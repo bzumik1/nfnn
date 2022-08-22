@@ -1,0 +1,15 @@
+@mixin backgroundColorAnimation($time) {
+    transition: background-color $time ease;
+}
+
+@mixin colorAnimation($time) {
+    transition: color $time ease;
+}
+
+@mixin fontsizeAnimation($time) {
+    transition: font-size $time ease, color $time ease;
+}
+
+@mixin heightAnimation($time) {
+    transition: height $time ease;
+}

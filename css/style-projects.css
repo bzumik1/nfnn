@@ -1,0 +1,309 @@
+@import url("https://fonts.googleapis.com/css?family=Oswald:200,300,400,500,600,700");
+@import url("https://fonts.googleapis.com/css?family=Great+Vibes:400");
+@import url("https://fonts.googleapis.com/css?family=Send+Flowers:400");
+@import url("https://fonts.googleapis.com/css?family=Sacramento:400");
+@import url("https://fonts.googleapis.com/css?family=Ruge+Boogie:400");
+@import url("https://fonts.googleapis.com/css?family=Puppies+Play:400");
+@import url("https://fonts.googleapis.com/css?family=Inspiration:400");
+@import url("https://fonts.googleapis.com/css?family=Libre+Franklin:200,300,regular,600,800,900");
+@import url("https://fonts.googleapis.com/css?family=Comfortaa:300,400,500,600,700");
+@import url("https://fonts.googleapis.com/css?family=Roboto+Slab:400");
+@import url("https://fonts.googleapis.com/css?family=IBM+Plex+Mono:regula");
+#finance-banner-button, #finance-navigation-button {
+  transition: color 500ms ease;
+  border-radius: 50px;
+  padding: 15px 15px;
+  font-family: "Libre Franklin", sans-serif;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+#finance-navigation-button {
+  font-size: 14px;
+  margin-left: 15px;
+  font-weight: 600;
+  background-color: #4375FD;
+  color: #fff;
+}
+#finance-navigation-button:hover {
+  background-color: #fff;
+  color: #4375FD;
+}
+
+#finance-banner-button {
+  display: inline-block;
+  padding: 15px 30px;
+  margin-top: 50px;
+  font-size: 16px;
+  line-height: 30px;
+  font-weight: 800;
+  background-color: white;
+  color: black;
+}
+#finance-banner-button:hover {
+  background-color: #e6e6e6;
+}
+
+#navigation {
+  z-index: 1;
+  padding-right: 30px;
+  padding-left: 30px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+#navbar {
+  width: 100%;
+  height: 100px;
+  max-width: 1920px;
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+}
+#navbar #navbar-logo img {
+  width: 11rem;
+}
+#navbar #navbar-menu .navbar-link {
+  transition: color 500ms ease;
+  font-family: "Libre Franklin", sans-serif;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  padding: 20px;
+}
+#navbar #navbar-menu .navbar-link:hover {
+  color: #4375FD;
+}
+#navbar #menu-button {
+  display: none;
+}
+#navbar #menu-toggle {
+  display: none;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* Set a background color */
+body {
+  background-color: #DFE3E7;
+  background-image: linear-gradient(180deg, rgba(0, 0, 0, 0.13), rgba(0, 0, 0, 0.13)), url("/assets/background/bg1.jpg");
+  background-size: cover;
+  background-repeat: repeat, no-repeat;
+  background-position: 0px 0px, 50% 50%;
+  font-family: Helvetica, sans-serif;
+}
+
+/* The actual timeline (the vertical ruler) */
+.timeline {
+  position: relative;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* The actual timeline (the vertical ruler) */
+.timeline::after {
+  content: "";
+  position: absolute;
+  width: 6px;
+  border-radius: 3px;
+  background-color: white;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  margin-left: -3px;
+}
+
+/* Project around content */
+.project {
+  padding: 10px 40px;
+  position: relative;
+  background-color: inherit;
+  width: 50%;
+  /* The circles on the timeline */
+}
+.project::after {
+  content: "";
+  position: absolute;
+  width: 25px;
+  height: 25px;
+  right: -17px;
+  background-color: white;
+  border: 4px solid #4474FF;
+  top: 15px;
+  border-radius: 50%;
+  z-index: 1;
+}
+
+/* Place the project to the left */
+.left {
+  left: 0;
+}
+
+/* Place the project to the right */
+.right {
+  left: 50%;
+}
+
+/* Add arrows to the left project (pointing right) */
+.left::before {
+  content: " ";
+  height: 0;
+  position: absolute;
+  top: 22px;
+  width: 0;
+  z-index: 1;
+  right: 30px;
+  border: medium solid white;
+  border-width: 10px 0 10px 10px;
+  border-color: transparent transparent transparent white;
+}
+
+/* Add arrows to the right project (pointing left) */
+.right::before {
+  content: " ";
+  height: 0;
+  position: absolute;
+  top: 22px;
+  width: 0;
+  z-index: 1;
+  left: 30px;
+  border: medium solid white;
+  border-width: 10px 10px 10px 0;
+  border-color: transparent white transparent transparent;
+}
+
+/* Fix the circle for projects on the right side */
+.right::after {
+  left: -16px;
+}
+
+/* The actual content */
+.project-content {
+  padding: 20px 30px;
+  background-color: white;
+  position: relative;
+  border-radius: 6px;
+}
+.project-content .project-heading {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+}
+.project-content .project-heading .project-photo {
+  width: min(8vw, 100px);
+}
+.project-content .project-heading .project-name {
+  margin: 0;
+  font-size: min(3vw, 45px);
+  color: #4474FF;
+}
+.project-content .project-heading .project-year {
+  margin: 0;
+  font-size: min(3vw, 45px);
+}
+.project-content .project-description {
+  height: 8em;
+  max-height: 8em;
+  overflow: hidden;
+  transition: max-height 1s ease-in-out;
+}
+.project-content .project-description p {
+  font-size: min(3vw, 20px);
+  line-height: 1.5em;
+  text-align: justify;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.project-content .project-description .overflow-wrapper {
+  column-width: 500px;
+  height: 100%;
+}
+.project-content .project-expand-icon {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  animation-duration: 2s;
+  animation-iteration-count: infinite;
+  animation-name: bounce;
+  animation-timing-function: ease-in-out;
+}
+.project-content .project-expand-icon img {
+  background-image: url("./assets/icon/circle-chevron-down-solid-primary-color.svg");
+  width: 30px;
+  transition: all 1s ease-in-out;
+}
+@keyframes bounce {
+  0% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-0.6vh);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+.project-content:hover .project-description {
+  max-height: 500px;
+  height: fit-content;
+}
+.project-content:hover .project-expand-icon img {
+  transform: rotate(180deg);
+}
+.project-content:hover .overflow-wrapper {
+  column-width: auto;
+}
+
+/* Media queries - Responsive timeline on screens less than 600px wide */
+@media screen and (max-width: 600px) {
+  /* Place the timelime to the left */
+  .timeline::after {
+    left: 31px;
+  }
+  /* Full-width projects */
+  .project {
+    width: 100%;
+    padding-left: 70px;
+    padding-right: 25px;
+  }
+  /* Make sure that all arrows are pointing leftwards */
+  .project::before {
+    left: 60px;
+    border: medium solid white;
+    border-width: 10px 10px 10px 0;
+    border-color: transparent white transparent transparent;
+  }
+  /* Make sure all circles are at the same spot */
+  .left::after, .right::after {
+    left: 15px;
+  }
+  /* Make all right projects behave like the left ones */
+  .right {
+    left: 0%;
+  }
+}
+#footer {
+  height: 100px;
+  background-color: #0a0e1a;
+  width: 100%;
+  margin-top: 60px;
+  padding: 20px 50px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+#footer #footer-credits {
+  margin-top: 15px;
+  font-family: "Libre Franklin", sans-serif;
+  color: #666;
+  text-align: center;
+  font-size: 12px;
+  line-height: 18px;
+  font-weight: 600;
+}

@@ -1,0 +1,152 @@
+#navbar{
+    //SETTINGS FOR MOBILE MENU
+    @media (max-width: $mobile-width) {
+        #navbar-menu {
+            margin-top: $navbar-height;
+            
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 90vw;
+            border-radius: 2vh;
+            margin-left: 5vw;
+            margin-right: 5vw;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background-color: white;
+
+            a{
+                // //ALIGNMENT
+                display: flex;
+                justify-content: center;
+                align-items: center;
+            }
+
+            .navbar-link{
+                color: $primary-color;
+                transition: height 600ms cubic-bezier(0.23, 1, 0.32, 1);
+                transition: color none;
+            }
+            
+            #finance-navigation-button{
+                transition: height 600ms cubic-bezier(0.23, 1, 0.32, 1);
+            }
+
+        }
+
+        #menu-toggle{
+            position: absolute;
+            opacity: 0;
+            cursor: pointer;
+            height: 0;
+            width: 0;
+        
+            //MENU IS CLOSED
+            & ~ #navbar-menu a {
+                //RESET
+                height: 0;
+                margin: 0;
+                padding: 0;
+                border: 0;
+                color: transparent;
+                
+                cursor: default;
+                user-select: none;
+            }
+            
+        
+            //MENU IS OPENED
+            //ICON ANIMATION
+            &:checked ~ #menu-button #menu-icon{
+                background: rgba(255, 255, 255, 0);
+            }
+
+            &:checked ~ #menu-button #menu-icon::before{
+                margin: 0px;
+                transform: rotate(45deg);
+                background-color: white;
+            }
+        
+            &:checked ~ #menu-button #menu-icon::after{
+                margin: 0px;
+                transform: rotate(-45deg);
+                background-color: white;
+            }
+            
+            //MENU ANIMATION
+            &:checked ~ #navbar-menu{
+                
+                // padding-bottom: 20px;
+                
+                
+            }
+
+            &:checked ~ #navbar-menu .navbar-link {
+                height: 4em;
+                width: 100%;
+                padding: 0.5em;
+                margin-bottom: -1px;
+                color: $primary-color;
+            }
+
+            &:checked ~ #navbar-menu #finance-navigation-button{
+                margin: 0;
+                width: auto;
+                color: white;
+                height: auto;
+                padding: 1em;
+                margin-bottom: 2em;
+    
+                &:hover{
+                    color: white;
+                    background-color: $primary-color;
+                }                
+            }
+        
+        }
+
+        #menu-button{
+            cursor: pointer;
+            width: 5vh;
+            height: 5vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 10px;
+        
+            #menu-icon{
+                display:block;
+                position: absolute;
+                width: 5vh;
+                height: 0.6vh;
+                border-radius: 0.3vh;
+                background-color: white;
+                transition: all $main-animation-speed ease-in-out;
+            
+                &::before{
+                    @extend #menu-icon;
+                    content: "";
+                    margin-top: -1.5vh;
+                }
+            
+                &::after{
+                    @extend #menu-icon;
+                    content: "";
+                    margin-top: 1.5vh;
+                }
+            }
+            
+            &:hover ~ #menu-icon{
+                background-color: $primary-color;
+            }
+            
+            &:hover ~ #menu-icon{
+                background-color: $primary-color;
+            }
+        }
+        
+        
+    }
+}
