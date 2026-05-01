@@ -1,0 +1,50 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:-novanadeje}
+      POSTGRES_USER: ${DB_USERNAME:-novanadeje}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-novanadeje}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-novanadeje} -d ${DB_NAME:-novanadeje}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-prod}
+      DB_URL: jdbc:postgresql://postgres:5432/${DB_NAME:-novanadeje}
+      DB_USERNAME: ${DB_USERNAME:-novanadeje}
+      DB_PASSWORD: ${DB_PASSWORD:-novanadeje}
+      MAIL_HOST: ${MAIL_HOST:-}
+      MAIL_PORT: ${MAIL_PORT:-587}
+      MAIL_USERNAME: ${MAIL_USERNAME:-}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+      MAIL_AUTH: ${MAIL_AUTH:-true}
+      MAIL_STARTTLS: ${MAIL_STARTTLS:-true}
+      CONTACT_RECIPIENT: ${CONTACT_RECIPIENT:-info@novanadeje.cz}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set}
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "${FRONTEND_PORT:-8080}:80"
+
+volumes:
+  postgres-data:

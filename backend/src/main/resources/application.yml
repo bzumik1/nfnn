@@ -1,0 +1,71 @@
+spring:
+  application:
+    name: nova-nadeje
+  profiles:
+    default: dev
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/novanadeje}
+    username: ${DB_USERNAME:novanadeje}
+    password: ${DB_PASSWORD:novanadeje}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        format_sql: true
+        jdbc:
+          time_zone: Europe/Prague
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.xml
+  mail:
+    host: ${MAIL_HOST:localhost}
+    port: ${MAIL_PORT:1025}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: ${MAIL_AUTH:false}
+          starttls:
+            enable: ${MAIL_STARTTLS:false}
+  messages:
+    basename: i18n/messages
+    encoding: UTF-8
+    fallback-to-system-locale: false
+  web:
+    locale: cs
+    locale-resolver: accept_header
+
+server:
+  port: ${SERVER_PORT:8080}
+  forward-headers-strategy: framework
+  error:
+    include-message: never
+    include-binding-errors: never
+    include-stacktrace: never
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: when_authorized
+
+app:
+  contact:
+    recipient-email: ${CONTACT_RECIPIENT:info@novanadeje.cz}
+  security:
+    jwt:
+      issuer: nova-nadeje
+      secret: ${JWT_SECRET:change-me-in-production-this-is-only-for-local-development-32chars-min}
+      access-token-ttl: PT1H
+      refresh-token-ttl: P30D
+
+logging:
+  level:
+    cz.novanadeje.app: INFO
+    org.springframework.web: INFO

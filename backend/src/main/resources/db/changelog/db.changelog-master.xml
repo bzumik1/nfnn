@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <includeAll path="db/changelog/content/" relativeToChangelogFile="false"/>
+    <includeAll path="db/changelog/donors/" relativeToChangelogFile="false"/>
+    <includeAll path="db/changelog/donations/" relativeToChangelogFile="false"/>
+    <includeAll path="db/changelog/contact/" relativeToChangelogFile="false"/>
+
+</databaseChangeLog>
