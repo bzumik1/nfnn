@@ -1,0 +1,226 @@
+:host {
+  display: contents;
+}
+
+.nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  background: transparent;
+  transition: all 0.35s ease;
+
+  &.is-scrolled {
+    background: rgba(255, 255, 255, 0.97);
+    backdrop-filter: blur(12px);
+    box-shadow: 0 2px 20px rgba(0, 0, 0, 0.08);
+  }
+}
+
+.nav-inner {
+  max-width: var(--content-max);
+  margin: 0 auto;
+  padding: 0 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 72px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+
+  img {
+    height: 40px;
+    width: auto;
+    display: block;
+  }
+}
+
+.desktop-nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.nav-link {
+  color: #fff;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  padding: 8px 14px;
+  border-radius: 8px;
+  transition: background 0.2s, color 0.2s;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.15);
+  }
+}
+
+.nav-cta {
+  background: var(--color-accent);
+  color: #fff;
+  text-decoration: none;
+  padding: 10px 22px;
+  border-radius: 50px;
+  font-size: 14px;
+  font-weight: 700;
+  margin-left: 8px;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
+}
+
+.nav-login {
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+  border: 1.5px solid rgba(255, 255, 255, 0.45);
+  color: #fff;
+  padding: 9px 18px;
+  border-radius: 50px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-left: 8px;
+  text-decoration: none;
+  transition: all 0.2s;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.25);
+  }
+}
+
+.nav.is-scrolled {
+  .nav-link {
+    color: #374151;
+    text-shadow: none;
+
+    &:hover {
+      background: var(--color-accent-bg);
+    }
+  }
+
+  .nav-login {
+    background: #fff;
+    backdrop-filter: none;
+    border-color: var(--color-accent);
+    color: var(--color-accent);
+
+    &:hover {
+      background: var(--color-accent-soft);
+    }
+  }
+}
+
+.mobile-menu-btn {
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+
+  span {
+    display: block;
+    width: 24px;
+    height: 2px;
+    background: #fff;
+    border-radius: 2px;
+    transition: all 0.3s;
+  }
+
+  &.is-open span:nth-child(1) {
+    transform: rotate(45deg) translate(5px, 5px);
+  }
+
+  &.is-open span:nth-child(2) {
+    opacity: 0;
+  }
+
+  &.is-open span:nth-child(3) {
+    transform: rotate(-45deg) translate(5px, -5px);
+  }
+}
+
+.nav.is-scrolled .mobile-menu-btn span,
+.mobile-menu-btn.is-open span {
+  background: var(--color-text);
+}
+
+.mobile-menu {
+  position: fixed;
+  top: 72px;
+  left: 0;
+  right: 0;
+  z-index: 99;
+  background: #fff;
+  padding: 16px 20px 24px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.mobile-link {
+  color: var(--color-text);
+  text-decoration: none;
+  font-size: 17px;
+  font-weight: 500;
+  padding: 13px 8px;
+  border-bottom: 1px solid var(--color-divider);
+  display: block;
+}
+
+.mobile-cta {
+  display: block;
+  background: var(--color-accent);
+  color: #fff;
+  text-decoration: none;
+  text-align: center;
+  padding: 14px;
+  border-radius: 50px;
+  font-size: 16px;
+  font-weight: 700;
+  margin-top: 14px;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.3);
+}
+
+.mobile-login {
+  display: block;
+  width: 100%;
+  background: var(--color-accent-bg);
+  color: var(--color-accent);
+  border: 1.5px solid rgba(37, 99, 235, 0.2);
+  text-align: center;
+  padding: 13px;
+  border-radius: 50px;
+  font-size: 15px;
+  font-weight: 600;
+  margin-top: 8px;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+@media (max-width: 768px) {
+  .desktop-nav {
+    display: none;
+  }
+
+  .mobile-menu-btn {
+    display: flex;
+  }
+
+  .nav-inner {
+    padding: 0 20px;
+  }
+}
+
+@media (min-width: 769px) {
+  .mobile-menu {
+    display: none;
+  }
+}
