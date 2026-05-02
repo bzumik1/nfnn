@@ -1,0 +1,357 @@
+.dashboard {
+  min-height: 100vh;
+  background: var(--color-surface-alt);
+}
+
+.topbar {
+  background: #fff;
+  border-bottom: 1px solid var(--color-border);
+  position: sticky;
+  top: 72px;
+  z-index: 10;
+}
+
+.topbar-inner {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 0 24px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.topbar-logo {
+  height: 32px;
+  display: block;
+}
+
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.topbar-greeting {
+  font-size: 14px;
+  color: #374151;
+  font-weight: 500;
+}
+
+.topbar-logout {
+  background: var(--color-accent-bg);
+  color: var(--color-accent);
+  border: none;
+  padding: 8px 18px;
+  border-radius: 50px;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  font-family: var(--font-sans);
+}
+
+.container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 40px 24px;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 36px;
+}
+
+.stat-card {
+  background: #fff;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  border: 1px solid var(--color-border-soft);
+  position: relative;
+  overflow: hidden;
+}
+
+.stat-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  border-radius: 16px 16px 0 0;
+}
+
+.stat-card--accent {
+  --stat-color: var(--color-accent);
+
+  .stat-bar {
+    background: var(--color-accent);
+  }
+
+  .stat-icon {
+    background: rgba(37, 99, 235, 0.08);
+    color: var(--color-accent);
+  }
+}
+
+.stat-card--indigo {
+  --stat-color: #6366f1;
+
+  .stat-bar {
+    background: #6366f1;
+  }
+
+  .stat-icon {
+    background: rgba(99, 102, 241, 0.08);
+    color: #6366f1;
+  }
+}
+
+.stat-card--sky {
+  --stat-color: #0ea5e9;
+
+  .stat-bar {
+    background: #0ea5e9;
+  }
+
+  .stat-icon {
+    background: rgba(14, 165, 233, 0.08);
+    color: #0ea5e9;
+  }
+}
+
+.stat-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.stat-value {
+  font-family: var(--font-serif);
+  font-size: 26px;
+  font-weight: 800;
+  color: var(--color-text);
+  margin-bottom: 4px;
+  letter-spacing: -0.02em;
+}
+
+.stat-label {
+  font-size: 13px;
+  color: var(--color-text-subtle);
+  font-weight: 500;
+}
+
+.yearly-card {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  border: 1px solid var(--color-border-soft);
+  padding: 20px 24px;
+  margin-bottom: 20px;
+}
+
+.yearly-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.yearly-title {
+  font-family: var(--font-serif);
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--color-text);
+  margin-bottom: 4px;
+}
+
+.yearly-sub {
+  color: var(--color-text-soft);
+  font-size: 13px;
+}
+
+.yearly-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.year-toggle {
+  display: flex;
+  background: var(--color-accent-bg);
+  border-radius: 10px;
+  padding: 4px;
+  gap: 4px;
+
+  button {
+    padding: 7px 16px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    font-family: var(--font-sans);
+    font-weight: 600;
+    font-size: 14px;
+    transition: all 0.2s;
+    background: transparent;
+    color: var(--color-text-soft);
+
+    &.is-active {
+      background: var(--color-accent);
+      color: #fff;
+    }
+  }
+}
+
+.yearly-pdf {
+  background: var(--color-accent);
+  color: #fff;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 50px;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.3);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.yearly-foot {
+  margin-top: 16px;
+  padding: 12px 16px;
+  background: var(--color-surface-alt);
+  border-radius: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.yearly-count {
+  color: var(--color-text-soft);
+  font-size: 14px;
+}
+
+.yearly-total {
+  font-family: var(--font-serif);
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--color-accent);
+}
+
+.payments-card {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  border: 1px solid var(--color-border-soft);
+  overflow: hidden;
+  margin-bottom: 24px;
+}
+
+.payments-head {
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--color-divider);
+}
+
+.payments-title {
+  font-family: var(--font-serif);
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.payments-card table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.payments-card thead tr {
+  background: var(--color-surface-alt);
+}
+
+.payments-card th {
+  padding: 12px 20px;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-text-subtle);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.payments-card tbody tr {
+  border-top: 1px solid var(--color-divider);
+  transition: background 0.15s;
+
+  &:hover {
+    background: var(--color-surface-alt);
+  }
+}
+
+.payments-card td {
+  padding: 14px 20px;
+  font-size: 14px;
+  color: #374151;
+}
+
+.payments-card td.amount {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--color-accent);
+  font-family: var(--font-serif);
+}
+
+.status-pill {
+  background: #dcfce7;
+  color: #16a34a;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 50px;
+}
+
+.download-btn {
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
+  border: none;
+  padding: 7px 14px;
+  border-radius: 50px;
+  font-weight: 600;
+  font-size: 12px;
+  cursor: pointer;
+  font-family: var(--font-sans);
+}
+
+.contact-line {
+  text-align: center;
+  font-size: 13px;
+  color: var(--color-text-subtle);
+
+  a {
+    color: var(--color-accent);
+    text-decoration: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .yearly-actions {
+    flex-direction: column;
+    align-items: flex-start;
+    width: 100%;
+  }
+
+  .payments-card {
+    overflow-x: auto;
+  }
+}

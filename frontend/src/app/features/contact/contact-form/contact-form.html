@@ -1,0 +1,93 @@
+<section id="contact" class="contact section-pad">
+  <div class="two-col section-inner">
+    <div class="contact-left">
+      <p class="eyebrow" i18n="@@home.contact.eyebrow">Spojte se s námi</p>
+      <h2 class="title" i18n="@@home.contact.title">Kontaktujte nás</h2>
+      <p class="lead" i18n="@@home.contact.lead">
+        Máte dotaz, chcete se zapojit nebo potřebujete více informací? Neváhejte nás kontaktovat.
+      </p>
+      <div class="contact-info">
+        <div class="info-row">
+          <div class="info-icon" aria-hidden="true">✉</div>
+          <div>
+            <div class="info-label" i18n="@@home.contact.email">E-mail</div>
+            <div class="info-value">info&#64;novanaděje.cz</div>
+          </div>
+        </div>
+        <div class="info-row">
+          <div class="info-icon" aria-hidden="true">📍</div>
+          <div>
+            <div class="info-label" i18n="@@home.contact.address">Adresa</div>
+            <div class="info-value" i18n="@@home.contact.addressValue">Ústí nad Labem, Česká republika</div>
+          </div>
+        </div>
+        <div class="info-row">
+          <div class="info-icon" aria-hidden="true">🏛</div>
+          <div>
+            <div class="info-label" i18n="@@home.contact.ico">IČO</div>
+            <div class="info-value">12345678</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="contact-form-wrap">
+      @if (sent()) {
+        <div class="form-success">
+          <div class="form-success-icon" aria-hidden="true">✓</div>
+          <h3 class="form-success-title" i18n="@@home.contact.success.title">Zpráva odeslána!</h3>
+          <p class="form-success-text" i18n="@@home.contact.success.text">
+            Děkujeme za váš zájem. Ozveme se co nejdříve.
+          </p>
+          <button type="button" class="form-success-again" (click)="reset()" i18n="@@home.contact.success.again">
+            Odeslat další zprávu
+          </button>
+        </div>
+      } @else {
+        <form #f="ngForm" (ngSubmit)="submit(f)" novalidate>
+          <h3 class="form-title" i18n="@@home.contact.form.title">Napište nám</h3>
+
+          <div class="field">
+            <label for="contact-name" i18n="@@home.contact.form.name">Jméno a příjmení</label>
+            <input
+              id="contact-name"
+              name="name"
+              type="text"
+              placeholder="Jan Novák"
+              i18n-placeholder="@@home.contact.form.namePlaceholder"
+              [(ngModel)]="model.name"
+              required
+            />
+          </div>
+
+          <div class="field">
+            <label for="contact-email" i18n="@@home.contact.form.email">E-mailová adresa</label>
+            <input
+              id="contact-email"
+              name="email"
+              type="email"
+              placeholder="jan@example.com"
+              [(ngModel)]="model.email"
+              required
+            />
+          </div>
+
+          <div class="field">
+            <label for="contact-message" i18n="@@home.contact.form.message">Vaše zpráva</label>
+            <textarea
+              id="contact-message"
+              name="message"
+              rows="4"
+              placeholder="Napište nám váš dotaz..."
+              i18n-placeholder="@@home.contact.form.messagePlaceholder"
+              [(ngModel)]="model.message"
+              required
+            ></textarea>
+          </div>
+
+          <button type="submit" class="form-submit" i18n="@@home.contact.form.submit">Odeslat zprávu</button>
+        </form>
+      }
+    </div>
+  </div>
+</section>

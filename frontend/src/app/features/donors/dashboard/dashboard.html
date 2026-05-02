@@ -1,0 +1,137 @@
+<div class="dashboard">
+  <div class="topbar">
+    <div class="topbar-inner">
+      <a routerLink="/">
+        <img src="/images/logo.svg" alt="Nová naděje – nadační fond" i18n-alt="@@layout.header.logoAlt" class="topbar-logo" />
+      </a>
+      <div class="topbar-right">
+        <span class="topbar-greeting">
+          <span i18n="@@donor.dashboard.welcome">Vítejte,</span> {{ user.name }}
+        </span>
+        <button type="button" class="topbar-logout" (click)="logout()" i18n="@@donor.dashboard.logout">
+          Odhlásit se
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="stats-grid">
+      <div class="stat-card stat-card--accent">
+        <div class="stat-bar"></div>
+        <div class="stat-icon" aria-hidden="true">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+          </svg>
+        </div>
+        <div class="stat-value">{{ formatAmount(total()) }} Kč</div>
+        <div class="stat-label" i18n="@@donor.dashboard.stat.total">Celkem darováno</div>
+      </div>
+
+      <div class="stat-card stat-card--indigo">
+        <div class="stat-bar"></div>
+        <div class="stat-icon" aria-hidden="true">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+            <polyline points="14 2 14 8 20 8" />
+            <line x1="16" y1="13" x2="8" y2="13" />
+            <line x1="16" y1="17" x2="8" y2="17" />
+            <polyline points="10 9 9 9 8 9" />
+          </svg>
+        </div>
+        <div class="stat-value">{{ payments.length }}</div>
+        <div class="stat-label" i18n="@@donor.dashboard.stat.count">Počet příspěvků</div>
+      </div>
+
+      <div class="stat-card stat-card--sky">
+        <div class="stat-bar"></div>
+        <div class="stat-icon" aria-hidden="true">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+            <line x1="16" y1="2" x2="16" y2="6" />
+            <line x1="8" y1="2" x2="8" y2="6" />
+            <line x1="3" y1="10" x2="21" y2="10" />
+          </svg>
+        </div>
+        <div class="stat-value">{{ payments[0].date }}</div>
+        <div class="stat-label" i18n="@@donor.dashboard.stat.last">Poslední příspěvek</div>
+      </div>
+    </div>
+
+    <div class="yearly-card">
+      <div class="yearly-head">
+        <div>
+          <h2 class="yearly-title" i18n="@@donor.dashboard.yearly.title">Roční potvrzení o darech</h2>
+          <p class="yearly-sub" i18n="@@donor.dashboard.yearly.sub">Souhrnný doklad pro daňové účely</p>
+        </div>
+        <div class="yearly-actions">
+          <div class="year-toggle">
+            @for (y of years(); track y) {
+              <button type="button" [class.is-active]="selectedYear() === y" (click)="selectYear(y)">{{ y }}</button>
+            }
+          </div>
+          <button type="button" class="yearly-pdf" (click)="openYearReceipt()">
+            <span i18n="@@donor.dashboard.yearly.pdf">↓ PDF za rok</span> {{ selectedYear() }}
+          </button>
+        </div>
+      </div>
+      <div class="yearly-foot">
+        <span class="yearly-count">
+          {{ yearPayments().length }} {{ contributionsLabel(yearPayments().length) }}
+          <span i18n="@@donor.dashboard.yearly.inYear">v roce</span>
+          {{ selectedYear() }}
+        </span>
+        <span class="yearly-total">
+          {{ formatAmount(yearTotal()) }} Kč <span i18n="@@donor.dashboard.yearly.totalSuffix">celkem</span>
+        </span>
+      </div>
+    </div>
+
+    <div class="payments-card">
+      <div class="payments-head">
+        <h2 class="payments-title" i18n="@@donor.dashboard.payments.title">Přehled plateb</h2>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th i18n="@@donor.dashboard.payments.col.date">Datum</th>
+            <th i18n="@@donor.dashboard.payments.col.amount">Částka</th>
+            <th i18n="@@donor.dashboard.payments.col.purpose">Účel</th>
+            <th i18n="@@donor.dashboard.payments.col.status">Stav</th>
+            <th i18n="@@donor.dashboard.payments.col.receipt">Potvrzení</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (p of payments; track p.id) {
+            <tr>
+              <td>{{ p.date }}</td>
+              <td class="amount">{{ formatAmount(p.amount) }} Kč</td>
+              <td>{{ p.purpose }}</td>
+              <td>
+                <span class="status-pill">{{ p.status }}</span>
+              </td>
+              <td>
+                <button type="button" class="download-btn" (click)="openSingleReceipt(p)" i18n="@@donor.dashboard.payments.download">
+                  Stáhnout PDF
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <p class="contact-line">
+      <span i18n="@@donor.dashboard.help">Máte dotaz k platbě? Napište nám na</span>
+      <a href="mailto:info@novanaděje.cz">info&#64;novanaděje.cz</a>
+    </p>
+  </div>
+
+  @if (selectedReceipt()) {
+    <app-receipt
+      [data]="selectedReceipt()!"
+      [user]="user"
+      (closed)="closeReceipt()"
+    />
+  }
+</div>

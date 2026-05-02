@@ -1,0 +1,110 @@
+<article
+  class="card"
+  [class.is-open]="open()"
+  (click)="toggle()"
+  (keydown.enter)="toggle()"
+  (keydown.space)="toggle()"
+  tabindex="0"
+  role="button"
+>
+  <div class="card-image">
+    <img [src]="imageSrc()" alt="Příběh dítěte" i18n-alt="@@home.projects.card.imageAlt" class="real-img" />
+  </div>
+  <div class="card-body">
+    @switch (project()) {
+      @case ('dominik') {
+        <div class="card-meta">
+          <span class="card-tag" i18n="@@home.projects.dominik.tag">Kompenzační pomůcky</span>
+          <span class="card-year">2024</span>
+        </div>
+        <h3 class="card-title" i18n="@@home.projects.dominik.title">Dominik, 7 let</h3>
+        <p class="card-desc" i18n="@@home.projects.dominik.desc">
+          Dominik se narodil s dětskou mozkovou obrnou. Pomohli jsme mu získat speciální kočárek a terapeutické pomůcky.
+        </p>
+        @if (open()) {
+          <div class="card-extra">
+            <p i18n="@@home.projects.dominik.extra">
+              Díky štědrosti našich dárců se podařilo situaci Dominika výrazně zlepšit. Každý příspěvek – malý i velký – přispívá k tomu, aby děti jako Dominik mohly žít plnohodnotný život.
+            </p>
+          </div>
+        }
+      }
+      @case ('anicka') {
+        <div class="card-meta">
+          <span class="card-tag" i18n="@@home.projects.anicka.tag">Sluchové pomůcky</span>
+          <span class="card-year">2024</span>
+        </div>
+        <h3 class="card-title" i18n="@@home.projects.anicka.title">Anička, 5 let</h3>
+        <p class="card-desc" i18n="@@home.projects.anicka.desc">
+          Anička má sluchové postižení. Díky vašim příspěvkům jsme pořídili naslouchátka a podpořili její vzdělávání v běžné škole.
+        </p>
+        @if (open()) {
+          <div class="card-extra">
+            <p i18n="@@home.projects.anicka.extra">
+              Díky štědrosti našich dárců se podařilo situaci Aničky výrazně zlepšit. Každý příspěvek – malý i velký – přispívá k tomu, aby děti jako Anička mohly žít plnohodnotný život.
+            </p>
+          </div>
+        }
+      }
+      @case ('tomas') {
+        <div class="card-meta">
+          <span class="card-tag" i18n="@@home.projects.tomas.tag">Zrakové pomůcky</span>
+          <span class="card-year">2023</span>
+        </div>
+        <h3 class="card-title" i18n="@@home.projects.tomas.title">Tomáš, 9 let</h3>
+        <p class="card-desc" i18n="@@home.projects.tomas.desc">
+          Tomáš bojuje s těžkým postižením zraku. Zakoupili jsme mu speciální software a pomůcky pro čtení Braillova písma.
+        </p>
+        @if (open()) {
+          <div class="card-extra">
+            <p i18n="@@home.projects.tomas.extra">
+              Díky štědrosti našich dárců se podařilo situaci Tomáše výrazně zlepšit. Každý příspěvek – malý i velký – přispívá k tomu, aby děti jako Tomáš mohly žít plnohodnotný život.
+            </p>
+          </div>
+        }
+      }
+      @case ('eliska') {
+        <div class="card-meta">
+          <span class="card-tag" i18n="@@home.projects.eliska.tag">Fyzioterapie</span>
+          <span class="card-year">2023</span>
+        </div>
+        <h3 class="card-title" i18n="@@home.projects.eliska.title">Eliška, 6 let</h3>
+        <p class="card-desc" i18n="@@home.projects.eliska.desc">
+          Eliška potřebovala speciální ortopedické boty a fyzioterapii. Vaše pomoc jí umožnila první samostatné kroky.
+        </p>
+        @if (open()) {
+          <div class="card-extra">
+            <p i18n="@@home.projects.eliska.extra">
+              Díky štědrosti našich dárců se podařilo situaci Elišky výrazně zlepšit. Každý příspěvek – malý i velký – přispívá k tomu, aby děti jako Eliška mohly žít plnohodnotný život.
+            </p>
+          </div>
+        }
+      }
+      @case ('martin') {
+        <div class="card-meta">
+          <span class="card-tag" i18n="@@home.projects.martin.tag">Komunikační pomůcky</span>
+          <span class="card-year">2023</span>
+        </div>
+        <h3 class="card-title" i18n="@@home.projects.martin.title">Martin, 11 let</h3>
+        <p class="card-desc" i18n="@@home.projects.martin.desc">
+          Martin má autismus a potřeboval terapeutické pomůcky pro rozvoj komunikace. Pořídili jsme mu tablet se speciálními aplikacemi.
+        </p>
+        @if (open()) {
+          <div class="card-extra">
+            <p i18n="@@home.projects.martin.extra">
+              Díky štědrosti našich dárců se podařilo situaci Martina výrazně zlepšit. Každý příspěvek – malý i velký – přispívá k tomu, aby děti jako Martin mohly žít plnohodnotný život.
+            </p>
+          </div>
+        }
+      }
+    }
+
+    <div class="card-toggle">
+      @if (open()) {
+        <span i18n="@@home.projects.card.collapse">↑ Skrýt</span>
+      } @else {
+        <span i18n="@@home.projects.card.expand">↓ Zobrazit více</span>
+      }
+    </div>
+  </div>
+</article>

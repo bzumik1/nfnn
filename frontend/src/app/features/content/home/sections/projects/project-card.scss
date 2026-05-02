@@ -1,0 +1,91 @@
+:host {
+  display: block;
+}
+
+.card {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.07);
+  overflow: hidden;
+  transition: all 0.3s ease;
+  transform: translateY(0);
+  cursor: pointer;
+  border: 1px solid var(--color-border-soft);
+  outline: none;
+
+  &.is-open {
+    transform: translateY(-4px);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.13);
+  }
+
+  &:focus-visible {
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.4);
+  }
+}
+
+.card-image {
+  height: 196px;
+  overflow: hidden;
+
+  img {
+    object-position: center 20%;
+  }
+}
+
+.card-body {
+  padding: 20px 24px;
+}
+
+.card-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.card-tag {
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 50px;
+}
+
+.card-year {
+  color: var(--color-text-subtle);
+  font-size: 12px;
+}
+
+.card-title {
+  font-family: var(--font-serif);
+  font-size: 22px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  color: var(--color-text);
+}
+
+.card-desc {
+  color: var(--color-text-soft);
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+.card-extra {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--color-divider);
+
+  p {
+    color: #374151;
+    font-size: 14px;
+    line-height: 1.75;
+  }
+}
+
+.card-toggle {
+  margin-top: 12px;
+  color: var(--color-accent);
+  font-size: 13px;
+  font-weight: 600;
+}

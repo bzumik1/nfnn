@@ -1,0 +1,112 @@
+<div class="login-screen">
+  <div class="login-card">
+    <div class="login-logo">
+      <a routerLink="/">
+        <img src="/images/logo.svg" alt="Nová naděje – nadační fond" i18n-alt="@@layout.header.logoAlt" />
+      </a>
+    </div>
+
+    @if (mode() !== 'reset') {
+      <div class="tab-switch">
+        <button
+          type="button"
+          [class.is-active]="mode() === 'login'"
+          (click)="setMode('login')"
+          i18n="@@donor.login.tab.login"
+        >Přihlásit se</button>
+        <button
+          type="button"
+          [class.is-active]="mode() === 'register'"
+          (click)="setMode('register')"
+          i18n="@@donor.login.tab.register"
+        >Registrace</button>
+      </div>
+
+      @if (mode() === 'login') {
+        <p class="login-sub" i18n="@@donor.login.sub.login">Přístup do vašeho přehledu příspěvků</p>
+      } @else {
+        <p class="login-sub" i18n="@@donor.login.sub.register">Vytvořte si účet dárce</p>
+      }
+
+      <form #f="ngForm" (ngSubmit)="submitAuth(f)" novalidate>
+        @if (mode() === 'register') {
+          <div class="field">
+            <label for="login-name" i18n="@@donor.login.name">Jméno a příjmení</label>
+            <input id="login-name" name="name" type="text" placeholder="Jan Novák" i18n-placeholder="@@home.contact.form.namePlaceholder" [(ngModel)]="name" required />
+          </div>
+        }
+        <div class="field">
+          <label for="login-email" i18n="@@donor.login.email">E-mail</label>
+          <input id="login-email" name="email" type="email" placeholder="vas@email.cz" i18n-placeholder="@@donor.login.emailPlaceholder" [(ngModel)]="email" required />
+        </div>
+        <div class="field">
+          <label for="login-password" i18n="@@donor.login.password">Heslo</label>
+          <input id="login-password" name="password" type="password" placeholder="••••••••" [(ngModel)]="password" required />
+        </div>
+
+        @if (error()) {
+          <p class="form-error">{{ error() }}</p>
+        }
+
+        <button type="submit" class="form-submit" [disabled]="loading()">
+          @if (loading()) {
+            @if (mode() === 'login') {
+              <span i18n="@@donor.login.submit.login.loading">Přihlašuji…</span>
+            } @else {
+              <span i18n="@@donor.login.submit.register.loading">Registruji…</span>
+            }
+          } @else {
+            @if (mode() === 'login') {
+              <span i18n="@@donor.login.submit.login">Přihlásit se</span>
+            } @else {
+              <span i18n="@@donor.login.submit.register">Vytvořit účet</span>
+            }
+          }
+        </button>
+      </form>
+
+      <p class="login-foot">
+        @if (mode() === 'login') {
+          <span i18n="@@donor.login.forgot">Zapomněli jste heslo?</span>
+          <button type="button" class="link-btn" (click)="setMode('reset')" i18n="@@donor.login.reset">Obnovit heslo</button>
+        } @else {
+          <span i18n="@@donor.login.demo">Demo: libovolný email + heslo (min. 3 znaky)</span>
+        }
+      </p>
+    } @else {
+      @if (resetSent()) {
+        <div class="reset-success">
+          <div class="reset-icon" aria-hidden="true">✉️</div>
+          <h3 i18n="@@donor.login.reset.successTitle">E-mail odeslán!</h3>
+          <p i18n="@@donor.login.reset.successText">
+            Pokud účet s touto adresou existuje, obdržíte pokyny k obnovení hesla.
+          </p>
+          <button type="button" class="form-submit" (click)="backToLogin()" i18n="@@donor.login.reset.back">
+            Zpět na přihlášení
+          </button>
+        </div>
+      } @else {
+        <button type="button" class="reset-back" (click)="backToLogin()" i18n="@@donor.login.reset.backLink">
+          ← Zpět na přihlášení
+        </button>
+        <h3 class="reset-title" i18n="@@donor.login.reset.title">Obnovení hesla</h3>
+        <p class="reset-lead" i18n="@@donor.login.reset.lead">
+          Zadejte svůj e-mail a zašleme vám odkaz pro obnovení hesla.
+        </p>
+        <form (ngSubmit)="submitReset()" novalidate>
+          <div class="field">
+            <label for="reset-email" i18n="@@donor.login.email">E-mail</label>
+            <input id="reset-email" name="resetEmail" type="email" placeholder="vas@email.cz" i18n-placeholder="@@donor.login.emailPlaceholder" [(ngModel)]="resetEmail" required />
+          </div>
+          <button type="submit" class="form-submit" [disabled]="loading()">
+            @if (loading()) {
+              <span i18n="@@donor.login.reset.submitLoading">Odesílám…</span>
+            } @else {
+              <span i18n="@@donor.login.reset.submit">Odeslat odkaz</span>
+            }
+          </button>
+        </form>
+      }
+    }
+  </div>
+</div>
