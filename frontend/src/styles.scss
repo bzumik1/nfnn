@@ -1,1 +1,88 @@
-/* You can add global styles to this file, and also import other style files */
+:root {
+  --color-accent: #2563EB;
+  --color-accent-soft: #eff6ff;
+  --color-accent-bg: #f0f4ff;
+  --color-text: #1a1a2e;
+  --color-text-muted: #4b5563;
+  --color-text-soft: #6b7280;
+  --color-text-subtle: #9ca3af;
+  --color-surface: #ffffff;
+  --color-surface-alt: #f8faff;
+  --color-surface-blue: #f0f6ff;
+  --color-border: #e5e7eb;
+  --color-border-soft: #eef2ff;
+  --color-border-blue: #bfdbfe;
+  --color-divider: #f0f4ff;
+  --color-dark: #0f172a;
+  --color-darker: #060d1f;
+  --shadow-card: 0 2px 16px rgba(0, 0, 0, 0.07);
+  --shadow-card-hover: 0 16px 48px rgba(0, 0, 0, 0.12);
+  --shadow-cta: 0 8px 28px rgba(37, 99, 235, 0.35);
+  --font-serif: 'Playfair Display', serif;
+  --font-sans: 'Inter', sans-serif;
+  --content-max: 1200px;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-sans);
+  color: var(--color-text);
+  background: #fff;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-accent-bg);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-accent);
+  border-radius: 3px;
+}
+
+@keyframes scrollDot {
+  0%,
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  50% {
+    transform: translateY(10px);
+    opacity: 0.4;
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.real-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
