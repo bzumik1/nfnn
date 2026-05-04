@@ -1,10 +1,26 @@
-<div class="login-screen">
-  <div class="login-card">
-    <div class="login-logo">
-      <a routerLink="/">
-        <img src="/images/logo.svg" alt="Nová naděje – nadační fond" i18n-alt="@@layout.header.logoAlt" />
-      </a>
+<div
+  class="overlay"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="login-dialog-title"
+  (click)="onOverlayClick($event)"
+>
+  <div class="card">
+    <button
+      type="button"
+      class="close-btn"
+      (click)="closeDialog()"
+      aria-label="Zavřít"
+      i18n-aria-label="@@donor.login.close"
+    >
+      <span aria-hidden="true">×</span>
+    </button>
+
+    <div class="logo">
+      <img src="/images/logo.svg" alt="Nová naděje – nadační fond" i18n-alt="@@layout.header.logoAlt" />
     </div>
+
+    <h2 id="login-dialog-title" class="visually-hidden" i18n="@@donor.login.title">Přihlášení a registrace</h2>
 
     @if (mode() !== 'reset') {
       <div class="tab-switch">
@@ -23,9 +39,9 @@
       </div>
 
       @if (mode() === 'login') {
-        <p class="login-sub" i18n="@@donor.login.sub.login">Přístup do vašeho přehledu příspěvků</p>
+        <p class="sub" i18n="@@donor.login.sub.login">Přístup do vašeho přehledu příspěvků</p>
       } @else {
-        <p class="login-sub" i18n="@@donor.login.sub.register">Vytvořte si účet dárce</p>
+        <p class="sub" i18n="@@donor.login.sub.register">Vytvořte si účet pro správu daňových potvrzení</p>
       }
 
       <form #f="ngForm" (ngSubmit)="submitAuth(f)" novalidate>
@@ -59,13 +75,13 @@
             @if (mode() === 'login') {
               <span i18n="@@donor.login.submit.login">Přihlásit se</span>
             } @else {
-              <span i18n="@@donor.login.submit.register">Vytvořit účet</span>
+              <span i18n="@@donor.login.submit.register">Registrovat</span>
             }
           }
         </button>
       </form>
 
-      <p class="login-foot">
+      <p class="foot">
         @if (mode() === 'login') {
           <span i18n="@@donor.login.forgot">Zapomněli jste heslo?</span>
           <button type="button" class="link-btn" (click)="setMode('reset')" i18n="@@donor.login.reset">Obnovit heslo</button>

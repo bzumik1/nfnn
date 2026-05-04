@@ -1,5 +1,5 @@
-<app-site-header />
-<main>
-  <router-outlet />
-</main>
-<app-site-footer />
+<router-outlet />
+
+@if (loginDialog.isOpen()) {
+  <app-login-dialog />
+}

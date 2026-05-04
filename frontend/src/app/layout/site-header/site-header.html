@@ -11,7 +11,7 @@
       <a class="nav-link" routerLink="/" fragment="news" i18n="@@layout.header.nav.news">Aktuality</a>
       <a class="nav-link" routerLink="/" fragment="contact" i18n="@@layout.header.nav.contact">Kontakt</a>
       <a class="nav-cta" routerLink="/" fragment="donate" i18n="@@layout.header.nav.donate">Finanční příspěvek</a>
-      <a class="nav-login" routerLink="/donor/prihlaseni" i18n="@@layout.header.nav.login">Přihlásit se</a>
+      <button type="button" class="nav-login" (click)="openLogin()" i18n="@@layout.header.nav.login">Přihlásit se</button>
     </div>
 
     <button
@@ -37,6 +37,6 @@
     <a class="mobile-link" routerLink="/" fragment="news" (click)="closeMenu()" i18n="@@layout.header.nav.news">Aktuality</a>
     <a class="mobile-link" routerLink="/" fragment="contact" (click)="closeMenu()" i18n="@@layout.header.nav.contact">Kontakt</a>
     <a class="mobile-cta" routerLink="/" fragment="donate" (click)="closeMenu()" i18n="@@layout.header.nav.donate">Finanční příspěvek</a>
-    <a class="mobile-login" routerLink="/donor/prihlaseni" (click)="closeMenu()" i18n="@@layout.header.mobile.login">👤 Přihlásit se</a>
+    <button type="button" class="mobile-login" (click)="openLogin()" i18n="@@layout.header.mobile.login">👤 Přihlásit se</button>
   </div>
 }

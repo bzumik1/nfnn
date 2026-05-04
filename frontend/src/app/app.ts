@@ -1,12 +1,14 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
-import { SiteHeader } from './layout/site-header/site-header';
-import { SiteFooter } from './layout/site-footer/site-footer';
+import { LoginDialog } from './features/donors/login-dialog/login-dialog';
+import { LoginDialogService } from './features/donors/login-dialog.service';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, SiteHeader, SiteFooter],
+  imports: [RouterOutlet, LoginDialog],
   templateUrl: './app.html',
   styleUrl: './app.scss',
 })
-export class App {}
+export class App {
+  protected readonly loginDialog = inject(LoginDialogService);
+}

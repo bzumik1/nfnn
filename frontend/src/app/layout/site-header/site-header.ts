@@ -1,5 +1,6 @@
-import { Component, HostListener, signal } from '@angular/core';
+import { Component, HostListener, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { LoginDialogService } from '../../features/donors/login-dialog.service';
 
 @Component({
   selector: 'app-site-header',
@@ -8,6 +9,8 @@ import { RouterLink } from '@angular/router';
   styleUrl: './site-header.scss',
 })
 export class SiteHeader {
+  private readonly loginDialog = inject(LoginDialogService);
+
   protected readonly scrolled = signal(false);
   protected readonly menuOpen = signal(false);
 
@@ -22,5 +25,10 @@ export class SiteHeader {
 
   closeMenu(): void {
     this.menuOpen.set(false);
+  }
+
+  openLogin(): void {
+    this.menuOpen.set(false);
+    this.loginDialog.open();
   }
 }
