@@ -24,6 +24,12 @@ public class TestSupportConfiguration {
     }
 
     @Bean
+    @Primary
+    public FakeFioClient fakeFioClient(MutableClock clock) {
+        return new FakeFioClient(clock);
+    }
+
+    @Bean
     public DatabaseCleaner databaseCleaner(JdbcClient jdbcClient) {
         return new DatabaseCleaner(jdbcClient);
     }
