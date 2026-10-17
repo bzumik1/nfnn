@@ -1,5 +1,32 @@
-import { Component } from '@angular/core';
+/// <reference types="@angular/localize" />
+
+import { Component, computed, inject, input, linkedSignal, signal } from '@angular/core';
+import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
+import { catchError, debounceTime, distinctUntilChanged, map, Observable, of, startWith, switchMap } from 'rxjs';
+import { BankAccountResponse, PaymentQrApi, PaymentQrResponse } from '../../../../donations/payment-qr-api';
+
+const DEFAULT_AMOUNT = 500;
+const MIN_AMOUNT = 1;
+const MAX_AMOUNT = 1_000_000;
+const REQUEST_DEBOUNCE_MS = 300;
+
+interface AmountPreset {
+  readonly amount: number;
+  readonly label: string;
+}
+
+interface QrRequest {
+  readonly amount: number | null;
+  readonly variableSymbol: string | null;
+  readonly attempt: number;
+}
+
+type QrState =
+  | { readonly kind: 'loading' }
+  | { readonly kind: 'ready'; readonly qr: PaymentQrResponse }
+  | { readonly kind: 'failed' }
+  | { readonly kind: 'amountInvalid' };
 
 @Component({
   selector: 'app-donate-cta',
@@ -8,22 +35,105 @@ import { RouterLink } from '@angular/router';
   styleUrl: './donate-cta.scss',
 })
 export class DonateCta {
-  protected readonly dataCells: ReadonlyArray<readonly [number, number]> = [
-    [42, 8], [46, 8], [50, 8], [54, 8], [42, 12], [50, 12], [42, 16], [46, 16], [50, 16], [54, 16],
-    [42, 20], [54, 20], [42, 24], [46, 24], [54, 24], [42, 28], [50, 28], [54, 28],
-    [8, 42], [12, 42], [20, 42], [24, 42], [28, 42], [8, 46], [20, 46], [28, 46],
-    [8, 50], [12, 50], [16, 50], [24, 50], [8, 54], [16, 54], [20, 54], [28, 54],
-    [8, 58], [24, 58], [28, 58], [8, 62], [12, 62], [16, 62], [20, 62], [28, 62],
-    [42, 42], [50, 42], [58, 42], [62, 42], [66, 42], [42, 46], [46, 46], [54, 46], [66, 46],
-    [42, 50], [50, 50], [58, 50], [62, 50], [42, 54], [46, 54], [58, 54], [66, 54],
-    [42, 58], [50, 58], [54, 58], [62, 58], [66, 58], [42, 62], [46, 62], [54, 62],
-    [70, 42], [78, 42], [82, 42], [70, 46], [74, 46], [82, 46], [70, 50], [78, 50],
-    [70, 54], [74, 54], [78, 54], [82, 54], [70, 58], [82, 58], [70, 62], [74, 62], [78, 62], [82, 62],
-    [8, 70], [16, 70], [24, 70], [28, 70], [8, 74], [12, 74], [20, 74], [8, 78], [16, 78], [24, 78],
-    [8, 82], [20, 82], [28, 82], [8, 86], [12, 86], [16, 86], [20, 86], [24, 86],
-    [42, 70], [46, 70], [54, 70], [62, 70], [66, 70], [42, 74], [50, 74], [58, 74], [66, 74],
-    [42, 78], [46, 78], [54, 78], [58, 78], [42, 82], [50, 82], [66, 82], [42, 86], [46, 86], [54, 86], [62, 86], [66, 86],
-    [70, 70], [78, 70], [82, 70], [70, 74], [74, 74], [82, 74], [70, 78], [74, 78], [78, 78],
-    [70, 82], [82, 82], [70, 86], [74, 86], [78, 86], [82, 86],
+  private readonly api = inject(PaymentQrApi);
+
+  readonly variableSymbol = input<string | null>(null);
+
+  protected readonly presets: readonly AmountPreset[] = [
+    { amount: 100, label: $localize`:@@home.donate.amount.preset100:100 Kč` },
+    { amount: 500, label: $localize`:@@home.donate.amount.preset500:500 Kč` },
+    { amount: 1000, label: $localize`:@@home.donate.amount.preset1000:1 000 Kč` },
   ];
+  protected readonly minAmount = MIN_AMOUNT;
+  protected readonly maxAmount = MAX_AMOUNT;
+
+  protected readonly customChosen = signal(false);
+  protected readonly presetAmount = signal(DEFAULT_AMOUNT);
+  protected readonly customAmount = signal<number | null>(DEFAULT_AMOUNT);
+  protected readonly customAmountSeed = signal(DEFAULT_AMOUNT);
+  private readonly attempt = signal(0);
+
+  protected readonly amount = computed(() =>
+    this.customChosen() ? wholeAmountInRange(this.customAmount()) : this.presetAmount(),
+  );
+
+  private readonly request = computed<QrRequest>(() => ({
+    amount: this.amount(),
+    variableSymbol: this.variableSymbol(),
+    attempt: this.attempt(),
+  }));
+
+  protected readonly state = toSignal(
+    toObservable(this.request).pipe(
+      debounceTime(REQUEST_DEBOUNCE_MS),
+      distinctUntilChanged(sameRequest),
+      switchMap((request) => this.load(request)),
+    ),
+    { initialValue: { kind: 'loading' } as QrState },
+  );
+
+  protected readonly qr = computed(() => {
+    const state = this.state();
+    return state.kind === 'ready' ? state.qr : null;
+  });
+
+  protected readonly bankAccount = linkedSignal<QrState, BankAccountResponse | null>({
+    source: this.state,
+    computation: (state, previous) => (state.kind === 'ready' ? state.qr.bankAccount : (previous?.value ?? null)),
+  });
+
+  protected readonly ibanInGroups = computed(() => {
+    const account = this.bankAccount();
+    return account ? inGroupsOfFour(account.iban) : '';
+  });
+
+  choosePreset(amount: number): void {
+    this.customChosen.set(false);
+    this.presetAmount.set(amount);
+  }
+
+  chooseCustomAmount(): void {
+    if (this.customChosen()) {
+      return;
+    }
+    this.customAmountSeed.set(this.presetAmount());
+    this.customAmount.set(this.presetAmount());
+    this.customChosen.set(true);
+  }
+
+  enterCustomAmount(event: Event): void {
+    const typed = (event.target as HTMLInputElement).valueAsNumber;
+    this.customAmount.set(Number.isNaN(typed) ? null : typed);
+  }
+
+  retry(): void {
+    this.attempt.update((attempt) => attempt + 1);
+  }
+
+  private load(request: QrRequest): Observable<QrState> {
+    if (request.amount === null) {
+      return of({ kind: 'amountInvalid' });
+    }
+    return this.api.paymentQr(request.amount, request.variableSymbol).pipe(
+      map((qr): QrState => ({ kind: 'ready', qr })),
+      catchError(() => of<QrState>({ kind: 'failed' })),
+      startWith<QrState>({ kind: 'loading' }),
+    );
+  }
+}
+
+function wholeAmountInRange(amount: number | null): number | null {
+  return amount !== null && Number.isInteger(amount) && amount >= MIN_AMOUNT && amount <= MAX_AMOUNT ? amount : null;
+}
+
+function sameRequest(previous: QrRequest, current: QrRequest): boolean {
+  return (
+    previous.amount === current.amount &&
+    previous.variableSymbol === current.variableSymbol &&
+    previous.attempt === current.attempt
+  );
+}
+
+function inGroupsOfFour(iban: string): string {
+  return iban.replace(/(.{4})(?=.)/g, '$1 ');
 }

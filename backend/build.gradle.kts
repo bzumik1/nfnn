@@ -21,6 +21,7 @@ repositories {
 extra["cucumberVersion"] = "7.20.1"
 extra["archunitVersion"] = "1.5.1"
 extra["openhtmltopdfVersion"] = "1.1.24"
+extra["zxingVersion"] = "3.5.3"
 
 dependencies {
 	implementation("org.springframework.boot:spring-boot-starter-actuator")
@@ -37,6 +38,9 @@ dependencies {
 
 	implementation("io.github.openhtmltopdf:openhtmltopdf-core:${property("openhtmltopdfVersion")}")
 	implementation("io.github.openhtmltopdf:openhtmltopdf-pdfbox:${property("openhtmltopdfVersion")}")
+
+	implementation("com.google.zxing:core:${property("zxingVersion")}")
+	implementation("com.google.zxing:javase:${property("zxingVersion")}")
 
 	runtimeOnly("org.postgresql:postgresql")
 	annotationProcessor("org.springframework.boot:spring-boot-configuration-processor")

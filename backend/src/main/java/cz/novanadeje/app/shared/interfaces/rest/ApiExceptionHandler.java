@@ -1,5 +1,6 @@
 package cz.novanadeje.app.shared.interfaces.rest;
 
+import org.springframework.beans.TypeMismatchException;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -9,10 +10,13 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.FieldError;
+import org.springframework.validation.method.ParameterErrors;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
+import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
 import java.net.URI;
@@ -31,6 +35,21 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
         return handleExceptionInternal(ex, problem, headers, status, request);
     }
 
+    @Override
+    protected ResponseEntity<Object> handleHandlerMethodValidationException(HandlerMethodValidationException ex, HttpHeaders headers, HttpStatusCode status, WebRequest request) {
+        return validationProblem(ex, parameterErrors(ex), headers, request);
+    }
+
+    @Override
+    protected ResponseEntity<Object> handleTypeMismatch(TypeMismatchException ex, HttpHeaders headers, HttpStatusCode status, WebRequest request) {
+        return validationProblem(ex, List.of(fieldError(ex.getPropertyName(), message("problem.validation.invalid-value"))), headers, request);
+    }
+
+    @Override
+    protected ResponseEntity<Object> handleMissingServletRequestParameter(MissingServletRequestParameterException ex, HttpHeaders headers, HttpStatusCode status, WebRequest request) {
+        return validationProblem(ex, List.of(fieldError(ex.getParameterName(), message("problem.validation.missing-value"))), headers, request);
+    }
+
     @ExceptionHandler(AuthenticationException.class)
     ProblemDetail handleAuthentication(AuthenticationException ex) {
         return problem(HttpStatus.UNAUTHORIZED, ProblemTypes.UNAUTHENTICATED, "problem.unauthenticated.title");
@@ -47,6 +66,31 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
         problem.setType(type);
         problem.setTitle(getMessageSource().getMessage(titleKey, null, status.getReasonPhrase(), locale));
         return problem;
+    }
+
+    private ResponseEntity<Object> validationProblem(Exception ex, List<Map<String, String>> errors, HttpHeaders headers, WebRequest request) {
+        ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
+        problem.setType(ProblemTypes.VALIDATION);
+        problem.setTitle(message("problem.validation.title"));
+        problem.setDetail(message("problem.validation.detail"));
+        problem.setProperty("errors", errors);
+        return handleExceptionInternal(ex, problem, headers, HttpStatus.BAD_REQUEST, request);
+    }
+
+    private String message(String key) {
+        return getMessageSource().getMessage(key, null, key, LocaleContextHolder.getLocale());
+    }
+
+    private static List<Map<String, String>> parameterErrors(HandlerMethodValidationException ex) {
+        return ex.getParameterValidationResults().stream()
+                .flatMap(result -> result instanceof ParameterErrors beanErrors
+                        ? beanErrors.getFieldErrors().stream().map(error -> fieldError(error.getField(), error.getDefaultMessage()))
+                        : result.getResolvableErrors().stream().map(error -> fieldError(result.getMethodParameter().getParameterName(), error.getDefaultMessage())))
+                .toList();
+    }
+
+    private static Map<String, String> fieldError(String field, String message) {
+        return Map.of("field", field == null ? "" : field, "message", message == null ? "" : message);
     }
 
     private static List<Map<String, String>> fieldErrors(List<FieldError> errors) {

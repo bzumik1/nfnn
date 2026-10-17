@@ -148,7 +148,7 @@ Refresh token is **not** in the JSON body — it ships in a `Set-Cookie` header.
 | `GET` | `/api/donations/me/summary` | donor | Dashboard stat cards (total, count, last, byYear). |
 | `GET` | `/api/donations/me/{id}/receipt` | donor | PDF for one donation. |
 | `GET` | `/api/donations/me/receipts/yearly?year=` | donor | PDF yearly summary. 404 if no donations that year, 400 for future year. |
-| `GET` | `/api/donations/payment-qr?amount=&donorId=` | public (donorId optional) | Returns SPAYD string + PNG QR. Donor sees their VS embedded. |
+| `GET` | `/api/donations/payment-qr?amount=&variableSymbol=` | public | Returns the SPAYD string (Czech "QR platba"), its PNG QR code and the foundation's bank account. A signed-in donor's frontend passes their variable symbol. |
 | `GET/POST/PATCH` | `/api/donations/admin[...]` | admin | List/filter, manually record donation, edit. |
 
 #### `GET /api/donations/me` response
@@ -190,18 +190,29 @@ PDF locale uses `donor.preferredLocale`, not `Accept-Language`.
 #### `GET /api/donations/payment-qr`
 
 ```
-GET /api/donations/payment-qr?amount=500&donorId=...
+GET /api/donations/payment-qr?amount=500&variableSymbol=1234567890
 ```
+
+- `amount`: whole CZK, required, 1 to 1 000 000.
+- `variableSymbol`: optional, 1 to 10 digits. The frontend sends the signed-in donor's `variableSymbol` from `GET /api/donors/me`; the backend does not look the donor up, so the endpoint stays public and stateless.
+- A missing, non-numeric or out-of-range parameter answers 400 `validation` with `errors: [{ field, message }]`, `field` being the query parameter name.
 
 Response:
 ```json
 {
-  "spayd": "SPD*1.0*ACC:CZ12...*AM:500*CC:CZK*X-VS:...",
-  "qrPngBase64": "iVBORw0KG..."
+  "spayd": "SPD*1.0*ACC:CZ6508000000192000145399*AM:500.00*CC:CZK*X-VS:1234567890*RN:NADACNI FOND NOVA NADEJE*MSG:DAR NOVA NADEJE",
+  "qrPngBase64": "iVBORw0KG...",
+  "bankAccount": {
+    "accountNumber": "123456789/0800",
+    "iban": "CZ6508000000192000145399",
+    "recipientName": "Nadační fond Nová naděje"
+  }
 }
 ```
 
-If `donorId` is omitted, the SPAYD has no `X-VS:` segment.
+SPAYD 1.0 rules the backend follows (`donations/domain/payment/QrPayment`): fields joined by `*` in the order `ACC` (IBAN, no spaces), `AM` (two decimals, `.` separator), `CC:CZK`, `X-VS` (only when a variable symbol was given), `RN` (recipient name, max 35 characters), `MSG` (max 60 characters). `RN` and `MSG` are uppercase ASCII without diacritics, limited to the QR alphanumeric set (`0-9 A-Z space $ % + - . / :`). The PNG is 300x300 px, error correction level M.
+
+The bank account comes from `app.donations.bank-account.{account-number,iban,recipient-name}` (env `BANK_ACCOUNT_NUMBER`, `BANK_IBAN`, `BANK_RECIPIENT_NAME`). The defaults are placeholders until the foundation supplies its real account; an IBAN that fails the mod-97 check stops the backend at startup.
 
 ### `contact` — contact form
 
