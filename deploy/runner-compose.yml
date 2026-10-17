@@ -1,0 +1,45 @@
+services:
+  runner:
+    image: myoung34/github-runner:latest
+    container_name: nfnn-runner
+    deploy:
+      resources:
+        reservations:
+          memory: 256MB
+          cpus: "0.00"
+        limits:
+          memory: 1GB
+          cpus: "1.00"
+    restart: unless-stopped
+    network_mode: bridge
+    environment:
+      REPO_URL: https://github.com/bzumik1/nfnn
+      RUNNER_NAME: zima-nfnn
+      LABELS: nfnn
+      RUNNER_WORKDIR: /tmp/runner/work
+      RUNNER_SCOPE: repo
+      ACCESS_TOKEN: ""
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /DATA/AppData/nfnn/secrets.env:/nfnn/secrets.env:ro
+      - /DATA/AppData/github-runner-nfnn:/tmp/runner
+x-casaos:
+  title:
+    custom: GitHub Runner — nfnn
+  main: runner
+  scheme: http
+  hostname: ""
+  index: /
+  category: Developer
+  tagline:
+    cs_cz: Automatické nasazení webu Nová naděje
+    en_us: Automatic deploys for the Nová naděje site
+  description:
+    cs_cz: >-
+      Self-hosted GitHub Actions runner. Po merge do main stáhne nové image
+      z ghcr.io a spustí stack Nové naděje přes docker compose.
+      Neposlouchá na žádném portu, nemá webové rozhraní.
+    en_us: >-
+      Self-hosted GitHub Actions runner. After a merge to main it pulls the new
+      images from ghcr.io and starts the Nová naděje stack with docker compose.
+      Listens on no port and has no web UI.

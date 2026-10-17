@@ -76,20 +76,17 @@ jobs:
           docker build -t ghcr.io/bzumik1/nfnn-backend:latest backend
           docker build -t ghcr.io/bzumik1/nfnn-frontend:latest frontend
 
-      - name: Compose file has no dollar signs
+      - name: Prepare secrets
         run: |
-          if grep -n '\$' deploy/compose.yml; then
-            echo "::error::ZimaOS stores the compose file without its \$\$ escapes, so every \$ becomes an empty variable"
-            exit 1
-          fi
-
-      - name: Prepare compose file
-        run: |
-          sed -e "s/ZMEN_HESLO_DB/ci-password/" \
-              -e "s/ZMEN_JWT_SECRET/ci-secret-that-is-at-least-32-characters-long/" \
-              -e "s#/DATA/AppData/nfnn#$RUNNER_TEMP/nfnn#g" \
-              deploy/compose.yml > "$RUNNER_TEMP/compose.yml"
-          echo "COMPOSE_FILE=$RUNNER_TEMP/compose.yml" >> "$GITHUB_ENV"
+          {
+            echo "DB_PASSWORD=ci-password"
+            echo "JWT_SECRET=ci-secret-that-is-at-least-32-characters-long"
+            echo "NFNN_DATA=$RUNNER_TEMP/nfnn"
+          } > "$RUNNER_TEMP/secrets.env"
+          {
+            echo "COMPOSE_FILE=deploy/compose.yml"
+            echo "COMPOSE_ENV_FILES=$RUNNER_TEMP/secrets.env"
+          } >> "$GITHUB_ENV"
 
       - name: Start the production stack
         run: docker compose up -d --wait --wait-timeout 300

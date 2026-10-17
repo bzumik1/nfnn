@@ -1,8 +1,5 @@
 name: nfnn
 
-x-db-password: &db_password ZMEN_HESLO_DB
-x-jwt-secret: &jwt_secret ZMEN_JWT_SECRET
-
 x-logging: &logging
   driver: json-file
   options:
@@ -14,14 +11,13 @@ services:
     image: postgres:17-alpine
     container_name: nfnn-postgres
     restart: unless-stopped
-    network_mode: bridge
     environment:
       POSTGRES_DB: novanadeje
       POSTGRES_USER: novanadeje
-      POSTGRES_PASSWORD: *db_password
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is not set}
       TZ: Europe/Prague
     volumes:
-      - /DATA/AppData/nfnn/postgres:/var/lib/postgresql/data
+      - ${NFNN_DATA:-/DATA/AppData/nfnn}/postgres:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U novanadeje -d novanadeje"]
       interval: 10s
@@ -37,20 +33,17 @@ services:
     image: postgres:17-alpine
     container_name: nfnn-backup
     restart: unless-stopped
-    network_mode: bridge
     depends_on:
       postgres:
-        condition: service_started
-    links:
-      - postgres
+        condition: service_healthy
     environment:
       PGHOST: postgres
       PGDATABASE: novanadeje
       PGUSER: novanadeje
-      PGPASSWORD: *db_password
+      PGPASSWORD: ${DB_PASSWORD:?DB_PASSWORD is not set}
       TZ: Europe/Prague
     volumes:
-      - /DATA/AppData/nfnn/backups:/backups
+      - ${NFNN_DATA:-/DATA/AppData/nfnn}/backups:/backups
     entrypoint: ["/bin/sh", "-c"]
     command:
       - |
@@ -76,18 +69,15 @@ services:
     image: ghcr.io/bzumik1/nfnn-backend:latest
     container_name: nfnn-backend
     restart: unless-stopped
-    network_mode: bridge
     depends_on:
       postgres:
-        condition: service_started
-    links:
-      - postgres
+        condition: service_healthy
     environment:
       SPRING_PROFILES_ACTIVE: prod
       DB_URL: jdbc:postgresql://postgres:5432/novanadeje
       DB_USERNAME: novanadeje
-      DB_PASSWORD: *db_password
-      JWT_SECRET: *jwt_secret
+      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is not set}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is not set}
       MAIL_HOST: ""
       MAIL_PORT: "587"
       MAIL_USERNAME: ""
@@ -120,12 +110,9 @@ services:
     image: ghcr.io/bzumik1/nfnn-frontend:latest
     container_name: nfnn-frontend
     restart: unless-stopped
-    network_mode: bridge
     depends_on:
       backend:
-        condition: service_started
-    links:
-      - backend
+        condition: service_healthy
     ports:
       - "8089:80"
     healthcheck:
@@ -136,21 +123,5 @@ services:
     deploy:
       resources:
         limits:
-          memory: 256M
+          memory: 128M
     logging: *logging
-
-x-casaos:
-  title:
-    custom: Nová naděje
-  main: frontend
-  scheme: http
-  hostname: ""
-  index: /
-  port_map: "8089"
-  category: Web
-  tagline:
-    cs_cz: Web Nadačního fondu Nová naděje
-    en_us: Website of the Nová naděje foundation
-  description:
-    cs_cz: Web, dárcovský portál a potvrzení o daru. Data v /DATA/AppData/nfnn.
-    en_us: Website, donor portal and donation receipts. Data in /DATA/AppData/nfnn.

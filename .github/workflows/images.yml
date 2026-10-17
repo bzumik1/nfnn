@@ -1,4 +1,4 @@
-name: Publish Docker images
+name: Publish and deploy
 
 on:
   push:
@@ -34,3 +34,30 @@ jobs:
             docker push --all-tags "$prefix-$app"
           done
 
+  deploy:
+    needs: images
+    runs-on: [self-hosted, nfnn]
+    concurrency:
+      group: deploy
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Start the new version
+        run: |
+          docker compose --env-file /nfnn/secrets.env -f deploy/compose.yml \
+            up -d --pull always --remove-orphans --wait --wait-timeout 300
+
+      - name: Verify
+        run: |
+          docker exec nfnn-frontend wget -q -O - http://127.0.0.1/ | grep -q '<app-root'
+          docker exec nfnn-frontend wget -q -O - http://backend:8080/actuator/health | grep -q '"status":"UP"'
+
+      - name: Remove replaced images
+        run: docker image prune -f
+
+      - name: Logs
+        if: failure()
+        run: docker compose --env-file /nfnn/secrets.env -f deploy/compose.yml logs --no-color --tail 200

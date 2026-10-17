@@ -50,7 +50,7 @@ npm start                   # dev server na http://localhost:4200, /api proxy na
 
 ## Produkční nasazení (ZimaOS)
 
-Merge do `main` postaví Docker image do ghcr.io, na Zimě běží jako aplikace z `deploy/compose.yml` (ZimaOS → Custom Install). Instalace, nasazení nové verze, zálohy a obnova jsou v [deploy/README.md](deploy/README.md).
+Merge do `main` postaví Docker image do ghcr.io a runner na Zimě je hned nasadí z `deploy/compose.yml`. Jednorázové nastavení, zálohy a obnova jsou v [deploy/README.md](deploy/README.md).
 
 Lokálně celý stack spustíš přes `cp .env.example .env && docker compose up -d --build`, frontend pak běží na `http://localhost:8080`.
 
