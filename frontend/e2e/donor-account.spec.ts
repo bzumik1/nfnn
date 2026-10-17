@@ -127,9 +127,9 @@ test.describe('Given a visitor who wants a donor account', () => {
         requestedSymbols.push(new URL(route.request().url()).searchParams.get('variableSymbol'));
         await route.fulfill({
           json: {
-            spayd: 'SPD*1.0*ACC:CZ6508000000192000145399*AM:500.00*CC:CZK*X-VS:1234567890',
+            spayd: 'SPD*1.0*ACC:CZ2620100000005544332217*AM:500.00*CC:CZK*X-VS:1234567890',
             qrPngBase64: 'iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAIAAAAmkwkpAAAAEElEQVR4nGNQTX4NRwzEcQBO0hcxU+9NfQAAAABJRU5ErkJggg==',
-            bankAccount: { accountNumber: '123456789/0800', iban: 'CZ6508000000192000145399', recipientName: 'Nadační fond Nová naděje' },
+            bankAccount: { accountNumber: '5544332217/2010', iban: 'CZ2620100000005544332217', recipientName: 'Nadační fond Nová naděje' },
           },
         });
       },

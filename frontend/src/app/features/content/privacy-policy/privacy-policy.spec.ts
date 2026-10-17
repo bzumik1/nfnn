@@ -48,7 +48,7 @@ describe('Given the privacy policy page', () => {
 
   it('when it renders, then it names the controller with its company ID and seat', () => {
     expect(texts('#privacy-controller p').join(' ')).toContain(
-      'Nadační fond Nová naděje, IČO 12345678, se sídlem Ústí nad Labem',
+      'Nová naděje - nadační fond, IČO 27278794, se sídlem Jiráskova 436, 473 01 Nový Bor',
     );
   });
 

@@ -10,11 +10,11 @@ const DEBOUNCE_MS = 300;
 
 function paymentQr(amount: string): PaymentQrResponse {
   return {
-    spayd: `SPD*1.0*ACC:CZ6508000000192000145399*AM:${amount}*CC:CZK`,
+    spayd: `SPD*1.0*ACC:CZ2620100000005544332217*AM:${amount}*CC:CZK`,
     qrPngBase64: `png-for-${amount}`,
     bankAccount: {
-      accountNumber: '123456789/0800',
-      iban: 'CZ6508000000192000145399',
+      accountNumber: '5544332217/2010',
+      iban: 'CZ2620100000005544332217',
       recipientName: 'Nadační fond Nová naděje',
     },
   };
@@ -92,8 +92,8 @@ describe('Given the donate section', () => {
     const image = element<HTMLImageElement>('.qr-code img');
     expect(image.getAttribute('src')).toBe('data:image/png;base64,png-for-500.00');
     expect(image.alt).toContain('QR');
-    expect(text('.bank')).toContain('123456789/0800');
-    expect(text('.bank')).toContain('CZ65 0800 0000 1920 0014 5399');
+    expect(text('.bank')).toContain('5544332217/2010');
+    expect(text('.bank')).toContain('CZ26 2010 0000 0055 4433 2217');
     expect(text('.bank')).not.toContain('Variabilní symbol');
     expect(button('500 Kč').getAttribute('aria-pressed')).toBe('true');
   });
