@@ -13,6 +13,7 @@ services:
   postgres:
     image: postgres:17-alpine
     restart: unless-stopped
+    network_mode: bridge
     environment:
       POSTGRES_DB: novanadeje
       POSTGRES_USER: novanadeje
@@ -34,9 +35,12 @@ services:
   backup:
     image: postgres:17-alpine
     restart: unless-stopped
+    network_mode: bridge
     depends_on:
       postgres:
         condition: service_healthy
+    links:
+      - postgres
     environment:
       PGHOST: postgres
       PGDATABASE: novanadeje
@@ -70,9 +74,12 @@ services:
   backend:
     image: ghcr.io/bzumik1/nfnn-backend:latest
     restart: unless-stopped
+    network_mode: bridge
     depends_on:
       postgres:
         condition: service_healthy
+    links:
+      - postgres
     environment:
       SPRING_PROFILES_ACTIVE: prod
       DB_URL: jdbc:postgresql://postgres:5432/novanadeje
@@ -110,9 +117,12 @@ services:
   frontend:
     image: ghcr.io/bzumik1/nfnn-frontend:latest
     restart: unless-stopped
+    network_mode: bridge
     depends_on:
       backend:
         condition: service_healthy
+    links:
+      - backend
     ports:
       - "8089:80"
     healthcheck:
