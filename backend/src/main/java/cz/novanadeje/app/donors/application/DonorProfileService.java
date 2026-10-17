@@ -1,10 +1,10 @@
 package cz.novanadeje.app.donors.application;
 
-import cz.novanadeje.app.donors.application.event.DonorProfileChanged;
 import cz.novanadeje.app.donors.domain.Donor;
 import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.donors.domain.DonorNotFound;
 import cz.novanadeje.app.donors.domain.DonorRepository;
+import cz.novanadeje.app.shared.application.event.DonorProfileChanged;
 import cz.novanadeje.app.shared.domain.LocaleCode;
 import cz.novanadeje.app.shared.domain.PostalAddress;
 import org.springframework.context.ApplicationEventPublisher;
@@ -37,7 +37,7 @@ public class DonorProfileService {
         LocaleCode locale = command.preferredLocale() == null ? donor.preferredLocale() : LocaleCode.fromTag(command.preferredLocale());
         donor.updateProfile(name, address, locale);
         donors.save(donor);
-        events.publishEvent(new DonorProfileChanged(donor.id(), donor.name(), donor.address()));
+        events.publishEvent(new DonorProfileChanged(donor.id().value(), donor.name(), donor.address(), donor.preferredLocale()));
         return DonorView.of(donor);
     }
 

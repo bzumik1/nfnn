@@ -1,6 +1,6 @@
 package cz.novanadeje.app.donors.application;
 
-import cz.novanadeje.app.donors.domain.DonorType;
+import cz.novanadeje.app.shared.domain.DonorType;
 
 public record RegisterDonorCommand(
         DonorType type,

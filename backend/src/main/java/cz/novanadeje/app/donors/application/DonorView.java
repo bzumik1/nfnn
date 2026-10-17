@@ -2,8 +2,8 @@ package cz.novanadeje.app.donors.application;
 
 import cz.novanadeje.app.donors.domain.CompanyIdentifier;
 import cz.novanadeje.app.donors.domain.Donor;
-import cz.novanadeje.app.donors.domain.DonorType;
 import cz.novanadeje.app.donors.domain.Role;
+import cz.novanadeje.app.shared.domain.DonorType;
 import cz.novanadeje.app.shared.domain.PostalAddress;
 
 import java.time.Instant;

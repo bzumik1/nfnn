@@ -1,6 +1,5 @@
 package cz.novanadeje.app.donors.application;
 
-import cz.novanadeje.app.donors.application.event.DonorRegistered;
 import cz.novanadeje.app.donors.domain.CompanyIdentifier;
 import cz.novanadeje.app.donors.domain.Donor;
 import cz.novanadeje.app.donors.domain.DonorId;
@@ -8,6 +7,7 @@ import cz.novanadeje.app.donors.domain.DonorRepository;
 import cz.novanadeje.app.donors.domain.EmailAlreadyRegistered;
 import cz.novanadeje.app.donors.domain.PasswordHasher;
 import cz.novanadeje.app.donors.domain.RawPassword;
+import cz.novanadeje.app.shared.application.event.DonorRegistered;
 import cz.novanadeje.app.shared.domain.VariableSymbol;
 import cz.novanadeje.app.shared.domain.EmailAddress;
 import cz.novanadeje.app.shared.domain.LocaleCode;
@@ -61,8 +61,8 @@ public class DonorRegistrationService {
         );
         donors.save(donor);
         events.publishEvent(new DonorRegistered(
-                donor.id(), donor.type(), donor.name(), donor.companyIdentifier(), donor.address(), donor.email(),
-                donor.variableSymbol(), donor.registeredAt()
+                donor.id().value(), donor.type(), donor.name(), donor.companyIdentifier().map(CompanyIdentifier::value),
+                donor.address(), donor.email(), donor.variableSymbol(), donor.preferredLocale(), donor.registeredAt()
         ));
         return new AuthenticatedDonor(DonorView.of(donor), sessions.open(donor.id(), donor.roles()));
     }

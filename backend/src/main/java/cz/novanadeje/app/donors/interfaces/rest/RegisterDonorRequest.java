@@ -2,8 +2,8 @@ package cz.novanadeje.app.donors.interfaces.rest;
 
 import cz.novanadeje.app.donors.application.RegisterDonorCommand;
 import cz.novanadeje.app.donors.domain.Donor;
-import cz.novanadeje.app.donors.domain.DonorType;
 import cz.novanadeje.app.donors.domain.RawPassword;
+import cz.novanadeje.app.shared.domain.DonorType;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
