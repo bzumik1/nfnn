@@ -170,6 +170,7 @@ Modelled on the sister site `bzumik1/kocarky`; the server setup and the deploy s
 - ZimaOS replaces the compose project name with `compose-<hash>`, so every service sets `container_name: nfnn-<service>` to stay findable in Portainer and `docker ps`.
 - ZimaOS runs the app on Docker's default `bridge` network, which has no DNS for service names, so every service sets `network_mode: bridge` and reaches the others through `links:` (backend → postgres, backup → postgres, frontend → backend). A new service that talks to another needs a `links:` entry too.
 - `depends_on` uses `service_started`, not `service_healthy`: ZimaOS starts the app once, and a dependency that is not healthy yet would leave the dependent container never started. The backend restarts on its own until Postgres accepts connections, and the backup loop waits with `pg_isready`.
+- ZimaOS adds its own memory reservation to every service and refuses to create a container whose `limits.memory` is below it, so no limit in `deploy/compose.yml` goes under 256M (a 128M frontend was silently never created).
 - Port 8080 is taken on the ZimaOS box; the frontend publishes 8089. Nginx Proxy Manager terminates TLS for `nfnn.znamenacek.duckdns.org` and forwards to it.
 - The `backup` service writes a daily `pg_dump` to `/DATA/AppData/nfnn/backups/`.
 - The mail health indicator is off, so `/actuator/health` (the backend's Docker healthcheck) does not go DOWN when SMTP is missing or unreachable.
