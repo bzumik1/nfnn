@@ -236,6 +236,54 @@ SPAYD 1.0 rules the backend follows (`donations/domain/payment/QrPayment`): fiel
 
 The bank account comes from `app.donations.bank-account.{account-number,iban,recipient-name}` (env `BANK_ACCOUNT_NUMBER`, `BANK_IBAN`, `BANK_RECIPIENT_NAME`). The defaults are placeholders until the foundation supplies its real account; an IBAN that fails the mod-97 check stops the backend at startup.
 
+#### Fio import and pairing
+
+Implemented, with no endpoint of its own: the backend downloads the foundation account's movements from the Fio API every hour and turns them into donations. `GET /api/donations/me` (task 5) reads the `donation` and `donor_record` tables described here; the receipt (task 6) adds a nullable `receipt_number` to `donation` with its own changelog.
+
+Tables (`db/changelog/donations/001`–`004`):
+
+| Table | Holds | Columns that matter to readers of the API |
+|---|---|---|
+| `donor_record` | The `donations` copy of each donor, fed by the shared events above; no FK to `donor`, the ids are equal by construction. It carries the receipt data. | `donor_id`, `type` (`PERSON`/`COMPANY`), `name`, `company_identifier`, `street`, `city`, `postal_code`, `variable_symbol` (unique), `preferred_locale`, `registered_at`, `updated_at` |
+| `bank_payment` | Every incoming CZK movement, stored once (`bank_transaction_id` is Fio's movement id and unique). Texts from the bank are cut to their column width before storing. | `booked_on`, `amount_minor`, `currency`, `sender_account_number`/`sender_bank_code` (canonical Czech account, null for a foreign payer), `counterparty_*` as sent, `variable_symbol` as sent (e.g. `0558`), `matching_variable_symbol` (digits with leading zeros stripped, null when there is none), `constant_symbol`, `specific_symbol`, `message_for_recipient`, `transaction_type`, `imported_at` |
+| `bank_import_state` | One row (`id = 1`): the period the application has downloaded and the last attempt. | `covered_from`/`covered_to`, `last_attempted_at`, `last_succeeded_at`, `last_failure_kind` (`RATE_LIMITED`, `HISTORY_LOCKED`, `UNAUTHORIZED`, `TRANSPORT`, `INVALID_RESPONSE`, `UNEXPECTED`), `last_failure_message` |
+| `donation` | A payment given to a donor (`Donation` aggregate). `uq_donation_bank_payment` makes a double pairing impossible. | `donor_id` (FK to `donor_record`), `bank_payment_id`, `received_on` (= `booked_on`), `amount_minor`, `currency`, `source` (`BANK_TRANSFER`; `MANUAL` has no producer yet), `status` (`RECEIVED`; `REFUNDED` has no producer yet), `paired_by` (`VARIABLE_SYMBOL`, `SENDER_ACCOUNT`; `MANUAL` comes with the admin task), `recorded_at` |
+| `donor_sender_account` | Sender accounts learned for a donor, insert-only (`on conflict do nothing`), with the payment they were learned from. | `donor_id`, `account_number`, `bank_code`, `learned_from_payment_id`, `learned_at` |
+
+"Unpaired" is derived: a `bank_payment` no `donation` references. The reason a payment stayed unpaired is logged, not stored.
+
+Import cycle (`donations/application/importing`, `donations/infrastructure/fio`):
+
+- `FioImportScheduler` exists only when `FIO_TOKEN` is set; it runs `ImportBankPaymentsService.importIncomingPayments` 30 seconds after start (`STARTUP`) and then with a fixed delay of one hour (`HOURLY`), on Boot's single-thread `TaskScheduler` (`@EnableScheduling` in `shared/infrastructure/scheduling`). Overlapping runs are skipped with a WARN. Without a token the `FioClient` bean is `DisabledFioClient` and nothing calls the bank.
+- The application owns the downloaded period (`bank_import_state.covered_from/covered_to`). Every run is exactly one `GET /periods/` request from `max(covered_to − 3 days, today − 89 days)` to today (Prague calendar date); the three-day overlap catches late and back-dated bookings, and a movement delivered twice is skipped by its transaction id. The bank-side bookmark (`/last/`, `setLastDownloadedId`, `setLastDownloadedDate`) is never used.
+- Only the `STARTUP` run may ask for history Fio keeps locked (older than 90 days): on the first run ever it asks from `FIO_HISTORY_FROM` when set, and at every later start again while `FIO_HISTORY_FROM` lies before `covered_from`. An `HOURLY` run never does. The requested period is what gets covered; for a deep request the period the bank reports is trusted instead (it equals the request in practice). A run that leaves days between the old and the new coverage logs a WARN naming the gap and the `FIO_HISTORY_FROM` that closes it.
+- Follow-ups: a 409 (one request per token per 30 seconds) is retried once at the bank's retry time plus a second with the same trigger; a 422 on a period that needed the unlock records `HISTORY_LOCKED` and retries 31 seconds later for the servable window as `HOURLY`; a 422 inside the window is an ERROR about `history-window` and waits for the next hour. At most one follow-up is pending and at most three run per hourly tick. `UNAUTHORIZED` (token missing, not yet active or expired after 180 days) is an ERROR with the renewal instruction; `TRANSPORT`, `INVALID_RESPONSE` and `UNEXPECTED` wait for the next hour. Every failure lands in `bank_import_state`; `/actuator/health` never depends on Fio.
+- The adapter (`FioBankStatementSource`) drops outgoing, zero and non-CZK movements and an amount that is not a whole number of hellers (each with a WARN naming the movement id), parses the sender into a canonical Czech account (`SenderAccount.parse`; an IBAN or a missing bank code gives no sender), and keeps the raw variable symbol next to its matching form. Payments, donations, learned accounts and the coverage are written in one transaction per run.
+
+Pairing rules (`donations/domain/pairing/PaymentPairingPolicy`, applied by `PaymentPairingService` over every unpaired payment at the end of each import and, for one donor, right after a registration):
+
+1. Symbol first. A payment whose `matching_variable_symbol` equals a donor's symbol becomes that donor's donation (`paired_by = VARIABLE_SYMBOL`), even when the sender account was learned by someone else: the payer named the donor. Such a payment also teaches the donor its sender account, which is the only way an account is ever learned (`DonorRecord.learnSenderAccountFrom` refuses any other payment).
+2. A symbol nobody has stays unpaired whatever the account, and teaches nothing (a mistyped symbol must not become someone's gift).
+3. No symbol: the sender account must have been learned by exactly one donor who pays from it; then the payment is theirs (`paired_by = SENDER_ACCOUNT`). Two or more owners leave it unpaired (one WARN per account and run, naming the bank transaction id); no owner, or no Czech sender, leaves it unpaired. The symbol pass runs over the whole unpaired set before the account pass, so an account learned today pairs older payments without a symbol in the same run.
+4. A variable symbol of `0` (what Fio sends for some standing orders) counts as no symbol: it is stored raw, its matching form is null, and the payment goes to the account rule.
+5. The sender's name is never used.
+6. The hourly run never re-points or removes a donation: a payment keeps its donor when imported again, and an account that a second donor proves with their own symbol leaves the first donor's earlier account-based donations in place while later payments from it without a symbol stay unpaired.
+
+Configuration (`application.yml`, `app.donations.*`):
+
+| Property | Env var | Default | Meaning |
+|---|---|---|---|
+| `fio.token` | `FIO_TOKEN` | empty → import off | read-only Fio token ("Sledování účtu") |
+| `fio.base-uri` | — | `https://fioapi.fio.cz/v1/rest` | |
+| `fio.interval` | — | `PT1H` | fixed delay between runs |
+| `fio.initial-delay` | — | `PT30S` | before the `STARTUP` run |
+| `fio.request-timeout` | — | `PT2M` | |
+| `import.overlap` | — | `P3D` | re-requested days |
+| `import.history-window` | — | `P89D` | servable without the unlock (Fio refuses `from` older than 90 days) |
+| `import.history-from` | `FIO_HISTORY_FROM` | empty | first-import depth, ISO date |
+
+`spring.task.scheduling.pool.size` is 1. Logging: the token is never logged (`FioImportProperties.toString()` masks it and the Fio library masks it in every message); counterparty names, account numbers and symbols appear only at DEBUG. At INFO every run logs what the bank answered (`FioBankStatementSource`) and one completion line `Fio import {trigger} {period} completed: ... covered {coverage}` with the counts (`ImportBankPaymentsService`); the pairing after a registration logs one INFO line with its counts.
+
 ### `contact` — contact form
 
 Implemented.
@@ -256,14 +304,30 @@ Request:
 
 ## Cross-context events
 
-All events are immutable Java `record`s in `<context>/application/event/`, published from application services through `ApplicationEventPublisher` and consumed via `@TransactionalEventListener(phase = AFTER_COMMIT)`. Events never carry JPA entities — only IDs and value objects.
+Events consumed by another context live in `shared/application/event/` and carry only shared types and JDK types; events consumed inside their own context stay in `<context>/application/event/`. All are immutable Java `record`s published from application services through `ApplicationEventPublisher`; they never carry JPA entities, only IDs and value objects. Three kinds of listener:
+
+- Side-effect listeners (mail) run `@Async @TransactionalEventListener(phase = AFTER_COMMIT)`, off the request thread.
+- A projection another context's correctness depends on runs `BEFORE_COMMIT` in the publisher's transaction, so the source row and the projection commit together or neither does.
+- Follow-up work on that projection runs synchronously `AFTER_COMMIT` in its own `REQUIRES_NEW` transaction and must only log on failure, never fail the request.
 
 | Event | Publisher | Listener | Effect |
 |---|---|---|---|
-| `DonorRegistered` | `donors/application` | `donors/infrastructure` (welcome email) | Send welcome email via Thymeleaf `templates/email/donors/welcome.html`. |
-| `DonorPasswordResetRequested` | `donors/application` | `donors/infrastructure` | Send reset link email. |
-| `DonationRecorded` | `donations/application` | `donations/infrastructure` | Send donation confirmation with link to PDF. No-op if `donorId == null` (anonymous bank transfer not yet matched). |
-| `ContactMessageReceived` | `contact/application` | `contact/infrastructure` | Forward to `app.contact.recipient-email`. |
+| `DonorRegistered` | `donors/application` (`DonorRegistrationService`) | `donations/infrastructure/events/DonorRecordSynchronizer`, `BEFORE_COMMIT` | `DonorRecordService.register`: copies the donor into `donor_record` in the registration transaction (an upsert, so a replayed event changes nothing). A failure fails the registration. No welcome email is sent in v1. |
+| `DonorRegistered` | as above | `DonorRecordSynchronizer`, `AFTER_COMMIT`, synchronous | `DonorRecordService.pairPaymentsOf` in `REQUIRES_NEW`: pairs the stored payments carrying the donor's symbol and, through the accounts learned from them, the donor's earlier payments without a symbol. Any failure, including a lost race with the hourly import, is a WARN; the registration response is unaffected. |
+| `DonorProfileChanged` | `donors/application` (`DonorProfileService`) | `DonorRecordSynchronizer`, `BEFORE_COMMIT` | `DonorRecordService.changeProfile`: name, address and locale on the `donor_record` copy; the symbol, the pairings and the learned accounts stay. A missing copy is a WARN, never an error for `PATCH /api/donors/me`. |
+| `DonorPasswordResetRequested` | `donors/application` (task 7) | `donors/infrastructure` | Send reset link email. |
+| `DonationRecorded` | not published in v1 | — | Nothing is sent in v1 (`docs/requirements.md` §8) and nothing consumes it; the admin task decides whether it is needed. |
+| `ContactMessageReceived` | `contact/application` | `contact/infrastructure` (`@Async AFTER_COMMIT`) | Forward to `app.contact.recipient-email`. |
+
+Shapes of the shared events:
+
+```java
+record DonorRegistered(UUID donorId, DonorType type, String name, Optional<String> companyIdentifier, PostalAddress address,
+                       EmailAddress email, VariableSymbol variableSymbol, LocaleCode preferredLocale, Instant registeredAt)
+record DonorProfileChanged(UUID donorId, String name, PostalAddress address, LocaleCode preferredLocale)
+```
+
+The donor id travels as a `UUID` and the IČO as a `String`, because `DonorId` and `CompanyIdentifier` stay in `donors`; `preferredLocale` is on both events because the PDF receipt is rendered in it.
 
 Side effects belong to the publishing context, unless another context owns a real reaction in its own model.
 
@@ -284,13 +348,13 @@ Shared pieces that came with it and that every later context reuses:
 
 ### `donors` (done)
 
-`features/donors/donor_registration.feature` and `donor_login.feature` cover registration as a person and as a company, the IČO rules, duplicate emails, weak passwords, sign-in, expiry of the access token, refresh rotation and reuse, sign-out and the profile update. Domain: `Donor` aggregate, `DonorType`, `Role`, `CompanyIdentifier`, `VariableSymbol`, `RawPassword` / `PasswordHash` (`PasswordHasher` port, BCrypt adapter), `RefreshToken` / `RefreshTokenSecret`. Liquibase: `donors/001_create_donor.xml` (`donor`, `donor_role`), `002_create_donor_refresh_token.xml`. Password reset (task 7) adds its own token table.
+`features/donors/donor_registration.feature` and `donor_login.feature` cover registration as a person and as a company, the IČO rules, duplicate emails, weak passwords, sign-in, expiry of the access token, refresh rotation and reuse, sign-out and the profile update. Domain: `Donor` aggregate, `Role`, `CompanyIdentifier`, `VariableSymbol`, `RawPassword` / `PasswordHash` (`PasswordHasher` port, BCrypt adapter), `RefreshToken` / `RefreshTokenSecret`; `DonorType` moved to `shared/domain` with the Fio import. Liquibase: `donors/001_create_donor.xml` (`donor`, `donor_role`), `002_create_donor_refresh_token.xml`. Password reset (task 7) adds its own token table.
 
 Shared pieces that came with it: the sealed `shared/domain/error/DomainException` family (`RuleViolation` 400, `Conflict` 409, `NotFound` 404, `AuthenticationFailure` 401, `AccessDenied` 403), which `ApiExceptionHandler` maps to a problem whose `type` is the exception's code and whose title and detail come from `problem.<code>.title` / `.detail` in the message bundles; `PostalAddress` and `LocaleCode` value objects; `shared/infrastructure/security/JwtConfiguration` (encoder, decoder validated against the application `Clock`, roles → `ROLE_*` authorities), with `ApiSecurityConfiguration` acting as an OAuth2 resource server. Cucumber scenarios truncate every application table before they start (`support/DatabaseCleaner`).
 
-### `donations` first features
+### `donations` (import and pairing done)
 
-Manual donation recording (admin), PDF receipt download, yearly summary edge cases. Domain: `Donation` aggregate, `Money` (in `shared`), `DonationStatus`, `DonationSource`, `DonationReceiptRenderer` port (implemented by openhtmltopdf adapter). Liquibase: `001_create_donation.xml`.
+`features/donations/donor_record_sync.feature`, `fio_payment_import.feature` and `payment_pairing.feature` cover the donor copy, the import cycle with its failures and the pairing rules of "Fio import and pairing". Domain: `Donation` aggregate, `DonationStatus`, `DonationSource`, `PairingMethod`, `BankPayment`, `DonorRecord`, `PaymentPairingPolicy`, the `importing` package (`ImportPlanner`, `ImportCoverage`, `BankImportState`). Liquibase: `donations/001_create_donor_record.xml`, `002_create_bank_payment.xml` (`bank_payment`, `bank_import_state`), `003_create_donation.xml`, `004_create_donor_sender_account.xml`. Still to come: `GET /api/donations/me` and the summary (task 5), the PDF receipts with a `DonationReceiptRenderer` port (task 6), manual donation recording (admin).
 
 ### `content` first features
 
@@ -313,6 +377,10 @@ Belongs in `shared/domain/`:
 - `PersonName`
 - `LocaleCode` (`cs`, `en`)
 - `Slug`
+- `DonorType` (`PERSON`, `COMPANY`; moved from `donors`, the receipt and the `donations` copy need it)
+- `VariableSymbol`, `PostalAddress`, `Iban`, `UuidV7`
+
+Belongs in `shared/application/event/`: `DonorRegistered`, `DonorProfileChanged` (see "Cross-context events").
 
 Does **not** belong in `shared`: JWT types, `Donation`, `Donor`, JPA-related types, Spring `Page`.
 
@@ -335,7 +403,7 @@ Does **not** belong in `shared`: JWT types, `Donation`, `Donor`, JPA-related typ
 | CMS i18n | Czech only for now; structure ready (`Accept-Language`) for adding `content_translation` table later. |
 | Static images | `frontend/public/` for now; backend volume + `/api/content/media/{id}` once admin upload is implemented. |
 | Donation statuses | `RECEIVED`, `REFUNDED`. |
-| Bank reconciliation | Variable symbol derived from donor ID; admin imports CSV later. |
+| Bank reconciliation | Random 10-digit variable symbol per donor; hourly Fio API import pairs by symbol, then by learned sender account for payments without a symbol; CSV import deferred to the admin task. |
 | Yearly receipt edge cases | 404 for empty year, 400 for future year. |
 | Rate limiting | Bucket4j + Caffeine in-memory. |
 | Antispam (contact) | Honeypot + rate limit. No captcha until needed. |

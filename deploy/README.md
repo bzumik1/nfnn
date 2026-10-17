@@ -49,3 +49,28 @@ sudo docker start nfnn-backend
 ## Přechod na skutečnou doménu
 
 Stejně jako `nakocarky.cz`: doménu na Cloudflare (proxied, SSL Full strict), CNAME na `kocarky.znamenacek.duckdns.org`, v NPM nový proxy host na stejný port 8089 a `www` přesměrovat na holou doménu. Před ostrým provozem je potřeba SMTP služba (`MAIL_*` u backendu) a SPF/DKIM/DMARC na doméně.
+
+## Fio API
+
+Backend si každou hodinu stahuje pohyby na účtu fondu přes Fio API (jen čtení) a páruje je s dárci. Bez tokenu je import vypnutý a zbytek aplikace běží normálně.
+
+1. Ve Fio internetovém bankovnictví: Nastavení → API → vytvoř token typu „Sledování účtu“ pro účet fondu. Token začne fungovat asi 5 minut po vytvoření a platí 180 dní; hned si dej do kalendáře připomínku na jeho obnovu.
+2. Do `compose.yml`, který vkládáš do ZimaOS, přidej pod `environment:` backendu řádek `FIO_TOKEN: <token>` – hodnotu přímo, bez `$` a bez kotvy. Soubor v repu tento řádek nemá, takže ho přidej při každém dalším vložení compose do ZimaOS; token nikdy necommituj.
+3. První import sáhne 89 dní zpět. Má-li jít hlouběji: ve Fio odemkni historii (Nastavení → API, ikona zámku; odemčení platí 10 minut), přidej backendu řádek `FIO_HISTORY_FROM: 2025-01-01` (datum RRRR-MM-DD, zase bez `$`) a do 10 minut backend restartuj (přeinstaluj aplikaci). Dokud se hlubší období nestáhne, backend se o něj pokusí při každém dalším startu; hodinové běhy chtějí jen posledních pár dní, takže odemčení potřebuje jen start.
+4. V logu backendu (`sudo docker logs nfnn-backend`) zkontroluj asi 30 s po startu řádek `Fio import STARTUP ... completed`. `failed with HISTORY_LOCKED` znamená, že historie nebyla odemčená a import zatím pokryl jen 89 dní; `failed with UNAUTHORIZED` znamená, že token chybí, ještě neplatí nebo vypršel – vytvoř nový a nasaď ho stejně jako ten první.
+5. Stav importu je v tabulce `bank_import_state` (`covered_from`, `covered_to`, poslední chyba). `/actuator/health` na Fio nezávisí.
+
+### Dárci registrovaní před nasazením importu
+
+Párování používá vlastní kopii dárců v tabulce `donor_record`, kterou plní registrace. Dárci zaregistrovaní před nasazením verze s importem v ní nejsou a jejich platby by zůstaly nespárované. Po prvním nasazení s importem spusť jednou:
+
+```bash
+sudo docker exec -i nfnn-backup psql <<'SQL'
+insert into donor_record (donor_id, type, name, company_identifier, street, city, postal_code, variable_symbol, preferred_locale, registered_at, updated_at)
+select id, type, name, company_identifier, street, city, postal_code, variable_symbol, preferred_locale, registered_at, registered_at
+from donor d
+where not exists (select 1 from donor_record r where r.donor_id = d.id);
+SQL
+```
+
+Kontejner `nfnn-backup` má přihlášení k databázi v prostředí, takže `psql` nepotřebuje žádné parametry. Příkaz je idempotentní; platby těchto dárců spáruje nejbližší hodinový import.
