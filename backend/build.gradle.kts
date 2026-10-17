@@ -23,6 +23,8 @@ extra["archunitVersion"] = "1.5.1"
 extra["openhtmltopdfVersion"] = "1.1.24"
 
 dependencies {
+	implementation(project(":fio-api"))
+
 	implementation("org.springframework.boot:spring-boot-starter-actuator")
 	implementation("org.springframework.boot:spring-boot-starter-data-jpa")
 	implementation("org.springframework.boot:spring-boot-starter-liquibase")
