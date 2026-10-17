@@ -46,9 +46,9 @@ describe('Given the home page', () => {
   function expectQrRequest(): TestRequest {
     const request = http.expectOne((candidate) => candidate.url === PAYMENT_QR_URL);
     request.flush({
-      spayd: 'SPD*1.0*ACC:CZ6508000000192000145399*AM:500.00*CC:CZK',
+      spayd: 'SPD*1.0*ACC:CZ2620100000005544332217*AM:500.00*CC:CZK',
       qrPngBase64: 'png',
-      bankAccount: { accountNumber: '123456789/0800', iban: 'CZ6508000000192000145399', recipientName: 'Nadační fond Nová naděje' },
+      bankAccount: { accountNumber: '5544332217/2010', iban: 'CZ2620100000005544332217', recipientName: 'Nadační fond Nová naděje' },
     });
     return request;
   }

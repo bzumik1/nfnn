@@ -65,7 +65,7 @@ Admin (role `ADMIN` required):
   "hero": { "eyebrow": "...", "title": "...", "subtitle": "...", "primaryCtaLabel": "...", "secondaryCtaLabel": "...", "imageUrl": "..." },
   "about": { "eyebrow": "...", "title": "...", "paragraphs": ["...", "..."], "imageUrl": "...", "highlight": { "title": "...", "text": "..." } },
   "stats": [{ "value": "19+", "label": "let pomáháme" }],
-  "donate": { "title": "...", "body": "...", "bankAccount": "123456789/0800", "iban": "CZ12 0800 0000 0012 3456 7890" },
+  "donate": { "title": "...", "body": "...", "bankAccount": "5544332217/2010", "iban": "CZ26 2010 0000 0055 4433 2217" },
   "contactInfo": { "email": "info@novanadeje.cz", "address": "...", "ico": "12345678" },
   "latestNews": [ /* 3 newest news items, same shape as /news list item */ ]
 }
@@ -222,11 +222,11 @@ GET /api/donations/payment-qr?amount=500&variableSymbol=1234567890
 Response:
 ```json
 {
-  "spayd": "SPD*1.0*ACC:CZ6508000000192000145399*AM:500.00*CC:CZK*X-VS:1234567890*RN:NADACNI FOND NOVA NADEJE*MSG:DAR NOVA NADEJE",
+  "spayd": "SPD*1.0*ACC:CZ2620100000005544332217*AM:500.00*CC:CZK*X-VS:1234567890*RN:NADACNI FOND NOVA NADEJE*MSG:DAR NOVA NADEJE",
   "qrPngBase64": "iVBORw0KG...",
   "bankAccount": {
-    "accountNumber": "123456789/0800",
-    "iban": "CZ6508000000192000145399",
+    "accountNumber": "5544332217/2010",
+    "iban": "CZ2620100000005544332217",
     "recipientName": "Nadační fond Nová naděje"
   }
 }

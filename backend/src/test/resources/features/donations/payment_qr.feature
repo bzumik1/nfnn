@@ -3,14 +3,14 @@ Feature: Visitor gets a QR payment for a donation
   Scenario: Donor's QR payment carries their variable symbol
     When the visitor asks for a QR payment of 500 CZK with variable symbol "1234567890"
     Then the response status is 200
-    And the QR payment reads "SPD*1.0*ACC:CZ6508000000192000145399*AM:500.00*CC:CZK*X-VS:1234567890*RN:NADACNI FOND NOVA NADEJE*MSG:DAR NOVA NADEJE"
+    And the QR payment reads "SPD*1.0*ACC:CZ2620100000005544332217*AM:500.00*CC:CZK*X-VS:1234567890*RN:NADACNI FOND NOVA NADEJE*MSG:DAR NOVA NADEJE"
     And the QR code is a PNG image that encodes the QR payment
-    And the foundation's bank account is "123456789/0800" with IBAN "CZ6508000000192000145399" held by "Nadační fond Nová naděje"
+    And the foundation's bank account is "5544332217/2010" with IBAN "CZ2620100000005544332217" held by "Nadační fond Nová naděje"
 
   Scenario: Anonymous visitor's QR payment has no variable symbol
     When the visitor asks for a QR payment of 1000 CZK
     Then the response status is 200
-    And the QR payment contains "ACC:CZ6508000000192000145399*AM:1000.00*CC:CZK"
+    And the QR payment contains "ACC:CZ2620100000005544332217*AM:1000.00*CC:CZK"
     And the QR payment has no variable symbol
 
   Scenario Outline: Amount that is not a whole number of crowns from 1 to 1 000 000 is rejected

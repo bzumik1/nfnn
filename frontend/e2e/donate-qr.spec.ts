@@ -13,11 +13,11 @@ async function servePaymentQr(page: Page, requestedAmounts: string[]): Promise<v
       requestedAmounts.push(amount);
       await route.fulfill({
         json: {
-          spayd: `SPD*1.0*ACC:CZ6508000000192000145399*AM:${amount}.00*CC:CZK`,
+          spayd: `SPD*1.0*ACC:CZ2620100000005544332217*AM:${amount}.00*CC:CZK`,
           qrPngBase64: QR_FOR_AMOUNT[amount] ?? QR_FOR_AMOUNT['500'],
           bankAccount: {
-            accountNumber: '123456789/0800',
-            iban: 'CZ6508000000192000145399',
+            accountNumber: '5544332217/2010',
+            iban: 'CZ2620100000005544332217',
             recipientName: 'Nadační fond Nová naděje',
           },
         },
@@ -40,6 +40,6 @@ test.describe('Given a visitor on the home page', () => {
     await expect(qrCode).toHaveAttribute('src', `data:image/png;base64,${QR_FOR_AMOUNT['1000']}`);
     expect(await qrCode.evaluate((image: HTMLImageElement) => image.complete && image.naturalWidth > 0)).toBe(true);
     expect(requestedAmounts).toEqual(['500', '1000']);
-    await expect(page.locator('#donate')).toContainText('CZ65 0800 0000 1920 0014 5399');
+    await expect(page.locator('#donate')).toContainText('CZ26 2010 0000 0055 4433 2217');
   });
 });
