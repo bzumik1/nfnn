@@ -1,5 +1,8 @@
 name: nfnn
 
+x-db-password: &db_password ZMEN_HESLO_DB
+x-jwt-secret: &jwt_secret ZMEN_JWT_SECRET
+
 x-logging: &logging
   driver: json-file
   options:
@@ -11,14 +14,14 @@ services:
     image: postgres:17-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ${DB_NAME:-novanadeje}
-      POSTGRES_USER: ${DB_USERNAME:-novanadeje}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set}
+      POSTGRES_DB: novanadeje
+      POSTGRES_USER: novanadeje
+      POSTGRES_PASSWORD: *db_password
       TZ: Europe/Prague
     volumes:
-      - ${NFNN_DATA:-/DATA/AppData/nfnn}/postgres:/var/lib/postgresql/data
+      - /DATA/AppData/nfnn/postgres:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      test: ["CMD-SHELL", "pg_isready -U novanadeje -d novanadeje"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -36,13 +39,13 @@ services:
         condition: service_healthy
     environment:
       PGHOST: postgres
-      PGDATABASE: ${DB_NAME:-novanadeje}
-      PGUSER: ${DB_USERNAME:-novanadeje}
-      PGPASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set}
-      BACKUP_KEEP_DAYS: ${BACKUP_KEEP_DAYS:-30}
+      PGDATABASE: novanadeje
+      PGUSER: novanadeje
+      PGPASSWORD: *db_password
+      BACKUP_KEEP_DAYS: "30"
       TZ: Europe/Prague
     volumes:
-      - ${NFNN_DATA:-/DATA/AppData/nfnn}/backups:/backups
+      - /DATA/AppData/nfnn/backups:/backups
     entrypoint: ["/bin/sh", "-c"]
     command:
       - |
@@ -65,24 +68,24 @@ services:
     logging: *logging
 
   backend:
-    image: ${NFNN_IMAGE_PREFIX:-ghcr.io/bzumik1/nfnn}-backend:${NFNN_TAG:-latest}
+    image: ghcr.io/bzumik1/nfnn-backend:latest
     restart: unless-stopped
     depends_on:
       postgres:
         condition: service_healthy
     environment:
       SPRING_PROFILES_ACTIVE: prod
-      DB_URL: jdbc:postgresql://postgres:5432/${DB_NAME:-novanadeje}
-      DB_USERNAME: ${DB_USERNAME:-novanadeje}
-      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set}
-      MAIL_HOST: ${MAIL_HOST:-}
-      MAIL_PORT: ${MAIL_PORT:-587}
-      MAIL_USERNAME: ${MAIL_USERNAME:-}
-      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
-      MAIL_AUTH: ${MAIL_AUTH:-true}
-      MAIL_STARTTLS: ${MAIL_STARTTLS:-true}
-      CONTACT_RECIPIENT: ${CONTACT_RECIPIENT:-info@novanadeje.cz}
-      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set}
+      DB_URL: jdbc:postgresql://postgres:5432/novanadeje
+      DB_USERNAME: novanadeje
+      DB_PASSWORD: *db_password
+      JWT_SECRET: *jwt_secret
+      MAIL_HOST: ""
+      MAIL_PORT: "587"
+      MAIL_USERNAME: ""
+      MAIL_PASSWORD: ""
+      MAIL_AUTH: "true"
+      MAIL_STARTTLS: "true"
+      CONTACT_RECIPIENT: info@novanadeje.cz
       JAVA_TOOL_OPTIONS: -XX:MaxRAMPercentage=75
       TZ: Europe/Prague
     healthcheck:
@@ -105,13 +108,13 @@ services:
     logging: *logging
 
   frontend:
-    image: ${NFNN_IMAGE_PREFIX:-ghcr.io/bzumik1/nfnn}-frontend:${NFNN_TAG:-latest}
+    image: ghcr.io/bzumik1/nfnn-frontend:latest
     restart: unless-stopped
     depends_on:
       backend:
         condition: service_healthy
     ports:
-      - "${FRONTEND_PORT:-8089}:80"
+      - "8089:80"
     healthcheck:
       test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/"]
       interval: 10s
@@ -122,3 +125,19 @@ services:
         limits:
           memory: 128M
     logging: *logging
+
+x-casaos:
+  title:
+    custom: Nová naděje
+  main: frontend
+  scheme: http
+  hostname: ""
+  index: /
+  port_map: "8089"
+  category: Web
+  tagline:
+    cs_cz: Web Nadačního fondu Nová naděje
+    en_us: Website of the Nová naděje foundation
+  description:
+    cs_cz: Web, dárcovský portál a potvrzení o daru. Data v /DATA/AppData/nfnn.
+    en_us: Website, donor portal and donation receipts. Data in /DATA/AppData/nfnn.
