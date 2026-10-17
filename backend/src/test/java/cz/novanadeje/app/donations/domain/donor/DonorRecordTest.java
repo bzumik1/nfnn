@@ -1,6 +1,11 @@
 package cz.novanadeje.app.donations.domain.donor;
 
+import cz.novanadeje.app.donations.domain.bank.BankPayment;
+import cz.novanadeje.app.donations.domain.bank.BankPaymentId;
+import cz.novanadeje.app.donations.domain.bank.BankTransactionId;
+import cz.novanadeje.app.donations.domain.bank.IncomingMovement;
 import cz.novanadeje.app.donations.domain.bank.SenderAccount;
+import cz.novanadeje.app.shared.domain.Money;
 import cz.novanadeje.app.shared.domain.DonorType;
 import cz.novanadeje.app.shared.domain.LocaleCode;
 import cz.novanadeje.app.shared.domain.PostalAddress;
@@ -10,9 +15,9 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.Optional;
 import java.util.Set;
-import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -25,7 +30,7 @@ class DonorRecordTest {
     private static final VariableSymbol SYMBOL = new VariableSymbol("4821937560");
     private static final PostalAddress ADDRESS = new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01");
     private static final SenderAccount ACCOUNT = new SenderAccount("2900233333", "2010");
-    private static final UUID PAYMENT = UuidV7.generate(LATER);
+    private static final BankPaymentId PAYMENT = BankPaymentId.newId(LATER);
 
     @Test
     @DisplayName("Given a person's details, when the record is registered, then it is a person without a company identifier and with the given profile")
@@ -115,7 +120,13 @@ class DonorRecordTest {
     @Test
     @DisplayName("Given a payment whose matching symbol is the record's, when asked, then the record claims it by symbol")
     void should_claim_when_asked_given_payment_with_own_symbol() {
-        assertThat(person().claimsBySymbol(payment(Optional.of(SYMBOL), Optional.of(ACCOUNT)))).isTrue();
+        assertThat(person().claimsBySymbol(payment(PAYMENT, SYMBOL.value(), Optional.of(ACCOUNT)))).isTrue();
+    }
+
+    @Test
+    @DisplayName("Given a payment whose symbol is the record's padded with zeros, when asked, then the record claims it by its matching form")
+    void should_claim_when_asked_given_payment_with_own_symbol_padded_with_zeros() {
+        assertThat(person().claimsBySymbol(payment(PAYMENT, "000" + SYMBOL.value(), Optional.of(ACCOUNT)))).isTrue();
     }
 
     @Test
@@ -123,8 +134,8 @@ class DonorRecordTest {
     void should_not_claim_when_asked_given_payment_with_other_or_no_symbol() {
         DonorRecord record = person();
 
-        assertThat(record.claimsBySymbol(payment(Optional.of(new VariableSymbol("1111111111")), Optional.of(ACCOUNT)))).isFalse();
-        assertThat(record.claimsBySymbol(payment(Optional.empty(), Optional.of(ACCOUNT)))).isFalse();
+        assertThat(record.claimsBySymbol(payment(PAYMENT, "1111111111", Optional.of(ACCOUNT)))).isFalse();
+        assertThat(record.claimsBySymbol(payment(PAYMENT, null, Optional.of(ACCOUNT)))).isFalse();
     }
 
     @Test
@@ -132,9 +143,9 @@ class DonorRecordTest {
     void should_refuse_learning_when_learned_given_payment_without_own_symbol() {
         DonorRecord record = person();
 
-        assertThatThrownBy(() -> record.learnSenderAccountFrom(payment(Optional.empty(), Optional.of(ACCOUNT)), LATER))
+        assertThatThrownBy(() -> record.learnSenderAccountFrom(payment(PAYMENT, null, Optional.of(ACCOUNT)), LATER))
                 .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> record.learnSenderAccountFrom(payment(Optional.of(new VariableSymbol("1111111111")), Optional.of(ACCOUNT)), LATER))
+        assertThatThrownBy(() -> record.learnSenderAccountFrom(payment(PAYMENT, "1111111111", Optional.of(ACCOUNT)), LATER))
                 .isInstanceOf(IllegalArgumentException.class);
         assertThat(record.senderAccounts()).isEmpty();
     }
@@ -144,7 +155,7 @@ class DonorRecordTest {
     void should_learn_account_when_learned_given_own_symbol_from_new_account() {
         DonorRecord record = person();
 
-        Optional<LearnedSenderAccount> learned = record.learnSenderAccountFrom(payment(Optional.of(SYMBOL), Optional.of(ACCOUNT)), LATER);
+        Optional<LearnedSenderAccount> learned = record.learnSenderAccountFrom(payment(PAYMENT, SYMBOL.value(), Optional.of(ACCOUNT)), LATER);
 
         assertThat(learned).contains(new LearnedSenderAccount(ACCOUNT, PAYMENT, LATER));
         assertThat(record.paysFrom(ACCOUNT)).isTrue();
@@ -155,10 +166,10 @@ class DonorRecordTest {
     @DisplayName("Given an account the record already knows, when learned again, then nothing is added")
     void should_learn_nothing_when_learned_given_known_account() {
         DonorRecord record = person();
-        record.learnSenderAccountFrom(payment(Optional.of(SYMBOL), Optional.of(ACCOUNT)), LATER);
+        record.learnSenderAccountFrom(payment(PAYMENT, SYMBOL.value(), Optional.of(ACCOUNT)), LATER);
 
         Optional<LearnedSenderAccount> again = record.learnSenderAccountFrom(
-                new PaymentFacts(UuidV7.generate(LATER), Optional.of(SYMBOL), Optional.of(ACCOUNT)), LATER.plusSeconds(60));
+                payment(BankPaymentId.newId(LATER), SYMBOL.value(), Optional.of(ACCOUNT)), LATER.plusSeconds(60));
 
         assertThat(again).isEmpty();
         assertThat(record.learnedSenderAccounts()).containsExactly(new LearnedSenderAccount(ACCOUNT, PAYMENT, LATER));
@@ -169,7 +180,7 @@ class DonorRecordTest {
     void should_learn_nothing_when_learned_given_payment_without_czech_sender() {
         DonorRecord record = person();
 
-        assertThat(record.learnSenderAccountFrom(payment(Optional.of(SYMBOL), Optional.empty()), LATER)).isEmpty();
+        assertThat(record.learnSenderAccountFrom(payment(PAYMENT, SYMBOL.value(), Optional.empty()), LATER)).isEmpty();
         assertThat(record.senderAccounts()).isEmpty();
     }
 
@@ -177,7 +188,7 @@ class DonorRecordTest {
     @DisplayName("Given a record with a learned account, when the profile changes, then name, address, locale and update time change while the symbol and the accounts stay")
     void should_keep_symbol_and_accounts_when_profile_changed_given_learned_account() {
         DonorRecord record = person();
-        record.learnSenderAccountFrom(payment(Optional.of(SYMBOL), Optional.of(ACCOUNT)), LATER);
+        record.learnSenderAccountFrom(payment(PAYMENT, SYMBOL.value(), Optional.of(ACCOUNT)), LATER);
         PostalAddress newAddress = new PostalAddress("Krátká 3", "Praha", "110 00");
 
         record.changeProfile(" Jana Malá ", newAddress, LocaleCode.EN, LATER);
@@ -232,7 +243,9 @@ class DonorRecordTest {
                 SYMBOL, LocaleCode.CS, REGISTERED_AT);
     }
 
-    private static PaymentFacts payment(Optional<VariableSymbol> matchingSymbol, Optional<SenderAccount> sender) {
-        return new PaymentFacts(PAYMENT, matchingSymbol, sender);
+    private static BankPayment payment(BankPaymentId id, String variableSymbol, Optional<SenderAccount> sender) {
+        return BankPayment.incoming(id, IncomingMovement.of(new BankTransactionId(1001), LocalDate.of(2026, 10, 15), Money.czk(50000), sender,
+                sender.map(SenderAccount::accountNumber), sender.map(SenderAccount::bankCode), Optional.of("Nováková Jana"),
+                Optional.ofNullable(variableSymbol), Optional.empty(), Optional.empty(), Optional.empty(), "Bezhotovostní příjem"), LATER);
     }
 }

@@ -4,6 +4,8 @@ import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
+import cz.novanadeje.app.donations.application.pairing.PairingOutcome;
+import cz.novanadeje.app.donations.application.pairing.PaymentPairingService;
 import cz.novanadeje.app.donations.domain.donor.DonorRecord;
 import cz.novanadeje.app.donations.domain.donor.DonorRecordRepository;
 import cz.novanadeje.app.donations.domain.donor.DonorReference;
@@ -21,6 +23,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -32,6 +35,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
@@ -49,6 +53,8 @@ class DonorRecordServiceTest {
 
     @Mock
     private DonorRecordRepository donorRecords;
+    @Mock
+    private PaymentPairingService pairing;
 
     private DonorRecordService service;
     private ListAppender<ILoggingEvent> logs;
@@ -56,7 +62,7 @@ class DonorRecordServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new DonorRecordService(donorRecords, Clock.fixed(NOW, ZoneOffset.UTC));
+        service = new DonorRecordService(donorRecords, pairing, Clock.fixed(NOW, ZoneOffset.UTC));
         logger = (Logger) LoggerFactory.getLogger(DonorRecordService.class);
         logs = new ListAppender<>();
         logs.start();
@@ -86,6 +92,7 @@ class DonorRecordServiceTest {
         assertThat(saved.registeredAt()).isEqualTo(REGISTERED_AT);
         assertThat(saved.senderAccounts()).isEmpty();
         verifyNoMoreInteractions(donorRecords);
+        verifyNoInteractions(pairing);
     }
 
     @Test
@@ -117,6 +124,7 @@ class DonorRecordServiceTest {
         assertThat(saved.variableSymbol()).isEqualTo(SYMBOL);
         assertThat(saved.registeredAt()).isEqualTo(REGISTERED_AT);
         assertThat(saved.updatedAt()).isEqualTo(NOW);
+        verifyNoInteractions(pairing);
     }
 
     @Test
@@ -147,27 +155,43 @@ class DonorRecordServiceTest {
     }
 
     @Test
-    @DisplayName("Given a known donor, when payments are paired after the registration, then the record is loaded and nothing is written")
-    void should_load_record_when_pairing_after_registration_given_known_donor() {
-        when(donorRecords.findById(DONOR)).thenReturn(Optional.of(
-                DonorRecord.registerPerson(DONOR, "Jana Nováková", ADDRESS, SYMBOL, LocaleCode.CS, REGISTERED_AT)));
+    @DisplayName("Given a known donor, when payments are paired after the registration, then the loaded record is paired at the clock's time and nothing is written")
+    void should_pair_loaded_record_when_pairing_after_registration_given_known_donor() {
+        DonorRecord record = DonorRecord.registerPerson(DONOR, "Jana Nováková", ADDRESS, SYMBOL, LocaleCode.CS, REGISTERED_AT);
+        when(donorRecords.findById(DONOR)).thenReturn(Optional.of(record));
+        when(pairing.pairPaymentsOf(record, NOW)).thenReturn(new PairingOutcome(1, 1, 1, 0));
 
         service.pairPaymentsOf(DONOR_ID);
 
+        verify(pairing).pairPaymentsOf(record, NOW);
         verify(donorRecords).findById(DONOR);
         verifyNoMoreInteractions(donorRecords);
         assertThat(warnings()).isEmpty();
     }
 
     @Test
-    @DisplayName("Given a donor unknown to donations, when payments are paired after the registration, then a warning names the donor and nothing fails")
+    @DisplayName("Given a donor unknown to donations, when payments are paired after the registration, then a warning names the donor and nothing is paired")
     void should_warn_when_pairing_after_registration_given_unknown_donor() {
         when(donorRecords.findById(DONOR)).thenReturn(Optional.empty());
 
         service.pairPaymentsOf(DONOR_ID);
 
         verifyNoMoreInteractions(donorRecords);
+        verifyNoInteractions(pairing);
         assertThat(warnings()).anySatisfy(message -> assertThat(message).contains(DONOR_ID.toString()));
+    }
+
+    @Test
+    @DisplayName("Given pairing that loses a race with the import, when payments are paired after the registration, then the integrity violation is logged and swallowed")
+    void should_swallow_and_warn_when_pairing_after_registration_given_lost_race() {
+        DonorRecord record = DonorRecord.registerPerson(DONOR, "Jana Nováková", ADDRESS, SYMBOL, LocaleCode.CS, REGISTERED_AT);
+        when(donorRecords.findById(DONOR)).thenReturn(Optional.of(record));
+        when(pairing.pairPaymentsOf(record, NOW)).thenThrow(new DataIntegrityViolationException("uq_donation_bank_payment"));
+
+        service.pairPaymentsOf(DONOR_ID);
+
+        assertThat(warnings()).singleElement().isEqualTo("pairing after registration of donor " + DONOR_ID
+                + " lost a race with the import; the hourly pass completes it");
     }
 
     private RegisterDonorRecordCommand personCommand(String name, PostalAddress address, LocaleCode locale) {

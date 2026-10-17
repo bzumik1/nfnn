@@ -1,10 +1,12 @@
 package cz.novanadeje.app.donations.application.donor;
 
+import cz.novanadeje.app.donations.application.pairing.PaymentPairingService;
 import cz.novanadeje.app.donations.domain.donor.DonorRecord;
 import cz.novanadeje.app.donations.domain.donor.DonorRecordRepository;
 import cz.novanadeje.app.donations.domain.donor.DonorReference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,10 +21,12 @@ public class DonorRecordService {
     private static final Logger LOG = LoggerFactory.getLogger(DonorRecordService.class);
 
     private final DonorRecordRepository donorRecords;
+    private final PaymentPairingService pairing;
     private final Clock clock;
 
-    public DonorRecordService(DonorRecordRepository donorRecords, Clock clock) {
+    public DonorRecordService(DonorRecordRepository donorRecords, PaymentPairingService pairing, Clock clock) {
         this.donorRecords = donorRecords;
+        this.pairing = pairing;
         this.clock = clock;
     }
 
@@ -44,6 +48,12 @@ public class DonorRecordService {
         Optional<DonorRecord> record = donorRecords.findById(new DonorReference(donorId));
         if (record.isEmpty()) {
             LOG.warn("Payments of donor {} were not paired: donations has no record of the donor", donorId);
+            return;
+        }
+        try {
+            pairing.pairPaymentsOf(record.get(), clock.instant());
+        } catch (DataIntegrityViolationException e) {
+            LOG.warn("pairing after registration of donor {} lost a race with the import; the hourly pass completes it", donorId);
         }
     }
 

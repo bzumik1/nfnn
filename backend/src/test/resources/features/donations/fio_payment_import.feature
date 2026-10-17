@@ -27,7 +27,7 @@ Feature: Incoming bank payments are imported from Fio
     When the application starts the import
     Then Fio was asked for movements from 2025-01-01 to 2026-10-17
     And 2 bank payments are stored
-    And the bank movements are covered from 2025-02-03 to 2026-10-15
+    And the bank movements are covered from 2025-01-01 to 2026-10-17
 
   Scenario: Locked history is attempted at startup and the import falls back to the last 89 days
     Given today is 2026-10-17
@@ -113,6 +113,7 @@ Feature: Incoming bank payments are imported from Fio
     And the bank account has these movements:
       | id   | date       | amount | account    | bankCode | name          | variableSymbol |
       | 1001 | 2026-10-18 | 500.00 | 2900233333 | 2010     | Nováková Jana |                |
+    And the bank reports the period 2026-10-18 to 2026-10-18
     When the hourly import runs
     Then Fio was asked for movements from 2026-10-12 to 2026-10-18
     And the bank movements are covered from 2026-07-18 to 2026-10-18
@@ -181,8 +182,10 @@ Feature: Incoming bank payments are imported from Fio
     And the bank account has these movements:
       | id   | date       | amount | account    | bankCode | name          | variableSymbol |
       | 1001 | 2026-10-15 | 500.00 | 2900233333 | 2010     | Nováková Jana | 0004821937560  |
+      | 1002 | 2026-10-16 | 300.00 | 2900233333 | 2010     | Nováková Jana | 0              |
     When the application starts the import
     Then bank payment 1001 carries variable symbol "0004821937560" matched as "4821937560"
+    And bank payment 1002 carries variable symbol "0" and no symbol to match
 
   Scenario: A payment with overlong texts from the bank is stored with the texts cut to size
     Given today is 2026-10-17

@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donations.cucumber;
 
+import cz.novanadeje.app.cucumber.ScenarioDonors;
 import cz.novanadeje.app.donations.application.importing.FollowUp;
 import cz.novanadeje.app.donations.application.importing.ImportBankPaymentsService;
 import cz.novanadeje.app.donations.application.importing.ImportReport;
@@ -68,18 +69,20 @@ public class FioImportStepDefinitions {
     private final FakeFioClient fio;
     private final MutableClock clock;
     private final JdbcClient jdbc;
+    private final ScenarioDonors scenarioDonors;
     private final List<ImportReport> reports = new ArrayList<>();
     private ImportSettings settings = ImportSettings.defaults();
     private Instant clockBeforeScenarioDate;
 
     public FioImportStepDefinitions(ImportBankPaymentsService importService, BankPaymentRepository payments, BankImportStateRepository states,
-                                    FakeFioClient fio, MutableClock clock, JdbcClient jdbc) {
+                                    FakeFioClient fio, MutableClock clock, JdbcClient jdbc, ScenarioDonors scenarioDonors) {
         this.importService = importService;
         this.payments = payments;
         this.states = states;
         this.fio = fio;
         this.clock = clock;
         this.jdbc = jdbc;
+        this.scenarioDonors = scenarioDonors;
     }
 
     @After
@@ -195,6 +198,14 @@ public class FioImportStepDefinitions {
         assertThat(payment.matchingVariableSymbol()).contains(new VariableSymbol(matching));
     }
 
+    @Then("bank payment {long} carries variable symbol {string} and no symbol to match")
+    public void bankPaymentCarriesVariableSymbolAndNoSymbolToMatch(long transactionId, String raw) {
+        BankPayment payment = storedPayment(transactionId);
+        assertThat(payment.variableSymbol()).contains(raw);
+        assertThat(payment.matchingVariableSymbol()).isEmpty();
+        assertThat(payment.carriesVariableSymbol()).isFalse();
+    }
+
     @Then("bank payment {long} is stored with a {int}-character name, a {int}-character message and a {int}-character account")
     public void bankPaymentIsStoredWithCutTexts(long transactionId, int nameLength, int messageLength, int accountLength) {
         BankPayment payment = storedPayment(transactionId);
@@ -275,7 +286,7 @@ public class FioImportStepDefinitions {
     }
 
     private String variableSymbolCell(String cell) {
-        return cell;
+        return scenarioDonors.resolve(cell);
     }
 
     private static String cell(Map<String, String> row, String column) {

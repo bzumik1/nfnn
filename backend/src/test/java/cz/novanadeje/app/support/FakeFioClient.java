@@ -51,7 +51,7 @@ public class FakeFioClient implements FioClient {
                 .filter(row -> !row.date().isBefore(from) && !row.date().isAfter(to))
                 .sorted(Comparator.comparingLong(FioTransaction::id))
                 .toList();
-        return new FioStatement(info(rows), rows);
+        return new FioStatement(info(from, to, rows), rows);
     }
 
     @Override
@@ -107,9 +107,9 @@ public class FakeFioClient implements FioClient {
         reportedEnd = null;
     }
 
-    private FioAccountInfo info(List<FioTransaction> rows) {
-        LocalDate start = reportedStart != null ? reportedStart : rows.stream().map(FioTransaction::date).min(Comparator.naturalOrder()).orElse(null);
-        LocalDate end = reportedEnd != null ? reportedEnd : rows.stream().map(FioTransaction::date).max(Comparator.naturalOrder()).orElse(null);
+    private FioAccountInfo info(LocalDate from, LocalDate to, List<FioTransaction> rows) {
+        LocalDate start = reportedStart != null ? reportedStart : from;
+        LocalDate end = reportedEnd != null ? reportedEnd : to;
         Long idFrom = rows.isEmpty() ? null : rows.getFirst().id();
         Long idTo = rows.isEmpty() ? null : rows.getLast().id();
         return new FioAccountInfo("5544332217", "2010", "CZK", "CZ2620100000005544332217", "FIOBCZPPXXX",

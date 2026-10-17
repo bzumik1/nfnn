@@ -11,16 +11,19 @@ import java.util.UUID;
 
 public interface BankPaymentJpaRepository extends JpaRepository<BankPaymentJpaEntity, UUID> {
 
+    String UNPAIRED = "select p from BankPaymentJpaEntity p"
+            + " where not exists (select 1 from DonationJpaEntity d where d.bankPaymentId = p.id)";
+    String BY_BOOKING = " order by p.bookedOn, p.transactionId";
+
     @Query("select p.transactionId from BankPaymentJpaEntity p where p.transactionId in :ids")
     Set<Long> findTransactionIdsIn(@Param("ids") Collection<Long> ids);
 
-    @Query("select p from BankPaymentJpaEntity p order by p.bookedOn, p.transactionId")
+    @Query(UNPAIRED + BY_BOOKING)
     List<BankPaymentJpaEntity> findUnpairedOrderByBooking();
 
-    @Query("select p from BankPaymentJpaEntity p where p.matchingVariableSymbol = :symbol order by p.bookedOn, p.transactionId")
+    @Query(UNPAIRED + " and p.matchingVariableSymbol = :symbol" + BY_BOOKING)
     List<BankPaymentJpaEntity> findUnpairedByMatchingVariableSymbol(@Param("symbol") String symbol);
 
-    @Query("select p from BankPaymentJpaEntity p where p.matchingVariableSymbol is null"
-            + " and p.senderAccountNumber = :number and p.senderBankCode = :code order by p.bookedOn, p.transactionId")
+    @Query(UNPAIRED + " and p.matchingVariableSymbol is null and p.senderAccountNumber = :number and p.senderBankCode = :code" + BY_BOOKING)
     List<BankPaymentJpaEntity> findUnpairedWithoutSymbolBySenderAccount(@Param("number") String number, @Param("code") String code);
 }

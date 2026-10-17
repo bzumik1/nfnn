@@ -12,11 +12,18 @@ Feature: Donations keeps its own record of each donor
     And donations knows "Stavby" with the registered variable symbol
 
   Scenario: A profile change updates the record's name, address and locale and leaves the symbol and the learned accounts alone
-    Given a person "Jana" is registered
+    Given today is 2026-10-17
+    And a person "Jana" is registered
+    And the bank account has these movements:
+      | id   | date       | amount | account    | bankCode | name          | variableSymbol |
+      | 1001 | 2026-10-15 | 500.00 | 2900233333 | 2010     | Nováková Jana | {Jana}         |
+    And the application starts the import
+    And "Jana" has learned sender account "2900233333/2010"
     When "Jana" updates the profile to name "Jana Malá" and street "Krátká 3"
     And "Jana" switches the preferred locale to "en"
     Then donations knows "Jana" with type "PERSON", name "Jana Malá", address "Krátká 3, 400 01 Ústí nad Labem" and locale "en"
     And donations knows "Jana" with the registered variable symbol
+    And "Jana" has learned sender account "2900233333/2010"
 
   Scenario: The record exists as soon as the registration response arrives
     When a person "Jana" is registered

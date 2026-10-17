@@ -6,7 +6,17 @@ import cz.novanadeje.app.donations.domain.bank.BankPaymentRepository;
 import cz.novanadeje.app.donations.domain.bank.BankTransactionId;
 import cz.novanadeje.app.donations.domain.bank.IncomingMovement;
 import cz.novanadeje.app.donations.domain.bank.SenderAccount;
+import cz.novanadeje.app.donations.domain.donation.Donation;
+import cz.novanadeje.app.donations.domain.donation.DonationId;
+import cz.novanadeje.app.donations.domain.donation.DonationRepository;
+import cz.novanadeje.app.donations.domain.donation.PairingMethod;
+import cz.novanadeje.app.donations.domain.donor.DonorRecord;
+import cz.novanadeje.app.donations.domain.donor.DonorRecordRepository;
+import cz.novanadeje.app.donations.domain.donor.DonorReference;
+import cz.novanadeje.app.shared.domain.LocaleCode;
 import cz.novanadeje.app.shared.domain.Money;
+import cz.novanadeje.app.shared.domain.PostalAddress;
+import cz.novanadeje.app.shared.domain.UuidV7;
 import cz.novanadeje.app.shared.domain.VariableSymbol;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.DisplayName;
@@ -37,6 +47,10 @@ class JpaBankPaymentRepositoryTest {
 
     @Autowired
     private BankPaymentRepository payments;
+    @Autowired
+    private DonorRecordRepository donorRecords;
+    @Autowired
+    private DonationRepository donations;
     @Autowired
     private EntityManager entityManager;
     @Autowired
@@ -149,8 +163,52 @@ class JpaBankPaymentRepositoryTest {
     }
 
     @Test
+    @DisplayName("Given a paired and an unpaired payment, when unpaired ones are listed, then the paired one is left out")
+    void should_leave_out_paired_payment_when_unpaired_listed() {
+        BankPayment paired = payment(1001, "2026-10-14", JANA_ACCOUNT, null);
+        payments.saveAll(List.of(paired, payment(1002, "2026-10-15", JANA_ACCOUNT, null)));
+        pair(paired, PairingMethod.SENDER_ACCOUNT);
+        flushAndClear();
+
+        assertThat(payments.findUnpairedOrderedByBooking()).extracting(payment -> payment.transactionId().value()).containsExactly(1002L);
+    }
+
+    @Test
+    @DisplayName("Given a paired and an unpaired payment with one symbol, when unpaired ones are asked for by the symbol, then the paired one is left out")
+    void should_leave_out_paired_payment_when_unpaired_asked_by_symbol() {
+        BankPayment paired = payment(1001, "2026-10-14", JANA_ACCOUNT, "4821937560");
+        payments.saveAll(List.of(paired, payment(1002, "2026-10-15", JANA_ACCOUNT, "4821937560")));
+        pair(paired, PairingMethod.VARIABLE_SYMBOL);
+        flushAndClear();
+
+        assertThat(payments.findUnpairedByMatchingVariableSymbol(new VariableSymbol("4821937560")))
+                .extracting(payment -> payment.transactionId().value())
+                .containsExactly(1002L);
+    }
+
+    @Test
+    @DisplayName("Given a paired and an unpaired payment without a symbol from one account, when unpaired ones are asked for by the account, then the paired one is left out")
+    void should_leave_out_paired_payment_when_unpaired_asked_by_account() {
+        BankPayment paired = payment(1001, "2026-10-14", JANA_ACCOUNT, null);
+        payments.saveAll(List.of(paired, payment(1002, "2026-10-15", JANA_ACCOUNT, null)));
+        pair(paired, PairingMethod.SENDER_ACCOUNT);
+        flushAndClear();
+
+        assertThat(payments.findUnpairedWithoutSymbolBySenderAccount(JANA_ACCOUNT.orElseThrow()))
+                .extracting(payment -> payment.transactionId().value())
+                .containsExactly(1002L);
+    }
+
+    @Test
     void should_be_empty_when_found_by_id_given_unknown_id() {
         assertThat(payments.findById(BankPaymentId.newId(NOW))).isEmpty();
+    }
+
+    private void pair(BankPayment payment, PairingMethod method) {
+        DonorRecord jana = DonorRecord.registerPerson(new DonorReference(UuidV7.generate(NOW)), "Jana Nováková",
+                new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"), new VariableSymbol("4821937560"), LocaleCode.CS, NOW);
+        donorRecords.save(jana);
+        donations.save(Donation.fromBankPayment(DonationId.newId(NOW), jana.id(), payment, method, NOW));
     }
 
     private void flushAndClear() {

@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <changeSet id="004-create-donor-sender-account" author="nfnn">
+        <createTable tableName="donor_sender_account">
+            <column name="donor_id" type="uuid">
+                <constraints nullable="false" foreignKeyName="fk_donor_sender_account_donor" referencedTableName="donor_record"
+                             referencedColumnNames="donor_id" deleteCascade="true"/>
+            </column>
+            <column name="account_number" type="varchar(17)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="bank_code" type="varchar(4)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="learned_from_payment_id" type="uuid">
+                <constraints nullable="false" foreignKeyName="fk_donor_sender_account_payment" referencedTableName="bank_payment"
+                             referencedColumnNames="id"/>
+            </column>
+            <column name="learned_at" type="timestamp with time zone">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <addPrimaryKey tableName="donor_sender_account" columnNames="donor_id, account_number, bank_code"
+                       constraintName="pk_donor_sender_account"/>
+        <createIndex tableName="donor_sender_account" indexName="ix_donor_sender_account_account">
+            <column name="account_number"/>
+            <column name="bank_code"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>

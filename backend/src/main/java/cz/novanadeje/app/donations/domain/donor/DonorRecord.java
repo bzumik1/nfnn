@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donations.domain.donor;
 
+import cz.novanadeje.app.donations.domain.bank.BankPayment;
 import cz.novanadeje.app.donations.domain.bank.SenderAccount;
 import cz.novanadeje.app.shared.domain.DonorType;
 import cz.novanadeje.app.shared.domain.LocaleCode;
@@ -80,7 +81,7 @@ public final class DonorRecord {
         this.updatedAt = checkedAt;
     }
 
-    public boolean claimsBySymbol(PaymentFacts payment) {
+    public boolean claimsBySymbol(BankPayment payment) {
         return require(payment, "Payment").matchingVariableSymbol().filter(variableSymbol::equals).isPresent();
     }
 
@@ -88,7 +89,7 @@ public final class DonorRecord {
         return senderAccounts.containsKey(account);
     }
 
-    public Optional<LearnedSenderAccount> learnSenderAccountFrom(PaymentFacts payment, Instant at) {
+    public Optional<LearnedSenderAccount> learnSenderAccountFrom(BankPayment payment, Instant at) {
         if (!claimsBySymbol(payment)) {
             throw new IllegalArgumentException("A sender account is learned only from a payment carrying the donor's variable symbol");
         }
@@ -96,7 +97,7 @@ public final class DonorRecord {
         return payment.sender()
                 .filter(account -> !paysFrom(account))
                 .map(account -> {
-                    LearnedSenderAccount learned = new LearnedSenderAccount(account, payment.paymentId(), at);
+                    LearnedSenderAccount learned = new LearnedSenderAccount(account, payment.id(), at);
                     senderAccounts.put(account, learned);
                     return learned;
                 });

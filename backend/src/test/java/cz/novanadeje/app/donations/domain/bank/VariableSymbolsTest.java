@@ -1,6 +1,7 @@
 package cz.novanadeje.app.donations.domain.bank;
 
 import cz.novanadeje.app.shared.domain.VariableSymbol;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -38,5 +39,17 @@ class VariableSymbolsTest {
     @Test
     void should_be_empty_when_matched_given_only_zeros() {
         assertThat(VariableSymbols.forMatching("0000")).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Given the literal symbol 0 that standing orders send, when matched, then there is no symbol to match")
+    void should_be_empty_when_matched_given_single_zero() {
+        assertThat(VariableSymbols.forMatching("0")).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Given a symbol of three zeros, when matched, then there is no symbol to match")
+    void should_be_empty_when_matched_given_three_zeros() {
+        assertThat(VariableSymbols.forMatching("000")).isEmpty();
     }
 }

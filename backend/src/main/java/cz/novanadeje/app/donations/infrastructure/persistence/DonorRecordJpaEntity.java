@@ -76,6 +76,10 @@ public class DonorRecordJpaEntity {
         return entity;
     }
 
+    UUID donorId() {
+        return donorId;
+    }
+
     DonorRecord toDomain(Set<LearnedSenderAccount> senderAccounts) {
         return DonorRecord.reconstitute(
                 new DonorReference(donorId),
