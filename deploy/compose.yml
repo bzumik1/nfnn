@@ -48,7 +48,6 @@ services:
       PGDATABASE: novanadeje
       PGUSER: novanadeje
       PGPASSWORD: *db_password
-      BACKUP_KEEP_DAYS: "30"
       TZ: Europe/Prague
     volumes:
       - /DATA/AppData/nfnn/backups:/backups
@@ -57,15 +56,14 @@ services:
       - |
         while true; do
           until pg_isready --quiet; do sleep 5; done
-          file="/backups/nfnn-$$(date +%Y-%m-%d_%H%M).dump"
-          if pg_dump --format=custom --file="$$file.part"; then
-            mv "$$file.part" "$$file"
-            echo "backup written: $$file"
+          if pg_dump --format=custom --file=/backups/nfnn.dump.part; then
+            mv /backups/nfnn.dump.part "/backups/nfnn-`date +%Y-%m-%d_%H%M`.dump"
+            echo "backup written"
           else
-            rm -f "$$file.part"
+            rm -f /backups/nfnn.dump.part
             echo "backup failed" >&2
           fi
-          find /backups -name 'nfnn-*.dump' -mtime +"$$BACKUP_KEEP_DAYS" -delete
+          find /backups -name 'nfnn-*.dump' -mtime +30 -delete
           sleep 86400
         done
     deploy:

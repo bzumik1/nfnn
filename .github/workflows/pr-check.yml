@@ -76,6 +76,13 @@ jobs:
           docker build -t ghcr.io/bzumik1/nfnn-backend:latest backend
           docker build -t ghcr.io/bzumik1/nfnn-frontend:latest frontend
 
+      - name: Compose file has no dollar signs
+        run: |
+          if grep -n '\$' deploy/compose.yml; then
+            echo "::error::ZimaOS stores the compose file without its \$\$ escapes, so every \$ becomes an empty variable"
+            exit 1
+          fi
+
       - name: Prepare compose file
         run: |
           sed -e "s/ZMEN_HESLO_DB/ci-password/" \
@@ -95,6 +102,12 @@ jobs:
           case "$status" in
             502|503|504|000) echo "::error::nginx could not reach the backend"; exit 1 ;;
           esac
+          for _ in $(seq 30); do
+            ls "$RUNNER_TEMP"/nfnn/backups/nfnn-*.dump 2>/dev/null && exit 0
+            sleep 2
+          done
+          echo "::error::the backup service wrote no dump"
+          exit 1
 
       - name: Logs
         if: failure()
