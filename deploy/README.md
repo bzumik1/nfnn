@@ -4,7 +4,7 @@ Image se staví na GitHubu, Zima je jen stáhne a spustí. Zatím ručně, autom
 
 ```
 PR ─► PR check (GitHub runner): testy backendu a frontendu, build image, start celého stacku
-merge do main ─► Publish Docker images: ghcr.io/bzumik1/nfnn-backend a -frontend (privátní),
+merge do main ─► Publish Docker images: ghcr.io/bzumik1/nfnn-backend a -frontend (veřejné),
                  tagy latest a krátký SHA commitu
 na Zimě ─► docker compose pull && docker compose up -d --wait
 ```
@@ -44,15 +44,9 @@ ss -ltn | grep ':8089 ' || echo "port 8089 je volný"
 
 `DB_PASSWORD` po prvním startu neměň: Postgres si ho uloží do dat a nové heslo by backend nepustilo dovnitř. Port 8080 je na Zimě obsazený, proto 8089.
 
-### 2. Přihlášení do ghcr.io
+### 2. Veřejné image
 
-Image jsou privátní. GitHub → Settings → Developer settings → Personal access tokens → **Tokens (classic)** → nový token jen se scope `read:packages` (fine-grained tokeny na ghcr.io nefungují). Pak na Zimě:
-
-```bash
-sudo docker login ghcr.io -u bzumik1
-```
-
-a jako heslo vlož token. Docker si ho pamatuje, stačí jednou.
+Image se na ghcr.io objeví po prvním merge do `main` (workflow **Publish Docker images**) a jsou privátní jako repo. Jednou přepni oba balíčky na public: GitHub → profil → Packages → `nfnn-backend` → Package settings → Change visibility → Public, a totéž pro `nfnn-frontend`. Pak je Zima stáhne bez přihlášení. Tajemství v image nejsou, ta jsou jen v `.env`.
 
 ### 3. Compose soubor
 
