@@ -14,11 +14,11 @@ ZimaOS ─► aplikace „Nová naděje“ z compose.yml (App Store → Custom I
 ## Instalace
 
 1. Na Macu vygeneruj dvě tajemství: `openssl rand -hex 24` (heslo DB) a `openssl rand -hex 32` (JWT).
-2. Zkopíruj `compose.yml` a na začátku nahraď `ZMEN_HESLO_DB` a `ZMEN_JWT_SECRET` těmi hodnotami. Do repa je nikdy necommituj.
-3. ZimaOS → App Store → Custom Install → smazat vzor, vložit upravený soubor → Install.
+2. Zkopíruj `compose.yml` a v textovém editoru přes Najít a nahradit nahraď `ZMEN_HESLO_DB` a `ZMEN_JWT_SECRET` těmi hodnotami. Do repa je nikdy necommituj.
+3. ZimaOS → App Store → Custom Install → smazat vzor, vložit upravený soubor → Install. Hodnoty nahrazuj před vložením: ZimaOS při vložení kotvy rozbalí a heslo DB pak stojí na třech místech (`POSTGRES_PASSWORD`, `PGPASSWORD`, `DB_PASSWORD`), takže úprava jen první řádky už se nikam nepropíše.
 4. Heslo DB si ulož. Po první instalaci ho neměň: Postgres si ho zapíše do dat v `/DATA/AppData/nfnn/postgres` a nové heslo by backend nepustilo dovnitř.
 
-Když se změní `compose.yml` v repu, v ZimaOS u aplikace otevři nastavení a změny tam přenes ručně; tajemství nech, jak jsou.
+Když se změní `compose.yml` v repu, aplikaci přeinstaluj s novým souborem a se stejnými tajemstvími.
 
 ## Nginx Proxy Manager
 
