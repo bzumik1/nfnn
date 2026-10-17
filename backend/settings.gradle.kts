@@ -3,3 +3,5 @@ plugins {
 }
 
 rootProject.name = "app"
+
+include("fio-api")
