@@ -1,6 +1,7 @@
 package cz.novanadeje.app.cucumber;
 
 import cz.novanadeje.app.support.DatabaseCleaner;
+import cz.novanadeje.app.support.FakeFioClient;
 import cz.novanadeje.app.support.MutableClock;
 import cz.novanadeje.app.support.RecordingMailSender;
 import io.cucumber.java.Before;
@@ -19,18 +20,22 @@ public class CommonStepDefinitions {
     private final RecordingMailSender mailSender;
     private final MutableClock clock;
     private final DatabaseCleaner database;
+    private final FakeFioClient fioClient;
 
-    public CommonStepDefinitions(ApiClient api, RecordingMailSender mailSender, MutableClock clock, DatabaseCleaner database) {
+    public CommonStepDefinitions(ApiClient api, RecordingMailSender mailSender, MutableClock clock, DatabaseCleaner database,
+                                 FakeFioClient fioClient) {
         this.api = api;
         this.mailSender = mailSender;
         this.clock = clock;
         this.database = database;
+        this.fioClient = fioClient;
     }
 
     @Before
     public void isolateScenario() {
         database.truncateAllTables();
         mailSender.clear();
+        fioClient.reset();
         clock.advance(Duration.ofDays(1));
     }
 

@@ -6,22 +6,19 @@ import java.util.regex.Pattern;
 
 public record SenderAccount(String accountNumber, String bankCode) {
 
-    public static final int MAX_PREFIX_LENGTH = 6;
-    public static final int MAX_NUMBER_LENGTH = 10;
-    public static final int MAX_ACCOUNT_NUMBER_LENGTH = MAX_PREFIX_LENGTH + 1 + MAX_NUMBER_LENGTH;
+    public static final int MAX_ACCOUNT_NUMBER_LENGTH = 17;
     public static final int BANK_CODE_LENGTH = 4;
 
-    private static final Pattern CANONICAL_ACCOUNT = Pattern.compile("([1-9][0-9]{0,5}-)?[1-9][0-9]{0,9}");
-    private static final Pattern RAW_ACCOUNT = Pattern.compile("(?:([0-9]{1,6})-)?([0-9]{1,10})");
-    private static final Pattern BANK_CODE = Pattern.compile("[0-9]{4}");
-    private static final Pattern WHITESPACE = Pattern.compile("\\s+");
+    private static final Pattern CANONICAL_NUMBER = Pattern.compile("([1-9]\\d{0,5}-)?[1-9]\\d{0,9}");
+    private static final Pattern RAW_NUMBER = Pattern.compile("(?:(\\d{1,6})-)?(\\d{1,10})");
+    private static final Pattern BANK_CODE = Pattern.compile("\\d{4}");
 
     public SenderAccount {
-        if (accountNumber == null || !CANONICAL_ACCOUNT.matcher(accountNumber).matches()) {
-            throw new IllegalArgumentException("Sender account number is not canonical: " + accountNumber);
+        if (accountNumber == null || !CANONICAL_NUMBER.matcher(accountNumber).matches()) {
+            throw new IllegalArgumentException("Not a canonical Czech account number: " + accountNumber);
         }
         if (bankCode == null || !BANK_CODE.matcher(bankCode).matches()) {
-            throw new IllegalArgumentException("Sender bank code must be four digits: " + bankCode);
+            throw new IllegalArgumentException("Not a Czech bank code: " + bankCode);
         }
     }
 
@@ -29,8 +26,8 @@ public record SenderAccount(String accountNumber, String bankCode) {
         if (rawAccount == null || rawAccount.isBlank() || rawBankCode == null || rawBankCode.isBlank()) {
             return Optional.empty();
         }
-        String bankCode = withoutWhitespace(rawBankCode);
-        Matcher account = RAW_ACCOUNT.matcher(withoutWhitespace(rawAccount));
+        String bankCode = withoutSpaces(rawBankCode);
+        Matcher account = RAW_NUMBER.matcher(withoutSpaces(rawAccount));
         if (!BANK_CODE.matcher(bankCode).matches() || !account.matches()) {
             return Optional.empty();
         }
@@ -46,15 +43,11 @@ public record SenderAccount(String accountNumber, String bankCode) {
         return accountNumber + "/" + bankCode;
     }
 
-    private static String withoutWhitespace(String value) {
-        return WHITESPACE.matcher(value).replaceAll("");
+    private static String withoutSpaces(String value) {
+        return value.replaceAll("\\s", "");
     }
 
     private static String withoutLeadingZeros(String digits) {
-        int first = 0;
-        while (first < digits.length() && digits.charAt(first) == '0') {
-            first++;
-        }
-        return digits.substring(first);
+        return digits.replaceFirst("^0+", "");
     }
 }
