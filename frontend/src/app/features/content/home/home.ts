@@ -1,4 +1,5 @@
-import { Component } from '@angular/core';
+import { Component, computed, inject } from '@angular/core';
+import { AuthStore } from '../../../core/auth/auth-store';
 import { Hero } from './sections/hero/hero';
 import { StatsBar } from './sections/stats-bar/stats-bar';
 import { About } from './sections/about/about';
@@ -13,4 +14,8 @@ import { ContactForm } from '../../contact/contact-form/contact-form';
   templateUrl: './home.html',
   styleUrl: './home.scss',
 })
-export class Home {}
+export class Home {
+  private readonly auth = inject(AuthStore);
+
+  protected readonly variableSymbol = computed(() => this.auth.donor()?.variableSymbol ?? null);
+}

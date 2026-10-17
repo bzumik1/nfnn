@@ -1,8 +1,10 @@
 import { Routes } from '@angular/router';
+import { donorGuard } from './core/auth/donor-guard';
 
 export const routes: Routes = [
   {
     path: 'donor',
+    canActivate: [donorGuard],
     loadComponent: () =>
       import('./layout/donor-shell/donor-shell').then((m) => m.DonorShell),
     loadChildren: () =>

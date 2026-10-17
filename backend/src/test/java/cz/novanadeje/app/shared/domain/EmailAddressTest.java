@@ -8,8 +8,8 @@ import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException
 class EmailAddressTest {
 
     @Test
-    void should_keep_trimmed_value_when_created_given_surrounding_whitespace() {
-        assertThat(new EmailAddress("  jana@example.cz ").value()).isEqualTo("jana@example.cz");
+    void should_keep_trimmed_lowercase_value_when_created_given_surrounding_whitespace_and_capitals() {
+        assertThat(new EmailAddress("  Jana@Example.cz ").value()).isEqualTo("jana@example.cz");
     }
 
     @Test

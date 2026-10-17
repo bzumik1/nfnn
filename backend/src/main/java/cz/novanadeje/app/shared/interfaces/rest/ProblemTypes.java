@@ -8,6 +8,7 @@ public final class ProblemTypes {
 
     public static final URI VALIDATION = of("validation");
     public static final URI UNAUTHENTICATED = of("auth", "unauthenticated");
+    public static final URI EXPIRED_TOKEN = of("auth", "expired-token");
     public static final URI FORBIDDEN = of("auth", "forbidden");
 
     private ProblemTypes() {

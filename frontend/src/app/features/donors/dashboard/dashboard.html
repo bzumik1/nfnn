@@ -6,9 +6,9 @@
       </a>
       <div class="topbar-right">
         <span class="topbar-greeting">
-          <span i18n="@@donor.dashboard.welcome">Vítejte,</span> {{ user.name }}
+          <span i18n="@@donor.dashboard.welcome">Vítejte,</span> {{ donor()?.name }}
         </span>
-        <button type="button" class="topbar-logout" (click)="logout()" i18n="@@donor.dashboard.logout">
+        <button type="button" class="topbar-logout" (click)="logout()" [disabled]="signingOut()" i18n="@@donor.dashboard.logout">
           Odhlásit se
         </button>
       </div>
@@ -16,6 +16,16 @@
   </div>
 
   <div class="container">
+    <div class="symbol-card">
+      <div class="symbol-text">
+        <h2 class="symbol-title" i18n="@@donor.dashboard.symbol.title">Váš variabilní symbol</h2>
+        <p class="symbol-sub" i18n="@@donor.dashboard.symbol.sub">
+          Uveďte ho u každé platby na účet nadačního fondu. Dar se tak přiřadí k vašemu účtu a objeví se v tomto přehledu.
+        </p>
+      </div>
+      <div class="symbol-value">{{ donor()?.variableSymbol }}</div>
+    </div>
+
     <div class="stats-grid">
       <div class="stat-card stat-card--accent">
         <div class="stat-bar"></div>
@@ -130,7 +140,7 @@
   @if (selectedReceipt()) {
     <app-receipt
       [data]="selectedReceipt()!"
-      [user]="user"
+      [user]="user()"
       (closed)="closeReceipt()"
     />
   }

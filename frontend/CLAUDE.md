@@ -47,7 +47,16 @@ src/
     app.{ts,html,scss}        Root shell: <app-site-header />, <router-outlet />, <app-site-footer />.
     app.config.ts             provideRouter + withInMemoryScrolling (anchor scrolling on for #fragment links).
     app.routes.ts             Top-level routes (lazy children per bounded context).
-    core/                     Singletons: HTTP services, interceptors, guards, auth state. (Currently empty.)
+    core/                     Singletons: HTTP services, interceptors, guards, auth state.
+      auth/
+        donor.ts              DTOs: Donor, RegisterDonorRequest, AuthResponse.
+        auth-api.ts           HTTP: /api/donors/auth/{register,login,refresh,logout}, /api/donors/me.
+        auth-store.ts         Signals `donor`, `status`, `signedIn`; access token in memory; refresh shared between callers; restore() on app start.
+        auth-interceptor.ts   Adds `Authorization: Bearer` to /api/** (not the auth endpoints); on 401 `auth/expired-token` refreshes once and retries.
+        donor-guard.ts        canActivate for `/donor/**`: waits for the restore, otherwise goes home and opens the sign-in dialog.
+        login-dialog.service.ts  Open/closed state of the sign-in dialog (used by the header, the guard and the dialog).
+        api-problem.ts        Reads an RFC 7807 body out of an HttpErrorResponse.
+        testing/              Fixtures for specs (excluded from the app build).
     shared/                   Reusable presentational components/pipes/directives. (Currently empty.)
     layout/
       site-header/            Sticky top nav, desktop links + mobile burger menu (signal-based open state).
@@ -56,24 +65,25 @@ src/
       content/                Public marketing pages.
         content.routes.ts     `''` → home, `'zasady-ochrany-osobnich-udaju'` → privacy policy (both lazy, with titles).
         home/
-          home.{ts,html,scss} Composes the section components below.
+          home.{ts,html,scss} Composes the section components below; passes the signed-in donor's variable symbol from AuthStore to the donate section.
           sections/
             hero/             Full-bleed hero with overlay copy and CTA.
             stats-bar/        Numbers strip under the hero.
             about/            Two-column About section with image.
             projects/         Project grid + project-card child component.
             news/             News card grid (placeholder content).
-            donate-cta/       Donation call-to-action band.
+            donate-cta/       Donation band: preset or custom amount, QR payment from PaymentQrApi (debounced, latest request wins), bank account and the donor's variable symbol when given.
         privacy-policy/       "Zásady ochrany osobních údajů" (GDPR) page, linked from the footer bottom row.
       contact/
         contact-api.ts        HTTP service: POST /api/contact/messages.
         contact-form/         Contact form; posts through ContactApi, honeypot field, 429 and generic errors.
       donations/
+        payment-qr-api.ts     HTTP service: GET /api/donations/payment-qr (SPAYD, PNG QR code, bank account).
         receipt/              Donation receipt placeholder page.
       donors/
-        donors.routes.ts      `'prihlaseni'` → login, `'portal'` → dashboard.
-        login/                Donor login form (no auth wired yet).
-        dashboard/            Donor portal dashboard (placeholder).
+        donors.routes.ts      `'prehled'` → dashboard (the whole `/donor` branch sits behind `donorGuard` in app.routes.ts).
+        login-dialog/         Sign-in / registration dialog opened from the header; posts through AuthStore and shows the problem's title and detail on failure. The password-reset tab is still a mock (task 7).
+        dashboard/            Donor portal: greeting, variable symbol, sign-out; the payments table is hardcoded until the donations import lands.
 public/
   favicon.ico
   images/                     Site imagery (hero, about, donate, news1-3, proj1-5, logo). Reference as `/images/<file>`.
@@ -85,7 +95,7 @@ e2e/                          Playwright specs.
 Defined in `src/app/app.routes.ts`. Two top-level lazy paths today:
 
 - `''` → `features/content/content.routes.ts` (home page).
-- `'donor'` → `features/donors/donors.routes.ts` (login at `/donor/prihlaseni`, dashboard at `/donor/portal`).
+- `'donor'` → `features/donors/donors.routes.ts` (dashboard at `/donor/prehled`), guarded by `core/auth/donor-guard.ts`.
 - `'**'` → redirect to `/`.
 
 In-page navigation uses `routerLink="/" fragment="..."` (e.g. `fragment="about"`); anchor scrolling is enabled in `app.config.ts`. The old `#about`-style hash links from the design prototype are reproduced this way.
@@ -120,7 +130,9 @@ When adding new copy, **always** mark it with a stable `@@id`. Renaming an id si
 
 Backend lives at `http://localhost:8080` and exposes everything under `/api/...`. `npm start` proxies `/api/*` there through `proxy.conf.json` (`serve.options.proxyConfig` in `angular.json`). `HttpClient` is provided in `app.config.ts` with `withFetch()`. Each feature keeps its own HTTP service next to its components (`features/contact/contact-api.ts`); cross-feature singletons (auth state, interceptors) go to `core/`.
 
-Errors from the backend are RFC 7807 `application/problem+json`; the `HttpErrorResponse.error` body carries `type`, `title`, `status` and, for validation, `errors: [{ field, message }]`.
+Errors from the backend are RFC 7807 `application/problem+json`; the `HttpErrorResponse.error` body carries `type`, `title`, `detail`, `status` and, for validation, `errors: [{ field, message }]`. `core/auth/api-problem.ts` reads it; titles and details are already localized by the backend (`Accept-Language`), so components show them as they are.
+
+Donor sessions: `AuthStore` keeps the access token in memory only; the refresh token is an HttpOnly cookie the browser sends to `/api/donors/auth/**` by itself. A `localStorage` flag (`nfnn.donor-session`) only says that a session may exist, so `restore()` on app start calls `refresh` for returning donors and nothing for everyone else. Every `/api/**` call goes through `authInterceptor`; nothing else should add the header.
 
 Production: nginx in `frontend/Dockerfile` proxies `/api/*` to the `backend` container in compose. Components must only call relative `/api/...` URLs.
 
@@ -130,10 +142,10 @@ Images and other public files live in `public/`. The build copies `public/**/*` 
 
 ## What is intentionally *not* implemented yet
 
-- No auth, no guards, no interceptors. The login dialog and the donor forms are static markup with no submit handlers; only the contact form talks to the backend.
+- Password reset: the dialog's "Obnovit heslo" tab only pretends to send an email (task 7 wires it).
+- The dashboard's payments, yearly summary and `donations/receipt` show hardcoded data until the Fio import and the PDF receipts land.
 - No real translations (English target empty).
-- `core/` and `shared/` are placeholders (`.gitkeep`).
-- Donor `dashboard` and `donations/receipt` are visual placeholders only.
+- `shared/` is still a placeholder (`.gitkeep`).
 
 When implementing a feature that touches the backend, add: a service in `core/` (or a feature subfolder), HTTP types as DTOs (not entities), a guard if it's auth-gated, a route, and at least one Vitest spec following the project's `Given … when … then` BDD naming.
 
