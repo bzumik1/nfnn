@@ -10,4 +10,5 @@ RUN npm run build -- --configuration=production
 FROM nginx:1.29-alpine
 COPY --from=build /workspace/dist/frontend/browser /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY nginx-security-headers.conf /etc/nginx/snippets/security-headers.conf
 EXPOSE 80

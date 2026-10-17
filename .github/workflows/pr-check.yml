@@ -1,0 +1,103 @@
+name: PR check
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr-check-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "25"
+
+      - uses: gradle/actions/setup-gradle@v6
+
+      - name: Build and test
+        run: ./gradlew build
+
+      - name: Keep test reports
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: backend-test-reports
+          path: backend/build/reports/
+          retention-days: 14
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - run: npm ci
+
+      - name: Unit tests
+        run: npx ng test --watch=false
+
+      - name: Build
+        run: npm run build
+
+  stack:
+    runs-on: ubuntu-latest
+    env:
+      NFNN_TAG: ci
+      DB_PASSWORD: ci-password
+      JWT_SECRET: ci-secret-that-is-at-least-32-characters-long
+      FRONTEND_PORT: "8089"
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Build images
+        run: |
+          echo "NFNN_DATA=$RUNNER_TEMP/nfnn" >> "$GITHUB_ENV"
+          docker build -t ghcr.io/bzumik1/nfnn-backend:ci backend
+          docker build -t ghcr.io/bzumik1/nfnn-frontend:ci frontend
+
+      - name: Start the production stack
+        run: docker compose -f deploy/compose.yml up -d --wait --wait-timeout 300
+
+      - name: Verify
+        run: |
+          curl -fsS --max-time 10 http://localhost:8089/ | grep -q '<app-root'
+          status=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 http://localhost:8089/api/)
+          echo "/api/ answered $status"
+          case "$status" in
+            502|503|504|000) echo "::error::nginx could not reach the backend"; exit 1 ;;
+          esac
+
+      - name: Logs
+        if: failure()
+        run: docker compose -f deploy/compose.yml logs --no-color --tail 200
+
+      - name: Stop
+        if: always()
+        run: docker compose -f deploy/compose.yml down

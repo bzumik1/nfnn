@@ -17,7 +17,7 @@ backend/    Spring Boot 4 + Java 25, strict DDD, Gradle (Kotlin DSL)
 frontend/   Angular 21 (standalone components, SCSS, Vitest, Playwright)
 ```
 
-Compose stack at the repo root deploys all three services (`postgres`, `backend`, `frontend`) to ZimaOS.
+`docker-compose.yml` at the repo root runs the stack locally. Production on ZimaOS uses `deploy/compose.yml` with images from ghcr.io; see Deployment below.
 
 ## Backend architecture
 
@@ -147,7 +147,7 @@ The `Test` task in `build.gradle.kts` sets `TESTCONTAINERS_DOCKER_SOCKET_OVERRID
 
 `@angular/localize` is already wired into `angular.json`, `main.ts`, and the tsconfigs — do not run `ng add @angular/localize` again.
 
-### Full stack (Docker, intended for ZimaOS)
+### Full stack locally (Docker)
 
 | Command | Purpose |
 |---|---|
@@ -157,6 +157,19 @@ The `Test` task in `build.gradle.kts` sets `TESTCONTAINERS_DOCKER_SOCKET_OVERRID
 | `docker compose down` | Stop everything |
 
 `JWT_SECRET` is required and has no default — compose will refuse to start without it.
+
+## Deployment
+
+Modelled on the sister site `bzumik1/kocarky`; the server setup and the deploy steps are in `deploy/README.md` (Czech).
+
+- `.github/workflows/pr-check.yml` runs on every PR to `main` on GitHub's runner: `./gradlew build` (Testcontainers works there), frontend unit tests and build, then both Docker images built and `deploy/compose.yml` started and probed. Never run it, or anything a PR triggers, on a self-hosted runner: unmerged code must not run on the server.
+- `.github/workflows/images.yml` runs on a push to `main` on GitHub's runner and pushes `ghcr.io/bzumik1/nfnn-backend` and `-frontend` (`latest` and the short SHA). Both packages are public, so ZimaOS pulls without logging in; the images hold no secrets, which live only in the server's `.env`. Visibility was switched once on GitHub, not by the workflow.
+- Deploying is manual for now: on ZimaOS, `/DATA/AppData/nfnn/` holds a copy of `deploy/compose.yml` and the `.env`, and `docker compose pull && docker compose up -d --wait` there starts the new images. A change to `deploy/compose.yml` or `deploy/env.example` reaches the server only when someone copies it there; say so in the PR. Automating this with a self-hosted runner like kocarky's is planned; that runner would need the Docker socket, so the repo must stay private.
+- Secrets live only in `/DATA/AppData/nfnn/.env` on the server (`deploy/env.example` lists them). GitHub needs no secrets: `GITHUB_TOKEN` pushes the images.
+- Port 8080 is taken on the ZimaOS box; the frontend publishes 8089. Nginx Proxy Manager terminates TLS for `nfnn.znamenacek.duckdns.org` and forwards to it.
+- The `backup` service writes a daily `pg_dump` to `/DATA/AppData/nfnn/backups/`.
+- The mail health indicator is off, so `/actuator/health` (the backend's Docker healthcheck) does not go DOWN when SMTP is missing or unreachable.
+- Cache headers live in `frontend/nginx.conf`: `index.html` is `no-cache`, hashed bundles are immutable, `public/images/` is cached for an hour. A location with its own `add_header` drops inherited ones, so each location includes `nginx-security-headers.conf`.
 
 ## Configuration
 
