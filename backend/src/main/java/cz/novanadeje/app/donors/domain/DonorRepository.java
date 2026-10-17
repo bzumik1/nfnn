@@ -1,0 +1,19 @@
+package cz.novanadeje.app.donors.domain;
+
+import cz.novanadeje.app.shared.domain.VariableSymbol;
+import cz.novanadeje.app.shared.domain.EmailAddress;
+
+import java.util.Optional;
+
+public interface DonorRepository {
+
+    void save(Donor donor);
+
+    Optional<Donor> findById(DonorId id);
+
+    Optional<Donor> findByEmail(EmailAddress email);
+
+    boolean existsByEmail(EmailAddress email);
+
+    boolean existsByVariableSymbol(VariableSymbol variableSymbol);
+}

@@ -1,5 +1,6 @@
 package cz.novanadeje.app.shared.domain;
 
+import java.util.Locale;
 import java.util.regex.Pattern;
 
 public record EmailAddress(String value) {
@@ -11,9 +12,18 @@ public record EmailAddress(String value) {
         if (value == null) {
             throw new IllegalArgumentException("Email address is required");
         }
-        value = value.trim();
+        value = value.trim().toLowerCase(Locale.ROOT);
         if (value.length() > MAX_LENGTH || !SHAPE.matcher(value).matches()) {
             throw new IllegalArgumentException("Email address is not valid: " + value);
+        }
+    }
+
+    public static boolean isValid(String candidate) {
+        try {
+            new EmailAddress(candidate);
+            return true;
+        } catch (IllegalArgumentException invalid) {
+            return false;
         }
     }
 

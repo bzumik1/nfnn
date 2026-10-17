@@ -1,8 +1,11 @@
 package cz.novanadeje.app.shared.domain;
 
+import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+
+import java.security.SecureRandom;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
@@ -30,5 +33,10 @@ class VariableSymbolTest {
     void should_match_the_published_format_when_validated_outside_the_domain() {
         assertThat("1234567890").matches(VariableSymbol.FORMAT);
         assertThat("12345678901").doesNotMatch(VariableSymbol.FORMAT);
+    }
+
+    @RepeatedTest(20)
+    void should_have_ten_digits_starting_with_nonzero_when_generated() {
+        assertThat(VariableSymbol.random(new SecureRandom()).value()).matches("[1-9][0-9]{9}");
     }
 }

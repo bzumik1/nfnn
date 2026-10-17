@@ -71,8 +71,10 @@ app:
     jwt:
       issuer: nova-nadeje
       secret: ${JWT_SECRET:change-me-in-production-this-is-only-for-local-development-32chars-min}
-      access-token-ttl: PT1H
-      refresh-token-ttl: P30D
+      access-token-ttl: PT15M
+  donors:
+    session:
+      refresh-token-ttl: P14D
 
 logging:
   level:

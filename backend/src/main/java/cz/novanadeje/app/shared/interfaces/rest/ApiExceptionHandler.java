@@ -1,5 +1,11 @@
 package cz.novanadeje.app.shared.interfaces.rest;
 
+import cz.novanadeje.app.shared.domain.error.AccessDenied;
+import cz.novanadeje.app.shared.domain.error.AuthenticationFailure;
+import cz.novanadeje.app.shared.domain.error.Conflict;
+import cz.novanadeje.app.shared.domain.error.DomainException;
+import cz.novanadeje.app.shared.domain.error.NotFound;
+import cz.novanadeje.app.shared.domain.error.RuleViolation;
 import org.springframework.beans.TypeMismatchException;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.http.HttpHeaders;
@@ -9,6 +15,7 @@ import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
 import org.springframework.validation.FieldError;
 import org.springframework.validation.method.ParameterErrors;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -50,8 +57,36 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
         return validationProblem(ex, List.of(fieldError(ex.getParameterName(), message("problem.validation.missing-value"))), headers, request);
     }
 
+    @ExceptionHandler(DomainException.class)
+    ProblemDetail handleDomainException(DomainException ex) {
+        HttpStatus status = switch (ex) {
+            case RuleViolation violation -> HttpStatus.BAD_REQUEST;
+            case Conflict conflict -> HttpStatus.CONFLICT;
+            case NotFound notFound -> HttpStatus.NOT_FOUND;
+            case AuthenticationFailure failure -> HttpStatus.UNAUTHORIZED;
+            case AccessDenied denied -> HttpStatus.FORBIDDEN;
+        };
+        ProblemDetail problem = ProblemDetail.forStatus(status);
+        problem.setType(ProblemTypes.of(ex.code()));
+        problem.setTitle(message("problem." + ex.code() + ".title", ex.getMessage()));
+        problem.setDetail(message("problem." + ex.code() + ".detail", ex.getMessage()));
+        return problem;
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    ProblemDetail handleIllegalArgument(IllegalArgumentException ex) {
+        ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
+        problem.setType(ProblemTypes.VALIDATION);
+        problem.setTitle(message("problem.validation.title", HttpStatus.BAD_REQUEST.getReasonPhrase()));
+        problem.setDetail(ex.getMessage());
+        return problem;
+    }
+
     @ExceptionHandler(AuthenticationException.class)
     ProblemDetail handleAuthentication(AuthenticationException ex) {
+        if (isExpiredToken(ex)) {
+            return problem(HttpStatus.UNAUTHORIZED, ProblemTypes.EXPIRED_TOKEN, "problem.expired-token.title");
+        }
         return problem(HttpStatus.UNAUTHORIZED, ProblemTypes.UNAUTHENTICATED, "problem.unauthenticated.title");
     }
 
@@ -60,11 +95,16 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
         return problem(HttpStatus.FORBIDDEN, ProblemTypes.FORBIDDEN, "problem.forbidden.title");
     }
 
+    private static boolean isExpiredToken(AuthenticationException ex) {
+        return ex instanceof OAuth2AuthenticationException oauth
+                && oauth.getError().getDescription() != null
+                && oauth.getError().getDescription().contains("expired");
+    }
+
     private ProblemDetail problem(HttpStatus status, URI type, String titleKey) {
-        Locale locale = LocaleContextHolder.getLocale();
         ProblemDetail problem = ProblemDetail.forStatus(status);
         problem.setType(type);
-        problem.setTitle(getMessageSource().getMessage(titleKey, null, status.getReasonPhrase(), locale));
+        problem.setTitle(message(titleKey, status.getReasonPhrase()));
         return problem;
     }
 
@@ -78,7 +118,12 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
     }
 
     private String message(String key) {
-        return getMessageSource().getMessage(key, null, key, LocaleContextHolder.getLocale());
+        return message(key, key);
+    }
+
+    private String message(String key, String fallback) {
+        Locale locale = LocaleContextHolder.getLocale();
+        return getMessageSource().getMessage(key, null, fallback, locale);
     }
 
     private static List<Map<String, String>> parameterErrors(HandlerMethodValidationException ex) {
