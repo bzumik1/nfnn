@@ -54,7 +54,7 @@ src/
       site-footer/            Footer with columns and bottom bar.
     features/                 One folder per backend bounded context.
       content/                Public marketing pages.
-        content.routes.ts     `''` → home (lazy).
+        content.routes.ts     `''` → home, `'zasady-ochrany-osobnich-udaju'` → privacy policy (both lazy, with titles).
         home/
           home.{ts,html,scss} Composes the section components below.
           sections/
@@ -64,6 +64,7 @@ src/
             projects/         Project grid + project-card child component.
             news/             News card grid (placeholder content).
             donate-cta/       Donation call-to-action band.
+        privacy-policy/       "Zásady ochrany osobních údajů" (GDPR) page, linked from the footer bottom row.
       contact/
         contact-api.ts        HTTP service: POST /api/contact/messages.
         contact-form/         Contact form; posts through ContactApi, honeypot field, 429 and generic errors.
