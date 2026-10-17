@@ -160,11 +160,12 @@ The `Test` task in `build.gradle.kts` sets `TESTCONTAINERS_DOCKER_SOCKET_OVERRID
 
 ## Deployment
 
-Same model as the sister site `bzumik1/kocarky`; the one-time server setup is in `deploy/README.md` (Czech).
+Modelled on the sister site `bzumik1/kocarky`; the server setup and the deploy steps are in `deploy/README.md` (Czech).
 
-- `.github/workflows/pr-check.yml` runs on every PR to `main` on GitHub's runner: `./gradlew build` (Testcontainers works there), frontend unit tests and build, then both Docker images built and `deploy/compose.yml` started and probed. Never move it, or anything a PR triggers, to the self-hosted runner: unmerged code must not run on the server.
-- `.github/workflows/deploy.yml` runs on a push to `main`: GitHub's runner builds and pushes `ghcr.io/bzumik1/nfnn-backend` and `-frontend` (`latest` and the short SHA), then the self-hosted runner `zima-nfnn` on ZimaOS copies `deploy/compose.yml` to `/DATA/AppData/nfnn/`, pulls that SHA and runs `docker compose up -d --wait`. That runner has the Docker socket, so the repo must stay private.
-- Secrets live only in `/DATA/AppData/nfnn/.env` on the server (`deploy/env.example` lists them). GitHub needs no secrets: `GITHUB_TOKEN` pushes and pulls the images.
+- `.github/workflows/pr-check.yml` runs on every PR to `main` on GitHub's runner: `./gradlew build` (Testcontainers works there), frontend unit tests and build, then both Docker images built and `deploy/compose.yml` started and probed. Never run it, or anything a PR triggers, on a self-hosted runner: unmerged code must not run on the server.
+- `.github/workflows/images.yml` runs on a push to `main` on GitHub's runner and pushes `ghcr.io/bzumik1/nfnn-backend` and `-frontend` (`latest` and the short SHA, private packages).
+- Deploying is manual for now: on ZimaOS, `/DATA/AppData/nfnn/` holds a copy of `deploy/compose.yml` and the `.env`, and `docker compose pull && docker compose up -d --wait` there starts the new images. A change to `deploy/compose.yml` or `deploy/env.example` reaches the server only when someone copies it there; say so in the PR. Automating this with a self-hosted runner like kocarky's is planned; that runner would need the Docker socket, so the repo must stay private.
+- Secrets live only in `/DATA/AppData/nfnn/.env` on the server (`deploy/env.example` lists them). GitHub needs no secrets: `GITHUB_TOKEN` pushes the images.
 - Port 8080 is taken on the ZimaOS box; the frontend publishes 8089. Nginx Proxy Manager terminates TLS for `nfnn.znamenacek.duckdns.org` and forwards to it.
 - The `backup` service writes a daily `pg_dump` to `/DATA/AppData/nfnn/backups/`.
 - The mail health indicator is off, so `/actuator/health` (the backend's Docker healthcheck) does not go DOWN when SMTP is missing or unreachable.

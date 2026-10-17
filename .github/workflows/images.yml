@@ -1,0 +1,36 @@
+name: Publish Docker images
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: images
+  cancel-in-progress: false
+
+jobs:
+  images:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Build and push images
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          prefix=ghcr.io/${GITHUB_REPOSITORY,,}
+          echo "$TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          for app in backend frontend; do
+            docker build \
+              --label org.opencontainers.image.source="https://github.com/$GITHUB_REPOSITORY" \
+              --label org.opencontainers.image.revision="$GITHUB_SHA" \
+              -t "$prefix-$app:latest" -t "$prefix-$app:${GITHUB_SHA::7}" "$app"
+            docker push --all-tags "$prefix-$app"
+          done
+

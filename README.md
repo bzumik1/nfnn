@@ -50,7 +50,7 @@ npm start                   # dev server na http://localhost:4200, /api proxy na
 
 ## Produkční nasazení (ZimaOS)
 
-Merge do `main` nasadí web na Zimu automaticky (GitHub Actions + runner na Zimě). Jednorázové nastavení serveru, zálohy a obnova jsou v [deploy/README.md](deploy/README.md).
+Merge do `main` postaví Docker image do ghcr.io, na Zimě se pak stáhnou a spustí přes `docker compose`. Nastavení serveru, nasazení nové verze, zálohy a obnova jsou v [deploy/README.md](deploy/README.md).
 
 Lokálně celý stack spustíš přes `cp .env.example .env && docker compose up -d --build`, frontend pak běží na `http://localhost:8080`.
 
