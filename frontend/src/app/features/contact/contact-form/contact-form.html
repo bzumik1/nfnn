@@ -51,12 +51,14 @@
             <label for="contact-name" i18n="@@home.contact.form.name">Jméno a příjmení</label>
             <input
               id="contact-name"
-              name="name"
+              name="fullName"
               type="text"
+              autocomplete="name"
               placeholder="Jan Novák"
               i18n-placeholder="@@home.contact.form.namePlaceholder"
-              [(ngModel)]="model.name"
+              [(ngModel)]="model.fullName"
               required
+              maxlength="120"
             />
           </div>
 
@@ -66,9 +68,12 @@
               id="contact-email"
               name="email"
               type="email"
+              autocomplete="email"
               placeholder="jan@example.com"
               [(ngModel)]="model.email"
               required
+              email
+              maxlength="254"
             />
           </div>
 
@@ -82,10 +87,33 @@
               i18n-placeholder="@@home.contact.form.messagePlaceholder"
               [(ngModel)]="model.message"
               required
+              maxlength="5000"
             ></textarea>
           </div>
 
-          <button type="submit" class="form-submit" i18n="@@home.contact.form.submit">Odeslat zprávu</button>
+          <div class="field field-trap" aria-hidden="true">
+            <label for="contact-website">Website</label>
+            <input
+              id="contact-website"
+              name="website"
+              type="text"
+              tabindex="-1"
+              autocomplete="off"
+              [(ngModel)]="model.website"
+            />
+          </div>
+
+          @if (error()) {
+            <p class="form-error" role="alert">{{ error() }}</p>
+          }
+
+          <button type="submit" class="form-submit" [disabled]="sending()">
+            @if (sending()) {
+              <ng-container i18n="@@home.contact.form.sending">Odesílám…</ng-container>
+            } @else {
+              <ng-container i18n="@@home.contact.form.submit">Odeslat zprávu</ng-container>
+            }
+          </button>
         </form>
       }
     </div>

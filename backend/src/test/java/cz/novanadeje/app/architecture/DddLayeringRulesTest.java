@@ -6,6 +6,7 @@ import com.tngtech.archunit.junit.ArchTest;
 import com.tngtech.archunit.lang.ArchRule;
 import cz.novanadeje.app.AppApplication;
 
+import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 import static com.tngtech.archunit.library.Architectures.layeredArchitecture;
 import static com.tngtech.archunit.library.dependencies.SlicesRuleDefinition.slices;
 
@@ -22,7 +23,6 @@ class DddLayeringRulesTest {
             .layer("Application").definedBy("..application..")
             .layer("Infrastructure").definedBy("..infrastructure..")
             .layer("Interfaces").definedBy("..interfaces..")
-            .withOptionalLayers(true)
             .whereLayer("Interfaces").mayNotBeAccessedByAnyLayer()
             .whereLayer("Infrastructure").mayOnlyBeAccessedByLayers("Interfaces")
             .whereLayer("Application").mayOnlyBeAccessedByLayers("Interfaces", "Infrastructure")
@@ -32,6 +32,17 @@ class DddLayeringRulesTest {
     static final ArchRule bounded_contexts_must_not_depend_on_each_other = slices()
             .matching("cz.novanadeje.app.(content|donors|donations|contact)..")
             .namingSlices("Bounded context: $1")
-            .should().notDependOnEachOther()
-            .allowEmptyShould(true);
+            .should().notDependOnEachOther();
+
+    @ArchTest
+    static final ArchRule domain_must_not_depend_on_frameworks = noClasses()
+            .that().resideInAPackage("..domain..")
+            .should().dependOnClassesThat()
+            .resideInAnyPackage("org.springframework..", "jakarta.persistence..", "jakarta.validation..");
+
+    @ArchTest
+    static final ArchRule rest_controllers_must_not_expose_infrastructure_types = noClasses()
+            .that().resideInAPackage("..interfaces.rest..")
+            .should().dependOnClassesThat()
+            .resideInAPackage("..infrastructure.persistence..");
 }
