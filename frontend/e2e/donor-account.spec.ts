@@ -116,4 +116,29 @@ test.describe('Given a visitor who wants a donor account', () => {
 
     await expect(page.locator('.topbar-greeting')).toContainText('Jana Nováková');
   });
+
+  test('when they come back with a remembered session to the home page, then the QR payment carries their variable symbol', async ({ page }) => {
+    await page.addInitScript(() => localStorage.setItem('nfnn.donor-session', '1'));
+    await page.route('**/api/donors/auth/refresh', (route) => route.fulfill(session(200)));
+    const requestedSymbols: (string | null)[] = [];
+    await page.route(
+      (url) => url.pathname === '/api/donations/payment-qr',
+      async (route) => {
+        requestedSymbols.push(new URL(route.request().url()).searchParams.get('variableSymbol'));
+        await route.fulfill({
+          json: {
+            spayd: 'SPD*1.0*ACC:CZ6508000000192000145399*AM:500.00*CC:CZK*X-VS:1234567890',
+            qrPngBase64: 'iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAIAAAAmkwkpAAAAEElEQVR4nGNQTX4NRwzEcQBO0hcxU+9NfQAAAABJRU5ErkJggg==',
+            bankAccount: { accountNumber: '123456789/0800', iban: 'CZ6508000000192000145399', recipientName: 'Nadační fond Nová naděje' },
+          },
+        });
+      },
+    );
+
+    await page.goto('/');
+
+    await expect(page.locator('#donate')).toContainText('Variabilní symbol');
+    await expect(page.locator('#donate')).toContainText('1234567890');
+    expect(requestedSymbols).toEqual(['1234567890']);
+  });
 });

@@ -65,19 +65,20 @@ src/
       content/                Public marketing pages.
         content.routes.ts     `''` → home, `'zasady-ochrany-osobnich-udaju'` → privacy policy (both lazy, with titles).
         home/
-          home.{ts,html,scss} Composes the section components below.
+          home.{ts,html,scss} Composes the section components below; passes the signed-in donor's variable symbol from AuthStore to the donate section.
           sections/
             hero/             Full-bleed hero with overlay copy and CTA.
             stats-bar/        Numbers strip under the hero.
             about/            Two-column About section with image.
             projects/         Project grid + project-card child component.
             news/             News card grid (placeholder content).
-            donate-cta/       Donation call-to-action band.
+            donate-cta/       Donation band: preset or custom amount, QR payment from PaymentQrApi (debounced, latest request wins), bank account and the donor's variable symbol when given.
         privacy-policy/       "Zásady ochrany osobních údajů" (GDPR) page, linked from the footer bottom row.
       contact/
         contact-api.ts        HTTP service: POST /api/contact/messages.
         contact-form/         Contact form; posts through ContactApi, honeypot field, 429 and generic errors.
       donations/
+        payment-qr-api.ts     HTTP service: GET /api/donations/payment-qr (SPAYD, PNG QR code, bank account).
         receipt/              Donation receipt placeholder page.
       donors/
         donors.routes.ts      `'prehled'` → dashboard (the whole `/donor` branch sits behind `donorGuard` in app.routes.ts).
