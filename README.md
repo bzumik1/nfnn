@@ -50,13 +50,9 @@ npm start                   # dev server na http://localhost:4200, /api proxy na
 
 ## Produkční nasazení (ZimaOS)
 
-```bash
-cp .env.example .env
-# uprav JWT_SECRET, DB_PASSWORD, MAIL_*
-docker compose up -d --build
-```
+Merge do `main` nasadí web na Zimu automaticky (GitHub Actions + runner na Zimě). Jednorázové nastavení serveru, zálohy a obnova jsou v [deploy/README.md](deploy/README.md).
 
-Frontend bude na `http://<host>:8080`, requesty na `/api/*` se proxyjí na backend kontejner.
+Lokálně celý stack spustíš přes `cp .env.example .env && docker compose up -d --build`, frontend pak běží na `http://localhost:8080`.
 
 ## Architektura
 
