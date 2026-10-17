@@ -38,7 +38,7 @@ services:
     network_mode: bridge
     depends_on:
       postgres:
-        condition: service_healthy
+        condition: service_started
     links:
       - postgres
     environment:
@@ -54,6 +54,7 @@ services:
     command:
       - |
         while true; do
+          until pg_isready --quiet; do sleep 5; done
           file="/backups/nfnn-$$(date +%Y-%m-%d_%H%M).dump"
           if pg_dump --format=custom --file="$$file.part"; then
             mv "$$file.part" "$$file"
@@ -77,7 +78,7 @@ services:
     network_mode: bridge
     depends_on:
       postgres:
-        condition: service_healthy
+        condition: service_started
     links:
       - postgres
     environment:
@@ -120,7 +121,7 @@ services:
     network_mode: bridge
     depends_on:
       backend:
-        condition: service_healthy
+        condition: service_started
     links:
       - backend
     ports:
