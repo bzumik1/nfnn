@@ -6,6 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Web application for the foundation **Nadační fond Nová naděje**. Czech-language site (i18n-ready for English) with a public marketing site, content administration, donor portal with PDF donation receipts, and a contact form.
 
+**Product requirements** (Czech, agreed with the client) are in `docs/requirements.md`: what the first version does, what is deferred, and the open questions. Read it before building a feature; update it when the client decides something new. The HTTP API is specified in `docs/api-contract.md`.
+
 The HTML/React prototype in `Claude Design/Nova Nadeje.html` is the **visual reference only** — it is a static prototype using Babel-in-the-browser. The production frontend is Angular and the design must be re-implemented in components, not embedded.
 
 ## Repository layout
