@@ -12,6 +12,7 @@ x-logging: &logging
 services:
   postgres:
     image: postgres:17-alpine
+    container_name: nfnn-postgres
     restart: unless-stopped
     network_mode: bridge
     environment:
@@ -34,6 +35,7 @@ services:
 
   backup:
     image: postgres:17-alpine
+    container_name: nfnn-backup
     restart: unless-stopped
     network_mode: bridge
     depends_on:
@@ -74,6 +76,7 @@ services:
 
   backend:
     image: ghcr.io/bzumik1/nfnn-backend:latest
+    container_name: nfnn-backend
     restart: unless-stopped
     network_mode: bridge
     depends_on:
@@ -117,6 +120,7 @@ services:
 
   frontend:
     image: ghcr.io/bzumik1/nfnn-frontend:latest
+    container_name: nfnn-frontend
     restart: unless-stopped
     network_mode: bridge
     depends_on:

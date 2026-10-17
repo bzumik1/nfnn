@@ -32,26 +32,18 @@ Gzip, cache a bezpečnostní hlavičky řeší nginx ve frontend image, Advanced
 
 ## Nasazení nové verze
 
-Po merge do `main` počkej, až v Actions doběhne zeleně **Publish Docker images**. Pak na Zimě stáhni nové `latest` image a restartuj aplikaci, buď v ZimaOS, nebo v terminálu:
-
-```bash
-sudo docker pull ghcr.io/bzumik1/nfnn-backend:latest
-sudo docker pull ghcr.io/bzumik1/nfnn-frontend:latest
-sudo docker restart nfnn-backend-1 nfnn-frontend-1
-```
-
-Pokud se kontejnery na Zimě jmenují jinak, `sudo docker ps --filter name=nfnn` je ukáže.
+Po merge do `main` počkej, až v Actions doběhne zeleně **Publish Docker images**. Pak v ZimaOS aplikaci přeinstaluj se stejným compose a stejnými tajemstvími; data v `/DATA/AppData/nfnn` zůstanou. Samotné `docker restart` nestačí, kontejner by běžel dál ze staré image.
 
 ## Zálohy
 
 Kontejner `backup` udělá `pg_dump` při každém startu a pak každých 24 hodin do `/DATA/AppData/nfnn/backups/nfnn-<datum>.dump` a maže zálohy starší než 30 dní. Leží na stejném disku jako databáze, takže je potřeba je kopírovat i mimo Zimu (ZimaOS Backup, cloud sync).
 
-Obnova (název kontejneru ověř přes `sudo docker ps --filter name=nfnn`):
+Obnova:
 
 ```bash
-sudo docker stop nfnn-backend-1
-sudo docker exec nfnn-backup-1 sh -c 'pg_restore --clean --if-exists --dbname="$PGDATABASE" /backups/nfnn-2026-10-17_0300.dump'
-sudo docker start nfnn-backend-1
+sudo docker stop nfnn-backend
+sudo docker exec nfnn-backup sh -c 'pg_restore --clean --if-exists --dbname="$PGDATABASE" /backups/nfnn-2026-10-17_0300.dump'
+sudo docker start nfnn-backend
 ```
 
 ## Přechod na skutečnou doménu
