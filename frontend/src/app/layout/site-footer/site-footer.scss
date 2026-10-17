@@ -53,10 +53,32 @@
   display: flex;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 12px 28px;
 
   p {
     font-size: 13px;
+  }
+
+  > :first-child {
+    margin-inline-end: auto;
+  }
+}
+
+.footer-privacy {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 13px;
+  text-decoration: none;
+  transition: color 0.2s;
+
+  &:hover,
+  &.is-active {
+    color: #fff;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 3px;
+    border-radius: 2px;
   }
 }
 
@@ -76,6 +98,10 @@
     flex-direction: column;
     gap: 8px;
     text-align: center;
+
+    > :first-child {
+      margin-inline-end: 0;
+    }
   }
 
   .section-inner {

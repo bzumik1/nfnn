@@ -25,7 +25,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 72px;
+  height: var(--header-height);
 }
 
 .brand {
@@ -154,7 +154,7 @@
 
 .mobile-menu {
   position: fixed;
-  top: 72px;
+  top: var(--header-height);
   left: 0;
   right: 0;
   z-index: 99;
