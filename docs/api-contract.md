@@ -28,9 +28,9 @@ JWT-based, scoped to `donors` bounded context. Roles in JWT claims: `DONOR`, `AD
 | Token | Lifetime | Storage (frontend) | Transport |
 |---|---|---|---|
 | Access | ~15 min | In-memory only (no localStorage) | `Authorization: Bearer ...` header |
-| Refresh | ~14 days | HttpOnly + Secure + SameSite=Strict cookie, path `/api/donors/auth/refresh` | Set-Cookie on login/refresh; sent automatically by browser |
+| Refresh | 14 days | HttpOnly + Secure + SameSite=Strict cookie, path `/api/donors/auth` | Set-Cookie on register/login/refresh; sent automatically by the browser to refresh and logout |
 
-Refresh tokens are stored server-side (`donor_refresh_token` table) and rotated on every refresh (anti-replay). Logout invalidates the current refresh token.
+Refresh tokens are stored server-side as hashes (`donor_refresh_token` table) and rotated on every refresh; presenting an already rotated token revokes every session of the donor. Logout invalidates the current refresh token.
 
 Password rules: min 12 characters; checked against a small disallow-list of common passwords; BCrypt cost 12.
 
@@ -94,51 +94,73 @@ Detail adds: `longDescription`, `gallery: string[]`. News uses `title`/`perex`/`
 
 ### `donors` — donor accounts and authentication
 
+Implemented: register, login, refresh, logout, profile. Password reset is task 7.
+
 | Method | Path | Auth | Purpose |
 |---|---|---|---|
-| `POST` | `/api/donors/auth/register` | public | Create donor account. 201 with access token + refresh cookie. |
-| `POST` | `/api/donors/auth/login` | public | 200 with access token + refresh cookie. 401 `auth/invalid-credentials`. |
-| `POST` | `/api/donors/auth/refresh` | refresh cookie | New access token (and rotated refresh cookie). |
-| `POST` | `/api/donors/auth/logout` | donor | Invalidates refresh token. 204. |
-| `POST` | `/api/donors/auth/password-reset/request` | public | Always 202 (no email enumeration). Rate-limited 3/h/email. |
-| `POST` | `/api/donors/auth/password-reset/confirm` | public | Consume token + set new password. 204. |
-| `GET` | `/api/donors/me` | donor | Profile + variable symbol. |
-| `PATCH` | `/api/donors/me` | donor | Update `fullName`, `preferredLocale`. |
+| `POST` | `/api/donors/auth/register` | public | Create a donor account. 201 with the auth response and the refresh cookie. 400 `validation` (field errors, incl. a wrong IČO check digit), 400 `donors/company-identifier-required` / `donors/company-identifier-not-allowed`, 400 `donors/password-too-short` / `-too-long` / `-too-common`, 409 `donors/email-already-registered`. |
+| `POST` | `/api/donors/auth/login` | public | 200 with the auth response and the refresh cookie. 401 `auth/invalid-credentials` for a wrong password and an unknown email alike. |
+| `POST` | `/api/donors/auth/refresh` | refresh cookie | New access token and a rotated refresh cookie. 401 `auth/invalid-refresh-token` when the cookie is missing, expired, revoked or already used (a reused token revokes every session of that donor). |
+| `POST` | `/api/donors/auth/logout` | refresh cookie | Revokes the refresh token and clears the cookie. 204 even without a cookie. |
+| `POST` | `/api/donors/auth/password-reset/request` | public | Planned (task 7). Always 202 (no email enumeration), rate-limited. |
+| `POST` | `/api/donors/auth/password-reset/confirm` | public | Planned (task 7). Consume the token and set a new password. 204. |
+| `GET` | `/api/donors/me` | donor | Profile incl. the variable symbol. |
+| `PATCH` | `/api/donors/me` | donor | Partial update of `name`, `address`, `preferredLocale`; omitted fields stay. |
 
-#### Auth response shape (register/login)
+#### Registration request
 
 ```json
 {
-  "user": { "id": "...", "fullName": "...", "email": "...", "preferredLocale": "cs", "variableSymbol": "..." },
-  "accessToken": "eyJ...",
-  "accessTokenExpiresAt": "2026-05-02T13:30:00Z"
+  "type": "COMPANY",
+  "name": "Stavby Novák s.r.o.",
+  "companyIdentifier": "45274649",
+  "address": { "street": "Průmyslová 5", "city": "Teplice", "postalCode": "415 01" },
+  "email": "ucetni@stavby.cz",
+  "password": "correct horse battery",
+  "preferredLocale": "cs"
 }
 ```
 
-Refresh token is **not** in the JSON body — it ships in a `Set-Cookie` header.
+- `type` is `PERSON` or `COMPANY`. A company must send `companyIdentifier` (IČO: 8 digits with a valid check digit, spaces allowed); a person must not. Both go on the gift confirmation, which is why `address` is required.
+- `name`: `@NotBlank`, max 160; the person's full name or the company name.
+- `email`: `@Email`, max 254; stored trimmed and lowercased, so uniqueness is case-insensitive.
+- `password`: 12–128 characters, not on the common-password list; stored as BCrypt (cost 12).
+- `preferredLocale`: `cs` (default) or `en`.
 
-#### Validation
+#### Auth response (register, login, refresh)
 
-- `email`: `@Email`, max 254.
-- `fullName`: `@NotBlank @Size(min=2, max=120)`.
-- `password`: `@Size(min=12, max=128)` + disallow common passwords.
-- `preferredLocale`: `cs` or `en`.
+```json
+{
+  "user": { "...": "the GET /api/donors/me body" },
+  "accessToken": "eyJ...",
+  "accessTokenExpiresAt": "2026-10-17T10:15:00Z"
+}
+```
+
+The access token is an HS256 JWT (`iss`, `sub` = donor id, `roles`, 15 minutes; `app.security.jwt.*`). The refresh token is **not** in the body: it ships as the `refresh_token` cookie (`HttpOnly; Secure; SameSite=Strict; Path=/api/donors/auth`, 14 days; `app.donors.session.refresh-token-ttl`), so only the auth endpoints ever receive it. The backend stores its SHA-256 hash in `donor_refresh_token`.
 
 #### `GET /api/donors/me` response
 
 ```json
 {
-  "id": "...",
-  "fullName": "...",
-  "email": "...",
+  "id": "01a18e56-bdb0-775a-bd0a-a60756831369",
+  "type": "PERSON",
+  "name": "Jana Nováková",
+  "companyIdentifier": null,
+  "address": { "street": "Dlouhá 12", "city": "Ústí nad Labem", "postalCode": "400 01" },
+  "email": "jana@example.cz",
   "preferredLocale": "cs",
-  "variableSymbol": "...",
+  "variableSymbol": "4821937560",
   "roles": ["DONOR"],
-  "createdAt": "..."
+  "registeredAt": "2026-10-17T10:00:00Z"
 }
 ```
 
-`variableSymbol` is generated at registration (deterministic from `donor.id`), shown in the donor dashboard so the donor can put it on bank transfers. Backend uses it to match incoming bank statements to donors.
+`variableSymbol` is a random 10-digit number (first digit 1–9), unique among donors, generated at registration. The dashboard shows it so the donor puts it on bank transfers; `donations` will match incoming payments by it.
+
+#### Frontend session handling
+
+`core/auth/AuthStore` keeps the donor and the access token in memory only. `authInterceptor` adds `Authorization: Bearer` to every `/api/**` call except `/api/donors/auth/**`; on a 401 whose problem type ends with `auth/expired-token` it refreshes once (one request even for parallel calls) and retries. A `localStorage` flag (`nfnn.donor-session`) only records that a session may exist, so the app calls `refresh` on start for returning donors and skips it for everyone else; `donorGuard` waits for that restore before opening `/donor/**` and otherwise sends the visitor home with the sign-in dialog open.
 
 ### `donations` — donations and PDF receipts
 
@@ -260,9 +282,11 @@ Shared pieces that came with it and that every later context reuses:
 - `shared/infrastructure/async`: `@EnableAsync`, so `@TransactionalEventListener(AFTER_COMMIT)` listeners run off the request thread with `@Async`.
 - Test support in `src/test/java/.../support/`: `MutableClock`, `RecordingMailSender` (records instead of sending), both wired as `@Primary` by `TestSupportConfiguration`, and `cucumber/ApiClient` for HTTP calls in step definitions.
 
-### `donors` first features
+### `donors` (done)
 
-Registration, login, invalid login. Domain: `Donor` aggregate, `Role` sealed enum, `PasswordHash`, `VariableSymbol`, `RefreshToken`. Liquibase: `001_create_donor.xml`, `002_create_donor_role.xml`, `003_create_refresh_token.xml`, `004_create_password_reset_token.xml`.
+`features/donors/donor_registration.feature` and `donor_login.feature` cover registration as a person and as a company, the IČO rules, duplicate emails, weak passwords, sign-in, expiry of the access token, refresh rotation and reuse, sign-out and the profile update. Domain: `Donor` aggregate, `DonorType`, `Role`, `CompanyIdentifier`, `VariableSymbol`, `RawPassword` / `PasswordHash` (`PasswordHasher` port, BCrypt adapter), `RefreshToken` / `RefreshTokenSecret`. Liquibase: `donors/001_create_donor.xml` (`donor`, `donor_role`), `002_create_donor_refresh_token.xml`. Password reset (task 7) adds its own token table.
+
+Shared pieces that came with it: the sealed `shared/domain/error/DomainException` family (`RuleViolation` 400, `Conflict` 409, `NotFound` 404, `AuthenticationFailure` 401, `AccessDenied` 403), which `ApiExceptionHandler` maps to a problem whose `type` is the exception's code and whose title and detail come from `problem.<code>.title` / `.detail` in the message bundles; `PostalAddress` and `LocaleCode` value objects; `shared/infrastructure/security/JwtConfiguration` (encoder, decoder validated against the application `Clock`, roles → `ROLE_*` authorities), with `ApiSecurityConfiguration` acting as an OAuth2 resource server. Cucumber scenarios truncate every application table before they start (`support/DatabaseCleaner`).
 
 ### `donations` first features
 

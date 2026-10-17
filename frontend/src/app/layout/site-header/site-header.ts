@@ -1,6 +1,7 @@
 import { Component, HostListener, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { LoginDialogService } from '../../features/donors/login-dialog.service';
+import { AuthStore } from '../../core/auth/auth-store';
+import { LoginDialogService } from '../../core/auth/login-dialog.service';
 
 @Component({
   selector: 'app-site-header',
@@ -11,6 +12,7 @@ import { LoginDialogService } from '../../features/donors/login-dialog.service';
 export class SiteHeader {
   private readonly loginDialog = inject(LoginDialogService);
 
+  protected readonly auth = inject(AuthStore);
   protected readonly scrolled = signal(false);
   protected readonly menuOpen = signal(false);
 

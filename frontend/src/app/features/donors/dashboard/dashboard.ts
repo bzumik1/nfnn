@@ -1,5 +1,6 @@
-import { Component, computed, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
+import { AuthStore } from '../../../core/auth/auth-store';
 import {
   Receipt,
   ReceiptInput,
@@ -14,10 +15,15 @@ import {
   styleUrl: './dashboard.scss',
 })
 export class DonorDashboard {
-  protected readonly user: ReceiptUser = {
-    name: 'Demo dárce',
-    email: 'demo@novanaděje.cz',
-  };
+  private readonly router = inject(Router);
+  private readonly auth = inject(AuthStore);
+
+  protected readonly donor = this.auth.donor;
+
+  protected readonly user = computed<ReceiptUser>(() => ({
+    name: this.donor()?.name ?? '',
+    email: this.donor()?.email ?? '',
+  }));
 
   protected readonly payments: readonly ReceiptPayment[] = [
     { id: 1, date: '15. 03. 2026', amount: 500, purpose: 'Obecný příspěvek', status: 'Přijato' },
@@ -37,6 +43,7 @@ export class DonorDashboard {
 
   protected readonly selectedYear = signal<string>('');
   protected readonly selectedReceipt = signal<ReceiptInput | null>(null);
+  protected readonly signingOut = signal(false);
 
   protected readonly yearPayments = computed(() =>
     this.payments.filter((p) => p.date.split('. ')[2] === this.selectedYear()),
@@ -46,7 +53,7 @@ export class DonorDashboard {
     this.yearPayments().reduce((sum, p) => sum + p.amount, 0),
   );
 
-  constructor(private readonly router: Router) {
+  constructor() {
     this.selectedYear.set(this.years()[0] ?? '');
   }
 
@@ -78,7 +85,11 @@ export class DonorDashboard {
   }
 
   protected logout(): void {
-    this.router.navigateByUrl('/');
+    if (this.signingOut()) {
+      return;
+    }
+    this.signingOut.set(true);
+    this.auth.logout().subscribe(() => this.router.navigateByUrl('/'));
   }
 
   protected contributionsLabel(count: number): string {

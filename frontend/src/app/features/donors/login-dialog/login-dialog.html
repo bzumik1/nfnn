@@ -5,7 +5,7 @@
   aria-labelledby="login-dialog-title"
   (click)="onOverlayClick($event)"
 >
-  <div class="card">
+  <div class="card" [class.card--wide]="mode() === 'register'">
     <button
       type="button"
       class="close-btn"
@@ -40,55 +40,124 @@
 
       @if (mode() === 'login') {
         <p class="sub" i18n="@@donor.login.sub.login">Přístup do vašeho přehledu příspěvků</p>
-      } @else {
-        <p class="sub" i18n="@@donor.login.sub.register">Vytvořte si účet pro správu daňových potvrzení</p>
-      }
 
-      <form #f="ngForm" (ngSubmit)="submitAuth(f)" novalidate>
-        @if (mode() === 'register') {
+        <form #login="ngForm" class="login-form" (ngSubmit)="submitLogin(login)" novalidate>
           <div class="field">
-            <label for="login-name" i18n="@@donor.login.name">Jméno a příjmení</label>
-            <input id="login-name" name="name" type="text" placeholder="Jan Novák" i18n-placeholder="@@home.contact.form.namePlaceholder" [(ngModel)]="name" required />
+            <label for="login-email" i18n="@@donor.login.email">E-mail</label>
+            <input id="login-email" name="email" type="email" autocomplete="email" placeholder="vas@email.cz" i18n-placeholder="@@donor.login.emailPlaceholder" [(ngModel)]="email" required email />
           </div>
-        }
-        <div class="field">
-          <label for="login-email" i18n="@@donor.login.email">E-mail</label>
-          <input id="login-email" name="email" type="email" placeholder="vas@email.cz" i18n-placeholder="@@donor.login.emailPlaceholder" [(ngModel)]="email" required />
-        </div>
-        <div class="field">
-          <label for="login-password" i18n="@@donor.login.password">Heslo</label>
-          <input id="login-password" name="password" type="password" placeholder="••••••••" [(ngModel)]="password" required />
-        </div>
+          <div class="field">
+            <label for="login-password" i18n="@@donor.login.password">Heslo</label>
+            <input id="login-password" name="password" type="password" autocomplete="current-password" placeholder="••••••••" [(ngModel)]="password" required />
+          </div>
 
-        @if (error()) {
-          <p class="form-error">{{ error() }}</p>
-        }
+          @if (error()) {
+            <p class="form-error" role="alert">{{ error() }}</p>
+          }
 
-        <button type="submit" class="form-submit" [disabled]="loading()">
-          @if (loading()) {
-            @if (mode() === 'login') {
+          <button type="submit" class="form-submit" [disabled]="loading()">
+            @if (loading()) {
               <span i18n="@@donor.login.submit.login.loading">Přihlašuji…</span>
             } @else {
-              <span i18n="@@donor.login.submit.register.loading">Registruji…</span>
-            }
-          } @else {
-            @if (mode() === 'login') {
               <span i18n="@@donor.login.submit.login">Přihlásit se</span>
+            }
+          </button>
+        </form>
+
+        <p class="foot">
+          <span i18n="@@donor.login.forgot">Zapomněli jste heslo?</span>
+          <button type="button" class="link-btn" (click)="setMode('reset')" i18n="@@donor.login.reset">Obnovit heslo</button>
+        </p>
+      } @else {
+        <p class="sub" i18n="@@donor.login.sub.register">Vytvořte si účet pro správu potvrzení o darech</p>
+
+        <form #register="ngForm" class="register-form" (ngSubmit)="submitRegistration(register)" novalidate>
+          <div class="type-switch" role="radiogroup" aria-label="Typ dárce" i18n-aria-label="@@donor.register.type">
+            <button
+              type="button"
+              role="radio"
+              [attr.aria-checked]="donorType() === 'PERSON'"
+              [class.is-active]="donorType() === 'PERSON'"
+              (click)="setDonorType('PERSON')"
+              i18n="@@donor.register.type.person"
+            >Fyzická osoba</button>
+            <button
+              type="button"
+              role="radio"
+              [attr.aria-checked]="donorType() === 'COMPANY'"
+              [class.is-active]="donorType() === 'COMPANY'"
+              (click)="setDonorType('COMPANY')"
+              i18n="@@donor.register.type.company"
+            >Firma</button>
+          </div>
+
+          <div class="field">
+            @if (donorType() === 'COMPANY') {
+              <label for="register-name" i18n="@@donor.register.companyName">Název firmy</label>
+              <input id="register-name" name="name" type="text" autocomplete="organization" placeholder="Stavby Novák s.r.o." i18n-placeholder="@@donor.register.companyNamePlaceholder" [(ngModel)]="registration.name" required maxlength="160" />
+            } @else {
+              <label for="register-name" i18n="@@donor.login.name">Jméno a příjmení</label>
+              <input id="register-name" name="name" type="text" autocomplete="name" placeholder="Jan Novák" i18n-placeholder="@@home.contact.form.namePlaceholder" [(ngModel)]="registration.name" required maxlength="160" />
+            }
+          </div>
+
+          @if (donorType() === 'COMPANY') {
+            <div class="field">
+              <label for="register-company-identifier" i18n="@@donor.register.companyIdentifier">IČO</label>
+              <input id="register-company-identifier" name="companyIdentifier" type="text" inputmode="numeric" placeholder="12345678" [(ngModel)]="registration.companyIdentifier" required pattern="\s*(\d\s*){8}" />
+              <p class="hint" i18n="@@donor.register.companyIdentifierHint">Osm číslic, uvedeme ho na potvrzení o daru.</p>
+            </div>
+          }
+
+          <div class="field">
+            @if (donorType() === 'COMPANY') {
+              <label for="register-street" i18n="@@donor.register.companyStreet">Sídlo – ulice a číslo</label>
+            } @else {
+              <label for="register-street" i18n="@@donor.register.street">Ulice a číslo</label>
+            }
+            <input id="register-street" name="street" type="text" autocomplete="street-address" placeholder="Dlouhá 12" [(ngModel)]="registration.street" required maxlength="200" />
+          </div>
+
+          <div class="field-row">
+            <div class="field">
+              <label for="register-city" i18n="@@donor.register.city">Město</label>
+              <input id="register-city" name="city" type="text" autocomplete="address-level2" placeholder="Ústí nad Labem" [(ngModel)]="registration.city" required maxlength="120" />
+            </div>
+            <div class="field">
+              <label for="register-postal-code" i18n="@@donor.register.postalCode">PSČ</label>
+              <input id="register-postal-code" name="postalCode" type="text" inputmode="numeric" autocomplete="postal-code" placeholder="400 01" [(ngModel)]="registration.postalCode" required pattern="\s*\d{3}\s*\d{2}\s*" />
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="register-email" i18n="@@donor.login.email">E-mail</label>
+            <input id="register-email" name="email" type="email" autocomplete="email" placeholder="vas@email.cz" i18n-placeholder="@@donor.login.emailPlaceholder" [(ngModel)]="registration.email" required email maxlength="254" />
+          </div>
+
+          <div class="field">
+            <label for="register-password" i18n="@@donor.login.password">Heslo</label>
+            <input id="register-password" name="password" type="password" autocomplete="new-password" placeholder="••••••••••••" [(ngModel)]="registration.password" required [minlength]="passwordMinLength" maxlength="128" />
+            <p class="hint" i18n="@@donor.register.passwordHint">Alespoň 12 znaků. Klidně celá věta, která se vám dobře pamatuje.</p>
+          </div>
+
+          @if (error()) {
+            <p class="form-error" role="alert">{{ error() }}</p>
+          }
+
+          <button type="submit" class="form-submit" [disabled]="loading()">
+            @if (loading()) {
+              <span i18n="@@donor.login.submit.register.loading">Registruji…</span>
             } @else {
               <span i18n="@@donor.login.submit.register">Registrovat</span>
             }
-          }
-        </button>
-      </form>
+          </button>
 
-      <p class="foot">
-        @if (mode() === 'login') {
-          <span i18n="@@donor.login.forgot">Zapomněli jste heslo?</span>
-          <button type="button" class="link-btn" (click)="setMode('reset')" i18n="@@donor.login.reset">Obnovit heslo</button>
-        } @else {
-          <span i18n="@@donor.login.demo">Demo: libovolný email + heslo (min. 3 znaky)</span>
-        }
-      </p>
+          <p class="consent" i18n="@@donor.register.consent">
+            Registrací souhlasíte se zpracováním osobních údajů podle
+            <a routerLink="/zasady-ochrany-osobnich-udaju" (click)="closeDialog()">zásad ochrany osobních údajů</a>.
+          </p>
+        </form>
+      }
     } @else {
       @if (resetSent()) {
         <div class="reset-success">
