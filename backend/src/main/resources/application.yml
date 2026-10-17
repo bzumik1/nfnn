@@ -61,6 +61,7 @@ management:
 app:
   contact:
     recipient-email: ${CONTACT_RECIPIENT:info@novanadeje.cz}
+    sender-email: ${MAIL_FROM:${CONTACT_RECIPIENT:info@novanadeje.cz}}
   security:
     jwt:
       issuer: nova-nadeje

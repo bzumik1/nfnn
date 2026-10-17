@@ -65,7 +65,8 @@ src/
             news/             News card grid (placeholder content).
             donate-cta/       Donation call-to-action band.
       contact/
-        contact-form/         Static contact form (no submission wired yet).
+        contact-api.ts        HTTP service: POST /api/contact/messages.
+        contact-form/         Contact form; posts through ContactApi, honeypot field, 429 and generic errors.
       donations/
         receipt/              Donation receipt placeholder page.
       donors/
@@ -116,7 +117,9 @@ When adding new copy, **always** mark it with a stable `@@id`. Renaming an id si
 
 ## API access
 
-Backend lives at `http://localhost:8080` and exposes everything under `/api/...`. The repo-root `CLAUDE.md` says `npm start` proxies `/api/*` to the backend, but **no `proxy.conf.json` is wired up yet** — it will need to be added to `angular.json` (`serve.options.proxyConfig`) the first time the frontend has to call the backend. Until then, all components are static; no HTTP services exist in `core/`.
+Backend lives at `http://localhost:8080` and exposes everything under `/api/...`. `npm start` proxies `/api/*` there through `proxy.conf.json` (`serve.options.proxyConfig` in `angular.json`). `HttpClient` is provided in `app.config.ts` with `withFetch()`. Each feature keeps its own HTTP service next to its components (`features/contact/contact-api.ts`); cross-feature singletons (auth state, interceptors) go to `core/`.
+
+Errors from the backend are RFC 7807 `application/problem+json`; the `HttpErrorResponse.error` body carries `type`, `title`, `status` and, for validation, `errors: [{ field, message }]`.
 
 Production: nginx in `frontend/Dockerfile` proxies `/api/*` to the `backend` container in compose. Components must only call relative `/api/...` URLs.
 
@@ -126,11 +129,9 @@ Images and other public files live in `public/`. The build copies `public/**/*` 
 
 ## What is intentionally *not* implemented yet
 
-- No HTTP services, no auth, no guards, no interceptors. All forms are static markup with no submit handlers.
+- No auth, no guards, no interceptors. The login dialog and the donor forms are static markup with no submit handlers; only the contact form talks to the backend.
 - No real translations (English target empty).
-- No proxy config — first backend call will require wiring `proxy.conf.json`.
 - `core/` and `shared/` are placeholders (`.gitkeep`).
-- `app.spec.ts` is the default scaffold spec; no real component tests yet.
 - Donor `dashboard` and `donations/receipt` are visual placeholders only.
 
 When implementing a feature that touches the backend, add: a service in `core/` (or a feature subfolder), HTTP types as DTOs (not entities), a guard if it's auth-gated, a route, and at least one Vitest spec following the project's `Given … when … then` BDD naming.

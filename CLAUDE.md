@@ -104,11 +104,9 @@ src/app/features/.../<feature>.routes.ts               Lazy-loaded route definit
 - Cucumber glue (step definitions) live in the same package as the bounded context they test (e.g. `cz.novanadeje.app.donations.cucumber`), not in one shared dump folder. The Cucumber suite (`AcceptanceTests`) glues from `cz.novanadeje.app`, so any subpackage is discovered.
 - **Never use H2** — Testcontainers provides real PostgreSQL.
 
-**Smoke feature placeholder:**
-A trivial `smoke.feature` + `SmokeStepDefinitions` exists so `./gradlew test` is green on a fresh checkout. The file's own comment block instructs to remove it once real features exist. Do not build on top of it — the moment you add the first real feature in any bounded context, delete `smoke.feature` and `SmokeStepDefinitions.java`.
+**Test support (`src/test/java/.../support/`):** `TestSupportConfiguration` replaces the `Clock` bean with a `MutableClock` and the `JavaMailSender` with a `RecordingMailSender`, so scenarios can move time (rate-limit windows, year boundaries) and assert on sent emails without an SMTP server. Cucumber step definitions call the API through `cucumber/ApiClient`; a `@Before` hook in `CommonStepDefinitions` clears recorded mail and advances the clock a day, which isolates scenarios from each other's rate-limit windows.
 
-**ArchUnit scaffolding accommodations:**
-The DDD layering rule uses `withOptionalLayers(true)` and the slices rule uses `allowEmptyShould(true)`. These exist solely because the project starts with empty layers. Once each layer in each bounded context has at least one real class, consider tightening these rules (drop the flags) — it's stricter and catches more.
+**ArchUnit and Java 25:** ArchUnit must be at least 1.5 to parse Java 25 class files. With 1.4.0 it silently imported zero classes, so every rule passed vacuously. The rules now fail on an empty `that()` match (`withOptionalLayers` and `allowEmptyShould` were dropped), which guards against that.
 
 ### Frontend
 
@@ -196,10 +194,10 @@ i18n message bundles live at `backend/src/main/resources/i18n/messages_{cs,en}.p
 - **Spring Boot 4 naming**: starter is `spring-boot-starter-webmvc` (not `-web`). Other starters follow the same pattern; check before assuming.
 - **Cross-context communication**: prefer publishing a Spring `ApplicationEvent` from one context's application service and consuming it in another's `@EventListener`. Direct method calls across contexts are forbidden by ArchUnit.
 
-## Current state of the scaffold
+## Current state
 
-- **Backend**: empty bounded contexts (only `package-info.java` per package). One smoke `.feature` and its glue exist solely to keep the test suite green and wired. `AppApplication.java` is the Spring Boot entry point. No domain code, no REST endpoints, no JPA entities, no Liquibase changelogs, no email or PDF templates.
-- **Frontend**: default Angular welcome page in `src/app/app.{ts,html,scss}`. Empty feature folders under `src/app/features/`. No real components, no routes beyond the default, no real i18n strings.
-- **Verified to pass on a clean checkout** (with Docker daemon available): `./gradlew test` (4 tests in ~11s) and `npm run build` (~2.5s). All ArchUnit DDD rules currently pass against the empty scaffold.
+- **Backend**: `contact` is implemented end to end (`POST /api/contact/messages`, stored in `contact_message`, forwarded by email after commit). `shared` holds `EmailAddress`, `UuidV7`, the security filter chain, the problem+json exception handler, the rate limiter and the `Clock` bean; see "Shared pieces" in `docs/api-contract.md`. `content`, `donors` and `donations` are still empty packages.
+- **Frontend**: the public site and the donor portal are built as components with hardcoded content; the contact form is the only one wired to the backend (`features/contact/contact-api.ts`). `provideHttpClient(withFetch())` is in `app.config.ts`; `npm start` proxies `/api` through `proxy.conf.json`.
+- **Verified to pass on a clean checkout** (with Docker daemon available): `./gradlew test` and `npm run build`.
 
 When implementing a new feature, expect to create files across all four layers of the relevant bounded context, plus a Liquibase changelog, a `.feature` file, unit tests, and the corresponding Angular feature folder.

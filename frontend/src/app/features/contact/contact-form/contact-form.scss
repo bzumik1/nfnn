@@ -84,6 +84,7 @@
 }
 
 .contact-form-wrap {
+  position: relative;
   background: #fff;
   border-radius: 16px;
   padding: 40px;
@@ -130,6 +131,26 @@
   }
 }
 
+.field-trap {
+  position: absolute;
+  left: -10000px;
+  top: auto;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+.form-error {
+  color: #b91c1c;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+  padding: 12px 16px;
+  font-size: 14px;
+  line-height: 1.5;
+  margin-bottom: 18px;
+}
+
 .form-submit {
   background: var(--color-accent);
   color: #fff;
@@ -146,6 +167,12 @@
 
   &:hover {
     transform: translateY(-1px);
+  }
+
+  &:disabled {
+    opacity: 0.7;
+    cursor: wait;
+    transform: none;
   }
 }
 

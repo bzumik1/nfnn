@@ -19,7 +19,7 @@ repositories {
 }
 
 extra["cucumberVersion"] = "7.20.1"
-extra["archunitVersion"] = "1.4.0"
+extra["archunitVersion"] = "1.5.1"
 extra["openhtmltopdfVersion"] = "1.1.24"
 
 dependencies {
@@ -32,6 +32,8 @@ dependencies {
 	implementation("org.springframework.boot:spring-boot-starter-validation")
 	implementation("org.springframework.boot:spring-boot-starter-webmvc")
 	implementation("org.thymeleaf.extras:thymeleaf-extras-springsecurity6")
+
+	implementation("com.github.ben-manes.caffeine:caffeine")
 
 	implementation("io.github.openhtmltopdf:openhtmltopdf-core:${property("openhtmltopdfVersion")}")
 	implementation("io.github.openhtmltopdf:openhtmltopdf-pdfbox:${property("openhtmltopdfVersion")}")
@@ -52,6 +54,7 @@ dependencies {
 	testImplementation("org.testcontainers:testcontainers-postgresql")
 
 	testImplementation("org.assertj:assertj-core")
+	testImplementation("org.awaitility:awaitility")
 	testImplementation("org.mockito:mockito-core")
 	testImplementation("org.mockito:mockito-junit-jupiter")
 

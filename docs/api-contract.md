@@ -205,18 +205,21 @@ If `donorId` is omitted, the SPAYD has no `X-VS:` segment.
 
 ### `contact` — contact form
 
+Implemented.
+
 | Method | Path | Auth | Purpose |
 |---|---|---|---|
-| `POST` | `/api/contact/messages` | public | Send a message; backend emails it asynchronously. 202. |
+| `POST` | `/api/contact/messages` | public | Send a message; backend stores it and emails it asynchronously after commit. 202. |
 
 Request:
 ```json
-{ "fullName": "...", "email": "...", "subject": "...", "message": "...", "website": "" }
+{ "fullName": "...", "email": "...", "message": "...", "website": "" }
 ```
 
-- All visible fields `@NotBlank`. `email` `@Email`. `message` `@Size(max=5000)`.
-- `website` is a honeypot — must be empty. If non-empty, return 202 but do not send.
-- Rate limit: 5/hour/IP via Bucket4j (in-memory, Caffeine-backed).
+- `fullName` `@NotBlank @Size(max=120)`, `email` `@NotBlank @Email @Size(max=254)`, `message` `@NotBlank @Size(max=5000)`. There is no subject field: the prototype's form has none, and the email subject is built from the sender's name.
+- `website` is a honeypot — must be empty. If non-empty, return 202 but store and send nothing.
+- Rate limit: 5/hour per client address (fixed window, Caffeine-backed, in-memory). The 6th request answers 429 with type `contact/rate-limited`. The client address is `getRemoteAddr()` after `ForwardedHeaderFilter`, so behind the nginx in `frontend/` it is the visitor's address from `X-Forwarded-For`.
+- The forwarded email goes to `app.contact.recipient-email` (`CONTACT_RECIPIENT`) from `app.contact.sender-email` (`MAIL_FROM`, defaults to the recipient) with `Reply-To` set to the visitor, body from `templates/email/contact/message-received.html`.
 
 ## Cross-context events
 
@@ -233,33 +236,18 @@ Side effects belong to the publishing context, unless another context owns a rea
 
 ## Walking skeleton — TDD order
 
-Implementation order is `contact` → `donors` → `donations` → `content`. Each context starts with one Cucumber `.feature` covering the minimal happy path, then domain types, then JPA / Liquibase / REST / templates. Delete `smoke.feature` and `SmokeStepDefinitions` as soon as `contact` has its first real `.feature`.
+Implementation order is `contact` → `donors` → `donations` → `content`. Each context starts with one Cucumber `.feature` covering the minimal happy path, then domain types, then JPA / Liquibase / REST / templates.
 
-### `contact` first feature
+### `contact` (done)
 
-`src/test/resources/features/contact/contact_message.feature`:
+`src/test/resources/features/contact/contact_message.feature` covers the accepted message, the honeypot, field errors and the rate limit. Domain: `ContactMessage` aggregate, `EmailAddress` (in `shared`), `ContactMessageReceived` event. Liquibase: `db/changelog/contact/001_create_contact_message.xml`.
 
-```gherkin
-Feature: Visitor sends a contact message
-
-  Scenario: Valid message is accepted
-    Given the email server accepts messages
-    When the visitor submits a contact message
-      | name    | Jana Nováková        |
-      | email   | jana@example.cz      |
-      | subject | Dotaz                |
-      | message | Mám dotaz k projektu |
-    Then the response status is 202
-    And one email is delivered to "info@novanadeje.cz"
-
-  Scenario: Honeypot blocks bot
-    When the visitor submits a contact message with a non-empty "website" field
-    Then the response status is 202
-    And no email is sent
-```
-
-Domain: `ContactMessage` aggregate, `EmailAddress` (in `shared`), `ContactMessageReceived` event.
-Liquibase: `db/changelog/contact/001_create_contact_message.xml`.
+Shared pieces that came with it and that every later context reuses:
+- `shared/infrastructure/security/ApiSecurityConfiguration`: stateless chain, CSRF off, `permitAll` only for the public endpoints listed there and the health endpoint, everything else `authenticated()`. Unauthenticated and forbidden requests answer `application/problem+json` (types `auth/unauthenticated`, `auth/forbidden`) through `ApiExceptionHandler`, never a Basic challenge. A new public endpoint has to be added to that chain.
+- `shared/interfaces/rest/ApiExceptionHandler`: validation errors become a problem with type `validation` and `errors: [{ field, message }]`; titles come from `i18n/messages_*.properties` by `Accept-Language`. `RateLimitExceededException` answers 429.
+- `shared/infrastructure/ratelimit/FixedWindowRateLimiter` and a `java.time.Clock` bean (`shared/infrastructure/time`), which tests replace with a `MutableClock`.
+- `shared/infrastructure/async`: `@EnableAsync`, so `@TransactionalEventListener(AFTER_COMMIT)` listeners run off the request thread with `@Async`.
+- Test support in `src/test/java/.../support/`: `MutableClock`, `RecordingMailSender` (records instead of sending), both wired as `@Primary` by `TestSupportConfiguration`, and `cucumber/ApiClient` for HTTP calls in step definitions.
 
 ### `donors` first features
 
