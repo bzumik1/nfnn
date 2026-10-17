@@ -21,6 +21,7 @@ class ApiSecurityConfiguration {
                 .authorizeHttpRequests(requests -> requests
                         .dispatcherTypeMatchers(DispatcherType.ERROR, DispatcherType.ASYNC).permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/contact/messages").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/donations/payment-qr").permitAll()
                         .requestMatchers("/actuator/health", "/actuator/health/**", "/actuator/info").permitAll()
                         .anyRequest().authenticated())
                 .exceptionHandling(handling -> handling

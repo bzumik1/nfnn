@@ -1,0 +1,34 @@
+package cz.novanadeje.app.shared.domain;
+
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
+
+class VariableSymbolTest {
+
+    @ParameterizedTest
+    @ValueSource(strings = {"7", "2025", "1234567890", "0000000042"})
+    void should_accept_when_created_given_one_to_ten_digits(String digits) {
+        assertThat(new VariableSymbol(digits).value()).isEqualTo(digits);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"", "12345678901", "12A", "12 34", "-1"})
+    void should_reject_when_created_given_anything_but_one_to_ten_digits(String value) {
+        assertThatIllegalArgumentException().isThrownBy(() -> new VariableSymbol(value));
+    }
+
+    @Test
+    void should_reject_when_created_given_no_value() {
+        assertThatIllegalArgumentException().isThrownBy(() -> new VariableSymbol(null));
+    }
+
+    @Test
+    void should_match_the_published_format_when_validated_outside_the_domain() {
+        assertThat("1234567890").matches(VariableSymbol.FORMAT);
+        assertThat("12345678901").doesNotMatch(VariableSymbol.FORMAT);
+    }
+}

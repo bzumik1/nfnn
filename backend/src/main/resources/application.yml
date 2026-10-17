@@ -62,6 +62,11 @@ app:
   contact:
     recipient-email: ${CONTACT_RECIPIENT:info@novanadeje.cz}
     sender-email: ${MAIL_FROM:${CONTACT_RECIPIENT:info@novanadeje.cz}}
+  donations:
+    bank-account:
+      account-number: ${BANK_ACCOUNT_NUMBER:123456789/0800}
+      iban: ${BANK_IBAN:CZ6508000000192000145399}
+      recipient-name: ${BANK_RECIPIENT_NAME:Nadační fond Nová naděje}
   security:
     jwt:
       issuer: nova-nadeje
