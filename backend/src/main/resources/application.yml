@@ -37,6 +37,13 @@ spring:
   web:
     locale: cs
     locale-resolver: accept_header
+  task:
+    scheduling:
+      pool:
+        size: 1
+      shutdown:
+        await-termination: true
+        await-termination-period: PT30S
 
 server:
   port: ${SERVER_PORT:8080}
