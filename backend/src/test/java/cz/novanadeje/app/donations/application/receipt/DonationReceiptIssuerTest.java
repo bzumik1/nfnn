@@ -2,9 +2,11 @@ package cz.novanadeje.app.donations.application.receipt;
 
 import cz.novanadeje.app.donations.domain.donation.Donation;
 import cz.novanadeje.app.donations.domain.donor.DonorRecord;
+import cz.novanadeje.app.donations.domain.receipt.ContentDigest;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceipt;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceiptId;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceiptRepository;
+import cz.novanadeje.app.donations.domain.receipt.ReceiptContent;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptDocument;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptDocumentFactory;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptFingerprint;
@@ -29,6 +31,8 @@ import static cz.novanadeje.app.donations.domain.receipt.Receipts.FOUNDATION;
 import static cz.novanadeje.app.donations.domain.receipt.Receipts.JANA;
 import static cz.novanadeje.app.donations.domain.receipt.Receipts.NOW;
 import static cz.novanadeje.app.donations.domain.receipt.Receipts.SIGNATORY;
+import static cz.novanadeje.app.donations.domain.receipt.Receipts.SNAPSHOT;
+import static cz.novanadeje.app.donations.domain.receipt.Receipts.SNAPSHOT_CONTENT;
 import static cz.novanadeje.app.donations.domain.receipt.Receipts.TODAY;
 import static cz.novanadeje.app.donations.domain.receipt.Receipts.YEAR_2026;
 import static cz.novanadeje.app.donations.domain.receipt.Receipts.jana;
@@ -41,6 +45,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 class DonationReceiptIssuerTest {
@@ -61,7 +66,7 @@ class DonationReceiptIssuerTest {
     void should_issue_new_receipt_after_lock_when_issued_given_no_receipt() {
         when(receipts.findActiveForDonation(MARCH.id())).thenReturn(Optional.empty());
         when(receipts.nextSerial()).thenReturn(1L);
-        when(renderer.render(any())).thenReturn(RENDERED);
+        givenRenderer();
 
         IssuedReceipt issued = issuer.issue(ReceiptRequest.forDonation(jana(), MARCH, TODAY));
 
@@ -69,7 +74,8 @@ class DonationReceiptIssuerTest {
         order.verify(receipts).lockDonor(JANA);
         order.verify(receipts).findActiveForDonation(MARCH.id());
         order.verify(receipts).nextSerial();
-        order.verify(renderer).render(any());
+        order.verify(renderer).freeze(any());
+        order.verify(renderer).render(SNAPSHOT, new ReceiptNumber("2027-000001"), NOW);
         DonationReceipt saved = savedReceipt();
         assertThat(saved.kind()).isEqualTo(ReceiptKind.SINGLE);
         assertThat(saved.donor()).isEqualTo(JANA);
@@ -79,7 +85,7 @@ class DonationReceiptIssuerTest {
         assertThat(saved.issuedAt()).isEqualTo(NOW);
         assertThat(saved.locale()).isEqualTo(LocaleCode.CS);
         assertThat(saved.fingerprint()).isEqualTo(ReceiptDocumentFactory.fingerprintForDonation(jana(), MARCH));
-        assertThat(saved.content()).isEqualTo(RENDERED);
+        assertThat(saved.content()).isEqualTo(new ReceiptContent.Snapshot(SNAPSHOT, ContentDigest.of(RENDERED)));
         assertThat(saved.supersedes()).isEmpty();
         assertThat(renderedDocument().replaces()).isEmpty();
         assertThat(renderedDocument().number()).isEqualTo(new ReceiptNumber("2027-000001"));
@@ -91,11 +97,12 @@ class DonationReceiptIssuerTest {
     }
 
     @Test
-    @DisplayName("Given an active receipt certifying the same data, when issued again, then the stored bytes come back and nothing is numbered, rendered or saved")
-    void should_reuse_stored_receipt_when_issued_given_equal_fingerprint() {
+    @DisplayName("Given an active receipt certifying the same data, when issued again, then its snapshot is rendered with its own number and issue time and nothing is numbered, frozen or saved")
+    void should_render_kept_snapshot_when_issued_given_equal_fingerprint() {
         ReceiptFingerprint same = ReceiptDocumentFactory.fingerprintForYear(jana(), YEAR_2026, List.of(MARCH, JUNE));
         DonationReceipt active = yearlyReceipt(same, LocaleCode.CS);
         when(receipts.findActiveForYear(JANA, YEAR_2026)).thenReturn(Optional.of(active));
+        when(renderer.render(SNAPSHOT, active.number(), active.issuedAt())).thenReturn(STORED);
 
         IssuedReceipt issued = issuer.issue(ReceiptRequest.forYear(jana(), YEAR_2026, List.of(MARCH, JUNE), TODAY));
 
@@ -106,7 +113,24 @@ class DonationReceiptIssuerTest {
         verify(receipts).lockDonor(JANA);
         verify(receipts, never()).nextSerial();
         verify(receipts, never()).save(any());
-        verify(renderer, never()).render(any());
+        verify(renderer, never()).freeze(any());
+    }
+
+    @Test
+    @DisplayName("Given an active receipt stored as a PDF before snapshots, when issued again, then exactly that PDF comes back without rendering")
+    void should_serve_stored_pdf_when_issued_given_receipt_from_before_snapshots() {
+        ReceiptFingerprint same = ReceiptDocumentFactory.fingerprintForYear(jana(), YEAR_2026, List.of(MARCH, JUNE));
+        DonationReceipt active = DonationReceipt.reconstitute(DonationReceiptId.newId(Instant.parse("2026-10-10T08:00:00Z")), JANA,
+                ReceiptKind.YEARLY, Optional.empty(), Optional.of(YEAR_2026), new ReceiptNumber("2026-000001"), LocalDate.of(2026, 10, 10),
+                Instant.parse("2026-10-10T08:00:00Z"), LocaleCode.CS, same, new ReceiptContent.StoredPdf(STORED), Optional.empty(),
+                Optional.empty());
+        when(receipts.findActiveForYear(JANA, YEAR_2026)).thenReturn(Optional.of(active));
+
+        IssuedReceipt issued = issuer.issue(ReceiptRequest.forYear(jana(), YEAR_2026, List.of(MARCH, JUNE), TODAY));
+
+        assertThat(issued.content()).isEqualTo(STORED);
+        verifyNoInteractions(renderer);
+        verify(receipts, never()).save(any());
     }
 
     @Test
@@ -115,7 +139,7 @@ class DonationReceiptIssuerTest {
         DonationReceipt active = yearlyReceipt(ReceiptDocumentFactory.fingerprintForYear(jana(), YEAR_2026, List.of(MARCH)), LocaleCode.CS);
         when(receipts.findActiveForYear(JANA, YEAR_2026)).thenReturn(Optional.of(active));
         when(receipts.nextSerial()).thenReturn(2L);
-        when(renderer.render(any())).thenReturn(RENDERED);
+        givenRenderer();
 
         IssuedReceipt issued = issuer.issue(ReceiptRequest.forYear(jana(), YEAR_2026, List.of(JUNE, MARCH), TODAY));
 
@@ -141,7 +165,7 @@ class DonationReceiptIssuerTest {
         DonationReceipt active = yearlyReceipt(ReceiptDocumentFactory.fingerprintForYear(jana(), YEAR_2026, List.of(MARCH)), LocaleCode.EN);
         when(receipts.findActiveForYear(JANA, YEAR_2026)).thenReturn(Optional.of(active));
         when(receipts.nextSerial()).thenReturn(3L);
-        when(renderer.render(any())).thenReturn(RENDERED);
+        givenRenderer();
 
         IssuedReceipt issued = issuer.issue(ReceiptRequest.forYear(jana(), YEAR_2026, List.of(MARCH, JUNE), TODAY));
 
@@ -156,7 +180,7 @@ class DonationReceiptIssuerTest {
         english.changeProfile(english.name(), english.address(), LocaleCode.EN, NOW);
         when(receipts.findActiveForDonation(MARCH.id())).thenReturn(Optional.empty());
         when(receipts.nextSerial()).thenReturn(1L);
-        when(renderer.render(any())).thenReturn(RENDERED);
+        givenRenderer();
 
         assertThat(issuer.issue(ReceiptRequest.forDonation(english, MARCH, TODAY)).locale()).isEqualTo(LocaleCode.EN);
     }
@@ -167,7 +191,8 @@ class DonationReceiptIssuerTest {
         DonationReceipt active = yearlyReceipt(ReceiptDocumentFactory.fingerprintForYear(jana(), YEAR_2026, List.of(MARCH)), LocaleCode.CS);
         when(receipts.findActiveForYear(JANA, YEAR_2026)).thenReturn(Optional.of(active));
         when(receipts.nextSerial()).thenReturn(4L);
-        when(renderer.render(any())).thenThrow(new IllegalStateException("font missing"));
+        when(renderer.freeze(any())).thenReturn(SNAPSHOT);
+        when(renderer.render(any(), any(), any())).thenThrow(new IllegalStateException("font missing"));
 
         assertThatThrownBy(() -> issuer.issue(ReceiptRequest.forYear(jana(), YEAR_2026, List.of(MARCH, JUNE), TODAY)))
                 .isInstanceOf(IllegalStateException.class)
@@ -181,7 +206,7 @@ class DonationReceiptIssuerTest {
     void should_number_with_year_of_issue_when_issued_given_new_year() {
         when(receipts.findActiveForYear(JANA, YEAR_2026)).thenReturn(Optional.empty());
         when(receipts.nextSerial()).thenReturn(17L);
-        when(renderer.render(any())).thenReturn(RENDERED);
+        givenRenderer();
 
         IssuedReceipt issued = issuer.issue(ReceiptRequest.forYear(jana(), YEAR_2026, List.of(MARCH), LocalDate.of(2027, 1, 1)));
 
@@ -191,7 +216,13 @@ class DonationReceiptIssuerTest {
 
     private DonationReceipt yearlyReceipt(ReceiptFingerprint fingerprint, LocaleCode locale) {
         return DonationReceipt.issueForYear(DonationReceiptId.newId(Instant.parse("2027-01-10T08:00:00Z")), JANA, YEAR_2026,
-                new ReceiptNumber("2027-000001"), EARLIER, Instant.parse("2027-01-10T08:00:00Z"), locale, fingerprint, STORED, Optional.empty());
+                new ReceiptNumber("2027-000001"), EARLIER, Instant.parse("2027-01-10T08:00:00Z"), locale, fingerprint, SNAPSHOT_CONTENT,
+                Optional.empty());
+    }
+
+    private void givenRenderer() {
+        when(renderer.freeze(any())).thenReturn(SNAPSHOT);
+        when(renderer.render(any(), any(), any())).thenReturn(RENDERED);
     }
 
     private DonationReceipt savedReceipt() {
@@ -202,7 +233,7 @@ class DonationReceiptIssuerTest {
 
     private ReceiptDocument renderedDocument() {
         ArgumentCaptor<ReceiptDocument> rendered = ArgumentCaptor.forClass(ReceiptDocument.class);
-        verify(renderer).render(rendered.capture());
+        verify(renderer).freeze(rendered.capture());
         return rendered.getValue();
     }
 }

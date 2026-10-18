@@ -2,7 +2,7 @@ package cz.novanadeje.app.donations.infrastructure.pdf;
 
 import java.util.Optional;
 
-public record ConfiguredSignatureImage(Optional<SignatureImage> image) {
+public record ConfiguredSignatureImage(Optional<ReceiptImage> image) {
 
     public ConfiguredSignatureImage {
         if (image == null) {

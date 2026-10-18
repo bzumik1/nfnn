@@ -31,8 +31,9 @@ Feature: A donor downloads PDF receipts of their donations
     And the PDF says "předseda správní rady"
     And the PDF does not say "Confirmation"
     And 1 receipt is stored
+    And receipt "2027-000001" is kept as its template and data, without the PDF
 
-  Scenario: Downloading the yearly receipt again serves the stored document
+  Scenario: Downloading the yearly receipt again serves the same document
     Given today is 2026-12-20
     And a person "Jana" is registered
     And the bank account has these movements:
@@ -49,6 +50,28 @@ Feature: A donor downloads PDF receipts of their donations
     And the PDF says "Číslo potvrzení: 2027-000001"
     And the PDF says "Datum vystavení: 15. 1. 2027"
     And 1 receipt is stored
+
+  Scenario: A receipt stored as a PDF file before receipts were kept as template and data is served from that file
+    Given today is 2026-12-20
+    And a person "Jana" is registered
+    And the bank account has these movements:
+      | id   | date       | amount  | account    | bankCode | name          | variableSymbol |
+      | 2001 | 2026-10-01 | 1000.00 | 2900233333 | 2010     | Nováková Jana | {Jana}         |
+    And the application starts the import
+    And today is 2027-01-15
+    And "Jana" downloads her yearly receipt for 2026
+    And receipt "2027-000001" was stored as a PDF file before receipts were kept as template and data
+    When 30 days pass
+    And "Jana" downloads her yearly receipt for 2026
+    Then the response status is 200
+    And the download is the stored PDF file of receipt "2027-000001"
+    When "Jana" changes her address to street "Nová 7", postal code "405 02" and city "Děčín"
+    And "Jana" downloads her yearly receipt for 2026
+    Then the response status is 200
+    And the PDF says "Číslo potvrzení: 2027-000002"
+    And the PDF says "Toto potvrzení nahrazuje potvrzení č. 2027-000001 ze dne 15. 1. 2027"
+    And receipt "2027-000002" is kept as its template and data, without the PDF
+    And 2 receipts are stored
 
   Scenario: The yearly receipt is not available before the year ends, nor for a year that is not a four-digit number
     Given today is 2026-12-20

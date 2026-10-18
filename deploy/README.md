@@ -195,7 +195,9 @@ Sken podpisu na serveru:
 3. Aplikaci přeinstaluj (vlož znovu `deploy/compose.yml`).
 4. Chybí-li soubor, nejde-li přečíst nebo nemá-li příponu `.png`, `.jpg` či `.jpeg`, backend nenastartuje a log (`sudo docker logs nfnn-backend`) hlásí `RECEIPT_SIGNATURE_IMAGE ...`. Prázdné jméno nebo funkce podepisujícího zastaví start s hlášením `RECEIPT_SIGNATORY_NAME ... is required` nebo `RECEIPT_SIGNATORY_ROLE ... is required`.
 
-Vystavené potvrzení je uložené v tabulce `donation_receipt` a každé další stažení vrátí stejný soubor. Změna podepisujícího nebo podpisu proto platí jen pro nově vystavená potvrzení; už vystavená se nemění. Změní-li dárce jméno nebo adresu a potvrzení si stáhne znovu, vystaví se náhradní potvrzení s novým číslem a staré zůstává v tabulce jako nahrazené; každá taková náhrada přidá jedno PDF (desítky kB) a počet náhrad nic neomezuje, takže tabulka i denní záloha s nimi rostou.
+Vystavené potvrzení se neukládá jako PDF. Tabulka `donation_receipt` drží jen údaje, které na potvrzení stojí (zhruba 1 kB), a odkaz na šablonu, logo a podpis, se kterými vzniklo; šablona s texty je v tabulce `receipt_template` a obrázky v `receipt_image`, každá verze jen jednou. Každé stažení PDF vykreslí znovu a vyjde bajt po bajtu stejný soubor jako poprvé. Změna podepisujícího, podpisu nebo šablony proto platí jen pro nově vystavená potvrzení; už vystavená zůstávají se svou šablonou i svým podpisem, i když soubor se skenem na serveru vyměníš. Potvrzení vystavená před touto změnou mají PDF uložené dál a stahují se z něj. Změní-li dárce jméno nebo adresu a potvrzení si stáhne znovu, vystaví se náhradní potvrzení s novým číslem a staré zůstává v tabulce jako nahrazené; náhrada přidá jen další řádek s údaji, takže tabulka i denní záloha rostou pomalu.
+
+Najednou se vykreslují nejvýš tři potvrzení, další stažení chvíli počkají. Kdyby po Novém roce stahování vázlo a server měl volnou paměť i procesor, jde limit zvýšit řádkem `APP_DONATIONS_RECEIPT_CONCURRENTRENDERS=5` v `backend.env` a přeinstalací aplikace (vlastnost `app.donations.receipt.concurrent-renders`, výchozí `3`).
 
 ## Obnova hesla
 

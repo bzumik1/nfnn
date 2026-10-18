@@ -1,12 +1,15 @@
 package cz.novanadeje.app.donations.application.receipt;
 
+import cz.novanadeje.app.donations.domain.receipt.ContentDigest;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceipt;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceiptId;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceiptRepository;
 import cz.novanadeje.app.donations.domain.receipt.FoundationIdentity;
+import cz.novanadeje.app.donations.domain.receipt.ReceiptContent;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptDocument;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptFingerprint;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptNumber;
+import cz.novanadeje.app.donations.domain.receipt.ReceiptSnapshot;
 import cz.novanadeje.app.donations.domain.receipt.ReplacedReceipt;
 import cz.novanadeje.app.donations.domain.receipt.Signatory;
 import cz.novanadeje.app.shared.domain.LocaleCode;
@@ -48,20 +51,28 @@ public class DonationReceiptIssuer {
         ReceiptFingerprint fingerprint = request.fingerprint();
         if (active.isPresent() && active.get().certifies(fingerprint)) {
             LOG.debug("Serving stored receipt {} to donor {}", active.get().number(), request.donor());
-            return IssuedReceipt.of(active.get());
+            return IssuedReceipt.of(active.get(), contentOf(active.get()));
         }
-        return IssuedReceipt.of(issueNew(request, fingerprint, active));
+        return issueNew(request, fingerprint, active);
     }
 
-    private DonationReceipt issueNew(ReceiptRequest request, ReceiptFingerprint fingerprint, Optional<DonationReceipt> replaced) {
+    private byte[] contentOf(DonationReceipt receipt) {
+        return switch (receipt.content()) {
+            case ReceiptContent.StoredPdf stored -> stored.pdf();
+            case ReceiptContent.Snapshot kept -> renderer.render(kept.snapshot(), receipt.number(), receipt.issuedAt());
+        };
+    }
+
+    private IssuedReceipt issueNew(ReceiptRequest request, ReceiptFingerprint fingerprint, Optional<DonationReceipt> replaced) {
         ReceiptNumber number = ReceiptNumber.of(Year.from(request.today()), receipts.nextSerial());
         Instant issuedAt = clock.instant();
         LocaleCode locale = replaced.map(DonationReceipt::locale).orElse(request.record().preferredLocale());
         ReceiptDocument document = request.document(foundation, signatory, number, locale,
                 replaced.map(old -> new ReplacedReceipt(old.number(), old.issuedOn())));
-        byte[] content = renderer.render(document);
-        DonationReceipt issued = request.receipt(DonationReceiptId.newId(issuedAt), number, issuedAt, locale, fingerprint, content,
-                replaced.map(DonationReceipt::id));
+        ReceiptSnapshot snapshot = renderer.freeze(document);
+        byte[] pdf = renderer.render(snapshot, number, issuedAt);
+        DonationReceipt issued = request.receipt(DonationReceiptId.newId(issuedAt), number, issuedAt, locale, fingerprint,
+                new ReceiptContent.Snapshot(snapshot, ContentDigest.of(pdf)), replaced.map(DonationReceipt::id));
         replaced.ifPresent(old -> {
             old.markSuperseded(issuedAt);
             receipts.save(old);
@@ -69,7 +80,7 @@ public class DonationReceiptIssuer {
         receipts.save(issued);
         LOG.info("Issued receipt {} ({}) for donor {}{}", number, issued.kind(), request.donor(),
                 replaced.map(old -> " replacing " + old.number()).orElse(""));
-        return issued;
+        return IssuedReceipt.of(issued, pdf);
     }
 
     private Optional<DonationReceipt> activeReceipt(ReceiptRequest request) {

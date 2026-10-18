@@ -1,8 +1,14 @@
 package cz.novanadeje.app.donations.application.receipt;
 
 import cz.novanadeje.app.donations.domain.receipt.ReceiptDocument;
+import cz.novanadeje.app.donations.domain.receipt.ReceiptNumber;
+import cz.novanadeje.app.donations.domain.receipt.ReceiptSnapshot;
+
+import java.time.Instant;
 
 public interface DonationReceiptRenderer {
 
-    byte[] render(ReceiptDocument document);
+    ReceiptSnapshot freeze(ReceiptDocument document);
+
+    byte[] render(ReceiptSnapshot snapshot, ReceiptNumber number, Instant issuedAt);
 }

@@ -1,15 +1,17 @@
 package cz.novanadeje.app.donations.infrastructure.pdf;
 
+import cz.novanadeje.app.donations.domain.receipt.ContentDigest;
+
 import java.util.Base64;
 
-public record SignatureImage(byte[] bytes, String mediaType) {
+public record ReceiptImage(byte[] bytes, String mediaType) {
 
-    public SignatureImage {
+    public ReceiptImage {
         if (bytes == null || bytes.length == 0) {
-            throw new IllegalArgumentException("A signature image has content");
+            throw new IllegalArgumentException("A receipt image has content");
         }
         if (!"image/png".equals(mediaType) && !"image/jpeg".equals(mediaType)) {
-            throw new IllegalArgumentException("A signature image is PNG or JPEG, not " + mediaType);
+            throw new IllegalArgumentException("A receipt image is PNG or JPEG, not " + mediaType);
         }
         bytes = bytes.clone();
     }
@@ -17,6 +19,10 @@ public record SignatureImage(byte[] bytes, String mediaType) {
     @Override
     public byte[] bytes() {
         return bytes.clone();
+    }
+
+    public ContentDigest digest() {
+        return ContentDigest.of(bytes);
     }
 
     public String dataUri() {

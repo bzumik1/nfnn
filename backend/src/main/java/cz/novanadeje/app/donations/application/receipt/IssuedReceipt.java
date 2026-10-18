@@ -17,8 +17,8 @@ public record IssuedReceipt(byte[] content, ReceiptNumber number, ReceiptKind ki
         content = content.clone();
     }
 
-    static IssuedReceipt of(DonationReceipt receipt) {
-        return new IssuedReceipt(receipt.content(), receipt.number(), receipt.kind(), receipt.year(), receipt.locale());
+    static IssuedReceipt of(DonationReceipt receipt, byte[] content) {
+        return new IssuedReceipt(content, receipt.number(), receipt.kind(), receipt.year(), receipt.locale());
     }
 
     @Override

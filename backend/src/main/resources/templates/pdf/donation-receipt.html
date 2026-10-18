@@ -286,12 +286,12 @@
         <tbody>
         <tr th:each="line : ${lines}">
             <td>
-                <span th:text="${line.receivedOnCs()}">1. 1. 2026</span>
-                <span class="en" th:if="${bilingual}" th:text="${'(' + line.receivedOnEn() + ')'}">(1 January 2026)</span>
+                <span th:text="${line['receivedOnCs']}">1. 1. 2026</span>
+                <span class="en" th:if="${bilingual}" th:text="${'(' + line['receivedOnEn'] + ')'}">(1 January 2026)</span>
             </td>
             <td class="amount">
-                <span th:text="${line.amountCs()}">500 Kč</span>
-                <span class="en" th:if="${bilingual}" th:text="${'(' + line.amountEn() + ')'}">(CZK 500)</span>
+                <span th:text="${line['amountCs']}">500 Kč</span>
+                <span class="en" th:if="${bilingual}" th:text="${'(' + line['amountEn'] + ')'}">(CZK 500)</span>
             </td>
         </tr>
         </tbody>

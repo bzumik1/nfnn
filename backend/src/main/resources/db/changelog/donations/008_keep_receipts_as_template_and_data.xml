@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <changeSet id="008-keep-receipts-as-template-and-data" author="nfnn">
+        <createTable tableName="receipt_template">
+            <column name="sha256" type="varchar(64)">
+                <constraints primaryKey="true" primaryKeyName="pk_receipt_template" nullable="false"/>
+            </column>
+            <column name="content" type="text">
+                <constraints nullable="false"/>
+            </column>
+            <column name="first_used_at" type="timestamp with time zone">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <createTable tableName="receipt_image">
+            <column name="sha256" type="varchar(64)">
+                <constraints primaryKey="true" primaryKeyName="pk_receipt_image" nullable="false"/>
+            </column>
+            <column name="media_type" type="varchar(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="content" type="bytea">
+                <constraints nullable="false"/>
+            </column>
+            <column name="first_used_at" type="timestamp with time zone">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <dropNotNullConstraint tableName="donation_receipt" columnName="content" columnDataType="bytea"/>
+        <addColumn tableName="donation_receipt">
+            <column name="template_sha256" type="varchar(64)">
+                <constraints foreignKeyName="fk_donation_receipt_template" referencedTableName="receipt_template"
+                             referencedColumnNames="sha256"/>
+            </column>
+            <column name="data" type="text"/>
+            <column name="logo_sha256" type="varchar(64)">
+                <constraints foreignKeyName="fk_donation_receipt_logo" referencedTableName="receipt_image" referencedColumnNames="sha256"/>
+            </column>
+            <column name="signature_sha256" type="varchar(64)">
+                <constraints foreignKeyName="fk_donation_receipt_signature" referencedTableName="receipt_image"
+                             referencedColumnNames="sha256"/>
+            </column>
+            <column name="render_profile" type="smallint"/>
+            <column name="pdf_sha256" type="varchar(64)"/>
+        </addColumn>
+        <sql>alter table donation_receipt add constraint ck_donation_receipt_content check ((content is not null and template_sha256 is null and data is null and logo_sha256 is null and signature_sha256 is null and render_profile is null and pdf_sha256 is null) or (content is null and template_sha256 is not null and data is not null and logo_sha256 is not null and render_profile is not null and pdf_sha256 is not null))</sql>
+    </changeSet>
+
+</databaseChangeLog>

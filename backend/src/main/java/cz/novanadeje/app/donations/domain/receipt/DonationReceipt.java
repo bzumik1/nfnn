@@ -21,13 +21,13 @@ public final class DonationReceipt {
     private final Instant issuedAt;
     private final LocaleCode locale;
     private final ReceiptFingerprint fingerprint;
-    private final byte[] content;
+    private final ReceiptContent content;
     private final DonationReceiptId supersedes;
     private Instant supersededAt;
 
     private DonationReceipt(DonationReceiptId id, DonorReference donor, ReceiptKind kind, Optional<DonationId> donation, Optional<Year> year,
                             ReceiptNumber number, LocalDate issuedOn, Instant issuedAt, LocaleCode locale, ReceiptFingerprint fingerprint,
-                            byte[] content, Optional<DonationReceiptId> supersedes, Optional<Instant> supersededAt) {
+                            ReceiptContent content, Optional<DonationReceiptId> supersedes, Optional<Instant> supersededAt) {
         this.id = require(id, "Receipt id");
         this.donor = require(donor, "Donor reference");
         this.kind = require(kind, "Receipt kind");
@@ -38,7 +38,7 @@ public final class DonationReceipt {
         this.issuedAt = require(issuedAt, "Issue time");
         this.locale = require(locale, "Locale");
         this.fingerprint = require(fingerprint, "Fingerprint");
-        this.content = requireContent(content);
+        this.content = require(content, "Content");
         this.supersedes = require(supersedes, "Superseded receipt").orElse(null);
         this.supersededAt = require(supersededAt, "Supersede time").orElse(null);
         requireSubjectMatchingKind();
@@ -46,13 +46,13 @@ public final class DonationReceipt {
 
     public static DonationReceipt issueForDonation(DonationReceiptId id, DonorReference donor, DonationId donation, ReceiptNumber number,
                                                    LocalDate issuedOn, Instant issuedAt, LocaleCode locale, ReceiptFingerprint fingerprint,
-                                                   byte[] content, Optional<DonationReceiptId> supersedes) {
+                                                   ReceiptContent.Snapshot content, Optional<DonationReceiptId> supersedes) {
         return new DonationReceipt(id, donor, ReceiptKind.SINGLE, Optional.ofNullable(donation), Optional.empty(), number, issuedOn, issuedAt,
                 locale, fingerprint, content, supersedes, Optional.empty());
     }
 
     public static DonationReceipt issueForYear(DonationReceiptId id, DonorReference donor, Year year, ReceiptNumber number, LocalDate issuedOn,
-                                               Instant issuedAt, LocaleCode locale, ReceiptFingerprint fingerprint, byte[] content,
+                                               Instant issuedAt, LocaleCode locale, ReceiptFingerprint fingerprint, ReceiptContent.Snapshot content,
                                                Optional<DonationReceiptId> supersedes) {
         return new DonationReceipt(id, donor, ReceiptKind.YEARLY, Optional.empty(), Optional.ofNullable(year), number, issuedOn, issuedAt,
                 locale, fingerprint, content, supersedes, Optional.empty());
@@ -60,7 +60,7 @@ public final class DonationReceipt {
 
     public static DonationReceipt reconstitute(DonationReceiptId id, DonorReference donor, ReceiptKind kind, Optional<DonationId> donation,
                                                Optional<Year> year, ReceiptNumber number, LocalDate issuedOn, Instant issuedAt,
-                                               LocaleCode locale, ReceiptFingerprint fingerprint, byte[] content,
+                                               LocaleCode locale, ReceiptFingerprint fingerprint, ReceiptContent content,
                                                Optional<DonationReceiptId> supersedes, Optional<Instant> supersededAt) {
         return new DonationReceipt(id, donor, kind, donation, year, number, issuedOn, issuedAt, locale, fingerprint, content, supersedes,
                 supersededAt);
@@ -122,8 +122,8 @@ public final class DonationReceipt {
         return fingerprint;
     }
 
-    public byte[] content() {
-        return content.clone();
+    public ReceiptContent content() {
+        return content;
     }
 
     public Optional<DonationReceiptId> supersedes() {
@@ -140,13 +140,6 @@ public final class DonationReceipt {
         if (!single && !yearly) {
             throw new IllegalArgumentException("A single receipt names its donation and a yearly receipt its year, never both");
         }
-    }
-
-    private static byte[] requireContent(byte[] content) {
-        if (content == null || content.length == 0) {
-            throw new IllegalArgumentException("A receipt holds its rendered document");
-        }
-        return content.clone();
     }
 
     private static <T> T require(T value, String label) {

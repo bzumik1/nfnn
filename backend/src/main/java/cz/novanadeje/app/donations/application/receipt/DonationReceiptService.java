@@ -25,12 +25,15 @@ public class DonationReceiptService {
     private final DonationRepository donations;
     private final DonorRecordRepository donorRecords;
     private final DonationReceiptIssuer issuer;
+    private final ReceiptRenderingLimit renderingLimit;
     private final Clock clock;
 
-    public DonationReceiptService(DonationRepository donations, DonorRecordRepository donorRecords, DonationReceiptIssuer issuer, Clock clock) {
+    public DonationReceiptService(DonationRepository donations, DonorRecordRepository donorRecords, DonationReceiptIssuer issuer,
+                                  ReceiptRenderingLimit renderingLimit, Clock clock) {
         this.donations = donations;
         this.donorRecords = donorRecords;
         this.issuer = issuer;
+        this.renderingLimit = renderingLimit;
         this.clock = clock;
     }
 
@@ -40,7 +43,8 @@ public class DonationReceiptService {
         if (!donation.isReceived()) {
             throw new ReceiptNotAvailable(donationId);
         }
-        return issuer.issue(ReceiptRequest.forDonation(record(donor), donation, today));
+        ReceiptRequest request = ReceiptRequest.forDonation(record(donor), donation, today);
+        return renderingLimit.withinLimit(() -> issuer.issue(request));
     }
 
     public IssuedReceipt yearlyReceipt(DonorReference donor, Year year) {
@@ -56,7 +60,8 @@ public class DonationReceiptService {
         if (received.isEmpty()) {
             throw new YearlyReceiptNotAvailable(year);
         }
-        return issuer.issue(ReceiptRequest.forYear(record(donor), year, received, today));
+        ReceiptRequest request = ReceiptRequest.forYear(record(donor), year, received, today);
+        return renderingLimit.withinLimit(() -> issuer.issue(request));
     }
 
     private DonorRecord record(DonorReference donor) {

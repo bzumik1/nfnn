@@ -2,122 +2,154 @@ package cz.novanadeje.app.donations.infrastructure.pdf;
 
 import com.openhtmltopdf.extend.FSSupplier;
 import com.openhtmltopdf.outputdevice.helper.BaseRendererBuilder.FontStyle;
+import com.openhtmltopdf.pdfboxout.PdfBoxRenderer;
 import com.openhtmltopdf.pdfboxout.PdfRendererBuilder;
 import cz.novanadeje.app.donations.application.receipt.DonationReceiptRenderer;
-import cz.novanadeje.app.donations.domain.receipt.FoundationIdentity;
+import cz.novanadeje.app.donations.domain.receipt.ContentDigest;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptDocument;
-import cz.novanadeje.app.donations.domain.receipt.ReceiptKind;
-import cz.novanadeje.app.donations.domain.receipt.ReceiptLine;
-import cz.novanadeje.app.donations.domain.receipt.ReceiptParty;
-import cz.novanadeje.app.shared.domain.DonorType;
+import cz.novanadeje.app.donations.domain.receipt.ReceiptNumber;
+import cz.novanadeje.app.donations.domain.receipt.ReceiptSnapshot;
 import cz.novanadeje.app.shared.domain.LocaleCode;
-import org.springframework.context.MessageSource;
+import org.apache.pdfbox.pdmodel.PDDocument;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Component;
 import org.thymeleaf.ITemplateEngine;
 import org.thymeleaf.context.Context;
+import org.thymeleaf.spring6.SpringTemplateEngine;
+import org.thymeleaf.templatemode.TemplateMode;
+import org.thymeleaf.templateresolver.StringTemplateResolver;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.json.JsonMapper;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.time.Year;
-import java.util.Base64;
+import java.nio.charset.StandardCharsets;
+import java.time.Clock;
+import java.time.Instant;
+import java.util.Calendar;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.TimeZone;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Component
 class ThymeleafPdfReceiptRenderer implements DonationReceiptRenderer {
 
-    private static final String TEMPLATE = "pdf/donation-receipt";
+    static final int RENDER_PROFILE = 1;
     private static final String FONT_FAMILY = "DejaVu Sans";
     private static final int REGULAR = 400;
     private static final int BOLD = 700;
     private static final String PRODUCER = "Nová naděje - nadační fond";
+    private static final JsonMapper JSON = JsonMapper.builder().build();
+    private static final TypeReference<Map<String, Object>> DATA = new TypeReference<>() {
+    };
 
-    private final ITemplateEngine templates;
-    private final ReceiptTexts czech;
-    private final ReceiptTexts english;
-    private final byte[] regularFont;
-    private final byte[] boldFont;
-    private final String logo;
-    private final Optional<String> signature;
+    private final ReceiptResources resources;
+    private final Clock clock;
+    private final ReceiptTemplate template;
+    private final String templateContent;
+    private final ContentDigest templateDigest;
+    private final ReceiptImage logo;
+    private final Optional<ReceiptImage> signature;
+    private final ITemplateEngine engine = stringTemplateEngine();
+    private final byte[] regularFont = classpathBytes("fonts/DejaVuSans.ttf");
+    private final byte[] boldFont = classpathBytes("fonts/DejaVuSans-Bold.ttf");
+    private final Map<ContentDigest, ReceiptTemplate> templates = new ConcurrentHashMap<>();
+    private final Map<ContentDigest, String> images = new ConcurrentHashMap<>();
 
-    ThymeleafPdfReceiptRenderer(ITemplateEngine templates, MessageSource messages, ConfiguredSignatureImage signature) {
-        this.templates = templates;
-        this.czech = new ReceiptTexts(messages, LocaleCode.CS.toLocale());
-        this.english = new ReceiptTexts(messages, LocaleCode.EN.toLocale());
-        this.regularFont = classpathBytes("fonts/DejaVuSans.ttf");
-        this.boldFont = classpathBytes("fonts/DejaVuSans-Bold.ttf");
-        this.logo = "data:image/png;base64," + Base64.getEncoder().encodeToString(classpathBytes("receipt/logo.png"));
-        this.signature = signature.image().map(SignatureImage::dataUri);
+    ThymeleafPdfReceiptRenderer(ReceiptResources resources, ReceiptTemplate template, ConfiguredSignatureImage signature, Clock clock) {
+        this.resources = resources;
+        this.clock = clock;
+        this.template = template;
+        this.templateContent = template.content();
+        this.templateDigest = ContentDigest.of(templateContent.getBytes(StandardCharsets.UTF_8));
+        this.logo = new ReceiptImage(classpathBytes("receipt/logo.png"), "image/png");
+        this.signature = signature.image();
     }
 
     @Override
-    public byte[] render(ReceiptDocument document) {
-        String html = templates.process(TEMPLATE, new Context(document.locale().toLocale(), variables(document)));
+    public ReceiptSnapshot freeze(ReceiptDocument document) {
+        Instant now = clock.instant();
+        resources.storeTemplate(templateDigest, templateContent, now);
+        resources.storeImage(logo.digest(), logo, now);
+        signature.ifPresent(image -> resources.storeImage(image.digest(), image, now));
+        String data = JSON.writeValueAsString(ReceiptData.of(document, template.texts(LocaleCode.CS)));
+        return new ReceiptSnapshot(templateDigest, data, logo.digest(), signature.map(ReceiptImage::digest), RENDER_PROFILE);
+    }
+
+    @Override
+    public byte[] render(ReceiptSnapshot snapshot, ReceiptNumber number, Instant issuedAt) {
+        if (snapshot.renderProfile() != RENDER_PROFILE) {
+            throw new IllegalStateException("Receipt " + number + " needs render profile " + snapshot.renderProfile()
+                    + ", which this renderer does not have");
+        }
+        ReceiptTemplate stored = templates.computeIfAbsent(snapshot.template(), this::storedTemplate);
+        Map<String, Object> variables = new HashMap<>(JSON.readValue(snapshot.data(), DATA));
+        variables.put("cs", stored.texts(LocaleCode.CS));
+        variables.put("en", stored.texts(LocaleCode.EN));
+        variables.put("logo", image(snapshot.logo()));
+        variables.put("signature", snapshot.signature().map(this::image).orElse(null));
+        LocaleCode locale = LocaleCode.fromTag((String) variables.get("locale"));
+        String html = engine.process(stored.html(), new Context(locale.toLocale(), variables));
+        return pdf(html, number, issuedAt);
+    }
+
+    private byte[] pdf(String html, ReceiptNumber number, Instant issuedAt) {
+        PdfRendererBuilder builder = new PdfRendererBuilder();
+        builder.useFastMode();
+        builder.withHtmlContent(html, null);
+        builder.useFont(font(regularFont), FONT_FAMILY, REGULAR, FontStyle.NORMAL, true);
+        builder.useFont(font(boldFont), FONT_FAMILY, BOLD, FontStyle.NORMAL, true);
+        builder.withProducer(PRODUCER);
         ByteArrayOutputStream pdf = new ByteArrayOutputStream();
-        try {
-            PdfRendererBuilder builder = new PdfRendererBuilder();
-            builder.useFastMode();
-            builder.withHtmlContent(html, null);
-            builder.useFont(font(regularFont), FONT_FAMILY, REGULAR, FontStyle.NORMAL, true);
-            builder.useFont(font(boldFont), FONT_FAMILY, BOLD, FontStyle.NORMAL, true);
-            builder.withProducer(PRODUCER);
-            builder.toStream(pdf);
-            builder.run();
+        try (PdfBoxRenderer renderer = builder.buildPdfRenderer()) {
+            renderer.layout();
+            try (PDDocument document = renderer.createPDFKeepOpen()) {
+                document.getDocumentInformation().setCreationDate(calendar(issuedAt));
+                document.setDocumentId(Long.parseLong(number.value().replace("-", "")));
+                document.save(pdf);
+            }
         } catch (IOException failure) {
-            throw new IllegalStateException("Receipt " + document.number() + " could not be rendered", failure);
+            throw new IllegalStateException("Receipt " + number + " could not be rendered", failure);
         }
         return pdf.toByteArray();
     }
 
-    private Map<String, Object> variables(ReceiptDocument document) {
-        FoundationIdentity foundation = document.foundation();
-        ReceiptParty donor = document.donor();
-        ReceiptLine firstLine = document.lines().getFirst();
-        boolean single = document.kind() == ReceiptKind.SINGLE;
-        String year = document.year().map(Year::toString).orElse(null);
-        Map<String, Object> variables = new HashMap<>();
-        variables.put("cs", czech);
-        variables.put("en", english);
-        variables.put("single", single);
-        variables.put("bilingual", document.locale() == LocaleCode.EN);
-        variables.put("documentTitle", single ? czech.text("receipt.title.single") : czech.text("receipt.title.yearly", year));
-        variables.put("year", year);
-        variables.put("number", document.number().value());
-        variables.put("issuedOnCs", ReceiptFormats.czechDate(document.issuedOn()));
-        variables.put("issuedOnEn", ReceiptFormats.englishDate(document.issuedOn()));
-        variables.put("replaced", document.replaces().isPresent());
-        variables.put("replacedNumber", document.replaces().map(replaced -> replaced.number().value()).orElse(null));
-        variables.put("replacedOnCs", document.replaces().map(replaced -> ReceiptFormats.czechDate(replaced.issuedOn())).orElse(null));
-        variables.put("replacedOnEn", document.replaces().map(replaced -> ReceiptFormats.englishDate(replaced.issuedOn())).orElse(null));
-        variables.put("foundationName", foundation.name());
-        variables.put("foundationIdentifier", foundation.companyIdentifier());
-        variables.put("foundationAddress", foundation.address().singleLine());
-        variables.put("registryFile", foundation.registryFile());
-        variables.put("registryCourt", foundation.registryCourt());
-        variables.put("accountNumber", foundation.bankAccountNumber());
-        variables.put("issuePlace", foundation.issuePlace());
-        variables.put("issuePlaceEn", foundation.issuePlaceEn());
-        variables.put("company", donor.type() == DonorType.COMPANY);
-        variables.put("donorName", donor.name());
-        variables.put("donorIdentifier", donor.companyIdentifier().orElse(null));
-        variables.put("donorAddress", donor.address().singleLine());
-        variables.put("variableSymbol", donor.variableSymbol().value());
-        variables.put("giftFormKey", "receipt.gift.form." + firstLine.source().name());
-        variables.put("receivedOnCs", ReceiptFormats.czechDate(firstLine.receivedOn()));
-        variables.put("receivedOnEn", ReceiptFormats.englishDate(firstLine.receivedOn()));
-        variables.put("lines", document.lines().stream().map(ReceiptLineView::of).toList());
-        variables.put("count", Integer.toString(document.count()));
-        variables.put("totalCs", ReceiptFormats.czechAmount(document.total()));
-        variables.put("totalEn", ReceiptFormats.englishAmount(document.total()));
-        variables.put("signatoryName", document.signatory().name());
-        variables.put("signatoryRole", document.signatory().role());
-        variables.put("logo", logo);
-        variables.put("signature", signature.orElse(null));
-        return variables;
+    private ReceiptTemplate storedTemplate(ContentDigest digest) {
+        String content = resources.template(digest)
+                .orElseThrow(() -> new IllegalStateException("The receipt template " + digest + " is not stored"));
+        if (!ContentDigest.of(content.getBytes(StandardCharsets.UTF_8)).equals(digest)) {
+            throw new IllegalStateException("The stored receipt template " + digest + " does not match its digest");
+        }
+        return ReceiptTemplate.fromContent(content);
+    }
+
+    private String image(ContentDigest digest) {
+        return images.computeIfAbsent(digest, missing -> {
+            ReceiptImage image = resources.image(missing)
+                    .orElseThrow(() -> new IllegalStateException("The receipt image " + missing + " is not stored"));
+            if (!image.digest().equals(missing)) {
+                throw new IllegalStateException("The stored receipt image " + missing + " does not match its digest");
+            }
+            return image.dataUri();
+        });
+    }
+
+    private static Calendar calendar(Instant instant) {
+        Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
+        calendar.setTimeInMillis(instant.toEpochMilli());
+        return calendar;
+    }
+
+    private static ITemplateEngine stringTemplateEngine() {
+        StringTemplateResolver resolver = new StringTemplateResolver();
+        resolver.setTemplateMode(TemplateMode.HTML);
+        SpringTemplateEngine engine = new SpringTemplateEngine();
+        engine.setTemplateResolver(resolver);
+        return engine;
     }
 
     private static FSSupplier<InputStream> font(byte[] bytes) {
