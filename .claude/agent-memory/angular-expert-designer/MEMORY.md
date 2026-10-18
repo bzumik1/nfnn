@@ -1,0 +1,1 @@
+- [Visual check in cloud sessions](visual-check-in-cloud.md) — installing Playwright Chromium and screenshotting the dashboard with e2e mocks

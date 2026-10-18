@@ -2,6 +2,7 @@ package cz.novanadeje.app.donations.application;
 
 import cz.novanadeje.app.donations.domain.BankAccount;
 import cz.novanadeje.app.donations.domain.payment.QrPayment;
+import cz.novanadeje.app.donations.domain.payment.QrPaymentPurpose;
 import cz.novanadeje.app.shared.domain.Currency;
 import cz.novanadeje.app.shared.domain.Money;
 import cz.novanadeje.app.shared.domain.VariableSymbol;
@@ -23,15 +24,16 @@ public class GeneratePaymentQrService {
     }
 
     public PaymentQr generate(GeneratePaymentQrQuery query) {
-        QrPayment payment = donation(Money.of(BigDecimal.valueOf(query.amountCzk()), Currency.CZK), query.variableSymbol());
+        QrPayment payment = payment(Money.of(BigDecimal.valueOf(query.amountCzk()), Currency.CZK), query.variableSymbol(), query.purpose());
         String spayd = payment.toSpayd();
         return new PaymentQr(spayd, renderer.renderPng(spayd, QR_SIZE_PX), foundationAccount);
     }
 
-    private QrPayment donation(Money amount, String variableSymbol) {
-        if (variableSymbol == null) {
-            return QrPayment.donation(foundationAccount, amount);
-        }
-        return QrPayment.donation(foundationAccount, amount, new VariableSymbol(variableSymbol));
+    private QrPayment payment(Money amount, String variableSymbol, QrPaymentPurpose purpose) {
+        VariableSymbol symbol = variableSymbol == null ? null : new VariableSymbol(variableSymbol);
+        return switch (purpose) {
+            case ACCOUNT_VERIFICATION -> QrPayment.accountVerification(foundationAccount, amount, symbol);
+            case DONATION -> symbol == null ? QrPayment.donation(foundationAccount, amount) : QrPayment.donation(foundationAccount, amount, symbol);
+        };
     }
 }

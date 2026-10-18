@@ -1,4 +1,6 @@
 package cz.novanadeje.app.donations.application;
 
-public record GeneratePaymentQrQuery(long amountCzk, String variableSymbol) {
+import cz.novanadeje.app.donations.domain.payment.QrPaymentPurpose;
+
+public record GeneratePaymentQrQuery(long amountCzk, String variableSymbol, QrPaymentPurpose purpose) {
 }

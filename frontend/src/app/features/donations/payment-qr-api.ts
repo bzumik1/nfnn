@@ -8,6 +8,8 @@ export interface BankAccountResponse {
   recipientName: string;
 }
 
+export type PaymentQrPurpose = 'DONATION' | 'ACCOUNT_VERIFICATION';
+
 export interface PaymentQrResponse {
   spayd: string;
   qrPngBase64: string;
@@ -18,10 +20,13 @@ export interface PaymentQrResponse {
 export class PaymentQrApi {
   private readonly http = inject(HttpClient);
 
-  paymentQr(amount: number, variableSymbol: string | null): Observable<PaymentQrResponse> {
+  paymentQr(amount: number, variableSymbol: string | null, purpose: PaymentQrPurpose = 'DONATION'): Observable<PaymentQrResponse> {
     let params = new HttpParams().set('amount', amount);
     if (variableSymbol) {
       params = params.set('variableSymbol', variableSymbol);
+    }
+    if (purpose !== 'DONATION') {
+      params = params.set('purpose', purpose);
     }
     return this.http.get<PaymentQrResponse>('/api/donations/payment-qr', { params });
   }
