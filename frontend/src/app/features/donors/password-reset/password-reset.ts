@@ -12,6 +12,7 @@ import { LoginDialogService } from '../../../core/auth/login-dialog.service';
 import { FocusFirstInvalid } from '../../../shared/ui/form-field/focus-first-invalid';
 import { FormControlDirective } from '../../../shared/ui/form-field/form-control';
 import { FormField } from '../../../shared/ui/form-field/form-field';
+import { PasswordReveal } from '../../../shared/ui/password-reveal/password-reveal';
 
 type Panel = 'missing-link' | 'form' | 'success' | 'invalid';
 
@@ -20,7 +21,7 @@ const INVALID_TOKEN = 'donors/invalid-password-reset-token';
 
 @Component({
   selector: 'app-password-reset',
-  imports: [FormsModule, FormField, FormControlDirective, FocusFirstInvalid],
+  imports: [FormsModule, FormField, FormControlDirective, FocusFirstInvalid, PasswordReveal],
   templateUrl: './password-reset.html',
   styleUrl: './password-reset.scss',
 })

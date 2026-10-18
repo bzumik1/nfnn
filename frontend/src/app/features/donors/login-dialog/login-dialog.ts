@@ -14,6 +14,7 @@ import { Dialog } from '../../../shared/ui/dialog/dialog';
 import { FocusFirstInvalid } from '../../../shared/ui/form-field/focus-first-invalid';
 import { FormControlDirective } from '../../../shared/ui/form-field/form-control';
 import { FormField } from '../../../shared/ui/form-field/form-field';
+import { PasswordReveal } from '../../../shared/ui/password-reveal/password-reveal';
 import {
   CITY_MESSAGES,
   COMPANY_NAME_MESSAGES,
@@ -36,7 +37,7 @@ const TOO_MANY_REQUESTS = 429;
 
 @Component({
   selector: 'app-login-dialog',
-  imports: [FormsModule, RouterLink, Dialog, FormField, FormControlDirective, FocusFirstInvalid],
+  imports: [FormsModule, RouterLink, Dialog, FormField, FormControlDirective, FocusFirstInvalid, PasswordReveal],
   templateUrl: './login-dialog.html',
   styleUrl: './login-dialog.scss',
 })
