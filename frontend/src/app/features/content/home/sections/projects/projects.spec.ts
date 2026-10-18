@@ -36,4 +36,21 @@ describe('Given the projects section', () => {
       'Martin, 11 let',
     ]);
   });
+
+  it('when it renders, then the photos are small WebP files that wait until they are near', () => {
+    const images = Array.from(root().querySelectorAll('img'));
+
+    expect(images.map((image) => image.getAttribute('src'))).toEqual([
+      '/images/project-1.webp',
+      '/images/project-2.webp',
+      '/images/project-3.webp',
+      '/images/project-4.webp',
+      '/images/project-5.webp',
+    ]);
+    for (const image of images) {
+      expect(image.getAttribute('loading')).toBe('lazy');
+      expect(image.getAttribute('width')).toBe('600');
+      expect(image.getAttribute('height')).toBe('400');
+    }
+  });
 });

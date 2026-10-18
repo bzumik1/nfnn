@@ -22,4 +22,15 @@ describe('Given the news section', () => {
     expect(alts.length).toBeGreaterThan(0);
     expect(alts.every((alt) => alt === '')).toBe(true);
   });
+
+  it('when it renders, then the photos are small WebP files that wait until they are near', () => {
+    const images = Array.from(root().querySelectorAll('img'));
+
+    for (const image of images) {
+      expect(image.getAttribute('src')).toMatch(/^\/images\/news-\d\.webp$/);
+      expect(image.getAttribute('loading')).toBe('lazy');
+      expect(image.getAttribute('width')).toBe('600');
+      expect(image.getAttribute('height')).toBe('400');
+    }
+  });
 });

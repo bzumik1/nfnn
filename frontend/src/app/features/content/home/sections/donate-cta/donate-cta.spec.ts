@@ -81,6 +81,15 @@ describe('Given the donate section', () => {
     await settle();
   }
 
+  it('when it renders, then its photo waits until it is near and comes in two widths', async () => {
+    await settle();
+    respond(expectQrRequest());
+    const image = element<HTMLImageElement>('.donate-img img');
+
+    expect(image.getAttribute('srcset')).toBe('/images/donate-720.webp 720w, /images/donate-1440.webp 1440w');
+    expect(image.getAttribute('loading')).toBe('lazy');
+  });
+
   it('when it opens, then it asks for a QR payment of 500 Kč without a variable symbol and shows the QR and the bank account', async () => {
     await settle();
 

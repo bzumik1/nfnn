@@ -12,11 +12,11 @@ export class ProjectCard {
 
   protected readonly imageSrc = computed(() => {
     const map: Record<ProjectKey, string> = {
-      dominik: '/images/proj1.jpg',
-      anicka: '/images/proj2.jpg',
-      tomas: '/images/proj3.jpg',
-      eliska: '/images/proj4.jpg',
-      martin: '/images/proj5.jpg',
+      dominik: '/images/project-1.webp',
+      anicka: '/images/project-2.webp',
+      tomas: '/images/project-3.webp',
+      eliska: '/images/project-4.webp',
+      martin: '/images/project-5.webp',
     };
     return map[this.project()];
   });
