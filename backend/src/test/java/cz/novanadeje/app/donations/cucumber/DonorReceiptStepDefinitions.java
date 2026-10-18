@@ -79,7 +79,7 @@ public class DonorReceiptStepDefinitions {
         assertThat(response.getStatusCode().value()).withFailMessage("Profile update answered %s", response.getBody()).isEqualTo(200);
     }
 
-    @When("{string} downloads her/his yearly receipt for {int}")
+    @When("{string} downloads her/his/its yearly receipt for {int}")
     public void downloadsTheYearlyReceipt(String alias, int year) {
         downloadAs(alias, YEARLY_RECEIPT_PATH + year);
     }
