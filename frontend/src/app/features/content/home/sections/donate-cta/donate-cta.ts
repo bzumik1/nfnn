@@ -40,9 +40,9 @@ export class DonateCta {
   readonly variableSymbol = input<string | null>(null);
 
   protected readonly presets: readonly AmountPreset[] = [
-    { amount: 100, label: $localize`:@@home.donate.amount.preset100:100 Kč` },
-    { amount: 500, label: $localize`:@@home.donate.amount.preset500:500 Kč` },
     { amount: 1000, label: $localize`:@@home.donate.amount.preset1000:1 000 Kč` },
+    { amount: 500, label: $localize`:@@home.donate.amount.preset500:500 Kč` },
+    { amount: 100, label: $localize`:@@home.donate.amount.preset100:100 Kč` },
   ];
   protected readonly minAmount = MIN_AMOUNT;
   protected readonly maxAmount = MAX_AMOUNT;
