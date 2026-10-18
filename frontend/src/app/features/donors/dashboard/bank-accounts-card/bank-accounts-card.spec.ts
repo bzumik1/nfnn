@@ -145,6 +145,30 @@ describe('Given the bank accounts card in the overview', () => {
     expect(element('.account-hint-icon')).toBeNull();
   });
 
+  it('when an account only pairs payments with the symbol, then it stays verified, asks for the symbol in a plain line and cannot be disconnected', async () => {
+    await respond([bankAccount({ pairingExcluded: true })]);
+
+    expect(text('.account-status')).toBe('Ověřený');
+    expect(element('.account-status')?.classList).toContain('account-status--active');
+    expect(element('.account-hint--warning')).toBeNull();
+    expect(text('.account-hint')).toBe(
+      'Z tohoto účtu přiřazujeme jen platby s variabilním symbolem. Posílejte z něj prosím vždy s vaším variabilním symbolem.',
+    );
+    expect(texts('.account-meta > li')).toEqual(['ověřeno 12. 03. 2026', '14 darů bez VS', '7 400 Kč']);
+    expect(element('.account-action')).toBeNull();
+  });
+
+  it('when a disconnected account only pairs payments with the symbol, then its row offers no Zapnout párování', async () => {
+    await respond([
+      bankAccount({ id: 'a-2', status: 'DISCONNECTED', disconnectedOn: '2026-10-18', pairingExcluded: true }),
+      bankAccount({ accountNumber: '19-2000145399/0800', status: 'DISCONNECTED', disconnectedOn: '2026-09-30' }),
+    ]);
+
+    expect(texts('.account-status')).toEqual(['Párování vypnuto', 'Párování vypnuto']);
+    expect(element('.account:nth-child(1) .account-action')).toBeNull();
+    expect(texts('.account-action')).toEqual(['Zapnout párování']);
+  });
+
   it('when an account waits for a payment, then the row says what to send and can still be disconnected', async () => {
     await respond([bankAccount({ status: 'AWAITING_PAYMENT', verifiedOn: null, donationCount: 0, totalAmountMinor: 0 })]);
 
@@ -247,7 +271,8 @@ describe('Given the bank accounts card in the overview', () => {
         'Tomuto přiřazování podle účtu říkáme párování. ' +
         'Účet ověříte tak, že z něj jednou pošlete platbu s vaším variabilním symbolem; stačí 1 Kč, návod najdete pod tlačítkem „Přidat účet“. ' +
         'Musí to být český účet, ale nemusí být veden na vaše jméno. ' +
-        'Když účet ověříte poprvé a předtím ho neověřil jiný dárce, přiřadíme vám i dřívější platby z něj, které přišly bez symbolu.',
+        'Když účet ověříte poprvé a předtím ho neověřil jiný dárce, přiřadíme vám i dřívější platby z něj, které přišly bez symbolu. ' +
+        'U některých účtů přiřazujeme jen platby s variabilním symbolem; u takového účtu to v přehledu uvidíte.',
       'S jiným symbolem Platbu s jiným variabilním symbolem, než je váš, vám nepřiřadíme, ani když přijde z vašeho ověřeného účtu. ' +
         'Pokud nám posíláte dary trvalým příkazem se starším symbolem, nastavte v něm prosím váš variabilní symbol 9876543210. ' +
         'Platbu se symbolem 0 bereme jako platbu bez symbolu.',

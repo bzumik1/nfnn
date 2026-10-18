@@ -53,6 +53,8 @@ const HINTS: Record<AccountLabel, string> = {
   disconnected: '',
 };
 
+const EXCLUDED_HINT = $localize`:@@donor.bankAccounts.hint.excluded:Z tohoto účtu přiřazujeme jen platby s variabilním symbolem. Posílejte z něj prosím vždy s vaším variabilním symbolem.`;
+
 const DISCONNECTED_MESSAGE = $localize`:@@donor.bankAccounts.disconnected:Párování z účtu jsme vypnuli.`;
 const RECONNECTED_MESSAGE = $localize`:@@donor.bankAccounts.reconnected:Účet čeká na vaši platbu 1 Kč.`;
 const CHANGE_FAILED = $localize`:@@donor.bankAccounts.error.change:Účet se nepodařilo změnit. Zkuste to prosím znovu.`;
@@ -177,7 +179,14 @@ export class BankAccountsCard {
   }
 
   protected hint(account: BankAccountItem): string {
+    if (account.pairingExcluded && account.status !== 'DISCONNECTED') {
+      return EXCLUDED_HINT;
+    }
     return HINTS[labelOf(account)];
+  }
+
+  protected offersDisconnect(account: BankAccountItem): boolean {
+    return account.status !== 'DISCONNECTED' && !account.pairingExcluded;
   }
 
   protected warns(account: BankAccountItem): boolean {
@@ -186,7 +195,7 @@ export class BankAccountsCard {
 
   protected offersReconnect(account: BankAccountItem): boolean {
     const newestOfItsNumber = this.accounts().find((other) => other.accountNumber === account.accountNumber);
-    return account.status === 'DISCONNECTED' && newestOfItsNumber === account;
+    return account.status === 'DISCONNECTED' && !account.pairingExcluded && newestOfItsNumber === account;
   }
 
   protected labelModifier(account: BankAccountItem): string {

@@ -93,6 +93,7 @@ public class DonorBankAccountsStepDefinitions {
         assertThat(items()).allSatisfy(item -> {
             assertThat(UUID.fromString(item.get("id").asString())).isNotNull();
             assertThat(item.get("currency").asString()).isEqualTo("CZK");
+            assertThat(item.get("pairingExcluded").isBoolean()).isTrue();
         });
     }
 
@@ -100,6 +101,13 @@ public class DonorBankAccountsStepDefinitions {
     public void bankAccountWasVerifiedOn(String accountNumber, LocalDate verifiedOn) {
         assertThat(items()).filteredOn(item -> item.get("accountNumber").asString().equals(accountNumber))
                 .anySatisfy(item -> assertThat(item.get("verifiedOn").asString()).isEqualTo(verifiedOn.toString()));
+    }
+
+    @Then("bank account {string} is excluded from pairing")
+    public void bankAccountIsExcludedFromPairing(String accountNumber) {
+        assertThat(items()).filteredOn(item -> item.get("accountNumber").asString().equals(accountNumber))
+                .isNotEmpty()
+                .allSatisfy(item -> assertThat(item.get("pairingExcluded").asBoolean()).isTrue());
     }
 
     @Then("the donation received on {date} is listed as paired by sender account {string}")

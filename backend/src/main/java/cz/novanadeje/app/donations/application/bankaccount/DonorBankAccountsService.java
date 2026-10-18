@@ -6,6 +6,7 @@ import cz.novanadeje.app.donations.domain.donation.DonationRepository;
 import cz.novanadeje.app.donations.domain.donor.DonorRecord;
 import cz.novanadeje.app.donations.domain.donor.DonorRecordRepository;
 import cz.novanadeje.app.donations.domain.donor.DonorReference;
+import cz.novanadeje.app.donations.domain.donor.ExcludedSenderAccounts;
 import cz.novanadeje.app.donations.domain.donor.SenderAccountAlreadyConnected;
 import cz.novanadeje.app.donations.domain.donor.SenderAccountLink;
 import cz.novanadeje.app.donations.domain.donor.SenderAccountLinkId;
@@ -36,11 +37,14 @@ public class DonorBankAccountsService {
 
     private final DonorRecordRepository donorRecords;
     private final DonationRepository donations;
+    private final ExcludedSenderAccounts excluded;
     private final Clock clock;
 
-    public DonorBankAccountsService(DonorRecordRepository donorRecords, DonationRepository donations, Clock clock) {
+    public DonorBankAccountsService(DonorRecordRepository donorRecords, DonationRepository donations, ExcludedSenderAccounts excluded,
+                                    Clock clock) {
         this.donorRecords = donorRecords;
         this.donations = donations;
+        this.excluded = excluded;
         this.clock = clock;
     }
 
@@ -82,7 +86,9 @@ public class DonorBankAccountsService {
     private BankAccountView view(DonorReference donor, SenderAccountLink link, List<Donation> paired) {
         Money total = paired.stream().map(Donation::amount).reduce(Money.zero(Currency.CZK), Money::plus);
         Optional<LocalDate> last = paired.stream().map(Donation::receivedOn).max(Comparator.naturalOrder());
-        return new BankAccountView(link, paired.size(), total, last, link.isActive() && isShared(donor, link));
+        boolean pairingExcluded = excluded.excludes(link.account());
+        return new BankAccountView(link, paired.size(), total, last, link.isActive() && !pairingExcluded && isShared(donor, link),
+                pairingExcluded);
     }
 
     private boolean isShared(DonorReference donor, SenderAccountLink link) {

@@ -50,7 +50,7 @@
         ho u nás ověřili. Tomuto přiřazování podle účtu říkáme párování. Účet ověříte tak, že z něj jednou pošlete platbu s vaším
         variabilním symbolem; stačí 1&nbsp;Kč, návod najdete pod tlačítkem „Přidat účet“. Musí to být český účet, ale nemusí být veden
         na vaše jméno. Když účet ověříte poprvé a předtím ho neověřil jiný dárce, přiřadíme vám i dřívější platby z něj, které přišly
-        bez symbolu.
+        bez symbolu. U některých účtů přiřazujeme jen platby s variabilním symbolem; u takového účtu to v přehledu uvidíte.
       </li>
       @if (variableSymbol(); as symbol) {
         <li i18n="@@donor.bankAccounts.help.otherSymbol">
@@ -138,7 +138,7 @@
                     (click)="reconnect(account)"
                     i18n="@@donor.bankAccounts.reconnect"
                   >Zapnout párování</button>
-                } @else if (account.status !== 'DISCONNECTED') {
+                } @else if (offersDisconnect(account)) {
                   <button
                     type="button"
                     class="account-action"

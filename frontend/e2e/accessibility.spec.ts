@@ -100,6 +100,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
                 currency: 'CZK',
                 lastDonationOn: null,
                 shared: true,
+                pairingExcluded: false,
               },
               {
                 id: '0192f0c4-0000-7000-8000-000000000002',
@@ -113,6 +114,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
                 currency: 'CZK',
                 lastDonationOn: '2026-09-12',
                 shared: false,
+                pairingExcluded: false,
               },
             ],
           },

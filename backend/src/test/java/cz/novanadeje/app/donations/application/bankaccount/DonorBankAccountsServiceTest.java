@@ -11,6 +11,7 @@ import cz.novanadeje.app.donations.domain.donation.PairingMethod;
 import cz.novanadeje.app.donations.domain.donor.DonorRecord;
 import cz.novanadeje.app.donations.domain.donor.DonorRecordRepository;
 import cz.novanadeje.app.donations.domain.donor.DonorReference;
+import cz.novanadeje.app.donations.domain.donor.ExcludedSenderAccounts;
 import cz.novanadeje.app.donations.domain.donor.SenderAccountAlreadyConnected;
 import cz.novanadeje.app.donations.domain.donor.SenderAccountLink;
 import cz.novanadeje.app.donations.domain.donor.SenderAccountLinkId;
@@ -32,9 +33,11 @@ import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -53,7 +56,8 @@ class DonorBankAccountsServiceTest {
 
     private final DonorRecordRepository donorRecords = mock(DonorRecordRepository.class);
     private final DonationRepository donations = mock(DonationRepository.class);
-    private final DonorBankAccountsService service = new DonorBankAccountsService(donorRecords, donations, Clock.fixed(NOW, ZoneOffset.UTC));
+    private final DonorBankAccountsService service = new DonorBankAccountsService(donorRecords, donations, ExcludedSenderAccounts.none(),
+            Clock.fixed(NOW, ZoneOffset.UTC));
 
     @Test
     @DisplayName("Given links and donations paired through them, when listed, then live links come first, newest first, with their received donations counted")
@@ -93,6 +97,25 @@ class DonorBankAccountsServiceTest {
 
         when(donorRecords.findBySenderAccount(ACCOUNT)).thenReturn(List.of(jana, record(PETR, disconnected(ACCOUNT, NOW))));
         assertThat(service.listBankAccounts(JANA)).singleElement().satisfies(view -> assertThat(view.shared()).isFalse());
+    }
+
+    @Test
+    @DisplayName("Given an active link to an excluded account another donor also uses, when listed, then it is excluded from pairing and not shared, while the other account is neither")
+    void should_mark_excluded_and_not_shared_when_listed_given_excluded_account() {
+        SenderAccountLink excludedLink = active(ACCOUNT, NOW.minusSeconds(60));
+        SenderAccountLink otherLink = active(OTHER_ACCOUNT, NOW);
+        DonorRecord jana = record(JANA, excludedLink, otherLink);
+        when(donorRecords.findById(JANA)).thenReturn(Optional.of(jana));
+        when(donorRecords.findBySenderAccount(ACCOUNT)).thenReturn(List.of(jana, record(PETR, active(ACCOUNT, NOW))));
+        when(donorRecords.findBySenderAccount(OTHER_ACCOUNT)).thenReturn(List.of(jana));
+        when(donations.findByDonorNewestFirst(JANA)).thenReturn(List.of());
+        DonorBankAccountsService excluding = new DonorBankAccountsService(donorRecords, donations, new ExcludedSenderAccounts(Set.of(ACCOUNT)),
+                Clock.fixed(NOW, ZoneOffset.UTC));
+
+        List<BankAccountView> views = excluding.listBankAccounts(JANA);
+
+        assertThat(views).extracting(view -> view.link().id(), BankAccountView::pairingExcluded, BankAccountView::shared)
+                .containsExactly(tuple(otherLink.id(), false, false), tuple(excludedLink.id(), true, false));
     }
 
     @Test

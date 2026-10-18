@@ -131,6 +131,42 @@ Feature: A donor sees, adds and disconnects the bank accounts the foundation pai
       | accountNumber   | status | connectedFrom | disconnectedOn | donationCount | totalAmountMinor | lastDonationOn | shared |
       | 2900233333/2010 | ACTIVE | 2026-10-18    |                | 1             | 15000            | 2026-10-18     | false  |
 
+  Scenario: An account taken over while its previous holder awaits a reconnect starts the day after the previous holder's last day
+    Given today is 2026-10-17
+    And a person "Jana" is registered
+    And a person "Petr" is registered
+    And the bank account has these movements:
+      | id   | date       | amount | account    | bankCode | name          | variableSymbol |
+      | 1001 | 2026-10-05 | 500.00 | 2900233333 | 2010     | Nováková Jana | {Jana}         |
+    And the application starts the import
+    And "Jana" disconnects bank account "2900233333/2010"
+    And 2 days pass
+    And "Jana" reconnects bank account "2900233333/2010"
+    And the bank account has these movements:
+      | id   | date       | amount | account    | bankCode | name          | variableSymbol |
+      | 1002 | 2026-10-16 | 200.00 | 2900233333 | 2010     | Nováková Jana |                |
+      | 1003 | 2026-10-19 | 1.00   | 2900233333 | 2010     | Svoboda Petr  | {Petr}         |
+    When the hourly import runs
+    Then bank payment 1003 is paired with "Petr"
+    And bank payment 1002 is paired with "Jana"
+    When "Petr" asks for his bank accounts
+    Then the bank accounts are:
+      | accountNumber   | status | connectedFrom | disconnectedOn | donationCount | totalAmountMinor | lastDonationOn | shared |
+      | 2900233333/2010 | ACTIVE | 2026-10-18    |                | 0             | 0                |                | false  |
+    Given the bank account has these movements:
+      | id   | date       | amount | account    | bankCode | name          | variableSymbol |
+      | 1004 | 2026-10-20 | 1.00   | 2900233333 | 2010     | Nováková Jana | {Jana}         |
+      | 1005 | 2026-10-20 | 100.00 | 2900233333 | 2010     | Nováková Jana |                |
+    When 1 days pass
+    And the hourly import runs
+    Then bank payment 1004 is paired with "Jana"
+    And bank payment 1005 is unpaired
+    When "Jana" asks for her bank accounts
+    Then the bank accounts are:
+      | accountNumber   | status       | connectedFrom | disconnectedOn | donationCount | totalAmountMinor | lastDonationOn | shared |
+      | 2900233333/2010 | ACTIVE       | 2026-10-19    |                | 0             | 0                |                | true   |
+      | 2900233333/2010 | DISCONNECTED |               | 2026-10-17     | 1             | 20000            | 2026-10-16     | false  |
+
   Scenario: An account two donors verified is marked as shared for both
     Given today is 2026-10-17
     And a person "Jana" is registered
@@ -162,6 +198,28 @@ Feature: A donor sees, adds and disconnects the bank accounts the foundation pai
     Then bank payment 1001 is paired with "Jana"
     And bank payment 1002 is unpaired
     And "Jana" has learned no sender account
+
+  Scenario: An account learned before it was excluded stays listed as verified but excluded from pairing, and can still be disconnected
+    Given today is 2026-10-17
+    And a person "Jana" is registered
+    And the bank account has these movements:
+      | id   | date       | amount | account    | bankCode | name          | variableSymbol |
+      | 1001 | 2026-10-10 | 500.00 | 2400000002 | 2010     | Sběrný účet   | {Jana}         |
+    And the application starts the import
+    And "Jana" learned the sender account of bank payment 1001 before it was excluded
+    And the bank account has these movements:
+      | id   | date       | amount | account    | bankCode | name          | variableSymbol |
+      | 1002 | 2026-10-18 | 300.00 | 2400000002 | 2010     | Sběrný účet   |                |
+    When 1 days pass
+    And the hourly import runs
+    Then bank payment 1002 is unpaired
+    When "Jana" asks for her bank accounts
+    Then the bank accounts are:
+      | accountNumber   | status | connectedFrom | disconnectedOn | donationCount | totalAmountMinor | lastDonationOn | shared |
+      | 2400000002/2010 | ACTIVE |               |                | 0             | 0                |                | false  |
+    And bank account "2400000002/2010" is excluded from pairing
+    When "Jana" disconnects bank account "2400000002/2010"
+    Then the response status is 204
 
   Scenario: A donor cannot disconnect another donor's account, an account twice, or reconnect a connected one
     Given today is 2026-10-17
