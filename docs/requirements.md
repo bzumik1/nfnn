@@ -64,6 +64,7 @@ Web fondu, který představí fond a jeho pomoc dětem, usnadní darování a d�
 ## 7. Později, mimo první verzi
 
 - Administrace pro správce (aktuality, projekty, nespárované platby).
+- Přístup Clauda k logům na serveru a MCP server pro NFNN: nejdřív čtení (logy, stav importu, počty darů) z chatu na claude.ai, později zápis jako náhrada části administrace. Rozbor a pořadí jsou v plánu úkolů (úkoly 10 a 11).
 - Posílání potvrzení e-mailem.
 - Smazání účtu dárcem.
 - Platba kartou online.
