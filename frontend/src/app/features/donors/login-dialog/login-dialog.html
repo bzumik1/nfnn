@@ -31,7 +31,9 @@
           <input appFormControl id="login-email" autofocus name="email" type="email" autocomplete="email" placeholder="vas@email.cz" i18n-placeholder="@@donor.login.emailPlaceholder" [(ngModel)]="email" required email />
         </app-form-field>
         <app-form-field label="Heslo" i18n-label="@@donor.login.password" [messages]="signInPasswordMessages">
-          <input appFormControl id="login-password" name="password" type="password" autocomplete="current-password" [(ngModel)]="password" required />
+          <app-password-reveal>
+            <input appFormControl id="login-password" name="password" type="password" autocomplete="current-password" [(ngModel)]="password" required />
+          </app-password-reveal>
         </app-form-field>
 
         @if (error()) {
@@ -110,7 +112,9 @@
         </app-form-field>
 
         <app-form-field label="Heslo" i18n-label="@@donor.login.password" [hint]="newPasswordHint" [messages]="newPasswordMessages">
-          <input appFormControl id="register-password" name="password" type="password" autocomplete="new-password" [(ngModel)]="registration.password" required [minlength]="passwordMinLength" maxlength="128" />
+          <app-password-reveal>
+            <input appFormControl id="register-password" name="password" type="password" autocomplete="new-password" [(ngModel)]="registration.password" required [minlength]="passwordMinLength" maxlength="128" />
+          </app-password-reveal>
         </app-form-field>
 
         @if (error()) {

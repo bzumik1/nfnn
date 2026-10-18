@@ -115,6 +115,15 @@ describe('Given the sign-in dialog', () => {
       expect(navigate).not.toHaveBeenCalled();
     });
 
+    it('who wants to check the password, then the eye button shows it and the field keeps its label', async () => {
+      await fillIn('#login-password', 'correct horse battery');
+
+      await click('#login-password + .password-reveal');
+
+      expect(element<HTMLInputElement>('#login-password').type).toBe('text');
+      expect(element('label[for="login-password"]').textContent).toContain('Heslo');
+    });
+
     it('with an empty field, then nothing is sent and the empty field says what is missing', async () => {
       await fillIn('#login-email', 'jana@example.cz');
 
