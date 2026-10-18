@@ -1,6 +1,7 @@
 package cz.novanadeje.app.donations.cucumber;
 
 import cz.novanadeje.app.cucumber.ApiClient;
+import cz.novanadeje.app.cucumber.DonorSessions;
 import cz.novanadeje.app.cucumber.ScenarioDonors;
 import cz.novanadeje.app.donations.domain.donor.DonorRecord;
 import cz.novanadeje.app.donations.domain.donor.DonorRecordRepository;
@@ -47,10 +48,12 @@ public class DonorRecordStepDefinitions {
     private final TransactionTemplate transaction;
     private final JdbcClient jdbc;
     private final Clock clock;
+    private final DonorSessions sessions;
     private final Map<String, PostalAddress> addresses = new HashMap<>();
 
     public DonorRecordStepDefinitions(ApiClient api, ScenarioDonors scenarioDonors, DonorRecordRepository donorRecords,
-                                      ApplicationEventPublisher events, TransactionTemplate transaction, JdbcClient jdbc, Clock clock) {
+                                      ApplicationEventPublisher events, TransactionTemplate transaction, JdbcClient jdbc, Clock clock,
+                                      DonorSessions sessions) {
         this.api = api;
         this.scenarioDonors = scenarioDonors;
         this.donorRecords = donorRecords;
@@ -58,6 +61,7 @@ public class DonorRecordStepDefinitions {
         this.transaction = transaction;
         this.jdbc = jdbc;
         this.clock = clock;
+        this.sessions = sessions;
     }
 
     @Given("a person {string} is registered")
@@ -135,11 +139,12 @@ public class DonorRecordStepDefinitions {
         JsonNode user = json.get("user");
         scenarioDonors.remember(alias, UUID.fromString(user.get("id").asString()), new VariableSymbol(user.get("variableSymbol").asString()));
         scenarioDonors.rememberAccessToken(alias, json.get("accessToken").asString());
+        scenarioDonors.rememberCredentials(alias, email(alias), PASSWORD);
         addresses.put(alias, address);
     }
 
     private void patchProfileOf(String alias, Map<String, ?> body) {
-        api.authorize(scenarioDonors.accessTokenOf(alias));
+        sessions.actAs(alias);
         ResponseEntity<String> response = api.patch(PROFILE_PATH, body);
         assertThat(response.getStatusCode().value()).withFailMessage("Profile update answered %s", response.getBody()).isEqualTo(200);
     }

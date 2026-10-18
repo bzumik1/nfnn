@@ -19,6 +19,7 @@ public class ScenarioDonors {
 
     private final Map<String, RememberedDonor> donors = new HashMap<>();
     private final Map<String, String> accessTokens = new HashMap<>();
+    private final Map<String, Credentials> credentials = new HashMap<>();
 
     public void remember(String alias, UUID donorId, VariableSymbol variableSymbol) {
         donors.put(alias, new RememberedDonor(donorId, variableSymbol));
@@ -26,6 +27,18 @@ public class ScenarioDonors {
 
     public void rememberAccessToken(String alias, String accessToken) {
         accessTokens.put(alias, accessToken);
+    }
+
+    public void rememberCredentials(String alias, String email, String password) {
+        credentials.put(alias, new Credentials(email, password));
+    }
+
+    public Credentials credentialsOf(String alias) {
+        Credentials remembered = credentials.get(alias);
+        if (remembered == null) {
+            throw new IllegalArgumentException("No credentials for \"" + alias + "\" in this scenario; known: " + credentials.keySet());
+        }
+        return remembered;
     }
 
     public String accessTokenOf(String alias) {
@@ -62,6 +75,9 @@ public class ScenarioDonors {
             throw new IllegalArgumentException("No donor \"" + alias + "\" in this scenario; known: " + donors.keySet());
         }
         return donor;
+    }
+
+    public record Credentials(String email, String password) {
     }
 
     private record RememberedDonor(UUID donorId, VariableSymbol variableSymbol) {
