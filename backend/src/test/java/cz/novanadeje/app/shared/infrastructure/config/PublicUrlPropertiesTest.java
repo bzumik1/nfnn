@@ -40,8 +40,8 @@ class PublicUrlPropertiesTest {
     @Test
     @DisplayName("Given PUBLIC_URL with a trailing slash, when the context starts, then it is used without the slash")
     void should_use_public_url_without_slash_when_started_given_env_var() {
-        contexts.withPropertyValues("spring.profiles.active=prod", "PUBLIC_URL=https://novanadeje.cz/").run(context ->
-                assertThat(context.getBean(PublicUrlProperties.class).publicUrl()).isEqualTo("https://novanadeje.cz"));
+        contexts.withPropertyValues("spring.profiles.active=prod", "PUBLIC_URL=https://nfnn.cz/").run(context ->
+                assertThat(context.getBean(PublicUrlProperties.class).publicUrl()).isEqualTo("https://nfnn.cz"));
     }
 
     @Test
@@ -56,10 +56,10 @@ class PublicUrlPropertiesTest {
     @Test
     @DisplayName("Given an https address with a path, when a link is made, then the path follows the address")
     void should_append_path_when_link_made_given_valid_address() {
-        PublicUrlProperties properties = new PublicUrlProperties(" https://novanadeje.cz/ ");
+        PublicUrlProperties properties = new PublicUrlProperties(" https://nfnn.cz/ ");
 
-        assertThat(properties.publicUrl()).isEqualTo("https://novanadeje.cz");
-        assertThat(properties.link("/obnova-hesla#token=abc")).isEqualTo(URI.create("https://novanadeje.cz/obnova-hesla#token=abc"));
+        assertThat(properties.publicUrl()).isEqualTo("https://nfnn.cz");
+        assertThat(properties.link("/obnova-hesla#token=abc")).isEqualTo(URI.create("https://nfnn.cz/obnova-hesla#token=abc"));
     }
 
     @Test
@@ -70,8 +70,8 @@ class PublicUrlPropertiesTest {
 
     @ParameterizedTest
     @NullSource
-    @ValueSource(strings = {"", "  ", "ftp://novanadeje.cz", "novanadeje.cz", "/obnova-hesla", "https://", "https://novanadeje.cz/a b",
-            "https://novanadeje.cz/?x=1", "https://novanadeje.cz/#x", "https://novanadeje.cz#"})
+    @ValueSource(strings = {"", "  ", "ftp://nfnn.cz", "nfnn.cz", "/obnova-hesla", "https://", "https://nfnn.cz/a b",
+            "https://nfnn.cz/?x=1", "https://nfnn.cz/#x", "https://nfnn.cz#"})
     @DisplayName("Given something that is not a plain absolute http(s) address, when the properties are made, then they fail naming the environment variable")
     void should_fail_naming_env_var_when_made_given_invalid_address(String value) {
         assertThatIllegalArgumentException().isThrownBy(() -> new PublicUrlProperties(value))
@@ -81,7 +81,7 @@ class PublicUrlPropertiesTest {
     @Test
     @DisplayName("Given a path without a leading slash, when a link is made, then it is refused")
     void should_refuse_when_link_made_given_relative_path() {
-        PublicUrlProperties properties = new PublicUrlProperties("https://novanadeje.cz");
+        PublicUrlProperties properties = new PublicUrlProperties("https://nfnn.cz");
 
         assertThatIllegalArgumentException().isThrownBy(() -> properties.link("obnova-hesla"));
     }

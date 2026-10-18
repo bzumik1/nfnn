@@ -127,7 +127,22 @@ sudo docker start nfnn-backend
 
 ## Přechod na skutečnou doménu
 
-Stejně jako `nakocarky.cz`: doménu na Cloudflare (proxied, SSL Full strict), CNAME na `kocarky.znamenacek.duckdns.org`, v NPM nový proxy host na stejný port 8089 a `www` přesměrovat na holou doménu. Před ostrým provozem je potřeba SMTP služba (`MAIL_*` v `backend.env`), SPF/DKIM/DMARC na doméně a `PUBLIC_URL` v `backend.env` s novou doménou (viz Obnova hesla), jinak odkazy v e-mailech vedou na starou adresu.
+Doména fondu je `nfnn.cz` (u WEDOS, držitel fond). Nastavuje se jako `nakocarky.cz`:
+
+1. V Cloudflare (plán Free) přidej `nfnn.cz` a u WEDOS přepni NSSET na nameservery, které Cloudflare ukáže. DNSSEC nech vypnuté.
+2. DNS v Cloudflare: `nfnn.cz` CNAME `nfnn.znamenacek.duckdns.org` a `www` CNAME `nfnn.cz`, obojí Proxied; SSL/TLS v režimu Full (strict).
+3. V NPM nový proxy host `nfnn.cz` na port 8089 s certifikátem Let's Encrypt a Force SSL, a `www.nfnn.cz` přesměrovat 301 na `https://nfnn.cz`. V Advanced konfiguraci proxy hostu brát adresu návštěvníka z `CF-Connecting-IP` (viz Obnova hesla).
+4. V `backend.env` nastav `PUBLIC_URL=https://nfnn.cz`, jinak odkazy v e-mailech vedou na starou adresu, a aplikaci přeinstaluj.
+
+## E-maily
+
+Adresa fondu je `info@nfnn.cz`. Příchozí poštu přeposílá Cloudflare Email Routing do běžných schránek, web odesílá přes Brevo (SMTP, zdarma 300 e-mailů denně). Odesílatel je `CONTACT_RECIPIENT`, takže odpověď na e-mail z webu dojde fondu.
+
+1. Cloudflare → Email → Email Routing: zapni ho (MX a SPF záznamy přidá sám), ověř cílové schránky a založ adresu `info@nfnn.cz`.
+2. Brevo: účet fondu, Senders, Domains & Dedicated IPs → Domains → přidej `nfnn.cz` a záznamy, které vypíše (ověřovací TXT a DKIM), vlož do Cloudflare. Záznamy CNAME pro DKIM musí být DNS only (šedý mráček), ne Proxied.
+3. DNS v Cloudflare: SPF (TXT na `nfnn.cz`, jen jeden) `v=spf1 include:_spf.mx.cloudflare.net include:spf.brevo.com ~all` a DMARC (TXT na `_dmarc`) `v=DMARC1; p=none`. Až e-maily z webu chodí bez spamu, zpřísni DMARC na `p=quarantine`.
+4. Brevo → SMTP & API → SMTP: vygeneruj SMTP klíč. Do `backend.env` vyplň `MAIL_HOST=smtp-relay.brevo.com`, `MAIL_PORT=587`, `MAIL_USERNAME` (SMTP login z té stránky), `MAIL_PASSWORD` (SMTP klíč), `MAIL_AUTH=true`, `MAIL_STARTTLS=true` a aplikaci přeinstaluj.
+5. Vyzkoušej kontaktní formulář: zpráva musí dojít na `info@nfnn.cz` a v jejích hlavičkách musí být `dkim=pass` a `dmarc=pass`.
 
 ## Fio API
 

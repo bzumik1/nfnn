@@ -55,8 +55,8 @@ describe('Given the privacy policy page', () => {
   it('when it renders, then the contact e-mail is a mailto link', () => {
     const link = fixture.nativeElement.querySelector('a[href^="mailto:"]') as HTMLAnchorElement;
 
-    expect(link.getAttribute('href')).toBe('mailto:info@novanadeje.cz');
-    expect(link.textContent!.trim()).toBe('info@novanadeje.cz');
+    expect(link.getAttribute('href')).toBe('mailto:info@nfnn.cz');
+    expect(link.textContent!.trim()).toBe('info@nfnn.cz');
   });
 
   it('when it renders, then the contact section links to the contact form on the home page', () => {

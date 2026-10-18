@@ -49,7 +49,7 @@ class PasswordResetEmailSenderTest {
 
     private static final UUID DONOR_ID = UUID.fromString("01a18e56-bdb0-775a-bd0a-a60756831369");
     private static final EmailAddress EMAIL = new EmailAddress("jana@example.cz");
-    private static final String SENDER = "info@novanadeje.cz";
+    private static final String SENDER = "info@nfnn.cz";
     private static final PasswordResetSecret SECRET = PasswordResetSecret.generate();
     private static final String LINK = "http://localhost:4200/obnova-hesla#token=" + SECRET.value();
     private static final Instant EXPIRES_AT = Instant.parse("2026-10-18T11:00:00Z");
@@ -103,7 +103,7 @@ class PasswordResetEmailSenderTest {
 
                 Nová naděje – nadační fond
 
-                Máte-li dotaz, napište nám na info@novanadeje.cz.
+                Máte-li dotaz, napište nám na info@nfnn.cz.
                 """.formatted(LINK)));
     }
 
@@ -120,7 +120,7 @@ class PasswordResetEmailSenderTest {
                 .contains("(jana@example.cz)")
                 .contains("Odkaz platí 60 minut a lze ho použít jen jednou.")
                 .contains("Pokud jste o obnovu hesla nežádali")
-                .contains("Máte-li dotaz, napište nám na info@novanadeje.cz.")
+                .contains("Máte-li dotaz, napište nám na info@nfnn.cz.")
                 .doesNotContain("<img"));
     }
 
@@ -146,7 +146,7 @@ class PasswordResetEmailSenderTest {
                     .contains("we received a request to set a new password for your Nová naděje donor account (jana@example.cz).")
                     .contains(LINK)
                     .contains("The link is valid for 30 minutes and can be used once.")
-                    .contains("Questions? Write to info@novanadeje.cz.");
+                    .contains("Questions? Write to info@nfnn.cz.");
             assertThat(MailContents.html(email))
                     .contains("lang=\"en\"")
                     .contains("Set a new password")

@@ -21,5 +21,5 @@ export function authResponse(accessToken: string, donor: Donor = sampleDonor()):
 }
 
 export function problem(type: string, title = 'Problem', detail = ''): Record<string, unknown> {
-  return { type: `https://novanadeje.cz/problems/${type}`, title, detail, status: 401 };
+  return { type: `https://nfnn.cz/problems/${type}`, title, detail, status: 401 };
 }

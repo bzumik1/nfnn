@@ -125,7 +125,7 @@ describe('Given a signed-in donor on the dashboard', () => {
   }
 
   function problemBlob(type: string, title: string, status: number): Blob {
-    return new Blob([JSON.stringify({ type: `https://novanadeje.cz/problems/${type}`, title, detail: '', status })], {
+    return new Blob([JSON.stringify({ type: `https://nfnn.cz/problems/${type}`, title, detail: '', status })], {
       type: 'application/problem+json',
     });
   }
@@ -536,7 +536,7 @@ describe('Given a signed-in donor on the dashboard', () => {
     const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
     http.expectOne('/api/donations/me').flush(twoYearDonations());
     http.expectOne('/api/donations/me/summary').flush(
-      { type: 'https://novanadeje.cz/problems/auth/unauthenticated', title: 'Přihlaste se', status: 401 },
+      { type: 'https://nfnn.cz/problems/auth/unauthenticated', title: 'Přihlaste se', status: 401 },
       { status: 401, statusText: 'Unauthorized' },
     );
     await settle();
@@ -548,7 +548,7 @@ describe('Given a signed-in donor on the dashboard', () => {
 
   it('when the session was forgotten while the donations were loading, then the donor is sent home to sign in', async () => {
     const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
-    const sessionLost = { type: 'https://novanadeje.cz/problems/auth/invalid-refresh-token', title: 'Přihlaste se znovu', status: 401 };
+    const sessionLost = { type: 'https://nfnn.cz/problems/auth/invalid-refresh-token', title: 'Přihlaste se znovu', status: 401 };
     store.refresh().subscribe({ error: () => undefined });
     http.expectOne('/api/donors/auth/refresh').flush(sessionLost, { status: 401, statusText: 'Unauthorized' });
     http.expectOne('/api/donations/me').flush(twoYearDonations());

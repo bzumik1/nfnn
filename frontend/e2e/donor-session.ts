@@ -25,7 +25,7 @@ export function problem(status: number, type: string, title: string, detail: str
   return {
     status,
     contentType: 'application/problem+json',
-    body: JSON.stringify({ type: `https://novanadeje.cz/problems/${type}`, title, detail, status }),
+    body: JSON.stringify({ type: `https://nfnn.cz/problems/${type}`, title, detail, status }),
   };
 }
 

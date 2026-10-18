@@ -94,7 +94,7 @@ class ApiExceptionHandlerTest {
         return result
                 .andExpect(status().isBadRequest())
                 .andExpect(content().contentTypeCompatibleWith("application/problem+json"))
-                .andExpect(jsonPath("$.type").value("https://novanadeje.cz/problems/validation"))
+                .andExpect(jsonPath("$.type").value("https://nfnn.cz/problems/validation"))
                 .andExpect(jsonPath("$.title").value("Neplatné údaje"))
                 .andExpect(jsonPath("$.detail").value("Zkontrolujte prosím označená pole."));
     }

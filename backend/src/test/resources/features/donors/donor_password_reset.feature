@@ -7,7 +7,7 @@ Feature: Donor resets a forgotten password by e-mail
     And 1 password reset link is stored
     And the stored link expires one hour after it was issued
     And 1 reset e-mail is sent to "jana@example.cz"
-    And the reset e-mail comes from "info@novanadeje.cz" named "Nová naděje – nadační fond"
+    And the reset e-mail comes from "info@nfnn.cz" named "Nová naděje – nadační fond"
     And the reset e-mail has the subject "Obnova hesla k dárcovskému účtu – Nová naděje"
     And both parts of the reset e-mail contain "http://localhost:4200/obnova-hesla#token="
     And both parts of the reset e-mail contain "jana@example.cz"

@@ -30,7 +30,7 @@ class ApiSecurityTest {
                 .andExpect(status().isUnauthorized())
                 .andExpect(header().doesNotExist("WWW-Authenticate"))
                 .andExpect(content().contentTypeCompatibleWith("application/problem+json"))
-                .andExpect(jsonPath("$.type").value("https://novanadeje.cz/problems/auth/unauthenticated"))
+                .andExpect(jsonPath("$.type").value("https://nfnn.cz/problems/auth/unauthenticated"))
                 .andExpect(jsonPath("$.title").value("Přihlášení je vyžadováno"));
     }
 
