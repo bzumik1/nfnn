@@ -23,9 +23,9 @@ Hesla, tokeny a nastavení, která patří jen tomuto serveru, nejsou v `compose
 Vzory jsou v repu jako `deploy/db.env.example` a `deploy/backend.env.example`; co který řádek znamená, říká komentář nad ním. Vyplněné soubory do repa nepatří, `.gitignore` všechny `*.env` ignoruje. Postgres a zálohy `backend.env` nedostanou, takže token Fio, heslo SMTP ani JWT klíč v databázových kontejnerech nejsou.
 
 - Hodnoty piš bez uvozovek. Nesmí obsahovat `$` (docker compose ho bere jako začátek proměnné a hodnota se zkomolí) ani mezeru před `#` (od ní dál je komentář). Hesla z `openssl rand -hex 32` mají jen číslice a písmena a–f.
-- Volitelný řádek buď vyplň, nebo nech zakomentovaný (`#` na začátku). Prázdná hodnota není totéž co chybějící řádek: prázdné `MAIL_FROM`, `PUBLIC_URL`, `RECEIPT_SIGNATORY_NAME` nebo `RECEIPT_SIGNATORY_ROLE` zastaví start backendu.
+- Volitelný řádek buď vyplň, nebo nech zakomentovaný (`#` na začátku). Prázdná hodnota není totéž co chybějící řádek: prázdné `MAIL_FROM`, `CONTACT_RECIPIENT`, `PUBLIC_URL`, `RECEIPT_SIGNATORY_NAME` nebo `RECEIPT_SIGNATORY_ROLE` zastaví start backendu (prázdné `CONTACT_RECIPIENT` bez `MAIL_FROM` hlásí chybu `MAIL_FROM (app.mail.sender-email) is required`).
 - **Po každé změně souboru aplikaci přeinstaluj** (vlož znovu `deploy/compose.yml`). ZimaOS si hodnoty nejspíš při instalaci zkopíruje do své kopie compose, takže samotný restart může nechat staré hodnoty.
-- Soubory musí existovat před instalací. Chybí-li některý, instalace skončí chybou `env file /DATA/AppData/nfnn/env/... not found`.
+- Soubory musí existovat před instalací. Chybí-li některý, instalace skončí chybou, která jmenuje chybějící soubor (`/DATA/AppData/nfnn/env/db.env` nebo `backend.env`) a hlásí `no such file or directory` nebo `not found`.
 - Kdyby ZimaOS compose s `env_file` odmítla, vrať se k dřívějšímu postupu s hesly přímo v compose: starý `deploy/compose.yml` i tento návod k němu jsou v historii gitu (`git log -p -- deploy/compose.yml deploy/README.md`).
 
 ## Instalace
@@ -66,7 +66,7 @@ Vzory jsou v repu jako `deploy/db.env.example` a `deploy/backend.env.example`; c
 5. ZimaOS → App Store → Custom Install → smazat vzor, vložit `deploy/compose.yml` beze změn → Install.
 6. Heslo databáze po první instalaci neměň: Postgres si ho zapíše do dat v `/DATA/AppData/nfnn/postgres` a nové heslo by backend nepustilo dovnitř. Nový JWT klíč jen odhlásí všechny dárce.
 
-Když se změní `compose.yml` v repu, aplikaci přeinstaluj s novým souborem; soubory v `/DATA/AppData/nfnn/env` zůstanou, jak jsou.
+Když se změní `compose.yml` v repu, aplikaci přeinstaluj s novým souborem; soubory v `/DATA/AppData/nfnn/env` zůstanou, jak jsou. Přibude-li nebo změní-li se řádek ve vzoru (`deploy/*.env.example`), přepiš ho před přeinstalací do souboru v `/DATA/AppData/nfnn/env`.
 
 ## Přechod na env soubory
 
@@ -95,7 +95,7 @@ Server nainstalovaný ze staršího `compose.yml` má hesla přímo v compose (k
    ```
 
 3. Chybí-li ještě token Fio nebo SMTP, doplň je do `backend.env` (`sudo vi /DATA/AppData/nfnn/env/backend.env`).
-4. Připojoval-li starý compose sken podpisu z `/DATA/AppData/nfnn/receipt/signature.png`, přesuň ho: `sudo mv /DATA/AppData/nfnn/receipt/signature.png /DATA/AppData/nfnn/config/`. Nový compose připojuje celou složku `config` jako `/config`, takže řádek `RECEIPT_SIGNATURE_IMAGE=/config/signature.png` platí dál.
+4. Připojoval-li starý compose sken podpisu z `/DATA/AppData/nfnn/receipt`, zkopíruj ho do `config`; nepřesouvej ho, starý compose ho potřebuje, dokud aplikaci nepřeinstaluješ: `sudo install -m 644 /DATA/AppData/nfnn/receipt/signature.png /DATA/AppData/nfnn/config/signature.png`. Sken `.jpg` nebo `.jpeg` zkopíruj stejně, jen s jeho příponou v obou cestách, aby dál seděl přenesený řádek `RECEIPT_SIGNATURE_IMAGE` (třeba `/config/signature.jpg`). Nový compose připojuje celou složku `config` jako `/config`. Složku `/DATA/AppData/nfnn/receipt` smaž, až log nové instalace v kroku 6 ukáže `Started AppApplication`.
 5. Aplikaci přeinstaluj s novým `deploy/compose.yml`, vloženým beze změn.
 6. Zkontroluj log backendu: `sudo docker logs nfnn-backend 2>&1 | grep -E 'Started AppApplication|JWT_SECRET|password authentication failed'`. Má tam být `Started AppApplication`. `JWT_SECRET (app.security.jwt.secret) is required` znamená prázdný nebo chybějící `JWT_SECRET` v `backend.env`; `password authentication failed` znamená jiné heslo databáze, než s jakým Postgres poprvé startoval. Postgres a zálohy JWT klíč vidět nesmí: `sudo docker exec nfnn-postgres printenv JWT_SECRET` nevypíše nic.
 
