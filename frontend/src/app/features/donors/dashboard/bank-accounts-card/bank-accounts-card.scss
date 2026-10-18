@@ -78,11 +78,16 @@
 }
 
 .help-title {
-  font-family: var(--font-sans);
-  font-size: 15px;
+  font-family: var(--font-serif);
+  font-size: 16px;
   font-weight: 700;
   color: var(--color-text);
-  margin-bottom: 8px;
+  margin-bottom: 12px;
+}
+
+.help-list,
+.help-contact {
+  max-width: 520px;
 }
 
 .help-list {
@@ -138,6 +143,7 @@
 }
 
 .accounts-add {
+  margin-left: auto;
   background: var(--color-accent);
   color: var(--color-on-accent);
   box-shadow: var(--shadow-button-sm);

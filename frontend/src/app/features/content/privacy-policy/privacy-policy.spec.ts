@@ -75,6 +75,10 @@ describe('Given the privacy policy page', () => {
 
     expect(donations).toContain('podle vašeho variabilního symbolu');
     expect(donations).toContain('podle čísla účtu, ze kterého přišla');
+    expect(donations).toContain(
+      'Když nám ho prokážete poprvé a předtím ho neprokázal jiný dárce, přiřadíme vám i dřívější platby bez symbolu z tohoto účtu.',
+    );
+    expect(donations).not.toContain('přiřadíme vám tak i dřívější');
     expect(donations).toContain('Moje bankovní účty');
     expect(donations).toContain('párování vypnout');
     expect(donations).toContain('které z takového účtu přijdou ode dne po vypnutí párování, vám už nepřiřazujeme');

@@ -243,22 +243,22 @@ describe('Given the bank accounts card in the overview', () => {
   describe('when the donor looks up how payments are paired', () => {
     const HELP_ITEMS = [
       'S vaším symbolem Platbu s vaším variabilním symbolem 9876543210 přiřadíme vám, ať přijde z jakéhokoli účtu.',
-      'Bez symbolu Platbu bez variabilního symbolu přiřadíme podle účtu, ze kterého přišla, pokud jste nám ho ověřili: ' +
-        'stačí z něj jednou poslat 1 Kč přes „Přidat účet“ nebo jakýkoli dar s vaším variabilním symbolem. ' +
-        'Ověřit jde jen český účet, nemusí ale být veden na vaše jméno. ' +
-        'Když účet ověříte poprvé a předtím ho neověřil jiný dárce, přiřadíme vám i dřívější platby bez symbolu z něj.',
+      'Bez symbolu Platbu bez variabilního symbolu přiřadíme podle účtu, ze kterého přišla, pokud jste ho u nás ověřili. ' +
+        'Tomuto přiřazování podle účtu říkáme párování. ' +
+        'Účet ověříte tak, že z něj jednou pošlete platbu s vaším variabilním symbolem; stačí 1 Kč, návod najdete pod tlačítkem „Přidat účet“. ' +
+        'Musí to být český účet, ale nemusí být veden na vaše jméno. ' +
+        'Když účet ověříte poprvé a předtím ho neověřil jiný dárce, přiřadíme vám i dřívější platby z něj, které přišly bez symbolu.',
       'S jiným symbolem Platbu s jiným variabilním symbolem, než je váš, vám nepřiřadíme, ani když přijde z vašeho ověřeného účtu. ' +
-        'Posíláte-li nám dary trvalým příkazem se starším symbolem, změňte ho prosím na 9876543210. ' +
+        'Pokud nám posíláte dary trvalým příkazem se starším symbolem, nastavte v něm prosím váš variabilní symbol 9876543210. ' +
         'Platbu se symbolem 0 bereme jako platbu bez symbolu.',
       'Vypnutí párování Párování můžete u každého účtu vypnout tlačítkem „Vypnout párování“. ' +
-        'Platby bez symbolu, které z něj přijdou od následujícího dne, vám pak nepřiřadíme; dary přiřazené dříve zůstanou. ' +
-        'Znovu ho zapnete tlačítkem „Zapnout párování“ a další platbou z účtu s vaším variabilním symbolem (stačí 1 Kč). ' +
-        'Platby bez symbolu z něj vám pak přiřadíme ode dne zapnutí.',
-      'Sdílený účet Když stejný účet ověří i jiný dárce, označíme ho jako sdílený a platby bez variabilního symbolu z něj nepřiřazujeme nikomu. ' +
+        'Platby bez symbolu, které z účtu přijdou ode dne po vypnutí, vám pak nepřiřadíme; dary přiřazené dříve zůstanou. ' +
+        'Párování znovu zapnete tlačítkem „Zapnout párování“. ' +
+        'Účet pak čeká na platbu: pošlete z něj 1 Kč (nebo jakýkoli dar) s vaším variabilním symbolem. ' +
+        'Jakmile dorazí, přiřadíme vám z něj i platby bez symbolu ode dne zapnutí.',
+      'Sdílený účet Když stejný účet ověří i jiný dárce, označíme ho jako „Sdílený“ a platby bez variabilního symbolu z něj nepřiřadíme nikomu. ' +
         'Pokud z něj dary neposíláte vy, vypněte si u něj párování. ' +
         'Jinak z něj prosím posílejte vždy s vaším variabilním symbolem.',
-      'Načítání z banky Nové platby z banky načítáme každou hodinu. ' +
-        'Do banky se navíc podíváme, když otevřete tento přehled nebo stisknete „Obnovit“, nejvýš ale jednou za 30 sekund.',
     ];
 
     beforeEach(async () => {
@@ -308,9 +308,17 @@ describe('Given the bank accounts card in the overview', () => {
       fixture.componentRef.setInput('variableSymbol', null);
       await click('.accounts-help');
 
-      const items = texts('#accounts-help-panel .help-list > li');
-      expect(items[0]).toBe('S vaším symbolem Platbu s vaším variabilním symbolem přiřadíme vám, ať přijde z jakéhokoli účtu.');
-      expect(items[2]).toContain('Posíláte-li nám dary trvalým příkazem se starším symbolem, změňte ho prosím na váš variabilní symbol.');
+      expect(texts('#accounts-help-panel .help-list > li')).toEqual(
+        HELP_ITEMS.map((item, index) =>
+          index === 0
+            ? 'S vaším symbolem Platbu s vaším variabilním symbolem přiřadíme vám, ať přijde z jakéhokoli účtu.'
+            : index === 2
+              ? 'S jiným symbolem Platbu s jiným variabilním symbolem, než je váš, vám nepřiřadíme, ani když přijde z vašeho ověřeného účtu. ' +
+                'Pokud nám posíláte dary trvalým příkazem se starším symbolem, nastavte v něm prosím váš variabilní symbol. ' +
+                'Platbu se symbolem 0 bereme jako platbu bez symbolu.'
+              : item,
+        ),
+      );
       expect(element('#accounts-help-panel .help-symbol')).toBeNull();
     });
 
@@ -333,6 +341,31 @@ describe('Given the bank accounts card in the overview', () => {
       expect(helpButton().getAttribute('aria-expanded')).toBe('false');
       expect(helpPanel().hidden).toBe(true);
       expect(document.activeElement).toBe(helpButton());
+    });
+
+    it('and presses Escape on the ? button while the panel is open, then it closes and the focus stays on the button', async () => {
+      await click('.accounts-help');
+      const button = helpButton();
+      button.focus();
+
+      button.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      await settle();
+
+      expect(button.getAttribute('aria-expanded')).toBe('false');
+      expect(helpPanel().hidden).toBe(true);
+      expect(document.activeElement).toBe(button);
+    });
+
+    it('and presses Escape on the ? button while the panel is closed, then the panel stays closed', async () => {
+      const button = helpButton();
+      button.focus();
+
+      button.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      await settle();
+
+      expect(button.getAttribute('aria-expanded')).toBe('false');
+      expect(helpPanel().hidden).toBe(true);
+      expect(document.activeElement).toBe(button);
     });
   });
 
@@ -475,7 +508,8 @@ describe('Given the bank accounts card in the overview', () => {
       expect(text('#add-account-title')).toBe('Přidat účet');
       expect(text('.add-account-text')).toBe(
         'Pošlete z účtu, který chcete přidat, 1 Kč (nebo jakýkoli dar) s vaším variabilním symbolem 9876543210. ' +
-          'Jakmile platba dorazí, účet se tu objeví a přiřadíme k vám i dřívější dary z něj, které přišly bez symbolu. ' +
+          'Jakmile platba dorazí, účet se tu objeví. ' +
+          'Když ho ověříte poprvé a předtím ho neověřil jiný dárce, přiřadíme vám i dřívější dary z něj, které přišly bez symbolu. ' +
           'Okamžitá platba dorazí do pár minut, běžný převod obvykle do dalšího pracovního dne. Funguje jen český účet.',
       );
       expect(texts('.add-account-text strong')).toEqual(['1 Kč', '9876543210']);

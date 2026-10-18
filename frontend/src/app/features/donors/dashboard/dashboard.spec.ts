@@ -239,6 +239,10 @@ describe('Given a signed-in donor on the dashboard', () => {
 
     expect(text('.bank-hint')).toContain('Okamžitá platba se tu obvykle objeví do minuty');
     expect(text('.bank-hint')).toContain('váš variabilní symbol');
+    expect(text('.bank-hint')).toContain(
+      'Nové platby hledáme v bance každou hodinu a také když otevřete tento přehled nebo stisknete „Obnovit“, nejvýš ale jednou za 30 sekund.',
+    );
+    expect(text('.bank-hint')).not.toContain('při každém otevření');
   });
 
   it('when the page opens, then the top bar shows the name of the donor without a greeting and the variable symbol is shown', async () => {
