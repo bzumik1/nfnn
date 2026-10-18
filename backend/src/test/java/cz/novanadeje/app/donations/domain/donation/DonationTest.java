@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.Year;
 import java.util.Optional;
 
 import static cz.novanadeje.app.donations.BankPayments.payment;
@@ -93,6 +94,29 @@ class DonationTest {
                 Money.czk(100), DonationSource.MANUAL, DonationStatus.RECEIVED, Optional.empty(), NOW));
         assertThatIllegalArgumentException().isThrownBy(() -> Donation.reconstitute(DONATION_ID, DONOR, Optional.empty(), RECEIVED_ON,
                 Money.czk(100), DonationSource.MANUAL, DonationStatus.RECEIVED, Optional.empty(), null));
+    }
+
+    @Test
+    @DisplayName("Given a received and a refunded donation, when asked whether they count, then only the received one counts")
+    void should_count_only_received_when_asked_given_received_and_refunded() {
+        Donation received = Donation.reconstitute(DONATION_ID, DONOR, Optional.empty(), RECEIVED_ON, Money.czk(100), DonationSource.MANUAL,
+                DonationStatus.RECEIVED, Optional.empty(), NOW);
+        Donation refunded = Donation.reconstitute(DONATION_ID, DONOR, Optional.empty(), RECEIVED_ON, Money.czk(100), DonationSource.MANUAL,
+                DonationStatus.REFUNDED, Optional.empty(), NOW);
+
+        assertThat(received.isReceived()).isTrue();
+        assertThat(refunded.isReceived()).isFalse();
+    }
+
+    @Test
+    @DisplayName("Given a donation received on the last day of a year, when asked for its year, then it belongs to that year only")
+    void should_belong_to_receipt_year_when_asked_given_last_day_of_year() {
+        Donation donation = Donation.reconstitute(DONATION_ID, DONOR, Optional.empty(), LocalDate.of(2025, 12, 31), Money.czk(100),
+                DonationSource.MANUAL, DonationStatus.RECEIVED, Optional.empty(), NOW);
+
+        assertThat(donation.receivedIn(Year.of(2025))).isTrue();
+        assertThat(donation.receivedIn(Year.of(2026))).isFalse();
+        assertThat(donation.receivedYear()).isEqualTo(Year.of(2025));
     }
 
     @Test

@@ -7,6 +7,7 @@ import cz.novanadeje.app.shared.domain.Money;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.Year;
 import java.util.Optional;
 
 public final class Donation {
@@ -82,6 +83,18 @@ public final class Donation {
 
     public Instant recordedAt() {
         return recordedAt;
+    }
+
+    public boolean isReceived() {
+        return status == DonationStatus.RECEIVED;
+    }
+
+    public Year receivedYear() {
+        return Year.from(receivedOn);
+    }
+
+    public boolean receivedIn(Year year) {
+        return receivedYear().equals(year);
     }
 
     private void requireOriginMatchingSource() {
