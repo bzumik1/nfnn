@@ -24,7 +24,7 @@ Vzory jsou v repu jako `deploy/db.env.example` a `deploy/backend.env.example`; c
 
 - Hodnoty piš bez uvozovek. Nesmí obsahovat `$` (docker compose ho bere jako začátek proměnné a hodnota se zkomolí) ani mezeru před `#` (od ní dál je komentář). Hesla z `openssl rand -hex 32` mají jen číslice a písmena a–f.
 - Volitelný řádek buď vyplň, nebo nech zakomentovaný (`#` na začátku). Prázdná hodnota není totéž co chybějící řádek: prázdné `MAIL_FROM`, `CONTACT_RECIPIENT`, `PUBLIC_URL`, `RECEIPT_SIGNATORY_NAME` nebo `RECEIPT_SIGNATORY_ROLE` zastaví start backendu (prázdné `CONTACT_RECIPIENT` bez `MAIL_FROM` hlásí chybu `MAIL_FROM (app.mail.sender-email) is required`).
-- **Po každé změně souboru aplikaci přeinstaluj** (vlož znovu `deploy/compose.yml`). ZimaOS si hodnoty nejspíš při instalaci zkopíruje do své kopie compose, takže samotný restart může nechat staré hodnoty.
+- **Po každé změně souboru aplikaci přeinstaluj** (vlož znovu `deploy/compose.yml`). ZimaOS si při instalaci zkopíruje hodnoty ze souborů do své kopie compose jako `environment:` a ty mají přednost. Restart ani `docker compose up --force-recreate` proto nové hodnoty nenačtou, kontejner dostane ty z poslední instalace. Co kontejner opravdu vidí, ukáže bez prozrazení hodnot `sudo docker exec nfnn-backend printenv | awk -F= '/^MAIL_/{print $1, length($0)-length($1)-1}'` (délka 0 = prázdné).
 - Soubory musí existovat před instalací. Chybí-li některý, instalace skončí chybou, která jmenuje chybějící soubor (`/DATA/AppData/nfnn/env/db.env` nebo `backend.env`) a hlásí `no such file or directory` nebo `not found`.
 - Kdyby ZimaOS compose s `env_file` odmítla, vrať se k dřívějšímu postupu s hesly přímo v compose: starý `deploy/compose.yml` i tento návod k němu jsou v historii gitu (`git log -p -- deploy/compose.yml deploy/README.md`).
 
@@ -141,8 +141,13 @@ Adresa fondu je `info@nfnn.cz`. Příchozí poštu přeposílá Cloudflare Email
 1. Cloudflare → Email → Email Routing: zapni ho, ověř cílovou schránku a v Routing rules založ `info@nfnn.cz` → tu schránku. MX, SPF (`v=spf1 include:_spf.mx.cloudflare.net ~all`) a DKIM pro přeposílání přidá Cloudflare sám a zamkne je; Catch-all nech vypnutý.
 2. Brevo: účet fondu (plán Free), Senders, Domains & Dedicated IPs → Domains → přidej `nfnn.cz`, brandovanou subdoménu přeskoč a zvol ruční přidání záznamů (Manual). Do Cloudflare přidej čtyři záznamy přesně podle Brevo: TXT `brevo-code:…` na `nfnn.cz`, CNAME `brevo1._domainkey` a `brevo2._domainkey` (DNS only, šedý mráček, ne Proxied) a TXT na `_dmarc` (`v=DMARC1; p=none; rua=mailto:rua@dmarc.brevo.com`). Až e-maily z webu chodí bez spamu, zpřísni DMARC na `p=quarantine`.
 3. SPF neměň: Brevo odesílá z vlastní odesílací domény a za `nfnn.cz` se prokazuje podpisem DKIM, takže DMARC projde i bez `include:spf.brevo.com`. V Brevo vypni u transakčních e-mailů sledování otevření a kliků, aby odkaz pro obnovu hesla s tokenem nevedl přes jeho server.
-4. Brevo → SMTP & API → SMTP: vygeneruj SMTP klíč. Do `backend.env` vyplň `MAIL_HOST=smtp-relay.brevo.com`, `MAIL_PORT=587`, `MAIL_USERNAME` (SMTP login z té stránky), `MAIL_PASSWORD` (SMTP klíč), `MAIL_AUTH=true`, `MAIL_STARTTLS=true` a aplikaci přeinstaluj.
+4. Brevo → SMTP & API → SMTP: vygeneruj SMTP klíč (Standard, bez expirace; Brevo ho i tak zruší po 90 dnech bez použití). Vzor `backend.env` už má `MAIL_HOST=smtp-relay.brevo.com`, port, login účtu fondu `bebb0c001@smtp-brevo.com` a STARTTLS; doplň jen `MAIL_PASSWORD` (SMTP klíč) a aplikaci přeinstaluj.
 5. Vyzkoušej kontaktní formulář: zpráva musí dojít na `info@nfnn.cz` a v jejích hlavičkách musí být `dkim=pass` a `dmarc=pass`.
+
+Když e-maily neodcházejí:
+- `MailAuthenticationException` s `no password specified?` v `sudo docker logs nfnn-backend`: kontejner nemá `MAIL_USERNAME` nebo `MAIL_PASSWORD`. Ověř délky příkazem `printenv` výše a aplikaci přeinstaluj.
+- V Brevo → Transactional → Logs stav Error s `sender … is not valid`: odesílatel není na doméně `nfnn.cz`. Server nainstalovaný před přechodem na `nfnn.cz` může mít v `backend.env` řádek `CONTACT_RECIPIENT` nebo `MAIL_FROM` se starou adresou; zakomentuj ho a aplikaci přeinstaluj.
+- Úspěšné odeslání backend do logu nezapisuje; zda zpráva odešla, ukáže log v Brevo.
 
 ## Fio API
 
