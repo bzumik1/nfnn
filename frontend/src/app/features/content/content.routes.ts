@@ -11,4 +11,9 @@ export const contentRoutes: Routes = [
     title: $localize`:@@content.privacy.pageTitle:Zásady ochrany osobních údajů | Nová naděje – nadační fond`,
     loadComponent: () => import('./privacy-policy/privacy-policy').then((m) => m.PrivacyPolicy),
   },
+  {
+    path: '**',
+    title: $localize`:@@content.notFound.pageTitle:Stránka nenalezena | Nová naděje – nadační fond`,
+    loadComponent: () => import('./not-found/not-found').then((m) => m.NotFound),
+  },
 ];

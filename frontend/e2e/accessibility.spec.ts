@@ -35,6 +35,14 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     expect(await violations(page)).toEqual([]);
   });
 
+  test('when they open an address the site does not know, then the page says so and breaks no rule', async ({ page }) => {
+    await page.goto('/stara-stranka');
+
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Tuhle stránku jsme nenašli');
+    await expect(page).toHaveURL(/\/stara-stranka$/);
+    expect(await violations(page)).toEqual([]);
+  });
+
   test('when they open a password reset link, then nothing on the page breaks the rules', async ({ page }) => {
     await page.goto('/obnova-hesla#token=abc');
     await expect(page.locator('h1')).toBeVisible();

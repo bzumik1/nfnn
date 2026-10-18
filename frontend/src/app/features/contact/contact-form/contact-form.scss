@@ -64,7 +64,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 18px;
+  color: var(--color-on-accent);
   flex-shrink: 0;
 }
 
@@ -78,9 +78,15 @@
 }
 
 .info-value {
+  display: block;
   color: var(--color-on-inverse);
   font-size: 16px;
   font-weight: 500;
+}
+
+a.info-value {
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 .contact-form-wrap {
