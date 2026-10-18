@@ -40,10 +40,10 @@ Run from `frontend/`.
 
 ```
 src/
-  index.html                  Root HTML. Loads Google Fonts (Playfair Display, Inter), title, app-root.
+  index.html                  Root HTML: title, meta description, Open Graph tags, app-root. Loads nothing from other sites.
   main.ts                     bootstrapApplication entry, references @angular/localize.
   styles.scss                 Loads the theme; reset, scrollbar, keyframes.
-  styles/themes/              The look: `_nova-nadeje.scss` sets every design token on `:root`.
+  styles/themes/              The look: `_nova-nadeje.scss` declares the fonts (`@font-face` for `fonts/`) and sets every design token on `:root`.
   app/
     app.{ts,html,scss}        Root: `<router-outlet />` and the sign-in dialog rendered while `LoginDialogService.isOpen()` (re-created on every open, so its fields and panels start clean; it is an `app-dialog`, and its "Přihlásit se / Registrace" switch carries `aria-pressed`).
     app.config.ts             provideRouter + withInMemoryScrolling (anchor scrolling on for #fragment links).
@@ -114,7 +114,7 @@ When a feature gains real routes (e.g. `contact`, `donations`), add a `<feature>
 The look is kept apart from the behaviour so it can change without touching components. `src/styles/themes/_nova-nadeje.scss` is the theme: it gives every design token its value on `:root`, and `src/styles.scss` loads it. Components only reference tokens:
 
 - Colour, named by role, not by hue: `--color-accent` (`-soft`, `-bg`, `-on-inverse`, `-2`, `-3`), `--color-on-accent`, `--color-text` (`-secondary`, `-muted`, `-soft`, `-subtle`), `--color-surface` (`-alt`, `-accent`, `-inverse`, `-inverse-strong`), `--color-on-inverse`, `--color-on-image`, `--color-image-shade`, `--color-backdrop`, `--color-border` (`-soft`, `-accent`), `--color-divider`, `--color-focus-ring`, `--color-danger*`, `--color-success*`. A translucent variant is `color-mix(in srgb, var(--color-on-image) 65%, transparent)`, never an `rgba()`.
-- Type: `--font-serif` (Playfair Display, headlines), `--font-sans` (Inter, body), `--font-mono`, and `--numeric-figures` (`font-variant-numeric` for amounts and dates, so Playfair's old-style figures line up).
+- Type: `--font-serif` (Playfair Display, headlines), `--font-sans` (Inter, body), both self-hosted variable fonts (latin and latin-ext WOFF2 from Fontsource, OFL licences beside them in `src/styles/themes/fonts/`; the build hashes them into `/media/`, which nginx caches as immutable), `--font-mono`, and `--numeric-figures` (`font-variant-numeric` for amounts and dates, so Playfair's old-style figures line up).
 - Shape: `--radius-xs` … `--radius-xl`, `--radius-field`, `--radius-card`, `--radius-media`, `--radius-dialog`, `--radius-pill`, `--radius-round`.
 - Depth: one `--shadow-*` per role (`card`, `panel`, `dialog`, `header`, `menu`, `cta`, `button`, `tab`, `focus`, …); shadows of accent buttons mix `--color-accent`, so they follow it.
 - Layout: `--content-max: 1200px`, `--header-height`.
@@ -150,7 +150,7 @@ Production: nginx in `frontend/Dockerfile` proxies `/api/*` to the `backend` con
 
 ## Assets
 
-Images and other public files live in `public/`. The build copies `public/**/*` to the output root, so `<img src="/images/hero.jpg">` works in dev and prod identically. **Do not** reference files under `Claude Design/images/` — copy them into `public/images/` instead.
+Images and other public files live in `public/`. The build copies `public/**/*` to the output root, so `<img src="/images/hero-1920.webp">` works in dev and prod identically. Photos are WebP: the hero in 1280/1920/2560 px with `srcset`, `sizes="max(100vw, 150vh, 900px)"` (it covers the whole screen, which on a phone is taller than wide) and `fetchpriority="high"`; the about and donate photos in 720/1440 px; project and news cards at 600 px. Every photo below the hero has `loading="lazy"` written before `src`/`srcset` (Angular sets attributes in template order, and a `src` set first starts the download) plus `width`/`height`, so the about and donate photos, hidden on phones, are never downloaded there. Convert a new photo with Pillow or `cwebp` at quality about 78; no file is used that the templates do not name. **Do not** reference files under `Claude Design/images/` — copy them into `public/images/` instead.
 
 ## What is intentionally *not* implemented yet
 

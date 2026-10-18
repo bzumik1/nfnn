@@ -1,6 +1,6 @@
 <article class="card">
   <div class="card-image">
-    <img [src]="imageSrc()" alt="" class="real-img" />
+    <img loading="lazy" [src]="imageSrc()" width="600" height="400" alt="" class="real-img" />
   </div>
   <div class="card-body">
     @switch (project()) {
