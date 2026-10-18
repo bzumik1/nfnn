@@ -20,11 +20,17 @@ Feature: Donor resets a forgotten password by e-mail
     And 0 password reset links are stored
     And no reset e-mail is sent
 
-  Scenario: A malformed address is refused with a field error
-    When a password reset is asked for "not-an-email"
+  Scenario Outline: A malformed address is refused with a field error
+    When a password reset is asked for "<address>"
     Then the response status is 400
     And the problem type ends with "validation"
     And the problem lists an error for field "email"
+
+    Examples:
+      | address        |
+      | not-an-email   |
+      | jana@localhost |
+      | jana@          |
 
   Scenario: The address is matched trimmed and lowercased
     Given a person registered with email "jana@example.cz" and password "correct horse battery"

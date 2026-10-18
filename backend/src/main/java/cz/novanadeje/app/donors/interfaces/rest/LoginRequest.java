@@ -10,6 +10,6 @@ record LoginRequest(
 
     @Override
     public String toString() {
-        return "LoginRequest[email=" + email + ", password=***]";
+        return "LoginRequest[email=***, password=***]";
     }
 }

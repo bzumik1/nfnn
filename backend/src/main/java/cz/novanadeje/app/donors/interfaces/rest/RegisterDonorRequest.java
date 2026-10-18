@@ -28,7 +28,7 @@ record RegisterDonorRequest(
 
     @Override
     public String toString() {
-        return "RegisterDonorRequest[type=" + type + ", name=" + name + ", companyIdentifier=" + companyIdentifier + ", address=" + address
-                + ", email=" + email + ", password=***, preferredLocale=" + preferredLocale + "]";
+        return "RegisterDonorRequest[type=" + type + ", name=***, companyIdentifier=" + companyIdentifier
+                + ", address=***, email=***, password=***, preferredLocale=" + preferredLocale + "]";
     }
 }

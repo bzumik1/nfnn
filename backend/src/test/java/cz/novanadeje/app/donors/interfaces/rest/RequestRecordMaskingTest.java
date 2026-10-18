@@ -24,24 +24,19 @@ class RequestRecordMaskingTest {
     }
 
     @Test
-    @DisplayName("Given a login request, when it is printed, then the password is masked")
-    void should_mask_password_when_printed_given_login_request() {
-        assertThat(new LoginRequest("jana@example.cz", PASSWORD).toString())
-                .doesNotContain(PASSWORD)
-                .isEqualTo("LoginRequest[email=jana@example.cz, password=***]");
+    @DisplayName("Given a login request, when it is printed, then the address and the password are masked")
+    void should_mask_email_and_password_when_printed_given_login_request() {
+        assertThat(new LoginRequest("jana@example.cz", PASSWORD).toString()).isEqualTo("LoginRequest[email=***, password=***]");
     }
 
     @Test
-    @DisplayName("Given a registration request, when it is printed, then the password is masked")
-    void should_mask_password_when_printed_given_registration_request() {
-        RegisterDonorRequest request = new RegisterDonorRequest(DonorType.PERSON, "Jana Nováková", null,
+    @DisplayName("Given a registration request, when it is printed, then the name, the address, the e-mail and the password are masked")
+    void should_mask_personal_data_when_printed_given_registration_request() {
+        RegisterDonorRequest request = new RegisterDonorRequest(DonorType.COMPANY, "Jana Nováková", "25596641",
                 new AddressRequest("Dlouhá 12", "Ústí nad Labem", "400 01"), "jana@example.cz", PASSWORD, "cs");
 
-        assertThat(request.toString())
-                .doesNotContain(PASSWORD)
-                .contains("password=***")
-                .contains("email=jana@example.cz")
-                .startsWith("RegisterDonorRequest[type=PERSON, name=Jana Nováková");
+        assertThat(request.toString()).isEqualTo("RegisterDonorRequest[type=COMPANY, name=***, companyIdentifier=25596641, "
+                + "address=***, email=***, password=***, preferredLocale=cs]");
     }
 
     @Test
