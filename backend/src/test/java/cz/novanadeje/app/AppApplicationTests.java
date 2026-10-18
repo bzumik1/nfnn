@@ -10,7 +10,7 @@ import org.springframework.context.annotation.Import;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @Import(TestcontainersConfiguration.class)
-@SpringBootTest(properties = "app.donations.fio.token=")
+@SpringBootTest(properties = {"app.donations.fio.token=", "app.donations.report.cron=-"})
 class AppApplicationTests {
 
 	@Test

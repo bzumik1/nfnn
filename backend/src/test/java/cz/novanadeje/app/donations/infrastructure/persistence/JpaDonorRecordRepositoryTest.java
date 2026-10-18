@@ -179,6 +179,24 @@ class JpaDonorRecordRepositoryTest {
         assertThat(accountRows()).isZero();
     }
 
+    @Test
+    @DisplayName("Given donors registered at three instants, when donors registered before an instant are counted, then only the earlier ones count")
+    void should_count_only_earlier_registrations_when_counted_given_three_registration_times() {
+        donorRecords.save(registeredAt("4821937560", NOW));
+        donorRecords.save(registeredAt("7310945528", LATER));
+        donorRecords.save(registeredAt("1234567890", LATER.plusSeconds(1)));
+        flushAndClear();
+
+        assertThat(donorRecords.countRegisteredBefore(NOW)).isZero();
+        assertThat(donorRecords.countRegisteredBefore(LATER)).isEqualTo(1);
+        assertThat(donorRecords.countRegisteredBefore(LATER.plusSeconds(2))).isEqualTo(3);
+    }
+
+    private static DonorRecord registeredAt(String symbol, Instant at) {
+        return DonorRecord.registerPerson(new DonorReference(UuidV7.generate(at)), "Jana Nováková", ADDRESS, new VariableSymbol(symbol),
+                LocaleCode.CS, at);
+    }
+
     private DonorRecord person(String name, String symbol) {
         return person(name, symbol, new DonorReference(UuidV7.generate(NOW)));
     }
