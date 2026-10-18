@@ -2,8 +2,10 @@
 
 import { Component, computed, inject, input, linkedSignal, signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
-import { RouterLink } from '@angular/router';
 import { catchError, debounceTime, distinctUntilChanged, map, Observable, of, startWith, switchMap } from 'rxjs';
+import { LoginDialogService } from '../../../../../core/auth/login-dialog.service';
+import { CopyButton } from '../../../../../shared/ui/copy-button/copy-button';
+import { formatCrowns } from '../../../../donations/donation-amount';
 import { BankAccountResponse, PaymentQrApi, PaymentQrResponse } from '../../../../donations/payment-qr-api';
 
 const DEFAULT_AMOUNT = 500;
@@ -30,12 +32,13 @@ type QrState =
 
 @Component({
   selector: 'app-donate-cta',
-  imports: [RouterLink],
+  imports: [CopyButton],
   templateUrl: './donate-cta.html',
   styleUrl: './donate-cta.scss',
 })
 export class DonateCta {
   private readonly api = inject(PaymentQrApi);
+  private readonly loginDialog = inject(LoginDialogService);
 
   readonly variableSymbol = input<string | null>(null);
 
@@ -44,18 +47,20 @@ export class DonateCta {
     { amount: 500, label: $localize`:@@home.donate.amount.preset500:500 Kč` },
     { amount: 100, label: $localize`:@@home.donate.amount.preset100:100 Kč` },
   ];
-  protected readonly minAmount = MIN_AMOUNT;
-  protected readonly maxAmount = MAX_AMOUNT;
+  protected readonly crowns = formatCrowns;
 
   protected readonly customChosen = signal(false);
   protected readonly presetAmount = signal(DEFAULT_AMOUNT);
   protected readonly customAmount = signal<number | null>(DEFAULT_AMOUNT);
   protected readonly customAmountSeed = signal(DEFAULT_AMOUNT);
+  private readonly customAmountLeft = signal(false);
   private readonly attempt = signal(0);
 
   protected readonly amount = computed(() =>
     this.customChosen() ? wholeAmountInRange(this.customAmount()) : this.presetAmount(),
   );
+
+  protected readonly showAmountHint = computed(() => this.customChosen() && this.customAmountLeft() && this.amount() === null);
 
   private readonly request = computed<QrRequest>(() => ({
     amount: this.amount(),
@@ -98,12 +103,24 @@ export class DonateCta {
     }
     this.customAmountSeed.set(this.presetAmount());
     this.customAmount.set(this.presetAmount());
+    this.customAmountLeft.set(false);
     this.customChosen.set(true);
   }
 
   enterCustomAmount(event: Event): void {
-    const typed = (event.target as HTMLInputElement).valueAsNumber;
-    this.customAmount.set(Number.isNaN(typed) ? null : typed);
+    this.customAmount.set(wholeCrowns((event.target as HTMLInputElement).value));
+  }
+
+  leaveCustomAmount(): void {
+    this.customAmountLeft.set(true);
+  }
+
+  register(): void {
+    this.loginDialog.open('register');
+  }
+
+  signIn(): void {
+    this.loginDialog.open('login');
   }
 
   retry(): void {
@@ -120,6 +137,11 @@ export class DonateCta {
       startWith<QrState>({ kind: 'loading' }),
     );
   }
+}
+
+function wholeCrowns(typed: string): number | null {
+  const digits = typed.replace(/\s/g, '');
+  return /^\d+$/.test(digits) ? Number(digits) : null;
 }
 
 function wholeAmountInRange(amount: number | null): number | null {

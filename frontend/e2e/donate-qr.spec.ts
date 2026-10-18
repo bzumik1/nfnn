@@ -42,4 +42,27 @@ test.describe('Given a visitor on the home page', () => {
     expect(requestedAmounts).toEqual(['500', '1000']);
     await expect(page.locator('#donate')).toContainText('CZ26 2010 0000 0055 4433 2217');
   });
+
+  test.describe('on a phone', () => {
+    test.use({ viewport: { width: 390, height: 844 }, permissions: ['clipboard-read', 'clipboard-write'] });
+
+    test('when they copy the amount, then the clipboard holds it and the bank details come before the QR code', async ({ page }) => {
+      await servePaymentQr(page, []);
+      await page.goto('/');
+      const bank = page.locator('#donate .bank');
+      await expect(bank).toContainText('5544332217/2010');
+
+      await page.getByRole('button', { name: 'Jiná částka' }).click();
+      await page.locator('#donate-custom-amount').fill('2 500');
+      await expect(bank).toContainText('2 500 Kč');
+      await page.getByRole('button', { name: 'Kopírovat částku' }).click();
+
+      await expect(page.getByRole('button', { name: 'Zkopírováno' })).toBeVisible();
+      expect(await page.evaluate(() => navigator.clipboard.readText())).toBe('2500');
+      const bankTop = (await bank.boundingBox())!.y;
+      const qrTop = (await page.locator('#donate .qr').boundingBox())!.y;
+      expect(bankTop).toBeLessThan(qrTop);
+    });
+  });
 });
+

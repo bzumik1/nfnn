@@ -2,6 +2,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting, TestRequest } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
+import { LoginDialogService } from '../../../../../core/auth/login-dialog.service';
 import { PaymentQrResponse } from '../../../../donations/payment-qr-api';
 import { DonateCta } from './donate-cta';
 
@@ -156,8 +157,62 @@ describe('Given the donate section', () => {
     await enterCustomAmount('12.5');
 
     http.expectNone((request) => request.url === PAYMENT_QR_URL);
+    expect(element('.amount-hint')).toBeNull();
+
+    element('#donate-custom-amount').dispatchEvent(new Event('blur'));
+    fixture.detectChanges();
+
     expect(text('.amount-hint')).toContain('celou částku od 1 do 1 000 000 Kč');
     expect(element('.qr-code img')).toBeNull();
+  });
+
+  it('when the visitor writes the amount with a space between thousands, then it asks for that amount', async () => {
+    await settle();
+    respond(expectQrRequest());
+
+    await enterCustomAmount('2 500');
+
+    const request = expectQrRequest();
+    expect(request.request.params.get('amount')).toBe('2500');
+    respond(request);
+  });
+
+  it('when the QR is ready, then the bank details list the account, the amount and the IBAN, each with a copy button', async () => {
+    await settle();
+    respond(expectQrRequest());
+
+    const rows = Array.from(fixture.nativeElement.querySelectorAll('.bank-row')) as HTMLElement[];
+    expect(rows.map((row) => row.querySelector('.bank-key')?.textContent?.trim())).toEqual(['Číslo účtu', 'Částka', 'IBAN']);
+    expect(rows[1].querySelector('.bank-value')?.textContent?.replace(/\s/g, ' ').trim()).toBe('500 Kč');
+    const copied = rows.map((row) => row.querySelector('app-copy-button button')?.textContent?.replace(/\s+/g, ' ').trim());
+    expect(copied).toEqual(['Kopírovat číslo účtu', 'Kopírovat částku', 'Kopírovat IBAN']);
+  });
+
+  it('when the QR is ready, then it can be saved as an image for the banking app', async () => {
+    await settle();
+    respond(expectQrRequest());
+
+    const save = element<HTMLAnchorElement>('a.qr-save');
+    expect(save.getAttribute('download')).toBe('qr-platba-nova-nadeje.png');
+    expect(save.getAttribute('href')).toBe('data:image/png;base64,png-for-500.00');
+  });
+
+  it('when nobody is signed in, then it offers to create an account and opens the registration', async () => {
+    await settle();
+    respond(expectQrRequest());
+
+    button('Založit účet').click();
+
+    const dialog = TestBed.inject(LoginDialogService);
+    expect(dialog.isOpen()).toBe(true);
+    expect(dialog.initialMode()).toBe('register');
+  });
+
+  it('when it renders, then nothing in it sends the visitor to the contact form', async () => {
+    await settle();
+    respond(expectQrRequest());
+
+    expect(element('a[href*="contact"]')).toBeNull();
   });
 
   it('when the visitor clicks through amounts quickly, then only the last one is asked for', async () => {
@@ -218,6 +273,9 @@ describe('Given the donate section', () => {
       expect(text('.bank')).toContain('Variabilní symbol');
       expect(text('.bank')).toContain('1234567890');
       expect(text('.bank-note')).toContain('dar uvidíte ve svém přehledu dárce');
+      const keys = Array.from(fixture.nativeElement.querySelectorAll('.bank-key')).map((key) => (key as HTMLElement).textContent?.trim());
+      expect(keys).toEqual(['Číslo účtu', 'Částka', 'Variabilní symbol', 'IBAN']);
+      expect(fixture.nativeElement.textContent).not.toContain('Založit účet');
     });
   });
 });
