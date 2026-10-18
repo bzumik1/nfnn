@@ -166,21 +166,25 @@ The access token is an HS256 JWT (`iss`, `sub` = donor id, `roles`, 15 minutes; 
 
 | Method | Path | Auth | Purpose |
 |---|---|---|---|
-| `GET` | `/api/donations/me?year=` | donor | List of caller's donations + total. |
-| `GET` | `/api/donations/me/summary` | donor | Dashboard stat cards (total, count, last, byYear). |
+| `GET` | `/api/donations/me?year=` | donor | Caller's donations, newest first, optionally one year, with the total and count. |
+| `GET` | `/api/donations/me/summary` | donor | Dashboard stat cards: total, count, last donation, totals per year. |
 | `GET` | `/api/donations/me/{id}/receipt` | donor | PDF for one donation. |
 | `GET` | `/api/donations/me/receipts/yearly?year=` | donor | PDF yearly summary. 404 if no donations that year, 400 for future year. |
 | `GET` | `/api/donations/payment-qr?amount=&variableSymbol=` | public | Returns the SPAYD string (Czech "QR platba"), its PNG QR code and the foundation's bank account. A signed-in donor's frontend passes their variable symbol. |
 | `GET/POST/PATCH` | `/api/donations/admin[...]` | admin | List/filter, manually record donation, edit. |
 
-#### `GET /api/donations/me` response
+#### `GET /api/donations/me` and `GET /api/donations/me/summary`
+
+Both read the caller's donations, found by the donor id in the JWT subject (`donor_record.donor_id`); 401 `unauthenticated` without a token. A donor the `donations` context has no record of, or one with no donations yet, gets 200 with an empty list and zero totals, never 404. Another donor's donations are never visible: there is no id parameter, the caller is the only filter.
+
+`GET /api/donations/me?year=` lists the donations, newest first (`receivedAt`, then `recordedAt`, descending). `year` is optional; when given it must be a four-digit year (`@Min(1000) @Max(9999)`, else 400 `validation`) and only donations received in that year are returned, with `totalAmountMinor` and `count` covering the returned items. A year with no donations gives an empty list.
 
 ```json
 {
   "items": [
     {
-      "id": "...",
-      "receiptNumber": "000001",
+      "id": "0192f0f1-...",
+      "receiptNumber": null,
       "receivedAt": "2026-03-15",
       "amountMinor": 50000,
       "currency": "CZK",
@@ -194,6 +198,29 @@ The access token is an HS256 JWT (`iss`, `sub` = donor id, `roles`, 15 minutes; 
   "count": 4
 }
 ```
+
+- `receiptNumber` is `null` until the receipts (task 6) assign numbers.
+- `purpose` is the text to show, resolved by `Accept-Language` from the message bundles (`donation.purpose.general`, Czech "Obecný příspěvek"); v1 knows only the general purpose, a project-bound purpose comes with the admin.
+- `totalAmountMinor` and `count` add up `RECEIVED` donations only; a `REFUNDED` one stays in `items` with its status. `currency` is `CZK` even for an empty list (every imported donation is CZK).
+
+`GET /api/donations/me/summary` feeds the dashboard's stat cards and the year toggle:
+
+```json
+{
+  "totalAmountMinor": 375000,
+  "currency": "CZK",
+  "count": 4,
+  "lastReceivedAt": "2026-03-15",
+  "byYear": [
+    { "year": 2026, "count": 2, "totalAmountMinor": 150000 },
+    { "year": 2025, "count": 2, "totalAmountMinor": 225000 }
+  ]
+}
+```
+
+- Same counting rule as the list: `RECEIVED` donations only.
+- `lastReceivedAt` is the newest `receivedAt`, `null` when there is none.
+- `byYear` holds one entry per calendar year with at least one counted donation, newest year first; empty when there are none.
 
 Enums:
 - `DonationStatus`: `RECEIVED`, `REFUNDED`.
