@@ -223,10 +223,10 @@ describe('Given a signed-in donor on the dashboard', () => {
     expect(text('.bank-hint')).toContain('váš variabilní symbol');
   });
 
-  it('when the page opens, then it greets the donor by name and shows the variable symbol', async () => {
+  it('when the page opens, then the top bar shows the name of the donor without a greeting and the variable symbol is shown', async () => {
     await respond(twoYearSummary(), twoYearDonations());
 
-    expect(text('.topbar-greeting')).toContain('Jana Nováková');
+    expect(normalized(text('.topbar-donor'))).toBe('Jana Nováková');
     expect(text('.symbol-value')).toBe('9876543210');
   });
 
