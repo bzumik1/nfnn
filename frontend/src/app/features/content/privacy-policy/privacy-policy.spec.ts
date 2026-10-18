@@ -103,6 +103,14 @@ describe('Given the privacy policy page', () => {
     expect(ipAddress).not.toContain('za poslední hodinu');
   });
 
+  it('when it renders, then it names the sign-in and registration limits next to the contact form and password reset', () => {
+    const ipAddress = purposeText('IP adresa a záznamy serveru');
+
+    expect(ipAddress).toContain('přihlášení, registraci, kontaktní formulář a obnovu hesla');
+    expect(ipAddress).toContain('během 15 minut od prvního pokusu z ní přijmeme nejvýš deset pokusů o přihlášení');
+    expect(ipAddress).toContain('nejvýš pět registrací, pět zpráv z formuláře a pět žádostí o obnovu hesla');
+  });
+
   it('when it renders, then the logs it describes are those of both the reverse proxy and the web server', () => {
     const ipAddress = purposeText('IP adresa a záznamy serveru');
 
