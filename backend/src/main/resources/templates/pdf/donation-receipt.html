@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org" lang="cs">
+<head>
+    <meta charset="UTF-8" />
+    <title th:text="${documentTitle}">Potvrzení o přijetí daru</title>
+    <meta name="author" th:content="${foundationName}" />
+    <style>
+        @page {
+            size: A4;
+            margin: 18mm 18mm 24mm 18mm;
+            @bottom-center {
+                content: element(footer);
+                vertical-align: top;
+            }
+            @bottom-right {
+                content: counter(page) " / " counter(pages);
+                font-family: 'DejaVu Sans';
+                font-size: 7.5pt;
+                color: #555555;
+                vertical-align: top;
+                padding-top: 4mm;
+            }
+        }
+        body {
+            font-family: 'DejaVu Sans';
+            font-size: 9.5pt;
+            line-height: 1.35;
+            color: #1f2328;
+            margin: 0;
+        }
+        .footer {
+            position: running(footer);
+            font-size: 7.5pt;
+            color: #555555;
+            padding-top: 4mm;
+            border-top: 0.5pt solid #b8bec6;
+        }
+        table {
+            -fs-table-paginate: paginate;
+            border-collapse: collapse;
+            width: 100%;
+        }
+        thead {
+            display: table-header-group;
+        }
+        tr {
+            page-break-inside: avoid;
+        }
+        td, th {
+            vertical-align: top;
+            padding: 0;
+        }
+        p {
+            margin: 0;
+        }
+        .header td.logo {
+            width: 40%;
+        }
+        .header td.logo img {
+            width: 58mm;
+        }
+        .header td.title {
+            text-align: right;
+        }
+        h1 {
+            font-size: 14pt;
+            font-weight: 700;
+            margin: 0 0 1.5mm 0;
+        }
+        h2 {
+            font-size: 10.5pt;
+            font-weight: 700;
+            margin: 0 0 1.5mm 0;
+            padding-bottom: 1mm;
+            border-bottom: 0.5pt solid #b8bec6;
+        }
+        .en {
+            font-size: 7.5pt;
+            color: #6b7280;
+        }
+        h1 .en, h2 .en {
+            font-weight: 400;
+        }
+        .replaces {
+            margin-top: 5mm;
+            padding: 3mm;
+            background-color: #fdf1e3;
+            border: 0.75pt solid #e0a458;
+            font-weight: 700;
+        }
+        .replaces .en {
+            font-weight: 400;
+        }
+        .section {
+            margin-top: 6mm;
+        }
+        .parties td.party {
+            width: 50%;
+        }
+        .parties td.party.donee {
+            padding-right: 6mm;
+        }
+        .line {
+            margin-bottom: 1mm;
+        }
+        .gifts {
+            margin-top: 3mm;
+        }
+        .gifts th {
+            font-weight: 700;
+            text-align: left;
+            padding: 1.5mm 2mm;
+            border-bottom: 0.75pt solid #1f2328;
+            background-color: #f1f3f5;
+        }
+        .gifts td {
+            padding: 1.2mm 2mm;
+            border-bottom: 0.5pt solid #dde1e6;
+        }
+        .gifts .amount {
+            text-align: right;
+        }
+        .totals {
+            margin-top: 3mm;
+        }
+        .totals .total {
+            font-weight: 700;
+        }
+        .declaration p {
+            text-align: justify;
+        }
+        .declaration p.en {
+            margin-top: 1.5mm;
+        }
+        .signature {
+            margin-top: 8mm;
+            page-break-inside: avoid;
+        }
+        .signature .image {
+            height: 22mm;
+            margin-top: 2mm;
+        }
+        .signature .image img {
+            max-height: 22mm;
+            max-width: 60mm;
+        }
+        .signature .blank {
+            height: 16mm;
+        }
+        .signature .rule {
+            width: 70mm;
+            border-top: 0.5pt solid #1f2328;
+            padding-top: 1mm;
+        }
+        .signature .name {
+            font-weight: 700;
+        }
+    </style>
+</head>
+<body>
+<div class="footer" th:text="${cs.text('receipt.footer', foundationName, foundationIdentifier, foundationAddress, number)}">footer</div>
+
+<table class="header">
+    <tr>
+        <td class="logo"><img th:src="${logo}" alt="Nová naděje" /></td>
+        <td class="title">
+            <h1>
+                <span th:text="${single} ? ${cs.text('receipt.title.single')} : ${cs.text('receipt.title.yearly', year)}">Potvrzení</span>
+                <br th:if="${bilingual}" />
+                <span class="en" th:if="${bilingual}"
+                      th:text="${single} ? ${en.text('receipt.title.single')} : ${en.text('receipt.title.yearly', year)}">Confirmation</span>
+            </h1>
+            <p th:text="${cs.text('receipt.number', number)}">Číslo potvrzení</p>
+            <p class="en" th:if="${bilingual}" th:text="${en.text('receipt.number', number)}">Confirmation No.</p>
+            <p th:text="${cs.text('receipt.issuedOn', issuedOnCs)}">Datum vystavení</p>
+            <p class="en" th:if="${bilingual}" th:text="${en.text('receipt.issuedOn', issuedOnEn)}">Date of issue</p>
+        </td>
+    </tr>
+</table>
+
+<div class="replaces" th:if="${replaced}">
+    <p th:text="${cs.text('receipt.replaces', replacedNumber, replacedOnCs)}">Toto potvrzení nahrazuje</p>
+    <p class="en" th:if="${bilingual}" th:text="${en.text('receipt.replaces', replacedNumber, replacedOnEn)}">This confirmation replaces</p>
+</div>
+
+<table class="section parties">
+    <tr>
+        <td class="party donee">
+            <h2>
+                <span th:text="${cs.text('receipt.donee')}">Obdarovaný</span>
+                <span class="en" th:if="${bilingual}" th:text="${'/ ' + en.text('receipt.donee')}">Donee</span>
+            </h2>
+            <div class="line">
+                <p th:text="${cs.text('receipt.donee.name', foundationName)}">Název</p>
+                <p class="en" th:if="${bilingual}" th:text="${en.text('receipt.donee.name', foundationName)}">Name</p>
+            </div>
+            <div class="line">
+                <p th:text="${cs.text('receipt.donee.companyIdentifier', foundationIdentifier)}">IČO</p>
+                <p class="en" th:if="${bilingual}" th:text="${en.text('receipt.donee.companyIdentifier', foundationIdentifier)}">Company ID</p>
+            </div>
+            <div class="line">
+                <p th:text="${cs.text('receipt.donee.seat', foundationAddress)}">Sídlo</p>
+                <p class="en" th:if="${bilingual}" th:text="${en.text('receipt.donee.seat', foundationAddress)}">Registered office</p>
+            </div>
+            <div class="line">
+                <p th:text="${cs.text('receipt.donee.registry', registryFile, registryCourt)}">zapsaný v nadačním rejstříku</p>
+                <p class="en" th:if="${bilingual}" th:text="${en.text('receipt.donee.registry', registryFile, registryCourt)}">registered</p>
+            </div>
+        </td>
+        <td class="party donor">
+            <h2>
+                <span th:text="${cs.text('receipt.donor')}">Dárce</span>
+                <span class="en" th:if="${bilingual}" th:text="${'/ ' + en.text('receipt.donor')}">Donor</span>
+            </h2>
+            <th:block th:if="${company}">
+                <div class="line">
+                    <p th:text="${cs.text('receipt.donor.company.name', donorName)}">Název</p>
+                    <p class="en" th:if="${bilingual}" th:text="${en.text('receipt.donor.company.name', donorName)}">Name</p>
+                </div>
+                <div class="line">
+                    <p th:text="${cs.text('receipt.donor.company.identifier', donorIdentifier)}">IČO</p>
+                    <p class="en" th:if="${bilingual}" th:text="${en.text('receipt.donor.company.identifier', donorIdentifier)}">Company ID</p>
+                </div>
+                <div class="line">
+                    <p th:text="${cs.text('receipt.donor.company.seat', donorAddress)}">Sídlo</p>
+                    <p class="en" th:if="${bilingual}" th:text="${en.text('receipt.donor.company.seat', donorAddress)}">Registered office</p>
+                </div>
+            </th:block>
+            <th:block th:unless="${company}">
+                <div class="line">
+                    <p th:text="${cs.text('receipt.donor.person.name', donorName)}">Jméno a příjmení</p>
+                    <p class="en" th:if="${bilingual}" th:text="${en.text('receipt.donor.person.name', donorName)}">Name and surname</p>
+                </div>
+                <div class="line">
+                    <p th:text="${cs.text('receipt.donor.person.residence', donorAddress)}">Bydliště</p>
+                    <p class="en" th:if="${bilingual}" th:text="${en.text('receipt.donor.person.residence', donorAddress)}">Residence</p>
+                </div>
+            </th:block>
+            <div class="line">
+                <p th:text="${cs.text('receipt.donor.variableSymbol', variableSymbol)}">Variabilní symbol</p>
+                <p class="en" th:if="${bilingual}" th:text="${en.text('receipt.donor.variableSymbol', variableSymbol)}">Variable symbol</p>
+            </div>
+        </td>
+    </tr>
+</table>
+
+<div class="section gift" th:if="${single}">
+    <div class="line">
+        <p th:text="${cs.text(giftFormKey)}">Forma daru</p>
+        <p class="en" th:if="${bilingual}" th:text="${en.text(giftFormKey)}">Form of the gift</p>
+    </div>
+    <div class="line">
+        <p th:text="${cs.text('receipt.gift.receivedOn', receivedOnCs)}">Datum připsání na účet</p>
+        <p class="en" th:if="${bilingual}" th:text="${en.text('receipt.gift.receivedOn', receivedOnEn)}">Date credited</p>
+    </div>
+    <div class="line">
+        <p th:text="${cs.text('receipt.gift.amount', totalCs)}">Částka</p>
+        <p class="en" th:if="${bilingual}" th:text="${en.text('receipt.gift.amount', totalEn)}">Amount</p>
+    </div>
+    <div class="line">
+        <p th:text="${cs.text('receipt.gift.account', accountNumber)}">Účet příjemce</p>
+        <p class="en" th:if="${bilingual}" th:text="${en.text('receipt.gift.account', accountNumber)}">Recipient account</p>
+    </div>
+</div>
+
+<div class="section gifts-yearly" th:unless="${single}">
+    <div class="line">
+        <p th:text="${cs.text('receipt.gift.account', accountNumber)}">Účet příjemce</p>
+        <p class="en" th:if="${bilingual}" th:text="${en.text('receipt.gift.account', accountNumber)}">Recipient account</p>
+    </div>
+    <table class="gifts">
+        <thead>
+        <tr>
+            <th>
+                <span th:text="${cs.text('receipt.table.receivedOn')}">Datum připsání na účet</span>
+                <br th:if="${bilingual}" />
+                <span class="en" th:if="${bilingual}" th:text="${en.text('receipt.table.receivedOn')}">Date credited</span>
+            </th>
+            <th class="amount">
+                <span th:text="${cs.text('receipt.table.amount')}">Částka</span>
+                <br th:if="${bilingual}" />
+                <span class="en" th:if="${bilingual}" th:text="${en.text('receipt.table.amount')}">Amount</span>
+            </th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="line : ${lines}">
+            <td>
+                <span th:text="${line.receivedOnCs()}">1. 1. 2026</span>
+                <span class="en" th:if="${bilingual}" th:text="${'(' + line.receivedOnEn() + ')'}">(1 January 2026)</span>
+            </td>
+            <td class="amount">
+                <span th:text="${line.amountCs()}">500 Kč</span>
+                <span class="en" th:if="${bilingual}" th:text="${'(' + line.amountEn() + ')'}">(CZK 500)</span>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+    <div class="totals">
+        <p th:text="${cs.text('receipt.yearly.count', count)}">Počet darů</p>
+        <p class="en" th:if="${bilingual}" th:text="${en.text('receipt.yearly.count', count)}">Number of gifts</p>
+        <p class="total" th:text="${cs.text('receipt.yearly.total', year, totalCs)}">Celkem darováno</p>
+        <p class="en" th:if="${bilingual}" th:text="${en.text('receipt.yearly.total', year, totalEn)}">Total donated</p>
+    </div>
+</div>
+
+<div class="section declaration">
+    <p th:text="${single} ? ${cs.text('receipt.declaration.single', foundationName, receivedOnCs, totalCs, accountNumber)} : ${cs.text('receipt.declaration.yearly', foundationName, year, totalCs, accountNumber)}">Prohlášení</p>
+    <p class="en" th:if="${bilingual}"
+       th:text="${single} ? ${en.text('receipt.declaration.single', foundationName, receivedOnEn, totalEn, accountNumber)} : ${en.text('receipt.declaration.yearly', foundationName, year, totalEn, accountNumber)}">Declaration</p>
+</div>
+
+<div class="signature">
+    <p th:text="${cs.text('receipt.issuedAt', issuePlace, issuedOnCs)}">V Novém Boru, dne</p>
+    <p class="en" th:if="${bilingual}" th:text="${en.text('receipt.issuedAt', issuePlaceEn, issuedOnEn)}">In Nový Bor, on</p>
+    <p th:text="${cs.text('receipt.signature.for', foundationName)}">Za</p>
+    <p class="en" th:if="${bilingual}" th:text="${en.text('receipt.signature.for', foundationName)}">For</p>
+    <div class="image" th:if="${signature != null}"><img th:src="${signature}" alt="" /></div>
+    <div class="blank" th:if="${signature == null}"></div>
+    <div class="rule">
+        <p class="name" th:text="${signatoryName}">Jméno</p>
+        <p th:text="${signatoryRole}">Funkce</p>
+    </div>
+</div>
+</body>
+</html>

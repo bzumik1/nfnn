@@ -23,4 +23,10 @@ class AdapterLibraryRulesTest {
     static final ArchRule fio_client_library_is_used_only_by_infrastructure_adapters = noClasses()
             .that().resideOutsideOfPackage("..infrastructure..")
             .should().dependOnClassesThat().resideInAPackage("cz.novanadeje.fio..");
+
+    @ArchTest
+    static final ArchRule pdf_and_template_libraries_are_used_only_by_infrastructure_adapters = noClasses()
+            .that().resideOutsideOfPackage("..infrastructure..")
+            .should().dependOnClassesThat()
+            .resideInAnyPackage("io.github.openhtmltopdf..", "com.openhtmltopdf..", "org.apache.pdfbox..", "org.thymeleaf..");
 }
