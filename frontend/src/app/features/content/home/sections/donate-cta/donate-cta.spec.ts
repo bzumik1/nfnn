@@ -98,6 +98,16 @@ describe('Given the donate section', () => {
     expect(button('500 Kč').getAttribute('aria-pressed')).toBe('true');
   });
 
+  it('when it opens, then it offers the amounts from the largest down, with another amount last', async () => {
+    await settle();
+    respond(expectQrRequest());
+
+    const labels = Array.from(fixture.nativeElement.querySelectorAll('.amount-option') as NodeListOf<HTMLButtonElement>).map(
+      (option) => option.textContent?.trim(),
+    );
+    expect(labels).toEqual(['1 000 Kč', '500 Kč', '100 Kč', 'Jiná částka']);
+  });
+
   it('when the QR is on its way, then it says it is being prepared', async () => {
     await settle();
 
