@@ -11,5 +11,5 @@ public interface DonationRepository {
 
     boolean existsForBankPayment(BankPaymentId bankPayment);
 
-    List<Donation> findByDonorOrderedByReceivedOnDesc(DonorReference donor);
+    List<Donation> findByDonorNewestFirst(DonorReference donor);
 }

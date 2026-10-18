@@ -9,5 +9,5 @@ public interface DonationJpaRepository extends JpaRepository<DonationJpaEntity, 
 
     boolean existsByBankPaymentId(UUID bankPaymentId);
 
-    List<DonationJpaEntity> findByDonorIdOrderByReceivedOnDesc(UUID donorId);
+    List<DonationJpaEntity> findByDonorIdOrderByReceivedOnDescRecordedAtDesc(UUID donorId);
 }
