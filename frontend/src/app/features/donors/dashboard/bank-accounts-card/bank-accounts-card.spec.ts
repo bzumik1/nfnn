@@ -332,7 +332,7 @@ describe('Given the bank accounts card in the overview', () => {
       await settle();
 
       expect(element<HTMLImageElement>('.add-account-qr img')?.getAttribute('src')).toBe('data:image/png;base64,iVBORw0KGgo=');
-      expect(texts('.add-account-bank dd .bank-value')).toEqual(['5544332217/2010', '1 Kč', 'Ověření účtu nfnn.cz', '9876543210']);
+      expect(texts('.add-account-bank dd .bank-value')).toEqual(['5544332217/2010', '1 Kč', 'Ověření účtu Nadační fond Nová naděje', '9876543210']);
       expect(texts('.add-account-bank app-copy-button button')).toEqual(['Kopírovat číslo účtu', 'Kopírovat variabilní symbol']);
     });
 

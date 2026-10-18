@@ -46,7 +46,7 @@ class GeneratePaymentQrServiceTest {
 
         PaymentQr qr = service.generate(new GeneratePaymentQrQuery(500, "1234567890", QrPaymentPurpose.DONATION));
 
-        String expected = "SPD*1.0*ACC:CZ6508000000192000145399*AM:500.00*CC:CZK*X-VS:1234567890*RN:NADACNI FOND NOVA NADEJE*MSG:DAR NOVA NADEJE";
+        String expected = "SPD*1.0*ACC:CZ6508000000192000145399*AM:500.00*CC:CZK*X-VS:1234567890*RN:NADACNI FOND NOVA NADEJE*MSG:DAR NADACNI FOND NOVA NADEJE";
         assertThat(qr.spayd()).isEqualTo(expected);
         assertThat(qr.pngImage()).isEqualTo(PNG);
         assertThat(qr.recipient()).isEqualTo(FOUNDATION);
@@ -68,7 +68,7 @@ class GeneratePaymentQrServiceTest {
 
         PaymentQr qr = service.generate(new GeneratePaymentQrQuery(1, "1234567890", QrPaymentPurpose.ACCOUNT_VERIFICATION));
 
-        assertThat(qr.spayd()).contains("*AM:1.00*").contains("*X-VS:1234567890*").endsWith("*MSG:OVERENI UCTU NFNN.CZ");
+        assertThat(qr.spayd()).contains("*AM:1.00*").contains("*X-VS:1234567890*").endsWith("*MSG:OVERENI UCTU NADACNI FOND NOVA NADEJE");
     }
 
     @Test

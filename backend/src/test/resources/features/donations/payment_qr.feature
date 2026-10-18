@@ -3,7 +3,7 @@ Feature: Visitor gets a QR payment for a donation
   Scenario: Donor's QR payment carries their variable symbol
     When the visitor asks for a QR payment of 500 CZK with variable symbol "1234567890"
     Then the response status is 200
-    And the QR payment reads "SPD*1.0*ACC:CZ2620100000005544332217*AM:500.00*CC:CZK*X-VS:1234567890*RN:NADACNI FOND NOVA NADEJE*MSG:DAR NOVA NADEJE"
+    And the QR payment reads "SPD*1.0*ACC:CZ2620100000005544332217*AM:500.00*CC:CZK*X-VS:1234567890*RN:NADACNI FOND NOVA NADEJE*MSG:DAR NADACNI FOND NOVA NADEJE"
     And the QR code is a PNG image that encodes the QR payment
     And the foundation's bank account is "5544332217/2010" with IBAN "CZ2620100000005544332217" held by "Nadační fond Nová naděje"
 
@@ -16,7 +16,7 @@ Feature: Visitor gets a QR payment for a donation
   Scenario: The QR payment that verifies a donor's account says so in the message
     When the visitor asks for a QR payment with parameters "amount=1&variableSymbol=1234567890&purpose=ACCOUNT_VERIFICATION"
     Then the response status is 200
-    And the QR payment reads "SPD*1.0*ACC:CZ2620100000005544332217*AM:1.00*CC:CZK*X-VS:1234567890*RN:NADACNI FOND NOVA NADEJE*MSG:OVERENI UCTU NFNN.CZ"
+    And the QR payment reads "SPD*1.0*ACC:CZ2620100000005544332217*AM:1.00*CC:CZK*X-VS:1234567890*RN:NADACNI FOND NOVA NADEJE*MSG:OVERENI UCTU NADACNI FOND NOVA NADEJE"
     And the QR code is a PNG image that encodes the QR payment
 
   Scenario: A QR payment that verifies an account needs the donor's variable symbol
