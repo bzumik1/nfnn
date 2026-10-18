@@ -511,6 +511,17 @@ Request:
 - `website` is a honeypot — must be empty. If non-empty, return 202 but store and send nothing.
 - Rate limit: 5/hour per client address (fixed window, Caffeine-backed, in-memory). The 6th request answers 429 with type `contact/rate-limited`. The client address is `getRemoteAddr()` after `ForwardedHeaderFilter`, so behind the nginx in `frontend/` it is the visitor's address from `X-Forwarded-For`; that nginx resolves the visitor's address itself and rewrites the header, so a client cannot choose it (see "Password reset").
 - The forwarded email goes to `app.contact.recipient-email` (`CONTACT_RECIPIENT`) from `app.mail.sender-email` (`MAIL_FROM`, defaults to the recipient; `shared/infrastructure/mail/MailSenderProperties`, shared with the password reset e-mail) with `Reply-To` set to the visitor, body from `templates/email/contact/message-received.html`.
+- Retention: the privacy policy promises that a message stays in the web database for a year. Every day at 03:30 Prague time `infrastructure/retention/ContactMessageRetentionScheduler` runs `application/ContactMessageRetentionService.deleteExpiredMessages`, which deletes the `contact_message` rows whose `received_at` lies before now (the application `Clock`) minus `retention.max-age`, in one `DELETE` statement (`ContactMessageRepository.deleteReceivedBefore`) served by the index `ix_contact_message_received_at`. A message therefore goes at the first run after it turns 365 days old, at most a day later. The run logs the count and the cutoff at INFO when it deleted something, never a message's content or sender; a failure is one ERROR line with the exception class, and the next day's run tries again. The copy forwarded by e-mail lives in the foundation's mailbox, which the application cannot reach; the daily `pg_dump` backups keep a deleted row until they are themselves deleted after about 30 days (`deploy/compose.yml`).
+
+Configuration (`application.yml`, `app.contact.*`):
+
+| Property | Env var | Default | Meaning |
+|---|---|---|---|
+| `recipient-email` | `CONTACT_RECIPIENT` | `info@nfnn.cz` | where the messages are forwarded |
+| `retention.max-age` | — | `P365D` | how long a message stays in `contact_message`; a duration that is not positive stops the startup naming the property (`ContactMessageRetentionProperties`) |
+| `retention.cron` | — | `0 30 3 * * *` | when the deletion runs, Prague time; `-` turns it off, as every `@SpringBootTest` does |
+
+`features/contact/contact_message_retention.feature` covers a message received 366 days ago that goes and one received yesterday that stays, and a message received 364 days ago that stays.
 
 ## Cross-context events
 
@@ -547,12 +558,12 @@ Implementation order is `contact` → `donors` → `donations` → `content`. Ea
 
 ### `contact` (done)
 
-`src/test/resources/features/contact/contact_message.feature` covers the accepted message, the honeypot, field errors and the rate limit. Domain: `ContactMessage` aggregate, `EmailAddress` (in `shared`), `ContactMessageReceived` event. Liquibase: `db/changelog/contact/001_create_contact_message.xml`.
+`src/test/resources/features/contact/contact_message.feature` covers the accepted message, the honeypot, field errors and the rate limit, and `contact_message_retention.feature` the deletion after a year. Domain: `ContactMessage` aggregate, `EmailAddress` (in `shared`), `ContactMessageReceived` event, `ContactMessageRepository.deleteReceivedBefore`. Application: `SubmitContactMessageService`, `ContactMessageRetentionService` with `ContactMessageRetentionProperties` and `ContactMessagePurge`. Liquibase: `db/changelog/contact/001_create_contact_message.xml` (with the `received_at` index the retention uses).
 
 Shared pieces that came with it and that every later context reuses:
 - `shared/infrastructure/security/ApiSecurityConfiguration`: stateless chain, CSRF off, `permitAll` only for the public endpoints listed there and the health endpoint, everything else `authenticated()`. Unauthenticated and forbidden requests answer `application/problem+json` (types `auth/unauthenticated`, `auth/forbidden`) through `ApiExceptionHandler`, never a Basic challenge. A new public endpoint has to be added to that chain.
 - `shared/interfaces/rest/ApiExceptionHandler`: validation errors become a problem with type `validation` and `errors: [{ field, message }]`; titles come from `i18n/messages_*.properties` by `Accept-Language`. `RateLimitExceededException` answers 429.
-- `shared/infrastructure/ratelimit/FixedWindowRateLimiter` and a `java.time.Clock` bean (`shared/infrastructure/time`), which tests replace with a `MutableClock`.
+- `shared/infrastructure/ratelimit/FixedWindowRateLimiter` (a key's window starts at its first request; the cache has no scheduler, so an expired key, a client address, leaves memory at the cache's next maintenance, which a later request triggers, or at a restart, as the privacy policy says) and a `java.time.Clock` bean (`shared/infrastructure/time`), which tests replace with a `MutableClock`.
 - `shared/infrastructure/async`: `@EnableAsync`, so `@TransactionalEventListener(AFTER_COMMIT)` listeners run off the request thread with `@Async`.
 - Test support in `src/test/java/.../support/`: `MutableClock`, `RecordingMailSender` (records instead of sending), both wired as `@Primary` by `TestSupportConfiguration`, and `cucumber/ApiClient` for HTTP calls in step definitions; it sends each scenario's requests from a client address of its own (`X-Forwarded-For`), and `When the following requests come from another client address` switches to a new one, so the per-address limits of one scenario never reach the next.
 
