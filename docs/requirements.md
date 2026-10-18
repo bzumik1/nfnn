@@ -58,7 +58,7 @@ Web fondu, který představí fond a jeho pomoc dětem, usnadní darování a d�
 ## 6. Provoz
 
 - ✅ Zatím na nfnn.znamenacek.duckdns.org (ZimaOS, Nginx Proxy Manager), až bude web hotový, přejde na vlastní doménu **nfnn.cz** (zaregistrovaná 18. 10. 2026 u WEDOS, držitel fond).
-- ✅ E-mail fondu `info@nfnn.cz`: příchozí pošta se přeposílá přes Cloudflare Email Routing, web odesílá přes Brevo.
+- ✅ E-mail fondu `info@nfnn.cz` (příjem funguje od 18. 10. 2026): příchozí pošta se přeposílá přes Cloudflare Email Routing, web odesílá přes Brevo.
 - 🔸 Angular + Spring Boot + PostgreSQL podle repa `bzumik1/nfnn`. Čeština; angličtina připravená na později.
 
 ## 7. Později, mimo první verzi
