@@ -61,6 +61,10 @@ describe('Given the privacy policy page', () => {
     ]);
   });
 
+  it('when it renders, then the introduction covers visitors who only open the site', () => {
+    expect(texts('.intro .lead').join(' ')).toContain('napíšete nám nebo web jen navštívíte');
+  });
+
   it('when it renders, then the date it applies from stands under the heading and in the closing section', () => {
     expect(texts('.intro .effective')).toEqual(['Platné od 18. října 2026']);
     expect(sectionText('Účinnost')).toContain('účinné od 18. října 2026');
@@ -92,6 +96,22 @@ describe('Given the privacy policy page', () => {
     expect(ipAddress).toContain('do svého provozního záznamu (logu)');
   });
 
+  it('when it renders, then it counts requests in a window from the first one rather than over the last hour', () => {
+    const ipAddress = purposeText('IP adresa a záznamy serveru');
+
+    expect(ipAddress).toContain('během jedné hodiny od první žádosti');
+    expect(ipAddress).not.toContain('za poslední hodinu');
+  });
+
+  it('when it renders, then the logs it describes are those of both the reverse proxy and the web server', () => {
+    const ipAddress = purposeText('IP adresa a záznamy serveru');
+
+    expect(ipAddress).toContain('reverzní proxy');
+    expect(ipAddress).toContain('webový server');
+    expect(ipAddress).toContain('nastavené stáří nebo objem');
+    expect(sectionText('Jak dlouho údaje uchováváme')).toContain('v provozních záznamech serveru');
+  });
+
   it('when it renders, then it promises to delete contact messages from the web database a year after they were sent', () => {
     expect(purposeText('Kontaktní formulář')).toContain('Z databáze webu ji automaticky smažeme jeden rok po odeslání.');
     expect(sectionText('Jak dlouho údaje uchováváme')).toContain('zálohy');
@@ -107,6 +127,13 @@ describe('Given the privacy policy page', () => {
     expect(recipients).toContain('USA');
     expect(recipients).toContain('Data Privacy Framework');
     expect(recipients).not.toContain('vlastní infrastruktuře');
+  });
+
+  it('when it renders, then it says where the site runs without claiming whose server it is', () => {
+    const recipients = sectionText('Komu údaje předáváme');
+
+    expect(recipients).toContain('neběží u poskytovatele hostingu ani v cloudu');
+    expect(recipients).not.toContain('vlastním serveru');
   });
 
   it('when it renders, then it names the controller with its company ID and seat', () => {

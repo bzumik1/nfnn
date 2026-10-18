@@ -4,7 +4,7 @@
       <p class="eyebrow" i18n="@@content.privacy.intro.eyebrow">Právní informace</p>
       <h1 class="title" i18n="@@content.privacy.intro.title">Zásady ochrany osobních údajů</h1>
       <p class="lead" i18n="@@content.privacy.intro.lead">
-        Vážíme si důvěry, kterou nám dáváte. Na této stránce vysvětlujeme, jaké osobní údaje zpracováváme, když si u nás založíte dárcovský účet, pošlete dar nebo nám napíšete, proč to děláme, jak dlouho údaje uchováváme a jaká máte práva.
+        Vážíme si důvěry, kterou nám dáváte. Na této stránce vysvětlujeme, jaké osobní údaje zpracováváme, když si u nás založíte dárcovský účet, pošlete dar, napíšete nám nebo web jen navštívíte, proč to děláme, jak dlouho údaje uchováváme a jaká máte práva.
       </p>
       <p class="effective" i18n="@@content.privacy.intro.effective">Platné od 18.&nbsp;října&nbsp;2026</p>
     </div>
@@ -96,10 +96,10 @@
         <div class="purpose">
           <h3 i18n="@@content.privacy.ipAddress.title">IP adresa a záznamy serveru</h3>
           <p i18n="@@content.privacy.ipAddress.limits">
-            Abychom kontaktní formulář a obnovu hesla ochránili před zneužitím, počítáme, kolik žádostí přišlo z jedné IP adresy za poslední hodinu: z jedné adresy přijmeme nejvýš pět zpráv z formuláře a pět žádostí o obnovu hesla. Adresu k tomu držíme jen v operační paměti serveru, nejvýš hodinu, a do databáze ji neukládáme.
+            Abychom kontaktní formulář a obnovu hesla ochránili před zneužitím, počítáme žádosti z každé IP adresy: během jedné hodiny od první žádosti z ní přijmeme nejvýš pět zpráv z formuláře a pět žádostí o obnovu hesla. Adresu k tomu držíme jen v operační paměti serveru a do databáze ji neukládáme. Hodinu po první žádosti ji k tomu přestaneme používat a server ji pak z paměti odstraní při průběžném úklidu, nejpozději při svém restartu.
           </p>
           <p i18n="@@content.privacy.ipAddress.logs">
-            Webový server zapisuje každý požadavek na web do svého provozního záznamu (logu): IP adresu, čas, adresu požadované stránky, adresu stránky, ze které jste přišli, a údaj o prohlížeči. Záznamy používáme jen k řešení poruch a k ochraně webu a nikomu je nepředáváme. Server je průběžně přepisuje: nejstarší záznamy smaže, jakmile jejich objem překročí pevně nastavený limit.
+            Na serveru, na kterém web běží, zapisují každý požadavek do svého provozního záznamu (logu) dva programy: reverzní proxy, která přijímá šifrované spojení a předává ho dál, a webový server, který stránky vydává. Zapisují IP adresu, čas, adresu požadované stránky, adresu stránky, ze které jste přišli, a údaj o prohlížeči. Záznamy používáme jen k řešení poruch a k ochraně webu a nikomu je nepředáváme. Oba programy je automaticky mažou: nejstarší záznamy odstraní, jakmile překročí nastavené stáří nebo objem.
           </p>
           <dl class="basis">
             <dt i18n="@@content.privacy.data.basisLabel">Právní základ</dt>
@@ -122,7 +122,7 @@
             zprávy z kontaktního formuláře v databázi webu jeden rok od odeslání, kopii doručenou e&#8209;mailem jen po dobu potřebnou k vyřízení dotazu,
           </li>
           <li i18n="@@content.privacy.retention.ipAddress">
-            IP adresu pro omezení počtu žádostí nejvýš hodinu, v záznamech webového serveru do jejich přepsání.
+            IP adresu pro omezení počtu žádostí hodinu od první žádosti (v operační paměti nejdéle do restartu serveru), v provozních záznamech serveru do jejich automatického smazání.
           </li>
         </ul>
         <p i18n="@@content.privacy.retention.deletion">Jakmile údaje přestaneme potřebovat, smažeme je.</p>
@@ -157,7 +157,7 @@
           Cloudflare a Google mohou údaje zpracovávat i mimo Evropskou unii, zejména v USA. Obě společnosti se zapojily do rámce pro ochranu údajů mezi EU a USA (EU&#8209;US Data Privacy Framework), u kterého Evropská komise rozhodla, že údajům zajišťuje odpovídající ochranu. Kde se tento rámec neuplatní, chrání předávané údaje standardní smluvní doložky schválené Evropskou komisí.
         </p>
         <p i18n="@@content.privacy.recipients.hosting">
-          Web a jeho databáze běží na našem vlastním serveru, nikoli u externího poskytovatele hostingu. Brevo, Cloudflare a Google pro nás zajišťují jen odesílání a příjem e&#8209;mailů a přenos provozu webu.
+          Web a jeho databáze neběží u poskytovatele hostingu ani v cloudu, ale na samostatném serveru, o který se pro nadační fond stará autor webu. Brevo, Cloudflare a Google pro nás zajišťují jen odesílání a příjem e&#8209;mailů a přenos provozu webu.
         </p>
       </section>
 

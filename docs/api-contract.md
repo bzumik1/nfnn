@@ -508,7 +508,7 @@ Configuration (`application.yml`, `app.contact.*`):
 |---|---|---|---|
 | `recipient-email` | `CONTACT_RECIPIENT` | `info@nfnn.cz` | where the messages are forwarded |
 | `retention.max-age` | — | `P365D` | how long a message stays in `contact_message`; a duration that is not positive stops the startup naming the property (`ContactMessageRetentionProperties`) |
-| `retention.cron` | — | `0 30 3 * * *` | when the deletion runs, Prague time; `-` turns it off |
+| `retention.cron` | — | `0 30 3 * * *` | when the deletion runs, Prague time; `-` turns it off, as every `@SpringBootTest` does |
 
 `features/contact/contact_message_retention.feature` covers a message received 366 days ago that goes and one received yesterday that stays, and a message received 364 days ago that stays.
 
@@ -552,7 +552,7 @@ Implementation order is `contact` → `donors` → `donations` → `content`. Ea
 Shared pieces that came with it and that every later context reuses:
 - `shared/infrastructure/security/ApiSecurityConfiguration`: stateless chain, CSRF off, `permitAll` only for the public endpoints listed there and the health endpoint, everything else `authenticated()`. Unauthenticated and forbidden requests answer `application/problem+json` (types `auth/unauthenticated`, `auth/forbidden`) through `ApiExceptionHandler`, never a Basic challenge. A new public endpoint has to be added to that chain.
 - `shared/interfaces/rest/ApiExceptionHandler`: validation errors become a problem with type `validation` and `errors: [{ field, message }]`; titles come from `i18n/messages_*.properties` by `Accept-Language`. `RateLimitExceededException` answers 429.
-- `shared/infrastructure/ratelimit/FixedWindowRateLimiter` and a `java.time.Clock` bean (`shared/infrastructure/time`), which tests replace with a `MutableClock`.
+- `shared/infrastructure/ratelimit/FixedWindowRateLimiter` (a key's window starts at its first request; the cache has no scheduler, so an expired key, a client address, leaves memory at the cache's next maintenance, which a later request triggers, or at a restart, as the privacy policy says) and a `java.time.Clock` bean (`shared/infrastructure/time`), which tests replace with a `MutableClock`.
 - `shared/infrastructure/async`: `@EnableAsync`, so `@TransactionalEventListener(AFTER_COMMIT)` listeners run off the request thread with `@Async`.
 - Test support in `src/test/java/.../support/`: `MutableClock`, `RecordingMailSender` (records instead of sending), both wired as `@Primary` by `TestSupportConfiguration`, and `cucumber/ApiClient` for HTTP calls in step definitions.
 
