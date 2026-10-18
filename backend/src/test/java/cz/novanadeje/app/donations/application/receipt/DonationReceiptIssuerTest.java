@@ -85,7 +85,7 @@ class DonationReceiptIssuerTest {
         assertThat(saved.issuedAt()).isEqualTo(NOW);
         assertThat(saved.locale()).isEqualTo(LocaleCode.CS);
         assertThat(saved.fingerprint()).isEqualTo(ReceiptDocumentFactory.fingerprintForDonation(jana(), MARCH));
-        assertThat(saved.content()).isEqualTo(new ReceiptContent.Snapshot(SNAPSHOT, ContentDigest.of(RENDERED)));
+        assertThat(saved.content()).isEqualTo(new ReceiptContent(SNAPSHOT, ContentDigest.of(RENDERED)));
         assertThat(saved.supersedes()).isEmpty();
         assertThat(renderedDocument().replaces()).isEmpty();
         assertThat(renderedDocument().number()).isEqualTo(new ReceiptNumber("2027-000001"));
@@ -114,23 +114,6 @@ class DonationReceiptIssuerTest {
         verify(receipts, never()).nextSerial();
         verify(receipts, never()).save(any());
         verify(renderer, never()).freeze(any());
-    }
-
-    @Test
-    @DisplayName("Given an active receipt stored as a PDF before snapshots, when issued again, then exactly that PDF comes back without rendering")
-    void should_serve_stored_pdf_when_issued_given_receipt_from_before_snapshots() {
-        ReceiptFingerprint same = ReceiptDocumentFactory.fingerprintForYear(jana(), YEAR_2026, List.of(MARCH, JUNE));
-        DonationReceipt active = DonationReceipt.reconstitute(DonationReceiptId.newId(Instant.parse("2026-10-10T08:00:00Z")), JANA,
-                ReceiptKind.YEARLY, Optional.empty(), Optional.of(YEAR_2026), new ReceiptNumber("2026-000001"), LocalDate.of(2026, 10, 10),
-                Instant.parse("2026-10-10T08:00:00Z"), LocaleCode.CS, same, new ReceiptContent.StoredPdf(STORED), Optional.empty(),
-                Optional.empty());
-        when(receipts.findActiveForYear(JANA, YEAR_2026)).thenReturn(Optional.of(active));
-
-        IssuedReceipt issued = issuer.issue(ReceiptRequest.forYear(jana(), YEAR_2026, List.of(MARCH, JUNE), TODAY));
-
-        assertThat(issued.content()).isEqualTo(STORED);
-        verifyNoInteractions(renderer);
-        verify(receipts, never()).save(any());
     }
 
     @Test

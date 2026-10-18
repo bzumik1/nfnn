@@ -46,13 +46,13 @@ public final class DonationReceipt {
 
     public static DonationReceipt issueForDonation(DonationReceiptId id, DonorReference donor, DonationId donation, ReceiptNumber number,
                                                    LocalDate issuedOn, Instant issuedAt, LocaleCode locale, ReceiptFingerprint fingerprint,
-                                                   ReceiptContent.Snapshot content, Optional<DonationReceiptId> supersedes) {
+                                                   ReceiptContent content, Optional<DonationReceiptId> supersedes) {
         return new DonationReceipt(id, donor, ReceiptKind.SINGLE, Optional.ofNullable(donation), Optional.empty(), number, issuedOn, issuedAt,
                 locale, fingerprint, content, supersedes, Optional.empty());
     }
 
     public static DonationReceipt issueForYear(DonationReceiptId id, DonorReference donor, Year year, ReceiptNumber number, LocalDate issuedOn,
-                                               Instant issuedAt, LocaleCode locale, ReceiptFingerprint fingerprint, ReceiptContent.Snapshot content,
+                                               Instant issuedAt, LocaleCode locale, ReceiptFingerprint fingerprint, ReceiptContent content,
                                                Optional<DonationReceiptId> supersedes) {
         return new DonationReceipt(id, donor, ReceiptKind.YEARLY, Optional.empty(), Optional.ofNullable(year), number, issuedOn, issuedAt,
                 locale, fingerprint, content, supersedes, Optional.empty());
