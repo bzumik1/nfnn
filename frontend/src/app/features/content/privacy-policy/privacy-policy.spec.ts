@@ -137,11 +137,11 @@ describe('Given the privacy policy page', () => {
     expect(recipients).not.toContain('vlastní infrastruktuře');
   });
 
-  it('when it renders, then it says where the site runs without claiming whose server it is', () => {
+  it('when it renders, then it says the site runs on a server owned by the foundation rather than at a hosting provider', () => {
     const recipients = sectionText('Komu údaje předáváme');
 
-    expect(recipients).toContain('neběží u poskytovatele hostingu ani v cloudu');
-    expect(recipients).not.toContain('vlastním serveru');
+    expect(recipients).toContain('neběží u poskytovatele hostingu ani v cloudu, ale na vlastním serveru nadačního fondu');
+    expect(recipients).not.toContain('autor webu');
   });
 
   it('when it renders, then it names the controller with its company ID and seat', () => {
