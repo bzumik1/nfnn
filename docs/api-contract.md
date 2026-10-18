@@ -12,14 +12,14 @@ When adding a new endpoint, update this file in the same change.
 - Identifiers: UUIDv7 (string) for all entity IDs. Public URLs for content use `slug` (kebab-case, unique, immutable after publish); admin URLs use `id`.
 - Money: `{ amountMinor: long, currency: "CZK" }`. Domain value object `Money` lives in `shared/domain/`. Sealed `Currency` (CZK only for now).
 - Dates: ISO-8601. `LocalDate` as `YYYY-MM-DD`, instants as `YYYY-MM-DDTHH:MM:SSZ`. UI formatting (e.g. `15. 03. 2026`) is the frontend's job.
-- Locale signaling: frontend sends `Accept-Language: cs` (default) or `en` on every request via HTTP interceptor. Used for `ProblemDetail` titles/details and (later) translated CMS content. **Exception:** PDF receipts use `donor.preferredLocale` from the profile, not `Accept-Language`, so generated PDFs are deterministic.
+- Locale signaling: frontend sends `Accept-Language: cs` (default) or `en` on every request via HTTP interceptor. Used for `ProblemDetail` titles/details and (later) translated CMS content. **Exception:** a PDF receipt is rendered in the donor's `preferredLocale` at the time it is issued and then stored, never in `Accept-Language` (see "PDF receipts").
 - Pagination response shape, uniform across the API:
   ```json
   { "items": [...], "page": 0, "size": 20, "totalElements": 42, "totalPages": 3 }
   ```
 - CORS: not configured. Production is same-origin via the nginx in `frontend/Dockerfile`; dev uses Angular's `proxy.conf.json`. Re-evaluate if a non-browser client appears.
 - HTML body fields (news / projects long-form text): backend sanitizes on **write** with a jsoup whitelist. Frontend renders as-is.
-- Caching: public CMS GETs return `Cache-Control: public, max-age=60` and an `ETag`. Yearly receipt PDFs return `Last-Modified`. Listing endpoints support `If-None-Match`.
+- Caching: public CMS GETs return `Cache-Control: public, max-age=60` and an `ETag`. Receipt PDFs are `Cache-Control: private, no-store`. Listing endpoints support `If-None-Match`.
 
 ## Authentication
 
@@ -168,8 +168,8 @@ The access token is an HS256 JWT (`iss`, `sub` = donor id, `roles`, 15 minutes; 
 |---|---|---|---|
 | `GET` | `/api/donations/me?year=` | donor | Caller's donations, newest first, optionally one year, with the total and count. |
 | `GET` | `/api/donations/me/summary` | donor | Dashboard stat cards: total, count, last donation, totals per year. |
-| `GET` | `/api/donations/me/{id}/receipt` | donor | PDF for one donation. |
-| `GET` | `/api/donations/me/receipts/yearly?year=` | donor | PDF yearly summary. 404 if no donations that year, 400 for future year. |
+| `GET` | `/api/donations/me/{id}/receipt` | donor | PDF receipt of one `RECEIVED` donation of the caller. 404 for an unknown or another donor's id. |
+| `GET` | `/api/donations/me/receipts/yearly?year=` | donor | PDF receipt of the caller's donations received in a completed year. 400 while the year is not completed, 404 when it has none. |
 | `GET` | `/api/donations/payment-qr?amount=&variableSymbol=` | public | Returns the SPAYD string (Czech "QR platba"), its PNG QR code and the foundation's bank account. A signed-in donor's frontend passes their variable symbol. |
 | `GET/POST/PATCH` | `/api/donations/admin[...]` | admin | List/filter, manually record donation, edit. |
 
@@ -199,7 +199,7 @@ Both read the caller's donations, found by the donor id in the JWT subject (`don
 }
 ```
 
-- `receiptNumber` is `null` until the receipts (task 6) assign numbers.
+- `receiptNumber` is the number of the donation's active single receipt (the one its last download issued and nothing has replaced), `null` before the first download and for a `REFUNDED` donation; see "PDF receipts".
 - `purpose` is the text to show, resolved by `Accept-Language` from the message bundles (`donation.purpose.general`, Czech "Obecný příspěvek"); v1 knows only the general purpose, a project-bound purpose comes with the admin.
 - `totalAmountMinor` and `count` add up `RECEIVED` donations only; a `REFUNDED` one stays in `items` with its status. `currency` is `CZK` even for an empty list (every imported donation is CZK).
 
@@ -214,27 +214,82 @@ Both read the caller's donations, found by the donor id in the JWT subject (`don
   "byYear": [
     { "year": 2026, "count": 2, "totalAmountMinor": 150000 },
     { "year": 2025, "count": 2, "totalAmountMinor": 225000 }
-  ]
+  ],
+  "yearlyReceiptsAvailableThrough": 2025
 }
 ```
 
 - Same counting rule as the list: `RECEIVED` donations only.
 - `lastReceivedAt` is the newest `receivedAt`, `null` when there is none.
 - `byYear` holds one entry per calendar year with at least one counted donation, newest year first; empty when there are none.
+- `yearlyReceiptsAvailableThrough` is the last completed calendar year in Prague time (`2025` during 2026): the yearly receipt can be downloaded for that year and earlier, so the frontend decides nothing from its own clock.
 
 Enums:
 - `DonationStatus`: `RECEIVED`, `REFUNDED`.
 - `DonationSource`: `BANK_TRANSFER`, `MANUAL` (admin-recorded).
 
-#### PDF receipt endpoints
+#### PDF receipts
 
-- `Content-Type: application/pdf`.
-- `Content-Disposition: attachment; filename*=UTF-8''<urlencoded-filename>` (RFC 5987).
-- 403 `donations/not-your-donation` if the receipt belongs to someone else.
-- 404 `donations/yearly-receipt-not-available` for a year with no donations.
-- 400 `donations/year-not-yet-completed` for a future year.
+`GET /api/donations/me/{id}/receipt` returns the receipt of one `RECEIVED` donation of the caller ("Potvrzení o přijetí daru"); `GET /api/donations/me/receipts/yearly?year=YYYY` returns the receipt of every `RECEIVED` donation the caller gave in a completed calendar year ("Potvrzení o přijatých darech za rok YYYY"). Both find the caller by the JWT subject; 401 `auth/unauthenticated` without a token. Nothing is e-mailed.
 
-PDF locale uses `donor.preferredLocale`, not `Accept-Language`.
+Response:
+
+- `200`, `Content-Type: application/pdf`, `Content-Length`, `Cache-Control: private, no-store`, `Content-Disposition: attachment; filename="<ascii>"; filename*=UTF-8''<urlencoded>` (both forms, as Spring's `ContentDisposition` writes them).
+- File names are ASCII, resolved in the controller from the message bundle (`receipt.fileName.single`, `receipt.fileName.yearly`) in the receipt's language: Czech `potvrzeni-o-daru-2027-000001.pdf` (single, with the receipt number) and `potvrzeni-o-darech-2026.pdf` (yearly, with the year); English `donation-receipt-2027-000001.pdf` and `donation-summary-2026.pdf`.
+
+Single receipt:
+
+- 404 `donations/donation-not-found` for an id that does not exist or belongs to another donor (one query, no existence leak; there is no 403).
+- 404 `donations/receipt-not-available` for a `REFUNDED` donation.
+- 400 `validation` for an id that is not a UUID.
+
+Yearly receipt:
+
+- `year` is required and four digits (`@Min(1000) @Max(9999)`), else 400 `validation`.
+- 400 `donations/year-not-yet-completed` while `year` is the current Prague calendar year or later: a receipt covers a completed year and is available from 1 January.
+- 404 `donations/yearly-receipt-not-available` for a completed year in which the caller has no `RECEIVED` donation.
+
+A receipt is a frozen document. The first download issues it: the PDF is rendered, gets a receipt number and an issue date, and its bytes are stored in `donation_receipt`; every later download serves the stored bytes, so a number always denotes one document. When the data the receipt certifies has changed since it was issued (a late-paired payment of that year, a changed donor name or address; the certified data is hashed into `fingerprint`), the next download issues a replacement with a new number that states which receipt it replaces, and the old one is marked superseded (`superseded_at`). A changed signatory, template or preferred language never re-issues. Issuing is serialised per donor (a row lock on `donor_record` in a transaction of its own), so two parallel downloads yield one receipt.
+
+Receipt numbers are `YYYY-NNNNNN`: the year of issue and a six-digit serial from the sequence `donation_receipt_number_seq`, which never resets (`2027-000001`, `2027-000002`, ..., at most 999 999). A gap is possible (a render that failed consumed a serial) and acceptable.
+
+The language of a receipt is the donor's `preferredLocale` at first issue, stored on the receipt; a later change of the preference does not re-issue, and a replacement keeps the language of the receipt it replaces. An `en` receipt is bilingual, every Czech label and paragraph with its English rendering beneath; a `cs` receipt is Czech only. `Accept-Language` plays no part.
+
+The document (Thymeleaf template `templates/pdf/donation-receipt.html`, rendered by openhtmltopdf with embedded DejaVu Sans) carries the title, number and issue date; the replaced receipt when there is one; the foundation (name, IČO, seat, registry court and file); the donor (person: name and residence; company: name, IČO and seat; always the variable symbol); the gift or gifts: one donation with its form, date of crediting, amount and the foundation's account, or the yearly table of dates and amounts oldest first with the count and the total; the declaration that the gifts were given without consideration for the statutory purposes, naming § 15 odst. 1 and § 20 odst. 8 of zákon č. 586/1992 Sb.; place and date of issue, the signature image when configured, the signatory's name and role; and a running footer with the foundation line and the receipt number on every page. The texts live under `receipt.*` in the message bundles.
+
+Table `donation_receipt` (`db/changelog/donations/005_create_donation_receipt.xml`):
+
+| Column | Holds |
+|---|---|
+| `id` | UUIDv7 |
+| `donor_id` | FK to `donor_record` |
+| `kind` | `SINGLE` / `YEARLY` |
+| `donation_id` | FK to `donation`, set for `SINGLE` |
+| `receipt_year` | set for `YEARLY` |
+| `number` | `YYYY-NNNNNN`, unique |
+| `issued_on`, `issued_at` | Prague calendar date and instant of issue |
+| `locale` | `cs` / `en` |
+| `fingerprint` | SHA-256 hex of the certified data |
+| `content` | the PDF bytes |
+| `supersedes_id`, `superseded_at` | the receipt this one replaces; when this one was replaced |
+
+`ck_donation_receipt_shape` ties `kind` to `donation_id` and `receipt_year`; partial unique indexes keep one active (not superseded) receipt per donation and per donor and year.
+
+Configuration (`application.yml`, `app.donations.receipt.*`; the defaults ship a working receipt, the env vars are for the operator):
+
+| Property | Env var | Default |
+|---|---|---|
+| `foundation-name` | - | `Nová naděje - nadační fond` |
+| `foundation-company-identifier` | - | `27278794` |
+| `foundation-street` / `-city` / `-postal-code` | - | `Jiráskova 436` / `Nový Bor` / `473 01` |
+| `registry-court` | - | `Krajský soud v Ústí nad Labem` |
+| `registry-file` | - | `N 78` |
+| `issue-place` / `issue-place-en` | - | `V Novém Boru` / `Nový Bor` |
+| `signatory-name` | `RECEIPT_SIGNATORY_NAME` | `Pavel Znamenáček` |
+| `signatory-role` | `RECEIPT_SIGNATORY_ROLE` | `předseda správní rady` |
+| `signature-image` | `RECEIPT_SIGNATURE_IMAGE` | empty: no image, only the line and the name; a path to a PNG or JPEG that must exist at startup |
+
+The account number printed on the receipt is `app.donations.bank-account.account-number`.
 
 #### `GET /api/donations/payment-qr`
 
@@ -265,9 +320,9 @@ The bank account comes from `app.donations.bank-account.{account-number,iban,rec
 
 #### Fio import and pairing
 
-Implemented, with no endpoint of its own: the backend downloads the foundation account's movements from the Fio API every hour and turns them into donations. `GET /api/donations/me` and `/api/donations/me/summary` read the `donation` table described here for the donor in the JWT subject; the receipt (task 6) adds a nullable `receipt_number` to `donation` with its own changelog.
+Implemented, with no endpoint of its own: the backend downloads the foundation account's movements from the Fio API every hour and turns them into donations. `GET /api/donations/me` and `/api/donations/me/summary` read the `donation` table described here for the donor in the JWT subject; the receipts keep their own table, `donation_receipt` (see "PDF receipts").
 
-Tables (`db/changelog/donations/001`–`004`):
+Tables (`db/changelog/donations/001`–`005`):
 
 | Table | Holds | Columns that matter to readers of the API |
 |---|---|---|
@@ -276,6 +331,7 @@ Tables (`db/changelog/donations/001`–`004`):
 | `bank_import_state` | One row (`id = 1`): the period the application has downloaded and the last attempt. | `covered_from`/`covered_to`, `last_attempted_at`, `last_succeeded_at`, `last_failure_kind` (`RATE_LIMITED`, `HISTORY_LOCKED`, `UNAUTHORIZED`, `TRANSPORT`, `INVALID_RESPONSE`, `UNEXPECTED`), `last_failure_message` |
 | `donation` | A payment given to a donor (`Donation` aggregate). `uq_donation_bank_payment` makes a double pairing impossible. | `donor_id` (FK to `donor_record`), `bank_payment_id`, `received_on` (= `booked_on`), `amount_minor`, `currency`, `source` (`BANK_TRANSFER`; `MANUAL` has no producer yet), `status` (`RECEIVED`; `REFUNDED` has no producer yet), `paired_by` (`VARIABLE_SYMBOL`, `SENDER_ACCOUNT`; `MANUAL` comes with the admin task), `recorded_at` |
 | `donor_sender_account` | Sender accounts learned for a donor, insert-only (`on conflict do nothing`), with the payment they were learned from. | `donor_id`, `account_number`, `bank_code`, `learned_from_payment_id`, `learned_at` |
+| `donation_receipt` | Every receipt ever issued, with its PDF; see "PDF receipts". | `donor_id`, `kind`, `donation_id`, `receipt_year`, `number`, `issued_on`, `locale`, `fingerprint`, `content`, `supersedes_id`, `superseded_at` |
 
 "Unpaired" is derived: a `bank_payment` no `donation` references. The reason a payment stayed unpaired is logged, not stored.
 
@@ -413,7 +469,7 @@ Does **not** belong in `shared`: JWT types, `Donation`, `Donor`, JPA-related typ
 
 ## UX notes affecting the API
 
-- **Language switcher in nav.** For unauthenticated visitors it switches the UI locale only (cookie or `localStorage`). For authenticated donors it persists `preferredLocale` via `PATCH /api/donors/me` so PDF receipts come out in the chosen language.
+- **Language switcher in nav.** For unauthenticated visitors it switches the UI locale only (cookie or `localStorage`). For authenticated donors it persists `preferredLocale` via `PATCH /api/donors/me` so receipts issued from then on come out in the chosen language (an issued receipt keeps its language).
 - **Password rules.** Frontend shows the 12-character minimum and disallow-list hint inline; backend is the source of truth for validation.
 - **Refresh on 401.** Angular HTTP interceptor catches 401 with `type` `auth/expired-token`, calls `POST /api/donors/auth/refresh` with `withCredentials: true`, retries the original request. On second 401 → redirect to `/prihlaseni`.
 
@@ -431,10 +487,12 @@ Does **not** belong in `shared`: JWT types, `Donation`, `Donor`, JPA-related typ
 | Static images | `frontend/public/` for now; backend volume + `/api/content/media/{id}` once admin upload is implemented. |
 | Donation statuses | `RECEIVED`, `REFUNDED`. |
 | Bank reconciliation | Random 10-digit variable symbol per donor; hourly Fio API import pairs by symbol, then by learned sender account for payments without a symbol; CSV import deferred to the admin task. |
-| Yearly receipt edge cases | 404 for empty year, 400 for future year. |
+| Yearly receipt edge cases | 404 for a completed year without donations, 400 while the year is not completed (Prague calendar). |
+| Receipt of someone else's donation | 404 `donation-not-found`, not 403: no existence leak. |
+| Receipts | Frozen documents: the first download issues, numbers (`YYYY-NNNNNN`) and stores the PDF; changed certified data issues a replacement with a new number that names the replaced one. Language: the donor's preference at issue, `en` bilingual. |
 | Rate limiting | Bucket4j + Caffeine in-memory. |
 | Antispam (contact) | Honeypot + rate limit. No captcha until needed. |
-| PDF preview | None — frontend builds preview from list response. |
+| PDF preview | None: the dashboard downloads the file. |
 | CORS | Not configured (same-origin in prod, dev proxy in dev). |
 
 ## Open items
