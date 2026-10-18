@@ -1,6 +1,7 @@
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting, TestRequest } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { provideRouter, Router } from '@angular/router';
 import { authInterceptor } from '../../../core/auth/auth-interceptor';
 import { AuthStore } from '../../../core/auth/auth-store';
@@ -15,6 +16,7 @@ import {
   twoYearSummary,
 } from '../../donations/testing/donation-fixtures';
 import { bankAccount } from '../../donations/testing/bank-account-fixtures';
+import { BankAccountsCard } from './bank-accounts-card/bank-accounts-card';
 import { DonorDashboard } from './dashboard';
 
 const OBJECT_URL = 'blob:http://localhost/receipt';
@@ -204,6 +206,22 @@ describe('Given a signed-in donor on the dashboard', () => {
     await respond(twoYearSummary(), twoYearDonations());
     expect(text('app-bank-accounts-card .account-number')).toBe('2900233333/2010');
     expect(text('.bank-check-status')).toBe('Údaje z banky k 18. 10. 2026 10:05');
+  });
+
+  it('when the add account dialog checked the bank and got new data, then the bank time changes and the donations load again', async () => {
+    await respond(twoYearSummary(), twoYearDonations());
+    bankCheck.flush({ bankDataAsOf: EARLIER, checking: false }, { status: 202, statusText: 'Accepted' });
+    await settle();
+    const card = fixture.debugElement.query(By.directive(BankAccountsCard)).componentInstance as BankAccountsCard;
+
+    card.bankChecked.emit({ bankDataAsOf: EARLIER, checking: false });
+    await settle();
+    http.expectNone('/api/donations/me/summary');
+
+    card.bankChecked.emit({ bankDataAsOf: LATER, checking: false });
+    await respond(twoYearSummary(), twoYearDonations());
+
+    expect(text('.bank-check-status')).toBe('Údaje z banky k 18. 10. 2026 10:07');
   });
 
   it('when the bank check fails, then the dashboard shows no bank time and the donor can try again', async () => {

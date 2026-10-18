@@ -1,7 +1,7 @@
 import { Component, computed, DestroyRef, inject, linkedSignal, signal, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router, RouterLink } from '@angular/router';
-import { EMPTY, expand, forkJoin, last, Observable, switchMap, take, takeWhile, timer } from 'rxjs';
+import { forkJoin, last, Observable, tap } from 'rxjs';
 import { problemOf, problemTypeEndsWith } from '../../../core/auth/api-problem';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
@@ -40,8 +40,6 @@ const MINOR_UNITS_PER_CROWN = 100;
 const UNAUTHENTICATED = 'auth/unauthenticated';
 const YEARLY_PROBLEMS_SHOWN_AS_TITLE = ['donations/year-not-yet-completed', 'donations/yearly-receipt-not-available'];
 const NOT_FOUND = 404;
-const BANK_CHECK_POLL_MS = 2000;
-const BANK_CHECK_MAX_POLLS = 45;
 const SENDER_ACCOUNT_DIGITS_SHOWN = 4;
 
 @Component({
@@ -106,15 +104,12 @@ export class DonorDashboard {
     this.checkingBank.set(true);
     let asOfBefore: string | null | undefined;
     this.donations
-      .requestBankCheck()
+      .checkBankUntilDone()
       .pipe(
-        expand((check) => (check.checking ? timer(BANK_CHECK_POLL_MS).pipe(switchMap(() => this.donations.bankCheck())) : EMPTY)),
-        take(BANK_CHECK_MAX_POLLS + 1),
-        takeWhile((check) => {
+        tap((check) => {
           asOfBefore ??= check.bankDataAsOf;
           this.bankDataAsOf.set(check.bankDataAsOf);
-          return check.checking;
-        }, true),
+        }),
         last(),
         takeUntilDestroyed(this.destroyRef),
       )
@@ -128,6 +123,14 @@ export class DonorDashboard {
         },
         error: () => this.checkingBank.set(false),
       });
+  }
+
+  protected bankCheckedWhileAdding(check: BankCheckResponse): void {
+    const asOfBefore = this.bankDataAsOf();
+    this.bankDataAsOf.set(check.bankDataAsOf);
+    if (check.bankDataAsOf !== asOfBefore) {
+      this.fetchDonations();
+    }
   }
 
   protected load(): void {

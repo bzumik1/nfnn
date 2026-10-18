@@ -1,20 +1,41 @@
 /// <reference types="@angular/localize" />
 
+import { DOCUMENT } from '@angular/common';
 import { afterNextRender, Component, computed, DestroyRef, ElementRef, inject, Injector, input, output, signal, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { Observable, Subscription } from 'rxjs';
+import {
+  catchError,
+  distinctUntilChanged,
+  EMPTY,
+  fromEvent,
+  last,
+  map,
+  Observable,
+  of,
+  repeat,
+  startWith,
+  Subscription,
+  switchMap,
+  take,
+  takeWhile,
+  tap,
+  timer,
+} from 'rxjs';
 import { describeProblem, problemOf, problemTypeEndsWith } from '../../../../core/auth/api-problem';
 import { AuthStore } from '../../../../core/auth/auth-store';
 import { CopyButton } from '../../../../shared/ui/copy-button/copy-button';
 import { Dialog } from '../../../../shared/ui/dialog/dialog';
-import { BankAccountItem, BankAccountsApi } from '../../../donations/bank-accounts-api';
+import { BankAccountItem, BankAccountListResponse, BankAccountsApi } from '../../../donations/bank-accounts-api';
 import { formatCrowns } from '../../../donations/donation-amount';
 import { formatDonationDate } from '../../../donations/donation-date';
+import { BankCheckResponse, DonationsApi } from '../../../donations/donations-api';
 import { PaymentQrApi, PaymentQrResponse } from '../../../donations/payment-qr-api';
 
 type ListState = 'loading' | 'ready' | 'error';
 
 type QrState = { readonly kind: 'loading' } | { readonly kind: 'ready'; readonly qr: PaymentQrResponse } | { readonly kind: 'failed' };
+
+type PaymentWatch = 'waiting' | 'stopped';
 
 type AccountLabel = 'active' | 'shared' | 'awaiting' | 'disconnected';
 
@@ -40,6 +61,8 @@ const UNAUTHENTICATED = 'auth/unauthenticated';
 const STALE_LIST_STATUSES = [404, 409];
 const MINOR_UNITS_PER_CROWN = 100;
 const VERIFICATION_AMOUNT = 1;
+const PAYMENT_WATCH_INTERVAL_MS = 30_000;
+const PAYMENT_WATCH_CHECKS = 20;
 
 @Component({
   selector: 'app-bank-accounts-card',
@@ -50,6 +73,8 @@ const VERIFICATION_AMOUNT = 1;
 export class BankAccountsCard {
   private readonly api = inject(BankAccountsApi);
   private readonly paymentQr = inject(PaymentQrApi);
+  private readonly donations = inject(DonationsApi);
+  private readonly document = inject(DOCUMENT);
   private readonly auth = inject(AuthStore);
   private readonly destroyRef = inject(DestroyRef);
   private readonly injector = inject(Injector);
@@ -57,6 +82,7 @@ export class BankAccountsCard {
 
   readonly variableSymbol = input<string | null>(null);
   readonly sessionEnded = output<void>();
+  readonly bankChecked = output<BankCheckResponse>();
 
   private readonly title = viewChild<ElementRef<HTMLElement>>('title');
   private readonly confirmCancel = viewChild<ElementRef<HTMLButtonElement>>('confirmCancel');
@@ -77,9 +103,23 @@ export class BankAccountsCard {
   protected readonly verificationAmount = VERIFICATION_AMOUNT;
   private qrRequest: Subscription | undefined;
 
+  protected readonly paymentWatch = signal<PaymentWatch>('waiting');
+  private readonly activeWhenOpened = signal<ReadonlySet<string> | null>(null);
+  protected readonly newlyVerified = computed(() => {
+    const known = this.activeWhenOpened();
+    if (!this.adding() || known === null) {
+      return null;
+    }
+    return this.accounts().find((account) => account.status === 'ACTIVE' && !known.has(account.id)) ?? null;
+  });
+  private watchRequest: Subscription | undefined;
+
   constructor() {
     this.fetch();
-    this.destroyRef.onDestroy(() => this.qrRequest?.unsubscribe());
+    this.destroyRef.onDestroy(() => {
+      this.qrRequest?.unsubscribe();
+      this.watchRequest?.unsubscribe();
+    });
   }
 
   reload(): void {
@@ -97,8 +137,7 @@ export class BankAccountsCard {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: ({ items }) => {
-          this.accounts.set(items);
-          this.state.set('ready');
+          this.showAccounts(items);
           if (focusTitle) {
             afterNextRender(() => this.title()?.nativeElement.focus(), { injector: this.injector });
           }
@@ -111,6 +150,14 @@ export class BankAccountsCard {
           this.state.set('error');
         },
       });
+  }
+
+  private showAccounts(items: readonly BankAccountItem[]): void {
+    this.accounts.set(items);
+    this.state.set('ready');
+    if (this.adding() && this.activeWhenOpened() === null) {
+      this.activeWhenOpened.set(activeIds(items));
+    }
   }
 
   protected label(account: BankAccountItem): string {
@@ -189,12 +236,74 @@ export class BankAccountsCard {
 
   protected openAdd(): void {
     this.adding.set(true);
+    if (this.state() === 'ready') {
+      this.activeWhenOpened.set(activeIds(this.accounts()));
+    } else {
+      this.activeWhenOpened.set(null);
+      this.fetch();
+    }
     this.loadQr();
+    this.watchForPayment();
   }
 
   protected closeAdd(): void {
     this.qrRequest?.unsubscribe();
+    this.watchRequest?.unsubscribe();
     this.adding.set(false);
+    this.activeWhenOpened.set(null);
+  }
+
+  protected watchAgain(): void {
+    this.watchForPayment();
+  }
+
+  private watchForPayment(): void {
+    this.watchRequest?.unsubscribe();
+    this.paymentWatch.set('waiting');
+    this.watchRequest = this.pageVisible()
+      .pipe(
+        switchMap((visible, index) =>
+          visible
+            ? timer(index === 0 ? PAYMENT_WATCH_INTERVAL_MS : 0).pipe(
+                switchMap(() => this.checkForPayment().pipe(repeat({ delay: PAYMENT_WATCH_INTERVAL_MS }))),
+              )
+            : EMPTY,
+        ),
+        take(PAYMENT_WATCH_CHECKS),
+        takeWhile(() => this.newlyVerified() === null),
+      )
+      .subscribe({
+        complete: () => {
+          if (this.newlyVerified() === null) {
+            this.paymentWatch.set('stopped');
+          }
+        },
+      });
+  }
+
+  private checkForPayment(): Observable<void> {
+    return this.donations.checkBankUntilDone().pipe(
+      last(),
+      tap((check) => this.bankChecked.emit(check)),
+      catchError(() => of(null)),
+      switchMap(() => this.api.list()),
+      map(({ items }: BankAccountListResponse) => this.showAccounts(items)),
+      catchError((failure: unknown) => {
+        if (this.sessionHasEnded(failure)) {
+          this.closeAdd();
+          this.sessionEnded.emit();
+        }
+        return of(undefined);
+      }),
+    );
+  }
+
+  private pageVisible(): Observable<boolean> {
+    return fromEvent(this.document, 'visibilitychange').pipe(
+      startWith(null),
+      map(() => this.document.visibilityState !== 'hidden'),
+      distinctUntilChanged(),
+    );
   }
 
   protected loadQr(): void {
@@ -228,6 +337,10 @@ function labelOf(account: BankAccountItem): AccountLabel {
     case 'DISCONNECTED':
       return 'disconnected';
   }
+}
+
+function activeIds(items: readonly BankAccountItem[]): ReadonlySet<string> {
+  return new Set(items.filter((account) => account.status === 'ACTIVE').map((account) => account.id));
 }
 
 function actionButtonId(account: BankAccountItem): string {
