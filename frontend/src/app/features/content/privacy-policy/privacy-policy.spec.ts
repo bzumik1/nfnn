@@ -17,8 +17,22 @@ describe('Given the privacy policy page', () => {
 
   function texts(selector: string): string[] {
     return Array.from<HTMLElement>(fixture.nativeElement.querySelectorAll(selector)).map(
-      (element) => element.textContent!.trim(),
+      (element) => element.textContent!.replace(/\s+/g, ' ').trim(),
     );
+  }
+
+  function sectionText(heading: string): string {
+    const section = Array.from<HTMLElement>(fixture.nativeElement.querySelectorAll('section')).find(
+      (candidate) => candidate.querySelector('h2')?.textContent?.trim() === heading,
+    );
+    return section!.textContent!.replace(/\s+/g, ' ');
+  }
+
+  function purposeText(heading: string): string {
+    const purpose = Array.from<HTMLElement>(fixture.nativeElement.querySelectorAll('.purpose')).find(
+      (candidate) => candidate.querySelector('h3')?.textContent?.trim() === heading,
+    );
+    return purpose!.textContent!.replace(/\s+/g, ' ');
   }
 
   it('when it renders, then its only main heading names the policy', () => {
@@ -43,7 +57,91 @@ describe('Given the privacy policy page', () => {
       'Dárcovský účet',
       'Evidence darů a potvrzení o daru',
       'Kontaktní formulář',
+      'IP adresa a záznamy serveru',
     ]);
+  });
+
+  it('when it renders, then the introduction covers visitors who only open the site', () => {
+    expect(texts('.intro .lead').join(' ')).toContain('napíšete nám nebo web jen navštívíte');
+  });
+
+  it('when it renders, then the date it applies from stands under the heading and in the closing section', () => {
+    expect(texts('.intro .effective')).toEqual(['Platné od 18. října 2026']);
+    expect(sectionText('Účinnost')).toContain('účinné od 18. října 2026');
+  });
+
+  it('when it renders, then it says a gift is assigned by the variable symbol and by a bank account the donor proved', () => {
+    const donations = purposeText('Evidence darů a potvrzení o daru');
+
+    expect(donations).toContain('podle vašeho variabilního symbolu');
+    expect(donations).toContain('podle čísla účtu, ze kterého přišla');
+    expect(donations).toContain('Moje bankovní účty');
+    expect(donations).toContain('odpojit');
+  });
+
+  it('when it renders, then it lists every payment detail the bank statement gives us', () => {
+    expect(texts('.purpose li')).toEqual(
+      expect.arrayContaining([
+        'variabilní, konstantní a specifický symbol,',
+        'zprávu pro příjemce, pokud ji k platbě připíšete.',
+      ]),
+    );
+  });
+
+  it('when it renders, then it says IP addresses are held in memory for the limits and kept in the server logs', () => {
+    const ipAddress = purposeText('IP adresa a záznamy serveru');
+
+    expect(ipAddress).toContain('jen v operační paměti serveru');
+    expect(ipAddress).toContain('do databáze ji neukládáme');
+    expect(ipAddress).toContain('do svého provozního záznamu (logu)');
+  });
+
+  it('when it renders, then it counts requests in a window from the first one rather than over the last hour', () => {
+    const ipAddress = purposeText('IP adresa a záznamy serveru');
+
+    expect(ipAddress).toContain('během jedné hodiny od první žádosti');
+    expect(ipAddress).not.toContain('za poslední hodinu');
+  });
+
+  it('when it renders, then it names the sign-in and registration limits next to the contact form and password reset', () => {
+    const ipAddress = purposeText('IP adresa a záznamy serveru');
+
+    expect(ipAddress).toContain('přihlášení, registraci, kontaktní formulář a obnovu hesla');
+    expect(ipAddress).toContain('během 15 minut od prvního pokusu z ní přijmeme nejvýš deset pokusů o přihlášení');
+    expect(ipAddress).toContain('nejvýš pět registrací, pět zpráv z formuláře a pět žádostí o obnovu hesla');
+  });
+
+  it('when it renders, then the logs it describes are those of both the reverse proxy and the web server', () => {
+    const ipAddress = purposeText('IP adresa a záznamy serveru');
+
+    expect(ipAddress).toContain('reverzní proxy');
+    expect(ipAddress).toContain('webový server');
+    expect(ipAddress).toContain('nastavené stáří nebo objem');
+    expect(sectionText('Jak dlouho údaje uchováváme')).toContain('v provozních záznamech serveru');
+  });
+
+  it('when it renders, then it promises to delete contact messages from the web database a year after they were sent', () => {
+    expect(purposeText('Kontaktní formulář')).toContain('Z databáze webu ji automaticky smažeme jeden rok po odeslání.');
+    expect(sectionText('Jak dlouho údaje uchováváme')).toContain('zálohy');
+  });
+
+  it('when it renders, then it names the e-mail and network providers and the transfer to the USA', () => {
+    const recipients = sectionText('Komu údaje předáváme');
+
+    expect(recipients).toContain('Sendinblue SAS');
+    expect(recipients).toContain('Brevo');
+    expect(recipients).toContain('Cloudflare');
+    expect(recipients).toContain('Gmail');
+    expect(recipients).toContain('USA');
+    expect(recipients).toContain('Data Privacy Framework');
+    expect(recipients).not.toContain('vlastní infrastruktuře');
+  });
+
+  it('when it renders, then it says the site runs on a server owned by the foundation rather than at a hosting provider', () => {
+    const recipients = sectionText('Komu údaje předáváme');
+
+    expect(recipients).toContain('neběží u poskytovatele hostingu ani v cloudu, ale na vlastním serveru nadačního fondu');
+    expect(recipients).not.toContain('autor webu');
   });
 
   it('when it renders, then it names the controller with its company ID and seat', () => {

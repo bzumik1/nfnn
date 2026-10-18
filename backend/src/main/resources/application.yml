@@ -72,6 +72,9 @@ app:
     sender-email: ${MAIL_FROM:${CONTACT_RECIPIENT:info@nfnn.cz}}
   contact:
     recipient-email: ${CONTACT_RECIPIENT:info@nfnn.cz}
+    retention:
+      max-age: P365D
+      cron: "0 30 3 * * *"
   donations:
     bank-account:
       account-number: ${BANK_ACCOUNT_NUMBER:5544332217/2010}

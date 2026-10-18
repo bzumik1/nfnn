@@ -4,6 +4,8 @@ import cz.novanadeje.app.contact.domain.ContactMessage;
 import cz.novanadeje.app.contact.domain.ContactMessageRepository;
 import org.springframework.stereotype.Repository;
 
+import java.time.Instant;
+
 @Repository
 class JpaContactMessageRepository implements ContactMessageRepository {
 
@@ -16,5 +18,10 @@ class JpaContactMessageRepository implements ContactMessageRepository {
     @Override
     public void save(ContactMessage message) {
         jpa.save(ContactMessageJpaEntity.fromDomain(message));
+    }
+
+    @Override
+    public int deleteReceivedBefore(Instant cutoff) {
+        return jpa.deleteReceivedBefore(cutoff);
     }
 }
