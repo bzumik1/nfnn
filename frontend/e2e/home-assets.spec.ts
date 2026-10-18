@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import { mockDonorApi } from './donor-session';
 
 const PNG_TRUECOLOUR_WITHOUT_ALPHA = 2;
@@ -14,6 +14,24 @@ function pngSize(png: Buffer): [number, number] {
 function pngColourType(png: Buffer): number {
   return png[25];
 }
+
+test.describe('Given the site\'s SVG tab icon', () => {
+  async function drawn(page: Page, svg: string, size: number): Promise<Buffer> {
+    const source = `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`;
+    await page.setContent(`<img width="${size}" height="${size}" src="${source}">`);
+    await page.locator('img').evaluate((image: HTMLImageElement) => image.decode());
+    return page.locator('img').screenshot({ omitBackground: true });
+  }
+
+  test('when it is drawn at 16 px, then it leaves out the face, which it keeps at 32 px', async ({ page, request }) => {
+    const svg = await (await request.get('/favicon.svg')).text();
+    const withoutFace = svg.replace(/<g class="face"[^>]*>[\s\S]*?<\/g>/, '');
+    expect(withoutFace).not.toEqual(svg);
+
+    expect(await drawn(page, svg, 16)).toEqual(await drawn(page, withoutFace, 16));
+    expect(await drawn(page, svg, 32)).not.toEqual(await drawn(page, withoutFace, 32));
+  });
+});
 
 test.describe('Given a visitor on the home page', () => {
   test.beforeEach(async ({ page }) => {
