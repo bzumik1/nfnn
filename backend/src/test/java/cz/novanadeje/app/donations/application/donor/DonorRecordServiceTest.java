@@ -23,6 +23,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.CannotAcquireLockException;
 import org.springframework.dao.DataIntegrityViolationException;
 
 import java.time.Clock;
@@ -187,6 +188,19 @@ class DonorRecordServiceTest {
         DonorRecord record = DonorRecord.registerPerson(DONOR, "Jana Nováková", ADDRESS, SYMBOL, LocaleCode.CS, REGISTERED_AT);
         when(donorRecords.findById(DONOR)).thenReturn(Optional.of(record));
         when(pairing.pairPaymentsOf(record, NOW)).thenThrow(new DataIntegrityViolationException("uq_donation_bank_payment"));
+
+        service.pairPaymentsOf(DONOR_ID);
+
+        assertThat(warnings()).singleElement().isEqualTo("pairing after registration of donor " + DONOR_ID
+                + " lost a race with the import; the hourly pass completes it");
+    }
+
+    @Test
+    @DisplayName("Given pairing that deadlocks with the import, when payments are paired after the registration, then the lock failure is logged as a lost race and swallowed")
+    void should_swallow_and_warn_when_pairing_after_registration_given_deadlock_with_import() {
+        DonorRecord record = DonorRecord.registerPerson(DONOR, "Jana Nováková", ADDRESS, SYMBOL, LocaleCode.CS, REGISTERED_AT);
+        when(donorRecords.findById(DONOR)).thenReturn(Optional.of(record));
+        when(pairing.pairPaymentsOf(record, NOW)).thenThrow(new CannotAcquireLockException("deadlock detected"));
 
         service.pairPaymentsOf(DONOR_ID);
 

@@ -7,6 +7,7 @@ import cz.novanadeje.app.donations.domain.donor.DonorReference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,7 +19,7 @@ import java.util.UUID;
 @Service
 public class DonorRecordService {
 
-    private static final Logger LOG = LoggerFactory.getLogger(DonorRecordService.class);
+    private static final Logger log = LoggerFactory.getLogger(DonorRecordService.class);
 
     private final DonorRecordRepository donorRecords;
     private final PaymentPairingService pairing;
@@ -47,13 +48,13 @@ public class DonorRecordService {
     public void pairPaymentsOf(UUID donorId) {
         Optional<DonorRecord> record = donorRecords.findById(new DonorReference(donorId));
         if (record.isEmpty()) {
-            LOG.warn("Payments of donor {} were not paired: donations has no record of the donor", donorId);
+            log.warn("Payments of donor {} were not paired: donations has no record of the donor", donorId);
             return;
         }
         try {
             pairing.pairPaymentsOf(record.get(), clock.instant());
-        } catch (DataIntegrityViolationException e) {
-            LOG.warn("pairing after registration of donor {} lost a race with the import; the hourly pass completes it", donorId);
+        } catch (DataIntegrityViolationException | PessimisticLockingFailureException e) {
+            log.warn("pairing after registration of donor {} lost a race with the import; the hourly pass completes it", donorId);
         }
     }
 
@@ -61,7 +62,7 @@ public class DonorRecordService {
     public void changeProfile(ChangeDonorRecordProfileCommand command) {
         Optional<DonorRecord> record = donorRecords.findById(new DonorReference(command.donorId()));
         if (record.isEmpty()) {
-            LOG.warn("Profile change of donor {} ignored: donations has no record of the donor", command.donorId());
+            log.warn("Profile change of donor {} ignored: donations has no record of the donor", command.donorId());
             return;
         }
         record.get().changeProfile(command.name(), command.address(), command.preferredLocale(), clock.instant());
