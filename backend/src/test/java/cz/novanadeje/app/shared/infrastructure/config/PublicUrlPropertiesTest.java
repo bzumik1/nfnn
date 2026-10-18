@@ -70,8 +70,9 @@ class PublicUrlPropertiesTest {
 
     @ParameterizedTest
     @NullSource
-    @ValueSource(strings = {"", "  ", "ftp://novanadeje.cz", "novanadeje.cz", "/obnova-hesla", "https://", "https://novanadeje.cz/a b"})
-    @DisplayName("Given something that is not an absolute http(s) address, when the properties are made, then they fail naming the environment variable")
+    @ValueSource(strings = {"", "  ", "ftp://novanadeje.cz", "novanadeje.cz", "/obnova-hesla", "https://", "https://novanadeje.cz/a b",
+            "https://novanadeje.cz/?x=1", "https://novanadeje.cz/#x", "https://novanadeje.cz#"})
+    @DisplayName("Given something that is not a plain absolute http(s) address, when the properties are made, then they fail naming the environment variable")
     void should_fail_naming_env_var_when_made_given_invalid_address(String value) {
         assertThatIllegalArgumentException().isThrownBy(() -> new PublicUrlProperties(value))
                 .withMessageContaining("PUBLIC_URL (app.site.public-url)");

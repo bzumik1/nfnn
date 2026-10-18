@@ -24,6 +24,9 @@ public record PublicUrlProperties(String publicUrl) {
         if (parsed.getHost() == null || parsed.getHost().isBlank()) {
             throw new IllegalArgumentException(NAME + " must name a host, but is '" + publicUrl + "'");
         }
+        if (parsed.getRawQuery() != null || parsed.getRawFragment() != null) {
+            throw new IllegalArgumentException(NAME + " must not carry a query or a fragment, but is '" + publicUrl + "'");
+        }
     }
 
     public URI link(String path) {
