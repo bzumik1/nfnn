@@ -29,10 +29,34 @@ export function problem(status: number, type: string, title: string, detail: str
   };
 }
 
-export const noDonations = {
-  summary: { totalAmountMinor: 0, currency: 'CZK', count: 0, lastReceivedAt: null, byYear: [] },
+export interface DonorApiMock {
+  summary: unknown;
+  list: unknown;
+  receipts?: { singleFileName: string };
+}
+
+export const noDonations: DonorApiMock = {
+  summary: {
+    totalAmountMinor: 0,
+    currency: 'CZK',
+    count: 0,
+    lastReceivedAt: null,
+    byYear: [],
+    yearlyReceiptsAvailableThrough: 2025,
+  },
   list: { items: [], totalAmountMinor: 0, currency: 'CZK', count: 0 },
 };
+
+export function receiptPdf(fileName: string) {
+  return {
+    status: 200,
+    headers: {
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="${fileName}"; filename*=UTF-8''${fileName}`,
+    },
+    body: Buffer.from('%PDF-1.4\n%%EOF'),
+  };
+}
 
 export const paymentQr = {
   spayd: 'SPD*1.0*ACC:CZ2620100000005544332217*AM:500.00*CC:CZK',
@@ -40,7 +64,19 @@ export const paymentQr = {
   bankAccount: { accountNumber: '5544332217/2010', iban: 'CZ2620100000005544332217', recipientName: 'Nadační fond Nová naděje' },
 };
 
-export async function mockDonorApi(page: Page, donations: { summary: unknown; list: unknown } = noDonations): Promise<void> {
+export async function mockDonorApi(page: Page, donations: DonorApiMock = noDonations): Promise<void> {
+  const receipts = donations.receipts;
+  if (receipts) {
+    await page.route(
+      (url) => url.pathname === '/api/donations/me/receipts/yearly',
+      (route) =>
+        route.fulfill(receiptPdf(`potvrzeni-o-darech-${new URL(route.request().url()).searchParams.get('year')}.pdf`)),
+    );
+    await page.route(
+      (url) => /^\/api\/donations\/me\/[^/]+\/receipt$/.test(url.pathname),
+      (route) => route.fulfill(receiptPdf(receipts.singleFileName)),
+    );
+  }
   await page.route(
     (url) => url.pathname === '/api/donations/payment-qr',
     (route) => route.fulfill({ json: paymentQr }),

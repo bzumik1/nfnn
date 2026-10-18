@@ -24,6 +24,7 @@ const twoYears = {
       { year: 2026, count: 2, totalAmountMinor: 150000 },
       { year: 2025, count: 1, totalAmountMinor: 25000 },
     ],
+    yearlyReceiptsAvailableThrough: 2025,
   },
   list: {
     items: [
@@ -37,6 +38,8 @@ const twoYears = {
     count: 3,
   },
 };
+
+const withReceipts = { ...twoYears, receipts: { singleFileName: 'potvrzeni-o-daru-2026-000001.pdf' } };
 
 test.describe('Given a signed-in donor', () => {
   test('when they have given in two years, then the dashboard shows their totals, their payments and each year on its own', async ({ page }) => {
@@ -62,6 +65,35 @@ test.describe('Given a signed-in donor', () => {
     await expect(page.locator('.yearly-count')).toHaveText('1 příspěvek v roce 2025');
     await expect(page.locator('.yearly-total')).toHaveText('250 Kč celkem');
     await expect(page.locator('.yearly-pdf')).toHaveText('↓ PDF za rok 2025');
+  });
+
+  test('when they download the receipt of a completed year, then the browser saves the PDF under the name the server gives', async ({ page }) => {
+    await mockDonorApi(page, withReceipts);
+    await signIn(page);
+
+    await expect(page.locator('.yearly-pdf')).toBeDisabled();
+    await expect(page.locator('.yearly-hint')).toHaveText('Potvrzení za rok 2026 bude ke stažení po skončení roku.');
+    await page.locator('.year-toggle').getByRole('button', { name: '2025' }).click();
+    await expect(page.locator('.yearly-hint')).toHaveCount(0);
+
+    const [download] = await Promise.all([page.waitForEvent('download'), page.locator('.yearly-pdf').click()]);
+
+    expect(download.suggestedFilename()).toBe('potvrzeni-o-darech-2025.pdf');
+    await expect(page.locator('.yearly-pdf')).toHaveText('↓ PDF za rok 2025');
+  });
+
+  test('when they download the receipt of one payment, then the browser saves that PDF and a refunded payment offers none', async ({ page }) => {
+    await mockDonorApi(page, withReceipts);
+    await signIn(page);
+
+    await expect(page.locator('.payments-card tbody tr').last().locator('.download-btn')).toHaveCount(0);
+
+    const [download] = await Promise.all([
+      page.waitForEvent('download'),
+      page.locator('.payments-card tbody tr').nth(1).getByRole('button', { name: 'Stáhnout PDF' }).click(),
+    ]);
+
+    expect(download.suggestedFilename()).toBe('potvrzeni-o-daru-2026-000001.pdf');
   });
 
   test('when no donation has arrived yet, then the dashboard shows zeros and explains how a gift appears', async ({ page }) => {

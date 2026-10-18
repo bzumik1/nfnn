@@ -38,6 +38,7 @@ export function twoYearSummary(): DonationSummaryResponse {
       { year: 2026, count: 2, totalAmountMinor: 150000 },
       { year: 2025, count: 1, totalAmountMinor: 25000 },
     ],
+    yearlyReceiptsAvailableThrough: 2025,
   };
 }
 
@@ -46,5 +47,5 @@ export function emptyDonations(): DonationListResponse {
 }
 
 export function emptySummary(): DonationSummaryResponse {
-  return { totalAmountMinor: 0, currency: 'CZK', count: 0, lastReceivedAt: null, byYear: [] };
+  return { totalAmountMinor: 0, currency: 'CZK', count: 0, lastReceivedAt: null, byYear: [], yearlyReceiptsAvailableThrough: 2025 };
 }
