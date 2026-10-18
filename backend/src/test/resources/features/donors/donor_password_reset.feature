@@ -69,10 +69,10 @@ Feature: Donor resets a forgotten password by e-mail
     Given a person registered with email "jana@example.cz" and password "correct horse battery"
     And the donor asked for a password reset for "jana@example.cz"
     And the donor asked for a password reset for "jana@example.cz"
-    When the donor sets the new password "a brand new passphrase" with the link from e-mail 2
+    When the donor sets the new password "a brand new passphrase" with the link from e-mail 1
     Then the response status is 204
     And 1 password reset link is stored
-    When the donor sets the new password "yet another passphrase" with the link from e-mail 1
+    When the donor sets the new password "yet another passphrase" with the link from e-mail 2
     Then the response status is 400
     And the problem type ends with "donors/invalid-password-reset-token"
 
