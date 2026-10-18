@@ -67,6 +67,12 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Install Playwright's Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: End-to-end and accessibility tests
+        run: npm run e2e
+
   stack:
     runs-on: ubuntu-latest
     steps:
