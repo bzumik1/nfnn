@@ -191,7 +191,10 @@
 }
 
 .mobile-login {
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   width: 100%;
   background: var(--color-accent-bg);
   color: var(--color-accent);

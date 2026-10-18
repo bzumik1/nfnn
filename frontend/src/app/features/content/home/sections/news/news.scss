@@ -10,9 +10,6 @@
 }
 
 .news-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
   margin-bottom: 56px;
 }
 
@@ -32,14 +29,6 @@
   color: var(--color-text);
 }
 
-.news-all {
-  color: var(--color-accent);
-  font-weight: 600;
-  font-size: 14px;
-  text-decoration: none;
-  border-bottom: 1.5px solid var(--color-accent);
-  padding-bottom: 2px;
-}
 
 .news-grid {
   display: grid;

@@ -1,4 +1,4 @@
-import { Component, computed, input, signal } from '@angular/core';
+import { Component, computed, input } from '@angular/core';
 
 export type ProjectKey = 'dominik' | 'anicka' | 'tomas' | 'eliska' | 'martin';
 
@@ -9,7 +9,6 @@ export type ProjectKey = 'dominik' | 'anicka' | 'tomas' | 'eliska' | 'martin';
 })
 export class ProjectCard {
   readonly project = input.required<ProjectKey>();
-  protected readonly open = signal(false);
 
   protected readonly imageSrc = computed(() => {
     const map: Record<ProjectKey, string> = {
@@ -21,8 +20,4 @@ export class ProjectCard {
     };
     return map[this.project()];
   });
-
-  toggle(): void {
-    this.open.update((value) => !value);
-  }
 }

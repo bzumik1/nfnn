@@ -52,4 +52,16 @@ test.describe('Given a visitor on the home page', () => {
     await expect(page.locator('#contact-message')).toHaveAttribute('aria-invalid', 'true');
     expect(posted).toEqual([]);
   });
+
+  test.describe('on a phone', () => {
+    test.use({ viewport: { width: 390, height: 844 } });
+
+    test('when they reach the contact section, then the heading, the e-mail address and the address are there to read', async ({ page }) => {
+      await page.goto('/');
+
+      await expect(page.getByRole('heading', { name: 'Kontaktujte nás' })).toBeVisible();
+      await expect(page.getByRole('link', { name: 'info@nfnn.cz' })).toHaveAttribute('href', 'mailto:info@nfnn.cz');
+      await expect(page.getByText('Jiráskova 436, 473 01 Nový Bor')).toBeVisible();
+    });
+  });
 });

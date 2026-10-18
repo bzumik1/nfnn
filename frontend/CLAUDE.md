@@ -64,17 +64,18 @@ src/
       site-footer/            Footer with columns and bottom bar.
     features/                 One folder per backend bounded context.
       content/                Public marketing pages.
-        content.routes.ts     `''` → home, `'zasady-ochrany-osobnich-udaju'` → privacy policy (both lazy, with titles).
+        content.routes.ts     `''` → home, `'zasady-ochrany-osobnich-udaju'` → privacy policy, `'**'` → not-found (all lazy, with titles).
         home/
           home.{ts,html,scss} Composes the section components below; passes the signed-in donor's variable symbol from AuthStore to the donate section.
           sections/
             hero/             Full-bleed hero with overlay copy and CTA.
-            stats-bar/        Numbers strip under the hero.
+            stats-bar/        Numbers strip under the hero; the years are counted from the registry entry on 28 October 2005 on the visitor's day.
             about/            Two-column About section with image.
-            projects/         Project grid + project-card child component.
-            news/             News card grid (placeholder content).
+            projects/         Project grid + project-card child component (plain cards, nothing to click).
+            news/             News card grid (placeholder content, no link until news has pages of its own).
             donate-cta/       Donation band: preset or custom amount (a text field taking whole crowns with spaces, its hint shown after leaving it), QR payment from PaymentQrApi (debounced, latest request wins) with an "Uložit QR kód" download, bank details (account, amount, the donor's variable symbol when given, IBAN), each with an `app-copy-button`; a note under them says the gift shows in the overview once booked, or, without a symbol, to sign in before paying, with "Založit účet" and "Přihlásit se" opening the dialog. On phones the bank details come before the QR code (CSS `order`), since a phone cannot scan its own screen.
         privacy-policy/       "Zásady ochrany osobních údajů" (GDPR) page, linked from the footer bottom row.
+        not-found/            "Tuhle stránku jsme nenašli" for any unknown address under the public shell, with links home and to the contact form; sets `<meta name="robots" content="noindex">` while shown, since nginx answers 200 for every path.
       contact/
         contact-api.ts        HTTP service: POST /api/contact/messages.
         contact-form/         Contact form; posts through ContactApi, honeypot field, 429 and generic errors.
@@ -102,7 +103,7 @@ Defined in `src/app/app.routes.ts`. Two top-level lazy paths today:
 
 - `''` → `layout/public-shell` (header, footer) with `children`: `'obnova-hesla'` → `features/donors/password-reset/` (lazy `loadComponent`, title "Nové heslo | Nová naděje – nadační fond"), then `''` → `features/content/content.routes.ts` (home page, privacy policy). A route cannot have both `children` and `loadChildren`, so the content routes hang under a child of their own.
 - `'donor'` → `layout/donor-shell` with `features/donors/donors.routes.ts` (dashboard at `/donor/prehled`), guarded by `core/auth/donor-guard.ts`.
-- `'**'` → redirect to `/`.
+- Unknown addresses keep their URL and show `features/content/not-found/` (the `'**'` route at the end of `content.routes.ts`); there is no top-level redirect.
 
 In-page navigation uses `routerLink="/" fragment="..."` (e.g. `fragment="about"`); anchor scrolling is enabled in `app.config.ts`. The old `#about`-style hash links from the design prototype are reproduced this way.
 
@@ -122,6 +123,8 @@ The look is kept apart from the behaviour so it can change without touching comp
 `npm run lint:styles` (Stylelint, run by the PR check) fails on a hex, `rgb()`/`hsl()` or named colour, a `font-family`, a `border-radius` or a `box-shadow`/`text-shadow` in `src/app/**`, `src/styles/*.scss` or `src/styles.scss` that is not a token (the theme in `src/styles/themes/` is the one place with raw values). A new look is a change to the theme file; if a component needs a value the theme does not have, add a token there.
 
 Every form field goes through `shared/ui/form-field/`: `<app-form-field label="…" [hint]="…" [messages]="{ required: …, email: … }">` wraps one control marked `appFormControl` (it needs an `id` and `ngModel`), renders the `<label for>`, the hint and the message for the control's first error key, and sets `aria-invalid` and `aria-describedby` on the control once it is touched or its form submitted. `form[appFocusFirstInvalid]` moves the focus to the first invalid control on submit. A field's error is said at the field in its own words, never as one sentence for the whole form; a form-level error is only for what no single field owns (passwords that do not match, a refusal from the API). The control's look is the global `.form-control` in `src/styles/_form-controls.scss`; components only space the fields.
+
+Photos that only illustrate the text next to them (hero, about, donate, project and news cards) take `alt=""`; icons are inline SVGs with `aria-hidden="true"` and `stroke="currentColor"`, never emoji inside translated text, which screen readers would read out. `src/index.html` holds the meta description and the Open Graph tags; `og:image` and `og:url` wait for the real domain.
 
 The visual reference is `Claude Design/Nova Nadeje.html` at the repo root — a static React-in-the-browser prototype. **Treat it as the source of truth for visuals only**; never embed its JSX or pull React in. All sections in `home/sections/` are 1:1 ports.
 
