@@ -2,7 +2,7 @@ package cz.novanadeje.app.donations.infrastructure.persistence;
 
 import cz.novanadeje.app.donations.domain.donor.DonorRecord;
 import cz.novanadeje.app.donations.domain.donor.DonorReference;
-import cz.novanadeje.app.donations.domain.donor.LearnedSenderAccount;
+import cz.novanadeje.app.donations.domain.donor.SenderAccountLink;
 import cz.novanadeje.app.shared.domain.DonorType;
 import cz.novanadeje.app.shared.domain.LocaleCode;
 import cz.novanadeje.app.shared.domain.PostalAddress;
@@ -15,7 +15,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
 import java.time.Instant;
-import java.util.Set;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -80,7 +80,7 @@ public class DonorRecordJpaEntity {
         return donorId;
     }
 
-    DonorRecord toDomain(Set<LearnedSenderAccount> senderAccounts) {
+    DonorRecord toDomain(List<SenderAccountLink> senderAccountLinks) {
         return DonorRecord.reconstitute(
                 new DonorReference(donorId),
                 type,
@@ -89,7 +89,7 @@ public class DonorRecordJpaEntity {
                 new PostalAddress(street, city, postalCode),
                 new VariableSymbol(variableSymbol),
                 LocaleCode.fromTag(preferredLocale),
-                senderAccounts,
+                senderAccountLinks,
                 registeredAt,
                 updatedAt
         );

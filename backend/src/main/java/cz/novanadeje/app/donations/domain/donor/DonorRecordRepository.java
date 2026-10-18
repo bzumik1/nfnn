@@ -10,7 +10,7 @@ public interface DonorRecordRepository {
 
     void save(DonorRecord record);
 
-    void addSenderAccount(DonorReference donor, LearnedSenderAccount account);
+    boolean saveSenderAccountLink(DonorReference donor, SenderAccountLink link);
 
     Optional<DonorRecord> findById(DonorReference id);
 

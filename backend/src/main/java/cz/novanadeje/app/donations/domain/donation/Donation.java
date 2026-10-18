@@ -3,6 +3,7 @@ package cz.novanadeje.app.donations.domain.donation;
 import cz.novanadeje.app.donations.domain.bank.BankPayment;
 import cz.novanadeje.app.donations.domain.bank.BankPaymentId;
 import cz.novanadeje.app.donations.domain.donor.DonorReference;
+import cz.novanadeje.app.donations.domain.donor.SenderAccountLinkId;
 import cz.novanadeje.app.shared.domain.Money;
 
 import java.time.Instant;
@@ -20,10 +21,12 @@ public final class Donation {
     private final DonationSource source;
     private final DonationStatus status;
     private final PairingMethod pairedBy;
+    private final SenderAccountLinkId pairedThrough;
     private final Instant recordedAt;
 
     private Donation(DonationId id, DonorReference donor, Optional<BankPaymentId> bankPayment, LocalDate receivedOn, Money amount,
-                     DonationSource source, DonationStatus status, Optional<PairingMethod> pairedBy, Instant recordedAt) {
+                     DonationSource source, DonationStatus status, Optional<PairingMethod> pairedBy, Optional<SenderAccountLinkId> pairedThrough,
+                     Instant recordedAt) {
         this.id = require(id, "Donation id");
         this.donor = require(donor, "Donor reference");
         this.bankPayment = require(bankPayment, "Bank payment").orElse(null);
@@ -32,21 +35,37 @@ public final class Donation {
         this.source = require(source, "Donation source");
         this.status = require(status, "Donation status");
         this.pairedBy = require(pairedBy, "Pairing method").orElse(null);
+        this.pairedThrough = require(pairedThrough, "Sender account link").orElse(null);
         this.recordedAt = require(recordedAt, "Recording time");
         requireOriginMatchingSource();
+        requireLinkOnlyForAccountPairing();
     }
 
     public static Donation fromBankPayment(DonationId id, DonorReference donor, BankPayment payment, PairingMethod pairedBy,
                                            Instant recordedAt) {
         BankPayment paid = require(payment, "Bank payment");
         return new Donation(id, donor, Optional.of(paid.id()), paid.bookedOn(), paid.amount(), DonationSource.BANK_TRANSFER,
-                DonationStatus.RECEIVED, Optional.ofNullable(pairedBy), recordedAt);
+                DonationStatus.RECEIVED, Optional.ofNullable(pairedBy), Optional.empty(), recordedAt);
+    }
+
+    public static Donation pairedBySenderAccount(DonationId id, DonorReference donor, BankPayment payment, SenderAccountLinkId link,
+                                                 Instant recordedAt) {
+        BankPayment paid = require(payment, "Bank payment");
+        return new Donation(id, donor, Optional.of(paid.id()), paid.bookedOn(), paid.amount(), DonationSource.BANK_TRANSFER,
+                DonationStatus.RECEIVED, Optional.of(PairingMethod.SENDER_ACCOUNT), Optional.of(require(link, "Sender account link")),
+                recordedAt);
     }
 
     public static Donation reconstitute(DonationId id, DonorReference donor, Optional<BankPaymentId> bankPayment, LocalDate receivedOn,
                                         Money amount, DonationSource source, DonationStatus status, Optional<PairingMethod> pairedBy,
                                         Instant recordedAt) {
-        return new Donation(id, donor, bankPayment, receivedOn, amount, source, status, pairedBy, recordedAt);
+        return reconstitute(id, donor, bankPayment, receivedOn, amount, source, status, pairedBy, Optional.empty(), recordedAt);
+    }
+
+    public static Donation reconstitute(DonationId id, DonorReference donor, Optional<BankPaymentId> bankPayment, LocalDate receivedOn,
+                                        Money amount, DonationSource source, DonationStatus status, Optional<PairingMethod> pairedBy,
+                                        Optional<SenderAccountLinkId> pairedThrough, Instant recordedAt) {
+        return new Donation(id, donor, bankPayment, receivedOn, amount, source, status, pairedBy, pairedThrough, recordedAt);
     }
 
     public DonationId id() {
@@ -81,6 +100,10 @@ public final class Donation {
         return Optional.ofNullable(pairedBy);
     }
 
+    public Optional<SenderAccountLinkId> pairedThrough() {
+        return Optional.ofNullable(pairedThrough);
+    }
+
     public Instant recordedAt() {
         return recordedAt;
     }
@@ -105,6 +128,12 @@ public final class Donation {
         }
         if (source == DonationSource.MANUAL && !withoutBank) {
             throw new IllegalArgumentException("A manual donation has neither a bank payment nor a pairing method");
+        }
+    }
+
+    private void requireLinkOnlyForAccountPairing() {
+        if (pairedThrough != null && pairedBy != PairingMethod.SENDER_ACCOUNT) {
+            throw new IllegalArgumentException("Only a donation paired by sender account names the account link it was paired through");
         }
     }
 

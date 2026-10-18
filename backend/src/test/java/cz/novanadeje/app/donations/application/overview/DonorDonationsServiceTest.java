@@ -1,15 +1,30 @@
 package cz.novanadeje.app.donations.application.overview;
 
+import cz.novanadeje.app.donations.domain.bank.BankPaymentId;
+import cz.novanadeje.app.donations.domain.bank.SenderAccount;
 import cz.novanadeje.app.donations.domain.donation.Donation;
+import cz.novanadeje.app.donations.domain.donation.DonationId;
 import cz.novanadeje.app.donations.domain.donation.DonationList;
 import cz.novanadeje.app.donations.domain.donation.DonationRepository;
+import cz.novanadeje.app.donations.domain.donation.DonationSource;
+import cz.novanadeje.app.donations.domain.donation.DonationStatus;
 import cz.novanadeje.app.donations.domain.donation.DonationSummary;
+import cz.novanadeje.app.donations.domain.donation.PairingMethod;
 import cz.novanadeje.app.donations.domain.donation.YearTotal;
+import cz.novanadeje.app.donations.domain.donor.DonorRecord;
+import cz.novanadeje.app.donations.domain.donor.DonorRecordRepository;
 import cz.novanadeje.app.donations.domain.donor.DonorReference;
+import cz.novanadeje.app.donations.domain.donor.SenderAccountLink;
+import cz.novanadeje.app.donations.domain.donor.SenderAccountLinkId;
+import cz.novanadeje.app.donations.domain.donor.SenderAccountLinkStatus;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceiptRepository;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptNumber;
+import cz.novanadeje.app.shared.domain.DonorType;
+import cz.novanadeje.app.shared.domain.LocaleCode;
 import cz.novanadeje.app.shared.domain.Money;
+import cz.novanadeje.app.shared.domain.PostalAddress;
 import cz.novanadeje.app.shared.domain.UuidV7;
+import cz.novanadeje.app.shared.domain.VariableSymbol;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -40,7 +55,8 @@ class DonorDonationsServiceTest {
 
     private final DonationRepository donations = mock(DonationRepository.class);
     private final DonationReceiptRepository receipts = mock(DonationReceiptRepository.class);
-    private final DonorDonationsService service = new DonorDonationsService(donations, receipts,
+    private final DonorRecordRepository donorRecords = mock(DonorRecordRepository.class);
+    private final DonorDonationsService service = new DonorDonationsService(donations, receipts, donorRecords,
             Clock.fixed(Instant.parse("2026-10-17T11:00:00Z"), ZoneOffset.UTC));
 
     @Test
@@ -132,10 +148,30 @@ class DonorDonationsServiceTest {
     @Test
     @DisplayName("Given 23:30 UTC on New Year's Eve, when summarized, then the closing year already counts as completed in Prague")
     void should_count_closing_year_as_completed_when_summarized_given_prague_new_year() {
-        DonorDonationsService atNewYear = new DonorDonationsService(donations, receipts,
+        DonorDonationsService atNewYear = new DonorDonationsService(donations, receipts, donorRecords,
                 Clock.fixed(Instant.parse("2026-12-31T23:30:00Z"), ZoneOffset.UTC));
         when(donations.findByDonorNewestFirst(JANA)).thenReturn(List.of());
 
         assertThat(atNewYear.summarizeDonations(JANA).lastCompletedYear()).isEqualTo(Year.of(2026));
+    }
+
+    @Test
+    @DisplayName("Given a donation paired through one of the donor's account links, when listed, then the overview names that account and no other donation gets one")
+    void should_name_sender_account_when_listed_given_donation_paired_through_link() {
+        SenderAccount account = new SenderAccount("2900233333", "2010");
+        SenderAccountLink link = SenderAccountLink.reconstitute(SenderAccountLinkId.newId(NOW), account, SenderAccountLinkStatus.ACTIVE,
+                Optional.of(BankPaymentId.newId(NOW)), Optional.of(NOW), Optional.empty(), Optional.empty(), NOW, Optional.empty());
+        DonorRecord record = DonorRecord.reconstitute(JANA, DonorType.PERSON, "Jana Nováková", null,
+                new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"), new VariableSymbol("4821937560"), LocaleCode.CS, List.of(link), NOW, NOW);
+        Donation byAccount = Donation.reconstitute(DonationId.newId(NOW), JANA, Optional.of(BankPaymentId.newId(NOW)), LocalDate.of(2026, 3, 1),
+                Money.czk(30000), DonationSource.BANK_TRANSFER, DonationStatus.RECEIVED, Optional.of(PairingMethod.SENDER_ACCOUNT),
+                Optional.of(link.id()), NOW);
+        when(donations.findByDonorNewestFirst(JANA)).thenReturn(List.of(byAccount, JANUARY_2026));
+        when(donorRecords.findById(JANA)).thenReturn(Optional.of(record));
+
+        DonationOverview overview = service.listDonations(JANA, Optional.empty());
+
+        assertThat(overview.senderAccountOf(byAccount)).contains(account);
+        assertThat(overview.senderAccountOf(JANUARY_2026)).isEmpty();
     }
 }

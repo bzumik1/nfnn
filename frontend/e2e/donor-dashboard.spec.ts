@@ -11,6 +11,8 @@ function donation(id: string, receivedAt: string, amountMinor: number, status = 
     purpose: 'Obecný příspěvek',
     status,
     source: 'BANK_TRANSFER',
+    pairedBy: 'VARIABLE_SYMBOL',
+    senderAccount: null,
   };
 }
 

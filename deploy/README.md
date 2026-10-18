@@ -169,6 +169,10 @@ SQL
 
 Kontejner `nfnn-backup` má přihlášení k databázi v prostředí, takže `psql` nepotřebuje žádné parametry. Příkaz je idempotentní; platby těchto dárců spáruje nejbližší hodinový import.
 
+### Bankovní účty dárců a sběrné účty
+
+Účet odesílatele se dárci přiřadí z platby s jeho VS; pak se mu přiřazují i platby bez VS z toho účtu. Dárce své účty vidí na nástěnce, může je odpojit a znovu připojit (viz „Donor's bank accounts“ v `docs/api-contract.md`). Platí-li přes jeden účet víc lidí (platební brána, sbírkový nebo firemní účet zaměstnavatele), dej ho do `backend.env` na řádek `PAIRING_EXCLUDED_ACCOUNTS=` ve tvaru `číslo/kód banky`, víc účtů odděl čárkou, třeba `PAIRING_EXCLUDED_ACCOUNTS=2400000002/2010,19-2000145399/0800`, a aplikaci přeinstaluj. Z takového účtu se už žádnému dárci účet nepřiřadí a platby bez VS z něj zůstanou nespárované; platba s VS se spáruje dál podle VS. Účet, který se dárce naučil dřív, mu na nástěnce zůstane i s dosavadními dary, jen se mu z něj další platby bez VS už nepřiřadí. Se špatně zapsaným účtem backend nenastartuje a log hlásí `app.donations.pairing.excluded-accounts holds a Czech account as number/bank code`.
+
 ## Potvrzení o daru
 
 Přihlášený dárce si v portálu stáhne potvrzení o daru v PDF: za jeden dar kdykoli, za celý rok od 1. ledna následujícího roku. Bez jakéhokoli nastavení potvrzení podepisuje Pavel Znamenáček, předseda správní rady, a místo obrázku podpisu je jen čára se jménem. Podepisujícího a sken podpisu určují tři řádky v `backend.env` (ve vzoru jsou zakomentované):

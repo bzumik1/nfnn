@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <changeSet id="006-link-sender-accounts-over-time" author="nfnn">
+        <addColumn tableName="donor_sender_account">
+            <column name="id" type="uuid"/>
+            <column name="status" type="varchar(16)" defaultValue="ACTIVE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="valid_from" type="date"/>
+            <column name="valid_to" type="date"/>
+            <column name="created_at" type="timestamp with time zone"/>
+            <column name="disconnected_at" type="timestamp with time zone"/>
+        </addColumn>
+        <sql>update donor_sender_account set id = gen_random_uuid(), created_at = learned_at</sql>
+        <addNotNullConstraint tableName="donor_sender_account" columnName="id"/>
+        <addNotNullConstraint tableName="donor_sender_account" columnName="created_at"/>
+        <dropDefaultValue tableName="donor_sender_account" columnName="status"/>
+        <dropNotNullConstraint tableName="donor_sender_account" columnName="learned_from_payment_id"/>
+        <dropNotNullConstraint tableName="donor_sender_account" columnName="learned_at"/>
+        <dropPrimaryKey tableName="donor_sender_account" constraintName="pk_donor_sender_account"/>
+        <addPrimaryKey tableName="donor_sender_account" columnNames="id" constraintName="pk_donor_sender_account"/>
+        <sql>alter table donor_sender_account add constraint ck_donor_sender_account_status check (status in ('ACTIVE', 'AWAITING_PAYMENT', 'DISCONNECTED'))</sql>
+        <sql>alter table donor_sender_account add constraint ck_donor_sender_account_proof check ((learned_from_payment_id is null) = (learned_at is null) and (status &lt;&gt; 'ACTIVE' or learned_from_payment_id is not null))</sql>
+        <sql>alter table donor_sender_account add constraint ck_donor_sender_account_disconnected check ((status = 'DISCONNECTED') = (valid_to is not null) and (status = 'DISCONNECTED') = (disconnected_at is not null))</sql>
+        <sql>alter table donor_sender_account add constraint ck_donor_sender_account_period check (valid_from is null or valid_to is null or valid_to &gt;= valid_from)</sql>
+        <sql>create unique index uq_donor_sender_account_live on donor_sender_account (donor_id, account_number, bank_code) where status &lt;&gt; 'DISCONNECTED'</sql>
+        <createIndex tableName="donor_sender_account" indexName="ix_donor_sender_account_donor">
+            <column name="donor_id"/>
+        </createIndex>
+
+        <addColumn tableName="donation">
+            <column name="sender_account_id" type="uuid">
+                <constraints foreignKeyName="fk_donation_sender_account" referencedTableName="donor_sender_account" referencedColumnNames="id"/>
+            </column>
+        </addColumn>
+        <sql>update donation d set sender_account_id = a.id from bank_payment p, donor_sender_account a
+            where d.paired_by = 'SENDER_ACCOUNT' and d.bank_payment_id = p.id and a.donor_id = d.donor_id
+            and a.account_number = p.sender_account_number and a.bank_code = p.sender_bank_code</sql>
+        <sql>alter table donation add constraint ck_donation_sender_account_only_for_account_pairing check (sender_account_id is null or paired_by = 'SENDER_ACCOUNT')</sql>
+        <createIndex tableName="donation" indexName="ix_donation_sender_account">
+            <column name="sender_account_id"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>

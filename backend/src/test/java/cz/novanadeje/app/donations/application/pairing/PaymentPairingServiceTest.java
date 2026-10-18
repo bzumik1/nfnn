@@ -14,7 +14,10 @@ import cz.novanadeje.app.donations.domain.donation.PairingMethod;
 import cz.novanadeje.app.donations.domain.donor.DonorRecord;
 import cz.novanadeje.app.donations.domain.donor.DonorRecordRepository;
 import cz.novanadeje.app.donations.domain.donor.DonorReference;
-import cz.novanadeje.app.donations.domain.donor.LearnedSenderAccount;
+import cz.novanadeje.app.donations.domain.donor.ExcludedSenderAccounts;
+import cz.novanadeje.app.donations.domain.donor.SenderAccountLink;
+import cz.novanadeje.app.donations.domain.donor.SenderAccountLinkId;
+import cz.novanadeje.app.donations.domain.donor.SenderAccountLinkStatus;
 import cz.novanadeje.app.shared.domain.DonorType;
 import cz.novanadeje.app.shared.domain.LocaleCode;
 import cz.novanadeje.app.shared.domain.Money;
@@ -43,6 +46,7 @@ import static cz.novanadeje.app.donations.BankPayments.payment;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
@@ -75,7 +79,7 @@ class PaymentPairingServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new PaymentPairingService(payments, donorRecords, donations);
+        service = new PaymentPairingService(payments, donorRecords, donations, ExcludedSenderAccounts.none());
         logger = (Logger) LoggerFactory.getLogger(PaymentPairingService.class);
         logs = new ListAppender<>();
         logs.start();
@@ -94,7 +98,9 @@ class PaymentPairingServiceTest {
         BankPayment newer = payment(1002, LocalDate.of(2026, 10, 16), Money.czk(50000), Optional.of(ACCOUNT), JANA_SYMBOL.value());
         when(payments.findUnpairedOrderedByBooking()).thenReturn(List.of(older, newer));
         when(donorRecords.findByVariableSymbol(JANA_SYMBOL)).thenReturn(Optional.of(jana));
-        when(donorRecords.findBySenderAccount(ACCOUNT)).thenReturn(List.of(withAccount(jana)));
+        DonorRecord storedJana = withAccount(jana);
+        when(donorRecords.findBySenderAccount(ACCOUNT)).thenReturn(List.of(storedJana));
+        when(donorRecords.saveSenderAccountLink(any(), any())).thenReturn(true);
 
         PairingOutcome outcome = service.pairUnpaired(NOW);
 
@@ -106,10 +112,17 @@ class PaymentPairingServiceTest {
         assertThat(saved.get(1).bankPayment()).contains(older.id());
         assertThat(saved.get(1).pairedBy()).contains(PairingMethod.SENDER_ACCOUNT);
         assertThat(saved.get(1).donor()).isEqualTo(jana.id());
+        assertThat(saved.get(1).pairedThrough()).contains(storedJana.senderAccountLinks().getFirst().id());
+        assertThat(saved.get(0).pairedThrough()).isEmpty();
         assertThat(saved).allSatisfy(donation -> assertThat(donation.recordedAt()).isEqualTo(NOW));
+        ArgumentCaptor<SenderAccountLink> learned = ArgumentCaptor.forClass(SenderAccountLink.class);
         InOrder order = inOrder(donorRecords);
-        order.verify(donorRecords).addSenderAccount(jana.id(), new LearnedSenderAccount(ACCOUNT, newer.id(), NOW));
         order.verify(donorRecords).findBySenderAccount(ACCOUNT);
+        order.verify(donorRecords).saveSenderAccountLink(eq(jana.id()), learned.capture());
+        order.verify(donorRecords).findBySenderAccount(ACCOUNT);
+        assertThat(learned.getValue().account()).isEqualTo(ACCOUNT);
+        assertThat(learned.getValue().provedBy()).contains(newer.id());
+        assertThat(learned.getValue().validFrom()).isEmpty();
         verify(donorRecords, never()).save(any());
     }
 
@@ -123,7 +136,7 @@ class PaymentPairingServiceTest {
 
         assertThat(outcome).isEqualTo(new PairingOutcome(0, 0, 0, 1));
         verify(donorRecords, never()).findBySenderAccount(any());
-        verify(donorRecords, never()).addSenderAccount(any(), any());
+        verify(donorRecords, never()).saveSenderAccountLink(any(), any());
         verifyNoInteractions(donations);
     }
 
@@ -162,12 +175,13 @@ class PaymentPairingServiceTest {
         BankPayment second = payment(1002, Optional.of(ACCOUNT), "000" + JANA_SYMBOL.value());
         when(payments.findUnpairedOrderedByBooking()).thenReturn(List.of(first, second));
         when(donorRecords.findByVariableSymbol(JANA_SYMBOL)).thenReturn(Optional.of(jana));
+        when(donorRecords.saveSenderAccountLink(any(), any())).thenReturn(true);
 
         PairingOutcome outcome = service.pairUnpaired(NOW);
 
         assertThat(outcome).isEqualTo(new PairingOutcome(2, 0, 1, 0));
         verify(donorRecords, times(1)).findByVariableSymbol(JANA_SYMBOL);
-        verify(donorRecords, times(1)).addSenderAccount(any(), any());
+        verify(donorRecords, times(1)).saveSenderAccountLink(any(), any());
         savedDonations(2);
     }
 
@@ -190,6 +204,7 @@ class PaymentPairingServiceTest {
         BankPayment byAccount = payment(1001, LocalDate.of(2026, 10, 8), Money.czk(20000), Optional.of(ACCOUNT), null);
         when(payments.findUnpairedByMatchingVariableSymbol(JANA_SYMBOL)).thenReturn(List.of(bySymbol));
         when(donorRecords.findBySenderAccount(ACCOUNT)).thenReturn(List.of(withAccount(jana)));
+        when(donorRecords.saveSenderAccountLink(any(), any())).thenReturn(true);
         when(payments.findUnpairedWithoutSymbolBySenderAccount(ACCOUNT)).thenReturn(List.of(byAccount));
 
         PairingOutcome outcome = service.pairPaymentsOf(jana, NOW);
@@ -199,7 +214,7 @@ class PaymentPairingServiceTest {
         assertThat(saved).extracting(donation -> donation.bankPayment().orElseThrow()).containsExactly(bySymbol.id(), byAccount.id());
         assertThat(saved).extracting(donation -> donation.pairedBy().orElseThrow())
                 .containsExactly(PairingMethod.VARIABLE_SYMBOL, PairingMethod.SENDER_ACCOUNT);
-        verify(donorRecords).addSenderAccount(jana.id(), new LearnedSenderAccount(ACCOUNT, bySymbol.id(), NOW));
+        verify(donorRecords).saveSenderAccountLink(eq(jana.id()), any());
         verify(payments, never()).findUnpairedOrderedByBooking();
     }
 
@@ -209,11 +224,12 @@ class PaymentPairingServiceTest {
         BankPayment bySymbol = payment(1002, Optional.of(ACCOUNT), JANA_SYMBOL.value());
         when(payments.findUnpairedByMatchingVariableSymbol(JANA_SYMBOL)).thenReturn(List.of(bySymbol));
         when(donorRecords.findBySenderAccount(ACCOUNT)).thenReturn(List.of(withAccount(jana), withAccount(petr)));
+        when(donorRecords.saveSenderAccountLink(any(), any())).thenReturn(true);
+        when(payments.findUnpairedWithoutSymbolBySenderAccount(ACCOUNT)).thenReturn(List.of(payment(1003, Optional.of(ACCOUNT), null)));
 
         PairingOutcome outcome = service.pairPaymentsOf(jana, NOW);
 
-        assertThat(outcome).isEqualTo(new PairingOutcome(1, 0, 1, 0));
-        verify(payments, never()).findUnpairedWithoutSymbolBySenderAccount(any());
+        assertThat(outcome).isEqualTo(new PairingOutcome(1, 0, 1, 1));
         savedDonations(1);
     }
 
@@ -226,7 +242,7 @@ class PaymentPairingServiceTest {
 
         assertThat(outcome).isEqualTo(new PairingOutcome(1, 0, 0, 0));
         verify(donorRecords, never()).findBySenderAccount(any());
-        verify(donorRecords, never()).addSenderAccount(any(), any());
+        verify(donorRecords, never()).saveSenderAccountLink(any(), any());
     }
 
     @Test
@@ -237,6 +253,37 @@ class PaymentPairingServiceTest {
         doThrow(new DataIntegrityViolationException("uq_donation_bank_payment")).when(donations).save(any());
 
         assertThatThrownBy(() -> service.pairPaymentsOf(jana, NOW)).isInstanceOf(DataIntegrityViolationException.class);
+    }
+
+    @Test
+    @DisplayName("Given an account another donor disconnected on a day, when a donor proves it with a symbol payment, then the new link starts the day after")
+    void should_start_link_after_release_when_unpaired_paired_given_account_released_by_another_donor() {
+        LocalDate released = LocalDate.of(2026, 9, 30);
+        BankPayment proof = payment(1001, Optional.of(ACCOUNT), PETR_SYMBOL.value());
+        when(payments.findUnpairedOrderedByBooking()).thenReturn(List.of(proof));
+        when(donorRecords.findByVariableSymbol(PETR_SYMBOL)).thenReturn(Optional.of(petr));
+        when(donorRecords.findBySenderAccount(ACCOUNT)).thenReturn(List.of(withLink(jana, SenderAccountLinkStatus.DISCONNECTED, Optional.of(released))));
+        when(donorRecords.saveSenderAccountLink(any(), any())).thenReturn(true);
+
+        service.pairUnpaired(NOW);
+
+        ArgumentCaptor<SenderAccountLink> learned = ArgumentCaptor.forClass(SenderAccountLink.class);
+        verify(donorRecords).saveSenderAccountLink(eq(petr.id()), learned.capture());
+        assertThat(learned.getValue().validFrom()).contains(released.plusDays(1));
+    }
+
+    @Test
+    @DisplayName("Given a payment without a symbol from an excluded account, when unpaired payments are paired, then it stays unpaired and no owner is looked up for it")
+    void should_leave_unpaired_when_unpaired_paired_given_excluded_account() {
+        PaymentPairingService excluding = new PaymentPairingService(payments, donorRecords, donations,
+                new ExcludedSenderAccounts(Set.of(ACCOUNT)));
+        when(payments.findUnpairedOrderedByBooking()).thenReturn(List.of(payment(1001, Optional.of(ACCOUNT), null)));
+        when(donorRecords.findBySenderAccount(ACCOUNT)).thenReturn(List.of(withAccount(jana)));
+
+        PairingOutcome outcome = excluding.pairUnpaired(NOW);
+
+        assertThat(outcome).isEqualTo(new PairingOutcome(0, 0, 0, 1));
+        verifyNoInteractions(donations);
     }
 
     private List<Donation> savedDonations(int count) {
@@ -255,7 +302,13 @@ class PaymentPairingServiceTest {
     }
 
     private static DonorRecord withAccount(DonorRecord record) {
+        return withLink(record, SenderAccountLinkStatus.ACTIVE, Optional.empty());
+    }
+
+    private static DonorRecord withLink(DonorRecord record, SenderAccountLinkStatus status, Optional<LocalDate> validTo) {
+        SenderAccountLink link = SenderAccountLink.reconstitute(SenderAccountLinkId.newId(NOW), ACCOUNT, status, Optional.of(BankPaymentId.newId(NOW)),
+                Optional.of(NOW), Optional.empty(), validTo, NOW, validTo.map(day -> NOW));
         return DonorRecord.reconstitute(record.id(), DonorType.PERSON, record.name(), null, record.address(), record.variableSymbol(),
-                record.preferredLocale(), Set.of(new LearnedSenderAccount(ACCOUNT, BankPaymentId.newId(NOW), NOW)), record.registeredAt(), NOW);
+                record.preferredLocale(), List.of(link), record.registeredAt(), NOW);
     }
 }

@@ -1,0 +1,372 @@
+import { provideHttpClient, withInterceptors } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { authInterceptor } from '../../../../core/auth/auth-interceptor';
+import { AuthStore } from '../../../../core/auth/auth-store';
+import { authResponse, problem, sampleDonor } from '../../../../core/auth/testing/donor-fixtures';
+import { BankAccountItem } from '../../../donations/bank-accounts-api';
+import { PaymentQrResponse } from '../../../donations/payment-qr-api';
+import { bankAccount } from '../../../donations/testing/bank-account-fixtures';
+import { BankAccountsCard } from './bank-accounts-card';
+
+const LIST_URL = '/api/donations/me/bank-accounts';
+const ACCOUNT_ID = '0192f0c4-0000-7000-8000-000000000001';
+
+function paymentQr(): PaymentQrResponse {
+  return {
+    spayd: 'SPD*1.0*ACC:CZ2620100000005544332217*AM:1.00*CC:CZK*X-VS:9876543210',
+    qrPngBase64: 'iVBORw0KGgo=',
+    bankAccount: { accountNumber: '5544332217/2010', iban: 'CZ2620100000005544332217', recipientName: 'Nadační fond Nová naděje' },
+  };
+}
+
+describe('Given the bank accounts card in the overview', () => {
+  let fixture: ComponentFixture<BankAccountsCard>;
+  let http: HttpTestingController;
+  let sessionEnded: number;
+
+  beforeEach(async () => {
+    localStorage.clear();
+    await TestBed.configureTestingModule({
+      imports: [BankAccountsCard],
+      providers: [provideHttpClient(withInterceptors([authInterceptor])), provideHttpClientTesting()],
+    }).compileComponents();
+    http = TestBed.inject(HttpTestingController);
+    const store = TestBed.inject(AuthStore);
+    store.login('jana@example.cz', 'correct horse battery').subscribe();
+    http.expectOne('/api/donors/auth/login').flush(authResponse('token-1', sampleDonor({ variableSymbol: '9876543210' })));
+    fixture = TestBed.createComponent(BankAccountsCard);
+    fixture.componentRef.setInput('variableSymbol', '9876543210');
+    sessionEnded = 0;
+    fixture.componentInstance.sessionEnded.subscribe(() => sessionEnded++);
+    document.body.appendChild(fixture.nativeElement);
+    fixture.detectChanges();
+  });
+
+  afterEach(() => {
+    http.verify();
+    fixture.nativeElement.remove();
+  });
+
+  async function settle(): Promise<void> {
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+  }
+
+  async function respond(items: BankAccountItem[]): Promise<void> {
+    const request = http.expectOne({ method: 'GET', url: LIST_URL });
+    expect(request.request.headers.get('Authorization')).toBe('Bearer token-1');
+    request.flush({ items });
+    await settle();
+  }
+
+  function element<T extends HTMLElement = HTMLElement>(selector: string): T | null {
+    return (fixture.nativeElement as HTMLElement).querySelector(selector) as T | null;
+  }
+
+  function text(selector: string): string {
+    return normalized(element(selector)?.textContent ?? '');
+  }
+
+  function texts(selector: string): string[] {
+    return [...((fixture.nativeElement as HTMLElement).querySelectorAll(selector) as NodeListOf<HTMLElement>)].map((node) =>
+      normalized(node.textContent ?? ''),
+    );
+  }
+
+  function normalized(value: string): string {
+    return value.replace(/\s+/g, ' ').trim();
+  }
+
+  async function click(selector: string): Promise<void> {
+    (element(selector) as HTMLButtonElement).click();
+    await settle();
+  }
+
+  it('when the accounts are still loading, then a loading line says so under the title', () => {
+    expect(text('h2')).toBe('Moje bankovní účty');
+    expect(text('.accounts-loading')).toBe('Načítáme vaše účty…');
+
+    http.expectOne(LIST_URL).flush({ items: [] });
+  });
+
+  it('when a verified account arrives, then its row shows the number, the status, the verification day and the gifts without a symbol', async () => {
+    await respond([bankAccount()]);
+
+    expect(text('.account-number')).toBe('2900233333/2010');
+    expect(text('.account-status')).toBe('Ověřený');
+    expect(text('.account-hint')).toBe('Platby bez variabilního symbolu z něj vám přiřazujeme automaticky.');
+    expect(texts('.account-meta > li')).toEqual(['ověřeno 12. 03. 2026', '14 darů bez VS', '7 400 Kč']);
+    expect(text('.account-action')).toBe('Odpojit');
+  });
+
+  it('when an account has one gift without a symbol, then the count uses the singular', async () => {
+    await respond([bankAccount({ donationCount: 1, totalAmountMinor: 50050 })]);
+
+    expect(texts('.account-meta > li')).toEqual(['ověřeno 12. 03. 2026', '1 dar bez VS', '500,50 Kč']);
+  });
+
+  it('when an account has no gifts without a symbol yet, then the row does not count them', async () => {
+    await respond([bankAccount({ donationCount: 0, totalAmountMinor: 0, lastDonationOn: null })]);
+
+    expect(texts('.account-meta > li')).toEqual(['ověřeno 12. 03. 2026']);
+  });
+
+  it('when another donor verified the same account, then the row says it is shared and asks for the symbol', async () => {
+    await respond([bankAccount({ shared: true })]);
+
+    expect(text('.account-status')).toBe('Sdílený');
+    expect(text('.account-hint')).toBe(
+      'Tento účet ověřil i jiný dárce, platby bez symbolu z něj proto nepřiřazujeme nikomu. Posílejte z něj prosím s vaším variabilním symbolem.',
+    );
+  });
+
+  it('when an account waits for a payment, then the row says what to send and can still be disconnected', async () => {
+    await respond([bankAccount({ status: 'AWAITING_PAYMENT', verifiedOn: null, donationCount: 0, totalAmountMinor: 0 })]);
+
+    expect(text('.account-status')).toBe('Čeká na platbu');
+    expect(text('.account-hint')).toBe('Pošlete z účtu 1 Kč s vaším variabilním symbolem, pak ho znovu připojíme.');
+    expect(texts('.account-meta > li')).toEqual([]);
+    expect(text('.account-action')).toBe('Odpojit');
+  });
+
+  it('when accounts were disconnected, then each row is muted and says the day after the last one that counted', async () => {
+    await respond([
+      bankAccount({ id: 'a-1', status: 'DISCONNECTED', disconnectedOn: '2026-10-18' }),
+      bankAccount({ id: 'a-2', accountNumber: '19-2000145399/0800', status: 'DISCONNECTED', disconnectedOn: '2025-12-31', donationCount: 0 }),
+    ]);
+
+    expect(texts('.account-status')).toEqual(['Odpojený', 'Odpojený']);
+    expect(element('.account')?.classList).toContain('account--disconnected');
+    expect(texts('.account:nth-child(1) .account-meta > li')).toEqual([
+      'ověřeno 12. 03. 2026',
+      'odpojen od 19. 10. 2026',
+      '14 darů bez VS',
+      '7 400 Kč',
+    ]);
+    expect(texts('.account:nth-child(2) .account-meta > li')).toEqual(['ověřeno 12. 03. 2026', 'odpojen od 01. 01. 2026']);
+    expect(element('.account-hint')).toBeNull();
+    expect(texts('.account-action')).toEqual(['Připojit znovu', 'Připojit znovu']);
+  });
+
+  it('when the donor has no known account, then the card explains how one becomes known', async () => {
+    await respond([]);
+
+    expect(element('.accounts-list')).toBeNull();
+    expect(text('.accounts-empty')).toBe(
+      'Zatím jsme od vás nedostali platbu s vaším variabilním symbolem, podle které bychom poznali váš účet.',
+    );
+  });
+
+  it('when the accounts cannot be loaded, then an alert offers to try again and a retry shows them', async () => {
+    http.expectOne(LIST_URL).flush(null, { status: 500, statusText: 'Server Error' });
+    await settle();
+
+    expect(element('.accounts-load-error')?.getAttribute('role')).toBe('alert');
+    expect(text('.accounts-load-error')).toContain('Bankovní účty se nepodařilo načíst.');
+
+    await click('.accounts-retry');
+    expect(text('.accounts-loading')).toBe('Načítáme vaše účty…');
+    await respond([bankAccount()]);
+
+    expect(element('.accounts-load-error')).toBeNull();
+    expect(text('.account-number')).toBe('2900233333/2010');
+  });
+
+  it('when the session has ended while loading, then the overview is told to send the donor to sign in', async () => {
+    http.expectOne(LIST_URL).flush(problem('auth/unauthenticated', 'Nejste přihlášeni'), { status: 401, statusText: 'Unauthorized' });
+    await settle();
+
+    expect(sessionEnded).toBe(1);
+  });
+
+  it('when the overview asks for a reload, then the accounts are fetched again while the old list stays visible', async () => {
+    await respond([bankAccount({ status: 'AWAITING_PAYMENT', verifiedOn: null })]);
+
+    fixture.componentInstance.reload();
+    await settle();
+
+    expect(element('.accounts-loading')).toBeNull();
+    expect(text('.account-status')).toBe('Čeká na platbu');
+    await respond([bankAccount()]);
+    expect(text('.account-status')).toBe('Ověřený');
+  });
+
+  describe('when the donor presses Odpojit', () => {
+    beforeEach(async () => {
+      await respond([bankAccount()]);
+      await click('.account-action');
+    });
+
+    it('then the row asks to confirm with what disconnecting means, and nothing is sent yet', () => {
+      expect(text('.account-confirm-text')).toBe(
+        'Platby bez variabilního symbolu z tohoto účtu vám už nebudeme přiřazovat. Dosavadní dary zůstanou; pokud některý z nich není váš, napište nám.',
+      );
+      expect(element<HTMLAnchorElement>('.account-confirm-text a')?.getAttribute('href')).toBe('mailto:info@nfnn.cz');
+      expect(text('.account-confirm-yes')).toBe('Odpojit');
+      expect(text('.account-confirm-no')).toBe('Zrušit');
+      expect(element('.account-action')).toBeNull();
+      expect(document.activeElement).toBe(element('.account-confirm-no'));
+      http.expectNone(`${LIST_URL}/${ACCOUNT_ID}/disconnect`);
+    });
+
+    it('and cancels, then nothing is sent and the focus goes back to Odpojit', async () => {
+      await click('.account-confirm-no');
+
+      http.expectNone(`${LIST_URL}/${ACCOUNT_ID}/disconnect`);
+      expect(element('.account-confirm')).toBeNull();
+      expect(document.activeElement).toBe(element('.account-action'));
+    });
+
+    it('and confirms, then the account is disconnected, the list loads again and a status line says so', async () => {
+      await click('.account-confirm-yes');
+
+      const request = http.expectOne({ method: 'POST', url: `${LIST_URL}/${ACCOUNT_ID}/disconnect` });
+      expect(request.request.body).toBeNull();
+      request.flush(null, { status: 204, statusText: 'No Content' });
+      await settle();
+      await respond([bankAccount({ status: 'DISCONNECTED', disconnectedOn: '2026-10-18' })]);
+
+      expect(text('.account-status')).toBe('Odpojený');
+      expect(text('.accounts-status')).toBe('Účet jsme odpojili.');
+      expect(document.activeElement).toBe(element('h2'));
+    });
+
+    it('and the account was disconnected meanwhile, then the problem shows and the list loads again', async () => {
+      await click('.account-confirm-yes');
+
+      http
+        .expectOne(`${LIST_URL}/${ACCOUNT_ID}/disconnect`)
+        .flush(
+          { ...problem('donations/bank-account-already-disconnected', 'Účet je už odpojený'), status: 409 },
+          { status: 409, statusText: 'Conflict' },
+        );
+      await settle();
+      await respond([bankAccount({ status: 'DISCONNECTED', disconnectedOn: '2026-10-18' })]);
+
+      expect(element('.accounts-error')?.getAttribute('role')).toBe('alert');
+      expect(text('.accounts-error')).toBe('Účet je už odpojený.');
+      expect(text('.account-status')).toBe('Odpojený');
+    });
+
+    it('and the request fails without a problem, then a generic line asks to try again', async () => {
+      await click('.account-confirm-yes');
+
+      http.expectOne(`${LIST_URL}/${ACCOUNT_ID}/disconnect`).flush(null, { status: 500, statusText: 'Server Error' });
+      await settle();
+
+      expect(text('.accounts-error')).toBe('Účet se nepodařilo změnit. Zkuste to prosím znovu.');
+      expect(element('.account-confirm')).not.toBeNull();
+      expect((element('.account-confirm-yes') as HTMLButtonElement).disabled).toBe(false);
+    });
+
+    it('and the session has ended, then the overview is told to send the donor to sign in', async () => {
+      await click('.account-confirm-yes');
+
+      http
+        .expectOne(`${LIST_URL}/${ACCOUNT_ID}/disconnect`)
+        .flush(problem('auth/unauthenticated', 'Nejste přihlášeni'), { status: 401, statusText: 'Unauthorized' });
+      await settle();
+
+      expect(sessionEnded).toBe(1);
+    });
+  });
+
+  it('when the donor reconnects a disconnected account, then it is posted, the list loads again and the new row waits for a payment', async () => {
+    await respond([bankAccount({ status: 'DISCONNECTED', disconnectedOn: '2026-10-18' })]);
+
+    await click('.account-action');
+    const request = http.expectOne({ method: 'POST', url: `${LIST_URL}/${ACCOUNT_ID}/reconnect` });
+    expect(request.request.body).toBeNull();
+    expect((element('.account-action') as HTMLButtonElement).disabled).toBe(true);
+    request.flush(null, { status: 204, statusText: 'No Content' });
+    await settle();
+    await respond([
+      bankAccount({ id: 'a-new', status: 'AWAITING_PAYMENT', verifiedOn: null, donationCount: 0 }),
+      bankAccount({ status: 'DISCONNECTED', disconnectedOn: '2026-10-18' }),
+    ]);
+
+    expect(texts('.account-status')).toEqual(['Čeká na platbu', 'Odpojený']);
+    expect(text('.accounts-status')).toBe('Účet čeká na vaši platbu 1 Kč.');
+  });
+
+  it('when reconnecting is refused because the account is connected already, then the problem shows and the list loads again', async () => {
+    await respond([bankAccount({ status: 'DISCONNECTED', disconnectedOn: '2026-10-18' })]);
+
+    await click('.account-action');
+    http
+      .expectOne(`${LIST_URL}/${ACCOUNT_ID}/reconnect`)
+      .flush(
+        { ...problem('donations/bank-account-already-connected', 'Účet je už připojený', 'Čeká na vaši platbu.'), status: 409 },
+        { status: 409, statusText: 'Conflict' },
+      );
+    await settle();
+    await respond([bankAccount({ status: 'AWAITING_PAYMENT', verifiedOn: null })]);
+
+    expect(text('.accounts-error')).toBe('Účet je už připojený. Čeká na vaši platbu.');
+  });
+
+  describe('when the donor presses Přidat účet', () => {
+    beforeEach(async () => {
+      await respond([bankAccount()]);
+      (element('.accounts-add') as HTMLButtonElement).focus();
+      await click('.accounts-add');
+    });
+
+    it('then a dialog explains to send 1 Kč with the variable symbol and asks for that QR payment', async () => {
+      const dialog = element<HTMLDialogElement>('dialog');
+      expect(dialog?.open).toBe(true);
+      expect(dialog?.getAttribute('aria-labelledby')).toBe('add-account-title');
+      expect(text('#add-account-title')).toBe('Přidat účet');
+      expect(text('.add-account-text')).toBe(
+        'Pošlete z účtu, který chcete přidat, 1 Kč (nebo jakýkoli dar) s vaším variabilním symbolem 9876543210. ' +
+          'Jakmile platba dorazí, účet se tu objeví a přiřadíme k vám i dřívější dary z něj, které přišly bez symbolu. ' +
+          'Okamžitá platba dorazí do pár minut, běžný převod obvykle do dalšího pracovního dne. Funguje jen český účet.',
+      );
+      expect(texts('.add-account-text strong')).toEqual(['1 Kč', '9876543210']);
+      expect(text('.add-account-qr')).toBe('Připravujeme QR kód…');
+
+      const request = http.expectOne({ method: 'GET', url: '/api/donations/payment-qr?amount=1&variableSymbol=9876543210' });
+      request.flush(paymentQr());
+      await settle();
+
+      expect(element<HTMLImageElement>('.add-account-qr img')?.getAttribute('src')).toBe('data:image/png;base64,iVBORw0KGgo=');
+      expect(texts('.add-account-bank dd .bank-value')).toEqual(['5544332217/2010', '1 Kč', '9876543210']);
+      expect(texts('.add-account-bank app-copy-button button')).toEqual(['Kopírovat číslo účtu', 'Kopírovat variabilní symbol']);
+    });
+
+    it('and the QR payment cannot be prepared, then the dialog says so and a retry asks again', async () => {
+      http.expectOne((request) => request.url === '/api/donations/payment-qr').flush(null, { status: 500, statusText: 'Server Error' });
+      await settle();
+
+      expect(text('.add-account-qr-error')).toContain('QR platbu se nepodařilo připravit.');
+
+      await click('.add-account-qr-retry');
+      http.expectOne((request) => request.url === '/api/donations/payment-qr').flush(paymentQr());
+      await settle();
+
+      expect(element('.add-account-qr img')).not.toBeNull();
+    });
+
+    it('and closes the dialog, then it disappears and the focus returns to Přidat účet', async () => {
+      http.expectOne((request) => request.url === '/api/donations/payment-qr').flush(paymentQr());
+      await settle();
+
+      await click('.add-account-close');
+
+      expect(element('dialog')).toBeNull();
+      expect(document.activeElement).toBe(element('.accounts-add'));
+    });
+
+    it('and presses Esc, then the dialog closes', async () => {
+      http.expectOne((request) => request.url === '/api/donations/payment-qr').flush(paymentQr());
+      await settle();
+
+      element<HTMLDialogElement>('dialog')?.close();
+      await settle();
+
+      expect(element('dialog')).toBeNull();
+    });
+  });
+});

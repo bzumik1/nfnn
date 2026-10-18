@@ -1,0 +1,176 @@
+<section class="accounts-card" aria-labelledby="bank-accounts-title">
+  <div class="accounts-head">
+    <h2 #title id="bank-accounts-title" class="accounts-title" tabindex="-1" i18n="@@donor.bankAccounts.title">Moje bankovní účty</h2>
+    <button
+      type="button"
+      class="accounts-add"
+      [disabled]="!variableSymbol()"
+      (click)="openAdd()"
+      i18n="@@donor.bankAccounts.add"
+    >Přidat účet</button>
+  </div>
+
+  @switch (state()) {
+    @case ('loading') {
+      <p class="accounts-loading" role="status" i18n="@@donor.bankAccounts.loading">Načítáme vaše účty…</p>
+    }
+    @case ('error') {
+      <div class="accounts-load-error" role="alert">
+        <p i18n="@@donor.bankAccounts.error.load">Bankovní účty se nepodařilo načíst.</p>
+        <button type="button" class="accounts-retry" (click)="retry()" i18n="@@donor.bankAccounts.error.retry">Zkusit znovu</button>
+      </div>
+    }
+    @case ('ready') {
+      @if (accounts().length > 0) {
+        <ul class="accounts-list">
+          @for (account of accounts(); track account.id) {
+            <li class="account" [class.account--disconnected]="account.status === 'DISCONNECTED'">
+              <div class="account-main">
+                <div class="account-line">
+                  <span class="account-number">{{ account.accountNumber }}</span>
+                  <span class="account-status" [class]="labelModifier(account)">{{ label(account) }}</span>
+                </div>
+                @if (account.verifiedOn || account.disconnectedOn || account.donationCount > 0) {
+                  <div class="account-meta-wrap">
+                    <ul class="account-meta">
+                      @if (account.verifiedOn; as verifiedOn) {
+                        <li i18n="@@donor.bankAccounts.verifiedOn">ověřeno {{ formatDate(verifiedOn) }}</li>
+                      }
+                      @if (account.status === 'DISCONNECTED' && account.disconnectedOn) {
+                        <li i18n="@@donor.bankAccounts.disconnectedFrom">odpojen od {{ firstDayOff(account.disconnectedOn) }}</li>
+                      }
+                      @if (account.donationCount > 0) {
+                        <li i18n="@@donor.bankAccounts.donationCount">{account.donationCount, plural, =1 {{{ account.donationCount }} dar bez VS} =2 {{{ account.donationCount }} dary bez VS} =3 {{{ account.donationCount }} dary bez VS} =4 {{{ account.donationCount }} dary bez VS} other {{{ account.donationCount }} darů bez VS}}</li>
+                        <li class="account-total">{{ crowns(account.totalAmountMinor) }} Kč</li>
+                      }
+                    </ul>
+                  </div>
+                }
+                @if (hint(account); as hint) {
+                  <p class="account-hint">{{ hint }}</p>
+                }
+              </div>
+
+              @if (confirming() !== account.id) {
+                @if (account.status === 'DISCONNECTED') {
+                  <button
+                    type="button"
+                    class="account-action"
+                    [id]="actionButtonId(account)"
+                    [disabled]="busy() === account.id"
+                    [attr.aria-busy]="busy() === account.id"
+                    (click)="reconnect(account)"
+                    i18n="@@donor.bankAccounts.reconnect"
+                  >Připojit znovu</button>
+                } @else {
+                  <button
+                    type="button"
+                    class="account-action"
+                    [id]="actionButtonId(account)"
+                    (click)="askToDisconnect(account)"
+                    i18n="@@donor.bankAccounts.disconnect"
+                  >Odpojit</button>
+                }
+              } @else {
+                <div class="account-confirm" role="group" [attr.aria-labelledby]="actionButtonId(account) + '-confirm'">
+                  <p [id]="actionButtonId(account) + '-confirm'" class="account-confirm-text" i18n="@@donor.bankAccounts.confirm.text">
+                    Platby bez variabilního symbolu z tohoto účtu vám už nebudeme přiřazovat. Dosavadní dary zůstanou; pokud některý
+                    z nich není váš, <a href="mailto:info@nfnn.cz">napište nám</a>.
+                  </p>
+                  <div class="account-confirm-actions">
+                    <button
+                      type="button"
+                      class="account-confirm-yes"
+                      [disabled]="busy() === account.id"
+                      [attr.aria-busy]="busy() === account.id"
+                      (click)="disconnect(account)"
+                      i18n="@@donor.bankAccounts.confirm.yes"
+                    >Odpojit</button>
+                    <button
+                      #confirmCancel
+                      type="button"
+                      class="account-confirm-no"
+                      (click)="cancelDisconnect(account)"
+                      i18n="@@donor.bankAccounts.confirm.no"
+                    >Zrušit</button>
+                  </div>
+                </div>
+              }
+            </li>
+          }
+        </ul>
+      } @else {
+        <p class="accounts-empty" i18n="@@donor.bankAccounts.empty">
+          Zatím jsme od vás nedostali platbu s vaším variabilním symbolem, podle které bychom poznali váš účet.
+        </p>
+      }
+    }
+  }
+
+  @if (actionError()) {
+    <p class="accounts-error" role="alert">{{ actionError() }}</p>
+  }
+  <p class="accounts-status" role="status">{{ actionDone() }}</p>
+</section>
+
+@if (adding()) {
+  <app-dialog labelledBy="add-account-title" [wide]="true" (dismissed)="closeAdd()">
+    <h2 id="add-account-title" class="add-account-title" i18n="@@donor.bankAccounts.addDialog.title">Přidat účet</h2>
+    <p class="add-account-text" i18n="@@donor.bankAccounts.addDialog.text">
+      Pošlete z účtu, který chcete přidat, <strong>1 Kč</strong> (nebo jakýkoli dar) s vaším variabilním symbolem
+      <strong>{{ variableSymbol() }}</strong>. Jakmile platba dorazí, účet se tu objeví a přiřadíme k vám i dřívější dary z něj,
+      které přišly bez symbolu. Okamžitá platba dorazí do pár minut, běžný převod obvykle do dalšího pracovního dne. Funguje jen
+      český účet.
+    </p>
+
+    <div class="add-account-payment">
+      <div class="add-account-qr" [attr.aria-busy]="qr().kind === 'loading'">
+        @if (qrResponse(); as response) {
+          <img
+            [src]="'data:image/png;base64,' + response.qrPngBase64"
+            width="160"
+            height="160"
+            alt="QR platba 1 Kč s vaším variabilním symbolem"
+            i18n-alt="@@donor.bankAccounts.addDialog.qrAlt"
+          />
+        } @else if (qr().kind === 'loading') {
+          <span class="add-account-qr-placeholder" i18n="@@home.donate.qr.loading">Připravujeme QR kód…</span>
+        } @else {
+          <div class="add-account-qr-error" role="alert">
+            <p i18n="@@home.donate.qr.error">QR platbu se nepodařilo připravit. Zkuste to prosím znovu.</p>
+            <button type="button" class="add-account-qr-retry" (click)="loadQr()" i18n="@@home.donate.qr.retry">Zkusit znovu</button>
+          </div>
+        }
+      </div>
+
+      @if (qrResponse(); as response) {
+        <dl class="add-account-bank">
+          <div class="add-account-row">
+            <dt i18n="@@home.donate.bank.account">Číslo účtu</dt>
+            <dd>
+              <span class="bank-value">{{ response.bankAccount.accountNumber }}</span>
+              <app-copy-button [value]="response.bankAccount.accountNumber" what="číslo účtu" i18n-what="@@home.donate.bank.copyAccount" />
+            </dd>
+          </div>
+          <div class="add-account-row">
+            <dt i18n="@@home.donate.bank.amount">Částka</dt>
+            <dd>
+              <span class="bank-value">{{ verificationAmount }}&nbsp;<ng-container i18n="@@home.donate.amount.currency">Kč</ng-container></span>
+            </dd>
+          </div>
+          @if (variableSymbol(); as symbol) {
+            <div class="add-account-row">
+              <dt i18n="@@home.donate.bank.vs">Variabilní symbol</dt>
+              <dd>
+                <span class="bank-value">{{ symbol }}</span>
+                <app-copy-button [value]="symbol" what="variabilní symbol" i18n-what="@@home.donate.bank.copyVs" />
+              </dd>
+            </div>
+          }
+        </dl>
+      }
+    </div>
+
+    <button type="button" class="add-account-close" (click)="closeAdd()" i18n="@@donor.bankAccounts.addDialog.close">Zavřít</button>
+  </app-dialog>
+}
