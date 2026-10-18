@@ -99,6 +99,27 @@ jobs:
             exit 1
           fi
 
+      - name: Env template values survive the YAML copy ZimaOS makes
+        run: |
+          failed=0
+          while IFS= read -r line; do
+            file=${line%%:*}
+            entry=${line#*:}
+            entry=${entry#\#}
+            key=${entry%%=*}
+            value=${entry#*=}
+            tag=$(printf 'v: %s\n' "$value" | yq '.v | tag' 2>/dev/null) || tag=invalid
+            case "$tag" in
+              '!!str') continue ;;
+              '!!int') [[ $value =~ ^(0|[1-9][0-9]*)$ ]] && continue ;;
+              '!!bool') [[ $value =~ ^(true|false)$ ]] && continue ;;
+              '!!timestamp') [ "$key" = FIO_HISTORY_FROM ] && continue ;;
+            esac
+            echo "::error file=$file::$key=$value is read by YAML as $tag, so ZimaOS stores it in another form; make the backend accept that form and allow it here"
+            failed=1
+          done < <(grep -HE '^#?[A-Z_]+=.+' deploy/*.env.example)
+          exit $failed
+
       - name: Prepare compose file and env files from the templates
         run: |
           env_dir="$RUNNER_TEMP/nfnn/env"
