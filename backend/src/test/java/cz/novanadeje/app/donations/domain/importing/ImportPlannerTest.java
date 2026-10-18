@@ -10,6 +10,7 @@ import java.util.Optional;
 import static cz.novanadeje.app.donations.domain.importing.ImportCoverageTest.coverage;
 import static cz.novanadeje.app.donations.domain.importing.ImportPeriodTest.period;
 import static cz.novanadeje.app.donations.domain.importing.ImportTrigger.HOURLY;
+import static cz.novanadeje.app.donations.domain.importing.ImportTrigger.ON_DEMAND;
 import static cz.novanadeje.app.donations.domain.importing.ImportTrigger.STARTUP;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -36,6 +37,20 @@ class ImportPlannerTest {
     void should_ignore_history_from_when_hourly_given_empty_coverage() {
         assertThat(ImportPlanner.plan(ImportCoverage.none(), TODAY, DEEP, HOURLY))
                 .isEqualTo(new ImportPlan(period("2026-07-20", "2026-10-17"), false));
+    }
+
+    @Test
+    @DisplayName("Given no coverage and a history start, when an on-demand run plans, then it asks for the servable window like an hourly run")
+    void should_plan_servable_window_when_on_demand_given_empty_coverage_and_history_from() {
+        assertThat(ImportPlanner.plan(ImportCoverage.none(), TODAY, DEEP, ON_DEMAND))
+                .isEqualTo(new ImportPlan(period("2026-07-20", "2026-10-17"), false));
+    }
+
+    @Test
+    @DisplayName("Given coverage up to yesterday, when an on-demand run plans, then it asks from the overlap before the coverage end")
+    void should_plan_from_overlap_when_on_demand_given_covered_state() {
+        assertThat(ImportPlanner.plan(coverage("2026-07-20", "2026-10-16"), TODAY, DEFAULTS, ON_DEMAND))
+                .isEqualTo(new ImportPlan(period("2026-10-13", "2026-10-17"), false));
     }
 
     @Test

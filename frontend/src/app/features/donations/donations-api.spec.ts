@@ -1,7 +1,7 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-import { DonationListResponse, DonationsApi, DonationSummaryResponse, DownloadedFile } from './donations-api';
+import { BankCheckResponse, DonationListResponse, DonationsApi, DonationSummaryResponse, DownloadedFile } from './donations-api';
 import { twoYearDonations, twoYearSummary } from './testing/donation-fixtures';
 
 describe('Given the donations API', () => {
@@ -44,6 +44,29 @@ describe('Given the donations API', () => {
   function pdf(): Blob {
     return new Blob(['%PDF-1.4\n%%EOF'], { type: 'application/pdf' });
   }
+
+  it('when a bank check is requested, then it posts an empty body and reads when the bank data was last updated', () => {
+    let received: BankCheckResponse | undefined;
+    api.requestBankCheck().subscribe((response) => (received = response));
+
+    const request = http.expectOne('/api/donations/me/bank-check');
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toBeNull();
+    request.flush({ bankDataAsOf: '2026-10-18T08:05:30Z', checking: true }, { status: 202, statusText: 'Accepted' });
+
+    expect(received).toEqual({ bankDataAsOf: '2026-10-18T08:05:30Z', checking: true });
+  });
+
+  it('when the bank check is read, then it asks whether the bank is still being checked', () => {
+    let received: BankCheckResponse | undefined;
+    api.bankCheck().subscribe((response) => (received = response));
+
+    const request = http.expectOne('/api/donations/me/bank-check');
+    expect(request.request.method).toBe('GET');
+    request.flush({ bankDataAsOf: null, checking: false });
+
+    expect(received).toEqual({ bankDataAsOf: null, checking: false });
+  });
 
   it("when the receipt of one donation is requested, then it downloads that donation's PDF under the file name from the server", async () => {
     let received: DownloadedFile | undefined;

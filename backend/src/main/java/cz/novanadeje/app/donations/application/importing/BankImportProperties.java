@@ -3,16 +3,20 @@ package cz.novanadeje.app.donations.application.importing;
 import cz.novanadeje.app.donations.domain.importing.ImportSettings;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.Period;
 import java.time.format.DateTimeParseException;
 import java.util.Optional;
 
 @ConfigurationProperties("app.donations.import")
-public record BankImportProperties(Period overlap, Period historyWindow, String historyFrom) {
+public record BankImportProperties(Period overlap, Period historyWindow, String historyFrom, Duration onDemandCooldown) {
 
     public BankImportProperties {
         historyStart(historyFrom);
+        if (onDemandCooldown == null || onDemandCooldown.isNegative()) {
+            throw new IllegalArgumentException("app.donations.import.on-demand-cooldown must be zero or positive, but is " + onDemandCooldown);
+        }
     }
 
     public ImportSettings toSettings() {

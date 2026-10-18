@@ -2,6 +2,7 @@ package cz.novanadeje.app.donations.infrastructure.fio;
 
 import com.sun.net.httpserver.HttpServer;
 import cz.novanadeje.app.donations.application.importing.BankImportProperties;
+import cz.novanadeje.app.donations.application.importing.BankImportRequests;
 import cz.novanadeje.app.donations.application.importing.ImportBankPaymentsService;
 import io.github.bzumik1.fio.AccountStatement;
 import io.github.bzumik1.fio.FioClient;
@@ -58,7 +59,7 @@ class FioImportConfigurationTest {
             """;
 
     private final ApplicationContextRunner contexts = new ApplicationContextRunner()
-            .withUserConfiguration(FioImportConfiguration.class, FioImportScheduler.class, Support.class)
+            .withUserConfiguration(FioImportConfiguration.class, FioImportScheduler.class, DisabledBankImportRequests.class, Support.class)
             .withPropertyValues(
                     "app.donations.fio.base-uri=https://fioapi.fio.cz/v1/rest",
                     "app.donations.fio.interval=PT1H",
@@ -66,7 +67,8 @@ class FioImportConfigurationTest {
                     "app.donations.fio.request-timeout=PT2M",
                     "app.donations.import.overlap=P3D",
                     "app.donations.import.history-window=P89D",
-                    "app.donations.import.history-from=");
+                    "app.donations.import.history-from=",
+                    "app.donations.import.on-demand-cooldown=PT30S");
 
     @Test
     @DisplayName("Given an empty token, when the context starts, then the Fio client is the disabled one and no import scheduler is created")
@@ -75,6 +77,7 @@ class FioImportConfigurationTest {
             assertThat(context).hasSingleBean(FioClient.class);
             assertThat(context.getBean(FioClient.class)).isInstanceOf(DisabledFioClient.class);
             assertThat(context).doesNotHaveBean(FioImportScheduler.class);
+            assertThat(context.getBean(BankImportRequests.class)).isInstanceOf(DisabledBankImportRequests.class);
         });
     }
 
@@ -104,6 +107,7 @@ class FioImportConfigurationTest {
             assertThat(client).isNotInstanceOf(DisabledFioClient.class);
             assertThat(client.getClass().getSimpleName()).isEqualTo("HttpFioClient");
             assertThat(context).hasSingleBean(FioImportScheduler.class);
+            assertThat(context.getBean(BankImportRequests.class)).isInstanceOf(FioImportScheduler.class);
         });
     }
 

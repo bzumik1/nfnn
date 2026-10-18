@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donations.domain.importing;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Optional;
 
@@ -49,6 +50,10 @@ public final class BankImportState {
         lastFailureMessage = cut(message);
         lastAttemptedAt = require(at, "Attempt time");
         updatedAt = at;
+    }
+
+    public boolean attemptedWithin(Duration window, Instant now) {
+        return lastAttemptedAt != null && lastAttemptedAt.plus(window).isAfter(now);
     }
 
     public ImportCoverage coverage() {

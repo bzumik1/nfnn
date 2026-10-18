@@ -2,6 +2,7 @@ package cz.novanadeje.app.donations.domain.importing;
 
 import org.junit.jupiter.api.Test;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Optional;
 
@@ -12,6 +13,7 @@ class BankImportStateTest {
 
     private static final Instant CREATED = Instant.parse("2026-10-17T10:00:00Z");
     private static final Instant LATER = Instant.parse("2026-10-17T11:00:00Z");
+    private static final Duration COOLDOWN = Duration.ofSeconds(30);
 
     @Test
     void should_have_no_coverage_and_no_attempt_when_created_given_initial_state() {
@@ -85,5 +87,34 @@ class BankImportStateTest {
         assertThat(state.lastFailureKind()).contains(ImportFailureKind.RATE_LIMITED);
         assertThat(state.lastFailureMessage()).contains("409");
         assertThat(state.updatedAt()).isEqualTo(LATER);
+    }
+
+    @Test
+    void should_not_count_as_recent_when_asked_given_no_attempt() {
+        assertThat(BankImportState.initial(CREATED).attemptedWithin(COOLDOWN, CREATED)).isFalse();
+    }
+
+    @Test
+    void should_count_as_recent_when_asked_before_the_cooldown_ends_given_successful_attempt() {
+        BankImportState state = BankImportState.initial(CREATED);
+        state.succeeded(coverage("2026-07-20", "2026-10-17"), LATER);
+
+        assertThat(state.attemptedWithin(COOLDOWN, LATER.plusSeconds(29))).isTrue();
+    }
+
+    @Test
+    void should_count_as_recent_when_asked_before_the_cooldown_ends_given_failed_attempt() {
+        BankImportState state = BankImportState.initial(CREATED);
+        state.failed(ImportFailureKind.TRANSPORT, "timed out", LATER);
+
+        assertThat(state.attemptedWithin(COOLDOWN, LATER)).isTrue();
+    }
+
+    @Test
+    void should_not_count_as_recent_when_asked_once_the_cooldown_ended_given_attempt() {
+        BankImportState state = BankImportState.initial(CREATED);
+        state.succeeded(coverage("2026-07-20", "2026-10-17"), LATER);
+
+        assertThat(state.attemptedWithin(COOLDOWN, LATER.plusSeconds(30))).isFalse();
     }
 }

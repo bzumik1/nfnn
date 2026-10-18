@@ -11,7 +11,7 @@ public final class ImportPlanner {
     public static ImportPlan plan(ImportCoverage coverage, LocalDate today, ImportSettings settings, ImportTrigger trigger) {
         LocalDate servableFrom = today.minus(settings.historyWindow());
         return switch (trigger) {
-            case HOURLY -> hourly(coverage, today, settings, servableFrom);
+            case HOURLY, ON_DEMAND -> hourly(coverage, today, settings, servableFrom);
             case STARTUP -> startup(coverage, today, settings, servableFrom);
         };
     }

@@ -1,5 +1,5 @@
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
-import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { HttpTestingController, provideHttpClientTesting, TestRequest } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { authInterceptor } from '../../../core/auth/auth-interceptor';
@@ -17,6 +17,9 @@ import {
 import { DonorDashboard } from './dashboard';
 
 const OBJECT_URL = 'blob:http://localhost/receipt';
+const BANK_CHECK_URL = '/api/donations/me/bank-check';
+const EARLIER = '2026-10-18T08:05:30Z';
+const LATER = '2026-10-18T08:07:10Z';
 
 describe('Given a signed-in donor on the dashboard', () => {
   let fixture: ComponentFixture<DonorDashboard>;
@@ -24,6 +27,7 @@ describe('Given a signed-in donor on the dashboard', () => {
   let store: AuthStore;
   let savedFiles: { fileName: string; href: string }[];
   let createObjectURL: ReturnType<typeof vi.fn>;
+  let bankCheck: TestRequest;
 
   beforeEach(async () => {
     localStorage.clear();
@@ -44,9 +48,11 @@ describe('Given a signed-in donor on the dashboard', () => {
     http.expectOne('/api/donors/auth/login').flush(authResponse('token-1', sampleDonor({ variableSymbol: '9876543210' })));
     fixture = TestBed.createComponent(DonorDashboard);
     fixture.detectChanges();
+    bankCheck = http.expectOne({ method: 'POST', url: BANK_CHECK_URL });
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     http.verify();
     vi.restoreAllMocks();
     Reflect.deleteProperty(URL, 'createObjectURL');
@@ -126,6 +132,87 @@ describe('Given a signed-in donor on the dashboard', () => {
 
   const yearlyUrl = (year: number): string => `/api/donations/me/receipts/yearly?year=${year}`;
   const secondRowButton = '.payments-card tbody tr:nth-child(2) .download-btn';
+
+  it('when the page opens, then it asks the bank for new payments while the donations load', async () => {
+    expect(bankCheck.request.method).toBe('POST');
+    expect(bankCheck.request.headers.get('Authorization')).toBe('Bearer token-1');
+
+    await respond(twoYearSummary(), twoYearDonations());
+  });
+
+  it('when the bank was checked recently and nothing is running, then the time of the bank data shows and the donations are not loaded again', async () => {
+    await respond(twoYearSummary(), twoYearDonations());
+
+    bankCheck.flush({ bankDataAsOf: EARLIER, checking: false }, { status: 202, statusText: 'Accepted' });
+    await settle();
+
+    expect(text('.bank-check-status')).toBe('Údaje z banky k 18. 10. 2026 10:05');
+    expect(button('.bank-check-btn').disabled).toBe(false);
+    http.expectNone('/api/donations/me/summary');
+  });
+
+  it('when the bank is being checked, then the dashboard says so, waits for the check and loads the donations again once new bank data arrived', async () => {
+    vi.useFakeTimers();
+    await respond(emptySummary(), emptyDonations());
+
+    bankCheck.flush({ bankDataAsOf: EARLIER, checking: true }, { status: 202, statusText: 'Accepted' });
+    await settle();
+
+    expect(text('.bank-check-status')).toBe('Kontrolujeme nové platby v bance…');
+    expect(button('.bank-check-btn').disabled).toBe(true);
+
+    await vi.advanceTimersByTimeAsync(2000);
+    http.expectOne({ method: 'GET', url: BANK_CHECK_URL }).flush({ bankDataAsOf: EARLIER, checking: true });
+    await vi.advanceTimersByTimeAsync(2000);
+    http.expectOne({ method: 'GET', url: BANK_CHECK_URL }).flush({ bankDataAsOf: LATER, checking: false });
+    await respond(twoYearSummary(), twoYearDonations());
+
+    expect(text('.bank-check-status')).toBe('Údaje z banky k 18. 10. 2026 10:07');
+    expect(button('.bank-check-btn').disabled).toBe(false);
+    expect(texts('.payments-card tbody tr')).toHaveLength(twoYearDonations().items.length);
+  });
+
+  it('when the check ends without new bank data, then the donations are not loaded again', async () => {
+    vi.useFakeTimers();
+    await respond(twoYearSummary(), twoYearDonations());
+
+    bankCheck.flush({ bankDataAsOf: EARLIER, checking: true }, { status: 202, statusText: 'Accepted' });
+    await vi.advanceTimersByTimeAsync(2000);
+    http.expectOne({ method: 'GET', url: BANK_CHECK_URL }).flush({ bankDataAsOf: EARLIER, checking: false });
+    await settle();
+
+    http.expectNone('/api/donations/me/summary');
+    expect(text('.bank-check-status')).toBe('Údaje z banky k 18. 10. 2026 10:05');
+  });
+
+  it('when the donor presses Obnovit, then the bank is asked again and the donations load again even without new bank data', async () => {
+    await respond(twoYearSummary(), twoYearDonations());
+    bankCheck.flush({ bankDataAsOf: EARLIER, checking: false }, { status: 202, statusText: 'Accepted' });
+    await settle();
+
+    await click('.bank-check-btn');
+    http.expectOne({ method: 'POST', url: BANK_CHECK_URL }).flush({ bankDataAsOf: EARLIER, checking: false });
+
+    await respond(twoYearSummary(), twoYearDonations());
+    expect(text('.bank-check-status')).toBe('Údaje z banky k 18. 10. 2026 10:05');
+  });
+
+  it('when the bank check fails, then the dashboard shows no bank time and the donor can try again', async () => {
+    await respond(twoYearSummary(), twoYearDonations());
+
+    bankCheck.flush(null, { status: 500, statusText: 'Server Error' });
+    await settle();
+
+    expect(element('.bank-check-status')).toBeNull();
+    expect(button('.bank-check-btn').disabled).toBe(false);
+  });
+
+  it('when the payments are shown, then a note says how long a payment takes to appear and that it needs the variable symbol', async () => {
+    await respond(twoYearSummary(), twoYearDonations());
+
+    expect(text('.bank-hint')).toContain('Okamžitá platba se tu obvykle objeví do minuty');
+    expect(text('.bank-hint')).toContain('váš variabilní symbol');
+  });
 
   it('when the page opens, then it greets the donor by name and shows the variable symbol', async () => {
     await respond(twoYearSummary(), twoYearDonations());

@@ -1,6 +1,7 @@
 package cz.novanadeje.app.donations.infrastructure.fio;
 
 import cz.novanadeje.app.donations.application.importing.BankImportProperties;
+import cz.novanadeje.app.donations.application.importing.BankImportRequests;
 import cz.novanadeje.app.donations.application.importing.FollowUp;
 import cz.novanadeje.app.donations.application.importing.ImportBankPaymentsService;
 import cz.novanadeje.app.donations.application.importing.ImportReport;
@@ -13,14 +14,17 @@ import org.springframework.scheduling.TaskScheduler;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
+import java.time.Clock;
+import java.util.Optional;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Supplier;
 
 @Component
 @Conditional(FioTokenPresentCondition.class)
-class FioImportScheduler {
+class FioImportScheduler implements BankImportRequests {
 
     static final int MAX_FOLLOW_UPS_PER_TICK = 3;
 
@@ -33,15 +37,18 @@ class FioImportScheduler {
     private final ImportBankPaymentsService service;
     private final BankImportProperties importProperties;
     private final TaskScheduler taskScheduler;
+    private final Clock clock;
     private final AtomicBoolean running = new AtomicBoolean();
+    private final AtomicBoolean onDemandPending = new AtomicBoolean();
     private final AtomicBoolean started = new AtomicBoolean();
     private final AtomicReference<ScheduledFuture<?>> pendingFollowUp = new AtomicReference<>();
     private final AtomicInteger followUpsSinceTick = new AtomicInteger();
 
-    FioImportScheduler(ImportBankPaymentsService service, BankImportProperties importProperties, TaskScheduler taskScheduler) {
+    FioImportScheduler(ImportBankPaymentsService service, BankImportProperties importProperties, TaskScheduler taskScheduler, Clock clock) {
         this.service = service;
         this.importProperties = importProperties;
         this.taskScheduler = taskScheduler;
+        this.clock = clock;
     }
 
     @Scheduled(initialDelayString = "${app.donations.fio.initial-delay}", fixedDelayString = "${app.donations.fio.interval}")
@@ -51,15 +58,47 @@ class FioImportScheduler {
         run(started.compareAndSet(false, true) ? ImportTrigger.STARTUP : ImportTrigger.HOURLY);
     }
 
+    @Override
+    public void requestImport() {
+        if (!onDemandPending.compareAndSet(false, true)) {
+            return;
+        }
+        try {
+            taskScheduler.schedule(this::runOnDemand, clock.instant());
+        } catch (RuntimeException rejected) {
+            onDemandPending.set(false);
+            throw rejected;
+        }
+    }
+
+    @Override
+    public boolean inProgress() {
+        ScheduledFuture<?> followUp = pendingFollowUp.get();
+        return onDemandPending.get() || running.get() || (followUp != null && !followUp.isDone());
+    }
+
     void run(ImportTrigger trigger) {
+        execute(trigger, () -> Optional.of(service.importIncomingPayments(trigger, importProperties.toSettings())));
+    }
+
+    private void runOnDemand() {
+        try {
+            execute(ImportTrigger.ON_DEMAND, () -> service.importOnDemand(importProperties.toSettings(), importProperties.onDemandCooldown()));
+        } finally {
+            onDemandPending.set(false);
+        }
+    }
+
+    private void execute(ImportTrigger trigger, Supplier<Optional<ImportReport>> importer) {
         if (!running.compareAndSet(false, true)) {
             log.warn("Fio import {} skipped, previous import still running", trigger);
             return;
         }
         try {
-            ImportReport report = service.importIncomingPayments(trigger, importProperties.toSettings());
-            report.failure().ifPresent(kind -> logFailure(report, kind));
-            report.followUp().ifPresent(this::scheduleFollowUp);
+            importer.get().ifPresent(report -> {
+                report.failure().ifPresent(kind -> logFailure(report, kind));
+                report.followUp().ifPresent(this::scheduleFollowUp);
+            });
         } catch (RuntimeException unexpected) {
             log.error("Fio import {} failed unexpectedly", trigger, unexpected);
         } finally {

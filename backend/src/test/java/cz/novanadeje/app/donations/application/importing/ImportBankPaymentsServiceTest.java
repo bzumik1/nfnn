@@ -41,6 +41,7 @@ class ImportBankPaymentsServiceTest {
     private static final Instant NOW = Instant.parse("2026-10-17T10:00:00Z");
     private static final ImportPeriod SERVABLE = new ImportPeriod(LocalDate.of(2026, 7, 20), LocalDate.of(2026, 10, 17));
     private static final ImportPeriod DEEP = new ImportPeriod(LocalDate.of(2025, 1, 1), LocalDate.of(2026, 10, 17));
+    private static final Duration COOLDOWN = Duration.ofSeconds(30);
     private static final ImportSettings DEEP_SETTINGS = ImportSettings.defaults().withHistoryFrom(LocalDate.of(2025, 1, 1));
 
     @Mock
@@ -205,5 +206,39 @@ class ImportBankPaymentsServiceTest {
 
     private static BankStatementUnavailable unavailable(ImportFailureKind kind, Optional<Instant> retryAfter) {
         return new BankStatementUnavailable(kind, retryAfter, "refused", null);
+    }
+
+    @Test
+    @DisplayName("Given the last attempt is younger than the cooldown, when an on-demand import is asked for, then the bank is not asked")
+    void should_skip_the_bank_when_on_demand_import_asked_given_recent_attempt() {
+        BankImportState attempted = BankImportState.initial(NOW);
+        attempted.failed(ImportFailureKind.TRANSPORT, "timed out", NOW.minusSeconds(29));
+        when(states.current()).thenReturn(attempted);
+
+        Optional<ImportReport> report = service.importOnDemand(DEEP_SETTINGS, COOLDOWN);
+
+        assertThat(report).isEmpty();
+        verify(source, never()).fetch(any());
+        verify(recorder, never()).recordFailure(any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("Given the last attempt is as old as the cooldown, when an on-demand import is asked for, then it imports the recent days like an hourly run")
+    void should_import_like_hourly_when_on_demand_import_asked_given_attempt_older_than_cooldown() {
+        BankImportState attempted = BankImportState.initial(NOW);
+        attempted.succeeded(ImportCoverage.of(SERVABLE), NOW.minus(COOLDOWN));
+        ImportPeriod recent = new ImportPeriod(LocalDate.of(2026, 10, 14), LocalDate.of(2026, 10, 17));
+        BankStatement statement = new BankStatement(recent, Optional.of(recent), List.of(), 0);
+        when(states.current()).thenReturn(attempted);
+        when(source.fetch(recent)).thenReturn(statement);
+        when(recorder.record(statement, new ImportPlan(recent, false), NOW)).thenReturn(ImportCounts.none());
+
+        Optional<ImportReport> report = service.importOnDemand(DEEP_SETTINGS, COOLDOWN);
+
+        assertThat(report).hasValueSatisfying(imported -> {
+            assertThat(imported.trigger()).isEqualTo(ImportTrigger.ON_DEMAND);
+            assertThat(imported.requested()).isEqualTo(recent);
+            assertThat(imported.completed()).isTrue();
+        });
     }
 }

@@ -39,6 +39,11 @@ public class CommonStepDefinitions {
         clock.advance(Duration.ofDays(1));
     }
 
+    @When("{int} seconds pass")
+    public void secondsPass(int seconds) {
+        clock.advance(Duration.ofSeconds(seconds));
+    }
+
     @When("{int} minutes pass")
     public void minutesPass(int minutes) {
         clock.advance(Duration.ofMinutes(minutes));

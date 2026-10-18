@@ -120,6 +120,16 @@
               </div>
             }
           </div>
+          @if (variableSymbol()) {
+            <p class="bank-note" i18n="@@home.donate.bank.noteSignedIn">
+              Jakmile banka platbu připíše, dar uvidíte ve svém přehledu dárce.
+            </p>
+          } @else {
+            <p class="bank-note" i18n="@@home.donate.bank.noteAnonymous">
+              Chcete dar vidět ve svém přehledu a stáhnout si potvrzení? Přihlaste se před platbou, QR kód pak ponese váš
+              variabilní symbol.
+            </p>
+          }
         </div>
       }
 

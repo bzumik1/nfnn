@@ -98,6 +98,13 @@ describe('Given the donate section', () => {
     expect(button('500 Kč').getAttribute('aria-pressed')).toBe('true');
   });
 
+  it('when nobody is signed in, then a note says to sign in before paying so the gift shows in the donor overview', async () => {
+    await settle();
+    respond(expectQrRequest());
+
+    expect(text('.bank-note')).toContain('Přihlaste se před platbou');
+  });
+
   it('when it opens, then it offers the amounts from the largest down, with another amount last', async () => {
     await settle();
     respond(expectQrRequest());
@@ -210,6 +217,7 @@ describe('Given the donate section', () => {
       respond(request);
       expect(text('.bank')).toContain('Variabilní symbol');
       expect(text('.bank')).toContain('1234567890');
+      expect(text('.bank-note')).toContain('dar uvidíte ve svém přehledu dárce');
     });
   });
 });
