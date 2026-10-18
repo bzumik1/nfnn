@@ -185,7 +185,7 @@ Feature: Imported payments are paired with donors
 
   Scenario: A payment with a variable symbol padded with zeros is paired with the donor whose symbol it spells
     Given today is 2026-10-17
-    And a person "Jana" is registered
+    And donations is told that a person "Jana" registered with variable symbol "4821937"
     And the bank account has these movements:
       | id   | date       | amount | account    | bankCode | name          | variableSymbol |
       | 1001 | 2026-10-15 | 500.00 | 2900233333 | 2010     | Nováková Jana | 000{Jana}      |

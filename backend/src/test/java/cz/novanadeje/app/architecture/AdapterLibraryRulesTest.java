@@ -20,9 +20,9 @@ class AdapterLibraryRulesTest {
             .should().dependOnClassesThat().resideInAPackage("com.google.zxing..");
 
     @ArchTest
-    static final ArchRule fio_client_library_is_used_only_by_infrastructure_adapters = noClasses()
-            .that().resideOutsideOfPackage("..infrastructure..")
-            .should().dependOnClassesThat().resideInAPackage("cz.novanadeje.fio..");
+    static final ArchRule fio_client_library_is_used_only_by_the_donations_fio_adapter = noClasses()
+            .that().resideOutsideOfPackage("cz.novanadeje.app.donations.infrastructure.fio..")
+            .should().dependOnClassesThat().resideInAPackage("io.github.bzumik1.fio..");
 
     @ArchTest
     static final ArchRule pdf_and_template_libraries_are_used_only_by_infrastructure_adapters = noClasses()

@@ -1,29 +1,31 @@
 package cz.novanadeje.app.donations.infrastructure.fio;
 
-import cz.novanadeje.fio.FioClient;
-import cz.novanadeje.fio.FioStatement;
-
-import java.time.LocalDate;
+import io.github.bzumik1.fio.FioClient;
 
 final class DisabledFioClient implements FioClient {
 
     @Override
-    public FioStatement newTransactions() {
+    public Transactions transactions() {
         throw disabled();
     }
 
     @Override
-    public FioStatement transactionsBetween(LocalDate from, LocalDate to) {
+    public Statements statements() {
         throw disabled();
     }
 
     @Override
-    public void setLastDownloadedId(long transactionId) {
+    public Merchant merchant() {
         throw disabled();
     }
 
     @Override
-    public void setLastDownloadedDate(LocalDate date) {
+    public Bookmark bookmark() {
+        throw disabled();
+    }
+
+    @Override
+    public Payments payments() {
         throw disabled();
     }
 

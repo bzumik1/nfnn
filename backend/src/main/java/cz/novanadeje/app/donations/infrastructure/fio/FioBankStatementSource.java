@@ -10,15 +10,16 @@ import cz.novanadeje.app.donations.domain.importing.ImportFailureKind;
 import cz.novanadeje.app.donations.domain.importing.ImportPeriod;
 import cz.novanadeje.app.shared.domain.Currency;
 import cz.novanadeje.app.shared.domain.Money;
-import cz.novanadeje.fio.FioAccountInfo;
-import cz.novanadeje.fio.FioAuthorizationException;
-import cz.novanadeje.fio.FioClient;
-import cz.novanadeje.fio.FioException;
-import cz.novanadeje.fio.FioHistoryLockedException;
-import cz.novanadeje.fio.FioRateLimitException;
-import cz.novanadeje.fio.FioStatement;
-import cz.novanadeje.fio.FioTransaction;
-import cz.novanadeje.fio.FioTransportException;
+import io.github.bzumik1.fio.AccountInfo;
+import io.github.bzumik1.fio.AccountStatement;
+import io.github.bzumik1.fio.FioAuthorizationException;
+import io.github.bzumik1.fio.FioClient;
+import io.github.bzumik1.fio.FioException;
+import io.github.bzumik1.fio.FioHistoryLockedException;
+import io.github.bzumik1.fio.FioRateLimitException;
+import io.github.bzumik1.fio.FioTransportException;
+import io.github.bzumik1.fio.Transaction;
+import io.github.bzumik1.fio.TransactionColumn;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -26,13 +27,14 @@ import org.springframework.stereotype.Component;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
-import java.util.Locale;
 import java.util.Optional;
 
 @Component
 class FioBankStatementSource implements BankStatementSource {
 
     private static final Logger log = LoggerFactory.getLogger(FioBankStatementSource.class);
+    private static final int COUNTERPARTY_ACCOUNT_COLUMN = 2;
+    private static final int COUNTERPARTY_BANK_CODE_COLUMN = 3;
 
     private final FioClient client;
     private final Clock clock;
@@ -44,10 +46,10 @@ class FioBankStatementSource implements BankStatementSource {
 
     @Override
     public BankStatement fetch(ImportPeriod requested) {
-        FioStatement statement = download(requested);
-        FioAccountInfo info = statement.info();
+        AccountStatement statement = download(requested);
+        AccountInfo info = statement.info();
         log.info("Fio answered {}: reported {}/{} ids {}-{}, {} movements", requested, info.dateStart(), info.dateEnd(),
-                info.idFrom(), info.idTo(), statement.transactions().size());
+                info.firstTransactionId(), info.lastTransactionId(), statement.transactions().size());
         List<IncomingMovement> incoming = statement.transactions().stream()
                 .map(this::incoming)
                 .flatMap(Optional::stream)
@@ -55,29 +57,33 @@ class FioBankStatementSource implements BankStatementSource {
         return new BankStatement(requested, reported(info), incoming, statement.transactions().size());
     }
 
-    private FioStatement download(ImportPeriod requested) {
+    private AccountStatement download(ImportPeriod requested) {
         try {
-            return client.transactionsBetween(requested.from(), requested.to());
-        } catch (FioRateLimitException e) {
-            throw unavailable(ImportFailureKind.RATE_LIMITED, Optional.of(e.retryAfter()), e);
-        } catch (FioHistoryLockedException e) {
-            Instant refusedAt = clock.instant();
-            throw unavailable(ImportFailureKind.HISTORY_LOCKED, Optional.of(refusedAt.plus(FioClient.MINIMUM_REQUEST_INTERVAL)), e);
-        } catch (FioAuthorizationException e) {
-            throw unavailable(ImportFailureKind.UNAUTHORIZED, Optional.empty(), e);
-        } catch (FioTransportException e) {
-            throw unavailable(ImportFailureKind.TRANSPORT, Optional.empty(), e);
+            return client.transactions().between(requested.from(), requested.to()).fetch();
         } catch (FioException e) {
-            throw unavailable(answeredSuccessfully(e) ? ImportFailureKind.INVALID_RESPONSE : ImportFailureKind.UNEXPECTED, Optional.empty(), e);
+            throw unavailable(e);
         }
     }
 
-    private Optional<IncomingMovement> incoming(FioTransaction transaction) {
-        if (transaction.amount().signum() <= 0) {
+    private BankStatementUnavailable unavailable(FioException failure) {
+        return switch (failure) {
+            case FioRateLimitException limited -> unavailable(ImportFailureKind.RATE_LIMITED, Optional.of(limited.retryAfter()), limited);
+            case FioHistoryLockedException locked ->
+                    unavailable(ImportFailureKind.HISTORY_LOCKED, Optional.of(clock.instant().plus(FioClient.MINIMUM_REQUEST_INTERVAL)), locked);
+            case FioAuthorizationException refused -> unavailable(ImportFailureKind.UNAUTHORIZED, Optional.empty(), refused);
+            case FioTransportException unreachable -> unavailable(ImportFailureKind.TRANSPORT, Optional.empty(), unreachable);
+            case FioException other ->
+                    unavailable(answeredSuccessfully(other) ? ImportFailureKind.INVALID_RESPONSE : ImportFailureKind.UNEXPECTED, Optional.empty(), other);
+        };
+    }
+
+    private Optional<IncomingMovement> incoming(Transaction transaction) {
+        if (!transaction.isIncoming()) {
             return Optional.empty();
         }
-        if (!Currency.CZK.name().equals(transaction.currency().trim().toUpperCase(Locale.ROOT))) {
-            log.warn("Fio movement {} is in {}, not CZK; it is not imported", transaction.id(), transaction.currency());
+        String currency = transaction.amount().currency().getCurrencyCode();
+        if (!Currency.CZK.name().equals(currency)) {
+            log.warn("Fio movement {} is in {}, not CZK; it is not imported", transaction.id(), currency);
             return Optional.empty();
         }
         Optional<Money> amount = czk(transaction);
@@ -85,32 +91,40 @@ class FioBankStatementSource implements BankStatementSource {
             log.warn("Fio movement {} has an amount that is not a whole number of hellers; it is not imported", transaction.id());
             return Optional.empty();
         }
-        log.debug("Fio movement {} from {}/{} ({}) with variable symbol {}", transaction.id(), transaction.counterpartyAccount(),
-                transaction.counterpartyBankCode(), transaction.counterpartyName(), transaction.variableSymbol());
+        Optional<String> account = sent(transaction, COUNTERPARTY_ACCOUNT_COLUMN);
+        Optional<String> bankCode = sent(transaction, COUNTERPARTY_BANK_CODE_COLUMN);
+        log.debug("Fio movement {} from {}/{} ({}) with variable symbol {}", transaction.id(), account.orElse(null), bankCode.orElse(null),
+                transaction.counterparty().name(), transaction.symbols().variable());
         return Optional.of(IncomingMovement.of(
                 new BankTransactionId(transaction.id()),
                 transaction.date(),
                 amount.get(),
-                SenderAccount.parse(transaction.counterpartyAccount(), transaction.counterpartyBankCode()),
-                Optional.ofNullable(transaction.counterpartyAccount()),
-                Optional.ofNullable(transaction.counterpartyBankCode()),
-                Optional.ofNullable(transaction.counterpartyName()),
-                Optional.ofNullable(transaction.variableSymbol()),
-                Optional.ofNullable(transaction.constantSymbol()),
-                Optional.ofNullable(transaction.specificSymbol()),
+                SenderAccount.parse(account.orElse(null), bankCode.orElse(null)),
+                account,
+                bankCode,
+                Optional.ofNullable(transaction.counterparty().name()),
+                Optional.ofNullable(transaction.symbols().variable()),
+                Optional.ofNullable(transaction.symbols().constant()),
+                Optional.ofNullable(transaction.symbols().specific()),
                 Optional.ofNullable(transaction.messageForRecipient()),
-                transaction.type()));
+                transaction.typeLabel()));
     }
 
-    private static Optional<Money> czk(FioTransaction transaction) {
+    private static Optional<String> sent(Transaction transaction, int column) {
+        return Optional.ofNullable(transaction.columns().get(column))
+                .map(TransactionColumn::value)
+                .filter(value -> !value.isBlank());
+    }
+
+    private static Optional<Money> czk(Transaction transaction) {
         try {
-            return Optional.of(Money.of(transaction.amount(), Currency.CZK));
+            return Optional.of(Money.of(transaction.amount().amount(), Currency.CZK));
         } catch (ArithmeticException notRepresentable) {
             return Optional.empty();
         }
     }
 
-    private static Optional<ImportPeriod> reported(FioAccountInfo info) {
+    private static Optional<ImportPeriod> reported(AccountInfo info) {
         if (info.dateStart() == null || info.dateEnd() == null || info.dateEnd().isBefore(info.dateStart())) {
             return Optional.empty();
         }
