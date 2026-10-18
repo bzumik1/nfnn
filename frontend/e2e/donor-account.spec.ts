@@ -21,7 +21,7 @@ test.describe('Given a visitor who wants a donor account', () => {
     await page.getByRole('button', { name: 'Registrovat' }).click();
 
     await expect(page).toHaveURL(/\/donor\/prehled$/);
-    await expect(page.locator('.topbar-greeting')).toContainText('Jana Nováková');
+    await expect(page.locator('.topbar-donor')).toContainText('Jana Nováková');
     await expect(page.locator('.symbol-value')).toHaveText('1234567890');
     expect(posted).toEqual([
       {
@@ -102,7 +102,7 @@ test.describe('Given a visitor who wants a donor account', () => {
 
     await page.goto('/donor/prehled');
 
-    await expect(page.locator('.topbar-greeting')).toContainText('Jana Nováková');
+    await expect(page.locator('.topbar-donor')).toContainText('Jana Nováková');
   });
 
   test('when they come back with a remembered session to the home page, then the QR payment carries their variable symbol', async ({ page }) => {
