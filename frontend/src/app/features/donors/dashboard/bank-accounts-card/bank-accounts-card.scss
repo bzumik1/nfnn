@@ -375,6 +375,133 @@
   color: var(--color-text);
 }
 
+.add-account-watch {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  margin-top: 24px;
+  padding: 14px 16px;
+  border-radius: var(--radius-card);
+  background: var(--color-accent-soft);
+  transition: background-color 0.3s ease;
+}
+
+.add-account-watch--verified {
+  background: var(--color-success-bg);
+}
+
+.watch-icon {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+}
+
+.watch-track {
+  fill: none;
+  stroke: color-mix(in srgb, var(--color-accent) 18%, transparent);
+  stroke-width: 3;
+}
+
+.watch-arc {
+  fill: none;
+  stroke: var(--color-accent);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-dasharray: 20 62;
+  transform-origin: center;
+  animation: watchSpin 1.2s linear infinite;
+}
+
+.watch-disc {
+  fill: var(--color-success);
+  transform-origin: center;
+  animation: watchPop 0.35s ease-out both;
+}
+
+.watch-tick {
+  fill: none;
+  stroke: var(--color-on-accent);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 22;
+  stroke-dashoffset: 22;
+  animation: watchTick 0.35s ease-out 0.25s forwards;
+}
+
+.watch-text {
+  min-width: 0;
+}
+
+.watch-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.add-account-watch--verified .watch-title {
+  color: var(--color-success);
+}
+
+.watch-account {
+  font-family: var(--font-mono);
+  white-space: nowrap;
+}
+
+.watch-detail {
+  margin-top: 2px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--color-text-secondary);
+}
+
+.watch-again {
+  margin-top: 10px;
+  background: var(--color-surface);
+  color: var(--color-accent);
+  border: 1.5px solid var(--color-border-accent);
+  padding: 7px 16px;
+  border-radius: var(--radius-pill);
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+@keyframes watchSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes watchPop {
+  from {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+}
+
+@keyframes watchTick {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .watch-arc {
+    animation: none;
+  }
+
+  .watch-disc {
+    animation: none;
+  }
+
+  .watch-tick {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
+}
+
 .add-account-close {
   display: block;
   width: 100%;
