@@ -177,7 +177,7 @@ The access token is an HS256 JWT (`iss`, `sub` = donor id, `roles`, 15 minutes; 
 
 Both read the caller's donations, found by the donor id in the JWT subject (`donor_record.donor_id`); 401 `unauthenticated` without a token. A donor the `donations` context has no record of, or one with no donations yet, gets 200 with an empty list and zero totals, never 404. Another donor's donations are never visible: there is no id parameter, the caller is the only filter.
 
-`GET /api/donations/me?year=` lists the donations, newest first (`receivedAt`, then `recordedAt`, descending). `year` is optional; when given it must be a four-digit year (`@Min(1000) @Max(9999)`, else 400 `validation`) and only donations received in that year are returned, with `totalAmountMinor` and `count` covering the returned items. A year with no donations gives an empty list.
+`GET /api/donations/me?year=` lists the donations, newest first (`receivedAt`, then `recordedAt`, then `id`, descending; the id breaks the tie between donations paired in one import run, which share their `recordedAt`). `year` is optional; when given it must be a four-digit year (`@Min(1000) @Max(9999)`, else 400 `validation`) and only donations received in that year are returned, with `totalAmountMinor` and `count` covering the returned items. An empty `year=` counts as absent. A year with no donations gives an empty list.
 
 ```json
 {

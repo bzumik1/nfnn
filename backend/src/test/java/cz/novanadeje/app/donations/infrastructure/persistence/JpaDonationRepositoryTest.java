@@ -115,6 +115,22 @@ class JpaDonationRepositoryTest {
     }
 
     @Test
+    @DisplayName("Given two donations received on the same day and recorded at the same time, when listed, then the one with the newer id comes first")
+    void should_list_newer_id_first_when_listed_given_same_receipt_day_and_recording_time() {
+        DonorReference jana = storedDonor("4821937560");
+        LocalDate sameDay = LocalDate.of(2026, 10, 15);
+        Donation olderId = Donation.fromBankPayment(DonationId.newId(NOW), jana, storedPayment(1001, sameDay),
+                PairingMethod.VARIABLE_SYMBOL, NOW);
+        Donation newerId = Donation.fromBankPayment(DonationId.newId(NOW.plusMillis(1)), jana, storedPayment(1002, sameDay),
+                PairingMethod.VARIABLE_SYMBOL, NOW);
+        donations.save(olderId);
+        donations.save(newerId);
+        flushAndClear();
+
+        assertThat(donations.findByDonorNewestFirst(jana)).extracting(Donation::id).containsExactly(newerId.id(), olderId.id());
+    }
+
+    @Test
     @DisplayName("Given a paired bank payment, when a second donation for it is saved, then the save itself fails with an integrity violation")
     void should_refuse_when_saved_given_second_donation_for_payment() {
         DonorReference jana = storedDonor("4821937560");

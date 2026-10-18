@@ -92,6 +92,22 @@ Feature: A donor sees their own donations and their summary
     And the donation list is empty
     And the list totals 0 minor CZK in 0 donations
 
+  Scenario: An empty year counts as no year
+    Given today is 2026-01-20
+    And a person "Jana" is registered
+    And the bank account has these movements:
+      | id   | date       | amount  | account    | bankCode | name          | variableSymbol |
+      | 1001 | 2025-11-30 | 1000.00 | 2900233333 | 2010     | Nováková Jana | {Jana}         |
+      | 1002 | 2026-01-10 | 500.00  | 2900233333 | 2010     | Nováková Jana | {Jana}         |
+    And the application starts the import
+    When "Jana" asks for her donations in year ""
+    Then the response status is 200
+    And the donation list holds:
+      | receivedAt | amountMinor | currency | purpose          | status   | source        |
+      | 2026-01-10 | 50000       | CZK      | Obecný příspěvek | RECEIVED | BANK_TRANSFER |
+      | 2025-11-30 | 100000      | CZK      | Obecný příspěvek | RECEIVED | BANK_TRANSFER |
+    And the list totals 150000 minor CZK in 2 donations
+
   Scenario Outline: A year that is not a four-digit number is refused
     Given today is 2026-01-20
     And a person "Jana" is registered
@@ -106,22 +122,34 @@ Feature: A donor sees their own donations and their summary
       | 10000 |
       | abc   |
 
-  Scenario: Another donor sees none of the first donor's donations
+  Scenario: Each donor sees only their own donations
     Given today is 2026-01-20
     And a person "Jana" is registered
     And a person "Petr" is registered
     And the bank account has these movements:
-      | id   | date       | amount | account    | bankCode | name          | variableSymbol |
-      | 1001 | 2026-01-10 | 500.00 | 2900233333 | 2010     | Nováková Jana | {Jana}         |
+      | id   | date       | amount  | account    | bankCode | name          | variableSymbol |
+      | 1001 | 2026-01-10 | 500.00  | 2900233333 | 2010     | Nováková Jana | {Jana}         |
+      | 1002 | 2026-01-12 | 1200.00 | 2900244444 | 2010     | Svoboda Petr  | {Petr}         |
     And the application starts the import
+    When "Jana" asks for her donations
+    Then the response status is 200
+    And the donation list holds:
+      | receivedAt | amountMinor | currency | purpose          | status   | source        |
+      | 2026-01-10 | 50000       | CZK      | Obecný příspěvek | RECEIVED | BANK_TRANSFER |
+    And the list totals 50000 minor CZK in 1 donation
     When "Petr" asks for his donations
     Then the response status is 200
-    And the donation list is empty
-    And the list totals 0 minor CZK in 0 donations
+    And the donation list holds:
+      | receivedAt | amountMinor | currency | purpose          | status   | source        |
+      | 2026-01-12 | 120000      | CZK      | Obecný příspěvek | RECEIVED | BANK_TRANSFER |
+    And the list totals 120000 minor CZK in 1 donation
     When "Petr" asks for his donation summary
-    Then the summary totals 0 minor CZK in 0 donations
-    And the summary has no last donation
-    And the summary has no years
+    Then the response status is 200
+    And the summary totals 120000 minor CZK in 1 donation
+    And the summary's last donation was received on 2026-01-12
+    And the summary by year is:
+      | year | count | totalAmountMinor |
+      | 2026 | 1     | 120000           |
 
   Scenario: Without a token neither the list nor the summary answers
     When someone without a token asks for the donations
