@@ -14,6 +14,13 @@ import { Dialog } from '../../../shared/ui/dialog/dialog';
 import { FocusFirstInvalid } from '../../../shared/ui/form-field/focus-first-invalid';
 import { FormControlDirective } from '../../../shared/ui/form-field/form-control';
 import { FormField } from '../../../shared/ui/form-field/form-field';
+import {
+  CITY_MESSAGES,
+  COMPANY_NAME_MESSAGES,
+  PERSON_NAME_MESSAGES,
+  POSTAL_CODE_MESSAGES,
+  STREET_MESSAGES,
+} from '../donor-field-messages';
 
 interface RegistrationFields {
   name: string;
@@ -64,27 +71,16 @@ export class LoginDialog {
     required: $localize`:@@donor.form.newPassword.required:Zvolte si prosím heslo.`,
     minlength: $localize`:@@donor.form.newPassword.tooShort:Heslo musí mít alespoň 12 znaků.`,
   };
-  protected readonly personNameMessages = {
-    required: $localize`:@@donor.register.name.required:Vyplňte prosím jméno a příjmení, uvedeme je na potvrzení o daru.`,
-  };
-  protected readonly companyNameMessages = {
-    required: $localize`:@@donor.register.companyName.required:Vyplňte prosím název firmy.`,
-  };
+  protected readonly personNameMessages = PERSON_NAME_MESSAGES;
+  protected readonly companyNameMessages = COMPANY_NAME_MESSAGES;
   protected readonly companyIdentifierHint = $localize`:@@donor.register.companyIdentifierHint:Osm číslic, uvedeme ho na potvrzení o daru.`;
   protected readonly companyIdentifierMessages = {
     required: $localize`:@@donor.register.companyIdentifier.required:Vyplňte prosím IČO.`,
     pattern: $localize`:@@donor.register.companyIdentifier.invalid:IČO má osm číslic.`,
   };
-  protected readonly streetMessages = {
-    required: $localize`:@@donor.register.street.required:Vyplňte prosím ulici a číslo domu.`,
-  };
-  protected readonly cityMessages = {
-    required: $localize`:@@donor.register.city.required:Vyplňte prosím město.`,
-  };
-  protected readonly postalCodeMessages = {
-    required: $localize`:@@donor.register.postalCode.required:Vyplňte prosím PSČ.`,
-    pattern: $localize`:@@donor.register.postalCode.invalid:PSČ má pět číslic, například 400 01.`,
-  };
+  protected readonly streetMessages = STREET_MESSAGES;
+  protected readonly cityMessages = CITY_MESSAGES;
+  protected readonly postalCodeMessages = POSTAL_CODE_MESSAGES;
 
   setMode(next: LoginDialogMode): void {
     this.mode.set(next);

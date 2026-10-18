@@ -16,6 +16,7 @@ import {
   DownloadedFile,
 } from '../../donations/donations-api';
 import { saveBlob } from '../../donations/file-download';
+import { ProfileCard } from './profile-card/profile-card';
 import { SymbolCard } from './symbol-card/symbol-card';
 
 type DashboardState = 'loading' | 'ready' | 'error';
@@ -43,7 +44,7 @@ const BANK_CHECK_MAX_POLLS = 45;
 
 @Component({
   selector: 'app-donor-dashboard',
-  imports: [RouterLink, SymbolCard],
+  imports: [RouterLink, SymbolCard, ProfileCard],
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.scss',
 })
@@ -152,7 +153,7 @@ export class DonorDashboard {
     return problemTypeEndsWith(failure, UNAUTHENTICATED) || this.auth.status() === 'anonymous';
   }
 
-  private sendToSignIn(): void {
+  protected sendToSignIn(): void {
     this.loginDialog.open();
     void this.router.navigateByUrl('/');
   }

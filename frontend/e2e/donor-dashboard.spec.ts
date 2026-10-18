@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { mockDonorApi, noDonations, signIn } from './donor-session';
+import { donor, mockDonorApi, noDonations, signIn } from './donor-session';
 
 function donation(id: string, receivedAt: string, amountMinor: number, status = 'RECEIVED') {
   return {
@@ -110,5 +110,37 @@ test.describe('Given a signed-in donor', () => {
     await expect(page.locator('.payments-card table')).toHaveCount(0);
     await expect(page.locator('.payments-empty')).toHaveText('Zatím tu není žádná platba.');
     await expect(page.locator('.symbol-value')).toHaveText('1234567890');
+  });
+
+  test('when they correct their address, then the overview saves it and shows it as the receipts will', async ({ page }) => {
+    await mockDonorApi(page, noDonations);
+    const patched: unknown[] = [];
+    await page.route('**/api/donors/me', async (route) => {
+      if (route.request().method() !== 'PATCH') {
+        return route.fallback();
+      }
+      const body = route.request().postDataJSON();
+      patched.push(body);
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ...donor, ...body }) });
+    });
+
+    await signIn(page);
+    await page.getByRole('button', { name: 'Upravit údaje' }).click();
+    await expect(page.getByLabel('Jméno a příjmení')).toBeFocused();
+    await page.getByLabel('Ulice a číslo').fill('Krátká 3');
+    await page.getByLabel('Jazyk potvrzení').selectOption('en');
+    await page.getByRole('button', { name: 'Uložit' }).click();
+
+    await expect(page.locator('.profile-data')).toContainText('Krátká 3, 400 01 Ústí nad Labem');
+    await expect(page.locator('.profile-data')).toContainText('angličtina (dvojjazyčné)');
+    await expect(page.getByRole('status').filter({ hasText: 'Údaje jsme uložili.' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Upravit údaje' })).toBeFocused();
+    expect(patched).toEqual([
+      {
+        name: 'Jana Nováková',
+        address: { street: 'Krátká 3', city: 'Ústí nad Labem', postalCode: '400 01' },
+        preferredLocale: 'en',
+      },
+    ]);
   });
 });

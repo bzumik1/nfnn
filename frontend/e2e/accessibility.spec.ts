@@ -76,6 +76,16 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     expect(await violations(page)).toEqual([]);
   });
 
+  test('when a signed-in donor edits their data, then the form breaks no rule either', async ({ page }) => {
+    await signIn(page);
+    await page.getByRole('button', { name: 'Upravit údaje' }).click();
+    await page.getByLabel('Město').fill('');
+    await page.getByRole('button', { name: 'Uložit' }).click();
+    await expect(page.getByLabel('Město')).toBeFocused();
+
+    expect(await violations(page)).toEqual([]);
+  });
+
   test('when they press Tab first, then the skip link appears and takes them to the content', async ({ page }) => {
     await page.goto('/zasady-ochrany-osobnich-udaju');
     await expect(page.locator('h1')).toBeVisible();
