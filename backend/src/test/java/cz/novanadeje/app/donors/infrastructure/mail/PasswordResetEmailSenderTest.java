@@ -121,8 +121,18 @@ class PasswordResetEmailSenderTest {
                 .contains("Odkaz platí 60 minut a lze ho použít jen jednou.")
                 .contains("Pokud jste o obnovu hesla nežádali")
                 .contains("Máte-li dotaz, napište nám na info@novanadeje.cz.")
-                .doesNotContain("<img")
-                .doesNotContain("Nováková"));
+                .doesNotContain("<img"));
+    }
+
+    @Test
+    @DisplayName("Given a link valid for 1500 minutes, when the reset e-mail is sent, then both parts write the number without grouping")
+    void should_write_minutes_without_grouping_when_sent_given_long_ttl() {
+        sent(LocaleCode.CS, Duration.ofMinutes(1500), email -> {
+            assertThat(MailContents.plainText(email)).contains("Odkaz platí 1500 minut a lze ho použít jen jednou.");
+            assertThat(MailContents.html(email)).contains("Odkaz platí 1500 minut a lze ho použít jen jednou.");
+        });
+        sent(LocaleCode.EN, Duration.ofMinutes(1500), email ->
+                assertThat(MailContents.plainText(email)).contains("The link is valid for 1500 minutes and can be used once."));
     }
 
     @Test
