@@ -1,6 +1,20 @@
 <section class="accounts-card" aria-labelledby="bank-accounts-title">
   <div class="accounts-head">
-    <h2 #title id="bank-accounts-title" class="accounts-title" tabindex="-1" i18n="@@donor.bankAccounts.title">Moje bankovní účty</h2>
+    <div class="accounts-heading">
+      <h2 #title id="bank-accounts-title" class="accounts-title" tabindex="-1" i18n="@@donor.bankAccounts.title">Moje bankovní účty</h2>
+      <button
+        #helpToggle
+        type="button"
+        class="accounts-help"
+        aria-controls="accounts-help-panel"
+        [attr.aria-expanded]="helpOpen()"
+        aria-label="Jak přiřazujeme platby"
+        i18n-aria-label="@@donor.bankAccounts.help.toggle"
+        (click)="toggleHelp()"
+      >
+        <span aria-hidden="true">?</span>
+      </button>
+    </div>
     <button
       type="button"
       class="accounts-add"
@@ -8,6 +22,66 @@
       (click)="openAdd()"
       i18n="@@donor.bankAccounts.add"
     >Přidat účet</button>
+  </div>
+
+  <div
+    id="accounts-help-panel"
+    class="accounts-help-panel"
+    role="region"
+    aria-labelledby="accounts-help-title"
+    [hidden]="!helpOpen()"
+    (keydown.escape)="closeHelp()"
+  >
+    <h3 id="accounts-help-title" class="help-title" i18n="@@donor.bankAccounts.help.title">Jak přiřazujeme platby</h3>
+    <ul class="help-list">
+      @if (variableSymbol(); as symbol) {
+        <li i18n="@@donor.bankAccounts.help.bySymbol">
+          <span class="help-lead">S vaším symbolem</span> Platbu s vaším variabilním symbolem
+          <strong class="help-symbol">{{ symbol }}</strong> přiřadíme vám, ať přijde z jakéhokoli účtu.
+        </li>
+      } @else {
+        <li i18n="@@donor.bankAccounts.help.bySymbolWithoutNumber">
+          <span class="help-lead">S vaším symbolem</span> Platbu s vaším variabilním symbolem přiřadíme vám, ať přijde z jakéhokoli účtu.
+        </li>
+      }
+      <li i18n="@@donor.bankAccounts.help.byAccount">
+        <span class="help-lead">Bez symbolu</span> Platbu bez variabilního symbolu přiřadíme podle účtu, ze kterého přišla, pokud jste
+        nám ho ověřili: stačí z něj jednou poslat 1 Kč přes „Přidat účet“ nebo jakýkoli dar s vaším variabilním symbolem. Ověřit jde
+        jen český účet, nemusí ale být veden na vaše jméno. Když účet ověříte poprvé a předtím ho neověřil jiný dárce, přiřadíme vám i
+        dřívější platby bez symbolu z něj.
+      </li>
+      @if (variableSymbol(); as symbol) {
+        <li i18n="@@donor.bankAccounts.help.otherSymbol">
+          <span class="help-lead">S jiným symbolem</span> Platbu s jiným variabilním symbolem, než je váš, vám nepřiřadíme, ani když
+          přijde z vašeho ověřeného účtu. Posíláte-li nám dary trvalým příkazem se starším symbolem, změňte ho prosím na
+          <strong class="help-symbol">{{ symbol }}</strong>. Platbu se symbolem 0 bereme jako platbu bez symbolu.
+        </li>
+      } @else {
+        <li i18n="@@donor.bankAccounts.help.otherSymbolWithoutNumber">
+          <span class="help-lead">S jiným symbolem</span> Platbu s jiným variabilním symbolem, než je váš, vám nepřiřadíme, ani když
+          přijde z vašeho ověřeného účtu. Posíláte-li nám dary trvalým příkazem se starším symbolem, změňte ho prosím na váš variabilní
+          symbol. Platbu se symbolem 0 bereme jako platbu bez symbolu.
+        </li>
+      }
+      <li i18n="@@donor.bankAccounts.help.disconnect">
+        <span class="help-lead">Vypnutí párování</span> Párování můžete u každého účtu vypnout tlačítkem „Vypnout párování“. Platby bez
+        symbolu, které z něj přijdou od následujícího dne, vám pak nepřiřadíme; dary přiřazené dříve zůstanou. Znovu ho zapnete
+        tlačítkem „Zapnout párování“ a další platbou z účtu s vaším variabilním symbolem (stačí 1 Kč). Platby bez symbolu z něj vám pak
+        přiřadíme ode dne zapnutí.
+      </li>
+      <li i18n="@@donor.bankAccounts.help.shared">
+        <span class="help-lead">Sdílený účet</span> Když stejný účet ověří i jiný dárce, označíme ho jako sdílený a platby bez
+        variabilního symbolu z něj nepřiřazujeme nikomu. Pokud z něj dary neposíláte vy, vypněte si u něj párování. Jinak z něj prosím
+        posílejte vždy s vaším variabilním symbolem.
+      </li>
+      <li i18n="@@donor.bankAccounts.help.import">
+        <span class="help-lead">Načítání z banky</span> Nové platby z banky načítáme každou hodinu. Do banky se navíc podíváme, když
+        otevřete tento přehled nebo stisknete „Obnovit“, nejvýš ale jednou za 30 sekund.
+      </li>
+    </ul>
+    <p class="help-contact" i18n="@@donor.bankAccounts.help.contact">
+      Chybí vám nějaký dar, nebo tu vidíte dar, který není váš? Napište nám na <a href="mailto:info@nfnn.cz">info&#64;nfnn.cz</a>.
+    </p>
   </div>
 
   @switch (state()) {

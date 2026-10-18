@@ -86,6 +86,9 @@ export class BankAccountsCard {
 
   private readonly title = viewChild<ElementRef<HTMLElement>>('title');
   private readonly confirmCancel = viewChild<ElementRef<HTMLButtonElement>>('confirmCancel');
+  private readonly helpToggle = viewChild<ElementRef<HTMLButtonElement>>('helpToggle');
+
+  protected readonly helpOpen = signal(false);
 
   protected readonly state = signal<ListState>('loading');
   protected readonly accounts = signal<readonly BankAccountItem[]>([]);
@@ -124,6 +127,15 @@ export class BankAccountsCard {
 
   reload(): void {
     this.fetch();
+  }
+
+  protected toggleHelp(): void {
+    this.helpOpen.update((open) => !open);
+  }
+
+  protected closeHelp(): void {
+    this.helpOpen.set(false);
+    this.helpToggle()?.nativeElement.focus();
   }
 
   protected retry(): void {
