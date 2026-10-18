@@ -1,7 +1,7 @@
 .footer {
-  background: var(--color-darker);
+  background: var(--color-surface-inverse-strong);
   padding: 52px 0 28px;
-  color: rgba(255, 255, 255, 0.5);
+  color: color-mix(in srgb, var(--color-on-inverse) 50%, transparent);
 }
 
 .section-inner {
@@ -36,19 +36,19 @@
   flex-wrap: wrap;
 
   a {
-    color: rgba(255, 255, 255, 0.5);
+    color: color-mix(in srgb, var(--color-on-inverse) 50%, transparent);
     text-decoration: none;
     font-size: 14px;
     transition: color 0.2s;
 
     &:hover {
-      color: #fff;
+      color: var(--color-on-inverse);
     }
   }
 }
 
 .footer-bottom {
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1px solid color-mix(in srgb, var(--color-on-inverse) 8%, transparent);
   padding-top: 24px;
   display: flex;
   justify-content: space-between;
@@ -65,20 +65,20 @@
 }
 
 .footer-privacy {
-  color: rgba(255, 255, 255, 0.5);
+  color: color-mix(in srgb, var(--color-on-inverse) 50%, transparent);
   font-size: 13px;
   text-decoration: none;
   transition: color 0.2s;
 
   &:hover,
   &.is-active {
-    color: #fff;
+    color: var(--color-on-inverse);
   }
 
   &:focus-visible {
     outline: 2px solid var(--color-accent);
     outline-offset: 3px;
-    border-radius: 2px;
+    border-radius: var(--radius-xs);
   }
 }
 

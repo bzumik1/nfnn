@@ -1,0 +1,75 @@
+:root {
+  --color-accent: #2563eb;
+  --color-accent-soft: #eff6ff;
+  --color-accent-bg: #f0f4ff;
+  --color-accent-2: #6366f1;
+  --color-accent-3: #0ea5e9;
+  --color-on-accent: #ffffff;
+
+  --color-text: #1a1a2e;
+  --color-text-secondary: #374151;
+  --color-text-muted: #4b5563;
+  --color-text-soft: #6b7280;
+  --color-text-subtle: #9ca3af;
+
+  --color-surface: #ffffff;
+  --color-surface-alt: #f8faff;
+  --color-surface-accent: #f0f6ff;
+  --color-surface-inverse: #0f172a;
+  --color-surface-inverse-strong: #060d1f;
+  --color-on-inverse: #ffffff;
+
+  --color-on-image: #ffffff;
+  --color-image-shade: #080c24;
+  --color-backdrop: rgb(10 15 40 / 0.6);
+
+  --color-border: #e5e7eb;
+  --color-border-soft: #eef2ff;
+  --color-border-accent: #bfdbfe;
+  --color-divider: #f0f4ff;
+
+  --color-danger: #b91c1c;
+  --color-danger-bg: #fef2f2;
+  --color-danger-border: #fecaca;
+  --color-success: #16a34a;
+  --color-success-bg: #dcfce7;
+
+  --font-serif: 'Playfair Display', serif;
+  --font-sans: 'Inter', sans-serif;
+  --font-mono: monospace;
+
+  --radius-xs: 2px;
+  --radius-scrollbar: 3px;
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 12px;
+  --radius-xl: 14px;
+  --radius-card: 16px;
+  --radius-media: 20px;
+  --radius-dialog: 24px;
+  --radius-pill: 50px;
+  --radius-round: 50%;
+
+  --shadow-card: 0 2px 16px rgb(0 0 0 / 0.07);
+  --shadow-card-quiet: 0 2px 16px rgb(0 0 0 / 0.06);
+  --shadow-card-open: 0 20px 60px rgb(0 0 0 / 0.13);
+  --shadow-card-hover: 0 16px 48px rgb(0 0 0 / 0.12);
+  --shadow-panel: 0 2px 12px rgb(0 0 0 / 0.06);
+  --shadow-media: 0 12px 36px rgb(0 0 0 / 0.25);
+  --shadow-dialog: 0 24px 80px rgb(0 0 0 / 0.2);
+  --shadow-header: 0 2px 20px rgb(0 0 0 / 0.08);
+  --shadow-menu: 0 8px 24px rgb(0 0 0 / 0.1);
+  --shadow-text-on-image: 0 1px 4px rgb(0 0 0 / 0.4);
+  --shadow-cta: 0 8px 28px color-mix(in srgb, var(--color-accent) 35%, transparent);
+  --shadow-cta-hero: 0 8px 28px color-mix(in srgb, var(--color-accent) 50%, transparent);
+  --shadow-cta-nav: 0 4px 14px color-mix(in srgb, var(--color-accent) 35%, transparent);
+  --shadow-button: 0 6px 20px color-mix(in srgb, var(--color-accent) 35%, transparent);
+  --shadow-button-sm: 0 4px 14px color-mix(in srgb, var(--color-accent) 30%, transparent);
+  --shadow-tab: 0 4px 12px color-mix(in srgb, var(--color-accent) 30%, transparent);
+  --shadow-badge: 0 16px 48px color-mix(in srgb, var(--color-accent) 40%, transparent);
+  --shadow-qr: 0 4px 20px color-mix(in srgb, var(--color-accent) 13%, transparent);
+  --shadow-focus: 0 0 0 3px color-mix(in srgb, var(--color-accent) 40%, transparent);
+
+  --content-max: 1200px;
+  --header-height: 72px;
+}

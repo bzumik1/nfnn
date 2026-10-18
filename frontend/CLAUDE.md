@@ -42,7 +42,8 @@ Run from `frontend/`.
 src/
   index.html                  Root HTML. Loads Google Fonts (Playfair Display, Inter), title, app-root.
   main.ts                     bootstrapApplication entry, references @angular/localize.
-  styles.scss                 Global CSS variables (design tokens), reset, scrollbar, keyframes.
+  styles.scss                 Loads the theme; reset, scrollbar, keyframes.
+  styles/themes/              The look: `_nova-nadeje.scss` sets every design token on `:root`.
   app/
     app.{ts,html,scss}        Root: `<router-outlet />` and the sign-in dialog rendered while `LoginDialogService.isOpen()` (re-created on every open, so its fields and panels start clean).
     app.config.ts             provideRouter + withInMemoryScrolling (anchor scrolling on for #fragment links).
@@ -109,15 +110,16 @@ When a feature gains real routes (e.g. `contact`, `donations`), add a `<feature>
 
 ## Design system
 
-The design lives in CSS custom properties on `:root` in `src/styles.scss`:
+The look is kept apart from the behaviour so it can change without touching components. `src/styles/themes/_nova-nadeje.scss` is the theme: it gives every design token its value on `:root`, and `src/styles.scss` loads it. Components only reference tokens:
 
-- Color: `--color-accent` (`#2563EB`), `--color-text` (`#1a1a2e`), `--color-surface*`, `--color-border*`, `--color-dark`.
-- Type: `--font-serif` (Playfair Display, headlines), `--font-sans` (Inter, body).
-- Layout: `--content-max: 1200px`.
-- Effects: `--shadow-card`, `--shadow-card-hover`, `--shadow-cta`.
+- Colour, named by role, not by hue: `--color-accent` (`-soft`, `-bg`, `-2`, `-3`), `--color-on-accent`, `--color-text` (`-secondary`, `-muted`, `-soft`, `-subtle`), `--color-surface` (`-alt`, `-accent`, `-inverse`, `-inverse-strong`), `--color-on-inverse`, `--color-on-image`, `--color-image-shade`, `--color-backdrop`, `--color-border` (`-soft`, `-accent`), `--color-divider`, `--color-danger*`, `--color-success*`. A translucent variant is `color-mix(in srgb, var(--color-on-image) 65%, transparent)`, never an `rgba()`.
+- Type: `--font-serif` (Playfair Display, headlines), `--font-sans` (Inter, body), `--font-mono`.
+- Shape: `--radius-xs` … `--radius-xl`, `--radius-card`, `--radius-media`, `--radius-dialog`, `--radius-pill`, `--radius-round`.
+- Depth: one `--shadow-*` per role (`card`, `panel`, `dialog`, `header`, `menu`, `cta`, `button`, `tab`, `focus`, …); shadows of accent buttons mix `--color-accent`, so they follow it.
+- Layout: `--content-max: 1200px`, `--header-height`.
 - Animations: `@keyframes scrollDot`, `@keyframes fadeInUp`.
 
-**Use these variables in component SCSS instead of hardcoding values.** If a section needs a new token, add it to `:root` rather than redefining locally.
+`npm run lint:styles` (Stylelint, run by the PR check) fails on a hex, `rgb()`/`hsl()` or named colour, a `font-family`, a `border-radius` or a `box-shadow`/`text-shadow` in `src/app/**` or `src/styles.scss` that is not a token. A new look is a change to the theme file; if a component needs a value the theme does not have, add a token there.
 
 The visual reference is `Claude Design/Nova Nadeje.html` at the repo root — a static React-in-the-browser prototype. **Treat it as the source of truth for visuals only**; never embed its JSX or pull React in. All sections in `home/sections/` are 1:1 ports.
 

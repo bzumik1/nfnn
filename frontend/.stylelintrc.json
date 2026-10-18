@@ -1,0 +1,13 @@
+{
+  "customSyntax": "postcss-scss",
+  "rules": {
+    "color-no-hex": true,
+    "color-named": "never",
+    "function-disallowed-list": ["rgb", "rgba", "hsl", "hsla", "hwb", "lab", "lch", "oklab", "oklch"],
+    "declaration-property-value-allowed-list": {
+      "font-family": ["/^var\\(--font-[a-z0-9-]+\\)$/"],
+      "border-radius": ["/^(var\\(--radius-[a-z0-9-]+\\)|0)( (var\\(--radius-[a-z0-9-]+\\)|0))*$/"],
+      "/^(box|text)-shadow$/": ["none", "/^var\\(--shadow-[a-z0-9-]+\\)$/"]
+    }
+  }
+}

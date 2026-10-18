@@ -1,6 +1,6 @@
 .about {
   padding: 108px 0;
-  background: #fff;
+  background: var(--color-surface);
 }
 
 .section-inner {
@@ -62,7 +62,7 @@
 }
 
 .about-img {
-  border-radius: 20px;
+  border-radius: var(--radius-media);
   height: 480px;
   overflow: hidden;
 
@@ -76,11 +76,11 @@
   bottom: -28px;
   left: -28px;
   background: var(--color-accent);
-  color: #fff;
-  border-radius: 20px;
+  color: var(--color-on-accent);
+  border-radius: var(--radius-media);
   padding: 22px 30px;
   max-width: 240px;
-  box-shadow: 0 16px 48px rgba(37, 99, 235, 0.4);
+  box-shadow: var(--shadow-badge);
 }
 
 .about-badge-title {
