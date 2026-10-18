@@ -59,11 +59,12 @@ Web fondu, který představí fond a jeho pomoc dětem, usnadní darování a d�
 
 - ✅ Zatím na nfnn.znamenacek.duckdns.org (ZimaOS, Nginx Proxy Manager), až bude web hotový, přejde na vlastní doménu **nfnn.cz** (zaregistrovaná 18. 10. 2026 u WEDOS, držitel fond).
 - ✅ E-mail fondu `info@nfnn.cz` (příjem funguje od 18. 10. 2026): příchozí pošta se přeposílá přes Cloudflare Email Routing, web odesílá přes Brevo.
+- ✅ Fond dostává každý měsíc e-mailem přehled za minulý měsíc (dárci, dary, nespárované platby, stav importu z banky) na `REPORT_RECIPIENT`, výchozí `info@nfnn.cz`. Zároveň tím Brevo neshodí SMTP klíč po 90 dnech bez odeslaného e-mailu. Správa přehledu přijde s administrací.
 - 🔸 Angular + Spring Boot + PostgreSQL podle repa `bzumik1/nfnn`. Čeština; angličtina připravená na později.
 
 ## 7. Později, mimo první verzi
 
-- Administrace pro správce (aktuality, projekty, nespárované platby).
+- Administrace pro správce (aktuality, projekty, nespárované platby, nastavení měsíčního přehledu: komu chodí, kdy a co obsahuje).
 - Přístup Clauda k logům na serveru a MCP server pro NFNN: nejdřív čtení (logy, stav importu, počty darů) z chatu na claude.ai, později zápis jako náhrada části administrace. Rozbor a pořadí jsou v plánu úkolů (úkoly 10 a 11).
 - Posílání potvrzení e-mailem.
 - Smazání účtu dárcem.

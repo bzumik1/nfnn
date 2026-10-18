@@ -42,7 +42,7 @@ import static cz.novanadeje.app.donations.BankPayments.payment;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @Import(TestcontainersConfiguration.class)
-@SpringBootTest(properties = "app.donations.fio.token=")
+@SpringBootTest(properties = {"app.donations.fio.token=", "app.donations.report.cron=-"})
 class DonationReceiptIssuerConcurrencyTest {
 
     @Autowired

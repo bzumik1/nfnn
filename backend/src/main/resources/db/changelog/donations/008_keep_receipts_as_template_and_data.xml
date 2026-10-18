@@ -5,7 +5,7 @@
         xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
         https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
 
-    <changeSet id="007-keep-receipts-as-template-and-data" author="nfnn">
+    <changeSet id="008-keep-receipts-as-template-and-data" author="nfnn">
         <createTable tableName="receipt_template">
             <column name="sha256" type="varchar(64)">
                 <constraints primaryKey="true" primaryKeyName="pk_receipt_template" nullable="false"/>
