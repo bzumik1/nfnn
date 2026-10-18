@@ -83,12 +83,32 @@ jobs:
             exit 1
           fi
 
-      - name: Prepare compose file
+      - name: Compose file names no secret
         run: |
-          sed -e "s/ZMEN_HESLO_DB/ci-password/" \
-              -e "s/ZMEN_JWT_SECRET/ci-secret-that-is-at-least-32-characters-long/" \
-              -e "s#/DATA/AppData/nfnn#$RUNNER_TEMP/nfnn#g" \
-              deploy/compose.yml > "$RUNNER_TEMP/compose.yml"
+          if grep -noE '\b(POSTGRES_PASSWORD|PGPASSWORD|DB_PASSWORD|JWT_SECRET|MAIL_PASSWORD|FIO_TOKEN)\b' deploy/compose.yml; then
+            echo "::error::Secrets live in the env files on the server (deploy/*.env.example), never in deploy/compose.yml"
+            exit 1
+          fi
+
+      - name: Prepare compose file and env files from the templates
+        run: |
+          env_dir="$RUNNER_TEMP/nfnn/env"
+          mkdir -p "$RUNNER_TEMP/nfnn"
+          umask 077
+          mkdir "$env_dir"
+          db_password=$(openssl rand -hex 32)
+          jwt_secret=$(openssl rand -hex 32)
+          sed -E "s/^(POSTGRES_PASSWORD|PGPASSWORD|DB_PASSWORD)=$/\1=$db_password/" deploy/db.env.example > "$env_dir/db.env"
+          sed -E "s/^JWT_SECRET=$/JWT_SECRET=$jwt_secret/" deploy/backend.env.example > "$env_dir/backend.env"
+          if [ "$(grep -cE '^(POSTGRES_PASSWORD|PGPASSWORD|DB_PASSWORD)=[0-9a-f]{64}$' "$env_dir/db.env")" != 3 ]; then
+            echo "::error::deploy/db.env.example must have the empty lines POSTGRES_PASSWORD=, PGPASSWORD= and DB_PASSWORD="
+            exit 1
+          fi
+          if ! grep -qE '^JWT_SECRET=[0-9a-f]{64}$' "$env_dir/backend.env"; then
+            echo "::error::deploy/backend.env.example must have the empty line JWT_SECRET="
+            exit 1
+          fi
+          sed "s#/DATA/AppData/nfnn#$RUNNER_TEMP/nfnn#g" deploy/compose.yml > "$RUNNER_TEMP/compose.yml"
           echo "COMPOSE_FILE=$RUNNER_TEMP/compose.yml" >> "$GITHUB_ENV"
 
       - name: Start the production stack
@@ -102,6 +122,14 @@ jobs:
           case "$status" in
             502|503|504|000) echo "::error::nginx could not reach the backend"; exit 1 ;;
           esac
+          for container in nfnn-postgres nfnn-backup; do
+            for key in JWT_SECRET FIO_TOKEN MAIL_PASSWORD; do
+              if docker exec "$container" printenv "$key" > /dev/null; then
+                echo "::error::$container must not receive $key: only the backend reads backend.env"
+                exit 1
+              fi
+            done
+          done
           for _ in $(seq 30); do
             ls "$RUNNER_TEMP"/nfnn/backups/nfnn-*.dump 2>/dev/null && exit 0
             sleep 2
