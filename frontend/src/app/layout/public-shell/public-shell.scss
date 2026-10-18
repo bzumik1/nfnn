@@ -8,8 +8,8 @@ main {
 
 .skip-link {
   position: absolute;
-  top: 16px;
-  left: 16px;
+  top: calc(var(--header-height) + 8px);
+  left: 50%;
   z-index: 300;
   padding: 12px 20px;
   border-radius: var(--radius-pill);
@@ -18,10 +18,11 @@ main {
   box-shadow: var(--shadow-menu);
   font-weight: 600;
   text-decoration: none;
-  transform: translateY(-200%);
+  white-space: nowrap;
+  transform: translate(-50%, calc(-100% - var(--header-height) - 16px));
 
   &:focus-visible {
-    transform: none;
+    transform: translate(-50%, 0);
   }
 }
 
