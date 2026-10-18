@@ -1,7 +1,7 @@
 /// <reference types="@angular/localize" />
 
 import { Location } from '@angular/common';
-import { afterNextRender, Component, ElementRef, inject, Injector, signal, viewChild } from '@angular/core';
+import { afterNextRender, Component, DestroyRef, ElementRef, inject, Injector, signal, viewChild } from '@angular/core';
 import { FormsModule, NgForm } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { describeProblem, problemTypeEndsWith } from '../../../core/auth/api-problem';
@@ -26,6 +26,7 @@ export class PasswordReset {
   private readonly auth = inject(AuthStore);
   private readonly dialog = inject(LoginDialogService);
   private readonly injector = inject(Injector);
+  private readonly destroyRef = inject(DestroyRef);
   private readonly heading = viewChild<ElementRef<HTMLElement>>('heading');
   private readonly token = tokenOf(inject(ActivatedRoute).snapshot.fragment);
 
@@ -90,6 +91,9 @@ export class PasswordReset {
   }
 
   private show(panel: Panel): void {
+    if (this.destroyRef.destroyed) {
+      return;
+    }
     this.loading.set(false);
     this.error.set('');
     this.password = '';

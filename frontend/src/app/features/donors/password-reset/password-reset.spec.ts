@@ -164,6 +164,16 @@ describe('Given the page that sets a new password from the e-mail link', () => {
 
       expect(element('.form-error').textContent).toContain('Heslo se nepodařilo uložit. Zkuste to prosím znovu.');
     });
+
+    it('and the donor leaves the page before the answer arrives, then the late answer is dropped silently', async () => {
+      await submitPasswords('correct horse battery');
+      harness.fixture.destroy();
+
+      http.expectOne('/api/donors/auth/password-reset/confirm').flush(null, { status: 204, statusText: 'No Content' });
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(dialog.isOpen()).toBe(false);
+    });
   });
 
   describe('when the browser still holds a session and the password is saved', () => {
