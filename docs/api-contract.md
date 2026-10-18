@@ -348,13 +348,13 @@ GET /api/donations/payment-qr?amount=500&variableSymbol=1234567890
 
 - `amount`: whole CZK, required, 1 to 1 000 000.
 - `variableSymbol`: optional, 1 to 10 digits. The frontend sends the signed-in donor's `variableSymbol` from `GET /api/donors/me`; the backend does not look the donor up, so the endpoint stays public and stateless.
-- `purpose`: optional, `DONATION` (default, message "Dar Nová naděje") or `ACCOUNT_VERIFICATION` (message "Ověření účtu nfnn.cz", for the payment that adds a bank account, see "Donor's bank accounts"). `ACCOUNT_VERIFICATION` needs `variableSymbol`, else 400 `donations/verification-needs-variable-symbol`; another value answers 400 `validation` for `purpose`. The purpose changes only the message: the import pairs the payment by its symbol either way.
+- `purpose`: optional, `DONATION` (default, message "Dar Nadační fond Nová naděje") or `ACCOUNT_VERIFICATION` (message "Ověření účtu Nadační fond Nová naděje", for the payment that adds a bank account, see "Donor's bank accounts"). `ACCOUNT_VERIFICATION` needs `variableSymbol`, else 400 `donations/verification-needs-variable-symbol`; another value answers 400 `validation` for `purpose`. The purpose changes only the message: the import pairs the payment by its symbol either way.
 - A missing, non-numeric or out-of-range parameter answers 400 `validation` with `errors: [{ field, message }]`, `field` being the query parameter name.
 
 Response:
 ```json
 {
-  "spayd": "SPD*1.0*ACC:CZ2620100000005544332217*AM:500.00*CC:CZK*X-VS:1234567890*RN:NADACNI FOND NOVA NADEJE*MSG:DAR NOVA NADEJE",
+  "spayd": "SPD*1.0*ACC:CZ2620100000005544332217*AM:500.00*CC:CZK*X-VS:1234567890*RN:NADACNI FOND NOVA NADEJE*MSG:DAR NADACNI FOND NOVA NADEJE",
   "qrPngBase64": "iVBORw0KG...",
   "bankAccount": {
     "accountNumber": "5544332217/2010",

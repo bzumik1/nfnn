@@ -2,8 +2,8 @@ package cz.novanadeje.app.donations.domain.payment;
 
 public enum QrPaymentPurpose {
 
-    DONATION("Dar Nová naděje"),
-    ACCOUNT_VERIFICATION("Ověření účtu nfnn.cz");
+    DONATION("Dar Nadační fond Nová naděje"),
+    ACCOUNT_VERIFICATION("Ověření účtu Nadační fond Nová naděje");
 
     private final String message;
 

@@ -12,7 +12,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class ZxingQrCodeRendererTest {
 
-    private static final String SPAYD = "SPD*1.0*ACC:CZ6508000000192000145399*AM:500.00*CC:CZK*X-VS:1234567890*RN:NADACNI FOND NOVA NADEJE*MSG:DAR NOVA NADEJE";
+    private static final String SPAYD = "SPD*1.0*ACC:CZ6508000000192000145399*AM:500.00*CC:CZK*X-VS:1234567890*RN:NADACNI FOND NOVA NADEJE*MSG:DAR NADACNI FOND NOVA NADEJE";
 
     private final ZxingQrCodeRenderer renderer = new ZxingQrCodeRenderer();
 

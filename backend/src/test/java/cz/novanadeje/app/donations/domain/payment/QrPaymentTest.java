@@ -23,7 +23,7 @@ class QrPaymentTest {
         QrPayment payment = QrPayment.donation(FOUNDATION, Money.czk(50_000), new VariableSymbol("1234567890"));
 
         assertThat(payment.toSpayd()).isEqualTo(
-                "SPD*1.0*ACC:CZ6508000000192000145399*AM:500.00*CC:CZK*X-VS:1234567890*RN:NADACNI FOND NOVA NADEJE*MSG:DAR NOVA NADEJE");
+                "SPD*1.0*ACC:CZ6508000000192000145399*AM:500.00*CC:CZK*X-VS:1234567890*RN:NADACNI FOND NOVA NADEJE*MSG:DAR NADACNI FOND NOVA NADEJE");
     }
 
     @Test
@@ -31,7 +31,7 @@ class QrPaymentTest {
         QrPayment payment = QrPayment.donation(FOUNDATION, Money.czk(100_000));
 
         assertThat(payment.toSpayd()).isEqualTo(
-                "SPD*1.0*ACC:CZ6508000000192000145399*AM:1000.00*CC:CZK*RN:NADACNI FOND NOVA NADEJE*MSG:DAR NOVA NADEJE");
+                "SPD*1.0*ACC:CZ6508000000192000145399*AM:1000.00*CC:CZK*RN:NADACNI FOND NOVA NADEJE*MSG:DAR NADACNI FOND NOVA NADEJE");
         assertThat(payment.variableSymbol()).isEmpty();
     }
 
@@ -40,7 +40,7 @@ class QrPaymentTest {
         QrPayment payment = QrPayment.accountVerification(FOUNDATION, Money.czk(100), new VariableSymbol("1234567890"));
 
         assertThat(payment.toSpayd()).isEqualTo(
-                "SPD*1.0*ACC:CZ6508000000192000145399*AM:1.00*CC:CZK*X-VS:1234567890*RN:NADACNI FOND NOVA NADEJE*MSG:OVERENI UCTU NFNN.CZ");
+                "SPD*1.0*ACC:CZ6508000000192000145399*AM:1.00*CC:CZK*X-VS:1234567890*RN:NADACNI FOND NOVA NADEJE*MSG:OVERENI UCTU NADACNI FOND NOVA NADEJE");
         assertThat(payment.purpose()).isEqualTo(QrPaymentPurpose.ACCOUNT_VERIFICATION);
     }
 
