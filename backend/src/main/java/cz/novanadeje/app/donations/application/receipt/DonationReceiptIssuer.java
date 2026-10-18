@@ -50,17 +50,14 @@ public class DonationReceiptIssuer {
         Optional<DonationReceipt> active = activeReceipt(request);
         ReceiptFingerprint fingerprint = request.fingerprint();
         if (active.isPresent() && active.get().certifies(fingerprint)) {
-            LOG.debug("Serving stored receipt {} to donor {}", active.get().number(), request.donor());
+            LOG.debug("Rendering issued receipt {} again for donor {}", active.get().number(), request.donor());
             return IssuedReceipt.of(active.get(), contentOf(active.get()));
         }
         return issueNew(request, fingerprint, active);
     }
 
     private byte[] contentOf(DonationReceipt receipt) {
-        return switch (receipt.content()) {
-            case ReceiptContent.StoredPdf stored -> stored.pdf();
-            case ReceiptContent.Snapshot kept -> renderer.render(kept.snapshot(), receipt.number(), receipt.issuedAt());
-        };
+        return renderer.render(receipt.content().snapshot(), receipt.number(), receipt.issuedAt());
     }
 
     private IssuedReceipt issueNew(ReceiptRequest request, ReceiptFingerprint fingerprint, Optional<DonationReceipt> replaced) {
@@ -72,7 +69,7 @@ public class DonationReceiptIssuer {
         ReceiptSnapshot snapshot = renderer.freeze(document);
         byte[] pdf = renderer.render(snapshot, number, issuedAt);
         DonationReceipt issued = request.receipt(DonationReceiptId.newId(issuedAt), number, issuedAt, locale, fingerprint,
-                new ReceiptContent.Snapshot(snapshot, ContentDigest.of(pdf)), replaced.map(DonationReceipt::id));
+                new ReceiptContent(snapshot, ContentDigest.of(pdf)), replaced.map(DonationReceipt::id));
         replaced.ifPresent(old -> {
             old.markSuperseded(issuedAt);
             receipts.save(old);

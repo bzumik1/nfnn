@@ -39,7 +39,7 @@ public final class Receipts {
     public static final ContentDigest PDF_DIGEST = new ContentDigest("3".repeat(64));
     public static final ReceiptSnapshot SNAPSHOT = new ReceiptSnapshot(TEMPLATE_DIGEST, "{\"number\":\"2027-000001\"}", LOGO_DIGEST,
             Optional.empty(), 1);
-    public static final ReceiptContent.Snapshot SNAPSHOT_CONTENT = new ReceiptContent.Snapshot(SNAPSHOT, PDF_DIGEST);
+    public static final ReceiptContent SNAPSHOT_CONTENT = new ReceiptContent(SNAPSHOT, PDF_DIGEST);
 
     private Receipts() {
     }
