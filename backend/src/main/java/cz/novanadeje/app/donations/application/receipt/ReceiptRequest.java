@@ -33,7 +33,7 @@ public sealed interface ReceiptRequest {
                              Optional<ReplacedReceipt> replaces);
 
     DonationReceipt receipt(DonationReceiptId id, ReceiptNumber number, Instant issuedAt, LocaleCode locale, ReceiptFingerprint fingerprint,
-                            ReceiptContent.Snapshot content, Optional<DonationReceiptId> supersedes);
+                            ReceiptContent content, Optional<DonationReceiptId> supersedes);
 
     default DonorReference donor() {
         return record().id();
@@ -68,7 +68,7 @@ public sealed interface ReceiptRequest {
 
         @Override
         public DonationReceipt receipt(DonationReceiptId id, ReceiptNumber number, Instant issuedAt, LocaleCode locale,
-                                       ReceiptFingerprint fingerprint, ReceiptContent.Snapshot content, Optional<DonationReceiptId> supersedes) {
+                                       ReceiptFingerprint fingerprint, ReceiptContent content, Optional<DonationReceiptId> supersedes) {
             return DonationReceipt.issueForDonation(id, donor(), donation.id(), number, today, issuedAt, locale, fingerprint, content, supersedes);
         }
     }
@@ -95,7 +95,7 @@ public sealed interface ReceiptRequest {
 
         @Override
         public DonationReceipt receipt(DonationReceiptId id, ReceiptNumber number, Instant issuedAt, LocaleCode locale,
-                                       ReceiptFingerprint fingerprint, ReceiptContent.Snapshot content, Optional<DonationReceiptId> supersedes) {
+                                       ReceiptFingerprint fingerprint, ReceiptContent content, Optional<DonationReceiptId> supersedes) {
             return DonationReceipt.issueForYear(id, donor(), year, number, today, issuedAt, locale, fingerprint, content, supersedes);
         }
     }

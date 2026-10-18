@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <changeSet id="009-drop-receipts-stored-as-pdf" author="nfnn">
+        <sql>update donation_receipt set supersedes_id = null where supersedes_id in (select id from donation_receipt where content is not null)</sql>
+        <sql>delete from donation_receipt where content is not null</sql>
+        <sql>alter table donation_receipt drop constraint ck_donation_receipt_content</sql>
+        <dropColumn tableName="donation_receipt" columnName="content"/>
+        <addNotNullConstraint tableName="donation_receipt" columnName="template_sha256" columnDataType="varchar(64)"/>
+        <addNotNullConstraint tableName="donation_receipt" columnName="data" columnDataType="text"/>
+        <addNotNullConstraint tableName="donation_receipt" columnName="logo_sha256" columnDataType="varchar(64)"/>
+        <addNotNullConstraint tableName="donation_receipt" columnName="render_profile" columnDataType="smallint"/>
+        <addNotNullConstraint tableName="donation_receipt" columnName="pdf_sha256" columnDataType="varchar(64)"/>
+    </changeSet>
+
+</databaseChangeLog>

@@ -27,7 +27,6 @@ class DonationReceiptTest {
     private static final DonationId DONATION = DonationId.newId(NOW);
     private static final ReceiptFingerprint FINGERPRINT = new ReceiptFingerprint("a".repeat(64));
     private static final ReceiptFingerprint OTHER_FINGERPRINT = new ReceiptFingerprint("b".repeat(64));
-    private static final byte[] PDF = {'%', 'P', 'D', 'F'};
 
     @Test
     @DisplayName("Given a donation, when its receipt is issued, then it is an active single receipt of that donation without a year")
@@ -85,38 +84,10 @@ class DonationReceiptTest {
     }
 
     @Test
-    @DisplayName("Given a receipt stored as a PDF before snapshots, when it is reconstituted, then it keeps that PDF as its content")
-    void should_keep_stored_pdf_when_reconstituted_given_receipt_from_before_snapshots() {
-        DonationReceipt receipt = DonationReceipt.reconstitute(ID, JANA, ReceiptKind.SINGLE, Optional.of(DONATION), Optional.empty(), FIRST_NUMBER,
-                TODAY, NOW, LocaleCode.CS, FINGERPRINT, new ReceiptContent.StoredPdf(PDF), Optional.empty(), Optional.empty());
-
-        assertThat(receipt.content()).isEqualTo(new ReceiptContent.StoredPdf(PDF));
-    }
-
-    @Test
-    @DisplayName("Given an empty PDF, when it is kept as receipt content, then it is refused")
-    void should_refuse_when_kept_given_empty_pdf() {
-        assertThatIllegalArgumentException().isThrownBy(() -> new ReceiptContent.StoredPdf(new byte[0]));
-        assertThatIllegalArgumentException().isThrownBy(() -> new ReceiptContent.StoredPdf(null));
-    }
-
-    @Test
-    @DisplayName("Given the bytes a stored PDF was made from, when either side changes its array, then the content keeps its own copy")
-    void should_keep_own_copy_of_pdf_when_arrays_change_given_stored_pdf() {
-        byte[] pdf = PDF.clone();
-        ReceiptContent.StoredPdf stored = new ReceiptContent.StoredPdf(pdf);
-
-        pdf[0] = 'X';
-        stored.pdf()[1] = 'X';
-
-        assertThat(stored.pdf()).isEqualTo(PDF);
-    }
-
-    @Test
     @DisplayName("Given a snapshot without the digest of its issued PDF, when it is kept as receipt content, then it is refused")
     void should_refuse_when_kept_given_snapshot_without_pdf_digest() {
-        assertThatIllegalArgumentException().isThrownBy(() -> new ReceiptContent.Snapshot(SNAPSHOT, null));
-        assertThatIllegalArgumentException().isThrownBy(() -> new ReceiptContent.Snapshot(null, PDF_DIGEST));
+        assertThatIllegalArgumentException().isThrownBy(() -> new ReceiptContent(SNAPSHOT, null));
+        assertThatIllegalArgumentException().isThrownBy(() -> new ReceiptContent(null, PDF_DIGEST));
     }
 
     @Test
