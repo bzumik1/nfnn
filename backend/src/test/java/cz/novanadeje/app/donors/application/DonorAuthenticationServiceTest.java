@@ -14,18 +14,23 @@ import cz.novanadeje.app.shared.domain.EmailAddress;
 import cz.novanadeje.app.shared.domain.LocaleCode;
 import cz.novanadeje.app.shared.domain.PostalAddress;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Optional;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -36,6 +41,7 @@ class DonorAuthenticationServiceTest {
     private static final Instant NOW = Instant.parse("2026-10-17T10:00:00Z");
     private static final EmailAddress EMAIL = new EmailAddress("jana@example.cz");
     private static final PasswordHash HASH = new PasswordHash("$hash");
+    private static final String BCRYPT_COST_12 = "\\$2[aby]\\$12\\$[./0-9A-Za-z]{53}";
 
     @Mock
     private DonorRepository donors;
@@ -83,6 +89,24 @@ class DonorAuthenticationServiceTest {
 
         assertThatThrownBy(() -> service.login("jana@example.cz", "correct horse battery"))
                 .isInstanceOf(InvalidCredentials.class);
+    }
+
+    @Test
+    @DisplayName("Given an unknown email, when signing in, then the password is still compared against a cost-12 BCrypt hash that no password matches")
+    void should_compare_against_real_bcrypt_hash_when_logged_in_given_unknown_email() {
+        when(donors.findByEmail(EMAIL)).thenReturn(Optional.empty());
+        ArgumentCaptor<PasswordHash> compared = ArgumentCaptor.forClass(PasswordHash.class);
+
+        assertThatThrownBy(() -> service.login("jana@example.cz", "correct horse battery"))
+                .isInstanceOf(InvalidCredentials.class);
+
+        verify(passwordHasher).matches(eq(new RawPassword("correct horse battery")), compared.capture());
+        String unknownDonorHash = compared.getValue().value();
+        assertThat(unknownDonorHash).matches(BCRYPT_COST_12);
+        BCryptPasswordEncoder bcrypt = new BCryptPasswordEncoder(12);
+        assertThat(bcrypt.matches("correct horse battery", unknownDonorHash)).isFalse();
+        assertThat(bcrypt.matches(UUID.randomUUID().toString(), unknownDonorHash)).isFalse();
+        verify(sessions, never()).open(any(), any());
     }
 
     @Test

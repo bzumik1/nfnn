@@ -74,7 +74,10 @@
   gap: 16px;
 }
 
-.topbar-greeting {
+.topbar-donor {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   font-size: 14px;
   color: var(--color-text-secondary);
   font-weight: 500;
@@ -99,7 +102,7 @@
 }
 
 @media (max-width: 768px) {
-  .topbar-greeting {
+  .topbar-donor {
     display: none;
   }
 }

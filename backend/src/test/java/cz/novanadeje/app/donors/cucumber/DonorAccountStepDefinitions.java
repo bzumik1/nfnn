@@ -46,6 +46,17 @@ public class DonorAccountStepDefinitions {
         registerPerson(email, password, "Jana Nováková", null);
     }
 
+    @Given("people registered with these emails:")
+    public void peopleRegisteredWithTheseEmails(List<String> emails) {
+        emails.forEach(email -> registerPerson(email, "correct horse battery", "Jana Nováková", null));
+    }
+
+    @When("a person registers with email {string} and password {string}")
+    public void aPersonRegistersWithEmailAndPassword(String email, String password) {
+        api.forgetCredentials();
+        api.post(REGISTER_PATH, registration("PERSON", personFields(email, password, "Jana Nováková", null)));
+    }
+
     @Given("a person registered with email {string}, password {string} and name {string}")
     public void aPersonRegisteredWithName(String email, String password, String name) {
         registerPerson(email, password, name, null);
@@ -69,6 +80,16 @@ public class DonorAccountStepDefinitions {
     public void theDonorSignedIn(String email, String password) {
         theDonorSignsIn(email, password);
         assertThat(api.lastResponse().getStatusCode().value()).isEqualTo(200);
+    }
+
+    @Given("{int} sign-in attempts were made with email {string} and password {string}")
+    public void signInAttemptsWereMade(int attempts, String email, String password) {
+        for (int i = 0; i < attempts; i++) {
+            theDonorSignsIn(email, password);
+            assertThat(api.lastResponse().getStatusCode().value())
+                    .withFailMessage("Sign-in attempt %d answered %s", i + 1, api.lastResponse().getBody())
+                    .isIn(200, 401);
+        }
     }
 
     @When("the donor asks for the profile")
@@ -182,6 +203,12 @@ public class DonorAccountStepDefinitions {
     }
 
     private void registerPerson(String email, String password, String name, String preferredLocale) {
+        ResponseEntity<String> response = api.post(REGISTER_PATH, registration("PERSON", personFields(email, password, name, preferredLocale)));
+        assertThat(response.getStatusCode().value()).withFailMessage("Registration answered %s", response.getBody()).isEqualTo(201);
+        api.forgetCredentials();
+    }
+
+    private static Map<String, String> personFields(String email, String password, String name, String preferredLocale) {
         Map<String, String> fields = new HashMap<>();
         fields.put("name", name);
         fields.put("street", "Dlouhá 12");
@@ -190,9 +217,7 @@ public class DonorAccountStepDefinitions {
         fields.put("email", email);
         fields.put("password", password);
         fields.put("preferredLocale", preferredLocale);
-        ResponseEntity<String> response = api.post(REGISTER_PATH, registration("PERSON", fields));
-        assertThat(response.getStatusCode().value()).withFailMessage("Registration answered %s", response.getBody()).isEqualTo(201);
-        api.forgetCredentials();
+        return fields;
     }
 
     private static Map<String, Object> registration(String type, Map<String, String> fields) {
