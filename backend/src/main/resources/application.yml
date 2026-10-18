@@ -81,6 +81,7 @@ app:
       overlap: P3D
       history-window: P89D
       history-from: ${FIO_HISTORY_FROM:}
+      on-demand-cooldown: PT30S
     fio:
       token: ${FIO_TOKEN:}
       base-uri: https://fioapi.fio.cz/v1/rest

@@ -20,23 +20,30 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.slf4j.LoggerFactory;
+import cz.novanadeje.app.support.MutableClock;
+import org.springframework.core.task.TaskRejectedException;
 import org.springframework.scheduling.TaskScheduler;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.Period;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ScheduledFuture;
 
 import static cz.novanadeje.app.donations.domain.importing.ImportTrigger.HOURLY;
+import static cz.novanadeje.app.donations.domain.importing.ImportTrigger.ON_DEMAND;
 import static cz.novanadeje.app.donations.domain.importing.ImportTrigger.STARTUP;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -45,15 +52,18 @@ import static org.mockito.Mockito.when;
 
 class FioImportSchedulerTest {
 
+    private static final Instant NOW = Instant.parse("2026-10-17T10:00:00Z");
     private static final Instant RETRY_AT = Instant.parse("2026-10-17T10:00:31Z");
     private static final ImportPeriod REQUESTED = new ImportPeriod(LocalDate.parse("2026-07-20"), LocalDate.parse("2026-10-17"));
     private static final String FAILURE_MESSAGE = "Fio API request GET /periods/***/ failed: timed out";
-    private static final BankImportProperties IMPORT_PROPERTIES = new BankImportProperties(Period.ofDays(3), Period.ofDays(89), "2025-01-01");
+    private static final Duration COOLDOWN = Duration.ofSeconds(30);
+    private static final BankImportProperties IMPORT_PROPERTIES = new BankImportProperties(Period.ofDays(3), Period.ofDays(89), "2025-01-01", COOLDOWN);
     private static final ImportSettings SETTINGS = IMPORT_PROPERTIES.toSettings();
 
     private final ImportBankPaymentsService service = mock(ImportBankPaymentsService.class);
     private final TaskScheduler taskScheduler = mock(TaskScheduler.class);
-    private final FioImportScheduler scheduler = new FioImportScheduler(service, IMPORT_PROPERTIES, taskScheduler);
+    private final MutableClock clock = new MutableClock(NOW, ZoneId.of("Europe/Prague"));
+    private final FioImportScheduler scheduler = new FioImportScheduler(service, IMPORT_PROPERTIES, taskScheduler, clock);
     private ListAppender<ILoggingEvent> log;
 
     @BeforeEach
@@ -287,6 +297,88 @@ class FioImportSchedulerTest {
                 "Fio import STARTUP 2026-07-20/2026-10-17 failed with INVALID_RESPONSE (" + FAILURE_MESSAGE + "); retrying at the next hourly run",
                 "Fio import HOURLY 2026-07-20/2026-10-17 failed with UNEXPECTED (" + FAILURE_MESSAGE + "); retrying at the next hourly run");
         assertThat(messages(Level.WARN)).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Given nothing pending, when an import is requested twice, then one on-demand run is scheduled now and the scheduler reports work in progress")
+    void should_schedule_one_on_demand_run_now_when_requested_twice_given_nothing_pending() {
+        doReturn(mock(ScheduledFuture.class)).when(taskScheduler).schedule(any(Runnable.class), any(Instant.class));
+
+        scheduler.requestImport();
+        scheduler.requestImport();
+
+        verify(taskScheduler, times(1)).schedule(any(Runnable.class), eq(NOW));
+        assertThat(scheduler.inProgress()).isTrue();
+        verify(service, never()).importOnDemand(any(), any());
+    }
+
+    @Test
+    @DisplayName("Given the task scheduler refuses the run, when an import is requested, then the refusal escapes and a later request may schedule again")
+    void should_release_the_pending_request_when_requested_given_scheduler_refuses() {
+        doThrow(new TaskRejectedException("shutting down")).doReturn(mock(ScheduledFuture.class))
+                .when(taskScheduler).schedule(any(Runnable.class), any(Instant.class));
+
+        assertThatThrownBy(scheduler::requestImport).isInstanceOf(TaskRejectedException.class);
+        assertThat(scheduler.inProgress()).isFalse();
+        scheduler.requestImport();
+
+        verify(taskScheduler, times(2)).schedule(any(Runnable.class), eq(NOW));
+    }
+
+    @Test
+    @DisplayName("Given a requested import, when it runs, then the service imports on demand with the cooldown and nothing is in progress afterwards")
+    void should_import_on_demand_and_finish_when_requested_run_executes_given_completed_import() {
+        doReturn(mock(ScheduledFuture.class)).when(taskScheduler).schedule(any(Runnable.class), any(Instant.class));
+        when(service.importOnDemand(SETTINGS, COOLDOWN)).thenReturn(Optional.of(completed(ON_DEMAND)));
+        scheduler.requestImport();
+
+        scheduledFollowUp().run();
+
+        verify(service).importOnDemand(SETTINGS, COOLDOWN);
+        assertThat(scheduler.inProgress()).isFalse();
+    }
+
+    @Test
+    @DisplayName("Given a requested import that ran, when another import is requested, then a new on-demand run is scheduled")
+    void should_schedule_again_when_requested_given_previous_on_demand_run_finished() {
+        doReturn(mock(ScheduledFuture.class)).when(taskScheduler).schedule(any(Runnable.class), any(Instant.class));
+        when(service.importOnDemand(SETTINGS, COOLDOWN)).thenReturn(Optional.empty());
+        scheduler.requestImport();
+        scheduledFollowUp().run();
+
+        scheduler.requestImport();
+
+        verify(taskScheduler, times(2)).schedule(any(Runnable.class), eq(NOW));
+    }
+
+    @Test
+    @DisplayName("Given an import is running, when the progress is asked, then the scheduler reports work in progress")
+    void should_report_progress_when_asked_given_import_running() {
+        when(service.importIncomingPayments(any(), any())).thenAnswer(invocation -> {
+            assertThat(scheduler.inProgress()).isTrue();
+            return completed(STARTUP);
+        });
+
+        scheduler.tick();
+
+        assertThat(scheduler.inProgress()).isFalse();
+    }
+
+    @Test
+    @DisplayName("Given Fio refused the on-demand run, when the progress is asked, then the pending follow-up counts as work in progress until it is done")
+    void should_report_progress_when_asked_given_pending_follow_up_after_on_demand_run() {
+        ScheduledFuture<?> onDemand = mock(ScheduledFuture.class);
+        ScheduledFuture<?> followUp = mock(ScheduledFuture.class);
+        doReturn(onDemand).doReturn(followUp).when(taskScheduler).schedule(any(Runnable.class), any(Instant.class));
+        when(service.importOnDemand(SETTINGS, COOLDOWN))
+                .thenReturn(Optional.of(failed(ON_DEMAND, ImportFailureKind.RATE_LIMITED, new FollowUp(RETRY_AT, ON_DEMAND))));
+        scheduler.requestImport();
+        scheduledFollowUp().run();
+
+        assertThat(scheduler.inProgress()).isTrue();
+        when(followUp.isDone()).thenReturn(true);
+        assertThat(scheduler.inProgress()).isFalse();
+        verify(taskScheduler).schedule(any(Runnable.class), eq(RETRY_AT));
     }
 
     private Runnable scheduledFollowUp() {

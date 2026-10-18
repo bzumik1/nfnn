@@ -39,6 +39,11 @@ export interface DonationSummaryResponse {
   yearlyReceiptsAvailableThrough: number;
 }
 
+export interface BankCheckResponse {
+  bankDataAsOf: string | null;
+  checking: boolean;
+}
+
 export interface DownloadedFile {
   blob: Blob;
   fileName: string;
@@ -57,6 +62,14 @@ export class DonationsApi {
 
   summary(): Observable<DonationSummaryResponse> {
     return this.http.get<DonationSummaryResponse>('/api/donations/me/summary');
+  }
+
+  requestBankCheck(): Observable<BankCheckResponse> {
+    return this.http.post<BankCheckResponse>('/api/donations/me/bank-check', null);
+  }
+
+  bankCheck(): Observable<BankCheckResponse> {
+    return this.http.get<BankCheckResponse>('/api/donations/me/bank-check');
   }
 
   singleReceipt(id: string): Observable<DownloadedFile> {

@@ -1,13 +1,14 @@
 import { Component, computed, DestroyRef, inject, linkedSignal, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router, RouterLink } from '@angular/router';
-import { forkJoin, Observable } from 'rxjs';
+import { EMPTY, expand, forkJoin, last, Observable, switchMap, take, takeWhile, timer } from 'rxjs';
 import { problemOf, problemTypeEndsWith } from '../../../core/auth/api-problem';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
 import { formatCrowns } from '../../donations/donation-amount';
-import { formatDonationDate } from '../../donations/donation-date';
+import { formatBankTime, formatDonationDate } from '../../donations/donation-date';
 import {
+  BankCheckResponse,
   DonationItem,
   DonationsApi,
   DonationStatus,
@@ -36,6 +37,8 @@ const MINOR_UNITS_PER_CROWN = 100;
 const UNAUTHENTICATED = 'auth/unauthenticated';
 const YEARLY_PROBLEMS_SHOWN_AS_TITLE = ['donations/year-not-yet-completed', 'donations/yearly-receipt-not-available'];
 const NOT_FOUND = 404;
+const BANK_CHECK_POLL_MS = 2000;
+const BANK_CHECK_MAX_POLLS = 45;
 
 @Component({
   selector: 'app-donor-dashboard',
@@ -78,8 +81,46 @@ export class DonorDashboard {
   private readonly downloads = signal<ReadonlySet<string>>(new Set());
   protected readonly signingOut = signal(false);
 
+  protected readonly bankDataAsOf = signal<string | null>(null);
+  protected readonly checkingBank = signal(false);
+
   constructor() {
     this.load();
+    this.checkBank(false);
+  }
+
+  protected refreshFromBank(): void {
+    this.checkBank(true);
+  }
+
+  private checkBank(reloadAlways: boolean): void {
+    if (this.checkingBank()) {
+      return;
+    }
+    this.checkingBank.set(true);
+    let asOfBefore: string | null | undefined;
+    this.donations
+      .requestBankCheck()
+      .pipe(
+        expand((check) => (check.checking ? timer(BANK_CHECK_POLL_MS).pipe(switchMap(() => this.donations.bankCheck())) : EMPTY)),
+        take(BANK_CHECK_MAX_POLLS + 1),
+        takeWhile((check) => {
+          asOfBefore ??= check.bankDataAsOf;
+          this.bankDataAsOf.set(check.bankDataAsOf);
+          return check.checking;
+        }, true),
+        last(),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: (check: BankCheckResponse) => {
+          this.checkingBank.set(false);
+          if (reloadAlways || check.bankDataAsOf !== asOfBefore) {
+            this.fetchDonations();
+          }
+        },
+        error: () => this.checkingBank.set(false),
+      });
   }
 
   protected load(): void {
@@ -121,6 +162,10 @@ export class DonorDashboard {
 
   protected formatDate(isoDate: string): string {
     return formatDonationDate(isoDate);
+  }
+
+  protected formatBankTime(isoInstant: string): string {
+    return formatBankTime(isoInstant);
   }
 
   protected statusLabel(status: DonationStatus): string {

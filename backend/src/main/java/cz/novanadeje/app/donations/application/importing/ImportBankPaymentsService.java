@@ -52,6 +52,13 @@ public class ImportBankPaymentsService {
         }
     }
 
+    public Optional<ImportReport> importOnDemand(ImportSettings settings, Duration cooldown) {
+        if (states.current().attemptedWithin(cooldown, clock.instant())) {
+            return Optional.empty();
+        }
+        return Optional.of(importIncomingPayments(ImportTrigger.ON_DEMAND, settings));
+    }
+
     private ImportReport completed(ImportTrigger trigger, ImportPlan plan, BankStatement statement, ImportCounts counts) {
         ImportCoverage coverage = states.current().coverage();
         log.info("Fio import {} {} completed: bank reported {}, {} movements, {} new incoming, {} known, {} paired by symbol, "

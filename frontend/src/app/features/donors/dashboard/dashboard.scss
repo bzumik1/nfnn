@@ -386,6 +386,51 @@
   border-bottom: 1px solid var(--color-divider);
 }
 
+.payments-title-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+}
+
+.bank-check {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+
+.bank-check-status {
+  font-size: 13px;
+  color: var(--color-text-soft);
+}
+
+.bank-check-btn {
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
+  border: none;
+  padding: 7px 14px;
+  border-radius: 50px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+}
+
+.bank-hint {
+  padding: 16px 24px 20px;
+  border-top: 1px solid var(--color-divider);
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--color-text-soft);
+}
+
 .payments-title {
   font-family: var(--font-serif);
   font-size: 22px;

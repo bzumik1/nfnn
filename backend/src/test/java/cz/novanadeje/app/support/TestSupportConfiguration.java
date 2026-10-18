@@ -1,5 +1,7 @@
 package cz.novanadeje.app.support;
 
+import cz.novanadeje.app.donations.application.importing.BankImportProperties;
+import cz.novanadeje.app.donations.application.importing.ImportBankPaymentsService;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
@@ -27,6 +29,12 @@ public class TestSupportConfiguration {
     @Primary
     public FakeFioClient fakeFioClient(MutableClock clock) {
         return new FakeFioClient(clock);
+    }
+
+    @Bean
+    @Primary
+    public SynchronousBankImportRequests synchronousBankImportRequests(ImportBankPaymentsService imports, BankImportProperties properties) {
+        return new SynchronousBankImportRequests(imports, properties);
     }
 
     @Bean
