@@ -432,7 +432,7 @@ Configuration (`application.yml`, `app.donations.*`):
 
 #### Donor's bank accounts
 
-A donor sees the accounts their payments without a symbol are paired from and can disconnect one or connect it again. Every account is proved the same way: a payment with the donor's variable symbol from it (one koruna is enough). There is no other way to add an account and no check of the holder's name.
+A donor sees the accounts their payments without a symbol are paired from and can disconnect one or connect it again. Every account is proved the same way: a payment with the donor's variable symbol from it (one koruna is enough). There is no other way to add an account and no check of the holder's name. The dashboard calls disconnect and reconnect "Vypnout párování" and "Zapnout párování" (a disconnected row says "Párování vypnuto"); the API keeps the names below.
 
 `GET /api/donations/me/bank-accounts` (401 without a token; a donor without a record gets an empty list):
 

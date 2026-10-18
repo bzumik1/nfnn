@@ -158,9 +158,9 @@
 }
 
 .account-status--shared {
-  background: var(--color-accent-bg);
-  color: var(--color-text-secondary);
-  border: 1px dashed var(--color-border-accent);
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
+  border: 1px solid var(--color-warning-border);
 }
 
 .account-status--awaiting {
@@ -216,6 +216,23 @@
   font-size: 13px;
   line-height: 1.6;
   color: var(--color-text-muted);
+}
+
+.account-hint--warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 10px 12px;
+  background: var(--color-warning-bg);
+  border: 1px solid var(--color-warning-border);
+  border-radius: var(--radius-md);
+  color: var(--color-warning);
+}
+
+.account-hint-icon {
+  flex-shrink: 0;
+  margin-top: 3px;
 }
 
 .account--disconnected {

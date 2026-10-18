@@ -106,7 +106,7 @@ describe('Given the bank accounts card in the overview', () => {
     expect(text('.account-status')).toBe('Ověřený');
     expect(text('.account-hint')).toBe('Platby bez variabilního symbolu z něj vám přiřazujeme automaticky.');
     expect(texts('.account-meta > li')).toEqual(['ověřeno 12. 03. 2026', '14 darů bez VS', '7 400 Kč']);
-    expect(text('.account-action')).toBe('Odpojit');
+    expect(text('.account-action')).toBe('Vypnout párování');
   });
 
   it('when an account has one gift without a symbol, then the count uses the singular', async () => {
@@ -121,22 +121,36 @@ describe('Given the bank accounts card in the overview', () => {
     expect(texts('.account-meta > li')).toEqual(['ověřeno 12. 03. 2026']);
   });
 
-  it('when another donor verified the same account, then the row says it is shared and asks for the symbol', async () => {
+  it('when another donor verified the same account, then the row warns that it is shared and says what the donor can do', async () => {
     await respond([bankAccount({ shared: true })]);
 
     expect(text('.account-status')).toBe('Sdílený');
-    expect(text('.account-hint')).toBe(
-      'Tento účet ověřil i jiný dárce, platby bez symbolu z něj proto nepřiřazujeme nikomu. Posílejte z něj prosím s vaším variabilním symbolem.',
+    expect(element('.account-status')?.classList).toContain('account-status--shared');
+    const warning = element('.account-hint');
+    expect(warning?.classList).toContain('account-hint--warning');
+    expect(element('.account-hint--warning .account-hint-icon')?.getAttribute('aria-hidden')).toBe('true');
+    expect(text('.account-hint--warning .visually-hidden')).toBe('Upozornění:');
+    expect(text('.account-hint-text')).toBe(
+      'Tento účet ověřil i jiný dárce, proto z něj platby bez vašeho variabilního symbolu nepřiřazujeme nikomu. ' +
+        'Pokud z něj dary posílá jen druhý dárce, vypněte u něj párování a platby se začnou přiřazovat jemu. ' +
+        'Jinak z něj prosím posílejte vždy s vaším variabilním symbolem.',
     );
+  });
+
+  it('when an account is verified only by the donor, then its hint is a plain line, not a warning', async () => {
+    await respond([bankAccount()]);
+
+    expect(element('.account-hint--warning')).toBeNull();
+    expect(element('.account-hint-icon')).toBeNull();
   });
 
   it('when an account waits for a payment, then the row says what to send and can still be disconnected', async () => {
     await respond([bankAccount({ status: 'AWAITING_PAYMENT', verifiedOn: null, donationCount: 0, totalAmountMinor: 0 })]);
 
     expect(text('.account-status')).toBe('Čeká na platbu');
-    expect(text('.account-hint')).toBe('Pošlete z účtu 1 Kč s vaším variabilním symbolem, pak ho znovu připojíme.');
+    expect(text('.account-hint')).toBe('Pošlete z účtu 1 Kč s vaším variabilním symbolem, pak párování znovu zapneme.');
     expect(texts('.account-meta > li')).toEqual([]);
-    expect(text('.account-action')).toBe('Odpojit');
+    expect(text('.account-action')).toBe('Vypnout párování');
   });
 
   it('when accounts were disconnected, then each row is muted and says the day after the last one that counted', async () => {
@@ -145,17 +159,17 @@ describe('Given the bank accounts card in the overview', () => {
       bankAccount({ id: 'a-2', accountNumber: '19-2000145399/0800', status: 'DISCONNECTED', disconnectedOn: '2025-12-31', donationCount: 0 }),
     ]);
 
-    expect(texts('.account-status')).toEqual(['Odpojený', 'Odpojený']);
+    expect(texts('.account-status')).toEqual(['Párování vypnuto', 'Párování vypnuto']);
     expect(element('.account')?.classList).toContain('account--disconnected');
     expect(texts('.account:nth-child(1) .account-meta > li')).toEqual([
       'ověřeno 12. 03. 2026',
-      'odpojen od 19. 10. 2026',
+      'vypnuto od 19. 10. 2026',
       '14 darů bez VS',
       '7 400 Kč',
     ]);
-    expect(texts('.account:nth-child(2) .account-meta > li')).toEqual(['ověřeno 12. 03. 2026', 'odpojen od 01. 01. 2026']);
+    expect(texts('.account:nth-child(2) .account-meta > li')).toEqual(['ověřeno 12. 03. 2026', 'vypnuto od 01. 01. 2026']);
     expect(element('.account-hint')).toBeNull();
-    expect(texts('.account-action')).toEqual(['Připojit znovu', 'Připojit znovu']);
+    expect(texts('.account-action')).toEqual(['Zapnout párování', 'Zapnout párování']);
   });
 
   it('when the donor has no known account, then the card explains how one becomes known', async () => {
@@ -201,7 +215,7 @@ describe('Given the bank accounts card in the overview', () => {
     expect(text('.account-status')).toBe('Ověřený');
   });
 
-  describe('when the donor presses Odpojit', () => {
+  describe('when the donor presses Vypnout párování', () => {
     beforeEach(async () => {
       await respond([bankAccount()]);
       await click('.account-action');
@@ -212,14 +226,14 @@ describe('Given the bank accounts card in the overview', () => {
         'Platby bez variabilního symbolu z tohoto účtu vám už nebudeme přiřazovat. Dosavadní dary zůstanou; pokud některý z nich není váš, napište nám.',
       );
       expect(element<HTMLAnchorElement>('.account-confirm-text a')?.getAttribute('href')).toBe('mailto:info@nfnn.cz');
-      expect(text('.account-confirm-yes')).toBe('Odpojit');
-      expect(text('.account-confirm-no')).toBe('Zrušit');
+      expect(text('.account-confirm-yes')).toBe('Vypnout párování');
+      expect(text('.account-confirm-no')).toBe('Ponechat');
       expect(element('.account-action')).toBeNull();
       expect(document.activeElement).toBe(element('.account-confirm-no'));
       http.expectNone(`${LIST_URL}/${ACCOUNT_ID}/disconnect`);
     });
 
-    it('and cancels, then nothing is sent and the focus goes back to Odpojit', async () => {
+    it('and cancels, then nothing is sent and the focus goes back to Vypnout párování', async () => {
       await click('.account-confirm-no');
 
       http.expectNone(`${LIST_URL}/${ACCOUNT_ID}/disconnect`);
@@ -236,8 +250,8 @@ describe('Given the bank accounts card in the overview', () => {
       await settle();
       await respond([bankAccount({ status: 'DISCONNECTED', disconnectedOn: '2026-10-18' })]);
 
-      expect(text('.account-status')).toBe('Odpojený');
-      expect(text('.accounts-status')).toBe('Účet jsme odpojili.');
+      expect(text('.account-status')).toBe('Párování vypnuto');
+      expect(text('.accounts-status')).toBe('Párování z účtu jsme vypnuli.');
       expect(document.activeElement).toBe(element('h2'));
     });
 
@@ -247,15 +261,15 @@ describe('Given the bank accounts card in the overview', () => {
       http
         .expectOne(`${LIST_URL}/${ACCOUNT_ID}/disconnect`)
         .flush(
-          { ...problem('donations/bank-account-already-disconnected', 'Účet je už odpojený'), status: 409 },
+          { ...problem('donations/bank-account-already-disconnected', 'Párování z účtu je už vypnuté'), status: 409 },
           { status: 409, statusText: 'Conflict' },
         );
       await settle();
       await respond([bankAccount({ status: 'DISCONNECTED', disconnectedOn: '2026-10-18' })]);
 
       expect(element('.accounts-error')?.getAttribute('role')).toBe('alert');
-      expect(text('.accounts-error')).toBe('Účet je už odpojený.');
-      expect(text('.account-status')).toBe('Odpojený');
+      expect(text('.accounts-error')).toBe('Párování z účtu je už vypnuté.');
+      expect(text('.account-status')).toBe('Párování vypnuto');
     });
 
     it('and the request fails without a problem, then a generic line asks to try again', async () => {
@@ -295,7 +309,7 @@ describe('Given the bank accounts card in the overview', () => {
       bankAccount({ status: 'DISCONNECTED', disconnectedOn: '2026-10-18' }),
     ]);
 
-    expect(texts('.account-status')).toEqual(['Čeká na platbu', 'Odpojený']);
+    expect(texts('.account-status')).toEqual(['Čeká na platbu', 'Párování vypnuto']);
     expect(text('.accounts-status')).toBe('Účet čeká na vaši platbu 1 Kč.');
   });
 
@@ -306,13 +320,20 @@ describe('Given the bank accounts card in the overview', () => {
     http
       .expectOne(`${LIST_URL}/${ACCOUNT_ID}/reconnect`)
       .flush(
-        { ...problem('donations/bank-account-already-connected', 'Účet je už připojený', 'Čeká na vaši platbu.'), status: 409 },
+        {
+          ...problem(
+            'donations/bank-account-already-connected',
+            'Párování z účtu je už zapnuté',
+            'Párování z tohoto účtu je zapnuté nebo čeká na vaši platbu 1 Kč.',
+          ),
+          status: 409,
+        },
         { status: 409, statusText: 'Conflict' },
       );
     await settle();
     await respond([bankAccount({ status: 'AWAITING_PAYMENT', verifiedOn: null })]);
 
-    expect(text('.accounts-error')).toBe('Účet je už připojený. Čeká na vaši platbu.');
+    expect(text('.accounts-error')).toBe('Párování z účtu je už zapnuté. Párování z tohoto účtu je zapnuté nebo čeká na vaši platbu 1 Kč.');
   });
 
   describe('when the donor presses Přidat účet', () => {

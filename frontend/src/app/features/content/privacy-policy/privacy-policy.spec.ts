@@ -76,7 +76,8 @@ describe('Given the privacy policy page', () => {
     expect(donations).toContain('podle vašeho variabilního symbolu');
     expect(donations).toContain('podle čísla účtu, ze kterého přišla');
     expect(donations).toContain('Moje bankovní účty');
-    expect(donations).toContain('odpojit');
+    expect(donations).toContain('párování vypnout');
+    expect(donations).not.toContain('odpoj');
   });
 
   it('when it renders, then it lists every payment detail the bank statement gives us', () => {

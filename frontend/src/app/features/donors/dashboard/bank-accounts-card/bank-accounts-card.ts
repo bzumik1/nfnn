@@ -43,17 +43,17 @@ const LABELS: Record<AccountLabel, string> = {
   active: $localize`:@@donor.bankAccounts.status.active:Ověřený`,
   shared: $localize`:@@donor.bankAccounts.status.shared:Sdílený`,
   awaiting: $localize`:@@donor.bankAccounts.status.awaiting:Čeká na platbu`,
-  disconnected: $localize`:@@donor.bankAccounts.status.disconnected:Odpojený`,
+  disconnected: $localize`:@@donor.bankAccounts.status.disconnected:Párování vypnuto`,
 };
 
 const HINTS: Record<AccountLabel, string> = {
   active: $localize`:@@donor.bankAccounts.hint.active:Platby bez variabilního symbolu z něj vám přiřazujeme automaticky.`,
-  shared: $localize`:@@donor.bankAccounts.hint.shared:Tento účet ověřil i jiný dárce, platby bez symbolu z něj proto nepřiřazujeme nikomu. Posílejte z něj prosím s vaším variabilním symbolem.`,
-  awaiting: $localize`:@@donor.bankAccounts.hint.awaiting:Pošlete z účtu 1 Kč s vaším variabilním symbolem, pak ho znovu připojíme.`,
+  shared: $localize`:@@donor.bankAccounts.hint.shared:Tento účet ověřil i jiný dárce, proto z něj platby bez vašeho variabilního symbolu nepřiřazujeme nikomu. Pokud z něj dary posílá jen druhý dárce, vypněte u něj párování a platby se začnou přiřazovat jemu. Jinak z něj prosím posílejte vždy s vaším variabilním symbolem.`,
+  awaiting: $localize`:@@donor.bankAccounts.hint.awaiting:Pošlete z účtu 1 Kč s vaším variabilním symbolem, pak párování znovu zapneme.`,
   disconnected: '',
 };
 
-const DISCONNECTED_MESSAGE = $localize`:@@donor.bankAccounts.disconnected:Účet jsme odpojili.`;
+const DISCONNECTED_MESSAGE = $localize`:@@donor.bankAccounts.disconnected:Párování z účtu jsme vypnuli.`;
 const RECONNECTED_MESSAGE = $localize`:@@donor.bankAccounts.reconnected:Účet čeká na vaši platbu 1 Kč.`;
 const CHANGE_FAILED = $localize`:@@donor.bankAccounts.error.change:Účet se nepodařilo změnit. Zkuste to prosím znovu.`;
 
@@ -166,6 +166,10 @@ export class BankAccountsCard {
 
   protected hint(account: BankAccountItem): string {
     return HINTS[labelOf(account)];
+  }
+
+  protected warns(account: BankAccountItem): boolean {
+    return labelOf(account) === 'shared';
   }
 
   protected labelModifier(account: BankAccountItem): string {
