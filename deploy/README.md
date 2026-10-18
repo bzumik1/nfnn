@@ -111,7 +111,15 @@ Gzip, cache a bezpečnostní hlavičky řeší nginx ve frontend image, Advanced
 
 ## Nasazení nové verze
 
-Po merge do `main` počkej, až v Actions doběhne zeleně **Publish Docker images**. Pak v ZimaOS aplikaci přeinstaluj se stejným compose, vloženým beze změn; data i env soubory v `/DATA/AppData/nfnn` zůstanou. Samotné `docker restart` nestačí, kontejner by běžel dál ze staré image.
+Po merge do `main` počkej, až v Actions doběhne zeleně **Publish Docker images**. Pak v ZimaOS otevři nastavení aplikace „Nová naděje“ a klikni na **Uložit** bez jakékoli změny: ZimaOS stáhne nové image `latest` a kontejnery vytvoří znovu; data i env soubory v `/DATA/AppData/nfnn` zůstanou. Tlačítko Update to neudělá (u tagu `latest` aplikaci považuje za aktuální) a samotné `docker restart` taky ne, kontejner by běžel dál ze staré image.
+
+Kterou verzi kontejnery mají, ukáže commit, ze kterého image vznikla; má se shodovat s commitem běhu **Publish Docker images**:
+
+```bash
+sudo docker inspect nfnn-backend nfnn-frontend --format '{{.Name}} {{index .Config.Labels "org.opencontainers.image.revision"}}'
+```
+
+Uložení bere compose z poslední instalace, takže změnu `compose.yml` nebo env souborů nepřenese; na ty je dál potřeba přeinstalace.
 
 ## Zálohy
 
