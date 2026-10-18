@@ -53,7 +53,6 @@ class JpaDonationReceiptRepository implements DonationReceiptRepository {
 
     @Override
     public void lockDonor(DonorReference donor) {
-        jpa.lockDonorRecord(donor.value())
-                .orElseThrow(() -> new IllegalStateException("Donor record " + donor + " does not exist, so it cannot be locked for issuing"));
+        jpa.lockDonorRecord(donor.value());
     }
 }

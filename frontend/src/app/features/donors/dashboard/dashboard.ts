@@ -1,6 +1,6 @@
 import { Component, computed, DestroyRef, inject, linkedSignal, signal, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { Router, RouterLink } from '@angular/router';
+import { Router } from '@angular/router';
 import { forkJoin, last, Observable, tap } from 'rxjs';
 import { problemOf, problemTypeEndsWith } from '../../../core/auth/api-problem';
 import { AuthStore } from '../../../core/auth/auth-store';
@@ -19,6 +19,7 @@ import { saveBlob } from '../../donations/file-download';
 import { BankAccountsCard } from './bank-accounts-card/bank-accounts-card';
 import { ProfileCard } from './profile-card/profile-card';
 import { SymbolCard } from './symbol-card/symbol-card';
+import { DashboardTopBar } from './top-bar/top-bar';
 
 type DashboardState = 'loading' | 'ready' | 'error';
 
@@ -44,7 +45,7 @@ const SENDER_ACCOUNT_DIGITS_SHOWN = 4;
 
 @Component({
   selector: 'app-donor-dashboard',
-  imports: [RouterLink, SymbolCard, BankAccountsCard, ProfileCard],
+  imports: [DashboardTopBar, SymbolCard, BankAccountsCard, ProfileCard],
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.scss',
 })
@@ -83,7 +84,6 @@ export class DonorDashboard {
 
   protected readonly receiptError = signal<ReceiptError | null>(null);
   private readonly downloads = signal<ReadonlySet<string>>(new Set());
-  protected readonly signingOut = signal(false);
 
   protected readonly bankDataAsOf = signal<string | null>(null);
   protected readonly checkingBank = signal(false);
@@ -257,14 +257,6 @@ export class DonorDashboard {
       return;
     }
     this.receiptError.set({ scope, message: RECEIPT_FAILED });
-  }
-
-  protected logout(): void {
-    if (this.signingOut()) {
-      return;
-    }
-    this.signingOut.set(true);
-    this.auth.logout().subscribe(() => this.router.navigateByUrl('/'));
   }
 }
 

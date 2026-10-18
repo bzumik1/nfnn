@@ -82,3 +82,35 @@ Feature: Donor registers an account
       | password   | password1234    |
     Then the response status is 400
     And the problem type ends with "donors/password-too-common"
+
+  Scenario: The sixth registration within an hour from one address is refused, a refused one counts too, and no account is created
+    Given people registered with these emails:
+      | anna@example.cz  |
+      | berta@example.cz |
+      | cyril@example.cz |
+      | dana@example.cz  |
+    When a person registers with email "anna@example.cz" and password "correct horse battery"
+    Then the response status is 409
+    When a person registers with email "eva@example.cz" and password "correct horse battery"
+    Then the response status is 429
+    And the problem type ends with "donors/rate-limited"
+    And the problem has the title "Příliš mnoho požadavků"
+    When the donor signs in with email "eva@example.cz" and password "correct horse battery"
+    Then the response status is 401
+    When the following requests come from another client address
+    And a person registers with email "eva@example.cz" and password "correct horse battery"
+    Then the response status is 201
+
+  Scenario: Registration opens again an hour after the address's first one
+    Given people registered with these emails:
+      | anna@example.cz  |
+      | berta@example.cz |
+      | cyril@example.cz |
+      | dana@example.cz  |
+      | emil@example.cz  |
+    When 59 minutes pass
+    And a person registers with email "eva@example.cz" and password "correct horse battery"
+    Then the response status is 429
+    When 60 seconds pass
+    And a person registers with email "eva@example.cz" and password "correct horse battery"
+    Then the response status is 201

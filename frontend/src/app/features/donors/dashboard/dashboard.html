@@ -1,19 +1,5 @@
 <div class="dashboard">
-  <div class="topbar">
-    <div class="topbar-inner">
-      <a routerLink="/">
-        <img src="/images/logo.svg" alt="Nová naděje – nadační fond" i18n-alt="@@layout.header.logoAlt" class="topbar-logo" />
-      </a>
-      <div class="topbar-right">
-        <span class="topbar-greeting">
-          <span i18n="@@donor.dashboard.welcome">Vítejte,</span> {{ donor()?.name }}
-        </span>
-        <button type="button" class="topbar-logout" (click)="logout()" [disabled]="signingOut()" i18n="@@donor.dashboard.logout">
-          Odhlásit se
-        </button>
-      </div>
-    </div>
-  </div>
+  <app-dashboard-top-bar />
 
   <div class="container">
     <h1 class="visually-hidden" i18n="@@donor.dashboard.heading">Můj přehled darů</h1>

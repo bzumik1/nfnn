@@ -3,6 +3,7 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
 import { FormsModule, NgForm } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { FocusFirstInvalid } from '../../../shared/ui/form-field/focus-first-invalid';
 import { FormControlDirective } from '../../../shared/ui/form-field/form-control';
 import { FormField } from '../../../shared/ui/form-field/form-field';
@@ -12,7 +13,7 @@ const TOO_MANY_REQUESTS = 429;
 
 @Component({
   selector: 'app-contact-form',
-  imports: [FormsModule, FormField, FormControlDirective, FocusFirstInvalid],
+  imports: [FormsModule, RouterLink, FormField, FormControlDirective, FocusFirstInvalid],
   templateUrl: './contact-form.html',
   styleUrl: './contact-form.scss',
 })
