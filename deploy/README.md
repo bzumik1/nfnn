@@ -138,9 +138,9 @@ Doména fondu je `nfnn.cz` (u WEDOS, držitel fond). Nastavuje se jako `nakocark
 
 Adresa fondu je `info@nfnn.cz`. Příchozí poštu přeposílá Cloudflare Email Routing do běžných schránek, web odesílá přes Brevo (SMTP, zdarma 300 e-mailů denně). Odesílatel je `CONTACT_RECIPIENT`, takže odpověď na e-mail z webu dojde fondu.
 
-1. Cloudflare → Email → Email Routing: zapni ho (MX a SPF záznamy přidá sám), ověř cílové schránky a založ adresu `info@nfnn.cz`.
-2. Brevo: účet fondu, Senders, Domains & Dedicated IPs → Domains → přidej `nfnn.cz` a záznamy, které vypíše (ověřovací TXT a DKIM), vlož do Cloudflare. Záznamy CNAME pro DKIM musí být DNS only (šedý mráček), ne Proxied.
-3. DNS v Cloudflare: SPF (TXT na `nfnn.cz`, jen jeden) `v=spf1 include:_spf.mx.cloudflare.net include:spf.brevo.com ~all` a DMARC (TXT na `_dmarc`) `v=DMARC1; p=none`. Až e-maily z webu chodí bez spamu, zpřísni DMARC na `p=quarantine`.
+1. Cloudflare → Email → Email Routing: zapni ho, ověř cílovou schránku a v Routing rules založ `info@nfnn.cz` → tu schránku. MX, SPF (`v=spf1 include:_spf.mx.cloudflare.net ~all`) a DKIM pro přeposílání přidá Cloudflare sám a zamkne je; Catch-all nech vypnutý.
+2. Brevo: účet fondu (plán Free), Senders, Domains & Dedicated IPs → Domains → přidej `nfnn.cz`, brandovanou subdoménu přeskoč a zvol ruční přidání záznamů (Manual). Do Cloudflare přidej čtyři záznamy přesně podle Brevo: TXT `brevo-code:…` na `nfnn.cz`, CNAME `brevo1._domainkey` a `brevo2._domainkey` (DNS only, šedý mráček, ne Proxied) a TXT na `_dmarc` (`v=DMARC1; p=none; rua=mailto:rua@dmarc.brevo.com`). Až e-maily z webu chodí bez spamu, zpřísni DMARC na `p=quarantine`.
+3. SPF neměň: Brevo odesílá z vlastní odesílací domény a za `nfnn.cz` se prokazuje podpisem DKIM, takže DMARC projde i bez `include:spf.brevo.com`. V Brevo vypni u transakčních e-mailů sledování otevření a kliků, aby odkaz pro obnovu hesla s tokenem nevedl přes jeho server.
 4. Brevo → SMTP & API → SMTP: vygeneruj SMTP klíč. Do `backend.env` vyplň `MAIL_HOST=smtp-relay.brevo.com`, `MAIL_PORT=587`, `MAIL_USERNAME` (SMTP login z té stránky), `MAIL_PASSWORD` (SMTP klíč), `MAIL_AUTH=true`, `MAIL_STARTTLS=true` a aplikaci přeinstaluj.
 5. Vyzkoušej kontaktní formulář: zpráva musí dojít na `info@nfnn.cz` a v jejích hlavičkách musí být `dkim=pass` a `dmarc=pass`.
 
