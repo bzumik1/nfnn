@@ -16,7 +16,7 @@
         Zaujalo vás naše poslání a rádi byste pomáhali s námi?
       </h2>
       <p class="lead" i18n="@@home.donate.lead">
-        Nejjednodušší cestou bude kliknout na tlačítko níže a rázem se budete podílet na našich projektech. Každý příspěvek je plně transparentní a pomáhá přímo konkrétním dětem.
+        Stačí zvolit částku a zaplatit QR kódem nebo převodem na náš účet. Rázem se budete podílet na našich projektech. Každý příspěvek je plně transparentní a pomáhá přímo konkrétním dětem.
       </p>
 
       <div class="amount" role="group" aria-labelledby="donate-amount-label">
@@ -46,19 +46,18 @@
             <label for="donate-custom-amount" class="visually-hidden" i18n="@@home.donate.amount.customLabel">Vlastní částka v korunách</label>
             <input
               id="donate-custom-amount"
-              type="number"
+              type="text"
               inputmode="numeric"
-              [attr.min]="minAmount"
-              [attr.max]="maxAmount"
-              step="1"
+              autocomplete="off"
               [value]="customAmountSeed()"
-              [attr.aria-invalid]="amount() === null"
-              [attr.aria-describedby]="amount() === null ? 'donate-amount-hint' : null"
+              [attr.aria-invalid]="showAmountHint()"
+              [attr.aria-describedby]="showAmountHint() ? 'donate-amount-hint' : null"
               (input)="enterCustomAmount($event)"
+              (blur)="leaveCustomAmount()"
             />
             <span class="custom-amount-currency" aria-hidden="true" i18n="@@home.donate.amount.currency">Kč</span>
           </div>
-          @if (amount() === null) {
+          @if (showAmountHint()) {
             <p id="donate-amount-hint" class="amount-hint" i18n="@@home.donate.amount.invalid">Zadejte celou částku od 1 do 1 000 000 Kč.</p>
           }
         }
@@ -90,8 +89,17 @@
         <div class="qr-text" aria-live="polite">
           <p class="qr-title" i18n="@@home.donate.qr.title">Naskenujte a přispějte</p>
           <p class="qr-desc" i18n="@@home.donate.qr.desc">
-            Načtěte QR kód mobilní bankovní aplikací pro okamžitou platbu přímo na účet nadačního fondu.
+            Načtěte QR kód mobilní bankovní aplikací pro okamžitou platbu přímo na účet nadačního fondu. Na telefonu si ho
+            uložte a v bankovní aplikaci otevřete z galerie.
           </p>
+          @if (qr(); as qr) {
+            <a
+              class="qr-save"
+              [href]="'data:image/png;base64,' + qr.qrPngBase64"
+              download="qr-platba-nova-nadeje.png"
+              i18n="@@home.donate.qr.save"
+            >Uložit QR kód</a>
+          }
           @if (state().kind === 'failed') {
             <div class="qr-error">
               <p i18n="@@home.donate.qr.error">QR platbu se nepodařilo připravit. Zkuste to prosím znovu.</p>
@@ -107,18 +115,36 @@
           <div class="bank-rows">
             <div class="bank-row">
               <span class="bank-key" i18n="@@home.donate.bank.account">Číslo účtu</span>
-              <span class="bank-value">{{ account.accountNumber }}</span>
+              <span class="bank-value-wrap">
+                <span class="bank-value">{{ account.accountNumber }}</span>
+                <app-copy-button [value]="account.accountNumber" what="číslo účtu" i18n-what="@@home.donate.bank.copyAccount" />
+              </span>
             </div>
-            <div class="bank-row">
-              <span class="bank-key" i18n="@@home.donate.bank.iban">IBAN</span>
-              <span class="bank-value">{{ ibanInGroups() }}</span>
-            </div>
+            @if (amount(); as chosen) {
+              <div class="bank-row">
+                <span class="bank-key" i18n="@@home.donate.bank.amount">Částka</span>
+                <span class="bank-value-wrap">
+                  <span class="bank-value">{{ crowns(chosen) }}&nbsp;<ng-container i18n="@@home.donate.amount.currency">Kč</ng-container></span>
+                  <app-copy-button [value]="'' + chosen" what="částku" i18n-what="@@home.donate.bank.copyAmount" />
+                </span>
+              </div>
+            }
             @if (variableSymbol(); as symbol) {
               <div class="bank-row">
                 <span class="bank-key" i18n="@@home.donate.bank.vs">Variabilní symbol</span>
-                <span class="bank-value">{{ symbol }}</span>
+                <span class="bank-value-wrap">
+                  <span class="bank-value">{{ symbol }}</span>
+                  <app-copy-button [value]="symbol" what="variabilní symbol" i18n-what="@@home.donate.bank.copyVs" />
+                </span>
               </div>
             }
+            <div class="bank-row">
+              <span class="bank-key" i18n="@@home.donate.bank.iban">IBAN</span>
+              <span class="bank-value-wrap">
+                <span class="bank-value">{{ ibanInGroups() }}</span>
+                <app-copy-button [value]="account.iban" what="IBAN" i18n-what="@@home.donate.bank.copyIban" />
+              </span>
+            </div>
           </div>
           @if (variableSymbol()) {
             <p class="bank-note" i18n="@@home.donate.bank.noteSignedIn">
@@ -129,11 +155,13 @@
               Chcete dar vidět ve svém přehledu a stáhnout si potvrzení? Přihlaste se před platbou, QR kód pak ponese váš
               variabilní symbol.
             </p>
+            <div class="account-actions">
+              <button type="button" class="account-register" (click)="register()" i18n="@@home.donate.account.register">Založit účet</button>
+              <button type="button" class="account-sign-in" (click)="signIn()" i18n="@@home.donate.account.signIn">Přihlásit se</button>
+            </div>
           }
         </div>
       }
-
-      <a class="btn-primary" routerLink="/" fragment="contact" i18n="@@home.donate.cta">Finanční příspěvek</a>
     </div>
   </div>
 </section>
