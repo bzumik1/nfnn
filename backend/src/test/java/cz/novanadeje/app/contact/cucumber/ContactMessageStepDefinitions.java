@@ -69,6 +69,12 @@ public class ContactMessageStepDefinitions {
         assertThat(Arrays.stream(email.getRecipients(Message.RecipientType.TO)).map(Object::toString)).containsExactly(recipient);
     }
 
+    @And("the email comes from {string}")
+    public void theEmailComesFrom(String sender) throws Exception {
+        MimeMessage email = mailSender.sent().getFirst();
+        assertThat(Arrays.stream(email.getFrom()).map(Object::toString)).containsExactly(sender);
+    }
+
     @And("the email can be answered to {string}")
     public void theEmailCanBeAnsweredTo(String replyTo) throws Exception {
         MimeMessage email = mailSender.sent().getFirst();

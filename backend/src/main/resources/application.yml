@@ -66,9 +66,12 @@ management:
       enabled: false
 
 app:
+  site:
+    public-url: ${PUBLIC_URL:https://nfnn.znamenacek.duckdns.org}
+  mail:
+    sender-email: ${MAIL_FROM:${CONTACT_RECIPIENT:info@novanadeje.cz}}
   contact:
     recipient-email: ${CONTACT_RECIPIENT:info@novanadeje.cz}
-    sender-email: ${MAIL_FROM:${CONTACT_RECIPIENT:info@novanadeje.cz}}
   donations:
     bank-account:
       account-number: ${BANK_ACCOUNT_NUMBER:5544332217/2010}
