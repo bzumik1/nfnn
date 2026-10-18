@@ -251,13 +251,13 @@ class JpaDonationReceiptRepositoryTest {
     }
 
     @Test
-    @DisplayName("Given no donor record, when the donor is locked for issuing, then the adapter refuses with an invariant breach")
-    void should_refuse_when_locked_given_unknown_donor() {
+    @DisplayName("Given no donor record, when the donor is locked for issuing, then there is no row to hold and the reads that follow decide the answer")
+    void should_lock_nothing_and_not_fail_when_locked_given_unknown_donor() {
         DonorReference unknown = new DonorReference(UuidV7.generate(NOW));
 
-        assertThatThrownBy(() -> receipts.lockDonor(unknown))
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("cannot be locked");
+        receipts.lockDonor(unknown);
+
+        assertThat(jdbc.sql("select count(*) from donor_record where donor_id = ?").param(unknown.value()).query(Long.class).single()).isZero();
     }
 
     @Test
