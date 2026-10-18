@@ -1,34 +1,3 @@
-.overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 200;
-  background: var(--color-backdrop);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
-  display: flex;
-  align-items: safe center;
-  justify-content: center;
-  padding: 20px;
-  overflow-y: auto;
-  animation: fadeIn 0.2s ease both;
-}
-
-.card {
-  position: relative;
-  background: var(--color-surface);
-  border-radius: var(--radius-dialog);
-  padding: 36px 40px;
-  width: 100%;
-  max-width: 420px;
-  box-shadow: var(--shadow-dialog);
-  animation: fadeInUp 0.3s ease both;
-  transition: max-width 0.2s;
-
-  &--wide {
-    max-width: 520px;
-  }
-}
-
 .type-switch {
   display: flex;
   gap: 8px;
@@ -76,30 +45,6 @@
   a {
     color: var(--color-accent);
     font-weight: 600;
-  }
-}
-
-.close-btn {
-  position: absolute;
-  top: 14px;
-  right: 14px;
-  width: 32px;
-  height: 32px;
-  border-radius: var(--radius-round);
-  border: none;
-  background: transparent;
-  color: var(--color-text-subtle);
-  font-size: 24px;
-  line-height: 1;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background 0.2s, color 0.2s;
-
-  &:hover {
-    background: var(--color-accent-bg);
-    color: var(--color-accent);
   }
 }
 
@@ -263,9 +208,4 @@
   justify-content: center;
   font-size: 24px;
   margin: 0 auto 16px;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
 }

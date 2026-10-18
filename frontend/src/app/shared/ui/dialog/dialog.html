@@ -1,0 +1,15 @@
+<dialog
+  #dialog
+  class="dialog"
+  [attr.aria-labelledby]="labelledBy()"
+  (close)="dismiss()"
+  (pointerdown)="onPointerDown($event)"
+  (click)="onClick($event)"
+>
+  <div class="dialog-panel" [class.dialog-panel--wide]="wide()">
+    <button type="button" class="dialog-close" (click)="dismiss()" aria-label="Zavřít" i18n-aria-label="@@ui.dialog.close">
+      <span aria-hidden="true">×</span>
+    </button>
+    <ng-content />
+  </div>
+</dialog>

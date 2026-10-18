@@ -62,6 +62,22 @@ describe('Given the sign-in dialog', () => {
     await fixture.whenStable();
   }
 
+  describe('when it opens', () => {
+    beforeEach(() => render());
+
+    it('then it is a modal dialog with the sign-in tab pressed', () => {
+      expect(element<HTMLDialogElement>('dialog').open).toBe(true);
+      expect(element('.tab-switch button.is-active').getAttribute('aria-pressed')).toBe('true');
+      expect(element('.tab-switch button:not(.is-active)').getAttribute('aria-pressed')).toBe('false');
+    });
+
+    it('and the browser closes it on Esc, then the dialog is closed', () => {
+      element<HTMLDialogElement>('dialog').close();
+
+      expect(dialog.isOpen()).toBe(false);
+    });
+  });
+
   describe('when a donor signs in', () => {
     beforeEach(() => render());
 

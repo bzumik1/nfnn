@@ -80,4 +80,60 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     await expect(page.locator('main')).toBeFocused();
     await expect(page).toHaveURL(/\/zasady-ochrany-osobnich-udaju$/);
   });
+
+  test('when they open the sign-in dialog from the keyboard, then the focus stays in it and comes back after Esc', async ({ page }) => {
+    await page.goto('/');
+    const signInButton = page.locator('.nav-login');
+    await signInButton.focus();
+    await page.keyboard.press('Enter');
+
+    await expect(page.locator('#login-email')).toBeFocused();
+    for (let step = 0; step < 15; step++) {
+      await page.keyboard.press('Tab');
+      expect(await page.evaluate(() => document.activeElement === document.body || !!document.activeElement?.closest('dialog'))).toBe(true);
+    }
+
+    await page.keyboard.press('Escape');
+
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    await expect(signInButton).toBeFocused();
+  });
+});
+
+test.describe('Given a visitor on a phone who relies on WCAG 2.2 AA', () => {
+  test.use({ viewport: { width: 390, height: 844 } });
+
+  test.beforeEach(async ({ page }) => {
+    await mockDonorApi(page);
+  });
+
+  test('when they open the menu, then its button says so, nothing breaks the rules and Esc closes it', async ({ page }) => {
+    await page.goto('/');
+    const menuButton = page.getByRole('button', { name: 'Otevřít menu' });
+    await expect(menuButton).toHaveAttribute('aria-expanded', 'false');
+
+    await menuButton.click();
+
+    const closeButton = page.getByRole('button', { name: 'Zavřít menu' });
+    await expect(closeButton).toHaveAttribute('aria-expanded', 'true');
+    await expect(page.locator('#mobile-menu')).toBeVisible();
+    expect(await violations(page)).toEqual([]);
+
+    await page.locator('#mobile-menu a').first().focus();
+    await page.keyboard.press('Escape');
+
+    await expect(page.locator('#mobile-menu')).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Otevřít menu' })).toBeFocused();
+  });
+
+  test('when they open the sign-in dialog, then it fills the screen and nothing in it breaks the rules', async ({ page }) => {
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Otevřít menu' }).click();
+    await page.locator('#mobile-menu .mobile-login').click();
+
+    const panel = page.locator('.dialog-panel');
+    await expect(panel).toBeVisible();
+    expect((await panel.boundingBox())?.width).toBe(390);
+    expect(await violations(page)).toEqual([]);
+  });
 });

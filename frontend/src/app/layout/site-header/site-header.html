@@ -19,12 +19,14 @@
     </div>
 
     <button
+      #menuButton
       type="button"
       class="mobile-menu-btn"
       [class.is-open]="menuOpen()"
+      [attr.aria-expanded]="menuOpen()"
+      aria-controls="mobile-menu"
+      [attr.aria-label]="menuOpen() ? closeMenuLabel : openMenuLabel"
       (click)="toggleMenu()"
-      aria-label="Otevřít menu"
-      i18n-aria-label="@@layout.header.toggleMenu"
     >
       <span></span>
       <span></span>
@@ -34,7 +36,7 @@
 </nav>
 
 @if (menuOpen()) {
-  <div class="mobile-menu">
+  <div id="mobile-menu" class="mobile-menu">
     <a class="mobile-link" routerLink="/" fragment="home" (click)="closeMenu()" i18n="@@layout.header.nav.home">Domů</a>
     <a class="mobile-link" routerLink="/" fragment="about" (click)="closeMenu()" i18n="@@layout.header.nav.about">O nás</a>
     <a class="mobile-link" routerLink="/" fragment="projects" (click)="closeMenu()" i18n="@@layout.header.nav.projects">Projekty</a>

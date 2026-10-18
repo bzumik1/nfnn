@@ -8,7 +8,7 @@ Angular 21 application for the Nadační fond Nová naděje site. Read this toge
 - **Angular flat file naming**: components are `name.ts` / `name.html` / `name.scss` (e.g. `hero.ts`, not `hero.component.ts`). Class names also drop the `Component` suffix (`export class Hero {}`). Keep this style for any new component.
 - **SCSS** for all styles (`inlineStyleLanguage: scss` in `angular.json`). Per-component SCSS for component-scoped rules; `src/styles.scss` for true globals.
 - **`@angular/localize`** wired in `angular.json`, `main.ts`, `tsconfig.app.json`. Czech is the source locale; English target is empty until translated. Do **not** run `ng add @angular/localize` again.
-- **Vitest** for unit tests (`@angular/build:unit-test` builder), **Playwright** for E2E (`e2e/`).
+- **Vitest** for unit tests (`@angular/build:unit-test` builder; `src/test-setup.ts` gives jsdom the `<dialog>` methods `showModal()` and `close()` it lacks), **Playwright** for E2E (`e2e/`).
 - **Build tooling**: `@angular/build:application` (Vite-based). No webpack config.
 
 ## Required Node version
@@ -45,7 +45,7 @@ src/
   styles.scss                 Loads the theme; reset, scrollbar, keyframes.
   styles/themes/              The look: `_nova-nadeje.scss` sets every design token on `:root`.
   app/
-    app.{ts,html,scss}        Root: `<router-outlet />` and the sign-in dialog rendered while `LoginDialogService.isOpen()` (re-created on every open, so its fields and panels start clean).
+    app.{ts,html,scss}        Root: `<router-outlet />` and the sign-in dialog rendered while `LoginDialogService.isOpen()` (re-created on every open, so its fields and panels start clean; it is an `app-dialog`, and its "Přihlásit se / Registrace" switch carries `aria-pressed`).
     app.config.ts             provideRouter + withInMemoryScrolling (anchor scrolling on for #fragment links).
     app.routes.ts             Top-level routes (lazy children per bounded context).
     core/                     Singletons: HTTP services, interceptors, guards, auth state.
@@ -58,9 +58,9 @@ src/
         login-dialog.service.ts  Open/closed state of the sign-in dialog and the tab it opens on (`LoginDialogMode` `login` | `register` | `reset`; `open(mode = 'login')` sets `initialMode`, which the dialog reads once when it is created). Used by the header, the guard, the dashboard, the password reset page and the dialog.
         api-problem.ts        Reads an RFC 7807 body out of an HttpErrorResponse; `describeProblem(failure, generic)` turns it into one line (title, detail, field messages) or `generic` when there is no problem body.
         testing/              Fixtures for specs (excluded from the app build).
-    shared/                   Reusable presentational components/pipes/directives. (Currently empty.)
+    shared/ui/                Behaviour-only building blocks the features share: `form-field/` (see Design system) and `dialog/` (`<app-dialog labelledBy="…" [wide]="…" (dismissed)="…">` on a native `<dialog>` opened with `showModal()`: the browser keeps the focus inside and makes the page under it inert, focus goes to the `autofocus` control, Esc, the × button and a click on the backdrop emit `dismissed`, and destroying it returns the focus to the element that opened it; on phones up to 480 px it fills the screen).
     layout/
-      site-header/            Sticky top nav, desktop links + mobile burger menu (signal-based open state).
+      site-header/            Sticky top nav, desktop links + mobile burger menu (signal-based open state; the button carries `aria-expanded`, `aria-controls="mobile-menu"` and "Otevřít/Zavřít menu"; Esc closes the menu and returns the focus to the button, a click outside or on a link closes it).
       site-footer/            Footer with columns and bottom bar.
     features/                 One folder per backend bounded context.
       content/                Public marketing pages.
@@ -152,7 +152,6 @@ Images and other public files live in `public/`. The build copies `public/**/*` 
 ## What is intentionally *not* implemented yet
 
 - No real translations (English target empty).
-- `shared/` is still a placeholder (`.gitkeep`).
 
 When implementing a feature that touches the backend, add: a service in `core/` (or a feature subfolder), HTTP types as DTOs (not entities), a guard if it's auth-gated, a route, and at least one Vitest spec following the project's `Given … when … then` BDD naming.
 
