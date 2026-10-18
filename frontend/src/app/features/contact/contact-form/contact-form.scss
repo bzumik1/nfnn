@@ -21,7 +21,7 @@
 }
 
 .eyebrow {
-  color: var(--color-accent);
+  color: var(--color-accent-on-inverse);
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.2em;
@@ -69,7 +69,7 @@
 }
 
 .info-label {
-  color: color-mix(in srgb, var(--color-on-inverse) 45%, transparent);
+  color: color-mix(in srgb, var(--color-on-inverse) 65%, transparent);
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.1em;

@@ -1,5 +1,6 @@
+<a class="skip-link" href="#obsah" (click)="skipToContent($event)" i18n="@@layout.skipToContent">Přeskočit na obsah</a>
 <app-site-header />
-<main>
+<main #content id="obsah" tabindex="-1">
   <router-outlet />
 </main>
 <app-site-footer />

@@ -221,6 +221,14 @@ describe('Given a signed-in donor on the dashboard', () => {
     expect(text('.symbol-value')).toBe('9876543210');
   });
 
+  it('when the page opens, then one level-one heading names the page for screen readers', async () => {
+    await respond(twoYearSummary(), twoYearDonations());
+
+    const headings = (fixture.nativeElement as HTMLElement).querySelectorAll('h1');
+    expect(headings.length).toBe(1);
+    expect(headings[0].textContent?.trim()).toBe('Můj přehled darů');
+  });
+
   it('when the donations are still loading, then a loading line stands where the stat cards go and the symbol stays visible', async () => {
     expect(text('.dashboard-loading')).toBe('Načítáme vaše dary…');
     expect(element('.stats-grid')).toBeNull();
