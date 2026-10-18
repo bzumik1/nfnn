@@ -152,8 +152,8 @@ class JpaDonationRepositoryTest {
         DonorReference jana = storedDonor("4821937560");
         entityManager.flush();
 
-        assertThatThrownBy(() -> jdbc.sql("insert into donation (id, donor_id, received_on, amount_minor, currency, source, status, recorded_at)"
-                        + " values (?, ?, current_date, 100, 'CZK', 'BANK_TRANSFER', 'RECEIVED', now())")
+        assertThatThrownBy(() -> jdbc.sql("insert into donation (id, donor_id, received_on, amount_minor, currency, source, status, purpose, recorded_at)"
+                        + " values (?, ?, current_date, 100, 'CZK', 'BANK_TRANSFER', 'RECEIVED', 'GENERAL', now())")
                 .params(UuidV7.generate(NOW), jana.value()).update())
                 .hasMessageContaining("ck_donation_bank_transfer_has_payment");
     }
