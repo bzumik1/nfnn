@@ -99,13 +99,15 @@ describe('Given the sign-in dialog', () => {
       expect(navigate).not.toHaveBeenCalled();
     });
 
-    it('with an empty field, then nothing is sent', async () => {
+    it('with an empty field, then nothing is sent and the empty field says what is missing', async () => {
       await fillIn('#login-email', 'jana@example.cz');
 
       await submit('.login-form');
 
       http.expectNone('/api/donors/auth/login');
-      expect(element('.form-error').textContent).toContain('Vyplňte');
+      expect(element('#login-password-error').textContent).toContain('Vyplňte prosím heslo.');
+      expect(element('#login-email-error')).toBeNull();
+      expect(element('.form-error')).toBeNull();
     });
   });
 
@@ -170,16 +172,29 @@ describe('Given the sign-in dialog', () => {
       await submit('.register-form');
 
       http.expectNone('/api/donors/auth/register');
-      expect(element('.form-error').textContent).toContain('Vyplňte');
+      expect(element('#register-company-identifier-error').textContent).toContain('Vyplňte prosím IČO.');
     });
 
-    it('with a password shorter than 12 characters, then nothing is sent', async () => {
+    it('as a company with a seven-digit identification number, then the field says it has eight digits', async () => {
+      await click('.type-switch button:nth-child(2)');
+      await fillInPerson();
+      await fillIn('#register-company-identifier', '1234567');
+
+      await submit('.register-form');
+
+      http.expectNone('/api/donors/auth/register');
+      expect(element('#register-company-identifier-error').textContent).toContain('IČO má osm číslic.');
+    });
+
+    it('with a password shorter than 12 characters, then nothing is sent and the password field says why', async () => {
       await fillInPerson();
       await fillIn('#register-password', 'short');
 
       await submit('.register-form');
 
       http.expectNone('/api/donors/auth/register');
+      expect(element('#register-password-error').textContent).toContain('Heslo musí mít alespoň 12 znaků.');
+      expect(element('#register-password').getAttribute('aria-describedby')).toBe('register-password-hint register-password-error');
     });
 
     it('with an email that already has an account, then the dialog explains it', async () => {
@@ -248,7 +263,7 @@ describe('Given the sign-in dialog', () => {
       await requestLink('jana-at-example');
 
       http.expectNone('/api/donors/auth/password-reset/request');
-      expect(element('.form-error').textContent).toContain('Vyplňte');
+      expect(element('#reset-email-error').textContent).toContain('Zadejte e-mail ve tvaru jana@example.cz.');
     });
 
     it('too many times, then the dialog asks to wait an hour', async () => {

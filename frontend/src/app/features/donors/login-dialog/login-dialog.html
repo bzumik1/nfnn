@@ -41,15 +41,13 @@
       @if (mode() === 'login') {
         <p class="sub" i18n="@@donor.login.sub.login">Přístup do vašeho přehledu příspěvků</p>
 
-        <form #login="ngForm" class="login-form" (ngSubmit)="submitLogin(login)" novalidate>
-          <div class="field">
-            <label for="login-email" i18n="@@donor.login.email">E-mail</label>
-            <input id="login-email" name="email" type="email" autocomplete="email" placeholder="vas@email.cz" i18n-placeholder="@@donor.login.emailPlaceholder" [(ngModel)]="email" required email />
-          </div>
-          <div class="field">
-            <label for="login-password" i18n="@@donor.login.password">Heslo</label>
-            <input id="login-password" name="password" type="password" autocomplete="current-password" placeholder="••••••••" [(ngModel)]="password" required />
-          </div>
+        <form #login="ngForm" class="login-form" appFocusFirstInvalid (ngSubmit)="submitLogin(login)" novalidate>
+          <app-form-field label="E-mail" i18n-label="@@donor.login.email" [messages]="emailMessages">
+            <input appFormControl id="login-email" name="email" type="email" autocomplete="email" placeholder="vas@email.cz" i18n-placeholder="@@donor.login.emailPlaceholder" [(ngModel)]="email" required email />
+          </app-form-field>
+          <app-form-field label="Heslo" i18n-label="@@donor.login.password" [messages]="signInPasswordMessages">
+            <input appFormControl id="login-password" name="password" type="password" autocomplete="current-password" [(ngModel)]="password" required />
+          </app-form-field>
 
           @if (error()) {
             <p class="form-error" role="alert">{{ error() }}</p>
@@ -71,7 +69,7 @@
       } @else {
         <p class="sub" i18n="@@donor.login.sub.register">Vytvořte si účet pro správu potvrzení o darech</p>
 
-        <form #register="ngForm" class="register-form" (ngSubmit)="submitRegistration(register)" novalidate>
+        <form #register="ngForm" class="register-form" appFocusFirstInvalid (ngSubmit)="submitRegistration(register)" novalidate>
           <div class="type-switch" role="radiogroup" aria-label="Typ dárce" i18n-aria-label="@@donor.register.type">
             <button
               type="button"
@@ -91,54 +89,44 @@
             >Firma</button>
           </div>
 
-          <div class="field">
-            @if (donorType() === 'COMPANY') {
-              <label for="register-name" i18n="@@donor.register.companyName">Název firmy</label>
-              <input id="register-name" name="name" type="text" autocomplete="organization" placeholder="Stavby Novák s.r.o." i18n-placeholder="@@donor.register.companyNamePlaceholder" [(ngModel)]="registration.name" required maxlength="160" />
-            } @else {
-              <label for="register-name" i18n="@@donor.login.name">Jméno a příjmení</label>
-              <input id="register-name" name="name" type="text" autocomplete="name" placeholder="Jan Novák" i18n-placeholder="@@home.contact.form.namePlaceholder" [(ngModel)]="registration.name" required maxlength="160" />
-            }
-          </div>
-
           @if (donorType() === 'COMPANY') {
-            <div class="field">
-              <label for="register-company-identifier" i18n="@@donor.register.companyIdentifier">IČO</label>
-              <input id="register-company-identifier" name="companyIdentifier" type="text" inputmode="numeric" placeholder="12345678" [(ngModel)]="registration.companyIdentifier" required pattern="\s*(\d\s*){8}" />
-              <p class="hint" i18n="@@donor.register.companyIdentifierHint">Osm číslic, uvedeme ho na potvrzení o daru.</p>
-            </div>
+            <app-form-field label="Název firmy" i18n-label="@@donor.register.companyName" [messages]="companyNameMessages">
+              <input appFormControl id="register-name" name="name" type="text" autocomplete="organization" placeholder="Stavby Novák s.r.o." i18n-placeholder="@@donor.register.companyNamePlaceholder" [(ngModel)]="registration.name" required maxlength="160" />
+            </app-form-field>
+
+            <app-form-field label="IČO" i18n-label="@@donor.register.companyIdentifier" [hint]="companyIdentifierHint" [messages]="companyIdentifierMessages">
+              <input appFormControl id="register-company-identifier" name="companyIdentifier" type="text" inputmode="numeric" placeholder="12345678" [(ngModel)]="registration.companyIdentifier" required pattern="\s*(\d\s*){8}" />
+            </app-form-field>
+
+            <app-form-field label="Sídlo – ulice a číslo" i18n-label="@@donor.register.companyStreet" [messages]="streetMessages">
+              <input appFormControl id="register-street" name="street" type="text" autocomplete="street-address" placeholder="Dlouhá 12" [(ngModel)]="registration.street" required maxlength="200" />
+            </app-form-field>
+          } @else {
+            <app-form-field label="Jméno a příjmení" i18n-label="@@donor.login.name" [messages]="personNameMessages">
+              <input appFormControl id="register-name" name="name" type="text" autocomplete="name" placeholder="Jan Novák" i18n-placeholder="@@home.contact.form.namePlaceholder" [(ngModel)]="registration.name" required maxlength="160" />
+            </app-form-field>
+
+            <app-form-field label="Ulice a číslo" i18n-label="@@donor.register.street" [messages]="streetMessages">
+              <input appFormControl id="register-street" name="street" type="text" autocomplete="street-address" placeholder="Dlouhá 12" [(ngModel)]="registration.street" required maxlength="200" />
+            </app-form-field>
           }
 
-          <div class="field">
-            @if (donorType() === 'COMPANY') {
-              <label for="register-street" i18n="@@donor.register.companyStreet">Sídlo – ulice a číslo</label>
-            } @else {
-              <label for="register-street" i18n="@@donor.register.street">Ulice a číslo</label>
-            }
-            <input id="register-street" name="street" type="text" autocomplete="street-address" placeholder="Dlouhá 12" [(ngModel)]="registration.street" required maxlength="200" />
-          </div>
-
           <div class="field-row">
-            <div class="field">
-              <label for="register-city" i18n="@@donor.register.city">Město</label>
-              <input id="register-city" name="city" type="text" autocomplete="address-level2" placeholder="Ústí nad Labem" [(ngModel)]="registration.city" required maxlength="120" />
-            </div>
-            <div class="field">
-              <label for="register-postal-code" i18n="@@donor.register.postalCode">PSČ</label>
-              <input id="register-postal-code" name="postalCode" type="text" inputmode="numeric" autocomplete="postal-code" placeholder="400 01" [(ngModel)]="registration.postalCode" required pattern="\s*\d{3}\s*\d{2}\s*" />
-            </div>
+            <app-form-field label="Město" i18n-label="@@donor.register.city" [messages]="cityMessages">
+              <input appFormControl id="register-city" name="city" type="text" autocomplete="address-level2" placeholder="Ústí nad Labem" [(ngModel)]="registration.city" required maxlength="120" />
+            </app-form-field>
+            <app-form-field label="PSČ" i18n-label="@@donor.register.postalCode" [messages]="postalCodeMessages">
+              <input appFormControl id="register-postal-code" name="postalCode" type="text" inputmode="numeric" autocomplete="postal-code" placeholder="400 01" [(ngModel)]="registration.postalCode" required pattern="\s*\d{3}\s*\d{2}\s*" />
+            </app-form-field>
           </div>
 
-          <div class="field">
-            <label for="register-email" i18n="@@donor.login.email">E-mail</label>
-            <input id="register-email" name="email" type="email" autocomplete="email" placeholder="vas@email.cz" i18n-placeholder="@@donor.login.emailPlaceholder" [(ngModel)]="registration.email" required email maxlength="254" />
-          </div>
+          <app-form-field label="E-mail" i18n-label="@@donor.login.email" [messages]="emailMessages">
+            <input appFormControl id="register-email" name="email" type="email" autocomplete="email" placeholder="vas@email.cz" i18n-placeholder="@@donor.login.emailPlaceholder" [(ngModel)]="registration.email" required email maxlength="254" />
+          </app-form-field>
 
-          <div class="field">
-            <label for="register-password" i18n="@@donor.login.password">Heslo</label>
-            <input id="register-password" name="password" type="password" autocomplete="new-password" placeholder="••••••••••••" [(ngModel)]="registration.password" required [minlength]="passwordMinLength" maxlength="128" />
-            <p class="hint" i18n="@@donor.register.passwordHint">Alespoň 12 znaků. Klidně celá věta, která se vám dobře pamatuje.</p>
-          </div>
+          <app-form-field label="Heslo" i18n-label="@@donor.login.password" [hint]="newPasswordHint" [messages]="newPasswordMessages">
+            <input appFormControl id="register-password" name="password" type="password" autocomplete="new-password" [(ngModel)]="registration.password" required [minlength]="passwordMinLength" maxlength="128" />
+          </app-form-field>
 
           @if (error()) {
             <p class="form-error" role="alert">{{ error() }}</p>
@@ -178,11 +166,10 @@
         <p class="reset-lead" i18n="@@donor.login.reset.lead">
           Zadejte svůj e-mail a zašleme vám odkaz pro obnovení hesla.
         </p>
-        <form #reset="ngForm" class="reset-form" (ngSubmit)="submitReset(reset)" novalidate>
-          <div class="field">
-            <label for="reset-email" i18n="@@donor.login.email">E-mail</label>
-            <input id="reset-email" name="resetEmail" type="email" autocomplete="email" placeholder="vas@email.cz" i18n-placeholder="@@donor.login.emailPlaceholder" [(ngModel)]="resetEmail" required email maxlength="254" />
-          </div>
+        <form #reset="ngForm" class="reset-form" appFocusFirstInvalid (ngSubmit)="submitReset(reset)" novalidate>
+          <app-form-field label="E-mail" i18n-label="@@donor.login.email" [messages]="emailMessages">
+            <input appFormControl id="reset-email" name="resetEmail" type="email" autocomplete="email" placeholder="vas@email.cz" i18n-placeholder="@@donor.login.emailPlaceholder" [(ngModel)]="resetEmail" required email maxlength="254" />
+          </app-form-field>
 
           @if (error()) {
             <p class="form-error" role="alert">{{ error() }}</p>

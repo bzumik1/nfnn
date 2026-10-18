@@ -1,0 +1,23 @@
+.form-control {
+  width: 100%;
+  padding: 12px 16px;
+  border-radius: var(--radius-field);
+  border: 1.5px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 15px;
+  font-family: var(--font-sans);
+  transition: border-color 0.2s;
+
+  &:focus {
+    border-color: var(--color-accent);
+  }
+
+  &[aria-invalid='true'] {
+    border-color: var(--color-danger);
+  }
+}
+
+textarea.form-control {
+  resize: vertical;
+}

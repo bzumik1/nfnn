@@ -103,11 +103,11 @@ describe('Given the page that sets a new password from the e-mail link', () => {
       expect(element('.form-error').textContent).toContain('Hesla se neshodují.');
     });
 
-    it('and the password is too short, then nothing is sent', async () => {
+    it('and the password is too short, then nothing is sent and the password field says why', async () => {
       await submitPasswords('short');
 
       http.expectNone('/api/donors/auth/password-reset/confirm');
-      expect(element('.form-error').textContent).toContain('Vyplňte');
+      expect(element('#reset-password-error').textContent).toContain('Heslo musí mít alespoň 12 znaků.');
     });
 
     it('and the password is saved, then the success panel takes focus and offers the sign-in dialog', async () => {

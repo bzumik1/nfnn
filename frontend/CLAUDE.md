@@ -112,14 +112,16 @@ When a feature gains real routes (e.g. `contact`, `donations`), add a `<feature>
 
 The look is kept apart from the behaviour so it can change without touching components. `src/styles/themes/_nova-nadeje.scss` is the theme: it gives every design token its value on `:root`, and `src/styles.scss` loads it. Components only reference tokens:
 
-- Colour, named by role, not by hue: `--color-accent` (`-soft`, `-bg`, `-2`, `-3`), `--color-on-accent`, `--color-text` (`-secondary`, `-muted`, `-soft`, `-subtle`), `--color-surface` (`-alt`, `-accent`, `-inverse`, `-inverse-strong`), `--color-on-inverse`, `--color-on-image`, `--color-image-shade`, `--color-backdrop`, `--color-border` (`-soft`, `-accent`), `--color-divider`, `--color-danger*`, `--color-success*`. A translucent variant is `color-mix(in srgb, var(--color-on-image) 65%, transparent)`, never an `rgba()`.
+- Colour, named by role, not by hue: `--color-accent` (`-soft`, `-bg`, `-on-inverse`, `-2`, `-3`), `--color-on-accent`, `--color-text` (`-secondary`, `-muted`, `-soft`, `-subtle`), `--color-surface` (`-alt`, `-accent`, `-inverse`, `-inverse-strong`), `--color-on-inverse`, `--color-on-image`, `--color-image-shade`, `--color-backdrop`, `--color-border` (`-soft`, `-accent`), `--color-divider`, `--color-focus-ring`, `--color-danger*`, `--color-success*`. A translucent variant is `color-mix(in srgb, var(--color-on-image) 65%, transparent)`, never an `rgba()`.
 - Type: `--font-serif` (Playfair Display, headlines), `--font-sans` (Inter, body), `--font-mono`.
-- Shape: `--radius-xs` … `--radius-xl`, `--radius-card`, `--radius-media`, `--radius-dialog`, `--radius-pill`, `--radius-round`.
+- Shape: `--radius-xs` … `--radius-xl`, `--radius-field`, `--radius-card`, `--radius-media`, `--radius-dialog`, `--radius-pill`, `--radius-round`.
 - Depth: one `--shadow-*` per role (`card`, `panel`, `dialog`, `header`, `menu`, `cta`, `button`, `tab`, `focus`, …); shadows of accent buttons mix `--color-accent`, so they follow it.
 - Layout: `--content-max: 1200px`, `--header-height`.
 - Animations: `@keyframes scrollDot`, `@keyframes fadeInUp`.
 
-`npm run lint:styles` (Stylelint, run by the PR check) fails on a hex, `rgb()`/`hsl()` or named colour, a `font-family`, a `border-radius` or a `box-shadow`/`text-shadow` in `src/app/**` or `src/styles.scss` that is not a token. A new look is a change to the theme file; if a component needs a value the theme does not have, add a token there.
+`npm run lint:styles` (Stylelint, run by the PR check) fails on a hex, `rgb()`/`hsl()` or named colour, a `font-family`, a `border-radius` or a `box-shadow`/`text-shadow` in `src/app/**`, `src/styles/*.scss` or `src/styles.scss` that is not a token (the theme in `src/styles/themes/` is the one place with raw values). A new look is a change to the theme file; if a component needs a value the theme does not have, add a token there.
+
+Every form field goes through `shared/ui/form-field/`: `<app-form-field label="…" [hint]="…" [messages]="{ required: …, email: … }">` wraps one control marked `appFormControl` (it needs an `id` and `ngModel`), renders the `<label for>`, the hint and the message for the control's first error key, and sets `aria-invalid` and `aria-describedby` on the control once it is touched or its form submitted. `form[appFocusFirstInvalid]` moves the focus to the first invalid control on submit. A field's error is said at the field in its own words, never as one sentence for the whole form; a form-level error is only for what no single field owns (passwords that do not match, a refusal from the API). The control's look is the global `.form-control` in `src/styles/_form-controls.scss`; components only space the fields.
 
 The visual reference is `Claude Design/Nova Nadeje.html` at the repo root — a static React-in-the-browser prototype. **Treat it as the source of truth for visuals only**; never embed its JSX or pull React in. All sections in `home/sections/` are 1:1 ports.
 

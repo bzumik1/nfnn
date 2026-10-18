@@ -44,12 +44,12 @@
           </button>
         </div>
       } @else {
-        <form #f="ngForm" (ngSubmit)="submit(f)" novalidate>
+        <form #f="ngForm" appFocusFirstInvalid (ngSubmit)="submit(f)" novalidate>
           <h3 class="form-title" i18n="@@home.contact.form.title">Napište nám</h3>
 
-          <div class="field">
-            <label for="contact-name" i18n="@@home.contact.form.name">Jméno a příjmení</label>
+          <app-form-field label="Jméno a příjmení" i18n-label="@@home.contact.form.name" [messages]="nameMessages">
             <input
+              appFormControl
               id="contact-name"
               name="fullName"
               type="text"
@@ -60,11 +60,11 @@
               required
               maxlength="120"
             />
-          </div>
+          </app-form-field>
 
-          <div class="field">
-            <label for="contact-email" i18n="@@home.contact.form.email">E-mailová adresa</label>
+          <app-form-field label="E-mailová adresa" i18n-label="@@home.contact.form.email" [messages]="emailMessages">
             <input
+              appFormControl
               id="contact-email"
               name="email"
               type="email"
@@ -75,11 +75,11 @@
               email
               maxlength="254"
             />
-          </div>
+          </app-form-field>
 
-          <div class="field">
-            <label for="contact-message" i18n="@@home.contact.form.message">Vaše zpráva</label>
+          <app-form-field label="Vaše zpráva" i18n-label="@@home.contact.form.message" [messages]="messageMessages">
             <textarea
+              appFormControl
               id="contact-message"
               name="message"
               rows="4"
@@ -89,7 +89,7 @@
               required
               maxlength="5000"
             ></textarea>
-          </div>
+          </app-form-field>
 
           <div class="field field-trap" aria-hidden="true">
             <label for="contact-website">Website</label>

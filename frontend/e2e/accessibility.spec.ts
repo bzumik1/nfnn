@@ -53,6 +53,14 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     expect(await violations(page)).toEqual([]);
   });
 
+  test('when they send the contact form empty, then its error messages break no rule either', async ({ page }) => {
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Odeslat zprávu' }).click();
+    await expect(page.locator('#contact-name')).toHaveAttribute('aria-invalid', 'true');
+
+    expect(await violations(page)).toEqual([]);
+  });
+
   test('when a signed-in donor opens the overview, then nothing on it breaks the rules', async ({ page }) => {
     await signIn(page);
     await expect(page.locator('.symbol-value')).toBeVisible();
