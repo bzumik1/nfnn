@@ -43,17 +43,17 @@ public class DonorAccountStepDefinitions {
 
     @Given("a person registered with email {string} and password {string}")
     public void aPersonRegisteredWith(String email, String password) {
-        Map<String, String> fields = Map.of(
-                "name", "Jana Nováková",
-                "street", "Dlouhá 12",
-                "city", "Ústí nad Labem",
-                "postalCode", "400 01",
-                "email", email,
-                "password", password
-        );
-        ResponseEntity<String> response = api.post(REGISTER_PATH, registration("PERSON", fields));
-        assertThat(response.getStatusCode().value()).isEqualTo(201);
-        api.forgetCredentials();
+        registerPerson(email, password, "Jana Nováková", null);
+    }
+
+    @Given("a person registered with email {string}, password {string} and name {string}")
+    public void aPersonRegisteredWithName(String email, String password, String name) {
+        registerPerson(email, password, name, null);
+    }
+
+    @Given("a person registered with email {string}, password {string} and preferred locale {string}")
+    public void aPersonRegisteredWithPreferredLocale(String email, String password, String preferredLocale) {
+        registerPerson(email, password, "Jana Nováková", preferredLocale);
     }
 
     @When("the donor signs in with email {string} and password {string}")
@@ -181,6 +181,20 @@ public class DonorAccountStepDefinitions {
                 .orElseThrow(() -> new AssertionError("No refresh_token cookie in " + cookies));
     }
 
+    private void registerPerson(String email, String password, String name, String preferredLocale) {
+        Map<String, String> fields = new HashMap<>();
+        fields.put("name", name);
+        fields.put("street", "Dlouhá 12");
+        fields.put("city", "Ústí nad Labem");
+        fields.put("postalCode", "400 01");
+        fields.put("email", email);
+        fields.put("password", password);
+        fields.put("preferredLocale", preferredLocale);
+        ResponseEntity<String> response = api.post(REGISTER_PATH, registration("PERSON", fields));
+        assertThat(response.getStatusCode().value()).withFailMessage("Registration answered %s", response.getBody()).isEqualTo(201);
+        api.forgetCredentials();
+    }
+
     private static Map<String, Object> registration(String type, Map<String, String> fields) {
         Map<String, Object> body = new HashMap<>();
         body.put("type", type);
@@ -193,6 +207,7 @@ public class DonorAccountStepDefinitions {
         ));
         body.put("email", fields.get("email"));
         body.put("password", fields.get("password"));
+        body.put("preferredLocale", fields.get("preferredLocale"));
         return body;
     }
 }
