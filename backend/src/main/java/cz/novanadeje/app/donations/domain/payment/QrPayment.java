@@ -14,7 +14,6 @@ public final class QrPayment {
 
     private static final String HEADER = "SPD*1.0";
     private static final String FIELD_SEPARATOR = "*";
-    private static final String DONATION_MESSAGE = "Dar Nová naděje";
     private static final long MAX_AMOUNT_MINOR = 999_999_999L;
     private static final int MAX_RECIPIENT_NAME_LENGTH = 35;
     private static final int MAX_MESSAGE_LENGTH = 60;
@@ -22,8 +21,9 @@ public final class QrPayment {
     private final BankAccount recipient;
     private final Money amount;
     private final VariableSymbol variableSymbol;
+    private final QrPaymentPurpose purpose;
 
-    private QrPayment(BankAccount recipient, Money amount, VariableSymbol variableSymbol) {
+    private QrPayment(BankAccount recipient, Money amount, VariableSymbol variableSymbol, QrPaymentPurpose purpose) {
         if (recipient == null) {
             throw new IllegalArgumentException("Recipient account is required");
         }
@@ -36,17 +36,25 @@ public final class QrPayment {
         this.recipient = recipient;
         this.amount = amount;
         this.variableSymbol = variableSymbol;
+        this.purpose = purpose;
     }
 
     public static QrPayment donation(BankAccount recipient, Money amount) {
-        return new QrPayment(recipient, amount, null);
+        return new QrPayment(recipient, amount, null, QrPaymentPurpose.DONATION);
     }
 
     public static QrPayment donation(BankAccount recipient, Money amount, VariableSymbol variableSymbol) {
         if (variableSymbol == null) {
             throw new IllegalArgumentException("Variable symbol is required for an identified donation");
         }
-        return new QrPayment(recipient, amount, variableSymbol);
+        return new QrPayment(recipient, amount, variableSymbol, QrPaymentPurpose.DONATION);
+    }
+
+    public static QrPayment accountVerification(BankAccount recipient, Money amount, VariableSymbol variableSymbol) {
+        if (variableSymbol == null) {
+            throw new VerificationNeedsVariableSymbol();
+        }
+        return new QrPayment(recipient, amount, variableSymbol, QrPaymentPurpose.ACCOUNT_VERIFICATION);
     }
 
     public BankAccount recipient() {
@@ -61,6 +69,10 @@ public final class QrPayment {
         return Optional.ofNullable(variableSymbol);
     }
 
+    public QrPaymentPurpose purpose() {
+        return purpose;
+    }
+
     public String toSpayd() {
         StringJoiner spayd = new StringJoiner(FIELD_SEPARATOR).add(HEADER)
                 .add("ACC:" + recipient.iban().value())
@@ -68,7 +80,7 @@ public final class QrPayment {
                 .add("CC:" + amount.currency().name());
         variableSymbol().ifPresent(symbol -> spayd.add("X-VS:" + symbol.value()));
         addText(spayd, "RN:", recipient.recipientName(), MAX_RECIPIENT_NAME_LENGTH);
-        addText(spayd, "MSG:", DONATION_MESSAGE, MAX_MESSAGE_LENGTH);
+        addText(spayd, "MSG:", purpose.message(), MAX_MESSAGE_LENGTH);
         return spayd.toString();
     }
 
@@ -94,12 +106,13 @@ public final class QrPayment {
         return other instanceof QrPayment payment
                 && recipient.equals(payment.recipient)
                 && amount.equals(payment.amount)
-                && Objects.equals(variableSymbol, payment.variableSymbol);
+                && Objects.equals(variableSymbol, payment.variableSymbol)
+                && purpose == payment.purpose;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(recipient, amount, variableSymbol);
+        return Objects.hash(recipient, amount, variableSymbol, purpose);
     }
 
     @Override

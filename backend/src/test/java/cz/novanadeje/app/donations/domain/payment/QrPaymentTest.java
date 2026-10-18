@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class QrPaymentTest {
 
@@ -32,6 +33,21 @@ class QrPaymentTest {
         assertThat(payment.toSpayd()).isEqualTo(
                 "SPD*1.0*ACC:CZ6508000000192000145399*AM:1000.00*CC:CZK*RN:NADACNI FOND NOVA NADEJE*MSG:DAR NOVA NADEJE");
         assertThat(payment.variableSymbol()).isEmpty();
+    }
+
+    @Test
+    void should_say_it_verifies_the_account_when_rendered_given_account_verification() {
+        QrPayment payment = QrPayment.accountVerification(FOUNDATION, Money.czk(100), new VariableSymbol("1234567890"));
+
+        assertThat(payment.toSpayd()).isEqualTo(
+                "SPD*1.0*ACC:CZ6508000000192000145399*AM:1.00*CC:CZK*X-VS:1234567890*RN:NADACNI FOND NOVA NADEJE*MSG:OVERENI UCTU NFNN.CZ");
+        assertThat(payment.purpose()).isEqualTo(QrPaymentPurpose.ACCOUNT_VERIFICATION);
+    }
+
+    @Test
+    void should_refuse_when_created_given_account_verification_without_variable_symbol() {
+        assertThatThrownBy(() -> QrPayment.accountVerification(FOUNDATION, Money.czk(100), null))
+                .isInstanceOf(VerificationNeedsVariableSymbol.class);
     }
 
     @Test
@@ -81,6 +97,7 @@ class QrPaymentTest {
     void should_be_equal_when_created_from_the_same_values() {
         assertThat(QrPayment.donation(FOUNDATION, Money.czk(100), new VariableSymbol("7")))
                 .isEqualTo(QrPayment.donation(FOUNDATION, Money.czk(100), new VariableSymbol("7")))
-                .isNotEqualTo(QrPayment.donation(FOUNDATION, Money.czk(100)));
+                .isNotEqualTo(QrPayment.donation(FOUNDATION, Money.czk(100)))
+                .isNotEqualTo(QrPayment.accountVerification(FOUNDATION, Money.czk(100), new VariableSymbol("7")));
     }
 }

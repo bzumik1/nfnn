@@ -202,7 +202,7 @@ Frontend: the dialog's "Obnovit heslo" tab posts the request and shows "E-mail o
 | `POST` | `/api/donations/me/bank-accounts/{id}/disconnect` | donor | Stops pairing later payments without a symbol from that account to the caller; 204. Donations paired before stay. |
 | `POST` | `/api/donations/me/bank-accounts/{id}/reconnect` | donor | Connects a disconnected account again once a payment with the caller's symbol arrives from it; 204. |
 | `GET` | `/api/donations/me/receipts/yearly?year=` | donor | PDF receipt of the caller's donations received in a completed year. 400 while the year is not completed, 404 when it has none. |
-| `GET` | `/api/donations/payment-qr?amount=&variableSymbol=` | public | Returns the SPAYD string (Czech "QR platba"), its PNG QR code and the foundation's bank account. A signed-in donor's frontend passes their variable symbol. |
+| `GET` | `/api/donations/payment-qr?amount=&variableSymbol=&purpose=` | public | Returns the SPAYD string (Czech "QR platba"), its PNG QR code and the foundation's bank account. A signed-in donor's frontend passes their variable symbol; the 1 Kč payment that verifies an account passes `purpose=ACCOUNT_VERIFICATION`. |
 | `GET/POST/PATCH` | `/api/donations/admin[...]` | admin | List/filter, manually record donation, edit. |
 
 #### `GET /api/donations/me` and `GET /api/donations/me/summary`
@@ -334,6 +334,7 @@ GET /api/donations/payment-qr?amount=500&variableSymbol=1234567890
 
 - `amount`: whole CZK, required, 1 to 1 000 000.
 - `variableSymbol`: optional, 1 to 10 digits. The frontend sends the signed-in donor's `variableSymbol` from `GET /api/donors/me`; the backend does not look the donor up, so the endpoint stays public and stateless.
+- `purpose`: optional, `DONATION` (default, message "Dar Nová naděje") or `ACCOUNT_VERIFICATION` (message "Ověření účtu nfnn.cz", for the payment that adds a bank account, see "Donor's bank accounts"). `ACCOUNT_VERIFICATION` needs `variableSymbol`, else 400 `donations/verification-needs-variable-symbol`; another value answers 400 `validation` for `purpose`. The purpose changes only the message: the import pairs the payment by its symbol either way.
 - A missing, non-numeric or out-of-range parameter answers 400 `validation` with `errors: [{ field, message }]`, `field` being the query parameter name.
 
 Response:
@@ -349,7 +350,7 @@ Response:
 }
 ```
 
-SPAYD 1.0 rules the backend follows (`donations/domain/payment/QrPayment`): fields joined by `*` in the order `ACC` (IBAN, no spaces), `AM` (two decimals, `.` separator), `CC:CZK`, `X-VS` (only when a variable symbol was given), `RN` (recipient name, max 35 characters), `MSG` (max 60 characters). `RN` and `MSG` are uppercase ASCII without diacritics, limited to the QR alphanumeric set (`0-9 A-Z space $ % + - . / :`). The PNG is 300x300 px, error correction level M.
+SPAYD 1.0 rules the backend follows (`donations/domain/payment/QrPayment`): fields joined by `*` in the order `ACC` (IBAN, no spaces), `AM` (two decimals, `.` separator), `CC:CZK`, `X-VS` (only when a variable symbol was given), `RN` (recipient name, max 35 characters), `MSG` (the purpose's message, max 60 characters). `RN` and `MSG` are uppercase ASCII without diacritics, limited to the QR alphanumeric set (`0-9 A-Z space $ % + - . / :`). The PNG is 300x300 px, error correction level M.
 
 The bank account comes from `app.donations.bank-account.{account-number,iban,recipient-name}` (env `BANK_ACCOUNT_NUMBER`, `BANK_IBAN`, `BANK_RECIPIENT_NAME`). The defaults are placeholders until the foundation supplies its real account; an IBAN that fails the mod-97 check stops the backend at startup.
 

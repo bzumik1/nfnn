@@ -314,7 +314,7 @@ describe('Given the bank accounts card in the overview', () => {
       await click('.accounts-add');
     });
 
-    it('then a dialog explains to send 1 Kč with the variable symbol and asks for that QR payment', async () => {
+    it('then a dialog explains to send 1 Kč with the variable symbol and asks for the account verification QR payment', async () => {
       const dialog = element<HTMLDialogElement>('dialog');
       expect(dialog?.open).toBe(true);
       expect(dialog?.getAttribute('aria-labelledby')).toBe('add-account-title');
@@ -327,12 +327,12 @@ describe('Given the bank accounts card in the overview', () => {
       expect(texts('.add-account-text strong')).toEqual(['1 Kč', '9876543210']);
       expect(text('.add-account-qr')).toBe('Připravujeme QR kód…');
 
-      const request = http.expectOne({ method: 'GET', url: '/api/donations/payment-qr?amount=1&variableSymbol=9876543210' });
+      const request = http.expectOne({ method: 'GET', url: '/api/donations/payment-qr?amount=1&variableSymbol=9876543210&purpose=ACCOUNT_VERIFICATION' });
       request.flush(paymentQr());
       await settle();
 
       expect(element<HTMLImageElement>('.add-account-qr img')?.getAttribute('src')).toBe('data:image/png;base64,iVBORw0KGgo=');
-      expect(texts('.add-account-bank dd .bank-value')).toEqual(['5544332217/2010', '1 Kč', '9876543210']);
+      expect(texts('.add-account-bank dd .bank-value')).toEqual(['5544332217/2010', '1 Kč', 'Ověření účtu nfnn.cz', '9876543210']);
       expect(texts('.add-account-bank app-copy-button button')).toEqual(['Kopírovat číslo účtu', 'Kopírovat variabilní symbol']);
     });
 

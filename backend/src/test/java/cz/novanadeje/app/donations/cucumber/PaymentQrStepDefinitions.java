@@ -35,6 +35,11 @@ public class PaymentQrStepDefinitions {
         api.get(PAYMENT_QR_PATH + "?amount=" + amount);
     }
 
+    @When("the visitor asks for a QR payment with parameters {string}")
+    public void theVisitorAsksForAQrPaymentWithParameters(String query) {
+        api.get(PAYMENT_QR_PATH + "?" + query);
+    }
+
     @When("the visitor asks for a QR payment without an amount")
     public void theVisitorAsksForAQrPaymentWithoutAnAmount() {
         api.get(PAYMENT_QR_PATH);

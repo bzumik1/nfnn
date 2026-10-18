@@ -200,7 +200,7 @@ export class BankAccountsCard {
   protected loadQr(): void {
     this.qrRequest?.unsubscribe();
     this.qr.set({ kind: 'loading' });
-    this.qrRequest = this.paymentQr.paymentQr(VERIFICATION_AMOUNT, this.variableSymbol()).subscribe({
+    this.qrRequest = this.paymentQr.paymentQr(VERIFICATION_AMOUNT, this.variableSymbol(), 'ACCOUNT_VERIFICATION').subscribe({
       next: (qr) => this.qr.set({ kind: 'ready', qr }),
       error: () => this.qr.set({ kind: 'failed' }),
     });

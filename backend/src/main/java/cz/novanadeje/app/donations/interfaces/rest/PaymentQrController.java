@@ -2,6 +2,7 @@ package cz.novanadeje.app.donations.interfaces.rest;
 
 import cz.novanadeje.app.donations.application.GeneratePaymentQrQuery;
 import cz.novanadeje.app.donations.application.GeneratePaymentQrService;
+import cz.novanadeje.app.donations.domain.payment.QrPaymentPurpose;
 import cz.novanadeje.app.shared.domain.VariableSymbol;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -27,8 +28,9 @@ class PaymentQrController {
     @GetMapping
     PaymentQrResponse paymentQr(
             @RequestParam @Min(MIN_AMOUNT_CZK) @Max(MAX_AMOUNT_CZK) long amount,
-            @RequestParam(required = false) @Pattern(regexp = VariableSymbol.FORMAT) String variableSymbol
+            @RequestParam(required = false) @Pattern(regexp = VariableSymbol.FORMAT) String variableSymbol,
+            @RequestParam(defaultValue = "DONATION") QrPaymentPurpose purpose
     ) {
-        return PaymentQrResponse.from(generatePaymentQr.generate(new GeneratePaymentQrQuery(amount, variableSymbol)));
+        return PaymentQrResponse.from(generatePaymentQr.generate(new GeneratePaymentQrQuery(amount, variableSymbol, purpose)));
     }
 }
