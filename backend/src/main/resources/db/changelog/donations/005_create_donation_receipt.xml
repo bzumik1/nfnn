@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <changeSet id="005-create-donation-receipt" author="nfnn">
+        <createTable tableName="donation_receipt">
+            <column name="id" type="uuid">
+                <constraints primaryKey="true" primaryKeyName="pk_donation_receipt" nullable="false"/>
+            </column>
+            <column name="donor_id" type="uuid">
+                <constraints nullable="false" foreignKeyName="fk_donation_receipt_donor" referencedTableName="donor_record"
+                             referencedColumnNames="donor_id"/>
+            </column>
+            <column name="kind" type="varchar(10)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="donation_id" type="uuid">
+                <constraints foreignKeyName="fk_donation_receipt_donation" referencedTableName="donation" referencedColumnNames="id"/>
+            </column>
+            <column name="receipt_year" type="integer"/>
+            <column name="number" type="varchar(11)">
+                <constraints nullable="false" unique="true" uniqueConstraintName="uq_donation_receipt_number"/>
+            </column>
+            <column name="issued_on" type="date">
+                <constraints nullable="false"/>
+            </column>
+            <column name="issued_at" type="timestamp with time zone">
+                <constraints nullable="false"/>
+            </column>
+            <column name="locale" type="varchar(2)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="fingerprint" type="varchar(64)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="content" type="bytea">
+                <constraints nullable="false"/>
+            </column>
+            <column name="supersedes_id" type="uuid">
+                <constraints foreignKeyName="fk_donation_receipt_supersedes" referencedTableName="donation_receipt"
+                             referencedColumnNames="id"/>
+            </column>
+            <column name="superseded_at" type="timestamp with time zone"/>
+        </createTable>
+        <sql>alter table donation_receipt add constraint ck_donation_receipt_shape check ((kind = 'SINGLE' and donation_id is not null and receipt_year is null) or (kind = 'YEARLY' and donation_id is null and receipt_year is not null))</sql>
+        <sql>create unique index uq_donation_receipt_active_donation on donation_receipt (donation_id) where superseded_at is null</sql>
+        <sql>create unique index uq_donation_receipt_active_year on donation_receipt (donor_id, receipt_year) where superseded_at is null</sql>
+        <createIndex tableName="donation_receipt" indexName="ix_donation_receipt_donor">
+            <column name="donor_id"/>
+            <column name="kind"/>
+        </createIndex>
+        <createSequence sequenceName="donation_receipt_number_seq" startValue="1" incrementBy="1" maxValue="999999" cycle="false"/>
+    </changeSet>
+
+</databaseChangeLog>

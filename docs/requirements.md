@@ -39,7 +39,8 @@ Web fondu, který představí fond a jeho pomoc dětem, usnadní darování a d�
 - ✅ Potvrzení k jednotlivému daru navíc, pokud nebude složité (je to stejná šablona s jedním řádkem).
 - 🔸 Obsah: údaje fondu (název, IČO, sídlo), údaje dárce, seznam darů s datem a částkou, celková částka, účel, datum vystavení, číslo potvrzení.
 - 🔸 Podpis: jméno a funkce podepisujícího a naskenovaný podpis jako obrázek, který jde vyměnit bez úpravy kódu. Bez razítka (zákon formu nepředepisuje, razítko nemá právní váhu).
-- ❓ Kdo za fond podepisuje.
+- 🔸 Vystavené potvrzení se už nemění: první stažení ho vystaví s číslem a uloží, další stažení vrací tentýž soubor. Změní-li se potvrzované údaje (pozdě spárovaná platba toho roku, změna jména nebo adresy dárce), další stažení vystaví náhradní potvrzení s novým číslem, které uvádí, jaké potvrzení nahrazuje. Jazyk podle preferovaného jazyka dárce v době vystavení; anglické potvrzení je dvojjazyčné.
+- ❓ Kdo za fond podepisuje. Jméno, funkce a sken podpisu jsou nastavení serveru (`RECEIPT_SIGNATORY_NAME`, `RECEIPT_SIGNATORY_ROLE`, `RECEIPT_SIGNATURE_IMAGE`, viz `deploy/README.md`); dokud Jakub nerozhodne, podepisuje podle rejstříku předseda správní rady Pavel Znamenáček a místo skenu je jen čára se jménem.
 
 ## 5. Příjem a párování darů
 

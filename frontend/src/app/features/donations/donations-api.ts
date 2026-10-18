@@ -1,6 +1,6 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams, HttpResponse } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
-import { Observable } from 'rxjs';
+import { map, Observable } from 'rxjs';
 
 export type DonationStatus = 'RECEIVED' | 'REFUNDED';
 
@@ -36,7 +36,16 @@ export interface DonationSummaryResponse {
   count: number;
   lastReceivedAt: string | null;
   byYear: YearTotal[];
+  yearlyReceiptsAvailableThrough: number;
 }
+
+export interface DownloadedFile {
+  blob: Blob;
+  fileName: string;
+}
+
+const EXTENDED_FILE_NAME = /(?:^|;)\s*filename\*\s*=\s*utf-8''([^;\s]+)/i;
+const PLAIN_FILE_NAME = /(?:^|;)\s*filename\s*=\s*(?:"([^"]*)"|([^;\s]+))/i;
 
 @Injectable({ providedIn: 'root' })
 export class DonationsApi {
@@ -48,5 +57,51 @@ export class DonationsApi {
 
   summary(): Observable<DonationSummaryResponse> {
     return this.http.get<DonationSummaryResponse>('/api/donations/me/summary');
+  }
+
+  singleReceipt(id: string): Observable<DownloadedFile> {
+    return this.download(`/api/donations/me/${encodeURIComponent(id)}/receipt`, new HttpParams(), 'potvrzeni-o-daru.pdf');
+  }
+
+  yearlyReceipt(year: number): Observable<DownloadedFile> {
+    return this.download(
+      '/api/donations/me/receipts/yearly',
+      new HttpParams().set('year', year),
+      `potvrzeni-o-darech-${year}.pdf`,
+    );
+  }
+
+  private download(url: string, params: HttpParams, fallbackFileName: string): Observable<DownloadedFile> {
+    return this.http
+      .get(url, { params, responseType: 'blob', observe: 'response' })
+      .pipe(map((response) => downloadedFile(response, fallbackFileName)));
+  }
+}
+
+function downloadedFile(response: HttpResponse<Blob>, fallbackFileName: string): DownloadedFile {
+  return {
+    blob: response.body ?? new Blob([], { type: 'application/pdf' }),
+    fileName: fileNameOf(response.headers.get('Content-Disposition')) ?? fallbackFileName,
+  };
+}
+
+function fileNameOf(contentDisposition: string | null): string | null {
+  if (contentDisposition === null) {
+    return null;
+  }
+  const extended = EXTENDED_FILE_NAME.exec(contentDisposition)?.[1];
+  const decoded = extended === undefined ? null : decodedOrNull(extended);
+  if (decoded) {
+    return decoded;
+  }
+  const plain = PLAIN_FILE_NAME.exec(contentDisposition);
+  return plain?.[1] || plain?.[2] || null;
+}
+
+function decodedOrNull(encoded: string): string | null {
+  try {
+    return decodeURIComponent(encoded);
+  } catch {
+    return null;
   }
 }

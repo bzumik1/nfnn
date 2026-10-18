@@ -91,4 +91,63 @@ describe('Given the auth interceptor', () => {
     expect((failure as HttpErrorResponse).status).toBe(401);
     expect(store.currentAccessToken()).toBe('token-1');
   });
+
+  function problemBlob(type: string, title = 'Problem'): Blob {
+    return new Blob([JSON.stringify(problem(type, title))], { type: 'application/problem+json' });
+  }
+
+  async function blobSettled(): Promise<void> {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  }
+
+  it('when a file download fails with an expired token, then the session is refreshed and the download is retried with the new token', async () => {
+    signIn('token-1');
+    let received: Blob | undefined;
+    client.get('/api/donations/me/receipts/yearly', { responseType: 'blob' }).subscribe((file) => (received = file));
+
+    http
+      .expectOne('/api/donations/me/receipts/yearly')
+      .flush(problemBlob('auth/expired-token'), { status: 401, statusText: 'Unauthorized' });
+    await blobSettled();
+
+    http.expectOne('/api/donors/auth/refresh').flush(authResponse('token-2'));
+    const retried = http.expectOne('/api/donations/me/receipts/yearly');
+    expect(retried.request.headers.get('Authorization')).toBe('Bearer token-2');
+    retried.flush(new Blob(['%PDF-1.4'], { type: 'application/pdf' }));
+
+    expect(await received?.text()).toBe('%PDF-1.4');
+  });
+
+  it('when a file download is refused as unauthenticated, then the caller gets the problem as a parsed body and no refresh happens', async () => {
+    signIn('token-1');
+    let failure: unknown;
+    client
+      .get('/api/donations/me/receipts/yearly', { responseType: 'blob' })
+      .subscribe({ error: (reason: unknown) => (failure = reason) });
+
+    http
+      .expectOne('/api/donations/me/receipts/yearly')
+      .flush(problemBlob('auth/unauthenticated', 'Přihlaste se'), { status: 401, statusText: 'Unauthorized' });
+    await blobSettled();
+
+    http.expectNone('/api/donors/auth/refresh');
+    expect(failure).toBeInstanceOf(HttpErrorResponse);
+    expect((failure as HttpErrorResponse).status).toBe(401);
+    expect((failure as HttpErrorResponse).error).toEqual(problem('auth/unauthenticated', 'Přihlaste se'));
+  });
+
+  it('when a file download fails with a blob that is not a problem, then the failure passes through unchanged', async () => {
+    signIn('token-1');
+    let failure: unknown;
+    const body = new Blob(['Bad Gateway'], { type: 'text/html' });
+    client
+      .get('/api/donations/me/receipts/yearly', { responseType: 'blob' })
+      .subscribe({ error: (reason: unknown) => (failure = reason) });
+
+    http.expectOne('/api/donations/me/receipts/yearly').flush(body, { status: 502, statusText: 'Bad Gateway' });
+    await blobSettled();
+
+    expect((failure as HttpErrorResponse).status).toBe(502);
+    expect((failure as HttpErrorResponse).error).toBe(body);
+  });
 });

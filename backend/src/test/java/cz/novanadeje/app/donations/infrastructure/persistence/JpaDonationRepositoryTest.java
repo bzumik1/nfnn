@@ -156,6 +156,23 @@ class JpaDonationRepositoryTest {
                 .hasMessageContaining("ck_donation_bank_transfer_has_payment");
     }
 
+    @Test
+    @DisplayName("Given donations of two donors, when a donation is looked up for a donor, then only the donor's own donation is found")
+    void should_find_only_own_donation_when_looked_up_given_two_donors() {
+        DonorReference jana = storedDonor("4821937560");
+        DonorReference petr = storedDonor("7310945528");
+        Donation janas = bySymbol(jana, storedPayment(1001, LocalDate.of(2026, 10, 15)));
+        donations.save(janas);
+        flushAndClear();
+
+        assertThat(donations.findByIdForDonor(janas.id(), jana)).hasValueSatisfying(found -> {
+            assertThat(found.id()).isEqualTo(janas.id());
+            assertThat(found.amount()).isEqualTo(Money.czk(50000));
+        });
+        assertThat(donations.findByIdForDonor(janas.id(), petr)).isEmpty();
+        assertThat(donations.findByIdForDonor(DonationId.newId(NOW), jana)).isEmpty();
+    }
+
     private Donation bySymbol(DonorReference donor, BankPayment payment) {
         return Donation.fromBankPayment(DonationId.newId(NOW), donor, payment, PairingMethod.VARIABLE_SYMBOL, NOW);
     }

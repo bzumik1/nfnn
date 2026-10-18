@@ -1,17 +1,19 @@
 package cz.novanadeje.app.donations.domain.importing;
 
+import cz.novanadeje.app.donations.domain.FoundationCalendar;
+
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.ZoneId;
 
 public final class BankCalendar {
 
-    public static final ZoneId ZONE = ZoneId.of("Europe/Prague");
+    public static final ZoneId ZONE = FoundationCalendar.ZONE;
 
     private BankCalendar() {
     }
 
     public static LocalDate today(Clock clock) {
-        return clock.instant().atZone(ZONE).toLocalDate();
+        return FoundationCalendar.today(clock);
     }
 }

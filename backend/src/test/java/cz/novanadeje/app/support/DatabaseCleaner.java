@@ -22,9 +22,16 @@ public class DatabaseCleaner {
                 .stream()
                 .filter(table -> !LIQUIBASE_TABLES.contains(table))
                 .toList();
-        if (tables.isEmpty()) {
-            return;
+        if (!tables.isEmpty()) {
+            jdbc.sql("truncate table " + String.join(", ", tables) + " restart identity cascade").update();
         }
-        jdbc.sql("truncate table " + String.join(", ", tables) + " restart identity cascade").update();
+        restartAllSequences();
+    }
+
+    private void restartAllSequences() {
+        jdbc.sql("select sequencename from pg_sequences where schemaname = 'public'")
+                .query(String.class)
+                .list()
+                .forEach(sequence -> jdbc.sql("alter sequence " + sequence + " restart").update());
     }
 }

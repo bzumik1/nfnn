@@ -105,8 +105,19 @@
                     >{{ year }}</button>
                   }
                 </div>
-                <button type="button" class="yearly-pdf" (click)="openYearReceipt()">
-                  <span i18n="@@donor.dashboard.yearly.pdf">↓ PDF za rok</span> {{ yearTotal.year }}
+                <button
+                  type="button"
+                  class="yearly-pdf"
+                  [disabled]="!selectedYearCompleted() || yearlyDownloading(yearTotal.year)"
+                  [attr.aria-busy]="yearlyDownloading(yearTotal.year)"
+                  [attr.aria-describedby]="selectedYearCompleted() ? null : 'yearly-hint'"
+                  (click)="downloadYearlyReceipt()"
+                >
+                  @if (yearlyDownloading(yearTotal.year)) {
+                    <span i18n="@@donor.dashboard.receipt.preparing">Připravujeme PDF…</span>
+                  } @else {
+                    <span i18n="@@donor.dashboard.yearly.pdf">↓ PDF za rok</span> {{ yearTotal.year }}
+                  }
                 </button>
               </div>
             }
@@ -121,6 +132,16 @@
                 {{ crowns(yearTotal.totalAmountMinor) }} Kč <span i18n="@@donor.dashboard.yearly.totalSuffix">celkem</span>
               </span>
             </div>
+            @if (!selectedYearCompleted()) {
+              <p id="yearly-hint" class="yearly-hint" i18n="@@donor.dashboard.yearly.notYetAvailable">
+                Potvrzení za rok {{ yearTotal.year }} bude ke stažení po skončení roku.
+              </p>
+            }
+            @if (receiptError(); as error) {
+              @if (error.scope === 'yearly') {
+                <p class="receipt-error" role="alert">{{ error.message }}</p>
+              }
+            }
           } @else {
             <p class="yearly-empty" i18n="@@donor.dashboard.yearly.empty">
               Zatím jsme od vás žádný dar nepřijali. Jakmile dorazí platba s vaším variabilním symbolem, objeví se tady.
@@ -131,6 +152,11 @@
         <div class="payments-card">
           <div class="payments-head">
             <h2 class="payments-title" i18n="@@donor.dashboard.payments.title">Přehled plateb</h2>
+            @if (receiptError(); as error) {
+              @if (error.scope === 'single') {
+                <p class="receipt-error" role="alert">{{ error.message }}</p>
+              }
+            }
           </div>
           @if (items().length > 0) {
             <table>
@@ -153,9 +179,21 @@
                       <span class="status-pill" [class.status-pill--refunded]="item.status === 'REFUNDED'">{{ statusLabel(item.status) }}</span>
                     </td>
                     <td>
-                      <button type="button" class="download-btn" (click)="openSingleReceipt(item)" i18n="@@donor.dashboard.payments.download">
-                        Stáhnout PDF
-                      </button>
+                      @if (item.status !== 'REFUNDED') {
+                        <button
+                          type="button"
+                          class="download-btn"
+                          [disabled]="singleDownloading(item)"
+                          [attr.aria-busy]="singleDownloading(item)"
+                          (click)="downloadSingleReceipt(item)"
+                        >
+                          @if (singleDownloading(item)) {
+                            <span i18n="@@donor.dashboard.receipt.preparing">Připravujeme PDF…</span>
+                          } @else {
+                            <span i18n="@@donor.dashboard.payments.download">Stáhnout PDF</span>
+                          }
+                        </button>
+                      }
                     </td>
                   </tr>
                 }
@@ -173,12 +211,4 @@
       <a href="mailto:info@novanaděje.cz">info&#64;novanaděje.cz</a>
     </p>
   </div>
-
-  @if (selectedReceipt()) {
-    <app-receipt
-      [data]="selectedReceipt()!"
-      [user]="user()"
-      (closed)="closeReceipt()"
-    />
-  }
 </div>

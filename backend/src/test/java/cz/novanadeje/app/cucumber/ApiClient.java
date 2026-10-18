@@ -11,6 +11,7 @@ import org.springframework.web.client.RestClient;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
+import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -22,6 +23,7 @@ public class ApiClient {
     private final JsonMapper jsonMapper = JsonMapper.builder().build();
     private final Map<String, String> defaultHeaders = new LinkedHashMap<>();
     private ResponseEntity<String> lastResponse;
+    private byte[] lastResponseBytes;
 
     public ApiClient(@LocalServerPort int port) {
         this.client = RestClient.builder()
@@ -41,6 +43,19 @@ public class ApiClient {
 
     public ResponseEntity<String> get(String path) {
         return exchange(HttpMethod.GET, path, null);
+    }
+
+    public ResponseEntity<byte[]> getBytes(String path) {
+        ResponseEntity<byte[]> response = client.get()
+                .uri(path)
+                .headers(headers -> defaultHeaders.forEach(headers::set))
+                .retrieve()
+                .toEntity(byte[].class);
+        lastResponseBytes = response.getBody() == null ? new byte[0] : response.getBody();
+        lastResponse = ResponseEntity.status(response.getStatusCode())
+                .headers(response.getHeaders())
+                .body(new String(lastResponseBytes, StandardCharsets.UTF_8));
+        return response;
     }
 
     public void authorize(String accessToken) {
@@ -63,6 +78,13 @@ public class ApiClient {
         return lastResponse;
     }
 
+    public byte[] lastResponseBytes() {
+        if (lastResponseBytes == null) {
+            throw new IllegalStateException("No binary response was read in this scenario");
+        }
+        return lastResponseBytes.clone();
+    }
+
     public JsonNode lastResponseJson() {
         return jsonMapper.readTree(lastResponse.getBody());
     }
@@ -75,6 +97,7 @@ public class ApiClient {
             request = request.contentType(MediaType.APPLICATION_JSON).body(body);
         }
         lastResponse = request.retrieve().toEntity(String.class);
+        lastResponseBytes = null;
         return lastResponse;
     }
 }

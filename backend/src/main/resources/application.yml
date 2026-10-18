@@ -84,6 +84,19 @@ app:
       interval: PT1H
       initial-delay: PT30S
       request-timeout: PT2M
+    receipt:
+      foundation-name: Nová naděje - nadační fond
+      foundation-company-identifier: "27278794"
+      foundation-street: Jiráskova 436
+      foundation-city: Nový Bor
+      foundation-postal-code: 473 01
+      registry-court: Krajský soud v Ústí nad Labem
+      registry-file: N 78
+      issue-place: V Novém Boru
+      issue-place-en: Nový Bor
+      signatory-name: ${RECEIPT_SIGNATORY_NAME:Pavel Znamenáček}
+      signatory-role: ${RECEIPT_SIGNATORY_ROLE:předseda správní rady}
+      signature-image: ${RECEIPT_SIGNATURE_IMAGE:}
   security:
     jwt:
       issuer: nova-nadeje
@@ -97,3 +110,5 @@ logging:
   level:
     cz.novanadeje.app: INFO
     org.springframework.web: INFO
+    com.openhtmltopdf: WARN
+    org.apache.pdfbox.pdmodel.font.PDType1Font: ERROR
