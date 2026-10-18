@@ -45,6 +45,29 @@ Feature: A donor sees their own donations and their summary
       | receivedAt | amountMinor | currency | purpose              | status   | source        |
       | 2026-01-10 | 50000       | CZK      | General contribution | RECEIVED | BANK_TRANSFER |
 
+  Scenario: The 1 Kč payment that verifies a bank account shows its own purpose
+    Given today is 2026-01-20
+    And a person "Jana" is registered
+    And the bank account has these movements:
+      | id   | date       | amount | account    | bankCode | name          | variableSymbol | message                               |
+      | 1001 | 2026-01-10 | 500.00 | 2900233333 | 2010     | Nováková Jana | {Jana}         | DAR NADACNI FOND NOVA NADEJE          |
+      | 1002 | 2026-01-12 | 1.00   | 2700112222 | 2010     | Nováková Jana | {Jana}         | OVERENI UCTU NADACNI FOND NOVA NADEJE |
+      | 1003 | 2026-01-14 | 200.00 | 2700112222 | 2010     | Nováková Jana | {Jana}         | OVERENI UCTU NADACNI FOND NOVA NADEJE |
+    And the application starts the import
+    When "Jana" asks for her donations
+    Then the response status is 200
+    And the donation list holds:
+      | receivedAt | amountMinor | currency | purpose          | status   | source        |
+      | 2026-01-14 | 20000       | CZK      | Obecný příspěvek | RECEIVED | BANK_TRANSFER |
+      | 2026-01-12 | 100         | CZK      | Ověření účtu     | RECEIVED | BANK_TRANSFER |
+      | 2026-01-10 | 50000       | CZK      | Obecný příspěvek | RECEIVED | BANK_TRANSFER |
+    When "Jana" asks for her donations in English
+    Then the donation list holds:
+      | receivedAt | amountMinor | currency | purpose              | status   | source        |
+      | 2026-01-14 | 20000       | CZK      | General contribution | RECEIVED | BANK_TRANSFER |
+      | 2026-01-12 | 100         | CZK      | Account verification | RECEIVED | BANK_TRANSFER |
+      | 2026-01-10 | 50000       | CZK      | General contribution | RECEIVED | BANK_TRANSFER |
+
   Scenario: The summary adds up the donations per year, newest year first
     Given today is 2026-01-20
     And a person "Jana" is registered

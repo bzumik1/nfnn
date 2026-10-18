@@ -1,6 +1,7 @@
 package cz.novanadeje.app.donations.interfaces.rest;
 
 import cz.novanadeje.app.donations.application.overview.DonorDonationsService;
+import cz.novanadeje.app.donations.domain.donation.DonationPurpose;
 import cz.novanadeje.app.donations.domain.donor.DonorReference;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -22,7 +23,7 @@ class DonorDonationsController {
 
     static final int FIRST_FOUR_DIGIT_YEAR = 1000;
     static final int LAST_FOUR_DIGIT_YEAR = 9999;
-    private static final String GENERAL_PURPOSE_KEY = "donation.purpose.general";
+    private static final String PURPOSE_KEY_PREFIX = "donation.purpose.";
 
     private final DonorDonationsService donorDonations;
     private final MessageSource messages;
@@ -38,7 +39,7 @@ class DonorDonationsController {
             @RequestParam(required = false) @Min(FIRST_FOUR_DIGIT_YEAR) @Max(LAST_FOUR_DIGIT_YEAR) Integer year
     ) {
         Optional<Year> receiptYear = Optional.ofNullable(year).map(Year::of);
-        return DonationListResponse.from(donorDonations.listDonations(caller(jwt), receiptYear), generalPurpose());
+        return DonationListResponse.from(donorDonations.listDonations(caller(jwt), receiptYear), this::purposeText);
     }
 
     @GetMapping("/summary")
@@ -46,8 +47,8 @@ class DonorDonationsController {
         return DonationSummaryResponse.from(donorDonations.summarizeDonations(caller(jwt)));
     }
 
-    private String generalPurpose() {
-        return messages.getMessage(GENERAL_PURPOSE_KEY, null, LocaleContextHolder.getLocale());
+    private String purposeText(DonationPurpose purpose) {
+        return messages.getMessage(PURPOSE_KEY_PREFIX + purpose.name(), null, LocaleContextHolder.getLocale());
     }
 
     private static DonorReference caller(Jwt jwt) {

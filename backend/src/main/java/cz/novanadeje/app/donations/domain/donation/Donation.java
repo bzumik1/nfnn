@@ -22,11 +22,12 @@ public final class Donation {
     private final DonationStatus status;
     private final PairingMethod pairedBy;
     private final SenderAccountLinkId pairedThrough;
+    private final DonationPurpose purpose;
     private final Instant recordedAt;
 
     private Donation(DonationId id, DonorReference donor, Optional<BankPaymentId> bankPayment, LocalDate receivedOn, Money amount,
                      DonationSource source, DonationStatus status, Optional<PairingMethod> pairedBy, Optional<SenderAccountLinkId> pairedThrough,
-                     Instant recordedAt) {
+                     DonationPurpose purpose, Instant recordedAt) {
         this.id = require(id, "Donation id");
         this.donor = require(donor, "Donor reference");
         this.bankPayment = require(bankPayment, "Bank payment").orElse(null);
@@ -36,6 +37,7 @@ public final class Donation {
         this.status = require(status, "Donation status");
         this.pairedBy = require(pairedBy, "Pairing method").orElse(null);
         this.pairedThrough = require(pairedThrough, "Sender account link").orElse(null);
+        this.purpose = require(purpose, "Purpose");
         this.recordedAt = require(recordedAt, "Recording time");
         requireOriginMatchingSource();
         requireLinkOnlyForAccountPairing();
@@ -45,7 +47,7 @@ public final class Donation {
                                            Instant recordedAt) {
         BankPayment paid = require(payment, "Bank payment");
         return new Donation(id, donor, Optional.of(paid.id()), paid.bookedOn(), paid.amount(), DonationSource.BANK_TRANSFER,
-                DonationStatus.RECEIVED, Optional.ofNullable(pairedBy), Optional.empty(), recordedAt);
+                DonationStatus.RECEIVED, Optional.ofNullable(pairedBy), Optional.empty(), DonationPurpose.of(paid), recordedAt);
     }
 
     public static Donation pairedBySenderAccount(DonationId id, DonorReference donor, BankPayment payment, SenderAccountLinkId link,
@@ -53,7 +55,7 @@ public final class Donation {
         BankPayment paid = require(payment, "Bank payment");
         return new Donation(id, donor, Optional.of(paid.id()), paid.bookedOn(), paid.amount(), DonationSource.BANK_TRANSFER,
                 DonationStatus.RECEIVED, Optional.of(PairingMethod.SENDER_ACCOUNT), Optional.of(require(link, "Sender account link")),
-                recordedAt);
+                DonationPurpose.of(paid), recordedAt);
     }
 
     public static Donation reconstitute(DonationId id, DonorReference donor, Optional<BankPaymentId> bankPayment, LocalDate receivedOn,
@@ -65,7 +67,14 @@ public final class Donation {
     public static Donation reconstitute(DonationId id, DonorReference donor, Optional<BankPaymentId> bankPayment, LocalDate receivedOn,
                                         Money amount, DonationSource source, DonationStatus status, Optional<PairingMethod> pairedBy,
                                         Optional<SenderAccountLinkId> pairedThrough, Instant recordedAt) {
-        return new Donation(id, donor, bankPayment, receivedOn, amount, source, status, pairedBy, pairedThrough, recordedAt);
+        return reconstitute(id, donor, bankPayment, receivedOn, amount, source, status, pairedBy, pairedThrough, DonationPurpose.GENERAL,
+                recordedAt);
+    }
+
+    public static Donation reconstitute(DonationId id, DonorReference donor, Optional<BankPaymentId> bankPayment, LocalDate receivedOn,
+                                        Money amount, DonationSource source, DonationStatus status, Optional<PairingMethod> pairedBy,
+                                        Optional<SenderAccountLinkId> pairedThrough, DonationPurpose purpose, Instant recordedAt) {
+        return new Donation(id, donor, bankPayment, receivedOn, amount, source, status, pairedBy, pairedThrough, purpose, recordedAt);
     }
 
     public DonationId id() {
@@ -102,6 +111,10 @@ public final class Donation {
 
     public Optional<SenderAccountLinkId> pairedThrough() {
         return Optional.ofNullable(pairedThrough);
+    }
+
+    public DonationPurpose purpose() {
+        return purpose;
     }
 
     public Instant recordedAt() {
