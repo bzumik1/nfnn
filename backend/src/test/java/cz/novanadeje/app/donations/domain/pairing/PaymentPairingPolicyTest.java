@@ -5,7 +5,10 @@ import cz.novanadeje.app.donations.domain.bank.BankPaymentId;
 import cz.novanadeje.app.donations.domain.bank.SenderAccount;
 import cz.novanadeje.app.donations.domain.donor.DonorRecord;
 import cz.novanadeje.app.donations.domain.donor.DonorReference;
-import cz.novanadeje.app.donations.domain.donor.LearnedSenderAccount;
+import cz.novanadeje.app.donations.domain.donor.ExcludedSenderAccounts;
+import cz.novanadeje.app.donations.domain.donor.SenderAccountLink;
+import cz.novanadeje.app.donations.domain.donor.SenderAccountLinkId;
+import cz.novanadeje.app.donations.domain.donor.SenderAccountLinkStatus;
 import cz.novanadeje.app.shared.domain.DonorType;
 import cz.novanadeje.app.shared.domain.LocaleCode;
 import cz.novanadeje.app.shared.domain.PostalAddress;
@@ -15,12 +18,15 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
+import static cz.novanadeje.app.donations.BankPayments.BOOKED_ON;
 import static cz.novanadeje.app.donations.BankPayments.PAYER_NAME;
 import static cz.novanadeje.app.donations.BankPayments.payment;
+import static cz.novanadeje.app.shared.domain.Money.czk;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class PaymentPairingPolicyTest {
@@ -30,7 +36,7 @@ class PaymentPairingPolicyTest {
     private static final VariableSymbol JANA_SYMBOL = new VariableSymbol("4821937560");
     private static final VariableSymbol PETR_SYMBOL = new VariableSymbol("7310945528");
 
-    private final PaymentPairingPolicy policy = new PaymentPairingPolicy();
+    private final PaymentPairingPolicy policy = new PaymentPairingPolicy(ExcludedSenderAccounts.none());
     private final DonorRecord jana = donor("Jana Nováková", JANA_SYMBOL);
     private final DonorRecord petr = donor("Petr Svoboda", PETR_SYMBOL);
 
@@ -76,7 +82,7 @@ class PaymentPairingPolicyTest {
 
         PairingDecision decision = policy.decide(payment(1, Optional.of(ACCOUNT), null), Optional.empty(), List.of(owner));
 
-        assertThat(decision).isEqualTo(new PairingDecision.PairByAccount(owner));
+        assertThat(decision).isEqualTo(new PairingDecision.PairByAccount(owner, owner.senderAccountLinks().getFirst()));
     }
 
     @Test
@@ -86,7 +92,7 @@ class PaymentPairingPolicyTest {
 
         PairingDecision decision = policy.decide(payment(1, Optional.of(ACCOUNT), "0"), Optional.empty(), List.of(owner));
 
-        assertThat(decision).isEqualTo(new PairingDecision.PairByAccount(owner));
+        assertThat(decision).isEqualTo(new PairingDecision.PairByAccount(owner, owner.senderAccountLinks().getFirst()));
     }
 
     @Test
@@ -133,13 +139,66 @@ class PaymentPairingPolicyTest {
         assertThat(decision).isEqualTo(new PairingDecision.LeaveUnpaired(UnpairedReason.UNKNOWN_SENDER_ACCOUNT));
     }
 
+    @Test
+    @DisplayName("Given a payment without a symbol from an excluded account with a single owner, when decided, then it stays unpaired as excluded")
+    void should_leave_unpaired_when_decided_given_excluded_account() {
+        PaymentPairingPolicy excluding = new PaymentPairingPolicy(new ExcludedSenderAccounts(Set.of(ACCOUNT)));
+
+        PairingDecision decision = excluding.decide(payment(1, Optional.of(ACCOUNT), null), Optional.empty(), List.of(withAccount(jana)));
+
+        assertThat(decision).isEqualTo(new PairingDecision.LeaveUnpaired(UnpairedReason.EXCLUDED_SENDER_ACCOUNT));
+    }
+
+    @Test
+    @DisplayName("Given a payment with the donor's symbol from an excluded account, when decided, then it is still paired by symbol")
+    void should_pair_by_symbol_when_decided_given_symbol_from_excluded_account() {
+        PaymentPairingPolicy excluding = new PaymentPairingPolicy(new ExcludedSenderAccounts(Set.of(ACCOUNT)));
+
+        PairingDecision decision = excluding.decide(payment(1, Optional.of(ACCOUNT), JANA_SYMBOL.value()), Optional.of(jana), List.of());
+
+        assertThat(decision).isEqualTo(new PairingDecision.PairBySymbol(jana));
+    }
+
+    @Test
+    @DisplayName("Given an account one donor gave up and another took over, when decided, then each payment goes to the donor whose link covers its booking day")
+    void should_pair_by_booking_day_when_decided_given_account_passed_between_donors() {
+        LocalDate released = LocalDate.of(2026, 9, 30);
+        DonorRecord before = withLink(jana, Optional.empty(), Optional.of(released), SenderAccountLinkStatus.DISCONNECTED);
+        DonorRecord after = withLink(petr, Optional.of(released.plusDays(1)), Optional.empty(), SenderAccountLinkStatus.ACTIVE);
+
+        PairingDecision onRelease = policy.decide(payment(1, released, czk(10000), Optional.of(ACCOUNT), null), Optional.empty(), List.of(before, after));
+        PairingDecision dayAfter = policy.decide(payment(2, released.plusDays(1), czk(10000), Optional.of(ACCOUNT), null), Optional.empty(),
+                List.of(before, after));
+
+        assertThat(onRelease).isEqualTo(new PairingDecision.PairByAccount(before, before.senderAccountLinks().getFirst()));
+        assertThat(dayAfter).isEqualTo(new PairingDecision.PairByAccount(after, after.senderAccountLinks().getFirst()));
+    }
+
+    @Test
+    @DisplayName("Given an owner whose link still awaits a payment, when decided, then the link pairs nothing")
+    void should_leave_unpaired_when_decided_given_link_awaiting_payment() {
+        DonorRecord awaiting = DonorRecord.reconstitute(jana.id(), DonorType.PERSON, jana.name(), null, jana.address(), jana.variableSymbol(),
+                jana.preferredLocale(), List.of(SenderAccountLink.awaitingPayment(SenderAccountLinkId.newId(NOW), ACCOUNT, BOOKED_ON.minusDays(5), NOW)),
+                jana.registeredAt(), NOW);
+
+        PairingDecision decision = policy.decide(payment(1, Optional.of(ACCOUNT), null), Optional.empty(), List.of(awaiting));
+
+        assertThat(decision).isEqualTo(new PairingDecision.LeaveUnpaired(UnpairedReason.UNKNOWN_SENDER_ACCOUNT));
+    }
+
     private static DonorRecord donor(String name, VariableSymbol symbol) {
         return DonorRecord.registerPerson(new DonorReference(UuidV7.generate(NOW)), name, new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"),
                 symbol, LocaleCode.CS, NOW);
     }
 
     private static DonorRecord withAccount(DonorRecord record) {
+        return withLink(record, Optional.empty(), Optional.empty(), SenderAccountLinkStatus.ACTIVE);
+    }
+
+    private static DonorRecord withLink(DonorRecord record, Optional<LocalDate> from, Optional<LocalDate> to, SenderAccountLinkStatus status) {
+        SenderAccountLink link = SenderAccountLink.reconstitute(SenderAccountLinkId.newId(NOW), ACCOUNT, status, Optional.of(BankPaymentId.newId(NOW)),
+                Optional.of(NOW), from, to, NOW, to.map(day -> NOW));
         return DonorRecord.reconstitute(record.id(), DonorType.PERSON, record.name(), null, record.address(), record.variableSymbol(),
-                record.preferredLocale(), Set.of(new LearnedSenderAccount(ACCOUNT, BankPaymentId.newId(NOW), NOW)), record.registeredAt(), NOW);
+                record.preferredLocale(), List.of(link), record.registeredAt(), NOW);
     }
 }

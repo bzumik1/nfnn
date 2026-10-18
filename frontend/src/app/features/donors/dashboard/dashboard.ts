@@ -1,4 +1,4 @@
-import { Component, computed, DestroyRef, inject, linkedSignal, signal } from '@angular/core';
+import { Component, computed, DestroyRef, inject, linkedSignal, signal, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router, RouterLink } from '@angular/router';
 import { EMPTY, expand, forkJoin, last, Observable, switchMap, take, takeWhile, timer } from 'rxjs';
@@ -16,6 +16,7 @@ import {
   DownloadedFile,
 } from '../../donations/donations-api';
 import { saveBlob } from '../../donations/file-download';
+import { BankAccountsCard } from './bank-accounts-card/bank-accounts-card';
 import { ProfileCard } from './profile-card/profile-card';
 import { SymbolCard } from './symbol-card/symbol-card';
 
@@ -41,10 +42,11 @@ const YEARLY_PROBLEMS_SHOWN_AS_TITLE = ['donations/year-not-yet-completed', 'don
 const NOT_FOUND = 404;
 const BANK_CHECK_POLL_MS = 2000;
 const BANK_CHECK_MAX_POLLS = 45;
+const SENDER_ACCOUNT_DIGITS_SHOWN = 4;
 
 @Component({
   selector: 'app-donor-dashboard',
-  imports: [RouterLink, SymbolCard, ProfileCard],
+  imports: [RouterLink, SymbolCard, BankAccountsCard, ProfileCard],
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.scss',
 })
@@ -54,6 +56,8 @@ export class DonorDashboard {
   private readonly loginDialog = inject(LoginDialogService);
   private readonly donations = inject(DonationsApi);
   private readonly destroyRef = inject(DestroyRef);
+
+  private readonly bankAccountsCard = viewChild(BankAccountsCard);
 
   protected readonly donor = this.auth.donor;
 
@@ -119,6 +123,7 @@ export class DonorDashboard {
           this.checkingBank.set(false);
           if (reloadAlways || check.bankDataAsOf !== asOfBefore) {
             this.fetchDonations();
+            this.bankAccountsCard()?.reload();
           }
         },
         error: () => this.checkingBank.set(false),
@@ -168,6 +173,12 @@ export class DonorDashboard {
 
   protected formatBankTime(isoInstant: string): string {
     return formatBankTime(isoInstant);
+  }
+
+  protected senderAccountEnd(senderAccount: string): string {
+    const [number, bankCode] = senderAccount.split('/');
+    const lastDigits = number.replace(/\D/g, '').slice(-SENDER_ACCOUNT_DIGITS_SHOWN);
+    return bankCode === undefined ? `…${lastDigits}` : `…${lastDigits}/${bankCode}`;
   }
 
   protected statusLabel(status: DonationStatus): string {

@@ -14,10 +14,12 @@ import {
   twoYearDonations,
   twoYearSummary,
 } from '../../donations/testing/donation-fixtures';
+import { bankAccount } from '../../donations/testing/bank-account-fixtures';
 import { DonorDashboard } from './dashboard';
 
 const OBJECT_URL = 'blob:http://localhost/receipt';
 const BANK_CHECK_URL = '/api/donations/me/bank-check';
+const BANK_ACCOUNTS_URL = '/api/donations/me/bank-accounts';
 const EARLIER = '2026-10-18T08:05:30Z';
 const LATER = '2026-10-18T08:07:10Z';
 
@@ -49,6 +51,7 @@ describe('Given a signed-in donor on the dashboard', () => {
     fixture = TestBed.createComponent(DonorDashboard);
     fixture.detectChanges();
     bankCheck = http.expectOne({ method: 'POST', url: BANK_CHECK_URL });
+    http.expectOne({ method: 'GET', url: BANK_ACCOUNTS_URL }).flush({ items: [] });
   });
 
   afterEach(() => {
@@ -149,6 +152,7 @@ describe('Given a signed-in donor on the dashboard', () => {
     expect(text('.bank-check-status')).toBe('Údaje z banky k 18. 10. 2026 10:05');
     expect(button('.bank-check-btn').disabled).toBe(false);
     http.expectNone('/api/donations/me/summary');
+    http.expectNone(BANK_ACCOUNTS_URL);
   });
 
   it('when the bank is being checked, then the dashboard says so, waits for the check and loads the donations again once new bank data arrived', async () => {
@@ -165,9 +169,11 @@ describe('Given a signed-in donor on the dashboard', () => {
     http.expectOne({ method: 'GET', url: BANK_CHECK_URL }).flush({ bankDataAsOf: EARLIER, checking: true });
     await vi.advanceTimersByTimeAsync(2000);
     http.expectOne({ method: 'GET', url: BANK_CHECK_URL }).flush({ bankDataAsOf: LATER, checking: false });
+    http.expectOne(BANK_ACCOUNTS_URL).flush({ items: [bankAccount()] });
     await respond(twoYearSummary(), twoYearDonations());
 
     expect(text('.bank-check-status')).toBe('Údaje z banky k 18. 10. 2026 10:07');
+    expect(text('app-bank-accounts-card .account-number')).toBe('2900233333/2010');
     expect(button('.bank-check-btn').disabled).toBe(false);
     expect(texts('.payments-card tbody tr')).toHaveLength(twoYearDonations().items.length);
   });
@@ -182,6 +188,7 @@ describe('Given a signed-in donor on the dashboard', () => {
     await settle();
 
     http.expectNone('/api/donations/me/summary');
+    http.expectNone(BANK_ACCOUNTS_URL);
     expect(text('.bank-check-status')).toBe('Údaje z banky k 18. 10. 2026 10:05');
   });
 
@@ -193,7 +200,9 @@ describe('Given a signed-in donor on the dashboard', () => {
     await click('.bank-check-btn');
     http.expectOne({ method: 'POST', url: BANK_CHECK_URL }).flush({ bankDataAsOf: EARLIER, checking: false });
 
+    http.expectOne(BANK_ACCOUNTS_URL).flush({ items: [bankAccount()] });
     await respond(twoYearSummary(), twoYearDonations());
+    expect(text('app-bank-accounts-card .account-number')).toBe('2900233333/2010');
     expect(text('.bank-check-status')).toBe('Údaje z banky k 18. 10. 2026 10:05');
   });
 
@@ -237,6 +246,39 @@ describe('Given a signed-in donor on the dashboard', () => {
       (cell) => cell.dataset['label'],
     );
     expect(labels).toEqual(['Datum', 'Částka', 'Účel', 'Stav', 'Potvrzení']);
+  });
+
+  it('when a donation was paired by the sender account, then its purpose carries a tag naming the end of that account', async () => {
+    const list = twoYearDonations();
+    list.items[0] = donationItem({ id: 'd-4', pairedBy: 'SENDER_ACCOUNT', senderAccount: '2900233333/2010' });
+    list.items[1] = donationItem({ id: 'd-3', pairedBy: 'SENDER_ACCOUNT', senderAccount: '19-2000145399/0800' });
+
+    await respond(twoYearSummary(), list);
+
+    const tag = element('.payments-card tbody tr:first-child .pairing-tag');
+    expect(tag?.getAttribute('title')).toBe('Přiřazeno podle účtu 2900233333/2010, platba přišla bez variabilního symbolu');
+    expect(normalized(tag?.querySelector('[aria-hidden="true"]')?.textContent ?? '')).toBe('bez VS · …3333/2010');
+    expect(normalized(tag?.querySelector('.visually-hidden')?.textContent ?? '')).toBe(
+      'Přiřazeno podle účtu 2900233333/2010, platba přišla bez variabilního symbolu',
+    );
+    expect(text('.payments-card tbody tr:nth-child(2) .pairing-tag [aria-hidden="true"]')).toBe('bez VS · …5399/0800');
+  });
+
+  it('when donations were paired by the variable symbol or by hand, then they carry no tag', async () => {
+    const list = twoYearDonations();
+    list.items[0] = donationItem({ id: 'd-4', pairedBy: null, source: 'MANUAL' });
+
+    await respond(twoYearSummary(), list);
+
+    expect(element('.pairing-tag')).toBeNull();
+  });
+
+  it('when the page opens, then the bank accounts card shows below the payments with the variable symbol for adding one', async () => {
+    await respond(twoYearSummary(), twoYearDonations());
+
+    const cards = [...(fixture.nativeElement as HTMLElement).querySelectorAll('.payments-card, app-bank-accounts-card, app-profile-card')];
+    expect(cards.map((card) => card.tagName.toLowerCase())).toEqual(['div', 'app-bank-accounts-card', 'app-profile-card']);
+    expect(text('app-bank-accounts-card h2')).toBe('Moje bankovní účty');
   });
 
   it('when the page opens, then the help line keeps a space before the e-mail address', async () => {

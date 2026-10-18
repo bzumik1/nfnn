@@ -187,7 +187,19 @@
                   <tr>
                     <td data-label="Datum" i18n-data-label="@@donor.dashboard.payments.col.date">{{ formatDate(item.receivedAt) }}</td>
                     <td data-label="Částka" i18n-data-label="@@donor.dashboard.payments.col.amount" class="amount">{{ crowns(item.amountMinor) }} Kč</td>
-                    <td data-label="Účel" i18n-data-label="@@donor.dashboard.payments.col.purpose">{{ item.purpose }}</td>
+                    <td data-label="Účel" i18n-data-label="@@donor.dashboard.payments.col.purpose">
+                      {{ item.purpose }}
+                      @if (item.pairedBy === 'SENDER_ACCOUNT' && item.senderAccount) {
+                        <span
+                          class="pairing-tag"
+                          title="Přiřazeno podle účtu {{ item.senderAccount }}, platba přišla bez variabilního symbolu"
+                          i18n-title="@@donor.dashboard.payments.pairedByAccountTitle"
+                        >
+                          <span aria-hidden="true"><span i18n="@@donor.dashboard.payments.withoutSymbol">bez VS</span> · {{ senderAccountEnd(item.senderAccount) }}</span>
+                          <span class="visually-hidden" i18n="@@donor.dashboard.payments.pairedByAccount">Přiřazeno podle účtu {{ item.senderAccount }}, platba přišla bez variabilního symbolu</span>
+                        </span>
+                      }
+                    </td>
                     <td data-label="Stav" i18n-data-label="@@donor.dashboard.payments.col.status">
                       <span class="status-pill" [class.status-pill--refunded]="item.status === 'REFUNDED'">{{ statusLabel(item.status) }}</span>
                     </td>
@@ -222,6 +234,8 @@
         </div>
       }
     }
+
+    <app-bank-accounts-card [variableSymbol]="donor()?.variableSymbol ?? null" (sessionEnded)="sendToSignIn()" />
 
     <app-profile-card (sessionEnded)="sendToSignIn()" />
 

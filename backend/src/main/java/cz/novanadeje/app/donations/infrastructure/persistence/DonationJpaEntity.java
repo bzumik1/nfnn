@@ -7,6 +7,7 @@ import cz.novanadeje.app.donations.domain.donation.DonationSource;
 import cz.novanadeje.app.donations.domain.donation.DonationStatus;
 import cz.novanadeje.app.donations.domain.donation.PairingMethod;
 import cz.novanadeje.app.donations.domain.donor.DonorReference;
+import cz.novanadeje.app.donations.domain.donor.SenderAccountLinkId;
 import cz.novanadeje.app.shared.domain.Currency;
 import cz.novanadeje.app.shared.domain.Money;
 import jakarta.persistence.Column;
@@ -56,6 +57,9 @@ public class DonationJpaEntity {
     @Column(name = "paired_by", length = 16)
     private PairingMethod pairedBy;
 
+    @Column(name = "sender_account_id")
+    private UUID senderAccountId;
+
     @Column(name = "recorded_at", nullable = false)
     private Instant recordedAt;
 
@@ -73,6 +77,7 @@ public class DonationJpaEntity {
         entity.source = donation.source();
         entity.status = donation.status();
         entity.pairedBy = donation.pairedBy().orElse(null);
+        entity.senderAccountId = donation.pairedThrough().map(SenderAccountLinkId::value).orElse(null);
         entity.recordedAt = donation.recordedAt();
         return entity;
     }
@@ -87,6 +92,7 @@ public class DonationJpaEntity {
                 source,
                 status,
                 Optional.ofNullable(pairedBy),
+                Optional.ofNullable(senderAccountId).map(SenderAccountLinkId::new),
                 recordedAt);
     }
 }

@@ -9,7 +9,8 @@ import cz.novanadeje.app.donations.domain.donation.DonationRepository;
 import cz.novanadeje.app.donations.domain.donation.PairingMethod;
 import cz.novanadeje.app.donations.domain.donor.DonorRecord;
 import cz.novanadeje.app.donations.domain.donor.DonorRecordRepository;
-import cz.novanadeje.app.donations.domain.donor.LearnedSenderAccount;
+import cz.novanadeje.app.donations.domain.donor.ExcludedSenderAccounts;
+import cz.novanadeje.app.donations.domain.donor.SenderAccountLink;
 import cz.novanadeje.app.donations.domain.pairing.PairingDecision;
 import cz.novanadeje.app.donations.domain.pairing.PaymentPairingPolicy;
 import cz.novanadeje.app.donations.domain.pairing.UnpairedReason;
@@ -21,9 +22,11 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
-import java.util.ArrayList;
+import java.time.LocalDate;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -38,12 +41,16 @@ public class PaymentPairingService {
     private final BankPaymentRepository payments;
     private final DonorRecordRepository donorRecords;
     private final DonationRepository donations;
-    private final PaymentPairingPolicy policy = new PaymentPairingPolicy();
+    private final ExcludedSenderAccounts excluded;
+    private final PaymentPairingPolicy policy;
 
-    public PaymentPairingService(BankPaymentRepository payments, DonorRecordRepository donorRecords, DonationRepository donations) {
+    public PaymentPairingService(BankPaymentRepository payments, DonorRecordRepository donorRecords, DonationRepository donations,
+                                 ExcludedSenderAccounts excluded) {
         this.payments = payments;
         this.donorRecords = donorRecords;
         this.donations = donations;
+        this.excluded = excluded;
+        this.policy = new PaymentPairingPolicy(excluded);
     }
 
     public PairingOutcome pairUnpaired(Instant now) {
@@ -73,19 +80,15 @@ public class PaymentPairingService {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public PairingOutcome pairPaymentsOf(DonorRecord record, Instant now) {
         Tally tally = new Tally();
-        List<LearnedSenderAccount> learned = new ArrayList<>();
+        Set<SenderAccount> learned = new LinkedHashSet<>();
         for (BankPayment payment : payments.findUnpairedByMatchingVariableSymbol(record.variableSymbol())) {
-            applySymbolDecision(policy.decide(payment, Optional.of(record), List.of()), payment, now, tally).ifPresent(learned::add);
+            applySymbolDecision(policy.decide(payment, Optional.of(record), List.of()), payment, now, tally)
+                    .ifPresent(link -> learned.add(link.account()));
         }
         Set<SenderAccount> reportedAmbiguous = new HashSet<>();
-        for (LearnedSenderAccount account : learned) {
-            List<DonorRecord> owners = donorRecords.findBySenderAccount(account.account());
-            if (!isSoleOwner(record, owners)) {
-                log.debug("Sender account {} of donor {} is shared with other donors; its payments without a symbol stay unpaired",
-                        account.account().display(), record.id());
-                continue;
-            }
-            for (BankPayment payment : payments.findUnpairedWithoutSymbolBySenderAccount(account.account())) {
+        for (SenderAccount account : learned) {
+            List<DonorRecord> owners = donorRecords.findBySenderAccount(account);
+            for (BankPayment payment : payments.findUnpairedWithoutSymbolBySenderAccount(account)) {
                 applyAccountDecision(policy.decide(payment, Optional.empty(), owners), payment, now, tally, reportedAmbiguous);
             }
         }
@@ -95,20 +98,14 @@ public class PaymentPairingService {
         return outcome;
     }
 
-    private Optional<LearnedSenderAccount> applySymbolDecision(PairingDecision decision, BankPayment payment, Instant now, Tally tally) {
+    private Optional<SenderAccountLink> applySymbolDecision(PairingDecision decision, BankPayment payment, Instant now, Tally tally) {
         return switch (decision) {
             case PairingDecision.PairBySymbol(DonorRecord donor) -> {
-                if (recordDonation(donor, payment, PairingMethod.VARIABLE_SYMBOL, now)) {
+                if (recordDonation(Donation.fromBankPayment(DonationId.newId(now), donor.id(), payment, PairingMethod.VARIABLE_SYMBOL, now),
+                        payment, donor)) {
                     tally.pairedBySymbol++;
                 }
-                Optional<LearnedSenderAccount> learned = donor.learnSenderAccountFrom(payment, now);
-                learned.ifPresent(account -> {
-                    donorRecords.addSenderAccount(donor.id(), account);
-                    tally.accountsLearned++;
-                    log.debug("Donor {} learned sender account {} from bank payment {}", donor.id(), account.account().display(),
-                            payment.transactionId());
-                });
-                yield learned;
+                yield learnSenderAccount(donor, payment, now, tally);
             }
             case PairingDecision.LeaveUnpaired(UnpairedReason reason) -> {
                 leaveUnpaired(payment, reason, tally);
@@ -119,11 +116,28 @@ public class PaymentPairingService {
         };
     }
 
+    private Optional<SenderAccountLink> learnSenderAccount(DonorRecord donor, BankPayment payment, Instant now, Tally tally) {
+        Optional<LocalDate> takenOverOn = payment.sender()
+                .flatMap(sender -> donorRecords.findBySenderAccount(sender).stream()
+                        .filter(other -> !other.id().equals(donor.id()))
+                        .flatMap(other -> other.releasedSenderAccountOn(sender).stream())
+                        .max(Comparator.naturalOrder()));
+        Optional<SenderAccountLink> learned = donor.learnSenderAccountFrom(payment, takenOverOn, excluded, now);
+        learned.ifPresent(link -> {
+            if (donorRecords.saveSenderAccountLink(donor.id(), link)) {
+                tally.accountsLearned++;
+                log.debug("Donor {} learned sender account {} from bank payment {}", donor.id(), link.account().display(),
+                        payment.transactionId());
+            }
+        });
+        return learned;
+    }
+
     private void applyAccountDecision(PairingDecision decision, BankPayment payment, Instant now, Tally tally,
                                       Set<SenderAccount> reportedAmbiguous) {
         switch (decision) {
-            case PairingDecision.PairByAccount(DonorRecord donor) -> {
-                if (recordDonation(donor, payment, PairingMethod.SENDER_ACCOUNT, now)) {
+            case PairingDecision.PairByAccount(DonorRecord donor, SenderAccountLink link) -> {
+                if (recordDonation(Donation.pairedBySenderAccount(DonationId.newId(now), donor.id(), payment, link.id(), now), payment, donor)) {
                     tally.pairedByAccount++;
                 }
             }
@@ -139,13 +153,13 @@ public class PaymentPairingService {
         }
     }
 
-    private boolean recordDonation(DonorRecord donor, BankPayment payment, PairingMethod method, Instant now) {
+    private boolean recordDonation(Donation donation, BankPayment payment, DonorRecord donor) {
         if (donations.existsForBankPayment(payment.id())) {
             log.debug("Bank payment {} already has a donation", payment.transactionId());
             return false;
         }
-        donations.save(Donation.fromBankPayment(DonationId.newId(now), donor.id(), payment, method, now));
-        log.debug("Bank payment {} paired with donor {} by {}", payment.transactionId(), donor.id(), method);
+        donations.save(donation);
+        log.debug("Bank payment {} paired with donor {} by {}", payment.transactionId(), donor.id(), donation.pairedBy().orElseThrow());
         return true;
     }
 
@@ -153,10 +167,6 @@ public class PaymentPairingService {
         tally.leftUnpaired++;
         log.debug("Bank payment {} stays unpaired: {} (symbol {}, sender {})", payment.transactionId(), reason,
                 payment.variableSymbol().orElse("none"), payment.sender().map(SenderAccount::display).orElse("none"));
-    }
-
-    private static boolean isSoleOwner(DonorRecord record, List<DonorRecord> owners) {
-        return owners.size() == 1 && owners.getFirst().id().equals(record.id());
     }
 
     private static final class Tally {

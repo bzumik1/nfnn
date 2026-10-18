@@ -10,6 +10,8 @@ export function donationItem(overrides: Partial<DonationItem> = {}): DonationIte
     purpose: 'Obecný příspěvek',
     status: 'RECEIVED',
     source: 'BANK_TRANSFER',
+    pairedBy: 'VARIABLE_SYMBOL',
+    senderAccount: null,
     ...overrides,
   };
 }

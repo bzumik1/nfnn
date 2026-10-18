@@ -1,10 +1,12 @@
 package cz.novanadeje.app.donations.interfaces.rest;
 
 import cz.novanadeje.app.donations.application.overview.DonationOverview;
+import cz.novanadeje.app.donations.domain.bank.SenderAccount;
 import cz.novanadeje.app.donations.domain.donation.Donation;
 import cz.novanadeje.app.donations.domain.donation.DonationList;
 import cz.novanadeje.app.donations.domain.donation.DonationSource;
 import cz.novanadeje.app.donations.domain.donation.DonationStatus;
+import cz.novanadeje.app.donations.domain.donation.PairingMethod;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptNumber;
 import cz.novanadeje.app.shared.domain.Currency;
 
@@ -17,17 +19,19 @@ record DonationListResponse(List<DonationItemResponse> items, long totalAmountMi
     static DonationListResponse from(DonationOverview overview, String purpose) {
         DonationList list = overview.list();
         List<DonationItemResponse> items = list.items().stream()
-                .map(donation -> DonationItemResponse.from(donation, overview.receiptNumberOf(donation).map(ReceiptNumber::value).orElse(null), purpose))
+                .map(donation -> DonationItemResponse.from(donation, overview.receiptNumberOf(donation).map(ReceiptNumber::value).orElse(null), purpose,
+                        overview.senderAccountOf(donation).map(SenderAccount::display).orElse(null)))
                 .toList();
         return new DonationListResponse(items, list.total().amountMinor(), list.total().currency(), list.count());
     }
 
     record DonationItemResponse(UUID id, String receiptNumber, LocalDate receivedAt, long amountMinor, Currency currency, String purpose,
-                                DonationStatus status, DonationSource source) {
+                                DonationStatus status, DonationSource source, PairingMethod pairedBy, String senderAccount) {
 
-        static DonationItemResponse from(Donation donation, String receiptNumber, String purpose) {
+        static DonationItemResponse from(Donation donation, String receiptNumber, String purpose, String senderAccount) {
             return new DonationItemResponse(donation.id().value(), receiptNumber, donation.receivedOn(), donation.amount().amountMinor(),
-                    donation.amount().currency(), purpose, donation.status(), donation.source());
+                    donation.amount().currency(), purpose, donation.status(), donation.source(), donation.pairedBy().orElse(null),
+                    senderAccount);
         }
     }
 }

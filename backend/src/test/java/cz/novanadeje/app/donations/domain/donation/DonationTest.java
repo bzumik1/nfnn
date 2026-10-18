@@ -4,6 +4,7 @@ import cz.novanadeje.app.donations.domain.bank.BankPayment;
 import cz.novanadeje.app.donations.domain.bank.BankPaymentId;
 import cz.novanadeje.app.donations.domain.bank.SenderAccount;
 import cz.novanadeje.app.donations.domain.donor.DonorReference;
+import cz.novanadeje.app.donations.domain.donor.SenderAccountLinkId;
 import cz.novanadeje.app.shared.domain.Money;
 import cz.novanadeje.app.shared.domain.UuidV7;
 import org.junit.jupiter.api.DisplayName;
@@ -41,6 +42,27 @@ class DonationTest {
         assertThat(donation.status()).isEqualTo(DonationStatus.RECEIVED);
         assertThat(donation.pairedBy()).contains(PairingMethod.VARIABLE_SYMBOL);
         assertThat(donation.recordedAt()).isEqualTo(NOW);
+    }
+
+    @Test
+    @DisplayName("Given a bank payment and a sender account link, when a donation is paired through the link, then it names the link")
+    void should_name_link_when_paired_by_sender_account_given_link() {
+        BankPayment payment = payment(1001, RECEIVED_ON, Money.czk(30000), SenderAccount.parse("2900233333", "2010"), null);
+        SenderAccountLinkId link = SenderAccountLinkId.newId(NOW);
+
+        Donation donation = Donation.pairedBySenderAccount(DONATION_ID, DONOR, payment, link, NOW);
+
+        assertThat(donation.pairedBy()).contains(PairingMethod.SENDER_ACCOUNT);
+        assertThat(donation.pairedThrough()).contains(link);
+        assertThat(donation.receivedOn()).isEqualTo(RECEIVED_ON);
+    }
+
+    @Test
+    @DisplayName("Given a donation paired by symbol, when reconstituted with a sender account link, then it is refused")
+    void should_refuse_when_reconstituted_given_link_without_account_pairing() {
+        assertThatIllegalArgumentException().isThrownBy(() -> Donation.reconstitute(DONATION_ID, DONOR, Optional.of(BankPaymentId.newId(NOW)),
+                RECEIVED_ON, Money.czk(50000), DonationSource.BANK_TRANSFER, DonationStatus.RECEIVED, Optional.of(PairingMethod.VARIABLE_SYMBOL),
+                Optional.of(SenderAccountLinkId.newId(NOW)), NOW));
     }
 
     @Test

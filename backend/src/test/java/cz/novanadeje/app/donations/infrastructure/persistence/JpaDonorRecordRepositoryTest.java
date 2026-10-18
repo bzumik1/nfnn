@@ -6,7 +6,9 @@ import cz.novanadeje.app.donations.domain.bank.SenderAccount;
 import cz.novanadeje.app.donations.domain.donor.DonorRecord;
 import cz.novanadeje.app.donations.domain.donor.DonorRecordRepository;
 import cz.novanadeje.app.donations.domain.donor.DonorReference;
-import cz.novanadeje.app.donations.domain.donor.LearnedSenderAccount;
+import cz.novanadeje.app.donations.domain.donor.ExcludedSenderAccounts;
+import cz.novanadeje.app.donations.domain.donor.SenderAccountLink;
+import cz.novanadeje.app.donations.domain.donor.SenderAccountLinkStatus;
 import cz.novanadeje.app.shared.domain.LocaleCode;
 import cz.novanadeje.app.shared.domain.PostalAddress;
 import cz.novanadeje.app.shared.domain.UuidV7;
@@ -21,6 +23,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.simple.JdbcClient;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -61,27 +64,62 @@ class JpaDonorRecordRepositoryTest {
         assertThat(byId.address()).isEqualTo(ADDRESS);
         assertThat(byId.variableSymbol()).isEqualTo(new VariableSymbol("4821937560"));
         assertThat(byId.registeredAt()).isEqualTo(NOW);
-        assertThat(byId.learnedSenderAccounts()).isEmpty();
+        assertThat(byId.senderAccountLinks()).isEmpty();
         assertThat(donorRecords.findByVariableSymbol(new VariableSymbol("4821937560"))).map(DonorRecord::id).contains(jana.id());
         assertThat(donorRecords.findById(new DonorReference(UuidV7.generate(NOW)))).isEmpty();
     }
 
     @Test
-    @DisplayName("Given a learned account, when it is added twice, then one row is stored and the record is read back with it and its provenance")
-    void should_store_one_row_when_added_twice_given_learned_account() {
+    @DisplayName("Given a learned account, when it is saved twice or a second live link to it is saved, then one row is stored and the record is read back with it and its proof")
+    void should_store_one_row_when_saved_twice_given_learned_account() {
         DonorRecord jana = person("Jana Nováková", "4821937560");
         donorRecords.save(jana);
         BankPayment payment = storedPayment(1001, jana.variableSymbol().value());
-        LearnedSenderAccount learned = jana.learnSenderAccountFrom(payment, LEARNED_AT).orElseThrow();
+        SenderAccountLink learned = learn(jana, payment);
+        DonorRecord concurrentCopy = person("Jana Nováková", "4821937560", jana.id());
+        SenderAccountLink concurrent = learn(concurrentCopy, storedPayment(1002, jana.variableSymbol().value()));
 
-        donorRecords.addSenderAccount(jana.id(), learned);
-        donorRecords.addSenderAccount(jana.id(), learned);
+        assertThat(donorRecords.saveSenderAccountLink(jana.id(), learned)).isTrue();
+        assertThat(donorRecords.saveSenderAccountLink(jana.id(), learned)).isTrue();
+        assertThat(donorRecords.saveSenderAccountLink(jana.id(), concurrent)).isFalse();
         flushAndClear();
 
         assertThat(accountRows()).isEqualTo(1L);
-        assertThat(donorRecords.findById(jana.id()).orElseThrow().learnedSenderAccounts())
-                .containsExactly(new LearnedSenderAccount(ACCOUNT, payment.id(), LEARNED_AT));
-        assertThat(donorRecords.findByVariableSymbol(jana.variableSymbol()).orElseThrow().paysFrom(ACCOUNT)).isTrue();
+        SenderAccountLink reread = donorRecords.findById(jana.id()).orElseThrow().senderAccountLinks().getFirst();
+        assertThat(reread.id()).isEqualTo(learned.id());
+        assertThat(reread.account()).isEqualTo(ACCOUNT);
+        assertThat(reread.status()).isEqualTo(SenderAccountLinkStatus.ACTIVE);
+        assertThat(reread.provedBy()).contains(payment.id());
+        assertThat(reread.provedAt()).contains(LEARNED_AT);
+        assertThat(reread.createdAt()).isEqualTo(LEARNED_AT);
+        assertThat(donorRecords.findByVariableSymbol(jana.variableSymbol()).orElseThrow().usesSenderAccount(ACCOUNT)).isTrue();
+    }
+
+    @Test
+    @DisplayName("Given a stored link, when it is disconnected and reconnected, then the old row keeps its end and a new row awaits a payment")
+    void should_keep_history_when_disconnected_and_reconnected_given_stored_link() {
+        DonorRecord jana = person("Jana Nováková", "4821937560");
+        donorRecords.save(jana);
+        donorRecords.saveSenderAccountLink(jana.id(), learn(jana, storedPayment(1001, jana.variableSymbol().value())));
+        flushAndClear();
+        LocalDate today = LocalDate.of(2026, 10, 18);
+
+        DonorRecord stored = donorRecords.findById(jana.id()).orElseThrow();
+        SenderAccountLink disconnected = stored.disconnectSenderAccount(stored.senderAccountLinks().getFirst().id(), today, LATER);
+        donorRecords.saveSenderAccountLink(jana.id(), disconnected);
+        SenderAccountLink awaiting = stored.reconnectSenderAccount(disconnected.id(), today.plusDays(1), LATER.plusSeconds(60));
+        assertThat(donorRecords.saveSenderAccountLink(jana.id(), awaiting)).isTrue();
+        flushAndClear();
+
+        List<SenderAccountLink> links = donorRecords.findById(jana.id()).orElseThrow().senderAccountLinks();
+        assertThat(links).extracting(SenderAccountLink::status)
+                .containsExactly(SenderAccountLinkStatus.DISCONNECTED, SenderAccountLinkStatus.AWAITING_PAYMENT);
+        assertThat(links.getFirst().validTo()).contains(today);
+        assertThat(links.getFirst().disconnectedAt()).contains(LATER);
+        assertThat(links.get(1).id()).isEqualTo(awaiting.id());
+        assertThat(links.get(1).validFrom()).contains(today.plusDays(1));
+        assertThat(links.get(1).provedBy()).isEmpty();
+        assertThat(accountRows()).isEqualTo(2L);
     }
 
     @Test
@@ -90,7 +128,7 @@ class JpaDonorRecordRepositoryTest {
         DonorRecord jana = person("Jana Nováková", "4821937560");
         donorRecords.save(jana);
         BankPayment payment = storedPayment(1001, jana.variableSymbol().value());
-        donorRecords.addSenderAccount(jana.id(), jana.learnSenderAccountFrom(payment, LEARNED_AT).orElseThrow());
+        donorRecords.saveSenderAccountLink(jana.id(), learn(jana, payment));
         flushAndClear();
 
         DonorRecord stored = donorRecords.findById(jana.id()).orElseThrow();
@@ -105,7 +143,7 @@ class JpaDonorRecordRepositoryTest {
         assertThat(accountRows()).isEqualTo(1L);
         DonorRecord reread = donorRecords.findById(jana.id()).orElseThrow();
         assertThat(reread.name()).isEqualTo("Jana Malá");
-        assertThat(reread.learnedSenderAccounts()).containsExactly(new LearnedSenderAccount(ACCOUNT, payment.id(), LEARNED_AT));
+        assertThat(reread.senderAccountLinks()).singleElement().satisfies(link -> assertThat(link.provedBy()).contains(payment.id()));
     }
 
     @Test
@@ -117,14 +155,14 @@ class JpaDonorRecordRepositoryTest {
         donorRecords.save(jana);
         donorRecords.save(petr);
         donorRecords.save(eva);
-        donorRecords.addSenderAccount(jana.id(), jana.learnSenderAccountFrom(storedPayment(1001, "4821937560"), LEARNED_AT).orElseThrow());
-        donorRecords.addSenderAccount(petr.id(), petr.learnSenderAccountFrom(storedPayment(1002, "7310945528"), LEARNED_AT).orElseThrow());
+        donorRecords.saveSenderAccountLink(jana.id(), learn(jana, storedPayment(1001, "4821937560")));
+        donorRecords.saveSenderAccountLink(petr.id(), learn(petr, storedPayment(1002, "7310945528")));
         flushAndClear();
 
         List<DonorRecord> owners = donorRecords.findBySenderAccount(ACCOUNT);
 
         assertThat(owners).extracting(DonorRecord::id).containsExactlyInAnyOrder(jana.id(), petr.id());
-        assertThat(owners).allSatisfy(owner -> assertThat(owner.paysFrom(ACCOUNT)).isTrue());
+        assertThat(owners).allSatisfy(owner -> assertThat(owner.usesSenderAccount(ACCOUNT)).isTrue());
         assertThat(donorRecords.findBySenderAccount(new SenderAccount("19-2000145399", "0800"))).isEmpty();
     }
 
@@ -135,14 +173,22 @@ class JpaDonorRecordRepositoryTest {
         donorRecords.save(jana);
         flushAndClear();
         DonorRecord stored = donorRecords.findById(jana.id()).orElseThrow();
-        stored.learnSenderAccountFrom(storedPayment(1001, "4821937560"), LEARNED_AT);
+        learn(stored, storedPayment(1001, "4821937560"));
 
         assertThatIllegalStateException().isThrownBy(() -> donorRecords.save(stored));
         assertThat(accountRows()).isZero();
     }
 
     private DonorRecord person(String name, String symbol) {
-        return DonorRecord.registerPerson(new DonorReference(UuidV7.generate(NOW)), name, ADDRESS, new VariableSymbol(symbol), LocaleCode.CS, NOW);
+        return person(name, symbol, new DonorReference(UuidV7.generate(NOW)));
+    }
+
+    private DonorRecord person(String name, String symbol, DonorReference id) {
+        return DonorRecord.registerPerson(id, name, ADDRESS, new VariableSymbol(symbol), LocaleCode.CS, NOW);
+    }
+
+    private static SenderAccountLink learn(DonorRecord record, BankPayment payment) {
+        return record.learnSenderAccountFrom(payment, Optional.empty(), ExcludedSenderAccounts.none(), LEARNED_AT).orElseThrow();
     }
 
     private BankPayment storedPayment(long transactionId, String variableSymbol) {

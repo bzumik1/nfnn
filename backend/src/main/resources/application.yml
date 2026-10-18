@@ -82,6 +82,8 @@ app:
       history-window: P89D
       history-from: ${FIO_HISTORY_FROM:}
       on-demand-cooldown: PT30S
+    pairing:
+      excluded-accounts: ${PAIRING_EXCLUDED_ACCOUNTS:}
     fio:
       token: ${FIO_TOKEN:}
       base-uri: https://fioapi.fio.cz/v1/rest

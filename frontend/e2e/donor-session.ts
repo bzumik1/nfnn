@@ -97,6 +97,10 @@ export async function mockDonorApi(page: Page, donations: DonorApiMock = noDonat
         json: { bankDataAsOf: '2026-10-18T08:05:30Z', checking: false },
       }),
   );
+  await page.route(
+    (url) => url.pathname === '/api/donations/me/bank-accounts',
+    (route) => route.fulfill({ json: { items: [] } }),
+  );
 }
 
 export async function openSignInDialog(page: Page): Promise<void> {

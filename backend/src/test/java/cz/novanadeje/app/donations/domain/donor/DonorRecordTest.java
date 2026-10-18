@@ -16,6 +16,7 @@ import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
@@ -31,6 +32,9 @@ class DonorRecordTest {
     private static final PostalAddress ADDRESS = new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01");
     private static final SenderAccount ACCOUNT = new SenderAccount("2900233333", "2010");
     private static final BankPaymentId PAYMENT = BankPaymentId.newId(LATER);
+    private static final SenderAccountLinkId LINK = SenderAccountLinkId.newId(LATER);
+    private static final LocalDate BOOKED_ON = LocalDate.of(2026, 10, 15);
+    private static final LocalDate TODAY = LocalDate.of(2026, 10, 18);
 
     @Test
     @DisplayName("Given a person's details, when the record is registered, then it is a person without a company identifier and with the given profile")
@@ -45,7 +49,7 @@ class DonorRecordTest {
         assertThat(record.variableSymbol()).isEqualTo(SYMBOL);
         assertThat(record.preferredLocale()).isEqualTo(LocaleCode.CS);
         assertThat(record.senderAccounts()).isEmpty();
-        assertThat(record.learnedSenderAccounts()).isEmpty();
+        assertThat(record.senderAccountLinks()).isEmpty();
         assertThat(record.registeredAt()).isEqualTo(REGISTERED_AT);
         assertThat(record.updatedAt()).isEqualTo(REGISTERED_AT);
     }
@@ -100,21 +104,34 @@ class DonorRecordTest {
     @DisplayName("Given a stored person with an identifier, when reconstituted, then it is refused")
     void should_refuse_when_reconstituted_given_person_with_identifier() {
         assertThatThrownBy(() -> DonorRecord.reconstitute(DONOR, DonorType.PERSON, "Jana Nováková", "45274649", ADDRESS, SYMBOL,
-                LocaleCode.CS, Set.of(), REGISTERED_AT, REGISTERED_AT)).isInstanceOf(IllegalArgumentException.class);
+                LocaleCode.CS, List.of(), REGISTERED_AT, REGISTERED_AT)).isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
-    @DisplayName("Given stored learned accounts, when reconstituted, then the record pays from them")
-    void should_pay_from_stored_accounts_when_reconstituted_given_learned_accounts() {
-        LearnedSenderAccount learned = new LearnedSenderAccount(ACCOUNT, PAYMENT, LATER);
+    @DisplayName("Given stored account links, when reconstituted, then the record pairs payments from them")
+    void should_pair_from_stored_links_when_reconstituted_given_account_links() {
+        SenderAccountLink link = SenderAccountLink.reconstitute(LINK, ACCOUNT, SenderAccountLinkStatus.ACTIVE, Optional.of(PAYMENT),
+                Optional.of(LATER), Optional.empty(), Optional.empty(), LATER, Optional.empty());
 
         DonorRecord record = DonorRecord.reconstitute(DONOR, DonorType.PERSON, "Jana Nováková", null, ADDRESS, SYMBOL,
-                LocaleCode.EN, Set.of(learned), REGISTERED_AT, LATER);
+                LocaleCode.EN, List.of(link), REGISTERED_AT, LATER);
 
-        assertThat(record.learnedSenderAccounts()).containsExactly(learned);
+        assertThat(record.senderAccountLinks()).containsExactly(link);
         assertThat(record.senderAccounts()).containsExactly(ACCOUNT);
-        assertThat(record.paysFrom(ACCOUNT)).isTrue();
+        assertThat(record.linkPairingPaymentsFrom(ACCOUNT, BOOKED_ON)).contains(link);
+        assertThat(record.usesSenderAccount(ACCOUNT)).isTrue();
         assertThat(record.updatedAt()).isEqualTo(LATER);
+    }
+
+    @Test
+    @DisplayName("Given two live links to one account, when reconstituted, then it is refused")
+    void should_refuse_when_reconstituted_given_two_live_links_to_one_account() {
+        SenderAccountLink first = SenderAccountLink.reconstitute(LINK, ACCOUNT, SenderAccountLinkStatus.ACTIVE, Optional.of(PAYMENT),
+                Optional.of(LATER), Optional.empty(), Optional.empty(), LATER, Optional.empty());
+        SenderAccountLink second = SenderAccountLink.awaitingPayment(SenderAccountLinkId.newId(LATER), ACCOUNT, BOOKED_ON, LATER);
+
+        assertThatThrownBy(() -> DonorRecord.reconstitute(DONOR, DonorType.PERSON, "Jana Nováková", null, ADDRESS, SYMBOL,
+                LocaleCode.EN, List.of(first, second), REGISTERED_AT, LATER)).isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
@@ -143,36 +160,69 @@ class DonorRecordTest {
     void should_refuse_learning_when_learned_given_payment_without_own_symbol() {
         DonorRecord record = person();
 
-        assertThatThrownBy(() -> record.learnSenderAccountFrom(payment(PAYMENT, null, Optional.of(ACCOUNT)), LATER))
+        assertThatThrownBy(() -> learn(record, payment(PAYMENT, null, Optional.of(ACCOUNT))))
                 .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> record.learnSenderAccountFrom(payment(PAYMENT, "1111111111", Optional.of(ACCOUNT)), LATER))
+        assertThatThrownBy(() -> learn(record, payment(PAYMENT, "1111111111", Optional.of(ACCOUNT))))
                 .isInstanceOf(IllegalArgumentException.class);
         assertThat(record.senderAccounts()).isEmpty();
     }
 
     @Test
-    @DisplayName("Given a payment with this record's symbol from a new Czech account, when an account is learned from it, then the account is added with its provenance")
+    @DisplayName("Given a payment with this record's symbol from a new Czech account, when an account is learned from it, then an active link since always is added with its proof")
     void should_learn_account_when_learned_given_own_symbol_from_new_account() {
         DonorRecord record = person();
 
-        Optional<LearnedSenderAccount> learned = record.learnSenderAccountFrom(payment(PAYMENT, SYMBOL.value(), Optional.of(ACCOUNT)), LATER);
+        Optional<SenderAccountLink> learned = learn(record, payment(PAYMENT, SYMBOL.value(), Optional.of(ACCOUNT)));
 
-        assertThat(learned).contains(new LearnedSenderAccount(ACCOUNT, PAYMENT, LATER));
-        assertThat(record.paysFrom(ACCOUNT)).isTrue();
-        assertThat(record.learnedSenderAccounts()).containsExactly(learned.orElseThrow());
+        assertThat(learned).hasValueSatisfying(link -> {
+            assertThat(link.account()).isEqualTo(ACCOUNT);
+            assertThat(link.status()).isEqualTo(SenderAccountLinkStatus.ACTIVE);
+            assertThat(link.provedBy()).contains(PAYMENT);
+            assertThat(link.provedAt()).contains(LATER);
+            assertThat(link.validFrom()).isEmpty();
+            assertThat(link.validTo()).isEmpty();
+        });
+        assertThat(record.linkPairingPaymentsFrom(ACCOUNT, LocalDate.of(2001, 1, 1))).isEqualTo(learned);
+        assertThat(record.senderAccountLinks()).containsExactly(learned.orElseThrow());
+    }
+
+    @Test
+    @DisplayName("Given an account another donor gave up on a day, when learned, then the link starts the day after")
+    void should_start_after_take_over_when_learned_given_account_released_by_another_donor() {
+        DonorRecord record = person();
+
+        SenderAccountLink learned = record.learnSenderAccountFrom(payment(PAYMENT, SYMBOL.value(), Optional.of(ACCOUNT)),
+                Optional.of(LocalDate.of(2026, 9, 30)), ExcludedSenderAccounts.none(), LATER).orElseThrow();
+
+        assertThat(learned.validFrom()).contains(LocalDate.of(2026, 10, 1));
+        assertThat(record.linkPairingPaymentsFrom(ACCOUNT, LocalDate.of(2026, 9, 30))).isEmpty();
+        assertThat(record.linkPairingPaymentsFrom(ACCOUNT, LocalDate.of(2026, 10, 1))).contains(learned);
+    }
+
+    @Test
+    @DisplayName("Given an excluded account, when learned, then nothing is learned")
+    void should_learn_nothing_when_learned_given_excluded_account() {
+        DonorRecord record = person();
+
+        Optional<SenderAccountLink> learned = record.learnSenderAccountFrom(payment(PAYMENT, SYMBOL.value(), Optional.of(ACCOUNT)),
+                Optional.empty(), new ExcludedSenderAccounts(Set.of(ACCOUNT)), LATER);
+
+        assertThat(learned).isEmpty();
+        assertThat(record.senderAccountLinks()).isEmpty();
     }
 
     @Test
     @DisplayName("Given an account the record already knows, when learned again, then nothing is added")
     void should_learn_nothing_when_learned_given_known_account() {
         DonorRecord record = person();
-        record.learnSenderAccountFrom(payment(PAYMENT, SYMBOL.value(), Optional.of(ACCOUNT)), LATER);
+        SenderAccountLink first = learn(record, payment(PAYMENT, SYMBOL.value(), Optional.of(ACCOUNT))).orElseThrow();
 
-        Optional<LearnedSenderAccount> again = record.learnSenderAccountFrom(
-                payment(BankPaymentId.newId(LATER), SYMBOL.value(), Optional.of(ACCOUNT)), LATER.plusSeconds(60));
+        Optional<SenderAccountLink> again = record.learnSenderAccountFrom(
+                payment(BankPaymentId.newId(LATER), SYMBOL.value(), Optional.of(ACCOUNT)), Optional.empty(), ExcludedSenderAccounts.none(),
+                LATER.plusSeconds(60));
 
         assertThat(again).isEmpty();
-        assertThat(record.learnedSenderAccounts()).containsExactly(new LearnedSenderAccount(ACCOUNT, PAYMENT, LATER));
+        assertThat(record.senderAccountLinks()).containsExactly(first);
     }
 
     @Test
@@ -180,15 +230,102 @@ class DonorRecordTest {
     void should_learn_nothing_when_learned_given_payment_without_czech_sender() {
         DonorRecord record = person();
 
-        assertThat(record.learnSenderAccountFrom(payment(PAYMENT, SYMBOL.value(), Optional.empty()), LATER)).isEmpty();
+        assertThat(learn(record, payment(PAYMENT, SYMBOL.value(), Optional.empty()))).isEmpty();
         assertThat(record.senderAccounts()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Given an active link, when the donor disconnects it, then it pairs payments up to that day only and is released on it")
+    void should_pair_up_to_the_day_when_disconnected_given_active_link() {
+        DonorRecord record = person();
+        SenderAccountLink link = learn(record, payment(PAYMENT, SYMBOL.value(), Optional.of(ACCOUNT))).orElseThrow();
+
+        SenderAccountLink disconnected = record.disconnectSenderAccount(link.id(), TODAY, LATER);
+
+        assertThat(disconnected.status()).isEqualTo(SenderAccountLinkStatus.DISCONNECTED);
+        assertThat(disconnected.validTo()).contains(TODAY);
+        assertThat(disconnected.disconnectedAt()).contains(LATER);
+        assertThat(record.linkPairingPaymentsFrom(ACCOUNT, TODAY)).contains(disconnected);
+        assertThat(record.linkPairingPaymentsFrom(ACCOUNT, TODAY.plusDays(1))).isEmpty();
+        assertThat(record.usesSenderAccount(ACCOUNT)).isFalse();
+        assertThat(record.releasedSenderAccountOn(ACCOUNT)).contains(TODAY);
+    }
+
+    @Test
+    @DisplayName("Given a disconnected link, when disconnected again, then it is a conflict")
+    void should_refuse_when_disconnected_given_disconnected_link() {
+        DonorRecord record = person();
+        SenderAccountLink link = learn(record, payment(PAYMENT, SYMBOL.value(), Optional.of(ACCOUNT))).orElseThrow();
+        record.disconnectSenderAccount(link.id(), TODAY, LATER);
+
+        assertThatThrownBy(() -> record.disconnectSenderAccount(link.id(), TODAY, LATER)).isInstanceOf(SenderAccountAlreadyDisconnected.class);
+    }
+
+    @Test
+    @DisplayName("Given an unknown link id, when disconnected or reconnected, then it is not found")
+    void should_not_find_when_disconnected_given_unknown_link() {
+        DonorRecord record = person();
+
+        assertThatThrownBy(() -> record.disconnectSenderAccount(LINK, TODAY, LATER)).isInstanceOf(SenderAccountLinkNotFound.class);
+        assertThatThrownBy(() -> record.reconnectSenderAccount(LINK, TODAY, LATER)).isInstanceOf(SenderAccountLinkNotFound.class);
+    }
+
+    @Test
+    @DisplayName("Given a disconnected account, when a new payment with the symbol comes from it, then it is not learned again by itself")
+    void should_not_relearn_when_learned_given_disconnected_account() {
+        DonorRecord record = person();
+        SenderAccountLink link = learn(record, payment(PAYMENT, SYMBOL.value(), Optional.of(ACCOUNT))).orElseThrow();
+        record.disconnectSenderAccount(link.id(), TODAY, LATER);
+
+        Optional<SenderAccountLink> again = learn(record, payment(BankPaymentId.newId(LATER), SYMBOL.value(), Optional.of(ACCOUNT), TODAY.plusDays(2)));
+
+        assertThat(again).isEmpty();
+        assertThat(record.senderAccountLinks()).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("Given a disconnected account, when the donor reconnects it, then a link awaits a payment from that day and only a later payment with the symbol proves it")
+    void should_await_new_payment_when_reconnected_given_disconnected_account() {
+        DonorRecord record = person();
+        SenderAccountLink link = learn(record, payment(PAYMENT, SYMBOL.value(), Optional.of(ACCOUNT))).orElseThrow();
+        record.disconnectSenderAccount(link.id(), TODAY, LATER);
+        LocalDate reconnectedOn = TODAY.plusDays(3);
+
+        SenderAccountLink awaiting = record.reconnectSenderAccount(link.id(), reconnectedOn, LATER.plusSeconds(3600));
+
+        assertThat(awaiting.status()).isEqualTo(SenderAccountLinkStatus.AWAITING_PAYMENT);
+        assertThat(awaiting.validFrom()).contains(reconnectedOn);
+        assertThat(record.linkPairingPaymentsFrom(ACCOUNT, reconnectedOn)).isEmpty();
+        assertThat(record.releasedSenderAccountOn(ACCOUNT)).isEmpty();
+        assertThat(learn(record, payment(BankPaymentId.newId(LATER), SYMBOL.value(), Optional.of(ACCOUNT), reconnectedOn.minusDays(1)))).isEmpty();
+
+        BankPaymentId proof = BankPaymentId.newId(LATER);
+        Optional<SenderAccountLink> proved = learn(record, payment(proof, SYMBOL.value(), Optional.of(ACCOUNT), reconnectedOn));
+
+        assertThat(proved).containsSame(awaiting);
+        assertThat(awaiting.status()).isEqualTo(SenderAccountLinkStatus.ACTIVE);
+        assertThat(awaiting.provedBy()).contains(proof);
+        assertThat(record.linkPairingPaymentsFrom(ACCOUNT, reconnectedOn)).contains(awaiting);
+        assertThat(record.linkPairingPaymentsFrom(ACCOUNT, TODAY.plusDays(1))).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Given a live link, when reconnected, then it is a conflict")
+    void should_refuse_when_reconnected_given_live_link() {
+        DonorRecord record = person();
+        SenderAccountLink link = learn(record, payment(PAYMENT, SYMBOL.value(), Optional.of(ACCOUNT))).orElseThrow();
+
+        assertThatThrownBy(() -> record.reconnectSenderAccount(link.id(), TODAY, LATER)).isInstanceOf(SenderAccountAlreadyConnected.class);
+        record.disconnectSenderAccount(link.id(), TODAY, LATER);
+        record.reconnectSenderAccount(link.id(), TODAY, LATER);
+        assertThatThrownBy(() -> record.reconnectSenderAccount(link.id(), TODAY, LATER)).isInstanceOf(SenderAccountAlreadyConnected.class);
     }
 
     @Test
     @DisplayName("Given a record with a learned account, when the profile changes, then name, address, locale and update time change while the symbol and the accounts stay")
     void should_keep_symbol_and_accounts_when_profile_changed_given_learned_account() {
         DonorRecord record = person();
-        record.learnSenderAccountFrom(payment(PAYMENT, SYMBOL.value(), Optional.of(ACCOUNT)), LATER);
+        learn(record, payment(PAYMENT, SYMBOL.value(), Optional.of(ACCOUNT)));
         PostalAddress newAddress = new PostalAddress("Krátká 3", "Praha", "110 00");
 
         record.changeProfile(" Jana Malá ", newAddress, LocaleCode.EN, LATER);
@@ -225,11 +362,11 @@ class DonorRecordTest {
     }
 
     @Test
-    @DisplayName("Given the learned accounts, when the caller changes the returned sets, then the record is not affected")
+    @DisplayName("Given the account links, when the caller changes the returned collections, then the record is not affected")
     void should_not_leak_internal_state_when_sets_returned_given_record() {
         DonorRecord record = person();
 
-        assertThatThrownBy(() -> record.learnedSenderAccounts().add(new LearnedSenderAccount(ACCOUNT, PAYMENT, LATER)))
+        assertThatThrownBy(() -> record.senderAccountLinks().add(SenderAccountLink.awaitingPayment(LINK, ACCOUNT, TODAY, LATER)))
                 .isInstanceOf(UnsupportedOperationException.class);
         assertThatThrownBy(() -> record.senderAccounts().add(ACCOUNT)).isInstanceOf(UnsupportedOperationException.class);
     }
@@ -243,8 +380,16 @@ class DonorRecordTest {
                 SYMBOL, LocaleCode.CS, REGISTERED_AT);
     }
 
+    private static Optional<SenderAccountLink> learn(DonorRecord record, BankPayment payment) {
+        return record.learnSenderAccountFrom(payment, Optional.empty(), ExcludedSenderAccounts.none(), LATER);
+    }
+
     private static BankPayment payment(BankPaymentId id, String variableSymbol, Optional<SenderAccount> sender) {
-        return BankPayment.incoming(id, IncomingMovement.of(new BankTransactionId(1001), LocalDate.of(2026, 10, 15), Money.czk(50000), sender,
+        return payment(id, variableSymbol, sender, BOOKED_ON);
+    }
+
+    private static BankPayment payment(BankPaymentId id, String variableSymbol, Optional<SenderAccount> sender, LocalDate bookedOn) {
+        return BankPayment.incoming(id, IncomingMovement.of(new BankTransactionId(1001), bookedOn, Money.czk(50000), sender,
                 sender.map(SenderAccount::accountNumber), sender.map(SenderAccount::bankCode), Optional.of("Nováková Jana"),
                 Optional.ofNullable(variableSymbol), Optional.empty(), Optional.empty(), Optional.empty(), "Bezhotovostní příjem"), LATER);
     }

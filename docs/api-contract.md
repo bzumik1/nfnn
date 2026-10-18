@@ -198,6 +198,9 @@ Frontend: the dialog's "Obnovit heslo" tab posts the request and shows "E-mail o
 | `POST` | `/api/donations/me/bank-check` | donor | Asks the bank for new payments now unless the bank was asked in the last 30 seconds; 202 with when the bank data was last updated and whether a check is running. See "Bank check on demand". |
 | `GET` | `/api/donations/me/bank-check` | donor | The same answer without asking the bank; the dashboard polls it while `checking` is true. |
 | `GET` | `/api/donations/me/{id}/receipt` | donor | PDF receipt of one `RECEIVED` donation of the caller. 404 for an unknown or another donor's id. |
+| `GET` | `/api/donations/me/bank-accounts` | donor | The caller's bank accounts: the accounts the foundation pairs their payments without a symbol from, with the donations paired through each. See "Donor's bank accounts". |
+| `POST` | `/api/donations/me/bank-accounts/{id}/disconnect` | donor | Stops pairing later payments without a symbol from that account to the caller; 204. Donations paired before stay. |
+| `POST` | `/api/donations/me/bank-accounts/{id}/reconnect` | donor | Connects a disconnected account again once a payment with the caller's symbol arrives from it; 204. |
 | `GET` | `/api/donations/me/receipts/yearly?year=` | donor | PDF receipt of the caller's donations received in a completed year. 400 while the year is not completed, 404 when it has none. |
 | `GET` | `/api/donations/payment-qr?amount=&variableSymbol=` | public | Returns the SPAYD string (Czech "QR platba"), its PNG QR code and the foundation's bank account. A signed-in donor's frontend passes their variable symbol. |
 | `GET/POST/PATCH` | `/api/donations/admin[...]` | admin | List/filter, manually record donation, edit. |
@@ -219,7 +222,9 @@ Both read the caller's donations, found by the donor id in the JWT subject (`don
       "currency": "CZK",
       "purpose": "Obecný příspěvek",
       "status": "RECEIVED",
-      "source": "BANK_TRANSFER"
+      "source": "BANK_TRANSFER",
+      "pairedBy": "SENDER_ACCOUNT",
+      "senderAccount": "2900233333/2010"
     }
   ],
   "totalAmountMinor": 375000,
@@ -230,6 +235,7 @@ Both read the caller's donations, found by the donor id in the JWT subject (`don
 
 - `receiptNumber` is the number of the donation's active single receipt (the one its last download issued and nothing has replaced), `null` before the first download and for a `REFUNDED` donation; see "PDF receipts".
 - `purpose` is the text to show, resolved by `Accept-Language` from the message bundles (`donation.purpose.general`, Czech "Obecný příspěvek"); v1 knows only the general purpose, a project-bound purpose comes with the admin.
+- `pairedBy` is `VARIABLE_SYMBOL` or `SENDER_ACCOUNT` (`null` for a manual donation); `senderAccount` is the account (`number/bank code`) a donation paired by account was paired through, `null` otherwise. The dashboard tags such a donation "bez VS".
 - `totalAmountMinor` and `count` add up `RECEIVED` donations only; a `REFUNDED` one stays in `items` with its status. `currency` is `CZK` even for an empty list (every imported donation is CZK).
 
 `GET /api/donations/me/summary` feeds the dashboard's stat cards and the year toggle:
@@ -351,15 +357,15 @@ The bank account comes from `app.donations.bank-account.{account-number,iban,rec
 
 Implemented: the backend downloads the foundation account's movements from the Fio API every hour, and when a donor opens the overview (see "Bank check on demand"), and turns them into donations. `GET /api/donations/me` and `/api/donations/me/summary` read the `donation` table described here for the donor in the JWT subject; the receipts keep their own table, `donation_receipt` (see "PDF receipts").
 
-Tables (`db/changelog/donations/001`–`005`):
+Tables (`db/changelog/donations/001`–`006`):
 
 | Table | Holds | Columns that matter to readers of the API |
 |---|---|---|
 | `donor_record` | The `donations` copy of each donor, fed by the shared events above; no FK to `donor`, the ids are equal by construction. It carries the receipt data. | `donor_id`, `type` (`PERSON`/`COMPANY`), `name`, `company_identifier`, `street`, `city`, `postal_code`, `variable_symbol` (unique), `preferred_locale`, `registered_at`, `updated_at` |
 | `bank_payment` | Every incoming CZK movement, stored once (`bank_transaction_id` is Fio's movement id and unique). Texts from the bank are cut to their column width before storing. | `booked_on`, `amount_minor`, `currency`, `sender_account_number`/`sender_bank_code` (canonical Czech account, null for a foreign payer), `counterparty_*` as sent, `variable_symbol` as sent (e.g. `0558`), `matching_variable_symbol` (digits with leading zeros stripped, null when there is none), `constant_symbol`, `specific_symbol`, `message_for_recipient`, `transaction_type`, `imported_at` |
 | `bank_import_state` | One row (`id = 1`): the period the application has downloaded and the last attempt. | `covered_from`/`covered_to`, `last_attempted_at`, `last_succeeded_at`, `last_failure_kind` (`RATE_LIMITED`, `HISTORY_LOCKED`, `UNAUTHORIZED`, `TRANSPORT`, `INVALID_RESPONSE`, `UNEXPECTED`), `last_failure_message` |
-| `donation` | A payment given to a donor (`Donation` aggregate). `uq_donation_bank_payment` makes a double pairing impossible. | `donor_id` (FK to `donor_record`), `bank_payment_id`, `received_on` (= `booked_on`), `amount_minor`, `currency`, `source` (`BANK_TRANSFER`; `MANUAL` has no producer yet), `status` (`RECEIVED`; `REFUNDED` has no producer yet), `paired_by` (`VARIABLE_SYMBOL`, `SENDER_ACCOUNT`; `MANUAL` comes with the admin task), `recorded_at` |
-| `donor_sender_account` | Sender accounts learned for a donor, insert-only (`on conflict do nothing`), with the payment they were learned from. | `donor_id`, `account_number`, `bank_code`, `learned_from_payment_id`, `learned_at` |
+| `donation` | A payment given to a donor (`Donation` aggregate). `uq_donation_bank_payment` makes a double pairing impossible. | `donor_id` (FK to `donor_record`), `bank_payment_id`, `received_on` (= `booked_on`), `amount_minor`, `currency`, `source` (`BANK_TRANSFER`; `MANUAL` has no producer yet), `status` (`RECEIVED`; `REFUNDED` has no producer yet), `paired_by` (`VARIABLE_SYMBOL`, `SENDER_ACCOUNT`; `MANUAL` comes with the admin task), `sender_account_id` (FK to `donor_sender_account`, the link a `SENDER_ACCOUNT` donation was paired through; null otherwise), `recorded_at` |
+| `donor_sender_account` | One row per period a donor's account pairs payments (`SenderAccountLink`): a new row when the account is learned or reconnected, the row's end set when it is disconnected, never deleted. At most one live (not `DISCONNECTED`) row per donor and account (`uq_donor_sender_account_live`; a learned or reconnected link is inserted with `on conflict ... do nothing` against it). | `id`, `donor_id`, `account_number`, `bank_code`, `status` (`ACTIVE`, `AWAITING_PAYMENT`, `DISCONNECTED`), `learned_from_payment_id` and `learned_at` (the payment with the donor's symbol that proved it, null while awaiting), `valid_from`/`valid_to` (booking days the link pairs, both inclusive, null = unbounded), `created_at`, `disconnected_at` |
 | `donation_receipt` | Every receipt ever issued, with its PDF; see "PDF receipts". | `donor_id`, `kind`, `donation_id`, `receipt_year`, `number`, `issued_on`, `locale`, `fingerprint`, `content`, `supersedes_id`, `superseded_at` |
 
 "Unpaired" is derived: a `bank_payment` no `donation` references. The reason a payment stayed unpaired is logged, not stored.
@@ -374,12 +380,13 @@ Import cycle (`donations/application/importing`, `donations/infrastructure/fio`)
 
 Pairing rules (`donations/domain/pairing/PaymentPairingPolicy`, applied by `PaymentPairingService` over every unpaired payment at the end of each import and, for one donor, right after a registration):
 
-1. Symbol first. A payment whose `matching_variable_symbol` equals a donor's symbol becomes that donor's donation (`paired_by = VARIABLE_SYMBOL`), even when the sender account was learned by someone else: the payer named the donor. Such a payment also teaches the donor its sender account, which is the only way an account is ever learned (`DonorRecord.learnSenderAccountFrom` refuses any other payment).
+1. Symbol first. A payment whose `matching_variable_symbol` equals a donor's symbol becomes that donor's donation (`paired_by = VARIABLE_SYMBOL`), even when the sender account was learned by someone else: the payer named the donor. Such a payment also teaches the donor its sender account, which is the only way an account is ever learned (`DonorRecord.learnSenderAccountFrom` refuses any other payment). It teaches nothing when the donor already has any link to that account (a disconnected one included: only the donor reconnects it), when the account is excluded (rule 7), or when it has no Czech sender. A link awaiting a payment (after a reconnect) is proved by such a payment booked on or after its start and becomes `ACTIVE`.
 2. A symbol nobody has stays unpaired whatever the account, and teaches nothing (a mistyped symbol must not become someone's gift).
-3. No symbol: the sender account must have been learned by exactly one donor who pays from it; then the payment is theirs (`paired_by = SENDER_ACCOUNT`). Two or more owners leave it unpaired (one WARN per account and run, naming the bank transaction id); no owner, or no Czech sender, leaves it unpaired. The symbol pass runs over the whole unpaired set before the account pass, so an account learned today pairs older payments without a symbol in the same run.
+3. No symbol: exactly one donor must have a proved link to the sender account whose period covers the payment's booking day; then the payment is theirs (`paired_by = SENDER_ACCOUNT`, `sender_account_id` = that link). A newly learned link has no start, so it also pairs the donor's older payments from the account; when another donor's link to the account ended (they disconnected it), the new link starts the day after that end, so the new owner never gets the previous owner's history. A disconnected link pairs payments up to and including its last day. Two or more owners leave it unpaired (one WARN per account and run, naming the bank transaction id); no owner, or no Czech sender, leaves it unpaired. The symbol pass runs over the whole unpaired set before the account pass, so an account learned today pairs older payments without a symbol in the same run.
 4. A variable symbol of `0` (what Fio sends for some standing orders) counts as no symbol: it is stored raw, its matching form is null, and the payment goes to the account rule.
-5. The sender's name is never used.
-6. The hourly run never re-points or removes a donation: a payment keeps its donor when imported again, and an account that a second donor proves with their own symbol leaves the first donor's earlier account-based donations in place while later payments from it without a symbol stay unpaired.
+5. The sender's name is never used, also not to check that the account belongs to the donor (Jakub's decision of 18 October 2026: a donor who proves an account with their symbol gets its payments even when the bank names someone else).
+6. The hourly run never re-points or removes a donation: a payment keeps its donor when imported again, and an account that a second donor proves with their own symbol leaves the first donor's earlier account-based donations in place while later payments from it without a symbol stay unpaired. Disconnecting an account changes no donation either; a donation the donor says is not theirs is for the admin.
+7. Excluded accounts (`pairing.excluded-accounts`, for example a payment gateway's or a collection account many people pay through) are never learned and never pair a payment without a symbol (`EXCLUDED_SENDER_ACCOUNT`); a payment from them with a donor's symbol still pairs by the symbol.
 
 Configuration (`application.yml`, `app.donations.*`):
 
@@ -394,7 +401,46 @@ Configuration (`application.yml`, `app.donations.*`):
 | `import.history-window` | — | `P89D` | servable without the unlock (Fio refuses `from` older than 90 days) |
 | `import.history-from` | `FIO_HISTORY_FROM` | empty | first-import depth, ISO date (`YYYY-MM-DD`); anything else stops the startup |
 
+| `pairing.excluded-accounts` | `PAIRING_EXCLUDED_ACCOUNTS` | empty | comma-separated Czech accounts written `number/bank code` (`2400000002/2010,19-2000145399/0800`) that are never learned (pairing rule 7); an entry that is not a Czech account stops the startup |
 | `import.on-demand-cooldown` | — | `PT30S` | how long after the last attempt (successful or not) a donor's bank check does not ask the bank; Fio allows one request per token per 30 seconds |
+
+#### Donor's bank accounts
+
+A donor sees the accounts their payments without a symbol are paired from and can disconnect one or connect it again. Every account is proved the same way: a payment with the donor's variable symbol from it (one koruna is enough). There is no other way to add an account and no check of the holder's name.
+
+`GET /api/donations/me/bank-accounts` (401 without a token; a donor without a record gets an empty list):
+
+```json
+{
+  "items": [
+    {
+      "id": "0192f0f1-...",
+      "accountNumber": "2900233333/2010",
+      "status": "ACTIVE",
+      "verifiedOn": "2026-10-17",
+      "connectedFrom": null,
+      "disconnectedOn": null,
+      "donationCount": 2,
+      "totalAmountMinor": 50000,
+      "currency": "CZK",
+      "lastDonationOn": "2026-10-12",
+      "shared": false
+    }
+  ]
+}
+```
+
+- One item per link (`donor_sender_account` row), live ones first, then newest first; a reconnected account appears twice, the old period as `DISCONNECTED`. An excluded account appears only when it was learned before it was excluded; it keeps its donations and pairs nothing more.
+- `status`: `ACTIVE` pairs payments; `AWAITING_PAYMENT` was reconnected and waits for a payment with the symbol booked from `connectedFrom`; `DISCONNECTED` ended on `disconnectedOn` (its last paired booking day, the Prague date of the disconnect).
+- `verifiedOn` is the Prague date the proving payment was paired, null while awaiting. `connectedFrom` is the link's first booking day, null when it pairs the account's whole history.
+- `donationCount`, `totalAmountMinor` and `lastDonationOn` cover the `RECEIVED` donations paired through this link (`donation.sender_account_id`); donations paired by symbol are not counted here.
+- `shared` is true for an active link when another donor also has a live link to the account; payments without a symbol from it then stay unpaired (rule 3).
+
+`POST /api/donations/me/bank-accounts/{id}/disconnect` answers 204 and ends the link today (Prague date): payments booked up to today still pair, later ones without a symbol stay unpaired, the donations paired before stay. 404 `donations/bank-account-not-found` for an unknown id or another donor's link, 409 `donations/bank-account-already-disconnected` when it is already disconnected. A later payment with the symbol does not connect it again.
+
+`POST /api/donations/me/bank-accounts/{id}/reconnect` answers 204 and creates a link `AWAITING_PAYMENT` from today for the same account; it becomes `ACTIVE` with the next payment with the donor's symbol from that account booked from today and pairs payments without a symbol booked from today on, never the gap. 404 as above, 409 `donations/bank-account-already-connected` when the donor already has a live link to the account (also for an `ACTIVE` id).
+
+Code: `domain/donor/SenderAccountLink` (status, period, proof) inside the `DonorRecord` aggregate, `ExcludedSenderAccounts`; `application/bankaccount/DonorBankAccountsService` and `BankAccountView`; `interfaces/rest/DonorBankAccountsController`; `infrastructure/bank/PairingProperties`; Liquibase `donations/006_link_sender_accounts_over_time.xml`, which gives every existing row an id, keeps it `ACTIVE` without a period and fills `donation.sender_account_id` for donations already paired by account. Receipts do not change: a receipt lists donations, not accounts, and a donation added later through a proved account replaces the receipt by the fingerprint rule of "PDF receipts". `features/donations/donor_bank_accounts.feature` covers the list, the one-koruna proof with the earlier payments, disconnect, reconnect, the take-over without history, the shared account, an excluded account, the 404 and 409 answers and 401.
 
 #### Bank check on demand
 

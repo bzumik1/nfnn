@@ -1,10 +1,11 @@
 package cz.novanadeje.app.donations.infrastructure.persistence;
 
+import cz.novanadeje.app.donations.domain.bank.BankPaymentId;
 import cz.novanadeje.app.donations.domain.bank.SenderAccount;
 import cz.novanadeje.app.donations.domain.donor.DonorRecord;
 import cz.novanadeje.app.donations.domain.donor.DonorRecordRepository;
 import cz.novanadeje.app.donations.domain.donor.DonorReference;
-import cz.novanadeje.app.donations.domain.donor.LearnedSenderAccount;
+import cz.novanadeje.app.donations.domain.donor.SenderAccountLink;
 import cz.novanadeje.app.shared.domain.VariableSymbol;
 import org.springframework.stereotype.Repository;
 
@@ -27,14 +28,25 @@ class JpaDonorRecordRepository implements DonorRecordRepository {
 
     @Override
     public void save(DonorRecord record) {
-        refuseUnstoredAccounts(record);
+        refuseUnstoredLinks(record);
         jpa.save(DonorRecordJpaEntity.fromDomain(record));
     }
 
     @Override
-    public void addSenderAccount(DonorReference donor, LearnedSenderAccount account) {
-        accounts.insertIgnoringDuplicate(donor.value(), account.account().accountNumber(), account.account().bankCode(),
-                account.learnedFrom().value(), account.learnedAt());
+    public boolean saveSenderAccountLink(DonorReference donor, SenderAccountLink link) {
+        Optional<DonorSenderAccountJpaEntity> stored = accounts.findById(link.id().value());
+        if (stored.isPresent()) {
+            if (!stored.get().donorId().equals(donor.value())) {
+                throw new IllegalArgumentException("Sender account link " + link.id() + " belongs to another donor");
+            }
+            stored.get().updateFrom(link);
+            accounts.saveAndFlush(stored.get());
+            return true;
+        }
+        return accounts.insertIgnoringLiveDuplicate(link.id().value(), donor.value(), link.account().accountNumber(),
+                link.account().bankCode(), link.status().name(), link.provedBy().map(BankPaymentId::value).orElse(null),
+                link.provedAt().orElse(null), link.validFrom().orElse(null), link.validTo().orElse(null), link.createdAt(),
+                link.disconnectedAt().orElse(null)) == 1;
     }
 
     @Override
@@ -57,25 +69,22 @@ class JpaDonorRecordRepository implements DonorRecordRepository {
     }
 
     private DonorRecord withAccounts(DonorRecordJpaEntity entity) {
-        return entity.toDomain(accounts.findByDonorId(entity.donorId()).stream()
+        return entity.toDomain(accounts.findByDonorIdOrderByCreatedAtAscIdAsc(entity.donorId()).stream()
                 .map(DonorSenderAccountJpaEntity::toDomain)
-                .collect(Collectors.toUnmodifiableSet()));
+                .toList());
     }
 
-    private void refuseUnstoredAccounts(DonorRecord record) {
-        Set<LearnedSenderAccount> learned = record.learnedSenderAccounts();
-        if (learned.isEmpty()) {
+    private void refuseUnstoredLinks(DonorRecord record) {
+        List<SenderAccountLink> links = record.senderAccountLinks();
+        if (links.isEmpty()) {
             return;
         }
-        Set<DonorSenderAccountKey> stored = accounts.findByDonorId(record.id().value()).stream()
-                .map(DonorSenderAccountJpaEntity::key)
+        Set<UUID> stored = accounts.findByDonorIdOrderByCreatedAtAscIdAsc(record.id().value()).stream()
+                .map(DonorSenderAccountJpaEntity::id)
                 .collect(Collectors.toUnmodifiableSet());
-        boolean unstored = learned.stream()
-                .map(account -> new DonorSenderAccountKey(record.id().value(), account.account().accountNumber(), account.account().bankCode()))
-                .anyMatch(key -> !stored.contains(key));
-        if (unstored) {
-            throw new IllegalStateException("Donor record " + record.id() + " holds sender accounts that are not stored; "
-                    + "learned accounts are written only by addSenderAccount");
+        if (links.stream().anyMatch(link -> !stored.contains(link.id().value()))) {
+            throw new IllegalStateException("Donor record " + record.id() + " holds sender account links that are not stored; "
+                    + "links are written only by saveSenderAccountLink");
         }
     }
 }
