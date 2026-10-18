@@ -111,3 +111,4 @@ logging:
     cz.novanadeje.app: INFO
     org.springframework.web: INFO
     com.openhtmltopdf: WARN
+    org.apache.pdfbox.pdmodel.font.PDType1Font: ERROR

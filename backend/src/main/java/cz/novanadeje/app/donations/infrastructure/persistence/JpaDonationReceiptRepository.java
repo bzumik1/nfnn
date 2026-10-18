@@ -34,7 +34,10 @@ class JpaDonationReceiptRepository implements DonationReceiptRepository {
 
     @Override
     public void save(DonationReceipt receipt) {
-        jpa.saveAndFlush(DonationReceiptJpaEntity.fromDomain(receipt));
+        jpa.findById(receipt.id().value()).ifPresentOrElse(
+                stored -> stored.supersededAs(receipt),
+                () -> jpa.save(DonationReceiptJpaEntity.fromDomain(receipt)));
+        jpa.flush();
     }
 
     @Override

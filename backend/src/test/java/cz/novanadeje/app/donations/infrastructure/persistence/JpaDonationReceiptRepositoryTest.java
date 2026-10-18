@@ -29,7 +29,12 @@ import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 import org.springframework.context.annotation.Import;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.simple.JdbcClient;
+import org.springframework.test.context.transaction.TestTransaction;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.Instant;
 import java.time.LocalDate;
@@ -41,7 +46,6 @@ import java.util.Optional;
 import static cz.novanadeje.app.donations.BankPayments.payment;
 import static cz.novanadeje.app.donations.infrastructure.persistence.BankPersistenceTestConfiguration.NOW;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @DataJpaTest
@@ -67,6 +71,8 @@ class JpaDonationReceiptRepositoryTest {
     private EntityManager entityManager;
     @Autowired
     private JdbcClient jdbc;
+    @Autowired
+    private PlatformTransactionManager transactionManager;
 
     private long transactionIds = 5000;
 
@@ -139,6 +145,27 @@ class JpaDonationReceiptRepositoryTest {
     }
 
     @Test
+    @DisplayName("Given a stored receipt, when a superseded copy of it with other content is saved, then only superseded_at changes and the PDF stays")
+    void should_change_only_superseded_at_when_saved_given_stored_receipt() {
+        DonorReference jana = storedDonor("4821937560");
+        DonationReceipt stored = yearly(jana, YEAR_2025, "2026-000001", Optional.empty());
+        receipts.save(stored);
+        flushAndClear();
+        Instant replacedAt = NOW.plusSeconds(3600);
+        DonationReceipt copy = DonationReceipt.reconstitute(stored.id(), jana, ReceiptKind.YEARLY, Optional.empty(), Optional.of(YEAR_2025),
+                new ReceiptNumber("2026-000001"), ISSUED_ON, NOW, LocaleCode.CS, FINGERPRINT, new byte[] {'o', 't', 'h', 'e', 'r'}, Optional.empty(),
+                Optional.of(replacedAt));
+
+        receipts.save(copy);
+        flushAndClear();
+
+        assertThat(jdbc.sql("select content from donation_receipt where id = ?").param(stored.id().value()).query(byte[].class).single())
+                .isEqualTo(PDF);
+        assertThat(jdbc.sql("select superseded_at from donation_receipt where id = ?").param(stored.id().value()).query(Instant.class).single())
+                .isEqualTo(replacedAt);
+    }
+
+    @Test
     @DisplayName("Given single, yearly, superseded and other donors' receipts, when the donor's single numbers are read, then only their active single ones come")
     void should_map_active_single_numbers_when_read_given_mixed_receipts() {
         DonorReference jana = storedDonor("4821937560");
@@ -175,12 +202,34 @@ class JpaDonationReceiptRepositoryTest {
     }
 
     @Test
-    @DisplayName("Given a stored donor, when the donor is locked for issuing, then the lock is taken inside the transaction")
-    void should_lock_donor_row_when_locked_given_stored_donor() {
-        DonorReference jana = storedDonor("4821937560");
-        entityManager.flush();
+    @DisplayName("Given a committed donor, when the donor is locked for issuing, then another transaction cannot lock the same row")
+    void should_hold_donor_row_lock_when_locked_given_committed_donor() {
+        TestTransaction.end();
+        TransactionTemplate separately = new TransactionTemplate(transactionManager);
+        separately.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+        DonorReference jana = separately.execute(status -> storedDonor("5555555555"));
+        try {
+            separately.executeWithoutResult(status -> {
+                receipts.lockDonor(jana);
 
-        assertThatCode(() -> receipts.lockDonor(jana)).doesNotThrowAnyException();
+                assertThatThrownBy(() -> separately.executeWithoutResult(other -> jdbc
+                        .sql("select donor_id from donor_record where donor_id = ? for update nowait").param(jana.value()).query().listOfRows()))
+                        .isInstanceOf(DataAccessException.class)
+                        .hasMessageContaining("could not obtain lock on row");
+            });
+        } finally {
+            separately.executeWithoutResult(status -> jdbc.sql("delete from donor_record where donor_id = ?").param(jana.value()).update());
+        }
+    }
+
+    @Test
+    @DisplayName("Given no donor record, when the donor is locked for issuing, then the adapter refuses with an invariant breach")
+    void should_refuse_when_locked_given_unknown_donor() {
+        DonorReference unknown = new DonorReference(UuidV7.generate(NOW));
+
+        assertThatThrownBy(() -> receipts.lockDonor(unknown))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("cannot be locked");
     }
 
     @Test

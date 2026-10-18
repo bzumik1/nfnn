@@ -25,6 +25,7 @@ import java.time.Year;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
 @Component
 class ThymeleafPdfReceiptRenderer implements DonationReceiptRenderer {
@@ -41,7 +42,7 @@ class ThymeleafPdfReceiptRenderer implements DonationReceiptRenderer {
     private final byte[] regularFont;
     private final byte[] boldFont;
     private final String logo;
-    private final String signature;
+    private final Optional<String> signature;
 
     ThymeleafPdfReceiptRenderer(ITemplateEngine templates, MessageSource messages, ConfiguredSignatureImage signature) {
         this.templates = templates;
@@ -50,7 +51,7 @@ class ThymeleafPdfReceiptRenderer implements DonationReceiptRenderer {
         this.regularFont = classpathBytes("fonts/DejaVuSans.ttf");
         this.boldFont = classpathBytes("fonts/DejaVuSans-Bold.ttf");
         this.logo = "data:image/png;base64," + Base64.getEncoder().encodeToString(classpathBytes("receipt/logo.png"));
-        this.signature = signature.image().map(SignatureImage::dataUri).orElse(null);
+        this.signature = signature.image().map(SignatureImage::dataUri);
     }
 
     @Override
@@ -115,7 +116,7 @@ class ThymeleafPdfReceiptRenderer implements DonationReceiptRenderer {
         variables.put("signatoryName", document.signatory().name());
         variables.put("signatoryRole", document.signatory().role());
         variables.put("logo", logo);
-        variables.put("signature", signature);
+        variables.put("signature", signature.orElse(null));
         return variables;
     }
 

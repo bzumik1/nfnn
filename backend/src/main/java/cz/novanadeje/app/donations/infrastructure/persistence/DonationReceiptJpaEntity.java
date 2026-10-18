@@ -14,6 +14,7 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import org.hibernate.annotations.DynamicUpdate;
 
 import java.time.Instant;
 import java.time.LocalDate;
@@ -22,6 +23,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Entity
+@DynamicUpdate
 @Table(name = "donation_receipt")
 public class DonationReceiptJpaEntity {
 
@@ -84,6 +86,10 @@ public class DonationReceiptJpaEntity {
         entity.supersedesId = receipt.supersedes().map(DonationReceiptId::value).orElse(null);
         entity.supersededAt = receipt.supersededAt().orElse(null);
         return entity;
+    }
+
+    void supersededAs(DonationReceipt receipt) {
+        this.supersededAt = receipt.supersededAt().orElse(null);
     }
 
     DonationReceipt toDomain() {
