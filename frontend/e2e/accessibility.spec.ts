@@ -76,6 +76,53 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     expect(await violations(page)).toEqual([]);
   });
 
+  test('when a signed-in donor has a shared account, then its warning and the switch-off confirmation break no rule either', async ({ page }) => {
+    await page.route(
+      (url) => url.pathname === '/api/donations/me/bank-accounts',
+      (route) =>
+        route.fulfill({
+          json: {
+            items: [
+              {
+                id: '0192f0c4-0000-7000-8000-000000000001',
+                accountNumber: '2900233333/2010',
+                status: 'ACTIVE',
+                verifiedOn: '2026-10-17',
+                connectedFrom: null,
+                disconnectedOn: null,
+                donationCount: 0,
+                totalAmountMinor: 0,
+                currency: 'CZK',
+                lastDonationOn: null,
+                shared: true,
+              },
+              {
+                id: '0192f0c4-0000-7000-8000-000000000002',
+                accountNumber: '19-2000145399/0800',
+                status: 'DISCONNECTED',
+                verifiedOn: '2026-03-12',
+                connectedFrom: null,
+                disconnectedOn: '2026-09-30',
+                donationCount: 2,
+                totalAmountMinor: 80000,
+                currency: 'CZK',
+                lastDonationOn: '2026-09-12',
+                shared: false,
+              },
+            ],
+          },
+        }),
+    );
+    await signIn(page);
+    await expect(page.locator('.account-hint--warning')).toBeVisible();
+    expect(await violations(page)).toEqual([]);
+
+    await page.getByRole('button', { name: 'Vypnout párování' }).click();
+    await expect(page.getByRole('button', { name: 'Nechat zapnuté' })).toBeFocused();
+
+    expect(await violations(page)).toEqual([]);
+  });
+
   test('when a signed-in donor edits their data, then the form breaks no rule either', async ({ page }) => {
     await signIn(page);
     await page.getByRole('button', { name: 'Upravit údaje' }).click();

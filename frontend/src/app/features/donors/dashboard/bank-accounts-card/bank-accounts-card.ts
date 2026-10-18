@@ -1,6 +1,6 @@
 /// <reference types="@angular/localize" />
 
-import { DOCUMENT } from '@angular/common';
+import { DOCUMENT, NgTemplateOutlet } from '@angular/common';
 import { afterNextRender, Component, computed, DestroyRef, ElementRef, inject, Injector, input, output, signal, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
@@ -48,8 +48,8 @@ const LABELS: Record<AccountLabel, string> = {
 
 const HINTS: Record<AccountLabel, string> = {
   active: $localize`:@@donor.bankAccounts.hint.active:Platby bez variabilního symbolu z něj vám přiřazujeme automaticky.`,
-  shared: $localize`:@@donor.bankAccounts.hint.shared:Tento účet ověřil i jiný dárce, proto z něj platby bez vašeho variabilního symbolu nepřiřazujeme nikomu. Pokud z něj dary posílá jen druhý dárce, vypněte u něj párování a platby se začnou přiřazovat jemu. Jinak z něj prosím posílejte vždy s vaším variabilním symbolem.`,
-  awaiting: $localize`:@@donor.bankAccounts.hint.awaiting:Pošlete z účtu 1 Kč s vaším variabilním symbolem, pak párování znovu zapneme.`,
+  shared: $localize`:@@donor.bankAccounts.hint.shared:Tento účet ověřil i jiný dárce, proto z něj platby bez variabilního symbolu nepřiřazujeme nikomu. Pokud z něj dary neposíláte vy, vypněte si u tohoto účtu párování. Jinak z něj prosím posílejte vždy s vaším variabilním symbolem.`,
+  awaiting: $localize`:@@donor.bankAccounts.hint.awaiting:Pošlete z účtu 1 Kč s vaším variabilním symbolem. Jakmile dorazí, přiřadíme vám z něj i platby bez symbolu ode dne zapnutí.`,
   disconnected: '',
 };
 
@@ -66,7 +66,7 @@ const PAYMENT_WATCH_CHECKS = 20;
 
 @Component({
   selector: 'app-bank-accounts-card',
-  imports: [Dialog, CopyButton],
+  imports: [Dialog, CopyButton, NgTemplateOutlet],
   templateUrl: './bank-accounts-card.html',
   styleUrl: './bank-accounts-card.scss',
 })
@@ -170,6 +170,11 @@ export class BankAccountsCard {
 
   protected warns(account: BankAccountItem): boolean {
     return labelOf(account) === 'shared';
+  }
+
+  protected offersReconnect(account: BankAccountItem): boolean {
+    const newestOfItsNumber = this.accounts().find((other) => other.accountNumber === account.accountNumber);
+    return account.status === 'DISCONNECTED' && newestOfItsNumber === account;
   }
 
   protected labelModifier(account: BankAccountItem): string {

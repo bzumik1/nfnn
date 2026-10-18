@@ -460,7 +460,7 @@ A donor sees the accounts their payments without a symbol are paired from and ca
 - `status`: `ACTIVE` pairs payments; `AWAITING_PAYMENT` was reconnected and waits for a payment with the symbol booked from `connectedFrom`; `DISCONNECTED` ended on `disconnectedOn` (its last paired booking day, the Prague date of the disconnect).
 - `verifiedOn` is the Prague date the proving payment was paired, null while awaiting. `connectedFrom` is the link's first booking day, null when it pairs the account's whole history.
 - `donationCount`, `totalAmountMinor` and `lastDonationOn` cover the `RECEIVED` donations paired through this link (`donation.sender_account_id`); donations paired by symbol are not counted here.
-- `shared` is true for an active link when another donor also has a live link to the account; payments without a symbol from it then stay unpaired (rule 3).
+- `shared` is true for an active link when another donor also has an active link to the account; payments without a symbol from it then stay unpaired (rule 3). Another donor's link that still awaits its payment does not count.
 
 `POST /api/donations/me/bank-accounts/{id}/disconnect` answers 204 and ends the link today (Prague date): payments booked up to today still pair, later ones without a symbol stay unpaired, the donations paired before stay. 404 `donations/bank-account-not-found` for an unknown id or another donor's link, 409 `donations/bank-account-already-disconnected` when it is already disconnected. A later payment with the symbol does not connect it again.
 

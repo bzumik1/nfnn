@@ -77,6 +77,7 @@ describe('Given the privacy policy page', () => {
     expect(donations).toContain('podle čísla účtu, ze kterého přišla');
     expect(donations).toContain('Moje bankovní účty');
     expect(donations).toContain('párování vypnout');
+    expect(donations).toContain('které z takového účtu přijdou ode dne po vypnutí párování, vám už nepřiřazujeme');
     expect(donations).not.toContain('odpoj');
   });
 
