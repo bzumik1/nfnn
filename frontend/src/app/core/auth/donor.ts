@@ -1,3 +1,5 @@
+export const PASSWORD_MIN_LENGTH = 12;
+
 export type DonorType = 'PERSON' | 'COMPANY';
 
 export type DonorLocale = 'cs' | 'en';

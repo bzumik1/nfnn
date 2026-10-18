@@ -14,8 +14,19 @@ export const routes: Routes = [
     path: '',
     loadComponent: () =>
       import('./layout/public-shell/public-shell').then((m) => m.PublicShell),
-    loadChildren: () =>
-      import('./features/content/content.routes').then((m) => m.contentRoutes),
+    children: [
+      {
+        path: 'obnova-hesla',
+        title: $localize`:@@donor.passwordReset.pageTitle:Nové heslo | Nová naděje – nadační fond`,
+        loadComponent: () =>
+          import('./features/donors/password-reset/password-reset').then((m) => m.PasswordReset),
+      },
+      {
+        path: '',
+        loadChildren: () =>
+          import('./features/content/content.routes').then((m) => m.contentRoutes),
+      },
+    ],
   },
   { path: '**', redirectTo: '' },
 ];

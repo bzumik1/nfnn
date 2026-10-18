@@ -23,6 +23,14 @@ export class AuthApi {
     return this.http.post<void>('/api/donors/auth/logout', null);
   }
 
+  requestPasswordReset(email: string): Observable<void> {
+    return this.http.post<void>('/api/donors/auth/password-reset/request', { email });
+  }
+
+  confirmPasswordReset(token: string, password: string): Observable<void> {
+    return this.http.post<void>('/api/donors/auth/password-reset/confirm', { token, password });
+  }
+
   profile(): Observable<Donor> {
     return this.http.get<Donor>('/api/donors/me');
   }

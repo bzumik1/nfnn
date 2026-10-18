@@ -178,11 +178,16 @@
         <p class="reset-lead" i18n="@@donor.login.reset.lead">
           Zadejte svůj e-mail a zašleme vám odkaz pro obnovení hesla.
         </p>
-        <form (ngSubmit)="submitReset()" novalidate>
+        <form #reset="ngForm" class="reset-form" (ngSubmit)="submitReset(reset)" novalidate>
           <div class="field">
             <label for="reset-email" i18n="@@donor.login.email">E-mail</label>
-            <input id="reset-email" name="resetEmail" type="email" placeholder="vas@email.cz" i18n-placeholder="@@donor.login.emailPlaceholder" [(ngModel)]="resetEmail" required />
+            <input id="reset-email" name="resetEmail" type="email" autocomplete="email" placeholder="vas@email.cz" i18n-placeholder="@@donor.login.emailPlaceholder" [(ngModel)]="resetEmail" required email maxlength="254" />
           </div>
+
+          @if (error()) {
+            <p class="form-error" role="alert">{{ error() }}</p>
+          }
+
           <button type="submit" class="form-submit" [disabled]="loading()">
             @if (loading()) {
               <span i18n="@@donor.login.reset.submitLoading">Odesílám…</span>
