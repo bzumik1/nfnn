@@ -6,6 +6,11 @@ const WCAG_AA = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 
 async function violations(page: Page): Promise<string[]> {
   await page.evaluate(() => document.fonts.ready);
+  await page.waitForFunction(() =>
+    document
+      .getAnimations()
+      .every((animation) => animation.playState !== 'running' || animation.effect?.getTiming().iterations === Infinity),
+  );
   const results = await new AxeBuilder({ page }).withTags(WCAG_AA).analyze();
   return results.violations.flatMap((violation) =>
     violation.nodes.map((node) => `${violation.id}: ${node.target.join(' ')}`),
@@ -57,6 +62,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
 
   test('when they press Tab first, then the skip link appears and takes them to the content', async ({ page }) => {
     await page.goto('/zasady-ochrany-osobnich-udaju');
+    await expect(page.locator('h1')).toBeVisible();
     await page.keyboard.press('Tab');
     const skipLink = page.getByRole('link', { name: 'Přeskočit na obsah' });
     await expect(skipLink).toBeFocused();
