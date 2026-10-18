@@ -1,4 +1,4 @@
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 
@@ -42,9 +42,8 @@ export interface DonationSummaryResponse {
 export class DonationsApi {
   private readonly http = inject(HttpClient);
 
-  list(year?: number): Observable<DonationListResponse> {
-    const params = year === undefined ? new HttpParams() : new HttpParams().set('year', year);
-    return this.http.get<DonationListResponse>('/api/donations/me', { params });
+  list(): Observable<DonationListResponse> {
+    return this.http.get<DonationListResponse>('/api/donations/me');
   }
 
   summary(): Observable<DonationSummaryResponse> {

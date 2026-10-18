@@ -34,7 +34,17 @@ export const noDonations = {
   list: { items: [], totalAmountMinor: 0, currency: 'CZK', count: 0 },
 };
 
-export async function serveDonations(page: Page, donations: { summary: unknown; list: unknown }): Promise<void> {
+export const paymentQr = {
+  spayd: 'SPD*1.0*ACC:CZ2620100000005544332217*AM:500.00*CC:CZK',
+  qrPngBase64: 'iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAIAAAAmkwkpAAAAEElEQVR4nGNQTX4NRwzEcQBO0hcxU+9NfQAAAABJRU5ErkJggg==',
+  bankAccount: { accountNumber: '5544332217/2010', iban: 'CZ2620100000005544332217', recipientName: 'Nadační fond Nová naděje' },
+};
+
+export async function mockDonorApi(page: Page, donations: { summary: unknown; list: unknown } = noDonations): Promise<void> {
+  await page.route(
+    (url) => url.pathname === '/api/donations/payment-qr',
+    (route) => route.fulfill({ json: paymentQr }),
+  );
   await page.route(
     (url) => url.pathname === '/api/donations/me/summary',
     (route) => route.fulfill({ json: donations.summary }),
@@ -53,17 +63,6 @@ export async function openSignInDialog(page: Page): Promise<void> {
 
 export async function signIn(page: Page): Promise<void> {
   await page.route('**/api/donors/auth/login', (route) => route.fulfill(session(200)));
-  await page.route(
-    (url) => url.pathname === '/api/donations/payment-qr',
-    (route) =>
-      route.fulfill({
-        json: {
-          spayd: 'SPD*1.0*ACC:CZ2620100000005544332217*AM:500.00*CC:CZK',
-          qrPngBase64: 'iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAIAAAAmkwkpAAAAEElEQVR4nGNQTX4NRwzEcQBO0hcxU+9NfQAAAABJRU5ErkJggg==',
-          bankAccount: { accountNumber: '5544332217/2010', iban: 'CZ2620100000005544332217', recipientName: 'Nadační fond Nová naděje' },
-        },
-      }),
-  );
   await openSignInDialog(page);
   await page.locator('#login-email').fill('jana@example.cz');
   await page.locator('#login-password').fill('correct horse battery');

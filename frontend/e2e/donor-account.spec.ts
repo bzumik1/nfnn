@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { noDonations, openSignInDialog, problem, serveDonations, session } from './donor-session';
+import { mockDonorApi, openSignInDialog, paymentQr, problem, session } from './donor-session';
 
 test.describe('Given a visitor who wants a donor account', () => {
   test('when they register as a person, then the donor portal opens with their name and variable symbol', async ({ page }) => {
@@ -8,7 +8,7 @@ test.describe('Given a visitor who wants a donor account', () => {
       posted.push(route.request().postDataJSON());
       await route.fulfill(session(201));
     });
-    await serveDonations(page, noDonations);
+    await mockDonorApi(page);
 
     await openSignInDialog(page);
     await page.getByRole('button', { name: 'Registrace' }).click();
@@ -40,6 +40,7 @@ test.describe('Given a visitor who wants a donor account', () => {
     await page.route('**/api/donors/auth/login', (route) =>
       route.fulfill(problem(401, 'auth/invalid-credentials', 'Nesprávný e-mail nebo heslo', 'Zkontrolujte prosím e-mail a heslo.')),
     );
+    await mockDonorApi(page);
 
     await openSignInDialog(page);
     await page.locator('#login-email').fill('jana@example.cz');
@@ -54,7 +55,7 @@ test.describe('Given a visitor who wants a donor account', () => {
   test('when they sign in and sign out again, then the home page shows the sign-in button again', async ({ page }) => {
     await page.route('**/api/donors/auth/login', (route) => route.fulfill(session(200)));
     await page.route('**/api/donors/auth/logout', (route) => route.fulfill({ status: 204 }));
-    await serveDonations(page, noDonations);
+    await mockDonorApi(page);
 
     await openSignInDialog(page);
     await page.locator('#login-email').fill('jana@example.cz');
@@ -69,6 +70,8 @@ test.describe('Given a visitor who wants a donor account', () => {
   });
 
   test('when they open the portal without a session, then they land on the home page with the sign-in dialog', async ({ page }) => {
+    await mockDonorApi(page);
+
     await page.goto('/donor/prehled');
 
     await expect(page).toHaveURL(/\/$/);
@@ -79,7 +82,7 @@ test.describe('Given a visitor who wants a donor account', () => {
   test('when they come back with a remembered session, then the portal opens without signing in again', async ({ page }) => {
     await page.addInitScript(() => localStorage.setItem('nfnn.donor-session', '1'));
     await page.route('**/api/donors/auth/refresh', (route) => route.fulfill(session(200)));
-    await serveDonations(page, noDonations);
+    await mockDonorApi(page);
 
     await page.goto('/donor/prehled');
 
@@ -94,13 +97,7 @@ test.describe('Given a visitor who wants a donor account', () => {
       (url) => url.pathname === '/api/donations/payment-qr',
       async (route) => {
         requestedSymbols.push(new URL(route.request().url()).searchParams.get('variableSymbol'));
-        await route.fulfill({
-          json: {
-            spayd: 'SPD*1.0*ACC:CZ2620100000005544332217*AM:500.00*CC:CZK*X-VS:1234567890',
-            qrPngBase64: 'iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAIAAAAmkwkpAAAAEElEQVR4nGNQTX4NRwzEcQBO0hcxU+9NfQAAAABJRU5ErkJggg==',
-            bankAccount: { accountNumber: '5544332217/2010', iban: 'CZ2620100000005544332217', recipientName: 'Nadační fond Nová naděje' },
-          },
-        });
+        await route.fulfill({ json: { ...paymentQr, spayd: `${paymentQr.spayd}*X-VS:1234567890` } });
       },
     );
 

@@ -79,7 +79,7 @@ src/
         contact-form/         Contact form; posts through ContactApi, honeypot field, 429 and generic errors.
       donations/
         payment-qr-api.ts     HTTP service: GET /api/donations/payment-qr (SPAYD, PNG QR code, bank account).
-        donations-api.ts      HTTP service: GET /api/donations/me (optional `year`) and /api/donations/me/summary; DTOs as in the contract.
+        donations-api.ts      HTTP service: GET /api/donations/me and /api/donations/me/summary; DTOs as in the contract. The API's `year` filter has no frontend caller (the yearly receipt filters the full list), so the service does not offer it.
         donation-date.ts      Formats the API's `YYYY-MM-DD` as `15. 03. 2026` (no locale data, no time zone).
         donation-amount.ts    Formats crowns for display: whole amounts without decimals, hellers always with two (`1 000,50`).
         receipt/              Donation receipt mock (overlay); still fed by the dashboard until the PDF receipts (task 6) replace it.
@@ -91,7 +91,7 @@ src/
 public/
   favicon.ico
   images/                     Site imagery (hero, about, donate, news1-3, proj1-5, logo). Reference as `/images/<file>`.
-e2e/                          Playwright specs; `donor-session.ts` holds the sample donor, the sign-in and the donations route mocks shared by the donor specs.
+e2e/                          Playwright specs; `donor-session.ts` holds the sample donor, the sign-in and `mockDonorApi` (QR payment, summary and list), which every donor spec registers before opening a page so nothing escapes to the dev proxy.
 ```
 
 ## Routing

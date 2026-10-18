@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { noDonations, serveDonations, signIn } from './donor-session';
+import { mockDonorApi, noDonations, signIn } from './donor-session';
 
 function donation(id: string, receivedAt: string, amountMinor: number, status = 'RECEIVED') {
   return {
@@ -40,7 +40,7 @@ const twoYears = {
 
 test.describe('Given a signed-in donor', () => {
   test('when they have given in two years, then the dashboard shows their totals, their payments and each year on its own', async ({ page }) => {
-    await serveDonations(page, twoYears);
+    await mockDonorApi(page, twoYears);
 
     await signIn(page);
 
@@ -65,7 +65,7 @@ test.describe('Given a signed-in donor', () => {
   });
 
   test('when no donation has arrived yet, then the dashboard shows zeros and explains how a gift appears', async ({ page }) => {
-    await serveDonations(page, noDonations);
+    await mockDonorApi(page, noDonations);
 
     await signIn(page);
 

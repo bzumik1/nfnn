@@ -18,25 +18,16 @@ describe('Given the donations API', () => {
 
   afterEach(() => http.verify());
 
-  it("when the list is requested without a year, then it asks for all of the donor's donations", () => {
+  it("when the list is requested, then it asks for all of the donor's donations without a year", () => {
     let received: DonationListResponse | undefined;
     api.list().subscribe((response) => (received = response));
 
-    const request = http.expectOne((req) => req.url === '/api/donations/me');
+    const request = http.expectOne('/api/donations/me');
     expect(request.request.method).toBe('GET');
-    expect(request.request.params.has('year')).toBe(false);
     expect(request.request.urlWithParams).toBe('/api/donations/me');
     request.flush(twoYearDonations());
 
     expect(received).toEqual(twoYearDonations());
-  });
-
-  it('when the list is requested for a year, then the year travels as a query parameter', () => {
-    api.list(2025).subscribe();
-
-    const request = http.expectOne((req) => req.url === '/api/donations/me');
-    expect(request.request.urlWithParams).toBe('/api/donations/me?year=2025');
-    request.flush(twoYearDonations());
   });
 
   it("when the summary is requested, then it asks for the donor's summary", () => {
