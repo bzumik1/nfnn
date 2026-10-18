@@ -36,8 +36,8 @@
       <app-form-field
         label="Jazyk potvrzení"
         i18n-label="@@donor.profile.locale"
-        hint="Platí pro potvrzení, která si stáhnete od teď."
-        i18n-hint="@@donor.profile.localeHint"
+        hint="Platí pro potvrzení, která si stáhnete poprvé. Ta, která jste si už stáhli, zůstanou v původním jazyce."
+        i18n-hint="@@donor.profile.localeHint.firstDownload"
       >
         <select appFormControl id="profile-locale" name="preferredLocale" [(ngModel)]="fields.preferredLocale">
           <option value="cs">{{ localeLabels.cs }}</option>
@@ -93,7 +93,9 @@
 
   <p class="profile-status" role="status">
     @if (saved()) {
-      <span i18n="@@donor.profile.saved">Údaje jsme uložili. Potvrzení, která si stáhnete od teď, ponesou nové údaje.</span>
+      <span i18n="@@donor.profile.saved.receiptScope">
+        Údaje jsme uložili. Jméno a adresu ponesou všechna potvrzení, která si stáhnete od teď, zvolený jazyk jen ta, která si stáhnete poprvé.
+      </span>
     }
   </p>
 </section>

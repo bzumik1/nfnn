@@ -153,6 +153,19 @@ app-form-field {
   }
 }
 
+.form-privacy {
+  margin-top: 14px;
+  font-size: 12px;
+  line-height: 1.5;
+  text-align: center;
+  color: var(--color-text-subtle);
+
+  a {
+    color: var(--color-accent);
+    font-weight: 600;
+  }
+}
+
 .form-success {
   text-align: center;
   padding: 40px 0;

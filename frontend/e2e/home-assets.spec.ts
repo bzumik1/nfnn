@@ -1,6 +1,20 @@
 import { expect, test } from '@playwright/test';
 import { mockDonorApi } from './donor-session';
 
+const PNG_TRUECOLOUR_WITHOUT_ALPHA = 2;
+
+function icoImageWidths(ico: Buffer): number[] {
+  return Array.from({ length: ico.readUInt16LE(4) }, (_, index) => ico[6 + 16 * index]);
+}
+
+function pngSize(png: Buffer): [number, number] {
+  return [png.readUInt32BE(16), png.readUInt32BE(20)];
+}
+
+function pngColourType(png: Buffer): number {
+  return png[25];
+}
+
 test.describe('Given a visitor on the home page', () => {
   test.beforeEach(async ({ page }) => {
     await mockDonorApi(page);
@@ -24,6 +38,38 @@ test.describe('Given a visitor on the home page', () => {
     });
 
     expect(elsewhere).toEqual([]);
+  });
+
+  test('when it loads, then it links a tab icon as ICO and SVG and an opaque 180 px home-screen icon, all served by the site', async ({ page, request }) => {
+    await page.goto('/');
+
+    const links = await page
+      .locator('link[rel="icon"], link[rel="apple-touch-icon"]')
+      .evaluateAll((elements) =>
+        elements.map((element) => {
+          const link = element as HTMLLinkElement;
+          return { rel: link.rel, path: new URL(link.href).pathname, type: link.type, sizes: link.sizes.value };
+        }),
+      );
+    expect(links).toEqual([
+      { rel: 'icon', path: '/favicon.ico', type: '', sizes: '32x32' },
+      { rel: 'icon', path: '/favicon.svg', type: 'image/svg+xml', sizes: '' },
+      { rel: 'apple-touch-icon', path: '/apple-touch-icon.png', type: '', sizes: '' },
+    ]);
+
+    const ico = await request.get('/favicon.ico');
+    expect(ico.ok()).toBe(true);
+    expect(icoImageWidths(await ico.body())).toEqual([16, 32, 48]);
+
+    const svg = await request.get('/favicon.svg');
+    expect(svg.ok()).toBe(true);
+    expect(await svg.text()).toContain('<svg');
+
+    const touch = await request.get('/apple-touch-icon.png');
+    expect(touch.ok()).toBe(true);
+    const png = await touch.body();
+    expect(pngSize(png)).toEqual([180, 180]);
+    expect(pngColourType(png)).toBe(PNG_TRUECOLOUR_WITHOUT_ALPHA);
   });
 
   test.describe('on a phone', () => {
