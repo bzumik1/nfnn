@@ -83,6 +83,9 @@ export class LoginDialog {
   protected readonly cityMessages = CITY_MESSAGES;
   protected readonly postalCodeMessages = POSTAL_CODE_MESSAGES;
 
+  private readonly tooManyAttempts = $localize`:@@donor.login.error.tooManyAttempts:Příliš mnoho pokusů z této adresy. Zkuste to prosím za chvíli znovu.`;
+  private readonly tooManyResetRequests = $localize`:@@donor.login.reset.error.tooMany:Odeslali jste příliš mnoho žádostí. Zkuste to prosím za hodinu.`;
+
   setMode(next: LoginDialogMode): void {
     this.mode.set(next);
     this.error.set('');
@@ -99,7 +102,7 @@ export class LoginDialog {
     }
     this.auth.login(this.email.trim(), this.password).subscribe({
       next: () => this.enterPortal(),
-      error: (failure: unknown) => this.fail(failure),
+      error: (failure: unknown) => this.failUnlessThrottled(failure, this.tooManyAttempts),
     });
   }
 
@@ -124,7 +127,7 @@ export class LoginDialog {
       })
       .subscribe({
         next: () => this.enterPortal(),
-        error: (failure: unknown) => this.fail(failure),
+        error: (failure: unknown) => this.failUnlessThrottled(failure, this.tooManyAttempts),
       });
   }
 
@@ -137,7 +140,7 @@ export class LoginDialog {
         this.loading.set(false);
         this.resetSent.set(true);
       },
-      error: (failure: unknown) => this.failReset(failure),
+      error: (failure: unknown) => this.failUnlessThrottled(failure, this.tooManyResetRequests),
     });
   }
 
@@ -176,12 +179,10 @@ export class LoginDialog {
     );
   }
 
-  private failReset(failure: unknown): void {
+  private failUnlessThrottled(failure: unknown, tooMany: string): void {
     if (failure instanceof HttpErrorResponse && failure.status === TOO_MANY_REQUESTS) {
       this.loading.set(false);
-      this.error.set(
-        $localize`:@@donor.login.reset.error.tooMany:Odeslali jste příliš mnoho žádostí. Zkuste to prosím za hodinu.`,
-      );
+      this.error.set(tooMany);
       return;
     }
     this.fail(failure);

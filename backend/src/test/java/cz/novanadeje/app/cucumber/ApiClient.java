@@ -18,10 +18,14 @@ import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 @Component
 @ScenarioScope
 public class ApiClient {
+
+    private static final String FORWARDED_FOR = "X-Forwarded-For";
+    private static final AtomicInteger CLIENT_ADDRESSES = new AtomicInteger();
 
     private final RestClient client;
     private final int port;
@@ -29,6 +33,7 @@ public class ApiClient {
     private final Map<String, String> defaultHeaders = new LinkedHashMap<>();
     private ResponseEntity<String> lastResponse;
     private byte[] lastResponseBytes;
+    private String clientAddress = nextClientAddress();
 
     public ApiClient(@LocalServerPort int port) {
         this.port = port;
@@ -54,7 +59,7 @@ public class ApiClient {
     public ResponseEntity<byte[]> getBytes(String path) {
         ResponseEntity<byte[]> response = client.get()
                 .uri(path)
-                .headers(headers -> defaultHeaders.forEach(headers::set))
+                .headers(this::addDefaultHeaders)
                 .retrieve()
                 .toEntity(byte[].class);
         lastResponseBytes = response.getBody() == null ? new byte[0] : response.getBody();
@@ -67,7 +72,9 @@ public class ApiClient {
     public ResponseEntity<String> postRaw(String path, String json, Map<String, String> headers) {
         byte[] body = json.getBytes(StandardCharsets.UTF_8);
         StringBuilder request = new StringBuilder("POST " + path + " HTTP/1.1\r\n");
-        headers.forEach((name, value) -> request.append(name).append(": ").append(value).append("\r\n"));
+        Map<String, String> sent = new LinkedHashMap<>(headers);
+        sent.putIfAbsent(FORWARDED_FOR, clientAddress);
+        sent.forEach((name, value) -> request.append(name).append(": ").append(value).append("\r\n"));
         request.append("Content-Type: application/json\r\n")
                 .append("Content-Length: ").append(body.length).append("\r\n")
                 .append("Connection: close\r\n\r\n");
@@ -104,6 +111,10 @@ public class ApiClient {
         defaultHeaders.clear();
     }
 
+    public void comeFromAnotherAddress() {
+        clientAddress = nextClientAddress();
+    }
+
     public ResponseEntity<String> lastResponse() {
         return lastResponse;
     }
@@ -122,12 +133,22 @@ public class ApiClient {
     private ResponseEntity<String> exchange(HttpMethod method, String path, Map<String, ?> body) {
         RestClient.RequestBodySpec request = client.method(method)
                 .uri(path)
-                .headers(headers -> defaultHeaders.forEach(headers::set));
+                .headers(this::addDefaultHeaders);
         if (body != null) {
             request = request.contentType(MediaType.APPLICATION_JSON).body(body);
         }
         lastResponse = request.retrieve().toEntity(String.class);
         lastResponseBytes = null;
         return lastResponse;
+    }
+
+    private void addDefaultHeaders(HttpHeaders headers) {
+        defaultHeaders.forEach(headers::set);
+        headers.set(FORWARDED_FOR, clientAddress);
+    }
+
+    private static String nextClientAddress() {
+        int client = CLIENT_ADDRESSES.incrementAndGet();
+        return "10." + (client >> 16 & 0xff) + "." + (client >> 8 & 0xff) + "." + (client & 0xff);
     }
 }

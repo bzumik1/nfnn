@@ -115,6 +115,27 @@ describe('Given the sign-in dialog', () => {
       expect(navigate).not.toHaveBeenCalled();
     });
 
+    it('too many times from one address, then the dialog asks to try again in a while', async () => {
+      await fillIn('#login-email', 'jana@example.cz');
+      await fillIn('#login-password', 'correct horse battery');
+
+      await submit('.login-form');
+      http
+        .expectOne('/api/donors/auth/login')
+        .flush(problem('donors/rate-limited', 'Příliš mnoho požadavků', 'Zkuste to prosím znovu později.'), {
+          status: 429,
+          statusText: 'Too Many Requests',
+        });
+      await settle();
+
+      expect(dialog.isOpen()).toBe(true);
+      expect(element('.form-error').textContent).toContain(
+        'Příliš mnoho pokusů z této adresy. Zkuste to prosím za chvíli znovu.',
+      );
+      expect(element<HTMLButtonElement>('.form-submit').disabled).toBe(false);
+      expect(navigate).not.toHaveBeenCalled();
+    });
+
     it('who wants to check the password, then the eye button shows it and the field keeps its label', async () => {
       await fillIn('#login-password', 'correct horse battery');
 
@@ -236,6 +257,26 @@ describe('Given the sign-in dialog', () => {
 
       expect(element('.form-error').textContent).toContain('Účet s tímto e-mailem už existuje');
       expect(element('.form-error').textContent).toContain('Přihlaste se');
+    });
+
+    it('too many times from one address, then the dialog asks to try again in a while', async () => {
+      await fillInPerson();
+
+      await submit('.register-form');
+      http
+        .expectOne('/api/donors/auth/register')
+        .flush(problem('donors/rate-limited', 'Příliš mnoho požadavků', 'Zkuste to prosím znovu později.'), {
+          status: 429,
+          statusText: 'Too Many Requests',
+        });
+      await settle();
+
+      expect(dialog.isOpen()).toBe(true);
+      expect(element('.form-error').textContent).toContain(
+        'Příliš mnoho pokusů z této adresy. Zkuste to prosím za chvíli znovu.',
+      );
+      expect(element<HTMLButtonElement>('.register-form .form-submit').disabled).toBe(false);
+      expect(navigate).not.toHaveBeenCalled();
     });
 
     it('and the server fails, then the dialog shows a generic error', async () => {
