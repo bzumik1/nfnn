@@ -54,3 +54,23 @@ Feature: Donor signs in and keeps a session
     Then the response status is 200
     And the donor profile shows type "PERSON", name "Jana Svobodová" and email "jana@example.cz"
     And the donor profile shows street "Krátká 3"
+
+  Scenario: The eleventh sign-in within 15 minutes from one address is refused, even with the right password
+    Given 10 sign-in attempts were made with email "jana@example.cz" and password "wrong horse battery"
+    When the donor signs in with email "jana@example.cz" and password "correct horse battery"
+    Then the response status is 429
+    And the problem type ends with "donors/rate-limited"
+    And the problem has the title "Příliš mnoho požadavků"
+    When the following requests come from another client address
+    And the donor signs in with email "jana@example.cz" and password "correct horse battery"
+    Then the response status is 200
+
+  Scenario: Successful and unknown sign-ins count too, and the address may sign in again 15 minutes after its first attempt
+    Given 5 sign-in attempts were made with email "jana@example.cz" and password "correct horse battery"
+    And 5 sign-in attempts were made with email "nobody@example.cz" and password "correct horse battery"
+    When 14 minutes pass
+    And the donor signs in with email "jana@example.cz" and password "correct horse battery"
+    Then the response status is 429
+    When 60 seconds pass
+    And the donor signs in with email "jana@example.cz" and password "correct horse battery"
+    Then the response status is 200
