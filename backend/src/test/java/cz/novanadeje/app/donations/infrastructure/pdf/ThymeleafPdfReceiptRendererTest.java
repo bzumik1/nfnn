@@ -11,6 +11,10 @@ import cz.novanadeje.app.shared.domain.LocaleCode;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDDocumentInformation;
+import org.apache.pdfbox.pdmodel.PDPage;
+import org.apache.pdfbox.pdmodel.PDResources;
+import org.apache.pdfbox.pdmodel.graphics.PDXObject;
+import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
 import org.apache.pdfbox.text.PDFTextStripper;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -21,8 +25,11 @@ import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.boot.thymeleaf.autoconfigure.ThymeleafAutoConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.io.ClassPathResource;
 
+import javax.imageio.ImageIO;
+
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
@@ -31,6 +38,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.stream.IntStream;
+import java.util.stream.StreamSupport;
 
 import static cz.novanadeje.app.donations.domain.receipt.Receipts.FIRST_NUMBER;
 import static cz.novanadeje.app.donations.domain.receipt.Receipts.FOUNDATION;
@@ -170,6 +178,8 @@ class ThymeleafPdfReceiptRendererTest {
                 assertThat(normalized(lastPage.getText(document)))
                         .contains("Číslo potvrzení: 2027-000001")
                         .contains("Datum připsání na účet Částka")
+                        .contains("Nová naděje - nadační fond potvrzuje, že od výše uvedeného dárce přijal v roce 2026")
+                        .contains("Pavel Znamenáček")
                         .contains(document.getNumberOfPages() + " / " + document.getNumberOfPages());
             } catch (IOException e) {
                 throw new AssertionError(e);
@@ -179,15 +189,71 @@ class ThymeleafPdfReceiptRendererTest {
 
     @Test
     @DisplayName("Given a configured PNG signature, when a receipt is rendered, then it renders without error and still names the signatory")
-    void should_render_with_signature_when_rendered_given_png_signature() throws IOException {
-        byte[] png = new ClassPathResource("receipt/logo.png").getContentAsByteArray();
-        ApplicationContextRunner withSignature = contexts.withBean(ConfiguredSignatureImage.class,
-                () -> new ConfiguredSignatureImage(Optional.of(new SignatureImage(png, "image/png"))));
+    void should_render_with_signature_when_rendered_given_png_signature() {
+        ApplicationContextRunner withSignature = withSignature();
 
         withSignature.run(context -> {
             byte[] pdf = context.getBean(DonationReceiptRenderer.class).render(Receipts.singleDocument(jana(), MARCH));
             assertThat(text(pdf)).contains("Pavel Znamenáček");
+            assertThat(imagesOnFirstPage(pdf)).as("logo and signature").isEqualTo(2);
         });
+        render(Receipts.singleDocument(jana(), MARCH), pdf -> assertThat(imagesOnFirstPage(pdf)).as("logo only").isEqualTo(1));
+    }
+
+    @Test
+    @DisplayName("Given a yearly receipt, when rendered, then its title stays on one line with the year")
+    void should_keep_title_on_one_line_when_rendered_given_yearly_receipt() {
+        render(Receipts.yearlyDocument(jana(), List.of(MARCH, JUNE)), pdf -> assertThat(lines(pdf))
+                .anyMatch(line -> line.contains("Potvrzení o přijatých darech za rok 2026")));
+        render(Receipts.yearlyDocument(janaSpeakingEnglish(), List.of(MARCH, JUNE)), pdf -> assertThat(lines(pdf))
+                .anyMatch(line -> line.contains("Confirmation of donations received in 2026")));
+    }
+
+    @Test
+    @DisplayName("Given a bilingual yearly receipt of two gifts without a signature image, when rendered, then it fits on one page")
+    void should_fit_on_one_page_when_rendered_given_bilingual_yearly_receipt_of_two_gifts() {
+        render(Receipts.yearlyDocument(janaSpeakingEnglish(), List.of(MARCH, JUNE)), pdf -> assertThat(pages(pdf)).isEqualTo(1));
+    }
+
+    @Test
+    @DisplayName("Given a bilingual single receipt with a signature image, when rendered, then it fits on one page")
+    void should_fit_on_one_page_when_rendered_given_bilingual_single_receipt_with_signature() {
+        ApplicationContextRunner withSignature = withSignature();
+
+        withSignature.run(context -> {
+            byte[] pdf = context.getBean(DonationReceiptRenderer.class).render(Receipts.singleDocument(janaSpeakingEnglish(), MARCH));
+            assertThat(pages(pdf)).isEqualTo(1);
+        });
+    }
+
+    @Test
+    @DisplayName("Given a bilingual yearly receipt too long for one page, when rendered, then the declaration moves to the last page with the signature")
+    void should_keep_declaration_with_signature_when_rendered_given_bilingual_yearly_receipt_over_one_page() {
+        List<Donation> gifts = IntStream.rangeClosed(1, 6).mapToObj(month -> receivedFromJana(LocalDate.of(2026, month, 1), 10000)).toList();
+
+        withSignature().run(context -> {
+            byte[] pdf = context.getBean(DonationReceiptRenderer.class).render(Receipts.yearlyDocument(janaSpeakingEnglish(), gifts));
+            assertThat(pages(pdf)).isEqualTo(2);
+            assertThat(pageText(pdf, 1)).doesNotContain("potvrzuje, že");
+            assertThat(pageText(pdf, 2))
+                    .contains("Nová naděje - nadační fond potvrzuje, že od výše uvedeného dárce přijal v roce 2026")
+                    .contains("Pavel Znamenáček");
+        });
+    }
+
+    private ApplicationContextRunner withSignature() {
+        return contexts.withBean(ConfiguredSignatureImage.class,
+                () -> new ConfiguredSignatureImage(Optional.of(new SignatureImage(signaturePng(), "image/png"))));
+    }
+
+    private static byte[] signaturePng() {
+        try {
+            ByteArrayOutputStream png = new ByteArrayOutputStream();
+            ImageIO.write(new BufferedImage(300, 100, BufferedImage.TYPE_INT_ARGB), "png", png);
+            return png.toByteArray();
+        } catch (IOException e) {
+            throw new AssertionError(e);
+        }
     }
 
     private void render(ReceiptDocument document, Consumer<byte[]> assertions) {
@@ -208,8 +274,50 @@ class ThymeleafPdfReceiptRendererTest {
     }
 
     private static PDDocumentInformation information(byte[] pdf) {
+        return read(pdf, PDDocument::getDocumentInformation);
+    }
+
+    private static List<String> lines(byte[] pdf) {
+        return read(pdf, document -> new PDFTextStripper().getText(document).replace('\u00a0', ' ').lines().toList());
+    }
+
+    private static int pages(byte[] pdf) {
+        return read(pdf, PDDocument::getNumberOfPages);
+    }
+
+    private static String pageText(byte[] pdf, int page) {
+        return read(pdf, document -> {
+            PDFTextStripper stripper = new PDFTextStripper();
+            stripper.setStartPage(page);
+            stripper.setEndPage(page);
+            return normalized(stripper.getText(document));
+        });
+    }
+
+    private static long imagesOnFirstPage(byte[] pdf) {
+        return read(pdf, document -> {
+            PDPage page = document.getPage(0);
+            PDResources resources = page.getResources();
+            return StreamSupport.stream(resources.getXObjectNames().spliterator(), false)
+                    .filter(name -> {
+                        try {
+                            PDXObject object = resources.getXObject(name);
+                            return object instanceof PDImageXObject;
+                        } catch (IOException e) {
+                            throw new AssertionError(e);
+                        }
+                    })
+                    .count();
+        });
+    }
+
+    private interface PdfReader<T> {
+        T read(PDDocument document) throws IOException;
+    }
+
+    private static <T> T read(byte[] pdf, PdfReader<T> reader) {
         try (PDDocument document = Loader.loadPDF(pdf)) {
-            return document.getDocumentInformation();
+            return reader.read(document);
         } catch (IOException e) {
             throw new AssertionError(e);
         }

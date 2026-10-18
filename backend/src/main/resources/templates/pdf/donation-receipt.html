@@ -7,7 +7,7 @@
     <style>
         @page {
             size: A4;
-            margin: 18mm 18mm 24mm 18mm;
+            margin: 15mm 18mm 20mm 18mm;
             @bottom-center {
                 content: element(footer);
                 vertical-align: top;
@@ -24,7 +24,7 @@
         body {
             font-family: 'DejaVu Sans';
             font-size: 9.5pt;
-            line-height: 1.35;
+            line-height: 1.3;
             color: #1f2328;
             margin: 0;
         }
@@ -54,7 +54,7 @@
             margin: 0;
         }
         .header td.logo {
-            width: 40%;
+            width: 60mm;
         }
         .header td.logo img {
             width: 58mm;
@@ -63,7 +63,7 @@
             text-align: right;
         }
         h1 {
-            font-size: 14pt;
+            font-size: 13pt;
             font-weight: 700;
             margin: 0 0 1.5mm 0;
         }
@@ -92,7 +92,7 @@
             font-weight: 400;
         }
         .section {
-            margin-top: 6mm;
+            margin-top: 4mm;
         }
         .parties td.party {
             width: 50%;
@@ -104,7 +104,7 @@
             margin-bottom: 1mm;
         }
         .gifts {
-            margin-top: 3mm;
+            margin-top: 2mm;
         }
         .gifts th {
             font-weight: 700;
@@ -121,31 +121,31 @@
             text-align: right;
         }
         .totals {
-            margin-top: 3mm;
+            margin-top: 2mm;
         }
         .totals .total {
             font-weight: 700;
         }
-        .declaration p {
-            text-align: justify;
+        .closing {
+            page-break-inside: avoid;
         }
         .declaration p.en {
             margin-top: 1.5mm;
         }
         .signature {
-            margin-top: 8mm;
+            margin-top: 6mm;
             page-break-inside: avoid;
         }
         .signature .image {
-            height: 22mm;
-            margin-top: 2mm;
+            height: 18mm;
+            margin-top: 1mm;
         }
         .signature .image img {
-            max-height: 22mm;
+            max-height: 18mm;
             max-width: 60mm;
         }
         .signature .blank {
-            height: 16mm;
+            height: 12mm;
         }
         .signature .rule {
             width: 70mm;
@@ -162,7 +162,7 @@
 
 <table class="header">
     <tr>
-        <td class="logo"><img th:src="${logo}" alt="Nová naděje" /></td>
+        <td class="logo"><img th:src="${logo}" th:alt="${foundationName}" alt="" /></td>
         <td class="title">
             <h1>
                 <span th:text="${single} ? ${cs.text('receipt.title.single')} : ${cs.text('receipt.title.yearly', year)}">Potvrzení</span>
@@ -304,7 +304,8 @@
     </div>
 </div>
 
-<div class="section declaration">
+<div class="section closing">
+<div class="declaration">
     <p th:text="${single} ? ${cs.text('receipt.declaration.single', foundationName, receivedOnCs, totalCs, accountNumber)} : ${cs.text('receipt.declaration.yearly', foundationName, year, totalCs, accountNumber)}">Prohlášení</p>
     <p class="en" th:if="${bilingual}"
        th:text="${single} ? ${en.text('receipt.declaration.single', foundationName, receivedOnEn, totalEn, accountNumber)} : ${en.text('receipt.declaration.yearly', foundationName, year, totalEn, accountNumber)}">Declaration</p>
@@ -321,6 +322,7 @@
         <p class="name" th:text="${signatoryName}">Jméno</p>
         <p th:text="${signatoryRole}">Funkce</p>
     </div>
+</div>
 </div>
 </body>
 </html>
