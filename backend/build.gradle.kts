@@ -22,9 +22,10 @@ extra["cucumberVersion"] = "7.20.1"
 extra["archunitVersion"] = "1.5.1"
 extra["openhtmltopdfVersion"] = "1.1.24"
 extra["zxingVersion"] = "3.5.3"
+extra["fioApiVersion"] = "1.0.0"
 
 dependencies {
-	implementation(project(":fio-api"))
+	implementation("io.github.bzumik1:fio-api:${property("fioApiVersion")}")
 
 	implementation("org.springframework.boot:spring-boot-starter-actuator")
 	implementation("org.springframework.boot:spring-boot-starter-data-jpa")

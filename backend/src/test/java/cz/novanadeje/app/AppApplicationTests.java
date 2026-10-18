@@ -1,6 +1,6 @@
 package cz.novanadeje.app;
 
-import cz.novanadeje.fio.FioClient;
+import io.github.bzumik1.fio.FioClient;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;

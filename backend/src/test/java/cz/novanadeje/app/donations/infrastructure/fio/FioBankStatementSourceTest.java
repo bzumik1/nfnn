@@ -15,15 +15,21 @@ import cz.novanadeje.app.shared.domain.Money;
 import cz.novanadeje.app.shared.domain.VariableSymbol;
 import cz.novanadeje.app.support.FioMovements;
 import cz.novanadeje.app.support.MutableClock;
-import cz.novanadeje.fio.FioAccountInfo;
-import cz.novanadeje.fio.FioAuthorizationException;
-import cz.novanadeje.fio.FioClient;
-import cz.novanadeje.fio.FioException;
-import cz.novanadeje.fio.FioHistoryLockedException;
-import cz.novanadeje.fio.FioRateLimitException;
-import cz.novanadeje.fio.FioStatement;
-import cz.novanadeje.fio.FioTransaction;
-import cz.novanadeje.fio.FioTransportException;
+import io.github.bzumik1.fio.AccountInfo;
+import io.github.bzumik1.fio.AccountStatement;
+import io.github.bzumik1.fio.DomesticAccount;
+import io.github.bzumik1.fio.Download;
+import io.github.bzumik1.fio.FioAuthorizationException;
+import io.github.bzumik1.fio.FioClient;
+import io.github.bzumik1.fio.FioException;
+import io.github.bzumik1.fio.FioHistoryLockedException;
+import io.github.bzumik1.fio.FioMalformedResponseException;
+import io.github.bzumik1.fio.FioRateLimitException;
+import io.github.bzumik1.fio.FioResponseTooLargeException;
+import io.github.bzumik1.fio.FioTooManyTransactionsException;
+import io.github.bzumik1.fio.FioTransportException;
+import io.github.bzumik1.fio.Transaction;
+import io.github.bzumik1.fio.TransactionFormat;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -31,12 +37,12 @@ import org.junit.jupiter.api.Test;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.math.BigDecimal;
 import java.net.http.HttpTimeoutException;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.util.Currency;
 import java.util.List;
 import java.util.Optional;
 
@@ -129,8 +135,7 @@ class FioBankStatementSourceTest {
     @Test
     @DisplayName("Given the bank's answer, when the statement is fetched, then one info line names the requested and reported periods, the id range and the movement count")
     void should_log_bank_answer_when_fetched_given_statement() {
-        fio.answer(new FioStatement(new FioAccountInfo("5544332217", "2010", "CZK", "CZ2620100000005544332217", "FIOBCZPPXXX",
-                BigDecimal.ZERO, BigDecimal.ZERO, LocalDate.of(2026, 7, 20), LocalDate.of(2026, 10, 17), 1001L, 1002L, null),
+        fio.answer(new AccountStatement(info(LocalDate.of(2026, 7, 20), LocalDate.of(2026, 10, 17), 1001L, 1002L),
                 List.of(FioMovements.incoming(1001, DAY, "500.00").build(), FioMovements.incoming(1002, DAY, "300.00").build())));
 
         source.fetch(REQUESTED);
@@ -142,12 +147,24 @@ class FioBankStatementSourceTest {
     @Test
     @DisplayName("Given a symbol with leading zeros, when the statement is fetched, then the raw symbol is kept and the matching form derived")
     void should_keep_raw_symbol_and_derive_matching_form_when_fetched_given_padded_symbol() {
-        fio.answer(statement(null, null, FioMovements.incoming(1001, DAY, "500.00").withVariableSymbol("0004821937560").build()));
+        fio.answer(statement(null, null, FioMovements.incoming(1001, DAY, "500.00").withVariableSymbol("0004821937").build()));
 
         IncomingMovement movement = source.fetch(REQUESTED).incoming().getFirst();
 
-        assertThat(movement.variableSymbol()).contains("0004821937560");
-        assertThat(movement.matchingVariableSymbol()).contains(new VariableSymbol("4821937560"));
+        assertThat(movement.variableSymbol()).contains("0004821937");
+        assertThat(movement.matchingVariableSymbol()).contains(new VariableSymbol("4821937"));
+    }
+
+    @Test
+    @DisplayName("Given a sender account with a zero prefix, when the statement is fetched, then the account is kept as sent and the sender is canonical")
+    void should_keep_account_as_sent_and_derive_canonical_sender_when_fetched_given_zero_prefix() {
+        fio.answer(statement(null, null, FioMovements.incoming(1001, DAY, "500.00").from("000000-2900233333", "2010").build()));
+
+        IncomingMovement movement = source.fetch(REQUESTED).incoming().getFirst();
+
+        assertThat(movement.counterpartyAccount()).contains("000000-2900233333");
+        assertThat(movement.counterpartyBankCode()).contains("2010");
+        assertThat(movement.sender()).contains(new SenderAccount("2900233333", "2010"));
     }
 
     @Test
@@ -160,6 +177,18 @@ class FioBankStatementSourceTest {
         assertThat(movement.sender()).isEmpty();
         assertThat(movement.counterpartyAccount()).contains("DE89370400440532013000");
         assertThat(movement.counterpartyBankCode()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Given a foreign payer with a bank identifier in the bank code column, when the statement is fetched, then both are kept as sent and there is no Czech sender")
+    void should_keep_foreign_account_and_bank_code_as_sent_when_fetched_given_foreign_account_with_bank_code() {
+        fio.answer(statement(null, null, FioMovements.incoming(1001, DAY, "500.00").from("SK3112000000198742637541", "TATRSKBX").build()));
+
+        IncomingMovement movement = source.fetch(REQUESTED).incoming().getFirst();
+
+        assertThat(movement.sender()).isEmpty();
+        assertThat(movement.counterpartyAccount()).contains("SK3112000000198742637541");
+        assertThat(movement.counterpartyBankCode()).contains("TATRSKBX");
     }
 
     @Test
@@ -195,6 +224,18 @@ class FioBankStatementSourceTest {
     }
 
     @Test
+    @DisplayName("Given the client's own rate limit holds the request back, when the statement is fetched, then it is unavailable as rate limited with the next slot")
+    void should_map_rate_limit_when_fetched_given_request_not_sent() {
+        Instant nextSlot = NOW.plusSeconds(12);
+        fio.fail(FioRateLimitException.notSent("not sent: the token was used less than 30 seconds ago", nextSlot));
+
+        BankStatementUnavailable unavailable = unavailable();
+
+        assertThat(unavailable.kind()).isEqualTo(ImportFailureKind.RATE_LIMITED);
+        assertThat(unavailable.retryAfter()).contains(nextSlot);
+    }
+
+    @Test
     @DisplayName("Given a locked history, when the statement is fetched, then it is unavailable as history locked, retryable 30 seconds after the refusal arrived")
     void should_map_history_lock_with_retry_from_catch_instant_when_fetched_given_422() {
         fio.beforeAnswer(() -> clock.advance(Duration.ofSeconds(7)));
@@ -218,24 +259,27 @@ class FioBankStatementSourceTest {
 
     @Test
     void should_map_transport_when_fetched_given_timeout() {
-        fio.fail(new FioTransportException("Fio API request GET /periods/***/ failed: timed out", new HttpTimeoutException("timed out")));
+        fio.fail(new FioTransportException("Fio API request GET /periods/***/ failed: timed out", new HttpTimeoutException("timed out"), true));
 
         assertThat(unavailable().kind()).isEqualTo(ImportFailureKind.TRANSPORT);
     }
 
     @Test
     void should_map_invalid_response_when_fetched_given_2xx_body_that_is_not_a_statement() {
-        fio.fail(new FioException("answered with HTTP 200 and a body that is not an account statement", 200, "<html>", new IOException("x")));
+        fio.fail(new FioMalformedResponseException("answered with HTTP 200 and a body this client does not understand", 200, "<html>", new IOException("x")));
 
         assertThat(unavailable().kind()).isEqualTo(ImportFailureKind.INVALID_RESPONSE);
     }
 
     @Test
     void should_map_unexpected_when_fetched_given_other_status() {
-        fio.fail(new FioException("refused with HTTP 413", 413, ""));
+        fio.fail(new FioTooManyTransactionsException("refused with HTTP 413", ""));
         assertThat(unavailable().kind()).isEqualTo(ImportFailureKind.UNEXPECTED);
 
         fio.fail(new FioException("refused with HTTP 404", 404, ""));
+        assertThat(unavailable().kind()).isEqualTo(ImportFailureKind.UNEXPECTED);
+
+        fio.fail(new FioResponseTooLargeException("answered with more than 256 bytes", 256, null));
         assertThat(unavailable().kind()).isEqualTo(ImportFailureKind.UNEXPECTED);
     }
 
@@ -251,20 +295,25 @@ class FioBankStatementSourceTest {
         return catchThrowableOfType(BankStatementUnavailable.class, () -> source.fetch(REQUESTED));
     }
 
-    private static FioStatement statement(LocalDate dateStart, LocalDate dateEnd, FioTransaction... rows) {
-        return new FioStatement(new FioAccountInfo("5544332217", "2010", "CZK", "CZ2620100000005544332217", "FIOBCZPPXXX",
-                BigDecimal.ZERO, BigDecimal.ZERO, dateStart, dateEnd, null, null, null), List.of(rows));
+    private static AccountStatement statement(LocalDate dateStart, LocalDate dateEnd, Transaction... rows) {
+        return new AccountStatement(info(dateStart, dateEnd, null, null), List.of(rows));
+    }
+
+    private static AccountInfo info(LocalDate dateStart, LocalDate dateEnd, Long firstTransactionId, Long lastTransactionId) {
+        io.github.bzumik1.fio.Money zero = io.github.bzumik1.fio.Money.czk("0.00");
+        return new AccountInfo(DomesticAccount.of("5544332217", "2010"), "CZ2620100000005544332217", "FIOBCZPPXXX",
+                Currency.getInstance("CZK"), zero, zero, dateStart, dateEnd, null, firstTransactionId, lastTransactionId, null);
     }
 
     private static final class StubFioClient implements FioClient {
 
         private List<LocalDate> requested = List.of();
-        private FioStatement answer;
+        private AccountStatement answer;
         private FioException failure;
         private Runnable beforeAnswer = () -> {
         };
 
-        void answer(FioStatement statement) {
+        void answer(AccountStatement statement) {
             this.answer = statement;
             this.failure = null;
         }
@@ -278,27 +327,52 @@ class FioBankStatementSourceTest {
         }
 
         @Override
-        public FioStatement transactionsBetween(LocalDate from, LocalDate to) {
-            requested = List.of(from, to);
-            beforeAnswer.run();
-            if (failure != null) {
-                throw failure;
-            }
-            return Optional.ofNullable(answer).orElseThrow();
+        public Transactions transactions() {
+            return new Transactions() {
+                @Override
+                public TransactionRequest between(LocalDate from, LocalDate to) {
+                    return new TransactionRequest() {
+                        @Override
+                        public AccountStatement fetch() {
+                            requested = List.of(from, to);
+                            beforeAnswer.run();
+                            if (failure != null) {
+                                throw failure;
+                            }
+                            return Optional.ofNullable(answer).orElseThrow();
+                        }
+
+                        @Override
+                        public Download download(TransactionFormat format) {
+                            throw new UnsupportedOperationException();
+                        }
+                    };
+                }
+
+                @Override
+                public TransactionRequest sinceBookmark() {
+                    throw new UnsupportedOperationException();
+                }
+            };
         }
 
         @Override
-        public FioStatement newTransactions() {
+        public Statements statements() {
             throw new UnsupportedOperationException();
         }
 
         @Override
-        public void setLastDownloadedId(long transactionId) {
+        public Merchant merchant() {
             throw new UnsupportedOperationException();
         }
 
         @Override
-        public void setLastDownloadedDate(LocalDate date) {
+        public Bookmark bookmark() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public Payments payments() {
             throw new UnsupportedOperationException();
         }
     }

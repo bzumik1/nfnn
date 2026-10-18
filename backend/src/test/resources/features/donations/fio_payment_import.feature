@@ -181,10 +181,10 @@ Feature: Incoming bank payments are imported from Fio
     Given today is 2026-10-17
     And the bank account has these movements:
       | id   | date       | amount | account    | bankCode | name          | variableSymbol |
-      | 1001 | 2026-10-15 | 500.00 | 2900233333 | 2010     | Nováková Jana | 0004821937560  |
+      | 1001 | 2026-10-15 | 500.00 | 2900233333 | 2010     | Nováková Jana | 0004821937     |
       | 1002 | 2026-10-16 | 300.00 | 2900233333 | 2010     | Nováková Jana | 0              |
     When the application starts the import
-    Then bank payment 1001 carries variable symbol "0004821937560" matched as "4821937560"
+    Then bank payment 1001 carries variable symbol "0004821937" matched as "4821937"
     And bank payment 1002 carries variable symbol "0" and no symbol to match
 
   Scenario: A payment with overlong texts from the bank is stored with the texts cut to size

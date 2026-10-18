@@ -4,7 +4,6 @@ FROM eclipse-temurin:25-jdk AS build
 WORKDIR /workspace
 COPY gradlew settings.gradle.kts build.gradle.kts ./
 COPY gradle ./gradle
-COPY fio-api ./fio-api
 RUN --mount=type=cache,target=/root/.gradle ./gradlew --no-daemon dependencies || true
 COPY src ./src
 RUN --mount=type=cache,target=/root/.gradle ./gradlew --no-daemon clean bootJar -x test
