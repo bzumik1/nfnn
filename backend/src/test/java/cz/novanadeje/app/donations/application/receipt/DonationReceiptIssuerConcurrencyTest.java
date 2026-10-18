@@ -9,11 +9,13 @@ import cz.novanadeje.app.donations.domain.bank.BankPaymentRepository;
 import cz.novanadeje.app.donations.domain.bank.SenderAccount;
 import cz.novanadeje.app.donations.domain.donation.Donation;
 import cz.novanadeje.app.donations.domain.donation.DonationId;
+import cz.novanadeje.app.donations.domain.donation.DonationNotFound;
 import cz.novanadeje.app.donations.domain.donation.DonationRepository;
 import cz.novanadeje.app.donations.domain.donation.PairingMethod;
 import cz.novanadeje.app.donations.domain.donor.DonorRecord;
 import cz.novanadeje.app.donations.domain.donor.DonorRecordRepository;
 import cz.novanadeje.app.donations.domain.donor.DonorReference;
+import cz.novanadeje.app.donations.domain.receipt.YearlyReceiptNotAvailable;
 import cz.novanadeje.app.shared.domain.LocaleCode;
 import cz.novanadeje.app.shared.domain.Money;
 import cz.novanadeje.app.shared.domain.PostalAddress;
@@ -142,6 +144,22 @@ class DonationReceiptIssuerConcurrencyTest {
 
         assertThat(receipts.yearlyReceipt(jana.id(), YEAR_2025).number()).isEqualTo(waited.number());
         assertThat(storedReceipts()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("Given a donor without a donor record, when their receipts are issued, then the donation is not found and the yearly receipt is not available")
+    void should_answer_not_found_when_issued_given_donor_without_record() {
+        DonorReference unknown = new DonorReference(UuidV7.generate(Instant.now()));
+        DonationId donation = DonationId.newId(Instant.now());
+        LocalDate today = FoundationCalendar.today(Clock.systemUTC());
+
+        assertThatThrownBy(() -> issuer.issueForDonation(unknown, donation, today))
+                .isInstanceOf(DonationNotFound.class)
+                .extracting("code").isEqualTo("donations/donation-not-found");
+        assertThatThrownBy(() -> issuer.issueForYear(unknown, YEAR_2025, today))
+                .isInstanceOf(YearlyReceiptNotAvailable.class)
+                .extracting("code").isEqualTo("donations/yearly-receipt-not-available");
+        assertThat(storedReceipts()).isZero();
     }
 
     @Test

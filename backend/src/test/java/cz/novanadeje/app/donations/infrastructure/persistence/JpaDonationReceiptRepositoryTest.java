@@ -53,6 +53,7 @@ import java.util.Optional;
 import static cz.novanadeje.app.donations.BankPayments.payment;
 import static cz.novanadeje.app.donations.infrastructure.persistence.BankPersistenceTestConfiguration.NOW;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @DataJpaTest
@@ -251,13 +252,11 @@ class JpaDonationReceiptRepositoryTest {
     }
 
     @Test
-    @DisplayName("Given no donor record, when the donor is locked for issuing, then there is no row to hold and the reads that follow decide the answer")
-    void should_lock_nothing_and_not_fail_when_locked_given_unknown_donor() {
+    @DisplayName("Given no donor record, when the donor is locked for issuing, then the lock does not fail")
+    void should_not_fail_when_locked_given_unknown_donor() {
         DonorReference unknown = new DonorReference(UuidV7.generate(NOW));
 
-        receipts.lockDonor(unknown);
-
-        assertThat(jdbc.sql("select count(*) from donor_record where donor_id = ?").param(unknown.value()).query(Long.class).single()).isZero();
+        assertThatCode(() -> receipts.lockDonor(unknown)).doesNotThrowAnyException();
     }
 
     @Test

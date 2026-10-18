@@ -43,13 +43,18 @@ class DonationReceiptServiceTest {
     }
 
     @Test
-    @DisplayName("Given a donation the issuer does not find, when its receipt is asked for, then it is not found")
-    void should_not_find_donation_when_asked_given_issuer_does_not_find_it() {
-        when(issuer.issueForDonation(JANA, MARCH_2026, TODAY)).thenThrow(new DonationNotFound(MARCH_2026));
+    @DisplayName("Given a donation the issuer does not find, when its receipt is asked for, then it is not found and the rendering slot is free again")
+    void should_not_find_donation_and_free_slot_when_asked_given_issuer_does_not_find_it() {
+        DonationId unknown = DonationId.newId(NOW);
+        when(issuer.issueForDonation(JANA, unknown, TODAY)).thenThrow(new DonationNotFound(unknown));
+        IssuedReceipt issued = new IssuedReceipt(PDF, FIRST_NUMBER, ReceiptKind.SINGLE, Optional.empty(), LocaleCode.CS);
+        when(issuer.issueForDonation(JANA, MARCH_2026, TODAY)).thenReturn(issued);
+        DonationReceiptService service = service(NOW);
 
-        assertThatThrownBy(() -> service(NOW).singleReceipt(JANA, MARCH_2026))
+        assertThatThrownBy(() -> service.singleReceipt(JANA, unknown))
                 .isInstanceOf(DonationNotFound.class)
                 .extracting("code").isEqualTo("donations/donation-not-found");
+        assertThat(service.singleReceipt(JANA, MARCH_2026)).isEqualTo(issued);
     }
 
     @Test
