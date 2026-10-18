@@ -49,6 +49,11 @@ public class CommonStepDefinitions {
         clock.advance(Duration.ofMinutes(minutes));
     }
 
+    @When("the following requests come from another client address")
+    public void theFollowingRequestsComeFromAnotherClientAddress() {
+        api.comeFromAnotherAddress();
+    }
+
     @Then("the response status is {int}")
     public void theResponseStatusIs(int status) {
         assertThat(api.lastResponse().getStatusCode().value())

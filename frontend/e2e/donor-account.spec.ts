@@ -21,7 +21,7 @@ test.describe('Given a visitor who wants a donor account', () => {
     await page.getByRole('button', { name: 'Registrovat' }).click();
 
     await expect(page).toHaveURL(/\/donor\/prehled$/);
-    await expect(page.locator('.topbar-greeting')).toContainText('Jana Nováková');
+    await expect(page.locator('.topbar-donor')).toContainText('Jana Nováková');
     await expect(page.locator('.symbol-value')).toHaveText('1234567890');
     expect(posted).toEqual([
       {
@@ -69,6 +69,22 @@ test.describe('Given a visitor who wants a donor account', () => {
     await expect(page.locator('.nav-login')).toHaveText('Přihlásit se');
   });
 
+  test('when they go back to the home page from the overview, then they stay signed in and can return to it', async ({ page }) => {
+    await page.route('**/api/donors/auth/login', (route) => route.fulfill(session(200)));
+    await mockDonorApi(page);
+
+    await openSignInDialog(page);
+    await page.locator('#login-email').fill('jana@example.cz');
+    await page.locator('#login-password').fill('correct horse battery');
+    await page.getByRole('dialog').locator('.form-submit').click();
+    await expect(page).toHaveURL(/\/donor\/prehled$/);
+
+    await page.getByRole('link', { name: 'Hlavní stránka' }).click();
+
+    await expect(page).toHaveURL(/\/$/);
+    await expect(page.locator('.nav-login')).toHaveText('Můj přehled');
+  });
+
   test('when they open the portal without a session, then they land on the home page with the sign-in dialog', async ({ page }) => {
     await mockDonorApi(page);
 
@@ -86,7 +102,7 @@ test.describe('Given a visitor who wants a donor account', () => {
 
     await page.goto('/donor/prehled');
 
-    await expect(page.locator('.topbar-greeting')).toContainText('Jana Nováková');
+    await expect(page.locator('.topbar-donor')).toContainText('Jana Nováková');
   });
 
   test('when they come back with a remembered session to the home page, then the QR payment carries their variable symbol', async ({ page }) => {

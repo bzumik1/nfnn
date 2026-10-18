@@ -1,6 +1,7 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import { ContactForm } from './contact-form';
 
 describe('Given the contact form', () => {
@@ -10,7 +11,7 @@ describe('Given the contact form', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [ContactForm],
-      providers: [provideHttpClient(), provideHttpClientTesting()],
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])],
     }).compileComponents();
     fixture = TestBed.createComponent(ContactForm);
     http = TestBed.inject(HttpTestingController);
@@ -43,6 +44,18 @@ describe('Given the contact form', () => {
     await fillIn('#contact-email', 'jana@example.cz');
     await fillIn('#contact-message', 'Mám dotaz k projektu.');
   }
+
+  it('when it is shown, then a line under the submit button says what the data is used for and links the privacy policy', () => {
+    const note = element('.form-privacy');
+
+    expect(element('.form-submit').nextElementSibling).toBe(note);
+    expect(note.textContent?.replace(/\s+/g, ' ').trim()).toBe(
+      'Údaje z formuláře použijeme jen k vyřízení vaší zprávy, jak popisují zásady ochrany osobních údajů.',
+    );
+    const link = note.querySelector('a') as HTMLAnchorElement;
+    expect(link.textContent?.trim()).toBe('zásady ochrany osobních údajů');
+    expect(link.getAttribute('href')).toBe('/zasady-ochrany-osobnich-udaju');
+  });
 
   it('when submitted with a name, an email and a message, then it posts them with an empty honeypot and shows the thank-you', async () => {
     await fillInValidMessage();

@@ -53,6 +53,7 @@ import java.util.Optional;
 import static cz.novanadeje.app.donations.BankPayments.payment;
 import static cz.novanadeje.app.donations.infrastructure.persistence.BankPersistenceTestConfiguration.NOW;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @DataJpaTest
@@ -251,13 +252,11 @@ class JpaDonationReceiptRepositoryTest {
     }
 
     @Test
-    @DisplayName("Given no donor record, when the donor is locked for issuing, then the adapter refuses with an invariant breach")
-    void should_refuse_when_locked_given_unknown_donor() {
+    @DisplayName("Given no donor record, when the donor is locked for issuing, then the lock does not fail")
+    void should_not_fail_when_locked_given_unknown_donor() {
         DonorReference unknown = new DonorReference(UuidV7.generate(NOW));
 
-        assertThatThrownBy(() -> receipts.lockDonor(unknown))
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("cannot be locked");
+        assertThatCode(() -> receipts.lockDonor(unknown)).doesNotThrowAnyException();
     }
 
     @Test
