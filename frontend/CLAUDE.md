@@ -79,15 +79,18 @@ src/
         contact-form/         Contact form; posts through ContactApi, honeypot field, 429 and generic errors.
       donations/
         payment-qr-api.ts     HTTP service: GET /api/donations/payment-qr (SPAYD, PNG QR code, bank account).
-        receipt/              Donation receipt placeholder page.
+        donations-api.ts      HTTP service: GET /api/donations/me (optional `year`) and /api/donations/me/summary; DTOs as in the contract.
+        donation-date.ts      Formats the API's `YYYY-MM-DD` as `15. 03. 2026` (no locale data, no time zone).
+        receipt/              Donation receipt mock (overlay); still fed by the dashboard until the PDF receipts (task 6) replace it.
+        testing/              Donation fixtures for specs (excluded from the app build).
       donors/
         donors.routes.ts      `'prehled'` → dashboard (the whole `/donor` branch sits behind `donorGuard` in app.routes.ts).
         login-dialog/         Sign-in / registration dialog opened from the header; posts through AuthStore and shows the problem's title and detail on failure. The password-reset tab is still a mock (task 7).
-        dashboard/            Donor portal: greeting, variable symbol, sign-out; the payments table is hardcoded until the donations import lands.
+        dashboard/            Donor portal: greeting, variable symbol, sign-out; stat cards, year toggle and payments table from DonationsApi (summary + full list on open, signals `state` loading/ready/error, retry, empty state). "PDF" buttons still open the Receipt mock.
 public/
   favicon.ico
   images/                     Site imagery (hero, about, donate, news1-3, proj1-5, logo). Reference as `/images/<file>`.
-e2e/                          Playwright specs.
+e2e/                          Playwright specs; `donor-session.ts` holds the sample donor, the sign-in and the donations route mocks shared by the donor specs.
 ```
 
 ## Routing
@@ -143,7 +146,7 @@ Images and other public files live in `public/`. The build copies `public/**/*` 
 ## What is intentionally *not* implemented yet
 
 - Password reset: the dialog's "Obnovit heslo" tab only pretends to send an email (task 7 wires it).
-- The dashboard's payments, yearly summary and `donations/receipt` show hardcoded data until the Fio import and the PDF receipts land.
+- PDF receipts: the dashboard's "↓ PDF za rok" and "Stáhnout PDF" open the `donations/receipt` mock with the API's data (the yearly one gets that year's `RECEIVED` donations) until task 6 serves real PDFs.
 - No real translations (English target empty).
 - `shared/` is still a placeholder (`.gitkeep`).
 
