@@ -103,6 +103,7 @@ app:
       signatory-name: ${RECEIPT_SIGNATORY_NAME:Pavel Znamenáček}
       signatory-role: ${RECEIPT_SIGNATORY_ROLE:předseda správní rady}
       signature-image: ${RECEIPT_SIGNATURE_IMAGE:}
+      concurrent-renders: 3
   security:
     jwt:
       issuer: nova-nadeje

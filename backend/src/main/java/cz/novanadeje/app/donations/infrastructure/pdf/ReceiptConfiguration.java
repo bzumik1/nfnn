@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donations.infrastructure.pdf;
 
+import cz.novanadeje.app.donations.application.receipt.ReceiptRenderingLimit;
 import cz.novanadeje.app.donations.domain.BankAccount;
 import cz.novanadeje.app.donations.domain.receipt.FoundationIdentity;
 import cz.novanadeje.app.donations.domain.receipt.Signatory;
@@ -30,14 +31,24 @@ class ReceiptConfiguration {
     }
 
     @Bean
+    ReceiptTemplate currentReceiptTemplate() {
+        return ReceiptTemplate.fromClasspath();
+    }
+
+    @Bean
+    ReceiptRenderingLimit receiptRenderingLimit(ReceiptProperties properties) {
+        return new ReceiptRenderingLimit(properties.concurrentRenders());
+    }
+
+    @Bean
     ConfiguredSignatureImage configuredSignatureImage(ReceiptProperties properties) {
         return new ConfiguredSignatureImage(properties.signatureImagePath().map(ReceiptConfiguration::readSignature));
     }
 
-    private static SignatureImage readSignature(Path path) {
+    private static ReceiptImage readSignature(Path path) {
         String mediaType = mediaTypeOf(path);
         try {
-            return new SignatureImage(Files.readAllBytes(path), mediaType);
+            return new ReceiptImage(Files.readAllBytes(path), mediaType);
         } catch (IOException | IllegalArgumentException unreadable) {
             throw new IllegalStateException("RECEIPT_SIGNATURE_IMAGE points to " + path + ", which cannot be read as a signature image: "
                     + unreadable.getMessage(), unreadable);

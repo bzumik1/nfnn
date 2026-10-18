@@ -2,11 +2,14 @@ package cz.novanadeje.app.donations.infrastructure.persistence;
 
 import cz.novanadeje.app.donations.domain.donation.DonationId;
 import cz.novanadeje.app.donations.domain.donor.DonorReference;
+import cz.novanadeje.app.donations.domain.receipt.ContentDigest;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceipt;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceiptId;
+import cz.novanadeje.app.donations.domain.receipt.ReceiptContent;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptFingerprint;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptKind;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptNumber;
+import cz.novanadeje.app.donations.domain.receipt.ReceiptSnapshot;
 import cz.novanadeje.app.shared.domain.LocaleCode;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -58,8 +61,26 @@ public class DonationReceiptJpaEntity {
     @Column(name = "fingerprint", nullable = false, length = 64)
     private String fingerprint;
 
-    @Column(name = "content", nullable = false)
+    @Column(name = "content")
     private byte[] content;
+
+    @Column(name = "template_sha256", length = 64)
+    private String templateSha256;
+
+    @Column(name = "data", columnDefinition = "text")
+    private String data;
+
+    @Column(name = "logo_sha256", length = 64)
+    private String logoSha256;
+
+    @Column(name = "signature_sha256", length = 64)
+    private String signatureSha256;
+
+    @Column(name = "render_profile")
+    private Short renderProfile;
+
+    @Column(name = "pdf_sha256", length = 64)
+    private String pdfSha256;
 
     @Column(name = "supersedes_id")
     private UUID supersedesId;
@@ -82,10 +103,30 @@ public class DonationReceiptJpaEntity {
         entity.issuedAt = receipt.issuedAt();
         entity.locale = receipt.locale().tag();
         entity.fingerprint = receipt.fingerprint().value();
-        entity.content = receipt.content();
+        switch (receipt.content()) {
+            case ReceiptContent.StoredPdf stored -> entity.content = stored.pdf();
+            case ReceiptContent.Snapshot kept -> {
+                ReceiptSnapshot snapshot = kept.snapshot();
+                entity.templateSha256 = snapshot.template().value();
+                entity.data = snapshot.data();
+                entity.logoSha256 = snapshot.logo().value();
+                entity.signatureSha256 = snapshot.signature().map(ContentDigest::value).orElse(null);
+                entity.renderProfile = (short) snapshot.renderProfile();
+                entity.pdfSha256 = kept.issuedPdf().value();
+            }
+        }
         entity.supersedesId = receipt.supersedes().map(DonationReceiptId::value).orElse(null);
         entity.supersededAt = receipt.supersededAt().orElse(null);
         return entity;
+    }
+
+    private ReceiptContent content() {
+        if (content != null) {
+            return new ReceiptContent.StoredPdf(content);
+        }
+        ReceiptSnapshot snapshot = new ReceiptSnapshot(new ContentDigest(templateSha256), data, new ContentDigest(logoSha256),
+                Optional.ofNullable(signatureSha256).map(ContentDigest::new), renderProfile);
+        return new ReceiptContent.Snapshot(snapshot, new ContentDigest(pdfSha256));
     }
 
     void supersededAs(DonationReceipt receipt) {
@@ -104,7 +145,7 @@ public class DonationReceiptJpaEntity {
                 issuedAt,
                 LocaleCode.fromTag(locale),
                 new ReceiptFingerprint(fingerprint),
-                content,
+                content(),
                 Optional.ofNullable(supersedesId).map(DonationReceiptId::new),
                 Optional.ofNullable(supersededAt));
     }

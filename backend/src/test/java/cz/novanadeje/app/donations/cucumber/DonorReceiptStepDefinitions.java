@@ -19,9 +19,13 @@ import tools.jackson.databind.JsonNode;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -164,6 +168,32 @@ public class DonorReceiptStepDefinitions {
         assertThat(jdbc.sql("select count(*) from donation_receipt").query(Long.class).single()).isEqualTo(count);
     }
 
+    @Then("receipt {string} is kept as its template and data, without the PDF")
+    public void receiptIsKeptAsTemplateAndData(String number) {
+        Map<String, Object> row = jdbc.sql("select content is null as without_pdf, template_sha256, data, logo_sha256, render_profile, pdf_sha256"
+                + " from donation_receipt where number = ?").param(number).query().singleRow();
+        assertThat(row.get("without_pdf")).isEqualTo(true);
+        assertThat(row.get("template_sha256")).isNotNull();
+        assertThat((String) row.get("data")).contains("\"number\":\"" + number + "\"").doesNotContain("data:image");
+        assertThat(row.get("logo_sha256")).isNotNull();
+        assertThat(((Number) row.get("render_profile")).intValue()).isEqualTo(1);
+        assertThat(row.get("pdf_sha256")).isEqualTo(sha256(downloads.getLast()));
+    }
+
+    @Given("receipt {string} was stored as a PDF file before receipts were kept as template and data")
+    public void receiptWasStoredAsPdfFile(String number) {
+        byte[] stored = storedBeforeSnapshots(downloads.getLast());
+        assertThat(jdbc.sql("update donation_receipt set content = ?, template_sha256 = null, data = null, logo_sha256 = null,"
+                + " signature_sha256 = null, render_profile = null, pdf_sha256 = null where number = ?")
+                .params(stored, number).update()).isEqualTo(1);
+    }
+
+    @Then("the download is the stored PDF file of receipt {string}")
+    public void theDownloadIsTheStoredPdfFile(String number) {
+        byte[] stored = jdbc.sql("select content from donation_receipt where number = ?").param(number).query(byte[].class).single();
+        assertThat(downloads.getLast()).isEqualTo(stored);
+    }
+
     @Then("{int} receipt(s) is/are active")
     public void receiptsAreActive(int count) {
         assertThat(jdbc.sql("select count(*) from donation_receipt where superseded_at is null").query(Long.class).single()).isEqualTo(count);
@@ -192,6 +222,21 @@ public class DonorReceiptStepDefinitions {
         JsonNode json = api.lastResponseJson();
         assertThat(json.get("yearlyReceiptsAvailableThrough").isInt()).withFailMessage("No integer year in %s", json).isTrue();
         assertThat(json.get("yearlyReceiptsAvailableThrough").asInt()).isEqualTo(year);
+    }
+
+    private static byte[] storedBeforeSnapshots(byte[] pdf) {
+        byte[] marker = "\n%stored before receipts were kept as template and data\n".getBytes(StandardCharsets.US_ASCII);
+        byte[] stored = Arrays.copyOf(pdf, pdf.length + marker.length);
+        System.arraycopy(marker, 0, stored, pdf.length, marker.length);
+        return stored;
+    }
+
+    private static String sha256(byte[] bytes) {
+        try {
+            return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes));
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException(e);
+        }
     }
 
     private void downloadAs(String alias, String path) {

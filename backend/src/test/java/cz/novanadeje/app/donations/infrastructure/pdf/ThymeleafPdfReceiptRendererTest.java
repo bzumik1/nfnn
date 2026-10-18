@@ -18,13 +18,6 @@ import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
 import org.apache.pdfbox.text.PDFTextStripper;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.autoconfigure.AutoConfigurations;
-import org.springframework.boot.autoconfigure.context.MessageSourceAutoConfiguration;
-import org.springframework.boot.test.context.ConfigDataApplicationContextInitializer;
-import org.springframework.boot.test.context.runner.ApplicationContextRunner;
-import org.springframework.boot.thymeleaf.autoconfigure.ThymeleafAutoConfiguration;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
 
 import javax.imageio.ImageIO;
 
@@ -32,8 +25,10 @@ import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.time.Clock;
 import java.time.LocalDate;
 import java.time.Year;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
@@ -42,6 +37,7 @@ import java.util.stream.StreamSupport;
 
 import static cz.novanadeje.app.donations.domain.receipt.Receipts.FIRST_NUMBER;
 import static cz.novanadeje.app.donations.domain.receipt.Receipts.FOUNDATION;
+import static cz.novanadeje.app.donations.domain.receipt.Receipts.NOW;
 import static cz.novanadeje.app.donations.domain.receipt.Receipts.SIGNATORY;
 import static cz.novanadeje.app.donations.domain.receipt.Receipts.TODAY;
 import static cz.novanadeje.app.donations.domain.receipt.Receipts.YEAR_2026;
@@ -57,10 +53,7 @@ class ThymeleafPdfReceiptRendererTest {
     private static final Donation MARCH = receivedFromJana(LocalDate.of(2026, 3, 15), 50000);
     private static final Donation JUNE = receivedFromJana(LocalDate.of(2026, 6, 1), 125050);
 
-    private final ApplicationContextRunner contexts = new ApplicationContextRunner()
-            .withInitializer(new ConfigDataApplicationContextInitializer())
-            .withConfiguration(AutoConfigurations.of(MessageSourceAutoConfiguration.class, ThymeleafAutoConfiguration.class))
-            .withUserConfiguration(ThymeleafPdfReceiptRenderer.class);
+    private final InMemoryReceiptResources resources = new InMemoryReceiptResources();
 
     @Test
     @DisplayName("Given a Czech single receipt of a person, when rendered, then every part of the receipt is in the PDF text with its Czech letters")
@@ -190,14 +183,11 @@ class ThymeleafPdfReceiptRendererTest {
     @Test
     @DisplayName("Given a configured PNG signature, when a receipt is rendered, then it renders without error and still names the signatory")
     void should_render_with_signature_when_rendered_given_png_signature() {
-        ApplicationContextRunner withSignature = withSignature();
+        byte[] pdf = issue(signed(), Receipts.singleDocument(jana(), MARCH));
 
-        withSignature.run(context -> {
-            byte[] pdf = context.getBean(DonationReceiptRenderer.class).render(Receipts.singleDocument(jana(), MARCH));
-            assertThat(text(pdf)).contains("Pavel Znamenáček");
-            assertThat(imagesOnFirstPage(pdf)).as("logo and signature").isEqualTo(2);
-        });
-        render(Receipts.singleDocument(jana(), MARCH), pdf -> assertThat(imagesOnFirstPage(pdf)).as("logo only").isEqualTo(1));
+        assertThat(text(pdf)).contains("Pavel Znamenáček");
+        assertThat(imagesOnFirstPage(pdf)).as("logo and signature").isEqualTo(2);
+        render(Receipts.singleDocument(jana(), MARCH), unsignedPdf -> assertThat(imagesOnFirstPage(unsignedPdf)).as("logo only").isEqualTo(1));
     }
 
     @Test
@@ -218,12 +208,9 @@ class ThymeleafPdfReceiptRendererTest {
     @Test
     @DisplayName("Given a bilingual single receipt with a signature image, when rendered, then it fits on one page")
     void should_fit_on_one_page_when_rendered_given_bilingual_single_receipt_with_signature() {
-        ApplicationContextRunner withSignature = withSignature();
+        byte[] pdf = issue(signed(), Receipts.singleDocument(janaSpeakingEnglish(), MARCH));
 
-        withSignature.run(context -> {
-            byte[] pdf = context.getBean(DonationReceiptRenderer.class).render(Receipts.singleDocument(janaSpeakingEnglish(), MARCH));
-            assertThat(pages(pdf)).isEqualTo(1);
-        });
+        assertThat(pages(pdf)).isEqualTo(1);
     }
 
     @Test
@@ -231,38 +218,45 @@ class ThymeleafPdfReceiptRendererTest {
     void should_keep_declaration_with_signature_when_rendered_given_bilingual_yearly_receipt_over_one_page() {
         List<Donation> gifts = IntStream.rangeClosed(1, 6).mapToObj(month -> receivedFromJana(LocalDate.of(2026, month, 1), 10000)).toList();
 
-        withSignature().run(context -> {
-            byte[] pdf = context.getBean(DonationReceiptRenderer.class).render(Receipts.yearlyDocument(janaSpeakingEnglish(), gifts));
-            assertThat(pages(pdf)).isEqualTo(2);
-            assertThat(pageText(pdf, 1)).doesNotContain("potvrzuje, že");
-            assertThat(pageText(pdf, 2))
-                    .contains("Nová naděje - nadační fond potvrzuje, že od výše uvedeného dárce přijal v roce 2026")
-                    .contains("Pavel Znamenáček");
-        });
+        byte[] pdf = issue(signed(), Receipts.yearlyDocument(janaSpeakingEnglish(), gifts));
+
+        assertThat(pages(pdf)).isEqualTo(2);
+        assertThat(pageText(pdf, 1)).doesNotContain("potvrzuje, že");
+        assertThat(pageText(pdf, 2))
+                .contains("Nová naděje - nadační fond potvrzuje, že od výše uvedeného dárce přijal v roce 2026")
+                .contains("Pavel Znamenáček");
     }
 
-    private ApplicationContextRunner withSignature() {
-        return contexts.withBean(ConfiguredSignatureImage.class,
-                () -> new ConfiguredSignatureImage(Optional.of(new SignatureImage(signaturePng(), "image/png"))));
+    private ThymeleafPdfReceiptRenderer unsigned() {
+        return renderer(ReceiptTemplate.fromClasspath(), Optional.empty());
     }
 
-    private static byte[] signaturePng() {
+    private ThymeleafPdfReceiptRenderer signed() {
+        return renderer(ReceiptTemplate.fromClasspath(), Optional.of(signature(300, 100)));
+    }
+
+    private ThymeleafPdfReceiptRenderer renderer(ReceiptTemplate template, Optional<ReceiptImage> signature) {
+        return new ThymeleafPdfReceiptRenderer(resources, template, new ConfiguredSignatureImage(signature), Clock.fixed(NOW, ZoneOffset.UTC));
+    }
+
+    static ReceiptImage signature(int width, int height) {
         try {
             ByteArrayOutputStream png = new ByteArrayOutputStream();
-            ImageIO.write(new BufferedImage(300, 100, BufferedImage.TYPE_INT_ARGB), "png", png);
-            return png.toByteArray();
+            ImageIO.write(new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB), "png", png);
+            return new ReceiptImage(png.toByteArray(), "image/png");
         } catch (IOException e) {
             throw new AssertionError(e);
         }
     }
 
+    private static byte[] issue(DonationReceiptRenderer renderer, ReceiptDocument document) {
+        byte[] pdf = renderer.render(renderer.freeze(document), document.number(), NOW);
+        assertThat(new String(pdf, 0, 5, StandardCharsets.US_ASCII)).isEqualTo("%PDF-");
+        return pdf;
+    }
+
     private void render(ReceiptDocument document, Consumer<byte[]> assertions) {
-        contexts.withUserConfiguration(NoSignature.class).run(context -> {
-            assertThat(context).hasNotFailed();
-            byte[] pdf = context.getBean(DonationReceiptRenderer.class).render(document);
-            assertThat(new String(pdf, 0, 5, StandardCharsets.US_ASCII)).isEqualTo("%PDF-");
-            assertions.accept(pdf);
-        });
+        assertions.accept(issue(unsigned(), document));
     }
 
     private static String text(byte[] pdf) {
@@ -325,14 +319,5 @@ class ThymeleafPdfReceiptRendererTest {
 
     private static String normalized(String text) {
         return text.replace(' ', ' ').replaceAll("\\s+", " ");
-    }
-
-    @Configuration(proxyBeanMethods = false)
-    static class NoSignature {
-
-        @Bean
-        ConfiguredSignatureImage configuredSignatureImage() {
-            return new ConfiguredSignatureImage(Optional.empty());
-        }
     }
 }

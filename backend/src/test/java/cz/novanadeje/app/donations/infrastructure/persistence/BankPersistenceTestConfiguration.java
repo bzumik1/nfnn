@@ -11,7 +11,7 @@ import java.time.ZoneId;
 
 @TestConfiguration(proxyBeanMethods = false)
 @Import({TestcontainersConfiguration.class, JpaBankPaymentRepository.class, JpaBankImportStateRepository.class, JpaDonorRecordRepository.class,
-        JpaDonationRepository.class, JpaDonationReceiptRepository.class})
+        JpaDonationRepository.class, JpaDonationReceiptRepository.class, JpaReceiptResources.class})
 class BankPersistenceTestConfiguration {
 
     static final Instant NOW = Instant.parse("2026-10-17T10:00:00Z");

@@ -6,6 +6,7 @@ import cz.novanadeje.app.donations.domain.donor.DonorReference;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceipt;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceiptId;
 import cz.novanadeje.app.donations.domain.receipt.FoundationIdentity;
+import cz.novanadeje.app.donations.domain.receipt.ReceiptContent;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptDocument;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptDocumentFactory;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptFingerprint;
@@ -32,7 +33,7 @@ public sealed interface ReceiptRequest {
                              Optional<ReplacedReceipt> replaces);
 
     DonationReceipt receipt(DonationReceiptId id, ReceiptNumber number, Instant issuedAt, LocaleCode locale, ReceiptFingerprint fingerprint,
-                            byte[] content, Optional<DonationReceiptId> supersedes);
+                            ReceiptContent.Snapshot content, Optional<DonationReceiptId> supersedes);
 
     default DonorReference donor() {
         return record().id();
@@ -67,7 +68,7 @@ public sealed interface ReceiptRequest {
 
         @Override
         public DonationReceipt receipt(DonationReceiptId id, ReceiptNumber number, Instant issuedAt, LocaleCode locale,
-                                       ReceiptFingerprint fingerprint, byte[] content, Optional<DonationReceiptId> supersedes) {
+                                       ReceiptFingerprint fingerprint, ReceiptContent.Snapshot content, Optional<DonationReceiptId> supersedes) {
             return DonationReceipt.issueForDonation(id, donor(), donation.id(), number, today, issuedAt, locale, fingerprint, content, supersedes);
         }
     }
@@ -94,7 +95,7 @@ public sealed interface ReceiptRequest {
 
         @Override
         public DonationReceipt receipt(DonationReceiptId id, ReceiptNumber number, Instant issuedAt, LocaleCode locale,
-                                       ReceiptFingerprint fingerprint, byte[] content, Optional<DonationReceiptId> supersedes) {
+                                       ReceiptFingerprint fingerprint, ReceiptContent.Snapshot content, Optional<DonationReceiptId> supersedes) {
             return DonationReceipt.issueForYear(id, donor(), year, number, today, issuedAt, locale, fingerprint, content, supersedes);
         }
     }

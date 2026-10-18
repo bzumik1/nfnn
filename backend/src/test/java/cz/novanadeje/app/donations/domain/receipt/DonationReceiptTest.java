@@ -12,6 +12,9 @@ import java.util.Optional;
 import static cz.novanadeje.app.donations.domain.receipt.Receipts.FIRST_NUMBER;
 import static cz.novanadeje.app.donations.domain.receipt.Receipts.JANA;
 import static cz.novanadeje.app.donations.domain.receipt.Receipts.NOW;
+import static cz.novanadeje.app.donations.domain.receipt.Receipts.PDF_DIGEST;
+import static cz.novanadeje.app.donations.domain.receipt.Receipts.SNAPSHOT;
+import static cz.novanadeje.app.donations.domain.receipt.Receipts.SNAPSHOT_CONTENT;
 import static cz.novanadeje.app.donations.domain.receipt.Receipts.TODAY;
 import static cz.novanadeje.app.donations.domain.receipt.Receipts.YEAR_2026;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -41,7 +44,7 @@ class DonationReceiptTest {
         assertThat(receipt.issuedAt()).isEqualTo(NOW);
         assertThat(receipt.locale()).isEqualTo(LocaleCode.CS);
         assertThat(receipt.fingerprint()).isEqualTo(FINGERPRINT);
-        assertThat(receipt.content()).isEqualTo(PDF);
+        assertThat(receipt.content()).isEqualTo(SNAPSHOT_CONTENT);
         assertThat(receipt.supersedes()).isEmpty();
         assertThat(receipt.supersededAt()).isEmpty();
         assertThat(receipt.isActive()).isTrue();
@@ -53,7 +56,7 @@ class DonationReceiptTest {
         DonationReceiptId replaced = DonationReceiptId.newId(NOW.minusSeconds(60));
 
         DonationReceipt receipt = DonationReceipt.issueForYear(ID, JANA, YEAR_2026, FIRST_NUMBER, TODAY, NOW, LocaleCode.EN, FINGERPRINT,
-                PDF, Optional.of(replaced));
+                SNAPSHOT_CONTENT, Optional.of(replaced));
 
         assertThat(receipt.kind()).isEqualTo(ReceiptKind.YEARLY);
         assertThat(receipt.year()).contains(YEAR_2026);
@@ -73,23 +76,47 @@ class DonationReceiptTest {
     }
 
     @Test
-    @DisplayName("Given an empty PDF, when a receipt is issued, then it is refused")
-    void should_refuse_when_issued_given_empty_content() {
+    @DisplayName("Given no content, when a receipt is issued or reconstituted, then it is refused")
+    void should_refuse_when_issued_given_no_content() {
         assertThatIllegalArgumentException().isThrownBy(() -> DonationReceipt.issueForDonation(ID, JANA, DONATION, FIRST_NUMBER, TODAY, NOW,
-                LocaleCode.CS, FINGERPRINT, new byte[0], Optional.empty()));
+                LocaleCode.CS, FINGERPRINT, null, Optional.empty()));
+        assertThatIllegalArgumentException().isThrownBy(() -> DonationReceipt.reconstitute(ID, JANA, ReceiptKind.SINGLE, Optional.of(DONATION),
+                Optional.empty(), FIRST_NUMBER, TODAY, NOW, LocaleCode.CS, FINGERPRINT, null, Optional.empty(), Optional.empty()));
     }
 
     @Test
-    @DisplayName("Given the bytes a receipt was issued with, when either side changes its array, then the receipt keeps its own copy")
-    void should_keep_own_copy_of_content_when_arrays_change_given_issued_receipt() {
-        byte[] content = PDF.clone();
-        DonationReceipt receipt = DonationReceipt.issueForDonation(ID, JANA, DONATION, FIRST_NUMBER, TODAY, NOW, LocaleCode.CS, FINGERPRINT,
-                content, Optional.empty());
+    @DisplayName("Given a receipt stored as a PDF before snapshots, when it is reconstituted, then it keeps that PDF as its content")
+    void should_keep_stored_pdf_when_reconstituted_given_receipt_from_before_snapshots() {
+        DonationReceipt receipt = DonationReceipt.reconstitute(ID, JANA, ReceiptKind.SINGLE, Optional.of(DONATION), Optional.empty(), FIRST_NUMBER,
+                TODAY, NOW, LocaleCode.CS, FINGERPRINT, new ReceiptContent.StoredPdf(PDF), Optional.empty(), Optional.empty());
 
-        content[0] = 'X';
-        receipt.content()[1] = 'X';
+        assertThat(receipt.content()).isEqualTo(new ReceiptContent.StoredPdf(PDF));
+    }
 
-        assertThat(receipt.content()).isEqualTo(PDF);
+    @Test
+    @DisplayName("Given an empty PDF, when it is kept as receipt content, then it is refused")
+    void should_refuse_when_kept_given_empty_pdf() {
+        assertThatIllegalArgumentException().isThrownBy(() -> new ReceiptContent.StoredPdf(new byte[0]));
+        assertThatIllegalArgumentException().isThrownBy(() -> new ReceiptContent.StoredPdf(null));
+    }
+
+    @Test
+    @DisplayName("Given the bytes a stored PDF was made from, when either side changes its array, then the content keeps its own copy")
+    void should_keep_own_copy_of_pdf_when_arrays_change_given_stored_pdf() {
+        byte[] pdf = PDF.clone();
+        ReceiptContent.StoredPdf stored = new ReceiptContent.StoredPdf(pdf);
+
+        pdf[0] = 'X';
+        stored.pdf()[1] = 'X';
+
+        assertThat(stored.pdf()).isEqualTo(PDF);
+    }
+
+    @Test
+    @DisplayName("Given a snapshot without the digest of its issued PDF, when it is kept as receipt content, then it is refused")
+    void should_refuse_when_kept_given_snapshot_without_pdf_digest() {
+        assertThatIllegalArgumentException().isThrownBy(() -> new ReceiptContent.Snapshot(SNAPSHOT, null));
+        assertThatIllegalArgumentException().isThrownBy(() -> new ReceiptContent.Snapshot(null, PDF_DIGEST));
     }
 
     @Test
@@ -123,11 +150,11 @@ class DonationReceiptTest {
     }
 
     private static DonationReceipt single(Optional<DonationReceiptId> supersedes) {
-        return DonationReceipt.issueForDonation(ID, JANA, DONATION, FIRST_NUMBER, TODAY, NOW, LocaleCode.CS, FINGERPRINT, PDF, supersedes);
+        return DonationReceipt.issueForDonation(ID, JANA, DONATION, FIRST_NUMBER, TODAY, NOW, LocaleCode.CS, FINGERPRINT, SNAPSHOT_CONTENT, supersedes);
     }
 
     private static DonationReceipt reconstitute(ReceiptKind kind, Optional<DonationId> donation, Optional<Year> year) {
-        return DonationReceipt.reconstitute(ID, JANA, kind, donation, year, FIRST_NUMBER, TODAY, NOW, LocaleCode.CS, FINGERPRINT, PDF,
-                Optional.empty(), Optional.empty());
+        return DonationReceipt.reconstitute(ID, JANA, kind, donation, year, FIRST_NUMBER, TODAY, NOW, LocaleCode.CS, FINGERPRINT,
+                SNAPSHOT_CONTENT, Optional.empty(), Optional.empty());
     }
 }

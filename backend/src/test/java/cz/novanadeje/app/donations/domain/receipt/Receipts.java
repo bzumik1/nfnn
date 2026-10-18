@@ -34,6 +34,12 @@ public final class Receipts {
             "V Novém Boru", "Nový Bor");
     public static final Signatory SIGNATORY = new Signatory("Pavel Znamenáček", "předseda správní rady");
     public static final ReceiptNumber FIRST_NUMBER = ReceiptNumber.of(Year.of(2027), 1);
+    public static final ContentDigest TEMPLATE_DIGEST = new ContentDigest("1".repeat(64));
+    public static final ContentDigest LOGO_DIGEST = new ContentDigest("2".repeat(64));
+    public static final ContentDigest PDF_DIGEST = new ContentDigest("3".repeat(64));
+    public static final ReceiptSnapshot SNAPSHOT = new ReceiptSnapshot(TEMPLATE_DIGEST, "{\"number\":\"2027-000001\"}", LOGO_DIGEST,
+            Optional.empty(), 1);
+    public static final ReceiptContent.Snapshot SNAPSHOT_CONTENT = new ReceiptContent.Snapshot(SNAPSHOT, PDF_DIGEST);
 
     private Receipts() {
     }

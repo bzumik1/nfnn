@@ -9,10 +9,12 @@ import java.util.regex.Pattern;
 @ConfigurationProperties("app.donations.receipt")
 public record ReceiptProperties(String foundationName, String foundationCompanyIdentifier, String foundationStreet, String foundationCity,
                                 String foundationPostalCode, String registryCourt, String registryFile, String issuePlace,
-                                String issuePlaceEn, String signatoryName, String signatoryRole, String signatureImage) {
+                                String issuePlaceEn, String signatoryName, String signatoryRole, String signatureImage,
+                                Integer concurrentRenders) {
 
     private static final String PREFIX = "app.donations.receipt.";
     private static final Pattern COMPANY_IDENTIFIER = Pattern.compile("[0-9]{8}");
+    private static final int DEFAULT_CONCURRENT_RENDERS = 3;
 
     public ReceiptProperties {
         foundationName = required(foundationName, PREFIX + "foundation-name");
@@ -31,6 +33,10 @@ public record ReceiptProperties(String foundationName, String foundationCompanyI
         signatoryName = required(signatoryName, "RECEIPT_SIGNATORY_NAME (" + PREFIX + "signatory-name)");
         signatoryRole = required(signatoryRole, "RECEIPT_SIGNATORY_ROLE (" + PREFIX + "signatory-role)");
         signatureImage = signatureImage == null || signatureImage.isBlank() ? null : signatureImage.trim();
+        concurrentRenders = concurrentRenders == null ? DEFAULT_CONCURRENT_RENDERS : concurrentRenders;
+        if (concurrentRenders < 1) {
+            throw new IllegalArgumentException(PREFIX + "concurrent-renders must be at least 1, but is " + concurrentRenders);
+        }
     }
 
     public Optional<Path> signatureImagePath() {

@@ -152,7 +152,7 @@ class DonationReceiptServiceTest {
     }
 
     private DonationReceiptService service(Instant now) {
-        return new DonationReceiptService(donations, donorRecords, issuer, Clock.fixed(now, ZoneOffset.UTC));
+        return new DonationReceiptService(donations, donorRecords, issuer, new ReceiptRenderingLimit(1), Clock.fixed(now, ZoneOffset.UTC));
     }
 
     private ReceiptRequest issuedRequest() {
