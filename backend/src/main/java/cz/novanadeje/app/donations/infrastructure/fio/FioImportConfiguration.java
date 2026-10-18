@@ -1,7 +1,8 @@
 package cz.novanadeje.app.donations.infrastructure.fio;
 
-import cz.novanadeje.fio.FioClient;
-import cz.novanadeje.fio.FioToken;
+import io.github.bzumik1.fio.FioClient;
+import io.github.bzumik1.fio.FioToken;
+import io.github.bzumik1.fio.RateLimit;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -19,6 +20,7 @@ class FioImportConfiguration {
                 .baseUri(properties.baseUri())
                 .clock(clock)
                 .requestTimeout(properties.requestTimeout())
+                .rateLimit(RateLimit.failFast())
                 .build();
     }
 }

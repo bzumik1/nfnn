@@ -23,16 +23,16 @@ import cz.novanadeje.app.support.FakeFioClient;
 import cz.novanadeje.app.support.FakeFioClient.RequestedPeriod;
 import cz.novanadeje.app.support.FioMovements;
 import cz.novanadeje.app.support.MutableClock;
-import cz.novanadeje.fio.FioAuthorizationException;
-import cz.novanadeje.fio.FioClient;
-import cz.novanadeje.fio.FioException;
-import cz.novanadeje.fio.FioHistoryLockedException;
-import cz.novanadeje.fio.FioRateLimitException;
-import cz.novanadeje.fio.FioTransportException;
 import io.cucumber.java.After;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
+import io.github.bzumik1.fio.FioAuthorizationException;
+import io.github.bzumik1.fio.FioClient;
+import io.github.bzumik1.fio.FioException;
+import io.github.bzumik1.fio.FioHistoryLockedException;
+import io.github.bzumik1.fio.FioRateLimitException;
+import io.github.bzumik1.fio.FioTransportException;
 import org.springframework.jdbc.core.simple.JdbcClient;
 
 import java.math.BigDecimal;
@@ -300,7 +300,7 @@ public class FioImportStepDefinitions {
                     clock.instant().plus(FioClient.MINIMUM_REQUEST_INTERVAL));
             case HISTORY_LOCKED -> new FioHistoryLockedException("Fio API request was refused with HTTP 422", "");
             case UNAUTHORIZED -> new FioAuthorizationException("Fio API request was refused with HTTP 401", 401, "");
-            case UNREACHABLE -> new FioTransportException("Fio API request failed: timed out", new HttpTimeoutException("timed out"));
+            case UNREACHABLE -> new FioTransportException("Fio API request failed: timed out", new HttpTimeoutException("timed out"), true);
             default -> throw new IllegalArgumentException("Unknown refusal: " + reason);
         };
     }
