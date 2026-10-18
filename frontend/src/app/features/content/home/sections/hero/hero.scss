@@ -19,7 +19,7 @@
   left: 0;
   right: 0;
   height: 160px;
-  background: linear-gradient(to bottom, rgba(8, 12, 36, 0.55) 0%, transparent 100%);
+  background: linear-gradient(to bottom, color-mix(in srgb, var(--color-image-shade) 55%, transparent) 0%, transparent 100%);
   z-index: 1;
 }
 
@@ -28,8 +28,8 @@
   inset: 0;
   background: linear-gradient(
     to top,
-    rgba(8, 12, 36, 0.85) 0%,
-    rgba(8, 12, 36, 0.3) 50%,
+    color-mix(in srgb, var(--color-image-shade) 85%, transparent) 0%,
+    color-mix(in srgb, var(--color-image-shade) 30%, transparent) 50%,
     transparent 100%
   );
 }
@@ -45,7 +45,7 @@
 }
 
 .hero-eyebrow {
-  color: rgba(255, 255, 255, 0.65);
+  color: color-mix(in srgb, var(--color-on-image) 65%, transparent);
   font-size: 12px;
   letter-spacing: 0.2em;
   text-transform: uppercase;
@@ -56,14 +56,14 @@
   font-family: var(--font-serif);
   font-size: clamp(52px, 8vw, 100px);
   font-weight: 800;
-  color: #fff;
+  color: var(--color-on-image);
   line-height: 1;
   margin-bottom: 20px;
   font-style: italic;
 }
 
 .hero-lead {
-  color: rgba(255, 255, 255, 0.82);
+  color: color-mix(in srgb, var(--color-on-image) 82%, transparent);
   font-size: 18px;
   max-width: 500px;
   line-height: 1.7;
@@ -77,13 +77,13 @@
 
 .btn-primary {
   background: var(--color-accent);
-  color: #fff;
+  color: var(--color-on-accent);
   text-decoration: none;
   padding: 16px 36px;
-  border-radius: 50px;
+  border-radius: var(--radius-pill);
   font-size: 16px;
   font-weight: 700;
-  box-shadow: 0 8px 28px rgba(37, 99, 235, 0.5);
+  box-shadow: var(--shadow-cta-hero);
   transition: transform 0.2s;
 
   &:hover {
@@ -92,19 +92,19 @@
 }
 
 .btn-ghost {
-  background: rgba(255, 255, 255, 0.12);
+  background: color-mix(in srgb, var(--color-on-image) 12%, transparent);
   backdrop-filter: blur(10px);
-  color: #fff;
+  color: var(--color-on-image);
   text-decoration: none;
   padding: 16px 36px;
-  border-radius: 50px;
+  border-radius: var(--radius-pill);
   font-size: 16px;
   font-weight: 600;
-  border: 1.5px solid rgba(255, 255, 255, 0.35);
+  border: 1.5px solid color-mix(in srgb, var(--color-on-image) 35%, transparent);
   transition: background 0.2s;
 
   &:hover {
-    background: rgba(255, 255, 255, 0.22);
+    background: color-mix(in srgb, var(--color-on-image) 22%, transparent);
   }
 }
 
@@ -119,8 +119,8 @@
 .hero-scroll-mouse {
   width: 26px;
   height: 42px;
-  border: 2px solid rgba(255, 255, 255, 0.4);
-  border-radius: 13px;
+  border: 2px solid color-mix(in srgb, var(--color-on-image) 40%, transparent);
+  border-radius: var(--radius-xl);
   display: flex;
   justify-content: center;
   padding-top: 7px;
@@ -129,8 +129,8 @@
 .hero-scroll-dot {
   width: 4px;
   height: 7px;
-  background: #fff;
-  border-radius: 2px;
+  background: var(--color-on-image);
+  border-radius: var(--radius-xs);
   animation: scrollDot 1.8s infinite;
 }
 

@@ -1,6 +1,6 @@
 .donate {
   padding: 108px 0;
-  background: #fff;
+  background: var(--color-surface);
 }
 
 .section-inner {
@@ -21,7 +21,7 @@
 }
 
 .donate-img {
-  border-radius: 20px;
+  border-radius: var(--radius-media);
   height: 460px;
   overflow: hidden;
 
@@ -35,12 +35,12 @@
   top: 28px;
   right: -20px;
   background: var(--color-text);
-  color: #fff;
-  border-radius: 20px;
+  color: var(--color-on-inverse);
+  border-radius: var(--radius-media);
   padding: 18px 24px;
   font-size: 14px;
   line-height: 1.5;
-  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.25);
+  box-shadow: var(--shadow-media);
   max-width: 200px;
 }
 
@@ -82,11 +82,11 @@
 }
 
 .bank {
-  background: var(--color-surface-blue);
-  border-radius: 20px;
+  background: var(--color-surface-accent);
+  border-radius: var(--radius-media);
   padding: 24px 28px;
   margin-bottom: 32px;
-  border: 1px solid var(--color-border-blue);
+  border: 1px solid var(--color-border-accent);
 }
 
 .panel-label {
@@ -115,8 +115,8 @@
   white-space: nowrap;
   color: var(--color-text);
   background: var(--color-surface);
-  border: 1.5px solid var(--color-border-blue);
-  border-radius: 50px;
+  border: 1.5px solid var(--color-border-accent);
+  border-radius: var(--radius-pill);
   padding: 10px 22px;
   cursor: pointer;
   transition:
@@ -138,7 +138,7 @@
   &.active {
     background: var(--color-accent);
     border-color: var(--color-accent);
-    color: #fff;
+    color: var(--color-on-accent);
     box-shadow: var(--shadow-cta);
   }
 }
@@ -151,8 +151,8 @@
   input {
     width: 100%;
     padding: 12px 52px 12px 18px;
-    border-radius: 14px;
-    border: 1.5px solid var(--color-border-blue);
+    border-radius: var(--radius-xl);
+    border: 1.5px solid var(--color-border-accent);
     background: var(--color-surface);
     color: var(--color-text);
     font-family: var(--font-sans);
@@ -214,7 +214,7 @@
 .bank-value {
   font-weight: 700;
   color: var(--color-text);
-  font-family: monospace;
+  font-family: var(--font-mono);
   font-size: 14px;
 }
 
@@ -227,11 +227,11 @@
 
 .qr-code {
   flex-shrink: 0;
-  background: #fff;
-  border-radius: 16px;
+  background: var(--color-surface);
+  border-radius: var(--radius-card);
   padding: 10px;
-  box-shadow: 0 4px 20px rgba(37, 99, 235, 0.13);
-  border: 2px solid rgba(37, 99, 235, 0.13);
+  box-shadow: var(--shadow-qr);
+  border: 2px solid color-mix(in srgb, var(--color-accent) 13%, transparent);
 
   img {
     display: block;
@@ -247,8 +247,8 @@
   width: 140px;
   height: 140px;
   padding: 16px;
-  border-radius: 10px;
-  background: var(--color-surface-blue);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-accent);
   color: var(--color-text-soft);
   font-size: 12px;
   line-height: 1.5;
@@ -285,7 +285,7 @@
 .qr-error {
   margin-top: 12px;
   padding: 10px 14px;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   border: 1px solid var(--color-danger-border);
   background: var(--color-danger-bg);
   color: var(--color-danger);
@@ -309,13 +309,13 @@
 .btn-primary {
   display: inline-block;
   background: var(--color-accent);
-  color: #fff;
+  color: var(--color-on-accent);
   text-decoration: none;
   padding: 16px 36px;
-  border-radius: 50px;
+  border-radius: var(--radius-pill);
   font-size: 16px;
   font-weight: 700;
-  box-shadow: 0 8px 28px rgba(37, 99, 235, 0.35);
+  box-shadow: var(--shadow-cta);
   transition: transform 0.2s;
 
   &:hover {

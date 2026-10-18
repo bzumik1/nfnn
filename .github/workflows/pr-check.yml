@@ -58,6 +58,9 @@ jobs:
 
       - run: npm ci
 
+      - name: Styles use the theme's tokens
+        run: npm run lint:styles
+
       - name: Unit tests
         run: npx ng test --watch=false
 
