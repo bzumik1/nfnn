@@ -333,6 +333,25 @@ describe('Given a signed-in donor on the dashboard', () => {
     expect(element(secondRowButton)).toBeNull();
   });
 
+  it('when the payments are loaded again after a missing receipt, then the year the donor had chosen stays selected', async () => {
+    await respond(twoYearSummary(), twoYearDonations());
+    await clickYear('2025');
+
+    await click(secondRowButton);
+    http
+      .expectOne('/api/donations/me/d-3/receipt')
+      .flush(problemBlob('donations/receipt-not-available', 'Potvrzení k tomuto daru nelze vystavit', 404), {
+        status: 404,
+        statusText: 'Not Found',
+      });
+    await settleBlobFailure();
+    await respond(twoYearSummary(), twoYearDonations());
+
+    expect(text('.year-toggle button.is-active')).toBe('2025');
+    expect(text('.yearly-count')).toBe('1 příspěvek v roce 2025');
+    expect(text('.yearly-pdf')).toBe('↓ PDF za rok 2025');
+  });
+
   it('when a download fails for any other reason, then a generic message asks to try again and a successful retry clears it', async () => {
     await respond(twoYearSummary(), twoYearDonations());
 

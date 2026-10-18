@@ -58,7 +58,11 @@ export class DonorDashboard {
 
   protected readonly years = computed(() => (this.summary()?.byYear ?? []).map((entry) => entry.year));
 
-  protected readonly selectedYear = linkedSignal<number | null>(() => this.years()[0] ?? null);
+  protected readonly selectedYear = linkedSignal<readonly number[], number | null>({
+    source: this.years,
+    computation: (years, previous) =>
+      previous !== undefined && previous.value !== null && years.includes(previous.value) ? previous.value : (years[0] ?? null),
+  });
 
   protected readonly selectedYearTotal = computed(
     () => this.summary()?.byYear.find((entry) => entry.year === this.selectedYear()) ?? null,
