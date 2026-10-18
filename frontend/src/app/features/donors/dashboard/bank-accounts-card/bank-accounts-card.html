@@ -177,6 +177,40 @@
       }
     </div>
 
+    <div class="add-account-watch" [class.add-account-watch--verified]="newlyVerified()" role="status">
+      @if (newlyVerified(); as account) {
+        <svg class="watch-icon watch-icon--verified" viewBox="0 0 32 32" aria-hidden="true">
+          <circle class="watch-disc" cx="16" cy="16" r="15" />
+          <path class="watch-tick" d="M9.5 16.5l4.5 4.5 8.5-9" />
+        </svg>
+        <div class="watch-text">
+          <p class="watch-title" i18n="@@donor.bankAccounts.addDialog.verified">Účet <span class="watch-account">{{ account.accountNumber }}</span> je ověřený</p>
+          <p class="watch-detail">{{ hint(account) }}</p>
+        </div>
+      } @else if (paymentWatch() === 'waiting') {
+        <svg class="watch-icon watch-icon--waiting" viewBox="0 0 32 32" aria-hidden="true">
+          <circle class="watch-track" cx="16" cy="16" r="13" />
+          <circle class="watch-arc" cx="16" cy="16" r="13" />
+        </svg>
+        <div class="watch-text">
+          <p class="watch-title" i18n="@@donor.bankAccounts.addDialog.waiting">Čekáme na vaši platbu…</p>
+          <p class="watch-detail" i18n="@@donor.bankAccounts.addDialog.waitingDetail">
+            Banku kontrolujeme zhruba každou půlminutu, dokud je tohle okno otevřené.
+          </p>
+        </div>
+      } @else {
+        <div class="watch-text">
+          <p class="watch-title" i18n="@@donor.bankAccounts.addDialog.stopped">Platba zatím nedorazila</p>
+          <p class="watch-detail" i18n="@@donor.bankAccounts.addDialog.stoppedDetail">
+            Běžný převod může dorazit až další pracovní den. Účet se pak v přehledu objeví sám, okno nemusíte nechávat otevřené.
+          </p>
+          <button type="button" class="watch-again" (click)="watchAgain()" i18n="@@donor.bankAccounts.addDialog.watchAgain">
+            Kontrolovat dál
+          </button>
+        </div>
+      }
+    </div>
+
     <button type="button" class="add-account-close" (click)="closeAdd()" i18n="@@donor.bankAccounts.addDialog.close">Zavřít</button>
   </app-dialog>
 }
