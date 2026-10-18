@@ -1,39 +1,5 @@
-import { expect, Page, test } from '@playwright/test';
-
-const donor = {
-  id: '01a18e56-bdb0-775a-bd0a-a60756831369',
-  type: 'PERSON',
-  name: 'Jana Nováková',
-  companyIdentifier: null,
-  address: { street: 'Dlouhá 12', city: 'Ústí nad Labem', postalCode: '400 01' },
-  email: 'jana@example.cz',
-  preferredLocale: 'cs',
-  variableSymbol: '1234567890',
-  roles: ['DONOR'],
-  registeredAt: '2026-10-17T10:00:00Z',
-};
-
-function session(status: number) {
-  return {
-    status,
-    contentType: 'application/json',
-    body: JSON.stringify({ user: donor, accessToken: 'token-1', accessTokenExpiresAt: '2026-10-17T10:15:00Z' }),
-  };
-}
-
-function problem(status: number, type: string, title: string, detail: string) {
-  return {
-    status,
-    contentType: 'application/problem+json',
-    body: JSON.stringify({ type: `https://novanadeje.cz/problems/${type}`, title, detail, status }),
-  };
-}
-
-async function openSignInDialog(page: Page): Promise<void> {
-  await page.goto('/');
-  await page.locator('.nav-login').click();
-  await expect(page.getByRole('dialog')).toBeVisible();
-}
+import { expect, test } from '@playwright/test';
+import { mockDonorApi, openSignInDialog, paymentQr, problem, session } from './donor-session';
 
 test.describe('Given a visitor who wants a donor account', () => {
   test('when they register as a person, then the donor portal opens with their name and variable symbol', async ({ page }) => {
@@ -42,6 +8,7 @@ test.describe('Given a visitor who wants a donor account', () => {
       posted.push(route.request().postDataJSON());
       await route.fulfill(session(201));
     });
+    await mockDonorApi(page);
 
     await openSignInDialog(page);
     await page.getByRole('button', { name: 'Registrace' }).click();
@@ -73,6 +40,7 @@ test.describe('Given a visitor who wants a donor account', () => {
     await page.route('**/api/donors/auth/login', (route) =>
       route.fulfill(problem(401, 'auth/invalid-credentials', 'Nesprávný e-mail nebo heslo', 'Zkontrolujte prosím e-mail a heslo.')),
     );
+    await mockDonorApi(page);
 
     await openSignInDialog(page);
     await page.locator('#login-email').fill('jana@example.cz');
@@ -87,6 +55,7 @@ test.describe('Given a visitor who wants a donor account', () => {
   test('when they sign in and sign out again, then the home page shows the sign-in button again', async ({ page }) => {
     await page.route('**/api/donors/auth/login', (route) => route.fulfill(session(200)));
     await page.route('**/api/donors/auth/logout', (route) => route.fulfill({ status: 204 }));
+    await mockDonorApi(page);
 
     await openSignInDialog(page);
     await page.locator('#login-email').fill('jana@example.cz');
@@ -101,6 +70,8 @@ test.describe('Given a visitor who wants a donor account', () => {
   });
 
   test('when they open the portal without a session, then they land on the home page with the sign-in dialog', async ({ page }) => {
+    await mockDonorApi(page);
+
     await page.goto('/donor/prehled');
 
     await expect(page).toHaveURL(/\/$/);
@@ -111,6 +82,7 @@ test.describe('Given a visitor who wants a donor account', () => {
   test('when they come back with a remembered session, then the portal opens without signing in again', async ({ page }) => {
     await page.addInitScript(() => localStorage.setItem('nfnn.donor-session', '1'));
     await page.route('**/api/donors/auth/refresh', (route) => route.fulfill(session(200)));
+    await mockDonorApi(page);
 
     await page.goto('/donor/prehled');
 
@@ -125,13 +97,7 @@ test.describe('Given a visitor who wants a donor account', () => {
       (url) => url.pathname === '/api/donations/payment-qr',
       async (route) => {
         requestedSymbols.push(new URL(route.request().url()).searchParams.get('variableSymbol'));
-        await route.fulfill({
-          json: {
-            spayd: 'SPD*1.0*ACC:CZ2620100000005544332217*AM:500.00*CC:CZK*X-VS:1234567890',
-            qrPngBase64: 'iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAIAAAAmkwkpAAAAEElEQVR4nGNQTX4NRwzEcQBO0hcxU+9NfQAAAABJRU5ErkJggg==',
-            bankAccount: { accountNumber: '5544332217/2010', iban: 'CZ2620100000005544332217', recipientName: 'Nadační fond Nová naděje' },
-          },
-        });
+        await route.fulfill({ json: { ...paymentQr, spayd: `${paymentQr.spayd}*X-VS:1234567890` } });
       },
     );
 

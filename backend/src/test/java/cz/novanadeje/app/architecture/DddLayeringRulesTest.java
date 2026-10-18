@@ -5,6 +5,7 @@ import com.tngtech.archunit.junit.AnalyzeClasses;
 import com.tngtech.archunit.junit.ArchTest;
 import com.tngtech.archunit.lang.ArchRule;
 import cz.novanadeje.app.AppApplication;
+import org.springframework.context.MessageSource;
 
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 import static com.tngtech.archunit.library.Architectures.layeredArchitecture;
@@ -39,6 +40,18 @@ class DddLayeringRulesTest {
             .that().resideInAPackage("..domain..")
             .should().dependOnClassesThat()
             .resideInAnyPackage("org.springframework..", "jakarta.persistence..", "jakarta.validation..");
+
+    @ArchTest
+    static final ArchRule application_must_not_depend_on_web = noClasses()
+            .that().resideInAPackage("..application..")
+            .should().dependOnClassesThat()
+            .resideInAnyPackage("org.springframework.web..", "org.springframework.http..", "jakarta.servlet..");
+
+    @ArchTest
+    static final ArchRule message_bundles_must_be_read_only_by_adapters = noClasses()
+            .that().resideInAnyPackage("..domain..", "..application..")
+            .should().dependOnClassesThat()
+            .areAssignableTo(MessageSource.class);
 
     @ArchTest
     static final ArchRule rest_controllers_must_not_expose_infrastructure_types = noClasses()

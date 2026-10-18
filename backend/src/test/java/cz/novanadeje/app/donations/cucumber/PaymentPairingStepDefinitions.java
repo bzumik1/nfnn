@@ -85,7 +85,7 @@ public class PaymentPairingStepDefinitions {
     }
 
     private List<Donation> donationsOf(String alias) {
-        return donations.findByDonorOrderedByReceivedOnDesc(new DonorReference(scenarioDonors.idOf(alias)));
+        return donations.findByDonorNewestFirst(new DonorReference(scenarioDonors.idOf(alias)));
     }
 
     private List<UUID> donorsPaidBy(long transactionId) {

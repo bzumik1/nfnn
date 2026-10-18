@@ -166,21 +166,25 @@ The access token is an HS256 JWT (`iss`, `sub` = donor id, `roles`, 15 minutes; 
 
 | Method | Path | Auth | Purpose |
 |---|---|---|---|
-| `GET` | `/api/donations/me?year=` | donor | List of caller's donations + total. |
-| `GET` | `/api/donations/me/summary` | donor | Dashboard stat cards (total, count, last, byYear). |
+| `GET` | `/api/donations/me?year=` | donor | Caller's donations, newest first, optionally one year, with the total and count. |
+| `GET` | `/api/donations/me/summary` | donor | Dashboard stat cards: total, count, last donation, totals per year. |
 | `GET` | `/api/donations/me/{id}/receipt` | donor | PDF for one donation. |
 | `GET` | `/api/donations/me/receipts/yearly?year=` | donor | PDF yearly summary. 404 if no donations that year, 400 for future year. |
 | `GET` | `/api/donations/payment-qr?amount=&variableSymbol=` | public | Returns the SPAYD string (Czech "QR platba"), its PNG QR code and the foundation's bank account. A signed-in donor's frontend passes their variable symbol. |
 | `GET/POST/PATCH` | `/api/donations/admin[...]` | admin | List/filter, manually record donation, edit. |
 
-#### `GET /api/donations/me` response
+#### `GET /api/donations/me` and `GET /api/donations/me/summary`
+
+Both read the caller's donations, found by the donor id in the JWT subject (`donor_record.donor_id`); 401 `unauthenticated` without a token. A donor the `donations` context has no record of, or one with no donations yet, gets 200 with an empty list and zero totals, never 404. Another donor's donations are never visible: there is no id parameter, the caller is the only filter.
+
+`GET /api/donations/me?year=` lists the donations, newest first (`receivedAt`, then `recordedAt`, then `id`, descending; the id breaks the tie between donations paired in one import run, which share their `recordedAt`). `year` is optional; when given it must be a four-digit year (`@Min(1000) @Max(9999)`, else 400 `validation`) and only donations received in that year are returned, with `totalAmountMinor` and `count` covering the returned items. An empty `year=` counts as absent. A year with no donations gives an empty list.
 
 ```json
 {
   "items": [
     {
-      "id": "...",
-      "receiptNumber": "000001",
+      "id": "0192f0f1-...",
+      "receiptNumber": null,
       "receivedAt": "2026-03-15",
       "amountMinor": 50000,
       "currency": "CZK",
@@ -194,6 +198,29 @@ The access token is an HS256 JWT (`iss`, `sub` = donor id, `roles`, 15 minutes; 
   "count": 4
 }
 ```
+
+- `receiptNumber` is `null` until the receipts (task 6) assign numbers.
+- `purpose` is the text to show, resolved by `Accept-Language` from the message bundles (`donation.purpose.general`, Czech "Obecný příspěvek"); v1 knows only the general purpose, a project-bound purpose comes with the admin.
+- `totalAmountMinor` and `count` add up `RECEIVED` donations only; a `REFUNDED` one stays in `items` with its status. `currency` is `CZK` even for an empty list (every imported donation is CZK).
+
+`GET /api/donations/me/summary` feeds the dashboard's stat cards and the year toggle:
+
+```json
+{
+  "totalAmountMinor": 375000,
+  "currency": "CZK",
+  "count": 4,
+  "lastReceivedAt": "2026-03-15",
+  "byYear": [
+    { "year": 2026, "count": 2, "totalAmountMinor": 150000 },
+    { "year": 2025, "count": 2, "totalAmountMinor": 225000 }
+  ]
+}
+```
+
+- Same counting rule as the list: `RECEIVED` donations only.
+- `lastReceivedAt` is the newest `receivedAt`, `null` when there is none.
+- `byYear` holds one entry per calendar year with at least one counted donation, newest year first; empty when there are none.
 
 Enums:
 - `DonationStatus`: `RECEIVED`, `REFUNDED`.
@@ -238,7 +265,7 @@ The bank account comes from `app.donations.bank-account.{account-number,iban,rec
 
 #### Fio import and pairing
 
-Implemented, with no endpoint of its own: the backend downloads the foundation account's movements from the Fio API every hour and turns them into donations. `GET /api/donations/me` (task 5) reads the `donation` and `donor_record` tables described here; the receipt (task 6) adds a nullable `receipt_number` to `donation` with its own changelog.
+Implemented, with no endpoint of its own: the backend downloads the foundation account's movements from the Fio API every hour and turns them into donations. `GET /api/donations/me` and `/api/donations/me/summary` read the `donation` table described here for the donor in the JWT subject; the receipt (task 6) adds a nullable `receipt_number` to `donation` with its own changelog.
 
 Tables (`db/changelog/donations/001`–`004`):
 
@@ -352,9 +379,9 @@ Shared pieces that came with it and that every later context reuses:
 
 Shared pieces that came with it: the sealed `shared/domain/error/DomainException` family (`RuleViolation` 400, `Conflict` 409, `NotFound` 404, `AuthenticationFailure` 401, `AccessDenied` 403), which `ApiExceptionHandler` maps to a problem whose `type` is the exception's code and whose title and detail come from `problem.<code>.title` / `.detail` in the message bundles; `PostalAddress` and `LocaleCode` value objects; `shared/infrastructure/security/JwtConfiguration` (encoder, decoder validated against the application `Clock`, roles → `ROLE_*` authorities), with `ApiSecurityConfiguration` acting as an OAuth2 resource server. Cucumber scenarios truncate every application table before they start (`support/DatabaseCleaner`).
 
-### `donations` (import and pairing done)
+### `donations` (import, pairing and the donor's overview done)
 
-`features/donations/donor_record_sync.feature`, `fio_payment_import.feature` and `payment_pairing.feature` cover the donor copy, the import cycle with its failures and the pairing rules of "Fio import and pairing". Domain: `Donation` aggregate, `DonationStatus`, `DonationSource`, `PairingMethod`, `BankPayment`, `DonorRecord`, `PaymentPairingPolicy`, the `importing` package (`ImportPlanner`, `ImportCoverage`, `BankImportState`). Liquibase: `donations/001_create_donor_record.xml`, `002_create_bank_payment.xml` (`bank_payment`, `bank_import_state`), `003_create_donation.xml`, `004_create_donor_sender_account.xml`. Still to come: `GET /api/donations/me` and the summary (task 5), the PDF receipts with a `DonationReceiptRenderer` port (task 6), manual donation recording (admin).
+`features/donations/donor_record_sync.feature`, `fio_payment_import.feature` and `payment_pairing.feature` cover the donor copy, the import cycle with its failures and the pairing rules of "Fio import and pairing"; `donor_donations_overview.feature` covers `GET /api/donations/me` and `/api/donations/me/summary` (empty list and zero summary, ordering, the `year` filter and its validation, the purpose in the caller's language, another donor's isolation, 401 without a token). Domain: `Donation` aggregate, `DonationStatus`, `DonationSource`, `PairingMethod`, `BankPayment`, `DonorRecord`, `PaymentPairingPolicy`, the `importing` package (`ImportPlanner`, `ImportCoverage`, `BankImportState`), and for the overview `DonationList` (items with the total and count of `RECEIVED` ones, `inYear`), `DonationSummary` (total, count, last receipt day, `YearTotal` per year newest first) built from `DonationRepository.findByDonorNewestFirst`. Application: the read-only `application/overview/DonorDonationsService`. REST: `interfaces/rest/DonorDonationsController` with `DonationListResponse` and `DonationSummaryResponse`; the controller resolves `donation.purpose.general` from the message bundles, and ArchUnit keeps `MessageSource` and the web packages out of `domain` and `application`. Liquibase: `donations/001_create_donor_record.xml`, `002_create_bank_payment.xml` (`bank_payment`, `bank_import_state`), `003_create_donation.xml`, `004_create_donor_sender_account.xml`. Still to come: the PDF receipts with a `DonationReceiptRenderer` port (task 6), manual donation recording (admin).
 
 ### `content` first features
 

@@ -1,12 +1,34 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, DestroyRef, inject, linkedSignal, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router, RouterLink } from '@angular/router';
+import { forkJoin } from 'rxjs';
+import { problemTypeEndsWith } from '../../../core/auth/api-problem';
 import { AuthStore } from '../../../core/auth/auth-store';
+import { LoginDialogService } from '../../../core/auth/login-dialog.service';
+import { formatCrowns } from '../../donations/donation-amount';
+import { formatDonationDate } from '../../donations/donation-date';
+import {
+  DonationItem,
+  DonationsApi,
+  DonationStatus,
+  DonationSummaryResponse,
+} from '../../donations/donations-api';
 import {
   Receipt,
   ReceiptInput,
   ReceiptPayment,
   ReceiptUser,
 } from '../../donations/receipt/receipt';
+
+type DashboardState = 'loading' | 'ready' | 'error';
+
+const STATUS_LABELS: Record<DonationStatus, string> = {
+  RECEIVED: $localize`:@@donor.dashboard.payments.status.received:Přijato`,
+  REFUNDED: $localize`:@@donor.dashboard.payments.status.refunded:Vráceno`,
+};
+
+const MINOR_UNITS_PER_CROWN = 100;
+const UNAUTHENTICATED = 'auth/unauthenticated';
 
 @Component({
   selector: 'app-donor-dashboard',
@@ -17,6 +39,9 @@ import {
 export class DonorDashboard {
   private readonly router = inject(Router);
   private readonly auth = inject(AuthStore);
+  private readonly loginDialog = inject(LoginDialogService);
+  private readonly donations = inject(DonationsApi);
+  private readonly destroyRef = inject(DestroyRef);
 
   protected readonly donor = this.auth.donor;
 
@@ -25,59 +50,95 @@ export class DonorDashboard {
     email: this.donor()?.email ?? '',
   }));
 
-  protected readonly payments: readonly ReceiptPayment[] = [
-    { id: 1, date: '15. 03. 2026', amount: 500, purpose: 'Obecný příspěvek', status: 'Přijato' },
-    { id: 2, date: '10. 01. 2026', amount: 1000, purpose: 'Projekt Dominik', status: 'Přijato' },
-    { id: 3, date: '05. 11. 2025', amount: 250, purpose: 'Obecný příspěvek', status: 'Přijato' },
-    { id: 4, date: '20. 08. 2025', amount: 2000, purpose: 'Projekt Anička', status: 'Přijato' },
-  ];
+  protected readonly state = signal<DashboardState>('loading');
+  protected readonly summary = signal<DonationSummaryResponse | null>(null);
+  protected readonly items = signal<readonly DonationItem[]>([]);
 
-  protected readonly total = computed(() =>
-    this.payments.reduce((sum, p) => sum + p.amount, 0),
+  protected readonly years = computed(() => (this.summary()?.byYear ?? []).map((entry) => entry.year));
+
+  protected readonly selectedYear = linkedSignal<number | null>(() => this.years()[0] ?? null);
+
+  protected readonly selectedYearTotal = computed(
+    () => this.summary()?.byYear.find((entry) => entry.year === this.selectedYear()) ?? null,
   );
 
-  protected readonly years = computed(() => {
-    const set = new Set(this.payments.map((p) => p.date.split('. ')[2]));
-    return [...set].sort((a, b) => Number(b) - Number(a));
-  });
-
-  protected readonly selectedYear = signal<string>('');
   protected readonly selectedReceipt = signal<ReceiptInput | null>(null);
   protected readonly signingOut = signal(false);
 
-  protected readonly yearPayments = computed(() =>
-    this.payments.filter((p) => p.date.split('. ')[2] === this.selectedYear()),
-  );
-
-  protected readonly yearTotal = computed(() =>
-    this.yearPayments().reduce((sum, p) => sum + p.amount, 0),
-  );
-
   constructor() {
-    this.selectedYear.set(this.years()[0] ?? '');
+    this.load();
+  }
+
+  protected load(): void {
+    this.state.set('loading');
+    forkJoin({ summary: this.donations.summary(), list: this.donations.list() })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: ({ summary, list }) => {
+          this.summary.set(summary);
+          this.items.set(list.items);
+          this.state.set('ready');
+        },
+        error: (failure: unknown) => {
+          if (this.sessionEnded(failure)) {
+            this.sendToSignIn();
+            return;
+          }
+          this.state.set('error');
+        },
+      });
+  }
+
+  private sessionEnded(failure: unknown): boolean {
+    return problemTypeEndsWith(failure, UNAUTHENTICATED) || this.auth.status() === 'anonymous';
+  }
+
+  private sendToSignIn(): void {
+    this.loginDialog.open();
+    void this.router.navigateByUrl('/');
+  }
+
+  protected crowns(amountMinor: number): string {
+    return this.formatAmount(amountMinor / MINOR_UNITS_PER_CROWN);
   }
 
   protected formatAmount(value: number): string {
-    return value.toLocaleString('cs-CZ');
+    return formatCrowns(value);
   }
 
-  protected selectYear(year: string): void {
+  protected formatDate(isoDate: string): string {
+    return formatDonationDate(isoDate);
+  }
+
+  protected statusLabel(status: DonationStatus): string {
+    return STATUS_LABELS[status];
+  }
+
+  protected selectYear(year: number): void {
     this.selectedYear.set(year);
   }
 
   protected openYearReceipt(): void {
+    const year = this.selectedYear();
+    const yearTotal = this.selectedYearTotal();
+    if (year === null || yearTotal === null) {
+      return;
+    }
+    const payments = this.items()
+      .filter((item) => item.status === 'RECEIVED' && item.receivedAt.startsWith(`${year}-`))
+      .map((item) => this.toReceiptPayment(item));
     this.selectedReceipt.set({
       kind: 'summary',
       summary: {
-        year: this.selectedYear(),
-        total: this.yearTotal(),
-        payments: this.yearPayments(),
+        year: String(year),
+        total: yearTotal.totalAmountMinor / MINOR_UNITS_PER_CROWN,
+        payments,
       },
     });
   }
 
-  protected openSingleReceipt(payment: ReceiptPayment): void {
-    this.selectedReceipt.set({ kind: 'single', payment });
+  protected openSingleReceipt(item: DonationItem): void {
+    this.selectedReceipt.set({ kind: 'single', payment: this.toReceiptPayment(item) });
   }
 
   protected closeReceipt(): void {
@@ -92,9 +153,14 @@ export class DonorDashboard {
     this.auth.logout().subscribe(() => this.router.navigateByUrl('/'));
   }
 
-  protected contributionsLabel(count: number): string {
-    if (count === 1) return 'příspěvek';
-    if (count < 5) return 'příspěvky';
-    return 'příspěvků';
+  private toReceiptPayment(item: DonationItem): ReceiptPayment {
+    return {
+      id: item.id,
+      receiptNumber: item.receiptNumber,
+      date: formatDonationDate(item.receivedAt),
+      amount: item.amountMinor / MINOR_UNITS_PER_CROWN,
+      purpose: item.purpose,
+      status: STATUS_LABELS[item.status],
+    };
   }
 }

@@ -65,7 +65,7 @@ class JpaDonationRepositoryTest {
         donations.save(donation);
         flushAndClear();
 
-        assertThat(donations.findByDonorOrderedByReceivedOnDesc(jana)).singleElement().satisfies(stored -> {
+        assertThat(donations.findByDonorNewestFirst(jana)).singleElement().satisfies(stored -> {
             assertThat(stored.id()).isEqualTo(donation.id());
             assertThat(stored.donor()).isEqualTo(jana);
             assertThat(stored.bankPayment()).contains(payment.id());
@@ -90,8 +90,44 @@ class JpaDonationRepositoryTest {
         donations.save(bySymbol(petr, storedPayment(1003, LocalDate.of(2026, 10, 12))));
         flushAndClear();
 
-        assertThat(donations.findByDonorOrderedByReceivedOnDesc(jana)).extracting(Donation::receivedOn)
+        assertThat(donations.findByDonorNewestFirst(jana)).extracting(Donation::receivedOn)
                 .containsExactly(LocalDate.of(2026, 10, 16), LocalDate.of(2026, 10, 10));
+    }
+
+    @Test
+    @DisplayName("Given two donations received on the same day, when listed, then the one recorded later comes first")
+    void should_list_later_recorded_first_when_listed_given_same_receipt_day() {
+        DonorReference jana = storedDonor("4821937560");
+        LocalDate sameDay = LocalDate.of(2026, 10, 15);
+        Donation recordedFirst = Donation.fromBankPayment(DonationId.newId(NOW), jana, storedPayment(1001, sameDay),
+                PairingMethod.VARIABLE_SYMBOL, NOW);
+        Donation recordedLater = Donation.fromBankPayment(DonationId.newId(NOW), jana, storedPayment(1002, sameDay),
+                PairingMethod.VARIABLE_SYMBOL, NOW.plusSeconds(60));
+        Donation olderDay = Donation.fromBankPayment(DonationId.newId(NOW), jana, storedPayment(1003, sameDay.minusDays(1)),
+                PairingMethod.VARIABLE_SYMBOL, NOW.plusSeconds(120));
+        donations.save(recordedFirst);
+        donations.save(olderDay);
+        donations.save(recordedLater);
+        flushAndClear();
+
+        assertThat(donations.findByDonorNewestFirst(jana)).extracting(Donation::id)
+                .containsExactly(recordedLater.id(), recordedFirst.id(), olderDay.id());
+    }
+
+    @Test
+    @DisplayName("Given two donations received on the same day and recorded at the same time, when listed, then the one with the newer id comes first")
+    void should_list_newer_id_first_when_listed_given_same_receipt_day_and_recording_time() {
+        DonorReference jana = storedDonor("4821937560");
+        LocalDate sameDay = LocalDate.of(2026, 10, 15);
+        Donation olderId = Donation.fromBankPayment(DonationId.newId(NOW), jana, storedPayment(1001, sameDay),
+                PairingMethod.VARIABLE_SYMBOL, NOW);
+        Donation newerId = Donation.fromBankPayment(DonationId.newId(NOW.plusMillis(1)), jana, storedPayment(1002, sameDay),
+                PairingMethod.VARIABLE_SYMBOL, NOW);
+        donations.save(olderId);
+        donations.save(newerId);
+        flushAndClear();
+
+        assertThat(donations.findByDonorNewestFirst(jana)).extracting(Donation::id).containsExactly(newerId.id(), olderId.id());
     }
 
     @Test
