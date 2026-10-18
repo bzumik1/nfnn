@@ -1,8 +1,5 @@
 name: nfnn
 
-x-db-password: &db_password ZMEN_HESLO_DB
-x-jwt-secret: &jwt_secret ZMEN_JWT_SECRET
-
 x-logging: &logging
   driver: json-file
   options:
@@ -15,10 +12,11 @@ services:
     container_name: nfnn-postgres
     restart: unless-stopped
     network_mode: bridge
+    env_file:
+      - /DATA/AppData/nfnn/env/db.env
     environment:
       POSTGRES_DB: novanadeje
       POSTGRES_USER: novanadeje
-      POSTGRES_PASSWORD: *db_password
       TZ: Europe/Prague
     volumes:
       - /DATA/AppData/nfnn/postgres:/var/lib/postgresql/data
@@ -43,11 +41,12 @@ services:
         condition: service_started
     links:
       - postgres
+    env_file:
+      - /DATA/AppData/nfnn/env/db.env
     environment:
       PGHOST: postgres
       PGDATABASE: novanadeje
       PGUSER: novanadeje
-      PGPASSWORD: *db_password
       TZ: Europe/Prague
     volumes:
       - /DATA/AppData/nfnn/backups:/backups
@@ -82,21 +81,17 @@ services:
         condition: service_started
     links:
       - postgres
+    env_file:
+      - /DATA/AppData/nfnn/env/db.env
+      - /DATA/AppData/nfnn/env/backend.env
     environment:
       SPRING_PROFILES_ACTIVE: prod
       DB_URL: jdbc:postgresql://postgres:5432/novanadeje
       DB_USERNAME: novanadeje
-      DB_PASSWORD: *db_password
-      JWT_SECRET: *jwt_secret
-      MAIL_HOST: ""
-      MAIL_PORT: "587"
-      MAIL_USERNAME: ""
-      MAIL_PASSWORD: ""
-      MAIL_AUTH: "true"
-      MAIL_STARTTLS: "true"
-      CONTACT_RECIPIENT: info@novanadeje.cz
       JAVA_TOOL_OPTIONS: -XX:MaxRAMPercentage=75
       TZ: Europe/Prague
+    volumes:
+      - /DATA/AppData/nfnn/config:/config:ro
     healthcheck:
       test:
         - CMD
@@ -152,5 +147,5 @@ x-casaos:
     cs_cz: Web Nadačního fondu Nová naděje
     en_us: Website of the Nová naděje foundation
   description:
-    cs_cz: Web, dárcovský portál a potvrzení o daru. Data v /DATA/AppData/nfnn.
-    en_us: Website, donor portal and donation receipts. Data in /DATA/AppData/nfnn.
+    cs_cz: Web, dárcovský portál a potvrzení o daru. Data v /DATA/AppData/nfnn, hesla a nastavení v /DATA/AppData/nfnn/env.
+    en_us: Website, donor portal and donation receipts. Data in /DATA/AppData/nfnn, secrets and settings in /DATA/AppData/nfnn/env.
