@@ -98,8 +98,8 @@ Implemented: register, login, refresh, logout, profile, password reset.
 
 | Method | Path | Auth | Purpose |
 |---|---|---|---|
-| `POST` | `/api/donors/auth/register` | public | Create a donor account. 201 with the auth response and the refresh cookie. 400 `validation` (field errors, incl. a wrong IČO check digit), 400 `donors/company-identifier-required` / `donors/company-identifier-not-allowed`, 400 `donors/password-too-common` (a password shorter than 12 or longer than 128 characters is a `validation` field error), 409 `donors/email-already-registered`. |
-| `POST` | `/api/donors/auth/login` | public | 200 with the auth response and the refresh cookie. 401 `auth/invalid-credentials` for a wrong password and an unknown email alike. |
+| `POST` | `/api/donors/auth/register` | public | Create a donor account. 201 with the auth response and the refresh cookie. 400 `validation` (field errors, incl. a wrong IČO check digit), 400 `donors/company-identifier-required` / `donors/company-identifier-not-allowed`, 400 `donors/password-too-common` (a password shorter than 12 or longer than 128 characters is a `validation` field error), 409 `donors/email-already-registered`, 429 `donors/rate-limited` after 5 registrations per hour from one client address (see "Sign-in and registration limits"). |
+| `POST` | `/api/donors/auth/login` | public | 200 with the auth response and the refresh cookie. 401 `auth/invalid-credentials` for a wrong password and an unknown email alike. 429 `donors/rate-limited` after 10 sign-ins per 15 minutes from one client address (see "Sign-in and registration limits"). |
 | `POST` | `/api/donors/auth/refresh` | refresh cookie | New access token and a rotated refresh cookie. 401 `auth/invalid-refresh-token` when the cookie is missing, expired, revoked or already used (a reused token revokes every session of that donor). |
 | `POST` | `/api/donors/auth/logout` | refresh cookie | Revokes the refresh token and clears the cookie. 204 even without a cookie. |
 | `POST` | `/api/donors/auth/password-reset/request` | public | Sends a reset link to the address when it belongs to a donor. Always 202 without a body (no email enumeration); 400 `validation` for a malformed address; 429 `donors/rate-limited` after 5 requests per hour from one client address. See "Password reset". |
@@ -157,6 +157,17 @@ The access token is an HS256 JWT (`iss`, `sub` = donor id, `roles`, 15 minutes; 
 ```
 
 `variableSymbol` is a random 10-digit number (first digit 1–9), unique among donors, generated at registration. The dashboard shows it so the donor puts it on bank transfers; `donations` will match incoming payments by it.
+
+#### Sign-in and registration limits
+
+- `POST /api/donors/auth/login`: 10 requests per 15 minutes per client address (`SignInRateLimiter`); `POST /api/donors/auth/register`: 5 requests per hour per client address (`RegistrationRateLimiter`). Both sit in `donors/interfaces/rest`, each with its own `FixedWindowRateLimiter`, like `PasswordResetRateLimiter`; the limits are constants in those classes. The window is fixed: it starts with the address's first request and closes after the whole period, whatever came in between.
+- Every request that reaches the controller counts, successful or not: a right password, a wrong one, an unknown e-mail, a taken e-mail. A body that fails validation is answered 400 before the controller runs and does not count; it costs no hashing.
+- A limited request answers 429 with type `donors/rate-limited` and the generic title and detail of `RateLimitExceededException`, before any password is hashed or any registration work is done. Sign-ins and registrations have separate counters, and both are separate from the password reset's.
+- The client address is `getRemoteAddr()` after `ForwardedHeaderFilter`; the nginx in `frontend/` resolves the visitor's address itself and rewrites `X-Forwarded-For`, so a client cannot choose it (see "Password reset"). The counters live in memory per backend instance and start empty after a restart. Visitors behind one shared address (an office, a school, a mobile carrier's NAT) share the limits, accepted.
+- The limits brake password guessing and mass registration from one address. They are not an account lockout, so nobody can lock a donor out of the account; guessing spread over many addresses is not covered, and a CAPTCHA or a per-account delay is the escalation if it appears.
+- An unknown e-mail costs the same as a real one: the password is compared against a fixed BCrypt cost-12 hash of a random string (`UNKNOWN_DONOR_HASH` in `DonorAuthenticationService`), so both run one BCrypt comparison and answer the same 401. A malformed e-mail or a password the password rules refuse (shorter than 12 characters or on the common list) is answered 401 without hashing; that depends only on what was sent and says nothing about the account.
+
+Frontend: the sign-in dialog answers a 429 on sign-in or registration with "Příliš mnoho pokusů z této adresy. Zkuste to prosím za chvíli znovu." (`donor.login.error.tooManyAttempts`). Cucumber: `features/donors/donor_login.feature` and `donor_registration.feature`.
 
 #### Password reset
 
