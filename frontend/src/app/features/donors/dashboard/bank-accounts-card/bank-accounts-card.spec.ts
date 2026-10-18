@@ -5,11 +5,15 @@ import { authInterceptor } from '../../../../core/auth/auth-interceptor';
 import { AuthStore } from '../../../../core/auth/auth-store';
 import { authResponse, problem, sampleDonor } from '../../../../core/auth/testing/donor-fixtures';
 import { BankAccountItem } from '../../../donations/bank-accounts-api';
+import { BankCheckResponse } from '../../../donations/donations-api';
 import { PaymentQrResponse } from '../../../donations/payment-qr-api';
 import { bankAccount } from '../../../donations/testing/bank-account-fixtures';
 import { BankAccountsCard } from './bank-accounts-card';
 
 const LIST_URL = '/api/donations/me/bank-accounts';
+const BANK_CHECK_URL = '/api/donations/me/bank-check';
+const EARLIER = '2026-10-18T08:05:00Z';
+const LATER = '2026-10-18T08:07:00Z';
 const ACCOUNT_ID = '0192f0c4-0000-7000-8000-000000000001';
 
 function paymentQr(): PaymentQrResponse {
@@ -24,6 +28,7 @@ describe('Given the bank accounts card in the overview', () => {
   let fixture: ComponentFixture<BankAccountsCard>;
   let http: HttpTestingController;
   let sessionEnded: number;
+  let bankChecks: BankCheckResponse[];
 
   beforeEach(async () => {
     localStorage.clear();
@@ -39,11 +44,14 @@ describe('Given the bank accounts card in the overview', () => {
     fixture.componentRef.setInput('variableSymbol', '9876543210');
     sessionEnded = 0;
     fixture.componentInstance.sessionEnded.subscribe(() => sessionEnded++);
+    bankChecks = [];
+    fixture.componentInstance.bankChecked.subscribe((check) => bankChecks.push(check));
     document.body.appendChild(fixture.nativeElement);
     fixture.detectChanges();
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     http.verify();
     fixture.nativeElement.remove();
   });
@@ -367,6 +375,177 @@ describe('Given the bank accounts card in the overview', () => {
       await settle();
 
       expect(element('dialog')).toBeNull();
+    });
+  });
+
+  describe('when the donor opens Přidat účet and pays from a new account', () => {
+    const newAccount = bankAccount({ id: '0192f0c4-0000-7000-8000-000000000002', accountNumber: '1234567890/0800', donationCount: 0 });
+
+    beforeEach(async () => {
+      vi.useFakeTimers();
+      await respond([bankAccount()]);
+      await click('.accounts-add');
+      http.expectOne((request) => request.url === '/api/donations/payment-qr').flush(paymentQr());
+      await settle();
+    });
+
+    async function wait(milliseconds: number): Promise<void> {
+      await vi.advanceTimersByTimeAsync(milliseconds);
+      await settle();
+    }
+
+    async function answerCheck(check: BankCheckResponse, items: BankAccountItem[]): Promise<void> {
+      http.expectOne({ method: 'POST', url: BANK_CHECK_URL }).flush(check, { status: 202, statusText: 'Accepted' });
+      await settle();
+      await respond(items);
+    }
+
+    it('then the dialog says it waits for the payment in a status line and asks the bank only after half a minute', async () => {
+      const watch = element('.add-account-watch');
+      expect(watch?.getAttribute('role')).toBe('status');
+      expect(text('.add-account-watch .watch-title')).toBe('Čekáme na vaši platbu…');
+      expect(element('.watch-icon--waiting')?.getAttribute('aria-hidden')).toBe('true');
+
+      await wait(29_000);
+      http.expectNone(BANK_CHECK_URL);
+
+      await wait(1_000);
+      await answerCheck({ bankDataAsOf: EARLIER, checking: false }, [bankAccount()]);
+
+      expect(text('.add-account-watch .watch-title')).toBe('Čekáme na vaši platbu…');
+      expect(bankChecks).toEqual([{ bankDataAsOf: EARLIER, checking: false }]);
+    });
+
+    it('and the payment arrives during a running check, then the waiting turns into a tick with the verified account', async () => {
+      await wait(30_000);
+      http.expectOne({ method: 'POST', url: BANK_CHECK_URL }).flush({ bankDataAsOf: EARLIER, checking: true });
+      await wait(2_000);
+      http.expectOne({ method: 'GET', url: BANK_CHECK_URL }).flush({ bankDataAsOf: LATER, checking: false });
+      await settle();
+      await respond([newAccount, bankAccount()]);
+
+      expect(element('.add-account-watch--verified')).not.toBeNull();
+      expect(element('.watch-icon--verified')).not.toBeNull();
+      expect(element('.watch-icon--waiting')).toBeNull();
+      expect(text('.add-account-watch .watch-title')).toBe('Účet 1234567890/0800 je ověřený');
+      expect(text('.add-account-watch .watch-detail')).toBe('Platby bez variabilního symbolu z něj vám přiřazujeme automaticky.');
+      expect(bankChecks).toEqual([{ bankDataAsOf: LATER, checking: false }]);
+
+      await wait(60_000);
+      http.expectNone(BANK_CHECK_URL);
+    });
+
+    it('and the next check comes half a minute after the previous one ended, so the bank pause between checks is kept', async () => {
+      await wait(30_000);
+      await answerCheck({ bankDataAsOf: EARLIER, checking: false }, [bankAccount()]);
+
+      await wait(29_000);
+      http.expectNone(BANK_CHECK_URL);
+      await wait(1_000);
+      await answerCheck({ bankDataAsOf: LATER, checking: false }, [newAccount, bankAccount()]);
+
+      expect(text('.add-account-watch .watch-title')).toBe('Účet 1234567890/0800 je ověřený');
+    });
+
+    it('and an account waiting for a payment becomes verified, then it counts as the new account', async () => {
+      await click('.add-account-close');
+      await respondToReload([bankAccount({ status: 'AWAITING_PAYMENT', verifiedOn: null })]);
+      await click('.accounts-add');
+      http.expectOne((request) => request.url === '/api/donations/payment-qr').flush(paymentQr());
+
+      await wait(30_000);
+      await answerCheck({ bankDataAsOf: LATER, checking: false }, [bankAccount()]);
+
+      expect(text('.add-account-watch .watch-title')).toBe('Účet 2900233333/2010 je ověřený');
+    });
+
+    it('and the overview reloads the accounts with the new one, then the dialog shows the tick and stops asking the bank', async () => {
+      fixture.componentInstance.reload();
+      await respond([newAccount, bankAccount()]);
+
+      expect(text('.add-account-watch .watch-title')).toBe('Účet 1234567890/0800 je ověřený');
+
+      await wait(30_000);
+      await answerCheck({ bankDataAsOf: LATER, checking: false }, [newAccount, bankAccount()]);
+      await wait(60_000);
+      http.expectNone(BANK_CHECK_URL);
+    });
+
+    it('and the bank check fails, then the accounts are still fetched and the dialog keeps waiting', async () => {
+      await wait(30_000);
+      http.expectOne({ method: 'POST', url: BANK_CHECK_URL }).flush(null, { status: 500, statusText: 'Server Error' });
+      await settle();
+      await respond([bankAccount()]);
+
+      expect(text('.add-account-watch .watch-title')).toBe('Čekáme na vaši platbu…');
+      expect(bankChecks).toEqual([]);
+    });
+
+    it('and no payment arrives within twenty checks, then the dialog stops, says a normal transfer can take until the next working day and can check again', async () => {
+      for (let check = 0; check < 20; check++) {
+        await wait(30_000);
+        await answerCheck({ bankDataAsOf: EARLIER, checking: false }, [bankAccount()]);
+      }
+
+      expect(text('.add-account-watch .watch-title')).toBe('Platba zatím nedorazila');
+      expect(text('.add-account-watch .watch-detail')).toBe(
+        'Běžný převod může dorazit až další pracovní den. Účet se pak v přehledu objeví sám, okno nemusíte nechávat otevřené.',
+      );
+      await wait(60_000);
+      http.expectNone(BANK_CHECK_URL);
+
+      await click('.watch-again');
+      expect(text('.add-account-watch .watch-title')).toBe('Čekáme na vaši platbu…');
+      await wait(30_000);
+      await answerCheck({ bankDataAsOf: LATER, checking: false }, [newAccount, bankAccount()]);
+
+      expect(text('.add-account-watch .watch-title')).toBe('Účet 1234567890/0800 je ověřený');
+    });
+
+    it('and the page is hidden, then the bank is not asked until it is visible again, and then at once', async () => {
+      setVisibility('hidden');
+      await wait(120_000);
+      http.expectNone(BANK_CHECK_URL);
+
+      setVisibility('visible');
+      await wait(0);
+      await answerCheck({ bankDataAsOf: LATER, checking: false }, [newAccount, bankAccount()]);
+
+      expect(text('.add-account-watch .watch-title')).toBe('Účet 1234567890/0800 je ověřený');
+    });
+
+    it('and the dialog is closed, then the bank is not asked any more', async () => {
+      await click('.add-account-close');
+
+      await wait(120_000);
+      http.expectNone(BANK_CHECK_URL);
+    });
+
+    it('and the session has ended, then the dialog closes and the overview is told to send the donor to sign in', async () => {
+      await wait(30_000);
+      http.expectOne({ method: 'POST', url: BANK_CHECK_URL }).flush({ bankDataAsOf: EARLIER, checking: false });
+      await settle();
+      http.expectOne(LIST_URL).flush(problem('auth/unauthenticated', 'Nejste přihlášeni'), { status: 401, statusText: 'Unauthorized' });
+      await settle();
+
+      expect(sessionEnded).toBe(1);
+      expect(element('dialog')).toBeNull();
+      await wait(120_000);
+      http.expectNone(BANK_CHECK_URL);
+    });
+
+    async function respondToReload(items: BankAccountItem[]): Promise<void> {
+      fixture.componentInstance.reload();
+      await respond(items);
+    }
+
+    function setVisibility(state: DocumentVisibilityState): void {
+      Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => state });
+      document.dispatchEvent(new Event('visibilitychange'));
+    }
+
+    afterEach(() => {
+      Reflect.deleteProperty(document, 'visibilityState');
     });
   });
 });

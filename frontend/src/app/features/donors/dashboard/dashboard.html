@@ -221,7 +221,11 @@
       }
     }
 
-    <app-bank-accounts-card [variableSymbol]="donor()?.variableSymbol ?? null" (sessionEnded)="sendToSignIn()" />
+    <app-bank-accounts-card
+      [variableSymbol]="donor()?.variableSymbol ?? null"
+      (sessionEnded)="sendToSignIn()"
+      (bankChecked)="bankCheckedWhileAdding($event)"
+    />
 
     <app-profile-card (sessionEnded)="sendToSignIn()" />
 

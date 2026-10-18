@@ -1,6 +1,6 @@
 import { HttpClient, HttpParams, HttpResponse } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
-import { map, Observable } from 'rxjs';
+import { EMPTY, expand, map, Observable, switchMap, take, timer } from 'rxjs';
 
 export type DonationStatus = 'RECEIVED' | 'REFUNDED';
 
@@ -56,6 +56,9 @@ export interface DownloadedFile {
 const EXTENDED_FILE_NAME = /(?:^|;)\s*filename\*\s*=\s*utf-8''([^;\s]+)/i;
 const PLAIN_FILE_NAME = /(?:^|;)\s*filename\s*=\s*(?:"([^"]*)"|([^;\s]+))/i;
 
+const BANK_CHECK_POLL_MS = 2000;
+const BANK_CHECK_MAX_POLLS = 45;
+
 @Injectable({ providedIn: 'root' })
 export class DonationsApi {
   private readonly http = inject(HttpClient);
@@ -74,6 +77,13 @@ export class DonationsApi {
 
   bankCheck(): Observable<BankCheckResponse> {
     return this.http.get<BankCheckResponse>('/api/donations/me/bank-check');
+  }
+
+  checkBankUntilDone(): Observable<BankCheckResponse> {
+    return this.requestBankCheck().pipe(
+      expand((check) => (check.checking ? timer(BANK_CHECK_POLL_MS).pipe(switchMap(() => this.bankCheck())) : EMPTY)),
+      take(BANK_CHECK_MAX_POLLS + 1),
+    );
   }
 
   singleReceipt(id: string): Observable<DownloadedFile> {
