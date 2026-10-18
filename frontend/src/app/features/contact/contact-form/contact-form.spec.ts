@@ -64,7 +64,7 @@ describe('Given the contact form', () => {
     expect(element('form')).toBeNull();
   });
 
-  it('when submitted with an empty required field, then nothing is sent', async () => {
+  it('when submitted with an empty required field, then nothing is sent and that field says what is missing', async () => {
     await fillIn('#contact-name', 'Jana Nováková');
     await fillIn('#contact-email', 'jana@example.cz');
 
@@ -72,6 +72,20 @@ describe('Given the contact form', () => {
 
     http.expectNone('/api/contact/messages');
     expect(element('form')).not.toBeNull();
+    expect(element('#contact-message-error').textContent).toContain('Napište nám prosím, s čím vám můžeme pomoct.');
+    expect(element('#contact-message').getAttribute('aria-invalid')).toBe('true');
+    expect(element('#contact-name-error')).toBeNull();
+  });
+
+  it('when submitted with a malformed e-mail, then the e-mail field explains the expected form', async () => {
+    await fillIn('#contact-name', 'Jana Nováková');
+    await fillIn('#contact-email', 'jana@');
+    await fillIn('#contact-message', 'Dobrý den');
+
+    await submit();
+
+    http.expectNone('/api/contact/messages');
+    expect(element('#contact-email-error').textContent).toContain('Zadejte e-mail ve tvaru jan@example.com.');
   });
 
   it('when the server refuses with 429, then the form stays and explains the hourly limit', async () => {

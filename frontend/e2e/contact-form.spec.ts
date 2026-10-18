@@ -34,4 +34,22 @@ test.describe('Given a visitor on the home page', () => {
     await expect(page.getByRole('alert')).toContainText('příliš mnoho zpráv');
     await expect(page.locator('#contact-message')).toHaveValue('Ještě jedna.');
   });
+
+  test('when they send the form empty, then each field says what is missing and the first one takes the focus', async ({ page }) => {
+    const posted: unknown[] = [];
+    await page.route('**/api/contact/messages', async (route) => {
+      posted.push(route.request().postDataJSON());
+      await route.fulfill({ status: 202 });
+    });
+
+    await page.goto('/');
+    await page.locator('#contact-email').fill('jana@');
+    await page.getByRole('button', { name: 'Odeslat zprávu' }).click();
+
+    await expect(page.locator('#contact-name')).toBeFocused();
+    await expect(page.locator('#contact-name')).toHaveAccessibleDescription('Napište nám prosím své jméno.');
+    await expect(page.locator('#contact-email')).toHaveAccessibleDescription('Zadejte e-mail ve tvaru jan@example.com.');
+    await expect(page.locator('#contact-message')).toHaveAttribute('aria-invalid', 'true');
+    expect(posted).toEqual([]);
+  });
 });

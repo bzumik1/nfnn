@@ -1,0 +1,28 @@
+:host {
+  display: block;
+  margin-bottom: 14px;
+}
+
+.field-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  margin-bottom: 6px;
+}
+
+.field-hint,
+.field-error {
+  font-size: 12px;
+  line-height: 1.5;
+  margin-top: 6px;
+}
+
+.field-hint {
+  color: var(--color-text-soft);
+}
+
+.field-error {
+  color: var(--color-danger);
+  font-weight: 600;
+}

@@ -9,6 +9,9 @@ import { AuthApi } from '../../../core/auth/auth-api';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { PASSWORD_MIN_LENGTH } from '../../../core/auth/donor';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
+import { FocusFirstInvalid } from '../../../shared/ui/form-field/focus-first-invalid';
+import { FormControlDirective } from '../../../shared/ui/form-field/form-control';
+import { FormField } from '../../../shared/ui/form-field/form-field';
 
 type Panel = 'missing-link' | 'form' | 'success' | 'invalid';
 
@@ -17,7 +20,7 @@ const INVALID_TOKEN = 'donors/invalid-password-reset-token';
 
 @Component({
   selector: 'app-password-reset',
-  imports: [FormsModule],
+  imports: [FormsModule, FormField, FormControlDirective, FocusFirstInvalid],
   templateUrl: './password-reset.html',
   styleUrl: './password-reset.scss',
 })
@@ -31,6 +34,14 @@ export class PasswordReset {
   private readonly token = tokenOf(inject(ActivatedRoute).snapshot.fragment);
 
   protected readonly passwordMinLength = PASSWORD_MIN_LENGTH;
+  protected readonly passwordHint = $localize`:@@donor.passwordReset.form.hint:Alespoň 12 znaků. Klidně celá věta, která se vám dobře pamatuje.`;
+  protected readonly passwordMessages = {
+    required: $localize`:@@donor.form.newPassword.required:Zvolte si prosím heslo.`,
+    minlength: $localize`:@@donor.form.newPassword.tooShort:Heslo musí mít alespoň 12 znaků.`,
+  };
+  protected readonly confirmationMessages = {
+    required: $localize`:@@donor.passwordReset.form.passwordConfirm.required:Napište prosím nové heslo ještě jednou.`,
+  };
   protected readonly panel = signal<Panel>(this.token === null ? 'missing-link' : 'form');
   protected readonly loading = signal(false);
   protected readonly error = signal('');
@@ -48,7 +59,7 @@ export class PasswordReset {
       return;
     }
     if (form.invalid) {
-      this.error.set($localize`:@@donor.login.error.fields:Vyplňte prosím správně všechna pole.`);
+      this.error.set('');
       return;
     }
     if (this.password !== this.passwordConfirmation) {
