@@ -1,7 +1,7 @@
 package cz.novanadeje.app.donations.cucumber;
 
 import cz.novanadeje.app.cucumber.ApiClient;
-import cz.novanadeje.app.cucumber.ScenarioDonors;
+import cz.novanadeje.app.cucumber.DonorSessions;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
 import tools.jackson.databind.JsonNode;
@@ -23,11 +23,11 @@ public class DonorDonationsStepDefinitions {
     private static final List<String> ITEM_FIELDS = List.of("receivedAt", "amountMinor", "currency", "purpose", "status", "source");
 
     private final ApiClient api;
-    private final ScenarioDonors scenarioDonors;
+    private final DonorSessions sessions;
 
-    public DonorDonationsStepDefinitions(ApiClient api, ScenarioDonors scenarioDonors) {
+    public DonorDonationsStepDefinitions(ApiClient api, DonorSessions sessions) {
         this.api = api;
-        this.scenarioDonors = scenarioDonors;
+        this.sessions = sessions;
     }
 
     @When("{string} asks for her/his donations")
@@ -129,8 +129,7 @@ public class DonorDonationsStepDefinitions {
     }
 
     private void getAs(String alias, String language, String path) {
-        api.forgetCredentials();
-        api.authorize(scenarioDonors.accessTokenOf(alias));
+        sessions.actAs(alias);
         api.acceptLanguage(language);
         api.get(path);
     }
