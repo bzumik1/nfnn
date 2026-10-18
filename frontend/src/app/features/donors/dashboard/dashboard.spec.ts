@@ -8,6 +8,7 @@ import { authResponse, sampleDonor } from '../../../core/auth/testing/donor-fixt
 import { DonationListResponse, DonationSummaryResponse } from '../../donations/donations-api';
 import { Receipt, ReceiptInput } from '../../donations/receipt/receipt';
 import {
+  donationItem,
   emptyDonations,
   emptySummary,
   twoYearDonations,
@@ -121,6 +122,27 @@ describe('Given a signed-in donor on the dashboard', () => {
     ]);
   });
 
+  it('when a donation has hellers, then its amount shows two decimals', async () => {
+    const list = twoYearDonations();
+    list.items[0] = donationItem({ id: 'd-4', receivedAt: '2026-03-15', amountMinor: 100050 });
+    const summary = twoYearSummary();
+    summary.totalAmountMinor = 225050;
+
+    await respond(summary, list);
+
+    expect(text('.payments-card tbody tr:first-child td.amount')).toBe('1 000,50 Kč');
+    expect(texts('.stat-value')[0]).toBe('2 250,50 Kč');
+  });
+
+  it('when a year holds five or more donations, then the yearly count uses the plural for many', async () => {
+    const summary = twoYearSummary();
+    summary.byYear[0] = { year: 2026, count: 5, totalAmountMinor: 150000 };
+
+    await respond(summary, twoYearDonations());
+
+    expect(text('.yearly-count')).toBe('5 příspěvků v roce 2026');
+  });
+
   it('when the donations arrive, then the year toggle lists the summary years and the newest is selected', async () => {
     await respond(twoYearSummary(), twoYearDonations());
 
@@ -152,8 +174,8 @@ describe('Given a signed-in donor on the dashboard', () => {
         year: '2026',
         total: 1500,
         payments: [
-          { id: 'd-4', date: '15. 03. 2026', amount: 500, purpose: 'Obecný příspěvek', status: 'Přijato' },
-          { id: '2026-000017', date: '10. 01. 2026', amount: 1000, purpose: 'Obecný příspěvek', status: 'Přijato' },
+          { id: 'd-4', receiptNumber: null, date: '15. 03. 2026', amount: 500, purpose: 'Obecný příspěvek', status: 'Přijato' },
+          { id: 'd-3', receiptNumber: '2026-000017', date: '10. 01. 2026', amount: 1000, purpose: 'Obecný příspěvek', status: 'Přijato' },
         ],
       },
     });
@@ -170,7 +192,7 @@ describe('Given a signed-in donor on the dashboard', () => {
       summary: {
         year: '2025',
         total: 250,
-        payments: [{ id: 'd-2', date: '05. 11. 2025', amount: 250, purpose: 'Obecný příspěvek', status: 'Přijato' }],
+        payments: [{ id: 'd-2', receiptNumber: null, date: '05. 11. 2025', amount: 250, purpose: 'Obecný příspěvek', status: 'Přijato' }],
       },
     });
   });
@@ -182,8 +204,21 @@ describe('Given a signed-in donor on the dashboard', () => {
 
     expect(shownReceipt()).toEqual({
       kind: 'single',
-      payment: { id: '2026-000017', date: '10. 01. 2026', amount: 1000, purpose: 'Obecný příspěvek', status: 'Přijato' },
+      payment: { id: 'd-3', receiptNumber: '2026-000017', date: '10. 01. 2026', amount: 1000, purpose: 'Obecný příspěvek', status: 'Přijato' },
     });
+    expect(text('.receipt-header-id')).toBe('#2026-000017');
+  });
+
+  it('when the donor opens the receipt of a payment without a receipt number yet, then the receipt carries no number', async () => {
+    await respond(twoYearSummary(), twoYearDonations());
+
+    await click('.payments-card tbody tr:first-child .download-btn');
+
+    expect(shownReceipt()).toEqual({
+      kind: 'single',
+      payment: { id: 'd-4', receiptNumber: null, date: '15. 03. 2026', amount: 500, purpose: 'Obecný příspěvek', status: 'Přijato' },
+    });
+    expect(text('.receipt-header-id')).toBe('');
   });
 
   it('when the donor has no donations yet, then the cards show zeros and the yearly and payments cards explain how a gift appears', async () => {

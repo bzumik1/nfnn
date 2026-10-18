@@ -1,7 +1,9 @@
 import { Component, input, output } from '@angular/core';
+import { formatCrowns } from '../donation-amount';
 
 export interface ReceiptPayment {
-  readonly id: number | string;
+  readonly id: string;
+  readonly receiptNumber: string | null;
   readonly date: string;
   readonly amount: number;
   readonly purpose: string;
@@ -47,15 +49,8 @@ export class Receipt {
     return value.kind === 'single' ? value.payment : null;
   }
 
-  protected formatId(id: number | string): string {
-    if (typeof id === 'string') {
-      return id;
-    }
-    return String(id).padStart(6, '0');
-  }
-
   protected formatAmount(value: number): string {
-    return value.toLocaleString('cs-CZ');
+    return formatCrowns(value);
   }
 
   close(): void {

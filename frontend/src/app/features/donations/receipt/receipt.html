@@ -13,8 +13,8 @@
         <div class="receipt-header-id">
           @if (isSummary) {
             <span>#{{ summary?.year }}</span>
-          } @else {
-            <span>#{{ formatId(single!.id) }}</span>
+          } @else if (single?.receiptNumber) {
+            <span>#{{ single?.receiptNumber }}</span>
           }
         </div>
       </div>

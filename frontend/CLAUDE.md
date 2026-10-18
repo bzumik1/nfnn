@@ -81,6 +81,7 @@ src/
         payment-qr-api.ts     HTTP service: GET /api/donations/payment-qr (SPAYD, PNG QR code, bank account).
         donations-api.ts      HTTP service: GET /api/donations/me (optional `year`) and /api/donations/me/summary; DTOs as in the contract.
         donation-date.ts      Formats the API's `YYYY-MM-DD` as `15. 03. 2026` (no locale data, no time zone).
+        donation-amount.ts    Formats crowns for display: whole amounts without decimals, hellers always with two (`1 000,50`).
         receipt/              Donation receipt mock (overlay); still fed by the dashboard until the PDF receipts (task 6) replace it.
         testing/              Donation fixtures for specs (excluded from the app build).
       donors/

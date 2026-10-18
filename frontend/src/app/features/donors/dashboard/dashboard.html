@@ -113,10 +113,9 @@
           </div>
           @if (selectedYearTotal(); as yearTotal) {
             <div class="yearly-foot">
-              <span class="yearly-count">
-                {{ yearTotal.count }} {{ contributionsLabel(yearTotal.count) }}
-                <span i18n="@@donor.dashboard.yearly.inYear">v roce</span>
-                {{ yearTotal.year }}
+              <span class="yearly-count" i18n="@@donor.dashboard.yearly.count">
+                {yearTotal.count, plural, =1 {{{ yearTotal.count }} příspěvek} =2 {{{ yearTotal.count }} příspěvky} =3 {{{ yearTotal.count }} příspěvky} =4 {{{ yearTotal.count }} příspěvky} other {{{ yearTotal.count }} příspěvků}}
+                v roce {{ yearTotal.year }}
               </span>
               <span class="yearly-total">
                 {{ crowns(yearTotal.totalAmountMinor) }} Kč <span i18n="@@donor.dashboard.yearly.totalSuffix">celkem</span>

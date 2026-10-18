@@ -3,6 +3,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router, RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import { AuthStore } from '../../../core/auth/auth-store';
+import { formatCrowns } from '../../donations/donation-amount';
 import { formatDonationDate } from '../../donations/donation-date';
 import {
   DonationItem,
@@ -83,7 +84,7 @@ export class DonorDashboard {
   }
 
   protected formatAmount(value: number): string {
-    return value.toLocaleString('cs-CZ');
+    return formatCrowns(value);
   }
 
   protected formatDate(isoDate: string): string {
@@ -133,15 +134,10 @@ export class DonorDashboard {
     this.auth.logout().subscribe(() => this.router.navigateByUrl('/'));
   }
 
-  protected contributionsLabel(count: number): string {
-    if (count === 1) return 'příspěvek';
-    if (count < 5) return 'příspěvky';
-    return 'příspěvků';
-  }
-
   private toReceiptPayment(item: DonationItem): ReceiptPayment {
     return {
-      id: item.receiptNumber ?? item.id,
+      id: item.id,
+      receiptNumber: item.receiptNumber,
       date: formatDonationDate(item.receivedAt),
       amount: item.amountMinor / MINOR_UNITS_PER_CROWN,
       purpose: item.purpose,
