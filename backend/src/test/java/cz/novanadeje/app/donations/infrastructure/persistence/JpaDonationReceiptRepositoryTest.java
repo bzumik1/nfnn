@@ -43,14 +43,12 @@ import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.nio.charset.StandardCharsets;
-import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.Year;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.UUID;
 
 import static cz.novanadeje.app.donations.BankPayments.payment;
 import static cz.novanadeje.app.donations.infrastructure.persistence.BankPersistenceTestConfiguration.NOW;
@@ -68,15 +66,15 @@ class JpaDonationReceiptRepositoryTest {
     private static final byte[] PDF = {'%', 'P', 'D', 'F', '-', '1', '.', '7'};
     private static final ReceiptFingerprint FINGERPRINT = new ReceiptFingerprint("0123456789abcdef".repeat(4));
     private static final String RECEIPT_INSERT = "insert into donation_receipt (id, donor_id, kind, receipt_year, number, issued_on, issued_at,"
-            + " locale, fingerprint, content, template_sha256, data, logo_sha256, render_profile, pdf_sha256)"
-            + " values (?, ?, 'YEARLY', 2025, ?, current_date, now(), 'cs', ?, ?, ?, ?, ?, ?, ?)";
+            + " locale, fingerprint, template_sha256, data, logo_sha256, render_profile, pdf_sha256)"
+            + " values (?, ?, 'YEARLY', 2025, ?, current_date, now(), 'cs', ?, ?, ?, ?, ?, ?)";
     private static final String TEMPLATE = "{\"html\":\"<html/>\",\"texts\":{\"cs\":{},\"en\":{}}}";
     private static final ContentDigest TEMPLATE_DIGEST = ContentDigest.of(TEMPLATE.getBytes(StandardCharsets.UTF_8));
     private static final ReceiptImage LOGO = new ReceiptImage(new byte[] {(byte) 0x89, 'P', 'N', 'G', 1}, "image/png");
     private static final ReceiptImage SIGNATURE = new ReceiptImage(new byte[] {(byte) 0xff, (byte) 0xd8, 2}, "image/jpeg");
     private static final ReceiptSnapshot SNAPSHOT = new ReceiptSnapshot(TEMPLATE_DIGEST, "{\"number\":\"2026-000001\",\"lines\":[]}",
             LOGO.digest(), Optional.of(SIGNATURE.digest()), 1);
-    private static final ReceiptContent.Snapshot CONTENT = new ReceiptContent.Snapshot(SNAPSHOT, ContentDigest.of(PDF));
+    private static final ReceiptContent CONTENT = new ReceiptContent(SNAPSHOT, ContentDigest.of(PDF));
 
     @Autowired
     private DonationReceiptRepository receipts;
@@ -181,7 +179,7 @@ class JpaDonationReceiptRepositoryTest {
         flushAndClear();
         Instant replacedAt = NOW.plusSeconds(3600);
         DonationReceipt copy = DonationReceipt.reconstitute(stored.id(), jana, ReceiptKind.YEARLY, Optional.empty(), Optional.of(YEAR_2025),
-                new ReceiptNumber("2026-000001"), ISSUED_ON, NOW, LocaleCode.CS, FINGERPRINT, new ReceiptContent.StoredPdf(new byte[] {'o', 't', 'h', 'e', 'r'}),
+                new ReceiptNumber("2026-000001"), ISSUED_ON, NOW, LocaleCode.CS, FINGERPRINT, new ReceiptContent(new ReceiptSnapshot(TEMPLATE_DIGEST, "{\"other\":true}", LOGO.digest(), Optional.empty(), 1), ContentDigest.of(PDF)),
                 Optional.empty(), Optional.of(replacedAt));
 
         receipts.save(copy);
@@ -189,8 +187,8 @@ class JpaDonationReceiptRepositoryTest {
 
         assertThat(jdbc.sql("select data from donation_receipt where id = ?").param(stored.id().value()).query(String.class).single())
                 .isEqualTo(SNAPSHOT.data());
-        assertThat(jdbc.sql("select count(*) from donation_receipt where id = ? and content is null").param(stored.id().value())
-                .query(Long.class).single()).isEqualTo(1);
+        assertThat(jdbc.sql("select signature_sha256 from donation_receipt where id = ?").param(stored.id().value()).query(String.class).single())
+                .isEqualTo(SIGNATURE.digest().value());
         assertThat(jdbc.sql("select superseded_at from donation_receipt where id = ?").param(stored.id().value()).query(Instant.class).single())
                 .isEqualTo(replacedAt);
     }
@@ -269,8 +267,10 @@ class JpaDonationReceiptRepositoryTest {
         entityManager.flush();
 
         assertThatThrownBy(() -> jdbc.sql("insert into donation_receipt (id, donor_id, kind, receipt_year, number, issued_on, issued_at, locale,"
-                        + " fingerprint, content) values (?, ?, 'SINGLE', 2025, '2026-000009', current_date, now(), 'cs', ?, ?)")
-                .params(UuidV7.generate(NOW), jana.value(), FINGERPRINT.value(), PDF).update())
+                        + " fingerprint, template_sha256, data, logo_sha256, render_profile, pdf_sha256)"
+                        + " values (?, ?, 'SINGLE', 2025, '2026-000009', current_date, now(), 'cs', ?, ?, '{}', ?, 1, ?)")
+                .params(UuidV7.generate(NOW), jana.value(), FINGERPRINT.value(), TEMPLATE_DIGEST.value(), LOGO.digest().value(),
+                        ContentDigest.of(PDF).value()).update())
                 .hasMessageContaining("ck_donation_receipt_shape");
     }
 
@@ -300,57 +300,29 @@ class JpaDonationReceiptRepositoryTest {
     }
 
     @Test
-    @DisplayName("Given a receipt stored as a PDF before snapshots, when its donation's active receipt is read, then it comes back with exactly that PDF")
-    void should_read_stored_pdf_when_read_given_receipt_from_before_snapshots() {
-        DonorReference jana = storedDonor("4821937560");
-        Donation donation = storedDonation(jana, LocalDate.of(2026, 3, 15));
-        entityManager.flush();
-        UUID id = UuidV7.generate(NOW);
-        jdbc.sql("insert into donation_receipt (id, donor_id, kind, donation_id, number, issued_on, issued_at, locale, fingerprint, content)"
-                        + " values (?, ?, 'SINGLE', ?, '2026-000007', ?, ?, 'cs', ?, ?)")
-                .params(id, jana.value(), donation.id().value(), ISSUED_ON, Timestamp.from(NOW), FINGERPRINT.value(), PDF).update();
-
-        assertThat(receipts.findActiveForDonation(donation.id())).hasValueSatisfying(stored -> {
-            assertThat(stored.id()).isEqualTo(new DonationReceiptId(id));
-            assertThat(stored.content()).isEqualTo(new ReceiptContent.StoredPdf(PDF));
-        });
-    }
-
-    @Test
     @DisplayName("Given a receipt without a signature image, when it is saved and read, then its snapshot still has no signature")
     void should_keep_missing_signature_when_saved_and_read_given_unsigned_snapshot() {
         DonorReference jana = storedDonor("4821937560");
         ReceiptSnapshot unsigned = new ReceiptSnapshot(TEMPLATE_DIGEST, SNAPSHOT.data(), LOGO.digest(), Optional.empty(), 1);
         DonationReceipt receipt = DonationReceipt.issueForYear(DonationReceiptId.newId(NOW), jana, YEAR_2025, new ReceiptNumber("2026-000008"),
-                ISSUED_ON, NOW, LocaleCode.CS, FINGERPRINT, new ReceiptContent.Snapshot(unsigned, ContentDigest.of(PDF)), Optional.empty());
+                ISSUED_ON, NOW, LocaleCode.CS, FINGERPRINT, new ReceiptContent(unsigned, ContentDigest.of(PDF)), Optional.empty());
 
         receipts.save(receipt);
         flushAndClear();
 
         assertThat(receipts.findActiveForYear(jana, YEAR_2025)).hasValueSatisfying(stored ->
-                assertThat(stored.content()).isEqualTo(new ReceiptContent.Snapshot(unsigned, ContentDigest.of(PDF))));
+                assertThat(stored.content()).isEqualTo(new ReceiptContent(unsigned, ContentDigest.of(PDF))));
     }
 
     @Test
-    @DisplayName("Given the schema, when a receipt with neither a PDF nor a snapshot is inserted, then the content check refuses it")
-    void should_refuse_when_inserted_given_receipt_without_content() {
+    @DisplayName("Given the schema, when a receipt without its snapshot is inserted, then the not-null constraint refuses it")
+    void should_refuse_when_inserted_given_receipt_without_snapshot() {
         DonorReference jana = storedDonor("4821937560");
         entityManager.flush();
 
         assertThatThrownBy(() -> jdbc.sql(RECEIPT_INSERT).params(UuidV7.generate(NOW), jana.value(), "2026-000010", FINGERPRINT.value(),
-                null, null, null, null, null, null).update())
-                .hasMessageContaining("ck_donation_receipt_content");
-    }
-
-    @Test
-    @DisplayName("Given the schema, when a receipt with both a PDF and a snapshot is inserted, then the content check refuses it")
-    void should_refuse_when_inserted_given_receipt_with_both_contents() {
-        DonorReference jana = storedDonor("4821937560");
-        entityManager.flush();
-
-        assertThatThrownBy(() -> jdbc.sql(RECEIPT_INSERT).params(UuidV7.generate(NOW), jana.value(), "2026-000011", FINGERPRINT.value(),
-                PDF, TEMPLATE_DIGEST.value(), "{}", LOGO.digest().value(), 1, ContentDigest.of(PDF).value()).update())
-                .hasMessageContaining("ck_donation_receipt_content");
+                TEMPLATE_DIGEST.value(), null, LOGO.digest().value(), 1, ContentDigest.of(PDF).value()).update())
+                .hasMessageContaining("null value in column \"data\"");
     }
 
     @Test
@@ -359,7 +331,7 @@ class JpaDonationReceiptRepositoryTest {
         DonorReference jana = storedDonor("4821937560");
         ReceiptSnapshot unknown = new ReceiptSnapshot(new ContentDigest("f".repeat(64)), SNAPSHOT.data(), LOGO.digest(), Optional.empty(), 1);
         DonationReceipt receipt = DonationReceipt.issueForYear(DonationReceiptId.newId(NOW), jana, YEAR_2025, new ReceiptNumber("2026-000012"),
-                ISSUED_ON, NOW, LocaleCode.CS, FINGERPRINT, new ReceiptContent.Snapshot(unknown, ContentDigest.of(PDF)), Optional.empty());
+                ISSUED_ON, NOW, LocaleCode.CS, FINGERPRINT, new ReceiptContent(unknown, ContentDigest.of(PDF)), Optional.empty());
 
         assertThatThrownBy(() -> receipts.save(receipt))
                 .isInstanceOf(DataIntegrityViolationException.class)

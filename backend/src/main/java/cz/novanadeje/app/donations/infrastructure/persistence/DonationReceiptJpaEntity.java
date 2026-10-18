@@ -61,25 +61,22 @@ public class DonationReceiptJpaEntity {
     @Column(name = "fingerprint", nullable = false, length = 64)
     private String fingerprint;
 
-    @Column(name = "content")
-    private byte[] content;
-
-    @Column(name = "template_sha256", length = 64)
+    @Column(name = "template_sha256", nullable = false, length = 64)
     private String templateSha256;
 
-    @Column(name = "data", columnDefinition = "text")
+    @Column(name = "data", nullable = false, columnDefinition = "text")
     private String data;
 
-    @Column(name = "logo_sha256", length = 64)
+    @Column(name = "logo_sha256", nullable = false, length = 64)
     private String logoSha256;
 
     @Column(name = "signature_sha256", length = 64)
     private String signatureSha256;
 
-    @Column(name = "render_profile")
+    @Column(name = "render_profile", nullable = false)
     private Short renderProfile;
 
-    @Column(name = "pdf_sha256", length = 64)
+    @Column(name = "pdf_sha256", nullable = false, length = 64)
     private String pdfSha256;
 
     @Column(name = "supersedes_id")
@@ -103,30 +100,22 @@ public class DonationReceiptJpaEntity {
         entity.issuedAt = receipt.issuedAt();
         entity.locale = receipt.locale().tag();
         entity.fingerprint = receipt.fingerprint().value();
-        switch (receipt.content()) {
-            case ReceiptContent.StoredPdf stored -> entity.content = stored.pdf();
-            case ReceiptContent.Snapshot kept -> {
-                ReceiptSnapshot snapshot = kept.snapshot();
-                entity.templateSha256 = snapshot.template().value();
-                entity.data = snapshot.data();
-                entity.logoSha256 = snapshot.logo().value();
-                entity.signatureSha256 = snapshot.signature().map(ContentDigest::value).orElse(null);
-                entity.renderProfile = (short) snapshot.renderProfile();
-                entity.pdfSha256 = kept.issuedPdf().value();
-            }
-        }
+        ReceiptSnapshot snapshot = receipt.content().snapshot();
+        entity.templateSha256 = snapshot.template().value();
+        entity.data = snapshot.data();
+        entity.logoSha256 = snapshot.logo().value();
+        entity.signatureSha256 = snapshot.signature().map(ContentDigest::value).orElse(null);
+        entity.renderProfile = (short) snapshot.renderProfile();
+        entity.pdfSha256 = receipt.content().issuedPdf().value();
         entity.supersedesId = receipt.supersedes().map(DonationReceiptId::value).orElse(null);
         entity.supersededAt = receipt.supersededAt().orElse(null);
         return entity;
     }
 
     private ReceiptContent content() {
-        if (content != null) {
-            return new ReceiptContent.StoredPdf(content);
-        }
         ReceiptSnapshot snapshot = new ReceiptSnapshot(new ContentDigest(templateSha256), data, new ContentDigest(logoSha256),
                 Optional.ofNullable(signatureSha256).map(ContentDigest::new), renderProfile);
-        return new ReceiptContent.Snapshot(snapshot, new ContentDigest(pdfSha256));
+        return new ReceiptContent(snapshot, new ContentDigest(pdfSha256));
     }
 
     void supersededAs(DonationReceipt receipt) {
