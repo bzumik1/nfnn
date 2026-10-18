@@ -18,4 +18,9 @@ class AdapterLibraryRulesTest {
     static final ArchRule qr_code_library_is_used_only_by_infrastructure_adapters = noClasses()
             .that().resideOutsideOfPackage("..infrastructure..")
             .should().dependOnClassesThat().resideInAPackage("com.google.zxing..");
+
+    @ArchTest
+    static final ArchRule fio_client_library_is_used_only_by_infrastructure_adapters = noClasses()
+            .that().resideOutsideOfPackage("..infrastructure..")
+            .should().dependOnClassesThat().resideInAPackage("cz.novanadeje.fio..");
 }

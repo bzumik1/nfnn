@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donors.domain;
 
+import cz.novanadeje.app.shared.domain.DonorType;
 import cz.novanadeje.app.shared.domain.VariableSymbol;
 import cz.novanadeje.app.shared.domain.EmailAddress;
 import cz.novanadeje.app.shared.domain.LocaleCode;

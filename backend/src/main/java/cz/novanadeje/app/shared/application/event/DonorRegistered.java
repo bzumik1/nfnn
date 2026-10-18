@@ -1,23 +1,24 @@
-package cz.novanadeje.app.donors.application.event;
+package cz.novanadeje.app.shared.application.event;
 
-import cz.novanadeje.app.donors.domain.CompanyIdentifier;
-import cz.novanadeje.app.donors.domain.DonorId;
-import cz.novanadeje.app.donors.domain.DonorType;
-import cz.novanadeje.app.shared.domain.VariableSymbol;
+import cz.novanadeje.app.shared.domain.DonorType;
 import cz.novanadeje.app.shared.domain.EmailAddress;
+import cz.novanadeje.app.shared.domain.LocaleCode;
 import cz.novanadeje.app.shared.domain.PostalAddress;
+import cz.novanadeje.app.shared.domain.VariableSymbol;
 
 import java.time.Instant;
 import java.util.Optional;
+import java.util.UUID;
 
 public record DonorRegistered(
-        DonorId donorId,
+        UUID donorId,
         DonorType type,
         String name,
-        Optional<CompanyIdentifier> companyIdentifier,
+        Optional<String> companyIdentifier,
         PostalAddress address,
         EmailAddress email,
         VariableSymbol variableSymbol,
+        LocaleCode preferredLocale,
         Instant registeredAt
 ) {
 }

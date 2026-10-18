@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <changeSet id="003-create-donation" author="nfnn">
+        <createTable tableName="donation">
+            <column name="id" type="uuid">
+                <constraints primaryKey="true" primaryKeyName="pk_donation" nullable="false"/>
+            </column>
+            <column name="donor_id" type="uuid">
+                <constraints nullable="false" foreignKeyName="fk_donation_donor" referencedTableName="donor_record"
+                             referencedColumnNames="donor_id"/>
+            </column>
+            <column name="bank_payment_id" type="uuid">
+                <constraints unique="true" uniqueConstraintName="uq_donation_bank_payment"
+                             foreignKeyName="fk_donation_bank_payment" referencedTableName="bank_payment" referencedColumnNames="id"/>
+            </column>
+            <column name="received_on" type="date">
+                <constraints nullable="false"/>
+            </column>
+            <column name="amount_minor" type="bigint">
+                <constraints nullable="false"/>
+            </column>
+            <column name="currency" type="varchar(3)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="source" type="varchar(16)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="varchar(16)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="paired_by" type="varchar(16)"/>
+            <column name="recorded_at" type="timestamp with time zone">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <sql>alter table donation add constraint ck_donation_amount_positive check (amount_minor &gt; 0)</sql>
+        <sql>alter table donation add constraint ck_donation_bank_transfer_has_payment check ((source &lt;&gt; 'BANK_TRANSFER') or (bank_payment_id is not null and paired_by is not null))</sql>
+        <createIndex tableName="donation" indexName="ix_donation_donor_received_on">
+            <column name="donor_id"/>
+            <column name="received_on"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>

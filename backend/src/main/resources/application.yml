@@ -37,6 +37,13 @@ spring:
   web:
     locale: cs
     locale-resolver: accept_header
+  task:
+    scheduling:
+      pool:
+        size: 1
+      shutdown:
+        await-termination: true
+        await-termination-period: PT30S
 
 server:
   port: ${SERVER_PORT:8080}
@@ -67,6 +74,16 @@ app:
       account-number: ${BANK_ACCOUNT_NUMBER:5544332217/2010}
       iban: ${BANK_IBAN:CZ2620100000005544332217}
       recipient-name: ${BANK_RECIPIENT_NAME:Nadační fond Nová naděje}
+    import:
+      overlap: P3D
+      history-window: P89D
+      history-from: ${FIO_HISTORY_FROM:}
+    fio:
+      token: ${FIO_TOKEN:}
+      base-uri: https://fioapi.fio.cz/v1/rest
+      interval: PT1H
+      initial-delay: PT30S
+      request-timeout: PT2M
   security:
     jwt:
       issuer: nova-nadeje

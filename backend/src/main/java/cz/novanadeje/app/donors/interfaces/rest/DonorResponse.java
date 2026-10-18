@@ -1,8 +1,8 @@
 package cz.novanadeje.app.donors.interfaces.rest;
 
 import cz.novanadeje.app.donors.application.DonorView;
-import cz.novanadeje.app.donors.domain.DonorType;
 import cz.novanadeje.app.donors.domain.Role;
+import cz.novanadeje.app.shared.domain.DonorType;
 
 import java.time.Instant;
 import java.util.List;

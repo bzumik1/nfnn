@@ -48,6 +48,7 @@ Web fondu, který představí fond a jeho pomoc dětem, usnadní darování a d�
 - ✅ Párování podle variabilního symbolu dárce; bez VS podle jména a čísla účtu odesílatele. Přesná pravidla doladíme nad skutečnými daty z Fio.
 - 🔸 Bezpečné pravidlo pro první verzi: číslo účtu se dárci přiřadí jen z platby, která přišla s jeho VS. Pak se mu spárují i ostatní platby z téhož účtu, starší i budoucí. Dárce si účet do profilu sám nezadává, jinak by kdokoli mohl vidět cizí dary a stáhnout potvrzení na cizí jméno.
 - 🔸 Platba, kterou nejde přiřadit, se uloží jako nespárovaná. Přiřadí ji správce, až bude administrace; do té doby Jakub.
+- 🔸 Jak to dělá první verze (k doladění nad daty): VS `0`, který Fio posílá u některých trvalých příkazů, se bere jako platba bez VS a páruje se podle účtu; platba s VS, který žádný dárce nemá, zůstane nespárovaná, i když přišla z už přiřazeného účtu (překlep nesmí skončit jako cizí dar). Jméno odesílatele se k párování nepoužívá, jen číslo účtu.
 
 ## 6. Provoz
 

@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <changeSet id="002-create-bank-payment" author="nfnn">
+        <createTable tableName="bank_payment">
+            <column name="id" type="uuid">
+                <constraints primaryKey="true" primaryKeyName="pk_bank_payment" nullable="false"/>
+            </column>
+            <column name="bank_transaction_id" type="bigint">
+                <constraints nullable="false" unique="true" uniqueConstraintName="uq_bank_payment_transaction"/>
+            </column>
+            <column name="booked_on" type="date">
+                <constraints nullable="false"/>
+            </column>
+            <column name="amount_minor" type="bigint">
+                <constraints nullable="false"/>
+            </column>
+            <column name="currency" type="varchar(3)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="sender_account_number" type="varchar(17)"/>
+            <column name="sender_bank_code" type="varchar(4)"/>
+            <column name="counterparty_account" type="varchar(64)"/>
+            <column name="counterparty_bank_code" type="varchar(10)"/>
+            <column name="counterparty_name" type="varchar(255)"/>
+            <column name="variable_symbol" type="varchar(20)"/>
+            <column name="matching_variable_symbol" type="varchar(10)"/>
+            <column name="constant_symbol" type="varchar(10)"/>
+            <column name="specific_symbol" type="varchar(10)"/>
+            <column name="message_for_recipient" type="varchar(500)"/>
+            <column name="transaction_type" type="varchar(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="imported_at" type="timestamp with time zone">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <sql>alter table bank_payment add constraint ck_bank_payment_amount_positive check (amount_minor &gt; 0)</sql>
+        <createIndex tableName="bank_payment" indexName="ix_bank_payment_sender">
+            <column name="sender_account_number"/>
+            <column name="sender_bank_code"/>
+        </createIndex>
+        <createIndex tableName="bank_payment" indexName="ix_bank_payment_matching_symbol">
+            <column name="matching_variable_symbol"/>
+        </createIndex>
+        <createIndex tableName="bank_payment" indexName="ix_bank_payment_booked_on">
+            <column name="booked_on"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="002-create-bank-import-state" author="nfnn">
+        <createTable tableName="bank_import_state">
+            <column name="id" type="smallint">
+                <constraints primaryKey="true" primaryKeyName="pk_bank_import_state" nullable="false"/>
+            </column>
+            <column name="covered_from" type="date"/>
+            <column name="covered_to" type="date"/>
+            <column name="last_attempted_at" type="timestamp with time zone"/>
+            <column name="last_succeeded_at" type="timestamp with time zone"/>
+            <column name="last_failure_kind" type="varchar(32)"/>
+            <column name="last_failure_message" type="varchar(1000)"/>
+            <column name="updated_at" type="timestamp with time zone">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <sql>alter table bank_import_state add constraint ck_bank_import_state_singleton check (id = 1)</sql>
+        <sql>alter table bank_import_state add constraint ck_bank_import_state_coverage check ((covered_from is null) = (covered_to is null))</sql>
+    </changeSet>
+
+</databaseChangeLog>
