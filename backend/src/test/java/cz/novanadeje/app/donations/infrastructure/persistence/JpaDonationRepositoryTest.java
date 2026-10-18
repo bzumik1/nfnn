@@ -173,6 +173,21 @@ class JpaDonationRepositoryTest {
         assertThat(donations.findByIdForDonor(DonationId.newId(NOW), jana)).isEmpty();
     }
 
+    @Test
+    @DisplayName("Given donations around a period, when donations received in it are asked for, then both boundary days are included and the days outside are not")
+    void should_include_boundary_days_when_asked_for_period_given_donations_around_it() {
+        DonorReference jana = storedDonor("4821937560");
+        donations.save(bySymbol(jana, storedPayment(1001, LocalDate.of(2025, 12, 31))));
+        donations.save(bySymbol(jana, storedPayment(1002, LocalDate.of(2026, 1, 1))));
+        donations.save(bySymbol(jana, storedPayment(1003, LocalDate.of(2026, 9, 30))));
+        donations.save(bySymbol(jana, storedPayment(1004, LocalDate.of(2026, 10, 1))));
+        flushAndClear();
+
+        assertThat(donations.findReceivedOnBetween(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 9, 30)))
+                .extracting(Donation::receivedOn)
+                .containsExactlyInAnyOrder(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 9, 30));
+    }
+
     private Donation bySymbol(DonorReference donor, BankPayment payment) {
         return Donation.fromBankPayment(DonationId.newId(NOW), donor, payment, PairingMethod.VARIABLE_SYMBOL, NOW);
     }

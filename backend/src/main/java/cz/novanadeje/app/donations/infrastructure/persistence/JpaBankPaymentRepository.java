@@ -8,6 +8,7 @@ import cz.novanadeje.app.donations.domain.bank.SenderAccount;
 import cz.novanadeje.app.shared.domain.VariableSymbol;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDate;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -56,6 +57,11 @@ class JpaBankPaymentRepository implements BankPaymentRepository {
     @Override
     public List<BankPayment> findUnpairedWithoutSymbolBySenderAccount(SenderAccount account) {
         return toDomain(jpa.findUnpairedWithoutSymbolBySenderAccount(account.accountNumber(), account.bankCode()));
+    }
+
+    @Override
+    public List<BankPayment> findUnpairedBookedBetween(LocalDate firstDay, LocalDate lastDay) {
+        return toDomain(jpa.findUnpairedBookedBetween(firstDay, lastDay));
     }
 
     private static List<BankPayment> toDomain(List<BankPaymentJpaEntity> entities) {

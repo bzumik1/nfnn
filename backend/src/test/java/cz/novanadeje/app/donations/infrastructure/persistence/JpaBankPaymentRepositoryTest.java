@@ -200,6 +200,24 @@ class JpaBankPaymentRepositoryTest {
     }
 
     @Test
+    @DisplayName("Given paired and unpaired payments around September, when unpaired ones booked in September are asked for, then only those inside it are returned")
+    void should_find_unpaired_payments_of_period_when_asked_given_payments_around_it() {
+        BankPayment paired = payment(1002, "2026-09-10", JANA_ACCOUNT, null);
+        payments.saveAll(List.of(
+                payment(1001, "2026-08-31", JANA_ACCOUNT, null),
+                paired,
+                payment(1003, "2026-09-01", JANA_ACCOUNT, null),
+                payment(1004, "2026-09-30", Optional.empty(), "1111111111"),
+                payment(1005, "2026-10-01", JANA_ACCOUNT, null)));
+        pair(paired, PairingMethod.SENDER_ACCOUNT);
+        flushAndClear();
+
+        assertThat(payments.findUnpairedBookedBetween(LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 30)))
+                .extracting(payment -> payment.transactionId().value())
+                .containsExactlyInAnyOrder(1003L, 1004L);
+    }
+
+    @Test
     void should_be_empty_when_found_by_id_given_unknown_id() {
         assertThat(payments.findById(BankPaymentId.newId(NOW))).isEmpty();
     }

@@ -84,6 +84,9 @@ app:
       on-demand-cooldown: PT30S
     pairing:
       excluded-accounts: ${PAIRING_EXCLUDED_ACCOUNTS:}
+    report:
+      cron: "0 0 7 * * *"
+      recipient: ${REPORT_RECIPIENT:${CONTACT_RECIPIENT:info@nfnn.cz}}
     fio:
       token: ${FIO_TOKEN:}
       base-uri: https://fioapi.fio.cz/v1/rest

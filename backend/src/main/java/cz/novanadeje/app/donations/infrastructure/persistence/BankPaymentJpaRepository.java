@@ -4,6 +4,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDate;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
@@ -26,4 +27,7 @@ public interface BankPaymentJpaRepository extends JpaRepository<BankPaymentJpaEn
 
     @Query(UNPAIRED + " and p.matchingVariableSymbol is null and p.senderAccountNumber = :number and p.senderBankCode = :code" + BY_BOOKING)
     List<BankPaymentJpaEntity> findUnpairedWithoutSymbolBySenderAccount(@Param("number") String number, @Param("code") String code);
+
+    @Query(UNPAIRED + " and p.bookedOn between :firstDay and :lastDay" + BY_BOOKING)
+    List<BankPaymentJpaEntity> findUnpairedBookedBetween(@Param("firstDay") LocalDate firstDay, @Param("lastDay") LocalDate lastDay);
 }

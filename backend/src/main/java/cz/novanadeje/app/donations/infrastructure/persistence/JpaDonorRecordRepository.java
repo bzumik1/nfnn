@@ -9,6 +9,7 @@ import cz.novanadeje.app.donations.domain.donor.SenderAccountLink;
 import cz.novanadeje.app.shared.domain.VariableSymbol;
 import org.springframework.stereotype.Repository;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -66,6 +67,11 @@ class JpaDonorRecordRepository implements DonorRecordRepository {
                 .distinct()
                 .toList();
         return jpa.findAllById(owners).stream().map(this::withAccounts).toList();
+    }
+
+    @Override
+    public long countRegisteredBefore(Instant end) {
+        return jpa.countByRegisteredAtBefore(end);
     }
 
     private DonorRecord withAccounts(DonorRecordJpaEntity entity) {

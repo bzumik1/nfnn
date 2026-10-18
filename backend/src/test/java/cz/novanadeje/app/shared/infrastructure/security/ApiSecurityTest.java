@@ -16,7 +16,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @Import(TestcontainersConfiguration.class)
-@SpringBootTest(properties = "app.donations.fio.token=")
+@SpringBootTest(properties = {"app.donations.fio.token=", "app.donations.report.cron=-"})
 @AutoConfigureMockMvc
 class ApiSecurityTest {
 

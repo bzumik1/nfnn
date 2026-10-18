@@ -6,7 +6,8 @@ import java.time.ZoneId;
 
 public final class FoundationCalendar {
 
-    public static final ZoneId ZONE = ZoneId.of("Europe/Prague");
+    public static final String ZONE_ID = "Europe/Prague";
+    public static final ZoneId ZONE = ZoneId.of(ZONE_ID);
 
     private FoundationCalendar() {
     }

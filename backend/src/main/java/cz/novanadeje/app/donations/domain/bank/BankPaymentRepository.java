@@ -2,6 +2,7 @@ package cz.novanadeje.app.donations.domain.bank;
 
 import cz.novanadeje.app.shared.domain.VariableSymbol;
 
+import java.time.LocalDate;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -20,4 +21,6 @@ public interface BankPaymentRepository {
     List<BankPayment> findUnpairedByMatchingVariableSymbol(VariableSymbol symbol);
 
     List<BankPayment> findUnpairedWithoutSymbolBySenderAccount(SenderAccount account);
+
+    List<BankPayment> findUnpairedBookedBetween(LocalDate firstDay, LocalDate lastDay);
 }

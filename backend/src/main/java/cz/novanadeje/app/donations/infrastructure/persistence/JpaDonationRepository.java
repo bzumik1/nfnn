@@ -7,6 +7,7 @@ import cz.novanadeje.app.donations.domain.donation.DonationRepository;
 import cz.novanadeje.app.donations.domain.donor.DonorReference;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -37,5 +38,10 @@ class JpaDonationRepository implements DonationRepository {
     @Override
     public Optional<Donation> findByIdForDonor(DonationId id, DonorReference donor) {
         return jpa.findByIdAndDonorId(id.value(), donor.value()).map(DonationJpaEntity::toDomain);
+    }
+
+    @Override
+    public List<Donation> findReceivedOnBetween(LocalDate firstDay, LocalDate lastDay) {
+        return jpa.findByReceivedOnBetween(firstDay, lastDay).stream().map(DonationJpaEntity::toDomain).toList();
     }
 }
