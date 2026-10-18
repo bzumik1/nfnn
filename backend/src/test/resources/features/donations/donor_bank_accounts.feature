@@ -177,10 +177,12 @@ Feature: A donor sees, adds and disconnects the bank accounts the foundation pai
     When "Jana" reconnects the connected bank account "2900233333/2010"
     Then the response status is 409
     And the problem type ends with "donations/bank-account-already-connected"
+    And the problem has the title "Párování z účtu už jste zapnuli"
     When "Jana" disconnects bank account "2900233333/2010"
     And "Jana" disconnects the disconnected bank account "2900233333/2010"
     Then the response status is 409
     And the problem type ends with "donations/bank-account-already-disconnected"
+    And the problem has the title "Párování z účtu je už vypnuté"
 
   Scenario: The bank accounts need a signed-in donor
     When someone without a token asks for the bank accounts

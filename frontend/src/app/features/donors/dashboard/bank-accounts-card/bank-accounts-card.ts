@@ -1,6 +1,6 @@
 /// <reference types="@angular/localize" />
 
-import { DOCUMENT } from '@angular/common';
+import { DOCUMENT, NgTemplateOutlet } from '@angular/common';
 import { afterNextRender, Component, computed, DestroyRef, ElementRef, inject, Injector, input, output, signal, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
@@ -43,17 +43,17 @@ const LABELS: Record<AccountLabel, string> = {
   active: $localize`:@@donor.bankAccounts.status.active:Ověřený`,
   shared: $localize`:@@donor.bankAccounts.status.shared:Sdílený`,
   awaiting: $localize`:@@donor.bankAccounts.status.awaiting:Čeká na platbu`,
-  disconnected: $localize`:@@donor.bankAccounts.status.disconnected:Odpojený`,
+  disconnected: $localize`:@@donor.bankAccounts.status.disconnected:Párování vypnuto`,
 };
 
 const HINTS: Record<AccountLabel, string> = {
   active: $localize`:@@donor.bankAccounts.hint.active:Platby bez variabilního symbolu z něj vám přiřazujeme automaticky.`,
-  shared: $localize`:@@donor.bankAccounts.hint.shared:Tento účet ověřil i jiný dárce, platby bez symbolu z něj proto nepřiřazujeme nikomu. Posílejte z něj prosím s vaším variabilním symbolem.`,
-  awaiting: $localize`:@@donor.bankAccounts.hint.awaiting:Pošlete z účtu 1 Kč s vaším variabilním symbolem, pak ho znovu připojíme.`,
+  shared: $localize`:@@donor.bankAccounts.hint.shared:Tento účet ověřil i jiný dárce, proto z něj platby bez variabilního symbolu nepřiřazujeme nikomu. Pokud z něj dary neposíláte vy, vypněte si u tohoto účtu párování. Jinak z něj prosím posílejte vždy s vaším variabilním symbolem.`,
+  awaiting: $localize`:@@donor.bankAccounts.hint.awaiting:Pošlete z účtu 1 Kč s vaším variabilním symbolem. Jakmile dorazí, přiřadíme vám z něj i platby bez symbolu ode dne zapnutí.`,
   disconnected: '',
 };
 
-const DISCONNECTED_MESSAGE = $localize`:@@donor.bankAccounts.disconnected:Účet jsme odpojili.`;
+const DISCONNECTED_MESSAGE = $localize`:@@donor.bankAccounts.disconnected:Párování z účtu jsme vypnuli.`;
 const RECONNECTED_MESSAGE = $localize`:@@donor.bankAccounts.reconnected:Účet čeká na vaši platbu 1 Kč.`;
 const CHANGE_FAILED = $localize`:@@donor.bankAccounts.error.change:Účet se nepodařilo změnit. Zkuste to prosím znovu.`;
 
@@ -66,7 +66,7 @@ const PAYMENT_WATCH_CHECKS = 20;
 
 @Component({
   selector: 'app-bank-accounts-card',
-  imports: [Dialog, CopyButton],
+  imports: [Dialog, CopyButton, NgTemplateOutlet],
   templateUrl: './bank-accounts-card.html',
   styleUrl: './bank-accounts-card.scss',
 })
@@ -86,6 +86,9 @@ export class BankAccountsCard {
 
   private readonly title = viewChild<ElementRef<HTMLElement>>('title');
   private readonly confirmCancel = viewChild<ElementRef<HTMLButtonElement>>('confirmCancel');
+  private readonly helpToggle = viewChild<ElementRef<HTMLButtonElement>>('helpToggle');
+
+  protected readonly helpOpen = signal(false);
 
   protected readonly state = signal<ListState>('loading');
   protected readonly accounts = signal<readonly BankAccountItem[]>([]);
@@ -124,6 +127,15 @@ export class BankAccountsCard {
 
   reload(): void {
     this.fetch();
+  }
+
+  protected toggleHelp(): void {
+    this.helpOpen.update((open) => !open);
+  }
+
+  protected closeHelp(): void {
+    this.helpOpen.set(false);
+    this.helpToggle()?.nativeElement.focus();
   }
 
   protected retry(): void {
@@ -166,6 +178,15 @@ export class BankAccountsCard {
 
   protected hint(account: BankAccountItem): string {
     return HINTS[labelOf(account)];
+  }
+
+  protected warns(account: BankAccountItem): boolean {
+    return labelOf(account) === 'shared';
+  }
+
+  protected offersReconnect(account: BankAccountItem): boolean {
+    const newestOfItsNumber = this.accounts().find((other) => other.accountNumber === account.accountNumber);
+    return account.status === 'DISCONNECTED' && newestOfItsNumber === account;
   }
 
   protected labelModifier(account: BankAccountItem): string {

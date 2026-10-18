@@ -36,6 +36,90 @@
   }
 }
 
+.accounts-heading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.accounts-help {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
+  border: 1px solid var(--color-border-accent);
+  border-radius: var(--radius-round);
+  font-family: var(--font-sans);
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+
+  &[aria-expanded='true'] {
+    background: var(--color-accent);
+    border-color: var(--color-accent);
+    color: var(--color-on-accent);
+  }
+}
+
+.accounts-help-panel {
+  margin-bottom: 16px;
+  padding: 14px 16px;
+  background: var(--color-surface-accent);
+  border: 1px solid var(--color-border-accent);
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--color-text-secondary);
+}
+
+.help-title {
+  font-family: var(--font-serif);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--color-text);
+  margin-bottom: 12px;
+}
+
+.help-list,
+.help-contact {
+  max-width: 520px;
+}
+
+.help-list {
+  display: grid;
+  gap: 10px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.help-lead {
+  display: block;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.help-symbol {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  color: var(--color-text);
+  white-space: nowrap;
+}
+
+.help-contact {
+  margin-top: 12px;
+
+  a {
+    color: var(--color-accent);
+    overflow-wrap: anywhere;
+  }
+}
+
 .accounts-add,
 .account-action,
 .account-confirm-no,
@@ -59,6 +143,7 @@
 }
 
 .accounts-add {
+  margin-left: auto;
   background: var(--color-accent);
   color: var(--color-on-accent);
   box-shadow: var(--shadow-button-sm);
@@ -158,9 +243,9 @@
 }
 
 .account-status--shared {
-  background: var(--color-accent-bg);
-  color: var(--color-text-secondary);
-  border: 1px dashed var(--color-border-accent);
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
+  border: 1px solid var(--color-warning-border);
 }
 
 .account-status--awaiting {
@@ -216,6 +301,23 @@
   font-size: 13px;
   line-height: 1.6;
   color: var(--color-text-muted);
+}
+
+.account-hint--warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 10px 12px;
+  background: var(--color-warning-bg);
+  border: 1px solid var(--color-warning-border);
+  border-radius: var(--radius-md);
+  color: var(--color-warning);
+}
+
+.account-hint-icon {
+  flex-shrink: 0;
+  margin-top: 3px;
 }
 
 .account--disconnected {
