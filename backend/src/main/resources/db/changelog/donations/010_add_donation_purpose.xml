@@ -12,7 +12,7 @@
             </column>
         </addColumn>
         <sql>update donation d set purpose = 'ACCOUNT_VERIFICATION' from bank_payment p
-            where d.bank_payment_id = p.id
+            where d.bank_payment_id = p.id and p.amount_minor = 100 and p.currency = 'CZK'
             and upper(regexp_replace(translate(p.message_for_recipient, 'ěščřžýáíéúůďťňóĚŠČŘŽÝÁÍÉÚŮĎŤŇÓ', 'escrzyaieuudtnoESCRZYAIEUUDTNO'), '\s+', ' ', 'g')) like '%OVERENI UCTU%'</sql>
         <dropDefaultValue tableName="donation" columnName="purpose"/>
         <sql>alter table donation add constraint ck_donation_purpose check (purpose in ('GENERAL', 'ACCOUNT_VERIFICATION'))</sql>
