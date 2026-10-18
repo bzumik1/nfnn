@@ -137,7 +137,7 @@ Implemented: register, login, refresh, logout, profile, password reset.
 }
 ```
 
-The access token is an HS256 JWT (`iss`, `sub` = donor id, `roles`, 15 minutes; `app.security.jwt.*`). The refresh token is **not** in the body: it ships as the `refresh_token` cookie (`HttpOnly; Secure; SameSite=Strict; Path=/api/donors/auth`, 14 days; `app.donors.session.refresh-token-ttl`), so only the auth endpoints ever receive it. The backend stores its SHA-256 hash in `donor_refresh_token`.
+The access token is an HS256 JWT (`iss`, `sub` = donor id, `roles`, 15 minutes; `app.security.jwt.*`). It is signed with `JWT_SECRET` (`app.security.jwt.secret`, at least 32 characters, `shared/infrastructure/security/JwtProperties`); only the dev profile has a default, and any other profile without it stops at startup with an error naming `JWT_SECRET`. The refresh token is **not** in the body: it ships as the `refresh_token` cookie (`HttpOnly; Secure; SameSite=Strict; Path=/api/donors/auth`, 14 days; `app.donors.session.refresh-token-ttl`), so only the auth endpoints ever receive it. The backend stores its SHA-256 hash in `donor_refresh_token`.
 
 #### `GET /api/donors/me` response
 

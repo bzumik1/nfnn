@@ -4,6 +4,7 @@
 *.iml
 .env
 .env.local
+*.env
 
 backend/.gradle/
 backend/build/

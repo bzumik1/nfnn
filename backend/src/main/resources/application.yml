@@ -103,7 +103,7 @@ app:
   security:
     jwt:
       issuer: nova-nadeje
-      secret: ${JWT_SECRET:change-me-in-production-this-is-only-for-local-development-32chars-min}
+      secret: ${JWT_SECRET:}
       access-token-ttl: PT15M
   donors:
     session:
