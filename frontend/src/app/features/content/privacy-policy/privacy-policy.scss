@@ -42,6 +42,14 @@
   line-height: 1.8;
 }
 
+.effective {
+  margin-top: 20px;
+  color: color-mix(in srgb, var(--color-on-inverse) 65%, transparent);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
 .body {
   padding-top: 80px;
   padding-bottom: 108px;

@@ -6,6 +6,7 @@
       <p class="lead" i18n="@@content.privacy.intro.lead">
         Vážíme si důvěry, kterou nám dáváte. Na této stránce vysvětlujeme, jaké osobní údaje zpracováváme, když si u nás založíte dárcovský účet, pošlete dar nebo nám napíšete, proč to děláme, jak dlouho údaje uchováváme a jaká máte práva.
       </p>
+      <p class="effective" i18n="@@content.privacy.intro.effective">Platné od 18.&nbsp;října&nbsp;2026</p>
     </div>
   </header>
 
@@ -40,6 +41,7 @@
             <li i18n="@@content.privacy.account.password">
               heslo, které ukládáme jen jako jednosměrný otisk (hash), takže ho nezná nikdo, ani my,
             </li>
+            <li i18n="@@content.privacy.account.language">jazyk, ve kterém vám vystavujeme potvrzení o daru,</li>
             <li i18n="@@content.privacy.account.variableSymbol">variabilní symbol, podle kterého poznáme vaše dary.</li>
           </ul>
           <p i18n="@@content.privacy.account.purpose">
@@ -56,15 +58,19 @@
         <div class="purpose">
           <h3 i18n="@@content.privacy.donations.title">Evidence darů a potvrzení o daru</h3>
           <p i18n="@@content.privacy.donations.intro">
-            Dary přijímáme na bankovní účet nadačního fondu. Z výpisů z tohoto účtu zpracováváme u každé přijaté platby:
+            Dary přijímáme na bankovní účet nadačního fondu. Z výpisů z tohoto účtu ukládáme každou přijatou platbu, i když ji nepřiřadíme k žádnému dárcovskému účtu, a zpracováváme u ní:
           </p>
           <ul>
             <li i18n="@@content.privacy.donations.amount">částku a datum platby,</li>
             <li i18n="@@content.privacy.donations.payer">číslo účtu a jméno plátce,</li>
-            <li i18n="@@content.privacy.donations.variableSymbol">variabilní symbol.</li>
+            <li i18n="@@content.privacy.donations.variableSymbol">variabilní, konstantní a specifický symbol,</li>
+            <li i18n="@@content.privacy.donations.message">zprávu pro příjemce, pokud ji k platbě připíšete.</li>
           </ul>
           <p i18n="@@content.privacy.donations.purpose">
-            Podle variabilního symbolu přiřadíme dar k vašemu dárcovskému účtu, zobrazíme ho v přehledu vašich darů a vystavíme k němu potvrzení o daru ve formátu PDF.
+            Dar přiřadíme k vašemu dárcovskému účtu podle vašeho variabilního symbolu. Platbu bez variabilního symbolu přiřadíme podle čísla účtu, ze kterého přišla, pokud jste nám tento účet prokázali platbou se svým variabilním symbolem; přiřadíme vám tak i dřívější platby bez symbolu z tohoto účtu. Jméno plátce k přiřazení nepoužíváme. Přiřazený dar zobrazíme v přehledu vašich darů a vystavíme k němu potvrzení o daru ve formátu PDF.
+          </p>
+          <p i18n="@@content.privacy.donations.accounts">
+            Čísla účtů, které jste nám takto prokázali, uchováváme u vašeho dárcovského účtu. Vidíte je v dárcovském portálu v části Moje bankovní účty a kterýkoli z nich tam můžete odpojit. Platby bez variabilního symbolu z odpojeného účtu vám pak už nepřiřazujeme, dary přiřazené dříve zůstávají.
           </p>
           <dl class="basis">
             <dt i18n="@@content.privacy.data.basisLabel">Právní základ</dt>
@@ -77,12 +83,28 @@
         <div class="purpose">
           <h3 i18n="@@content.privacy.contactForm.title">Kontaktní formulář</h3>
           <p i18n="@@content.privacy.contactForm.intro">
-            Když nám napíšete přes kontaktní formulář, zpracováváme vaše jméno, e&#8209;mailovou adresu a text zprávy. Zprávu uložíme a e&#8209;mailem ji přepošleme do schránky nadačního fondu, abychom vám mohli odpovědět. Uchováváme ji nejdéle jeden rok od odeslání.
+            Když nám napíšete přes kontaktní formulář, zpracováváme vaše jméno, e&#8209;mailovou adresu a text zprávy. Zprávu uložíme do databáze webu a e&#8209;mailem ji přepošleme do schránky nadačního fondu, abychom vám mohli odpovědět. Z databáze webu ji automaticky smažeme jeden rok po odeslání. Kopii, která nám přišla e&#8209;mailem, uchováváme ve schránce nadačního fondu jen po dobu potřebnou k vyřízení vašeho dotazu.
           </p>
           <dl class="basis">
             <dt i18n="@@content.privacy.data.basisLabel">Právní základ</dt>
             <dd i18n="@@content.privacy.contactForm.basis">
               Náš oprávněný zájem odpovědět na váš dotaz a vyřídit ho (čl.&nbsp;6 odst.&nbsp;1 písm.&nbsp;f) GDPR).
+            </dd>
+          </dl>
+        </div>
+
+        <div class="purpose">
+          <h3 i18n="@@content.privacy.ipAddress.title">IP adresa a záznamy serveru</h3>
+          <p i18n="@@content.privacy.ipAddress.limits">
+            Abychom kontaktní formulář a obnovu hesla ochránili před zneužitím, počítáme, kolik žádostí přišlo z jedné IP adresy za poslední hodinu: z jedné adresy přijmeme nejvýš pět zpráv z formuláře a pět žádostí o obnovu hesla. Adresu k tomu držíme jen v operační paměti serveru, nejvýš hodinu, a do databáze ji neukládáme.
+          </p>
+          <p i18n="@@content.privacy.ipAddress.logs">
+            Webový server zapisuje každý požadavek na web do svého provozního záznamu (logu): IP adresu, čas, adresu požadované stránky, adresu stránky, ze které jste přišli, a údaj o prohlížeči. Záznamy používáme jen k řešení poruch a k ochraně webu a nikomu je nepředáváme. Server je průběžně přepisuje: nejstarší záznamy smaže, jakmile jejich objem překročí pevně nastavený limit.
+          </p>
+          <dl class="basis">
+            <dt i18n="@@content.privacy.data.basisLabel">Právní základ</dt>
+            <dd i18n="@@content.privacy.ipAddress.basis">
+              Náš oprávněný zájem na bezpečném provozu webu a na jeho ochraně před zneužitím (čl.&nbsp;6 odst.&nbsp;1 písm.&nbsp;f) GDPR).
             </dd>
           </dl>
         </div>
@@ -94,11 +116,19 @@
         <ul>
           <li i18n="@@content.privacy.retention.account">údaje dárcovského účtu po celou dobu trvání účtu,</li>
           <li i18n="@@content.privacy.retention.donations">
-            záznamy o darech a vystavená potvrzení o daru po dobu, kterou stanoví účetní a daňové předpisy, a to i po zrušení dárcovského účtu,
+            záznamy o přijatých platbách a darech a vystavená potvrzení o daru po dobu, kterou stanoví účetní a daňové předpisy, a to i po zrušení dárcovského účtu,
           </li>
-          <li i18n="@@content.privacy.retention.contactForm">zprávy z kontaktního formuláře nejdéle jeden rok od odeslání.</li>
+          <li i18n="@@content.privacy.retention.contactForm">
+            zprávy z kontaktního formuláře v databázi webu jeden rok od odeslání, kopii doručenou e&#8209;mailem jen po dobu potřebnou k vyřízení dotazu,
+          </li>
+          <li i18n="@@content.privacy.retention.ipAddress">
+            IP adresu pro omezení počtu žádostí nejvýš hodinu, v záznamech webového serveru do jejich přepsání.
+          </li>
         </ul>
         <p i18n="@@content.privacy.retention.deletion">Jakmile údaje přestaneme potřebovat, smažeme je.</p>
+        <p i18n="@@content.privacy.retention.backups">
+          Databázi webu každý den zálohujeme a zálohy uchováváme přibližně jeden měsíc. Smazané údaje proto ze záloh zmizí nejpozději po této době.
+        </p>
       </section>
 
       <section>
@@ -108,7 +138,13 @@
         </p>
         <ul>
           <li i18n="@@content.privacy.recipients.email">
-            poskytovateli e&#8209;mailových služeb, přes kterého odesíláme e&#8209;maily a přeposíláme zprávy z kontaktního formuláře,
+            společnosti Sendinblue SAS se sídlem ve Francii (služba Brevo), přes kterou web odesílá e&#8209;maily: odkazy pro obnovu hesla a zprávy z kontaktního formuláře přeposílané do schránky nadačního fondu; Brevo u odeslaných e&#8209;mailů zaznamenává, zda byly otevřeny a zda příjemce klikl na odkaz (odkazy proto vedou nejprve přes jeho server), a v bezplatném tarifu, který používáme, to vypnout nejde,
+          </li>
+          <li i18n="@@content.privacy.recipients.cloudflare">
+            společnosti Cloudflare, Inc. z USA, která pro nás zajišťuje DNS domény nfnn.cz a přeposílá e&#8209;maily zaslané na adresu info&#64;nfnn.cz, včetně zpráv z kontaktního formuláře, do naší e&#8209;mailové schránky; pokud web otevíráte na adrese nfnn.cz, prochází přes Cloudflare i provoz webu včetně vaší IP adresy,
+          </li>
+          <li i18n="@@content.privacy.recipients.google">
+            společnosti Google, v jejíž e&#8209;mailové službě Gmail je schránka, do které e&#8209;maily pro info&#64;nfnn.cz přicházejí a ze které je vyřizujeme,
           </li>
           <li i18n="@@content.privacy.recipients.bank">
             Fio bance, a.s., která vede bankovní účet nadačního fondu a z jejíchž výpisů načítáme přijaté dary,
@@ -117,8 +153,11 @@
             orgánům veřejné moci, například finančnímu úřadu, pokud nám to ukládá zákon.
           </li>
         </ul>
+        <p i18n="@@content.privacy.recipients.transfers">
+          Cloudflare a Google mohou údaje zpracovávat i mimo Evropskou unii, zejména v USA. Obě společnosti se zapojily do rámce pro ochranu údajů mezi EU a USA (EU&#8209;US Data Privacy Framework), u kterého Evropská komise rozhodla, že údajům zajišťuje odpovídající ochranu. Kde se tento rámec neuplatní, chrání předávané údaje standardní smluvní doložky schválené Evropskou komisí.
+        </p>
         <p i18n="@@content.privacy.recipients.hosting">
-          Web a jeho databázi provozujeme na vlastní infrastruktuře, nikoli u externího poskytovatele hostingu.
+          Web a jeho databáze běží na našem vlastním serveru, nikoli u externího poskytovatele hostingu. Brevo, Cloudflare a Google pro nás zajišťují jen odesílání a příjem e&#8209;mailů a přenos provozu webu.
         </p>
       </section>
 
@@ -179,7 +218,7 @@
       <section>
         <h2 i18n="@@content.privacy.effective.title">Účinnost</h2>
         <p i18n="@@content.privacy.effective.text">
-          Tyto zásady jsou účinné od 1.&nbsp;1.&nbsp;2026. Pokud je změníme, nové znění zveřejníme na této stránce.
+          Tyto zásady jsou účinné od 18.&nbsp;října&nbsp;2026. Pokud je změníme, nové znění zveřejníme na této stránce.
         </p>
       </section>
     </div>

@@ -61,6 +61,8 @@ Web fondu, který představí fond a jeho pomoc dětem, usnadní darování a d�
 - ✅ E-mail fondu `info@nfnn.cz` (příjem funguje od 18. 10. 2026): příchozí pošta se přeposílá přes Cloudflare Email Routing, web odesílá přes Brevo.
 - ✅ Fond dostává každý měsíc e-mailem přehled za minulý měsíc (dárci, dary, nespárované platby, stav importu z banky) na `REPORT_RECIPIENT`, výchozí `info@nfnn.cz`. Zároveň tím Brevo neshodí SMTP klíč po 90 dnech bez odeslaného e-mailu. Správa přehledu přijde s administrací.
 - 🔸 Angular + Spring Boot + PostgreSQL podle repa `bzumik1/nfnn`. Čeština; angličtina připravená na později.
+- 🔸 Zprávy z kontaktního formuláře web smaže ze své databáze rok po odeslání (každý den ve 3:30). Kopii ve schránce fondu web smazat neumí; zásady slibují, že ji fond drží jen do vyřízení dotazu.
+- 🔸 Zásady ochrany osobních údajů popisují, co web skutečně dělá: párování podle VS i podle prokázaného účtu, uložené údaje z výpisu (i konstantní a specifický symbol a zprávu pro příjemce), IP adresy v limitech a v logu webového serveru, Brevo (měří otevření a kliky), Cloudflare a Gmail včetně předání do USA a zálohy. ❓ Datum účinnosti 18. 10. 2026 potvrdí Jakub při kontrole textu.
 
 ## 7. Později, mimo první verzi
 
