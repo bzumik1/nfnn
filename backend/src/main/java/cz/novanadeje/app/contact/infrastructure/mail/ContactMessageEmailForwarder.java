@@ -1,6 +1,7 @@
 package cz.novanadeje.app.contact.infrastructure.mail;
 
 import cz.novanadeje.app.contact.application.event.ContactMessageReceived;
+import cz.novanadeje.app.shared.infrastructure.mail.MailSenderProperties;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import org.springframework.context.MessageSource;
@@ -28,12 +29,15 @@ class ContactMessageEmailForwarder {
     private final ITemplateEngine templates;
     private final MessageSource messages;
     private final ContactMailProperties properties;
+    private final MailSenderProperties sender;
 
-    ContactMessageEmailForwarder(JavaMailSender mailSender, ITemplateEngine templates, MessageSource messages, ContactMailProperties properties) {
+    ContactMessageEmailForwarder(JavaMailSender mailSender, ITemplateEngine templates, MessageSource messages, ContactMailProperties properties,
+                                 MailSenderProperties sender) {
         this.mailSender = mailSender;
         this.templates = templates;
         this.messages = messages;
         this.properties = properties;
+        this.sender = sender;
     }
 
     @Async
@@ -41,7 +45,7 @@ class ContactMessageEmailForwarder {
     public void forward(ContactMessageReceived event) throws MessagingException {
         MimeMessage email = mailSender.createMimeMessage();
         MimeMessageHelper helper = new MimeMessageHelper(email, "UTF-8");
-        helper.setFrom(properties.senderEmail());
+        helper.setFrom(sender.senderEmail());
         helper.setTo(properties.recipientEmail());
         helper.setReplyTo(event.senderEmail().value());
         helper.setSubject(messages.getMessage("contact.email.subject", new Object[]{event.senderName()}, FOUNDATION_LOCALE));

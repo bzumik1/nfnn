@@ -6,7 +6,8 @@ import java.util.regex.Pattern;
 public record EmailAddress(String value) {
 
     private static final int MAX_LENGTH = 254;
-    private static final Pattern SHAPE = Pattern.compile("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$");
+    public static final String SHAPE_REGEX = "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$";
+    private static final Pattern SHAPE = Pattern.compile(SHAPE_REGEX);
 
     public EmailAddress {
         if (value == null) {

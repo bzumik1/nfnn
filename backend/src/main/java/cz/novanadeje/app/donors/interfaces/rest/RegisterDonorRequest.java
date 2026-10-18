@@ -25,4 +25,10 @@ record RegisterDonorRequest(
         return new RegisterDonorCommand(type, name, companyIdentifier, address.street(), address.city(), address.postalCode(),
                 email, password, preferredLocale);
     }
+
+    @Override
+    public String toString() {
+        return "RegisterDonorRequest[type=" + type + ", name=***, companyIdentifier=" + companyIdentifier
+                + ", address=***, email=***, password=***, preferredLocale=" + preferredLocale + "]";
+    }
 }

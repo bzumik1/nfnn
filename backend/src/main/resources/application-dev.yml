@@ -5,6 +5,10 @@ spring:
       hibernate:
         format_sql: true
 
+app:
+  site:
+    public-url: ${PUBLIC_URL:http://localhost:4200}
+
 logging:
   level:
     cz.novanadeje.app: DEBUG

@@ -3,7 +3,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { AuthStore } from '../../../core/auth/auth-store';
-import { LoginDialogService } from '../../../core/auth/login-dialog.service';
+import { LoginDialogMode, LoginDialogService } from '../../../core/auth/login-dialog.service';
 import { authResponse, problem, sampleDonor } from '../../../core/auth/testing/donor-fixtures';
 import { LoginDialog } from './login-dialog';
 
@@ -21,14 +21,17 @@ describe('Given the sign-in dialog', () => {
     }).compileComponents();
     http = TestBed.inject(HttpTestingController);
     dialog = TestBed.inject(LoginDialogService);
-    dialog.open();
     navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
-    fixture = TestBed.createComponent(LoginDialog);
-    fixture.detectChanges();
-    await fixture.whenStable();
   });
 
   afterEach(() => http.verify());
+
+  async function render(mode: LoginDialogMode = 'login'): Promise<void> {
+    dialog.open(mode);
+    fixture = TestBed.createComponent(LoginDialog);
+    fixture.detectChanges();
+    await fixture.whenStable();
+  }
 
   function element<T extends HTMLElement>(selector: string): T {
     return fixture.nativeElement.querySelector(selector) as T;
@@ -60,6 +63,8 @@ describe('Given the sign-in dialog', () => {
   }
 
   describe('when a donor signs in', () => {
+    beforeEach(() => render());
+
     it('with the right password, then the dialog closes and the donor portal opens', async () => {
       await fillIn('#login-email', 'jana@example.cz');
       await fillIn('#login-password', 'correct horse battery');
@@ -105,7 +110,10 @@ describe('Given the sign-in dialog', () => {
   });
 
   describe('when a visitor registers', () => {
-    beforeEach(() => click('.tab-switch button:nth-child(2)'));
+    beforeEach(async () => {
+      await render();
+      await click('.tab-switch button:nth-child(2)');
+    });
 
     async function fillInPerson(): Promise<void> {
       await fillIn('#register-name', 'Jana Nováková');
@@ -198,6 +206,88 @@ describe('Given the sign-in dialog', () => {
       await settle();
 
       expect(element('.form-error').textContent).toContain('nepodařilo');
+    });
+  });
+
+  describe('when a donor asks for a password reset link', () => {
+    beforeEach(() => render('reset'));
+
+    async function requestLink(email: string): Promise<void> {
+      await fillIn('#reset-email', email);
+      await submit('.reset-form');
+    }
+
+    it('opened on the reset tab, then the reset form is shown straight away', () => {
+      expect(element('.reset-title').textContent).toContain('Obnovení hesla');
+      expect(element('#reset-email')).not.toBeNull();
+    });
+
+    it('from the sign-in tab, then the link switches to the reset form', async () => {
+      await click('.reset-back');
+      await click('.foot .link-btn');
+
+      expect(element('.reset-form')).not.toBeNull();
+    });
+
+    it('with a valid address, then the trimmed address is sent and the sent panel replaces the form', async () => {
+      await requestLink('  jana@example.cz ');
+
+      expect(element<HTMLButtonElement>('.reset-form .form-submit').disabled).toBe(true);
+      const request = http.expectOne('/api/donors/auth/password-reset/request');
+      expect(request.request.method).toBe('POST');
+      expect(request.request.body).toEqual({ email: 'jana@example.cz' });
+      request.flush(null, { status: 202, statusText: 'Accepted' });
+      await settle();
+
+      expect(element('.reset-success h3').textContent).toContain('E-mail odeslán!');
+      expect(element('.reset-success').textContent).toContain('Pokud účet s touto adresou existuje');
+      expect(element('.reset-form')).toBeNull();
+    });
+
+    it('with a malformed address, then nothing is sent', async () => {
+      await requestLink('jana-at-example');
+
+      http.expectNone('/api/donors/auth/password-reset/request');
+      expect(element('.form-error').textContent).toContain('Vyplňte');
+    });
+
+    it('too many times, then the dialog asks to wait an hour', async () => {
+      await requestLink('jana@example.cz');
+      http
+        .expectOne('/api/donors/auth/password-reset/request')
+        .flush(problem('donors/rate-limited', 'Příliš mnoho požadavků', 'Zkuste to prosím znovu později.'), {
+          status: 429,
+          statusText: 'Too Many Requests',
+        });
+      await settle();
+
+      expect(element('.form-error').textContent).toContain(
+        'Odeslali jste příliš mnoho žádostí. Zkuste to prosím za hodinu.',
+      );
+      expect(element('.reset-success')).toBeNull();
+      expect(element<HTMLButtonElement>('.reset-form .form-submit').disabled).toBe(false);
+    });
+
+    it('and the server refuses the address, then the problem is shown', async () => {
+      await requestLink('jana@example.cz');
+      http.expectOne('/api/donors/auth/password-reset/request').flush(
+        {
+          ...problem('validation', 'Neplatný požadavek'),
+          errors: [{ field: 'email', message: 'Zadejte platný e-mail.' }],
+        },
+        { status: 400, statusText: 'Bad Request' },
+      );
+      await settle();
+
+      expect(element('.form-error').textContent).toContain('Neplatný požadavek. Zadejte platný e-mail.');
+    });
+
+    it('and the server fails, then the dialog shows a generic error', async () => {
+      await requestLink('jana@example.cz');
+      http.expectOne('/api/donors/auth/password-reset/request').flush(null, { status: 502, statusText: 'Bad Gateway' });
+      await settle();
+
+      expect(element('.form-error').textContent).toContain('Spojení se serverem se nepodařilo');
     });
   });
 });

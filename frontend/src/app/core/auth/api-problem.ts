@@ -36,6 +36,15 @@ export function problemTypeEndsWith(failure: unknown, suffix: string): boolean {
   return problem !== null && problem.type.endsWith(suffix);
 }
 
+export function describeProblem(failure: unknown, generic: string): string {
+  const problem = problemOf(failure);
+  if (problem === null || problem.title === '') {
+    return generic;
+  }
+  const fieldMessages = problem.errors.map((error) => error.message).filter((message) => message !== '');
+  return [problem.title + '.', problem.detail, ...fieldMessages].filter((part) => part !== '').join(' ');
+}
+
 function errorOf(value: unknown): ApiProblemError {
   const fields = (value ?? {}) as Record<string, unknown>;
   return { field: stringOf(fields['field']), message: stringOf(fields['message']) };
