@@ -55,7 +55,7 @@ class BankPaymentTest {
     }
 
     @Test
-    void should_tell_whether_a_sender_is_known_when_asked() {
+    void should_tell_whether_a_sender_is_known_when_asked_given_czech_or_foreign_payer() {
         assertThat(paymentWithSymbol(null).hasSender()).isTrue();
         BankPayment foreign = BankPayment.incoming(PAYMENT_ID, IncomingMovement.of(new BankTransactionId(1), LocalDate.of(2026, 10, 15),
                 Money.czk(100), SenderAccount.parse("DE89370400440532013000", null), Optional.of("DE89370400440532013000"),

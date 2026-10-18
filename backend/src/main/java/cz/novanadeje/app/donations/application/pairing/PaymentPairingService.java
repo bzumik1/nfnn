@@ -33,7 +33,7 @@ import java.util.Set;
 @Transactional
 public class PaymentPairingService {
 
-    private static final Logger LOG = LoggerFactory.getLogger(PaymentPairingService.class);
+    private static final Logger log = LoggerFactory.getLogger(PaymentPairingService.class);
 
     private final BankPaymentRepository payments;
     private final DonorRecordRepository donorRecords;
@@ -81,7 +81,7 @@ public class PaymentPairingService {
         for (LearnedSenderAccount account : learned) {
             List<DonorRecord> owners = donorRecords.findBySenderAccount(account.account());
             if (!isSoleOwner(record, owners)) {
-                LOG.debug("Sender account {} of donor {} is shared with other donors; its payments without a symbol stay unpaired",
+                log.debug("Sender account {} of donor {} is shared with other donors; its payments without a symbol stay unpaired",
                         account.account().display(), record.id());
                 continue;
             }
@@ -90,7 +90,7 @@ public class PaymentPairingService {
             }
         }
         PairingOutcome outcome = tally.outcome();
-        LOG.info("Payments of donor {} paired after the registration: {} by symbol, {} by account, {} accounts learned", record.id(),
+        log.info("Payments of donor {} paired after the registration: {} by symbol, {} by account, {} accounts learned", record.id(),
                 outcome.pairedBySymbol(), outcome.pairedByAccount(), outcome.accountsLearned());
         return outcome;
     }
@@ -105,7 +105,7 @@ public class PaymentPairingService {
                 learned.ifPresent(account -> {
                     donorRecords.addSenderAccount(donor.id(), account);
                     tally.accountsLearned++;
-                    LOG.debug("Donor {} learned sender account {} from bank payment {}", donor.id(), account.account().display(),
+                    log.debug("Donor {} learned sender account {} from bank payment {}", donor.id(), account.account().display(),
                             payment.transactionId());
                 });
                 yield learned;
@@ -129,7 +129,7 @@ public class PaymentPairingService {
             }
             case PairingDecision.LeaveUnpaired(UnpairedReason reason) -> {
                 if (reason == UnpairedReason.AMBIGUOUS_SENDER_ACCOUNT && reportedAmbiguous.add(payment.sender().orElseThrow())) {
-                    LOG.warn("Bank payment {} without a variable symbol stays unpaired: its sender account was learned by several donors; "
+                    log.warn("Bank payment {} without a variable symbol stays unpaired: its sender account was learned by several donors; "
                             + "later payments from that account stay unpaired too until they are paired by hand", payment.transactionId());
                 }
                 leaveUnpaired(payment, reason, tally);
@@ -141,17 +141,17 @@ public class PaymentPairingService {
 
     private boolean recordDonation(DonorRecord donor, BankPayment payment, PairingMethod method, Instant now) {
         if (donations.existsForBankPayment(payment.id())) {
-            LOG.debug("Bank payment {} already has a donation", payment.transactionId());
+            log.debug("Bank payment {} already has a donation", payment.transactionId());
             return false;
         }
         donations.save(Donation.fromBankPayment(DonationId.newId(now), donor.id(), payment, method, now));
-        LOG.debug("Bank payment {} paired with donor {} by {}", payment.transactionId(), donor.id(), method);
+        log.debug("Bank payment {} paired with donor {} by {}", payment.transactionId(), donor.id(), method);
         return true;
     }
 
     private static void leaveUnpaired(BankPayment payment, UnpairedReason reason, Tally tally) {
         tally.leftUnpaired++;
-        LOG.debug("Bank payment {} stays unpaired: {} (symbol {}, sender {})", payment.transactionId(), reason,
+        log.debug("Bank payment {} stays unpaired: {} (symbol {}, sender {})", payment.transactionId(), reason,
                 payment.variableSymbol().orElse("none"), payment.sender().map(SenderAccount::display).orElse("none"));
     }
 

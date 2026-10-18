@@ -1,5 +1,9 @@
 package cz.novanadeje.app.donations.infrastructure.fio;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import cz.novanadeje.app.donations.application.importing.BankStatement;
 import cz.novanadeje.app.donations.application.importing.BankStatementUnavailable;
 import cz.novanadeje.app.donations.domain.bank.BankTransactionId;
@@ -20,9 +24,11 @@ import cz.novanadeje.fio.FioRateLimitException;
 import cz.novanadeje.fio.FioStatement;
 import cz.novanadeje.fio.FioTransaction;
 import cz.novanadeje.fio.FioTransportException;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -46,12 +52,21 @@ class FioBankStatementSourceTest {
     private MutableClock clock;
     private StubFioClient fio;
     private FioBankStatementSource source;
+    private ListAppender<ILoggingEvent> log;
 
     @BeforeEach
     void setUp() {
         clock = new MutableClock(NOW, ZoneId.of("UTC"));
         fio = new StubFioClient();
         source = new FioBankStatementSource(fio, clock);
+        log = new ListAppender<>();
+        log.start();
+        logger().addAppender(log);
+    }
+
+    @AfterEach
+    void releaseLog() {
+        logger().detachAppender(log);
     }
 
     @Test
@@ -85,6 +100,7 @@ class FioBankStatementSourceTest {
             assertThat(movement.transactionType()).isEqualTo("Bezhotovostní příjem");
         });
         assertThat(statement.requested()).isEqualTo(REQUESTED);
+        assertThat(messages(Level.WARN)).containsExactly("Fio movement 1004 is in EUR, not CZK; it is not imported");
     }
 
     @Test
@@ -96,6 +112,31 @@ class FioBankStatementSourceTest {
 
         assertThat(statement.movementsReceived()).isEqualTo(2);
         assertThat(statement.incoming()).extracting(IncomingMovement::id).containsExactly(new BankTransactionId(1002));
+        assertThat(messages(Level.WARN)).containsExactly("Fio movement 1001 has an amount that is not a whole number of hellers; it is not imported");
+    }
+
+    @Test
+    @DisplayName("Given a skipped movement from a named payer, when the statement is fetched, then its warning names the movement but never the payer or the account")
+    void should_keep_payer_out_of_warning_when_fetched_given_skipped_named_payer() {
+        fio.answer(statement(null, null,
+                FioMovements.incoming(1004, DAY, "20.00").inCurrency("EUR").from("2900233333", "2010").named("Nováková Jana").build()));
+
+        source.fetch(REQUESTED);
+
+        assertThat(messages(Level.WARN)).singleElement().asString().doesNotContain("Nováková").doesNotContain("2900233333");
+    }
+
+    @Test
+    @DisplayName("Given the bank's answer, when the statement is fetched, then one info line names the requested and reported periods, the id range and the movement count")
+    void should_log_bank_answer_when_fetched_given_statement() {
+        fio.answer(new FioStatement(new FioAccountInfo("5544332217", "2010", "CZK", "CZ2620100000005544332217", "FIOBCZPPXXX",
+                BigDecimal.ZERO, BigDecimal.ZERO, LocalDate.of(2026, 7, 20), LocalDate.of(2026, 10, 17), 1001L, 1002L, null),
+                List.of(FioMovements.incoming(1001, DAY, "500.00").build(), FioMovements.incoming(1002, DAY, "300.00").build())));
+
+        source.fetch(REQUESTED);
+
+        assertThat(messages(Level.INFO)).containsExactly(
+                "Fio answered 2026-07-20/2026-10-17: reported 2026-07-20/2026-10-17 ids 1001-1002, 2 movements");
     }
 
     @Test
@@ -196,6 +237,14 @@ class FioBankStatementSourceTest {
 
         fio.fail(new FioException("refused with HTTP 404", 404, ""));
         assertThat(unavailable().kind()).isEqualTo(ImportFailureKind.UNEXPECTED);
+    }
+
+    private List<String> messages(Level level) {
+        return log.list.stream().filter(event -> event.getLevel() == level).map(ILoggingEvent::getFormattedMessage).toList();
+    }
+
+    private static Logger logger() {
+        return (Logger) LoggerFactory.getLogger(FioBankStatementSource.class);
     }
 
     private BankStatementUnavailable unavailable() {

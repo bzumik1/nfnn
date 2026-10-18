@@ -44,12 +44,12 @@ class ImportPeriodTest {
     }
 
     @Test
-    void should_span_both_when_united() {
+    void should_span_both_when_united_given_overlapping_periods() {
         assertThat(period("2026-10-01", "2026-10-10").union(period("2026-10-05", "2026-10-20"))).isEqualTo(period("2026-10-01", "2026-10-20"));
     }
 
     @Test
-    void should_print_from_slash_to_when_printed() {
+    void should_print_from_slash_to_when_printed_given_period() {
         assertThat(period("2026-10-01", "2026-10-10")).hasToString("2026-10-01/2026-10-10");
     }
 

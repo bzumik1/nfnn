@@ -75,7 +75,7 @@ class BankImportStateTest {
     }
 
     @Test
-    void should_keep_every_field_when_reconstituted() {
+    void should_keep_every_field_when_reconstituted_given_stored_state() {
         BankImportState state = BankImportState.reconstitute(coverage("2026-07-20", "2026-10-17"), Optional.of(LATER), Optional.of(CREATED),
                 Optional.of(ImportFailureKind.RATE_LIMITED), Optional.of("409"), LATER);
 

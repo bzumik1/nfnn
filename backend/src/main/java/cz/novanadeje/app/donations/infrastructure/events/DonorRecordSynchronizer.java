@@ -14,7 +14,7 @@ import org.springframework.transaction.event.TransactionalEventListener;
 @Component
 class DonorRecordSynchronizer {
 
-    private static final Logger LOG = LoggerFactory.getLogger(DonorRecordSynchronizer.class);
+    private static final Logger log = LoggerFactory.getLogger(DonorRecordSynchronizer.class);
 
     private final DonorRecordService donorRecordService;
 
@@ -33,7 +33,7 @@ class DonorRecordSynchronizer {
         try {
             donorRecordService.pairPaymentsOf(event.donorId());
         } catch (RuntimeException e) {
-            LOG.warn("Pairing the payments of donor {} after the registration failed; the hourly import pairs them", event.donorId(), e);
+            log.warn("Pairing the payments of donor {} after the registration failed; the hourly import pairs them", event.donorId(), e);
         }
     }
 

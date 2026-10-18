@@ -20,7 +20,7 @@ class ImportPlannerTest {
     private static final ImportSettings DEEP = withHistoryFrom("2025-01-01");
 
     @Test
-    void should_default_to_three_days_overlap_and_eighty_nine_days_window_when_defaults_asked() {
+    void should_default_to_three_days_overlap_and_eighty_nine_days_window_when_defaults_asked_given_no_configuration() {
         assertThat(DEFAULTS).isEqualTo(new ImportSettings(Period.ofDays(3), Period.ofDays(89), Optional.empty()));
     }
 
