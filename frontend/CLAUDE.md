@@ -87,7 +87,7 @@ src/
       donors/
         donors.routes.ts      `'prehled'` → dashboard (the whole `/donor` branch sits behind `donorGuard` in app.routes.ts).
         login-dialog/         Sign-in / registration dialog opened from the header; posts through AuthStore and shows the problem's title and detail on failure. The password-reset tab is still a mock (task 7).
-        dashboard/            Donor portal: greeting, variable symbol, sign-out; stat cards, year toggle and payments table from DonationsApi (summary + full list on open, signals `state` loading/ready/error, retry, empty state). "PDF" buttons still open the Receipt mock.
+        dashboard/            Donor portal: greeting, variable symbol, sign-out; stat cards, year toggle and payments table from DonationsApi (summary + full list on open, signals `state` loading/ready/error, retry, empty state; a 401 `auth/unauthenticated` or a session forgotten by a failed refresh sends the donor home with the sign-in dialog, like `donorGuard`). "PDF" buttons still open the Receipt mock.
 public/
   favicon.ico
   images/                     Site imagery (hero, about, donate, news1-3, proj1-5, logo). Reference as `/images/<file>`.

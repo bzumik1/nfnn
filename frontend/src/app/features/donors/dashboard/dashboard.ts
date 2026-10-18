@@ -2,7 +2,9 @@ import { Component, computed, DestroyRef, inject, linkedSignal, signal } from '@
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router, RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
+import { problemTypeEndsWith } from '../../../core/auth/api-problem';
 import { AuthStore } from '../../../core/auth/auth-store';
+import { LoginDialogService } from '../../../core/auth/login-dialog.service';
 import { formatCrowns } from '../../donations/donation-amount';
 import { formatDonationDate } from '../../donations/donation-date';
 import {
@@ -26,6 +28,7 @@ const STATUS_LABELS: Record<DonationStatus, string> = {
 };
 
 const MINOR_UNITS_PER_CROWN = 100;
+const UNAUTHENTICATED = 'auth/unauthenticated';
 
 @Component({
   selector: 'app-donor-dashboard',
@@ -36,6 +39,7 @@ const MINOR_UNITS_PER_CROWN = 100;
 export class DonorDashboard {
   private readonly router = inject(Router);
   private readonly auth = inject(AuthStore);
+  private readonly loginDialog = inject(LoginDialogService);
   private readonly donations = inject(DonationsApi);
   private readonly destroyRef = inject(DestroyRef);
 
@@ -75,8 +79,23 @@ export class DonorDashboard {
           this.items.set(list.items);
           this.state.set('ready');
         },
-        error: () => this.state.set('error'),
+        error: (failure: unknown) => {
+          if (this.sessionEnded(failure)) {
+            this.sendToSignIn();
+            return;
+          }
+          this.state.set('error');
+        },
       });
+  }
+
+  private sessionEnded(failure: unknown): boolean {
+    return problemTypeEndsWith(failure, UNAUTHENTICATED) || this.auth.status() === 'anonymous';
+  }
+
+  private sendToSignIn(): void {
+    this.loginDialog.open();
+    void this.router.navigateByUrl('/');
   }
 
   protected crowns(amountMinor: number): string {

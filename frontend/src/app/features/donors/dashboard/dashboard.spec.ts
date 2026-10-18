@@ -4,6 +4,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { provideRouter, Router } from '@angular/router';
 import { AuthStore } from '../../../core/auth/auth-store';
+import { LoginDialogService } from '../../../core/auth/login-dialog.service';
 import { authResponse, sampleDonor } from '../../../core/auth/testing/donor-fixtures';
 import { DonationListResponse, DonationSummaryResponse } from '../../donations/donations-api';
 import { Receipt, ReceiptInput } from '../../donations/receipt/receipt';
@@ -251,6 +252,35 @@ describe('Given a signed-in donor on the dashboard', () => {
 
     expect(element('[role="alert"]')).toBeNull();
     expect(texts('.stat-value')).toEqual(['1 750 Kč', '3', '15. 03. 2026']);
+  });
+
+  it('when the session has ended, then the donor is sent home to sign in instead of being offered a retry', async () => {
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+    http.expectOne('/api/donations/me').flush(twoYearDonations());
+    http.expectOne('/api/donations/me/summary').flush(
+      { type: 'https://novanadeje.cz/problems/auth/unauthenticated', title: 'Přihlaste se', status: 401 },
+      { status: 401, statusText: 'Unauthorized' },
+    );
+    await settle();
+
+    expect(element('[role="alert"]')).toBeNull();
+    expect(TestBed.inject(LoginDialogService).isOpen()).toBe(true);
+    expect(navigate).toHaveBeenCalledWith('/');
+  });
+
+  it('when the session was forgotten while the donations were loading, then the donor is sent home to sign in', async () => {
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+    const sessionLost = { type: 'https://novanadeje.cz/problems/auth/invalid-refresh-token', title: 'Přihlaste se znovu', status: 401 };
+    store.refresh().subscribe({ error: () => undefined });
+    http.expectOne('/api/donors/auth/refresh').flush(sessionLost, { status: 401, statusText: 'Unauthorized' });
+    http.expectOne('/api/donations/me').flush(twoYearDonations());
+    http.expectOne('/api/donations/me/summary').flush(sessionLost, { status: 401, statusText: 'Unauthorized' });
+    await settle();
+
+    expect(store.signedIn()).toBe(false);
+    expect(element('[role="alert"]')).toBeNull();
+    expect(TestBed.inject(LoginDialogService).isOpen()).toBe(true);
+    expect(navigate).toHaveBeenCalledWith('/');
   });
 
   it('when the donor signs out, then the session ends and the home page opens', async () => {
