@@ -21,6 +21,18 @@ test.describe('Given a visitor at the bottom of the home page', () => {
   });
 });
 
+test.describe('Given a visitor at the contact form', () => {
+  test('when they click the policy link under the submit button, then the policy opens', async ({ page }) => {
+    await page.goto('/');
+    const form = page.locator('#contact form');
+
+    await form.getByRole('link', { name: 'zásady ochrany osobních údajů' }).click();
+
+    await expect(page).toHaveURL(/\/zasady-ochrany-osobnich-udaju$/);
+    await expect(page.getByRole('heading', policyHeading)).toBeVisible();
+  });
+});
+
 test.describe('Given a visitor with a direct link to the privacy policy', () => {
   test('when they open it, then the policy renders under its own tab title', async ({ page }) => {
     await page.goto('/zasady-ochrany-osobnich-udaju');

@@ -99,9 +99,20 @@ describe('Given the donor data card in the overview', () => {
 
       expect(element('.profile-form')).toBeNull();
       expect(shown()).toEqual(['Jana Nováková', 'Krátká 3, 400 11 Ústí nad Labem', 'jana@example.cz', 'angličtina (dvojjazyčné)']);
-      expect(element('.profile-status').textContent).toContain('Údaje jsme uložili.');
+      expect(element('.profile-status').textContent?.trim()).toBe(
+        'Údaje jsme uložili. Jméno a adresu ponesou všechna potvrzení, která si stáhnete od teď, zvolený jazyk jen ta, která si stáhnete poprvé.',
+      );
       expect(store.donor()?.address.street).toBe('Krátká 3');
       expect(document.activeElement).toBe(element('.profile-edit'));
+    });
+
+    it('and edits the data, then the language field says that receipts already downloaded keep their language', async () => {
+      await click('.profile-edit');
+
+      expect(element('#profile-locale').getAttribute('aria-describedby')).toBe('profile-locale-hint');
+      expect(element('#profile-locale-hint').textContent?.trim()).toBe(
+        'Platí pro potvrzení, která si stáhnete poprvé. Ta, která jste si už stáhli, zůstanou v původním jazyce.',
+      );
     });
 
     it('and empties the city, then nothing is sent and the field says what is missing', async () => {
