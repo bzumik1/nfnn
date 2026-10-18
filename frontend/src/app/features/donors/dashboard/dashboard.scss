@@ -56,45 +56,6 @@
   padding: 40px 24px;
 }
 
-.symbol-card {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 24px;
-  background: var(--color-surface-inverse);
-  color: var(--color-on-inverse);
-  border-radius: var(--radius-card);
-  padding: 24px 28px;
-  margin-bottom: 20px;
-}
-
-.symbol-title {
-  font-family: var(--font-serif);
-  font-size: 18px;
-  font-weight: 700;
-  margin-bottom: 6px;
-}
-
-.symbol-sub {
-  font-size: 13px;
-  line-height: 1.6;
-  color: color-mix(in srgb, var(--color-on-inverse) 75%, transparent);
-  max-width: 480px;
-}
-
-.symbol-value {
-  font-family: var(--font-sans);
-  font-size: 28px;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-  background: color-mix(in srgb, var(--color-on-inverse) 10%, transparent);
-  border: 1px solid color-mix(in srgb, var(--color-on-inverse) 20%, transparent);
-  border-radius: var(--radius-lg);
-  padding: 12px 20px;
-}
-
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -221,6 +182,7 @@
   color: var(--color-text);
   margin-bottom: 4px;
   letter-spacing: -0.02em;
+  font-variant-numeric: var(--numeric-figures);
 }
 
 .stat-label {
@@ -307,11 +269,17 @@
   gap: 8px;
 }
 
-.yearly-pdf:disabled,
+.yearly-pdf:disabled {
+  cursor: not-allowed;
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  border: 1.5px dashed var(--color-border);
+  box-shadow: none;
+}
+
 .download-btn:disabled {
   cursor: not-allowed;
   opacity: 0.6;
-  box-shadow: none;
 }
 
 .yearly-hint {
@@ -351,6 +319,7 @@
   font-size: 22px;
   font-weight: 800;
   color: var(--color-accent);
+  font-variant-numeric: var(--numeric-figures);
 }
 
 .yearly-empty,
@@ -477,6 +446,13 @@
   font-weight: 700;
   color: var(--color-accent);
   font-family: var(--font-serif);
+  font-variant-numeric: var(--numeric-figures);
+  white-space: nowrap;
+}
+
+.payments-card th.amount,
+.payments-card td.amount {
+  text-align: right;
 }
 
 .status-pill {
@@ -521,6 +497,12 @@
     grid-template-columns: 1fr;
   }
 
+  .yearly-foot {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
   .yearly-actions {
     flex-direction: column;
     align-items: flex-start;
@@ -529,5 +511,62 @@
 
   .payments-card {
     overflow-x: auto;
+  }
+
+  .topbar-greeting {
+    display: none;
+  }
+
+}
+
+@media (max-width: 640px) {
+  .payments-card thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .payments-card table,
+  .payments-card tbody,
+  .payments-card tr,
+  .payments-card td {
+    display: block;
+  }
+
+  .payments-card tbody tr {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 6px 12px;
+    padding: 14px 20px;
+
+    &:hover {
+      background: none;
+    }
+  }
+
+  .payments-card td {
+    padding: 0;
+  }
+
+  .payments-card td::before {
+    content: attr(data-label);
+    display: block;
+    font-family: var(--font-sans);
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--color-text-subtle);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 2px;
+  }
+
+  .payments-card td.receipt {
+    grid-column: 1 / -1;
+  }
+
+  .payments-card td.receipt.is-empty {
+    display: none;
   }
 }

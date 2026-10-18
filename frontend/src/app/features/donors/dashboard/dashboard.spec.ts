@@ -221,6 +221,30 @@ describe('Given a signed-in donor on the dashboard', () => {
     expect(text('.symbol-value')).toBe('9876543210');
   });
 
+  it('when the page opens, then the variable symbol can be copied and the donor can give again with it', async () => {
+    await respond(twoYearSummary(), twoYearDonations());
+
+    expect(text('.symbol-card app-copy-button button')).toBe('Kopírovat variabilní symbol');
+    const giveAgain = element('.symbol-card a.give-again') as HTMLAnchorElement;
+    expect(normalized(giveAgain.textContent ?? '')).toBe('Přispět znovu');
+    expect(giveAgain.getAttribute('href')).toBe('/#donate');
+  });
+
+  it('when the payments are shown, then every cell names its column so a phone can show the rows as cards', async () => {
+    await respond(twoYearSummary(), twoYearDonations());
+
+    const labels = [...(fixture.nativeElement.querySelectorAll('.payments-card tbody tr:first-child td') as NodeListOf<HTMLElement>)].map(
+      (cell) => cell.dataset['label'],
+    );
+    expect(labels).toEqual(['Datum', 'Částka', 'Účel', 'Stav', 'Potvrzení']);
+  });
+
+  it('when the page opens, then the help line keeps a space before the e-mail address', async () => {
+    await respond(twoYearSummary(), twoYearDonations());
+
+    expect(text('.contact-line')).toBe('Máte dotaz k platbě? Napište nám na info@nfnn.cz');
+  });
+
   it('when the page opens, then one level-one heading names the page for screen readers', async () => {
     await respond(twoYearSummary(), twoYearDonations());
 

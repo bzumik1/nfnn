@@ -17,15 +17,7 @@
 
   <div class="container">
     <h1 class="visually-hidden" i18n="@@donor.dashboard.heading">Můj přehled darů</h1>
-    <div class="symbol-card">
-      <div class="symbol-text">
-        <h2 class="symbol-title" i18n="@@donor.dashboard.symbol.title">Váš variabilní symbol</h2>
-        <p class="symbol-sub" i18n="@@donor.dashboard.symbol.sub">
-          Uveďte ho u každé platby na účet nadačního fondu. Dar se tak přiřadí k vašemu účtu a objeví se v tomto přehledu.
-        </p>
-      </div>
-      <div class="symbol-value">{{ donor()?.variableSymbol }}</div>
-    </div>
+    <app-symbol-card [variableSymbol]="donor()?.variableSymbol ?? null" />
 
     @switch (state()) {
       @case ('loading') {
@@ -184,7 +176,7 @@
               <thead>
                 <tr>
                   <th i18n="@@donor.dashboard.payments.col.date">Datum</th>
-                  <th i18n="@@donor.dashboard.payments.col.amount">Částka</th>
+                  <th class="amount" i18n="@@donor.dashboard.payments.col.amount">Částka</th>
                   <th i18n="@@donor.dashboard.payments.col.purpose">Účel</th>
                   <th i18n="@@donor.dashboard.payments.col.status">Stav</th>
                   <th i18n="@@donor.dashboard.payments.col.receipt">Potvrzení</th>
@@ -193,13 +185,13 @@
               <tbody>
                 @for (item of items(); track item.id) {
                   <tr>
-                    <td>{{ formatDate(item.receivedAt) }}</td>
-                    <td class="amount">{{ crowns(item.amountMinor) }} Kč</td>
-                    <td>{{ item.purpose }}</td>
-                    <td>
+                    <td data-label="Datum" i18n-data-label="@@donor.dashboard.payments.col.date">{{ formatDate(item.receivedAt) }}</td>
+                    <td data-label="Částka" i18n-data-label="@@donor.dashboard.payments.col.amount" class="amount">{{ crowns(item.amountMinor) }} Kč</td>
+                    <td data-label="Účel" i18n-data-label="@@donor.dashboard.payments.col.purpose">{{ item.purpose }}</td>
+                    <td data-label="Stav" i18n-data-label="@@donor.dashboard.payments.col.status">
                       <span class="status-pill" [class.status-pill--refunded]="item.status === 'REFUNDED'">{{ statusLabel(item.status) }}</span>
                     </td>
-                    <td>
+                    <td class="receipt" [class.is-empty]="item.status === 'REFUNDED'" data-label="Potvrzení" i18n-data-label="@@donor.dashboard.payments.col.receipt">
                       @if (item.status !== 'REFUNDED') {
                         <button
                           type="button"
@@ -232,8 +224,7 @@
     }
 
     <p class="contact-line">
-      <span i18n="@@donor.dashboard.help">Máte dotaz k platbě? Napište nám na</span>
-      <a href="mailto:info@nfnn.cz">info&#64;nfnn.cz</a>
+      <span i18n="@@donor.dashboard.help">Máte dotaz k platbě? Napište nám na</span>&ngsp;<a href="mailto:info@nfnn.cz">info&#64;nfnn.cz</a>
     </p>
   </div>
 </div>

@@ -16,6 +16,7 @@ import {
   DownloadedFile,
 } from '../../donations/donations-api';
 import { saveBlob } from '../../donations/file-download';
+import { SymbolCard } from './symbol-card/symbol-card';
 
 type DashboardState = 'loading' | 'ready' | 'error';
 
@@ -42,7 +43,7 @@ const BANK_CHECK_MAX_POLLS = 45;
 
 @Component({
   selector: 'app-donor-dashboard',
-  imports: [RouterLink],
+  imports: [RouterLink, SymbolCard],
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.scss',
 })
