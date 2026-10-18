@@ -9,7 +9,7 @@ import java.util.Optional;
 
 public record ImportReport(ImportTrigger trigger, ImportPeriod requested, boolean needsUnlockedHistory, Optional<ImportPeriod> reported,
                            ImportCoverage coverage, ImportCounts counts, Optional<ImportFailureKind> failure,
-                           Optional<FollowUp> followUp) {
+                           Optional<String> failureMessage, Optional<FollowUp> followUp) {
 
     public boolean completed() {
         return failure.isEmpty();

@@ -60,12 +60,12 @@ public class ImportBankPaymentsService {
                 counts.incomingNew(), counts.incomingKnown(), counts.pairedBySymbol(), counts.pairedByAccount(),
                 counts.accountsLearned(), counts.leftUnpaired(), coverage);
         return new ImportReport(trigger, plan.period(), plan.needsUnlockedHistory(), statement.reported(), coverage, counts,
-                Optional.empty(), Optional.empty());
+                Optional.empty(), Optional.empty(), Optional.empty());
     }
 
     private ImportReport failed(ImportTrigger trigger, ImportPlan plan, ImportCoverage coverage, BankStatementUnavailable unavailable) {
         return new ImportReport(trigger, plan.period(), plan.needsUnlockedHistory(), Optional.empty(), coverage, ImportCounts.none(),
-                Optional.of(unavailable.kind()), followUp(trigger, plan, unavailable));
+                Optional.of(unavailable.kind()), Optional.ofNullable(unavailable.getMessage()), followUp(trigger, plan, unavailable));
     }
 
     private Optional<FollowUp> followUp(ImportTrigger trigger, ImportPlan plan, BankStatementUnavailable unavailable) {

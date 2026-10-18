@@ -81,7 +81,7 @@ class ImportBankPaymentsServiceTest {
         order.verify(source).fetch(SERVABLE);
         order.verify(recorder).record(statement, new ImportPlan(SERVABLE, false), NOW);
         assertThat(report).isEqualTo(new ImportReport(ImportTrigger.HOURLY, SERVABLE, false, Optional.of(SERVABLE),
-                ImportCoverage.of(SERVABLE), counts, Optional.empty(), Optional.empty()));
+                ImportCoverage.of(SERVABLE), counts, Optional.empty(), Optional.empty(), Optional.empty()));
         assertThat(report.completed()).isTrue();
     }
 
@@ -160,6 +160,7 @@ class ImportBankPaymentsServiceTest {
         verify(recorder).recordFailure(kind, "refused", NOW);
         verify(recorder, never()).record(any(), any(), any());
         assertThat(report.failure()).contains(kind);
+        assertThat(report.failureMessage()).contains("refused");
         assertThat(report.followUp()).isEmpty();
         assertThat(report.coverage()).isEqualTo(ImportCoverage.of(SERVABLE));
     }

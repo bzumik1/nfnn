@@ -47,6 +47,7 @@ class FioImportSchedulerTest {
 
     private static final Instant RETRY_AT = Instant.parse("2026-10-17T10:00:31Z");
     private static final ImportPeriod REQUESTED = new ImportPeriod(LocalDate.parse("2026-07-20"), LocalDate.parse("2026-10-17"));
+    private static final String FAILURE_MESSAGE = "Fio API request GET /periods/***/ failed: timed out";
     private static final BankImportProperties IMPORT_PROPERTIES = new BankImportProperties(Period.ofDays(3), Period.ofDays(89), "2025-01-01");
     private static final ImportSettings SETTINGS = IMPORT_PROPERTIES.toSettings();
 
@@ -217,19 +218,19 @@ class FioImportSchedulerTest {
         scheduler.tick();
 
         assertThat(messages(Level.WARN)).containsExactly(
-                "Fio import STARTUP 2026-07-20/2026-10-17 failed with RATE_LIMITED; follow-up STARTUP at 2026-10-17T10:00:31Z");
+                "Fio import STARTUP 2026-07-20/2026-10-17 failed with RATE_LIMITED (" + FAILURE_MESSAGE + "); follow-up STARTUP at 2026-10-17T10:00:31Z");
         assertThat(messages(Level.ERROR)).isEmpty();
     }
 
     @Test
-    @DisplayName("Given a transport failure, when the import fails, then a warning says the next hourly run retries")
+    @DisplayName("Given a transport failure, when the import fails, then a warning carries the masked failure message and says the next hourly run retries")
     void should_warn_when_ticked_given_transport_failure() {
         when(service.importIncomingPayments(any(), any())).thenReturn(failed(STARTUP, ImportFailureKind.TRANSPORT, null));
 
         scheduler.tick();
 
         assertThat(messages(Level.WARN)).containsExactly(
-                "Fio import STARTUP 2026-07-20/2026-10-17 failed with TRANSPORT; retrying at the next hourly run");
+                "Fio import STARTUP 2026-07-20/2026-10-17 failed with TRANSPORT (" + FAILURE_MESSAGE + "); retrying at the next hourly run");
         assertThat(messages(Level.ERROR)).isEmpty();
     }
 
@@ -243,7 +244,7 @@ class FioImportSchedulerTest {
         scheduler.tick();
 
         assertThat(messages(Level.WARN)).containsExactly(
-                "Fio import STARTUP 2026-07-20/2026-10-17 failed with HISTORY_LOCKED: unlock the history in Fio internet banking "
+                "Fio import STARTUP 2026-07-20/2026-10-17 failed with HISTORY_LOCKED (" + FAILURE_MESSAGE + "): unlock the history in Fio internet banking "
                         + "(Nastavení > API, the lock icon) and restart the backend within 10 minutes, or shorten FIO_HISTORY_FROM; "
                         + "follow-up HOURLY at 2026-10-17T10:00:31Z");
     }
@@ -267,7 +268,7 @@ class FioImportSchedulerTest {
         scheduler.tick();
 
         assertThat(messages(Level.ERROR)).containsExactly(
-                "Fio import STARTUP 2026-07-20/2026-10-17 failed with UNAUTHORIZED: the Fio token is missing, not yet active or "
+                "Fio import STARTUP 2026-07-20/2026-10-17 failed with UNAUTHORIZED (" + FAILURE_MESSAGE + "): the Fio token is missing, not yet active or "
                         + "expired (180 days): create a new one in Fio internet banking and set FIO_TOKEN; retrying at the next hourly run");
         assertThat(messages(Level.WARN)).isEmpty();
     }
@@ -283,8 +284,8 @@ class FioImportSchedulerTest {
         scheduler.tick();
 
         assertThat(messages(Level.ERROR)).containsExactly(
-                "Fio import STARTUP 2026-07-20/2026-10-17 failed with INVALID_RESPONSE; retrying at the next hourly run",
-                "Fio import HOURLY 2026-07-20/2026-10-17 failed with UNEXPECTED; retrying at the next hourly run");
+                "Fio import STARTUP 2026-07-20/2026-10-17 failed with INVALID_RESPONSE (" + FAILURE_MESSAGE + "); retrying at the next hourly run",
+                "Fio import HOURLY 2026-07-20/2026-10-17 failed with UNEXPECTED (" + FAILURE_MESSAGE + "); retrying at the next hourly run");
         assertThat(messages(Level.WARN)).isEmpty();
     }
 
@@ -304,7 +305,7 @@ class FioImportSchedulerTest {
 
     private static ImportReport completed(ImportTrigger trigger) {
         return new ImportReport(trigger, REQUESTED, false, Optional.of(REQUESTED), new ImportCoverage(REQUESTED.from(), REQUESTED.to()),
-                ImportCounts.none(), Optional.empty(), Optional.empty());
+                ImportCounts.none(), Optional.empty(), Optional.empty(), Optional.empty());
     }
 
     private static ImportReport failed(ImportTrigger trigger, ImportFailureKind kind, FollowUp followUp) {
@@ -313,7 +314,7 @@ class FioImportSchedulerTest {
 
     private static ImportReport failed(ImportTrigger trigger, ImportFailureKind kind, FollowUp followUp, boolean needsUnlockedHistory) {
         return new ImportReport(trigger, REQUESTED, needsUnlockedHistory, Optional.empty(), ImportCoverage.none(), ImportCounts.none(),
-                Optional.of(kind), Optional.ofNullable(followUp));
+                Optional.of(kind), Optional.of(FAILURE_MESSAGE), Optional.ofNullable(followUp));
     }
 
     private static Logger logger() {

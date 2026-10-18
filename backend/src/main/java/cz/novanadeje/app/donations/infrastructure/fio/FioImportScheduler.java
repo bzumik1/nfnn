@@ -81,15 +81,16 @@ class FioImportScheduler {
         String next = report.followUp()
                 .map(followUp -> "follow-up " + followUp.trigger() + " at " + followUp.at())
                 .orElse("retrying at the next hourly run");
+        String failure = kind + report.failureMessage().map(message -> " (" + message + ")").orElse("");
         switch (kind) {
-            case RATE_LIMITED, TRANSPORT -> log.warn("Fio import {} {} failed with {}; {}", report.trigger(), report.requested(), kind, next);
+            case RATE_LIMITED, TRANSPORT -> log.warn("Fio import {} {} failed with {}; {}", report.trigger(), report.requested(), failure, next);
             case HISTORY_LOCKED -> {
                 if (report.needsUnlockedHistory()) {
-                    log.warn("Fio import {} {} failed with {}: {}; {}", report.trigger(), report.requested(), kind, UNLOCK_HISTORY, next);
+                    log.warn("Fio import {} {} failed with {}: {}; {}", report.trigger(), report.requested(), failure, UNLOCK_HISTORY, next);
                 }
             }
-            case UNAUTHORIZED -> log.error("Fio import {} {} failed with {}: {}; {}", report.trigger(), report.requested(), kind, RENEW_TOKEN, next);
-            case INVALID_RESPONSE, UNEXPECTED -> log.error("Fio import {} {} failed with {}; {}", report.trigger(), report.requested(), kind, next);
+            case UNAUTHORIZED -> log.error("Fio import {} {} failed with {}: {}; {}", report.trigger(), report.requested(), failure, RENEW_TOKEN, next);
+            case INVALID_RESPONSE, UNEXPECTED -> log.error("Fio import {} {} failed with {}; {}", report.trigger(), report.requested(), failure, next);
         }
     }
 
