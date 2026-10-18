@@ -44,18 +44,18 @@ src/
   main.ts                     bootstrapApplication entry, references @angular/localize.
   styles.scss                 Global CSS variables (design tokens), reset, scrollbar, keyframes.
   app/
-    app.{ts,html,scss}        Root shell: <app-site-header />, <router-outlet />, <app-site-footer />.
+    app.{ts,html,scss}        Root: `<router-outlet />` and the sign-in dialog rendered while `LoginDialogService.isOpen()` (re-created on every open, so its fields and panels start clean).
     app.config.ts             provideRouter + withInMemoryScrolling (anchor scrolling on for #fragment links).
     app.routes.ts             Top-level routes (lazy children per bounded context).
     core/                     Singletons: HTTP services, interceptors, guards, auth state.
       auth/
-        donor.ts              DTOs: Donor, RegisterDonorRequest, AuthResponse.
-        auth-api.ts           HTTP: /api/donors/auth/{register,login,refresh,logout}, /api/donors/me.
+        donor.ts              DTOs: Donor, RegisterDonorRequest, AuthResponse; `PASSWORD_MIN_LENGTH` (12, shared by the registration form and the password reset page).
+        auth-api.ts           HTTP: /api/donors/auth/{register,login,refresh,logout}, /api/donors/auth/password-reset/{request,confirm} (`requestPasswordReset`, `confirmPasswordReset`), /api/donors/me.
         auth-store.ts         Signals `donor`, `status`, `signedIn`; access token in memory; refresh shared between callers; restore() on app start.
         auth-interceptor.ts   Adds `Authorization: Bearer` to /api/** (not the auth endpoints); parses an `application/problem+json` Blob body (a failed blob download) into the HttpErrorResponse first; on 401 `auth/expired-token` refreshes once and retries.
         donor-guard.ts        canActivate for `/donor/**`: waits for the restore, otherwise goes home and opens the sign-in dialog.
-        login-dialog.service.ts  Open/closed state of the sign-in dialog (used by the header, the guard and the dialog).
-        api-problem.ts        Reads an RFC 7807 body out of an HttpErrorResponse.
+        login-dialog.service.ts  Open/closed state of the sign-in dialog and the tab it opens on (`LoginDialogMode` `login` | `register` | `reset`; `open(mode = 'login')` sets `initialMode`, which the dialog reads once when it is created). Used by the header, the guard, the dashboard, the password reset page and the dialog.
+        api-problem.ts        Reads an RFC 7807 body out of an HttpErrorResponse; `describeProblem(failure, generic)` turns it into one line (title, detail, field messages) or `generic` when there is no problem body.
         testing/              Fixtures for specs (excluded from the app build).
     shared/                   Reusable presentational components/pipes/directives. (Currently empty.)
     layout/
@@ -86,20 +86,21 @@ src/
         testing/              Donation fixtures for specs (excluded from the app build).
       donors/
         donors.routes.ts      `'prehled'` → dashboard (the whole `/donor` branch sits behind `donorGuard` in app.routes.ts).
-        login-dialog/         Sign-in / registration dialog opened from the header; posts through AuthStore and shows the problem's title and detail on failure. The password-reset tab is still a mock (task 7).
+        login-dialog/         Sign-in / registration dialog opened from the header; posts through AuthStore and shows the problem's title and detail on failure. The "Obnovit heslo" tab posts the trimmed address through `AuthApi.requestPasswordReset` and shows "E-mail odeslán!" on 202, its own sentence on 429 and `describeProblem` otherwise.
+        password-reset/       Public page `/obnova-hesla` (link from the reset e-mail, `#token=…`): reads the token from the fragment once and removes it with `Location.replaceState`, asks for the new password twice ("Hesla se neshodují." without a request), posts `AuthApi.confirmPasswordReset`; on 204 calls `AuthStore.logout()` when the browser still holds a session, then the success panel offers the sign-in dialog; `donors/invalid-password-reset-token` and a missing token show panels offering the dialog's reset tab (`LoginDialogService.open('reset')`); other failures show `describeProblem` in the form's alert line. Each panel's `<h1 id="password-reset-title" tabindex="-1">` takes focus after a panel switch.
         dashboard/            Donor portal: greeting, variable symbol, sign-out; stat cards, year toggle and payments table from DonationsApi (summary + full list on open, signals `state` loading/ready/error, retry, empty state; a 401 `auth/unauthenticated` or a session forgotten by a failed refresh sends the donor home with the sign-in dialog, like `donorGuard`). PDF receipts: "Stáhnout PDF" (not on a `REFUNDED` row) saves the single receipt and "↓ PDF za rok" the yearly one through `saveBlob`; the yearly button is disabled with the line "Potvrzení za rok … bude ke stažení po skončení roku." for a year above the summary's `yearlyReceiptsAvailableThrough` (the frontend keeps no calendar of its own). A running download disables its button, which reads "Připravujeme PDF…". Failures show in a `role="alert"` line in the card the download started from: the problem's title for `donations/year-not-yet-completed` and `donations/yearly-receipt-not-available`; the title of a 404 on a single receipt, after which summary and list are fetched again (without the loading state); "Potvrzení se nepodařilo stáhnout. Zkuste to prosím znovu." otherwise; an ended session goes home with the sign-in dialog.
 public/
   favicon.ico
   images/                     Site imagery (hero, about, donate, news1-3, proj1-5, logo). Reference as `/images/<file>`.
-e2e/                          Playwright specs; `donor-session.ts` holds the sample donor, the sign-in and `mockDonorApi` (QR payment, summary and list, and with the `receipts` option both receipt endpoints answering a tiny PDF with both Content-Disposition forms: `potvrzeni-o-darech-<year>.pdf` and the given single file name), which every donor spec registers before opening a page so nothing escapes to the dev proxy. Download tests take `const [download] = await Promise.all([page.waitForEvent('download'), <click>])` and check `download.suggestedFilename()`.
+e2e/                          Playwright specs; `donor-session.ts` holds the sample donor, the sign-in and `mockDonorApi` (QR payment, summary and list, and with the `receipts` option both receipt endpoints answering a tiny PDF with both Content-Disposition forms: `potvrzeni-o-darech-<year>.pdf` and the given single file name), which every donor spec registers before opening a page so nothing escapes to the dev proxy. `password-reset.spec.ts` covers the dialog's reset tab and the `/obnova-hesla` page with mocked request and confirm endpoints. Download tests take `const [download] = await Promise.all([page.waitForEvent('download'), <click>])` and check `download.suggestedFilename()`.
 ```
 
 ## Routing
 
 Defined in `src/app/app.routes.ts`. Two top-level lazy paths today:
 
-- `''` → `features/content/content.routes.ts` (home page).
-- `'donor'` → `features/donors/donors.routes.ts` (dashboard at `/donor/prehled`), guarded by `core/auth/donor-guard.ts`.
+- `''` → `layout/public-shell` (header, footer) with `children`: `'obnova-hesla'` → `features/donors/password-reset/` (lazy `loadComponent`, title "Nové heslo | Nová naděje – nadační fond"), then `''` → `features/content/content.routes.ts` (home page, privacy policy). A route cannot have both `children` and `loadChildren`, so the content routes hang under a child of their own.
+- `'donor'` → `layout/donor-shell` with `features/donors/donors.routes.ts` (dashboard at `/donor/prehled`), guarded by `core/auth/donor-guard.ts`.
 - `'**'` → redirect to `/`.
 
 In-page navigation uses `routerLink="/" fragment="..."` (e.g. `fragment="about"`); anchor scrolling is enabled in `app.config.ts`. The old `#about`-style hash links from the design prototype are reproduced this way.
@@ -138,7 +139,7 @@ Errors from the backend are RFC 7807 `application/problem+json`; the `HttpErrorR
 
 Donor sessions: `AuthStore` keeps the access token in memory only; the refresh token is an HttpOnly cookie the browser sends to `/api/donors/auth/**` by itself. A `localStorage` flag (`nfnn.donor-session`) only says that a session may exist, so `restore()` on app start calls `refresh` for returning donors and nothing for everyone else. Every `/api/**` call goes through `authInterceptor`; nothing else should add the header.
 
-Production: nginx in `frontend/Dockerfile` proxies `/api/*` to the `backend` container in compose. Components must only call relative `/api/...` URLs.
+Production: nginx in `frontend/Dockerfile` proxies `/api/*` to the `backend` container in compose. Components must only call relative `/api/...` URLs. The backend trusts forwarded headers, so `nginx.conf` resolves the visitor's address itself (`set_real_ip_from` the private ranges, `real_ip_header X-Forwarded-For`, `real_ip_recursive on`), sends the backend `X-Forwarded-For $remote_addr` and drops a client-sent `Forwarded`; the per-address rate limits rely on it.
 
 ## Assets
 
@@ -146,7 +147,6 @@ Images and other public files live in `public/`. The build copies `public/**/*` 
 
 ## What is intentionally *not* implemented yet
 
-- Password reset: the dialog's "Obnovit heslo" tab only pretends to send an email (task 7 wires it).
 - No real translations (English target empty).
 - `shared/` is still a placeholder (`.gitkeep`).
 
