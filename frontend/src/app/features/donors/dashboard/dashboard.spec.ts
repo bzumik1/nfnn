@@ -230,6 +230,15 @@ describe('Given a signed-in donor on the dashboard', () => {
     expect(text('.symbol-value')).toBe('9876543210');
   });
 
+  it('when the page opens, then the top bar offers a way back to the home page besides the logo', async () => {
+    await respond(twoYearSummary(), twoYearDonations());
+
+    const back = element('.topbar a.topbar-home') as HTMLAnchorElement;
+    expect(normalized(back.querySelector('.topbar-home-label')?.textContent ?? '')).toBe('Hlavní stránka');
+    expect(normalized(back.querySelector('.topbar-home-label-short')?.textContent ?? '')).toBe('Domů');
+    expect(back.getAttribute('href')).toBe('/');
+  });
+
   it('when the page opens, then the variable symbol can be copied and the donor can give again with it', async () => {
     await respond(twoYearSummary(), twoYearDonations());
 
