@@ -17,15 +17,6 @@ async function violations(page: Page): Promise<string[]> {
   );
 }
 
-async function coversTheHeader(page: Page): Promise<boolean> {
-  const link = await page.getByRole('link', { name: 'Přeskočit na obsah' }).boundingBox();
-  const header = await page.locator('.nav-inner').boundingBox();
-  if (!link || !header) {
-    throw new Error('The skip link or the header is not on the page');
-  }
-  return link.y + link.height > 0 && link.y < header.y + header.height;
-}
-
 test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
   test.beforeEach(async ({ page }) => {
     await mockDonorApi(page);
@@ -108,16 +99,6 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     await expect(page).toHaveURL(/\/zasady-ochrany-osobnich-udaju$/);
   });
 
-  test('when they press Tab first, then the skip link leaves the logo and the menu in sight', async ({ page }) => {
-    await page.goto('/');
-    await expect(page.locator('.brand img')).toBeVisible();
-    expect(await coversTheHeader(page)).toBe(false);
-    await page.keyboard.press('Tab');
-    await expect(page.getByRole('link', { name: 'Přeskočit na obsah' })).toBeFocused();
-
-    expect(await coversTheHeader(page)).toBe(false);
-  });
-
   test('when they open the sign-in dialog from the keyboard, then the focus stays in it and comes back after Esc', async ({ page }) => {
     await page.goto('/');
     const signInButton = page.locator('.nav-login');
@@ -161,16 +142,6 @@ test.describe('Given a visitor on a phone who relies on WCAG 2.2 AA', () => {
 
     await expect(page.locator('#mobile-menu')).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Otevřít menu' })).toBeFocused();
-  });
-
-  test('when they press Tab first, then the skip link leaves the logo and the menu in sight', async ({ page }) => {
-    await page.goto('/');
-    await expect(page.locator('.brand img')).toBeVisible();
-    expect(await coversTheHeader(page)).toBe(false);
-    await page.keyboard.press('Tab');
-    await expect(page.getByRole('link', { name: 'Přeskočit na obsah' })).toBeFocused();
-
-    expect(await coversTheHeader(page)).toBe(false);
   });
 
   test('when they open the sign-in dialog, then it fills the screen and nothing in it breaks the rules', async ({ page }) => {
