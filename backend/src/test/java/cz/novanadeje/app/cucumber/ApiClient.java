@@ -47,6 +47,10 @@ public class ApiClient {
         defaultHeaders.put(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken);
     }
 
+    public void acceptLanguage(String languageTag) {
+        defaultHeaders.put(HttpHeaders.ACCEPT_LANGUAGE, languageTag);
+    }
+
     public void sendCookie(String cookie) {
         defaultHeaders.put(HttpHeaders.COOKIE, cookie);
     }

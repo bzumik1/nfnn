@@ -18,9 +18,22 @@ public class ScenarioDonors {
     private static final Pattern ALIAS_PLACEHOLDER = Pattern.compile("\\{([^{}]+)}");
 
     private final Map<String, RememberedDonor> donors = new HashMap<>();
+    private final Map<String, String> accessTokens = new HashMap<>();
 
     public void remember(String alias, UUID donorId, VariableSymbol variableSymbol) {
         donors.put(alias, new RememberedDonor(donorId, variableSymbol));
+    }
+
+    public void rememberAccessToken(String alias, String accessToken) {
+        accessTokens.put(alias, accessToken);
+    }
+
+    public String accessTokenOf(String alias) {
+        String accessToken = accessTokens.get(alias);
+        if (accessToken == null) {
+            throw new IllegalArgumentException("No access token for \"" + alias + "\" in this scenario; known: " + accessTokens.keySet());
+        }
+        return accessToken;
     }
 
     public Optional<UUID> findIdOf(String alias) {

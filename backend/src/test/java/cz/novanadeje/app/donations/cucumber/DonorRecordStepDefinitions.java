@@ -47,7 +47,6 @@ public class DonorRecordStepDefinitions {
     private final TransactionTemplate transaction;
     private final JdbcClient jdbc;
     private final Clock clock;
-    private final Map<String, String> accessTokens = new HashMap<>();
     private final Map<String, PostalAddress> addresses = new HashMap<>();
 
     public DonorRecordStepDefinitions(ApiClient api, ScenarioDonors scenarioDonors, DonorRecordRepository donorRecords,
@@ -135,12 +134,12 @@ public class DonorRecordStepDefinitions {
         JsonNode json = api.lastResponseJson();
         JsonNode user = json.get("user");
         scenarioDonors.remember(alias, UUID.fromString(user.get("id").asString()), new VariableSymbol(user.get("variableSymbol").asString()));
-        accessTokens.put(alias, json.get("accessToken").asString());
+        scenarioDonors.rememberAccessToken(alias, json.get("accessToken").asString());
         addresses.put(alias, address);
     }
 
     private void patchProfileOf(String alias, Map<String, ?> body) {
-        api.authorize(accessTokens.get(alias));
+        api.authorize(scenarioDonors.accessTokenOf(alias));
         ResponseEntity<String> response = api.patch(PROFILE_PATH, body);
         assertThat(response.getStatusCode().value()).withFailMessage("Profile update answered %s", response.getBody()).isEqualTo(200);
     }
