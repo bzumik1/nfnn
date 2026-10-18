@@ -21,7 +21,7 @@ class MailSenderPropertiesTest {
     void should_send_from_foundation_address_when_started_given_defaults() {
         contexts.run(context -> {
             assertThat(context).hasNotFailed();
-            assertThat(context.getBean(MailSenderProperties.class).senderEmail()).isEqualTo("info@novanadeje.cz");
+            assertThat(context.getBean(MailSenderProperties.class).senderEmail()).isEqualTo("info@nfnn.cz");
         });
     }
 

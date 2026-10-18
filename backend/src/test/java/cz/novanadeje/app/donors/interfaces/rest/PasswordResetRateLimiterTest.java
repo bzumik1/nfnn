@@ -30,7 +30,7 @@ class PasswordResetRateLimiterTest {
         assertThatThrownBy(() -> limiter.check("203.0.113.7"))
                 .isInstanceOfSatisfying(RateLimitExceededException.class, refused -> {
                     assertThat(refused.getStatusCode()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
-                    assertThat(refused.getBody().getType()).isEqualTo(URI.create("https://novanadeje.cz/problems/donors/rate-limited"));
+                    assertThat(refused.getBody().getType()).isEqualTo(URI.create("https://nfnn.cz/problems/donors/rate-limited"));
                 });
         assertThatNoException().isThrownBy(() -> limiter.check("198.51.100.1"));
     }

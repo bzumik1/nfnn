@@ -4,7 +4,7 @@ import java.net.URI;
 
 public final class ProblemTypes {
 
-    private static final String BASE = "https://novanadeje.cz/problems/";
+    private static final String BASE = "https://nfnn.cz/problems/";
 
     public static final URI VALIDATION = of("validation");
     public static final URI UNAUTHENTICATED = of("auth", "unauthenticated");

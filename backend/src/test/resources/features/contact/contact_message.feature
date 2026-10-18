@@ -7,8 +7,8 @@ Feature: Visitor sends a contact message
       | email    | jana@example.cz                 |
       | message  | Mám dotaz k projektu Dominik.   |
     Then the response status is 202
-    And one email is delivered to "info@novanadeje.cz"
-    And the email comes from "info@novanadeje.cz"
+    And one email is delivered to "info@nfnn.cz"
+    And the email comes from "info@nfnn.cz"
     And the email can be answered to "jana@example.cz"
     And the email mentions "Jana Nováková" and "Mám dotaz k projektu Dominik."
     And the message is stored

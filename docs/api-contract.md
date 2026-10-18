@@ -8,7 +8,7 @@ When adding a new endpoint, update this file in the same change.
 
 - All endpoints under `/api/<context>/...`. Contexts: `content`, `donors`, `donations`, `contact`. No cross-context HTTP calls — use `ApplicationEvent` for behavioral coordination.
 - JSON in / JSON out. Exception: PDF receipts return `application/pdf`, media returns image binary.
-- Errors follow RFC 7807 `application/problem+json` (Spring `ProblemDetail`). `type` URI namespace: `https://novanadeje.cz/problems/<context>/<code>`. Per-field validation errors carried in an `errors: [{ field, message }]` array.
+- Errors follow RFC 7807 `application/problem+json` (Spring `ProblemDetail`). `type` URI namespace: `https://nfnn.cz/problems/<context>/<code>`. Per-field validation errors carried in an `errors: [{ field, message }]` array.
 - Identifiers: UUIDv7 (string) for all entity IDs. Public URLs for content use `slug` (kebab-case, unique, immutable after publish); admin URLs use `id`.
 - Money: `{ amountMinor: long, currency: "CZK" }`. Domain value object `Money` lives in `shared/domain/`. Sealed `Currency` (CZK only for now).
 - Dates: ISO-8601. `LocalDate` as `YYYY-MM-DD`, instants as `YYYY-MM-DDTHH:MM:SSZ`. UI formatting (e.g. `15. 03. 2026`) is the frontend's job.
@@ -66,7 +66,7 @@ Admin (role `ADMIN` required):
   "about": { "eyebrow": "...", "title": "...", "paragraphs": ["...", "..."], "imageUrl": "...", "highlight": { "title": "...", "text": "..." } },
   "stats": [{ "value": "19+", "label": "let pomáháme" }],
   "donate": { "title": "...", "body": "...", "bankAccount": "5544332217/2010", "iban": "CZ26 2010 0000 0055 4433 2217" },
-  "contactInfo": { "email": "info@novanadeje.cz", "address": "...", "ico": "12345678" },
+  "contactInfo": { "email": "info@nfnn.cz", "address": "...", "ico": "12345678" },
   "latestNews": [ /* 3 newest news items, same shape as /news list item */ ]
 }
 ```
