@@ -1,5 +1,7 @@
 package cz.novanadeje.app.donations.application.receipt;
 
+import cz.novanadeje.app.donations.domain.donation.DonationId;
+import cz.novanadeje.app.donations.domain.donor.DonorReference;
 import cz.novanadeje.app.donations.domain.receipt.ContentDigest;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceipt;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceiptId;
@@ -21,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.Year;
 import java.util.Optional;
 
@@ -30,14 +33,16 @@ public class DonationReceiptIssuer {
     private static final Logger LOG = LoggerFactory.getLogger(DonationReceiptIssuer.class);
 
     private final DonationReceiptRepository receipts;
+    private final ReceiptRequestReader requests;
     private final DonationReceiptRenderer renderer;
     private final FoundationIdentity foundation;
     private final Signatory signatory;
     private final Clock clock;
 
-    public DonationReceiptIssuer(DonationReceiptRepository receipts, DonationReceiptRenderer renderer, FoundationIdentity foundation,
-                                 Signatory signatory, Clock clock) {
+    public DonationReceiptIssuer(DonationReceiptRepository receipts, ReceiptRequestReader requests, DonationReceiptRenderer renderer,
+                                 FoundationIdentity foundation, Signatory signatory, Clock clock) {
         this.receipts = receipts;
+        this.requests = requests;
         this.renderer = renderer;
         this.foundation = foundation;
         this.signatory = signatory;
@@ -45,8 +50,18 @@ public class DonationReceiptIssuer {
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public IssuedReceipt issue(ReceiptRequest request) {
-        receipts.lockDonor(request.donor());
+    public IssuedReceipt issueForDonation(DonorReference donor, DonationId donation, LocalDate today) {
+        receipts.lockDonor(donor);
+        return issue(requests.forDonation(donor, donation, today));
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public IssuedReceipt issueForYear(DonorReference donor, Year year, LocalDate today) {
+        receipts.lockDonor(donor);
+        return issue(requests.forYear(donor, year, today));
+    }
+
+    private IssuedReceipt issue(ReceiptRequest request) {
         Optional<DonationReceipt> active = activeReceipt(request);
         ReceiptFingerprint fingerprint = request.fingerprint();
         if (active.isPresent() && active.get().certifies(fingerprint)) {
