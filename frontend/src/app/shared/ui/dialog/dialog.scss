@@ -1,0 +1,88 @@
+.dialog {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 20px;
+  border: 0;
+  background: var(--color-backdrop);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  color: var(--color-text);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  animation: fadeIn 0.2s ease both;
+
+  &[open] {
+    display: flex;
+    align-items: safe center;
+    justify-content: center;
+  }
+
+  &::backdrop {
+    background: transparent;
+  }
+}
+
+.dialog-panel {
+  position: relative;
+  background: var(--color-surface);
+  border-radius: var(--radius-dialog);
+  padding: 36px 40px;
+  width: 100%;
+  max-width: 420px;
+  box-shadow: var(--shadow-dialog);
+  animation: fadeInUp 0.3s ease both;
+  transition: max-width 0.2s;
+
+  &--wide {
+    max-width: 520px;
+  }
+}
+
+.dialog-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-round);
+  border: none;
+  background: transparent;
+  color: var(--color-text-subtle);
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s, color 0.2s;
+
+  &:hover {
+    background: var(--color-accent-bg);
+    color: var(--color-accent);
+  }
+}
+
+@media (max-width: 480px) {
+  .dialog[open] {
+    padding: 0;
+    align-items: flex-start;
+  }
+
+  .dialog-panel {
+    max-width: none;
+    min-height: 100%;
+    border-radius: 0;
+    padding: 56px 20px 32px;
+    box-shadow: none;
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}

@@ -2,7 +2,7 @@
 
 import { DOCUMENT } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, HostListener, inject, signal } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { FormsModule, NgForm } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { describeProblem } from '../../../core/auth/api-problem';
@@ -10,6 +10,7 @@ import { AuthApi } from '../../../core/auth/auth-api';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { DonorLocale, DonorType, PASSWORD_MIN_LENGTH } from '../../../core/auth/donor';
 import { LoginDialogMode, LoginDialogService } from '../../../core/auth/login-dialog.service';
+import { Dialog } from '../../../shared/ui/dialog/dialog';
 import { FocusFirstInvalid } from '../../../shared/ui/form-field/focus-first-invalid';
 import { FormControlDirective } from '../../../shared/ui/form-field/form-control';
 import { FormField } from '../../../shared/ui/form-field/form-field';
@@ -28,7 +29,7 @@ const TOO_MANY_REQUESTS = 429;
 
 @Component({
   selector: 'app-login-dialog',
-  imports: [FormsModule, RouterLink, FormField, FormControlDirective, FocusFirstInvalid],
+  imports: [FormsModule, RouterLink, Dialog, FormField, FormControlDirective, FocusFirstInvalid],
   templateUrl: './login-dialog.html',
   styleUrl: './login-dialog.scss',
 })
@@ -150,17 +151,6 @@ export class LoginDialog {
 
   closeDialog(): void {
     this.dialog.close();
-  }
-
-  onOverlayClick(event: MouseEvent): void {
-    if (event.target === event.currentTarget) {
-      this.closeDialog();
-    }
-  }
-
-  @HostListener('document:keydown.escape')
-  onEscape(): void {
-    this.closeDialog();
   }
 
   private readyToSend(form: NgForm): boolean {
