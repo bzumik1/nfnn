@@ -1,39 +1,5 @@
-import { expect, Page, test } from '@playwright/test';
-
-const donor = {
-  id: '01a18e56-bdb0-775a-bd0a-a60756831369',
-  type: 'PERSON',
-  name: 'Jana Nováková',
-  companyIdentifier: null,
-  address: { street: 'Dlouhá 12', city: 'Ústí nad Labem', postalCode: '400 01' },
-  email: 'jana@example.cz',
-  preferredLocale: 'cs',
-  variableSymbol: '1234567890',
-  roles: ['DONOR'],
-  registeredAt: '2026-10-17T10:00:00Z',
-};
-
-function session(status: number) {
-  return {
-    status,
-    contentType: 'application/json',
-    body: JSON.stringify({ user: donor, accessToken: 'token-1', accessTokenExpiresAt: '2026-10-17T10:15:00Z' }),
-  };
-}
-
-function problem(status: number, type: string, title: string, detail: string) {
-  return {
-    status,
-    contentType: 'application/problem+json',
-    body: JSON.stringify({ type: `https://novanadeje.cz/problems/${type}`, title, detail, status }),
-  };
-}
-
-async function openSignInDialog(page: Page): Promise<void> {
-  await page.goto('/');
-  await page.locator('.nav-login').click();
-  await expect(page.getByRole('dialog')).toBeVisible();
-}
+import { expect, test } from '@playwright/test';
+import { noDonations, openSignInDialog, problem, serveDonations, session } from './donor-session';
 
 test.describe('Given a visitor who wants a donor account', () => {
   test('when they register as a person, then the donor portal opens with their name and variable symbol', async ({ page }) => {
@@ -42,6 +8,7 @@ test.describe('Given a visitor who wants a donor account', () => {
       posted.push(route.request().postDataJSON());
       await route.fulfill(session(201));
     });
+    await serveDonations(page, noDonations);
 
     await openSignInDialog(page);
     await page.getByRole('button', { name: 'Registrace' }).click();
@@ -87,6 +54,7 @@ test.describe('Given a visitor who wants a donor account', () => {
   test('when they sign in and sign out again, then the home page shows the sign-in button again', async ({ page }) => {
     await page.route('**/api/donors/auth/login', (route) => route.fulfill(session(200)));
     await page.route('**/api/donors/auth/logout', (route) => route.fulfill({ status: 204 }));
+    await serveDonations(page, noDonations);
 
     await openSignInDialog(page);
     await page.locator('#login-email').fill('jana@example.cz');
@@ -111,6 +79,7 @@ test.describe('Given a visitor who wants a donor account', () => {
   test('when they come back with a remembered session, then the portal opens without signing in again', async ({ page }) => {
     await page.addInitScript(() => localStorage.setItem('nfnn.donor-session', '1'));
     await page.route('**/api/donors/auth/refresh', (route) => route.fulfill(session(200)));
+    await serveDonations(page, noDonations);
 
     await page.goto('/donor/prehled');
 
