@@ -4,6 +4,7 @@ import cz.novanadeje.app.donations.application.overview.DonationOverview;
 import cz.novanadeje.app.donations.domain.bank.SenderAccount;
 import cz.novanadeje.app.donations.domain.donation.Donation;
 import cz.novanadeje.app.donations.domain.donation.DonationList;
+import cz.novanadeje.app.donations.domain.donation.DonationPurpose;
 import cz.novanadeje.app.donations.domain.donation.DonationSource;
 import cz.novanadeje.app.donations.domain.donation.DonationStatus;
 import cz.novanadeje.app.donations.domain.donation.PairingMethod;
@@ -13,13 +14,15 @@ import cz.novanadeje.app.shared.domain.Currency;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
+import java.util.function.Function;
 
 record DonationListResponse(List<DonationItemResponse> items, long totalAmountMinor, Currency currency, int count) {
 
-    static DonationListResponse from(DonationOverview overview, String purpose) {
+    static DonationListResponse from(DonationOverview overview, Function<DonationPurpose, String> purposeText) {
         DonationList list = overview.list();
         List<DonationItemResponse> items = list.items().stream()
-                .map(donation -> DonationItemResponse.from(donation, overview.receiptNumberOf(donation).map(ReceiptNumber::value).orElse(null), purpose,
+                .map(donation -> DonationItemResponse.from(donation, overview.receiptNumberOf(donation).map(ReceiptNumber::value).orElse(null),
+                        purposeText.apply(donation.purpose()),
                         overview.senderAccountOf(donation).map(SenderAccount::display).orElse(null)))
                 .toList();
         return new DonationListResponse(items, list.total().amountMinor(), list.total().currency(), list.count());

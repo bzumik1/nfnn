@@ -41,7 +41,27 @@ class DonationTest {
         assertThat(donation.source()).isEqualTo(DonationSource.BANK_TRANSFER);
         assertThat(donation.status()).isEqualTo(DonationStatus.RECEIVED);
         assertThat(donation.pairedBy()).contains(PairingMethod.VARIABLE_SYMBOL);
+        assertThat(donation.purpose()).isEqualTo(DonationPurpose.GENERAL);
         assertThat(donation.recordedAt()).isEqualTo(NOW);
+    }
+
+    @Test
+    @DisplayName("Given a bank payment verifying an account, when a donation is made from it or paired through a link, then its purpose is the account verification")
+    void should_take_verification_purpose_when_made_from_payment_given_verification_message() {
+        BankPayment payment = payment(1001, RECEIVED_ON, Money.czk(100), SenderAccount.parse("2900233333", "2010"), "4821937560",
+                "OVERENI UCTU NADACNI FOND NOVA NADEJE");
+
+        assertThat(Donation.fromBankPayment(DONATION_ID, DONOR, payment, PairingMethod.VARIABLE_SYMBOL, NOW).purpose())
+                .isEqualTo(DonationPurpose.ACCOUNT_VERIFICATION);
+        assertThat(Donation.pairedBySenderAccount(DONATION_ID, DONOR, payment, SenderAccountLinkId.newId(NOW), NOW).purpose())
+                .isEqualTo(DonationPurpose.ACCOUNT_VERIFICATION);
+    }
+
+    @Test
+    @DisplayName("Given a donation without a purpose, when reconstituted, then it is refused")
+    void should_refuse_when_reconstituted_given_no_purpose() {
+        assertThatIllegalArgumentException().isThrownBy(() -> Donation.reconstitute(DONATION_ID, DONOR, Optional.empty(), RECEIVED_ON,
+                Money.czk(100), DonationSource.MANUAL, DonationStatus.RECEIVED, Optional.empty(), Optional.empty(), null, NOW));
     }
 
     @Test

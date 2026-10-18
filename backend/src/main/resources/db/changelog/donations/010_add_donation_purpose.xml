@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <changeSet id="010-add-donation-purpose" author="nfnn">
+        <addColumn tableName="donation">
+            <column name="purpose" type="varchar(32)" defaultValue="GENERAL">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+        <sql>update donation d set purpose = 'ACCOUNT_VERIFICATION' from bank_payment p
+            where d.bank_payment_id = p.id
+            and upper(regexp_replace(translate(p.message_for_recipient, 'ěščřžýáíéúůďťňóĚŠČŘŽÝÁÍÉÚŮĎŤŇÓ', 'escrzyaieuudtnoESCRZYAIEUUDTNO'), '\s+', ' ', 'g')) like '%OVERENI UCTU%'</sql>
+        <dropDefaultValue tableName="donation" columnName="purpose"/>
+        <sql>alter table donation add constraint ck_donation_purpose check (purpose in ('GENERAL', 'ACCOUNT_VERIFICATION'))</sql>
+    </changeSet>
+
+</databaseChangeLog>

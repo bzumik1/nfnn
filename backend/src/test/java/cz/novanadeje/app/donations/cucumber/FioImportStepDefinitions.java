@@ -280,7 +280,8 @@ public class FioImportStepDefinitions {
                 : FioMovements.incoming(id, date, amount);
         movement.from(cell(row, "account"), cell(row, "bankCode"))
                 .named(cell(row, "name"))
-                .withVariableSymbol(variableSymbolCell(cell(row, "variableSymbol")));
+                .withVariableSymbol(variableSymbolCell(cell(row, "variableSymbol")))
+                .withMessage(cell(row, "message"));
         Optional.ofNullable(cell(row, "currency")).ifPresent(movement::inCurrency);
         return movement;
     }

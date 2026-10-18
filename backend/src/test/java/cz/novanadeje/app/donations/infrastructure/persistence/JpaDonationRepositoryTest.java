@@ -6,6 +6,7 @@ import cz.novanadeje.app.donations.domain.bank.BankPaymentRepository;
 import cz.novanadeje.app.donations.domain.bank.SenderAccount;
 import cz.novanadeje.app.donations.domain.donation.Donation;
 import cz.novanadeje.app.donations.domain.donation.DonationId;
+import cz.novanadeje.app.donations.domain.donation.DonationPurpose;
 import cz.novanadeje.app.donations.domain.donation.DonationRepository;
 import cz.novanadeje.app.donations.domain.donation.DonationSource;
 import cz.novanadeje.app.donations.domain.donation.DonationStatus;
@@ -74,6 +75,7 @@ class JpaDonationRepositoryTest {
             assertThat(stored.source()).isEqualTo(DonationSource.BANK_TRANSFER);
             assertThat(stored.status()).isEqualTo(DonationStatus.RECEIVED);
             assertThat(stored.pairedBy()).contains(PairingMethod.SENDER_ACCOUNT);
+            assertThat(stored.purpose()).isEqualTo(DonationPurpose.GENERAL);
             assertThat(stored.recordedAt()).isEqualTo(NOW);
         });
         assertThat(donations.existsForBankPayment(payment.id())).isTrue();
@@ -186,6 +188,21 @@ class JpaDonationRepositoryTest {
         assertThat(donations.findReceivedOnBetween(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 9, 30)))
                 .extracting(Donation::receivedOn)
                 .containsExactlyInAnyOrder(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 9, 30));
+    }
+
+    @Test
+    @DisplayName("Given a donation from a payment verifying an account, when it is saved and read back, then it keeps the account verification purpose")
+    void should_keep_verification_purpose_when_saved_and_read_given_verification_payment() {
+        DonorReference jana = storedDonor("4821937560");
+        BankPayment payment = payment(1001, LocalDate.of(2026, 10, 15), Money.czk(100), ACCOUNT, "4821937560",
+                "OVERENI UCTU NADACNI FOND NOVA NADEJE");
+        payments.saveAll(List.of(payment));
+
+        donations.save(bySymbol(jana, payment));
+        flushAndClear();
+
+        assertThat(donations.findByDonorNewestFirst(jana)).singleElement()
+                .extracting(Donation::purpose).isEqualTo(DonationPurpose.ACCOUNT_VERIFICATION);
     }
 
     private Donation bySymbol(DonorReference donor, BankPayment payment) {

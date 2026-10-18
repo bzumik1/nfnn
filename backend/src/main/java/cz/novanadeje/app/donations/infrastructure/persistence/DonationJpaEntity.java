@@ -3,6 +3,7 @@ package cz.novanadeje.app.donations.infrastructure.persistence;
 import cz.novanadeje.app.donations.domain.bank.BankPaymentId;
 import cz.novanadeje.app.donations.domain.donation.Donation;
 import cz.novanadeje.app.donations.domain.donation.DonationId;
+import cz.novanadeje.app.donations.domain.donation.DonationPurpose;
 import cz.novanadeje.app.donations.domain.donation.DonationSource;
 import cz.novanadeje.app.donations.domain.donation.DonationStatus;
 import cz.novanadeje.app.donations.domain.donation.PairingMethod;
@@ -60,6 +61,10 @@ public class DonationJpaEntity {
     @Column(name = "sender_account_id")
     private UUID senderAccountId;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "purpose", nullable = false, length = 32)
+    private DonationPurpose purpose;
+
     @Column(name = "recorded_at", nullable = false)
     private Instant recordedAt;
 
@@ -78,6 +83,7 @@ public class DonationJpaEntity {
         entity.status = donation.status();
         entity.pairedBy = donation.pairedBy().orElse(null);
         entity.senderAccountId = donation.pairedThrough().map(SenderAccountLinkId::value).orElse(null);
+        entity.purpose = donation.purpose();
         entity.recordedAt = donation.recordedAt();
         return entity;
     }
@@ -93,6 +99,7 @@ public class DonationJpaEntity {
                 status,
                 Optional.ofNullable(pairedBy),
                 Optional.ofNullable(senderAccountId).map(SenderAccountLinkId::new),
+                purpose,
                 recordedAt);
     }
 }
