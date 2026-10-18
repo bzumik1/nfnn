@@ -74,3 +74,29 @@ SQL
 ```
 
 Kontejner `nfnn-backup` má přihlášení k databázi v prostředí, takže `psql` nepotřebuje žádné parametry. Příkaz je idempotentní; platby těchto dárců spáruje nejbližší hodinový import.
+
+## Potvrzení o daru
+
+Přihlášený dárce si v portálu stáhne potvrzení o daru v PDF: za jeden dar kdykoli, za celý rok od 1. ledna následujícího roku. Bez jakéhokoli nastavení potvrzení podepisuje Pavel Znamenáček, předseda správní rady, a místo obrázku podpisu je jen čára se jménem. Podepisujícího a sken podpisu určují tři proměnné backendu:
+
+- `RECEIPT_SIGNATORY_NAME` – jméno podepisujícího (výchozí `Pavel Znamenáček`),
+- `RECEIPT_SIGNATORY_ROLE` – jeho funkce (výchozí `předseda správní rady`),
+- `RECEIPT_SIGNATURE_IMAGE` – cesta ke skenu podpisu uvnitř kontejneru backendu; bez ní je potvrzení bez obrázku podpisu.
+
+Sken podpisu na serveru:
+
+1. Naskenovaný podpis (PNG nebo JPEG; nejlépe PNG s průhledným pozadím) ulož na ZimaOS jako `/DATA/AppData/nfnn/receipt/signature.png`. Pro JPEG použij příponu `.jpg` a stejně uprav obě cesty níže; typ obrázku backend pozná podle přípony.
+2. Do `compose.yml`, který vkládáš do ZimaOS, přidej backendu připojení souboru jen pro čtení a pod `environment:` cestu k němu (hodnoty přímo, bez `$`):
+
+   ```yaml
+       volumes:
+         - /DATA/AppData/nfnn/receipt/signature.png:/config/signature.png:ro
+       environment:
+         RECEIPT_SIGNATURE_IMAGE: /config/signature.png
+   ```
+
+   Jiného podepisujícího nastav stejně řádky `RECEIPT_SIGNATORY_NAME: ...` a `RECEIPT_SIGNATORY_ROLE: ...`.
+3. Soubor `deploy/compose.yml` v repu tyto řádky nemá. Na server se dostanou, až compose znovu vložíš do ZimaOS (přeinstaluj aplikaci), a přidat je musíš při každém dalším vložení.
+4. Chybí-li soubor, nejde-li přečíst nebo nemá-li příponu `.png`, `.jpg` či `.jpeg`, backend nenastartuje a log (`sudo docker logs nfnn-backend`) hlásí `RECEIPT_SIGNATURE_IMAGE ...`. Prázdné jméno nebo funkce podepisujícího zastaví start s hlášením `RECEIPT_SIGNATORY_NAME ... is required` nebo `RECEIPT_SIGNATORY_ROLE ... is required`.
+
+Vystavené potvrzení je uložené v tabulce `donation_receipt` a každé další stažení vrátí stejný soubor. Změna podepisujícího nebo podpisu proto platí jen pro nově vystavená potvrzení; už vystavená se nemění.
