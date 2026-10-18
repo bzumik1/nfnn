@@ -105,6 +105,9 @@ app:
   donors:
     session:
       refresh-token-ttl: P14D
+    password-reset:
+      token-ttl: PT1H
+      max-live-links: 3
 
 logging:
   level:
