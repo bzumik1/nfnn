@@ -50,8 +50,8 @@
         ho u nás ověřili. Tomuto přiřazování podle účtu říkáme párování. Účet ověříte tak, že z něj jednou pošlete platbu s vaším
         variabilním symbolem; stačí 1&nbsp;Kč, návod najdete pod tlačítkem „Přidat účet“. Musí to být český účet, ale nemusí být veden
         na vaše jméno. Když účet ověříte poprvé a předtím ho neověřil jiný dárce, přiřadíme vám i dřívější platby z něj, které přišly
-        bez symbolu. Z některých účtů, například ze sběrných účtů, přes které posílá peníze víc lidí, přiřazujeme jen platby
-        s variabilním symbolem.
+        bez symbolu. Účet, přes který posílá peníze víc lidí (třeba sběrný účet), můžeme z párování vyloučit; z takového účtu pak
+        přiřazujeme jen platby s variabilním symbolem.
       </li>
       @if (variableSymbol(); as symbol) {
         <li i18n="@@donor.bankAccounts.help.otherSymbol">
@@ -210,8 +210,8 @@
       Pošlete z účtu, který chcete přidat, <strong>1 Kč</strong> (nebo jakýkoli dar) s vaším variabilním symbolem
       <strong>{{ variableSymbol() }}</strong>. Jakmile platba dorazí, účet se tu objeví. Když ho ověříte poprvé a předtím ho
       neověřil jiný dárce, přiřadíme vám i dřívější dary z něj, které přišly bez symbolu. Okamžitá platba dorazí do pár minut, běžný
-      převod obvykle do dalšího pracovního dne. Funguje jen český účet, ne sběrný účet, přes který posílá peníze
-      víc lidí.
+      převod obvykle do dalšího pracovního dne. Funguje jen český účet. Neověřujte prosím sběrný účet, přes který posílá
+      peníze víc lidí.
     </p>
 
     <div class="add-account-payment">

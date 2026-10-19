@@ -293,7 +293,7 @@ describe('Given the bank accounts card in the overview', () => {
         'Účet ověříte tak, že z něj jednou pošlete platbu s vaším variabilním symbolem; stačí 1 Kč, návod najdete pod tlačítkem „Přidat účet“. ' +
         'Musí to být český účet, ale nemusí být veden na vaše jméno. ' +
         'Když účet ověříte poprvé a předtím ho neověřil jiný dárce, přiřadíme vám i dřívější platby z něj, které přišly bez symbolu. ' +
-        'Z některých účtů, například ze sběrných účtů, přes které posílá peníze víc lidí, přiřazujeme jen platby s variabilním symbolem.',
+        'Účet, přes který posílá peníze víc lidí (třeba sběrný účet), můžeme z párování vyloučit; z takového účtu pak přiřazujeme jen platby s variabilním symbolem.',
       'S jiným symbolem Platbu s jiným variabilním symbolem, než je váš, vám nepřiřadíme, ani když přijde z vašeho ověřeného účtu. ' +
         'Pokud nám posíláte dary trvalým příkazem se starším symbolem, nastavte v něm prosím váš variabilní symbol 9876543210. ' +
         'Platbu se symbolem 0 bereme jako platbu bez symbolu.',
@@ -557,7 +557,7 @@ describe('Given the bank accounts card in the overview', () => {
         'Pošlete z účtu, který chcete přidat, 1 Kč (nebo jakýkoli dar) s vaším variabilním symbolem 9876543210. ' +
           'Jakmile platba dorazí, účet se tu objeví. ' +
           'Když ho ověříte poprvé a předtím ho neověřil jiný dárce, přiřadíme vám i dřívější dary z něj, které přišly bez symbolu. ' +
-          'Okamžitá platba dorazí do pár minut, běžný převod obvykle do dalšího pracovního dne. Funguje jen český účet, ne sběrný účet, přes který posílá peníze víc lidí.',
+          'Okamžitá platba dorazí do pár minut, běžný převod obvykle do dalšího pracovního dne. Funguje jen český účet. Neověřujte prosím sběrný účet, přes který posílá peníze víc lidí.',
       );
       expect(texts('.add-account-text strong')).toEqual(['1 Kč', '9876543210']);
       expect(text('.add-account-qr')).toBe('Připravujeme QR kód…');
