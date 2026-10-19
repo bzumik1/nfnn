@@ -50,7 +50,8 @@
         ho u nás ověřili. Tomuto přiřazování podle účtu říkáme párování. Účet ověříte tak, že z něj jednou pošlete platbu s vaším
         variabilním symbolem; stačí 1&nbsp;Kč, návod najdete pod tlačítkem „Přidat účet“. Musí to být český účet, ale nemusí být veden
         na vaše jméno. Když účet ověříte poprvé a předtím ho neověřil jiný dárce, přiřadíme vám i dřívější platby z něj, které přišly
-        bez symbolu.
+        bez symbolu. Účet, přes který posílá peníze víc lidí (třeba sběrný účet), můžeme z párování vyloučit; z takového účtu pak
+        přiřazujeme jen platby s variabilním symbolem.
       </li>
       @if (variableSymbol(); as symbol) {
         <li i18n="@@donor.bankAccounts.help.otherSymbol">
@@ -66,10 +67,11 @@
         </li>
       }
       <li i18n="@@donor.bankAccounts.help.disconnect">
-        <span class="help-lead">Vypnutí párování</span> Párování můžete u každého účtu vypnout tlačítkem „Vypnout párování“. Platby bez
+        <span class="help-lead">Vypnutí párování</span> Párování můžete u účtu vypnout tlačítkem „Vypnout párování“. Platby bez
         symbolu, které z účtu přijdou ode dne po vypnutí, vám pak nepřiřadíme; dary přiřazené dříve zůstanou. Párování znovu zapnete
         tlačítkem „Zapnout párování“. Účet pak čeká na platbu: pošlete z něj 1&nbsp;Kč (nebo jakýkoli dar) s vaším variabilním
-        symbolem. Jakmile dorazí, přiřadíme vám z něj i platby bez symbolu ode dne zapnutí.
+        symbolem. Jakmile dorazí, přiřadíme vám z něj i platby bez symbolu ode dne zapnutí. U účtu, ze kterého přiřazujeme jen platby
+        s variabilním symbolem, párování znovu zapnout nejde.
       </li>
       <li i18n="@@donor.bankAccounts.help.shared">
         <span class="help-lead">Sdílený účet</span> Když stejný účet ověří i jiný dárce, označíme ho jako „Sdílený“ a platby bez
@@ -138,7 +140,7 @@
                     (click)="reconnect(account)"
                     i18n="@@donor.bankAccounts.reconnect"
                   >Zapnout párování</button>
-                } @else if (account.status !== 'DISCONNECTED') {
+                } @else if (offersDisconnect(account)) {
                   <button
                     type="button"
                     class="account-action"
@@ -208,7 +210,8 @@
       Pošlete z účtu, který chcete přidat, <strong>1 Kč</strong> (nebo jakýkoli dar) s vaším variabilním symbolem
       <strong>{{ variableSymbol() }}</strong>. Jakmile platba dorazí, účet se tu objeví. Když ho ověříte poprvé a předtím ho
       neověřil jiný dárce, přiřadíme vám i dřívější dary z něj, které přišly bez symbolu. Okamžitá platba dorazí do pár minut, běžný
-      převod obvykle do dalšího pracovního dne. Funguje jen český účet.
+      převod obvykle do dalšího pracovního dne. Funguje jen český účet. Neověřujte prosím sběrný účet, přes který posílá
+      peníze víc lidí.
     </p>
 
     <div class="add-account-payment">

@@ -296,7 +296,6 @@ class DonorRecordTest {
         assertThat(awaiting.status()).isEqualTo(SenderAccountLinkStatus.AWAITING_PAYMENT);
         assertThat(awaiting.validFrom()).contains(reconnectedOn);
         assertThat(record.linkPairingPaymentsFrom(ACCOUNT, reconnectedOn)).isEmpty();
-        assertThat(record.releasedSenderAccountOn(ACCOUNT)).isEmpty();
         assertThat(learn(record, payment(BankPaymentId.newId(LATER), SYMBOL.value(), Optional.of(ACCOUNT), reconnectedOn.minusDays(1)))).isEmpty();
 
         BankPaymentId proof = BankPaymentId.newId(LATER);
@@ -307,6 +306,64 @@ class DonorRecordTest {
         assertThat(awaiting.provedBy()).contains(proof);
         assertThat(record.linkPairingPaymentsFrom(ACCOUNT, reconnectedOn)).contains(awaiting);
         assertThat(record.linkPairingPaymentsFrom(ACCOUNT, TODAY.plusDays(1))).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Given a disconnected account reconnected and still awaiting its payment, when asked for the release day, then it is the end of the ended link, and still once the payment proves the reconnect")
+    void should_release_on_last_end_when_asked_given_reconnect_awaiting_or_proved() {
+        DonorRecord record = person();
+        SenderAccountLink link = learn(record, payment(PAYMENT, SYMBOL.value(), Optional.of(ACCOUNT))).orElseThrow();
+        record.disconnectSenderAccount(link.id(), TODAY, LATER);
+        LocalDate reconnectedOn = TODAY.plusDays(3);
+        record.reconnectSenderAccount(link.id(), reconnectedOn, LATER.plusSeconds(3600));
+
+        assertThat(record.usesSenderAccount(ACCOUNT)).isFalse();
+        assertThat(record.releasedSenderAccountOn(ACCOUNT)).contains(TODAY);
+
+        learn(record, payment(BankPaymentId.newId(LATER), SYMBOL.value(), Optional.of(ACCOUNT), reconnectedOn)).orElseThrow();
+
+        assertThat(record.usesSenderAccount(ACCOUNT)).isTrue();
+        assertThat(record.releasedSenderAccountOn(ACCOUNT)).contains(TODAY);
+    }
+
+    @Test
+    @DisplayName("Given a reconnect awaiting its payment from an account excluded since, when a payment with the symbol comes from it, then it does not prove the reconnect")
+    void should_not_prove_awaiting_link_when_payment_with_symbol_arrives_given_excluded_account() {
+        DonorRecord record = person();
+        SenderAccountLink link = learn(record, payment(PAYMENT, SYMBOL.value(), Optional.of(ACCOUNT))).orElseThrow();
+        record.disconnectSenderAccount(link.id(), TODAY, LATER);
+        LocalDate reconnectedOn = TODAY.plusDays(3);
+        SenderAccountLink awaiting = record.reconnectSenderAccount(link.id(), reconnectedOn, LATER.plusSeconds(3600));
+
+        Optional<SenderAccountLink> proved = record.learnSenderAccountFrom(
+                payment(BankPaymentId.newId(LATER), SYMBOL.value(), Optional.of(ACCOUNT), reconnectedOn), Optional.empty(),
+                new ExcludedSenderAccounts(Set.of(ACCOUNT)), LATER.plusSeconds(7200));
+
+        assertThat(proved).isEmpty();
+        assertThat(awaiting.status()).isEqualTo(SenderAccountLinkStatus.AWAITING_PAYMENT);
+        assertThat(record.linkPairingPaymentsFrom(ACCOUNT, reconnectedOn)).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Given an active link that never ended, when asked for the release day, then there is none")
+    void should_release_never_when_asked_given_active_link_never_ended() {
+        DonorRecord record = person();
+        learn(record, payment(PAYMENT, SYMBOL.value(), Optional.of(ACCOUNT))).orElseThrow();
+
+        assertThat(record.releasedSenderAccountOn(ACCOUNT)).isEmpty();
+        assertThatThrownBy(() -> record.releasedSenderAccountOn(null)).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    @DisplayName("Given a reconnect disconnected again before a payment proved it, when asked for the release day, then it is the end of the last proved link")
+    void should_release_on_last_proved_end_when_asked_given_unproved_reconnect_disconnected() {
+        DonorRecord record = person();
+        SenderAccountLink link = learn(record, payment(PAYMENT, SYMBOL.value(), Optional.of(ACCOUNT))).orElseThrow();
+        record.disconnectSenderAccount(link.id(), TODAY, LATER);
+        SenderAccountLink awaiting = record.reconnectSenderAccount(link.id(), TODAY.plusDays(3), LATER.plusSeconds(3600));
+        record.disconnectSenderAccount(awaiting.id(), TODAY.plusDays(5), LATER.plusSeconds(7200));
+
+        assertThat(record.releasedSenderAccountOn(ACCOUNT)).contains(TODAY);
     }
 
     @Test

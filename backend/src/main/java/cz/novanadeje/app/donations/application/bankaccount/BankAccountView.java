@@ -7,7 +7,8 @@ import cz.novanadeje.app.shared.domain.Money;
 import java.time.LocalDate;
 import java.util.Optional;
 
-public record BankAccountView(SenderAccountLink link, int donationCount, Money total, Optional<LocalDate> lastDonationOn, boolean shared) {
+public record BankAccountView(SenderAccountLink link, int donationCount, Money total, Optional<LocalDate> lastDonationOn, boolean shared,
+                              boolean pairingExcluded) {
 
     public BankAccountView {
         if (link == null || total == null || lastDonationOn == null) {

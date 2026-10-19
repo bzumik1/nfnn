@@ -127,9 +127,6 @@ public final class DonorRecord {
 
     public Optional<LocalDate> releasedSenderAccountOn(SenderAccount account) {
         require(account, "Sender account");
-        if (liveLinkOf(account).isPresent()) {
-            return Optional.empty();
-        }
         return senderAccountLinks.values().stream()
                 .filter(link -> link.account().equals(account) && link.provedBy().isPresent())
                 .flatMap(link -> link.validTo().stream())

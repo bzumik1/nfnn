@@ -253,6 +253,7 @@
   color: var(--color-accent);
 }
 
+.account-status--excluded,
 .account-status--disconnected {
   background: var(--color-border);
   color: var(--color-text-muted);

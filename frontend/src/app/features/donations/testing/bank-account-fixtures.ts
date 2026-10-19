@@ -13,6 +13,7 @@ export function bankAccount(overrides: Partial<BankAccountItem> = {}): BankAccou
     currency: 'CZK',
     lastDonationOn: '2026-10-01',
     shared: false,
+    pairingExcluded: false,
     ...overrides,
   };
 }

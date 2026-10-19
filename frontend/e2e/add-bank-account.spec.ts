@@ -13,6 +13,7 @@ const newAccount = {
   currency: 'CZK',
   lastDonationOn: null,
   shared: false,
+  pairingExcluded: false,
 };
 
 test.describe('Given a signed-in donor adding a bank account', () => {

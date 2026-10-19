@@ -1,6 +1,9 @@
 package cz.novanadeje.app.donations.cucumber;
 
 import cz.novanadeje.app.cucumber.ScenarioDonors;
+import cz.novanadeje.app.donations.domain.bank.BankPayment;
+import cz.novanadeje.app.donations.domain.bank.BankPaymentId;
+import cz.novanadeje.app.donations.domain.bank.BankPaymentRepository;
 import cz.novanadeje.app.donations.domain.bank.SenderAccount;
 import cz.novanadeje.app.donations.domain.donation.Donation;
 import cz.novanadeje.app.donations.domain.donation.DonationRepository;
@@ -8,14 +11,19 @@ import cz.novanadeje.app.donations.domain.donation.PairingMethod;
 import cz.novanadeje.app.donations.domain.donor.DonorRecord;
 import cz.novanadeje.app.donations.domain.donor.DonorRecordRepository;
 import cz.novanadeje.app.donations.domain.donor.DonorReference;
+import cz.novanadeje.app.donations.domain.donor.ExcludedSenderAccounts;
+import cz.novanadeje.app.donations.domain.donor.SenderAccountLink;
 import cz.novanadeje.app.shared.domain.Currency;
 import cz.novanadeje.app.shared.domain.Money;
+import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
 import org.springframework.jdbc.core.simple.JdbcClient;
 
 import java.math.BigDecimal;
+import java.time.Clock;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -25,14 +33,28 @@ public class PaymentPairingStepDefinitions {
     private final ScenarioDonors scenarioDonors;
     private final DonationRepository donations;
     private final DonorRecordRepository donorRecords;
+    private final BankPaymentRepository payments;
     private final JdbcClient jdbc;
+    private final Clock clock;
 
     public PaymentPairingStepDefinitions(ScenarioDonors scenarioDonors, DonationRepository donations, DonorRecordRepository donorRecords,
-                                         JdbcClient jdbc) {
+                                         BankPaymentRepository payments, JdbcClient jdbc, Clock clock) {
         this.scenarioDonors = scenarioDonors;
         this.donations = donations;
         this.donorRecords = donorRecords;
+        this.payments = payments;
         this.jdbc = jdbc;
+        this.clock = clock;
+    }
+
+    @Given("{string} learned the sender account of bank payment {long} before it was excluded")
+    public void learnedTheSenderAccountBeforeItWasExcluded(String alias, long transactionId) {
+        DonorRecord record = recordOf(alias);
+        BankPayment payment = payments.findById(new BankPaymentId(jdbc.sql("select id from bank_payment where bank_transaction_id = ?")
+                .param(transactionId).query(UUID.class).single())).orElseThrow();
+        SenderAccountLink link = record.learnSenderAccountFrom(payment, Optional.empty(), ExcludedSenderAccounts.none(), clock.instant())
+                .orElseThrow(() -> new AssertionError("Bank payment " + transactionId + " teaches \"" + alias + "\" no sender account"));
+        assertThat(donorRecords.saveSenderAccountLink(record.id(), link)).isTrue();
     }
 
     @Then("{string} has {int} donation(s)")

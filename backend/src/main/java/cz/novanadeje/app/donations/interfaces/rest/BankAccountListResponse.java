@@ -16,13 +16,13 @@ record BankAccountListResponse(List<BankAccountItemResponse> items) {
 
     record BankAccountItemResponse(UUID id, String accountNumber, SenderAccountLinkStatus status, LocalDate verifiedOn, LocalDate connectedFrom,
                                    LocalDate disconnectedOn, int donationCount, long totalAmountMinor, Currency currency,
-                                   LocalDate lastDonationOn, boolean shared) {
+                                   LocalDate lastDonationOn, boolean shared, boolean pairingExcluded) {
 
         static BankAccountItemResponse from(BankAccountView view) {
             return new BankAccountItemResponse(view.link().id().value(), view.link().account().display(), view.link().status(),
                     view.verifiedOn().orElse(null), view.link().validFrom().orElse(null), view.link().validTo().orElse(null),
                     view.donationCount(), view.total().amountMinor(), view.total().currency(), view.lastDonationOn().orElse(null),
-                    view.shared());
+                    view.shared(), view.pairingExcluded());
         }
     }
 }

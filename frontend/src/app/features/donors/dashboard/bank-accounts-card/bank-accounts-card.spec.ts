@@ -145,6 +145,51 @@ describe('Given the bank accounts card in the overview', () => {
     expect(element('.account-hint-icon')).toBeNull();
   });
 
+  it('when an account only pairs payments with the symbol, then it stays verified, asks for the symbol in a plain line and cannot be disconnected', async () => {
+    await respond([bankAccount({ pairingExcluded: true })]);
+
+    expect(text('.account-status')).toBe('Ověřený');
+    expect(element('.account-status')?.classList).toContain('account-status--active');
+    expect(element('.account-hint--warning')).toBeNull();
+    expect(text('.account-hint')).toBe(
+      'Z tohoto účtu už přiřazujeme jen platby s variabilním symbolem. Posílejte z něj prosím vždy s vaším variabilním symbolem.',
+    );
+    expect(texts('.account-meta > li')).toEqual(['ověřeno 12. 03. 2026', '14 darů bez VS', '7 400 Kč']);
+    expect(element('.account-action')).toBeNull();
+  });
+
+  it('when a reconnected account awaits a payment but only pairs payments with the symbol, then it does not say Čeká na platbu, asks for the symbol and can be disconnected', async () => {
+    await respond([
+      bankAccount({ status: 'AWAITING_PAYMENT', verifiedOn: null, donationCount: 0, totalAmountMinor: 0, pairingExcluded: true }),
+    ]);
+
+    expect(text('.account-status')).toBe('Jen s variabilním symbolem');
+    expect(element('.account-status')?.classList).toContain('account-status--excluded');
+    expect(element('.account-hint--warning')).toBeNull();
+    expect(text('.account-hint')).toBe(
+      'Z tohoto účtu už přiřazujeme jen platby s variabilním symbolem. Posílejte z něj prosím vždy s vaším variabilním symbolem.',
+    );
+    expect(texts('.account-action')).toEqual(['Vypnout párování']);
+  });
+
+  it('when a disconnected account only pairs payments with the symbol, then its newest row says why it offers no Zapnout párování', async () => {
+    await respond([
+      bankAccount({ id: 'a-2', status: 'DISCONNECTED', disconnectedOn: '2026-10-18', pairingExcluded: true }),
+      bankAccount({ id: 'a-3', status: 'DISCONNECTED', disconnectedOn: '2026-05-31', pairingExcluded: true }),
+      bankAccount({ accountNumber: '19-2000145399/0800', status: 'DISCONNECTED', disconnectedOn: '2026-09-30' }),
+    ]);
+
+    expect(texts('.account-status')).toEqual(['Párování vypnuto', 'Párování vypnuto', 'Párování vypnuto']);
+    expect(element('.account:nth-child(1) .account-hint--warning')).toBeNull();
+    expect(text('.account:nth-child(1) .account-hint')).toBe(
+      'Z tohoto účtu už přiřazujeme jen platby s variabilním symbolem, párování u něj proto znovu zapnout nejde.',
+    );
+    expect(element('.account:nth-child(2) .account-hint')).toBeNull();
+    expect(element('.account:nth-child(1) .account-action')).toBeNull();
+    expect(element('.account:nth-child(2) .account-action')).toBeNull();
+    expect(texts('.account-action')).toEqual(['Zapnout párování']);
+  });
+
   it('when an account waits for a payment, then the row says what to send and can still be disconnected', async () => {
     await respond([bankAccount({ status: 'AWAITING_PAYMENT', verifiedOn: null, donationCount: 0, totalAmountMinor: 0 })]);
 
@@ -247,15 +292,17 @@ describe('Given the bank accounts card in the overview', () => {
         'Tomuto přiřazování podle účtu říkáme párování. ' +
         'Účet ověříte tak, že z něj jednou pošlete platbu s vaším variabilním symbolem; stačí 1 Kč, návod najdete pod tlačítkem „Přidat účet“. ' +
         'Musí to být český účet, ale nemusí být veden na vaše jméno. ' +
-        'Když účet ověříte poprvé a předtím ho neověřil jiný dárce, přiřadíme vám i dřívější platby z něj, které přišly bez symbolu.',
+        'Když účet ověříte poprvé a předtím ho neověřil jiný dárce, přiřadíme vám i dřívější platby z něj, které přišly bez symbolu. ' +
+        'Účet, přes který posílá peníze víc lidí (třeba sběrný účet), můžeme z párování vyloučit; z takového účtu pak přiřazujeme jen platby s variabilním symbolem.',
       'S jiným symbolem Platbu s jiným variabilním symbolem, než je váš, vám nepřiřadíme, ani když přijde z vašeho ověřeného účtu. ' +
         'Pokud nám posíláte dary trvalým příkazem se starším symbolem, nastavte v něm prosím váš variabilní symbol 9876543210. ' +
         'Platbu se symbolem 0 bereme jako platbu bez symbolu.',
-      'Vypnutí párování Párování můžete u každého účtu vypnout tlačítkem „Vypnout párování“. ' +
+      'Vypnutí párování Párování můžete u účtu vypnout tlačítkem „Vypnout párování“. ' +
         'Platby bez symbolu, které z účtu přijdou ode dne po vypnutí, vám pak nepřiřadíme; dary přiřazené dříve zůstanou. ' +
         'Párování znovu zapnete tlačítkem „Zapnout párování“. ' +
         'Účet pak čeká na platbu: pošlete z něj 1 Kč (nebo jakýkoli dar) s vaším variabilním symbolem. ' +
-        'Jakmile dorazí, přiřadíme vám z něj i platby bez symbolu ode dne zapnutí.',
+        'Jakmile dorazí, přiřadíme vám z něj i platby bez symbolu ode dne zapnutí. ' +
+        'U účtu, ze kterého přiřazujeme jen platby s variabilním symbolem, párování znovu zapnout nejde.',
       'Sdílený účet Když stejný účet ověří i jiný dárce, označíme ho jako „Sdílený“ a platby bez variabilního symbolu z něj nepřiřadíme nikomu. ' +
         'Pokud z něj dary neposíláte vy, vypněte si u něj párování. ' +
         'Jinak z něj prosím posílejte vždy s vaším variabilním symbolem.',
@@ -510,7 +557,7 @@ describe('Given the bank accounts card in the overview', () => {
         'Pošlete z účtu, který chcete přidat, 1 Kč (nebo jakýkoli dar) s vaším variabilním symbolem 9876543210. ' +
           'Jakmile platba dorazí, účet se tu objeví. ' +
           'Když ho ověříte poprvé a předtím ho neověřil jiný dárce, přiřadíme vám i dřívější dary z něj, které přišly bez symbolu. ' +
-          'Okamžitá platba dorazí do pár minut, běžný převod obvykle do dalšího pracovního dne. Funguje jen český účet.',
+          'Okamžitá platba dorazí do pár minut, běžný převod obvykle do dalšího pracovního dne. Funguje jen český účet. Neověřujte prosím sběrný účet, přes který posílá peníze víc lidí.',
       );
       expect(texts('.add-account-text strong')).toEqual(['1 Kč', '9876543210']);
       expect(text('.add-account-qr')).toBe('Připravujeme QR kód…');

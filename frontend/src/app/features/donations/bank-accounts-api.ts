@@ -16,6 +16,7 @@ export interface BankAccountItem {
   currency: string;
   lastDonationOn: string | null;
   shared: boolean;
+  pairingExcluded: boolean;
 }
 
 export interface BankAccountListResponse {
