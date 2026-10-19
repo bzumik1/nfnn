@@ -37,23 +37,27 @@ type QrState = { readonly kind: 'loading' } | { readonly kind: 'ready'; readonly
 
 type PaymentWatch = 'waiting' | 'stopped';
 
-type AccountLabel = 'active' | 'shared' | 'awaiting' | 'disconnected';
+type AccountLabel = 'active' | 'shared' | 'awaiting' | 'excluded' | 'disconnected';
 
 const LABELS: Record<AccountLabel, string> = {
   active: $localize`:@@donor.bankAccounts.status.active:Ověřený`,
   shared: $localize`:@@donor.bankAccounts.status.shared:Sdílený`,
   awaiting: $localize`:@@donor.bankAccounts.status.awaiting:Čeká na platbu`,
+  excluded: $localize`:@@donor.bankAccounts.status.excluded:Jen s variabilním symbolem`,
   disconnected: $localize`:@@donor.bankAccounts.status.disconnected:Párování vypnuto`,
 };
+
+const EXCLUDED_HINT = $localize`:@@donor.bankAccounts.hint.excluded:Z tohoto účtu už přiřazujeme jen platby s variabilním symbolem. Posílejte z něj prosím vždy s vaším variabilním symbolem.`;
 
 const HINTS: Record<AccountLabel, string> = {
   active: $localize`:@@donor.bankAccounts.hint.active:Platby bez variabilního symbolu z něj vám přiřazujeme automaticky.`,
   shared: $localize`:@@donor.bankAccounts.hint.shared:Tento účet ověřil i jiný dárce, proto z něj platby bez variabilního symbolu nepřiřazujeme nikomu. Pokud z něj dary neposíláte vy, vypněte si u tohoto účtu párování. Jinak z něj prosím posílejte vždy s vaším variabilním symbolem.`,
   awaiting: $localize`:@@donor.bankAccounts.hint.awaiting:Pošlete z účtu 1 Kč s vaším variabilním symbolem. Jakmile dorazí, přiřadíme vám z něj i platby bez symbolu ode dne zapnutí.`,
+  excluded: EXCLUDED_HINT,
   disconnected: '',
 };
 
-const EXCLUDED_HINT = $localize`:@@donor.bankAccounts.hint.excluded:Z tohoto účtu přiřazujeme jen platby s variabilním symbolem. Posílejte z něj prosím vždy s vaším variabilním symbolem.`;
+const EXCLUDED_DISCONNECTED_HINT = $localize`:@@donor.bankAccounts.hint.excludedDisconnected:Z tohoto účtu už přiřazujeme jen platby s variabilním symbolem, párování u něj proto znovu zapnout nejde.`;
 
 const DISCONNECTED_MESSAGE = $localize`:@@donor.bankAccounts.disconnected:Párování z účtu jsme vypnuli.`;
 const RECONNECTED_MESSAGE = $localize`:@@donor.bankAccounts.reconnected:Účet čeká na vaši platbu 1 Kč.`;
@@ -179,14 +183,17 @@ export class BankAccountsCard {
   }
 
   protected hint(account: BankAccountItem): string {
-    if (account.pairingExcluded && account.status !== 'DISCONNECTED') {
+    if (!account.pairingExcluded) {
+      return HINTS[labelOf(account)];
+    }
+    if (account.status !== 'DISCONNECTED') {
       return EXCLUDED_HINT;
     }
-    return HINTS[labelOf(account)];
+    return this.isNewestOfItsNumber(account) ? EXCLUDED_DISCONNECTED_HINT : '';
   }
 
   protected offersDisconnect(account: BankAccountItem): boolean {
-    return account.status !== 'DISCONNECTED' && !account.pairingExcluded;
+    return account.status === 'ACTIVE' ? !account.pairingExcluded : account.status !== 'DISCONNECTED';
   }
 
   protected warns(account: BankAccountItem): boolean {
@@ -194,8 +201,11 @@ export class BankAccountsCard {
   }
 
   protected offersReconnect(account: BankAccountItem): boolean {
-    const newestOfItsNumber = this.accounts().find((other) => other.accountNumber === account.accountNumber);
-    return account.status === 'DISCONNECTED' && !account.pairingExcluded && newestOfItsNumber === account;
+    return account.status === 'DISCONNECTED' && !account.pairingExcluded && this.isNewestOfItsNumber(account);
+  }
+
+  private isNewestOfItsNumber(account: BankAccountItem): boolean {
+    return this.accounts().find((other) => other.accountNumber === account.accountNumber) === account;
   }
 
   protected labelModifier(account: BankAccountItem): string {
@@ -363,7 +373,7 @@ function labelOf(account: BankAccountItem): AccountLabel {
     case 'ACTIVE':
       return account.shared ? 'shared' : 'active';
     case 'AWAITING_PAYMENT':
-      return 'awaiting';
+      return account.pairingExcluded ? 'excluded' : 'awaiting';
     case 'DISCONNECTED':
       return 'disconnected';
   }
