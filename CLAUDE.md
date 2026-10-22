@@ -9,7 +9,7 @@ Read before building, update in the same PR: `docs/requirements.md` (client deci
 | Path | What |
 |---|---|
 | `backend/` | Spring Boot 4.0, Java 25, Gradle Kotlin DSL. Strict DDD: `cz.novanadeje.app.{content,donors,donations,contact}` + `shared`, each `domain / application / infrastructure / interfaces/rest`, enforced by ArchUnit |
-| `frontend/` | Angular 21 standalone, zoneless, signals, SCSS design tokens, Vitest, Playwright + axe |
+| `frontend/` | Angular 22 standalone, zoneless, signals, SCSS design tokens, Vitest, Playwright + axe |
 | `deploy/` | ZimaOS compose and env templates (production); `docker-compose.yml` at the root is the local stack |
 | `.github/workflows/` | `pr-check.yml` on every PR; `images.yml` on push to `main` publishes ghcr.io images |
 | `.claude/rules/` | `backend.md`, `frontend.md`, `testing.md`, `security.md`, `reliability.md` load with this file. `deploy-ci.md` (deploy, CI, backups) loads only when a file under `deploy/`, `.github/`, a Dockerfile or nginx config is opened; a claude.ai project thread never loads it, so read it before touching those files |
@@ -22,7 +22,7 @@ Read before building, update in the same PR: `docs/requirements.md` (client deci
 | `./gradlew test --tests "*architecture*" -PnoCucumber` | ArchUnit only, no Docker (`-PnoCucumber` leaves out the Cucumber suite, which `--tests` cannot filter) |
 | `./gradlew test --tests "*AcceptanceTests"` | Cucumber suite |
 | `./gradlew bootTestRun` | app with Testcontainers PostgreSQL; `bootRun` uses an external Postgres (`dev` profile) |
-| **Frontend, in `frontend/`** (Node 22 or 24; 25 is unsupported) | |
+| **Frontend, in `frontend/`** (Node 22.22.3+ or 24.15+; 25 is unsupported) | |
 | `npm ci`, `npm start` | dependencies; dev server :4200 with `/api` proxied to :8080 |
 | `npm run format`, `npm run format:check` | Prettier over `src/`, `e2e/` and the config files; the check runs in CI |
 | `npm run lint` | ESLint (angular-eslint): TypeScript, templates and their accessibility; runs in CI |

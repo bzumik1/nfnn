@@ -1,6 +1,6 @@
 # API Contract — NFNN
 
-Agreed HTTP API contract between Angular 21 frontend and Spring Boot 4 + DDD backend. This document is the source of truth for endpoint shape, auth flow, error format, and bounded-context allocation. It came out of a frontend/backend design pass against the original prototype (removed from the repo in October 2026) and the architecture in `CLAUDE.md`; how the system works today is in `docs/system-overview.md`.
+Agreed HTTP API contract between Angular 22 frontend and Spring Boot 4 + DDD backend. This document is the source of truth for endpoint shape, auth flow, error format, and bounded-context allocation. It came out of a frontend/backend design pass against the original prototype (removed from the repo in October 2026) and the architecture in `CLAUDE.md`; how the system works today is in `docs/system-overview.md`.
 
 When adding a new endpoint, update this file in the same change.
 

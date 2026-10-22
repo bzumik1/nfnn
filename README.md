@@ -1,6 +1,6 @@
 # Nadační fond Nová naděje
 
-Web nadačního fondu — Spring Boot 4 (Java 25, DDD) + Angular 21.
+Web nadačního fondu — Spring Boot 4 (Java 25, DDD) + Angular 22.
 
 ## Struktura
 
@@ -34,7 +34,7 @@ Backend poběží na `http://localhost:8080`. JDK 25 si Gradle stáhne sám (too
 
 ### Frontend
 
-> Vyžaduje **Node 22 nebo 24 LTS**. Node 25 není Angularem podporován.
+> Vyžaduje **Node 22.22.3+ nebo 24.15+ (LTS)**. Node 25 není Angularem podporován.
 
 ```bash
 cd frontend
