@@ -74,3 +74,15 @@ Feature: Donor signs in and keeps a session
     When 60 seconds pass
     And the donor signs in with email "jana@example.cz" and password "correct horse battery"
     Then the response status is 200
+
+  Scenario: A long password with Czech letters signs in
+    Given a person registered with email "petr@example.cz" and password "Příliš žluťoučký kůň úpěl ďábelské ódy, a pak ještě jednou, prosím"
+    When the donor signs in with email "petr@example.cz" and password "Příliš žluťoučký kůň úpěl ďábelské ódy, a pak ještě jednou, prosím"
+    Then the response status is 200
+    And the response carries an access token and a refresh cookie
+
+  Scenario: A long password is checked beyond its first 72 bytes
+    Given a person registered with email "petr@example.cz" and password "Příliš žluťoučký kůň úpěl ďábelské ódy, a pak ještě jednou, prosím"
+    When the donor signs in with email "petr@example.cz" and password "Příliš žluťoučký kůň úpěl ďábelské ódy, a pak ještě jednou, děkuji"
+    Then the response status is 401
+    And the problem type ends with "auth/invalid-credentials"
