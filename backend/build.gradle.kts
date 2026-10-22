@@ -1,6 +1,6 @@
 plugins {
 	java
-	id("org.springframework.boot") version "4.1.1"
+	id("org.springframework.boot") version "4.1.2"
 	id("io.spring.dependency-management") version "1.1.7"
 }
 
@@ -18,10 +18,10 @@ repositories {
 	mavenCentral()
 }
 
-extra["cucumberVersion"] = "7.20.1"
+extra["cucumberVersion"] = "7.34.9"
 extra["archunitVersion"] = "1.5.1"
-extra["openhtmltopdfVersion"] = "1.1.24"
-extra["zxingVersion"] = "3.5.3"
+extra["openhtmltopdfVersion"] = "1.1.100"
+extra["zxingVersion"] = "3.5.4"
 extra["fioApiVersion"] = "1.0.0"
 
 dependencies {
