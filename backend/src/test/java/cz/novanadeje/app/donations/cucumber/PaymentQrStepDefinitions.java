@@ -1,7 +1,7 @@
 package cz.novanadeje.app.donations.cucumber;
 
 import cz.novanadeje.app.cucumber.ApiClient;
-import cz.novanadeje.app.donations.QrCodes;
+import cz.novanadeje.app.shared.QrCodes;
 import io.cucumber.java.en.And;
 import io.cucumber.java.en.When;
 import tools.jackson.databind.JsonNode;

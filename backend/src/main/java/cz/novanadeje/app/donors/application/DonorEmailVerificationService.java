@@ -31,17 +31,19 @@ public class DonorEmailVerificationService {
     private final EmailVerificationTokenRepository tokens;
     private final RefreshTokenRepository refreshTokens;
     private final DonorSessionService sessions;
+    private final DonorViews views;
     private final DonorEmailVerificationProperties properties;
     private final Clock clock;
     private final ApplicationEventPublisher events;
 
     public DonorEmailVerificationService(DonorRepository donors, EmailVerificationTokenRepository tokens, RefreshTokenRepository refreshTokens,
-                                         DonorSessionService sessions, DonorEmailVerificationProperties properties, Clock clock,
-                                         ApplicationEventPublisher events) {
+                                         DonorSessionService sessions, DonorViews views, DonorEmailVerificationProperties properties,
+                                         Clock clock, ApplicationEventPublisher events) {
         this.donors = donors;
         this.tokens = tokens;
         this.refreshTokens = refreshTokens;
         this.sessions = sessions;
+        this.views = views;
         this.properties = properties;
         this.clock = clock;
         this.events = events;
@@ -74,7 +76,7 @@ public class DonorEmailVerificationService {
         Donor donor = found.newEmail()
                 .map(newEmail -> changeEmail(found, newEmail, now))
                 .orElseGet(() -> verifyRegistration(found, now));
-        return new AuthenticatedDonor(DonorView.of(donor), sessions.open(donor.id(), donor.roles()));
+        return views.authenticated(donor, sessions.open(donor, false));
     }
 
     private Donor verifyRegistration(EmailVerificationToken found, Instant now) {

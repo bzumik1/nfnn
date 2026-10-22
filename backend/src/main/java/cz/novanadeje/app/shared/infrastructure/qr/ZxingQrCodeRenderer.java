@@ -1,4 +1,4 @@
-package cz.novanadeje.app.donations.infrastructure.qr;
+package cz.novanadeje.app.shared.infrastructure.qr;
 
 import com.google.zxing.BarcodeFormat;
 import com.google.zxing.EncodeHintType;
@@ -7,7 +7,7 @@ import com.google.zxing.client.j2se.MatrixToImageWriter;
 import com.google.zxing.common.BitMatrix;
 import com.google.zxing.qrcode.QRCodeWriter;
 import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel;
-import cz.novanadeje.app.donations.application.QrCodeRenderer;
+import cz.novanadeje.app.shared.application.qr.QrCodeRenderer;
 import org.springframework.stereotype.Component;
 
 import java.io.ByteArrayOutputStream;

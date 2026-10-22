@@ -1,5 +1,7 @@
 package cz.novanadeje.app.shared.domain.error;
 
+import java.util.Map;
+
 public abstract sealed class DomainException extends RuntimeException
         permits RuleViolation, Conflict, NotFound, AuthenticationFailure, AccessDenied {
 
@@ -16,5 +18,9 @@ public abstract sealed class DomainException extends RuntimeException
 
     public String getCode() {
         return code;
+    }
+
+    public Map<String, Object> extensions() {
+        return Map.of();
     }
 }

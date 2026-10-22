@@ -4,30 +4,56 @@ import cz.novanadeje.app.donors.domain.Donor;
 import cz.novanadeje.app.donors.domain.DonorRepository;
 import cz.novanadeje.app.donors.domain.EmailNotVerified;
 import cz.novanadeje.app.donors.domain.InvalidCredentials;
+import cz.novanadeje.app.donors.domain.InvalidSecondFactorChallenge;
+import cz.novanadeje.app.donors.domain.InvalidSecondFactorCode;
+import cz.novanadeje.app.donors.domain.LinkSecret;
 import cz.novanadeje.app.donors.domain.PasswordHash;
 import cz.novanadeje.app.donors.domain.PasswordHasher;
 import cz.novanadeje.app.donors.domain.RawPassword;
+import cz.novanadeje.app.donors.domain.SecondFactor;
+import cz.novanadeje.app.donors.domain.SecondFactorChallenge;
+import cz.novanadeje.app.donors.domain.SecondFactorChallengeRepository;
+import cz.novanadeje.app.donors.domain.SecondFactorRepository;
+import cz.novanadeje.app.donors.domain.SecondFactorRequired;
 import cz.novanadeje.app.shared.domain.EmailAddress;
 import cz.novanadeje.app.shared.domain.error.RuleViolation;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.Clock;
+import java.time.Instant;
 
 @Service
 public class DonorAuthenticationService {
 
+    private static final Logger log = LoggerFactory.getLogger(DonorAuthenticationService.class);
     private static final PasswordHash UNKNOWN_DONOR_HASH = new PasswordHash("$2a$12$nHaJvjs2DmAUxce8R89JQenUJ3uPyNxk7wzoV6M5duitBKTlu9VvG");
 
     private final DonorRepository donors;
     private final PasswordHasher passwordHasher;
     private final DonorSessionService sessions;
+    private final DonorViews views;
+    private final SecondFactorRepository secondFactors;
+    private final SecondFactorChallengeRepository challenges;
+    private final DonorSecondFactorProperties secondFactorProperties;
+    private final Clock clock;
 
-    public DonorAuthenticationService(DonorRepository donors, PasswordHasher passwordHasher, DonorSessionService sessions) {
+    public DonorAuthenticationService(DonorRepository donors, PasswordHasher passwordHasher, DonorSessionService sessions, DonorViews views,
+                                      SecondFactorRepository secondFactors, SecondFactorChallengeRepository challenges,
+                                      DonorSecondFactorProperties secondFactorProperties, Clock clock) {
         this.donors = donors;
         this.passwordHasher = passwordHasher;
         this.sessions = sessions;
+        this.views = views;
+        this.secondFactors = secondFactors;
+        this.challenges = challenges;
+        this.secondFactorProperties = secondFactorProperties;
+        this.clock = clock;
     }
 
-    @Transactional
+    @Transactional(noRollbackFor = SecondFactorRequired.class)
     public AuthenticatedDonor login(String email, String password) {
         if (!EmailAddress.isValid(email)) {
             throw new InvalidCredentials();
@@ -46,13 +72,49 @@ public class DonorAuthenticationService {
         if (!donor.isEmailVerified()) {
             throw new EmailNotVerified();
         }
-        return new AuthenticatedDonor(DonorView.of(donor), sessions.open(donor.id(), donor.roles()));
+        if (secondFactors.findByDonor(donor.id()).filter(SecondFactor::isEnabled).isPresent()) {
+            Instant now = clock.instant();
+            LinkSecret secret = LinkSecret.generate();
+            SecondFactorChallenge challenge = SecondFactorChallenge.issue(secret, donor.id(), now, secondFactorProperties.challengeTtl());
+            challenges.save(challenge);
+            log.info("Sign-in of donor {} waits for the second factor", donor.id());
+            throw new SecondFactorRequired(secret.value(), challenge.expiresAt());
+        }
+        return views.authenticated(donor, sessions.open(donor, false));
+    }
+
+    @Transactional(noRollbackFor = InvalidSecondFactorCode.class)
+    public AuthenticatedDonor completeSecondFactor(String challenge, String code) {
+        Instant now = clock.instant();
+        LinkSecret secret;
+        try {
+            secret = new LinkSecret(challenge);
+        } catch (IllegalArgumentException malformed) {
+            throw new InvalidSecondFactorChallenge();
+        }
+        SecondFactorChallenge found = challenges.findBySecretHash(secret.hash())
+                .filter(candidate -> candidate.isUsableAt(now, secondFactorProperties.challengeAttempts()))
+                .orElseThrow(InvalidSecondFactorChallenge::new);
+        Donor donor = donors.findById(found.donorId()).orElseThrow(InvalidSecondFactorChallenge::new);
+        SecondFactor factor = secondFactors.findByDonor(donor.id()).filter(SecondFactor::isEnabled).orElseThrow(InvalidSecondFactorChallenge::new);
+        try {
+            factor.verify(code, now);
+        } catch (InvalidSecondFactorCode wrong) {
+            found.recordFailedAttempt();
+            challenges.save(found);
+            log.info("Second factor of donor {} refused, attempt {} of {}", donor.id(), found.failedAttempts(), secondFactorProperties.challengeAttempts());
+            throw wrong;
+        }
+        secondFactors.save(factor);
+        found.markUsed(now);
+        challenges.save(found);
+        return views.authenticated(donor, sessions.open(donor, true));
     }
 
     @Transactional
     public AuthenticatedDonor refresh(String refreshToken) {
         RefreshedSession session = sessions.refresh(refreshToken);
-        return new AuthenticatedDonor(DonorView.of(session.donor()), session.tokens());
+        return views.authenticated(session.donor(), session.tokens());
     }
 
     @Transactional

@@ -24,8 +24,10 @@ class DonorAuthControllerTest {
     private final DonorRegistrationService registration = mock(DonorRegistrationService.class);
     private final DonorAuthenticationService authentication = mock(DonorAuthenticationService.class);
     private final SignInRateLimiter signInLimiter = new SignInRateLimiter(clock);
+    private final SecondFactorRateLimiter secondFactorLimiter = new SecondFactorRateLimiter(clock);
     private final RegistrationRateLimiter registrationLimiter = new RegistrationRateLimiter(clock);
-    private final DonorAuthController controller = new DonorAuthController(registration, authentication, signInLimiter, registrationLimiter, clock);
+    private final DonorAuthController controller = new DonorAuthController(registration, authentication, signInLimiter, secondFactorLimiter,
+            registrationLimiter, clock);
 
     @Test
     @DisplayName("Given the address used up its sign-ins, when it signs in again, then it is refused before any password is hashed")
@@ -35,6 +37,19 @@ class DonorAuthControllerTest {
         }
 
         assertThatThrownBy(() -> controller.login(new LoginRequest("jana@example.cz", "correct horse battery"), requestFrom(ADDRESS)))
+                .isInstanceOf(RateLimitExceededException.class);
+
+        verifyNoInteractions(authentication, registration);
+    }
+
+    @Test
+    @DisplayName("Given the address used up its second-factor attempts, when it sends a code again, then it is refused before the challenge is looked at")
+    void should_refuse_without_authenticating_when_completing_second_factor_given_attempts_used_up() {
+        for (int i = 0; i < 10; i++) {
+            secondFactorLimiter.check(ADDRESS);
+        }
+
+        assertThatThrownBy(() -> controller.completeSecondFactor(new SecondFactorLoginRequest("c".repeat(43), "123456"), requestFrom(ADDRESS)))
                 .isInstanceOf(RateLimitExceededException.class);
 
         verifyNoInteractions(authentication, registration);

@@ -37,7 +37,64 @@
       </button>
     </div>
 
-    @if (mode() === 'login') {
+    @if (mode() === 'login' && challenge() !== null) {
+      <p class="sub" i18n="@@donor.login.secondFactor.sub">
+        Přihlášení dokončíte kódem z ověřovací aplikace
+      </p>
+
+      <form
+        #codeForm="ngForm"
+        class="code-form"
+        appFocusFirstInvalid
+        (ngSubmit)="submitCode(codeForm)"
+        novalidate
+      >
+        <app-form-field
+          label="Kód z aplikace"
+          i18n-label="@@donor.login.secondFactor.code"
+          [hint]="codeHint"
+          [messages]="codeMessages"
+        >
+          <input
+            #codeField
+            appFormControl
+            id="login-code"
+            name="code"
+            type="text"
+            inputmode="numeric"
+            autocomplete="one-time-code"
+            placeholder="123456"
+            [(ngModel)]="code"
+            required
+            pattern="\s*\d{6}\s*"
+            maxlength="8"
+          />
+        </app-form-field>
+
+        @if (error()) {
+          <p class="form-error" role="alert">{{ error() }}</p>
+        }
+
+        <button type="submit" class="form-submit" [disabled]="loading()">
+          @if (loading()) {
+            <span i18n="@@donor.login.secondFactor.submitLoading">Ověřuji kód…</span>
+          } @else {
+            <span i18n="@@donor.login.secondFactor.submit">Přihlásit se</span>
+          }
+        </button>
+      </form>
+
+      <p class="foot">
+        <button
+          type="button"
+          class="link-btn"
+          (click)="backToPassword()"
+          i18n="@@donor.login.secondFactor.back"
+        >
+          ← Zpět na heslo
+        </button>
+      </p>
+    } @else if (mode() === 'login') {
       <p class="sub" i18n="@@donor.login.sub.login">Přístup do vašeho přehledu příspěvků</p>
 
       <form

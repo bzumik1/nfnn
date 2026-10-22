@@ -29,6 +29,9 @@ public class RefreshTokenJpaEntity {
     @Column(name = "expires_at", nullable = false)
     private Instant expiresAt;
 
+    @Column(name = "second_factor_verified", nullable = false)
+    private boolean secondFactorVerified;
+
     @Column(name = "revoked_at")
     private Instant revokedAt;
 
@@ -42,11 +45,12 @@ public class RefreshTokenJpaEntity {
         entity.secretHash = token.secretHash();
         entity.issuedAt = token.issuedAt();
         entity.expiresAt = token.expiresAt();
+        entity.secondFactorVerified = token.secondFactorVerified();
         entity.revokedAt = token.revokedAt().orElse(null);
         return entity;
     }
 
     RefreshToken toDomain() {
-        return RefreshToken.reconstitute(id, new DonorId(donorId), secretHash, issuedAt, expiresAt, revokedAt);
+        return RefreshToken.reconstitute(id, new DonorId(donorId), secretHash, issuedAt, expiresAt, secondFactorVerified, revokedAt);
     }
 }

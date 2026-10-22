@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <changeSet id="006-add-second-factor" author="nfnn">
+        <createTable tableName="donor_second_factor">
+            <column name="donor_id" type="uuid">
+                <constraints primaryKey="true" primaryKeyName="pk_donor_second_factor" nullable="false"/>
+            </column>
+            <column name="secret" type="varchar(32)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="timestamp with time zone">
+                <constraints nullable="false"/>
+            </column>
+            <column name="confirmed_at" type="timestamp with time zone"/>
+            <column name="last_used_step" type="bigint"/>
+        </createTable>
+        <addForeignKeyConstraint baseTableName="donor_second_factor" baseColumnNames="donor_id"
+                                 referencedTableName="donor" referencedColumnNames="id"
+                                 constraintName="fk_donor_second_factor_donor" onDelete="CASCADE"/>
+
+        <createTable tableName="donor_second_factor_challenge">
+            <column name="id" type="uuid">
+                <constraints primaryKey="true" primaryKeyName="pk_donor_second_factor_challenge" nullable="false"/>
+            </column>
+            <column name="donor_id" type="uuid">
+                <constraints nullable="false"/>
+            </column>
+            <column name="secret_hash" type="varchar(64)">
+                <constraints nullable="false" unique="true" uniqueConstraintName="uq_donor_second_factor_challenge_secret_hash"/>
+            </column>
+            <column name="issued_at" type="timestamp with time zone">
+                <constraints nullable="false"/>
+            </column>
+            <column name="expires_at" type="timestamp with time zone">
+                <constraints nullable="false"/>
+            </column>
+            <column name="failed_attempts" type="integer" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="used_at" type="timestamp with time zone"/>
+        </createTable>
+        <addForeignKeyConstraint baseTableName="donor_second_factor_challenge" baseColumnNames="donor_id"
+                                 referencedTableName="donor" referencedColumnNames="id"
+                                 constraintName="fk_donor_second_factor_challenge_donor" onDelete="CASCADE"/>
+        <createIndex tableName="donor_second_factor_challenge" indexName="ix_donor_second_factor_challenge_donor">
+            <column name="donor_id"/>
+        </createIndex>
+
+        <addColumn tableName="donor_refresh_token">
+            <column name="second_factor_verified" type="boolean" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+    </changeSet>
+
+</databaseChangeLog>

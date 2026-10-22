@@ -23,11 +23,11 @@ class DonorProfileController {
 
     @GetMapping
     DonorResponse profile(@AuthenticationPrincipal Jwt jwt) {
-        return DonorResponse.of(profiles.profile(DonorId.of(jwt.getSubject())));
+        return DonorResponse.of(profiles.profile(DonorId.of(jwt.getSubject()), SessionRoles.of(jwt)));
     }
 
     @PatchMapping
     DonorResponse update(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody UpdateDonorProfileRequest request) {
-        return DonorResponse.of(profiles.updateProfile(DonorId.of(jwt.getSubject()), request.toCommand()));
+        return DonorResponse.of(profiles.updateProfile(DonorId.of(jwt.getSubject()), SessionRoles.of(jwt), request.toCommand()));
     }
 }

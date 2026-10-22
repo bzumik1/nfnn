@@ -316,7 +316,21 @@ SQL
 
 ## Správci
 
-Správce je obyčejný dárcovský účet, kterému v databázi přidáš roli `ADMIN`. Nic jiného se nenastavuje: správa je na `/sprava`, odkaz „Správa“ se v hlavičce přehledu ukáže jen správci a backend pustí k `/api/admin/...` jen token s touto rolí. Role se čte při přihlášení a při obnově tokenu, takže se projeví nejpozději do 15 minut, nebo hned po odhlášení a novém přihlášení. Druhý faktor (TOTP) pro správce přijde v další verzi; do té doby ať má správce silné heslo a ověřený e-mail (bez něj se nepřihlásí).
+Správce je obyčejný dárcovský účet, kterému v databázi přidáš roli `ADMIN`. Nic jiného se v databázi nenastavuje: správa je na `/sprava`, odkaz „Správa“ se v hlavičce přehledu ukáže jen správci a backend pustí k `/api/admin/...` jen token s touto rolí.
+
+Správa je dostupná z internetu, proto roli `ADMIN` dostane jen přihlášení potvrzené druhým faktorem. Postup pro nového správce:
+
+1. Přidej roli SQL níže (účet musí mít ověřený e-mail, jinak se nepřihlásí).
+2. Správce se přihlásí (zatím jako dárce) a na kartě „Přihlašovací údaje“ klikne na „Zapnout druhý faktor“: zadá heslo, naskenuje QR kód (nebo opíše klíč) do ověřovací aplikace v telefonu (Google Authenticator, Microsoft Authenticator, Aegis apod.) a zadá první kód z ní. Tím je druhý faktor zapnutý a správce hned vidí odkaz „Správa“.
+3. Od té doby se přihlašuje heslem a kódem z aplikace. Dokud druhý faktor nezapne, přihlásí se jen jako dárce a přehled mu napíše, že správa čeká na druhý faktor; stejně tak po vypnutí druhého faktoru.
+
+Ztracený nebo vyměněný telefon: druhý faktor vypni SQL (správce se pak přihlásí jen heslem a zapne si ho znovu; záložní kódy neexistují). Ověř nejdřív telefonicky, že žádá opravdu majitel účtu.
+
+```sh
+sudo docker exec -i nfnn-postgres psql -U nfnn nfnn <<'SQL'
+delete from donor_second_factor where donor_id = (select id from donor where email = 'spravce@example.cz');
+SQL
+```
 
 Přidání role (e-mail nahraď adresou účtu, který má být správcem):
 
@@ -340,7 +354,9 @@ Kdo je správce a co kdy udělal (tabulka `admin_action` se plní od první změ
 
 ```sh
 sudo docker exec -i nfnn-postgres psql -U nfnn nfnn <<'SQL'
-select d.email, r.role from donor_role r join donor d on d.id = r.donor_id where r.role = 'ADMIN';
+select d.email, r.role, (f.confirmed_at is not null) as second_factor
+from donor_role r join donor d on d.id = r.donor_id left join donor_second_factor f on f.donor_id = d.id
+where r.role = 'ADMIN';
 select a.performed_at, d.email, a.action, a.subject_id, a.details
 from admin_action a join donor d on d.id = a.admin_id
 order by a.performed_at desc limit 50;

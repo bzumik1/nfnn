@@ -3,7 +3,12 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { authInterceptor } from '../../../../core/auth/auth-interceptor';
 import { AuthStore } from '../../../../core/auth/auth-store';
-import { authResponse, problem } from '../../../../core/auth/testing/donor-fixtures';
+import {
+  authResponse,
+  problem,
+  sampleDonor,
+  secondFactorEnrolment,
+} from '../../../../core/auth/testing/donor-fixtures';
 import { AccountCard } from './account-card';
 
 describe('Given the sign-in data card in the overview', () => {
@@ -69,12 +74,221 @@ describe('Given the sign-in data card in the overview', () => {
     await settle();
   }
 
-  it('when it opens, then it shows the address and the two actions', () => {
+  it('when it opens, then it shows the address, the second factor as off and the three actions', () => {
     expect(element('h2').textContent).toContain('Přihlašovací údaje');
     expect(element('.account-data dd').textContent?.trim()).toBe('jana@example.cz');
     expect(
+      Array.from(root().querySelectorAll('.account-data dd')).map((dd) => dd.textContent?.trim()),
+    ).toEqual(['jana@example.cz', 'Vypnutý']);
+    expect(element('.account-hint')).toBeNull();
+    expect(
       Array.from(root().querySelectorAll('.account-action')).map((b) => b.textContent?.trim()),
-    ).toEqual(['Změnit e-mail', 'Změnit heslo']);
+    ).toEqual(['Změnit e-mail', 'Změnit heslo', 'Zapnout druhý faktor']);
+  });
+
+  describe('when the donor turns the second factor on', () => {
+    beforeEach(() => clickButton('Zapnout druhý faktor'));
+
+    it('then the password field has the focus and the form names the authenticator apps', () => {
+      expect(document.activeElement).toBe(element('#account-second-factor-password'));
+      expect(element('.account-form-intro').textContent).toContain('Google Authenticator');
+      http.expectNone('/api/donors/me/second-factor/setup');
+    });
+
+    it('and confirms the password, then the QR code, the key and the code field appear with the focus on the code', async () => {
+      await fillIn('#account-second-factor-password', 'correct horse battery');
+
+      await submit();
+      const request = http.expectOne({ method: 'POST', url: '/api/donors/me/second-factor/setup' });
+      expect(request.request.body).toEqual({ password: 'correct horse battery' });
+      request.flush(secondFactorEnrolment());
+      await settle();
+
+      expect(element<HTMLImageElement>('.account-qr').getAttribute('src')).toBe(
+        `data:image/png;base64,${secondFactorEnrolment()['qrPngBase64'] as string}`,
+      );
+      expect(element('.account-qr').getAttribute('alt')).toContain('QR kód');
+      expect(element('.account-secret-value').textContent?.trim()).toBe(
+        'GEZD GNBV GY3T QOJQ GEZD GNBV GY3T QOJQ',
+      );
+      expect(element('app-copy-button button').textContent).toContain('klíč');
+      expect(element('#account-second-factor-code').getAttribute('autocomplete')).toBe(
+        'one-time-code',
+      );
+      expect(document.activeElement).toBe(element('#account-second-factor-code'));
+    });
+
+    it('and the password is wrong, then the password form stays and shows the reason', async () => {
+      await fillIn('#account-second-factor-password', 'wrong horse battery');
+
+      await submit();
+      http
+        .expectOne('/api/donors/me/second-factor/setup')
+        .flush(problem('donors/wrong-password', 'Nesprávné současné heslo', ''), {
+          status: 400,
+          statusText: 'Bad Request',
+        });
+      await settle();
+
+      expect(element('#account-second-factor-password')).not.toBeNull();
+      expect(element('.account-form .form-error').textContent).toContain(
+        'Nesprávné současné heslo',
+      );
+    });
+
+    describe('and has the key in the app', () => {
+      beforeEach(async () => {
+        await fillIn('#account-second-factor-password', 'correct horse battery');
+        await submit();
+        http.expectOne('/api/donors/me/second-factor/setup').flush(secondFactorEnrolment());
+        await settle();
+      });
+
+      it('and sends the code the app shows, then the new session is adopted and the card says the factor is on', async () => {
+        await fillIn('#account-second-factor-code', '287082');
+
+        await submit();
+        const request = http.expectOne({
+          method: 'POST',
+          url: '/api/donors/me/second-factor/confirm',
+        });
+        expect(request.request.body).toEqual({ code: '287082' });
+        request.flush(
+          authResponse(
+            'token-2',
+            sampleDonor({ secondFactor: { enabled: true, neededForAdministration: false } }),
+          ),
+        );
+        await settle();
+
+        expect(element('.account-form')).toBeNull();
+        expect(element('.account-status').textContent).toContain('Druhý faktor je zapnutý.');
+        expect(
+          Array.from(root().querySelectorAll('.account-data dd')).map((dd) =>
+            dd.textContent?.trim(),
+          ),
+        ).toEqual(['jana@example.cz', 'Zapnutý']);
+        expect(document.activeElement?.textContent?.trim()).toBe('Vypnout druhý faktor');
+        store.updateProfile({}).subscribe();
+        expect(http.expectOne('/api/donors/me').request.headers.get('Authorization')).toBe(
+          'Bearer token-2',
+        );
+      });
+
+      it('and sends a wrong code, then the QR step stays and shows the reason', async () => {
+        await fillIn('#account-second-factor-code', '000000');
+
+        await submit();
+        http
+          .expectOne('/api/donors/me/second-factor/confirm')
+          .flush(
+            problem(
+              'donors/second-factor-code-rejected',
+              'Nesprávný kód',
+              'Zadejte prosím aktuální kód z ověřovací aplikace; každý kód platí jen jednou.',
+            ),
+            { status: 400, statusText: 'Bad Request' },
+          );
+        await settle();
+
+        expect(element('.account-qr')).not.toBeNull();
+        expect(element('.account-form .form-error').textContent).toContain('Nesprávný kód.');
+      });
+
+      it('and sends five digits, then nothing goes out and the field says the code has six', async () => {
+        await fillIn('#account-second-factor-code', '12345');
+
+        await submit();
+
+        http.expectNone('/api/donors/me/second-factor/confirm');
+        expect(element('#account-second-factor-code-error').textContent).toContain(
+          'Kód má přesně šest číslic.',
+        );
+      });
+
+      it('and cancels, then the QR code is gone and the focus returns to the action', async () => {
+        await click('.account-cancel');
+
+        expect(element('.account-form')).toBeNull();
+        expect(element('.account-qr')).toBeNull();
+        expect(document.activeElement?.textContent?.trim()).toBe('Zapnout druhý faktor');
+      });
+    });
+  });
+
+  describe('when an administrator without the second factor opens the card', () => {
+    beforeEach(async () => {
+      store.updateProfile({}).subscribe();
+      http.expectOne('/api/donors/me').flush(
+        sampleDonor({
+          roles: ['DONOR'],
+          secondFactor: { enabled: false, neededForAdministration: true },
+        }),
+      );
+      await settle();
+    });
+
+    it('then the card says the administration waits for the second factor', () => {
+      expect(element('.account-hint').textContent).toContain(
+        'Správa se vám otevře, až zapnete druhý faktor',
+      );
+    });
+  });
+
+  describe('when a donor with the second factor on turns it off', () => {
+    beforeEach(async () => {
+      store.updateProfile({}).subscribe();
+      http
+        .expectOne('/api/donors/me')
+        .flush(sampleDonor({ secondFactor: { enabled: true, neededForAdministration: false } }));
+      await settle();
+      await clickButton('Vypnout druhý faktor');
+    });
+
+    it('then the card showed the factor as on and the password field has the focus', () => {
+      expect(document.activeElement).toBe(element('#account-second-factor-off-password'));
+      expect(element('.account-form-intro').textContent).toContain(
+        'K přihlášení pak bude stačit heslo.',
+      );
+    });
+
+    it('and sends the password and the code, then the new session is adopted and the card says the factor is off', async () => {
+      await fillIn('#account-second-factor-off-password', 'correct horse battery');
+      await fillIn('#account-second-factor-off-code', '287082');
+
+      await submit();
+      const request = http.expectOne({
+        method: 'POST',
+        url: '/api/donors/me/second-factor/disable',
+      });
+      expect(request.request.body).toEqual({ password: 'correct horse battery', code: '287082' });
+      request.flush(authResponse('token-3'));
+      await settle();
+
+      expect(element('.account-form')).toBeNull();
+      expect(element('.account-status').textContent).toContain('Druhý faktor jsme vypnuli.');
+      expect(
+        Array.from(root().querySelectorAll('.account-action')).map((b) => b.textContent?.trim()),
+      ).toEqual(['Změnit e-mail', 'Změnit heslo', 'Zapnout druhý faktor']);
+      expect(document.activeElement?.textContent?.trim()).toBe('Zapnout druhý faktor');
+    });
+
+    it('and the code was already used, then the form stays and shows the reason', async () => {
+      await fillIn('#account-second-factor-off-password', 'correct horse battery');
+      await fillIn('#account-second-factor-off-code', '287082');
+
+      await submit();
+      http
+        .expectOne('/api/donors/me/second-factor/disable')
+        .flush(problem('donors/second-factor-code-rejected', 'Nesprávný kód', ''), {
+          status: 400,
+          statusText: 'Bad Request',
+        });
+      await settle();
+
+      expect(element('#account-second-factor-off-code')).not.toBeNull();
+      expect(element('.account-form .form-error').textContent).toContain('Nesprávný kód');
+    });
   });
 
   describe('when the donor changes the e-mail', () => {

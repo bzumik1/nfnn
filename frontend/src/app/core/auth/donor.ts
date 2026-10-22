@@ -10,6 +10,11 @@ export interface DonorAddress {
   postalCode: string;
 }
 
+export interface SecondFactorState {
+  enabled: boolean;
+  neededForAdministration: boolean;
+}
+
 export interface Donor {
   id: string;
   type: DonorType;
@@ -21,6 +26,7 @@ export interface Donor {
   variableSymbol: string;
   roles: string[];
   registeredAt: string;
+  secondFactor: SecondFactorState;
 }
 
 export interface RegisterDonorRequest {
@@ -47,6 +53,17 @@ export interface ChangePasswordRequest {
 export interface EmailChangeRequest {
   newEmail: string;
   password: string;
+}
+
+export interface SecondFactorDisableRequest {
+  password: string;
+  code: string;
+}
+
+export interface SecondFactorEnrolment {
+  secret: string;
+  otpauthUri: string;
+  qrPngBase64: string;
 }
 
 export interface AuthResponse {

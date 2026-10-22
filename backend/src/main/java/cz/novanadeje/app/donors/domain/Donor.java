@@ -140,6 +140,19 @@ public final class Donor {
         return Set.copyOf(roles);
     }
 
+    public Set<Role> sessionRoles(boolean secondFactorVerified) {
+        if (secondFactorVerified || !roles.contains(Role.ADMIN)) {
+            return roles();
+        }
+        EnumSet<Role> granted = EnumSet.copyOf(roles);
+        granted.remove(Role.ADMIN);
+        return Set.copyOf(granted);
+    }
+
+    public boolean isAdministrator() {
+        return roles.contains(Role.ADMIN);
+    }
+
     public Instant registeredAt() {
         return registeredAt;
     }

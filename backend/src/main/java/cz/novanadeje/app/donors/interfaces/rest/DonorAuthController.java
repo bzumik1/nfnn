@@ -24,14 +24,17 @@ class DonorAuthController {
     private final DonorRegistrationService registration;
     private final DonorAuthenticationService authentication;
     private final SignInRateLimiter signInRateLimiter;
+    private final SecondFactorRateLimiter secondFactorRateLimiter;
     private final RegistrationRateLimiter registrationRateLimiter;
     private final Clock clock;
 
     DonorAuthController(DonorRegistrationService registration, DonorAuthenticationService authentication,
-                        SignInRateLimiter signInRateLimiter, RegistrationRateLimiter registrationRateLimiter, Clock clock) {
+                        SignInRateLimiter signInRateLimiter, SecondFactorRateLimiter secondFactorRateLimiter,
+                        RegistrationRateLimiter registrationRateLimiter, Clock clock) {
         this.registration = registration;
         this.authentication = authentication;
         this.signInRateLimiter = signInRateLimiter;
+        this.secondFactorRateLimiter = secondFactorRateLimiter;
         this.registrationRateLimiter = registrationRateLimiter;
         this.clock = clock;
     }
@@ -47,6 +50,12 @@ class DonorAuthController {
     ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request, HttpServletRequest http) {
         signInRateLimiter.check(http.getRemoteAddr());
         return respondWithSession(HttpStatus.OK, authentication.login(request.email(), request.password()));
+    }
+
+    @PostMapping("/login/second-factor")
+    ResponseEntity<AuthResponse> completeSecondFactor(@Valid @RequestBody SecondFactorLoginRequest request, HttpServletRequest http) {
+        secondFactorRateLimiter.check(http.getRemoteAddr());
+        return respondWithSession(HttpStatus.OK, authentication.completeSecondFactor(request.challenge(), request.code()));
     }
 
     @PostMapping("/refresh")

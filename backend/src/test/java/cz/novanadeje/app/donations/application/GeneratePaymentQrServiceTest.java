@@ -1,6 +1,7 @@
 package cz.novanadeje.app.donations.application;
 
 import cz.novanadeje.app.donations.domain.BankAccount;
+import cz.novanadeje.app.shared.application.qr.QrCodeRenderer;
 import cz.novanadeje.app.donations.domain.payment.QrPaymentPurpose;
 import cz.novanadeje.app.donations.domain.payment.VerificationNeedsVariableSymbol;
 import cz.novanadeje.app.shared.domain.Iban;

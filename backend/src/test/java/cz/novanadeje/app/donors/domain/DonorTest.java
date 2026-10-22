@@ -138,4 +138,26 @@ class DonorTest {
 
         assertThatThrownBy(() -> donor.changeEmail(new EmailAddress("jana.nova@example.cz"))).isInstanceOf(IllegalStateException.class);
     }
+
+    @Test
+    @DisplayName("Given an administrator, when the session roles are asked without the second factor, then ADMIN is left out, and with it every role is granted")
+    void should_grant_admin_only_with_second_factor_when_session_roles_asked_given_administrator() {
+        Donor admin = Donor.reconstitute(DonorId.newId(NOW), DonorType.PERSON, "Jana Nováková", null, ADDRESS, EMAIL, HASH, SYMBOL, LocaleCode.CS,
+                Set.of(Role.DONOR, Role.ADMIN), NOW, NOW);
+
+        assertThat(admin.isAdministrator()).isTrue();
+        assertThat(admin.sessionRoles(false)).containsExactly(Role.DONOR);
+        assertThat(admin.sessionRoles(true)).containsExactlyInAnyOrder(Role.DONOR, Role.ADMIN);
+        assertThat(admin.roles()).containsExactlyInAnyOrder(Role.DONOR, Role.ADMIN);
+    }
+
+    @Test
+    @DisplayName("Given a plain donor, when the session roles are asked either way, then they are DONOR")
+    void should_keep_donor_role_when_session_roles_asked_given_plain_donor() {
+        Donor donor = Donor.register(DonorId.newId(NOW), DonorType.PERSON, "Jana Nováková", null, ADDRESS, EMAIL, HASH, SYMBOL, LocaleCode.CS, NOW);
+
+        assertThat(donor.isAdministrator()).isFalse();
+        assertThat(donor.sessionRoles(false)).containsExactly(Role.DONOR);
+        assertThat(donor.sessionRoles(true)).containsExactly(Role.DONOR);
+    }
 }

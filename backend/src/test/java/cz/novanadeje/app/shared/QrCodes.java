@@ -1,4 +1,4 @@
-package cz.novanadeje.app.donations;
+package cz.novanadeje.app.shared;
 
 import com.google.zxing.BinaryBitmap;
 import com.google.zxing.ChecksumException;

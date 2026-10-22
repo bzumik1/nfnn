@@ -14,23 +14,31 @@ public final class RefreshToken {
     private final String secretHash;
     private final Instant issuedAt;
     private final Instant expiresAt;
+    private final boolean secondFactorVerified;
     private Instant revokedAt;
 
-    private RefreshToken(UUID id, DonorId donorId, String secretHash, Instant issuedAt, Instant expiresAt, Instant revokedAt) {
+    private RefreshToken(UUID id, DonorId donorId, String secretHash, Instant issuedAt, Instant expiresAt, boolean secondFactorVerified,
+                         Instant revokedAt) {
         this.id = id;
         this.donorId = donorId;
         this.secretHash = secretHash;
         this.issuedAt = issuedAt;
         this.expiresAt = expiresAt;
+        this.secondFactorVerified = secondFactorVerified;
         this.revokedAt = revokedAt;
     }
 
-    public static RefreshToken issue(RefreshTokenSecret secret, DonorId donorId, Instant issuedAt, Duration lifetime) {
-        return new RefreshToken(UuidV7.generate(issuedAt), donorId, secret.hash(), issuedAt, issuedAt.plus(lifetime), null);
+    public static RefreshToken issue(RefreshTokenSecret secret, DonorId donorId, Instant issuedAt, Duration lifetime, boolean secondFactorVerified) {
+        return new RefreshToken(UuidV7.generate(issuedAt), donorId, secret.hash(), issuedAt, issuedAt.plus(lifetime), secondFactorVerified, null);
     }
 
-    public static RefreshToken reconstitute(UUID id, DonorId donorId, String secretHash, Instant issuedAt, Instant expiresAt, Instant revokedAt) {
-        return new RefreshToken(id, donorId, secretHash, issuedAt, expiresAt, revokedAt);
+    public static RefreshToken reconstitute(UUID id, DonorId donorId, String secretHash, Instant issuedAt, Instant expiresAt,
+                                            boolean secondFactorVerified, Instant revokedAt) {
+        return new RefreshToken(id, donorId, secretHash, issuedAt, expiresAt, secondFactorVerified, revokedAt);
+    }
+
+    public boolean secondFactorVerified() {
+        return secondFactorVerified;
     }
 
     public boolean isUsableAt(Instant now) {

@@ -13,6 +13,7 @@ import cz.novanadeje.app.donors.domain.LinkSecret;
 import cz.novanadeje.app.donors.domain.PasswordHash;
 import cz.novanadeje.app.donors.domain.RefreshTokenRepository;
 import cz.novanadeje.app.donors.domain.Role;
+import cz.novanadeje.app.donors.domain.SecondFactorRepository;
 import cz.novanadeje.app.shared.application.event.DonorRegistered;
 import cz.novanadeje.app.shared.domain.DonorType;
 import cz.novanadeje.app.shared.domain.EmailAddress;
@@ -56,7 +57,8 @@ class DonorEmailVerificationServiceTest {
     private static final PostalAddress ADDRESS = new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01");
     private static final VariableSymbol SYMBOL = new VariableSymbol("4821937560");
     private static final EmailAddress NEW_EMAIL = new EmailAddress("jana.nova@example.cz");
-    private static final IssuedTokens TOKENS = new IssuedTokens("access", NOW.plus(Duration.ofMinutes(15)), "refresh", NOW.plus(Duration.ofDays(14)));
+    private static final IssuedTokens TOKENS = new IssuedTokens("access", NOW.plus(Duration.ofMinutes(15)), "refresh", NOW.plus(Duration.ofDays(14)),
+            Set.of(Role.DONOR));
 
     @Mock
     private DonorRepository donors;
@@ -67,13 +69,16 @@ class DonorEmailVerificationServiceTest {
     @Mock
     private DonorSessionService sessions;
     @Mock
+    private SecondFactorRepository secondFactors;
+    @Mock
     private ApplicationEventPublisher events;
 
     private DonorEmailVerificationService service;
 
     @BeforeEach
     void setUp() {
-        service = new DonorEmailVerificationService(donors, tokens, refreshTokens, sessions, new DonorEmailVerificationProperties(TTL, 3),
+        service = new DonorEmailVerificationService(donors, tokens, refreshTokens, sessions, new DonorViews(secondFactors),
+                new DonorEmailVerificationProperties(TTL, 3),
                 Clock.fixed(NOW, ZoneOffset.UTC), events);
     }
 
@@ -232,7 +237,7 @@ class DonorEmailVerificationServiceTest {
         when(tokens.findBySecretHash(secret.hash())).thenReturn(Optional.of(token));
         when(tokens.markUsed(token.id(), NOW)).thenReturn(true);
         when(donors.findById(DONOR)).thenReturn(Optional.of(donor));
-        when(sessions.open(DONOR, Set.of(Role.DONOR))).thenReturn(TOKENS);
+        when(sessions.open(donor, false)).thenReturn(TOKENS);
 
         AuthenticatedDonor result = service.confirm(secret.value());
 
@@ -242,7 +247,7 @@ class DonorEmailVerificationServiceTest {
         order.verify(tokens).deleteAllOf(DONOR);
         order.verify(events).publishEvent(new DonorRegistered(DONOR.value(), DonorType.PERSON, "Jana Nováková", Optional.empty(), ADDRESS, EMAIL,
                 SYMBOL, LocaleCode.CS, donor.registeredAt()));
-        order.verify(sessions).open(DONOR, Set.of(Role.DONOR));
+        order.verify(sessions).open(donor, false);
         assertThat(saved.getValue().emailVerifiedAt()).contains(NOW);
         assertThat(result.donor().email()).isEqualTo("jana@example.cz");
         assertThat(result.tokens()).isEqualTo(TOKENS);
@@ -292,7 +297,7 @@ class DonorEmailVerificationServiceTest {
         when(tokens.markUsed(token.id(), NOW)).thenReturn(true);
         when(donors.findById(DONOR)).thenReturn(Optional.of(donor));
         when(donors.existsByEmail(NEW_EMAIL)).thenReturn(false);
-        when(sessions.open(DONOR, Set.of(Role.DONOR))).thenReturn(TOKENS);
+        when(sessions.open(donor, false)).thenReturn(TOKENS);
 
         AuthenticatedDonor result = service.confirm(secret.value());
 
@@ -301,7 +306,7 @@ class DonorEmailVerificationServiceTest {
         order.verify(tokens).deleteAllOf(DONOR);
         order.verify(refreshTokens).revokeAllOf(DONOR, NOW);
         order.verify(events).publishEvent(new DonorEmailChanged(DONOR.value(), EMAIL, NEW_EMAIL, LocaleCode.CS));
-        order.verify(sessions).open(DONOR, Set.of(Role.DONOR));
+        order.verify(sessions).open(donor, false);
         assertThat(donor.email()).isEqualTo(NEW_EMAIL);
         assertThat(result.donor().email()).isEqualTo("jana.nova@example.cz");
         assertThat(result.tokens()).isEqualTo(TOKENS);

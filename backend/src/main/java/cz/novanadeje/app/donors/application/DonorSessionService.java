@@ -34,8 +34,8 @@ public class DonorSessionService {
     }
 
     @Transactional
-    public IssuedTokens open(DonorId donorId, Set<Role> roles) {
-        return issue(donorId, roles, clock.instant());
+    public IssuedTokens open(Donor donor, boolean secondFactorVerified) {
+        return issue(donor.id(), donor.sessionRoles(secondFactorVerified), secondFactorVerified, clock.instant());
     }
 
     @Transactional
@@ -53,7 +53,7 @@ public class DonorSessionService {
         Donor donor = donors.findById(token.donorId()).orElseThrow(InvalidRefreshToken::new);
         token.revoke(now);
         refreshTokens.save(token);
-        return new RefreshedSession(donor, issue(donor.id(), donor.roles(), now));
+        return new RefreshedSession(donor, issue(donor.id(), donor.sessionRoles(token.secondFactorVerified()), token.secondFactorVerified(), now));
     }
 
     @Transactional
@@ -64,11 +64,11 @@ public class DonorSessionService {
         });
     }
 
-    private IssuedTokens issue(DonorId donorId, Set<Role> roles, Instant now) {
+    private IssuedTokens issue(DonorId donorId, Set<Role> roles, boolean secondFactorVerified, Instant now) {
         IssuedAccessToken access = accessTokens.issue(donorId, roles, now);
         RefreshTokenSecret secret = RefreshTokenSecret.generate();
-        RefreshToken refresh = RefreshToken.issue(secret, donorId, now, properties.refreshTokenTtl());
+        RefreshToken refresh = RefreshToken.issue(secret, donorId, now, properties.refreshTokenTtl(), secondFactorVerified);
         refreshTokens.save(refresh);
-        return new IssuedTokens(access.token(), access.expiresAt(), secret.value(), refresh.expiresAt());
+        return new IssuedTokens(access.token(), access.expiresAt(), secret.value(), refresh.expiresAt(), roles);
     }
 }

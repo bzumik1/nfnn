@@ -2,10 +2,19 @@
 
 import { DOCUMENT } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import {
+  afterNextRender,
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  inject,
+  Injector,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { FormsModule, NgForm } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
-import { describeProblem, problemTypeEndsWith } from '../../../core/auth/api-problem';
+import { describeProblem, problemOf, problemTypeEndsWith } from '../../../core/auth/api-problem';
 import { AuthApi } from '../../../core/auth/auth-api';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { DonorLocale, DonorType, PASSWORD_MIN_LENGTH } from '../../../core/auth/donor';
@@ -35,6 +44,8 @@ interface RegistrationFields {
 
 const TOO_MANY_REQUESTS = 429;
 const EMAIL_NOT_VERIFIED = 'auth/email-not-verified';
+const SECOND_FACTOR_REQUIRED = 'auth/second-factor-required';
+const INVALID_SECOND_FACTOR_CHALLENGE = 'auth/invalid-second-factor-challenge';
 
 @Component({
   selector: 'app-login-dialog',
@@ -57,6 +68,8 @@ export class LoginDialog {
   private readonly auth = inject(AuthStore);
   private readonly authApi = inject(AuthApi);
   private readonly document = inject(DOCUMENT);
+  private readonly injector = inject(Injector);
+  private readonly codeField = viewChild<ElementRef<HTMLInputElement>>('codeField');
 
   protected readonly passwordMinLength = PASSWORD_MIN_LENGTH;
   protected readonly mode = signal<LoginDialogMode>(this.dialog.initialMode());
@@ -66,10 +79,12 @@ export class LoginDialog {
   protected readonly registrationSent = signal(false);
   protected readonly emailNotVerified = signal(false);
   protected readonly verificationResent = signal(false);
+  protected readonly challenge = signal<string | null>(null);
   protected readonly error = signal('');
 
   protected email = '';
   protected password = '';
+  protected code = '';
   protected registration: RegistrationFields = emptyRegistration();
   protected resetEmail = '';
 
@@ -79,6 +94,11 @@ export class LoginDialog {
   };
   protected readonly signInPasswordMessages = {
     required: $localize`:@@donor.form.password.required:Vyplňte prosím heslo.`,
+  };
+  protected readonly codeHint = $localize`:@@donor.login.secondFactor.codeHint:Šest číslic z ověřovací aplikace; kód se mění každých 30 sekund.`;
+  protected readonly codeMessages = {
+    required: $localize`:@@donor.form.code.required:Opište prosím kód z aplikace.`,
+    pattern: $localize`:@@donor.form.code.invalid:Kód má přesně šest číslic.`,
   };
   protected readonly newPasswordHint = $localize`:@@donor.register.passwordHint:Alespoň 12 znaků. Klidně celá věta, která se vám dobře pamatuje.`;
   protected readonly newPasswordMessages = {
@@ -104,6 +124,7 @@ export class LoginDialog {
     this.error.set('');
     this.emailNotVerified.set(false);
     this.verificationResent.set(false);
+    this.leaveCodeStep();
   }
 
   setDonorType(type: DonorType): void {
@@ -120,10 +141,35 @@ export class LoginDialog {
     this.auth.login(this.email.trim(), this.password).subscribe({
       next: () => this.enterPortal(),
       error: (failure: unknown) => {
+        if (problemTypeEndsWith(failure, SECOND_FACTOR_REQUIRED)) {
+          this.askForCode(problemOf(failure)?.challenge ?? '');
+          return;
+        }
         this.emailNotVerified.set(problemTypeEndsWith(failure, EMAIL_NOT_VERIFIED));
         this.failUnlessThrottled(failure, this.tooManyAttempts);
       },
     });
+  }
+
+  submitCode(form: NgForm): void {
+    const challenge = this.challenge();
+    if (challenge === null || !this.readyToSend(form)) {
+      return;
+    }
+    this.auth.completeSecondFactor(challenge, this.code.trim()).subscribe({
+      next: () => this.enterPortal(),
+      error: (failure: unknown) => {
+        if (problemTypeEndsWith(failure, INVALID_SECOND_FACTOR_CHALLENGE)) {
+          this.leaveCodeStep();
+        }
+        this.failUnlessThrottled(failure, this.tooManyAttempts);
+      },
+    });
+  }
+
+  backToPassword(): void {
+    this.leaveCodeStep();
+    this.error.set('');
   }
 
   resendVerification(): void {
@@ -204,6 +250,19 @@ export class LoginDialog {
     this.loading.set(true);
     this.error.set('');
     return true;
+  }
+
+  private askForCode(challenge: string): void {
+    this.loading.set(false);
+    this.error.set('');
+    this.code = '';
+    this.challenge.set(challenge);
+    afterNextRender(() => this.codeField()?.nativeElement.focus(), { injector: this.injector });
+  }
+
+  private leaveCodeStep(): void {
+    this.challenge.set(null);
+    this.code = '';
   }
 
   private enterPortal(): void {

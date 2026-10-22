@@ -9,17 +9,25 @@ public class AdminStepDefinitions {
     private final JdbcClient jdbc;
     private final ScenarioDonors scenarioDonors;
     private final DonorSessions sessions;
+    private final SecondFactorEnrolments secondFactors;
 
-    public AdminStepDefinitions(JdbcClient jdbc, ScenarioDonors scenarioDonors, DonorSessions sessions) {
+    public AdminStepDefinitions(JdbcClient jdbc, ScenarioDonors scenarioDonors, DonorSessions sessions, SecondFactorEnrolments secondFactors) {
         this.jdbc = jdbc;
         this.scenarioDonors = scenarioDonors;
         this.sessions = sessions;
+        this.secondFactors = secondFactors;
     }
 
     @Given("{string} is an administrator")
     public void isAnAdministrator(String alias) {
         grantAdminRole(alias);
+        secondFactors.enable(alias);
         sessions.signInAgain(alias);
+    }
+
+    @When("{string} enables the second factor")
+    public void enablesTheSecondFactor(String alias) {
+        secondFactors.enable(alias);
     }
 
     @Given("{string} is given the administrator role without signing in again")

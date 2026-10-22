@@ -1,6 +1,6 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { describeProblem } from './api-problem';
-import { problem } from './testing/donor-fixtures';
+import { describeProblem, problemOf } from './api-problem';
+import { problem, SAMPLE_CHALLENGE, secondFactorRequired } from './testing/donor-fixtures';
 
 describe('Given a failed API call to describe', () => {
   const generic = 'Spojení se serverem se nepodařilo.';
@@ -45,5 +45,10 @@ describe('Given a failed API call to describe', () => {
 
   it('when the failure is not an HTTP error at all, then the generic text is shown', () => {
     expect(describeProblem(new Error('offline'), generic)).toBe(generic);
+  });
+
+  it('when the problem carries a second-factor challenge, then it is read, and it is null otherwise', () => {
+    expect(problemOf(failure(secondFactorRequired(), 401))?.challenge).toBe(SAMPLE_CHALLENGE);
+    expect(problemOf(failure(problem('auth/invalid-credentials'), 401))?.challenge).toBeNull();
   });
 });

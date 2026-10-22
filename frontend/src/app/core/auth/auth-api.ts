@@ -7,6 +7,8 @@ import {
   Donor,
   EmailChangeRequest,
   RegisterDonorRequest,
+  SecondFactorDisableRequest,
+  SecondFactorEnrolment,
   UpdateDonorProfileRequest,
 } from './donor';
 
@@ -28,6 +30,13 @@ export class AuthApi {
 
   login(email: string, password: string): Observable<AuthResponse> {
     return this.http.post<AuthResponse>('/api/donors/auth/login', { email, password });
+  }
+
+  completeSecondFactor(challenge: string, code: string): Observable<AuthResponse> {
+    return this.http.post<AuthResponse>('/api/donors/auth/login/second-factor', {
+      challenge,
+      code,
+    });
   }
 
   refresh(): Observable<AuthResponse> {
@@ -60,5 +69,19 @@ export class AuthApi {
 
   requestEmailChange(request: EmailChangeRequest): Observable<void> {
     return this.http.post<void>('/api/donors/me/email-change', request);
+  }
+
+  setupSecondFactor(password: string): Observable<SecondFactorEnrolment> {
+    return this.http.post<SecondFactorEnrolment>('/api/donors/me/second-factor/setup', {
+      password,
+    });
+  }
+
+  confirmSecondFactor(code: string): Observable<AuthResponse> {
+    return this.http.post<AuthResponse>('/api/donors/me/second-factor/confirm', { code });
+  }
+
+  disableSecondFactor(request: SecondFactorDisableRequest): Observable<AuthResponse> {
+    return this.http.post<AuthResponse>('/api/donors/me/second-factor/disable', request);
   }
 }
