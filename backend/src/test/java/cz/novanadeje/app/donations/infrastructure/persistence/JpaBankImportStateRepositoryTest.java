@@ -68,6 +68,24 @@ class JpaBankImportStateRepositoryTest {
     }
 
     @Test
+    @DisplayName("Given three failures in a row, when the state is saved and read back, then the failure count and the reported outage survive")
+    void should_keep_failure_count_and_reported_outage_when_saved() {
+        BankImportState state = states.current();
+        for (int i = 0; i < 3; i++) {
+            state.failed(ImportFailureKind.TRANSPORT, "timed out", NOW.plusSeconds(i * 3600L));
+        }
+        states.save(state);
+        flushAndClear();
+
+        BankImportState reread = states.current();
+        assertThat(reread.consecutiveFailures()).isEqualTo(3);
+        assertThat(reread.reportedOutage()).contains(ImportFailureKind.TRANSPORT);
+        assertThat(reread.failed(ImportFailureKind.TRANSPORT, "timed out", LATER)).isEmpty();
+        assertThat(jdbc.sql("select consecutive_failures, reported_outage from bank_import_state").query((rs, i) -> rs.getInt(1) + " " + rs.getString(2)).single())
+                .isEqualTo("3 TRANSPORT");
+    }
+
+    @Test
     @DisplayName("Given the schema, when a second state row is inserted, then the singleton check refuses it")
     void should_refuse_when_inserted_given_second_row() {
         assertThatThrownBy(() -> jdbc.sql("insert into bank_import_state (id, updated_at) values (2, now())").update())

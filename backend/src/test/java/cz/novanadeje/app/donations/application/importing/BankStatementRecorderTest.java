@@ -4,6 +4,8 @@ import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
+import cz.novanadeje.app.donations.application.event.BankImportOutageDetected;
+import cz.novanadeje.app.donations.application.event.BankImportRecovered;
 import cz.novanadeje.app.donations.application.pairing.PairingOutcome;
 import cz.novanadeje.app.donations.application.pairing.PaymentPairingService;
 import cz.novanadeje.app.donations.domain.bank.BankPayment;
@@ -15,8 +17,10 @@ import cz.novanadeje.app.donations.domain.importing.BankImportState;
 import cz.novanadeje.app.donations.domain.importing.BankImportStateRepository;
 import cz.novanadeje.app.donations.domain.importing.ImportCoverage;
 import cz.novanadeje.app.donations.domain.importing.ImportFailureKind;
+import cz.novanadeje.app.donations.domain.importing.ImportOutage;
 import cz.novanadeje.app.donations.domain.importing.ImportPeriod;
 import cz.novanadeje.app.donations.domain.importing.ImportPlan;
+import cz.novanadeje.app.donations.domain.importing.ImportRecovery;
 import cz.novanadeje.app.shared.domain.Money;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -28,6 +32,7 @@ import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 
 import java.time.Instant;
 import java.time.LocalDate;
@@ -39,6 +44,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -55,13 +61,15 @@ class BankStatementRecorderTest {
     private PaymentPairingService pairing;
     @Mock
     private BankImportStateRepository states;
+    @Mock
+    private ApplicationEventPublisher events;
 
     private BankStatementRecorder recorder;
     private ListAppender<ILoggingEvent> log;
 
     @BeforeEach
     void setUp() {
-        recorder = new BankStatementRecorder(payments, pairing, states);
+        recorder = new BankStatementRecorder(payments, pairing, states, events);
         log = new ListAppender<>();
         log.start();
         logger().addAppender(log);
@@ -190,6 +198,49 @@ class BankStatementRecorderTest {
         assertThat(state.lastFailureKind()).contains(ImportFailureKind.TRANSPORT);
         assertThat(state.lastFailureMessage()).contains("timed out");
         assertThat(state.lastAttemptedAt()).contains(NOW);
+        verify(events, never()).publishEvent(any());
+    }
+
+    @Test
+    @DisplayName("Given two recorded failures, when a third one is recorded, then the outage is published before the state is saved")
+    void should_publish_outage_when_failure_recorded_given_third_failure_in_a_row() {
+        BankImportState state = stateCovering("2026-07-18", "2026-10-15");
+        state.failed(ImportFailureKind.TRANSPORT, "timed out", NOW.minusSeconds(7200));
+        state.failed(ImportFailureKind.TRANSPORT, "timed out", NOW.minusSeconds(3600));
+
+        recorder.recordFailure(ImportFailureKind.TRANSPORT, "timed out", NOW);
+
+        InOrder order = inOrder(events, states);
+        order.verify(events).publishEvent(new BankImportOutageDetected(
+                new ImportOutage(ImportFailureKind.TRANSPORT, 3, Optional.of(Instant.parse("2026-10-15T10:00:00Z")), NOW)));
+        order.verify(states).save(state);
+        assertThat(errors()).containsExactly("Fio import outage: TRANSPORT failed 3 times in a row, the foundation is being told");
+    }
+
+    @Test
+    @DisplayName("Given a reported outage, when a statement is recorded, then the recovery is published before the state is saved")
+    void should_publish_recovery_when_recorded_given_reported_outage() {
+        BankImportState state = stateCovering("2026-07-18", "2026-10-15");
+        state.failed(ImportFailureKind.UNAUTHORIZED, "refused with HTTP 401", NOW.minusSeconds(3600));
+        noMovementsKnownAndNothingPaired();
+
+        recorder.record(new BankStatement(HOURLY_REQUEST, Optional.empty(), List.of(), 0), new ImportPlan(HOURLY_REQUEST, false), NOW);
+
+        InOrder order = inOrder(events, states);
+        order.verify(events).publishEvent(new BankImportRecovered(
+                new ImportRecovery(ImportFailureKind.UNAUTHORIZED, 1, Optional.of(Instant.parse("2026-10-15T10:00:00Z")), NOW)));
+        order.verify(states).save(state);
+        assertThat(state.reportedOutage()).isEmpty();
+    }
+
+    @Test
+    void should_publish_nothing_when_recorded_given_no_outage_to_recover_from() {
+        stateCovering("2026-07-18", "2026-10-15");
+        noMovementsKnownAndNothingPaired();
+
+        recorder.record(new BankStatement(HOURLY_REQUEST, Optional.empty(), List.of(), 0), new ImportPlan(HOURLY_REQUEST, false), NOW);
+
+        verify(events, never()).publishEvent(any());
     }
 
     private BankImportState stateCovering(String from, String to) {
@@ -205,7 +256,15 @@ class BankStatementRecorderTest {
     }
 
     private List<String> warnings() {
-        return log.list.stream().filter(event -> event.getLevel() == Level.WARN).map(ILoggingEvent::getFormattedMessage).toList();
+        return logged(Level.WARN);
+    }
+
+    private List<String> errors() {
+        return logged(Level.ERROR);
+    }
+
+    private List<String> logged(Level level) {
+        return log.list.stream().filter(event -> event.getLevel() == level).map(ILoggingEvent::getFormattedMessage).toList();
     }
 
     private static Logger logger() {

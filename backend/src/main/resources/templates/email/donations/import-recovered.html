@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="cs" xmlns:th="http://www.thymeleaf.org">
+<body>
+<th:block th:fragment="content">
+    <p style="margin: 0 0 16px;" th:text="#{donations.importAlert.email.greeting}">Dobrý den,</p>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 0 0 20px;">
+        <tr>
+            <td style="background: #dcfce7; border: 1px solid #15803d; border-radius: 12px; padding: 14px 18px; font-size: 14px; color: #15803d;">
+                <span th:text="${intro}">web Nová naděje 22. 10. 2026 16:00 znovu stáhl platby z Fio. Předtím selhaly 3 pokusy za sebou.</span>
+            </td>
+        </tr>
+    </table>
+    <p style="margin: 0 0 8px;" th:text="${lastSuccess}">Poslední úspěšné stažení před poruchou: 22. 10. 2026 12:00</p>
+    <p style="margin: 0 0 28px;" th:text="${caughtUp}">Platby, které mezitím přišly, jsou stažené a spárované; dárci je vidí ve svém přehledu.</p>
+    <p style="margin: 0;">
+        <span th:text="#{donations.importAlert.email.regards}">S pozdravem</span><br>
+        <span style="font-family: 'Playfair Display', Georgia, serif; font-size: 17px; font-style: italic; color: #1a1a2e;" th:text="#{donations.importAlert.email.signature}">Nová naděje – nadační fond</span>
+    </p>
+</th:block>
+</body>
+</html>

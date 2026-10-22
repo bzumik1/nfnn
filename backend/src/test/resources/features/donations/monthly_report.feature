@@ -33,6 +33,7 @@ Feature: The foundation receives a monthly statistics e-mail
     Given today is 2026-10-01
     And Fio refuses the next request because the token is not valid
     And the hourly import runs
+    And 1 e-mail is sent to "info@nfnn.cz" with the subject "Stahování plateb z banky selhává – Nová naděje"
     When the monthly report check runs on 2026-10-02
     Then 1 monthly report e-mail is sent to "info@nfnn.cz"
     And both parts of the monthly report e-mail say:
