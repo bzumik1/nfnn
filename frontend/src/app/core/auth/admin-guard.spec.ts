@@ -1,0 +1,67 @@
+import { provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { TestBed } from '@angular/core/testing';
+import {
+  ActivatedRouteSnapshot,
+  provideRouter,
+  Router,
+  RouterStateSnapshot,
+  UrlTree,
+} from '@angular/router';
+import { adminGuard } from './admin-guard';
+import { SESSION_HINT_KEY } from './auth-store';
+import { LoginDialogService } from './login-dialog.service';
+import { authResponse, sampleDonor } from './testing/donor-fixtures';
+
+describe('Given the administration guard', () => {
+  let http: HttpTestingController;
+
+  beforeEach(() => {
+    localStorage.clear();
+    TestBed.configureTestingModule({
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])],
+    });
+    http = TestBed.inject(HttpTestingController);
+  });
+
+  afterEach(() => http.verify());
+
+  function activate(): Promise<boolean | UrlTree> {
+    return TestBed.runInInjectionContext(() =>
+      adminGuard({} as ActivatedRouteSnapshot, { url: '/sprava' } as RouterStateSnapshot),
+    ) as Promise<boolean | UrlTree>;
+  }
+
+  function serialized(result: boolean | UrlTree): string {
+    expect(result).toBeInstanceOf(UrlTree);
+    return TestBed.inject(Router).serializeUrl(result as UrlTree);
+  }
+
+  it('when an administrator has a session to restore, then the administration opens', async () => {
+    localStorage.setItem(SESSION_HINT_KEY, '1');
+
+    const result = activate();
+    http
+      .expectOne('/api/donors/auth/refresh')
+      .flush(authResponse('token-1', sampleDonor({ roles: ['DONOR', 'ADMIN'] })));
+
+    expect(await result).toBe(true);
+  });
+
+  it('when a donor without the role is signed in, then they go to their overview without a dialog', async () => {
+    localStorage.setItem(SESSION_HINT_KEY, '1');
+
+    const result = activate();
+    http.expectOne('/api/donors/auth/refresh').flush(authResponse('token-1'));
+
+    expect(serialized(await result)).toBe('/donor/prehled');
+    expect(TestBed.inject(LoginDialogService).isOpen()).toBe(false);
+  });
+
+  it('when nobody is signed in, then the visitor goes to the home page and the sign-in dialog opens', async () => {
+    const result = await activate();
+
+    expect(serialized(result)).toBe('/');
+    expect(TestBed.inject(LoginDialogService).isOpen()).toBe(true);
+  });
+});

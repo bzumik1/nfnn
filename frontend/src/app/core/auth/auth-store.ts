@@ -36,6 +36,7 @@ export class AuthStore {
   readonly donor = this.currentDonor.asReadonly();
   readonly status = this.currentStatus.asReadonly();
   readonly signedIn = computed(() => this.currentDonor() !== null);
+  readonly isAdmin = computed(() => this.currentDonor()?.roles.includes('ADMIN') ?? false);
 
   currentAccessToken(): string | null {
     return this.accessToken;

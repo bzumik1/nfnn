@@ -314,6 +314,39 @@ SQL
 ```
 <!-- symbol-claim-names:end -->
 
+## Správci
+
+Správce je obyčejný dárcovský účet, kterému v databázi přidáš roli `ADMIN`. Nic jiného se nenastavuje: správa je na `/sprava`, odkaz „Správa“ se v hlavičce přehledu ukáže jen správci a backend pustí k `/api/admin/...` jen token s touto rolí. Role se čte při přihlášení a při obnově tokenu, takže se projeví nejpozději do 15 minut, nebo hned po odhlášení a novém přihlášení. Druhý faktor (TOTP) pro správce přijde v další verzi; do té doby ať má správce silné heslo a ověřený e-mail (bez něj se nepřihlásí).
+
+Přidání role (e-mail nahraď adresou účtu, který má být správcem):
+
+```sh
+sudo docker exec -i nfnn-postgres psql -U nfnn nfnn <<'SQL'
+insert into donor_role (donor_id, role)
+select id, 'ADMIN' from donor where email = 'spravce@example.cz'
+on conflict do nothing;
+SQL
+```
+
+Odebrání role:
+
+```sh
+sudo docker exec -i nfnn-postgres psql -U nfnn nfnn <<'SQL'
+delete from donor_role where role = 'ADMIN' and donor_id = (select id from donor where email = 'spravce@example.cz');
+SQL
+```
+
+Kdo je správce a co kdy udělal (tabulka `admin_action` se plní od první změny provedené ve správě; zatím správa jen čte, takže je prázdná):
+
+```sh
+sudo docker exec -i nfnn-postgres psql -U nfnn nfnn <<'SQL'
+select d.email, r.role from donor_role r join donor d on d.id = r.donor_id where r.role = 'ADMIN';
+select a.performed_at, d.email, a.action, a.subject_id, a.details
+from admin_action a join donor d on d.id = a.admin_id
+order by a.performed_at desc limit 50;
+SQL
+```
+
 ## Potvrzení o daru
 
 Přihlášený dárce si v portálu stáhne potvrzení o daru v PDF: za jeden dar kdykoli, za celý rok od 1. ledna následujícího roku, obojí jen za dary přijaté od 1. ledna 2026 (viz „Od kterého roku“ níže). Bez jakéhokoli nastavení potvrzení podepisuje Pavel Znamenáček, předseda správní rady, a místo obrázku podpisu je jen čára se jménem. Podepisujícího a sken podpisu určují tři řádky v `backend.env` (ve vzoru jsou zakomentované):

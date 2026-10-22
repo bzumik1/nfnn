@@ -1,4 +1,4 @@
-<header class="topbar">
+<header class="topbar" [class.topbar--switching]="switching()">
   <div class="topbar-inner">
     <div class="topbar-left">
       <a class="topbar-brand" routerLink="/">
@@ -27,6 +27,43 @@
         <span class="topbar-home-label" i18n="@@donor.dashboard.home">Hlavní stránka</span>
         <span class="topbar-home-label-short" i18n="@@donor.dashboard.homeShort">Domů</span>
       </a>
+      @if (area() === 'admin') {
+        <a class="topbar-switch" routerLink="/donor/prehled">
+          <svg
+            aria-hidden="true"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <circle cx="12" cy="8" r="4" />
+            <path d="M4 21a8 8 0 0 1 16 0" />
+          </svg>
+          <span i18n="@@admin.topBar.overview">Můj přehled</span>
+        </a>
+      } @else if (isAdmin()) {
+        <a class="topbar-switch" routerLink="/sprava">
+          <svg
+            aria-hidden="true"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M12 3 4 6v6c0 5 3.5 8.5 8 9 4.5-.5 8-4 8-9V6l-8-3z" />
+            <path d="m9 12 2 2 4-4" />
+          </svg>
+          <span i18n="@@donor.dashboard.admin">Správa</span>
+        </a>
+      }
     </div>
     <div class="topbar-right">
       <span class="topbar-donor">

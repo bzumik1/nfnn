@@ -14,6 +14,8 @@ import org.springframework.security.web.SecurityFilterChain;
 @EnableWebSecurity
 class ApiSecurityConfiguration {
 
+    static final String ADMIN_ROLE = "ADMIN";
+
     @Bean
     SecurityFilterChain apiSecurityFilterChain(HttpSecurity http, ProblemDetailSecurityErrorHandler errorHandler,
                                                JwtAuthenticationConverter jwtAuthenticationConverter) throws Exception {
@@ -26,6 +28,7 @@ class ApiSecurityConfiguration {
                         .requestMatchers(HttpMethod.GET, "/api/donations/payment-qr").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/donors/auth/**").permitAll()
                         .requestMatchers("/actuator/health", "/actuator/health/**", "/actuator/info").permitAll()
+                        .requestMatchers("/api/admin/**").hasRole(ADMIN_ROLE)
                         .anyRequest().authenticated())
                 .oauth2ResourceServer(resourceServer -> resourceServer
                         .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter))

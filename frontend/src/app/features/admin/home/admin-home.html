@@ -1,0 +1,103 @@
+<div class="admin">
+  <app-dashboard-top-bar area="admin" />
+
+  <div class="container">
+    <h1 #title class="admin-title" tabindex="-1" i18n="@@admin.home.heading">Správa</h1>
+    <p class="admin-intro" i18n="@@admin.home.intro">
+      Tady uvidíte, jak se webu daří, a časem tu budete párovat platby, spravovat dárce a obsah
+      webu. Zatím je tu stav stahování plateb z banky; další části připravujeme.
+    </p>
+
+    <section class="admin-card" aria-labelledby="admin-import-title">
+      <h2 id="admin-import-title" class="admin-card-title" i18n="@@admin.home.import.title">
+        Stav stahování plateb z banky
+      </h2>
+      @switch (state()) {
+        @case ('loading') {
+          <p class="admin-loading" role="status" i18n="@@admin.home.import.loading">
+            Načítáme stav importu…
+          </p>
+        }
+        @case ('error') {
+          <div class="admin-error" role="alert">
+            <p i18n="@@admin.home.import.error.text">Stav importu se nepodařilo načíst.</p>
+            <button
+              type="button"
+              class="admin-retry"
+              (click)="load()"
+              i18n="@@admin.home.import.error.retry"
+            >
+              Zkusit znovu
+            </button>
+          </div>
+        }
+        @case ('ready') {
+          @if (outage(); as outage) {
+            <div class="admin-outage" role="status">
+              <span class="visually-hidden" i18n="@@admin.home.import.outage.label"
+                >Upozornění:
+              </span>
+              <span i18n="@@admin.home.import.outage.text"
+                >Stahování plateb selhává a fond o tom dostal e-mail: {{ outage }}, selhání za
+                sebou: {{ consecutiveFailures() }}.</span
+              >
+            </div>
+          }
+          <dl class="admin-data">
+            <div>
+              <dt i18n="@@admin.home.import.covered">Stažené období</dt>
+              <dd>
+                @if (coveredPeriod(); as period) {
+                  {{ period }}
+                } @else {
+                  <ng-container i18n="@@admin.home.import.covered.none">zatím nic</ng-container>
+                }
+              </dd>
+            </div>
+            <div>
+              <dt i18n="@@admin.home.import.lastSuccess">Poslední úspěšné stažení</dt>
+              <dd>
+                @if (lastSuccess(); as at) {
+                  {{ at }}
+                } @else {
+                  <ng-container i18n="@@admin.home.import.lastSuccess.none"
+                    >zatím žádné</ng-container
+                  >
+                }
+              </dd>
+            </div>
+            <div>
+              <dt i18n="@@admin.home.import.lastAttempt">Poslední pokus</dt>
+              <dd>
+                @if (lastAttempt(); as at) {
+                  {{ at }}
+                } @else {
+                  <ng-container i18n="@@admin.home.import.lastAttempt.none"
+                    >zatím žádný</ng-container
+                  >
+                }
+              </dd>
+            </div>
+            <div>
+              <dt i18n="@@admin.home.import.lastFailure">Poslední chyba</dt>
+              <dd>
+                @if (lastFailure(); as failure) {
+                  {{ failure }}
+                  @if (lastFailureMessage(); as message) {
+                    <span class="admin-failure-message">({{ message }})</span>
+                  }
+                } @else {
+                  <ng-container i18n="@@admin.home.import.lastFailure.none">žádná</ng-container>
+                }
+              </dd>
+            </div>
+          </dl>
+        }
+      }
+    </section>
+
+    <p class="admin-back">
+      <a routerLink="/donor/prehled" i18n="@@admin.home.backToOverview">Zpět na můj přehled</a>
+    </p>
+  </div>
+</div>
