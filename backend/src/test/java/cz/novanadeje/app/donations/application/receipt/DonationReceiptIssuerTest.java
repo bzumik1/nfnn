@@ -10,6 +10,7 @@ import cz.novanadeje.app.donations.domain.receipt.ContentDigest;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceipt;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceiptId;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceiptRepository;
+import cz.novanadeje.app.donations.domain.receipt.FirstReceiptYear;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptContent;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptDocument;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptDocumentFactory;
@@ -64,8 +65,9 @@ class DonationReceiptIssuerTest {
     private final DonationRepository donations = mock(DonationRepository.class);
     private final DonorRecordRepository donorRecords = mock(DonorRecordRepository.class);
     private final DonationReceiptRenderer renderer = mock(DonationReceiptRenderer.class);
-    private final DonationReceiptIssuer issuer = new DonationReceiptIssuer(receipts, new ReceiptRequestReader(donations, donorRecords), renderer,
-            FOUNDATION, SIGNATORY, Clock.fixed(NOW, ZoneOffset.UTC));
+    private final DonationReceiptIssuer issuer = new DonationReceiptIssuer(receipts,
+            new ReceiptRequestReader(donations, donorRecords, new FirstReceiptYear(YEAR_2026)), renderer, FOUNDATION, SIGNATORY,
+            Clock.fixed(NOW, ZoneOffset.UTC));
 
     @Test
     @DisplayName("Given no receipt yet, when a single receipt is issued, then the donor is locked first, then the donation and the donor record are read, a new number is taken and the rendered PDF is stored")

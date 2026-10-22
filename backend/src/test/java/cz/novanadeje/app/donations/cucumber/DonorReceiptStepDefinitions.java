@@ -201,6 +201,24 @@ public class DonorReceiptStepDefinitions {
         assertThat(donation.get("status").asString()).isEqualTo(status);
     }
 
+    @Then("the donation received on {date} is listed with a receipt")
+    public void theDonationIsListedWithAReceipt(LocalDate receivedOn) {
+        assertReceiptAvailable(receivedOn, true);
+    }
+
+    @Then("the donation received on {date} is listed without a receipt")
+    public void theDonationIsListedWithoutAReceipt(LocalDate receivedOn) {
+        assertReceiptAvailable(receivedOn, false);
+    }
+
+    @Then("the summary makes receipts available from {int}")
+    public void theSummaryMakesReceiptsAvailableFrom(int year) {
+        JsonNode json = api.lastResponseJson();
+        assertThat(json.get("receiptsAvailableFrom")).withFailMessage("No receiptsAvailableFrom in %s", json).isNotNull();
+        assertThat(json.get("receiptsAvailableFrom").isInt()).withFailMessage("No integer year in %s", json).isTrue();
+        assertThat(json.get("receiptsAvailableFrom").asInt()).isEqualTo(year);
+    }
+
     @Then("the summary makes yearly receipts available through {int}")
     public void theSummaryMakesYearlyReceiptsAvailableThrough(int year) {
         JsonNode json = api.lastResponseJson();
@@ -229,6 +247,13 @@ public class DonorReceiptStepDefinitions {
                 .params(scenarioDonors.idOf(alias), receivedOn)
                 .query(UUID.class)
                 .single();
+    }
+
+    private void assertReceiptAvailable(LocalDate receivedOn, boolean available) {
+        JsonNode donation = listedDonation(receivedOn);
+        assertThat(donation.get("receiptAvailable")).withFailMessage("No receiptAvailable in %s", donation).isNotNull();
+        assertThat(donation.get("receiptAvailable").isBoolean()).withFailMessage("No boolean receiptAvailable in %s", donation).isTrue();
+        assertThat(donation.get("receiptAvailable").asBoolean()).withFailMessage("Unexpected receiptAvailable in %s", donation).isEqualTo(available);
     }
 
     private JsonNode listedDonation(LocalDate receivedOn) {

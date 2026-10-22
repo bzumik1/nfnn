@@ -1,5 +1,9 @@
 package cz.novanadeje.app.donations.application.importing;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import cz.novanadeje.app.donations.domain.importing.BankImportState;
 import cz.novanadeje.app.donations.domain.importing.BankImportStateRepository;
 import cz.novanadeje.app.donations.domain.importing.ImportCoverage;
@@ -18,6 +22,7 @@ import org.junit.jupiter.params.provider.EnumSource;
 import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -64,7 +69,7 @@ class ImportBankPaymentsServiceTest {
     @DisplayName("Given no coverage yet, when the import runs, then it plans, fetches outside any repository call and records the statement")
     void should_plan_fetch_and_record_in_order_when_import_runs_given_no_coverage() {
         BankStatement statement = new BankStatement(SERVABLE, Optional.of(SERVABLE), List.of(), 3);
-        ImportCounts counts = new ImportCounts(3, 1, 0, 0, 0, 0, 1);
+        ImportCounts counts = new ImportCounts(3, 1, 0, 0, 0, 0, 0, 1);
         BankImportState covered = BankImportState.initial(NOW);
         covered.succeeded(ImportCoverage.of(SERVABLE), NOW);
         when(states.current()).thenReturn(BankImportState.initial(NOW), covered);
@@ -84,6 +89,30 @@ class ImportBankPaymentsServiceTest {
         assertThat(report).isEqualTo(new ImportReport(ImportTrigger.HOURLY, SERVABLE, false, Optional.of(SERVABLE),
                 ImportCoverage.of(SERVABLE), counts, Optional.empty(), Optional.empty(), Optional.empty()));
         assertThat(report.completed()).isTrue();
+    }
+
+    @Test
+    @DisplayName("Given a run that paired payments in every way, when the import completes, then its info line counts each way, the confirmed symbol included")
+    void should_count_each_pairing_way_when_import_completes_given_payments_paired_every_way() {
+        BankStatement statement = new BankStatement(SERVABLE, Optional.of(SERVABLE), List.of(), 9);
+        BankImportState covered = BankImportState.initial(NOW);
+        covered.succeeded(ImportCoverage.of(SERVABLE), NOW);
+        when(states.current()).thenReturn(BankImportState.initial(NOW), covered);
+        when(source.fetch(SERVABLE)).thenReturn(statement);
+        when(recorder.record(statement, new ImportPlan(SERVABLE, false), NOW)).thenReturn(new ImportCounts(9, 8, 1, 2, 3, 4, 1, 5));
+        Logger logger = (Logger) LoggerFactory.getLogger(ImportBankPaymentsService.class);
+        ListAppender<ILoggingEvent> logs = new ListAppender<>();
+        logs.start();
+        logger.addAppender(logs);
+        try {
+            service.importIncomingPayments(ImportTrigger.HOURLY, ImportSettings.defaults());
+        } finally {
+            logger.detachAppender(logs);
+        }
+
+        assertThat(logs.list).filteredOn(event -> event.getLevel() == Level.INFO).singleElement()
+                .extracting(ILoggingEvent::getFormattedMessage).asString()
+                .contains("2 paired by symbol, 3 by account, 4 by confirmed symbol, 1 accounts learned, 5 left unpaired");
     }
 
     @Test

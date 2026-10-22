@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <changeSet id="011-confirm-old-variable-symbols" author="nfnn">
+        <createTable tableName="donor_symbol_claim">
+            <column name="id" type="uuid">
+                <constraints primaryKey="true" primaryKeyName="pk_donor_symbol_claim" nullable="false"/>
+            </column>
+            <column name="donor_id" type="uuid">
+                <constraints nullable="false" foreignKeyName="fk_donor_symbol_claim_donor" referencedTableName="donor_record"
+                             referencedColumnNames="donor_id" deleteCascade="true"/>
+            </column>
+            <column name="account_number" type="varchar(17)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="bank_code" type="varchar(4)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="variable_symbol" type="varchar(10)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="answer" type="varchar(16)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="answered_at" type="timestamp with time zone">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <addUniqueConstraint tableName="donor_symbol_claim" columnNames="donor_id, account_number, bank_code, variable_symbol"
+                             constraintName="uq_donor_symbol_claim"/>
+        <createIndex tableName="donor_symbol_claim" indexName="ix_donor_symbol_claim_account">
+            <column name="account_number"/>
+            <column name="bank_code"/>
+        </createIndex>
+        <sql>alter table donor_symbol_claim add constraint ck_donor_symbol_claim_answer check (answer in ('CONFIRMED', 'DECLINED'))</sql>
+        <sql>alter table donor_symbol_claim add constraint ck_donor_symbol_claim_symbol check (variable_symbol ~ '^[1-9][0-9]{0,9}$')</sql>
+
+        <addColumn tableName="donation">
+            <column name="symbol_claim_id" type="uuid">
+                <constraints foreignKeyName="fk_donation_symbol_claim" referencedTableName="donor_symbol_claim" referencedColumnNames="id"/>
+            </column>
+        </addColumn>
+        <createIndex tableName="donation" indexName="ix_donation_symbol_claim">
+            <column name="symbol_claim_id"/>
+        </createIndex>
+        <sql>alter table donation drop constraint ck_donation_sender_account_only_for_account_pairing</sql>
+        <sql>alter table donation add constraint ck_donation_paired_by check (paired_by in ('VARIABLE_SYMBOL', 'SENDER_ACCOUNT', 'CONFIRMED_SYMBOL'))</sql>
+        <sql>alter table donation add constraint ck_donation_sender_account_pairing check (sender_account_id is null or coalesce(paired_by, '') in ('SENDER_ACCOUNT', 'CONFIRMED_SYMBOL'))</sql>
+        <sql>alter table donation add constraint ck_donation_symbol_claim_pairing check ((coalesce(paired_by, '') = 'CONFIRMED_SYMBOL') = (symbol_claim_id is not null))</sql>
+        <sql>alter table donation add constraint ck_donation_confirmed_symbol_link check (coalesce(paired_by, '') &lt;&gt; 'CONFIRMED_SYMBOL' or sender_account_id is not null)</sql>
+    </changeSet>
+
+</databaseChangeLog>

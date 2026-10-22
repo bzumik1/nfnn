@@ -7,6 +7,7 @@ import io.cucumber.java.en.When;
 import tools.jackson.databind.JsonNode;
 
 import java.time.LocalDate;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -29,7 +30,7 @@ public class DonorBankAccountsStepDefinitions {
         this.sessions = sessions;
     }
 
-    @When("{string} asks for her/his bank accounts")
+    @When("{string} asks for her/his/its bank accounts")
     public void asksForBankAccounts(String alias) {
         sessions.actAs(alias);
         api.get(BANK_ACCOUNTS_PATH);
@@ -72,6 +73,37 @@ public class DonorBankAccountsStepDefinitions {
         api.post(BANK_ACCOUNTS_PATH + "/" + id + "/disconnect", Map.of());
     }
 
+    @When("{string} confirms symbol {string} at bank account {string}")
+    public void confirmsSymbolAtBankAccount(String alias, String symbol, String accountNumber) {
+        UUID id = liveLinkOf(alias, accountNumber);
+        api.post(symbolClaimPath(id, "confirm"), Map.of("variableSymbol", symbol));
+    }
+
+    @When("{string} declines symbol {string} at bank account {string}")
+    public void declinesSymbolAtBankAccount(String alias, String symbol, String accountNumber) {
+        UUID id = liveLinkOf(alias, accountNumber);
+        api.post(symbolClaimPath(id, "decline"), Map.of("variableSymbol", symbol));
+    }
+
+    @When("{string} tries to confirm symbol {string} at bank account {string} of {string}")
+    public void triesToConfirmSymbolAtBankAccountOf(String alias, String symbol, String accountNumber, String owner) {
+        UUID id = liveLinkOf(owner, accountNumber);
+        sessions.actAs(alias);
+        api.post(symbolClaimPath(id, "confirm"), Map.of("variableSymbol", symbol));
+    }
+
+    @When("someone without a token confirms symbol {string} at a bank account")
+    public void someoneWithoutATokenConfirmsSymbol(String symbol) {
+        api.forgetCredentials();
+        api.post(symbolClaimPath(UUID.randomUUID(), "confirm"), Map.of("variableSymbol", symbol));
+    }
+
+    @When("someone without a token declines symbol {string} at a bank account")
+    public void someoneWithoutATokenDeclinesSymbol(String symbol) {
+        api.forgetCredentials();
+        api.post(symbolClaimPath(UUID.randomUUID(), "decline"), Map.of("variableSymbol", symbol));
+    }
+
     @Then("the bank account list is empty")
     public void theBankAccountListIsEmpty() {
         assertThat(items()).isEmpty();
@@ -103,6 +135,49 @@ public class DonorBankAccountsStepDefinitions {
                 .anySatisfy(item -> assertThat(item.get("verifiedOn").asString()).isEqualTo(verifiedOn.toString()));
     }
 
+    @Then("bank account {string} asks about symbol {string} with {int} payment(s) from {string} to {string}")
+    public void bankAccountAsksAboutSymbol(String accountNumber, String symbol, int paymentCount, String firstMonth, String lastMonth) {
+        assertThat(rowsOf(accountNumber)).filteredOn(item -> !item.get("symbolOffer").isNull())
+                .singleElement()
+                .satisfies(item -> {
+                    JsonNode offer = item.get("symbolOffer");
+                    assertThat(offer.get("variableSymbol").asString()).isEqualTo(symbol);
+                    assertThat(offer.get("paymentCount").asInt()).isEqualTo(paymentCount);
+                    assertThat(offer.get("firstMonth").asString()).isEqualTo(firstMonth);
+                    assertThat(offer.get("lastMonth").asString()).isEqualTo(lastMonth);
+                    assertThat(offer.properties()).extracting(Map.Entry::getKey)
+                            .containsExactlyInAnyOrder("variableSymbol", "paymentCount", "firstMonth", "lastMonth");
+                });
+    }
+
+    @Then("bank account {string} asks about no symbol")
+    public void bankAccountAsksAboutNoSymbol(String accountNumber) {
+        assertThat(rowsOf(accountNumber)).allSatisfy(item -> assertThat(item.get("symbolOffer").isNull()).isTrue());
+    }
+
+    @Then("bank account {string} lists confirmed symbols {string}")
+    public void bankAccountListsConfirmedSymbols(String accountNumber, String symbols) {
+        List<JsonNode> rows = rowsOf(accountNumber);
+        assertThat(confirmedSymbolsOf(rows.getFirst())).containsExactlyElementsOf(Arrays.asList(symbols.split(",\\s*")));
+        assertThat(rows.subList(1, rows.size())).allSatisfy(item -> assertThat(confirmedSymbolsOf(item)).isEmpty());
+    }
+
+    @Then("bank account {string} lists no confirmed symbol")
+    public void bankAccountListsNoConfirmedSymbol(String accountNumber) {
+        assertThat(rowsOf(accountNumber)).allSatisfy(item -> assertThat(confirmedSymbolsOf(item)).isEmpty());
+    }
+
+    @Then("bank account {string} was last verified by a payment on {date}")
+    public void bankAccountWasLastVerifiedByAPaymentOn(String accountNumber, LocalDate bookedOn) {
+        assertThat(rowsOf(accountNumber))
+                .allSatisfy(item -> assertThat(item.get("verificationPaymentOn").asString()).isEqualTo(bookedOn.toString()));
+    }
+
+    @Then("bank account {string} was never verified by a payment")
+    public void bankAccountWasNeverVerifiedByAPayment(String accountNumber) {
+        assertThat(rowsOf(accountNumber)).allSatisfy(item -> assertThat(item.get("verificationPaymentOn").isNull()).isTrue());
+    }
+
     @Then("bank account {string} is excluded from pairing")
     public void bankAccountIsExcludedFromPairing(String accountNumber) {
         assertThat(items()).filteredOn(item -> item.get("accountNumber").asString().equals(accountNumber))
@@ -117,6 +192,18 @@ public class DonorBankAccountsStepDefinitions {
                 .satisfies(item -> {
                     assertThat(item.get("pairedBy").asString()).isEqualTo("SENDER_ACCOUNT");
                     assertThat(item.get("senderAccount").asString()).isEqualTo(accountNumber);
+                    assertThat(item.get("confirmedSymbol").isNull()).isTrue();
+                });
+    }
+
+    @Then("the donation received on {date} is listed as paired by confirmed symbol {string} through sender account {string}")
+    public void theDonationIsListedAsPairedByConfirmedSymbol(LocalDate receivedOn, String symbol, String accountNumber) {
+        assertThat(items()).filteredOn(item -> item.get("receivedAt").asString().equals(receivedOn.toString()))
+                .singleElement()
+                .satisfies(item -> {
+                    assertThat(item.get("pairedBy").asString()).isEqualTo("CONFIRMED_SYMBOL");
+                    assertThat(item.get("confirmedSymbol").asString()).isEqualTo(symbol);
+                    assertThat(item.get("senderAccount").asString()).isEqualTo(accountNumber);
                 });
     }
 
@@ -128,6 +215,22 @@ public class DonorBankAccountsStepDefinitions {
                     assertThat(item.get("pairedBy").asString()).isEqualTo("VARIABLE_SYMBOL");
                     assertThat(item.get("senderAccount").isNull()).isTrue();
                 });
+    }
+
+    private static String symbolClaimPath(UUID id, String answer) {
+        return BANK_ACCOUNTS_PATH + "/" + id + "/symbol-claim/" + answer;
+    }
+
+    private List<JsonNode> rowsOf(String accountNumber) {
+        List<JsonNode> rows = items().stream().filter(item -> item.get("accountNumber").asString().equals(accountNumber)).toList();
+        assertThat(rows).withFailMessage("No bank account %s in %s", accountNumber, api.lastResponse().getBody()).isNotEmpty();
+        return rows;
+    }
+
+    private static List<String> confirmedSymbolsOf(JsonNode item) {
+        JsonNode symbols = item.get("confirmedSymbols");
+        assertThat(symbols).withFailMessage("No confirmed symbols in %s", item).isNotNull();
+        return symbols.valueStream().map(JsonNode::asString).toList();
     }
 
     private UUID liveLinkOf(String alias, String accountNumber) {

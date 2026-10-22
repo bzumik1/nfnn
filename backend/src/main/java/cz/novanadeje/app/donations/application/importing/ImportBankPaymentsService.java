@@ -62,10 +62,10 @@ public class ImportBankPaymentsService {
     private ImportReport completed(ImportTrigger trigger, ImportPlan plan, BankStatement statement, ImportCounts counts) {
         ImportCoverage coverage = states.current().coverage();
         log.info("Fio import {} {} completed: bank reported {}, {} movements, {} new incoming, {} known, {} paired by symbol, "
-                        + "{} by account, {} accounts learned, {} left unpaired, covered {}",
+                        + "{} by account, {} by confirmed symbol, {} accounts learned, {} left unpaired, covered {}",
                 trigger, plan.period(), statement.reported().map(Object::toString).orElse("no period"), counts.movementsReceived(),
                 counts.incomingNew(), counts.incomingKnown(), counts.pairedBySymbol(), counts.pairedByAccount(),
-                counts.accountsLearned(), counts.leftUnpaired(), coverage);
+                counts.pairedByConfirmedSymbol(), counts.accountsLearned(), counts.leftUnpaired(), coverage);
         return new ImportReport(trigger, plan.period(), plan.needsUnlockedHistory(), statement.reported(), coverage, counts,
                 Optional.empty(), Optional.empty(), Optional.empty());
     }

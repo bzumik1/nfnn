@@ -5,6 +5,8 @@ import cz.novanadeje.app.donations.domain.donation.DonationId;
 import cz.novanadeje.app.donations.domain.donation.DonationNotFound;
 import cz.novanadeje.app.donations.domain.donation.DonationRepository;
 import cz.novanadeje.app.donations.domain.donor.DonorRecordRepository;
+import cz.novanadeje.app.donations.domain.receipt.FirstReceiptYear;
+import cz.novanadeje.app.donations.domain.receipt.ReceiptBeforeFirstYear;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptDocumentFactory;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptNotAvailable;
 import cz.novanadeje.app.donations.domain.receipt.YearlyReceiptNotAvailable;
@@ -35,10 +37,13 @@ class ReceiptRequestReaderTest {
     private static final Donation REFUNDED_2026 = refundedToJana(LocalDate.of(2026, 4, 1), 20000);
     private static final Donation DECEMBER_2025 = receivedFromJana(LocalDate.of(2025, 12, 20), 100000);
     private static final Donation JANUARY_2027 = receivedFromJana(LocalDate.of(2027, 1, 3), 30000);
+    private static final Donation NEW_YEARS_EVE_2025 = receivedFromJana(LocalDate.of(2025, 12, 31), 40000);
+    private static final Donation NEW_YEARS_DAY_2026 = receivedFromJana(LocalDate.of(2026, 1, 1), 60000);
+    private static final Donation REFUNDED_2025 = refundedToJana(LocalDate.of(2025, 11, 2), 10000);
 
     private final DonationRepository donations = mock(DonationRepository.class);
     private final DonorRecordRepository donorRecords = mock(DonorRecordRepository.class);
-    private final ReceiptRequestReader reader = new ReceiptRequestReader(donations, donorRecords);
+    private final ReceiptRequestReader reader = new ReceiptRequestReader(donations, donorRecords, new FirstReceiptYear(YEAR_2026));
 
     @Test
     @DisplayName("Given a received donation of the caller, when its receipt request is read, then it carries that donation, the donor record and today")
@@ -84,6 +89,45 @@ class ReceiptRequestReaderTest {
         assertThatThrownBy(() -> reader.forDonation(JANA, REFUNDED_2026.id(), TODAY))
                 .isInstanceOf(ReceiptNotAvailable.class)
                 .extracting("code").isEqualTo("donations/receipt-not-available");
+    }
+
+    @Test
+    @DisplayName("Given receipts from 2026 and a donation of the caller received on 31 December 2025, when its receipt request is read, then it is before the first receipt year")
+    void should_refuse_receipt_when_read_given_donation_received_before_first_receipt_year() {
+        when(donations.findByIdForDonor(NEW_YEARS_EVE_2025.id(), JANA)).thenReturn(Optional.of(NEW_YEARS_EVE_2025));
+        when(donorRecords.findById(JANA)).thenReturn(Optional.of(jana()));
+
+        assertThatThrownBy(() -> reader.forDonation(JANA, NEW_YEARS_EVE_2025.id(), TODAY))
+                .isInstanceOf(ReceiptBeforeFirstYear.class)
+                .extracting("code").isEqualTo("donations/receipt-before-first-year");
+    }
+
+    @Test
+    @DisplayName("Given receipts from 2026 and a donation of the caller received on 1 January 2026, when its receipt request is read, then it carries that donation")
+    void should_read_donation_when_read_given_donation_received_on_first_day_of_first_receipt_year() {
+        when(donations.findByIdForDonor(NEW_YEARS_DAY_2026.id(), JANA)).thenReturn(Optional.of(NEW_YEARS_DAY_2026));
+        when(donorRecords.findById(JANA)).thenReturn(Optional.of(jana()));
+
+        ReceiptRequest.ForDonation request = (ReceiptRequest.ForDonation) reader.forDonation(JANA, NEW_YEARS_DAY_2026.id(), TODAY);
+
+        assertThat(request.donation()).isEqualTo(NEW_YEARS_DAY_2026);
+    }
+
+    @Test
+    @DisplayName("Given receipts from 2026 and a refunded donation of the caller from 2025, when its receipt request is read, then no receipt is available, as for any refunded donation")
+    void should_refuse_as_refunded_when_read_given_refunded_donation_before_first_receipt_year() {
+        when(donations.findByIdForDonor(REFUNDED_2025.id(), JANA)).thenReturn(Optional.of(REFUNDED_2025));
+        when(donorRecords.findById(JANA)).thenReturn(Optional.of(jana()));
+
+        assertThatThrownBy(() -> reader.forDonation(JANA, REFUNDED_2025.id(), TODAY)).isInstanceOf(ReceiptNotAvailable.class);
+    }
+
+    @Test
+    @DisplayName("Given receipts from 2026 and another donor's donation from 2025, when its receipt request is read, then it is not found")
+    void should_not_find_donation_when_read_given_other_donors_donation_before_first_receipt_year() {
+        when(donations.findByIdForDonor(NEW_YEARS_EVE_2025.id(), JANA)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> reader.forDonation(JANA, NEW_YEARS_EVE_2025.id(), TODAY)).isInstanceOf(DonationNotFound.class);
     }
 
     @Test

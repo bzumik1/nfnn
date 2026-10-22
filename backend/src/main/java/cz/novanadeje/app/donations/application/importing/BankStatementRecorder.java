@@ -45,7 +45,8 @@ public class BankStatementRecorder {
         PairingOutcome outcome = pairing.pairUnpaired(now);
         extendCoverage(statement, plan, now);
         return new ImportCounts(statement.movementsReceived(), fresh.size(), statement.incoming().size() - fresh.size(),
-                outcome.pairedBySymbol(), outcome.pairedByAccount(), outcome.accountsLearned(), outcome.leftUnpaired());
+                outcome.pairedBySymbol(), outcome.pairedByAccount(), outcome.pairedByConfirmedSymbol(), outcome.accountsLearned(),
+                outcome.leftUnpaired());
     }
 
     @Transactional

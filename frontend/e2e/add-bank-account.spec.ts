@@ -1,20 +1,12 @@
 import { expect, test } from '@playwright/test';
-import { mockDonorApi, signIn } from './donor-session';
+import { bankAccountItem, mockDonorApi, signIn } from './donor-session';
 
-const newAccount = {
+const newAccount = bankAccountItem({
   id: '0192f0c4-0000-7000-8000-000000000002',
   accountNumber: '1234567890/0800',
-  status: 'ACTIVE',
   verifiedOn: '2026-10-18',
-  connectedFrom: null,
-  disconnectedOn: null,
-  donationCount: 0,
-  totalAmountMinor: 0,
-  currency: 'CZK',
-  lastDonationOn: null,
-  shared: false,
-  pairingExcluded: false,
-};
+  verificationPaymentOn: '2026-10-18',
+});
 
 test.describe('Given a signed-in donor adding a bank account', () => {
   test('when the verification payment arrives while the dialog is open, then the waiting turns into a tick', async ({

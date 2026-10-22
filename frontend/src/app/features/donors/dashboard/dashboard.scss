@@ -287,6 +287,10 @@
   padding: 12px 16px;
   background: var(--color-surface-alt);
   border-radius: var(--radius-md);
+
+  a {
+    color: var(--color-accent);
+  }
 }
 
 .payments-empty {
@@ -345,6 +349,7 @@
   }
 }
 
+.receipts-from,
 .bank-hint {
   padding: 16px 24px 20px;
   border-top: 1px solid var(--color-divider);

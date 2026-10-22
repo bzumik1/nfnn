@@ -77,7 +77,7 @@ class BankStatementRecorderTest {
     void should_save_only_new_movements_before_pairing_when_recorded_given_known_movement() {
         stateCovering("2026-07-18", "2026-10-15");
         when(payments.findKnownTransactionIds(anyCollection())).thenReturn(Set.of(new BankTransactionId(1001)));
-        when(pairing.pairUnpaired(NOW)).thenReturn(new PairingOutcome(1, 2, 3, 4));
+        when(pairing.pairUnpaired(NOW)).thenReturn(new PairingOutcome(1, 2, 5, 3, 4));
         BankStatement statement = new BankStatement(HOURLY_REQUEST, Optional.empty(), List.of(movement(1001), movement(1002)), 5);
 
         ImportCounts counts = recorder.record(statement, new ImportPlan(HOURLY_REQUEST, false), NOW);
@@ -93,7 +93,7 @@ class BankStatementRecorderTest {
             assertThat(payment.transactionId()).isEqualTo(new BankTransactionId(1002));
             assertThat(payment.importedAt()).isEqualTo(NOW);
         });
-        assertThat(counts).isEqualTo(new ImportCounts(5, 1, 1, 1, 2, 3, 4));
+        assertThat(counts).isEqualTo(new ImportCounts(5, 1, 1, 1, 2, 5, 3, 4));
     }
 
     @Test
@@ -101,7 +101,7 @@ class BankStatementRecorderTest {
     void should_save_once_when_recorded_given_duplicate_movement_in_statement() {
         stateCovering("2026-07-18", "2026-10-15");
         when(payments.findKnownTransactionIds(anyCollection())).thenReturn(Set.of());
-        when(pairing.pairUnpaired(NOW)).thenReturn(new PairingOutcome(0, 0, 0, 0));
+        when(pairing.pairUnpaired(NOW)).thenReturn(new PairingOutcome(0, 0, 0, 0, 0));
 
         ImportCounts counts = recorder.record(new BankStatement(HOURLY_REQUEST, Optional.empty(), List.of(movement(1001), movement(1001)), 2),
                 new ImportPlan(HOURLY_REQUEST, false), NOW);
@@ -201,7 +201,7 @@ class BankStatementRecorderTest {
 
     private void noMovementsKnownAndNothingPaired() {
         when(payments.findKnownTransactionIds(anyCollection())).thenReturn(Set.of());
-        when(pairing.pairUnpaired(NOW)).thenReturn(new PairingOutcome(0, 0, 0, 0));
+        when(pairing.pairUnpaired(NOW)).thenReturn(new PairingOutcome(0, 0, 0, 0, 0));
     }
 
     private List<String> warnings() {

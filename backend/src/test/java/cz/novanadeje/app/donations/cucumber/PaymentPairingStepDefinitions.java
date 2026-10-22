@@ -72,9 +72,46 @@ public class PaymentPairingStepDefinitions {
         assertDonation(alias, amount, receivedOn, PairingMethod.SENDER_ACCOUNT);
     }
 
+    @Then("{string} has a donation of {string} CZK received on {date} paired by confirmed symbol")
+    public void hasADonationPairedByConfirmedSymbol(String alias, String amount, LocalDate receivedOn) {
+        assertDonation(alias, amount, receivedOn, PairingMethod.CONFIRMED_SYMBOL);
+    }
+
     @Then("bank payment {long} is paired with {string}")
     public void bankPaymentIsPairedWith(long transactionId, String alias) {
         assertThat(donorsPaidBy(transactionId)).containsExactly(scenarioDonors.idOf(alias));
+    }
+
+    @Then("bank payment {long} is paired with {string} by confirmed symbol")
+    public void bankPaymentIsPairedWithByConfirmedSymbol(long transactionId, String alias) {
+        UUID donor = scenarioDonors.idOf(alias);
+        List<ConfirmedSymbolPair> pairs = jdbc.sql("""
+                        select d.donor_id, d.paired_by,
+                               c.donor_id as claimant, c.answer, c.account_number || '/' || c.bank_code as claimed_account,
+                               c.variable_symbol as claimed_symbol,
+                               a.donor_id as link_owner, a.account_number || '/' || a.bank_code as linked_account,
+                               p.sender_account_number || '/' || p.sender_bank_code as sender, p.matching_variable_symbol
+                        from donation d
+                        join bank_payment p on p.id = d.bank_payment_id
+                        left join donor_symbol_claim c on c.id = d.symbol_claim_id
+                        left join donor_sender_account a on a.id = d.sender_account_id
+                        where p.bank_transaction_id = ?""")
+                .param(transactionId)
+                .query((row, number) -> new ConfirmedSymbolPair(row.getObject("donor_id", UUID.class), row.getString("paired_by"),
+                        row.getObject("claimant", UUID.class), row.getString("answer"), row.getString("claimed_account"),
+                        row.getString("claimed_symbol"), row.getObject("link_owner", UUID.class), row.getString("linked_account"),
+                        row.getString("sender"), row.getString("matching_variable_symbol")))
+                .list();
+        assertThat(pairs).withFailMessage("Bank payment %d has %d donations", transactionId, pairs.size()).hasSize(1);
+        ConfirmedSymbolPair pair = pairs.getFirst();
+        assertThat(pair.donor()).isEqualTo(donor);
+        assertThat(pair.pairedBy()).isEqualTo(PairingMethod.CONFIRMED_SYMBOL.name());
+        assertThat(pair.claimant()).isEqualTo(donor);
+        assertThat(pair.answer()).isEqualTo("CONFIRMED");
+        assertThat(pair.claimedAccount()).isEqualTo(pair.sender());
+        assertThat(pair.claimedSymbol()).isEqualTo(pair.matchingSymbol());
+        assertThat(pair.linkOwner()).isEqualTo(donor);
+        assertThat(pair.linkedAccount()).isEqualTo(pair.sender());
     }
 
     @Then("bank payment {long} is unpaired")
@@ -93,6 +130,11 @@ public class PaymentPairingStepDefinitions {
     @Then("{string} has learned no sender account")
     public void hasLearnedNoSenderAccount(String alias) {
         assertThat(recordOf(alias).senderAccounts()).isEmpty();
+    }
+
+    @Then("{string} has learned only sender account {string}")
+    public void hasLearnedOnlySenderAccount(String alias, String account) {
+        assertThat(recordOf(alias).senderAccountLinks()).extracting(link -> link.account().display()).containsExactly(account);
     }
 
     private void assertDonation(String alias, String amount, LocalDate receivedOn, PairingMethod method) {
@@ -120,5 +162,9 @@ public class PaymentPairingStepDefinitions {
     private DonorRecord recordOf(String alias) {
         return donorRecords.findById(new DonorReference(scenarioDonors.idOf(alias)))
                 .orElseThrow(() -> new AssertionError("Donations has no record of \"" + alias + "\""));
+    }
+
+    private record ConfirmedSymbolPair(UUID donor, String pairedBy, UUID claimant, String answer, String claimedAccount, String claimedSymbol,
+                                       UUID linkOwner, String linkedAccount, String sender, String matchingSymbol) {
     }
 }

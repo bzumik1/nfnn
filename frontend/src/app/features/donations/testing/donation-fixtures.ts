@@ -12,6 +12,8 @@ export function donationItem(overrides: Partial<DonationItem> = {}): DonationIte
     source: 'BANK_TRANSFER',
     pairedBy: 'VARIABLE_SYMBOL',
     senderAccount: null,
+    confirmedSymbol: null,
+    receiptAvailable: true,
     ...overrides,
   };
 }
@@ -32,6 +34,7 @@ export function twoYearDonations(): DonationListResponse {
         receivedAt: '2025-08-20',
         amountMinor: 200000,
         status: 'REFUNDED',
+        receiptAvailable: false,
       }),
     ],
     totalAmountMinor: 175000,
@@ -51,6 +54,7 @@ export function twoYearSummary(): DonationSummaryResponse {
       { year: 2025, count: 1, totalAmountMinor: 25000 },
     ],
     yearlyReceiptsAvailableThrough: 2025,
+    receiptsAvailableFrom: 2025,
   };
 }
 
@@ -66,5 +70,6 @@ export function emptySummary(): DonationSummaryResponse {
     lastReceivedAt: null,
     byYear: [],
     yearlyReceiptsAvailableThrough: 2025,
+    receiptsAvailableFrom: 2025,
   };
 }

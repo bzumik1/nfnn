@@ -5,6 +5,7 @@ import cz.novanadeje.app.donations.domain.bank.BankPaymentId;
 import cz.novanadeje.app.donations.domain.bank.SenderAccount;
 import cz.novanadeje.app.donations.domain.donor.DonorReference;
 import cz.novanadeje.app.donations.domain.donor.SenderAccountLinkId;
+import cz.novanadeje.app.donations.domain.donor.SymbolClaimId;
 import cz.novanadeje.app.shared.domain.Money;
 import cz.novanadeje.app.shared.domain.UuidV7;
 import org.junit.jupiter.api.DisplayName;
@@ -25,6 +26,7 @@ class DonationTest {
     private static final DonationId DONATION_ID = DonationId.newId(NOW);
     private static final DonorReference DONOR = new DonorReference(UuidV7.generate(NOW));
     private static final LocalDate RECEIVED_ON = LocalDate.of(2026, 10, 15);
+    private static final Optional<SenderAccount> ACCOUNT = SenderAccount.parse("1234567", "0800");
 
     @Test
     @DisplayName("Given a bank payment, when a donation is made from it, then it is a received bank transfer on the booking date with the payment's amount")
@@ -61,7 +63,7 @@ class DonationTest {
     @DisplayName("Given a donation without a purpose, when reconstituted, then it is refused")
     void should_refuse_when_reconstituted_given_no_purpose() {
         assertThatIllegalArgumentException().isThrownBy(() -> Donation.reconstitute(DONATION_ID, DONOR, Optional.empty(), RECEIVED_ON,
-                Money.czk(100), DonationSource.MANUAL, DonationStatus.RECEIVED, Optional.empty(), Optional.empty(), null, NOW));
+                Money.czk(100), DonationSource.MANUAL, DonationStatus.RECEIVED, Optional.empty(), Optional.empty(), Optional.empty(), null, NOW));
     }
 
     @Test
@@ -83,6 +85,93 @@ class DonationTest {
         assertThatIllegalArgumentException().isThrownBy(() -> Donation.reconstitute(DONATION_ID, DONOR, Optional.of(BankPaymentId.newId(NOW)),
                 RECEIVED_ON, Money.czk(50000), DonationSource.BANK_TRANSFER, DonationStatus.RECEIVED, Optional.of(PairingMethod.VARIABLE_SYMBOL),
                 Optional.of(SenderAccountLinkId.newId(NOW)), NOW));
+    }
+
+    @Test
+    @DisplayName("Given a payment with a symbol nobody has and the donor's confirmed claim, when a donation is paired by the confirmed symbol, then it names the method, the link and the claim and keeps the purpose")
+    void should_name_link_and_claim_when_paired_by_confirmed_symbol_given_claim() {
+        BankPayment payment = payment(1001, RECEIVED_ON, Money.czk(30000), ACCOUNT, "6123456789", "Dar");
+        SenderAccountLinkId link = SenderAccountLinkId.newId(NOW);
+        SymbolClaimId claim = SymbolClaimId.newId(NOW);
+
+        Donation donation = Donation.pairedByConfirmedSymbol(DONATION_ID, DONOR, payment, link, claim, NOW);
+
+        assertThat(donation.pairedBy()).contains(PairingMethod.CONFIRMED_SYMBOL);
+        assertThat(donation.pairedThrough()).contains(link);
+        assertThat(donation.confirmedClaim()).contains(claim);
+        assertThat(donation.bankPayment()).contains(payment.id());
+        assertThat(donation.receivedOn()).isEqualTo(RECEIVED_ON);
+        assertThat(donation.amount()).isEqualTo(Money.czk(30000));
+        assertThat(donation.status()).isEqualTo(DonationStatus.RECEIVED);
+        assertThat(donation.purpose()).isEqualTo(DonationPurpose.GENERAL);
+        assertThat(donation.recordedAt()).isEqualTo(NOW);
+    }
+
+    @Test
+    @DisplayName("Given a payment without a symbol or without a Czech sender, when a donation is paired by a confirmed symbol, then it is refused")
+    void should_refuse_when_paired_by_confirmed_symbol_given_payment_without_symbol_or_sender() {
+        SenderAccountLinkId link = SenderAccountLinkId.newId(NOW);
+        SymbolClaimId claim = SymbolClaimId.newId(NOW);
+
+        assertThatIllegalArgumentException().isThrownBy(() -> Donation.pairedByConfirmedSymbol(DONATION_ID, DONOR,
+                payment(1001, RECEIVED_ON, Money.czk(30000), ACCOUNT, null), link, claim, NOW));
+        assertThatIllegalArgumentException().isThrownBy(() -> Donation.pairedByConfirmedSymbol(DONATION_ID, DONOR,
+                payment(1002, RECEIVED_ON, Money.czk(30000), ACCOUNT, "0"), link, claim, NOW));
+        assertThatIllegalArgumentException().isThrownBy(() -> Donation.pairedByConfirmedSymbol(DONATION_ID, DONOR,
+                payment(1003, RECEIVED_ON, Money.czk(30000), Optional.empty(), "6123456789"), link, claim, NOW));
+        assertThatIllegalArgumentException().isThrownBy(() -> Donation.pairedByConfirmedSymbol(DONATION_ID, DONOR,
+                payment(1004, RECEIVED_ON, Money.czk(30000), ACCOUNT, "6123456789"), null, claim, NOW));
+        assertThatIllegalArgumentException().isThrownBy(() -> Donation.pairedByConfirmedSymbol(DONATION_ID, DONOR,
+                payment(1005, RECEIVED_ON, Money.czk(30000), ACCOUNT, "6123456789"), link, null, NOW));
+    }
+
+    @Test
+    @DisplayName("Given a donation paired by a confirmed symbol, when reconstituted with its link and claim, then it keeps both")
+    void should_keep_link_and_claim_when_reconstituted_given_confirmed_symbol_pairing() {
+        SenderAccountLinkId link = SenderAccountLinkId.newId(NOW);
+        SymbolClaimId claim = SymbolClaimId.newId(NOW);
+
+        Donation donation = reconstituted(PairingMethod.CONFIRMED_SYMBOL, Optional.of(link), Optional.of(claim));
+
+        assertThat(donation.pairedBy()).contains(PairingMethod.CONFIRMED_SYMBOL);
+        assertThat(donation.pairedThrough()).contains(link);
+        assertThat(donation.confirmedClaim()).contains(claim);
+    }
+
+    @Test
+    @DisplayName("Given a donation paired by a confirmed symbol without its link or without its claim, when reconstituted, then it is refused")
+    void should_refuse_when_reconstituted_given_confirmed_symbol_without_link_or_claim() {
+        assertThatIllegalArgumentException().isThrownBy(() -> reconstituted(PairingMethod.CONFIRMED_SYMBOL, Optional.empty(),
+                Optional.of(SymbolClaimId.newId(NOW))));
+        assertThatIllegalArgumentException().isThrownBy(() -> reconstituted(PairingMethod.CONFIRMED_SYMBOL,
+                Optional.of(SenderAccountLinkId.newId(NOW)), Optional.empty()));
+    }
+
+    @Test
+    @DisplayName("Given a donation paired by symbol or by sender account, when reconstituted with a claim, then it is refused")
+    void should_refuse_when_reconstituted_given_claim_without_confirmed_symbol_pairing() {
+        assertThatIllegalArgumentException().isThrownBy(() -> reconstituted(PairingMethod.SENDER_ACCOUNT,
+                Optional.of(SenderAccountLinkId.newId(NOW)), Optional.of(SymbolClaimId.newId(NOW))));
+        assertThatIllegalArgumentException().isThrownBy(() -> reconstituted(PairingMethod.VARIABLE_SYMBOL, Optional.empty(),
+                Optional.of(SymbolClaimId.newId(NOW))));
+    }
+
+    @Test
+    @DisplayName("Given a donation paired by sender account without its link, when reconstituted, then it is accepted as before the links existed")
+    void should_accept_when_reconstituted_given_sender_account_pairing_without_link() {
+        Donation donation = reconstituted(PairingMethod.SENDER_ACCOUNT, Optional.empty(), Optional.empty());
+
+        assertThat(donation.pairedThrough()).isEmpty();
+        assertThat(donation.confirmedClaim()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Given a bank payment, when a donation is made from it as paired by a confirmed symbol without the link and claim, then it is refused")
+    void should_refuse_when_made_from_payment_given_confirmed_symbol_method() {
+        BankPayment payment = payment(1001, RECEIVED_ON, Money.czk(30000), ACCOUNT, "6123456789");
+
+        assertThatIllegalArgumentException().isThrownBy(() -> Donation.fromBankPayment(DONATION_ID, DONOR, payment,
+                PairingMethod.CONFIRMED_SYMBOL, NOW));
     }
 
     @Test
@@ -164,5 +253,10 @@ class DonationTest {
     @Test
     void should_round_trip_when_parsed_given_donation_id_text() {
         assertThat(DonationId.of(DONATION_ID.toString())).isEqualTo(DONATION_ID);
+    }
+
+    private static Donation reconstituted(PairingMethod method, Optional<SenderAccountLinkId> link, Optional<SymbolClaimId> claim) {
+        return Donation.reconstitute(DONATION_ID, DONOR, Optional.of(BankPaymentId.newId(NOW)), RECEIVED_ON, Money.czk(30000),
+                DonationSource.BANK_TRANSFER, DonationStatus.RECEIVED, Optional.of(method), link, claim, DonationPurpose.GENERAL, NOW);
     }
 }

@@ -2,6 +2,7 @@ package cz.novanadeje.app.donations.infrastructure.pdf;
 
 import cz.novanadeje.app.donations.application.receipt.ReceiptRenderingLimit;
 import cz.novanadeje.app.donations.domain.BankAccount;
+import cz.novanadeje.app.donations.domain.receipt.FirstReceiptYear;
 import cz.novanadeje.app.donations.domain.receipt.FoundationIdentity;
 import cz.novanadeje.app.donations.domain.receipt.Signatory;
 import cz.novanadeje.app.shared.domain.PostalAddress;
@@ -28,6 +29,11 @@ class ReceiptConfiguration {
     @Bean
     Signatory receiptSignatory(ReceiptProperties properties) {
         return new Signatory(properties.signatoryName(), properties.signatoryRole());
+    }
+
+    @Bean
+    FirstReceiptYear firstReceiptYear(ReceiptProperties properties) {
+        return new FirstReceiptYear(properties.firstReceiptYear());
     }
 
     @Bean

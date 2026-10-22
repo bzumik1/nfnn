@@ -218,6 +218,57 @@ class JpaBankPaymentRepositoryTest {
     }
 
     @Test
+    @DisplayName("Given paired and unpaired payments from several accounts, when an account's payments are asked for, then all of its payments come, paired or not, by booking date and then by transaction id")
+    void should_find_paired_and_unpaired_payments_of_account_in_booking_order_when_asked_by_account() {
+        BankPayment paired = payment(1003, "2026-10-14", JANA_ACCOUNT, "6123456789");
+        payments.saveAll(List.of(
+                payment(1004, "2026-10-15", JANA_ACCOUNT, null),
+                paired,
+                payment(1002, "2026-10-14", JANA_ACCOUNT, "4821937560"),
+                payment(1005, "2026-10-13", SenderAccount.parse("19-2000145399", "0800"), "6123456789"),
+                payment(1006, "2026-10-13", Optional.empty(), "6123456789")));
+        pair(paired, PairingMethod.VARIABLE_SYMBOL);
+        flushAndClear();
+
+        assertThat(payments.findBySenderAccount(JANA_ACCOUNT.orElseThrow()))
+                .extracting(payment -> payment.transactionId().value())
+                .containsExactly(1002L, 1003L, 1004L);
+    }
+
+    @Test
+    @DisplayName("Given payments with several symbols from several accounts, when unpaired ones are asked for by an account and a symbol, then only the unpaired ones from it with that symbol come, by booking date")
+    void should_find_unpaired_payments_of_account_with_symbol_when_asked_by_account_and_symbol() {
+        BankPayment paired = payment(1001, "2026-10-10", JANA_ACCOUNT, "6123456789");
+        payments.saveAll(List.of(
+                paired,
+                payment(1002, "2026-10-15", JANA_ACCOUNT, "006123456789"),
+                payment(1003, "2026-10-12", JANA_ACCOUNT, "6123456789"),
+                payment(1004, "2026-10-12", JANA_ACCOUNT, "6123456788"),
+                payment(1005, "2026-10-12", JANA_ACCOUNT, null),
+                payment(1006, "2026-10-12", SenderAccount.parse("19-2000145399", "0800"), "6123456789"),
+                payment(1007, "2026-10-12", Optional.empty(), "6123456789")));
+        pair(paired, PairingMethod.VARIABLE_SYMBOL);
+        flushAndClear();
+
+        assertThat(payments.findUnpairedBySenderAccountAndMatchingVariableSymbol(JANA_ACCOUNT.orElseThrow(), new VariableSymbol("6123456789")))
+                .extracting(payment -> payment.transactionId().value())
+                .containsExactly(1003L, 1002L);
+    }
+
+    @Test
+    @DisplayName("Given stored payments, when several are asked for by their ids, then the stored ones among them come and an unknown id is skipped")
+    void should_find_stored_payments_when_asked_by_ids() {
+        BankPayment first = payment(1001, "2026-10-10", JANA_ACCOUNT, null);
+        BankPayment second = payment(1002, "2026-10-11", JANA_ACCOUNT, null);
+        payments.saveAll(List.of(first, second, payment(1003, "2026-10-12", JANA_ACCOUNT, null)));
+        flushAndClear();
+
+        assertThat(payments.findByIds(List.of(first.id(), second.id(), BankPaymentId.newId(NOW))))
+                .containsExactlyInAnyOrder(first, second);
+        assertThat(payments.findByIds(List.of())).isEmpty();
+    }
+
+    @Test
     void should_be_empty_when_found_by_id_given_unknown_id() {
         assertThat(payments.findById(BankPaymentId.newId(NOW))).isEmpty();
     }

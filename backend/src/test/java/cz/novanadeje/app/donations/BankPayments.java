@@ -31,8 +31,13 @@ public final class BankPayments {
 
     public static BankPayment payment(long transactionId, LocalDate bookedOn, Money amount, Optional<SenderAccount> sender,
                                       String variableSymbol, String messageForRecipient) {
+        return payment(transactionId, bookedOn, amount, sender, variableSymbol, messageForRecipient, Optional.of(PAYER_NAME));
+    }
+
+    public static BankPayment payment(long transactionId, LocalDate bookedOn, Money amount, Optional<SenderAccount> sender,
+                                      String variableSymbol, String messageForRecipient, Optional<String> counterpartyName) {
         return BankPayment.incoming(BankPaymentId.newId(IMPORTED_AT), IncomingMovement.of(new BankTransactionId(transactionId), bookedOn,
-                amount, sender, sender.map(SenderAccount::accountNumber), sender.map(SenderAccount::bankCode), Optional.of(PAYER_NAME),
+                amount, sender, sender.map(SenderAccount::accountNumber), sender.map(SenderAccount::bankCode), counterpartyName,
                 Optional.ofNullable(variableSymbol), Optional.empty(), Optional.empty(), Optional.ofNullable(messageForRecipient),
                 "Bezhotovostní příjem"), IMPORTED_AT);
     }

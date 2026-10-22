@@ -48,9 +48,11 @@ const RECEIPT_FAILED = $localize`:@@donor.dashboard.receipt.error:Potvrzení se 
 
 const MINOR_UNITS_PER_CROWN = 100;
 const UNAUTHENTICATED = 'auth/unauthenticated';
+const RECEIPT_BEFORE_FIRST_YEAR = 'donations/receipt-before-first-year';
 const YEARLY_PROBLEMS_SHOWN_AS_TITLE = [
   'donations/year-not-yet-completed',
   'donations/yearly-receipt-not-available',
+  RECEIPT_BEFORE_FIRST_YEAR,
 ];
 const NOT_FOUND = 404;
 const SENDER_ACCOUNT_DIGITS_SHOWN = 4;
@@ -98,6 +100,18 @@ export class DonorDashboard {
     const availableThrough = this.summary()?.yearlyReceiptsAvailableThrough;
     return year !== null && availableThrough !== undefined && year <= availableThrough;
   });
+
+  protected readonly receiptsFrom = computed(() => this.summary()?.receiptsAvailableFrom ?? null);
+
+  protected readonly selectedYearIssuable = computed(() => {
+    const year = this.selectedYear();
+    const from = this.receiptsFrom();
+    return year !== null && from !== null && year >= from;
+  });
+
+  protected readonly receivedWithoutReceipt = computed(() =>
+    this.items().some((item) => item.status === 'RECEIVED' && !item.receiptAvailable),
+  );
 
   protected readonly receiptError = signal<ReceiptError | null>(null);
   private readonly downloads = signal<ReadonlySet<string>>(new Set());
@@ -155,7 +169,7 @@ export class DonorDashboard {
     this.fetchDonations();
   }
 
-  private fetchDonations(): void {
+  protected fetchDonations(): void {
     forkJoin({ summary: this.donations.summary(), list: this.donations.list() })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
@@ -181,6 +195,11 @@ export class DonorDashboard {
   protected sendToSignIn(): void {
     this.loginDialog.open();
     void this.router.navigateByUrl('/');
+  }
+
+  protected showBankAccounts(event: Event): void {
+    event.preventDefault();
+    this.bankAccountsCard()?.focusTitle();
   }
 
   protected crowns(amountMinor: number): string {
@@ -229,6 +248,9 @@ export class DonorDashboard {
   }
 
   protected downloadSingleReceipt(item: DonationItem): void {
+    if (!item.receiptAvailable) {
+      return;
+    }
     this.download(singleKey(item.id), 'single', this.donations.singleReceipt(item.id));
   }
 
@@ -271,8 +293,10 @@ export class DonorDashboard {
       this.receiptError.set({ scope, message: problem?.title || RECEIPT_FAILED });
       return;
     }
-    if (scope === 'single' && problem?.status === NOT_FOUND) {
-      this.receiptError.set({ scope, message: problem.title || RECEIPT_FAILED });
+    const rowOutdated =
+      problem?.status === NOT_FOUND || problemTypeEndsWith(failure, RECEIPT_BEFORE_FIRST_YEAR);
+    if (scope === 'single' && rowOutdated) {
+      this.receiptError.set({ scope, message: problem?.title || RECEIPT_FAILED });
       this.fetchDonations();
       return;
     }

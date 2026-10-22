@@ -7,6 +7,8 @@ import cz.novanadeje.app.donations.domain.donation.DonationRepository;
 import cz.novanadeje.app.donations.domain.donor.DonorRecord;
 import cz.novanadeje.app.donations.domain.donor.DonorRecordRepository;
 import cz.novanadeje.app.donations.domain.donor.DonorReference;
+import cz.novanadeje.app.donations.domain.receipt.FirstReceiptYear;
+import cz.novanadeje.app.donations.domain.receipt.ReceiptBeforeFirstYear;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptNotAvailable;
 import cz.novanadeje.app.donations.domain.receipt.YearlyReceiptNotAvailable;
 import org.springframework.stereotype.Component;
@@ -23,16 +25,21 @@ public class ReceiptRequestReader {
 
     private final DonationRepository donations;
     private final DonorRecordRepository donorRecords;
+    private final FirstReceiptYear firstYear;
 
-    public ReceiptRequestReader(DonationRepository donations, DonorRecordRepository donorRecords) {
+    public ReceiptRequestReader(DonationRepository donations, DonorRecordRepository donorRecords, FirstReceiptYear firstYear) {
         this.donations = donations;
         this.donorRecords = donorRecords;
+        this.firstYear = firstYear;
     }
 
     public ReceiptRequest forDonation(DonorReference donor, DonationId donationId, LocalDate today) {
         Donation donation = donations.findByIdForDonor(donationId, donor).orElseThrow(() -> new DonationNotFound(donationId));
         if (!donation.isReceived()) {
             throw new ReceiptNotAvailable(donationId);
+        }
+        if (!firstYear.admits(donation.receivedOn())) {
+            throw new ReceiptBeforeFirstYear(firstYear);
         }
         return ReceiptRequest.forDonation(record(donor), donation, today);
     }

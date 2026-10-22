@@ -9,6 +9,7 @@ import cz.novanadeje.app.donations.domain.donation.DonationStatus;
 import cz.novanadeje.app.donations.domain.donation.PairingMethod;
 import cz.novanadeje.app.donations.domain.donor.DonorReference;
 import cz.novanadeje.app.donations.domain.donor.SenderAccountLinkId;
+import cz.novanadeje.app.donations.domain.donor.SymbolClaimId;
 import cz.novanadeje.app.shared.domain.Currency;
 import cz.novanadeje.app.shared.domain.Money;
 import jakarta.persistence.Column;
@@ -61,6 +62,9 @@ public class DonationJpaEntity {
     @Column(name = "sender_account_id")
     private UUID senderAccountId;
 
+    @Column(name = "symbol_claim_id")
+    private UUID symbolClaimId;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "purpose", nullable = false, length = 32)
     private DonationPurpose purpose;
@@ -83,6 +87,7 @@ public class DonationJpaEntity {
         entity.status = donation.status();
         entity.pairedBy = donation.pairedBy().orElse(null);
         entity.senderAccountId = donation.pairedThrough().map(SenderAccountLinkId::value).orElse(null);
+        entity.symbolClaimId = donation.confirmedClaim().map(SymbolClaimId::value).orElse(null);
         entity.purpose = donation.purpose();
         entity.recordedAt = donation.recordedAt();
         return entity;
@@ -99,6 +104,7 @@ public class DonationJpaEntity {
                 status,
                 Optional.ofNullable(pairedBy),
                 Optional.ofNullable(senderAccountId).map(SenderAccountLinkId::new),
+                Optional.ofNullable(symbolClaimId).map(SymbolClaimId::new),
                 purpose,
                 recordedAt);
     }

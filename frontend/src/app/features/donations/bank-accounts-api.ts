@@ -17,6 +17,21 @@ export interface BankAccountItem {
   lastDonationOn: string | null;
   shared: boolean;
   pairingExcluded: boolean;
+  verificationPaymentOn: string | null;
+  symbolOffer: SymbolOffer | null;
+  confirmedSymbols: string[];
+}
+
+export interface SymbolOffer {
+  variableSymbol: string;
+  paymentCount: number;
+  firstMonth: string;
+  lastMonth: string;
+}
+
+export interface SymbolClaimConfirmation {
+  pairedCount: number;
+  changedYearlyReceipts: number[];
 }
 
 export interface BankAccountListResponse {
@@ -39,5 +54,19 @@ export class BankAccountsApi {
 
   reconnect(id: string): Observable<void> {
     return this.http.post<void>(`${BANK_ACCOUNTS_URL}/${encodeURIComponent(id)}/reconnect`, null);
+  }
+
+  confirmSymbol(id: string, variableSymbol: string): Observable<SymbolClaimConfirmation> {
+    return this.http.post<SymbolClaimConfirmation>(
+      `${BANK_ACCOUNTS_URL}/${encodeURIComponent(id)}/symbol-claim/confirm`,
+      { variableSymbol },
+    );
+  }
+
+  declineSymbol(id: string, variableSymbol: string): Observable<void> {
+    return this.http.post<void>(
+      `${BANK_ACCOUNTS_URL}/${encodeURIComponent(id)}/symbol-claim/decline`,
+      { variableSymbol },
+    );
   }
 }

@@ -160,7 +160,7 @@ class DonorRecordServiceTest {
     void should_pair_loaded_record_when_pairing_after_registration_given_known_donor() {
         DonorRecord record = DonorRecord.registerPerson(DONOR, "Jana Nováková", ADDRESS, SYMBOL, LocaleCode.CS, REGISTERED_AT);
         when(donorRecords.findById(DONOR)).thenReturn(Optional.of(record));
-        when(pairing.pairPaymentsOf(record, NOW)).thenReturn(new PairingOutcome(1, 1, 1, 0));
+        when(pairing.pairPaymentsOf(record, NOW)).thenReturn(new PairingOutcome(1, 1, 0, 1, 0));
 
         service.pairPaymentsOf(DONOR_ID);
 

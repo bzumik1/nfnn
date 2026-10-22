@@ -35,77 +35,11 @@
     </button>
   </div>
 
-  <div
-    id="accounts-help-panel"
-    class="accounts-help-panel"
-    role="region"
-    aria-labelledby="accounts-help-title"
-    [hidden]="!helpOpen()"
-    (keydown.escape)="closeHelp()"
-  >
-    <h3 id="accounts-help-title" class="help-title" i18n="@@donor.bankAccounts.help.title">
-      Jak přiřazujeme platby
-    </h3>
-    <ul class="help-list">
-      @if (variableSymbol(); as symbol) {
-        <li i18n="@@donor.bankAccounts.help.bySymbol">
-          <span class="help-lead">S vaším symbolem</span> Platbu s vaším variabilním symbolem
-          <strong class="help-symbol">{{ symbol }}</strong> přiřadíme vám, ať přijde z jakéhokoli
-          účtu.
-        </li>
-      } @else {
-        <li i18n="@@donor.bankAccounts.help.bySymbolWithoutNumber">
-          <span class="help-lead">S vaším symbolem</span> Platbu s vaším variabilním symbolem
-          přiřadíme vám, ať přijde z jakéhokoli účtu.
-        </li>
-      }
-      <li i18n="@@donor.bankAccounts.help.byAccount">
-        <span class="help-lead">Bez symbolu</span> Platbu bez variabilního symbolu přiřadíme podle
-        účtu, ze kterého přišla, pokud jste ho u nás ověřili. Tomuto přiřazování podle účtu říkáme
-        párování. Účet ověříte tak, že z něj jednou pošlete platbu s vaším variabilním symbolem;
-        stačí 1&nbsp;Kč, návod najdete pod tlačítkem „Přidat účet“. Musí to být český účet, ale
-        nemusí být veden na vaše jméno. Když účet ověříte poprvé a předtím ho neověřil jiný dárce,
-        přiřadíme vám i dřívější platby z něj, které přišly bez symbolu. Účet, přes který posílá
-        peníze víc lidí (třeba sběrný účet), můžeme z párování vyloučit; z takového účtu pak
-        přiřazujeme jen platby s variabilním symbolem.
-      </li>
-      @if (variableSymbol(); as symbol) {
-        <li i18n="@@donor.bankAccounts.help.otherSymbol">
-          <span class="help-lead">S jiným symbolem</span> Platbu s jiným variabilním symbolem, než
-          je váš, vám nepřiřadíme, ani když přijde z vašeho ověřeného účtu. Pokud nám posíláte dary
-          trvalým příkazem se starším symbolem, nastavte v něm prosím váš variabilní symbol
-          <strong class="help-symbol">{{ symbol }}</strong
-          >. Platbu se symbolem&nbsp;0 bereme jako platbu bez symbolu.
-        </li>
-      } @else {
-        <li i18n="@@donor.bankAccounts.help.otherSymbolWithoutNumber">
-          <span class="help-lead">S jiným symbolem</span> Platbu s jiným variabilním symbolem, než
-          je váš, vám nepřiřadíme, ani když přijde z vašeho ověřeného účtu. Pokud nám posíláte dary
-          trvalým příkazem se starším symbolem, nastavte v něm prosím váš variabilní symbol. Platbu
-          se symbolem&nbsp;0 bereme jako platbu bez symbolu.
-        </li>
-      }
-      <li i18n="@@donor.bankAccounts.help.disconnect">
-        <span class="help-lead">Vypnutí párování</span> Párování můžete u účtu vypnout tlačítkem
-        „Vypnout párování“. Platby bez symbolu, které z účtu přijdou ode dne po vypnutí, vám pak
-        nepřiřadíme; dary přiřazené dříve zůstanou. Párování znovu zapnete tlačítkem „Zapnout
-        párování“. Účet pak čeká na platbu: pošlete z něj 1&nbsp;Kč (nebo jakýkoli dar) s vaším
-        variabilním symbolem. Jakmile dorazí, přiřadíme vám z něj i platby bez symbolu ode dne
-        zapnutí. U účtu, ze kterého přiřazujeme jen platby s variabilním symbolem, párování znovu
-        zapnout nejde.
-      </li>
-      <li i18n="@@donor.bankAccounts.help.shared">
-        <span class="help-lead">Sdílený účet</span> Když stejný účet ověří i jiný dárce, označíme ho
-        jako „Sdílený“ a platby bez variabilního symbolu z něj nepřiřadíme nikomu. Pokud z něj dary
-        neposíláte vy, vypněte si u něj párování. Jinak z něj prosím posílejte vždy s vaším
-        variabilním symbolem.
-      </li>
-    </ul>
-    <p class="help-contact" i18n="@@donor.bankAccounts.help.contact">
-      Chybí vám nějaký dar, nebo tu vidíte dar, který není váš? Napište nám na
-      <a href="mailto:info@nfnn.cz">info&#64;nfnn.cz</a>.
-    </p>
-  </div>
+  <app-pairing-help
+    [variableSymbol]="variableSymbol()"
+    [open]="helpOpen()"
+    (closeRequested)="closeHelp()"
+  />
 
   @switch (state()) {
     @case ('loading') {
@@ -176,6 +110,23 @@
                     <p class="account-hint">{{ hint }}</p>
                   }
                 }
+                @for (symbol of account.confirmedSymbols; track symbol) {
+                  <p class="account-hint" i18n="@@donor.bankAccounts.claim.confirmed">
+                    Platby s VS <strong>{{ symbol }}</strong> z tohoto účtu jste potvrdili jako své
+                    a přiřazujeme vám je stejně jako platby bez VS.
+                  </p>
+                }
+                @if (account.symbolOffer; as offer) {
+                  @if (confirming() !== account.id) {
+                    <app-symbol-claim
+                      [accountId]="account.id"
+                      [offer]="offer"
+                      [donorName]="donorName()"
+                      [busy]="busy() === account.id"
+                      (answer)="answer(account, offer, $event)"
+                    />
+                  }
+                }
               </div>
 
               @if (confirming() !== account.id) {
@@ -208,15 +159,28 @@
                   role="group"
                   [attr.aria-labelledby]="actionButtonId(account) + '-confirm'"
                 >
-                  <p
-                    [id]="actionButtonId(account) + '-confirm'"
-                    class="account-confirm-text"
-                    i18n="@@donor.bankAccounts.confirm.text"
-                  >
-                    Platby bez variabilního symbolu, které z tohoto účtu přijdou od zítřka, vám už
-                    nebudeme přiřazovat. Dosavadní dary zůstanou; pokud některý z nich není váš,
-                    <a href="mailto:info@nfnn.cz">napište nám</a>.
-                  </p>
+                  @if (account.confirmedSymbols.length > 0) {
+                    <p
+                      [id]="actionButtonId(account) + '-confirm'"
+                      class="account-confirm-text"
+                      i18n="@@donor.bankAccounts.confirm.textWithSymbols"
+                    >
+                      Platby bez variabilního symbolu ani platby s VS
+                      {{ symbolList(account.confirmedSymbols) }}, které z tohoto účtu přijdou od
+                      zítřka, vám už nebudeme přiřazovat. Dosavadní dary zůstanou; pokud některý z
+                      nich není váš, <a href="mailto:info@nfnn.cz">napište nám</a>.
+                    </p>
+                  } @else {
+                    <p
+                      [id]="actionButtonId(account) + '-confirm'"
+                      class="account-confirm-text"
+                      i18n="@@donor.bankAccounts.confirm.text"
+                    >
+                      Platby bez variabilního symbolu, které z tohoto účtu přijdou od zítřka, vám už
+                      nebudeme přiřazovat. Dosavadní dary zůstanou; pokud některý z nich není váš,
+                      <a href="mailto:info@nfnn.cz">napište nám</a>.
+                    </p>
+                  }
                   <div class="account-confirm-actions">
                     <button
                       type="button"
@@ -243,11 +207,33 @@
             </li>
           }
         </ul>
+        <p class="accounts-nudge" i18n="@@donor.bankAccounts.nudge.list">
+          Posíláte trvalým příkazem se starým VS? Ověřte platbou 1&nbsp;Kč ze stejného účtu a
+          uvidíte i dřívější dary.
+        </p>
       } @else {
         <p class="accounts-empty" i18n="@@donor.bankAccounts.empty">
           Zatím jsme od vás nedostali platbu s vaším variabilním symbolem, podle které bychom
           poznali váš účet.
         </p>
+        @if (variableSymbol(); as symbol) {
+          <p class="accounts-nudge" i18n="@@donor.bankAccounts.nudge.empty">
+            Posíláte nám dary trvalým příkazem se starším variabilním symbolem? Pošlete 1&nbsp;Kč
+            přes QR kód v části „Přidat účet“, a to ze stejného účtu, ze kterého trvalý příkaz
+            odchází. Pak se vás obvykle zeptáme, jestli jsou platby s tím symbolem vaše, a přiřadíme
+            vám i dřívější dary z tohoto účtu, které máme ve výpisech. Nejjistější je změnit v
+            trvalém příkazu variabilní symbol na <strong>{{ symbol }}</strong
+            >. Platí pro účty u českých bank.
+          </p>
+        } @else {
+          <p class="accounts-nudge" i18n="@@donor.bankAccounts.nudge.emptyWithoutNumber">
+            Posíláte nám dary trvalým příkazem se starším variabilním symbolem? Pošlete 1&nbsp;Kč
+            přes QR kód v části „Přidat účet“, a to ze stejného účtu, ze kterého trvalý příkaz
+            odchází. Pak se vás obvykle zeptáme, jestli jsou platby s tím symbolem vaše, a přiřadíme
+            vám i dřívější dary z tohoto účtu, které máme ve výpisech. Nejjistější je změnit v
+            trvalém příkazu variabilní symbol na váš. Platí pro účty u českých bank.
+          </p>
+        }
       }
     }
   }
@@ -297,6 +283,12 @@
       dárce, přiřadíme vám i dřívější dary z něj, které přišly bez symbolu. Okamžitá platba dorazí
       do pár minut, běžný převod obvykle do dalšího pracovního dne. Funguje jen český účet.
       Neověřujte prosím sběrný účet, přes který posílá peníze víc lidí.
+    </p>
+    <p class="add-account-text" i18n="@@donor.bankAccounts.addDialog.standingOrder">
+      Posíláte z účtu dary trvalým příkazem se starším variabilním symbolem? Pošlete pak právě
+      <strong>1&nbsp;Kč</strong> se zprávou pro příjemce „Ověření účtu“, jak ji má QR kód; běžný dar
+      nestačí. Pokud z účtu chodil jen jeden takový symbol, obvykle se vás u účtu zeptáme, jestli
+      jsou platby s ním vaše.
     </p>
 
     <div class="add-account-payment">
@@ -389,10 +381,21 @@
           <path class="watch-tick" d="M9.5 16.5l4.5 4.5 8.5-9" />
         </svg>
         <div class="watch-text">
-          <p class="watch-title" i18n="@@donor.bankAccounts.addDialog.verified">
-            Účet <span class="watch-account">{{ account.accountNumber }}</span> je ověřený
-          </p>
-          @if (warns(account)) {
+          @if (wasActiveWhenOpened(account)) {
+            <p class="watch-title" i18n="@@donor.bankAccounts.addDialog.paymentArrived">
+              Platba z účtu <span class="watch-account">{{ account.accountNumber }}</span> dorazila
+            </p>
+          } @else {
+            <p class="watch-title" i18n="@@donor.bankAccounts.addDialog.verified">
+              Účet <span class="watch-account">{{ account.accountNumber }}</span> je ověřený
+            </p>
+          }
+          @if (account.symbolOffer) {
+            <p class="watch-detail" i18n="@@donor.bankAccounts.addDialog.offerWaiting">
+              U účtu na vás čeká otázka k platbám se starším variabilním symbolem. Najdete ji v
+              seznamu účtů po zavření okna.
+            </p>
+          } @else if (warns(account)) {
             <ng-container
               [ngTemplateOutlet]="warning"
               [ngTemplateOutletContext]="{ $implicit: hint(account) }"

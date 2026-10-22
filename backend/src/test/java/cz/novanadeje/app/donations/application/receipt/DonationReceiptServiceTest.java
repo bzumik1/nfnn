@@ -2,6 +2,8 @@ package cz.novanadeje.app.donations.application.receipt;
 
 import cz.novanadeje.app.donations.domain.donation.DonationId;
 import cz.novanadeje.app.donations.domain.donation.DonationNotFound;
+import cz.novanadeje.app.donations.domain.receipt.FirstReceiptYear;
+import cz.novanadeje.app.donations.domain.receipt.ReceiptBeforeFirstYear;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptKind;
 import cz.novanadeje.app.donations.domain.receipt.YearNotYetCompleted;
 import cz.novanadeje.app.shared.domain.LocaleCode;
@@ -87,7 +89,35 @@ class DonationReceiptServiceTest {
                 .isInstanceOf(YearNotYetCompleted.class);
     }
 
+    @Test
+    @DisplayName("Given receipts from 2026, when the yearly receipt of 2025 is asked for, then it is before the first receipt year and nothing is read")
+    void should_refuse_when_asked_given_year_before_first_receipt_year() {
+        assertThatThrownBy(() -> service(NOW).yearlyReceipt(JANA, Year.of(2025)))
+                .isInstanceOf(ReceiptBeforeFirstYear.class)
+                .extracting("code").isEqualTo("donations/receipt-before-first-year");
+        verifyNoInteractions(issuer);
+    }
+
+    @Test
+    @DisplayName("Given receipts from 2026 and today in 2026, when the yearly receipt of 2026 is asked for, then it is not completed yet")
+    void should_still_check_completion_when_asked_given_first_receipt_year_not_completed() {
+        assertThatThrownBy(() -> service(Instant.parse("2026-10-22T10:00:00Z")).yearlyReceipt(JANA, YEAR_2026))
+                .isInstanceOf(YearNotYetCompleted.class);
+        verifyNoInteractions(issuer);
+    }
+
+    @Test
+    @DisplayName("Given receipts from 2028, when the yearly receipt of the current year 2027 is asked for, then the first receipt year is checked before completion")
+    void should_refuse_before_first_year_ahead_of_completion_when_asked_given_year_neither_admitted_nor_completed() {
+        DonationReceiptService fromLaterYear = new DonationReceiptService(issuer, new ReceiptRenderingLimit(1),
+                Clock.fixed(NOW, ZoneOffset.UTC), new FirstReceiptYear(Year.of(2028)));
+
+        assertThatThrownBy(() -> fromLaterYear.yearlyReceipt(JANA, Year.of(2027))).isInstanceOf(ReceiptBeforeFirstYear.class);
+        verifyNoInteractions(issuer);
+    }
+
     private DonationReceiptService service(Instant now) {
-        return new DonationReceiptService(issuer, new ReceiptRenderingLimit(1), Clock.fixed(now, ZoneOffset.UTC));
+        return new DonationReceiptService(issuer, new ReceiptRenderingLimit(1), Clock.fixed(now, ZoneOffset.UTC),
+                new FirstReceiptYear(YEAR_2026));
     }
 }

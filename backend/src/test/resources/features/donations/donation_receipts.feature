@@ -85,11 +85,43 @@ Feature: A donor downloads PDF receipts of their donations
       | id   | date       | amount  | account    | bankCode | name          | variableSymbol |
       | 2001 | 2026-10-01 | 1000.00 | 2900233333 | 2010     | Nováková Jana | {Jana}         |
     And the application starts the import
-    And today is 2027-01-15
-    When "Jana" downloads her yearly receipt for 2025
+    And today is 2028-01-15
+    When "Jana" downloads her yearly receipt for 2027
     Then the response status is 404
     And the problem type ends with "donations/yearly-receipt-not-available"
     And 0 receipts are stored
+
+  Scenario: Donations received before the first receipt year are listed without a receipt and have none
+    Given today is 2025-12-20
+    And a person "Jana" is registered
+    And the bank account has these movements:
+      | id   | date       | amount | account    | bankCode | name          | variableSymbol |
+      | 2001 | 2025-12-10 | 700.00 | 2900233333 | 2010     | Nováková Jana | {Jana}         |
+    And the application starts the import
+    And today is 2026-12-20
+    And the bank account has these movements:
+      | id   | date       | amount  | account    | bankCode | name          | variableSymbol |
+      | 2002 | 2026-10-05 | 1000.00 | 2900233333 | 2010     | Nováková Jana | {Jana}         |
+    And the hourly import runs
+    When "Jana" asks for her donations
+    Then the response status is 200
+    And the donation received on 2025-12-10 is listed without a receipt
+    And the donation received on 2026-10-05 is listed with a receipt
+    When "Jana" downloads the receipt of her donation received on 2025-12-10
+    Then the response status is 400
+    And the problem type ends with "donations/receipt-before-first-year"
+    And the problem has the title "Za dary z této doby potvrzení na webu nevystavujeme"
+    Given today is 2027-01-15
+    When "Jana" downloads her yearly receipt for 2025
+    Then the response status is 400
+    And the problem type ends with "donations/receipt-before-first-year"
+    When "Jana" downloads her yearly receipt for 2026
+    Then the response status is 200
+    And the PDF says "Počet darů: 1"
+    When "Jana" asks for her donation summary
+    Then the response status is 200
+    And the summary makes receipts available from 2026
+    And 1 receipt is stored
 
   Scenario: The yearly receipt lists only that year's donations, oldest first
     Given today is 2025-12-20
@@ -231,6 +263,8 @@ Feature: A donor downloads PDF receipts of their donations
     When "Jana" asks for her donations
     Then the response status is 200
     And the donation received on 2026-11-15 is listed without a receipt number and with status "REFUNDED"
+    And the donation received on 2026-11-15 is listed without a receipt
+    And the donation received on 2026-10-01 is listed with a receipt
     When "Jana" downloads her yearly receipt for 2026
     Then the response status is 200
     And the PDF says "Počet darů: 2"
@@ -353,6 +387,7 @@ Feature: A donor downloads PDF receipts of their donations
     When "Jana" asks for her donation summary
     Then the response status is 200
     And the summary makes yearly receipts available through 2025
+    And the summary makes receipts available from 2026
     Given today is 2027-01-15
     When "Jana" asks for her donation summary
     Then the response status is 200

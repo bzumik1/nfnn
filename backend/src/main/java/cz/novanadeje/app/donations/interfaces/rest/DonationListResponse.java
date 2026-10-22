@@ -10,6 +10,7 @@ import cz.novanadeje.app.donations.domain.donation.DonationStatus;
 import cz.novanadeje.app.donations.domain.donation.PairingMethod;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptNumber;
 import cz.novanadeje.app.shared.domain.Currency;
+import cz.novanadeje.app.shared.domain.VariableSymbol;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -23,18 +24,22 @@ record DonationListResponse(List<DonationItemResponse> items, long totalAmountMi
         List<DonationItemResponse> items = list.items().stream()
                 .map(donation -> DonationItemResponse.from(donation, overview.receiptNumberOf(donation).map(ReceiptNumber::value).orElse(null),
                         purposeText.apply(donation.purpose()),
-                        overview.senderAccountOf(donation).map(SenderAccount::display).orElse(null)))
+                        overview.senderAccountOf(donation).map(SenderAccount::display).orElse(null),
+                        overview.confirmedSymbolOf(donation).map(VariableSymbol::value).orElse(null),
+                        overview.receiptAvailable(donation)))
                 .toList();
         return new DonationListResponse(items, list.total().amountMinor(), list.total().currency(), list.count());
     }
 
     record DonationItemResponse(UUID id, String receiptNumber, LocalDate receivedAt, long amountMinor, Currency currency, String purpose,
-                                DonationStatus status, DonationSource source, PairingMethod pairedBy, String senderAccount) {
+                                DonationStatus status, DonationSource source, PairingMethod pairedBy, String senderAccount,
+                                String confirmedSymbol, boolean receiptAvailable) {
 
-        static DonationItemResponse from(Donation donation, String receiptNumber, String purpose, String senderAccount) {
+        static DonationItemResponse from(Donation donation, String receiptNumber, String purpose, String senderAccount, String confirmedSymbol,
+                                         boolean receiptAvailable) {
             return new DonationItemResponse(donation.id().value(), receiptNumber, donation.receivedOn(), donation.amount().amountMinor(),
                     donation.amount().currency(), purpose, donation.status(), donation.source(), donation.pairedBy().orElse(null),
-                    senderAccount);
+                    senderAccount, confirmedSymbol, receiptAvailable);
         }
     }
 }

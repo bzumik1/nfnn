@@ -1,6 +1,7 @@
 package cz.novanadeje.app.donations.infrastructure.pdf;
 
 import cz.novanadeje.app.donations.domain.BankAccount;
+import cz.novanadeje.app.donations.domain.receipt.FirstReceiptYear;
 import cz.novanadeje.app.donations.domain.receipt.FoundationIdentity;
 import cz.novanadeje.app.donations.domain.receipt.Signatory;
 import cz.novanadeje.app.shared.domain.Iban;
@@ -8,6 +9,8 @@ import cz.novanadeje.app.shared.domain.PostalAddress;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.test.context.ConfigDataApplicationContextInitializer;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
@@ -18,6 +21,7 @@ import org.springframework.context.annotation.Import;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Year;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -38,6 +42,38 @@ class ReceiptPropertiesTest {
             assertThat(context.getBean(Signatory.class)).isEqualTo(new Signatory("Pavel Znamenáček", "předseda správní rady"));
             assertThat(context.getBean(ConfiguredSignatureImage.class).image()).isEmpty();
             assertThat(context.getBean(ReceiptProperties.class).signatureImagePath()).isEmpty();
+        });
+    }
+
+    @Test
+    @DisplayName("Given only application.yml, when the context starts, then receipts are issued for donations from 2026")
+    void should_issue_receipts_from_2026_when_started_given_no_first_year() {
+        contexts.run(context -> assertThat(context.getBean(FirstReceiptYear.class)).isEqualTo(new FirstReceiptYear(Year.of(2026))));
+    }
+
+    @Test
+    @DisplayName("Given another first receipt year, when the context starts, then receipts are issued from that year")
+    void should_issue_receipts_from_configured_year_when_started_given_first_year() {
+        contexts.withPropertyValues("app.donations.receipt.first-year=2025").run(context ->
+                assertThat(context.getBean(FirstReceiptYear.class)).isEqualTo(new FirstReceiptYear(Year.of(2025))));
+    }
+
+    @Test
+    @DisplayName("Given an empty first receipt year, when the context starts, then receipts are issued from 2026")
+    void should_issue_receipts_from_2026_when_started_given_empty_first_year() {
+        contexts.withPropertyValues("app.donations.receipt.first-year=").run(context ->
+                assertThat(context.getBean(FirstReceiptYear.class)).isEqualTo(new FirstReceiptYear(Year.of(2026))));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"999", "10000", "0", "-2026"})
+    @DisplayName("Given a first receipt year that is not a four-digit year, when the context starts, then it fails naming the environment variable")
+    void should_fail_naming_env_var_when_started_given_first_year_out_of_range(String year) {
+        contexts.withPropertyValues("app.donations.receipt.first-year=" + year).run(context -> {
+            assertThat(context).hasFailed();
+            assertThat(context.getStartupFailure()).rootCause()
+                    .hasMessageContaining("RECEIPT_FIRST_YEAR (app.donations.receipt.first-year) must be a four-digit year")
+                    .hasMessageContaining(year);
         });
     }
 

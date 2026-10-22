@@ -5,6 +5,7 @@ import cz.novanadeje.app.donations.domain.bank.SenderAccount;
 import cz.novanadeje.app.donations.domain.donation.Donation;
 import cz.novanadeje.app.donations.domain.donation.DonationId;
 import cz.novanadeje.app.donations.domain.donation.DonationList;
+import cz.novanadeje.app.donations.domain.donation.DonationPurpose;
 import cz.novanadeje.app.donations.domain.donation.DonationRepository;
 import cz.novanadeje.app.donations.domain.donation.DonationSource;
 import cz.novanadeje.app.donations.domain.donation.DonationStatus;
@@ -17,7 +18,12 @@ import cz.novanadeje.app.donations.domain.donor.DonorReference;
 import cz.novanadeje.app.donations.domain.donor.SenderAccountLink;
 import cz.novanadeje.app.donations.domain.donor.SenderAccountLinkId;
 import cz.novanadeje.app.donations.domain.donor.SenderAccountLinkStatus;
+import cz.novanadeje.app.donations.domain.donor.SymbolClaim;
+import cz.novanadeje.app.donations.domain.donor.SymbolClaimAnswer;
+import cz.novanadeje.app.donations.domain.donor.SymbolClaimId;
+import cz.novanadeje.app.donations.domain.donor.SymbolClaimRepository;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceiptRepository;
+import cz.novanadeje.app.donations.domain.receipt.FirstReceiptYear;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptNumber;
 import cz.novanadeje.app.shared.domain.DonorType;
 import cz.novanadeje.app.shared.domain.LocaleCode;
@@ -52,12 +58,14 @@ class DonorDonationsServiceTest {
 
     private static final Donation REFUNDED_2026 = refunded(LocalDate.of(2026, 2, 1), 30000);
     private static final ReceiptNumber FIRST_RECEIPT = new ReceiptNumber("2026-000001");
+    private static final FirstReceiptYear FROM_2026 = new FirstReceiptYear(Year.of(2026));
 
     private final DonationRepository donations = mock(DonationRepository.class);
     private final DonationReceiptRepository receipts = mock(DonationReceiptRepository.class);
     private final DonorRecordRepository donorRecords = mock(DonorRecordRepository.class);
-    private final DonorDonationsService service = new DonorDonationsService(donations, receipts, donorRecords,
-            Clock.fixed(Instant.parse("2026-10-17T11:00:00Z"), ZoneOffset.UTC));
+    private final SymbolClaimRepository claims = mock(SymbolClaimRepository.class);
+    private final DonorDonationsService service = new DonorDonationsService(donations, receipts, donorRecords, claims,
+            Clock.fixed(Instant.parse("2026-10-17T11:00:00Z"), ZoneOffset.UTC), FROM_2026);
 
     @Test
     @DisplayName("Given a donor with donations, when listed without a year, then every donation comes in the repository's order with the total")
@@ -138,6 +146,40 @@ class DonorDonationsServiceTest {
     }
 
     @Test
+    @DisplayName("Given receipts from 2026, when listed, then a received donation from 2026 has a receipt available and one from 2025 or a refunded one has none")
+    void should_make_receipt_available_from_first_receipt_year_when_listed_given_donations_around_it() {
+        Donation newYearsEve = received(LocalDate.of(2025, 12, 31), 20000);
+        Donation newYearsDay = received(LocalDate.of(2026, 1, 1), 20000);
+        when(donations.findByDonorNewestFirst(JANA)).thenReturn(List.of(REFUNDED_2026, JANUARY_2026, newYearsDay, newYearsEve, DECEMBER_2025));
+
+        DonationOverview overview = service.listDonations(JANA, Optional.empty());
+
+        assertThat(overview.receiptAvailable(JANUARY_2026)).isTrue();
+        assertThat(overview.receiptAvailable(newYearsDay)).isTrue();
+        assertThat(overview.receiptAvailable(newYearsEve)).isFalse();
+        assertThat(overview.receiptAvailable(DECEMBER_2025)).isFalse();
+        assertThat(overview.receiptAvailable(REFUNDED_2026)).isFalse();
+    }
+
+    @Test
+    @DisplayName("Given receipts from 2025, when listed, then a received donation from 2025 has a receipt available")
+    void should_make_receipt_available_when_listed_given_earlier_first_receipt_year() {
+        DonorDonationsService from2025 = new DonorDonationsService(donations, receipts, donorRecords, claims,
+                Clock.fixed(Instant.parse("2026-10-17T11:00:00Z"), ZoneOffset.UTC), new FirstReceiptYear(Year.of(2025)));
+        when(donations.findByDonorNewestFirst(JANA)).thenReturn(List.of(DECEMBER_2025));
+
+        assertThat(from2025.listDonations(JANA, Optional.empty()).receiptAvailable(DECEMBER_2025)).isTrue();
+    }
+
+    @Test
+    @DisplayName("Given receipts from 2026, when summarized, then the summary makes receipts available from 2026")
+    void should_name_first_receipt_year_when_summarized_given_receipts_from_2026() {
+        when(donations.findByDonorNewestFirst(JANA)).thenReturn(List.of(DECEMBER_2025));
+
+        assertThat(service.summarizeDonations(JANA).firstReceiptYear()).isEqualTo(Year.of(2026));
+    }
+
+    @Test
     @DisplayName("Given today is in 2026 in Prague, when summarized, then yearly receipts are available through 2025")
     void should_name_last_completed_year_when_summarized_given_clock_in_2026() {
         when(donations.findByDonorNewestFirst(JANA)).thenReturn(List.of());
@@ -148,8 +190,8 @@ class DonorDonationsServiceTest {
     @Test
     @DisplayName("Given 23:30 UTC on New Year's Eve, when summarized, then the closing year already counts as completed in Prague")
     void should_count_closing_year_as_completed_when_summarized_given_prague_new_year() {
-        DonorDonationsService atNewYear = new DonorDonationsService(donations, receipts, donorRecords,
-                Clock.fixed(Instant.parse("2026-12-31T23:30:00Z"), ZoneOffset.UTC));
+        DonorDonationsService atNewYear = new DonorDonationsService(donations, receipts, donorRecords, claims,
+                Clock.fixed(Instant.parse("2026-12-31T23:30:00Z"), ZoneOffset.UTC), FROM_2026);
         when(donations.findByDonorNewestFirst(JANA)).thenReturn(List.of());
 
         assertThat(atNewYear.summarizeDonations(JANA).lastCompletedYear()).isEqualTo(Year.of(2026));
@@ -173,5 +215,35 @@ class DonorDonationsServiceTest {
 
         assertThat(overview.senderAccountOf(byAccount)).contains(account);
         assertThat(overview.senderAccountOf(JANUARY_2026)).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Given a donation paired by a symbol the donor confirmed at one of her accounts, when listed, then the overview names that symbol and the account, and no other donation gets a symbol")
+    void should_name_confirmed_symbol_when_listed_given_donation_paired_by_confirmed_symbol() {
+        SenderAccount account = new SenderAccount("2900233333", "2010");
+        VariableSymbol oldSymbol = new VariableSymbol("6123456789");
+        SenderAccountLink link = SenderAccountLink.reconstitute(SenderAccountLinkId.newId(NOW), account, SenderAccountLinkStatus.ACTIVE,
+                Optional.of(BankPaymentId.newId(NOW)), Optional.of(NOW), Optional.empty(), Optional.empty(), NOW, Optional.empty());
+        SymbolClaim confirmed = SymbolClaim.reconstitute(SymbolClaimId.newId(NOW), JANA, account, oldSymbol, SymbolClaimAnswer.CONFIRMED, NOW);
+        SymbolClaim declined = SymbolClaim.reconstitute(SymbolClaimId.newId(NOW), JANA, account, new VariableSymbol("5123456789"),
+                SymbolClaimAnswer.DECLINED, NOW);
+        Donation byClaim = Donation.reconstitute(DonationId.newId(NOW), JANA, Optional.of(BankPaymentId.newId(NOW)), LocalDate.of(2026, 3, 1),
+                Money.czk(50000), DonationSource.BANK_TRANSFER, DonationStatus.RECEIVED, Optional.of(PairingMethod.CONFIRMED_SYMBOL),
+                Optional.of(link.id()), Optional.of(confirmed.id()), DonationPurpose.GENERAL, NOW);
+        Donation byAccount = Donation.reconstitute(DonationId.newId(NOW), JANA, Optional.of(BankPaymentId.newId(NOW)), LocalDate.of(2026, 2, 1),
+                Money.czk(30000), DonationSource.BANK_TRANSFER, DonationStatus.RECEIVED, Optional.of(PairingMethod.SENDER_ACCOUNT),
+                Optional.of(link.id()), NOW);
+        when(donations.findByDonorNewestFirst(JANA)).thenReturn(List.of(byClaim, byAccount, JANUARY_2026));
+        when(donorRecords.findById(JANA)).thenReturn(Optional.of(DonorRecord.reconstitute(JANA, DonorType.PERSON, "Jana Nováková", null,
+                new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"), new VariableSymbol("4821937560"), LocaleCode.CS, List.of(link), NOW,
+                NOW)));
+        when(claims.findByDonor(JANA)).thenReturn(List.of(declined, confirmed));
+
+        DonationOverview overview = service.listDonations(JANA, Optional.empty());
+
+        assertThat(overview.confirmedSymbolOf(byClaim)).contains(oldSymbol);
+        assertThat(overview.senderAccountOf(byClaim)).contains(account);
+        assertThat(overview.confirmedSymbolOf(byAccount)).isEmpty();
+        assertThat(overview.confirmedSymbolOf(JANUARY_2026)).isEmpty();
     }
 }
