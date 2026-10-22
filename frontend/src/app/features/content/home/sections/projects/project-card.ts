@@ -1,4 +1,4 @@
-import { Component, computed, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 
 export type ProjectKey = 'dominik' | 'anicka' | 'tomas' | 'eliska' | 'martin';
 
@@ -6,6 +6,7 @@ export type ProjectKey = 'dominik' | 'anicka' | 'tomas' | 'eliska' | 'martin';
   selector: 'app-project-card',
   templateUrl: './project-card.html',
   styleUrl: './project-card.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ProjectCard {
   readonly project = input.required<ProjectKey>();

@@ -2,6 +2,7 @@
 
 import {
   afterNextRender,
+  ChangeDetectionStrategy,
   Component,
   computed,
   ElementRef,
@@ -46,6 +47,7 @@ const UNAUTHENTICATED = 'auth/unauthenticated';
   imports: [FormsModule, FormField, FormControlDirective, FocusFirstInvalid],
   templateUrl: './profile-card.html',
   styleUrl: './profile-card.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ProfileCard {
   private readonly auth = inject(AuthStore);

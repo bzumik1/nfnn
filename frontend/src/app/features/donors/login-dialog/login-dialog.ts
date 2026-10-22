@@ -2,7 +2,7 @@
 
 import { DOCUMENT } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { FormsModule, NgForm } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { describeProblem } from '../../../core/auth/api-problem';
@@ -48,6 +48,7 @@ const TOO_MANY_REQUESTS = 429;
   ],
   templateUrl: './login-dialog.html',
   styleUrl: './login-dialog.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class LoginDialog {
   private readonly router = inject(Router);

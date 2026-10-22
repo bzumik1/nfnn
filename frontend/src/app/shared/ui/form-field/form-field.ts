@@ -1,4 +1,4 @@
-import { Component, contentChild, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, contentChild, input } from '@angular/core';
 import { FormControlDirective } from './form-control';
 
 export type FieldMessages = Readonly<Record<string, string>>;
@@ -7,6 +7,7 @@ export type FieldMessages = Readonly<Record<string, string>>;
   selector: 'app-form-field',
   templateUrl: './form-field.html',
   styleUrl: './form-field.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class FormField {
   readonly label = input.required<string>();

@@ -1,4 +1,5 @@
 import {
+  ChangeDetectionStrategy,
   Component,
   computed,
   DestroyRef,
@@ -59,6 +60,7 @@ const SENDER_ACCOUNT_DIGITS_SHOWN = 4;
   imports: [DashboardTopBar, SymbolCard, BankAccountsCard, ProfileCard],
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class DonorDashboard {
   private readonly router = inject(Router);

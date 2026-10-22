@@ -1,6 +1,14 @@
 /// <reference types="@angular/localize" />
 
-import { Component, ElementRef, HostListener, inject, signal, viewChild } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  HostListener,
+  inject,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { AuthStore } from '../../core/auth/auth-store';
 import { LoginDialogService } from '../../core/auth/login-dialog.service';
@@ -10,6 +18,7 @@ import { LoginDialogService } from '../../core/auth/login-dialog.service';
   imports: [RouterLink],
   templateUrl: './site-header.html',
   styleUrl: './site-header.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class SiteHeader {
   private readonly loginDialog = inject(LoginDialogService);

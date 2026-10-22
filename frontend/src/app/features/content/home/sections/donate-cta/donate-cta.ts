@@ -1,6 +1,14 @@
 /// <reference types="@angular/localize" />
 
-import { Component, computed, inject, input, linkedSignal, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  input,
+  linkedSignal,
+  signal,
+} from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import {
   catchError,
@@ -48,6 +56,7 @@ type QrState =
   imports: [CopyButton],
   templateUrl: './donate-cta.html',
   styleUrl: './donate-cta.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class DonateCta {
   private readonly api = inject(PaymentQrApi);
