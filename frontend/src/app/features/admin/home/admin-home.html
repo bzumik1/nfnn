@@ -4,9 +4,18 @@
   <div class="container">
     <h1 #title class="admin-title" tabindex="-1" i18n="@@admin.home.heading">Správa</h1>
     <p class="admin-intro" i18n="@@admin.home.intro">
-      Tady uvidíte, jak se webu daří, a časem tu budete párovat platby, spravovat dárce a obsah
-      webu. Zatím je tu stav stahování plateb z banky; další části připravujeme.
+      Tady uvidíte, jak se webu daří, přiřadíte platby, které web nepoznal, a časem tu budete
+      spravovat dárce a obsah webu.
     </p>
+
+    <nav class="admin-links" aria-label="Části správy" i18n-aria-label="@@admin.home.links.label">
+      <a class="admin-link" routerLink="/sprava/platby">
+        <span class="admin-link-title" i18n="@@admin.home.links.payments">Platby z banky</span>
+        <span class="admin-link-text" i18n="@@admin.home.links.payments.text"
+          >Nespárované platby přiřadíte dárci ručně, u spárovaných můžete přiřazení zrušit.</span
+        >
+      </a>
+    </nav>
 
     <section class="admin-card" aria-labelledby="admin-import-title">
       <h2 id="admin-import-title" class="admin-card-title" i18n="@@admin.home.import.title">

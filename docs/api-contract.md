@@ -307,7 +307,11 @@ Frontend: the dialog's "Obnovit heslo" tab posts the request and shows "E-mail o
 | `GET` | `/api/donations/me/receipts/yearly?year=` | donor | PDF receipt of the caller's donations received in a completed year from the first receipt year on. 400 before the first receipt year and while the year is not completed, 404 when it has none. |
 | `GET` | `/api/donations/payment-qr?amount=&variableSymbol=&purpose=` | public | Returns the SPAYD string (Czech "QR platba"), its PNG QR code and the foundation's bank account. A signed-in donor's frontend passes their variable symbol; the 1 Kč payment that verifies an account passes `purpose=ACCOUNT_VERIFICATION`. |
 | `GET` | `/api/admin/donations/import-state` | admin | The Fio import's state for the administration: covered period, last attempt and success, last failure, failures in a row, the outage being reported. See "Administration". |
-| `GET/POST/PATCH` | `/api/admin/donations[...]` | admin | Planned: list/filter, manually record donation, edit. |
+| `GET` | `/api/admin/donations/payments?pairing=unpaired\|paired&year=` | admin | Bank payments for the administration: the unpaired ones newest first, or the paired ones of one year with their donation, donor and whether a receipt was issued. See "Bank payments". |
+| `GET` | `/api/admin/donations/donors?query=` | admin | Up to 20 donor records whose name contains or whose variable symbol starts with the query, for the pairing dialog. |
+| `POST` | `/api/admin/donations/payments/{id}/pair` | admin | Pairs an unpaired payment with a donor by hand (`{"donorId": "…"}`): a `MANUAL` donation, audited as `PAIR_PAYMENT`; 200 with the donation id and the yearly receipts it changes. |
+| `POST` | `/api/admin/donations/payments/{id}/unpair` | admin | Deletes the payment's donation and keeps the payment out of automatic pairing, audited as `UNPAIR_PAYMENT`; 200 with the yearly receipts it changes; 409 when a single receipt was issued for the donation. |
+| `POST/PATCH` | `/api/admin/donations[...]` | admin | Planned: manually record a donation without a bank payment, edit. |
 
 #### `GET /api/donations/me` and `GET /api/donations/me/summary`
 
@@ -676,7 +680,7 @@ Not an endpoint. The foundation is e-mailed once when the Fio import stops worki
 
 ### Administration (`/api/admin/**`)
 
-Administrators are donors with the `ADMIN` role (see "Authentication"); there is no admin context, each context serves its own administration under `/api/admin/<context>/...` from its `interfaces/rest`. The Angular area is `/sprava` (`docs/frontend-overview.md`). Done so far: the skeleton (role gate, audit trail, the first read-only endpoint) and the second factor (an administrator holds `ADMIN` only in a session opened with the code, see "Second factor"); manual pairing, donors, content and the report settings follow one PR at a time (`docs/requirements.md` §7).
+Administrators are donors with the `ADMIN` role (see "Authentication"); there is no admin context, each context serves its own administration under `/api/admin/<context>/...` from its `interfaces/rest`. The Angular area is `/sprava` (`docs/frontend-overview.md`). Done so far: the skeleton (role gate, audit trail, the first read-only endpoint), the second factor (an administrator holds `ADMIN` only in a session opened with the code, see "Second factor") and the bank payments (manual pairing and unpairing, see "Bank payments"); donors, content and the report settings follow one PR at a time (`docs/requirements.md` §7).
 
 #### `GET /api/admin/donations/import-state`
 
@@ -696,9 +700,38 @@ Administrators are donors with the `ADMIN` role (see "Authentication"); there is
 
 Every field but `consecutiveFailures` is null until it has a value (a fresh database answers all nulls and 0); `lastFailure` is the last attempt's failure (null after a success), `kind` and `reportedOutage` are `ImportFailureKind` values (see "Import outage alerts"), `message` is the failure text kept for the log, at most the stored length. 401 without a token, 403 `auth/forbidden` for a donor without the role or for an administrator whose session was opened without the second factor; the role gained while signed in shows at the next sign-in with the code.
 
+#### Bank payments
+
+`donations/interfaces/rest/AdminPaymentsController`. `GET /api/admin/donations/payments?pairing=unpaired` (the default) → `application/admin/AdminPaymentsService.listUnpaired()` (read-only): every `bank_payment` without a `donation`, newest booking day first, then the higher bank transaction id. `pairing=paired&year=2026` → `listPaired(year)`: the donations received in that Prague calendar year with their payment; without `year` the newest year that has a donation; `availableYears` lists every year with a donation, newest first. `pairing` other than `unpaired|paired` or a `year` outside 1000–9999 answers 400. 200:
+
+```json
+{
+  "year": 2026,
+  "availableYears": [2026, 2025],
+  "items": [
+    {
+      "id": "019a…", "bankTransactionId": 26683551, "bookedOn": "2026-10-10", "amountMinor": 50000, "currency": "CZK",
+      "variableSymbol": "1111111111", "counterpartyAccount": "2900233333/2010", "counterpartyName": "Nováková Jana",
+      "messageForRecipient": "Dar pro fond", "importedAt": "2026-10-17T10:00:00Z", "unpairedByAdminAt": null,
+      "donation": { "id": "019a…", "donorId": "019a…", "donorName": "Jana Nováková", "pairedBy": "MANUAL", "status": "RECEIVED", "recordedAt": "2026-10-18T09:00:00Z", "receiptIssued": false }
+    }
+  ]
+}
+```
+
+`year` and `availableYears` are null and empty for the unpaired list. `counterpartyAccount` is the canonical sender account (`number/bank code`) or, when the bank sent something that is not a Czech account, the raw account and bank code; `variableSymbol` is the symbol as the bank sent it (`"0"` and blanks become null at import). `donation` is null for an unpaired payment; `donorName` is null when the donor record is gone; `receiptIssued` is true when any receipt (single or yearly, active or superseded) references the donation. `unpairedByAdminAt` is set once an administrator unpaired the payment: from then on automatic pairing skips it (`BankPaymentJpaRepository` filters `unpaired_by_admin_at is null` in every query the pairing uses, the monthly report still counts it among the unpaired), so a payment with a donor's symbol does not come back at the next import; only a new manual pairing gives it a donation.
+
+`GET /api/admin/donations/donors?query=nov` → `AdminPaymentsService.searchDonors(query)`: up to 20 `donor_record` rows whose name contains the query (case-insensitive) or whose variable symbol starts with it, ordered by name; `%`, `_` and `!` in the query are literal; a blank query answers an empty list; `query` is at most 160 characters (400 above). 200 `{"items": [{"donorId", "name", "type": "PERSON|COMPANY", "variableSymbol", "companyIdentifier"}]}`.
+
+`POST /api/admin/donations/payments/{id}/pair` with `{"donorId": "…"}` (`@NotNull`, 400 `validation-failed` without it) → `application/pairing/ManualPairingService.pair(adminId, paymentId, donorId)`: takes the pairing lock (`PairingLock`, the same advisory lock as the import), loads the payment (404 `donations/bank-payment-not-found`), refuses one that already has a donation (409 `donations/bank-payment-already-paired`), loads the donor record (404 `donations/donor-not-found`), locks the donor's `donor_record` row like a receipt download does, stores `Donation.fromBankPayment(…, PairingMethod.MANUAL, now)` (the purpose is derived from the payment as for any other pairing, so a 1 Kč "OVERENI UCTU" payment stays an account verification; no sender account is learned and no symbol claim is touched) and publishes `AdminActionPerformed(adminId, "PAIR_PAYMENT", paymentId, details, now)`. 200 `{"donationId": "…", "changedYearlyReceipts": [2026]}`: the years (at most the payment's year) from the first receipt year on for which the donor already holds an active yearly receipt, so the administrator can tell the donor that the next download replaces it (the receipt itself is replaced lazily, as after a late import).
+
+`POST /api/admin/donations/payments/{id}/unpair` (no body) → `ManualPairingService.unpair(adminId, paymentId)`: lock, payment (404 `donations/bank-payment-not-found`), its donation (409 `donations/bank-payment-not-paired` when there is none), the donor row lock, then 409 `donations/donation-has-receipt` when a receipt references the donation (the `donation_receipt.donation_id` foreign key would refuse the delete anyway; a yearly receipt does not block, it is reported instead); otherwise the donation is deleted, the payment is saved with `unpaired_by_admin_at = now` and `AdminActionPerformed(adminId, "UNPAIR_PAYMENT", paymentId, details, now)` is published. 200 `{"changedYearlyReceipts": [2026]}` as above. The `details` of both actions name the bank transaction id, amount, booking day, donor id, donation id and the pairing method, never a name or an account.
+
+Every endpoint: 401 without a token, 403 `auth/forbidden` for a donor without the role or a session without the second factor. Liquibase `donations/013_pair_payments_by_hand.xml` adds `bank_payment.unpaired_by_admin_at` and lets `ck_donation_paired_by` admit `MANUAL`. Tests: `features/donations/admin_payments.feature` (eleven scenarios: the list and its fields, pairing with the audit record and the donor's overview, the already paired payment, the unknown payment and donor, the missing donor id, unpairing with the hourly import not pairing again and a new manual pairing, the unpaired payment, the donation with a single receipt, the yearly receipt in both directions, the donor search, 403 and 401), `application/pairing/ManualPairingServiceTest`, `application/admin/AdminPaymentsServiceTest`, the repository tests for every new query.
+
 #### Audit trail
 
-Every change an administrator makes is recorded in `admin_action` (Liquibase `shared/001_create_admin_action.xml`, included by the master changelog's new `db/changelog/shared/` folder): `id` (UUIDv7), `admin_id` (the donor id from the JWT), `action` (an upper-case code up to 64 characters, e.g. `PAIR_PAYMENT`), `subject_id` (the affected row's id, nullable), `details` (up to 2000 characters of plain text, never personal data beyond what the action needs), `performed_at`; indexed by `performed_at`, `admin_id` and `subject_id`. A use case publishes `shared/application/event/AdminActionPerformed(adminId, action, Optional<UUID> subjectId, details, performedAt)` from its transaction; `shared/infrastructure/audit/AdminActionLog` stores it `BEFORE_COMMIT`, so the change and its record commit together or neither does, and logs `Admin {id} performed {ACTION} on {subject}` at INFO. Nothing publishes it yet (the first producer is manual pairing); `AdminActionLogTest` proves the commit and the rollback against PostgreSQL, `AdminActionPerformedTest` the record's rules. Reading the trail is a later admin endpoint; until then `select * from admin_action order by performed_at desc` in `deploy/README.md`.
+Every change an administrator makes is recorded in `admin_action` (Liquibase `shared/001_create_admin_action.xml`, included by the master changelog's new `db/changelog/shared/` folder): `id` (UUIDv7), `admin_id` (the donor id from the JWT), `action` (an upper-case code up to 64 characters, e.g. `PAIR_PAYMENT`), `subject_id` (the affected row's id, nullable), `details` (up to 2000 characters of plain text, never personal data beyond what the action needs), `performed_at`; indexed by `performed_at`, `admin_id` and `subject_id`. A use case publishes `shared/application/event/AdminActionPerformed(adminId, action, Optional<UUID> subjectId, details, performedAt)` from its transaction; `shared/infrastructure/audit/AdminActionLog` stores it `BEFORE_COMMIT`, so the change and its record commit together or neither does, and logs `Admin {id} performed {ACTION} on {subject}` at INFO. The manual pairing publishes `PAIR_PAYMENT` and `UNPAIR_PAYMENT` (see "Bank payments"); `AdminActionLogTest` proves the commit and the rollback against PostgreSQL, `AdminActionPerformedTest` the record's rules. Reading the trail is a later admin endpoint; until then `select * from admin_action order by performed_at desc` in `deploy/README.md`.
 
 ### `contact` — contact form
 

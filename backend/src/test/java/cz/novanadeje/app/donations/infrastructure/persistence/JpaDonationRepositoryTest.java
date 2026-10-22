@@ -38,6 +38,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.simple.JdbcClient;
 
 import java.time.LocalDate;
+import java.time.Year;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -294,6 +295,44 @@ class JpaDonationRepositoryTest {
 
     private Donation bySymbol(DonorReference donor, BankPayment payment) {
         return Donation.fromBankPayment(DonationId.newId(NOW), donor, payment, PairingMethod.VARIABLE_SYMBOL, NOW);
+    }
+
+    @Test
+    @DisplayName("Given a donation paired by hand, when it is saved and looked up by its payment, then it comes back and a deletion frees the payment")
+    void should_find_by_payment_and_free_it_when_deleted_given_manual_donation() {
+        DonorReference jana = storedDonor("4821937560");
+        BankPayment payment = storedPayment(1001, LocalDate.of(2026, 10, 15));
+        Donation donation = Donation.fromBankPayment(DonationId.newId(NOW), jana, payment, PairingMethod.MANUAL, NOW);
+        donations.save(donation);
+        flushAndClear();
+
+        assertThat(donations.findByBankPayment(payment.id())).hasValueSatisfying(stored -> {
+            assertThat(stored.id()).isEqualTo(donation.id());
+            assertThat(stored.pairedBy()).contains(PairingMethod.MANUAL);
+        });
+        assertThat(donations.findByBankPayment(BankPaymentId.newId(NOW))).isEmpty();
+
+        donations.delete(donation.id());
+        flushAndClear();
+
+        assertThat(donations.findByBankPayment(payment.id())).isEmpty();
+        assertThat(donations.existsForBankPayment(payment.id())).isFalse();
+        assertThat(payments.findById(payment.id())).isPresent();
+    }
+
+    @Test
+    @DisplayName("Given donations received in several years, when the years are listed, then each year comes once, newest first")
+    void should_list_distinct_years_newest_first_when_listed_given_donations_in_several_years() {
+        DonorReference jana = storedDonor("4821937560");
+        donations.save(Donation.fromBankPayment(DonationId.newId(NOW), jana, storedPayment(1001, LocalDate.of(2025, 3, 1)),
+                PairingMethod.MANUAL, NOW));
+        donations.save(Donation.fromBankPayment(DonationId.newId(NOW), jana, storedPayment(1002, LocalDate.of(2026, 10, 15)),
+                PairingMethod.VARIABLE_SYMBOL, NOW));
+        donations.save(Donation.fromBankPayment(DonationId.newId(NOW), jana, storedPayment(1003, LocalDate.of(2026, 1, 2)),
+                PairingMethod.VARIABLE_SYMBOL, NOW));
+        flushAndClear();
+
+        assertThat(donations.findReceivedYearsNewestFirst()).containsExactly(Year.of(2026), Year.of(2025));
     }
 
     private DonorReference storedDonor(String symbol) {

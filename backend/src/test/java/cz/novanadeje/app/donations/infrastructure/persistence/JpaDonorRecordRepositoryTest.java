@@ -192,6 +192,39 @@ class JpaDonorRecordRepositoryTest {
         assertThat(donorRecords.countRegisteredBefore(LATER.plusSeconds(2))).isEqualTo(3);
     }
 
+    @Test
+    @DisplayName("Given stored records, when several are asked for by id, then exactly those come back with their accounts")
+    void should_find_records_when_asked_by_ids_given_stored_records() {
+        DonorRecord jana = person("Jana Nováková", "4821937560");
+        DonorRecord petr = person("Petr Svoboda", "7310945528");
+        DonorRecord eva = person("Eva Dvořáková", "5555555555");
+        donorRecords.save(jana);
+        donorRecords.save(petr);
+        donorRecords.save(eva);
+        flushAndClear();
+
+        assertThat(donorRecords.findByIds(List.of(jana.id(), eva.id(), new DonorReference(UuidV7.generate(LATER)))))
+                .extracting(DonorRecord::name).containsExactlyInAnyOrder("Jana Nováková", "Eva Dvořáková");
+        assertThat(donorRecords.findByIds(List.of())).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Given stored records, when searched by a part of the name or the start of the symbol, then the matches come by name, at most the limit, and like-wildcards are literal")
+    void should_find_by_name_part_or_symbol_start_when_searched_given_stored_records() {
+        donorRecords.save(person("Jana Nováková", "4821937560"));
+        donorRecords.save(person("Petr Novák", "7310945528"));
+        donorRecords.save(person("Eva Dvořáková", "4899999999"));
+        donorRecords.save(person("Karel 100% Veselý", "1000000000"));
+        flushAndClear();
+
+        assertThat(donorRecords.searchByNameOrSymbol("novák", 20)).extracting(DonorRecord::name).containsExactly("Jana Nováková", "Petr Novák");
+        assertThat(donorRecords.searchByNameOrSymbol("48", 20)).extracting(DonorRecord::name).containsExactly("Eva Dvořáková", "Jana Nováková");
+        assertThat(donorRecords.searchByNameOrSymbol("48", 1)).extracting(DonorRecord::name).containsExactly("Eva Dvořáková");
+        assertThat(donorRecords.searchByNameOrSymbol("100%", 20)).extracting(DonorRecord::name).containsExactly("Karel 100% Veselý");
+        assertThat(donorRecords.searchByNameOrSymbol("%", 20)).extracting(DonorRecord::name).containsExactly("Karel 100% Veselý");
+        assertThat(donorRecords.searchByNameOrSymbol("xyz", 20)).isEmpty();
+    }
+
     private static DonorRecord registeredAt(String symbol, Instant at) {
         return DonorRecord.registerPerson(new DonorReference(UuidV7.generate(at)), "Jana Nováková", ADDRESS, new VariableSymbol(symbol),
                 LocaleCode.CS, at);

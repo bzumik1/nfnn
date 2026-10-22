@@ -77,6 +77,11 @@ public class PaymentPairingStepDefinitions {
         assertDonation(alias, amount, receivedOn, PairingMethod.CONFIRMED_SYMBOL);
     }
 
+    @Then("{string} has a donation of {string} CZK received on {date} paired by hand")
+    public void hasADonationPairedByHand(String alias, String amount, LocalDate receivedOn) {
+        assertDonation(alias, amount, receivedOn, PairingMethod.MANUAL);
+    }
+
     @Then("bank payment {long} is paired with {string}")
     public void bankPaymentIsPairedWith(long transactionId, String alias) {
         assertThat(donorsPaidBy(transactionId)).containsExactly(scenarioDonors.idOf(alias));

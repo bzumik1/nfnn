@@ -9,6 +9,7 @@ import {
   secondFactorEnrolment,
   secondFactorRequired,
   signIn,
+  session,
 } from './donor-session';
 
 const WCAG_AA = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
@@ -243,6 +244,72 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     expect(await violations(page)).toEqual([]);
   });
 
+  test('when an administrator pairs a bank payment, then the payments page and the dialog break no rule', async ({
+    page,
+  }) => {
+    await page.route(
+      (url) => url.pathname === '/api/admin/donations/payments',
+      (route) =>
+        route.fulfill({
+          json: {
+            year: null,
+            availableYears: [],
+            items: [
+              {
+                id: '019a1c00-0000-7000-8000-000000001001',
+                bankTransactionId: 1001,
+                bookedOn: '2026-10-10',
+                amountMinor: 50000,
+                currency: 'CZK',
+                variableSymbol: '1111111111',
+                counterpartyAccount: '2900233333/2010',
+                counterpartyName: 'Nováková Jana',
+                messageForRecipient: 'Dar pro fond',
+                importedAt: '2026-10-17T10:00:00Z',
+                unpairedByAdminAt: '2026-10-18T10:00:00Z',
+                donation: null,
+              },
+            ],
+          },
+        }),
+    );
+    await page.route(
+      (url) => url.pathname === '/api/admin/donations/donors',
+      (route) =>
+        route.fulfill({
+          json: {
+            items: [
+              {
+                donorId: administrator.id,
+                name: 'Jana Nováková',
+                type: 'PERSON',
+                variableSymbol: '4821937560',
+                companyIdentifier: null,
+              },
+            ],
+          },
+        }),
+    );
+    await page.route('**/api/donors/auth/refresh', (route) =>
+      route.fulfill(session(200, administrator)),
+    );
+    await page.goto('/');
+    await page.evaluate(() => localStorage.setItem('nfnn.donor-session', '1'));
+    await page.goto('/sprava/platby');
+    await expect(page.getByRole('heading', { level: 1, name: 'Platby z banky' })).toBeFocused();
+    await expect(page.locator('tbody tr')).toContainText('jen ručně');
+
+    expect(await violations(page)).toEqual([]);
+
+    await page.getByRole('button', { name: 'Přiřadit dárci' }).click();
+    await page.getByRole('dialog').getByRole('searchbox').fill('jana');
+    await expect(
+      page.getByRole('dialog').getByRole('radio', { name: /Jana Nováková/ }),
+    ).toBeVisible();
+
+    expect(await violations(page)).toEqual([]);
+  });
+
   test('when a signed-in donor edits their data, then the form breaks no rule either', async ({
     page,
   }) => {
@@ -280,7 +347,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
       route.fulfill({ json: secondFactorEnrolment }),
     );
     await signIn(page);
-    await page.getByRole('button', { name: 'Zapnout druhý faktor' }).click();
+    await page.getByRole('button', { name: 'Zapnout dvoufaktorové ověření' }).click();
     await page.getByLabel('Současné heslo').fill('correct horse battery');
     await page.getByRole('button', { name: 'Pokračovat' }).click();
     await expect(page.getByLabel('Kód z aplikace')).toBeFocused();
@@ -288,7 +355,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     expect(await violations(page)).toEqual([]);
 
     await page.getByLabel('Kód z aplikace').fill('12345');
-    await page.getByRole('button', { name: 'Zapnout druhý faktor' }).click();
+    await page.getByRole('button', { name: 'Zapnout dvoufaktorové ověření' }).click();
     await expect(page.getByLabel('Kód z aplikace')).toBeFocused();
 
     expect(await violations(page)).toEqual([]);

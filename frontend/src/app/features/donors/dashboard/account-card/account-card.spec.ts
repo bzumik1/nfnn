@@ -79,15 +79,15 @@ describe('Given the sign-in data card in the overview', () => {
     expect(element('.account-data dd').textContent?.trim()).toBe('jana@example.cz');
     expect(
       Array.from(root().querySelectorAll('.account-data dd')).map((dd) => dd.textContent?.trim()),
-    ).toEqual(['jana@example.cz', 'Vypnutý']);
+    ).toEqual(['jana@example.cz', 'Vypnuté']);
     expect(element('.account-hint')).toBeNull();
     expect(
       Array.from(root().querySelectorAll('.account-action')).map((b) => b.textContent?.trim()),
-    ).toEqual(['Změnit e-mail', 'Změnit heslo', 'Zapnout druhý faktor']);
+    ).toEqual(['Změnit e-mail', 'Změnit heslo', 'Zapnout dvoufaktorové ověření']);
   });
 
   describe('when the donor turns the second factor on', () => {
-    beforeEach(() => clickButton('Zapnout druhý faktor'));
+    beforeEach(() => clickButton('Zapnout dvoufaktorové ověření'));
 
     it('then the password field has the focus and the form names the authenticator apps', () => {
       expect(document.activeElement).toBe(element('#account-second-factor-password'));
@@ -162,13 +162,15 @@ describe('Given the sign-in data card in the overview', () => {
         await settle();
 
         expect(element('.account-form')).toBeNull();
-        expect(element('.account-status').textContent).toContain('Druhý faktor je zapnutý.');
+        expect(element('.account-status').textContent).toContain(
+          'Dvoufaktorové ověření je zapnuté.',
+        );
         expect(
           Array.from(root().querySelectorAll('.account-data dd')).map((dd) =>
             dd.textContent?.trim(),
           ),
-        ).toEqual(['jana@example.cz', 'Zapnutý']);
-        expect(document.activeElement?.textContent?.trim()).toBe('Vypnout druhý faktor');
+        ).toEqual(['jana@example.cz', 'Zapnuté']);
+        expect(document.activeElement?.textContent?.trim()).toBe('Vypnout dvoufaktorové ověření');
         store.updateProfile({}).subscribe();
         expect(http.expectOne('/api/donors/me').request.headers.get('Authorization')).toBe(
           'Bearer token-2',
@@ -211,7 +213,7 @@ describe('Given the sign-in data card in the overview', () => {
 
         expect(element('.account-form')).toBeNull();
         expect(element('.account-qr')).toBeNull();
-        expect(document.activeElement?.textContent?.trim()).toBe('Zapnout druhý faktor');
+        expect(document.activeElement?.textContent?.trim()).toBe('Zapnout dvoufaktorové ověření');
       });
     });
   });
@@ -230,7 +232,7 @@ describe('Given the sign-in data card in the overview', () => {
 
     it('then the card says the administration waits for the second factor', () => {
       expect(element('.account-hint').textContent).toContain(
-        'Správa se vám otevře, až zapnete druhý faktor',
+        'Správa se vám otevře, až zapnete dvoufaktorové ověření',
       );
     });
   });
@@ -242,7 +244,7 @@ describe('Given the sign-in data card in the overview', () => {
         .expectOne('/api/donors/me')
         .flush(sampleDonor({ secondFactor: { enabled: true, neededForAdministration: false } }));
       await settle();
-      await clickButton('Vypnout druhý faktor');
+      await clickButton('Vypnout dvoufaktorové ověření');
     });
 
     it('then the card showed the factor as on and the password field has the focus', () => {
@@ -266,11 +268,13 @@ describe('Given the sign-in data card in the overview', () => {
       await settle();
 
       expect(element('.account-form')).toBeNull();
-      expect(element('.account-status').textContent).toContain('Druhý faktor jsme vypnuli.');
+      expect(element('.account-status').textContent).toContain(
+        'Dvoufaktorové ověření jsme vypnuli.',
+      );
       expect(
         Array.from(root().querySelectorAll('.account-action')).map((b) => b.textContent?.trim()),
-      ).toEqual(['Změnit e-mail', 'Změnit heslo', 'Zapnout druhý faktor']);
-      expect(document.activeElement?.textContent?.trim()).toBe('Zapnout druhý faktor');
+      ).toEqual(['Změnit e-mail', 'Změnit heslo', 'Zapnout dvoufaktorové ověření']);
+      expect(document.activeElement?.textContent?.trim()).toBe('Zapnout dvoufaktorové ověření');
     });
 
     it('and the code was already used, then the form stays and shows the reason', async () => {

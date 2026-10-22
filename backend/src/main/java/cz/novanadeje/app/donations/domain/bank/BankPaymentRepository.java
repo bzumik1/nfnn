@@ -12,11 +12,15 @@ public interface BankPaymentRepository {
 
     void saveAll(List<BankPayment> payments);
 
+    void save(BankPayment payment);
+
     Set<BankTransactionId> findKnownTransactionIds(Collection<BankTransactionId> ids);
 
     Optional<BankPayment> findById(BankPaymentId id);
 
     List<BankPayment> findUnpairedOrderedByBooking();
+
+    List<BankPayment> findUnpairedNewestFirst();
 
     List<BankPayment> findUnpairedByMatchingVariableSymbol(VariableSymbol symbol);
 

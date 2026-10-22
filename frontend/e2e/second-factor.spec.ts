@@ -47,7 +47,7 @@ test.describe('Given a donor who protects the account with an authenticator app'
 
     await expect(page).toHaveURL(/\/darce\/prehled$/);
     expect(completed).toEqual([{ challenge: CHALLENGE, code: '287082' }]);
-    await expect(page.locator('.account-data')).toContainText('Zapnutý');
+    await expect(page.locator('.account-data')).toContainText('Zapnuté');
   });
 
   test('when they type a wrong code and then the challenge expires, then the dialog says so and goes back to the password', async ({
@@ -108,7 +108,7 @@ test.describe('Given a donor who protects the account with an authenticator app'
     });
     await signIn(page);
 
-    await page.getByRole('button', { name: 'Zapnout druhý faktor' }).click();
+    await page.getByRole('button', { name: 'Zapnout dvoufaktorové ověření' }).click();
     await expect(page.getByLabel('Současné heslo')).toBeFocused();
     await page.getByLabel('Současné heslo').fill('correct horse battery');
     await page.getByRole('button', { name: 'Pokračovat' }).click();
@@ -123,13 +123,13 @@ test.describe('Given a donor who protects the account with an authenticator app'
     );
     await expect(page.getByLabel('Kód z aplikace')).toBeFocused();
     await page.getByLabel('Kód z aplikace').fill('287082');
-    await page.getByRole('button', { name: 'Zapnout druhý faktor' }).click();
+    await page.getByRole('button', { name: 'Zapnout dvoufaktorové ověření' }).click();
 
-    await expect(page.getByRole('status').filter({ hasText: 'Druhý faktor' })).toContainText(
-      'Druhý faktor je zapnutý.',
-    );
-    await expect(page.locator('.account-data')).toContainText('Zapnutý');
-    await expect(page.getByRole('button', { name: 'Vypnout druhý faktor' })).toBeFocused();
+    await expect(
+      page.getByRole('status').filter({ hasText: 'Dvoufaktorové ověření' }),
+    ).toContainText('Dvoufaktorové ověření je zapnuté.');
+    await expect(page.locator('.account-data')).toContainText('Zapnuté');
+    await expect(page.getByRole('button', { name: 'Vypnout dvoufaktorové ověření' })).toBeFocused();
     expect(posted).toEqual([
       { path: 'setup', body: { password: 'correct horse battery' } },
       { path: 'confirm', body: { code: '287082' } },
@@ -146,15 +146,15 @@ test.describe('Given a donor who protects the account with an authenticator app'
     });
     await signIn(page, protectedDonor);
 
-    await page.getByRole('button', { name: 'Vypnout druhý faktor' }).click();
+    await page.getByRole('button', { name: 'Vypnout dvoufaktorové ověření' }).click();
     await page.getByLabel('Současné heslo').fill('correct horse battery');
     await page.getByLabel('Kód z aplikace').fill('287082');
-    await page.getByRole('button', { name: 'Vypnout druhý faktor' }).click();
+    await page.getByRole('button', { name: 'Vypnout dvoufaktorové ověření' }).click();
 
-    await expect(page.getByRole('status').filter({ hasText: 'Druhý faktor' })).toContainText(
-      'Druhý faktor jsme vypnuli.',
-    );
-    await expect(page.locator('.account-data')).toContainText('Vypnutý');
+    await expect(
+      page.getByRole('status').filter({ hasText: 'Dvoufaktorové ověření' }),
+    ).toContainText('Dvoufaktorové ověření jsme vypnuli.');
+    await expect(page.locator('.account-data')).toContainText('Vypnuté');
     expect(posted).toEqual([{ password: 'correct horse battery', code: '287082' }]);
   });
 
@@ -168,7 +168,7 @@ test.describe('Given a donor who protects the account with an authenticator app'
     });
 
     await expect(page.locator('.account-hint')).toContainText(
-      'Správa se vám otevře, až zapnete druhý faktor',
+      'Správa se vám otevře, až zapnete dvoufaktorové ověření',
     );
     await expect(page.getByRole('link', { name: 'Správa' })).toHaveCount(0);
   });
