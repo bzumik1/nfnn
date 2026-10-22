@@ -1,0 +1,70 @@
+<div
+  id="accounts-help-panel"
+  class="accounts-help-panel"
+  role="region"
+  aria-labelledby="accounts-help-title"
+  [hidden]="!open()"
+  (keydown.escape)="requestClose()"
+>
+  <h3 id="accounts-help-title" class="help-title" i18n="@@donor.bankAccounts.help.title">Jak přiřazujeme platby</h3>
+  <ul class="help-list">
+    @if (variableSymbol(); as symbol) {
+      <li i18n="@@donor.bankAccounts.help.bySymbol">
+        <span class="help-lead">S vaším symbolem</span> Platbu s vaším variabilním symbolem
+        <strong class="help-symbol">{{ symbol }}</strong> přiřadíme vám, ať přijde z jakéhokoli účtu.
+      </li>
+    } @else {
+      <li i18n="@@donor.bankAccounts.help.bySymbolWithoutNumber">
+        <span class="help-lead">S vaším symbolem</span> Platbu s vaším variabilním symbolem přiřadíme vám, ať přijde z jakéhokoli účtu.
+      </li>
+    }
+    <li i18n="@@donor.bankAccounts.help.byAccount">
+      <span class="help-lead">Bez symbolu</span> Platbu bez variabilního symbolu přiřadíme podle účtu, ze kterého přišla, pokud jste
+      ho u nás ověřili. Tomuto přiřazování podle účtu říkáme párování. Účet ověříte tak, že z něj jednou pošlete platbu s vaším
+      variabilním symbolem; stačí 1&nbsp;Kč, návod najdete pod tlačítkem „Přidat účet“. Musí to být český účet, ale nemusí být veden
+      na vaše jméno. Když účet ověříte poprvé a předtím ho neověřil jiný dárce, přiřadíme vám i dřívější platby z něj, které přišly
+      bez symbolu. Účet, přes který posílá peníze víc lidí (třeba sběrný účet), můžeme z párování vyloučit; z takového účtu pak
+      přiřazujeme jen platby s variabilním symbolem.
+    </li>
+    @if (variableSymbol(); as symbol) {
+      <li i18n="@@donor.bankAccounts.help.otherSymbol">
+        <span class="help-lead">S jiným symbolem</span> Platbu se symbolem jiného dárce přiřadíme jemu, i když přijde z vašeho
+        ověřeného účtu. Platbu se starším symbolem, který nemá žádný registrovaný dárce, vám přiřadíme, jen když ho u účtu potvrdíte
+        jako svůj (viz Starší symbol). Pokud nám posíláte dary trvalým příkazem se starším symbolem, nejjistější je nastavit v něm váš
+        variabilní symbol <strong class="help-symbol">{{ symbol }}</strong>. Platbu se symbolem&nbsp;0 bereme jako platbu bez symbolu.
+      </li>
+    } @else {
+      <li i18n="@@donor.bankAccounts.help.otherSymbolWithoutNumber">
+        <span class="help-lead">S jiným symbolem</span> Platbu se symbolem jiného dárce přiřadíme jemu, i když přijde z vašeho
+        ověřeného účtu. Platbu se starším symbolem, který nemá žádný registrovaný dárce, vám přiřadíme, jen když ho u účtu potvrdíte
+        jako svůj (viz Starší symbol). Pokud nám posíláte dary trvalým příkazem se starším symbolem, nejjistější je nastavit v něm váš
+        variabilní symbol. Platbu se symbolem&nbsp;0 bereme jako platbu bez symbolu.
+      </li>
+    }
+    <li i18n="@@donor.bankAccounts.help.olderSymbol">
+      <span class="help-lead">Starší symbol</span> Když nám z účtu pošlete 1&nbsp;Kč se zprávou „Ověření účtu“ (QR kód pod tlačítkem
+      „Přidat účet“; běžný dar nestačí) a z tohoto účtu k nám do té doby kromě plateb s vaším symbolem nebo bez symbolu chodily platby
+      s jediným dalším symbolem, který nemá žádný registrovaný dárce, zeptáme se vás u účtu, jestli jsou to vaše dary. Neptáme se
+      u sdíleného účtu, u účtu, ze kterého přiřazujeme jen platby s variabilním symbolem, ani když podle jména v bance patří účet firmě
+      a vy jste u nás jako osoba (nebo naopak). Po odpovědi „Ano, jsou moje“ vám platby s tímto symbolem z tohoto účtu přiřazujeme
+      stejně jako platby bez symbolu, dřívější i další; po odpovědi „Ne, nejsou moje“ se už neptáme. Odpověď nejde změnit; kdybyste
+      se spletli, napište nám.
+    </li>
+    <li i18n="@@donor.bankAccounts.help.disconnect">
+      <span class="help-lead">Vypnutí párování</span> Párování můžete u účtu vypnout tlačítkem „Vypnout párování“. Platby bez
+      symbolu ani platby se starším symbolem, který jste u účtu potvrdili, které z účtu přijdou ode dne po vypnutí, vám pak
+      nepřiřadíme; dary přiřazené dříve zůstanou. Párování znovu zapnete tlačítkem „Zapnout párování“. Účet pak čeká na platbu:
+      pošlete z něj 1&nbsp;Kč (nebo jakýkoli dar) s vaším variabilním symbolem. Jakmile dorazí, přiřadíme vám z něj zase platby bez
+      symbolu i se starším potvrzeným symbolem ode dne zapnutí. U účtu, ze kterého přiřazujeme jen platby s variabilním symbolem,
+      párování znovu zapnout nejde.
+    </li>
+    <li i18n="@@donor.bankAccounts.help.shared">
+      <span class="help-lead">Sdílený účet</span> Když stejný účet ověří i jiný dárce, označíme ho jako „Sdílený“ a platby bez
+      variabilního symbolu ani se starším potvrzeným symbolem z něj nepřiřadíme nikomu. Pokud z něj dary neposíláte vy, vypněte si
+      u něj párování. Jinak z něj prosím posílejte vždy s vaším variabilním symbolem.
+    </li>
+  </ul>
+  <p class="help-contact" i18n="@@donor.bankAccounts.help.contact">
+    Chybí vám nějaký dar, nebo tu vidíte dar, který není váš? Napište nám na <a href="mailto:info@nfnn.cz">info&#64;nfnn.cz</a>.
+  </p>
+</div>

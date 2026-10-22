@@ -135,8 +135,21 @@ describe('Given a signed-in donor on the dashboard', () => {
     });
   }
 
+  function summaryWithReceiptsFrom2026(): DonationSummaryResponse {
+    return { ...twoYearSummary(), receiptsAvailableFrom: 2026 };
+  }
+
+  function donationsWithoutReceiptsBefore2026(): DonationListResponse {
+    const list = twoYearDonations();
+    return {
+      ...list,
+      items: list.items.map((item) => (item.receivedAt < '2026-01-01' ? { ...item, receiptAvailable: false } : item)),
+    };
+  }
+
   const yearlyUrl = (year: number): string => `/api/donations/me/receipts/yearly?year=${year}`;
   const secondRowButton = '.payments-card tbody tr:nth-child(2) .download-btn';
+  const thirdRowButton = '.payments-card tbody tr:nth-child(3) .download-btn';
 
   it('when the page opens, then it asks the bank for new payments while the donations load', async () => {
     expect(bankCheck.request.method).toBe('POST');
@@ -295,6 +308,26 @@ describe('Given a signed-in donor on the dashboard', () => {
     expect(text('.payments-card tbody tr:nth-child(2) .pairing-tag [aria-hidden="true"]')).toBe('bez VS · …5399/0800');
   });
 
+  it('when a donation was paired by a symbol the donor confirmed at their account, then its purpose carries a tag naming that symbol and the end of the account', async () => {
+    const list = twoYearDonations();
+    list.items[0] = donationItem({
+      id: 'd-4',
+      pairedBy: 'CONFIRMED_SYMBOL',
+      senderAccount: '19-2000145399/0800',
+      confirmedSymbol: '6123456789',
+    });
+
+    await respond(twoYearSummary(), list);
+
+    const tag = element('.payments-card tbody tr:first-child .pairing-tag');
+    const sentence =
+      'Přiřazeno podle účtu 19-2000145399/0800 a variabilního symbolu 6123456789, který jste u účtu potvrdili jako svůj';
+    expect(tag?.getAttribute('title')).toBe(sentence);
+    expect(normalized(tag?.querySelector('[aria-hidden="true"]')?.textContent ?? '')).toBe('VS 6123456789 · …5399/0800');
+    expect(normalized(tag?.querySelector('.visually-hidden')?.textContent ?? '')).toBe(sentence);
+    expect(texts('.pairing-tag')).toHaveLength(1);
+  });
+
   it('when donations were paired by the variable symbol or by hand, then they carry no tag', async () => {
     const list = twoYearDonations();
     list.items[0] = donationItem({ id: 'd-4', pairedBy: null, source: 'MANUAL' });
@@ -441,11 +474,37 @@ describe('Given a signed-in donor on the dashboard', () => {
     expect(element('.yearly-hint')).toBeNull();
   });
 
-  it('when a payment was refunded, then its row offers no receipt download', async () => {
+  it('when a payment was refunded, then its row offers no receipt download and no line says from when receipts are issued', async () => {
     await respond(twoYearSummary(), twoYearDonations());
 
     const rows = [...(fixture.nativeElement.querySelectorAll('.payments-card tbody tr') as NodeListOf<HTMLElement>)];
     expect(rows.map((row) => row.querySelector('.download-btn') !== null)).toEqual([true, true, true, false]);
+    expect(element('.receipts-from')).toBeNull();
+  });
+
+  it('when donations were received before the first receipt year, then their rows offer no download and a line under the payments says from when receipts are issued', async () => {
+    await respond(summaryWithReceiptsFrom2026(), donationsWithoutReceiptsBefore2026());
+
+    const rows = [...(fixture.nativeElement.querySelectorAll('.payments-card tbody tr') as NodeListOf<HTMLElement>)];
+    expect(rows.map((row) => row.querySelector('.download-btn') !== null)).toEqual([true, true, false, false]);
+    expect(rows.map((row) => row.querySelector('td.receipt')!.classList.contains('is-empty'))).toEqual([false, false, true, true]);
+    expect(text('.payments-card .receipts-from')).toBe(
+      'Potvrzení o daru tu vystavujeme za dary přijaté od 1. ledna 2026, u starších darů proto tlačítko „Stáhnout PDF“ chybí.',
+    );
+  });
+
+  it('when the selected year is before the first receipt year, then the yearly card offers no PDF and a line says from which year receipts are issued', async () => {
+    await respond(summaryWithReceiptsFrom2026(), donationsWithoutReceiptsBefore2026());
+
+    expect(text('.yearly-pdf')).toBe('↓ PDF za rok 2026');
+    expect(text('.yearly-hint')).toBe('Potvrzení za rok 2026 bude ke stažení po skončení roku.');
+
+    await clickYear('2025');
+
+    expect(text('.year-toggle button.is-active')).toBe('2025');
+    expect(element('.yearly-pdf')).toBeNull();
+    expect(text('#yearly-hint')).toBe('Potvrzení za rok tu vystavujeme za dary od roku 2026.');
+    expect(text('.yearly-count')).toBe('1 příspěvek v roce 2025');
   });
 
   it('when a download is running, then its button is disabled and says the PDF is being prepared until it arrives', async () => {
@@ -505,6 +564,23 @@ describe('Given a signed-in donor on the dashboard', () => {
     expect(text('.yearly-card [role="alert"]')).toBe('Za tento rok nemáme žádný dar');
   });
 
+  it('when the server issues no receipts for the selected year, then the yearly card shows the title of that problem', async () => {
+    await respond(twoYearSummary(), twoYearDonations());
+    await clickYear('2025');
+
+    await click('.yearly-pdf');
+    http
+      .expectOne(yearlyUrl(2025))
+      .flush(
+        problemBlob('donations/receipt-before-first-year', 'Za dary z této doby potvrzení na webu nevystavujeme', 400),
+        { status: 400, statusText: 'Bad Request' },
+      );
+    await settleBlobFailure();
+
+    expect(text('.yearly-card [role="alert"]')).toBe('Za dary z této doby potvrzení na webu nevystavujeme');
+    expect(savedFiles).toEqual([]);
+  });
+
   it('when the receipt of a payment is no longer available, then the problem title is shown and the payments are loaded again', async () => {
     await respond(twoYearSummary(), twoYearDonations());
 
@@ -517,12 +593,37 @@ describe('Given a signed-in donor on the dashboard', () => {
       });
     await settleBlobFailure();
     const refunded = twoYearDonations();
-    refunded.items[1] = donationItem({ id: 'd-3', receivedAt: '2026-01-10', amountMinor: 100000, status: 'REFUNDED' });
+    refunded.items[1] = donationItem({
+      id: 'd-3',
+      receivedAt: '2026-01-10',
+      amountMinor: 100000,
+      status: 'REFUNDED',
+      receiptAvailable: false,
+    });
     await respond(twoYearSummary(), refunded);
 
     expect(text('.payments-card [role="alert"]')).toBe('Potvrzení k tomuto daru nelze vystavit');
     expect(text('.payments-card tbody tr:nth-child(2)')).toContain('Vráceno');
     expect(element(secondRowButton)).toBeNull();
+  });
+
+  it('when the server issues no receipt for a payment from before the first receipt year, then the problem title is shown and the payments are loaded again', async () => {
+    await respond(twoYearSummary(), twoYearDonations());
+
+    await click(thirdRowButton);
+    http
+      .expectOne('/api/donations/me/d-2/receipt')
+      .flush(
+        problemBlob('donations/receipt-before-first-year', 'Za dary z této doby potvrzení na webu nevystavujeme', 400),
+        { status: 400, statusText: 'Bad Request' },
+      );
+    await settleBlobFailure();
+    await respond(summaryWithReceiptsFrom2026(), donationsWithoutReceiptsBefore2026());
+
+    expect(text('.payments-card [role="alert"]')).toBe('Za dary z této doby potvrzení na webu nevystavujeme');
+    expect(element(thirdRowButton)).toBeNull();
+    expect(text('.receipts-from')).toContain('od 1. ledna 2026');
+    expect(savedFiles).toEqual([]);
   });
 
   it('when the payments are loaded again after a missing receipt, then the year the donor had chosen stays selected', async () => {
@@ -604,10 +705,40 @@ describe('Given a signed-in donor on the dashboard', () => {
     expect(element('.year-toggle')).toBeNull();
     expect(element('.yearly-pdf')).toBeNull();
     expect(text('.yearly-empty')).toBe(
-      'Zatím jsme od vás žádný dar nepřijali. Jakmile dorazí platba s vaším variabilním symbolem, objeví se tady.',
+      'Zatím tu nemáme žádný váš dar. Jakmile dorazí platba s vaším variabilním symbolem, objeví se tady. Posíláte trvalým příkazem?',
     );
     expect(element('.payments-card table')).toBeNull();
     expect(text('.payments-empty')).toBe('Zatím tu není žádná platba.');
+  });
+
+  it('when the donor with no donations yet follows the standing order link, then the bank accounts card heading takes the focus and the address stays', async () => {
+    await respond(emptySummary(), emptyDonations());
+    const addressBefore = window.location.href;
+    const link = element('.yearly-empty a') as HTMLAnchorElement;
+    expect(normalized(link.textContent ?? '')).toBe('Posíláte trvalým příkazem?');
+    expect(link.getAttribute('href')).toBe('#bank-accounts-title');
+
+    const follow = new MouseEvent('click', { bubbles: true, cancelable: true });
+    link.dispatchEvent(follow);
+    await settle();
+
+    expect(document.activeElement).toBe(element('app-bank-accounts-card h2#bank-accounts-title'));
+    expect(follow.defaultPrevented).toBe(true);
+    expect(window.location.href).toBe(addressBefore);
+  });
+
+  it('when the bank accounts card says a confirmed symbol brought donations, then the summary and the payments load again without the loading line', async () => {
+    await respond(emptySummary(), emptyDonations());
+    const card = fixture.debugElement.query(By.directive(BankAccountsCard)).componentInstance as BankAccountsCard;
+
+    card.donationsChanged.emit();
+    await settle();
+
+    expect(element('.dashboard-loading')).toBeNull();
+    expect(element('.stats-grid')).not.toBeNull();
+    await respond(twoYearSummary(), twoYearDonations());
+    expect(texts('.stat-value')).toEqual(['1 750 Kč', '3', '15. 03. 2026']);
+    expect(texts('.payments-card tbody tr')).toHaveLength(twoYearDonations().items.length);
   });
 
   it('when the donations cannot be loaded, then an alert offers to try again and a retry asks for both again and shows them', async () => {

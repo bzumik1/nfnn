@@ -84,20 +84,22 @@
                     >{{ year }}</button>
                   }
                 </div>
-                <button
-                  type="button"
-                  class="yearly-pdf"
-                  [disabled]="!selectedYearCompleted() || yearlyDownloading(yearTotal.year)"
-                  [attr.aria-busy]="yearlyDownloading(yearTotal.year)"
-                  [attr.aria-describedby]="selectedYearCompleted() ? null : 'yearly-hint'"
-                  (click)="downloadYearlyReceipt()"
-                >
-                  @if (yearlyDownloading(yearTotal.year)) {
-                    <span i18n="@@donor.dashboard.receipt.preparing">Připravujeme PDF…</span>
-                  } @else {
-                    <span i18n="@@donor.dashboard.yearly.pdf">↓ PDF za rok</span> {{ yearTotal.year }}
-                  }
-                </button>
+                @if (selectedYearIssuable()) {
+                  <button
+                    type="button"
+                    class="yearly-pdf"
+                    [disabled]="!selectedYearCompleted() || yearlyDownloading(yearTotal.year)"
+                    [attr.aria-busy]="yearlyDownloading(yearTotal.year)"
+                    [attr.aria-describedby]="selectedYearCompleted() ? null : 'yearly-hint'"
+                    (click)="downloadYearlyReceipt()"
+                  >
+                    @if (yearlyDownloading(yearTotal.year)) {
+                      <span i18n="@@donor.dashboard.receipt.preparing">Připravujeme PDF…</span>
+                    } @else {
+                      <span i18n="@@donor.dashboard.yearly.pdf">↓ PDF za rok</span> {{ yearTotal.year }}
+                    }
+                  </button>
+                }
               </div>
             }
           </div>
@@ -111,7 +113,11 @@
                 {{ crowns(yearTotal.totalAmountMinor) }} Kč <span i18n="@@donor.dashboard.yearly.totalSuffix">celkem</span>
               </span>
             </div>
-            @if (!selectedYearCompleted()) {
+            @if (!selectedYearIssuable()) {
+              <p id="yearly-hint" class="yearly-hint" i18n="@@donor.dashboard.yearly.beforeReceipts">
+                Potvrzení za rok tu vystavujeme za dary od roku {{ receiptsFrom() }}.
+              </p>
+            } @else if (!selectedYearCompleted()) {
               <p id="yearly-hint" class="yearly-hint" i18n="@@donor.dashboard.yearly.notYetAvailable">
                 Potvrzení za rok {{ yearTotal.year }} bude ke stažení po skončení roku.
               </p>
@@ -122,8 +128,12 @@
               }
             }
           } @else {
-            <p class="yearly-empty" i18n="@@donor.dashboard.yearly.empty">
-              Zatím jsme od vás žádný dar nepřijali. Jakmile dorazí platba s vaším variabilním symbolem, objeví se tady.
+            <p class="yearly-empty">
+              <span i18n="@@donor.dashboard.yearly.empty">Zatím tu nemáme žádný váš dar. Jakmile dorazí platba s vaším variabilním symbolem, objeví se tady.</span>&ngsp;<a
+                href="#bank-accounts-title"
+                (click)="showBankAccounts($event)"
+                i18n="@@donor.dashboard.yearly.emptyStandingOrder"
+              >Posíláte trvalým příkazem?</a>
             </p>
           }
         </div>
@@ -185,12 +195,22 @@
                           <span class="visually-hidden" i18n="@@donor.dashboard.payments.pairedByAccount">Přiřazeno podle účtu {{ item.senderAccount }}, platba přišla bez variabilního symbolu</span>
                         </span>
                       }
+                      @if (item.pairedBy === 'CONFIRMED_SYMBOL' && item.senderAccount && item.confirmedSymbol) {
+                        <span
+                          class="pairing-tag"
+                          title="Přiřazeno podle účtu {{ item.senderAccount }} a variabilního symbolu {{ item.confirmedSymbol }}, který jste u účtu potvrdili jako svůj"
+                          i18n-title="@@donor.dashboard.payments.pairedByConfirmedSymbolTitle"
+                        >
+                          <span aria-hidden="true"><span i18n="@@donor.dashboard.payments.symbolPrefix">VS</span> {{ item.confirmedSymbol }} · {{ senderAccountEnd(item.senderAccount) }}</span>
+                          <span class="visually-hidden" i18n="@@donor.dashboard.payments.pairedByConfirmedSymbol">Přiřazeno podle účtu {{ item.senderAccount }} a variabilního symbolu {{ item.confirmedSymbol }}, který jste u účtu potvrdili jako svůj</span>
+                        </span>
+                      }
                     </td>
                     <td data-label="Stav" i18n-data-label="@@donor.dashboard.payments.col.status">
                       <span class="status-pill" [class.status-pill--refunded]="item.status === 'REFUNDED'">{{ statusLabel(item.status) }}</span>
                     </td>
-                    <td class="receipt" [class.is-empty]="item.status === 'REFUNDED'" data-label="Potvrzení" i18n-data-label="@@donor.dashboard.payments.col.receipt">
-                      @if (item.status !== 'REFUNDED') {
+                    <td class="receipt" [class.is-empty]="!item.receiptAvailable" data-label="Potvrzení" i18n-data-label="@@donor.dashboard.payments.col.receipt">
+                      @if (item.receiptAvailable) {
                         <button
                           type="button"
                           class="download-btn"
@@ -210,6 +230,11 @@
                 }
               </tbody>
             </table>
+            @if (receivedWithoutReceipt()) {
+              <p class="receipts-from" i18n="@@donor.dashboard.payments.receiptsFrom">
+                Potvrzení o daru tu vystavujeme za dary přijaté od 1.&nbsp;ledna&nbsp;{{ receiptsFrom() }}, u starších darů proto tlačítko „Stáhnout PDF“ chybí.
+              </p>
+            }
           } @else {
             <p class="payments-empty" i18n="@@donor.dashboard.payments.empty">Zatím tu není žádná platba.</p>
           }
@@ -226,6 +251,7 @@
       [variableSymbol]="donor()?.variableSymbol ?? null"
       (sessionEnded)="sendToSignIn()"
       (bankChecked)="bankCheckedWhileAdding($event)"
+      (donationsChanged)="fetchDonations()"
     />
 
     <app-profile-card (sessionEnded)="sendToSignIn()" />

@@ -66,60 +66,6 @@
   }
 }
 
-.accounts-help-panel {
-  margin-bottom: 16px;
-  padding: 14px 16px;
-  background: var(--color-surface-accent);
-  border: 1px solid var(--color-border-accent);
-  border-radius: var(--radius-md);
-  font-size: 14px;
-  line-height: 1.6;
-  color: var(--color-text-secondary);
-}
-
-.help-title {
-  font-family: var(--font-serif);
-  font-size: 16px;
-  font-weight: 700;
-  color: var(--color-text);
-  margin-bottom: 12px;
-}
-
-.help-list,
-.help-contact {
-  max-width: 520px;
-}
-
-.help-list {
-  display: grid;
-  gap: 10px;
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-.help-lead {
-  display: block;
-  font-weight: 700;
-  color: var(--color-text);
-}
-
-.help-symbol {
-  font-family: var(--font-mono);
-  font-weight: 700;
-  color: var(--color-text);
-  white-space: nowrap;
-}
-
-.help-contact {
-  margin-top: 12px;
-
-  a {
-    color: var(--color-accent);
-    overflow-wrap: anywhere;
-  }
-}
-
 .accounts-add,
 .account-action,
 .account-confirm-no,
@@ -304,6 +250,21 @@
   color: var(--color-text-muted);
 }
 
+.accounts-nudge {
+  margin-top: 14px;
+  max-width: 560px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--color-text-muted);
+}
+
+.account-hint strong,
+.accounts-nudge strong {
+  font-family: var(--font-mono);
+  color: var(--color-text);
+  white-space: nowrap;
+}
+
 .account-hint--warning {
   display: flex;
   align-items: flex-start;
@@ -405,6 +366,10 @@
     font-weight: 700;
     white-space: nowrap;
   }
+}
+
+.add-account-text + .add-account-text {
+  margin-top: 10px;
 }
 
 .add-account-payment {

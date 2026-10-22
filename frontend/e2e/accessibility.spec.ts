@@ -1,8 +1,37 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, Page, test } from '@playwright/test';
-import { mockDonorApi, openSignInDialog, signIn } from './donor-session';
+import { bankAccountItem, mockDonorApi, openSignInDialog, signIn } from './donor-session';
 
 const WCAG_AA = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
+
+async function askAboutAnOlderSymbol(page: Page): Promise<void> {
+  let confirmed = false;
+  await page.route(
+    (url) => url.pathname === '/api/donations/me/bank-accounts',
+    (route) =>
+      route.fulfill({
+        json: {
+          items: [
+            bankAccountItem({
+              accountNumber: '19-2000145399/0800',
+              verificationPaymentOn: '2026-10-16',
+              symbolOffer: confirmed
+                ? null
+                : { variableSymbol: '6123456789', paymentCount: 14, firstMonth: '2025-01', lastMonth: '2026-10' },
+              confirmedSymbols: confirmed ? ['6123456789'] : [],
+            }),
+          ],
+        },
+      }),
+  );
+  await page.route(
+    (url) => url.pathname.endsWith('/symbol-claim/confirm'),
+    (route) => {
+      confirmed = true;
+      return route.fulfill({ json: { pairedCount: 14, changedYearlyReceipts: [] } });
+    },
+  );
+}
 
 async function violations(page: Page): Promise<string[]> {
   await page.evaluate(() => document.fonts.ready);
@@ -88,34 +117,17 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
         route.fulfill({
           json: {
             items: [
-              {
-                id: '0192f0c4-0000-7000-8000-000000000001',
-                accountNumber: '2900233333/2010',
-                status: 'ACTIVE',
-                verifiedOn: '2026-10-17',
-                connectedFrom: null,
-                disconnectedOn: null,
-                donationCount: 0,
-                totalAmountMinor: 0,
-                currency: 'CZK',
-                lastDonationOn: null,
-                shared: true,
-                pairingExcluded: false,
-              },
-              {
+              bankAccountItem({ shared: true }),
+              bankAccountItem({
                 id: '0192f0c4-0000-7000-8000-000000000002',
                 accountNumber: '19-2000145399/0800',
                 status: 'DISCONNECTED',
                 verifiedOn: '2026-03-12',
-                connectedFrom: null,
                 disconnectedOn: '2026-09-30',
                 donationCount: 2,
                 totalAmountMinor: 80000,
-                currency: 'CZK',
                 lastDonationOn: '2026-09-12',
-                shared: false,
-                pairingExcluded: false,
-              },
+              }),
             ],
           },
         }),
@@ -126,6 +138,21 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
 
     await page.getByRole('button', { name: 'Vypnout párování' }).click();
     await expect(page.getByRole('button', { name: 'Nechat zapnuté' })).toBeFocused();
+
+    expect(await violations(page)).toEqual([]);
+  });
+
+  test('when a signed-in donor is asked about an older symbol and answers it, then neither the question nor the answer breaks a rule', async ({ page }) => {
+    await askAboutAnOlderSymbol(page);
+    await signIn(page);
+    const question = page.getByRole('group', { name: /Z tohoto účtu k nám chodí i platby s variabilním symbolem 6123456789/ });
+    await expect(question).toBeVisible();
+
+    expect(await violations(page)).toEqual([]);
+
+    await question.getByRole('button', { name: 'Ano, jsou moje' }).click();
+    await expect(page.locator('.accounts-status')).toHaveText('Přiřadili jsme vám 14 plateb s VS 6123456789 z účtu 19-2000145399/0800.');
+    await expect(question).toHaveCount(0);
 
     expect(await violations(page)).toEqual([]);
   });
@@ -221,6 +248,23 @@ test.describe('Given a visitor on a phone who relies on WCAG 2.2 AA', () => {
 
     await expect(panel).toBeHidden();
     await expect(helpButton).toBeFocused();
+  });
+
+  test('when a signed-in donor is asked about an older symbol on a 360 px phone, then the question fits the screen and both answers are big enough to tap', async ({ page }) => {
+    await askAboutAnOlderSymbol(page);
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await signIn(page);
+    await page.setViewportSize({ width: 360, height: 800 });
+    const question = page.getByRole('group', { name: /Z tohoto účtu k nám chodí/ });
+    await expect(question).toBeVisible();
+
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(360);
+    for (const name of ['Ano, jsou moje', 'Ne, nejsou moje']) {
+      const size = await question.getByRole('button', { name }).boundingBox();
+      expect(size?.width).toBeGreaterThanOrEqual(24);
+      expect(size?.height).toBeGreaterThanOrEqual(24);
+    }
+    expect(await violations(page)).toEqual([]);
   });
 
   test('when they open the sign-in dialog, then it fills the screen and nothing in it breaks the rules', async ({ page }) => {

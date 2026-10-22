@@ -25,11 +25,19 @@ import { describeProblem, problemOf, problemTypeEndsWith } from '../../../../cor
 import { AuthStore } from '../../../../core/auth/auth-store';
 import { CopyButton } from '../../../../shared/ui/copy-button/copy-button';
 import { Dialog } from '../../../../shared/ui/dialog/dialog';
-import { BankAccountItem, BankAccountListResponse, BankAccountsApi } from '../../../donations/bank-accounts-api';
+import {
+  BankAccountItem,
+  BankAccountListResponse,
+  BankAccountsApi,
+  SymbolClaimConfirmation,
+  SymbolOffer,
+} from '../../../donations/bank-accounts-api';
 import { formatCrowns } from '../../../donations/donation-amount';
 import { formatDonationDate } from '../../../donations/donation-date';
 import { BankCheckResponse, DonationsApi } from '../../../donations/donations-api';
 import { PaymentQrApi, PaymentQrResponse } from '../../../donations/payment-qr-api';
+import { PairingHelp } from './pairing-help/pairing-help';
+import { SymbolClaim, SymbolClaimAnswer } from './symbol-claim/symbol-claim';
 
 type ListState = 'loading' | 'ready' | 'error';
 
@@ -38,6 +46,13 @@ type QrState = { readonly kind: 'loading' } | { readonly kind: 'ready'; readonly
 type PaymentWatch = 'waiting' | 'stopped';
 
 type AccountLabel = 'active' | 'shared' | 'awaiting' | 'excluded' | 'disconnected';
+
+type PluralForm = 'one' | 'few' | 'many';
+
+interface AccountsWhenOpened {
+  readonly active: ReadonlySet<string>;
+  readonly verificationPaymentOn: ReadonlyMap<string, string | null>;
+}
 
 const LABELS: Record<AccountLabel, string> = {
   active: $localize`:@@donor.bankAccounts.status.active:Ověřený`,
@@ -62,6 +77,8 @@ const EXCLUDED_DISCONNECTED_HINT = $localize`:@@donor.bankAccounts.hint.excluded
 const DISCONNECTED_MESSAGE = $localize`:@@donor.bankAccounts.disconnected:Párování z účtu jsme vypnuli.`;
 const RECONNECTED_MESSAGE = $localize`:@@donor.bankAccounts.reconnected:Účet čeká na vaši platbu 1 Kč.`;
 const CHANGE_FAILED = $localize`:@@donor.bankAccounts.error.change:Účet se nepodařilo změnit. Zkuste to prosím znovu.`;
+const ANSWER_FAILED = $localize`:@@donor.bankAccounts.error.answer:Odpověď se nepodařilo uložit. Zkuste to prosím znovu.`;
+const AND = $localize`:@@donor.bankAccounts.claim.and:a`;
 
 const UNAUTHENTICATED = 'auth/unauthenticated';
 const STALE_LIST_STATUSES = [404, 409];
@@ -72,7 +89,7 @@ const PAYMENT_WATCH_CHECKS = 20;
 
 @Component({
   selector: 'app-bank-accounts-card',
-  imports: [Dialog, CopyButton, NgTemplateOutlet],
+  imports: [Dialog, CopyButton, NgTemplateOutlet, PairingHelp, SymbolClaim],
   templateUrl: './bank-accounts-card.html',
   styleUrl: './bank-accounts-card.scss',
 })
@@ -89,6 +106,9 @@ export class BankAccountsCard {
   readonly variableSymbol = input<string | null>(null);
   readonly sessionEnded = output<void>();
   readonly bankChecked = output<BankCheckResponse>();
+  readonly donationsChanged = output<void>();
+
+  protected readonly donorName = computed(() => this.auth.donor()?.name ?? '');
 
   private readonly title = viewChild<ElementRef<HTMLElement>>('title');
   private readonly confirmCancel = viewChild<ElementRef<HTMLButtonElement>>('confirmCancel');
@@ -113,13 +133,19 @@ export class BankAccountsCard {
   private qrRequest: Subscription | undefined;
 
   protected readonly paymentWatch = signal<PaymentWatch>('waiting');
-  private readonly activeWhenOpened = signal<ReadonlySet<string> | null>(null);
+  private readonly accountsWhenOpened = signal<AccountsWhenOpened | null>(null);
   protected readonly newlyVerified = computed(() => {
-    const known = this.activeWhenOpened();
+    const known = this.accountsWhenOpened();
     if (!this.adding() || known === null) {
       return null;
     }
-    return this.accounts().find((account) => account.status === 'ACTIVE' && !known.has(account.id)) ?? null;
+    return (
+      this.accounts().find(
+        (account) =>
+          account.status === 'ACTIVE' &&
+          (!known.active.has(account.id) || known.verificationPaymentOn.get(account.id) !== account.verificationPaymentOn),
+      ) ?? null
+    );
   });
   private watchRequest: Subscription | undefined;
 
@@ -133,6 +159,10 @@ export class BankAccountsCard {
 
   reload(): void {
     this.fetch();
+  }
+
+  focusTitle(): void {
+    this.title()?.nativeElement.focus();
   }
 
   protected toggleHelp(): void {
@@ -157,7 +187,7 @@ export class BankAccountsCard {
         next: ({ items }) => {
           this.showAccounts(items);
           if (focusTitle) {
-            afterNextRender(() => this.title()?.nativeElement.focus(), { injector: this.injector });
+            afterNextRender(() => this.focusTitle(), { injector: this.injector });
           }
         },
         error: (failure: unknown) => {
@@ -173,8 +203,8 @@ export class BankAccountsCard {
   private showAccounts(items: readonly BankAccountItem[]): void {
     this.accounts.set(items);
     this.state.set('ready');
-    if (this.adding() && this.activeWhenOpened() === null) {
-      this.activeWhenOpened.set(activeIds(items));
+    if (this.adding() && this.accountsWhenOpened() === null) {
+      this.accountsWhenOpened.set(accountsWhenOpened(items));
     }
   }
 
@@ -198,6 +228,14 @@ export class BankAccountsCard {
 
   protected warns(account: BankAccountItem): boolean {
     return labelOf(account) === 'shared';
+  }
+
+  protected wasActiveWhenOpened(account: BankAccountItem): boolean {
+    return this.accountsWhenOpened()?.active.has(account.id) ?? false;
+  }
+
+  protected symbolList(symbols: readonly string[]): string {
+    return joinedList(symbols);
   }
 
   protected offersReconnect(account: BankAccountItem): boolean {
@@ -238,22 +276,44 @@ export class BankAccountsCard {
   }
 
   protected disconnect(account: BankAccountItem): void {
-    this.change(account, this.api.disconnect(account.id), DISCONNECTED_MESSAGE);
+    this.run(account, this.api.disconnect(account.id).pipe(map(() => DISCONNECTED_MESSAGE)), CHANGE_FAILED);
   }
 
   protected reconnect(account: BankAccountItem): void {
-    this.actionDone.set('');
-    this.change(account, this.api.reconnect(account.id), RECONNECTED_MESSAGE);
+    this.run(account, this.api.reconnect(account.id).pipe(map(() => RECONNECTED_MESSAGE)), CHANGE_FAILED);
   }
 
-  private change(account: BankAccountItem, request$: Observable<void>, doneMessage: string): void {
+  protected answer(account: BankAccountItem, offer: SymbolOffer, answer: SymbolClaimAnswer): void {
+    const request$ = answer === 'confirm' ? this.confirmSymbol(account, offer) : this.declineSymbol(account, offer);
+    this.run(account, request$, ANSWER_FAILED);
+  }
+
+  private confirmSymbol(account: BankAccountItem, offer: SymbolOffer): Observable<string> {
+    return this.api.confirmSymbol(account.id, offer.variableSymbol).pipe(
+      tap(({ pairedCount }) => {
+        if (pairedCount > 0) {
+          this.donationsChanged.emit();
+        }
+      }),
+      map((confirmation) => confirmedMessage(confirmation, offer.variableSymbol, account.accountNumber)),
+    );
+  }
+
+  private declineSymbol(account: BankAccountItem, offer: SymbolOffer): Observable<string> {
+    return this.api
+      .declineSymbol(account.id, offer.variableSymbol)
+      .pipe(map(() => declinedMessage(offer.variableSymbol, account.accountNumber)));
+  }
+
+  private run(account: BankAccountItem, request$: Observable<string>, failedMessage: string): void {
     if (this.busy() !== null) {
       return;
     }
     this.busy.set(account.id);
     this.actionError.set('');
+    this.actionDone.set('');
     request$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: () => {
+      next: (doneMessage) => {
         this.busy.set(null);
         this.confirming.set(null);
         this.actionDone.set(doneMessage);
@@ -265,10 +325,10 @@ export class BankAccountsCard {
           this.sessionEnded.emit();
           return;
         }
-        this.actionError.set(describeProblem(failure, CHANGE_FAILED));
+        this.actionError.set(describeProblem(failure, failedMessage));
         if (STALE_LIST_STATUSES.includes(problemOf(failure)?.status ?? 0)) {
           this.confirming.set(null);
-          this.fetch();
+          this.fetch(true);
         }
       },
     });
@@ -277,9 +337,9 @@ export class BankAccountsCard {
   protected openAdd(): void {
     this.adding.set(true);
     if (this.state() === 'ready') {
-      this.activeWhenOpened.set(activeIds(this.accounts()));
+      this.accountsWhenOpened.set(accountsWhenOpened(this.accounts()));
     } else {
-      this.activeWhenOpened.set(null);
+      this.accountsWhenOpened.set(null);
       this.fetch();
     }
     this.loadQr();
@@ -290,7 +350,7 @@ export class BankAccountsCard {
     this.qrRequest?.unsubscribe();
     this.watchRequest?.unsubscribe();
     this.adding.set(false);
-    this.activeWhenOpened.set(null);
+    this.accountsWhenOpened.set(null);
   }
 
   protected watchAgain(): void {
@@ -379,8 +439,58 @@ function labelOf(account: BankAccountItem): AccountLabel {
   }
 }
 
-function activeIds(items: readonly BankAccountItem[]): ReadonlySet<string> {
-  return new Set(items.filter((account) => account.status === 'ACTIVE').map((account) => account.id));
+function accountsWhenOpened(items: readonly BankAccountItem[]): AccountsWhenOpened {
+  return {
+    active: new Set(items.filter((account) => account.status === 'ACTIVE').map((account) => account.id)),
+    verificationPaymentOn: new Map(items.map((account) => [account.id, account.verificationPaymentOn])),
+  };
+}
+
+function confirmedMessage({ pairedCount, changedYearlyReceipts }: SymbolClaimConfirmation, symbol: string, account: string): string {
+  const paired = pairedMessage(pairedCount, symbol, account);
+  return changedYearlyReceipts.length > 0 ? `${paired} ${receiptsChangedMessage(changedYearlyReceipts)}` : paired;
+}
+
+function pairedMessage(count: number, symbol: string, account: string): string {
+  if (count === 0) {
+    return $localize`:@@donor.bankAccounts.claim.paired.none:Odpověď jsme uložili. Platby s VS ${symbol}:symbol: z účtu ${account}:account: vám přiřazujeme stejně jako platby bez VS.`;
+  }
+  switch (pluralForm(count)) {
+    case 'one':
+      return $localize`:@@donor.bankAccounts.claim.paired.one:Přiřadili jsme vám 1 platbu s VS ${symbol}:symbol: z účtu ${account}:account:.`;
+    case 'few':
+      return $localize`:@@donor.bankAccounts.claim.paired.few:Přiřadili jsme vám ${count}:count: platby s VS ${symbol}:symbol: z účtu ${account}:account:.`;
+    case 'many':
+      return $localize`:@@donor.bankAccounts.claim.paired.many:Přiřadili jsme vám ${count}:count: plateb s VS ${symbol}:symbol: z účtu ${account}:account:.`;
+  }
+}
+
+function receiptsChangedMessage(years: readonly number[]): string {
+  const sorted = [...years].sort((first, second) => first - second);
+  if (sorted.length === 1) {
+    const year = sorted[0];
+    return $localize`:@@donor.bankAccounts.claim.receiptChanged:Potvrzení za rok ${year}:year: se změnilo, stáhněte si nové.`;
+  }
+  const list = joinedList(sorted.map(String));
+  return $localize`:@@donor.bankAccounts.claim.receiptsChanged:Potvrzení za roky ${list}:years: se změnila, stáhněte si nová.`;
+}
+
+function declinedMessage(symbol: string, account: string): string {
+  return $localize`:@@donor.bankAccounts.claim.declined:Odpověď jsme uložili. Platby s VS ${symbol}:symbol: z účtu ${account}:account: vám nepřiřadíme.`;
+}
+
+function pluralForm(count: number): PluralForm {
+  if (count === 1) {
+    return 'one';
+  }
+  return count >= 2 && count <= 4 ? 'few' : 'many';
+}
+
+function joinedList(values: readonly string[]): string {
+  if (values.length < 2) {
+    return values.join('');
+  }
+  return `${values.slice(0, -1).join(', ')} ${AND} ${values[values.length - 1]}`;
 }
 
 function actionButtonId(account: BankAccountItem): string {

@@ -43,9 +43,49 @@ export const noDonations: DonorApiMock = {
     lastReceivedAt: null,
     byYear: [],
     yearlyReceiptsAvailableThrough: 2025,
+    receiptsAvailableFrom: 2026,
   },
   list: { items: [], totalAmountMinor: 0, currency: 'CZK', count: 0 },
 };
+
+export function donationItem(overrides: Record<string, unknown> = {}) {
+  return {
+    id: '0192f0f1-0000-7000-8000-000000000001',
+    receiptNumber: null,
+    receivedAt: '2026-03-15',
+    amountMinor: 50000,
+    currency: 'CZK',
+    purpose: 'Obecný příspěvek',
+    status: 'RECEIVED',
+    source: 'BANK_TRANSFER',
+    pairedBy: 'VARIABLE_SYMBOL',
+    senderAccount: null,
+    confirmedSymbol: null,
+    receiptAvailable: true,
+    ...overrides,
+  };
+}
+
+export function bankAccountItem(overrides: Record<string, unknown> = {}) {
+  return {
+    id: '0192f0c4-0000-7000-8000-000000000001',
+    accountNumber: '2900233333/2010',
+    status: 'ACTIVE',
+    verifiedOn: '2026-10-17',
+    connectedFrom: null,
+    disconnectedOn: null,
+    donationCount: 0,
+    totalAmountMinor: 0,
+    currency: 'CZK',
+    lastDonationOn: null,
+    shared: false,
+    pairingExcluded: false,
+    verificationPaymentOn: null,
+    symbolOffer: null,
+    confirmedSymbols: [],
+    ...overrides,
+  };
+}
 
 export function receiptPdf(fileName: string) {
   return {

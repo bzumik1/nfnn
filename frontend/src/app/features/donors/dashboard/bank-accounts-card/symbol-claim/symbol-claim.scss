@@ -1,0 +1,70 @@
+:host {
+  display: block;
+}
+
+.claim {
+  margin-top: 10px;
+  max-width: 560px;
+  padding: 12px 14px;
+  background: var(--color-surface-accent);
+  border: 1px solid var(--color-border-accent);
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--color-text-secondary);
+}
+
+.claim-question {
+  color: var(--color-text);
+  font-weight: 500;
+}
+
+.claim-symbol {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.claim-note {
+  margin-top: 6px;
+  font-size: 13px;
+
+  a {
+    color: var(--color-accent);
+    overflow-wrap: anywhere;
+  }
+}
+
+.claim-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.claim-yes,
+.claim-no {
+  min-height: 32px;
+  padding: 6px 16px;
+  border: 1.5px solid var(--color-accent);
+  border-radius: var(--radius-pill);
+  font-family: var(--font-sans);
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+
+  &[aria-disabled='true'] {
+    cursor: progress;
+    opacity: 0.7;
+  }
+}
+
+.claim-yes {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+}
+
+.claim-no {
+  background: var(--color-surface);
+  color: var(--color-accent);
+}
