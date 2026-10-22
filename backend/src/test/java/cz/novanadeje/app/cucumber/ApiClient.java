@@ -60,6 +60,10 @@ public class ApiClient {
         return exchange(HttpMethod.GET, path, null);
     }
 
+    public ResponseEntity<String> delete(String path) {
+        return exchange(HttpMethod.DELETE, path, null);
+    }
+
     public ResponseEntity<byte[]> getBytes(String path) {
         ResponseEntity<byte[]> response = client.get()
                 .uri(path)

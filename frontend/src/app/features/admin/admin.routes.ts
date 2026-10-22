@@ -13,4 +13,10 @@ export const adminRoutes: Routes = [
     title: $localize`:@@admin.payments.pageTitle:Platby z banky | Správa | Nová naděje – nadační fond`,
     loadComponent: () => import('./payments/admin-payments').then((m) => m.AdminPayments),
   },
+  {
+    path: 'spravci',
+    title: $localize`:@@admin.administrators.pageTitle:Správci | Správa | Nová naděje – nadační fond`,
+    loadComponent: () =>
+      import('./administrators/admin-administrators').then((m) => m.AdminAdministrators),
+  },
 ];

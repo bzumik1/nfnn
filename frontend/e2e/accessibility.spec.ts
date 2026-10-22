@@ -310,6 +310,50 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     expect(await violations(page)).toEqual([]);
   });
 
+  test('when an administrator manages the administrators, then the page, its form and the confirmations break no rule', async ({
+    page,
+  }) => {
+    await page.route(
+      (url) => url.pathname === '/api/admin/donors/administrators',
+      (route) =>
+        route.fulfill({
+          json: {
+            items: [
+              {
+                donorId: administrator.id,
+                name: 'Jana Nováková',
+                email: 'jana@example.cz',
+                secondFactorEnabled: true,
+              },
+              {
+                donorId: '019a1c00-0000-7000-8000-00000000a002',
+                name: 'Petr Svoboda',
+                email: 'petr@example.cz',
+                secondFactorEnabled: true,
+              },
+            ],
+          },
+        }),
+    );
+    await page.route('**/api/donors/auth/refresh', (route) =>
+      route.fulfill(session(200, administrator)),
+    );
+    await page.goto('/');
+    await page.evaluate(() => localStorage.setItem('nfnn.donor-session', '1'));
+    await page.goto('/sprava/spravci');
+    await expect(page.getByRole('heading', { level: 1, name: 'Správci' })).toBeFocused();
+    await expect(page.locator('tbody tr')).toHaveCount(2);
+
+    expect(await violations(page)).toEqual([]);
+
+    await page.locator('tbody tr').nth(1).getByRole('button', { name: 'Odebrat' }).click();
+    await expect(page.locator('tbody tr').nth(1)).toContainText('Opravdu odebrat?');
+    await page.getByRole('button', { name: 'Přidat správce' }).click();
+    await expect(page.getByLabel('E-mail dárce')).toBeFocused();
+
+    expect(await violations(page)).toEqual([]);
+  });
+
   test('when a signed-in donor edits their data, then the form breaks no rule either', async ({
     page,
   }) => {

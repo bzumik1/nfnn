@@ -140,7 +140,7 @@ test.describe('Given an administrator with an unpaired bank payment', () => {
     await dialog.getByRole('button', { name: 'Přiřadit' }).click();
 
     await expect(dialog).toHaveCount(0);
-    await expect(page.getByRole('status')).toHaveText(
+    await expect(page.getByRole('status').filter({ hasNotText: 'Načítáme' })).toHaveText(
       'Platba 500 Kč z 10. 10. 2026 je přiřazena dárci Jana Nováková. Dárce si už stáhl roční potvrzení za 2026; při dalším stažení dostane nové. Dejte mu prosím vědět.',
     );
     await expect(page.locator('.admin-empty')).toContainText(
@@ -196,7 +196,9 @@ test.describe('Given an administrator with an unpaired bank payment', () => {
     await page.getByRole('button', { name: 'Zrušit přiřazení' }).click();
     await page.getByRole('button', { name: 'Ano, zrušit' }).click();
 
-    await expect(page.getByRole('status')).toContainText('už není přiřazena');
+    await expect(page.getByRole('status').filter({ hasNotText: 'Načítáme' })).toContainText(
+      'už není přiřazena',
+    );
     await expect(page.locator('.admin-empty')).toHaveText('Zatím není přiřazena žádná platba.');
 
     await page.getByRole('button', { name: 'Nespárované', exact: true }).click();

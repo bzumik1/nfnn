@@ -153,6 +153,18 @@ public final class Donor {
         return roles.contains(Role.ADMIN);
     }
 
+    public void grantAdministration() {
+        if (!roles.add(Role.ADMIN)) {
+            throw new AlreadyAdministrator(id);
+        }
+    }
+
+    public void revokeAdministration() {
+        if (!roles.remove(Role.ADMIN)) {
+            throw new NotAdministrator(id);
+        }
+    }
+
     public Instant registeredAt() {
         return registeredAt;
     }

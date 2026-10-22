@@ -180,4 +180,19 @@ describe('Given an administrator on the administration home', () => {
     expect(navigate).toHaveBeenCalledWith('/');
     expect(TestBed.inject(LoginDialogService).isOpen()).toBe(true);
   });
+  it('when the home is shown, then it links to the bank payments and the administrators', async () => {
+    http.expectOne(IMPORT_STATE_URL).flush(importState());
+    fixture.detectChanges();
+
+    const links = Array.from(
+      fixture.nativeElement.querySelectorAll('nav.admin-links a') as NodeListOf<HTMLAnchorElement>,
+    ).map((link) => [
+      link.getAttribute('href'),
+      link.querySelector('.admin-link-title')?.textContent?.trim(),
+    ]);
+    expect(links).toEqual([
+      ['/sprava/platby', 'Platby z banky'],
+      ['/sprava/spravci', 'Správci'],
+    ]);
+  });
 });
