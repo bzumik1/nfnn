@@ -85,4 +85,5 @@ tasks.withType<Test> {
 	systemProperty("cucumber.junit-platform.naming-strategy", "long")
 	environment("TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE", "/var/run/docker.sock")
 	inputs.file("../deploy/README.md").withPropertyName("deployReadme").withPathSensitivity(PathSensitivity.NONE)
+	inputs.file("../frontend/src/styles/themes/_nova-nadeje.scss").withPropertyName("siteTheme").withPathSensitivity(PathSensitivity.NONE)
 }

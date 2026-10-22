@@ -1,20 +1,18 @@
 <!DOCTYPE html>
 <html lang="cs" xmlns:th="http://www.thymeleaf.org">
-<head>
-    <meta charset="UTF-8">
-    <title th:text="${title}">Měsíční přehled – září 2026</title>
-</head>
-<body style="margin: 0; padding: 24px; background: #f5f5f7; font-family: Arial, sans-serif; color: #1a1a2e; line-height: 1.6;">
-<div style="max-width: 560px; margin: 0 auto; background: #ffffff; border-radius: 8px; padding: 32px;">
-    <h1 style="font-size: 22px; margin: 0 0 24px;" th:text="${title}">Měsíční přehled – září 2026</h1>
+<body>
+<th:block th:fragment="content">
     <p style="margin: 0 0 16px;" th:text="${greeting}">Dobrý den,</p>
-    <p style="margin: 0 0 24px;" th:text="${intro}">posíláme měsíční přehled dárcovského portálu Nová naděje za září 2026.</p>
+    <p style="margin: 0 0 8px;" th:text="${intro}">posíláme měsíční přehled dárcovského portálu Nová naděje za září 2026.</p>
     <th:block th:each="section : ${sections}">
-        <h2 style="font-size: 16px; margin: 24px 0 8px;" th:text="${section.heading()}">Dárci</h2>
+        <h2 style="margin: 24px 0 8px; font-family: 'Playfair Display', Georgia, 'Times New Roman', serif; font-size: 18px; line-height: 1.3; font-weight: 700; color: #1a1a2e;"
+            th:text="${section.heading()}">Dárci</h2>
         <p style="margin: 0 0 4px;" th:each="line : ${section.lines()}" th:text="${line}">Registrovaní dárci k 30. 9. 2026: 2</p>
     </th:block>
-    <p style="margin: 32px 0 24px; color: #5b6474; font-size: 13px;" th:text="${footer}">Tento přehled posílá web automaticky jednou za měsíc.</p>
-    <p style="margin: 0;" th:text="${signature}">Nová naděje – nadační fond</p>
-</div>
+    <p style="margin: 28px 0 0;">
+        <span th:text="${regards}">S pozdravem</span><br>
+        <span style="font-family: 'Playfair Display', Georgia, serif; font-size: 17px; font-style: italic; color: #1a1a2e;" th:text="${signature}">Nová naděje – nadační fond</span>
+    </p>
+</th:block>
 </body>
 </html>

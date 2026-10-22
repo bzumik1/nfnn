@@ -9,8 +9,9 @@ import cz.novanadeje.app.donations.domain.report.MonthlyReport;
 import cz.novanadeje.app.donations.domain.report.ReportMonth;
 import cz.novanadeje.app.donations.domain.report.Tally;
 import cz.novanadeje.app.shared.domain.Money;
-import cz.novanadeje.app.shared.infrastructure.mail.MailSenderProperties;
+import cz.novanadeje.app.support.Emails;
 import cz.novanadeje.app.support.MailContents;
+import cz.novanadeje.app.support.MailPreviews;
 import jakarta.mail.Message;
 import jakarta.mail.Session;
 import jakarta.mail.internet.InternetAddress;
@@ -19,11 +20,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
-import org.springframework.context.support.ResourceBundleMessageSource;
 import org.springframework.mail.MailSendException;
 import org.springframework.mail.javamail.JavaMailSender;
-import org.thymeleaf.ITemplateEngine;
-import org.thymeleaf.context.IContext;
 
 import java.time.Instant;
 import java.util.Optional;
@@ -32,7 +30,6 @@ import java.util.Properties;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -47,14 +44,12 @@ class MonthlyReportEmailSenderTest {
             new Tally(3, Money.czk(173450)), new Tally(1, Money.czk(15000)), new BankImportStatus(Optional.of(SUCCEEDED_AT), Optional.empty()));
 
     private final JavaMailSender mailSender = mock(JavaMailSender.class);
-    private final ITemplateEngine templates = mock(ITemplateEngine.class);
-    private final MonthlyReportEmailSender sender = new MonthlyReportEmailSender(mailSender, templates, messages(),
-            new MailSenderProperties("info@nfnn.cz"), new MonthlyReportProperties("0 0 7 * * *", "prehled@nfnn.cz"));
+    private final MonthlyReportEmailSender sender = new MonthlyReportEmailSender(mailSender,
+            Emails.branded(mailSender, "info@nfnn.cz", "https://nfnn.cz"), Emails.messages(), new MonthlyReportProperties("0 0 7 * * *", "prehled@nfnn.cz"));
 
     @BeforeEach
     void prepareMail() {
         when(mailSender.createMimeMessage()).thenAnswer(invocation -> new MimeMessage(Session.getInstance(new Properties())));
-        when(templates.process(eq("email/donations/monthly-report"), any(IContext.class))).thenReturn("<html><body>přehled</body></html>");
     }
 
     @Test
@@ -68,7 +63,13 @@ class MonthlyReportEmailSenderTest {
         InternetAddress from = (InternetAddress) email.getFrom()[0];
         assertThat(from.getAddress()).isEqualTo("info@nfnn.cz");
         assertThat(from.getPersonal()).isEqualTo("Nová naděje – nadační fond");
-        assertThat(MailContents.html(email)).contains("přehled");
+        assertThat(MailContents.html(email))
+                .contains(">Měsíční přehled – září 2026</h1>")
+                .contains("Registrovaní dárci k 30. 9. 2026: 2")
+                .contains("Poslední úspěšné stažení plateb z banky: 1. 10. 2026 12:00")
+                .contains("Tento přehled posílá web automaticky jednou za měsíc.")
+                .contains("src=\"cid:logo\"");
+        MailPreviews.save("monthly-report", email);
     }
 
     @Test
@@ -119,13 +120,5 @@ class MonthlyReportEmailSenderTest {
 
     private String plainText() {
         return MailContents.plainText(sentEmail()).replace(' ', ' ');
-    }
-
-    private static ResourceBundleMessageSource messages() {
-        ResourceBundleMessageSource messages = new ResourceBundleMessageSource();
-        messages.setBasename("i18n/messages");
-        messages.setDefaultEncoding("UTF-8");
-        messages.setFallbackToSystemLocale(false);
-        return messages;
     }
 }

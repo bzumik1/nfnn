@@ -11,7 +11,9 @@ import cz.novanadeje.app.shared.domain.EmailAddress;
 import cz.novanadeje.app.shared.domain.LocaleCode;
 import cz.novanadeje.app.shared.infrastructure.config.PublicUrlProperties;
 import cz.novanadeje.app.shared.infrastructure.mail.MailSenderProperties;
+import cz.novanadeje.app.shared.infrastructure.mail.BrandedEmails;
 import cz.novanadeje.app.support.MailContents;
+import cz.novanadeje.app.support.MailPreviews;
 import cz.novanadeje.app.support.RecordingMailSender;
 import jakarta.mail.Message;
 import jakarta.mail.Session;
@@ -110,18 +112,24 @@ class PasswordResetEmailSenderTest {
     @Test
     @DisplayName("Given a Czech donor, when the reset e-mail is sent, then the HTML part carries the link as a button and as text, and every Czech text")
     void should_render_html_with_link_and_texts_when_sent_given_czech_donor() {
-        sent(LocaleCode.CS, Duration.ofHours(1), email -> assertThat(MailContents.html(email))
-                .contains("lang=\"cs\"")
-                .contains("href=\"" + LINK + "\"")
-                .contains(">" + LINK + "<")
-                .contains("Nastavit nové heslo")
-                .contains("Obnova hesla")
-                .contains("Dobrý den,")
-                .contains("(jana@example.cz)")
-                .contains("Odkaz platí 60 minut a lze ho použít jen jednou.")
-                .contains("Pokud jste o obnovu hesla nežádali")
-                .contains("Máte-li dotaz, napište nám na info@nfnn.cz.")
-                .doesNotContain("<img"));
+        sent(LocaleCode.CS, Duration.ofHours(1), email -> {
+            assertThat(MailContents.html(email))
+                    .contains("lang=\"cs\"")
+                    .contains("href=\"" + LINK + "\"")
+                    .contains(">" + LINK + "<")
+                    .contains("Nastavit nové heslo")
+                    .contains(">Obnova hesla</h1>")
+                    .contains("Dobrý den,")
+                    .contains("(jana@example.cz)")
+                    .contains("Pokud tlačítko nefunguje, otevřete tento odkaz:")
+                    .contains("Odkaz platí 60 minut a lze ho použít jen jednou.")
+                    .contains("Pokud jste o obnovu hesla nežádali")
+                    .contains("S pozdravem")
+                    .contains("Máte-li dotaz, napište nám na info@nfnn.cz.")
+                    .contains("Nová naděje – nadační fond · IČO 27278794 · Jiráskova 436, 473 01 Nový Bor")
+                    .contains("src=\"cid:logo\"");
+            MailPreviews.save("password-reset", email);
+        });
     }
 
     @Test
@@ -189,8 +197,11 @@ class PasswordResetEmailSenderTest {
 
     private static PasswordResetEmailSender sender(AssertableApplicationContext context, Duration ttl) {
         assertThat(context).hasNotFailed();
-        return new PasswordResetEmailSender(context.getBean(JavaMailSender.class), context.getBean(ITemplateEngine.class),
-                context.getBean(MessageSource.class), new MailSenderProperties(SENDER), new PublicUrlProperties("http://localhost:4200/"),
+        JavaMailSender mailSender = context.getBean(JavaMailSender.class);
+        MailSenderProperties sender = new MailSenderProperties(SENDER);
+        PublicUrlProperties publicUrl = new PublicUrlProperties("http://localhost:4200/");
+        BrandedEmails emails = new BrandedEmails(mailSender, context.getBean(ITemplateEngine.class), context.getBean(MessageSource.class), sender, publicUrl);
+        return new PasswordResetEmailSender(mailSender, emails, context.getBean(MessageSource.class), sender, publicUrl,
                 new DonorPasswordResetProperties(ttl, 3));
     }
 
