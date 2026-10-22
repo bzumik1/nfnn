@@ -24,6 +24,12 @@ class JpaDonorRepository implements DonorRepository {
     }
 
     @Override
+    public void delete(DonorId id) {
+        jpa.deleteById(id.value());
+        jpa.flush();
+    }
+
+    @Override
     public Optional<Donor> findById(DonorId id) {
         return jpa.findById(id.value()).map(DonorJpaEntity::toDomain);
     }

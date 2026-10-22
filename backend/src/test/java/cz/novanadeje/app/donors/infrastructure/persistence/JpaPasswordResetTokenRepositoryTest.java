@@ -5,7 +5,7 @@ import cz.novanadeje.app.donors.domain.Donor;
 import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.donors.domain.DonorRepository;
 import cz.novanadeje.app.donors.domain.PasswordHash;
-import cz.novanadeje.app.donors.domain.PasswordResetSecret;
+import cz.novanadeje.app.donors.domain.LinkSecret;
 import cz.novanadeje.app.donors.domain.PasswordResetToken;
 import cz.novanadeje.app.donors.domain.PasswordResetTokenRepository;
 import cz.novanadeje.app.shared.domain.DonorType;
@@ -56,7 +56,7 @@ class JpaPasswordResetTokenRepositoryTest {
     @Test
     @DisplayName("Given a saved token, when it is found by the hash of its secret, then every field survives")
     void should_keep_fields_when_found_by_secret_hash_given_saved_token() {
-        PasswordResetSecret secret = PasswordResetSecret.generate();
+        LinkSecret secret = LinkSecret.generate();
         PasswordResetToken token = PasswordResetToken.issue(secret, jana, NOW, HOUR);
         tokens.save(token);
         flushAndClear();
@@ -68,7 +68,7 @@ class JpaPasswordResetTokenRepositoryTest {
         assertThat(found.issuedAt()).isEqualTo(NOW);
         assertThat(found.expiresAt()).isEqualTo(NOW.plus(HOUR));
         assertThat(found.usedAt()).isEmpty();
-        assertThat(tokens.findBySecretHash(PasswordResetSecret.generate().hash())).isEmpty();
+        assertThat(tokens.findBySecretHash(LinkSecret.generate().hash())).isEmpty();
     }
 
     @Test
@@ -145,7 +145,7 @@ class JpaPasswordResetTokenRepositoryTest {
     }
 
     private PasswordResetToken issue(DonorId donorId, Instant issuedAt) {
-        PasswordResetToken token = PasswordResetToken.issue(PasswordResetSecret.generate(), donorId, issuedAt, HOUR);
+        PasswordResetToken token = PasswordResetToken.issue(LinkSecret.generate(), donorId, issuedAt, HOUR);
         tokens.save(token);
         return token;
     }

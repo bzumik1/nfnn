@@ -2,6 +2,7 @@ package cz.novanadeje.app.donors.application;
 
 import cz.novanadeje.app.donors.domain.Donor;
 import cz.novanadeje.app.donors.domain.DonorRepository;
+import cz.novanadeje.app.donors.domain.EmailNotVerified;
 import cz.novanadeje.app.donors.domain.InvalidCredentials;
 import cz.novanadeje.app.donors.domain.PasswordHash;
 import cz.novanadeje.app.donors.domain.PasswordHasher;
@@ -41,6 +42,9 @@ public class DonorAuthenticationService {
         PasswordHash hash = donor == null ? UNKNOWN_DONOR_HASH : donor.passwordHash();
         if (!passwordHasher.matches(rawPassword, hash) || donor == null) {
             throw new InvalidCredentials();
+        }
+        if (!donor.isEmailVerified()) {
+            throw new EmailNotVerified();
         }
         return new AuthenticatedDonor(DonorView.of(donor), sessions.open(donor.id(), donor.roles()));
     }

@@ -47,7 +47,7 @@ describe('Given the auth store', () => {
     expect(localStorage.getItem(SESSION_HINT_KEY)).toBe('1');
   });
 
-  it('when a donor registers, then the request carries the whole registration and the donor is signed in', () => {
+  it('when a donor registers, then the request carries the whole registration and nobody is signed in yet', () => {
     store
       .register({
         type: 'COMPANY',
@@ -63,9 +63,22 @@ describe('Given the auth store', () => {
     const request = http.expectOne('/api/donors/auth/register');
     expect(request.request.body.type).toBe('COMPANY');
     expect(request.request.body.companyIdentifier).toBe('45274649');
-    request.flush(authResponse('token-1'), { status: 201, statusText: 'Created' });
+    request.flush(null, { status: 202, statusText: 'Accepted' });
+
+    expect(store.signedIn()).toBe(false);
+    expect(localStorage.getItem(SESSION_HINT_KEY)).toBeNull();
+  });
+
+  it('when a donor confirms the e-mail with the link, then the token is sent and the donor is signed in', () => {
+    store.confirmEmail('abc').subscribe();
+
+    const request = http.expectOne('/api/donors/auth/email-verification/confirm');
+    expect(request.request.body).toEqual({ token: 'abc' });
+    request.flush(authResponse('token-1'));
 
     expect(store.signedIn()).toBe(true);
+    expect(store.currentAccessToken()).toBe('token-1');
+    expect(localStorage.getItem(SESSION_HINT_KEY)).toBe('1');
   });
 
   it('when the session is restored with a hint present, then the session is refreshed and the donor is signed in', async () => {

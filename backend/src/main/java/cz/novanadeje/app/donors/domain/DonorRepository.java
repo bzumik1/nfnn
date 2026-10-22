@@ -9,6 +9,8 @@ public interface DonorRepository {
 
     void save(Donor donor);
 
+    void delete(DonorId id);
+
     Optional<Donor> findById(DonorId id);
 
     Optional<Donor> findByEmail(EmailAddress email);

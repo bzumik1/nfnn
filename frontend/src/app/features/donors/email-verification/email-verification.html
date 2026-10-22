@@ -1,0 +1,163 @@
+<section class="email-verification" aria-labelledby="email-verification-title">
+  <div class="card">
+    @switch (panel()) {
+      @case ('confirming') {
+        <div class="notice">
+          <div class="notice-icon notice-icon--spinner" aria-hidden="true"></div>
+          <h1
+            id="email-verification-title"
+            class="title"
+            tabindex="-1"
+            i18n="@@donor.emailVerification.confirming.title"
+          >
+            Potvrzujeme váš e-mail
+          </h1>
+          <p class="lead" role="status" i18n="@@donor.emailVerification.confirming.text">
+            Chvilku strpení…
+          </p>
+        </div>
+      }
+      @case ('confirmed') {
+        <div class="notice">
+          <div class="notice-icon" aria-hidden="true">✓</div>
+          <h1
+            #heading
+            id="email-verification-title"
+            class="title"
+            tabindex="-1"
+            i18n="@@donor.emailVerification.confirmed.title"
+          >
+            E-mail je potvrzený
+          </h1>
+          <p class="lead" role="status" i18n="@@donor.emailVerification.confirmed.text">
+            Účet je připravený a jste přihlášeni. Na přehledu najdete svůj variabilní symbol pro
+            příspěvky.
+          </p>
+          <button
+            type="button"
+            class="form-submit"
+            (click)="enterPortal()"
+            i18n="@@donor.emailVerification.confirmed.action"
+          >
+            Přejít do přehledu
+          </button>
+        </div>
+      }
+      @case ('failed') {
+        <div class="notice">
+          <div class="notice-icon notice-icon--warning" aria-hidden="true">!</div>
+          <h1
+            #heading
+            id="email-verification-title"
+            class="title"
+            tabindex="-1"
+            i18n="@@donor.emailVerification.failed.title"
+          >
+            E-mail se nepodařilo potvrdit
+          </h1>
+          <p class="lead" role="alert">{{ error() }}</p>
+          <button
+            type="button"
+            class="form-submit"
+            (click)="retry()"
+            i18n="@@donor.emailVerification.failed.action"
+          >
+            Zkusit znovu
+          </button>
+        </div>
+      }
+      @case ('link-requested') {
+        <div class="notice">
+          <div class="notice-icon" aria-hidden="true">✓</div>
+          <h1
+            #heading
+            id="email-verification-title"
+            class="title"
+            tabindex="-1"
+            i18n="@@donor.emailVerification.requested.title"
+          >
+            E-mail odeslán
+          </h1>
+          <p class="lead" role="status" i18n="@@donor.emailVerification.requested.text">
+            Pokud účet s touto adresou čeká na potvrzení, poslali jsme na ni nový odkaz. Platí 24
+            hodin.
+          </p>
+        </div>
+      }
+      @default {
+        <div class="notice">
+          <div class="notice-icon notice-icon--warning" aria-hidden="true">!</div>
+          @if (panel() === 'invalid') {
+            <h1
+              #heading
+              id="email-verification-title"
+              class="title"
+              tabindex="-1"
+              i18n="@@donor.emailVerification.invalid.title"
+            >
+              Odkaz je neplatný nebo vypršel
+            </h1>
+            <p class="lead" i18n="@@donor.emailVerification.invalid.text">
+              Odkaz lze použít jen jednou a platí 24 hodin. Zadejte e-mail z registrace a pošleme
+              vám nový.
+            </p>
+          } @else {
+            <h1
+              #heading
+              id="email-verification-title"
+              class="title"
+              tabindex="-1"
+              i18n="@@donor.emailVerification.missingLink.title"
+            >
+              Odkaz je neúplný
+            </h1>
+            <p class="lead" i18n="@@donor.emailVerification.missingLink.text">
+              Otevřete prosím odkaz z e-mailu znovu, nebo zadejte e-mail z registrace a pošleme vám
+              nový.
+            </p>
+          }
+        </div>
+
+        <form
+          #form="ngForm"
+          class="request-form"
+          appFocusFirstInvalid
+          (ngSubmit)="requestNewLink(form)"
+          novalidate
+        >
+          <app-form-field
+            label="E-mail"
+            i18n-label="@@donor.login.email"
+            [messages]="emailMessages"
+          >
+            <input
+              appFormControl
+              id="verification-email"
+              name="email"
+              type="email"
+              autocomplete="email"
+              placeholder="vas@email.cz"
+              i18n-placeholder="@@donor.login.emailPlaceholder"
+              [(ngModel)]="email"
+              required
+              email
+              maxlength="254"
+            />
+          </app-form-field>
+
+          @if (error()) {
+            <p class="form-error" role="alert">{{ error() }}</p>
+          }
+
+          <button type="submit" class="form-submit" [disabled]="loading()">
+            @if (loading()) {
+              <span i18n="@@donor.emailVerification.request.submitLoading">Odesílám…</span>
+            } @else {
+              <span i18n="@@donor.emailVerification.request.submit">Poslat nový odkaz</span>
+            }
+          </button>
+        </form>
+      }
+    }
+  </div>
+</section>

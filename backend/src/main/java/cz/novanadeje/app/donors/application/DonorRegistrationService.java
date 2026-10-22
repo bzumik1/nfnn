@@ -1,17 +1,18 @@
 package cz.novanadeje.app.donors.application;
 
+import cz.novanadeje.app.donors.application.event.DonorRegistrationRepeated;
 import cz.novanadeje.app.donors.domain.CompanyIdentifier;
 import cz.novanadeje.app.donors.domain.Donor;
 import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.donors.domain.DonorRepository;
-import cz.novanadeje.app.donors.domain.EmailAlreadyRegistered;
 import cz.novanadeje.app.donors.domain.PasswordHasher;
 import cz.novanadeje.app.donors.domain.RawPassword;
-import cz.novanadeje.app.shared.application.event.DonorRegistered;
-import cz.novanadeje.app.shared.domain.VariableSymbol;
 import cz.novanadeje.app.shared.domain.EmailAddress;
 import cz.novanadeje.app.shared.domain.LocaleCode;
 import cz.novanadeje.app.shared.domain.PostalAddress;
+import cz.novanadeje.app.shared.domain.VariableSymbol;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,28 +24,36 @@ import java.time.Instant;
 @Service
 public class DonorRegistrationService {
 
+    private static final Logger log = LoggerFactory.getLogger(DonorRegistrationService.class);
     private static final SecureRandom RANDOM = new SecureRandom();
 
     private final DonorRepository donors;
     private final PasswordHasher passwordHasher;
-    private final DonorSessionService sessions;
+    private final DonorEmailVerificationService emailVerification;
     private final ApplicationEventPublisher events;
     private final Clock clock;
 
-    public DonorRegistrationService(DonorRepository donors, PasswordHasher passwordHasher, DonorSessionService sessions,
+    public DonorRegistrationService(DonorRepository donors, PasswordHasher passwordHasher, DonorEmailVerificationService emailVerification,
                                     ApplicationEventPublisher events, Clock clock) {
         this.donors = donors;
         this.passwordHasher = passwordHasher;
-        this.sessions = sessions;
+        this.emailVerification = emailVerification;
         this.events = events;
         this.clock = clock;
     }
 
     @Transactional
-    public AuthenticatedDonor register(RegisterDonorCommand command) {
+    public void register(RegisterDonorCommand command) {
         EmailAddress email = new EmailAddress(command.email());
-        if (donors.existsByEmail(email)) {
-            throw new EmailAlreadyRegistered();
+        Donor existing = donors.findByEmail(email).orElse(null);
+        if (existing != null && existing.isEmailVerified()) {
+            events.publishEvent(new DonorRegistrationRepeated(existing.id().value(), existing.email(), existing.preferredLocale()));
+            log.info("Registration repeated for verified donor {}", existing.id());
+            return;
+        }
+        if (existing != null) {
+            donors.delete(existing.id());
+            log.info("Unverified donor {} replaced by a new registration", existing.id());
         }
         Instant now = clock.instant();
         Donor donor = Donor.register(
@@ -60,11 +69,7 @@ public class DonorRegistrationService {
                 now
         );
         donors.save(donor);
-        events.publishEvent(new DonorRegistered(
-                donor.id().value(), donor.type(), donor.name(), donor.companyIdentifier().map(CompanyIdentifier::value),
-                donor.address(), donor.email(), donor.variableSymbol(), donor.preferredLocale(), donor.registeredAt()
-        ));
-        return new AuthenticatedDonor(DonorView.of(donor), sessions.open(donor.id(), donor.roles()));
+        emailVerification.issueLink(donor);
     }
 
     private VariableSymbol unusedVariableSymbol() {

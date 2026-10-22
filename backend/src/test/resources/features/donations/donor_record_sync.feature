@@ -25,9 +25,9 @@ Feature: Donations keeps its own record of each donor
     And donations knows "Jana" with the registered variable symbol
     And "Jana" has learned sender account "2900233333/2010"
 
-  Scenario: The record is readable as soon as the registration has answered
+  Scenario: The record is readable as soon as the e-mail confirmation has answered
     When a person "Jana" is registered
-    Then the response status is 201
+    Then the response status is 200
     And donations knows "Jana" with the registered variable symbol
 
   Scenario: A registration announced twice keeps one record

@@ -24,6 +24,19 @@ class RequestRecordMaskingTest {
     }
 
     @Test
+    @DisplayName("Given a verification request, when it is printed, then the address is masked and was trimmed")
+    void should_mask_email_when_printed_given_verification_request() {
+        assertThat(new EmailVerificationRequest("  jana@example.cz ").toString()).isEqualTo("EmailVerificationRequest[email=***]");
+        assertThat(new EmailVerificationRequest("  JANA@Example.cz ").email()).isEqualTo("JANA@Example.cz");
+    }
+
+    @Test
+    @DisplayName("Given a verification confirmation, when it is printed, then the token is masked")
+    void should_mask_token_when_printed_given_verification_confirmation() {
+        assertThat(new EmailVerificationConfirmation(TOKEN).toString()).isEqualTo("EmailVerificationConfirmation[token=***]");
+    }
+
+    @Test
     @DisplayName("Given a login request, when it is printed, then the address and the password are masked")
     void should_mask_email_and_password_when_printed_given_login_request() {
         assertThat(new LoginRequest("jana@example.cz", PASSWORD).toString()).isEqualTo("LoginRequest[email=***, password=***]");

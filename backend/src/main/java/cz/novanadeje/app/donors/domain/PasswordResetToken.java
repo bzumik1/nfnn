@@ -25,7 +25,7 @@ public final class PasswordResetToken {
         this.usedAt = usedAt;
     }
 
-    public static PasswordResetToken issue(PasswordResetSecret secret, DonorId donorId, Instant issuedAt, Duration lifetime) {
+    public static PasswordResetToken issue(LinkSecret secret, DonorId donorId, Instant issuedAt, Duration lifetime) {
         return new PasswordResetToken(UuidV7.generate(issuedAt), donorId, secret.hash(), issuedAt, issuedAt.plus(lifetime), null);
     }
 

@@ -1,6 +1,7 @@
 package cz.novanadeje.app.donors.cucumber;
 
 import cz.novanadeje.app.cucumber.ApiClient;
+import cz.novanadeje.app.cucumber.DonorRegistrations;
 import io.cucumber.java.en.And;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
@@ -17,28 +18,29 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 public class DonorAccountStepDefinitions {
 
-    private static final String REGISTER_PATH = "/api/donors/auth/register";
     private static final String LOGIN_PATH = "/api/donors/auth/login";
     private static final String REFRESH_PATH = "/api/donors/auth/refresh";
     private static final String LOGOUT_PATH = "/api/donors/auth/logout";
     private static final String PROFILE_PATH = "/api/donors/me";
 
     private final ApiClient api;
+    private final DonorRegistrations registrations;
     private String currentRefreshCookie;
     private String previousRefreshCookie;
 
-    public DonorAccountStepDefinitions(ApiClient api) {
+    public DonorAccountStepDefinitions(ApiClient api, DonorRegistrations registrations) {
         this.api = api;
+        this.registrations = registrations;
     }
 
     @When("a person registers")
     public void aPersonRegisters(Map<String, String> fields) {
-        api.post(REGISTER_PATH, registration("PERSON", fields));
+        registrations.register(registration("PERSON", fields));
     }
 
     @When("a company registers")
     public void aCompanyRegisters(Map<String, String> fields) {
-        api.post(REGISTER_PATH, registration("COMPANY", fields));
+        registrations.register(registration("COMPANY", fields));
     }
 
     @Given("a person registered with email {string} and password {string}")
@@ -53,8 +55,17 @@ public class DonorAccountStepDefinitions {
 
     @When("a person registers with email {string} and password {string}")
     public void aPersonRegistersWithEmailAndPassword(String email, String password) {
-        api.forgetCredentials();
-        api.post(REGISTER_PATH, registration("PERSON", personFields(email, password, "Jana Nováková", null)));
+        registrations.register(registration("PERSON", personFields(email, password, "Jana Nováková", null)));
+    }
+
+    @When("a person registers with email {string}, password {string} and preferred locale {string}")
+    public void aPersonRegistersWithPreferredLocale(String email, String password, String preferredLocale) {
+        registrations.register(registration("PERSON", personFields(email, password, "Jana Nováková", preferredLocale)));
+    }
+
+    @Given("a person registered with email {string} and password {string} but has not confirmed the e-mail")
+    public void aPersonRegisteredButHasNotConfirmed(String email, String password) {
+        registrations.registerAwaitingEmail(registration("PERSON", personFields(email, password, "Jana Nováková", null)));
     }
 
     @Given("a person registered with email {string}, password {string} and name {string}")
@@ -203,8 +214,7 @@ public class DonorAccountStepDefinitions {
     }
 
     private void registerPerson(String email, String password, String name, String preferredLocale) {
-        ResponseEntity<String> response = api.post(REGISTER_PATH, registration("PERSON", personFields(email, password, name, preferredLocale)));
-        assertThat(response.getStatusCode().value()).withFailMessage("Registration answered %s", response.getBody()).isEqualTo(201);
+        registrations.registerAndConfirm(registration("PERSON", personFields(email, password, name, preferredLocale)));
         api.forgetCredentials();
     }
 

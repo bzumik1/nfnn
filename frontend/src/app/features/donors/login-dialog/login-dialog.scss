@@ -110,6 +110,22 @@
   margin: 4px 0 8px;
 }
 
+.form-note {
+  font-size: 13px;
+  margin: 0 0 12px;
+
+  .link-btn {
+    padding: 0;
+  }
+}
+
+.form-status {
+  color: var(--color-success);
+  font-size: 13px;
+  line-height: 1.5;
+  margin: 4px 0 12px;
+}
+
 .form-submit {
   background: var(--color-accent);
   color: var(--color-on-accent);
@@ -195,6 +211,11 @@
     font-size: 14px;
     line-height: 1.6;
     margin-bottom: 24px;
+  }
+
+  .reset-hint {
+    font-size: 13px;
+    color: var(--color-text-subtle);
   }
 }
 

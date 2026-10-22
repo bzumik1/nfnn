@@ -122,6 +122,9 @@ app:
     password-reset:
       token-ttl: PT1H
       max-live-links: 3
+    email-verification:
+      token-ttl: PT24H
+      max-live-links: 3
 
 logging:
   level:

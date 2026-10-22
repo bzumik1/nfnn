@@ -1,6 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, Page, test } from '@playwright/test';
-import { bankAccountItem, mockDonorApi, openSignInDialog, signIn } from './donor-session';
+import { bankAccountItem, mockDonorApi, openSignInDialog, problem, signIn } from './donor-session';
 
 const WCAG_AA = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 
@@ -90,6 +90,28 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
   }) => {
     await page.goto('/obnova-hesla#token=abc');
     await expect(page.locator('h1')).toBeVisible();
+
+    expect(await violations(page)).toEqual([]);
+  });
+
+  test('when they open an expired e-mail confirmation link, then nothing on the page breaks the rules', async ({
+    page,
+  }) => {
+    await page.route('**/api/donors/auth/email-verification/confirm', (route) =>
+      route.fulfill(
+        problem(
+          400,
+          'donors/invalid-email-verification-token',
+          'Odkaz pro potvrzení e-mailu je neplatný nebo vypršel',
+          'Nechte si prosím poslat nový odkaz.',
+        ),
+      ),
+    );
+
+    await page.goto('/potvrzeni-emailu#token=abc');
+    await expect(
+      page.getByRole('heading', { name: 'Odkaz je neplatný nebo vypršel' }),
+    ).toBeVisible();
 
     expect(await violations(page)).toEqual([]);
   });
