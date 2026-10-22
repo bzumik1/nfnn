@@ -2,6 +2,7 @@ package cz.novanadeje.app.donors.infrastructure.persistence;
 
 import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.donors.domain.EmailVerificationToken;
+import cz.novanadeje.app.shared.domain.EmailAddress;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -29,6 +30,9 @@ public class EmailVerificationTokenJpaEntity {
     @Column(name = "expires_at", nullable = false)
     private Instant expiresAt;
 
+    @Column(name = "new_email", length = 254)
+    private String newEmail;
+
     @Column(name = "used_at")
     private Instant usedAt;
 
@@ -42,11 +46,13 @@ public class EmailVerificationTokenJpaEntity {
         entity.secretHash = token.secretHash();
         entity.issuedAt = token.issuedAt();
         entity.expiresAt = token.expiresAt();
+        entity.newEmail = token.newEmail().map(EmailAddress::value).orElse(null);
         entity.usedAt = token.usedAt().orElse(null);
         return entity;
     }
 
     EmailVerificationToken toDomain() {
-        return EmailVerificationToken.reconstitute(id, new DonorId(donorId), secretHash, issuedAt, expiresAt, usedAt);
+        return EmailVerificationToken.reconstitute(id, new DonorId(donorId), secretHash, issuedAt, expiresAt,
+                newEmail == null ? null : new EmailAddress(newEmail), usedAt);
     }
 }

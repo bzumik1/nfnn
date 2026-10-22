@@ -39,6 +39,16 @@ export interface UpdateDonorProfileRequest {
   preferredLocale?: DonorLocale;
 }
 
+export interface ChangePasswordRequest {
+  currentPassword: string;
+  newPassword: string;
+}
+
+export interface EmailChangeRequest {
+  newEmail: string;
+  password: string;
+}
+
 export interface AuthResponse {
   user: Donor;
   accessToken: string;

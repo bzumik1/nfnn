@@ -11,7 +11,14 @@ import {
   throwError,
 } from 'rxjs';
 import { AuthApi } from './auth-api';
-import { AuthResponse, Donor, RegisterDonorRequest, UpdateDonorProfileRequest } from './donor';
+import {
+  AuthResponse,
+  ChangePasswordRequest,
+  Donor,
+  EmailChangeRequest,
+  RegisterDonorRequest,
+  UpdateDonorProfileRequest,
+} from './donor';
 
 export type AuthStatus = 'unknown' | 'anonymous' | 'signed-in';
 
@@ -86,6 +93,14 @@ export class AuthStore {
 
   updateProfile(request: UpdateDonorProfileRequest): Observable<Donor> {
     return this.api.updateProfile(request).pipe(tap((donor) => this.currentDonor.set(donor)));
+  }
+
+  changePassword(request: ChangePasswordRequest): Observable<Donor> {
+    return this.api.changePassword(request).pipe(map((response) => this.adopt(response)));
+  }
+
+  requestEmailChange(request: EmailChangeRequest): Observable<void> {
+    return this.api.requestEmailChange(request);
   }
 
   private adopt(response: AuthResponse): Donor {

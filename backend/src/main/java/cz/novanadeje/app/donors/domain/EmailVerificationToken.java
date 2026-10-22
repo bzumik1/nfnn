@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donors.domain;
 
+import cz.novanadeje.app.shared.domain.EmailAddress;
 import cz.novanadeje.app.shared.domain.UuidV7;
 
 import java.time.Duration;
@@ -14,23 +15,43 @@ public final class EmailVerificationToken {
     private final String secretHash;
     private final Instant issuedAt;
     private final Instant expiresAt;
+    private final EmailAddress newEmail;
     private Instant usedAt;
 
-    private EmailVerificationToken(UUID id, DonorId donorId, String secretHash, Instant issuedAt, Instant expiresAt, Instant usedAt) {
+    private EmailVerificationToken(UUID id, DonorId donorId, String secretHash, Instant issuedAt, Instant expiresAt, EmailAddress newEmail,
+                                   Instant usedAt) {
         this.id = id;
         this.donorId = donorId;
         this.secretHash = secretHash;
         this.issuedAt = issuedAt;
         this.expiresAt = expiresAt;
+        this.newEmail = newEmail;
         this.usedAt = usedAt;
     }
 
     public static EmailVerificationToken issue(LinkSecret secret, DonorId donorId, Instant issuedAt, Duration lifetime) {
-        return new EmailVerificationToken(UuidV7.generate(issuedAt), donorId, secret.hash(), issuedAt, issuedAt.plus(lifetime), null);
+        return new EmailVerificationToken(UuidV7.generate(issuedAt), donorId, secret.hash(), issuedAt, issuedAt.plus(lifetime), null, null);
     }
 
-    public static EmailVerificationToken reconstitute(UUID id, DonorId donorId, String secretHash, Instant issuedAt, Instant expiresAt, Instant usedAt) {
-        return new EmailVerificationToken(id, donorId, secretHash, issuedAt, expiresAt, usedAt);
+    public static EmailVerificationToken issueForChange(LinkSecret secret, DonorId donorId, EmailAddress newEmail, Instant issuedAt,
+                                                        Duration lifetime) {
+        if (newEmail == null) {
+            throw new IllegalArgumentException("New e-mail is required");
+        }
+        return new EmailVerificationToken(UuidV7.generate(issuedAt), donorId, secret.hash(), issuedAt, issuedAt.plus(lifetime), newEmail, null);
+    }
+
+    public static EmailVerificationToken reconstitute(UUID id, DonorId donorId, String secretHash, Instant issuedAt, Instant expiresAt,
+                                                      EmailAddress newEmail, Instant usedAt) {
+        return new EmailVerificationToken(id, donorId, secretHash, issuedAt, expiresAt, newEmail, usedAt);
+    }
+
+    public boolean isForChange() {
+        return newEmail != null;
+    }
+
+    public Optional<EmailAddress> newEmail() {
+        return Optional.ofNullable(newEmail);
     }
 
     public boolean isUsableAt(Instant now) {

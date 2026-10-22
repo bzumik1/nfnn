@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donors.domain;
 
+import cz.novanadeje.app.shared.domain.EmailAddress;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -7,6 +8,7 @@ import java.time.Duration;
 import java.time.Instant;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 
 class EmailVerificationTokenTest {
@@ -73,11 +75,31 @@ class EmailVerificationTokenTest {
     void should_keep_values_when_reconstituted_given_stored_row() {
         EmailVerificationToken stored = EmailVerificationToken.issue(LinkSecret.generate(), DONOR, NOW, LIFETIME);
 
-        EmailVerificationToken token = EmailVerificationToken.reconstitute(stored.id(), DONOR, stored.secretHash(), NOW, NOW.plus(LIFETIME), NOW.plusSeconds(5));
+        EmailVerificationToken token = EmailVerificationToken.reconstitute(stored.id(), DONOR, stored.secretHash(), NOW, NOW.plus(LIFETIME), null, NOW.plusSeconds(5));
 
         assertThat(token.id()).isEqualTo(stored.id());
         assertThat(token.secretHash()).isEqualTo(stored.secretHash());
         assertThat(token.usedAt()).contains(NOW.plusSeconds(5));
         assertThat(token.isUsableAt(NOW.plusSeconds(10))).isFalse();
+    }
+
+    @Test
+    @DisplayName("Given a new address, when a change token is issued, then it carries the address and is for a change")
+    void should_carry_new_email_when_issued_for_change_given_new_address() {
+        EmailAddress newEmail = new EmailAddress("jana.nova@example.cz");
+
+        EmailVerificationToken token = EmailVerificationToken.issueForChange(LinkSecret.generate(), DONOR, newEmail, NOW, LIFETIME);
+
+        assertThat(token.isForChange()).isTrue();
+        assertThat(token.newEmail()).contains(newEmail);
+        assertThat(token.expiresAt()).isEqualTo(NOW.plus(LIFETIME));
+        assertThat(EmailVerificationToken.issue(LinkSecret.generate(), DONOR, NOW, LIFETIME).isForChange()).isFalse();
+    }
+
+    @Test
+    @DisplayName("Given no address, when a change token is issued, then it is refused")
+    void should_refuse_when_issued_for_change_given_no_address() {
+        assertThatIllegalArgumentException()
+                .isThrownBy(() -> EmailVerificationToken.issueForChange(LinkSecret.generate(), DONOR, null, NOW, LIFETIME));
     }
 }

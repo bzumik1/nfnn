@@ -52,6 +52,10 @@ public class ApiClient {
         return exchange(HttpMethod.PATCH, path, body);
     }
 
+    public ResponseEntity<String> put(String path, Map<String, ?> body) {
+        return exchange(HttpMethod.PUT, path, body);
+    }
+
     public ResponseEntity<String> get(String path) {
         return exchange(HttpMethod.GET, path, null);
     }

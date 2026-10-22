@@ -80,12 +80,7 @@ describe('Given the donor data card in the overview', () => {
 
     it('then it shows the data the receipts carry', () => {
       expect(element('h2').textContent).toContain('Údaje na potvrzení o daru');
-      expect(shown()).toEqual([
-        'Jana Nováková',
-        'Dlouhá 12, 400 01 Ústí nad Labem',
-        'jana@example.cz',
-        'čeština',
-      ]);
+      expect(shown()).toEqual(['Jana Nováková', 'Dlouhá 12, 400 01 Ústí nad Labem', 'čeština']);
     });
 
     it('and edits the address, then only the form is sent and the card shows the saved data', async () => {
@@ -114,7 +109,6 @@ describe('Given the donor data card in the overview', () => {
       expect(shown()).toEqual([
         'Jana Nováková',
         'Krátká 3, 400 11 Ústí nad Labem',
-        'jana@example.cz',
         'angličtina (dvojjazyčné)',
       ]);
       expect(element('.profile-status').textContent?.trim()).toBe(
@@ -208,7 +202,6 @@ describe('Given the donor data card in the overview', () => {
         'Stavby Novák s.r.o.',
         '45274649',
         'Dlouhá 12, 400 01 Ústí nad Labem',
-        'jana@example.cz',
         'čeština',
       ]);
 

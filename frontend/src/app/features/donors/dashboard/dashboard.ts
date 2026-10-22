@@ -25,6 +25,7 @@ import {
   DownloadedFile,
 } from '../../donations/donations-api';
 import { saveBlob } from '../../donations/file-download';
+import { AccountCard } from './account-card/account-card';
 import { BankAccountsCard } from './bank-accounts-card/bank-accounts-card';
 import { ProfileCard } from './profile-card/profile-card';
 import { SymbolCard } from './symbol-card/symbol-card';
@@ -59,7 +60,7 @@ const SENDER_ACCOUNT_DIGITS_SHOWN = 4;
 
 @Component({
   selector: 'app-donor-dashboard',
-  imports: [DashboardTopBar, SymbolCard, BankAccountsCard, ProfileCard],
+  imports: [DashboardTopBar, SymbolCard, BankAccountsCard, ProfileCard, AccountCard],
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
