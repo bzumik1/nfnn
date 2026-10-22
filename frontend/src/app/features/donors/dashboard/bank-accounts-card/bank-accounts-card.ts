@@ -30,6 +30,7 @@ import { formatCrowns } from '../../../donations/donation-amount';
 import { formatDonationDate } from '../../../donations/donation-date';
 import { BankCheckResponse, DonationsApi } from '../../../donations/donations-api';
 import { PaymentQrApi, PaymentQrResponse } from '../../../donations/payment-qr-api';
+import { PairingHelp } from './pairing-help/pairing-help';
 
 type ListState = 'loading' | 'ready' | 'error';
 
@@ -72,7 +73,7 @@ const PAYMENT_WATCH_CHECKS = 20;
 
 @Component({
   selector: 'app-bank-accounts-card',
-  imports: [Dialog, CopyButton, NgTemplateOutlet],
+  imports: [Dialog, CopyButton, NgTemplateOutlet, PairingHelp],
   templateUrl: './bank-accounts-card.html',
   styleUrl: './bank-accounts-card.scss',
 })

@@ -286,28 +286,6 @@ describe('Given the bank accounts card in the overview', () => {
   });
 
   describe('when the donor looks up how payments are paired', () => {
-    const HELP_ITEMS = [
-      'S vaším symbolem Platbu s vaším variabilním symbolem 9876543210 přiřadíme vám, ať přijde z jakéhokoli účtu.',
-      'Bez symbolu Platbu bez variabilního symbolu přiřadíme podle účtu, ze kterého přišla, pokud jste ho u nás ověřili. ' +
-        'Tomuto přiřazování podle účtu říkáme párování. ' +
-        'Účet ověříte tak, že z něj jednou pošlete platbu s vaším variabilním symbolem; stačí 1 Kč, návod najdete pod tlačítkem „Přidat účet“. ' +
-        'Musí to být český účet, ale nemusí být veden na vaše jméno. ' +
-        'Když účet ověříte poprvé a předtím ho neověřil jiný dárce, přiřadíme vám i dřívější platby z něj, které přišly bez symbolu. ' +
-        'Účet, přes který posílá peníze víc lidí (třeba sběrný účet), můžeme z párování vyloučit; z takového účtu pak přiřazujeme jen platby s variabilním symbolem.',
-      'S jiným symbolem Platbu s jiným variabilním symbolem, než je váš, vám nepřiřadíme, ani když přijde z vašeho ověřeného účtu. ' +
-        'Pokud nám posíláte dary trvalým příkazem se starším symbolem, nastavte v něm prosím váš variabilní symbol 9876543210. ' +
-        'Platbu se symbolem 0 bereme jako platbu bez symbolu.',
-      'Vypnutí párování Párování můžete u účtu vypnout tlačítkem „Vypnout párování“. ' +
-        'Platby bez symbolu, které z účtu přijdou ode dne po vypnutí, vám pak nepřiřadíme; dary přiřazené dříve zůstanou. ' +
-        'Párování znovu zapnete tlačítkem „Zapnout párování“. ' +
-        'Účet pak čeká na platbu: pošlete z něj 1 Kč (nebo jakýkoli dar) s vaším variabilním symbolem. ' +
-        'Jakmile dorazí, přiřadíme vám z něj i platby bez symbolu ode dne zapnutí. ' +
-        'U účtu, ze kterého přiřazujeme jen platby s variabilním symbolem, párování znovu zapnout nejde.',
-      'Sdílený účet Když stejný účet ověří i jiný dárce, označíme ho jako „Sdílený“ a platby bez variabilního symbolu z něj nepřiřadíme nikomu. ' +
-        'Pokud z něj dary neposíláte vy, vypněte si u něj párování. ' +
-        'Jinak z něj prosím posílejte vždy s vaším variabilním symbolem.',
-    ];
-
     beforeEach(async () => {
       await respond([bankAccount()]);
     });
@@ -331,41 +309,24 @@ describe('Given the bank accounts card in the overview', () => {
       expect(helpPanel().hidden).toBe(true);
     });
 
-    it('and presses the ? button, then the labelled panel opens under the head and explains every rule with the donor\'s symbol', async () => {
+    it('and presses the ? button, then the labelled panel opens under the head with the donor\'s symbol', async () => {
       await click('.accounts-help');
 
       expect(helpButton().getAttribute('aria-expanded')).toBe('true');
       const panel = helpPanel();
       expect(panel.hidden).toBe(false);
-      expect(element('.accounts-head + #accounts-help-panel')).toBe(panel);
+      expect(element('.accounts-head + app-pairing-help > #accounts-help-panel')).toBe(panel);
       expect(panel.compareDocumentPosition(element('.accounts-list') as HTMLElement) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
       expect(panel.getAttribute('role')).toBe('region');
-      expect(panel.getAttribute('aria-labelledby')).toBe('accounts-help-title');
-      expect(element('#accounts-help-title')?.tagName).toBe('H3');
-      expect(text('#accounts-help-title')).toBe('Jak přiřazujeme platby');
-      expect(texts('#accounts-help-panel .help-list > li')).toEqual(HELP_ITEMS);
+      expect(text('#' + panel.getAttribute('aria-labelledby'))).toBe('Jak přiřazujeme platby');
       expect(texts('#accounts-help-panel .help-symbol')).toEqual(['9876543210', '9876543210']);
-      expect(text('#accounts-help-panel .help-contact')).toBe(
-        'Chybí vám nějaký dar, nebo tu vidíte dar, který není váš? Napište nám na info@nfnn.cz.',
-      );
-      expect(element<HTMLAnchorElement>('#accounts-help-panel .help-contact a')?.getAttribute('href')).toBe('mailto:info@nfnn.cz');
     });
 
-    it('and has no variable symbol yet, then the panel speaks of their variable symbol without a number', async () => {
+    it('and has no variable symbol yet, then the panel shows no number', async () => {
       fixture.componentRef.setInput('variableSymbol', null);
       await click('.accounts-help');
 
-      expect(texts('#accounts-help-panel .help-list > li')).toEqual(
-        HELP_ITEMS.map((item, index) =>
-          index === 0
-            ? 'S vaším symbolem Platbu s vaším variabilním symbolem přiřadíme vám, ať přijde z jakéhokoli účtu.'
-            : index === 2
-              ? 'S jiným symbolem Platbu s jiným variabilním symbolem, než je váš, vám nepřiřadíme, ani když přijde z vašeho ověřeného účtu. ' +
-                'Pokud nám posíláte dary trvalým příkazem se starším symbolem, nastavte v něm prosím váš variabilní symbol. ' +
-                'Platbu se symbolem 0 bereme jako platbu bez symbolu.'
-              : item,
-        ),
-      );
+      expect(helpPanel().hidden).toBe(false);
       expect(element('#accounts-help-panel .help-symbol')).toBeNull();
     });
 
