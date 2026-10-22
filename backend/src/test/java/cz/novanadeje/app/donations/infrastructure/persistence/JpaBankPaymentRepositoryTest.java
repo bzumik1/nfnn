@@ -273,6 +273,58 @@ class JpaBankPaymentRepositoryTest {
         assertThat(payments.findById(BankPaymentId.newId(NOW))).isEmpty();
     }
 
+    @Test
+    @DisplayName("Given a payment an administrator unpaired, when it is saved and read back, then the unpairing time survives")
+    void should_keep_admin_unpairing_time_when_saved_given_held_payment() {
+        BankPayment payment = payment(1001, "2026-10-15", JANA_ACCOUNT, "4821937560");
+        payments.saveAll(List.of(payment));
+        flushAndClear();
+
+        payments.save(payment.unpairedByAdmin(NOW.plusSeconds(60)));
+        flushAndClear();
+
+        assertThat(payments.findById(payment.id())).hasValueSatisfying(stored -> {
+            assertThat(stored.isPairedByHandOnly()).isTrue();
+            assertThat(stored.unpairedByAdminAt()).contains(NOW.plusSeconds(60));
+        });
+    }
+
+    @Test
+    @DisplayName("Given a payment an administrator unpaired, when the automatic pairing asks for unpaired payments, then it is left out, while the admin list and the report still see it")
+    void should_hide_held_payment_from_automatic_pairing_when_unpaired_asked() {
+        BankPayment held = payment(1001, "2026-10-15", JANA_ACCOUNT, "4821937560");
+        BankPayment heldWithoutSymbol = payment(1002, "2026-10-14", JANA_ACCOUNT, null);
+        BankPayment free = payment(1003, "2026-10-13", JANA_ACCOUNT, "4821937560");
+        payments.saveAll(List.of(held, heldWithoutSymbol, free));
+        payments.save(held.unpairedByAdmin(NOW));
+        payments.save(heldWithoutSymbol.unpairedByAdmin(NOW));
+        flushAndClear();
+
+        assertThat(payments.findUnpairedOrderedByBooking()).extracting(payment -> payment.transactionId().value()).containsExactly(1003L);
+        assertThat(payments.findUnpairedByMatchingVariableSymbol(new VariableSymbol("4821937560")))
+                .extracting(payment -> payment.transactionId().value()).containsExactly(1003L);
+        assertThat(payments.findUnpairedWithoutSymbolBySenderAccount(JANA_ACCOUNT.orElseThrow())).isEmpty();
+        assertThat(payments.findUnpairedBySenderAccountAndMatchingVariableSymbol(JANA_ACCOUNT.orElseThrow(), new VariableSymbol("4821937560")))
+                .extracting(payment -> payment.transactionId().value()).containsExactly(1003L);
+        assertThat(payments.findUnpairedNewestFirst()).extracting(payment -> payment.transactionId().value())
+                .containsExactly(1001L, 1002L, 1003L);
+        assertThat(payments.findUnpairedBookedBetween(LocalDate.of(2026, 10, 1), LocalDate.of(2026, 10, 31)))
+                .extracting(payment -> payment.transactionId().value()).containsExactly(1003L, 1002L, 1001L);
+    }
+
+    @Test
+    @DisplayName("Given paired and unpaired payments, when the newest-first list is asked for, then only unpaired ones come, newest booking and highest id first")
+    void should_list_newest_first_when_unpaired_listed_for_admin() {
+        BankPayment paired = payment(1001, "2026-10-16", JANA_ACCOUNT, null);
+        payments.saveAll(List.of(paired, payment(1002, "2026-10-15", JANA_ACCOUNT, null), payment(1004, "2026-10-15", JANA_ACCOUNT, null),
+                payment(1003, "2026-10-14", JANA_ACCOUNT, null)));
+        pair(paired, PairingMethod.SENDER_ACCOUNT);
+        flushAndClear();
+
+        assertThat(payments.findUnpairedNewestFirst()).extracting(payment -> payment.transactionId().value())
+                .containsExactly(1004L, 1002L, 1003L);
+    }
+
     private void pair(BankPayment payment, PairingMethod method) {
         DonorRecord jana = DonorRecord.registerPerson(new DonorReference(UuidV7.generate(NOW)), "Jana Nováková",
                 new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"), new VariableSymbol("4821937560"), LocaleCode.CS, NOW);

@@ -9,8 +9,10 @@ import cz.novanadeje.app.donations.domain.receipt.ReceiptNumber;
 import org.springframework.stereotype.Repository;
 
 import java.time.Year;
+import java.util.Collection;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Repository
@@ -38,6 +40,21 @@ class JpaDonationReceiptRepository implements DonationReceiptRepository {
                 stored -> stored.supersededAs(receipt),
                 () -> jpa.save(DonationReceiptJpaEntity.fromDomain(receipt)));
         jpa.flush();
+    }
+
+    @Override
+    public boolean existsForDonation(DonationId donation) {
+        return jpa.existsByDonationId(donation.value());
+    }
+
+    @Override
+    public Set<DonationId> findDonationsWithReceipt(Collection<DonationId> donations) {
+        if (donations.isEmpty()) {
+            return Set.of();
+        }
+        return jpa.findDonationIdsWithReceipt(donations.stream().map(DonationId::value).collect(Collectors.toSet())).stream()
+                .map(DonationId::new)
+                .collect(Collectors.toUnmodifiableSet());
     }
 
     @Override

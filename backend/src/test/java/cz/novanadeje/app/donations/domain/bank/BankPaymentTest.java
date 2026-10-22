@@ -67,21 +67,46 @@ class BankPaymentTest {
     void should_reject_when_created_given_non_positive_amount() {
         assertThatIllegalArgumentException().isThrownBy(() -> new BankPayment(PAYMENT_ID, new BankTransactionId(1), LocalDate.of(2026, 10, 15),
                 Money.czk(0), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(),
-                Optional.empty(), Optional.empty(), Optional.empty(), "t", NOW));
+                Optional.empty(), Optional.empty(), Optional.empty(), "t", NOW, Optional.empty()));
     }
 
     @Test
     void should_reject_when_created_given_inconsistent_matching_symbol() {
         assertThatIllegalArgumentException().isThrownBy(() -> new BankPayment(PAYMENT_ID, new BankTransactionId(1), LocalDate.of(2026, 10, 15),
                 Money.czk(100), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.of("0558"),
-                Optional.of(new VariableSymbol("0558")), Optional.empty(), Optional.empty(), Optional.empty(), "t", NOW));
+                Optional.of(new VariableSymbol("0558")), Optional.empty(), Optional.empty(), Optional.empty(), "t", NOW, Optional.empty()));
     }
 
     @Test
     void should_reject_when_created_given_missing_import_time() {
         assertThatIllegalArgumentException().isThrownBy(() -> new BankPayment(PAYMENT_ID, new BankTransactionId(1), LocalDate.of(2026, 10, 15),
                 Money.czk(100), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(),
-                Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), "t", null));
+                Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), "t", null, Optional.empty()));
+    }
+
+    @Test
+    void should_pair_automatically_when_imported_given_incoming_movement() {
+        assertThat(paymentWithSymbol(null).isPairedByHandOnly()).isFalse();
+        assertThat(paymentWithSymbol(null).unpairedByAdminAt()).isEmpty();
+    }
+
+    @Test
+    void should_be_paired_by_hand_only_when_an_admin_unpaired_it_given_imported_payment() {
+        BankPayment payment = paymentWithSymbol("0558");
+        Instant unpairedAt = NOW.plusSeconds(3600);
+
+        BankPayment held = payment.unpairedByAdmin(unpairedAt);
+
+        assertThat(held.isPairedByHandOnly()).isTrue();
+        assertThat(held.unpairedByAdminAt()).contains(unpairedAt);
+        assertThat(held.id()).isEqualTo(payment.id());
+        assertThat(held.matchingVariableSymbol()).isEqualTo(payment.matchingVariableSymbol());
+        assertThat(payment.isPairedByHandOnly()).isFalse();
+    }
+
+    @Test
+    void should_reject_when_unpaired_by_admin_given_no_time() {
+        assertThatIllegalArgumentException().isThrownBy(() -> paymentWithSymbol(null).unpairedByAdmin(null));
     }
 
     @Test

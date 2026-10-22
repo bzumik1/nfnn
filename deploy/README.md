@@ -316,18 +316,18 @@ SQL
 
 ## Správci
 
-Správce je obyčejný dárcovský účet, kterému v databázi přidáš roli `ADMIN`. Nic jiného se v databázi nenastavuje: správa je na `/sprava`, odkaz „Správa“ se v hlavičce přehledu ukáže jen správci a backend pustí k `/api/admin/...` jen token s touto rolí.
+Správce je obyčejný dárcovský účet, kterému v databázi přidáš roli `ADMIN`. Nic jiného se v databázi nenastavuje: správa je na `/sprava`, odkaz „Správa“ se v hlavičce přehledu ukáže jen správci a backend pustí k `/api/admin/...` jen token s touto rolí. Správa dnes ukazuje stav stahování z banky a na stránce „Platby z banky“ (`/sprava/platby`) přiřazuje nespárované platby dárcům a ruší přiřazení; každý zásah je v tabulce `admin_action`. Platba, které správce zrušil přiřazení, má `bank_payment.unpaired_by_admin_at` a automatické párování ji přeskakuje, dokud ji správce nepřiřadí znovu.
 
-Správa je dostupná z internetu, proto roli `ADMIN` dostane jen přihlášení potvrzené druhým faktorem. Postup pro nového správce:
+Správa je dostupná z internetu, proto roli `ADMIN` dostane jen přihlášení potvrzené dvoufaktorovým ověřením. Postup pro nového správce:
 
 1. Přidej roli SQL níže (účet musí mít ověřený e-mail, jinak se nepřihlásí).
-2. Správce se přihlásí (zatím jako dárce) a na kartě „Přihlašovací údaje“ klikne na „Zapnout druhý faktor“: zadá heslo, naskenuje QR kód (nebo opíše klíč) do ověřovací aplikace v telefonu (Google Authenticator, Microsoft Authenticator, Aegis apod.) a zadá první kód z ní. Tím je druhý faktor zapnutý a správce hned vidí odkaz „Správa“.
-3. Od té doby se přihlašuje heslem a kódem z aplikace. Dokud druhý faktor nezapne, přihlásí se jen jako dárce a přehled mu napíše, že správa čeká na druhý faktor; stejně tak po vypnutí druhého faktoru.
+2. Správce se přihlásí (zatím jako dárce) a na kartě „Přihlašovací údaje“ klikne na „Zapnout dvoufaktorové ověření“: zadá heslo, naskenuje QR kód (nebo opíše klíč) do ověřovací aplikace v telefonu (Google Authenticator, Microsoft Authenticator, Aegis apod.) a zadá první kód z ní. Tím je dvoufaktorové ověření zapnuté a správce hned vidí odkaz „Správa“.
+3. Od té doby se přihlašuje heslem a kódem z aplikace. Dokud dvoufaktorové ověření nezapne, přihlásí se jen jako dárce a přehled mu napíše, že správa čeká na dvoufaktorové ověření; stejně tak po jeho vypnutí.
 
-Ztracený nebo vyměněný telefon: druhý faktor vypni SQL (správce se pak přihlásí jen heslem a zapne si ho znovu; záložní kódy neexistují). Ověř nejdřív telefonicky, že žádá opravdu majitel účtu.
+Ztracený nebo vyměněný telefon: dvoufaktorové ověření vypni SQL (správce se pak přihlásí jen heslem a zapne si je znovu; záložní kódy neexistují). Ověř nejdřív telefonicky, že žádá opravdu majitel účtu.
 
 ```sh
-sudo docker exec -i nfnn-postgres psql -U nfnn nfnn <<'SQL'
+sudo docker exec -i nfnn-backup psql <<'SQL'
 delete from donor_second_factor where donor_id = (select id from donor where email = 'spravce@example.cz');
 SQL
 ```
@@ -335,7 +335,7 @@ SQL
 Přidání role (e-mail nahraď adresou účtu, který má být správcem):
 
 ```sh
-sudo docker exec -i nfnn-postgres psql -U nfnn nfnn <<'SQL'
+sudo docker exec -i nfnn-backup psql <<'SQL'
 insert into donor_role (donor_id, role)
 select id, 'ADMIN' from donor where email = 'spravce@example.cz'
 on conflict do nothing;
@@ -345,7 +345,7 @@ SQL
 Odebrání role:
 
 ```sh
-sudo docker exec -i nfnn-postgres psql -U nfnn nfnn <<'SQL'
+sudo docker exec -i nfnn-backup psql <<'SQL'
 delete from donor_role where role = 'ADMIN' and donor_id = (select id from donor where email = 'spravce@example.cz');
 SQL
 ```
@@ -353,7 +353,7 @@ SQL
 Kdo je správce a co kdy udělal (tabulka `admin_action` se plní od první změny provedené ve správě; zatím správa jen čte, takže je prázdná):
 
 ```sh
-sudo docker exec -i nfnn-postgres psql -U nfnn nfnn <<'SQL'
+sudo docker exec -i nfnn-backup psql <<'SQL'
 select d.email, r.role, (f.confirmed_at is not null) as second_factor
 from donor_role r join donor d on d.id = r.donor_id left join donor_second_factor f on f.donor_id = d.id
 where r.role = 'ADMIN';

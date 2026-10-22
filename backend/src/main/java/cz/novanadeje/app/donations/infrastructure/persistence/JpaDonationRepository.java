@@ -8,6 +8,7 @@ import cz.novanadeje.app.donations.domain.donor.DonorReference;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
+import java.time.Year;
 import java.util.List;
 import java.util.Optional;
 
@@ -31,6 +32,17 @@ class JpaDonationRepository implements DonationRepository {
     }
 
     @Override
+    public Optional<Donation> findByBankPayment(BankPaymentId bankPayment) {
+        return jpa.findByBankPaymentId(bankPayment.value()).map(DonationJpaEntity::toDomain);
+    }
+
+    @Override
+    public void delete(DonationId id) {
+        jpa.deleteById(id.value());
+        jpa.flush();
+    }
+
+    @Override
     public List<Donation> findByDonorNewestFirst(DonorReference donor) {
         return jpa.findByDonorIdOrderByReceivedOnDescRecordedAtDescIdDesc(donor.value()).stream().map(DonationJpaEntity::toDomain).toList();
     }
@@ -43,5 +55,10 @@ class JpaDonationRepository implements DonationRepository {
     @Override
     public List<Donation> findReceivedOnBetween(LocalDate firstDay, LocalDate lastDay) {
         return jpa.findByReceivedOnBetween(firstDay, lastDay).stream().map(DonationJpaEntity::toDomain).toList();
+    }
+
+    @Override
+    public List<Year> findReceivedYearsNewestFirst() {
+        return jpa.findReceivedYearsNewestFirst().stream().map(Year::of).toList();
     }
 }

@@ -34,7 +34,8 @@ public record BankPayment(
         Optional<String> specificSymbol,
         Optional<String> messageForRecipient,
         String transactionType,
-        Instant importedAt) {
+        Instant importedAt,
+        Optional<Instant> unpairedByAdminAt) {
 
     public BankPayment {
         require(id, "Bank payment id");
@@ -52,13 +53,24 @@ public record BankPayment(
         messageForRecipient = normalized(messageForRecipient, MESSAGE_FOR_RECIPIENT_LENGTH);
         transactionType = required(transactionType, TRANSACTION_TYPE_LENGTH, "Transaction type");
         require(importedAt, "Import time");
+        require(unpairedByAdminAt, "Admin unpairing time");
     }
 
     public static BankPayment incoming(BankPaymentId id, IncomingMovement movement, Instant importedAt) {
         return new BankPayment(id, movement.id(), movement.bookedOn(), movement.amount(), movement.sender(),
                 movement.counterpartyAccount(), movement.counterpartyBankCode(), movement.counterpartyName(),
                 movement.variableSymbol(), movement.matchingVariableSymbol(), movement.constantSymbol(),
-                movement.specificSymbol(), movement.messageForRecipient(), movement.transactionType(), importedAt);
+                movement.specificSymbol(), movement.messageForRecipient(), movement.transactionType(), importedAt, Optional.empty());
+    }
+
+    public BankPayment unpairedByAdmin(Instant at) {
+        return new BankPayment(id, transactionId, bookedOn, amount, sender, counterpartyAccount, counterpartyBankCode, counterpartyName,
+                variableSymbol, matchingVariableSymbol, constantSymbol, specificSymbol, messageForRecipient, transactionType, importedAt,
+                Optional.of(require(at, "Admin unpairing time")));
+    }
+
+    public boolean isPairedByHandOnly() {
+        return unpairedByAdminAt.isPresent();
     }
 
     public boolean carriesVariableSymbol() {

@@ -356,6 +356,28 @@ class JpaDonationReceiptRepositoryTest {
         assertThat(resources.image(new ContentDigest("e".repeat(64)))).isEmpty();
     }
 
+    @Test
+    @DisplayName("Given single receipts, one of them superseded, when donations with a receipt are asked for, then every donation ever receipted is named")
+    void should_name_receipted_donations_when_asked_given_active_and_superseded_receipts() {
+        DonorReference jana = storedDonor("4821937560");
+        Donation receipted = storedDonation(jana, LocalDate.of(2026, 3, 15));
+        Donation replaced = storedDonation(jana, LocalDate.of(2026, 4, 15));
+        Donation bare = storedDonation(jana, LocalDate.of(2026, 5, 15));
+        DonationReceipt old = single(jana, replaced, "2026-000001");
+        receipts.save(old);
+        receipts.save(single(jana, receipted, "2026-000002"));
+        old.markSuperseded(NOW.plusSeconds(60));
+        receipts.save(old);
+        flushAndClear();
+
+        assertThat(receipts.existsForDonation(receipted.id())).isTrue();
+        assertThat(receipts.existsForDonation(replaced.id())).isTrue();
+        assertThat(receipts.existsForDonation(bare.id())).isFalse();
+        assertThat(receipts.findDonationsWithReceipt(List.of(receipted.id(), replaced.id(), bare.id())))
+                .containsExactlyInAnyOrder(receipted.id(), replaced.id());
+        assertThat(receipts.findDonationsWithReceipt(List.of())).isEmpty();
+    }
+
     private DonationReceipt single(DonorReference donor, Donation donation, String number) {
         return DonationReceipt.issueForDonation(DonationReceiptId.newId(NOW), donor, donation.id(), new ReceiptNumber(number), ISSUED_ON, NOW,
                 LocaleCode.EN, FINGERPRINT, CONTENT, Optional.empty());

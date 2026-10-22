@@ -1,8 +1,12 @@
 package cz.novanadeje.app.donations.infrastructure.persistence;
 
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -11,4 +15,8 @@ public interface DonorRecordJpaRepository extends JpaRepository<DonorRecordJpaEn
     Optional<DonorRecordJpaEntity> findByVariableSymbol(String variableSymbol);
 
     long countByRegisteredAtBefore(Instant end);
+
+    @Query("select r from DonorRecordJpaEntity r where lower(r.name) like lower(concat('%', :query, '%')) escape '!'"
+            + " or r.variableSymbol like concat(:query, '%') escape '!' order by r.name, r.donorId")
+    List<DonorRecordJpaEntity> searchByNameOrSymbol(@Param("query") String query, Pageable page);
 }

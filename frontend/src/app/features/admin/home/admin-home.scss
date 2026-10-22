@@ -35,6 +35,50 @@
   max-width: 640px;
 }
 
+.admin-links {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.admin-link {
+  display: block;
+  background: var(--color-surface);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-panel);
+  border: 1px solid var(--color-border-soft);
+  padding: 18px 20px;
+  text-decoration: none;
+  color: var(--color-text);
+
+  &:hover,
+  &:focus-visible {
+    border-color: var(--color-accent);
+  }
+
+  &:focus-visible {
+    outline: 3px solid var(--color-focus-ring);
+    outline-offset: 2px;
+  }
+}
+
+.admin-link-title {
+  display: block;
+  font-family: var(--font-serif);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--color-accent);
+  margin-bottom: 6px;
+}
+
+.admin-link-text {
+  display: block;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--color-text-muted);
+}
+
 .admin-card {
   background: var(--color-surface);
   border-radius: var(--radius-card);

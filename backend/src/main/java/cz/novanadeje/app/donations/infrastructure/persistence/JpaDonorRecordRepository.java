@@ -7,9 +7,11 @@ import cz.novanadeje.app.donations.domain.donor.DonorRecordRepository;
 import cz.novanadeje.app.donations.domain.donor.DonorReference;
 import cz.novanadeje.app.donations.domain.donor.SenderAccountLink;
 import cz.novanadeje.app.shared.domain.VariableSymbol;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -67,6 +69,20 @@ class JpaDonorRecordRepository implements DonorRecordRepository {
                 .distinct()
                 .toList();
         return jpa.findAllById(owners).stream().map(this::withAccounts).toList();
+    }
+
+    @Override
+    public List<DonorRecord> findByIds(Collection<DonorReference> ids) {
+        if (ids.isEmpty()) {
+            return List.of();
+        }
+        return jpa.findAllById(ids.stream().map(DonorReference::value).collect(Collectors.toSet())).stream().map(this::withAccounts).toList();
+    }
+
+    @Override
+    public List<DonorRecord> searchByNameOrSymbol(String query, int limit) {
+        String escaped = query.replace("!", "!!").replace("%", "!%").replace("_", "!_");
+        return jpa.searchByNameOrSymbol(escaped, PageRequest.of(0, limit)).stream().map(this::withAccounts).toList();
     }
 
     @Override

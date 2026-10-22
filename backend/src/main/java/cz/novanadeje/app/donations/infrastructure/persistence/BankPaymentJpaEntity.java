@@ -76,6 +76,9 @@ public class BankPaymentJpaEntity {
     @Column(name = "imported_at", nullable = false)
     private Instant importedAt;
 
+    @Column(name = "unpaired_by_admin_at")
+    private Instant unpairedByAdminAt;
+
     protected BankPaymentJpaEntity() {
     }
 
@@ -98,6 +101,7 @@ public class BankPaymentJpaEntity {
         entity.messageForRecipient = payment.messageForRecipient().orElse(null);
         entity.transactionType = payment.transactionType();
         entity.importedAt = payment.importedAt();
+        entity.unpairedByAdminAt = payment.unpairedByAdminAt().orElse(null);
         return entity;
     }
 
@@ -117,7 +121,8 @@ public class BankPaymentJpaEntity {
                 Optional.ofNullable(specificSymbol),
                 Optional.ofNullable(messageForRecipient),
                 transactionType,
-                importedAt);
+                importedAt,
+                Optional.ofNullable(unpairedByAdminAt));
     }
 
     private Optional<SenderAccount> sender() {

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <changeSet id="013-pair-payments-by-hand" author="nfnn">
+        <addColumn tableName="bank_payment">
+            <column name="unpaired_by_admin_at" type="timestamp with time zone"/>
+        </addColumn>
+        <sql>alter table donation drop constraint ck_donation_paired_by</sql>
+        <sql>alter table donation add constraint ck_donation_paired_by check (paired_by in ('VARIABLE_SYMBOL', 'SENDER_ACCOUNT', 'CONFIRMED_SYMBOL', 'MANUAL'))</sql>
+    </changeSet>
+
+</databaseChangeLog>

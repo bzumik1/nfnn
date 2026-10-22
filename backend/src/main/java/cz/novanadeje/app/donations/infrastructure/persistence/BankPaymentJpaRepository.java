@@ -14,21 +14,26 @@ public interface BankPaymentJpaRepository extends JpaRepository<BankPaymentJpaEn
 
     String UNPAIRED = "select p from BankPaymentJpaEntity p"
             + " where not exists (select 1 from DonationJpaEntity d where d.bankPaymentId = p.id)";
+    String AUTOMATIC = UNPAIRED + " and p.unpairedByAdminAt is null";
     String BY_BOOKING = " order by p.bookedOn, p.transactionId";
+    String NEWEST_FIRST = " order by p.bookedOn desc, p.transactionId desc";
 
     @Query("select p.transactionId from BankPaymentJpaEntity p where p.transactionId in :ids")
     Set<Long> findTransactionIdsIn(@Param("ids") Collection<Long> ids);
 
-    @Query(UNPAIRED + BY_BOOKING)
+    @Query(AUTOMATIC + BY_BOOKING)
     List<BankPaymentJpaEntity> findUnpairedOrderByBooking();
 
-    @Query(UNPAIRED + " and p.matchingVariableSymbol = :symbol" + BY_BOOKING)
+    @Query(UNPAIRED + NEWEST_FIRST)
+    List<BankPaymentJpaEntity> findUnpairedNewestFirst();
+
+    @Query(AUTOMATIC + " and p.matchingVariableSymbol = :symbol" + BY_BOOKING)
     List<BankPaymentJpaEntity> findUnpairedByMatchingVariableSymbol(@Param("symbol") String symbol);
 
-    @Query(UNPAIRED + " and p.matchingVariableSymbol is null and p.senderAccountNumber = :number and p.senderBankCode = :code" + BY_BOOKING)
+    @Query(AUTOMATIC + " and p.matchingVariableSymbol is null and p.senderAccountNumber = :number and p.senderBankCode = :code" + BY_BOOKING)
     List<BankPaymentJpaEntity> findUnpairedWithoutSymbolBySenderAccount(@Param("number") String number, @Param("code") String code);
 
-    @Query(UNPAIRED + " and p.senderAccountNumber = :number and p.senderBankCode = :code and p.matchingVariableSymbol = :symbol" + BY_BOOKING)
+    @Query(AUTOMATIC + " and p.senderAccountNumber = :number and p.senderBankCode = :code and p.matchingVariableSymbol = :symbol" + BY_BOOKING)
     List<BankPaymentJpaEntity> findUnpairedBySenderAccountAndMatchingVariableSymbol(@Param("number") String number, @Param("code") String code,
                                                                                     @Param("symbol") String symbol);
 

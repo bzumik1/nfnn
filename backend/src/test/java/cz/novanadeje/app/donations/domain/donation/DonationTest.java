@@ -29,6 +29,19 @@ class DonationTest {
     private static final Optional<SenderAccount> ACCOUNT = SenderAccount.parse("1234567", "0800");
 
     @Test
+    @DisplayName("Given a bank payment an administrator assigns, when the donation is made by hand, then it is a received bank transfer paired manually")
+    void should_be_paired_manually_when_made_from_payment_given_manual_method() {
+        BankPayment payment = payment(1001, RECEIVED_ON, Money.czk(50000), SenderAccount.parse("2900233333", "2010"), "1111111111");
+
+        Donation donation = Donation.fromBankPayment(DONATION_ID, DONOR, payment, PairingMethod.MANUAL, NOW);
+
+        assertThat(donation.source()).isEqualTo(DonationSource.BANK_TRANSFER);
+        assertThat(donation.pairedBy()).contains(PairingMethod.MANUAL);
+        assertThat(donation.pairedThrough()).isEmpty();
+        assertThat(donation.confirmedClaim()).isEmpty();
+    }
+
+    @Test
     @DisplayName("Given a bank payment, when a donation is made from it, then it is a received bank transfer on the booking date with the payment's amount")
     void should_be_received_bank_transfer_when_made_from_payment_given_bank_payment() {
         BankPayment payment = payment(1001, RECEIVED_ON, Money.czk(50000), SenderAccount.parse("2900233333", "2010"), "4821937560");

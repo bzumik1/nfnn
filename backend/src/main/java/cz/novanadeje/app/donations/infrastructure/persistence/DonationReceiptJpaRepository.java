@@ -7,13 +7,20 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 public interface DonationReceiptJpaRepository extends JpaRepository<DonationReceiptJpaEntity, UUID> {
 
     Optional<DonationReceiptJpaEntity> findByDonationIdAndSupersededAtIsNull(UUID donationId);
+
+    boolean existsByDonationId(UUID donationId);
+
+    @Query("select distinct r.donationId from DonationReceiptJpaEntity r where r.donationId in :donationIds")
+    Set<UUID> findDonationIdsWithReceipt(@Param("donationIds") Collection<UUID> donationIds);
 
     Optional<DonationReceiptJpaEntity> findByDonorIdAndReceiptYearAndSupersededAtIsNull(UUID donorId, Integer receiptYear);
 

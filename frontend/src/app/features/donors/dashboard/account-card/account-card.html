@@ -8,19 +8,19 @@
         <dd>{{ donor.email }}</dd>
       </div>
       <div class="account-row">
-        <dt i18n="@@donor.account.secondFactor">Druhý faktor</dt>
+        <dt i18n="@@donor.account.secondFactor">Dvoufaktorové ověření</dt>
         <dd>
           @if (secondFactor().enabled) {
-            <span i18n="@@donor.account.secondFactor.on">Zapnutý</span>
+            <span i18n="@@donor.account.secondFactor.on">Zapnuté</span>
           } @else {
-            <span i18n="@@donor.account.secondFactor.off">Vypnutý</span>
+            <span i18n="@@donor.account.secondFactor.off">Vypnuté</span>
           }
         </dd>
       </div>
     </dl>
     @if (secondFactor().neededForAdministration) {
       <p class="account-hint" i18n="@@donor.account.secondFactor.neededForAdministration">
-        Správa se vám otevře, až zapnete druhý faktor a přihlásíte se s kódem z aplikace.
+        Správa se vám otevře, až zapnete dvoufaktorové ověření a přihlásíte se s kódem z aplikace.
       </p>
     }
   }
@@ -53,7 +53,7 @@
           (click)="open('second-factor-off')"
           i18n="@@donor.account.secondFactor.turnOff"
         >
-          Vypnout druhý faktor
+          Vypnout dvoufaktorové ověření
         </button>
       } @else {
         <button
@@ -63,7 +63,7 @@
           (click)="open('second-factor-on')"
           i18n="@@donor.account.secondFactor.turnOn"
         >
-          Zapnout druhý faktor
+          Zapnout dvoufaktorové ověření
         </button>
       }
     </div>
@@ -76,7 +76,7 @@
       novalidate
     >
       <h3 class="account-form-title" i18n="@@donor.account.secondFactor.on.title">
-        Zapnutí druhého faktoru
+        Zapnutí dvoufaktorového ověření
       </h3>
       <p class="account-form-intro" i18n="@@donor.account.secondFactor.on.intro">
         Při každém přihlášení pak k heslu zadáte kód z ověřovací aplikace v telefonu (například
@@ -188,7 +188,7 @@
           @if (saving()) {
             <span i18n="@@donor.account.secondFactor.verifying">Ověřuji kód…</span>
           } @else {
-            <span i18n="@@donor.account.secondFactor.turnOn">Zapnout druhý faktor</span>
+            <span i18n="@@donor.account.secondFactor.turnOn">Zapnout dvoufaktorové ověření</span>
           }
         </button>
         <button
@@ -210,7 +210,7 @@
       novalidate
     >
       <h3 class="account-form-title" i18n="@@donor.account.secondFactor.off.title">
-        Vypnutí druhého faktoru
+        Vypnutí dvoufaktorového ověření
       </h3>
       <p class="account-form-intro" i18n="@@donor.account.secondFactor.off.intro">
         K přihlášení pak bude stačit heslo. Ostatní přihlášení ukončíme, tohle zůstane.
@@ -263,7 +263,7 @@
           @if (saving()) {
             <span i18n="@@donor.account.secondFactor.turningOff">Vypínám…</span>
           } @else {
-            <span i18n="@@donor.account.secondFactor.turnOff">Vypnout druhý faktor</span>
+            <span i18n="@@donor.account.secondFactor.turnOff">Vypnout dvoufaktorové ověření</span>
           }
         </button>
         <button
@@ -454,12 +454,12 @@
       </span>
     } @else if (secondFactorChanged() === 'on') {
       <span i18n="@@donor.account.secondFactor.turnedOn">
-        Druhý faktor je zapnutý. Při příštím přihlášení zadáte i kód z aplikace; ostatní přihlášení
-        jsme ukončili, tohle zůstává.
+        Dvoufaktorové ověření je zapnuté. Při příštím přihlášení zadáte i kód z aplikace; ostatní
+        přihlášení jsme ukončili, tohle zůstává.
       </span>
     } @else if (secondFactorChanged() === 'off') {
       <span i18n="@@donor.account.secondFactor.turnedOff">
-        Druhý faktor jsme vypnuli. Ostatní přihlášení jsme ukončili, tohle zůstává.
+        Dvoufaktorové ověření jsme vypnuli. Ostatní přihlášení jsme ukončili, tohle zůstává.
       </span>
     }
   </p>

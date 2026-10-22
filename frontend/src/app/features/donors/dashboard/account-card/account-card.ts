@@ -211,7 +211,7 @@ export class AccountCard {
       error: (failure: unknown) =>
         this.fail(
           failure,
-          $localize`:@@donor.account.secondFactor.error.disable:Druhý faktor se nepodařilo vypnout. Zkuste to prosím znovu.`,
+          $localize`:@@donor.account.secondFactor.error.disable:Dvoufaktorové ověření se nepodařilo vypnout. Zkuste to prosím znovu.`,
         ),
     });
   }

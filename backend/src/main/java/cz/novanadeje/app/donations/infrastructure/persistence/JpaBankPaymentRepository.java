@@ -30,6 +30,11 @@ class JpaBankPaymentRepository implements BankPaymentRepository {
     }
 
     @Override
+    public void save(BankPayment payment) {
+        jpa.saveAndFlush(BankPaymentJpaEntity.fromDomain(payment));
+    }
+
+    @Override
     public Set<BankTransactionId> findKnownTransactionIds(Collection<BankTransactionId> ids) {
         if (ids.isEmpty()) {
             return Set.of();
@@ -47,6 +52,11 @@ class JpaBankPaymentRepository implements BankPaymentRepository {
     @Override
     public List<BankPayment> findUnpairedOrderedByBooking() {
         return toDomain(jpa.findUnpairedOrderByBooking());
+    }
+
+    @Override
+    public List<BankPayment> findUnpairedNewestFirst() {
+        return toDomain(jpa.findUnpairedNewestFirst());
     }
 
     @Override
