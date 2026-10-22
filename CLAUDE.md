@@ -53,5 +53,6 @@ Read before building, update in the same PR: `docs/requirements.md` (client deci
 - `build.gradle.kts` sets `TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE=/var/run/docker.sock`; keep it.
 - A receipt template or `receipt.*` text change fails `ReceiptTemplateHistoryTest` until its candidate is reviewed and committed (skill `receipt-template`).
 - `@angular/localize` is wired in; never run `ng add @angular/localize` again. Never use H2.
+- `db/changelog/content/.gitkeep` stays: the master changelog's `includeAll` needs every context folder to exist, and a missing one stops the backend at startup.
 - `spring.profiles.default: dev`: `getActiveProfiles()` is empty then; assert on `getDefaultProfiles()`.
 - The original HTML prototype was removed from the repo (git history keeps it); the theme in `frontend/src/styles/themes/_nova-nadeje.scss` and the existing components are the visual reference.
