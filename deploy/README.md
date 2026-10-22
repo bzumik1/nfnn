@@ -215,7 +215,102 @@ Kontejner `nfnn-backup` má přihlášení k databázi v prostředí, takže `ps
 
 ### Bankovní účty dárců a sběrné účty
 
-Účet odesílatele se dárci přiřadí z platby s jeho VS; pak se mu přiřazují i platby bez VS z toho účtu. Dárce své účty vidí na nástěnce a u každého může párování vypnout a znovu zapnout (tlačítka „Vypnout párování“ a „Zapnout párování“, viz „Donor's bank accounts“ v `docs/api-contract.md`). Platí-li přes jeden účet víc lidí (platební brána, sbírkový nebo firemní účet zaměstnavatele), dej ho do `backend.env` na řádek `PAIRING_EXCLUDED_ACCOUNTS=` ve tvaru `číslo/kód banky`, víc účtů odděl čárkou, třeba `PAIRING_EXCLUDED_ACCOUNTS=2400000002/2010,19-2000145399/0800`, a aplikaci přeinstaluj. Z takového účtu se už žádnému dárci účet nepřiřadí a platby bez VS z něj zůstanou nespárované; platba s VS se spáruje dál podle VS. Účet, který se dárce naučil dřív, mu na nástěnce zůstane i s dosavadními dary, jen se mu z něj další platby bez VS už nepřiřadí. Se špatně zapsaným účtem backend nenastartuje a log hlásí `app.donations.pairing.excluded-accounts holds a Czech account as number/bank code`.
+Účet odesílatele se dárci přiřadí z platby s jeho VS; pak se mu přiřazují i platby bez VS z toho účtu. Dárce své účty vidí na nástěnce a u každého může párování vypnout a znovu zapnout (tlačítka „Vypnout párování“ a „Zapnout párování“, viz „Donor's bank accounts“ v `docs/api-contract.md`). Platí-li přes jeden účet víc lidí (platební brána, sbírkový nebo firemní účet zaměstnavatele), dej ho do `backend.env` na řádek `PAIRING_EXCLUDED_ACCOUNTS=` ve tvaru `číslo/kód banky`, víc účtů odděl čárkou, třeba `PAIRING_EXCLUDED_ACCOUNTS=2400000002/2010,19-2000145399/0800`, a aplikaci přeinstaluj. Z takového účtu se už žádnému dárci účet nepřiřadí a platby bez VS z něj zůstanou nespárované; platba s VS se spáruje dál podle VS. Účet, který se dárce naučil dřív, mu na nástěnce zůstane i s dosavadními dary, jen se mu z něj další platby bez VS ani platby se starším VS (níže) už nepřiřadí. Se špatně zapsaným účtem backend nenastartuje a log hlásí `app.donations.pairing.excluded-accounts holds a Czech account as number/bank code`.
+
+Platba s VS, který žádný registrovaný dárce nemá (typicky starší VS v trvalém příkazu z doby před registrací), se podle účtu nepáruje. Když dárce ověří účet platbou 1 Kč se zprávou Ověření účtu a z účtu do dne ověření přišel právě jeden takový VS, nástěnka se ho u účtu zeptá, jestli jsou platby s tím VS jeho. Po „Ano, jsou moje“ se mu tyto platby přiřadí hned a další při každém importu, stejně jako platby bez VS; u sdíleného nebo vyloučeného účtu se nikdo neptá. Pravidla jsou v „Older variable symbol confirmation“ v `docs/api-contract.md`. Dárce svou odpověď sám nezmění; výpis odpovědí a opravu omylu popisuje „Starší variabilní symbol: výpis a oprava vazeb“ níže.
+
+**Před prvním nasazením verze s otázkou na starší VS.** Otázka platí hned po nasazení, bez přepínače, a dostanou ji i dárci, kteří účet ověřili dřív. Proto předtím:
+
+1. Do `PAIRING_EXCLUDED_ACCOUNTS` přidej připisovací účty České pošty (platby poštovní poukázkou z nich chodí s VS mnoha různých lidí) a vlastní účty fondu.
+2. Zkontroluj vazby na účty ze zkušebního provozu (vypíše je příkaz níže). Patří-li vazba testovacímu dárci a účet ve skutečnosti někomu jinému, je účet sdílený: platby bez VS z něj zůstávají nespárované a na starší VS se nikdo nezeptá. Takovou vazbu odstraň v databázi i s dary, které přes ni přišly (hotový příkaz na to tu zatím není). „Vypnout párování“ nestačí: skutečný majitel by pak dostal platby z účtu, i ty se starším VS, až ode dne po vypnutí.
+3. Aby pravidlo „právě jeden VS do dne ověření“ vidělo celou historii účtu, nastav před přeinstalací, která tuto verzi nasadí, v `backend.env` `FIO_HISTORY_FROM=2025-01-01`, odemkni historii ve Fio a do 10 minut aplikaci přeinstaluj (krok 3 v „Fio API“). Import při startu pak asi 30 s po startu stáhne platby od 1. 1. 2025. Dokud historie chybí, může nástěnka položit otázku, kterou by starší platby zablokovaly (třeba když z účtu dřív chodil i druhý VS).
+
+Vazby dárců na účty vypíše:
+
+<!-- sender-account-links:start -->
+```bash
+sudo docker exec -i nfnn-backup psql -v ON_ERROR_STOP=1 <<'SQL'
+select r.name as darce, s.account_number || '/' || s.bank_code as ucet, s.status as stav, s.valid_from as od_dne, s.valid_to as do_dne,
+       s.learned_at as prokazano
+from donor_sender_account s join donor_record r on r.donor_id = s.donor_id
+order by ucet, s.created_at;
+SQL
+```
+<!-- sender-account-links:end -->
+
+### Starší variabilní symbol: výpis a oprava vazeb
+
+Odpovědi dárců na otázku u účtu jsou v tabulce `donor_symbol_claim` (`CONFIRMED` je „Ano, jsou moje“, `DECLINED` je „Ne, nejsou moje“). Dary spárované přes potvrzený VS mají v tabulce `donation` hodnotu `paired_by = 'CONFIRMED_SYMBOL'` a v `symbol_claim_id` id vazby. Každý příkaz níže pouští `psql` s `ON_ERROR_STOP=1`, takže se na první chybě zastaví.
+
+Výpis odpovědí, nejnovější nahoře (`vazba` je id, které potřebují další příkazy, `daru` počet darů, které vazba spárovala):
+
+<!-- symbol-claim-list:start -->
+```bash
+sudo docker exec -i nfnn-backup psql -v ON_ERROR_STOP=1 <<'SQL'
+select c.id as vazba, r.name as darce, c.account_number || '/' || c.bank_code as ucet, c.variable_symbol as vs,
+       c.answer as odpoved, c.answered_at as kdy,
+       (select count(*) from donation d where d.symbol_claim_id = c.id) as daru
+from donor_symbol_claim c join donor_record r on r.donor_id = c.donor_id
+order by c.answered_at desc;
+SQL
+```
+<!-- symbol-claim-list:end -->
+
+**Omylem „Ano“.** Příkaz smaže dary, které vazba spárovala, a odpověď změní na „Ne“. Platby s tím VS pak zůstanou nespárované a dárce se na ně už nezeptá. Příkaz odmítne vazbu zrušit, dokud na některý z jejích darů odkazuje vydané potvrzení: potvrzení za ten dar, nebo roční potvrzení za rok daru vystavené po jeho spárování, i když ho později nahradilo novější (vydané potvrzení zůstává vydané). Takovou vazbu nech, jak je, a řeš to s dárcem: web vydané potvrzení zrušit neumí. `ID_VAZBY` nahraď id z výpisu:
+
+<!-- symbol-claim-reverse:start -->
+```bash
+sudo docker exec -i nfnn-backup psql -v ON_ERROR_STOP=1 -v claim=ID_VAZBY <<'SQL'
+begin;
+select pg_advisory_xact_lock(20261022);
+create temp table target_claim on commit drop as
+  select id, donor_id from donor_symbol_claim where id = :'claim' and answer = 'CONFIRMED';
+select 1 from donor_record r join target_claim c on c.donor_id = r.donor_id for update of r;
+create temp table target_donations on commit drop as
+  select d.id, d.donor_id, d.received_on, d.recorded_at from donation d join target_claim c on d.symbol_claim_id = c.id;
+do $$
+begin
+  if not exists (select 1 from target_claim) then
+    raise exception 'Potvrzená vazba s tímto id neexistuje';
+  end if;
+  if exists (select 1 from donation_receipt r join target_donations d on r.donation_id = d.id)
+     or exists (select 1 from donation_receipt r join target_donations d on r.donor_id = d.donor_id
+                where r.kind = 'YEARLY' and r.receipt_year = extract(year from d.received_on) and r.issued_at >= d.recorded_at) then
+    raise exception 'Na dary z této vazby odkazuje vydané potvrzení o daru, vazbu nejde zrušit';
+  end if;
+end $$;
+delete from donation where id in (select id from target_donations);
+update donor_symbol_claim set answer = 'DECLINED', answered_at = now() where id in (select id from target_claim);
+commit;
+SQL
+```
+<!-- symbol-claim-reverse:end -->
+
+Povede-li se to, výpis končí `DELETE` s počtem smazaných darů, `UPDATE 1` a `COMMIT`. Po chybě se nezmění nic: `Potvrzená vazba s tímto id neexistuje` znamená špatné id nebo vazbu s odpovědí „Ne“, `Na dary z této vazby odkazuje vydané potvrzení o daru` vydané potvrzení. Příkaz nejdřív vezme stejný zámek jako párování (`pg_advisory_xact_lock(20261022)`, v backendu `PostgresPairingLock.KEY`), takže hodinový import ani odpověď dárce v tu chvíli nic nespárují, a pak zamkne řádek dárce v `donor_record`, takže se do konce příkazu nevystaví žádné jeho potvrzení. Roční potvrzení vystavené před spárováním darů tyto dary nepotvrzuje, takže zůstává, jak je.
+
+**Omylem „Ne“**, nebo má-li dárce po zrušeném „Ano“ odpovědět znovu: příkaz smaže odpověď „Ne“ a nástěnka se dárce zeptá znovu, pokud otázka pořád platí. Odpověď „Ano“ nesmaže (výpis hlásí `DELETE 0`); tu nejdřív zruš příkazem výše.
+
+<!-- symbol-claim-reset:start -->
+```bash
+sudo docker exec -i nfnn-backup psql -v ON_ERROR_STOP=1 -v claim=ID_VAZBY <<'SQL'
+delete from donor_symbol_claim c where c.id = :'claim' and c.answer = 'DECLINED'
+  and not exists (select 1 from donation d where d.symbol_claim_id = c.id);
+SQL
+```
+<!-- symbol-claim-reset:end -->
+
+**Jména z banky.** Osoby se nástěnka nezeptá, když banka u její ověřovací platby uvádí jméno s právní formou (`s.r.o.`, `a.s.`, `z.s.`, `o.p.s.`, `družstvo`, `nadace`…), a firmy, když jméno právní formu nemá; platba bez jména se nekontroluje. Seznam forem je v `CounterpartyNames` v backendu. Před ostrým provozem projdi jména na skutečných ověřovacích platbách s typem dárce (`PERSON` osoba, `COMPANY` firma). Objeví-li se forma, kterou seznam nezná (třeba `s.p.`, `p.o.` nebo `SVJ`), je potřeba ji do seznamu doplnit.
+
+<!-- symbol-claim-names:start -->
+```bash
+sudo docker exec -i nfnn-backup psql -v ON_ERROR_STOP=1 <<'SQL'
+select distinct r.type as typ, p.counterparty_name as jmeno_v_bance
+from donation d join bank_payment p on p.id = d.bank_payment_id join donor_record r on r.donor_id = d.donor_id
+where d.purpose = 'ACCOUNT_VERIFICATION'
+order by 1, 2;
+SQL
+```
+<!-- symbol-claim-names:end -->
 
 ## Potvrzení o daru
 

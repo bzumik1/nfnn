@@ -80,4 +80,5 @@ tasks.withType<Test> {
 	useJUnitPlatform()
 	systemProperty("cucumber.junit-platform.naming-strategy", "long")
 	environment("TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE", "/var/run/docker.sock")
+	inputs.file("../deploy/README.md").withPropertyName("deployReadme").withPathSensitivity(PathSensitivity.NONE)
 }

@@ -533,7 +533,7 @@ Answers (`application/bankaccount/SymbolClaimService`): confirm and decline each
 
 Confirm then pairs the counted payments in the same transaction (`PaymentPairingService.pairConfirmedSymbol`), so an answer commits together with its donations or not at all. Every later payment with the symbol from the account pairs in the hourly import and the bank check (pairing rule 8). A claim never teaches, starts or ends a link. Once the account is excluded, the claim pairs nothing more.
 
-The donor cannot change an answer, and the question does not come back after either one. A mistake is fixed by hand in the database. Logs carry only the donor, link and claim ids and the count, never the symbol, the account or a name.
+The donor cannot change an answer, and the question does not come back after either one. A mistake is fixed in the database with the SQL in „Starší variabilní symbol: výpis a oprava vazeb“ in `deploy/README.md`: it lists the answers; it reverses a mistaken yes by deleting the claim's donations and turning the answer into `DECLINED`, under the pairing lock and the donor's `donor_record` row lock, and refuses while an issued receipt may certify one of them (a single receipt of the donation, or a yearly receipt of its year, superseded or not, issued at or after its `recorded_at`); and it deletes a mistaken no, after which the question comes back if it still holds. Logs carry only the donor, link and claim ids and the count, never the symbol, the account or a name.
 
 Code: `domain/donor/SymbolClaim`, `SymbolClaimRepository`, `SymbolOfferNotAvailable`, `SymbolClaimAlreadyAnswered`; `domain/pairing/SymbolClaimOffer` and `SymbolClaimOfferPolicy`; `domain/bank/CounterpartyNames`; `application/bankaccount/SymbolClaimOffers`, `SymbolClaimService` and `SymbolClaimConfirmation`; `interfaces/rest/SymbolClaimRequest` and `SymbolClaimConfirmationResponse` on `DonorBankAccountsController`. `features/donations/symbol_claims.feature` asks and answers through these endpoints. It covers:
 - the trigger after a one-koruna proof and after a gift;
@@ -545,7 +545,7 @@ Code: `domain/donor/SymbolClaim`, `SymbolClaimRepository`, `SymbolOfferNotAvaila
 - the changed yearly receipt;
 - 400, 401, 404 and both 409 answers.
 
-It seeds a claim through `SymbolClaimRepository` only where no question can be asked: a claim from before the account was excluded, and one at an account the donor never verified.
+It seeds a claim through `SymbolClaimRepository` only where no question can be asked: a claim from before the account was excluded, and one at an account the donor never verified. `infrastructure/persistence/DeployReadmeSymbolClaimSqlTest` runs the README's blocks with `psql` in the PostgreSQL test container: the reversal refused by a single receipt and by a yearly receipt issued after the pairing, the reversal allowed by a yearly receipt issued before it (nothing pairs again and the account asks nothing), a declined claim, the reset with the question back, the listings, and the lock key equal to `PostgresPairingLock.KEY`. The Gradle test task declares `deploy/README.md` as an input, so a change to the README alone runs it again.
 
 #### Bank check on demand
 
