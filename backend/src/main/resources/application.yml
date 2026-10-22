@@ -125,6 +125,10 @@ app:
     email-verification:
       token-ttl: PT24H
       max-live-links: 3
+    second-factor:
+      challenge-ttl: PT5M
+      challenge-attempts: 5
+      issuer: Nová naděje
 
 logging:
   level:

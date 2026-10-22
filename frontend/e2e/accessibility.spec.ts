@@ -6,6 +6,8 @@ import {
   mockDonorApi,
   openSignInDialog,
   problem,
+  secondFactorEnrolment,
+  secondFactorRequired,
   signIn,
 } from './donor-session';
 
@@ -267,6 +269,40 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     await page.getByRole('button', { name: 'Zrušit' }).click();
     await page.getByRole('button', { name: 'Změnit heslo' }).click();
     await expect(page.getByLabel('Současné heslo')).toBeFocused();
+
+    expect(await violations(page)).toEqual([]);
+  });
+
+  test('when a signed-in donor sets up the second factor, then the QR step breaks no rule, with its error shown either', async ({
+    page,
+  }) => {
+    await page.route('**/api/donors/me/second-factor/setup', (route) =>
+      route.fulfill({ json: secondFactorEnrolment }),
+    );
+    await signIn(page);
+    await page.getByRole('button', { name: 'Zapnout druhý faktor' }).click();
+    await page.getByLabel('Současné heslo').fill('correct horse battery');
+    await page.getByRole('button', { name: 'Pokračovat' }).click();
+    await expect(page.getByLabel('Kód z aplikace')).toBeFocused();
+
+    expect(await violations(page)).toEqual([]);
+
+    await page.getByLabel('Kód z aplikace').fill('12345');
+    await page.getByRole('button', { name: 'Zapnout druhý faktor' }).click();
+    await expect(page.getByLabel('Kód z aplikace')).toBeFocused();
+
+    expect(await violations(page)).toEqual([]);
+  });
+
+  test('when a donor with the second factor on signs in, then the code step breaks no rule', async ({
+    page,
+  }) => {
+    await page.route('**/api/donors/auth/login', (route) => route.fulfill(secondFactorRequired()));
+    await openSignInDialog(page);
+    await page.locator('#login-email').fill('jana@example.cz');
+    await page.locator('#login-password').fill('correct horse battery');
+    await page.getByRole('dialog').locator('.form-submit').click();
+    await expect(page.getByLabel('Kód z aplikace')).toBeFocused();
 
     expect(await violations(page)).toEqual([]);
   });

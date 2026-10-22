@@ -17,6 +17,8 @@ import {
   Donor,
   EmailChangeRequest,
   RegisterDonorRequest,
+  SecondFactorDisableRequest,
+  SecondFactorEnrolment,
   UpdateDonorProfileRequest,
 } from './donor';
 
@@ -52,6 +54,12 @@ export class AuthStore {
 
   login(email: string, password: string): Observable<Donor> {
     return this.api.login(email, password).pipe(map((response) => this.adopt(response)));
+  }
+
+  completeSecondFactor(challenge: string, code: string): Observable<Donor> {
+    return this.api
+      .completeSecondFactor(challenge, code)
+      .pipe(map((response) => this.adopt(response)));
   }
 
   refresh(): Observable<string> {
@@ -102,6 +110,18 @@ export class AuthStore {
 
   requestEmailChange(request: EmailChangeRequest): Observable<void> {
     return this.api.requestEmailChange(request);
+  }
+
+  setupSecondFactor(password: string): Observable<SecondFactorEnrolment> {
+    return this.api.setupSecondFactor(password);
+  }
+
+  confirmSecondFactor(code: string): Observable<Donor> {
+    return this.api.confirmSecondFactor(code).pipe(map((response) => this.adopt(response)));
+  }
+
+  disableSecondFactor(request: SecondFactorDisableRequest): Observable<Donor> {
+    return this.api.disableSecondFactor(request).pipe(map((response) => this.adopt(response)));
   }
 
   private adopt(response: AuthResponse): Donor {

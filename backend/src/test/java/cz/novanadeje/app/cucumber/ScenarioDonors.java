@@ -20,6 +20,7 @@ public class ScenarioDonors {
     private final Map<String, RememberedDonor> donors = new HashMap<>();
     private final Map<String, String> accessTokens = new HashMap<>();
     private final Map<String, Credentials> credentials = new HashMap<>();
+    private final Map<String, String> secondFactorSecrets = new HashMap<>();
 
     public void remember(String alias, UUID donorId, VariableSymbol variableSymbol) {
         donors.put(alias, new RememberedDonor(donorId, variableSymbol));
@@ -31,6 +32,18 @@ public class ScenarioDonors {
 
     public void rememberCredentials(String alias, String email, String password) {
         credentials.put(alias, new Credentials(email, password));
+    }
+
+    public void rememberSecondFactorSecret(String alias, String secret) {
+        secondFactorSecrets.put(alias, secret);
+    }
+
+    public String secondFactorSecretOf(String alias) {
+        String secret = secondFactorSecrets.get(alias);
+        if (secret == null) {
+            throw new IllegalArgumentException("No second factor for \"" + alias + "\" in this scenario; known: " + secondFactorSecrets.keySet());
+        }
+        return secret;
     }
 
     public Credentials credentialsOf(String alias) {

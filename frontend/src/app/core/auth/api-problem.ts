@@ -11,6 +11,7 @@ export interface ApiProblem {
   title: string;
   detail: string;
   errors: readonly ApiProblemError[];
+  challenge: string | null;
 }
 
 export function problemOf(failure: unknown): ApiProblem | null {
@@ -28,6 +29,7 @@ export function problemOf(failure: unknown): ApiProblem | null {
     title: stringOf(fields['title']),
     detail: stringOf(fields['detail']),
     errors: Array.isArray(fields['errors']) ? fields['errors'].map(errorOf) : [],
+    challenge: typeof fields['challenge'] === 'string' ? fields['challenge'] : null,
   };
 }
 

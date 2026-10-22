@@ -4,6 +4,8 @@ import cz.novanadeje.app.donors.domain.Donor;
 import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.donors.domain.DonorRepository;
 import cz.novanadeje.app.donors.domain.PasswordHash;
+import cz.novanadeje.app.donors.domain.Role;
+import cz.novanadeje.app.donors.domain.SecondFactorRepository;
 import cz.novanadeje.app.shared.application.event.DonorProfileChanged;
 import cz.novanadeje.app.shared.domain.DonorType;
 import cz.novanadeje.app.shared.domain.EmailAddress;
@@ -20,6 +22,7 @@ import org.springframework.context.ApplicationEventPublisher;
 
 import java.time.Instant;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -33,13 +36,15 @@ class DonorProfileServiceTest {
     @Mock
     private DonorRepository donors;
     @Mock
+    private SecondFactorRepository secondFactors;
+    @Mock
     private ApplicationEventPublisher events;
 
     private DonorProfileService service;
 
     @BeforeEach
     void setUp() {
-        service = new DonorProfileService(donors, events);
+        service = new DonorProfileService(donors, new DonorViews(secondFactors), events);
     }
 
     @Test
@@ -47,7 +52,7 @@ class DonorProfileServiceTest {
     void should_publish_profile_changed_when_profile_updated_given_registered_donor() {
         when(donors.findById(DONOR)).thenReturn(Optional.of(donor()));
 
-        service.updateProfile(DONOR, new UpdateDonorProfileCommand("Jana Malá", "Krátká 3", "Praha", "110 00", "en"));
+        service.updateProfile(DONOR, Set.of(Role.DONOR), new UpdateDonorProfileCommand("Jana Malá", "Krátká 3", "Praha", "110 00", "en"));
 
         verify(events).publishEvent(new DonorProfileChanged(
                 DONOR.value(), "Jana Malá", new PostalAddress("Krátká 3", "Praha", "110 00"), LocaleCode.EN));

@@ -17,10 +17,14 @@ record DonorResponse(
         String preferredLocale,
         String variableSymbol,
         List<Role> roles,
-        Instant registeredAt
+        Instant registeredAt,
+        SecondFactorResponse secondFactor
 ) {
 
     record AddressResponse(String street, String city, String postalCode) {
+    }
+
+    record SecondFactorResponse(boolean enabled, boolean neededForAdministration) {
     }
 
     static DonorResponse of(DonorView view) {
@@ -34,7 +38,8 @@ record DonorResponse(
                 view.preferredLocale(),
                 view.variableSymbol(),
                 view.roles(),
-                view.registeredAt()
+                view.registeredAt(),
+                new SecondFactorResponse(view.secondFactor().enabled(), view.secondFactor().neededForAdministration())
         );
     }
 }

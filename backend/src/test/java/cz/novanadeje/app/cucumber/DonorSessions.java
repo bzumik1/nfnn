@@ -20,16 +20,20 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class DonorSessions {
 
     private static final String LOGIN_PATH = "/api/donors/auth/login";
+    private static final String SECOND_FACTOR_PATH = "/api/donors/auth/login/second-factor";
+    private static final String SECOND_FACTOR_REQUIRED = "auth/second-factor-required";
     private static final Duration SAFETY_MARGIN = Duration.ofMinutes(1);
 
     private final ApiClient api;
     private final ScenarioDonors scenarioDonors;
+    private final TotpCodes totpCodes;
     private final Clock clock;
     private final JsonMapper jsonMapper = JsonMapper.builder().build();
 
-    public DonorSessions(ApiClient api, ScenarioDonors scenarioDonors, Clock clock) {
+    public DonorSessions(ApiClient api, ScenarioDonors scenarioDonors, TotpCodes totpCodes, Clock clock) {
         this.api = api;
         this.scenarioDonors = scenarioDonors;
+        this.totpCodes = totpCodes;
         this.clock = clock;
     }
 
@@ -43,6 +47,11 @@ public class DonorSessions {
         ScenarioDonors.Credentials credentials = scenarioDonors.credentialsOf(alias);
         api.forgetCredentials();
         ResponseEntity<String> response = api.post(LOGIN_PATH, Map.of("email", credentials.email(), "password", credentials.password()));
+        if (response.getStatusCode().value() == 401 && api.lastResponseJson().get("type").asString().endsWith(SECOND_FACTOR_REQUIRED)) {
+            String challenge = api.lastResponseJson().get("challenge").asString();
+            String code = totpCodes.freshCode(scenarioDonors.secondFactorSecretOf(alias));
+            response = api.post(SECOND_FACTOR_PATH, Map.of("challenge", challenge, "code", code));
+        }
         assertThat(response.getStatusCode().value()).withFailMessage("Signing in again answered %s", response.getBody()).isEqualTo(200);
         String renewed = api.lastResponseJson().get("accessToken").asString();
         scenarioDonors.rememberAccessToken(alias, renewed);

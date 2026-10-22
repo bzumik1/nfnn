@@ -9,6 +9,7 @@ import cz.novanadeje.app.shared.domain.PostalAddress;
 import java.time.Instant;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Set;
 
 public record DonorView(
         String id,
@@ -20,10 +21,11 @@ public record DonorView(
         String preferredLocale,
         String variableSymbol,
         List<Role> roles,
-        Instant registeredAt
+        Instant registeredAt,
+        SecondFactorView secondFactor
 ) {
 
-    public static DonorView of(Donor donor) {
+    public static DonorView of(Donor donor, Set<Role> sessionRoles, SecondFactorView secondFactor) {
         return new DonorView(
                 donor.id().toString(),
                 donor.type(),
@@ -33,8 +35,9 @@ public record DonorView(
                 donor.email().value(),
                 donor.preferredLocale().tag(),
                 donor.variableSymbol().value(),
-                donor.roles().stream().sorted(Comparator.naturalOrder()).toList(),
-                donor.registeredAt()
+                sessionRoles.stream().sorted(Comparator.naturalOrder()).toList(),
+                donor.registeredAt(),
+                secondFactor
         );
     }
 }

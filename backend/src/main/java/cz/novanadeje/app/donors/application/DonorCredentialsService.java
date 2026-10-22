@@ -31,23 +31,25 @@ public class DonorCredentialsService {
     private final RefreshTokenRepository refreshTokens;
     private final DonorSessionService sessions;
     private final DonorEmailVerificationService emailVerification;
+    private final DonorViews views;
     private final ApplicationEventPublisher events;
     private final Clock clock;
 
     public DonorCredentialsService(DonorRepository donors, PasswordHasher passwordHasher, RefreshTokenRepository refreshTokens,
-                                   DonorSessionService sessions, DonorEmailVerificationService emailVerification,
+                                   DonorSessionService sessions, DonorViews views, DonorEmailVerificationService emailVerification,
                                    ApplicationEventPublisher events, Clock clock) {
         this.donors = donors;
         this.passwordHasher = passwordHasher;
         this.refreshTokens = refreshTokens;
         this.sessions = sessions;
+        this.views = views;
         this.emailVerification = emailVerification;
         this.events = events;
         this.clock = clock;
     }
 
     @Transactional
-    public AuthenticatedDonor changePassword(DonorId donorId, String currentPassword, String newPassword) {
+    public AuthenticatedDonor changePassword(DonorId donorId, boolean secondFactorVerified, String currentPassword, String newPassword) {
         Donor donor = load(donorId);
         requireMatching(donor, currentPassword);
         RawPassword rawPassword = new RawPassword(newPassword);
@@ -56,7 +58,7 @@ public class DonorCredentialsService {
         donors.save(donor);
         refreshTokens.revokeAllOf(donor.id(), now);
         log.info("Password of donor {} changed, every session revoked", donor.id());
-        return new AuthenticatedDonor(DonorView.of(donor), sessions.open(donor.id(), donor.roles()));
+        return views.authenticated(donor, sessions.open(donor, secondFactorVerified));
     }
 
     @Transactional

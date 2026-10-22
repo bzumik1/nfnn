@@ -40,7 +40,8 @@ class DonorCredentialsController {
                                                 HttpServletRequest http) {
         passwordLimiter.check(http.getRemoteAddr());
         return SessionResponses.opened(HttpStatus.OK,
-                credentials.changePassword(DonorId.of(jwt.getSubject()), request.currentPassword(), request.newPassword()), clock.instant());
+                credentials.changePassword(DonorId.of(jwt.getSubject()), SessionRoles.secondFactorVerified(jwt), request.currentPassword(),
+                        request.newPassword()), clock.instant());
     }
 
     @PostMapping("/email-change")

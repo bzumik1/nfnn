@@ -4,7 +4,12 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { LoginDialogMode, LoginDialogService } from '../../../core/auth/login-dialog.service';
-import { authResponse, problem } from '../../../core/auth/testing/donor-fixtures';
+import {
+  authResponse,
+  problem,
+  SAMPLE_CHALLENGE,
+  secondFactorRequired,
+} from '../../../core/auth/testing/donor-fixtures';
 import { LoginDialog } from './login-dialog';
 
 describe('Given the sign-in dialog', () => {
@@ -153,6 +158,107 @@ describe('Given the sign-in dialog', () => {
       );
       expect(element<HTMLButtonElement>('.form-submit').disabled).toBe(false);
       expect(navigate).not.toHaveBeenCalled();
+    });
+
+    describe('with the second factor on', () => {
+      beforeEach(async () => {
+        await fillIn('#login-email', 'jana@example.cz');
+        await fillIn('#login-password', 'correct horse battery');
+        await submit('.login-form');
+        http
+          .expectOne('/api/donors/auth/login')
+          .flush(secondFactorRequired(), { status: 401, statusText: 'Unauthorized' });
+        await settle();
+      });
+
+      it('then the dialog asks for the code from the app, focuses its field and shows no error', () => {
+        expect(element('.login-form')).toBeNull();
+        expect(element('.sub').textContent).toContain(
+          'Přihlášení dokončíte kódem z ověřovací aplikace',
+        );
+        expect(element('#login-code').getAttribute('autocomplete')).toBe('one-time-code');
+        expect(element('#login-code').getAttribute('inputmode')).toBe('numeric');
+        expect(element('#login-code-hint').textContent).toContain('Šest číslic');
+        expect(document.activeElement).toBe(element('#login-code'));
+        expect(element('.form-error')).toBeNull();
+        expect(dialog.isOpen()).toBe(true);
+      });
+
+      it('and the right code is sent, then the challenge and the code go together and the portal opens', async () => {
+        await fillIn('#login-code', ' 287082 ');
+
+        await submit('.code-form');
+        const request = http.expectOne('/api/donors/auth/login/second-factor');
+        expect(request.request.body).toEqual({ challenge: SAMPLE_CHALLENGE, code: '287082' });
+        request.flush(authResponse('token-1'));
+        await settle();
+
+        expect(TestBed.inject(AuthStore).donor()?.name).toBe('Jana Nováková');
+        expect(dialog.isOpen()).toBe(false);
+        expect(navigate).toHaveBeenCalledWith('/donor/prehled');
+      });
+
+      it('and a five-digit code is sent, then nothing goes out and the field says the code has six digits', async () => {
+        await fillIn('#login-code', '12345');
+
+        await submit('.code-form');
+
+        http.expectNone('/api/donors/auth/login/second-factor');
+        expect(element('#login-code-error').textContent).toContain('Kód má přesně šest číslic.');
+      });
+
+      it('and a wrong code is sent, then the code step stays and shows the reason', async () => {
+        await fillIn('#login-code', '000000');
+
+        await submit('.code-form');
+        http
+          .expectOne('/api/donors/auth/login/second-factor')
+          .flush(
+            problem(
+              'auth/invalid-second-factor-code',
+              'Nesprávný kód',
+              'Zadejte prosím aktuální kód z ověřovací aplikace; každý kód platí jen jednou.',
+            ),
+            { status: 401, statusText: 'Unauthorized' },
+          );
+        await settle();
+
+        expect(element('#login-code')).not.toBeNull();
+        expect(element('.form-error').textContent).toContain('Nesprávný kód.');
+        expect(element<HTMLButtonElement>('.form-submit').disabled).toBe(false);
+      });
+
+      it('and the challenge has expired, then the dialog goes back to the password and says why', async () => {
+        await fillIn('#login-code', '000000');
+
+        await submit('.code-form');
+        http
+          .expectOne('/api/donors/auth/login/second-factor')
+          .flush(
+            problem(
+              'auth/invalid-second-factor-challenge',
+              'Přihlášení vypršelo',
+              'Zadejte prosím znovu e-mail a heslo.',
+            ),
+            { status: 401, statusText: 'Unauthorized' },
+          );
+        await settle();
+
+        expect(element('#login-code')).toBeNull();
+        expect(element<HTMLInputElement>('#login-email').value).toBe('jana@example.cz');
+        expect(element('.form-error').textContent).toContain(
+          'Přihlášení vypršelo. Zadejte prosím znovu e-mail a heslo.',
+        );
+      });
+
+      it('and goes back, then the password form is shown again without an error', async () => {
+        await click('.foot .link-btn');
+
+        expect(element('#login-code')).toBeNull();
+        expect(element('#login-password')).not.toBeNull();
+        expect(element('.form-error')).toBeNull();
+        http.expectNone('/api/donors/auth/login/second-factor');
+      });
     });
 
     it('before confirming the e-mail, then the dialog explains it and offers to send the link again', async () => {

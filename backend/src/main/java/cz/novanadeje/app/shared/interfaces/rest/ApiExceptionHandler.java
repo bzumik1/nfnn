@@ -70,6 +70,7 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
         problem.setType(ProblemTypes.of(ex.code()));
         problem.setTitle(message("problem." + ex.code() + ".title", ex.getMessage()));
         problem.setDetail(message("problem." + ex.code() + ".detail", ex.getMessage()));
+        ex.extensions().forEach(problem::setProperty);
         return problem;
     }
 

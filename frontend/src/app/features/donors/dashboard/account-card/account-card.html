@@ -7,7 +7,22 @@
         <dt i18n="@@donor.login.email">E-mail</dt>
         <dd>{{ donor.email }}</dd>
       </div>
+      <div class="account-row">
+        <dt i18n="@@donor.account.secondFactor">Druhý faktor</dt>
+        <dd>
+          @if (secondFactor().enabled) {
+            <span i18n="@@donor.account.secondFactor.on">Zapnutý</span>
+          } @else {
+            <span i18n="@@donor.account.secondFactor.off">Vypnutý</span>
+          }
+        </dd>
+      </div>
     </dl>
+    @if (secondFactor().neededForAdministration) {
+      <p class="account-hint" i18n="@@donor.account.secondFactor.neededForAdministration">
+        Správa se vám otevře, až zapnete druhý faktor a přihlásíte se s kódem z aplikace.
+      </p>
+    }
   }
 
   @if (panel() === 'closed') {
@@ -30,7 +45,237 @@
       >
         Změnit heslo
       </button>
+      @if (secondFactor().enabled) {
+        <button
+          #secondFactorButton
+          type="button"
+          class="account-action"
+          (click)="open('second-factor-off')"
+          i18n="@@donor.account.secondFactor.turnOff"
+        >
+          Vypnout druhý faktor
+        </button>
+      } @else {
+        <button
+          #secondFactorButton
+          type="button"
+          class="account-action"
+          (click)="open('second-factor-on')"
+          i18n="@@donor.account.secondFactor.turnOn"
+        >
+          Zapnout druhý faktor
+        </button>
+      }
     </div>
+  } @else if (panel() === 'second-factor-on' && enrolment() === null) {
+    <form
+      #setupForm="ngForm"
+      class="account-form"
+      appFocusFirstInvalid
+      (ngSubmit)="startSecondFactor(setupForm)"
+      novalidate
+    >
+      <h3 class="account-form-title" i18n="@@donor.account.secondFactor.on.title">
+        Zapnutí druhého faktoru
+      </h3>
+      <p class="account-form-intro" i18n="@@donor.account.secondFactor.on.intro">
+        Při každém přihlášení pak k heslu zadáte kód z ověřovací aplikace v telefonu (například
+        Google Authenticator, Microsoft Authenticator nebo Aegis). Nejdřív potvrďte heslem.
+      </p>
+      <app-form-field
+        label="Současné heslo"
+        i18n-label="@@donor.account.currentPassword"
+        [messages]="currentPasswordMessages"
+      >
+        <app-password-reveal>
+          <input
+            #firstField
+            appFormControl
+            id="account-second-factor-password"
+            name="password"
+            type="password"
+            autocomplete="current-password"
+            [(ngModel)]="password"
+            required
+            maxlength="128"
+          />
+        </app-password-reveal>
+      </app-form-field>
+
+      @if (error()) {
+        <p class="form-error" role="alert">{{ error() }}</p>
+      }
+
+      <div class="account-form-actions">
+        <button type="submit" class="account-save" [disabled]="saving()">
+          @if (saving()) {
+            <span i18n="@@donor.account.secondFactor.preparing">Připravuji…</span>
+          } @else {
+            <span i18n="@@donor.account.secondFactor.continue">Pokračovat</span>
+          }
+        </button>
+        <button
+          type="button"
+          class="account-cancel"
+          (click)="cancel()"
+          i18n="@@donor.account.cancel"
+        >
+          Zrušit
+        </button>
+      </div>
+    </form>
+  } @else if (panel() === 'second-factor-on') {
+    <form
+      #confirmForm="ngForm"
+      class="account-form"
+      appFocusFirstInvalid
+      (ngSubmit)="confirmSecondFactor(confirmForm)"
+      novalidate
+    >
+      <h3 class="account-form-title" i18n="@@donor.account.secondFactor.scan.title">
+        Přidejte účet do ověřovací aplikace
+      </h3>
+      <p class="account-form-intro" i18n="@@donor.account.secondFactor.scan.intro">
+        Naskenujte QR kód v aplikaci, nebo do ní opište klíč. Pak sem zadejte kód, který aplikace
+        ukáže.
+      </p>
+      <div class="account-enrolment">
+        <img
+          class="account-qr"
+          [src]="qrSource()"
+          width="240"
+          height="240"
+          alt="QR kód s nastavením pro ověřovací aplikaci"
+          i18n-alt="@@donor.account.secondFactor.qrAlt"
+        />
+        <div class="account-secret">
+          <span class="account-secret-label" i18n="@@donor.account.secondFactor.secret">Klíč</span>
+          <span class="account-secret-value">{{ groupedSecret() }}</span>
+          <app-copy-button
+            [value]="enrolment()?.secret ?? ''"
+            what="klíč"
+            i18n-what="@@donor.account.secondFactor.copySecret"
+          />
+        </div>
+      </div>
+      <app-form-field
+        label="Kód z aplikace"
+        i18n-label="@@donor.login.secondFactor.code"
+        [hint]="codeHint"
+        [messages]="codeMessages"
+      >
+        <input
+          #codeField
+          appFormControl
+          id="account-second-factor-code"
+          name="code"
+          type="text"
+          inputmode="numeric"
+          autocomplete="one-time-code"
+          [(ngModel)]="code"
+          required
+          pattern="\s*\d{6}\s*"
+          maxlength="8"
+        />
+      </app-form-field>
+
+      @if (error()) {
+        <p class="form-error" role="alert">{{ error() }}</p>
+      }
+
+      <div class="account-form-actions">
+        <button type="submit" class="account-save" [disabled]="saving()">
+          @if (saving()) {
+            <span i18n="@@donor.account.secondFactor.verifying">Ověřuji kód…</span>
+          } @else {
+            <span i18n="@@donor.account.secondFactor.turnOn">Zapnout druhý faktor</span>
+          }
+        </button>
+        <button
+          type="button"
+          class="account-cancel"
+          (click)="cancel()"
+          i18n="@@donor.account.cancel"
+        >
+          Zrušit
+        </button>
+      </div>
+    </form>
+  } @else if (panel() === 'second-factor-off') {
+    <form
+      #disableForm="ngForm"
+      class="account-form"
+      appFocusFirstInvalid
+      (ngSubmit)="disableSecondFactor(disableForm)"
+      novalidate
+    >
+      <h3 class="account-form-title" i18n="@@donor.account.secondFactor.off.title">
+        Vypnutí druhého faktoru
+      </h3>
+      <p class="account-form-intro" i18n="@@donor.account.secondFactor.off.intro">
+        K přihlášení pak bude stačit heslo. Ostatní přihlášení ukončíme, tohle zůstane.
+      </p>
+      <app-form-field
+        label="Současné heslo"
+        i18n-label="@@donor.account.currentPassword"
+        [messages]="currentPasswordMessages"
+      >
+        <app-password-reveal>
+          <input
+            #firstField
+            appFormControl
+            id="account-second-factor-off-password"
+            name="password"
+            type="password"
+            autocomplete="current-password"
+            [(ngModel)]="password"
+            required
+            maxlength="128"
+          />
+        </app-password-reveal>
+      </app-form-field>
+      <app-form-field
+        label="Kód z aplikace"
+        i18n-label="@@donor.login.secondFactor.code"
+        [hint]="codeHint"
+        [messages]="codeMessages"
+      >
+        <input
+          appFormControl
+          id="account-second-factor-off-code"
+          name="code"
+          type="text"
+          inputmode="numeric"
+          autocomplete="one-time-code"
+          [(ngModel)]="code"
+          required
+          pattern="\s*\d{6}\s*"
+          maxlength="8"
+        />
+      </app-form-field>
+
+      @if (error()) {
+        <p class="form-error" role="alert">{{ error() }}</p>
+      }
+
+      <div class="account-form-actions">
+        <button type="submit" class="account-save" [disabled]="saving()">
+          @if (saving()) {
+            <span i18n="@@donor.account.secondFactor.turningOff">Vypínám…</span>
+          } @else {
+            <span i18n="@@donor.account.secondFactor.turnOff">Vypnout druhý faktor</span>
+          }
+        </button>
+        <button
+          type="button"
+          class="account-cancel"
+          (click)="cancel()"
+          i18n="@@donor.account.cancel"
+        >
+          Zrušit
+        </button>
+      </div>
+    </form>
   } @else if (panel() === 'email') {
     <form
       #emailForm="ngForm"
@@ -206,6 +451,15 @@
     } @else if (passwordChanged()) {
       <span i18n="@@donor.account.password.changed">
         Heslo jsme změnili. Ostatní přihlášení jsme ukončili, tohle zůstává.
+      </span>
+    } @else if (secondFactorChanged() === 'on') {
+      <span i18n="@@donor.account.secondFactor.turnedOn">
+        Druhý faktor je zapnutý. Při příštím přihlášení zadáte i kód z aplikace; ostatní přihlášení
+        jsme ukončili, tohle zůstává.
+      </span>
+    } @else if (secondFactorChanged() === 'off') {
+      <span i18n="@@donor.account.secondFactor.turnedOff">
+        Druhý faktor jsme vypnuli. Ostatní přihlášení jsme ukončili, tohle zůstává.
       </span>
     }
   </p>

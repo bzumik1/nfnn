@@ -1,4 +1,4 @@
-package cz.novanadeje.app.donations.application;
+package cz.novanadeje.app.shared.application.qr;
 
 public interface QrCodeRenderer {
 

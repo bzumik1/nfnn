@@ -38,6 +38,35 @@ describe('Given the auth store', () => {
     expect(store.isAdmin()).toBe(true);
   });
 
+  it('when the second factor completes a sign-in, then the session is adopted like after a password sign-in', () => {
+    store.completeSecondFactor('c'.repeat(43), '287082').subscribe();
+
+    const request = http.expectOne('/api/donors/auth/login/second-factor');
+    expect(request.request.body).toEqual({ challenge: 'c'.repeat(43), code: '287082' });
+    request.flush(
+      authResponse(
+        'token-2',
+        sampleDonor({ secondFactor: { enabled: true, neededForAdministration: false } }),
+      ),
+    );
+
+    expect(store.donor()?.secondFactor.enabled).toBe(true);
+    expect(store.currentAccessToken()).toBe('token-2');
+    expect(localStorage.getItem(SESSION_HINT_KEY)).toBe('1');
+  });
+
+  it('when the second factor is turned on or off, then the session the server opened replaces the current one', () => {
+    signIn();
+
+    store.confirmSecondFactor('287082').subscribe();
+    http.expectOne('/api/donors/me/second-factor/confirm').flush(authResponse('token-2'));
+    expect(store.currentAccessToken()).toBe('token-2');
+
+    store.disableSecondFactor({ password: 'correct horse battery', code: '287082' }).subscribe();
+    http.expectOne('/api/donors/me/second-factor/disable').flush(authResponse('token-3'));
+    expect(store.currentAccessToken()).toBe('token-3');
+  });
+
   it('when a donor signs in, then the profile and the access token are kept and a session hint is remembered', () => {
     let signedIn: Donor | undefined;
     store

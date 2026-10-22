@@ -12,6 +12,7 @@ import cz.novanadeje.app.donors.domain.PasswordTooWeak;
 import cz.novanadeje.app.donors.domain.RawPassword;
 import cz.novanadeje.app.donors.domain.RefreshTokenRepository;
 import cz.novanadeje.app.donors.domain.Role;
+import cz.novanadeje.app.donors.domain.SecondFactorRepository;
 import cz.novanadeje.app.donors.domain.WrongPassword;
 import cz.novanadeje.app.shared.domain.DonorType;
 import cz.novanadeje.app.shared.domain.EmailAddress;
@@ -57,7 +58,8 @@ class DonorCredentialsServiceTest {
     private static final String NEXT = "a brand new passphrase";
     private static final PasswordHash OLD_HASH = new PasswordHash("$old");
     private static final PasswordHash NEW_HASH = new PasswordHash("$new");
-    private static final IssuedTokens TOKENS = new IssuedTokens("access", NOW.plus(Duration.ofMinutes(15)), "refresh", NOW.plus(Duration.ofDays(14)));
+    private static final IssuedTokens TOKENS = new IssuedTokens("access", NOW.plus(Duration.ofMinutes(15)), "refresh", NOW.plus(Duration.ofDays(14)),
+            Set.of(Role.DONOR));
 
     @Mock
     private DonorRepository donors;
@@ -68,6 +70,8 @@ class DonorCredentialsServiceTest {
     @Mock
     private DonorSessionService sessions;
     @Mock
+    private SecondFactorRepository secondFactors;
+    @Mock
     private DonorEmailVerificationService emailVerification;
     @Mock
     private ApplicationEventPublisher events;
@@ -76,7 +80,7 @@ class DonorCredentialsServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new DonorCredentialsService(donors, passwordHasher, refreshTokens, sessions, emailVerification, events,
+        service = new DonorCredentialsService(donors, passwordHasher, refreshTokens, sessions, new DonorViews(secondFactors), emailVerification, events,
                 Clock.fixed(NOW, ZoneOffset.UTC));
     }
 
@@ -87,14 +91,14 @@ class DonorCredentialsServiceTest {
         when(donors.findById(DONOR)).thenReturn(Optional.of(donor));
         when(passwordHasher.matches(new RawPassword(CURRENT), OLD_HASH)).thenReturn(true);
         when(passwordHasher.hash(new RawPassword(NEXT))).thenReturn(NEW_HASH);
-        when(sessions.open(DONOR, Set.of(Role.DONOR))).thenReturn(TOKENS);
+        when(sessions.open(donor, false)).thenReturn(TOKENS);
 
-        AuthenticatedDonor result = service.changePassword(DONOR, CURRENT, NEXT);
+        AuthenticatedDonor result = service.changePassword(DONOR, false, CURRENT, NEXT);
 
         InOrder order = inOrder(donors, refreshTokens, sessions);
         order.verify(donors).save(donor);
         order.verify(refreshTokens).revokeAllOf(DONOR, NOW);
-        order.verify(sessions).open(DONOR, Set.of(Role.DONOR));
+        order.verify(sessions).open(donor, false);
         assertThat(donor.passwordHash()).isEqualTo(NEW_HASH);
         assertThat(result.tokens()).isEqualTo(TOKENS);
         assertThat(result.donor().email()).isEqualTo("jana@example.cz");
@@ -106,8 +110,8 @@ class DonorCredentialsServiceTest {
         when(donors.findById(DONOR)).thenReturn(Optional.of(donor()));
         when(passwordHasher.matches(new RawPassword("wrong horse battery"), OLD_HASH)).thenReturn(false);
 
-        assertThatThrownBy(() -> service.changePassword(DONOR, "wrong horse battery", NEXT)).isInstanceOf(WrongPassword.class);
-        assertThatThrownBy(() -> service.changePassword(DONOR, "short", NEXT)).isInstanceOf(WrongPassword.class);
+        assertThatThrownBy(() -> service.changePassword(DONOR, false, "wrong horse battery", NEXT)).isInstanceOf(WrongPassword.class);
+        assertThatThrownBy(() -> service.changePassword(DONOR, false, "short", NEXT)).isInstanceOf(WrongPassword.class);
 
         verify(donors, never()).save(any());
         verifyNoInteractions(refreshTokens, sessions);
@@ -119,7 +123,7 @@ class DonorCredentialsServiceTest {
         when(donors.findById(DONOR)).thenReturn(Optional.of(donor()));
         when(passwordHasher.matches(new RawPassword(CURRENT), OLD_HASH)).thenReturn(true);
 
-        assertThatThrownBy(() -> service.changePassword(DONOR, CURRENT, "password1234")).isInstanceOf(PasswordTooWeak.class);
+        assertThatThrownBy(() -> service.changePassword(DONOR, false, CURRENT, "password1234")).isInstanceOf(PasswordTooWeak.class);
 
         verify(donors, never()).save(any());
         verifyNoInteractions(refreshTokens, sessions);
@@ -130,7 +134,7 @@ class DonorCredentialsServiceTest {
     void should_report_not_found_when_password_changed_given_unknown_donor() {
         when(donors.findById(DONOR)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.changePassword(DONOR, CURRENT, NEXT)).isInstanceOf(DonorNotFound.class);
+        assertThatThrownBy(() -> service.changePassword(DONOR, false, CURRENT, NEXT)).isInstanceOf(DonorNotFound.class);
 
         verifyNoInteractions(passwordHasher, refreshTokens, sessions);
     }

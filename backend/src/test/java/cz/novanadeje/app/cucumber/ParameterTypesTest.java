@@ -25,4 +25,11 @@ class ParameterTypesTest {
         assertThat("17.10.2026").doesNotMatch(pattern);
         assertThat("2026-1-7").doesNotMatch(pattern);
     }
+
+    @Test
+    @DisplayName("Given the words on and off in a step, when the onOff parameter type converts them, then on is true and off is false")
+    void should_convert_on_and_off_when_on_off_parameter_used_given_either_word() {
+        assertThat(new ParameterTypes().onOff("on")).isTrue();
+        assertThat(new ParameterTypes().onOff("off")).isFalse();
+    }
 }

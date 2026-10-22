@@ -37,11 +37,15 @@ Feature: An administrator reads the state of the bank import
     Then the response status is 401
     And the problem type ends with "auth/unauthenticated"
 
-  Scenario: The administrator role takes effect at the next sign-in
+  Scenario: The administrator role takes effect at the next sign-in with the second factor
     Given a person "Jana" is registered
     And "Jana" is given the administrator role without signing in again
     When "Jana" asks for the import state
     Then the response status is 403
     When "Jana" signs in again
+    And "Jana" asks for the import state
+    Then the response status is 403
+    When "Jana" enables the second factor
+    And "Jana" signs in again
     And "Jana" asks for the import state
     Then the response status is 200

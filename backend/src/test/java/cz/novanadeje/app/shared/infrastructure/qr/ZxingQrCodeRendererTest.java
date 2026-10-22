@@ -1,6 +1,6 @@
-package cz.novanadeje.app.donations.infrastructure.qr;
+package cz.novanadeje.app.shared.infrastructure.qr;
 
-import cz.novanadeje.app.donations.QrCodes;
+import cz.novanadeje.app.shared.QrCodes;
 import org.junit.jupiter.api.Test;
 
 import javax.imageio.ImageIO;

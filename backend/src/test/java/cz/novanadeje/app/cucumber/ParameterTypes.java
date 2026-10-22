@@ -10,4 +10,9 @@ public class ParameterTypes {
     public LocalDate date(String iso) {
         return LocalDate.parse(iso);
     }
+
+    @ParameterType("on|off")
+    public boolean onOff(String state) {
+        return state.equals("on");
+    }
 }
