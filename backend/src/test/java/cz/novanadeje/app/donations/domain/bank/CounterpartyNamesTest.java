@@ -19,7 +19,7 @@ class CounterpartyNamesTest {
             "Hospic z. u.", "Energie SE", "Bytové družstvo Lípa", "BYTOVE DRUZSTVO", "Nadace Dobrý den", "Nadační fond Nová naděje",
             "Spolek přátel", "Studio K s.r.o.", "Tiskárna M a.s.", "Stavby Novák, společnost s ručením omezeným", "STAVBY NOVAK SPOLECNOST S RUCENIM",
             "Strojírny, akciová společnost", "Hospic sv. Jana, zapsaný ústav", "Lesy ČR, s.p.", "Lesy CR SP", "ABC, s. p.", "Základní škola, p.o.",
-            "SVJ Lipová 5", "Obec Lipová", "Město Nový Bor"})
+            "SVJ Lipová 5", "Společenství vlastníků jednotek Lipová 5", "SPOLECENSTVI VLASTNIKU LIPOVA 5", "Obec Lipová", "Město Nový Bor"})
     @DisplayName("Given a name with a Czech legal form written with or without spaces, dots, capitals or diacritics, when read, then it looks like a legal entity")
     void should_look_like_legal_entity_when_read_given_czech_legal_form(String name) {
         assertThat(CounterpartyNames.looksLikeLegalEntity(name)).isTrue();
@@ -36,9 +36,11 @@ class CounterpartyNamesTest {
 
     @ParameterizedTest(name = "{0}")
     @ValueSource(strings = {"Novák A. S.", "Jan de Vos", "Petr Se"})
-    @DisplayName("Given a person's name whose initials or surname spell a legal form, when read, then it is taken for a legal entity, which only withholds an offer")
+    @DisplayName("Given a person's name whose initials or surname spell a legal form, when read, then it is taken for a legal entity, which withholds the offer from a person donor and lets it through to a company donor")
     void should_look_like_legal_entity_when_read_given_known_false_positive(String name) {
         assertThat(CounterpartyNames.looksLikeLegalEntity(name)).isTrue();
+        assertThat(CounterpartyNames.fitsDonorType(DonorType.PERSON, Optional.of(name))).isFalse();
+        assertThat(CounterpartyNames.fitsDonorType(DonorType.COMPANY, Optional.of(name))).isTrue();
     }
 
     @Test

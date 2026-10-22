@@ -15,7 +15,7 @@ import static cz.novanadeje.app.donations.domain.bank.BankTexts.require;
 public final class CounterpartyNames {
 
     private static final Set<String> LEGAL_FORMS = Set.of("SRO", "SPOL", "AS", "ZS", "OPS", "VOS", "KS", "ZU", "SE", "SP", "PO", "SVJ", "SPOLEK",
-            "SPOLECNOST", "USTAV", "NADACE", "OBEC", "MESTO");
+            "SPOLECNOST", "SPOLECENSTVI", "USTAV", "NADACE", "OBEC", "MESTO");
     private static final String COOPERATIVE = "DRUZSTV";
     private static final List<String> FOUNDATION_FUND = List.of("NADACNI", "FOND");
 
