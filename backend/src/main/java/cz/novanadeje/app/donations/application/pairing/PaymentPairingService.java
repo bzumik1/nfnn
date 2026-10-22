@@ -11,6 +11,8 @@ import cz.novanadeje.app.donations.domain.donor.DonorRecord;
 import cz.novanadeje.app.donations.domain.donor.DonorRecordRepository;
 import cz.novanadeje.app.donations.domain.donor.ExcludedSenderAccounts;
 import cz.novanadeje.app.donations.domain.donor.SenderAccountLink;
+import cz.novanadeje.app.donations.domain.donor.SymbolClaim;
+import cz.novanadeje.app.donations.domain.donor.SymbolClaimRepository;
 import cz.novanadeje.app.donations.domain.pairing.PairingDecision;
 import cz.novanadeje.app.donations.domain.pairing.PaymentPairingPolicy;
 import cz.novanadeje.app.donations.domain.pairing.UnpairedReason;
@@ -23,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -41,27 +44,37 @@ public class PaymentPairingService {
     private final BankPaymentRepository payments;
     private final DonorRecordRepository donorRecords;
     private final DonationRepository donations;
+    private final SymbolClaimRepository claims;
+    private final PairingLock lock;
     private final ExcludedSenderAccounts excluded;
     private final PaymentPairingPolicy policy;
 
     public PaymentPairingService(BankPaymentRepository payments, DonorRecordRepository donorRecords, DonationRepository donations,
-                                 ExcludedSenderAccounts excluded) {
+                                 SymbolClaimRepository claims, PairingLock lock, ExcludedSenderAccounts excluded) {
         this.payments = payments;
         this.donorRecords = donorRecords;
         this.donations = donations;
+        this.claims = claims;
+        this.lock = lock;
         this.excluded = excluded;
         this.policy = new PaymentPairingPolicy(excluded);
     }
 
     public PairingOutcome pairUnpaired(Instant now) {
+        lock.acquire();
         List<BankPayment> unpaired = payments.findUnpairedOrderedByBooking();
         Tally tally = new Tally();
         Map<VariableSymbol, Optional<DonorRecord>> donorsBySymbol = new HashMap<>();
+        List<BankPayment> unknownSymbol = new ArrayList<>();
         for (BankPayment payment : unpaired) {
             if (payment.carriesVariableSymbol()) {
                 Optional<DonorRecord> donor = donorsBySymbol.computeIfAbsent(payment.matchingVariableSymbol().orElseThrow(),
                         donorRecords::findByVariableSymbol);
-                applySymbolDecision(policy.decide(payment, donor, List.of()), payment, now, tally);
+                if (donor.isPresent()) {
+                    applySymbolDecision(policy.decide(payment, donor, List.of()), payment, now, tally);
+                } else {
+                    unknownSymbol.add(payment);
+                }
             }
         }
         Map<SenderAccount, List<DonorRecord>> ownersByAccount = new HashMap<>();
@@ -74,11 +87,36 @@ public class PaymentPairingService {
                 applyAccountDecision(policy.decide(payment, Optional.empty(), owners), payment, now, tally, reportedAmbiguous);
             }
         }
+        pairByConfirmedSymbols(unknownSymbol, ownersByAccount, now, tally);
         return tally.outcome();
+    }
+
+    public ConfirmedSymbolPairing pairConfirmedSymbol(SymbolClaim claim, Instant now) {
+        lock.acquire();
+        Optional<DonorRecord> holder = donorRecords.findByVariableSymbol(claim.symbol());
+        List<DonorRecord> owners = donorRecords.findBySenderAccount(claim.account());
+        Tally tally = new Tally();
+        List<Donation> paired = new ArrayList<>();
+        for (BankPayment payment : payments.findUnpairedBySenderAccountAndMatchingVariableSymbol(claim.account(), claim.symbol())) {
+            switch (policy.decide(payment, holder, owners, List.of(claim))) {
+                case PairingDecision.PairByConfirmedSymbol(DonorRecord donor, SenderAccountLink link, SymbolClaim confirmed) -> {
+                    Donation donation = Donation.pairedByConfirmedSymbol(DonationId.newId(now), donor.id(), payment, link.id(), confirmed.id(), now);
+                    if (recordDonation(donation, payment, donor)) {
+                        paired.add(donation);
+                    }
+                }
+                case PairingDecision.PairBySymbol bySymbol -> applySymbolDecision(bySymbol, payment, now, tally);
+                case PairingDecision.LeaveUnpaired(UnpairedReason reason) -> leaveUnpaired(payment, reason, tally);
+                case PairingDecision.PairByAccount _ -> throw new IllegalStateException(
+                        "Bank payment " + payment.transactionId() + " carries a symbol and cannot be paired by account");
+            }
+        }
+        return new ConfirmedSymbolPairing(paired);
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public PairingOutcome pairPaymentsOf(DonorRecord record, Instant now) {
+        lock.acquire();
         Tally tally = new Tally();
         Set<SenderAccount> learned = new LinkedHashSet<>();
         for (BankPayment payment : payments.findUnpairedByMatchingVariableSymbol(record.variableSymbol())) {
@@ -113,6 +151,8 @@ public class PaymentPairingService {
             }
             case PairingDecision.PairByAccount _ ->
                     throw new IllegalStateException("Bank payment " + payment.transactionId() + " carries a symbol and cannot be paired by account");
+            case PairingDecision.PairByConfirmedSymbol _ ->
+                    throw new IllegalStateException("Bank payment " + payment.transactionId() + " is paired by its confirmed symbol in another pass");
         };
     }
 
@@ -148,8 +188,45 @@ public class PaymentPairingService {
                 }
                 leaveUnpaired(payment, reason, tally);
             }
-            case PairingDecision.PairBySymbol _ ->
+            case PairingDecision.PairBySymbol _, PairingDecision.PairByConfirmedSymbol _ ->
                     throw new IllegalStateException("Bank payment " + payment.transactionId() + " carries no symbol and cannot be paired by symbol");
+        }
+    }
+
+    private void pairByConfirmedSymbols(List<BankPayment> unknownSymbol, Map<SenderAccount, List<DonorRecord>> ownersByAccount, Instant now,
+                                        Tally tally) {
+        if (unknownSymbol.isEmpty()) {
+            return;
+        }
+        List<SymbolClaim> confirmed = claims.findConfirmed();
+        Set<SenderAccount> reportedAmbiguous = new HashSet<>();
+        for (BankPayment payment : unknownSymbol) {
+            List<SymbolClaim> matching = confirmed.stream().filter(claim -> claim.confirms(payment)).toList();
+            List<DonorRecord> owners = matching.isEmpty()
+                    ? List.of()
+                    : ownersByAccount.computeIfAbsent(payment.sender().orElseThrow(), donorRecords::findBySenderAccount);
+            applyClaimDecision(policy.decide(payment, Optional.empty(), owners, matching), payment, matching, now, tally, reportedAmbiguous);
+        }
+    }
+
+    private void applyClaimDecision(PairingDecision decision, BankPayment payment, List<SymbolClaim> matching, Instant now, Tally tally,
+                                    Set<SenderAccount> reportedAmbiguous) {
+        switch (decision) {
+            case PairingDecision.PairByConfirmedSymbol(DonorRecord donor, SenderAccountLink link, SymbolClaim claim) -> {
+                if (recordDonation(Donation.pairedByConfirmedSymbol(DonationId.newId(now), donor.id(), payment, link.id(), claim.id(), now),
+                        payment, donor)) {
+                    tally.pairedByConfirmedSymbol++;
+                }
+            }
+            case PairingDecision.LeaveUnpaired(UnpairedReason reason) -> {
+                if (reason == UnpairedReason.AMBIGUOUS_SENDER_ACCOUNT && reportedAmbiguous.add(payment.sender().orElseThrow())) {
+                    log.warn("Bank payment {} stays unpaired: symbol claim {} confirms its symbol but several donors' links cover its booking day",
+                            payment.transactionId(), matching.getFirst().id());
+                }
+                leaveUnpaired(payment, reason, tally);
+            }
+            case PairingDecision.PairBySymbol _, PairingDecision.PairByAccount _ ->
+                    throw new IllegalStateException("Bank payment " + payment.transactionId() + " carries a symbol no donor has");
         }
     }
 
@@ -173,11 +250,12 @@ public class PaymentPairingService {
 
         private int pairedBySymbol;
         private int pairedByAccount;
+        private int pairedByConfirmedSymbol;
         private int accountsLearned;
         private int leftUnpaired;
 
         private PairingOutcome outcome() {
-            return new PairingOutcome(pairedBySymbol, pairedByAccount, accountsLearned, leftUnpaired);
+            return new PairingOutcome(pairedBySymbol, pairedByAccount, pairedByConfirmedSymbol, accountsLearned, leftUnpaired);
         }
     }
 }

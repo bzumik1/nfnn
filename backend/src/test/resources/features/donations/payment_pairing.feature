@@ -65,7 +65,7 @@ Feature: Imported payments are paired with donors
     And "Jana" has a donation of "200.00" CZK received on 2026-10-10 paired by sender account
     And "Jana" has learned sender account "2900233333/2010"
 
-  Scenario: A payment with an unknown variable symbol from a learned account stays unpaired
+  Scenario: A payment with an unknown variable symbol from a learned account stays unpaired without the donor's confirmation
     Given today is 2026-10-17
     And a person "Jana" is registered
     And the bank account has these movements:

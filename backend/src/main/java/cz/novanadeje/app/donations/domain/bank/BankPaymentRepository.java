@@ -22,5 +22,11 @@ public interface BankPaymentRepository {
 
     List<BankPayment> findUnpairedWithoutSymbolBySenderAccount(SenderAccount account);
 
+    List<BankPayment> findUnpairedBySenderAccountAndMatchingVariableSymbol(SenderAccount account, VariableSymbol symbol);
+
+    List<BankPayment> findBySenderAccount(SenderAccount account);
+
+    List<BankPayment> findByIds(Collection<BankPaymentId> ids);
+
     List<BankPayment> findUnpairedBookedBetween(LocalDate firstDay, LocalDate lastDay);
 }

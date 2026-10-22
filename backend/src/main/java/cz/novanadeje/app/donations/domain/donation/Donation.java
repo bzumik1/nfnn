@@ -4,6 +4,7 @@ import cz.novanadeje.app.donations.domain.bank.BankPayment;
 import cz.novanadeje.app.donations.domain.bank.BankPaymentId;
 import cz.novanadeje.app.donations.domain.donor.DonorReference;
 import cz.novanadeje.app.donations.domain.donor.SenderAccountLinkId;
+import cz.novanadeje.app.donations.domain.donor.SymbolClaimId;
 import cz.novanadeje.app.shared.domain.Money;
 
 import java.time.Instant;
@@ -22,12 +23,13 @@ public final class Donation {
     private final DonationStatus status;
     private final PairingMethod pairedBy;
     private final SenderAccountLinkId pairedThrough;
+    private final SymbolClaimId confirmedClaim;
     private final DonationPurpose purpose;
     private final Instant recordedAt;
 
     private Donation(DonationId id, DonorReference donor, Optional<BankPaymentId> bankPayment, LocalDate receivedOn, Money amount,
                      DonationSource source, DonationStatus status, Optional<PairingMethod> pairedBy, Optional<SenderAccountLinkId> pairedThrough,
-                     DonationPurpose purpose, Instant recordedAt) {
+                     Optional<SymbolClaimId> confirmedClaim, DonationPurpose purpose, Instant recordedAt) {
         this.id = require(id, "Donation id");
         this.donor = require(donor, "Donor reference");
         this.bankPayment = require(bankPayment, "Bank payment").orElse(null);
@@ -37,17 +39,18 @@ public final class Donation {
         this.status = require(status, "Donation status");
         this.pairedBy = require(pairedBy, "Pairing method").orElse(null);
         this.pairedThrough = require(pairedThrough, "Sender account link").orElse(null);
+        this.confirmedClaim = require(confirmedClaim, "Confirmed symbol claim").orElse(null);
         this.purpose = require(purpose, "Purpose");
         this.recordedAt = require(recordedAt, "Recording time");
         requireOriginMatchingSource();
-        requireLinkOnlyForAccountPairing();
+        requirePairingDetailsMatchingMethod();
     }
 
     public static Donation fromBankPayment(DonationId id, DonorReference donor, BankPayment payment, PairingMethod pairedBy,
                                            Instant recordedAt) {
         BankPayment paid = require(payment, "Bank payment");
         return new Donation(id, donor, Optional.of(paid.id()), paid.bookedOn(), paid.amount(), DonationSource.BANK_TRANSFER,
-                DonationStatus.RECEIVED, Optional.ofNullable(pairedBy), Optional.empty(), DonationPurpose.of(paid), recordedAt);
+                DonationStatus.RECEIVED, Optional.ofNullable(pairedBy), Optional.empty(), Optional.empty(), DonationPurpose.of(paid), recordedAt);
     }
 
     public static Donation pairedBySenderAccount(DonationId id, DonorReference donor, BankPayment payment, SenderAccountLinkId link,
@@ -55,7 +58,18 @@ public final class Donation {
         BankPayment paid = require(payment, "Bank payment");
         return new Donation(id, donor, Optional.of(paid.id()), paid.bookedOn(), paid.amount(), DonationSource.BANK_TRANSFER,
                 DonationStatus.RECEIVED, Optional.of(PairingMethod.SENDER_ACCOUNT), Optional.of(require(link, "Sender account link")),
-                DonationPurpose.of(paid), recordedAt);
+                Optional.empty(), DonationPurpose.of(paid), recordedAt);
+    }
+
+    public static Donation pairedByConfirmedSymbol(DonationId id, DonorReference donor, BankPayment payment, SenderAccountLinkId link,
+                                                   SymbolClaimId claim, Instant recordedAt) {
+        BankPayment paid = require(payment, "Bank payment");
+        if (!paid.carriesVariableSymbol() || !paid.hasSender()) {
+            throw new IllegalArgumentException("Only a payment with a variable symbol from a Czech account is paired by a confirmed symbol");
+        }
+        return new Donation(id, donor, Optional.of(paid.id()), paid.bookedOn(), paid.amount(), DonationSource.BANK_TRANSFER,
+                DonationStatus.RECEIVED, Optional.of(PairingMethod.CONFIRMED_SYMBOL), Optional.of(require(link, "Sender account link")),
+                Optional.of(require(claim, "Confirmed symbol claim")), DonationPurpose.of(paid), recordedAt);
     }
 
     public static Donation reconstitute(DonationId id, DonorReference donor, Optional<BankPaymentId> bankPayment, LocalDate receivedOn,
@@ -67,14 +81,16 @@ public final class Donation {
     public static Donation reconstitute(DonationId id, DonorReference donor, Optional<BankPaymentId> bankPayment, LocalDate receivedOn,
                                         Money amount, DonationSource source, DonationStatus status, Optional<PairingMethod> pairedBy,
                                         Optional<SenderAccountLinkId> pairedThrough, Instant recordedAt) {
-        return reconstitute(id, donor, bankPayment, receivedOn, amount, source, status, pairedBy, pairedThrough, DonationPurpose.GENERAL,
-                recordedAt);
+        return reconstitute(id, donor, bankPayment, receivedOn, amount, source, status, pairedBy, pairedThrough, Optional.empty(),
+                DonationPurpose.GENERAL, recordedAt);
     }
 
     public static Donation reconstitute(DonationId id, DonorReference donor, Optional<BankPaymentId> bankPayment, LocalDate receivedOn,
                                         Money amount, DonationSource source, DonationStatus status, Optional<PairingMethod> pairedBy,
-                                        Optional<SenderAccountLinkId> pairedThrough, DonationPurpose purpose, Instant recordedAt) {
-        return new Donation(id, donor, bankPayment, receivedOn, amount, source, status, pairedBy, pairedThrough, purpose, recordedAt);
+                                        Optional<SenderAccountLinkId> pairedThrough, Optional<SymbolClaimId> confirmedClaim,
+                                        DonationPurpose purpose, Instant recordedAt) {
+        return new Donation(id, donor, bankPayment, receivedOn, amount, source, status, pairedBy, pairedThrough, confirmedClaim, purpose,
+                recordedAt);
     }
 
     public DonationId id() {
@@ -113,6 +129,10 @@ public final class Donation {
         return Optional.ofNullable(pairedThrough);
     }
 
+    public Optional<SymbolClaimId> confirmedClaim() {
+        return Optional.ofNullable(confirmedClaim);
+    }
+
     public DonationPurpose purpose() {
         return purpose;
     }
@@ -144,9 +164,16 @@ public final class Donation {
         }
     }
 
-    private void requireLinkOnlyForAccountPairing() {
-        if (pairedThrough != null && pairedBy != PairingMethod.SENDER_ACCOUNT) {
-            throw new IllegalArgumentException("Only a donation paired by sender account names the account link it was paired through");
+    private void requirePairingDetailsMatchingMethod() {
+        if (pairedThrough != null && pairedBy != PairingMethod.SENDER_ACCOUNT && pairedBy != PairingMethod.CONFIRMED_SYMBOL) {
+            throw new IllegalArgumentException("Only a donation paired by sender account or by a confirmed symbol names the account link "
+                    + "it was paired through");
+        }
+        if (pairedBy == PairingMethod.CONFIRMED_SYMBOL && (pairedThrough == null || confirmedClaim == null)) {
+            throw new IllegalArgumentException("A donation paired by a confirmed symbol names the account link and the claim it was paired through");
+        }
+        if (confirmedClaim != null && pairedBy != PairingMethod.CONFIRMED_SYMBOL) {
+            throw new IllegalArgumentException("Only a donation paired by a confirmed symbol names a symbol claim");
         }
     }
 

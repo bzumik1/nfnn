@@ -120,6 +120,16 @@ public class DonorBankAccountsStepDefinitions {
                 });
     }
 
+    @Then("the donation received on {date} is listed as paired by confirmed symbol through sender account {string}")
+    public void theDonationIsListedAsPairedByConfirmedSymbol(LocalDate receivedOn, String accountNumber) {
+        assertThat(items()).filteredOn(item -> item.get("receivedAt").asString().equals(receivedOn.toString()))
+                .singleElement()
+                .satisfies(item -> {
+                    assertThat(item.get("pairedBy").asString()).isEqualTo("CONFIRMED_SYMBOL");
+                    assertThat(item.get("senderAccount").asString()).isEqualTo(accountNumber);
+                });
+    }
+
     @Then("the donation received on {date} is listed as paired by variable symbol without a sender account")
     public void theDonationIsListedAsPairedByVariableSymbol(LocalDate receivedOn) {
         assertThat(items()).filteredOn(item -> item.get("receivedAt").asString().equals(receivedOn.toString()))

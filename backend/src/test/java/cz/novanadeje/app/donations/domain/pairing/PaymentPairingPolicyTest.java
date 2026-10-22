@@ -9,6 +9,9 @@ import cz.novanadeje.app.donations.domain.donor.ExcludedSenderAccounts;
 import cz.novanadeje.app.donations.domain.donor.SenderAccountLink;
 import cz.novanadeje.app.donations.domain.donor.SenderAccountLinkId;
 import cz.novanadeje.app.donations.domain.donor.SenderAccountLinkStatus;
+import cz.novanadeje.app.donations.domain.donor.SymbolClaim;
+import cz.novanadeje.app.donations.domain.donor.SymbolClaimAnswer;
+import cz.novanadeje.app.donations.domain.donor.SymbolClaimId;
 import cz.novanadeje.app.shared.domain.DonorType;
 import cz.novanadeje.app.shared.domain.LocaleCode;
 import cz.novanadeje.app.shared.domain.PostalAddress;
@@ -35,6 +38,7 @@ class PaymentPairingPolicyTest {
     private static final SenderAccount ACCOUNT = new SenderAccount("2900233333", "2010");
     private static final VariableSymbol JANA_SYMBOL = new VariableSymbol("4821937560");
     private static final VariableSymbol PETR_SYMBOL = new VariableSymbol("7310945528");
+    private static final VariableSymbol OLD_SYMBOL = new VariableSymbol("6123456789");
 
     private final PaymentPairingPolicy policy = new PaymentPairingPolicy(ExcludedSenderAccounts.none());
     private final DonorRecord jana = donor("Jana Nováková", JANA_SYMBOL);
@@ -186,6 +190,116 @@ class PaymentPairingPolicyTest {
         assertThat(decision).isEqualTo(new PairingDecision.LeaveUnpaired(UnpairedReason.UNKNOWN_SENDER_ACCOUNT));
     }
 
+    @Test
+    @DisplayName("Given a payment with a symbol nobody has from an account only the claimant's link covers, when decided with the claimant's confirmed claim, then it is paired by the confirmed symbol through that link")
+    void should_pair_by_confirmed_symbol_when_decided_given_claimants_sole_covering_link() {
+        DonorRecord owner = withAccount(jana);
+        SymbolClaim claim = confirmed(jana, ACCOUNT, OLD_SYMBOL);
+        BankPayment payment = payment(1, Optional.of(ACCOUNT), "00" + OLD_SYMBOL.value());
+
+        PairingDecision decision = policy.decide(payment, Optional.empty(), List.of(owner), List.of(claim));
+
+        assertThat(decision).isEqualTo(new PairingDecision.PairByConfirmedSymbol(owner, owner.senderAccountLinks().getFirst(), claim));
+        assertThat(policy.confirmedSymbolLink(payment, jana.id(), List.of(owner))).contains(owner.senderAccountLinks().getFirst());
+    }
+
+    @Test
+    @DisplayName("Given a declined claim, a claim for another account or a claim for another symbol, when decided, then the payment stays unpaired as an unknown symbol")
+    void should_leave_unpaired_when_decided_given_no_matching_confirmed_claim() {
+        DonorRecord owner = withAccount(jana);
+        BankPayment payment = payment(1, Optional.of(ACCOUNT), OLD_SYMBOL.value());
+        List<SymbolClaim> notMatching = List.of(
+                claim(jana, ACCOUNT, OLD_SYMBOL, SymbolClaimAnswer.DECLINED),
+                confirmed(jana, new SenderAccount("1234567", "0800"), OLD_SYMBOL),
+                confirmed(jana, ACCOUNT, new VariableSymbol("6123456788")));
+
+        PairingDecision decision = policy.decide(payment, Optional.empty(), List.of(owner), notMatching);
+
+        assertThat(decision).isEqualTo(new PairingDecision.LeaveUnpaired(UnpairedReason.UNKNOWN_VARIABLE_SYMBOL));
+    }
+
+    @Test
+    @DisplayName("Given another donor's link that also covers the booking day, when decided with the claimant's confirmed claim, then the payment stays unpaired as ambiguous")
+    void should_leave_unpaired_when_decided_given_another_donor_also_covering() {
+        List<DonorRecord> owners = List.of(withAccount(jana), withAccount(petr));
+        BankPayment payment = payment(1, Optional.of(ACCOUNT), OLD_SYMBOL.value());
+
+        PairingDecision decision = policy.decide(payment, Optional.empty(), owners, List.of(confirmed(jana, ACCOUNT, OLD_SYMBOL)));
+
+        assertThat(decision).isEqualTo(new PairingDecision.LeaveUnpaired(UnpairedReason.AMBIGUOUS_SENDER_ACCOUNT));
+        assertThat(policy.confirmedSymbolLink(payment, jana.id(), owners)).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Given only another donor's link covering the booking day, or no link at all, when decided with the claimant's confirmed claim, then the payment stays unpaired as an unknown symbol")
+    void should_leave_unpaired_when_decided_given_claimant_not_covering() {
+        LocalDate released = BOOKED_ON.minusDays(1);
+        DonorRecord janaBefore = withLink(jana, Optional.empty(), Optional.of(released), SenderAccountLinkStatus.DISCONNECTED);
+        DonorRecord petrAfter = withLink(petr, Optional.of(released.plusDays(1)), Optional.empty(), SenderAccountLinkStatus.ACTIVE);
+        BankPayment payment = payment(1, Optional.of(ACCOUNT), OLD_SYMBOL.value());
+        List<SymbolClaim> claims = List.of(confirmed(jana, ACCOUNT, OLD_SYMBOL));
+
+        PairingDecision onlyAnother = policy.decide(payment, Optional.empty(), List.of(janaBefore, petrAfter), claims);
+        PairingDecision nobody = policy.decide(payment, Optional.empty(), List.of(janaBefore), claims);
+
+        assertThat(onlyAnother).isEqualTo(new PairingDecision.LeaveUnpaired(UnpairedReason.UNKNOWN_VARIABLE_SYMBOL));
+        assertThat(nobody).isEqualTo(new PairingDecision.LeaveUnpaired(UnpairedReason.UNKNOWN_VARIABLE_SYMBOL));
+        assertThat(policy.confirmedSymbolLink(payment, jana.id(), List.of(janaBefore, petrAfter))).isEmpty();
+        assertThat(policy.confirmedSymbolLink(payment, jana.id(), List.of(janaBefore))).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Given an excluded account the claimant's link covers, when decided with the claimant's confirmed claim, then the payment stays unpaired as excluded")
+    void should_leave_unpaired_when_decided_given_confirmed_symbol_from_excluded_account() {
+        PaymentPairingPolicy excluding = new PaymentPairingPolicy(new ExcludedSenderAccounts(Set.of(ACCOUNT)));
+        DonorRecord owner = withAccount(jana);
+        BankPayment payment = payment(1, Optional.of(ACCOUNT), OLD_SYMBOL.value());
+
+        PairingDecision decision = excluding.decide(payment, Optional.empty(), List.of(owner), List.of(confirmed(jana, ACCOUNT, OLD_SYMBOL)));
+
+        assertThat(decision).isEqualTo(new PairingDecision.LeaveUnpaired(UnpairedReason.EXCLUDED_SENDER_ACCOUNT));
+        assertThat(excluding.confirmedSymbolLink(payment, jana.id(), List.of(owner))).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Given a symbol a donor registered and another donor's confirmed claim for it, when decided, then the registered donor's symbol wins")
+    void should_pair_by_symbol_when_decided_given_registered_symbol_and_confirmed_claim() {
+        DonorRecord owner = withAccount(jana);
+        BankPayment payment = payment(1, Optional.of(ACCOUNT), PETR_SYMBOL.value());
+
+        PairingDecision decision = policy.decide(payment, Optional.of(petr), List.of(owner), List.of(confirmed(jana, ACCOUNT, PETR_SYMBOL)));
+
+        assertThat(decision).isEqualTo(new PairingDecision.PairBySymbol(petr));
+    }
+
+    @Test
+    @DisplayName("Given a payment without a symbol and the claimant's confirmed claim, when decided, then the account rule alone decides")
+    void should_pair_by_account_when_decided_given_claim_and_no_symbol() {
+        DonorRecord owner = withAccount(jana);
+        BankPayment payment = payment(1, Optional.of(ACCOUNT), null);
+
+        PairingDecision decision = policy.decide(payment, Optional.empty(), List.of(owner), List.of(confirmed(jana, ACCOUNT, OLD_SYMBOL)));
+
+        assertThat(decision).isEqualTo(new PairingDecision.PairByAccount(owner, owner.senderAccountLinks().getFirst()));
+        assertThat(policy.confirmedSymbolLink(payment, jana.id(), List.of(owner))).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Given the claimant's link that covers only some days, when decided and asked for the confirmed symbol link, then both agree day by day")
+    void should_agree_with_decision_when_asked_for_confirmed_symbol_link_given_bounded_link() {
+        LocalDate from = LocalDate.of(2026, 10, 10);
+        DonorRecord owner = withLink(jana, Optional.of(from), Optional.empty(), SenderAccountLinkStatus.ACTIVE);
+        SymbolClaim claim = confirmed(jana, ACCOUNT, OLD_SYMBOL);
+
+        for (LocalDate day : List.of(from.minusDays(1), from, from.plusDays(1))) {
+            BankPayment payment = payment(1, day, czk(50000), Optional.of(ACCOUNT), OLD_SYMBOL.value());
+            boolean paired = policy.decide(payment, Optional.empty(), List.of(owner), List.of(claim)) instanceof PairingDecision.PairByConfirmedSymbol;
+
+            assertThat(policy.confirmedSymbolLink(payment, jana.id(), List.of(owner)).isPresent()).isEqualTo(paired);
+            assertThat(paired).isEqualTo(!day.isBefore(from));
+        }
+    }
+
     private static DonorRecord donor(String name, VariableSymbol symbol) {
         return DonorRecord.registerPerson(new DonorReference(UuidV7.generate(NOW)), name, new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"),
                 symbol, LocaleCode.CS, NOW);
@@ -200,5 +314,13 @@ class PaymentPairingPolicyTest {
                 Optional.of(NOW), from, to, NOW, to.map(day -> NOW));
         return DonorRecord.reconstitute(record.id(), DonorType.PERSON, record.name(), null, record.address(), record.variableSymbol(),
                 record.preferredLocale(), List.of(link), record.registeredAt(), NOW);
+    }
+
+    private static SymbolClaim confirmed(DonorRecord donor, SenderAccount account, VariableSymbol symbol) {
+        return claim(donor, account, symbol, SymbolClaimAnswer.CONFIRMED);
+    }
+
+    private static SymbolClaim claim(DonorRecord donor, SenderAccount account, VariableSymbol symbol, SymbolClaimAnswer answer) {
+        return SymbolClaim.reconstitute(SymbolClaimId.newId(NOW), donor.id(), account, symbol, answer, NOW);
     }
 }

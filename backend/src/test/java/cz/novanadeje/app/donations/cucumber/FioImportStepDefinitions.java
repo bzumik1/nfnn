@@ -228,6 +228,14 @@ public class FioImportStepDefinitions {
         assertThat(report.counts().incomingKnown()).isEqualTo(known);
     }
 
+    @Then("the import paired {int} by symbol, {int} by account and {int} by confirmed symbol")
+    public void theImportPaired(int bySymbol, int byAccount, int byConfirmedSymbol) {
+        ImportReport report = lastReport();
+        assertThat(report.counts().pairedBySymbol()).isEqualTo(bySymbol);
+        assertThat(report.counts().pairedByAccount()).isEqualTo(byAccount);
+        assertThat(report.counts().pairedByConfirmedSymbol()).isEqualTo(byConfirmedSymbol);
+    }
+
     @Then("^the import failed because " + REASONS + "$")
     public void theImportFailedBecause(String reason) {
         assertThat(lastReport().failure()).contains(FAILURE_KINDS.get(reason));

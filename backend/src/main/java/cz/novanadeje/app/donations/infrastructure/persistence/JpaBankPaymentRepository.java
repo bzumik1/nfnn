@@ -60,6 +60,25 @@ class JpaBankPaymentRepository implements BankPaymentRepository {
     }
 
     @Override
+    public List<BankPayment> findUnpairedBySenderAccountAndMatchingVariableSymbol(SenderAccount account, VariableSymbol symbol) {
+        return toDomain(jpa.findUnpairedBySenderAccountAndMatchingVariableSymbol(account.accountNumber(), account.bankCode(), symbol.value()));
+    }
+
+    @Override
+    public List<BankPayment> findBySenderAccount(SenderAccount account) {
+        return toDomain(jpa.findBySenderAccountNumberAndSenderBankCodeOrderByBookedOnAscTransactionIdAsc(account.accountNumber(),
+                account.bankCode()));
+    }
+
+    @Override
+    public List<BankPayment> findByIds(Collection<BankPaymentId> ids) {
+        if (ids.isEmpty()) {
+            return List.of();
+        }
+        return toDomain(jpa.findAllById(ids.stream().map(BankPaymentId::value).collect(Collectors.toSet())));
+    }
+
+    @Override
     public List<BankPayment> findUnpairedBookedBetween(LocalDate firstDay, LocalDate lastDay) {
         return toDomain(jpa.findUnpairedBookedBetween(firstDay, lastDay));
     }

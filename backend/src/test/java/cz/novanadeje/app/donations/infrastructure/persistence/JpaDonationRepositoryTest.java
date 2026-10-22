@@ -14,6 +14,12 @@ import cz.novanadeje.app.donations.domain.donation.PairingMethod;
 import cz.novanadeje.app.donations.domain.donor.DonorRecord;
 import cz.novanadeje.app.donations.domain.donor.DonorRecordRepository;
 import cz.novanadeje.app.donations.domain.donor.DonorReference;
+import cz.novanadeje.app.donations.domain.donor.ExcludedSenderAccounts;
+import cz.novanadeje.app.donations.domain.donor.SenderAccountLink;
+import cz.novanadeje.app.donations.domain.donor.SymbolClaim;
+import cz.novanadeje.app.donations.domain.donor.SymbolClaimAnswer;
+import cz.novanadeje.app.donations.domain.donor.SymbolClaimId;
+import cz.novanadeje.app.donations.domain.donor.SymbolClaimRepository;
 import cz.novanadeje.app.shared.domain.LocaleCode;
 import cz.novanadeje.app.shared.domain.Money;
 import cz.novanadeje.app.shared.domain.PostalAddress;
@@ -22,6 +28,8 @@ import cz.novanadeje.app.shared.domain.VariableSymbol;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
@@ -32,6 +40,7 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 import static cz.novanadeje.app.donations.BankPayments.payment;
 import static cz.novanadeje.app.donations.infrastructure.persistence.BankPersistenceTestConfiguration.NOW;
@@ -51,6 +60,8 @@ class JpaDonationRepositoryTest {
     private DonorRecordRepository donorRecords;
     @Autowired
     private BankPaymentRepository payments;
+    @Autowired
+    private SymbolClaimRepository claims;
     @Autowired
     private EntityManager entityManager;
     @Autowired
@@ -203,6 +214,82 @@ class JpaDonationRepositoryTest {
 
         assertThat(donations.findByDonorNewestFirst(jana)).singleElement()
                 .extracting(Donation::purpose).isEqualTo(DonationPurpose.ACCOUNT_VERIFICATION);
+    }
+
+    @Test
+    @DisplayName("Given a donation paired by a confirmed symbol, when it is saved and read back, then the method, the link and the claim survive")
+    void should_keep_link_and_claim_when_saved_and_read_given_confirmed_symbol_donation() {
+        ConfirmedSymbolSetup setup = confirmedSymbolSetup();
+        Donation donation = Donation.pairedByConfirmedSymbol(DonationId.newId(NOW), setup.donor(), setup.payment(), setup.link().id(),
+                setup.claim().id(), NOW);
+
+        donations.save(donation);
+        flushAndClear();
+
+        assertThat(donations.findByDonorNewestFirst(setup.donor())).singleElement().satisfies(stored -> {
+            assertThat(stored.pairedBy()).contains(PairingMethod.CONFIRMED_SYMBOL);
+            assertThat(stored.pairedThrough()).contains(setup.link().id());
+            assertThat(stored.confirmedClaim()).contains(setup.claim().id());
+        });
+        assertThat(jdbc.sql("select paired_by from donation where id = ?").param(donation.id().value()).query(String.class).single())
+                .isEqualTo("CONFIRMED_SYMBOL");
+    }
+
+    @ParameterizedTest(name = "{0} with link {1} and claim {2} breaks {3}")
+    @CsvSource({
+            "CONFIRMED_SYMBOL, false, true, ck_donation_confirmed_symbol_link",
+            "CONFIRMED_SYMBOL, true, false, ck_donation_symbol_claim_pairing",
+            "VARIABLE_SYMBOL, false, true, ck_donation_symbol_claim_pairing",
+            "SENDER_ACCOUNT, true, true, ck_donation_symbol_claim_pairing",
+            "VARIABLE_SYMBOL, true, false, ck_donation_sender_account_pairing",
+            "GUESSED, false, false, ck_donation_paired_by"})
+    @DisplayName("Given the schema, when a donation whose method, link and claim do not fit together is inserted, then a check constraint refuses it")
+    void should_refuse_when_inserted_given_method_link_and_claim_not_fitting(String pairedBy, boolean withLink, boolean withClaim,
+                                                                            String constraint) {
+        ConfirmedSymbolSetup setup = confirmedSymbolSetup();
+        entityManager.flush();
+        UUID link = withLink ? setup.link().id().value() : null;
+        UUID claim = withClaim ? setup.claim().id().value() : null;
+
+        assertThatThrownBy(() -> insertDonation(setup, pairedBy, link, claim)).hasMessageContaining(constraint);
+    }
+
+    @Test
+    @DisplayName("Given a claim with a donation paired through it, when the claim is deleted, then the database refuses it")
+    void should_refuse_when_claim_deleted_given_donation_paired_through_it() {
+        ConfirmedSymbolSetup setup = confirmedSymbolSetup();
+        donations.save(Donation.pairedByConfirmedSymbol(DonationId.newId(NOW), setup.donor(), setup.payment(), setup.link().id(),
+                setup.claim().id(), NOW));
+        entityManager.flush();
+
+        assertThatThrownBy(() -> jdbc.sql("delete from donor_symbol_claim where id = ?").param(setup.claim().id().value()).update())
+                .hasMessageContaining("fk_donation_symbol_claim");
+    }
+
+    private void insertDonation(ConfirmedSymbolSetup setup, String pairedBy, UUID link, UUID claim) {
+        jdbc.sql("insert into donation (id, donor_id, bank_payment_id, received_on, amount_minor, currency, source, status, paired_by,"
+                        + " sender_account_id, symbol_claim_id, purpose, recorded_at)"
+                        + " values (?, ?, ?, current_date, 100, 'CZK', 'BANK_TRANSFER', 'RECEIVED', ?, ?, ?, 'GENERAL', now())")
+                .params(UuidV7.generate(NOW), setup.donor().value(), setup.payment().id().value(), pairedBy, link, claim)
+                .update();
+    }
+
+    private ConfirmedSymbolSetup confirmedSymbolSetup() {
+        DonorRecord jana = DonorRecord.registerPerson(new DonorReference(UuidV7.generate(NOW)), "Jana Nováková",
+                new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"), new VariableSymbol("4821937560"), LocaleCode.CS, NOW);
+        donorRecords.save(jana);
+        BankPayment proof = payment(1001, LocalDate.of(2026, 10, 14), Money.czk(100), ACCOUNT, "4821937560");
+        BankPayment old = payment(1002, LocalDate.of(2026, 10, 15), Money.czk(50000), ACCOUNT, "6123456789");
+        payments.saveAll(List.of(proof, old));
+        SenderAccountLink link = jana.learnSenderAccountFrom(proof, Optional.empty(), ExcludedSenderAccounts.none(), NOW).orElseThrow();
+        donorRecords.saveSenderAccountLink(jana.id(), link);
+        SymbolClaim claim = SymbolClaim.answer(SymbolClaimId.newId(NOW), jana.id(), ACCOUNT.orElseThrow(), new VariableSymbol("6123456789"),
+                SymbolClaimAnswer.CONFIRMED, NOW);
+        claims.saveIfAbsent(claim);
+        return new ConfirmedSymbolSetup(jana.id(), old, link, claim);
+    }
+
+    private record ConfirmedSymbolSetup(DonorReference donor, BankPayment payment, SenderAccountLink link, SymbolClaim claim) {
     }
 
     private Donation bySymbol(DonorReference donor, BankPayment payment) {

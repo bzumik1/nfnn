@@ -28,6 +28,12 @@ public interface BankPaymentJpaRepository extends JpaRepository<BankPaymentJpaEn
     @Query(UNPAIRED + " and p.matchingVariableSymbol is null and p.senderAccountNumber = :number and p.senderBankCode = :code" + BY_BOOKING)
     List<BankPaymentJpaEntity> findUnpairedWithoutSymbolBySenderAccount(@Param("number") String number, @Param("code") String code);
 
+    @Query(UNPAIRED + " and p.senderAccountNumber = :number and p.senderBankCode = :code and p.matchingVariableSymbol = :symbol" + BY_BOOKING)
+    List<BankPaymentJpaEntity> findUnpairedBySenderAccountAndMatchingVariableSymbol(@Param("number") String number, @Param("code") String code,
+                                                                                    @Param("symbol") String symbol);
+
+    List<BankPaymentJpaEntity> findBySenderAccountNumberAndSenderBankCodeOrderByBookedOnAscTransactionIdAsc(String number, String code);
+
     @Query(UNPAIRED + " and p.bookedOn between :firstDay and :lastDay" + BY_BOOKING)
     List<BankPaymentJpaEntity> findUnpairedBookedBetween(@Param("firstDay") LocalDate firstDay, @Param("lastDay") LocalDate lastDay);
 }
