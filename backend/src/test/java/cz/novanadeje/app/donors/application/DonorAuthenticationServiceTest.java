@@ -4,6 +4,7 @@ import cz.novanadeje.app.donors.domain.CompanyIdentifier;
 import cz.novanadeje.app.donors.domain.Donor;
 import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.donors.domain.DonorRepository;
+import cz.novanadeje.app.donors.domain.EmailNotVerified;
 import cz.novanadeje.app.donors.domain.InvalidCredentials;
 import cz.novanadeje.app.donors.domain.PasswordHash;
 import cz.novanadeje.app.donors.domain.PasswordHasher;
@@ -58,6 +59,32 @@ class DonorAuthenticationServiceTest {
         service = new DonorAuthenticationService(donors, passwordHasher, sessions);
         donor = Donor.register(DonorId.newId(NOW), DonorType.COMPANY, "Stavby Novák s.r.o.", new CompanyIdentifier("45274649"),
                 new PostalAddress("Průmyslová 5", "Teplice", "415 01"), EMAIL, HASH, new VariableSymbol("1234567890"), LocaleCode.CS, NOW);
+        donor.verifyEmail(NOW);
+    }
+
+    @Test
+    @DisplayName("Given a donor whose e-mail is not verified, when signing in with the right password, then it is refused as not verified and no session opens")
+    void should_refuse_as_not_verified_when_logged_in_given_unverified_donor_and_matching_password() {
+        Donor unverified = Donor.register(DonorId.newId(NOW), DonorType.PERSON, "Jana Nováková", null,
+                new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"), EMAIL, HASH, new VariableSymbol("1234567891"), LocaleCode.CS, NOW);
+        when(donors.findByEmail(EMAIL)).thenReturn(Optional.of(unverified));
+        when(passwordHasher.matches(new RawPassword("correct horse battery"), HASH)).thenReturn(true);
+
+        assertThatThrownBy(() -> service.login("jana@example.cz", "correct horse battery"))
+                .isInstanceOfSatisfying(EmailNotVerified.class, refused -> assertThat(refused.code()).isEqualTo("auth/email-not-verified"));
+
+        verify(sessions, never()).open(any(), any());
+    }
+
+    @Test
+    @DisplayName("Given a donor whose e-mail is not verified, when signing in with a wrong password, then it is refused as wrong credentials, not as unverified")
+    void should_refuse_as_wrong_credentials_when_logged_in_given_unverified_donor_and_wrong_password() {
+        Donor unverified = Donor.register(DonorId.newId(NOW), DonorType.PERSON, "Jana Nováková", null,
+                new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"), EMAIL, HASH, new VariableSymbol("1234567891"), LocaleCode.CS, NOW);
+        when(donors.findByEmail(EMAIL)).thenReturn(Optional.of(unverified));
+        when(passwordHasher.matches(any(), any())).thenReturn(false);
+
+        assertThatThrownBy(() -> service.login("jana@example.cz", "wrong horse battery")).isInstanceOf(InvalidCredentials.class);
     }
 
     @Test

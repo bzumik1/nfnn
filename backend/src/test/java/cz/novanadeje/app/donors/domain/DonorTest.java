@@ -35,6 +35,40 @@ class DonorTest {
         assertThat(donor.variableSymbol()).isEqualTo(SYMBOL);
         assertThat(donor.roles()).isEqualTo(Set.of(Role.DONOR));
         assertThat(donor.registeredAt()).isEqualTo(NOW);
+        assertThat(donor.isEmailVerified()).isFalse();
+        assertThat(donor.emailVerifiedAt()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Given a fresh registration, when the e-mail is verified, then the donor remembers when and is verified")
+    void should_remember_time_when_email_verified_given_fresh_registration() {
+        Donor donor = Donor.register(DonorId.newId(NOW), DonorType.PERSON, "Jana Nováková", null, ADDRESS, EMAIL, HASH, SYMBOL, LocaleCode.CS, NOW);
+
+        donor.verifyEmail(NOW.plusSeconds(90));
+
+        assertThat(donor.isEmailVerified()).isTrue();
+        assertThat(donor.emailVerifiedAt()).contains(NOW.plusSeconds(90));
+    }
+
+    @Test
+    @DisplayName("Given a verified donor, when the e-mail is verified again, then it refuses and keeps the first time")
+    void should_refuse_when_email_verified_twice_given_verified_donor() {
+        Donor donor = Donor.register(DonorId.newId(NOW), DonorType.PERSON, "Jana Nováková", null, ADDRESS, EMAIL, HASH, SYMBOL, LocaleCode.CS, NOW);
+        donor.verifyEmail(NOW.plusSeconds(90));
+
+        assertThatThrownBy(() -> donor.verifyEmail(NOW.plusSeconds(120))).isInstanceOf(IllegalStateException.class);
+        assertThat(donor.emailVerifiedAt()).contains(NOW.plusSeconds(90));
+    }
+
+    @Test
+    @DisplayName("Given a stored verified donor, when reconstituted, then the verification time is kept")
+    void should_keep_verification_time_when_reconstituted_given_stored_row() {
+        Donor donor = Donor.reconstitute(DonorId.newId(NOW), DonorType.PERSON, "Jana Nováková", null, ADDRESS, EMAIL, HASH, SYMBOL, LocaleCode.CS,
+                Set.of(Role.DONOR), NOW, NOW.plusSeconds(5));
+
+        assertThat(donor.emailVerifiedAt()).contains(NOW.plusSeconds(5));
+        assertThat(Donor.reconstitute(DonorId.newId(NOW), DonorType.PERSON, "Jana Nováková", null, ADDRESS, EMAIL, HASH, SYMBOL, LocaleCode.CS,
+                Set.of(Role.DONOR), NOW, null).isEmailVerified()).isFalse();
     }
 
     @Test

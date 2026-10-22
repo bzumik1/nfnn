@@ -6,7 +6,7 @@ import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
 import cz.novanadeje.app.donors.application.DonorPasswordResetProperties;
 import cz.novanadeje.app.donors.application.event.DonorPasswordResetRequested;
-import cz.novanadeje.app.donors.domain.PasswordResetSecret;
+import cz.novanadeje.app.donors.domain.LinkSecret;
 import cz.novanadeje.app.shared.domain.EmailAddress;
 import cz.novanadeje.app.shared.domain.LocaleCode;
 import cz.novanadeje.app.shared.infrastructure.config.PublicUrlProperties;
@@ -52,7 +52,7 @@ class PasswordResetEmailSenderTest {
     private static final UUID DONOR_ID = UUID.fromString("01a18e56-bdb0-775a-bd0a-a60756831369");
     private static final EmailAddress EMAIL = new EmailAddress("jana@example.cz");
     private static final String SENDER = "info@nfnn.cz";
-    private static final PasswordResetSecret SECRET = PasswordResetSecret.generate();
+    private static final LinkSecret SECRET = LinkSecret.generate();
     private static final String LINK = "http://localhost:4200/obnova-hesla#token=" + SECRET.value();
     private static final Instant EXPIRES_AT = Instant.parse("2026-10-18T11:00:00Z");
 

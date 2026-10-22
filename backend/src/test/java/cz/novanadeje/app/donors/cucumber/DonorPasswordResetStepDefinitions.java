@@ -1,7 +1,7 @@
 package cz.novanadeje.app.donors.cucumber;
 
 import cz.novanadeje.app.cucumber.ApiClient;
-import cz.novanadeje.app.donors.domain.PasswordResetSecret;
+import cz.novanadeje.app.donors.domain.LinkSecret;
 import cz.novanadeje.app.donors.domain.PasswordResetToken;
 import cz.novanadeje.app.donors.domain.PasswordResetTokenRepository;
 import cz.novanadeje.app.donors.infrastructure.persistence.PasswordResetTokenJpaRepository;
@@ -101,7 +101,7 @@ public class DonorPasswordResetStepDefinitions {
 
     @When("a password reset is confirmed with an unknown well-formed token and password {string}")
     public void aPasswordResetIsConfirmedWithAnUnknownToken(String password) {
-        confirm(PasswordResetSecret.generate().value(), password);
+        confirm(LinkSecret.generate().value(), password);
     }
 
     @When("the link's token is presented as the refresh cookie")
@@ -130,13 +130,13 @@ public class DonorPasswordResetStepDefinitions {
 
     @And("the stored link expires one hour after it was issued")
     public void theStoredLinkExpiresOneHourAfterItWasIssued() {
-        PasswordResetToken token = tokens.findBySecretHash(new PasswordResetSecret(tokenOf(awaitEmails(1).getLast())).hash()).orElseThrow();
+        PasswordResetToken token = tokens.findBySecretHash(new LinkSecret(tokenOf(awaitEmails(1).getLast())).hash()).orElseThrow();
         assertThat(Duration.between(token.issuedAt(), token.expiresAt())).isEqualTo(Duration.ofHours(1));
     }
 
     @And("the link from the e-mail is marked as used")
     public void theLinkFromTheEmailIsMarkedAsUsed() {
-        PasswordResetToken token = tokens.findBySecretHash(new PasswordResetSecret(tokenOf(lastEmail())).hash()).orElseThrow();
+        PasswordResetToken token = tokens.findBySecretHash(new LinkSecret(tokenOf(lastEmail())).hash()).orElseThrow();
         assertThat(token.usedAt()).isPresent();
     }
 

@@ -4,7 +4,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { LoginDialogMode, LoginDialogService } from '../../../core/auth/login-dialog.service';
-import { authResponse, problem, sampleDonor } from '../../../core/auth/testing/donor-fixtures';
+import { authResponse, problem } from '../../../core/auth/testing/donor-fixtures';
 import { LoginDialog } from './login-dialog';
 
 describe('Given the sign-in dialog', () => {
@@ -155,6 +155,57 @@ describe('Given the sign-in dialog', () => {
       expect(navigate).not.toHaveBeenCalled();
     });
 
+    it('before confirming the e-mail, then the dialog explains it and offers to send the link again', async () => {
+      await fillIn('#login-email', ' jana@example.cz ');
+      await fillIn('#login-password', 'correct horse battery');
+
+      await submit('.login-form');
+      http
+        .expectOne('/api/donors/auth/login')
+        .flush(
+          problem(
+            'auth/email-not-verified',
+            'E-mail ještě není potvrzený',
+            'Otevřete odkaz z e-mailu, který jsme vám poslali při registraci, nebo si nechte poslat nový.',
+          ),
+          { status: 401, statusText: 'Unauthorized' },
+        );
+      await settle();
+
+      expect(element('.form-error').textContent).toContain('E-mail ještě není potvrzený');
+      expect(element('.form-note .link-btn').textContent).toContain(
+        'Poslat ověřovací e-mail znovu',
+      );
+
+      await click('.form-note .link-btn');
+      const resend = http.expectOne('/api/donors/auth/email-verification/request');
+      expect(resend.request.body).toEqual({ email: 'jana@example.cz' });
+      resend.flush(null, { status: 202, statusText: 'Accepted' });
+      await settle();
+
+      expect(element('.form-status').getAttribute('role')).toBe('status');
+      expect(element('.form-status').textContent).toContain('Ověřovací e-mail jsme poslali znovu.');
+      expect(element('.form-note')).toBeNull();
+      expect(element('.form-error')).toBeNull();
+      expect(navigate).not.toHaveBeenCalled();
+    });
+
+    it('with a wrong password, then no resend button appears', async () => {
+      await fillIn('#login-email', 'jana@example.cz');
+      await fillIn('#login-password', 'wrong horse battery');
+
+      await submit('.login-form');
+      http
+        .expectOne('/api/donors/auth/login')
+        .flush(problem('auth/invalid-credentials', 'Nesprávný e-mail nebo heslo'), {
+          status: 401,
+          statusText: 'Unauthorized',
+        });
+      await settle();
+
+      expect(element('.form-note')).toBeNull();
+    });
+
     it('who wants to check the password, then the eye button shows it and the field keeps its label', async () => {
       await fillIn('#login-password', 'correct horse battery');
 
@@ -191,7 +242,7 @@ describe('Given the sign-in dialog', () => {
       await fillIn('#register-password', 'correct horse battery');
     }
 
-    it('as a person, then the registration is posted without a company identifier and the portal opens', async () => {
+    it('as a person, then the registration is posted without a company identifier and the dialog asks to check the e-mail', async () => {
       await fillInPerson();
 
       await submit('.register-form');
@@ -205,11 +256,19 @@ describe('Given the sign-in dialog', () => {
         password: 'correct horse battery',
         preferredLocale: 'cs',
       });
-      request.flush(authResponse('token-1'), { status: 201, statusText: 'Created' });
+      request.flush(null, { status: 202, statusText: 'Accepted' });
       await settle();
 
-      expect(dialog.isOpen()).toBe(false);
-      expect(navigate).toHaveBeenCalledWith('/donor/prehled');
+      expect(dialog.isOpen()).toBe(true);
+      expect(navigate).not.toHaveBeenCalled();
+      expect(TestBed.inject(AuthStore).signedIn()).toBe(false);
+      expect(element('.reset-success h3').textContent).toContain('Zkontrolujte si e-mail');
+      expect(element('.reset-success [role="status"]').textContent).toContain('jana@example.cz');
+      expect(element('.register-form')).toBeNull();
+
+      await click('.reset-success .form-submit');
+
+      expect(element('.login-form')).not.toBeNull();
     });
 
     it('as a company, then the identification number travels with the registration', async () => {
@@ -227,10 +286,7 @@ describe('Given the sign-in dialog', () => {
       expect(request.request.body.type).toBe('COMPANY');
       expect(request.request.body.name).toBe('Stavby Novák s.r.o.');
       expect(request.request.body.companyIdentifier).toBe('45274649');
-      request.flush(authResponse('token-1', sampleDonor({ type: 'COMPANY' })), {
-        status: 201,
-        statusText: 'Created',
-      });
+      request.flush(null, { status: 202, statusText: 'Accepted' });
     });
 
     it('as a company without the identification number, then nothing is sent', async () => {
@@ -273,7 +329,7 @@ describe('Given the sign-in dialog', () => {
       );
     });
 
-    it('with an email that already has an account, then the dialog explains it', async () => {
+    it('with a password the server refuses, then the dialog explains it', async () => {
       await fillInPerson();
 
       await submit('.register-form');
@@ -281,16 +337,16 @@ describe('Given the sign-in dialog', () => {
         .expectOne('/api/donors/auth/register')
         .flush(
           problem(
-            'donors/email-already-registered',
-            'Účet s tímto e-mailem už existuje',
-            'Přihlaste se, nebo použijte obnovu hesla.',
+            'donors/password-too-common',
+            'Heslo je příliš běžné',
+            'Zvolte prosím méně obvyklé heslo.',
           ),
-          { status: 409, statusText: 'Conflict' },
+          { status: 400, statusText: 'Bad Request' },
         );
       await settle();
 
-      expect(element('.form-error').textContent).toContain('Účet s tímto e-mailem už existuje');
-      expect(element('.form-error').textContent).toContain('Přihlaste se');
+      expect(element('.form-error').textContent).toContain('Heslo je příliš běžné');
+      expect(element('.form-error').textContent).toContain('Zvolte prosím méně obvyklé heslo.');
     });
 
     it('too many times from one address, then the dialog asks to try again in a while', async () => {

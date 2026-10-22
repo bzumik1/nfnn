@@ -7,7 +7,7 @@ import cz.novanadeje.app.donors.domain.DonorRepository;
 import cz.novanadeje.app.donors.domain.InvalidPasswordResetToken;
 import cz.novanadeje.app.donors.domain.PasswordHash;
 import cz.novanadeje.app.donors.domain.PasswordHasher;
-import cz.novanadeje.app.donors.domain.PasswordResetSecret;
+import cz.novanadeje.app.donors.domain.LinkSecret;
 import cz.novanadeje.app.donors.domain.PasswordResetToken;
 import cz.novanadeje.app.donors.domain.PasswordResetTokenRepository;
 import cz.novanadeje.app.donors.domain.PasswordTooWeak;
@@ -85,6 +85,16 @@ class DonorPasswordResetServiceTest {
     }
 
     @Test
+    @DisplayName("Given a donor whose e-mail is not verified, when a reset is requested, then nothing is stored and nothing is published")
+    void should_store_and_publish_nothing_when_requested_given_unverified_donor() {
+        when(donors.findByEmail(EMAIL)).thenReturn(Optional.of(unverifiedDonor()));
+
+        service.requestReset(EMAIL);
+
+        verifyNoInteractions(tokens, events, passwordHasher, refreshTokens);
+    }
+
+    @Test
     @DisplayName("Given a donor, when a reset is requested, then the unusable links go first and the event carries the secret of the stored token")
     void should_store_token_and_publish_secret_when_requested_given_donor() {
         when(donors.findByEmail(EMAIL)).thenReturn(Optional.of(donor(LocaleCode.EN)));
@@ -126,7 +136,7 @@ class DonorPasswordResetServiceTest {
     @Test
     @DisplayName("Given a common password, when a reset is confirmed, then it is refused before the token is looked at")
     void should_refuse_before_token_when_confirmed_given_common_password() {
-        PasswordResetSecret secret = PasswordResetSecret.generate();
+        LinkSecret secret = LinkSecret.generate();
 
         assertThatThrownBy(() -> service.confirmReset(secret.value(), "password12345"))
                 .isInstanceOfSatisfying(PasswordTooWeak.class, weak -> assertThat(weak.code()).isEqualTo("donors/password-too-common"));
@@ -145,7 +155,7 @@ class DonorPasswordResetServiceTest {
     @Test
     @DisplayName("Given an unknown token, when a reset is confirmed, then it is invalid and nothing changes")
     void should_be_invalid_when_confirmed_given_unknown_token() {
-        PasswordResetSecret secret = PasswordResetSecret.generate();
+        LinkSecret secret = LinkSecret.generate();
         when(tokens.findBySecretHash(secret.hash())).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.confirmReset(secret.value(), NEW_PASSWORD)).isInstanceOf(InvalidPasswordResetToken.class);
@@ -157,7 +167,7 @@ class DonorPasswordResetServiceTest {
     @Test
     @DisplayName("Given an expired token, when a reset is confirmed, then it is invalid and nothing changes")
     void should_be_invalid_when_confirmed_given_expired_token() {
-        PasswordResetSecret secret = PasswordResetSecret.generate();
+        LinkSecret secret = LinkSecret.generate();
         PasswordResetToken expired = PasswordResetToken.issue(secret, DONOR, NOW.minus(TTL), TTL);
         when(tokens.findBySecretHash(secret.hash())).thenReturn(Optional.of(expired));
 
@@ -170,7 +180,7 @@ class DonorPasswordResetServiceTest {
     @Test
     @DisplayName("Given a used token, when a reset is confirmed, then it is invalid and nothing changes")
     void should_be_invalid_when_confirmed_given_used_token() {
-        PasswordResetSecret secret = PasswordResetSecret.generate();
+        LinkSecret secret = LinkSecret.generate();
         PasswordResetToken used = PasswordResetToken.issue(secret, DONOR, NOW.minusSeconds(60), TTL);
         used.markUsed(NOW.minusSeconds(30));
         when(tokens.findBySecretHash(secret.hash())).thenReturn(Optional.of(used));
@@ -184,7 +194,7 @@ class DonorPasswordResetServiceTest {
     @Test
     @DisplayName("Given a concurrent confirm that won the token, when a reset is confirmed, then it is invalid and no password changes")
     void should_be_invalid_and_change_nothing_when_confirmed_given_lost_race() {
-        PasswordResetSecret secret = PasswordResetSecret.generate();
+        LinkSecret secret = LinkSecret.generate();
         PasswordResetToken token = PasswordResetToken.issue(secret, DONOR, NOW.minusSeconds(60), TTL);
         when(tokens.findBySecretHash(secret.hash())).thenReturn(Optional.of(token));
         when(tokens.markUsed(token.id(), NOW)).thenReturn(false);
@@ -198,7 +208,7 @@ class DonorPasswordResetServiceTest {
     @Test
     @DisplayName("Given a won token whose donor is gone, when a reset is confirmed, then it is invalid")
     void should_be_invalid_when_confirmed_given_missing_donor() {
-        PasswordResetSecret secret = PasswordResetSecret.generate();
+        LinkSecret secret = LinkSecret.generate();
         PasswordResetToken token = PasswordResetToken.issue(secret, DONOR, NOW.minusSeconds(60), TTL);
         when(tokens.findBySecretHash(secret.hash())).thenReturn(Optional.of(token));
         when(tokens.markUsed(token.id(), NOW)).thenReturn(true);
@@ -212,7 +222,7 @@ class DonorPasswordResetServiceTest {
     @Test
     @DisplayName("Given a live token, when a reset is confirmed, then the password changes, the other links go and every session is revoked")
     void should_change_password_delete_others_and_revoke_sessions_when_confirmed_given_live_token() {
-        PasswordResetSecret secret = PasswordResetSecret.generate();
+        LinkSecret secret = LinkSecret.generate();
         PasswordResetToken token = PasswordResetToken.issue(secret, DONOR, NOW.minusSeconds(60), TTL);
         Donor donor = donor(LocaleCode.CS);
         when(tokens.findBySecretHash(secret.hash())).thenReturn(Optional.of(token));
@@ -231,6 +241,16 @@ class DonorPasswordResetServiceTest {
     }
 
     private static Donor donor(LocaleCode locale) {
+        Donor donor = unverifiedDonor(locale);
+        donor.verifyEmail(NOW);
+        return donor;
+    }
+
+    private static Donor unverifiedDonor() {
+        return unverifiedDonor(LocaleCode.CS);
+    }
+
+    private static Donor unverifiedDonor(LocaleCode locale) {
         return Donor.register(DONOR, DonorType.PERSON, "Jana Nováková", null, new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"),
                 EMAIL, OLD_HASH, new VariableSymbol("1234567890"), locale, NOW);
     }

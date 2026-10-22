@@ -7,8 +7,16 @@ import { AuthResponse, Donor, RegisterDonorRequest, UpdateDonorProfileRequest } 
 export class AuthApi {
   private readonly http = inject(HttpClient);
 
-  register(request: RegisterDonorRequest): Observable<AuthResponse> {
-    return this.http.post<AuthResponse>('/api/donors/auth/register', request);
+  register(request: RegisterDonorRequest): Observable<void> {
+    return this.http.post<void>('/api/donors/auth/register', request);
+  }
+
+  requestEmailVerification(email: string): Observable<void> {
+    return this.http.post<void>('/api/donors/auth/email-verification/request', { email });
+  }
+
+  confirmEmailVerification(token: string): Observable<AuthResponse> {
+    return this.http.post<AuthResponse>('/api/donors/auth/email-verification/confirm', { token });
   }
 
   login(email: string, password: string): Observable<AuthResponse> {

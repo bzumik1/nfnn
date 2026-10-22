@@ -1,6 +1,7 @@
 package cz.novanadeje.app.donations.cucumber;
 
 import cz.novanadeje.app.cucumber.ApiClient;
+import cz.novanadeje.app.cucumber.DonorRegistrations;
 import cz.novanadeje.app.cucumber.DonorSessions;
 import cz.novanadeje.app.cucumber.ScenarioDonors;
 import cz.novanadeje.app.donations.domain.donor.DonorRecord;
@@ -33,7 +34,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 public class DonorRecordStepDefinitions {
 
-    private static final String REGISTER_PATH = "/api/donors/auth/register";
     private static final String PROFILE_PATH = "/api/donors/me";
     private static final String PASSWORD = "correct horse battery";
     private static final PostalAddress PERSON_ADDRESS = new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01");
@@ -49,12 +49,14 @@ public class DonorRecordStepDefinitions {
     private final JdbcClient jdbc;
     private final Clock clock;
     private final DonorSessions sessions;
+    private final DonorRegistrations registrations;
     private final Map<String, PostalAddress> addresses = new HashMap<>();
 
     public DonorRecordStepDefinitions(ApiClient api, ScenarioDonors scenarioDonors, DonorRecordRepository donorRecords,
                                       ApplicationEventPublisher events, TransactionTemplate transaction, JdbcClient jdbc, Clock clock,
-                                      DonorSessions sessions) {
+                                      DonorSessions sessions, DonorRegistrations registrations) {
         this.api = api;
+        this.registrations = registrations;
         this.scenarioDonors = scenarioDonors;
         this.donorRecords = donorRecords;
         this.events = events;
@@ -125,7 +127,6 @@ public class DonorRecordStepDefinitions {
     }
 
     private void register(String alias, DonorType type, String name, String companyIdentifier, PostalAddress address) {
-        api.forgetCredentials();
         Map<String, Object> body = new HashMap<>();
         body.put("type", type.name());
         body.put("name", name);
@@ -133,8 +134,7 @@ public class DonorRecordStepDefinitions {
         body.put("address", Map.of("street", address.street(), "city", address.city(), "postalCode", address.postalCode()));
         body.put("email", email(alias));
         body.put("password", PASSWORD);
-        ResponseEntity<String> response = api.post(REGISTER_PATH, body);
-        assertThat(response.getStatusCode().value()).withFailMessage("Registration answered %s", response.getBody()).isEqualTo(201);
+        registrations.registerAndConfirm(body);
         JsonNode json = api.lastResponseJson();
         JsonNode user = json.get("user");
         scenarioDonors.remember(alias, UUID.fromString(user.get("id").asString()), new VariableSymbol(user.get("variableSymbol").asString()));

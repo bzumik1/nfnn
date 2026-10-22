@@ -1,6 +1,6 @@
 package cz.novanadeje.app.donors.application.event;
 
-import cz.novanadeje.app.donors.domain.PasswordResetSecret;
+import cz.novanadeje.app.donors.domain.LinkSecret;
 import cz.novanadeje.app.shared.domain.EmailAddress;
 import cz.novanadeje.app.shared.domain.LocaleCode;
 
@@ -11,7 +11,7 @@ public record DonorPasswordResetRequested(
         UUID donorId,
         EmailAddress email,
         LocaleCode preferredLocale,
-        PasswordResetSecret secret,
+        LinkSecret secret,
         Instant expiresAt
 ) {
 }

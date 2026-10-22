@@ -2,13 +2,13 @@ import { expect, test } from '@playwright/test';
 import { mockDonorApi, openSignInDialog, paymentQr, problem, session } from './donor-session';
 
 test.describe('Given a visitor who wants a donor account', () => {
-  test('when they register as a person, then the donor portal opens with their name and variable symbol', async ({
+  test('when they register as a person, then the dialog asks them to confirm the e-mail and nobody is signed in', async ({
     page,
   }) => {
     const posted: unknown[] = [];
     await page.route('**/api/donors/auth/register', async (route) => {
       posted.push(route.request().postDataJSON());
-      await route.fulfill(session(201));
+      await route.fulfill({ status: 202 });
     });
     await mockDonorApi(page);
 
@@ -22,9 +22,10 @@ test.describe('Given a visitor who wants a donor account', () => {
     await page.locator('#register-password').fill('correct horse battery');
     await page.getByRole('button', { name: 'Registrovat' }).click();
 
-    await expect(page).toHaveURL(/\/donor\/prehled$/);
-    await expect(page.locator('.topbar-donor')).toContainText('Jana Nováková');
-    await expect(page.locator('.symbol-value')).toHaveText('1234567890');
+    const dialog = page.getByRole('dialog');
+    await expect(dialog.getByRole('heading', { name: 'Zkontrolujte si e-mail' })).toBeVisible();
+    await expect(dialog.getByRole('status')).toContainText('jana@example.cz');
+    await expect(page).toHaveURL(/\/$/);
     expect(posted).toEqual([
       {
         type: 'PERSON',
@@ -36,6 +37,40 @@ test.describe('Given a visitor who wants a donor account', () => {
         preferredLocale: 'cs',
       },
     ]);
+  });
+
+  test('when they sign in before confirming the e-mail, then the dialog offers to send the link again', async ({
+    page,
+  }) => {
+    await page.route('**/api/donors/auth/login', (route) =>
+      route.fulfill(
+        problem(
+          401,
+          'auth/email-not-verified',
+          'E-mail ještě není potvrzený',
+          'Otevřete odkaz z e-mailu, který jsme vám poslali při registraci, nebo si nechte poslat nový.',
+        ),
+      ),
+    );
+    const requested: unknown[] = [];
+    await page.route('**/api/donors/auth/email-verification/request', async (route) => {
+      requested.push(route.request().postDataJSON());
+      await route.fulfill({ status: 202 });
+    });
+    await mockDonorApi(page);
+
+    await openSignInDialog(page);
+    await page.locator('#login-email').fill('jana@example.cz');
+    await page.locator('#login-password').fill('correct horse battery');
+    await page.getByRole('dialog').locator('.form-submit').click();
+
+    await expect(page.getByRole('alert')).toContainText('E-mail ještě není potvrzený');
+    await page.getByRole('button', { name: 'Poslat ověřovací e-mail znovu' }).click();
+
+    await expect(page.getByRole('dialog').getByRole('status')).toContainText(
+      'Ověřovací e-mail jsme poslali znovu.',
+    );
+    expect(requested).toEqual([{ email: 'jana@example.cz' }]);
   });
 
   test('when they sign in with a wrong password, then the dialog stays and explains it', async ({

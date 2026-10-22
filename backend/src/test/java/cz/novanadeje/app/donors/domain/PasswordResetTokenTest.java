@@ -18,7 +18,7 @@ class PasswordResetTokenTest {
     @Test
     @DisplayName("Given a secret, when a token is issued, then it stores only the hash, expires after the lifetime and is unused")
     void should_store_hash_and_expiry_when_issued_given_secret() {
-        PasswordResetSecret secret = PasswordResetSecret.generate();
+        LinkSecret secret = LinkSecret.generate();
 
         PasswordResetToken token = PasswordResetToken.issue(secret, DONOR, NOW, LIFETIME);
 
@@ -33,7 +33,7 @@ class PasswordResetTokenTest {
     @Test
     @DisplayName("Given an unused token, when checked before it expires, then it is usable")
     void should_be_usable_when_checked_given_unused_and_not_expired() {
-        PasswordResetToken token = PasswordResetToken.issue(PasswordResetSecret.generate(), DONOR, NOW, LIFETIME);
+        PasswordResetToken token = PasswordResetToken.issue(LinkSecret.generate(), DONOR, NOW, LIFETIME);
 
         assertThat(token.isUsableAt(NOW.plus(Duration.ofMinutes(59)))).isTrue();
     }
@@ -41,7 +41,7 @@ class PasswordResetTokenTest {
     @Test
     @DisplayName("Given an unused token, when checked at or after its expiry, then it is not usable")
     void should_not_be_usable_when_checked_given_expired() {
-        PasswordResetToken token = PasswordResetToken.issue(PasswordResetSecret.generate(), DONOR, NOW, LIFETIME);
+        PasswordResetToken token = PasswordResetToken.issue(LinkSecret.generate(), DONOR, NOW, LIFETIME);
 
         assertThat(token.isUsableAt(NOW.plus(LIFETIME))).isFalse();
         assertThat(token.isUsableAt(NOW.plus(Duration.ofMinutes(61)))).isFalse();
@@ -50,7 +50,7 @@ class PasswordResetTokenTest {
     @Test
     @DisplayName("Given a used token, when checked before its expiry, then it is not usable and remembers when it was used")
     void should_not_be_usable_when_checked_given_used() {
-        PasswordResetToken token = PasswordResetToken.issue(PasswordResetSecret.generate(), DONOR, NOW, LIFETIME);
+        PasswordResetToken token = PasswordResetToken.issue(LinkSecret.generate(), DONOR, NOW, LIFETIME);
 
         token.markUsed(NOW.plusSeconds(60));
 
@@ -61,7 +61,7 @@ class PasswordResetTokenTest {
     @Test
     @DisplayName("Given a used token, when it is marked used again, then it refuses")
     void should_refuse_when_marked_used_twice_given_used_token() {
-        PasswordResetToken token = PasswordResetToken.issue(PasswordResetSecret.generate(), DONOR, NOW, LIFETIME);
+        PasswordResetToken token = PasswordResetToken.issue(LinkSecret.generate(), DONOR, NOW, LIFETIME);
         token.markUsed(NOW.plusSeconds(60));
 
         assertThatIllegalStateException().isThrownBy(() -> token.markUsed(NOW.plusSeconds(120)));
@@ -71,7 +71,7 @@ class PasswordResetTokenTest {
     @Test
     @DisplayName("Given stored values, when a token is reconstituted, then it keeps them")
     void should_keep_values_when_reconstituted_given_stored_row() {
-        PasswordResetToken stored = PasswordResetToken.issue(PasswordResetSecret.generate(), DONOR, NOW, LIFETIME);
+        PasswordResetToken stored = PasswordResetToken.issue(LinkSecret.generate(), DONOR, NOW, LIFETIME);
 
         PasswordResetToken token = PasswordResetToken.reconstitute(stored.id(), DONOR, stored.secretHash(), NOW, NOW.plus(LIFETIME), NOW.plusSeconds(5));
 

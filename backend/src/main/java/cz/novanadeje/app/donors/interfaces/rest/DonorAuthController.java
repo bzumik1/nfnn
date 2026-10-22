@@ -12,6 +12,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.Clock;
@@ -36,9 +37,10 @@ class DonorAuthController {
     }
 
     @PostMapping("/register")
-    ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterDonorRequest request, HttpServletRequest http) {
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    void register(@Valid @RequestBody RegisterDonorRequest request, HttpServletRequest http) {
         registrationRateLimiter.check(http.getRemoteAddr());
-        return respondWithSession(HttpStatus.CREATED, registration.register(request.toCommand()));
+        registration.register(request.toCommand());
     }
 
     @PostMapping("/login")
@@ -62,9 +64,6 @@ class DonorAuthController {
     }
 
     private ResponseEntity<AuthResponse> respondWithSession(HttpStatus status, AuthenticatedDonor authenticated) {
-        return ResponseEntity.status(status)
-                .header(HttpHeaders.SET_COOKIE, RefreshTokenCookie.carrying(
-                        authenticated.tokens().refreshToken(), authenticated.tokens().refreshTokenExpiresAt(), clock.instant()).toString())
-                .body(AuthResponse.of(authenticated));
+        return SessionResponses.opened(status, authenticated, clock.instant());
     }
 }

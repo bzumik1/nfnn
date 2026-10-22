@@ -34,8 +34,12 @@ export class AuthStore {
     return this.accessToken;
   }
 
-  register(request: RegisterDonorRequest): Observable<Donor> {
-    return this.api.register(request).pipe(map((response) => this.adopt(response)));
+  register(request: RegisterDonorRequest): Observable<void> {
+    return this.api.register(request);
+  }
+
+  confirmEmail(token: string): Observable<Donor> {
+    return this.api.confirmEmailVerification(token).pipe(map((response) => this.adopt(response)));
   }
 
   login(email: string, password: string): Observable<Donor> {

@@ -5,7 +5,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { FormsModule, NgForm } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
-import { describeProblem } from '../../../core/auth/api-problem';
+import { describeProblem, problemTypeEndsWith } from '../../../core/auth/api-problem';
 import { AuthApi } from '../../../core/auth/auth-api';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { DonorLocale, DonorType, PASSWORD_MIN_LENGTH } from '../../../core/auth/donor';
@@ -34,6 +34,7 @@ interface RegistrationFields {
 }
 
 const TOO_MANY_REQUESTS = 429;
+const EMAIL_NOT_VERIFIED = 'auth/email-not-verified';
 
 @Component({
   selector: 'app-login-dialog',
@@ -62,6 +63,9 @@ export class LoginDialog {
   protected readonly donorType = signal<DonorType>('PERSON');
   protected readonly loading = signal(false);
   protected readonly resetSent = signal(false);
+  protected readonly registrationSent = signal(false);
+  protected readonly emailNotVerified = signal(false);
+  protected readonly verificationResent = signal(false);
   protected readonly error = signal('');
 
   protected email = '';
@@ -98,6 +102,8 @@ export class LoginDialog {
   setMode(next: LoginDialogMode): void {
     this.mode.set(next);
     this.error.set('');
+    this.emailNotVerified.set(false);
+    this.verificationResent.set(false);
   }
 
   setDonorType(type: DonorType): void {
@@ -109,9 +115,30 @@ export class LoginDialog {
     if (!this.readyToSend(form)) {
       return;
     }
+    this.emailNotVerified.set(false);
+    this.verificationResent.set(false);
     this.auth.login(this.email.trim(), this.password).subscribe({
       next: () => this.enterPortal(),
-      error: (failure: unknown) => this.failUnlessThrottled(failure, this.tooManyAttempts),
+      error: (failure: unknown) => {
+        this.emailNotVerified.set(problemTypeEndsWith(failure, EMAIL_NOT_VERIFIED));
+        this.failUnlessThrottled(failure, this.tooManyAttempts);
+      },
+    });
+  }
+
+  resendVerification(): void {
+    if (this.loading()) {
+      return;
+    }
+    this.loading.set(true);
+    this.error.set('');
+    this.authApi.requestEmailVerification(this.email.trim()).subscribe({
+      next: () => {
+        this.loading.set(false);
+        this.emailNotVerified.set(false);
+        this.verificationResent.set(true);
+      },
+      error: (failure: unknown) => this.failUnlessThrottled(failure, this.tooManyResetRequests),
     });
   }
 
@@ -135,7 +162,10 @@ export class LoginDialog {
         preferredLocale: preferredLocaleOf(this.document.documentElement.lang),
       })
       .subscribe({
-        next: () => this.enterPortal(),
+        next: () => {
+          this.loading.set(false);
+          this.registrationSent.set(true);
+        },
         error: (failure: unknown) => this.failUnlessThrottled(failure, this.tooManyAttempts),
       });
   }
@@ -155,6 +185,7 @@ export class LoginDialog {
 
   backToLogin(): void {
     this.resetSent.set(false);
+    this.registrationSent.set(false);
     this.setMode('login');
   }
 

@@ -29,7 +29,7 @@ Web fondu, který představí fond a jeho pomoc dětem, usnadní darování a d�
 - 🔸 Přihlášení e-mailem a heslem, obnova hesla e-mailem (jako v prototypu).
 - 🔸 Po registraci dostane dárce vlastní variabilní symbol, který vidí v přehledu.
 - ✅ Účet si dárce sám smazat nemůže; přidá se později. 🔸 Žádost o výmaz podle GDPR zatím vyřídí fond ručně (e-mailem); záznamy o darech zůstávají kvůli účetnictví.
-- ✅ Ověření e-mailu při registraci (odkaz v e-mailu, do potvrzení je účet neaktivní) přijde před spuštěním na nfnn.cz (Jakub 22. 10. 2026); do té doby se účet zakládá bez ověření.
+- ✅ Ověření e-mailu při registraci (Jakub 22. 10. 2026): registrace pošle e-mail s odkazem platným 24 hodin, do jeho otevření je účet neaktivní (nejde se přihlásit, platby se k jeho VS nepárují). Otevřením odkazu se účet aktivuje a dárce je rovnou přihlášen. Nový odkaz si dárce nechá poslat z přihlášení nebo ze stránky s neplatným odkazem (nejvýše 3 živé odkazy, 5 žádostí za hodinu z jedné adresy). Opakovaná registrace stejného e-mailu: u potvrzeného účtu se nic nezakládá a majitel dostane e-mail, že účet už má; nepotvrzenou registraci nahradí nová. Dárci registrovaní před touto změnou jsou považováni za potvrzené. Výchozí volby Claude, Jakub je zatím neschválil jednotlivě.
 
 ### Přehled
 - ✅ Jako v prototypu: celkem darováno, počet darů, poslední dar, tabulka plateb.

@@ -83,6 +83,24 @@
         @if (error()) {
           <p class="form-error" role="alert">{{ error() }}</p>
         }
+        @if (emailNotVerified()) {
+          <p class="form-note">
+            <button
+              type="button"
+              class="link-btn"
+              [disabled]="loading()"
+              (click)="resendVerification()"
+              i18n="@@donor.login.resendVerification"
+            >
+              Poslat ověřovací e-mail znovu
+            </button>
+          </p>
+        }
+        @if (verificationResent()) {
+          <p class="form-status" role="status" i18n="@@donor.login.verificationResent">
+            Ověřovací e-mail jsme poslali znovu. Otevřete odkaz v něm a pak se přihlaste.
+          </p>
+        }
 
         <button type="submit" class="form-submit" [disabled]="loading()">
           @if (loading()) {
@@ -104,6 +122,27 @@
           Obnovit heslo
         </button>
       </p>
+    } @else if (registrationSent()) {
+      <div class="reset-success">
+        <div class="reset-icon" aria-hidden="true">✉️</div>
+        <h3 i18n="@@donor.register.sentTitle">Zkontrolujte si e-mail</h3>
+        <p role="status" i18n="@@donor.register.sentText">
+          Na adresu {{ registration.email.trim() }} jsme poslali odkaz pro potvrzení. Platí 24
+          hodin; po jeho otevření se účet otevře a budete přihlášeni.
+        </p>
+        <p class="reset-hint" i18n="@@donor.register.sentHint">
+          E-mail nedorazil? Zkontrolujte složku s nevyžádanou poštou, nebo se přihlaste a nechte si
+          poslat nový odkaz.
+        </p>
+        <button
+          type="button"
+          class="form-submit"
+          (click)="backToLogin()"
+          i18n="@@donor.login.reset.back"
+        >
+          Zpět na přihlášení
+        </button>
+      </div>
     } @else {
       <p class="sub" i18n="@@donor.login.sub.register">
         Vytvořte si účet pro správu potvrzení o darech

@@ -5,7 +5,7 @@ import cz.novanadeje.app.donors.domain.Donor;
 import cz.novanadeje.app.donors.domain.DonorRepository;
 import cz.novanadeje.app.donors.domain.InvalidPasswordResetToken;
 import cz.novanadeje.app.donors.domain.PasswordHasher;
-import cz.novanadeje.app.donors.domain.PasswordResetSecret;
+import cz.novanadeje.app.donors.domain.LinkSecret;
 import cz.novanadeje.app.donors.domain.PasswordResetToken;
 import cz.novanadeje.app.donors.domain.PasswordResetTokenRepository;
 import cz.novanadeje.app.donors.domain.RawPassword;
@@ -52,6 +52,10 @@ public class DonorPasswordResetService {
             log.debug("Password reset requested for an address without a donor");
             return;
         }
+        if (!donor.isEmailVerified()) {
+            log.info("Password reset for donor {} not sent: the e-mail is not verified", donor.id());
+            return;
+        }
         Instant now = clock.instant();
         tokens.deleteUnusableOf(donor.id(), now);
         int liveLinks = tokens.countOf(donor.id());
@@ -59,7 +63,7 @@ public class DonorPasswordResetService {
             log.info("Password reset for donor {} not sent: {} live links", donor.id(), liveLinks);
             return;
         }
-        PasswordResetSecret secret = PasswordResetSecret.generate();
+        LinkSecret secret = LinkSecret.generate();
         PasswordResetToken token = PasswordResetToken.issue(secret, donor.id(), now, properties.tokenTtl());
         tokens.save(token);
         events.publishEvent(new DonorPasswordResetRequested(donor.id().value(), donor.email(), donor.preferredLocale(), secret, token.expiresAt()));
@@ -69,7 +73,7 @@ public class DonorPasswordResetService {
     @Transactional
     public void confirmReset(String token, String password) {
         RawPassword rawPassword = new RawPassword(password);
-        PasswordResetSecret secret = new PasswordResetSecret(token);
+        LinkSecret secret = new LinkSecret(token);
         Instant now = clock.instant();
         PasswordResetToken found = tokens.findBySecretHash(secret.hash())
                 .filter(candidate -> candidate.isUsableAt(now))

@@ -26,10 +26,11 @@ public final class Donor {
     private LocaleCode preferredLocale;
     private final Set<Role> roles;
     private final Instant registeredAt;
+    private Instant emailVerifiedAt;
 
     private Donor(DonorId id, DonorType type, String name, CompanyIdentifier companyIdentifier, PostalAddress address,
                   EmailAddress email, PasswordHash passwordHash, VariableSymbol variableSymbol, LocaleCode preferredLocale,
-                  Set<Role> roles, Instant registeredAt) {
+                  Set<Role> roles, Instant registeredAt, Instant emailVerifiedAt) {
         this.id = require(id, "Donor id");
         this.type = require(type, "Donor type");
         this.name = requireName(name);
@@ -41,6 +42,7 @@ public final class Donor {
         this.preferredLocale = require(preferredLocale, "Preferred locale");
         this.roles = EnumSet.copyOf(require(roles, "Roles"));
         this.registeredAt = require(registeredAt, "Registration time");
+        this.emailVerifiedAt = emailVerifiedAt;
     }
 
     public static Donor register(DonorId id, DonorType type, String name, CompanyIdentifier companyIdentifier, PostalAddress address,
@@ -53,13 +55,29 @@ public final class Donor {
             throw new CompanyIdentifierNotAllowed();
         }
         return new Donor(id, type, name, companyIdentifier, address, email, passwordHash, variableSymbol, preferredLocale,
-                EnumSet.of(Role.DONOR), registeredAt);
+                EnumSet.of(Role.DONOR), registeredAt, null);
     }
 
     public static Donor reconstitute(DonorId id, DonorType type, String name, CompanyIdentifier companyIdentifier, PostalAddress address,
                                      EmailAddress email, PasswordHash passwordHash, VariableSymbol variableSymbol, LocaleCode preferredLocale,
-                                     Set<Role> roles, Instant registeredAt) {
-        return new Donor(id, type, name, companyIdentifier, address, email, passwordHash, variableSymbol, preferredLocale, roles, registeredAt);
+                                     Set<Role> roles, Instant registeredAt, Instant emailVerifiedAt) {
+        return new Donor(id, type, name, companyIdentifier, address, email, passwordHash, variableSymbol, preferredLocale, roles, registeredAt,
+                emailVerifiedAt);
+    }
+
+    public void verifyEmail(Instant at) {
+        if (emailVerifiedAt != null) {
+            throw new IllegalStateException("The e-mail of donor " + id + " is already verified");
+        }
+        this.emailVerifiedAt = require(at, "Verification time");
+    }
+
+    public boolean isEmailVerified() {
+        return emailVerifiedAt != null;
+    }
+
+    public Optional<Instant> emailVerifiedAt() {
+        return Optional.ofNullable(emailVerifiedAt);
     }
 
     public void updateProfile(String newName, PostalAddress newAddress, LocaleCode newLocale) {
