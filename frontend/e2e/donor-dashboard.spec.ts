@@ -1,7 +1,13 @@
 import { expect, test } from '@playwright/test';
 import { donor, mockDonorApi, noDonations, signIn } from './donor-session';
 
-function donation(id: string, receivedAt: string, amountMinor: number, status = 'RECEIVED') {
+function donation(
+  id: string,
+  receivedAt: string,
+  amountMinor: number,
+  status = 'RECEIVED',
+  receiptAvailable = status === 'RECEIVED',
+) {
   return {
     id,
     receiptNumber: null,
@@ -13,6 +19,7 @@ function donation(id: string, receivedAt: string, amountMinor: number, status = 
     source: 'BANK_TRANSFER',
     pairedBy: 'VARIABLE_SYMBOL',
     senderAccount: null,
+    receiptAvailable,
   };
 }
 
@@ -27,6 +34,7 @@ const twoYears = {
       { year: 2025, count: 1, totalAmountMinor: 25000 },
     ],
     yearlyReceiptsAvailableThrough: 2025,
+    receiptsAvailableFrom: 2025,
   },
   list: {
     items: [
@@ -42,6 +50,17 @@ const twoYears = {
 };
 
 const withReceipts = { ...twoYears, receipts: { singleFileName: 'potvrzeni-o-daru-2026-000001.pdf' } };
+
+const receiptsFrom2026 = {
+  summary: { ...twoYears.summary, receiptsAvailableFrom: 2026 },
+  list: {
+    ...twoYears.list,
+    items: twoYears.list.items.map((item) => ({
+      ...item,
+      receiptAvailable: item.receiptAvailable && item.receivedAt >= '2026-01-01',
+    })),
+  },
+};
 
 test.describe('Given a signed-in donor', () => {
   test('when they have given in two years, then the dashboard shows their totals, their payments and each year on its own', async ({ page }) => {
@@ -96,6 +115,27 @@ test.describe('Given a signed-in donor', () => {
     ]);
 
     expect(download.suggestedFilename()).toBe('potvrzeni-o-daru-2026-000001.pdf');
+  });
+
+  test('when some gifts arrived before the first receipt year, then those offer no PDF, nor does their year, and lines say from when receipts are issued', async ({ page }) => {
+    await mockDonorApi(page, receiptsFrom2026);
+    await signIn(page);
+
+    const rows = page.locator('.payments-card tbody tr');
+    await expect(rows).toHaveCount(4);
+    await expect(rows.nth(1).getByRole('button', { name: 'Stáhnout PDF' })).toBeVisible();
+    await expect(rows.nth(2)).toContainText('Přijato');
+    await expect(rows.nth(2).getByRole('button', { name: 'Stáhnout PDF' })).toHaveCount(0);
+    await expect(page.locator('.payments-card .receipts-from')).toHaveText(
+      'Potvrzení o daru tu vystavujeme za dary přijaté od 1. ledna 2026, u starších darů proto tlačítko „Stáhnout PDF“ chybí.',
+    );
+    await expect(page.locator('.yearly-pdf')).toHaveText('↓ PDF za rok 2026');
+
+    await page.locator('.year-toggle').getByRole('button', { name: '2025' }).click();
+
+    await expect(page.locator('.yearly-count')).toHaveText('1 příspěvek v roce 2025');
+    await expect(page.locator('.yearly-pdf')).toHaveCount(0);
+    await expect(page.locator('.yearly-hint')).toHaveText('Potvrzení za rok tu vystavujeme za dary od roku 2026.');
   });
 
   test('when no donation has arrived yet, then the dashboard shows zeros and explains how a gift appears', async ({ page }) => {

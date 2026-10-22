@@ -43,6 +43,7 @@ export const noDonations: DonorApiMock = {
     lastReceivedAt: null,
     byYear: [],
     yearlyReceiptsAvailableThrough: 2025,
+    receiptsAvailableFrom: 2026,
   },
   list: { items: [], totalAmountMinor: 0, currency: 'CZK', count: 0 },
 };

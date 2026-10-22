@@ -12,6 +12,7 @@ export function donationItem(overrides: Partial<DonationItem> = {}): DonationIte
     source: 'BANK_TRANSFER',
     pairedBy: 'VARIABLE_SYMBOL',
     senderAccount: null,
+    receiptAvailable: true,
     ...overrides,
   };
 }
@@ -22,7 +23,7 @@ export function twoYearDonations(): DonationListResponse {
       donationItem({ id: 'd-4', receivedAt: '2026-03-15', amountMinor: 50000 }),
       donationItem({ id: 'd-3', receivedAt: '2026-01-10', amountMinor: 100000, receiptNumber: '2026-000017' }),
       donationItem({ id: 'd-2', receivedAt: '2025-11-05', amountMinor: 25000 }),
-      donationItem({ id: 'd-1', receivedAt: '2025-08-20', amountMinor: 200000, status: 'REFUNDED' }),
+      donationItem({ id: 'd-1', receivedAt: '2025-08-20', amountMinor: 200000, status: 'REFUNDED', receiptAvailable: false }),
     ],
     totalAmountMinor: 175000,
     currency: 'CZK',
@@ -41,6 +42,7 @@ export function twoYearSummary(): DonationSummaryResponse {
       { year: 2025, count: 1, totalAmountMinor: 25000 },
     ],
     yearlyReceiptsAvailableThrough: 2025,
+    receiptsAvailableFrom: 2025,
   };
 }
 
@@ -49,5 +51,13 @@ export function emptyDonations(): DonationListResponse {
 }
 
 export function emptySummary(): DonationSummaryResponse {
-  return { totalAmountMinor: 0, currency: 'CZK', count: 0, lastReceivedAt: null, byYear: [], yearlyReceiptsAvailableThrough: 2025 };
+  return {
+    totalAmountMinor: 0,
+    currency: 'CZK',
+    count: 0,
+    lastReceivedAt: null,
+    byYear: [],
+    yearlyReceiptsAvailableThrough: 2025,
+    receiptsAvailableFrom: 2025,
+  };
 }

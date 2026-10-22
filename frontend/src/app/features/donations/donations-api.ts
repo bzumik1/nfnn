@@ -19,6 +19,7 @@ export interface DonationItem {
   source: DonationSource;
   pairedBy: DonationPairing | null;
   senderAccount: string | null;
+  receiptAvailable: boolean;
 }
 
 export interface DonationListResponse {
@@ -41,6 +42,7 @@ export interface DonationSummaryResponse {
   lastReceivedAt: string | null;
   byYear: YearTotal[];
   yearlyReceiptsAvailableThrough: number;
+  receiptsAvailableFrom: number;
 }
 
 export interface BankCheckResponse {

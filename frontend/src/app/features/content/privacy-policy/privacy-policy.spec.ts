@@ -85,6 +85,12 @@ describe('Given the privacy policy page', () => {
     expect(donations).not.toContain('odpoj');
   });
 
+  it('when it renders, then it says receipts are issued for gifts received from 1 January 2026', () => {
+    expect(purposeText('Evidence darů a potvrzení o daru')).toContain(
+      'Přiřazený dar zobrazíme v přehledu vašich darů a za dary přijaté od 1. ledna 2026 k němu vystavíme potvrzení o daru ve formátu PDF.',
+    );
+  });
+
   it('when it renders, then it lists every payment detail the bank statement gives us', () => {
     expect(texts('.purpose li')).toEqual(
       expect.arrayContaining([

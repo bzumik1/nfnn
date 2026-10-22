@@ -84,20 +84,22 @@
                     >{{ year }}</button>
                   }
                 </div>
-                <button
-                  type="button"
-                  class="yearly-pdf"
-                  [disabled]="!selectedYearCompleted() || yearlyDownloading(yearTotal.year)"
-                  [attr.aria-busy]="yearlyDownloading(yearTotal.year)"
-                  [attr.aria-describedby]="selectedYearCompleted() ? null : 'yearly-hint'"
-                  (click)="downloadYearlyReceipt()"
-                >
-                  @if (yearlyDownloading(yearTotal.year)) {
-                    <span i18n="@@donor.dashboard.receipt.preparing">Připravujeme PDF…</span>
-                  } @else {
-                    <span i18n="@@donor.dashboard.yearly.pdf">↓ PDF za rok</span> {{ yearTotal.year }}
-                  }
-                </button>
+                @if (selectedYearIssuable()) {
+                  <button
+                    type="button"
+                    class="yearly-pdf"
+                    [disabled]="!selectedYearCompleted() || yearlyDownloading(yearTotal.year)"
+                    [attr.aria-busy]="yearlyDownloading(yearTotal.year)"
+                    [attr.aria-describedby]="selectedYearCompleted() ? null : 'yearly-hint'"
+                    (click)="downloadYearlyReceipt()"
+                  >
+                    @if (yearlyDownloading(yearTotal.year)) {
+                      <span i18n="@@donor.dashboard.receipt.preparing">Připravujeme PDF…</span>
+                    } @else {
+                      <span i18n="@@donor.dashboard.yearly.pdf">↓ PDF za rok</span> {{ yearTotal.year }}
+                    }
+                  </button>
+                }
               </div>
             }
           </div>
@@ -111,7 +113,11 @@
                 {{ crowns(yearTotal.totalAmountMinor) }} Kč <span i18n="@@donor.dashboard.yearly.totalSuffix">celkem</span>
               </span>
             </div>
-            @if (!selectedYearCompleted()) {
+            @if (!selectedYearIssuable()) {
+              <p id="yearly-hint" class="yearly-hint" i18n="@@donor.dashboard.yearly.beforeReceipts">
+                Potvrzení za rok tu vystavujeme za dary od roku {{ receiptsFrom() }}.
+              </p>
+            } @else if (!selectedYearCompleted()) {
               <p id="yearly-hint" class="yearly-hint" i18n="@@donor.dashboard.yearly.notYetAvailable">
                 Potvrzení za rok {{ yearTotal.year }} bude ke stažení po skončení roku.
               </p>
@@ -189,8 +195,8 @@
                     <td data-label="Stav" i18n-data-label="@@donor.dashboard.payments.col.status">
                       <span class="status-pill" [class.status-pill--refunded]="item.status === 'REFUNDED'">{{ statusLabel(item.status) }}</span>
                     </td>
-                    <td class="receipt" [class.is-empty]="item.status === 'REFUNDED'" data-label="Potvrzení" i18n-data-label="@@donor.dashboard.payments.col.receipt">
-                      @if (item.status !== 'REFUNDED') {
+                    <td class="receipt" [class.is-empty]="!item.receiptAvailable" data-label="Potvrzení" i18n-data-label="@@donor.dashboard.payments.col.receipt">
+                      @if (item.receiptAvailable) {
                         <button
                           type="button"
                           class="download-btn"
@@ -210,6 +216,11 @@
                 }
               </tbody>
             </table>
+            @if (receivedWithoutReceipt()) {
+              <p class="receipts-from" i18n="@@donor.dashboard.payments.receiptsFrom">
+                Potvrzení o daru tu vystavujeme za dary přijaté od 1.&nbsp;ledna&nbsp;{{ receiptsFrom() }}, u starších darů proto tlačítko „Stáhnout PDF“ chybí.
+              </p>
+            }
           } @else {
             <p class="payments-empty" i18n="@@donor.dashboard.payments.empty">Zatím tu není žádná platba.</p>
           }
