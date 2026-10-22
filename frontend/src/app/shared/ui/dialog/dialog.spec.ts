@@ -9,7 +9,7 @@ import { Dialog } from './dialog';
     @if (open()) {
       <app-dialog labelledBy="title" [wide]="wide()" (dismissed)="dismissals = dismissals + 1">
         <h2 id="title">Název</h2>
-        <input id="first" autofocus />
+        <input id="first" />
       </app-dialog>
     }
   `,

@@ -11,7 +11,8 @@
     "format": "prettier --write \"src/**/*.{ts,html,scss}\" \"e2e/**/*.ts\" \"*.{json,js,ts}\" \".*.json\"",
     "format:check": "prettier --check \"src/**/*.{ts,html,scss}\" \"e2e/**/*.ts\" \"*.{json,js,ts}\" \".*.json\"",
     "e2e": "playwright test",
-    "e2e:install": "playwright install --with-deps"
+    "e2e:install": "playwright install --with-deps",
+    "lint": "ng lint"
   },
   "private": true,
   "packageManager": "npm@11.11.1",
@@ -31,12 +32,17 @@
     "@angular/cli": "^21.2.9",
     "@angular/compiler-cli": "^21.2.0",
     "@axe-core/playwright": "^4.14.0",
+    "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.49.0",
+    "angular-eslint": "21.4.0",
+    "eslint": "^10.3.0",
+    "eslint-config-prettier": "^10.1.8",
     "jsdom": "^28.0.0",
     "postcss-scss": "^4.0.9",
     "prettier": "^3.8.1",
     "stylelint": "^16.26.1",
     "typescript": "~5.9.2",
+    "typescript-eslint": "8.59.2",
     "vitest": "^4.0.8"
   }
 }

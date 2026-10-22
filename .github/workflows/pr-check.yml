@@ -61,6 +61,9 @@ jobs:
       - name: Formatting follows Prettier
         run: npm run format:check
 
+      - name: Code follows the lint rules
+        run: npm run lint
+
       - name: Styles use the theme's tokens
         run: npm run lint:styles
 
