@@ -129,6 +129,8 @@ app:
       challenge-ttl: PT5M
       challenge-attempts: 5
       issuer: Nová naděje
+    administrators:
+      emails: ${ADMIN_EMAILS:}
 
 logging:
   level:

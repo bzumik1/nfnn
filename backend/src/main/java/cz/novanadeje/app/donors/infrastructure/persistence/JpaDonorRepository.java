@@ -3,10 +3,12 @@ package cz.novanadeje.app.donors.infrastructure.persistence;
 import cz.novanadeje.app.donors.domain.Donor;
 import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.donors.domain.DonorRepository;
+import cz.novanadeje.app.donors.domain.Role;
 import cz.novanadeje.app.shared.domain.VariableSymbol;
 import cz.novanadeje.app.shared.domain.EmailAddress;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -47,5 +49,10 @@ class JpaDonorRepository implements DonorRepository {
     @Override
     public boolean existsByVariableSymbol(VariableSymbol variableSymbol) {
         return jpa.existsByVariableSymbol(variableSymbol.value());
+    }
+
+    @Override
+    public List<Donor> findAdministrators() {
+        return jpa.findByRole(Role.ADMIN).stream().map(DonorJpaEntity::toDomain).toList();
     }
 }

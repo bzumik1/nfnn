@@ -1,4 +1,5 @@
 import {
+  AdministratorResponse,
   AdminDonorResponse,
   AdminPaymentListResponse,
   AdminPaymentResponse,
@@ -68,6 +69,18 @@ export function foundDonor(overrides: Partial<AdminDonorResponse> = {}): AdminDo
     type: 'PERSON',
     variableSymbol: '4821937560',
     companyIdentifier: null,
+    ...overrides,
+  };
+}
+
+export function administrator(
+  overrides: Partial<AdministratorResponse> = {},
+): AdministratorResponse {
+  return {
+    donorId: '01a18e56-bdb0-775a-bd0a-a60756831369',
+    name: 'Jana Nováková',
+    email: 'jana@example.cz',
+    secondFactorEnabled: true,
     ...overrides,
   };
 }

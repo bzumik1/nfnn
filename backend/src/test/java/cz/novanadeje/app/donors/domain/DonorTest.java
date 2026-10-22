@@ -160,4 +160,44 @@ class DonorTest {
         assertThat(donor.sessionRoles(false)).containsExactly(Role.DONOR);
         assertThat(donor.sessionRoles(true)).containsExactly(Role.DONOR);
     }
+
+    @Test
+    @DisplayName("Given a plain donor, when administration is granted, then the donor is an administrator with both roles")
+    void should_become_administrator_when_administration_granted_given_plain_donor() {
+        Donor donor = Donor.register(DonorId.newId(NOW), DonorType.PERSON, "Jana Nováková", null, ADDRESS, EMAIL, HASH, SYMBOL, LocaleCode.CS, NOW);
+
+        donor.grantAdministration();
+
+        assertThat(donor.isAdministrator()).isTrue();
+        assertThat(donor.roles()).containsExactlyInAnyOrder(Role.DONOR, Role.ADMIN);
+    }
+
+    @Test
+    @DisplayName("Given an administrator, when administration is granted again, then the donor refuses")
+    void should_refuse_when_administration_granted_given_administrator() {
+        Donor admin = Donor.reconstitute(DonorId.newId(NOW), DonorType.PERSON, "Jana Nováková", null, ADDRESS, EMAIL, HASH, SYMBOL, LocaleCode.CS,
+                Set.of(Role.DONOR, Role.ADMIN), NOW, NOW);
+
+        assertThatThrownBy(admin::grantAdministration).isInstanceOf(AlreadyAdministrator.class);
+    }
+
+    @Test
+    @DisplayName("Given an administrator, when administration is revoked, then only DONOR is left")
+    void should_keep_only_donor_role_when_administration_revoked_given_administrator() {
+        Donor admin = Donor.reconstitute(DonorId.newId(NOW), DonorType.PERSON, "Jana Nováková", null, ADDRESS, EMAIL, HASH, SYMBOL, LocaleCode.CS,
+                Set.of(Role.DONOR, Role.ADMIN), NOW, NOW);
+
+        admin.revokeAdministration();
+
+        assertThat(admin.isAdministrator()).isFalse();
+        assertThat(admin.roles()).containsExactly(Role.DONOR);
+    }
+
+    @Test
+    @DisplayName("Given a plain donor, when administration is revoked, then the donor refuses")
+    void should_refuse_when_administration_revoked_given_plain_donor() {
+        Donor donor = Donor.register(DonorId.newId(NOW), DonorType.PERSON, "Jana Nováková", null, ADDRESS, EMAIL, HASH, SYMBOL, LocaleCode.CS, NOW);
+
+        assertThatThrownBy(donor::revokeAdministration).isInstanceOf(NotAdministrator.class);
+    }
 }

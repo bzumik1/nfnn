@@ -82,6 +82,17 @@ export interface UnpairPaymentResponse {
   changedYearlyReceipts: number[];
 }
 
+export interface AdministratorResponse {
+  donorId: string;
+  name: string;
+  email: string;
+  secondFactorEnabled: boolean;
+}
+
+export interface AdministratorListResponse {
+  items: AdministratorResponse[];
+}
+
 @Injectable({ providedIn: 'root' })
 export class AdminApi {
   private readonly http = inject(HttpClient);
@@ -117,6 +128,27 @@ export class AdminApi {
   unpairPayment(paymentId: string): Observable<UnpairPaymentResponse> {
     return this.http.post<UnpairPaymentResponse>(
       `/api/admin/donations/payments/${encodeURIComponent(paymentId)}/unpair`,
+      null,
+    );
+  }
+
+  administrators(): Observable<AdministratorListResponse> {
+    return this.http.get<AdministratorListResponse>('/api/admin/donors/administrators');
+  }
+
+  grantAdministration(email: string): Observable<AdministratorResponse> {
+    return this.http.post<AdministratorResponse>('/api/admin/donors/administrators', { email });
+  }
+
+  revokeAdministration(donorId: string): Observable<void> {
+    return this.http.delete<void>(
+      `/api/admin/donors/administrators/${encodeURIComponent(donorId)}`,
+    );
+  }
+
+  resetSecondFactor(donorId: string): Observable<void> {
+    return this.http.post<void>(
+      `/api/admin/donors/${encodeURIComponent(donorId)}/second-factor/reset`,
       null,
     );
   }

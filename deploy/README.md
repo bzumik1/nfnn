@@ -242,6 +242,8 @@ SQL
 
 ### Starší variabilní symbol: výpis a oprava vazeb
 
+Jakub 22. 10. 2026: nic se nemá dělat SQL na serveru; tento postup zůstává jen do doby, než oprava omylu přibude do správy (plán v2, úkol 6c).
+
 Odpovědi dárců na otázku u účtu jsou v tabulce `donor_symbol_claim` (`CONFIRMED` je „Ano, jsou moje“, `DECLINED` je „Ne, nejsou moje“). Dary spárované přes potvrzený VS mají v tabulce `donation` hodnotu `paired_by = 'CONFIRMED_SYMBOL'` a v `symbol_claim_id` id vazby. Každý příkaz níže pouští `psql` s `ON_ERROR_STOP=1`, takže se na první chybě zastaví.
 
 Výpis odpovědí, nejnovější nahoře (`vazba` je id, které potřebují další příkazy, `daru` počet darů, které vazba spárovala):
@@ -316,47 +318,25 @@ SQL
 
 ## Správci
 
-Správce je obyčejný dárcovský účet, kterému v databázi přidáš roli `ADMIN`. Nic jiného se v databázi nenastavuje: správa je na `/sprava`, odkaz „Správa“ se v hlavičce přehledu ukáže jen správci a backend pustí k `/api/admin/...` jen token s touto rolí. Správa dnes ukazuje stav stahování z banky a na stránce „Platby z banky“ (`/sprava/platby`) přiřazuje nespárované platby dárcům a ruší přiřazení; každý zásah je v tabulce `admin_action`. Platba, které správce zrušil přiřazení, má `bank_payment.unpaired_by_admin_at` a automatické párování ji přeskakuje, dokud ji správce nepřiřadí znovu.
+Správce je obyčejný dárcovský účet s rolí `ADMIN`. Všechno kolem správců se dělá ve webu, ne na serveru (Jakub, 22. 10. 2026: žádná správa přes SQL): správa je na `/sprava`, odkaz „Správa“ se v hlavičce přehledu ukáže jen správci a backend pustí k `/api/admin/...` jen token s touto rolí. Správa dnes ukazuje stav stahování z banky, na stránce „Platby z banky“ (`/sprava/platby`) přiřazuje nespárované platby dárcům a ruší přiřazení a na stránce „Správci“ (`/sprava/spravci`) spravuje správce; každý zásah je v tabulce `admin_action`. Platba, které správce zrušil přiřazení, má `bank_payment.unpaired_by_admin_at` a automatické párování ji přeskakuje, dokud ji správce nepřiřadí znovu.
 
-Správa je dostupná z internetu, proto roli `ADMIN` dostane jen přihlášení potvrzené dvoufaktorovým ověřením. Postup pro nového správce:
+Správa je dostupná z internetu, proto roli `ADMIN` dostane jen přihlášení potvrzené dvoufaktorovým ověřením.
 
-1. Přidej roli SQL níže (účet musí mít ověřený e-mail, jinak se nepřihlásí).
-2. Správce se přihlásí (zatím jako dárce) a na kartě „Přihlašovací údaje“ klikne na „Zapnout dvoufaktorové ověření“: zadá heslo, naskenuje QR kód (nebo opíše klíč) do ověřovací aplikace v telefonu (Google Authenticator, Microsoft Authenticator, Aegis apod.) a zadá první kód z ní. Tím je dvoufaktorové ověření zapnuté a správce hned vidí odkaz „Správa“.
-3. Od té doby se přihlašuje heslem a kódem z aplikace. Dokud dvoufaktorové ověření nezapne, přihlásí se jen jako dárce a přehled mu napíše, že správa čeká na dvoufaktorové ověření; stejně tak po jeho vypnutí.
+**První správce** (při instalaci, nebo kdyby správce nezbyl): do `backend.env` přidej řádek `ADMIN_EMAILS=jakub@example.cz` (víc adres oddělených čárkou) s e-mailem účtu, který už je zaregistrovaný, a nainstaluj znovu (změna env souboru, viz „Nasazení nové verze“). Backend při každém startu dá roli každému registrovanému účtu z řádku, kterému chybí; neregistrovanou adresu jen zapíše do logu jako varování a zkusí to při dalším startu. Řádek je jen pro start: správce, kterého někdo odebral ve webu, roli při dalším startu dostane zpět, dokud je v řádku, proto po prvním přihlášení řádek smaž nebo zakomentuj a další správce už přidávej ve webu.
 
-Ztracený nebo vyměněný telefon: dvoufaktorové ověření vypni SQL (správce se pak přihlásí jen heslem a zapne si je znovu; záložní kódy neexistují). Ověř nejdřív telefonicky, že žádá opravdu majitel účtu.
+**Další správce** přidá kterýkoli správce na stránce „Správci“: zadá e-mail, kterým je dárce registrovaný (účet musí existovat, jinak stránka řekne, že s tímto e-mailem není nikdo registrován). Pak:
 
-```sh
-sudo docker exec -i nfnn-backup psql <<'SQL'
-delete from donor_second_factor where donor_id = (select id from donor where email = 'spravce@example.cz');
-SQL
-```
+1. Nový správce se přihlásí (zatím jako dárce) a na kartě „Přihlašovací údaje“ klikne na „Zapnout dvoufaktorové ověření“: zadá heslo, naskenuje QR kód (nebo opíše klíč) do ověřovací aplikace v telefonu (Google Authenticator, Microsoft Authenticator, Aegis apod.) a zadá první kód z ní. Tím je dvoufaktorové ověření zapnuté a správce hned vidí odkaz „Správa“.
+2. Od té doby se přihlašuje heslem a kódem z aplikace. Dokud dvoufaktorové ověření nezapne, přihlásí se jen jako dárce a přehled mu napíše, že správa čeká na dvoufaktorové ověření; stránka „Správci“ u něj ukazuje „vypnuté, správa se mu ještě neotevře“.
 
-Přidání role (e-mail nahraď adresou účtu, který má být správcem):
+**Odebrání správce**: na stránce „Správci“ tlačítko „Odebrat“ (sám sebe správce odebrat nemůže, aby web nezůstal bez správce). Odebranému skončí všechna přihlášení; roli ztratí nejpozději do 15 minut.
 
-```sh
-sudo docker exec -i nfnn-backup psql <<'SQL'
-insert into donor_role (donor_id, role)
-select id, 'ADMIN' from donor where email = 'spravce@example.cz'
-on conflict do nothing;
-SQL
-```
+**Ztracený nebo vyměněný telefon**: jiný správce mu na stránce „Správci“ klikne na „Vypnout dvoufaktorové ověření“ (u dárce, který není správce, bude tlačítko na stránce dárců, úkol 7 plánu). Nejdřív si telefonicky ověř, že žádá opravdu majitel účtu; stránka se na to před vypnutím ptá. Dotyčnému skončí všechna přihlášení a dostane e-mail, že mu správce dvoufaktorové ověření vypnul; přihlásí se pak jen heslem a zapne si ho znovu (záložní kódy neexistují). Správce bez dvoufaktorového ověření je do té doby jen dárce.
 
-Odebrání role:
+Kdo je správce vidíš na stránce „Správci“. Co kdo kdy udělal (tabulka `admin_action`) zatím web neukazuje; do té doby, než přibude ve správě, jde to jen pro ladění přečíst v databázi:
 
 ```sh
 sudo docker exec -i nfnn-backup psql <<'SQL'
-delete from donor_role where role = 'ADMIN' and donor_id = (select id from donor where email = 'spravce@example.cz');
-SQL
-```
-
-Kdo je správce a co kdy udělal (tabulka `admin_action` se plní od první změny provedené ve správě; zatím správa jen čte, takže je prázdná):
-
-```sh
-sudo docker exec -i nfnn-backup psql <<'SQL'
-select d.email, r.role, (f.confirmed_at is not null) as second_factor
-from donor_role r join donor d on d.id = r.donor_id left join donor_second_factor f on f.donor_id = d.id
-where r.role = 'ADMIN';
 select a.performed_at, d.email, a.action, a.subject_id, a.details
 from admin_action a join donor d on d.id = a.admin_id
 order by a.performed_at desc limit 50;

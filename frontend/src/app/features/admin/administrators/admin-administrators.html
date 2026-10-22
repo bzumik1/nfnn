@@ -1,0 +1,247 @@
+<div class="admin">
+  <app-dashboard-top-bar area="admin" />
+
+  <div class="container">
+    <p class="admin-crumbs">
+      <a routerLink="/sprava" i18n="@@admin.administrators.backToAdmin">← Správa</a>
+    </p>
+    <h1 #title class="admin-title" tabindex="-1" i18n="@@admin.administrators.heading">Správci</h1>
+    <p class="admin-intro" i18n="@@admin.administrators.intro">
+      Správce vidí stav webu, přiřazuje platby a spravuje další správce. Správcem může být jen
+      registrovaný dárce; správa se mu otevře, až si zapne dvoufaktorové ověření a přihlásí se s
+      kódem z aplikace.
+    </p>
+
+    @if (notice(); as notice) {
+      @if (notice.kind === 'status') {
+        <p class="admin-notice admin-notice--status" role="status">{{ notice.text }}</p>
+      } @else {
+        <p class="admin-notice admin-notice--alert" role="alert">{{ notice.text }}</p>
+      }
+    }
+
+    <section class="admin-card administrators-card" aria-labelledby="administrators-title">
+      <h2
+        id="administrators-title"
+        class="admin-card-title"
+        i18n="@@admin.administrators.list.title"
+      >
+        Kdo web spravuje
+      </h2>
+      @switch (state()) {
+        @case ('loading') {
+          <p class="admin-loading" role="status" i18n="@@admin.administrators.loading">
+            Načítáme správce…
+          </p>
+        }
+        @case ('error') {
+          <div class="admin-error" role="alert">
+            <p i18n="@@admin.administrators.error.text">Správce se nepodařilo načíst.</p>
+            <button
+              type="button"
+              class="admin-retry"
+              (click)="load()"
+              i18n="@@admin.administrators.error.retry"
+            >
+              Zkusit znovu
+            </button>
+          </div>
+        }
+        @case ('ready') {
+          <table>
+            <thead>
+              <tr>
+                <th i18n="@@admin.administrators.col.name">Jméno</th>
+                <th i18n="@@admin.administrators.col.email">E-mail</th>
+                <th i18n="@@admin.administrators.col.secondFactor">Dvoufaktorové ověření</th>
+                <th class="action">
+                  <span class="visually-hidden" i18n="@@admin.administrators.col.action">Akce</span>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (item of items(); track item.donorId) {
+                <tr>
+                  <td data-label="Jméno" i18n-data-label="@@admin.administrators.col.name">
+                    <span class="admin-name">{{ item.name }}</span>
+                    @if (isSelf(item)) {
+                      <span class="self-tag" i18n="@@admin.administrators.selfTag">to jste vy</span>
+                    }
+                  </td>
+                  <td data-label="E-mail" i18n-data-label="@@admin.administrators.col.email">
+                    {{ item.email }}
+                  </td>
+                  <td
+                    data-label="Dvoufaktorové ověření"
+                    i18n-data-label="@@admin.administrators.col.secondFactor"
+                  >
+                    @if (item.secondFactorEnabled) {
+                      <span
+                        class="factor-tag factor-tag--on"
+                        i18n="@@admin.administrators.factor.on"
+                        >zapnuté</span
+                      >
+                    } @else {
+                      <span
+                        class="factor-tag factor-tag--off"
+                        i18n="@@admin.administrators.factor.off"
+                        >vypnuté, správa se mu ještě neotevře</span
+                      >
+                    }
+                  </td>
+                  <td class="action">
+                    @if (isSelf(item)) {
+                      <span class="muted" i18n="@@admin.administrators.self.hint"
+                        >Svůj účet spravujete v přehledu.</span
+                      >
+                    } @else if (isPending('revoke', item)) {
+                      <span
+                        class="confirm"
+                        role="group"
+                        aria-label="Odebrat správce?"
+                        i18n-aria-label="@@admin.administrators.revoke.confirm.label"
+                      >
+                        <span i18n="@@admin.administrators.revoke.confirm.question"
+                          >Opravdu odebrat?</span
+                        >
+                        <button
+                          type="button"
+                          class="action-btn action-btn--danger"
+                          [disabled]="busy()"
+                          (click)="revoke(item)"
+                        >
+                          @if (busy()) {
+                            <ng-container i18n="@@admin.administrators.revoke.busy"
+                              >Odebírám…</ng-container
+                            >
+                          } @else {
+                            <ng-container i18n="@@admin.administrators.revoke.yes"
+                              >Ano, odebrat</ng-container
+                            >
+                          }
+                        </button>
+                        <button
+                          type="button"
+                          class="action-link"
+                          [disabled]="busy()"
+                          (click)="cancel()"
+                          i18n="@@admin.administrators.confirm.no"
+                        >
+                          Ne
+                        </button>
+                      </span>
+                    } @else if (isPending('reset', item)) {
+                      <span
+                        class="confirm"
+                        role="group"
+                        aria-label="Vypnout dvoufaktorové ověření?"
+                        i18n-aria-label="@@admin.administrators.reset.confirm.label"
+                      >
+                        <span i18n="@@admin.administrators.reset.confirm.question"
+                          >Ověřili jste, že žádá majitel účtu?</span
+                        >
+                        <button
+                          type="button"
+                          class="action-btn action-btn--danger"
+                          [disabled]="busy()"
+                          (click)="reset(item)"
+                        >
+                          @if (busy()) {
+                            <ng-container i18n="@@admin.administrators.reset.busy"
+                              >Vypínám…</ng-container
+                            >
+                          } @else {
+                            <ng-container i18n="@@admin.administrators.reset.yes"
+                              >Ano, vypnout</ng-container
+                            >
+                          }
+                        </button>
+                        <button
+                          type="button"
+                          class="action-link"
+                          [disabled]="busy()"
+                          (click)="cancel()"
+                          i18n="@@admin.administrators.confirm.no"
+                        >
+                          Ne
+                        </button>
+                      </span>
+                    } @else {
+                      <span class="actions">
+                        @if (item.secondFactorEnabled) {
+                          <button
+                            type="button"
+                            class="action-btn action-btn--quiet"
+                            (click)="ask('reset', item)"
+                            i18n="@@admin.administrators.reset.open"
+                          >
+                            Vypnout dvoufaktorové ověření
+                          </button>
+                        }
+                        <button
+                          type="button"
+                          class="action-btn"
+                          (click)="ask('revoke', item)"
+                          i18n="@@admin.administrators.revoke.open"
+                        >
+                          Odebrat
+                        </button>
+                      </span>
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        }
+      }
+    </section>
+
+    <section class="admin-card grant-card" aria-labelledby="grant-title">
+      <h2 id="grant-title" class="admin-card-title" i18n="@@admin.administrators.grant.title">
+        Přidat správce
+      </h2>
+      <form
+        #grantForm="ngForm"
+        class="grant-form"
+        appFocusFirstInvalid
+        (ngSubmit)="grant(grantForm)"
+        novalidate
+      >
+        <p class="grant-intro" i18n="@@admin.administrators.grant.intro">
+          Zadejte e-mail, kterým je dárce registrovaný. Správa se mu otevře, až si na kartě
+          Přihlašovací údaje zapne dvoufaktorové ověření a přihlásí se s kódem z aplikace.
+        </p>
+        <app-form-field
+          label="E-mail dárce"
+          i18n-label="@@admin.administrators.email"
+          [messages]="emailMessages"
+        >
+          <input
+            appFormControl
+            id="grant-email"
+            name="email"
+            type="email"
+            autocomplete="off"
+            [(ngModel)]="email"
+            required
+            email
+            maxlength="254"
+          />
+        </app-form-field>
+
+        @if (grantError()) {
+          <p class="form-error" role="alert">{{ grantError() }}</p>
+        }
+
+        <button type="submit" class="grant-submit" [disabled]="busy()">
+          @if (busy()) {
+            <span i18n="@@admin.administrators.grant.busy">Přidávám…</span>
+          } @else {
+            <span i18n="@@admin.administrators.grant.submit">Přidat správce</span>
+          }
+        </button>
+      </form>
+    </section>
+  </div>
+</div>
