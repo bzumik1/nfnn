@@ -5,15 +5,12 @@ export const routes: Routes = [
   {
     path: 'donor',
     canActivate: [donorGuard],
-    loadComponent: () =>
-      import('./layout/donor-shell/donor-shell').then((m) => m.DonorShell),
-    loadChildren: () =>
-      import('./features/donors/donors.routes').then((m) => m.donorsRoutes),
+    loadComponent: () => import('./layout/donor-shell/donor-shell').then((m) => m.DonorShell),
+    loadChildren: () => import('./features/donors/donors.routes').then((m) => m.donorsRoutes),
   },
   {
     path: '',
-    loadComponent: () =>
-      import('./layout/public-shell/public-shell').then((m) => m.PublicShell),
+    loadComponent: () => import('./layout/public-shell/public-shell').then((m) => m.PublicShell),
     children: [
       {
         path: 'obnova-hesla',

@@ -68,7 +68,9 @@ describe('Given the sign-in dialog', () => {
     it('then it is a modal dialog with the sign-in tab pressed', () => {
       expect(element<HTMLDialogElement>('dialog').open).toBe(true);
       expect(element('.tab-switch button.is-active').getAttribute('aria-pressed')).toBe('true');
-      expect(element('.tab-switch button:not(.is-active)').getAttribute('aria-pressed')).toBe('false');
+      expect(element('.tab-switch button:not(.is-active)').getAttribute('aria-pressed')).toBe(
+        'false',
+      );
     });
 
     it('and the browser closes it on Esc, then the dialog is closed', () => {
@@ -87,7 +89,10 @@ describe('Given the sign-in dialog', () => {
 
       await submit('.login-form');
       const request = http.expectOne('/api/donors/auth/login');
-      expect(request.request.body).toEqual({ email: 'jana@example.cz', password: 'correct horse battery' });
+      expect(request.request.body).toEqual({
+        email: 'jana@example.cz',
+        password: 'correct horse battery',
+      });
       request.flush(authResponse('token-1'));
       await settle();
 
@@ -103,10 +108,17 @@ describe('Given the sign-in dialog', () => {
       await submit('.login-form');
       http
         .expectOne('/api/donors/auth/login')
-        .flush(problem('auth/invalid-credentials', 'Nesprávný e-mail nebo heslo', 'Zkontrolujte prosím e-mail a heslo.'), {
-          status: 401,
-          statusText: 'Unauthorized',
-        });
+        .flush(
+          problem(
+            'auth/invalid-credentials',
+            'Nesprávný e-mail nebo heslo',
+            'Zkontrolujte prosím e-mail a heslo.',
+          ),
+          {
+            status: 401,
+            statusText: 'Unauthorized',
+          },
+        );
       await settle();
 
       expect(dialog.isOpen()).toBe(true);
@@ -122,10 +134,17 @@ describe('Given the sign-in dialog', () => {
       await submit('.login-form');
       http
         .expectOne('/api/donors/auth/login')
-        .flush(problem('donors/rate-limited', 'Příliš mnoho požadavků', 'Zkuste to prosím znovu později.'), {
-          status: 429,
-          statusText: 'Too Many Requests',
-        });
+        .flush(
+          problem(
+            'donors/rate-limited',
+            'Příliš mnoho požadavků',
+            'Zkuste to prosím znovu později.',
+          ),
+          {
+            status: 429,
+            statusText: 'Too Many Requests',
+          },
+        );
       await settle();
 
       expect(dialog.isOpen()).toBe(true);
@@ -208,7 +227,10 @@ describe('Given the sign-in dialog', () => {
       expect(request.request.body.type).toBe('COMPANY');
       expect(request.request.body.name).toBe('Stavby Novák s.r.o.');
       expect(request.request.body.companyIdentifier).toBe('45274649');
-      request.flush(authResponse('token-1', sampleDonor({ type: 'COMPANY' })), { status: 201, statusText: 'Created' });
+      request.flush(authResponse('token-1', sampleDonor({ type: 'COMPANY' })), {
+        status: 201,
+        statusText: 'Created',
+      });
     });
 
     it('as a company without the identification number, then nothing is sent', async () => {
@@ -218,7 +240,9 @@ describe('Given the sign-in dialog', () => {
       await submit('.register-form');
 
       http.expectNone('/api/donors/auth/register');
-      expect(element('#register-company-identifier-error').textContent).toContain('Vyplňte prosím IČO.');
+      expect(element('#register-company-identifier-error').textContent).toContain(
+        'Vyplňte prosím IČO.',
+      );
     });
 
     it('as a company with a seven-digit identification number, then the field says it has eight digits', async () => {
@@ -229,7 +253,9 @@ describe('Given the sign-in dialog', () => {
       await submit('.register-form');
 
       http.expectNone('/api/donors/auth/register');
-      expect(element('#register-company-identifier-error').textContent).toContain('IČO má osm číslic.');
+      expect(element('#register-company-identifier-error').textContent).toContain(
+        'IČO má osm číslic.',
+      );
     });
 
     it('with a password shorter than 12 characters, then nothing is sent and the password field says why', async () => {
@@ -239,8 +265,12 @@ describe('Given the sign-in dialog', () => {
       await submit('.register-form');
 
       http.expectNone('/api/donors/auth/register');
-      expect(element('#register-password-error').textContent).toContain('Heslo musí mít alespoň 12 znaků.');
-      expect(element('#register-password').getAttribute('aria-describedby')).toBe('register-password-hint register-password-error');
+      expect(element('#register-password-error').textContent).toContain(
+        'Heslo musí mít alespoň 12 znaků.',
+      );
+      expect(element('#register-password').getAttribute('aria-describedby')).toBe(
+        'register-password-hint register-password-error',
+      );
     });
 
     it('with an email that already has an account, then the dialog explains it', async () => {
@@ -250,7 +280,11 @@ describe('Given the sign-in dialog', () => {
       http
         .expectOne('/api/donors/auth/register')
         .flush(
-          problem('donors/email-already-registered', 'Účet s tímto e-mailem už existuje', 'Přihlaste se, nebo použijte obnovu hesla.'),
+          problem(
+            'donors/email-already-registered',
+            'Účet s tímto e-mailem už existuje',
+            'Přihlaste se, nebo použijte obnovu hesla.',
+          ),
           { status: 409, statusText: 'Conflict' },
         );
       await settle();
@@ -265,10 +299,17 @@ describe('Given the sign-in dialog', () => {
       await submit('.register-form');
       http
         .expectOne('/api/donors/auth/register')
-        .flush(problem('donors/rate-limited', 'Příliš mnoho požadavků', 'Zkuste to prosím znovu později.'), {
-          status: 429,
-          statusText: 'Too Many Requests',
-        });
+        .flush(
+          problem(
+            'donors/rate-limited',
+            'Příliš mnoho požadavků',
+            'Zkuste to prosím znovu později.',
+          ),
+          {
+            status: 429,
+            statusText: 'Too Many Requests',
+          },
+        );
       await settle();
 
       expect(dialog.isOpen()).toBe(true);
@@ -283,7 +324,9 @@ describe('Given the sign-in dialog', () => {
       await fillInPerson();
 
       await submit('.register-form');
-      http.expectOne('/api/donors/auth/register').flush(null, { status: 500, statusText: 'Server Error' });
+      http
+        .expectOne('/api/donors/auth/register')
+        .flush(null, { status: 500, statusText: 'Server Error' });
       await settle();
 
       expect(element('.form-error').textContent).toContain('nepodařilo');
@@ -321,7 +364,9 @@ describe('Given the sign-in dialog', () => {
       await settle();
 
       expect(element('.reset-success h3').textContent).toContain('E-mail odeslán!');
-      expect(element('.reset-success').textContent).toContain('Pokud účet s touto adresou existuje');
+      expect(element('.reset-success').textContent).toContain(
+        'Pokud účet s touto adresou existuje',
+      );
       expect(element('.reset-form')).toBeNull();
     });
 
@@ -329,17 +374,26 @@ describe('Given the sign-in dialog', () => {
       await requestLink('jana-at-example');
 
       http.expectNone('/api/donors/auth/password-reset/request');
-      expect(element('#reset-email-error').textContent).toContain('Zadejte e-mail ve tvaru jana@example.cz.');
+      expect(element('#reset-email-error').textContent).toContain(
+        'Zadejte e-mail ve tvaru jana@example.cz.',
+      );
     });
 
     it('too many times, then the dialog asks to wait an hour', async () => {
       await requestLink('jana@example.cz');
       http
         .expectOne('/api/donors/auth/password-reset/request')
-        .flush(problem('donors/rate-limited', 'Příliš mnoho požadavků', 'Zkuste to prosím znovu později.'), {
-          status: 429,
-          statusText: 'Too Many Requests',
-        });
+        .flush(
+          problem(
+            'donors/rate-limited',
+            'Příliš mnoho požadavků',
+            'Zkuste to prosím znovu později.',
+          ),
+          {
+            status: 429,
+            statusText: 'Too Many Requests',
+          },
+        );
       await settle();
 
       expect(element('.form-error').textContent).toContain(
@@ -360,12 +414,16 @@ describe('Given the sign-in dialog', () => {
       );
       await settle();
 
-      expect(element('.form-error').textContent).toContain('Neplatný požadavek. Zadejte platný e-mail.');
+      expect(element('.form-error').textContent).toContain(
+        'Neplatný požadavek. Zadejte platný e-mail.',
+      );
     });
 
     it('and the server fails, then the dialog shows a generic error', async () => {
       await requestLink('jana@example.cz');
-      http.expectOne('/api/donors/auth/password-reset/request').flush(null, { status: 502, statusText: 'Bad Gateway' });
+      http
+        .expectOne('/api/donors/auth/password-reset/request')
+        .flush(null, { status: 502, statusText: 'Bad Gateway' });
       await settle();
 
       expect(element('.form-error').textContent).toContain('Spojení se serverem se nepodařilo');

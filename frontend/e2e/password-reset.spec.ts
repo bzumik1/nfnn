@@ -8,7 +8,9 @@ async function chooseNewPassword(page: Page): Promise<void> {
 }
 
 test.describe('Given a donor who forgot the password', () => {
-  test('when they ask for a link in the sign-in dialog, then the dialog says the e-mail is on its way', async ({ page }) => {
+  test('when they ask for a link in the sign-in dialog, then the dialog says the e-mail is on its way', async ({
+    page,
+  }) => {
     const posted: unknown[] = [];
     await page.route('**/api/donors/auth/password-reset/request', async (route) => {
       posted.push(route.request().postDataJSON());
@@ -21,11 +23,15 @@ test.describe('Given a donor who forgot the password', () => {
     await page.locator('#reset-email').fill(' jana@example.cz ');
     await page.getByRole('button', { name: 'Odeslat odkaz' }).click();
 
-    await expect(page.getByRole('dialog').getByRole('heading', { name: 'E-mail odeslán!' })).toBeVisible();
+    await expect(
+      page.getByRole('dialog').getByRole('heading', { name: 'E-mail odeslán!' }),
+    ).toBeVisible();
     expect(posted).toEqual([{ email: 'jana@example.cz' }]);
   });
 
-  test('when they open the link and choose a new password, then the token leaves the address bar and they can sign in', async ({ page }) => {
+  test('when they open the link and choose a new password, then the token leaves the address bar and they can sign in', async ({
+    page,
+  }) => {
     const posted: unknown[] = [];
     await page.route('**/api/donors/auth/password-reset/confirm', async (route) => {
       posted.push(route.request().postDataJSON());
@@ -50,17 +56,26 @@ test.describe('Given a donor who forgot the password', () => {
     await expect(page.locator('#login-email')).toBeVisible();
   });
 
-  test('when the link has expired, then the page offers a new link in the dialog', async ({ page }) => {
+  test('when the link has expired, then the page offers a new link in the dialog', async ({
+    page,
+  }) => {
     await page.route('**/api/donors/auth/password-reset/confirm', (route) =>
       route.fulfill(
-        problem(400, 'donors/invalid-password-reset-token', 'Odkaz pro obnovu hesla je neplatný nebo vypršel', 'Požádejte prosím o nový odkaz.'),
+        problem(
+          400,
+          'donors/invalid-password-reset-token',
+          'Odkaz pro obnovu hesla je neplatný nebo vypršel',
+          'Požádejte prosím o nový odkaz.',
+        ),
       ),
     );
 
     await page.goto('/obnova-hesla#token=abc');
     await chooseNewPassword(page);
 
-    await expect(page.getByRole('heading', { name: 'Odkaz je neplatný nebo vypršel' })).toBeVisible();
+    await expect(
+      page.getByRole('heading', { name: 'Odkaz je neplatný nebo vypršel' }),
+    ).toBeVisible();
 
     await page.getByRole('button', { name: 'Požádat o nový odkaz' }).click();
 
@@ -68,7 +83,9 @@ test.describe('Given a donor who forgot the password', () => {
     await expect(page.locator('#reset-email')).toBeVisible();
   });
 
-  test('when they open the page without the token, then it says the link is incomplete', async ({ page }) => {
+  test('when they open the page without the token, then it says the link is incomplete', async ({
+    page,
+  }) => {
     await page.goto('/obnova-hesla');
 
     await expect(page.getByRole('heading', { name: 'Odkaz je neúplný' })).toBeVisible();

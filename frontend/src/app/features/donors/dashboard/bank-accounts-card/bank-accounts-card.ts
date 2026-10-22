@@ -1,7 +1,19 @@
 /// <reference types="@angular/localize" />
 
 import { DOCUMENT, NgTemplateOutlet } from '@angular/common';
-import { afterNextRender, Component, computed, DestroyRef, ElementRef, inject, Injector, input, output, signal, viewChild } from '@angular/core';
+import {
+  afterNextRender,
+  Component,
+  computed,
+  DestroyRef,
+  ElementRef,
+  inject,
+  Injector,
+  input,
+  output,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
   catchError,
@@ -25,7 +37,11 @@ import { describeProblem, problemOf, problemTypeEndsWith } from '../../../../cor
 import { AuthStore } from '../../../../core/auth/auth-store';
 import { CopyButton } from '../../../../shared/ui/copy-button/copy-button';
 import { Dialog } from '../../../../shared/ui/dialog/dialog';
-import { BankAccountItem, BankAccountListResponse, BankAccountsApi } from '../../../donations/bank-accounts-api';
+import {
+  BankAccountItem,
+  BankAccountListResponse,
+  BankAccountsApi,
+} from '../../../donations/bank-accounts-api';
 import { formatCrowns } from '../../../donations/donation-amount';
 import { formatDonationDate } from '../../../donations/donation-date';
 import { BankCheckResponse, DonationsApi } from '../../../donations/donations-api';
@@ -33,7 +49,10 @@ import { PaymentQrApi, PaymentQrResponse } from '../../../donations/payment-qr-a
 
 type ListState = 'loading' | 'ready' | 'error';
 
-type QrState = { readonly kind: 'loading' } | { readonly kind: 'ready'; readonly qr: PaymentQrResponse } | { readonly kind: 'failed' };
+type QrState =
+  | { readonly kind: 'loading' }
+  | { readonly kind: 'ready'; readonly qr: PaymentQrResponse }
+  | { readonly kind: 'failed' };
 
 type PaymentWatch = 'waiting' | 'stopped';
 
@@ -119,7 +138,10 @@ export class BankAccountsCard {
     if (!this.adding() || known === null) {
       return null;
     }
-    return this.accounts().find((account) => account.status === 'ACTIVE' && !known.has(account.id)) ?? null;
+    return (
+      this.accounts().find((account) => account.status === 'ACTIVE' && !known.has(account.id)) ??
+      null
+    );
   });
   private watchRequest: Subscription | undefined;
 
@@ -193,7 +215,9 @@ export class BankAccountsCard {
   }
 
   protected offersDisconnect(account: BankAccountItem): boolean {
-    return account.status === 'ACTIVE' ? !account.pairingExcluded : account.status !== 'DISCONNECTED';
+    return account.status === 'ACTIVE'
+      ? !account.pairingExcluded
+      : account.status !== 'DISCONNECTED';
   }
 
   protected warns(account: BankAccountItem): boolean {
@@ -201,11 +225,17 @@ export class BankAccountsCard {
   }
 
   protected offersReconnect(account: BankAccountItem): boolean {
-    return account.status === 'DISCONNECTED' && !account.pairingExcluded && this.isNewestOfItsNumber(account);
+    return (
+      account.status === 'DISCONNECTED' &&
+      !account.pairingExcluded &&
+      this.isNewestOfItsNumber(account)
+    );
   }
 
   private isNewestOfItsNumber(account: BankAccountItem): boolean {
-    return this.accounts().find((other) => other.accountNumber === account.accountNumber) === account;
+    return (
+      this.accounts().find((other) => other.accountNumber === account.accountNumber) === account
+    );
   }
 
   protected labelModifier(account: BankAccountItem): string {
@@ -305,7 +335,9 @@ export class BankAccountsCard {
         switchMap((visible, index) =>
           visible
             ? timer(index === 0 ? PAYMENT_WATCH_INTERVAL_MS : 0).pipe(
-                switchMap(() => this.checkForPayment().pipe(repeat({ delay: PAYMENT_WATCH_INTERVAL_MS }))),
+                switchMap(() =>
+                  this.checkForPayment().pipe(repeat({ delay: PAYMENT_WATCH_INTERVAL_MS })),
+                ),
               )
             : EMPTY,
         ),
@@ -349,10 +381,12 @@ export class BankAccountsCard {
   protected loadQr(): void {
     this.qrRequest?.unsubscribe();
     this.qr.set({ kind: 'loading' });
-    this.qrRequest = this.paymentQr.paymentQr(VERIFICATION_AMOUNT, this.variableSymbol(), 'ACCOUNT_VERIFICATION').subscribe({
-      next: (qr) => this.qr.set({ kind: 'ready', qr }),
-      error: () => this.qr.set({ kind: 'failed' }),
-    });
+    this.qrRequest = this.paymentQr
+      .paymentQr(VERIFICATION_AMOUNT, this.variableSymbol(), 'ACCOUNT_VERIFICATION')
+      .subscribe({
+        next: (qr) => this.qr.set({ kind: 'ready', qr }),
+        error: () => this.qr.set({ kind: 'failed' }),
+      });
   }
 
   private actionButtonOf(account: BankAccountItem): HTMLButtonElement | null {
@@ -380,7 +414,9 @@ function labelOf(account: BankAccountItem): AccountLabel {
 }
 
 function activeIds(items: readonly BankAccountItem[]): ReadonlySet<string> {
-  return new Set(items.filter((account) => account.status === 'ACTIVE').map((account) => account.id));
+  return new Set(
+    items.filter((account) => account.status === 'ACTIVE').map((account) => account.id),
+  );
 }
 
 function actionButtonId(account: BankAccountItem): string {

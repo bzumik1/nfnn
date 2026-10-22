@@ -9,7 +9,16 @@
       <div class="contact-info">
         <div class="info-row">
           <div class="info-icon" aria-hidden="true">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
               <rect x="2" y="4" width="20" height="16" rx="2" />
               <path d="m22 7-10 6L2 7" />
             </svg>
@@ -21,19 +30,39 @@
         </div>
         <div class="info-row">
           <div class="info-icon" aria-hidden="true">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
               <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
               <circle cx="12" cy="10" r="3" />
             </svg>
           </div>
           <div>
             <div class="info-label" i18n="@@home.contact.address">Adresa</div>
-            <div class="info-value" i18n="@@home.contact.addressValue">Jiráskova 436, 473 01 Nový Bor</div>
+            <div class="info-value" i18n="@@home.contact.addressValue">
+              Jiráskova 436, 473 01 Nový Bor
+            </div>
           </div>
         </div>
         <div class="info-row">
           <div class="info-icon" aria-hidden="true">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
               <path d="M3 22h18M6 18v-7M10 18v-7M14 18v-7M18 18v-7M12 2l8 5H4Z" />
             </svg>
           </div>
@@ -53,7 +82,12 @@
           <p class="form-success-text" i18n="@@home.contact.success.text">
             Děkujeme za váš zájem. Ozveme se co nejdříve.
           </p>
-          <button type="button" class="form-success-again" (click)="reset()" i18n="@@home.contact.success.again">
+          <button
+            type="button"
+            class="form-success-again"
+            (click)="reset()"
+            i18n="@@home.contact.success.again"
+          >
             Odeslat další zprávu
           </button>
         </div>
@@ -61,7 +95,11 @@
         <form #f="ngForm" appFocusFirstInvalid (ngSubmit)="submit(f)" novalidate>
           <h3 class="form-title" i18n="@@home.contact.form.title">Napište nám</h3>
 
-          <app-form-field label="Jméno a příjmení" i18n-label="@@home.contact.form.name" [messages]="nameMessages">
+          <app-form-field
+            label="Jméno a příjmení"
+            i18n-label="@@home.contact.form.name"
+            [messages]="nameMessages"
+          >
             <input
               appFormControl
               id="contact-name"
@@ -76,7 +114,11 @@
             />
           </app-form-field>
 
-          <app-form-field label="E-mailová adresa" i18n-label="@@home.contact.form.email" [messages]="emailMessages">
+          <app-form-field
+            label="E-mailová adresa"
+            i18n-label="@@home.contact.form.email"
+            [messages]="emailMessages"
+          >
             <input
               appFormControl
               id="contact-email"
@@ -91,7 +133,11 @@
             />
           </app-form-field>
 
-          <app-form-field label="Vaše zpráva" i18n-label="@@home.contact.form.message" [messages]="messageMessages">
+          <app-form-field
+            label="Vaše zpráva"
+            i18n-label="@@home.contact.form.message"
+            [messages]="messageMessages"
+          >
             <textarea
               appFormControl
               id="contact-message"

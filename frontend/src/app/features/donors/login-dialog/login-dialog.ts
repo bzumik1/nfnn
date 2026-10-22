@@ -37,7 +37,15 @@ const TOO_MANY_REQUESTS = 429;
 
 @Component({
   selector: 'app-login-dialog',
-  imports: [FormsModule, RouterLink, Dialog, FormField, FormControlDirective, FocusFirstInvalid, PasswordReveal],
+  imports: [
+    FormsModule,
+    RouterLink,
+    Dialog,
+    FormField,
+    FormControlDirective,
+    FocusFirstInvalid,
+    PasswordReveal,
+  ],
   templateUrl: './login-dialog.html',
   styleUrl: './login-dialog.scss',
 })
@@ -175,7 +183,10 @@ export class LoginDialog {
   private fail(failure: unknown): void {
     this.loading.set(false);
     this.error.set(
-      describeProblem(failure, $localize`:@@donor.login.error.generic:Spojení se serverem se nepodařilo. Zkuste to prosím znovu.`),
+      describeProblem(
+        failure,
+        $localize`:@@donor.login.error.generic:Spojení se serverem se nepodařilo. Zkuste to prosím znovu.`,
+      ),
     );
   }
 
@@ -190,7 +201,15 @@ export class LoginDialog {
 }
 
 function emptyRegistration(): RegistrationFields {
-  return { name: '', companyIdentifier: '', street: '', city: '', postalCode: '', email: '', password: '' };
+  return {
+    name: '',
+    companyIdentifier: '',
+    street: '',
+    city: '',
+    postalCode: '',
+    email: '',
+    password: '',
+  };
 }
 
 function preferredLocaleOf(locale: string): DonorLocale {

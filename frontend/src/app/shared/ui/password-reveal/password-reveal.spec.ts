@@ -4,7 +4,9 @@ import { PasswordReveal } from './password-reveal';
 
 @Component({
   imports: [PasswordReveal],
-  template: `<app-password-reveal><input id="secret" type="password" value="correct horse battery" /></app-password-reveal>`,
+  template: `<app-password-reveal
+    ><input id="secret" type="password" value="correct horse battery"
+  /></app-password-reveal>`,
 })
 class Host {}
 

@@ -17,7 +17,9 @@ describe('Given the news section', () => {
   });
 
   it('when it renders, then the photos are decorative because each title follows them', () => {
-    const alts = Array.from(root().querySelectorAll('img')).map((image) => image.getAttribute('alt'));
+    const alts = Array.from(root().querySelectorAll('img')).map((image) =>
+      image.getAttribute('alt'),
+    );
 
     expect(alts.length).toBeGreaterThan(0);
     expect(alts.every((alt) => alt === '')).toBe(true);

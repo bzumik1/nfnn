@@ -2,7 +2,9 @@ import { expect, test } from '@playwright/test';
 import { mockDonorApi, openSignInDialog, paymentQr, problem, session } from './donor-session';
 
 test.describe('Given a visitor who wants a donor account', () => {
-  test('when they register as a person, then the donor portal opens with their name and variable symbol', async ({ page }) => {
+  test('when they register as a person, then the donor portal opens with their name and variable symbol', async ({
+    page,
+  }) => {
     const posted: unknown[] = [];
     await page.route('**/api/donors/auth/register', async (route) => {
       posted.push(route.request().postDataJSON());
@@ -36,9 +38,18 @@ test.describe('Given a visitor who wants a donor account', () => {
     ]);
   });
 
-  test('when they sign in with a wrong password, then the dialog stays and explains it', async ({ page }) => {
+  test('when they sign in with a wrong password, then the dialog stays and explains it', async ({
+    page,
+  }) => {
     await page.route('**/api/donors/auth/login', (route) =>
-      route.fulfill(problem(401, 'auth/invalid-credentials', 'Nesprávný e-mail nebo heslo', 'Zkontrolujte prosím e-mail a heslo.')),
+      route.fulfill(
+        problem(
+          401,
+          'auth/invalid-credentials',
+          'Nesprávný e-mail nebo heslo',
+          'Zkontrolujte prosím e-mail a heslo.',
+        ),
+      ),
     );
     await mockDonorApi(page);
 
@@ -52,7 +63,9 @@ test.describe('Given a visitor who wants a donor account', () => {
     await expect(page).toHaveURL(/\/$/);
   });
 
-  test('when they sign in and sign out again, then the home page shows the sign-in button again', async ({ page }) => {
+  test('when they sign in and sign out again, then the home page shows the sign-in button again', async ({
+    page,
+  }) => {
     await page.route('**/api/donors/auth/login', (route) => route.fulfill(session(200)));
     await page.route('**/api/donors/auth/logout', (route) => route.fulfill({ status: 204 }));
     await mockDonorApi(page);
@@ -69,7 +82,9 @@ test.describe('Given a visitor who wants a donor account', () => {
     await expect(page.locator('.nav-login')).toHaveText('Přihlásit se');
   });
 
-  test('when they go back to the home page from the overview, then they stay signed in and can return to it', async ({ page }) => {
+  test('when they go back to the home page from the overview, then they stay signed in and can return to it', async ({
+    page,
+  }) => {
     await page.route('**/api/donors/auth/login', (route) => route.fulfill(session(200)));
     await mockDonorApi(page);
 
@@ -85,7 +100,9 @@ test.describe('Given a visitor who wants a donor account', () => {
     await expect(page.locator('.nav-login')).toHaveText('Můj přehled');
   });
 
-  test('when they open the portal without a session, then they land on the home page with the sign-in dialog', async ({ page }) => {
+  test('when they open the portal without a session, then they land on the home page with the sign-in dialog', async ({
+    page,
+  }) => {
     await mockDonorApi(page);
 
     await page.goto('/donor/prehled');
@@ -95,7 +112,9 @@ test.describe('Given a visitor who wants a donor account', () => {
     await expect(page.locator('#login-email')).toBeVisible();
   });
 
-  test('when they come back with a remembered session, then the portal opens without signing in again', async ({ page }) => {
+  test('when they come back with a remembered session, then the portal opens without signing in again', async ({
+    page,
+  }) => {
     await page.addInitScript(() => localStorage.setItem('nfnn.donor-session', '1'));
     await page.route('**/api/donors/auth/refresh', (route) => route.fulfill(session(200)));
     await mockDonorApi(page);
@@ -105,7 +124,9 @@ test.describe('Given a visitor who wants a donor account', () => {
     await expect(page.locator('.topbar-donor')).toContainText('Jana Nováková');
   });
 
-  test('when they come back with a remembered session to the home page, then the QR payment carries their variable symbol', async ({ page }) => {
+  test('when they come back with a remembered session to the home page, then the QR payment carries their variable symbol', async ({
+    page,
+  }) => {
     await page.addInitScript(() => localStorage.setItem('nfnn.donor-session', '1'));
     await page.route('**/api/donors/auth/refresh', (route) => route.fulfill(session(200)));
     const requestedSymbols: (string | null)[] = [];
@@ -113,7 +134,9 @@ test.describe('Given a visitor who wants a donor account', () => {
       (url) => url.pathname === '/api/donations/payment-qr',
       async (route) => {
         requestedSymbols.push(new URL(route.request().url()).searchParams.get('variableSymbol'));
-        await route.fulfill({ json: { ...paymentQr, spayd: `${paymentQr.spayd}*X-VS:1234567890` } });
+        await route.fulfill({
+          json: { ...paymentQr, spayd: `${paymentQr.spayd}*X-VS:1234567890` },
+        });
       },
     );
 

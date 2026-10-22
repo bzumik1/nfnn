@@ -7,7 +7,11 @@
   display: flex;
   align-items: center;
   background:
-    radial-gradient(ellipse at 85% 0%, color-mix(in srgb, var(--color-accent) 28%, transparent) 0%, transparent 60%),
+    radial-gradient(
+      ellipse at 85% 0%,
+      color-mix(in srgb, var(--color-accent) 28%, transparent) 0%,
+      transparent 60%
+    ),
     var(--color-surface-inverse);
   padding: calc(var(--header-height) + 88px) 0 108px;
 }

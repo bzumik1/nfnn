@@ -24,6 +24,7 @@ Read before building, update in the same PR: `docs/requirements.md` (client deci
 | `./gradlew bootTestRun` | app with Testcontainers PostgreSQL; `bootRun` uses an external Postgres (`dev` profile) |
 | **Frontend, in `frontend/`** (Node 22 or 24; 25 is unsupported) | |
 | `npm ci`, `npm start` | dependencies; dev server :4200 with `/api` proxied to :8080 |
+| `npm run format`, `npm run format:check` | Prettier over `src/`, `e2e/` and the config files; the check runs in CI |
 | `npm run lint:styles` | Stylelint: component styles use theme tokens only |
 | `npm test -- --watch=false` | Vitest |
 | `npm run build` | production build to `dist/frontend/browser/` |
@@ -41,7 +42,7 @@ Read before building, update in the same PR: `docs/requirements.md` (client deci
 
 ## Done means
 
-1. New tests failed first and pass now. `./gradlew test` and `npm run lint:styles && npm test -- --watch=false && npm run build && npm run e2e` pass. Without Docker: `--tests "*architecture*" -PnoCucumber` plus the touched test classes (`--tests "*Name*" -PnoCucumber`), and the PR says so.
+1. New tests failed first and pass now. `./gradlew test` and `npm run format:check && npm run lint:styles && npm test -- --watch=false && npm run build && npm run e2e` pass. Without Docker: `--tests "*architecture*" -PnoCucumber` plus the touched test classes (`--tests "*Name*" -PnoCucumber`), and the PR says so.
 2. Docs the change touches are updated (contract, overview, requirements for a client decision, `deploy/README.md` for operations).
 3. A visible UI change has before/after screenshots at 390 and 1280 px attached (skill `visual-check`).
 4. The PR body names anything that reaches the server only by hand (compose, env templates, Nginx Proxy Manager, Fio).

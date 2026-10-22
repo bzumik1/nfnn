@@ -11,7 +11,9 @@ describe('Given a failed API call to describe', () => {
 
   it('when the server sent a problem with a title and a detail, then both are joined into one sentence', () => {
     const description = describeProblem(
-      failure(problem('donors/password-too-common', 'Heslo je příliš běžné', 'Zvolte prosím jiné heslo.')),
+      failure(
+        problem('donors/password-too-common', 'Heslo je příliš běžné', 'Zvolte prosím jiné heslo.'),
+      ),
       generic,
     );
 

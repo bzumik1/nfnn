@@ -7,7 +7,10 @@ describe('Given an address the site does not know', () => {
   let fixture: ComponentFixture<NotFound>;
 
   beforeEach(async () => {
-    await TestBed.configureTestingModule({ imports: [NotFound], providers: [provideRouter([])] }).compileComponents();
+    await TestBed.configureTestingModule({
+      imports: [NotFound],
+      providers: [provideRouter([])],
+    }).compileComponents();
     fixture = TestBed.createComponent(NotFound);
     fixture.detectChanges();
   });

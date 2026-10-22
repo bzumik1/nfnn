@@ -1,5 +1,15 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
-import { catchError, finalize, firstValueFrom, map, Observable, of, share, tap, throwError } from 'rxjs';
+import {
+  catchError,
+  finalize,
+  firstValueFrom,
+  map,
+  Observable,
+  of,
+  share,
+  tap,
+  throwError,
+} from 'rxjs';
 import { AuthApi } from './auth-api';
 import { AuthResponse, Donor, RegisterDonorRequest, UpdateDonorProfileRequest } from './donor';
 

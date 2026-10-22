@@ -81,13 +81,19 @@ export class DonationsApi {
 
   checkBankUntilDone(): Observable<BankCheckResponse> {
     return this.requestBankCheck().pipe(
-      expand((check) => (check.checking ? timer(BANK_CHECK_POLL_MS).pipe(switchMap(() => this.bankCheck())) : EMPTY)),
+      expand((check) =>
+        check.checking ? timer(BANK_CHECK_POLL_MS).pipe(switchMap(() => this.bankCheck())) : EMPTY,
+      ),
       take(BANK_CHECK_MAX_POLLS + 1),
     );
   }
 
   singleReceipt(id: string): Observable<DownloadedFile> {
-    return this.download(`/api/donations/me/${encodeURIComponent(id)}/receipt`, new HttpParams(), 'potvrzeni-o-daru.pdf');
+    return this.download(
+      `/api/donations/me/${encodeURIComponent(id)}/receipt`,
+      new HttpParams(),
+      'potvrzeni-o-daru.pdf',
+    );
   }
 
   yearlyReceipt(year: number): Observable<DownloadedFile> {
@@ -98,7 +104,11 @@ export class DonationsApi {
     );
   }
 
-  private download(url: string, params: HttpParams, fallbackFileName: string): Observable<DownloadedFile> {
+  private download(
+    url: string,
+    params: HttpParams,
+    fallbackFileName: string,
+  ): Observable<DownloadedFile> {
     return this.http
       .get(url, { params, responseType: 'blob', observe: 'response' })
       .pipe(map((response) => downloadedFile(response, fallbackFileName)));

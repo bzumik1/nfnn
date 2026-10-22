@@ -20,7 +20,9 @@ describe('Given the payment QR API', () => {
   it('when a donation QR payment is asked for, then it sends the amount and the variable symbol and no purpose', () => {
     api.paymentQr(500, '1234567890').subscribe();
 
-    const request = http.expectOne('/api/donations/payment-qr?amount=500&variableSymbol=1234567890');
+    const request = http.expectOne(
+      '/api/donations/payment-qr?amount=500&variableSymbol=1234567890',
+    );
     expect(request.request.method).toBe('GET');
     request.flush(null);
   });
@@ -34,6 +36,10 @@ describe('Given the payment QR API', () => {
   it('when an account verification QR payment is asked for, then it sends that purpose', () => {
     api.paymentQr(1, '1234567890', 'ACCOUNT_VERIFICATION').subscribe();
 
-    http.expectOne('/api/donations/payment-qr?amount=1&variableSymbol=1234567890&purpose=ACCOUNT_VERIFICATION').flush(null);
+    http
+      .expectOne(
+        '/api/donations/payment-qr?amount=1&variableSymbol=1234567890&purpose=ACCOUNT_VERIFICATION',
+      )
+      .flush(null);
   });
 });

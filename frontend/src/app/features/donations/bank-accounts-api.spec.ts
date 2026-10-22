@@ -34,7 +34,9 @@ describe('Given the bank accounts API', () => {
     let done = false;
     api.disconnect('0192f0c4-0000-7000-8000-000000000001').subscribe(() => (done = true));
 
-    const request = http.expectOne('/api/donations/me/bank-accounts/0192f0c4-0000-7000-8000-000000000001/disconnect');
+    const request = http.expectOne(
+      '/api/donations/me/bank-accounts/0192f0c4-0000-7000-8000-000000000001/disconnect',
+    );
     expect(request.request.method).toBe('POST');
     expect(request.request.body).toBeNull();
     request.flush(null, { status: 204, statusText: 'No Content' });

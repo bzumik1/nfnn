@@ -25,10 +25,14 @@ describe('Given the projects section', () => {
   });
 
   it('when it renders, then the photos are decorative and the card titles name the children', () => {
-    const alts = Array.from(root().querySelectorAll('img')).map((image) => image.getAttribute('alt'));
+    const alts = Array.from(root().querySelectorAll('img')).map((image) =>
+      image.getAttribute('alt'),
+    );
 
     expect(alts).toEqual(['', '', '', '', '']);
-    expect(Array.from(root().querySelectorAll('.card-title')).map((title) => title.textContent?.trim())).toEqual([
+    expect(
+      Array.from(root().querySelectorAll('.card-title')).map((title) => title.textContent?.trim()),
+    ).toEqual([
       'Dominik, 7 let',
       'Anička, 5 let',
       'Tomáš, 9 let',

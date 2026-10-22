@@ -19,7 +19,8 @@ describe('Given a copy button for an account number', () => {
   afterEach(() => vi.useRealTimers());
 
   const button = () => fixture.nativeElement.querySelector('button') as HTMLButtonElement;
-  const status = () => (fixture.nativeElement.querySelector('[role="status"]') as HTMLElement).textContent?.trim();
+  const status = () =>
+    (fixture.nativeElement.querySelector('[role="status"]') as HTMLElement).textContent?.trim();
 
   async function press(): Promise<void> {
     button().click();

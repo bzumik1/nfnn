@@ -1,4 +1,14 @@
-import { AfterViewInit, Component, DOCUMENT, ElementRef, OnDestroy, inject, input, output, viewChild } from '@angular/core';
+import {
+  AfterViewInit,
+  Component,
+  DOCUMENT,
+  ElementRef,
+  OnDestroy,
+  inject,
+  input,
+  output,
+  viewChild,
+} from '@angular/core';
 
 @Component({
   selector: 'app-dialog',

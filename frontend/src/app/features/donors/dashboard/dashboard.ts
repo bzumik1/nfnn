@@ -1,4 +1,12 @@
-import { Component, computed, DestroyRef, inject, linkedSignal, signal, viewChild } from '@angular/core';
+import {
+  Component,
+  computed,
+  DestroyRef,
+  inject,
+  linkedSignal,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
 import { forkJoin, last, Observable, tap } from 'rxjs';
@@ -39,7 +47,10 @@ const RECEIPT_FAILED = $localize`:@@donor.dashboard.receipt.error:Potvrzení se 
 
 const MINOR_UNITS_PER_CROWN = 100;
 const UNAUTHENTICATED = 'auth/unauthenticated';
-const YEARLY_PROBLEMS_SHOWN_AS_TITLE = ['donations/year-not-yet-completed', 'donations/yearly-receipt-not-available'];
+const YEARLY_PROBLEMS_SHOWN_AS_TITLE = [
+  'donations/year-not-yet-completed',
+  'donations/yearly-receipt-not-available',
+];
 const NOT_FOUND = 404;
 const SENDER_ACCOUNT_DIGITS_SHOWN = 4;
 
@@ -64,12 +75,16 @@ export class DonorDashboard {
   protected readonly summary = signal<DonationSummaryResponse | null>(null);
   protected readonly items = signal<readonly DonationItem[]>([]);
 
-  protected readonly years = computed(() => (this.summary()?.byYear ?? []).map((entry) => entry.year));
+  protected readonly years = computed(() =>
+    (this.summary()?.byYear ?? []).map((entry) => entry.year),
+  );
 
   protected readonly selectedYear = linkedSignal<readonly number[], number | null>({
     source: this.years,
     computation: (years, previous) =>
-      previous !== undefined && previous.value !== null && years.includes(previous.value) ? previous.value : (years[0] ?? null),
+      previous !== undefined && previous.value !== null && years.includes(previous.value)
+        ? previous.value
+        : (years[0] ?? null),
   });
 
   protected readonly selectedYearTotal = computed(
@@ -247,7 +262,10 @@ export class DonorDashboard {
       return;
     }
     const problem = problemOf(failure);
-    if (scope === 'yearly' && YEARLY_PROBLEMS_SHOWN_AS_TITLE.some((type) => problemTypeEndsWith(failure, type))) {
+    if (
+      scope === 'yearly' &&
+      YEARLY_PROBLEMS_SHOWN_AS_TITLE.some((type) => problemTypeEndsWith(failure, type))
+    ) {
       this.receiptError.set({ scope, message: problem?.title || RECEIPT_FAILED });
       return;
     }

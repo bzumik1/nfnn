@@ -22,7 +22,9 @@ test.describe('Given a visitor at the bottom of the home page', () => {
 });
 
 test.describe('Given a visitor at the contact form', () => {
-  test('when they click the policy link under the submit button, then the policy opens', async ({ page }) => {
+  test('when they click the policy link under the submit button, then the policy opens', async ({
+    page,
+  }) => {
     await page.goto('/');
     const form = page.locator('#contact form');
 

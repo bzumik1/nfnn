@@ -1,4 +1,10 @@
-import { HttpErrorResponse, HttpEvent, HttpHandlerFn, HttpInterceptorFn, HttpRequest } from '@angular/common/http';
+import {
+  HttpErrorResponse,
+  HttpEvent,
+  HttpHandlerFn,
+  HttpInterceptorFn,
+  HttpRequest,
+} from '@angular/common/http';
 import { inject } from '@angular/core';
 import { catchError, from, map, Observable, of, switchMap, throwError } from 'rxjs';
 import { problemTypeEndsWith } from './api-problem';
@@ -54,7 +60,9 @@ function readable(failure: unknown): Observable<unknown> {
 }
 
 function isProblemBlob(body: unknown): body is Blob {
-  return body instanceof Blob && body.type.split(';')[0].trim().toLowerCase() === PROBLEM_MEDIA_TYPE;
+  return (
+    body instanceof Blob && body.type.split(';')[0].trim().toLowerCase() === PROBLEM_MEDIA_TYPE
+  );
 }
 
 function needsAccessToken(url: string): boolean {

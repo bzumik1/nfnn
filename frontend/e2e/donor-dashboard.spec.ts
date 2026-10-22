@@ -41,10 +41,15 @@ const twoYears = {
   },
 };
 
-const withReceipts = { ...twoYears, receipts: { singleFileName: 'potvrzeni-o-daru-2026-000001.pdf' } };
+const withReceipts = {
+  ...twoYears,
+  receipts: { singleFileName: 'potvrzeni-o-daru-2026-000001.pdf' },
+};
 
 test.describe('Given a signed-in donor', () => {
-  test('when they have given in two years, then the dashboard shows their totals, their payments and each year on its own', async ({ page }) => {
+  test('when they have given in two years, then the dashboard shows their totals, their payments and each year on its own', async ({
+    page,
+  }) => {
     await mockDonorApi(page, twoYears);
 
     await signIn(page);
@@ -69,36 +74,53 @@ test.describe('Given a signed-in donor', () => {
     await expect(page.locator('.yearly-pdf')).toHaveText('↓ PDF za rok 2025');
   });
 
-  test('when they download the receipt of a completed year, then the browser saves the PDF under the name the server gives', async ({ page }) => {
+  test('when they download the receipt of a completed year, then the browser saves the PDF under the name the server gives', async ({
+    page,
+  }) => {
     await mockDonorApi(page, withReceipts);
     await signIn(page);
 
     await expect(page.locator('.yearly-pdf')).toBeDisabled();
-    await expect(page.locator('.yearly-hint')).toHaveText('Potvrzení za rok 2026 bude ke stažení po skončení roku.');
+    await expect(page.locator('.yearly-hint')).toHaveText(
+      'Potvrzení za rok 2026 bude ke stažení po skončení roku.',
+    );
     await page.locator('.year-toggle').getByRole('button', { name: '2025' }).click();
     await expect(page.locator('.yearly-hint')).toHaveCount(0);
 
-    const [download] = await Promise.all([page.waitForEvent('download'), page.locator('.yearly-pdf').click()]);
+    const [download] = await Promise.all([
+      page.waitForEvent('download'),
+      page.locator('.yearly-pdf').click(),
+    ]);
 
     expect(download.suggestedFilename()).toBe('potvrzeni-o-darech-2025.pdf');
     await expect(page.locator('.yearly-pdf')).toHaveText('↓ PDF za rok 2025');
   });
 
-  test('when they download the receipt of one payment, then the browser saves that PDF and a refunded payment offers none', async ({ page }) => {
+  test('when they download the receipt of one payment, then the browser saves that PDF and a refunded payment offers none', async ({
+    page,
+  }) => {
     await mockDonorApi(page, withReceipts);
     await signIn(page);
 
-    await expect(page.locator('.payments-card tbody tr').last().locator('.download-btn')).toHaveCount(0);
+    await expect(
+      page.locator('.payments-card tbody tr').last().locator('.download-btn'),
+    ).toHaveCount(0);
 
     const [download] = await Promise.all([
       page.waitForEvent('download'),
-      page.locator('.payments-card tbody tr').nth(1).getByRole('button', { name: 'Stáhnout PDF' }).click(),
+      page
+        .locator('.payments-card tbody tr')
+        .nth(1)
+        .getByRole('button', { name: 'Stáhnout PDF' })
+        .click(),
     ]);
 
     expect(download.suggestedFilename()).toBe('potvrzeni-o-daru-2026-000001.pdf');
   });
 
-  test('when no donation has arrived yet, then the dashboard shows zeros and explains how a gift appears', async ({ page }) => {
+  test('when no donation has arrived yet, then the dashboard shows zeros and explains how a gift appears', async ({
+    page,
+  }) => {
     await mockDonorApi(page, noDonations);
 
     await signIn(page);
@@ -114,7 +136,9 @@ test.describe('Given a signed-in donor', () => {
     await expect(page.locator('.symbol-value')).toHaveText('1234567890');
   });
 
-  test('when they correct their address, then the overview saves it and shows it as the receipts will', async ({ page }) => {
+  test('when they correct their address, then the overview saves it and shows it as the receipts will', async ({
+    page,
+  }) => {
     await mockDonorApi(page, noDonations);
     const patched: unknown[] = [];
     await page.route('**/api/donors/me', async (route) => {
@@ -123,7 +147,11 @@ test.describe('Given a signed-in donor', () => {
       }
       const body = route.request().postDataJSON();
       patched.push(body);
-      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ...donor, ...body }) });
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ ...donor, ...body }),
+      });
     });
 
     await signIn(page);
