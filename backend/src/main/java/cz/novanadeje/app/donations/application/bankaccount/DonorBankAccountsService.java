@@ -95,7 +95,7 @@ public class DonorBankAccountsService {
             boolean pairing = link.isActive() && !pairingExcluded;
             List<DonorRecord> accountOwners = pairing ? owners.computeIfAbsent(account, donorRecords::findBySenderAccount) : List.of();
             boolean shared = pairing && isShared(donor, account, accountOwners);
-            Optional<SymbolClaimOffer> offer = pairing && !shared
+            Optional<SymbolClaimOffer> offer = pairing && !shared && verificationDays.containsKey(account)
                     ? offers.offerAt(record, link, donorDonations, accountOwners, today)
                     : Optional.empty();
             List<VariableSymbol> confirmed = listed.add(account) ? confirmedSymbols.getOrDefault(account, List.of()) : List.of();

@@ -17,7 +17,9 @@ class CounterpartyNamesTest {
     @ValueSource(strings = {"ABC s.r.o.", "ABC s. r. o.", "ABC S.R.O", "ABC SRO", "ABC, spol. s r.o.", "Novák a spol.", "Strojírny a.s.",
             "STROJIRNY AS", "Klub z.s.", "Klub z. s.", "Pomoc o.p.s.", "POMOC OPS", "Novák v.o.s.", "Investice k.s.", "Hospic z.ú.",
             "Hospic z. u.", "Energie SE", "Bytové družstvo Lípa", "BYTOVE DRUZSTVO", "Nadace Dobrý den", "Nadační fond Nová naděje",
-            "Spolek přátel", "Studio K s.r.o.", "Tiskárna M a.s."})
+            "Spolek přátel", "Studio K s.r.o.", "Tiskárna M a.s.", "Stavby Novák, společnost s ručením omezeným", "STAVBY NOVAK SPOLECNOST S RUCENIM",
+            "Strojírny, akciová společnost", "Hospic sv. Jana, zapsaný ústav", "Lesy ČR, s.p.", "Lesy CR SP", "ABC, s. p.", "Základní škola, p.o.",
+            "SVJ Lipová 5", "Obec Lipová", "Město Nový Bor"})
     @DisplayName("Given a name with a Czech legal form written with or without spaces, dots, capitals or diacritics, when read, then it looks like a legal entity")
     void should_look_like_legal_entity_when_read_given_czech_legal_form(String name) {
         assertThat(CounterpartyNames.looksLikeLegalEntity(name)).isTrue();
@@ -26,7 +28,7 @@ class CounterpartyNamesTest {
     @ParameterizedTest(name = "{0}")
     @ValueSource(strings = {"Nováková Jana", "NOVAK JAN", "Jan Novák", "NOVAK JAN ING.", "Ing. Jan Novák, Ph.D.", "Tomáš Kasal", "Sroková Eva",
             "Jan Sron", "Jan Spolný", "Aspen Petr", "Zsolt Novák", "Opsatová Eva", "Vosáhlo Petr", "Kšír Ondřej", "Zuzana Nová", "Seifert Jan",
-            "SEIFERT JAN", "Jan K. Sedláček"})
+            "SEIFERT JAN", "Jan K. Sedláček", "Pospíšil Jan", "Obecný Petr", "Městský Jan"})
     @DisplayName("Given a person's name, even one that starts or ends with the letters of a legal form, when read, then it does not look like a legal entity")
     void should_not_look_like_legal_entity_when_read_given_persons_name(String name) {
         assertThat(CounterpartyNames.looksLikeLegalEntity(name)).isFalse();

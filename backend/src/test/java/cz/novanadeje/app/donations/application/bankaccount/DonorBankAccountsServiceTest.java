@@ -176,6 +176,20 @@ class DonorBankAccountsServiceTest {
     }
 
     @Test
+    @DisplayName("Given a second active account without a verification payment, when listed, then its row asks nothing and its payments and answers are not even read")
+    void should_not_read_payments_when_listed_given_active_account_without_verification_payment() {
+        SenderAccountLink unverified = active(OTHER_ACCOUNT, NOW.minusSeconds(60));
+        DonorRecord jana = janaWithStandingOrder(active(ACCOUNT, NOW), unverified);
+        when(donorRecords.findBySenderAccount(ACCOUNT)).thenReturn(List.of(jana));
+        when(donorRecords.findBySenderAccount(OTHER_ACCOUNT)).thenReturn(List.of(jana));
+
+        assertThat(service.listBankAccounts(JANA)).extracting(view -> view.link().account(), view -> view.symbolOffer().isPresent())
+                .containsExactly(tuple(ACCOUNT, true), tuple(OTHER_ACCOUNT, false));
+        verify(payments, never()).findBySenderAccount(OTHER_ACCOUNT);
+        verify(claims, never()).findByAccount(OTHER_ACCOUNT);
+    }
+
+    @Test
     @DisplayName("Given the standing order's account is excluded from pairing, when listed, then the row asks nothing")
     void should_offer_nothing_when_listed_given_excluded_account() {
         DonorRecord jana = janaWithStandingOrder(active(ACCOUNT, NOW));
