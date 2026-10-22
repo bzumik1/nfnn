@@ -3,6 +3,12 @@ name: PR check
 on:
   pull_request:
     branches: [main]
+    paths:
+      - "**"
+      - "!docs/**"
+      - "!.claude/**"
+      - "!**/*.md"
+      - "deploy/README.md"
 
 permissions:
   contents: read
@@ -14,6 +20,7 @@ concurrency:
 jobs:
   backend:
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     defaults:
       run:
         working-directory: backend
@@ -28,6 +35,8 @@ jobs:
           java-version: "25"
 
       - uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-read-only: false
 
       - name: Build and test
         run: ./gradlew build
@@ -42,6 +51,7 @@ jobs:
 
   frontend:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     defaults:
       run:
         working-directory: frontend
@@ -81,6 +91,7 @@ jobs:
 
   stack:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
         with:

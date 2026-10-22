@@ -3,6 +3,10 @@ name: Publish Docker images
 on:
   push:
     branches: [main]
+    paths:
+      - "backend/**"
+      - "frontend/**"
+      - ".github/workflows/images.yml"
   workflow_dispatch:
 
 concurrency:
@@ -12,6 +16,7 @@ concurrency:
 jobs:
   images:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     permissions:
       contents: read
       packages: write
