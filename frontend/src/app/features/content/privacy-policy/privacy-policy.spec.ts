@@ -66,8 +66,8 @@ describe('Given the privacy policy page', () => {
   });
 
   it('when it renders, then the date it applies from stands under the heading and in the closing section', () => {
-    expect(texts('.intro .effective')).toEqual(['Platné od 18. října 2026']);
-    expect(sectionText('Účinnost')).toContain('účinné od 18. října 2026');
+    expect(texts('.intro .effective')).toEqual(['Platné od 22. října 2026']);
+    expect(sectionText('Účinnost')).toContain('účinné od 22. října 2026');
   });
 
   it('when it renders, then it says a gift is assigned by the variable symbol and by a bank account the donor proved', () => {
@@ -83,6 +83,33 @@ describe('Given the privacy policy page', () => {
     expect(donations).toContain('párování vypnout');
     expect(donations).toContain('které z takového účtu přijdou ode dne po vypnutí párování, vám už nepřiřazujeme');
     expect(donations).not.toContain('odpoj');
+  });
+
+  it('when it renders, then it says which older symbol we show a donor at a proved account and that we keep their answer', () => {
+    const olderSymbol = texts('.purpose p').find((paragraph) => paragraph.includes('jedním jiným variabilním symbolem')) ?? '';
+
+    expect(olderSymbol).toContain('platbou 1 Kč se zprávou „Ověření účtu“');
+    expect(olderSymbol).toContain('který nemá žádný registrovaný dárce');
+    expect(olderSymbol).toContain(
+      'zobrazíme vám v dárcovském portálu tento symbol, počet plateb s ním a měsíce, ve kterých přišly (nikdy ne jejich částky)',
+    );
+    expect(olderSymbol).toContain('Vaši odpověď, ano i ne, uložíme i s časem odpovědi u vašeho dárcovského účtu');
+    expect(olderSymbol).toContain('na tentýž symbol z tohoto účtu se znovu neptáme');
+    expect(olderSymbol).toContain(
+      'Odpovíte-li ano, přiřadíme vám dřívější i další platby s tímto symbolem z tohoto účtu stejně jako platby bez symbolu.',
+    );
+    expect(purposeText('Evidence darů a potvrzení o daru')).toContain(olderSymbol);
+  });
+
+  it('when it renders, then it says the name of the payer serves only to tell a company from a person before that question', () => {
+    const donations = purposeText('Evidence darů a potvrzení o daru');
+
+    expect(donations).toContain(
+      'Jméno plátce k přiřazení nepoužíváme; jen u ověřovací platby podle něj poznáme, zda účet patří firmě, nebo osobě (viz níže).',
+    );
+    expect(donations).toContain(
+      'porovnáme typ vašeho dárcovského účtu (osoba, nebo firma) se jménem plátce u ověřovací platby: když jméno ukazuje na firmu a vy jste se registrovali jako osoba, nebo naopak, nezeptáme se.',
+    );
   });
 
   it('when it renders, then it says receipts are issued for gifts received from 1 January 2026', () => {

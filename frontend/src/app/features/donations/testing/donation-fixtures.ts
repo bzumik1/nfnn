@@ -12,6 +12,7 @@ export function donationItem(overrides: Partial<DonationItem> = {}): DonationIte
     source: 'BANK_TRANSFER',
     pairedBy: 'VARIABLE_SYMBOL',
     senderAccount: null,
+    confirmedSymbol: null,
     receiptAvailable: true,
     ...overrides,
   };

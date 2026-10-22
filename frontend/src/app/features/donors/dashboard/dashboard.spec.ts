@@ -308,6 +308,26 @@ describe('Given a signed-in donor on the dashboard', () => {
     expect(text('.payments-card tbody tr:nth-child(2) .pairing-tag [aria-hidden="true"]')).toBe('bez VS · …5399/0800');
   });
 
+  it('when a donation was paired by a symbol the donor confirmed at their account, then its purpose carries a tag naming that symbol and the end of the account', async () => {
+    const list = twoYearDonations();
+    list.items[0] = donationItem({
+      id: 'd-4',
+      pairedBy: 'CONFIRMED_SYMBOL',
+      senderAccount: '19-2000145399/0800',
+      confirmedSymbol: '6123456789',
+    });
+
+    await respond(twoYearSummary(), list);
+
+    const tag = element('.payments-card tbody tr:first-child .pairing-tag');
+    const sentence =
+      'Přiřazeno podle účtu 19-2000145399/0800 a variabilního symbolu 6123456789, který jste u účtu potvrdili jako svůj';
+    expect(tag?.getAttribute('title')).toBe(sentence);
+    expect(normalized(tag?.querySelector('[aria-hidden="true"]')?.textContent ?? '')).toBe('VS 6123456789 · …5399/0800');
+    expect(normalized(tag?.querySelector('.visually-hidden')?.textContent ?? '')).toBe(sentence);
+    expect(texts('.pairing-tag')).toHaveLength(1);
+  });
+
   it('when donations were paired by the variable symbol or by hand, then they carry no tag', async () => {
     const list = twoYearDonations();
     list.items[0] = donationItem({ id: 'd-4', pairedBy: null, source: 'MANUAL' });
@@ -685,10 +705,40 @@ describe('Given a signed-in donor on the dashboard', () => {
     expect(element('.year-toggle')).toBeNull();
     expect(element('.yearly-pdf')).toBeNull();
     expect(text('.yearly-empty')).toBe(
-      'Zatím jsme od vás žádný dar nepřijali. Jakmile dorazí platba s vaším variabilním symbolem, objeví se tady.',
+      'Zatím tu nemáme žádný váš dar. Jakmile dorazí platba s vaším variabilním symbolem, objeví se tady. Posíláte trvalým příkazem?',
     );
     expect(element('.payments-card table')).toBeNull();
     expect(text('.payments-empty')).toBe('Zatím tu není žádná platba.');
+  });
+
+  it('when the donor with no donations yet follows the standing order link, then the bank accounts card heading takes the focus and the address stays', async () => {
+    await respond(emptySummary(), emptyDonations());
+    const addressBefore = window.location.href;
+    const link = element('.yearly-empty a') as HTMLAnchorElement;
+    expect(normalized(link.textContent ?? '')).toBe('Posíláte trvalým příkazem?');
+    expect(link.getAttribute('href')).toBe('#bank-accounts-title');
+
+    const follow = new MouseEvent('click', { bubbles: true, cancelable: true });
+    link.dispatchEvent(follow);
+    await settle();
+
+    expect(document.activeElement).toBe(element('app-bank-accounts-card h2#bank-accounts-title'));
+    expect(follow.defaultPrevented).toBe(true);
+    expect(window.location.href).toBe(addressBefore);
+  });
+
+  it('when the bank accounts card says a confirmed symbol brought donations, then the summary and the payments load again without the loading line', async () => {
+    await respond(emptySummary(), emptyDonations());
+    const card = fixture.debugElement.query(By.directive(BankAccountsCard)).componentInstance as BankAccountsCard;
+
+    card.donationsChanged.emit();
+    await settle();
+
+    expect(element('.dashboard-loading')).toBeNull();
+    expect(element('.stats-grid')).not.toBeNull();
+    await respond(twoYearSummary(), twoYearDonations());
+    expect(texts('.stat-value')).toEqual(['1 750 Kč', '3', '15. 03. 2026']);
+    expect(texts('.payments-card tbody tr')).toHaveLength(twoYearDonations().items.length);
   });
 
   it('when the donations cannot be loaded, then an alert offers to try again and a retry asks for both again and shows them', async () => {

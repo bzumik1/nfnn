@@ -155,7 +155,7 @@ export class DonorDashboard {
     this.fetchDonations();
   }
 
-  private fetchDonations(): void {
+  protected fetchDonations(): void {
     forkJoin({ summary: this.donations.summary(), list: this.donations.list() })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
@@ -181,6 +181,11 @@ export class DonorDashboard {
   protected sendToSignIn(): void {
     this.loginDialog.open();
     void this.router.navigateByUrl('/');
+  }
+
+  protected showBankAccounts(event: Event): void {
+    event.preventDefault();
+    this.bankAccountsCard()?.focusTitle();
   }
 
   protected crowns(amountMinor: number): string {

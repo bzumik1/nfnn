@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { donor, mockDonorApi, noDonations, signIn } from './donor-session';
+import { donationItem, donor, mockDonorApi, noDonations, signIn } from './donor-session';
 
 function donation(
   id: string,
@@ -8,19 +8,7 @@ function donation(
   status = 'RECEIVED',
   receiptAvailable = status === 'RECEIVED',
 ) {
-  return {
-    id,
-    receiptNumber: null,
-    receivedAt,
-    amountMinor,
-    currency: 'CZK',
-    purpose: 'Obecný příspěvek',
-    status,
-    source: 'BANK_TRANSFER',
-    pairedBy: 'VARIABLE_SYMBOL',
-    senderAccount: null,
-    receiptAvailable,
-  };
+  return donationItem({ id, receivedAt, amountMinor, status, receiptAvailable });
 }
 
 const twoYears = {
@@ -145,13 +133,24 @@ test.describe('Given a signed-in donor', () => {
 
     await expect(page.locator('.stat-value')).toHaveText(['0 Kč', '0', '—']);
     await expect(page.locator('.yearly-empty')).toHaveText(
-      'Zatím jsme od vás žádný dar nepřijali. Jakmile dorazí platba s vaším variabilním symbolem, objeví se tady.',
+      'Zatím tu nemáme žádný váš dar. Jakmile dorazí platba s vaším variabilním symbolem, objeví se tady. Posíláte trvalým příkazem?',
     );
     await expect(page.locator('.year-toggle')).toHaveCount(0);
     await expect(page.locator('.yearly-pdf')).toHaveCount(0);
     await expect(page.locator('.payments-card table')).toHaveCount(0);
     await expect(page.locator('.payments-empty')).toHaveText('Zatím tu není žádná platba.');
     await expect(page.locator('.symbol-value')).toHaveText('1234567890');
+  });
+
+  test('when no donation has arrived yet and they follow the standing order link, then their bank accounts take the focus', async ({ page }) => {
+    await mockDonorApi(page, noDonations);
+    await signIn(page);
+
+    await page.getByRole('link', { name: 'Posíláte trvalým příkazem?' }).click();
+
+    await expect(page.getByRole('heading', { name: 'Moje bankovní účty' })).toBeFocused();
+    await expect(page.locator('.accounts-nudge')).toContainText('Posíláte nám dary trvalým příkazem se starším variabilním symbolem?');
+    await expect(page).toHaveURL(/\/donor\/prehled$/);
   });
 
   test('when they correct their address, then the overview saves it and shows it as the receipts will', async ({ page }) => {

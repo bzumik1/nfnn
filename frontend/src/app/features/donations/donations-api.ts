@@ -6,7 +6,7 @@ export type DonationStatus = 'RECEIVED' | 'REFUNDED';
 
 export type DonationSource = 'BANK_TRANSFER' | 'MANUAL';
 
-export type DonationPairing = 'VARIABLE_SYMBOL' | 'SENDER_ACCOUNT';
+export type DonationPairing = 'VARIABLE_SYMBOL' | 'SENDER_ACCOUNT' | 'CONFIRMED_SYMBOL';
 
 export interface DonationItem {
   id: string;
@@ -19,6 +19,7 @@ export interface DonationItem {
   source: DonationSource;
   pairedBy: DonationPairing | null;
   senderAccount: string | null;
+  confirmedSymbol: string | null;
   receiptAvailable: boolean;
 }
 
