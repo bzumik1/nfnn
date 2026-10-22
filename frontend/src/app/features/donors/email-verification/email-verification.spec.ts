@@ -100,7 +100,7 @@ describe('Given the page that confirms the e-mail from the registration link', (
 
       await click('.form-submit');
 
-      expect(navigate).toHaveBeenCalledWith('/donor/prehled');
+      expect(navigate).toHaveBeenCalledWith('/darce/prehled');
     });
 
     it('and the link is no longer valid, then the invalid panel asks for the e-mail and sends a new link', async () => {

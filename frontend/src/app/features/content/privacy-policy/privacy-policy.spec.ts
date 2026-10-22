@@ -212,7 +212,7 @@ describe('Given the privacy policy page', () => {
   });
 
   it('when it renders, then the contact section links to the contact form on the home page', () => {
-    const link = fixture.nativeElement.querySelector('a[href="/#contact"]') as HTMLAnchorElement;
+    const link = fixture.nativeElement.querySelector('a[href="/#kontakt"]') as HTMLAnchorElement;
 
     expect(link.textContent!.trim()).toBe('kontaktní formulář');
   });

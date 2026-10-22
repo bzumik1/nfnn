@@ -103,7 +103,7 @@ describe('Given the sign-in dialog', () => {
 
       expect(TestBed.inject(AuthStore).donor()?.name).toBe('Jana Nováková');
       expect(dialog.isOpen()).toBe(false);
-      expect(navigate).toHaveBeenCalledWith('/donor/prehled');
+      expect(navigate).toHaveBeenCalledWith('/darce/prehled');
     });
 
     it('with a wrong password, then the dialog stays and shows the reason from the server', async () => {
@@ -195,7 +195,7 @@ describe('Given the sign-in dialog', () => {
 
         expect(TestBed.inject(AuthStore).donor()?.name).toBe('Jana Nováková');
         expect(dialog.isOpen()).toBe(false);
-        expect(navigate).toHaveBeenCalledWith('/donor/prehled');
+        expect(navigate).toHaveBeenCalledWith('/darce/prehled');
       });
 
       it('and a five-digit code is sent, then nothing goes out and the field says the code has six digits', async () => {

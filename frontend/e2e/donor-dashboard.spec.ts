@@ -188,7 +188,7 @@ test.describe('Given a signed-in donor', () => {
     await expect(page.locator('.accounts-nudge')).toContainText(
       'Posíláte nám dary trvalým příkazem se starším variabilním symbolem?',
     );
-    await expect(page).toHaveURL(/\/donor\/prehled$/);
+    await expect(page).toHaveURL(/\/darce\/prehled$/);
   });
 
   test('when they correct their address, then the overview saves it and shows it as the receipts will', async ({
@@ -249,7 +249,7 @@ test.describe('Given a signed-in donor', () => {
 
     await expect(page.getByRole('status').filter({ hasText: 'Heslo jsme změnili.' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Změnit heslo' })).toBeFocused();
-    await expect(page).toHaveURL(/\/donor\/prehled$/);
+    await expect(page).toHaveURL(/\/darce\/prehled$/);
     expect(sent).toEqual([
       { currentPassword: 'correct horse battery', newPassword: 'a brand new passphrase' },
     ]);

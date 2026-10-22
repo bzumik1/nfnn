@@ -28,7 +28,7 @@ describe('Given the donor area guard', () => {
 
   function activate(): Promise<boolean | UrlTree> {
     return TestBed.runInInjectionContext(() =>
-      donorGuard({} as ActivatedRouteSnapshot, { url: '/donor/prehled' } as RouterStateSnapshot),
+      donorGuard({} as ActivatedRouteSnapshot, { url: '/darce/prehled' } as RouterStateSnapshot),
     ) as Promise<boolean | UrlTree>;
   }
 

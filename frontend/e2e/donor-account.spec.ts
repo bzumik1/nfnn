@@ -109,7 +109,7 @@ test.describe('Given a visitor who wants a donor account', () => {
     await page.locator('#login-email').fill('jana@example.cz');
     await page.locator('#login-password').fill('correct horse battery');
     await page.getByRole('dialog').locator('.form-submit').click();
-    await expect(page).toHaveURL(/\/donor\/prehled$/);
+    await expect(page).toHaveURL(/\/darce\/prehled$/);
 
     await page.locator('.topbar-logout').click();
 
@@ -127,7 +127,7 @@ test.describe('Given a visitor who wants a donor account', () => {
     await page.locator('#login-email').fill('jana@example.cz');
     await page.locator('#login-password').fill('correct horse battery');
     await page.getByRole('dialog').locator('.form-submit').click();
-    await expect(page).toHaveURL(/\/donor\/prehled$/);
+    await expect(page).toHaveURL(/\/darce\/prehled$/);
 
     await page.getByRole('link', { name: 'Hlavní stránka' }).click();
 
@@ -140,7 +140,7 @@ test.describe('Given a visitor who wants a donor account', () => {
   }) => {
     await mockDonorApi(page);
 
-    await page.goto('/donor/prehled');
+    await page.goto('/darce/prehled');
 
     await expect(page).toHaveURL(/\/$/);
     await expect(page.getByRole('dialog')).toBeVisible();
@@ -154,7 +154,7 @@ test.describe('Given a visitor who wants a donor account', () => {
     await page.route('**/api/donors/auth/refresh', (route) => route.fulfill(session(200)));
     await mockDonorApi(page);
 
-    await page.goto('/donor/prehled');
+    await page.goto('/darce/prehled');
 
     await expect(page.locator('.topbar-donor')).toContainText('Jana Nováková');
   });
@@ -177,8 +177,8 @@ test.describe('Given a visitor who wants a donor account', () => {
 
     await page.goto('/');
 
-    await expect(page.locator('#donate')).toContainText('Variabilní symbol');
-    await expect(page.locator('#donate')).toContainText('1234567890');
+    await expect(page.locator('#prispet')).toContainText('Variabilní symbol');
+    await expect(page.locator('#prispet')).toContainText('1234567890');
     expect(requestedSymbols).toEqual(['1234567890']);
   });
 });

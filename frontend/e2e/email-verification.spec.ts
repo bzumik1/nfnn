@@ -22,7 +22,7 @@ test.describe('Given a visitor who registered and received the confirmation e-ma
 
     await page.getByRole('button', { name: 'Přejít do přehledu' }).click();
 
-    await expect(page).toHaveURL(/\/donor\/prehled$/);
+    await expect(page).toHaveURL(/\/darce\/prehled$/);
     await expect(page.locator('.topbar-donor')).toContainText('Jana Nováková');
     await expect(page.locator('.symbol-value')).toHaveText('1234567890');
   });

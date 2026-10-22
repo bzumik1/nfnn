@@ -67,7 +67,7 @@ describe('Given the dashboard top bar', () => {
     });
 
     it('then it leads back to their own overview instead', () => {
-      expect(links()).toEqual(['Hlavní stránkaDomů → /', 'Můj přehled → /donor/prehled']);
+      expect(links()).toEqual(['Hlavní stránkaDomů → /', 'Můj přehled → /darce/prehled']);
     });
   });
 });

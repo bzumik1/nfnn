@@ -97,7 +97,7 @@ export class AdminHome {
             return;
           }
           if (problemTypeEndsWith(failure, FORBIDDEN)) {
-            this.router.navigateByUrl('/donor/prehled');
+            this.router.navigateByUrl('/darce/prehled');
             return;
           }
           this.state.set('error');

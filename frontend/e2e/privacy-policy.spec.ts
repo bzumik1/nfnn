@@ -26,7 +26,7 @@ test.describe('Given a visitor at the contact form', () => {
     page,
   }) => {
     await page.goto('/');
-    const form = page.locator('#contact form');
+    const form = page.locator('#kontakt form');
 
     await form.getByRole('link', { name: 'zásady ochrany osobních údajů' }).click();
 
@@ -54,7 +54,7 @@ test.describe('Given a visitor with a direct link to the privacy policy', () => 
       .getByRole('link', { name: 'Nová naděje – nadační fond' })
       .click();
 
-    await expect(page).toHaveURL(/\/#home$/);
+    await expect(page).toHaveURL(/\/#uvod$/);
     await expect(page).toHaveTitle('Nová naděje – nadační fond');
   });
 });

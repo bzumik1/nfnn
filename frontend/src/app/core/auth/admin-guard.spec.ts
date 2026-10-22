@@ -54,7 +54,7 @@ describe('Given the administration guard', () => {
     const result = activate();
     http.expectOne('/api/donors/auth/refresh').flush(authResponse('token-1'));
 
-    expect(serialized(await result)).toBe('/donor/prehled');
+    expect(serialized(await result)).toBe('/darce/prehled');
     expect(TestBed.inject(LoginDialogService).isOpen()).toBe(false);
   });
 

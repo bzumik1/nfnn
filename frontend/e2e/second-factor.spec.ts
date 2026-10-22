@@ -45,7 +45,7 @@ test.describe('Given a donor who protects the account with an authenticator app'
     await code.fill('287082');
     await page.getByRole('dialog').locator('.form-submit').click();
 
-    await expect(page).toHaveURL(/\/donor\/prehled$/);
+    await expect(page).toHaveURL(/\/darce\/prehled$/);
     expect(completed).toEqual([{ challenge: CHALLENGE, code: '287082' }]);
     await expect(page.locator('.account-data')).toContainText('Zapnutý');
   });

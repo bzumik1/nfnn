@@ -46,7 +46,7 @@ test.describe('Given a visitor on the home page', () => {
       await qrCode.evaluate((image: HTMLImageElement) => image.complete && image.naturalWidth > 0),
     ).toBe(true);
     expect(requestedAmounts).toEqual(['500', '1000']);
-    await expect(page.locator('#donate')).toContainText('CZ26 2010 0000 0055 4433 2217');
+    await expect(page.locator('#prispet')).toContainText('CZ26 2010 0000 0055 4433 2217');
   });
 
   test.describe('on a phone', () => {
@@ -60,7 +60,7 @@ test.describe('Given a visitor on the home page', () => {
     }) => {
       await servePaymentQr(page, []);
       await page.goto('/');
-      const bank = page.locator('#donate .bank');
+      const bank = page.locator('#prispet .bank');
       await expect(bank).toContainText('5544332217/2010');
 
       await page.getByRole('button', { name: 'Jiná částka' }).click();
@@ -71,7 +71,7 @@ test.describe('Given a visitor on the home page', () => {
       await expect(page.getByRole('button', { name: 'Zkopírováno' })).toBeVisible();
       expect(await page.evaluate(() => navigator.clipboard.readText())).toBe('2500');
       const bankTop = (await bank.boundingBox())!.y;
-      const qrTop = (await page.locator('#donate .qr').boundingBox())!.y;
+      const qrTop = (await page.locator('#prispet .qr').boundingBox())!.y;
       expect(bankTop).toBeLessThan(qrTop);
     });
   });

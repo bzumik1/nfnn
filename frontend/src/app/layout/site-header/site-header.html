@@ -1,6 +1,6 @@
 <nav class="nav" [class.is-scrolled]="scrolled() || menuOpen()">
   <div class="nav-inner">
-    <a class="brand" routerLink="/" fragment="home" (click)="closeMenu()">
+    <a class="brand" routerLink="/" fragment="uvod" (click)="closeMenu()">
       <img
         src="/images/logo.svg"
         alt="Nová naděje – nadační fond"
@@ -9,22 +9,22 @@
     </a>
 
     <div class="desktop-nav">
-      <a class="nav-link" routerLink="/" fragment="home" i18n="@@layout.header.nav.home">Domů</a>
-      <a class="nav-link" routerLink="/" fragment="about" i18n="@@layout.header.nav.about">O nás</a>
-      <a class="nav-link" routerLink="/" fragment="projects" i18n="@@layout.header.nav.projects"
+      <a class="nav-link" routerLink="/" fragment="uvod" i18n="@@layout.header.nav.home">Domů</a>
+      <a class="nav-link" routerLink="/" fragment="o-nas" i18n="@@layout.header.nav.about">O nás</a>
+      <a class="nav-link" routerLink="/" fragment="projekty" i18n="@@layout.header.nav.projects"
         >Projekty</a
       >
-      <a class="nav-link" routerLink="/" fragment="news" i18n="@@layout.header.nav.news"
+      <a class="nav-link" routerLink="/" fragment="aktuality" i18n="@@layout.header.nav.news"
         >Aktuality</a
       >
-      <a class="nav-link" routerLink="/" fragment="contact" i18n="@@layout.header.nav.contact"
+      <a class="nav-link" routerLink="/" fragment="kontakt" i18n="@@layout.header.nav.contact"
         >Kontakt</a
       >
-      <a class="nav-cta" routerLink="/" fragment="donate" i18n="@@layout.header.nav.donate"
+      <a class="nav-cta" routerLink="/" fragment="prispet" i18n="@@layout.header.nav.donate"
         >Finanční příspěvek</a
       >
       @if (auth.signedIn()) {
-        <a class="nav-login" routerLink="/donor/prehled" i18n="@@layout.header.nav.portal"
+        <a class="nav-login" routerLink="/darce/prehled" i18n="@@layout.header.nav.portal"
           >Můj přehled</a
         >
       } @else {
@@ -61,7 +61,7 @@
     <a
       class="mobile-link"
       routerLink="/"
-      fragment="home"
+      fragment="uvod"
       (click)="closeMenu()"
       i18n="@@layout.header.nav.home"
       >Domů</a
@@ -69,7 +69,7 @@
     <a
       class="mobile-link"
       routerLink="/"
-      fragment="about"
+      fragment="o-nas"
       (click)="closeMenu()"
       i18n="@@layout.header.nav.about"
       >O nás</a
@@ -77,7 +77,7 @@
     <a
       class="mobile-link"
       routerLink="/"
-      fragment="projects"
+      fragment="projekty"
       (click)="closeMenu()"
       i18n="@@layout.header.nav.projects"
       >Projekty</a
@@ -85,7 +85,7 @@
     <a
       class="mobile-link"
       routerLink="/"
-      fragment="news"
+      fragment="aktuality"
       (click)="closeMenu()"
       i18n="@@layout.header.nav.news"
       >Aktuality</a
@@ -93,7 +93,7 @@
     <a
       class="mobile-link"
       routerLink="/"
-      fragment="contact"
+      fragment="kontakt"
       (click)="closeMenu()"
       i18n="@@layout.header.nav.contact"
       >Kontakt</a
@@ -101,13 +101,13 @@
     <a
       class="mobile-cta"
       routerLink="/"
-      fragment="donate"
+      fragment="prispet"
       (click)="closeMenu()"
       i18n="@@layout.header.nav.donate"
       >Finanční příspěvek</a
     >
     @if (auth.signedIn()) {
-      <a class="mobile-login" routerLink="/donor/prehled" (click)="closeMenu()">
+      <a class="mobile-login" routerLink="/darce/prehled" (click)="closeMenu()">
         <svg
           class="mobile-login-icon"
           aria-hidden="true"
