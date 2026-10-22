@@ -167,7 +167,15 @@ jobs:
             done
           done
           for _ in $(seq 30); do
-            ls "$RUNNER_TEMP"/nfnn/backups/nfnn-*.dump 2>/dev/null && exit 0
+            for dump in "$RUNNER_TEMP"/nfnn/backups/nfnn-*.dump; do
+              [ -f "$dump" ] || continue
+              if ! docker exec nfnn-backup pg_restore --list "/backups/$(basename "$dump")" | grep -q 'Compression: zstd'; then
+                echo "::error::the backup dump is not compressed with zstd"
+                exit 1
+              fi
+              echo "$dump is a zstd dump"
+              exit 0
+            done
             sleep 2
           done
           echo "::error::the backup service wrote no dump"

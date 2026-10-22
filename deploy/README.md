@@ -124,12 +124,12 @@ Uložení bere compose z poslední instalace, takže změnu `compose.yml` nebo e
 
 ## Zálohy
 
-Kontejner `backup` udělá `pg_dump` při každém startu a pak každých 24 hodin do `/DATA/AppData/nfnn/backups/nfnn-<datum>.dump` a maže zálohy starší než 30 dní. Leží na stejném disku jako databáze, takže je potřeba je kopírovat i mimo Zimu (ZimaOS Backup, cloud sync). Složky `env/` a `config/` záloha nekopíruje; jejich obsah (hesla, tokeny, podpis) si ulož do správce hesel.
+Kontejner `backup` udělá `pg_dump` při každém startu a pak každou noc ve 3:00 pražského času do `/DATA/AppData/nfnn/backups/nfnn-<datum>.dump` a maže zálohy starší než 30 dní. Dump je komprimovaný zstd na úrovni 19, nejvyšší, která se vejde do limitu 256 MB paměti kontejneru (úroveň 20 nic neušetří a potřebuje kolem 170 MB, úroveň 22 kontejner zabije). Na zkušebních datech byl proti dřívějšímu gzipu asi o čtvrtinu menší; `pg_restore` kompresi pozná sám, takže obnova i starší zálohy v gzipu fungují stejně. Leží na stejném disku jako databáze, takže je potřeba je kopírovat i mimo Zimu (ZimaOS Backup, cloud sync). Složky `env/` a `config/` záloha nekopíruje; jejich obsah (hesla, tokeny, podpis) si ulož do správce hesel.
 
 Zálohu na požádání, třeba před aktualizací, udělá:
 
 ```bash
-sudo docker exec nfnn-backup sh -c 'pg_dump --format=custom --file="/backups/nfnn-`date +%Y-%m-%d_%H%M`-rucni.dump"'
+sudo docker exec nfnn-backup sh -c 'pg_dump --format=custom --compress=zstd:19 --file="/backups/nfnn-`date +%Y-%m-%d_%H%M`-rucni.dump"'
 ```
 
 ### Obnova
@@ -140,7 +140,7 @@ Záloha se obnovuje do prázdného schématu. `pg_restore --clean` nestačí: sm
 
    ```bash
    sudo docker stop nfnn-backend
-   sudo docker exec nfnn-backup sh -c 'pg_dump --format=custom --file="/backups/nfnn-`date +%Y-%m-%d_%H%M`-pred-obnovou.dump"'
+   sudo docker exec nfnn-backup sh -c 'pg_dump --format=custom --compress=zstd:19 --file="/backups/nfnn-`date +%Y-%m-%d_%H%M`-pred-obnovou.dump"'
    ```
 
 2. Vyprázdni schéma a nahraj zálohu (název souboru podle `sudo ls /DATA/AppData/nfnn/backups`):
