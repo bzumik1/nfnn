@@ -13,7 +13,7 @@ const HELP_ITEMS = [
     'Platbu se starším symbolem, který nemá žádný registrovaný dárce, vám přiřadíme, jen když ho u účtu potvrdíte jako svůj (viz Starší symbol). ' +
     'Pokud nám posíláte dary trvalým příkazem se starším symbolem, nejjistější je nastavit v něm váš variabilní symbol 9876543210. ' +
     'Platbu se symbolem 0 bereme jako platbu bez symbolu.',
-  'Starší symbol Když nám z účtu pošlete 1 Kč se zprávou „Ověření účtu“ (QR kód pod tlačítkem „Přidat účet“; běžný dar nestačí) ' +
+  'Starší symbol Když nám z účtu pošlete 1 Kč s vaším variabilním symbolem a se zprávou „Ověření účtu“ (QR kód pod tlačítkem „Přidat účet“; běžný dar nestačí) ' +
     'a z tohoto účtu k nám do té doby kromě plateb s vaším symbolem nebo bez symbolu chodily platby s jediným dalším symbolem, ' +
     'který nemá žádný registrovaný dárce, zeptáme se vás u účtu, jestli jsou to vaše dary. ' +
     'Neptáme se u sdíleného účtu, u účtu, ze kterého přiřazujeme jen platby s variabilním symbolem, ' +

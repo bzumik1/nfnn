@@ -519,6 +519,27 @@ describe('Given the bank accounts card in the overview', () => {
       expect(texts('.account-action')).toEqual(['Vypnout párování']);
     });
 
+    it('and answers Ano, then the question is gone before the list loads again, so a second press cannot post it again', async () => {
+      await click('.claim-yes');
+      http.expectOne({ method: 'POST', url: CONFIRM_URL }).flush({ pairedCount: 14, changedYearlyReceipts: [] });
+      await settle();
+
+      expect(element('app-symbol-claim')).toBeNull();
+      expect(text('.accounts-status')).toBe('Přiřadili jsme vám 14 plateb s VS 6123456789 z účtu 2900233333/2010.');
+      await respond([bankAccount({ confirmedSymbols: ['6123456789'], verificationPaymentOn: '2026-10-16' })]);
+      http.expectNone(CONFIRM_URL);
+    });
+
+    it('and answers Ne, then the question is gone before the list loads again', async () => {
+      await click('.claim-no');
+      http.expectOne({ method: 'POST', url: DECLINE_URL }).flush(null, { status: 204, statusText: 'No Content' });
+      await settle();
+
+      expect(element('app-symbol-claim')).toBeNull();
+      expect(text('.accounts-status')).toBe('Odpověď jsme uložili. Platby s VS 6123456789 z účtu 2900233333/2010 vám nepřiřadíme.');
+      await respond([bankAccount({ verificationPaymentOn: '2026-10-16' })]);
+    });
+
     it('and answers Ano and one payment is paired, then the announcement uses the singular', async () => {
       await answerYes(1);
 
@@ -793,7 +814,7 @@ describe('Given the bank accounts card in the overview', () => {
       expect(texts('.add-account-text')[1]).toBe(
         'Posíláte z účtu dary trvalým příkazem se starším variabilním symbolem? ' +
           'Pošlete pak právě 1 Kč se zprávou pro příjemce „Ověření účtu“, jak ji má QR kód; běžný dar nestačí. ' +
-          'Pokud z účtu chodil jen jeden takový symbol, zeptáme se vás u účtu, jestli jsou platby s ním vaše.',
+          'Pokud z účtu chodil jen jeden takový symbol, obvykle se vás u účtu zeptáme, jestli jsou platby s ním vaše.',
       );
       expect(texts('.add-account-text + .add-account-text strong')).toEqual(['1 Kč']);
     });

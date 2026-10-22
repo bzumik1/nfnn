@@ -285,7 +285,11 @@ export class BankAccountsCard {
 
   protected answer(account: BankAccountItem, offer: SymbolOffer, answer: SymbolClaimAnswer): void {
     const request$ = answer === 'confirm' ? this.confirmSymbol(account, offer) : this.declineSymbol(account, offer);
-    this.run(account, request$, ANSWER_FAILED);
+    this.run(account, request$.pipe(tap(() => this.withdrawOffer(account))), ANSWER_FAILED);
+  }
+
+  private withdrawOffer(answered: BankAccountItem): void {
+    this.accounts.update((accounts) => accounts.map((account) => (account.id === answered.id ? { ...account, symbolOffer: null } : account)));
   }
 
   private confirmSymbol(account: BankAccountItem, offer: SymbolOffer): Observable<string> {
