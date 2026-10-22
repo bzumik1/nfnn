@@ -1,6 +1,6 @@
 # Frontend rules: Angular, UI, UX
 
-## Angular 21 (standalone, zoneless, signals)
+## Angular 22 (standalone, zoneless, signals)
 - Components: flat names `hero.ts/.html/.scss`, class `Hero` (no `Component` suffix), selector `app-*`, no `standalone: true` (default), no NgModules; `changeDetection: ChangeDetectionStrategy.OnPush` on every component (lint enforces it; test hosts in specs are exempt), so a template may read only signals, inputs and what its own events change: state that arrives otherwise (the forms API, a subscription) goes through a signal, as `appFormControl` turns the control's events into `showsError()` and `errorKey()`.
 - State in `signal`/`computed`/`linkedSignal`; `input()`, `output()`, `model()` instead of decorators; `inject()` instead of constructor parameters (a constructor only for effects or `takeUntilDestroyed`); `host: {}` metadata instead of `@HostListener`/`@HostBinding` in new code; no `any`; strict TS and templates stay on.
 - Templates: `@if/@for/@switch/@defer`; `[class.x]`/`[style.x]` (no `ngClass`/`ngStyle`); import only the directives and pipes used (never `CommonModule`); logic in the class.
