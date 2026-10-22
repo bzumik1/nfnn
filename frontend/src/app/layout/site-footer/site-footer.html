@@ -2,7 +2,11 @@
   <div class="section-inner">
     <div class="footer-top">
       <div class="footer-brand">
-        <img src="/images/logo.svg" alt="Nová naděje – nadační fond" i18n-alt="@@layout.header.logoAlt" />
+        <img
+          src="/images/logo.svg"
+          alt="Nová naděje – nadační fond"
+          i18n-alt="@@layout.header.logoAlt"
+        />
       </div>
       <div class="footer-links">
         <a routerLink="/" fragment="home" i18n="@@layout.header.nav.home">Domů</a>
@@ -13,15 +17,20 @@
       </div>
     </div>
     <div class="footer-bottom">
-      <p i18n="@@layout.footer.copyright">© {{ year }} Nová naděje – nadační fond. Všechna práva vyhrazena.</p>
-      <p i18n="@@layout.footer.registry">Zapsán u KS Ústí nad Labem, oddíl N, vložka 78 · IČO 27278794</p>
+      <p i18n="@@layout.footer.copyright">
+        © {{ year }} Nová naděje – nadační fond. Všechna práva vyhrazena.
+      </p>
+      <p i18n="@@layout.footer.registry">
+        Zapsán u KS Ústí nad Labem, oddíl N, vložka 78 · IČO 27278794
+      </p>
       <a
         class="footer-privacy"
         routerLink="/zasady-ochrany-osobnich-udaju"
         routerLinkActive="is-active"
         ariaCurrentWhenActive="page"
         i18n="@@layout.footer.privacy"
-      >Zásady ochrany osobních údajů</a>
+        >Zásady ochrany osobních údajů</a
+      >
     </div>
   </div>
 </footer>

@@ -1,5 +1,9 @@
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
-import { HttpTestingController, provideHttpClientTesting, TestRequest } from '@angular/common/http/testing';
+import {
+  HttpTestingController,
+  provideHttpClientTesting,
+  TestRequest,
+} from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { provideRouter, Router } from '@angular/router';
@@ -37,19 +41,35 @@ describe('Given a signed-in donor on the dashboard', () => {
     localStorage.clear();
     savedFiles = [];
     createObjectURL = vi.fn(() => OBJECT_URL);
-    Object.defineProperty(URL, 'createObjectURL', { configurable: true, writable: true, value: createObjectURL });
-    Object.defineProperty(URL, 'revokeObjectURL', { configurable: true, writable: true, value: vi.fn() });
-    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (this: HTMLAnchorElement) {
+    Object.defineProperty(URL, 'createObjectURL', {
+      configurable: true,
+      writable: true,
+      value: createObjectURL,
+    });
+    Object.defineProperty(URL, 'revokeObjectURL', {
+      configurable: true,
+      writable: true,
+      value: vi.fn(),
+    });
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (
+      this: HTMLAnchorElement,
+    ) {
       savedFiles.push({ fileName: this.download, href: this.href });
     });
     await TestBed.configureTestingModule({
       imports: [DonorDashboard],
-      providers: [provideHttpClient(withInterceptors([authInterceptor])), provideHttpClientTesting(), provideRouter([])],
+      providers: [
+        provideHttpClient(withInterceptors([authInterceptor])),
+        provideHttpClientTesting(),
+        provideRouter([]),
+      ],
     }).compileComponents();
     http = TestBed.inject(HttpTestingController);
     store = TestBed.inject(AuthStore);
     store.login('jana@example.cz', 'correct horse battery').subscribe();
-    http.expectOne('/api/donors/auth/login').flush(authResponse('token-1', sampleDonor({ variableSymbol: '9876543210' })));
+    http
+      .expectOne('/api/donors/auth/login')
+      .flush(authResponse('token-1', sampleDonor({ variableSymbol: '9876543210' })));
     fixture = TestBed.createComponent(DonorDashboard);
     fixture.detectChanges();
     bankCheck = http.expectOne({ method: 'POST', url: BANK_CHECK_URL });
@@ -64,7 +84,10 @@ describe('Given a signed-in donor on the dashboard', () => {
     Reflect.deleteProperty(URL, 'revokeObjectURL');
   });
 
-  async function respond(summary: DonationSummaryResponse, list: DonationListResponse): Promise<void> {
+  async function respond(
+    summary: DonationSummaryResponse,
+    list: DonationListResponse,
+  ): Promise<void> {
     http.expectOne('/api/donations/me/summary').flush(summary);
     http.expectOne('/api/donations/me').flush(list);
     await settle();
@@ -90,8 +113,8 @@ describe('Given a signed-in donor on the dashboard', () => {
   }
 
   function texts(selector: string): string[] {
-    return [...(fixture.nativeElement.querySelectorAll(selector) as NodeListOf<HTMLElement>)].map((node) =>
-      normalized(node.textContent ?? ''),
+    return [...(fixture.nativeElement.querySelectorAll(selector) as NodeListOf<HTMLElement>)].map(
+      (node) => normalized(node.textContent ?? ''),
     );
   }
 
@@ -109,9 +132,11 @@ describe('Given a signed-in donor on the dashboard', () => {
   }
 
   async function clickYear(year: string): Promise<void> {
-    const toggle = [...(fixture.nativeElement.querySelectorAll('.year-toggle button') as NodeListOf<HTMLButtonElement>)].find(
-      (candidate) => normalized(candidate.textContent ?? '') === year,
-    );
+    const toggle = [
+      ...(fixture.nativeElement.querySelectorAll(
+        '.year-toggle button',
+      ) as NodeListOf<HTMLButtonElement>),
+    ].find((candidate) => normalized(candidate.textContent ?? '') === year);
     toggle!.click();
     await settle();
   }
@@ -130,9 +155,12 @@ describe('Given a signed-in donor on the dashboard', () => {
   }
 
   function problemBlob(type: string, title: string, status: number): Blob {
-    return new Blob([JSON.stringify({ type: `https://nfnn.cz/problems/${type}`, title, detail: '', status })], {
-      type: 'application/problem+json',
-    });
+    return new Blob(
+      [JSON.stringify({ type: `https://nfnn.cz/problems/${type}`, title, detail: '', status })],
+      {
+        type: 'application/problem+json',
+      },
+    );
   }
 
   const yearlyUrl = (year: number): string => `/api/donations/me/receipts/yearly?year=${year}`;
@@ -148,7 +176,10 @@ describe('Given a signed-in donor on the dashboard', () => {
   it('when the bank was checked recently and nothing is running, then the time of the bank data shows and the donations are not loaded again', async () => {
     await respond(twoYearSummary(), twoYearDonations());
 
-    bankCheck.flush({ bankDataAsOf: EARLIER, checking: false }, { status: 202, statusText: 'Accepted' });
+    bankCheck.flush(
+      { bankDataAsOf: EARLIER, checking: false },
+      { status: 202, statusText: 'Accepted' },
+    );
     await settle();
 
     expect(text('.bank-check-status')).toBe('Údaje z banky k 18. 10. 2026 10:05');
@@ -161,16 +192,23 @@ describe('Given a signed-in donor on the dashboard', () => {
     vi.useFakeTimers();
     await respond(emptySummary(), emptyDonations());
 
-    bankCheck.flush({ bankDataAsOf: EARLIER, checking: true }, { status: 202, statusText: 'Accepted' });
+    bankCheck.flush(
+      { bankDataAsOf: EARLIER, checking: true },
+      { status: 202, statusText: 'Accepted' },
+    );
     await settle();
 
     expect(text('.bank-check-status')).toBe('Kontrolujeme nové platby v bance…');
     expect(button('.bank-check-btn').disabled).toBe(true);
 
     await vi.advanceTimersByTimeAsync(2000);
-    http.expectOne({ method: 'GET', url: BANK_CHECK_URL }).flush({ bankDataAsOf: EARLIER, checking: true });
+    http
+      .expectOne({ method: 'GET', url: BANK_CHECK_URL })
+      .flush({ bankDataAsOf: EARLIER, checking: true });
     await vi.advanceTimersByTimeAsync(2000);
-    http.expectOne({ method: 'GET', url: BANK_CHECK_URL }).flush({ bankDataAsOf: LATER, checking: false });
+    http
+      .expectOne({ method: 'GET', url: BANK_CHECK_URL })
+      .flush({ bankDataAsOf: LATER, checking: false });
     http.expectOne(BANK_ACCOUNTS_URL).flush({ items: [bankAccount()] });
     await respond(twoYearSummary(), twoYearDonations());
 
@@ -184,9 +222,14 @@ describe('Given a signed-in donor on the dashboard', () => {
     vi.useFakeTimers();
     await respond(twoYearSummary(), twoYearDonations());
 
-    bankCheck.flush({ bankDataAsOf: EARLIER, checking: true }, { status: 202, statusText: 'Accepted' });
+    bankCheck.flush(
+      { bankDataAsOf: EARLIER, checking: true },
+      { status: 202, statusText: 'Accepted' },
+    );
     await vi.advanceTimersByTimeAsync(2000);
-    http.expectOne({ method: 'GET', url: BANK_CHECK_URL }).flush({ bankDataAsOf: EARLIER, checking: false });
+    http
+      .expectOne({ method: 'GET', url: BANK_CHECK_URL })
+      .flush({ bankDataAsOf: EARLIER, checking: false });
     await settle();
 
     http.expectNone('/api/donations/me/summary');
@@ -196,11 +239,16 @@ describe('Given a signed-in donor on the dashboard', () => {
 
   it('when the donor presses Obnovit, then the bank is asked again and the donations load again even without new bank data', async () => {
     await respond(twoYearSummary(), twoYearDonations());
-    bankCheck.flush({ bankDataAsOf: EARLIER, checking: false }, { status: 202, statusText: 'Accepted' });
+    bankCheck.flush(
+      { bankDataAsOf: EARLIER, checking: false },
+      { status: 202, statusText: 'Accepted' },
+    );
     await settle();
 
     await click('.bank-check-btn');
-    http.expectOne({ method: 'POST', url: BANK_CHECK_URL }).flush({ bankDataAsOf: EARLIER, checking: false });
+    http
+      .expectOne({ method: 'POST', url: BANK_CHECK_URL })
+      .flush({ bankDataAsOf: EARLIER, checking: false });
 
     http.expectOne(BANK_ACCOUNTS_URL).flush({ items: [bankAccount()] });
     await respond(twoYearSummary(), twoYearDonations());
@@ -210,9 +258,13 @@ describe('Given a signed-in donor on the dashboard', () => {
 
   it('when the add account dialog checked the bank and got new data, then the bank time changes and the donations load again', async () => {
     await respond(twoYearSummary(), twoYearDonations());
-    bankCheck.flush({ bankDataAsOf: EARLIER, checking: false }, { status: 202, statusText: 'Accepted' });
+    bankCheck.flush(
+      { bankDataAsOf: EARLIER, checking: false },
+      { status: 202, statusText: 'Accepted' },
+    );
     await settle();
-    const card = fixture.debugElement.query(By.directive(BankAccountsCard)).componentInstance as BankAccountsCard;
+    const card = fixture.debugElement.query(By.directive(BankAccountsCard))
+      .componentInstance as BankAccountsCard;
 
     card.bankChecked.emit({ bankDataAsOf: EARLIER, checking: false });
     await settle();
@@ -256,8 +308,12 @@ describe('Given a signed-in donor on the dashboard', () => {
     await respond(twoYearSummary(), twoYearDonations());
 
     const back = element('.topbar a.topbar-home') as HTMLAnchorElement;
-    expect(normalized(back.querySelector('.topbar-home-label')?.textContent ?? '')).toBe('Hlavní stránka');
-    expect(normalized(back.querySelector('.topbar-home-label-short')?.textContent ?? '')).toBe('Domů');
+    expect(normalized(back.querySelector('.topbar-home-label')?.textContent ?? '')).toBe(
+      'Hlavní stránka',
+    );
+    expect(normalized(back.querySelector('.topbar-home-label-short')?.textContent ?? '')).toBe(
+      'Domů',
+    );
     expect(back.getAttribute('href')).toBe('/');
   });
 
@@ -273,26 +329,42 @@ describe('Given a signed-in donor on the dashboard', () => {
   it('when the payments are shown, then every cell names its column so a phone can show the rows as cards', async () => {
     await respond(twoYearSummary(), twoYearDonations());
 
-    const labels = [...(fixture.nativeElement.querySelectorAll('.payments-card tbody tr:first-child td') as NodeListOf<HTMLElement>)].map(
-      (cell) => cell.dataset['label'],
-    );
+    const labels = [
+      ...(fixture.nativeElement.querySelectorAll(
+        '.payments-card tbody tr:first-child td',
+      ) as NodeListOf<HTMLElement>),
+    ].map((cell) => cell.dataset['label']);
     expect(labels).toEqual(['Datum', 'Částka', 'Účel', 'Stav', 'Potvrzení']);
   });
 
   it('when a donation was paired by the sender account, then its purpose carries a tag naming the end of that account', async () => {
     const list = twoYearDonations();
-    list.items[0] = donationItem({ id: 'd-4', pairedBy: 'SENDER_ACCOUNT', senderAccount: '2900233333/2010' });
-    list.items[1] = donationItem({ id: 'd-3', pairedBy: 'SENDER_ACCOUNT', senderAccount: '19-2000145399/0800' });
+    list.items[0] = donationItem({
+      id: 'd-4',
+      pairedBy: 'SENDER_ACCOUNT',
+      senderAccount: '2900233333/2010',
+    });
+    list.items[1] = donationItem({
+      id: 'd-3',
+      pairedBy: 'SENDER_ACCOUNT',
+      senderAccount: '19-2000145399/0800',
+    });
 
     await respond(twoYearSummary(), list);
 
     const tag = element('.payments-card tbody tr:first-child .pairing-tag');
-    expect(tag?.getAttribute('title')).toBe('Přiřazeno podle účtu 2900233333/2010, platba přišla bez variabilního symbolu');
-    expect(normalized(tag?.querySelector('[aria-hidden="true"]')?.textContent ?? '')).toBe('bez VS · …3333/2010');
+    expect(tag?.getAttribute('title')).toBe(
+      'Přiřazeno podle účtu 2900233333/2010, platba přišla bez variabilního symbolu',
+    );
+    expect(normalized(tag?.querySelector('[aria-hidden="true"]')?.textContent ?? '')).toBe(
+      'bez VS · …3333/2010',
+    );
     expect(normalized(tag?.querySelector('.visually-hidden')?.textContent ?? '')).toBe(
       'Přiřazeno podle účtu 2900233333/2010, platba přišla bez variabilního symbolu',
     );
-    expect(text('.payments-card tbody tr:nth-child(2) .pairing-tag [aria-hidden="true"]')).toBe('bez VS · …5399/0800');
+    expect(text('.payments-card tbody tr:nth-child(2) .pairing-tag [aria-hidden="true"]')).toBe(
+      'bez VS · …5399/0800',
+    );
   });
 
   it('when donations were paired by the variable symbol or by hand, then they carry no tag', async () => {
@@ -307,8 +379,16 @@ describe('Given a signed-in donor on the dashboard', () => {
   it('when the page opens, then the bank accounts card shows below the payments with the variable symbol for adding one', async () => {
     await respond(twoYearSummary(), twoYearDonations());
 
-    const cards = [...(fixture.nativeElement as HTMLElement).querySelectorAll('.payments-card, app-bank-accounts-card, app-profile-card')];
-    expect(cards.map((card) => card.tagName.toLowerCase())).toEqual(['div', 'app-bank-accounts-card', 'app-profile-card']);
+    const cards = [
+      ...(fixture.nativeElement as HTMLElement).querySelectorAll(
+        '.payments-card, app-bank-accounts-card, app-profile-card',
+      ),
+    ];
+    expect(cards.map((card) => card.tagName.toLowerCase())).toEqual([
+      'div',
+      'app-bank-accounts-card',
+      'app-profile-card',
+    ]);
     expect(text('app-bank-accounts-card h2')).toBe('Moje bankovní účty');
   });
 
@@ -345,7 +425,11 @@ describe('Given a signed-in donor on the dashboard', () => {
   it('when the donations arrive, then the payments table lists every donation newest first with date, amount, purpose and status', async () => {
     await respond(twoYearSummary(), twoYearDonations());
 
-    const rows = [...(fixture.nativeElement.querySelectorAll('.payments-card tbody tr') as NodeListOf<HTMLElement>)].map((row) =>
+    const rows = [
+      ...(fixture.nativeElement.querySelectorAll(
+        '.payments-card tbody tr',
+      ) as NodeListOf<HTMLElement>),
+    ].map((row) =>
       [...row.querySelectorAll('td')].slice(0, 4).map((cell) => normalized(cell.textContent ?? '')),
     );
     expect(rows).toEqual([
@@ -409,7 +493,9 @@ describe('Given a signed-in donor on the dashboard', () => {
     await settle();
 
     expect(createObjectURL).toHaveBeenCalledWith(file);
-    expect(savedFiles).toEqual([{ fileName: 'potvrzeni-o-daru-2026-000017.pdf', href: OBJECT_URL }]);
+    expect(savedFiles).toEqual([
+      { fileName: 'potvrzeni-o-daru-2026-000017.pdf', href: OBJECT_URL },
+    ]);
     expect(element('[role="alert"]')).toBeNull();
   });
 
@@ -444,8 +530,17 @@ describe('Given a signed-in donor on the dashboard', () => {
   it('when a payment was refunded, then its row offers no receipt download', async () => {
     await respond(twoYearSummary(), twoYearDonations());
 
-    const rows = [...(fixture.nativeElement.querySelectorAll('.payments-card tbody tr') as NodeListOf<HTMLElement>)];
-    expect(rows.map((row) => row.querySelector('.download-btn') !== null)).toEqual([true, true, true, false]);
+    const rows = [
+      ...(fixture.nativeElement.querySelectorAll(
+        '.payments-card tbody tr',
+      ) as NodeListOf<HTMLElement>),
+    ];
+    expect(rows.map((row) => row.querySelector('.download-btn') !== null)).toEqual([
+      true,
+      true,
+      true,
+      false,
+    ]);
   });
 
   it('when a download is running, then its button is disabled and says the PDF is being prepared until it arrives', async () => {
@@ -467,7 +562,9 @@ describe('Given a signed-in donor on the dashboard', () => {
     expect(text('.yearly-pdf')).toBe('↓ PDF za rok 2025');
     expect(button(secondRowButton).disabled).toBe(true);
 
-    http.expectOne('/api/donations/me/d-3/receipt').flush(pdf(), attachment('potvrzeni-o-daru-2026-000017.pdf'));
+    http
+      .expectOne('/api/donations/me/d-3/receipt')
+      .flush(pdf(), attachment('potvrzeni-o-daru-2026-000017.pdf'));
     await settle();
     expect(button(secondRowButton).disabled).toBe(false);
     expect(text(secondRowButton)).toBe('Stáhnout PDF');
@@ -481,7 +578,10 @@ describe('Given a signed-in donor on the dashboard', () => {
     await click('.yearly-pdf');
     http
       .expectOne(yearlyUrl(2026))
-      .flush(problemBlob('donations/year-not-yet-completed', 'Rok ještě neskončil', 400), { status: 400, statusText: 'Bad Request' });
+      .flush(problemBlob('donations/year-not-yet-completed', 'Rok ještě neskončil', 400), {
+        status: 400,
+        statusText: 'Bad Request',
+      });
     await settleBlobFailure();
 
     expect(text('.yearly-card [role="alert"]')).toBe('Rok ještě neskončil');
@@ -496,10 +596,13 @@ describe('Given a signed-in donor on the dashboard', () => {
     await click('.yearly-pdf');
     http
       .expectOne(yearlyUrl(2025))
-      .flush(problemBlob('donations/yearly-receipt-not-available', 'Za tento rok nemáme žádný dar', 404), {
-        status: 404,
-        statusText: 'Not Found',
-      });
+      .flush(
+        problemBlob('donations/yearly-receipt-not-available', 'Za tento rok nemáme žádný dar', 404),
+        {
+          status: 404,
+          statusText: 'Not Found',
+        },
+      );
     await settleBlobFailure();
 
     expect(text('.yearly-card [role="alert"]')).toBe('Za tento rok nemáme žádný dar');
@@ -511,13 +614,25 @@ describe('Given a signed-in donor on the dashboard', () => {
     await click(secondRowButton);
     http
       .expectOne('/api/donations/me/d-3/receipt')
-      .flush(problemBlob('donations/receipt-not-available', 'Potvrzení k tomuto daru nelze vystavit', 404), {
-        status: 404,
-        statusText: 'Not Found',
-      });
+      .flush(
+        problemBlob(
+          'donations/receipt-not-available',
+          'Potvrzení k tomuto daru nelze vystavit',
+          404,
+        ),
+        {
+          status: 404,
+          statusText: 'Not Found',
+        },
+      );
     await settleBlobFailure();
     const refunded = twoYearDonations();
-    refunded.items[1] = donationItem({ id: 'd-3', receivedAt: '2026-01-10', amountMinor: 100000, status: 'REFUNDED' });
+    refunded.items[1] = donationItem({
+      id: 'd-3',
+      receivedAt: '2026-01-10',
+      amountMinor: 100000,
+      status: 'REFUNDED',
+    });
     await respond(twoYearSummary(), refunded);
 
     expect(text('.payments-card [role="alert"]')).toBe('Potvrzení k tomuto daru nelze vystavit');
@@ -532,10 +647,17 @@ describe('Given a signed-in donor on the dashboard', () => {
     await click(secondRowButton);
     http
       .expectOne('/api/donations/me/d-3/receipt')
-      .flush(problemBlob('donations/receipt-not-available', 'Potvrzení k tomuto daru nelze vystavit', 404), {
-        status: 404,
-        statusText: 'Not Found',
-      });
+      .flush(
+        problemBlob(
+          'donations/receipt-not-available',
+          'Potvrzení k tomuto daru nelze vystavit',
+          404,
+        ),
+        {
+          status: 404,
+          statusText: 'Not Found',
+        },
+      );
     await settleBlobFailure();
     await respond(twoYearSummary(), twoYearDonations());
 
@@ -550,13 +672,20 @@ describe('Given a signed-in donor on the dashboard', () => {
     await click(secondRowButton);
     http
       .expectOne('/api/donations/me/d-3/receipt')
-      .flush(new Blob(['Bad Gateway'], { type: 'text/html' }), { status: 502, statusText: 'Bad Gateway' });
+      .flush(new Blob(['Bad Gateway'], { type: 'text/html' }), {
+        status: 502,
+        statusText: 'Bad Gateway',
+      });
     await settleBlobFailure();
 
-    expect(text('.payments-card [role="alert"]')).toBe('Potvrzení se nepodařilo stáhnout. Zkuste to prosím znovu.');
+    expect(text('.payments-card [role="alert"]')).toBe(
+      'Potvrzení se nepodařilo stáhnout. Zkuste to prosím znovu.',
+    );
 
     await click(secondRowButton);
-    http.expectOne('/api/donations/me/d-3/receipt').flush(pdf(), attachment('potvrzeni-o-daru-2026-000017.pdf'));
+    http
+      .expectOne('/api/donations/me/d-3/receipt')
+      .flush(pdf(), attachment('potvrzeni-o-daru-2026-000017.pdf'));
     await settle();
 
     expect(element('[role="alert"]')).toBeNull();
@@ -570,7 +699,10 @@ describe('Given a signed-in donor on the dashboard', () => {
     await click('.yearly-pdf');
     http
       .expectOne(yearlyUrl(2025))
-      .flush(problemBlob('auth/expired-token', 'Platnost přihlášení vypršela', 401), { status: 401, statusText: 'Unauthorized' });
+      .flush(problemBlob('auth/expired-token', 'Platnost přihlášení vypršela', 401), {
+        status: 401,
+        statusText: 'Unauthorized',
+      });
     await settleBlobFailure();
     http.expectOne('/api/donors/auth/refresh').flush(authResponse('token-2'));
     const retried = http.expectOne(yearlyUrl(2025));
@@ -589,7 +721,10 @@ describe('Given a signed-in donor on the dashboard', () => {
     await click(secondRowButton);
     http
       .expectOne('/api/donations/me/d-3/receipt')
-      .flush(problemBlob('auth/unauthenticated', 'Přihlaste se', 401), { status: 401, statusText: 'Unauthorized' });
+      .flush(problemBlob('auth/unauthenticated', 'Přihlaste se', 401), {
+        status: 401,
+        statusText: 'Unauthorized',
+      });
     await settleBlobFailure();
 
     expect(element('[role="alert"]')).toBeNull();
@@ -633,7 +768,11 @@ describe('Given a signed-in donor on the dashboard', () => {
     const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
     http.expectOne('/api/donations/me').flush(twoYearDonations());
     http.expectOne('/api/donations/me/summary').flush(
-      { type: 'https://nfnn.cz/problems/auth/unauthenticated', title: 'Přihlaste se', status: 401 },
+      {
+        type: 'https://nfnn.cz/problems/auth/unauthenticated',
+        title: 'Přihlaste se',
+        status: 401,
+      },
       { status: 401, statusText: 'Unauthorized' },
     );
     await settle();
@@ -645,11 +784,19 @@ describe('Given a signed-in donor on the dashboard', () => {
 
   it('when the session was forgotten while the donations were loading, then the donor is sent home to sign in', async () => {
     const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
-    const sessionLost = { type: 'https://nfnn.cz/problems/auth/invalid-refresh-token', title: 'Přihlaste se znovu', status: 401 };
+    const sessionLost = {
+      type: 'https://nfnn.cz/problems/auth/invalid-refresh-token',
+      title: 'Přihlaste se znovu',
+      status: 401,
+    };
     store.refresh().subscribe({ error: () => undefined });
-    http.expectOne('/api/donors/auth/refresh').flush(sessionLost, { status: 401, statusText: 'Unauthorized' });
+    http
+      .expectOne('/api/donors/auth/refresh')
+      .flush(sessionLost, { status: 401, statusText: 'Unauthorized' });
     http.expectOne('/api/donations/me').flush(twoYearDonations());
-    http.expectOne('/api/donations/me/summary').flush(sessionLost, { status: 401, statusText: 'Unauthorized' });
+    http
+      .expectOne('/api/donations/me/summary')
+      .flush(sessionLost, { status: 401, statusText: 'Unauthorized' });
     await settle();
 
     expect(store.signedIn()).toBe(false);
@@ -663,7 +810,9 @@ describe('Given a signed-in donor on the dashboard', () => {
     const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
 
     (fixture.nativeElement.querySelector('.topbar-logout') as HTMLButtonElement).click();
-    http.expectOne('/api/donors/auth/logout').flush(null, { status: 204, statusText: 'No Content' });
+    http
+      .expectOne('/api/donors/auth/logout')
+      .flush(null, { status: 204, statusText: 'No Content' });
     await settle();
 
     expect(store.signedIn()).toBe(false);

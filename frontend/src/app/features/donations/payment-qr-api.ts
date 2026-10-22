@@ -20,7 +20,11 @@ export interface PaymentQrResponse {
 export class PaymentQrApi {
   private readonly http = inject(HttpClient);
 
-  paymentQr(amount: number, variableSymbol: string | null, purpose: PaymentQrPurpose = 'DONATION'): Observable<PaymentQrResponse> {
+  paymentQr(
+    amount: number,
+    variableSymbol: string | null,
+    purpose: PaymentQrPurpose = 'DONATION',
+  ): Observable<PaymentQrResponse> {
     let params = new HttpParams().set('amount', amount);
     if (variableSymbol) {
       params = params.set('variableSymbol', variableSymbol);

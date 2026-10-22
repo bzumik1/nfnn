@@ -2,11 +2,24 @@
 
 import { Component, computed, inject, input, linkedSignal, signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
-import { catchError, debounceTime, distinctUntilChanged, map, Observable, of, startWith, switchMap } from 'rxjs';
+import {
+  catchError,
+  debounceTime,
+  distinctUntilChanged,
+  map,
+  Observable,
+  of,
+  startWith,
+  switchMap,
+} from 'rxjs';
 import { LoginDialogService } from '../../../../../core/auth/login-dialog.service';
 import { CopyButton } from '../../../../../shared/ui/copy-button/copy-button';
 import { formatCrowns } from '../../../../donations/donation-amount';
-import { BankAccountResponse, PaymentQrApi, PaymentQrResponse } from '../../../../donations/payment-qr-api';
+import {
+  BankAccountResponse,
+  PaymentQrApi,
+  PaymentQrResponse,
+} from '../../../../donations/payment-qr-api';
 
 const DEFAULT_AMOUNT = 500;
 const MIN_AMOUNT = 1;
@@ -60,7 +73,9 @@ export class DonateCta {
     this.customChosen() ? wholeAmountInRange(this.customAmount()) : this.presetAmount(),
   );
 
-  protected readonly showAmountHint = computed(() => this.customChosen() && this.customAmountLeft() && this.amount() === null);
+  protected readonly showAmountHint = computed(
+    () => this.customChosen() && this.customAmountLeft() && this.amount() === null,
+  );
 
   private readonly request = computed<QrRequest>(() => ({
     amount: this.amount(),
@@ -84,7 +99,8 @@ export class DonateCta {
 
   protected readonly bankAccount = linkedSignal<QrState, BankAccountResponse | null>({
     source: this.state,
-    computation: (state, previous) => (state.kind === 'ready' ? state.qr.bankAccount : (previous?.value ?? null)),
+    computation: (state, previous) =>
+      state.kind === 'ready' ? state.qr.bankAccount : (previous?.value ?? null),
   });
 
   protected readonly ibanInGroups = computed(() => {
@@ -145,7 +161,9 @@ function wholeCrowns(typed: string): number | null {
 }
 
 function wholeAmountInRange(amount: number | null): number | null {
-  return amount !== null && Number.isInteger(amount) && amount >= MIN_AMOUNT && amount <= MAX_AMOUNT ? amount : null;
+  return amount !== null && Number.isInteger(amount) && amount >= MIN_AMOUNT && amount <= MAX_AMOUNT
+    ? amount
+    : null;
 }
 
 function sameRequest(previous: QrRequest, current: QrRequest): boolean {

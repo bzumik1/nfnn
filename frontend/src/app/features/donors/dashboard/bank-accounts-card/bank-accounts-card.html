@@ -1,7 +1,15 @@
 <section class="accounts-card" aria-labelledby="bank-accounts-title">
   <div class="accounts-head">
     <div class="accounts-heading">
-      <h2 #title id="bank-accounts-title" class="accounts-title" tabindex="-1" i18n="@@donor.bankAccounts.title">Moje bankovní účty</h2>
+      <h2
+        #title
+        id="bank-accounts-title"
+        class="accounts-title"
+        tabindex="-1"
+        i18n="@@donor.bankAccounts.title"
+      >
+        Moje bankovní účty
+      </h2>
       <button
         #helpToggle
         type="button"
@@ -22,7 +30,9 @@
       [disabled]="!variableSymbol()"
       (click)="openAdd()"
       i18n="@@donor.bankAccounts.add"
-    >Přidat účet</button>
+    >
+      Přidat účet
+    </button>
   </div>
 
   <div
@@ -33,65 +43,87 @@
     [hidden]="!helpOpen()"
     (keydown.escape)="closeHelp()"
   >
-    <h3 id="accounts-help-title" class="help-title" i18n="@@donor.bankAccounts.help.title">Jak přiřazujeme platby</h3>
+    <h3 id="accounts-help-title" class="help-title" i18n="@@donor.bankAccounts.help.title">
+      Jak přiřazujeme platby
+    </h3>
     <ul class="help-list">
       @if (variableSymbol(); as symbol) {
         <li i18n="@@donor.bankAccounts.help.bySymbol">
           <span class="help-lead">S vaším symbolem</span> Platbu s vaším variabilním symbolem
-          <strong class="help-symbol">{{ symbol }}</strong> přiřadíme vám, ať přijde z jakéhokoli účtu.
+          <strong class="help-symbol">{{ symbol }}</strong> přiřadíme vám, ať přijde z jakéhokoli
+          účtu.
         </li>
       } @else {
         <li i18n="@@donor.bankAccounts.help.bySymbolWithoutNumber">
-          <span class="help-lead">S vaším symbolem</span> Platbu s vaším variabilním symbolem přiřadíme vám, ať přijde z jakéhokoli účtu.
+          <span class="help-lead">S vaším symbolem</span> Platbu s vaším variabilním symbolem
+          přiřadíme vám, ať přijde z jakéhokoli účtu.
         </li>
       }
       <li i18n="@@donor.bankAccounts.help.byAccount">
-        <span class="help-lead">Bez symbolu</span> Platbu bez variabilního symbolu přiřadíme podle účtu, ze kterého přišla, pokud jste
-        ho u nás ověřili. Tomuto přiřazování podle účtu říkáme párování. Účet ověříte tak, že z něj jednou pošlete platbu s vaším
-        variabilním symbolem; stačí 1&nbsp;Kč, návod najdete pod tlačítkem „Přidat účet“. Musí to být český účet, ale nemusí být veden
-        na vaše jméno. Když účet ověříte poprvé a předtím ho neověřil jiný dárce, přiřadíme vám i dřívější platby z něj, které přišly
-        bez symbolu. Účet, přes který posílá peníze víc lidí (třeba sběrný účet), můžeme z párování vyloučit; z takového účtu pak
+        <span class="help-lead">Bez symbolu</span> Platbu bez variabilního symbolu přiřadíme podle
+        účtu, ze kterého přišla, pokud jste ho u nás ověřili. Tomuto přiřazování podle účtu říkáme
+        párování. Účet ověříte tak, že z něj jednou pošlete platbu s vaším variabilním symbolem;
+        stačí 1&nbsp;Kč, návod najdete pod tlačítkem „Přidat účet“. Musí to být český účet, ale
+        nemusí být veden na vaše jméno. Když účet ověříte poprvé a předtím ho neověřil jiný dárce,
+        přiřadíme vám i dřívější platby z něj, které přišly bez symbolu. Účet, přes který posílá
+        peníze víc lidí (třeba sběrný účet), můžeme z párování vyloučit; z takového účtu pak
         přiřazujeme jen platby s variabilním symbolem.
       </li>
       @if (variableSymbol(); as symbol) {
         <li i18n="@@donor.bankAccounts.help.otherSymbol">
-          <span class="help-lead">S jiným symbolem</span> Platbu s jiným variabilním symbolem, než je váš, vám nepřiřadíme, ani když
-          přijde z vašeho ověřeného účtu. Pokud nám posíláte dary trvalým příkazem se starším symbolem, nastavte v něm prosím váš
-          variabilní symbol <strong class="help-symbol">{{ symbol }}</strong>. Platbu se symbolem&nbsp;0 bereme jako platbu bez symbolu.
+          <span class="help-lead">S jiným symbolem</span> Platbu s jiným variabilním symbolem, než
+          je váš, vám nepřiřadíme, ani když přijde z vašeho ověřeného účtu. Pokud nám posíláte dary
+          trvalým příkazem se starším symbolem, nastavte v něm prosím váš variabilní symbol
+          <strong class="help-symbol">{{ symbol }}</strong
+          >. Platbu se symbolem&nbsp;0 bereme jako platbu bez symbolu.
         </li>
       } @else {
         <li i18n="@@donor.bankAccounts.help.otherSymbolWithoutNumber">
-          <span class="help-lead">S jiným symbolem</span> Platbu s jiným variabilním symbolem, než je váš, vám nepřiřadíme, ani když
-          přijde z vašeho ověřeného účtu. Pokud nám posíláte dary trvalým příkazem se starším symbolem, nastavte v něm prosím váš
-          variabilní symbol. Platbu se symbolem&nbsp;0 bereme jako platbu bez symbolu.
+          <span class="help-lead">S jiným symbolem</span> Platbu s jiným variabilním symbolem, než
+          je váš, vám nepřiřadíme, ani když přijde z vašeho ověřeného účtu. Pokud nám posíláte dary
+          trvalým příkazem se starším symbolem, nastavte v něm prosím váš variabilní symbol. Platbu
+          se symbolem&nbsp;0 bereme jako platbu bez symbolu.
         </li>
       }
       <li i18n="@@donor.bankAccounts.help.disconnect">
-        <span class="help-lead">Vypnutí párování</span> Párování můžete u účtu vypnout tlačítkem „Vypnout párování“. Platby bez
-        symbolu, které z účtu přijdou ode dne po vypnutí, vám pak nepřiřadíme; dary přiřazené dříve zůstanou. Párování znovu zapnete
-        tlačítkem „Zapnout párování“. Účet pak čeká na platbu: pošlete z něj 1&nbsp;Kč (nebo jakýkoli dar) s vaším variabilním
-        symbolem. Jakmile dorazí, přiřadíme vám z něj i platby bez symbolu ode dne zapnutí. U účtu, ze kterého přiřazujeme jen platby
-        s variabilním symbolem, párování znovu zapnout nejde.
+        <span class="help-lead">Vypnutí párování</span> Párování můžete u účtu vypnout tlačítkem
+        „Vypnout párování“. Platby bez symbolu, které z účtu přijdou ode dne po vypnutí, vám pak
+        nepřiřadíme; dary přiřazené dříve zůstanou. Párování znovu zapnete tlačítkem „Zapnout
+        párování“. Účet pak čeká na platbu: pošlete z něj 1&nbsp;Kč (nebo jakýkoli dar) s vaším
+        variabilním symbolem. Jakmile dorazí, přiřadíme vám z něj i platby bez symbolu ode dne
+        zapnutí. U účtu, ze kterého přiřazujeme jen platby s variabilním symbolem, párování znovu
+        zapnout nejde.
       </li>
       <li i18n="@@donor.bankAccounts.help.shared">
-        <span class="help-lead">Sdílený účet</span> Když stejný účet ověří i jiný dárce, označíme ho jako „Sdílený“ a platby bez
-        variabilního symbolu z něj nepřiřadíme nikomu. Pokud z něj dary neposíláte vy, vypněte si u něj párování. Jinak z něj prosím
-        posílejte vždy s vaším variabilním symbolem.
+        <span class="help-lead">Sdílený účet</span> Když stejný účet ověří i jiný dárce, označíme ho
+        jako „Sdílený“ a platby bez variabilního symbolu z něj nepřiřadíme nikomu. Pokud z něj dary
+        neposíláte vy, vypněte si u něj párování. Jinak z něj prosím posílejte vždy s vaším
+        variabilním symbolem.
       </li>
     </ul>
     <p class="help-contact" i18n="@@donor.bankAccounts.help.contact">
-      Chybí vám nějaký dar, nebo tu vidíte dar, který není váš? Napište nám na <a href="mailto:info@nfnn.cz">info&#64;nfnn.cz</a>.
+      Chybí vám nějaký dar, nebo tu vidíte dar, který není váš? Napište nám na
+      <a href="mailto:info@nfnn.cz">info&#64;nfnn.cz</a>.
     </p>
   </div>
 
   @switch (state()) {
     @case ('loading') {
-      <p class="accounts-loading" role="status" i18n="@@donor.bankAccounts.loading">Načítáme vaše účty…</p>
+      <p class="accounts-loading" role="status" i18n="@@donor.bankAccounts.loading">
+        Načítáme vaše účty…
+      </p>
     }
     @case ('error') {
       <div class="accounts-load-error" role="alert">
         <p i18n="@@donor.bankAccounts.error.load">Bankovní účty se nepodařilo načíst.</p>
-        <button type="button" class="accounts-retry" (click)="retry()" i18n="@@donor.bankAccounts.error.retry">Zkusit znovu</button>
+        <button
+          type="button"
+          class="accounts-retry"
+          (click)="retry()"
+          i18n="@@donor.bankAccounts.error.retry"
+        >
+          Zkusit znovu
+        </button>
       </div>
     }
     @case ('ready') {
@@ -102,19 +134,33 @@
               <div class="account-main">
                 <div class="account-line">
                   <span class="account-number">{{ account.accountNumber }}</span>
-                  <span class="account-status" [class]="labelModifier(account)">{{ label(account) }}</span>
+                  <span class="account-status" [class]="labelModifier(account)">{{
+                    label(account)
+                  }}</span>
                 </div>
                 @if (account.verifiedOn || account.disconnectedOn || account.donationCount > 0) {
                   <div class="account-meta-wrap">
                     <ul class="account-meta">
                       @if (account.verifiedOn; as verifiedOn) {
-                        <li i18n="@@donor.bankAccounts.verifiedOn">ověřeno {{ formatDate(verifiedOn) }}</li>
+                        <li i18n="@@donor.bankAccounts.verifiedOn">
+                          ověřeno {{ formatDate(verifiedOn) }}
+                        </li>
                       }
                       @if (account.status === 'DISCONNECTED' && account.disconnectedOn) {
-                        <li i18n="@@donor.bankAccounts.disconnectedFrom">vypnuto od {{ firstDayOff(account.disconnectedOn) }}</li>
+                        <li i18n="@@donor.bankAccounts.disconnectedFrom">
+                          vypnuto od {{ firstDayOff(account.disconnectedOn) }}
+                        </li>
                       }
                       @if (account.donationCount > 0) {
-                        <li i18n="@@donor.bankAccounts.donationCount">{account.donationCount, plural, =1 {{{ account.donationCount }} dar bez VS} =2 {{{ account.donationCount }} dary bez VS} =3 {{{ account.donationCount }} dary bez VS} =4 {{{ account.donationCount }} dary bez VS} other {{{ account.donationCount }} darů bez VS}}</li>
+                        <li i18n="@@donor.bankAccounts.donationCount">
+                          {account.donationCount, plural,
+                            =1 {{{ account.donationCount }} dar bez VS}
+                            =2 {{{ account.donationCount }} dary bez VS}
+                            =3 {{{ account.donationCount }} dary bez VS}
+                            =4 {{{ account.donationCount }} dary bez VS}
+                            other {{{ account.donationCount }} darů bez VS}
+                          }
+                        </li>
                         <li class="account-total">{{ crowns(account.totalAmountMinor) }} Kč</li>
                       }
                     </ul>
@@ -122,7 +168,10 @@
                 }
                 @if (hint(account); as hint) {
                   @if (warns(account)) {
-                    <ng-container [ngTemplateOutlet]="warning" [ngTemplateOutletContext]="{ $implicit: hint }" />
+                    <ng-container
+                      [ngTemplateOutlet]="warning"
+                      [ngTemplateOutletContext]="{ $implicit: hint }"
+                    />
                   } @else {
                     <p class="account-hint">{{ hint }}</p>
                   }
@@ -139,7 +188,9 @@
                     [attr.aria-busy]="busy() === account.id"
                     (click)="reconnect(account)"
                     i18n="@@donor.bankAccounts.reconnect"
-                  >Zapnout párování</button>
+                  >
+                    Zapnout párování
+                  </button>
                 } @else if (offersDisconnect(account)) {
                   <button
                     type="button"
@@ -147,13 +198,24 @@
                     [id]="actionButtonId(account)"
                     (click)="askToDisconnect(account)"
                     i18n="@@donor.bankAccounts.disconnect"
-                  >Vypnout párování</button>
+                  >
+                    Vypnout párování
+                  </button>
                 }
               } @else {
-                <div class="account-confirm" role="group" [attr.aria-labelledby]="actionButtonId(account) + '-confirm'">
-                  <p [id]="actionButtonId(account) + '-confirm'" class="account-confirm-text" i18n="@@donor.bankAccounts.confirm.text">
-                    Platby bez variabilního symbolu, které z tohoto účtu přijdou od zítřka, vám už nebudeme přiřazovat. Dosavadní dary
-                    zůstanou; pokud některý z nich není váš, <a href="mailto:info@nfnn.cz">napište nám</a>.
+                <div
+                  class="account-confirm"
+                  role="group"
+                  [attr.aria-labelledby]="actionButtonId(account) + '-confirm'"
+                >
+                  <p
+                    [id]="actionButtonId(account) + '-confirm'"
+                    class="account-confirm-text"
+                    i18n="@@donor.bankAccounts.confirm.text"
+                  >
+                    Platby bez variabilního symbolu, které z tohoto účtu přijdou od zítřka, vám už
+                    nebudeme přiřazovat. Dosavadní dary zůstanou; pokud některý z nich není váš,
+                    <a href="mailto:info@nfnn.cz">napište nám</a>.
                   </p>
                   <div class="account-confirm-actions">
                     <button
@@ -163,14 +225,18 @@
                       [attr.aria-busy]="busy() === account.id"
                       (click)="disconnect(account)"
                       i18n="@@donor.bankAccounts.confirm.yes"
-                    >Vypnout párování</button>
+                    >
+                      Vypnout párování
+                    </button>
                     <button
                       #confirmCancel
                       type="button"
                       class="account-confirm-no"
                       (click)="cancelDisconnect(account)"
                       i18n="@@donor.bankAccounts.confirm.no"
-                    >Nechat zapnuté</button>
+                    >
+                      Nechat zapnuté
+                    </button>
                   </div>
                 </div>
               }
@@ -179,7 +245,8 @@
         </ul>
       } @else {
         <p class="accounts-empty" i18n="@@donor.bankAccounts.empty">
-          Zatím jsme od vás nedostali platbu s vaším variabilním symbolem, podle které bychom poznali váš účet.
+          Zatím jsme od vás nedostali platbu s vaším variabilním symbolem, podle které bychom
+          poznali váš účet.
         </p>
       }
     }
@@ -193,7 +260,18 @@
 
 <ng-template #warning let-text>
   <p class="account-hint account-hint--warning">
-    <svg class="account-hint-icon" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <svg
+      class="account-hint-icon"
+      aria-hidden="true"
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
       <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
       <path d="M12 9v4" />
       <path d="M12 17h.01" />
@@ -205,13 +283,20 @@
 
 @if (adding()) {
   <app-dialog labelledBy="add-account-title" [wide]="true" (dismissed)="closeAdd()">
-    <h2 id="add-account-title" class="add-account-title" i18n="@@donor.bankAccounts.addDialog.title">Přidat účet</h2>
+    <h2
+      id="add-account-title"
+      class="add-account-title"
+      i18n="@@donor.bankAccounts.addDialog.title"
+    >
+      Přidat účet
+    </h2>
     <p class="add-account-text" i18n="@@donor.bankAccounts.addDialog.text">
-      Pošlete z účtu, který chcete přidat, <strong>1 Kč</strong> (nebo jakýkoli dar) s vaším variabilním symbolem
-      <strong>{{ variableSymbol() }}</strong>. Jakmile platba dorazí, účet se tu objeví. Když ho ověříte poprvé a předtím ho
-      neověřil jiný dárce, přiřadíme vám i dřívější dary z něj, které přišly bez symbolu. Okamžitá platba dorazí do pár minut, běžný
-      převod obvykle do dalšího pracovního dne. Funguje jen český účet. Neověřujte prosím sběrný účet, přes který posílá
-      peníze víc lidí.
+      Pošlete z účtu, který chcete přidat, <strong>1 Kč</strong> (nebo jakýkoli dar) s vaším
+      variabilním symbolem <strong>{{ variableSymbol() }}</strong
+      >. Jakmile platba dorazí, účet se tu objeví. Když ho ověříte poprvé a předtím ho neověřil jiný
+      dárce, přiřadíme vám i dřívější dary z něj, které přišly bez symbolu. Okamžitá platba dorazí
+      do pár minut, běžný převod obvykle do dalšího pracovního dne. Funguje jen český účet.
+      Neověřujte prosím sběrný účet, přes který posílá peníze víc lidí.
     </p>
 
     <div class="add-account-payment">
@@ -225,11 +310,22 @@
             i18n-alt="@@donor.bankAccounts.addDialog.qrAlt"
           />
         } @else if (qr().kind === 'loading') {
-          <span class="add-account-qr-placeholder" i18n="@@home.donate.qr.loading">Připravujeme QR kód…</span>
+          <span class="add-account-qr-placeholder" i18n="@@home.donate.qr.loading"
+            >Připravujeme QR kód…</span
+          >
         } @else {
           <div class="add-account-qr-error" role="alert">
-            <p i18n="@@home.donate.qr.error">QR platbu se nepodařilo připravit. Zkuste to prosím znovu.</p>
-            <button type="button" class="add-account-qr-retry" (click)="loadQr()" i18n="@@home.donate.qr.retry">Zkusit znovu</button>
+            <p i18n="@@home.donate.qr.error">
+              QR platbu se nepodařilo připravit. Zkuste to prosím znovu.
+            </p>
+            <button
+              type="button"
+              class="add-account-qr-retry"
+              (click)="loadQr()"
+              i18n="@@home.donate.qr.retry"
+            >
+              Zkusit znovu
+            </button>
           </div>
         }
       </div>
@@ -240,19 +336,29 @@
             <dt i18n="@@home.donate.bank.account">Číslo účtu</dt>
             <dd>
               <span class="bank-value">{{ response.bankAccount.accountNumber }}</span>
-              <app-copy-button [value]="response.bankAccount.accountNumber" what="číslo účtu" i18n-what="@@home.donate.bank.copyAccount" />
+              <app-copy-button
+                [value]="response.bankAccount.accountNumber"
+                what="číslo účtu"
+                i18n-what="@@home.donate.bank.copyAccount"
+              />
             </dd>
           </div>
           <div class="add-account-row">
             <dt i18n="@@home.donate.bank.amount">Částka</dt>
             <dd>
-              <span class="bank-value">{{ verificationAmount }}&nbsp;<ng-container i18n="@@home.donate.amount.currency">Kč</ng-container></span>
+              <span class="bank-value"
+                >{{ verificationAmount }}&nbsp;<ng-container i18n="@@home.donate.amount.currency"
+                  >Kč</ng-container
+                ></span
+              >
             </dd>
           </div>
           <div class="add-account-row">
             <dt i18n="@@donor.bankAccounts.addDialog.message">Zpráva pro příjemce</dt>
             <dd>
-              <span class="bank-value" i18n="@@donor.bankAccounts.addDialog.messageValue">Ověření účtu Nadační fond Nová naděje</span>
+              <span class="bank-value" i18n="@@donor.bankAccounts.addDialog.messageValue"
+                >Ověření účtu Nadační fond Nová naděje</span
+              >
             </dd>
           </div>
           @if (variableSymbol(); as symbol) {
@@ -260,7 +366,11 @@
               <dt i18n="@@home.donate.bank.vs">Variabilní symbol</dt>
               <dd>
                 <span class="bank-value">{{ symbol }}</span>
-                <app-copy-button [value]="symbol" what="variabilní symbol" i18n-what="@@home.donate.bank.copyVs" />
+                <app-copy-button
+                  [value]="symbol"
+                  what="variabilní symbol"
+                  i18n-what="@@home.donate.bank.copyVs"
+                />
               </dd>
             </div>
           }
@@ -268,16 +378,25 @@
       }
     </div>
 
-    <div class="add-account-watch" [class.add-account-watch--verified]="newlyVerified()" role="status">
+    <div
+      class="add-account-watch"
+      [class.add-account-watch--verified]="newlyVerified()"
+      role="status"
+    >
       @if (newlyVerified(); as account) {
         <svg class="watch-icon watch-icon--verified" viewBox="0 0 32 32" aria-hidden="true">
           <circle class="watch-disc" cx="16" cy="16" r="15" />
           <path class="watch-tick" d="M9.5 16.5l4.5 4.5 8.5-9" />
         </svg>
         <div class="watch-text">
-          <p class="watch-title" i18n="@@donor.bankAccounts.addDialog.verified">Účet <span class="watch-account">{{ account.accountNumber }}</span> je ověřený</p>
+          <p class="watch-title" i18n="@@donor.bankAccounts.addDialog.verified">
+            Účet <span class="watch-account">{{ account.accountNumber }}</span> je ověřený
+          </p>
           @if (warns(account)) {
-            <ng-container [ngTemplateOutlet]="warning" [ngTemplateOutletContext]="{ $implicit: hint(account) }" />
+            <ng-container
+              [ngTemplateOutlet]="warning"
+              [ngTemplateOutletContext]="{ $implicit: hint(account) }"
+            />
           } @else {
             <p class="watch-detail">{{ hint(account) }}</p>
           }
@@ -288,24 +407,41 @@
           <circle class="watch-arc" cx="16" cy="16" r="13" />
         </svg>
         <div class="watch-text">
-          <p class="watch-title" i18n="@@donor.bankAccounts.addDialog.waiting">Čekáme na vaši platbu…</p>
+          <p class="watch-title" i18n="@@donor.bankAccounts.addDialog.waiting">
+            Čekáme na vaši platbu…
+          </p>
           <p class="watch-detail" i18n="@@donor.bankAccounts.addDialog.waitingDetail">
             Banku kontrolujeme zhruba každou půlminutu, dokud je tohle okno otevřené.
           </p>
         </div>
       } @else {
         <div class="watch-text">
-          <p class="watch-title" i18n="@@donor.bankAccounts.addDialog.stopped">Platba zatím nedorazila</p>
-          <p class="watch-detail" i18n="@@donor.bankAccounts.addDialog.stoppedDetail">
-            Běžný převod může dorazit až další pracovní den. Účet se pak v přehledu objeví sám, okno nemusíte nechávat otevřené.
+          <p class="watch-title" i18n="@@donor.bankAccounts.addDialog.stopped">
+            Platba zatím nedorazila
           </p>
-          <button type="button" class="watch-again" (click)="watchAgain()" i18n="@@donor.bankAccounts.addDialog.watchAgain">
+          <p class="watch-detail" i18n="@@donor.bankAccounts.addDialog.stoppedDetail">
+            Běžný převod může dorazit až další pracovní den. Účet se pak v přehledu objeví sám, okno
+            nemusíte nechávat otevřené.
+          </p>
+          <button
+            type="button"
+            class="watch-again"
+            (click)="watchAgain()"
+            i18n="@@donor.bankAccounts.addDialog.watchAgain"
+          >
             Kontrolovat dál
           </button>
         </div>
       }
     </div>
 
-    <button type="button" class="add-account-close" (click)="closeAdd()" i18n="@@donor.bankAccounts.addDialog.close">Zavřít</button>
+    <button
+      type="button"
+      class="add-account-close"
+      (click)="closeAdd()"
+      i18n="@@donor.bankAccounts.addDialog.close"
+    >
+      Zavřít
+    </button>
   </app-dialog>
 }

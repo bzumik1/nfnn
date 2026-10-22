@@ -1,5 +1,9 @@
 import { provideHttpClient } from '@angular/common/http';
-import { HttpTestingController, provideHttpClientTesting, TestRequest } from '@angular/common/http/testing';
+import {
+  HttpTestingController,
+  provideHttpClientTesting,
+  TestRequest,
+} from '@angular/common/http/testing';
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
@@ -48,7 +52,11 @@ describe('Given the home page', () => {
     request.flush({
       spayd: 'SPD*1.0*ACC:CZ2620100000005544332217*AM:500.00*CC:CZK',
       qrPngBase64: 'png',
-      bankAccount: { accountNumber: '5544332217/2010', iban: 'CZ2620100000005544332217', recipientName: 'Nadační fond Nová naděje' },
+      bankAccount: {
+        accountNumber: '5544332217/2010',
+        iban: 'CZ2620100000005544332217',
+        recipientName: 'Nadační fond Nová naděje',
+      },
     });
     return request;
   }

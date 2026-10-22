@@ -1,7 +1,13 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-import { BankCheckResponse, DonationListResponse, DonationsApi, DonationSummaryResponse, DownloadedFile } from './donations-api';
+import {
+  BankCheckResponse,
+  DonationListResponse,
+  DonationsApi,
+  DonationSummaryResponse,
+  DownloadedFile,
+} from './donations-api';
 import { twoYearDonations, twoYearSummary } from './testing/donation-fixtures';
 
 describe('Given the donations API', () => {
@@ -52,7 +58,10 @@ describe('Given the donations API', () => {
     const request = http.expectOne('/api/donations/me/bank-check');
     expect(request.request.method).toBe('POST');
     expect(request.request.body).toBeNull();
-    request.flush({ bankDataAsOf: '2026-10-18T08:05:30Z', checking: true }, { status: 202, statusText: 'Accepted' });
+    request.flush(
+      { bankDataAsOf: '2026-10-18T08:05:30Z', checking: true },
+      { status: 202, statusText: 'Accepted' },
+    );
 
     expect(received).toEqual({ bankDataAsOf: '2026-10-18T08:05:30Z', checking: true });
   });
@@ -70,16 +79,20 @@ describe('Given the donations API', () => {
 
   it("when the receipt of one donation is requested, then it downloads that donation's PDF under the file name from the server", async () => {
     let received: DownloadedFile | undefined;
-    api.singleReceipt('0192f0f1-0000-7000-8000-000000000003').subscribe((file) => (received = file));
+    api
+      .singleReceipt('0192f0f1-0000-7000-8000-000000000003')
+      .subscribe((file) => (received = file));
 
-    const request = http.expectOne('/api/donations/me/0192f0f1-0000-7000-8000-000000000003/receipt');
+    const request = http.expectOne(
+      '/api/donations/me/0192f0f1-0000-7000-8000-000000000003/receipt',
+    );
     expect(request.request.method).toBe('GET');
     expect(request.request.responseType).toBe('blob');
     request.flush(pdf(), {
       headers: {
         'Content-Type': 'application/pdf',
         'Content-Disposition':
-          "attachment; filename=\"potvrzeni-o-daru-2027-000001.pdf\"; filename*=UTF-8''potvrzeni-o-daru-2027-000001.pdf",
+          'attachment; filename="potvrzeni-o-daru-2027-000001.pdf"; filename*=UTF-8\'\'potvrzeni-o-daru-2027-000001.pdf',
       },
     });
 
@@ -94,7 +107,9 @@ describe('Given the donations API', () => {
     const request = http.expectOne('/api/donations/me/receipts/yearly?year=2025');
     expect(request.request.method).toBe('GET');
     expect(request.request.responseType).toBe('blob');
-    request.flush(pdf(), { headers: { 'Content-Disposition': 'attachment; filename="potvrzeni-o-darech-2025.pdf"' } });
+    request.flush(pdf(), {
+      headers: { 'Content-Disposition': 'attachment; filename="potvrzeni-o-darech-2025.pdf"' },
+    });
 
     expect(received?.fileName).toBe('potvrzeni-o-darech-2025.pdf');
     expect(received?.blob).toBeInstanceOf(Blob);
@@ -105,7 +120,10 @@ describe('Given the donations API', () => {
     api.yearlyReceipt(2025).subscribe((file) => (received = file));
 
     http.expectOne('/api/donations/me/receipts/yearly?year=2025').flush(pdf(), {
-      headers: { 'Content-Disposition': "attachment; filename=\"potvrzeni.pdf\"; filename*=UTF-8''potvrzen%C3%AD%20o%20darech.pdf" },
+      headers: {
+        'Content-Disposition':
+          'attachment; filename="potvrzeni.pdf"; filename*=UTF-8\'\'potvrzen%C3%AD%20o%20darech.pdf',
+      },
     });
 
     expect(received?.fileName).toBe('potvrzení o darech.pdf');
@@ -116,7 +134,9 @@ describe('Given the donations API', () => {
     api.singleReceipt('d-1').subscribe((file) => (received = file));
 
     http.expectOne('/api/donations/me/d-1/receipt').flush(pdf(), {
-      headers: { 'Content-Disposition': "attachment; filename*=utf-8''donation-receipt-2027-000002.pdf" },
+      headers: {
+        'Content-Disposition': "attachment; filename*=utf-8''donation-receipt-2027-000002.pdf",
+      },
     });
 
     expect(received?.fileName).toBe('donation-receipt-2027-000002.pdf');
@@ -135,7 +155,9 @@ describe('Given the donations API', () => {
     let received: DownloadedFile | undefined;
     api.singleReceipt('d-1').subscribe((file) => (received = file));
 
-    http.expectOne('/api/donations/me/d-1/receipt').flush(pdf(), { headers: { 'Content-Disposition': 'attachment' } });
+    http
+      .expectOne('/api/donations/me/d-1/receipt')
+      .flush(pdf(), { headers: { 'Content-Disposition': 'attachment' } });
 
     expect(received?.fileName).toBe('potvrzeni-o-daru.pdf');
   });

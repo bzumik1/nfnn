@@ -16,7 +16,10 @@ describe('Given the donor data card in the overview', () => {
   async function render(donor: Donor = sampleDonor()): Promise<void> {
     await TestBed.configureTestingModule({
       imports: [ProfileCard],
-      providers: [provideHttpClient(withInterceptors([authInterceptor])), provideHttpClientTesting()],
+      providers: [
+        provideHttpClient(withInterceptors([authInterceptor])),
+        provideHttpClientTesting(),
+      ],
     }).compileComponents();
     http = TestBed.inject(HttpTestingController);
     store = TestBed.inject(AuthStore);
@@ -67,7 +70,9 @@ describe('Given the donor data card in the overview', () => {
   }
 
   function shown(): string[] {
-    return Array.from(root().querySelectorAll('.profile-data dd')).map((value) => value.textContent?.trim() ?? '');
+    return Array.from(root().querySelectorAll('.profile-data dd')).map(
+      (value) => value.textContent?.trim() ?? '',
+    );
   }
 
   describe('when a person opens the overview', () => {
@@ -75,7 +80,12 @@ describe('Given the donor data card in the overview', () => {
 
     it('then it shows the data the receipts carry', () => {
       expect(element('h2').textContent).toContain('Údaje na potvrzení o daru');
-      expect(shown()).toEqual(['Jana Nováková', 'Dlouhá 12, 400 01 Ústí nad Labem', 'jana@example.cz', 'čeština']);
+      expect(shown()).toEqual([
+        'Jana Nováková',
+        'Dlouhá 12, 400 01 Ústí nad Labem',
+        'jana@example.cz',
+        'čeština',
+      ]);
     });
 
     it('and edits the address, then only the form is sent and the card shows the saved data', async () => {
@@ -93,12 +103,20 @@ describe('Given the donor data card in the overview', () => {
         preferredLocale: 'en',
       });
       request.flush(
-        sampleDonor({ address: { street: 'Krátká 3', city: 'Ústí nad Labem', postalCode: '400 11' }, preferredLocale: 'en' }),
+        sampleDonor({
+          address: { street: 'Krátká 3', city: 'Ústí nad Labem', postalCode: '400 11' },
+          preferredLocale: 'en',
+        }),
       );
       await settle();
 
       expect(element('.profile-form')).toBeNull();
-      expect(shown()).toEqual(['Jana Nováková', 'Krátká 3, 400 11 Ústí nad Labem', 'jana@example.cz', 'angličtina (dvojjazyčné)']);
+      expect(shown()).toEqual([
+        'Jana Nováková',
+        'Krátká 3, 400 11 Ústí nad Labem',
+        'jana@example.cz',
+        'angličtina (dvojjazyčné)',
+      ]);
       expect(element('.profile-status').textContent?.trim()).toBe(
         'Údaje jsme uložili. Jméno a adresu ponesou všechna potvrzení, která si stáhnete od teď, zvolený jazyk jen ta, která si stáhnete poprvé.',
       );
@@ -109,7 +127,9 @@ describe('Given the donor data card in the overview', () => {
     it('and edits the data, then the language field says that receipts already downloaded keep their language', async () => {
       await click('.profile-edit');
 
-      expect(element('#profile-locale').getAttribute('aria-describedby')).toBe('profile-locale-hint');
+      expect(element('#profile-locale').getAttribute('aria-describedby')).toBe(
+        'profile-locale-hint',
+      );
       expect(element('#profile-locale-hint').textContent?.trim()).toBe(
         'Platí pro potvrzení, která si stáhnete poprvé. Ta, která jste si už stáhli, zůstanou v původním jazyce.',
       );
@@ -141,16 +161,20 @@ describe('Given the donor data card in the overview', () => {
       await click('.profile-edit');
 
       await submit();
-      http
-        .expectOne('/api/donors/me')
-        .flush(
-          { ...problem('validation', 'Neplatný požadavek'), status: 400, errors: [{ field: 'address.postalCode', message: 'PSČ má pět číslic.' }] },
-          { status: 400, statusText: 'Bad Request' },
-        );
+      http.expectOne('/api/donors/me').flush(
+        {
+          ...problem('validation', 'Neplatný požadavek'),
+          status: 400,
+          errors: [{ field: 'address.postalCode', message: 'PSČ má pět číslic.' }],
+        },
+        { status: 400, statusText: 'Bad Request' },
+      );
       await settle();
 
       expect(element('.profile-form')).not.toBeNull();
-      expect(element('.profile-form .form-error').textContent).toContain('Neplatný požadavek. PSČ má pět číslic.');
+      expect(element('.profile-form .form-error').textContent).toContain(
+        'Neplatný požadavek. PSČ má pět číslic.',
+      );
       expect(element<HTMLButtonElement>('.profile-save').disabled).toBe(false);
     });
 
@@ -158,9 +182,10 @@ describe('Given the donor data card in the overview', () => {
       await click('.profile-edit');
 
       await submit();
-      http
-        .expectOne('/api/donors/me')
-        .flush(problem('auth/unauthenticated', 'Nejste přihlášeni'), { status: 401, statusText: 'Unauthorized' });
+      http.expectOne('/api/donors/me').flush(problem('auth/unauthenticated', 'Nejste přihlášeni'), {
+        status: 401,
+        statusText: 'Unauthorized',
+      });
       await settle();
 
       expect(sessionEnded).toBe(1);
@@ -169,11 +194,23 @@ describe('Given the donor data card in the overview', () => {
 
   describe('when a company opens the overview', () => {
     beforeEach(() =>
-      render(sampleDonor({ type: 'COMPANY', name: 'Stavby Novák s.r.o.', companyIdentifier: '45274649' })),
+      render(
+        sampleDonor({
+          type: 'COMPANY',
+          name: 'Stavby Novák s.r.o.',
+          companyIdentifier: '45274649',
+        }),
+      ),
     );
 
     it('then it shows the company identification number, which cannot be edited', async () => {
-      expect(shown()).toEqual(['Stavby Novák s.r.o.', '45274649', 'Dlouhá 12, 400 01 Ústí nad Labem', 'jana@example.cz', 'čeština']);
+      expect(shown()).toEqual([
+        'Stavby Novák s.r.o.',
+        '45274649',
+        'Dlouhá 12, 400 01 Ústí nad Labem',
+        'jana@example.cz',
+        'čeština',
+      ]);
 
       await click('.profile-edit');
 

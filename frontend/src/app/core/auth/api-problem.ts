@@ -41,8 +41,12 @@ export function describeProblem(failure: unknown, generic: string): string {
   if (problem === null || problem.title === '') {
     return generic;
   }
-  const fieldMessages = problem.errors.map((error) => error.message).filter((message) => message !== '');
-  return [problem.title + '.', problem.detail, ...fieldMessages].filter((part) => part !== '').join(' ');
+  const fieldMessages = problem.errors
+    .map((error) => error.message)
+    .filter((message) => message !== '');
+  return [problem.title + '.', problem.detail, ...fieldMessages]
+    .filter((part) => part !== '')
+    .join(' ');
 }
 
 function errorOf(value: unknown): ApiProblemError {

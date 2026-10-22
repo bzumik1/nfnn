@@ -1,7 +1,16 @@
 /// <reference types="@angular/localize" />
 
 import { Location } from '@angular/common';
-import { afterNextRender, Component, DestroyRef, ElementRef, inject, Injector, signal, viewChild } from '@angular/core';
+import {
+  afterNextRender,
+  Component,
+  DestroyRef,
+  ElementRef,
+  inject,
+  Injector,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { FormsModule, NgForm } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { describeProblem, problemTypeEndsWith } from '../../../core/auth/api-problem';
@@ -98,7 +107,10 @@ export class PasswordReset {
     }
     this.loading.set(false);
     this.error.set(
-      describeProblem(failure, $localize`:@@donor.passwordReset.error.generic:Heslo se nepodařilo uložit. Zkuste to prosím znovu.`),
+      describeProblem(
+        failure,
+        $localize`:@@donor.passwordReset.error.generic:Heslo se nepodařilo uložit. Zkuste to prosím znovu.`,
+      ),
     );
   }
 

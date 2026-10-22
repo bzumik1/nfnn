@@ -85,7 +85,9 @@ describe('Given the contact form', () => {
 
     http.expectNone('/api/contact/messages');
     expect(element('form')).not.toBeNull();
-    expect(element('#contact-message-error').textContent).toContain('Napište nám prosím, s čím vám můžeme pomoct.');
+    expect(element('#contact-message-error').textContent).toContain(
+      'Napište nám prosím, s čím vám můžeme pomoct.',
+    );
     expect(element('#contact-message').getAttribute('aria-invalid')).toBe('true');
     expect(element('#contact-name-error')).toBeNull();
   });
@@ -98,14 +100,18 @@ describe('Given the contact form', () => {
     await submit();
 
     http.expectNone('/api/contact/messages');
-    expect(element('#contact-email-error').textContent).toContain('Zadejte e-mail ve tvaru jan@example.com.');
+    expect(element('#contact-email-error').textContent).toContain(
+      'Zadejte e-mail ve tvaru jan@example.com.',
+    );
   });
 
   it('when the server refuses with 429, then the form stays and explains the hourly limit', async () => {
     await fillInValidMessage();
 
     await submit();
-    http.expectOne('/api/contact/messages').flush(null, { status: 429, statusText: 'Too Many Requests' });
+    http
+      .expectOne('/api/contact/messages')
+      .flush(null, { status: 429, statusText: 'Too Many Requests' });
     fixture.detectChanges();
 
     expect(element('form')).not.toBeNull();
@@ -116,7 +122,9 @@ describe('Given the contact form', () => {
     await fillInValidMessage();
 
     await submit();
-    http.expectOne('/api/contact/messages').flush(null, { status: 500, statusText: 'Server Error' });
+    http
+      .expectOne('/api/contact/messages')
+      .flush(null, { status: 500, statusText: 'Server Error' });
     fixture.detectChanges();
 
     expect(element('.form-error').textContent).toContain('nepodařilo odeslat');

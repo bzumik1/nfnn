@@ -1,20 +1,41 @@
 <nav class="nav" [class.is-scrolled]="scrolled() || menuOpen()">
   <div class="nav-inner">
     <a class="brand" routerLink="/" fragment="home" (click)="closeMenu()">
-      <img src="/images/logo.svg" alt="Nová naděje – nadační fond" i18n-alt="@@layout.header.logoAlt" />
+      <img
+        src="/images/logo.svg"
+        alt="Nová naděje – nadační fond"
+        i18n-alt="@@layout.header.logoAlt"
+      />
     </a>
 
     <div class="desktop-nav">
       <a class="nav-link" routerLink="/" fragment="home" i18n="@@layout.header.nav.home">Domů</a>
       <a class="nav-link" routerLink="/" fragment="about" i18n="@@layout.header.nav.about">O nás</a>
-      <a class="nav-link" routerLink="/" fragment="projects" i18n="@@layout.header.nav.projects">Projekty</a>
-      <a class="nav-link" routerLink="/" fragment="news" i18n="@@layout.header.nav.news">Aktuality</a>
-      <a class="nav-link" routerLink="/" fragment="contact" i18n="@@layout.header.nav.contact">Kontakt</a>
-      <a class="nav-cta" routerLink="/" fragment="donate" i18n="@@layout.header.nav.donate">Finanční příspěvek</a>
+      <a class="nav-link" routerLink="/" fragment="projects" i18n="@@layout.header.nav.projects"
+        >Projekty</a
+      >
+      <a class="nav-link" routerLink="/" fragment="news" i18n="@@layout.header.nav.news"
+        >Aktuality</a
+      >
+      <a class="nav-link" routerLink="/" fragment="contact" i18n="@@layout.header.nav.contact"
+        >Kontakt</a
+      >
+      <a class="nav-cta" routerLink="/" fragment="donate" i18n="@@layout.header.nav.donate"
+        >Finanční příspěvek</a
+      >
       @if (auth.signedIn()) {
-        <a class="nav-login" routerLink="/donor/prehled" i18n="@@layout.header.nav.portal">Můj přehled</a>
+        <a class="nav-login" routerLink="/donor/prehled" i18n="@@layout.header.nav.portal"
+          >Můj přehled</a
+        >
       } @else {
-        <button type="button" class="nav-login" (click)="openLogin()" i18n="@@layout.header.nav.login">Přihlásit se</button>
+        <button
+          type="button"
+          class="nav-login"
+          (click)="openLogin()"
+          i18n="@@layout.header.nav.login"
+        >
+          Přihlásit se
+        </button>
       }
     </div>
 
@@ -37,20 +58,90 @@
 
 @if (menuOpen()) {
   <div id="mobile-menu" class="mobile-menu">
-    <a class="mobile-link" routerLink="/" fragment="home" (click)="closeMenu()" i18n="@@layout.header.nav.home">Domů</a>
-    <a class="mobile-link" routerLink="/" fragment="about" (click)="closeMenu()" i18n="@@layout.header.nav.about">O nás</a>
-    <a class="mobile-link" routerLink="/" fragment="projects" (click)="closeMenu()" i18n="@@layout.header.nav.projects">Projekty</a>
-    <a class="mobile-link" routerLink="/" fragment="news" (click)="closeMenu()" i18n="@@layout.header.nav.news">Aktuality</a>
-    <a class="mobile-link" routerLink="/" fragment="contact" (click)="closeMenu()" i18n="@@layout.header.nav.contact">Kontakt</a>
-    <a class="mobile-cta" routerLink="/" fragment="donate" (click)="closeMenu()" i18n="@@layout.header.nav.donate">Finanční příspěvek</a>
+    <a
+      class="mobile-link"
+      routerLink="/"
+      fragment="home"
+      (click)="closeMenu()"
+      i18n="@@layout.header.nav.home"
+      >Domů</a
+    >
+    <a
+      class="mobile-link"
+      routerLink="/"
+      fragment="about"
+      (click)="closeMenu()"
+      i18n="@@layout.header.nav.about"
+      >O nás</a
+    >
+    <a
+      class="mobile-link"
+      routerLink="/"
+      fragment="projects"
+      (click)="closeMenu()"
+      i18n="@@layout.header.nav.projects"
+      >Projekty</a
+    >
+    <a
+      class="mobile-link"
+      routerLink="/"
+      fragment="news"
+      (click)="closeMenu()"
+      i18n="@@layout.header.nav.news"
+      >Aktuality</a
+    >
+    <a
+      class="mobile-link"
+      routerLink="/"
+      fragment="contact"
+      (click)="closeMenu()"
+      i18n="@@layout.header.nav.contact"
+      >Kontakt</a
+    >
+    <a
+      class="mobile-cta"
+      routerLink="/"
+      fragment="donate"
+      (click)="closeMenu()"
+      i18n="@@layout.header.nav.donate"
+      >Finanční příspěvek</a
+    >
     @if (auth.signedIn()) {
       <a class="mobile-login" routerLink="/donor/prehled" (click)="closeMenu()">
-        <svg class="mobile-login-icon" aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4" /><path d="M4 21a8 8 0 0 1 16 0" /></svg>
+        <svg
+          class="mobile-login-icon"
+          aria-hidden="true"
+          width="18"
+          height="18"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <circle cx="12" cy="8" r="4" />
+          <path d="M4 21a8 8 0 0 1 16 0" />
+        </svg>
         <span i18n="@@layout.header.mobile.portal">Můj přehled</span>
       </a>
     } @else {
       <button type="button" class="mobile-login" (click)="openLogin()">
-        <svg class="mobile-login-icon" aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4" /><path d="M4 21a8 8 0 0 1 16 0" /></svg>
+        <svg
+          class="mobile-login-icon"
+          aria-hidden="true"
+          width="18"
+          height="18"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <circle cx="12" cy="8" r="4" />
+          <path d="M4 21a8 8 0 0 1 16 0" />
+        </svg>
         <span i18n="@@layout.header.mobile.login">Přihlásit se</span>
       </button>
     }
