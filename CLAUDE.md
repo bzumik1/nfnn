@@ -38,7 +38,7 @@ Read before building, update in the same PR: `docs/requirements.md` (client deci
 - ArchUnit enforces layering and context isolation. Never relax a rule or call across contexts; surface the conflict.
 - Schema only through Liquibase (`ddl-auto: validate`); never edit a checked-in changelog.
 - No comments in code; `record` for values, DTOs and config; constructor injection (Java) or `inject()` (Angular); no Lombok.
-- Czech copy carries i18n ids; identifiers, commits and PR titles are English and imperative.
+- Czech copy carries i18n ids; identifiers, commits and PR titles are English and imperative. Addresses a visitor sees (routes, section ids, links in e-mails) are Czech without diacritics (`/darce/prehled`, `/#prispet`); only `/api/...` stays English.
 - Every change is a branch and a PR to `main`; CI green before merge. Claude may merge its own green PR (Jakub, 2026-10-17). Deploy stays manual (`deploy-ci.md`).
 
 ## Done means
