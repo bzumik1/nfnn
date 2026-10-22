@@ -27,6 +27,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class MonthlyReportStepDefinitions {
 
     private static final LocalTime CHECK_TIME = LocalTime.of(7, 0);
+    private static final String SUBJECT_PREFIX = "Měsíční přehled";
 
     private final MonthlyReportService reports;
     private final RecordingMailSender mailSender;
@@ -79,14 +80,14 @@ public class MonthlyReportStepDefinitions {
 
     @Then("{int} monthly report e-mail(s) is/are sent to {string}")
     public void monthlyReportEmailsAreSentTo(int count, String recipient) {
-        List<MimeMessage> emails = mailSender.sent();
+        List<MimeMessage> emails = monthlyReports();
         assertThat(emails).hasSize(count);
         assertThat(emails).allSatisfy(email -> assertThat(recipientsOf(email)).containsExactly(recipient));
     }
 
     @Then("no monthly report e-mail is sent")
     public void noMonthlyReportEmailIsSent() {
-        assertThat(mailSender.sent()).isEmpty();
+        assertThat(monthlyReports()).isEmpty();
     }
 
     @Then("the monthly report e-mail comes from {string} named {string}")
@@ -98,7 +99,7 @@ public class MonthlyReportStepDefinitions {
 
     @Then("monthly report e-mail {int} has the subject {string}")
     public void monthlyReportEmailHasTheSubject(int number, String subject) throws MessagingException {
-        assertThat(MailContents.asReceived(mailSender.sent().get(number - 1)).getSubject()).isEqualTo(subject);
+        assertThat(MailContents.asReceived(monthlyReports().get(number - 1)).getSubject()).isEqualTo(subject);
     }
 
     @Then("both parts of the monthly report e-mail say:")
@@ -127,9 +128,21 @@ public class MonthlyReportStepDefinitions {
     }
 
     private MimeMessage lastEmail() {
-        List<MimeMessage> emails = mailSender.sent();
+        List<MimeMessage> emails = monthlyReports();
         assertThat(emails).withFailMessage("No monthly report e-mail was sent").isNotEmpty();
         return emails.getLast();
+    }
+
+    private List<MimeMessage> monthlyReports() {
+        return mailSender.sent().stream().filter(email -> subjectOf(email).startsWith(SUBJECT_PREFIX)).toList();
+    }
+
+    private static String subjectOf(MimeMessage email) {
+        try {
+            return MailContents.asReceived(email).getSubject();
+        } catch (MessagingException unreadable) {
+            throw new IllegalStateException("The e-mail's subject cannot be read", unreadable);
+        }
     }
 
     private static List<String> recipientsOf(MimeMessage email) {

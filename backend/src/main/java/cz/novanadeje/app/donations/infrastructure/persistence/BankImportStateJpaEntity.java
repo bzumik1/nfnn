@@ -42,6 +42,13 @@ public class BankImportStateJpaEntity {
     @Column(name = "last_failure_message", length = BankImportState.MAX_FAILURE_MESSAGE_LENGTH)
     private String lastFailureMessage;
 
+    @Column(name = "consecutive_failures", nullable = false)
+    private int consecutiveFailures;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "reported_outage", length = 32)
+    private ImportFailureKind reportedOutage;
+
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
@@ -57,6 +64,8 @@ public class BankImportStateJpaEntity {
         entity.lastSucceededAt = state.lastSucceededAt().orElse(null);
         entity.lastFailureKind = state.lastFailureKind().orElse(null);
         entity.lastFailureMessage = state.lastFailureMessage().orElse(null);
+        entity.consecutiveFailures = state.consecutiveFailures();
+        entity.reportedOutage = state.reportedOutage().orElse(null);
         entity.updatedAt = state.updatedAt();
         return entity;
     }
@@ -68,6 +77,8 @@ public class BankImportStateJpaEntity {
                 Optional.ofNullable(lastSucceededAt),
                 Optional.ofNullable(lastFailureKind),
                 Optional.ofNullable(lastFailureMessage),
+                consecutiveFailures,
+                Optional.ofNullable(reportedOutage),
                 updatedAt);
     }
 }
