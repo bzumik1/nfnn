@@ -250,6 +250,21 @@
   color: var(--color-text-muted);
 }
 
+.accounts-nudge {
+  margin-top: 14px;
+  max-width: 560px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--color-text-muted);
+}
+
+.account-hint strong,
+.accounts-nudge strong {
+  font-family: var(--font-mono);
+  color: var(--color-text);
+  white-space: nowrap;
+}
+
 .account-hint--warning {
   display: flex;
   align-items: flex-start;
@@ -351,6 +366,10 @@
     font-weight: 700;
     white-space: nowrap;
   }
+}
+
+.add-account-text + .add-account-text {
+  margin-top: 10px;
 }
 
 .add-account-payment {

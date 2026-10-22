@@ -9,16 +9,27 @@ const HELP_ITEMS = [
     'Musí to být český účet, ale nemusí být veden na vaše jméno. ' +
     'Když účet ověříte poprvé a předtím ho neověřil jiný dárce, přiřadíme vám i dřívější platby z něj, které přišly bez symbolu. ' +
     'Účet, přes který posílá peníze víc lidí (třeba sběrný účet), můžeme z párování vyloučit; z takového účtu pak přiřazujeme jen platby s variabilním symbolem.',
-  'S jiným symbolem Platbu s jiným variabilním symbolem, než je váš, vám nepřiřadíme, ani když přijde z vašeho ověřeného účtu. ' +
-    'Pokud nám posíláte dary trvalým příkazem se starším symbolem, nastavte v něm prosím váš variabilní symbol 9876543210. ' +
+  'S jiným symbolem Platbu se symbolem jiného dárce přiřadíme jemu, i když přijde z vašeho ověřeného účtu. ' +
+    'Platbu se starším symbolem, který nemá žádný registrovaný dárce, vám přiřadíme, jen když ho u účtu potvrdíte jako svůj (viz Starší symbol). ' +
+    'Pokud nám posíláte dary trvalým příkazem se starším symbolem, nejjistější je nastavit v něm váš variabilní symbol 9876543210. ' +
     'Platbu se symbolem 0 bereme jako platbu bez symbolu.',
+  'Starší symbol Když nám z účtu pošlete 1 Kč se zprávou „Ověření účtu“ (QR kód pod tlačítkem „Přidat účet“; běžný dar nestačí) ' +
+    'a z tohoto účtu k nám do té doby kromě plateb s vaším symbolem nebo bez symbolu chodily platby s jediným dalším symbolem, ' +
+    'který nemá žádný registrovaný dárce, zeptáme se vás u účtu, jestli jsou to vaše dary. ' +
+    'Neptáme se u sdíleného účtu, u účtu, ze kterého přiřazujeme jen platby s variabilním symbolem, ' +
+    'ani když podle jména v bance patří účet firmě a vy jste u nás jako osoba (nebo naopak). ' +
+    'Po odpovědi „Ano, jsou moje“ vám platby s tímto symbolem z tohoto účtu přiřazujeme stejně jako platby bez symbolu, dřívější i další; ' +
+    'po odpovědi „Ne, nejsou moje“ se už neptáme. ' +
+    'Odpověď nejde změnit; kdybyste se spletli, napište nám.',
   'Vypnutí párování Párování můžete u účtu vypnout tlačítkem „Vypnout párování“. ' +
-    'Platby bez symbolu, které z účtu přijdou ode dne po vypnutí, vám pak nepřiřadíme; dary přiřazené dříve zůstanou. ' +
+    'Platby bez symbolu ani platby se starším symbolem, který jste u účtu potvrdili, které z účtu přijdou ode dne po vypnutí, ' +
+    'vám pak nepřiřadíme; dary přiřazené dříve zůstanou. ' +
     'Párování znovu zapnete tlačítkem „Zapnout párování“. ' +
     'Účet pak čeká na platbu: pošlete z něj 1 Kč (nebo jakýkoli dar) s vaším variabilním symbolem. ' +
-    'Jakmile dorazí, přiřadíme vám z něj i platby bez symbolu ode dne zapnutí. ' +
+    'Jakmile dorazí, přiřadíme vám z něj zase platby bez symbolu i se starším potvrzeným symbolem ode dne zapnutí. ' +
     'U účtu, ze kterého přiřazujeme jen platby s variabilním symbolem, párování znovu zapnout nejde.',
-  'Sdílený účet Když stejný účet ověří i jiný dárce, označíme ho jako „Sdílený“ a platby bez variabilního symbolu z něj nepřiřadíme nikomu. ' +
+  'Sdílený účet Když stejný účet ověří i jiný dárce, označíme ho jako „Sdílený“ ' +
+    'a platby bez variabilního symbolu ani se starším potvrzeným symbolem z něj nepřiřadíme nikomu. ' +
     'Pokud z něj dary neposíláte vy, vypněte si u něj párování. ' +
     'Jinak z něj prosím posílejte vždy s vaším variabilním symbolem.',
 ];
@@ -72,7 +83,7 @@ describe('Given the help on how payments are paired', () => {
     expect((fixture.nativeElement as HTMLElement).hidden).toBe(false);
   });
 
-  it('when it is open, then the labelled region explains every rule with the donor\'s symbol', async () => {
+  it('when it is open, then the labelled region explains every rule, the older symbol included, with the donor\'s symbol', async () => {
     await open();
 
     expect(panel().hidden).toBe(false);
@@ -97,8 +108,9 @@ describe('Given the help on how payments are paired', () => {
         index === 0
           ? 'S vaším symbolem Platbu s vaším variabilním symbolem přiřadíme vám, ať přijde z jakéhokoli účtu.'
           : index === 2
-            ? 'S jiným symbolem Platbu s jiným variabilním symbolem, než je váš, vám nepřiřadíme, ani když přijde z vašeho ověřeného účtu. ' +
-              'Pokud nám posíláte dary trvalým příkazem se starším symbolem, nastavte v něm prosím váš variabilní symbol. ' +
+            ? 'S jiným symbolem Platbu se symbolem jiného dárce přiřadíme jemu, i když přijde z vašeho ověřeného účtu. ' +
+              'Platbu se starším symbolem, který nemá žádný registrovaný dárce, vám přiřadíme, jen když ho u účtu potvrdíte jako svůj (viz Starší symbol). ' +
+              'Pokud nám posíláte dary trvalým příkazem se starším symbolem, nejjistější je nastavit v něm váš variabilní symbol. ' +
               'Platbu se symbolem 0 bereme jako platbu bez symbolu.'
             : item,
       ),

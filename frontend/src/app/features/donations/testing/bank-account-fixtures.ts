@@ -1,4 +1,4 @@
-import { BankAccountItem } from '../bank-accounts-api';
+import { BankAccountItem, SymbolOffer } from '../bank-accounts-api';
 
 export function bankAccount(overrides: Partial<BankAccountItem> = {}): BankAccountItem {
   return {
@@ -14,6 +14,19 @@ export function bankAccount(overrides: Partial<BankAccountItem> = {}): BankAccou
     lastDonationOn: '2026-10-01',
     shared: false,
     pairingExcluded: false,
+    verificationPaymentOn: null,
+    symbolOffer: null,
+    confirmedSymbols: [],
+    ...overrides,
+  };
+}
+
+export function symbolOffer(overrides: Partial<SymbolOffer> = {}): SymbolOffer {
+  return {
+    variableSymbol: '6123456789',
+    paymentCount: 14,
+    firstMonth: '2025-01',
+    lastMonth: '2026-10',
     ...overrides,
   };
 }

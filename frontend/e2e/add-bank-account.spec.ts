@@ -14,6 +14,9 @@ const newAccount = {
   lastDonationOn: null,
   shared: false,
   pairingExcluded: false,
+  verificationPaymentOn: '2026-10-18',
+  symbolOffer: null,
+  confirmedSymbols: [],
 };
 
 test.describe('Given a signed-in donor adding a bank account', () => {
