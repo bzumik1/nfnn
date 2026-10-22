@@ -26,10 +26,8 @@
   color: var(--color-text);
   margin: 8px 0;
 
-  &:focus-visible {
-    outline: 3px solid var(--color-focus-ring);
-    outline-offset: 4px;
-    border-radius: var(--radius-sm);
+  &:focus {
+    outline: none;
   }
 }
 

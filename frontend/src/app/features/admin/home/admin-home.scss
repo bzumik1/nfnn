@@ -20,10 +20,8 @@
   color: var(--color-text);
   margin-bottom: 8px;
 
-  &:focus-visible {
-    outline: 3px solid var(--color-focus-ring);
-    outline-offset: 4px;
-    border-radius: var(--radius-sm);
+  &:focus {
+    outline: none;
   }
 }
 
