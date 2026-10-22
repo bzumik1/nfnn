@@ -53,7 +53,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 
 @Import(TestcontainersConfiguration.class)
-@SpringBootTest(properties = {"app.donations.fio.token=", "app.donations.report.cron=-", "app.contact.retention.cron=-"})
+@SpringBootTest(properties = {"app.donations.fio.token=", "app.donations.report.cron=-", "app.contact.retention.cron=-",
+        "app.donations.receipt.first-year=2025"})
 class DonationReceiptIssuerConcurrencyTest {
 
     private static final Year YEAR_2025 = Year.of(2025);

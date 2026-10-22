@@ -41,6 +41,7 @@ Web fondu, který představí fond a jeho pomoc dětem, usnadní darování a d�
 - 🔸 Podpis: jméno a funkce podepisujícího a naskenovaný podpis jako obrázek, který jde vyměnit bez úpravy kódu. Bez razítka (zákon formu nepředepisuje, razítko nemá právní váhu).
 - 🔸 Vystavené potvrzení se už nemění: první stažení ho vystaví s číslem a uloží, další stažení vrací tentýž soubor. Změní-li se potvrzované údaje (pozdě spárovaná platba toho roku, změna jména nebo adresy dárce), další stažení vystaví náhradní potvrzení s novým číslem, které uvádí, jaké potvrzení nahrazuje. Jazyk podle preferovaného jazyka dárce v době vystavení; anglické potvrzení je dvojjazyčné.
 - ✅ Za fond podepisuje Pavel Znamenáček, předseda správní rady (Jakub 18. 10. 2026). Jméno, funkce a sken podpisu jsou nastavení serveru (`RECEIPT_SIGNATORY_NAME`, `RECEIPT_SIGNATORY_ROLE`, `RECEIPT_SIGNATURE_IMAGE`, viz `deploy/README.md`); bez skenu je na potvrzení jen čára se jménem.
+- ✅ Potvrzení web vystavuje jen za dary přijaté od 1. 1. 2026 (Jakub 22. 10. 2026). Přehled dárce ukazuje i starší dary, jen u nich není tlačítko pro PDF, a roční potvrzení za dřívější roky stáhnout nejde. Rok je nastavení serveru (`RECEIPT_FIRST_YEAR`, výchozí 2026, viz `deploy/README.md`). ❓ Vystavil fond potvrzení za rok 2025 sám (otázka pro Pavla)? Kdyby je měl vystavit web, stačí nastavit 2025.
 
 ## 5. Příjem a párování darů
 

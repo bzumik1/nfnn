@@ -23,18 +23,21 @@ record DonationListResponse(List<DonationItemResponse> items, long totalAmountMi
         List<DonationItemResponse> items = list.items().stream()
                 .map(donation -> DonationItemResponse.from(donation, overview.receiptNumberOf(donation).map(ReceiptNumber::value).orElse(null),
                         purposeText.apply(donation.purpose()),
-                        overview.senderAccountOf(donation).map(SenderAccount::display).orElse(null)))
+                        overview.senderAccountOf(donation).map(SenderAccount::display).orElse(null),
+                        overview.receiptAvailable(donation)))
                 .toList();
         return new DonationListResponse(items, list.total().amountMinor(), list.total().currency(), list.count());
     }
 
     record DonationItemResponse(UUID id, String receiptNumber, LocalDate receivedAt, long amountMinor, Currency currency, String purpose,
-                                DonationStatus status, DonationSource source, PairingMethod pairedBy, String senderAccount) {
+                                DonationStatus status, DonationSource source, PairingMethod pairedBy, String senderAccount,
+                                boolean receiptAvailable) {
 
-        static DonationItemResponse from(Donation donation, String receiptNumber, String purpose, String senderAccount) {
+        static DonationItemResponse from(Donation donation, String receiptNumber, String purpose, String senderAccount,
+                                         boolean receiptAvailable) {
             return new DonationItemResponse(donation.id().value(), receiptNumber, donation.receivedOn(), donation.amount().amountMinor(),
                     donation.amount().currency(), purpose, donation.status(), donation.source(), donation.pairedBy().orElse(null),
-                    senderAccount);
+                    senderAccount, receiptAvailable);
         }
     }
 }

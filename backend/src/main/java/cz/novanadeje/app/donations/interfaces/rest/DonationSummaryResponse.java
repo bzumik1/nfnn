@@ -9,13 +9,13 @@ import java.time.LocalDate;
 import java.util.List;
 
 record DonationSummaryResponse(long totalAmountMinor, Currency currency, int count, LocalDate lastReceivedAt, List<YearTotalResponse> byYear,
-                               int yearlyReceiptsAvailableThrough) {
+                               int yearlyReceiptsAvailableThrough, int receiptsAvailableFrom) {
 
     static DonationSummaryResponse from(DonationSummaryView view) {
         DonationSummary summary = view.summary();
         return new DonationSummaryResponse(summary.total().amountMinor(), summary.total().currency(), summary.count(),
                 summary.lastReceivedOn().orElse(null), summary.byYear().stream().map(YearTotalResponse::from).toList(),
-                view.lastCompletedYear().getValue());
+                view.lastCompletedYear().getValue(), view.firstReceiptYear().getValue());
     }
 
     record YearTotalResponse(int year, int count, long totalAmountMinor) {

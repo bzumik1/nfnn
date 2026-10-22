@@ -18,6 +18,7 @@ import cz.novanadeje.app.donations.domain.donor.SenderAccountLink;
 import cz.novanadeje.app.donations.domain.donor.SenderAccountLinkId;
 import cz.novanadeje.app.donations.domain.donor.SenderAccountLinkStatus;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceiptRepository;
+import cz.novanadeje.app.donations.domain.receipt.FirstReceiptYear;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptNumber;
 import cz.novanadeje.app.shared.domain.DonorType;
 import cz.novanadeje.app.shared.domain.LocaleCode;
@@ -52,12 +53,13 @@ class DonorDonationsServiceTest {
 
     private static final Donation REFUNDED_2026 = refunded(LocalDate.of(2026, 2, 1), 30000);
     private static final ReceiptNumber FIRST_RECEIPT = new ReceiptNumber("2026-000001");
+    private static final FirstReceiptYear FROM_2026 = new FirstReceiptYear(Year.of(2026));
 
     private final DonationRepository donations = mock(DonationRepository.class);
     private final DonationReceiptRepository receipts = mock(DonationReceiptRepository.class);
     private final DonorRecordRepository donorRecords = mock(DonorRecordRepository.class);
     private final DonorDonationsService service = new DonorDonationsService(donations, receipts, donorRecords,
-            Clock.fixed(Instant.parse("2026-10-17T11:00:00Z"), ZoneOffset.UTC));
+            Clock.fixed(Instant.parse("2026-10-17T11:00:00Z"), ZoneOffset.UTC), FROM_2026);
 
     @Test
     @DisplayName("Given a donor with donations, when listed without a year, then every donation comes in the repository's order with the total")
@@ -138,6 +140,40 @@ class DonorDonationsServiceTest {
     }
 
     @Test
+    @DisplayName("Given receipts from 2026, when listed, then a received donation from 2026 has a receipt available and one from 2025 or a refunded one has none")
+    void should_make_receipt_available_from_first_receipt_year_when_listed_given_donations_around_it() {
+        Donation newYearsEve = received(LocalDate.of(2025, 12, 31), 20000);
+        Donation newYearsDay = received(LocalDate.of(2026, 1, 1), 20000);
+        when(donations.findByDonorNewestFirst(JANA)).thenReturn(List.of(REFUNDED_2026, JANUARY_2026, newYearsDay, newYearsEve, DECEMBER_2025));
+
+        DonationOverview overview = service.listDonations(JANA, Optional.empty());
+
+        assertThat(overview.receiptAvailable(JANUARY_2026)).isTrue();
+        assertThat(overview.receiptAvailable(newYearsDay)).isTrue();
+        assertThat(overview.receiptAvailable(newYearsEve)).isFalse();
+        assertThat(overview.receiptAvailable(DECEMBER_2025)).isFalse();
+        assertThat(overview.receiptAvailable(REFUNDED_2026)).isFalse();
+    }
+
+    @Test
+    @DisplayName("Given receipts from 2025, when listed, then a received donation from 2025 has a receipt available")
+    void should_make_receipt_available_when_listed_given_earlier_first_receipt_year() {
+        DonorDonationsService from2025 = new DonorDonationsService(donations, receipts, donorRecords,
+                Clock.fixed(Instant.parse("2026-10-17T11:00:00Z"), ZoneOffset.UTC), new FirstReceiptYear(Year.of(2025)));
+        when(donations.findByDonorNewestFirst(JANA)).thenReturn(List.of(DECEMBER_2025));
+
+        assertThat(from2025.listDonations(JANA, Optional.empty()).receiptAvailable(DECEMBER_2025)).isTrue();
+    }
+
+    @Test
+    @DisplayName("Given receipts from 2026, when summarized, then the summary makes receipts available from 2026")
+    void should_name_first_receipt_year_when_summarized_given_receipts_from_2026() {
+        when(donations.findByDonorNewestFirst(JANA)).thenReturn(List.of(DECEMBER_2025));
+
+        assertThat(service.summarizeDonations(JANA).firstReceiptYear()).isEqualTo(Year.of(2026));
+    }
+
+    @Test
     @DisplayName("Given today is in 2026 in Prague, when summarized, then yearly receipts are available through 2025")
     void should_name_last_completed_year_when_summarized_given_clock_in_2026() {
         when(donations.findByDonorNewestFirst(JANA)).thenReturn(List.of());
@@ -149,7 +185,7 @@ class DonorDonationsServiceTest {
     @DisplayName("Given 23:30 UTC on New Year's Eve, when summarized, then the closing year already counts as completed in Prague")
     void should_count_closing_year_as_completed_when_summarized_given_prague_new_year() {
         DonorDonationsService atNewYear = new DonorDonationsService(donations, receipts, donorRecords,
-                Clock.fixed(Instant.parse("2026-12-31T23:30:00Z"), ZoneOffset.UTC));
+                Clock.fixed(Instant.parse("2026-12-31T23:30:00Z"), ZoneOffset.UTC), FROM_2026);
         when(donations.findByDonorNewestFirst(JANA)).thenReturn(List.of());
 
         assertThat(atNewYear.summarizeDonations(JANA).lastCompletedYear()).isEqualTo(Year.of(2026));

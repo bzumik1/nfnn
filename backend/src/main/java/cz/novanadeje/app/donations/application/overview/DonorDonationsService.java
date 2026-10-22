@@ -8,6 +8,7 @@ import cz.novanadeje.app.donations.domain.donor.DonorRecordRepository;
 import cz.novanadeje.app.donations.domain.donor.SenderAccountLink;
 import cz.novanadeje.app.donations.domain.donor.DonorReference;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceiptRepository;
+import cz.novanadeje.app.donations.domain.receipt.FirstReceiptYear;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptCalendar;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,13 +27,15 @@ public class DonorDonationsService {
     private final DonationReceiptRepository receipts;
     private final DonorRecordRepository donorRecords;
     private final Clock clock;
+    private final FirstReceiptYear firstYear;
 
     public DonorDonationsService(DonationRepository donations, DonationReceiptRepository receipts, DonorRecordRepository donorRecords,
-                                 Clock clock) {
+                                 Clock clock, FirstReceiptYear firstYear) {
         this.donations = donations;
         this.receipts = receipts;
         this.donorRecords = donorRecords;
         this.clock = clock;
+        this.firstYear = firstYear;
     }
 
     public DonationOverview listDonations(DonorReference donor, Optional<Year> year) {
@@ -41,11 +44,11 @@ public class DonorDonationsService {
         return new DonationOverview(listed, receipts.findActiveSingleNumbersFor(donor), donorRecords.findById(donor)
                 .map(record -> record.senderAccountLinks().stream()
                         .collect(Collectors.toMap(SenderAccountLink::id, SenderAccountLink::account)))
-                .orElseGet(Map::of));
+                .orElseGet(Map::of), firstYear);
     }
 
     public DonationSummaryView summarizeDonations(DonorReference donor) {
         DonationSummary summary = DonationSummary.of(donations.findByDonorNewestFirst(donor));
-        return new DonationSummaryView(summary, ReceiptCalendar.lastCompleted(FoundationCalendar.today(clock)));
+        return new DonationSummaryView(summary, ReceiptCalendar.lastCompleted(FoundationCalendar.today(clock)), firstYear.year());
     }
 }
