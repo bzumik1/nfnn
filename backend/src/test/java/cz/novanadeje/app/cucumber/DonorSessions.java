@@ -39,22 +39,23 @@ public class DonorSessions {
         api.authorize(accessToken);
     }
 
+    public void signInAgain(String alias) {
+        ScenarioDonors.Credentials credentials = scenarioDonors.credentialsOf(alias);
+        api.forgetCredentials();
+        ResponseEntity<String> response = api.post(LOGIN_PATH, Map.of("email", credentials.email(), "password", credentials.password()));
+        assertThat(response.getStatusCode().value()).withFailMessage("Signing in again answered %s", response.getBody()).isEqualTo(200);
+        String renewed = api.lastResponseJson().get("accessToken").asString();
+        scenarioDonors.rememberAccessToken(alias, renewed);
+        api.authorize(renewed);
+    }
+
     private String validAccessTokenOf(String alias) {
         String accessToken = scenarioDonors.accessTokenOf(alias);
         if (expiresAt(accessToken).isAfter(clock.instant().plus(SAFETY_MARGIN))) {
             return accessToken;
         }
-        String renewed = signInAgain(alias);
-        scenarioDonors.rememberAccessToken(alias, renewed);
-        return renewed;
-    }
-
-    private String signInAgain(String alias) {
-        ScenarioDonors.Credentials credentials = scenarioDonors.credentialsOf(alias);
-        api.forgetCredentials();
-        ResponseEntity<String> response = api.post(LOGIN_PATH, Map.of("email", credentials.email(), "password", credentials.password()));
-        assertThat(response.getStatusCode().value()).withFailMessage("Signing in again answered %s", response.getBody()).isEqualTo(200);
-        return api.lastResponseJson().get("accessToken").asString();
+        signInAgain(alias);
+        return scenarioDonors.accessTokenOf(alias);
     }
 
     private Instant expiresAt(String accessToken) {

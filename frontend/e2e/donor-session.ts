@@ -13,12 +13,14 @@ export const donor = {
   registeredAt: '2026-10-17T10:00:00Z',
 };
 
-export function session(status: number) {
+export const administrator = { ...donor, roles: ['DONOR', 'ADMIN'] };
+
+export function session(status: number, user: typeof donor = donor) {
   return {
     status,
     contentType: 'application/json',
     body: JSON.stringify({
-      user: donor,
+      user,
       accessToken: 'token-1',
       accessTokenExpiresAt: '2026-10-17T10:15:00Z',
     }),
@@ -165,8 +167,8 @@ export async function openSignInDialog(page: Page): Promise<void> {
   await expect(page.getByRole('dialog')).toBeVisible();
 }
 
-export async function signIn(page: Page): Promise<void> {
-  await page.route('**/api/donors/auth/login', (route) => route.fulfill(session(200)));
+export async function signIn(page: Page, user: typeof donor = donor): Promise<void> {
+  await page.route('**/api/donors/auth/login', (route) => route.fulfill(session(200, user)));
   await openSignInDialog(page);
   await page.locator('#login-email').fill('jana@example.cz');
   await page.locator('#login-password').fill('correct horse battery');

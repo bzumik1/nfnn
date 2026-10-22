@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { AuthStore } from '../../../../core/auth/auth-store';
 
@@ -13,7 +13,11 @@ export class DashboardTopBar {
   private readonly router = inject(Router);
   private readonly auth = inject(AuthStore);
 
+  readonly area = input<'donor' | 'admin'>('donor');
+
   protected readonly donor = this.auth.donor;
+  protected readonly isAdmin = this.auth.isAdmin;
+  protected readonly switching = computed(() => this.area() === 'admin' || this.isAdmin());
   protected readonly signingOut = signal(false);
 
   protected logout(): void {

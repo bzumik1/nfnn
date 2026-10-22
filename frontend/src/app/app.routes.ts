@@ -1,4 +1,5 @@
 import { Routes } from '@angular/router';
+import { adminGuard } from './core/auth/admin-guard';
 import { donorGuard } from './core/auth/donor-guard';
 
 export const routes: Routes = [
@@ -7,6 +8,12 @@ export const routes: Routes = [
     canActivate: [donorGuard],
     loadComponent: () => import('./layout/donor-shell/donor-shell').then((m) => m.DonorShell),
     loadChildren: () => import('./features/donors/donors.routes').then((m) => m.donorsRoutes),
+  },
+  {
+    path: 'sprava',
+    canActivate: [adminGuard],
+    loadComponent: () => import('./layout/donor-shell/donor-shell').then((m) => m.DonorShell),
+    loadChildren: () => import('./features/admin/admin.routes').then((m) => m.adminRoutes),
   },
   {
     path: '',

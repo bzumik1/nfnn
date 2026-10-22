@@ -65,6 +65,7 @@ Web fondu, který představí fond a jeho pomoc dětem, usnadní darování a d�
 - ✅ Zatím na nfnn.znamenacek.duckdns.org (ZimaOS, Nginx Proxy Manager), až bude web hotový, přejde na vlastní doménu **nfnn.cz** (zaregistrovaná 18. 10. 2026 u WEDOS, držitel fond).
 - ✅ E-mail fondu `info@nfnn.cz` (příjem funguje od 18. 10. 2026): příchozí pošta se přeposílá přes Cloudflare Email Routing, web odesílá přes Brevo.
 - ✅ Fond dostává každý měsíc e-mailem přehled za minulý měsíc (dárci, dary, nespárované platby, stav importu z banky) na `REPORT_RECIPIENT`, výchozí `info@nfnn.cz`. Zároveň tím Brevo neshodí SMTP klíč po 90 dnech bez odeslaného e-mailu. Správa přehledu přijde s administrací.
+- ✅ Základ administrace (Jakub 22. 10. 2026): správce je dárcovský účet s rolí `ADMIN`, kterou mu dá Jakub SQL podle `deploy/README.md` (žádná registrace správce přes web); správa je na `/sprava` (odkaz „Správa“ v hlavičce přehledu vidí jen správce) a zatím ukazuje stav stahování plateb z banky; každý zásah správce se od prvního zápisu ukládá do tabulky `admin_action` (kdo, kdy, co). Správa je dostupná z internetu a správce se bude přihlašovat s druhým faktorem (TOTP, rozhodnuto 22. 10. 2026, přijde v navazující změně).
 - 🔸 Angular + Spring Boot + PostgreSQL podle repa `bzumik1/nfnn`. Čeština; angličtina připravená na později.
 - 🔸 Zprávy z kontaktního formuláře web smaže ze své databáze rok po odeslání (každý den ve 3:30). Kopii ve schránce fondu web smazat neumí; zásady slibují, že ji fond drží jen do vyřízení dotazu.
 - 🔸 Zásady ochrany osobních údajů popisují, co web skutečně dělá: párování podle VS i podle prokázaného účtu, uložené údaje z výpisu (i konstantní a specifický symbol a zprávu pro příjemce), IP adresy v limitech a v logu reverzní proxy a webového serveru, Brevo (měří otevření a kliky), Cloudflare a Gmail včetně předání do USA a zálohy. Platí od 18. 10. 2026 a web běží na vlastním serveru fondu (obojí potvrdil Jakub 18. 10. 2026). ❓ Zbývá zjistit, jak dlouho drží Nginx Proxy Manager své logy; zásady zatím říkají „do jejich automatického smazání“.
@@ -73,7 +74,7 @@ Web fondu, který představí fond a jeho pomoc dětem, usnadní darování a d�
 
 ## 7. Později, mimo první verzi
 
-- Administrace pro správce (aktuality, projekty, nespárované platby, nastavení měsíčního přehledu: komu chodí, kdy a co obsahuje).
+- Administrace pro správce (aktuality, projekty, nespárované platby, nastavení měsíčního přehledu: komu chodí, kdy a co obsahuje). Základ (role, `/sprava`, audit, stav importu) je hotový, viz §6; části přibývají po jedné.
 - Přístup Clauda k logům na serveru a MCP server pro NFNN: nejdřív čtení (logy, stav importu, počty darů) z chatu na claude.ai, později zápis jako náhrada části administrace. Rozbor a pořadí jsou v plánu úkolů (úkoly 10 a 11).
 - Posílání potvrzení e-mailem.
 - Smazání účtu dárcem.

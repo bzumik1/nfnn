@@ -1,6 +1,13 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, Page, test } from '@playwright/test';
-import { bankAccountItem, mockDonorApi, openSignInDialog, problem, signIn } from './donor-session';
+import {
+  administrator,
+  bankAccountItem,
+  mockDonorApi,
+  openSignInDialog,
+  problem,
+  signIn,
+} from './donor-session';
 
 const WCAG_AA = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 
@@ -204,6 +211,32 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
       'Přiřadili jsme vám 14 plateb s VS 6123456789 z účtu 19-2000145399/0800.',
     );
     await expect(question).toHaveCount(0);
+
+    expect(await violations(page)).toEqual([]);
+  });
+
+  test('when an administrator opens the administration, then nothing on it breaks the rules', async ({
+    page,
+  }) => {
+    await page.route(
+      (url) => url.pathname === '/api/admin/donations/import-state',
+      (route) =>
+        route.fulfill({
+          json: {
+            coveredFrom: '2026-07-20',
+            coveredTo: '2026-10-17',
+            lastAttemptedAt: '2026-10-18T09:00:00Z',
+            lastSucceededAt: '2026-10-17T10:00:00Z',
+            lastFailure: { kind: 'TRANSPORT', message: null, attemptedAt: '2026-10-18T09:00:00Z' },
+            consecutiveFailures: 3,
+            reportedOutage: 'TRANSPORT',
+          },
+        }),
+    );
+    await signIn(page, administrator);
+    await page.getByRole('link', { name: 'Správa' }).click();
+    await expect(page.getByRole('heading', { level: 1, name: 'Správa' })).toBeFocused();
+    await expect(page.locator('.admin-outage')).toBeVisible();
 
     expect(await violations(page)).toEqual([]);
   });

@@ -37,6 +37,7 @@
 }
 
 .topbar-home,
+.topbar-switch,
 .topbar-logout {
   display: inline-flex;
   align-items: center;
@@ -53,7 +54,8 @@
     border-color 0.15s;
 }
 
-.topbar-home {
+.topbar-home,
+.topbar-switch {
   background: var(--color-accent-bg);
   color: var(--color-accent);
   border: 1px solid transparent;
@@ -121,8 +123,13 @@
   }
 
   .topbar-home,
+  .topbar-switch,
   .topbar-logout {
     padding: 8px 12px;
+  }
+
+  .topbar--switching .topbar-home {
+    display: none;
   }
 }
 

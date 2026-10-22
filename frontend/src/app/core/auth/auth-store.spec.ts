@@ -3,7 +3,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { TestBed } from '@angular/core/testing';
 import { AuthStore, SESSION_HINT_KEY } from './auth-store';
 import { Donor } from './donor';
-import { authResponse, problem } from './testing/donor-fixtures';
+import { authResponse, problem, sampleDonor } from './testing/donor-fixtures';
 
 describe('Given the auth store', () => {
   let store: AuthStore;
@@ -24,6 +24,19 @@ describe('Given the auth store', () => {
     store.login('jana@example.cz', 'correct horse battery').subscribe();
     http.expectOne('/api/donors/auth/login').flush(authResponse(token));
   }
+
+  it('when a donor with the ADMIN role signs in, then the store says so, and not for a plain donor', () => {
+    expect(store.isAdmin()).toBe(false);
+    signIn();
+    expect(store.isAdmin()).toBe(false);
+
+    store.login('jana@example.cz', 'correct horse battery').subscribe();
+    http
+      .expectOne('/api/donors/auth/login')
+      .flush(authResponse('token-2', sampleDonor({ roles: ['DONOR', 'ADMIN'] })));
+
+    expect(store.isAdmin()).toBe(true);
+  });
 
   it('when a donor signs in, then the profile and the access token are kept and a session hint is remembered', () => {
     let signedIn: Donor | undefined;
