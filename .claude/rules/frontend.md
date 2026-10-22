@@ -1,0 +1,35 @@
+# Frontend rules: Angular, UI, UX
+
+## Angular 21 (standalone, zoneless, signals)
+- Components: flat names `hero.ts/.html/.scss`, class `Hero` (no `Component` suffix), selector `app-*`, no `standalone: true` (default), no NgModules; `changeDetection: ChangeDetectionStrategy.OnPush` on every component (lint enforces it; test hosts in specs are exempt), so a template may read only signals, inputs and what its own events change: state that arrives otherwise (the forms API, a subscription) goes through a signal, as `appFormControl` turns the control's events into `showsError()` and `errorKey()`.
+- State in `signal`/`computed`/`linkedSignal`; `input()`, `output()`, `model()` instead of decorators; `inject()` instead of constructor parameters (a constructor only for effects or `takeUntilDestroyed`); `host: {}` metadata instead of `@HostListener`/`@HostBinding` in new code; no `any`; strict TS and templates stay on.
+- Templates: `@if/@for/@switch/@defer`; `[class.x]`/`[style.x]` (no `ngClass`/`ngStyle`); import only the directives and pipes used (never `CommonModule`); logic in the class.
+- Forms: template-driven `ngModel` inside `<app-form-field label hint [messages]>` with `appFormControl` (needs `id` + `ngModel`) and `form[appFocusFirstInvalid]`; the field shows its own first error after touch or submit (`aria-invalid`, `aria-describedby`); a form-level alert only for what no field owns (passwords differ, an API refusal). Signal Forms only after a deliberate upgrade.
+- HTTP: one `providedIn: 'root'` service per feature (`features/<context>/<name>-api.ts`), relative `/api/...` only, DTO interfaces mirroring `docs/api-contract.md`; every call passes `authInterceptor` (Bearer header, problem+json Blob parsing, one refresh on `auth/expired-token`); errors become one line through `describeProblem` (`core/auth/api-problem.ts`).
+- Routing: lazy per feature (`<feature>.routes.ts`, `loadChildren`/`loadComponent`), `title` via `$localize`, `/donor/**` behind `donorGuard`, public shell with header and footer, unknown paths show `not-found` (nginx answers 200 for every path).
+- Formatting is Prettier's (`.prettierrc`: 100 columns, single quotes, Angular parser for templates): run `npm run format` before committing; CI fails on a file it would change.
+- Lint is ESLint with angular-eslint (`eslint.config.js`: recommended TypeScript and template rules, template accessibility, `prefer-inject`, `prefer-signals`, `prefer-output-readonly`, `prefer-control-flow`, `prefer-self-closing-tags`): run `npm run lint` before committing; CI fails on a finding. Two scoped exceptions, both for the native `<dialog>`: `autofocus` is allowed in `*dialog*.html` because the dialog moves focus to it on open, and `shared/ui/dialog/dialog.html` closes on a backdrop click without key events because Esc closes it natively.
+- Folders mirror backend contexts (`features/{content,donors,donations,contact}`); singletons in `core/`; a behaviour-only piece used twice moves to `shared/ui/` (`form-field`, `dialog`, `copy-button`, `password-reveal`).
+- The Content-Security-Policy (`nginx-security-headers.conf`, rule in `security.md`) allows no inline script and no third-party resource: fonts, images and scripts are served from `public/` or the build, QR images come as `data:` URLs, and nothing is loaded from a CDN.
+- Sessions: access token in memory (`AuthStore`), refresh cookie set by the browser, `localStorage` flag `nfnn.donor-session` only says a session may exist; nothing else adds auth headers.
+
+## i18n
+- Czech source: every visible string has `i18n="@@<context>.<area>.<key>"` (attributes `i18n-alt`, `i18n-aria-label`, `i18n-placeholder`; TS text with `$localize\`:@@id:text\``). Ids are stable, never renamed. English target stays empty until translation starts.
+- Czech copy: no vocative or declension of names (show the name alone); sentence case; the donate action is "Přispět"; amounts via `formatCrowns` (`1 000 Kč`, `&nbsp;` before Kč); dates `15. 03. 2026`; bank times in Prague time; backend titles and details are shown as they come (already localized).
+
+## UI (the look)
+- The look lives only in `src/styles/themes/_nova-nadeje.scss`: tokens on `:root` for colour by role (`--color-accent*`, `-text*`, `-surface*`, `-border*`, `-focus-ring`, `-danger*`, `-warning*`, `-success*`, `-on-*`), type (`--font-serif` Playfair, `--font-sans` Inter, `--font-mono`, `--numeric-figures`), shape (`--radius-*`), depth (`--shadow-*`, one per role), layout (`--content-max`, `--header-height`). Components only reference tokens; `npm run lint:styles` (in CI) rejects raw colours, fonts, radii and shadows elsewhere. A missing value is a new token, not an inline value.
+- Translucency with `color-mix()`, never `rgba()`. Fonts self-hosted variable WOFF2; nothing loads from another origin.
+- Breakpoints: phone ≤ 480 px (dialogs full-screen), tables as cards ≤ 640 px (`data-label` per cell), desktop ≥ 1100 px; `clamp()` for fluid sizes; `prefers-reduced-motion` stops animations.
+- Images: WebP in `public/images/`, sized variants with `srcset`/`sizes`, `width`/`height`, `loading="lazy"` written before `src` below the fold, `fetchpriority="high"` for the hero, decorative photos `alt=""`; icons inline SVG `aria-hidden="true" stroke="currentColor"`; no emoji in UI text.
+- Budgets in `angular.json`: initial bundle warns at 500 kB, component styles at 4 kB.
+
+## UX (how it behaves)
+- Every action shows loading, success (`role="status"` line) and failure (`role="alert"` line with the backend title/detail or a Czech sentence saying what to do next); a running request disables its button and names what happens ("Připravujeme PDF…").
+- Forms: visible labels, hint before error, error at the field in its own words, focus to the first invalid field, placeholders never the only label, every password field inside `<app-password-reveal>`.
+- Dialogs through `<app-dialog>` on native `<dialog>` (`showModal()`: focus trapped, Esc, backdrop and × dismiss, focus returns to the opener); shared open state in a service (`LoginDialogService.open(mode)`).
+- WCAG 2.2 AA: visible focus ring on every control; disclosure buttons with `aria-expanded`/`aria-controls`; live regions `role="status"` or `role="alert"`; headings in order; after a panel switch focus its `h1` (`tabindex="-1"`); the skip link stays top-left (Jakub, 2026-10-18); axe must pass (`e2e/accessibility.spec.ts`).
+- Session loss never leaves a dead page: the donor goes home with the sign-in dialog; an expired token refreshes silently once.
+- Money and bank details get copy buttons; on phones the bank details precede the QR code; delays are explained ("Údaje z banky k …", hourly import).
+- The site never claims what the system does not do; placeholder content is named as such in the PR until Jakub supplies real content.
+- Before handing a visual change over: screenshots at 390 and 1280 px of the states you changed (skill `visual-check`), audited by you for cut-offs, overlaps and contrast; before/after attached to the PR.

@@ -27,11 +27,16 @@ describe('Given the auth store', () => {
 
   it('when a donor signs in, then the profile and the access token are kept and a session hint is remembered', () => {
     let signedIn: Donor | undefined;
-    store.login('jana@example.cz', 'correct horse battery').subscribe((donor) => (signedIn = donor));
+    store
+      .login('jana@example.cz', 'correct horse battery')
+      .subscribe((donor) => (signedIn = donor));
 
     const request = http.expectOne('/api/donors/auth/login');
     expect(request.request.method).toBe('POST');
-    expect(request.request.body).toEqual({ email: 'jana@example.cz', password: 'correct horse battery' });
+    expect(request.request.body).toEqual({
+      email: 'jana@example.cz',
+      password: 'correct horse battery',
+    });
     request.flush(authResponse('token-1'));
 
     expect(signedIn?.name).toBe('Jana Nováková');
@@ -112,7 +117,9 @@ describe('Given the auth store', () => {
     signIn();
 
     store.logout().subscribe();
-    http.expectOne('/api/donors/auth/logout').flush(null, { status: 500, statusText: 'Server Error' });
+    http
+      .expectOne('/api/donors/auth/logout')
+      .flush(null, { status: 500, statusText: 'Server Error' });
 
     expect(store.donor()).toBeNull();
     expect(store.currentAccessToken()).toBeNull();

@@ -1,7 +1,11 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-import { BankAccountListResponse, BankAccountsApi, SymbolClaimConfirmation } from './bank-accounts-api';
+import {
+  BankAccountListResponse,
+  BankAccountsApi,
+  SymbolClaimConfirmation,
+} from './bank-accounts-api';
 import { bankAccount } from './testing/bank-account-fixtures';
 
 describe('Given the bank accounts API', () => {
@@ -34,7 +38,9 @@ describe('Given the bank accounts API', () => {
     let done = false;
     api.disconnect('0192f0c4-0000-7000-8000-000000000001').subscribe(() => (done = true));
 
-    const request = http.expectOne('/api/donations/me/bank-accounts/0192f0c4-0000-7000-8000-000000000001/disconnect');
+    const request = http.expectOne(
+      '/api/donations/me/bank-accounts/0192f0c4-0000-7000-8000-000000000001/disconnect',
+    );
     expect(request.request.method).toBe('POST');
     expect(request.request.body).toBeNull();
     request.flush(null, { status: 204, statusText: 'No Content' });
@@ -55,7 +61,10 @@ describe('Given the bank accounts API', () => {
   });
 
   it('when an older symbol is confirmed, then it posts the symbol to that account and maps the answer', () => {
-    const confirmation: SymbolClaimConfirmation = { pairedCount: 14, changedYearlyReceipts: [2026] };
+    const confirmation: SymbolClaimConfirmation = {
+      pairedCount: 14,
+      changedYearlyReceipts: [2026],
+    };
     let received: SymbolClaimConfirmation | undefined;
     api.confirmSymbol('a/b', '6123456789').subscribe((response) => (received = response));
 
@@ -69,9 +78,13 @@ describe('Given the bank accounts API', () => {
 
   it('when an older symbol is declined, then it posts the symbol to that account and completes on 204', () => {
     let done = false;
-    api.declineSymbol('0192f0c4-0000-7000-8000-000000000001', '6123456789').subscribe(() => (done = true));
+    api
+      .declineSymbol('0192f0c4-0000-7000-8000-000000000001', '6123456789')
+      .subscribe(() => (done = true));
 
-    const request = http.expectOne('/api/donations/me/bank-accounts/0192f0c4-0000-7000-8000-000000000001/symbol-claim/decline');
+    const request = http.expectOne(
+      '/api/donations/me/bank-accounts/0192f0c4-0000-7000-8000-000000000001/symbol-claim/decline',
+    );
     expect(request.request.method).toBe('POST');
     expect(request.request.body).toEqual({ variableSymbol: '6123456789' });
     request.flush(null, { status: 204, statusText: 'No Content' });

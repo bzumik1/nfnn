@@ -57,10 +57,16 @@ export class BankAccountsApi {
   }
 
   confirmSymbol(id: string, variableSymbol: string): Observable<SymbolClaimConfirmation> {
-    return this.http.post<SymbolClaimConfirmation>(`${BANK_ACCOUNTS_URL}/${encodeURIComponent(id)}/symbol-claim/confirm`, { variableSymbol });
+    return this.http.post<SymbolClaimConfirmation>(
+      `${BANK_ACCOUNTS_URL}/${encodeURIComponent(id)}/symbol-claim/confirm`,
+      { variableSymbol },
+    );
   }
 
   declineSymbol(id: string, variableSymbol: string): Observable<void> {
-    return this.http.post<void>(`${BANK_ACCOUNTS_URL}/${encodeURIComponent(id)}/symbol-claim/decline`, { variableSymbol });
+    return this.http.post<void>(
+      `${BANK_ACCOUNTS_URL}/${encodeURIComponent(id)}/symbol-claim/decline`,
+      { variableSymbol },
+    );
   }
 }

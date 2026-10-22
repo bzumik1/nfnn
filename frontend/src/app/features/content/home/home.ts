@@ -1,4 +1,4 @@
-import { Component, computed, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { Hero } from './sections/hero/hero';
 import { StatsBar } from './sections/stats-bar/stats-bar';
@@ -13,6 +13,7 @@ import { ContactForm } from '../../contact/contact-form/contact-form';
   imports: [Hero, StatsBar, About, Projects, DonateCta, News, ContactForm],
   templateUrl: './home.html',
   styleUrl: './home.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Home {
   private readonly auth = inject(AuthStore);

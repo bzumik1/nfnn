@@ -17,7 +17,12 @@ async function askAboutAnOlderSymbol(page: Page): Promise<void> {
               verificationPaymentOn: '2026-10-16',
               symbolOffer: confirmed
                 ? null
-                : { variableSymbol: '6123456789', paymentCount: 14, firstMonth: '2025-01', lastMonth: '2026-10' },
+                : {
+                    variableSymbol: '6123456789',
+                    paymentCount: 14,
+                    firstMonth: '2025-01',
+                    lastMonth: '2026-10',
+                  },
               confirmedSymbols: confirmed ? ['6123456789'] : [],
             }),
           ],
@@ -38,7 +43,11 @@ async function violations(page: Page): Promise<string[]> {
   await page.waitForFunction(() =>
     document
       .getAnimations()
-      .every((animation) => animation.playState !== 'running' || animation.effect?.getTiming().iterations === Infinity),
+      .every(
+        (animation) =>
+          animation.playState !== 'running' ||
+          animation.effect?.getTiming().iterations === Infinity,
+      ),
   );
   const results = await new AxeBuilder({ page }).withTags(WCAG_AA).analyze();
   return results.violations.flatMap((violation) =>
@@ -58,13 +67,17 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     expect(await violations(page)).toEqual([]);
   });
 
-  test('when they open the privacy policy, then nothing on it breaks the rules', async ({ page }) => {
+  test('when they open the privacy policy, then nothing on it breaks the rules', async ({
+    page,
+  }) => {
     await page.goto('/zasady-ochrany-osobnich-udaju');
 
     expect(await violations(page)).toEqual([]);
   });
 
-  test('when they open an address the site does not know, then the page says so and breaks no rule', async ({ page }) => {
+  test('when they open an address the site does not know, then the page says so and breaks no rule', async ({
+    page,
+  }) => {
     await page.goto('/stara-stranka');
 
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Tuhle stránku jsme nenašli');
@@ -72,14 +85,18 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     expect(await violations(page)).toEqual([]);
   });
 
-  test('when they open a password reset link, then nothing on the page breaks the rules', async ({ page }) => {
+  test('when they open a password reset link, then nothing on the page breaks the rules', async ({
+    page,
+  }) => {
     await page.goto('/obnova-hesla#token=abc');
     await expect(page.locator('h1')).toBeVisible();
 
     expect(await violations(page)).toEqual([]);
   });
 
-  test('when they open the sign-in dialog and its company registration, then nothing in it breaks the rules', async ({ page }) => {
+  test('when they open the sign-in dialog and its company registration, then nothing in it breaks the rules', async ({
+    page,
+  }) => {
     await openSignInDialog(page);
     expect(await violations(page)).toEqual([]);
 
@@ -90,7 +107,9 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     expect(await violations(page)).toEqual([]);
   });
 
-  test('when they send the contact form empty, then its error messages break no rule either', async ({ page }) => {
+  test('when they send the contact form empty, then its error messages break no rule either', async ({
+    page,
+  }) => {
     await page.goto('/');
     await page.getByRole('button', { name: 'Odeslat zprávu' }).click();
     await expect(page.locator('#contact-name')).toHaveAttribute('aria-invalid', 'true');
@@ -98,7 +117,9 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     expect(await violations(page)).toEqual([]);
   });
 
-  test('when a signed-in donor opens the overview, then nothing on it breaks the rules', async ({ page }) => {
+  test('when a signed-in donor opens the overview, then nothing on it breaks the rules', async ({
+    page,
+  }) => {
     await signIn(page);
     await expect(page.locator('.symbol-value')).toBeVisible();
 
@@ -110,7 +131,9 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     expect(await violations(page)).toEqual([]);
   });
 
-  test('when a signed-in donor has a shared account, then its warning and the switch-off confirmation break no rule either', async ({ page }) => {
+  test('when a signed-in donor has a shared account, then its warning and the switch-off confirmation break no rule either', async ({
+    page,
+  }) => {
     await page.route(
       (url) => url.pathname === '/api/donations/me/bank-accounts',
       (route) =>
@@ -142,22 +165,30 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     expect(await violations(page)).toEqual([]);
   });
 
-  test('when a signed-in donor is asked about an older symbol and answers it, then neither the question nor the answer breaks a rule', async ({ page }) => {
+  test('when a signed-in donor is asked about an older symbol and answers it, then neither the question nor the answer breaks a rule', async ({
+    page,
+  }) => {
     await askAboutAnOlderSymbol(page);
     await signIn(page);
-    const question = page.getByRole('group', { name: /Z tohoto účtu k nám chodí i platby s variabilním symbolem 6123456789/ });
+    const question = page.getByRole('group', {
+      name: /Z tohoto účtu k nám chodí i platby s variabilním symbolem 6123456789/,
+    });
     await expect(question).toBeVisible();
 
     expect(await violations(page)).toEqual([]);
 
     await question.getByRole('button', { name: 'Ano, jsou moje' }).click();
-    await expect(page.locator('.accounts-status')).toHaveText('Přiřadili jsme vám 14 plateb s VS 6123456789 z účtu 19-2000145399/0800.');
+    await expect(page.locator('.accounts-status')).toHaveText(
+      'Přiřadili jsme vám 14 plateb s VS 6123456789 z účtu 19-2000145399/0800.',
+    );
     await expect(question).toHaveCount(0);
 
     expect(await violations(page)).toEqual([]);
   });
 
-  test('when a signed-in donor edits their data, then the form breaks no rule either', async ({ page }) => {
+  test('when a signed-in donor edits their data, then the form breaks no rule either', async ({
+    page,
+  }) => {
     await signIn(page);
     await page.getByRole('button', { name: 'Upravit údaje' }).click();
     await page.getByLabel('Město').fill('');
@@ -167,7 +198,9 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     expect(await violations(page)).toEqual([]);
   });
 
-  test('when they press Tab first, then the skip link appears and takes them to the content', async ({ page }) => {
+  test('when they press Tab first, then the skip link appears and takes them to the content', async ({
+    page,
+  }) => {
     await page.goto('/zasady-ochrany-osobnich-udaju');
     await expect(page.locator('h1')).toBeVisible();
     await page.keyboard.press('Tab');
@@ -180,7 +213,9 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     await expect(page).toHaveURL(/\/zasady-ochrany-osobnich-udaju$/);
   });
 
-  test('when they open the sign-in dialog from the keyboard, then the focus stays in it and comes back after Esc', async ({ page }) => {
+  test('when they open the sign-in dialog from the keyboard, then the focus stays in it and comes back after Esc', async ({
+    page,
+  }) => {
     await page.goto('/');
     const signInButton = page.locator('.nav-login');
     await signInButton.focus();
@@ -189,7 +224,12 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     await expect(page.locator('#login-email')).toBeFocused();
     for (let step = 0; step < 15; step++) {
       await page.keyboard.press('Tab');
-      expect(await page.evaluate(() => document.activeElement === document.body || !!document.activeElement?.closest('dialog'))).toBe(true);
+      expect(
+        await page.evaluate(
+          () =>
+            document.activeElement === document.body || !!document.activeElement?.closest('dialog'),
+        ),
+      ).toBe(true);
     }
 
     await page.keyboard.press('Escape');
@@ -206,7 +246,9 @@ test.describe('Given a visitor on a phone who relies on WCAG 2.2 AA', () => {
     await mockDonorApi(page);
   });
 
-  test('when they open the menu, then its button says so, nothing breaks the rules and Esc closes it', async ({ page }) => {
+  test('when they open the menu, then its button says so, nothing breaks the rules and Esc closes it', async ({
+    page,
+  }) => {
     await page.goto('/');
     const menuButton = page.getByRole('button', { name: 'Otevřít menu' });
     await expect(menuButton).toHaveAttribute('aria-expanded', 'false');
@@ -225,7 +267,9 @@ test.describe('Given a visitor on a phone who relies on WCAG 2.2 AA', () => {
     await expect(page.getByRole('button', { name: 'Otevřít menu' })).toBeFocused();
   });
 
-  test('when a signed-in donor opens how payments are paired on a 360 px phone, then it fits the screen, breaks no rule and Esc closes it', async ({ page }) => {
+  test('when a signed-in donor opens how payments are paired on a 360 px phone, then it fits the screen, breaks no rule and Esc closes it', async ({
+    page,
+  }) => {
     await page.setViewportSize({ width: 1280, height: 800 });
     await signIn(page);
     await page.setViewportSize({ width: 360, height: 800 });
@@ -240,7 +284,9 @@ test.describe('Given a visitor on a phone who relies on WCAG 2.2 AA', () => {
     await expect(helpButton).toHaveAttribute('aria-expanded', 'true');
     const panel = page.getByRole('region', { name: 'Jak přiřazujeme platby' });
     await expect(panel).toBeVisible();
-    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(360);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+      360,
+    );
     expect(await violations(page)).toEqual([]);
 
     await panel.getByRole('link', { name: 'info@nfnn.cz' }).focus();
@@ -250,7 +296,9 @@ test.describe('Given a visitor on a phone who relies on WCAG 2.2 AA', () => {
     await expect(helpButton).toBeFocused();
   });
 
-  test('when a signed-in donor is asked about an older symbol on a 360 px phone, then the question fits the screen and both answers are big enough to tap', async ({ page }) => {
+  test('when a signed-in donor is asked about an older symbol on a 360 px phone, then the question fits the screen and both answers are big enough to tap', async ({
+    page,
+  }) => {
     await askAboutAnOlderSymbol(page);
     await page.setViewportSize({ width: 1280, height: 800 });
     await signIn(page);
@@ -258,7 +306,9 @@ test.describe('Given a visitor on a phone who relies on WCAG 2.2 AA', () => {
     const question = page.getByRole('group', { name: /Z tohoto účtu k nám chodí/ });
     await expect(question).toBeVisible();
 
-    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(360);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+      360,
+    );
     for (const name of ['Ano, jsou moje', 'Ne, nejsou moje']) {
       const size = await question.getByRole('button', { name }).boundingBox();
       expect(size?.width).toBeGreaterThanOrEqual(24);
@@ -267,7 +317,9 @@ test.describe('Given a visitor on a phone who relies on WCAG 2.2 AA', () => {
     expect(await violations(page)).toEqual([]);
   });
 
-  test('when they open the sign-in dialog, then it fills the screen and nothing in it breaks the rules', async ({ page }) => {
+  test('when they open the sign-in dialog, then it fills the screen and nothing in it breaks the rules', async ({
+    page,
+  }) => {
     await page.goto('/');
     await page.getByRole('button', { name: 'Otevřít menu' }).click();
     await page.locator('#mobile-menu .mobile-login').click();

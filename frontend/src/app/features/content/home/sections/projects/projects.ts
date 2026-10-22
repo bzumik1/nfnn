@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { ProjectCard } from './project-card';
 
 @Component({
@@ -6,5 +6,6 @@ import { ProjectCard } from './project-card';
   imports: [ProjectCard],
   templateUrl: './projects.html',
   styleUrl: './projects.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Projects {}

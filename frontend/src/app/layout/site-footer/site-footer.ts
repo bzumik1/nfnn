@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 
 @Component({
@@ -6,6 +6,7 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
   imports: [RouterLink, RouterLinkActive],
   templateUrl: './site-footer.html',
   styleUrl: './site-footer.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class SiteFooter {
   protected readonly year = new Date().getFullYear();

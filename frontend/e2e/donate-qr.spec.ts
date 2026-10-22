@@ -1,8 +1,10 @@
 import { expect, Page, test } from '@playwright/test';
 
 const QR_FOR_AMOUNT: Record<string, string> = {
-  '500': 'iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAIAAAAmkwkpAAAAEElEQVR4nGNQTX4NRwzEcQBO0hcxU+9NfQAAAABJRU5ErkJggg==',
-  '1000': 'iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAIAAAAmkwkpAAAAEElEQVR4nGOQktKDIwbiOACeNAYhsqv//AAAAABJRU5ErkJggg==',
+  '500':
+    'iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAIAAAAmkwkpAAAAEElEQVR4nGNQTX4NRwzEcQBO0hcxU+9NfQAAAABJRU5ErkJggg==',
+  '1000':
+    'iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAIAAAAmkwkpAAAAEElEQVR4nGOQktKDIwbiOACeNAYhsqv//AAAAABJRU5ErkJggg==',
 };
 
 async function servePaymentQr(page: Page, requestedAmounts: string[]): Promise<void> {
@@ -27,7 +29,9 @@ async function servePaymentQr(page: Page, requestedAmounts: string[]): Promise<v
 }
 
 test.describe('Given a visitor on the home page', () => {
-  test('when they choose 1 000 Kč, then the site asks for a QR payment of 1000 and shows its QR code', async ({ page }) => {
+  test('when they choose 1 000 Kč, then the site asks for a QR payment of 1000 and shows its QR code', async ({
+    page,
+  }) => {
     const requestedAmounts: string[] = [];
     await servePaymentQr(page, requestedAmounts);
 
@@ -38,15 +42,22 @@ test.describe('Given a visitor on the home page', () => {
     await page.getByRole('button', { name: '1 000 Kč' }).click();
 
     await expect(qrCode).toHaveAttribute('src', `data:image/png;base64,${QR_FOR_AMOUNT['1000']}`);
-    expect(await qrCode.evaluate((image: HTMLImageElement) => image.complete && image.naturalWidth > 0)).toBe(true);
+    expect(
+      await qrCode.evaluate((image: HTMLImageElement) => image.complete && image.naturalWidth > 0),
+    ).toBe(true);
     expect(requestedAmounts).toEqual(['500', '1000']);
     await expect(page.locator('#donate')).toContainText('CZ26 2010 0000 0055 4433 2217');
   });
 
   test.describe('on a phone', () => {
-    test.use({ viewport: { width: 390, height: 844 }, permissions: ['clipboard-read', 'clipboard-write'] });
+    test.use({
+      viewport: { width: 390, height: 844 },
+      permissions: ['clipboard-read', 'clipboard-write'],
+    });
 
-    test('when they copy the amount, then the clipboard holds it and the bank details come before the QR code', async ({ page }) => {
+    test('when they copy the amount, then the clipboard holds it and the bank details come before the QR code', async ({
+      page,
+    }) => {
       await servePaymentQr(page, []);
       await page.goto('/');
       const bank = page.locator('#donate .bank');
@@ -65,4 +76,3 @@ test.describe('Given a visitor on the home page', () => {
     });
   });
 });
-

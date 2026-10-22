@@ -2,16 +2,23 @@
   <div class="symbol-text">
     <h2 class="symbol-title" i18n="@@donor.dashboard.symbol.title">Váš variabilní symbol</h2>
     <p class="symbol-sub" i18n="@@donor.dashboard.symbol.sub">
-      Uveďte ho u každé platby na účet nadačního fondu. Dar se tak přiřadí k vašemu účtu a objeví se v tomto přehledu.
+      Uveďte ho u každé platby na účet nadačního fondu. Dar se tak přiřadí k vašemu účtu a objeví se
+      v tomto přehledu.
     </p>
   </div>
   <div class="symbol-side">
     <div class="symbol-value">{{ variableSymbol() }}</div>
     <div class="symbol-actions">
       @if (variableSymbol(); as symbol) {
-        <app-copy-button [value]="symbol" what="variabilní symbol" i18n-what="@@donor.dashboard.symbol.copy" />
+        <app-copy-button
+          [value]="symbol"
+          what="variabilní symbol"
+          i18n-what="@@donor.dashboard.symbol.copy"
+        />
       }
-      <a class="give-again" routerLink="/" fragment="donate" i18n="@@donor.dashboard.giveAgain">Přispět znovu</a>
+      <a class="give-again" routerLink="/" fragment="donate" i18n="@@donor.dashboard.giveAgain"
+        >Přispět znovu</a
+      >
     </div>
   </div>
 </div>

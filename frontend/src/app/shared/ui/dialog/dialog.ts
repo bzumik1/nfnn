@@ -1,9 +1,21 @@
-import { AfterViewInit, Component, DOCUMENT, ElementRef, OnDestroy, inject, input, output, viewChild } from '@angular/core';
+import {
+  AfterViewInit,
+  ChangeDetectionStrategy,
+  Component,
+  DOCUMENT,
+  ElementRef,
+  OnDestroy,
+  inject,
+  input,
+  output,
+  viewChild,
+} from '@angular/core';
 
 @Component({
   selector: 'app-dialog',
   templateUrl: './dialog.html',
   styleUrl: './dialog.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Dialog implements AfterViewInit, OnDestroy {
   readonly labelledBy = input.required<string>();

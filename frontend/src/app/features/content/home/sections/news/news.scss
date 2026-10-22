@@ -29,7 +29,6 @@
   color: var(--color-text);
 }
 
-
 .news-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -42,7 +41,9 @@
   overflow: hidden;
   box-shadow: var(--shadow-card-quiet);
   border: 1px solid var(--color-border-soft);
-  transition: box-shadow 0.25s, transform 0.25s;
+  transition:
+    box-shadow 0.25s,
+    transform 0.25s;
   cursor: pointer;
 
   &:hover {

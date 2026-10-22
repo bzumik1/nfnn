@@ -1,4 +1,13 @@
-import { Component, computed, DestroyRef, inject, linkedSignal, signal, viewChild } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  DestroyRef,
+  inject,
+  linkedSignal,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
 import { forkJoin, last, Observable, tap } from 'rxjs';
@@ -53,6 +62,7 @@ const SENDER_ACCOUNT_DIGITS_SHOWN = 4;
   imports: [DashboardTopBar, SymbolCard, BankAccountsCard, ProfileCard],
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class DonorDashboard {
   private readonly router = inject(Router);
@@ -69,12 +79,16 @@ export class DonorDashboard {
   protected readonly summary = signal<DonationSummaryResponse | null>(null);
   protected readonly items = signal<readonly DonationItem[]>([]);
 
-  protected readonly years = computed(() => (this.summary()?.byYear ?? []).map((entry) => entry.year));
+  protected readonly years = computed(() =>
+    (this.summary()?.byYear ?? []).map((entry) => entry.year),
+  );
 
   protected readonly selectedYear = linkedSignal<readonly number[], number | null>({
     source: this.years,
     computation: (years, previous) =>
-      previous !== undefined && previous.value !== null && years.includes(previous.value) ? previous.value : (years[0] ?? null),
+      previous !== undefined && previous.value !== null && years.includes(previous.value)
+        ? previous.value
+        : (years[0] ?? null),
   });
 
   protected readonly selectedYearTotal = computed(
@@ -272,11 +286,15 @@ export class DonorDashboard {
       return;
     }
     const problem = problemOf(failure);
-    if (scope === 'yearly' && YEARLY_PROBLEMS_SHOWN_AS_TITLE.some((type) => problemTypeEndsWith(failure, type))) {
+    if (
+      scope === 'yearly' &&
+      YEARLY_PROBLEMS_SHOWN_AS_TITLE.some((type) => problemTypeEndsWith(failure, type))
+    ) {
       this.receiptError.set({ scope, message: problem?.title || RECEIPT_FAILED });
       return;
     }
-    const rowOutdated = problem?.status === NOT_FOUND || problemTypeEndsWith(failure, RECEIPT_BEFORE_FIRST_YEAR);
+    const rowOutdated =
+      problem?.status === NOT_FOUND || problemTypeEndsWith(failure, RECEIPT_BEFORE_FIRST_YEAR);
     if (scope === 'single' && rowOutdated) {
       this.receiptError.set({ scope, message: problem?.title || RECEIPT_FAILED });
       this.fetchDonations();

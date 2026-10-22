@@ -9,7 +9,9 @@ const newAccount = bankAccountItem({
 });
 
 test.describe('Given a signed-in donor adding a bank account', () => {
-  test('when the verification payment arrives while the dialog is open, then the waiting turns into a tick', async ({ page }) => {
+  test('when the verification payment arrives while the dialog is open, then the waiting turns into a tick', async ({
+    page,
+  }) => {
     await page.clock.install();
     await mockDonorApi(page);
     let dialogOpen = false;
@@ -20,7 +22,10 @@ test.describe('Given a signed-in donor adding a bank account', () => {
         if (route.request().method() === 'POST' && dialogOpen) {
           paymentBooked = true;
         }
-        return route.fulfill({ status: 202, json: { bankDataAsOf: '2026-10-18T08:05:30Z', checking: false } });
+        return route.fulfill({
+          status: 202,
+          json: { bankDataAsOf: '2026-10-18T08:05:30Z', checking: false },
+        });
       },
     );
     await page.route(

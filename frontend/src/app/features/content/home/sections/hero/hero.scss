@@ -19,7 +19,11 @@
   left: 0;
   right: 0;
   height: 160px;
-  background: linear-gradient(to bottom, color-mix(in srgb, var(--color-image-shade) 55%, transparent) 0%, transparent 100%);
+  background: linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--color-image-shade) 55%, transparent) 0%,
+    transparent 100%
+  );
   z-index: 1;
 }
 

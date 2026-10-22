@@ -13,7 +13,15 @@ import { FormField } from './form-field';
         <input appFormControl id="name" name="name" [(ngModel)]="name" required />
       </app-form-field>
       <app-form-field label="E-mail" hint="Pošleme na něj potvrzení." [messages]="emailMessages">
-        <input appFormControl id="email" name="email" type="email" [(ngModel)]="email" required email />
+        <input
+          appFormControl
+          id="email"
+          name="email"
+          type="email"
+          [(ngModel)]="email"
+          required
+          email
+        />
       </app-form-field>
       <button type="submit">Odeslat</button>
     </form>
@@ -23,7 +31,10 @@ class TwoFieldForm {
   name = '';
   email = '';
   submits = 0;
-  readonly emailMessages = { required: 'Vyplňte prosím e-mail.', email: 'Zadejte e-mail ve tvaru jan@example.cz.' };
+  readonly emailMessages = {
+    required: 'Vyplňte prosím e-mail.',
+    email: 'Zadejte e-mail ve tvaru jan@example.cz.',
+  };
 }
 
 describe('Given a form built from form fields', () => {
@@ -65,7 +76,9 @@ describe('Given a form built from form fields', () => {
 
     expect(label?.textContent?.trim()).toBe('E-mail');
     expect(input('email').getAttribute('aria-describedby')).toBe('email-hint');
-    expect(host().querySelector('#email-hint')?.textContent?.trim()).toBe('Pošleme na něj potvrzení.');
+    expect(host().querySelector('#email-hint')?.textContent?.trim()).toBe(
+      'Pošleme na něj potvrzení.',
+    );
   });
 
   it('when nothing was touched yet, then no field shows an error', () => {

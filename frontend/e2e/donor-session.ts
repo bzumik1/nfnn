@@ -17,7 +17,11 @@ export function session(status: number) {
   return {
     status,
     contentType: 'application/json',
-    body: JSON.stringify({ user: donor, accessToken: 'token-1', accessTokenExpiresAt: '2026-10-17T10:15:00Z' }),
+    body: JSON.stringify({
+      user: donor,
+      accessToken: 'token-1',
+      accessTokenExpiresAt: '2026-10-17T10:15:00Z',
+    }),
   };
 }
 
@@ -100,17 +104,29 @@ export function receiptPdf(fileName: string) {
 
 export const paymentQr = {
   spayd: 'SPD*1.0*ACC:CZ2620100000005544332217*AM:500.00*CC:CZK',
-  qrPngBase64: 'iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAIAAAAmkwkpAAAAEElEQVR4nGNQTX4NRwzEcQBO0hcxU+9NfQAAAABJRU5ErkJggg==',
-  bankAccount: { accountNumber: '5544332217/2010', iban: 'CZ2620100000005544332217', recipientName: 'Nadační fond Nová naděje' },
+  qrPngBase64:
+    'iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAIAAAAmkwkpAAAAEElEQVR4nGNQTX4NRwzEcQBO0hcxU+9NfQAAAABJRU5ErkJggg==',
+  bankAccount: {
+    accountNumber: '5544332217/2010',
+    iban: 'CZ2620100000005544332217',
+    recipientName: 'Nadační fond Nová naděje',
+  },
 };
 
-export async function mockDonorApi(page: Page, donations: DonorApiMock = noDonations): Promise<void> {
+export async function mockDonorApi(
+  page: Page,
+  donations: DonorApiMock = noDonations,
+): Promise<void> {
   const receipts = donations.receipts;
   if (receipts) {
     await page.route(
       (url) => url.pathname === '/api/donations/me/receipts/yearly',
       (route) =>
-        route.fulfill(receiptPdf(`potvrzeni-o-darech-${new URL(route.request().url()).searchParams.get('year')}.pdf`)),
+        route.fulfill(
+          receiptPdf(
+            `potvrzeni-o-darech-${new URL(route.request().url()).searchParams.get('year')}.pdf`,
+          ),
+        ),
     );
     await page.route(
       (url) => /^\/api\/donations\/me\/[^/]+\/receipt$/.test(url.pathname),

@@ -1,4 +1,9 @@
-import { HttpClient, HttpErrorResponse, provideHttpClient, withInterceptors } from '@angular/common/http';
+import {
+  HttpClient,
+  HttpErrorResponse,
+  provideHttpClient,
+  withInterceptors,
+} from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { authInterceptor } from './auth-interceptor';
@@ -14,7 +19,10 @@ describe('Given the auth interceptor', () => {
   beforeEach(() => {
     localStorage.clear();
     TestBed.configureTestingModule({
-      providers: [provideHttpClient(withInterceptors([authInterceptor])), provideHttpClientTesting()],
+      providers: [
+        provideHttpClient(withInterceptors([authInterceptor])),
+        provideHttpClientTesting(),
+      ],
     });
     client = TestBed.inject(HttpClient);
     store = TestBed.inject(AuthStore);
@@ -51,7 +59,9 @@ describe('Given the auth interceptor', () => {
     let received: Donor | undefined;
     client.get<Donor>('/api/donors/me').subscribe((donor) => (received = donor));
 
-    http.expectOne('/api/donors/me').flush(problem('auth/expired-token'), { status: 401, statusText: 'Unauthorized' });
+    http
+      .expectOne('/api/donors/me')
+      .flush(problem('auth/expired-token'), { status: 401, statusText: 'Unauthorized' });
 
     const refresh = http.expectOne('/api/donors/auth/refresh');
     expect(refresh.request.headers.has('Authorization')).toBe(false);
@@ -70,7 +80,9 @@ describe('Given the auth interceptor', () => {
     let failure: unknown;
     client.get('/api/donors/me').subscribe({ error: (reason: unknown) => (failure = reason) });
 
-    http.expectOne('/api/donors/me').flush(problem('auth/expired-token'), { status: 401, statusText: 'Unauthorized' });
+    http
+      .expectOne('/api/donors/me')
+      .flush(problem('auth/expired-token'), { status: 401, statusText: 'Unauthorized' });
     http
       .expectOne('/api/donors/auth/refresh')
       .flush(problem('auth/invalid-refresh-token'), { status: 401, statusText: 'Unauthorized' });
@@ -85,7 +97,9 @@ describe('Given the auth interceptor', () => {
     let failure: unknown;
     client.get('/api/donors/me').subscribe({ error: (reason: unknown) => (failure = reason) });
 
-    http.expectOne('/api/donors/me').flush(problem('auth/unauthenticated'), { status: 401, statusText: 'Unauthorized' });
+    http
+      .expectOne('/api/donors/me')
+      .flush(problem('auth/unauthenticated'), { status: 401, statusText: 'Unauthorized' });
 
     http.expectNone('/api/donors/auth/refresh');
     expect((failure as HttpErrorResponse).status).toBe(401);
@@ -103,7 +117,9 @@ describe('Given the auth interceptor', () => {
   it('when a file download fails with an expired token, then the session is refreshed and the download is retried with the new token', async () => {
     signIn('token-1');
     let received: Blob | undefined;
-    client.get('/api/donations/me/receipts/yearly', { responseType: 'blob' }).subscribe((file) => (received = file));
+    client
+      .get('/api/donations/me/receipts/yearly', { responseType: 'blob' })
+      .subscribe((file) => (received = file));
 
     http
       .expectOne('/api/donations/me/receipts/yearly')
@@ -127,13 +143,18 @@ describe('Given the auth interceptor', () => {
 
     http
       .expectOne('/api/donations/me/receipts/yearly')
-      .flush(problemBlob('auth/unauthenticated', 'Přihlaste se'), { status: 401, statusText: 'Unauthorized' });
+      .flush(problemBlob('auth/unauthenticated', 'Přihlaste se'), {
+        status: 401,
+        statusText: 'Unauthorized',
+      });
     await blobSettled();
 
     http.expectNone('/api/donors/auth/refresh');
     expect(failure).toBeInstanceOf(HttpErrorResponse);
     expect((failure as HttpErrorResponse).status).toBe(401);
-    expect((failure as HttpErrorResponse).error).toEqual(problem('auth/unauthenticated', 'Přihlaste se'));
+    expect((failure as HttpErrorResponse).error).toEqual(
+      problem('auth/unauthenticated', 'Přihlaste se'),
+    );
   });
 
   it('when a file download fails with a blob that is not a problem, then the failure passes through unchanged', async () => {
@@ -144,7 +165,9 @@ describe('Given the auth interceptor', () => {
       .get('/api/donations/me/receipts/yearly', { responseType: 'blob' })
       .subscribe({ error: (reason: unknown) => (failure = reason) });
 
-    http.expectOne('/api/donations/me/receipts/yearly').flush(body, { status: 502, statusText: 'Bad Gateway' });
+    http
+      .expectOne('/api/donations/me/receipts/yearly')
+      .flush(body, { status: 502, statusText: 'Bad Gateway' });
     await blobSettled();
 
     expect((failure as HttpErrorResponse).status).toBe(502);

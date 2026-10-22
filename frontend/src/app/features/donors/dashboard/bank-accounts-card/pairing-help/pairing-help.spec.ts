@@ -59,9 +59,11 @@ describe('Given the help on how payments are paired', () => {
   }
 
   function texts(selector: string): string[] {
-    return [...((fixture.nativeElement as HTMLElement).querySelectorAll(selector) as NodeListOf<HTMLElement>)].map((node) =>
-      normalized(node.textContent ?? ''),
-    );
+    return [
+      ...((fixture.nativeElement as HTMLElement).querySelectorAll(
+        selector,
+      ) as NodeListOf<HTMLElement>),
+    ].map((node) => normalized(node.textContent ?? ''));
   }
 
   function normalized(value: string): string {
@@ -83,7 +85,7 @@ describe('Given the help on how payments are paired', () => {
     expect((fixture.nativeElement as HTMLElement).hidden).toBe(false);
   });
 
-  it('when it is open, then the labelled region explains every rule, the older symbol included, with the donor\'s symbol', async () => {
+  it("when it is open, then the labelled region explains every rule, the older symbol included, with the donor's symbol", async () => {
     await open();
 
     expect(panel().hidden).toBe(false);
@@ -96,7 +98,9 @@ describe('Given the help on how payments are paired', () => {
     expect(text('#accounts-help-panel .help-contact')).toBe(
       'Chybí vám nějaký dar, nebo tu vidíte dar, který není váš? Napište nám na info@nfnn.cz.',
     );
-    expect(element<HTMLAnchorElement>('#accounts-help-panel .help-contact a')?.getAttribute('href')).toBe('mailto:info@nfnn.cz');
+    expect(
+      element<HTMLAnchorElement>('#accounts-help-panel .help-contact a')?.getAttribute('href'),
+    ).toBe('mailto:info@nfnn.cz');
   });
 
   it('when the donor has no variable symbol yet, then it speaks of their variable symbol without a number', async () => {

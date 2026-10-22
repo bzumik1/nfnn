@@ -1,7 +1,17 @@
 /// <reference types="@angular/localize" />
 
 import { Location } from '@angular/common';
-import { afterNextRender, Component, DestroyRef, ElementRef, inject, Injector, signal, viewChild } from '@angular/core';
+import {
+  afterNextRender,
+  ChangeDetectionStrategy,
+  Component,
+  DestroyRef,
+  ElementRef,
+  inject,
+  Injector,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { FormsModule, NgForm } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { describeProblem, problemTypeEndsWith } from '../../../core/auth/api-problem';
@@ -24,6 +34,7 @@ const INVALID_TOKEN = 'donors/invalid-password-reset-token';
   imports: [FormsModule, FormField, FormControlDirective, FocusFirstInvalid, PasswordReveal],
   templateUrl: './password-reset.html',
   styleUrl: './password-reset.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PasswordReset {
   private readonly authApi = inject(AuthApi);
@@ -98,7 +109,10 @@ export class PasswordReset {
     }
     this.loading.set(false);
     this.error.set(
-      describeProblem(failure, $localize`:@@donor.passwordReset.error.generic:Heslo se nepodařilo uložit. Zkuste to prosím znovu.`),
+      describeProblem(
+        failure,
+        $localize`:@@donor.passwordReset.error.generic:Heslo se nepodařilo uložit. Zkuste to prosím znovu.`,
+      ),
     );
   }
 

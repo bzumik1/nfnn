@@ -29,9 +29,9 @@ describe('Given the privacy policy page', () => {
   }
 
   function purposeText(heading: string): string {
-    const purpose = Array.from<HTMLElement>(fixture.nativeElement.querySelectorAll('.purpose')).find(
-      (candidate) => candidate.querySelector('h3')?.textContent?.trim() === heading,
-    );
+    const purpose = Array.from<HTMLElement>(
+      fixture.nativeElement.querySelectorAll('.purpose'),
+    ).find((candidate) => candidate.querySelector('h3')?.textContent?.trim() === heading);
     return purpose!.textContent!.replace(/\s+/g, ' ');
   }
 
@@ -81,19 +81,26 @@ describe('Given the privacy policy page', () => {
     expect(donations).not.toContain('přiřadíme vám tak i dřívější');
     expect(donations).toContain('Moje bankovní účty');
     expect(donations).toContain('párování vypnout');
-    expect(donations).toContain('které z takového účtu přijdou ode dne po vypnutí párování, vám už nepřiřazujeme');
+    expect(donations).toContain(
+      'které z takového účtu přijdou ode dne po vypnutí párování, vám už nepřiřazujeme',
+    );
     expect(donations).not.toContain('odpoj');
   });
 
   it('when it renders, then it says which older symbol we show a donor at a proved account and that we keep their answer', () => {
-    const olderSymbol = texts('.purpose p').find((paragraph) => paragraph.includes('jedním jiným variabilním symbolem')) ?? '';
+    const olderSymbol =
+      texts('.purpose p').find((paragraph) =>
+        paragraph.includes('jedním jiným variabilním symbolem'),
+      ) ?? '';
 
     expect(olderSymbol).toContain('platbou 1 Kč se zprávou „Ověření účtu“');
     expect(olderSymbol).toContain('který nemá žádný registrovaný dárce');
     expect(olderSymbol).toContain(
       'zobrazíme vám v dárcovském portálu tento symbol, počet plateb s ním a měsíce, ve kterých přišly (nikdy ne jejich částky)',
     );
-    expect(olderSymbol).toContain('Vaši odpověď, ano i ne, uložíme i s časem odpovědi u vašeho dárcovského účtu');
+    expect(olderSymbol).toContain(
+      'Vaši odpověď, ano i ne, uložíme i s časem odpovědi u vašeho dárcovského účtu',
+    );
     expect(olderSymbol).toContain('na tentýž symbol z tohoto účtu se znovu neptáme');
     expect(olderSymbol).toContain(
       'Odpovíte-li ano, přiřadíme vám dřívější i další platby s tímto symbolem z tohoto účtu stejně jako platby bez symbolu.',
@@ -146,8 +153,12 @@ describe('Given the privacy policy page', () => {
     const ipAddress = purposeText('IP adresa a záznamy serveru');
 
     expect(ipAddress).toContain('přihlášení, registraci, kontaktní formulář a obnovu hesla');
-    expect(ipAddress).toContain('během 15 minut od prvního pokusu z ní přijmeme nejvýš deset pokusů o přihlášení');
-    expect(ipAddress).toContain('nejvýš pět registrací, pět zpráv z formuláře a pět žádostí o obnovu hesla');
+    expect(ipAddress).toContain(
+      'během 15 minut od prvního pokusu z ní přijmeme nejvýš deset pokusů o přihlášení',
+    );
+    expect(ipAddress).toContain(
+      'nejvýš pět registrací, pět zpráv z formuláře a pět žádostí o obnovu hesla',
+    );
   });
 
   it('when it renders, then the logs it describes are those of both the reverse proxy and the web server', () => {
@@ -160,7 +171,9 @@ describe('Given the privacy policy page', () => {
   });
 
   it('when it renders, then it promises to delete contact messages from the web database a year after they were sent', () => {
-    expect(purposeText('Kontaktní formulář')).toContain('Z databáze webu ji automaticky smažeme jeden rok po odeslání.');
+    expect(purposeText('Kontaktní formulář')).toContain(
+      'Z databáze webu ji automaticky smažeme jeden rok po odeslání.',
+    );
     expect(sectionText('Jak dlouho údaje uchováváme')).toContain('zálohy');
   });
 
@@ -179,7 +192,9 @@ describe('Given the privacy policy page', () => {
   it('when it renders, then it says the site runs on a server owned by the foundation rather than at a hosting provider', () => {
     const recipients = sectionText('Komu údaje předáváme');
 
-    expect(recipients).toContain('neběží u poskytovatele hostingu ani v cloudu, ale na vlastním serveru nadačního fondu');
+    expect(recipients).toContain(
+      'neběží u poskytovatele hostingu ani v cloudu, ale na vlastním serveru nadačního fondu',
+    );
     expect(recipients).not.toContain('autor webu');
   });
 

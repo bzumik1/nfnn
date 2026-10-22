@@ -7,12 +7,21 @@
 
     @switch (state()) {
       @case ('loading') {
-        <p class="dashboard-loading" role="status" i18n="@@donor.dashboard.loading">Načítáme vaše dary…</p>
+        <p class="dashboard-loading" role="status" i18n="@@donor.dashboard.loading">
+          Načítáme vaše dary…
+        </p>
       }
       @case ('error') {
         <div class="dashboard-error" role="alert">
-          <p class="dashboard-error-text" i18n="@@donor.dashboard.error.text">Přehled darů se nepodařilo načíst.</p>
-          <button type="button" class="dashboard-error-retry" (click)="load()" i18n="@@donor.dashboard.error.retry">
+          <p class="dashboard-error-text" i18n="@@donor.dashboard.error.text">
+            Přehled darů se nepodařilo načíst.
+          </p>
+          <button
+            type="button"
+            class="dashboard-error-retry"
+            (click)="load()"
+            i18n="@@donor.dashboard.error.retry"
+          >
             Zkusit znovu
           </button>
         </div>
@@ -22,8 +31,19 @@
           <div class="stat-card stat-card--accent">
             <div class="stat-bar"></div>
             <div class="stat-icon" aria-hidden="true">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path
+                  d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"
+                />
               </svg>
             </div>
             <div class="stat-value">{{ crowns(summary()?.totalAmountMinor ?? 0) }} Kč</div>
@@ -33,7 +53,16 @@
           <div class="stat-card stat-card--indigo">
             <div class="stat-bar"></div>
             <div class="stat-icon" aria-hidden="true">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
                 <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
                 <polyline points="14 2 14 8 20 8" />
                 <line x1="16" y1="13" x2="8" y2="13" />
@@ -48,7 +77,16 @@
           <div class="stat-card stat-card--sky">
             <div class="stat-bar"></div>
             <div class="stat-icon" aria-hidden="true">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
                 <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
                 <line x1="16" y1="2" x2="16" y2="6" />
                 <line x1="8" y1="2" x2="8" y2="6" />
@@ -69,8 +107,12 @@
         <div class="yearly-card">
           <div class="yearly-head">
             <div>
-              <h2 class="yearly-title" i18n="@@donor.dashboard.yearly.title">Roční potvrzení o darech</h2>
-              <p class="yearly-sub" i18n="@@donor.dashboard.yearly.sub">Souhrnný doklad pro daňové účely</p>
+              <h2 class="yearly-title" i18n="@@donor.dashboard.yearly.title">
+                Roční potvrzení o darech
+              </h2>
+              <p class="yearly-sub" i18n="@@donor.dashboard.yearly.sub">
+                Souhrnný doklad pro daňové účely
+              </p>
             </div>
             @if (selectedYearTotal(); as yearTotal) {
               <div class="yearly-actions">
@@ -81,7 +123,9 @@
                       [class.is-active]="selectedYear() === year"
                       [attr.aria-pressed]="selectedYear() === year"
                       (click)="selectYear(year)"
-                    >{{ year }}</button>
+                    >
+                      {{ year }}
+                    </button>
                   }
                 </div>
                 @if (selectedYearIssuable()) {
@@ -96,7 +140,8 @@
                     @if (yearlyDownloading(yearTotal.year)) {
                       <span i18n="@@donor.dashboard.receipt.preparing">Připravujeme PDF…</span>
                     } @else {
-                      <span i18n="@@donor.dashboard.yearly.pdf">↓ PDF za rok</span> {{ yearTotal.year }}
+                      <span i18n="@@donor.dashboard.yearly.pdf">↓ PDF za rok</span>
+                      {{ yearTotal.year }}
                     }
                   </button>
                 }
@@ -106,19 +151,34 @@
           @if (selectedYearTotal(); as yearTotal) {
             <div class="yearly-foot">
               <span class="yearly-count" i18n="@@donor.dashboard.yearly.count">
-                {yearTotal.count, plural, =1 {{{ yearTotal.count }} příspěvek} =2 {{{ yearTotal.count }} příspěvky} =3 {{{ yearTotal.count }} příspěvky} =4 {{{ yearTotal.count }} příspěvky} other {{{ yearTotal.count }} příspěvků}}
+                {yearTotal.count, plural,
+                  =1 {{{ yearTotal.count }} příspěvek}
+                  =2 {{{ yearTotal.count }} příspěvky}
+                  =3 {{{ yearTotal.count }} příspěvky}
+                  =4 {{{ yearTotal.count }} příspěvky}
+                  other {{{ yearTotal.count }} příspěvků}
+                }
                 v roce {{ yearTotal.year }}
               </span>
               <span class="yearly-total">
-                {{ crowns(yearTotal.totalAmountMinor) }} Kč <span i18n="@@donor.dashboard.yearly.totalSuffix">celkem</span>
+                {{ crowns(yearTotal.totalAmountMinor) }} Kč
+                <span i18n="@@donor.dashboard.yearly.totalSuffix">celkem</span>
               </span>
             </div>
             @if (!selectedYearIssuable()) {
-              <p id="yearly-hint" class="yearly-hint" i18n="@@donor.dashboard.yearly.beforeReceipts">
+              <p
+                id="yearly-hint"
+                class="yearly-hint"
+                i18n="@@donor.dashboard.yearly.beforeReceipts"
+              >
                 Potvrzení za rok tu vystavujeme za dary od roku {{ receiptsFrom() }}.
               </p>
             } @else if (!selectedYearCompleted()) {
-              <p id="yearly-hint" class="yearly-hint" i18n="@@donor.dashboard.yearly.notYetAvailable">
+              <p
+                id="yearly-hint"
+                class="yearly-hint"
+                i18n="@@donor.dashboard.yearly.notYetAvailable"
+              >
                 Potvrzení za rok {{ yearTotal.year }} bude ke stažení po skončení roku.
               </p>
             }
@@ -129,11 +189,15 @@
             }
           } @else {
             <p class="yearly-empty">
-              <span i18n="@@donor.dashboard.yearly.empty">Zatím tu nemáme žádný váš dar. Jakmile dorazí platba s vaším variabilním symbolem, objeví se tady.</span>&ngsp;<a
+              <span i18n="@@donor.dashboard.yearly.empty"
+                >Zatím tu nemáme žádný váš dar. Jakmile dorazí platba s vaším variabilním symbolem,
+                objeví se tady.</span
+              >&ngsp;<a
                 href="#bank-accounts-title"
                 (click)="showBankAccounts($event)"
                 i18n="@@donor.dashboard.yearly.emptyStandingOrder"
-              >Posíláte trvalým příkazem?</a>
+                >Posíláte trvalým příkazem?</a
+              >
             </p>
           }
         </div>
@@ -144,10 +208,13 @@
               <h2 class="payments-title" i18n="@@donor.dashboard.payments.title">Přehled plateb</h2>
               <div class="bank-check" aria-live="polite">
                 @if (checkingBank()) {
-                  <span class="bank-check-status" i18n="@@donor.dashboard.bank.checking">Kontrolujeme nové platby v bance…</span>
+                  <span class="bank-check-status" i18n="@@donor.dashboard.bank.checking"
+                    >Kontrolujeme nové platby v bance…</span
+                  >
                 } @else if (bankDataAsOf(); as asOf) {
                   <span class="bank-check-status">
-                    <span i18n="@@donor.dashboard.bank.asOf">Údaje z banky k</span> {{ formatBankTime(asOf) }}
+                    <span i18n="@@donor.dashboard.bank.asOf">Údaje z banky k</span>
+                    {{ formatBankTime(asOf) }}
                   </span>
                 }
                 <button
@@ -181,35 +248,79 @@
               <tbody>
                 @for (item of items(); track item.id) {
                   <tr>
-                    <td data-label="Datum" i18n-data-label="@@donor.dashboard.payments.col.date">{{ formatDate(item.receivedAt) }}</td>
-                    <td data-label="Částka" i18n-data-label="@@donor.dashboard.payments.col.amount" class="amount">{{ crowns(item.amountMinor) }} Kč</td>
+                    <td data-label="Datum" i18n-data-label="@@donor.dashboard.payments.col.date">
+                      {{ formatDate(item.receivedAt) }}
+                    </td>
+                    <td
+                      data-label="Částka"
+                      i18n-data-label="@@donor.dashboard.payments.col.amount"
+                      class="amount"
+                    >
+                      {{ crowns(item.amountMinor) }} Kč
+                    </td>
                     <td data-label="Účel" i18n-data-label="@@donor.dashboard.payments.col.purpose">
                       {{ item.purpose }}
                       @if (item.pairedBy === 'SENDER_ACCOUNT' && item.senderAccount) {
                         <span
                           class="pairing-tag"
-                          title="Přiřazeno podle účtu {{ item.senderAccount }}, platba přišla bez variabilního symbolu"
+                          title="Přiřazeno podle účtu {{
+                            item.senderAccount
+                          }}, platba přišla bez variabilního symbolu"
                           i18n-title="@@donor.dashboard.payments.pairedByAccountTitle"
                         >
-                          <span aria-hidden="true"><span i18n="@@donor.dashboard.payments.withoutSymbol">bez VS</span> · {{ senderAccountEnd(item.senderAccount) }}</span>
-                          <span class="visually-hidden" i18n="@@donor.dashboard.payments.pairedByAccount">Přiřazeno podle účtu {{ item.senderAccount }}, platba přišla bez variabilního symbolu</span>
+                          <span aria-hidden="true"
+                            ><span i18n="@@donor.dashboard.payments.withoutSymbol">bez VS</span> ·
+                            {{ senderAccountEnd(item.senderAccount) }}</span
+                          >
+                          <span
+                            class="visually-hidden"
+                            i18n="@@donor.dashboard.payments.pairedByAccount"
+                            >Přiřazeno podle účtu {{ item.senderAccount }}, platba přišla bez
+                            variabilního symbolu</span
+                          >
                         </span>
                       }
-                      @if (item.pairedBy === 'CONFIRMED_SYMBOL' && item.senderAccount && item.confirmedSymbol) {
+                      @if (
+                        item.pairedBy === 'CONFIRMED_SYMBOL' &&
+                        item.senderAccount &&
+                        item.confirmedSymbol
+                      ) {
                         <span
                           class="pairing-tag"
-                          title="Přiřazeno podle účtu {{ item.senderAccount }} a variabilního symbolu {{ item.confirmedSymbol }}, který jste u účtu potvrdili jako svůj"
+                          title="Přiřazeno podle účtu {{
+                            item.senderAccount
+                          }} a variabilního symbolu {{
+                            item.confirmedSymbol
+                          }}, který jste u účtu potvrdili jako svůj"
                           i18n-title="@@donor.dashboard.payments.pairedByConfirmedSymbolTitle"
                         >
-                          <span aria-hidden="true"><span i18n="@@donor.dashboard.payments.symbolPrefix">VS</span> {{ item.confirmedSymbol }} · {{ senderAccountEnd(item.senderAccount) }}</span>
-                          <span class="visually-hidden" i18n="@@donor.dashboard.payments.pairedByConfirmedSymbol">Přiřazeno podle účtu {{ item.senderAccount }} a variabilního symbolu {{ item.confirmedSymbol }}, který jste u účtu potvrdili jako svůj</span>
+                          <span aria-hidden="true"
+                            ><span i18n="@@donor.dashboard.payments.symbolPrefix">VS</span>
+                            {{ item.confirmedSymbol }} ·
+                            {{ senderAccountEnd(item.senderAccount) }}</span
+                          >
+                          <span
+                            class="visually-hidden"
+                            i18n="@@donor.dashboard.payments.pairedByConfirmedSymbol"
+                            >Přiřazeno podle účtu {{ item.senderAccount }} a variabilního symbolu
+                            {{ item.confirmedSymbol }}, který jste u účtu potvrdili jako svůj</span
+                          >
                         </span>
                       }
                     </td>
                     <td data-label="Stav" i18n-data-label="@@donor.dashboard.payments.col.status">
-                      <span class="status-pill" [class.status-pill--refunded]="item.status === 'REFUNDED'">{{ statusLabel(item.status) }}</span>
+                      <span
+                        class="status-pill"
+                        [class.status-pill--refunded]="item.status === 'REFUNDED'"
+                        >{{ statusLabel(item.status) }}</span
+                      >
                     </td>
-                    <td class="receipt" [class.is-empty]="!item.receiptAvailable" data-label="Potvrzení" i18n-data-label="@@donor.dashboard.payments.col.receipt">
+                    <td
+                      class="receipt"
+                      [class.is-empty]="!item.receiptAvailable"
+                      data-label="Potvrzení"
+                      i18n-data-label="@@donor.dashboard.payments.col.receipt"
+                    >
                       @if (item.receiptAvailable) {
                         <button
                           type="button"
@@ -219,7 +330,9 @@
                           (click)="downloadSingleReceipt(item)"
                         >
                           @if (singleDownloading(item)) {
-                            <span i18n="@@donor.dashboard.receipt.preparing">Připravujeme PDF…</span>
+                            <span i18n="@@donor.dashboard.receipt.preparing"
+                              >Připravujeme PDF…</span
+                            >
                           } @else {
                             <span i18n="@@donor.dashboard.payments.download">Stáhnout PDF</span>
                           }
@@ -232,16 +345,21 @@
             </table>
             @if (receivedWithoutReceipt()) {
               <p class="receipts-from" i18n="@@donor.dashboard.payments.receiptsFrom">
-                Potvrzení o daru tu vystavujeme za dary přijaté od 1.&nbsp;ledna&nbsp;{{ receiptsFrom() }}, u starších darů proto tlačítko „Stáhnout PDF“ chybí.
+                Potvrzení o daru tu vystavujeme za dary přijaté od 1.&nbsp;ledna&nbsp;{{
+                  receiptsFrom()
+                }}, u starších darů proto tlačítko „Stáhnout PDF“ chybí.
               </p>
             }
           } @else {
-            <p class="payments-empty" i18n="@@donor.dashboard.payments.empty">Zatím tu není žádná platba.</p>
+            <p class="payments-empty" i18n="@@donor.dashboard.payments.empty">
+              Zatím tu není žádná platba.
+            </p>
           }
           <p class="bank-hint" i18n="@@donor.dashboard.bank.hint">
-            Nové platby hledáme v bance každou hodinu a také když otevřete tento přehled nebo stisknete „Obnovit“, nejvýš ale jednou
-            za 30&nbsp;sekund. Okamžitá platba se tu obvykle objeví do minuty, běžný převod z jiné banky může trvat až do dalšího
-            pracovního dne. Dar se přiřadí sám, když platba nese váš variabilní symbol.
+            Nové platby hledáme v bance každou hodinu a také když otevřete tento přehled nebo
+            stisknete „Obnovit“, nejvýš ale jednou za 30&nbsp;sekund. Okamžitá platba se tu obvykle
+            objeví do minuty, běžný převod z jiné banky může trvat až do dalšího pracovního dne. Dar
+            se přiřadí sám, když platba nese váš variabilní symbol.
           </p>
         </div>
       }
@@ -257,7 +375,10 @@
     <app-profile-card (sessionEnded)="sendToSignIn()" />
 
     <p class="contact-line">
-      <span i18n="@@donor.dashboard.help">Máte dotaz k platbě? Napište nám na</span>&ngsp;<a href="mailto:info@nfnn.cz">info&#64;nfnn.cz</a>
+      <span i18n="@@donor.dashboard.help">Máte dotaz k platbě? Napište nám na</span>&ngsp;<a
+        href="mailto:info@nfnn.cz"
+        >info&#64;nfnn.cz</a
+      >
     </p>
   </div>
 </div>

@@ -52,7 +52,9 @@ describe('Given a question about payments with an older variable symbol from a v
       'Když odpovíte „Ano, jsou moje“, přiřadíme vám tyto platby i další s tímto symbolem z tohoto účtu. ' +
         'Odpověď už nepůjde změnit; kdybyste se spletli, napište nám na info@nfnn.cz.',
     );
-    expect(element<HTMLAnchorElement>('.claim-note a').getAttribute('href')).toBe('mailto:info@nfnn.cz');
+    expect(element<HTMLAnchorElement>('.claim-note a').getAttribute('href')).toBe(
+      'mailto:info@nfnn.cz',
+    );
     expect(text('.claim-yes')).toBe('Ano, jsou moje');
     expect(text('.claim-no')).toBe('Ne, nejsou moje');
     expect(text('.claim')).not.toContain('Kč');
@@ -74,7 +76,7 @@ describe('Given a question about payments with an older variable symbol from a v
     expect(text('.claim-question')).toContain('(2 platby, říjen 2026)');
   });
 
-  it('when the donor has no name, then it asks whether they are the donor\'s gifts without naming anyone', () => {
+  it("when the donor has no name, then it asks whether they are the donor's gifts without naming anyone", () => {
     fixture.componentRef.setInput('donorName', '');
     fixture.detectChanges();
 
@@ -90,7 +92,9 @@ describe('Given a question about payments with an older variable symbol from a v
     expect(question.id).toBe('symbol-claim-0192f0c4-0000-7000-8000-000000000001-question');
     expect(group.getAttribute('aria-labelledby')).toBe(question.id);
     expect(element('.claim-yes').getAttribute('aria-describedby')).toBe(element('.claim-note').id);
-    expect(element('.claim-note').id).toBe('symbol-claim-0192f0c4-0000-7000-8000-000000000001-note');
+    expect(element('.claim-note').id).toBe(
+      'symbol-claim-0192f0c4-0000-7000-8000-000000000001-note',
+    );
     expect(element('.claim-no').hasAttribute('aria-describedby')).toBe(false);
   });
 

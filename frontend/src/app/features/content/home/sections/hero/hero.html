@@ -1,7 +1,11 @@
 <section id="home" class="hero">
   <img
     fetchpriority="high"
-    srcset="/images/hero-1280.webp 1280w, /images/hero-1920.webp 1920w, /images/hero-2560.webp 2560w"
+    srcset="
+      /images/hero-1280.webp 1280w,
+      /images/hero-1920.webp 1920w,
+      /images/hero-2560.webp 2560w
+    "
     sizes="max(100vw, 150vh, 900px)"
     src="/images/hero-1920.webp"
     width="1920"
@@ -19,8 +23,12 @@
       Pomáháme zdravotně postiženým dětem k lepšímu životu. Každý příspěvek mění příběh.
     </p>
     <div class="hero-btns">
-      <a class="btn-primary" routerLink="/" fragment="donate" i18n="@@home.hero.cta.primary">Přispět nyní</a>
-      <a class="btn-ghost" routerLink="/" fragment="projects" i18n="@@home.hero.cta.secondary">Naše projekty</a>
+      <a class="btn-primary" routerLink="/" fragment="donate" i18n="@@home.hero.cta.primary"
+        >Přispět nyní</a
+      >
+      <a class="btn-ghost" routerLink="/" fragment="projects" i18n="@@home.hero.cta.secondary"
+        >Naše projekty</a
+      >
     </div>
   </div>
 

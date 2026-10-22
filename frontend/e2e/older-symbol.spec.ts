@@ -32,7 +32,9 @@ const confirmedGifts = ['2027-01-05', '2026-12-05', '2026-11-05'].map((receivedA
 
 function overview(items: ReturnType<typeof donationItem>[]) {
   const total = items.reduce((sum, item) => sum + item.amountMinor, 0);
-  const years = [...new Set(items.map((item) => Number(item.receivedAt.slice(0, 4))))].sort((a, b) => b - a);
+  const years = [...new Set(items.map((item) => Number(item.receivedAt.slice(0, 4))))].sort(
+    (a, b) => b - a,
+  );
   return {
     summary: {
       totalAmountMinor: total,
@@ -41,7 +43,11 @@ function overview(items: ReturnType<typeof donationItem>[]) {
       lastReceivedAt: items[0].receivedAt,
       byYear: years.map((year) => {
         const ofYear = items.filter((item) => item.receivedAt.startsWith(`${year}`));
-        return { year, count: ofYear.length, totalAmountMinor: ofYear.reduce((sum, item) => sum + item.amountMinor, 0) };
+        return {
+          year,
+          count: ofYear.length,
+          totalAmountMinor: ofYear.reduce((sum, item) => sum + item.amountMinor, 0),
+        };
       }),
       yearlyReceiptsAvailableThrough: 2026,
       receiptsAvailableFrom: 2026,
@@ -51,7 +57,13 @@ function overview(items: ReturnType<typeof donationItem>[]) {
 }
 
 const beforeAnswer = overview([verification, earlierGift]);
-const afterConfirmation = overview([verification, confirmedGifts[0], confirmedGifts[1], confirmedGifts[2], earlierGift]);
+const afterConfirmation = overview([
+  verification,
+  confirmedGifts[0],
+  confirmedGifts[1],
+  confirmedGifts[2],
+  earlierGift,
+]);
 
 interface Answers {
   posted: { path: string; body: unknown }[];
@@ -64,13 +76,16 @@ async function askAboutAnOlderSymbol(page: Page): Promise<Answers> {
   await mockDonorApi(page, beforeAnswer);
   await page.route(
     (url) => url.pathname === '/api/donations/me/summary',
-    (route) => route.fulfill({ json: (answer === 'confirm' ? afterConfirmation : beforeAnswer).summary }),
+    (route) =>
+      route.fulfill({ json: (answer === 'confirm' ? afterConfirmation : beforeAnswer).summary }),
   );
   await page.route(
     (url) => url.pathname === '/api/donations/me',
     (route) => {
       answers.overviewLoads++;
-      return route.fulfill({ json: (answer === 'confirm' ? afterConfirmation : beforeAnswer).list });
+      return route.fulfill({
+        json: (answer === 'confirm' ? afterConfirmation : beforeAnswer).list,
+      });
     },
   );
   await page.route(
@@ -85,7 +100,15 @@ async function askAboutAnOlderSymbol(page: Page): Promise<Answers> {
               verifiedOn: '2027-01-12',
               verificationPaymentOn: '2027-01-12',
               donationCount: 0,
-              symbolOffer: answer === null ? { variableSymbol: SYMBOL, paymentCount: 3, firstMonth: '2026-11', lastMonth: '2027-01' } : null,
+              symbolOffer:
+                answer === null
+                  ? {
+                      variableSymbol: SYMBOL,
+                      paymentCount: 3,
+                      firstMonth: '2026-11',
+                      lastMonth: '2027-01',
+                    }
+                  : null,
               confirmedSymbols: answer === 'confirm' ? [SYMBOL] : [],
             }),
           ],
@@ -109,10 +132,14 @@ async function askAboutAnOlderSymbol(page: Page): Promise<Answers> {
 }
 
 test.describe('Given a signed-in donor whose verified account sent payments with an older symbol', () => {
-  test('when they answer that the payments are theirs, then the row says so, the status names the payments and the changed receipt, and the payments carry the symbol', async ({ page }) => {
+  test('when they answer that the payments are theirs, then the row says so, the status names the payments and the changed receipt, and the payments carry the symbol', async ({
+    page,
+  }) => {
     const answers = await askAboutAnOlderSymbol(page);
     await signIn(page);
-    const question = page.getByRole('group', { name: /Z tohoto účtu k nám chodí i platby s variabilním symbolem/ });
+    const question = page.getByRole('group', {
+      name: /Z tohoto účtu k nám chodí i platby s variabilním symbolem/,
+    });
     await expect(question).toContainText(
       `Z tohoto účtu k nám chodí i platby s variabilním symbolem ${SYMBOL} (3 platby, listopad 2026 – leden 2027). Jsou to dary od vás (Jana Nováková)?`,
     );
@@ -124,7 +151,10 @@ test.describe('Given a signed-in donor whose verified account sent payments with
       `Přiřadili jsme vám 3 platby s VS ${SYMBOL} z účtu ${ACCOUNT}. Potvrzení za rok 2026 se změnilo, stáhněte si nové.`,
     );
     expect(answers.posted).toEqual([
-      { path: `/api/donations/me/bank-accounts/${ACCOUNT_ID}/symbol-claim/confirm`, body: { variableSymbol: SYMBOL } },
+      {
+        path: `/api/donations/me/bank-accounts/${ACCOUNT_ID}/symbol-claim/confirm`,
+        body: { variableSymbol: SYMBOL },
+      },
     ]);
     await expect(question).toHaveCount(0);
     await expect(page.locator('.accounts-list .account-hint')).toHaveText([
@@ -141,10 +171,14 @@ test.describe('Given a signed-in donor whose verified account sent payments with
     await expect(page.locator('.stat-value').first()).toHaveText('1 401 Kč');
   });
 
-  test('when they answer that the payments are not theirs, then the question disappears, the status says they stay unassigned and the payments do not change', async ({ page }) => {
+  test('when they answer that the payments are not theirs, then the question disappears, the status says they stay unassigned and the payments do not change', async ({
+    page,
+  }) => {
     const answers = await askAboutAnOlderSymbol(page);
     await signIn(page);
-    const question = page.getByRole('group', { name: /Z tohoto účtu k nám chodí i platby s variabilním symbolem/ });
+    const question = page.getByRole('group', {
+      name: /Z tohoto účtu k nám chodí i platby s variabilním symbolem/,
+    });
     await expect(question).toBeVisible();
     await expect(page.locator('.payments-card tbody tr')).toHaveCount(2);
 
@@ -154,7 +188,10 @@ test.describe('Given a signed-in donor whose verified account sent payments with
       `Odpověď jsme uložili. Platby s VS ${SYMBOL} z účtu ${ACCOUNT} vám nepřiřadíme.`,
     );
     expect(answers.posted).toEqual([
-      { path: `/api/donations/me/bank-accounts/${ACCOUNT_ID}/symbol-claim/decline`, body: { variableSymbol: SYMBOL } },
+      {
+        path: `/api/donations/me/bank-accounts/${ACCOUNT_ID}/symbol-claim/decline`,
+        body: { variableSymbol: SYMBOL },
+      },
     ]);
     await expect(question).toHaveCount(0);
     await expect(page.locator('.accounts-list .account-hint')).toHaveText([ACTIVE_HINT]);

@@ -68,7 +68,11 @@ describe('Given the page that sets a new password from the e-mail link', () => {
     await settle();
   }
 
-  async function answerConfirm(body: Record<string, unknown> | null, status: number, statusText: string): Promise<void> {
+  async function answerConfirm(
+    body: Record<string, unknown> | null,
+    status: number,
+    statusText: string,
+  ): Promise<void> {
     http.expectOne('/api/donors/auth/password-reset/confirm').flush(body, { status, statusText });
     await settle();
   }
@@ -79,7 +83,9 @@ describe('Given the page that sets a new password from the e-mail link', () => {
     it('then the token leaves the address bar and the form asks for the new password', () => {
       expect(TestBed.inject(Location).path(true)).toBe('/obnova-hesla');
       expect(heading().textContent).toContain('Nastavte si nové heslo');
-      expect(element('#reset-password').getAttribute('aria-describedby')).toBe('reset-password-hint');
+      expect(element('#reset-password').getAttribute('aria-describedby')).toBe(
+        'reset-password-hint',
+      );
       expect(element('#reset-password-hint').textContent).toContain('Alespoň 12 znaků');
     });
 
@@ -107,7 +113,9 @@ describe('Given the page that sets a new password from the e-mail link', () => {
       await submitPasswords('short');
 
       http.expectNone('/api/donors/auth/password-reset/confirm');
-      expect(element('#reset-password-error').textContent).toContain('Heslo musí mít alespoň 12 znaků.');
+      expect(element('#reset-password-error').textContent).toContain(
+        'Heslo musí mít alespoň 12 znaků.',
+      );
     });
 
     it('and the password is saved, then the success panel takes focus and offers the sign-in dialog', async () => {
@@ -130,7 +138,11 @@ describe('Given the page that sets a new password from the e-mail link', () => {
     it('and the link is no longer valid, then the invalid panel offers a new link', async () => {
       await submitPasswords('correct horse battery');
       await answerConfirm(
-        problem('donors/invalid-password-reset-token', 'Odkaz pro obnovu hesla je neplatný nebo vypršel', 'Požádejte prosím o nový odkaz.'),
+        problem(
+          'donors/invalid-password-reset-token',
+          'Odkaz pro obnovu hesla je neplatný nebo vypršel',
+          'Požádejte prosím o nový odkaz.',
+        ),
         400,
         'Bad Request',
       );
@@ -153,7 +165,9 @@ describe('Given the page that sets a new password from the e-mail link', () => {
         'Bad Request',
       );
 
-      expect(element('.form-error').textContent).toContain('Heslo je příliš běžné. Zvolte prosím jiné heslo.');
+      expect(element('.form-error').textContent).toContain(
+        'Heslo je příliš běžné. Zvolte prosím jiné heslo.',
+      );
       expect(heading().textContent).toContain('Nastavte si nové heslo');
       expect(element<HTMLButtonElement>('.form-submit').disabled).toBe(false);
     });
@@ -162,14 +176,18 @@ describe('Given the page that sets a new password from the e-mail link', () => {
       await submitPasswords('correct horse battery');
       await answerConfirm(null, 502, 'Bad Gateway');
 
-      expect(element('.form-error').textContent).toContain('Heslo se nepodařilo uložit. Zkuste to prosím znovu.');
+      expect(element('.form-error').textContent).toContain(
+        'Heslo se nepodařilo uložit. Zkuste to prosím znovu.',
+      );
     });
 
     it('and the donor leaves the page before the answer arrives, then the late answer is dropped silently', async () => {
       await submitPasswords('correct horse battery');
       harness.fixture.destroy();
 
-      http.expectOne('/api/donors/auth/password-reset/confirm').flush(null, { status: 204, statusText: 'No Content' });
+      http
+        .expectOne('/api/donors/auth/password-reset/confirm')
+        .flush(null, { status: 204, statusText: 'No Content' });
       await new Promise((resolve) => setTimeout(resolve, 0));
 
       expect(dialog.isOpen()).toBe(false);
@@ -188,7 +206,9 @@ describe('Given the page that sets a new password from the e-mail link', () => {
 
       await submitPasswords('correct horse battery');
       await answerConfirm(null, 204, 'No Content');
-      http.expectOne('/api/donors/auth/logout').flush(null, { status: 401, statusText: 'Unauthorized' });
+      http
+        .expectOne('/api/donors/auth/logout')
+        .flush(null, { status: 401, statusText: 'Unauthorized' });
       await settle();
 
       expect(logout).toHaveBeenCalledOnce();

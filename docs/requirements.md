@@ -17,7 +17,7 @@ Web fondu, který představí fond a jeho pomoc dětem, usnadní darování a d�
 
 ## 3. Úvodní stránka
 
-- ✅ Vzhled a sekce podle prototypu `Claude Design/Nova Nadeje.html` (modrý akcent, fullscreen hero, zaoblené karty): Domů, O nás, čísla, Projekty (karty dětí), Aktuality, Přispět, Kontakt (formulář), patička s IČO a zápisem v rejstříku.
+- ✅ Vzhled a sekce podle původního prototypu (modrý akcent, fullscreen hero, zaoblené karty; dnes hotové v theme `frontend/src/styles/themes/_nova-nadeje.scss` a v komponentách, prototyp byl z repa odstraněn 22. 10. 2026): Domů, O nás, čísla, Projekty (karty dětí), Aktuality, Přispět, Kontakt (formulář), patička s IČO a zápisem v rejstříku.
 - ✅ Texty, příběhy, čísla, fotky a údaje fondu (účet, IČO, adresa) jsou v prototypu zástupné. Skutečné dodá Jakub.
 - ✅ **Přispět**: návštěvník zvolí částku (100 / 500 / 1000 / jiná) a vygeneruje se QR platba na účet fondu. Přihlášenému dárci QR obsahuje jeho variabilní symbol, takže se dar spáruje sám.
 - 🔸 K tomu jen stránka **Zásady ochrany osobních údajů**, nutná kvůli registraci. Další stránky (detaily projektů a aktualit, dokumenty) až postupně ✅.
@@ -29,6 +29,7 @@ Web fondu, který představí fond a jeho pomoc dětem, usnadní darování a d�
 - 🔸 Přihlášení e-mailem a heslem, obnova hesla e-mailem (jako v prototypu).
 - 🔸 Po registraci dostane dárce vlastní variabilní symbol, který vidí v přehledu.
 - ✅ Účet si dárce sám smazat nemůže; přidá se později. 🔸 Žádost o výmaz podle GDPR zatím vyřídí fond ručně (e-mailem); záznamy o darech zůstávají kvůli účetnictví.
+- ✅ Ověření e-mailu při registraci (odkaz v e-mailu, do potvrzení je účet neaktivní) přijde před spuštěním na nfnn.cz (Jakub 22. 10. 2026); do té doby se účet zakládá bez ověření.
 
 ### Přehled
 - ✅ Jako v prototypu: celkem darováno, počet darů, poslední dar, tabulka plateb.
@@ -66,6 +67,8 @@ Web fondu, který představí fond a jeho pomoc dětem, usnadní darování a d�
 - 🔸 Zprávy z kontaktního formuláře web smaže ze své databáze rok po odeslání (každý den ve 3:30). Kopii ve schránce fondu web smazat neumí; zásady slibují, že ji fond drží jen do vyřízení dotazu.
 - 🔸 Zásady ochrany osobních údajů popisují, co web skutečně dělá: párování podle VS i podle prokázaného účtu, uložené údaje z výpisu (i konstantní a specifický symbol a zprávu pro příjemce), IP adresy v limitech a v logu reverzní proxy a webového serveru, Brevo (měří otevření a kliky), Cloudflare a Gmail včetně předání do USA a zálohy. Platí od 18. 10. 2026 a web běží na vlastním serveru fondu (obojí potvrdil Jakub 18. 10. 2026). ❓ Zbývá zjistit, jak dlouho drží Nginx Proxy Manager své logy; zásady zatím říkají „do jejich automatického smazání“.
 
+- 🔸 Hlídání výpadku zvenčí (kontrola dostupnosti webu a endpointu, který prokáže backend), zkušební obnova zálohy a kopie záloh mimo server přijdou po přechodu na nfnn.cz (Jakub 22. 10. 2026).
+
 ## 7. Později, mimo první verzi
 
 - Administrace pro správce (aktuality, projekty, nespárované platby, nastavení měsíčního přehledu: komu chodí, kdy a co obsahuje).
@@ -78,11 +81,3 @@ Web fondu, který představí fond a jeho pomoc dětem, usnadní darování a d�
 - Rozšíření přehledu dárce.
 - Změna odpovědi na otázku na starší VS dárcem samým.
 - Účty, ze kterých chodí víc starších VS, v měsíčním přehledu.
-
-## 8. Co je potřeba změnit v `docs/api-contract.md`
-
-Kontrakt vznikl před tímto zadáním a v těchto bodech se s ním rozchází:
-- Registrace a profil (`/api/donors/auth/register`, `/api/donors/me`): typ dárce (člověk / firma), adresa, u firmy název, IČO a sídlo.
-- Příjem darů: pravidelné stahování z Fio API místo ručního importu CSV; párování podle VS a pak podle čísla účtu odesílatele; nespárované platby se ukládají.
-- `DonationRecorded` neposílá e-mail (v první verzi se nic neposílá).
-- `GET /api/donations/me/summary`: souhrn po letech (rok, počet, částka) je v první verzi povinný.

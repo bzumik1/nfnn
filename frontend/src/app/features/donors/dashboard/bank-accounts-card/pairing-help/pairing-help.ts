@@ -1,9 +1,10 @@
-import { Component, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
 
 @Component({
   selector: 'app-pairing-help',
   templateUrl: './pairing-help.html',
   styleUrl: './pairing-help.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PairingHelp {
   readonly variableSymbol = input<string | null>(null);

@@ -22,9 +22,20 @@ export function twoYearDonations(): DonationListResponse {
   return {
     items: [
       donationItem({ id: 'd-4', receivedAt: '2026-03-15', amountMinor: 50000 }),
-      donationItem({ id: 'd-3', receivedAt: '2026-01-10', amountMinor: 100000, receiptNumber: '2026-000017' }),
+      donationItem({
+        id: 'd-3',
+        receivedAt: '2026-01-10',
+        amountMinor: 100000,
+        receiptNumber: '2026-000017',
+      }),
       donationItem({ id: 'd-2', receivedAt: '2025-11-05', amountMinor: 25000 }),
-      donationItem({ id: 'd-1', receivedAt: '2025-08-20', amountMinor: 200000, status: 'REFUNDED', receiptAvailable: false }),
+      donationItem({
+        id: 'd-1',
+        receivedAt: '2025-08-20',
+        amountMinor: 200000,
+        status: 'REFUNDED',
+        receiptAvailable: false,
+      }),
     ],
     totalAmountMinor: 175000,
     currency: 'CZK',

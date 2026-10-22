@@ -7,8 +7,10 @@ Web nadačního fondu — Spring Boot 4 (Java 25, DDD) + Angular 21.
 ```
 backend/         Java backend (Spring Boot, Gradle)
 frontend/        Angular frontend
-Claude Design/   HTML prototyp s designem (zdrojový vzor)
-docker-compose.yml   Stack pro ZimaOS (postgres + backend + frontend)
+deploy/          Compose a šablony env pro produkci na ZimaOS
+docs/            Zadání, API kontrakt, přehled systému a frontendu
+.claude/         Pravidla, skills, agenti a hooky pro Claude Code
+docker-compose.yml   Lokální stack (postgres + backend + frontend)
 ```
 
 ## Lokální vývoj
@@ -36,8 +38,7 @@ Backend poběží na `http://localhost:8080`. JDK 25 si Gradle stáhne sám (too
 
 ```bash
 cd frontend
-npm install
-ng add @angular/localize    # jednorázově při prvním checkoutu
+npm ci
 npm start                   # dev server na http://localhost:4200, /api proxy na backend
 ```
 
@@ -45,8 +46,9 @@ npm start                   # dev server na http://localhost:4200, /api proxy na
 
 | | Backend | Frontend |
 |---|---|---|
-| Unit | `./gradlew test` | `npm test` |
+| Unit | `./gradlew test` (potřebuje Docker) | `npm test -- --watch=false` |
 | Cucumber / E2E | `./gradlew test --tests "*AcceptanceTests"` | `npm run e2e` |
+| Bez Dockeru | `./gradlew test --tests "*architecture*" -PnoCucumber` | `npm run format:check`, `npm run lint`, `npm run lint:styles`, `npm run build` |
 
 ## Produkční nasazení (ZimaOS)
 
@@ -56,4 +58,4 @@ Lokálně celý stack spustíš přes `cp .env.example .env && docker compose up
 
 ## Architektura
 
-Detaily DDD vrstev, bounded contextů, testovacích konvencí a pravidel jsou v [CLAUDE.md](CLAUDE.md).
+Pravidla pro vývoj jsou v [CLAUDE.md](CLAUDE.md) a `.claude/rules/`; jak systém dnes funguje, v [docs/system-overview.md](docs/system-overview.md) a [docs/frontend-overview.md](docs/frontend-overview.md); HTTP kontrakt v [docs/api-contract.md](docs/api-contract.md).

@@ -14,7 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class DonorAuthenticationService {
 
-    private static final PasswordHash UNKNOWN_DONOR_HASH = new PasswordHash("$2a$12$M1iAaVTc4MVDPv.GpjOu2uOasdTBg4qXKljiFlEkDJx43eTcrMme2");
+    private static final PasswordHash UNKNOWN_DONOR_HASH = new PasswordHash("$2a$12$nHaJvjs2DmAUxce8R89JQenUJ3uPyNxk7wzoV6M5duitBKTlu9VvG");
 
     private final DonorRepository donors;
     private final PasswordHasher passwordHasher;

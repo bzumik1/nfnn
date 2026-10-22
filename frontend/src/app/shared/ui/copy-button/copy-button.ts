@@ -1,6 +1,13 @@
 /// <reference types="@angular/localize" />
 
-import { Component, DestroyRef, inject, input, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  DestroyRef,
+  inject,
+  input,
+  signal,
+} from '@angular/core';
 
 const CONFIRMATION_MS = 2000;
 
@@ -11,6 +18,7 @@ type CopyState = 'idle' | 'copied' | 'failed';
   templateUrl: './copy-button.html',
   styleUrl: './copy-button.scss',
   host: { '[class.has-failed]': "state() === 'failed'" },
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CopyButton {
   readonly value = input.required<string>();

@@ -1,6 +1,17 @@
 /// <reference types="@angular/localize" />
 
-import { afterNextRender, Component, computed, ElementRef, inject, Injector, output, signal, viewChild } from '@angular/core';
+import {
+  afterNextRender,
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  ElementRef,
+  inject,
+  Injector,
+  output,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { FormsModule, NgForm } from '@angular/forms';
 import { describeProblem, problemTypeEndsWith } from '../../../../core/auth/api-problem';
 import { AuthStore } from '../../../../core/auth/auth-store';
@@ -36,6 +47,7 @@ const UNAUTHENTICATED = 'auth/unauthenticated';
   imports: [FormsModule, FormField, FormControlDirective, FocusFirstInvalid],
   templateUrl: './profile-card.html',
   styleUrl: './profile-card.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ProfileCard {
   private readonly auth = inject(AuthStore);
@@ -56,7 +68,9 @@ export class ProfileCard {
 
   protected fields: ProfileFields = fieldsOf(null);
 
-  protected readonly nameMessages = computed(() => (this.company() ? COMPANY_NAME_MESSAGES : PERSON_NAME_MESSAGES));
+  protected readonly nameMessages = computed(() =>
+    this.company() ? COMPANY_NAME_MESSAGES : PERSON_NAME_MESSAGES,
+  );
   protected readonly streetMessages = STREET_MESSAGES;
   protected readonly cityMessages = CITY_MESSAGES;
   protected readonly postalCodeMessages = POSTAL_CODE_MESSAGES;

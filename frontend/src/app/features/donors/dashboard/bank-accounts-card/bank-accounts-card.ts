@@ -1,7 +1,20 @@
 /// <reference types="@angular/localize" />
 
 import { DOCUMENT, NgTemplateOutlet } from '@angular/common';
-import { afterNextRender, Component, computed, DestroyRef, ElementRef, inject, Injector, input, output, signal, viewChild } from '@angular/core';
+import {
+  afterNextRender,
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  DestroyRef,
+  ElementRef,
+  inject,
+  Injector,
+  input,
+  output,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
   catchError,
@@ -41,7 +54,10 @@ import { SymbolClaim, SymbolClaimAnswer } from './symbol-claim/symbol-claim';
 
 type ListState = 'loading' | 'ready' | 'error';
 
-type QrState = { readonly kind: 'loading' } | { readonly kind: 'ready'; readonly qr: PaymentQrResponse } | { readonly kind: 'failed' };
+type QrState =
+  | { readonly kind: 'loading' }
+  | { readonly kind: 'ready'; readonly qr: PaymentQrResponse }
+  | { readonly kind: 'failed' };
 
 type PaymentWatch = 'waiting' | 'stopped';
 
@@ -92,6 +108,7 @@ const PAYMENT_WATCH_CHECKS = 20;
   imports: [Dialog, CopyButton, NgTemplateOutlet, PairingHelp, SymbolClaim],
   templateUrl: './bank-accounts-card.html',
   styleUrl: './bank-accounts-card.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class BankAccountsCard {
   private readonly api = inject(BankAccountsApi);
@@ -143,7 +160,8 @@ export class BankAccountsCard {
       this.accounts().find(
         (account) =>
           account.status === 'ACTIVE' &&
-          (!known.active.has(account.id) || known.verificationPaymentOn.get(account.id) !== account.verificationPaymentOn),
+          (!known.active.has(account.id) ||
+            known.verificationPaymentOn.get(account.id) !== account.verificationPaymentOn),
       ) ?? null
     );
   });
@@ -223,7 +241,9 @@ export class BankAccountsCard {
   }
 
   protected offersDisconnect(account: BankAccountItem): boolean {
-    return account.status === 'ACTIVE' ? !account.pairingExcluded : account.status !== 'DISCONNECTED';
+    return account.status === 'ACTIVE'
+      ? !account.pairingExcluded
+      : account.status !== 'DISCONNECTED';
   }
 
   protected warns(account: BankAccountItem): boolean {
@@ -239,11 +259,17 @@ export class BankAccountsCard {
   }
 
   protected offersReconnect(account: BankAccountItem): boolean {
-    return account.status === 'DISCONNECTED' && !account.pairingExcluded && this.isNewestOfItsNumber(account);
+    return (
+      account.status === 'DISCONNECTED' &&
+      !account.pairingExcluded &&
+      this.isNewestOfItsNumber(account)
+    );
   }
 
   private isNewestOfItsNumber(account: BankAccountItem): boolean {
-    return this.accounts().find((other) => other.accountNumber === account.accountNumber) === account;
+    return (
+      this.accounts().find((other) => other.accountNumber === account.accountNumber) === account
+    );
   }
 
   protected labelModifier(account: BankAccountItem): string {
@@ -276,20 +302,35 @@ export class BankAccountsCard {
   }
 
   protected disconnect(account: BankAccountItem): void {
-    this.run(account, this.api.disconnect(account.id).pipe(map(() => DISCONNECTED_MESSAGE)), CHANGE_FAILED);
+    this.run(
+      account,
+      this.api.disconnect(account.id).pipe(map(() => DISCONNECTED_MESSAGE)),
+      CHANGE_FAILED,
+    );
   }
 
   protected reconnect(account: BankAccountItem): void {
-    this.run(account, this.api.reconnect(account.id).pipe(map(() => RECONNECTED_MESSAGE)), CHANGE_FAILED);
+    this.run(
+      account,
+      this.api.reconnect(account.id).pipe(map(() => RECONNECTED_MESSAGE)),
+      CHANGE_FAILED,
+    );
   }
 
   protected answer(account: BankAccountItem, offer: SymbolOffer, answer: SymbolClaimAnswer): void {
-    const request$ = answer === 'confirm' ? this.confirmSymbol(account, offer) : this.declineSymbol(account, offer);
+    const request$ =
+      answer === 'confirm'
+        ? this.confirmSymbol(account, offer)
+        : this.declineSymbol(account, offer);
     this.run(account, request$.pipe(tap(() => this.withdrawOffer(account))), ANSWER_FAILED);
   }
 
   private withdrawOffer(answered: BankAccountItem): void {
-    this.accounts.update((accounts) => accounts.map((account) => (account.id === answered.id ? { ...account, symbolOffer: null } : account)));
+    this.accounts.update((accounts) =>
+      accounts.map((account) =>
+        account.id === answered.id ? { ...account, symbolOffer: null } : account,
+      ),
+    );
   }
 
   private confirmSymbol(account: BankAccountItem, offer: SymbolOffer): Observable<string> {
@@ -299,7 +340,9 @@ export class BankAccountsCard {
           this.donationsChanged.emit();
         }
       }),
-      map((confirmation) => confirmedMessage(confirmation, offer.variableSymbol, account.accountNumber)),
+      map((confirmation) =>
+        confirmedMessage(confirmation, offer.variableSymbol, account.accountNumber),
+      ),
     );
   }
 
@@ -369,7 +412,9 @@ export class BankAccountsCard {
         switchMap((visible, index) =>
           visible
             ? timer(index === 0 ? PAYMENT_WATCH_INTERVAL_MS : 0).pipe(
-                switchMap(() => this.checkForPayment().pipe(repeat({ delay: PAYMENT_WATCH_INTERVAL_MS }))),
+                switchMap(() =>
+                  this.checkForPayment().pipe(repeat({ delay: PAYMENT_WATCH_INTERVAL_MS })),
+                ),
               )
             : EMPTY,
         ),
@@ -413,10 +458,12 @@ export class BankAccountsCard {
   protected loadQr(): void {
     this.qrRequest?.unsubscribe();
     this.qr.set({ kind: 'loading' });
-    this.qrRequest = this.paymentQr.paymentQr(VERIFICATION_AMOUNT, this.variableSymbol(), 'ACCOUNT_VERIFICATION').subscribe({
-      next: (qr) => this.qr.set({ kind: 'ready', qr }),
-      error: () => this.qr.set({ kind: 'failed' }),
-    });
+    this.qrRequest = this.paymentQr
+      .paymentQr(VERIFICATION_AMOUNT, this.variableSymbol(), 'ACCOUNT_VERIFICATION')
+      .subscribe({
+        next: (qr) => this.qr.set({ kind: 'ready', qr }),
+        error: () => this.qr.set({ kind: 'failed' }),
+      });
   }
 
   private actionButtonOf(account: BankAccountItem): HTMLButtonElement | null {
@@ -445,14 +492,24 @@ function labelOf(account: BankAccountItem): AccountLabel {
 
 function accountsWhenOpened(items: readonly BankAccountItem[]): AccountsWhenOpened {
   return {
-    active: new Set(items.filter((account) => account.status === 'ACTIVE').map((account) => account.id)),
-    verificationPaymentOn: new Map(items.map((account) => [account.id, account.verificationPaymentOn])),
+    active: new Set(
+      items.filter((account) => account.status === 'ACTIVE').map((account) => account.id),
+    ),
+    verificationPaymentOn: new Map(
+      items.map((account) => [account.id, account.verificationPaymentOn]),
+    ),
   };
 }
 
-function confirmedMessage({ pairedCount, changedYearlyReceipts }: SymbolClaimConfirmation, symbol: string, account: string): string {
+function confirmedMessage(
+  { pairedCount, changedYearlyReceipts }: SymbolClaimConfirmation,
+  symbol: string,
+  account: string,
+): string {
   const paired = pairedMessage(pairedCount, symbol, account);
-  return changedYearlyReceipts.length > 0 ? `${paired} ${receiptsChangedMessage(changedYearlyReceipts)}` : paired;
+  return changedYearlyReceipts.length > 0
+    ? `${paired} ${receiptsChangedMessage(changedYearlyReceipts)}`
+    : paired;
 }
 
 function pairedMessage(count: number, symbol: string, account: string): string {

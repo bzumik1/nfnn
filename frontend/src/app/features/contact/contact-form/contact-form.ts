@@ -1,7 +1,7 @@
 /// <reference types="@angular/localize" />
 
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { FormsModule, NgForm } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { FocusFirstInvalid } from '../../../shared/ui/form-field/focus-first-invalid';
@@ -16,6 +16,7 @@ const TOO_MANY_REQUESTS = 429;
   imports: [FormsModule, RouterLink, FormField, FormControlDirective, FocusFirstInvalid],
   templateUrl: './contact-form.html',
   styleUrl: './contact-form.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ContactForm {
   private readonly api = inject(ContactApi);

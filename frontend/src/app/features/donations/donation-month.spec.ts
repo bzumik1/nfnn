@@ -7,7 +7,9 @@ describe('Given a month the bank accounts API sends', () => {
   });
 
   it('when every month of a year is formatted, then each gets its own nominative name', () => {
-    const months = Array.from({ length: 12 }, (_, index) => formatMonth(`2026-${String(index + 1).padStart(2, '0')}`));
+    const months = Array.from({ length: 12 }, (_, index) =>
+      formatMonth(`2026-${String(index + 1).padStart(2, '0')}`),
+    );
 
     expect(months).toEqual([
       'leden 2026',

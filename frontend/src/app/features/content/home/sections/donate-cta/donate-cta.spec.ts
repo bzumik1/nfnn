@@ -1,5 +1,9 @@
 import { provideHttpClient } from '@angular/common/http';
-import { HttpTestingController, provideHttpClientTesting, TestRequest } from '@angular/common/http/testing';
+import {
+  HttpTestingController,
+  provideHttpClientTesting,
+  TestRequest,
+} from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { LoginDialogService } from '../../../../../core/auth/login-dialog.service';
@@ -49,7 +53,9 @@ describe('Given the donate section', () => {
   }
 
   function button(label: string): HTMLButtonElement {
-    const buttons = Array.from(fixture.nativeElement.querySelectorAll('button')) as HTMLButtonElement[];
+    const buttons = Array.from(
+      fixture.nativeElement.querySelectorAll('button'),
+    ) as HTMLButtonElement[];
     const match = buttons.find((candidate) => candidate.textContent?.trim() === label);
     if (!match) {
       throw new Error(`No button labelled "${label}"`);
@@ -86,7 +92,9 @@ describe('Given the donate section', () => {
     respond(expectQrRequest());
     const image = element<HTMLImageElement>('.donate-img img');
 
-    expect(image.getAttribute('srcset')).toBe('/images/donate-720.webp 720w, /images/donate-1440.webp 1440w');
+    expect(image.getAttribute('srcset')).toBe(
+      '/images/donate-720.webp 720w, /images/donate-1440.webp 1440w',
+    );
     expect(image.getAttribute('loading')).toBe('lazy');
   });
 
@@ -119,9 +127,9 @@ describe('Given the donate section', () => {
     await settle();
     respond(expectQrRequest());
 
-    const labels = Array.from(fixture.nativeElement.querySelectorAll('.amount-option') as NodeListOf<HTMLButtonElement>).map(
-      (option) => option.textContent?.trim(),
-    );
+    const labels = Array.from(
+      fixture.nativeElement.querySelectorAll('.amount-option') as NodeListOf<HTMLButtonElement>,
+    ).map((option) => option.textContent?.trim());
     expect(labels).toEqual(['1 000 Kč', '500 Kč', '100 Kč', 'Jiná částka']);
   });
 
@@ -143,7 +151,9 @@ describe('Given the donate section', () => {
     const request = expectQrRequest();
     expect(request.request.params.get('amount')).toBe('1000');
     respond(request);
-    expect(element<HTMLImageElement>('.qr-code img').getAttribute('src')).toBe('data:image/png;base64,png-for-1000.00');
+    expect(element<HTMLImageElement>('.qr-code img').getAttribute('src')).toBe(
+      'data:image/png;base64,png-for-1000.00',
+    );
     expect(button('1 000 Kč').getAttribute('aria-pressed')).toBe('true');
     expect(button('500 Kč').getAttribute('aria-pressed')).toBe('false');
   });
@@ -191,9 +201,17 @@ describe('Given the donate section', () => {
     respond(expectQrRequest());
 
     const rows = Array.from(fixture.nativeElement.querySelectorAll('.bank-row')) as HTMLElement[];
-    expect(rows.map((row) => row.querySelector('.bank-key')?.textContent?.trim())).toEqual(['Číslo účtu', 'Částka', 'IBAN']);
-    expect(rows[1].querySelector('.bank-value')?.textContent?.replace(/\s/g, ' ').trim()).toBe('500 Kč');
-    const copied = rows.map((row) => row.querySelector('app-copy-button button')?.textContent?.replace(/\s+/g, ' ').trim());
+    expect(rows.map((row) => row.querySelector('.bank-key')?.textContent?.trim())).toEqual([
+      'Číslo účtu',
+      'Částka',
+      'IBAN',
+    ]);
+    expect(rows[1].querySelector('.bank-value')?.textContent?.replace(/\s/g, ' ').trim()).toBe(
+      '500 Kč',
+    );
+    const copied = rows.map((row) =>
+      row.querySelector('app-copy-button button')?.textContent?.replace(/\s+/g, ' ').trim(),
+    );
     expect(copied).toEqual(['Kopírovat číslo účtu', 'Kopírovat částku', 'Kopírovat IBAN']);
   });
 
@@ -282,7 +300,9 @@ describe('Given the donate section', () => {
       expect(text('.bank')).toContain('Variabilní symbol');
       expect(text('.bank')).toContain('1234567890');
       expect(text('.bank-note')).toContain('dar uvidíte ve svém přehledu dárce');
-      const keys = Array.from(fixture.nativeElement.querySelectorAll('.bank-key')).map((key) => (key as HTMLElement).textContent?.trim());
+      const keys = Array.from(fixture.nativeElement.querySelectorAll('.bank-key')).map((key) =>
+        (key as HTMLElement).textContent?.trim(),
+      );
       expect(keys).toEqual(['Číslo účtu', 'Částka', 'Variabilní symbol', 'IBAN']);
       expect(fixture.nativeElement.textContent).not.toContain('Založit účet');
     });

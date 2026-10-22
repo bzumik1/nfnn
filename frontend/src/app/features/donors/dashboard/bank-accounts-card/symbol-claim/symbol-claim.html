@@ -1,20 +1,39 @@
 <div class="claim" role="group" [attr.aria-labelledby]="questionId()">
   @if (donorName()) {
     <p [id]="questionId()" class="claim-question" i18n="@@donor.bankAccounts.claim.question">
-      Z tohoto účtu k nám chodí i platby s variabilním symbolem <strong class="claim-symbol">{{ offer().variableSymbol }}</strong>
-      ({offer().paymentCount, plural, =1 {1&nbsp;platba} =2 {2&nbsp;platby} =3 {3&nbsp;platby} =4 {4&nbsp;platby} other {{{ offer().paymentCount }}&nbsp;plateb}},
-      {{ months() }}). Jsou to dary od vás ({{ donorName() }})?
+      Z tohoto účtu k nám chodí i platby s variabilním symbolem
+      <strong class="claim-symbol">{{ offer().variableSymbol }}</strong>
+      ({offer().paymentCount, plural,
+        =1 {1&nbsp;platba}
+        =2 {2&nbsp;platby}
+        =3 {3&nbsp;platby}
+        =4 {4&nbsp;platby}
+        other {{{ offer().paymentCount }}&nbsp;plateb}
+
+      }, {{ months() }}). Jsou to dary od vás ({{ donorName() }})?
     </p>
   } @else {
-    <p [id]="questionId()" class="claim-question" i18n="@@donor.bankAccounts.claim.questionWithoutName">
-      Z tohoto účtu k nám chodí i platby s variabilním symbolem <strong class="claim-symbol">{{ offer().variableSymbol }}</strong>
-      ({offer().paymentCount, plural, =1 {1&nbsp;platba} =2 {2&nbsp;platby} =3 {3&nbsp;platby} =4 {4&nbsp;platby} other {{{ offer().paymentCount }}&nbsp;plateb}},
-      {{ months() }}). Jsou to vaše dary?
+    <p
+      [id]="questionId()"
+      class="claim-question"
+      i18n="@@donor.bankAccounts.claim.questionWithoutName"
+    >
+      Z tohoto účtu k nám chodí i platby s variabilním symbolem
+      <strong class="claim-symbol">{{ offer().variableSymbol }}</strong>
+      ({offer().paymentCount, plural,
+        =1 {1&nbsp;platba}
+        =2 {2&nbsp;platby}
+        =3 {3&nbsp;platby}
+        =4 {4&nbsp;platby}
+        other {{{ offer().paymentCount }}&nbsp;plateb}
+
+      }, {{ months() }}). Jsou to vaše dary?
     </p>
   }
   <p [id]="noteId()" class="claim-note" i18n="@@donor.bankAccounts.claim.note">
-    Když odpovíte „Ano, jsou moje“, přiřadíme vám tyto platby i další s tímto symbolem z tohoto účtu. Odpověď už nepůjde změnit;
-    kdybyste se spletli, napište nám na <a href="mailto:info@nfnn.cz">info&#64;nfnn.cz</a>.
+    Když odpovíte „Ano, jsou moje“, přiřadíme vám tyto platby i další s tímto symbolem z tohoto
+    účtu. Odpověď už nepůjde změnit; kdybyste se spletli, napište nám na
+    <a href="mailto:info@nfnn.cz">info&#64;nfnn.cz</a>.
   </p>
   <div class="claim-actions">
     <button
@@ -25,7 +44,9 @@
       [attr.aria-describedby]="noteId()"
       (click)="press('confirm')"
       i18n="@@donor.bankAccounts.claim.yes"
-    >Ano, jsou moje</button>
+    >
+      Ano, jsou moje
+    </button>
     <button
       type="button"
       class="claim-no"
@@ -33,6 +54,8 @@
       [attr.aria-busy]="busy() && pressed() === 'decline'"
       (click)="press('decline')"
       i18n="@@donor.bankAccounts.claim.no"
-    >Ne, nejsou moje</button>
+    >
+      Ne, nejsou moje
+    </button>
   </div>
 </div>

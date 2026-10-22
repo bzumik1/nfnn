@@ -1,4 +1,4 @@
-import { Component, ElementRef, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, viewChild } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { SiteHeader } from '../site-header/site-header';
 import { SiteFooter } from '../site-footer/site-footer';
@@ -8,6 +8,7 @@ import { SiteFooter } from '../site-footer/site-footer';
   imports: [RouterOutlet, SiteHeader, SiteFooter],
   templateUrl: './public-shell.html',
   styleUrl: './public-shell.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PublicShell {
   private readonly content = viewChild.required<ElementRef<HTMLElement>>('content');
