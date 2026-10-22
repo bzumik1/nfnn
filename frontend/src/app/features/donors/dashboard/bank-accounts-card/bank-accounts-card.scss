@@ -224,6 +224,7 @@
   font-variant-numeric: var(--numeric-figures);
 
   > li {
+    display: flex;
     white-space: nowrap;
   }
 
