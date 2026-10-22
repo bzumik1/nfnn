@@ -1,7 +1,8 @@
 package cz.novanadeje.app.contact.infrastructure.mail;
 
 import cz.novanadeje.app.contact.application.event.ContactMessageReceived;
-import cz.novanadeje.app.shared.infrastructure.mail.MailSenderProperties;
+import cz.novanadeje.app.shared.infrastructure.mail.BrandedEmails;
+import cz.novanadeje.app.shared.infrastructure.mail.EmailDraft;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import org.springframework.context.MessageSource;
@@ -11,12 +12,12 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
-import org.thymeleaf.ITemplateEngine;
-import org.thymeleaf.context.Context;
 
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 @Component
 class ContactMessageEmailForwarder {
@@ -24,41 +25,45 @@ class ContactMessageEmailForwarder {
     private static final Locale FOUNDATION_LOCALE = Locale.forLanguageTag("cs");
     private static final ZoneId FOUNDATION_ZONE = ZoneId.of("Europe/Prague");
     private static final DateTimeFormatter RECEIVED_AT = DateTimeFormatter.ofPattern("d. M. yyyy H:mm");
+    private static final String KEYS = "contact.email.";
+    private static final String TEMPLATE = "email/contact/message-received";
 
     private final JavaMailSender mailSender;
-    private final ITemplateEngine templates;
+    private final BrandedEmails emails;
     private final MessageSource messages;
     private final ContactMailProperties properties;
-    private final MailSenderProperties sender;
 
-    ContactMessageEmailForwarder(JavaMailSender mailSender, ITemplateEngine templates, MessageSource messages, ContactMailProperties properties,
-                                 MailSenderProperties sender) {
+    ContactMessageEmailForwarder(JavaMailSender mailSender, BrandedEmails emails, MessageSource messages, ContactMailProperties properties) {
         this.mailSender = mailSender;
-        this.templates = templates;
+        this.emails = emails;
         this.messages = messages;
         this.properties = properties;
-        this.sender = sender;
     }
 
     @Async
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void forward(ContactMessageReceived event) throws MessagingException {
-        MimeMessage email = mailSender.createMimeMessage();
-        MimeMessageHelper helper = new MimeMessageHelper(email, "UTF-8");
-        helper.setFrom(sender.senderEmail());
-        helper.setTo(properties.recipientEmail());
-        helper.setReplyTo(event.senderEmail().value());
-        helper.setSubject(messages.getMessage("contact.email.subject", new Object[]{event.senderName()}, FOUNDATION_LOCALE));
-        helper.setText(render(event), true);
+        String receivedAt = RECEIVED_AT.format(event.receivedAt().atZone(FOUNDATION_ZONE));
+        MimeMessage email = emails.compose(new EmailDraft(FOUNDATION_LOCALE, properties.recipientEmail(), text("subject", event.senderName()),
+                text("title"), TEMPLATE,
+                Map.of("senderName", event.senderName(), "senderEmail", event.senderEmail().value(), "body", event.body(), "receivedAt", receivedAt),
+                plainText(event, receivedAt), text("footer")));
+        new MimeMessageHelper(email).setReplyTo(event.senderEmail().value());
         mailSender.send(email);
     }
 
-    private String render(ContactMessageReceived event) {
-        Context context = new Context(FOUNDATION_LOCALE);
-        context.setVariable("senderName", event.senderName());
-        context.setVariable("senderEmail", event.senderEmail().value());
-        context.setVariable("body", event.body());
-        context.setVariable("receivedAt", RECEIVED_AT.format(event.receivedAt().atZone(FOUNDATION_ZONE)));
-        return templates.process("email/contact/message-received", context);
+    private String plainText(ContactMessageReceived event, String receivedAt) {
+        return String.join("\n\n", List.of(
+                String.join("\n",
+                        text("senderName") + ": " + event.senderName(),
+                        text("senderEmail") + ": " + event.senderEmail().value(),
+                        text("receivedAt") + ": " + receivedAt),
+                text("body") + ":\n" + event.body(),
+                text("footer")
+        )) + "\n";
+    }
+
+    private String text(String key, Object... arguments) {
+        return messages.getMessage(KEYS + key, arguments.length == 0 ? null : arguments, FOUNDATION_LOCALE);
     }
 }

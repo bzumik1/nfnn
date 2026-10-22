@@ -2,12 +2,14 @@ package cz.novanadeje.app.contact.cucumber;
 
 import cz.novanadeje.app.contact.infrastructure.persistence.ContactMessageJpaRepository;
 import cz.novanadeje.app.cucumber.ApiClient;
+import cz.novanadeje.app.support.MailContents;
 import cz.novanadeje.app.support.RecordingMailSender;
 import io.cucumber.java.en.And;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
 import jakarta.mail.Message;
+import jakarta.mail.internet.InternetAddress;
 import jakarta.mail.internet.MimeMessage;
 
 import java.time.Duration;
@@ -69,10 +71,13 @@ public class ContactMessageStepDefinitions {
         assertThat(Arrays.stream(email.getRecipients(Message.RecipientType.TO)).map(Object::toString)).containsExactly(recipient);
     }
 
-    @And("the email comes from {string}")
-    public void theEmailComesFrom(String sender) throws Exception {
-        MimeMessage email = mailSender.sent().getFirst();
-        assertThat(Arrays.stream(email.getFrom()).map(Object::toString)).containsExactly(sender);
+    @And("the email comes from {string} named {string}")
+    public void theEmailComesFromNamed(String address, String name) throws Exception {
+        MimeMessage email = MailContents.asReceived(mailSender.sent().getFirst());
+        assertThat(email.getFrom()).hasSize(1);
+        InternetAddress from = (InternetAddress) email.getFrom()[0];
+        assertThat(from.getAddress()).isEqualTo(address);
+        assertThat(from.getPersonal()).isEqualTo(name);
     }
 
     @And("the email can be answered to {string}")
@@ -85,7 +90,8 @@ public class ContactMessageStepDefinitions {
     public void theEmailMentions(String first, String second) throws Exception {
         MimeMessage email = mailSender.sent().getFirst();
         assertThat(email.getSubject()).contains(first);
-        assertThat(email.getContent().toString()).contains(first, second);
+        assertThat(MailContents.plainText(email)).contains(first, second);
+        assertThat(MailContents.html(email)).contains(first, second);
     }
 
     @Then("no email is sent")

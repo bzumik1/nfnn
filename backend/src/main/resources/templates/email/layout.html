@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="cs" th:lang="${#locale.language}" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light only">
+    <title th:text="${title}">Obnova hesla</title>
+    <style>@media (max-width: 480px) { .card { padding: 28px 22px !important; } }</style>
+</head>
+<body style="margin: 0; padding: 0; background: #f0f4ff;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: #f0f4ff;">
+    <tr>
+        <td align="center" style="padding: 32px 16px;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width: 560px;">
+                <tr>
+                    <td class="card" style="background: #ffffff; border: 1px solid #e5e7eb; border-radius: 16px; padding: 32px; font-family: Inter, Arial, Helvetica, sans-serif; font-size: 15px; line-height: 1.65; color: #374151;">
+                        <img src="cid:logo" width="160" height="56" alt="Nová naděje – nadační fond" th:alt="#{email.layout.logoAlt}"
+                             style="display: block; border: 0; margin: 0 0 24px;">
+                        <h1 style="margin: 0 0 20px; font-family: 'Playfair Display', Georgia, 'Times New Roman', serif; font-size: 28px; line-height: 1.25; font-weight: 700; color: #1a1a2e;"
+                            th:text="${title}">Obnova hesla</h1>
+                        <th:block th:insert="~{${contentTemplate} :: content}"/>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding: 20px 8px 0; font-family: Inter, Arial, Helvetica, sans-serif; font-size: 12px; line-height: 1.6; color: #4b5563;">
+                        <span th:text="${footerNote}">Máte-li dotaz, napište nám na info@nfnn.cz.</span><br>
+                        <span th:text="#{email.layout.identity}">Nová naděje – nadační fond · IČO 27278794 · Jiráskova 436, 473 01 Nový Bor</span><br>
+                        <a th:href="${siteUrl}" th:text="${siteHost}" style="color: #4b5563;">nfnn.cz</a>
+                    </td>
+                </tr>
+            </table>
+        </td>
+    </tr>
+</table>
+</body>
+</html>
