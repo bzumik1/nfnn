@@ -2,6 +2,8 @@
 .idea/
 .vscode/
 *.iml
+.claude/settings.local.json
+CLAUDE.local.md
 .env
 .env.local
 *.env
@@ -10,7 +12,6 @@ backend/.gradle/
 backend/build/
 backend/out/
 backend/bin/
-backend/!gradle/wrapper/gradle-wrapper.jar
 
 frontend/node_modules/
 frontend/dist/
