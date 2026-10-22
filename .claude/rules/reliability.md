@@ -1,7 +1,7 @@
 # Reliability rules (stability)
 
 - Fail fast at startup, never at runtime: configuration validated by `@ConfigurationProperties`, schema validated by Hibernate against Liquibase, invalid IBAN or empty `PUBLIC_URL` stop the backend. A feature without its secret is off, not broken (`FIO_TOKEN`, `MAIL_*`: the send is logged and skipped).
-- Every write is retry-safe: idempotency keys (bank transaction id, report month, receipt fingerprint), locks where numbering or pairing races (`donor_record` row), `AFTER_COMMIT` listeners for side effects, no partial state on failure.
+- Every write is retry-safe: idempotency keys (bank transaction id, report month, receipt fingerprint), locks where numbering or pairing races (the `donor_record` row for receipt numbers; `application/pairing/PairingLock`, `pg_advisory_xact_lock(20261022)`, taken first by every pairing writer and by the README reversal SQL), `AFTER_COMMIT` listeners for side effects, no partial state on failure.
 - Scheduled work: one thread; a job logs its outcome, swallows its own exceptions, keeps a bookmark (`bank_import_state`, `donation_monthly_report`) so the next run completes a missed or failed one; shutdown drops delayed tasks and awaits a running import (`spring.task.scheduling.shutdown`).
 - External calls have timeouts and bounded retries: Fio requests time out (`app.donations.fio.request-timeout`), rate refusals become follow-ups, never a blocked scheduler thread; mail failures are logged with the id and exception class only.
 - Resources are bounded: receipt rendering limited to `app.donations.receipt.concurrent-renders` (3); rate-limit windows expire; container memory limits in `deploy/compose.yml` (backend 1 G with `MaxRAMPercentage=75`); log rotation 3 × 10 MB.
