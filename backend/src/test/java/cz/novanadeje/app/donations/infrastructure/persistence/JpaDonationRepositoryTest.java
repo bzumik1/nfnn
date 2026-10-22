@@ -40,6 +40,7 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import java.time.LocalDate;
 import java.time.Year;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -253,6 +254,31 @@ class JpaDonationRepositoryTest {
         UUID claim = withClaim ? setup.claim().id().value() : null;
 
         assertThatThrownBy(() -> insertDonation(setup, pairedBy, link, claim)).hasMessageContaining(constraint);
+    }
+
+    @Test
+    @DisplayName("Given donations paired through two claims and one by symbol, when the donations of a claim and the counts per claim are asked for, then only the claim's donations come, oldest first, and the counts name only claims with donations")
+    void should_find_and_count_claim_donations_when_asked_given_mixed_pairings() {
+        ConfirmedSymbolSetup setup = confirmedSymbolSetup();
+        BankPayment later = payment(1003, LocalDate.of(2026, 10, 20), Money.czk(50000), ACCOUNT, "6123456789");
+        BankPayment bySymbolPayment = payment(1004, LocalDate.of(2026, 10, 21), Money.czk(50000), ACCOUNT, "4821937560");
+        payments.saveAll(List.of(later, bySymbolPayment));
+        SymbolClaim otherClaim = SymbolClaim.answer(SymbolClaimId.newId(NOW.plusSeconds(1)), setup.donor(), ACCOUNT.orElseThrow(),
+                new VariableSymbol("5123456789"), SymbolClaimAnswer.CONFIRMED, NOW.plusSeconds(1));
+        claims.saveIfAbsent(otherClaim);
+        Donation second = Donation.pairedByConfirmedSymbol(DonationId.newId(NOW), setup.donor(), later, setup.link().id(), setup.claim().id(), NOW);
+        Donation first = Donation.pairedByConfirmedSymbol(DonationId.newId(NOW.plusMillis(1)), setup.donor(), setup.payment(), setup.link().id(),
+                setup.claim().id(), NOW);
+        donations.save(second);
+        donations.save(first);
+        donations.save(bySymbol(setup.donor(), bySymbolPayment));
+        flushAndClear();
+
+        assertThat(donations.findBySymbolClaim(setup.claim().id())).extracting(Donation::id).containsExactly(first.id(), second.id());
+        assertThat(donations.findBySymbolClaim(otherClaim.id())).isEmpty();
+        assertThat(donations.countBySymbolClaims(List.of(setup.claim().id(), otherClaim.id())))
+                .containsOnly(Map.entry(setup.claim().id(), 2L));
+        assertThat(donations.countBySymbolClaims(List.of())).isEmpty();
     }
 
     @Test

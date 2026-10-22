@@ -105,6 +105,59 @@ class JpaSymbolClaimRepositoryTest {
         assertThat(claims.findConfirmed()).extracting(SymbolClaim::id).containsExactly(janaFirst.id(), janaOtherAccount.id());
     }
 
+    @Test
+    @DisplayName("Given claims answered at different times, when all are listed, then the newest answer comes first and each is found by its id")
+    void should_list_newest_first_and_find_by_id_when_asked_given_several_claims() {
+        DonorReference jana = storedDonor("4821937560");
+        DonorReference petr = storedDonor("7310945528");
+        SymbolClaim janaFirst = claim(jana, ACCOUNT, OLD_SYMBOL, SymbolClaimAnswer.CONFIRMED, NOW);
+        SymbolClaim petrs = claim(petr, ACCOUNT, OLD_SYMBOL, SymbolClaimAnswer.DECLINED, NOW.plusSeconds(30));
+        SymbolClaim janaLater = claim(jana, OTHER_ACCOUNT, OTHER_SYMBOL, SymbolClaimAnswer.DECLINED, NOW.plusSeconds(60));
+        claims.saveIfAbsent(janaFirst);
+        claims.saveIfAbsent(petrs);
+        claims.saveIfAbsent(janaLater);
+        flushAndClear();
+
+        assertThat(claims.findAllNewestFirst()).extracting(SymbolClaim::id).containsExactly(janaLater.id(), petrs.id(), janaFirst.id());
+        assertThat(claims.findById(petrs.id())).hasValueSatisfying(stored -> assertThat(stored.donor()).isEqualTo(petr));
+        assertThat(claims.findById(SymbolClaimId.newId(NOW))).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Given a confirmed claim, when its reversal is saved, then the stored answer is DECLINED from the reversal time and nothing else changes")
+    void should_update_answer_when_reversal_saved_given_confirmed_claim() {
+        DonorReference jana = storedDonor("4821937560");
+        SymbolClaim claim = claim(jana, ACCOUNT, OLD_SYMBOL, SymbolClaimAnswer.CONFIRMED, NOW);
+        claims.saveIfAbsent(claim);
+        flushAndClear();
+
+        claims.save(claim.reverse(NOW.plusSeconds(3600)));
+        flushAndClear();
+
+        assertThat(claims.findByDonor(jana)).singleElement().satisfies(stored -> {
+            assertThat(stored.id()).isEqualTo(claim.id());
+            assertThat(stored.account()).isEqualTo(ACCOUNT);
+            assertThat(stored.symbol()).isEqualTo(OLD_SYMBOL);
+            assertThat(stored.answer()).isEqualTo(SymbolClaimAnswer.DECLINED);
+            assertThat(stored.answeredAt()).isEqualTo(NOW.plusSeconds(3600));
+        });
+    }
+
+    @Test
+    @DisplayName("Given a declined claim, when it is deleted, then the donor has no answer any more")
+    void should_remove_claim_when_deleted_given_declined_claim() {
+        DonorReference jana = storedDonor("4821937560");
+        SymbolClaim claim = claim(jana, ACCOUNT, OLD_SYMBOL, SymbolClaimAnswer.DECLINED, NOW);
+        claims.saveIfAbsent(claim);
+        flushAndClear();
+
+        claims.delete(claim.id());
+        flushAndClear();
+
+        assertThat(claims.findByDonor(jana)).isEmpty();
+        assertThat(claims.findById(claim.id())).isEmpty();
+    }
+
     @ParameterizedTest(name = "symbol {0} answered {1} breaks {2}")
     @CsvSource({
             "6123456789, MAYBE, ck_donor_symbol_claim_answer",

@@ -8,6 +8,7 @@ import cz.novanadeje.app.donations.domain.receipt.ReceiptKind;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptNumber;
 import org.springframework.stereotype.Repository;
 
+import java.time.Instant;
 import java.time.Year;
 import java.util.Collection;
 import java.util.Map;
@@ -45,6 +46,11 @@ class JpaDonationReceiptRepository implements DonationReceiptRepository {
     @Override
     public boolean existsForDonation(DonationId donation) {
         return jpa.existsByDonationId(donation.value());
+    }
+
+    @Override
+    public boolean existsYearlyIssuedSince(DonorReference donor, Year year, Instant since) {
+        return jpa.existsByDonorIdAndKindAndReceiptYearAndIssuedAtGreaterThanEqual(donor.value(), ReceiptKind.YEARLY, year.getValue(), since);
     }
 
     @Override

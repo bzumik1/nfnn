@@ -4,8 +4,9 @@
   <div class="container">
     <h1 #title class="admin-title" tabindex="-1" i18n="@@admin.home.heading">Správa</h1>
     <p class="admin-intro" i18n="@@admin.home.intro">
-      Tady uvidíte, jak se webu daří, přiřadíte platby, které web nepoznal, a časem tu budete
-      spravovat dárce a obsah webu.
+      Tady uvidíte, jak se webu daří, přiřadíte platby, které web nepoznal, opravíte odpovědi dárců
+      na starší symboly, spravujete správce a vidíte, kdo co udělal; časem tu budete spravovat dárce
+      a obsah webu.
     </p>
 
     <nav class="admin-links" aria-label="Části správy" i18n-aria-label="@@admin.home.links.label">
@@ -20,6 +21,19 @@
         <span class="admin-link-text" i18n="@@admin.home.links.administrators.text"
           >Kdo web spravuje; přidáte dalšího správce, odeberete ho nebo mu vypnete dvoufaktorové
           ověření po ztrátě telefonu.</span
+        >
+      </a>
+      <a class="admin-link" routerLink="/sprava/starsi-symboly">
+        <span class="admin-link-title" i18n="@@admin.home.links.symbolClaims">Starší symboly</span>
+        <span class="admin-link-text" i18n="@@admin.home.links.symbolClaims.text"
+          >Odpovědi dárců na otázku, zda jsou platby se starším variabilním symbolem jejich; omyl tu
+          opravíte.</span
+        >
+      </a>
+      <a class="admin-link" routerLink="/sprava/historie">
+        <span class="admin-link-title" i18n="@@admin.home.links.actions">Historie správy</span>
+        <span class="admin-link-text" i18n="@@admin.home.links.actions.text"
+          >Kdo ze správců co a kdy udělal.</span
         >
       </a>
     </nav>

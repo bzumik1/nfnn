@@ -38,6 +38,13 @@ public final class SymbolClaim {
         return new SymbolClaim(id, donor, account, symbol, answer, answeredAt);
     }
 
+    public SymbolClaim reverse(Instant at) {
+        if (!isConfirmed()) {
+            throw new SymbolClaimNotConfirmed(id);
+        }
+        return new SymbolClaim(id, donor, account, symbol, SymbolClaimAnswer.DECLINED, at);
+    }
+
     public boolean confirms(BankPayment payment) {
         return isConfirmed()
                 && require(payment, "Payment").sender().filter(account::equals).isPresent()

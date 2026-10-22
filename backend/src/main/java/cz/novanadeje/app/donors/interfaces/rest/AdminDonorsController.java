@@ -1,9 +1,12 @@
 package cz.novanadeje.app.donors.interfaces.rest;
 
+import cz.novanadeje.app.donors.application.AdministratorActivityService;
 import cz.novanadeje.app.donors.application.AdministratorService;
 import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.shared.domain.EmailAddress;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -13,9 +16,12 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.Instant;
+import java.util.Optional;
 import java.util.UUID;
 
 @RestController
@@ -23,9 +29,11 @@ import java.util.UUID;
 class AdminDonorsController {
 
     private final AdministratorService administrators;
+    private final AdministratorActivityService activity;
 
-    AdminDonorsController(AdministratorService administrators) {
+    AdminDonorsController(AdministratorService administrators, AdministratorActivityService activity) {
         this.administrators = administrators;
+        this.activity = activity;
     }
 
     @GetMapping("/administrators")
@@ -49,6 +57,15 @@ class AdminDonorsController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     void resetSecondFactor(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID donorId) {
         administrators.resetSecondFactor(admin(jwt), new DonorId(donorId));
+    }
+
+    @GetMapping("/actions")
+    AdminActionListResponse actions(
+            @RequestParam(required = false) Instant before,
+            @RequestParam(defaultValue = "" + AdministratorActivityService.DEFAULT_PAGE_SIZE)
+            @Min(1) @Max(AdministratorActivityService.MAX_PAGE_SIZE) int limit
+    ) {
+        return AdminActionListResponse.from(activity.list(Optional.ofNullable(before), limit));
     }
 
     private static DonorId admin(Jwt jwt) {

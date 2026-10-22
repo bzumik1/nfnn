@@ -3,6 +3,7 @@ package cz.novanadeje.app.donations.domain.receipt;
 import cz.novanadeje.app.donations.domain.donation.DonationId;
 import cz.novanadeje.app.donations.domain.donor.DonorReference;
 
+import java.time.Instant;
 import java.time.Year;
 import java.util.Collection;
 import java.util.Map;
@@ -18,6 +19,8 @@ public interface DonationReceiptRepository {
     void save(DonationReceipt receipt);
 
     boolean existsForDonation(DonationId donation);
+
+    boolean existsYearlyIssuedSince(DonorReference donor, Year year, Instant since);
 
     Set<DonationId> findDonationsWithReceipt(Collection<DonationId> donations);
 

@@ -3,6 +3,7 @@ package cz.novanadeje.app.donors.domain;
 import cz.novanadeje.app.shared.domain.VariableSymbol;
 import cz.novanadeje.app.shared.domain.EmailAddress;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -21,4 +22,6 @@ public interface DonorRepository {
     boolean existsByVariableSymbol(VariableSymbol variableSymbol);
 
     List<Donor> findAdministrators();
+
+    List<Donor> findByIds(Collection<DonorId> ids);
 }
