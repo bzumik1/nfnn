@@ -63,7 +63,8 @@ services:
             echo "backup failed" >&2
           fi
           find /backups -name 'nfnn-*.dump' -mtime +30 -delete
-          sleep 86400
+          sleep 61
+          until [ "`date +%H:%M`" = "03:00" ]; do sleep 20; done
         done
     deploy:
       resources:
