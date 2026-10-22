@@ -12,7 +12,7 @@ Read before building, update in the same PR: `docs/requirements.md` (client deci
 | `frontend/` | Angular 21 standalone, zoneless, signals, SCSS design tokens, Vitest, Playwright + axe |
 | `deploy/` | ZimaOS compose and env templates (production); `docker-compose.yml` at the root is the local stack |
 | `.github/workflows/` | `pr-check.yml` on every PR; `images.yml` on push to `main` publishes ghcr.io images |
-| `.claude/rules/` | `backend.md`, `frontend.md`, `testing.md`, `security.md`, `reliability.md` load with this file. `deploy-ci.md` loads only when a file under `deploy/`, `.github/`, a Dockerfile or nginx config is opened; a claude.ai project thread never loads it, so read it before touching those files |
+| `.claude/rules/` | `backend.md`, `frontend.md`, `testing.md`, `security.md`, `reliability.md` load with this file. `deploy-ci.md` (deploy, CI, backups) loads only when a file under `deploy/`, `.github/`, a Dockerfile or nginx config is opened; a claude.ai project thread never loads it, so read it before touching those files |
 
 ## Commands
 
