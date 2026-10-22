@@ -12,6 +12,7 @@ import java.util.Optional;
 import static cz.novanadeje.app.donations.BankPayments.payment;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class SymbolClaimTest {
 
@@ -33,6 +34,34 @@ class SymbolClaimTest {
         assertThat(claim.confirms(payment(5, Optional.of(ACCOUNT), null))).isFalse();
         assertThat(claim.confirms(payment(6, Optional.empty(), "6123456789"))).isFalse();
         assertThat(claim.isConfirmed()).isTrue();
+    }
+
+    @Test
+    @DisplayName("Given a confirmed claim, when an administrator reverses it, then the same claim answers DECLINED from the reversal time")
+    void should_become_declined_at_reversal_time_when_reversed_given_confirmed_claim() {
+        SymbolClaim claim = claim(SymbolClaimAnswer.CONFIRMED);
+        Instant later = NOW.plusSeconds(3600);
+
+        SymbolClaim reversed = claim.reverse(later);
+
+        assertThat(reversed.id()).isEqualTo(claim.id());
+        assertThat(reversed.donor()).isEqualTo(JANA);
+        assertThat(reversed.account()).isEqualTo(ACCOUNT);
+        assertThat(reversed.symbol()).isEqualTo(OLD_SYMBOL);
+        assertThat(reversed.answer()).isEqualTo(SymbolClaimAnswer.DECLINED);
+        assertThat(reversed.answeredAt()).isEqualTo(later);
+        assertThat(reversed.confirms(payment(1, Optional.of(ACCOUNT), "6123456789"))).isFalse();
+        assertThat(claim.isConfirmed()).isTrue();
+    }
+
+    @Test
+    @DisplayName("Given a declined claim, when an administrator reverses it, then it is refused because there is nothing to reverse")
+    void should_refuse_when_reversed_given_declined_claim() {
+        SymbolClaim claim = claim(SymbolClaimAnswer.DECLINED);
+
+        assertThatThrownBy(() -> claim.reverse(NOW))
+                .isInstanceOf(SymbolClaimNotConfirmed.class)
+                .hasMessageContaining(claim.id().toString());
     }
 
     @Test

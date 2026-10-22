@@ -354,6 +354,104 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     expect(await violations(page)).toEqual([]);
   });
 
+  test('when an administrator corrects an older-symbol answer, then the page and its confirmation break no rule', async ({
+    page,
+  }) => {
+    await page.route(
+      (url) => url.pathname === '/api/admin/donations/symbol-claims',
+      (route) =>
+        route.fulfill({
+          json: {
+            items: [
+              {
+                id: '019a1c00-0000-7000-8000-00000000c001',
+                donorId: administrator.id,
+                donorName: 'Jana Nováková',
+                account: '1234567/0800',
+                variableSymbol: '6123456789',
+                answer: 'CONFIRMED',
+                answeredAt: '2026-10-20T09:00:00Z',
+                donationCount: 3,
+              },
+              {
+                id: '019a1c00-0000-7000-8000-00000000c002',
+                donorId: '019a1c00-0000-7000-8000-00000000a002',
+                donorName: null,
+                account: '2900233333/2010',
+                variableSymbol: '777',
+                answer: 'DECLINED',
+                answeredAt: '2026-10-19T08:30:00Z',
+                donationCount: 0,
+              },
+            ],
+          },
+        }),
+    );
+    await page.route('**/api/donors/auth/refresh', (route) =>
+      route.fulfill(session(200, administrator)),
+    );
+    await page.goto('/');
+    await page.evaluate(() => localStorage.setItem('nfnn.donor-session', '1'));
+    await page.goto('/sprava/starsi-symboly');
+    await expect(page.getByRole('heading', { level: 1, name: 'Starší symboly' })).toBeFocused();
+    await expect(page.locator('tbody tr')).toHaveCount(2);
+
+    expect(await violations(page)).toEqual([]);
+
+    await page.locator('tbody tr').first().getByRole('button', { name: 'Zrušit Ano' }).click();
+    await expect(page.locator('tbody tr').first()).toContainText('změnit odpověď na Ne?');
+
+    expect(await violations(page)).toEqual([]);
+  });
+
+  test('when an administrator reads the history, then the page with its paging breaks no rule', async ({
+    page,
+  }) => {
+    await page.route(
+      (url) => url.pathname === '/api/admin/donors/actions',
+      (route) =>
+        route.fulfill({
+          json: {
+            items: [
+              {
+                id: '019a1c00-0000-7000-8000-00000000e001',
+                adminId: administrator.id,
+                adminName: 'Jana Nováková',
+                adminEmail: 'jana@example.cz',
+                action: 'PAIR_PAYMENT',
+                subjectId: '019a1c00-0000-7000-8000-000000001001',
+                details:
+                  'Bank payment 019a1c00-0000-7000-8000-000000001001 paired to donor by hand',
+                performedAt: '2026-10-22T10:00:00Z',
+              },
+              {
+                id: '019a1c00-0000-7000-8000-00000000e002',
+                adminId: '019a1c00-0000-7000-8000-00000000a009',
+                adminName: null,
+                adminEmail: null,
+                action: 'REVOKE_ADMINISTRATION',
+                subjectId: null,
+                details: 'details',
+                performedAt: '2026-10-21T10:00:00Z',
+              },
+            ],
+            hasMore: true,
+          },
+        }),
+    );
+    await page.route('**/api/donors/auth/refresh', (route) =>
+      route.fulfill(session(200, administrator)),
+    );
+    await page.goto('/');
+    await page.evaluate(() => localStorage.setItem('nfnn.donor-session', '1'));
+    await page.goto('/sprava/historie');
+    await expect(page.getByRole('heading', { level: 1, name: 'Historie správy' })).toBeFocused();
+    await expect(page.locator('tbody tr')).toHaveCount(2);
+    await expect(page.getByRole('button', { name: 'Načíst starší' })).toBeVisible();
+
+    expect(await violations(page)).toEqual([]);
+  });
+
   test('when a signed-in donor edits their data, then the form breaks no rule either', async ({
     page,
   }) => {

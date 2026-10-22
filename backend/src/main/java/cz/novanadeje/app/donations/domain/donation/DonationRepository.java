@@ -2,10 +2,13 @@ package cz.novanadeje.app.donations.domain.donation;
 
 import cz.novanadeje.app.donations.domain.bank.BankPaymentId;
 import cz.novanadeje.app.donations.domain.donor.DonorReference;
+import cz.novanadeje.app.donations.domain.donor.SymbolClaimId;
 
 import java.time.LocalDate;
 import java.time.Year;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 public interface DonationRepository {
@@ -25,4 +28,8 @@ public interface DonationRepository {
     List<Donation> findReceivedOnBetween(LocalDate firstDay, LocalDate lastDay);
 
     List<Year> findReceivedYearsNewestFirst();
+
+    List<Donation> findBySymbolClaim(SymbolClaimId claim);
+
+    Map<SymbolClaimId, Long> countBySymbolClaims(Collection<SymbolClaimId> claims);
 }

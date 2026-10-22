@@ -1,0 +1,214 @@
+<div class="admin">
+  <app-dashboard-top-bar area="admin" />
+
+  <div class="container">
+    <p class="admin-crumbs">
+      <a routerLink="/sprava" i18n="@@admin.symbolClaims.backToAdmin">← Správa</a>
+    </p>
+    <h1 #title class="admin-title" tabindex="-1" i18n="@@admin.symbolClaims.heading">
+      Starší symboly
+    </h1>
+    <p class="admin-intro" i18n="@@admin.symbolClaims.intro">
+      Když dárce ověří bankovní účet a z toho účtu k nám chodily platby s jiným variabilním
+      symbolem, nástěnka se ho zeptá, jestli jsou jeho. Tady vidíte odpovědi a opravíte omyl:
+      zrušením odpovědi Ano smažete dary, které se přes ni přiřadily, a dárce se už neptáme;
+      smazáním odpovědi Ne se nástěnka dárce zeptá znovu.
+    </p>
+
+    @if (notice(); as notice) {
+      @if (notice.kind === 'status') {
+        <p class="admin-notice admin-notice--status" role="status">{{ notice.text }}</p>
+      } @else {
+        <p class="admin-notice admin-notice--alert" role="alert">{{ notice.text }}</p>
+      }
+    }
+
+    <section class="admin-card" aria-labelledby="claims-title">
+      <h2 id="claims-title" class="admin-card-title" i18n="@@admin.symbolClaims.list.title">
+        Odpovědi dárců
+      </h2>
+      @switch (state()) {
+        @case ('loading') {
+          <p class="admin-loading" role="status" i18n="@@admin.symbolClaims.loading">
+            Načítáme odpovědi…
+          </p>
+        }
+        @case ('error') {
+          <div class="admin-error" role="alert">
+            <p i18n="@@admin.symbolClaims.error.text">Odpovědi se nepodařilo načíst.</p>
+            <button
+              type="button"
+              class="admin-retry"
+              (click)="load()"
+              i18n="@@admin.symbolClaims.error.retry"
+            >
+              Zkusit znovu
+            </button>
+          </div>
+        }
+        @case ('ready') {
+          @if (items().length === 0) {
+            <p class="admin-empty" i18n="@@admin.symbolClaims.empty">
+              Zatím nikdo neodpověděl na otázku o starším variabilním symbolu.
+            </p>
+          } @else {
+            <table>
+              <thead>
+                <tr>
+                  <th i18n="@@admin.symbolClaims.col.donor">Dárce</th>
+                  <th i18n="@@admin.symbolClaims.col.account">Účet</th>
+                  <th i18n="@@admin.symbolClaims.col.symbol">Variabilní symbol</th>
+                  <th i18n="@@admin.symbolClaims.col.answer">Odpověď</th>
+                  <th i18n="@@admin.symbolClaims.col.donations">Přiřazené dary</th>
+                  <th class="action">
+                    <span class="visually-hidden" i18n="@@admin.symbolClaims.col.action">Akce</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (item of items(); track item.id) {
+                  <tr>
+                    <td data-label="Dárce" i18n-data-label="@@admin.symbolClaims.col.donor">
+                      @if (item.donorName) {
+                        <span class="admin-name">{{ item.donorName }}</span>
+                      } @else {
+                        <span class="muted">{{ donorName(item) }}</span>
+                      }
+                    </td>
+                    <td data-label="Účet" i18n-data-label="@@admin.symbolClaims.col.account">
+                      <span class="mono">{{ item.account }}</span>
+                    </td>
+                    <td
+                      data-label="Variabilní symbol"
+                      i18n-data-label="@@admin.symbolClaims.col.symbol"
+                    >
+                      <span class="mono">{{ item.variableSymbol }}</span>
+                    </td>
+                    <td data-label="Odpověď" i18n-data-label="@@admin.symbolClaims.col.answer">
+                      @if (item.answer === 'CONFIRMED') {
+                        <span
+                          class="answer-tag answer-tag--yes"
+                          i18n="@@admin.symbolClaims.answer.yes"
+                          >Ano, jsou moje</span
+                        >
+                      } @else {
+                        <span
+                          class="answer-tag answer-tag--no"
+                          i18n="@@admin.symbolClaims.answer.no"
+                          >Ne, nejsou moje</span
+                        >
+                      }
+                      <span class="answered-at">{{ answeredAt(item) }}</span>
+                    </td>
+                    <td
+                      data-label="Přiřazené dary"
+                      i18n-data-label="@@admin.symbolClaims.col.donations"
+                    >
+                      {{ donations(item.donationCount) }}
+                    </td>
+                    <td class="action">
+                      @if (isPending(item)) {
+                        @if (item.answer === 'CONFIRMED') {
+                          <span
+                            class="confirm"
+                            role="group"
+                            aria-label="Zrušit odpověď Ano?"
+                            i18n-aria-label="@@admin.symbolClaims.reverse.confirm.label"
+                          >
+                            <span i18n="@@admin.symbolClaims.reverse.confirm.question"
+                              >Smazat {{ donations(item.donationCount) }} a změnit odpověď na
+                              Ne?</span
+                            >
+                            <button
+                              type="button"
+                              class="action-btn action-btn--danger"
+                              [disabled]="busy()"
+                              (click)="reverse(item)"
+                            >
+                              @if (busy()) {
+                                <ng-container i18n="@@admin.symbolClaims.reverse.busy"
+                                  >Rušíme…</ng-container
+                                >
+                              } @else {
+                                <ng-container i18n="@@admin.symbolClaims.reverse.yes"
+                                  >Ano, zrušit</ng-container
+                                >
+                              }
+                            </button>
+                            <button
+                              type="button"
+                              class="action-link"
+                              [disabled]="busy()"
+                              (click)="cancel()"
+                              i18n="@@admin.symbolClaims.confirm.no"
+                            >
+                              Ne
+                            </button>
+                          </span>
+                        } @else {
+                          <span
+                            class="confirm"
+                            role="group"
+                            aria-label="Smazat odpověď Ne?"
+                            i18n-aria-label="@@admin.symbolClaims.reset.confirm.label"
+                          >
+                            <span i18n="@@admin.symbolClaims.reset.confirm.question"
+                              >Dárce dostane otázku znovu. Smazat?</span
+                            >
+                            <button
+                              type="button"
+                              class="action-btn action-btn--danger"
+                              [disabled]="busy()"
+                              (click)="reset(item)"
+                            >
+                              @if (busy()) {
+                                <ng-container i18n="@@admin.symbolClaims.reset.busy"
+                                  >Mažeme…</ng-container
+                                >
+                              } @else {
+                                <ng-container i18n="@@admin.symbolClaims.reset.yes"
+                                  >Ano, smazat</ng-container
+                                >
+                              }
+                            </button>
+                            <button
+                              type="button"
+                              class="action-link"
+                              [disabled]="busy()"
+                              (click)="cancel()"
+                              i18n="@@admin.symbolClaims.confirm.no"
+                            >
+                              Ne
+                            </button>
+                          </span>
+                        }
+                      } @else if (item.answer === 'CONFIRMED') {
+                        <button
+                          type="button"
+                          class="action-btn"
+                          (click)="ask(item)"
+                          i18n="@@admin.symbolClaims.reverse.open"
+                        >
+                          Zrušit Ano
+                        </button>
+                      } @else {
+                        <button
+                          type="button"
+                          class="action-btn action-btn--quiet"
+                          (click)="ask(item)"
+                          i18n="@@admin.symbolClaims.reset.open"
+                        >
+                          Smazat Ne
+                        </button>
+                      }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          }
+        }
+      }
+    </section>
+  </div>
+</div>

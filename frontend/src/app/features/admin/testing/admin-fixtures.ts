@@ -1,10 +1,12 @@
 import {
+  AdminActionResponse,
   AdministratorResponse,
   AdminDonorResponse,
   AdminPaymentListResponse,
   AdminPaymentResponse,
   ImportStateResponse,
   PairedDonationResponse,
+  SymbolClaimResponse,
 } from '../admin-api';
 
 export function importState(overrides: Partial<ImportStateResponse> = {}): ImportStateResponse {
@@ -81,6 +83,35 @@ export function administrator(
     name: 'Jana Nováková',
     email: 'jana@example.cz',
     secondFactorEnabled: true,
+    ...overrides,
+  };
+}
+
+export function symbolClaim(overrides: Partial<SymbolClaimResponse> = {}): SymbolClaimResponse {
+  return {
+    id: '019a1c00-0000-7000-8000-00000000c001',
+    donorId: '01a18e56-bdb0-775a-bd0a-a60756831369',
+    donorName: 'Jana Nováková',
+    account: '1234567/0800',
+    variableSymbol: '6123456789',
+    answer: 'CONFIRMED',
+    answeredAt: '2026-10-20T09:00:00Z',
+    donationCount: 3,
+    ...overrides,
+  };
+}
+
+export function adminAction(overrides: Partial<AdminActionResponse> = {}): AdminActionResponse {
+  return {
+    id: '019a1c00-0000-7000-8000-00000000e001',
+    adminId: '01a18e56-bdb0-775a-bd0a-a60756831369',
+    adminName: 'Jana Nováková',
+    adminEmail: 'jana@example.cz',
+    action: 'PAIR_PAYMENT',
+    subjectId: '019a1c00-0000-7000-8000-000000001001',
+    details:
+      'Bank payment 019a1c00-0000-7000-8000-000000001001 paired to donor 01a18e56-bdb0-775a-bd0a-a60756831369 by hand',
+    performedAt: '2026-10-22T10:00:00Z',
     ...overrides,
   };
 }

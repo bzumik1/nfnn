@@ -5,12 +5,17 @@ import cz.novanadeje.app.donations.domain.donation.Donation;
 import cz.novanadeje.app.donations.domain.donation.DonationId;
 import cz.novanadeje.app.donations.domain.donation.DonationRepository;
 import cz.novanadeje.app.donations.domain.donor.DonorReference;
+import cz.novanadeje.app.donations.domain.donor.SymbolClaimId;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
 import java.time.Year;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Repository
 class JpaDonationRepository implements DonationRepository {
@@ -60,5 +65,19 @@ class JpaDonationRepository implements DonationRepository {
     @Override
     public List<Year> findReceivedYearsNewestFirst() {
         return jpa.findReceivedYearsNewestFirst().stream().map(Year::of).toList();
+    }
+
+    @Override
+    public List<Donation> findBySymbolClaim(SymbolClaimId claim) {
+        return jpa.findBySymbolClaimIdOrderByReceivedOnAscIdAsc(claim.value()).stream().map(DonationJpaEntity::toDomain).toList();
+    }
+
+    @Override
+    public Map<SymbolClaimId, Long> countBySymbolClaims(Collection<SymbolClaimId> claims) {
+        if (claims.isEmpty()) {
+            return Map.of();
+        }
+        return jpa.countBySymbolClaimIds(claims.stream().map(SymbolClaimId::value).collect(Collectors.toSet())).stream()
+                .collect(Collectors.toUnmodifiableMap(row -> new SymbolClaimId((UUID) row[0]), row -> (Long) row[1]));
     }
 }

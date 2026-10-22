@@ -1,0 +1,107 @@
+package cz.novanadeje.app.donors.cucumber;
+
+import cz.novanadeje.app.cucumber.ApiClient;
+import cz.novanadeje.app.cucumber.DonorSessions;
+import cz.novanadeje.app.cucumber.ScenarioDonors;
+import io.cucumber.datatable.DataTable;
+import io.cucumber.java.en.Then;
+import io.cucumber.java.en.When;
+import tools.jackson.databind.JsonNode;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+public class AdminActionsStepDefinitions {
+
+    private static final String ACTIONS_PATH = "/api/admin/donors/actions";
+
+    private final ApiClient api;
+    private final DonorSessions sessions;
+    private final ScenarioDonors scenarioDonors;
+
+    public AdminActionsStepDefinitions(ApiClient api, DonorSessions sessions, ScenarioDonors scenarioDonors) {
+        this.api = api;
+        this.sessions = sessions;
+        this.scenarioDonors = scenarioDonors;
+    }
+
+    @When("{string} asks for the admin actions")
+    public void asksForTheAdminActions(String alias) {
+        sessions.actAs(alias);
+        api.get(ACTIONS_PATH);
+    }
+
+    @When("{string} asks for the {int} newest admin actions")
+    public void asksForTheNewestAdminActions(String alias, int limit) {
+        sessions.actAs(alias);
+        api.get(ACTIONS_PATH + "?limit=" + limit);
+    }
+
+    @When("{string} asks for the {int} admin actions before the oldest one listed")
+    public void asksForTheAdminActionsBeforeTheOldestOneListed(String alias, int limit) {
+        JsonNode items = api.lastResponseJson().get("items");
+        String oldest = items.get(items.size() - 1).get("performedAt").asString();
+        sessions.actAs(alias);
+        api.get(ACTIONS_PATH + "?limit=" + limit + "&before=" + oldest);
+    }
+
+    @When("someone without a token asks for the admin actions")
+    public void someoneWithoutATokenAsksForTheAdminActions() {
+        api.forgetCredentials();
+        api.get(ACTIONS_PATH);
+    }
+
+    @Then("the admin actions are:")
+    public void theAdminActionsAre(DataTable table) {
+        List<Map<String, String>> expected = table.asMaps();
+        List<Map<String, String>> actual = new ArrayList<>();
+        api.lastResponseJson().get("items").forEach(item -> {
+            Map<String, String> row = new HashMap<>();
+            for (String column : expected.getFirst().keySet()) {
+                row.put(column, column.equals("subject") ? aliasOf(item.get("subjectId")) : item.get(column).asString());
+            }
+            actual.add(row);
+        });
+        assertThat(actual).containsExactlyElementsOf(expected);
+    }
+
+    @Then("the admin actions have more pages")
+    public void theAdminActionsHaveMorePages() {
+        assertThat(api.lastResponseJson().get("hasMore").asBoolean()).isTrue();
+    }
+
+    @Then("the admin actions have no more pages")
+    public void theAdminActionsHaveNoMorePages() {
+        assertThat(api.lastResponseJson().get("hasMore").asBoolean()).isFalse();
+    }
+
+    @Then("every admin action names when it was performed and what it changed")
+    public void everyAdminActionNamesWhenAndWhat() {
+        JsonNode items = api.lastResponseJson().get("items");
+        assertThat(items).isNotEmpty();
+        items.forEach(item -> {
+            assertThat(item.get("id").asString()).isNotBlank();
+            assertThat(item.get("performedAt").asString()).isNotBlank();
+            assertThat(item.get("details").asString()).isNotBlank();
+            assertThat(item.get("adminId").asString()).isEqualTo(scenarioDonors.idOf("Jana").toString());
+        });
+    }
+
+    private String aliasOf(JsonNode subjectId) {
+        if (subjectId == null || subjectId.isNull()) {
+            return "";
+        }
+        UUID id = UUID.fromString(subjectId.asString());
+        for (String alias : List.of("Jana", "Petr", "Eva")) {
+            if (scenarioDonors.findIdOf(alias).filter(id::equals).isPresent()) {
+                return alias;
+            }
+        }
+        return id.toString();
+    }
+}

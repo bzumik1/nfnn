@@ -19,4 +19,15 @@ export const adminRoutes: Routes = [
     loadComponent: () =>
       import('./administrators/admin-administrators').then((m) => m.AdminAdministrators),
   },
+  {
+    path: 'starsi-symboly',
+    title: $localize`:@@admin.symbolClaims.pageTitle:Starší symboly | Správa | Nová naděje – nadační fond`,
+    loadComponent: () =>
+      import('./symbol-claims/admin-symbol-claims').then((m) => m.AdminSymbolClaims),
+  },
+  {
+    path: 'historie',
+    title: $localize`:@@admin.actions.pageTitle:Historie správy | Správa | Nová naděje – nadační fond`,
+    loadComponent: () => import('./actions/admin-actions').then((m) => m.AdminActions),
+  },
 ];

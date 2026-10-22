@@ -19,6 +19,8 @@ public interface SymbolClaimJpaRepository extends JpaRepository<SymbolClaimJpaEn
 
     List<SymbolClaimJpaEntity> findByAnswerOrderByAnsweredAtAscIdAsc(SymbolClaimAnswer answer);
 
+    List<SymbolClaimJpaEntity> findAllByOrderByAnsweredAtDescIdDesc();
+
     @Transactional
     @Modifying(flushAutomatically = true)
     @Query(nativeQuery = true, value = "insert into donor_symbol_claim (id, donor_id, account_number, bank_code, variable_symbol, answer,"

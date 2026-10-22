@@ -93,6 +93,39 @@ export interface AdministratorListResponse {
   items: AdministratorResponse[];
 }
 
+export type SymbolClaimAnswer = 'CONFIRMED' | 'DECLINED';
+
+export interface SymbolClaimResponse {
+  id: string;
+  donorId: string;
+  donorName: string | null;
+  account: string;
+  variableSymbol: string;
+  answer: SymbolClaimAnswer;
+  answeredAt: string;
+  donationCount: number;
+}
+
+export interface SymbolClaimListResponse {
+  items: SymbolClaimResponse[];
+}
+
+export interface AdminActionResponse {
+  id: string;
+  adminId: string;
+  adminName: string | null;
+  adminEmail: string | null;
+  action: string;
+  subjectId: string | null;
+  details: string;
+  performedAt: string;
+}
+
+export interface AdminActionListResponse {
+  items: AdminActionResponse[];
+  hasMore: boolean;
+}
+
 @Injectable({ providedIn: 'root' })
 export class AdminApi {
   private readonly http = inject(HttpClient);
@@ -151,5 +184,30 @@ export class AdminApi {
       `/api/admin/donors/${encodeURIComponent(donorId)}/second-factor/reset`,
       null,
     );
+  }
+
+  symbolClaims(): Observable<SymbolClaimListResponse> {
+    return this.http.get<SymbolClaimListResponse>('/api/admin/donations/symbol-claims');
+  }
+
+  reverseSymbolClaim(claimId: string): Observable<void> {
+    return this.http.post<void>(
+      `/api/admin/donations/symbol-claims/${encodeURIComponent(claimId)}/reverse`,
+      null,
+    );
+  }
+
+  deleteSymbolClaim(claimId: string): Observable<void> {
+    return this.http.delete<void>(
+      `/api/admin/donations/symbol-claims/${encodeURIComponent(claimId)}`,
+    );
+  }
+
+  adminActions(before: string | null = null, limit = 50): Observable<AdminActionListResponse> {
+    const params: Record<string, string> = { limit: String(limit) };
+    if (before !== null) {
+      params['before'] = before;
+    }
+    return this.http.get<AdminActionListResponse>('/api/admin/donors/actions', { params });
   }
 }

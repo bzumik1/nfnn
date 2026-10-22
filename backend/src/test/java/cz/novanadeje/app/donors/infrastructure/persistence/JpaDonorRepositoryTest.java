@@ -23,6 +23,7 @@ import org.springframework.context.annotation.Import;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -91,6 +92,20 @@ class JpaDonorRepositoryTest {
 
         assertThat(donors.findAdministrators()).extracting(Donor::name).containsExactly("Andrea Znamenáčková", "Zdeňka Znamenáčková");
         assertThat(donors.findAdministrators()).allMatch(Donor::isAdministrator);
+    }
+
+    @Test
+    @DisplayName("Given saved donors, when some ids and an unknown id are looked up, then only the saved ones come")
+    void should_find_saved_donors_when_looked_up_by_ids_given_unknown_id_among_them() {
+        Donor jana = donor("jana@example.cz", "4821937580");
+        Donor petr = donor("petr@example.cz", "4821937581");
+        donors.save(jana);
+        donors.save(petr);
+        donors.save(donor("eva@example.cz", "4821937582"));
+        flushAndClear();
+
+        assertThat(donors.findByIds(List.of(jana.id(), petr.id(), DonorId.newId(NOW)))).extracting(Donor::id).containsExactlyInAnyOrder(jana.id(), petr.id());
+        assertThat(donors.findByIds(List.of())).isEmpty();
     }
 
     private static Donor donor(String email, String variableSymbol) {

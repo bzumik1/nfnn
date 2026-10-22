@@ -45,6 +45,18 @@ public class SymbolClaimJpaEntity {
     protected SymbolClaimJpaEntity() {
     }
 
+    static SymbolClaimJpaEntity fromDomain(SymbolClaim claim) {
+        SymbolClaimJpaEntity entity = new SymbolClaimJpaEntity();
+        entity.id = claim.id().value();
+        entity.donorId = claim.donor().value();
+        entity.accountNumber = claim.account().accountNumber();
+        entity.bankCode = claim.account().bankCode();
+        entity.variableSymbol = claim.symbol().value();
+        entity.answer = claim.answer();
+        entity.answeredAt = claim.answeredAt();
+        return entity;
+    }
+
     SymbolClaim toDomain() {
         return SymbolClaim.reconstitute(
                 new SymbolClaimId(id),

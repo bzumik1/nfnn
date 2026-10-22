@@ -8,8 +8,10 @@ import cz.novanadeje.app.shared.domain.VariableSymbol;
 import cz.novanadeje.app.shared.domain.EmailAddress;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Repository
 class JpaDonorRepository implements DonorRepository {
@@ -54,5 +56,13 @@ class JpaDonorRepository implements DonorRepository {
     @Override
     public List<Donor> findAdministrators() {
         return jpa.findByRole(Role.ADMIN).stream().map(DonorJpaEntity::toDomain).toList();
+    }
+
+    @Override
+    public List<Donor> findByIds(Collection<DonorId> ids) {
+        if (ids.isEmpty()) {
+            return List.of();
+        }
+        return jpa.findAllById(ids.stream().map(DonorId::value).collect(Collectors.toSet())).stream().map(DonorJpaEntity::toDomain).toList();
     }
 }
