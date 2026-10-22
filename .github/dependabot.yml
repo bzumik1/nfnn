@@ -9,6 +9,13 @@ updates:
     schedule:
       interval: monthly
     groups:
+      angular:
+        patterns:
+          - "@angular/*"
+          - "@angular-devkit/*"
+          - "@schematics/angular"
+          - "angular-eslint"
+          - "typescript"
       npm-minor-and-patch:
         update-types: [minor, patch]
   - package-ecosystem: gradle
