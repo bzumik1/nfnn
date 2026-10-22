@@ -169,7 +169,7 @@ describe('Given an administrator on the bank payments page', () => {
     http.expectOne(`${PAYMENTS_URL}?pairing=unpaired`).flush(refused.body, refused.options);
     await settle();
 
-    expect(navigate).toHaveBeenCalledWith('/donor/prehled');
+    expect(navigate).toHaveBeenCalledWith('/darce/prehled');
   });
 
   describe('when the administrator switches to the paired payments', () => {
