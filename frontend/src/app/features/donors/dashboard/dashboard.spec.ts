@@ -338,7 +338,7 @@ describe('Given a signed-in donor on the dashboard', () => {
     expect(text('.symbol-card app-copy-button button')).toBe('Kopírovat variabilní symbol');
     const giveAgain = element('.symbol-card a.give-again') as HTMLAnchorElement;
     expect(normalized(giveAgain.textContent ?? '')).toBe('Přispět znovu');
-    expect(giveAgain.getAttribute('href')).toBe('/#donate');
+    expect(giveAgain.getAttribute('href')).toBe('/#prispet');
   });
 
   it('when the payments are shown, then every cell names its column so a phone can show the rows as cards', async () => {

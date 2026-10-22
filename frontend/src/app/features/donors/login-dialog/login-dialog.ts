@@ -268,7 +268,7 @@ export class LoginDialog {
   private enterPortal(): void {
     this.loading.set(false);
     this.dialog.close();
-    this.router.navigateByUrl('/donor/prehled');
+    this.router.navigateByUrl('/darce/prehled');
   }
 
   private fail(failure: unknown): void {

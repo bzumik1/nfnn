@@ -61,7 +61,7 @@ test.describe('Given an administrator', () => {
 
     await page.getByRole('link', { name: 'Můj přehled', exact: true }).click();
 
-    await expect(page).toHaveURL(/\/donor\/prehled$/);
+    await expect(page).toHaveURL(/\/darce\/prehled$/);
   });
 
   test('when the bank import keeps failing, then the administration says so and names the failure', async ({
@@ -161,7 +161,7 @@ test.describe('Given a donor without the administrator role', () => {
 
     await page.goto('/sprava');
 
-    await expect(page).toHaveURL(/\/donor\/prehled$/);
+    await expect(page).toHaveURL(/\/darce\/prehled$/);
   });
 
   test('when the role is taken away while the page is open, then the next load sends them to their overview', async ({
@@ -178,7 +178,7 @@ test.describe('Given a donor without the administrator role', () => {
 
     await page.goto('/sprava');
 
-    await expect(page).toHaveURL(/\/donor\/prehled$/);
+    await expect(page).toHaveURL(/\/darce\/prehled$/);
   });
 });
 

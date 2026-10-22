@@ -12,7 +12,7 @@ export const adminGuard: CanActivateFn = async () => {
     return true;
   }
   if (store.signedIn()) {
-    return router.createUrlTree(['/donor/prehled']);
+    return router.createUrlTree(['/darce/prehled']);
   }
   loginDialog.open();
   return router.createUrlTree(['/']);

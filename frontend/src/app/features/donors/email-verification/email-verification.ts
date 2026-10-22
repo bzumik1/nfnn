@@ -97,7 +97,7 @@ export class EmailVerification {
   }
 
   enterPortal(): void {
-    this.router.navigateByUrl('/donor/prehled');
+    this.router.navigateByUrl('/darce/prehled');
   }
 
   private confirm(token: string): void {

@@ -156,7 +156,7 @@ describe('Given an administrator on the administration home', () => {
       403,
     );
 
-    expect(navigate).toHaveBeenCalledWith('/donor/prehled');
+    expect(navigate).toHaveBeenCalledWith('/darce/prehled');
     expect(fixture.nativeElement.querySelector('[role="alert"]')).toBeNull();
   });
 

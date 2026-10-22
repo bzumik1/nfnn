@@ -4,11 +4,12 @@ import { donorGuard } from './core/auth/donor-guard';
 
 export const routes: Routes = [
   {
-    path: 'donor',
+    path: 'darce',
     canActivate: [donorGuard],
     loadComponent: () => import('./layout/donor-shell/donor-shell').then((m) => m.DonorShell),
     loadChildren: () => import('./features/donors/donors.routes').then((m) => m.donorsRoutes),
   },
+  { path: 'donor', redirectTo: 'darce' },
   {
     path: 'sprava',
     canActivate: [adminGuard],

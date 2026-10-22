@@ -203,5 +203,5 @@ export async function signIn(page: Page, user: typeof donor = donor): Promise<vo
   await page.locator('#login-email').fill('jana@example.cz');
   await page.locator('#login-password').fill('correct horse battery');
   await page.getByRole('dialog').locator('.form-submit').click();
-  await expect(page).toHaveURL(/\/donor\/prehled$/);
+  await expect(page).toHaveURL(/\/darce\/prehled$/);
 }
