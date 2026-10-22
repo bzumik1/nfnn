@@ -40,4 +40,4 @@ Server setup and every operator step are in `deploy/README.md` (Czech); modelled
 
 ## Backups and rollback
 
-- The `backup` service writes a daily `pg_dump` to `/DATA/AppData/nfnn/backups/`. A restore drops and recreates the `public` schema, then `pg_restore --exit-on-error --single-transaction` (`--clean` leaves newer tables behind and Liquibase fails on them). Rollback: the older short-SHA image tag in the ZimaOS app settings, plus a restore when the newer version changed the schema; "Zálohy" in the README.
+- The `backup` service writes a daily `pg_dump --format=custom --compress=zstd:19` to `/DATA/AppData/nfnn/backups/`: 19 is the highest level that fits the 256M limit (measured: 19 peaks near 90 MB, 20 at 167 MB with no gain, 22 is OOM-killed); the PR check asserts the dump is zstd. A restore drops and recreates the `public` schema, then `pg_restore --exit-on-error --single-transaction` (`--clean` leaves newer tables behind and Liquibase fails on them). Rollback: the older short-SHA image tag in the ZimaOS app settings, plus a restore when the newer version changed the schema; "Zálohy" in the README.
