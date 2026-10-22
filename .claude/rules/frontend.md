@@ -10,6 +10,7 @@
 - Formatting is Prettier's (`.prettierrc`: 100 columns, single quotes, Angular parser for templates): run `npm run format` before committing; CI fails on a file it would change.
 - Lint is ESLint with angular-eslint (`eslint.config.js`: recommended TypeScript and template rules, template accessibility, `prefer-inject`, `prefer-signals`, `prefer-output-readonly`, `prefer-control-flow`, `prefer-self-closing-tags`): run `npm run lint` before committing; CI fails on a finding. Two scoped exceptions, both for the native `<dialog>`: `autofocus` is allowed in `*dialog*.html` because the dialog moves focus to it on open, and `shared/ui/dialog/dialog.html` closes on a backdrop click without key events because Esc closes it natively.
 - Folders mirror backend contexts (`features/{content,donors,donations,contact}`); singletons in `core/`; a behaviour-only piece used twice moves to `shared/ui/` (`form-field`, `dialog`, `copy-button`, `password-reveal`).
+- The Content-Security-Policy (`nginx-security-headers.conf`, rule in `security.md`) allows no inline script and no third-party resource: fonts, images and scripts are served from `public/` or the build, QR images come as `data:` URLs, and nothing is loaded from a CDN.
 - Sessions: access token in memory (`AuthStore`), refresh cookie set by the browser, `localStorage` flag `nfnn.donor-session` only says a session may exist; nothing else adds auth headers.
 
 ## i18n

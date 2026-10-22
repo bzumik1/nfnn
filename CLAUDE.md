@@ -29,7 +29,7 @@ Read before building, update in the same PR: `docs/requirements.md` (client deci
 | `npm run lint:styles` | Stylelint: component styles use theme tokens only |
 | `npm test -- --watch=false` | Vitest |
 | `npm run build` | production build to `dist/frontend/browser/` |
-| `npm run e2e` | Playwright; Chromium is preinstalled in cloud sessions, never run `playwright install` there |
+| `npm run e2e` | Playwright; when it reports a missing browser build (cloud sessions ship an older Chromium), run `npx playwright install chromium` once |
 | **Stack** | `cp .env.example .env && docker compose up -d --build`, frontend on :8080; `JWT_SECRET` has no default |
 
 ## Non-negotiable
