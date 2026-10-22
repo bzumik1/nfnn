@@ -1,6 +1,6 @@
 # API Contract — NFNN
 
-Agreed HTTP API contract between Angular 21 frontend and Spring Boot 4 + DDD backend. This document is the source of truth for endpoint shape, auth flow, error format, and bounded-context allocation. It is the result of a frontend/backend design pass against the prototype in `Claude Design/Nova Nadeje.html` and the architecture in `CLAUDE.md`.
+Agreed HTTP API contract between Angular 21 frontend and Spring Boot 4 + DDD backend. This document is the source of truth for endpoint shape, auth flow, error format, and bounded-context allocation. It came out of a frontend/backend design pass against the original prototype (removed from the repo in October 2026) and the architecture in `CLAUDE.md`; how the system works today is in `docs/system-overview.md`.
 
 When adding a new endpoint, update this file in the same change.
 
@@ -38,6 +38,8 @@ Password rules: min 12 characters; checked against a small disallow-list of comm
 
 ### `content` — public CMS
 
+_Planned, not implemented: the `content` package is empty and the site's content lives in the Angular components until the admin exists (`docs/requirements.md` §7). The sample values below are placeholders._
+
 Public:
 
 | Method | Path | Purpose |
@@ -66,7 +68,7 @@ Admin (role `ADMIN` required):
   "about": { "eyebrow": "...", "title": "...", "paragraphs": ["...", "..."], "imageUrl": "...", "highlight": { "title": "...", "text": "..." } },
   "stats": [{ "value": "19+", "label": "let pomáháme" }],
   "donate": { "title": "...", "body": "...", "bankAccount": "5544332217/2010", "iban": "CZ26 2010 0000 0055 4433 2217" },
-  "contactInfo": { "email": "info@nfnn.cz", "address": "...", "ico": "12345678" },
+  "contactInfo": { "email": "info@nfnn.cz", "address": "...", "ico": "27278794" },
   "latestNews": [ /* 3 newest news items, same shape as /news list item */ ]
 }
 ```
@@ -583,13 +585,9 @@ Shared pieces that came with it: the sealed `shared/domain/error/DomainException
 
 Home page returns content; project detail by slug. Domain: `Project`, `NewsArticle`, `Slug`, `PublicationStatus`. Liquibase: `001_create_project.xml`, `002_create_news_article.xml`, `003_create_news_tag.xml`. Media table only when admin upload is implemented.
 
-## ArchUnit follow-ups
+## ArchUnit
 
-Once each layer of each bounded context has a real class, drop the scaffolding flags in `DddLayeringRulesTest`:
-- remove `withOptionalLayers(true)` from the layered architecture rule
-- remove `allowEmptyShould(true)` from the slices rule
-
-Add: rules forbidding `org.springframework..` and `jakarta.persistence..` in `domain` packages, and forbidding REST controllers from returning classes from `..infrastructure..`.
+`architecture/DddLayeringRulesTest` and `AdapterLibraryRulesTest` (ArchUnit ≥ 1.5 for Java 25 class files; the scaffolding flags `withOptionalLayers` and `allowEmptyShould` are gone, so a rule fails on an empty match): layer dependencies per context, no dependencies between contexts, no `org.springframework..`, `jakarta.persistence..` or `jakarta.validation..` in `domain`, web and servlet types kept out of `domain` and `application`, REST controllers never expose `..infrastructure.persistence..` types, and the adapter libraries (ZXing, openhtmltopdf, PDFBox, Thymeleaf, `io.github.bzumik1.fio..`, `MessageSource`) confined to infrastructure.
 
 ## Shared kernel inventory
 
@@ -611,14 +609,14 @@ Does **not** belong in `shared`: JWT types, `Donation`, `Donor`, JPA-related typ
 
 - **Language switcher in nav.** For unauthenticated visitors it switches the UI locale only (cookie or `localStorage`). For authenticated donors it persists `preferredLocale` via `PATCH /api/donors/me` so receipts issued from then on come out in the chosen language (an issued receipt keeps its language).
 - **Password rules.** Frontend shows the 12-character minimum and disallow-list hint inline; backend is the source of truth for validation.
-- **Refresh on 401.** Angular HTTP interceptor catches 401 with `type` `auth/expired-token`, calls `POST /api/donors/auth/refresh` with `withCredentials: true`, retries the original request. On second 401 → redirect to `/prihlaseni`.
+- **Refresh on 401.** Angular HTTP interceptor catches 401 with `type` `auth/expired-token`, calls `POST /api/donors/auth/refresh` with `withCredentials: true`, retries the original request. On a second 401 the session ends: the donor is sent home and the sign-in dialog opens (`donorGuard` and the dashboard); there is no sign-in page.
 
 ## Decisions made (recap)
 
 | Topic | Decision |
 |---|---|
 | Admin auth | Role on `Donor`, no separate context. |
-| Refresh token transport | HttpOnly Secure SameSite=Strict cookie, path `/api/donors/auth/refresh`. |
+| Refresh token transport | HttpOnly Secure SameSite=Strict cookie, path `/api/donors/auth` (sent to refresh and logout). |
 | Money | `amountMinor` + `currency`, `Money` value object in `shared`. |
 | ID format | UUIDv7 string. |
 | Public content URLs | By `slug`. |
@@ -630,14 +628,12 @@ Does **not** belong in `shared`: JWT types, `Donation`, `Donor`, JPA-related typ
 | Yearly receipt edge cases | 404 for a completed year without donations, 400 while the year is not completed (Prague calendar). |
 | Receipt of someone else's donation | 404 `donation-not-found`, not 403: no existence leak. |
 | Receipts | Frozen documents: the first download issues, numbers (`YYYY-NNNNNN`) and stores the template and data it rendered; changed certified data issues a replacement with a new number that names the replaced one. Language: the donor's preference at issue, `en` bilingual. |
-| Rate limiting | Bucket4j + Caffeine in-memory. |
+| Rate limiting | Own `FixedWindowRateLimiter` over Caffeine, in memory, per client address (`shared/infrastructure`). |
 | Antispam (contact) | Honeypot + rate limit. No captcha until needed. |
 | PDF preview | None: the dashboard downloads the file. |
 | CORS | Not configured (same-origin in prod, dev proxy in dev). |
 
 ## Open items
 
-- `Cache-Control` / `ETag` exact strategy per endpoint — agree once first endpoints are live.
-- Audit columns (`createdBy`, `updatedBy`) on admin-editable entities — defer until first admin endpoint is built.
-- Health indicator for outbound mail (Spring `MailHealthIndicator`).
-- Migration plan for moving home content from YAML into DB once the admin needs to edit it.
+- With the admin: `Cache-Control` / `ETag` per endpoint, audit columns (`createdBy`, `updatedBy`) on admin-editable entities, moving home content from YAML into the database.
+- The outbound-mail health indicator stays off on purpose: the container healthcheck must not fail on SMTP (`deploy/README.md`).
