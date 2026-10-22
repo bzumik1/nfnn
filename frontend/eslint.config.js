@@ -36,6 +36,7 @@ module.exports = defineConfig([
       '@angular-eslint/prefer-inject': 'error',
       '@angular-eslint/prefer-signals': 'error',
       '@angular-eslint/prefer-output-readonly': 'error',
+      '@angular-eslint/prefer-on-push-component-change-detection': 'error',
     },
   },
   {
@@ -44,6 +45,12 @@ module.exports = defineConfig([
     rules: {
       '@angular-eslint/template/prefer-control-flow': 'error',
       '@angular-eslint/template/prefer-self-closing-tags': 'error',
+    },
+  },
+  {
+    files: ['**/*.spec.ts'],
+    rules: {
+      '@angular-eslint/prefer-on-push-component-change-detection': 'off',
     },
   },
   {

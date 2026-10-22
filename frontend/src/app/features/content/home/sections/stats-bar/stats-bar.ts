@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component } from '@angular/core';
 
 const FOUNDED = { year: 2005, monthIndex: 9, day: 28 };
 
@@ -6,6 +6,7 @@ const FOUNDED = { year: 2005, monthIndex: 9, day: 28 };
   selector: 'app-stats-bar',
   templateUrl: './stats-bar.html',
   styleUrl: './stats-bar.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class StatsBar {
   protected readonly foundedYear = FOUNDED.year;

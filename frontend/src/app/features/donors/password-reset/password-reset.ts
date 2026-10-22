@@ -3,6 +3,7 @@
 import { Location } from '@angular/common';
 import {
   afterNextRender,
+  ChangeDetectionStrategy,
   Component,
   DestroyRef,
   ElementRef,
@@ -33,6 +34,7 @@ const INVALID_TOKEN = 'donors/invalid-password-reset-token';
   imports: [FormsModule, FormField, FormControlDirective, FocusFirstInvalid, PasswordReveal],
   templateUrl: './password-reset.html',
   styleUrl: './password-reset.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PasswordReset {
   private readonly authApi = inject(AuthApi);

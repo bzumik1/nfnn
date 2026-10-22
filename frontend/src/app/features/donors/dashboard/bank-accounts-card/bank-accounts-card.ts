@@ -3,6 +3,7 @@
 import { DOCUMENT, NgTemplateOutlet } from '@angular/common';
 import {
   afterNextRender,
+  ChangeDetectionStrategy,
   Component,
   computed,
   DestroyRef,
@@ -94,6 +95,7 @@ const PAYMENT_WATCH_CHECKS = 20;
   imports: [Dialog, CopyButton, NgTemplateOutlet],
   templateUrl: './bank-accounts-card.html',
   styleUrl: './bank-accounts-card.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class BankAccountsCard {
   private readonly api = inject(BankAccountsApi);

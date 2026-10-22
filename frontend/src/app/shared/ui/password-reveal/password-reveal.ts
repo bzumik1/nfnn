@@ -1,11 +1,19 @@
 /// <reference types="@angular/localize" />
 
-import { AfterContentInit, Component, ElementRef, inject, signal } from '@angular/core';
+import {
+  AfterContentInit,
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  inject,
+  signal,
+} from '@angular/core';
 
 @Component({
   selector: 'app-password-reveal',
   templateUrl: './password-reveal.html',
   styleUrl: './password-reveal.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PasswordReveal implements AfterContentInit {
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;

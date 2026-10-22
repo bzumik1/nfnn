@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { AuthStore } from '../../../../core/auth/auth-store';
 
@@ -7,6 +7,7 @@ import { AuthStore } from '../../../../core/auth/auth-store';
   imports: [RouterLink],
   templateUrl: './top-bar.html',
   styleUrl: './top-bar.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class DashboardTopBar {
   private readonly router = inject(Router);
