@@ -1,5 +1,13 @@
 import { expect, test } from '@playwright/test';
-import { donationItem, donor, mockDonorApi, noDonations, signIn } from './donor-session';
+import {
+  donationItem,
+  donor,
+  mockDonorApi,
+  noDonations,
+  problem,
+  session,
+  signIn,
+} from './donor-session';
 
 function donation(
   id: string,
@@ -219,5 +227,83 @@ test.describe('Given a signed-in donor', () => {
         preferredLocale: 'en',
       },
     ]);
+  });
+
+  test('when they change the password with the current one, then the overview keeps them signed in and says the other sign-ins ended', async ({
+    page,
+  }) => {
+    await mockDonorApi(page, noDonations);
+    const sent: unknown[] = [];
+    await page.route('**/api/donors/me/password', async (route) => {
+      sent.push(route.request().postDataJSON());
+      await route.fulfill(session(200));
+    });
+
+    await signIn(page);
+    await page.getByRole('button', { name: 'Změnit heslo' }).click();
+    await expect(page.getByLabel('Současné heslo')).toBeFocused();
+    await page.getByLabel('Současné heslo').fill('correct horse battery');
+    await page.getByLabel('Nové heslo', { exact: true }).fill('a brand new passphrase');
+    await page.getByLabel('Nové heslo znovu').fill('a brand new passphrase');
+    await page.getByRole('button', { name: 'Změnit heslo' }).last().click();
+
+    await expect(page.getByRole('status').filter({ hasText: 'Heslo jsme změnili.' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Změnit heslo' })).toBeFocused();
+    await expect(page).toHaveURL(/\/donor\/prehled$/);
+    expect(sent).toEqual([
+      { currentPassword: 'correct horse battery', newPassword: 'a brand new passphrase' },
+    ]);
+  });
+
+  test('when they ask for a new e-mail, then the overview sends the link and keeps showing the current address until it is confirmed', async ({
+    page,
+  }) => {
+    await mockDonorApi(page, noDonations);
+    const sent: unknown[] = [];
+    await page.route('**/api/donors/me/email-change', async (route) => {
+      sent.push(route.request().postDataJSON());
+      await route.fulfill({ status: 202 });
+    });
+
+    await signIn(page);
+    await page.getByRole('button', { name: 'Změnit e-mail' }).click();
+    await expect(page.getByLabel('Nový e-mail')).toBeFocused();
+    await page.getByLabel('Nový e-mail').fill('jana.nova@example.cz');
+    await page.getByLabel('Současné heslo').fill('correct horse battery');
+    await page.getByRole('button', { name: 'Poslat potvrzovací odkaz' }).click();
+
+    await expect(
+      page.getByRole('status').filter({ hasText: 'Odkaz jsme poslali na jana.nova@example.cz.' }),
+    ).toBeVisible();
+    await expect(page.locator('.account-data')).toContainText('jana@example.cz');
+    await expect(page.getByRole('button', { name: 'Změnit e-mail' })).toBeFocused();
+    expect(sent).toEqual([{ newEmail: 'jana.nova@example.cz', password: 'correct horse battery' }]);
+  });
+
+  test('when the current password is wrong, then the e-mail form stays and shows the reason', async ({
+    page,
+  }) => {
+    await mockDonorApi(page, noDonations);
+    await page.route('**/api/donors/me/email-change', (route) =>
+      route.fulfill(
+        problem(
+          400,
+          'donors/wrong-password',
+          'Nesprávné současné heslo',
+          'Zadejte prosím heslo, kterým se teď přihlašujete.',
+        ),
+      ),
+    );
+
+    await signIn(page);
+    await page.getByRole('button', { name: 'Změnit e-mail' }).click();
+    await page.getByLabel('Nový e-mail').fill('jana.nova@example.cz');
+    await page.getByLabel('Současné heslo').fill('wrong horse battery');
+    await page.getByRole('button', { name: 'Poslat potvrzovací odkaz' }).click();
+
+    await expect(page.getByRole('alert')).toContainText(
+      'Nesprávné současné heslo. Zadejte prosím heslo, kterým se teď přihlašujete.',
+    );
+    await expect(page.getByLabel('Nový e-mail')).toHaveValue('jana.nova@example.cz');
   });
 });

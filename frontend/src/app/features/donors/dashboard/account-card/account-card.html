@@ -1,0 +1,212 @@
+<section class="account-card" aria-labelledby="account-title">
+  <h2 id="account-title" class="account-title" i18n="@@donor.account.title">Přihlašovací údaje</h2>
+
+  @if (donor(); as donor) {
+    <dl class="account-data">
+      <div class="account-row">
+        <dt i18n="@@donor.login.email">E-mail</dt>
+        <dd>{{ donor.email }}</dd>
+      </div>
+    </dl>
+  }
+
+  @if (panel() === 'closed') {
+    <div class="account-actions">
+      <button
+        #emailButton
+        type="button"
+        class="account-action"
+        (click)="open('email')"
+        i18n="@@donor.account.changeEmail"
+      >
+        Změnit e-mail
+      </button>
+      <button
+        #passwordButton
+        type="button"
+        class="account-action"
+        (click)="open('password')"
+        i18n="@@donor.account.changePassword"
+      >
+        Změnit heslo
+      </button>
+    </div>
+  } @else if (panel() === 'email') {
+    <form
+      #emailForm="ngForm"
+      class="account-form"
+      appFocusFirstInvalid
+      (ngSubmit)="requestEmailChange(emailForm)"
+      novalidate
+    >
+      <h3 class="account-form-title" i18n="@@donor.account.email.title">Změna e-mailu</h3>
+      <p class="account-form-intro" i18n="@@donor.account.email.intro">
+        Na novou adresu pošleme odkaz. Účet se na ni přepne, až ho otevřete; do té doby platí
+        současná adresa.
+      </p>
+      <app-form-field
+        label="Nový e-mail"
+        i18n-label="@@donor.account.newEmail"
+        [messages]="newEmailMessages"
+      >
+        <input
+          #firstField
+          appFormControl
+          id="account-new-email"
+          name="newEmail"
+          type="email"
+          autocomplete="email"
+          [(ngModel)]="newEmail"
+          required
+          email
+          maxlength="254"
+        />
+      </app-form-field>
+      <app-form-field
+        label="Současné heslo"
+        i18n-label="@@donor.account.currentPassword"
+        [messages]="currentPasswordMessages"
+      >
+        <app-password-reveal>
+          <input
+            appFormControl
+            id="account-email-password"
+            name="password"
+            type="password"
+            autocomplete="current-password"
+            [(ngModel)]="password"
+            required
+            maxlength="128"
+          />
+        </app-password-reveal>
+      </app-form-field>
+
+      @if (error()) {
+        <p class="form-error" role="alert">{{ error() }}</p>
+      }
+
+      <div class="account-form-actions">
+        <button type="submit" class="account-save" [disabled]="saving()">
+          @if (saving()) {
+            <span i18n="@@donor.account.email.sending">Odesíláme…</span>
+          } @else {
+            <span i18n="@@donor.account.email.submit">Poslat potvrzovací odkaz</span>
+          }
+        </button>
+        <button
+          type="button"
+          class="account-cancel"
+          (click)="cancel()"
+          i18n="@@donor.account.cancel"
+        >
+          Zrušit
+        </button>
+      </div>
+    </form>
+  } @else {
+    <form
+      #passwordForm="ngForm"
+      class="account-form"
+      appFocusFirstInvalid
+      (ngSubmit)="changePassword(passwordForm)"
+      novalidate
+    >
+      <h3 class="account-form-title" i18n="@@donor.account.password.title">Změna hesla</h3>
+      <p class="account-form-intro" i18n="@@donor.account.password.intro">
+        Po změně zůstanete přihlášeni jen tady; ostatní přihlášení ukončíme.
+      </p>
+      <app-form-field
+        label="Současné heslo"
+        i18n-label="@@donor.account.currentPassword"
+        [messages]="currentPasswordMessages"
+      >
+        <app-password-reveal>
+          <input
+            #firstField
+            appFormControl
+            id="account-current-password"
+            name="currentPassword"
+            type="password"
+            autocomplete="current-password"
+            [(ngModel)]="currentPassword"
+            required
+            maxlength="128"
+          />
+        </app-password-reveal>
+      </app-form-field>
+      <app-form-field
+        label="Nové heslo"
+        i18n-label="@@donor.account.newPassword"
+        [hint]="newPasswordHint"
+        [messages]="newPasswordMessages"
+      >
+        <app-password-reveal>
+          <input
+            appFormControl
+            id="account-new-password"
+            name="newPassword"
+            type="password"
+            autocomplete="new-password"
+            [(ngModel)]="newPassword"
+            required
+            [minlength]="passwordMinLength"
+            maxlength="128"
+          />
+        </app-password-reveal>
+      </app-form-field>
+      <app-form-field
+        label="Nové heslo znovu"
+        i18n-label="@@donor.account.newPasswordConfirm"
+        [messages]="confirmationMessages"
+      >
+        <app-password-reveal>
+          <input
+            appFormControl
+            id="account-new-password-confirm"
+            name="newPasswordConfirmation"
+            type="password"
+            autocomplete="new-password"
+            [(ngModel)]="newPasswordConfirmation"
+            required
+            maxlength="128"
+          />
+        </app-password-reveal>
+      </app-form-field>
+
+      @if (error()) {
+        <p class="form-error" role="alert">{{ error() }}</p>
+      }
+
+      <div class="account-form-actions">
+        <button type="submit" class="account-save" [disabled]="saving()">
+          @if (saving()) {
+            <span i18n="@@donor.account.password.saving">Ukládám…</span>
+          } @else {
+            <span i18n="@@donor.account.password.submit">Změnit heslo</span>
+          }
+        </button>
+        <button
+          type="button"
+          class="account-cancel"
+          (click)="cancel()"
+          i18n="@@donor.account.cancel"
+        >
+          Zrušit
+        </button>
+      </div>
+    </form>
+  }
+
+  <p class="account-status" role="status">
+    @if (linkSentTo(); as address) {
+      <span i18n="@@donor.account.email.sent">
+        Odkaz jsme poslali na {{ address }}. Platí 24 hodin; po jeho otevření se účet přepne na
+        novou adresu a na tu současnou pošleme oznámení.
+      </span>
+    } @else if (passwordChanged()) {
+      <span i18n="@@donor.account.password.changed">
+        Heslo jsme změnili. Ostatní přihlášení jsme ukončili, tohle zůstává.
+      </span>
+    }
+  </p>
+</section>

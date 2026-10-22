@@ -1,5 +1,7 @@
 package cz.novanadeje.app.donors.application;
 
+import cz.novanadeje.app.donors.application.event.DonorEmailChangeRequested;
+import cz.novanadeje.app.donors.application.event.DonorEmailChanged;
 import cz.novanadeje.app.donors.application.event.DonorEmailVerificationRequested;
 import cz.novanadeje.app.donors.domain.Donor;
 import cz.novanadeje.app.donors.domain.DonorId;
@@ -9,6 +11,7 @@ import cz.novanadeje.app.donors.domain.EmailVerificationTokenRepository;
 import cz.novanadeje.app.donors.domain.InvalidEmailVerificationToken;
 import cz.novanadeje.app.donors.domain.LinkSecret;
 import cz.novanadeje.app.donors.domain.PasswordHash;
+import cz.novanadeje.app.donors.domain.RefreshTokenRepository;
 import cz.novanadeje.app.donors.domain.Role;
 import cz.novanadeje.app.shared.application.event.DonorRegistered;
 import cz.novanadeje.app.shared.domain.DonorType;
@@ -52,12 +55,15 @@ class DonorEmailVerificationServiceTest {
     private static final EmailAddress EMAIL = new EmailAddress("jana@example.cz");
     private static final PostalAddress ADDRESS = new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01");
     private static final VariableSymbol SYMBOL = new VariableSymbol("4821937560");
+    private static final EmailAddress NEW_EMAIL = new EmailAddress("jana.nova@example.cz");
     private static final IssuedTokens TOKENS = new IssuedTokens("access", NOW.plus(Duration.ofMinutes(15)), "refresh", NOW.plus(Duration.ofDays(14)));
 
     @Mock
     private DonorRepository donors;
     @Mock
     private EmailVerificationTokenRepository tokens;
+    @Mock
+    private RefreshTokenRepository refreshTokens;
     @Mock
     private DonorSessionService sessions;
     @Mock
@@ -67,7 +73,7 @@ class DonorEmailVerificationServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new DonorEmailVerificationService(donors, tokens, sessions, new DonorEmailVerificationProperties(TTL, 3),
+        service = new DonorEmailVerificationService(donors, tokens, refreshTokens, sessions, new DonorEmailVerificationProperties(TTL, 3),
                 Clock.fixed(NOW, ZoneOffset.UTC), events);
     }
 
@@ -240,6 +246,83 @@ class DonorEmailVerificationServiceTest {
         assertThat(saved.getValue().emailVerifiedAt()).contains(NOW);
         assertThat(result.donor().email()).isEqualTo("jana@example.cz");
         assertThat(result.tokens()).isEqualTo(TOKENS);
+    }
+
+    @Test
+    @DisplayName("Given a verified donor, when a change link is issued, then the stored token carries the new address and the event its secret")
+    void should_store_change_token_and_publish_secret_when_change_link_issued_given_verified_donor() {
+        when(tokens.countOf(DONOR)).thenReturn(0);
+
+        service.issueChangeLink(verifiedDonor(), NEW_EMAIL);
+
+        InOrder order = inOrder(tokens, events);
+        order.verify(tokens).deleteUnusableOf(DONOR, NOW);
+        ArgumentCaptor<EmailVerificationToken> stored = ArgumentCaptor.forClass(EmailVerificationToken.class);
+        order.verify(tokens).save(stored.capture());
+        ArgumentCaptor<DonorEmailChangeRequested> published = ArgumentCaptor.forClass(DonorEmailChangeRequested.class);
+        order.verify(events).publishEvent(published.capture());
+        assertThat(stored.getValue().newEmail()).contains(NEW_EMAIL);
+        assertThat(stored.getValue().expiresAt()).isEqualTo(NOW.plus(TTL));
+        assertThat(published.getValue().secret().hash()).isEqualTo(stored.getValue().secretHash());
+        assertThat(published.getValue().newEmail()).isEqualTo(NEW_EMAIL);
+        assertThat(published.getValue().donorId()).isEqualTo(DONOR.value());
+        assertThat(published.getValue().preferredLocale()).isEqualTo(LocaleCode.CS);
+        assertThat(published.getValue().expiresAt()).isEqualTo(NOW.plus(TTL));
+        verifyNoInteractions(sessions, refreshTokens);
+    }
+
+    @Test
+    @DisplayName("Given a donor holding three live links, when a change link is issued, then nothing is stored and nothing is published")
+    void should_store_and_publish_nothing_when_change_link_issued_given_three_live_links() {
+        when(tokens.countOf(DONOR)).thenReturn(3);
+
+        service.issueChangeLink(verifiedDonor(), NEW_EMAIL);
+
+        verify(tokens, never()).save(any());
+        verifyNoInteractions(events);
+    }
+
+    @Test
+    @DisplayName("Given a live change token, when it is confirmed, then the address changes, every link and session goes, DonorEmailChanged is published and a session opens")
+    void should_change_email_revoke_sessions_and_publish_when_confirmed_given_change_token() {
+        LinkSecret secret = LinkSecret.generate();
+        EmailVerificationToken token = EmailVerificationToken.issueForChange(secret, DONOR, NEW_EMAIL, NOW.minusSeconds(60), TTL);
+        Donor donor = verifiedDonor();
+        when(tokens.findBySecretHash(secret.hash())).thenReturn(Optional.of(token));
+        when(tokens.markUsed(token.id(), NOW)).thenReturn(true);
+        when(donors.findById(DONOR)).thenReturn(Optional.of(donor));
+        when(donors.existsByEmail(NEW_EMAIL)).thenReturn(false);
+        when(sessions.open(DONOR, Set.of(Role.DONOR))).thenReturn(TOKENS);
+
+        AuthenticatedDonor result = service.confirm(secret.value());
+
+        InOrder order = inOrder(donors, tokens, refreshTokens, events, sessions);
+        order.verify(donors).save(donor);
+        order.verify(tokens).deleteAllOf(DONOR);
+        order.verify(refreshTokens).revokeAllOf(DONOR, NOW);
+        order.verify(events).publishEvent(new DonorEmailChanged(DONOR.value(), EMAIL, NEW_EMAIL, LocaleCode.CS));
+        order.verify(sessions).open(DONOR, Set.of(Role.DONOR));
+        assertThat(donor.email()).isEqualTo(NEW_EMAIL);
+        assertThat(result.donor().email()).isEqualTo("jana.nova@example.cz");
+        assertThat(result.tokens()).isEqualTo(TOKENS);
+        verify(events, never()).publishEvent(any(DonorRegistered.class));
+    }
+
+    @Test
+    @DisplayName("Given a change token whose address was registered meanwhile or whose donor is unverified, when it is confirmed, then it is invalid")
+    void should_be_invalid_when_confirmed_given_taken_address_or_unverified_donor() {
+        LinkSecret secret = LinkSecret.generate();
+        EmailVerificationToken token = EmailVerificationToken.issueForChange(secret, DONOR, NEW_EMAIL, NOW.minusSeconds(60), TTL);
+        when(tokens.findBySecretHash(secret.hash())).thenReturn(Optional.of(token));
+        when(tokens.markUsed(token.id(), NOW)).thenReturn(true);
+        when(donors.findById(DONOR)).thenReturn(Optional.of(verifiedDonor()), Optional.of(unverifiedDonor(LocaleCode.CS)));
+        when(donors.existsByEmail(NEW_EMAIL)).thenReturn(true);
+
+        assertThatThrownBy(() -> service.confirm(secret.value())).isInstanceOf(InvalidEmailVerificationToken.class);
+        assertThatThrownBy(() -> service.confirm(secret.value())).isInstanceOf(InvalidEmailVerificationToken.class);
+
+        verify(donors, never()).save(any());
+        verifyNoInteractions(sessions, refreshTokens, events);
     }
 
     private static Donor unverifiedDonor(LocaleCode locale) {

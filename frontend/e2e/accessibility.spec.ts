@@ -220,6 +220,24 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     expect(await violations(page)).toEqual([]);
   });
 
+  test('when a signed-in donor opens the e-mail and password forms, then neither breaks a rule, with errors shown either', async ({
+    page,
+  }) => {
+    await signIn(page);
+    await page.getByRole('button', { name: 'Změnit e-mail' }).click();
+    await page.getByLabel('Nový e-mail').fill('not-an-email');
+    await page.getByRole('button', { name: 'Poslat potvrzovací odkaz' }).click();
+    await expect(page.getByLabel('Nový e-mail')).toBeFocused();
+
+    expect(await violations(page)).toEqual([]);
+
+    await page.getByRole('button', { name: 'Zrušit' }).click();
+    await page.getByRole('button', { name: 'Změnit heslo' }).click();
+    await expect(page.getByLabel('Současné heslo')).toBeFocused();
+
+    expect(await violations(page)).toEqual([]);
+  });
+
   test('when they press Tab first, then the skip link appears and takes them to the content', async ({
     page,
   }) => {

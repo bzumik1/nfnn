@@ -20,7 +20,7 @@ public final class Donor {
     private String name;
     private final CompanyIdentifier companyIdentifier;
     private PostalAddress address;
-    private final EmailAddress email;
+    private EmailAddress email;
     private PasswordHash passwordHash;
     private final VariableSymbol variableSymbol;
     private LocaleCode preferredLocale;
@@ -88,6 +88,16 @@ public final class Donor {
 
     public void changePassword(PasswordHash newPasswordHash) {
         this.passwordHash = require(newPasswordHash, "Password hash");
+    }
+
+    public void changeEmail(EmailAddress newEmail) {
+        if (emailVerifiedAt == null) {
+            throw new IllegalStateException("The e-mail of donor " + id + " is not verified yet");
+        }
+        if (require(newEmail, "Email").equals(email)) {
+            throw new EmailUnchanged();
+        }
+        this.email = newEmail;
     }
 
     public DonorId id() {

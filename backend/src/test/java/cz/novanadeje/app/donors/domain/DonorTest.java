@@ -108,4 +108,34 @@ class DonorTest {
         assertThat(donor.address()).isEqualTo(moved);
         assertThat(donor.preferredLocale()).isEqualTo(LocaleCode.EN);
     }
+
+    @Test
+    @DisplayName("Given a verified donor, when the e-mail is changed to a new address, then the donor carries it and stays verified")
+    void should_carry_new_address_when_email_changed_given_verified_donor() {
+        Donor donor = Donor.register(DonorId.newId(NOW), DonorType.PERSON, "Jana Nováková", null, ADDRESS, EMAIL, HASH, SYMBOL, LocaleCode.CS, NOW);
+        donor.verifyEmail(NOW.plusSeconds(60));
+
+        donor.changeEmail(new EmailAddress("jana.nova@example.cz"));
+
+        assertThat(donor.email()).isEqualTo(new EmailAddress("jana.nova@example.cz"));
+        assertThat(donor.isEmailVerified()).isTrue();
+    }
+
+    @Test
+    @DisplayName("Given a verified donor, when the e-mail is changed to the address it already has, then it is refused as unchanged")
+    void should_refuse_when_email_changed_given_same_address() {
+        Donor donor = Donor.register(DonorId.newId(NOW), DonorType.PERSON, "Jana Nováková", null, ADDRESS, EMAIL, HASH, SYMBOL, LocaleCode.CS, NOW);
+        donor.verifyEmail(NOW.plusSeconds(60));
+
+        assertThatThrownBy(() -> donor.changeEmail(new EmailAddress("JANA@example.cz"))).isInstanceOf(EmailUnchanged.class);
+        assertThatThrownBy(() -> donor.changeEmail(null)).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    @DisplayName("Given an unverified donor, when the e-mail is changed, then it is refused")
+    void should_refuse_when_email_changed_given_unverified_donor() {
+        Donor donor = Donor.register(DonorId.newId(NOW), DonorType.PERSON, "Jana Nováková", null, ADDRESS, EMAIL, HASH, SYMBOL, LocaleCode.CS, NOW);
+
+        assertThatThrownBy(() -> donor.changeEmail(new EmailAddress("jana.nova@example.cz"))).isInstanceOf(IllegalStateException.class);
+    }
 }

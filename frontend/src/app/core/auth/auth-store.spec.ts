@@ -150,4 +150,38 @@ describe('Given the auth store', () => {
 
     expect(store.donor()?.name).toBe('Jana Svobodová');
   });
+
+  it('when the password is changed, then the store adopts the new session it answers with', () => {
+    signIn();
+
+    store
+      .changePassword({
+        currentPassword: 'correct horse battery',
+        newPassword: 'a brand new passphrase',
+      })
+      .subscribe();
+    const request = http.expectOne('/api/donors/me/password');
+    expect(request.request.method).toBe('PUT');
+    expect(request.request.body).toEqual({
+      currentPassword: 'correct horse battery',
+      newPassword: 'a brand new passphrase',
+    });
+    request.flush(authResponse('token-2'));
+
+    expect(store.signedIn()).toBe(true);
+    expect(store.currentAccessToken()).toBe('token-2');
+  });
+
+  it('when an e-mail change is requested, then the request goes out and the store keeps the current address', () => {
+    signIn();
+
+    store
+      .requestEmailChange({ newEmail: 'jana.nova@example.cz', password: 'correct horse battery' })
+      .subscribe();
+    const request = http.expectOne('/api/donors/me/email-change');
+    expect(request.request.method).toBe('POST');
+    request.flush(null, { status: 202, statusText: 'Accepted' });
+
+    expect(store.donor()?.email).toBe('jana@example.cz');
+  });
 });

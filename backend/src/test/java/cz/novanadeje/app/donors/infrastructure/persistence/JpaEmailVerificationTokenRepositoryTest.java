@@ -68,7 +68,22 @@ class JpaEmailVerificationTokenRepositoryTest {
         assertThat(found.issuedAt()).isEqualTo(NOW);
         assertThat(found.expiresAt()).isEqualTo(NOW.plus(HOUR));
         assertThat(found.usedAt()).isEmpty();
+        assertThat(found.newEmail()).isEmpty();
         assertThat(tokens.findBySecretHash(LinkSecret.generate().hash())).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Given a saved change token, when it is found by the hash of its secret, then the new address survives")
+    void should_keep_new_email_when_found_by_secret_hash_given_saved_change_token() {
+        LinkSecret secret = LinkSecret.generate();
+        EmailAddress newEmail = new EmailAddress("jana.nova@example.cz");
+        tokens.save(EmailVerificationToken.issueForChange(secret, jana, newEmail, NOW, HOUR));
+        flushAndClear();
+
+        EmailVerificationToken found = tokens.findBySecretHash(secret.hash()).orElseThrow();
+
+        assertThat(found.isForChange()).isTrue();
+        assertThat(found.newEmail()).contains(newEmail);
     }
 
     @Test
