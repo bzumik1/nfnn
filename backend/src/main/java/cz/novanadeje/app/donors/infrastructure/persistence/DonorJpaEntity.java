@@ -55,7 +55,7 @@ public class DonorJpaEntity {
     @Column(name = "email", nullable = false, length = 254, unique = true)
     private String email;
 
-    @Column(name = "password_hash", nullable = false, length = 100)
+    @Column(name = "password_hash", length = 100)
     private String passwordHash;
 
     @Column(name = "variable_symbol", nullable = false, length = VariableSymbol.MAX_LENGTH, unique = true)
@@ -92,7 +92,7 @@ public class DonorJpaEntity {
         entity.city = donor.address().city();
         entity.postalCode = donor.address().postalCode();
         entity.email = donor.email().value();
-        entity.passwordHash = donor.passwordHash().value();
+        entity.passwordHash = donor.passwordHash().map(PasswordHash::value).orElse(null);
         entity.variableSymbol = donor.variableSymbol().value();
         entity.preferredLocale = donor.preferredLocale().tag();
         entity.roles = EnumSet.noneOf(Role.class);
@@ -111,7 +111,7 @@ public class DonorJpaEntity {
                 companyIdentifier == null ? null : new CompanyIdentifier(companyIdentifier),
                 new PostalAddress(street, city, postalCode),
                 new EmailAddress(email),
-                new PasswordHash(passwordHash),
+                passwordHash == null ? null : new PasswordHash(passwordHash),
                 new VariableSymbol(variableSymbol),
                 LocaleCode.fromTag(preferredLocale),
                 roles,

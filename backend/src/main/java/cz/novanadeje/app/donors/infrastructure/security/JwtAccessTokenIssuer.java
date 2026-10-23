@@ -32,7 +32,7 @@ class JwtAccessTokenIssuer implements AccessTokenIssuer {
 
     @Override
     public IssuedAccessToken issue(DonorId donorId, Set<Role> roles, Instant issuedAt) {
-        return issue(new AccessTokenGrant(donorId, roles, properties.audience(), Set.of(), issuedAt, null));
+        return issue(new AccessTokenGrant(donorId, roles, properties.audience(), Set.of(), issuedAt, null, null));
     }
 
     @Override
@@ -51,6 +51,7 @@ class JwtAccessTokenIssuer implements AccessTokenIssuer {
         if (!grant.scopes().isEmpty()) {
             claims.claim(JwtProperties.SCOPE_CLAIM, OAuthScope.format(grant.scopes()));
         }
+        grant.connectedClient().ifPresent(client -> claims.claim(JwtProperties.CLIENT_CLAIM, client));
         JwsHeader header = JwsHeader.with(MacAlgorithm.HS256).build();
         return new IssuedAccessToken(encoder.encode(JwtEncoderParameters.from(header, claims.build())).getTokenValue(), expiresAt);
     }

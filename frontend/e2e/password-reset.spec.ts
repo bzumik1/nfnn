@@ -40,7 +40,7 @@ test.describe('Given a donor who forgot the password', () => {
 
     await page.goto('/obnova-hesla#token=abc');
 
-    await expect(page.getByRole('heading', { name: 'Nastavte si nové heslo' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Obnovte si přístup' })).toBeVisible();
     await expect(page).toHaveURL(/\/obnova-hesla$/);
     expect(page.url()).not.toContain('token');
     await expect(page).toHaveTitle('Nové heslo | Nová naděje – nadační fond');

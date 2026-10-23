@@ -33,7 +33,7 @@ class DonorSecondFactorController {
     SecondFactorEnrolmentResponse setup(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody SecondFactorSetupRequest request,
                                         HttpServletRequest http) {
         limiter.check(http.getRemoteAddr());
-        return SecondFactorEnrolmentResponse.of(secondFactors.begin(DonorId.of(jwt.getSubject()), request.password()));
+        return SecondFactorEnrolmentResponse.of(secondFactors.begin(DonorId.of(jwt.getSubject()), SessionRoles.secondFactorVerified(jwt), request.confirmation()));
     }
 
     @PostMapping("/confirm")
@@ -48,6 +48,6 @@ class DonorSecondFactorController {
                                          HttpServletRequest http) {
         limiter.check(http.getRemoteAddr());
         return SessionResponses.opened(HttpStatus.OK,
-                secondFactors.disable(DonorId.of(jwt.getSubject()), request.password(), request.code()), clock.instant());
+                secondFactors.disable(DonorId.of(jwt.getSubject()), request.confirmation(), request.code()), clock.instant());
     }
 }

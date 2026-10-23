@@ -110,7 +110,7 @@ class JpaDonorRepositoryTest {
     }
 
     @Test
-    @DisplayName("Given saved donors, when searched by a part of the name or e-mail or the start of the symbol, then the matches come by name, at most the limit, and like-wildcards are literal")
+    @DisplayName("Given saved donors, when searched by a part of the name or e-mail or the start of the symbol, then the matches come by name from the offset, at most the limit, like-wildcards are literal and an empty query lists everyone")
     void should_find_by_name_email_or_symbol_start_when_searched_given_saved_donors() {
         Donor jana = donor("jana@example.cz", "4821937560");
         Donor petr = donor("petr@firma.cz", "7310945528");
@@ -125,14 +125,17 @@ class JpaDonorRepositoryTest {
         donors.save(karel);
         flushAndClear();
 
-        assertThat(donors.search("novák", 20)).extracting(Donor::name).containsExactly("Jana Nováková", "Petr Novák");
-        assertThat(donors.search("FIRMA.CZ", 20)).extracting(Donor::name).containsExactly("Petr Novák");
-        assertThat(donors.search("example", 20)).extracting(Donor::name).containsExactly("Eva Dvořáková", "Jana Nováková", "Karel 100% Veselý");
-        assertThat(donors.search("48", 20)).extracting(Donor::name).containsExactly("Eva Dvořáková", "Jana Nováková");
-        assertThat(donors.search("48", 1)).extracting(Donor::name).containsExactly("Eva Dvořáková");
-        assertThat(donors.search("100%", 20)).extracting(Donor::name).containsExactly("Karel 100% Veselý");
-        assertThat(donors.search("_", 20)).isEmpty();
-        assertThat(donors.search("xyz", 20)).isEmpty();
+        assertThat(donors.search("novák", 0, 20)).extracting(Donor::name).containsExactly("Jana Nováková", "Petr Novák");
+        assertThat(donors.search("FIRMA.CZ", 0, 20)).extracting(Donor::name).containsExactly("Petr Novák");
+        assertThat(donors.search("example", 0, 20)).extracting(Donor::name).containsExactly("Eva Dvořáková", "Jana Nováková", "Karel 100% Veselý");
+        assertThat(donors.search("48", 0, 20)).extracting(Donor::name).containsExactly("Eva Dvořáková", "Jana Nováková");
+        assertThat(donors.search("48", 0, 1)).extracting(Donor::name).containsExactly("Eva Dvořáková");
+        assertThat(donors.search("100%", 0, 20)).extracting(Donor::name).containsExactly("Karel 100% Veselý");
+        assertThat(donors.search("_", 0, 20)).isEmpty();
+        assertThat(donors.search("xyz", 0, 20)).isEmpty();
+        assertThat(donors.search("", 0, 20)).extracting(Donor::name).containsExactly("Eva Dvořáková", "Jana Nováková", "Karel 100% Veselý", "Petr Novák");
+        assertThat(donors.search("", 1, 2)).extracting(Donor::name).containsExactly("Jana Nováková", "Karel 100% Veselý");
+        assertThat(donors.search("", 3, 20)).extracting(Donor::name).containsExactly("Petr Novák");
     }
 
     @Test
@@ -157,8 +160,8 @@ class JpaDonorRepositoryTest {
         assertThat(reloaded.roles()).isEmpty();
         assertThat(reloaded.isEmailVerified()).isFalse();
         assertThat(donors.findByEmail(new EmailAddress("jana@example.cz")).orElseThrow().variableSymbol()).isEqualTo(new VariableSymbol("4821937561"));
-        assertThat(donors.search("4821937560", 20)).extracting(Donor::id).containsExactly(donor.id());
-        assertThat(donors.search("nováková", 20)).extracting(Donor::id).doesNotContain(donor.id());
+        assertThat(donors.search("4821937560", 0, 20)).extracting(Donor::id).containsExactly(donor.id());
+        assertThat(donors.search("nováková", 0, 20)).extracting(Donor::id).doesNotContain(donor.id());
     }
 
     private static Donor donor(String email, String variableSymbol) {

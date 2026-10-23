@@ -15,7 +15,8 @@ record AdminActionListResponse(List<Item> items, boolean hasMore) {
         return new AdminActionListResponse(activity.items().stream().map(Item::from).toList(), activity.hasMore());
     }
 
-    record Item(UUID id, UUID adminId, String adminName, String adminEmail, String action, UUID subjectId, String details, Instant performedAt) {
+    record Item(UUID id, UUID adminId, String adminName, String adminEmail, String action, UUID subjectId, String details, Instant performedAt,
+                String client) {
 
         static Item from(AdminActionView view) {
             return new Item(
@@ -26,7 +27,8 @@ record AdminActionListResponse(List<Item> items, boolean hasMore) {
                     view.action(),
                     view.subjectId().orElse(null),
                     view.details(),
-                    view.performedAt());
+                    view.performedAt(),
+                    view.client().orElse(null));
         }
     }
 }

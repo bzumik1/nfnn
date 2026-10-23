@@ -28,6 +28,7 @@ const ACTION_NAMES: Record<string, string> = {
   GRANT_ADMINISTRATION: $localize`:@@admin.actions.action.grantAdministration:Přidání správce`,
   REVOKE_ADMINISTRATION: $localize`:@@admin.actions.action.revokeAdministration:Odebrání správce`,
   RESET_SECOND_FACTOR: $localize`:@@admin.actions.action.resetSecondFactor:Vypnutí dvoufaktorového ověření`,
+  REMOVE_PASSKEYS: $localize`:@@admin.actions.action.removePasskeys:Odebrání přístupových klíčů dárce`,
   REVERSE_SYMBOL_CLAIM: $localize`:@@admin.actions.action.reverseSymbolClaim:Zrušení odpovědi Ano na starší symbol`,
   RESET_SYMBOL_CLAIM: $localize`:@@admin.actions.action.resetSymbolClaim:Smazání odpovědi Ne na starší symbol`,
   DISCONNECT_SENDER_ACCOUNT: $localize`:@@admin.actions.action.disconnectSenderAccount:Vypnutí párování bankovního účtu`,
@@ -49,6 +50,9 @@ const ACTION_NAMES: Record<string, string> = {
   REQUEST_BACKUP: $localize`:@@admin.actions.action.requestBackup:Spuštění zálohy databáze`,
   REQUEST_TEST_RESTORE: $localize`:@@admin.actions.action.requestTestRestore:Spuštění zkušební obnovy zálohy`,
   DOWNLOAD_BACKUP: $localize`:@@admin.actions.action.downloadBackup:Stažení zálohy databáze`,
+  CHANGE_LOG_LEVEL: $localize`:@@admin.actions.action.changeLogLevel:Dočasná změna úrovně logování`,
+  RESET_LOG_LEVEL: $localize`:@@admin.actions.action.resetLogLevel:Vrácení úrovně logování`,
+  CHANGE_SETTINGS: $localize`:@@admin.actions.action.changeSettings:Změna nastavení webu`,
 };
 
 @Component({

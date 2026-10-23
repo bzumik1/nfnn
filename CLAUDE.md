@@ -31,23 +31,13 @@ Read before building, update in the same PR: `docs/requirements.md` (client deci
 | `npm test -- --watch=false` | Vitest |
 | `npm run build` | production build to `dist/frontend/browser/` |
 | `npm run e2e` | Playwright; when it reports a missing browser build (cloud sessions ship an older Chromium), run `npx playwright install chromium` once |
-| **Stack** | `cp .env.example .env && docker compose up -d --build`, frontend on :8080; `JWT_SECRET` has no default |
+| **Stack** | `cp .env.example .env && docker compose up -d --build`, frontend on :8080; the `prod` profile asks for the server's settings at `/prvni-nastaveni` and generates its keys into the `backend-secrets` volume |
 
 ## Production logs
 
-The server writes `backend.log` (Spring Boot, rotated), `backup.log`, `nginx-access.log` (every request: method, path, status, timing; no address or query) and `mcp.log` (the connector; both rotated daily, `.gz`, 14 days) into `/DATA/AppData/nfnn/logs/`, served read-only by the `nfnn-ops` container behind a Cloudflare tunnel and Cloudflare Access at `https://ops.nfnn.cz` (`deploy/README.md`, "Logy pro Clauda"). With `NFNN_OPS_CLIENT_ID` and `NFNN_OPS_CLIENT_SECRET` in the environment:
+The server writes `backend.log` (Spring Boot, rotated), `backup.log`, `nginx-access.log` (every request: method, path, status, timing; no address or query) and `mcp.log` (the connector; both rotated daily, `.gz`, 14 days) into `/DATA/AppData/nfnn/logs/`. With the NFNN connector in the session, `nfnn_status` names the running revision, and `nfnn_log_files`, `nfnn_log` (paged windows, the tail by default), `nfnn_log_search`, `nfnn_log_levels`, `nfnn_diagnostics` and `nfnn_thread_dump` read them through `/api/admin/operations/...`, and `nfnn_set_log_level` raises a logger for a while (audited, resets by itself). They all go through the backend: when it is down, ask Jakub for `sudo docker logs nfnn-backend` (`deploy/README.md`, "Logy").
 
-```bash
-h=(-H "CF-Access-Client-Id: $NFNN_OPS_CLIENT_ID" -H "CF-Access-Client-Secret: $NFNN_OPS_CLIENT_SECRET")
-curl -sS "${h[@]}" https://ops.nfnn.cz/info                                   # {"build":{"revision":"<short sha>"}}
-curl -sS "${h[@]}" https://ops.nfnn.cz/health
-curl -sS "${h[@]}" -H 'Range: bytes=-50000' https://ops.nfnn.cz/logs/backend.log   # the tail; /logs/ lists the files
-curl -sS "${h[@]}" https://ops.nfnn.cz/logs/backup.log
-```
-
-With the NFNN connector in the session, `nfnn_log_files`, `nfnn_log` (paged windows, the tail by default), `nfnn_log_search`, `nfnn_log_levels`, `nfnn_diagnostics` and `nfnn_thread_dump` read the same folder through `/api/admin/operations/...`, and `nfnn_set_log_level` raises a logger for a while (audited, resets by itself); prefer them over the tunnel.
-
-After a deploy, check `/info` against the merge commit and `Backend revision … is ready` in the log. The logs carry ids and outcomes, never names or tokens; quote them in a thread only as far as needed. Without the two variables (or a 403) the tunnel or the token is not set up: ask Jakub, never guess at the server.
+After a deploy, check the revision in `nfnn_status` against the merge commit and `Backend revision … is ready` in the log. The logs carry ids and outcomes, never names or tokens; quote them in a thread only as far as needed. Without the connector (or with a 401/403) ask Jakub, never guess at the server.
 
 ## Non-negotiable
 
@@ -72,6 +62,6 @@ After a deploy, check `/info` against the merge commit and `Backend revision …
 - `build.gradle.kts` sets `TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE=/var/run/docker.sock`; keep it.
 - A receipt template or `receipt.*` text change fails `ReceiptTemplateHistoryTest` until its candidate is reviewed and committed (skill `receipt-template`).
 - `@angular/localize` is wired in; never run `ng add @angular/localize` again. Never use H2.
-- `db/changelog/content/.gitkeep` stays: the master changelog's `includeAll` needs every context folder to exist, and a missing one stops the backend at startup.
+- Every context folder under `db/changelog/` must exist with at least one changelog: the master's `includeAll` stops the backend at startup on a missing folder. A new context brings its first changelog, not a `.gitkeep` (Liquibase warns about it at every start).
 - `spring.profiles.default: dev`: `getActiveProfiles()` is empty then; assert on `getDefaultProfiles()`.
 - The original HTML prototype was removed from the repo (git history keeps it); the theme in `frontend/src/styles/themes/_nova-nadeje.scss` and the existing components are the visual reference.

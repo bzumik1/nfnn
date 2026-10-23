@@ -374,7 +374,9 @@
 
     <app-profile-card (sessionEnded)="sendToSignIn()" />
 
-    <app-account-card (sessionEnded)="sendToSignIn()" />
+    <app-account-card [passkeyCount]="passkeyCount()" (sessionEnded)="sendToSignIn()" />
+
+    <app-passkeys-card (sessionEnded)="sendToSignIn()" (countChanged)="passkeyCount.set($event)" />
 
     <p class="contact-line">
       <span i18n="@@donor.dashboard.help">Máte dotaz k platbě? Napište nám na</span>&ngsp;<a

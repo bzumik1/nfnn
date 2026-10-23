@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <changeSet id="002-store-settings" author="nfnn">
+        <createTable tableName="operations_setting">
+            <column name="name" type="varchar(64)">
+                <constraints primaryKey="true" primaryKeyName="pk_operations_setting" nullable="false"/>
+            </column>
+            <column name="value" type="varchar(4000)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="sealed" type="boolean">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="timestamp with time zone">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <createTable tableName="operations_setup">
+            <column name="id" type="smallint">
+                <constraints primaryKey="true" primaryKeyName="pk_operations_setup" nullable="false"/>
+            </column>
+            <column name="completed_at" type="timestamp with time zone">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <sql>alter table operations_setup add constraint ck_operations_setup_singleton check (id = 1)</sql>
+    </changeSet>
+
+</databaseChangeLog>

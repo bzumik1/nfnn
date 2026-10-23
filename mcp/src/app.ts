@@ -10,9 +10,14 @@ import {
   type OAuthTokenVerifier,
 } from '@modelcontextprotocol/server';
 import type { AuthorizationServer, AuthorizationServerDiscovery } from './authorization.js';
+import type { BackendClient } from './backend.js';
+import { PHOTO_UPLOAD_PATH, receivePhoto } from './photo-upload.js';
+import type { PhotoSource } from './photos.js';
+import type { Logger } from './token-exchange.js';
 import { registerReadingTools } from './tools/reading.js';
 import { WRITE_SCOPE, type ToolDependencies } from './tools/support.js';
 import { registerWritingTools } from './tools/writing.js';
+import { UploadTickets } from './upload-tickets.js';
 
 export const MCP_PATH = '/mcp';
 export const READ_SCOPE = 'admin:read';
@@ -24,24 +29,36 @@ export interface App {
   close(): Promise<void>;
 }
 
-export interface AppDependencies extends ToolDependencies {
+export interface AppDependencies {
+  readonly backend: BackendClient;
+  readonly logger: Logger;
+  readonly photos: PhotoSource;
   readonly discovery: AuthorizationServerDiscovery;
   readonly verifier: OAuthTokenVerifier;
   readonly version: string;
+  readonly now?: () => number;
 }
 
 export function createApp(deps: AppDependencies): App {
+  const now = deps.now ?? (() => Date.now());
+  const tools: ToolDependencies = {
+    backend: deps.backend,
+    logger: deps.logger,
+    photos: deps.photos,
+    tickets: new UploadTickets(now),
+    publicUrl: () => deps.discovery.current()?.issuer,
+  };
   const handler = createMcpHandler(
     () => {
       const server = new McpServer(
         { name: SERVER_NAME, version: deps.version },
         {
           instructions:
-            'Tools of the administration of Nadační fond Nová naděje (nfnn.cz): the bank import, donations, donors, backups, the audit trail, the monthly report, the site content and the server logs. Amounts are in CZK, times in Prague time. Writing tools need the "admin:write" permission of the connection and are audited under the administrator who connected.',
+            'Tools of the administration of Nadační fond Nová naděje (nfnn.cz): the bank import, donations, donors, backups, the audit trail, the monthly report, the site content and the server logs. Answers are compact JSON: amounts are numbers of crowns (CZK, fields named without "Minor"), instants ISO 8601 in Prague time with their offset, days YYYY-MM-DD. Lists come a page at a time and say how to ask for the next one. Writing tools need the "admin:write" permission of the connection and are audited under the administrator who connected, naming the connected application. Photos for news and projects are uploaded with nfnn_upload_photo (from a public address) or nfnn_photo_upload_link (a file). Deleting content or account links, the administrator role, second-factor resets, older-symbol reversals, GDPR erasure and backup downloads are done only on the web at /sprava.',
         },
       );
-      registerReadingTools(server, deps);
-      registerWritingTools(server, deps);
+      registerReadingTools(server, tools);
+      registerWritingTools(server, tools);
       return server;
     },
     { onerror: (error) => deps.logger.warn(`MCP handler error: ${error.constructor.name}`) },
@@ -52,6 +69,9 @@ export function createApp(deps: AppDependencies): App {
       const url = new URL(request.url);
       if (url.pathname === '/health') {
         return health(deps);
+      }
+      if (url.pathname === PHOTO_UPLOAD_PATH) {
+        return receivePhoto(request, tools);
       }
       const server = await discovered(deps);
       if (!server) {
@@ -66,11 +86,17 @@ export function createApp(deps: AppDependencies): App {
       if (url.pathname !== MCP_PATH) {
         return json(404, { error: 'not found' });
       }
+      const started = now();
+      const methods = await methodsOf(request);
       const auth = await authenticate(request, deps.verifier, server);
-      if (auth instanceof Response) {
-        return auth;
-      }
-      return handler.fetch(request, { authInfo: auth });
+      const response =
+        auth instanceof Response ? auth : await handler.fetch(request, { authInfo: auth });
+      const donor =
+        auth instanceof Response ? 'unauthenticated' : `donor ${String(auth.extra?.['donorId'])}`;
+      deps.logger.info(
+        `MCP ${request.method} ${methods} for ${donor}: ${response.status} in ${Math.round(now() - started)} ms`,
+      );
+      return response;
     },
     close: () => handler.close(),
   };
@@ -99,6 +125,39 @@ async function authenticate(
   }
 }
 
+async function methodsOf(request: Request): Promise<string> {
+  if (request.method !== 'POST') {
+    return request.method === 'GET' ? 'stream' : 'session';
+  }
+  try {
+    const parsed: unknown = await request.clone().json();
+    const messages = Array.isArray(parsed) ? parsed : [parsed];
+    return messages.map(methodOf).join(',') || 'empty';
+  } catch {
+    return 'unreadable';
+  }
+}
+
+function methodOf(message: unknown): string {
+  const record =
+    typeof message === 'object' && message !== null ? (message as Record<string, unknown>) : {};
+  const method = record['method'];
+  if (typeof method !== 'string') {
+    return 'response';
+  }
+  if (!/^[A-Za-z/_]{1,64}$/.test(method)) {
+    return 'unknown';
+  }
+  const params = record['params'];
+  const tool =
+    typeof params === 'object' && params !== null
+      ? (params as Record<string, unknown>)['name']
+      : undefined;
+  return method === 'tools/call'
+    ? `tools/call:${typeof tool === 'string' && /^[a-z0-9_]{1,64}$/.test(tool) ? tool : 'unknown'}`
+    : method;
+}
+
 function metadataOptions(server: AuthorizationServer): AuthMetadataOptions {
   return {
     oauthMetadata: server.metadata,
@@ -110,12 +169,12 @@ function metadataOptions(server: AuthorizationServer): AuthMetadataOptions {
 }
 
 async function discovered(deps: AppDependencies): Promise<AuthorizationServer | undefined> {
-  if (deps.discovery.current()) {
-    return deps.discovery.current();
-  }
+  const before = deps.discovery.current()?.issuer;
   try {
     const server = await deps.discovery.discover();
-    deps.logger.info(`Authorization server discovered: ${server.issuer}`);
+    if (server.issuer !== before) {
+      deps.logger.info(`Authorization server discovered: ${server.issuer}`);
+    }
     return server;
   } catch (failure: unknown) {
     deps.logger.warn(

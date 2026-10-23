@@ -59,6 +59,11 @@
                       >
                       <span class="admin-email">{{ item.adminId }}</span>
                     }
+                    @if (item.client) {
+                      <span class="admin-client" i18n="@@admin.actions.admin.client"
+                        >přes aplikaci {{ item.client }}</span
+                      >
+                    }
                   </td>
                   <td data-label="Zásah" i18n-data-label="@@admin.actions.col.action">
                     <span class="admin-name">{{ actionName(item) }}</span>

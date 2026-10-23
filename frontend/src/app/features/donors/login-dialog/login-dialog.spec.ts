@@ -8,8 +8,11 @@ import {
   LoginDialogOptions,
   LoginDialogService,
 } from '../../../core/auth/login-dialog.service';
+import { PasskeyAuthenticator } from '../../../core/auth/passkey-authenticator';
 import {
   authResponse,
+  FakePasskeyAuthenticator,
+  passkeySignInOptions,
   problem,
   SAMPLE_CHALLENGE,
   secondFactorRequired,
@@ -21,12 +24,19 @@ describe('Given the sign-in dialog', () => {
   let http: HttpTestingController;
   let dialog: LoginDialogService;
   let navigate: ReturnType<typeof vi.spyOn>;
+  let passkeys: FakePasskeyAuthenticator;
 
   beforeEach(async () => {
     localStorage.clear();
+    passkeys = new FakePasskeyAuthenticator();
     await TestBed.configureTestingModule({
       imports: [LoginDialog],
-      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([]),
+        { provide: PasskeyAuthenticator, useValue: passkeys },
+      ],
     }).compileComponents();
     http = TestBed.inject(HttpTestingController);
     dialog = TestBed.inject(LoginDialogService);
@@ -355,6 +365,71 @@ describe('Given the sign-in dialog', () => {
     });
   });
 
+  describe('when a donor signs in with a passkey', () => {
+    beforeEach(() => render());
+
+    async function choosePasskey(): Promise<void> {
+      await click('.passkey-btn');
+      http.expectOne('/api/donors/auth/passkey/options').flush(passkeySignInOptions());
+      await vi.waitFor(() => expect(passkeys.requested).toHaveLength(1));
+      await settle();
+    }
+
+    it('then the device answers the challenge, the dialog closes and the page stays', async () => {
+      expect(element('.passkey-btn').textContent).toContain('Přihlásit se přístupovým klíčem');
+
+      await choosePasskey();
+      http.expectOne('/api/donors/auth/passkey').flush(authResponse('token-1'));
+      await settle();
+
+      expect(TestBed.inject(AuthStore).signedIn()).toBe(true);
+      expect(dialog.isOpen()).toBe(false);
+      expect(navigate).not.toHaveBeenCalled();
+    });
+
+    it('and dismisses the prompt of the device, then the dialog says so and the password form stays usable', async () => {
+      passkeys.failure = 'cancelled';
+
+      await choosePasskey();
+      await vi.waitFor(() => expect(element('.form-error')).not.toBeNull());
+      await settle();
+
+      expect(element('.form-error').getAttribute('role')).toBe('alert');
+      expect(element('.form-error').textContent).toContain(
+        'Přihlášení přístupovým klíčem neproběhlo',
+      );
+      expect(element<HTMLButtonElement>('.form-submit').disabled).toBe(false);
+      expect(element<HTMLButtonElement>('.passkey-btn').disabled).toBe(false);
+      expect(dialog.isOpen()).toBe(true);
+    });
+
+    it('and the server does not know the passkey, then the reason from the server is shown', async () => {
+      await choosePasskey();
+      http
+        .expectOne('/api/donors/auth/passkey')
+        .flush(
+          problem(
+            'auth/invalid-passkey',
+            'Přístupový klíč neznáme',
+            'Přihlaste se prosím e-mailem a heslem, nebo to zkuste znovu.',
+          ),
+          { status: 401, statusText: 'Unauthorized' },
+        );
+      await settle();
+
+      expect(element('.form-error').textContent).toContain('Přístupový klíč neznáme.');
+      expect(TestBed.inject(AuthStore).signedIn()).toBe(false);
+    });
+
+    it('in a browser without passkeys, then no passkey button is offered', async () => {
+      dialog.close();
+      passkeys.available = false;
+      await render();
+
+      expect(element('.passkey-btn')).toBeNull();
+    });
+  });
+
   describe('when a visitor registers', () => {
     beforeEach(async () => {
       await render();
@@ -397,6 +472,31 @@ describe('Given the sign-in dialog', () => {
       await click('.reset-success .form-submit');
 
       expect(element('.login-form')).not.toBeNull();
+    });
+
+    it('with a passkey instead of a password, then no password is asked for and none is sent', async () => {
+      await fillInPerson();
+      await click('.type-switch[aria-labelledby="register-method-label"] button:nth-child(2)');
+      expect(element('#register-password')).toBeNull();
+      expect(element('.register-hint').textContent).toContain('hned po potvrzení e-mailu');
+
+      await submit('.register-form');
+      const request = http.expectOne('/api/donors/auth/register');
+      expect(request.request.body.password).toBeNull();
+      request.flush(null, { status: 202, statusText: 'Accepted' });
+      await settle();
+
+      expect(element('.reset-success h3').textContent).toContain('Zkontrolujte si e-mail');
+    });
+
+    it('in a browser without passkeys, then only the password is offered', async () => {
+      passkeys.available = false;
+      fixture = TestBed.createComponent(LoginDialog);
+      await settle();
+      await click('.tab-switch button:nth-child(2)');
+
+      expect(element('#register-method-label')).toBeNull();
+      expect(element('#register-password')).not.toBeNull();
     });
 
     it('as a company, then the identification number travels with the registration', async () => {

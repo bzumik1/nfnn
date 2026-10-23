@@ -234,7 +234,7 @@ class DonorPasswordResetServiceTest {
 
         ArgumentCaptor<Donor> saved = ArgumentCaptor.forClass(Donor.class);
         verify(donors).save(saved.capture());
-        assertThat(saved.getValue().passwordHash()).isEqualTo(NEW_HASH);
+        assertThat(saved.getValue().passwordHash()).contains(NEW_HASH);
         verify(tokens).deleteOthersOf(DONOR, token.id());
         verify(refreshTokens).revokeAllOf(DONOR, NOW);
         verifyNoInteractions(events);

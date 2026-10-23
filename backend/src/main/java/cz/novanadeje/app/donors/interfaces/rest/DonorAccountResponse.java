@@ -9,7 +9,7 @@ import java.time.Instant;
 
 record DonorAccountResponse(String donorId, DonorType type, String name, String companyIdentifier, AddressResponse address, String email,
                             String variableSymbol, String preferredLocale, Instant registeredAt, boolean emailVerified, boolean administrator,
-                            boolean secondFactorEnabled, Instant erasedAt) {
+                            boolean secondFactorEnabled, int passkeys, Instant erasedAt) {
 
     record AddressResponse(String street, String city, String postalCode) {
     }
@@ -20,6 +20,6 @@ record DonorAccountResponse(String donorId, DonorType type, String name, String 
                 donor.companyIdentifier().map(CompanyIdentifier::value).orElse(null),
                 new AddressResponse(donor.address().street(), donor.address().city(), donor.address().postalCode()),
                 donor.email().value(), donor.variableSymbol().value(), donor.preferredLocale().tag(), donor.registeredAt(),
-                donor.isEmailVerified(), donor.isAdministrator(), view.secondFactorEnabled(), donor.erasedAt().orElse(null));
+                donor.isEmailVerified(), donor.isAdministrator(), view.secondFactorEnabled(), view.passkeys(), donor.erasedAt().orElse(null));
     }
 }

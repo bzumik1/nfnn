@@ -166,6 +166,14 @@ public class ApiClient {
         clientAddress = nextClientAddress();
     }
 
+    public void comeFromPublicAddress() {
+        clientAddress = "203.0.113." + (CLIENT_ADDRESSES.incrementAndGet() & 0xff);
+    }
+
+    public void sendHeader(String name, String value) {
+        defaultHeaders.put(name, value);
+    }
+
     public ResponseEntity<String> lastResponse() {
         return lastResponse;
     }

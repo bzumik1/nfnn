@@ -20,7 +20,11 @@ export class FormControlDirective {
     this.form ? merge(this.model.control.events, this.form.form.events) : this.model.control.events,
   );
 
-  readonly id: string = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement.id;
+  private readonly element = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
+
+  get id(): string {
+    return this.element.id;
+  }
 
   readonly showsError = computed(() => {
     this.lastEvent();

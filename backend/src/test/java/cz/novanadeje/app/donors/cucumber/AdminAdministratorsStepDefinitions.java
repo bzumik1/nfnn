@@ -159,11 +159,24 @@ public class AdminAdministratorsStepDefinitions {
         new AdministratorBootstrap(configured, administrators).run();
     }
 
+    @Given("nobody administers the site")
+    public void nobodyAdministersTheSite() {
+        jdbc.sql("delete from donor_role where role = 'ADMIN'").update();
+    }
+
     @Then("{string} is an administrator in the database")
     public void isAnAdministratorInTheDatabase(String alias) {
-        Long count = jdbc.sql("select count(*) from donor_role where role = 'ADMIN' and donor_id = ?").param(scenarioDonors.idOf(alias))
+        assertThat(administratorRows(alias)).isEqualTo(1);
+    }
+
+    @Then("{string} is not an administrator in the database")
+    public void isNotAnAdministratorInTheDatabase(String alias) {
+        assertThat(administratorRows(alias)).isZero();
+    }
+
+    private long administratorRows(String alias) {
+        return jdbc.sql("select count(*) from donor_role where role = 'ADMIN' and donor_id = ?").param(scenarioDonors.idOf(alias))
                 .query(Long.class).single();
-        assertThat(count).isEqualTo(1);
     }
 
     private List<String> administratorEmails() {

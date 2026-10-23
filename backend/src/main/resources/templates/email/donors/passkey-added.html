@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="cs" th:lang="${#locale.language}" xmlns:th="http://www.thymeleaf.org">
+<body>
+<th:block th:fragment="content">
+    <p style="margin: 0 0 16px;" th:text="#{donors.passkeyAdded.email.greeting}">Dobrý den,</p>
+    <p style="margin: 0 0 16px;" th:text="#{donors.passkeyAdded.email.intro(${passkeyName})}">k vašemu dárcovskému účtu Nová naděje jste právě přidali přístupový klíč „iPhone“. Odteď se jím můžete přihlásit bez hesla, otiskem prstu, obličejem nebo zámkem zařízení.</p>
+    <p style="margin: 0 0 28px;" th:text="#{donors.passkeyAdded.email.action}">Své přístupové klíče najdete po přihlášení na kartě Přístupové klíče, kde je také můžete odebrat.</p>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 0 0 28px;">
+        <tr>
+            <td style="background: #fffbeb; border: 1px solid #d97706; border-radius: 12px; padding: 14px 18px; font-size: 14px; color: #92400e;">
+                <span th:text="#{donors.passkeyAdded.email.warning(${senderEmail})}">Pokud jste klíč nepřidali vy, změňte si prosím hned heslo, klíč na kartě odeberte a napište nám na info@nfnn.cz.</span>
+            </td>
+        </tr>
+    </table>
+    <p style="margin: 0;">
+        <span th:text="#{donors.passkeyAdded.email.regards}">S pozdravem</span><br>
+        <span style="font-family: 'Playfair Display', Georgia, serif; font-size: 17px; font-style: italic; color: #1a1a2e;" th:text="#{donors.passkeyAdded.email.signature}">Nová naděje – nadační fond</span>
+    </p>
+</th:block>
+</body>
+</html>

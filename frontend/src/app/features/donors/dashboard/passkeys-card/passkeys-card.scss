@@ -1,0 +1,174 @@
+:host {
+  display: block;
+}
+
+.passkeys-card {
+  background: var(--color-surface);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-panel);
+  border: 1px solid var(--color-border-soft);
+  padding: 20px 24px;
+  margin-bottom: 24px;
+}
+
+.passkeys-title {
+  font-family: var(--font-serif);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--color-text);
+  margin-bottom: 8px;
+}
+
+.passkeys-intro,
+.passkeys-empty,
+.passkeys-unsupported,
+.passkeys-hint,
+.passkeys-form-intro {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--color-text-muted);
+  margin-bottom: 14px;
+}
+
+.passkeys-hint {
+  flex: 1 1 220px;
+}
+
+.passkeys-warning {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--color-warning);
+  background: var(--color-warning-bg);
+  border: 1px solid var(--color-warning-border);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  margin-bottom: 14px;
+}
+
+.passkey-list {
+  list-style: none;
+  margin: 0 0 16px;
+  padding: 0;
+}
+
+.passkey {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 16px;
+  padding: 12px 0;
+  border-top: 1px solid var(--color-border-soft);
+}
+
+.passkey-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  flex: 1 1 220px;
+}
+
+.passkey-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-text);
+  overflow-wrap: anywhere;
+}
+
+.passkey-dates {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.passkey-date {
+  white-space: nowrap;
+}
+
+.passkey-confirm {
+  flex: 1 1 100%;
+  font-size: 13px;
+  color: var(--color-text);
+
+  p {
+    margin-bottom: 8px;
+  }
+}
+
+.passkeys-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.passkeys-action {
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
+  border: none;
+  padding: 8px 16px;
+  border-radius: var(--radius-pill);
+  font-weight: 600;
+  font-size: 13px;
+  font-family: var(--font-sans);
+  cursor: pointer;
+  white-space: nowrap;
+
+  &:disabled {
+    opacity: 0.7;
+    cursor: progress;
+  }
+}
+
+.passkeys-action--danger {
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+}
+
+.passkeys-form {
+  max-width: 560px;
+}
+
+.passkeys-form-title {
+  font-family: var(--font-sans);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--color-text);
+  margin-bottom: 4px;
+}
+
+.passkeys-save {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  border: none;
+  padding: 10px 24px;
+  border-radius: var(--radius-pill);
+  font-weight: 700;
+  font-size: 14px;
+  font-family: var(--font-sans);
+  cursor: pointer;
+  box-shadow: var(--shadow-button-sm);
+
+  &:disabled {
+    opacity: 0.7;
+    cursor: progress;
+  }
+}
+
+.passkeys-cancel {
+  padding: 10px 20px;
+  font-size: 14px;
+}
+
+.form-error {
+  color: var(--color-danger);
+  font-size: 13px;
+  margin: 4px 0 8px;
+}
+
+.passkeys-status span {
+  display: block;
+  margin-top: 14px;
+  font-size: 13px;
+  color: var(--color-success);
+}

@@ -20,7 +20,23 @@ Feature: An administrator finds a donor and sees the donor's account
     When "Jana" searches the donors for "%"
     Then the found donor accounts are none
     When "Jana" searches the donors for "  "
-    Then the found donor accounts are none
+    Then the found donor accounts are "Jana", "Petr" and "Stavby"
+    And the donor list has no more pages
+
+  Scenario: Without a query every donor is listed by name, page by page
+    When "Jana" lists the donors with "limit=2"
+    Then the response status is 200
+    And the found donor accounts are "Jana" and "Petr"
+    And the donor list has more pages
+    When "Jana" lists the donors with "limit=2&page=1"
+    Then the found donor accounts are "Stavby"
+    And the donor list has no more pages
+    When "Jana" lists the donors with "limit=0"
+    Then the response status is 400
+    When "Jana" lists the donors with "limit=101"
+    Then the response status is 400
+    When "Jana" lists the donors with "page=-1"
+    Then the response status is 400
 
   Scenario: A found donor shows the account facts an administrator needs
     When "Jana" searches the donors for "jana"
@@ -64,6 +80,25 @@ Feature: An administrator finds a donor and sees the donor's account
     When "Jana" opens the donor "Petr"
     Then the donor card says:
       | secondFactorEnabled | false |
+
+  Scenario: An administrator removes the passkeys of a donor who lost the device
+    Given "Petr" added a passkey named "iPhone"
+    And "Petr" added a passkey named "Mac"
+    When "Jana" opens the donor "Petr"
+    Then the donor card says:
+      | passkeys | 2 |
+    When "Jana" removes the passkeys of "Petr"
+    Then the response status is 204
+    And the admin action "REMOVE_PASSKEYS" by "Jana" on "Petr" is recorded
+    And an e-mail goes to the address of "Petr" with the subject "Přístupové klíče k vašemu účtu byly odebrány – Nová naděje"
+    When "Jana" opens the donor "Petr"
+    Then the donor card says:
+      | passkeys | 0 |
+    When "Petr" signs in with the passkey "iPhone"
+    Then the response status is 401
+    When "Jana" removes the passkeys of "Petr"
+    Then the response status is 400
+    And the problem type ends with "donors/no-passkeys"
 
   Scenario: An unknown donor has no card
     When "Jana" opens an unknown donor

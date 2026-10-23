@@ -5,8 +5,11 @@ import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.donors.domain.DonorNotFound;
 import cz.novanadeje.app.donors.domain.DonorRepository;
 import cz.novanadeje.app.donors.domain.EmailNotRegistered;
+import cz.novanadeje.app.donors.domain.NoPasskeys;
 import cz.novanadeje.app.donors.domain.OwnAdministrationRevoked;
+import cz.novanadeje.app.donors.domain.PasskeyRepository;
 import cz.novanadeje.app.donors.domain.RefreshTokenRepository;
+import cz.novanadeje.app.donors.application.event.DonorPasskeysRemoved;
 import cz.novanadeje.app.donors.application.event.DonorSecondFactorReset;
 import cz.novanadeje.app.donors.domain.SecondFactor;
 import cz.novanadeje.app.donors.domain.SecondFactorNotEnabled;
@@ -30,19 +33,22 @@ public class AdministratorService {
     static final String GRANT_ACTION = "GRANT_ADMINISTRATION";
     static final String REVOKE_ACTION = "REVOKE_ADMINISTRATION";
     static final String RESET_SECOND_FACTOR_ACTION = "RESET_SECOND_FACTOR";
+    static final String REMOVE_PASSKEYS_ACTION = "REMOVE_PASSKEYS";
 
     private static final Logger log = LoggerFactory.getLogger(AdministratorService.class);
 
     private final DonorRepository donors;
     private final SecondFactorRepository secondFactors;
+    private final PasskeyRepository passkeys;
     private final RefreshTokenRepository refreshTokens;
     private final ApplicationEventPublisher events;
     private final Clock clock;
 
-    public AdministratorService(DonorRepository donors, SecondFactorRepository secondFactors, RefreshTokenRepository refreshTokens,
-                                ApplicationEventPublisher events, Clock clock) {
+    public AdministratorService(DonorRepository donors, SecondFactorRepository secondFactors, PasskeyRepository passkeys,
+                                RefreshTokenRepository refreshTokens, ApplicationEventPublisher events, Clock clock) {
         this.donors = donors;
         this.secondFactors = secondFactors;
+        this.passkeys = passkeys;
         this.refreshTokens = refreshTokens;
         this.events = events;
         this.clock = clock;
@@ -95,6 +101,21 @@ public class AdministratorService {
     }
 
     @Transactional
+    public void removePasskeys(DonorId adminId, DonorId donorId) {
+        Donor donor = donors.findById(donorId).orElseThrow(() -> new DonorNotFound(donorId));
+        int removed = passkeys.deleteAllOf(donorId);
+        if (removed == 0) {
+            throw new NoPasskeys();
+        }
+        Instant now = clock.instant();
+        refreshTokens.revokeAllOf(donorId, now);
+        events.publishEvent(new AdminActionPerformed(adminId.value(), REMOVE_PASSKEYS_ACTION, Optional.of(donorId.value()),
+                removed + " passkeys of donor " + donorId + " removed; every session of the donor was ended", now));
+        events.publishEvent(new DonorPasskeysRemoved(donorId.value(), donor.email(), donor.preferredLocale()));
+        log.info("Administrator {} removed {} passkeys of donor {}", adminId, removed, donorId);
+    }
+
+    @Transactional
     public StartupGrant grantAtStartup(EmailAddress email) {
         Optional<Donor> found = donors.findByEmail(email);
         if (found.isEmpty()) {
@@ -103,6 +124,9 @@ public class AdministratorService {
         Donor donor = found.get();
         if (donor.isAdministrator()) {
             return StartupGrant.ALREADY_ADMINISTRATOR;
+        }
+        if (!donors.findAdministrators().isEmpty()) {
+            return StartupGrant.SITE_HAS_ADMINISTRATOR;
         }
         donor.grantAdministration();
         donors.save(donor);

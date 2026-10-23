@@ -1,6 +1,8 @@
 package cz.novanadeje.app.donors.cucumber;
 
 import cz.novanadeje.app.cucumber.ApiClient;
+import cz.novanadeje.app.cucumber.DonorSessions;
+import cz.novanadeje.app.cucumber.ScenarioDonors;
 import cz.novanadeje.app.cucumber.SecondFactorEnrolments;
 import cz.novanadeje.app.cucumber.TotpCodes;
 import cz.novanadeje.app.shared.QrCodes;
@@ -36,15 +38,20 @@ public class DonorSecondFactorStepDefinitions {
     private final JdbcClient jdbc;
     private final Clock clock;
     private final DonorAccountStepDefinitions accounts;
+    private final DonorSessions sessions;
+    private final ScenarioDonors scenarioDonors;
     private String secret;
     private String challenge;
 
-    public DonorSecondFactorStepDefinitions(ApiClient api, TotpCodes totpCodes, JdbcClient jdbc, Clock clock, DonorAccountStepDefinitions accounts) {
+    public DonorSecondFactorStepDefinitions(ApiClient api, TotpCodes totpCodes, JdbcClient jdbc, Clock clock, DonorAccountStepDefinitions accounts,
+                                            DonorSessions sessions, ScenarioDonors scenarioDonors) {
         this.api = api;
         this.totpCodes = totpCodes;
         this.jdbc = jdbc;
         this.clock = clock;
         this.accounts = accounts;
+        this.sessions = sessions;
+        this.scenarioDonors = scenarioDonors;
     }
 
     @Given("the donor with email {string} is given the administrator role")
@@ -58,6 +65,12 @@ public class DonorSecondFactorStepDefinitions {
         if (response.getStatusCode().is2xxSuccessful()) {
             secret = api.lastResponseJson().get("secret").asString();
         }
+    }
+
+    @When("{string} starts the second factor set-up with the right password")
+    public void startsTheSecondFactorSetUpWithTheRightPassword(String alias) {
+        sessions.actAs(alias);
+        theDonorStartsTheSecondFactorSetUp(scenarioDonors.credentialsOf(alias).password());
     }
 
     @Given("the donor started the second factor set-up with password {string} {int} times")

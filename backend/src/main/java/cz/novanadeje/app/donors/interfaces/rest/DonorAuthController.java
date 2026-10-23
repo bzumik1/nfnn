@@ -2,6 +2,7 @@ package cz.novanadeje.app.donors.interfaces.rest;
 
 import cz.novanadeje.app.donors.application.AuthenticatedDonor;
 import cz.novanadeje.app.donors.application.DonorAuthenticationService;
+import cz.novanadeje.app.donors.application.DonorPasskeySignInService;
 import cz.novanadeje.app.donors.application.DonorRegistrationService;
 import cz.novanadeje.app.donors.domain.InvalidRefreshToken;
 import jakarta.servlet.http.HttpServletRequest;
@@ -23,19 +24,23 @@ class DonorAuthController {
 
     private final DonorRegistrationService registration;
     private final DonorAuthenticationService authentication;
+    private final DonorPasskeySignInService passkeySignIn;
     private final SignInRateLimiter signInRateLimiter;
     private final SecondFactorRateLimiter secondFactorRateLimiter;
     private final RegistrationRateLimiter registrationRateLimiter;
+    private final PasskeySignInRateLimiter passkeySignInRateLimiter;
     private final Clock clock;
 
-    DonorAuthController(DonorRegistrationService registration, DonorAuthenticationService authentication,
+    DonorAuthController(DonorRegistrationService registration, DonorAuthenticationService authentication, DonorPasskeySignInService passkeySignIn,
                         SignInRateLimiter signInRateLimiter, SecondFactorRateLimiter secondFactorRateLimiter,
-                        RegistrationRateLimiter registrationRateLimiter, Clock clock) {
+                        RegistrationRateLimiter registrationRateLimiter, PasskeySignInRateLimiter passkeySignInRateLimiter, Clock clock) {
         this.registration = registration;
         this.authentication = authentication;
+        this.passkeySignIn = passkeySignIn;
         this.signInRateLimiter = signInRateLimiter;
         this.secondFactorRateLimiter = secondFactorRateLimiter;
         this.registrationRateLimiter = registrationRateLimiter;
+        this.passkeySignInRateLimiter = passkeySignInRateLimiter;
         this.clock = clock;
     }
 
@@ -56,6 +61,18 @@ class DonorAuthController {
     ResponseEntity<AuthResponse> completeSecondFactor(@Valid @RequestBody SecondFactorLoginRequest request, HttpServletRequest http) {
         secondFactorRateLimiter.check(http.getRemoteAddr());
         return respondWithSession(HttpStatus.OK, authentication.completeSecondFactor(request.challenge(), request.code()));
+    }
+
+    @PostMapping("/passkey/options")
+    PasskeySignInOptionsResponse passkeyOptions(HttpServletRequest http) {
+        passkeySignInRateLimiter.check(http.getRemoteAddr());
+        return PasskeySignInOptionsResponse.of(passkeySignIn.options());
+    }
+
+    @PostMapping("/passkey")
+    ResponseEntity<AuthResponse> signInWithPasskey(@Valid @RequestBody PasskeySignInRequest request, HttpServletRequest http) {
+        passkeySignInRateLimiter.check(http.getRemoteAddr());
+        return respondWithSession(HttpStatus.OK, passkeySignIn.signIn(request.challenge(), request.assertion()));
     }
 
     @PostMapping("/refresh")

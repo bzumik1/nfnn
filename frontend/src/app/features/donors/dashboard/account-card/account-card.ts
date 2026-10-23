@@ -7,20 +7,24 @@ import {
   computed,
   ElementRef,
   inject,
+  input,
   Injector,
   output,
   signal,
   viewChild,
 } from '@angular/core';
 import { FormsModule, NgForm } from '@angular/forms';
+import { Observable, switchMap } from 'rxjs';
 import { describeProblem, problemTypeEndsWith } from '../../../../core/auth/api-problem';
 import { AuthApi } from '../../../../core/auth/auth-api';
 import { AuthStore } from '../../../../core/auth/auth-store';
 import {
+  Confirmation,
   ConnectedApp,
   PASSWORD_MIN_LENGTH,
   SecondFactorEnrolment,
 } from '../../../../core/auth/donor';
+import { PasskeyCeremonyError } from '../../../../core/auth/passkey-authenticator';
 import { formatDonationDate } from '../../../donations/donation-date';
 import { describeScopes } from '../../connect-app/oauth-scopes';
 import { CopyButton } from '../../../../shared/ui/copy-button/copy-button';
@@ -30,7 +34,8 @@ import { FormField } from '../../../../shared/ui/form-field/form-field';
 import { PasswordReveal } from '../../../../shared/ui/password-reveal/password-reveal';
 import { QrCode } from '../../../../shared/ui/qr-code/qr-code';
 
-type Panel = 'closed' | 'email' | 'password' | 'second-factor-on' | 'second-factor-off';
+type Panel =
+  'closed' | 'email' | 'password' | 'password-remove' | 'second-factor-on' | 'second-factor-off';
 
 const UNAUTHENTICATED = 'auth/unauthenticated';
 const SECRET_GROUP = 4;
@@ -54,11 +59,15 @@ export class AccountCard {
   private readonly auth = inject(AuthStore);
   private readonly authApi = inject(AuthApi);
   private readonly injector = inject(Injector);
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
 
+  readonly passkeyCount = input<number | null>(null);
   readonly sessionEnded = output<void>();
 
   private readonly emailButton = viewChild<ElementRef<HTMLButtonElement>>('emailButton');
   private readonly passwordButton = viewChild<ElementRef<HTMLButtonElement>>('passwordButton');
+  private readonly removePasswordButton =
+    viewChild<ElementRef<HTMLButtonElement>>('removePasswordButton');
   private readonly secondFactorButton =
     viewChild<ElementRef<HTMLButtonElement>>('secondFactorButton');
   private readonly firstField = viewChild<ElementRef<HTMLInputElement>>('firstField');
@@ -68,11 +77,15 @@ export class AccountCard {
   protected readonly secondFactor = computed(
     () => this.donor()?.secondFactor ?? { enabled: false, neededForAdministration: false },
   );
+  protected readonly hasPassword = computed(() => this.donor()?.hasPassword ?? true);
+  protected readonly canRemovePassword = computed(
+    () => this.hasPassword() && (this.passkeyCount() ?? 0) > 0,
+  );
   protected readonly panel = signal<Panel>('closed');
   protected readonly saving = signal(false);
   protected readonly error = signal('');
   protected readonly linkSentTo = signal('');
-  protected readonly passwordChanged = signal(false);
+  protected readonly passwordChanged = signal<'changed' | 'set' | 'removed' | null>(null);
   protected readonly secondFactorChanged = signal<'on' | 'off' | null>(null);
   protected readonly enrolment = signal<SecondFactorEnrolment | null>(null);
   protected readonly groupedSecret = computed(() => {
@@ -179,7 +192,7 @@ export class AccountCard {
   open(panel: Exclude<Panel, 'closed'>): void {
     this.reset();
     this.panel.set(panel);
-    afterNextRender(() => this.firstField()?.nativeElement.focus(), { injector: this.injector });
+    afterNextRender(() => this.firstControl()?.focus(), { injector: this.injector });
   }
 
   cancel(): void {
@@ -192,7 +205,9 @@ export class AccountCard {
     }
     const newEmail = this.newEmail.trim();
     this.start();
-    this.auth.requestEmailChange({ newEmail, password: this.password }).subscribe({
+    this.confirmed(this.password, (confirmation) =>
+      this.auth.requestEmailChange({ newEmail, ...confirmation }),
+    ).subscribe({
       next: () => {
         this.saving.set(false);
         this.linkSentTo.set(newEmail);
@@ -214,21 +229,46 @@ export class AccountCard {
       this.error.set($localize`:@@donor.account.password.mismatch:Nová hesla se neshodují.`);
       return;
     }
+    const setting = !this.hasPassword();
+    const newPassword = this.newPassword;
     this.start();
-    this.auth
-      .changePassword({ currentPassword: this.currentPassword, newPassword: this.newPassword })
-      .subscribe({
-        next: () => {
-          this.saving.set(false);
-          this.passwordChanged.set(true);
-          this.close('password');
-        },
-        error: (failure: unknown) =>
-          this.fail(
-            failure,
-            $localize`:@@donor.account.password.error.generic:Heslo se nepodařilo změnit. Zkuste to prosím znovu.`,
-          ),
-      });
+    this.confirmed(this.currentPassword, (confirmation) =>
+      this.auth.changePassword({
+        currentPassword: confirmation.password,
+        passkey: confirmation.passkey,
+        newPassword,
+      }),
+    ).subscribe({
+      next: () => {
+        this.saving.set(false);
+        this.passwordChanged.set(setting ? 'set' : 'changed');
+        this.close('password');
+      },
+      error: (failure: unknown) =>
+        this.fail(
+          failure,
+          $localize`:@@donor.account.password.error.generic:Heslo se nepodařilo změnit. Zkuste to prosím znovu.`,
+        ),
+    });
+  }
+
+  removePassword(form: NgForm): void {
+    if (form.invalid || this.saving()) {
+      return;
+    }
+    this.start();
+    this.auth.removePassword({ password: this.password }).subscribe({
+      next: () => {
+        this.saving.set(false);
+        this.passwordChanged.set('removed');
+        this.close('password');
+      },
+      error: (failure: unknown) =>
+        this.fail(
+          failure,
+          $localize`:@@donor.account.removePassword.error.generic:Heslo se nepodařilo odebrat. Zkuste to prosím znovu.`,
+        ),
+    });
   }
 
   startSecondFactor(form: NgForm): void {
@@ -236,7 +276,9 @@ export class AccountCard {
       return;
     }
     this.start();
-    this.auth.setupSecondFactor(this.password).subscribe({
+    this.confirmed(this.password, (confirmation) =>
+      this.auth.setupSecondFactor(confirmation),
+    ).subscribe({
       next: (enrolment) => {
         this.saving.set(false);
         this.password = '';
@@ -275,7 +317,10 @@ export class AccountCard {
       return;
     }
     this.start();
-    this.auth.disableSecondFactor({ password: this.password, code: this.code.trim() }).subscribe({
+    const code = this.code.trim();
+    this.confirmed(this.password, (confirmation) =>
+      this.auth.disableSecondFactor({ ...confirmation, code }),
+    ).subscribe({
       next: () => {
         this.saving.set(false);
         this.secondFactorChanged.set('off');
@@ -289,16 +334,38 @@ export class AccountCard {
     });
   }
 
+  private firstControl(): HTMLElement | null {
+    return (
+      this.firstField()?.nativeElement ??
+      this.host.nativeElement.querySelector<HTMLElement>(
+        '.account-form input, .account-form button[type="submit"]',
+      )
+    );
+  }
+
+  private confirmed<T>(
+    password: string,
+    change: (confirmation: Confirmation) => Observable<T>,
+  ): Observable<T> {
+    return this.auth.confirmWith(this.hasPassword() ? password : null).pipe(switchMap(change));
+  }
+
   private start(): void {
     this.saving.set(true);
     this.error.set('');
     this.linkSentTo.set('');
-    this.passwordChanged.set(false);
+    this.passwordChanged.set(null);
     this.secondFactorChanged.set(null);
   }
 
   private fail(failure: unknown, fallback: string): void {
     this.saving.set(false);
+    if (failure instanceof PasskeyCeremonyError) {
+      this.error.set(
+        $localize`:@@donor.account.passkeyConfirmation.failed:Změnu se nepodařilo potvrdit přístupovým klíčem. Zkuste to prosím znovu a v okně zařízení zvolte klíč k tomuto účtu.`,
+      );
+      return;
+    }
     if (problemTypeEndsWith(failure, UNAUTHENTICATED) || this.auth.status() === 'anonymous') {
       this.sessionEnded.emit();
       return;
@@ -309,7 +376,7 @@ export class AccountCard {
   private reset(): void {
     this.error.set('');
     this.linkSentTo.set('');
-    this.passwordChanged.set(false);
+    this.passwordChanged.set(null);
     this.secondFactorChanged.set(null);
     this.clearFields();
   }
@@ -338,6 +405,8 @@ export class AccountCard {
         return this.emailButton();
       case 'password':
         return this.passwordButton();
+      case 'password-remove':
+        return this.removePasswordButton();
       default:
         return this.secondFactorButton();
     }

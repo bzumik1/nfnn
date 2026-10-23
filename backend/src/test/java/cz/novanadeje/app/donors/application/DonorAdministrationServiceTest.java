@@ -6,6 +6,7 @@ import cz.novanadeje.app.donors.domain.DonorNotFound;
 import cz.novanadeje.app.donors.domain.DonorRepository;
 import cz.novanadeje.app.donors.domain.PasswordHash;
 import cz.novanadeje.app.donors.domain.Role;
+import cz.novanadeje.app.donors.domain.PasskeyRepository;
 import cz.novanadeje.app.donors.domain.SecondFactor;
 import cz.novanadeje.app.donors.domain.SecondFactorRepository;
 import cz.novanadeje.app.donors.domain.TotpSecret;
@@ -44,12 +45,14 @@ class DonorAdministrationServiceTest {
     private DonorRepository donors;
     @Mock
     private SecondFactorRepository secondFactors;
+    @Mock
+    private PasskeyRepository passkeys;
 
     private DonorAdministrationService service;
 
     @BeforeEach
     void setUp() {
-        service = new DonorAdministrationService(donors, secondFactors);
+        service = new DonorAdministrationService(donors, secondFactors, passkeys);
     }
 
     @Test
@@ -57,21 +60,38 @@ class DonorAdministrationServiceTest {
     void should_describe_each_match_when_searched_given_two_matching_donors() {
         Donor jana = donor(JANA, "Jana Nováková", "jana@example.cz", Set.of(Role.DONOR, Role.ADMIN));
         Donor petr = donor(PETR, "Petr Svoboda", "petr@example.cz", Set.of(Role.DONOR));
-        when(donors.search("nov", DonorAdministrationService.SEARCH_LIMIT)).thenReturn(List.of(jana, petr));
+        when(donors.search("nov", 0, DonorAdministrationService.SEARCH_LIMIT + 1)).thenReturn(List.of(jana, petr));
         when(secondFactors.findByDonor(JANA)).thenReturn(Optional.of(SecondFactor.reconstitute(JANA, SECRET, NOW.minusSeconds(100), NOW.minusSeconds(50), 1L)));
         when(secondFactors.findByDonor(PETR)).thenReturn(Optional.of(SecondFactor.enrol(PETR, SECRET, NOW.minusSeconds(10))));
+        when(passkeys.countByDonor(JANA)).thenReturn(2);
 
-        List<DonorAccountView> views = service.search("  nov ");
+        DonorSearchResult result = service.search("  nov ", 0, DonorAdministrationService.SEARCH_LIMIT);
 
-        assertThat(views).containsExactly(new DonorAccountView(jana, true), new DonorAccountView(petr, false));
+        assertThat(result.items()).containsExactly(new DonorAccountView(jana, true, 2), new DonorAccountView(petr, false, 0));
+        assertThat(result.hasMore()).isFalse();
     }
 
     @Test
-    @DisplayName("Given a blank query, when searched, then nothing is looked up and nothing comes back")
-    void should_return_nothing_when_searched_given_blank_query() {
-        assertThat(service.search("   ")).isEmpty();
-        assertThat(service.search(null)).isEmpty();
-        verifyNoInteractions(donors, secondFactors);
+    @DisplayName("Given a blank query, when searched for the second page, then every donor is asked from that page with one more to tell whether more follow")
+    void should_list_everyone_from_page_when_searched_given_blank_query() {
+        Donor jana = donor(JANA, "Jana Nováková", "jana@example.cz", Set.of(Role.DONOR));
+        Donor petr = donor(PETR, "Petr Svoboda", "petr@example.cz", Set.of(Role.DONOR));
+        when(donors.search("", 1, 2)).thenReturn(List.of(jana, petr));
+        when(secondFactors.findByDonor(JANA)).thenReturn(Optional.empty());
+
+        DonorSearchResult result = service.search(null, 1, 1);
+
+        assertThat(result.items()).containsExactly(new DonorAccountView(jana, false, 0));
+        assertThat(result.hasMore()).isTrue();
+    }
+
+    @Test
+    @DisplayName("Given a negative page or a limit outside 1 to 100, when searched, then the search is refused")
+    void should_refuse_when_searched_given_bad_page() {
+        assertThatThrownBy(() -> service.search("", -1, 20)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> service.search("", 0, 0)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> service.search("", 0, DonorAdministrationService.MAX_SEARCH_LIMIT + 1)).isInstanceOf(IllegalArgumentException.class);
+        verifyNoInteractions(donors, secondFactors, passkeys);
     }
 
     @Test
@@ -81,7 +101,7 @@ class DonorAdministrationServiceTest {
         when(donors.findById(PETR)).thenReturn(Optional.of(petr));
         when(secondFactors.findByDonor(PETR)).thenReturn(Optional.empty());
 
-        assertThat(service.view(PETR)).isEqualTo(new DonorAccountView(petr, false));
+        assertThat(service.view(PETR)).isEqualTo(new DonorAccountView(petr, false, 0));
     }
 
     @Test

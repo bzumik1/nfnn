@@ -5,6 +5,7 @@ import { AuthorizationServerDiscovery } from './authorization.js';
 import { BackendClient } from './backend.js';
 import { configFromEnv } from './config.js';
 import { createLogger } from './logger.js';
+import { PublicPhotoFetcher } from './photos.js';
 import { TokenExchangeVerifier, type Logger } from './token-exchange.js';
 
 const config = configFromEnv(process.env);
@@ -18,6 +19,7 @@ const app = createApp({
   discovery,
   verifier: new TokenExchangeVerifier(discovery, config.backendUrl, fetch, logger),
   backend: new BackendClient(config.backendUrl, fetch),
+  photos: new PublicPhotoFetcher(),
   logger,
   version,
 });

@@ -19,6 +19,10 @@ import { AuthApi } from '../../../core/auth/auth-api';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { DonorLocale, DonorType, PASSWORD_MIN_LENGTH } from '../../../core/auth/donor';
 import { LoginDialogMode, LoginDialogService } from '../../../core/auth/login-dialog.service';
+import {
+  PasskeyAuthenticator,
+  PasskeyCeremonyError,
+} from '../../../core/auth/passkey-authenticator';
 import { Dialog } from '../../../shared/ui/dialog/dialog';
 import { FocusFirstInvalid } from '../../../shared/ui/form-field/focus-first-invalid';
 import { FormControlDirective } from '../../../shared/ui/form-field/form-control';
@@ -68,11 +72,14 @@ export class LoginDialog {
   private readonly authApi = inject(AuthApi);
   private readonly document = inject(DOCUMENT);
   private readonly injector = inject(Injector);
+  private readonly passkeyAuthenticator = inject(PasskeyAuthenticator);
   private readonly codeField = viewChild<ElementRef<HTMLInputElement>>('codeField');
 
   protected readonly passwordMinLength = PASSWORD_MIN_LENGTH;
+  protected readonly passkeysSupported = this.passkeyAuthenticator.supported();
   protected readonly mode = signal<LoginDialogMode>(this.dialog.initialMode());
   protected readonly donorType = signal<DonorType>('PERSON');
+  protected readonly signInMethod = signal<'password' | 'passkey'>('password');
   protected readonly loading = signal(false);
   protected readonly resetSent = signal(false);
   protected readonly registrationSent = signal(false);
@@ -116,6 +123,7 @@ export class LoginDialog {
   protected readonly postalCodeMessages = POSTAL_CODE_MESSAGES;
 
   private readonly tooManyAttempts = $localize`:@@donor.login.error.tooManyAttempts:Příliš mnoho pokusů z této adresy. Zkuste to prosím za chvíli znovu.`;
+  private readonly passkeyNotUsed = $localize`:@@donor.login.passkey.notUsed:Přihlášení přístupovým klíčem neproběhlo. Zkuste to prosím znovu, nebo se přihlaste heslem.`;
   private readonly tooManyResetRequests = $localize`:@@donor.login.reset.error.tooMany:Odeslali jste příliš mnoho žádostí. Zkuste to prosím za hodinu.`;
 
   setMode(next: LoginDialogMode): void {
@@ -145,6 +153,27 @@ export class LoginDialog {
           return;
         }
         this.emailNotVerified.set(problemTypeEndsWith(failure, EMAIL_NOT_VERIFIED));
+        this.failUnlessThrottled(failure, this.tooManyAttempts);
+      },
+    });
+  }
+
+  signInWithPasskey(): void {
+    if (this.loading()) {
+      return;
+    }
+    this.loading.set(true);
+    this.error.set('');
+    this.emailNotVerified.set(false);
+    this.verificationResent.set(false);
+    this.auth.signInWithPasskey().subscribe({
+      next: () => this.enterPortal(),
+      error: (failure: unknown) => {
+        if (failure instanceof PasskeyCeremonyError) {
+          this.loading.set(false);
+          this.error.set(this.passkeyNotUsed);
+          return;
+        }
         this.failUnlessThrottled(failure, this.tooManyAttempts);
       },
     });
@@ -203,7 +232,7 @@ export class LoginDialog {
           postalCode: this.registration.postalCode.trim(),
         },
         email: this.registration.email.trim(),
-        password: this.registration.password,
+        password: this.signInMethod() === 'password' ? this.registration.password : null,
         preferredLocale: preferredLocaleOf(this.document.documentElement.lang),
       })
       .subscribe({

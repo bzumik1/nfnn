@@ -6,10 +6,17 @@ import {
   AuthResponse,
   ChangePasswordRequest,
   ClientDescription,
+  Confirmation,
   ConnectedAppList,
   Donor,
   RedirectResponse,
   EmailChangeRequest,
+  PasskeyAssertionCredential,
+  PasskeyCreationOptions,
+  Passkey,
+  PasskeyList,
+  PasskeyRegistrationCredential,
+  PasskeySignInOptions,
   RegisterDonorRequest,
   SecondFactorDisableRequest,
   SecondFactorEnrolment,
@@ -43,6 +50,17 @@ export class AuthApi {
     });
   }
 
+  passkeySignInOptions(): Observable<PasskeySignInOptions> {
+    return this.http.post<PasskeySignInOptions>('/api/donors/auth/passkey/options', null);
+  }
+
+  signInWithPasskey(
+    challenge: string,
+    credential: PasskeyAssertionCredential,
+  ): Observable<AuthResponse> {
+    return this.http.post<AuthResponse>('/api/donors/auth/passkey', { challenge, credential });
+  }
+
   refresh(): Observable<AuthResponse> {
     return this.http.post<AuthResponse>('/api/donors/auth/refresh', null);
   }
@@ -57,6 +75,27 @@ export class AuthApi {
 
   confirmPasswordReset(token: string, password: string): Observable<void> {
     return this.http.post<void>('/api/donors/auth/password-reset/confirm', { token, password });
+  }
+
+  passkeyRecoveryOptions(token: string, code: string | null): Observable<PasskeyCreationOptions> {
+    return this.http.post<PasskeyCreationOptions>(
+      '/api/donors/auth/password-reset/passkey/options',
+      code === null ? { token } : { token, code },
+    );
+  }
+
+  recoverWithPasskey(
+    token: string,
+    challenge: string,
+    name: string,
+    credential: PasskeyRegistrationCredential,
+  ): Observable<Passkey> {
+    return this.http.post<Passkey>('/api/donors/auth/password-reset/passkey', {
+      token,
+      challenge,
+      name,
+      credential,
+    });
   }
 
   profile(): Observable<Donor> {
@@ -75,10 +114,15 @@ export class AuthApi {
     return this.http.post<void>('/api/donors/me/email-change', request);
   }
 
-  setupSecondFactor(password: string): Observable<SecondFactorEnrolment> {
-    return this.http.post<SecondFactorEnrolment>('/api/donors/me/second-factor/setup', {
-      password,
-    });
+  setupSecondFactor(confirmation: Confirmation): Observable<SecondFactorEnrolment> {
+    return this.http.post<SecondFactorEnrolment>(
+      '/api/donors/me/second-factor/setup',
+      confirmation,
+    );
+  }
+
+  removePassword(confirmation: Confirmation): Observable<AuthResponse> {
+    return this.http.post<AuthResponse>('/api/donors/me/password/remove', confirmation);
   }
 
   confirmSecondFactor(code: string): Observable<AuthResponse> {
@@ -87,6 +131,26 @@ export class AuthApi {
 
   disableSecondFactor(request: SecondFactorDisableRequest): Observable<AuthResponse> {
     return this.http.post<AuthResponse>('/api/donors/me/second-factor/disable', request);
+  }
+
+  passkeys(): Observable<PasskeyList> {
+    return this.http.get<PasskeyList>('/api/donors/me/passkeys');
+  }
+
+  passkeyCreationOptions(confirmation: Confirmation): Observable<PasskeyCreationOptions> {
+    return this.http.post<PasskeyCreationOptions>('/api/donors/me/passkeys/options', confirmation);
+  }
+
+  addPasskey(
+    challenge: string,
+    name: string,
+    credential: PasskeyRegistrationCredential,
+  ): Observable<Passkey> {
+    return this.http.post<Passkey>('/api/donors/me/passkeys', { challenge, name, credential });
+  }
+
+  removePasskey(id: string): Observable<void> {
+    return this.http.delete<void>(`/api/donors/me/passkeys/${encodeURIComponent(id)}`);
   }
 
   describeClient(clientId: string, redirectUri: string): Observable<ClientDescription> {

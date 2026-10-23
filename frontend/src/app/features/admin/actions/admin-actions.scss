@@ -181,11 +181,17 @@ td {
   color: var(--color-text);
 }
 
-.admin-email {
+.admin-email,
+.admin-client {
   display: block;
   font-size: 12px;
   color: var(--color-text-muted);
   overflow-wrap: anywhere;
+}
+
+.admin-client {
+  margin-top: 4px;
+  font-weight: 600;
 }
 
 td.admin-col {

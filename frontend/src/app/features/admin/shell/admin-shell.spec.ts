@@ -99,6 +99,7 @@ describe('Given an administrator anywhere in the administration', () => {
         links: [
           ['Zálohy', '/sprava/zalohy'],
           ['Logy a diagnostika', '/sprava/logy'],
+          ['Nastavení', '/sprava/nastaveni'],
           ['Historie správy', '/sprava/historie'],
         ],
       },

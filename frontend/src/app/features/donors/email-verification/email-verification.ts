@@ -1,7 +1,7 @@
 /// <reference types="@angular/localize" />
 
 import { HttpErrorResponse } from '@angular/common/http';
-import { Location } from '@angular/common';
+import { DOCUMENT, Location } from '@angular/common';
 import {
   afterNextRender,
   ChangeDetectionStrategy,
@@ -15,9 +15,15 @@ import {
 } from '@angular/core';
 import { FormsModule, NgForm } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
+import { from, switchMap } from 'rxjs';
 import { describeProblem, problemTypeEndsWith } from '../../../core/auth/api-problem';
 import { AuthApi } from '../../../core/auth/auth-api';
 import { AuthStore } from '../../../core/auth/auth-store';
+import { deviceName } from '../../../core/auth/device-name';
+import {
+  PasskeyAuthenticator,
+  PasskeyCeremonyError,
+} from '../../../core/auth/passkey-authenticator';
 import { FocusFirstInvalid } from '../../../shared/ui/form-field/focus-first-invalid';
 import { FormControlDirective } from '../../../shared/ui/form-field/form-control';
 import { FormField } from '../../../shared/ui/form-field/form-field';
@@ -41,6 +47,8 @@ export class EmailVerification {
   private readonly router = inject(Router);
   private readonly injector = inject(Injector);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly document = inject(DOCUMENT);
+  private readonly authenticator = inject(PasskeyAuthenticator);
   private readonly heading = viewChild<ElementRef<HTMLElement>>('heading');
   private readonly token = tokenOf(inject(ActivatedRoute).snapshot.fragment);
 
@@ -52,6 +60,9 @@ export class EmailVerification {
   protected readonly loading = signal(false);
   protected readonly error = signal('');
   protected readonly donorName = signal('');
+  protected readonly needsPasskey = signal(false);
+  protected readonly passkeyCreated = signal(false);
+  protected readonly passkeysSupported = this.authenticator.supported();
 
   protected email = '';
 
@@ -96,6 +107,48 @@ export class EmailVerification {
     }
   }
 
+  createPasskey(): void {
+    if (this.loading()) {
+      return;
+    }
+    this.loading.set(true);
+    this.error.set('');
+    this.authApi
+      .passkeyCreationOptions({})
+      .pipe(
+        switchMap((options) =>
+          from(this.authenticator.create(options)).pipe(
+            switchMap((credential) =>
+              this.authApi.addPasskey(
+                options.challenge,
+                deviceName(this.document) ||
+                  $localize`:@@donor.emailVerification.passkey.defaultName:Můj klíč`,
+                credential,
+              ),
+            ),
+          ),
+        ),
+      )
+      .subscribe({
+        next: () => {
+          this.loading.set(false);
+          this.passkeyCreated.set(true);
+          this.needsPasskey.set(false);
+        },
+        error: (failure: unknown) => {
+          this.loading.set(false);
+          this.error.set(
+            failure instanceof PasskeyCeremonyError
+              ? $localize`:@@donor.emailVerification.passkey.notCreated:Klíč se nevytvořil, zařízení ho nepotvrdilo. Zkuste to prosím znovu; jde to i později na přehledu.`
+              : describeProblem(
+                  failure,
+                  $localize`:@@donor.emailVerification.passkey.error:Klíč se nepodařilo uložit. Zkuste to prosím znovu; jde to i později na přehledu.`,
+                ),
+          );
+        },
+      });
+  }
+
   enterPortal(): void {
     this.router.navigateByUrl('/darce/prehled');
   }
@@ -104,6 +157,7 @@ export class EmailVerification {
     this.auth.confirmEmail(token).subscribe({
       next: (donor) => {
         this.donorName.set(donor.name);
+        this.needsPasskey.set(!donor.hasPassword);
         this.show('confirmed');
       },
       error: (failure: unknown) => {

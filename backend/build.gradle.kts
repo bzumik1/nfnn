@@ -24,6 +24,7 @@ extra["openhtmltopdfVersion"] = "1.1.100"
 extra["zxingVersion"] = "3.5.4"
 extra["fioApiVersion"] = "1.0.0"
 extra["webpImageioVersion"] = "0.3.3"
+extra["webauthn4jVersion"] = "0.31.11.RELEASE"
 
 dependencies {
 	implementation("io.github.bzumik1:fio-api:${property("fioApiVersion")}")
@@ -47,6 +48,8 @@ dependencies {
 	implementation("com.google.zxing:core:${property("zxingVersion")}")
 
 	implementation("io.github.darkxanter:webp-imageio:${property("webpImageioVersion")}")
+
+	implementation("com.webauthn4j:webauthn4j-core:${property("webauthn4jVersion")}")
 
 	runtimeOnly("org.postgresql:postgresql")
 	annotationProcessor("org.springframework.boot:spring-boot-configuration-processor")

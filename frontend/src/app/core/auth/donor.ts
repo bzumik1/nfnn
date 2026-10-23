@@ -28,6 +28,7 @@ export interface Donor {
   variableSymbol: string;
   roles: string[];
   registeredAt: string;
+  hasPassword: boolean;
   secondFactor: SecondFactorState;
 }
 
@@ -37,7 +38,7 @@ export interface RegisterDonorRequest {
   companyIdentifier: string | null;
   address: DonorAddress;
   email: string;
-  password: string;
+  password: string | null;
   preferredLocale: DonorLocale;
 }
 
@@ -47,18 +48,27 @@ export interface UpdateDonorProfileRequest {
   preferredLocale?: DonorLocale;
 }
 
+export interface PasskeyConfirmation {
+  challenge: string;
+  credential: PasskeyAssertionCredential;
+}
+
+export interface Confirmation {
+  password?: string;
+  passkey?: PasskeyConfirmation;
+}
+
 export interface ChangePasswordRequest {
-  currentPassword: string;
+  currentPassword?: string;
+  passkey?: PasskeyConfirmation;
   newPassword: string;
 }
 
-export interface EmailChangeRequest {
+export interface EmailChangeRequest extends Confirmation {
   newEmail: string;
-  password: string;
 }
 
-export interface SecondFactorDisableRequest {
-  password: string;
+export interface SecondFactorDisableRequest extends Confirmation {
   code: string;
 }
 
@@ -109,4 +119,63 @@ export interface AuthResponse {
   user: Donor;
   accessToken: string;
   accessTokenExpiresAt: string;
+}
+
+export interface PasskeyCredentialDescriptor {
+  type: 'public-key';
+  id: string;
+  transports: string[];
+}
+
+export interface PasskeyCreationOptions {
+  challenge: string;
+  rp: { id: string; name: string };
+  user: { id: string; name: string; displayName: string };
+  pubKeyCredParams: { type: 'public-key'; alg: number }[];
+  timeout: number;
+  excludeCredentials: PasskeyCredentialDescriptor[];
+  authenticatorSelection: {
+    residentKey: 'required';
+    requireResidentKey: boolean;
+    userVerification: 'required';
+  };
+  attestation: 'none';
+}
+
+export interface PasskeySignInOptions {
+  challenge: string;
+  rpId: string;
+  timeout: number;
+  userVerification: 'required';
+  allowCredentials: PasskeyCredentialDescriptor[];
+}
+
+export interface PasskeyRegistrationCredential {
+  id: string;
+  rawId: string;
+  type: 'public-key';
+  response: { clientDataJSON: string; attestationObject: string; transports: string[] };
+}
+
+export interface PasskeyAssertionCredential {
+  id: string;
+  rawId: string;
+  type: 'public-key';
+  response: {
+    clientDataJSON: string;
+    authenticatorData: string;
+    signature: string;
+    userHandle: string | null;
+  };
+}
+
+export interface Passkey {
+  id: string;
+  name: string;
+  createdAt: string;
+  lastUsedAt: string | null;
+}
+
+export interface PasskeyList {
+  items: Passkey[];
 }
