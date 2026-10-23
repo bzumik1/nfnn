@@ -13,6 +13,7 @@ export const WRITE_SCOPE = 'admin:write';
 export interface Caller {
   readonly apiToken: string;
   readonly donorId: string;
+  readonly scopes: readonly string[];
 }
 
 export function callerOf(ctx: ServerContext): Caller {
@@ -22,7 +23,7 @@ export function callerOf(ctx: ServerContext): Caller {
   if (typeof apiToken !== 'string' || typeof donorId !== 'string') {
     throw new Error('the request carries no exchanged API token');
   }
-  return { apiToken, donorId };
+  return { apiToken, donorId, scopes: ctx.http?.authInfo?.scopes ?? [] };
 }
 
 export function text(value: unknown): CallToolResult {
@@ -60,6 +61,24 @@ export async function answer(
     );
     return failure('The administration could not be reached. Try again in a moment.');
   }
+}
+
+export async function answerChange(
+  deps: ToolDependencies,
+  ctx: ServerContext,
+  tool: string,
+  run: (caller: Caller) => Promise<CallToolResult>,
+): Promise<CallToolResult> {
+  const caller = callerOf(ctx);
+  if (!caller.scopes.includes(WRITE_SCOPE)) {
+    deps.logger.info(
+      `Tool ${tool} refused for donor ${caller.donorId}: the connection may only read`,
+    );
+    return failure(
+      'This connection may only read, so nothing was changed. To let Claude make changes, disconnect the NFNN connector in claude.ai (Settings → Connectors) and connect it again with „Změny“ ticked on the consent page of the site.',
+    );
+  }
+  return answer(deps, ctx, tool, run);
 }
 
 function describeProblem(problem: BackendProblem): string {
