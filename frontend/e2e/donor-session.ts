@@ -1,4 +1,5 @@
 import { expect, Page } from '@playwright/test';
+import { PAYMENT_QR_500, SECOND_FACTOR_QR } from './qr-matrices';
 
 export const donor = {
   id: '01a18e56-bdb0-775a-bd0a-a60756831369',
@@ -41,8 +42,7 @@ export const secondFactorEnrolment = {
   secret: 'GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ',
   otpauthUri:
     'otpauth://totp/Nov%C3%A1%20nad%C4%9Bje:jana%40example.cz?secret=GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ&issuer=Nov%C3%A1%20nad%C4%9Bje&algorithm=SHA1&digits=6&period=30',
-  qrPngBase64:
-    'iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAIAAAAmkwkpAAAAEElEQVR4nGNQTX4NRwzEcQBO0hcxU+9NfQAAAABJRU5ErkJggg==',
+  qrCode: SECOND_FACTOR_QR,
 };
 
 export function session(status: number, user: typeof donor = donor) {
@@ -134,10 +134,12 @@ export function receiptPdf(fileName: string) {
   };
 }
 
+export const samplePngBase64 =
+  'iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAIAAAAmkwkpAAAAEElEQVR4nGNQTX4NRwzEcQBO0hcxU+9NfQAAAABJRU5ErkJggg==';
+
 export const paymentQr = {
   spayd: 'SPD*1.0*ACC:CZ2620100000005544332217*AM:500.00*CC:CZK',
-  qrPngBase64:
-    'iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAIAAAAmkwkpAAAAEElEQVR4nGNQTX4NRwzEcQBO0hcxU+9NfQAAAABJRU5ErkJggg==',
+  qrCode: PAYMENT_QR_500,
   bankAccount: {
     accountNumber: '5544332217/2010',
     iban: 'CZ2620100000005544332217',

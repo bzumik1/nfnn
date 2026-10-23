@@ -1,7 +1,7 @@
 # Backend rules: architecture, design, persistence, configuration
 
 ## Contexts and layers
-- Contexts `content`, `donors`, `donations`, `contact`, `operations` (how the server runs: backups), kernel `shared`. Per context: `domain` depends on nothing (no Spring, JPA, Bean Validation); `application` → domain; `infrastructure` → domain, application; `interfaces/rest` → all. Contexts never depend on each other. Rules: `architecture/DddLayeringRulesTest`, `AdapterLibraryRulesTest` (zxing, openhtmltopdf, PDFBox, Thymeleaf only in `..infrastructure..`; `io.github.bzumik1.fio..` only in `donations/infrastructure/fio`; `MessageSource` only in adapters).
+- Contexts `content`, `donors`, `donations`, `contact`, `operations` (how the server runs: backups), kernel `shared`. Per context: `domain` depends on nothing (no Spring, JPA, Bean Validation); `application` → domain; `infrastructure` → domain, application; `interfaces/rest` → all. Contexts never depend on each other. Rules: `architecture/DddLayeringRulesTest`, `AdapterLibraryRulesTest` (zxing only in `shared/infrastructure/qr`; openhtmltopdf, PDFBox, Thymeleaf only in `..infrastructure..`; `io.github.bzumik1.fio..` only in `donations/infrastructure/fio`; `MessageSource` only in adapters).
 - Name the owning context before writing code. A concept that fits two contexts means a wrong boundary or a missing context: say so, never force it.
 - Cross-context only by events: a record in `shared/application/event/` (`DonorRegistered`, `DonorProfileChanged`) published with `ApplicationEventPublisher`, consumed with `@TransactionalEventListener` (`BEFORE_COMMIT` for a copy that must not be lost, `AFTER_COMMIT` + `@Async` for side effects like mail). A context keeps its own copy of foreign data (`donor_record` in donations).
 - `shared` holds only stable concepts: value objects (`Money`, `Currency`, `EmailAddress`, `Iban`, `VariableSymbol`, `PostalAddress`, `LocaleCode`, `DonorType`, `UuidV7`), the sealed `DomainException` family, the events, and cross-cutting infrastructure (security chain and JWT, `ApiExceptionHandler` + `ProblemTypes`, `FixedWindowRateLimiter`, `Clock`, scheduling, async, `MailSenderProperties`, `PublicUrlProperties`).
@@ -13,7 +13,7 @@
 
 ## Application
 - One use case per service; `@Transactional` on application services (`readOnly` for queries), never on controllers; short transactions; `REQUIRES_NEW` only with a stated reason (`DonationReceiptIssuer` locks the donor row).
-- Commands, queries and views are records; the layer knows no HTTP, JPA entity or template. Ports are interfaces here, implemented in infrastructure (`BankStatementSource`, `BankImportRequests`, `QrCodeRenderer`, `DonationReceiptRenderer`, `MonthlyReportSender`).
+- Commands, queries and views are records; the layer knows no HTTP, JPA entity or template. Ports are interfaces here, implemented in infrastructure (`BankStatementSource`, `BankImportRequests`, `QrCodeEncoder`, `DonationReceiptRenderer`, `MonthlyReportSender`).
 - Retry-safe by design: imports keyed by bank transaction id, the monthly report recorded in the sending transaction, receipt numbers from a sequence under the donor lock.
 
 ## REST (`<context>/interfaces/rest`)

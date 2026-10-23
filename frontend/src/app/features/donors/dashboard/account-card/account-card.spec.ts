@@ -119,10 +119,10 @@ describe('Given the sign-in data card in the overview', () => {
       request.flush(secondFactorEnrolment());
       await settle();
 
-      expect(element<HTMLImageElement>('.account-qr').getAttribute('src')).toBe(
-        `data:image/png;base64,${secondFactorEnrolment()['qrPngBase64'] as string}`,
-      );
-      expect(element('.account-qr').getAttribute('alt')).toContain('QR kód');
+      const qr = element('.account-qr svg[role="img"]');
+      expect(qr.getAttribute('aria-label')).toBe('QR kód s nastavením pro ověřovací aplikaci');
+      expect(qr.querySelector('.qr-plain')).not.toBeNull();
+      expect(qr.querySelector('.qr-star')).toBeNull();
       expect(element('.account-secret-value').textContent?.trim()).toBe(
         'GEZD GNBV GY3T QOJQ GEZD GNBV GY3T QOJQ',
       );

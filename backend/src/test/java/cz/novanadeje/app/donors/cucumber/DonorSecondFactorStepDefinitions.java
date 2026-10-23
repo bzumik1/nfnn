@@ -19,7 +19,6 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Arrays;
-import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 
@@ -31,7 +30,6 @@ public class DonorSecondFactorStepDefinitions {
     private static final String SECOND_FACTOR_LOGIN_PATH = "/api/donors/auth/login/second-factor";
     private static final String DISABLE_PATH = "/api/donors/me/second-factor/disable";
     private static final String PROFILE_PATH = "/api/donors/me";
-    private static final byte[] PNG_SIGNATURE = {(byte) 0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n'};
 
     private final ApiClient api;
     private final TotpCodes totpCodes;
@@ -151,9 +149,7 @@ public class DonorSecondFactorStepDefinitions {
         String uri = body.get("otpauthUri").asString();
         assertThat(URLDecoder.decode(uri, StandardCharsets.UTF_8))
                 .isEqualTo("otpauth://totp/" + issuer + ":" + account + "?secret=" + secret + "&issuer=" + issuer + "&algorithm=SHA1&digits=6&period=30");
-        byte[] png = Base64.getDecoder().decode(body.get("qrPngBase64").asString());
-        assertThat(Arrays.copyOf(png, PNG_SIGNATURE.length)).isEqualTo(PNG_SIGNATURE);
-        assertThat(QrCodes.decode(png)).isEqualTo(uri);
+        assertThat(QrCodes.decode(body.get("qrCode"))).isEqualTo(uri);
     }
 
     @Then("the donor profile shows roles {string} and the second factor {onOff}")

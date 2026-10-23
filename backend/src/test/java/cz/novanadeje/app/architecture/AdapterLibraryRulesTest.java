@@ -15,8 +15,8 @@ import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 class AdapterLibraryRulesTest {
 
     @ArchTest
-    static final ArchRule qr_code_library_is_used_only_by_infrastructure_adapters = noClasses()
-            .that().resideOutsideOfPackage("..infrastructure..")
+    static final ArchRule qr_code_library_is_used_only_by_the_shared_qr_adapter = noClasses()
+            .that().resideOutsideOfPackage("cz.novanadeje.app.shared.infrastructure.qr..")
             .should().dependOnClassesThat().resideInAPackage("com.google.zxing..");
 
     @ArchTest

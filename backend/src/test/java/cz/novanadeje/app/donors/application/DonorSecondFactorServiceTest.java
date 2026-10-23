@@ -18,7 +18,9 @@ import cz.novanadeje.app.donors.domain.SecondFactorRepository;
 import cz.novanadeje.app.donors.domain.Totp;
 import cz.novanadeje.app.donors.domain.TotpSecret;
 import cz.novanadeje.app.donors.domain.WrongPassword;
-import cz.novanadeje.app.shared.application.qr.QrCodeRenderer;
+import cz.novanadeje.app.shared.application.qr.QrCodeEncoder;
+import cz.novanadeje.app.shared.application.qr.QrErrorCorrection;
+import cz.novanadeje.app.shared.application.qr.QrMatrix;
 import cz.novanadeje.app.shared.domain.DonorType;
 import cz.novanadeje.app.shared.domain.EmailAddress;
 import cz.novanadeje.app.shared.domain.LocaleCode;
@@ -44,7 +46,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
-import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
@@ -60,7 +61,7 @@ class DonorSecondFactorServiceTest {
     private static final PasswordHash HASH = new PasswordHash("$hash");
     private static final String PASSWORD = "correct horse battery";
     private static final TotpSecret SECRET = new TotpSecret("GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ");
-    private static final byte[] PNG = {(byte) 0x89, 'P', 'N', 'G'};
+    private static final QrMatrix MODULES = new QrMatrix(21, "0".repeat(21 * 21));
     private static final IssuedTokens TOKENS = new IssuedTokens("access", NOW.plus(Duration.ofMinutes(15)), "refresh", NOW.plus(Duration.ofDays(14)),
             Set.of(Role.DONOR));
 
@@ -75,7 +76,7 @@ class DonorSecondFactorServiceTest {
     @Mock
     private DonorSessionService sessions;
     @Mock
-    private QrCodeRenderer qrCodes;
+    private QrCodeEncoder qrCodes;
 
     private DonorSecondFactorService service;
 
@@ -91,7 +92,7 @@ class DonorSecondFactorServiceTest {
         when(donors.findById(DONOR)).thenReturn(Optional.of(donor()));
         when(passwordHasher.matches(new RawPassword(PASSWORD), HASH)).thenReturn(true);
         when(secondFactors.findByDonor(DONOR)).thenReturn(Optional.empty());
-        when(qrCodes.renderPng(anyString(), anyInt())).thenReturn(PNG);
+        when(qrCodes.encode(anyString(), any())).thenReturn(MODULES);
 
         SecondFactorEnrolment enrolment = service.begin(DONOR, PASSWORD);
 
@@ -103,8 +104,8 @@ class DonorSecondFactorServiceTest {
         assertThat(enrolment.otpauthUri())
                 .isEqualTo("otpauth://totp/Nov%C3%A1%20nad%C4%9Bje:jana%40example.cz?secret=" + enrolment.secret()
                         + "&issuer=Nov%C3%A1%20nad%C4%9Bje&algorithm=SHA1&digits=6&period=30");
-        assertThat(enrolment.qrPng()).isEqualTo(PNG);
-        verify(qrCodes).renderPng(enrolment.otpauthUri(), DonorSecondFactorService.QR_SIZE_PX);
+        assertThat(enrolment.qrModules()).isEqualTo(MODULES);
+        verify(qrCodes).encode(enrolment.otpauthUri(), QrErrorCorrection.MEDIUM);
         verifyNoInteractions(sessions, refreshTokens);
     }
 
@@ -114,7 +115,7 @@ class DonorSecondFactorServiceTest {
         when(donors.findById(DONOR)).thenReturn(Optional.of(donor()));
         when(passwordHasher.matches(new RawPassword(PASSWORD), HASH)).thenReturn(true);
         when(secondFactors.findByDonor(DONOR)).thenReturn(Optional.of(SecondFactor.enrol(DONOR, SECRET, NOW.minusSeconds(600))));
-        when(qrCodes.renderPng(anyString(), anyInt())).thenReturn(PNG);
+        when(qrCodes.encode(anyString(), any())).thenReturn(MODULES);
 
         SecondFactorEnrolment enrolment = service.begin(DONOR, PASSWORD);
 

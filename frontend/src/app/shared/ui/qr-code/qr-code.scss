@@ -1,0 +1,62 @@
+:host {
+  display: block;
+}
+
+svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.qr-ground {
+  fill: var(--color-qr-ground);
+}
+
+.qr-dot {
+  fill: var(--color-qr-module);
+  transform-box: fill-box;
+  transform-origin: center;
+
+  &.is-off {
+    opacity: 0;
+    transform: scale(0);
+  }
+}
+
+.qr-plain {
+  fill: var(--color-qr-module);
+  shape-rendering: crispEdges;
+}
+
+.qr-finder,
+.qr-alignment,
+.qr-badge-disc {
+  fill: var(--color-qr-mark);
+}
+
+.qr-badge-line {
+  fill: none;
+  stroke: var(--color-qr-ground);
+}
+
+.qr-ring {
+  fill: none;
+  stroke: var(--color-qr-mark);
+  opacity: 0;
+}
+
+.qr-ring,
+.qr-badge,
+.qr-star {
+  transform-box: view-box;
+}
+
+.qr-star-body {
+  fill: var(--color-logo-fill);
+  stroke: var(--color-logo);
+}
+
+.qr-star-face {
+  fill: none;
+  stroke: var(--color-logo);
+}

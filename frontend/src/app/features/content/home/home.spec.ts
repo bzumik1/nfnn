@@ -13,6 +13,7 @@ import { sampleDonor } from '../../../core/auth/testing/donor-fixtures';
 import { newsArticle } from '../testing/news-fixtures';
 import { draftProject, project } from '../testing/project-fixtures';
 import { Home } from './home';
+import { checkerboard } from '../../../shared/ui/qr-code/testing/qr-matrices';
 
 const PAYMENT_QR_URL = '/api/donations/payment-qr';
 const DEBOUNCE_MS = 300;
@@ -55,17 +56,24 @@ describe('Given the home page', () => {
     return request;
   }
 
-  function expectQrRequest(): TestRequest {
-    const request = http.expectOne((candidate) => candidate.url === PAYMENT_QR_URL);
-    request.flush({
-      spayd: 'SPD*1.0*ACC:CZ2620100000005544332217*AM:500.00*CC:CZK',
-      qrPngBase64: 'png',
+  function qrPayment(amount: string | null): object {
+    return {
+      spayd: `SPD*1.0*ACC:CZ2620100000005544332217*AM:${amount}.00*CC:CZK`,
+      qrCode: checkerboard(25),
       bankAccount: {
         accountNumber: '5544332217/2010',
         iban: 'CZ2620100000005544332217',
         recipientName: 'Nadační fond Nová naděje',
       },
-    });
+    };
+  }
+
+  function expectQrRequest(): TestRequest {
+    const request = http.expectOne((candidate) => candidate.url === PAYMENT_QR_URL);
+    request.flush(qrPayment(request.request.params.get('amount')));
+    http
+      .match((candidate) => candidate.url === PAYMENT_QR_URL)
+      .forEach((prefetch) => prefetch.flush(qrPayment(prefetch.request.params.get('amount'))));
     return request;
   }
 

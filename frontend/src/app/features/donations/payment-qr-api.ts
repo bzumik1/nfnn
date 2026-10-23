@@ -1,6 +1,7 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
+import { QrMatrix } from '../../shared/ui/qr-code/qr-matrix';
 
 export interface BankAccountResponse {
   accountNumber: string;
@@ -12,7 +13,7 @@ export type PaymentQrPurpose = 'DONATION' | 'ACCOUNT_VERIFICATION';
 
 export interface PaymentQrResponse {
   spayd: string;
-  qrPngBase64: string;
+  qrCode: QrMatrix;
   bankAccount: BankAccountResponse;
 }
 

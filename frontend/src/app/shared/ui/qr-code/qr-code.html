@@ -1,0 +1,72 @@
+<svg
+  #svg
+  [attr.viewBox]="viewBox()"
+  role="img"
+  [attr.aria-label]="label()"
+  xmlns="http://www.w3.org/2000/svg"
+>
+  <rect class="qr-ground" [attr.width]="side()" [attr.height]="side()" />
+  @if (variant() === 'plain') {
+    <path class="qr-plain" [attr.d]="plainPath()" />
+  } @else {
+    <g>
+      @for (dot of dots(); track dot.index) {
+        <circle
+          #dot
+          class="qr-dot"
+          [class.is-off]="!dot.dark"
+          [attr.cx]="dot.cx"
+          [attr.cy]="dot.cy"
+          r="0.45"
+        />
+      }
+    </g>
+    @for (finder of layout().finders; track $index) {
+      <g class="qr-finder">
+        <path fill-rule="evenodd" [attr.d]="finder.ring" />
+        <path [attr.d]="finder.core" />
+      </g>
+    }
+    @for (alignment of layout().alignments; track $index) {
+      <path class="qr-alignment" fill-rule="evenodd" [attr.d]="alignment.ring" />
+      <circle class="qr-alignment" [attr.cx]="alignment.cx" [attr.cy]="alignment.cy" r="0.5" />
+    }
+    <circle
+      class="qr-ring"
+      [style.transform-origin]="origin()"
+      [attr.cx]="layout().centre"
+      [attr.cy]="layout().centre"
+      [attr.r]="layout().badgeRadius + 1"
+      stroke-width="0.9"
+      vector-effect="non-scaling-stroke"
+    />
+    <g class="qr-badge" [style.transform-origin]="origin()">
+      <circle
+        class="qr-badge-disc"
+        [attr.cx]="layout().centre"
+        [attr.cy]="layout().centre"
+        [attr.r]="layout().badgeRadius"
+      />
+      <circle
+        class="qr-badge-line"
+        [attr.cx]="layout().centre"
+        [attr.cy]="layout().centre"
+        [attr.r]="layout().badgeRadius - 0.7"
+        stroke-width="0.25"
+      />
+      <g class="qr-star" [style.transform-origin]="origin()">
+        <g
+          [attr.transform]="layout().starTransform"
+          stroke-width="20"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path class="qr-star-body" [attr.d]="starBody" />
+          @for (stroke of starFace; track $index) {
+            <path class="qr-star-face" [attr.d]="stroke" />
+          }
+        </g>
+      </g>
+    </g>
+  }
+</svg>

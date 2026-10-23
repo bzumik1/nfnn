@@ -8,6 +8,7 @@ import { BankAccountItem } from '../../../donations/bank-accounts-api';
 import { BankCheckResponse } from '../../../donations/donations-api';
 import { PaymentQrResponse } from '../../../donations/payment-qr-api';
 import { bankAccount, symbolOffer } from '../../../donations/testing/bank-account-fixtures';
+import { checkerboard } from '../../../../shared/ui/qr-code/testing/qr-matrices';
 import { BankAccountsCard } from './bank-accounts-card';
 
 const LIST_URL = '/api/donations/me/bank-accounts';
@@ -23,7 +24,7 @@ const OFFER_WAITING =
 function paymentQr(): PaymentQrResponse {
   return {
     spayd: 'SPD*1.0*ACC:CZ2620100000005544332217*AM:1.00*CC:CZK*X-VS:9876543210',
-    qrPngBase64: 'iVBORw0KGgo=',
+    qrCode: checkerboard(25),
     bankAccount: {
       accountNumber: '5544332217/2010',
       iban: 'CZ2620100000005544332217',
@@ -945,8 +946,8 @@ describe('Given the bank accounts card in the overview', () => {
       request.flush(paymentQr());
       await settle();
 
-      expect(element<HTMLImageElement>('.add-account-qr img')?.getAttribute('src')).toBe(
-        'data:image/png;base64,iVBORw0KGgo=',
+      expect(element('.add-account-qr svg[role="img"]')?.getAttribute('aria-label')).toBe(
+        'QR platba 1 Kč s vaším variabilním symbolem',
       );
       expect(texts('.add-account-bank dd .bank-value')).toEqual([
         '5544332217/2010',
@@ -985,7 +986,7 @@ describe('Given the bank accounts card in the overview', () => {
       http.expectOne((request) => request.url === '/api/donations/payment-qr').flush(paymentQr());
       await settle();
 
-      expect(element('.add-account-qr img')).not.toBeNull();
+      expect(element('.add-account-qr svg[role="img"]')).not.toBeNull();
     });
 
     it('and closes the dialog, then it disappears and the focus returns to Přidat účet', async () => {

@@ -1,4 +1,6 @@
 package cz.novanadeje.app.donors.application;
 
-public record SecondFactorEnrolment(String secret, String otpauthUri, byte[] qrPng) {
+import cz.novanadeje.app.shared.application.qr.QrMatrix;
+
+public record SecondFactorEnrolment(String secret, String otpauthUri, QrMatrix qrModules) {
 }

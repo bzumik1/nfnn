@@ -386,20 +386,18 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 184px;
-  min-height: 184px;
+  width: 224px;
+  min-height: 224px;
   padding: 12px;
   background: var(--color-surface);
   border-radius: var(--radius-card);
   border: 2px solid color-mix(in srgb, var(--color-accent) 13%, transparent);
   box-shadow: var(--shadow-qr);
   text-align: center;
+}
 
-  img {
-    display: block;
-    width: 160px;
-    height: 160px;
-  }
+.add-account-qr-image {
+  width: 200px;
 }
 
 .add-account-qr-placeholder {
