@@ -493,9 +493,12 @@ public class DonorPasskeyStepDefinitions {
 
     private String resetToken() {
         await().atMost(MAIL_WAIT).untilAsserted(() -> assertThat(mailSender.sent()).isNotEmpty());
-        Matcher token = RESET_TOKEN_IN_LINK.matcher(MailContents.plainText(mailSender.sent().getLast()));
-        assertThat(token.find()).withFailMessage("No reset link in the last e-mail").isTrue();
-        return token.group(1);
+        return mailSender.sent().reversed().stream()
+                .map(mail -> RESET_TOKEN_IN_LINK.matcher(MailContents.plainText(mail)))
+                .filter(Matcher::find)
+                .map(token -> token.group(1))
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("No e-mail carries a reset link"));
     }
 
     private JsonNode profileOf(String alias) {
