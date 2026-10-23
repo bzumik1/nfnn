@@ -1,10 +1,10 @@
-<section class="accounts-card" aria-labelledby="bank-accounts-title">
+<section class="ui-card ui-card--padded accounts-card" aria-labelledby="bank-accounts-title">
   <div class="accounts-head">
     <div class="accounts-heading">
       <h2
         #title
         id="bank-accounts-title"
-        class="accounts-title"
+        class="ui-card__title accounts-title"
         tabindex="-1"
         i18n="@@donor.bankAccounts.title"
       >
@@ -26,7 +26,7 @@
     </div>
     <button
       type="button"
-      class="accounts-add"
+      class="ui-button ui-button--primary accounts-add"
       [disabled]="!variableSymbol()"
       (click)="openAdd()"
       i18n="@@donor.bankAccounts.add"
@@ -48,11 +48,11 @@
       </p>
     }
     @case ('error') {
-      <div class="accounts-load-error" role="alert">
+      <div class="ui-callout ui-callout--danger accounts-load-error" role="alert">
         <p i18n="@@donor.bankAccounts.error.load">Bankovní účty se nepodařilo načíst.</p>
         <button
           type="button"
-          class="accounts-retry"
+          class="ui-button accounts-retry"
           (click)="retry()"
           i18n="@@donor.bankAccounts.error.retry"
         >
@@ -133,7 +133,7 @@
                 @if (offersReconnect(account)) {
                   <button
                     type="button"
-                    class="account-action"
+                    class="ui-button account-action"
                     [id]="actionButtonId(account)"
                     [disabled]="busy() === account.id"
                     [attr.aria-busy]="busy() === account.id"
@@ -145,7 +145,7 @@
                 } @else if (offersDisconnect(account)) {
                   <button
                     type="button"
-                    class="account-action"
+                    class="ui-button account-action"
                     [id]="actionButtonId(account)"
                     (click)="askToDisconnect(account)"
                     i18n="@@donor.bankAccounts.disconnect"
@@ -184,7 +184,7 @@
                   <div class="account-confirm-actions">
                     <button
                       type="button"
-                      class="account-confirm-yes"
+                      class="ui-button ui-button--danger account-confirm-yes"
                       [disabled]="busy() === account.id"
                       [attr.aria-busy]="busy() === account.id"
                       (click)="disconnect(account)"
@@ -195,7 +195,7 @@
                     <button
                       #confirmCancel
                       type="button"
-                      class="account-confirm-no"
+                      class="ui-button account-confirm-no"
                       (click)="cancelDisconnect(account)"
                       i18n="@@donor.bankAccounts.confirm.no"
                     >
@@ -239,7 +239,7 @@
   }
 
   @if (actionError()) {
-    <p class="accounts-error" role="alert">{{ actionError() }}</p>
+    <p class="ui-callout ui-callout--danger accounts-error" role="alert">{{ actionError() }}</p>
   }
   <p class="accounts-status" role="status">{{ actionDone() }}</p>
 </section>
@@ -311,7 +311,7 @@
             </p>
             <button
               type="button"
-              class="add-account-qr-retry"
+              class="ui-button add-account-qr-retry"
               (click)="loadQr()"
               i18n="@@home.donate.qr.retry"
             >

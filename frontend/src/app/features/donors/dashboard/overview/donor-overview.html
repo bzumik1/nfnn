@@ -80,13 +80,20 @@
     </div>
   </div>
 
-  <section class="recent-card" aria-labelledby="recent-title">
-    <div class="recent-head">
-      <h2 id="recent-title" class="recent-title" i18n="@@donor.overview.recent.title">
+  <section class="ui-card recent-card" aria-labelledby="recent-title">
+    <div class="ui-card__bar recent-head">
+      <h2
+        id="recent-title"
+        class="ui-card__title ui-card__title--large"
+        i18n="@@donor.overview.recent.title"
+      >
         Poslední dary
       </h2>
       @if (donations.items().length > 0) {
-        <a class="recent-all" routerLink="/darce/dary" i18n="@@donor.overview.recent.all"
+        <a
+          class="ui-button ui-button--small recent-all"
+          routerLink="/darce/dary"
+          i18n="@@donor.overview.recent.all"
           >Všechny dary</a
         >
       }

@@ -56,3 +56,25 @@
   font-family: var(--font-mono);
   font-variant-numeric: var(--numeric-figures);
 }
+
+.ui-callout {
+  margin-top: var(--space-3);
+  padding: var(--space-2-5) var(--space-3-5);
+  border: 1px solid;
+  border-radius: var(--radius-md);
+  font-size: var(--text-md);
+  line-height: var(--leading-normal);
+}
+
+.ui-callout--danger {
+  background: var(--color-danger-bg);
+  border-color: var(--color-danger-border);
+  color: var(--color-danger);
+  font-weight: var(--weight-medium);
+}
+
+.ui-callout--warning {
+  background: var(--color-warning-bg);
+  border-color: var(--color-warning-border);
+  color: var(--color-warning);
+}

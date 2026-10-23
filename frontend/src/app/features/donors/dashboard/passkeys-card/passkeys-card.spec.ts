@@ -191,7 +191,7 @@ describe('Given the passkeys card in the overview', () => {
         });
       await settle();
 
-      expect(element('.form-error').textContent).toContain('Nesprávné heslo');
+      expect(element('.ui-field-error').textContent).toContain('Nesprávné heslo');
       expect(passkeys.created).toHaveLength(0);
     });
 
@@ -201,10 +201,10 @@ describe('Given the passkeys card in the overview', () => {
       await fillIn('#passkey-password', 'correct horse battery');
       await submit();
       http.expectOne(OPTIONS_URL).flush(passkeyCreationOptions());
-      await vi.waitFor(() => expect(element('.form-error')).not.toBeNull());
+      await vi.waitFor(() => expect(element('.ui-field-error')).not.toBeNull());
       await settle();
 
-      expect(element('.form-error').textContent).toContain('Klíč se nevytvořil');
+      expect(element('.ui-field-error').textContent).toContain('Klíč se nevytvořil');
       expect(element<HTMLButtonElement>('.passkeys-save').disabled).toBe(false);
     });
 
@@ -214,10 +214,12 @@ describe('Given the passkeys card in the overview', () => {
       await fillIn('#passkey-password', 'correct horse battery');
       await submit();
       http.expectOne(OPTIONS_URL).flush(passkeyCreationOptions());
-      await vi.waitFor(() => expect(element('.form-error')).not.toBeNull());
+      await vi.waitFor(() => expect(element('.ui-field-error')).not.toBeNull());
       await settle();
 
-      expect(element('.form-error').textContent).toContain('už přístupový klíč k vašemu účtu má');
+      expect(element('.ui-field-error').textContent).toContain(
+        'už přístupový klíč k vašemu účtu má',
+      );
     });
 
     it('and cancels, then the form closes without a request', async () => {

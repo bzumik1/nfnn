@@ -1,8 +1,12 @@
 <app-page-title i18n="@@donor.receipts.heading">Potvrzení o daru</app-page-title>
 
 @if (donations.state() === 'ready') {
-  <section class="yearly-card" aria-labelledby="yearly-title">
-    <h2 id="yearly-title" class="yearly-title" i18n="@@donor.dashboard.yearly.title">
+  <section class="ui-card ui-card--padded yearly-card" aria-labelledby="yearly-title">
+    <h2
+      id="yearly-title"
+      class="ui-card__title ui-card__title--large"
+      i18n="@@donor.dashboard.yearly.title"
+    >
       Roční potvrzení o darech
     </h2>
     <p class="yearly-sub" i18n="@@donor.receipts.yearly.sub">
@@ -11,7 +15,7 @@
 
     @if (donations.receiptError(); as error) {
       @if (error.scope === 'yearly') {
-        <p class="receipt-error" role="alert">{{ error.message }}</p>
+        <p class="ui-callout ui-callout--danger receipt-error" role="alert">{{ error.message }}</p>
       }
     }
 
@@ -35,7 +39,7 @@
                 @case ('available') {
                   <button
                     type="button"
-                    class="yearly-pdf"
+                    class="ui-button ui-button--primary yearly-pdf"
                     [disabled]="donations.yearlyDownloading(row.year)"
                     [attr.aria-busy]="donations.yearlyDownloading(row.year)"
                     (click)="donations.downloadYearlyReceipt(row.year)"
@@ -80,8 +84,12 @@
     }
   </section>
 
-  <section class="single-card" aria-labelledby="single-title">
-    <h2 id="single-title" class="yearly-title" i18n="@@donor.receipts.single.title">
+  <section class="ui-card ui-card--padded single-card" aria-labelledby="single-title">
+    <h2
+      id="single-title"
+      class="ui-card__title ui-card__title--large"
+      i18n="@@donor.receipts.single.title"
+    >
       Potvrzení k jednotlivému daru
     </h2>
     <p class="yearly-sub">

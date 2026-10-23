@@ -166,7 +166,7 @@ describe('Given the donor data card in the overview', () => {
       await settle();
 
       expect(element('.profile-form')).not.toBeNull();
-      expect(element('.profile-form .form-error').textContent).toContain(
+      expect(element('.profile-form .ui-field-error').textContent).toContain(
         'Neplatný požadavek. PSČ má pět číslic.',
       );
       expect(element<HTMLButtonElement>('.profile-save').disabled).toBe(false);

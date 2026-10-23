@@ -4,15 +4,6 @@
   display: block;
 }
 
-.accounts-card {
-  background: var(--color-surface);
-  border-radius: var(--radius-card);
-  box-shadow: var(--shadow-panel);
-  border: 1px solid var(--color-border-soft);
-  padding: var(--space-5) var(--space-6);
-  margin-bottom: var(--space-5);
-}
-
 .accounts-head {
   display: flex;
   align-items: center;
@@ -23,11 +14,6 @@
 }
 
 .accounts-title {
-  font-family: var(--font-serif);
-  font-size: var(--text-2xl);
-  font-weight: var(--weight-bold);
-  color: var(--color-text);
-
   &:focus {
     outline: none;
   }
@@ -68,37 +54,8 @@
   }
 }
 
-.accounts-add,
-.account-action,
-.account-confirm-no,
-.accounts-retry,
-.add-account-qr-retry {
-  background: var(--color-accent-soft);
-  color: var(--color-accent);
-  border: none;
-  padding: var(--space-2) var(--space-4);
-  border-radius: var(--radius-pill);
-  font-family: var(--font-sans);
-  font-weight: var(--weight-semibold);
-  font-size: var(--text-sm);
-  white-space: nowrap;
-  cursor: pointer;
-
-  &:disabled {
-    cursor: not-allowed;
-    opacity: 0.6;
-  }
-}
-
 .accounts-add {
   margin-left: auto;
-  background: var(--color-accent);
-  color: var(--color-on-accent);
-  box-shadow: var(--shadow-button-sm);
-
-  &:disabled {
-    box-shadow: none;
-  }
 }
 
 .accounts-loading,
@@ -117,13 +74,8 @@
   justify-content: space-between;
   flex-wrap: wrap;
   gap: var(--space-3) var(--space-4);
+  margin-top: 0;
   padding: var(--space-3) var(--space-4);
-  background: var(--color-danger-bg);
-  border: 1px solid var(--color-danger-border);
-  border-radius: var(--radius-md);
-  color: var(--color-danger);
-  font-size: var(--text-md);
-  font-weight: var(--weight-medium);
 }
 
 .accounts-retry {
@@ -314,34 +266,6 @@
   flex-wrap: wrap;
   gap: var(--space-2-5);
   margin-top: var(--space-3);
-}
-
-.account-confirm-yes {
-  background: var(--color-danger);
-  color: var(--color-on-accent);
-  border: none;
-  padding: var(--space-2) var(--space-4-5);
-  border-radius: var(--radius-pill);
-  font-family: var(--font-sans);
-  font-weight: var(--weight-bold);
-  font-size: var(--text-sm);
-  cursor: pointer;
-
-  &:disabled {
-    cursor: progress;
-    opacity: 0.7;
-  }
-}
-
-.accounts-error {
-  margin-top: var(--space-3);
-  padding: var(--space-2-5) var(--space-3-5);
-  background: var(--color-danger-bg);
-  border: 1px solid var(--color-danger-border);
-  border-radius: var(--radius-md);
-  color: var(--color-danger);
-  font-size: var(--text-md);
-  font-weight: var(--weight-medium);
 }
 
 .accounts-status:not(:empty) {

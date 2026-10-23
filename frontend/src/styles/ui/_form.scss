@@ -29,3 +29,10 @@
     }
   }
 }
+
+.ui-form-status span {
+  display: block;
+  margin-top: var(--space-3-5);
+  font-size: var(--text-sm);
+  color: var(--color-success);
+}

@@ -1,13 +1,13 @@
-<section class="profile-card" aria-labelledby="profile-title">
+<section class="ui-card ui-card--padded profile-card" aria-labelledby="profile-title">
   <div class="profile-head">
-    <h2 id="profile-title" class="profile-title" i18n="@@donor.profile.title">
+    <h2 id="profile-title" class="ui-card__title" i18n="@@donor.profile.title">
       Údaje na potvrzení o daru
     </h2>
     @if (!editing()) {
       <button
         #editButton
         type="button"
-        class="profile-edit"
+        class="ui-button profile-edit"
         (click)="edit()"
         i18n="@@donor.profile.edit"
       >
@@ -144,11 +144,15 @@
       </app-form-field>
 
       @if (error()) {
-        <p class="form-error" role="alert">{{ error() }}</p>
+        <p class="ui-field-error" role="alert">{{ error() }}</p>
       }
 
       <div class="profile-actions">
-        <button type="submit" class="profile-save" [disabled]="saving()">
+        <button
+          type="submit"
+          class="ui-button ui-button--primary profile-save"
+          [disabled]="saving()"
+        >
           @if (saving()) {
             <span i18n="@@donor.profile.saving">Ukládám…</span>
           } @else {
@@ -157,7 +161,7 @@
         </button>
         <button
           type="button"
-          class="profile-cancel"
+          class="ui-button ui-button--large profile-cancel"
           (click)="cancel()"
           i18n="@@donor.profile.cancel"
         >
@@ -166,7 +170,7 @@
       </div>
     </form>
   } @else if (donor(); as donor) {
-    <dl class="profile-data">
+    <dl class="ui-data-list profile-data">
       <div class="profile-row">
         @if (company()) {
           <dt i18n="@@donor.register.companyName">Název firmy</dt>
@@ -192,7 +196,7 @@
     </dl>
   }
 
-  <p class="profile-status" role="status">
+  <p class="ui-form-status profile-status" role="status">
     @if (saved()) {
       <span i18n="@@donor.profile.saved.receiptScope">
         Údaje jsme uložili. Jméno a adresu ponesou všechna potvrzení, která si stáhnete od teď,
