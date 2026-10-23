@@ -81,39 +81,6 @@
   gap: var(--space-4);
 }
 
-.btn-primary {
-  background: var(--color-accent);
-  color: var(--color-on-accent);
-  text-decoration: none;
-  padding: var(--space-4) var(--space-9);
-  border-radius: var(--radius-pill);
-  font-size: var(--text-xl);
-  font-weight: var(--weight-bold);
-  box-shadow: var(--shadow-cta-hero);
-  transition: transform var(--duration-base);
-
-  &:hover {
-    transform: translateY(-2px);
-  }
-}
-
-.btn-ghost {
-  background: color-mix(in srgb, var(--color-on-image) 12%, transparent);
-  backdrop-filter: blur(10px);
-  color: var(--color-on-image);
-  text-decoration: none;
-  padding: var(--space-4) var(--space-9);
-  border-radius: var(--radius-pill);
-  font-size: var(--text-xl);
-  font-weight: var(--weight-semibold);
-  border: 1.5px solid color-mix(in srgb, var(--color-on-image) 35%, transparent);
-  transition: background var(--duration-base);
-
-  &:hover {
-    background: color-mix(in srgb, var(--color-on-image) 22%, transparent);
-  }
-}
-
 .hero-scroll {
   position: absolute;
   bottom: 32px;

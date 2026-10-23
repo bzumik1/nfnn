@@ -62,11 +62,13 @@ describe('Given the privacy policy page', () => {
   });
 
   it('when it renders, then the introduction covers visitors who only open the site', () => {
-    expect(texts('.intro .lead').join(' ')).toContain('napíšete nám nebo web jen navštívíte');
+    expect(texts('.ui-intro .ui-intro__lead').join(' ')).toContain(
+      'napíšete nám nebo web jen navštívíte',
+    );
   });
 
   it('when it renders, then the date it applies from stands under the heading and in the closing section', () => {
-    expect(texts('.intro .effective')).toEqual(['Platné od 23. října 2026']);
+    expect(texts('.ui-intro .effective')).toEqual(['Platné od 23. října 2026']);
     expect(sectionText('Účinnost')).toContain('účinné od 23. října 2026');
   });
 

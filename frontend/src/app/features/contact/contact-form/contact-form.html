@@ -1,7 +1,9 @@
 <section id="kontakt" class="contact section-pad">
-  <div class="two-col section-inner">
+  <div class="two-col ui-container">
     <div class="contact-left">
-      <p class="eyebrow" i18n="@@home.contact.eyebrow">Spojte se s námi</p>
+      <p class="ui-eyebrow ui-eyebrow--accent-on-inverse" i18n="@@home.contact.eyebrow">
+        Spojte se s námi
+      </p>
       <h2 class="title" i18n="@@home.contact.title">Kontaktujte nás</h2>
       <p class="lead" i18n="@@home.contact.lead">
         Máte dotaz, chcete se zapojit nebo potřebujete více informací? Neváhejte nás kontaktovat.
@@ -164,7 +166,7 @@
           </div>
 
           @if (error()) {
-            <p class="form-error" role="alert">{{ error() }}</p>
+            <p class="ui-callout ui-callout--danger form-error" role="alert">{{ error() }}</p>
           }
 
           <button

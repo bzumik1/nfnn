@@ -6,12 +6,6 @@
   color: color-mix(in srgb, var(--color-on-inverse) 50%, transparent);
 }
 
-.section-inner {
-  max-width: var(--content-max);
-  margin: 0 auto;
-  padding: 0 var(--space-8);
-}
-
 .footer-top {
   display: flex;
   justify-content: space-between;
@@ -104,9 +98,5 @@
     > :first-child {
       margin-inline-end: 0;
     }
-  }
-
-  .section-inner {
-    padding: 0 var(--space-5);
   }
 }

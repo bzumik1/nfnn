@@ -5,26 +5,11 @@
   background: var(--color-surface);
 }
 
-.section-inner {
-  max-width: var(--content-max);
-  margin: 0 auto;
-  padding: 0 var(--space-8);
-}
-
 .two-col {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: var(--space-20);
   align-items: center;
-}
-
-.eyebrow {
-  color: var(--color-accent);
-  font-size: var(--text-2xs);
-  font-weight: var(--weight-bold);
-  letter-spacing: var(--tracking-widest);
-  text-transform: uppercase;
-  margin-bottom: var(--space-4);
 }
 
 .title {
@@ -102,10 +87,6 @@
 @include bp.down(tablet) {
   .about {
     padding: var(--space-16) 0;
-  }
-
-  .section-inner {
-    padding: 0 var(--space-5);
   }
 
   .two-col {

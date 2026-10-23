@@ -1,5 +1,5 @@
 <section id="prispet" class="donate section-pad">
-  <div class="two-col section-inner">
+  <div class="two-col ui-container">
     <div class="donate-img-wrap">
       <div class="donate-img">
         <img
@@ -20,7 +20,7 @@
     </div>
 
     <div class="donate-text">
-      <p class="eyebrow" i18n="@@home.donate.eyebrow">Podpora dětí</p>
+      <p class="ui-eyebrow" i18n="@@home.donate.eyebrow">Podpora dětí</p>
       <h2 class="title" i18n="@@home.donate.title">
         Zaujalo vás naše poslání a rádi byste pomáhali s námi?
       </h2>
@@ -130,7 +130,7 @@
             </button>
           }
           @if (state().kind === 'failed') {
-            <div class="qr-error">
+            <div class="ui-callout ui-callout--danger qr-error">
               <p i18n="@@home.donate.qr.error">
                 QR platbu se nepodařilo připravit. Zkuste to prosím znovu.
               </p>
