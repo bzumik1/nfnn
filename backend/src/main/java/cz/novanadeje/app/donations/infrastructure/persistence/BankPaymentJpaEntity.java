@@ -22,7 +22,7 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "bank_payment")
-public class BankPaymentJpaEntity {
+class BankPaymentJpaEntity {
 
     @Id
     private UUID id;

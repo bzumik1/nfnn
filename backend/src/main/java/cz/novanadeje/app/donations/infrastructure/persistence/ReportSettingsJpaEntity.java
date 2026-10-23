@@ -13,7 +13,7 @@ import java.util.Arrays;
 
 @Entity
 @Table(name = "donation_report_settings")
-public class ReportSettingsJpaEntity {
+class ReportSettingsJpaEntity {
 
     static final short SINGLETON_ID = 1;
     static final int MAX_RECIPIENTS_LENGTH = 2600;

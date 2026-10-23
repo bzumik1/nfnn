@@ -1,5 +1,6 @@
 package cz.novanadeje.app.operations.infrastructure.backup;
 
+import cz.novanadeje.app.shared.domain.FoundationZone;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.time.Instant;
@@ -9,8 +10,7 @@ import java.util.Locale;
 
 final class BackupFormats {
 
-    static final String ZONE_ID = "Europe/Prague";
-    static final ZoneId ZONE = ZoneId.of(ZONE_ID);
+    static final ZoneId ZONE = FoundationZone.ZONE;
     static final Locale CZECH = Locale.forLanguageTag("cs");
 
     private static final DateTimeFormatter TIME = DateTimeFormatter.ofPattern("d. M. yyyy H:mm", CZECH).withZone(ZONE);

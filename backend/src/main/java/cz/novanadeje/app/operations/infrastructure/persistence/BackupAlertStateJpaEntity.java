@@ -15,7 +15,7 @@ import java.util.stream.Collectors;
 
 @Entity
 @Table(name = "backup_alert_state")
-public class BackupAlertStateJpaEntity {
+class BackupAlertStateJpaEntity {
 
     static final short SINGLETON_ID = 1;
     static final int MAX_PROBLEMS_LENGTH = 200;

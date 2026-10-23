@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-public interface DonorRecordJpaRepository extends JpaRepository<DonorRecordJpaEntity, UUID> {
+interface DonorRecordJpaRepository extends JpaRepository<DonorRecordJpaEntity, UUID> {
 
     Optional<DonorRecordJpaEntity> findByVariableSymbol(String variableSymbol);
 

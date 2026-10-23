@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-public interface DonorJpaRepository extends JpaRepository<DonorJpaEntity, UUID> {
+interface DonorJpaRepository extends JpaRepository<DonorJpaEntity, UUID> {
 
     Optional<DonorJpaEntity> findByEmail(String email);
 

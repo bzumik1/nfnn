@@ -16,7 +16,6 @@ import cz.novanadeje.app.donations.domain.donor.DonorRecord;
 import cz.novanadeje.app.donations.domain.donor.DonorRecordNotFound;
 import cz.novanadeje.app.donations.domain.donor.DonorRecordRepository;
 import cz.novanadeje.app.donations.domain.donor.DonorReference;
-import cz.novanadeje.app.donations.domain.receipt.DonationReceipt;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceiptRepository;
 import cz.novanadeje.app.donations.domain.receipt.FirstReceiptYear;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
@@ -39,6 +38,7 @@ import java.util.UUID;
 
 import static cz.novanadeje.app.donations.BankPayments.payment;
 import static cz.novanadeje.app.donations.domain.receipt.Receipts.jana;
+import static cz.novanadeje.app.donations.domain.receipt.Receipts.yearlyReceiptOf;
 import static cz.novanadeje.app.shared.domain.Money.czk;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -108,7 +108,7 @@ class ManualPairingServiceTest {
     @Test
     @DisplayName("Given the donor already downloaded the yearly receipt of the payment's year, when paired by hand, then the result names that year")
     void should_name_changed_yearly_receipt_when_paired_given_issued_yearly_receipt() {
-        when(receipts.findActiveForYear(janaId, Year.of(2026))).thenReturn(Optional.of(mock(DonationReceipt.class)));
+        when(receipts.findActiveForYear(janaId, Year.of(2026))).thenReturn(Optional.of(yearlyReceiptOf(janaId, Year.of(2026))));
 
         ManualPairingResult result = service.pair(ADMIN, unknownSymbol.id(), janaId);
 
@@ -118,7 +118,7 @@ class ManualPairingServiceTest {
     @Test
     @DisplayName("Given a payment from before the first receipt year, when paired by hand, then no yearly receipt is reported even if one exists")
     void should_report_no_changed_receipt_when_paired_given_payment_before_first_receipt_year() {
-        when(receipts.findActiveForYear(janaId, Year.of(2025))).thenReturn(Optional.of(mock(DonationReceipt.class)));
+        when(receipts.findActiveForYear(janaId, Year.of(2025))).thenReturn(Optional.of(yearlyReceiptOf(janaId, Year.of(2025))));
 
         ManualPairingResult result = service.pair(ADMIN, lastYear.id(), janaId);
 
@@ -183,7 +183,7 @@ class ManualPairingServiceTest {
     @DisplayName("Given a paired payment of a year with an issued yearly receipt, when unpaired, then that year is reported")
     void should_name_changed_yearly_receipt_when_unpaired_given_issued_yearly_receipt() {
         when(donations.findByBankPayment(unknownSymbol.id())).thenReturn(Optional.of(paired));
-        when(receipts.findActiveForYear(janaId, Year.of(2026))).thenReturn(Optional.of(mock(DonationReceipt.class)));
+        when(receipts.findActiveForYear(janaId, Year.of(2026))).thenReturn(Optional.of(yearlyReceiptOf(janaId, Year.of(2026))));
 
         assertThat(service.unpair(ADMIN, unknownSymbol.id())).containsExactly(Year.of(2026));
     }

@@ -26,6 +26,8 @@ extra["fioApiVersion"] = "1.0.0"
 extra["webpImageioVersion"] = "0.3.3"
 extra["webauthn4jVersion"] = "0.31.11.RELEASE"
 
+val mockitoAgent: Configuration = configurations.create("mockitoAgent")
+
 dependencies {
 	implementation("io.github.bzumik1:fio-api:${property("fioApiVersion")}")
 
@@ -38,7 +40,6 @@ dependencies {
 	implementation("org.springframework.boot:spring-boot-starter-thymeleaf")
 	implementation("org.springframework.boot:spring-boot-starter-validation")
 	implementation("org.springframework.boot:spring-boot-starter-webmvc")
-	implementation("org.thymeleaf.extras:thymeleaf-extras-springsecurity6")
 
 	implementation("com.github.ben-manes.caffeine:caffeine")
 
@@ -71,6 +72,7 @@ dependencies {
 	testImplementation("org.awaitility:awaitility")
 	testImplementation("org.mockito:mockito-core")
 	testImplementation("org.mockito:mockito-junit-jupiter")
+	mockitoAgent("org.mockito:mockito-core") { isTransitive = false }
 
 	testImplementation("io.cucumber:cucumber-java:${property("cucumberVersion")}")
 	testImplementation("io.cucumber:cucumber-spring:${property("cucumberVersion")}")
@@ -91,6 +93,7 @@ tasks.withType<Test> {
 	systemProperty("cucumber.junit-platform.naming-strategy", "long")
 	System.getenv("CUCUMBER_FILTER_TAGS")?.let { systemProperty("cucumber.filter.tags", it) }
 	jvmArgs("--enable-native-access=ALL-UNNAMED")
+	jvmArgumentProviders.add(CommandLineArgumentProvider { listOf("-javaagent:${mockitoAgent.singleFile}", "-Xshare:off") })
 	environment("TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE", "/var/run/docker.sock")
 	inputs.file("../frontend/src/styles/themes/_nova-nadeje.scss").withPropertyName("siteTheme").withPathSensitivity(PathSensitivity.NONE)
 }

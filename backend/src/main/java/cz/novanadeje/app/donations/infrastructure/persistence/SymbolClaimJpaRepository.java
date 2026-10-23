@@ -11,7 +11,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
-public interface SymbolClaimJpaRepository extends JpaRepository<SymbolClaimJpaEntity, UUID> {
+interface SymbolClaimJpaRepository extends JpaRepository<SymbolClaimJpaEntity, UUID> {
 
     List<SymbolClaimJpaEntity> findByDonorIdOrderByAnsweredAtAscIdAsc(UUID donorId);
 

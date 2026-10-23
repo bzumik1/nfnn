@@ -16,7 +16,7 @@ import java.util.Optional;
 
 @Entity
 @Table(name = "bank_import_state")
-public class BankImportStateJpaEntity {
+class BankImportStateJpaEntity {
 
     static final short SINGLETON_ID = 1;
 

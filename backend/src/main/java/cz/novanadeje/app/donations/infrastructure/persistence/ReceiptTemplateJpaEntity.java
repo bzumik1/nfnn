@@ -9,7 +9,7 @@ import java.time.Instant;
 
 @Entity
 @Table(name = "receipt_template")
-public class ReceiptTemplateJpaEntity {
+class ReceiptTemplateJpaEntity {
 
     @Id
     @Column(name = "sha256", length = 64)

@@ -9,7 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 import java.time.LocalDate;
 
-public interface MonthlyReportJpaRepository extends JpaRepository<MonthlyReportJpaEntity, LocalDate> {
+interface MonthlyReportJpaRepository extends JpaRepository<MonthlyReportJpaEntity, LocalDate> {
 
     @Transactional
     @Modifying(flushAutomatically = true)

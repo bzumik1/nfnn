@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
-public interface BankPaymentJpaRepository extends JpaRepository<BankPaymentJpaEntity, UUID> {
+interface BankPaymentJpaRepository extends JpaRepository<BankPaymentJpaEntity, UUID> {
 
     String UNPAIRED = "select p from BankPaymentJpaEntity p"
             + " where not exists (select 1 from DonationJpaEntity d where d.bankPaymentId = p.id)";

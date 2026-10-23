@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-public interface DonationJpaRepository extends JpaRepository<DonationJpaEntity, UUID> {
+interface DonationJpaRepository extends JpaRepository<DonationJpaEntity, UUID> {
 
     boolean existsByBankPaymentId(UUID bankPaymentId);
 

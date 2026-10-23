@@ -19,6 +19,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     restart: unless-stopped
+    stop_grace_period: 75s
     depends_on:
       postgres:
         condition: service_healthy

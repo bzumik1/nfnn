@@ -34,8 +34,6 @@ jobs:
           java-version: "25"
 
       - uses: gradle/actions/setup-gradle@v6
-        with:
-          cache-read-only: false
 
       - name: Build and test
         run: ./gradlew build
@@ -176,6 +174,15 @@ jobs:
             echo "::error::every service sets no-new-privileges"
             exit 1
           fi
+
+      - name: The backend gets the time its shutdown waits for before Docker kills it
+        run: |
+          for compose in deploy/compose.yml docker-compose.yml; do
+            if [ "$(yq '.services.backend.stop_grace_period' "$compose")" != 75s ]; then
+              echo "::error::$compose must give the backend stop_grace_period 75s: Spring drains requests for up to 30 s and then awaits a running bank import for up to 30 s (spring.task.scheduling.shutdown), and Docker kills after 10 s by default"
+              exit 1
+            fi
+          done
 
       - name: Both images rotate their log with the same script
         run: |
@@ -374,6 +381,7 @@ jobs:
             docker exec nfnn-postgres psql -U novanadeje -d novanadeje -tA -c "select count(*) from admin_action where $1"
           }
           docker exec nfnn-postgres psql -U novanadeje -d novanadeje -c "insert into admin_action (id, admin_id, action, details, performed_at) values ('019a0000-0000-7000-8000-000000000003', '019a0000-0000-7000-8000-000000000002', 'CI_MARKER', 'to be undone by the requested restore', now())"
+          docker exec nfnn-postgres psql -U novanadeje -d novanadeje -tA -c "select setval('donation_receipt_number_seq', 41)"
           docker exec nfnn-backend sh -c "printf 'source=backup\nfile=%s\nadmin=019a0000-0000-7000-8000-000000000002\n' '$(basename "$full_dump")' > /backups/requests/ci-3.restore"
           docker restart nfnn-backend
           wait_for "grep -q '^request=ci-3$' $backups/status/restore" 60 "the requested restore did not run"
@@ -381,6 +389,8 @@ jobs:
           docker compose up -d --wait --wait-timeout 300 backend
           [ ! -e "$backups/status/restore.running" ] || { echo "::error::the restore left its running marker"; exit 1; }
           [ "$(count_rows "action = 'CI_MARKER'")" = 0 ] || { echo "::error::the requested restore kept a row written after the dump"; exit 1; }
+          receipt_number=$(docker exec nfnn-postgres psql -U novanadeje -d novanadeje -tA -c "select last_value from donation_receipt_number_seq")
+          [ "$receipt_number" = 41 ] || { echo "::error::the restore rewound the receipt numbers to $receipt_number, so numbers issued after the backup would be issued again"; exit 1; }
           [ "$(count_rows "action = 'BACKUP_RESTORED' and admin_id = '019a0000-0000-7000-8000-000000000002'")" = 1 ] || { echo "::error::the finished restore is not recorded in the administration history"; exit 1; }
           docker exec nfnn-postgres psql -U novanadeje -d postgres -tA -c "select datname from pg_database" | grep -q nfnn_restore && { echo "::error::a staging or retired database was left behind"; exit 1; }
 

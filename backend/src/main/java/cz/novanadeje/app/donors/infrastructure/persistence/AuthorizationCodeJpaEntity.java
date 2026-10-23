@@ -16,7 +16,7 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "oauth_authorization_code")
-public class AuthorizationCodeJpaEntity {
+class AuthorizationCodeJpaEntity {
 
     @Id
     private UUID id;

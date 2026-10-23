@@ -46,4 +46,9 @@ class AdapterLibraryRulesTest {
     static final ArchRule webauthn_library_is_used_only_by_the_donors_webauthn_adapter = noClasses()
             .that().resideOutsideOfPackage("cz.novanadeje.app.donors.infrastructure.webauthn..")
             .should().dependOnClassesThat().resideInAPackage("com.webauthn4j..");
+
+    @ArchTest
+    static final ArchRule cache_library_is_used_only_by_infrastructure_adapters = noClasses()
+            .that().resideOutsideOfPackage("..infrastructure..")
+            .should().dependOnClassesThat().resideInAPackage("com.github.benmanes.caffeine..");
 }

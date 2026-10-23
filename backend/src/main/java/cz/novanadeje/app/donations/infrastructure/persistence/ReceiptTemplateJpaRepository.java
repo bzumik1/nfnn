@@ -8,7 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 
-public interface ReceiptTemplateJpaRepository extends JpaRepository<ReceiptTemplateJpaEntity, String> {
+interface ReceiptTemplateJpaRepository extends JpaRepository<ReceiptTemplateJpaEntity, String> {
 
     @Transactional
     @Modifying(flushAutomatically = true)

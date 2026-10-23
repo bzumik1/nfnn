@@ -50,6 +50,10 @@ class MediaImageJpaEntity {
         return entity;
     }
 
+    Instant uploadedAt() {
+        return uploadedAt;
+    }
+
     MediaImage toDomain() {
         List<MediaVariant> domainVariants = variants.stream().map(MediaVariantJpaEntity::toDomain).toList();
         return new MediaImage(new MediaId(id), width, height, domainVariants, uploadedAt);

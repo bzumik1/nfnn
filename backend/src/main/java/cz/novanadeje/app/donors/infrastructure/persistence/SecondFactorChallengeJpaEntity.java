@@ -12,7 +12,7 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "donor_second_factor_challenge")
-public class SecondFactorChallengeJpaEntity {
+class SecondFactorChallengeJpaEntity {
 
     @Id
     private UUID id;

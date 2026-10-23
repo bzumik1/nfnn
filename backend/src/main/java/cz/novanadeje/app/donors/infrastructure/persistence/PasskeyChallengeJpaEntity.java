@@ -15,7 +15,7 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "donor_passkey_challenge")
-public class PasskeyChallengeJpaEntity {
+class PasskeyChallengeJpaEntity {
 
     @Id
     private UUID id;

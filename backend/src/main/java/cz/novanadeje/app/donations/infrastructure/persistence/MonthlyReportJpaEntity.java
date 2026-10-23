@@ -10,7 +10,7 @@ import java.time.LocalDate;
 
 @Entity
 @Table(name = "donation_monthly_report")
-public class MonthlyReportJpaEntity {
+class MonthlyReportJpaEntity {
 
     @Id
     @Column(name = "report_month")

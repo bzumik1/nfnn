@@ -13,7 +13,7 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "contact_message")
-public class ContactMessageJpaEntity {
+class ContactMessageJpaEntity {
 
     @Id
     private UUID id;

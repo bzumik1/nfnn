@@ -15,7 +15,7 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "donor_refresh_token")
-public class RefreshTokenJpaEntity {
+class RefreshTokenJpaEntity {
 
     @Id
     private UUID id;

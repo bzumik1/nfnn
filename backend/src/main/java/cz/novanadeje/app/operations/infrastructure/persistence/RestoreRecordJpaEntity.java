@@ -9,7 +9,7 @@ import java.time.Instant;
 
 @Entity
 @Table(name = "operations_restore_record")
-public class RestoreRecordJpaEntity {
+class RestoreRecordJpaEntity {
 
     static final int MAX_REQUEST_ID_LENGTH = 36;
 

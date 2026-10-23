@@ -5,8 +5,19 @@ import com.tngtech.archunit.junit.AnalyzeClasses;
 import com.tngtech.archunit.junit.ArchTest;
 import com.tngtech.archunit.lang.ArchRule;
 import cz.novanadeje.app.AppApplication;
+import jakarta.persistence.Embeddable;
+import jakarta.persistence.Entity;
+import jakarta.persistence.MappedSuperclass;
 import org.springframework.context.MessageSource;
+import org.springframework.data.repository.Repository;
 
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZonedDateTime;
+
+import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 import static com.tngtech.archunit.library.Architectures.layeredArchitecture;
 import static com.tngtech.archunit.library.dependencies.SlicesRuleDefinition.slices;
@@ -58,4 +69,33 @@ class DddLayeringRulesTest {
             .that().resideInAPackage("..interfaces.rest..")
             .should().dependOnClassesThat()
             .resideInAPackage("..infrastructure.persistence..");
+
+    @ArchTest
+    static final ArchRule shared_kernel_must_not_depend_on_any_context = noClasses()
+            .that().resideInAPackage("cz.novanadeje.app.shared..")
+            .should().dependOnClassesThat()
+            .resideInAnyPackage(
+                    "cz.novanadeje.app.content..",
+                    "cz.novanadeje.app.donors..",
+                    "cz.novanadeje.app.donations..",
+                    "cz.novanadeje.app.contact..",
+                    "cz.novanadeje.app.operations..");
+
+    @ArchTest
+    static final ArchRule jpa_entities_and_spring_data_repositories_are_package_private_adapter_details = classes()
+            .that().areAnnotatedWith(Entity.class)
+            .or().areAnnotatedWith(Embeddable.class)
+            .or().areAnnotatedWith(MappedSuperclass.class)
+            .or().areAssignableTo(Repository.class)
+            .should().notBePublic()
+            .andShould().resideInAPackage("..infrastructure..");
+
+    @ArchTest
+    static final ArchRule time_comes_from_the_injected_clock = noClasses()
+            .should().callMethod(Instant.class, "now")
+            .orShould().callMethod(LocalDate.class, "now")
+            .orShould().callMethod(LocalDateTime.class, "now")
+            .orShould().callMethod(OffsetDateTime.class, "now")
+            .orShould().callMethod(ZonedDateTime.class, "now")
+            .orShould().callMethod(System.class, "currentTimeMillis");
 }

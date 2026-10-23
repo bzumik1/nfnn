@@ -28,7 +28,7 @@ import java.util.UUID;
 @Entity
 @DynamicUpdate
 @Table(name = "donation_receipt")
-public class DonationReceiptJpaEntity {
+class DonationReceiptJpaEntity {
 
     @Id
     private UUID id;

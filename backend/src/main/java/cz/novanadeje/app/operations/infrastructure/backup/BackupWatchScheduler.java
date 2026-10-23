@@ -1,6 +1,7 @@
 package cz.novanadeje.app.operations.infrastructure.backup;
 
 import cz.novanadeje.app.operations.application.backup.BackupWatchService;
+import cz.novanadeje.app.shared.domain.FoundationZone;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Conditional;
@@ -19,7 +20,7 @@ class BackupWatchScheduler {
         this.service = service;
     }
 
-    @Scheduled(cron = "${app.operations.backups.check-cron}", zone = BackupFormats.ZONE_ID)
+    @Scheduled(cron = "${app.operations.backups.check-cron}", zone = FoundationZone.ID)
     void checkBackups() {
         try {
             service.check();
