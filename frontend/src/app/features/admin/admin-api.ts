@@ -121,6 +121,7 @@ export interface AdminActionResponse {
   subjectId: string | null;
   details: string;
   performedAt: string;
+  client: string | null;
 }
 
 export interface AdminActionListResponse {
