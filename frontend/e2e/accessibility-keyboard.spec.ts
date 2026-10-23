@@ -1,4 +1,5 @@
-import { expect, Page, test } from '@playwright/test';
+import { Page } from '@playwright/test';
+import { expect, test } from './fixtures';
 import { mockDonorApi, openSignInDialog, signIn } from './donor-session';
 
 const WCAG_TEXT_SPACING =
