@@ -215,9 +215,10 @@ jobs:
             echo "::error::deploy/backend.env.example must have the empty line JWT_SECRET="
             exit 1
           fi
-          mkdir "$RUNNER_TEMP/nfnn/logs"
+          install -d -m 755 "$RUNNER_TEMP/nfnn/logs"
           for log in nginx-access.log mcp.log; do
             echo "2026-01-01T00:00:00+00:00 left over from an earlier day" > "$RUNNER_TEMP/nfnn/logs/$log"
+            chmod 644 "$RUNNER_TEMP/nfnn/logs/$log"
             touch -d '2 days ago' "$RUNNER_TEMP/nfnn/logs/$log"
           done
           sed "s#/DATA/AppData/nfnn#$RUNNER_TEMP/nfnn#g" deploy/compose.yml > "$RUNNER_TEMP/compose.yml"
