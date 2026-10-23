@@ -36,9 +36,7 @@ interface Notice {
 }
 
 type PendingAction =
-  | { kind: 'reset' }
-  | { kind: 'disconnect' | 'reconnect' | 'remove'; linkId: string }
-  | null;
+  { kind: 'reset' } | { kind: 'disconnect' | 'reconnect' | 'remove'; linkId: string } | null;
 
 const UNAUTHENTICATED = 'auth/unauthenticated';
 const FORBIDDEN = 'auth/forbidden';
