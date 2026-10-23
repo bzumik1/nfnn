@@ -2,9 +2,10 @@
 # Backs the nfnn database up, restores a dump left in the restore folder or asked for by the
 # administration, and rehearses a restore once a week. A restore goes into a staging database first
 # and replaces the live one by renaming only when it succeeded, after a -pred-obnovou backup, so a
-# failed restore leaves the current data as they were, and every sequence (the receipt numbers) keeps
-# the higher of its current and restored value; $BACKUPS/status/restore.running exists while
-# one runs and the backend waits for it to go. Everything is reported in the container log, in $LOGS/backup.log and in key=value
+# failed restore leaves the current data as they were. A restored database keeps every sequence (the
+# receipt numbers) at the higher of its current and restored value, and a Liquibase lock caught in
+# the dump is released. $BACKUPS/status/restore.running exists while one runs and the backend waits
+# for it to go. Everything is reported in the container log, in $LOGS/backup.log and in key=value
 # files under $BACKUPS/status, which the backend reads for the administration page.
 # The database password is read from $SECRETS_DIR/db-password once nfnn-postgres marks it ready.
 
@@ -145,6 +146,11 @@ allow_connections() {
   server_psql --command="alter database \"$PGDATABASE\" with allow_connections true" > /dev/null 2>&1
 }
 
+release_liquibase_lock() {
+  psql --dbname="$1" --quiet --no-align --tuples-only -v ON_ERROR_STOP=1 \
+    --command="do \$\$ begin if to_regclass('public.databasechangeloglock') is not null then update public.databasechangeloglock set locked = false, lockgranted = null, lockedby = null where locked; end if; end \$\$" > /dev/null 2>> "$2"
+}
+
 applied_changesets() {
   psql --dbname="$1" --tuples-only --no-align --command="select count(*) from public.databasechangelog" 2>> "$2" | tr -d '[:space:]'
 }
@@ -213,7 +219,7 @@ restore_dump() {
     r_tables=$(psql --dbname="$STAGING_DATABASE" --tuples-only --no-align --command="select count(*) from information_schema.tables where table_schema = 'public'" 2>> "$STATUS/restore.err" | tr -d '[:space:]')
     r_changesets=$(applied_changesets "$STAGING_DATABASE" "$STATUS/restore.err")
     if [ "${r_tables:-0}" -gt 0 ] 2>/dev/null && [ "${r_changesets:-0}" -gt 0 ] 2>/dev/null; then
-      if swap_in_staging; then
+      if release_liquibase_lock "$STAGING_DATABASE" "$STATUS/restore.err" && swap_in_staging; then
         write_status restore "outcome=ok" "started_at=$r_started" "finished_at=$(now_utc)" "file=$r_file" "size=$(file_size "$r_dump")" "tables=$r_tables" "request=$r_request" "admin=$r_admin"
         log "restore of $r_file succeeded: $r_tables tables"
         return 0
