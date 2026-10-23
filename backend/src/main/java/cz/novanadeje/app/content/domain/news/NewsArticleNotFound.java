@@ -1,5 +1,6 @@
 package cz.novanadeje.app.content.domain.news;
 
+import cz.novanadeje.app.content.domain.Slug;
 import cz.novanadeje.app.shared.domain.error.NotFound;
 
 public class NewsArticleNotFound extends NotFound {

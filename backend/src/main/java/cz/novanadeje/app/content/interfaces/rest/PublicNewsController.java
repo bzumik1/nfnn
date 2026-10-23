@@ -2,7 +2,7 @@ package cz.novanadeje.app.content.interfaces.rest;
 
 import cz.novanadeje.app.content.application.news.PublicNewsService;
 import cz.novanadeje.app.content.domain.news.NewsArticleNotFound;
-import cz.novanadeje.app.content.domain.news.Slug;
+import cz.novanadeje.app.content.domain.Slug;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import org.springframework.web.bind.annotation.GetMapping;

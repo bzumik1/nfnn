@@ -1,4 +1,4 @@
-package cz.novanadeje.app.content.domain.news;
+package cz.novanadeje.app.content.domain;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

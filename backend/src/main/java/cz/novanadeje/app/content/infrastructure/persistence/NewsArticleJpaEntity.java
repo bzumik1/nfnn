@@ -4,7 +4,7 @@ import cz.novanadeje.app.content.domain.media.MediaId;
 import cz.novanadeje.app.content.domain.news.NewsArticle;
 import cz.novanadeje.app.content.domain.news.NewsArticleId;
 import cz.novanadeje.app.content.domain.news.NewsContent;
-import cz.novanadeje.app.content.domain.news.Slug;
+import cz.novanadeje.app.content.domain.Slug;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;

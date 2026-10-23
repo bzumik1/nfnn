@@ -280,13 +280,13 @@ Vystavené potvrzení se neukládá jako PDF. Tabulka `donation_receipt` drží 
 
 Najednou se vykreslují nejvýš tři potvrzení, další stažení chvíli počkají. Kdyby po Novém roce stahování vázlo a server měl volnou paměť i procesor, jde limit zvýšit řádkem `APP_DONATIONS_RECEIPT_CONCURRENTRENDERS=5` v `backend.env` a přeinstalací aplikace (vlastnost `app.donations.receipt.concurrent-renders`, výchozí `3`).
 
-## Aktuality a fotky
+## Aktuality, projekty a fotky
 
-Správce píše aktuality na `/sprava/aktuality` a k nim nahrává fotky. Fotka smí být JPEG, PNG nebo WebP do 10 MB; backend ji otočí podle EXIF, zmenší na šířky 480, 960 a 1 440 px (nikdy nezvětšuje) a uloží jen tyto kopie ve WebP do tabulky `content_media_variant` (originál se nedrží). Fotky tedy leží v databázi: denní záloha (`pg_dump`) je obsahuje a na serveru není žádný další svazek. Jedna fotka zabere zhruba 150–400 kB, takže záloha roste pomalu; kdyby měla růst rychleji, ukazuje `select count(*), pg_size_pretty(sum(length(data))) from content_media_variant;` kolik fotky zabírají.
+Správce píše aktuality na `/sprava/aktuality` a projekty na `/sprava/projekty` a k nim nahrává fotky. Fotka smí být JPEG, PNG nebo WebP do 10 MB; backend ji otočí podle EXIF, zmenší na šířky 480, 960 a 1 440 px (nikdy nezvětšuje) a uloží jen tyto kopie ve WebP do tabulky `content_media_variant` (originál se nedrží). Fotky tedy leží v databázi: denní záloha (`pg_dump`) je obsahuje a na serveru není žádný další svazek. Jedna fotka zabere zhruba 150–400 kB, takže záloha roste pomalu; kdyby měla růst rychleji, ukazuje `select count(*), pg_size_pretty(sum(length(data))) from content_media_variant;` kolik fotky zabírají.
 
 Limit 10 MB hlídá backend (`spring.servlet.multipart.max-file-size`, odpověď 413 „Soubor je příliš velký“) a nginx ve frontend kontejneru pouští na `/api/` 11 MB (`client_max_body_size` ve `frontend/nginx.conf`). Nginx Proxy Manager má výchozí limit 100 MB, nic se v něm nenastavuje; kdyby nahrání velké fotky vracelo 413 dřív, než se objeví hláška webu, je limit v NPM nebo v Cloudflare (ten dovoluje 100 MB).
 
-Převod do WebP dělá knihovna `webp-imageio` s nativní libwebp pro Linux x64 i arm64; backend proto startuje s `--enable-native-access=ALL-UNNAMED` (v Dockerfile), jinak Java 25 jen vypíše varování do logu. Smazaná aktualita smaže i svou fotku; fotka nahraná a nikdy nepřipojená k aktualitě v tabulce zůstane (zatím se neuklízí).
+Převod do WebP dělá knihovna `webp-imageio` s nativní libwebp pro Linux x64 i arm64; backend proto startuje s `--enable-native-access=ALL-UNNAMED` (v Dockerfile), jinak Java 25 jen vypíše varování do logu. Smazaná aktualita nebo projekt smaže i svou fotku; fotka nahraná a nikdy nepřipojená k aktualitě ani projektu v tabulce zůstane (zatím se neuklízí).
 
 ## Obnova hesla
 

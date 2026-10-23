@@ -1,4 +1,4 @@
-package cz.novanadeje.app.content.domain.news;
+package cz.novanadeje.app.content.domain;
 
 import java.text.Normalizer;
 import java.util.Locale;

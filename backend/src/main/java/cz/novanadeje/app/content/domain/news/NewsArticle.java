@@ -1,5 +1,6 @@
 package cz.novanadeje.app.content.domain.news;
 
+import cz.novanadeje.app.content.domain.Slug;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Optional;

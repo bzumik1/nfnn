@@ -8,7 +8,7 @@ import cz.novanadeje.app.content.domain.news.NewsArticle;
 import cz.novanadeje.app.content.domain.news.NewsArticleId;
 import cz.novanadeje.app.content.domain.news.NewsArticleRepository;
 import cz.novanadeje.app.content.domain.news.NewsContent;
-import cz.novanadeje.app.content.domain.news.Slug;
+import cz.novanadeje.app.content.domain.Slug;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

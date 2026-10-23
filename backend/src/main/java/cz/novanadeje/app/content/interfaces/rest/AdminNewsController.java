@@ -50,7 +50,7 @@ class AdminNewsController {
     }
 
     @PostMapping("/{id}/publish")
-    NewsArticleResponse publish(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id, @Valid @RequestBody PublishNewsRequest request) {
+    NewsArticleResponse publish(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id, @Valid @RequestBody PublishRequest request) {
         return NewsArticleResponse.from(news.publish(admin(jwt), new NewsArticleId(id), request.publishedOn()));
     }
 

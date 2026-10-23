@@ -2,7 +2,7 @@ package cz.novanadeje.app.content.application.news;
 
 import cz.novanadeje.app.content.domain.media.MediaId;
 import cz.novanadeje.app.content.domain.news.NewsContent;
-import cz.novanadeje.app.content.domain.news.Slug;
+import cz.novanadeje.app.content.domain.Slug;
 
 import java.util.Optional;
 

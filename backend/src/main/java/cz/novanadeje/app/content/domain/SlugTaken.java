@@ -1,4 +1,4 @@
-package cz.novanadeje.app.content.domain.news;
+package cz.novanadeje.app.content.domain;
 
 import cz.novanadeje.app.shared.domain.error.Conflict;
 

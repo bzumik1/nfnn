@@ -3,7 +3,7 @@ package cz.novanadeje.app.content.interfaces.rest;
 import cz.novanadeje.app.content.application.news.NewsArticleCommand;
 import cz.novanadeje.app.content.domain.media.MediaId;
 import cz.novanadeje.app.content.domain.news.NewsContent;
-import cz.novanadeje.app.content.domain.news.Slug;
+import cz.novanadeje.app.content.domain.Slug;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;

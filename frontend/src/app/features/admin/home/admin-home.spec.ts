@@ -198,7 +198,7 @@ describe('Given an administrator on the administration home', () => {
     expect(navigate).toHaveBeenCalledWith('/');
     expect(TestBed.inject(LoginDialogService).isOpen()).toBe(true);
   });
-  it('when the home is shown, then it links to the bank payments, the donors, the administrators, the older symbols, the report, the news and the history', async () => {
+  it('when the home is shown, then it links to the bank payments, the donors, the administrators, the older symbols, the report, the news, the projects and the history', async () => {
     http.expectOne(IMPORT_STATE_URL).flush(importState());
     fixture.detectChanges();
 
@@ -215,6 +215,7 @@ describe('Given an administrator on the administration home', () => {
       ['/sprava/starsi-symboly', 'Starší symboly'],
       ['/sprava/prehledy', 'Měsíční přehled'],
       ['/sprava/aktuality', 'Aktuality'],
+      ['/sprava/projekty', 'Projekty'],
       ['/sprava/historie', 'Historie správy'],
     ]);
   });
