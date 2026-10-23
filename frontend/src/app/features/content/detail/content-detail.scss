@@ -4,24 +4,6 @@
   display: block;
 }
 
-.section-inner {
-  max-width: var(--content-max);
-  margin: 0 auto;
-  padding: 0 var(--space-8);
-}
-
-.intro,
-.detail--waiting {
-  background:
-    radial-gradient(
-      ellipse at 85% 0%,
-      color-mix(in srgb, var(--color-accent) 28%, transparent) 0%,
-      transparent 60%
-    ),
-    var(--color-surface-inverse);
-  padding: calc(var(--header-height) + var(--space-22)) 0 var(--space-20);
-}
-
 .detail--waiting {
   min-height: 70vh;
 }
@@ -46,34 +28,6 @@
       text-decoration: underline;
     }
   }
-}
-
-.eyebrow {
-  color: color-mix(in srgb, var(--color-on-inverse) 65%, transparent);
-  font-size: var(--text-2xs);
-  font-weight: var(--weight-bold);
-  letter-spacing: var(--tracking-widest);
-  text-transform: uppercase;
-  margin-bottom: var(--space-4);
-}
-
-.title {
-  font-family: var(--font-serif);
-  font-size: var(--text-article-title);
-  font-weight: var(--weight-extrabold);
-  line-height: var(--leading-display);
-  color: var(--color-on-inverse);
-  max-width: 20ch;
-  text-wrap: balance;
-  outline: none;
-}
-
-.lead {
-  margin-top: var(--space-6);
-  max-width: 62ch;
-  color: color-mix(in srgb, var(--color-on-inverse) 70%, transparent);
-  font-size: var(--text-2xl);
-  line-height: var(--leading-loose);
 }
 
 .body {
@@ -112,60 +66,7 @@
   margin-top: var(--space-14);
 }
 
-.btn-primary,
-.btn-ghost {
-  text-decoration: none;
-  padding: var(--space-3-5) var(--space-8);
-  border-radius: var(--radius-pill);
-  font-size: var(--text-xl);
-  display: inline-block;
-}
-
-.btn-primary {
-  background: var(--color-accent);
-  color: var(--color-on-accent);
-  font-weight: var(--weight-bold);
-  box-shadow: var(--shadow-cta-hero);
-  transition: transform var(--duration-base);
-
-  &:hover {
-    transform: translateY(-2px);
-  }
-}
-
-.btn-ghost {
-  color: var(--color-text);
-  font-weight: var(--weight-semibold);
-  border: 1.5px solid var(--color-border);
-  background: transparent;
-  cursor: pointer;
-  font-family: var(--font-sans);
-  transition: background var(--duration-base);
-
-  &:hover {
-    background: var(--color-surface-alt);
-  }
-}
-
-.detail--waiting .btn-ghost {
-  color: var(--color-on-inverse);
-  border-color: color-mix(in srgb, var(--color-on-inverse) 35%, transparent);
-
-  &:hover {
-    background: color-mix(in srgb, var(--color-on-inverse) 12%, transparent);
-  }
-}
-
 @include bp.down(tablet) {
-  .section-inner {
-    padding: 0 var(--space-5);
-  }
-
-  .intro,
-  .detail--waiting {
-    padding: calc(var(--header-height) + var(--space-14)) 0 var(--space-14);
-  }
-
   .body {
     padding-top: var(--space-10);
     padding-bottom: var(--space-18);

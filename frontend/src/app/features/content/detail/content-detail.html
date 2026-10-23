@@ -1,18 +1,23 @@
 @switch (state()) {
   @case ('loading') {
-    <section class="detail detail--waiting">
-      <div class="section-inner">
+    <section class="detail detail--waiting ui-intro">
+      <div class="ui-container">
         <p class="waiting" role="status" i18n="@@content.detail.loading">Načítáme stránku…</p>
       </div>
     </section>
   }
   @case ('error') {
-    <section class="detail detail--waiting">
-      <div class="section-inner">
+    <section class="detail detail--waiting ui-intro">
+      <div class="ui-container">
         <p class="waiting" role="alert" i18n="@@content.detail.error">
           Stránku se nepodařilo načíst.
         </p>
-        <button type="button" class="btn-ghost" (click)="retry()" i18n="@@content.detail.retry">
+        <button
+          type="button"
+          class="ui-cta ui-cta--ghost ui-cta--on-inverse"
+          (click)="retry()"
+          i18n="@@content.detail.retry"
+        >
           Zkusit znovu
         </button>
       </div>
@@ -24,8 +29,8 @@
   @case ('ready') {
     @if (page(); as page) {
       <article class="detail">
-        <header class="intro">
-          <div class="section-inner">
+        <header class="ui-intro">
+          <div class="ui-container">
             <p class="crumbs">
               <a routerLink="/" [fragment]="page.backFragment">
                 @if (kind === 'news') {
@@ -37,13 +42,15 @@
                 }
               </a>
             </p>
-            <p class="eyebrow">{{ page.eyebrow }}</p>
-            <h1 #heading class="title" tabindex="-1">{{ page.title }}</h1>
-            <p class="lead">{{ page.perex }}</p>
+            <p class="ui-eyebrow ui-eyebrow--on-inverse">{{ page.eyebrow }}</p>
+            <h1 #heading class="ui-intro__title ui-intro__title--article" tabindex="-1">
+              {{ page.title }}
+            </h1>
+            <p class="ui-intro__lead">{{ page.perex }}</p>
           </div>
         </header>
 
-        <div class="body section-inner">
+        <div class="body ui-container">
           @if (image(); as src) {
             <figure class="photo">
               <img
@@ -63,10 +70,10 @@
             }
           </div>
           <p class="actions">
-            <a class="btn-primary" routerLink="/" fragment="prispet" i18n="@@content.detail.donate"
+            <a class="ui-cta" routerLink="/" fragment="prispet" i18n="@@content.detail.donate"
               >Přispět</a
             >
-            <a class="btn-ghost" routerLink="/" [fragment]="page.backFragment">
+            <a class="ui-cta ui-cta--ghost" routerLink="/" [fragment]="page.backFragment">
               @if (kind === 'news') {
                 <ng-container i18n="@@content.detail.back.news.again"
                   >Zpět na aktuality</ng-container

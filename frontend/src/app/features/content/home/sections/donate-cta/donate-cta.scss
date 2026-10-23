@@ -5,12 +5,6 @@
   background: var(--color-surface);
 }
 
-.section-inner {
-  max-width: var(--content-max);
-  margin: 0 auto;
-  padding: 0 var(--space-8);
-}
-
 .two-col {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -56,15 +50,6 @@
 .donate-quote p {
   font-size: var(--text-sm);
   opacity: 0.85;
-}
-
-.eyebrow {
-  color: var(--color-accent);
-  font-size: var(--text-2xs);
-  font-weight: var(--weight-bold);
-  letter-spacing: var(--tracking-widest);
-  text-transform: uppercase;
-  margin-bottom: var(--space-4);
 }
 
 .title {
@@ -292,14 +277,7 @@
 }
 
 .qr-error {
-  margin-top: var(--space-3);
-  padding: var(--space-2-5) var(--space-3-5);
-  border-radius: var(--radius-md);
-  border: 1px solid var(--color-danger-border);
-  background: var(--color-danger-bg);
-  color: var(--color-danger);
   font-size: var(--text-sm);
-  line-height: var(--leading-normal);
 }
 
 .qr-retry {
@@ -383,10 +361,6 @@
 @include bp.down(tablet) {
   .donate {
     padding: var(--space-16) 0;
-  }
-
-  .section-inner {
-    padding: 0 var(--space-5);
   }
 
   .two-col {

@@ -80,7 +80,7 @@ test.describe('Given a visitor on the home page', () => {
     await expect(page).toHaveURL('/aktuality/zahrada-pro-deti');
     await expect(page).toHaveTitle('Zahrada pro děti | Nová naděje – nadační fond');
     await expect(page.getByRole('heading', { level: 1, name: 'Zahrada pro děti' })).toBeFocused();
-    await expect(page.locator('.eyebrow')).toHaveText('Projekt · 20. 10. 2026');
+    await expect(page.locator('.ui-eyebrow')).toHaveText('Projekt · 20. 10. 2026');
     await expect(page.locator('.prose p')).toHaveText(['První odstavec.', 'Druhý odstavec.']);
     await expect(page.locator('.photo img')).toBeVisible();
 
@@ -91,7 +91,7 @@ test.describe('Given a visitor on the home page', () => {
 
     await expect(page).toHaveURL('/projekty/dominik-7-let');
     await expect(page.getByRole('heading', { level: 1, name: 'Dominik, 7 let' })).toBeFocused();
-    await expect(page.locator('.eyebrow')).toHaveText('Kompenzační pomůcky · 2024');
+    await expect(page.locator('.ui-eyebrow')).toHaveText('Kompenzační pomůcky · 2024');
     await expect(page.locator('.photo')).toHaveCount(0);
     await expect(page.getByRole('link', { name: 'Zpět na projekty' })).toHaveAttribute(
       'href',

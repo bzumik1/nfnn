@@ -4,50 +4,6 @@
   display: block;
 }
 
-.section-inner {
-  max-width: var(--content-max);
-  margin: 0 auto;
-  padding: 0 var(--space-8);
-}
-
-.intro {
-  background:
-    radial-gradient(
-      ellipse at 85% 0%,
-      color-mix(in srgb, var(--color-accent) 28%, transparent) 0%,
-      transparent 60%
-    ),
-    var(--color-surface-inverse);
-  padding: calc(var(--header-height) + var(--space-22)) 0 var(--space-20);
-}
-
-.eyebrow {
-  color: color-mix(in srgb, var(--color-on-inverse) 65%, transparent);
-  font-size: var(--text-2xs);
-  font-weight: var(--weight-bold);
-  letter-spacing: var(--tracking-widest);
-  text-transform: uppercase;
-  margin-bottom: var(--space-4);
-}
-
-.title {
-  font-family: var(--font-serif);
-  font-size: var(--text-page-title);
-  font-weight: var(--weight-extrabold);
-  line-height: var(--leading-display);
-  color: var(--color-on-inverse);
-  max-width: 18ch;
-  text-wrap: balance;
-}
-
-.lead {
-  margin-top: var(--space-6);
-  max-width: 62ch;
-  color: color-mix(in srgb, var(--color-on-inverse) 70%, transparent);
-  font-size: var(--text-2xl);
-  line-height: var(--leading-loose);
-}
-
 .effective {
   margin-top: var(--space-5);
   color: color-mix(in srgb, var(--color-on-inverse) 65%, transparent);
@@ -166,15 +122,7 @@
 }
 
 @include bp.down(tablet) {
-  .section-inner {
-    padding: 0 var(--space-5);
-  }
-
-  .intro {
-    padding: calc(var(--header-height) + var(--space-12)) 0 var(--space-14);
-  }
-
-  .lead {
+  .ui-intro__lead {
     font-size: var(--text-xl);
   }
 
