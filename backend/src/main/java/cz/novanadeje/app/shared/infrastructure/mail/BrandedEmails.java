@@ -47,7 +47,7 @@ public class BrandedEmails {
             MimeMessage email = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(email, MimeMessageHelper.MULTIPART_MODE_MIXED_RELATED, "UTF-8");
             helper.setFrom(sender.senderEmail(), messages.getMessage("email.senderName", null, draft.locale()));
-            helper.setTo(draft.to());
+            helper.setTo(draft.to().toArray(String[]::new));
             helper.setSubject(draft.subject());
             helper.setText(draft.plainText(), html(draft));
             helper.addInline(LOGO_CONTENT_ID, LOGO);

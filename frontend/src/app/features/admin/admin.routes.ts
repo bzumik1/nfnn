@@ -37,6 +37,11 @@ export const adminRoutes: Routes = [
       import('./symbol-claims/admin-symbol-claims').then((m) => m.AdminSymbolClaims),
   },
   {
+    path: 'prehledy',
+    title: $localize`:@@admin.report.pageTitle:Měsíční přehled | Správa | Nová naděje – nadační fond`,
+    loadComponent: () => import('./report/admin-report').then((m) => m.AdminReport),
+  },
+  {
     path: 'historie',
     title: $localize`:@@admin.actions.pageTitle:Historie správy | Správa | Nová naděje – nadační fond`,
     loadComponent: () => import('./actions/admin-actions').then((m) => m.AdminActions),

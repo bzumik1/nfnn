@@ -4,6 +4,7 @@ import cz.novanadeje.app.donations.application.event.BankImportOutageDetected;
 import cz.novanadeje.app.donations.application.event.BankImportRecovered;
 import cz.novanadeje.app.donations.domain.importing.ImportOutage;
 import cz.novanadeje.app.donations.domain.importing.ImportRecovery;
+import cz.novanadeje.app.donations.domain.report.ReportSettingsRepository;
 import cz.novanadeje.app.shared.infrastructure.mail.BrandedEmails;
 import cz.novanadeje.app.shared.infrastructure.mail.EmailDraft;
 import org.slf4j.Logger;
@@ -34,13 +35,13 @@ class ImportAlertEmailSender {
     private final JavaMailSender mailSender;
     private final BrandedEmails emails;
     private final MessageSource messages;
-    private final MonthlyReportProperties properties;
+    private final ReportSettingsRepository settings;
 
-    ImportAlertEmailSender(JavaMailSender mailSender, BrandedEmails emails, MessageSource messages, MonthlyReportProperties properties) {
+    ImportAlertEmailSender(JavaMailSender mailSender, BrandedEmails emails, MessageSource messages, ReportSettingsRepository settings) {
         this.mailSender = mailSender;
         this.emails = emails;
         this.messages = messages;
-        this.properties = properties;
+        this.settings = settings;
     }
 
     @Async
@@ -58,7 +59,7 @@ class ImportAlertEmailSender {
         String next = text("outage.next");
         String footer = text("footer");
         String plainText = paragraphs(text("greeting"), intro, reason, action, lastSuccess, consequence, next, text("signature"), footer);
-        send("outage " + kind, new EmailDraft(CZECH, properties.recipient(), text("outage.subject"), text("outage.title"), OUTAGE_TEMPLATE,
+        send("outage " + kind, new EmailDraft(CZECH, settings.current().recipients().values(), text("outage.subject"), text("outage.title"), OUTAGE_TEMPLATE,
                 Map.of("intro", intro, "reason", reason, "action", action, "lastSuccess", lastSuccess, "consequence", consequence, "next", next),
                 plainText, footer));
     }
@@ -72,7 +73,7 @@ class ImportAlertEmailSender {
         String caughtUp = text("recovery.caughtUp");
         String footer = text("footer");
         String plainText = paragraphs(text("greeting"), intro, lastSuccess, caughtUp, text("signature"), footer);
-        send("recovery from " + recovery.outageKind(), new EmailDraft(CZECH, properties.recipient(), text("recovery.subject"),
+        send("recovery from " + recovery.outageKind(), new EmailDraft(CZECH, settings.current().recipients().values(), text("recovery.subject"),
                 text("recovery.title"), RECOVERY_TEMPLATE, Map.of("intro", intro, "lastSuccess", lastSuccess, "caughtUp", caughtUp),
                 plainText, footer));
     }

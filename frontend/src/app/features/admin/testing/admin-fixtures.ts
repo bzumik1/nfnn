@@ -1,6 +1,8 @@
 import {
   AdminActionResponse,
   AdminDonorDetailResponse,
+  AdminOverviewResponse,
+  AdminReportResponse,
   AdministratorResponse,
   AdminDonorResponse,
   AdminPaymentListResponse,
@@ -8,6 +10,7 @@ import {
   AdminReceiptResponse,
   DonorAccountResponse,
   ImportStateResponse,
+  MonthOverviewResponse,
   PairedDonationResponse,
   SymbolClaimResponse,
 } from '../admin-api';
@@ -231,6 +234,59 @@ export function donorDetail(
       adminReceipt({
         donationId: '0192f0f1-0000-7000-8000-000000000002',
         donationReceivedOn: '2026-10-10',
+      }),
+    ],
+    ...overrides,
+  };
+}
+
+export function reportView(overrides: Partial<AdminReportResponse> = {}): AdminReportResponse {
+  return {
+    settings: {
+      recipients: ['info@nfnn.cz'],
+      sendDay: 1,
+      sections: { donors: true, donations: true, unpairedPayments: true, bankImport: true },
+      changedAt: null,
+    },
+    sentReports: [],
+    nextReport: { month: '2026-09', dueOn: '2026-10-01' },
+    lastEndedMonth: '2026-09',
+    ...overrides,
+  };
+}
+
+export function monthOverview(
+  overrides: Partial<MonthOverviewResponse> = {},
+): MonthOverviewResponse {
+  return {
+    month: '2026-10',
+    donations: { count: 1, totalMinor: 99900, currency: 'CZK' },
+    newDonors: 1,
+    unpairedPayments: { count: 0, totalMinor: 0, currency: 'CZK' },
+    ...overrides,
+  };
+}
+
+export function overview(overrides: Partial<AdminOverviewResponse> = {}): AdminOverviewResponse {
+  return {
+    year: 2026,
+    availableYears: [2026, 2025],
+    donorsRegistered: 3,
+    newDonors: 3,
+    donations: { count: 4, totalMinor: 273350, currency: 'CZK' },
+    unpairedPayments: { count: 1, totalMinor: 15000, currency: 'CZK' },
+    months: [
+      monthOverview(),
+      monthOverview({
+        month: '2026-09',
+        donations: { count: 2, totalMinor: 153450, currency: 'CZK' },
+        newDonors: 1,
+        unpairedPayments: { count: 1, totalMinor: 15000, currency: 'CZK' },
+      }),
+      monthOverview({
+        month: '2026-08',
+        donations: { count: 1, totalMinor: 20000, currency: 'CZK' },
+        newDonors: 1,
       }),
     ],
     ...overrides,

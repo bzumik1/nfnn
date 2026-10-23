@@ -4,6 +4,7 @@ import cz.novanadeje.app.donations.application.report.MonthlyReportNotDelivered;
 import cz.novanadeje.app.donations.application.report.MonthlyReportService;
 import cz.novanadeje.app.donations.domain.FoundationCalendar;
 import cz.novanadeje.app.donations.domain.report.ReportMonth;
+import cz.novanadeje.app.donations.domain.report.ReportMonthNotEnded;
 import cz.novanadeje.app.support.MailContents;
 import cz.novanadeje.app.support.MutableClock;
 import cz.novanadeje.app.support.RecordingMailSender;
@@ -63,7 +64,7 @@ public class MonthlyReportStepDefinitions {
         lastFailure = null;
         try {
             reports.sendReportFor(new ReportMonth(YearMonth.parse(month)));
-        } catch (IllegalArgumentException refused) {
+        } catch (ReportMonthNotEnded refused) {
             lastFailure = refused;
         }
     }
@@ -75,14 +76,15 @@ public class MonthlyReportStepDefinitions {
 
     @Then("the report is refused because the month has not ended")
     public void theReportIsRefusedBecauseTheMonthHasNotEnded() {
-        assertThat(lastFailure).isInstanceOf(IllegalArgumentException.class).hasMessageContaining("has not ended");
+        assertThat(lastFailure).isInstanceOf(ReportMonthNotEnded.class).hasMessageContaining("has not ended");
     }
 
     @Then("{int} monthly report e-mail(s) is/are sent to {string}")
-    public void monthlyReportEmailsAreSentTo(int count, String recipient) {
+    public void monthlyReportEmailsAreSentTo(int count, String recipients) {
         List<MimeMessage> emails = monthlyReports();
+        List<String> expected = Arrays.stream(recipients.split(",")).map(String::trim).toList();
         assertThat(emails).hasSize(count);
-        assertThat(emails).allSatisfy(email -> assertThat(recipientsOf(email)).containsExactly(recipient));
+        assertThat(emails).allSatisfy(email -> assertThat(recipientsOf(email)).containsExactlyElementsOf(expected));
     }
 
     @Then("no monthly report e-mail is sent")

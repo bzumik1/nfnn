@@ -188,6 +188,72 @@ export interface AdminDonorDetailResponse {
   receipts: AdminReceiptResponse[];
 }
 
+export interface ReportSectionsResponse {
+  donors: boolean;
+  donations: boolean;
+  unpairedPayments: boolean;
+  bankImport: boolean;
+}
+
+export interface ReportSettingsResponse {
+  recipients: string[];
+  sendDay: number;
+  sections: ReportSectionsResponse;
+  changedAt: string | null;
+}
+
+export interface ReportSettingsRequest {
+  recipients: string[];
+  sendDay: number;
+  sections: ReportSectionsResponse;
+}
+
+export interface SentReportResponse {
+  month: string;
+  sentAt: string;
+}
+
+export interface NextReportResponse {
+  month: string;
+  dueOn: string;
+}
+
+export interface AdminReportResponse {
+  settings: ReportSettingsResponse;
+  sentReports: SentReportResponse[];
+  nextReport: NextReportResponse;
+  lastEndedMonth: string;
+}
+
+export interface SendReportResponse {
+  month: string;
+  recipients: string[];
+  sentAt: string;
+}
+
+export interface TallyResponse {
+  count: number;
+  totalMinor: number;
+  currency: string;
+}
+
+export interface MonthOverviewResponse {
+  month: string;
+  donations: TallyResponse;
+  newDonors: number;
+  unpairedPayments: TallyResponse;
+}
+
+export interface AdminOverviewResponse {
+  year: number;
+  availableYears: number[];
+  donorsRegistered: number;
+  newDonors: number;
+  donations: TallyResponse;
+  unpairedPayments: TallyResponse;
+  months: MonthOverviewResponse[];
+}
+
 @Injectable({ providedIn: 'root' })
 export class AdminApi {
   private readonly http = inject(HttpClient);
@@ -283,6 +349,26 @@ export class AdminApi {
 
   eraseDonor(donorId: string): Observable<void> {
     return this.http.delete<void>(`/api/admin/donors/${encodeURIComponent(donorId)}`);
+  }
+
+  report(): Observable<AdminReportResponse> {
+    return this.http.get<AdminReportResponse>('/api/admin/donations/report');
+  }
+
+  changeReportSettings(request: ReportSettingsRequest): Observable<ReportSettingsResponse> {
+    return this.http.put<ReportSettingsResponse>('/api/admin/donations/report/settings', request);
+  }
+
+  sendReport(month: string): Observable<SendReportResponse> {
+    return this.http.post<SendReportResponse>('/api/admin/donations/report/send', { month });
+  }
+
+  overview(year: number | null = null): Observable<AdminOverviewResponse> {
+    const params: Record<string, string> = {};
+    if (year !== null) {
+      params['year'] = String(year);
+    }
+    return this.http.get<AdminOverviewResponse>('/api/admin/donations/overview', { params });
   }
 
   donorDonations(donorId: string): Observable<AdminDonorDetailResponse> {

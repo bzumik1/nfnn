@@ -9,6 +9,9 @@ import cz.novanadeje.app.donations.application.event.BankImportRecovered;
 import cz.novanadeje.app.donations.domain.importing.ImportFailureKind;
 import cz.novanadeje.app.donations.domain.importing.ImportOutage;
 import cz.novanadeje.app.donations.domain.importing.ImportRecovery;
+import cz.novanadeje.app.donations.domain.report.ReportSettings;
+import cz.novanadeje.app.donations.domain.report.ReportSettingsRepository;
+import cz.novanadeje.app.shared.domain.EmailAddress;
 import cz.novanadeje.app.support.Emails;
 import cz.novanadeje.app.support.MailContents;
 import cz.novanadeje.app.support.MailPreviews;
@@ -45,14 +48,16 @@ class ImportAlertEmailSenderTest {
     private static final Instant RECOVERED_AT = Instant.parse("2026-10-22T14:00:00Z");
 
     private final JavaMailSender mailSender = mock(JavaMailSender.class);
+    private final ReportSettingsRepository settings = mock(ReportSettingsRepository.class);
     private final ImportAlertEmailSender sender = new ImportAlertEmailSender(mailSender,
             Emails.branded(mailSender, "info@nfnn.cz", "https://nfnn.cz"), Emails.messages(),
-            new MonthlyReportProperties("0 0 7 * * *", "prehled@nfnn.cz"));
+            settings);
     private ListAppender<ILoggingEvent> log;
 
     @BeforeEach
     void prepareMail() {
         when(mailSender.createMimeMessage()).thenAnswer(invocation -> new MimeMessage(Session.getInstance(new Properties())));
+        when(settings.current()).thenReturn(ReportSettings.defaults(new EmailAddress("prehled@nfnn.cz")));
         log = new ListAppender<>();
         log.start();
         logger().addAppender(log);

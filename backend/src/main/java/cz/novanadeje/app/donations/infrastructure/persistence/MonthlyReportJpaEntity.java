@@ -21,4 +21,12 @@ public class MonthlyReportJpaEntity {
 
     protected MonthlyReportJpaEntity() {
     }
+
+    LocalDate reportMonth() {
+        return reportMonth;
+    }
+
+    Instant sentAt() {
+        return sentAt;
+    }
 }
