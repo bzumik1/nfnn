@@ -169,12 +169,12 @@ function metadataOptions(server: AuthorizationServer): AuthMetadataOptions {
 }
 
 async function discovered(deps: AppDependencies): Promise<AuthorizationServer | undefined> {
-  if (deps.discovery.current()) {
-    return deps.discovery.current();
-  }
+  const before = deps.discovery.current()?.issuer;
   try {
     const server = await deps.discovery.discover();
-    deps.logger.info(`Authorization server discovered: ${server.issuer}`);
+    if (server.issuer !== before) {
+      deps.logger.info(`Authorization server discovered: ${server.issuer}`);
+    }
     return server;
   } catch (failure: unknown) {
     deps.logger.warn(

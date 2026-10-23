@@ -32,6 +32,7 @@ describe('Given an administrator connected with the reading permission only', ()
       'nfnn_admin_actions',
       'nfnn_administrators',
       'nfnn_backups',
+      'nfnn_change_settings',
       'nfnn_content',
       'nfnn_create_news',
       'nfnn_create_project',
@@ -57,6 +58,7 @@ describe('Given an administrator connected with the reading permission only', ()
       'nfnn_reset_log_level',
       'nfnn_send_report',
       'nfnn_set_log_level',
+      'nfnn_settings',
       'nfnn_status',
       'nfnn_symbol_claims',
       'nfnn_thread_dump',
@@ -201,6 +203,15 @@ describe('Given an administrator connected with the reading permission only', ()
     ).toContain('"body":"Text projektu."');
     expect(textOf(await client.callTool({ name: 'nfnn_backups', arguments: {} }))).toContain(
       'nfnn-2026-10-23_0300.dump',
+    );
+  });
+
+  it('when the settings are asked, then they come from the administration with secrets only as set or not', async () => {
+    const result = await client.callTool({ name: 'nfnn_settings', arguments: {} });
+    expect(result.isError).toBeFalsy();
+    expect(textOf(result)).toContain('"value":"https://nfnn.cz"');
+    expect(stack.backend.requests.map((request) => request.path)).toContain(
+      '/api/admin/operations/settings',
     );
   });
 
@@ -498,6 +509,35 @@ describe('Given an administrator connected with the writing permission', () => {
     expect(result.isError).toBe(true);
     expect(
       stack.backend.requests.filter((request) => request.path.includes('/report/send')),
+    ).toHaveLength(0);
+  });
+
+  it('when plain settings are changed, then the administration gets them and a refused value comes back with its reason', async () => {
+    const changed = await client.callTool({
+      name: 'nfnn_change_settings',
+      arguments: { changes: [{ name: 'RECEIPT_FIRST_YEAR', value: '2025' }] },
+    });
+    expect(textOf(changed)).toContain('"restarting":true');
+    const put = stack.backend.requests.find((request) => request.method === 'PUT');
+    expect(put?.path).toBe('/api/admin/operations/settings');
+    expect(put?.body).toBe('{"changes":[{"name":"RECEIPT_FIRST_YEAR","value":"2025"}]}');
+
+    const refused = await client.callTool({
+      name: 'nfnn_change_settings',
+      arguments: { changes: [{ name: 'RECEIPT_FIRST_YEAR', value: '26' }] },
+    });
+    expect(refused.isError).toBe(true);
+    expect(textOf(refused)).toContain('RECEIPT_FIRST_YEAR: Rok musí být mezi 2000 a 2100.');
+  });
+
+  it('when a secret setting is passed, then the tool refuses it before calling the administration', async () => {
+    const result = await client.callTool({
+      name: 'nfnn_change_settings',
+      arguments: { changes: [{ name: 'FIO_TOKEN', value: 'secret' }] },
+    });
+    expect(result.isError).toBe(true);
+    expect(
+      stack.backend.requests.filter((request) => request.path === '/api/admin/operations/settings'),
     ).toHaveLength(0);
   });
 

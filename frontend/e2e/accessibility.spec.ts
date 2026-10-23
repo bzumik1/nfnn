@@ -3,6 +3,7 @@ import { routeLogsApi } from './admin-logs-api';
 import { expect, Page, test } from '@playwright/test';
 import {
   administrator,
+  adminSettings,
   bankAccountItem,
   claudeConnection,
   connectionRequest,
@@ -870,6 +871,58 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
 
     await page.getByRole('button', { name: 'Zálohovat teď' }).click();
     await expect(page.getByRole('button', { name: 'Zálohujeme…' })).toBeDisabled();
+    expect(await violations(page)).toEqual([]);
+  });
+
+  test('when the site is set up for the first time, then the code step and the form with its errors break no rule', async ({
+    page,
+  }) => {
+    let unlocked = false;
+    await page.route(
+      (url) => url.pathname === '/api/operations/setup',
+      (route) => route.fulfill({ json: { required: true, codeRequired: true } }),
+    );
+    await page.route(
+      (url) => url.pathname === '/api/operations/setup/unlock',
+      (route) => {
+        unlocked = true;
+        return route.fulfill({ status: 204, body: '' });
+      },
+    );
+    await page.goto('/prvni-nastaveni');
+    await expect(
+      page.getByRole('heading', { level: 1, name: 'První nastavení webu' }),
+    ).toBeFocused();
+    expect(await violations(page)).toEqual([]);
+
+    await page.locator('#setup-code').fill('K7QM-2XPA-9TRD');
+    await page.getByRole('button', { name: 'Pokračovat' }).click();
+    await expect(page.locator('#setup-admin-email')).toBeVisible();
+    expect(unlocked).toBe(true);
+    await page.getByRole('button', { name: 'Uložit a spustit' }).click();
+    await expect(page.locator('#setup-admin-email')).toBeFocused();
+    expect(await violations(page)).toEqual([]);
+  });
+
+  test('when an administrator changes the settings, then the page and its confirmation break no rule', async ({
+    page,
+  }) => {
+    await page.route(
+      (url) => url.pathname === '/api/admin/operations/settings',
+      (route) => route.fulfill({ json: adminSettings }),
+    );
+    await page.route('**/api/donors/auth/refresh', (route) =>
+      route.fulfill(session(200, administrator)),
+    );
+    await page.goto('/');
+    await page.evaluate(() => localStorage.setItem('nfnn.donor-session', '1'));
+    await page.goto('/sprava/nastaveni');
+    await expect(page.getByRole('heading', { level: 1, name: 'Nastavení' })).toBeFocused();
+    expect(await violations(page)).toEqual([]);
+
+    await page.locator('#setting-RECEIPT_FIRST_YEAR').fill('2025');
+    await page.getByRole('button', { name: 'Uložit nastavení' }).click();
+    await expect(page.getByRole('button', { name: 'Ano, uložit a restartovat' })).toBeVisible();
     expect(await violations(page)).toEqual([]);
   });
 

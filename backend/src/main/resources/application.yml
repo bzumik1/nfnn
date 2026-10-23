@@ -128,6 +128,9 @@ app:
       max-test-restore-age: P8D
     logs:
       directory: /logs
+    settings:
+      from-database: false
+      key: ${SETTINGS_KEY:}
   security:
     jwt:
       issuer: nova-nadeje

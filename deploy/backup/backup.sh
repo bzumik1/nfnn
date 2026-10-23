@@ -2,6 +2,7 @@
 # Backs the nfnn database up, restores a dump left in the restore folder and rehearses a restore
 # once a week. Everything is reported in the container log, in $LOGS/backup.log and in key=value
 # files under $BACKUPS/status, which the backend reads for the administration page.
+# The database password is read from $SECRETS_DIR/db-password once nfnn-postgres marks it ready.
 
 set -u
 
@@ -13,6 +14,7 @@ TEST_RESTORE_TIME=${TEST_RESTORE_TIME:-04:00}
 KEEP_DAYS=${KEEP_DAYS:-30}
 TEST_DATABASE=${TEST_DATABASE:-nfnn_restore_test}
 LOGS=${LOGS_DIR:-/logs}
+SECRETS=${SECRETS_DIR:-/secrets}
 POLL_SECONDS=10
 
 STATUS="$BACKUPS/status"
@@ -43,6 +45,21 @@ write_status() {
 
 file_size() {
   stat -c %s "$1" 2>/dev/null || echo 0
+}
+
+read_database_password() {
+  [ -n "${PGPASSWORD:-}" ] && return 0
+  [ -d "$SECRETS" ] || return 0
+  p_waited=0
+  until [ -f "$SECRETS/db-password.ready" ] && [ -s "$SECRETS/db-password" ]; do
+    if [ $((p_waited % 60)) -eq 0 ]; then
+      log "waiting for the database password in $SECRETS (nfnn-postgres writes it; waited ${p_waited}s)"
+    fi
+    sleep 5
+    p_waited=$((p_waited + 5))
+  done
+  PGPASSWORD=$(cat "$SECRETS/db-password")
+  export PGPASSWORD
 }
 
 wait_for_database() {
@@ -166,6 +183,7 @@ chmod 1777 "$REQUESTS"
 rm -f "$REQUESTS"/*.backup "$REQUESTS"/*.test-restore
 log "nfnn backup started: backups in $BACKUPS, restore folder $RESTORE, daily backup at $BACKUP_TIME, test restore on day $TEST_RESTORE_DAY at $TEST_RESTORE_TIME"
 
+read_database_password
 wait_for_database
 restore_from_folder
 take_backup "" ""

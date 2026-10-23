@@ -6,6 +6,7 @@ export interface Problem {
   readonly type: string;
   readonly title: string;
   readonly detail: string;
+  readonly errors: readonly string[];
 }
 
 export class BackendProblem extends Error {
@@ -97,5 +98,14 @@ function problemOf(status: number, body: unknown): Problem {
         : `http-${status}`,
     title: typeof record['title'] === 'string' ? record['title'] : `HTTP ${status}`,
     detail: typeof record['detail'] === 'string' ? record['detail'] : '',
+    errors: Array.isArray(record['errors']) ? record['errors'].map(errorOf) : [],
   };
+}
+
+function errorOf(value: unknown): string {
+  const record =
+    typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : {};
+  const field = typeof record['field'] === 'string' ? record['field'] : '';
+  const message = typeof record['message'] === 'string' ? record['message'] : '';
+  return field === '' ? message : `${field}: ${message}`;
 }

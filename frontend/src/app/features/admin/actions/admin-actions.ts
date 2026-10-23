@@ -53,6 +53,7 @@ const ACTION_NAMES: Record<string, string> = {
   DOWNLOAD_BACKUP: $localize`:@@admin.actions.action.downloadBackup:Stažení zálohy databáze`,
   CHANGE_LOG_LEVEL: $localize`:@@admin.actions.action.changeLogLevel:Dočasná změna úrovně logování`,
   RESET_LOG_LEVEL: $localize`:@@admin.actions.action.resetLogLevel:Vrácení úrovně logování`,
+  CHANGE_SETTINGS: $localize`:@@admin.actions.action.changeSettings:Změna nastavení webu`,
 };
 
 @Component({

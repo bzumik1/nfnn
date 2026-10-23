@@ -1,0 +1,395 @@
+<section class="setup" aria-labelledby="setup-title">
+  <div class="card">
+    @switch (panel()) {
+      @case ('loading') {
+        <p class="lead" role="status" i18n="@@operations.setup.loading">
+          Zjišťujeme, jestli je web nastavený…
+        </p>
+      }
+      @case ('error') {
+        <div class="notice">
+          <div class="notice-icon notice-icon--warning" aria-hidden="true">!</div>
+          <h1
+            #heading
+            id="setup-title"
+            class="title"
+            tabindex="-1"
+            i18n="@@operations.setup.error.title"
+          >
+            Web zatím neodpovídá
+          </h1>
+          <p class="lead" role="alert" i18n="@@operations.setup.error.text">
+            Po instalaci se web chvíli spouští. Počkejte prosím minutu a zkuste to znovu.
+          </p>
+          <button
+            type="button"
+            class="form-submit"
+            (click)="load()"
+            i18n="@@operations.setup.error.retry"
+          >
+            Zkusit znovu
+          </button>
+        </div>
+      }
+      @case ('locked') {
+        <h1 #heading id="setup-title" class="title" tabindex="-1" i18n="@@operations.setup.title">
+          První nastavení webu
+        </h1>
+        <p class="lead" i18n="@@operations.setup.locked.lead">
+          Nejjednodušší je otevřít tuto stránku z domácí sítě kliknutím na ikonu aplikace v ZimaOS,
+          pak se na nic neptáme. Odjinud zadejte kód, který web vypsal do svého logu: v ZimaOS u
+          aplikace NFNN v nabídce Terminál a logy, kontejner nfnn-backend.
+        </p>
+        <form #codeForm="ngForm" appFocusFirstInvalid (ngSubmit)="unlock(codeForm)" novalidate>
+          <app-form-field
+            label="Kód z logu"
+            i18n-label="@@operations.setup.code"
+            hint="Dvanáct znaků ve tvaru K7QM-2XPA-9TRD. Při každém startu webu je jiný."
+            i18n-hint="@@operations.setup.code.hint"
+            [messages]="codeMessages"
+          >
+            <input
+              appFormControl
+              id="setup-code"
+              name="code"
+              autocomplete="off"
+              autocapitalize="characters"
+              spellcheck="false"
+              maxlength="40"
+              [(ngModel)]="code"
+              required
+            />
+          </app-form-field>
+          @if (codeError()) {
+            <p class="form-error" role="alert">{{ codeError() }}</p>
+          }
+          <button type="submit" class="form-submit" [disabled]="unlocking()">
+            @if (unlocking()) {
+              <span i18n="@@operations.setup.code.checking">Ověřujeme kód…</span>
+            } @else {
+              <span i18n="@@operations.setup.code.submit">Pokračovat</span>
+            }
+          </button>
+        </form>
+      }
+      @case ('form') {
+        <h1 #heading id="setup-title" class="title" tabindex="-1" i18n="@@operations.setup.title">
+          První nastavení webu
+        </h1>
+        <p class="lead" i18n="@@operations.setup.form.lead">
+          Vyplňte, co web potřebuje ke svému chodu. Všechno se uloží do databáze a později to
+          změníte ve správě webu. Tajné údaje se ukládají zašifrované.
+        </p>
+
+        <form
+          #setupForm="ngForm"
+          class="setup-form"
+          appFocusFirstInvalid
+          (ngSubmit)="save(setupForm)"
+          novalidate
+        >
+          <fieldset class="group">
+            <legend i18n="@@operations.setup.group.site">1. Web</legend>
+            <app-form-field
+              [label]="labels.PUBLIC_URL"
+              hint="Adresa, kterou uvidí návštěvníci, třeba https://nfnn.cz. Podle ní se tvoří odkazy v e-mailech."
+              i18n-hint="@@operations.setup.publicUrl.hint"
+              [messages]="urlMessages"
+            >
+              <input
+                appFormControl
+                id="setup-public-url"
+                name="publicUrl"
+                type="url"
+                autocomplete="url"
+                spellcheck="false"
+                maxlength="200"
+                pattern="\s*https?://[^\s/?#]+[^\s?#]*\s*"
+                [(ngModel)]="publicUrl"
+                required
+              />
+            </app-form-field>
+          </fieldset>
+
+          <fieldset class="group">
+            <legend i18n="@@operations.setup.group.mail">2. E-maily</legend>
+            <p class="group-intro" i18n="@@operations.setup.mail.intro">
+              Web posílá e-maily přes Brevo. Údaje najdete v Brevo v Nastavení → SMTP a API: server,
+              port, přihlašovací jméno a klíč SMTP.
+            </p>
+            <div class="row">
+              <app-form-field [label]="labels.MAIL_HOST" [messages]="hostMessages">
+                <input
+                  appFormControl
+                  id="setup-mail-host"
+                  name="mailHost"
+                  autocomplete="off"
+                  spellcheck="false"
+                  maxlength="253"
+                  [(ngModel)]="mail.host"
+                  required
+                />
+              </app-form-field>
+              <app-form-field class="port" [label]="labels.MAIL_PORT" [messages]="portMessages">
+                <input
+                  appFormControl
+                  id="setup-mail-port"
+                  name="mailPort"
+                  type="number"
+                  inputmode="numeric"
+                  [min]="1"
+                  [max]="65535"
+                  [(ngModel)]="mail.port"
+                  required
+                />
+              </app-form-field>
+            </div>
+            <app-form-field [label]="labels.MAIL_USERNAME">
+              <input
+                appFormControl
+                id="setup-mail-username"
+                name="mailUsername"
+                autocomplete="off"
+                spellcheck="false"
+                maxlength="254"
+                [(ngModel)]="mail.username"
+              />
+            </app-form-field>
+            <app-form-field [label]="labels.MAIL_PASSWORD">
+              <app-password-reveal>
+                <input
+                  appFormControl
+                  id="setup-mail-password"
+                  name="mailPassword"
+                  type="password"
+                  autocomplete="off"
+                  maxlength="500"
+                  [(ngModel)]="mail.password"
+                />
+              </app-password-reveal>
+            </app-form-field>
+            <label class="check">
+              <input type="checkbox" name="mailAuth" [(ngModel)]="mail.auth" />
+              <span>{{ labels.MAIL_AUTH }}</span>
+            </label>
+            <label class="check">
+              <input type="checkbox" name="mailStartTls" [(ngModel)]="mail.startTls" />
+              <span>{{ labels.MAIL_STARTTLS }}</span>
+            </label>
+            <div class="test-row">
+              <button
+                type="button"
+                class="secondary"
+                [disabled]="testingMail()"
+                (click)="testMail()"
+              >
+                @if (testingMail()) {
+                  <span i18n="@@operations.setup.mailTest.busy">Zkoušíme se přihlásit…</span>
+                } @else {
+                  <span i18n="@@operations.setup.mailTest">Ověřit spojení</span>
+                }
+              </button>
+              @if (mailNotice(); as notice) {
+                @if (notice.kind === 'status') {
+                  <p class="test-result test-result--ok" role="status">{{ notice.text }}</p>
+                } @else {
+                  <p class="test-result test-result--failed" role="alert">{{ notice.text }}</p>
+                }
+              }
+            </div>
+            <app-form-field
+              [label]="labels.MAIL_FROM"
+              hint="Adresa, ze které e-maily odcházejí. Doména musí být v Brevo ověřená."
+              i18n-hint="@@operations.setup.mailFrom.hint"
+              [messages]="emailMessages"
+            >
+              <input
+                appFormControl
+                id="setup-mail-from"
+                name="mailFrom"
+                type="email"
+                autocomplete="off"
+                maxlength="254"
+                [(ngModel)]="mail.from"
+                required
+                email
+              />
+            </app-form-field>
+            <app-form-field [label]="labels.CONTACT_RECIPIENT" [messages]="emailMessages">
+              <input
+                appFormControl
+                id="setup-contact-recipient"
+                name="contactRecipient"
+                type="email"
+                autocomplete="off"
+                maxlength="254"
+                [(ngModel)]="mail.contactRecipient"
+                required
+                email
+              />
+            </app-form-field>
+          </fieldset>
+
+          <fieldset class="group">
+            <legend i18n="@@operations.setup.group.bank">3. Banka</legend>
+            <app-form-field
+              [label]="labels.FIO_TOKEN"
+              hint="Nepovinné. Ve Fio internetovém bankovnictví: Nastavení → API → přidat token s právem jen pro čtení. Bez něj se platby nestahují."
+              i18n-hint="@@operations.setup.fioToken.hint"
+            >
+              <app-password-reveal>
+                <input
+                  appFormControl
+                  id="setup-fio-token"
+                  name="fioToken"
+                  type="password"
+                  autocomplete="off"
+                  maxlength="500"
+                  [(ngModel)]="fioToken"
+                />
+              </app-password-reveal>
+            </app-form-field>
+          </fieldset>
+
+          <fieldset class="group">
+            <legend i18n="@@operations.setup.group.administrator">4. Správce</legend>
+            <app-form-field
+              [label]="labels.ADMIN_EMAILS"
+              hint="Kdo se s touto adresou zaregistruje a potvrdí ji, stane se správcem. Pak si zapne dvoufaktorové ověření a další správce přidá ve správě."
+              i18n-hint="@@operations.setup.adminEmail.hint"
+              [messages]="emailMessages"
+            >
+              <input
+                appFormControl
+                id="setup-admin-email"
+                name="adminEmail"
+                type="email"
+                autocomplete="email"
+                maxlength="254"
+                [(ngModel)]="adminEmail"
+                required
+                email
+              />
+            </app-form-field>
+          </fieldset>
+
+          @if (saveError()) {
+            <div class="form-error" role="alert">
+              <p>{{ saveError() }}</p>
+              @if (fieldErrors().length > 0) {
+                <ul>
+                  @for (line of fieldErrors(); track line) {
+                    <li>{{ line }}</li>
+                  }
+                </ul>
+              }
+            </div>
+          }
+
+          <p class="restart-note" i18n="@@operations.setup.save.note">
+            Po uložení se web asi na minutu restartuje.
+          </p>
+          <button type="submit" class="form-submit" [disabled]="saving()">
+            @if (saving()) {
+              <span i18n="@@operations.setup.save.busy">Ukládáme…</span>
+            } @else {
+              <span i18n="@@operations.setup.save">Uložit a spustit</span>
+            }
+          </button>
+        </form>
+      }
+      @case ('restarting') {
+        <div class="notice">
+          <div class="notice-icon notice-icon--spinner" aria-hidden="true"></div>
+          <h1
+            #heading
+            id="setup-title"
+            class="title"
+            tabindex="-1"
+            i18n="@@operations.setup.restarting.title"
+          >
+            Web se restartuje
+          </h1>
+          <p class="lead" role="status" i18n="@@operations.setup.restarting.text">
+            Nastavení je uložené. Web se teď spouští znovu, obvykle to trvá do minuty.
+          </p>
+        </div>
+      }
+      @case ('done') {
+        <div class="notice">
+          <div class="notice-icon" aria-hidden="true">✓</div>
+          <h1
+            #heading
+            id="setup-title"
+            class="title"
+            tabindex="-1"
+            i18n="@@operations.setup.done.title"
+          >
+            Web je nastavený
+          </h1>
+          <p class="lead" role="status" i18n="@@operations.setup.done.text">
+            Teď se zaregistrujte s e-mailem správce a potvrďte ho odkazem z e-mailu. Pak ve svém
+            účtu zapněte dvoufaktorové ověření a správa webu se vám otevře.
+          </p>
+          <button
+            type="button"
+            class="form-submit"
+            (click)="signUp()"
+            i18n="@@operations.setup.done.signUp"
+          >
+            Zaregistrovat se
+          </button>
+        </div>
+      }
+      @case ('slow') {
+        <div class="notice">
+          <div class="notice-icon notice-icon--warning" aria-hidden="true">!</div>
+          <h1
+            #heading
+            id="setup-title"
+            class="title"
+            tabindex="-1"
+            i18n="@@operations.setup.slow.title"
+          >
+            Web se zatím nespustil
+          </h1>
+          <p class="lead" role="alert" i18n="@@operations.setup.slow.text">
+            Nastavení je uložené, ale web po restartu ještě neodpovídá. Zkuste to prosím za chvíli
+            znovu. Když se nespustí ani pak, podívejte se do logu kontejneru nfnn-backend v ZimaOS.
+          </p>
+          <button
+            type="button"
+            class="form-submit"
+            (click)="checkAgain()"
+            i18n="@@operations.setup.slow.retry"
+          >
+            Zkusit znovu
+          </button>
+        </div>
+      }
+      @case ('closed') {
+        <div class="notice">
+          <div class="notice-icon" aria-hidden="true">✓</div>
+          <h1
+            #heading
+            id="setup-title"
+            class="title"
+            tabindex="-1"
+            i18n="@@operations.setup.closed.title"
+          >
+            Web už je nastavený
+          </h1>
+          <p class="lead" i18n="@@operations.setup.closed.text">
+            Nastavení teď mění správce ve správě webu.
+          </p>
+          <a
+            class="form-submit"
+            routerLink="/sprava/nastaveni"
+            i18n="@@operations.setup.closed.link"
+            >Otevřít nastavení ve správě</a
+          >
+        </div>
+      }
+    }
+  </div>
+</section>

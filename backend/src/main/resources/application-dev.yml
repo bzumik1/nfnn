@@ -8,6 +8,9 @@ spring:
 app:
   site:
     public-url: ${PUBLIC_URL:http://localhost:4200}
+  operations:
+    settings:
+      key: ${SETTINGS_KEY:ZGV2LW9ubHktc2V0dGluZ3Mta2V5LTMyLWJ5dGVzLSE=}
   security:
     jwt:
       secret: ${JWT_SECRET:change-me-in-production-this-is-only-for-local-development-32chars-min}

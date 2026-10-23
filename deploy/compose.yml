@@ -8,18 +8,17 @@ x-logging: &logging
 
 services:
   postgres:
-    image: postgres:17-alpine
+    image: ghcr.io/bzumik1/nfnn-postgres:latest
     container_name: nfnn-postgres
     restart: unless-stopped
     network_mode: bridge
-    env_file:
-      - /DATA/AppData/nfnn/env/db.env
     environment:
       POSTGRES_DB: novanadeje
       POSTGRES_USER: novanadeje
       TZ: Europe/Prague
     volumes:
       - /DATA/AppData/nfnn/postgres:/var/lib/postgresql/data
+      - /DATA/AppData/nfnn/secrets:/secrets
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U novanadeje -d novanadeje"]
       interval: 10s
@@ -41,8 +40,6 @@ services:
         condition: service_started
     links:
       - postgres
-    env_file:
-      - /DATA/AppData/nfnn/env/db.env
     environment:
       PGHOST: postgres
       PGDATABASE: novanadeje
@@ -52,6 +49,7 @@ services:
       - /DATA/AppData/nfnn/backups:/backups
       - /DATA/AppData/nfnn/restore:/restore
       - /DATA/AppData/nfnn/logs:/logs
+      - /DATA/AppData/nfnn/secrets:/secrets:ro
     deploy:
       resources:
         limits:
@@ -70,9 +68,6 @@ services:
         condition: service_started
     links:
       - postgres
-    env_file:
-      - /DATA/AppData/nfnn/env/db.env
-      - /DATA/AppData/nfnn/env/backend.env
     environment:
       SPRING_PROFILES_ACTIVE: prod
       DB_URL: jdbc:postgresql://postgres:5432/novanadeje
@@ -85,6 +80,7 @@ services:
       - /DATA/AppData/nfnn/backups/requests:/backups/requests
       - /DATA/AppData/nfnn/restore:/restore:ro
       - /DATA/AppData/nfnn/logs:/logs
+      - /DATA/AppData/nfnn/secrets:/secrets
     healthcheck:
       test:
         - CMD
@@ -171,5 +167,5 @@ x-casaos:
     cs_cz: Web Nadačního fondu Nová naděje
     en_us: Website of the Nová naděje foundation
   description:
-    cs_cz: Web, dárcovský portál a potvrzení o daru. Data v /DATA/AppData/nfnn, hesla a nastavení v /DATA/AppData/nfnn/env, zálohy v backups, obnova ze složky restore, logy v logs, MCP konektor pro správu na /mcp.
-    en_us: Website, donor portal and donation receipts. Data in /DATA/AppData/nfnn, secrets and settings in /DATA/AppData/nfnn/env, backups in backups, a restore from the restore folder, logs in logs, the MCP connector of the administration at /mcp.
+    cs_cz: Web, dárcovský portál a potvrzení o daru. Po instalaci otevřete web a vyplňte první nastavení; později ho změníte ve správě webu. Data v /DATA/AppData/nfnn, vygenerovaná hesla a klíče v secrets, zálohy v backups, obnova ze složky restore, logy v logs, MCP konektor pro správu na /mcp.
+    en_us: Website, donor portal and donation receipts. After the install, open the site and fill in the first setup; the administration changes it later. Data in /DATA/AppData/nfnn, generated passwords and keys in secrets, backups in backups, a restore from the restore folder, logs in logs, the MCP connector of the administration at /mcp.

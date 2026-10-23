@@ -31,7 +31,7 @@ Read before building, update in the same PR: `docs/requirements.md` (client deci
 | `npm test -- --watch=false` | Vitest |
 | `npm run build` | production build to `dist/frontend/browser/` |
 | `npm run e2e` | Playwright; when it reports a missing browser build (cloud sessions ship an older Chromium), run `npx playwright install chromium` once |
-| **Stack** | `cp .env.example .env && docker compose up -d --build`, frontend on :8080; `JWT_SECRET` has no default |
+| **Stack** | `cp .env.example .env && docker compose up -d --build`, frontend on :8080; the `prod` profile asks for the server's settings at `/prvni-nastaveni` and generates its keys into the `backend-secrets` volume |
 
 ## Production logs
 

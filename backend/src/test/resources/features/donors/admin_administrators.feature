@@ -110,11 +110,19 @@ Feature: An administrator manages who administers the site
     Then the response status is 401
     And the problem type ends with "auth/unauthenticated"
 
-  Scenario: The configured e-mails become administrators when the application starts, once
-    Given the configuration names "Petr" and "nikdo@example.cz" as administrators
+  Scenario: The configured e-mail becomes the first administrator when the application starts, once
+    Given nobody administers the site
+    And the configuration names "Petr" and "nikdo@example.cz" as administrators
     When the application starts
     And the application starts
     Then "Petr" is an administrator in the database
     And no admin action is recorded for "Petr"
-    When "Jana" lists the administrators
-    Then the administrators are Jana, Petr
+
+  Scenario: Once the site has an administrator, a restart grants the configured e-mail nothing
+    Given the configuration names "Petr" and "nikdo@example.cz" as administrators
+    When the application starts
+    Then "Petr" is not an administrator in the database
+    When "Jana" makes "Petr" an administrator
+    And "Jana" removes "Petr" from the administrators
+    And the application starts
+    Then "Petr" is not an administrator in the database

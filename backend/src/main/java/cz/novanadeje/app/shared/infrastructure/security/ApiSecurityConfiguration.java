@@ -33,6 +33,8 @@ class ApiSecurityConfiguration {
                         .requestMatchers(HttpMethod.GET, "/api/donations/payment-qr").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/content/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/donors/auth/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/operations/setup").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/operations/setup", "/api/operations/setup/unlock", "/api/operations/setup/mail-test").permitAll()
                         .requestMatchers(HttpMethod.GET, "/.well-known/oauth-authorization-server").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/donors/oauth/token").permitAll()
                         .requestMatchers("/actuator/health", "/actuator/health/**", "/actuator/info").permitAll()

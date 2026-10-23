@@ -266,6 +266,33 @@ function adminRoute(request: RecordedRequest, url: URL, body: string): [number, 
       return [409, problem(409, 'donations/bank-account-link-active', 'Párování už je zapnuté')];
     case 'GET /api/admin/donations/report':
       return [200, { settings: { recipients: ['info@nfnn.cz'], sendDay: 1 }, sentReports: [] }];
+    case 'GET /api/admin/operations/settings':
+      return [
+        200,
+        {
+          settings: [
+            { name: 'PUBLIC_URL', group: 'SITE', secret: false, value: 'https://nfnn.cz' },
+            { name: 'FIO_TOKEN', group: 'BANK', secret: true, value: null, configured: true },
+          ],
+          secretsCanBeStored: true,
+        },
+      ];
+    case 'PUT /api/admin/operations/settings':
+      return body.includes('"26"')
+        ? [
+            400,
+            {
+              ...problem(400, 'operations/invalid-settings', 'Nastavení nejde uložit'),
+              errors: [
+                {
+                  field: 'RECEIPT_FIRST_YEAR',
+                  code: 'invalid-year',
+                  message: 'Rok musí být mezi 2000 a 2100.',
+                },
+              ],
+            },
+          ]
+        : [202, { changed: ['RECEIPT_FIRST_YEAR'], restarting: true }];
     case 'GET /api/admin/content/news':
       return [
         200,

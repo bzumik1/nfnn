@@ -277,6 +277,12 @@ public class ConnectedAppsStepDefinitions {
         api.get(BACKUPS_PATH + "/" + fileName);
     }
 
+    @When("the exchanged API token changes the setting {string} to {string}")
+    public void theExchangedApiTokenChangesTheSetting(String name, String value) {
+        actAsExchangedApiToken();
+        api.put("/api/admin/operations/settings", Map.of("changes", List.of(Map.of("name", name, "value", value))));
+    }
+
     @When("the exchanged API token sets the logger {string} to {string} for {int} minutes")
     public void theExchangedApiTokenSetsTheLogger(String logger, String level, int minutes) {
         actAsExchangedApiToken();
