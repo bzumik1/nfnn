@@ -10,7 +10,7 @@ RUN npm run build && npm prune --omit=dev
 
 FROM node:24-alpine
 ARG REVISION=dev
-ENV NODE_ENV=production APP_REVISION=$REVISION PORT=8081 BACKEND_URL=http://backend:8080 LOGS_DIR=/logs
+ENV NODE_ENV=production APP_REVISION=$REVISION PORT=8081 BACKEND_URL=http://backend:8080
 WORKDIR /app
 COPY --from=build /workspace/node_modules ./node_modules
 COPY --from=build /workspace/dist ./dist

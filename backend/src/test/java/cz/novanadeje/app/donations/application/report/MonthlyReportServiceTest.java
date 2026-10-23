@@ -73,7 +73,7 @@ class MonthlyReportServiceTest {
         when(donors.countRegisteredBefore(SEPTEMBER.end())).thenReturn(5L);
         when(donations.findReceivedOnBetween(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 9, 30)))
                 .thenReturn(List.of(received(LocalDate.of(2026, 3, 1), 20000), received(LocalDate.of(2026, 9, 15), 123450)));
-        when(payments.findUnpairedBookedBetween(LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 30)))
+        when(payments.findUnpairedBookedBetween(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 9, 30)))
                 .thenReturn(List.of(payment(1001, LocalDate.of(2026, 9, 2), Money.czk(15000), Optional.empty(), "1111111111")));
         when(importStates.current()).thenReturn(BankImportState.initial(FIRST_OF_OCTOBER_AT_SEVEN));
     }
@@ -88,9 +88,9 @@ class MonthlyReportServiceTest {
         MonthlyReport report = sentReport();
         assertThat(report.month()).isEqualTo(SEPTEMBER);
         assertThat(report.donors()).isEqualTo(DonorCounts.between(3, 5));
-        assertThat(report.donationsInMonth()).isEqualTo(new Tally(1, Money.czk(123450)));
-        assertThat(report.donationsInYear()).isEqualTo(new Tally(2, Money.czk(143450)));
-        assertThat(report.unpairedPaymentsInMonth()).isEqualTo(new Tally(1, Money.czk(15000)));
+        assertThat(report.pairedInMonth()).isEqualTo(new Tally(1, Money.czk(123450)));
+        assertThat(report.unpairedInMonth()).isEqualTo(new Tally(1, Money.czk(15000)));
+        assertThat(report.receivedInYear()).isEqualTo(new Tally(3, Money.czk(158450)));
     }
 
     @Test

@@ -132,7 +132,7 @@ function adminRoute(request: RecordedRequest, url: URL, body: string): [number, 
         200,
         {
           year: Number(url.searchParams.get('year') ?? 2026),
-          donations: { count: 1, totalMinor: 99900, currency: 'CZK' },
+          received: { count: 1, totalMinor: 99900, currency: 'CZK' },
         },
       ];
     case 'GET /api/admin/donations/payments':
@@ -179,6 +179,128 @@ function adminRoute(request: RecordedRequest, url: URL, body: string): [number, 
       return [200, { items: [{ id: UNKNOWN_ID, title: 'Koncept' }] }];
     case 'GET /api/admin/content/projects':
       return [200, { items: [] }];
+    case 'GET /api/admin/operations/logs':
+      return [
+        200,
+        {
+          available: true,
+          files: [
+            {
+              name: 'backend.log',
+              sizeBytes: 119,
+              changedAt: '2026-10-23T06:00:00Z',
+              compressed: false,
+            },
+            {
+              name: 'backend.log.2026-10-22.0.gz',
+              sizeBytes: 90,
+              changedAt: '2026-10-22T22:00:00Z',
+              compressed: true,
+            },
+          ],
+        },
+      ];
+    case 'GET /api/admin/operations/logs/backend.log':
+      return [
+        200,
+        {
+          name: 'backend.log',
+          sizeBytes: 119,
+          from: Number(url.searchParams.get('from') ?? 83),
+          to: 119,
+          hasOlder: true,
+          hasNewer: false,
+          text: '2026-10-23T10:00:02 INFO third line\n',
+        },
+      ];
+    case 'GET /api/admin/operations/logs/missing.log':
+      return [
+        404,
+        problem(
+          404,
+          'operations/log-not-found',
+          'Log nenalezen',
+          'Takový soubor ve složce logů není.',
+        ),
+      ];
+    case 'GET /api/admin/operations/logs/backend.log/search':
+      return [
+        200,
+        {
+          name: 'backend.log',
+          sizeBytes: 119,
+          matches: [{ offset: 36, line: '2026-10-23T10:00:01 WARN second line about Fio' }],
+          moreOlder: false,
+          scannedFrom: 0,
+        },
+      ];
+    case 'GET /api/admin/operations/loggers':
+      return [
+        200,
+        {
+          loggers: [
+            { logger: 'ROOT', configuredLevel: 'INFO', effectiveLevel: 'INFO', override: null },
+            {
+              logger: 'cz.novanadeje.app',
+              configuredLevel: 'INFO',
+              effectiveLevel: 'DEBUG',
+              override: {
+                logger: 'cz.novanadeje.app',
+                level: 'DEBUG',
+                configuredBefore: 'INFO',
+                since: '2026-10-23T06:00:00Z',
+                until: '2026-10-23T06:30:00Z',
+                adminId: DONOR_ID,
+              },
+            },
+          ],
+        },
+      ];
+    case 'GET /api/admin/operations/diagnostics':
+      return [
+        200,
+        {
+          now: '2026-10-23T06:05:00Z',
+          jvm: {
+            javaVersion: '25.0.4',
+            startedAt: '2026-10-23T05:00:00Z',
+            heapUsedBytes: 123,
+            heapMaxBytes: 456,
+            liveThreads: 40,
+          },
+          database: {
+            reachable: true,
+            pingMillis: 2,
+            activeConnections: 0,
+            idleConnections: 10,
+            waitingThreads: 0,
+            maxConnections: 10,
+          },
+          disks: [{ path: '/logs', mounted: true, freeBytes: 1000, totalBytes: 2000 }],
+          logLevelOverrides: [],
+        },
+      ];
+    case 'GET /api/admin/operations/diagnostics/threads':
+      return [200, '"main" #1 state=RUNNABLE\n    at java.lang.Thread.run\n'];
+    case 'PUT /api/admin/operations/loggers/cz.novanadeje.app':
+      return [
+        200,
+        {
+          logger: 'cz.novanadeje.app',
+          level: (JSON.parse(body) as { level: string }).level,
+          configuredBefore: 'INFO',
+          since: '2026-10-23T06:00:00Z',
+          until: '2026-10-23T06:30:00Z',
+          adminId: DONOR_ID,
+        },
+      ];
+    case 'DELETE /api/admin/operations/loggers/cz.novanadeje.app':
+      return [204, undefined];
+    case 'DELETE /api/admin/operations/loggers/org.hibernate.SQL':
+      return [
+        404,
+        problem(404, 'operations/log-override-not-found', 'Logger nemá dočasnou úroveň'),
+      ];
     case `POST /api/admin/donations/payments/${PAYMENT_ID}/pair`:
       return [
         200,

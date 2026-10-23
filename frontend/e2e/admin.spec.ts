@@ -30,26 +30,30 @@ const overview = {
   availableYears: [2026, 2025],
   donorsRegistered: 3,
   newDonors: 3,
-  donations: { count: 4, totalMinor: 273350, currency: 'CZK' },
-  unpairedPayments: { count: 1, totalMinor: 15000, currency: 'CZK' },
+  received: { count: 5, totalMinor: 288350, currency: 'CZK' },
+  paired: { count: 4, totalMinor: 273350, currency: 'CZK' },
+  unpaired: { count: 1, totalMinor: 15000, currency: 'CZK' },
   months: [
     {
       month: '2026-10',
-      donations: { count: 1, totalMinor: 99900, currency: 'CZK' },
+      received: { count: 1, totalMinor: 99900, currency: 'CZK' },
       newDonors: 1,
-      unpairedPayments: { count: 0, totalMinor: 0, currency: 'CZK' },
+      paired: { count: 1, totalMinor: 99900, currency: 'CZK' },
+      unpaired: { count: 0, totalMinor: 0, currency: 'CZK' },
     },
     {
       month: '2026-09',
-      donations: { count: 2, totalMinor: 153450, currency: 'CZK' },
+      received: { count: 3, totalMinor: 168450, currency: 'CZK' },
       newDonors: 1,
-      unpairedPayments: { count: 1, totalMinor: 15000, currency: 'CZK' },
+      paired: { count: 2, totalMinor: 153450, currency: 'CZK' },
+      unpaired: { count: 1, totalMinor: 15000, currency: 'CZK' },
     },
     {
       month: '2026-08',
-      donations: { count: 1, totalMinor: 20000, currency: 'CZK' },
+      received: { count: 1, totalMinor: 20000, currency: 'CZK' },
       newDonors: 1,
-      unpairedPayments: { count: 0, totalMinor: 0, currency: 'CZK' },
+      paired: { count: 1, totalMinor: 20000, currency: 'CZK' },
+      unpaired: { count: 0, totalMinor: 0, currency: 'CZK' },
     },
   ],
 };
@@ -66,14 +70,16 @@ async function mockOverview(page: Page): Promise<void> {
                 ...overview,
                 year: 2025,
                 newDonors: 0,
-                donations: { count: 1, totalMinor: 50000, currency: 'CZK' },
-                unpairedPayments: { count: 0, totalMinor: 0, currency: 'CZK' },
+                received: { count: 1, totalMinor: 50000, currency: 'CZK' },
+                paired: { count: 1, totalMinor: 50000, currency: 'CZK' },
+                unpaired: { count: 0, totalMinor: 0, currency: 'CZK' },
                 months: [
                   {
                     month: '2025-12',
-                    donations: { count: 1, totalMinor: 50000, currency: 'CZK' },
+                    received: { count: 1, totalMinor: 50000, currency: 'CZK' },
                     newDonors: 0,
-                    unpairedPayments: { count: 0, totalMinor: 0, currency: 'CZK' },
+                    paired: { count: 1, totalMinor: 50000, currency: 'CZK' },
+                    unpaired: { count: 0, totalMinor: 0, currency: 'CZK' },
                   },
                 ],
               }
@@ -173,12 +179,12 @@ test.describe('Given an administrator', () => {
       page.getByText('Registrovaní dárci: 3, z toho nových v roce 2026: 3.'),
     ).toBeVisible();
     await expect(page.locator('.overview-table tbody tr')).toHaveText([
-      'říjen 2026 1 999 Kč 1 žádné',
-      'září 2026 2 1 534,50 Kč 1 1 (150 Kč)',
-      'srpen 2026 1 200 Kč 1 žádné',
+      'říjen 2026 1 1 999 Kč 999 Kč 0 Kč',
+      'září 2026 3 1 1 684,50 Kč 1 534,50 Kč 150 Kč',
+      'srpen 2026 1 1 200 Kč 200 Kč 0 Kč',
     ]);
     await expect(page.locator('.overview-table tfoot tr')).toHaveText(
-      'Celkem 2026 4 2 733,50 Kč 3 1 (150 Kč)',
+      'Celkem 2026 5 3 2 883,50 Kč 2 733,50 Kč 150 Kč',
     );
 
     await page.getByLabel('Rok').selectOption('2025');
@@ -187,7 +193,7 @@ test.describe('Given an administrator', () => {
       page.getByText('Registrovaní dárci: 3, z toho nových v roce 2025: 0.'),
     ).toBeVisible();
     await expect(page.locator('.overview-table tbody tr')).toHaveText([
-      'prosinec 2025 1 500 Kč 0 žádné',
+      'prosinec 2025 1 0 500 Kč 500 Kč 0 Kč',
     ]);
 
     await page.getByRole('link', { name: 'Můj přehled', exact: true }).click();

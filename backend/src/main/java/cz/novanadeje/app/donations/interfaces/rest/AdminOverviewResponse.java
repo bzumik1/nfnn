@@ -3,12 +3,13 @@ package cz.novanadeje.app.donations.interfaces.rest;
 import cz.novanadeje.app.donations.application.report.OverviewView;
 import cz.novanadeje.app.donations.domain.report.MonthOverview;
 import cz.novanadeje.app.donations.domain.report.Tally;
+import cz.novanadeje.app.donations.domain.report.YearOverview;
 
 import java.time.Year;
 import java.util.List;
 
-public record AdminOverviewResponse(int year, List<Integer> availableYears, long donorsRegistered, long newDonors, TallyResponse donations,
-                                    TallyResponse unpairedPayments, List<Month> months) {
+public record AdminOverviewResponse(int year, List<Integer> availableYears, long donorsRegistered, long newDonors, TallyResponse received,
+                                    TallyResponse paired, TallyResponse unpaired, List<Month> months) {
 
     public record TallyResponse(int count, long totalMinor, String currency) {
 
@@ -17,17 +18,18 @@ public record AdminOverviewResponse(int year, List<Integer> availableYears, long
         }
     }
 
-    public record Month(String month, TallyResponse donations, long newDonors, TallyResponse unpairedPayments) {
+    public record Month(String month, TallyResponse received, long newDonors, TallyResponse paired, TallyResponse unpaired) {
 
         static Month from(MonthOverview overview) {
-            return new Month(overview.month().toString(), TallyResponse.from(overview.donations()), overview.newDonors(),
-                    TallyResponse.from(overview.unpairedPayments()));
+            return new Month(overview.month().toString(), TallyResponse.from(overview.received()), overview.newDonors(),
+                    TallyResponse.from(overview.paired()), TallyResponse.from(overview.unpaired()));
         }
     }
 
     static AdminOverviewResponse from(OverviewView view) {
-        return new AdminOverviewResponse(view.year().year().getValue(), view.availableYears().stream().map(Year::getValue).toList(),
-                view.year().donorsRegistered(), view.year().newDonors(), TallyResponse.from(view.year().donations()),
-                TallyResponse.from(view.year().unpairedPayments()), view.year().months().stream().map(Month::from).toList());
+        YearOverview year = view.year();
+        return new AdminOverviewResponse(year.year().getValue(), view.availableYears().stream().map(Year::getValue).toList(),
+                year.donorsRegistered(), year.newDonors(), TallyResponse.from(year.received()), TallyResponse.from(year.paired()),
+                TallyResponse.from(year.unpaired()), year.months().stream().map(Month::from).toList());
     }
 }

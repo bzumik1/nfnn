@@ -24,10 +24,13 @@ describe('Given an administrator connected with the reading permission only', ()
       'nfnn_admin_actions',
       'nfnn_backups',
       'nfnn_content',
+      'nfnn_diagnostics',
       'nfnn_donor',
       'nfnn_find_donors',
       'nfnn_log',
       'nfnn_log_files',
+      'nfnn_log_levels',
+      'nfnn_log_search',
       'nfnn_overview',
       'nfnn_pair_payment',
       'nfnn_payments',
@@ -35,8 +38,11 @@ describe('Given an administrator connected with the reading permission only', ()
       'nfnn_publish_project',
       'nfnn_report',
       'nfnn_request_backup',
+      'nfnn_reset_log_level',
       'nfnn_send_report',
+      'nfnn_set_log_level',
       'nfnn_status',
+      'nfnn_thread_dump',
       'nfnn_unpair_payment',
       'nfnn_unpublish_news',
       'nfnn_unpublish_project',
@@ -111,10 +117,48 @@ describe('Given an administrator connected with the reading permission only', ()
     );
   });
 
-  it('when the logs folder is not mounted, then the log tools say so as a tool error', async () => {
-    const result = await client.callTool({ name: 'nfnn_log_files', arguments: {} });
-    expect(result.isError).toBe(true);
-    expect(textOf(result)).toContain('not readable');
+  it('when the logs are read, then the files, a window with its position and a search come from the administration', async () => {
+    expect(textOf(await client.callTool({ name: 'nfnn_log_files', arguments: {} }))).toContain(
+      'backend.log.2026-10-22.0.gz',
+    );
+
+    const window = textOf(
+      await client.callTool({ name: 'nfnn_log', arguments: { from: 83, bytes: 500 } }),
+    );
+    expect(window).toContain('backend.log: bytes 83–119 of 119 (older: true, newer: false)');
+    expect(window).toContain('third line');
+    expect(
+      stack.backend.requests.find((request) =>
+        request.path.startsWith('/api/admin/operations/logs/backend.log?'),
+      )?.path,
+    ).toBe('/api/admin/operations/logs/backend.log?from=83&bytes=500');
+
+    const search = await client.callTool({
+      name: 'nfnn_log_search',
+      arguments: { pattern: 'fio', limit: 5 },
+    });
+    expect(textOf(search)).toContain('"offset": 36');
+    expect(
+      stack.backend.requests.find((request) =>
+        request.path.startsWith('/api/admin/operations/logs/backend.log/search'),
+      )?.path,
+    ).toBe('/api/admin/operations/logs/backend.log/search?pattern=fio&limit=5');
+
+    const missing = await client.callTool({ name: 'nfnn_log', arguments: { file: 'missing.log' } });
+    expect(missing.isError).toBe(true);
+    expect(textOf(missing)).toContain('404 operations/log-not-found');
+  });
+
+  it('when the log levels, the diagnostics and the thread dump are asked, then they come as text', async () => {
+    const levels = textOf(await client.callTool({ name: 'nfnn_log_levels', arguments: {} }));
+    expect(levels).toContain('"logger": "cz.novanadeje.app"');
+    expect(levels).toContain('"until": "23. 10. 2026 08:30:00"');
+    expect(textOf(await client.callTool({ name: 'nfnn_diagnostics', arguments: {} }))).toContain(
+      '"reachable": true',
+    );
+    expect(textOf(await client.callTool({ name: 'nfnn_thread_dump', arguments: {} }))).toContain(
+      'state=RUNNABLE',
+    );
   });
 
   it('when a writing tool is called, then 403 insufficient_scope asks for the writing permission before anything runs', async () => {
@@ -227,5 +271,31 @@ describe('Given an administrator connected with the writing permission', () => {
     expect(
       stack.backend.requests.filter((request) => request.path.includes('/report/send')),
     ).toHaveLength(0);
+  });
+
+  it('when a log level is raised and reset, then the administration gets the PUT and DELETE and a missing override is explained', async () => {
+    const raised = await client.callTool({
+      name: 'nfnn_set_log_level',
+      arguments: { logger: 'cz.novanadeje.app', level: 'DEBUG', minutes: 30 },
+    });
+    expect(textOf(raised)).toContain('"level": "DEBUG"');
+    const put = stack.backend.requests.find((request) => request.method === 'PUT');
+    expect(put?.path).toBe('/api/admin/operations/loggers/cz.novanadeje.app');
+    expect(put?.body).toBe('{"level":"DEBUG","minutes":30}');
+    expect(put?.authorization).toBe('Bearer api-token-write');
+
+    const reset = await client.callTool({
+      name: 'nfnn_reset_log_level',
+      arguments: { logger: 'cz.novanadeje.app' },
+    });
+    expect(reset.isError).toBeFalsy();
+    expect(textOf(reset)).toContain('back at its configured level');
+
+    const none = await client.callTool({
+      name: 'nfnn_reset_log_level',
+      arguments: { logger: 'org.hibernate.SQL' },
+    });
+    expect(none.isError).toBe(true);
+    expect(textOf(none)).toContain('404 operations/log-override-not-found');
   });
 });

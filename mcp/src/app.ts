@@ -1,9 +1,11 @@
 import {
+  bearerAuthChallengeResponse,
   createMcpHandler,
   getOAuthProtectedResourceMetadataUrl,
   McpServer,
   oauthMetadataResponse,
-  requireBearerAuth,
+  verifyBearerToken,
+  type AuthInfo,
   type AuthMetadataOptions,
   type OAuthTokenVerifier,
 } from '@modelcontextprotocol/server';
@@ -64,13 +66,7 @@ export function createApp(deps: AppDependencies): App {
       if (url.pathname !== MCP_PATH) {
         return json(404, { error: 'not found' });
       }
-      const gate = requireBearerAuth({
-        verifier: deps.verifier,
-        requiredScopes: [READ_SCOPE],
-        resourceMetadataUrl: getOAuthProtectedResourceMetadataUrl(new URL(server.mcpResource)),
-        expectedResource: new URL(server.mcpResource),
-      });
-      const auth = await gate(request);
+      const auth = await authenticate(request, deps.verifier, server);
       if (auth instanceof Response) {
         return auth;
       }
@@ -78,6 +74,29 @@ export function createApp(deps: AppDependencies): App {
     },
     close: () => handler.close(),
   };
+}
+
+async function authenticate(
+  request: Request,
+  verifier: OAuthTokenVerifier,
+  server: AuthorizationServer,
+): Promise<AuthInfo | Response> {
+  const mcpResource = new URL(server.mcpResource);
+  const resourceMetadataUrl = getOAuthProtectedResourceMetadataUrl(mcpResource);
+  const [authorization] = (request.headers.get('authorization') ?? '').split(',');
+  try {
+    return await verifyBearerToken(authorization || undefined, {
+      verifier,
+      requiredScopes: [READ_SCOPE],
+      resourceMetadataUrl,
+      expectedResource: mcpResource,
+    });
+  } catch (error: unknown) {
+    return bearerAuthChallengeResponse(error, {
+      requiredScopes: [READ_SCOPE, WRITE_SCOPE],
+      resourceMetadataUrl,
+    });
+  }
 }
 
 function metadataOptions(server: AuthorizationServer): AuthMetadataOptions {

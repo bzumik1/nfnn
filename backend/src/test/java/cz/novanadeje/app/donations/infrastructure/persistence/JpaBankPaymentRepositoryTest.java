@@ -30,6 +30,7 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.Year;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -197,6 +198,21 @@ class JpaBankPaymentRepositoryTest {
         assertThat(payments.findUnpairedWithoutSymbolBySenderAccount(JANA_ACCOUNT.orElseThrow()))
                 .extracting(payment -> payment.transactionId().value())
                 .containsExactly(1002L);
+    }
+
+    @Test
+    @DisplayName("Given paired and unpaired payments booked in several years, when the years are listed, then each year comes once, newest first")
+    void should_list_distinct_booking_years_newest_first_when_listed_given_payments_in_several_years() {
+        BankPayment paired = payment(1002, "2026-10-15", JANA_ACCOUNT, null);
+        payments.saveAll(List.of(
+                payment(1001, "2024-12-31", JANA_ACCOUNT, null),
+                paired,
+                payment(1003, "2026-01-02", Optional.empty(), "1111111111"),
+                payment(1004, "2025-03-01", JANA_ACCOUNT, null)));
+        pair(paired, PairingMethod.SENDER_ACCOUNT);
+        flushAndClear();
+
+        assertThat(payments.findBookedYearsNewestFirst()).containsExactly(Year.of(2026), Year.of(2025), Year.of(2024));
     }
 
     @Test

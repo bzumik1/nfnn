@@ -202,9 +202,27 @@
 
     tr {
       display: grid;
-      gap: 6px;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px 12px;
       padding: 12px 0;
       border-top: 1px solid var(--color-divider);
+    }
+
+    tfoot tr {
+      padding: 12px;
+      background: var(--color-surface-alt);
+    }
+
+    tfoot td {
+      background: none;
+    }
+
+    td:first-child {
+      grid-column: 1 / -1;
+
+      &::before {
+        display: none;
+      }
     }
 
     td {

@@ -25,7 +25,7 @@ class YearOverviewTest {
     private static final List<Long> REGISTRATIONS = List.of(0L, 0L, 1L, 1L, 1L, 1L, 1L, 2L, 2L, 4L, 5L, 5L, 5L);
 
     @Test
-    @DisplayName("Given donations, unpaired payments and registrations through October, when the year is compiled, then the started months come newest first with their figures")
+    @DisplayName("Given donations, unpaired payments and registrations through October, when the year is compiled, then the started months come newest first and everything received is paired plus unpaired")
     void should_list_started_months_newest_first_when_compiled_given_year_in_progress() {
         YearOverview overview = YearOverview.compile(YEAR, TODAY,
                 List.of(received(LocalDate.of(2026, 9, 1), 123450), received(LocalDate.of(2026, 9, 30), 30000),
@@ -40,10 +40,12 @@ class YearOverviewTest {
                 new Tally(1, Money.czk(20000))));
         assertThat(overview.months().get(1)).isEqualTo(new MonthOverview(ReportMonth.of(2026, 9), new Tally(2, Money.czk(153450)), 2,
                 new Tally(1, Money.czk(15000))));
+        assertThat(overview.months().get(1).received()).isEqualTo(new Tally(3, Money.czk(168450)));
         assertThat(overview.months().getLast()).isEqualTo(new MonthOverview(ReportMonth.of(2026, 1), new Tally(1, Money.czk(10000)), 0,
                 new Tally(0, Money.czk(0))));
-        assertThat(overview.donations()).isEqualTo(new Tally(4, Money.czk(213450)));
-        assertThat(overview.unpairedPayments()).isEqualTo(new Tally(2, Money.czk(35000)));
+        assertThat(overview.paired()).isEqualTo(new Tally(4, Money.czk(213450)));
+        assertThat(overview.unpaired()).isEqualTo(new Tally(2, Money.czk(35000)));
+        assertThat(overview.received()).isEqualTo(new Tally(6, Money.czk(248450)));
         assertThat(overview.newDonors()).isEqualTo(5);
         assertThat(overview.donorsRegistered()).isEqualTo(5);
     }
@@ -59,7 +61,7 @@ class YearOverviewTest {
         assertThat(overview.months().getFirst().newDonors()).isEqualTo(1);
         assertThat(overview.newDonors()).isEqualTo(2);
         assertThat(overview.donorsRegistered()).isEqualTo(4);
-        assertThat(overview.donations()).isEqualTo(new Tally(0, Money.czk(0)));
+        assertThat(overview.received()).isEqualTo(new Tally(0, Money.czk(0)));
     }
 
     @Test

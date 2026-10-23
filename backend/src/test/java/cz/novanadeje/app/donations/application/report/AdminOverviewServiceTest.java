@@ -41,6 +41,7 @@ class AdminOverviewServiceTest {
     @BeforeEach
     void stubFacts() {
         when(donations.findReceivedYearsNewestFirst()).thenReturn(List.of(Year.of(2026), Year.of(2025)));
+        when(payments.findBookedYearsNewestFirst()).thenReturn(List.of(Year.of(2026)));
         when(donors.countRegisteredBefore(any())).thenAnswer(invocation -> {
             Instant before = invocation.getArgument(0);
             if (!before.isAfter(Instant.parse("2026-08-31T22:00:00Z"))) {
@@ -63,8 +64,9 @@ class AdminOverviewServiceTest {
         assertThat(view.year().year()).isEqualTo(Year.of(2026));
         assertThat(view.year().months()).hasSize(10);
         assertThat(view.year().months().getFirst().month()).isEqualTo(ReportMonth.of(2026, 10));
-        assertThat(view.year().months().getFirst().donations()).isEqualTo(new Tally(1, Money.czk(50000)));
-        assertThat(view.year().months().getFirst().unpairedPayments()).isEqualTo(new Tally(1, Money.czk(15000)));
+        assertThat(view.year().months().getFirst().paired()).isEqualTo(new Tally(1, Money.czk(50000)));
+        assertThat(view.year().months().getFirst().unpaired()).isEqualTo(new Tally(1, Money.czk(15000)));
+        assertThat(view.year().months().getFirst().received()).isEqualTo(new Tally(2, Money.czk(65000)));
         assertThat(view.year().months().getFirst().newDonors()).isEqualTo(2);
         assertThat(view.year().months().get(1).newDonors()).isEqualTo(1);
         assertThat(view.year().newDonors()).isEqualTo(3);
@@ -95,6 +97,16 @@ class AdminOverviewServiceTest {
 
         assertThat(view.year().year()).isEqualTo(Year.of(2025));
         assertThat(view.year().months()).hasSize(12);
-        assertThat(view.year().donations()).isEqualTo(new Tally(1, Money.czk(20000)));
+        assertThat(view.year().paired()).isEqualTo(new Tally(1, Money.czk(20000)));
+    }
+
+    @Test
+    @DisplayName("Given 2024 with only unpaired payments, when the overview is asked for, then 2024 is offered among the years too")
+    void should_offer_year_of_unpaired_payments_when_asked_given_payments_without_donations() {
+        when(payments.findBookedYearsNewestFirst()).thenReturn(List.of(Year.of(2026), Year.of(2024)));
+
+        OverviewView view = service.overview(Optional.empty());
+
+        assertThat(view.availableYears()).containsExactly(Year.of(2026), Year.of(2025), Year.of(2024));
     }
 }

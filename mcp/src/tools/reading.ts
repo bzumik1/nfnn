@@ -1,7 +1,6 @@
 import type { McpServer } from '@modelcontextprotocol/server';
 import * as z from 'zod/v4';
 import { BackendProblem } from '../backend.js';
-import { DEFAULT_TAIL_BYTES, MAX_TAIL_BYTES } from '../logs.js';
 import { answer, plain, text, type ToolDependencies } from './support.js';
 
 const READ_ONLY = {
@@ -14,7 +13,7 @@ const YEAR = z.number().int().min(2000).max(2100);
 const UUID = z.string().regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
 
 export function registerReadingTools(server: McpServer, deps: ToolDependencies): void {
-  const { backend, logs } = deps;
+  const { backend } = deps;
 
   server.registerTool(
     'nfnn_status',
@@ -49,7 +48,7 @@ export function registerReadingTools(server: McpServer, deps: ToolDependencies):
     {
       title: 'Roční přehled',
       description:
-        'Donations, new donors and unpaired payments of a year, month by month (newest first), with the years that have donations.',
+        'Donations and donors of a year, month by month (newest first): everything received (received = paired + unpaired), new donors, the part paired with a registered donor and the unpaired part, with the years that have a donation or a bank payment.',
       inputSchema: z.object({
         year: YEAR.optional().describe('The calendar year; the current one when omitted.'),
       }),
@@ -205,30 +204,133 @@ export function registerReadingTools(server: McpServer, deps: ToolDependencies):
     {
       title: 'Soubory logů',
       description:
-        'The log files on the server (backend.log, backup.log and their rotated copies) with size and last change.',
+        'The log files on the server (backend.log, backup.log and their rotated .gz copies of the last 14 days) with size on disk and last change; sizes of a .gz copy are the unpacked ones in nfnn_log.',
       annotations: READ_ONLY,
     },
-    async (ctx) => answer(deps, ctx, 'nfnn_log_files', async () => text(await logs.list())),
+    async (ctx) =>
+      answer(deps, ctx, 'nfnn_log_files', async ({ apiToken }) =>
+        text(await backend.get('/api/admin/operations/logs', apiToken)),
+      ),
   );
 
   server.registerTool(
     'nfnn_log',
     {
-      title: 'Konec logu',
-      description: `The end of a log file (the last tailBytes bytes, ${DEFAULT_TAIL_BYTES} by default, at most ${MAX_TAIL_BYTES}); a rotated .gz copy is unpacked first.`,
+      title: 'Výřez logu',
+      description:
+        'A window of whole lines of a log file: the last `bytes` bytes (20000 by default, at most 200000) or, with `from`, the lines starting at that byte position. The answer names the window (from, to, hasOlder, hasNewer) so the whole file can be read page by page: pass `from` = the previous `to` for newer lines, or `from` = previous `from` − bytes for older ones. A rotated .gz copy is unpacked first.',
       inputSchema: z.object({
         file: z.string().default('backend.log'),
-        tailBytes: z.number().int().min(1).max(MAX_TAIL_BYTES).default(DEFAULT_TAIL_BYTES),
+        from: z
+          .number()
+          .int()
+          .min(0)
+          .optional()
+          .describe('Byte position to start at; the end of the file when omitted.'),
+        bytes: z
+          .number()
+          .int()
+          .min(1)
+          .max(200_000)
+          .optional()
+          .describe('Window size in bytes, 20000 by default.'),
       }),
       annotations: READ_ONLY,
     },
-    async ({ file, tailBytes }, ctx) =>
-      answer(deps, ctx, 'nfnn_log', async () => {
-        const tail = await logs.tail(file, tailBytes);
+    async ({ file, from, bytes }, ctx) =>
+      answer(deps, ctx, 'nfnn_log', async ({ apiToken }) => {
+        const query = new URLSearchParams();
+        if (from !== undefined) {
+          query.set('from', String(from));
+        }
+        if (bytes !== undefined) {
+          query.set('bytes', String(bytes));
+        }
+        const suffix = query.size === 0 ? '' : `?${query.toString()}`;
+        const window = asRecord(
+          await backend.get(
+            `/api/admin/operations/logs/${encodeURIComponent(file)}${suffix}`,
+            apiToken,
+          ),
+        );
         return plain(
-          `${tail.name}: last ${tail.tailBytes} of ${tail.sizeBytes} bytes\n\n${tail.text}`,
+          `${String(window['name'])}: bytes ${String(window['from'])}–${String(window['to'])} of ${String(window['sizeBytes'])} (older: ${String(window['hasOlder'])}, newer: ${String(window['hasNewer'])})\n\n${String(window['text'])}`,
         );
       }),
+  );
+
+  server.registerTool(
+    'nfnn_log_search',
+    {
+      title: 'Hledání v logu',
+      description:
+        'Searches a log file with a case-insensitive regular expression (at most 200 characters) and answers the newest matching lines first with their byte positions (`offset`), at most `limit` (50 by default, 200 at most); `before` pages towards older matches (pass the last `offset`), and `moreOlder` says whether there are any. Read the lines around a match with nfnn_log and `from` = offset − some bytes.',
+      inputSchema: z.object({
+        file: z.string().default('backend.log'),
+        pattern: z.string().min(1).max(200),
+        limit: z.number().int().min(1).max(200).optional(),
+        before: z.number().int().min(0).optional(),
+      }),
+      annotations: READ_ONLY,
+    },
+    async ({ file, pattern, limit, before }, ctx) =>
+      answer(deps, ctx, 'nfnn_log_search', async ({ apiToken }) => {
+        const query = new URLSearchParams({ pattern });
+        if (limit !== undefined) {
+          query.set('limit', String(limit));
+        }
+        if (before !== undefined) {
+          query.set('before', String(before));
+        }
+        return text(
+          await backend.get(
+            `/api/admin/operations/logs/${encodeURIComponent(file)}/search?${query.toString()}`,
+            apiToken,
+          ),
+        );
+      }),
+  );
+
+  server.registerTool(
+    'nfnn_log_levels',
+    {
+      title: 'Úrovně logování',
+      description:
+        'The log levels of the watched loggers (ROOT, cz.novanadeje.app, the Fio library, Spring web and security, Hibernate SQL, Liquibase, mail): what is configured, what is in effect and any temporary level with its end. Change one with nfnn_set_log_level.',
+      annotations: READ_ONLY,
+    },
+    async (ctx) =>
+      answer(deps, ctx, 'nfnn_log_levels', async ({ apiToken }) =>
+        text(await backend.get('/api/admin/operations/loggers', apiToken)),
+      ),
+  );
+
+  server.registerTool(
+    'nfnn_diagnostics',
+    {
+      title: 'Diagnostika serveru',
+      description:
+        'The running JVM (version, start, heap, threads, GC, load), the database (reachable, ping, pool usage), the free space of the log, backup and restore folders and the temporary log levels in effect.',
+      annotations: READ_ONLY,
+    },
+    async (ctx) =>
+      answer(deps, ctx, 'nfnn_diagnostics', async ({ apiToken }) =>
+        text(await backend.get('/api/admin/operations/diagnostics', apiToken)),
+      ),
+  );
+
+  server.registerTool(
+    'nfnn_thread_dump',
+    {
+      title: 'Výpis vláken',
+      description:
+        'A dump of every thread of the backend with its state, locks and stack, for a hanging request or a deadlock.',
+      annotations: READ_ONLY,
+    },
+    async (ctx) =>
+      answer(deps, ctx, 'nfnn_thread_dump', async ({ apiToken }) =>
+        plain(String(await backend.get('/api/admin/operations/diagnostics/threads', apiToken))),
+      ),
   );
 }
 

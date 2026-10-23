@@ -105,7 +105,7 @@ public class MonthlyReportService {
         DonorCounts donors = DonorCounts.between(donorRecords.countRegisteredBefore(month.start()), donorRecords.countRegisteredBefore(month.end()));
         return MonthlyReport.compile(month, donors,
                 donations.findReceivedOnBetween(month.firstDayOfYear(), month.lastDay()),
-                payments.findUnpairedBookedBetween(month.firstDay(), month.lastDay()),
+                payments.findUnpairedBookedBetween(month.firstDayOfYear(), month.lastDay()),
                 importStates.current());
     }
 }

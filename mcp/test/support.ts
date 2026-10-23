@@ -3,7 +3,6 @@ import { StreamableHTTPClientTransport } from '@modelcontextprotocol/client';
 import { createApp, type App } from '../src/app.js';
 import { AuthorizationServerDiscovery } from '../src/authorization.js';
 import { BackendClient } from '../src/backend.js';
-import { LogReader } from '../src/logs.js';
 import { TokenExchangeVerifier, type Logger } from '../src/token-exchange.js';
 import { FakeBackend, ISSUER } from './fake-backend.js';
 
@@ -16,7 +15,7 @@ export interface TestApp {
   stop(): Promise<void>;
 }
 
-export async function startApp(logsDir = '/nonexistent-logs'): Promise<TestApp> {
+export async function startApp(): Promise<TestApp> {
   const backend = new FakeBackend();
   await backend.start();
   const logLines: string[] = [];
@@ -29,7 +28,6 @@ export async function startApp(logsDir = '/nonexistent-logs'): Promise<TestApp> 
     discovery,
     verifier: new TokenExchangeVerifier(discovery, backend.url, fetch, logger),
     backend: new BackendClient(backend.url, fetch),
-    logs: new LogReader(logsDir),
     logger,
     version: 'test',
   });

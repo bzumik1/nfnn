@@ -183,7 +183,7 @@
             Registrovaní dárci: {{ data.donorsRegistered }}, z toho nových v roce {{ data.year }}:
             {{ data.newDonors }}.
           </p>
-          @if (data.unpairedPayments.count > 0) {
+          @if (data.unpaired.count > 0) {
             <a
               class="admin-card-link admin-card-link--top"
               routerLink="/sprava/platby"
@@ -201,9 +201,10 @@
                 <tr>
                   <th i18n="@@admin.home.overview.col.month">Měsíc</th>
                   <th class="num" i18n="@@admin.home.overview.col.count">Dary</th>
-                  <th class="num" i18n="@@admin.home.overview.col.total">Celkem</th>
                   <th class="num" i18n="@@admin.home.overview.col.newDonors">Noví dárci</th>
-                  <th class="num" i18n="@@admin.home.overview.col.unpaired">Platby bez dárce</th>
+                  <th class="num" i18n="@@admin.home.overview.col.total">Celkem</th>
+                  <th class="num" i18n="@@admin.home.overview.col.paired">Spárované</th>
+                  <th class="num" i18n="@@admin.home.overview.col.unpaired">Nespárované</th>
                 </tr>
               </thead>
               <tbody>
@@ -217,14 +218,7 @@
                       data-label="Dary"
                       i18n-data-label="@@admin.home.overview.col.count"
                     >
-                      {{ item.donations.count }}
-                    </td>
-                    <td
-                      class="num"
-                      data-label="Celkem"
-                      i18n-data-label="@@admin.home.overview.col.total"
-                    >
-                      {{ amount(item.donations) }}
+                      {{ item.received.count }}
                     </td>
                     <td
                       class="num"
@@ -235,16 +229,24 @@
                     </td>
                     <td
                       class="num"
-                      data-label="Platby bez dárce"
+                      data-label="Celkem"
+                      i18n-data-label="@@admin.home.overview.col.total"
+                    >
+                      {{ amount(item.received) }}
+                    </td>
+                    <td
+                      class="num"
+                      data-label="Spárované"
+                      i18n-data-label="@@admin.home.overview.col.paired"
+                    >
+                      {{ amount(item.paired) }}
+                    </td>
+                    <td
+                      class="num"
+                      data-label="Nespárované"
                       i18n-data-label="@@admin.home.overview.col.unpaired"
                     >
-                      @if (item.unpairedPayments.count === 0) {
-                        <ng-container i18n="@@admin.home.overview.unpaired.none"
-                          >žádné</ng-container
-                        >
-                      } @else {
-                        {{ item.unpairedPayments.count }} ({{ amount(item.unpairedPayments) }})
-                      }
+                      {{ amount(item.unpaired) }}
                     </td>
                   </tr>
                 }
@@ -261,14 +263,7 @@
                     data-label="Dary"
                     i18n-data-label="@@admin.home.overview.col.count"
                   >
-                    {{ data.donations.count }}
-                  </td>
-                  <td
-                    class="num"
-                    data-label="Celkem"
-                    i18n-data-label="@@admin.home.overview.col.total"
-                  >
-                    {{ amount(data.donations) }}
+                    {{ data.received.count }}
                   </td>
                   <td
                     class="num"
@@ -279,14 +274,24 @@
                   </td>
                   <td
                     class="num"
-                    data-label="Platby bez dárce"
+                    data-label="Celkem"
+                    i18n-data-label="@@admin.home.overview.col.total"
+                  >
+                    {{ amount(data.received) }}
+                  </td>
+                  <td
+                    class="num"
+                    data-label="Spárované"
+                    i18n-data-label="@@admin.home.overview.col.paired"
+                  >
+                    {{ amount(data.paired) }}
+                  </td>
+                  <td
+                    class="num"
+                    data-label="Nespárované"
                     i18n-data-label="@@admin.home.overview.col.unpaired"
                   >
-                    @if (data.unpairedPayments.count === 0) {
-                      <ng-container i18n="@@admin.home.overview.unpaired.none">žádné</ng-container>
-                    } @else {
-                      {{ data.unpairedPayments.count }} ({{ amount(data.unpairedPayments) }})
-                    }
+                    {{ amount(data.unpaired) }}
                   </td>
                 </tr>
               </tfoot>
