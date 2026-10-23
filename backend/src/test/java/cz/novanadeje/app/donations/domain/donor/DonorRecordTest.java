@@ -428,6 +428,21 @@ class DonorRecordTest {
         assertThatThrownBy(() -> record.senderAccounts().add(ACCOUNT)).isInstanceOf(UnsupportedOperationException.class);
     }
 
+    @Test
+    @DisplayName("Given a record with a learned account, when the link is removed, then it is returned and gone, and removing it again is not found")
+    void should_forget_link_when_removed_given_learned_account() {
+        DonorRecord record = person();
+        SenderAccountLink link = learn(record, payment(PAYMENT, SYMBOL.value(), Optional.of(ACCOUNT))).orElseThrow();
+
+        SenderAccountLink removed = record.removeSenderAccountLink(link.id());
+
+        assertThat(removed).isSameAs(link);
+        assertThat(record.senderAccountLinks()).isEmpty();
+        assertThat(record.senderAccounts()).isEmpty();
+        assertThat(record.usesSenderAccount(ACCOUNT)).isFalse();
+        assertThatThrownBy(() -> record.removeSenderAccountLink(link.id())).isInstanceOf(SenderAccountLinkNotFound.class);
+    }
+
     private static DonorRecord person() {
         return DonorRecord.registerPerson(DONOR, "Jana Nováková", ADDRESS, SYMBOL, LocaleCode.CS, REGISTERED_AT);
     }

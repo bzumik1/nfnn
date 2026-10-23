@@ -6,6 +6,7 @@ import cz.novanadeje.app.donations.domain.donor.DonorReference;
 import java.time.Instant;
 import java.time.Year;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -25,6 +26,8 @@ public interface DonationReceiptRepository {
     Set<DonationId> findDonationsWithReceipt(Collection<DonationId> donations);
 
     Map<DonationId, ReceiptNumber> findActiveSingleNumbersFor(DonorReference donor);
+
+    List<DonationReceipt> findByDonorNewestFirst(DonorReference donor);
 
     long nextSerial();
 

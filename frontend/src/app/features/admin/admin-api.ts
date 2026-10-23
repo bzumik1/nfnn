@@ -1,6 +1,8 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
+import { BankAccountItem } from '../donations/bank-accounts-api';
+import { DonationListResponse } from '../donations/donations-api';
 
 export type ImportFailureKind =
   | 'RATE_LIMITED'
@@ -126,6 +128,64 @@ export interface AdminActionListResponse {
   hasMore: boolean;
 }
 
+export interface AddressResponse {
+  street: string;
+  city: string;
+  postalCode: string;
+}
+
+export interface DonorAccountResponse {
+  donorId: string;
+  type: 'PERSON' | 'COMPANY';
+  name: string;
+  companyIdentifier: string | null;
+  address: AddressResponse;
+  email: string;
+  variableSymbol: string;
+  preferredLocale: string;
+  registeredAt: string;
+  emailVerified: boolean;
+  administrator: boolean;
+  secondFactorEnabled: boolean;
+}
+
+export interface DonorAccountListResponse {
+  items: DonorAccountResponse[];
+}
+
+export interface AdminDonorRecordResponse {
+  donorId: string;
+  name: string;
+  type: 'PERSON' | 'COMPANY';
+  variableSymbol: string;
+  companyIdentifier: string | null;
+  address: AddressResponse;
+  preferredLocale: string;
+  registeredAt: string;
+}
+
+export type ReceiptKind = 'SINGLE' | 'YEARLY';
+
+export interface AdminReceiptResponse {
+  id: string;
+  number: string;
+  kind: ReceiptKind;
+  donationId: string | null;
+  donationReceivedOn: string | null;
+  year: number | null;
+  issuedOn: string;
+  issuedAt: string;
+  locale: string;
+  active: boolean;
+}
+
+export interface AdminDonorDetailResponse {
+  donor: AdminDonorRecordResponse;
+  bankAccounts: BankAccountItem[];
+  donations: DonationListResponse;
+  receipts: AdminReceiptResponse[];
+}
+
 @Injectable({ providedIn: 'root' })
 export class AdminApi {
   private readonly http = inject(HttpClient);
@@ -210,4 +270,34 @@ export class AdminApi {
     }
     return this.http.get<AdminActionListResponse>('/api/admin/donors/actions', { params });
   }
+
+  donors(query: string): Observable<DonorAccountListResponse> {
+    return this.http.get<DonorAccountListResponse>('/api/admin/donors', { params: { query } });
+  }
+
+  donor(donorId: string): Observable<DonorAccountResponse> {
+    return this.http.get<DonorAccountResponse>(`/api/admin/donors/${encodeURIComponent(donorId)}`);
+  }
+
+  donorDonations(donorId: string): Observable<AdminDonorDetailResponse> {
+    return this.http.get<AdminDonorDetailResponse>(
+      `/api/admin/donations/donors/${encodeURIComponent(donorId)}`,
+    );
+  }
+
+  disconnectDonorAccount(donorId: string, linkId: string): Observable<void> {
+    return this.http.post<void>(`${donorAccountUrl(donorId, linkId)}/disconnect`, null);
+  }
+
+  reconnectDonorAccount(donorId: string, linkId: string): Observable<void> {
+    return this.http.post<void>(`${donorAccountUrl(donorId, linkId)}/reconnect`, null);
+  }
+
+  removeDonorAccount(donorId: string, linkId: string): Observable<void> {
+    return this.http.delete<void>(donorAccountUrl(donorId, linkId));
+  }
+}
+
+function donorAccountUrl(donorId: string, linkId: string): string {
+  return `/api/admin/donations/donors/${encodeURIComponent(donorId)}/bank-accounts/${encodeURIComponent(linkId)}`;
 }

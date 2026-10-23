@@ -16,6 +16,7 @@ import cz.novanadeje.app.donations.domain.donor.DonorRecordRepository;
 import cz.novanadeje.app.donations.domain.donor.DonorReference;
 import cz.novanadeje.app.donations.domain.donor.ExcludedSenderAccounts;
 import cz.novanadeje.app.donations.domain.donor.SenderAccountLink;
+import cz.novanadeje.app.donations.domain.donor.SenderAccountLinkId;
 import cz.novanadeje.app.donations.domain.donor.SymbolClaim;
 import cz.novanadeje.app.donations.domain.donor.SymbolClaimAnswer;
 import cz.novanadeje.app.donations.domain.donor.SymbolClaimId;
@@ -359,6 +360,25 @@ class JpaDonationRepositoryTest {
         flushAndClear();
 
         assertThat(donations.findReceivedYearsNewestFirst()).containsExactly(Year.of(2026), Year.of(2025));
+    }
+
+    @Test
+    @DisplayName("Given donations paired through a link by account and by confirmed symbol and one by symbol alone, when the link's donations are asked for, then only the two through the link come, oldest first")
+    void should_find_link_donations_oldest_first_when_asked_given_mixed_pairings() {
+        ConfirmedSymbolSetup setup = confirmedSymbolSetup();
+        BankPayment byAccountPayment = payment(1003, LocalDate.of(2026, 10, 13), Money.czk(20000), ACCOUNT, null);
+        BankPayment bySymbolPayment = payment(1004, LocalDate.of(2026, 10, 21), Money.czk(50000), ACCOUNT, "4821937560");
+        payments.saveAll(List.of(byAccountPayment, bySymbolPayment));
+        Donation byClaim = Donation.pairedByConfirmedSymbol(DonationId.newId(NOW), setup.donor(), setup.payment(), setup.link().id(),
+                setup.claim().id(), NOW);
+        Donation byAccount = Donation.pairedBySenderAccount(DonationId.newId(NOW.plusMillis(1)), setup.donor(), byAccountPayment, setup.link().id(), NOW);
+        donations.save(byClaim);
+        donations.save(byAccount);
+        donations.save(bySymbol(setup.donor(), bySymbolPayment));
+        flushAndClear();
+
+        assertThat(donations.findBySenderAccountLink(setup.link().id())).extracting(Donation::id).containsExactly(byAccount.id(), byClaim.id());
+        assertThat(donations.findBySenderAccountLink(SenderAccountLinkId.newId(NOW))).isEmpty();
     }
 
     private DonorReference storedDonor(String symbol) {

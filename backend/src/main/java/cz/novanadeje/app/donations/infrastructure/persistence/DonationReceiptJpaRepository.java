@@ -29,6 +29,8 @@ public interface DonationReceiptJpaRepository extends JpaRepository<DonationRece
 
     List<SingleReceiptNumber> findByDonorIdAndKindAndSupersededAtIsNull(UUID donorId, ReceiptKind kind);
 
+    List<DonationReceiptJpaEntity> findByDonorIdOrderByIssuedAtDescIdDesc(UUID donorId);
+
     @Transactional
     @Query(nativeQuery = true, value = "select nextval('donation_receipt_number_seq')")
     long nextSerial();

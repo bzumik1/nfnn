@@ -6,6 +6,7 @@ import cz.novanadeje.app.donations.domain.donor.DonorRecord;
 import cz.novanadeje.app.donations.domain.donor.DonorRecordRepository;
 import cz.novanadeje.app.donations.domain.donor.DonorReference;
 import cz.novanadeje.app.donations.domain.donor.SenderAccountLink;
+import cz.novanadeje.app.donations.domain.donor.SenderAccountLinkId;
 import cz.novanadeje.app.shared.domain.VariableSymbol;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Repository;
@@ -50,6 +51,15 @@ class JpaDonorRecordRepository implements DonorRecordRepository {
                 link.account().bankCode(), link.status().name(), link.provedBy().map(BankPaymentId::value).orElse(null),
                 link.provedAt().orElse(null), link.validFrom().orElse(null), link.validTo().orElse(null), link.createdAt(),
                 link.disconnectedAt().orElse(null)) == 1;
+    }
+
+    @Override
+    public void deleteSenderAccountLink(DonorReference donor, SenderAccountLinkId link) {
+        DonorSenderAccountJpaEntity stored = accounts.findById(link.value())
+                .filter(entity -> entity.donorId().equals(donor.value()))
+                .orElseThrow(() -> new IllegalArgumentException("Sender account link " + link + " is not stored for donor " + donor));
+        accounts.delete(stored);
+        accounts.flush();
     }
 
     @Override

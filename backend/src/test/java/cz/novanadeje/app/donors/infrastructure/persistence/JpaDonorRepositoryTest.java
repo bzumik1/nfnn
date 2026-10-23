@@ -108,6 +108,32 @@ class JpaDonorRepositoryTest {
         assertThat(donors.findByIds(List.of())).isEmpty();
     }
 
+    @Test
+    @DisplayName("Given saved donors, when searched by a part of the name or e-mail or the start of the symbol, then the matches come by name, at most the limit, and like-wildcards are literal")
+    void should_find_by_name_email_or_symbol_start_when_searched_given_saved_donors() {
+        Donor jana = donor("jana@example.cz", "4821937560");
+        Donor petr = donor("petr@firma.cz", "7310945528");
+        petr.updateProfile("Petr Novák", petr.address(), petr.preferredLocale());
+        Donor eva = donor("eva@example.cz", "4899999999");
+        eva.updateProfile("Eva Dvořáková", eva.address(), eva.preferredLocale());
+        Donor karel = donor("karel@example.cz", "1000000000");
+        karel.updateProfile("Karel 100% Veselý", karel.address(), karel.preferredLocale());
+        donors.save(jana);
+        donors.save(petr);
+        donors.save(eva);
+        donors.save(karel);
+        flushAndClear();
+
+        assertThat(donors.search("novák", 20)).extracting(Donor::name).containsExactly("Jana Nováková", "Petr Novák");
+        assertThat(donors.search("FIRMA.CZ", 20)).extracting(Donor::name).containsExactly("Petr Novák");
+        assertThat(donors.search("example", 20)).extracting(Donor::name).containsExactly("Eva Dvořáková", "Jana Nováková", "Karel 100% Veselý");
+        assertThat(donors.search("48", 20)).extracting(Donor::name).containsExactly("Eva Dvořáková", "Jana Nováková");
+        assertThat(donors.search("48", 1)).extracting(Donor::name).containsExactly("Eva Dvořáková");
+        assertThat(donors.search("100%", 20)).extracting(Donor::name).containsExactly("Karel 100% Veselý");
+        assertThat(donors.search("_", 20)).isEmpty();
+        assertThat(donors.search("xyz", 20)).isEmpty();
+    }
+
     private static Donor donor(String email, String variableSymbol) {
         return Donor.register(DonorId.newId(NOW), DonorType.PERSON, "Jana Nováková", null,
                 new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"), new EmailAddress(email), new PasswordHash("$hash"),

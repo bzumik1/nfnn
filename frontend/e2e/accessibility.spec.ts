@@ -3,6 +3,7 @@ import { expect, Page, test } from '@playwright/test';
 import {
   administrator,
   bankAccountItem,
+  donationItem,
   mockDonorApi,
   openSignInDialog,
   problem,
@@ -401,6 +402,138 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     await page.locator('tbody tr').first().getByRole('button', { name: 'Zrušit Ano' }).click();
     await expect(page.locator('tbody tr').first()).toContainText('změnit odpověď na Ne?');
 
+    expect(await violations(page)).toEqual([]);
+  });
+
+  test('when an administrator finds a donor and opens the card, then the search, the card and its confirmations break no rule', async ({
+    page,
+  }) => {
+    const petrId = '019a1c00-0000-7000-8000-00000000a002';
+    const petr = {
+      donorId: petrId,
+      type: 'PERSON',
+      name: 'Petr Svoboda',
+      companyIdentifier: null,
+      address: { street: 'Dlouhá 12', city: 'Ústí nad Labem', postalCode: '400 01' },
+      email: 'petr@example.cz',
+      variableSymbol: '7310945528',
+      preferredLocale: 'cs',
+      registeredAt: '2026-10-17T10:00:00Z',
+      emailVerified: false,
+      administrator: false,
+      secondFactorEnabled: true,
+    };
+    await page.route(
+      (url) => url.pathname === '/api/admin/donors',
+      (route) =>
+        route.fulfill({
+          json: {
+            items: [
+              petr,
+              {
+                ...petr,
+                donorId: administrator.id,
+                name: 'Jana Nováková',
+                administrator: true,
+                emailVerified: true,
+              },
+            ],
+          },
+        }),
+    );
+    await page.route(
+      (url) => url.pathname === `/api/admin/donors/${petrId}`,
+      (route) => route.fulfill({ json: petr }),
+    );
+    await page.route(
+      (url) => url.pathname === `/api/admin/donations/donors/${petrId}`,
+      (route) =>
+        route.fulfill({
+          json: {
+            donor: {
+              donorId: petrId,
+              name: 'Petr Svoboda',
+              type: 'PERSON',
+              variableSymbol: '7310945528',
+              companyIdentifier: null,
+              address: { street: 'Dlouhá 12', city: 'Ústí nad Labem', postalCode: '400 01' },
+              preferredLocale: 'cs',
+              registeredAt: '2026-10-17T10:00:00Z',
+            },
+            bankAccounts: [
+              bankAccountItem({
+                donationCount: 2,
+                totalAmountMinor: 50000,
+                lastDonationOn: '2026-10-12',
+                shared: true,
+              }),
+              bankAccountItem({
+                id: '0192f0c4-0000-7000-8000-000000000002',
+                accountNumber: '1234567/0800',
+                status: 'DISCONNECTED',
+                disconnectedOn: '2026-10-20',
+                confirmedSymbols: ['6123456789'],
+              }),
+            ],
+            donations: {
+              items: [
+                donationItem({
+                  receivedAt: '2026-10-12',
+                  amountMinor: 30000,
+                  pairedBy: 'SENDER_ACCOUNT',
+                  senderAccount: '2900233333/2010',
+                }),
+                donationItem({
+                  id: '0192f0f1-0000-7000-8000-000000000002',
+                  receivedAt: '2026-10-10',
+                  receiptNumber: '2026-000001',
+                  status: 'REFUNDED',
+                }),
+              ],
+              totalAmountMinor: 80000,
+              currency: 'CZK',
+              count: 2,
+            },
+            receipts: [
+              {
+                id: '019a1c00-0000-7000-8000-00000000f001',
+                number: '2026-000001',
+                kind: 'SINGLE',
+                donationId: '0192f0f1-0000-7000-8000-000000000002',
+                donationReceivedOn: '2026-10-10',
+                year: null,
+                issuedOn: '2026-10-17',
+                issuedAt: '2026-10-17T09:00:00Z',
+                locale: 'cs',
+                active: false,
+              },
+            ],
+          },
+        }),
+    );
+    await page.route('**/api/donors/auth/refresh', (route) =>
+      route.fulfill(session(200, administrator)),
+    );
+    await page.goto('/');
+    await page.evaluate(() => localStorage.setItem('nfnn.donor-session', '1'));
+    await page.goto('/sprava/darci');
+    await expect(page.getByRole('heading', { level: 1, name: 'Dárci' })).toBeFocused();
+    expect(await violations(page)).toEqual([]);
+
+    await page.getByLabel('Jméno, e-mail nebo variabilní symbol').fill('sv');
+    await expect(page.locator('tbody tr')).toHaveCount(2);
+    expect(await violations(page)).toEqual([]);
+
+    await page.getByRole('link', { name: 'Petr Svoboda' }).click();
+    await expect(page.getByRole('heading', { level: 1, name: 'Petr Svoboda' })).toBeFocused();
+    await expect(page.getByRole('region', { name: 'Vydaná potvrzení' })).toContainText(
+      '2026-000001',
+    );
+    expect(await violations(page)).toEqual([]);
+
+    await page.getByRole('button', { name: 'Vypnout dvoufaktorové ověření' }).click();
+    await page.getByRole('button', { name: 'Odebrat účet' }).first().click();
+    await expect(page.getByRole('group', { name: 'Odebrat účet?' })).toBeVisible();
     expect(await violations(page)).toEqual([]);
   });
 

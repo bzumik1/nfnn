@@ -153,6 +153,12 @@ public final class DonorRecord {
         return awaiting;
     }
 
+    public SenderAccountLink removeSenderAccountLink(SenderAccountLinkId linkId) {
+        SenderAccountLink link = linkOf(linkId);
+        senderAccountLinks.remove(linkId);
+        return link;
+    }
+
     public Optional<SenderAccountLink> senderAccountLink(SenderAccountLinkId linkId) {
         return Optional.ofNullable(senderAccountLinks.get(require(linkId, "Sender account link id")));
     }

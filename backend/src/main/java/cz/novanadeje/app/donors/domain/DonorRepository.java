@@ -24,4 +24,6 @@ public interface DonorRepository {
     List<Donor> findAdministrators();
 
     List<Donor> findByIds(Collection<DonorId> ids);
+
+    List<Donor> search(String query, int limit);
 }

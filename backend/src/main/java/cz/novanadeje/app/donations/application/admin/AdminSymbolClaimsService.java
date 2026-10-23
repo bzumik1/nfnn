@@ -76,7 +76,7 @@ public class AdminSymbolClaimsService {
         SymbolClaim reversed = claim.reverse(now);
         receipts.lockDonor(claim.donor());
         List<Donation> paired = donations.findBySymbolClaim(claimId);
-        if (anyReceiptCovers(claim.donor(), paired)) {
+        if (ReceiptCoverage.anyReceiptCovers(receipts, claim.donor(), paired)) {
             throw new SymbolClaimHasReceipt(claimId);
         }
         paired.forEach(donation -> donations.delete(donation.id()));
@@ -99,15 +99,5 @@ public class AdminSymbolClaimsService {
                 "Declined symbol claim " + claimId + " of donor " + claim.donor() + " for symbol " + claim.symbol().value()
                         + " deleted; the account may ask the donor again", now));
         log.info("Admin {} deleted declined symbol claim {} of donor {}", adminId, claimId, claim.donor());
-    }
-
-    private boolean anyReceiptCovers(DonorReference donor, List<Donation> paired) {
-        if (paired.isEmpty()) {
-            return false;
-        }
-        if (!receipts.findDonationsWithReceipt(paired.stream().map(Donation::id).toList()).isEmpty()) {
-            return true;
-        }
-        return paired.stream().anyMatch(donation -> receipts.existsYearlyIssuedSince(donor, donation.receivedYear(), donation.recordedAt()));
     }
 }

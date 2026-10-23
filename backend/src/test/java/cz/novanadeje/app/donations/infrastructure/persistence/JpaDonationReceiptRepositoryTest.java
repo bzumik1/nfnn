@@ -397,6 +397,32 @@ class JpaDonationReceiptRepositoryTest {
         assertThat(receipts.existsYearlyIssuedSince(petr, YEAR_2025, NOW)).isFalse();
     }
 
+    @Test
+    @DisplayName("Given single, yearly, superseded and other donors' receipts, when the donor's receipts are listed, then all of the donor's come, newest issue first")
+    void should_list_all_donor_receipts_newest_first_when_listed_given_mixed_receipts() {
+        DonorReference jana = storedDonor("4821937560");
+        DonorReference petr = storedDonor("7310945528");
+        Donation march = storedDonation(jana, LocalDate.of(2026, 3, 15));
+        Donation petrs = storedDonation(petr, LocalDate.of(2026, 4, 1));
+        DonationReceipt replaced = single(jana, march, "2026-000001");
+        receipts.save(replaced);
+        replaced.markSuperseded(NOW.plusSeconds(60));
+        receipts.save(replaced);
+        receipts.save(DonationReceipt.issueForYear(DonationReceiptId.newId(NOW.plusSeconds(30)), jana, YEAR_2025, new ReceiptNumber("2026-000002"),
+                ISSUED_ON, NOW.plusSeconds(30), LocaleCode.CS, FINGERPRINT, CONTENT, Optional.empty()));
+        receipts.save(single(petr, petrs, "2026-000003"));
+        DonationReceipt newest = DonationReceipt.issueForDonation(DonationReceiptId.newId(NOW.plusSeconds(120)), jana, march.id(),
+                new ReceiptNumber("2026-000004"), ISSUED_ON, NOW.plusSeconds(120), LocaleCode.CS, FINGERPRINT, CONTENT, Optional.of(replaced.id()));
+        receipts.save(newest);
+        flushAndClear();
+
+        assertThat(receipts.findByDonorNewestFirst(jana)).extracting(receipt -> receipt.number().value())
+                .containsExactly("2026-000004", "2026-000002", "2026-000001");
+        assertThat(receipts.findByDonorNewestFirst(jana)).filteredOn(receipt -> receipt.number().value().equals("2026-000001"))
+                .singleElement().satisfies(receipt -> assertThat(receipt.isActive()).isFalse());
+        assertThat(receipts.findByDonorNewestFirst(petr)).hasSize(1);
+    }
+
     private DonationReceipt single(DonorReference donor, Donation donation, String number) {
         return DonationReceipt.issueForDonation(DonationReceiptId.newId(NOW), donor, donation.id(), new ReceiptNumber(number), ISSUED_ON, NOW,
                 LocaleCode.EN, FINGERPRINT, CONTENT, Optional.empty());

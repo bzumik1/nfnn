@@ -2,6 +2,7 @@ package cz.novanadeje.app.donations.domain.donation;
 
 import cz.novanadeje.app.donations.domain.bank.BankPaymentId;
 import cz.novanadeje.app.donations.domain.donor.DonorReference;
+import cz.novanadeje.app.donations.domain.donor.SenderAccountLinkId;
 import cz.novanadeje.app.donations.domain.donor.SymbolClaimId;
 
 import java.time.LocalDate;
@@ -30,6 +31,8 @@ public interface DonationRepository {
     List<Year> findReceivedYearsNewestFirst();
 
     List<Donation> findBySymbolClaim(SymbolClaimId claim);
+
+    List<Donation> findBySenderAccountLink(SenderAccountLinkId link);
 
     Map<SymbolClaimId, Long> countBySymbolClaims(Collection<SymbolClaimId> claims);
 }
