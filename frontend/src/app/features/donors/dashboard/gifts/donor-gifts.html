@@ -1,10 +1,12 @@
 <app-page-title i18n="@@donor.gifts.heading">Moje dary</app-page-title>
 
 @if (donations.state() === 'ready') {
-  <div class="payments-card">
-    <div class="payments-head">
+  <div class="ui-card payments-card">
+    <div class="ui-card__bar">
       <div class="payments-title-row">
-        <h2 class="payments-title" i18n="@@donor.dashboard.payments.title">Přehled plateb</h2>
+        <h2 class="ui-card__title ui-card__title--large" i18n="@@donor.dashboard.payments.title">
+          Přehled plateb
+        </h2>
         <div class="bank-check" aria-live="polite">
           @if (donations.checkingBank()) {
             <span class="bank-check-status" i18n="@@donor.dashboard.bank.checking"
@@ -18,7 +20,7 @@
           }
           <button
             type="button"
-            class="bank-check-btn"
+            class="ui-button ui-button--small bank-check-btn"
             [disabled]="donations.checkingBank()"
             (click)="donations.refreshFromBank()"
             i18n="@@donor.dashboard.bank.refresh"
@@ -29,20 +31,22 @@
       </div>
       @if (donations.receiptError(); as error) {
         @if (error.scope === 'single') {
-          <p class="receipt-error" role="alert">{{ error.message }}</p>
+          <p class="ui-callout ui-callout--danger receipt-error" role="alert">
+            {{ error.message }}
+          </p>
         }
       }
     </div>
     @if (donations.items().length > 0) {
       <app-donations-table [items]="donations.items()" />
       @if (receivedWithoutReceipt()) {
-        <p class="receipts-from" i18n="@@donor.dashboard.payments.receiptsFrom">
+        <p class="ui-card__footer receipts-from" i18n="@@donor.dashboard.payments.receiptsFrom">
           Potvrzení o daru tu vystavujeme za dary přijaté od 1.&nbsp;ledna&nbsp;{{
             donations.receiptsFrom()
           }}, u starších darů proto tlačítko „Stáhnout PDF“ chybí.
         </p>
       }
-      <p class="yearly-link">
+      <p class="ui-card__footer yearly-link">
         <span i18n="@@donor.gifts.yearlyHint">Souhrnné potvrzení za celý rok najdete v části</span
         >&ngsp;<a routerLink="/darce/potvrzeni" i18n="@@donor.gifts.yearlyLink">Potvrzení o daru</a
         >.
@@ -56,7 +60,7 @@
         >
       </p>
     }
-    <p class="bank-hint" i18n="@@donor.dashboard.bank.hint">
+    <p class="ui-card__footer bank-hint" i18n="@@donor.dashboard.bank.hint">
       Nové platby hledáme v bance každou hodinu a také když otevřete tento přehled nebo stisknete
       „Obnovit“, nejvýš ale jednou za 30&nbsp;sekund. Okamžitá platba se tu obvykle objeví do
       minuty, běžný převod z jiné banky může trvat až do dalšího pracovního dne. Dar se přiřadí sám,

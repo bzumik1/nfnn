@@ -1,5 +1,5 @@
-<section class="passkeys-card" aria-labelledby="passkeys-title">
-  <h2 id="passkeys-title" class="passkeys-title" i18n="@@donor.passkeys.title">Přístupové klíče</h2>
+<section class="ui-card ui-card--padded" aria-labelledby="passkeys-title">
+  <h2 id="passkeys-title" class="ui-card__title" i18n="@@donor.passkeys.title">Přístupové klíče</h2>
   <p class="passkeys-intro" i18n="@@donor.passkeys.intro">
     Přístupový klíč (passkey) vás přihlásí otiskem prstu, obličejem nebo zámkem obrazovky, bez
     hesla. Uloží ho Hesla od Applu, Správce hesel Google nebo Windows Hello a na podvodné stránce
@@ -7,9 +7,14 @@
   </p>
 
   @if (loadError()) {
-    <p class="form-error" role="alert">{{ loadError() }}</p>
+    <p class="ui-field-error" role="alert">{{ loadError() }}</p>
     @if (passkeys() === null) {
-      <button type="button" class="passkeys-action" (click)="load()" i18n="@@donor.passkeys.retry">
+      <button
+        type="button"
+        class="ui-button passkeys-action"
+        (click)="load()"
+        i18n="@@donor.passkeys.retry"
+      >
         Načíst znovu
       </button>
     }
@@ -48,7 +53,7 @@
                 <div class="passkeys-buttons">
                   <button
                     type="button"
-                    class="passkeys-action passkeys-action--danger"
+                    class="ui-button passkeys-action ui-button--danger-soft"
                     [disabled]="removing() !== null"
                     (click)="remove(passkey)"
                   >
@@ -60,7 +65,7 @@
                   </button>
                   <button
                     type="button"
-                    class="passkeys-action"
+                    class="ui-button passkeys-action"
                     (click)="keep()"
                     i18n="@@donor.passkeys.keep"
                   >
@@ -94,10 +99,14 @@
                   />
                 </app-form-field>
                 @if (renameError()) {
-                  <p class="form-error" role="alert">{{ renameError() }}</p>
+                  <p class="ui-field-error" role="alert">{{ renameError() }}</p>
                 }
                 <div class="passkeys-buttons">
-                  <button type="submit" class="passkeys-save" [disabled]="renameSaving()">
+                  <button
+                    type="submit"
+                    class="ui-button ui-button--primary passkeys-save"
+                    [disabled]="renameSaving()"
+                  >
                     @if (renameSaving()) {
                       <span i18n="@@donor.passkeys.rename.saving">Ukládám…</span>
                     } @else {
@@ -106,7 +115,7 @@
                   </button>
                   <button
                     type="button"
-                    class="passkeys-action passkeys-cancel"
+                    class="ui-button passkeys-action ui-button--large passkeys-cancel"
                     (click)="cancelRename(passkey)"
                     i18n="@@donor.account.cancel"
                   >
@@ -118,7 +127,7 @@
               <div class="passkey-actions">
                 <button
                   type="button"
-                  class="passkeys-action"
+                  class="ui-button passkeys-action"
                   [id]="renameButtonId(passkey)"
                   [disabled]="removing() !== null"
                   (click)="openRename(passkey)"
@@ -129,7 +138,7 @@
                 @if (!lastSignInMethod()) {
                   <button
                     type="button"
-                    class="passkeys-action passkeys-action--danger"
+                    class="ui-button passkeys-action ui-button--danger-soft"
                     [disabled]="removing() !== null"
                     (click)="askToRemove(passkey)"
                     i18n="@@donor.passkeys.remove"
@@ -184,7 +193,7 @@
       (ngSubmit)="add(addForm)"
       novalidate
     >
-      <h3 class="passkeys-form-title" i18n="@@donor.passkeys.form.title">Nový přístupový klíč</h3>
+      <h3 class="ui-card__subtitle" i18n="@@donor.passkeys.form.title">Nový přístupový klíč</h3>
       @switch (confirmation()) {
         @case ('password') {
           <p class="passkeys-form-intro" i18n="@@donor.passkeys.form.intro">
@@ -243,11 +252,15 @@
       }
 
       @if (error()) {
-        <p class="form-error" role="alert">{{ error() }}</p>
+        <p class="ui-field-error" role="alert">{{ error() }}</p>
       }
 
       <div class="passkeys-buttons">
-        <button type="submit" class="passkeys-save" [disabled]="saving()">
+        <button
+          type="submit"
+          class="ui-button ui-button--primary passkeys-save"
+          [disabled]="saving()"
+        >
           @if (saving()) {
             <span i18n="@@donor.passkeys.saving">Čekáme na zařízení…</span>
           } @else {
@@ -256,7 +269,7 @@
         </button>
         <button
           type="button"
-          class="passkeys-action passkeys-cancel"
+          class="ui-button passkeys-action ui-button--large passkeys-cancel"
           (click)="cancel()"
           i18n="@@donor.account.cancel"
         >
@@ -268,7 +281,7 @@
     <button
       #addButton
       type="button"
-      class="passkeys-action"
+      class="ui-button passkeys-action"
       (click)="openForm()"
       i18n="@@donor.passkeys.add"
     >
@@ -276,7 +289,7 @@
     </button>
   }
 
-  <p class="passkeys-status" role="status">
+  <p class="ui-form-status" role="status">
     @if (status()) {
       <span>{{ status() }}</span>
     }

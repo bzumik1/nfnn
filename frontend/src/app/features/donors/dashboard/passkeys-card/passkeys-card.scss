@@ -2,20 +2,7 @@
   display: block;
 }
 
-.passkeys-card {
-  background: var(--color-surface);
-  border-radius: var(--radius-card);
-  box-shadow: var(--shadow-panel);
-  border: 1px solid var(--color-border-soft);
-  padding: var(--space-5) var(--space-6);
-  margin-bottom: var(--space-6);
-}
-
-.passkeys-title {
-  font-family: var(--font-serif);
-  font-size: var(--text-2xl);
-  font-weight: var(--weight-bold);
-  color: var(--color-text);
+.ui-card__title {
   margin-bottom: var(--space-2);
 }
 
@@ -122,73 +109,6 @@
   margin-top: var(--space-2);
 }
 
-.passkeys-action {
-  background: var(--color-accent-soft);
-  color: var(--color-accent);
-  border: none;
-  padding: var(--space-2) var(--space-4);
-  border-radius: var(--radius-pill);
-  font-weight: var(--weight-semibold);
-  font-size: var(--text-sm);
-  font-family: var(--font-sans);
-  cursor: pointer;
-  white-space: nowrap;
-
-  &:disabled {
-    opacity: 0.7;
-    cursor: progress;
-  }
-}
-
-.passkeys-action--danger {
-  background: var(--color-danger-bg);
-  color: var(--color-danger);
-}
-
 .passkeys-form {
   max-width: 560px;
-}
-
-.passkeys-form-title {
-  font-family: var(--font-sans);
-  font-size: var(--text-lg);
-  font-weight: var(--weight-bold);
-  color: var(--color-text);
-  margin-bottom: var(--space-1);
-}
-
-.passkeys-save {
-  background: var(--color-accent);
-  color: var(--color-on-accent);
-  border: none;
-  padding: var(--space-2-5) var(--space-6);
-  border-radius: var(--radius-pill);
-  font-weight: var(--weight-bold);
-  font-size: var(--text-md);
-  font-family: var(--font-sans);
-  cursor: pointer;
-  box-shadow: var(--shadow-button-sm);
-
-  &:disabled {
-    opacity: 0.7;
-    cursor: progress;
-  }
-}
-
-.passkeys-cancel {
-  padding: var(--space-2-5) var(--space-5);
-  font-size: var(--text-md);
-}
-
-.form-error {
-  color: var(--color-danger);
-  font-size: var(--text-sm);
-  margin: var(--space-1) 0 var(--space-2);
-}
-
-.passkeys-status span {
-  display: block;
-  margin-top: var(--space-3-5);
-  font-size: var(--text-sm);
-  color: var(--color-success);
 }

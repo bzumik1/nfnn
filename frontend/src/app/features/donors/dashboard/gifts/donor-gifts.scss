@@ -1,14 +1,5 @@
 .payments-card {
-  background: var(--color-surface);
-  border-radius: var(--radius-card);
-  box-shadow: var(--shadow-panel);
-  border: 1px solid var(--color-border-soft);
-  overflow: hidden;
-}
-
-.payments-head {
-  padding: var(--space-5) var(--space-6);
-  border-bottom: 1px solid var(--color-divider);
+  margin-bottom: 0;
 }
 
 .payments-title-row {
@@ -17,13 +8,6 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-2) var(--space-4);
-}
-
-.payments-title {
-  font-family: var(--font-serif);
-  font-size: var(--text-3xl);
-  font-weight: var(--weight-bold);
-  color: var(--color-text);
 }
 
 .bank-check {
@@ -35,44 +19,6 @@
 
 .bank-check-status {
   font-size: var(--text-sm);
-  color: var(--color-text-soft);
-}
-
-.bank-check-btn {
-  background: var(--color-accent-soft);
-  color: var(--color-accent);
-  border: none;
-  padding: var(--space-1-75) var(--space-3-5);
-  border-radius: var(--radius-pill);
-  font: inherit;
-  font-size: var(--text-sm);
-  font-weight: var(--weight-semibold);
-  cursor: pointer;
-
-  &:disabled {
-    cursor: not-allowed;
-    opacity: 0.6;
-  }
-}
-
-.receipt-error {
-  margin-top: var(--space-3);
-  padding: var(--space-2-5) var(--space-3-5);
-  background: var(--color-danger-bg);
-  border: 1px solid var(--color-danger-border);
-  border-radius: var(--radius-md);
-  color: var(--color-danger);
-  font-size: var(--text-md);
-  font-weight: var(--weight-medium);
-}
-
-.receipts-from,
-.yearly-link,
-.bank-hint {
-  padding: var(--space-4) var(--space-6) var(--space-5);
-  border-top: 1px solid var(--color-divider);
-  font-size: var(--text-sm);
-  line-height: var(--leading-relaxed);
   color: var(--color-text-soft);
 }
 

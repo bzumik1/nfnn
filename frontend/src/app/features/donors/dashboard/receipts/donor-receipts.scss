@@ -1,20 +1,6 @@
 @use 'breakpoints' as bp;
 
-.yearly-card,
-.single-card {
-  background: var(--color-surface);
-  border-radius: var(--radius-card);
-  box-shadow: var(--shadow-panel);
-  border: 1px solid var(--color-border-soft);
-  padding: var(--space-5) var(--space-6);
-  margin-bottom: var(--space-5);
-}
-
-.yearly-title {
-  font-family: var(--font-serif);
-  font-size: var(--text-3xl);
-  font-weight: var(--weight-bold);
-  color: var(--color-text);
+.ui-card__title {
   margin-bottom: var(--space-1);
 }
 
@@ -75,40 +61,10 @@
   text-align: right;
 }
 
-.yearly-pdf {
-  background: var(--color-accent);
-  color: var(--color-on-accent);
-  border: none;
-  padding: var(--space-2-25) var(--space-4-5);
-  border-radius: var(--radius-pill);
-  font-weight: var(--weight-bold);
-  font-size: var(--text-md);
-  cursor: pointer;
-  font-family: var(--font-sans);
-  box-shadow: var(--shadow-button-sm);
-  white-space: nowrap;
-
-  &:disabled {
-    cursor: not-allowed;
-    opacity: 0.7;
-  }
-}
-
 .yearly-hint {
   margin-top: var(--space-2);
   font-size: var(--text-sm);
   color: var(--color-text-soft);
-}
-
-.receipt-error {
-  margin-top: var(--space-3);
-  padding: var(--space-2-5) var(--space-3-5);
-  background: var(--color-danger-bg);
-  border: 1px solid var(--color-danger-border);
-  border-radius: var(--radius-md);
-  color: var(--color-danger);
-  font-size: var(--text-md);
-  font-weight: var(--weight-medium);
 }
 
 .yearly-empty {

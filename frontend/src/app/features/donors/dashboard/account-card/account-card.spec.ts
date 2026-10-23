@@ -151,7 +151,7 @@ describe('Given the sign-in data card in the overview', () => {
       await settle();
 
       expect(element('#account-second-factor-password')).not.toBeNull();
-      expect(element('.account-form .form-error').textContent).toContain(
+      expect(element('.account-form .ui-field-error').textContent).toContain(
         'Nesprávné současné heslo',
       );
     });
@@ -214,7 +214,7 @@ describe('Given the sign-in data card in the overview', () => {
         await settle();
 
         expect(element('.account-qr')).not.toBeNull();
-        expect(element('.account-form .form-error').textContent).toContain('Nesprávný kód.');
+        expect(element('.account-form .ui-field-error').textContent).toContain('Nesprávný kód.');
       });
 
       it('and sends five digits, then nothing goes out and the field says the code has six', async () => {
@@ -311,7 +311,7 @@ describe('Given the sign-in data card in the overview', () => {
       await settle();
 
       expect(element('#account-second-factor-off-code')).not.toBeNull();
-      expect(element('.account-form .form-error').textContent).toContain('Nesprávný kód');
+      expect(element('.account-form .ui-field-error').textContent).toContain('Nesprávný kód');
     });
   });
 
@@ -376,7 +376,7 @@ describe('Given the sign-in data card in the overview', () => {
         );
       await settle();
 
-      expect(element('.account-form .form-error').textContent).toContain(
+      expect(element('.account-form .ui-field-error').textContent).toContain(
         'Nesprávné současné heslo. Zadejte prosím heslo, kterým se teď přihlašujete.',
       );
       expect(element<HTMLButtonElement>('.account-save').disabled).toBe(false);
@@ -461,7 +461,7 @@ describe('Given the sign-in data card in the overview', () => {
       await submit();
 
       http.expectNone('/api/donors/me/password');
-      expect(element('.account-form .form-error').textContent).toContain(
+      expect(element('.account-form .ui-field-error').textContent).toContain(
         'Nová hesla se neshodují.',
       );
     });
@@ -518,7 +518,7 @@ describe('Given the sign-in data card in the overview', () => {
         });
       await settle();
 
-      expect(element('.account-form .form-error').textContent).toContain(
+      expect(element('.account-form .ui-field-error').textContent).toContain(
         'Nesprávné současné heslo',
       );
     });
@@ -593,9 +593,9 @@ describe("Given an administrator's sign-in data card", () => {
     http.expectOne(CONNECTIONS_URL).flush({ items: [CLAUDE_CONNECTION] });
     await settle();
 
-    element<HTMLButtonElement>('.account-action--danger').click();
+    element<HTMLButtonElement>('.account-danger').click();
     await settle();
-    expect(element('.account-action--danger').textContent).toContain('Odpojuji…');
+    expect(element('.account-danger').textContent).toContain('Odpojuji…');
     http
       .expectOne({ method: 'DELETE', url: `${CONNECTIONS_URL}/${CLAUDE_CONNECTION.id}` })
       .flush(null, { status: 204, statusText: 'No Content' });
@@ -744,10 +744,10 @@ describe('Given the sign-in data card of a donor without a password', () => {
 
     await submit();
     http.expectOne('/api/donors/auth/passkey/options').flush(passkeySignInOptions());
-    await vi.waitFor(() => expect(element('.account-form .form-error')).not.toBeNull());
+    await vi.waitFor(() => expect(element('.account-form .ui-field-error')).not.toBeNull());
     await settle();
 
-    expect(element('.account-form .form-error').textContent).toContain(
+    expect(element('.account-form .ui-field-error').textContent).toContain(
       'Změnu se nepodařilo potvrdit přístupovým klíčem',
     );
     http.expectNone('/api/donors/me/second-factor/setup');
