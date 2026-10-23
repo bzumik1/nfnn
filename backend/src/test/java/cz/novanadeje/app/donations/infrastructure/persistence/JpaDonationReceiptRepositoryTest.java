@@ -408,8 +408,8 @@ class JpaDonationReceiptRepositoryTest {
         receipts.save(replaced);
         replaced.markSuperseded(NOW.plusSeconds(60));
         receipts.save(replaced);
-        DonationReceipt yearly = yearly(jana, YEAR_2025, "2026-000002", Optional.empty());
-        receipts.save(yearly);
+        receipts.save(DonationReceipt.issueForYear(DonationReceiptId.newId(NOW.plusSeconds(30)), jana, YEAR_2025, new ReceiptNumber("2026-000002"),
+                ISSUED_ON, NOW.plusSeconds(30), LocaleCode.CS, FINGERPRINT, CONTENT, Optional.empty()));
         receipts.save(single(petr, petrs, "2026-000003"));
         DonationReceipt newest = DonationReceipt.issueForDonation(DonationReceiptId.newId(NOW.plusSeconds(120)), jana, march.id(),
                 new ReceiptNumber("2026-000004"), ISSUED_ON, NOW.plusSeconds(120), LocaleCode.CS, FINGERPRINT, CONTENT, Optional.of(replaced.id()));
