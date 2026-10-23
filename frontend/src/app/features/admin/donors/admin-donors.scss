@@ -185,6 +185,11 @@ td {
   color: var(--color-accent);
 }
 
+.tag--off {
+  background: var(--color-accent-bg);
+  color: var(--color-text-muted);
+}
+
 .tag--on {
   background: var(--color-success-bg);
   color: var(--color-success);

@@ -36,7 +36,9 @@ interface Notice {
 }
 
 type PendingAction =
-  { kind: 'reset' } | { kind: 'disconnect' | 'reconnect' | 'remove'; linkId: string } | null;
+  | { kind: 'reset' | 'erase' }
+  | { kind: 'disconnect' | 'reconnect' | 'remove'; linkId: string }
+  | null;
 
 const UNAUTHENTICATED = 'auth/unauthenticated';
 const FORBIDDEN = 'auth/forbidden';
@@ -83,6 +85,9 @@ export class AdminDonorDetail {
   protected readonly receipts = computed(() => this.detail()?.receipts ?? []);
   protected readonly total = computed(() =>
     this.crowns(this.detail()?.donations.totalAmountMinor ?? 0),
+  );
+  protected readonly erasedAt = computed(
+    () => this.account()?.erasedAt ?? this.detail()?.donor.erasedAt ?? null,
   );
 
   constructor() {
@@ -193,6 +198,11 @@ export class AdminDonorDetail {
     this.notice.set(null);
   }
 
+  protected askErase(): void {
+    this.pending.set({ kind: 'erase' });
+    this.notice.set(null);
+  }
+
   protected askAccount(kind: 'disconnect' | 'reconnect' | 'remove', item: BankAccountItem): void {
     this.pending.set({ kind, linkId: item.id });
     this.notice.set(null);
@@ -206,9 +216,13 @@ export class AdminDonorDetail {
     return this.pending()?.kind === 'reset';
   }
 
+  protected isPendingErase(): boolean {
+    return this.pending()?.kind === 'erase';
+  }
+
   protected pendingFor(item: BankAccountItem): 'disconnect' | 'reconnect' | 'remove' | null {
     const pending = this.pending();
-    if (pending === null || pending.kind === 'reset' || pending.linkId !== item.id) {
+    if (pending === null || !('linkId' in pending) || pending.linkId !== item.id) {
       return null;
     }
     return pending.kind;
@@ -221,6 +235,18 @@ export class AdminDonorDetail {
       $localize`:@@admin.donorDetail.reset.done:Dvoufaktorové ověření u ${name}:name: je vypnuté a všechna přihlášení jsme ukončili. Dárce dostal e-mail; po přihlášení heslem si ho může zapnout znovu.`,
       $localize`:@@admin.donorDetail.reset.failed:Dvoufaktorové ověření se nepodařilo vypnout. Zkuste to prosím znovu.`,
       () => this.loadAccount(),
+    );
+  }
+
+  protected erase(): void {
+    this.run(
+      this.api.eraseDonor(this.donorId),
+      $localize`:@@admin.donorDetail.erase.done:Osobní údaje dárce jsme vymazali a na jeho dosavadní e-mail poslali potvrzení. Účet už nejde použít; dary a vydaná potvrzení zůstávají bez jména.`,
+      $localize`:@@admin.donorDetail.erase.failed:Osobní údaje se nepodařilo vymazat. Zkuste to prosím znovu.`,
+      () => {
+        this.loadAccount();
+        this.loadDonations();
+      },
     );
   }
 

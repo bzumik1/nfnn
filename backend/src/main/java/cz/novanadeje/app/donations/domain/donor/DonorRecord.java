@@ -3,6 +3,7 @@ package cz.novanadeje.app.donations.domain.donor;
 import cz.novanadeje.app.donations.domain.bank.BankPayment;
 import cz.novanadeje.app.donations.domain.bank.SenderAccount;
 import cz.novanadeje.app.shared.domain.DonorType;
+import cz.novanadeje.app.shared.domain.ErasedPersonalData;
 import cz.novanadeje.app.shared.domain.LocaleCode;
 import cz.novanadeje.app.shared.domain.PostalAddress;
 import cz.novanadeje.app.shared.domain.VariableSymbol;
@@ -28,21 +29,23 @@ public final class DonorRecord {
     private final DonorReference id;
     private final DonorType type;
     private String name;
-    private final String companyIdentifier;
+    private String companyIdentifier;
     private PostalAddress address;
     private final VariableSymbol variableSymbol;
     private LocaleCode preferredLocale;
     private final Map<SenderAccountLinkId, SenderAccountLink> senderAccountLinks;
     private final Instant registeredAt;
     private Instant updatedAt;
+    private Instant erasedAt;
 
     private DonorRecord(DonorReference id, DonorType type, String name, String companyIdentifier, PostalAddress address,
                         VariableSymbol variableSymbol, LocaleCode preferredLocale, List<SenderAccountLink> senderAccountLinks,
-                        Instant registeredAt, Instant updatedAt) {
+                        Instant registeredAt, Instant updatedAt, Instant erasedAt) {
         this.id = require(id, "Donor reference");
         this.type = require(type, "Donor type");
         this.name = requireName(name);
-        this.companyIdentifier = requireIdentifierMatchingType(this.type, companyIdentifier);
+        this.erasedAt = erasedAt;
+        this.companyIdentifier = erasedAt == null ? requireIdentifierMatchingType(this.type, companyIdentifier) : null;
         this.address = require(address, "Address");
         this.variableSymbol = require(variableSymbol, "Variable symbol");
         this.preferredLocale = require(preferredLocale, "Preferred locale");
@@ -56,7 +59,7 @@ public final class DonorRecord {
     public static DonorRecord registerPerson(DonorReference id, String name, PostalAddress address, VariableSymbol variableSymbol,
                                              LocaleCode preferredLocale, Instant registeredAt) {
         return new DonorRecord(id, DonorType.PERSON, name, null, address, variableSymbol, preferredLocale, List.of(),
-                registeredAt, registeredAt);
+                registeredAt, registeredAt, null);
     }
 
     public static DonorRecord registerCompany(DonorReference id, String name, String companyIdentifier, PostalAddress address,
@@ -65,14 +68,37 @@ public final class DonorRecord {
             throw new IllegalArgumentException("A company needs its identification number");
         }
         return new DonorRecord(id, DonorType.COMPANY, name, companyIdentifier, address, variableSymbol, preferredLocale, List.of(),
-                registeredAt, registeredAt);
+                registeredAt, registeredAt, null);
     }
 
     public static DonorRecord reconstitute(DonorReference id, DonorType type, String name, String companyIdentifier, PostalAddress address,
                                            VariableSymbol variableSymbol, LocaleCode preferredLocale, List<SenderAccountLink> senderAccountLinks,
-                                           Instant registeredAt, Instant updatedAt) {
+                                           Instant registeredAt, Instant updatedAt, Instant erasedAt) {
         return new DonorRecord(id, type, name, companyIdentifier, address, variableSymbol, preferredLocale, senderAccountLinks,
-                registeredAt, updatedAt);
+                registeredAt, updatedAt, erasedAt);
+    }
+
+    public List<SenderAccountLink> erase(Instant at) {
+        Instant checkedAt = require(at, "Erasure time");
+        if (erasedAt != null) {
+            throw new IllegalStateException("Donor record " + id + " is already erased");
+        }
+        this.erasedAt = checkedAt;
+        this.updatedAt = checkedAt;
+        this.name = ErasedPersonalData.NAME;
+        this.companyIdentifier = null;
+        this.address = ErasedPersonalData.ADDRESS;
+        List<SenderAccountLink> removed = List.copyOf(senderAccountLinks.values());
+        senderAccountLinks.clear();
+        return removed;
+    }
+
+    public boolean isErased() {
+        return erasedAt != null;
+    }
+
+    public Optional<Instant> erasedAt() {
+        return Optional.ofNullable(erasedAt);
     }
 
     public void changeProfile(String newName, PostalAddress newAddress, LocaleCode newLocale, Instant at) {
@@ -87,7 +113,7 @@ public final class DonorRecord {
     }
 
     public boolean claimsBySymbol(BankPayment payment) {
-        return require(payment, "Payment").matchingVariableSymbol().filter(variableSymbol::equals).isPresent();
+        return erasedAt == null && require(payment, "Payment").matchingVariableSymbol().filter(variableSymbol::equals).isPresent();
     }
 
     public Optional<SenderAccountLink> linkPairingPaymentsFrom(SenderAccount account, LocalDate bookedOn) {

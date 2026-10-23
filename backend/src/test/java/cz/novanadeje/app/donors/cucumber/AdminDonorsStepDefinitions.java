@@ -3,31 +3,85 @@ package cz.novanadeje.app.donors.cucumber;
 import cz.novanadeje.app.cucumber.ApiClient;
 import cz.novanadeje.app.cucumber.DonorSessions;
 import cz.novanadeje.app.cucumber.ScenarioDonors;
+import cz.novanadeje.app.support.RecordingMailSender;
+import io.cucumber.java.en.Given;
 import io.cucumber.datatable.DataTable;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
 import tools.jackson.databind.JsonNode;
 
+import java.time.Duration;
 import java.time.LocalDate;
+import java.util.Map;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 
 public class AdminDonorsStepDefinitions {
 
     private static final String DONORS_PATH = "/api/admin/donors";
+    private static final String LOGIN_PATH = "/api/donors/auth/login";
     private static final UUID UNKNOWN_DONOR = UUID.fromString("019a1c00-0000-7000-8000-00000000dead");
+    private static final Duration MAIL_WAIT = Duration.ofSeconds(5);
 
     private final ApiClient api;
     private final DonorSessions sessions;
     private final ScenarioDonors scenarioDonors;
+    private final RecordingMailSender mailSender;
 
-    public AdminDonorsStepDefinitions(ApiClient api, DonorSessions sessions, ScenarioDonors scenarioDonors) {
+    public AdminDonorsStepDefinitions(ApiClient api, DonorSessions sessions, ScenarioDonors scenarioDonors, RecordingMailSender mailSender) {
         this.api = api;
         this.sessions = sessions;
         this.scenarioDonors = scenarioDonors;
+        this.mailSender = mailSender;
+    }
+
+    @When("{string} erases the donor {string}")
+    public void erasesTheDonor(String alias, String donorAlias) {
+        sessions.actAs(alias);
+        api.delete(DONORS_PATH + "/" + scenarioDonors.idOf(donorAlias));
+    }
+
+    @Given("{string} erased the donor {string}")
+    public void erasedTheDonor(String alias, String donorAlias) {
+        int sentBefore = mailSender.sent().size();
+        erasesTheDonor(alias, donorAlias);
+        assertThat(api.lastResponse().getStatusCode().value()).withFailMessage("Erasing answered %s", api.lastResponse().getBody()).isEqualTo(204);
+        await().atMost(MAIL_WAIT).untilAsserted(() -> assertThat(mailSender.sent()).hasSizeGreaterThan(sentBefore));
+    }
+
+    @When("{string} erases an unknown donor")
+    public void erasesAnUnknownDonor(String alias) {
+        sessions.actAs(alias);
+        api.delete(DONORS_PATH + "/" + UNKNOWN_DONOR);
+    }
+
+    @When("someone without a token erases a donor")
+    public void someoneWithoutATokenErasesADonor() {
+        api.forgetCredentials();
+        api.delete(DONORS_PATH + "/" + UNKNOWN_DONOR);
+    }
+
+    @When("{string} tries to sign in with the former credentials")
+    public void triesToSignInWithTheFormerCredentials(String alias) {
+        ScenarioDonors.Credentials credentials = scenarioDonors.credentialsOf(alias);
+        api.forgetCredentials();
+        api.post(LOGIN_PATH, Map.of("email", credentials.email(), "password", credentials.password()));
+    }
+
+    @Then("the donor card says the donor was erased on {date}")
+    public void theDonorCardSaysTheDonorWasErasedOn(LocalDate day) {
+        assertThat(api.lastResponseJson().get("erasedAt").asString()).startsWith(day.toString());
+    }
+
+    @Then("the donor card carries no personal data of {string}")
+    public void theDonorCardCarriesNoPersonalDataOf(String alias) {
+        String body = api.lastResponse().getBody();
+        assertThat(body).doesNotContainIgnoringCase(scenarioDonors.credentialsOf(alias).email())
+                .doesNotContain("Svoboda").doesNotContain("Dlouhá").doesNotContain("Ústí");
     }
 
     @When("{string} searches the donors for {string}")

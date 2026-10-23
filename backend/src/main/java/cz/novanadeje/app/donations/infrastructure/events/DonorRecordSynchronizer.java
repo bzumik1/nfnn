@@ -3,6 +3,7 @@ package cz.novanadeje.app.donations.infrastructure.events;
 import cz.novanadeje.app.donations.application.donor.ChangeDonorRecordProfileCommand;
 import cz.novanadeje.app.donations.application.donor.DonorRecordService;
 import cz.novanadeje.app.donations.application.donor.RegisterDonorRecordCommand;
+import cz.novanadeje.app.shared.application.event.DonorErased;
 import cz.novanadeje.app.shared.application.event.DonorProfileChanged;
 import cz.novanadeje.app.shared.application.event.DonorRegistered;
 import org.slf4j.Logger;
@@ -35,6 +36,11 @@ class DonorRecordSynchronizer {
         } catch (RuntimeException e) {
             log.warn("Pairing the payments of donor {} after the registration failed; the hourly import pairs them", event.donorId(), e);
         }
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT, fallbackExecution = true)
+    void onErased(DonorErased event) {
+        donorRecordService.erase(event.donorId(), event.erasedAt());
     }
 
     @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT, fallbackExecution = true)

@@ -49,6 +49,9 @@ public final class Donation {
     public static Donation fromBankPayment(DonationId id, DonorReference donor, BankPayment payment, PairingMethod pairedBy,
                                            Instant recordedAt) {
         BankPayment paid = require(payment, "Bank payment");
+        if (pairedBy == PairingMethod.CONFIRMED_SYMBOL) {
+            throw new IllegalArgumentException("A donation paired by a confirmed symbol is made with the account link and the claim it was paired through");
+        }
         return new Donation(id, donor, Optional.of(paid.id()), paid.bookedOn(), paid.amount(), DonationSource.BANK_TRANSFER,
                 DonationStatus.RECEIVED, Optional.ofNullable(pairedBy), Optional.empty(), Optional.empty(), DonationPurpose.of(paid), recordedAt);
     }
@@ -91,6 +94,11 @@ public final class Donation {
                                         DonationPurpose purpose, Instant recordedAt) {
         return new Donation(id, donor, bankPayment, receivedOn, amount, source, status, pairedBy, pairedThrough, confirmedClaim, purpose,
                 recordedAt);
+    }
+
+    public Donation withoutPairingSources() {
+        return new Donation(id, donor, Optional.ofNullable(bankPayment), receivedOn, amount, source, status, Optional.ofNullable(pairedBy),
+                Optional.empty(), Optional.empty(), purpose, recordedAt);
     }
 
     public DonationId id() {
@@ -169,8 +177,9 @@ public final class Donation {
             throw new IllegalArgumentException("Only a donation paired by sender account or by a confirmed symbol names the account link "
                     + "it was paired through");
         }
-        if (pairedBy == PairingMethod.CONFIRMED_SYMBOL && (pairedThrough == null || confirmedClaim == null)) {
-            throw new IllegalArgumentException("A donation paired by a confirmed symbol names the account link and the claim it was paired through");
+        if (pairedBy == PairingMethod.CONFIRMED_SYMBOL && (pairedThrough == null) != (confirmedClaim == null)) {
+            throw new IllegalArgumentException("A donation paired by a confirmed symbol names both the account link and the claim it was paired"
+                    + " through, or neither once they were erased with the donor");
         }
         if (confirmedClaim != null && pairedBy != PairingMethod.CONFIRMED_SYMBOL) {
             throw new IllegalArgumentException("Only a donation paired by a confirmed symbol names a symbol claim");

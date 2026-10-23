@@ -86,7 +86,7 @@ class SymbolClaimServiceTest {
     private final SenderAccountLink link = SenderAccountLink.reconstitute(SenderAccountLinkId.newId(NOW), ACCOUNT, SenderAccountLinkStatus.ACTIVE,
             Optional.of(verification.id()), Optional.of(NOW), Optional.empty(), Optional.empty(), NOW, Optional.empty());
     private final DonorRecord jana = DonorRecord.reconstitute(JANA, DonorType.PERSON, "Jana Nováková", null,
-            new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"), JANA_SYMBOL, LocaleCode.CS, List.of(link), NOW, NOW);
+            new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"), JANA_SYMBOL, LocaleCode.CS, List.of(link), NOW, NOW, null);
     private final Donation verificationDonation = Donation.fromBankPayment(DonationId.newId(NOW), JANA, verification,
             PairingMethod.VARIABLE_SYMBOL, NOW);
 
@@ -236,7 +236,7 @@ class SymbolClaimServiceTest {
     @DisplayName("Given the only other symbol belongs to a registered donor, when confirmed, then the offer is not available")
     void should_refuse_offer_when_confirmed_given_symbol_of_registered_donor() {
         when(donorRecords.findByVariableSymbol(OLD_SYMBOL)).thenReturn(Optional.of(DonorRecord.reconstitute(PETR, DonorType.PERSON, "Petr Svoboda",
-                null, new PostalAddress("Krátká 3", "Teplice", "415 01"), OLD_SYMBOL, LocaleCode.CS, List.of(), NOW, NOW)));
+                null, new PostalAddress("Krátká 3", "Teplice", "415 01"), OLD_SYMBOL, LocaleCode.CS, List.of(), NOW, NOW, null)));
 
         assertThatThrownBy(() -> service.confirm(JANA, link.id(), OLD_SYMBOL)).isInstanceOf(SymbolOfferNotAvailable.class);
         verify(claims, never()).saveIfAbsent(any());

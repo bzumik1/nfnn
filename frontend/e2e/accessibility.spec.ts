@@ -535,6 +535,10 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     await page.getByRole('button', { name: 'Odebrat účet' }).first().click();
     await expect(page.getByRole('group', { name: 'Odebrat účet?' })).toBeVisible();
     expect(await violations(page)).toEqual([]);
+
+    await page.getByRole('button', { name: 'Vymazat osobní údaje' }).click();
+    await expect(page.getByRole('group', { name: 'Vymazat osobní údaje?' })).toBeVisible();
+    expect(await violations(page)).toEqual([]);
   });
 
   test('when an administrator reads the history, then the page with its paging breaks no rule', async ({

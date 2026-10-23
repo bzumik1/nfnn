@@ -47,4 +47,9 @@ class JpaPasswordResetTokenRepository implements PasswordResetTokenRepository {
     public void deleteOthersOf(DonorId donorId, UUID keptTokenId) {
         jpa.deleteOthers(donorId.value(), keptTokenId);
     }
+
+    @Override
+    public void deleteAllOf(DonorId donorId) {
+        jpa.deleteAllOfDonor(donorId.value());
+    }
 }

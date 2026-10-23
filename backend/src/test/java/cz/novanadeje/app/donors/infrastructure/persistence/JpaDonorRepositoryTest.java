@@ -10,6 +10,7 @@ import cz.novanadeje.app.donors.domain.LinkSecret;
 import cz.novanadeje.app.donors.domain.PasswordHash;
 import cz.novanadeje.app.shared.domain.DonorType;
 import cz.novanadeje.app.shared.domain.EmailAddress;
+import cz.novanadeje.app.shared.domain.ErasedPersonalData;
 import cz.novanadeje.app.shared.domain.LocaleCode;
 import cz.novanadeje.app.shared.domain.PostalAddress;
 import cz.novanadeje.app.shared.domain.VariableSymbol;
@@ -132,6 +133,32 @@ class JpaDonorRepositoryTest {
         assertThat(donors.search("100%", 20)).extracting(Donor::name).containsExactly("Karel 100% Veselý");
         assertThat(donors.search("_", 20)).isEmpty();
         assertThat(donors.search("xyz", 20)).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Given a saved donor, when erased and saved again, then the placeholders, the empty roles and the time survive a reload, the former address is free and the search finds the donor by symbol, not by the former name")
+    void should_keep_erasure_when_saved_given_erased_donor() {
+        Donor donor = donor("jana@example.cz", "4821937560");
+        donors.save(donor);
+        flushAndClear();
+
+        Donor stored = donors.findById(donor.id()).orElseThrow();
+        stored.erase(NOW.plusSeconds(90));
+        donors.save(stored);
+        flushAndClear();
+        donors.save(donor("jana@example.cz", "4821937561"));
+        flushAndClear();
+
+        Donor reloaded = donors.findById(donor.id()).orElseThrow();
+        assertThat(reloaded.isErased()).isTrue();
+        assertThat(reloaded.erasedAt()).contains(NOW.plusSeconds(90));
+        assertThat(reloaded.name()).isEqualTo(ErasedPersonalData.NAME);
+        assertThat(reloaded.email()).isEqualTo(ErasedPersonalData.emailFor(donor.id().value()));
+        assertThat(reloaded.roles()).isEmpty();
+        assertThat(reloaded.isEmailVerified()).isFalse();
+        assertThat(donors.findByEmail(new EmailAddress("jana@example.cz")).orElseThrow().variableSymbol()).isEqualTo(new VariableSymbol("4821937561"));
+        assertThat(donors.search("4821937560", 20)).extracting(Donor::id).containsExactly(donor.id());
+        assertThat(donors.search("nováková", 20)).extracting(Donor::id).doesNotContain(donor.id());
     }
 
     private static Donor donor(String email, String variableSymbol) {

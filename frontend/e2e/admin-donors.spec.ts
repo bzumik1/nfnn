@@ -28,6 +28,7 @@ const janaAccount = {
   emailVerified: true,
   administrator: true,
   secondFactorEnabled: true,
+  erasedAt: null as string | null,
 };
 
 const petrAccount = {
@@ -50,6 +51,7 @@ const petrDetail = {
     address: { street: 'Dlouhá 12', city: 'Ústí nad Labem', postalCode: '400 01' },
     preferredLocale: 'cs',
     registeredAt: '2026-10-17T10:00:00Z',
+    erasedAt: null as string | null,
   },
   bankAccounts: [
     bankAccountItem({
@@ -129,7 +131,27 @@ test.describe('Given an administrator on the donors page', () => {
     );
     await page.route(
       (url) => url.pathname === PETR_ACCOUNT,
-      (route) => route.fulfill({ json: account }),
+      (route) => {
+        if (route.request().method() === 'DELETE') {
+          calls.push('erase');
+          account = {
+            ...petrAccount,
+            name: 'Vymazaný dárce',
+            email: `erased-${PETR_ID}@erased.invalid`,
+            address: { street: 'Vymazáno', city: 'Vymazáno', postalCode: '00000' },
+            emailVerified: false,
+            secondFactorEnabled: false,
+            erasedAt: '2026-10-23T09:00:00Z',
+          };
+          detail = {
+            ...detail,
+            donor: { ...detail.donor, name: 'Vymazaný dárce', erasedAt: '2026-10-23T09:00:00Z' },
+            bankAccounts: [],
+          };
+          return route.fulfill({ status: 204 });
+        }
+        return route.fulfill({ json: account });
+      },
     );
     await page.route(
       (url) => url.pathname === PETR_DONATIONS,
@@ -224,7 +246,7 @@ test.describe('Given an administrator on the donors page', () => {
       'Dvoufaktorové ověření u Petr Svoboda je vypnuté a všechna přihlášení jsme ukončili. Dárce dostal e-mail; po přihlášení heslem si ho může zapnout znovu.',
     );
     await expect(accountCard).toContainText(/Dvoufaktorové ověření\s*vypnuté/);
-    await expect(accountCard.getByRole('button')).toHaveCount(0);
+    await expect(accountCard.getByRole('button')).toHaveText(['Vymazat osobní údaje']);
 
     await accountsCard.getByRole('button', { name: 'Vypnout párování' }).click();
     await accountsCard.getByRole('button', { name: 'Ano, vypnout' }).click();
@@ -247,6 +269,29 @@ test.describe('Given an administrator on the donors page', () => {
       'Celkem 1 dar za 500 Kč.',
     );
     expect(calls).toEqual(['reset', 'disconnect', 'DELETE']);
+
+    await accountCard.getByRole('button', { name: 'Vymazat osobní údaje' }).click();
+    await expect(page.getByRole('group', { name: 'Vymazat osobní údaje?' })).toContainText(
+      'Nevratný krok',
+    );
+    await accountCard.getByRole('button', { name: 'Ne', exact: true }).click();
+    await accountCard.getByRole('button', { name: 'Vymazat osobní údaje' }).click();
+    await accountCard.getByRole('button', { name: 'Ano, vymazat' }).click();
+    await expect(page.getByRole('status').filter({ hasNotText: 'Načítáme' })).toHaveText(
+      'Osobní údaje dárce jsme vymazali a na jeho dosavadní e-mail poslali potvrzení. Účet už nejde použít; dary a vydaná potvrzení zůstávají bez jména.',
+    );
+    await expect(page.getByRole('heading', { level: 1, name: 'Vymazaný dárce' })).toBeVisible();
+    await expect(page.getByRole('note')).toContainText(
+      'Osobní údaje tohoto dárce jsme vymazali 23. 10. 2026 11:00.',
+    );
+    await expect(accountCard).not.toContainText('erased.invalid');
+    await expect(accountCard).toContainText(/Adresa\s*vymazána/);
+    await expect(accountCard.getByRole('button')).toHaveCount(0);
+    await expect(accountsCard).toContainText('Bankovní účty jsme s osobními údaji dárce smazali');
+    await expect(page.getByRole('region', { name: 'Dary' })).toContainText(
+      'Celkem 1 dar za 500 Kč.',
+    );
+    expect(calls).toEqual(['reset', 'disconnect', 'DELETE', 'erase']);
 
     await page.getByRole('link', { name: 'Dárci' }).click();
     await expect(page).toHaveURL(/\/sprava\/darci$/);

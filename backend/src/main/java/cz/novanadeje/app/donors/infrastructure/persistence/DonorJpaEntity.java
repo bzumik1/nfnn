@@ -76,6 +76,9 @@ public class DonorJpaEntity {
     @Column(name = "email_verified_at")
     private Instant emailVerifiedAt;
 
+    @Column(name = "erased_at")
+    private Instant erasedAt;
+
     protected DonorJpaEntity() {
     }
 
@@ -92,9 +95,11 @@ public class DonorJpaEntity {
         entity.passwordHash = donor.passwordHash().value();
         entity.variableSymbol = donor.variableSymbol().value();
         entity.preferredLocale = donor.preferredLocale().tag();
-        entity.roles = EnumSet.copyOf(donor.roles());
+        entity.roles = EnumSet.noneOf(Role.class);
+        entity.roles.addAll(donor.roles());
         entity.registeredAt = donor.registeredAt();
         entity.emailVerifiedAt = donor.emailVerifiedAt().orElse(null);
+        entity.erasedAt = donor.erasedAt().orElse(null);
         return entity;
     }
 
@@ -111,7 +116,8 @@ public class DonorJpaEntity {
                 LocaleCode.fromTag(preferredLocale),
                 roles,
                 registeredAt,
-                emailVerifiedAt
+                emailVerifiedAt,
+                erasedAt
         );
     }
 }

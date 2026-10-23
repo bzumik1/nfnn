@@ -17,4 +17,6 @@ public interface PasswordResetTokenRepository {
     boolean markUsed(UUID tokenId, Instant at);
 
     void deleteOthersOf(DonorId donorId, UUID keptTokenId);
+
+    void deleteAllOf(DonorId donorId);
 }

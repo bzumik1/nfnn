@@ -353,7 +353,7 @@ class SymbolClaimOfferPolicyTest {
         DonorRecord donor = type == DonorType.PERSON
                 ? janaWith(proved)
                 : DonorRecord.reconstitute(JANA, DonorType.COMPANY, "ABC s.r.o.", "45274649", address(), JANA_SYMBOL, LocaleCode.CS,
-                List.of(proved), NOW, NOW);
+                List.of(proved), NOW, NOW, null);
         return policy.candidate(donor, proved, List.of(january, september, verificationPayment), Set.of(verificationPayment.id()), List.of(donor),
                 List.of(), TODAY);
     }
@@ -392,7 +392,7 @@ class SymbolClaimOfferPolicyTest {
     }
 
     private static DonorRecord person(DonorReference id, String name, VariableSymbol symbol, SenderAccountLink link) {
-        return DonorRecord.reconstitute(id, DonorType.PERSON, name, null, address(), symbol, LocaleCode.CS, List.of(link), NOW, NOW);
+        return DonorRecord.reconstitute(id, DonorType.PERSON, name, null, address(), symbol, LocaleCode.CS, List.of(link), NOW, NOW, null);
     }
 
     private static PostalAddress address() {

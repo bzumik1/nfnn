@@ -3,6 +3,7 @@ package cz.novanadeje.app.donors.interfaces.rest;
 import cz.novanadeje.app.donors.application.AdministratorActivityService;
 import cz.novanadeje.app.donors.application.AdministratorService;
 import cz.novanadeje.app.donors.application.DonorAdministrationService;
+import cz.novanadeje.app.donors.application.DonorErasureService;
 import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.shared.domain.EmailAddress;
 import jakarta.validation.Valid;
@@ -35,11 +36,14 @@ class AdminDonorsController {
     private final AdministratorService administrators;
     private final AdministratorActivityService activity;
     private final DonorAdministrationService donors;
+    private final DonorErasureService erasure;
 
-    AdminDonorsController(AdministratorService administrators, AdministratorActivityService activity, DonorAdministrationService donors) {
+    AdminDonorsController(AdministratorService administrators, AdministratorActivityService activity, DonorAdministrationService donors,
+                          DonorErasureService erasure) {
         this.administrators = administrators;
         this.activity = activity;
         this.donors = donors;
+        this.erasure = erasure;
     }
 
     @GetMapping
@@ -50,6 +54,12 @@ class AdminDonorsController {
     @GetMapping("/{donorId}")
     DonorAccountResponse donor(@PathVariable UUID donorId) {
         return DonorAccountResponse.from(donors.view(new DonorId(donorId)));
+    }
+
+    @DeleteMapping("/{donorId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    void erase(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID donorId) {
+        erasure.erase(admin(jwt), new DonorId(donorId));
     }
 
     @GetMapping("/administrators")

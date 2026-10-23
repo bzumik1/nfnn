@@ -14,6 +14,12 @@
         <ng-container i18n="@@admin.donorDetail.heading">Dárce</ng-container>
       }
     </h1>
+    @if (erasedAt(); as erasedAt) {
+      <p class="admin-erased" role="note" i18n="@@admin.donorDetail.erased">
+        Osobní údaje tohoto dárce jsme vymazali {{ time(erasedAt) }}. Účet už nejde použít; dary a
+        vydaná potvrzení zůstávají kvůli účetnictví, bez jména.
+      </p>
+    }
 
     @if (notice(); as notice) {
       @if (notice.kind === 'status') {
@@ -69,22 +75,38 @@
               <div>
                 <dt i18n="@@admin.donorDetail.account.email">E-mail</dt>
                 <dd>
-                  <span class="email">{{ account.email }}</span
-                  >&ngsp;
-                  @if (account.emailVerified) {
-                    <span class="tag tag--on" i18n="@@admin.donorDetail.account.email.verified"
-                      >ověřen</span
+                  @if (account.erasedAt) {
+                    <span class="muted-inline" i18n="@@admin.donorDetail.account.email.erased"
+                      >vymazán</span
                     >
                   } @else {
-                    <span class="tag tag--warn" i18n="@@admin.donorDetail.account.email.unverified"
-                      >neověřen</span
-                    >
+                    <span class="email">{{ account.email }}</span
+                    >&ngsp;
+                    @if (account.emailVerified) {
+                      <span class="tag tag--on" i18n="@@admin.donorDetail.account.email.verified"
+                        >ověřen</span
+                      >
+                    } @else {
+                      <span
+                        class="tag tag--warn"
+                        i18n="@@admin.donorDetail.account.email.unverified"
+                        >neověřen</span
+                      >
+                    }
                   }
                 </dd>
               </div>
               <div>
                 <dt i18n="@@admin.donorDetail.account.address">Adresa</dt>
-                <dd>{{ address(account) }}</dd>
+                <dd>
+                  @if (account.erasedAt) {
+                    <span class="muted-inline" i18n="@@admin.donorDetail.account.address.erased"
+                      >vymazána</span
+                    >
+                  } @else {
+                    {{ address(account) }}
+                  }
+                </dd>
               </div>
               <div>
                 <dt i18n="@@admin.donorDetail.account.symbol">Variabilní symbol</dt>
@@ -127,7 +149,7 @@
                 </dd>
               </div>
             </dl>
-            @if (account.secondFactorEnabled) {
+            @if (account.secondFactorEnabled && !account.erasedAt) {
               <div class="admin-actions">
                 @if (isPendingReset()) {
                   <span
@@ -179,6 +201,65 @@
                 }
               </div>
             }
+            @if (!account.erasedAt) {
+              <div class="admin-actions admin-actions--erase">
+                @if (account.administrator) {
+                  <span class="admin-hint" i18n="@@admin.donorDetail.erase.administrator"
+                    >Správci nejde vymazat osobní údaje. Nejdřív mu odeberte roli správce na stránce
+                    Správci.</span
+                  >
+                } @else if (isPendingErase()) {
+                  <span
+                    class="confirm"
+                    role="group"
+                    aria-label="Vymazat osobní údaje?"
+                    i18n-aria-label="@@admin.donorDetail.erase.confirm.label"
+                  >
+                    <span i18n="@@admin.donorDetail.erase.confirm.question"
+                      >Nevratný krok: jméno, adresu, e-mail a heslo nahradíme zástupnými údaji,
+                      smažeme bankovní účty i odpovědi o starších symbolech a ukončíme všechna
+                      přihlášení. Účet už nepůjde použít. Dary a vydaná potvrzení zůstanou bez
+                      jména; dárce dostane e-mail. Vymazat?</span
+                    >
+                    <button
+                      type="button"
+                      class="action-btn action-btn--danger"
+                      [disabled]="busy()"
+                      (click)="erase()"
+                    >
+                      @if (busy()) {
+                        <ng-container i18n="@@admin.donorDetail.erase.busy">Mažeme…</ng-container>
+                      } @else {
+                        <ng-container i18n="@@admin.donorDetail.erase.yes"
+                          >Ano, vymazat</ng-container
+                        >
+                      }
+                    </button>
+                    <button
+                      type="button"
+                      class="action-link"
+                      [disabled]="busy()"
+                      (click)="cancel()"
+                      i18n="@@admin.donorDetail.confirm.no"
+                    >
+                      Ne
+                    </button>
+                  </span>
+                } @else {
+                  <button
+                    type="button"
+                    class="action-btn action-btn--quiet"
+                    (click)="askErase()"
+                    i18n="@@admin.donorDetail.erase.open"
+                  >
+                    Vymazat osobní údaje
+                  </button>
+                  <span class="admin-hint" i18n="@@admin.donorDetail.erase.hint"
+                    >Pro dárce, který požádal o výmaz podle GDPR.</span
+                  >
+                }
+              </div>
+            }
           }
         }
       }
@@ -215,7 +296,11 @@
           </div>
         }
         @case ('ready') {
-          @if (bankAccounts().length === 0) {
+          @if (erasedAt()) {
+            <p class="admin-empty" i18n="@@admin.donorDetail.accounts.erased">
+              Bankovní účty jsme s osobními údaji dárce smazali; další platby se mu už nepřiřadí.
+            </p>
+          } @else if (bankAccounts().length === 0) {
             <p class="admin-empty" i18n="@@admin.donorDetail.accounts.empty">
               Z žádného účtu zatím nepřišla platba s variabilním symbolem dárce.
             </p>

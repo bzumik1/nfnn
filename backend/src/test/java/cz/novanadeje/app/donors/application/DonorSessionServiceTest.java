@@ -197,6 +197,6 @@ class DonorSessionServiceTest {
     private static Donor administrator() {
         return Donor.reconstitute(DONOR, DonorType.PERSON, "Jana Nováková", null, new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"),
                 new EmailAddress("jana@example.cz"), new PasswordHash("$hash"), new VariableSymbol("1234567890"), LocaleCode.CS,
-                Set.of(Role.DONOR, Role.ADMIN), NOW, NOW);
+                Set.of(Role.DONOR, Role.ADMIN), NOW, NOW, null);
     }
 }

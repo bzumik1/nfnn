@@ -204,7 +204,7 @@ class DonorDonationsServiceTest {
         SenderAccountLink link = SenderAccountLink.reconstitute(SenderAccountLinkId.newId(NOW), account, SenderAccountLinkStatus.ACTIVE,
                 Optional.of(BankPaymentId.newId(NOW)), Optional.of(NOW), Optional.empty(), Optional.empty(), NOW, Optional.empty());
         DonorRecord record = DonorRecord.reconstitute(JANA, DonorType.PERSON, "Jana Nováková", null,
-                new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"), new VariableSymbol("4821937560"), LocaleCode.CS, List.of(link), NOW, NOW);
+                new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"), new VariableSymbol("4821937560"), LocaleCode.CS, List.of(link), NOW, NOW, null);
         Donation byAccount = Donation.reconstitute(DonationId.newId(NOW), JANA, Optional.of(BankPaymentId.newId(NOW)), LocalDate.of(2026, 3, 1),
                 Money.czk(30000), DonationSource.BANK_TRANSFER, DonationStatus.RECEIVED, Optional.of(PairingMethod.SENDER_ACCOUNT),
                 Optional.of(link.id()), NOW);
@@ -236,7 +236,7 @@ class DonorDonationsServiceTest {
         when(donations.findByDonorNewestFirst(JANA)).thenReturn(List.of(byClaim, byAccount, JANUARY_2026));
         when(donorRecords.findById(JANA)).thenReturn(Optional.of(DonorRecord.reconstitute(JANA, DonorType.PERSON, "Jana Nováková", null,
                 new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"), new VariableSymbol("4821937560"), LocaleCode.CS, List.of(link), NOW,
-                NOW)));
+                NOW, null)));
         when(claims.findByDonor(JANA)).thenReturn(List.of(declined, confirmed));
 
         DonationOverview overview = service.listDonations(JANA, Optional.empty());

@@ -9,6 +9,7 @@ import cz.novanadeje.app.donations.domain.donor.DonorReference;
 import cz.novanadeje.app.donations.domain.donor.ExcludedSenderAccounts;
 import cz.novanadeje.app.donations.domain.donor.SenderAccountLink;
 import cz.novanadeje.app.donations.domain.donor.SenderAccountLinkStatus;
+import cz.novanadeje.app.shared.domain.ErasedPersonalData;
 import cz.novanadeje.app.shared.domain.LocaleCode;
 import cz.novanadeje.app.shared.domain.PostalAddress;
 import cz.novanadeje.app.shared.domain.UuidV7;
@@ -244,6 +245,36 @@ class JpaDonorRecordRepositoryTest {
         assertThat(accountRows()).isZero();
         assertThat(donorRecords.findById(jana.id()).orElseThrow().senderAccountLinks()).isEmpty();
         assertThat(donorRecords.findBySenderAccount(ACCOUNT)).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Given a stored record with a learned account, when its links are deleted and the erased record is saved, then the rows are gone, the erasure survives a reload, and the search by name or symbol no longer finds it")
+    void should_keep_erasure_and_hide_from_search_when_erased_given_stored_record_with_account() {
+        DonorRecord jana = person("Jana Nováková", "4821937560");
+        donorRecords.save(jana);
+        donorRecords.saveSenderAccountLink(jana.id(), learn(jana, storedPayment(1001, jana.variableSymbol().value())));
+        donorRecords.save(person("Petr Novák", "7310945528"));
+        flushAndClear();
+
+        DonorRecord stored = donorRecords.findById(jana.id()).orElseThrow();
+        stored.erase(LATER);
+        donorRecords.deleteSenderAccountLinksOf(jana.id());
+        donorRecords.save(stored);
+        flushAndClear();
+
+        DonorRecord reloaded = donorRecords.findById(jana.id()).orElseThrow();
+        assertThat(reloaded.isErased()).isTrue();
+        assertThat(reloaded.erasedAt()).contains(LATER);
+        assertThat(reloaded.name()).isEqualTo(ErasedPersonalData.NAME);
+        assertThat(reloaded.address()).isEqualTo(ErasedPersonalData.ADDRESS);
+        assertThat(reloaded.variableSymbol()).isEqualTo(new VariableSymbol("4821937560"));
+        assertThat(reloaded.senderAccountLinks()).isEmpty();
+        assertThat(accountRows()).isZero();
+        assertThat(donorRecords.findBySenderAccount(ACCOUNT)).isEmpty();
+        assertThat(donorRecords.findByVariableSymbol(new VariableSymbol("4821937560"))).map(DonorRecord::id).contains(jana.id());
+        assertThat(donorRecords.searchByNameOrSymbol("48", 20)).isEmpty();
+        assertThat(donorRecords.searchByNameOrSymbol("vymaz", 20)).isEmpty();
+        assertThat(donorRecords.searchByNameOrSymbol("novák", 20)).extracting(DonorRecord::name).containsExactly("Petr Novák");
     }
 
     private static DonorRecord registeredAt(String symbol, Instant at) {

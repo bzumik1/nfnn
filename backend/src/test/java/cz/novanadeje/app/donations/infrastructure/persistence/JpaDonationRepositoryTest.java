@@ -48,6 +48,7 @@ import java.util.UUID;
 import static cz.novanadeje.app.donations.BankPayments.payment;
 import static cz.novanadeje.app.donations.infrastructure.persistence.BankPersistenceTestConfiguration.NOW;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @DataJpaTest
@@ -240,8 +241,8 @@ class JpaDonationRepositoryTest {
 
     @ParameterizedTest(name = "{0} with link {1} and claim {2} breaks {3}")
     @CsvSource({
-            "CONFIRMED_SYMBOL, false, true, ck_donation_confirmed_symbol_link",
-            "CONFIRMED_SYMBOL, true, false, ck_donation_symbol_claim_pairing",
+            "CONFIRMED_SYMBOL, false, true, ck_donation_confirmed_symbol_sources",
+            "CONFIRMED_SYMBOL, true, false, ck_donation_confirmed_symbol_sources",
             "VARIABLE_SYMBOL, false, true, ck_donation_symbol_claim_pairing",
             "SENDER_ACCOUNT, true, true, ck_donation_symbol_claim_pairing",
             "VARIABLE_SYMBOL, true, false, ck_donation_sender_account_pairing",
@@ -255,6 +256,15 @@ class JpaDonationRepositoryTest {
         UUID claim = withClaim ? setup.claim().id().value() : null;
 
         assertThatThrownBy(() -> insertDonation(setup, pairedBy, link, claim)).hasMessageContaining(constraint);
+    }
+
+    @Test
+    @DisplayName("Given the schema, when a donation paired by a confirmed symbol is inserted with neither its link nor its claim, as after the donor's erasure, then it is accepted")
+    void should_accept_when_inserted_given_confirmed_symbol_without_link_and_claim() {
+        ConfirmedSymbolSetup setup = confirmedSymbolSetup();
+        entityManager.flush();
+
+        assertThatCode(() -> insertDonation(setup, "CONFIRMED_SYMBOL", null, null)).doesNotThrowAnyException();
     }
 
     @Test

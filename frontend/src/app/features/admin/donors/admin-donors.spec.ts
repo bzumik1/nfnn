@@ -122,6 +122,25 @@ describe('Given an administrator on the donors page', () => {
     expect(text('[role="status"]')).toBe('Nalezení dárci: 2');
   });
 
+  it('when a found donor was erased, then the row carries the erased tag and no other account tag', async () => {
+    await searched('4821', [
+      donorAccount({
+        name: 'Vymazaný dárce',
+        email: 'erased-01a18e56-bdb0-775a-bd0a-a60756831369@erased.invalid',
+        emailVerified: false,
+        erasedAt: '2026-10-23T09:00:00Z',
+      }),
+    ]);
+
+    const [row] = rows();
+    expect(rowText(row)).toContain('Vymazaný dárce');
+    expect(rowText(row)).toContain('Údaje vymazány');
+    expect(rowText(row)).not.toContain('E-mail neověřen');
+    expect(rowText(row)).not.toContain('erased.invalid');
+    expect(rowText(row)).toContain('vymazán');
+    expect(rowText(row)).not.toContain('běžný účet');
+  });
+
   it('when nobody matches, then the page says so', async () => {
     await searched('xyz', []);
 

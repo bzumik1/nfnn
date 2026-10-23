@@ -63,6 +63,12 @@ class JpaDonorRecordRepository implements DonorRecordRepository {
     }
 
     @Override
+    public void deleteSenderAccountLinksOf(DonorReference donor) {
+        accounts.deleteAll(accounts.findByDonorIdOrderByCreatedAtAscIdAsc(donor.value()));
+        accounts.flush();
+    }
+
+    @Override
     public Optional<DonorRecord> findById(DonorReference id) {
         return jpa.findById(id.value()).map(this::withAccounts);
     }

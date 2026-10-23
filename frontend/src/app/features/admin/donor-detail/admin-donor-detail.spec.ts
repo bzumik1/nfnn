@@ -96,6 +96,12 @@ describe('Given an administrator on a donor card', () => {
       .join(' | ');
   }
 
+  function buttonNames(root: HTMLElement): string[] {
+    return Array.from(root.querySelectorAll('button')).map(
+      (candidate) => candidate.textContent?.trim() ?? '',
+    );
+  }
+
   function button(root: HTMLElement, name: string): HTMLButtonElement {
     const found = Array.from(root.querySelectorAll('button')).find(
       (candidate) => candidate.textContent?.trim() === name,
@@ -139,6 +145,95 @@ describe('Given an administrator on a donor card', () => {
     expect(button(section('Účet dárce'), 'Vypnout dvoufaktorové ověření')).toBeTruthy();
   });
 
+  it('when the donor is a plain donor, then the account card offers the erasure with its hint', async () => {
+    await loaded();
+
+    expect(button(section('Účet dárce'), 'Vymazat osobní údaje')).toBeTruthy();
+    expect(sectionText('Účet dárce')).toContain('Pro dárce, který požádal o výmaz podle GDPR.');
+    expect(fixture.nativeElement.querySelector('.admin-erased')).toBeNull();
+  });
+
+  it('when the donor is an administrator, then the card explains the role has to go first and offers no erasure', async () => {
+    await loaded(donorAccount({ administrator: true }));
+
+    expect(sectionText('Účet dárce')).toContain(
+      'Správci nejde vymazat osobní údaje. Nejdřív mu odeberte roli správce na stránce Správci.',
+    );
+    expect(section('Účet dárce').querySelectorAll('button')).toHaveLength(0);
+  });
+
+  it('when the personal data are erased after the confirmation, then the request is a DELETE, both parts reload and the page shows the erased state', async () => {
+    await loaded(donorAccount({ secondFactorEnabled: true }));
+
+    button(section('Účet dárce'), 'Vymazat osobní údaje').click();
+    fixture.detectChanges();
+    expect(sectionText('Účet dárce')).toContain(
+      'Nevratný krok: jméno, adresu, e-mail a heslo nahradíme zástupnými údaji, smažeme bankovní účty i odpovědi o starších symbolech a ukončíme všechna přihlášení. Účet už nepůjde použít. Dary a vydaná potvrzení zůstanou bez jména; dárce dostane e-mail. Vymazat?',
+    );
+    button(section('Účet dárce'), 'Ano, vymazat').click();
+    fixture.detectChanges();
+
+    const request = http.expectOne(ACCOUNT_URL);
+    expect(request.request.method).toBe('DELETE');
+    request.flush(null, { status: 204, statusText: 'No Content' });
+    fixture.detectChanges();
+
+    expect(text('.admin-notice--status')).toBe(
+      'Osobní údaje dárce jsme vymazali a na jeho dosavadní e-mail poslali potvrzení. Účet už nejde použít; dary a vydaná potvrzení zůstávají bez jména.',
+    );
+    const erased = donorAccount({
+      name: 'Vymazaný dárce',
+      email: 'erased-01a18e56-bdb0-775a-bd0a-a60756831369@erased.invalid',
+      address: { street: 'Vymazáno', city: 'Vymazáno', postalCode: '00000' },
+      emailVerified: false,
+      erasedAt: '2026-10-23T09:00:00Z',
+    });
+    http.expectOne(ACCOUNT_URL).flush(erased);
+    http.expectOne(DETAIL_URL).flush(
+      donorDetail({
+        donor: { ...donorDetail().donor, name: 'Vymazaný dárce', erasedAt: '2026-10-23T09:00:00Z' },
+        bankAccounts: [],
+      }),
+    );
+    await settle();
+
+    expect(text('h1')).toBe('Vymazaný dárce');
+    expect(text('.admin-erased')).toBe(
+      'Osobní údaje tohoto dárce jsme vymazali 23. 10. 2026 11:00. Účet už nejde použít; dary a vydaná potvrzení zůstávají kvůli účetnictví, bez jména.',
+    );
+    expect(accountFacts()).toContain('E-mail vymazán |');
+    expect(accountFacts()).toContain('Adresa vymazána');
+    expect(accountFacts()).not.toContain('erased.invalid');
+    expect(section('Účet dárce').querySelectorAll('button')).toHaveLength(0);
+    expect(sectionText('Bankovní účty')).toContain(
+      'Bankovní účty jsme s osobními údaji dárce smazali; další platby se mu už nepřiřadí.',
+    );
+    expect(sectionText('Dary')).toContain('2026-000001');
+    expect(sectionText('Vydaná potvrzení')).toContain('2026-000001');
+  });
+
+  it('when the erasure is refused, then the alert shows the backend title and detail and the button comes back', async () => {
+    await loaded();
+
+    button(section('Účet dárce'), 'Vymazat osobní údaje').click();
+    fixture.detectChanges();
+    button(section('Účet dárce'), 'Ano, vymazat').click();
+    fixture.detectChanges();
+    const refusal = problem(
+      409,
+      'donors/already-erased',
+      'Dárce už je vymazaný',
+      'Osobní údaje tohoto dárce byly vymazány dřív.',
+    );
+    http.expectOne(ACCOUNT_URL).flush(refusal.body, refusal.options);
+    fixture.detectChanges();
+
+    expect(text('.admin-notice--alert')).toBe(
+      'Dárce už je vymazaný. Osobní údaje tohoto dárce byly vymazány dřív.',
+    );
+    expect(button(section('Účet dárce'), 'Vymazat osobní údaje')).toBeTruthy();
+  });
+
   it('when the donor is a company without the second factor, then the card names the company and offers no reset', async () => {
     await loaded(
       donorAccount({
@@ -154,7 +249,7 @@ describe('Given an administrator on a donor card', () => {
     expect(account).toContain('neověřen');
     expect(account).toContain('Role dárce');
     expect(account).toContain('Dvoufaktorové ověření vypnuté');
-    expect(section('Účet dárce').querySelectorAll('button')).toHaveLength(0);
+    expect(buttonNames(section('Účet dárce'))).toEqual(['Vymazat osobní údaje']);
   });
 
   it('when the donations part arrives, then the bank accounts, donations and receipts cards list it', async () => {
@@ -248,7 +343,7 @@ describe('Given an administrator on a donor card', () => {
     http.expectOne(ACCOUNT_URL).flush(donorAccount());
     await settle();
     expect(accountFacts()).toContain('Dvoufaktorové ověření vypnuté');
-    expect(section('Účet dárce').querySelectorAll('button')).toHaveLength(0);
+    expect(buttonNames(section('Účet dárce'))).toEqual(['Vymazat osobní údaje']);
   });
 
   it('when the pairing is turned off and on again, then each asks for a confirmation, posts and reloads the donations part', async () => {

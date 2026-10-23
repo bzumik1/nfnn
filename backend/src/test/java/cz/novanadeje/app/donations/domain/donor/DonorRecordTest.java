@@ -7,6 +7,7 @@ import cz.novanadeje.app.donations.domain.bank.IncomingMovement;
 import cz.novanadeje.app.donations.domain.bank.SenderAccount;
 import cz.novanadeje.app.shared.domain.Money;
 import cz.novanadeje.app.shared.domain.DonorType;
+import cz.novanadeje.app.shared.domain.ErasedPersonalData;
 import cz.novanadeje.app.shared.domain.LocaleCode;
 import cz.novanadeje.app.shared.domain.PostalAddress;
 import cz.novanadeje.app.shared.domain.UuidV7;
@@ -104,7 +105,7 @@ class DonorRecordTest {
     @DisplayName("Given a stored person with an identifier, when reconstituted, then it is refused")
     void should_refuse_when_reconstituted_given_person_with_identifier() {
         assertThatThrownBy(() -> DonorRecord.reconstitute(DONOR, DonorType.PERSON, "Jana Nováková", "45274649", ADDRESS, SYMBOL,
-                LocaleCode.CS, List.of(), REGISTERED_AT, REGISTERED_AT)).isInstanceOf(IllegalArgumentException.class);
+                LocaleCode.CS, List.of(), REGISTERED_AT, REGISTERED_AT, null)).isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
@@ -114,7 +115,7 @@ class DonorRecordTest {
                 Optional.of(LATER), Optional.empty(), Optional.empty(), LATER, Optional.empty());
 
         DonorRecord record = DonorRecord.reconstitute(DONOR, DonorType.PERSON, "Jana Nováková", null, ADDRESS, SYMBOL,
-                LocaleCode.EN, List.of(link), REGISTERED_AT, LATER);
+                LocaleCode.EN, List.of(link), REGISTERED_AT, LATER, null);
 
         assertThat(record.senderAccountLinks()).containsExactly(link);
         assertThat(record.senderAccounts()).containsExactly(ACCOUNT);
@@ -131,7 +132,7 @@ class DonorRecordTest {
         SenderAccountLink second = SenderAccountLink.awaitingPayment(SenderAccountLinkId.newId(LATER), ACCOUNT, BOOKED_ON, LATER);
 
         assertThatThrownBy(() -> DonorRecord.reconstitute(DONOR, DonorType.PERSON, "Jana Nováková", null, ADDRESS, SYMBOL,
-                LocaleCode.EN, List.of(first, second), REGISTERED_AT, LATER)).isInstanceOf(IllegalArgumentException.class);
+                LocaleCode.EN, List.of(first, second), REGISTERED_AT, LATER, null)).isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
@@ -441,6 +442,52 @@ class DonorRecordTest {
         assertThat(record.senderAccounts()).isEmpty();
         assertThat(record.usesSenderAccount(ACCOUNT)).isFalse();
         assertThatThrownBy(() -> record.removeSenderAccountLink(link.id())).isInstanceOf(SenderAccountLinkNotFound.class);
+    }
+
+    @Test
+    @DisplayName("Given a company record with a learned account, when erased, then the links are returned and gone, the personal data are placeholders, the symbol stays and no payment is claimed by symbol any more")
+    void should_replace_personal_data_and_return_links_when_erased_given_company_with_learned_account() {
+        DonorRecord record = company("45274649");
+        SenderAccountLink link = learn(record, payment(PAYMENT, SYMBOL.value(), Optional.of(ACCOUNT))).orElseThrow();
+        Instant erasedAt = LATER.plusSeconds(60);
+
+        List<SenderAccountLink> removed = record.erase(erasedAt);
+
+        assertThat(removed).containsExactly(link);
+        assertThat(record.isErased()).isTrue();
+        assertThat(record.erasedAt()).contains(erasedAt);
+        assertThat(record.updatedAt()).isEqualTo(erasedAt);
+        assertThat(record.name()).isEqualTo(ErasedPersonalData.NAME);
+        assertThat(record.companyIdentifier()).isEmpty();
+        assertThat(record.type()).isEqualTo(DonorType.COMPANY);
+        assertThat(record.address()).isEqualTo(ErasedPersonalData.ADDRESS);
+        assertThat(record.variableSymbol()).isEqualTo(SYMBOL);
+        assertThat(record.senderAccountLinks()).isEmpty();
+        assertThat(record.senderAccounts()).isEmpty();
+        assertThat(record.usesSenderAccount(ACCOUNT)).isFalse();
+        assertThat(record.claimsBySymbol(payment(PAYMENT, SYMBOL.value(), Optional.of(ACCOUNT)))).isFalse();
+    }
+
+    @Test
+    @DisplayName("Given an erased record, when erased again, then it is refused")
+    void should_refuse_when_erased_twice_given_erased_record() {
+        DonorRecord record = person();
+        record.erase(LATER);
+
+        assertThatThrownBy(() -> record.erase(LATER.plusSeconds(1))).isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
+    @DisplayName("Given a stored erased company row without identifier, when reconstituted, then it is accepted as erased and claims nothing")
+    void should_accept_missing_identifier_when_reconstituted_given_erased_company() {
+        DonorRecord record = DonorRecord.reconstitute(DONOR, DonorType.COMPANY, ErasedPersonalData.NAME, null, ErasedPersonalData.ADDRESS, SYMBOL,
+                LocaleCode.CS, List.of(), REGISTERED_AT, LATER, LATER);
+
+        assertThat(record.isErased()).isTrue();
+        assertThat(record.companyIdentifier()).isEmpty();
+        assertThat(record.claimsBySymbol(payment(PAYMENT, SYMBOL.value(), Optional.of(ACCOUNT)))).isFalse();
+        assertThatThrownBy(() -> DonorRecord.reconstitute(DONOR, DonorType.COMPANY, "Stavby Novák s.r.o.", null, ADDRESS, SYMBOL,
+                LocaleCode.CS, List.of(), REGISTERED_AT, LATER, null)).isInstanceOf(IllegalArgumentException.class);
     }
 
     private static DonorRecord person() {

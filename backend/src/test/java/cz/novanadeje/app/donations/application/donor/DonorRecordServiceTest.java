@@ -4,11 +4,28 @@ import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
+import cz.novanadeje.app.donations.application.pairing.PairingLock;
 import cz.novanadeje.app.donations.application.pairing.PairingOutcome;
 import cz.novanadeje.app.donations.application.pairing.PaymentPairingService;
+import cz.novanadeje.app.donations.domain.bank.BankPaymentId;
+import cz.novanadeje.app.donations.domain.bank.SenderAccount;
+import cz.novanadeje.app.donations.domain.donation.Donation;
+import cz.novanadeje.app.donations.domain.donation.DonationId;
+import cz.novanadeje.app.donations.domain.donation.DonationPurpose;
+import cz.novanadeje.app.donations.domain.donation.DonationRepository;
+import cz.novanadeje.app.donations.domain.donation.DonationSource;
+import cz.novanadeje.app.donations.domain.donation.DonationStatus;
+import cz.novanadeje.app.donations.domain.donation.PairingMethod;
+import cz.novanadeje.app.donations.domain.donor.SenderAccountLinkId;
 import cz.novanadeje.app.donations.domain.donor.DonorRecord;
 import cz.novanadeje.app.donations.domain.donor.DonorRecordRepository;
 import cz.novanadeje.app.donations.domain.donor.DonorReference;
+import cz.novanadeje.app.donations.domain.donor.SymbolClaim;
+import cz.novanadeje.app.donations.domain.donor.SymbolClaimAnswer;
+import cz.novanadeje.app.donations.domain.donor.SymbolClaimId;
+import cz.novanadeje.app.donations.domain.donor.SymbolClaimRepository;
+import cz.novanadeje.app.shared.domain.ErasedPersonalData;
+import cz.novanadeje.app.shared.domain.Money;
 import cz.novanadeje.app.shared.domain.DonorType;
 import cz.novanadeje.app.shared.domain.LocaleCode;
 import cz.novanadeje.app.shared.domain.PostalAddress;
@@ -20,6 +37,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.slf4j.LoggerFactory;
@@ -28,6 +46,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
@@ -35,7 +54,9 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
@@ -55,7 +76,13 @@ class DonorRecordServiceTest {
     @Mock
     private DonorRecordRepository donorRecords;
     @Mock
+    private SymbolClaimRepository claims;
+    @Mock
+    private DonationRepository donations;
+    @Mock
     private PaymentPairingService pairing;
+    @Mock
+    private PairingLock lock;
 
     private DonorRecordService service;
     private ListAppender<ILoggingEvent> logs;
@@ -63,7 +90,7 @@ class DonorRecordServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new DonorRecordService(donorRecords, pairing, Clock.fixed(NOW, ZoneOffset.UTC));
+        service = new DonorRecordService(donorRecords, claims, donations, pairing, lock, Clock.fixed(NOW, ZoneOffset.UTC));
         logger = (Logger) LoggerFactory.getLogger(DonorRecordService.class);
         logs = new ListAppender<>();
         logs.start();
@@ -206,6 +233,71 @@ class DonorRecordServiceTest {
 
         assertThat(warnings()).singleElement().isEqualTo("pairing after registration of donor " + DONOR_ID
                 + " lost a race with the import; the hourly pass completes it");
+    }
+
+    @Test
+    @DisplayName("Given a known donor with a learned account, two answers about older symbols and donations paired through them, when the donor is erased, then under the pairing lock the donations keep only their pairing method, the record loses its personal data and links, the answers are deleted and the record is saved")
+    void should_anonymize_record_and_delete_links_and_answers_when_erased_given_known_donor() {
+        DonorRecord record = DonorRecord.registerPerson(DONOR, "Jana Nováková", ADDRESS, SYMBOL, LocaleCode.CS, REGISTERED_AT);
+        when(donorRecords.findById(DONOR)).thenReturn(Optional.of(record));
+        SenderAccount account = new SenderAccount("2900233333", "2010");
+        SymbolClaim confirmed = SymbolClaim.answer(SymbolClaimId.newId(NOW), DONOR, account, new VariableSymbol("6123456789"),
+                SymbolClaimAnswer.CONFIRMED, NOW);
+        SymbolClaim declined = SymbolClaim.answer(SymbolClaimId.newId(NOW.plusSeconds(1)), DONOR, account, new VariableSymbol("7123456789"),
+                SymbolClaimAnswer.DECLINED, NOW);
+        when(claims.findByDonor(DONOR)).thenReturn(List.of(confirmed, declined));
+        SenderAccountLinkId link = SenderAccountLinkId.newId(NOW);
+        Donation bySymbol = donation(PairingMethod.VARIABLE_SYMBOL, Optional.empty(), Optional.empty());
+        Donation byAccount = donation(PairingMethod.SENDER_ACCOUNT, Optional.of(link), Optional.empty());
+        Donation byClaim = donation(PairingMethod.CONFIRMED_SYMBOL, Optional.of(link), Optional.of(confirmed.id()));
+        when(donations.findByDonorNewestFirst(DONOR)).thenReturn(List.of(byClaim, byAccount, bySymbol));
+
+        service.erase(DONOR_ID, NOW);
+
+        InOrder order = inOrder(lock, donorRecords, donations, claims);
+        order.verify(lock).acquire();
+        order.verify(donorRecords).findById(DONOR);
+        ArgumentCaptor<Donation> rewritten = ArgumentCaptor.forClass(Donation.class);
+        order.verify(donations, times(2)).save(rewritten.capture());
+        order.verify(donorRecords).deleteSenderAccountLinksOf(DONOR);
+        order.verify(donorRecords).save(record);
+        order.verify(claims).delete(confirmed.id());
+        order.verify(claims).delete(declined.id());
+        assertThat(rewritten.getAllValues()).extracting(Donation::id).containsExactly(byClaim.id(), byAccount.id());
+        assertThat(rewritten.getAllValues()).allSatisfy(donation -> {
+            assertThat(donation.pairedThrough()).isEmpty();
+            assertThat(donation.confirmedClaim()).isEmpty();
+        });
+        assertThat(rewritten.getAllValues()).extracting(Donation::pairedBy)
+                .containsExactly(Optional.of(PairingMethod.CONFIRMED_SYMBOL), Optional.of(PairingMethod.SENDER_ACCOUNT));
+        assertThat(record.isErased()).isTrue();
+        assertThat(record.erasedAt()).contains(NOW);
+        assertThat(record.name()).isEqualTo(ErasedPersonalData.NAME);
+        assertThat(record.address()).isEqualTo(ErasedPersonalData.ADDRESS);
+        assertThat(record.variableSymbol()).isEqualTo(SYMBOL);
+        assertThat(record.senderAccountLinks()).isEmpty();
+        verifyNoInteractions(pairing);
+        assertThat(warnings()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Given a donor unknown to donations, when the donor is erased, then nothing is written and a warning names the donor")
+    void should_warn_and_write_nothing_when_erased_given_unknown_donor() {
+        when(donorRecords.findById(DONOR)).thenReturn(Optional.empty());
+
+        service.erase(DONOR_ID, NOW);
+
+        verify(lock).acquire();
+        verify(donorRecords, never()).save(any());
+        verify(donorRecords, never()).deleteSenderAccountLinksOf(any());
+        verifyNoInteractions(claims, donations);
+        assertThat(warnings()).singleElement().asString().contains(DONOR_ID.toString());
+    }
+
+    private static Donation donation(PairingMethod method, Optional<SenderAccountLinkId> link, Optional<SymbolClaimId> claim) {
+        return Donation.reconstitute(DonationId.newId(NOW), DONOR, Optional.of(BankPaymentId.newId(NOW)), LocalDate.of(2026, 10, 10),
+                Money.czk(50000), DonationSource.BANK_TRANSFER, DonationStatus.RECEIVED, Optional.of(method), link, claim, DonationPurpose.GENERAL,
+                NOW);
     }
 
     private RegisterDonorRecordCommand personCommand(String name, PostalAddress address, LocaleCode locale) {

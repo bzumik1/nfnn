@@ -26,4 +26,8 @@ public interface PasswordResetTokenJpaRepository extends JpaRepository<PasswordR
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("delete from PasswordResetTokenJpaEntity t where t.donorId = :donorId and t.id <> :keptId")
     int deleteOthers(@Param("donorId") UUID donorId, @Param("keptId") UUID keptId);
+
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("delete from PasswordResetTokenJpaEntity t where t.donorId = :donorId")
+    int deleteAllOfDonor(@Param("donorId") UUID donorId);
 }

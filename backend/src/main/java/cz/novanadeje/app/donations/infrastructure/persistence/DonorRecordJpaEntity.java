@@ -57,6 +57,9 @@ public class DonorRecordJpaEntity {
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
+    @Column(name = "erased_at")
+    private Instant erasedAt;
+
     protected DonorRecordJpaEntity() {
     }
 
@@ -73,6 +76,7 @@ public class DonorRecordJpaEntity {
         entity.preferredLocale = record.preferredLocale().tag();
         entity.registeredAt = record.registeredAt();
         entity.updatedAt = record.updatedAt();
+        entity.erasedAt = record.erasedAt().orElse(null);
         return entity;
     }
 
@@ -91,7 +95,8 @@ public class DonorRecordJpaEntity {
                 LocaleCode.fromTag(preferredLocale),
                 senderAccountLinks,
                 registeredAt,
-                updatedAt
+                updatedAt,
+                erasedAt
         );
     }
 }

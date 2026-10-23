@@ -30,6 +30,16 @@
   }
 }
 
+.admin-erased {
+  border-radius: var(--radius-sm);
+  padding: 12px 16px;
+  font-size: 14px;
+  line-height: 1.5;
+  margin-bottom: 16px;
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
+}
+
 .admin-notice {
   border-radius: var(--radius-sm);
   padding: 12px 16px;
@@ -122,6 +132,11 @@
   align-items: center;
   gap: 12px;
   padding: 0 24px 20px;
+}
+
+.admin-actions--erase {
+  border-top: 1px solid var(--color-divider);
+  padding-top: 16px;
 }
 
 .admin-retry,
@@ -232,6 +247,10 @@ td.amount {
 .email {
   overflow-wrap: anywhere;
   margin-right: 8px;
+}
+
+.muted-inline {
+  color: var(--color-text-muted);
 }
 
 .mono {
