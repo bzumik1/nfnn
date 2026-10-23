@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donors.application;
 
+import cz.novanadeje.app.donors.application.event.DonorPasswordChanged;
 import cz.novanadeje.app.donors.application.event.DonorPasswordResetRequested;
 import cz.novanadeje.app.donors.domain.Donor;
 import cz.novanadeje.app.donors.domain.DonorRepository;
@@ -86,6 +87,7 @@ public class DonorPasswordResetService {
         donors.save(donor);
         tokens.deleteOthersOf(donor.id(), found.id());
         refreshTokens.revokeAllOf(donor.id(), now);
+        events.publishEvent(new DonorPasswordChanged(donor.id().value(), donor.email(), donor.preferredLocale()));
         log.info("Password reset completed for donor {}", donor.id());
     }
 }

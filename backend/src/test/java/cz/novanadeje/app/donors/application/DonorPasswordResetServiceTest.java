@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donors.application;
 
+import cz.novanadeje.app.donors.application.event.DonorPasswordChanged;
 import cz.novanadeje.app.donors.application.event.DonorPasswordResetRequested;
 import cz.novanadeje.app.donors.domain.Donor;
 import cz.novanadeje.app.donors.domain.DonorId;
@@ -220,7 +221,7 @@ class DonorPasswordResetServiceTest {
     }
 
     @Test
-    @DisplayName("Given a live token, when a reset is confirmed, then the password changes, the other links go and every session is revoked")
+    @DisplayName("Given a live token, when a reset is confirmed, then the password changes, the other links go, every session is revoked and the donor is told")
     void should_change_password_delete_others_and_revoke_sessions_when_confirmed_given_live_token() {
         LinkSecret secret = LinkSecret.generate();
         PasswordResetToken token = PasswordResetToken.issue(secret, DONOR, NOW.minusSeconds(60), TTL);
@@ -237,7 +238,7 @@ class DonorPasswordResetServiceTest {
         assertThat(saved.getValue().passwordHash()).contains(NEW_HASH);
         verify(tokens).deleteOthersOf(DONOR, token.id());
         verify(refreshTokens).revokeAllOf(DONOR, NOW);
-        verifyNoInteractions(events);
+        verify(events).publishEvent(new DonorPasswordChanged(DONOR.value(), donor.email(), LocaleCode.CS));
     }
 
     private static Donor donor(LocaleCode locale) {

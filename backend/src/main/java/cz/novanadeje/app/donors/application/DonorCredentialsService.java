@@ -1,6 +1,7 @@
 package cz.novanadeje.app.donors.application;
 
 import cz.novanadeje.app.donors.application.event.DonorEmailAddressInUse;
+import cz.novanadeje.app.donors.application.event.DonorPasswordChanged;
 import cz.novanadeje.app.donors.domain.Donor;
 import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.donors.domain.DonorNotFound;
@@ -63,6 +64,7 @@ public class DonorCredentialsService {
         donor.changePassword(passwordHasher.hash(rawPassword));
         donors.save(donor);
         refreshTokens.revokeAllOf(donor.id(), now);
+        events.publishEvent(new DonorPasswordChanged(donor.id().value(), donor.email(), donor.preferredLocale()));
         log.info("Password of donor {} changed, every session revoked", donor.id());
         return views.authenticated(donor, sessions.open(donor, secondFactorVerified));
     }

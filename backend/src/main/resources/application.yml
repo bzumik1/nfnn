@@ -150,6 +150,10 @@ app:
     email-verification:
       token-ttl: PT24H
       max-live-links: 3
+    registration-reminder:
+      cron: "0 20 * * * *"
+      delay: P1D
+      window: P7D
     second-factor:
       challenge-ttl: PT5M
       challenge-attempts: 5

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <changeSet id="012-remind-unconfirmed-registrations" author="nfnn">
+        <createTable tableName="donor_registration_reminder">
+            <column name="donor_id" type="uuid">
+                <constraints primaryKey="true" primaryKeyName="pk_donor_registration_reminder" nullable="false"/>
+            </column>
+            <column name="sent_at" type="timestamp with time zone">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <addForeignKeyConstraint baseTableName="donor_registration_reminder" baseColumnNames="donor_id"
+                                 referencedTableName="donor" referencedColumnNames="id"
+                                 constraintName="fk_donor_registration_reminder_donor" onDelete="CASCADE"/>
+        <createIndex tableName="donor" indexName="ix_donor_registered_at">
+            <column name="registered_at"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>

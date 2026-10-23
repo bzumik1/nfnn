@@ -1,7 +1,7 @@
 package cz.novanadeje.app.donations.infrastructure.report;
 
-import cz.novanadeje.app.donations.application.event.BankImportOutageDetected;
-import cz.novanadeje.app.donations.application.event.BankImportRecovered;
+import cz.novanadeje.app.donations.application.importing.ImportAlertSender;
+import cz.novanadeje.app.donations.domain.importing.ImportAlert;
 import cz.novanadeje.app.donations.domain.importing.ImportOutage;
 import cz.novanadeje.app.donations.domain.importing.ImportRecovery;
 import cz.novanadeje.app.donations.domain.report.ReportSettingsRepository;
@@ -12,10 +12,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.context.MessageSource;
 import org.springframework.mail.MailException;
 import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.event.TransactionPhase;
-import org.springframework.transaction.event.TransactionalEventListener;
 
 import java.time.Instant;
 import java.util.List;
@@ -25,7 +22,7 @@ import java.util.Optional;
 import static cz.novanadeje.app.donations.infrastructure.report.MonthlyReportFormats.CZECH;
 
 @Component
-class ImportAlertEmailSender {
+class ImportAlertEmailSender implements ImportAlertSender {
 
     private static final Logger log = LoggerFactory.getLogger(ImportAlertEmailSender.class);
     private static final String KEYS = "donations.importAlert.email.";
@@ -44,10 +41,15 @@ class ImportAlertEmailSender {
         this.settings = settings;
     }
 
-    @Async
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    public void sendOutage(BankImportOutageDetected event) {
-        ImportOutage outage = event.outage();
+    @Override
+    public boolean send(ImportAlert alert) {
+        return switch (alert) {
+            case ImportOutage outage -> sendOutage(outage);
+            case ImportRecovery recovery -> sendRecovery(recovery);
+        };
+    }
+
+    private boolean sendOutage(ImportOutage outage) {
         String kind = outage.kind().name();
         String intro = outage.tokenRejected()
                 ? text("outage.intro.token", MonthlyReportFormats.time(outage.detectedAt()))
@@ -59,21 +61,18 @@ class ImportAlertEmailSender {
         String next = text("outage.next");
         String footer = text("footer");
         String plainText = paragraphs(text("greeting"), intro, reason, action, lastSuccess, consequence, next, text("signature"), footer);
-        send("outage " + kind, new EmailDraft(CZECH, settings.current().recipients().values(), text("outage.subject"), text("outage.title"), OUTAGE_TEMPLATE,
+        return send("outage " + kind, new EmailDraft(CZECH, settings.current().recipients().values(), text("outage.subject"), text("outage.title"), OUTAGE_TEMPLATE,
                 Map.of("intro", intro, "reason", reason, "action", action, "lastSuccess", lastSuccess, "consequence", consequence, "next", next),
                 plainText, footer));
     }
 
-    @Async
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    public void sendRecovery(BankImportRecovered event) {
-        ImportRecovery recovery = event.recovery();
+    private boolean sendRecovery(ImportRecovery recovery) {
         String intro = text("recovery.intro", MonthlyReportFormats.time(recovery.recoveredAt()), recovery.failures());
         String lastSuccess = lastSuccess("recovery", recovery.lastSucceededBefore());
         String caughtUp = text("recovery.caughtUp");
         String footer = text("footer");
         String plainText = paragraphs(text("greeting"), intro, lastSuccess, caughtUp, text("signature"), footer);
-        send("recovery from " + recovery.outageKind(), new EmailDraft(CZECH, settings.current().recipients().values(), text("recovery.subject"),
+        return send("recovery from " + recovery.outageKind(), new EmailDraft(CZECH, settings.current().recipients().values(), text("recovery.subject"),
                 text("recovery.title"), RECOVERY_TEMPLATE, Map.of("intro", intro, "lastSuccess", lastSuccess, "caughtUp", caughtUp),
                 plainText, footer));
     }
@@ -84,12 +83,14 @@ class ImportAlertEmailSender {
                 .orElseGet(() -> text(prefix + ".neverSucceeded"));
     }
 
-    private void send(String alert, EmailDraft draft) {
+    private boolean send(String alert, EmailDraft draft) {
         try {
             mailSender.send(emails.compose(draft));
             log.info("Fio import alert e-mail sent: {}", alert);
+            return true;
         } catch (MailException e) {
             log.error("The Fio import alert e-mail ({}) could not be sent: {}", alert, e.getClass().getSimpleName());
+            return false;
         }
     }
 

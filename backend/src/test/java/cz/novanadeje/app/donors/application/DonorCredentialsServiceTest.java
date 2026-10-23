@@ -1,6 +1,7 @@
 package cz.novanadeje.app.donors.application;
 
 import cz.novanadeje.app.donors.application.event.DonorEmailAddressInUse;
+import cz.novanadeje.app.donors.application.event.DonorPasswordChanged;
 import cz.novanadeje.app.donors.domain.Donor;
 import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.donors.domain.DonorNotFound;
@@ -95,7 +96,7 @@ class DonorCredentialsServiceTest {
     }
 
     @Test
-    @DisplayName("Given the right current password, when the password is changed, then the new hash is stored, every session is revoked and a new one opens")
+    @DisplayName("Given the right current password, when the password is changed, then the new hash is stored, every session is revoked, the donor is told and a new session opens")
     void should_store_hash_revoke_sessions_and_open_one_when_password_changed_given_right_current_password() {
         Donor donor = donor();
         when(donors.findById(DONOR)).thenReturn(Optional.of(donor));
@@ -112,6 +113,7 @@ class DonorCredentialsServiceTest {
         assertThat(donor.passwordHash()).contains(NEW_HASH);
         assertThat(result.tokens()).isEqualTo(TOKENS);
         assertThat(result.donor().email()).isEqualTo("jana@example.cz");
+        verify(events).publishEvent(new DonorPasswordChanged(DONOR.value(), donor.email(), donor.preferredLocale()));
     }
 
     @Test

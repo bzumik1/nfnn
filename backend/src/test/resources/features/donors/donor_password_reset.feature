@@ -46,6 +46,7 @@ Feature: Donor resets a forgotten password by e-mail
     Then the response status is 204
     And the refresh cookie is cleared
     And the link from the e-mail is marked as used
+    And e-mail 2 goes to "jana@example.cz" with the subject "Heslo k vašemu účtu bylo změněno – Nová naděje"
     When the donor signs in with email "jana@example.cz" and password "a brand new passphrase"
     Then the response status is 200
     When the donor signs in with email "jana@example.cz" and password "correct horse battery"

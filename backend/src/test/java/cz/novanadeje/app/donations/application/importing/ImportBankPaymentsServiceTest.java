@@ -37,6 +37,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mockingDetails;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -55,6 +56,8 @@ class ImportBankPaymentsServiceTest {
     private BankStatementRecorder recorder;
     @Mock
     private BankImportStateRepository states;
+    @Mock
+    private ImportAlertDelivery alertDelivery;
 
     private MutableClock clock;
     private ImportBankPaymentsService service;
@@ -62,7 +65,7 @@ class ImportBankPaymentsServiceTest {
     @BeforeEach
     void setUp() {
         clock = new MutableClock(NOW, ZoneId.of("UTC"));
-        service = new ImportBankPaymentsService(source, recorder, states, clock);
+        service = new ImportBankPaymentsService(source, recorder, states, alertDelivery, clock);
     }
 
     @Test
@@ -233,6 +236,60 @@ class ImportBankPaymentsServiceTest {
         verify(recorder).recordFailure(ImportFailureKind.UNEXPECTED, "java.lang.NullPointerException", NOW);
     }
 
+
+    @Test
+    @DisplayName("Given a completed import, when it ends, then the waiting alerts are delivered after the statement is recorded")
+    void should_deliver_waiting_alerts_after_recording_when_import_completes() {
+        BankStatement statement = new BankStatement(SERVABLE, Optional.of(SERVABLE), List.of(), 0);
+        when(states.current()).thenReturn(BankImportState.initial(NOW));
+        when(source.fetch(SERVABLE)).thenReturn(statement);
+        when(recorder.record(statement, new ImportPlan(SERVABLE, false), NOW)).thenReturn(ImportCounts.none());
+
+        service.importIncomingPayments(ImportTrigger.HOURLY, ImportSettings.defaults());
+
+        InOrder order = inOrder(recorder, alertDelivery);
+        order.verify(recorder).record(statement, new ImportPlan(SERVABLE, false), NOW);
+        order.verify(alertDelivery).deliverWaiting();
+    }
+
+    @Test
+    @DisplayName("Given Fio is unreachable, when the import fails, then the waiting alerts are delivered after the failure is recorded")
+    void should_deliver_waiting_alerts_after_failure_when_import_fails() {
+        when(states.current()).thenReturn(BankImportState.initial(NOW));
+        when(source.fetch(SERVABLE)).thenThrow(unavailable(ImportFailureKind.TRANSPORT, Optional.empty()));
+
+        service.importIncomingPayments(ImportTrigger.HOURLY, ImportSettings.defaults());
+
+        InOrder order = inOrder(recorder, alertDelivery);
+        order.verify(recorder).recordFailure(ImportFailureKind.TRANSPORT, "refused", NOW);
+        order.verify(alertDelivery).deliverWaiting();
+    }
+
+    @Test
+    @DisplayName("Given an unexpected failure, when the import throws, then the waiting alerts are still delivered and the failure reaches the caller")
+    void should_deliver_waiting_alerts_and_rethrow_when_import_throws_unexpectedly() {
+        IllegalStateException failure = new IllegalStateException("pairing failed");
+        when(states.current()).thenReturn(BankImportState.initial(NOW));
+        when(source.fetch(SERVABLE)).thenThrow(failure);
+
+        assertThatThrownBy(() -> service.importIncomingPayments(ImportTrigger.HOURLY, ImportSettings.defaults())).isSameAs(failure);
+
+        verify(alertDelivery).deliverWaiting();
+    }
+
+    @Test
+    @DisplayName("Given the alert delivery throws, when the import completes, then the report is still returned")
+    void should_return_report_when_alert_delivery_throws() {
+        BankStatement statement = new BankStatement(SERVABLE, Optional.of(SERVABLE), List.of(), 0);
+        when(states.current()).thenReturn(BankImportState.initial(NOW));
+        when(source.fetch(SERVABLE)).thenReturn(statement);
+        when(recorder.record(statement, new ImportPlan(SERVABLE, false), NOW)).thenReturn(ImportCounts.none());
+        doThrow(new IllegalStateException("database gone")).when(alertDelivery).deliverWaiting();
+
+        ImportReport report = service.importIncomingPayments(ImportTrigger.HOURLY, ImportSettings.defaults());
+
+        assertThat(report.completed()).isTrue();
+    }
     private static BankStatementUnavailable unavailable(ImportFailureKind kind, Optional<Instant> retryAfter) {
         return new BankStatementUnavailable(kind, retryAfter, "refused", null);
     }

@@ -27,12 +27,15 @@ public class ImportBankPaymentsService {
     private final BankStatementSource source;
     private final BankStatementRecorder recorder;
     private final BankImportStateRepository states;
+    private final ImportAlertDelivery alertDelivery;
     private final Clock clock;
 
-    public ImportBankPaymentsService(BankStatementSource source, BankStatementRecorder recorder, BankImportStateRepository states, Clock clock) {
+    public ImportBankPaymentsService(BankStatementSource source, BankStatementRecorder recorder, BankImportStateRepository states,
+                                     ImportAlertDelivery alertDelivery, Clock clock) {
         this.source = source;
         this.recorder = recorder;
         this.states = states;
+        this.alertDelivery = alertDelivery;
         this.clock = clock;
     }
 
@@ -49,6 +52,8 @@ public class ImportBankPaymentsService {
         } catch (RuntimeException unexpected) {
             recordUnexpected(unexpected);
             throw unexpected;
+        } finally {
+            deliverAlerts();
         }
     }
 
@@ -90,6 +95,14 @@ public class ImportBankPaymentsService {
             return Optional.empty();
         }
         return unavailable.retryAfter().map(at -> new FollowUp(at.plus(FOLLOW_UP_MARGIN), ImportTrigger.HOURLY));
+    }
+
+    private void deliverAlerts() {
+        try {
+            alertDelivery.deliverWaiting();
+        } catch (RuntimeException failure) {
+            log.error("Delivering the Fio import alerts failed: {}; retrying after the next import", failure.getClass().getSimpleName());
+        }
     }
 
     private void recordUnexpected(RuntimeException unexpected) {
