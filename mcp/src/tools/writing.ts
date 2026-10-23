@@ -442,7 +442,7 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
     {
       title: 'Dočasně změnit úroveň logování',
       description:
-        'Sets a logger (ROOT or a dotted package or class name, e.g. cz.novanadeje.app, io.github.bzumik1.fio, org.hibernate.SQL) to TRACE, DEBUG, INFO, WARN, ERROR or OFF for `minutes` (30 by default, at most 1440); the level goes back by itself when the time is up. Audited as CHANGE_LOG_LEVEL. Read the result with nfnn_log or nfnn_log_search.',
+        'Sets a logger (ROOT or a dotted package or class name, e.g. cz.novanadeje.app, io.github.bzumik1.fio, org.hibernate.SQL) to TRACE, DEBUG, INFO, WARN, ERROR or OFF for `minutes` (30 by default, at most 1440); the level goes back by itself when the time is up. Loggers that would write SQL values, bodies or raw requests (org.hibernate.orm.jdbc.bind, org.apache.coyote, org.postgresql and the like) keep their level and are refused. Audited as CHANGE_LOG_LEVEL. Read the result with nfnn_log or nfnn_log_search.',
       inputSchema: z.object({
         logger: z.string().min(1).max(200),
         level: z.enum(['TRACE', 'DEBUG', 'INFO', 'WARN', 'ERROR', 'OFF']),

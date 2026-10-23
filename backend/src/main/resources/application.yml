@@ -165,6 +165,15 @@ app:
 
 logging:
   level:
+    org.hibernate.orm.jdbc.bind: INFO
+    org.hibernate.orm.jdbc.extract: INFO
+    org.hibernate.internal.util.EntityPrinter: INFO
+    org.springframework.web.servlet.mvc.method.annotation: INFO
+    org.springframework.web.client: INFO
+    org.apache.coyote: INFO
+    org.apache.tomcat.util.http: INFO
+    org.postgresql: INFO
+    jakarta.mail: INFO
     cz.novanadeje.app: INFO
     org.springframework.web: INFO
     com.openhtmltopdf: WARN
