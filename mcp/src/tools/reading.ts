@@ -1,7 +1,16 @@
 import type { McpServer } from '@modelcontextprotocol/server';
 import * as z from 'zod/v4';
 import { BackendProblem } from '../backend.js';
-import { answer, plain, text, type ToolDependencies } from './support.js';
+import {
+  answer,
+  asRecord,
+  plain,
+  text,
+  ToolRefusal,
+  withHint,
+  type Caller,
+  type ToolDependencies,
+} from './support.js';
 
 const READ_ONLY = {
   readOnlyHint: true,
@@ -11,6 +20,11 @@ const READ_ONLY = {
 };
 const YEAR = z.number().int().min(2000).max(2100);
 const UUID = z.string().regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
+const DAY = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+const LOG_FILE = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
+const DONATIONS_SHOWN = 20;
+const LOG_TIMES =
+  'Times in backend.log carry the Prague offset (+01:00 or +02:00); nginx-access.log, backup.log and mcp.log are in UTC.';
 
 export function registerReadingTools(server: McpServer, deps: ToolDependencies): void {
   const { backend } = deps;
@@ -70,23 +84,57 @@ export function registerReadingTools(server: McpServer, deps: ToolDependencies):
     {
       title: 'Platby z banky',
       description:
-        'Incoming bank payments: "unpaired" lists every payment that no donation references (newest first); "paired" lists the donations of a year with their payments and donors.',
+        'Incoming bank payments, newest first, a page at a time: "unpaired" are the payments no donation references; "paired" are the donations of a year with their payments and donors. `total` counts every payment that matches, so page on with `offset`.',
       inputSchema: z.object({
         pairing: z.enum(['unpaired', 'paired']).default('unpaired'),
         year: YEAR.optional().describe(
           'For "paired": the year; the newest year with a donation when omitted.',
         ),
+        query: z
+          .string()
+          .trim()
+          .min(1)
+          .max(100)
+          .optional()
+          .describe(
+            'Text the bank transaction id, the variable symbol, the counterparty account, its name, the message or the paired donor name contains (case and diacritics ignored).',
+          ),
+        from: DAY.optional().describe('Only payments booked on or after this day (YYYY-MM-DD).'),
+        to: DAY.optional().describe('Only payments booked on or before this day (YYYY-MM-DD).'),
+        donorId: UUID.optional().describe('For "paired": only the donations of this donor.'),
+        offset: z.number().int().min(0).default(0),
+        limit: z.number().int().min(1).max(500).default(50),
       }),
       annotations: READ_ONLY,
     },
-    async ({ pairing, year }, ctx) =>
-      answer(deps, ctx, 'nfnn_payments', async ({ apiToken }) => {
-        const query = new URLSearchParams({ pairing });
-        if (year !== undefined) {
-          query.set('year', String(year));
-        }
-        return text(await backend.get(`/api/admin/donations/payments?${query}`, apiToken));
-      }),
+    async ({ pairing, year, query, from, to, donorId, offset, limit }, ctx) =>
+      answer(
+        deps,
+        ctx,
+        'nfnn_payments',
+        async ({ apiToken }) => {
+          const params = new URLSearchParams({ pairing });
+          for (const [key, value] of Object.entries({ year, query, from, to, donorId })) {
+            if (value !== undefined) {
+              params.set(key, String(value));
+            }
+          }
+          params.set('offset', String(offset));
+          params.set('limit', String(limit));
+          const page = asRecord(
+            await backend.get(`/api/admin/donations/payments?${params}`, apiToken),
+          );
+          const shown = Array.isArray(page['items']) ? page['items'].length : 0;
+          const total = typeof page['total'] === 'number' ? page['total'] : shown;
+          return withHint(
+            text(page),
+            offset + shown < total
+              ? `Showing ${offset + 1}–${offset + shown} of ${total}: call nfnn_payments again with offset ${offset + shown} for more.`
+              : undefined,
+          );
+        },
+        donorId === undefined ? undefined : `donor ${donorId}`,
+      ),
   );
 
   server.registerTool(
@@ -94,38 +142,58 @@ export function registerReadingTools(server: McpServer, deps: ToolDependencies):
     {
       title: 'Hledání dárců',
       description:
-        'Up to 20 donor accounts whose name or e-mail contains the query or whose variable symbol starts with it.',
-      inputSchema: z.object({ query: z.string().trim().min(1).max(254) }),
+        'Donor accounts by name, a page at a time: those whose name or e-mail contains the query or whose variable symbol starts with it, or every donor when the query is left out. `hasMore` says whether another page follows.',
+      inputSchema: z.object({
+        query: z.string().trim().max(254).optional(),
+        page: z.number().int().min(0).max(100_000).default(0),
+        limit: z.number().int().min(1).max(100).default(20),
+      }),
       annotations: READ_ONLY,
     },
-    async ({ query }, ctx) =>
-      answer(deps, ctx, 'nfnn_find_donors', async ({ apiToken }) =>
-        text(await backend.get(`/api/admin/donors?${new URLSearchParams({ query })}`, apiToken)),
-      ),
+    async ({ query, page, limit }, ctx) =>
+      answer(deps, ctx, 'nfnn_find_donors', async ({ apiToken }) => {
+        const params = new URLSearchParams({ page: String(page), limit: String(limit) });
+        if (query) {
+          params.set('query', query);
+        }
+        const found = asRecord(await backend.get(`/api/admin/donors?${params}`, apiToken));
+        return withHint(
+          text(found),
+          found['hasMore'] === true
+            ? `More donors: call nfnn_find_donors again with page ${page + 1}.`
+            : undefined,
+        );
+      }),
   );
 
   server.registerTool(
     'nfnn_donor',
     {
       title: 'Karta dárce',
-      description:
-        "A donor's card: the account (type, name, address, e-mail, symbol, roles, second factor) and the donation side (bank accounts, donations, receipts).",
+      description: `A donor's card: the account (type, name, address, e-mail, symbol, roles, second factor) and the donation side (what the donations context keeps beyond the account, bank accounts, the newest ${DONATIONS_SHOWN} donations with the count and total of all, receipts). Every donation of the donor: nfnn_payments with pairing "paired" and donorId.`,
       inputSchema: z.object({ donorId: UUID }),
       annotations: READ_ONLY,
     },
     async ({ donorId }, ctx) =>
-      answer(deps, ctx, 'nfnn_donor', async ({ apiToken }) => {
-        const account = await backend.get(`/api/admin/donors/${donorId}`, apiToken);
-        const donations = await backend
-          .get(`/api/admin/donations/donors/${donorId}`, apiToken)
-          .catch((thrown: unknown) => {
-            if (thrown instanceof BackendProblem && thrown.problem.status === 404) {
-              return 'The donor has no donation record yet (the e-mail was never confirmed).';
-            }
-            throw thrown;
-          });
-        return text({ account, donations });
-      }),
+      answer(
+        deps,
+        ctx,
+        'nfnn_donor',
+        async ({ apiToken }) => {
+          const account = asRecord(await backend.get(`/api/admin/donors/${donorId}`, apiToken));
+          const donations = await backend
+            .get(`/api/admin/donations/donors/${donorId}`, apiToken)
+            .then((side) => donationSide(account, asRecord(side)))
+            .catch((thrown: unknown) => {
+              if (thrown instanceof BackendProblem && thrown.problem.status === 404) {
+                return 'The donor has no donation record yet (the e-mail was never confirmed).';
+              }
+              throw thrown;
+            });
+          return text({ account, donations });
+        },
+        `donor ${donorId}`,
+      ),
   );
 
   server.registerTool(
@@ -226,7 +294,7 @@ export function registerReadingTools(server: McpServer, deps: ToolDependencies):
     {
       title: 'Aktuality a projekty',
       description:
-        'Every news article and project of the site, drafts included, with their ids, slugs, texts, photo and published dates.',
+        'Every news article and project of the site, drafts included, with id, slug, title, tag, perex, photo, published date and the length of the text, but not the text itself: read one whole with nfnn_news_article or nfnn_project.',
       annotations: READ_ONLY,
     },
     async (ctx) =>
@@ -235,16 +303,54 @@ export function registerReadingTools(server: McpServer, deps: ToolDependencies):
           backend.get('/api/admin/content/news', apiToken),
           backend.get('/api/admin/content/projects', apiToken),
         ]);
-        return text({ news: asRecord(news)['items'], projects: asRecord(projects)['items'] });
+        return text({ news: withoutBodies(news), projects: withoutBodies(projects) });
       }),
+  );
+
+  server.registerTool(
+    'nfnn_news_article',
+    {
+      title: 'Aktualita',
+      description:
+        'One news article whole, draft or published: every field nfnn_update_news takes, with its text and photo.',
+      inputSchema: z.object({ id: UUID }),
+      annotations: READ_ONLY,
+    },
+    async ({ id }, ctx) =>
+      answer(
+        deps,
+        ctx,
+        'nfnn_news_article',
+        async ({ apiToken }) => text(await backend.get(`/api/admin/content/news/${id}`, apiToken)),
+        `news ${id}`,
+      ),
+  );
+
+  server.registerTool(
+    'nfnn_project',
+    {
+      title: 'Projekt',
+      description:
+        'One project whole, draft or published: every field nfnn_update_project takes, with its text, year and photo.',
+      inputSchema: z.object({ id: UUID }),
+      annotations: READ_ONLY,
+    },
+    async ({ id }, ctx) =>
+      answer(
+        deps,
+        ctx,
+        'nfnn_project',
+        async ({ apiToken }) =>
+          text(await backend.get(`/api/admin/content/projects/${id}`, apiToken)),
+        `project ${id}`,
+      ),
   );
 
   server.registerTool(
     'nfnn_log_files',
     {
       title: 'Soubory logů',
-      description:
-        'The log files on the server (backend.log, backup.log, nginx-access.log with every request to the site without addresses or query strings, mcp.log of this connector, and their rotated .gz copies of the last 14 days) with size on disk and last change; sizes of a .gz copy are the unpacked ones in nfnn_log.',
+      description: `The log files on the server (backend.log, backup.log, nginx-access.log with every request to the site without addresses or query strings, mcp.log of this connector, and their rotated .gz copies of the last 14 days) with size on disk and last change; sizes of a .gz copy are the unpacked ones in nfnn_log. ${LOG_TIMES}`,
       annotations: READ_ONLY,
     },
     async (ctx) =>
@@ -257,8 +363,7 @@ export function registerReadingTools(server: McpServer, deps: ToolDependencies):
     'nfnn_log',
     {
       title: 'Výřez logu',
-      description:
-        'A window of whole lines of a log file: the last `bytes` bytes (20000 by default, at most 200000) or, with `from`, the lines starting at that byte position. The answer names the window (from, to, hasOlder, hasNewer) so the whole file can be read page by page: pass `from` = the previous `to` for newer lines, or `from` = previous `from` − bytes for older ones. A rotated .gz copy is unpacked first.',
+      description: `A window of whole lines of a log file named as nfnn_log_files lists it: the last \`bytes\` bytes (20000 by default, at most 200000) or, with \`from\`, the lines starting at that byte position. The answer names the window (from, to, hasOlder, hasNewer) so the whole file can be read page by page: pass \`from\` = the previous \`to\` for newer lines, or \`from\` = previous \`from\` − bytes for older ones. A rotated .gz copy is unpacked first. ${LOG_TIMES}`,
       inputSchema: z.object({
         file: z.string().default('backend.log'),
         from: z
@@ -278,7 +383,9 @@ export function registerReadingTools(server: McpServer, deps: ToolDependencies):
       annotations: READ_ONLY,
     },
     async ({ file, from, bytes }, ctx) =>
-      answer(deps, ctx, 'nfnn_log', async ({ apiToken }) => {
+      answer(deps, ctx, 'nfnn_log', async (caller) => {
+        const { apiToken } = caller;
+        await requireLogFile(deps, caller, file);
         const query = new URLSearchParams();
         if (from !== undefined) {
           query.set('from', String(from));
@@ -303,30 +410,67 @@ export function registerReadingTools(server: McpServer, deps: ToolDependencies):
     'nfnn_log_search',
     {
       title: 'Hledání v logu',
-      description:
-        'Searches a log file with a case-insensitive regular expression (at most 200 characters) and answers the newest matching lines first with their byte positions (`offset`), at most `limit` (50 by default, 200 at most); `before` pages towards older matches (pass the last `offset`), and `moreOlder` says whether there are any. Read the lines around a match with nfnn_log and `from` = offset − some bytes.',
+      description: `Searches a log file with a case-insensitive regular expression (at most 200 characters) and answers the newest matching lines first with their file and byte position (\`offset\`), at most \`limit\` (50 by default, 200 at most). With \`rotated\` the search goes on into the rotated .gz copies of the file, newest first, so 14 days are searched in one call. When more matches remain, the answer names \`continueWith\` (a file and \`before\`): pass both back for the next, older page. Read the lines around a match with nfnn_log, that file and \`from\` = offset − some bytes. ${LOG_TIMES}`,
       inputSchema: z.object({
         file: z.string().default('backend.log'),
         pattern: z.string().min(1).max(200),
-        limit: z.number().int().min(1).max(200).optional(),
-        before: z.number().int().min(0).optional(),
+        limit: z.number().int().min(1).max(200).default(50),
+        before: z
+          .number()
+          .int()
+          .min(0)
+          .optional()
+          .describe('Only matches before this byte position of `file` (from `continueWith`).'),
+        rotated: z
+          .boolean()
+          .default(false)
+          .describe('Also search the rotated copies of the file, newest first.'),
+        series: z
+          .string()
+          .optional()
+          .describe(
+            'With `rotated`: the current file whose copies are searched (backend.log, …), when `file` is a rotated copy named by `continueWith`.',
+          ),
       }),
       annotations: READ_ONLY,
     },
-    async ({ file, pattern, limit, before }, ctx) =>
-      answer(deps, ctx, 'nfnn_log_search', async ({ apiToken }) => {
-        const query = new URLSearchParams({ pattern });
-        if (limit !== undefined) {
-          query.set('limit', String(limit));
+    async ({ file, pattern, limit, before, rotated, series }, ctx) =>
+      answer(deps, ctx, 'nfnn_log_search', async (caller) => {
+        const files = await requireLogFile(deps, caller, file);
+        const queue = rotated ? searchOrder(files, series ?? file, file) : [file];
+        const matches: Record<string, unknown>[] = [];
+        let continueWith: { file: string; before?: number } | null = null;
+        for (const [index, name] of queue.entries()) {
+          const query = new URLSearchParams({ pattern, limit: String(limit - matches.length) });
+          if (index === 0 && before !== undefined) {
+            query.set('before', String(before));
+          }
+          const found = asRecord(
+            await backend.get(
+              `/api/admin/operations/logs/${encodeURIComponent(name)}/search?${query.toString()}`,
+              caller.apiToken,
+            ),
+          );
+          const lines = Array.isArray(found['matches']) ? found['matches'] : [];
+          matches.push(...lines.map((line) => ({ file: name, ...asRecord(line) })));
+          const next = queue[index + 1];
+          if (matches.length >= limit) {
+            const last = asRecord(lines[lines.length - 1])['offset'];
+            continueWith =
+              found['moreOlder'] === true && typeof last === 'number'
+                ? { file: name, before: last }
+                : next === undefined
+                  ? null
+                  : { file: next };
+            break;
+          }
         }
-        if (before !== undefined) {
-          query.set('before', String(before));
-        }
-        return text(
-          await backend.get(
-            `/api/admin/operations/logs/${encodeURIComponent(file)}/search?${query.toString()}`,
-            apiToken,
-          ),
+        const result = text({ pattern, searched: queue, matches, continueWith });
+        return withHint(
+          result,
+          continueWith === null
+            ? undefined
+            : `Older matches: call nfnn_log_search again with file "${continueWith.file}"${continueWith.before === undefined ? '' : ` and before ${continueWith.before}`}${rotated ? `, rotated true and series "${series ?? file}"` : ''}.`,
         );
       }),
   );
@@ -374,6 +518,63 @@ export function registerReadingTools(server: McpServer, deps: ToolDependencies):
   );
 }
 
-function asRecord(value: unknown): Record<string, unknown> {
-  return typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : {};
+function withoutBodies(list: unknown): unknown[] {
+  const items = asRecord(list)['items'];
+  return (Array.isArray(items) ? items : []).map((item) => {
+    const { body, ...rest } = asRecord(item);
+    return { ...rest, bodyLength: typeof body === 'string' ? body.length : 0 };
+  });
+}
+
+function donationSide(account: Record<string, unknown>, side: Record<string, unknown>): unknown {
+  const kept = Object.entries(asRecord(side['donor'])).filter(
+    ([key, value]) => JSON.stringify(account[key]) !== JSON.stringify(value),
+  );
+  const list = asRecord(side['donations']);
+  const items = Array.isArray(list['items']) ? list['items'] : [];
+  return {
+    ...side,
+    donor: Object.fromEntries(kept),
+    donations: {
+      ...list,
+      items: items.slice(0, DONATIONS_SHOWN),
+      shown: Math.min(items.length, DONATIONS_SHOWN),
+    },
+  };
+}
+
+interface LogFile {
+  readonly name: string;
+  readonly changedAt: string;
+}
+
+async function requireLogFile(
+  deps: ToolDependencies,
+  caller: Caller,
+  file: string,
+): Promise<LogFile[]> {
+  const listing = asRecord(await deps.backend.get('/api/admin/operations/logs', caller.apiToken));
+  const files = (Array.isArray(listing['files']) ? listing['files'] : [])
+    .map(asRecord)
+    .map((entry) => ({ name: String(entry['name']), changedAt: String(entry['changedAt']) }));
+  if (!LOG_FILE.test(file) || !files.some((entry) => entry.name === file)) {
+    throw new ToolRefusal(
+      'unknown-log-file',
+      `There is no log file "${file}". The files are: ${files.map((entry) => entry.name).join(', ') || 'none yet'}.`,
+    );
+  }
+  return files;
+}
+
+function searchOrder(files: readonly LogFile[], series: string, start: string): string[] {
+  const copies = files
+    .filter((entry) => entry.name.startsWith(`${series}.`) && entry.name.endsWith('.gz'))
+    .sort(
+      (left, right) =>
+        right.changedAt.localeCompare(left.changedAt) || right.name.localeCompare(left.name),
+    )
+    .map((entry) => entry.name);
+  const order = [series, ...copies];
+  const from = order.indexOf(start);
+  return from < 0 ? [start] : order.slice(from);
 }

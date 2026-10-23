@@ -1,7 +1,15 @@
 import type { Client } from '@modelcontextprotocol/client';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { DONOR_ID, PAYMENT_ID, READ_TOKEN, UNKNOWN_ID, WRITE_TOKEN } from './fake-backend.js';
-import { connect, MCP_URL, startApp, textOf, type TestApp } from './support.js';
+import {
+  DONOR_ID,
+  GIVING_DONOR_ID,
+  MEDIA_ID,
+  PAYMENT_ID,
+  READ_TOKEN,
+  UNKNOWN_ID,
+  WRITE_TOKEN,
+} from './fake-backend.js';
+import { BROKEN_PHOTO_URL, connect, PHOTO_URL, startApp, textOf, type TestApp } from './support.js';
 
 describe('Given an administrator connected with the reading permission only', () => {
   let stack: TestApp;
@@ -35,9 +43,12 @@ describe('Given an administrator connected with the reading permission only', ()
       'nfnn_log_files',
       'nfnn_log_levels',
       'nfnn_log_search',
+      'nfnn_news_article',
       'nfnn_overview',
       'nfnn_pair_payment',
       'nfnn_payments',
+      'nfnn_photo_upload_link',
+      'nfnn_project',
       'nfnn_publish_news',
       'nfnn_publish_project',
       'nfnn_reconnect_bank_account',
@@ -55,6 +66,7 @@ describe('Given an administrator connected with the reading permission only', ()
       'nfnn_update_news',
       'nfnn_update_project',
       'nfnn_update_report_settings',
+      'nfnn_upload_photo',
     ]);
     expect(tools.find((tool) => tool.name === 'nfnn_status')?.annotations?.readOnlyHint).toBe(true);
     expect(
@@ -62,17 +74,17 @@ describe('Given an administrator connected with the reading permission only', ()
     ).toBe(true);
   });
 
-  it('when the status is asked, then the version, the import state and the last backup come as text with Prague times', async () => {
+  it('when the status is asked, then the version, the import state and the last backup come as compact JSON with Prague offsets', async () => {
     const result = await client.callTool({ name: 'nfnn_status', arguments: {} });
     expect(result.isError).toBeFalsy();
     const text = textOf(result);
-    expect(text).toContain('"revision": "abc1234"');
-    expect(text).toContain('"health": "UP"');
-    expect(text).toContain('"lastSucceededAt": "23. 10. 2026 07:00:00"');
-    expect(text).toContain('"outcome": "OK"');
+    expect(text).toContain('"revision":"abc1234"');
+    expect(text).toContain('"health":"UP"');
+    expect(text).toContain('"lastSucceededAt":"2026-10-23T07:00:00+02:00"');
+    expect(text).toContain('"outcome":"OK"');
   });
 
-  it('when the payments are asked, then the administration gets the exchanged API token and amounts read in crowns', async () => {
+  it('when the payments are asked, then the administration gets the exchanged API token, a first page of 50, and amounts come as crowns with the next page named', async () => {
     const result = await client.callTool({
       name: 'nfnn_payments',
       arguments: { pairing: 'unpaired' },
@@ -80,30 +92,86 @@ describe('Given an administrator connected with the reading permission only', ()
     const call = stack.backend.requests.find((request) =>
       request.path.startsWith('/api/admin/donations/payments'),
     );
-    expect(call?.path).toBe('/api/admin/donations/payments?pairing=unpaired');
+    expect(call?.path).toBe('/api/admin/donations/payments?pairing=unpaired&offset=0&limit=50');
     expect(call?.authorization).toBe('Bearer api-token-read');
-    expect(textOf(result)).toContain('"amount": "500,00 Kč"');
+    expect(textOf(result)).toContain('"amount":500');
+    expect(textOf(result)).toContain('"total":3');
     expect(textOf(result)).not.toContain('amountMinor');
+    expect(textOf(result)).toContain(
+      'Showing 1–1 of 3: call nfnn_payments again with offset 1 for more.',
+    );
   });
 
-  it('when a year is given, then the overview and the paired payments pass it on', async () => {
+  it('when a year, a text, a period, a donor and a page are given, then the payments pass them on and the donor is logged', async () => {
     await client.callTool({ name: 'nfnn_overview', arguments: { year: 2025 } });
-    await client.callTool({ name: 'nfnn_payments', arguments: { pairing: 'paired', year: 2025 } });
+    await client.callTool({
+      name: 'nfnn_payments',
+      arguments: {
+        pairing: 'paired',
+        year: 2025,
+        query: 'novák',
+        from: '2025-01-01',
+        to: '2025-06-30',
+        donorId: DONOR_ID,
+        offset: 50,
+        limit: 10,
+      },
+    });
     const paths = stack.backend.requests.map((request) => request.path);
     expect(paths).toContain('/api/admin/donations/overview?year=2025');
-    expect(paths).toContain('/api/admin/donations/payments?pairing=paired&year=2025');
+    expect(paths).toContain(
+      `/api/admin/donations/payments?pairing=paired&year=2025&query=nov%C3%A1k&from=2025-01-01&to=2025-06-30&donorId=${DONOR_ID}&offset=50&limit=10`,
+    );
+    expect(stack.logLines).toContain(
+      `INFO Tool nfnn_payments answered donor donor-jana about donor ${DONOR_ID}`,
+    );
   });
 
   it('when a donor is looked up and opened, then both halves of the card come, a missing record explained', async () => {
     const found = await client.callTool({ name: 'nfnn_find_donors', arguments: { query: 'nov' } });
     expect(textOf(found)).toContain('Jana Nováková');
+    expect(textOf(found)).toContain('More donors: call nfnn_find_donors again with page 1.');
     expect(stack.backend.requests.map((request) => request.path)).toContain(
-      '/api/admin/donors?query=nov',
+      '/api/admin/donors?page=0&limit=20&query=nov',
     );
     const card = await client.callTool({ name: 'nfnn_donor', arguments: { donorId: DONOR_ID } });
     expect(card.isError).toBeFalsy();
-    expect(textOf(card)).toContain('"registeredAt": "17. 10. 2026 12:00:00"');
+    expect(textOf(card)).toContain('"registeredAt":"2026-10-17T12:00:00+02:00"');
     expect(textOf(card)).toContain('no donation record yet');
+    expect(stack.logLines).toContain(
+      `INFO Tool nfnn_donor answered donor donor-jana about donor ${DONOR_ID}`,
+    );
+  });
+
+  it('when every donor is listed a page later, then no query is sent and the last page names no next one', async () => {
+    const page = await client.callTool({
+      name: 'nfnn_find_donors',
+      arguments: { page: 2, limit: 5 },
+    });
+    expect(stack.backend.requests.map((request) => request.path)).toContain(
+      '/api/admin/donors?page=2&limit=5',
+    );
+    expect(textOf(page)).not.toContain('More donors');
+  });
+
+  it('when the card of a donor with many gifts is opened, then the donor data come once and only the newest donations with the count of all', async () => {
+    const card = JSON.parse(
+      textOf(
+        await client.callTool({ name: 'nfnn_donor', arguments: { donorId: GIVING_DONOR_ID } }),
+      ),
+    ) as {
+      account: Record<string, unknown>;
+      donations: { donor: Record<string, unknown>; donations: Record<string, unknown> };
+    };
+    expect(card.account['name']).toBe('Petr Svoboda');
+    expect(card.donations.donor).toEqual({ variableSymbol: '1234567890', erasedAt: null });
+    expect(card.donations.donations['count']).toBe(25);
+    expect(card.donations.donations['totalAmount']).toBe(2500);
+    expect(card.donations.donations['shown']).toBe(20);
+    expect((card.donations.donations['items'] as { id: string }[]).map((item) => item.id)[0]).toBe(
+      'donation-25',
+    );
+    expect(card.donations.donations['items']).toHaveLength(20);
   });
 
   it('when the history, the report and the content are asked, then they come from the administration', async () => {
@@ -121,9 +189,16 @@ describe('Given an administrator connected with the reading permission only', ()
     expect(textOf(await client.callTool({ name: 'nfnn_report', arguments: {} }))).toContain(
       'info@nfnn.cz',
     );
-    expect(textOf(await client.callTool({ name: 'nfnn_content', arguments: {} }))).toContain(
-      'Koncept',
-    );
+    const content = textOf(await client.callTool({ name: 'nfnn_content', arguments: {} }));
+    expect(content).toContain('"title":"Koncept"');
+    expect(content).toContain('"bodyLength":22');
+    expect(content).not.toContain('Dlouhý text');
+    expect(
+      textOf(await client.callTool({ name: 'nfnn_news_article', arguments: { id: UNKNOWN_ID } })),
+    ).toContain('"body":"Dlouhý text aktuality."');
+    expect(
+      textOf(await client.callTool({ name: 'nfnn_project', arguments: { id: UNKNOWN_ID } })),
+    ).toContain('"body":"Text projektu."');
     expect(textOf(await client.callTool({ name: 'nfnn_backups', arguments: {} }))).toContain(
       'nfnn-2026-10-23_0300.dump',
     );
@@ -133,10 +208,10 @@ describe('Given an administrator connected with the reading permission only', ()
     const administrators = textOf(
       await client.callTool({ name: 'nfnn_administrators', arguments: {} }),
     );
-    expect(administrators).toContain('"secondFactorEnabled": true');
+    expect(administrators).toContain('"secondFactorEnabled":true');
     const claims = textOf(await client.callTool({ name: 'nfnn_symbol_claims', arguments: {} }));
-    expect(claims).toContain('"answer": "CONFIRMED"');
-    expect(claims).toContain('"answeredAt": "22. 10. 2026 12:00:00"');
+    expect(claims).toContain('"answer":"CONFIRMED"');
+    expect(claims).toContain('"answeredAt":"2026-10-22T12:00:00+02:00"');
     const paths = stack.backend.requests.map((request) => request.path);
     expect(paths).toContain('/api/admin/donors/administrators');
     expect(paths).toContain('/api/admin/donations/symbol-claims');
@@ -162,24 +237,78 @@ describe('Given an administrator connected with the reading permission only', ()
       name: 'nfnn_log_search',
       arguments: { pattern: 'fio', limit: 5 },
     });
-    expect(textOf(search)).toContain('"offset": 36');
+    expect(textOf(search)).toContain('{"file":"backend.log","offset":36');
+    expect(textOf(search)).toContain('"continueWith":null');
     expect(
       stack.backend.requests.find((request) =>
         request.path.startsWith('/api/admin/operations/logs/backend.log/search'),
       )?.path,
     ).toBe('/api/admin/operations/logs/backend.log/search?pattern=fio&limit=5');
+  });
 
-    const missing = await client.callTool({ name: 'nfnn_log', arguments: { file: 'missing.log' } });
-    expect(missing.isError).toBe(true);
-    expect(textOf(missing)).toContain('404 operations/log-not-found');
+  it('when a log name is not one of the files, then the tool lists the files and asks the administration for no window', async () => {
+    for (const file of ['missing.log', '../etc/passwd']) {
+      const missing = await client.callTool({ name: 'nfnn_log', arguments: { file } });
+      expect(missing.isError).toBe(true);
+      expect(textOf(missing)).toBe(
+        `There is no log file "${file}". The files are: backend.log, backend.log.2026-10-22.0.gz, backend.log.2026-10-21.0.gz, nginx-access.log.`,
+      );
+    }
+    expect(
+      stack.backend.requests.filter((request) =>
+        request.path.startsWith('/api/admin/operations/logs/'),
+      ),
+    ).toHaveLength(0);
+  });
+
+  it('when a search goes on into the rotated copies, then it reads them newest first and names where to continue', async () => {
+    const first = await client.callTool({
+      name: 'nfnn_log_search',
+      arguments: { pattern: 'fio', limit: 3, rotated: true },
+    });
+    const page = JSON.parse(textOf(first).split('\n')[0] ?? '{}') as {
+      matches: { file: string; offset: number }[];
+      continueWith: unknown;
+    };
+    expect(page.matches.map((match) => `${match.file}@${match.offset}`)).toEqual([
+      'backend.log@36',
+      'backend.log.2026-10-22.0.gz@70',
+      'backend.log.2026-10-22.0.gz@50',
+    ]);
+    expect(page.continueWith).toEqual({ file: 'backend.log.2026-10-22.0.gz', before: 50 });
+    expect(textOf(first)).toContain(
+      'Older matches: call nfnn_log_search again with file "backend.log.2026-10-22.0.gz" and before 50, rotated true and series "backend.log".',
+    );
+
+    const second = JSON.parse(
+      textOf(
+        await client.callTool({
+          name: 'nfnn_log_search',
+          arguments: {
+            pattern: 'fio',
+            limit: 3,
+            rotated: true,
+            series: 'backend.log',
+            file: 'backend.log.2026-10-22.0.gz',
+            before: 50,
+          },
+        }),
+      ),
+    ) as { searched: string[]; matches: { file: string; offset: number }[]; continueWith: unknown };
+    expect(second.searched).toEqual(['backend.log.2026-10-22.0.gz', 'backend.log.2026-10-21.0.gz']);
+    expect(second.matches.map((match) => `${match.file}@${match.offset}`)).toEqual([
+      'backend.log.2026-10-22.0.gz@10',
+      'backend.log.2026-10-21.0.gz@5',
+    ]);
+    expect(second.continueWith).toBeNull();
   });
 
   it('when the log levels, the diagnostics and the thread dump are asked, then they come as text', async () => {
     const levels = textOf(await client.callTool({ name: 'nfnn_log_levels', arguments: {} }));
-    expect(levels).toContain('"logger": "cz.novanadeje.app"');
-    expect(levels).toContain('"until": "23. 10. 2026 08:30:00"');
+    expect(levels).toContain('"logger":"cz.novanadeje.app"');
+    expect(levels).toContain('"until":"2026-10-23T08:30:00+02:00"');
     expect(textOf(await client.callTool({ name: 'nfnn_diagnostics', arguments: {} }))).toContain(
-      '"reachable": true',
+      '"reachable":true',
     );
     expect(textOf(await client.callTool({ name: 'nfnn_thread_dump', arguments: {} }))).toContain(
       'state=RUNNABLE',
@@ -202,6 +331,18 @@ describe('Given an administrator connected with the reading permission only', ()
     expect(stack.logLines).toContain(
       'INFO Tool nfnn_pair_payment refused for donor donor-jana: the connection may only read',
     );
+  });
+
+  it('when a photo upload is asked, then it is refused like every change and nothing is fetched', async () => {
+    const fromUrl = await client.callTool({
+      name: 'nfnn_upload_photo',
+      arguments: { url: PHOTO_URL },
+    });
+    const link = await client.callTool({ name: 'nfnn_photo_upload_link', arguments: {} });
+    expect(fromUrl.isError).toBe(true);
+    expect(link.isError).toBe(true);
+    expect(textOf(link)).toContain('This connection may only read');
+    expect(stack.photos.fetched).toHaveLength(0);
   });
 });
 
@@ -229,8 +370,10 @@ describe('Given an administrator connected with the writing permission', () => {
     expect(call?.method).toBe('POST');
     expect(call?.authorization).toBe('Bearer api-token-write');
     expect(JSON.parse(call?.body ?? '{}')).toEqual({ donorId: DONOR_ID });
-    expect(textOf(result)).toContain('"pairedBy": "MANUAL"');
-    expect(stack.logLines).toContain('INFO Tool nfnn_pair_payment answered donor donor-jana');
+    expect(textOf(result)).toContain('"pairedBy":"MANUAL"');
+    expect(stack.logLines).toContain(
+      `INFO Tool nfnn_pair_payment answered donor donor-jana about payment ${PAYMENT_ID}, donor ${DONOR_ID}`,
+    );
   });
 
   it('when the administration refuses, then the tool answers an error with the Czech title and detail', async () => {
@@ -253,7 +396,7 @@ describe('Given an administrator connected with the writing permission', () => {
   it('when the report, a backup and a news article are requested, then each reaches its endpoint', async () => {
     expect(
       textOf(await client.callTool({ name: 'nfnn_send_report', arguments: { month: '2026-09' } })),
-    ).toContain('"month": "2026-09"');
+    ).toContain('"month":"2026-09"');
     expect(
       textOf(
         await client.callTool({ name: 'nfnn_request_backup', arguments: { kind: 'TEST_RESTORE' } }),
@@ -266,7 +409,7 @@ describe('Given an administrator connected with the writing permission', () => {
           arguments: { id: UNKNOWN_ID, publishedOn: '2026-10-23' },
         }),
       ),
-    ).toContain('"publishedOn": "2026-10-23"');
+    ).toContain('"publishedOn":"2026-10-23"');
     const bodies = stack.backend.requests
       .filter((request) => request.method === 'POST' && request.path.startsWith('/api/admin'))
       .map((request) => request.body);
@@ -285,7 +428,7 @@ describe('Given an administrator connected with the writing permission', () => {
       arguments: settings,
     });
     expect(result.isError).toBeFalsy();
-    expect(textOf(result)).toContain('"sendDay": 5');
+    expect(textOf(result)).toContain('"sendDay":5');
     const put = stack.backend.requests.find((request) => request.method === 'PUT');
     expect(put?.path).toBe('/api/admin/donations/report/settings');
     expect(JSON.parse(put?.body ?? '{}')).toEqual(settings);
@@ -300,7 +443,7 @@ describe('Given an administrator connected with the writing permission', () => {
       tag: 'Tábor',
     };
     const created = await client.callTool({ name: 'nfnn_create_news', arguments: article });
-    expect(textOf(created)).toContain('"slug": "letni-tabor"');
+    expect(textOf(created)).toContain('"slug":"letni-tabor"');
     const edited = await client.callTool({
       name: 'nfnn_update_news',
       arguments: { id: UNKNOWN_ID, ...article, slug: 'tabor-2026' },
@@ -363,7 +506,7 @@ describe('Given an administrator connected with the writing permission', () => {
       name: 'nfnn_set_log_level',
       arguments: { logger: 'cz.novanadeje.app', level: 'DEBUG', minutes: 30 },
     });
-    expect(textOf(raised)).toContain('"level": "DEBUG"');
+    expect(textOf(raised)).toContain('"level":"DEBUG"');
     const put = stack.backend.requests.find((request) => request.method === 'PUT');
     expect(put?.path).toBe('/api/admin/operations/loggers/cz.novanadeje.app');
     expect(put?.body).toBe('{"level":"DEBUG","minutes":30}');
@@ -382,5 +525,53 @@ describe('Given an administrator connected with the writing permission', () => {
     });
     expect(none.isError).toBe(true);
     expect(textOf(none)).toContain('404 operations/log-override-not-found');
+  });
+
+  it('when a photo is uploaded from an address, then its bytes reach the administration as a file and the id comes back for the cover', async () => {
+    const result = await client.callTool({
+      name: 'nfnn_upload_photo',
+      arguments: { url: PHOTO_URL },
+    });
+    expect(result.isError).toBeFalsy();
+    expect(textOf(result)).toContain(`"id":"${MEDIA_ID}"`);
+    expect(textOf(result)).toContain(`Use coverImageId "${MEDIA_ID}"`);
+    const upload = stack.backend.requests.find(
+      (request) => request.path === '/api/admin/content/media',
+    );
+    expect(upload?.method).toBe('POST');
+    expect(upload?.authorization).toBe('Bearer api-token-write');
+    expect(upload?.contentType).toMatch(/^multipart\/form-data; boundary=/);
+    expect(upload?.body).toContain('Content-Type: image/jpeg');
+    expect(upload?.body).toContain('jpeg-bytes');
+  });
+
+  it('when the photo address is refused or the image is unusable, then the tool says why', async () => {
+    const privateAddress = await client.callTool({
+      name: 'nfnn_upload_photo',
+      arguments: { url: 'https://192.168.1.10/photo.jpg' },
+    });
+    expect(privateAddress.isError).toBe(true);
+    expect(textOf(privateAddress)).toBe(
+      'The photo was not uploaded: the address points into a private network.',
+    );
+    expect(stack.logLines).toContain(
+      'INFO Tool nfnn_upload_photo refused for donor donor-jana: photo-refused',
+    );
+    const broken = await client.callTool({
+      name: 'nfnn_upload_photo',
+      arguments: { url: BROKEN_PHOTO_URL },
+    });
+    expect(broken.isError).toBe(true);
+    expect(textOf(broken)).toContain('400 content/unsupported-image');
+  });
+
+  it('when an upload link is asked, then it names the address on the site, a ticket and a curl line', async () => {
+    const link = JSON.parse(
+      textOf(await client.callTool({ name: 'nfnn_photo_upload_link', arguments: {} })),
+    ) as { method: string; url: string; headers: Record<string, string>; example: string };
+    expect(link.method).toBe('PUT');
+    expect(link.url).toBe('https://nfnn.example/mcp-photos');
+    expect(link.headers['X-Upload-Ticket']).toMatch(/^[A-Za-z0-9_-]{43}$/);
+    expect(link.example).toContain(`X-Upload-Ticket: ${link.headers['X-Upload-Ticket']}`);
   });
 });
