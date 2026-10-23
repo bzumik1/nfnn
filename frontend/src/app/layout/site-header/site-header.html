@@ -24,7 +24,11 @@
         >Finanční příspěvek</a
       >
       @if (auth.signedIn()) {
-        <a class="nav-login" routerLink="/darce/prehled" i18n="@@layout.header.nav.portal"
+        <a
+          #portalLink
+          class="nav-login"
+          routerLink="/darce/prehled"
+          i18n="@@layout.header.nav.portal"
           >Můj přehled</a
         >
       } @else {

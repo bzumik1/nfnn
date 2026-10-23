@@ -3,7 +3,7 @@ import { CanActivateFn, Router } from '@angular/router';
 import { AuthStore } from './auth-store';
 import { LoginDialogService } from './login-dialog.service';
 
-export const donorGuard: CanActivateFn = async () => {
+export const donorGuard: CanActivateFn = async (_route, state) => {
   const store = inject(AuthStore);
   const router = inject(Router);
   const loginDialog = inject(LoginDialogService);
@@ -11,6 +11,6 @@ export const donorGuard: CanActivateFn = async () => {
   if (store.signedIn()) {
     return true;
   }
-  loginDialog.open();
+  loginDialog.open('login', { returnTo: state.url });
   return router.createUrlTree(['/']);
 };

@@ -22,7 +22,7 @@ test.describe('Given a donor who protects the account with an authenticator app'
     await mockDonorApi(page);
   });
 
-  test('when they sign in, then the password alone is not enough and the code from the app opens the overview', async ({
+  test('when they open the overview and sign in, then the password alone is not enough and the code from the app opens the overview', async ({
     page,
   }) => {
     await page.route('**/api/donors/auth/login', (route) => route.fulfill(secondFactorRequired()));
@@ -32,7 +32,8 @@ test.describe('Given a donor who protects the account with an authenticator app'
       await route.fulfill(session(200, protectedDonor));
     });
 
-    await openSignInDialog(page);
+    await page.goto('/darce/prehled');
+    await expect(page.getByRole('dialog')).toBeVisible();
     await page.locator('#login-email').fill('jana@example.cz');
     await page.locator('#login-password').fill('correct horse battery');
     await page.getByRole('dialog').locator('.form-submit').click();

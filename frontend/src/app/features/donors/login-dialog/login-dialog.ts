@@ -13,7 +13,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { FormsModule, NgForm } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { RouterLink } from '@angular/router';
 import { describeProblem, problemOf, problemTypeEndsWith } from '../../../core/auth/api-problem';
 import { AuthApi } from '../../../core/auth/auth-api';
 import { AuthStore } from '../../../core/auth/auth-store';
@@ -63,7 +63,6 @@ const INVALID_SECOND_FACTOR_CHALLENGE = 'auth/invalid-second-factor-challenge';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class LoginDialog {
-  private readonly router = inject(Router);
   private readonly dialog = inject(LoginDialogService);
   private readonly auth = inject(AuthStore);
   private readonly authApi = inject(AuthApi);
@@ -267,11 +266,7 @@ export class LoginDialog {
 
   private enterPortal(): void {
     this.loading.set(false);
-    const stay = this.dialog.staysOnPage();
-    this.dialog.close();
-    if (!stay) {
-      this.router.navigateByUrl('/darce/prehled');
-    }
+    this.dialog.signedIn();
   }
 
   private fail(failure: unknown): void {

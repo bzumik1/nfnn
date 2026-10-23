@@ -386,8 +386,10 @@ describe('Given an administrator on the monthly report page', () => {
     expect(navigate).toHaveBeenCalledWith('/darce/prehled');
   });
 
-  it('when the session has ended, then the administrator is sent home to sign in', async () => {
-    const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+  it('when the session has ended, then the administrator is sent home to sign in and comes back after it', async () => {
+    const router = TestBed.inject(Router);
+    vi.spyOn(router, 'url', 'get').mockReturnValue('/sprava/prehledy');
+    const navigate = vi.spyOn(router, 'navigateByUrl').mockResolvedValue(true);
     const refusal = problem(401, 'auth/unauthenticated', 'Přihlaste se', '');
 
     http.expectOne(REPORT_URL).flush(refusal.body, refusal.options);
@@ -399,5 +401,9 @@ describe('Given an administrator on the monthly report page', () => {
     expect(store.signedIn()).toBe(false);
     expect(navigate).toHaveBeenCalledWith('/');
     expect(TestBed.inject(LoginDialogService).isOpen()).toBe(true);
+
+    TestBed.inject(LoginDialogService).signedIn();
+
+    expect(navigate).toHaveBeenLastCalledWith('/sprava/prehledy');
   });
 });

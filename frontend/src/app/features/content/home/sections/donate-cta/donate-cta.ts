@@ -1,10 +1,13 @@
 /// <reference types="@angular/localize" />
 
 import {
+  afterNextRender,
   ChangeDetectionStrategy,
   Component,
   computed,
+  ElementRef,
   inject,
+  Injector,
   input,
   linkedSignal,
   signal,
@@ -69,6 +72,8 @@ type QrState =
 export class DonateCta {
   private readonly api = inject(PaymentQrApi);
   private readonly loginDialog = inject(LoginDialogService);
+  private readonly injector = inject(Injector);
+  private readonly bankLabel = viewChild<ElementRef<HTMLElement>>('bankLabel');
 
   readonly variableSymbol = input<string | null>(null);
 
@@ -168,7 +173,11 @@ export class DonateCta {
   }
 
   signIn(): void {
-    this.loginDialog.open('login');
+    this.loginDialog.open('login', { afterSignIn: () => this.focusBankDetails() });
+  }
+
+  private focusBankDetails(): void {
+    afterNextRender(() => this.bankLabel()?.nativeElement.focus(), { injector: this.injector });
   }
 
   retry(): void {

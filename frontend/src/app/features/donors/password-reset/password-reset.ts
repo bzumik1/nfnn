@@ -91,7 +91,7 @@ export class PasswordReset {
   }
 
   signIn(): void {
-    this.dialog.open('login');
+    this.dialog.open('login', { returnTo: '/darce/prehled' });
   }
 
   private passwordChanged(): void {

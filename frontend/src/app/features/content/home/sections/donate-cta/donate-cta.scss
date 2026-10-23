@@ -96,6 +96,10 @@
   margin-bottom: 14px;
   letter-spacing: 0.1em;
   text-transform: uppercase;
+
+  &:focus {
+    outline: none;
+  }
 }
 
 .amount {
