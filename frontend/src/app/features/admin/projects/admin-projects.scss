@@ -1,0 +1,210 @@
+:host {
+  display: block;
+}
+
+.admin {
+  min-height: 100vh;
+  background: var(--color-surface-alt);
+}
+
+.container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 32px 24px 48px;
+}
+
+.admin-crumbs {
+  font-size: 14px;
+  margin-bottom: 12px;
+}
+
+.admin-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 16px;
+}
+
+.admin-title {
+  font-family: var(--font-serif);
+  font-size: clamp(26px, 4vw, 32px);
+  font-weight: 700;
+  color: var(--color-text);
+  margin: 8px 0;
+
+  &:focus {
+    outline: none;
+  }
+}
+
+.admin-intro {
+  color: var(--color-text-muted);
+  font-size: 15px;
+  line-height: 1.5;
+  margin-bottom: 20px;
+  max-width: 680px;
+}
+
+.admin-card {
+  background: var(--color-surface);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-panel);
+  border: 1px solid var(--color-border-soft);
+  overflow: hidden;
+  margin-bottom: 20px;
+}
+
+.admin-card-title {
+  font-family: var(--font-serif);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--color-text);
+  padding: 20px 24px 12px;
+}
+
+.card-body {
+  padding: 0 24px 24px;
+}
+
+.card-intro {
+  font-size: 13px;
+  color: var(--color-text-muted);
+  line-height: 1.5;
+}
+
+.admin-loading,
+.admin-error {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  color: var(--color-text-muted);
+  font-size: 14px;
+}
+
+.admin-error {
+  color: var(--color-danger);
+}
+
+.primary {
+  display: inline-block;
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  border: none;
+  padding: 10px 24px;
+  border-radius: var(--radius-pill);
+  font-weight: 700;
+  font-size: 14px;
+  text-decoration: none;
+  font-family: var(--font-sans);
+  box-shadow: var(--shadow-button-sm);
+}
+
+.admin-retry {
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
+  border: none;
+  padding: 9px 18px;
+  border-radius: var(--radius-pill);
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  font-family: var(--font-sans);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+thead tr {
+  background: var(--color-surface-alt);
+}
+
+th {
+  padding: 12px 20px;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-text-subtle);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+tbody tr {
+  border-top: 1px solid var(--color-divider);
+}
+
+td {
+  padding: 14px 20px;
+  font-size: 14px;
+  color: var(--color-text-secondary);
+  vertical-align: top;
+}
+
+.admin-name {
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+.muted {
+  color: var(--color-text-subtle);
+}
+
+.state {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.state--published {
+  background: var(--color-success-bg);
+  color: var(--color-success);
+}
+
+.state--draft {
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
+}
+
+@media (max-width: 640px) {
+  thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  table,
+  tbody,
+  tr,
+  td {
+    display: block;
+  }
+
+  tbody tr {
+    display: grid;
+    gap: 8px;
+    padding: 14px 20px;
+  }
+
+  td {
+    padding: 0;
+  }
+
+  td::before {
+    content: attr(data-label);
+    display: block;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--color-text-subtle);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 2px;
+  }
+}

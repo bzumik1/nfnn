@@ -42,6 +42,11 @@ const ACTION_NAMES: Record<string, string> = {
   PUBLISH_NEWS: $localize`:@@admin.actions.action.publishNews:Zveřejnění aktuality`,
   UNPUBLISH_NEWS: $localize`:@@admin.actions.action.unpublishNews:Stažení aktuality z webu`,
   DELETE_NEWS: $localize`:@@admin.actions.action.deleteNews:Smazání aktuality`,
+  CREATE_PROJECT: $localize`:@@admin.actions.action.createProject:Napsání projektu`,
+  UPDATE_PROJECT: $localize`:@@admin.actions.action.updateProject:Úprava projektu`,
+  PUBLISH_PROJECT: $localize`:@@admin.actions.action.publishProject:Zveřejnění projektu`,
+  UNPUBLISH_PROJECT: $localize`:@@admin.actions.action.unpublishProject:Stažení projektu z webu`,
+  DELETE_PROJECT: $localize`:@@admin.actions.action.deleteProject:Smazání projektu`,
 };
 
 @Component({

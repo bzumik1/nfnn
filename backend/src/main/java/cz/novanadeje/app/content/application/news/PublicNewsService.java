@@ -3,7 +3,7 @@ package cz.novanadeje.app.content.application.news;
 import cz.novanadeje.app.content.domain.news.NewsArticle;
 import cz.novanadeje.app.content.domain.news.NewsArticleNotFound;
 import cz.novanadeje.app.content.domain.news.NewsArticleRepository;
-import cz.novanadeje.app.content.domain.news.Slug;
+import cz.novanadeje.app.content.domain.Slug;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 

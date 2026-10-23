@@ -4,5 +4,5 @@ import jakarta.validation.constraints.NotNull;
 
 import java.time.LocalDate;
 
-public record PublishNewsRequest(@NotNull LocalDate publishedOn) {
+public record PublishRequest(@NotNull LocalDate publishedOn) {
 }

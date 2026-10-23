@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <changeSet id="003-create-project" author="nfnn">
+        <createTable tableName="content_project">
+            <column name="id" type="uuid">
+                <constraints primaryKey="true" primaryKeyName="pk_content_project" nullable="false"/>
+            </column>
+            <column name="slug" type="varchar(80)">
+                <constraints nullable="false" unique="true" uniqueConstraintName="uq_content_project_slug"/>
+            </column>
+            <column name="title" type="varchar(120)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="year" type="int">
+                <constraints nullable="false"/>
+            </column>
+            <column name="tag" type="varchar(40)"/>
+            <column name="perex" type="varchar(300)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="body" type="varchar(20000)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="cover_media_id" type="uuid">
+                <constraints foreignKeyName="fk_content_project_cover_media" references="content_media(id)"/>
+            </column>
+            <column name="published_on" type="date"/>
+            <column name="created_at" type="timestamp with time zone">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="timestamp with time zone">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <sql>alter table content_project add constraint ck_content_project_year check (year between 2005 and 2100)</sql>
+        <createIndex tableName="content_project" indexName="ix_content_project_published_on">
+            <column name="published_on"/>
+        </createIndex>
+        <createIndex tableName="content_project" indexName="ix_content_project_cover_media">
+            <column name="cover_media_id"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>

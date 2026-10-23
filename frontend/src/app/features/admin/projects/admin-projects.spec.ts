@@ -1,0 +1,138 @@
+import { provideHttpClient, withInterceptors } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideRouter, Router } from '@angular/router';
+import { authInterceptor } from '../../../core/auth/auth-interceptor';
+import { AuthStore } from '../../../core/auth/auth-store';
+import { LoginDialogService } from '../../../core/auth/login-dialog.service';
+import { authResponse, sampleDonor } from '../../../core/auth/testing/donor-fixtures';
+import { draftProject, project } from '../../content/testing/project-fixtures';
+import { AdminProjects } from './admin-projects';
+
+const LIST_URL = '/api/admin/content/projects';
+
+function problem(status: number, type: string) {
+  return {
+    body: { type: `https://nfnn.cz/problems/${type}`, title: 'Chyba', detail: 'Detail', status },
+    options: {
+      status,
+      statusText: 'Error',
+      headers: { 'Content-Type': 'application/problem+json' },
+    },
+  };
+}
+
+describe('Given an administrator on the project list', () => {
+  let fixture: ComponentFixture<AdminProjects>;
+  let http: HttpTestingController;
+  let store: AuthStore;
+
+  beforeEach(async () => {
+    localStorage.clear();
+    await TestBed.configureTestingModule({
+      imports: [AdminProjects],
+      providers: [
+        provideHttpClient(withInterceptors([authInterceptor])),
+        provideHttpClientTesting(),
+        provideRouter([]),
+      ],
+    }).compileComponents();
+    http = TestBed.inject(HttpTestingController);
+    store = TestBed.inject(AuthStore);
+    store.login('jana@example.cz', 'correct horse battery').subscribe();
+    http
+      .expectOne('/api/donors/auth/login')
+      .flush(authResponse('token-1', sampleDonor({ roles: ['DONOR', 'ADMIN'] })));
+    fixture = TestBed.createComponent(AdminProjects);
+    fixture.detectChanges();
+  });
+
+  afterEach(() => http.verify());
+
+  function texts(selector: string): string[] {
+    return Array.from(fixture.nativeElement.querySelectorAll(selector) as NodeListOf<Element>).map(
+      (element) => (element.textContent ?? '').replace(/\s+/g, ' ').trim(),
+    );
+  }
+
+  function rows(): string[] {
+    return Array.from(
+      fixture.nativeElement.querySelectorAll('tbody tr') as NodeListOf<Element>,
+    ).map((row) =>
+      Array.from(row.querySelectorAll('td'))
+        .map((cell) => (cell.textContent ?? '').replace(/\s+/g, ' ').trim())
+        .join(' '),
+    );
+  }
+
+  async function settle(): Promise<void> {
+    await fixture.whenStable();
+    fixture.detectChanges();
+  }
+
+  it('when the list arrives, then every project shows its title as a link, its year, its tag, its state and when it was last saved', async () => {
+    http.expectOne(LIST_URL).flush({ items: [draftProject(), project()] });
+    await settle();
+
+    expect(rows()).toEqual([
+      'Benefiční koncert 2026 bez štítku Koncept 22. 10. 2026 11:00',
+      'Zahrada pro děti 2024 Projekt Zveřejněno 20. 10. 2026 20. 10. 2026 09:30',
+    ]);
+    const links = fixture.nativeElement.querySelectorAll(
+      'tbody a',
+    ) as NodeListOf<HTMLAnchorElement>;
+    expect(links[0].getAttribute('href')).toBe(`/sprava/projekty/${draftProject().id}`);
+    expect(
+      (fixture.nativeElement.querySelector('a.primary') as HTMLAnchorElement).getAttribute('href'),
+    ).toBe('/sprava/projekty/nova');
+  });
+
+  it('when there is no project yet, then the page says so and offers the first one', async () => {
+    http.expectOne(LIST_URL).flush({ items: [] });
+    await settle();
+
+    expect(texts('.card-intro')).toEqual([
+      'Zatím tu žádný projekt není. Napište první tlačítkem Nový projekt.',
+    ]);
+  });
+
+  it('when the list cannot be loaded, then an alert offers a retry that asks again', async () => {
+    http.expectOne(LIST_URL).flush(null, { status: 500, statusText: 'Error' });
+    await settle();
+
+    expect(texts('[role="alert"]')).toEqual(['Projekty se nepodařilo načíst. Zkusit znovu']);
+    (fixture.nativeElement.querySelector('.admin-retry') as HTMLButtonElement).click();
+    await settle();
+    http.expectOne(LIST_URL).flush({ items: [project()] });
+    await settle();
+
+    expect(rows()).toHaveLength(1);
+  });
+
+  it('when the donor is no administrator, then the page sends them to their overview', async () => {
+    const router = TestBed.inject(Router);
+    const navigated = vi.spyOn(router, 'navigateByUrl').mockResolvedValue(true);
+    const { body, options } = problem(403, 'auth/forbidden');
+    http.expectOne(LIST_URL).flush(body, options);
+    await settle();
+
+    expect(navigated).toHaveBeenCalledWith('/darce/prehled');
+  });
+
+  it('when the session is gone, then the page signs the donor out and opens the sign-in dialog', async () => {
+    const router = TestBed.inject(Router);
+    const navigated = vi.spyOn(router, 'navigateByUrl').mockResolvedValue(true);
+    const dialog = TestBed.inject(LoginDialogService);
+    const opened = vi.spyOn(dialog, 'open');
+    const { body, options } = problem(401, 'auth/unauthenticated');
+    http.expectOne(LIST_URL).flush(body, options);
+    await settle();
+    http
+      .expectOne('/api/donors/auth/logout')
+      .flush(null, { status: 204, statusText: 'No Content' });
+    await settle();
+
+    expect(navigated).toHaveBeenCalledWith('/');
+    expect(opened).toHaveBeenCalled();
+  });
+});

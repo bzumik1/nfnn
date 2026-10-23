@@ -1,0 +1,278 @@
+import { expect, Page, test } from '@playwright/test';
+import { administrator, mockDonorApi, problem, session } from './donor-session';
+
+const PROJECTS = '/api/admin/content/projects';
+const MEDIA = '/api/admin/content/media';
+const IMAGE_ID = '0199f3e0-0000-7000-8000-00000000a001';
+const PROJECT_ID = '0199f3e0-0000-7000-8000-00000000c001';
+const DRAFT_ID = '0199f3e0-0000-7000-8000-00000000c002';
+const TINY_PNG = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAIAAAAmkwkpAAAAEElEQVR4nGNQTX4NRwzEcQBO0hcxU+9NfQAAAABJRU5ErkJggg==',
+  'base64',
+);
+
+function project(overrides: Record<string, unknown> = {}) {
+  return {
+    id: PROJECT_ID,
+    slug: 'zahrada-pro-deti',
+    title: 'Zahrada pro děti',
+    year: 2024,
+    tag: 'Projekt',
+    perex: 'Stavíme zahradu, kde si děti budou hrát.',
+    body: 'První odstavec.\n\nDruhý odstavec.',
+    coverImage: { id: IMAGE_ID, url: `/api/content/media/${IMAGE_ID}` },
+    publishedOn: '2026-10-20',
+    createdAt: '2026-10-19T09:00:00Z',
+    updatedAt: '2026-10-20T07:30:00Z',
+    ...overrides,
+  };
+}
+
+function draft(overrides: Record<string, unknown> = {}) {
+  return project({
+    id: DRAFT_ID,
+    slug: 'beneficni-koncert',
+    title: 'Benefiční koncert',
+    year: 2026,
+    tag: null,
+    perex: 'Zveme vás na koncert.',
+    body: 'Text o koncertu.',
+    coverImage: null,
+    publishedOn: null,
+    createdAt: '2026-10-22T09:00:00Z',
+    updatedAt: '2026-10-22T09:00:00Z',
+    ...overrides,
+  });
+}
+
+async function rememberedSession(page: Page): Promise<void> {
+  await page.route('**/api/donors/auth/refresh', (route) =>
+    route.fulfill(session(200, administrator)),
+  );
+  await page.route(
+    (url) => url.pathname.startsWith('/api/content/media/'),
+    (route) => route.fulfill({ contentType: 'image/png', body: TINY_PNG }),
+  );
+  await page.goto('/');
+  await page.evaluate(() => localStorage.setItem('nfnn.donor-session', '1'));
+}
+
+test.describe('Given an administrator managing the projects', () => {
+  test.beforeEach(async ({ page }) => {
+    await mockDonorApi(page);
+    await rememberedSession(page);
+  });
+
+  test('when they open the list, then drafts and published projects show their state and lead to the editor', async ({
+    page,
+  }) => {
+    await page.route(
+      (url) => url.pathname === PROJECTS,
+      (route) => route.fulfill({ json: { items: [draft(), project()] } }),
+    );
+    await page.route(
+      (url) => url.pathname === `${PROJECTS}/${PROJECT_ID}`,
+      (route) => route.fulfill({ json: project() }),
+    );
+
+    await page.goto('/sprava/projekty');
+
+    await expect(page).toHaveTitle('Projekty | Správa | Nová naděje – nadační fond');
+    await expect(page.getByRole('heading', { level: 1, name: 'Projekty' })).toBeFocused();
+    await expect(page.locator('tbody tr').nth(0).locator('td')).toHaveText([
+      'Benefiční koncert',
+      '2026',
+      'bez štítku',
+      'Koncept',
+      '22. 10. 2026 11:00',
+    ]);
+    await expect(page.locator('tbody tr').nth(1).locator('td')).toHaveText([
+      'Zahrada pro děti',
+      '2024',
+      'Projekt',
+      'Zveřejněno 20. 10. 2026',
+      '20. 10. 2026 09:30',
+    ]);
+
+    await page.getByRole('link', { name: 'Zahrada pro děti' }).click();
+
+    await expect(page).toHaveURL(`/sprava/projekty/${PROJECT_ID}`);
+    await expect(page.getByRole('heading', { level: 1, name: 'Úprava projektu' })).toBeFocused();
+    await expect(page.getByLabel('Titulek')).toHaveValue('Zahrada pro děti');
+    await expect(page.getByLabel('Rok')).toHaveValue('2024');
+    await expect(page.locator('.image-preview')).toBeVisible();
+    await expect(page.getByText('Zveřejněno s datem 20. 10. 2026.')).toBeVisible();
+  });
+
+  test('when they write a new project with a photo and publish it, then each step is confirmed and the requests carry what they typed', async ({
+    page,
+  }) => {
+    const created: unknown[] = [];
+    const published: unknown[] = [];
+    await page.route(
+      (url) => url.pathname === MEDIA,
+      (route) =>
+        route.fulfill({
+          status: 201,
+          json: { id: IMAGE_ID, url: `/api/content/media/${IMAGE_ID}`, width: 1600, height: 1000 },
+        }),
+    );
+    await page.route(
+      (url) => url.pathname === PROJECTS,
+      (route) => {
+        created.push(route.request().postDataJSON());
+        return route.fulfill({ status: 201, json: draft({ coverImage: project().coverImage }) });
+      },
+    );
+    await page.route(
+      (url) => url.pathname === `${PROJECTS}/${DRAFT_ID}/publish`,
+      (route) => {
+        published.push(route.request().postDataJSON());
+        return route.fulfill({
+          json: draft({ coverImage: project().coverImage, publishedOn: '2026-10-23' }),
+        });
+      },
+    );
+
+    await page.goto('/sprava/projekty/nova');
+    await expect(page.getByRole('heading', { level: 1, name: 'Nový projekt' })).toBeFocused();
+
+    await page.getByLabel('Titulek').fill('Benefiční koncert');
+    await expect(page.getByLabel('Adresa na webu')).toHaveValue('beneficni-koncert');
+    await expect(
+      page.getByText('Projekt bude na nfnn.cz/projekty/beneficni-koncert.'),
+    ).toBeVisible();
+    await page.getByLabel('Rok').fill('2026');
+    await page.getByLabel('Perex').fill('Zveme vás na koncert.');
+    await page.getByLabel('Text', { exact: true }).fill('Text o koncertu.');
+    await page.getByLabel('Fotka').setInputFiles({
+      name: 'koncert.png',
+      mimeType: 'image/png',
+      buffer: TINY_PNG,
+    });
+    await expect(page.locator('.image-preview')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Odebrat fotku' })).toBeVisible();
+
+    await page.getByRole('button', { name: 'Uložit koncept' }).click();
+
+    await expect(page.locator('.admin-notice--status')).toHaveText(
+      'Projekt jsme uložili jako koncept. Na web ho dostanete tlačítkem Zveřejnit.',
+    );
+    await expect(page).toHaveURL(`/sprava/projekty/${DRAFT_ID}`);
+    expect(created).toEqual([
+      {
+        title: 'Benefiční koncert',
+        year: 2026,
+        slug: 'beneficni-koncert',
+        tag: null,
+        perex: 'Zveme vás na koncert.',
+        body: 'Text o koncertu.',
+        coverImageId: IMAGE_ID,
+      },
+    ]);
+
+    await page.getByLabel('Datum zveřejnění').fill('2026-10-23');
+    await page.getByRole('button', { name: 'Zveřejnit' }).click();
+
+    await expect(page.locator('.admin-notice--status')).toHaveText(
+      'Projekt je na webu s datem 23. 10. 2026.',
+    );
+    await expect(page.getByRole('button', { name: 'Stáhnout z webu' })).toBeVisible();
+    expect(published).toEqual([{ publishedOn: '2026-10-23' }]);
+  });
+
+  test('when the title is missing, then the field says so, gets focus and nothing is sent', async ({
+    page,
+  }) => {
+    let sent = 0;
+    await page.route(
+      (url) => url.pathname === PROJECTS,
+      (route) => {
+        sent++;
+        return route.fulfill({ status: 500 });
+      },
+    );
+
+    await page.goto('/sprava/projekty/nova');
+    await page.getByLabel('Perex').fill('Perex.');
+    await page.getByLabel('Text', { exact: true }).fill('Text.');
+    await page.getByRole('button', { name: 'Uložit koncept' }).click();
+
+    await expect(page.getByLabel('Titulek')).toBeFocused();
+    await expect(page.getByLabel('Titulek')).toHaveAttribute('aria-invalid', 'true');
+    await expect(page.getByText('Vyplňte prosím titulek.')).toBeVisible();
+    expect(sent).toBe(0);
+  });
+
+  test('when the address is taken, then the form carries the backend words', async ({ page }) => {
+    await page.route(
+      (url) => url.pathname === PROJECTS,
+      (route) =>
+        route.fulfill(
+          problem(
+            409,
+            'content/slug-taken',
+            'Adresa je obsazená',
+            'Jiná aktualita nebo projekt už tuto adresu používá; zvolte jinou.',
+          ),
+        ),
+    );
+
+    await page.goto('/sprava/projekty/nova');
+    await page.getByLabel('Titulek').fill('Zahrada pro děti');
+    await page.getByLabel('Perex').fill('Perex.');
+    await page.getByLabel('Text', { exact: true }).fill('Text.');
+    await page.getByRole('button', { name: 'Uložit koncept' }).click();
+
+    await expect(page.getByRole('alert')).toHaveText(
+      'Adresa je obsazená. Jiná aktualita nebo projekt už tuto adresu používá; zvolte jinou.',
+    );
+  });
+
+  test('when they take a published project off the site and then delete it, then the page confirms each step and returns to the list', async ({
+    page,
+  }) => {
+    let view = project();
+    let deleted = 0;
+    await page.route(
+      (url) => url.pathname === `${PROJECTS}/${PROJECT_ID}`,
+      (route) => {
+        if (route.request().method() === 'DELETE') {
+          deleted++;
+          return route.fulfill({ status: 204 });
+        }
+        return route.fulfill({ json: view });
+      },
+    );
+    await page.route(
+      (url) => url.pathname === `${PROJECTS}/${PROJECT_ID}/unpublish`,
+      (route) => {
+        view = project({ publishedOn: null });
+        return route.fulfill({ json: view });
+      },
+    );
+    await page.route(
+      (url) => url.pathname === PROJECTS,
+      (route) => route.fulfill({ json: { items: [] } }),
+    );
+
+    await page.goto(`/sprava/projekty/${PROJECT_ID}`);
+    await page.getByRole('button', { name: 'Stáhnout z webu' }).click();
+
+    await expect(page.locator('.admin-notice--status')).toHaveText(
+      'Projekt jsme z webu stáhli. Zůstává tu jako koncept.',
+    );
+    await expect(page.getByRole('button', { name: 'Zveřejnit' })).toBeVisible();
+
+    await page.getByRole('button', { name: 'Smazat projekt' }).click();
+    const question = page.getByRole('group', { name: 'Smazat projekt?' });
+    await expect(question).toContainText('Opravdu smazat projekt „Zahrada pro děti“?');
+    await question.getByRole('button', { name: 'Ano, smazat' }).click();
+
+    await expect(page).toHaveURL('/sprava/projekty');
+    await expect(
+      page.getByText('Zatím tu žádný projekt není. Napište první tlačítkem Nový projekt.'),
+    ).toBeVisible();
+    expect(deleted).toBe(1);
+  });
+});
