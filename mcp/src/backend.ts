@@ -32,6 +32,14 @@ export class BackendClient {
     return this.send('POST', path, apiToken, body);
   }
 
+  async put(path: string, apiToken: string, body?: unknown): Promise<unknown> {
+    return this.send('PUT', path, apiToken, body);
+  }
+
+  async delete(path: string, apiToken: string): Promise<unknown> {
+    return this.send('DELETE', path, apiToken);
+  }
+
   private async send(
     method: string,
     path: string,

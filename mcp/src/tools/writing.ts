@@ -1,6 +1,6 @@
 import { requireScopes, type McpServer } from '@modelcontextprotocol/server';
 import * as z from 'zod/v4';
-import { answer, text, WRITE_SCOPE, type ToolDependencies } from './support.js';
+import { answer, plain, text, WRITE_SCOPE, type ToolDependencies } from './support.js';
 
 const WRITING = {
   readOnlyHint: false,
@@ -152,5 +152,51 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
       answer(deps, ctx, 'nfnn_unpublish_project', async ({ apiToken }) =>
         text(await backend.post(`/api/admin/content/projects/${id}/unpublish`, apiToken)),
       ),
+  );
+
+  server.registerTool(
+    'nfnn_set_log_level',
+    {
+      title: 'Dočasně změnit úroveň logování',
+      description:
+        'Sets a logger (ROOT or a dotted package or class name, e.g. cz.novanadeje.app, io.github.bzumik1.fio, org.hibernate.SQL) to TRACE, DEBUG, INFO, WARN, ERROR or OFF for `minutes` (30 by default, at most 1440); the level goes back by itself when the time is up. Audited as CHANGE_LOG_LEVEL. Read the result with nfnn_log or nfnn_log_search.',
+      inputSchema: z.object({
+        logger: z.string().min(1).max(200),
+        level: z.enum(['TRACE', 'DEBUG', 'INFO', 'WARN', 'ERROR', 'OFF']),
+        minutes: z.number().int().min(1).max(1440).optional(),
+      }),
+      annotations: WRITING,
+      scopeChallenge,
+    },
+    async ({ logger, level, minutes }, ctx) =>
+      answer(deps, ctx, 'nfnn_set_log_level', async ({ apiToken }) =>
+        text(
+          await backend.put(
+            `/api/admin/operations/loggers/${encodeURIComponent(logger)}`,
+            apiToken,
+            minutes === undefined ? { level } : { level, minutes },
+          ),
+        ),
+      ),
+  );
+
+  server.registerTool(
+    'nfnn_reset_log_level',
+    {
+      title: 'Vrátit úroveň logování',
+      description:
+        'Ends the temporary level of a logger now, so it goes back to what the configuration says; audited as RESET_LOG_LEVEL.',
+      inputSchema: z.object({ logger: z.string().min(1).max(200) }),
+      annotations: WRITING,
+      scopeChallenge,
+    },
+    async ({ logger }, ctx) =>
+      answer(deps, ctx, 'nfnn_reset_log_level', async ({ apiToken }) => {
+        await backend.delete(
+          `/api/admin/operations/loggers/${encodeURIComponent(logger)}`,
+          apiToken,
+        );
+        return plain(`The logger ${logger} is back at its configured level.`);
+      }),
   );
 }

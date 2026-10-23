@@ -45,6 +45,8 @@ curl -sS "${h[@]}" -H 'Range: bytes=-50000' https://ops.nfnn.cz/logs/backend.log
 curl -sS "${h[@]}" https://ops.nfnn.cz/logs/backup.log
 ```
 
+With the NFNN connector in the session, `nfnn_log_files`, `nfnn_log` (paged windows, the tail by default), `nfnn_log_search`, `nfnn_log_levels`, `nfnn_diagnostics` and `nfnn_thread_dump` read the same folder through `/api/admin/operations/...`, and `nfnn_set_log_level` raises a logger for a while (audited, resets by itself); prefer them over the tunnel.
+
 After a deploy, check `/info` against the merge commit and `Backend revision … is ready` in the log. The logs carry ids and outcomes, never names or tokens; quote them in a thread only as far as needed. Without the two variables (or a 403) the tunnel or the token is not set up: ask Jakub, never guess at the server.
 
 ## Non-negotiable

@@ -126,6 +126,8 @@ app:
       check-cron: "0 15 7 * * *"
       max-backup-age: PT26H
       max-test-restore-age: P8D
+    logs:
+      directory: /logs
   security:
     jwt:
       issuer: nova-nadeje

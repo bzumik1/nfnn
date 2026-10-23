@@ -5,11 +5,11 @@
         xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
         https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
 
-    <includeAll path="db/changelog/content/" relativeToChangelogFile="false"/>
-    <includeAll path="db/changelog/donors/" relativeToChangelogFile="false"/>
-    <includeAll path="db/changelog/donations/" relativeToChangelogFile="false"/>
-    <includeAll path="db/changelog/contact/" relativeToChangelogFile="false"/>
-    <includeAll path="db/changelog/operations/" relativeToChangelogFile="false"/>
-    <includeAll path="db/changelog/shared/" relativeToChangelogFile="false"/>
+    <includeAll path="db/changelog/content/" relativeToChangelogFile="false" endsWithFilter=".xml"/>
+    <includeAll path="db/changelog/donors/" relativeToChangelogFile="false" endsWithFilter=".xml"/>
+    <includeAll path="db/changelog/donations/" relativeToChangelogFile="false" endsWithFilter=".xml"/>
+    <includeAll path="db/changelog/contact/" relativeToChangelogFile="false" endsWithFilter=".xml"/>
+    <includeAll path="db/changelog/operations/" relativeToChangelogFile="false" endsWithFilter=".xml"/>
+    <includeAll path="db/changelog/shared/" relativeToChangelogFile="false" endsWithFilter=".xml"/>
 
 </databaseChangeLog>
