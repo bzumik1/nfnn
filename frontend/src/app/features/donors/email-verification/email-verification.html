@@ -29,18 +29,64 @@
           >
             E-mail je potvrzený
           </h1>
-          <p class="lead" role="status" i18n="@@donor.emailVerification.confirmed.text">
-            Účet je připravený a jste přihlášeni. Na přehledu najdete svůj variabilní symbol pro
-            příspěvky.
-          </p>
-          <button
-            type="button"
-            class="form-submit"
-            (click)="enterPortal()"
-            i18n="@@donor.emailVerification.confirmed.action"
-          >
-            Přejít do přehledu
-          </button>
+          @if (needsPasskey()) {
+            <p class="lead" role="status" i18n="@@donor.emailVerification.confirmed.passkeyText">
+              Účet je připravený a jste přihlášeni. Teď si vytvořte přístupový klíč, kterým se
+              budete přihlašovat: zařízení vás požádá o otisk prstu, obličej nebo PIN.
+            </p>
+            @if (!passkeysSupported) {
+              <p class="lead" i18n="@@donor.emailVerification.passkey.unsupported">
+                Tento prohlížeč přístupové klíče neumí. Klíč vytvoříte na přehledu v aktuálním
+                Safari, Chromu, Edgi nebo Firefoxu, nebo si tam nastavíte heslo.
+              </p>
+            } @else {
+              @if (error()) {
+                <p class="form-error" role="alert">{{ error() }}</p>
+              }
+              <button
+                type="button"
+                class="form-submit"
+                [disabled]="loading()"
+                (click)="createPasskey()"
+              >
+                @if (loading()) {
+                  <span i18n="@@donor.passkeys.saving">Čekáme na zařízení…</span>
+                } @else {
+                  <span i18n="@@donor.emailVerification.passkey.create"
+                    >Vytvořit přístupový klíč</span
+                  >
+                }
+              </button>
+            }
+            <button
+              type="button"
+              class="link-action"
+              (click)="enterPortal()"
+              i18n="@@donor.emailVerification.passkey.later"
+            >
+              Přejít do přehledu bez klíče
+            </button>
+          } @else {
+            @if (passkeyCreated()) {
+              <p class="lead" role="status" i18n="@@donor.emailVerification.passkey.created">
+                Přístupový klíč je uložený a příště se jím přihlásíte. Doporučujeme přidat na
+                přehledu ještě klíč v dalším zařízení.
+              </p>
+            } @else {
+              <p class="lead" role="status" i18n="@@donor.emailVerification.confirmed.text">
+                Účet je připravený a jste přihlášeni. Na přehledu najdete svůj variabilní symbol pro
+                příspěvky.
+              </p>
+            }
+            <button
+              type="button"
+              class="form-submit"
+              (click)="enterPortal()"
+              i18n="@@donor.emailVerification.confirmed.action"
+            >
+              Přejít do přehledu
+            </button>
+          }
         </div>
       }
       @case ('failed') {

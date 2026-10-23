@@ -17,7 +17,7 @@ record RegisterDonorRequest(
         @ValidCompanyIdentifier String companyIdentifier,
         @NotNull @Valid AddressRequest address,
         @NotBlank @Email @Size(max = 254) String email,
-        @NotBlank @Size(min = RawPassword.MIN_LENGTH, max = RawPassword.MAX_LENGTH) String password,
+        @Size(min = RawPassword.MIN_LENGTH, max = RawPassword.MAX_LENGTH) String password,
         @Pattern(regexp = "cs|en") String preferredLocale
 ) {
 

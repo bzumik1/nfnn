@@ -78,6 +78,7 @@ export class DonorDashboard {
   protected readonly donor = this.auth.donor;
 
   protected readonly state = signal<DashboardState>('loading');
+  protected readonly passkeyCount = signal<number | null>(null);
   protected readonly summary = signal<DonationSummaryResponse | null>(null);
   protected readonly items = signal<readonly DonationItem[]>([]);
 

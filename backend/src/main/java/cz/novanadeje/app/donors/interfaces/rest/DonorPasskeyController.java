@@ -35,7 +35,7 @@ class DonorPasskeyController {
     PasskeyCreationOptionsResponse options(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody PasskeyOptionsRequest request,
                                            HttpServletRequest http) {
         limiter.check(http.getRemoteAddr());
-        return PasskeyCreationOptionsResponse.of(passkeys.creationOptions(DonorId.of(jwt.getSubject()), request.password()));
+        return PasskeyCreationOptionsResponse.of(passkeys.creationOptions(DonorId.of(jwt.getSubject()), SessionRoles.secondFactorVerified(jwt), request.confirmation()));
     }
 
     @PostMapping
@@ -52,6 +52,6 @@ class DonorPasskeyController {
     @DeleteMapping("/{passkeyId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     void remove(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID passkeyId) {
-        passkeys.remove(DonorId.of(jwt.getSubject()), new PasskeyId(passkeyId));
+        passkeys.remove(DonorId.of(jwt.getSubject()), SessionRoles.secondFactorVerified(jwt), new PasskeyId(passkeyId));
     }
 }

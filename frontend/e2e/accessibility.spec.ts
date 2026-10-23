@@ -8,6 +8,7 @@ import {
   claudeConnection,
   connectionRequest,
   donationItem,
+  donor,
   mockConnectApi,
   mockDonorApi,
   openSignInDialog,
@@ -174,6 +175,41 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     expect(await violations(page)).toEqual([]);
   });
 
+  test('when they restore access with a new passkey and the code from the app is needed, then the page breaks no rule', async ({
+    page,
+  }) => {
+    await page.route('**/api/donors/auth/password-reset/passkey/options', (route) =>
+      route.fulfill(
+        problem(
+          400,
+          'donors/second-factor-code-required',
+          'Zadejte kód z aplikace',
+          'Účet má zapnuté dvoufaktorové ověření.',
+        ),
+      ),
+    );
+    await page.goto('/obnova-hesla#token=abc');
+    await page.getByRole('radio', { name: 'Nový přístupový klíč' }).click();
+    await page.getByLabel('Název klíče').fill('Nový telefon');
+    await page.getByRole('button', { name: 'Vytvořit klíč' }).click();
+    await expect(page.getByLabel('Kód z aplikace')).toBeFocused();
+
+    expect(await violations(page)).toEqual([]);
+  });
+
+  test('when a donor without a password confirms the e-mail, then the offer of the first passkey breaks no rule', async ({
+    page,
+  }) => {
+    await mockDonorApi(page);
+    await page.route('**/api/donors/auth/email-verification/confirm', (route) =>
+      route.fulfill(session(200, { ...donor, hasPassword: false })),
+    );
+    await page.goto('/potvrzeni-emailu#token=abc');
+    await expect(page.getByRole('button', { name: 'Vytvořit přístupový klíč' })).toBeVisible();
+
+    expect(await violations(page)).toEqual([]);
+  });
+
   test('when they open an expired e-mail confirmation link, then nothing on the page breaks the rules', async ({
     page,
   }) => {
@@ -238,6 +274,10 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     const dialog = page.getByRole('dialog');
     await dialog.getByRole('button', { name: 'Registrace' }).click();
     await dialog.getByRole('radio', { name: 'Firma' }).click();
+
+    expect(await violations(page)).toEqual([]);
+
+    await dialog.getByRole('radio', { name: 'Přístupovým klíčem' }).click();
 
     expect(await violations(page)).toEqual([]);
   });
@@ -1157,6 +1197,51 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
 
     await card.getByRole('button', { name: 'Odebrat', exact: true }).click();
     await expect(card).toContainText('Odebrat klíč iPhone?');
+    expect(await violations(page)).toEqual([]);
+  });
+
+  test('when a donor without a password and without a passkey opens the overview, then the warning and the password set-up break no rule', async ({
+    page,
+  }) => {
+    await mockDonorApi(page);
+    await signIn(page, { ...donor, hasPassword: false });
+    const card = page.getByRole('region', { name: 'Přístupové klíče' });
+    await expect(card.locator('.passkeys-warning')).toBeVisible();
+    expect(await violations(page)).toEqual([]);
+
+    await page
+      .getByRole('region', { name: 'Přihlašovací údaje' })
+      .getByRole('button', { name: 'Nastavit heslo' })
+      .click();
+    await expect(page.getByLabel('Nové heslo', { exact: true })).toBeFocused();
+    expect(await violations(page)).toEqual([]);
+  });
+
+  test('when a donor with a passkey opens the removal of the password, then the form breaks no rule', async ({
+    page,
+  }) => {
+    await mockDonorApi(page);
+    await page.route(
+      (url) => url.pathname === '/api/donors/me/passkeys',
+      (route) =>
+        route.fulfill({
+          json: {
+            items: [
+              {
+                id: '019a1b2c-3d4e-7f00-8000-000000000001',
+                name: 'iPhone',
+                createdAt: '2026-10-17T10:00:00Z',
+                lastUsedAt: null,
+              },
+            ],
+          },
+        }),
+    );
+    await signIn(page);
+    const account = page.getByRole('region', { name: 'Přihlašovací údaje' });
+    await account.getByRole('button', { name: 'Odebrat heslo' }).click();
+    await expect(account.getByLabel('Současné heslo')).toBeFocused();
+
     expect(await violations(page)).toEqual([]);
   });
 

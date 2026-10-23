@@ -8,9 +8,12 @@ import {
   authResponse,
   FakePasskeyAuthenticator,
   passkeyCreationOptions,
+  passkeySignInOptions,
   problem,
+  SAMPLE_ASSERTION,
   SAMPLE_CHALLENGE,
   SAMPLE_REGISTRATION,
+  sampleDonor,
   samplePasskey,
 } from '../../../../core/auth/testing/donor-fixtures';
 import { PasskeysCard } from './passkeys-card';
@@ -276,5 +279,141 @@ describe('Given the passkeys card in the overview', () => {
     expect(element('.passkeys-unsupported').textContent).toContain('Tento prohlížeč');
     expect(texts('button')).not.toContain('Přidat přístupový klíč');
     expect(texts('.passkey-name')).toEqual(['iPhone']);
+  });
+});
+
+describe('Given the passkeys card of a donor without a password', () => {
+  let fixture: ComponentFixture<PasskeysCard>;
+  let http: HttpTestingController;
+  let passkeys: FakePasskeyAuthenticator;
+  let counts: number[];
+
+  beforeEach(async () => {
+    passkeys = new FakePasskeyAuthenticator();
+    await TestBed.configureTestingModule({
+      imports: [PasskeysCard],
+      providers: [
+        provideHttpClient(withInterceptors([authInterceptor])),
+        provideHttpClientTesting(),
+        { provide: PasskeyAuthenticator, useValue: passkeys },
+      ],
+    }).compileComponents();
+    http = TestBed.inject(HttpTestingController);
+    TestBed.inject(AuthStore).signInWithPasskey().subscribe();
+    http.expectOne('/api/donors/auth/passkey/options').flush(passkeySignInOptions());
+    const signIn = await vi.waitFor(() => http.expectOne('/api/donors/auth/passkey'));
+    signIn.flush(authResponse('token-1', sampleDonor({ hasPassword: false })));
+    passkeys.requested.length = 0;
+  });
+
+  afterEach(() => http.verify());
+
+  async function render(items = [IPHONE]): Promise<void> {
+    fixture = TestBed.createComponent(PasskeysCard);
+    counts = [];
+    fixture.componentInstance.countChanged.subscribe((count) => counts.push(count));
+    await settle();
+    http.expectOne(PASSKEYS_URL).flush({ items });
+    await settle();
+  }
+
+  const root = () => fixture.nativeElement as HTMLElement;
+
+  function element<T extends HTMLElement>(selector: string): T {
+    return root().querySelector(selector) as T;
+  }
+
+  function texts(selector: string): string[] {
+    return Array.from(root().querySelectorAll(selector)).map(
+      (node) => node.textContent?.replace(/\s+/g, ' ').trim() ?? '',
+    );
+  }
+
+  async function settle(): Promise<void> {
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+  }
+
+  async function clickButton(text: string): Promise<void> {
+    const button = Array.from(root().querySelectorAll('button')).find((candidate) =>
+      candidate.textContent?.includes(text),
+    );
+    expect(button, `button "${text}"`).toBeDefined();
+    button?.click();
+    await settle();
+  }
+
+  async function fillIn(selector: string, value: string): Promise<void> {
+    const input = element<HTMLInputElement>(selector);
+    input.value = value;
+    input.dispatchEvent(new Event('input'));
+    await settle();
+  }
+
+  async function submit(): Promise<void> {
+    element<HTMLFormElement>('form').dispatchEvent(new Event('submit'));
+    await settle();
+  }
+
+  it('when the only key is listed, then it cannot be removed, a second key is recommended and the count is reported', async () => {
+    await render([IPHONE]);
+
+    expect(texts('button')).not.toContain('Odebrat');
+    expect(element('.passkey .passkeys-hint').textContent).toContain('Jediný způsob přihlášení');
+    expect(texts('.passkeys-hint')[1]).toContain('aspoň ve dvou zařízeních');
+    expect(counts).toEqual([1]);
+  });
+
+  it('when two keys are listed, then either can be removed', async () => {
+    await render([IPHONE, WINDOWS]);
+
+    expect(texts('button').filter((text) => text === 'Odebrat')).toHaveLength(2);
+    expect(element('.passkeys-hint')).toBeNull();
+  });
+
+  it('when no key is left, then a warning asks for one and the first needs no confirmation', async () => {
+    await render([]);
+
+    expect(element('.passkeys-warning').textContent).toContain(
+      'Účet nemá heslo ani přístupový klíč',
+    );
+    await clickButton('Přidat přístupový klíč');
+    expect(element('#passkey-password')).toBeNull();
+    await fillIn('#passkey-name', 'iPhone');
+    await submit();
+
+    const options = http.expectOne(OPTIONS_URL);
+    expect(options.request.body).toEqual({});
+    options.flush(passkeyCreationOptions());
+    await vi.waitFor(() => expect(passkeys.created).toHaveLength(1));
+    await settle();
+    http.expectOne(PASSKEYS_URL).flush(samplePasskey());
+    await settle();
+
+    expect(texts('.passkey-name')).toEqual(['iPhone']);
+    expect(counts).toEqual([0, 1]);
+  });
+
+  it('when a further key is added, then an existing key confirms it instead of a password', async () => {
+    await render([IPHONE]);
+    await clickButton('Přidat přístupový klíč');
+    expect(element('#passkey-password')).toBeNull();
+    expect(element('.passkeys-form-intro').textContent).toContain('jedním z vašich klíčů');
+    await fillIn('#passkey-name', 'MacBook');
+    await submit();
+
+    http.expectOne('/api/donors/auth/passkey/options').flush(passkeySignInOptions());
+    const options = await vi.waitFor(() => http.expectOne(OPTIONS_URL));
+    expect(options.request.body).toEqual({
+      passkey: { challenge: SAMPLE_CHALLENGE, credential: SAMPLE_ASSERTION },
+    });
+    options.flush(passkeyCreationOptions());
+    await vi.waitFor(() => expect(passkeys.created).toHaveLength(1));
+    await settle();
+    http.expectOne(PASSKEYS_URL).flush(samplePasskey({ id: 'new', name: 'MacBook' }));
+    await settle();
+
+    expect(texts('.passkey-name')).toEqual(['iPhone', 'MacBook']);
   });
 });

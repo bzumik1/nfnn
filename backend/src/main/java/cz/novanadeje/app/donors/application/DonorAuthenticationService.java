@@ -66,8 +66,8 @@ public class DonorAuthenticationService {
             throw new InvalidCredentials();
         }
         Donor donor = donors.findByEmail(new EmailAddress(email)).filter(found -> !found.isErased()).orElse(null);
-        PasswordHash hash = donor == null ? UNKNOWN_DONOR_HASH : donor.passwordHash();
-        if (!passwordHasher.matches(rawPassword, hash) || donor == null) {
+        PasswordHash hash = donor == null ? UNKNOWN_DONOR_HASH : donor.passwordHash().orElse(UNKNOWN_DONOR_HASH);
+        if (!passwordHasher.matches(rawPassword, hash) || donor == null || !donor.hasPassword()) {
             throw new InvalidCredentials();
         }
         if (!donor.isEmailVerified()) {

@@ -28,6 +28,7 @@ export interface Donor {
   variableSymbol: string;
   roles: string[];
   registeredAt: string;
+  hasPassword: boolean;
   secondFactor: SecondFactorState;
 }
 
@@ -37,7 +38,7 @@ export interface RegisterDonorRequest {
   companyIdentifier: string | null;
   address: DonorAddress;
   email: string;
-  password: string;
+  password: string | null;
   preferredLocale: DonorLocale;
 }
 
@@ -47,18 +48,27 @@ export interface UpdateDonorProfileRequest {
   preferredLocale?: DonorLocale;
 }
 
+export interface PasskeyConfirmation {
+  challenge: string;
+  credential: PasskeyAssertionCredential;
+}
+
+export interface Confirmation {
+  password?: string;
+  passkey?: PasskeyConfirmation;
+}
+
 export interface ChangePasswordRequest {
-  currentPassword: string;
+  currentPassword?: string;
+  passkey?: PasskeyConfirmation;
   newPassword: string;
 }
 
-export interface EmailChangeRequest {
+export interface EmailChangeRequest extends Confirmation {
   newEmail: string;
-  password: string;
 }
 
-export interface SecondFactorDisableRequest {
-  password: string;
+export interface SecondFactorDisableRequest extends Confirmation {
   code: string;
 }
 

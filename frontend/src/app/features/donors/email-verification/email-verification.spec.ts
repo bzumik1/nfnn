@@ -5,7 +5,17 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { AuthStore } from '../../../core/auth/auth-store';
-import { authResponse, problem } from '../../../core/auth/testing/donor-fixtures';
+import { PasskeyAuthenticator } from '../../../core/auth/passkey-authenticator';
+import {
+  authResponse,
+  FakePasskeyAuthenticator,
+  passkeyCreationOptions,
+  problem,
+  SAMPLE_CHALLENGE,
+  SAMPLE_REGISTRATION,
+  sampleDonor,
+  samplePasskey,
+} from '../../../core/auth/testing/donor-fixtures';
 import { EmailVerification } from './email-verification';
 
 describe('Given the page that confirms the e-mail from the registration link', () => {
@@ -199,5 +209,79 @@ describe('Given the page that confirms the e-mail from the registration link', (
 
       expect(heading().textContent).toContain('E-mail odeslán');
     });
+  });
+});
+
+describe('Given the registration link of a donor who chose a passkey instead of a password', () => {
+  let harness: RouterTestingHarness;
+  let http: HttpTestingController;
+  let passkeys: FakePasskeyAuthenticator;
+  let navigate: ReturnType<typeof vi.spyOn>;
+
+  beforeEach(async () => {
+    localStorage.clear();
+    passkeys = new FakePasskeyAuthenticator();
+    TestBed.configureTestingModule({
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([{ path: 'potvrzeni-emailu', component: EmailVerification }]),
+        { provide: PasskeyAuthenticator, useValue: passkeys },
+      ],
+    });
+    http = TestBed.inject(HttpTestingController);
+    harness = await RouterTestingHarness.create('/potvrzeni-emailu#token=abc');
+    navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+    http
+      .expectOne('/api/donors/auth/email-verification/confirm')
+      .flush(authResponse('token-1', sampleDonor({ hasPassword: false })));
+    await settle();
+  });
+
+  afterEach(() => http.verify());
+
+  async function settle(): Promise<void> {
+    harness.detectChanges();
+    await harness.fixture.whenStable();
+  }
+
+  function element<T extends HTMLElement>(selector: string): T {
+    return harness.routeNativeElement!.querySelector(selector) as T;
+  }
+
+  it('when the e-mail is confirmed, then the page asks to create the first passkey right away', () => {
+    expect(element('[role="status"]').textContent).toContain('vytvořte přístupový klíč');
+    expect(element('.form-submit').textContent).toContain('Vytvořit přístupový klíč');
+  });
+
+  it('when the donor creates the passkey, then it is saved without any confirmation and the page leads on', async () => {
+    element<HTMLButtonElement>('.form-submit').click();
+    await settle();
+    const options = http.expectOne('/api/donors/me/passkeys/options');
+    expect(options.request.body).toEqual({});
+    options.flush(passkeyCreationOptions());
+    const added = await vi.waitFor(() =>
+      http.expectOne({ method: 'POST', url: '/api/donors/me/passkeys' }),
+    );
+    expect(added.request.body.challenge).toBe(SAMPLE_CHALLENGE);
+    expect(added.request.body.credential).toEqual(SAMPLE_REGISTRATION);
+    added.flush(samplePasskey());
+    await settle();
+
+    expect(element('[role="status"]').textContent).toContain('Přístupový klíč je uložený');
+    element<HTMLButtonElement>('.form-submit').click();
+    expect(navigate).toHaveBeenCalledWith('/darce/prehled');
+  });
+
+  it('when the device does not create the key, then the page says it can be done later and still leads on', async () => {
+    passkeys.failure = 'cancelled';
+    element<HTMLButtonElement>('.form-submit').click();
+    await settle();
+    http.expectOne('/api/donors/me/passkeys/options').flush(passkeyCreationOptions());
+    await vi.waitFor(() => expect(element('.form-error')).not.toBeNull());
+
+    expect(element('.form-error').textContent).toContain('jde to i později na přehledu');
+    element<HTMLButtonElement>('.link-action').click();
+    expect(navigate).toHaveBeenCalledWith('/darce/prehled');
   });
 });

@@ -22,6 +22,7 @@ public record DonorView(
         String variableSymbol,
         List<Role> roles,
         Instant registeredAt,
+        boolean hasPassword,
         SecondFactorView secondFactor
 ) {
 
@@ -37,6 +38,7 @@ public record DonorView(
                 donor.variableSymbol().value(),
                 sessionRoles.stream().sorted(Comparator.naturalOrder()).toList(),
                 donor.registeredAt(),
+                donor.hasPassword(),
                 secondFactor
         );
     }

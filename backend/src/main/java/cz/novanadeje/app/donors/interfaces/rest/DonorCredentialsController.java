@@ -40,14 +40,23 @@ class DonorCredentialsController {
                                                 HttpServletRequest http) {
         passwordLimiter.check(http.getRemoteAddr());
         return SessionResponses.opened(HttpStatus.OK,
-                credentials.changePassword(DonorId.of(jwt.getSubject()), SessionRoles.secondFactorVerified(jwt), request.currentPassword(),
+                credentials.changePassword(DonorId.of(jwt.getSubject()), SessionRoles.secondFactorVerified(jwt), request.confirmation(),
                         request.newPassword()), clock.instant());
+    }
+
+    @PostMapping("/password/remove")
+    ResponseEntity<AuthResponse> removePassword(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody PasswordRemovalRequest request,
+                                                HttpServletRequest http) {
+        passwordLimiter.check(http.getRemoteAddr());
+        return SessionResponses.opened(HttpStatus.OK,
+                credentials.removePassword(DonorId.of(jwt.getSubject()), SessionRoles.secondFactorVerified(jwt), request.confirmation()),
+                clock.instant());
     }
 
     @PostMapping("/email-change")
     @ResponseStatus(HttpStatus.ACCEPTED)
     void requestEmailChange(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody EmailChangeRequest request, HttpServletRequest http) {
         emailLimiter.check(http.getRemoteAddr());
-        credentials.requestEmailChange(DonorId.of(jwt.getSubject()), request.password(), new EmailAddress(request.newEmail()));
+        credentials.requestEmailChange(DonorId.of(jwt.getSubject()), request.confirmation(), new EmailAddress(request.newEmail()));
     }
 }

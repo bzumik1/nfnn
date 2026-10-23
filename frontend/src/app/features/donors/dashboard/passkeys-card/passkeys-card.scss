@@ -22,10 +22,26 @@
 .passkeys-intro,
 .passkeys-empty,
 .passkeys-unsupported,
+.passkeys-hint,
 .passkeys-form-intro {
   font-size: 13px;
   line-height: 1.5;
   color: var(--color-text-muted);
+  margin-bottom: 14px;
+}
+
+.passkeys-hint {
+  flex: 1 1 220px;
+}
+
+.passkeys-warning {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--color-warning);
+  background: var(--color-warning-bg);
+  border: 1px solid var(--color-warning-border);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
   margin-bottom: 14px;
 }
 

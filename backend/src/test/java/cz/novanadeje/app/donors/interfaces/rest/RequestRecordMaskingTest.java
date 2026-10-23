@@ -62,15 +62,15 @@ class RequestRecordMaskingTest {
     @Test
     @DisplayName("Given a password change request, when it is printed, then both passwords are masked")
     void should_mask_both_passwords_when_printed_given_password_change_request() {
-        assertThat(new ChangePasswordRequest(PASSWORD, "a brand new passphrase").toString())
-                .isEqualTo("ChangePasswordRequest[currentPassword=***, newPassword=***]");
+        assertThat(new ChangePasswordRequest(PASSWORD, null, "a brand new passphrase").toString())
+                .isEqualTo("ChangePasswordRequest[currentPassword=***, passkey=***, newPassword=***]");
     }
 
     @Test
     @DisplayName("Given an e-mail change request, when it is printed, then the address and the password are masked and the address was trimmed")
     void should_mask_email_and_password_when_printed_given_email_change_request() {
-        EmailChangeRequest request = new EmailChangeRequest("  Jana.Nova@Example.cz ", PASSWORD);
-        assertThat(request.toString()).isEqualTo("EmailChangeRequest[newEmail=***, password=***]");
+        EmailChangeRequest request = new EmailChangeRequest("  Jana.Nova@Example.cz ", PASSWORD, null);
+        assertThat(request.toString()).isEqualTo("EmailChangeRequest[newEmail=***, password=***, passkey=***]");
         assertThat(request.newEmail()).isEqualTo("Jana.Nova@Example.cz");
     }
 }
