@@ -152,7 +152,9 @@ export function registerReadingTools(server: McpServer, deps: ToolDependencies):
           .string()
           .datetime({ offset: true })
           .optional()
-          .describe('Only actions before this instant (ISO 8601).'),
+          .describe(
+            'Only actions before this instant (ISO 8601), as the previous answer names it for the next page.',
+          ),
         limit: z.number().int().min(1).max(200).default(50),
       }),
       annotations: READ_ONLY,
@@ -163,7 +165,17 @@ export function registerReadingTools(server: McpServer, deps: ToolDependencies):
         if (before !== undefined) {
           query.set('before', before);
         }
-        return text(await backend.get(`/api/admin/donors/actions?${query}`, apiToken));
+        const page = asRecord(await backend.get(`/api/admin/donors/actions?${query}`, apiToken));
+        const items = Array.isArray(page['items']) ? page['items'] : [];
+        const oldest = asRecord(items[items.length - 1])['performedAt'];
+        const result = text(page);
+        if (page['hasMore'] === true && typeof oldest === 'string') {
+          result.content.push({
+            type: 'text',
+            text: `Older actions: call nfnn_admin_actions again with before "${oldest}".`,
+          });
+        }
+        return result;
       }),
   );
 
@@ -371,7 +383,7 @@ export function registerReadingTools(server: McpServer, deps: ToolDependencies):
     },
     async (ctx) =>
       answer(deps, ctx, 'nfnn_thread_dump', async ({ apiToken }) =>
-        plain(String(await backend.get('/api/admin/operations/diagnostics/threads', apiToken))),
+        plain(await backend.getText('/api/admin/operations/diagnostics/threads', apiToken)),
       ),
   );
 }

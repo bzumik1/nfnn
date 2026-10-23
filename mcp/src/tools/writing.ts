@@ -1,6 +1,6 @@
-import { requireScopes, type McpServer } from '@modelcontextprotocol/server';
+import type { McpServer } from '@modelcontextprotocol/server';
 import * as z from 'zod/v4';
-import { answer, plain, text, WRITE_SCOPE, type ToolDependencies } from './support.js';
+import { answerChange, plain, text, type ToolDependencies } from './support.js';
 
 const WRITING = {
   readOnlyHint: false,
@@ -50,7 +50,6 @@ const ACCOUNT_LINK = z.object({
 
 export function registerWritingTools(server: McpServer, deps: ToolDependencies): void {
   const { backend } = deps;
-  const scopeChallenge = requireScopes(WRITE_SCOPE);
 
   server.registerTool(
     'nfnn_pair_payment',
@@ -60,10 +59,9 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
         "Pairs an unpaired bank payment with a donor by hand (audited as PAIR_PAYMENT); the donation then counts in the donor's overview and receipts.",
       inputSchema: z.object({ paymentId: UUID, donorId: UUID }),
       annotations: WRITING,
-      scopeChallenge,
     },
     async ({ paymentId, donorId }, ctx) =>
-      answer(deps, ctx, 'nfnn_pair_payment', async ({ apiToken }) =>
+      answerChange(deps, ctx, 'nfnn_pair_payment', async ({ apiToken }) =>
         text(
           await backend.post(`/api/admin/donations/payments/${paymentId}/pair`, apiToken, {
             donorId,
@@ -80,10 +78,9 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
         'Removes the donation of a paired payment, so the payment is unpaired again (refused while a receipt certifies the donation); audited as UNPAIR_PAYMENT.',
       inputSchema: z.object({ paymentId: UUID }),
       annotations: { ...WRITING, destructiveHint: true },
-      scopeChallenge,
     },
     async ({ paymentId }, ctx) =>
-      answer(deps, ctx, 'nfnn_unpair_payment', async ({ apiToken }) =>
+      answerChange(deps, ctx, 'nfnn_unpair_payment', async ({ apiToken }) =>
         text(await backend.post(`/api/admin/donations/payments/${paymentId}/unpair`, apiToken)),
       ),
   );
@@ -96,10 +93,9 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
         'Sends the monthly report of an ended month (YYYY-MM) to the current recipients again; audited as SEND_MONTHLY_REPORT.',
       inputSchema: z.object({ month: MONTH }),
       annotations: WRITING,
-      scopeChallenge,
     },
     async ({ month }, ctx) =>
-      answer(deps, ctx, 'nfnn_send_report', async ({ apiToken }) =>
+      answerChange(deps, ctx, 'nfnn_send_report', async ({ apiToken }) =>
         text(await backend.post('/api/admin/donations/report/send', apiToken, { month })),
       ),
   );
@@ -112,10 +108,9 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
         'Asks the backup container for a database backup now (BACKUP) or for a test restore of the newest dump (TEST_RESTORE); it runs within about ten seconds and nfnn_backups shows the outcome. Audited.',
       inputSchema: z.object({ kind: z.enum(['BACKUP', 'TEST_RESTORE']) }),
       annotations: WRITING,
-      scopeChallenge,
     },
     async ({ kind }, ctx) =>
-      answer(deps, ctx, 'nfnn_request_backup', async ({ apiToken }) =>
+      answerChange(deps, ctx, 'nfnn_request_backup', async ({ apiToken }) =>
         text(await backend.post('/api/admin/operations/backups/requests', apiToken, { kind })),
       ),
   );
@@ -128,10 +123,9 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
         'Puts a news article on the site from the given day (YYYY-MM-DD, past or future); audited as PUBLISH_NEWS.',
       inputSchema: z.object({ id: UUID, publishedOn: DAY }),
       annotations: WRITING,
-      scopeChallenge,
     },
     async ({ id, publishedOn }, ctx) =>
-      answer(deps, ctx, 'nfnn_publish_news', async ({ apiToken }) =>
+      answerChange(deps, ctx, 'nfnn_publish_news', async ({ apiToken }) =>
         text(
           await backend.post(`/api/admin/content/news/${id}/publish`, apiToken, { publishedOn }),
         ),
@@ -146,10 +140,9 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
         'Takes a news article off the site (it becomes a draft again); audited as UNPUBLISH_NEWS.',
       inputSchema: z.object({ id: UUID }),
       annotations: WRITING,
-      scopeChallenge,
     },
     async ({ id }, ctx) =>
-      answer(deps, ctx, 'nfnn_unpublish_news', async ({ apiToken }) =>
+      answerChange(deps, ctx, 'nfnn_unpublish_news', async ({ apiToken }) =>
         text(await backend.post(`/api/admin/content/news/${id}/unpublish`, apiToken)),
       ),
   );
@@ -162,10 +155,9 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
         'Puts a project on the site from the given day (YYYY-MM-DD); audited as PUBLISH_PROJECT.',
       inputSchema: z.object({ id: UUID, publishedOn: DAY }),
       annotations: WRITING,
-      scopeChallenge,
     },
     async ({ id, publishedOn }, ctx) =>
-      answer(deps, ctx, 'nfnn_publish_project', async ({ apiToken }) =>
+      answerChange(deps, ctx, 'nfnn_publish_project', async ({ apiToken }) =>
         text(
           await backend.post(`/api/admin/content/projects/${id}/publish`, apiToken, {
             publishedOn,
@@ -182,10 +174,9 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
         'Takes a project off the site (it becomes a draft again); audited as UNPUBLISH_PROJECT.',
       inputSchema: z.object({ id: UUID }),
       annotations: WRITING,
-      scopeChallenge,
     },
     async ({ id }, ctx) =>
-      answer(deps, ctx, 'nfnn_unpublish_project', async ({ apiToken }) =>
+      answerChange(deps, ctx, 'nfnn_unpublish_project', async ({ apiToken }) =>
         text(await backend.post(`/api/admin/content/projects/${id}/unpublish`, apiToken)),
       ),
   );
@@ -203,10 +194,9 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
           .max(13),
       }),
       annotations: WRITING,
-      scopeChallenge,
     },
     async ({ changes }, ctx) =>
-      answer(deps, ctx, 'nfnn_change_settings', async ({ apiToken }) =>
+      answerChange(deps, ctx, 'nfnn_change_settings', async ({ apiToken }) =>
         text(await backend.put('/api/admin/operations/settings', apiToken, { changes })),
       ),
   );
@@ -228,10 +218,9 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
         }),
       }),
       annotations: { ...WRITING, idempotentHint: true },
-      scopeChallenge,
     },
     async (settings, ctx) =>
-      answer(deps, ctx, 'nfnn_update_report_settings', async ({ apiToken }) =>
+      answerChange(deps, ctx, 'nfnn_update_report_settings', async ({ apiToken }) =>
         text(await backend.put('/api/admin/donations/report/settings', apiToken, settings)),
       ),
   );
@@ -244,10 +233,9 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
         'Creates a news article as a draft (not on the site until nfnn_publish_news); audited as CREATE_NEWS. Texts are Czech, sentence case.',
       inputSchema: z.object(ARTICLE),
       annotations: WRITING,
-      scopeChallenge,
     },
     async (article, ctx) =>
-      answer(deps, ctx, 'nfnn_create_news', async ({ apiToken }) =>
+      answerChange(deps, ctx, 'nfnn_create_news', async ({ apiToken }) =>
         text(await backend.post('/api/admin/content/news', apiToken, article)),
       ),
   );
@@ -260,10 +248,9 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
         'Replaces the texts and the photo of a news article, draft or published (the published date stays); send every field, read them with nfnn_content first. Audited as UPDATE_NEWS.',
       inputSchema: z.object({ id: UUID, ...ARTICLE }),
       annotations: { ...WRITING, idempotentHint: true },
-      scopeChallenge,
     },
     async ({ id, ...article }, ctx) =>
-      answer(deps, ctx, 'nfnn_update_news', async ({ apiToken }) =>
+      answerChange(deps, ctx, 'nfnn_update_news', async ({ apiToken }) =>
         text(await backend.put(`/api/admin/content/news/${id}`, apiToken, article)),
       ),
   );
@@ -276,10 +263,9 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
         'Creates a project of the given year as a draft (not on the site until nfnn_publish_project); audited as CREATE_PROJECT.',
       inputSchema: z.object(PROJECT),
       annotations: WRITING,
-      scopeChallenge,
     },
     async (project, ctx) =>
-      answer(deps, ctx, 'nfnn_create_project', async ({ apiToken }) =>
+      answerChange(deps, ctx, 'nfnn_create_project', async ({ apiToken }) =>
         text(await backend.post('/api/admin/content/projects', apiToken, project)),
       ),
   );
@@ -292,10 +278,9 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
         'Replaces the texts, the year and the photo of a project (the published date stays); send every field, read them with nfnn_content first. Audited as UPDATE_PROJECT.',
       inputSchema: z.object({ id: UUID, ...PROJECT }),
       annotations: { ...WRITING, idempotentHint: true },
-      scopeChallenge,
     },
     async ({ id, ...project }, ctx) =>
-      answer(deps, ctx, 'nfnn_update_project', async ({ apiToken }) =>
+      answerChange(deps, ctx, 'nfnn_update_project', async ({ apiToken }) =>
         text(await backend.put(`/api/admin/content/projects/${id}`, apiToken, project)),
       ),
   );
@@ -308,10 +293,9 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
         'Stops pairing later payments without a symbol from one of the donor\'s bank accounts to the donor, as the donor\'s own "Vypnout párování" does; donations paired before stay. Audited as DISCONNECT_SENDER_ACCOUNT; nfnn_reconnect_bank_account turns it on again.',
       inputSchema: ACCOUNT_LINK,
       annotations: { ...WRITING, idempotentHint: true },
-      scopeChallenge,
     },
     async ({ donorId, linkId }, ctx) =>
-      answer(deps, ctx, 'nfnn_disconnect_bank_account', async ({ apiToken }) => {
+      answerChange(deps, ctx, 'nfnn_disconnect_bank_account', async ({ apiToken }) => {
         await backend.post(
           `/api/admin/donations/donors/${donorId}/bank-accounts/${linkId}/disconnect`,
           apiToken,
@@ -328,10 +312,9 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
         "Turns the pairing from one of the donor's bank accounts on again; it starts once a payment with the donor's symbol arrives from the account. Audited as RECONNECT_SENDER_ACCOUNT.",
       inputSchema: ACCOUNT_LINK,
       annotations: { ...WRITING, idempotentHint: true },
-      scopeChallenge,
     },
     async ({ donorId, linkId }, ctx) =>
-      answer(deps, ctx, 'nfnn_reconnect_bank_account', async ({ apiToken }) => {
+      answerChange(deps, ctx, 'nfnn_reconnect_bank_account', async ({ apiToken }) => {
         await backend.post(
           `/api/admin/donations/donors/${donorId}/bank-accounts/${linkId}/reconnect`,
           apiToken,
@@ -354,10 +337,9 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
         minutes: z.number().int().min(1).max(1440).optional(),
       }),
       annotations: WRITING,
-      scopeChallenge,
     },
     async ({ logger, level, minutes }, ctx) =>
-      answer(deps, ctx, 'nfnn_set_log_level', async ({ apiToken }) =>
+      answerChange(deps, ctx, 'nfnn_set_log_level', async ({ apiToken }) =>
         text(
           await backend.put(
             `/api/admin/operations/loggers/${encodeURIComponent(logger)}`,
@@ -376,10 +358,9 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
         'Ends the temporary level of a logger now, so it goes back to what the configuration says; audited as RESET_LOG_LEVEL.',
       inputSchema: z.object({ logger: z.string().min(1).max(200) }),
       annotations: WRITING,
-      scopeChallenge,
     },
     async ({ logger }, ctx) =>
-      answer(deps, ctx, 'nfnn_reset_log_level', async ({ apiToken }) => {
+      answerChange(deps, ctx, 'nfnn_reset_log_level', async ({ apiToken }) => {
         await backend.delete(
           `/api/admin/operations/loggers/${encodeURIComponent(logger)}`,
           apiToken,

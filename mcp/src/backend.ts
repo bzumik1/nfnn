@@ -29,6 +29,10 @@ export class BackendClient {
     return this.send('GET', path, apiToken);
   }
 
+  async getText(path: string, apiToken: string): Promise<string> {
+    return String(await this.send('GET', path, apiToken, undefined, 'text/plain'));
+  }
+
   async post(path: string, apiToken: string, body?: unknown): Promise<unknown> {
     return this.send('POST', path, apiToken, body);
   }
@@ -46,8 +50,9 @@ export class BackendClient {
     path: string,
     apiToken?: string,
     body?: unknown,
+    accept = 'application/json',
   ): Promise<unknown> {
-    const headers: Record<string, string> = { accept: 'application/json', 'accept-language': 'cs' };
+    const headers: Record<string, string> = { accept, 'accept-language': 'cs' };
     if (apiToken !== undefined) {
       headers['authorization'] = `Bearer ${apiToken}`;
     }
