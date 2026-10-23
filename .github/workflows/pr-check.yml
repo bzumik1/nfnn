@@ -272,6 +272,12 @@ jobs:
           issuer=$(curl -fsS --max-time 10 http://localhost:8089/.well-known/oauth-authorization-server | jq -r '.issuer')
           [ -n "$issuer" ] && [ "$issuer" != null ] || { echo "::error::the authorization server metadata names no issuer"; exit 1; }
           echo "The authorization server is $issuer"
+          echo "The connector picks up the address saved in the first setup within its 30 s refresh"
+          for _ in $(seq 25); do
+            docker exec nfnn-mcp wget -q -O - http://127.0.0.1:8081/health | jq -e --arg issuer "$issuer" '.issuer == $issuer' > /dev/null && break
+            sleep 2
+          done
+          docker exec nfnn-mcp wget -q -O - http://127.0.0.1:8081/health | jq -e --arg issuer "$issuer" '.issuer == $issuer' > /dev/null || { echo "::error::the MCP connector still names another authorization server"; exit 1; }
           mcp_headers=$(curl -sS -D - -o /dev/null --max-time 10 -X POST -H 'Content-Type: application/json' -H 'Accept: application/json, text/event-stream' --data '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' http://localhost:8089/mcp)
           echo "$mcp_headers" | grep -q '^HTTP/1.1 401' || { echo "::error::/mcp without a token must answer 401"; echo "$mcp_headers"; exit 1; }
           echo "$mcp_headers" | grep -qi "^WWW-Authenticate: Bearer .*resource_metadata=\"$issuer/.well-known/oauth-protected-resource/mcp\"" || { echo "::error::the 401 must point at the protected resource metadata"; echo "$mcp_headers"; exit 1; }
