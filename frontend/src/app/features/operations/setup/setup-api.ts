@@ -124,7 +124,7 @@ export class SetupApi {
     }
     return this.http.put<RestoreRequestResponse>('/api/operations/setup/restore', file, {
       headers,
-      reportProgress: true,
+      reportUploadProgress: true,
       observe: 'events',
     });
   }
