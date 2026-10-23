@@ -1013,7 +1013,7 @@ Shared pieces that came with it: the sealed `shared/domain/error/DomainException
 
 ### `operations` (backups done)
 
-`features/operations/backups.feature` covers the administration of the backups (see "Backups"). The context has no public endpoint; the container's own behaviour is proved by the stack job of the PR check.
+`features/operations/backups.feature` covers the administration of the backups (see "Backups"). The context has no public endpoint; the container's own behaviour is proved by the stack job of the PR check. The production logs are not an API: `docs/system-overview.md` "operations" says how they reach Claude; `/actuator/info` (public, like `/actuator/health`) answers `{"build": {"revision": "<short sha>"}}` (`InfoEndpointTests`, `BuildRevisionTest`).
 
 ## ArchUnit
 

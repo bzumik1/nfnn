@@ -32,6 +32,20 @@ Read before building, update in the same PR: `docs/requirements.md` (client deci
 | `npm run e2e` | Playwright; when it reports a missing browser build (cloud sessions ship an older Chromium), run `npx playwright install chromium` once |
 | **Stack** | `cp .env.example .env && docker compose up -d --build`, frontend on :8080; `JWT_SECRET` has no default |
 
+## Production logs
+
+The server writes `backend.log` (Spring Boot, rotated) and `backup.log` into `/DATA/AppData/nfnn/logs/`, served read-only by the `nfnn-ops` container behind a Cloudflare tunnel and Cloudflare Access at `https://ops.nfnn.cz` (`deploy/README.md`, "Logy pro Clauda"). With `NFNN_OPS_CLIENT_ID` and `NFNN_OPS_CLIENT_SECRET` in the environment:
+
+```bash
+h=(-H "CF-Access-Client-Id: $NFNN_OPS_CLIENT_ID" -H "CF-Access-Client-Secret: $NFNN_OPS_CLIENT_SECRET")
+curl -sS "${h[@]}" https://ops.nfnn.cz/info                                   # {"build":{"revision":"<short sha>"}}
+curl -sS "${h[@]}" https://ops.nfnn.cz/health
+curl -sS "${h[@]}" -H 'Range: bytes=-50000' https://ops.nfnn.cz/logs/backend.log   # the tail; /logs/ lists the files
+curl -sS "${h[@]}" https://ops.nfnn.cz/logs/backup.log
+```
+
+After a deploy, check `/info` against the merge commit and `Backend revision … is ready` in the log. The logs carry ids and outcomes, never names or tokens; quote them in a thread only as far as needed. Without the two variables (or a 403) the tunnel or the token is not set up: ask Jakub, never guess at the server.
+
 ## Non-negotiable
 
 - Test first: failing test, smallest change, refactor. Given/when/then naming everywhere (`testing.md`).

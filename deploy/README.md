@@ -4,29 +4,30 @@ Image se staví na GitHubu, ZimaOS je stáhne a spustí jako aplikaci „Nová n
 
 ```
 PR ─► PR check (GitHub runner): testy backendu a frontendu, build image, start celého stacku
-merge do main ─► Publish Docker images: ghcr.io/bzumik1/nfnn-backend a -frontend (veřejné),
+merge do main ─► Publish Docker images: ghcr.io/bzumik1/nfnn-backend, -frontend, -backup a -ops (veřejné),
                  tagy latest a krátký SHA commitu
 ZimaOS ─► aplikace „Nová naděje“ z compose.yml (App Store → Custom Install)
 ```
 
-`compose.yml` je produkční stack pro ZimaOS: Postgres, denní zálohy, backend a frontend na portu 8089 (8080 je na Zimě obsazený). Kořenový `docker-compose.yml` je jen pro lokální vývoj.
+`compose.yml` je produkční stack pro ZimaOS: Postgres, zálohy, backend, frontend na portu 8089 (8080 je na Zimě obsazený) a dvojice `ops` + `cloudflared`, přes kterou Claude čte logy (viz [Logy pro Clauda](#logy-pro-clauda)). Kořenový `docker-compose.yml` je jen pro lokální vývoj.
 
 ## Hesla a nastavení serveru
 
-Hesla, tokeny a nastavení, která patří jen tomuto serveru, nejsou v `compose.yml`, ale ve dvou souborech na disku ZimaOS. `compose.yml` se proto do ZimaOS vkládá vždy beze změn.
+Hesla, tokeny a nastavení, která patří jen tomuto serveru, nejsou v `compose.yml`, ale ve třech souborech na disku ZimaOS. `compose.yml` se proto do ZimaOS vkládá vždy beze změn.
 
 | Soubor | Obsah | Čte ho |
 |---|---|---|
 | `/DATA/AppData/nfnn/env/db.env` | heslo databáze, stejné na třech řádcích `POSTGRES_PASSWORD`, `PGPASSWORD` a `DB_PASSWORD` | Postgres, zálohy, backend |
 | `/DATA/AppData/nfnn/env/backend.env` | `JWT_SECRET`, `FIO_TOKEN`, SMTP (`MAIL_*`) a volitelná nastavení backendu | jen backend |
+| `/DATA/AppData/nfnn/env/ops.env` | `TUNNEL_TOKEN` tunelu Cloudflare, kterým Claude čte logy | jen cloudflared |
 
-Vzory jsou v repu jako `deploy/db.env.example` a `deploy/backend.env.example`; co který řádek znamená, říká komentář nad ním. Vyplněné soubory do repa nepatří, `.gitignore` všechny `*.env` ignoruje. Postgres a zálohy `backend.env` nedostanou, takže token Fio, heslo SMTP ani JWT klíč v databázových kontejnerech nejsou.
+Vzory jsou v repu jako `deploy/db.env.example`, `deploy/backend.env.example` a `deploy/ops.env.example`; co který řádek znamená, říká komentář nad ním. Vyplněné soubory do repa nepatří, `.gitignore` všechny `*.env` ignoruje. Postgres a zálohy `backend.env` nedostanou, takže token Fio, heslo SMTP ani JWT klíč v databázových kontejnerech nejsou.
 
 - Hodnoty piš bez uvozovek. Nesmí obsahovat `$` (docker compose ho bere jako začátek proměnné a hodnota se zkomolí) ani mezeru před `#` (od ní dál je komentář). Hesla z `openssl rand -hex 32` mají jen číslice a písmena a–f.
 - Volitelný řádek buď vyplň, nebo nech zakomentovaný (`#` na začátku). Prázdná hodnota není totéž co chybějící řádek: prázdné `MAIL_FROM`, `CONTACT_RECIPIENT`, `REPORT_RECIPIENT`, `PUBLIC_URL`, `RECEIPT_SIGNATORY_NAME` nebo `RECEIPT_SIGNATORY_ROLE` zastaví start backendu (prázdné `CONTACT_RECIPIENT` bez `MAIL_FROM` hlásí chybu `MAIL_FROM (app.mail.sender-email) is required`).
 - **Po každé změně souboru aplikaci přeinstaluj** (vlož znovu `deploy/compose.yml`). ZimaOS si při instalaci zkopíruje hodnoty ze souborů do své kopie compose jako `environment:` a ty mají přednost. Restart ani `docker compose up --force-recreate` proto nové hodnoty nenačtou, kontejner dostane ty z poslední instalace. Co kontejner opravdu vidí, ukáže bez prozrazení hodnot `sudo docker exec nfnn-backend printenv | awk -F= '/^MAIL_/{print $1, length($0)-length($1)-1}'` (délka 0 = prázdné).
 - ZimaOS při tom kopírování čte hodnoty jako YAML, takže datum převede na čas: z `FIO_HISTORY_FROM=2025-01-01` udělá `2025-01-01 00:00:00 +0000 UTC` a tak ho ukáže i v nastavení aplikace. Backend tenhle tvar přijme (do opravy v říjnu 2026 na něm nenastartoval s chybou `Text '2025-01-01 00:00:00 +0000 UTC' could not be parsed`). Ostatní řádky vzoru nic takového nepotkává: port, rok a `true` zůstanou, jak jsou, a e-maily, adresy, cesty, tokeny ani čísla účtů YAML za datum ani číslo nepovažuje.
-- Soubory musí existovat před instalací. Chybí-li některý, instalace skončí chybou, která jmenuje chybějící soubor (`/DATA/AppData/nfnn/env/db.env` nebo `backend.env`) a hlásí `no such file or directory` nebo `not found`.
+- Soubory musí existovat před instalací. Chybí-li některý, instalace skončí chybou, která jmenuje chybějící soubor (`/DATA/AppData/nfnn/env/db.env`, `backend.env` nebo `ops.env`) a hlásí `no such file or directory` nebo `not found`.
 - Kdyby ZimaOS compose s `env_file` odmítla, vrať se k dřívějšímu postupu s hesly přímo v compose: starý `deploy/compose.yml` i tento návod k němu jsou v historii gitu (`git log -p -- deploy/compose.yml deploy/README.md`).
 
 ## Instalace
@@ -34,17 +35,18 @@ Vzory jsou v repu jako `deploy/db.env.example` a `deploy/backend.env.example`; c
 1. Na Macu v kořeni repa zkopíruj vzory na ZimaOS (`<uživatel>` je tvůj uživatel na ní):
 
    ```bash
-   scp deploy/db.env.example deploy/backend.env.example <uživatel>@192.168.1.117:/tmp/
+   scp deploy/db.env.example deploy/backend.env.example deploy/ops.env.example <uživatel>@192.168.1.117:/tmp/
    ```
 
-2. Přes SSH na ZimaOS z nich založ soubory, které smí číst jen root, složku pro sken podpisu a složky pro zálohy a obnovu:
+2. Přes SSH na ZimaOS z nich založ soubory, které smí číst jen root, složku pro sken podpisu a složky pro zálohy, obnovu a logy:
 
    ```bash
    sudo install -d -m 700 /DATA/AppData/nfnn/env
-   sudo install -d -m 755 /DATA/AppData/nfnn/config /DATA/AppData/nfnn/backups /DATA/AppData/nfnn/restore
+   sudo install -d -m 755 /DATA/AppData/nfnn/config /DATA/AppData/nfnn/backups /DATA/AppData/nfnn/restore /DATA/AppData/nfnn/logs
    sudo install -m 600 /tmp/db.env.example /DATA/AppData/nfnn/env/db.env
    sudo install -m 600 /tmp/backend.env.example /DATA/AppData/nfnn/env/backend.env
-   rm /tmp/db.env.example /tmp/backend.env.example
+   sudo install -m 600 /tmp/ops.env.example /DATA/AppData/nfnn/env/ops.env
+   rm /tmp/db.env.example /tmp/backend.env.example /tmp/ops.env.example
    ```
 
 3. Heslo databáze a JWT klíč vygeneruj rovnou do souborů. Heslo se zapíše na všechny tři řádky `db.env` a ani jedna hodnota se neukáže na obrazovce ani nezůstane v historii shellu:
@@ -56,7 +58,7 @@ Vzory jsou v repu jako `deploy/db.env.example` a `deploy/backend.env.example`; c
 
    Nemá-li ZimaOS `openssl`, napiš v obou příkazech místo `openssl rand -hex 32` tohle: `head -c 32 /dev/urandom | od -An -tx1 | tr -d " \n"`.
 
-4. Token Fio a SMTP doplň do `backend.env`, máš-li je (`sudo vi /DATA/AppData/nfnn/env/backend.env`; viz [Fio API](#fio-api) a [Obnova hesla](#obnova-hesla)). Prázdné nech, dokud je nemáš: bez tokenu je import plateb vypnutý a bez SMTP e-maily neodcházejí. Které řádky mají hodnotu, ukáže (hodnoty samotné nevypíše):
+4. Token tunelu Cloudflare doplň do `ops.env` podle [Logy pro Clauda](#logy-pro-clauda); bez něj kontejner `nfnn-cloudflared` jen dokola startuje a všechno ostatní běží. Token Fio a SMTP doplň do `backend.env`, máš-li je (`sudo vi /DATA/AppData/nfnn/env/backend.env`; viz [Fio API](#fio-api) a [Obnova hesla](#obnova-hesla)). Prázdné nech, dokud je nemáš: bez tokenu je import plateb vypnutý a bez SMTP e-maily neodcházejí. Které řádky mají hodnotu, ukáže (hodnoty samotné nevypíše):
 
    ```bash
    sudo grep -E '^[A-Z_]+=' /DATA/AppData/nfnn/env/db.env /DATA/AppData/nfnn/env/backend.env | sed -E 's/=.+/=(vyplněno)/'
@@ -118,7 +120,7 @@ Po merge do `main` počkej, až v Actions doběhne zeleně **Publish Docker imag
 Kterou verzi kontejnery mají, ukáže commit, ze kterého image vznikla; má se shodovat s commitem běhu **Publish Docker images**:
 
 ```bash
-sudo docker inspect nfnn-backend nfnn-frontend nfnn-backup --format '{{.Name}} {{index .Config.Labels "org.opencontainers.image.revision"}}'
+sudo docker inspect nfnn-backend nfnn-frontend nfnn-backup nfnn-ops --format '{{.Name}} {{index .Config.Labels "org.opencontainers.image.revision"}}'
 ```
 
 Uložení bere compose z poslední instalace, takže změnu `compose.yml` nebo env souborů nepřenese; na ty je dál potřeba přeinstalace.
@@ -161,9 +163,30 @@ sudo docker start nfnn-backend
 
 ### Návrat na předchozí verzi
 
-Každá image má vedle `latest` i tag se zkráceným commitem (7 znaků, např. `418105c`), seznam je v GitHubu u balíčků `nfnn-backend`, `nfnn-frontend` a `nfnn-backup`. V nastavení aplikace „Nová naděje“ v ZimaOS změň u backendu a frontendu (a zálohování, měnila-li se) tag z `latest` na commit předchozí verze a klikni na **Uložit**. Zpátky na nejnovější verzi se vrátíš tagem `latest`.
+Každá image má vedle `latest` i tag se zkráceným commitem (7 znaků, např. `418105c`), seznam je v GitHubu u balíčků `nfnn-backend`, `nfnn-frontend`, `nfnn-backup` a `nfnn-ops`. V nastavení aplikace „Nová naděje“ v ZimaOS změň u backendu a frontendu (a zálohování nebo ops, měnily-li se) tag z `latest` na commit předchozí verze a klikni na **Uložit**. Zpátky na nejnovější verzi se vrátíš tagem `latest`.
 
 Pokud novější verze měnila databázi (v jejím commitu přibyl soubor v `backend/src/main/resources/db/changelog/`), starší backend s novější databází fungovat nemusí. Pak po změně tagu obnov zálohu z doby před aktualizací (viz Obnova); dary a registrace mezi zálohou a obnovou se ztratí, platby z banky z posledních 90 dní se ale při dalším stažení z Fio doplní znovu. Proto před aktualizací, která mění databázi, udělej zálohu na požádání.
+
+## Logy pro Clauda
+
+Backend píše svůj log kromě `docker logs` i do souboru `/DATA/AppData/nfnn/logs/backend.log` (rotace po 10 MB, 14 dní, nejvýš 200 MB; složku si při startu převezme uživatel `app`, pod kterým Java běží) a zálohování připisuje výsledky do `backup.log` ve stejné složce. Při startu backend zapíše řádek `Backend revision <commit> is ready` a totéž vrací `/actuator/info`, takže je vidět, kterou verzi Zima právě spouští. Kontejner `nfnn-ops` (nginx) složku jen pro čtení vystavuje na `/logs/` a přeposílá `/health` a `/info` na backend; žádný port na routeru neotvírá. Ven ho dostane `nfnn-cloudflared`: spojení jde jen ze Zimy do Cloudflare, na adrese `ops.nfnn.cz` sedí Cloudflare Access a pustí jen servisní token (Claude) a tvůj e-mail (prohlížeč). Token tunelu jde při úniku zrušit v Cloudflare během minuty a dovoluje jen číst logy; `JWT_SECRET`, heslo databáze ani Fio token se do logů nedostanou (knihovna Fio je v chybách maskuje).
+
+Nastavení v Cloudflare (jednou, asi 30 minut; doména `nfnn.cz` už u Cloudflare je):
+
+1. [Zero Trust](https://one.dash.cloudflare.com) → Networks → Tunnels → **Create a tunnel** → Cloudflared → název `nfnn-ops`. Z nabídnutého příkazu pro Docker zkopíruj jen hodnotu za `--token` (dlouhý řetězec `eyJ…`) do `/DATA/AppData/nfnn/env/ops.env` jako `TUNNEL_TOKEN=…`. Příkaz samotný nespouštěj, kontejner je v compose.
+2. V tunelu → Public Hostname → **Add a public hostname**: subdomain `ops`, domain `nfnn.cz`, type HTTP, URL `ops:80`. Cloudflare sám založí DNS záznam `ops.nfnn.cz`.
+3. Access → Service Auth → Service Tokens → **Create Service Token**: název `claude-nfnn`, platnost podle uvážení (po vypršení ho vytvoříš znovu). Client ID a Client Secret se ukážou jen jednou: ulož je do prostředí projektu na claude.ai jako `NFNN_OPS_CLIENT_ID` a `NFNN_OPS_CLIENT_SECRET` (stejně jako `FIO_TOKEN`).
+4. Access → Applications → **Add an application** → Self-hosted: název `NFNN logy`, domain `ops.nfnn.cz`. Dvě pravidla: `Claude` s akcí **Service Auth** a podmínkou Service Token = `claude-nfnn`; `Jakub` s akcí **Allow** a podmínkou Emails = tvůj e-mail (přihlásíš se jednorázovým kódem z e-mailu).
+5. Na Zimě založ složku `logs` a soubor `ops.env` (krok 2 Instalace, pokud ještě nejsou) a aplikaci přeinstaluj s aktuálním `deploy/compose.yml`.
+
+Kontrola z libovolného počítače (hodnoty tokenu dosaď; Claude má totéž v prostředí projektu):
+
+```bash
+curl -sS -H "CF-Access-Client-Id: $NFNN_OPS_CLIENT_ID" -H "CF-Access-Client-Secret: $NFNN_OPS_CLIENT_SECRET" https://ops.nfnn.cz/info
+curl -sS -H "CF-Access-Client-Id: $NFNN_OPS_CLIENT_ID" -H "CF-Access-Client-Secret: $NFNN_OPS_CLIENT_SECRET" -H 'Range: bytes=-20000' https://ops.nfnn.cz/logs/backend.log
+```
+
+V prohlížeči otevři https://ops.nfnn.cz/logs/ a přihlas se e-mailem. Když tunel neběží (`sudo docker logs nfnn-cloudflared` hlásí chybu tokenu), zbytek webu to neovlivní; logy jsou dál v `docker logs` a v souborech na disku. Co v logu není: compose uložený ZimaOS, proměnné v kontejnerech a kontejner, který ZimaOS vůbec nevytvořil; na to zůstává tvůj příkaz na Zimě.
 
 ## Přechod na skutečnou doménu
 
