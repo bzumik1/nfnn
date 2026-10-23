@@ -1,0 +1,231 @@
+<div class="container">
+  <h1 #title class="admin-title" tabindex="-1" i18n="@@admin.settings.heading">Nastavení</h1>
+  <p class="admin-intro" i18n="@@admin.settings.intro">
+    Adresa webu, odesílání e-mailů, napojení na banku a údaje na potvrzeních o daru. Tajné údaje se
+    ukládají zašifrované a nikdy se nezobrazují; můžete je jen přepsat nebo odebrat. Uložení web
+    restartuje, takže asi minutu nebude odpovídat.
+  </p>
+
+  @if (notice(); as notice) {
+    @if (notice.kind === 'status') {
+      <p class="admin-notice admin-notice--status" role="status">{{ notice.text }}</p>
+    } @else {
+      <p class="admin-notice admin-notice--alert" role="alert">{{ notice.text }}</p>
+    }
+  }
+
+  @switch (state()) {
+    @case ('loading') {
+      <p class="admin-loading" role="status" i18n="@@admin.settings.loading">Načítáme nastavení…</p>
+    }
+    @case ('error') {
+      <div class="admin-error" role="alert">
+        <p i18n="@@admin.settings.error.text">Nastavení se nepodařilo načíst.</p>
+        <button
+          type="button"
+          class="admin-retry"
+          (click)="load()"
+          i18n="@@admin.settings.error.retry"
+        >
+          Zkusit znovu
+        </button>
+      </div>
+    }
+    @case ('restarting') {
+      <p class="admin-loading" role="status">
+        <span class="spinner" aria-hidden="true"></span>
+        <span i18n="@@admin.settings.restarting"
+          >Nastavení je uložené a web se restartuje. Obvykle to trvá do minuty.</span
+        >
+      </p>
+    }
+    @case ('slow') {
+      <div class="admin-error" role="alert">
+        <p i18n="@@admin.settings.slow.text">
+          Nastavení je uložené, ale web po restartu zatím neodpovídá. Zkuste to prosím za chvíli
+          znovu; když se nespustí, podívejte se do logu kontejneru nfnn-backend v ZimaOS.
+        </p>
+        <button
+          type="button"
+          class="admin-retry"
+          (click)="checkAgain()"
+          i18n="@@admin.settings.slow.retry"
+        >
+          Zkusit znovu
+        </button>
+      </div>
+    }
+    @case ('ready') {
+      @if (!secretsCanBeStored()) {
+        <p class="admin-notice admin-notice--alert" role="alert" i18n="@@admin.settings.noKey">
+          Tajné údaje teď nejde uložit, protože serveru chybí klíč k šifrování (soubor
+          secrets/settings-key). Ostatní nastavení uložit jde.
+        </p>
+      } @else if (unreadableSecrets()) {
+        <p
+          class="admin-notice admin-notice--alert"
+          role="alert"
+          i18n="@@admin.settings.unreadableSecrets"
+        >
+          Tyto tajné údaje jsou uložené jiným klíčem, než má tento server, třeba po obnově ze zálohy
+          na novém serveru: {{ unreadableSecrets() }}. Dokud je znovu nezadáte a neuložíte, nebudou
+          fungovat.
+        </p>
+      }
+      <form class="settings-form" (ngSubmit)="askSave()" novalidate>
+        @for (group of groups(); track group.id) {
+          <section class="admin-card" [attr.aria-labelledby]="'settings-' + group.id">
+            <h2 [id]="'settings-' + group.id" class="admin-card-title">{{ group.title }}</h2>
+            <div class="card-body">
+              @for (field of group.fields; track field.name) {
+                @switch (field.input) {
+                  @case ('flag') {
+                    <label class="check">
+                      <input
+                        type="checkbox"
+                        [id]="'setting-' + field.name"
+                        [name]="field.name"
+                        [ngModel]="field.value === 'true'"
+                        (ngModelChange)="setFlag(field, $event)"
+                      />
+                      <span>{{ field.label }}</span>
+                    </label>
+                  }
+                  @case ('secret') {
+                    <div class="secret">
+                      <p class="secret-state" [class.secret-state--warning]="field.unreadable">
+                        <span class="secret-label">{{ field.label }}:</span>
+                        {{ secretState(field) }}
+                      </p>
+                      <app-form-field
+                        label="Nová hodnota"
+                        i18n-label="@@admin.settings.secret.new"
+                        [hint]="field.hint"
+                      >
+                        <app-password-reveal>
+                          <input
+                            appFormControl
+                            type="password"
+                            autocomplete="off"
+                            [id]="'setting-' + field.name"
+                            [name]="field.name"
+                            [disabled]="!secretsCanBeStored() || field.remove"
+                            [(ngModel)]="field.value"
+                          />
+                        </app-password-reveal>
+                      </app-form-field>
+                      @if (field.stored) {
+                        <label class="check">
+                          <input
+                            type="checkbox"
+                            [id]="'setting-' + field.name + '-remove'"
+                            [name]="field.name + '-remove'"
+                            [(ngModel)]="field.remove"
+                          />
+                          <span i18n="@@admin.settings.secret.remove"
+                            >Odebrat uloženou hodnotu</span
+                          >
+                        </label>
+                      }
+                    </div>
+                  }
+                  @default {
+                    <app-form-field [label]="field.label" [hint]="field.hint">
+                      <input
+                        appFormControl
+                        autocomplete="off"
+                        spellcheck="false"
+                        [type]="field.input"
+                        [id]="'setting-' + field.name"
+                        [name]="field.name"
+                        [(ngModel)]="field.value"
+                      />
+                    </app-form-field>
+                  }
+                }
+              }
+              @if (group.id === 'RECEIPTS') {
+                <app-receipt-signature />
+              }
+              @if (group.id === 'MAIL') {
+                <div class="test-row">
+                  <button
+                    type="button"
+                    class="action-btn"
+                    [disabled]="testingMail()"
+                    (click)="testMail()"
+                  >
+                    @if (testingMail()) {
+                      <span i18n="@@admin.settings.mailTest.busy">Zkoušíme se přihlásit…</span>
+                    } @else {
+                      <span i18n="@@admin.settings.mailTest">Ověřit spojení</span>
+                    }
+                  </button>
+                  @if (mailNotice(); as mailNotice) {
+                    @if (mailNotice.kind === 'status') {
+                      <p class="test-result test-result--ok" role="status">
+                        {{ mailNotice.text }}
+                      </p>
+                    } @else {
+                      <p class="test-result test-result--failed" role="alert">
+                        {{ mailNotice.text }}
+                      </p>
+                    }
+                  }
+                </div>
+              }
+            </div>
+          </section>
+        }
+
+        @if (saveError()) {
+          <div class="form-error" role="alert">
+            <p>{{ saveError() }}</p>
+            @if (fieldErrors().length > 0) {
+              <ul>
+                @for (line of fieldErrors(); track line) {
+                  <li>{{ line }}</li>
+                }
+              </ul>
+            }
+          </div>
+        }
+
+        @if (confirming()) {
+          <div
+            class="confirm"
+            role="group"
+            aria-label="Uložit nastavení?"
+            i18n-aria-label="@@admin.settings.confirm.label"
+          >
+            <span i18n="@@admin.settings.confirm.question"
+              >Uložením se web restartuje a asi minutu nebude odpovídat. Uložit?</span
+            >
+            <button type="button" class="primary" [disabled]="saving()" (click)="save()">
+              @if (saving()) {
+                <ng-container i18n="@@admin.settings.saving">Ukládáme…</ng-container>
+              } @else {
+                <ng-container i18n="@@admin.settings.confirm.yes"
+                  >Ano, uložit a restartovat</ng-container
+                >
+              }
+            </button>
+            <button
+              type="button"
+              class="action-link"
+              [disabled]="saving()"
+              (click)="cancelSave()"
+              i18n="@@admin.settings.confirm.no"
+            >
+              Ne
+            </button>
+          </div>
+        } @else {
+          <button type="submit" class="primary" i18n="@@admin.settings.save">
+            Uložit nastavení
+          </button>
+        }
+      </form>
+    }
+  }
+</div>

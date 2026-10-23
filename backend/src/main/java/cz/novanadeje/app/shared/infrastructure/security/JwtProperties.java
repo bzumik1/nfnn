@@ -9,6 +9,7 @@ public record JwtProperties(String issuer, String secret, Duration accessTokenTt
 
     public static final String ROLES_CLAIM = "roles";
     public static final String SCOPE_CLAIM = "scope";
+    public static final String CLIENT_CLAIM = "client";
     private static final String NAME = "JWT_SECRET (app.security.jwt.secret)";
     private static final int MIN_SECRET_LENGTH = 32;
 

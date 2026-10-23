@@ -1,0 +1,22 @@
+@switch (donations.state()) {
+  @case ('loading') {
+    <p class="dashboard-loading" role="status" i18n="@@donor.dashboard.loading">
+      Načítáme vaše dary…
+    </p>
+  }
+  @case ('error') {
+    <div class="dashboard-error" role="alert">
+      <p class="dashboard-error-text" i18n="@@donor.dashboard.error.text">
+        Přehled darů se nepodařilo načíst.
+      </p>
+      <button
+        type="button"
+        class="dashboard-error-retry"
+        (click)="donations.load()"
+        i18n="@@donor.dashboard.error.retry"
+      >
+        Zkusit znovu
+      </button>
+    </div>
+  }
+}

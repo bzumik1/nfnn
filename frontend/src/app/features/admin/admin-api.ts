@@ -3,6 +3,13 @@ import { inject, Injectable } from '@angular/core';
 import { map, Observable } from 'rxjs';
 import { BankAccountItem } from '../donations/bank-accounts-api';
 import { DonationListResponse, DownloadedFile, downloadedFile } from '../donations/donations-api';
+import {
+  MailServerRequest,
+  MailTestResponse,
+  SettingName,
+  SettingsSavedResponse,
+  SettingValueRequest,
+} from '../operations/setup/setup-api';
 
 export type ImportFailureKind =
   | 'RATE_LIMITED'
@@ -61,6 +68,7 @@ export interface AdminPaymentListResponse {
   year: number | null;
   availableYears: number[];
   items: AdminPaymentResponse[];
+  total: number;
 }
 
 export interface AdminDonorResponse {
@@ -121,6 +129,7 @@ export interface AdminActionResponse {
   subjectId: string | null;
   details: string;
   performedAt: string;
+  client: string | null;
 }
 
 export interface AdminActionListResponse {
@@ -153,6 +162,7 @@ export interface DonorAccountResponse {
 
 export interface DonorAccountListResponse {
   items: DonorAccountResponse[];
+  hasMore: boolean;
 }
 
 export interface AdminDonorRecordResponse {
@@ -257,6 +267,31 @@ export interface AdminOverviewResponse {
   months: MonthOverviewResponse[];
 }
 
+export type SettingGroup = 'SITE' | 'MAIL' | 'BANK' | 'RECEIPTS' | 'ADMINISTRATORS';
+
+export interface AdminSettingResponse {
+  name: SettingName;
+  group: SettingGroup;
+  secret: boolean;
+  value: string | null;
+  configured: boolean;
+  stored: boolean;
+  unreadable: boolean;
+}
+
+export interface AdminSettingsResponse {
+  settings: AdminSettingResponse[];
+  secretsCanBeStored: boolean;
+}
+
+export interface ReceiptSignatureResponse {
+  configured: boolean;
+  image: string | null;
+  width: number | null;
+  height: number | null;
+  uploadedAt: string | null;
+}
+
 export type BackupKind = 'DAILY' | 'REQUESTED' | 'BEFORE_RESTORE' | 'OTHER';
 
 export type RunOutcome = 'OK' | 'FAILED';
@@ -306,7 +341,14 @@ export interface AdminBackupsResponse {
   lastRestore: BackupRunResponse | null;
   restoreFiles: RestoreFileResponse[];
   pendingRequests: number;
+  restorePending: boolean;
   problems: BackupProblem[];
+}
+
+export interface RestoreRequestResponse {
+  requestId: string;
+  fileName: string;
+  requestedAt: string;
 }
 
 export interface BackupRequestResponse {
@@ -560,6 +602,13 @@ export class AdminApi {
     });
   }
 
+  restoreBackup(fileName: string): Observable<RestoreRequestResponse> {
+    return this.http.post<RestoreRequestResponse>(
+      `/api/admin/operations/backups/${encodeURIComponent(fileName)}/restore`,
+      null,
+    );
+  }
+
   downloadBackup(fileName: string): Observable<DownloadedFile> {
     return this.http
       .get(`/api/admin/operations/backups/${encodeURIComponent(fileName)}`, {
@@ -567,6 +616,32 @@ export class AdminApi {
         observe: 'response',
       })
       .pipe(map((response) => downloadedFile(response, fileName)));
+  }
+
+  settings(): Observable<AdminSettingsResponse> {
+    return this.http.get<AdminSettingsResponse>('/api/admin/operations/settings');
+  }
+
+  changeSettings(changes: SettingValueRequest[]): Observable<SettingsSavedResponse> {
+    return this.http.put<SettingsSavedResponse>('/api/admin/operations/settings', { changes });
+  }
+
+  receiptSignature(): Observable<ReceiptSignatureResponse> {
+    return this.http.get<ReceiptSignatureResponse>(RECEIPT_SIGNATURE_URL);
+  }
+
+  uploadReceiptSignature(file: File): Observable<ReceiptSignatureResponse> {
+    const form = new FormData();
+    form.append('file', file, file.name);
+    return this.http.post<ReceiptSignatureResponse>(RECEIPT_SIGNATURE_URL, form);
+  }
+
+  removeReceiptSignature(): Observable<void> {
+    return this.http.delete<void>(RECEIPT_SIGNATURE_URL);
+  }
+
+  testMailServer(server: MailServerRequest): Observable<MailTestResponse> {
+    return this.http.post<MailTestResponse>('/api/admin/operations/settings/mail-test', server);
   }
 
   logFiles(): Observable<LogFilesResponse> {
@@ -623,6 +698,7 @@ export class AdminApi {
 }
 
 const LOGS_URL = '/api/admin/operations/logs';
+const RECEIPT_SIGNATURE_URL = '/api/admin/donations/receipt-signature';
 const LOGGERS_URL = '/api/admin/operations/loggers';
 const DIAGNOSTICS_URL = '/api/admin/operations/diagnostics';
 

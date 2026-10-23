@@ -12,7 +12,7 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule, NgForm } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { Router } from '@angular/router';
 import { describeProblem, problemTypeEndsWith } from '../../../core/auth/api-problem';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
@@ -20,7 +20,6 @@ import { FocusFirstInvalid } from '../../../shared/ui/form-field/focus-first-inv
 import { FormControlDirective } from '../../../shared/ui/form-field/form-control';
 import { FormField } from '../../../shared/ui/form-field/form-field';
 import { formatBankTime, formatDonationDate } from '../../donations/donation-date';
-import { DashboardTopBar } from '../../donors/dashboard/top-bar/top-bar';
 import { AdminApi, AdminReportResponse, SentReportResponse } from '../admin-api';
 import { EmailListValidator, MAX_REPORT_RECIPIENTS, parseEmailList } from './email-list';
 import { formatReportMonth, previousMonths } from './report-month';
@@ -44,15 +43,7 @@ const SEND_DAYS = Array.from({ length: 28 }, (_, index) => index + 1);
 
 @Component({
   selector: 'app-admin-report',
-  imports: [
-    DashboardTopBar,
-    RouterLink,
-    FormsModule,
-    FormField,
-    FormControlDirective,
-    FocusFirstInvalid,
-    EmailListValidator,
-  ],
+  imports: [FormsModule, FormField, FormControlDirective, FocusFirstInvalid, EmailListValidator],
   templateUrl: './admin-report.html',
   styleUrl: './admin-report.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

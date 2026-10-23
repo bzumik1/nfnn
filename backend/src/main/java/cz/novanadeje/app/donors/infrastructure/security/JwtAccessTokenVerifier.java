@@ -39,7 +39,8 @@ class JwtAccessTokenVerifier implements AccessTokenVerifier {
         String scope = jwt.getClaimAsString(JwtProperties.SCOPE_CLAIM);
         Set<OAuthScope> scopes = scope == null || scope.isBlank() ? Set.of() : OAuthScope.parse(scope);
         return new VerifiedAccessToken(DonorId.of(jwt.getSubject()), roles(jwt.getClaimAsStringList(JwtProperties.ROLES_CLAIM)),
-                Set.copyOf(jwt.getAudience() == null ? List.of() : jwt.getAudience()), scopes, jwt.getExpiresAt());
+                Set.copyOf(jwt.getAudience() == null ? List.of() : jwt.getAudience()), scopes, jwt.getExpiresAt(),
+                jwt.getClaimAsString(JwtProperties.CLIENT_CLAIM));
     }
 
     private static Set<Role> roles(List<String> names) {

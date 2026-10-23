@@ -1,5 +1,6 @@
 import { expect, Page } from '@playwright/test';
 import { PAYMENT_QR_500, SECOND_FACTOR_QR } from './qr-matrices';
+import { noSignature } from './signature-image';
 
 export const donor = {
   id: '01a18e56-bdb0-775a-bd0a-a60756831369',
@@ -169,6 +170,14 @@ export async function mockDonorApi(
     );
   }
   await page.route(
+    (url) => url.pathname === '/api/operations/setup',
+    (route) => route.fulfill({ json: { required: false, codeRequired: true } }),
+  );
+  await page.route(
+    (url) => url.pathname === '/api/admin/donations/receipt-signature',
+    (route) => route.fulfill({ json: noSignature }),
+  );
+  await page.route(
     (url) => url.pathname === '/api/content/home',
     (route) => route.fulfill({ json: { news: [], projects: [] } }),
   );
@@ -243,4 +252,51 @@ export async function signIn(page: Page, user: typeof donor = donor): Promise<vo
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await page.locator('.nav-login', { hasText: 'Můj přehled' }).click();
   await expect(page).toHaveURL(/\/darce\/prehled$/);
+}
+
+function adminSetting(
+  name: string,
+  group: string,
+  value: string | null,
+  overrides: Record<string, unknown> = {},
+) {
+  return {
+    name,
+    group,
+    secret: false,
+    value,
+    configured: value !== null,
+    stored: false,
+    unreadable: false,
+    ...overrides,
+  };
+}
+
+export const adminSettings = {
+  settings: [
+    adminSetting('PUBLIC_URL', 'SITE', 'https://nfnn.cz', { stored: true }),
+    adminSetting('MAIL_HOST', 'MAIL', 'smtp-relay.brevo.com', { stored: true }),
+    adminSetting('MAIL_PORT', 'MAIL', '587', { stored: true }),
+    adminSetting('MAIL_USERNAME', 'MAIL', 'abc@smtp-brevo.com', { stored: true }),
+    adminSetting('MAIL_PASSWORD', 'MAIL', null, { secret: true, configured: true, stored: true }),
+    adminSetting('MAIL_AUTH', 'MAIL', 'true', { stored: true }),
+    adminSetting('MAIL_STARTTLS', 'MAIL', 'true', { stored: true }),
+    adminSetting('MAIL_FROM', 'MAIL', 'info@nfnn.cz', { stored: true }),
+    adminSetting('CONTACT_RECIPIENT', 'MAIL', 'info@nfnn.cz', { stored: true }),
+    adminSetting('FIO_TOKEN', 'BANK', null, { secret: true, configured: true, stored: true }),
+    adminSetting('FIO_HISTORY_FROM', 'BANK', null),
+    adminSetting('PAIRING_EXCLUDED_ACCOUNTS', 'BANK', null),
+    adminSetting('RECEIPT_SIGNATORY_NAME', 'RECEIPTS', 'Pavel Znamenáček'),
+    adminSetting('RECEIPT_SIGNATORY_ROLE', 'RECEIPTS', 'předseda správní rady'),
+    adminSetting('RECEIPT_FIRST_YEAR', 'RECEIPTS', '2026'),
+  ],
+  secretsCanBeStored: true,
+};
+
+export async function openDonorSection(page: Page, name: string): Promise<void> {
+  const link = page
+    .getByRole('navigation', { name: 'Můj účet' })
+    .getByRole('link', { name, exact: true });
+  await link.click();
+  await expect(link).toHaveAttribute('aria-current', 'page');
 }

@@ -110,7 +110,7 @@ class AdministratorActivityServiceTest {
     }
 
     private static AdminActionEntry entry(UUID adminId, String action, Instant at) {
-        return new AdminActionEntry(UUID.randomUUID(), adminId, action, Optional.of(SUBJECT), "details of " + action, at);
+        return new AdminActionEntry(UUID.randomUUID(), adminId, action, Optional.of(SUBJECT), "details of " + action, at, Optional.empty());
     }
 
     private static Donor donor(DonorId id, String name) {

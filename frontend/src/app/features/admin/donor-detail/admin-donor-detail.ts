@@ -20,7 +20,6 @@ import { BankAccountItem } from '../../donations/bank-accounts-api';
 import { formatCrowns } from '../../donations/donation-amount';
 import { formatBankTime, formatDonationDate } from '../../donations/donation-date';
 import { DonationItem } from '../../donations/donations-api';
-import { DashboardTopBar } from '../../donors/dashboard/top-bar/top-bar';
 import {
   AdminApi,
   AdminDonorDetailResponse,
@@ -53,7 +52,7 @@ const PAIRING_LABELS: Record<NonNullable<DonationItem['pairedBy']>, string> = {
 
 @Component({
   selector: 'app-admin-donor-detail',
-  imports: [DashboardTopBar, RouterLink],
+  imports: [RouterLink],
   templateUrl: './admin-donor-detail.html',
   styleUrl: './admin-donor-detail.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

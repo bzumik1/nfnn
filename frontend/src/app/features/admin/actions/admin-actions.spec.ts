@@ -113,6 +113,54 @@ describe('Given an administrator on the history page', () => {
     expect(fixture.nativeElement.querySelector('.admin-more')).toBeNull();
   });
 
+  it('when the settings or a log level were changed, then those changes are named in Czech too', () => {
+    firstPage([
+      adminAction({ action: 'CHANGE_SETTINGS', details: 'Settings changed: PUBLIC_URL' }),
+      adminAction({
+        id: '019a1c00-0000-7000-8000-00000000e004',
+        action: 'CHANGE_LOG_LEVEL',
+        details: 'Logger cz.novanadeje.app set to DEBUG',
+      }),
+      adminAction({
+        id: '019a1c00-0000-7000-8000-00000000e005',
+        action: 'RESET_LOG_LEVEL',
+        details: 'Logger cz.novanadeje.app reset',
+      }),
+    ]);
+
+    const [settings, raised, reset] = rows();
+    expect(rowText(settings)).toContain('Změna nastavení webu');
+    expect(rowText(raised)).toContain('Dočasná změna úrovně logování');
+    expect(rowText(reset)).toContain('Vrácení úrovně logování');
+  });
+
+  it('when the receipt signature was uploaded or removed, then those changes are named in Czech too', () => {
+    firstPage([
+      adminAction({
+        action: 'CHANGE_RECEIPT_SIGNATURE',
+        details: 'Signature image for receipts uploaded: 1200x400 px',
+      }),
+      adminAction({
+        id: '019a1c00-0000-7000-8000-00000000e006',
+        action: 'REMOVE_RECEIPT_SIGNATURE',
+        details: 'Signature image for receipts removed',
+      }),
+    ]);
+
+    const [uploaded, removed] = rows();
+    expect(rowText(uploaded)).toContain('Nahrání podpisu na potvrzení o daru');
+    expect(rowText(removed)).toContain('Odebrání podpisu z potvrzení o daru');
+  });
+
+  it('when a change came through a connected application, then the row names the application and a change on the web names none', () => {
+    firstPage([adminAction({ action: 'CHANGE_LOG_LEVEL', client: 'claude.ai' }), granted]);
+
+    const [throughApp, onWeb] = rows();
+    expect(rowText(throughApp)).toContain('přes aplikaci claude.ai');
+    expect(rowText(throughApp)).toContain('Dočasná změna úrovně logování');
+    expect(rowText(onWeb)).not.toContain('přes aplikaci');
+  });
+
   it('when nothing has been changed yet, then the card says so', () => {
     firstPage([]);
 

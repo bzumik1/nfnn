@@ -1,251 +1,237 @@
-<div class="admin">
-  <app-dashboard-top-bar area="admin" />
+<div class="container">
+  <h1 #title class="admin-title" tabindex="-1" i18n="@@admin.payments.heading">Platby z banky</h1>
+  <p class="admin-intro" i18n="@@admin.payments.intro">
+    Platby, které web nedokázal přiřadit žádnému dárci, tu přiřadíte ručně. U přiřazených plateb
+    můžete přiřazení zrušit; platba pak zůstane mimo automatické párování a čeká na vaše rozhodnutí.
+  </p>
 
-  <div class="container">
-    <p class="admin-crumbs">
-      <a routerLink="/sprava" i18n="@@admin.payments.backToAdmin">← Správa</a>
-    </p>
-    <h1 #title class="admin-title" tabindex="-1" i18n="@@admin.payments.heading">Platby z banky</h1>
-    <p class="admin-intro" i18n="@@admin.payments.intro">
-      Platby, které web nedokázal přiřadit žádnému dárci, tu přiřadíte ručně. U přiřazených plateb
-      můžete přiřazení zrušit; platba pak zůstane mimo automatické párování a čeká na vaše
-      rozhodnutí.
-    </p>
-
-    <div class="admin-toolbar">
-      <div
-        class="admin-tabs"
-        role="group"
-        aria-label="Zobrazit"
-        i18n-aria-label="@@admin.payments.filter.label"
+  <div class="admin-toolbar">
+    <div
+      class="admin-tabs"
+      role="group"
+      aria-label="Zobrazit"
+      i18n-aria-label="@@admin.payments.filter.label"
+    >
+      <button
+        type="button"
+        class="admin-tab"
+        [class.is-active]="filter() === 'unpaired'"
+        [attr.aria-pressed]="filter() === 'unpaired'"
+        (click)="show('unpaired')"
+        i18n="@@admin.payments.filter.unpaired"
       >
-        <button
-          type="button"
-          class="admin-tab"
-          [class.is-active]="filter() === 'unpaired'"
-          [attr.aria-pressed]="filter() === 'unpaired'"
-          (click)="show('unpaired')"
-          i18n="@@admin.payments.filter.unpaired"
-        >
-          Nespárované
-        </button>
-        <button
-          type="button"
-          class="admin-tab"
-          [class.is-active]="filter() === 'paired'"
-          [attr.aria-pressed]="filter() === 'paired'"
-          (click)="show('paired')"
-          i18n="@@admin.payments.filter.paired"
-        >
-          Spárované
-        </button>
-      </div>
-      @if (filter() === 'paired' && availableYears().length > 0) {
-        <label class="admin-year">
-          <span i18n="@@admin.payments.year.label">Rok</span>
-          <select [value]="shownYear()" (change)="showYear($any($event.target).value)">
-            @for (year of availableYears(); track year) {
-              <option [value]="year" [selected]="year === shownYear()">{{ year }}</option>
-            }
-          </select>
-        </label>
-      }
+        Nespárované
+      </button>
+      <button
+        type="button"
+        class="admin-tab"
+        [class.is-active]="filter() === 'paired'"
+        [attr.aria-pressed]="filter() === 'paired'"
+        (click)="show('paired')"
+        i18n="@@admin.payments.filter.paired"
+      >
+        Spárované
+      </button>
     </div>
-
-    @if (notice(); as notice) {
-      @if (notice.kind === 'status') {
-        <p class="admin-notice admin-notice--status" role="status">{{ notice.text }}</p>
-      } @else {
-        <p class="admin-notice admin-notice--alert" role="alert">{{ notice.text }}</p>
-      }
+    @if (filter() === 'paired' && availableYears().length > 0) {
+      <label class="admin-year">
+        <span i18n="@@admin.payments.year.label">Rok</span>
+        <select [value]="shownYear()" (change)="showYear($any($event.target).value)">
+          @for (year of availableYears(); track year) {
+            <option [value]="year" [selected]="year === shownYear()">{{ year }}</option>
+          }
+        </select>
+      </label>
     }
+  </div>
 
-    <section class="admin-card payments-card" aria-labelledby="payments-title">
-      <h2 id="payments-title" class="admin-card-title">
-        @if (filter() === 'unpaired') {
-          <ng-container i18n="@@admin.payments.list.unpairedTitle">Nespárované platby</ng-container>
-        } @else {
-          <ng-container i18n="@@admin.payments.list.pairedTitle"
-            >Spárované platby {{ shownYear() }}</ng-container
+  @if (notice(); as notice) {
+    @if (notice.kind === 'status') {
+      <p class="admin-notice admin-notice--status" role="status">{{ notice.text }}</p>
+    } @else {
+      <p class="admin-notice admin-notice--alert" role="alert">{{ notice.text }}</p>
+    }
+  }
+
+  <section class="admin-card payments-card" aria-labelledby="payments-title">
+    <h2 id="payments-title" class="admin-card-title">
+      @if (filter() === 'unpaired') {
+        <ng-container i18n="@@admin.payments.list.unpairedTitle">Nespárované platby</ng-container>
+      } @else {
+        <ng-container i18n="@@admin.payments.list.pairedTitle"
+          >Spárované platby {{ shownYear() }}</ng-container
+        >
+      }
+    </h2>
+    @switch (state()) {
+      @case ('loading') {
+        <p class="admin-loading" role="status" i18n="@@admin.payments.loading">Načítáme platby…</p>
+      }
+      @case ('error') {
+        <div class="admin-error" role="alert">
+          <p i18n="@@admin.payments.error.text">Platby se nepodařilo načíst.</p>
+          <button
+            type="button"
+            class="admin-retry"
+            (click)="load()"
+            i18n="@@admin.payments.error.retry"
           >
-        }
-      </h2>
-      @switch (state()) {
-        @case ('loading') {
-          <p class="admin-loading" role="status" i18n="@@admin.payments.loading">
-            Načítáme platby…
-          </p>
-        }
-        @case ('error') {
-          <div class="admin-error" role="alert">
-            <p i18n="@@admin.payments.error.text">Platby se nepodařilo načíst.</p>
-            <button
-              type="button"
-              class="admin-retry"
-              (click)="load()"
-              i18n="@@admin.payments.error.retry"
-            >
-              Zkusit znovu
-            </button>
-          </div>
-        }
-        @case ('ready') {
-          @if (items().length === 0) {
-            @if (filter() === 'unpaired') {
-              <p class="admin-empty" i18n="@@admin.payments.empty.unpaired">
-                Všechny platby z banky jsou přiřazené. Nová platba se tu objeví po dalším stažení z
-                banky (každou hodinu).
-              </p>
-            } @else {
-              <p class="admin-empty" i18n="@@admin.payments.empty.paired">
-                Zatím není přiřazena žádná platba.
-              </p>
-            }
+            Zkusit znovu
+          </button>
+        </div>
+      }
+      @case ('ready') {
+        @if (items().length === 0) {
+          @if (filter() === 'unpaired') {
+            <p class="admin-empty" i18n="@@admin.payments.empty.unpaired">
+              Všechny platby z banky jsou přiřazené. Nová platba se tu objeví po dalším stažení z
+              banky (každou hodinu).
+            </p>
           } @else {
-            <table>
-              <thead>
+            <p class="admin-empty" i18n="@@admin.payments.empty.paired">
+              Zatím není přiřazena žádná platba.
+            </p>
+          }
+        } @else {
+          <table>
+            <thead>
+              <tr>
+                <th i18n="@@admin.payments.col.date">Datum</th>
+                <th class="amount" i18n="@@admin.payments.col.amount">Částka</th>
+                <th i18n="@@admin.payments.col.sender">Odesílatel</th>
+                <th i18n="@@admin.payments.col.symbol">VS a zpráva</th>
+                @if (filter() === 'paired') {
+                  <th i18n="@@admin.payments.col.donor">Dárce</th>
+                }
+                <th class="action">
+                  <span class="visually-hidden" i18n="@@admin.payments.col.action">Akce</span>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (item of items(); track item.id) {
                 <tr>
-                  <th i18n="@@admin.payments.col.date">Datum</th>
-                  <th class="amount" i18n="@@admin.payments.col.amount">Částka</th>
-                  <th i18n="@@admin.payments.col.sender">Odesílatel</th>
-                  <th i18n="@@admin.payments.col.symbol">VS a zpráva</th>
+                  <td data-label="Datum" i18n-data-label="@@admin.payments.col.date">
+                    {{ date(item.bookedOn) }}
+                    @if (item.unpairedByAdminAt) {
+                      <span
+                        class="held-tag"
+                        i18n="@@admin.payments.heldTag"
+                        title="Správce zrušil přiřazení; automatické párování tuto platbu přeskakuje."
+                        i18n-title="@@admin.payments.heldTag.title"
+                        >jen ručně</span
+                      >
+                    }
+                  </td>
+                  <td
+                    data-label="Částka"
+                    i18n-data-label="@@admin.payments.col.amount"
+                    class="amount"
+                  >
+                    {{ crowns(item.amountMinor) }}&nbsp;Kč
+                  </td>
+                  <td data-label="Odesílatel" i18n-data-label="@@admin.payments.col.sender">
+                    <span class="sender-name">{{ item.counterpartyName ?? '—' }}</span>
+                    @if (item.counterpartyAccount) {
+                      <span class="sender-account">{{ item.counterpartyAccount }}</span>
+                    }
+                  </td>
+                  <td data-label="VS a zpráva" i18n-data-label="@@admin.payments.col.symbol">
+                    @if (item.variableSymbol) {
+                      <span class="symbol">{{ item.variableSymbol }}</span>
+                    } @else {
+                      <span class="muted" i18n="@@admin.payments.noSymbol">bez VS</span>
+                    }
+                    @if (item.messageForRecipient) {
+                      <span class="message">{{ item.messageForRecipient }}</span>
+                    }
+                  </td>
                   @if (filter() === 'paired') {
-                    <th i18n="@@admin.payments.col.donor">Dárce</th>
-                  }
-                  <th class="action">
-                    <span class="visually-hidden" i18n="@@admin.payments.col.action">Akce</span>
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                @for (item of items(); track item.id) {
-                  <tr>
-                    <td data-label="Datum" i18n-data-label="@@admin.payments.col.date">
-                      {{ date(item.bookedOn) }}
-                      @if (item.unpairedByAdminAt) {
-                        <span
-                          class="held-tag"
-                          i18n="@@admin.payments.heldTag"
-                          title="Správce zrušil přiřazení; automatické párování tuto platbu přeskakuje."
-                          i18n-title="@@admin.payments.heldTag.title"
-                          >jen ručně</span
-                        >
-                      }
-                    </td>
-                    <td
-                      data-label="Částka"
-                      i18n-data-label="@@admin.payments.col.amount"
-                      class="amount"
-                    >
-                      {{ crowns(item.amountMinor) }}&nbsp;Kč
-                    </td>
-                    <td data-label="Odesílatel" i18n-data-label="@@admin.payments.col.sender">
-                      <span class="sender-name">{{ item.counterpartyName ?? '—' }}</span>
-                      @if (item.counterpartyAccount) {
-                        <span class="sender-account">{{ item.counterpartyAccount }}</span>
-                      }
-                    </td>
-                    <td data-label="VS a zpráva" i18n-data-label="@@admin.payments.col.symbol">
-                      @if (item.variableSymbol) {
-                        <span class="symbol">{{ item.variableSymbol }}</span>
-                      } @else {
-                        <span class="muted" i18n="@@admin.payments.noSymbol">bez VS</span>
-                      }
-                      @if (item.messageForRecipient) {
-                        <span class="message">{{ item.messageForRecipient }}</span>
-                      }
-                    </td>
-                    @if (filter() === 'paired') {
-                      <td data-label="Dárce" i18n-data-label="@@admin.payments.col.donor">
-                        @if (item.donation; as donation) {
-                          <span class="donor-name">
-                            @if (donation.donorName) {
-                              {{ donation.donorName }}
-                            } @else {
-                              <ng-container i18n="@@admin.payments.donor.unknown"
-                                >dárce bez záznamu</ng-container
-                              >
-                            }
-                          </span>
-                          <span class="donor-method">{{ method(donation.pairedBy) }}</span>
-                          @if (donation.receiptIssued) {
-                            <span class="receipt-tag" i18n="@@admin.payments.receiptIssued"
-                              >potvrzení vystaveno</span
+                    <td data-label="Dárce" i18n-data-label="@@admin.payments.col.donor">
+                      @if (item.donation; as donation) {
+                        <span class="donor-name">
+                          @if (donation.donorName) {
+                            {{ donation.donorName }}
+                          } @else {
+                            <ng-container i18n="@@admin.payments.donor.unknown"
+                              >dárce bez záznamu</ng-container
                             >
                           }
-                        }
-                      </td>
-                    }
-                    <td class="action">
-                      @if (filter() === 'unpaired') {
-                        <button
-                          type="button"
-                          class="action-btn"
-                          (click)="openPairing(item)"
-                          i18n="@@admin.payments.pair.open"
-                        >
-                          Přiřadit dárci
-                        </button>
-                      } @else if (item.donation?.receiptIssued) {
-                        <span class="muted" i18n="@@admin.payments.unpair.blocked"
-                          >Nelze zrušit, k daru je vystavené potvrzení.</span
-                        >
-                      } @else if (unpairing() === item.id) {
-                        <span
-                          class="confirm"
-                          role="group"
-                          aria-label="Zrušit přiřazení?"
-                          i18n-aria-label="@@admin.payments.unpair.confirm.label"
-                        >
-                          <span i18n="@@admin.payments.unpair.confirm.question"
-                            >Opravdu zrušit?</span
-                          >
-                          <button
-                            type="button"
-                            class="action-btn action-btn--danger"
-                            [disabled]="busy()"
-                            (click)="unpair(item)"
-                          >
-                            @if (busy()) {
-                              <ng-container i18n="@@admin.payments.unpair.busy"
-                                >Ruším…</ng-container
-                              >
-                            } @else {
-                              <ng-container i18n="@@admin.payments.unpair.yes"
-                                >Ano, zrušit</ng-container
-                              >
-                            }
-                          </button>
-                          <button
-                            type="button"
-                            class="action-link"
-                            [disabled]="busy()"
-                            (click)="cancelUnpair()"
-                            i18n="@@admin.payments.unpair.no"
-                          >
-                            Ne
-                          </button>
                         </span>
-                      } @else {
-                        <button
-                          type="button"
-                          class="action-btn action-btn--quiet"
-                          (click)="askUnpair(item)"
-                          i18n="@@admin.payments.unpair.open"
-                        >
-                          Zrušit přiřazení
-                        </button>
+                        <span class="donor-method">{{ method(donation.pairedBy) }}</span>
+                        @if (donation.receiptIssued) {
+                          <span class="receipt-tag" i18n="@@admin.payments.receiptIssued"
+                            >potvrzení vystaveno</span
+                          >
+                        }
                       }
                     </td>
-                  </tr>
-                }
-              </tbody>
-            </table>
-          }
+                  }
+                  <td class="action">
+                    @if (filter() === 'unpaired') {
+                      <button
+                        type="button"
+                        class="action-btn"
+                        (click)="openPairing(item)"
+                        i18n="@@admin.payments.pair.open"
+                      >
+                        Přiřadit dárci
+                      </button>
+                    } @else if (item.donation?.receiptIssued) {
+                      <span class="muted" i18n="@@admin.payments.unpair.blocked"
+                        >Nelze zrušit, k daru je vystavené potvrzení.</span
+                      >
+                    } @else if (unpairing() === item.id) {
+                      <span
+                        class="confirm"
+                        role="group"
+                        aria-label="Zrušit přiřazení?"
+                        i18n-aria-label="@@admin.payments.unpair.confirm.label"
+                      >
+                        <span i18n="@@admin.payments.unpair.confirm.question">Opravdu zrušit?</span>
+                        <button
+                          type="button"
+                          class="action-btn action-btn--danger"
+                          [disabled]="busy()"
+                          (click)="unpair(item)"
+                        >
+                          @if (busy()) {
+                            <ng-container i18n="@@admin.payments.unpair.busy">Ruším…</ng-container>
+                          } @else {
+                            <ng-container i18n="@@admin.payments.unpair.yes"
+                              >Ano, zrušit</ng-container
+                            >
+                          }
+                        </button>
+                        <button
+                          type="button"
+                          class="action-link"
+                          [disabled]="busy()"
+                          (click)="cancelUnpair()"
+                          i18n="@@admin.payments.unpair.no"
+                        >
+                          Ne
+                        </button>
+                      </span>
+                    } @else {
+                      <button
+                        type="button"
+                        class="action-btn action-btn--quiet"
+                        (click)="askUnpair(item)"
+                        i18n="@@admin.payments.unpair.open"
+                      >
+                        Zrušit přiřazení
+                      </button>
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
         }
       }
-    </section>
-  </div>
+    }
+  </section>
 </div>
 
 @if (pairing(); as payment) {

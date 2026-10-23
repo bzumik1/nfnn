@@ -1,0 +1,139 @@
+:host {
+  display: block;
+}
+
+.signature {
+  border-top: 1px solid var(--color-border-soft);
+  margin-top: var(--space-2);
+  padding-top: var(--space-4);
+}
+
+.signature-title {
+  font-size: var(--text-lg);
+  font-weight: var(--weight-bold);
+  color: var(--color-text);
+  margin-bottom: var(--space-1);
+}
+
+.signature-hint {
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  color: var(--color-text-soft);
+  margin-bottom: var(--space-3);
+}
+
+.signature-frame {
+  background: var(--color-surface);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-3);
+  margin-bottom: var(--space-2);
+  max-width: 360px;
+}
+
+.signature-preview {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 120px;
+  object-fit: contain;
+}
+
+.signature-state {
+  font-size: var(--text-md);
+  color: var(--color-text-secondary);
+  margin-bottom: var(--space-2-5);
+}
+
+.signature-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+}
+
+.signature-file-label {
+  flex-basis: 100%;
+  font-size: var(--text-md);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text);
+}
+
+.signature-input {
+  font-family: var(--font-sans);
+  font-size: var(--text-md);
+  color: var(--color-text-secondary);
+  max-width: 100%;
+}
+
+.signature-confirm {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-md);
+  color: var(--color-text);
+  margin-top: var(--space-3);
+
+  > span {
+    flex-basis: 100%;
+  }
+}
+
+.signature-status,
+.signature-error {
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  margin-top: var(--space-2-5);
+  color: var(--color-text-muted);
+}
+
+.signature-error {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+}
+
+.signature-status--ok {
+  color: var(--color-success);
+}
+
+.signature-error,
+.signature-status--failed {
+  color: var(--color-danger);
+}
+
+.action-btn {
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
+  border: none;
+  padding: var(--space-2-25) var(--space-4-5);
+  border-radius: var(--radius-pill);
+  font-weight: var(--weight-semibold);
+  font-size: var(--text-sm);
+  cursor: pointer;
+  font-family: var(--font-sans);
+}
+
+.action-link {
+  background: none;
+  border: none;
+  color: var(--color-accent);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  cursor: pointer;
+  padding: var(--space-1-5) var(--space-2);
+}
+
+.action-link--danger {
+  color: var(--color-danger);
+  padding-left: 0;
+  padding-right: 0;
+}
+
+button:disabled {
+  cursor: progress;
+  opacity: 0.7;
+}

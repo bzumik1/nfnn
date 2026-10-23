@@ -1,146 +1,138 @@
-<div class="admin">
-  <app-dashboard-top-bar area="admin" />
+<div class="container">
+  <h1 #title class="admin-title" tabindex="-1" i18n="@@admin.donors.heading">Dárci</h1>
+  <p class="admin-intro" i18n="@@admin.donors.intro">
+    Najděte dárce a otevřete jeho kartu: uvidíte jeho účet, bankovní účty, dary a vydaná potvrzení a
+    můžete mu vypnout dvoufaktorové ověření, odebrat špatně přiřazený bankovní účet nebo na jeho
+    žádost vymazat osobní údaje.
+  </p>
 
-  <div class="container">
-    <p class="admin-crumbs">
-      <a routerLink="/sprava" i18n="@@admin.donors.backToAdmin">← Správa</a>
-    </p>
-    <h1 #title class="admin-title" tabindex="-1" i18n="@@admin.donors.heading">Dárci</h1>
-    <p class="admin-intro" i18n="@@admin.donors.intro">
-      Najděte dárce a otevřete jeho kartu: uvidíte jeho účet, bankovní účty, dary a vydaná potvrzení
-      a můžete mu vypnout dvoufaktorové ověření, odebrat špatně přiřazený bankovní účet nebo na jeho
-      žádost vymazat osobní údaje.
-    </p>
+  <section class="admin-card" aria-labelledby="search-title">
+    <h2 id="search-title" class="admin-card-title" i18n="@@admin.donors.search.title">
+      Hledat dárce
+    </h2>
+    <div class="search">
+      <label class="search-label" for="donor-search" i18n="@@admin.donors.search.label"
+        >Jméno, e-mail nebo variabilní symbol</label
+      >
+      <input
+        id="donor-search"
+        class="search-input"
+        type="search"
+        autocomplete="off"
+        [value]="query()"
+        (input)="search($any($event.target).value)"
+        placeholder="např. Nováková, jana@ nebo 4821"
+        i18n-placeholder="@@admin.donors.search.placeholder"
+        aria-describedby="donor-search-hint"
+      />
+      <p id="donor-search-hint" class="search-hint" i18n="@@admin.donors.search.hint">
+        Hledáme část jména nebo e-mailu a začátek variabilního symbolu; nabídneme nejvýše 20 dárců.
+      </p>
+    </div>
 
-    <section class="admin-card" aria-labelledby="search-title">
-      <h2 id="search-title" class="admin-card-title" i18n="@@admin.donors.search.title">
-        Hledat dárce
-      </h2>
-      <div class="search">
-        <label class="search-label" for="donor-search" i18n="@@admin.donors.search.label"
-          >Jméno, e-mail nebo variabilní symbol</label
-        >
-        <input
-          id="donor-search"
-          class="search-input"
-          type="search"
-          autocomplete="off"
-          [value]="query()"
-          (input)="search($any($event.target).value)"
-          placeholder="např. Nováková, jana@ nebo 4821"
-          i18n-placeholder="@@admin.donors.search.placeholder"
-          aria-describedby="donor-search-hint"
-        />
-        <p id="donor-search-hint" class="search-hint" i18n="@@admin.donors.search.hint">
-          Hledáme část jména nebo e-mailu a začátek variabilního symbolu; nabídneme nejvýše 20
-          dárců.
+    @switch (state()) {
+      @case ('idle') {
+        <p class="admin-empty" role="status" i18n="@@admin.donors.search.idle">
+          Začněte psát a dárci se objeví tady.
         </p>
-      </div>
-
-      @switch (state()) {
-        @case ('idle') {
-          <p class="admin-empty" role="status" i18n="@@admin.donors.search.idle">
-            Začněte psát a dárci se objeví tady.
+      }
+      @case ('searching') {
+        <p class="admin-loading" role="status" i18n="@@admin.donors.search.searching">
+          Hledáme dárce…
+        </p>
+      }
+      @case ('error') {
+        <p class="admin-error" role="alert" i18n="@@admin.donors.search.failed">
+          Hledání se nepodařilo. Zkuste to prosím znovu.
+        </p>
+      }
+      @case ('ready') {
+        @if (results().length === 0) {
+          <p class="admin-empty" role="status" i18n="@@admin.donors.search.empty">
+            Žádný dárce neodpovídá.
           </p>
-        }
-        @case ('searching') {
-          <p class="admin-loading" role="status" i18n="@@admin.donors.search.searching">
-            Hledáme dárce…
+        } @else {
+          <p class="visually-hidden" role="status" i18n="@@admin.donors.search.count">
+            Nalezení dárci: {{ results().length }}
           </p>
-        }
-        @case ('error') {
-          <p class="admin-error" role="alert" i18n="@@admin.donors.search.failed">
-            Hledání se nepodařilo. Zkuste to prosím znovu.
-          </p>
-        }
-        @case ('ready') {
-          @if (results().length === 0) {
-            <p class="admin-empty" role="status" i18n="@@admin.donors.search.empty">
-              Žádný dárce neodpovídá.
-            </p>
-          } @else {
-            <p class="visually-hidden" role="status" i18n="@@admin.donors.search.count">
-              Nalezení dárci: {{ results().length }}
-            </p>
-            <table>
-              <thead>
+          <table>
+            <thead>
+              <tr>
+                <th i18n="@@admin.donors.col.donor">Dárce</th>
+                <th i18n="@@admin.donors.col.email">E-mail</th>
+                <th i18n="@@admin.donors.col.symbol">Variabilní symbol</th>
+                <th i18n="@@admin.donors.col.registered">Registrace</th>
+                <th i18n="@@admin.donors.col.account">Účet</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (item of results(); track item.donorId) {
                 <tr>
-                  <th i18n="@@admin.donors.col.donor">Dárce</th>
-                  <th i18n="@@admin.donors.col.email">E-mail</th>
-                  <th i18n="@@admin.donors.col.symbol">Variabilní symbol</th>
-                  <th i18n="@@admin.donors.col.registered">Registrace</th>
-                  <th i18n="@@admin.donors.col.account">Účet</th>
-                </tr>
-              </thead>
-              <tbody>
-                @for (item of results(); track item.donorId) {
-                  <tr>
-                    <td data-label="Dárce" i18n-data-label="@@admin.donors.col.donor">
-                      <a class="admin-name" [routerLink]="['/sprava/darci', item.donorId]">{{
-                        item.name
-                      }}</a>
-                      <span class="muted">
-                        {{ typeLabel(item) }}
-                        @if (item.companyIdentifier) {
-                          ·
-                          <ng-container i18n="@@admin.donors.company"
-                            >IČO {{ item.companyIdentifier }}</ng-container
-                          >
-                        }
-                      </span>
-                    </td>
-                    <td data-label="E-mail" i18n-data-label="@@admin.donors.col.email">
-                      @if (item.erasedAt) {
-                        <span class="muted" i18n="@@admin.donors.email.erased">vymazán</span>
-                      } @else {
-                        <span class="email">{{ item.email }}</span>
+                  <td data-label="Dárce" i18n-data-label="@@admin.donors.col.donor">
+                    <a class="admin-name" [routerLink]="['/sprava/darci', item.donorId]">{{
+                      item.name
+                    }}</a>
+                    <span class="muted">
+                      {{ typeLabel(item) }}
+                      @if (item.companyIdentifier) {
+                        ·
+                        <ng-container i18n="@@admin.donors.company"
+                          >IČO {{ item.companyIdentifier }}</ng-container
+                        >
                       }
-                    </td>
-                    <td data-label="Variabilní symbol" i18n-data-label="@@admin.donors.col.symbol">
-                      <span class="mono">{{ item.variableSymbol }}</span>
-                    </td>
-                    <td data-label="Registrace" i18n-data-label="@@admin.donors.col.registered">
-                      {{ registeredAt(item) }}
-                    </td>
-                    <td data-label="Účet" i18n-data-label="@@admin.donors.col.account">
-                      <span class="tags">
-                        @if (item.erasedAt) {
-                          <span class="tag tag--off" i18n="@@admin.donors.tag.erased"
-                            >Údaje vymazány</span
-                          >
-                        }
-                        @if (item.administrator) {
-                          <span class="tag tag--admin" i18n="@@admin.donors.tag.administrator"
-                            >Správce</span
-                          >
-                        }
-                        @if (item.secondFactorEnabled) {
-                          <span class="tag tag--on" i18n="@@admin.donors.tag.secondFactor"
-                            >Dvoufaktorové ověření</span
-                          >
-                        }
-                        @if (!item.emailVerified && !item.erasedAt) {
-                          <span class="tag tag--warn" i18n="@@admin.donors.tag.unverified"
-                            >E-mail neověřen</span
-                          >
-                        }
-                        @if (
-                          !item.erasedAt &&
-                          !item.administrator &&
-                          !item.secondFactorEnabled &&
-                          item.emailVerified
-                        ) {
-                          <span class="muted" i18n="@@admin.donors.tag.plain">běžný účet</span>
-                        }
-                      </span>
-                    </td>
-                  </tr>
-                }
-              </tbody>
-            </table>
-          }
+                    </span>
+                  </td>
+                  <td data-label="E-mail" i18n-data-label="@@admin.donors.col.email">
+                    @if (item.erasedAt) {
+                      <span class="muted" i18n="@@admin.donors.email.erased">vymazán</span>
+                    } @else {
+                      <span class="email">{{ item.email }}</span>
+                    }
+                  </td>
+                  <td data-label="Variabilní symbol" i18n-data-label="@@admin.donors.col.symbol">
+                    <span class="mono">{{ item.variableSymbol }}</span>
+                  </td>
+                  <td data-label="Registrace" i18n-data-label="@@admin.donors.col.registered">
+                    {{ registeredAt(item) }}
+                  </td>
+                  <td data-label="Účet" i18n-data-label="@@admin.donors.col.account">
+                    <span class="tags">
+                      @if (item.erasedAt) {
+                        <span class="tag tag--off" i18n="@@admin.donors.tag.erased"
+                          >Údaje vymazány</span
+                        >
+                      }
+                      @if (item.administrator) {
+                        <span class="tag tag--admin" i18n="@@admin.donors.tag.administrator"
+                          >Správce</span
+                        >
+                      }
+                      @if (item.secondFactorEnabled) {
+                        <span class="tag tag--on" i18n="@@admin.donors.tag.secondFactor"
+                          >Dvoufaktorové ověření</span
+                        >
+                      }
+                      @if (!item.emailVerified && !item.erasedAt) {
+                        <span class="tag tag--warn" i18n="@@admin.donors.tag.unverified"
+                          >E-mail neověřen</span
+                        >
+                      }
+                      @if (
+                        !item.erasedAt &&
+                        !item.administrator &&
+                        !item.secondFactorEnabled &&
+                        item.emailVerified
+                      ) {
+                        <span class="muted" i18n="@@admin.donors.tag.plain">běžný účet</span>
+                      }
+                    </span>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
         }
       }
-    </section>
-  </div>
+    }
+  </section>
 </div>

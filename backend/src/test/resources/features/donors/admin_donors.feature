@@ -20,7 +20,23 @@ Feature: An administrator finds a donor and sees the donor's account
     When "Jana" searches the donors for "%"
     Then the found donor accounts are none
     When "Jana" searches the donors for "  "
-    Then the found donor accounts are none
+    Then the found donor accounts are "Jana", "Petr" and "Stavby"
+    And the donor list has no more pages
+
+  Scenario: Without a query every donor is listed by name, page by page
+    When "Jana" lists the donors with "limit=2"
+    Then the response status is 200
+    And the found donor accounts are "Jana" and "Petr"
+    And the donor list has more pages
+    When "Jana" lists the donors with "limit=2&page=1"
+    Then the found donor accounts are "Stavby"
+    And the donor list has no more pages
+    When "Jana" lists the donors with "limit=0"
+    Then the response status is 400
+    When "Jana" lists the donors with "limit=101"
+    Then the response status is 400
+    When "Jana" lists the donors with "page=-1"
+    Then the response status is 400
 
   Scenario: A found donor shows the account facts an administrator needs
     When "Jana" searches the donors for "jana"

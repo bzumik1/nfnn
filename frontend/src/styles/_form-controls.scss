@@ -1,13 +1,13 @@
 .form-control {
   width: 100%;
-  padding: 12px 16px;
+  padding: var(--space-3) var(--space-4);
   border-radius: var(--radius-field);
   border: 1.5px solid var(--color-border);
   background: var(--color-surface);
   color: var(--color-text);
-  font-size: 15px;
+  font-size: var(--text-lg);
   font-family: var(--font-sans);
-  transition: border-color 0.2s;
+  transition: border-color var(--duration-base);
 
   &:focus {
     border-color: var(--color-accent);
@@ -23,5 +23,5 @@ textarea.form-control {
 }
 
 app-password-reveal .form-control {
-  padding-right: 52px;
+  padding-right: var(--space-13);
 }

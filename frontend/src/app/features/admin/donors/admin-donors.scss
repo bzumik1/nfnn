@@ -1,29 +1,21 @@
+@use 'breakpoints' as bp;
+
 :host {
   display: block;
 }
 
-.admin {
-  min-height: 100vh;
-  background: var(--color-surface-alt);
-}
-
 .container {
   max-width: 1000px;
-  margin: 0 auto;
-  padding: 32px 24px 48px;
-}
-
-.admin-crumbs {
-  font-size: 14px;
-  margin-bottom: 12px;
+  margin: 0;
+  padding: var(--space-8) var(--space-6) var(--space-12);
 }
 
 .admin-title {
   font-family: var(--font-serif);
-  font-size: clamp(26px, 4vw, 32px);
-  font-weight: 700;
+  font-size: var(--text-heading);
+  font-weight: var(--weight-bold);
   color: var(--color-text);
-  margin: 8px 0;
+  margin: var(--space-2) 0;
 
   &:focus {
     outline: none;
@@ -32,9 +24,9 @@
 
 .admin-intro {
   color: var(--color-text-muted);
-  font-size: 15px;
-  line-height: 1.5;
-  margin-bottom: 20px;
+  font-size: var(--text-lg);
+  line-height: var(--leading-normal);
+  margin-bottom: var(--space-5);
   max-width: 680px;
 }
 
@@ -44,35 +36,35 @@
   box-shadow: var(--shadow-panel);
   border: 1px solid var(--color-border-soft);
   overflow: hidden;
-  margin-bottom: 20px;
+  margin-bottom: var(--space-5);
 }
 
 .admin-card-title {
   font-family: var(--font-serif);
-  font-size: 18px;
-  font-weight: 700;
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-bold);
   color: var(--color-text);
-  padding: 20px 24px 12px;
+  padding: var(--space-5) var(--space-6) var(--space-3);
 }
 
 .search {
-  padding: 0 24px 16px;
+  padding: 0 var(--space-6) var(--space-4);
   max-width: 520px;
 }
 
 .search-label {
   display: block;
-  font-size: 13px;
-  font-weight: 600;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
   color: var(--color-text);
-  margin-bottom: 6px;
+  margin-bottom: var(--space-1-5);
 }
 
 .search-input {
   width: 100%;
   font: inherit;
-  font-size: 15px;
-  padding: 10px 14px;
+  font-size: var(--text-lg);
+  padding: var(--space-2-5) var(--space-3-5);
   border: 1.5px solid var(--color-border);
   border-radius: var(--radius-sm);
   background: var(--color-surface);
@@ -86,18 +78,18 @@
 }
 
 .search-hint {
-  font-size: 13px;
+  font-size: var(--text-sm);
   color: var(--color-text-muted);
-  margin-top: 6px;
-  line-height: 1.5;
+  margin-top: var(--space-1-5);
+  line-height: var(--leading-normal);
 }
 
 .admin-loading,
 .admin-error,
 .admin-empty {
   color: var(--color-text-muted);
-  font-size: 14px;
-  padding: 0 24px 20px;
+  font-size: var(--text-md);
+  padding: 0 var(--space-6) var(--space-5);
 }
 
 .admin-error {
@@ -114,12 +106,12 @@ thead tr {
 }
 
 th {
-  padding: 12px 20px;
+  padding: var(--space-3) var(--space-5);
   text-align: left;
-  font-size: 11px;
-  font-weight: 700;
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-bold);
   color: var(--color-text-subtle);
-  letter-spacing: 0.08em;
+  letter-spacing: var(--tracking-wide);
   text-transform: uppercase;
 }
 
@@ -128,8 +120,8 @@ tbody tr {
 }
 
 td {
-  padding: 14px 20px;
-  font-size: 14px;
+  padding: var(--space-3-5) var(--space-5);
+  font-size: var(--text-md);
   color: var(--color-text-secondary);
   vertical-align: top;
 }
@@ -137,7 +129,7 @@ td {
 .admin-name {
   display: block;
   color: var(--color-accent);
-  font-weight: 600;
+  font-weight: var(--weight-semibold);
   text-decoration: none;
 
   &:hover {
@@ -153,7 +145,7 @@ td {
 
 .muted {
   color: var(--color-text-muted);
-  font-size: 13px;
+  font-size: var(--text-sm);
 }
 
 .email {
@@ -168,15 +160,15 @@ td {
 .tags {
   display: inline-flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: var(--space-1-5);
 }
 
 .tag {
   display: inline-block;
-  padding: 2px 8px;
+  padding: var(--space-0-5) var(--space-2);
   border-radius: var(--radius-pill);
-  font-size: 11px;
-  font-weight: 700;
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-bold);
   white-space: nowrap;
 }
 
@@ -212,7 +204,7 @@ td {
   border: 0;
 }
 
-@media (max-width: 640px) {
+@include bp.down(cards) {
   thead {
     position: absolute;
     width: 1px;
@@ -230,8 +222,8 @@ td {
 
   tbody tr {
     display: grid;
-    gap: 8px;
-    padding: 14px 20px;
+    gap: var(--space-2);
+    padding: var(--space-3-5) var(--space-5);
   }
 
   td {
@@ -241,11 +233,11 @@ td {
   td::before {
     content: attr(data-label);
     display: block;
-    font-size: 11px;
-    font-weight: 700;
+    font-size: var(--text-2xs);
+    font-weight: var(--weight-bold);
     color: var(--color-text-subtle);
-    letter-spacing: 0.08em;
+    letter-spacing: var(--tracking-wide);
     text-transform: uppercase;
-    margin-bottom: 2px;
+    margin-bottom: var(--space-0-5);
   }
 }

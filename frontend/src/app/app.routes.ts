@@ -33,6 +33,12 @@ export const routes: Routes = [
           import('./features/donors/connect-app/connect-app').then((m) => m.ConnectApp),
       },
       {
+        path: 'prvni-nastaveni',
+        title: $localize`:@@operations.setup.pageTitle:První nastavení | Nová naděje – nadační fond`,
+        loadComponent: () =>
+          import('./features/operations/setup/first-setup').then((m) => m.FirstSetup),
+      },
+      {
         path: 'potvrzeni-emailu',
         title: $localize`:@@donor.emailVerification.pageTitle:Potvrzení e-mailu | Nová naděje – nadační fond`,
         loadComponent: () =>

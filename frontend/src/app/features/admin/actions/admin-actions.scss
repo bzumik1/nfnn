@@ -1,29 +1,21 @@
+@use 'breakpoints' as bp;
+
 :host {
   display: block;
 }
 
-.admin {
-  min-height: 100vh;
-  background: var(--color-surface-alt);
-}
-
 .container {
   max-width: 1000px;
-  margin: 0 auto;
-  padding: 32px 24px 48px;
-}
-
-.admin-crumbs {
-  font-size: 14px;
-  margin-bottom: 12px;
+  margin: 0;
+  padding: var(--space-8) var(--space-6) var(--space-12);
 }
 
 .admin-title {
   font-family: var(--font-serif);
-  font-size: clamp(26px, 4vw, 32px);
-  font-weight: 700;
+  font-size: var(--text-heading);
+  font-weight: var(--weight-bold);
   color: var(--color-text);
-  margin: 8px 0;
+  margin: var(--space-2) 0;
 
   &:focus {
     outline: none;
@@ -32,18 +24,18 @@
 
 .admin-intro {
   color: var(--color-text-muted);
-  font-size: 15px;
-  line-height: 1.5;
-  margin-bottom: 20px;
+  font-size: var(--text-lg);
+  line-height: var(--leading-normal);
+  margin-bottom: var(--space-5);
   max-width: 680px;
 }
 
 .admin-notice {
   border-radius: var(--radius-sm);
-  padding: 12px 16px;
-  font-size: 14px;
-  line-height: 1.5;
-  margin-bottom: 16px;
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--text-md);
+  line-height: var(--leading-normal);
+  margin-bottom: var(--space-4);
 }
 
 .admin-notice--status {
@@ -62,15 +54,15 @@
   box-shadow: var(--shadow-panel);
   border: 1px solid var(--color-border-soft);
   overflow: hidden;
-  margin-bottom: 20px;
+  margin-bottom: var(--space-5);
 }
 
 .admin-card-title {
   font-family: var(--font-serif);
-  font-size: 18px;
-  font-weight: 700;
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-bold);
   color: var(--color-text);
-  padding: 20px 24px 12px;
+  padding: var(--space-5) var(--space-6) var(--space-3);
 }
 
 .admin-loading,
@@ -78,10 +70,10 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-3);
   color: var(--color-text-muted);
-  font-size: 14px;
-  padding: 0 24px 20px;
+  font-size: var(--text-md);
+  padding: 0 var(--space-6) var(--space-5);
 }
 
 .admin-error {
@@ -93,10 +85,10 @@
   background: var(--color-accent-soft);
   color: var(--color-accent);
   border: none;
-  padding: 7px 14px;
+  padding: var(--space-1-75) var(--space-3-5);
   border-radius: var(--radius-pill);
-  font-weight: 600;
-  font-size: 12px;
+  font-weight: var(--weight-semibold);
+  font-size: var(--text-xs);
   cursor: pointer;
   font-family: var(--font-sans);
   white-space: nowrap;
@@ -118,10 +110,10 @@
   border: none;
   color: var(--color-accent);
   font-family: var(--font-sans);
-  font-size: 13px;
-  font-weight: 600;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
   cursor: pointer;
-  padding: 6px 8px;
+  padding: var(--space-1-5) var(--space-2);
 }
 
 .actions,
@@ -130,8 +122,8 @@
   flex-wrap: wrap;
   align-items: center;
   justify-content: flex-end;
-  gap: 8px;
-  font-size: 13px;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
   color: var(--color-text);
 }
 
@@ -145,12 +137,12 @@ thead tr {
 }
 
 th {
-  padding: 12px 20px;
+  padding: var(--space-3) var(--space-5);
   text-align: left;
-  font-size: 11px;
-  font-weight: 700;
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-bold);
   color: var(--color-text-subtle);
-  letter-spacing: 0.08em;
+  letter-spacing: var(--tracking-wide);
   text-transform: uppercase;
 }
 
@@ -159,26 +151,26 @@ tbody tr {
 }
 
 td {
-  padding: 14px 20px;
-  font-size: 14px;
+  padding: var(--space-3-5) var(--space-5);
+  font-size: var(--text-md);
   color: var(--color-text-secondary);
   vertical-align: top;
 }
 
 .admin-name {
   color: var(--color-text);
-  font-weight: 600;
+  font-weight: var(--weight-semibold);
 }
 
 .muted {
   color: var(--color-text-muted);
-  font-size: 13px;
+  font-size: var(--text-sm);
 }
 
 .admin-empty {
   color: var(--color-text-muted);
-  font-size: 14px;
-  padding: 0 24px 20px;
+  font-size: var(--text-md);
+  padding: 0 var(--space-6) var(--space-5);
 }
 
 .mono {
@@ -191,11 +183,17 @@ td {
   color: var(--color-text);
 }
 
-.admin-email {
+.admin-email,
+.admin-client {
   display: block;
-  font-size: 12px;
+  font-size: var(--text-xs);
   color: var(--color-text-muted);
   overflow-wrap: anywhere;
+}
+
+.admin-client {
+  margin-top: var(--space-1);
+  font-weight: var(--weight-semibold);
 }
 
 td.admin-col {
@@ -206,23 +204,23 @@ td.admin-col {
 .details {
   display: block;
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: var(--text-xs);
   color: var(--color-text-muted);
   word-break: break-word;
 }
 
 .action-code {
-  margin-top: 4px;
+  margin-top: var(--space-1);
 }
 
 .admin-more {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 12px;
-  padding: 16px 24px 20px;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-6) var(--space-5);
   border-top: 1px solid var(--color-divider);
-  font-size: 14px;
+  font-size: var(--text-md);
   color: var(--color-text-muted);
 }
 
@@ -231,7 +229,7 @@ button:disabled {
   opacity: 0.7;
 }
 
-@media (max-width: 640px) {
+@include bp.down(cards) {
   thead {
     position: absolute;
     width: 1px;
@@ -249,8 +247,8 @@ button:disabled {
 
   tbody tr {
     display: grid;
-    gap: 8px;
-    padding: 14px 20px;
+    gap: var(--space-2);
+    padding: var(--space-3-5) var(--space-5);
   }
 
   td {
@@ -260,12 +258,12 @@ button:disabled {
   td::before {
     content: attr(data-label);
     display: block;
-    font-size: 11px;
-    font-weight: 700;
+    font-size: var(--text-2xs);
+    font-weight: var(--weight-bold);
     color: var(--color-text-subtle);
-    letter-spacing: 0.08em;
+    letter-spacing: var(--tracking-wide);
     text-transform: uppercase;
-    margin-bottom: 2px;
+    margin-bottom: var(--space-0-5);
   }
 
   .actions,

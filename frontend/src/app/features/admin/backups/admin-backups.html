@@ -1,26 +1,48 @@
-<div class="admin">
-  <app-dashboard-top-bar area="admin" />
+<div class="container">
+  <h1 #title class="admin-title" tabindex="-1" i18n="@@admin.backups.heading">Zálohy</h1>
+  <p class="admin-intro" i18n="@@admin.backups.introRestore">
+    Databáze se zálohuje každou noc ve 3:00 do složky /DATA/AppData/nfnn/backups na serveru a každou
+    neděli ve 4:00 se nejnovější záloha zkušebně obnoví do dočasné databáze. Tady vidíte, jak to
+    dopadlo, zálohu i zkušební obnovu spustíte hned, zálohu si stáhnete a web z ní obnovíte. Zálohy
+    leží na stejném disku jako databáze; kopii mimo server web zatím nedělá.
+  </p>
 
-  <div class="container">
-    <p class="admin-crumbs">
-      <a routerLink="/sprava" i18n="@@admin.backups.backToAdmin">← Správa</a>
-    </p>
-    <h1 #title class="admin-title" tabindex="-1" i18n="@@admin.backups.heading">Zálohy</h1>
-    <p class="admin-intro" i18n="@@admin.backups.intro">
-      Databáze se zálohuje každou noc ve 3:00 do složky /DATA/AppData/nfnn/backups na serveru a
-      každou neděli ve 4:00 se nejnovější záloha zkušebně obnoví do dočasné databáze. Tady vidíte,
-      jak to dopadlo, zálohu i zkušební obnovu spustíte hned a zálohu si stáhnete. Zálohy leží na
-      stejném disku jako databáze; kopii mimo server web zatím nedělá.
-    </p>
-
-    @if (notice(); as notice) {
-      @if (notice.kind === 'status') {
-        <p class="admin-notice admin-notice--status" role="status">{{ notice.text }}</p>
-      } @else {
-        <p class="admin-notice admin-notice--alert" role="alert">{{ notice.text }}</p>
-      }
+  @if (notice(); as notice) {
+    @if (notice.kind === 'status') {
+      <p class="admin-notice admin-notice--status" role="status">{{ notice.text }}</p>
+    } @else {
+      <p class="admin-notice admin-notice--alert" role="alert">{{ notice.text }}</p>
     }
+  }
 
+  @if (restoring(); as restore) {
+    <section class="admin-card" aria-labelledby="restoring-title">
+      <h2 id="restoring-title" class="admin-card-title" i18n="@@admin.backups.restoring.title">
+        Obnova ze zálohy
+      </h2>
+      <div class="card-body">
+        @if (restoreSlow()) {
+          <p class="restoring restoring--slow" role="alert" i18n="@@admin.backups.restoring.slow">
+            Web se ještě nevrátil. Velká záloha se může obnovovat i déle; zkuste to prosím za chvíli
+            znovu.
+          </p>
+          <button
+            type="button"
+            class="primary"
+            (click)="watchRestore()"
+            i18n="@@admin.backups.restoring.retry"
+          >
+            Zkontrolovat znovu
+          </button>
+        } @else {
+          <p class="restoring" role="status" i18n="@@admin.backups.restoring.text">
+            Obnovujeme databázi ze zálohy {{ restore.fileName }}. Web je teď několik minut
+            nedostupný; stránka počká a ukáže výsledek. Možná se pak budete muset znovu přihlásit.
+          </p>
+        }
+      </div>
+    </section>
+  } @else {
     @switch (state()) {
       @case ('loading') {
         <p class="admin-loading" role="status" i18n="@@admin.backups.loading">
@@ -71,13 +93,16 @@
                 <dd>{{ lastTestRestore() }}</dd>
               </div>
               <div class="run">
+                <dt i18n="@@admin.backups.status.restore">Obnova</dt>
+                <dd>{{ lastRestore() }}</dd>
+              </div>
+              <div class="run">
                 <dt i18n="@@admin.backups.status.restoreFolder">Složka restore</dt>
                 <dd>
                   @if (restoreFiles().length === 0) {
-                    <ng-container i18n="@@admin.backups.restore.empty"
-                      >Prázdná. Dump, který do ní na serveru dáte, se při příštím startu kontejneru
-                      nfnn-backup obnoví do prázdné databáze (postup je v deploy/README.md, část
-                      Obnova).</ng-container
+                    <ng-container i18n="@@admin.backups.restore.emptyGui"
+                      >Prázdná. Web obnovíte tlačítkem Obnovit u zálohy níže, na novém serveru v
+                      průvodci prvním nastavením.</ng-container
                     >
                   } @else {
                     <ul class="restore-files">
@@ -85,11 +110,6 @@
                         <li>{{ describeRestoreFile(file) }}</li>
                       }
                     </ul>
-                    @if (lastRestoreError(); as error) {
-                      <p class="restore-error" i18n="@@admin.backups.restore.lastError">
-                        Poslední obnova skončila chybou: {{ error }}
-                      </p>
-                    }
                   }
                 </dd>
               </div>
@@ -181,6 +201,16 @@
                       <button
                         type="button"
                         class="action-btn"
+                        [disabled]="actionsDisabled()"
+                        [attr.aria-label]="restoreLabel(item)"
+                        (click)="askRestore(item)"
+                        i18n="@@admin.backups.restore.start"
+                      >
+                        Obnovit
+                      </button>
+                      <button
+                        type="button"
+                        class="action-btn"
                         [disabled]="downloading() !== null"
                         [attr.aria-label]="downloadLabel(item)"
                         (click)="download(item)"
@@ -204,5 +234,15 @@
         </section>
       }
     }
-  </div>
+  }
 </div>
+
+@if (restoreCandidate(); as candidate) {
+  <app-restore-dialog
+    [backup]="candidate"
+    [busy]="restoreBusy()"
+    [error]="restoreError()"
+    (confirmed)="confirmRestore()"
+    (dismissed)="cancelRestore()"
+  />
+}

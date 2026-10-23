@@ -12,7 +12,7 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule, NgForm } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { Router } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import { describeProblem, problemTypeEndsWith } from '../../../core/auth/api-problem';
 import { AuthStore } from '../../../core/auth/auth-store';
@@ -21,7 +21,6 @@ import { FocusFirstInvalid } from '../../../shared/ui/form-field/focus-first-inv
 import { FormControlDirective } from '../../../shared/ui/form-field/form-control';
 import { FormField } from '../../../shared/ui/form-field/form-field';
 import { formatBankTime } from '../../donations/donation-date';
-import { DashboardTopBar } from '../../donors/dashboard/top-bar/top-bar';
 import {
   AdminApi,
   DiagnosticsResponse,
@@ -54,14 +53,7 @@ const LOGGER_NAME = /^(ROOT|[A-Za-z0-9_$][A-Za-z0-9_$.]*)$/;
 
 @Component({
   selector: 'app-admin-logs',
-  imports: [
-    DashboardTopBar,
-    RouterLink,
-    FormsModule,
-    FormField,
-    FormControlDirective,
-    FocusFirstInvalid,
-  ],
+  imports: [FormsModule, FormField, FormControlDirective, FocusFirstInvalid],
   templateUrl: './admin-logs.html',
   styleUrl: './admin-logs.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

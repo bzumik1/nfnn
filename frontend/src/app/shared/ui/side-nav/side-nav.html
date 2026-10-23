@@ -1,0 +1,66 @@
+<div class="side-nav-layout">
+  <aside #side class="side-nav">
+    <button
+      #toggle
+      type="button"
+      class="side-nav-toggle"
+      [attr.aria-controls]="navId()"
+      [attr.aria-expanded]="menuOpen()"
+      (click)="toggleMenu()"
+    >
+      <svg
+        aria-hidden="true"
+        width="18"
+        height="18"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2.25"
+        stroke-linecap="round"
+      >
+        @if (menuOpen()) {
+          <line x1="6" y1="6" x2="18" y2="18" />
+          <line x1="18" y1="6" x2="6" y2="18" />
+        } @else {
+          <line x1="4" y1="7" x2="20" y2="7" />
+          <line x1="4" y1="12" x2="20" y2="12" />
+          <line x1="4" y1="17" x2="20" y2="17" />
+        }
+      </svg>
+      <span>{{ menuLabel() }}</span>
+    </button>
+
+    <nav
+      class="side-nav-panel"
+      [id]="navId()"
+      [class.side-nav-panel--open]="menuOpen()"
+      [attr.aria-label]="label()"
+    >
+      @for (group of groups(); track group.id) {
+        <div class="side-nav-group">
+          @if (group.label; as groupLabel) {
+            <p class="side-nav-group-title" [id]="group.id">{{ groupLabel }}</p>
+          }
+          <ul class="side-nav-list" [attr.aria-labelledby]="group.label ? group.id : null">
+            @for (item of group.items; track item.path) {
+              <li>
+                <a
+                  class="side-nav-link"
+                  [routerLink]="item.path"
+                  routerLinkActive="side-nav-link--active"
+                  ariaCurrentWhenActive="page"
+                  [routerLinkActiveOptions]="{ exact: item.exact ?? false }"
+                  >{{ item.label }}</a
+                >
+              </li>
+            }
+          </ul>
+        </div>
+      }
+    </nav>
+  </aside>
+
+  <div class="side-nav-content">
+    <ng-content />
+  </div>
+</div>

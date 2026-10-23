@@ -17,6 +17,7 @@ import java.util.List;
 public class DonorAdministrationService {
 
     public static final int SEARCH_LIMIT = 20;
+    public static final int MAX_SEARCH_LIMIT = 100;
 
     private final DonorRepository donors;
     private final SecondFactorRepository secondFactors;
@@ -28,12 +29,13 @@ public class DonorAdministrationService {
         this.passkeys = passkeys;
     }
 
-    public List<DonorAccountView> search(String query) {
-        String trimmed = query == null ? "" : query.trim();
-        if (trimmed.isEmpty()) {
-            return List.of();
+    public DonorSearchResult search(String query, int page, int limit) {
+        if (page < 0 || limit < 1 || limit > MAX_SEARCH_LIMIT) {
+            throw new IllegalArgumentException("A donor search page starts at zero and holds 1 to " + MAX_SEARCH_LIMIT + " donors");
         }
-        return donors.search(trimmed, SEARCH_LIMIT).stream().map(this::view).toList();
+        String trimmed = query == null ? "" : query.trim();
+        List<Donor> found = donors.search(trimmed, page * limit, limit + 1);
+        return new DonorSearchResult(found.stream().limit(limit).map(this::view).toList(), found.size() > limit);
     }
 
     public DonorAccountView view(DonorId donorId) {

@@ -45,9 +45,10 @@ services:
       PAIRING_EXCLUDED_ACCOUNTS: ${PAIRING_EXCLUDED_ACCOUNTS:-}
       RECEIPT_SIGNATORY_NAME: ${RECEIPT_SIGNATORY_NAME:-Pavel Znamenáček}
       RECEIPT_SIGNATORY_ROLE: ${RECEIPT_SIGNATORY_ROLE:-předseda správní rady}
-      RECEIPT_SIGNATURE_IMAGE: ${RECEIPT_SIGNATURE_IMAGE:-}
       RECEIPT_FIRST_YEAR: ${RECEIPT_FIRST_YEAR:-2026}
-      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set}
+      JWT_SECRET: ${JWT_SECRET:-}
+    volumes:
+      - backend-secrets:/secrets
 
   frontend:
     build:
@@ -61,3 +62,4 @@ services:
 
 volumes:
   postgres-data:
+  backend-secrets:

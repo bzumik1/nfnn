@@ -1,0 +1,228 @@
+:host {
+  display: block;
+}
+
+.container {
+  max-width: 900px;
+  margin: 0;
+  padding: var(--space-8) var(--space-6) var(--space-12);
+}
+
+.admin-title {
+  font-family: var(--font-serif);
+  font-size: var(--text-heading);
+  font-weight: var(--weight-bold);
+  color: var(--color-text);
+  margin: var(--space-2) 0;
+
+  &:focus {
+    outline: none;
+  }
+}
+
+.admin-intro {
+  color: var(--color-text-muted);
+  font-size: var(--text-lg);
+  line-height: var(--leading-normal);
+  margin-bottom: var(--space-5);
+  max-width: 680px;
+}
+
+.admin-notice {
+  border-radius: var(--radius-sm);
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--text-md);
+  line-height: var(--leading-normal);
+  margin-bottom: var(--space-4);
+}
+
+.admin-notice--status {
+  background: var(--color-success-bg);
+  color: var(--color-success);
+}
+
+.admin-notice--alert {
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+}
+
+.admin-card {
+  background: var(--color-surface);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-panel);
+  border: 1px solid var(--color-border-soft);
+  overflow: hidden;
+  margin-bottom: var(--space-5);
+}
+
+.admin-card-title {
+  font-family: var(--font-serif);
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-bold);
+  color: var(--color-text);
+  padding: var(--space-5) var(--space-6) var(--space-3);
+}
+
+.card-body {
+  padding: 0 var(--space-6) var(--space-6);
+}
+
+.admin-loading,
+.admin-error {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  color: var(--color-text-muted);
+  font-size: var(--text-md);
+}
+
+.admin-error {
+  color: var(--color-danger);
+}
+
+.settings-form {
+  max-width: 680px;
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2-5);
+  font-size: var(--text-md);
+  color: var(--color-text-secondary);
+  padding: var(--space-1-5) 0;
+  margin-bottom: var(--space-2-5);
+
+  input {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--color-accent);
+  }
+}
+
+.secret {
+  padding: var(--space-1) 0 var(--space-3);
+}
+
+.secret-state {
+  font-size: var(--text-md);
+  color: var(--color-text-secondary);
+  margin-bottom: var(--space-2);
+}
+
+.secret-label {
+  font-weight: var(--weight-semibold);
+  color: var(--color-text);
+}
+
+.secret-state--warning {
+  color: var(--color-danger);
+}
+
+.test-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+  margin-top: var(--space-2);
+}
+
+.test-result {
+  flex: 1 1 220px;
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+}
+
+.test-result--ok {
+  color: var(--color-success);
+}
+
+.test-result--failed,
+.form-error {
+  color: var(--color-danger);
+}
+
+.form-error {
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  margin: var(--space-1) 0 var(--space-3);
+
+  ul {
+    margin: var(--space-1-5) 0 0 var(--space-4-5);
+  }
+}
+
+.primary {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  border: none;
+  padding: var(--space-2-5) var(--space-6);
+  border-radius: var(--radius-pill);
+  font-weight: var(--weight-bold);
+  font-size: var(--text-md);
+  cursor: pointer;
+  font-family: var(--font-sans);
+  box-shadow: var(--shadow-button-sm);
+}
+
+.admin-retry,
+.action-btn {
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
+  border: none;
+  padding: var(--space-2-25) var(--space-4-5);
+  border-radius: var(--radius-pill);
+  font-weight: var(--weight-semibold);
+  font-size: var(--text-sm);
+  cursor: pointer;
+  font-family: var(--font-sans);
+}
+
+.action-link {
+  background: none;
+  border: none;
+  color: var(--color-accent);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  cursor: pointer;
+  padding: var(--space-1-5) var(--space-2);
+}
+
+.confirm {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-md);
+  color: var(--color-text);
+
+  > span {
+    flex-basis: 100%;
+  }
+}
+
+.spinner {
+  width: 18px;
+  height: 18px;
+  border-radius: var(--radius-round);
+  border: 3px solid var(--color-accent-soft);
+  border-top-color: var(--color-accent);
+  animation: spin 0.9s linear infinite;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
+
+button:disabled {
+  cursor: progress;
+  opacity: 0.7;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

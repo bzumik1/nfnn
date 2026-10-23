@@ -11,25 +11,26 @@ import {
   viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { Router, RouterLink } from '@angular/router';
+import { Router } from '@angular/router';
 import { switchMap, take, takeWhile, timer } from 'rxjs';
 import { describeProblem, problemTypeEndsWith } from '../../../core/auth/api-problem';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
 import { formatBankTime } from '../../donations/donation-date';
 import { saveBlob } from '../../donations/file-download';
-import { DashboardTopBar } from '../../donors/dashboard/top-bar/top-bar';
+import { RESTORE_MAX_POLLS, SetupApi } from '../../operations/setup/setup-api';
 import {
   AdminApi,
   AdminBackupsResponse,
   BackupFileResponse,
   BackupKind,
-  BackupProblem,
   BackupRequestKind,
   BackupRunResponse,
   RestoreFileResponse,
 } from '../admin-api';
 import { formatSize } from './backup-format';
+import { BACKUP_PROBLEM_TEXTS } from './backup-texts';
+import { RestoreDialog } from './restore-dialog';
 
 type LoadState = 'loading' | 'ready' | 'error';
 
@@ -42,10 +43,16 @@ interface RunningJob {
   kind: BackupRequestKind;
 }
 
+interface RequestedRestore {
+  requestId: string;
+  fileName: string;
+}
+
 const UNAUTHENTICATED = 'auth/unauthenticated';
 const FORBIDDEN = 'auth/forbidden';
 export const JOB_POLL_MS = 3000;
 export const JOB_MAX_POLLS = 20;
+export const RESTORE_REQUEST_KEY = 'nfnn.restore-request';
 
 const KIND_NAMES: Record<BackupKind, string> = {
   DAILY: $localize`:@@admin.backups.kind.daily:Noční`,
@@ -54,25 +61,16 @@ const KIND_NAMES: Record<BackupKind, string> = {
   OTHER: $localize`:@@admin.backups.kind.other:Jiná`,
 };
 
-const PROBLEM_TEXTS: Record<BackupProblem, string> = {
-  BACKUPS_UNAVAILABLE: $localize`:@@admin.backups.problem.unavailable:Backend nevidí složku záloh. Zkontrolujte compose na serveru: backend má mít připojenou složku /DATA/AppData/nfnn/backups jako /backups.`,
-  BACKUP_MISSING: $localize`:@@admin.backups.problem.backupMissing:Zatím neproběhla žádná záloha; kontejner nfnn-backup asi neběží.`,
-  BACKUP_FAILED: $localize`:@@admin.backups.problem.backupFailed:Poslední záloha selhala.`,
-  BACKUP_STALE: $localize`:@@admin.backups.problem.backupStale:Poslední záloha je starší než den; kontejner nfnn-backup asi neběží.`,
-  TEST_RESTORE_MISSING: $localize`:@@admin.backups.problem.testRestoreMissing:Zkušební obnova ještě neproběhla, i když zálohy jsou starší než týden.`,
-  TEST_RESTORE_FAILED: $localize`:@@admin.backups.problem.testRestoreFailed:Poslední zkušební obnova selhala; záloha může být nepoužitelná.`,
-  TEST_RESTORE_STALE: $localize`:@@admin.backups.problem.testRestoreStale:Poslední zkušební obnova je starší než týden.`,
-};
-
 @Component({
   selector: 'app-admin-backups',
-  imports: [DashboardTopBar, RouterLink],
+  imports: [RestoreDialog],
   templateUrl: './admin-backups.html',
   styleUrl: './admin-backups.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AdminBackups {
   private readonly api = inject(AdminApi);
+  private readonly setupApi = inject(SetupApi);
   private readonly auth = inject(AuthStore);
   private readonly router = inject(Router);
   private readonly loginDialog = inject(LoginDialogService);
@@ -85,23 +83,28 @@ export class AdminBackups {
   protected readonly notice = signal<Notice | null>(null);
   protected readonly job = signal<RunningJob | null>(null);
   protected readonly downloading = signal<string | null>(null);
+  protected readonly restoreCandidate = signal<BackupFileResponse | null>(null);
+  protected readonly restoreBusy = signal(false);
+  protected readonly restoreError = signal<string | null>(null);
+  protected readonly restoring = signal<RequestedRestore | null>(null);
+  protected readonly restoreSlow = signal(false);
 
   protected readonly available = computed(() => this.view()?.available ?? false);
   protected readonly backups = computed(() => this.view()?.backups ?? []);
   protected readonly restoreFiles = computed(() => this.view()?.restoreFiles ?? []);
   protected readonly pendingRequests = computed(() => this.view()?.pendingRequests ?? 0);
   protected readonly problems = computed(() =>
-    (this.view()?.problems ?? []).map((problem) => PROBLEM_TEXTS[problem]),
+    (this.view()?.problems ?? []).map((problem) => BACKUP_PROBLEM_TEXTS[problem]),
   );
   protected readonly lastBackup = computed(() => this.describeBackup(this.view()?.lastBackup));
   protected readonly lastTestRestore = computed(() =>
     this.describeTestRestore(this.view()?.lastTestRestore),
   );
-  protected readonly lastRestoreError = computed(() => {
-    const run = this.view()?.lastRestore;
-    return run && run.outcome === 'FAILED' ? run.error : null;
-  });
-  protected readonly actionsDisabled = computed(() => !this.available() || this.job() !== null);
+  protected readonly lastRestore = computed(() => this.describeRestore(this.view()?.lastRestore));
+  protected readonly restorePending = computed(() => this.view()?.restorePending ?? false);
+  protected readonly actionsDisabled = computed(
+    () => !this.available() || this.job() !== null || this.restorePending(),
+  );
 
   constructor() {
     this.load();
@@ -117,6 +120,7 @@ export class AdminBackups {
         next: (view) => {
           this.view.set(view);
           this.state.set('ready');
+          this.reportRequestedRestore(view);
         },
         error: (failure: unknown) => {
           if (problemTypeEndsWith(failure, UNAUTHENTICATED)) {
@@ -134,6 +138,10 @@ export class AdminBackups {
 
   protected kindName(item: BackupFileResponse): string {
     return KIND_NAMES[item.kind];
+  }
+
+  protected restoreLabel(item: BackupFileResponse): string {
+    return $localize`:@@admin.backups.restore.label:Obnovit databázi ze zálohy ${item.fileName}:file:`;
   }
 
   protected downloadLabel(item: BackupFileResponse): string {
@@ -156,10 +164,70 @@ export class AdminBackups {
       case 'DONE':
         return $localize`:@@admin.backups.restore.done:${file.fileName}:file: byl obnoven ${at}:time:.`;
       case 'FAILED':
-        return $localize`:@@admin.backups.restore.failed:${file.fileName}:file: se ${at}:time: obnovit nepodařilo; backend nenastartuje, dokud soubor ve složce leží.`;
+        return $localize`:@@admin.backups.restore.failedKept:${file.fileName}:file: se ${at}:time: obnovit nepodařilo; data zůstala, jak byla.`;
       case 'SKIPPED':
         return $localize`:@@admin.backups.restore.skipped:${file.fileName}:file: byl ${at}:time: přeskočen: databáze nebyla prázdná nebo ve složce leželo víc souborů.`;
     }
+  }
+
+  protected askRestore(item: BackupFileResponse): void {
+    if (this.actionsDisabled()) {
+      return;
+    }
+    this.restoreError.set(null);
+    this.restoreCandidate.set(item);
+  }
+
+  protected cancelRestore(): void {
+    this.restoreCandidate.set(null);
+    this.restoreError.set(null);
+  }
+
+  protected confirmRestore(): void {
+    const item = this.restoreCandidate();
+    if (item === null || this.restoreBusy()) {
+      return;
+    }
+    this.restoreBusy.set(true);
+    this.restoreError.set(null);
+    this.api
+      .restoreBackup(item.fileName)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (request) => {
+          const requested = { requestId: request.requestId, fileName: request.fileName };
+          this.restoreBusy.set(false);
+          this.restoreCandidate.set(null);
+          this.notice.set(null);
+          rememberRestore(requested);
+          this.restoring.set(requested);
+          this.watchRestore();
+        },
+        error: (failure: unknown) => {
+          this.restoreBusy.set(false);
+          this.restoreError.set(
+            describeProblem(
+              failure,
+              $localize`:@@admin.backups.restoreDialog.failed:Obnovu se nepodařilo předat. Zkuste to prosím znovu.`,
+            ),
+          );
+        },
+      });
+  }
+
+  protected watchRestore(): void {
+    this.restoreSlow.set(false);
+    this.setupApi
+      .watchRestart(RESTORE_MAX_POLLS)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((outcome) => {
+        if (outcome === 'restarted') {
+          this.restoring.set(null);
+          this.load();
+        } else {
+          this.restoreSlow.set(true);
+        }
+      });
   }
 
   protected start(kind: BackupRequestKind): void {
@@ -278,6 +346,43 @@ export class AdminBackups {
         };
   }
 
+  private reportRequestedRestore(view: AdminBackupsResponse): void {
+    const requested = takeRememberedRestore();
+    if (requested === null) {
+      return;
+    }
+    const run = view.lastRestore;
+    if (run === null || run.requestId !== requested.requestId) {
+      this.notice.set({
+        kind: 'alert',
+        text: $localize`:@@admin.backups.restore.notPickedUp:Kontejner nfnn-backup si obnovu do pěti minut nevzal, takže web běží s daty, jaká měl. Zkuste to prosím znovu; když se to opakuje, kontejner asi neběží.`,
+      });
+      return;
+    }
+    this.notice.set(
+      run.outcome === 'OK'
+        ? {
+            kind: 'status',
+            text: $localize`:@@admin.backups.restore.succeeded:Databáze je obnovená ze zálohy ${requested.fileName}:file:. Stav před obnovou je uložený jako záloha „Před obnovou“.`,
+          }
+        : {
+            kind: 'alert',
+            text: $localize`:@@admin.backups.restore.failedNow:Obnova ze zálohy ${requested.fileName}:file: se nepovedla: ${run.error ?? ''}:error:. Web běží dál s daty, jaká měl před obnovou.`,
+          },
+    );
+  }
+
+  private describeRestore(run: BackupRunResponse | null | undefined): string {
+    if (!run) {
+      return $localize`:@@admin.backups.lastRestore.none:Poslední obnova: zatím žádná.`;
+    }
+    const at = formatBankTime(run.finishedAt);
+    if (run.outcome === 'FAILED') {
+      return $localize`:@@admin.backups.lastRestore.failed:Poslední obnova ${at}:time: se nepovedla, data zůstala: ${run.error ?? ''}:error:`;
+    }
+    return $localize`:@@admin.backups.lastRestore.ok:Poslední obnova: ${at}:time: ze zálohy ${run.fileName ?? ''}:file:.`;
+  }
+
   private describeBackup(run: BackupRunResponse | null | undefined): string {
     if (!run) {
       return $localize`:@@admin.backups.lastBackup.none:Poslední záloha: zatím žádná.`;
@@ -306,5 +411,35 @@ export class AdminBackups {
       this.router.navigateByUrl('/');
       this.loginDialog.open('login', { returnTo });
     });
+  }
+}
+
+function rememberRestore(restore: RequestedRestore): void {
+  try {
+    sessionStorage.setItem(RESTORE_REQUEST_KEY, JSON.stringify(restore));
+  } catch {
+    return;
+  }
+}
+
+function takeRememberedRestore(): RequestedRestore | null {
+  try {
+    const stored = sessionStorage.getItem(RESTORE_REQUEST_KEY);
+    sessionStorage.removeItem(RESTORE_REQUEST_KEY);
+    if (stored === null) {
+      return null;
+    }
+    const parsed: unknown = JSON.parse(stored);
+    if (
+      typeof parsed === 'object' &&
+      parsed !== null &&
+      typeof (parsed as RequestedRestore).requestId === 'string' &&
+      typeof (parsed as RequestedRestore).fileName === 'string'
+    ) {
+      return parsed as RequestedRestore;
+    }
+    return null;
+  } catch {
+    return null;
   }
 }

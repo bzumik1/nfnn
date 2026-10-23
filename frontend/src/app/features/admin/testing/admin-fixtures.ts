@@ -11,6 +11,8 @@ import {
   AdminDonorDetailResponse,
   AdminOverviewResponse,
   AdminReportResponse,
+  AdminSettingResponse,
+  AdminSettingsResponse,
   AdministratorResponse,
   AdminDonorResponse,
   AdminPaymentListResponse,
@@ -20,6 +22,7 @@ import {
   ImportStateResponse,
   MonthOverviewResponse,
   PairedDonationResponse,
+  ReceiptSignatureResponse,
   SymbolClaimResponse,
 } from '../admin-api';
 import { BankAccountItem } from '../../donations/bank-accounts-api';
@@ -77,7 +80,7 @@ export function paymentList(
   items: AdminPaymentResponse[],
   overrides: Partial<AdminPaymentListResponse> = {},
 ): AdminPaymentListResponse {
-  return { year: null, availableYears: [], items, ...overrides };
+  return { year: null, availableYears: [], items, total: items.length, ...overrides };
 }
 
 export function foundDonor(overrides: Partial<AdminDonorResponse> = {}): AdminDonorResponse {
@@ -128,6 +131,7 @@ export function adminAction(overrides: Partial<AdminActionResponse> = {}): Admin
     details:
       'Bank payment 019a1c00-0000-7000-8000-000000001001 paired to donor 01a18e56-bdb0-775a-bd0a-a60756831369 by hand',
     performedAt: '2026-10-22T10:00:00Z',
+    client: null,
     ...overrides,
   };
 }
@@ -351,9 +355,43 @@ export function backupsView(overrides: Partial<AdminBackupsResponse> = {}): Admi
     lastRestore: null,
     restoreFiles: [],
     pendingRequests: 0,
+    restorePending: false,
     problems: [],
     ...overrides,
   };
+}
+
+export function setting(overrides: Partial<AdminSettingResponse> = {}): AdminSettingResponse {
+  return {
+    name: 'PUBLIC_URL',
+    group: 'SITE',
+    secret: false,
+    value: 'https://nfnn.cz',
+    configured: true,
+    stored: true,
+    unreadable: false,
+    ...overrides,
+  };
+}
+
+export const SIGNATURE_IMAGE =
+  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
+
+export function receiptSignature(
+  overrides: Partial<ReceiptSignatureResponse> = {},
+): ReceiptSignatureResponse {
+  return {
+    configured: true,
+    image: SIGNATURE_IMAGE,
+    width: 1200,
+    height: 400,
+    uploadedAt: '2026-10-23T19:30:00Z',
+    ...overrides,
+  };
+}
+
+export function noReceiptSignature(): ReceiptSignatureResponse {
+  return { configured: false, image: null, width: null, height: null, uploadedAt: null };
 }
 
 export function logFile(overrides: Partial<LogFileResponse> = {}): LogFileResponse {
@@ -362,6 +400,62 @@ export function logFile(overrides: Partial<LogFileResponse> = {}): LogFileRespon
     sizeBytes: 220,
     changedAt: '2026-10-23T10:00:02Z',
     compressed: false,
+    ...overrides,
+  };
+}
+
+export function settingsView(
+  overrides: Partial<AdminSettingsResponse> = {},
+): AdminSettingsResponse {
+  return {
+    settings: [
+      setting(),
+      setting({ name: 'MAIL_HOST', group: 'MAIL', value: 'smtp-relay.brevo.com' }),
+      setting({ name: 'MAIL_PORT', group: 'MAIL', value: '587' }),
+      setting({ name: 'MAIL_USERNAME', group: 'MAIL', value: 'abc@smtp-brevo.com' }),
+      setting({ name: 'MAIL_PASSWORD', group: 'MAIL', secret: true, value: null }),
+      setting({ name: 'MAIL_AUTH', group: 'MAIL', value: 'true' }),
+      setting({ name: 'MAIL_STARTTLS', group: 'MAIL', value: 'true' }),
+      setting({ name: 'MAIL_FROM', group: 'MAIL', value: 'info@nfnn.cz' }),
+      setting({ name: 'CONTACT_RECIPIENT', group: 'MAIL', value: 'info@nfnn.cz' }),
+      setting({
+        name: 'FIO_TOKEN',
+        group: 'BANK',
+        secret: true,
+        value: null,
+        configured: false,
+        stored: true,
+        unreadable: true,
+      }),
+      setting({
+        name: 'FIO_HISTORY_FROM',
+        group: 'BANK',
+        value: null,
+        configured: false,
+        stored: false,
+      }),
+      setting({
+        name: 'PAIRING_EXCLUDED_ACCOUNTS',
+        group: 'BANK',
+        value: null,
+        configured: false,
+        stored: false,
+      }),
+      setting({
+        name: 'RECEIPT_SIGNATORY_NAME',
+        group: 'RECEIPTS',
+        value: 'Pavel Znamenáček',
+        stored: false,
+      }),
+      setting({
+        name: 'RECEIPT_SIGNATORY_ROLE',
+        group: 'RECEIPTS',
+        value: 'předseda správní rady',
+        stored: false,
+      }),
+      setting({ name: 'RECEIPT_FIRST_YEAR', group: 'RECEIPTS', value: '2026', stored: false }),
+    ],
+    secretsCanBeStored: true,
     ...overrides,
   };
 }

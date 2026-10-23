@@ -1,10 +1,12 @@
 import type { FetchLike } from './authorization.js';
+import type { Photo } from './photos.js';
 
 export interface Problem {
   readonly status: number;
   readonly type: string;
   readonly title: string;
   readonly detail: string;
+  readonly errors: readonly string[];
 }
 
 export class BackendProblem extends Error {
@@ -44,6 +46,12 @@ export class BackendClient {
     return this.send('DELETE', path, apiToken);
   }
 
+  async postPhoto(path: string, apiToken: string, photo: Photo): Promise<unknown> {
+    const form = new FormData();
+    form.append('file', new Blob([photo.bytes], { type: photo.contentType }), 'photo');
+    return this.send('POST', path, apiToken, form);
+  }
+
   private async send(
     method: string,
     path: string,
@@ -56,7 +64,9 @@ export class BackendClient {
       headers['authorization'] = `Bearer ${apiToken}`;
     }
     const init: RequestInit = { method, headers };
-    if (body !== undefined) {
+    if (body instanceof FormData) {
+      init.body = body;
+    } else if (body !== undefined) {
       headers['content-type'] = 'application/json';
       init.body = JSON.stringify(body);
     }
@@ -88,5 +98,14 @@ function problemOf(status: number, body: unknown): Problem {
         : `http-${status}`,
     title: typeof record['title'] === 'string' ? record['title'] : `HTTP ${status}`,
     detail: typeof record['detail'] === 'string' ? record['detail'] : '',
+    errors: Array.isArray(record['errors']) ? record['errors'].map(errorOf) : [],
   };
+}
+
+function errorOf(value: unknown): string {
+  const record =
+    typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : {};
+  const field = typeof record['field'] === 'string' ? record['field'] : '';
+  const message = typeof record['message'] === 'string' ? record['message'] : '';
+  return field === '' ? message : `${field}: ${message}`;
 }

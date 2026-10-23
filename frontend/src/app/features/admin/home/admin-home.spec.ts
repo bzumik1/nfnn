@@ -6,11 +6,18 @@ import { authInterceptor } from '../../../core/auth/auth-interceptor';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
 import { authResponse, sampleDonor } from '../../../core/auth/testing/donor-fixtures';
-import { importState, monthOverview, overview } from '../testing/admin-fixtures';
+import {
+  backupRun,
+  backupsView,
+  importState,
+  monthOverview,
+  overview,
+} from '../testing/admin-fixtures';
 import { AdminHome } from './admin-home';
 
 const IMPORT_STATE_URL = '/api/admin/donations/import-state';
 const OVERVIEW_URL = '/api/admin/donations/overview';
+const BACKUPS_URL = '/api/admin/operations/backups';
 
 describe('Given an administrator on the administration home', () => {
   let fixture: ComponentFixture<AdminHome>;
@@ -39,6 +46,7 @@ describe('Given an administrator on the administration home', () => {
 
   afterEach(() => {
     http.match(OVERVIEW_URL).forEach((pending) => pending.flush(overview()));
+    http.match(BACKUPS_URL).forEach((pending) => pending.flush(backupsView()));
     http.verify();
   });
 
@@ -48,15 +56,17 @@ describe('Given an administrator on the administration home', () => {
       .trim();
   }
 
-  function dataRows(): Record<string, string> {
+  function dataRows(card = 'admin-import-title'): Record<string, string> {
     const rows: Record<string, string> = {};
-    fixture.nativeElement.querySelectorAll('.admin-data div').forEach((row: HTMLElement) => {
-      rows[row.querySelector('dt')?.textContent?.trim() ?? ''] = (
-        row.querySelector('dd')?.textContent ?? ''
-      )
-        .replace(/\s+/g, ' ')
-        .trim();
-    });
+    fixture.nativeElement
+      .querySelectorAll(`.admin-card[aria-labelledby="${card}"] .admin-data div`)
+      .forEach((row: HTMLElement) => {
+        rows[row.querySelector('dt')?.textContent?.trim() ?? ''] = (
+          row.querySelector('dd')?.textContent ?? ''
+        )
+          .replace(/\s+/g, ' ')
+          .trim();
+      });
     return rows;
   }
 
@@ -87,7 +97,9 @@ describe('Given an administrator on the administration home', () => {
 
     expect(request.request.headers.get('Authorization')).toBe('Bearer token-1');
     expect(text('h1')).toBe('Správa');
-    expect(text('[role="status"]')).toBe('Načítáme stav importu…');
+    expect(text('.admin-card[aria-labelledby="admin-import-title"] [role="status"]')).toBe(
+      'Načítáme stav importu…',
+    );
     request.flush(importState());
   });
 
@@ -198,30 +210,6 @@ describe('Given an administrator on the administration home', () => {
     expect(navigate).toHaveBeenCalledWith('/');
     expect(TestBed.inject(LoginDialogService).isOpen()).toBe(true);
   });
-  it('when the home is shown, then it links to the bank payments, the donors, the administrators, the older symbols, the report, the news, the projects, the backups, the logs and the history', async () => {
-    http.expectOne(IMPORT_STATE_URL).flush(importState());
-    fixture.detectChanges();
-
-    const links = Array.from(
-      fixture.nativeElement.querySelectorAll('nav.admin-links a') as NodeListOf<HTMLAnchorElement>,
-    ).map((link) => [
-      link.getAttribute('href'),
-      link.querySelector('.admin-link-title')?.textContent?.trim(),
-    ]);
-    expect(links).toEqual([
-      ['/sprava/platby', 'Platby z banky'],
-      ['/sprava/darci', 'Dárci'],
-      ['/sprava/spravci', 'Správci'],
-      ['/sprava/starsi-symboly', 'Starší symboly'],
-      ['/sprava/prehledy', 'Měsíční přehled'],
-      ['/sprava/aktuality', 'Aktuality'],
-      ['/sprava/projekty', 'Projekty'],
-      ['/sprava/zalohy', 'Zálohy'],
-      ['/sprava/logy', 'Logy a diagnostika'],
-      ['/sprava/historie', 'Historie správy'],
-    ]);
-  });
-
   describe('when the donations overview arrives', () => {
     beforeEach(async () => {
       http.expectOne(IMPORT_STATE_URL).flush(importState());
@@ -301,5 +289,81 @@ describe('Given an administrator on the administration home', () => {
 
     expect(card.querySelector('[role="alert"]')).toBeNull();
     expect(overviewRows()).toHaveLength(4);
+  });
+
+  describe('when the backups state arrives', () => {
+    beforeEach(() => {
+      http.expectOne(IMPORT_STATE_URL).flush(importState());
+    });
+
+    function backupsCard(): HTMLElement {
+      return fixture.nativeElement.querySelector(
+        '.admin-card[aria-labelledby="admin-backups-title"]',
+      );
+    }
+
+    it('then a healthy state names the last backup and test restore and links to the backups', async () => {
+      await respondOverview(BACKUPS_URL, backupsView());
+
+      expect(text('#admin-backups-title')).toBe('Zálohy databáze');
+      expect(text('.admin-card[aria-labelledby="admin-backups-title"] .healthy')).toBe(
+        'Zálohování je v pořádku.',
+      );
+      expect(dataRows('admin-backups-title')).toEqual({
+        'Poslední záloha': '23. 10. 2026 03:00 (2 kB)',
+        'Zkušební obnova': '18. 10. 2026 04:00, 37 tabulek',
+      });
+      expect(backupsCard().querySelector('a')?.getAttribute('href')).toBe('/sprava/zalohy');
+    });
+
+    it('then failures and problems are named in Czech', async () => {
+      await respondOverview(
+        BACKUPS_URL,
+        backupsView({
+          lastBackup: backupRun({ outcome: 'FAILED', fileName: null, error: 'pg_dump: exit 1' }),
+          lastTestRestore: null,
+          problems: ['BACKUP_FAILED', 'TEST_RESTORE_MISSING'],
+        }),
+      );
+
+      expect(
+        Array.from(backupsCard().querySelectorAll('.admin-problems li')).map((item) =>
+          (item.textContent ?? '').trim(),
+        ),
+      ).toEqual([
+        'Poslední záloha selhala.',
+        'Zkušební obnova ještě neproběhla, i když zálohy jsou starší než týden.',
+      ]);
+      expect(backupsCard().querySelector('.healthy')).toBeNull();
+      expect(dataRows('admin-backups-title')).toEqual({
+        'Poslední záloha': 'selhala 23. 10. 2026 03:00',
+        'Zkušební obnova': 'zatím žádná',
+      });
+    });
+
+    it('then a failed load offers a retry that asks again', async () => {
+      await respondOverview(BACKUPS_URL, { title: 'Server error' }, 500);
+
+      expect(backupsCard().querySelector('[role="alert"]')?.textContent).toContain(
+        'Stav záloh se nepodařilo načíst.',
+      );
+
+      (backupsCard().querySelector('.admin-retry') as HTMLButtonElement).click();
+      await respondOverview(BACKUPS_URL, backupsView());
+
+      expect(backupsCard().querySelector('[role="alert"]')).toBeNull();
+      expect(dataRows('admin-backups-title')['Poslední záloha']).toBe('23. 10. 2026 03:00 (2 kB)');
+    });
+  });
+
+  it('when the year has payments without a donor, then the overview links to the bank payments', async () => {
+    http.expectOne(IMPORT_STATE_URL).flush(importState());
+    await respondOverview(OVERVIEW_URL, overview());
+
+    const link = fixture.nativeElement.querySelector(
+      '.admin-card[aria-labelledby="admin-overview-title"] a.admin-card-link',
+    ) as HTMLAnchorElement;
+    expect(link.textContent?.trim()).toBe('Přiřadit platby bez dárce');
+    expect(link.getAttribute('href')).toBe('/sprava/platby');
   });
 });

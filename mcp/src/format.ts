@@ -1,11 +1,7 @@
 const MINOR_SUFFIX = 'Minor';
 const ISO_INSTANT = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,9})?(?:Z|[+-]\d{2}:\d{2})$/;
 
-const crowns = new Intl.NumberFormat('cs-CZ', {
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-});
-const pragueTime = new Intl.DateTimeFormat('cs-CZ', {
+const pragueTime = new Intl.DateTimeFormat('en-GB', {
   timeZone: 'Europe/Prague',
   year: 'numeric',
   month: '2-digit',
@@ -16,15 +12,29 @@ const pragueTime = new Intl.DateTimeFormat('cs-CZ', {
   hourCycle: 'h23',
 });
 
-export function formatCrowns(minor: number): string {
-  return `${crowns.format(minor / 100)} Kč`.replace(/ /g, ' ');
+export function crownsOf(minor: number): number {
+  return minor / 100;
 }
 
-export function formatPragueInstant(iso: string): string {
+export function pragueInstant(iso: string): string {
+  const instant = new Date(iso);
+  const seconds = Math.floor(instant.getTime() / 1000) * 1000;
   const parts = Object.fromEntries(
-    pragueTime.formatToParts(new Date(iso)).map((part) => [part.type, part.value]),
+    pragueTime.formatToParts(new Date(seconds)).map((part) => [part.type, part.value]),
   );
-  return `${parts['day']}. ${parts['month']}. ${parts['year']} ${parts['hour']}:${parts['minute']}:${parts['second']}`;
+  const wall = Date.UTC(
+    Number(parts['year']),
+    Number(parts['month']) - 1,
+    Number(parts['day']),
+    Number(parts['hour']),
+    Number(parts['minute']),
+    Number(parts['second']),
+  );
+  const offsetMinutes = Math.round((wall - seconds) / 60000);
+  const sign = offsetMinutes < 0 ? '-' : '+';
+  const hours = String(Math.floor(Math.abs(offsetMinutes) / 60)).padStart(2, '0');
+  const minutes = String(Math.abs(offsetMinutes) % 60).padStart(2, '0');
+  return `${parts['year']}-${parts['month']}-${parts['day']}T${parts['hour']}:${parts['minute']}:${parts['second']}${sign}${hours}:${minutes}`;
 }
 
 export function shape(value: unknown): unknown {
@@ -32,7 +42,7 @@ export function shape(value: unknown): unknown {
     return value.map(shape);
   }
   if (typeof value === 'string') {
-    return ISO_INSTANT.test(value) ? formatPragueInstant(value) : value;
+    return ISO_INSTANT.test(value) ? pragueInstant(value) : value;
   }
   if (typeof value !== 'object' || value === null) {
     return value;
@@ -40,7 +50,7 @@ export function shape(value: unknown): unknown {
   const shaped: Record<string, unknown> = {};
   for (const [key, entry] of Object.entries(value)) {
     if (key.endsWith(MINOR_SUFFIX) && typeof entry === 'number') {
-      shaped[key.slice(0, -MINOR_SUFFIX.length)] = formatCrowns(entry);
+      shaped[key.slice(0, -MINOR_SUFFIX.length)] = crownsOf(entry);
     } else {
       shaped[key] = shape(entry);
     }
@@ -49,5 +59,5 @@ export function shape(value: unknown): unknown {
 }
 
 export function asText(value: unknown): string {
-  return JSON.stringify(shape(value), null, 2);
+  return JSON.stringify(shape(value));
 }

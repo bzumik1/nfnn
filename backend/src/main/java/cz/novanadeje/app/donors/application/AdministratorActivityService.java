@@ -43,7 +43,7 @@ public class AdministratorActivityService {
                 .collect(Collectors.toMap(Donor::id, Function.identity()));
         List<AdminActionView> items = page.stream()
                 .map(entry -> new AdminActionView(entry.id(), entry.adminId(), Optional.ofNullable(adminsById.get(new DonorId(entry.adminId()))),
-                        entry.action(), entry.subjectId(), entry.details(), entry.performedAt()))
+                        entry.action(), entry.subjectId(), entry.details(), entry.performedAt(), entry.client()))
                 .toList();
         return new AdministratorActivity(items, entries.size() > limit);
     }

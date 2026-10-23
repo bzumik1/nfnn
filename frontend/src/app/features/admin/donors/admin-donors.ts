@@ -16,7 +16,6 @@ import { problemTypeEndsWith } from '../../../core/auth/api-problem';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
 import { formatBankTime } from '../../donations/donation-date';
-import { DashboardTopBar } from '../../donors/dashboard/top-bar/top-bar';
 import { AdminApi, DonorAccountResponse } from '../admin-api';
 
 type SearchState = 'idle' | 'searching' | 'ready' | 'error';
@@ -33,7 +32,7 @@ const QUERY_PARAM = 'q';
 
 @Component({
   selector: 'app-admin-donors',
-  imports: [DashboardTopBar, RouterLink],
+  imports: [RouterLink],
   templateUrl: './admin-donors.html',
   styleUrl: './admin-donors.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

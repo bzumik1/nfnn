@@ -1,20 +1,22 @@
+@use 'breakpoints' as bp;
+
 .type-switch {
   display: flex;
-  gap: 8px;
-  margin-bottom: 16px;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
 
   button {
     flex: 1;
-    padding: 10px;
+    padding: var(--space-2-5);
     border-radius: var(--radius-lg);
     border: 1.5px solid var(--color-border);
     background: var(--color-surface);
     color: var(--color-text-soft);
     cursor: pointer;
     font-family: var(--font-sans);
-    font-weight: 600;
-    font-size: 14px;
-    transition: all 0.2s;
+    font-weight: var(--weight-semibold);
+    font-size: var(--text-md);
+    transition: all var(--duration-base);
 
     &.is-active {
       border-color: var(--color-accent);
@@ -27,44 +29,44 @@
 .field-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
+  gap: var(--space-3);
 
-  @media (max-width: 480px) {
+  @include bp.down(phone) {
     grid-template-columns: 1fr;
     gap: 0;
   }
 }
 
 .register-label {
-  font-size: 13px;
-  font-weight: 600;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
   color: var(--color-text);
-  margin-bottom: 8px;
+  margin-bottom: var(--space-2);
 }
 
 .register-hint {
-  font-size: 13px;
-  line-height: 1.5;
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
   color: var(--color-text-muted);
-  margin-bottom: 16px;
+  margin-bottom: var(--space-4);
 }
 
 .consent {
-  font-size: 12px;
+  font-size: var(--text-xs);
   color: var(--color-text-subtle);
   text-align: center;
-  line-height: 1.5;
-  margin-top: 14px;
+  line-height: var(--leading-normal);
+  margin-top: var(--space-3-5);
 
   a {
     color: var(--color-accent);
-    font-weight: 600;
+    font-weight: var(--weight-semibold);
   }
 }
 
 .logo {
   text-align: center;
-  margin-bottom: 24px;
+  margin-bottom: var(--space-6);
 
   img {
     height: 36px;
@@ -87,19 +89,19 @@
   display: flex;
   background: var(--color-accent-bg);
   border-radius: var(--radius-pill);
-  padding: 4px;
-  margin-bottom: 8px;
+  padding: var(--space-1);
+  margin-bottom: var(--space-2);
 
   button {
     flex: 1;
-    padding: 10px;
+    padding: var(--space-2-5);
     border-radius: var(--radius-pill);
     border: none;
     cursor: pointer;
     font-family: var(--font-sans);
-    font-weight: 600;
-    font-size: 14px;
-    transition: all 0.2s;
+    font-weight: var(--weight-semibold);
+    font-size: var(--text-md);
+    transition: all var(--duration-base);
     background: transparent;
     color: var(--color-text-muted);
 
@@ -113,20 +115,20 @@
 
 .sub {
   color: var(--color-text-soft);
-  font-size: 14px;
+  font-size: var(--text-md);
   text-align: center;
-  margin: 12px 0 20px;
+  margin: var(--space-3) 0 var(--space-5);
 }
 
 .form-error {
   color: var(--color-danger);
-  font-size: 13px;
-  margin: 4px 0 8px;
+  font-size: var(--text-sm);
+  margin: var(--space-1) 0 var(--space-2);
 }
 
 .form-note {
-  font-size: 13px;
-  margin: 0 0 12px;
+  font-size: var(--text-sm);
+  margin: 0 0 var(--space-3);
 
   .link-btn {
     padding: 0;
@@ -135,25 +137,25 @@
 
 .form-status {
   color: var(--color-success);
-  font-size: 13px;
-  line-height: 1.5;
-  margin: 4px 0 12px;
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  margin: var(--space-1) 0 var(--space-3);
 }
 
 .form-submit {
   background: var(--color-accent);
   color: var(--color-on-accent);
   border: none;
-  padding: 14px;
+  padding: var(--space-3-5);
   width: 100%;
   border-radius: var(--radius-pill);
-  font-weight: 700;
-  font-size: 15px;
+  font-weight: var(--weight-bold);
+  font-size: var(--text-lg);
   cursor: pointer;
   font-family: var(--font-sans);
   box-shadow: var(--shadow-button);
-  margin-top: 4px;
-  transition: opacity 0.2s;
+  margin-top: var(--space-1);
+  transition: opacity var(--duration-base);
 
   &:disabled {
     opacity: 0.7;
@@ -164,9 +166,9 @@
 .divider {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin: 16px 0 12px;
-  font-size: 13px;
+  gap: var(--space-3);
+  margin: var(--space-4) 0 var(--space-3);
+  font-size: var(--text-sm);
   color: var(--color-text-subtle);
 
   &::before,
@@ -181,16 +183,16 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: var(--space-2);
   width: 100%;
-  padding: 12px;
+  padding: var(--space-3);
   border: 1.5px solid var(--color-accent);
   border-radius: var(--radius-pill);
   background: var(--color-surface);
   color: var(--color-accent);
   font-family: var(--font-sans);
-  font-weight: 700;
-  font-size: 15px;
+  font-weight: var(--weight-bold);
+  font-size: var(--text-lg);
   cursor: pointer;
 
   &:disabled {
@@ -201,19 +203,19 @@
 
 .foot {
   text-align: center;
-  font-size: 13px;
+  font-size: var(--text-sm);
   color: var(--color-text-subtle);
-  margin-top: 16px;
+  margin-top: var(--space-4);
 }
 
 .link-btn {
   background: none;
   border: none;
   color: var(--color-accent);
-  font-weight: 600;
-  font-size: 13px;
+  font-weight: var(--weight-semibold);
+  font-size: var(--text-sm);
   cursor: pointer;
-  padding: 0 0 0 4px;
+  padding: 0 0 0 var(--space-1);
   font-family: var(--font-sans);
 }
 
@@ -221,30 +223,30 @@
   background: none;
   border: none;
   color: var(--color-accent);
-  font-weight: 600;
-  font-size: 13px;
+  font-weight: var(--weight-semibold);
+  font-size: var(--text-sm);
   cursor: pointer;
   padding: 0;
   font-family: var(--font-sans);
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  margin-bottom: 24px;
+  gap: var(--space-1);
+  margin-bottom: var(--space-6);
 }
 
 .reset-title {
   font-family: var(--font-serif);
-  font-size: 22px;
-  font-weight: 700;
+  font-size: var(--text-3xl);
+  font-weight: var(--weight-bold);
   color: var(--color-text);
-  margin-bottom: 8px;
+  margin-bottom: var(--space-2);
 }
 
 .reset-lead {
   color: var(--color-text-soft);
-  font-size: 14px;
-  line-height: 1.6;
-  margin-bottom: 20px;
+  font-size: var(--text-md);
+  line-height: var(--leading-relaxed);
+  margin-bottom: var(--space-5);
 }
 
 .reset-success {
@@ -252,21 +254,21 @@
 
   h3 {
     font-family: var(--font-serif);
-    font-size: 20px;
-    font-weight: 700;
+    font-size: var(--text-3xl);
+    font-weight: var(--weight-bold);
     color: var(--color-text);
-    margin-bottom: 10px;
+    margin-bottom: var(--space-2-5);
   }
 
   p {
     color: var(--color-text-soft);
-    font-size: 14px;
-    line-height: 1.6;
-    margin-bottom: 24px;
+    font-size: var(--text-md);
+    line-height: var(--leading-relaxed);
+    margin-bottom: var(--space-6);
   }
 
   .reset-hint {
-    font-size: 13px;
+    font-size: var(--text-sm);
     color: var(--color-text-subtle);
   }
 }
@@ -279,6 +281,6 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 24px;
-  margin: 0 auto 16px;
+  font-size: var(--text-4xl);
+  margin: 0 auto var(--space-4);
 }

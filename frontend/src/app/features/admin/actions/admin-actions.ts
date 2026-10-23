@@ -10,12 +10,11 @@ import {
   viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { Router, RouterLink } from '@angular/router';
+import { Router } from '@angular/router';
 import { problemTypeEndsWith } from '../../../core/auth/api-problem';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
 import { formatBankTime } from '../../donations/donation-date';
-import { DashboardTopBar } from '../../donors/dashboard/top-bar/top-bar';
 import { AdminActionResponse, AdminApi } from '../admin-api';
 
 type LoadState = 'loading' | 'ready' | 'error';
@@ -38,6 +37,8 @@ const ACTION_NAMES: Record<string, string> = {
   ERASE_DONOR: $localize`:@@admin.actions.action.eraseDonor:Výmaz osobních údajů dárce`,
   CHANGE_REPORT_SETTINGS: $localize`:@@admin.actions.action.changeReportSettings:Změna nastavení měsíčního přehledu`,
   SEND_MONTHLY_REPORT: $localize`:@@admin.actions.action.sendMonthlyReport:Ruční odeslání měsíčního přehledu`,
+  CHANGE_RECEIPT_SIGNATURE: $localize`:@@admin.actions.action.changeReceiptSignature:Nahrání podpisu na potvrzení o daru`,
+  REMOVE_RECEIPT_SIGNATURE: $localize`:@@admin.actions.action.removeReceiptSignature:Odebrání podpisu z potvrzení o daru`,
   CREATE_NEWS: $localize`:@@admin.actions.action.createNews:Napsání aktuality`,
   UPDATE_NEWS: $localize`:@@admin.actions.action.updateNews:Úprava aktuality`,
   PUBLISH_NEWS: $localize`:@@admin.actions.action.publishNews:Zveřejnění aktuality`,
@@ -51,11 +52,16 @@ const ACTION_NAMES: Record<string, string> = {
   REQUEST_BACKUP: $localize`:@@admin.actions.action.requestBackup:Spuštění zálohy databáze`,
   REQUEST_TEST_RESTORE: $localize`:@@admin.actions.action.requestTestRestore:Spuštění zkušební obnovy zálohy`,
   DOWNLOAD_BACKUP: $localize`:@@admin.actions.action.downloadBackup:Stažení zálohy databáze`,
+  RESTORE_BACKUP: $localize`:@@admin.actions.action.restoreBackup:Spuštění obnovy databáze ze zálohy`,
+  BACKUP_RESTORED: $localize`:@@admin.actions.action.backupRestored:Obnova databáze ze zálohy`,
+  BACKUP_RESTORE_FAILED: $localize`:@@admin.actions.action.backupRestoreFailed:Nepovedená obnova databáze ze zálohy`,
+  CHANGE_LOG_LEVEL: $localize`:@@admin.actions.action.changeLogLevel:Dočasná změna úrovně logování`,
+  RESET_LOG_LEVEL: $localize`:@@admin.actions.action.resetLogLevel:Vrácení úrovně logování`,
+  CHANGE_SETTINGS: $localize`:@@admin.actions.action.changeSettings:Změna nastavení webu`,
 };
 
 @Component({
   selector: 'app-admin-actions',
-  imports: [DashboardTopBar, RouterLink],
   templateUrl: './admin-actions.html',
   styleUrl: './admin-actions.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

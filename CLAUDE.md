@@ -31,7 +31,7 @@ Read before building, update in the same PR: `docs/requirements.md` (client deci
 | `npm test -- --watch=false` | Vitest |
 | `npm run build` | production build to `dist/frontend/browser/` |
 | `npm run e2e` | Playwright; when it reports a missing browser build (cloud sessions ship an older Chromium), run `npx playwright install chromium` once |
-| **Stack** | `cp .env.example .env && docker compose up -d --build`, frontend on :8080; `JWT_SECRET` has no default |
+| **Stack** | `cp .env.example .env && docker compose up -d --build`, frontend on :8080; the `prod` profile asks for the server's settings at `/prvni-nastaveni` and generates its keys into the `backend-secrets` volume |
 
 ## Production logs
 
@@ -62,6 +62,6 @@ After a deploy, check the revision in `nfnn_status` against the merge commit and
 - `build.gradle.kts` sets `TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE=/var/run/docker.sock`; keep it.
 - A receipt template or `receipt.*` text change fails `ReceiptTemplateHistoryTest` until its candidate is reviewed and committed (skill `receipt-template`).
 - `@angular/localize` is wired in; never run `ng add @angular/localize` again. Never use H2.
-- `db/changelog/content/.gitkeep` stays: the master changelog's `includeAll` needs every context folder to exist, and a missing one stops the backend at startup.
+- Every context folder under `db/changelog/` must exist with at least one changelog: the master's `includeAll` stops the backend at startup on a missing folder. A new context brings its first changelog, not a `.gitkeep` (Liquibase warns about it at every start).
 - `spring.profiles.default: dev`: `getActiveProfiles()` is empty then; assert on `getDefaultProfiles()`.
 - The original HTML prototype was removed from the repo (git history keeps it); the theme in `frontend/src/styles/themes/_nova-nadeje.scss` and the existing components are the visual reference.

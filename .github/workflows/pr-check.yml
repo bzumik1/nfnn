@@ -124,6 +124,7 @@ jobs:
           docker build -t ghcr.io/bzumik1/nfnn-backend:latest backend
           docker build -t ghcr.io/bzumik1/nfnn-frontend:latest frontend
           docker build -t ghcr.io/bzumik1/nfnn-backup:latest deploy/backup
+          docker build -t ghcr.io/bzumik1/nfnn-postgres:latest deploy/postgres
           docker build -t ghcr.io/bzumik1/nfnn-mcp:latest mcp
 
       - name: Compose file has no dollar signs
@@ -136,14 +137,23 @@ jobs:
       - name: Compose file names no secret
         run: |
           if grep -noE '\b(POSTGRES_PASSWORD|PGPASSWORD|DB_PASSWORD|JWT_SECRET|MAIL_PASSWORD|FIO_TOKEN)\b' deploy/compose.yml; then
-            echo "::error::Secrets live in the env files on the server (deploy/*.env.example), never in deploy/compose.yml"
+            echo "::error::Secrets are generated into secrets/ or entered in the first setup, never written into deploy/compose.yml"
             exit 1
           fi
 
-      - name: Only the frontend publishes a port and only the backend reads secrets
+      - name: Only the frontend publishes a port, nothing reads an env file and the secrets folder reaches only its services
         run: |
           if [ "$(yq '[.services[] | select(has("ports"))] | length' deploy/compose.yml)" != 1 ] || [ "$(yq '.services.frontend | has("ports")' deploy/compose.yml)" != true ]; then
             echo "::error::only the frontend publishes a port"
+            exit 1
+          fi
+          if [ "$(yq '[.services[] | select(has("env_file"))] | length' deploy/compose.yml)" != 0 ]; then
+            echo "::error::no service reads an env file: secrets are generated into secrets/ and settings come from the first setup"
+            exit 1
+          fi
+          secrets_mounts=$(yq -o=json '[.services | to_entries[] | select(.value.volumes[]? | test("^/DATA/AppData/nfnn/secrets:")) | .key + "=" + (.value.volumes[] | select(test("^/DATA/AppData/nfnn/secrets:")))] | sort | join(" ")' deploy/compose.yml)
+          if [ "$secrets_mounts" != '"backend=/DATA/AppData/nfnn/secrets:/secrets backup=/DATA/AppData/nfnn/secrets:/secrets:ro postgres=/DATA/AppData/nfnn/secrets:/secrets"' ]; then
+            echo "::error::the secrets folder goes to postgres and the backend, read-only to the backup, and to nothing else (found $secrets_mounts)"
             exit 1
           fi
           if [ "$(yq '.services.mcp.volumes | length' deploy/compose.yml)" != 1 ] || [ "$(yq '.services.mcp.volumes[0]' deploy/compose.yml)" != /DATA/AppData/nfnn/logs:/logs ] || [ "$(yq '.services.mcp | has("env_file")' deploy/compose.yml)" != false ]; then
@@ -162,45 +172,9 @@ jobs:
             exit 1
           fi
 
-      - name: Env template values survive the YAML copy ZimaOS makes
+      - name: Prepare the compose file
         run: |
-          failed=0
-          while IFS= read -r line; do
-            file=${line%%:*}
-            entry=${line#*:}
-            entry=${entry#\#}
-            key=${entry%%=*}
-            value=${entry#*=}
-            tag=$(printf 'v: %s\n' "$value" | yq '.v | tag' 2>/dev/null) || tag=invalid
-            case "$tag" in
-              '!!str') continue ;;
-              '!!int') [[ $value =~ ^(0|[1-9][0-9]*)$ ]] && continue ;;
-              '!!bool') [[ $value =~ ^(true|false)$ ]] && continue ;;
-              '!!timestamp') [ "$key" = FIO_HISTORY_FROM ] && continue ;;
-            esac
-            echo "::error file=$file::$key=$value is read by YAML as $tag, so ZimaOS stores it in another form; make the backend accept that form and allow it here"
-            failed=1
-          done < <(grep -HE '^#?[A-Z_]+=.+' deploy/*.env.example)
-          exit $failed
-
-      - name: Prepare compose file and env files from the templates
-        run: |
-          env_dir="$RUNNER_TEMP/nfnn/env"
           mkdir -p "$RUNNER_TEMP/nfnn"
-          umask 077
-          mkdir "$env_dir"
-          db_password=$(openssl rand -hex 32)
-          jwt_secret=$(openssl rand -hex 32)
-          sed -E "s/^(POSTGRES_PASSWORD|PGPASSWORD|DB_PASSWORD)=$/\1=$db_password/" deploy/db.env.example > "$env_dir/db.env"
-          sed -E "s/^JWT_SECRET=$/JWT_SECRET=$jwt_secret/" deploy/backend.env.example > "$env_dir/backend.env"
-          if [ "$(grep -cE '^(POSTGRES_PASSWORD|PGPASSWORD|DB_PASSWORD)=[0-9a-f]{64}$' "$env_dir/db.env")" != 3 ]; then
-            echo "::error::deploy/db.env.example must have the empty lines POSTGRES_PASSWORD=, PGPASSWORD= and DB_PASSWORD="
-            exit 1
-          fi
-          if ! grep -qE '^JWT_SECRET=[0-9a-f]{64}$' "$env_dir/backend.env"; then
-            echo "::error::deploy/backend.env.example must have the empty line JWT_SECRET="
-            exit 1
-          fi
           install -d -m 755 "$RUNNER_TEMP/nfnn/logs"
           for log in nginx-access.log mcp.log; do
             echo "2026-01-01T00:00:00+00:00 left over from an earlier day" > "$RUNNER_TEMP/nfnn/logs/$log"
@@ -213,6 +187,65 @@ jobs:
       - name: Start the production stack
         run: docker compose up -d --wait --wait-timeout 300
 
+      - name: First setup
+        run: |
+          secrets="$RUNNER_TEMP/nfnn/secrets"
+          for file in db-password jwt-secret settings-key; do
+            [ "$(sudo stat -c '%a %U' "$secrets/$file")" = '600 root' ] || { echo "::error::secrets/$file must exist, owned by root with mode 600"; sudo ls -la "$secrets"; exit 1; }
+          done
+          status=$(curl -fsS --max-time 10 http://localhost:8089/api/operations/setup)
+          [ "$status" = '{"required":true,"codeRequired":false,"lastRestore":null}' ] || { echo "::error::a fresh install opened directly must ask for the setup without a code (got $status)"; exit 1; }
+          proxied=$(curl -fsS --max-time 10 -H 'X-Forwarded-For: 203.0.113.7' http://localhost:8089/api/operations/setup)
+          [ "$proxied" = '{"required":true,"codeRequired":true,"lastRestore":null}' ] || { echo "::error::a request through a proxy must need the code (got $proxied)"; exit 1; }
+          wrong=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 -H 'X-Forwarded-For: 203.0.113.7' -H 'Content-Type: application/json' --data '{"code":"AAAA-BBBB-CCCC"}' http://localhost:8089/api/operations/setup/unlock)
+          [ "$wrong" = 403 ] || { echo "::error::a wrong code must answer 403 (got $wrong)"; exit 1; }
+          code=$(docker logs nfnn-backend 2>&1 | grep -oE '^ +[2-9A-Z]{4}-[2-9A-Z]{4}-[2-9A-Z]{4} *$' | tail -n 1 | tr -d ' ')
+          [ -n "$code" ] || { echo "::error::the backend printed no setup code into the container log"; exit 1; }
+          if grep -q -- "$code" "$RUNNER_TEMP/nfnn/logs/backend.log"; then
+            echo "::error::the setup code must not reach backend.log, which administrators and the connector read"
+            exit 1
+          fi
+          right=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 -H 'X-Forwarded-For: 203.0.113.7' -H 'Content-Type: application/json' --data "{\"code\":\"$code\"}" http://localhost:8089/api/operations/setup/unlock)
+          [ "$right" = 204 ] || { echo "::error::the code from the log must unlock the setup (got $right)"; exit 1; }
+          restarts=$(docker inspect -f '{{.RestartCount}}' nfnn-backend)
+          saved=$(curl -fsS --max-time 30 -H 'X-Forwarded-For: 203.0.113.7' -H 'Content-Type: application/json' --data "{\"code\":\"$code\",\"settings\":[{\"name\":\"PUBLIC_URL\",\"value\":\"http://localhost:8089\"},{\"name\":\"MAIL_HOST\",\"value\":\"localhost\"},{\"name\":\"MAIL_PORT\",\"value\":\"1025\"},{\"name\":\"MAIL_FROM\",\"value\":\"info@nfnn.cz\"},{\"name\":\"CONTACT_RECIPIENT\",\"value\":\"info@nfnn.cz\"},{\"name\":\"ADMIN_EMAILS\",\"value\":\"spravce@example.cz\"},{\"name\":\"MAIL_PASSWORD\",\"value\":\"not-a-real-password\"}]}" http://localhost:8089/api/operations/setup)
+          echo "$saved" | jq -e '.restarting == true' > /dev/null || { echo "::error::the setup was not saved: $saved"; exit 1; }
+          echo "The backend restarts with the stored settings"
+          for _ in $(seq 90); do
+            if [ "$(docker inspect -f '{{.RestartCount}}' nfnn-backend)" -gt "$restarts" ] && [ "$(docker inspect -f '{{.State.Health.Status}}' nfnn-backend)" = healthy ]; then
+              break
+            fi
+            sleep 2
+          done
+          [ "$(docker inspect -f '{{.State.Health.Status}}' nfnn-backend)" = healthy ] && [ "$(docker inspect -f '{{.RestartCount}}' nfnn-backend)" -gt "$restarts" ] || { echo "::error::the backend did not come back after the setup"; exit 1; }
+          done_status=$(curl -fsS --max-time 10 http://localhost:8089/api/operations/setup)
+          [ "$(echo "$done_status" | jq -r '.required')" = false ] || { echo "::error::the setup still asks after the restart"; exit 1; }
+          grep -q 'Loaded 7 stored settings' "$RUNNER_TEMP/nfnn/logs/backend.log" || { echo "::error::the backend did not load the stored settings"; exit 1; }
+          stored=$(docker exec nfnn-postgres psql -U novanadeje -d novanadeje -tA -c "select value from operations_setting where name = 'MAIL_PASSWORD'")
+          case "$stored" in
+            v1:*) ;;
+            *) echo "::error::the SMTP password must be stored encrypted"; exit 1 ;;
+          esac
+          if echo "$stored" | grep -q not-a-real-password; then
+            echo "::error::the stored SMTP password is readable in the database"
+            exit 1
+          fi
+          closed=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 -H 'Content-Type: application/json' --data '{"code":null,"settings":[]}' http://localhost:8089/api/operations/setup)
+          [ "$closed" = 409 ] || { echo "::error::a completed setup must answer 409 (got $closed)"; exit 1; }
+
+      - name: The database takes the generated password even when it had another one
+        run: |
+          docker exec nfnn-postgres psql -U novanadeje -d novanadeje -c "alter role novanadeje password 'an-old-password'"
+          docker compose restart postgres
+          for _ in $(seq 30); do
+            if docker exec nfnn-postgres sh -c 'PGPASSWORD=$(cat /secrets/db-password) psql -h 127.0.0.1 -U novanadeje -d novanadeje -tA -c "select 1"' 2> /dev/null | grep -q 1; then
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "::error::nfnn-postgres did not set the role's password to the generated one"
+          exit 1
+
       - name: Verify
         run: |
           curl -fsS --max-time 10 http://localhost:8089/ | grep -q '<app-root'
@@ -224,7 +257,7 @@ jobs:
           for container in nfnn-postgres nfnn-backup nfnn-mcp nfnn-frontend; do
             for key in JWT_SECRET FIO_TOKEN MAIL_PASSWORD; do
               if docker exec "$container" printenv "$key" > /dev/null; then
-                echo "::error::$container must not receive $key: only the backend reads backend.env"
+                echo "::error::$container must not receive $key"
                 exit 1
               fi
             done
@@ -239,6 +272,12 @@ jobs:
           issuer=$(curl -fsS --max-time 10 http://localhost:8089/.well-known/oauth-authorization-server | jq -r '.issuer')
           [ -n "$issuer" ] && [ "$issuer" != null ] || { echo "::error::the authorization server metadata names no issuer"; exit 1; }
           echo "The authorization server is $issuer"
+          echo "The connector picks up the address saved in the first setup within its 30 s refresh"
+          for _ in $(seq 25); do
+            docker exec nfnn-mcp wget -q -O - http://127.0.0.1:8081/health | jq -e --arg issuer "$issuer" '.issuer == $issuer' > /dev/null && break
+            sleep 2
+          done
+          docker exec nfnn-mcp wget -q -O - http://127.0.0.1:8081/health | jq -e --arg issuer "$issuer" '.issuer == $issuer' > /dev/null || { echo "::error::the MCP connector still names another authorization server"; exit 1; }
           mcp_headers=$(curl -sS -D - -o /dev/null --max-time 10 -X POST -H 'Content-Type: application/json' -H 'Accept: application/json, text/event-stream' --data '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' http://localhost:8089/mcp)
           echo "$mcp_headers" | grep -q '^HTTP/1.1 401' || { echo "::error::/mcp without a token must answer 401"; echo "$mcp_headers"; exit 1; }
           echo "$mcp_headers" | grep -qi "^WWW-Authenticate: Bearer .*resource_metadata=\"$issuer/.well-known/oauth-protected-resource/mcp\"" || { echo "::error::the 401 must point at the protected resource metadata"; echo "$mcp_headers"; exit 1; }
@@ -250,11 +289,12 @@ jobs:
           docker exec nfnn-mcp sh -c 'uid=$(awk "/^Uid:/ {print \$2}" /proc/1/status); [ "$uid" = "$(id -u node)" ]' || { echo "::error::the MCP connector must run as the node user"; exit 1; }
           echo "The frontend and the connector write their logs into the logs folder, without addresses or query strings, and rotated the files left over from an earlier day"
           curl -fsS -o /dev/null --max-time 10 'http://localhost:8089/?q=not-in-the-log'
+          docker exec nfnn-frontend wget -q -O /dev/null http://127.0.0.1/healthcheck-not-in-the-log
           grep -q 'Authorization server discovered' "$logs/mcp.log" || { echo "::error::the MCP connector did not write its log file"; ls -la "$logs"; exit 1; }
           grep -qE ' GET / 200 ' "$logs/nginx-access.log" || { echo "::error::nginx did not write its access log"; ls -la "$logs"; exit 1; }
           grep -qE ' POST /mcp 401 ' "$logs/nginx-access.log" || { echo "::error::the access log misses the connector's 401"; cat "$logs/nginx-access.log"; exit 1; }
           if grep -nE 'not-in-the-log|([0-9]{1,3}\.){3}[0-9]{1,3}' "$logs/nginx-access.log"; then
-            echo "::error::the access log must name no client address and no query string"
+            echo "::error::the access log must name no client address, no query string and no healthcheck from inside the container"
             exit 1
           fi
           for log in nginx-access.log mcp.log; do
@@ -288,18 +328,45 @@ jobs:
           wait_for "grep -q '^request=ci-2$' $backups/status/test-restore" 60 "the requested test restore did not run"
           grep -q '^outcome=ok$' "$backups/status/test-restore" || { echo "::error::the test restore failed"; cat "$backups/status/test-restore"; exit 1; }
           grep -E '^tables=[1-9][0-9]*$' "$backups/status/test-restore" || { echo "::error::the test restore counted no tables"; exit 1; }
+          full_dump=$(ls "$backups"/nfnn-*-rucni.dump | head -n 1)
 
           echo "A dump in the restore folder is restored into the emptied database before the backend starts"
           restore="$RUNNER_TEMP/nfnn/restore"
           docker compose stop backend backup
           docker exec nfnn-postgres psql -U novanadeje -d novanadeje -c "insert into admin_action (id, admin_id, action, details, performed_at) values ('019a0000-0000-7000-8000-000000000001', '019a0000-0000-7000-8000-000000000002', 'CI_MARKER', 'to be undone by the restore', now())"
-          sudo cp "$dump" "$restore/ci.force.dump"
+          sudo cp "$full_dump" "$restore/ci.force.dump"
           docker compose up -d --wait --wait-timeout 300 postgres backup backend frontend
           wait_for "[ -f $restore/ci.force.dump.done ]" 30 "the restore folder dump was not restored"
           grep -q '^outcome=ok$' "$backups/status/restore" || { echo "::error::the restore status file does not say ok"; cat "$backups/status/restore"; exit 1; }
           ls "$backups"/nfnn-*-pred-obnovou.dump > /dev/null || { echo "::error::no safety dump was taken before the forced restore"; exit 1; }
           marker=$(docker exec nfnn-postgres psql -U novanadeje -d novanadeje -tA -c "select count(*) from admin_action where action = 'CI_MARKER'")
           [ "$marker" = 0 ] || { echo "::error::the forced restore kept a row written after the dump"; exit 1; }
+          curl -fsS --max-time 10 http://localhost:8089/ | grep -q '<app-root'
+
+          echo "A restore asked for in the administration runs while the restarted backend waits, replaces the data and is recorded once"
+          count_rows() {
+            docker exec nfnn-postgres psql -U novanadeje -d novanadeje -tA -c "select count(*) from admin_action where $1"
+          }
+          docker exec nfnn-postgres psql -U novanadeje -d novanadeje -c "insert into admin_action (id, admin_id, action, details, performed_at) values ('019a0000-0000-7000-8000-000000000003', '019a0000-0000-7000-8000-000000000002', 'CI_MARKER', 'to be undone by the requested restore', now())"
+          docker exec nfnn-backend sh -c "printf 'source=backup\nfile=%s\nadmin=019a0000-0000-7000-8000-000000000002\n' '$(basename "$full_dump")' > /backups/requests/ci-3.restore"
+          docker restart nfnn-backend
+          wait_for "grep -q '^request=ci-3$' $backups/status/restore" 60 "the requested restore did not run"
+          grep -q '^outcome=ok$' "$backups/status/restore" || { echo "::error::the requested restore failed"; cat "$backups/status/restore"; exit 1; }
+          docker compose up -d --wait --wait-timeout 300 backend
+          [ ! -e "$backups/status/restore.running" ] || { echo "::error::the restore left its running marker"; exit 1; }
+          [ "$(count_rows "action = 'CI_MARKER'")" = 0 ] || { echo "::error::the requested restore kept a row written after the dump"; exit 1; }
+          [ "$(count_rows "action = 'BACKUP_RESTORED' and admin_id = '019a0000-0000-7000-8000-000000000002'")" = 1 ] || { echo "::error::the finished restore is not recorded in the administration history"; exit 1; }
+          docker exec nfnn-postgres psql -U novanadeje -d postgres -tA -c "select datname from pg_database" | grep -q nfnn_restore && { echo "::error::a staging or retired database was left behind"; exit 1; }
+
+          echo "A restore that fails leaves the data as they were, removes the upload and lets the backend start"
+          docker exec nfnn-postgres psql -U novanadeje -d novanadeje -c "insert into admin_action (id, admin_id, action, details, performed_at) values ('019a0000-0000-7000-8000-000000000004', '019a0000-0000-7000-8000-000000000002', 'CI_MARKER', 'kept by the failed restore', now())"
+          docker exec nfnn-backend sh -c "printf 'PGDMP but not a dump' > /restore/ci-4.upload && printf 'source=upload\nfile=ci-4.upload\nadmin=\n' > /backups/requests/ci-4.restore"
+          docker restart nfnn-backend
+          wait_for "grep -q '^request=ci-4$' $backups/status/restore" 60 "the failing restore did not run"
+          grep -q '^outcome=failed$' "$backups/status/restore" || { echo "::error::the broken upload was not reported as failed"; cat "$backups/status/restore"; exit 1; }
+          docker compose up -d --wait --wait-timeout 300 backend
+          [ "$(count_rows "action = 'CI_MARKER'")" = 1 ] || { echo "::error::the failed restore changed the data"; exit 1; }
+          [ ! -e "$restore/ci-4.upload" ] || { echo "::error::the upload was left in the restore folder"; exit 1; }
           curl -fsS --max-time 10 http://localhost:8089/ | grep -q '<app-root'
 
       - name: Logs

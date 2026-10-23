@@ -1,0 +1,15 @@
+:host {
+  display: block;
+}
+
+.page-title {
+  font-family: var(--font-serif);
+  font-size: var(--text-heading);
+  font-weight: var(--weight-bold);
+  color: var(--color-text);
+  margin-bottom: var(--space-5);
+
+  &:focus {
+    outline: none;
+  }
+}

@@ -12,6 +12,7 @@ public record PairingProperties(List<String> excludedAccounts) {
 
     public PairingProperties {
         excludedAccounts = excludedAccounts == null ? List.of() : List.copyOf(excludedAccounts);
+        excludedAccounts.stream().filter(entry -> !entry.isBlank()).forEach(PairingProperties::parse);
     }
 
     ExcludedSenderAccounts toExcludedSenderAccounts() {

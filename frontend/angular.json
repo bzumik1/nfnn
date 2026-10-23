@@ -24,6 +24,7 @@
             "browser": "src/main.ts",
             "tsConfig": "tsconfig.app.json",
             "inlineStyleLanguage": "scss",
+            "stylePreprocessorOptions": { "includePaths": ["src/styles"] },
             "assets": [
               {
                 "glob": "**/*",
@@ -49,7 +50,7 @@
                 {
                   "type": "anyComponentStyle",
                   "maximumWarning": "4kB",
-                  "maximumError": "10kB"
+                  "maximumError": "12kB"
                 }
               ],
               "outputHashing": "all"

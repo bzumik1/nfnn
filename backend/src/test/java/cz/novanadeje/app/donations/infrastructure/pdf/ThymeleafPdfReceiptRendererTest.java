@@ -7,6 +7,7 @@ import cz.novanadeje.app.donations.domain.receipt.ReceiptDocumentFactory;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptNumber;
 import cz.novanadeje.app.donations.domain.receipt.Receipts;
 import cz.novanadeje.app.donations.domain.receipt.ReplacedReceipt;
+import cz.novanadeje.app.donations.domain.receipt.SignatureImage;
 import cz.novanadeje.app.shared.domain.LocaleCode;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
@@ -235,15 +236,15 @@ class ThymeleafPdfReceiptRendererTest {
         return renderer(ReceiptTemplate.fromClasspath(), Optional.of(signature(300, 100)));
     }
 
-    private ThymeleafPdfReceiptRenderer renderer(ReceiptTemplate template, Optional<ReceiptImage> signature) {
-        return new ThymeleafPdfReceiptRenderer(resources, template, new ConfiguredSignatureImage(signature), Clock.fixed(NOW, ZoneOffset.UTC));
+    private ThymeleafPdfReceiptRenderer renderer(ReceiptTemplate template, Optional<SignatureImage> signature) {
+        return new ThymeleafPdfReceiptRenderer(resources, template, InMemoryReceiptSignatures.holding(signature), Clock.fixed(NOW, ZoneOffset.UTC));
     }
 
-    static ReceiptImage signature(int width, int height) {
+    static SignatureImage signature(int width, int height) {
         try {
             ByteArrayOutputStream png = new ByteArrayOutputStream();
             ImageIO.write(new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB), "png", png);
-            return new ReceiptImage(png.toByteArray(), "image/png");
+            return new SignatureImage(png.toByteArray(), width, height);
         } catch (IOException e) {
             throw new AssertionError(e);
         }

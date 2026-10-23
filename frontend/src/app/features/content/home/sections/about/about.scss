@@ -1,60 +1,62 @@
+@use 'breakpoints' as bp;
+
 .about {
-  padding: 108px 0;
+  padding: var(--space-27) 0;
   background: var(--color-surface);
 }
 
 .section-inner {
   max-width: var(--content-max);
   margin: 0 auto;
-  padding: 0 32px;
+  padding: 0 var(--space-8);
 }
 
 .two-col {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 80px;
+  gap: var(--space-20);
   align-items: center;
 }
 
 .eyebrow {
   color: var(--color-accent);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.2em;
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-widest);
   text-transform: uppercase;
-  margin-bottom: 16px;
+  margin-bottom: var(--space-4);
 }
 
 .title {
   font-family: var(--font-serif);
-  font-size: clamp(30px, 4vw, 50px);
-  font-weight: 800;
-  line-height: 1.15;
-  margin-bottom: 28px;
+  font-size: var(--text-section-title);
+  font-weight: var(--weight-extrabold);
+  line-height: var(--leading-display);
+  margin-bottom: var(--space-7);
   color: var(--color-text);
 }
 
 .paragraph {
   color: var(--color-text-muted);
-  line-height: 1.85;
-  font-size: 16px;
-  margin-bottom: 18px;
+  line-height: var(--leading-loose);
+  font-size: var(--text-xl);
+  margin-bottom: var(--space-4-5);
 }
 
 .paragraph--last {
-  margin-bottom: 36px;
+  margin-bottom: var(--space-9);
 }
 
 .link-arrow {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   color: var(--color-accent);
-  font-weight: 700;
-  font-size: 15px;
+  font-weight: var(--weight-bold);
+  font-size: var(--text-lg);
   text-decoration: none;
   border-bottom: 2px solid var(--color-accent);
-  padding-bottom: 2px;
+  padding-bottom: var(--space-0-5);
 }
 
 .about-img-wrap {
@@ -78,37 +80,37 @@
   background: var(--color-accent);
   color: var(--color-on-accent);
   border-radius: var(--radius-media);
-  padding: 22px 30px;
+  padding: var(--space-5-5) var(--space-7);
   max-width: 240px;
   box-shadow: var(--shadow-badge);
 }
 
 .about-badge-title {
   font-family: var(--font-serif);
-  font-size: 30px;
-  font-weight: 800;
-  line-height: 1;
+  font-size: var(--text-5xl);
+  font-weight: var(--weight-extrabold);
+  line-height: var(--leading-none);
 }
 
 .about-badge-text {
-  font-size: 13px;
+  font-size: var(--text-sm);
   opacity: 0.92;
-  margin-top: 6px;
-  line-height: 1.45;
+  margin-top: var(--space-1-5);
+  line-height: var(--leading-normal);
 }
 
-@media (max-width: 768px) {
+@include bp.down(tablet) {
   .about {
-    padding: 64px 0;
+    padding: var(--space-16) 0;
   }
 
   .section-inner {
-    padding: 0 20px;
+    padding: 0 var(--space-5);
   }
 
   .two-col {
     grid-template-columns: 1fr;
-    gap: 40px;
+    gap: var(--space-10);
   }
 
   .about-img-wrap {

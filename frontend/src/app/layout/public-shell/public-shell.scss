@@ -11,12 +11,12 @@ main {
   top: 16px;
   left: 16px;
   z-index: 300;
-  padding: 12px 20px;
+  padding: var(--space-3) var(--space-5);
   border-radius: var(--radius-pill);
   background: var(--color-surface);
   color: var(--color-accent);
   box-shadow: var(--shadow-menu);
-  font-weight: 600;
+  font-weight: var(--weight-semibold);
   text-decoration: none;
   transform: translateY(-200%);
 
