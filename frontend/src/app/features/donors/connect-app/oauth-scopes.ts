@@ -2,6 +2,8 @@
 
 import { OAuthScope } from '../../../core/auth/donor';
 
+export const WRITE_SCOPE: OAuthScope = 'admin:write';
+
 export const SCOPE_LABELS: Record<OAuthScope, string> = {
   'admin:read': $localize`:@@donor.connect.scope.read:Čtení: stav importu a verze, dary a dárci, zálohy, historie správy, nastavení reportu, aktuality a projekty, konec logu`,
   'admin:write': $localize`:@@donor.connect.scope.write:Změny: přiřazení platby dárci, odeslání měsíčního reportu, vyžádání zálohy, zveřejnění aktuality nebo projektu`,

@@ -129,8 +129,12 @@ describe('Given an application sent the browser to the connection page', () => {
       expect(element('.lead').textContent).toContain('„Claude“');
       expect(element('.lead').textContent).toContain('Jana Nováková');
       expect(Array.from(root().querySelectorAll('.scopes li')).map((li) => li.textContent)).toEqual(
-        [expect.stringContaining('Čtení:'), expect.stringContaining('Změny:')],
+        [expect.stringContaining('Čtení:')],
       );
+      const writeOption = element<HTMLInputElement>('#connect-app-write');
+      expect(writeOption.checked).toBe(false);
+      expect(element('label[for="connect-app-write"]').textContent).toContain('Změny:');
+      expect(element('.scope-hint').textContent).toContain('jen čtení');
       expect(document.activeElement).toBe(element('h1'));
     });
   });
@@ -152,7 +156,7 @@ describe('Given an application sent the browser to the connection page', () => {
         responseType: 'code',
         codeChallenge: QUERY.code_challenge,
         codeChallengeMethod: 'S256',
-        scope: 'admin:read admin:write',
+        scope: 'admin:read',
         resource: 'http://localhost:4200/mcp',
         state: 'xyz',
         approved: true,
@@ -168,6 +172,22 @@ describe('Given an application sent the browser to the connection page', () => {
         `${REDIRECT}?code=abc&state=xyz&iss=http%3A%2F%2Flocalhost%3A4200`,
       ]);
       expect(element('h1').textContent).toContain('Vracíme vás do aplikace');
+    });
+
+    it('and ticks the changes before allowing, then both permissions go to the API', async () => {
+      element<HTMLInputElement>('#connect-app-write').click();
+      await settle();
+      expect(element<HTMLInputElement>('#connect-app-write').checked).toBe(true);
+
+      await clickButton('Povolit');
+
+      const request = http.expectOne({ method: 'POST', url: '/api/donors/oauth/authorize' });
+      expect(request.request.body).toMatchObject({
+        scope: 'admin:read admin:write',
+        approved: true,
+      });
+      request.flush({ redirectTo: `${REDIRECT}?code=abc&state=xyz` });
+      await settle();
     });
 
     it('and declines, then the API is told and the browser leaves with the error for the application', async () => {
@@ -246,6 +266,16 @@ describe('Given an application sent the browser to the connection page', () => {
       await settle();
 
       expect(element('h1').textContent).toContain('Povolit přístup ke správě aplikaci');
+    });
+
+    it('then an application asking for reading only gets no choice of changes', async () => {
+      await configure({ ...QUERY, scope: 'admin:read' }, { roles: ['DONOR', 'ADMIN'] });
+      http.expectOne(CLIENT_URL).flush(CLAUDE);
+      await settle();
+
+      expect(element('#connect-app-write')).toBeNull();
+      expect(element('.scope-hint')).toBeNull();
+      expect(root().querySelectorAll('.scopes li')).toHaveLength(1);
     });
 
     it('then an unknown permission disables Povolit and says why', async () => {
