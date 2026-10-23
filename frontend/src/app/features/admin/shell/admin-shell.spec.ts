@@ -98,6 +98,7 @@ describe('Given an administrator anywhere in the administration', () => {
         label: 'Provoz',
         links: [
           ['Zálohy', '/sprava/zalohy'],
+          ['Logy a diagnostika', '/sprava/logy'],
           ['Historie správy', '/sprava/historie'],
         ],
       },

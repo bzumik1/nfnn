@@ -314,6 +314,102 @@ export interface BackupRequestResponse {
   requestedAt: string;
 }
 
+export interface LogFileResponse {
+  name: string;
+  sizeBytes: number;
+  changedAt: string;
+  compressed: boolean;
+}
+
+export interface LogFilesResponse {
+  available: boolean;
+  files: LogFileResponse[];
+}
+
+export interface LogWindowResponse {
+  name: string;
+  sizeBytes: number;
+  from: number;
+  to: number;
+  hasOlder: boolean;
+  hasNewer: boolean;
+  text: string;
+}
+
+export interface LogMatchResponse {
+  offset: number;
+  line: string;
+}
+
+export interface LogSearchResponse {
+  name: string;
+  sizeBytes: number;
+  matches: LogMatchResponse[];
+  moreOlder: boolean;
+  scannedFrom: number;
+}
+
+export type LogLevel = 'TRACE' | 'DEBUG' | 'INFO' | 'WARN' | 'ERROR' | 'OFF';
+
+export interface LogOverrideResponse {
+  logger: string;
+  level: LogLevel;
+  configuredBefore: LogLevel | null;
+  since: string;
+  until: string;
+  adminId: string;
+}
+
+export interface LoggerResponse {
+  logger: string;
+  configuredLevel: LogLevel | null;
+  effectiveLevel: LogLevel;
+  override: LogOverrideResponse | null;
+}
+
+export interface LogLevelsResponse {
+  loggers: LoggerResponse[];
+}
+
+export interface JvmDiagnosticsResponse {
+  javaVersion: string;
+  startedAt: string;
+  heapUsedBytes: number;
+  heapMaxBytes: number;
+  nonHeapUsedBytes: number;
+  liveThreads: number;
+  peakThreads: number;
+  daemonThreads: number;
+  gcCount: number;
+  gcTimeMillis: number;
+  availableProcessors: number;
+  systemLoadAverage: number;
+}
+
+export interface DatabaseDiagnosticsResponse {
+  reachable: boolean;
+  pingMillis: number;
+  activeConnections: number;
+  idleConnections: number;
+  waitingThreads: number;
+  maxConnections: number;
+}
+
+export interface DiskSpaceResponse {
+  path: string;
+  mounted: boolean;
+  freeBytes: number;
+  totalBytes: number;
+}
+
+export interface DiagnosticsResponse {
+  now: string;
+  jvm: JvmDiagnosticsResponse;
+  database: DatabaseDiagnosticsResponse;
+  disks: DiskSpaceResponse[];
+  logLevelOverrides: LogOverrideResponse[];
+}
+
 @Injectable({ providedIn: 'root' })
 export class AdminApi {
   private readonly http = inject(HttpClient);
@@ -467,7 +563,63 @@ export class AdminApi {
       })
       .pipe(map((response) => downloadedFile(response, fileName)));
   }
+
+  logFiles(): Observable<LogFilesResponse> {
+    return this.http.get<LogFilesResponse>(LOGS_URL);
+  }
+
+  logWindow(name: string, from: number | null, bytes: number): Observable<LogWindowResponse> {
+    const params: Record<string, string> = { bytes: String(bytes) };
+    if (from !== null) {
+      params['from'] = String(from);
+    }
+    return this.http.get<LogWindowResponse>(`${LOGS_URL}/${encodeURIComponent(name)}`, {
+      params,
+    });
+  }
+
+  searchLog(
+    name: string,
+    pattern: string,
+    before: number | null,
+    limit: number,
+  ): Observable<LogSearchResponse> {
+    const params: Record<string, string> = { pattern, limit: String(limit) };
+    if (before !== null) {
+      params['before'] = String(before);
+    }
+    return this.http.get<LogSearchResponse>(`${LOGS_URL}/${encodeURIComponent(name)}/search`, {
+      params,
+    });
+  }
+
+  logLevels(): Observable<LogLevelsResponse> {
+    return this.http.get<LogLevelsResponse>(LOGGERS_URL);
+  }
+
+  setLogLevel(logger: string, level: LogLevel, minutes: number): Observable<LogOverrideResponse> {
+    return this.http.put<LogOverrideResponse>(`${LOGGERS_URL}/${encodeURIComponent(logger)}`, {
+      level,
+      minutes,
+    });
+  }
+
+  resetLogLevel(logger: string): Observable<void> {
+    return this.http.delete<void>(`${LOGGERS_URL}/${encodeURIComponent(logger)}`);
+  }
+
+  diagnostics(): Observable<DiagnosticsResponse> {
+    return this.http.get<DiagnosticsResponse>(DIAGNOSTICS_URL);
+  }
+
+  threadDump(): Observable<string> {
+    return this.http.get(`${DIAGNOSTICS_URL}/threads`, { responseType: 'text' });
+  }
 }
+
+const LOGS_URL = '/api/admin/operations/logs';
+const LOGGERS_URL = '/api/admin/operations/loggers';
+const DIAGNOSTICS_URL = '/api/admin/operations/diagnostics';
 
 function donorAccountUrl(donorId: string, linkId: string): string {
   return `/api/admin/donations/donors/${encodeURIComponent(donorId)}/bank-accounts/${encodeURIComponent(linkId)}`;

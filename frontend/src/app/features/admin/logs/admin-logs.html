@@ -1,0 +1,472 @@
+<div class="container">
+  <h1 #title class="admin-title" tabindex="-1" i18n="@@admin.logs.heading">Logy a diagnostika</h1>
+  <p class="admin-intro" i18n="@@admin.logs.intro">
+    Log backendu ze serveru (složka /DATA/AppData/nfnn/logs, 14 dní zpět po souborech), hledání v
+    něm, dočasné zapnutí podrobnějšího logování a stav aplikace. Totéž umí Claude přes konektor.
+  </p>
+
+  @switch (state()) {
+    @case ('loading') {
+      <p class="admin-loading" role="status" i18n="@@admin.logs.loading">Načítáme logy…</p>
+    }
+    @case ('error') {
+      <div class="admin-error" role="alert">
+        <p i18n="@@admin.logs.error.text">Logy a diagnostiku se nepodařilo načíst.</p>
+        <button type="button" class="admin-retry" (click)="load()" i18n="@@admin.logs.error.retry">
+          Zkusit znovu
+        </button>
+      </div>
+    }
+    @case ('ready') {
+      <section class="admin-card" aria-labelledby="logs-files-title">
+        <h2 id="logs-files-title" class="admin-card-title" i18n="@@admin.logs.files.title">
+          Soubory logu
+        </h2>
+        @if (!available()) {
+          <p class="card-body unavailable" role="alert" i18n="@@admin.logs.files.unavailable">
+            Backend nevidí složku logů. Zkontrolujte compose na serveru: backend má mít připojenou
+            složku /DATA/AppData/nfnn/logs jako /logs.
+          </p>
+        } @else if (files().length === 0) {
+          <p class="card-body card-intro" i18n="@@admin.logs.files.none">Složka logů je prázdná.</p>
+        } @else {
+          <table>
+            <thead>
+              <tr>
+                <th i18n="@@admin.logs.files.col.file">Soubor</th>
+                <th i18n="@@admin.logs.files.col.changedAt">Změněno</th>
+                <th i18n="@@admin.logs.files.col.size">Velikost</th>
+                <th class="visually-hidden" i18n="@@admin.logs.files.col.actions">Akce</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (file of files(); track file.name) {
+                <tr [class.selected]="file.name === selectedFile()">
+                  <td data-label="Soubor" i18n-data-label="@@admin.logs.files.col.file">
+                    <span class="file-name">{{ file.name }}</span>
+                    @if (file.compressed) {
+                      <span class="badge" i18n="@@admin.logs.files.compressed">komprimovaný</span>
+                    }
+                  </td>
+                  <td
+                    class="changed"
+                    data-label="Změněno"
+                    i18n-data-label="@@admin.logs.files.col.changedAt"
+                  >
+                    {{ time(file.changedAt) }}
+                  </td>
+                  <td data-label="Velikost" i18n-data-label="@@admin.logs.files.col.size">
+                    {{ size(file.sizeBytes) }}
+                  </td>
+                  <td class="row-actions">
+                    <button
+                      type="button"
+                      class="action-btn"
+                      [attr.aria-label]="openLabel(file)"
+                      [attr.aria-pressed]="file.name === selectedFile()"
+                      (click)="open(file.name)"
+                      i18n="@@admin.logs.files.open"
+                    >
+                      Zobrazit
+                    </button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        }
+      </section>
+
+      @if (selectedFile(); as file) {
+        <section class="admin-card" aria-labelledby="logs-window-title">
+          <h2 id="logs-window-title" class="admin-card-title">
+            <ng-container i18n="@@admin.logs.window.title">Výpis</ng-container>
+            <span class="file-name title-file">{{ file }}</span>
+          </h2>
+          <div class="card-body">
+            <form
+              #searchForm="ngForm"
+              class="search-form"
+              appFocusFirstInvalid
+              (ngSubmit)="find(searchForm)"
+              novalidate
+            >
+              <app-form-field
+                label="Hledat"
+                i18n-label="@@admin.logs.search.label"
+                hint="Text nebo regulární výraz; velikost písmen nerozhoduje. Najde se nejvýš 50 nejnovějších řádků, starší načtete tlačítkem."
+                i18n-hint="@@admin.logs.search.hint"
+                [messages]="searchMessages"
+              >
+                <input
+                  appFormControl
+                  id="log-search"
+                  name="pattern"
+                  type="search"
+                  autocomplete="off"
+                  spellcheck="false"
+                  maxlength="200"
+                  [(ngModel)]="pattern"
+                  required
+                />
+              </app-form-field>
+              <button type="submit" class="action-btn" [disabled]="searchState() === 'loading'">
+                @if (searchState() === 'loading') {
+                  <ng-container i18n="@@admin.logs.search.busy">Hledáme…</ng-container>
+                } @else {
+                  <ng-container i18n="@@admin.logs.search.submit">Hledat</ng-container>
+                }
+              </button>
+            </form>
+            @if (searchState() === 'error') {
+              <p class="admin-notice admin-notice--alert" role="alert">{{ searchError() }}</p>
+            }
+            @if (search(); as result) {
+              <div class="matches" role="status">
+                @if (matches().length === 0) {
+                  <p class="card-intro" i18n="@@admin.logs.search.none">
+                    Nic takového v logu není.
+                  </p>
+                } @else {
+                  <p class="card-intro" i18n="@@admin.logs.search.count">
+                    {matches().length, plural,
+                      =1 {1 řádek, nejnovější první. Kliknutím ho zobrazíte i s okolím.}
+                      =2 {
+                        {{ matches().length }} řádky, nejnovější první. Kliknutím zobrazíte řádek i
+                        s okolím.
+                      }
+                      =3 {
+                        {{ matches().length }} řádky, nejnovější první. Kliknutím zobrazíte řádek i
+                        s okolím.
+                      }
+                      =4 {
+                        {{ matches().length }} řádky, nejnovější první. Kliknutím zobrazíte řádek i
+                        s okolím.
+                      }
+                      other {
+                        {{ matches().length }} řádků, nejnovější první. Kliknutím zobrazíte řádek i
+                        s okolím.
+                      }
+                    }
+                  </p>
+                  <ul class="match-list">
+                    @for (match of matches(); track match.offset) {
+                      <li>
+                        <button type="button" class="match" (click)="showMatch(match)">
+                          {{ match.line }}
+                        </button>
+                      </li>
+                    }
+                  </ul>
+                  @if (result.moreOlder) {
+                    <button
+                      type="button"
+                      class="action-btn"
+                      [disabled]="searchState() === 'loading'"
+                      (click)="olderMatches()"
+                      i18n="@@admin.logs.search.older"
+                    >
+                      Načíst starší shody
+                    </button>
+                  }
+                }
+              </div>
+            }
+
+            <div class="pager">
+              <button
+                type="button"
+                class="action-btn"
+                [disabled]="windowState() === 'loading' || !window()?.hasOlder"
+                (click)="older()"
+                i18n="@@admin.logs.window.older"
+              >
+                ← Starší
+              </button>
+              <button
+                type="button"
+                class="action-btn"
+                [disabled]="windowState() === 'loading' || !window()?.hasNewer"
+                (click)="newer()"
+                i18n="@@admin.logs.window.newer"
+              >
+                Novější →
+              </button>
+              <button
+                type="button"
+                class="action-btn"
+                [disabled]="windowState() === 'loading'"
+                (click)="toEnd()"
+                i18n="@@admin.logs.window.end"
+              >
+                Na konec
+              </button>
+              <span class="range" aria-live="polite">{{ windowRange() }}</span>
+            </div>
+            @if (windowState() === 'loading') {
+              <p class="card-intro" role="status" i18n="@@admin.logs.window.loading">
+                Načítáme výpis…
+              </p>
+            }
+            @if (windowState() === 'error') {
+              <p class="admin-notice admin-notice--alert" role="alert">{{ windowError() }}</p>
+            }
+            @if (window(); as window) {
+              <pre class="log-text" tabindex="0">{{ window.text }}</pre>
+            }
+          </div>
+        </section>
+      }
+
+      <section class="admin-card" aria-labelledby="logs-levels-title">
+        <h2 id="logs-levels-title" class="admin-card-title" i18n="@@admin.logs.level.title">
+          Úroveň logování
+        </h2>
+        <div class="card-body">
+          <p class="card-intro" i18n="@@admin.logs.level.intro">
+            Podrobnější logování (DEBUG, TRACE) zapněte jen na dobu hledání chyby: po uplynutí času
+            i po restartu backendu se úroveň vrátí sama. Změna se zapisuje do historie správy.
+          </p>
+          @if (levelNotice(); as notice) {
+            @if (notice.kind === 'status') {
+              <p class="admin-notice admin-notice--status" role="status">{{ notice.text }}</p>
+            } @else {
+              <p class="admin-notice admin-notice--alert" role="alert">{{ notice.text }}</p>
+            }
+          }
+          <form
+            #levelForm="ngForm"
+            class="level-form"
+            appFocusFirstInvalid
+            (ngSubmit)="setLevel(levelForm)"
+            novalidate
+          >
+            <app-form-field
+              label="Logger"
+              i18n-label="@@admin.logs.level.logger"
+              hint="ROOT, balíček nebo třída, třeba cz.novanadeje.app nebo org.hibernate.SQL."
+              i18n-hint="@@admin.logs.level.logger.hint"
+              [messages]="loggerMessages"
+            >
+              <input
+                appFormControl
+                id="log-level-logger"
+                name="logger"
+                type="text"
+                list="log-level-loggers"
+                autocomplete="off"
+                spellcheck="false"
+                maxlength="200"
+                [pattern]="loggerPattern"
+                [(ngModel)]="logger"
+                required
+              />
+              <datalist id="log-level-loggers">
+                @for (entry of loggers(); track entry.logger) {
+                  <option [value]="entry.logger"></option>
+                }
+              </datalist>
+            </app-form-field>
+            <app-form-field label="Úroveň" i18n-label="@@admin.logs.level.level">
+              <select appFormControl id="log-level-level" name="level" [(ngModel)]="level">
+                @for (option of levels; track option) {
+                  <option [ngValue]="option">{{ option }}</option>
+                }
+              </select>
+            </app-form-field>
+            <app-form-field
+              label="Na kolik minut"
+              i18n-label="@@admin.logs.level.minutes"
+              [messages]="minutesMessages"
+            >
+              <input
+                appFormControl
+                id="log-level-minutes"
+                name="minutes"
+                type="number"
+                inputmode="numeric"
+                min="1"
+                [max]="maxMinutes"
+                [(ngModel)]="minutes"
+                required
+              />
+            </app-form-field>
+            <button type="submit" class="primary" [disabled]="levelState() === 'loading'">
+              @if (levelState() === 'loading') {
+                <ng-container i18n="@@admin.logs.level.busy">Nastavujeme…</ng-container>
+              } @else {
+                <ng-container i18n="@@admin.logs.level.submit">Nastavit</ng-container>
+              }
+            </button>
+          </form>
+
+          <table class="levels">
+            <thead>
+              <tr>
+                <th i18n="@@admin.logs.level.col.logger">Logger</th>
+                <th i18n="@@admin.logs.level.col.configured">Nastaveno</th>
+                <th i18n="@@admin.logs.level.col.effective">Platí</th>
+                <th i18n="@@admin.logs.level.col.override">Dočasně</th>
+                <th class="visually-hidden" i18n="@@admin.logs.level.col.actions">Akce</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (entry of loggers(); track entry.logger) {
+                <tr [class.overridden]="entry.override !== null">
+                  <td data-label="Logger" i18n-data-label="@@admin.logs.level.col.logger">
+                    <span class="file-name">{{ entry.logger }}</span>
+                  </td>
+                  <td data-label="Nastaveno" i18n-data-label="@@admin.logs.level.col.configured">
+                    @if (entry.configuredLevel; as configured) {
+                      {{ configured }}
+                    } @else {
+                      <span class="muted" i18n="@@admin.logs.level.inherited">zděděno</span>
+                    }
+                  </td>
+                  <td data-label="Platí" i18n-data-label="@@admin.logs.level.col.effective">
+                    {{ entry.effectiveLevel }}
+                  </td>
+                  <td data-label="Dočasně" i18n-data-label="@@admin.logs.level.col.override">
+                    @if (entry.override) {
+                      {{ describeOverride(entry) }}
+                    } @else {
+                      <span class="muted">–</span>
+                    }
+                  </td>
+                  <td class="row-actions">
+                    @if (entry.override) {
+                      <button
+                        type="button"
+                        class="action-btn"
+                        [disabled]="resetting() !== null"
+                        [attr.aria-label]="resetLabel(entry)"
+                        (click)="reset(entry)"
+                      >
+                        @if (resetting() === entry.logger) {
+                          <ng-container i18n="@@admin.logs.level.resetting">Vracíme…</ng-container>
+                        } @else {
+                          <ng-container i18n="@@admin.logs.level.resetNow">Vrátit</ng-container>
+                        }
+                      </button>
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="admin-card" aria-labelledby="logs-diagnostics-title">
+        <h2
+          id="logs-diagnostics-title"
+          class="admin-card-title"
+          i18n="@@admin.logs.diagnostics.title"
+        >
+          Stav aplikace
+        </h2>
+        <div class="card-body">
+          @if (diagnostics(); as diagnostics) {
+            <p class="card-intro" i18n="@@admin.logs.diagnostics.asOf">
+              Stav k {{ time(diagnostics.now) }}.
+            </p>
+            <dl class="runs">
+              @for (row of jvmRows(); track row.label) {
+                <div class="run">
+                  <dt>{{ row.label }}</dt>
+                  <dd>{{ row.value }}</dd>
+                </div>
+              }
+              <div class="run">
+                <dt i18n="@@admin.logs.diagnostics.database">Databáze</dt>
+                <dd [class.danger]="!diagnostics.database.reachable">{{ databaseText() }}</dd>
+              </div>
+              <div class="run">
+                <dt i18n="@@admin.logs.diagnostics.disks">Složky</dt>
+                <dd>
+                  <ul class="disks">
+                    @for (disk of diagnostics.disks; track disk.path) {
+                      <li [class.danger]="!disk.mounted">{{ diskText(disk) }}</li>
+                    }
+                  </ul>
+                </dd>
+              </div>
+              <div class="run">
+                <dt i18n="@@admin.logs.diagnostics.overrides">Dočasné úrovně</dt>
+                <dd>
+                  @if (overrides().length === 0) {
+                    <ng-container i18n="@@admin.logs.diagnostics.overrides.none"
+                      >Žádné.</ng-container
+                    >
+                  } @else {
+                    <ul class="disks">
+                      @for (entry of overrides(); track entry.logger) {
+                        <li>
+                          <span class="file-name">{{ entry.logger }}</span>
+                          {{ entry.override?.level }} {{ describeOverride(entry) }}
+                        </li>
+                      }
+                    </ul>
+                  }
+                </dd>
+              </div>
+            </dl>
+          }
+          @if (diagnosticsState() === 'error') {
+            <p
+              class="admin-notice admin-notice--alert"
+              role="alert"
+              i18n="@@admin.logs.diagnostics.failed"
+            >
+              Stav aplikace se nepodařilo obnovit.
+            </p>
+          }
+          <div class="actions">
+            <button
+              type="button"
+              class="action-btn"
+              [disabled]="diagnosticsState() === 'loading'"
+              (click)="refreshDiagnostics()"
+            >
+              @if (diagnosticsState() === 'loading') {
+                <ng-container i18n="@@admin.logs.diagnostics.refreshing">Obnovujeme…</ng-container>
+              } @else {
+                <ng-container i18n="@@admin.logs.diagnostics.refresh">Obnovit stav</ng-container>
+              }
+            </button>
+            <button
+              type="button"
+              class="action-btn"
+              [disabled]="threadsState() === 'loading'"
+              [attr.aria-expanded]="threads() !== null"
+              aria-controls="logs-threads"
+              (click)="toggleThreads()"
+            >
+              @if (threadsState() === 'loading') {
+                <ng-container i18n="@@admin.logs.threads.busy">Načítáme vlákna…</ng-container>
+              } @else if (threads() !== null) {
+                <ng-container i18n="@@admin.logs.threads.hide">Skrýt výpis vláken</ng-container>
+              } @else {
+                <ng-container i18n="@@admin.logs.threads.show">Zobrazit výpis vláken</ng-container>
+              }
+            </button>
+          </div>
+          @if (threadsState() === 'error') {
+            <p
+              class="admin-notice admin-notice--alert"
+              role="alert"
+              i18n="@@admin.logs.threads.failed"
+            >
+              Výpis vláken se nepodařilo načíst.
+            </p>
+          }
+          <div id="logs-threads">
+            @if (threads(); as dump) {
+              <pre class="log-text" tabindex="0">{{ dump }}</pre>
+            }
+          </div>
+        </div>
+      </section>
+    }
+  }
+</div>

@@ -44,6 +44,7 @@ export const ADMIN_SECTIONS: readonly SideNavGroup[] = [
     label: $localize`:@@admin.nav.group.operations:Provoz`,
     items: [
       { path: '/sprava/zalohy', label: $localize`:@@admin.nav.backups:Zálohy` },
+      { path: '/sprava/logy', label: $localize`:@@admin.nav.logs:Logy a diagnostika` },
       { path: '/sprava/historie', label: $localize`:@@admin.nav.actions:Historie správy` },
     ],
   },
