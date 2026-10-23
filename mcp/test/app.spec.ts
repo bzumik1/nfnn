@@ -44,7 +44,7 @@ describe('Given the MCP connector in front of the administration', () => {
     expect(((await response.json()) as { issuer: string }).issuer).toBe(ISSUER);
   });
 
-  it('when a request comes without a token, then 401 points at the resource metadata and asks for reading', async () => {
+  it('when a request comes without a token, then 401 points at the resource metadata and asks for reading and writing, so the administrator chooses on the site', async () => {
     const response = await stack.app.fetch(new Request(MCP_URL, { method: 'POST' }));
     expect(response.status).toBe(401);
     const challenge = response.headers.get('www-authenticate') ?? '';
@@ -52,7 +52,7 @@ describe('Given the MCP connector in front of the administration', () => {
     expect(challenge).toContain(
       `resource_metadata="${ISSUER}/.well-known/oauth-protected-resource/mcp"`,
     );
-    expect(challenge).toContain('scope="admin:read"');
+    expect(challenge).toContain('scope="admin:read admin:write"');
     expect(((await response.json()) as { error: string }).error).toBe('invalid_token');
   });
 

@@ -20,7 +20,7 @@ import { AuthStore } from '../../../core/auth/auth-store';
 import { AuthorizationRequest, ClientDescription } from '../../../core/auth/donor';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
 import { ExternalNavigation } from '../../../core/navigation/external-navigation';
-import { describeScopes, knownScopes } from './oauth-scopes';
+import { describeScopes, knownScopes, WRITE_SCOPE } from './oauth-scopes';
 
 type Panel = 'incomplete' | 'checking' | 'sign-in' | 'consent' | 'not-admin' | 'leaving' | 'failed';
 
@@ -56,11 +56,16 @@ export class ConnectApp {
   protected readonly client = signal<ClientDescription | null>(null);
   protected readonly error = signal('');
   protected readonly deciding = signal<'allow' | 'deny' | null>(null);
-  protected readonly scopes = computed(() =>
-    describeScopes(knownScopes(this.request?.scope ?? null)),
+  protected readonly allowWrite = signal(false);
+  private readonly requested = knownScopes(this.request?.scope ?? null);
+  protected readonly scopes = describeScopes(
+    this.requested.filter((scope) => scope !== WRITE_SCOPE),
   );
-  protected readonly unknownScope = computed(
-    () => knownScopes(this.request?.scope ?? null).length === 0 && this.request !== null,
+  protected readonly writeRequested = this.requested.includes(WRITE_SCOPE);
+  protected readonly writeDescription = describeScopes([WRITE_SCOPE])[0] ?? '';
+  protected readonly unknownScope = this.requested.length === 0 && this.request !== null;
+  private readonly grantedScope = computed(() =>
+    this.requested.filter((scope) => scope !== WRITE_SCOPE || this.allowWrite()).join(' '),
   );
   protected readonly donorName = computed(() => this.auth.donor()?.name ?? '');
 
@@ -81,6 +86,10 @@ export class ConnectApp {
 
   deny(): void {
     this.decide(false);
+  }
+
+  chooseWrite(event: Event): void {
+    this.allowWrite.set((event.target as HTMLInputElement).checked);
   }
 
   retry(): void {
@@ -126,7 +135,11 @@ export class ConnectApp {
     }
     this.deciding.set(approved ? 'allow' : 'deny');
     this.error.set('');
-    const body: AuthorizationRequest = { ...request, approved };
+    const body: AuthorizationRequest = {
+      ...request,
+      scope: approved ? this.grantedScope() : request.scope,
+      approved,
+    };
     this.authApi.authorize(body).subscribe({
       next: (response) => {
         this.deciding.set(null);

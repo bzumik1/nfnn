@@ -79,16 +79,36 @@
             }
           </p>
           <h2 class="scopes-title" i18n="@@donor.connect.consent.scopesTitle">Co bude smět</h2>
-          @if (unknownScope()) {
+          @if (unknownScope) {
             <p class="form-error" role="alert" i18n="@@donor.connect.consent.unknownScope">
               Aplikace žádá o oprávnění, které web nenabízí. Připojení nelze povolit.
             </p>
           } @else {
             <ul class="scopes">
-              @for (scope of scopes(); track scope) {
+              @for (scope of scopes; track scope) {
                 <li>{{ scope }}</li>
               }
             </ul>
+            @if (writeRequested) {
+              <div class="scope-option">
+                <input
+                  type="checkbox"
+                  id="connect-app-write"
+                  aria-describedby="connect-app-write-hint"
+                  [checked]="allowWrite()"
+                  (change)="chooseWrite($event)"
+                />
+                <label for="connect-app-write">{{ writeDescription }}</label>
+              </div>
+              <p
+                class="scope-hint"
+                id="connect-app-write-hint"
+                i18n="@@donor.connect.consent.writeHint"
+              >
+                Bez zaškrtnutí dostane aplikace jen čtení. Rozsah později změníte jen odpojením a
+                novým připojením.
+              </p>
+            }
           }
           <p class="lead" i18n="@@donor.connect.consent.after">
             Po povolení vás pošleme zpět do aplikace. Přístup kdykoli odeberete v přehledu dárce v
@@ -101,7 +121,7 @@
             <button
               type="button"
               class="form-submit"
-              [disabled]="deciding() !== null || unknownScope()"
+              [disabled]="deciding() !== null || unknownScope"
               (click)="allow()"
             >
               @if (deciding() === 'allow') {

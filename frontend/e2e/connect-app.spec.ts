@@ -49,10 +49,13 @@ test.describe('Given Claude sent an administrator to the site to connect the adm
     const heading = page.getByRole('heading', { level: 1 });
     await expect(heading).toContainText('Povolit přístup ke správě aplikaci claude.ai?');
     await expect(heading).toBeFocused();
-    await expect(page.locator('.scopes li')).toHaveCount(2);
+    await expect(page.locator('.scopes li')).toHaveCount(1);
     await expect(page.locator('.scopes li').first()).toContainText('Čtení');
-    await expect(page.locator('.scopes li').last()).toContainText('Změny');
+    const changes = page.getByRole('checkbox', { name: /Změny/ });
+    await expect(changes).not.toBeChecked();
+    await expect(changes).toHaveAccessibleDescription(/jen čtení/);
 
+    await changes.check();
     await page.getByRole('button', { name: 'Povolit' }).click();
 
     await expect(page).toHaveURL(
