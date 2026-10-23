@@ -35,7 +35,7 @@ Read before building, update in the same PR: `docs/requirements.md` (client deci
 
 ## Production logs
 
-The server writes `backend.log` (Spring Boot, rotated) and `backup.log` into `/DATA/AppData/nfnn/logs/`, served read-only by the `nfnn-ops` container behind a Cloudflare tunnel and Cloudflare Access at `https://ops.nfnn.cz` (`deploy/README.md`, "Logy pro Clauda"). With `NFNN_OPS_CLIENT_ID` and `NFNN_OPS_CLIENT_SECRET` in the environment:
+The server writes `backend.log` (Spring Boot, rotated), `backup.log`, `nginx-access.log` (every request: method, path, status, timing; no address or query) and `mcp.log` (the connector; both rotated daily, `.gz`, 14 days) into `/DATA/AppData/nfnn/logs/`, served read-only by the `nfnn-ops` container behind a Cloudflare tunnel and Cloudflare Access at `https://ops.nfnn.cz` (`deploy/README.md`, "Logy pro Clauda"). With `NFNN_OPS_CLIENT_ID` and `NFNN_OPS_CLIENT_SECRET` in the environment:
 
 ```bash
 h=(-H "CF-Access-Client-Id: $NFNN_OPS_CLIENT_ID" -H "CF-Access-Client-Secret: $NFNN_OPS_CLIENT_SECRET")

@@ -117,7 +117,7 @@ services:
     environment:
       TZ: Europe/Prague
     volumes:
-      - /DATA/AppData/nfnn/logs:/logs:ro
+      - /DATA/AppData/nfnn/logs:/logs
     healthcheck:
       test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8081/health"]
       interval: 30s
@@ -145,6 +145,8 @@ services:
       - mcp
     ports:
       - "8089:80"
+    volumes:
+      - /DATA/AppData/nfnn/logs:/logs
     healthcheck:
       test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/"]
       interval: 10s

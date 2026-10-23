@@ -4,14 +4,15 @@ import { createApp } from './app.js';
 import { AuthorizationServerDiscovery } from './authorization.js';
 import { BackendClient } from './backend.js';
 import { configFromEnv } from './config.js';
+import { createLogger } from './logger.js';
 import { TokenExchangeVerifier, type Logger } from './token-exchange.js';
 
 const config = configFromEnv(process.env);
 const version = process.env['APP_REVISION'] || 'dev';
-const logger: Logger = {
-  info: (message) => console.log(`${new Date().toISOString()} INFO ${message}`),
-  warn: (message) => console.warn(`${new Date().toISOString()} WARN ${message}`),
-};
+const logger: Logger = createLogger({
+  ...(config.logFile ? { file: config.logFile } : {}),
+  console: (line) => console.log(line),
+});
 const discovery = new AuthorizationServerDiscovery(config.backendUrl, fetch);
 const app = createApp({
   discovery,

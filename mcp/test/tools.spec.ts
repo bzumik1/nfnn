@@ -22,9 +22,13 @@ describe('Given an administrator connected with the reading permission only', ()
     const names = tools.map((tool) => tool.name).sort();
     expect(names).toEqual([
       'nfnn_admin_actions',
+      'nfnn_administrators',
       'nfnn_backups',
       'nfnn_content',
+      'nfnn_create_news',
+      'nfnn_create_project',
       'nfnn_diagnostics',
+      'nfnn_disconnect_bank_account',
       'nfnn_donor',
       'nfnn_find_donors',
       'nfnn_log',
@@ -36,16 +40,21 @@ describe('Given an administrator connected with the reading permission only', ()
       'nfnn_payments',
       'nfnn_publish_news',
       'nfnn_publish_project',
+      'nfnn_reconnect_bank_account',
       'nfnn_report',
       'nfnn_request_backup',
       'nfnn_reset_log_level',
       'nfnn_send_report',
       'nfnn_set_log_level',
       'nfnn_status',
+      'nfnn_symbol_claims',
       'nfnn_thread_dump',
       'nfnn_unpair_payment',
       'nfnn_unpublish_news',
       'nfnn_unpublish_project',
+      'nfnn_update_news',
+      'nfnn_update_project',
+      'nfnn_update_report_settings',
     ]);
     expect(tools.find((tool) => tool.name === 'nfnn_status')?.annotations?.readOnlyHint).toBe(true);
     expect(
@@ -115,6 +124,19 @@ describe('Given an administrator connected with the reading permission only', ()
     expect(textOf(await client.callTool({ name: 'nfnn_backups', arguments: {} }))).toContain(
       'nfnn-2026-10-23_0300.dump',
     );
+  });
+
+  it('when the administrators and the older-symbol answers are asked, then they come from the administration', async () => {
+    const administrators = textOf(
+      await client.callTool({ name: 'nfnn_administrators', arguments: {} }),
+    );
+    expect(administrators).toContain('"secondFactorEnabled": true');
+    const claims = textOf(await client.callTool({ name: 'nfnn_symbol_claims', arguments: {} }));
+    expect(claims).toContain('"answer": "CONFIRMED"');
+    expect(claims).toContain('"answeredAt": "22. 10. 2026 12:00:00"');
+    const paths = stack.backend.requests.map((request) => request.path);
+    expect(paths).toContain('/api/admin/donors/administrators');
+    expect(paths).toContain('/api/admin/donations/symbol-claims');
   });
 
   it('when the logs are read, then the files, a window with its position and a search come from the administration', async () => {
@@ -260,6 +282,79 @@ describe('Given an administrator connected with the writing permission', () => {
       .map((request) => request.body);
     expect(bodies).toContain('{"month":"2026-09"}');
     expect(bodies).toContain('{"kind":"TEST_RESTORE"}');
+  });
+
+  it('when the report settings change, then the whole settings reach the administration', async () => {
+    const settings = {
+      recipients: ['info@nfnn.cz', 'pavel@example.cz'],
+      sendDay: 5,
+      sections: { donors: true, donations: true, unpairedPayments: false, bankImport: true },
+    };
+    const result = await client.callTool({
+      name: 'nfnn_update_report_settings',
+      arguments: settings,
+    });
+    expect(result.isError).toBeFalsy();
+    expect(textOf(result)).toContain('"sendDay": 5');
+    const put = stack.backend.requests.find((request) => request.method === 'PUT');
+    expect(put?.path).toBe('/api/admin/donations/report/settings');
+    expect(JSON.parse(put?.body ?? '{}')).toEqual(settings);
+    expect(put?.authorization).toBe('Bearer api-token-write');
+  });
+
+  it('when a news article and a project are written and edited, then drafts are created and replaced', async () => {
+    const article = {
+      title: 'Letní tábor',
+      perex: 'Krátce o táboře.',
+      body: 'První odstavec.\n\nDruhý odstavec.',
+      tag: 'Tábor',
+    };
+    const created = await client.callTool({ name: 'nfnn_create_news', arguments: article });
+    expect(textOf(created)).toContain('"slug": "letni-tabor"');
+    const edited = await client.callTool({
+      name: 'nfnn_update_news',
+      arguments: { id: UNKNOWN_ID, ...article, slug: 'tabor-2026' },
+    });
+    expect(edited.isError).toBeFalsy();
+    const project = { title: 'Nová střecha', year: 2026, perex: 'Střecha.', body: 'Text.' };
+    await client.callTool({ name: 'nfnn_create_project', arguments: project });
+    await client.callTool({
+      name: 'nfnn_update_project',
+      arguments: { id: UNKNOWN_ID, ...project },
+    });
+
+    const writes = stack.backend.requests
+      .filter((request) => request.path.startsWith('/api/admin/content'))
+      .map((request) => [request.method, request.path, JSON.parse(request.body)]);
+    expect(writes).toEqual([
+      ['POST', '/api/admin/content/news', article],
+      ['PUT', `/api/admin/content/news/${UNKNOWN_ID}`, { ...article, slug: 'tabor-2026' }],
+      ['POST', '/api/admin/content/projects', project],
+      ['PUT', `/api/admin/content/projects/${UNKNOWN_ID}`, project],
+    ]);
+  });
+
+  it('when the pairing from a donor account is turned off and on, then the administration gets both and a refusal comes back', async () => {
+    const off = await client.callTool({
+      name: 'nfnn_disconnect_bank_account',
+      arguments: { donorId: DONOR_ID, linkId: PAYMENT_ID },
+    });
+    expect(off.isError).toBeFalsy();
+    expect(textOf(off)).toContain('turned off');
+    const on = await client.callTool({
+      name: 'nfnn_reconnect_bank_account',
+      arguments: { donorId: DONOR_ID, linkId: PAYMENT_ID },
+    });
+    expect(on.isError).toBe(true);
+    expect(textOf(on)).toContain('409 donations/bank-account-link-active');
+    expect(
+      stack.backend.requests
+        .filter((request) => request.path.includes('/bank-accounts/'))
+        .map((request) => `${request.method} ${request.path}`),
+    ).toEqual([
+      `POST /api/admin/donations/donors/${DONOR_ID}/bank-accounts/${PAYMENT_ID}/disconnect`,
+      `POST /api/admin/donations/donors/${DONOR_ID}/bank-accounts/${PAYMENT_ID}/reconnect`,
+    ]);
   });
 
   it('when an argument is malformed, then the tool refuses it before calling the administration', async () => {

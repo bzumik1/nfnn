@@ -105,6 +105,16 @@ test.describe('Given a visitor on the home page', () => {
     expect(pngColourType(png)).toBe(PNG_TRUECOLOUR_WITHOUT_ALPHA);
   });
 
+  test('when a server dashboard asks for the app icon, then the site serves it as a 512 px PNG', async ({
+    request,
+  }) => {
+    const icon = await request.get('/app-icon.png');
+
+    expect(icon.ok()).toBe(true);
+    expect(icon.headers()['content-type']).toBe('image/png');
+    expect(pngSize(await icon.body())).toEqual([512, 512]);
+  });
+
   test.describe('on a phone', () => {
     test.use({ viewport: { width: 390, height: 844 } });
 

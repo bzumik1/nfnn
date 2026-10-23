@@ -11,6 +11,27 @@ const WRITING = {
 const UUID = z.string().regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
 const DAY = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 const MONTH = z.string().regex(/^\d{4}-\d{2}$/);
+const SLUG = z
+  .string()
+  .max(80)
+  .regex(/^[a-z0-9]+(-[a-z0-9]+)*$/)
+  .optional()
+  .describe('Address of the page; made from the title when left out.');
+const ARTICLE = {
+  title: z.string().min(1).max(120),
+  slug: SLUG,
+  tag: z.string().max(40).optional(),
+  perex: z.string().min(1).max(300).describe('Short summary shown on the cards.'),
+  body: z.string().min(1).max(20000).describe('Plain text; an empty line starts a new paragraph.'),
+  coverImageId: UUID.optional().describe(
+    'Id of a photo already uploaded on the web; left out means no photo.',
+  ),
+};
+const PROJECT = { ...ARTICLE, year: z.number().int().min(2005).max(2100) };
+const ACCOUNT_LINK = z.object({
+  donorId: UUID,
+  linkId: UUID.describe("Id of the account link from the donor's card (nfnn_donor)."),
+});
 
 export function registerWritingTools(server: McpServer, deps: ToolDependencies): void {
   const { backend } = deps;
@@ -152,6 +173,137 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
       answer(deps, ctx, 'nfnn_unpublish_project', async ({ apiToken }) =>
         text(await backend.post(`/api/admin/content/projects/${id}/unpublish`, apiToken)),
       ),
+  );
+
+  server.registerTool(
+    'nfnn_update_report_settings',
+    {
+      title: 'Nastavit měsíční přehled',
+      description:
+        'Replaces the monthly report settings: the recipients (1–10 addresses), the day of the month it goes out (1–28) and its sections. Read the current ones with nfnn_report first and send all of them. Audited as CHANGE_REPORT_SETTINGS.',
+      inputSchema: z.object({
+        recipients: z.array(z.string().min(1).max(254)).min(1).max(10),
+        sendDay: z.number().int().min(1).max(28),
+        sections: z.object({
+          donors: z.boolean(),
+          donations: z.boolean(),
+          unpairedPayments: z.boolean(),
+          bankImport: z.boolean(),
+        }),
+      }),
+      annotations: { ...WRITING, idempotentHint: true },
+      scopeChallenge,
+    },
+    async (settings, ctx) =>
+      answer(deps, ctx, 'nfnn_update_report_settings', async ({ apiToken }) =>
+        text(await backend.put('/api/admin/donations/report/settings', apiToken, settings)),
+      ),
+  );
+
+  server.registerTool(
+    'nfnn_create_news',
+    {
+      title: 'Napsat aktualitu',
+      description:
+        'Creates a news article as a draft (not on the site until nfnn_publish_news); audited as CREATE_NEWS. Texts are Czech, sentence case.',
+      inputSchema: z.object(ARTICLE),
+      annotations: WRITING,
+      scopeChallenge,
+    },
+    async (article, ctx) =>
+      answer(deps, ctx, 'nfnn_create_news', async ({ apiToken }) =>
+        text(await backend.post('/api/admin/content/news', apiToken, article)),
+      ),
+  );
+
+  server.registerTool(
+    'nfnn_update_news',
+    {
+      title: 'Upravit aktualitu',
+      description:
+        'Replaces the texts and the photo of a news article, draft or published (the published date stays); send every field, read them with nfnn_content first. Audited as UPDATE_NEWS.',
+      inputSchema: z.object({ id: UUID, ...ARTICLE }),
+      annotations: { ...WRITING, idempotentHint: true },
+      scopeChallenge,
+    },
+    async ({ id, ...article }, ctx) =>
+      answer(deps, ctx, 'nfnn_update_news', async ({ apiToken }) =>
+        text(await backend.put(`/api/admin/content/news/${id}`, apiToken, article)),
+      ),
+  );
+
+  server.registerTool(
+    'nfnn_create_project',
+    {
+      title: 'Založit projekt',
+      description:
+        'Creates a project of the given year as a draft (not on the site until nfnn_publish_project); audited as CREATE_PROJECT.',
+      inputSchema: z.object(PROJECT),
+      annotations: WRITING,
+      scopeChallenge,
+    },
+    async (project, ctx) =>
+      answer(deps, ctx, 'nfnn_create_project', async ({ apiToken }) =>
+        text(await backend.post('/api/admin/content/projects', apiToken, project)),
+      ),
+  );
+
+  server.registerTool(
+    'nfnn_update_project',
+    {
+      title: 'Upravit projekt',
+      description:
+        'Replaces the texts, the year and the photo of a project (the published date stays); send every field, read them with nfnn_content first. Audited as UPDATE_PROJECT.',
+      inputSchema: z.object({ id: UUID, ...PROJECT }),
+      annotations: { ...WRITING, idempotentHint: true },
+      scopeChallenge,
+    },
+    async ({ id, ...project }, ctx) =>
+      answer(deps, ctx, 'nfnn_update_project', async ({ apiToken }) =>
+        text(await backend.put(`/api/admin/content/projects/${id}`, apiToken, project)),
+      ),
+  );
+
+  server.registerTool(
+    'nfnn_disconnect_bank_account',
+    {
+      title: 'Vypnout párování z účtu dárce',
+      description:
+        'Stops pairing later payments without a symbol from one of the donor\'s bank accounts to the donor, as the donor\'s own "Vypnout párování" does; donations paired before stay. Audited as DISCONNECT_SENDER_ACCOUNT; nfnn_reconnect_bank_account turns it on again.',
+      inputSchema: ACCOUNT_LINK,
+      annotations: { ...WRITING, idempotentHint: true },
+      scopeChallenge,
+    },
+    async ({ donorId, linkId }, ctx) =>
+      answer(deps, ctx, 'nfnn_disconnect_bank_account', async ({ apiToken }) => {
+        await backend.post(
+          `/api/admin/donations/donors/${donorId}/bank-accounts/${linkId}/disconnect`,
+          apiToken,
+        );
+        return plain('Pairing from the account is turned off for the donor.');
+      }),
+  );
+
+  server.registerTool(
+    'nfnn_reconnect_bank_account',
+    {
+      title: 'Zapnout párování z účtu dárce',
+      description:
+        "Turns the pairing from one of the donor's bank accounts on again; it starts once a payment with the donor's symbol arrives from the account. Audited as RECONNECT_SENDER_ACCOUNT.",
+      inputSchema: ACCOUNT_LINK,
+      annotations: { ...WRITING, idempotentHint: true },
+      scopeChallenge,
+    },
+    async ({ donorId, linkId }, ctx) =>
+      answer(deps, ctx, 'nfnn_reconnect_bank_account', async ({ apiToken }) => {
+        await backend.post(
+          `/api/admin/donations/donors/${donorId}/bank-accounts/${linkId}/reconnect`,
+          apiToken,
+        );
+        return plain(
+          "Pairing from the account is on again; it starts with the next payment carrying the donor's symbol.",
+        );
+      }),
   );
 
   server.registerTool(
