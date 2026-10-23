@@ -8,6 +8,7 @@ public final class LogReadLimits {
     public static final int MAX_MATCHES = 200;
     public static final int MAX_LINE_LENGTH = 2_000;
     public static final int MAX_PATTERN_LENGTH = 200;
+    public static final java.time.Duration SEARCH_TIME = java.time.Duration.ofSeconds(5);
 
     private LogReadLimits() {
     }
