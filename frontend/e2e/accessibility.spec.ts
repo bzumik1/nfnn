@@ -1,4 +1,5 @@
 import AxeBuilder from '@axe-core/playwright';
+import { routeLogsApi } from './admin-logs-api';
 import { expect, Page, test } from '@playwright/test';
 import {
   administrator,
@@ -821,6 +822,31 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
 
     await page.getByRole('button', { name: 'Zálohovat teď' }).click();
     await expect(page.getByRole('button', { name: 'Zálohujeme…' })).toBeDisabled();
+    expect(await violations(page)).toEqual([]);
+  });
+
+  test('when an administrator reads the logs, searches, raises a level and opens the thread dump, then the page breaks no rule', async ({
+    page,
+  }) => {
+    await routeLogsApi(page);
+    await page.route('**/api/donors/auth/refresh', (route) =>
+      route.fulfill(session(200, administrator)),
+    );
+    await page.goto('/');
+    await page.evaluate(() => localStorage.setItem('nfnn.donor-session', '1'));
+    await page.goto('/sprava/logy');
+    await expect(page.getByRole('heading', { level: 1, name: 'Logy a diagnostika' })).toBeFocused();
+    await expect(page.locator('.log-text').first()).toBeVisible();
+    expect(await violations(page)).toEqual([]);
+
+    await page.getByLabel('Hledat', { exact: true }).fill('fio');
+    await page.getByRole('button', { name: 'Hledat', exact: true }).click();
+    await expect(page.locator('.match')).toHaveCount(2);
+    await page.getByLabel('Logger').fill('not a logger!');
+    await page.getByRole('button', { name: 'Nastavit' }).click();
+    await expect(page.getByLabel('Logger')).toHaveAttribute('aria-invalid', 'true');
+    await page.getByRole('button', { name: 'Zobrazit výpis vláken' }).click();
+    await expect(page.locator('#logs-threads .log-text')).toBeVisible();
     expect(await violations(page)).toEqual([]);
   });
 

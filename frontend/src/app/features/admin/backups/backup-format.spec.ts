@@ -12,3 +12,10 @@ describe('Given a size in bytes', () => {
     expect(formatSize(12 * 1024 * 1024 + 500 * 1024)).toBe('12,5 MB');
   });
 });
+
+describe('Given a size of a gigabyte or more', () => {
+  it('when it is formatted, then it has one decimal in gigabytes', () => {
+    expect(formatSize(1024 ** 3)).toBe('1,0\u00a0GB');
+    expect(formatSize(12.5 * 1024 ** 3)).toBe('12,5\u00a0GB');
+  });
+});

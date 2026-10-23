@@ -1,5 +1,10 @@
 import {
   AdminActionResponse,
+  DiagnosticsResponse,
+  LogFileResponse,
+  LoggerResponse,
+  LogOverrideResponse,
+  LogWindowResponse,
   AdminBackupsResponse,
   BackupFileResponse,
   BackupRunResponse,
@@ -342,6 +347,86 @@ export function backupsView(overrides: Partial<AdminBackupsResponse> = {}): Admi
     restoreFiles: [],
     pendingRequests: 0,
     problems: [],
+    ...overrides,
+  };
+}
+
+export function logFile(overrides: Partial<LogFileResponse> = {}): LogFileResponse {
+  return {
+    name: 'backend.log',
+    sizeBytes: 220,
+    changedAt: '2026-10-23T10:00:02Z',
+    compressed: false,
+    ...overrides,
+  };
+}
+
+export function logWindow(overrides: Partial<LogWindowResponse> = {}): LogWindowResponse {
+  return {
+    name: 'backend.log',
+    sizeBytes: 220,
+    from: 0,
+    to: 220,
+    hasOlder: false,
+    hasNewer: false,
+    text: '2026-10-23T10:00:00 INFO first line\n2026-10-23T10:00:01 WARN second line about Fio\n',
+    ...overrides,
+  };
+}
+
+export function logOverride(overrides: Partial<LogOverrideResponse> = {}): LogOverrideResponse {
+  return {
+    logger: 'cz.novanadeje.app',
+    level: 'DEBUG',
+    configuredBefore: 'INFO',
+    since: '2026-10-23T10:00:00Z',
+    until: '2026-10-23T10:30:00Z',
+    adminId: '019a1c00-0000-7000-8000-000000000001',
+    ...overrides,
+  };
+}
+
+export function loggerEntry(overrides: Partial<LoggerResponse> = {}): LoggerResponse {
+  return {
+    logger: 'cz.novanadeje.app',
+    configuredLevel: 'INFO',
+    effectiveLevel: 'INFO',
+    override: null,
+    ...overrides,
+  };
+}
+
+export function diagnostics(overrides: Partial<DiagnosticsResponse> = {}): DiagnosticsResponse {
+  return {
+    now: '2026-10-23T10:00:00Z',
+    jvm: {
+      javaVersion: '25.0.1+8',
+      startedAt: '2026-10-23T06:00:00Z',
+      heapUsedBytes: 172 * 1024 * 1024,
+      heapMaxBytes: 768 * 1024 * 1024,
+      nonHeapUsedBytes: 115 * 1024 * 1024,
+      liveThreads: 42,
+      peakThreads: 48,
+      daemonThreads: 30,
+      gcCount: 120,
+      gcTimeMillis: 950,
+      availableProcessors: 4,
+      systemLoadAverage: 0.4,
+    },
+    database: {
+      reachable: true,
+      pingMillis: 2,
+      activeConnections: 0,
+      idleConnections: 10,
+      waitingThreads: 0,
+      maxConnections: 10,
+    },
+    disks: [
+      { path: '/logs', mounted: true, freeBytes: 12.5 * 1024 ** 3, totalBytes: 250 * 1024 ** 3 },
+      { path: '/backups', mounted: false, freeBytes: 0, totalBytes: 0 },
+      { path: '/restore', mounted: true, freeBytes: 12.5 * 1024 ** 3, totalBytes: 250 * 1024 ** 3 },
+    ],
+    logLevelOverrides: [],
     ...overrides,
   };
 }
