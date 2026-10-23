@@ -1,64 +1,93 @@
 <article class="card">
-  <div class="card-image">
-    <img loading="lazy" [src]="imageSrc()" width="600" height="400" alt="" class="real-img" />
-  </div>
-  <div class="card-body">
-    @switch (project()) {
-      @case ('dominik') {
-        <div class="card-meta">
-          <span class="card-tag" i18n="@@home.projects.dominik.tag">Kompenzační pomůcky</span>
-          <span class="card-year">2024</span>
-        </div>
-        <h3 class="card-title" i18n="@@home.projects.dominik.title">Dominik, 7 let</h3>
-        <p class="card-desc" i18n="@@home.projects.dominik.desc">
-          Dominik se narodil s dětskou mozkovou obrnou. Pomohli jsme mu získat speciální kočárek a
-          terapeutické pomůcky.
-        </p>
-      }
-      @case ('anicka') {
-        <div class="card-meta">
-          <span class="card-tag" i18n="@@home.projects.anicka.tag">Sluchové pomůcky</span>
-          <span class="card-year">2024</span>
-        </div>
-        <h3 class="card-title" i18n="@@home.projects.anicka.title">Anička, 5 let</h3>
-        <p class="card-desc" i18n="@@home.projects.anicka.desc">
-          Anička má sluchové postižení. Díky vašim příspěvkům jsme pořídili naslouchátka a podpořili
-          její vzdělávání v běžné škole.
-        </p>
-      }
-      @case ('tomas') {
-        <div class="card-meta">
-          <span class="card-tag" i18n="@@home.projects.tomas.tag">Zrakové pomůcky</span>
-          <span class="card-year">2023</span>
-        </div>
-        <h3 class="card-title" i18n="@@home.projects.tomas.title">Tomáš, 9 let</h3>
-        <p class="card-desc" i18n="@@home.projects.tomas.desc">
-          Tomáš bojuje s těžkým postižením zraku. Zakoupili jsme mu speciální software a pomůcky pro
-          čtení Braillova písma.
-        </p>
-      }
-      @case ('eliska') {
-        <div class="card-meta">
-          <span class="card-tag" i18n="@@home.projects.eliska.tag">Fyzioterapie</span>
-          <span class="card-year">2023</span>
-        </div>
-        <h3 class="card-title" i18n="@@home.projects.eliska.title">Eliška, 6 let</h3>
-        <p class="card-desc" i18n="@@home.projects.eliska.desc">
-          Eliška potřebovala speciální ortopedické boty a fyzioterapii. Vaše pomoc jí umožnila první
-          samostatné kroky.
-        </p>
-      }
-      @case ('martin') {
-        <div class="card-meta">
-          <span class="card-tag" i18n="@@home.projects.martin.tag">Komunikační pomůcky</span>
-          <span class="card-year">2023</span>
-        </div>
-        <h3 class="card-title" i18n="@@home.projects.martin.title">Martin, 11 let</h3>
-        <p class="card-desc" i18n="@@home.projects.martin.desc">
-          Martin má autismus a potřeboval terapeutické pomůcky pro rozvoj komunikace. Pořídili jsme
-          mu tablet se speciálními aplikacemi.
-        </p>
-      }
+  @if (item(); as item) {
+    @if (image(); as src) {
+      <div class="card-image">
+        <img
+          loading="lazy"
+          [src]="src"
+          [srcset]="imageSet()"
+          sizes="(max-width: 768px) 100vw, 400px"
+          width="480"
+          height="300"
+          alt=""
+          class="real-img"
+        />
+      </div>
     }
-  </div>
+    <div class="card-body">
+      <div class="card-meta">
+        @if (item.tag) {
+          <span class="card-tag">{{ item.tag }}</span>
+        }
+        <span class="card-year">{{ item.year }}</span>
+      </div>
+      <h3 class="card-title">
+        <a class="card-link" [routerLink]="['/projekty', item.slug]">{{ item.title }}</a>
+      </h3>
+      <p class="card-desc">{{ item.perex }}</p>
+    </div>
+  } @else {
+    <div class="card-image">
+      <img loading="lazy" [src]="imageSrc()" width="600" height="400" alt="" class="real-img" />
+    </div>
+    <div class="card-body">
+      @switch (project()) {
+        @case ('dominik') {
+          <div class="card-meta">
+            <span class="card-tag" i18n="@@home.projects.dominik.tag">Kompenzační pomůcky</span>
+            <span class="card-year">2024</span>
+          </div>
+          <h3 class="card-title" i18n="@@home.projects.dominik.title">Dominik, 7 let</h3>
+          <p class="card-desc" i18n="@@home.projects.dominik.desc">
+            Dominik se narodil s dětskou mozkovou obrnou. Pomohli jsme mu získat speciální kočárek a
+            terapeutické pomůcky.
+          </p>
+        }
+        @case ('anicka') {
+          <div class="card-meta">
+            <span class="card-tag" i18n="@@home.projects.anicka.tag">Sluchové pomůcky</span>
+            <span class="card-year">2024</span>
+          </div>
+          <h3 class="card-title" i18n="@@home.projects.anicka.title">Anička, 5 let</h3>
+          <p class="card-desc" i18n="@@home.projects.anicka.desc">
+            Anička má sluchové postižení. Díky vašim příspěvkům jsme pořídili naslouchátka a
+            podpořili její vzdělávání v běžné škole.
+          </p>
+        }
+        @case ('tomas') {
+          <div class="card-meta">
+            <span class="card-tag" i18n="@@home.projects.tomas.tag">Zrakové pomůcky</span>
+            <span class="card-year">2023</span>
+          </div>
+          <h3 class="card-title" i18n="@@home.projects.tomas.title">Tomáš, 9 let</h3>
+          <p class="card-desc" i18n="@@home.projects.tomas.desc">
+            Tomáš bojuje s těžkým postižením zraku. Zakoupili jsme mu speciální software a pomůcky
+            pro čtení Braillova písma.
+          </p>
+        }
+        @case ('eliska') {
+          <div class="card-meta">
+            <span class="card-tag" i18n="@@home.projects.eliska.tag">Fyzioterapie</span>
+            <span class="card-year">2023</span>
+          </div>
+          <h3 class="card-title" i18n="@@home.projects.eliska.title">Eliška, 6 let</h3>
+          <p class="card-desc" i18n="@@home.projects.eliska.desc">
+            Eliška potřebovala speciální ortopedické boty a fyzioterapii. Vaše pomoc jí umožnila
+            první samostatné kroky.
+          </p>
+        }
+        @case ('martin') {
+          <div class="card-meta">
+            <span class="card-tag" i18n="@@home.projects.martin.tag">Komunikační pomůcky</span>
+            <span class="card-year">2023</span>
+          </div>
+          <h3 class="card-title" i18n="@@home.projects.martin.title">Martin, 11 let</h3>
+          <p class="card-desc" i18n="@@home.projects.martin.desc">
+            Martin má autismus a potřeboval terapeutické pomůcky pro rozvoj komunikace. Pořídili
+            jsme mu tablet se speciálními aplikacemi.
+          </p>
+        }
+      }
+    </div>
+  }
 </article>

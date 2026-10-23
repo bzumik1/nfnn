@@ -1,4 +1,5 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, input } from '@angular/core';
+import { ProjectResponse } from '../../../projects-api';
 import { ProjectCard } from './project-card';
 
 @Component({
@@ -8,4 +9,6 @@ import { ProjectCard } from './project-card';
   styleUrl: './projects.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class Projects {}
+export class Projects {
+  readonly items = input<ProjectResponse[]>([]);
+}

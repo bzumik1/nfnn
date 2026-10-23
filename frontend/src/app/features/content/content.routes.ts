@@ -12,6 +12,18 @@ export const contentRoutes: Routes = [
     loadComponent: () => import('./privacy-policy/privacy-policy').then((m) => m.PrivacyPolicy),
   },
   {
+    path: 'aktuality/:slug',
+    title: $localize`:@@content.newsDetail.pageTitle:Aktualita | Nová naděje – nadační fond`,
+    data: { kind: 'news' },
+    loadComponent: () => import('./detail/content-detail').then((m) => m.ContentDetail),
+  },
+  {
+    path: 'projekty/:slug',
+    title: $localize`:@@content.projectDetail.pageTitle:Projekt | Nová naděje – nadační fond`,
+    data: { kind: 'project' },
+    loadComponent: () => import('./detail/content-detail').then((m) => m.ContentDetail),
+  },
+  {
     path: '**',
     title: $localize`:@@content.notFound.pageTitle:Stránka nenalezena | Nová naděje – nadační fond`,
     loadComponent: () => import('./not-found/not-found').then((m) => m.NotFound),
