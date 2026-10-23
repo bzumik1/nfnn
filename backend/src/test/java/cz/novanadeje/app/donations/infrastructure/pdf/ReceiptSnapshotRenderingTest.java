@@ -4,6 +4,7 @@ import cz.novanadeje.app.donations.domain.donation.Donation;
 import cz.novanadeje.app.donations.domain.receipt.ContentDigest;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptDocument;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptSnapshot;
+import cz.novanadeje.app.donations.domain.receipt.SignatureImage;
 import cz.novanadeje.app.donations.domain.receipt.Receipts;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
@@ -42,7 +43,7 @@ class ReceiptSnapshotRenderingTest {
     @Test
     @DisplayName("Given a signed receipt, when it is frozen, then the template, logo and signature are stored once and the data holds no image")
     void should_store_template_and_images_and_keep_data_free_of_images_when_frozen_given_signed_receipt() {
-        ReceiptImage signature = ThymeleafPdfReceiptRendererTest.signature(300, 100);
+        SignatureImage signature = ThymeleafPdfReceiptRendererTest.signature(300, 100);
         ThymeleafPdfReceiptRenderer renderer = renderer(current, Optional.of(signature));
 
         ReceiptSnapshot first = renderer.freeze(SINGLE);
@@ -99,13 +100,32 @@ class ReceiptSnapshotRenderingTest {
     }
 
     @Test
-    @DisplayName("Given a receipt signed with an earlier signature, when the signature image is replaced, then the receipt keeps the earlier one")
-    void should_keep_earlier_signature_when_rendered_given_signature_replaced_after_freeze() {
-        ReceiptSnapshot issuedEarlier = renderer(current, Optional.of(ThymeleafPdfReceiptRendererTest.signature(300, 100))).freeze(SINGLE);
-        ThymeleafPdfReceiptRenderer afterChange = renderer(current, Optional.of(ThymeleafPdfReceiptRendererTest.signature(200, 50)));
+    @DisplayName("Given a signed receipt, when an administrator uploads another signature, then the receipt keeps the earlier one and the next receipt carries the new one")
+    void should_keep_earlier_signature_and_freeze_new_one_when_rendered_given_signature_replaced_after_freeze() {
+        InMemoryReceiptSignatures signatures = InMemoryReceiptSignatures.holding(Optional.of(ThymeleafPdfReceiptRendererTest.signature(300, 100)));
+        ThymeleafPdfReceiptRenderer renderer = new ThymeleafPdfReceiptRenderer(resources, current, signatures, Clock.fixed(NOW, ZoneOffset.UTC));
+        ReceiptSnapshot issuedEarlier = renderer.freeze(SINGLE);
 
-        assertThat(imageWidths(afterChange.render(issuedEarlier, FIRST_NUMBER, NOW))).contains(300).doesNotContain(200);
-        assertThat(imageWidths(afterChange.render(afterChange.freeze(SINGLE), FIRST_NUMBER, NOW))).contains(200).doesNotContain(300);
+        signatures.replace(ThymeleafPdfReceiptRendererTest.signature(200, 50), NOW);
+
+        assertThat(imageWidths(renderer.render(issuedEarlier, FIRST_NUMBER, NOW))).contains(300).doesNotContain(200);
+        assertThat(imageWidths(renderer.render(renderer.freeze(SINGLE), FIRST_NUMBER, NOW))).contains(200).doesNotContain(300);
+    }
+
+    @Test
+    @DisplayName("Given a signed receipt, when an administrator removes the signature, then the receipt keeps it and the next receipt has none")
+    void should_freeze_no_signature_when_frozen_given_signature_removed() {
+        InMemoryReceiptSignatures signatures = InMemoryReceiptSignatures.holding(Optional.of(ThymeleafPdfReceiptRendererTest.signature(300, 100)));
+        ThymeleafPdfReceiptRenderer renderer = new ThymeleafPdfReceiptRenderer(resources, current, signatures, Clock.fixed(NOW, ZoneOffset.UTC));
+        ReceiptSnapshot issuedEarlier = renderer.freeze(SINGLE);
+
+        signatures.remove();
+        ReceiptSnapshot issuedLater = renderer.freeze(SINGLE);
+
+        assertThat(issuedEarlier.signature()).isPresent();
+        assertThat(issuedLater.signature()).isEmpty();
+        assertThat(imageWidths(renderer.render(issuedEarlier, FIRST_NUMBER, NOW))).contains(300);
+        assertThat(imageWidths(renderer.render(issuedLater, FIRST_NUMBER, NOW))).doesNotContain(300);
     }
 
     @Test
@@ -125,7 +145,7 @@ class ReceiptSnapshotRenderingTest {
         ReceiptSnapshot snapshot = renderer(current, Optional.empty()).freeze(SINGLE);
         tampered.storeTemplate(snapshot.template(), current.content().replace("Obdarovaný", "Nikdo"), NOW);
         resources.image(snapshot.logo()).ifPresent(logo -> tampered.storeImage(snapshot.logo(), logo, NOW));
-        ThymeleafPdfReceiptRenderer renderer = new ThymeleafPdfReceiptRenderer(tampered, current, new ConfiguredSignatureImage(Optional.empty()),
+        ThymeleafPdfReceiptRenderer renderer = new ThymeleafPdfReceiptRenderer(tampered, current, InMemoryReceiptSignatures.holding(Optional.empty()),
                 Clock.fixed(NOW, ZoneOffset.UTC));
 
         assertThatIllegalStateException().isThrownBy(() -> renderer.render(snapshot, FIRST_NUMBER, NOW))
@@ -154,8 +174,8 @@ class ReceiptSnapshotRenderingTest {
         assertThat(current.english().get("receipt.donee")).isEqualTo("Donee");
     }
 
-    private ThymeleafPdfReceiptRenderer renderer(ReceiptTemplate template, Optional<ReceiptImage> signature) {
-        return new ThymeleafPdfReceiptRenderer(resources, template, new ConfiguredSignatureImage(signature), Clock.fixed(NOW, ZoneOffset.UTC));
+    private ThymeleafPdfReceiptRenderer renderer(ReceiptTemplate template, Optional<SignatureImage> signature) {
+        return new ThymeleafPdfReceiptRenderer(resources, template, InMemoryReceiptSignatures.holding(signature), Clock.fixed(NOW, ZoneOffset.UTC));
     }
 
     private static String text(byte[] pdf) {

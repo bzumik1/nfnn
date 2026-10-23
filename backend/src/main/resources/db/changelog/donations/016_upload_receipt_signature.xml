@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <changeSet id="016-upload-receipt-signature" author="nfnn">
+        <createTable tableName="donation_receipt_signature">
+            <column name="id" type="smallint">
+                <constraints primaryKey="true" primaryKeyName="pk_donation_receipt_signature" nullable="false"/>
+            </column>
+            <column name="image_sha256" type="varchar(64)">
+                <constraints nullable="false" foreignKeyName="fk_donation_receipt_signature_image" referencedTableName="receipt_image"
+                             referencedColumnNames="sha256"/>
+            </column>
+            <column name="width" type="smallint">
+                <constraints nullable="false"/>
+            </column>
+            <column name="height" type="smallint">
+                <constraints nullable="false"/>
+            </column>
+            <column name="uploaded_at" type="timestamp with time zone">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <sql>alter table donation_receipt_signature add constraint ck_donation_receipt_signature_singleton check (id = 1)</sql>
+        <sql>alter table donation_receipt_signature add constraint ck_donation_receipt_signature_size
+            check (width between 1 and 1200 and height between 1 and 600)</sql>
+        <createIndex tableName="donation_receipt_signature" indexName="ix_donation_receipt_signature_image">
+            <column name="image_sha256"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>

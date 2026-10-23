@@ -1,7 +1,9 @@
 import { expect, Page, test } from '@playwright/test';
 import { administrator, adminSettings, mockDonorApi, session } from './donor-session';
+import { noSignature, uploadedSignature } from './signature-image';
 
 const SETTINGS = '/api/admin/operations/settings';
+const SIGNATURE = '/api/admin/donations/receipt-signature';
 
 async function rememberedSession(page: Page): Promise<void> {
   await page.route('**/api/donors/auth/refresh', (route) =>
@@ -72,5 +74,57 @@ test.describe('Given an administrator on the settings page', () => {
         ],
       },
     ]);
+  });
+
+  test('when they upload a scan of the signature and remove it again, then the receipts card shows it and asks before removing', async ({
+    page,
+  }) => {
+    let current: object = noSignature;
+    const methods: string[] = [];
+    await page.route(
+      (url) => url.pathname === SETTINGS,
+      (route) => route.fulfill({ json: adminSettings }),
+    );
+    await page.route(
+      (url) => url.pathname === SIGNATURE,
+      (route) => {
+        const method = route.request().method();
+        methods.push(method);
+        if (method === 'POST') {
+          current = uploadedSignature;
+        }
+        if (method === 'DELETE') {
+          current = noSignature;
+          return route.fulfill({ status: 204, body: '' });
+        }
+        return route.fulfill({ json: current });
+      },
+    );
+
+    await page.goto('/sprava/nastaveni');
+    const card = page.getByRole('group', { name: 'Sken podpisu' });
+    await expect(card).toContainText('Podpis není nahraný.');
+
+    await card.getByLabel('Nahrát sken').setInputFiles({
+      name: 'podpis.jpg',
+      mimeType: 'image/jpeg',
+      buffer: Buffer.from('JPEG'),
+    });
+
+    await expect(card.getByRole('img', { name: 'Nahraný podpis' })).toBeVisible();
+    await expect(card.getByRole('status')).toHaveText(
+      'Podpis je uložený. Ponesou ho potvrzení vystavená od teď.',
+    );
+    await expect(card).toContainText('Nahráno 23. 10. 2026 21:30, 600 × 200 px.');
+
+    await card.getByRole('button', { name: 'Odebrat podpis' }).click();
+    await expect(card.getByRole('group', { name: 'Odebrat podpis?' })).toContainText('bez podpisu');
+    await card.getByRole('button', { name: 'Ano, odebrat' }).click();
+
+    await expect(card.getByRole('status')).toHaveText(
+      'Podpis je odebraný. Potvrzení vystavená od teď ho nebudou mít.',
+    );
+    await expect(card.getByRole('img', { name: 'Nahraný podpis' })).toHaveCount(0);
+    expect(methods).toEqual(['GET', 'POST', 'DELETE']);
   });
 });

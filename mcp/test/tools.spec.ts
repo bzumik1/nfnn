@@ -52,6 +52,7 @@ describe('Given an administrator connected with the reading permission only', ()
       'nfnn_project',
       'nfnn_publish_news',
       'nfnn_publish_project',
+      'nfnn_receipt_signature',
       'nfnn_reconnect_bank_account',
       'nfnn_report',
       'nfnn_request_backup',
@@ -212,6 +213,19 @@ describe('Given an administrator connected with the reading permission only', ()
     expect(textOf(result)).toContain('"value":"https://nfnn.cz"');
     expect(stack.backend.requests.map((request) => request.path)).toContain(
       '/api/admin/operations/settings',
+    );
+  });
+
+  it('when the receipt signature is asked, then it says whether one is uploaded, its size and when, without the image itself', async () => {
+    const result = await client.callTool({ name: 'nfnn_receipt_signature', arguments: {} });
+    expect(result.isError).toBeFalsy();
+    const text = textOf(result);
+    expect(text).toContain('"configured":true');
+    expect(text).toContain('"width":1200');
+    expect(text).toContain('"uploadedAt":"2026-10-23T21:30:00+02:00"');
+    expect(text).not.toContain('base64');
+    expect(stack.backend.requests.map((request) => request.path)).toContain(
+      '/api/admin/donations/receipt-signature',
     );
   });
 

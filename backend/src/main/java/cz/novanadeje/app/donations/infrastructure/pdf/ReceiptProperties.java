@@ -2,15 +2,13 @@ package cz.novanadeje.app.donations.infrastructure.pdf;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
-import java.nio.file.Path;
 import java.time.Year;
-import java.util.Optional;
 import java.util.regex.Pattern;
 
 @ConfigurationProperties("app.donations.receipt")
 public record ReceiptProperties(String foundationName, String foundationCompanyIdentifier, String foundationStreet, String foundationCity,
                                 String foundationPostalCode, String registryCourt, String registryFile, String issuePlace,
-                                String issuePlaceEn, String signatoryName, String signatoryRole, String signatureImage,
+                                String issuePlaceEn, String signatoryName, String signatoryRole,
                                 Integer concurrentRenders, Integer firstYear) {
 
     private static final String PREFIX = "app.donations.receipt.";
@@ -36,7 +34,6 @@ public record ReceiptProperties(String foundationName, String foundationCompanyI
         issuePlaceEn = required(issuePlaceEn, PREFIX + "issue-place-en");
         signatoryName = required(signatoryName, "RECEIPT_SIGNATORY_NAME (" + PREFIX + "signatory-name)");
         signatoryRole = required(signatoryRole, "RECEIPT_SIGNATORY_ROLE (" + PREFIX + "signatory-role)");
-        signatureImage = signatureImage == null || signatureImage.isBlank() ? null : signatureImage.trim();
         concurrentRenders = concurrentRenders == null ? DEFAULT_CONCURRENT_RENDERS : concurrentRenders;
         if (concurrentRenders < 1) {
             throw new IllegalArgumentException(PREFIX + "concurrent-renders must be at least 1, but is " + concurrentRenders);
@@ -49,10 +46,6 @@ public record ReceiptProperties(String foundationName, String foundationCompanyI
 
     public Year firstReceiptYear() {
         return Year.of(firstYear);
-    }
-
-    public Optional<Path> signatureImagePath() {
-        return Optional.ofNullable(signatureImage).map(Path::of);
     }
 
     private static String required(String value, String name) {

@@ -22,6 +22,7 @@ import {
   ImportStateResponse,
   MonthOverviewResponse,
   PairedDonationResponse,
+  ReceiptSignatureResponse,
   SymbolClaimResponse,
 } from '../admin-api';
 import { BankAccountItem } from '../../donations/bank-accounts-api';
@@ -371,6 +372,26 @@ export function setting(overrides: Partial<AdminSettingResponse> = {}): AdminSet
     unreadable: false,
     ...overrides,
   };
+}
+
+export const SIGNATURE_IMAGE =
+  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
+
+export function receiptSignature(
+  overrides: Partial<ReceiptSignatureResponse> = {},
+): ReceiptSignatureResponse {
+  return {
+    configured: true,
+    image: SIGNATURE_IMAGE,
+    width: 1200,
+    height: 400,
+    uploadedAt: '2026-10-23T19:30:00Z',
+    ...overrides,
+  };
+}
+
+export function noReceiptSignature(): ReceiptSignatureResponse {
+  return { configured: false, image: null, width: null, height: null, uploadedAt: null };
 }
 
 export function logFile(overrides: Partial<LogFileResponse> = {}): LogFileResponse {

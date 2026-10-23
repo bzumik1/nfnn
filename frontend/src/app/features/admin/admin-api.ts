@@ -284,6 +284,14 @@ export interface AdminSettingsResponse {
   secretsCanBeStored: boolean;
 }
 
+export interface ReceiptSignatureResponse {
+  configured: boolean;
+  image: string | null;
+  width: number | null;
+  height: number | null;
+  uploadedAt: string | null;
+}
+
 export type BackupKind = 'DAILY' | 'REQUESTED' | 'BEFORE_RESTORE' | 'OTHER';
 
 export type RunOutcome = 'OK' | 'FAILED';
@@ -618,6 +626,20 @@ export class AdminApi {
     return this.http.put<SettingsSavedResponse>('/api/admin/operations/settings', { changes });
   }
 
+  receiptSignature(): Observable<ReceiptSignatureResponse> {
+    return this.http.get<ReceiptSignatureResponse>(RECEIPT_SIGNATURE_URL);
+  }
+
+  uploadReceiptSignature(file: File): Observable<ReceiptSignatureResponse> {
+    const form = new FormData();
+    form.append('file', file, file.name);
+    return this.http.post<ReceiptSignatureResponse>(RECEIPT_SIGNATURE_URL, form);
+  }
+
+  removeReceiptSignature(): Observable<void> {
+    return this.http.delete<void>(RECEIPT_SIGNATURE_URL);
+  }
+
   testMailServer(server: MailServerRequest): Observable<MailTestResponse> {
     return this.http.post<MailTestResponse>('/api/admin/operations/settings/mail-test', server);
   }
@@ -676,6 +698,7 @@ export class AdminApi {
 }
 
 const LOGS_URL = '/api/admin/operations/logs';
+const RECEIPT_SIGNATURE_URL = '/api/admin/donations/receipt-signature';
 const LOGGERS_URL = '/api/admin/operations/loggers';
 const DIAGNOSTICS_URL = '/api/admin/operations/diagnostics';
 

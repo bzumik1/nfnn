@@ -25,6 +25,7 @@ import { DashboardTopBar } from '../../donors/dashboard/top-bar/top-bar';
 import { SETTING_LABELS, settingErrors } from '../../operations/setting-labels';
 import { SettingName, SettingValueRequest, SetupApi } from '../../operations/setup/setup-api';
 import { AdminApi, AdminSettingResponse, SettingGroup } from '../admin-api';
+import { ReceiptSignature } from './receipt-signature/receipt-signature';
 
 type LoadState = 'loading' | 'ready' | 'error' | 'restarting' | 'slow';
 
@@ -90,6 +91,7 @@ const INPUTS: Partial<Readonly<Record<SettingName, Input>>> = {
     FormField,
     FormControlDirective,
     PasswordReveal,
+    ReceiptSignature,
   ],
   templateUrl: './admin-settings.html',
   styleUrl: './admin-settings.scss',

@@ -1,0 +1,139 @@
+:host {
+  display: block;
+}
+
+.signature {
+  border-top: 1px solid var(--color-border-soft);
+  margin-top: 8px;
+  padding-top: 16px;
+}
+
+.signature-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--color-text);
+  margin-bottom: 4px;
+}
+
+.signature-hint {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--color-text-soft);
+  margin-bottom: 12px;
+}
+
+.signature-frame {
+  background: var(--color-surface);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  margin-bottom: 8px;
+  max-width: 360px;
+}
+
+.signature-preview {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 120px;
+  object-fit: contain;
+}
+
+.signature-state {
+  font-size: 14px;
+  color: var(--color-text-secondary);
+  margin-bottom: 10px;
+}
+
+.signature-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+}
+
+.signature-file-label {
+  flex-basis: 100%;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.signature-input {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  color: var(--color-text-secondary);
+  max-width: 100%;
+}
+
+.signature-confirm {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--color-text);
+  margin-top: 12px;
+
+  > span {
+    flex-basis: 100%;
+  }
+}
+
+.signature-status,
+.signature-error {
+  font-size: 13px;
+  line-height: 1.5;
+  margin-top: 10px;
+  color: var(--color-text-muted);
+}
+
+.signature-error {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+
+.signature-status--ok {
+  color: var(--color-success);
+}
+
+.signature-error,
+.signature-status--failed {
+  color: var(--color-danger);
+}
+
+.action-btn {
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
+  border: none;
+  padding: 9px 18px;
+  border-radius: var(--radius-pill);
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  font-family: var(--font-sans);
+}
+
+.action-link {
+  background: none;
+  border: none;
+  color: var(--color-accent);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 6px 8px;
+}
+
+.action-link--danger {
+  color: var(--color-danger);
+  padding-left: 0;
+  padding-right: 0;
+}
+
+button:disabled {
+  cursor: progress;
+  opacity: 0.7;
+}
