@@ -1,0 +1,65 @@
+package cz.novanadeje.app.content.application.home;
+
+import cz.novanadeje.app.content.domain.news.NewsArticle;
+import cz.novanadeje.app.content.domain.news.NewsArticleRepository;
+import cz.novanadeje.app.content.domain.news.NewsContent;
+import cz.novanadeje.app.content.domain.news.NewsArticleId;
+import cz.novanadeje.app.content.domain.project.Project;
+import cz.novanadeje.app.content.domain.project.ProjectContent;
+import cz.novanadeje.app.content.domain.project.ProjectId;
+import cz.novanadeje.app.content.domain.project.ProjectRepository;
+import cz.novanadeje.app.content.domain.Slug;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+
+import java.time.Clock;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneOffset;
+import java.util.List;
+import java.util.Optional;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+class HomeContentServiceTest {
+
+    private static final Instant LATE_EVENING_UTC = Instant.parse("2026-10-23T22:30:00Z");
+    private static final LocalDate PRAGUE_DAY = LocalDate.of(2026, 10, 24);
+
+    private final NewsArticleRepository news = mock(NewsArticleRepository.class);
+    private final ProjectRepository projects = mock(ProjectRepository.class);
+    private final HomeContentService service = new HomeContentService(news, projects, Clock.fixed(LATE_EVENING_UTC, ZoneOffset.UTC));
+
+    @Test
+    @DisplayName("Given published news and projects, when the home content is read, then it carries the three newest news articles and the projects visible on the Prague day")
+    void should_carry_three_news_and_the_projects_when_read_given_published_content() {
+        NewsArticle article = NewsArticle.create(NewsArticleId.newId(LATE_EVENING_UTC), new NewsContent(new Slug("zprava"), "Zpráva", Optional.empty(), "Perex", "Text", Optional.empty()), LATE_EVENING_UTC);
+        Project project = Project.create(ProjectId.newId(LATE_EVENING_UTC), new ProjectContent(new Slug("dominik"), "Dominik", 2024, Optional.empty(), "Perex", "Text", Optional.empty()), LATE_EVENING_UTC);
+        when(news.findVisibleNewestFirst(eq(PRAGUE_DAY), eq(0), anyInt())).thenReturn(List.of(article));
+        when(projects.findVisibleNewestFirst(eq(PRAGUE_DAY), eq(0), anyInt())).thenReturn(List.of(project));
+
+        HomeContent content = service.read();
+
+        assertThat(content.news()).singleElement().satisfies(view -> assertThat(view.title()).isEqualTo("Zpráva"));
+        assertThat(content.projects()).singleElement().satisfies(view -> assertThat(view.year()).isEqualTo(2024));
+        verify(news).findVisibleNewestFirst(PRAGUE_DAY, 0, HomeContentService.NEWS_ON_HOME);
+        verify(projects).findVisibleNewestFirst(PRAGUE_DAY, 0, HomeContentService.PROJECTS_ON_HOME);
+    }
+
+    @Test
+    @DisplayName("Given nothing published, when the home content is read, then both lists are empty")
+    void should_be_empty_when_read_given_nothing_published() {
+        when(news.findVisibleNewestFirst(eq(PRAGUE_DAY), eq(0), anyInt())).thenReturn(List.of());
+        when(projects.findVisibleNewestFirst(eq(PRAGUE_DAY), eq(0), anyInt())).thenReturn(List.of());
+
+        HomeContent content = service.read();
+
+        assertThat(content.news()).isEmpty();
+        assertThat(content.projects()).isEmpty();
+    }
+}

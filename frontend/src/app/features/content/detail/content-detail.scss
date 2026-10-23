@@ -1,0 +1,175 @@
+:host {
+  display: block;
+}
+
+.section-inner {
+  max-width: var(--content-max);
+  margin: 0 auto;
+  padding: 0 32px;
+}
+
+.intro,
+.detail--waiting {
+  background:
+    radial-gradient(
+      ellipse at 85% 0%,
+      color-mix(in srgb, var(--color-accent) 28%, transparent) 0%,
+      transparent 60%
+    ),
+    var(--color-surface-inverse);
+  padding: calc(var(--header-height) + 88px) 0 80px;
+}
+
+.detail--waiting {
+  min-height: 70vh;
+}
+
+.waiting {
+  color: color-mix(in srgb, var(--color-on-inverse) 80%, transparent);
+  font-size: 17px;
+  margin-bottom: 24px;
+}
+
+.crumbs {
+  margin-bottom: 28px;
+
+  a {
+    color: color-mix(in srgb, var(--color-on-inverse) 80%, transparent);
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+
+    &:hover {
+      color: var(--color-on-inverse);
+      text-decoration: underline;
+    }
+  }
+}
+
+.eyebrow {
+  color: color-mix(in srgb, var(--color-on-inverse) 65%, transparent);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  margin-bottom: 16px;
+}
+
+.title {
+  font-family: var(--font-serif);
+  font-size: clamp(34px, 5vw, 56px);
+  font-weight: 800;
+  line-height: 1.1;
+  color: var(--color-on-inverse);
+  max-width: 20ch;
+  text-wrap: balance;
+  outline: none;
+}
+
+.lead {
+  margin-top: 24px;
+  max-width: 62ch;
+  color: color-mix(in srgb, var(--color-on-inverse) 70%, transparent);
+  font-size: 18px;
+  line-height: 1.8;
+}
+
+.body {
+  padding-top: 64px;
+  padding-bottom: 108px;
+}
+
+.photo {
+  max-width: 960px;
+  margin: 0 0 48px;
+  border-radius: var(--radius-card);
+  overflow: hidden;
+  box-shadow: var(--shadow-card);
+  aspect-ratio: 8 / 5;
+}
+
+.prose {
+  max-width: 70ch;
+
+  p {
+    color: var(--color-text-soft);
+    font-size: 17px;
+    line-height: 1.8;
+    white-space: pre-line;
+  }
+
+  p + p {
+    margin-top: 22px;
+  }
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 56px;
+}
+
+.btn-primary,
+.btn-ghost {
+  text-decoration: none;
+  padding: 14px 32px;
+  border-radius: var(--radius-pill);
+  font-size: 16px;
+  display: inline-block;
+}
+
+.btn-primary {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  font-weight: 700;
+  box-shadow: var(--shadow-cta-hero);
+  transition: transform 0.2s;
+
+  &:hover {
+    transform: translateY(-2px);
+  }
+}
+
+.btn-ghost {
+  color: var(--color-text);
+  font-weight: 600;
+  border: 1.5px solid var(--color-border);
+  background: transparent;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  transition: background 0.2s;
+
+  &:hover {
+    background: var(--color-surface-alt);
+  }
+}
+
+.detail--waiting .btn-ghost {
+  color: var(--color-on-inverse);
+  border-color: color-mix(in srgb, var(--color-on-inverse) 35%, transparent);
+
+  &:hover {
+    background: color-mix(in srgb, var(--color-on-inverse) 12%, transparent);
+  }
+}
+
+@media (max-width: 768px) {
+  .section-inner {
+    padding: 0 20px;
+  }
+
+  .intro,
+  .detail--waiting {
+    padding: calc(var(--header-height) + 56px) 0 56px;
+  }
+
+  .body {
+    padding-top: 40px;
+    padding-bottom: 72px;
+  }
+
+  .photo {
+    margin-bottom: 32px;
+  }
+}

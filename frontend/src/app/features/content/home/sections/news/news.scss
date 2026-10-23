@@ -114,3 +114,28 @@
     grid-template-columns: 1fr;
   }
 }
+
+.news-card:has(.news-link) {
+  position: relative;
+}
+
+.news-link {
+  color: inherit;
+  text-decoration: none;
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: var(--radius-card);
+  }
+
+  &:focus-visible {
+    outline: none;
+  }
+
+  &:focus-visible::after {
+    outline: 3px solid var(--color-focus-ring);
+    outline-offset: 2px;
+  }
+}

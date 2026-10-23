@@ -1,0 +1,85 @@
+@switch (state()) {
+  @case ('loading') {
+    <section class="detail detail--waiting">
+      <div class="section-inner">
+        <p class="waiting" role="status" i18n="@@content.detail.loading">Načítáme stránku…</p>
+      </div>
+    </section>
+  }
+  @case ('error') {
+    <section class="detail detail--waiting">
+      <div class="section-inner">
+        <p class="waiting" role="alert" i18n="@@content.detail.error">
+          Stránku se nepodařilo načíst.
+        </p>
+        <button type="button" class="btn-ghost" (click)="retry()" i18n="@@content.detail.retry">
+          Zkusit znovu
+        </button>
+      </div>
+    </section>
+  }
+  @case ('missing') {
+    <app-not-found />
+  }
+  @case ('ready') {
+    @if (page(); as page) {
+      <article class="detail">
+        <header class="intro">
+          <div class="section-inner">
+            <p class="crumbs">
+              <a routerLink="/" [fragment]="page.backFragment">
+                @if (kind === 'news') {
+                  <ng-container i18n="@@content.detail.back.news">← Všechny aktuality</ng-container>
+                } @else {
+                  <ng-container i18n="@@content.detail.back.projects"
+                    >← Všechny projekty</ng-container
+                  >
+                }
+              </a>
+            </p>
+            <p class="eyebrow">{{ page.eyebrow }}</p>
+            <h1 #heading class="title" tabindex="-1">{{ page.title }}</h1>
+            <p class="lead">{{ page.perex }}</p>
+          </div>
+        </header>
+
+        <div class="body section-inner">
+          @if (image(); as src) {
+            <figure class="photo">
+              <img
+                [src]="src"
+                [srcset]="imageSet()"
+                sizes="(max-width: 1100px) 100vw, 960px"
+                width="960"
+                height="600"
+                alt=""
+                class="real-img"
+              />
+            </figure>
+          }
+          <div class="prose">
+            @for (paragraph of page.paragraphs; track $index) {
+              <p>{{ paragraph }}</p>
+            }
+          </div>
+          <p class="actions">
+            <a class="btn-primary" routerLink="/" fragment="prispet" i18n="@@content.detail.donate"
+              >Přispět</a
+            >
+            <a class="btn-ghost" routerLink="/" [fragment]="page.backFragment">
+              @if (kind === 'news') {
+                <ng-container i18n="@@content.detail.back.news.again"
+                  >Zpět na aktuality</ng-container
+                >
+              } @else {
+                <ng-container i18n="@@content.detail.back.projects.again"
+                  >Zpět na projekty</ng-container
+                >
+              }
+            </a>
+          </p>
+        </div>
+      </article>
+    }
+  }
+}

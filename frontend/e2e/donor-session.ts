@@ -166,6 +166,10 @@ export async function mockDonorApi(
     );
   }
   await page.route(
+    (url) => url.pathname === '/api/content/home',
+    (route) => route.fulfill({ json: { news: [], projects: [] } }),
+  );
+  await page.route(
     (url) => url.pathname === '/api/donations/payment-qr',
     (route) => route.fulfill({ json: paymentQr }),
   );

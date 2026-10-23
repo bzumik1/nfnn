@@ -1,7 +1,7 @@
 <app-hero />
 <app-stats-bar />
 <app-about />
-<app-projects />
+<app-projects [items]="projects()" />
 <app-donate-cta [variableSymbol]="variableSymbol()" />
-<app-news />
+<app-news [items]="news()" />
 <app-contact-form />

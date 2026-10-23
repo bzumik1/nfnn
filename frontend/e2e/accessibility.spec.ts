@@ -78,6 +78,69 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     expect(await violations(page)).toEqual([]);
   });
 
+  test('when the home page shows published news and projects and they open both pages, then nothing breaks the rules', async ({
+    page,
+  }) => {
+    const imageId = '0199f3e0-0000-7000-8000-00000000a001';
+    const article = {
+      id: '0199f3e0-0000-7000-8000-00000000c001',
+      slug: 'zahrada-pro-deti',
+      title: 'Zahrada pro děti',
+      tag: 'Projekt',
+      perex: 'Stavíme zahradu, kde si děti budou hrát.',
+      body: 'První odstavec.\n\nDruhý odstavec.',
+      coverImage: { id: imageId, url: `/api/content/media/${imageId}` },
+      publishedOn: '2026-10-20',
+      createdAt: '2026-10-19T09:00:00Z',
+      updatedAt: '2026-10-20T07:30:00Z',
+    };
+    const project = {
+      ...article,
+      id: '0199f3e0-0000-7000-8000-00000000c002',
+      slug: 'dominik-7-let',
+      title: 'Dominik, 7 let',
+      year: 2024,
+      tag: 'Kompenzační pomůcky',
+      coverImage: null,
+    };
+    await page.route(
+      (url) => url.pathname === '/api/content/home',
+      (route) => route.fulfill({ json: { news: [article], projects: [project] } }),
+    );
+    await page.route(
+      (url) => url.pathname === `/api/content/news/${article.slug}`,
+      (route) => route.fulfill({ json: article }),
+    );
+    await page.route(
+      (url) => url.pathname === `/api/content/projects/${project.slug}`,
+      (route) => route.fulfill({ json: project }),
+    );
+    await page.route(
+      (url) => url.pathname.startsWith('/api/content/media/'),
+      (route) =>
+        route.fulfill({
+          contentType: 'image/png',
+          body: Buffer.from(secondFactorEnrolment.qrPngBase64, 'base64'),
+        }),
+    );
+
+    await page.goto('/');
+    await expect(page.locator('#aktuality .news-card')).toHaveCount(1);
+    await expect(page.locator('.qr-code img')).toBeVisible();
+
+    expect(await violations(page)).toEqual([]);
+
+    await page.goto('/aktuality/zahrada-pro-deti');
+    await expect(page.getByRole('heading', { level: 1, name: 'Zahrada pro děti' })).toBeFocused();
+
+    expect(await violations(page)).toEqual([]);
+
+    await page.goto('/projekty/dominik-7-let');
+    await expect(page.getByRole('heading', { level: 1, name: 'Dominik, 7 let' })).toBeFocused();
+
+    expect(await violations(page)).toEqual([]);
+  });
+
   test('when they open the privacy policy, then nothing on it breaks the rules', async ({
     page,
   }) => {
