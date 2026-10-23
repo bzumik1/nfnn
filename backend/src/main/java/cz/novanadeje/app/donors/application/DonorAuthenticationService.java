@@ -64,7 +64,7 @@ public class DonorAuthenticationService {
         } catch (RuleViolation weak) {
             throw new InvalidCredentials();
         }
-        Donor donor = donors.findByEmail(new EmailAddress(email)).orElse(null);
+        Donor donor = donors.findByEmail(new EmailAddress(email)).filter(found -> !found.isErased()).orElse(null);
         PasswordHash hash = donor == null ? UNKNOWN_DONOR_HASH : donor.passwordHash();
         if (!passwordHasher.matches(rawPassword, hash) || donor == null) {
             throw new InvalidCredentials();

@@ -1,6 +1,7 @@
 package cz.novanadeje.app.donors.domain;
 
 import cz.novanadeje.app.shared.domain.DonorType;
+import cz.novanadeje.app.shared.domain.ErasedPersonalData;
 import cz.novanadeje.app.shared.domain.VariableSymbol;
 import cz.novanadeje.app.shared.domain.EmailAddress;
 import cz.novanadeje.app.shared.domain.LocaleCode;
@@ -14,11 +15,12 @@ import java.util.Set;
 public final class Donor {
 
     public static final int MAX_NAME_LENGTH = 160;
+    static final PasswordHash ERASED_PASSWORD_HASH = new PasswordHash("$2a$12$d.Mm0cokxokrs8I.FUbkheX.XAfiajXc0IC06zGzHjAPmJqpwF/cK");
 
     private final DonorId id;
     private final DonorType type;
     private String name;
-    private final CompanyIdentifier companyIdentifier;
+    private CompanyIdentifier companyIdentifier;
     private PostalAddress address;
     private EmailAddress email;
     private PasswordHash passwordHash;
@@ -27,10 +29,11 @@ public final class Donor {
     private final Set<Role> roles;
     private final Instant registeredAt;
     private Instant emailVerifiedAt;
+    private Instant erasedAt;
 
     private Donor(DonorId id, DonorType type, String name, CompanyIdentifier companyIdentifier, PostalAddress address,
                   EmailAddress email, PasswordHash passwordHash, VariableSymbol variableSymbol, LocaleCode preferredLocale,
-                  Set<Role> roles, Instant registeredAt, Instant emailVerifiedAt) {
+                  Set<Role> roles, Instant registeredAt, Instant emailVerifiedAt, Instant erasedAt) {
         this.id = require(id, "Donor id");
         this.type = require(type, "Donor type");
         this.name = requireName(name);
@@ -40,9 +43,11 @@ public final class Donor {
         this.passwordHash = require(passwordHash, "Password hash");
         this.variableSymbol = require(variableSymbol, "Variable symbol");
         this.preferredLocale = require(preferredLocale, "Preferred locale");
-        this.roles = EnumSet.copyOf(require(roles, "Roles"));
+        this.roles = EnumSet.noneOf(Role.class);
+        this.roles.addAll(require(roles, "Roles"));
         this.registeredAt = require(registeredAt, "Registration time");
         this.emailVerifiedAt = emailVerifiedAt;
+        this.erasedAt = erasedAt;
     }
 
     public static Donor register(DonorId id, DonorType type, String name, CompanyIdentifier companyIdentifier, PostalAddress address,
@@ -55,14 +60,40 @@ public final class Donor {
             throw new CompanyIdentifierNotAllowed();
         }
         return new Donor(id, type, name, companyIdentifier, address, email, passwordHash, variableSymbol, preferredLocale,
-                EnumSet.of(Role.DONOR), registeredAt, null);
+                EnumSet.of(Role.DONOR), registeredAt, null, null);
     }
 
     public static Donor reconstitute(DonorId id, DonorType type, String name, CompanyIdentifier companyIdentifier, PostalAddress address,
                                      EmailAddress email, PasswordHash passwordHash, VariableSymbol variableSymbol, LocaleCode preferredLocale,
-                                     Set<Role> roles, Instant registeredAt, Instant emailVerifiedAt) {
+                                     Set<Role> roles, Instant registeredAt, Instant emailVerifiedAt, Instant erasedAt) {
         return new Donor(id, type, name, companyIdentifier, address, email, passwordHash, variableSymbol, preferredLocale, roles, registeredAt,
-                emailVerifiedAt);
+                emailVerifiedAt, erasedAt);
+    }
+
+    public void erase(Instant at) {
+        Instant checkedAt = require(at, "Erasure time");
+        if (erasedAt != null) {
+            throw new DonorAlreadyErased(id);
+        }
+        if (isAdministrator()) {
+            throw new AdministratorNotErasable(id);
+        }
+        this.erasedAt = checkedAt;
+        this.name = ErasedPersonalData.NAME;
+        this.companyIdentifier = null;
+        this.address = ErasedPersonalData.ADDRESS;
+        this.email = ErasedPersonalData.emailFor(id.value());
+        this.passwordHash = ERASED_PASSWORD_HASH;
+        this.roles.clear();
+        this.emailVerifiedAt = null;
+    }
+
+    public boolean isErased() {
+        return erasedAt != null;
+    }
+
+    public Optional<Instant> erasedAt() {
+        return Optional.ofNullable(erasedAt);
     }
 
     public void verifyEmail(Instant at) {

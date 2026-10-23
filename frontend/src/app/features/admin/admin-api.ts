@@ -147,6 +147,7 @@ export interface DonorAccountResponse {
   emailVerified: boolean;
   administrator: boolean;
   secondFactorEnabled: boolean;
+  erasedAt: string | null;
 }
 
 export interface DonorAccountListResponse {
@@ -162,6 +163,7 @@ export interface AdminDonorRecordResponse {
   address: AddressResponse;
   preferredLocale: string;
   registeredAt: string;
+  erasedAt: string | null;
 }
 
 export type ReceiptKind = 'SINGLE' | 'YEARLY';
@@ -277,6 +279,10 @@ export class AdminApi {
 
   donor(donorId: string): Observable<DonorAccountResponse> {
     return this.http.get<DonorAccountResponse>(`/api/admin/donors/${encodeURIComponent(donorId)}`);
+  }
+
+  eraseDonor(donorId: string): Observable<void> {
+    return this.http.delete<void>(`/api/admin/donors/${encodeURIComponent(donorId)}`);
   }
 
   donorDonations(donorId: string): Observable<AdminDonorDetailResponse> {

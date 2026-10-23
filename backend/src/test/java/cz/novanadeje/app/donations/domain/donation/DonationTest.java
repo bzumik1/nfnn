@@ -152,12 +152,35 @@ class DonationTest {
     }
 
     @Test
-    @DisplayName("Given a donation paired by a confirmed symbol without its link or without its claim, when reconstituted, then it is refused")
-    void should_refuse_when_reconstituted_given_confirmed_symbol_without_link_or_claim() {
+    @DisplayName("Given a donation paired by a confirmed symbol with only its link or only its claim, when reconstituted, then it is refused, while one with neither is accepted as erased with the donor")
+    void should_refuse_when_reconstituted_given_confirmed_symbol_with_only_link_or_only_claim() {
         assertThatIllegalArgumentException().isThrownBy(() -> reconstituted(PairingMethod.CONFIRMED_SYMBOL, Optional.empty(),
                 Optional.of(SymbolClaimId.newId(NOW))));
         assertThatIllegalArgumentException().isThrownBy(() -> reconstituted(PairingMethod.CONFIRMED_SYMBOL,
                 Optional.of(SenderAccountLinkId.newId(NOW)), Optional.empty()));
+        assertThat(reconstituted(PairingMethod.CONFIRMED_SYMBOL, Optional.empty(), Optional.empty()).pairedBy())
+                .contains(PairingMethod.CONFIRMED_SYMBOL);
+    }
+
+    @Test
+    @DisplayName("Given a donation paired by a confirmed symbol, when its pairing sources are forgotten, then a copy keeps everything but the link and the claim")
+    void should_keep_everything_but_link_and_claim_when_pairing_sources_forgotten_given_confirmed_symbol_pairing() {
+        Donation donation = reconstituted(PairingMethod.CONFIRMED_SYMBOL, Optional.of(SenderAccountLinkId.newId(NOW)),
+                Optional.of(SymbolClaimId.newId(NOW)));
+
+        Donation forgotten = donation.withoutPairingSources();
+
+        assertThat(forgotten.id()).isEqualTo(donation.id());
+        assertThat(forgotten.donor()).isEqualTo(donation.donor());
+        assertThat(forgotten.bankPayment()).isEqualTo(donation.bankPayment());
+        assertThat(forgotten.amount()).isEqualTo(donation.amount());
+        assertThat(forgotten.receivedOn()).isEqualTo(donation.receivedOn());
+        assertThat(forgotten.pairedBy()).contains(PairingMethod.CONFIRMED_SYMBOL);
+        assertThat(forgotten.pairedThrough()).isEmpty();
+        assertThat(forgotten.confirmedClaim()).isEmpty();
+        assertThat(forgotten.purpose()).isEqualTo(donation.purpose());
+        assertThat(forgotten.recordedAt()).isEqualTo(donation.recordedAt());
+        assertThat(donation.pairedThrough()).isPresent();
     }
 
     @Test

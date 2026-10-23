@@ -16,7 +16,7 @@ public interface DonorRecordJpaRepository extends JpaRepository<DonorRecordJpaEn
 
     long countByRegisteredAtBefore(Instant end);
 
-    @Query("select r from DonorRecordJpaEntity r where lower(r.name) like lower(concat('%', :query, '%')) escape '!'"
-            + " or r.variableSymbol like concat(:query, '%') escape '!' order by r.name, r.donorId")
+    @Query("select r from DonorRecordJpaEntity r where r.erasedAt is null and (lower(r.name) like lower(concat('%', :query, '%')) escape '!'"
+            + " or r.variableSymbol like concat(:query, '%') escape '!') order by r.name, r.donorId")
     List<DonorRecordJpaEntity> searchByNameOrSymbol(@Param("query") String query, Pageable page);
 }

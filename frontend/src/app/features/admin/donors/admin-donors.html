@@ -8,7 +8,8 @@
     <h1 #title class="admin-title" tabindex="-1" i18n="@@admin.donors.heading">Dárci</h1>
     <p class="admin-intro" i18n="@@admin.donors.intro">
       Najděte dárce a otevřete jeho kartu: uvidíte jeho účet, bankovní účty, dary a vydaná potvrzení
-      a můžete mu vypnout dvoufaktorové ověření nebo odebrat špatně přiřazený bankovní účet.
+      a můžete mu vypnout dvoufaktorové ověření, odebrat špatně přiřazený bankovní účet nebo na jeho
+      žádost vymazat osobní údaje.
     </p>
 
     <section class="admin-card" aria-labelledby="search-title">
@@ -89,7 +90,11 @@
                       </span>
                     </td>
                     <td data-label="E-mail" i18n-data-label="@@admin.donors.col.email">
-                      <span class="email">{{ item.email }}</span>
+                      @if (item.erasedAt) {
+                        <span class="muted" i18n="@@admin.donors.email.erased">vymazán</span>
+                      } @else {
+                        <span class="email">{{ item.email }}</span>
+                      }
                     </td>
                     <td data-label="Variabilní symbol" i18n-data-label="@@admin.donors.col.symbol">
                       <span class="mono">{{ item.variableSymbol }}</span>
@@ -99,6 +104,11 @@
                     </td>
                     <td data-label="Účet" i18n-data-label="@@admin.donors.col.account">
                       <span class="tags">
+                        @if (item.erasedAt) {
+                          <span class="tag tag--off" i18n="@@admin.donors.tag.erased"
+                            >Údaje vymazány</span
+                          >
+                        }
                         @if (item.administrator) {
                           <span class="tag tag--admin" i18n="@@admin.donors.tag.administrator"
                             >Správce</span
@@ -109,13 +119,16 @@
                             >Dvoufaktorové ověření</span
                           >
                         }
-                        @if (!item.emailVerified) {
+                        @if (!item.emailVerified && !item.erasedAt) {
                           <span class="tag tag--warn" i18n="@@admin.donors.tag.unverified"
                             >E-mail neověřen</span
                           >
                         }
                         @if (
-                          !item.administrator && !item.secondFactorEnabled && item.emailVerified
+                          !item.erasedAt &&
+                          !item.administrator &&
+                          !item.secondFactorEnabled &&
+                          item.emailVerified
                         ) {
                           <span class="muted" i18n="@@admin.donors.tag.plain">běžný účet</span>
                         }

@@ -1,6 +1,7 @@
 package cz.novanadeje.app.donors.domain;
 
 import cz.novanadeje.app.shared.domain.DonorType;
+import cz.novanadeje.app.shared.domain.ErasedPersonalData;
 import cz.novanadeje.app.shared.domain.VariableSymbol;
 import cz.novanadeje.app.shared.domain.EmailAddress;
 import cz.novanadeje.app.shared.domain.LocaleCode;
@@ -64,11 +65,11 @@ class DonorTest {
     @DisplayName("Given a stored verified donor, when reconstituted, then the verification time is kept")
     void should_keep_verification_time_when_reconstituted_given_stored_row() {
         Donor donor = Donor.reconstitute(DonorId.newId(NOW), DonorType.PERSON, "Jana Nováková", null, ADDRESS, EMAIL, HASH, SYMBOL, LocaleCode.CS,
-                Set.of(Role.DONOR), NOW, NOW.plusSeconds(5));
+                Set.of(Role.DONOR), NOW, NOW.plusSeconds(5), null);
 
         assertThat(donor.emailVerifiedAt()).contains(NOW.plusSeconds(5));
         assertThat(Donor.reconstitute(DonorId.newId(NOW), DonorType.PERSON, "Jana Nováková", null, ADDRESS, EMAIL, HASH, SYMBOL, LocaleCode.CS,
-                Set.of(Role.DONOR), NOW, null).isEmailVerified()).isFalse();
+                Set.of(Role.DONOR), NOW, null, null).isEmailVerified()).isFalse();
     }
 
     @Test
@@ -143,7 +144,7 @@ class DonorTest {
     @DisplayName("Given an administrator, when the session roles are asked without the second factor, then ADMIN is left out, and with it every role is granted")
     void should_grant_admin_only_with_second_factor_when_session_roles_asked_given_administrator() {
         Donor admin = Donor.reconstitute(DonorId.newId(NOW), DonorType.PERSON, "Jana Nováková", null, ADDRESS, EMAIL, HASH, SYMBOL, LocaleCode.CS,
-                Set.of(Role.DONOR, Role.ADMIN), NOW, NOW);
+                Set.of(Role.DONOR, Role.ADMIN), NOW, NOW, null);
 
         assertThat(admin.isAdministrator()).isTrue();
         assertThat(admin.sessionRoles(false)).containsExactly(Role.DONOR);
@@ -176,7 +177,7 @@ class DonorTest {
     @DisplayName("Given an administrator, when administration is granted again, then the donor refuses")
     void should_refuse_when_administration_granted_given_administrator() {
         Donor admin = Donor.reconstitute(DonorId.newId(NOW), DonorType.PERSON, "Jana Nováková", null, ADDRESS, EMAIL, HASH, SYMBOL, LocaleCode.CS,
-                Set.of(Role.DONOR, Role.ADMIN), NOW, NOW);
+                Set.of(Role.DONOR, Role.ADMIN), NOW, NOW, null);
 
         assertThatThrownBy(admin::grantAdministration).isInstanceOf(AlreadyAdministrator.class);
     }
@@ -185,7 +186,7 @@ class DonorTest {
     @DisplayName("Given an administrator, when administration is revoked, then only DONOR is left")
     void should_keep_only_donor_role_when_administration_revoked_given_administrator() {
         Donor admin = Donor.reconstitute(DonorId.newId(NOW), DonorType.PERSON, "Jana Nováková", null, ADDRESS, EMAIL, HASH, SYMBOL, LocaleCode.CS,
-                Set.of(Role.DONOR, Role.ADMIN), NOW, NOW);
+                Set.of(Role.DONOR, Role.ADMIN), NOW, NOW, null);
 
         admin.revokeAdministration();
 
@@ -199,5 +200,70 @@ class DonorTest {
         Donor donor = Donor.register(DonorId.newId(NOW), DonorType.PERSON, "Jana Nováková", null, ADDRESS, EMAIL, HASH, SYMBOL, LocaleCode.CS, NOW);
 
         assertThatThrownBy(donor::revokeAdministration).isInstanceOf(NotAdministrator.class);
+    }
+
+    @Test
+    @DisplayName("Given a verified company donor, when erased, then every personal detail is a placeholder, the password no longer matches anything known, the roles are gone and the time is kept")
+    void should_replace_personal_data_when_erased_given_verified_company() {
+        DonorId id = DonorId.newId(NOW);
+        Donor donor = Donor.register(id, DonorType.COMPANY, "Stavby Novák s.r.o.", new CompanyIdentifier("45274649"), ADDRESS, EMAIL, HASH, SYMBOL,
+                LocaleCode.EN, NOW);
+        donor.verifyEmail(NOW.plusSeconds(60));
+
+        donor.erase(NOW.plusSeconds(3600));
+
+        assertThat(donor.isErased()).isTrue();
+        assertThat(donor.erasedAt()).contains(NOW.plusSeconds(3600));
+        assertThat(donor.name()).isEqualTo(ErasedPersonalData.NAME);
+        assertThat(donor.companyIdentifier()).isEmpty();
+        assertThat(donor.type()).isEqualTo(DonorType.COMPANY);
+        assertThat(donor.address()).isEqualTo(ErasedPersonalData.ADDRESS);
+        assertThat(donor.email()).isEqualTo(new EmailAddress("erased-" + id.value() + "@erased.invalid"));
+        assertThat(donor.passwordHash()).isNotEqualTo(HASH);
+        assertThat(donor.passwordHash().value()).startsWith("$2a$12$");
+        assertThat(donor.roles()).isEmpty();
+        assertThat(donor.isEmailVerified()).isFalse();
+        assertThat(donor.variableSymbol()).isEqualTo(SYMBOL);
+        assertThat(donor.preferredLocale()).isEqualTo(LocaleCode.EN);
+        assertThat(donor.registeredAt()).isEqualTo(NOW);
+    }
+
+    @Test
+    @DisplayName("Given an erased donor, when erased again, then it is refused as already erased and the first time stays")
+    void should_refuse_when_erased_twice_given_erased_donor() {
+        Donor donor = Donor.register(DonorId.newId(NOW), DonorType.PERSON, "Jana Nováková", null, ADDRESS, EMAIL, HASH, SYMBOL, LocaleCode.CS, NOW);
+        donor.erase(NOW.plusSeconds(10));
+
+        assertThatThrownBy(() -> donor.erase(NOW.plusSeconds(20)))
+                .isInstanceOf(DonorAlreadyErased.class)
+                .hasFieldOrPropertyWithValue("code", "donors/already-erased");
+        assertThat(donor.erasedAt()).contains(NOW.plusSeconds(10));
+    }
+
+    @Test
+    @DisplayName("Given an administrator, when erased, then it is refused and nothing changes")
+    void should_refuse_when_erased_given_administrator() {
+        Donor donor = Donor.register(DonorId.newId(NOW), DonorType.PERSON, "Jana Nováková", null, ADDRESS, EMAIL, HASH, SYMBOL, LocaleCode.CS, NOW);
+        donor.grantAdministration();
+
+        assertThatThrownBy(() -> donor.erase(NOW.plusSeconds(10)))
+                .isInstanceOf(AdministratorNotErasable.class)
+                .hasFieldOrPropertyWithValue("code", "donors/administrator-not-erasable");
+        assertThat(donor.isErased()).isFalse();
+        assertThat(donor.name()).isEqualTo("Jana Nováková");
+        assertThat(donor.email()).isEqualTo(EMAIL);
+    }
+
+    @Test
+    @DisplayName("Given a stored erased donor without roles, when reconstituted, then it is erased and has no roles")
+    void should_keep_erasure_when_reconstituted_given_erased_row() {
+        DonorId id = DonorId.newId(NOW);
+        Donor donor = Donor.reconstitute(id, DonorType.PERSON, ErasedPersonalData.NAME, null, ErasedPersonalData.ADDRESS,
+                ErasedPersonalData.emailFor(id.value()), HASH, SYMBOL, LocaleCode.CS, Set.of(), NOW, null, NOW.plusSeconds(5));
+
+        assertThat(donor.isErased()).isTrue();
+        assertThat(donor.erasedAt()).contains(NOW.plusSeconds(5));
+        assertThat(donor.roles()).isEmpty();
+        assertThat(donor.isAdministrator()).isFalse();
     }
 }

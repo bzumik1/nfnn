@@ -71,6 +71,6 @@ class DonorViewsTest {
 
     private static Donor donor(Set<Role> roles) {
         return Donor.reconstitute(DONOR, DonorType.PERSON, "Jana Nováková", null, new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"),
-                new EmailAddress("jana@example.cz"), new PasswordHash("$hash"), new VariableSymbol("1234567890"), LocaleCode.CS, roles, NOW, NOW);
+                new EmailAddress("jana@example.cz"), new PasswordHash("$hash"), new VariableSymbol("1234567890"), LocaleCode.CS, roles, NOW, NOW, null);
     }
 }

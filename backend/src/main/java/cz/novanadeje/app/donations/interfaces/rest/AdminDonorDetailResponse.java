@@ -26,13 +26,13 @@ record AdminDonorDetailResponse(AdminDonorRecordResponse donor, List<BankAccount
     }
 
     record AdminDonorRecordResponse(UUID donorId, String name, DonorType type, String variableSymbol, String companyIdentifier,
-                                    AddressResponse address, String preferredLocale, Instant registeredAt) {
+                                    AddressResponse address, String preferredLocale, Instant registeredAt, Instant erasedAt) {
 
         static AdminDonorRecordResponse from(DonorRecord record) {
             return new AdminDonorRecordResponse(record.id().value(), record.name(), record.type(), record.variableSymbol().value(),
                     record.companyIdentifier().orElse(null),
                     new AddressResponse(record.address().street(), record.address().city(), record.address().postalCode()),
-                    record.preferredLocale().tag(), record.registeredAt());
+                    record.preferredLocale().tag(), record.registeredAt(), record.erasedAt().orElse(null));
         }
     }
 

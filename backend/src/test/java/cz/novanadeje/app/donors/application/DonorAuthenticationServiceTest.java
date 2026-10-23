@@ -114,6 +114,21 @@ class DonorAuthenticationServiceTest {
     }
 
     @Test
+    @DisplayName("Given an erased donor whose placeholder address is used, when signing in, then it is refused as wrong credentials without comparing the password")
+    void should_refuse_as_wrong_credentials_when_logged_in_given_erased_donor() {
+        Donor erased = Donor.register(DonorId.newId(NOW), DonorType.PERSON, "Jana Nováková", null,
+                new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"), EMAIL, HASH, new VariableSymbol("1234567891"), LocaleCode.CS, NOW);
+        erased.verifyEmail(NOW);
+        erased.erase(NOW.plusSeconds(5));
+        when(donors.findByEmail(erased.email())).thenReturn(Optional.of(erased));
+
+        assertThatThrownBy(() -> service.login(erased.email().value(), "correct horse battery")).isInstanceOf(InvalidCredentials.class);
+
+        verify(passwordHasher, never()).matches(any(), eq(erased.passwordHash()));
+        verify(sessions, never()).open(any(), anyBoolean());
+    }
+
+    @Test
     void should_open_session_when_logged_in_given_matching_password() {
         when(donors.findByEmail(EMAIL)).thenReturn(Optional.of(donor));
         when(passwordHasher.matches(new RawPassword("correct horse battery"), HASH)).thenReturn(true);

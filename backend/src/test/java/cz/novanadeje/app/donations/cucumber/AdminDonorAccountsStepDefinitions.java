@@ -105,6 +105,11 @@ public class AdminDonorAccountsStepDefinitions {
         assertThat(donor.get("registeredAt").asString()).isNotBlank();
     }
 
+    @Then("the donations card says the donor was erased on {date}")
+    public void theDonationsCardSaysTheDonorWasErasedOn(LocalDate day) {
+        assertThat(api.lastResponseJson().get("donor").get("erasedAt").asString()).startsWith(day.toString());
+    }
+
     @Then("the donor's bank accounts are none")
     public void theDonorsBankAccountsAreNone() {
         assertThat(bankAccounts()).isEmpty();

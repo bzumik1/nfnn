@@ -451,7 +451,7 @@ class PaymentPairingServiceTest {
         DonorRecord petrFrom = DonorRecord.reconstitute(petr.id(), DonorType.PERSON, petr.name(), null, petr.address(), petr.variableSymbol(),
                 petr.preferredLocale(), List.of(SenderAccountLink.reconstitute(SenderAccountLinkId.newId(NOW), ACCOUNT, SenderAccountLinkStatus.ACTIVE,
                         Optional.of(BankPaymentId.newId(NOW)), Optional.of(NOW), Optional.of(LocalDate.of(2026, 10, 10)), Optional.empty(), NOW,
-                        Optional.empty())), petr.registeredAt(), NOW);
+                        Optional.empty())), petr.registeredAt(), NOW, null);
         when(donorRecords.findByVariableSymbol(OLD_SYMBOL)).thenReturn(Optional.empty());
         when(donorRecords.findBySenderAccount(ACCOUNT)).thenReturn(List.of(storedJana, petrFrom));
         when(payments.findUnpairedBySenderAccountAndMatchingVariableSymbol(ACCOUNT, OLD_SYMBOL)).thenReturn(List.of(pairedMeanwhile, shared));
@@ -507,7 +507,7 @@ class PaymentPairingServiceTest {
         SenderAccountLink link = SenderAccountLink.reconstitute(SenderAccountLinkId.newId(NOW), ACCOUNT, status, Optional.of(BankPaymentId.newId(NOW)),
                 Optional.of(NOW), Optional.empty(), validTo, NOW, validTo.map(day -> NOW));
         return DonorRecord.reconstitute(record.id(), DonorType.PERSON, record.name(), null, record.address(), record.variableSymbol(),
-                record.preferredLocale(), List.of(link), record.registeredAt(), NOW);
+                record.preferredLocale(), List.of(link), record.registeredAt(), NOW, null);
     }
 
     private static SymbolClaim confirmed(DonorRecord donor, VariableSymbol symbol) {

@@ -260,11 +260,11 @@ class AdministratorServiceTest {
 
     private static Donor plainDonor(DonorId id, String name, String email) {
         return Donor.reconstitute(id, DonorType.PERSON, name, null, ADDRESS, new EmailAddress(email), new PasswordHash("$hash"),
-                new VariableSymbol("4821937560"), LocaleCode.CS, Set.of(Role.DONOR), NOW.minusSeconds(1000), NOW.minusSeconds(900));
+                new VariableSymbol("4821937560"), LocaleCode.CS, Set.of(Role.DONOR), NOW.minusSeconds(1000), NOW.minusSeconds(900), null);
     }
 
     private static Donor administrator(DonorId id, String name, String email) {
         return Donor.reconstitute(id, DonorType.PERSON, name, null, ADDRESS, new EmailAddress(email), new PasswordHash("$hash"),
-                new VariableSymbol("4821937560"), LocaleCode.CS, Set.of(Role.DONOR, Role.ADMIN), NOW.minusSeconds(1000), NOW.minusSeconds(900));
+                new VariableSymbol("4821937560"), LocaleCode.CS, Set.of(Role.DONOR, Role.ADMIN), NOW.minusSeconds(1000), NOW.minusSeconds(900), null);
     }
 }

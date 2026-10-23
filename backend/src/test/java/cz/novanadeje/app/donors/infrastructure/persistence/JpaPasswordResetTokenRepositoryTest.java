@@ -144,6 +144,22 @@ class JpaPasswordResetTokenRepositoryTest {
         assertThat(tokens.countOf(petr)).isEqualTo(1);
     }
 
+    @Test
+    @DisplayName("Given live and used tokens of two donors, when one donor's tokens are all deleted, then none of theirs stays and the other donor's do")
+    void should_delete_every_token_of_donor_when_all_deleted_given_two_donors() {
+        PasswordResetToken used = issue(jana, NOW.minusSeconds(60));
+        tokens.markUsed(used.id(), NOW.minusSeconds(30));
+        issue(jana, NOW);
+        issue(petr, NOW);
+        flushAndClear();
+
+        tokens.deleteAllOf(jana);
+        flushAndClear();
+
+        assertThat(tokens.countOf(jana)).isZero();
+        assertThat(tokens.countOf(petr)).isEqualTo(1);
+    }
+
     private PasswordResetToken issue(DonorId donorId, Instant issuedAt) {
         PasswordResetToken token = PasswordResetToken.issue(LinkSecret.generate(), donorId, issuedAt, HOUR);
         tokens.save(token);

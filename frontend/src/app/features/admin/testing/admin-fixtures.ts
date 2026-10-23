@@ -135,6 +135,7 @@ export function donorAccount(overrides: Partial<DonorAccountResponse> = {}): Don
     emailVerified: true,
     administrator: false,
     secondFactorEnabled: false,
+    erasedAt: null,
     ...overrides,
   };
 }
@@ -207,6 +208,7 @@ export function donorDetail(
       address: { street: 'Dlouhá 12', city: 'Ústí nad Labem', postalCode: '400 01' },
       preferredLocale: 'cs',
       registeredAt: '2026-10-17T08:00:00Z',
+      erasedAt: null,
     },
     bankAccounts: [adminBankAccount()],
     donations: {

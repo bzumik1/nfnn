@@ -183,7 +183,7 @@ class PaymentPairingPolicyTest {
     void should_leave_unpaired_when_decided_given_link_awaiting_payment() {
         DonorRecord awaiting = DonorRecord.reconstitute(jana.id(), DonorType.PERSON, jana.name(), null, jana.address(), jana.variableSymbol(),
                 jana.preferredLocale(), List.of(SenderAccountLink.awaitingPayment(SenderAccountLinkId.newId(NOW), ACCOUNT, BOOKED_ON.minusDays(5), NOW)),
-                jana.registeredAt(), NOW);
+                jana.registeredAt(), NOW, null);
 
         PairingDecision decision = policy.decide(payment(1, Optional.of(ACCOUNT), null), Optional.empty(), List.of(awaiting));
 
@@ -313,7 +313,7 @@ class PaymentPairingPolicyTest {
         SenderAccountLink link = SenderAccountLink.reconstitute(SenderAccountLinkId.newId(NOW), ACCOUNT, status, Optional.of(BankPaymentId.newId(NOW)),
                 Optional.of(NOW), from, to, NOW, to.map(day -> NOW));
         return DonorRecord.reconstitute(record.id(), DonorType.PERSON, record.name(), null, record.address(), record.variableSymbol(),
-                record.preferredLocale(), List.of(link), record.registeredAt(), NOW);
+                record.preferredLocale(), List.of(link), record.registeredAt(), NOW, null);
     }
 
     private static SymbolClaim confirmed(DonorRecord donor, SenderAccount account, VariableSymbol symbol) {
