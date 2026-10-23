@@ -116,7 +116,7 @@
     accent-color: var(--color-accent);
 
     &:focus-visible {
-      outline: 3px solid var(--color-border-accent);
+      outline: 3px solid var(--color-focus-ring);
       outline-offset: 2px;
     }
   }
@@ -199,7 +199,7 @@
   transition: opacity var(--duration-base);
 
   &:focus-visible {
-    outline: 3px solid var(--color-border-accent);
+    outline: 3px solid var(--color-focus-ring);
     outline-offset: 2px;
   }
 

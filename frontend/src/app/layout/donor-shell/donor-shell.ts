@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DOCUMENT, inject } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 
 @Component({
@@ -8,4 +8,11 @@ import { RouterOutlet } from '@angular/router';
   styleUrl: './donor-shell.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class DonorShell {}
+export class DonorShell {
+  private readonly document = inject(DOCUMENT);
+
+  skipToContent(event: Event): void {
+    event.preventDefault();
+    this.document.getElementById('obsah')?.focus();
+  }
+}

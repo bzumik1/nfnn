@@ -205,7 +205,7 @@
 .form-submit,
 .secondary {
   &:focus-visible {
-    outline: 3px solid var(--color-border-accent);
+    outline: 3px solid var(--color-focus-ring);
     outline-offset: 2px;
   }
 
@@ -279,7 +279,7 @@
 }
 
 .file-input:focus-visible + .file-pick {
-  outline: 3px solid var(--color-border-accent);
+  outline: 3px solid var(--color-focus-ring);
   outline-offset: 2px;
 }
 

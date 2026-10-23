@@ -78,7 +78,12 @@
 }
 
 .side-nav-content {
+  display: block;
   min-width: 0;
+
+  &:focus {
+    outline: none;
+  }
 }
 
 @include bp.down(nav) {

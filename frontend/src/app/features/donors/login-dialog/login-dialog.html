@@ -240,7 +240,7 @@
       >
         <div
           class="type-switch"
-          role="radiogroup"
+          appRadioGroup
           aria-label="Typ dárce"
           i18n-aria-label="@@donor.register.type"
         >
@@ -248,6 +248,7 @@
             type="button"
             role="radio"
             [attr.aria-checked]="donorType() === 'PERSON'"
+            [tabindex]="donorType() === 'PERSON' ? 0 : -1"
             [class.is-active]="donorType() === 'PERSON'"
             (click)="setDonorType('PERSON')"
             i18n="@@donor.register.type.person"
@@ -258,6 +259,7 @@
             type="button"
             role="radio"
             [attr.aria-checked]="donorType() === 'COMPANY'"
+            [tabindex]="donorType() === 'COMPANY' ? 0 : -1"
             [class.is-active]="donorType() === 'COMPANY'"
             (click)="setDonorType('COMPANY')"
             i18n="@@donor.register.type.company"
@@ -420,11 +422,12 @@
           <p id="register-method-label" class="register-label" i18n="@@donor.register.signInMethod">
             Jak se budete přihlašovat
           </p>
-          <div class="type-switch" role="radiogroup" aria-labelledby="register-method-label">
+          <div class="type-switch" appRadioGroup aria-labelledby="register-method-label">
             <button
               type="button"
               role="radio"
               [attr.aria-checked]="signInMethod() === 'password'"
+              [tabindex]="signInMethod() === 'password' ? 0 : -1"
               [class.is-active]="signInMethod() === 'password'"
               (click)="signInMethod.set('password')"
               i18n="@@donor.register.signInMethod.password"
@@ -435,6 +438,7 @@
               type="button"
               role="radio"
               [attr.aria-checked]="signInMethod() === 'passkey'"
+              [tabindex]="signInMethod() === 'passkey' ? 0 : -1"
               [class.is-active]="signInMethod() === 'passkey'"
               (click)="signInMethod.set('passkey')"
               i18n="@@donor.register.signInMethod.passkey"

@@ -16,6 +16,7 @@
 
 html {
   scroll-behavior: smooth;
+  scroll-padding-top: calc(var(--header-height) + var(--space-4));
 }
 
 :focus-visible {
@@ -25,6 +26,31 @@ html {
 
 [tabindex='-1']:focus {
   outline: none;
+}
+
+@media (forced-colors: active) {
+  :focus-visible {
+    outline-color: Highlight;
+  }
+
+  button,
+  [role='button'] {
+    border: 1px solid ButtonText;
+  }
+
+  [aria-pressed='true'],
+  [aria-checked='true'],
+  [aria-current='page'] {
+    forced-color-adjust: none;
+    background: Highlight;
+    color: HighlightText;
+  }
+
+  [aria-pressed='true'] svg,
+  [aria-checked='true'] svg,
+  [aria-current='page'] svg {
+    color: HighlightText;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -83,6 +109,25 @@ body {
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+.skip-link {
+  position: fixed;
+  top: var(--space-4);
+  left: var(--space-4);
+  z-index: 300;
+  padding: var(--space-3) var(--space-5);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  color: var(--color-accent);
+  box-shadow: var(--shadow-menu);
+  font-weight: var(--weight-semibold);
+  text-decoration: none;
+  transform: translateY(-200%);
+
+  &:focus-visible {
+    transform: none;
   }
 }
 
