@@ -1,3 +1,5 @@
+@use 'breakpoints' as bp;
+
 :host {
   display: block;
 }
@@ -5,15 +7,15 @@
 .container {
   max-width: 1100px;
   margin: 0;
-  padding: 32px 24px 48px;
+  padding: var(--space-8) var(--space-6) var(--space-12);
 }
 
 .admin-title {
   font-family: var(--font-serif);
-  font-size: clamp(26px, 4vw, 32px);
-  font-weight: 700;
+  font-size: var(--text-heading);
+  font-weight: var(--weight-bold);
   color: var(--color-text);
-  margin: 8px 0;
+  margin: var(--space-2) 0;
 
   &:focus {
     outline: none;
@@ -22,9 +24,9 @@
 
 .admin-intro {
   color: var(--color-text-muted);
-  font-size: 15px;
-  line-height: 1.5;
-  margin-bottom: 20px;
+  font-size: var(--text-lg);
+  line-height: var(--leading-normal);
+  margin-bottom: var(--space-5);
   max-width: 680px;
 }
 
@@ -33,8 +35,8 @@
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 16px;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
 }
 
 .admin-tabs {
@@ -42,17 +44,17 @@
   background: var(--color-surface);
   border: 1px solid var(--color-border-soft);
   border-radius: var(--radius-pill);
-  padding: 4px;
+  padding: var(--space-1);
 }
 
 .admin-tab {
   border: none;
   background: none;
-  padding: 8px 18px;
+  padding: var(--space-2) var(--space-4-5);
   border-radius: var(--radius-pill);
   font-family: var(--font-sans);
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--text-md);
+  font-weight: var(--weight-semibold);
   color: var(--color-text-muted);
   cursor: pointer;
 
@@ -65,14 +67,14 @@
 .admin-year {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  font-size: 14px;
+  gap: var(--space-2);
+  font-size: var(--text-md);
   color: var(--color-text-muted);
 
   select {
     font-family: var(--font-sans);
-    font-size: 14px;
-    padding: 6px 10px;
+    font-size: var(--text-md);
+    padding: var(--space-1-5) var(--space-2-5);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-sm);
     background: var(--color-surface);
@@ -82,10 +84,10 @@
 
 .admin-notice {
   border-radius: var(--radius-sm);
-  padding: 12px 16px;
-  font-size: 14px;
-  line-height: 1.5;
-  margin-bottom: 16px;
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--text-md);
+  line-height: var(--leading-normal);
+  margin-bottom: var(--space-4);
 }
 
 .admin-notice--status {
@@ -108,38 +110,38 @@
 
 .admin-card-title {
   font-family: var(--font-serif);
-  font-size: 18px;
-  font-weight: 700;
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-bold);
   color: var(--color-text);
-  padding: 20px 24px 12px;
+  padding: var(--space-5) var(--space-6) var(--space-3);
 }
 
 .admin-loading,
 .admin-empty {
   color: var(--color-text-muted);
-  font-size: 14px;
-  padding: 0 24px 20px;
-  line-height: 1.5;
+  font-size: var(--text-md);
+  padding: 0 var(--space-6) var(--space-5);
+  line-height: var(--leading-normal);
 }
 
 .admin-error {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-3);
   color: var(--color-danger);
-  font-size: 14px;
-  padding: 0 24px 20px;
+  font-size: var(--text-md);
+  padding: 0 var(--space-6) var(--space-5);
 }
 
 .admin-retry {
   background: var(--color-accent-soft);
   color: var(--color-accent);
   border: none;
-  padding: 8px 16px;
+  padding: var(--space-2) var(--space-4);
   border-radius: var(--radius-pill);
-  font-weight: 600;
-  font-size: 13px;
+  font-weight: var(--weight-semibold);
+  font-size: var(--text-sm);
   cursor: pointer;
   font-family: var(--font-sans);
 }
@@ -154,12 +156,12 @@
 }
 
 .payments-card th {
-  padding: 12px 20px;
+  padding: var(--space-3) var(--space-5);
   text-align: left;
-  font-size: 11px;
-  font-weight: 700;
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-bold);
   color: var(--color-text-subtle);
-  letter-spacing: 0.08em;
+  letter-spacing: var(--tracking-wide);
   text-transform: uppercase;
 }
 
@@ -168,8 +170,8 @@
 }
 
 .payments-card td {
-  padding: 14px 20px;
-  font-size: 14px;
+  padding: var(--space-3-5) var(--space-5);
+  font-size: var(--text-md);
   color: var(--color-text-secondary);
   vertical-align: top;
 }
@@ -179,8 +181,8 @@
 }
 
 .payments-card td.amount {
-  font-size: 15px;
-  font-weight: 700;
+  font-size: var(--text-lg);
+  font-weight: var(--weight-bold);
   color: var(--color-accent);
   font-family: var(--font-serif);
   font-variant-numeric: var(--numeric-figures);
@@ -200,19 +202,19 @@
 .donor-name {
   display: block;
   color: var(--color-text);
-  font-weight: 600;
+  font-weight: var(--weight-semibold);
 }
 
 .sender-account,
 .message,
 .donor-method {
   display: block;
-  font-size: 13px;
+  font-size: var(--text-sm);
   color: var(--color-text-muted);
   overflow-wrap: anywhere;
 }
 
-@media (min-width: 641px) {
+@include bp.up(cards) {
   .payments-card .sender-account {
     white-space: nowrap;
     overflow-wrap: normal;
@@ -221,30 +223,30 @@
 
 .symbol {
   font-family: var(--font-mono);
-  font-weight: 700;
+  font-weight: var(--weight-bold);
   color: var(--color-text);
 }
 
 .muted {
   color: var(--color-text-muted);
-  font-size: 13px;
+  font-size: var(--text-sm);
 }
 
 .held-tag,
 .receipt-tag {
   display: inline-block;
-  margin-top: 4px;
-  padding: 2px 8px;
+  margin-top: var(--space-1);
+  padding: var(--space-0-5) var(--space-2);
   border-radius: var(--radius-pill);
-  font-size: 11px;
-  font-weight: 700;
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-bold);
   white-space: nowrap;
 }
 
 .held-tag {
   background: var(--color-warning-bg);
   color: var(--color-warning);
-  margin-left: 6px;
+  margin-left: var(--space-1-5);
   margin-top: 0;
 }
 
@@ -257,10 +259,10 @@
   background: var(--color-accent-soft);
   color: var(--color-accent);
   border: none;
-  padding: 7px 14px;
+  padding: var(--space-1-75) var(--space-3-5);
   border-radius: var(--radius-pill);
-  font-weight: 600;
-  font-size: 12px;
+  font-weight: var(--weight-semibold);
+  font-size: var(--text-xs);
   cursor: pointer;
   font-family: var(--font-sans);
   white-space: nowrap;
@@ -287,10 +289,10 @@
   border: none;
   color: var(--color-accent);
   font-family: var(--font-sans);
-  font-size: 13px;
-  font-weight: 600;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
   cursor: pointer;
-  padding: 6px 8px;
+  padding: var(--space-1-5) var(--space-2);
 }
 
 .confirm {
@@ -298,39 +300,39 @@
   flex-wrap: wrap;
   align-items: center;
   justify-content: flex-end;
-  gap: 8px;
-  font-size: 13px;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
   color: var(--color-text);
 }
 
 .pair-title {
   font-family: var(--font-serif);
-  font-size: 22px;
-  font-weight: 700;
+  font-size: var(--text-3xl);
+  font-weight: var(--weight-bold);
   color: var(--color-text);
-  margin-bottom: 16px;
+  margin-bottom: var(--space-4);
 }
 
 .pair-payment {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: 12px 20px;
-  padding: 12px 16px;
+  gap: var(--space-3) var(--space-5);
+  padding: var(--space-3) var(--space-4);
   background: var(--color-surface-alt);
   border-radius: var(--radius-md);
-  margin-bottom: 20px;
+  margin-bottom: var(--space-5);
 
   dt {
-    font-size: 11px;
-    font-weight: 700;
+    font-size: var(--text-2xs);
+    font-weight: var(--weight-bold);
     color: var(--color-text-subtle);
-    letter-spacing: 0.08em;
+    letter-spacing: var(--tracking-wide);
     text-transform: uppercase;
-    margin-bottom: 2px;
+    margin-bottom: var(--space-0-5);
   }
 
   dd {
-    font-size: 14px;
+    font-size: var(--text-md);
     color: var(--color-text);
     overflow-wrap: anywhere;
 
@@ -342,17 +344,17 @@
 
 .pair-search-label {
   display: block;
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--text-md);
+  font-weight: var(--weight-semibold);
   color: var(--color-text);
-  margin-bottom: 6px;
+  margin-bottom: var(--space-1-5);
 }
 
 .pair-search {
   width: 100%;
   font-family: var(--font-sans);
-  font-size: 15px;
-  padding: 10px 12px;
+  font-size: var(--text-lg);
+  padding: var(--space-2-5) var(--space-3);
   border: 1.5px solid var(--color-border);
   border-radius: var(--radius-md);
   background: var(--color-surface);
@@ -365,28 +367,28 @@
 }
 
 .pair-hint {
-  font-size: 13px;
+  font-size: var(--text-sm);
   color: var(--color-text-muted);
-  margin: 6px 0 12px;
+  margin: var(--space-1-5) 0 var(--space-3);
 }
 
 .pair-results {
   border: none;
   padding: 0;
-  margin: 0 0 12px;
+  margin: 0 0 var(--space-3);
   max-height: 260px;
   overflow-y: auto;
   display: grid;
-  gap: 6px;
+  gap: var(--space-1-5);
 }
 
 .pair-result {
   display: grid;
   grid-template-columns: auto 1fr;
   grid-template-rows: auto auto;
-  column-gap: 10px;
+  column-gap: var(--space-2-5);
   align-items: center;
-  padding: 8px 12px;
+  padding: var(--space-2) var(--space-3);
   border: 1.5px solid var(--color-border-soft);
   border-radius: var(--radius-md);
   cursor: pointer;
@@ -402,44 +404,44 @@
 }
 
 .pair-result-name {
-  font-weight: 600;
+  font-weight: var(--weight-semibold);
   color: var(--color-text);
 }
 
 .pair-result-detail {
-  font-size: 13px;
+  font-size: var(--text-sm);
   color: var(--color-text-muted);
   font-variant-numeric: var(--numeric-figures);
 }
 
 .pair-empty {
-  font-size: 14px;
+  font-size: var(--text-md);
   color: var(--color-text-muted);
-  margin-bottom: 12px;
+  margin-bottom: var(--space-3);
 }
 
 .pair-alert {
-  font-size: 14px;
+  font-size: var(--text-md);
   color: var(--color-danger);
-  margin-bottom: 12px;
+  margin-bottom: var(--space-3);
 }
 
 .pair-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
-  margin-top: 8px;
+  gap: var(--space-2-5);
+  margin-top: var(--space-2);
 }
 
 .pair-submit {
   background: var(--color-accent);
   color: var(--color-on-accent);
   border: none;
-  padding: 10px 22px;
+  padding: var(--space-2-5) var(--space-5-5);
   border-radius: var(--radius-pill);
   font-family: var(--font-sans);
-  font-weight: 700;
-  font-size: 14px;
+  font-weight: var(--weight-bold);
+  font-size: var(--text-md);
   cursor: pointer;
 
   &:disabled {
@@ -452,11 +454,11 @@
   background: none;
   border: 1.5px solid var(--color-border);
   color: var(--color-text-muted);
-  padding: 10px 18px;
+  padding: var(--space-2-5) var(--space-4-5);
   border-radius: var(--radius-pill);
   font-family: var(--font-sans);
-  font-weight: 600;
-  font-size: 14px;
+  font-weight: var(--weight-semibold);
+  font-size: var(--text-md);
   cursor: pointer;
 }
 
@@ -472,7 +474,7 @@
   border: 0;
 }
 
-@media (max-width: 640px) {
+@include bp.down(cards) {
   .payments-card thead {
     position: absolute;
     width: 1px;
@@ -491,8 +493,8 @@
   .payments-card tbody tr {
     display: grid;
     grid-template-columns: 1fr auto;
-    gap: 8px 12px;
-    padding: 14px 20px;
+    gap: var(--space-2) var(--space-3);
+    padding: var(--space-3-5) var(--space-5);
   }
 
   .payments-card td {
@@ -503,12 +505,12 @@
     content: attr(data-label);
     display: block;
     font-family: var(--font-sans);
-    font-size: 11px;
-    font-weight: 700;
+    font-size: var(--text-2xs);
+    font-weight: var(--weight-bold);
     color: var(--color-text-subtle);
-    letter-spacing: 0.08em;
+    letter-spacing: var(--tracking-wide);
     text-transform: uppercase;
-    margin-bottom: 2px;
+    margin-bottom: var(--space-0-5);
   }
 
   .payments-card td.amount {

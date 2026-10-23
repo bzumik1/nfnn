@@ -4,10 +4,10 @@
 
 .page-title {
   font-family: var(--font-serif);
-  font-size: clamp(26px, 4vw, 32px);
-  font-weight: 700;
+  font-size: var(--text-heading);
+  font-weight: var(--weight-bold);
   color: var(--color-text);
-  margin-bottom: 20px;
+  margin-bottom: var(--space-5);
 
   &:focus {
     outline: none;

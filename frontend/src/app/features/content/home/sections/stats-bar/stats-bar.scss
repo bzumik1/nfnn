@@ -1,15 +1,17 @@
+@use 'breakpoints' as bp;
+
 .stats {
   background: var(--color-accent);
-  padding: 36px 0;
+  padding: var(--space-9) 0;
 }
 
 .stats-grid {
   max-width: var(--content-max);
   margin: 0 auto;
-  padding: 0 32px;
+  padding: 0 var(--space-8);
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 24px;
+  gap: var(--space-6);
 }
 
 .stat {
@@ -19,21 +21,21 @@
 
 .stat-value {
   font-family: var(--font-serif);
-  font-size: 44px;
-  font-weight: 800;
-  line-height: 1;
+  font-size: var(--text-6xl);
+  font-weight: var(--weight-extrabold);
+  line-height: var(--leading-none);
 }
 
 .stat-label {
-  font-size: 13px;
+  font-size: var(--text-sm);
   opacity: 0.92;
-  margin-top: 6px;
-  letter-spacing: 0.04em;
+  margin-top: var(--space-1-5);
+  letter-spacing: var(--tracking-slight);
 }
 
-@media (max-width: 768px) {
+@include bp.down(tablet) {
   .stats-grid {
     grid-template-columns: repeat(2, 1fr);
-    padding: 0 20px;
+    padding: 0 var(--space-5);
   }
 }

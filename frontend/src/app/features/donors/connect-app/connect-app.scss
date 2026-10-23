@@ -1,3 +1,5 @@
+@use 'breakpoints' as bp;
+
 :host {
   display: block;
 }
@@ -7,7 +9,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: calc(var(--header-height) + 48px) 20px 80px;
+  padding: calc(var(--header-height) + var(--space-12)) var(--space-5) var(--space-20);
   background:
     radial-gradient(
       ellipse at 85% 0%,
@@ -22,22 +24,22 @@
   max-width: 480px;
   background: var(--color-surface);
   border-radius: var(--radius-dialog);
-  padding: 36px 40px;
+  padding: var(--space-9) var(--space-10);
   box-shadow: var(--shadow-dialog);
-  animation: fadeInUp 0.3s ease both;
+  animation: fadeInUp var(--duration-slow) ease both;
 
-  @media (max-width: 480px) {
-    padding: 28px 24px;
+  @include bp.down(phone) {
+    padding: var(--space-7) var(--space-6);
   }
 }
 
 .title {
   font-family: var(--font-serif);
-  font-size: 24px;
-  font-weight: 700;
-  line-height: 1.25;
+  font-size: var(--text-4xl);
+  font-weight: var(--weight-bold);
+  line-height: var(--leading-heading);
   color: var(--color-text);
-  margin-bottom: 8px;
+  margin-bottom: var(--space-2);
   text-wrap: balance;
 
   &:focus {
@@ -48,42 +50,42 @@
 .client-host {
   display: inline-block;
   font-family: var(--font-mono);
-  font-size: 20px;
+  font-size: var(--text-3xl);
   color: var(--color-accent);
   overflow-wrap: anywhere;
 }
 
 .lead {
   color: var(--color-text-soft);
-  font-size: 14px;
-  line-height: 1.6;
-  margin-bottom: 20px;
+  font-size: var(--text-md);
+  line-height: var(--leading-relaxed);
+  margin-bottom: var(--space-5);
 }
 
 .scopes-title {
   font-family: var(--font-sans);
-  font-size: 13px;
-  font-weight: 700;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: var(--tracking-slight);
   color: var(--color-text-muted);
-  margin-bottom: 8px;
+  margin-bottom: var(--space-2);
 }
 
 .scopes {
   list-style: none;
-  margin: 0 0 20px;
+  margin: 0 0 var(--space-5);
   padding: 0;
 
   li {
     position: relative;
-    padding-left: 24px;
-    font-size: 14px;
-    line-height: 1.5;
+    padding-left: var(--space-6);
+    font-size: var(--text-md);
+    line-height: var(--leading-normal);
     color: var(--color-text);
 
     & + li {
-      margin-top: 8px;
+      margin-top: var(--space-2);
     }
 
     &::before {
@@ -91,7 +93,7 @@
       position: absolute;
       left: 0;
       top: 0;
-      font-weight: 700;
+      font-weight: var(--weight-bold);
       color: var(--color-success);
     }
   }
@@ -100,17 +102,17 @@
 .scope-option {
   display: flex;
   align-items: flex-start;
-  gap: 6px;
-  margin: 0 0 8px;
-  font-size: 14px;
-  line-height: 1.5;
+  gap: var(--space-1-5);
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-md);
+  line-height: var(--leading-normal);
   color: var(--color-text);
 
   input {
     flex: none;
     width: 18px;
     height: 18px;
-    margin: 2px 0 0;
+    margin: var(--space-0-5) 0 0;
     accent-color: var(--color-accent);
 
     &:focus-visible {
@@ -126,9 +128,9 @@
 
 .scope-hint {
   color: var(--color-text-muted);
-  font-size: 13px;
-  line-height: 1.5;
-  margin: 0 0 20px 24px;
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  margin: 0 0 var(--space-5) var(--space-6);
 }
 
 .notice {
@@ -138,15 +140,15 @@
 .notice-icon {
   width: 56px;
   height: 56px;
-  margin: 0 auto 16px;
+  margin: 0 auto var(--space-4);
   border-radius: var(--radius-round);
   display: flex;
   align-items: center;
   justify-content: center;
   background: var(--color-accent-soft);
   color: var(--color-accent);
-  font-size: 24px;
-  font-weight: 700;
+  font-size: var(--text-4xl);
+  font-weight: var(--weight-bold);
 
   &--warning {
     background: var(--color-danger-bg);
@@ -167,15 +169,15 @@
 
 .form-error {
   color: var(--color-danger);
-  font-size: 13px;
-  line-height: 1.5;
-  margin: 4px 0 12px;
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  margin: var(--space-1) 0 var(--space-3);
 }
 
 .actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: var(--space-2-5);
 
   .form-submit,
   .form-secondary {
@@ -186,15 +188,15 @@
 .form-submit,
 .form-secondary {
   width: 100%;
-  margin-top: 4px;
-  padding: 14px;
+  margin-top: var(--space-1);
+  padding: var(--space-3-5);
   border: none;
   border-radius: var(--radius-pill);
   font-family: var(--font-sans);
-  font-size: 15px;
-  font-weight: 700;
+  font-size: var(--text-lg);
+  font-weight: var(--weight-bold);
   cursor: pointer;
-  transition: opacity 0.2s;
+  transition: opacity var(--duration-base);
 
   &:focus-visible {
     outline: 3px solid var(--color-border-accent);

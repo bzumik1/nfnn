@@ -1,0 +1,29 @@
+@use 'sass:map';
+
+$widths: (
+  tiny: 360px,
+  narrow: 420px,
+  phone: 480px,
+  cards: 640px,
+  tablet: 768px,
+  nav: 899px,
+);
+
+@function width($name) {
+  @if not map.has-key($widths, $name) {
+    @error 'Unknown breakpoint #{$name}; use one of #{map.keys($widths)}.';
+  }
+  @return map.get($widths, $name);
+}
+
+@mixin down($name) {
+  @media (max-width: width($name)) {
+    @content;
+  }
+}
+
+@mixin up($name) {
+  @media (min-width: width($name) + 1px) {
+    @content;
+  }
+}

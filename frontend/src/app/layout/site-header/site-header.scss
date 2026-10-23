@@ -1,3 +1,5 @@
+@use 'breakpoints' as bp;
+
 :host {
   display: contents;
 }
@@ -9,7 +11,7 @@
   right: 0;
   z-index: 100;
   background: transparent;
-  transition: all 0.35s ease;
+  transition: all var(--duration-slow) ease;
 
   &.is-scrolled {
     background: color-mix(in srgb, var(--color-surface) 97%, transparent);
@@ -24,7 +26,7 @@
 .nav-inner {
   max-width: var(--content-max);
   margin: 0 auto;
-  padding: 0 20px;
+  padding: 0 var(--space-5);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -46,19 +48,19 @@
 .desktop-nav {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-1);
 }
 
 .nav-link {
   color: var(--color-on-image);
   text-decoration: none;
-  font-size: 14px;
-  font-weight: 500;
-  padding: 8px 14px;
+  font-size: var(--text-md);
+  font-weight: var(--weight-medium);
+  padding: var(--space-2) var(--space-3-5);
   border-radius: var(--radius-sm);
   transition:
-    background 0.2s,
-    color 0.2s;
+    background var(--duration-base),
+    color var(--duration-base);
   text-shadow: var(--shadow-text-on-image);
 
   &:hover {
@@ -70,11 +72,11 @@
   background: var(--color-accent);
   color: var(--color-on-accent);
   text-decoration: none;
-  padding: 10px 22px;
+  padding: var(--space-2-5) var(--space-5-5);
   border-radius: var(--radius-pill);
-  font-size: 14px;
-  font-weight: 700;
-  margin-left: 8px;
+  font-size: var(--text-md);
+  font-weight: var(--weight-bold);
+  margin-left: var(--space-2);
   box-shadow: var(--shadow-cta-nav);
 }
 
@@ -83,15 +85,15 @@
   backdrop-filter: blur(10px);
   border: 1.5px solid color-mix(in srgb, var(--color-on-image) 45%, transparent);
   color: var(--color-on-image);
-  padding: 9px 18px;
+  padding: var(--space-2-25) var(--space-4-5);
   border-radius: var(--radius-pill);
-  font-size: 13px;
-  font-weight: 600;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
   font-family: var(--font-sans);
   cursor: pointer;
-  margin-left: 8px;
+  margin-left: var(--space-2);
   text-decoration: none;
-  transition: all 0.2s;
+  transition: all var(--duration-base);
 
   &:hover {
     background: color-mix(in srgb, var(--color-on-image) 25%, transparent);
@@ -124,11 +126,11 @@
   display: none;
   flex-direction: column;
   justify-content: center;
-  gap: 5px;
+  gap: var(--space-1);
   background: none;
   border: none;
   cursor: pointer;
-  padding: 8px;
+  padding: var(--space-2);
 
   span {
     display: block;
@@ -136,7 +138,7 @@
     height: 2px;
     background: var(--color-on-image);
     border-radius: var(--radius-xs);
-    transition: all 0.3s;
+    transition: all var(--duration-slow);
   }
 
   &.is-open span:nth-child(1) {
@@ -164,19 +166,19 @@
   right: 0;
   z-index: 99;
   background: var(--color-surface);
-  padding: 16px 20px 24px;
+  padding: var(--space-4) var(--space-5) var(--space-6);
   box-shadow: var(--shadow-menu);
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--space-0-5);
 }
 
 .mobile-link {
   color: var(--color-text);
   text-decoration: none;
-  font-size: 17px;
-  font-weight: 500;
-  padding: 13px 8px;
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-medium);
+  padding: var(--space-3) var(--space-2);
   border-bottom: 1px solid var(--color-divider);
   display: block;
 }
@@ -187,11 +189,11 @@
   color: var(--color-on-accent);
   text-decoration: none;
   text-align: center;
-  padding: 14px;
+  padding: var(--space-3-5);
   border-radius: var(--radius-pill);
-  font-size: 16px;
-  font-weight: 700;
-  margin-top: 14px;
+  font-size: var(--text-xl);
+  font-weight: var(--weight-bold);
+  margin-top: var(--space-3-5);
   box-shadow: var(--shadow-button-sm);
 }
 
@@ -199,23 +201,23 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: var(--space-2);
   width: 100%;
   background: var(--color-accent-bg);
   color: var(--color-accent);
   border: 1.5px solid color-mix(in srgb, var(--color-accent) 20%, transparent);
   text-align: center;
-  padding: 13px;
+  padding: var(--space-3);
   border-radius: var(--radius-pill);
-  font-size: 15px;
-  font-weight: 600;
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
   font-family: var(--font-sans);
-  margin-top: 8px;
+  margin-top: var(--space-2);
   cursor: pointer;
   text-decoration: none;
 }
 
-@media (max-width: 768px) {
+@include bp.down(tablet) {
   .desktop-nav {
     display: none;
   }
@@ -225,11 +227,11 @@
   }
 
   .nav-inner {
-    padding: 0 20px;
+    padding: 0 var(--space-5);
   }
 }
 
-@media (min-width: 769px) {
+@include bp.up(tablet) {
   .mobile-menu {
     display: none;
   }

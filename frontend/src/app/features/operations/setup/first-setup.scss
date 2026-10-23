@@ -1,3 +1,5 @@
+@use 'breakpoints' as bp;
+
 :host {
   display: block;
 }
@@ -7,7 +9,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: calc(var(--header-height) + 48px) 20px 80px;
+  padding: calc(var(--header-height) + var(--space-12)) var(--space-5) var(--space-20);
   background:
     radial-gradient(
       ellipse at 85% 0%,
@@ -22,21 +24,21 @@
   max-width: 600px;
   background: var(--color-surface);
   border-radius: var(--radius-dialog);
-  padding: 36px 40px;
+  padding: var(--space-9) var(--space-10);
   box-shadow: var(--shadow-dialog);
 
-  @media (max-width: 480px) {
-    padding: 28px 20px;
+  @include bp.down(phone) {
+    padding: var(--space-7) var(--space-5);
   }
 }
 
 .title {
   font-family: var(--font-serif);
-  font-size: 24px;
-  font-weight: 700;
-  line-height: 1.25;
+  font-size: var(--text-4xl);
+  font-weight: var(--weight-bold);
+  line-height: var(--leading-heading);
   color: var(--color-text);
-  margin-bottom: 8px;
+  margin-bottom: var(--space-2);
   text-wrap: balance;
 
   &:focus {
@@ -48,36 +50,36 @@
 .group-intro,
 .restart-note {
   color: var(--color-text-soft);
-  font-size: 14px;
-  line-height: 1.6;
-  margin-bottom: 24px;
+  font-size: var(--text-md);
+  line-height: var(--leading-relaxed);
+  margin-bottom: var(--space-6);
 }
 
 .group-intro,
 .restart-note {
-  font-size: 13px;
-  margin-bottom: 16px;
+  font-size: var(--text-sm);
+  margin-bottom: var(--space-4);
 }
 
 .group {
   border: none;
   border-top: 1px solid var(--color-divider);
-  padding: 20px 0 8px;
+  padding: var(--space-5) 0 var(--space-2);
   margin: 0;
 
   legend {
     font-family: var(--font-serif);
-    font-size: 18px;
-    font-weight: 700;
+    font-size: var(--text-2xl);
+    font-weight: var(--weight-bold);
     color: var(--color-text);
-    padding-right: 12px;
+    padding-right: var(--space-3);
   }
 }
 
 .row {
   display: flex;
   flex-wrap: wrap;
-  gap: 0 16px;
+  gap: 0 var(--space-4);
 
   app-form-field {
     flex: 1 1 240px;
@@ -91,10 +93,10 @@
 .check {
   display: flex;
   align-items: center;
-  gap: 10px;
-  font-size: 14px;
+  gap: var(--space-2-5);
+  font-size: var(--text-md);
   color: var(--color-text-secondary);
-  padding: 4px 0;
+  padding: var(--space-1) 0;
 
   input {
     width: 18px;
@@ -107,14 +109,14 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px 16px;
-  margin: 12px 0 20px;
+  gap: var(--space-2) var(--space-4);
+  margin: var(--space-3) 0 var(--space-5);
 }
 
 .test-result {
   flex: 1 1 220px;
-  font-size: 13px;
-  line-height: 1.5;
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
 
   &--ok {
     color: var(--color-success);
@@ -129,22 +131,22 @@
   background: var(--color-accent-soft);
   color: var(--color-accent);
   border: none;
-  padding: 9px 18px;
+  padding: var(--space-2-25) var(--space-4-5);
   border-radius: var(--radius-pill);
   font-family: var(--font-sans);
-  font-size: 13px;
-  font-weight: 600;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
   cursor: pointer;
 }
 
 .form-error {
   color: var(--color-danger);
-  font-size: 13px;
-  line-height: 1.5;
-  margin: 4px 0 12px;
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  margin: var(--space-1) 0 var(--space-3);
 
   ul {
-    margin: 6px 0 0 18px;
+    margin: var(--space-1-5) 0 0 var(--space-4-5);
   }
 }
 
@@ -155,15 +157,15 @@
 .notice-icon {
   width: 56px;
   height: 56px;
-  margin: 0 auto 16px;
+  margin: 0 auto var(--space-4);
   border-radius: var(--radius-round);
   display: flex;
   align-items: center;
   justify-content: center;
   background: var(--color-accent-soft);
   color: var(--color-accent);
-  font-size: 24px;
-  font-weight: 700;
+  font-size: var(--text-4xl);
+  font-weight: var(--weight-bold);
 
   &--warning {
     background: var(--color-danger-bg);
@@ -185,15 +187,15 @@
 .form-submit {
   display: block;
   width: 100%;
-  margin-top: 4px;
-  padding: 14px;
+  margin-top: var(--space-1);
+  padding: var(--space-3-5);
   border: none;
   border-radius: var(--radius-pill);
   background: var(--color-accent);
   color: var(--color-on-accent);
   font-family: var(--font-sans);
-  font-size: 15px;
-  font-weight: 700;
+  font-size: var(--text-lg);
+  font-weight: var(--weight-bold);
   text-align: center;
   text-decoration: none;
   cursor: pointer;
@@ -221,18 +223,18 @@
 
 .restore-offer,
 .restore-done {
-  margin: -8px 0 24px;
-  padding: 14px 16px;
+  margin: calc(-1 * var(--space-2)) 0 var(--space-6);
+  padding: var(--space-3-5) var(--space-4);
   border-radius: var(--radius-sm);
-  font-size: 14px;
-  line-height: 1.5;
+  font-size: var(--text-md);
+  line-height: var(--leading-normal);
 }
 
 .restore-offer {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 10px 16px;
+  gap: var(--space-2-5) var(--space-4);
   background: var(--color-surface-alt);
   color: var(--color-text-soft);
 
@@ -249,10 +251,10 @@
 
 .file-label {
   display: block;
-  font-weight: 600;
-  font-size: 14px;
+  font-weight: var(--weight-semibold);
+  font-size: var(--text-md);
   color: var(--color-text);
-  margin-bottom: 8px;
+  margin-bottom: var(--space-2);
 }
 
 .file-row {
@@ -260,8 +262,8 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px 12px;
-  margin-bottom: 8px;
+  gap: var(--space-2) var(--space-3);
+  margin-bottom: var(--space-2);
 }
 
 .file-input {
@@ -290,14 +292,14 @@
   min-width: 0;
   overflow-wrap: anywhere;
   font-family: var(--font-mono);
-  font-size: 13px;
+  font-size: var(--text-sm);
   color: var(--color-text-soft);
 }
 
 .restore-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: var(--space-3);
   align-items: center;
 }
 

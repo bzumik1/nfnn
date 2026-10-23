@@ -1,3 +1,5 @@
+@use 'breakpoints' as bp;
+
 :host {
   display: block;
 }
@@ -15,7 +17,7 @@
   top: var(--top-bar-height);
   max-height: calc(100vh - var(--top-bar-height));
   overflow-y: auto;
-  padding: 32px 0 32px 24px;
+  padding: var(--space-8) 0 var(--space-8) var(--space-6);
 }
 
 .side-nav-toggle {
@@ -23,17 +25,17 @@
 }
 
 .side-nav-group + .side-nav-group {
-  margin-top: 20px;
+  margin-top: var(--space-5);
 }
 
 .side-nav-group-title {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-wide);
   text-transform: uppercase;
   color: var(--color-text-subtle);
-  padding: 0 12px;
-  margin-bottom: 6px;
+  padding: 0 var(--space-3);
+  margin-bottom: var(--space-1-5);
 }
 
 .side-nav-list {
@@ -41,20 +43,20 @@
   margin: 0;
   padding: 0;
   display: grid;
-  gap: 2px;
+  gap: var(--space-0-5);
 }
 
 .side-nav-link {
   display: block;
-  padding: 8px 12px;
+  padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-sm);
-  font-size: 14px;
-  font-weight: 500;
+  font-size: var(--text-md);
+  font-weight: var(--weight-medium);
   color: var(--color-text-secondary);
   text-decoration: none;
   transition:
-    background 0.15s,
-    color 0.15s;
+    background var(--duration-fast),
+    color var(--duration-fast);
 
   &:hover {
     background: var(--color-accent-bg);
@@ -70,7 +72,7 @@
 .side-nav-link--active {
   background: var(--color-accent-soft);
   color: var(--color-accent);
-  font-weight: 700;
+  font-weight: var(--weight-bold);
   box-shadow: var(--shadow-nav-active);
   border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
 }
@@ -79,7 +81,7 @@
   min-width: 0;
 }
 
-@media (max-width: 899px) {
+@include bp.down(nav) {
   .side-nav-layout {
     display: block;
   }
@@ -88,21 +90,21 @@
     position: static;
     max-height: none;
     overflow: visible;
-    padding: 16px 24px 0;
+    padding: var(--space-4) var(--space-6) 0;
   }
 
   .side-nav-toggle {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
-    padding: 10px 16px;
+    gap: var(--space-2);
+    padding: var(--space-2-5) var(--space-4);
     border-radius: var(--radius-pill);
     border: 1px solid var(--color-border);
     background: var(--color-surface);
     color: var(--color-text);
     font-family: var(--font-sans);
-    font-size: 14px;
-    font-weight: 600;
+    font-size: var(--text-md);
+    font-weight: var(--weight-semibold);
     cursor: pointer;
 
     &[aria-expanded='true'] {
@@ -118,8 +120,8 @@
 
   .side-nav-panel {
     display: none;
-    margin-top: 12px;
-    padding: 16px 12px;
+    margin-top: var(--space-3);
+    padding: var(--space-4) var(--space-3);
     background: var(--color-surface);
     border: 1px solid var(--color-border-soft);
     border-radius: var(--radius-card);
