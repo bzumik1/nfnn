@@ -1,5 +1,8 @@
 import {
   AdminActionResponse,
+  AdminBackupsResponse,
+  BackupFileResponse,
+  BackupRunResponse,
   AdminDonorDetailResponse,
   AdminOverviewResponse,
   AdminReportResponse,
@@ -289,6 +292,56 @@ export function overview(overrides: Partial<AdminOverviewResponse> = {}): AdminO
         newDonors: 1,
       }),
     ],
+    ...overrides,
+  };
+}
+
+export function backupFile(overrides: Partial<BackupFileResponse> = {}): BackupFileResponse {
+  return {
+    fileName: 'nfnn-2026-10-23_0300.dump',
+    kind: 'DAILY',
+    sizeBytes: 1590,
+    createdAt: '2026-10-23T01:00:03Z',
+    ...overrides,
+  };
+}
+
+export function backupRun(overrides: Partial<BackupRunResponse> = {}): BackupRunResponse {
+  return {
+    outcome: 'OK',
+    startedAt: '2026-10-23T01:00:00Z',
+    finishedAt: '2026-10-23T01:00:03Z',
+    fileName: 'nfnn-2026-10-23_0300.dump',
+    sizeBytes: 1590,
+    tables: null,
+    requestId: null,
+    error: null,
+    ...overrides,
+  };
+}
+
+export function backupsView(overrides: Partial<AdminBackupsResponse> = {}): AdminBackupsResponse {
+  return {
+    available: true,
+    backups: [
+      backupFile(),
+      backupFile({
+        fileName: 'nfnn-2026-10-22_0300.dump',
+        sizeBytes: 1000,
+        createdAt: '2026-10-22T01:00:03Z',
+      }),
+    ],
+    lastBackup: backupRun(),
+    lastTestRestore: backupRun({
+      startedAt: '2026-10-18T02:00:00Z',
+      finishedAt: '2026-10-18T02:00:05Z',
+      fileName: 'nfnn-2026-10-18_0300.dump',
+      tables: 37,
+    }),
+    lastRestore: null,
+    restoreFiles: [],
+    pendingRequests: 0,
+    problems: [],
     ...overrides,
   };
 }

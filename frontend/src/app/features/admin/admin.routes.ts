@@ -74,6 +74,11 @@ export const adminRoutes: Routes = [
       import('./projects/admin-project-editor').then((m) => m.AdminProjectEditor),
   },
   {
+    path: 'zalohy',
+    title: $localize`:@@admin.backups.pageTitle:Zálohy | Správa | Nová naděje – nadační fond`,
+    loadComponent: () => import('./backups/admin-backups').then((m) => m.AdminBackups),
+  },
+  {
     path: 'historie',
     title: $localize`:@@admin.actions.pageTitle:Historie správy | Správa | Nová naděje – nadační fond`,
     loadComponent: () => import('./actions/admin-actions').then((m) => m.AdminActions),

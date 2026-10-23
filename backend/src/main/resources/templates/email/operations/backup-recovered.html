@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="cs" xmlns:th="http://www.thymeleaf.org">
+<body>
+<th:block th:fragment="content">
+    <p style="margin: 0 0 16px;" th:text="#{operations.backupAlert.email.greeting}">Dobrý den,</p>
+    <p style="margin: 0 0 20px;" th:text="${intro}">denní kontrola 24. 10. 2026 7:15 našla zálohování databáze webu Nová naděje zase v pořádku.</p>
+    <p style="margin: 0 0 8px;" th:text="${resolved}">Skončily tyto problémy: poslední záloha selhala.</p>
+    <p style="margin: 0 0 8px;" th:text="${lastBackup}">Poslední záloha: nfnn-2026-10-24_0300.dump z 24. 10. 2026 3:00 (2 kB).</p>
+    <p style="margin: 0 0 28px;" th:text="${lastTestRestore}">Poslední zkušební obnova: 19. 10. 2026 4:00, 37 tabulek.</p>
+    <p style="margin: 0;">
+        <span th:text="#{operations.backupAlert.email.regards}">S pozdravem</span><br>
+        <span style="font-family: 'Playfair Display', Georgia, serif; font-size: 17px; font-style: italic; color: #1a1a2e;" th:text="#{operations.backupAlert.email.signature}">Nová naděje – nadační fond</span>
+    </p>
+</th:block>
+</body>
+</html>

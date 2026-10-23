@@ -31,7 +31,7 @@ class DddLayeringRulesTest {
 
     @ArchTest
     static final ArchRule bounded_contexts_must_not_depend_on_each_other = slices()
-            .matching("cz.novanadeje.app.(content|donors|donations|contact)..")
+            .matching("cz.novanadeje.app.(content|donors|donations|contact|operations)..")
             .namingSlices("Bounded context: $1")
             .should().notDependOnEachOther();
 

@@ -117,6 +117,13 @@ app:
       signature-image: ${RECEIPT_SIGNATURE_IMAGE:}
       concurrent-renders: 3
       first-year: ${RECEIPT_FIRST_YEAR:2026}
+  operations:
+    backups:
+      directory: /backups
+      restore-directory: /restore
+      check-cron: "0 15 7 * * *"
+      max-backup-age: PT26H
+      max-test-restore-age: P8D
   security:
     jwt:
       issuer: nova-nadeje

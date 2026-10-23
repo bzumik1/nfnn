@@ -6,7 +6,8 @@
     <p class="admin-intro" i18n="@@admin.home.intro">
       Tady uvidíte, jak se webu daří, najdete dárce a jeho účty, dary a potvrzení, přiřadíte platby,
       které web nepoznal, opravíte odpovědi dárců na starší symboly, spravujete správce a vidíte,
-      kdo co udělal, nastavíte měsíční přehled a píšete aktuality a projekty na web.
+      kdo co udělal, nastavíte měsíční přehled, píšete aktuality a projekty na web a hlídáte zálohy
+      databáze.
     </p>
 
     <nav class="admin-links" aria-label="Části správy" i18n-aria-label="@@admin.home.links.label">
@@ -54,6 +55,13 @@
         <span class="admin-link-title" i18n="@@admin.home.links.projects">Projekty</span>
         <span class="admin-link-text" i18n="@@admin.home.links.projects.text"
           >Představíte projekt fondu s fotkou a rokem, zveřejníte ho nebo ho z webu stáhnete.</span
+        >
+      </a>
+      <a class="admin-link" routerLink="/sprava/zalohy">
+        <span class="admin-link-title" i18n="@@admin.home.links.backups">Zálohy</span>
+        <span class="admin-link-text" i18n="@@admin.home.links.backups.text"
+          >Jak dopadla noční záloha databáze a její zkušební obnova; zálohu spustíte hned a stáhnete
+          si ji.</span
         >
       </a>
       <a class="admin-link" routerLink="/sprava/historie">

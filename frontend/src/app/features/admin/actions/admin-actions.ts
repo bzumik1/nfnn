@@ -47,6 +47,9 @@ const ACTION_NAMES: Record<string, string> = {
   PUBLISH_PROJECT: $localize`:@@admin.actions.action.publishProject:Zveřejnění projektu`,
   UNPUBLISH_PROJECT: $localize`:@@admin.actions.action.unpublishProject:Stažení projektu z webu`,
   DELETE_PROJECT: $localize`:@@admin.actions.action.deleteProject:Smazání projektu`,
+  REQUEST_BACKUP: $localize`:@@admin.actions.action.requestBackup:Spuštění zálohy databáze`,
+  REQUEST_TEST_RESTORE: $localize`:@@admin.actions.action.requestTestRestore:Spuštění zkušební obnovy zálohy`,
+  DOWNLOAD_BACKUP: $localize`:@@admin.actions.action.downloadBackup:Stažení zálohy databáze`,
 };
 
 @Component({

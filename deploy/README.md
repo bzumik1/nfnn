@@ -37,11 +37,11 @@ Vzory jsou v repu jako `deploy/db.env.example` a `deploy/backend.env.example`; c
    scp deploy/db.env.example deploy/backend.env.example <uživatel>@192.168.1.117:/tmp/
    ```
 
-2. Přes SSH na ZimaOS z nich založ soubory, které smí číst jen root, a složku pro sken podpisu:
+2. Přes SSH na ZimaOS z nich založ soubory, které smí číst jen root, složku pro sken podpisu a složky pro zálohy a obnovu:
 
    ```bash
    sudo install -d -m 700 /DATA/AppData/nfnn/env
-   sudo install -d -m 755 /DATA/AppData/nfnn/config
+   sudo install -d -m 755 /DATA/AppData/nfnn/config /DATA/AppData/nfnn/backups /DATA/AppData/nfnn/restore
    sudo install -m 600 /tmp/db.env.example /DATA/AppData/nfnn/env/db.env
    sudo install -m 600 /tmp/backend.env.example /DATA/AppData/nfnn/env/backend.env
    rm /tmp/db.env.example /tmp/backend.env.example
@@ -64,8 +64,9 @@ Vzory jsou v repu jako `deploy/db.env.example` a `deploy/backend.env.example`; c
 
    `POSTGRES_PASSWORD`, `PGPASSWORD`, `DB_PASSWORD` a `JWT_SECRET` musí být `(vyplněno)`.
 
-5. ZimaOS → App Store → Custom Install → smazat vzor, vložit `deploy/compose.yml` beze změn → Install.
-6. Heslo databáze po první instalaci neměň: Postgres si ho zapíše do dat v `/DATA/AppData/nfnn/postgres` a nové heslo by backend nepustilo dovnitř. Nový JWT klíč jen odhlásí všechny dárce.
+5. Stěhuješ-li data z jiného serveru nebo ze zálohy, dej teď jeden soubor `.dump` do `/DATA/AppData/nfnn/restore/` (viz [Obnova](#obnova)); kontejner záloh ho při prvním startu nahraje do prázdné databáze a backend počká, než bude hotovo.
+6. ZimaOS → App Store → Custom Install → smazat vzor, vložit `deploy/compose.yml` beze změn → Install.
+7. Heslo databáze po první instalaci neměň: Postgres si ho zapíše do dat v `/DATA/AppData/nfnn/postgres` a nové heslo by backend nepustilo dovnitř. Nový JWT klíč jen odhlásí všechny dárce.
 
 Když se změní `compose.yml` v repu, aplikaci přeinstaluj s novým souborem; soubory v `/DATA/AppData/nfnn/env` zůstanou, jak jsou. Přibude-li nebo změní-li se řádek ve vzoru (`deploy/*.env.example`), přepiš ho před přeinstalací do souboru v `/DATA/AppData/nfnn/env`.
 
@@ -117,46 +118,50 @@ Po merge do `main` počkej, až v Actions doběhne zeleně **Publish Docker imag
 Kterou verzi kontejnery mají, ukáže commit, ze kterého image vznikla; má se shodovat s commitem běhu **Publish Docker images**:
 
 ```bash
-sudo docker inspect nfnn-backend nfnn-frontend --format '{{.Name}} {{index .Config.Labels "org.opencontainers.image.revision"}}'
+sudo docker inspect nfnn-backend nfnn-frontend nfnn-backup --format '{{.Name}} {{index .Config.Labels "org.opencontainers.image.revision"}}'
 ```
 
 Uložení bere compose z poslední instalace, takže změnu `compose.yml` nebo env souborů nepřenese; na ty je dál potřeba přeinstalace.
 
 ## Zálohy
 
-Kontejner `backup` udělá `pg_dump` při každém startu a pak každou noc ve 3:00 pražského času do `/DATA/AppData/nfnn/backups/nfnn-<datum>.dump` a maže zálohy starší než 30 dní. Dump je komprimovaný zstd na úrovni 19, nejvyšší, která se vejde do limitu 256 MB paměti kontejneru (úroveň 20 nic neušetří a potřebuje kolem 170 MB, úroveň 22 kontejner zabije). Na zkušebních datech byl proti dřívějšímu gzipu asi o čtvrtinu menší; `pg_restore` kompresi pozná sám, takže obnova i starší zálohy v gzipu fungují stejně. Leží na stejném disku jako databáze, takže je potřeba je kopírovat i mimo Zimu (ZimaOS Backup, cloud sync). Složky `env/` a `config/` záloha nekopíruje; jejich obsah (hesla, tokeny, podpis) si ulož do správce hesel.
+Kontejner `nfnn-backup` (image `ghcr.io/bzumik1/nfnn-backup`, skript `deploy/backup/backup.sh`) udělá `pg_dump` při každém startu a pak každou noc ve 3:00 pražského času do `/DATA/AppData/nfnn/backups/nfnn-<datum>_<čas>.dump` a maže zálohy starší než 30 dní. Každou neděli ve 4:00 nejnovější zálohu zkušebně obnoví do dočasné databáze `nfnn_restore_test`, spočítá tabulky a databázi zase smaže, takže se včas pozná záloha, ze které by se obnovit nedalo. Výsledek každého běhu je v logu kontejneru (`sudo docker logs nfnn-backup`) a v souborech `/DATA/AppData/nfnn/backups/status/`, které čte backend: správce ho vidí ve správě na stránce **Zálohy** (`/sprava/zalohy`), kde také spustí zálohu nebo zkušební obnovu hned a zálohu si stáhne (každé stažení je v historii správy, dump obsahuje údaje všech dárců). Když záloha chybí, selhala nebo je starší než den, nebo zkušební obnova chybí, selhala nebo je starší než 8 dní, pošle backend po ranní kontrole (7:15) e-mail příjemcům měsíčního přehledu, jednou za poruchu a jednou, až zase všechno funguje.
 
-Zálohu na požádání, třeba před aktualizací, udělá:
+Dump je komprimovaný zstd na úrovni 19, nejvyšší, která se vejde do limitu 256 MB paměti kontejneru (úroveň 20 nic neušetří a potřebuje kolem 170 MB, úroveň 22 kontejner zabije). Na zkušebních datech byl proti dřívějšímu gzipu asi o čtvrtinu menší; `pg_restore` kompresi pozná sám, takže obnova i starší zálohy v gzipu fungují stejně. Zálohy leží na stejném disku jako databáze, takže je potřeba je kopírovat i mimo Zimu (ZimaOS Backup, cloud sync, nebo stažení ze stránky Zálohy). Složky `env/` a `config/` záloha nekopíruje; jejich obsah (hesla, tokeny, podpis) si ulož do správce hesel.
+
+Zálohu na požádání, třeba před aktualizací, spustí správce tlačítkem **Zálohovat teď** na `/sprava/zalohy` (soubor dostane příponu `-rucni`). Z příkazové řádky to samé udělá prázdný soubor ve složce požadavků, kontejner si ho do 10 sekund vezme (`rucni.test-restore` místo `.backup` spustí zkušební obnovu):
 
 ```bash
-sudo docker exec nfnn-backup sh -c 'pg_dump --format=custom --compress=zstd:19 --file="/backups/nfnn-`date +%Y-%m-%d_%H%M`-rucni.dump"'
+sudo touch /DATA/AppData/nfnn/backups/requests/rucni.backup
 ```
 
 ### Obnova
 
-Záloha se obnovuje do prázdného schématu. `pg_restore --clean` nestačí: smaže jen to, co v záloze je, takže tabulky z novější verze zůstanou, zatímco tabulka Liquibase se vrátí do stavu zálohy, a backend pak při startu spadne na pokusu založit tabulku, která už existuje.
+Zálohu obnovuje kontejner `nfnn-backup` při svém startu ze složky `/DATA/AppData/nfnn/restore/`:
 
-1. Zastav backend a pro jistotu ulož současný stav:
-
-   ```bash
-   sudo docker stop nfnn-backend
-   sudo docker exec nfnn-backup sh -c 'pg_dump --format=custom --compress=zstd:19 --file="/backups/nfnn-`date +%Y-%m-%d_%H%M`-pred-obnovou.dump"'
-   ```
-
-2. Vyprázdni schéma a nahraj zálohu (název souboru podle `sudo ls /DATA/AppData/nfnn/backups`):
+1. Dej do složky právě jeden soubor s příponou `.dump` (ze `backups/`, ze zálohy stažené ze stránky Zálohy, nebo z jiného serveru), např.:
 
    ```bash
-   sudo docker exec nfnn-backup psql -v ON_ERROR_STOP=1 -c 'DROP SCHEMA public CASCADE' -c 'CREATE SCHEMA public'
-   sudo docker exec nfnn-backup pg_restore --exit-on-error --single-transaction --dbname=novanadeje /backups/nfnn-2026-10-17_0300.dump
+   sudo cp /DATA/AppData/nfnn/backups/nfnn-2026-10-17_0300.dump /DATA/AppData/nfnn/restore/
    ```
 
-   Když `pg_restore` skončí chybou, schéma zůstane prázdné; zopakuj tento krok se zálohou `-pred-obnovou`.
+2. Restartuj aplikaci: v ZimaOS v nastavení aplikace „Nová naděje“ klikni na **Uložit**, nebo `sudo docker restart nfnn-backup nfnn-backend`. Backend čeká, dokud ve složce leží `.dump`; kontejner záloh ukončí ostatní připojení, vyprázdní schéma `public`, nahraje dump a soubor přejmenuje na `.dump.done`; pak backend nastartuje a Liquibase doplní změny databáze, které jsou v běžící verzi novější než záloha.
 
-3. Spusť backend: `sudo docker start nfnn-backend`. Liquibase doplní změny databáze, které jsou v běžící verzi novější než záloha.
+Pravidla: do **prázdné** databáze (nový server, smazaná složka `postgres/`) se takhle obnoví i úplně první start, stačí dát dump do `restore/` před instalací. Do databáze, která **už data má**, kontejner dump neobnoví a přejmenuje ho na `.dump.skipped`; chceš-li ji přepsat, pojmenuj soubor `*.force.dump` – kontejner nejdřív udělá zálohu `-pred-obnovou` a pak databázi nahradí. Víc souborů `.dump` ve složce se přeskočí všechny. Když `pg_restore` skončí chybou, soubor dostane příponu `.dump.failed`, schéma zůstane prázdné a backend **nenastartuje**, dokud soubor ve složce leží (jinak by si Liquibase založil novou prázdnou databázi): dej do složky zálohu `-pred-obnovou` nebo jiný dump a restartuj znovu, nebo `.failed` soubor smaž, chceš-li opravdu začít s prázdnou databází. Jak to dopadlo, je v logu kontejneru a na `/sprava/zalohy` (řádek „Složka restore“ a poslední chyba). Soubory `.done`, `.failed` a `.skipped` smaž, až je nebudeš potřebovat.
+
+Proč prázdné schéma: `pg_restore --clean` nestačí, smaže jen to, co v záloze je, takže tabulky z novější verze zůstanou, zatímco tabulka Liquibase se vrátí do stavu zálohy, a backend pak při startu spadne na pokusu založit tabulku, která už existuje. Kdyby kontejner záloh neběžel, udělá to samé ručně:
+
+```bash
+sudo docker stop nfnn-backend
+sudo docker exec nfnn-backup sh -c 'pg_dump --format=custom --compress=zstd:19 --file="/backups/nfnn-`date +%Y-%m-%d_%H%M`-pred-obnovou.dump"'
+sudo docker exec nfnn-backup psql -v ON_ERROR_STOP=1 -c 'DROP SCHEMA public CASCADE' -c 'CREATE SCHEMA public'
+sudo docker exec nfnn-backup pg_restore --exit-on-error --single-transaction --dbname=novanadeje /backups/nfnn-2026-10-17_0300.dump
+sudo docker start nfnn-backend
+```
 
 ### Návrat na předchozí verzi
 
-Každá image má vedle `latest` i tag se zkráceným commitem (7 znaků, např. `418105c`), seznam je v GitHubu u balíčků `nfnn-backend` a `nfnn-frontend`. V nastavení aplikace „Nová naděje“ v ZimaOS změň u backendu a frontendu tag z `latest` na commit předchozí verze a klikni na **Uložit**. Zpátky na nejnovější verzi se vrátíš tagem `latest`.
+Každá image má vedle `latest` i tag se zkráceným commitem (7 znaků, např. `418105c`), seznam je v GitHubu u balíčků `nfnn-backend`, `nfnn-frontend` a `nfnn-backup`. V nastavení aplikace „Nová naděje“ v ZimaOS změň u backendu a frontendu (a zálohování, měnila-li se) tag z `latest` na commit předchozí verze a klikni na **Uložit**. Zpátky na nejnovější verzi se vrátíš tagem `latest`.
 
 Pokud novější verze měnila databázi (v jejím commitu přibyl soubor v `backend/src/main/resources/db/changelog/`), starší backend s novější databází fungovat nemusí. Pak po změně tagu obnov zálohu z doby před aktualizací (viz Obnova); dary a registrace mezi zálohou a obnovou se ztratí, platby z banky z posledních 90 dní se ale při dalším stažení z Fio doplní znovu. Proto před aktualizací, která mění databázi, udělej zálohu na požádání.
 
