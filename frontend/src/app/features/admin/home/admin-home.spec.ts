@@ -59,7 +59,7 @@ describe('Given an administrator on the administration home', () => {
   function dataRows(card = 'admin-import-title'): Record<string, string> {
     const rows: Record<string, string> = {};
     fixture.nativeElement
-      .querySelectorAll(`.admin-card[aria-labelledby="${card}"] .admin-data div`)
+      .querySelectorAll(`.ui-card[aria-labelledby="${card}"] .admin-data div`)
       .forEach((row: HTMLElement) => {
         rows[row.querySelector('dt')?.textContent?.trim() ?? ''] = (
           row.querySelector('dd')?.textContent ?? ''
@@ -97,7 +97,7 @@ describe('Given an administrator on the administration home', () => {
 
     expect(request.request.headers.get('Authorization')).toBe('Bearer token-1');
     expect(text('h1')).toBe('Správa');
-    expect(text('.admin-card[aria-labelledby="admin-import-title"] [role="status"]')).toBe(
+    expect(text('.ui-card[aria-labelledby="admin-import-title"] [role="status"]')).toBe(
       'Načítáme stav importu…',
     );
     request.flush(importState());
@@ -167,7 +167,9 @@ describe('Given an administrator on the administration home', () => {
 
     expect(text('[role="alert"]')).toContain('Stav importu se nepodařilo načíst.');
 
-    (fixture.nativeElement.querySelector('.admin-retry') as HTMLButtonElement).click();
+    (
+      fixture.nativeElement.querySelector('.ui-load-state--error button') as HTMLButtonElement
+    ).click();
     await respond(importState());
 
     expect(fixture.nativeElement.querySelector('[role="alert"]')).toBeNull();
@@ -243,7 +245,7 @@ describe('Given an administrator on the administration home', () => {
       select.dispatchEvent(new Event('change'));
       fixture.detectChanges();
 
-      expect(text('.admin-card[aria-labelledby="admin-overview-title"] [role="status"]')).toBe(
+      expect(text('.ui-card[aria-labelledby="admin-overview-title"] [role="status"]')).toBe(
         'Načítáme dary po měsících…',
       );
       await respondOverview(
@@ -278,13 +280,13 @@ describe('Given an administrator on the administration home', () => {
     await respondOverview(OVERVIEW_URL, { title: 'Server error' }, 500);
 
     const card = fixture.nativeElement.querySelector(
-      '.admin-card[aria-labelledby="admin-overview-title"]',
+      '.ui-card[aria-labelledby="admin-overview-title"]',
     ) as HTMLElement;
     expect(card.querySelector('[role="alert"]')?.textContent).toContain(
       'Dary po měsících se nepodařilo načíst.',
     );
 
-    (card.querySelector('.admin-retry') as HTMLButtonElement).click();
+    (card.querySelector('.ui-load-state--error button') as HTMLButtonElement).click();
     await respondOverview(OVERVIEW_URL, overview());
 
     expect(card.querySelector('[role="alert"]')).toBeNull();
@@ -297,16 +299,14 @@ describe('Given an administrator on the administration home', () => {
     });
 
     function backupsCard(): HTMLElement {
-      return fixture.nativeElement.querySelector(
-        '.admin-card[aria-labelledby="admin-backups-title"]',
-      );
+      return fixture.nativeElement.querySelector('.ui-card[aria-labelledby="admin-backups-title"]');
     }
 
     it('then a healthy state names the last backup and test restore and links to the backups', async () => {
       await respondOverview(BACKUPS_URL, backupsView());
 
       expect(text('#admin-backups-title')).toBe('Zálohy databáze');
-      expect(text('.admin-card[aria-labelledby="admin-backups-title"] .healthy')).toBe(
+      expect(text('.ui-card[aria-labelledby="admin-backups-title"] .healthy')).toBe(
         'Zálohování je v pořádku.',
       );
       expect(dataRows('admin-backups-title')).toEqual({
@@ -348,7 +348,7 @@ describe('Given an administrator on the administration home', () => {
         'Stav záloh se nepodařilo načíst.',
       );
 
-      (backupsCard().querySelector('.admin-retry') as HTMLButtonElement).click();
+      (backupsCard().querySelector('.ui-load-state--error button') as HTMLButtonElement).click();
       await respondOverview(BACKUPS_URL, backupsView());
 
       expect(backupsCard().querySelector('[role="alert"]')).toBeNull();
@@ -361,7 +361,7 @@ describe('Given an administrator on the administration home', () => {
     await respondOverview(OVERVIEW_URL, overview());
 
     const link = fixture.nativeElement.querySelector(
-      '.admin-card[aria-labelledby="admin-overview-title"] a.admin-card-link',
+      '.ui-card[aria-labelledby="admin-overview-title"] a.admin-card-link',
     ) as HTMLAnchorElement;
     expect(link.textContent?.trim()).toBe('Přiřadit platby bez dárce');
     expect(link.getAttribute('href')).toBe('/sprava/platby');

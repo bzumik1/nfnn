@@ -210,7 +210,7 @@ describe('Given an administrator on the monthly report page', () => {
     });
     await settle();
 
-    expect(text('.admin-notice--status')).toBe(
+    expect(text('.ui-notice--status')).toBe(
       'Nastavení jsme uložili. Příští přehled odejde podle něj.',
     );
     await respond(
@@ -314,9 +314,7 @@ describe('Given an administrator on the monthly report page', () => {
     });
     await settle();
 
-    expect(text('.admin-notice--status')).toBe(
-      'Přehled za srpen 2026 jsme poslali na info@nfnn.cz.',
-    );
+    expect(text('.ui-notice--status')).toBe('Přehled za srpen 2026 jsme poslali na info@nfnn.cz.');
     await respond(
       reportView({
         sentReports: [
@@ -358,7 +356,7 @@ describe('Given an administrator on the monthly report page', () => {
     http.expectOne(SEND_URL).flush(refusal.body, refusal.options);
     await settle();
 
-    expect(text('.admin-notice--alert')).toBe(
+    expect(text('.ui-notice--alert')).toBe(
       'Přehled se nepodařilo odeslat. Poštovní server e-mail odmítl. Zkontrolujte nastavení MAIL_* a log backendu.',
     );
     expect(fixture.nativeElement.querySelector('[role="group"]')).toBeNull();
@@ -369,7 +367,7 @@ describe('Given an administrator on the monthly report page', () => {
 
     expect(text('[role="alert"]')).toContain('Nastavení přehledu se nepodařilo načíst.');
 
-    element<HTMLButtonElement>('.admin-retry').click();
+    element<HTMLButtonElement>('.ui-load-state--error button').click();
     await respond(reportView());
 
     expect(fixture.nativeElement.querySelector('[role="alert"]')).toBeNull();

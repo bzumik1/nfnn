@@ -1,8 +1,8 @@
-<div class="container">
-  <p class="admin-crumbs">
+<div class="ui-page container">
+  <p class="ui-crumbs">
     <a routerLink="/sprava/darci" i18n="@@admin.donorDetail.backToDonors">← Dárci</a>
   </p>
-  <h1 #title class="admin-title" tabindex="-1">
+  <h1 #title class="ui-page-title" tabindex="-1">
     @if (name(); as name) {
       {{ name }}
     } @else {
@@ -18,33 +18,41 @@
 
   @if (notice(); as notice) {
     @if (notice.kind === 'status') {
-      <p class="admin-notice admin-notice--status" role="status">{{ notice.text }}</p>
+      <p class="ui-notice ui-notice--status" role="status">{{ notice.text }}</p>
     } @else {
-      <p class="admin-notice admin-notice--alert" role="alert">{{ notice.text }}</p>
+      <p class="ui-notice ui-notice--alert" role="alert">{{ notice.text }}</p>
     }
   }
 
-  <section class="admin-card" aria-labelledby="account-title">
-    <h2 id="account-title" class="admin-card-title" i18n="@@admin.donorDetail.account.title">
+  <section class="ui-card" aria-labelledby="account-title">
+    <h2 id="account-title" class="ui-card__title" i18n="@@admin.donorDetail.account.title">
       Účet dárce
     </h2>
     @switch (accountState()) {
       @case ('loading') {
-        <p class="admin-loading" role="status" i18n="@@admin.donorDetail.account.loading">
+        <p
+          class="ui-load-state ui-load-state--inset"
+          role="status"
+          i18n="@@admin.donorDetail.account.loading"
+        >
           Načítáme účet…
         </p>
       }
       @case ('missing') {
-        <p class="admin-error" role="alert" i18n="@@admin.donorDetail.account.missing">
+        <p
+          class="ui-load-state ui-load-state--error ui-load-state--inset"
+          role="alert"
+          i18n="@@admin.donorDetail.account.missing"
+        >
           Takový dárce není. Vraťte se na seznam dárců a vyhledejte ho znovu.
         </p>
       }
       @case ('error') {
-        <div class="admin-error" role="alert">
+        <div class="ui-load-state ui-load-state--error ui-load-state--inset" role="alert">
           <p i18n="@@admin.donorDetail.account.error.text">Účet se nepodařilo načíst.</p>
           <button
             type="button"
-            class="admin-retry"
+            class="ui-button ui-button--small"
             (click)="loadAccount()"
             i18n="@@admin.donorDetail.account.error.retry"
           >
@@ -104,7 +112,7 @@
             <div>
               <dt i18n="@@admin.donorDetail.account.symbol">Variabilní symbol</dt>
               <dd>
-                <span class="mono">{{ account.variableSymbol }}</span>
+                <span class="ui-mono">{{ account.variableSymbol }}</span>
               </dd>
             </div>
             <div>
@@ -167,7 +175,7 @@
                   >
                   <button
                     type="button"
-                    class="action-btn action-btn--danger"
+                    class="ui-button ui-button--small ui-button--danger"
                     [disabled]="busy()"
                     (click)="reset()"
                   >
@@ -179,7 +187,7 @@
                   </button>
                   <button
                     type="button"
-                    class="action-link"
+                    class="ui-link-button"
                     [disabled]="busy()"
                     (click)="cancel()"
                     i18n="@@admin.donorDetail.confirm.no"
@@ -190,7 +198,7 @@
               } @else {
                 <button
                   type="button"
-                  class="action-btn action-btn--quiet"
+                  class="ui-button ui-button--small ui-button--quiet"
                   (click)="askReset()"
                   i18n="@@admin.donorDetail.reset.open"
                 >
@@ -216,7 +224,7 @@
                   >
                   <button
                     type="button"
-                    class="action-btn action-btn--danger"
+                    class="ui-button ui-button--small ui-button--danger"
                     [disabled]="busy()"
                     (click)="removePasskeys()"
                   >
@@ -232,7 +240,7 @@
                   </button>
                   <button
                     type="button"
-                    class="action-link"
+                    class="ui-link-button"
                     [disabled]="busy()"
                     (click)="cancel()"
                     i18n="@@admin.donorDetail.confirm.no"
@@ -243,7 +251,7 @@
               } @else {
                 <button
                   type="button"
-                  class="action-btn action-btn--quiet"
+                  class="ui-button ui-button--small ui-button--quiet"
                   (click)="askRemovePasskeys()"
                   i18n="@@admin.donorDetail.passkeys.open"
                 >
@@ -277,7 +285,7 @@
                   >
                   <button
                     type="button"
-                    class="action-btn action-btn--danger"
+                    class="ui-button ui-button--small ui-button--danger"
                     [disabled]="busy()"
                     (click)="erase()"
                   >
@@ -289,7 +297,7 @@
                   </button>
                   <button
                     type="button"
-                    class="action-link"
+                    class="ui-link-button"
                     [disabled]="busy()"
                     (click)="cancel()"
                     i18n="@@admin.donorDetail.confirm.no"
@@ -300,7 +308,7 @@
               } @else {
                 <button
                   type="button"
-                  class="action-btn action-btn--quiet"
+                  class="ui-button ui-button--small ui-button--quiet"
                   (click)="askErase()"
                   i18n="@@admin.donorDetail.erase.open"
                 >
@@ -317,29 +325,37 @@
     }
   </section>
 
-  <section class="admin-card" aria-labelledby="accounts-title">
-    <h2 id="accounts-title" class="admin-card-title" i18n="@@admin.donorDetail.accounts.title">
+  <section class="ui-card" aria-labelledby="accounts-title">
+    <h2 id="accounts-title" class="ui-card__title" i18n="@@admin.donorDetail.accounts.title">
       Bankovní účty
     </h2>
     @switch (donationsState()) {
       @case ('loading') {
-        <p class="admin-loading" role="status" i18n="@@admin.donorDetail.accounts.loading">
+        <p
+          class="ui-load-state ui-load-state--inset"
+          role="status"
+          i18n="@@admin.donorDetail.accounts.loading"
+        >
           Načítáme účty, dary a potvrzení…
         </p>
       }
       @case ('missing') {
-        <p class="admin-error" role="alert" i18n="@@admin.donorDetail.donations.missing">
+        <p
+          class="ui-load-state ui-load-state--error ui-load-state--inset"
+          role="alert"
+          i18n="@@admin.donorDetail.donations.missing"
+        >
           Dárce nemá záznam v evidenci darů, takže nemá žádné účty, dary ani potvrzení.
         </p>
       }
       @case ('error') {
-        <div class="admin-error" role="alert">
+        <div class="ui-load-state ui-load-state--error ui-load-state--inset" role="alert">
           <p i18n="@@admin.donorDetail.donations.error.text">
             Účty, dary a potvrzení se nepodařilo načíst.
           </p>
           <button
             type="button"
-            class="admin-retry"
+            class="ui-button ui-button--small"
             (click)="loadDonations()"
             i18n="@@admin.donorDetail.donations.error.retry"
           >
@@ -349,11 +365,11 @@
       }
       @case ('ready') {
         @if (erasedAt()) {
-          <p class="admin-empty" i18n="@@admin.donorDetail.accounts.erased">
+          <p class="ui-card__empty" i18n="@@admin.donorDetail.accounts.erased">
             Bankovní účty jsme s osobními údaji dárce smazali; další platby se mu už nepřiřadí.
           </p>
         } @else if (bankAccounts().length === 0) {
-          <p class="admin-empty" i18n="@@admin.donorDetail.accounts.empty">
+          <p class="ui-card__empty" i18n="@@admin.donorDetail.accounts.empty">
             Z žádného účtu zatím nepřišla platba s variabilním symbolem dárce.
           </p>
         } @else {
@@ -362,7 +378,7 @@
             symbolu. Odebrání účtu smaže i dary, které se přes něj přiřadily, a odpovědi o starších
             symbolech; použijte ho, když se účet naučil omylem.
           </p>
-          <table>
+          <table class="ui-table">
             <thead>
               <tr>
                 <th i18n="@@admin.donorDetail.accounts.col.account">Účet</th>
@@ -379,7 +395,7 @@
               @for (item of bankAccounts(); track item.id) {
                 <tr>
                   <td data-label="Účet" i18n-data-label="@@admin.donorDetail.accounts.col.account">
-                    <span class="mono admin-name">{{ item.accountNumber }}</span>
+                    <span class="ui-mono admin-name">{{ item.accountNumber }}</span>
                     @if (item.shared) {
                       <span class="tag tag--warn" i18n="@@admin.donorDetail.accounts.shared"
                         >sdílený</span
@@ -395,7 +411,7 @@
                         <ng-container i18n="@@admin.donorDetail.accounts.confirmedSymbols"
                           >Potvrzené starší symboly:</ng-container
                         >
-                        <span class="mono">{{ item.confirmedSymbols.join(', ') }}</span>
+                        <span class="ui-mono">{{ item.confirmedSymbols.join(', ') }}</span>
                       </span>
                     }
                   </td>
@@ -452,7 +468,7 @@
                           >
                           <button
                             type="button"
-                            class="action-btn action-btn--danger"
+                            class="ui-button ui-button--small ui-button--danger"
                             [disabled]="busy()"
                             (click)="disconnect(item)"
                           >
@@ -468,7 +484,7 @@
                           </button>
                           <button
                             type="button"
-                            class="action-link"
+                            class="ui-link-button"
                             [disabled]="busy()"
                             (click)="cancel()"
                             i18n="@@admin.donorDetail.confirm.no"
@@ -490,7 +506,7 @@
                           >
                           <button
                             type="button"
-                            class="action-btn"
+                            class="ui-button ui-button--small"
                             [disabled]="busy()"
                             (click)="reconnect(item)"
                           >
@@ -506,7 +522,7 @@
                           </button>
                           <button
                             type="button"
-                            class="action-link"
+                            class="ui-link-button"
                             [disabled]="busy()"
                             (click)="cancel()"
                             i18n="@@admin.donorDetail.confirm.no"
@@ -529,7 +545,7 @@
                           >
                           <button
                             type="button"
-                            class="action-btn action-btn--danger"
+                            class="ui-button ui-button--small ui-button--danger"
                             [disabled]="busy()"
                             (click)="remove(item)"
                           >
@@ -545,7 +561,7 @@
                           </button>
                           <button
                             type="button"
-                            class="action-link"
+                            class="ui-link-button"
                             [disabled]="busy()"
                             (click)="cancel()"
                             i18n="@@admin.donorDetail.confirm.no"
@@ -559,7 +575,7 @@
                           @if (isLive(item)) {
                             <button
                               type="button"
-                              class="action-btn action-btn--quiet"
+                              class="ui-button ui-button--small ui-button--quiet"
                               (click)="askAccount('disconnect', item)"
                               i18n="@@admin.donorDetail.disconnect.open"
                             >
@@ -568,7 +584,7 @@
                           } @else if (!item.pairingExcluded) {
                             <button
                               type="button"
-                              class="action-btn action-btn--quiet"
+                              class="ui-button ui-button--small ui-button--quiet"
                               (click)="askAccount('reconnect', item)"
                               i18n="@@admin.donorDetail.reconnect.open"
                             >
@@ -577,7 +593,7 @@
                           }
                           <button
                             type="button"
-                            class="action-btn"
+                            class="ui-button ui-button--small"
                             (click)="askAccount('remove', item)"
                             i18n="@@admin.donorDetail.remove.open"
                           >
@@ -597,19 +613,19 @@
   </section>
 
   @if (donationsState() === 'ready') {
-    <section class="admin-card" aria-labelledby="donations-title">
-      <h2 id="donations-title" class="admin-card-title" i18n="@@admin.donorDetail.donations.title">
+    <section class="ui-card" aria-labelledby="donations-title">
+      <h2 id="donations-title" class="ui-card__title" i18n="@@admin.donorDetail.donations.title">
         Dary
       </h2>
       @if (donations().length === 0) {
-        <p class="admin-empty" i18n="@@admin.donorDetail.donations.empty">
+        <p class="ui-card__empty" i18n="@@admin.donorDetail.donations.empty">
           Dárce zatím nemá žádný přiřazený dar.
         </p>
       } @else {
         <p class="admin-hint admin-hint--card" i18n="@@admin.donorDetail.donations.summary">
           Celkem {{ donationsCount(donations().length) }} za {{ total() }}&nbsp;Kč.
         </p>
-        <table>
+        <table class="ui-table">
           <thead>
             <tr>
               <th i18n="@@admin.donorDetail.donations.col.date">Přijato</th>
@@ -635,7 +651,7 @@
                   data-label="Částka"
                   i18n-data-label="@@admin.donorDetail.donations.col.amount"
                 >
-                  <span class="mono">{{ crowns(item.amountMinor) }}&nbsp;Kč</span>
+                  <span class="ui-mono">{{ crowns(item.amountMinor) }}&nbsp;Kč</span>
                 </td>
                 <td data-label="Účel" i18n-data-label="@@admin.donorDetail.donations.col.purpose">
                   {{ item.purpose }}
@@ -646,7 +662,7 @@
                 >
                   {{ pairingLabel(item) }}
                   @if (item.senderAccount) {
-                    <span class="muted mono">{{ item.senderAccount }}</span>
+                    <span class="muted ui-mono">{{ item.senderAccount }}</span>
                   }
                   @if (item.confirmedSymbol) {
                     <span class="muted">
@@ -661,7 +677,7 @@
                   i18n-data-label="@@admin.donorDetail.donations.col.receipt"
                 >
                   @if (item.receiptNumber) {
-                    <span class="mono">{{ item.receiptNumber }}</span>
+                    <span class="ui-mono">{{ item.receiptNumber }}</span>
                   } @else {
                     <span class="muted" i18n="@@admin.donorDetail.donations.noReceipt"
                       >zatím žádné</span
@@ -675,16 +691,16 @@
       }
     </section>
 
-    <section class="admin-card" aria-labelledby="receipts-title">
-      <h2 id="receipts-title" class="admin-card-title" i18n="@@admin.donorDetail.receipts.title">
+    <section class="ui-card" aria-labelledby="receipts-title">
+      <h2 id="receipts-title" class="ui-card__title" i18n="@@admin.donorDetail.receipts.title">
         Vydaná potvrzení
       </h2>
       @if (receipts().length === 0) {
-        <p class="admin-empty" i18n="@@admin.donorDetail.receipts.empty">
+        <p class="ui-card__empty" i18n="@@admin.donorDetail.receipts.empty">
           Dárce si zatím žádné potvrzení nestáhl.
         </p>
       } @else {
-        <table>
+        <table class="ui-table">
           <thead>
             <tr>
               <th i18n="@@admin.donorDetail.receipts.col.number">Číslo</th>
@@ -697,7 +713,7 @@
             @for (receipt of receipts(); track receipt.id) {
               <tr>
                 <td data-label="Číslo" i18n-data-label="@@admin.donorDetail.receipts.col.number">
-                  <span class="mono admin-name">{{ receipt.number }}</span>
+                  <span class="ui-mono admin-name">{{ receipt.number }}</span>
                 </td>
                 <td
                   data-label="Potvrzuje"

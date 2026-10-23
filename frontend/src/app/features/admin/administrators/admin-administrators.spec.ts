@@ -118,7 +118,7 @@ describe('Given an administrator on the administrators page', () => {
     fixture.detectChanges();
 
     expect(text('[role="alert"]')).toContain('Správce se nepodařilo načíst.');
-    element<HTMLButtonElement>('.admin-retry').click();
+    element<HTMLButtonElement>('.ui-load-state--error button').click();
     fixture.detectChanges();
 
     await listed([jana]);
@@ -142,7 +142,7 @@ describe('Given an administrator on the administrators page', () => {
     request.flush(petr, { status: 201, statusText: 'Created' });
     fixture.detectChanges();
 
-    expect(text('.admin-notice--status')).toBe(
+    expect(text('.ui-notice--status')).toBe(
       'Petr Svoboda je teď správce. Správa se mu otevře, až si zapne dvoufaktorové ověření a přihlásí se s kódem z aplikace.',
     );
     expect(element<HTMLInputElement>('#grant-email').value).toBe('');
@@ -201,7 +201,7 @@ describe('Given an administrator on the administrators page', () => {
     request.flush(null, { status: 204, statusText: 'No Content' });
     fixture.detectChanges();
 
-    expect(text('.admin-notice--status')).toBe(
+    expect(text('.ui-notice--status')).toBe(
       'Petr Svoboda už není správce. Všechna jeho přihlášení jsme ukončili.',
     );
     await listed([jana]);
@@ -236,7 +236,7 @@ describe('Given an administrator on the administrators page', () => {
     request.flush(null, { status: 204, statusText: 'No Content' });
     fixture.detectChanges();
 
-    expect(text('.admin-notice--status')).toBe(
+    expect(text('.ui-notice--status')).toBe(
       'Dvoufaktorové ověření u Petr Svoboda je vypnuté a všechna jeho přihlášení jsme ukončili. Poslali jsme mu e-mail; po přihlášení heslem si ho může zapnout znovu.',
     );
     await listed([jana, petr]);
@@ -261,7 +261,7 @@ describe('Given an administrator on the administrators page', () => {
       .flush(refusal.body, refusal.options);
     fixture.detectChanges();
 
-    expect(text('.admin-notice--alert')).toBe('Tento dárce není správce. Není co odebrat.');
+    expect(text('.ui-notice--alert')).toBe('Tento dárce není správce. Není co odebrat.');
     expect(rows()).toHaveLength(2);
   });
 

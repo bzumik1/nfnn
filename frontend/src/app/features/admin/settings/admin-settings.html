@@ -1,6 +1,6 @@
-<div class="container">
-  <h1 #title class="admin-title" tabindex="-1" i18n="@@admin.settings.heading">Nastavení</h1>
-  <p class="admin-intro" i18n="@@admin.settings.intro">
+<div class="ui-page container">
+  <h1 #title class="ui-page-title" tabindex="-1" i18n="@@admin.settings.heading">Nastavení</h1>
+  <p class="ui-page-intro" i18n="@@admin.settings.intro">
     Adresa webu, odesílání e-mailů, napojení na banku a údaje na potvrzeních o daru. Tajné údaje se
     ukládají zašifrované a nikdy se nezobrazují; můžete je jen přepsat nebo odebrat. Uložení web
     restartuje, takže asi minutu nebude odpovídat.
@@ -8,22 +8,22 @@
 
   @if (notice(); as notice) {
     @if (notice.kind === 'status') {
-      <p class="admin-notice admin-notice--status" role="status">{{ notice.text }}</p>
+      <p class="ui-notice ui-notice--status" role="status">{{ notice.text }}</p>
     } @else {
-      <p class="admin-notice admin-notice--alert" role="alert">{{ notice.text }}</p>
+      <p class="ui-notice ui-notice--alert" role="alert">{{ notice.text }}</p>
     }
   }
 
   @switch (state()) {
     @case ('loading') {
-      <p class="admin-loading" role="status" i18n="@@admin.settings.loading">Načítáme nastavení…</p>
+      <p class="ui-load-state" role="status" i18n="@@admin.settings.loading">Načítáme nastavení…</p>
     }
     @case ('error') {
-      <div class="admin-error" role="alert">
+      <div class="ui-load-state ui-load-state--error" role="alert">
         <p i18n="@@admin.settings.error.text">Nastavení se nepodařilo načíst.</p>
         <button
           type="button"
-          class="admin-retry"
+          class="ui-button"
           (click)="load()"
           i18n="@@admin.settings.error.retry"
         >
@@ -32,7 +32,7 @@
       </div>
     }
     @case ('restarting') {
-      <p class="admin-loading" role="status">
+      <p class="ui-load-state" role="status">
         <span class="spinner" aria-hidden="true"></span>
         <span i18n="@@admin.settings.restarting"
           >Nastavení je uložené a web se restartuje. Obvykle to trvá do minuty.</span
@@ -40,14 +40,14 @@
       </p>
     }
     @case ('slow') {
-      <div class="admin-error" role="alert">
+      <div class="ui-load-state ui-load-state--error" role="alert">
         <p i18n="@@admin.settings.slow.text">
           Nastavení je uložené, ale web po restartu zatím neodpovídá. Zkuste to prosím za chvíli
           znovu; když se nespustí, podívejte se do logu kontejneru nfnn-backend v ZimaOS.
         </p>
         <button
           type="button"
-          class="admin-retry"
+          class="ui-button"
           (click)="checkAgain()"
           i18n="@@admin.settings.slow.retry"
         >
@@ -57,13 +57,13 @@
     }
     @case ('ready') {
       @if (!secretsCanBeStored()) {
-        <p class="admin-notice admin-notice--alert" role="alert" i18n="@@admin.settings.noKey">
+        <p class="ui-notice ui-notice--alert" role="alert" i18n="@@admin.settings.noKey">
           Tajné údaje teď nejde uložit, protože serveru chybí klíč k šifrování (soubor
           secrets/settings-key). Ostatní nastavení uložit jde.
         </p>
       } @else if (unreadableSecrets()) {
         <p
-          class="admin-notice admin-notice--alert"
+          class="ui-notice ui-notice--alert"
           role="alert"
           i18n="@@admin.settings.unreadableSecrets"
         >
@@ -74,9 +74,9 @@
       }
       <form class="settings-form" (ngSubmit)="askSave()" novalidate>
         @for (group of groups(); track group.id) {
-          <section class="admin-card" [attr.aria-labelledby]="'settings-' + group.id">
-            <h2 [id]="'settings-' + group.id" class="admin-card-title">{{ group.title }}</h2>
-            <div class="card-body">
+          <section class="ui-card" [attr.aria-labelledby]="'settings-' + group.id">
+            <h2 [id]="'settings-' + group.id" class="ui-card__title">{{ group.title }}</h2>
+            <div class="ui-card__body">
               @for (field of group.fields; track field.name) {
                 @switch (field.input) {
                   @case ('flag') {
@@ -151,7 +151,7 @@
                 <div class="test-row">
                   <button
                     type="button"
-                    class="action-btn"
+                    class="ui-button"
                     [disabled]="testingMail()"
                     (click)="testMail()"
                   >
@@ -201,7 +201,12 @@
             <span i18n="@@admin.settings.confirm.question"
               >Uložením se web restartuje a asi minutu nebude odpovídat. Uložit?</span
             >
-            <button type="button" class="primary" [disabled]="saving()" (click)="save()">
+            <button
+              type="button"
+              class="ui-button ui-button--primary"
+              [disabled]="saving()"
+              (click)="save()"
+            >
               @if (saving()) {
                 <ng-container i18n="@@admin.settings.saving">Ukládáme…</ng-container>
               } @else {
@@ -212,7 +217,7 @@
             </button>
             <button
               type="button"
-              class="action-link"
+              class="ui-link-button"
               [disabled]="saving()"
               (click)="cancelSave()"
               i18n="@@admin.settings.confirm.no"
@@ -221,7 +226,7 @@
             </button>
           </div>
         } @else {
-          <button type="submit" class="primary" i18n="@@admin.settings.save">
+          <button type="submit" class="ui-button ui-button--primary" i18n="@@admin.settings.save">
             Uložit nastavení
           </button>
         }

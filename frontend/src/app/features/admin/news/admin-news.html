@@ -1,38 +1,41 @@
-<div class="container">
-  <div class="admin-head">
-    <h1 #title class="admin-title" tabindex="-1" i18n="@@admin.news.heading">Aktuality</h1>
-    <a class="primary" routerLink="/sprava/aktuality/nova" i18n="@@admin.news.new"
+<div class="ui-page container">
+  <div class="ui-page-head">
+    <h1 #title class="ui-page-title" tabindex="-1" i18n="@@admin.news.heading">Aktuality</h1>
+    <a
+      class="ui-button ui-button--primary"
+      routerLink="/sprava/aktuality/nova"
+      i18n="@@admin.news.new"
       >Nová aktualita</a
     >
   </div>
-  <p class="admin-intro" i18n="@@admin.news.intro">
+  <p class="ui-page-intro" i18n="@@admin.news.intro">
     Aktuality se na webu ukazují od data zveřejnění, nejnovější první. Koncept vidíte jen vy;
     zveřejněnou aktualitu můžete kdykoli upravit nebo z webu stáhnout.
   </p>
 
   @switch (state()) {
     @case ('loading') {
-      <p class="admin-loading" role="status" i18n="@@admin.news.loading">Načítáme aktuality…</p>
+      <p class="ui-load-state" role="status" i18n="@@admin.news.loading">Načítáme aktuality…</p>
     }
     @case ('error') {
-      <div class="admin-error" role="alert">
+      <div class="ui-load-state ui-load-state--error" role="alert">
         <p i18n="@@admin.news.error.text">Aktuality se nepodařilo načíst.</p>
-        <button type="button" class="admin-retry" (click)="load()" i18n="@@admin.news.error.retry">
+        <button type="button" class="ui-button" (click)="load()" i18n="@@admin.news.error.retry">
           Zkusit znovu
         </button>
       </div>
     }
     @case ('ready') {
-      <section class="admin-card" aria-labelledby="news-list-title">
-        <h2 id="news-list-title" class="admin-card-title" i18n="@@admin.news.list.title">
+      <section class="ui-card" aria-labelledby="news-list-title">
+        <h2 id="news-list-title" class="ui-card__title" i18n="@@admin.news.list.title">
           Všechny aktuality
         </h2>
         @if (items().length === 0) {
-          <p class="card-body card-intro" i18n="@@admin.news.list.empty">
+          <p class="ui-card__body ui-card__intro" i18n="@@admin.news.list.empty">
             Zatím tu žádná aktualita není. Napište první tlačítkem Nová aktualita.
           </p>
         } @else {
-          <table>
+          <table class="ui-table">
             <thead>
               <tr>
                 <th i18n="@@admin.news.col.title">Titulek</th>
@@ -58,11 +61,11 @@
                   </td>
                   <td data-label="Stav" i18n-data-label="@@admin.news.col.state">
                     @if (publishedOn(item); as date) {
-                      <span class="state state--published" i18n="@@admin.news.state.published"
+                      <span class="ui-badge ui-badge--success" i18n="@@admin.news.state.published"
                         >Zveřejněno {{ date }}</span
                       >
                     } @else {
-                      <span class="state state--draft" i18n="@@admin.news.state.draft"
+                      <span class="ui-badge ui-badge--warning" i18n="@@admin.news.state.draft"
                         >Koncept</span
                       >
                     }

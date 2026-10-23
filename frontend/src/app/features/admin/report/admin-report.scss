@@ -1,75 +1,12 @@
-@use 'breakpoints' as bp;
-
 :host {
   display: block;
 }
 
 .container {
   max-width: 900px;
-  margin: 0;
-  padding: var(--space-8) var(--space-6) var(--space-12);
 }
 
-.admin-title {
-  font-family: var(--font-serif);
-  font-size: var(--text-heading);
-  font-weight: var(--weight-bold);
-  color: var(--color-text);
-  margin: var(--space-2) 0;
-
-  &:focus {
-    outline: none;
-  }
-}
-
-.admin-intro {
-  color: var(--color-text-muted);
-  font-size: var(--text-lg);
-  line-height: var(--leading-normal);
-  margin-bottom: var(--space-5);
-  max-width: 680px;
-}
-
-.admin-notice {
-  border-radius: var(--radius-sm);
-  padding: var(--space-3) var(--space-4);
-  font-size: var(--text-md);
-  line-height: var(--leading-normal);
-  margin-bottom: var(--space-4);
-}
-
-.admin-notice--status {
-  background: var(--color-success-bg);
-  color: var(--color-success);
-}
-
-.admin-notice--alert {
-  background: var(--color-danger-bg);
-  color: var(--color-danger);
-}
-
-.admin-card {
-  background: var(--color-surface);
-  border-radius: var(--radius-card);
-  box-shadow: var(--shadow-panel);
-  border: 1px solid var(--color-border-soft);
-  overflow: hidden;
-  margin-bottom: var(--space-5);
-}
-
-.admin-card-title {
-  font-family: var(--font-serif);
-  font-size: var(--text-2xl);
-  font-weight: var(--weight-bold);
-  color: var(--color-text);
-  padding: var(--space-5) var(--space-6) var(--space-3);
-}
-
-.card-body {
-  padding: 0 var(--space-6) var(--space-6);
-}
-
-.card-intro,
+.ui-card__intro,
 .changed-at {
   font-size: var(--text-sm);
   color: var(--color-text-muted);
@@ -82,20 +19,6 @@
   color: var(--color-text);
   line-height: var(--leading-normal);
   margin-bottom: var(--space-1-5);
-}
-
-.admin-loading,
-.admin-error {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-3);
-  color: var(--color-text-muted);
-  font-size: var(--text-md);
-}
-
-.admin-error {
-  color: var(--color-danger);
 }
 
 .settings-form {
@@ -136,44 +59,6 @@
   margin: var(--space-1) 0 var(--space-2);
 }
 
-.primary {
-  background: var(--color-accent);
-  color: var(--color-on-accent);
-  border: none;
-  padding: var(--space-2-5) var(--space-6);
-  border-radius: var(--radius-pill);
-  font-weight: var(--weight-bold);
-  font-size: var(--text-md);
-  cursor: pointer;
-  font-family: var(--font-sans);
-  box-shadow: var(--shadow-button-sm);
-}
-
-.admin-retry,
-.action-btn {
-  background: var(--color-accent-soft);
-  color: var(--color-accent);
-  border: none;
-  padding: var(--space-2-25) var(--space-4-5);
-  border-radius: var(--radius-pill);
-  font-weight: var(--weight-semibold);
-  font-size: var(--text-sm);
-  cursor: pointer;
-  font-family: var(--font-sans);
-  white-space: nowrap;
-}
-
-.action-link {
-  background: none;
-  border: none;
-  color: var(--color-accent);
-  font-family: var(--font-sans);
-  font-size: var(--text-sm);
-  font-weight: var(--weight-semibold);
-  cursor: pointer;
-  padding: var(--space-1-5) var(--space-2);
-}
-
 .send-row {
   display: flex;
   flex-wrap: wrap;
@@ -196,80 +81,7 @@
   padding-bottom: var(--space-1-5);
 }
 
-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-thead tr {
-  background: var(--color-surface-alt);
-}
-
-th {
-  padding: var(--space-3) var(--space-5);
-  text-align: left;
-  font-size: var(--text-2xs);
-  font-weight: var(--weight-bold);
-  color: var(--color-text-subtle);
-  letter-spacing: var(--tracking-wide);
-  text-transform: uppercase;
-}
-
-tbody tr {
-  border-top: 1px solid var(--color-divider);
-}
-
-td {
-  padding: var(--space-3-5) var(--space-5);
-  font-size: var(--text-md);
-  color: var(--color-text-secondary);
-  vertical-align: top;
-}
-
 .admin-name {
   color: var(--color-text);
   font-weight: var(--weight-semibold);
-}
-
-button:disabled {
-  cursor: progress;
-  opacity: 0.7;
-}
-
-@include bp.down(cards) {
-  thead {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip-path: inset(50%);
-  }
-
-  table,
-  tbody,
-  tr,
-  td {
-    display: block;
-  }
-
-  tbody tr {
-    display: grid;
-    gap: var(--space-2);
-    padding: var(--space-3-5) var(--space-5);
-  }
-
-  td {
-    padding: 0;
-  }
-
-  td::before {
-    content: attr(data-label);
-    display: block;
-    font-size: var(--text-2xs);
-    font-weight: var(--weight-bold);
-    color: var(--color-text-subtle);
-    letter-spacing: var(--tracking-wide);
-    text-transform: uppercase;
-    margin-bottom: var(--space-0-5);
-  }
 }

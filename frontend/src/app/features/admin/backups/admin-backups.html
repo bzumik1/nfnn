@@ -1,6 +1,6 @@
-<div class="container">
-  <h1 #title class="admin-title" tabindex="-1" i18n="@@admin.backups.heading">Zálohy</h1>
-  <p class="admin-intro" i18n="@@admin.backups.introRestore">
+<div class="ui-page container">
+  <h1 #title class="ui-page-title" tabindex="-1" i18n="@@admin.backups.heading">Zálohy</h1>
+  <p class="ui-page-intro" i18n="@@admin.backups.introRestore">
     Databáze se zálohuje každou noc ve 3:00 do složky /DATA/AppData/nfnn/backups na serveru a každou
     neděli ve 4:00 se nejnovější záloha zkušebně obnoví do dočasné databáze. Tady vidíte, jak to
     dopadlo, zálohu i zkušební obnovu spustíte hned, zálohu si stáhnete a web z ní obnovíte. Zálohy
@@ -9,18 +9,18 @@
 
   @if (notice(); as notice) {
     @if (notice.kind === 'status') {
-      <p class="admin-notice admin-notice--status" role="status">{{ notice.text }}</p>
+      <p class="ui-notice ui-notice--status" role="status">{{ notice.text }}</p>
     } @else {
-      <p class="admin-notice admin-notice--alert" role="alert">{{ notice.text }}</p>
+      <p class="ui-notice ui-notice--alert" role="alert">{{ notice.text }}</p>
     }
   }
 
   @if (restoring(); as restore) {
-    <section class="admin-card" aria-labelledby="restoring-title">
-      <h2 id="restoring-title" class="admin-card-title" i18n="@@admin.backups.restoring.title">
+    <section class="ui-card" aria-labelledby="restoring-title">
+      <h2 id="restoring-title" class="ui-card__title" i18n="@@admin.backups.restoring.title">
         Obnova ze zálohy
       </h2>
-      <div class="card-body">
+      <div class="ui-card__body">
         @if (restoreSlow()) {
           <p class="restoring restoring--slow" role="alert" i18n="@@admin.backups.restoring.slow">
             Web se ještě nevrátil. Velká záloha se může obnovovat i déle; zkuste to prosím za chvíli
@@ -28,7 +28,7 @@
           </p>
           <button
             type="button"
-            class="primary"
+            class="ui-button ui-button--primary"
             (click)="watchRestore()"
             i18n="@@admin.backups.restoring.retry"
           >
@@ -45,16 +45,16 @@
   } @else {
     @switch (state()) {
       @case ('loading') {
-        <p class="admin-loading" role="status" i18n="@@admin.backups.loading">
+        <p class="ui-load-state" role="status" i18n="@@admin.backups.loading">
           Načítáme stav záloh…
         </p>
       }
       @case ('error') {
-        <div class="admin-error" role="alert">
+        <div class="ui-load-state ui-load-state--error" role="alert">
           <p i18n="@@admin.backups.error.text">Stav záloh se nepodařilo načíst.</p>
           <button
             type="button"
-            class="admin-retry"
+            class="ui-button"
             (click)="load()"
             i18n="@@admin.backups.error.retry"
           >
@@ -63,15 +63,11 @@
         </div>
       }
       @case ('ready') {
-        <section class="admin-card" aria-labelledby="backups-status-title">
-          <h2
-            id="backups-status-title"
-            class="admin-card-title"
-            i18n="@@admin.backups.status.title"
-          >
+        <section class="ui-card" aria-labelledby="backups-status-title">
+          <h2 id="backups-status-title" class="ui-card__title" i18n="@@admin.backups.status.title">
             Stav záloh
           </h2>
-          <div class="card-body">
+          <div class="ui-card__body">
             @if (problems().length > 0) {
               <div class="problems" role="alert">
                 <ul>
@@ -128,7 +124,7 @@
             <div class="actions">
               <button
                 type="button"
-                class="primary"
+                class="ui-button ui-button--primary"
                 [disabled]="actionsDisabled()"
                 (click)="start('BACKUP')"
               >
@@ -140,7 +136,7 @@
               </button>
               <button
                 type="button"
-                class="action-btn"
+                class="ui-button"
                 [disabled]="actionsDisabled()"
                 (click)="start('TEST_RESTORE')"
               >
@@ -161,12 +157,14 @@
           </div>
         </section>
 
-        <section class="admin-card" aria-labelledby="backups-list-title">
-          <h2 id="backups-list-title" class="admin-card-title" i18n="@@admin.backups.list.title">
+        <section class="ui-card" aria-labelledby="backups-list-title">
+          <h2 id="backups-list-title" class="ui-card__title" i18n="@@admin.backups.list.title">
             Zálohy na serveru
           </h2>
           @if (backups().length === 0) {
-            <p class="card-body card-intro" i18n="@@admin.backups.list.none">Zatím žádná záloha.</p>
+            <p class="ui-card__body ui-card__intro" i18n="@@admin.backups.list.none">
+              Zatím žádná záloha.
+            </p>
           } @else {
             <table>
               <thead>
@@ -200,7 +198,7 @@
                     <td class="row-actions">
                       <button
                         type="button"
-                        class="action-btn"
+                        class="ui-button"
                         [disabled]="actionsDisabled()"
                         [attr.aria-label]="restoreLabel(item)"
                         (click)="askRestore(item)"
@@ -210,7 +208,7 @@
                       </button>
                       <button
                         type="button"
-                        class="action-btn"
+                        class="ui-button"
                         [disabled]="downloading() !== null"
                         [attr.aria-label]="downloadLabel(item)"
                         (click)="download(item)"

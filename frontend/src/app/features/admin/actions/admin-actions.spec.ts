@@ -164,7 +164,7 @@ describe('Given an administrator on the history page', () => {
   it('when nothing has been changed yet, then the card says so', () => {
     firstPage([]);
 
-    expect(text('.admin-empty')).toBe('Zatím žádný správce nic nezměnil.');
+    expect(text('.ui-card__empty')).toBe('Zatím žádný správce nic nezměnil.');
   });
 
   it('when more pages exist, then "Načíst starší" asks for the changes before the oldest one and appends them', () => {
@@ -210,7 +210,7 @@ describe('Given an administrator on the history page', () => {
     fixture.detectChanges();
 
     expect(text('[role="alert"]')).toContain('Historii se nepodařilo načíst.');
-    element<HTMLButtonElement>('.admin-retry').click();
+    element<HTMLButtonElement>('.ui-load-state--error button').click();
     fixture.detectChanges();
 
     firstPage([paired]);

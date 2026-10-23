@@ -62,7 +62,7 @@ test.describe('Given an administrator on the settings page', () => {
     );
     await page.getByRole('button', { name: 'Ano, uložit a restartovat' }).click();
 
-    await expect(page.locator('.admin-notice--status')).toHaveText(
+    await expect(page.locator('.ui-notice--status')).toHaveText(
       'Nastavení je uložené a web po restartu běží s ním.',
       { timeout: 15_000 },
     );

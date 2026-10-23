@@ -1,6 +1,6 @@
-<div class="container">
-  <h1 #title class="admin-title" tabindex="-1" i18n="@@admin.payments.heading">Platby z banky</h1>
-  <p class="admin-intro" i18n="@@admin.payments.intro">
+<div class="ui-page container">
+  <h1 #title class="ui-page-title" tabindex="-1" i18n="@@admin.payments.heading">Platby z banky</h1>
+  <p class="ui-page-intro" i18n="@@admin.payments.intro">
     Platby, které web nedokázal přiřadit žádnému dárci, tu přiřadíte ručně. U přiřazených plateb
     můžete přiřazení zrušit; platba pak zůstane mimo automatické párování a čeká na vaše rozhodnutí.
   </p>
@@ -47,14 +47,14 @@
 
   @if (notice(); as notice) {
     @if (notice.kind === 'status') {
-      <p class="admin-notice admin-notice--status" role="status">{{ notice.text }}</p>
+      <p class="ui-notice ui-notice--status" role="status">{{ notice.text }}</p>
     } @else {
-      <p class="admin-notice admin-notice--alert" role="alert">{{ notice.text }}</p>
+      <p class="ui-notice ui-notice--alert" role="alert">{{ notice.text }}</p>
     }
   }
 
-  <section class="admin-card payments-card" aria-labelledby="payments-title">
-    <h2 id="payments-title" class="admin-card-title">
+  <section class="ui-card payments-card" aria-labelledby="payments-title">
+    <h2 id="payments-title" class="ui-card__title">
       @if (filter() === 'unpaired') {
         <ng-container i18n="@@admin.payments.list.unpairedTitle">Nespárované platby</ng-container>
       } @else {
@@ -65,14 +65,16 @@
     </h2>
     @switch (state()) {
       @case ('loading') {
-        <p class="admin-loading" role="status" i18n="@@admin.payments.loading">Načítáme platby…</p>
+        <p class="ui-load-state ui-load-state--inset" role="status" i18n="@@admin.payments.loading">
+          Načítáme platby…
+        </p>
       }
       @case ('error') {
-        <div class="admin-error" role="alert">
+        <div class="ui-load-state ui-load-state--error ui-load-state--inset" role="alert">
           <p i18n="@@admin.payments.error.text">Platby se nepodařilo načíst.</p>
           <button
             type="button"
-            class="admin-retry"
+            class="ui-button"
             (click)="load()"
             i18n="@@admin.payments.error.retry"
           >
@@ -83,12 +85,12 @@
       @case ('ready') {
         @if (items().length === 0) {
           @if (filter() === 'unpaired') {
-            <p class="admin-empty" i18n="@@admin.payments.empty.unpaired">
+            <p class="ui-card__empty" i18n="@@admin.payments.empty.unpaired">
               Všechny platby z banky jsou přiřazené. Nová platba se tu objeví po dalším stažení z
               banky (každou hodinu).
             </p>
           } @else {
-            <p class="admin-empty" i18n="@@admin.payments.empty.paired">
+            <p class="ui-card__empty" i18n="@@admin.payments.empty.paired">
               Zatím není přiřazena žádná platba.
             </p>
           }
@@ -171,7 +173,7 @@
                     @if (filter() === 'unpaired') {
                       <button
                         type="button"
-                        class="action-btn"
+                        class="ui-button ui-button--small"
                         (click)="openPairing(item)"
                         i18n="@@admin.payments.pair.open"
                       >
@@ -191,7 +193,7 @@
                         <span i18n="@@admin.payments.unpair.confirm.question">Opravdu zrušit?</span>
                         <button
                           type="button"
-                          class="action-btn action-btn--danger"
+                          class="ui-button ui-button--small ui-button--danger"
                           [disabled]="busy()"
                           (click)="unpair(item)"
                         >
@@ -205,7 +207,7 @@
                         </button>
                         <button
                           type="button"
-                          class="action-link"
+                          class="ui-link-button"
                           [disabled]="busy()"
                           (click)="cancelUnpair()"
                           i18n="@@admin.payments.unpair.no"
@@ -216,7 +218,7 @@
                     } @else {
                       <button
                         type="button"
-                        class="action-btn action-btn--quiet"
+                        class="ui-button ui-button--small ui-button--quiet"
                         (click)="askUnpair(item)"
                         i18n="@@admin.payments.unpair.open"
                       >

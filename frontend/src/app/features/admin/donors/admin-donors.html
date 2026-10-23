@@ -1,13 +1,13 @@
-<div class="container">
-  <h1 #title class="admin-title" tabindex="-1" i18n="@@admin.donors.heading">Dárci</h1>
-  <p class="admin-intro" i18n="@@admin.donors.intro">
+<div class="ui-page container">
+  <h1 #title class="ui-page-title" tabindex="-1" i18n="@@admin.donors.heading">Dárci</h1>
+  <p class="ui-page-intro" i18n="@@admin.donors.intro">
     Najděte dárce a otevřete jeho kartu: uvidíte jeho účet, bankovní účty, dary a vydaná potvrzení a
     můžete mu vypnout dvoufaktorové ověření, odebrat špatně přiřazený bankovní účet nebo na jeho
     žádost vymazat osobní údaje.
   </p>
 
-  <section class="admin-card" aria-labelledby="search-title">
-    <h2 id="search-title" class="admin-card-title" i18n="@@admin.donors.search.title">
+  <section class="ui-card" aria-labelledby="search-title">
+    <h2 id="search-title" class="ui-card__title" i18n="@@admin.donors.search.title">
       Hledat dárce
     </h2>
     <div class="search">
@@ -32,30 +32,38 @@
 
     @switch (state()) {
       @case ('idle') {
-        <p class="admin-empty" role="status" i18n="@@admin.donors.search.idle">
+        <p class="ui-card__empty" role="status" i18n="@@admin.donors.search.idle">
           Začněte psát a dárci se objeví tady.
         </p>
       }
       @case ('searching') {
-        <p class="admin-loading" role="status" i18n="@@admin.donors.search.searching">
+        <p
+          class="ui-load-state ui-load-state--inset"
+          role="status"
+          i18n="@@admin.donors.search.searching"
+        >
           Hledáme dárce…
         </p>
       }
       @case ('error') {
-        <p class="admin-error" role="alert" i18n="@@admin.donors.search.failed">
+        <p
+          class="ui-load-state ui-load-state--error ui-load-state--inset"
+          role="alert"
+          i18n="@@admin.donors.search.failed"
+        >
           Hledání se nepodařilo. Zkuste to prosím znovu.
         </p>
       }
       @case ('ready') {
         @if (results().length === 0) {
-          <p class="admin-empty" role="status" i18n="@@admin.donors.search.empty">
+          <p class="ui-card__empty" role="status" i18n="@@admin.donors.search.empty">
             Žádný dárce neodpovídá.
           </p>
         } @else {
           <p class="visually-hidden" role="status" i18n="@@admin.donors.search.count">
             Nalezení dárci: {{ results().length }}
           </p>
-          <table>
+          <table class="ui-table">
             <thead>
               <tr>
                 <th i18n="@@admin.donors.col.donor">Dárce</th>
@@ -90,7 +98,7 @@
                     }
                   </td>
                   <td data-label="Variabilní symbol" i18n-data-label="@@admin.donors.col.symbol">
-                    <span class="mono">{{ item.variableSymbol }}</span>
+                    <span class="ui-mono">{{ item.variableSymbol }}</span>
                   </td>
                   <td data-label="Registrace" i18n-data-label="@@admin.donors.col.registered">
                     {{ registeredAt(item) }}

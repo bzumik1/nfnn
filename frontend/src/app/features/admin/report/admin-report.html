@@ -1,6 +1,6 @@
-<div class="container">
-  <h1 #title class="admin-title" tabindex="-1" i18n="@@admin.report.heading">Měsíční přehled</h1>
-  <p class="admin-intro" i18n="@@admin.report.intro">
+<div class="ui-page container">
+  <h1 #title class="ui-page-title" tabindex="-1" i18n="@@admin.report.heading">Měsíční přehled</h1>
+  <p class="ui-page-intro" i18n="@@admin.report.intro">
     Fond dostává každý měsíc e-mailem přehled za minulý měsíc: registrované a nové dárce, přijaté
     dary, platby bez dárce a stav stahování z banky. Tady nastavíte, komu přehled chodí, v který den
     a co obsahuje, a přehled za kterýkoli skončený měsíc můžete poslat znovu. Na stejné adresy chodí
@@ -9,41 +9,32 @@
 
   @if (notice(); as notice) {
     @if (notice.kind === 'status') {
-      <p class="admin-notice admin-notice--status" role="status">{{ notice.text }}</p>
+      <p class="ui-notice ui-notice--status" role="status">{{ notice.text }}</p>
     } @else {
-      <p class="admin-notice admin-notice--alert" role="alert">{{ notice.text }}</p>
+      <p class="ui-notice ui-notice--alert" role="alert">{{ notice.text }}</p>
     }
   }
 
   @switch (state()) {
     @case ('loading') {
-      <p class="admin-loading" role="status" i18n="@@admin.report.loading">
+      <p class="ui-load-state" role="status" i18n="@@admin.report.loading">
         Načítáme nastavení přehledu…
       </p>
     }
     @case ('error') {
-      <div class="admin-error" role="alert">
+      <div class="ui-load-state ui-load-state--error" role="alert">
         <p i18n="@@admin.report.error.text">Nastavení přehledu se nepodařilo načíst.</p>
-        <button
-          type="button"
-          class="admin-retry"
-          (click)="load()"
-          i18n="@@admin.report.error.retry"
-        >
+        <button type="button" class="ui-button" (click)="load()" i18n="@@admin.report.error.retry">
           Zkusit znovu
         </button>
       </div>
     }
     @case ('ready') {
-      <section class="admin-card" aria-labelledby="report-settings-title">
-        <h2
-          id="report-settings-title"
-          class="admin-card-title"
-          i18n="@@admin.report.settings.title"
-        >
+      <section class="ui-card" aria-labelledby="report-settings-title">
+        <h2 id="report-settings-title" class="ui-card__title" i18n="@@admin.report.settings.title">
           Nastavení
         </h2>
-        <div class="card-body">
+        <div class="ui-card__body">
           @if (nextReport(); as next) {
             <p class="next-report" i18n="@@admin.report.next">
               Příští přehled za {{ next.month }} odejde {{ next.dueOn }} ráno. Byl-li by web ten den
@@ -133,7 +124,7 @@
               <p class="form-error" role="alert">{{ settingsError() }}</p>
             }
 
-            <button type="submit" class="primary" [disabled]="saving()">
+            <button type="submit" class="ui-button ui-button--primary" [disabled]="saving()">
               @if (saving()) {
                 <span i18n="@@admin.report.settings.saving">Ukládáme…</span>
               } @else {
@@ -144,12 +135,12 @@
         </div>
       </section>
 
-      <section class="admin-card" aria-labelledby="report-send-title">
-        <h2 id="report-send-title" class="admin-card-title" i18n="@@admin.report.send.title">
+      <section class="ui-card" aria-labelledby="report-send-title">
+        <h2 id="report-send-title" class="ui-card__title" i18n="@@admin.report.send.title">
           Poslat přehled znovu
         </h2>
-        <div class="card-body">
-          <p class="card-intro" i18n="@@admin.report.send.intro">
+        <div class="ui-card__body">
+          <p class="ui-card__intro" i18n="@@admin.report.send.intro">
             Přehled za vybraný měsíc odejde hned na adresy z nastavení, i když už jednou odešel.
             Měsíc, který ještě neskončil, poslat nejde.
           </p>
@@ -177,7 +168,12 @@
                 <span i18n="@@admin.report.send.confirm.question"
                   >Poslat přehled za {{ selectedMonthLabel() }} na {{ currentRecipients() }}?</span
                 >
-                <button type="button" class="primary" [disabled]="sending()" (click)="send()">
+                <button
+                  type="button"
+                  class="ui-button ui-button--primary"
+                  [disabled]="sending()"
+                  (click)="send()"
+                >
                   @if (sending()) {
                     <ng-container i18n="@@admin.report.send.busy">Posíláme…</ng-container>
                   } @else {
@@ -186,7 +182,7 @@
                 </button>
                 <button
                   type="button"
-                  class="action-link"
+                  class="ui-link-button"
                   [disabled]="sending()"
                   (click)="cancelSend()"
                   i18n="@@admin.report.send.no"
@@ -197,7 +193,7 @@
             } @else {
               <button
                 type="button"
-                class="action-btn"
+                class="ui-button"
                 (click)="askSend()"
                 i18n="@@admin.report.send.open"
               >
@@ -208,16 +204,16 @@
         </div>
       </section>
 
-      <section class="admin-card" aria-labelledby="report-sent-title">
-        <h2 id="report-sent-title" class="admin-card-title" i18n="@@admin.report.sent.title">
+      <section class="ui-card" aria-labelledby="report-sent-title">
+        <h2 id="report-sent-title" class="ui-card__title" i18n="@@admin.report.sent.title">
           Odeslané přehledy
         </h2>
         @if (sentReports().length === 0) {
-          <p class="card-body card-intro" i18n="@@admin.report.sent.none">
+          <p class="ui-card__body ui-card__intro" i18n="@@admin.report.sent.none">
             Zatím žádný přehled neodešel.
           </p>
         } @else {
-          <table>
+          <table class="ui-table">
             <thead>
               <tr>
                 <th i18n="@@admin.report.sent.col.month">Měsíc</th>

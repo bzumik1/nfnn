@@ -1,8 +1,8 @@
-<div class="container">
-  <h1 #title class="admin-title" tabindex="-1" i18n="@@admin.symbolClaims.heading">
+<div class="ui-page container">
+  <h1 #title class="ui-page-title" tabindex="-1" i18n="@@admin.symbolClaims.heading">
     Starší symboly
   </h1>
-  <p class="admin-intro" i18n="@@admin.symbolClaims.intro">
+  <p class="ui-page-intro" i18n="@@admin.symbolClaims.intro">
     Když dárce ověří bankovní účet a z toho účtu k nám chodily platby s jiným variabilním symbolem,
     nástěnka se ho zeptá, jestli jsou jeho. Tady vidíte odpovědi a opravíte omyl: zrušením odpovědi
     Ano smažete dary, které se přes ni přiřadily, a dárce se už neptáme; smazáním odpovědi Ne se
@@ -11,28 +11,32 @@
 
   @if (notice(); as notice) {
     @if (notice.kind === 'status') {
-      <p class="admin-notice admin-notice--status" role="status">{{ notice.text }}</p>
+      <p class="ui-notice ui-notice--status" role="status">{{ notice.text }}</p>
     } @else {
-      <p class="admin-notice admin-notice--alert" role="alert">{{ notice.text }}</p>
+      <p class="ui-notice ui-notice--alert" role="alert">{{ notice.text }}</p>
     }
   }
 
-  <section class="admin-card" aria-labelledby="claims-title">
-    <h2 id="claims-title" class="admin-card-title" i18n="@@admin.symbolClaims.list.title">
+  <section class="ui-card" aria-labelledby="claims-title">
+    <h2 id="claims-title" class="ui-card__title" i18n="@@admin.symbolClaims.list.title">
       Odpovědi dárců
     </h2>
     @switch (state()) {
       @case ('loading') {
-        <p class="admin-loading" role="status" i18n="@@admin.symbolClaims.loading">
+        <p
+          class="ui-load-state ui-load-state--inset"
+          role="status"
+          i18n="@@admin.symbolClaims.loading"
+        >
           Načítáme odpovědi…
         </p>
       }
       @case ('error') {
-        <div class="admin-error" role="alert">
+        <div class="ui-load-state ui-load-state--error ui-load-state--inset" role="alert">
           <p i18n="@@admin.symbolClaims.error.text">Odpovědi se nepodařilo načíst.</p>
           <button
             type="button"
-            class="admin-retry"
+            class="ui-button ui-button--small"
             (click)="load()"
             i18n="@@admin.symbolClaims.error.retry"
           >
@@ -42,11 +46,11 @@
       }
       @case ('ready') {
         @if (items().length === 0) {
-          <p class="admin-empty" i18n="@@admin.symbolClaims.empty">
+          <p class="ui-card__empty" i18n="@@admin.symbolClaims.empty">
             Zatím nikdo neodpověděl na otázku o starším variabilním symbolu.
           </p>
         } @else {
-          <table>
+          <table class="ui-table">
             <thead>
               <tr>
                 <th i18n="@@admin.symbolClaims.col.donor">Dárce</th>
@@ -70,13 +74,13 @@
                     }
                   </td>
                   <td data-label="Účet" i18n-data-label="@@admin.symbolClaims.col.account">
-                    <span class="mono">{{ item.account }}</span>
+                    <span class="ui-mono">{{ item.account }}</span>
                   </td>
                   <td
                     data-label="Variabilní symbol"
                     i18n-data-label="@@admin.symbolClaims.col.symbol"
                   >
-                    <span class="mono">{{ item.variableSymbol }}</span>
+                    <span class="ui-mono">{{ item.variableSymbol }}</span>
                   </td>
                   <td data-label="Odpověď" i18n-data-label="@@admin.symbolClaims.col.answer">
                     @if (item.answer === 'CONFIRMED') {
@@ -113,7 +117,7 @@
                           >
                           <button
                             type="button"
-                            class="action-btn action-btn--danger"
+                            class="ui-button ui-button--small ui-button--danger"
                             [disabled]="busy()"
                             (click)="reverse(item)"
                           >
@@ -129,7 +133,7 @@
                           </button>
                           <button
                             type="button"
-                            class="action-link"
+                            class="ui-link-button"
                             [disabled]="busy()"
                             (click)="cancel()"
                             i18n="@@admin.symbolClaims.confirm.no"
@@ -149,7 +153,7 @@
                           >
                           <button
                             type="button"
-                            class="action-btn action-btn--danger"
+                            class="ui-button ui-button--small ui-button--danger"
                             [disabled]="busy()"
                             (click)="reset(item)"
                           >
@@ -165,7 +169,7 @@
                           </button>
                           <button
                             type="button"
-                            class="action-link"
+                            class="ui-link-button"
                             [disabled]="busy()"
                             (click)="cancel()"
                             i18n="@@admin.symbolClaims.confirm.no"
@@ -177,7 +181,7 @@
                     } @else if (item.answer === 'CONFIRMED') {
                       <button
                         type="button"
-                        class="action-btn"
+                        class="ui-button ui-button--small"
                         (click)="ask(item)"
                         i18n="@@admin.symbolClaims.reverse.open"
                       >
@@ -186,7 +190,7 @@
                     } @else {
                       <button
                         type="button"
-                        class="action-btn action-btn--quiet"
+                        class="ui-button ui-button--small ui-button--quiet"
                         (click)="ask(item)"
                         i18n="@@admin.symbolClaims.reset.open"
                       >

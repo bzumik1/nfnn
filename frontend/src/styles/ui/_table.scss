@@ -1,0 +1,71 @@
+@use 'breakpoints' as bp;
+
+.ui-table {
+  width: 100%;
+  border-collapse: collapse;
+
+  thead tr {
+    background: var(--color-surface-alt);
+  }
+
+  th {
+    padding: var(--space-3) var(--space-5);
+    text-align: left;
+    font-size: var(--text-2xs);
+    font-weight: var(--weight-bold);
+    color: var(--color-text-subtle);
+    letter-spacing: var(--tracking-wide);
+    text-transform: uppercase;
+  }
+
+  tbody tr {
+    border-top: 1px solid var(--color-divider);
+  }
+
+  td {
+    padding: var(--space-3-5) var(--space-5);
+    font-size: var(--text-md);
+    color: var(--color-text-secondary);
+    vertical-align: top;
+  }
+}
+
+@include bp.down(cards) {
+  .ui-table {
+    thead {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+    }
+
+    &,
+    tbody,
+    tr,
+    td {
+      display: block;
+    }
+
+    tbody tr {
+      display: grid;
+      gap: var(--space-2);
+      padding: var(--space-3-5) var(--space-5);
+    }
+
+    td {
+      padding: 0;
+    }
+
+    td::before {
+      content: attr(data-label);
+      display: block;
+      font-size: var(--text-2xs);
+      font-weight: var(--weight-bold);
+      color: var(--color-text-subtle);
+      letter-spacing: var(--tracking-wide);
+      text-transform: uppercase;
+      margin-bottom: var(--space-0-5);
+    }
+  }
+}

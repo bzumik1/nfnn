@@ -1,6 +1,6 @@
-<div class="container">
-  <h1 #title class="admin-title" tabindex="-1" i18n="@@admin.administrators.heading">Správci</h1>
-  <p class="admin-intro" i18n="@@admin.administrators.intro">
+<div class="ui-page container">
+  <h1 #title class="ui-page-title" tabindex="-1" i18n="@@admin.administrators.heading">Správci</h1>
+  <p class="ui-page-intro" i18n="@@admin.administrators.intro">
     Správce vidí stav webu, přiřazuje platby a spravuje další správce. Správcem může být jen
     registrovaný dárce; správa se mu otevře, až si zapne dvoufaktorové ověření a přihlásí se s kódem
     z aplikace.
@@ -8,28 +8,32 @@
 
   @if (notice(); as notice) {
     @if (notice.kind === 'status') {
-      <p class="admin-notice admin-notice--status" role="status">{{ notice.text }}</p>
+      <p class="ui-notice ui-notice--status" role="status">{{ notice.text }}</p>
     } @else {
-      <p class="admin-notice admin-notice--alert" role="alert">{{ notice.text }}</p>
+      <p class="ui-notice ui-notice--alert" role="alert">{{ notice.text }}</p>
     }
   }
 
-  <section class="admin-card administrators-card" aria-labelledby="administrators-title">
-    <h2 id="administrators-title" class="admin-card-title" i18n="@@admin.administrators.list.title">
+  <section class="ui-card administrators-card" aria-labelledby="administrators-title">
+    <h2 id="administrators-title" class="ui-card__title" i18n="@@admin.administrators.list.title">
       Kdo web spravuje
     </h2>
     @switch (state()) {
       @case ('loading') {
-        <p class="admin-loading" role="status" i18n="@@admin.administrators.loading">
+        <p
+          class="ui-load-state ui-load-state--inset"
+          role="status"
+          i18n="@@admin.administrators.loading"
+        >
           Načítáme správce…
         </p>
       }
       @case ('error') {
-        <div class="admin-error" role="alert">
+        <div class="ui-load-state ui-load-state--error ui-load-state--inset" role="alert">
           <p i18n="@@admin.administrators.error.text">Správce se nepodařilo načíst.</p>
           <button
             type="button"
-            class="admin-retry"
+            class="ui-button ui-button--small"
             (click)="load()"
             i18n="@@admin.administrators.error.retry"
           >
@@ -38,7 +42,7 @@
         </div>
       }
       @case ('ready') {
-        <table>
+        <table class="ui-table">
           <thead>
             <tr>
               <th i18n="@@admin.administrators.col.name">Jméno</th>
@@ -94,7 +98,7 @@
                       >
                       <button
                         type="button"
-                        class="action-btn action-btn--danger"
+                        class="ui-button ui-button--small ui-button--danger"
                         [disabled]="busy()"
                         (click)="revoke(item)"
                       >
@@ -110,7 +114,7 @@
                       </button>
                       <button
                         type="button"
-                        class="action-link"
+                        class="ui-link-button"
                         [disabled]="busy()"
                         (click)="cancel()"
                         i18n="@@admin.administrators.confirm.no"
@@ -130,7 +134,7 @@
                       >
                       <button
                         type="button"
-                        class="action-btn action-btn--danger"
+                        class="ui-button ui-button--small ui-button--danger"
                         [disabled]="busy()"
                         (click)="reset(item)"
                       >
@@ -146,7 +150,7 @@
                       </button>
                       <button
                         type="button"
-                        class="action-link"
+                        class="ui-link-button"
                         [disabled]="busy()"
                         (click)="cancel()"
                         i18n="@@admin.administrators.confirm.no"
@@ -159,7 +163,7 @@
                       @if (item.secondFactorEnabled) {
                         <button
                           type="button"
-                          class="action-btn action-btn--quiet"
+                          class="ui-button ui-button--small ui-button--quiet"
                           (click)="ask('reset', item)"
                           i18n="@@admin.administrators.reset.open"
                         >
@@ -168,7 +172,7 @@
                       }
                       <button
                         type="button"
-                        class="action-btn"
+                        class="ui-button ui-button--small"
                         (click)="ask('revoke', item)"
                         i18n="@@admin.administrators.revoke.open"
                       >
@@ -185,8 +189,8 @@
     }
   </section>
 
-  <section class="admin-card grant-card" aria-labelledby="grant-title">
-    <h2 id="grant-title" class="admin-card-title" i18n="@@admin.administrators.grant.title">
+  <section class="ui-card grant-card" aria-labelledby="grant-title">
+    <h2 id="grant-title" class="ui-card__title" i18n="@@admin.administrators.grant.title">
       Přidat správce
     </h2>
     <form
@@ -222,7 +226,7 @@
         <p class="form-error" role="alert">{{ grantError() }}</p>
       }
 
-      <button type="submit" class="grant-submit" [disabled]="busy()">
+      <button type="submit" class="ui-button ui-button--primary grant-submit" [disabled]="busy()">
         @if (busy()) {
           <span i18n="@@admin.administrators.grant.busy">Přidávám…</span>
         } @else {
