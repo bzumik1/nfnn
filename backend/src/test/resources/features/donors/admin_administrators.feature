@@ -1,3 +1,4 @@
+@donors
 Feature: An administrator manages who administers the site
 
   Background:

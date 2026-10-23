@@ -1,3 +1,4 @@
+@donations
 Feature: Donations keeps its own record of each donor
 
   Scenario: A registered person is known to donations with the variable symbol, name, address and locale

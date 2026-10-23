@@ -1,3 +1,4 @@
+@donors
 Feature: Donor resets a forgotten password by e-mail
 
   Scenario: A donor asks for a reset link and gets it by e-mail without the registered name

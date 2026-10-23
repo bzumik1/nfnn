@@ -1,3 +1,4 @@
+@donations
 Feature: Incoming bank payments are imported from Fio
 
   Scenario: The first import asks for the last 89 days and stores only incoming payments

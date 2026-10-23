@@ -1,3 +1,4 @@
+@donors
 Feature: Donor confirms the e-mail address after registering
 
   Scenario: Registration sends a verification link, and the account opens only once the link is used

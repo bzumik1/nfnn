@@ -1,3 +1,4 @@
+@donations
 Feature: A donor is asked whether an old variable symbol from their verified account is theirs, and payments with a confirmed one are paired with them
 
   Scenario: After a one-koruna verification the account asks about its one old symbol, and confirming pairs the payments the question counted and later ones, learning nothing

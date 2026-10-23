@@ -1,3 +1,4 @@
+@donations
 Feature: An administrator uploads the signature printed on donation receipts
 
   Background:

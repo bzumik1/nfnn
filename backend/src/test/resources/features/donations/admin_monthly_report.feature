@@ -1,3 +1,4 @@
+@donations
 Feature: An administrator sets up the monthly report, sends it again and reads the yearly overview
 
   Background:

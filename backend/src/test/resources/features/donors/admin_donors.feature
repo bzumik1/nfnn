@@ -1,3 +1,4 @@
+@donors
 Feature: An administrator finds a donor and sees the donor's account
 
   Background:

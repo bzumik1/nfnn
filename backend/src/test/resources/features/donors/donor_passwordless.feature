@@ -1,3 +1,4 @@
+@donors
 Feature: An account without a password, opened only with passkeys
 
   Background:

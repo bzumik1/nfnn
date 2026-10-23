@@ -1,3 +1,4 @@
+@donations
 Feature: An administrator pairs bank payments by hand
 
   Background:

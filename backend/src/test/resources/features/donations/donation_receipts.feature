@@ -1,3 +1,4 @@
+@donations
 Feature: A donor downloads PDF receipts of their donations
 
   Scenario: The yearly receipt of a completed year lists the year's donations with their total

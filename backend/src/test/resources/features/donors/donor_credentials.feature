@@ -1,3 +1,4 @@
+@donors
 Feature: Donor changes the password or the e-mail while signed in
 
   Scenario: Changing the password with the current one keeps this session, ends the others and only the new password signs in

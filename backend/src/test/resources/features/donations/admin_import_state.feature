@@ -1,3 +1,4 @@
+@donations
 Feature: An administrator reads the state of the bank import
 
   Scenario: An administrator sees the covered period, the last attempt and the outage being reported

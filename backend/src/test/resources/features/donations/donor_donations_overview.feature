@@ -1,3 +1,4 @@
+@donations
 Feature: A donor sees their own donations and their summary
 
   Scenario: A donor without donations gets an empty list and a zero summary

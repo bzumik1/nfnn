@@ -1,3 +1,4 @@
+@donors
 Feature: Donor registers an account
 
   Scenario: A person registers, confirms the e-mail and receives a variable symbol

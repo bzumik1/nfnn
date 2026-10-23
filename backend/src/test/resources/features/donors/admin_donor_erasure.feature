@@ -1,3 +1,4 @@
+@donors
 Feature: An administrator erases a donor's personal data
 
   Background:

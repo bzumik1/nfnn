@@ -1,4 +1,4 @@
-@connected-apps
+@donors @connected-apps
 Feature: An administrator connects an application such as Claude to the administration
 
   The site is the OAuth 2.1 authorization server for the MCP connector: the administrator

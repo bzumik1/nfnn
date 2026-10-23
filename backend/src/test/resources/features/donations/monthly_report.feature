@@ -1,3 +1,4 @@
+@donations
 Feature: The foundation receives a monthly statistics e-mail
 
   Scenario: The report for the previous month counts the donors, the donations and the unpaired payments
