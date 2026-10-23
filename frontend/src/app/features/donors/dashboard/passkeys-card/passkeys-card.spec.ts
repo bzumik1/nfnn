@@ -256,6 +256,68 @@ describe('Given the passkeys card in the overview', () => {
     });
   });
 
+  describe('when the donor renames a passkey', () => {
+    beforeEach(() => render());
+
+    it('then the field holds the current name and the saved name replaces it', async () => {
+      await clickButton('Přejmenovat');
+      const field = element<HTMLInputElement>('#passkey-rename');
+      expect(field.value).toBe('iPhone');
+      expect(document.activeElement).toBe(field);
+
+      await fillIn('#passkey-rename', '  iPhone 16 Pro Max  ');
+      await submit();
+      const rename = http.expectOne(`${PASSKEYS_URL}/${IPHONE.id}`);
+      expect(rename.request.method).toBe('PATCH');
+      expect(rename.request.body).toEqual({ name: 'iPhone 16 Pro Max' });
+      rename.flush({ ...IPHONE, name: 'iPhone 16 Pro Max' });
+      await settle();
+
+      expect(element('#passkey-rename')).toBeNull();
+      expect(texts('.passkey-name')).toEqual(['iPhone 16 Pro Max', 'Windows']);
+      expect(element('[role="status"]').textContent).toContain(
+        'Přístupový klíč je přejmenovaný na iPhone 16 Pro Max.',
+      );
+    });
+
+    it('then an empty name is refused at the field without a request', async () => {
+      await clickButton('Přejmenovat');
+      await fillIn('#passkey-rename', '');
+      await submit();
+
+      expect(element('.passkey-rename').textContent).toContain('Pojmenujte prosím klíč.');
+      expect(texts('.passkey-name')).toEqual(['iPhone', 'Windows']);
+    });
+
+    it('and the server refuses the name, then the reason is shown at the form', async () => {
+      await clickButton('Přejmenovat');
+      await fillIn('#passkey-rename', 'Mac');
+      await submit();
+      http
+        .expectOne(`${PASSKEYS_URL}/${IPHONE.id}`)
+        .flush(problem('validation', 'Neplatný požadavek', 'Název je příliš dlouhý.'), {
+          status: 400,
+          statusText: 'Bad Request',
+        });
+      await settle();
+
+      expect(element('.passkey-rename [role="alert"]').textContent).toContain(
+        'Název je příliš dlouhý.',
+      );
+      expect(texts('.passkey-name')).toEqual(['iPhone', 'Windows']);
+    });
+
+    it('and cancels, then the name stays and nothing is sent', async () => {
+      await clickButton('Přejmenovat');
+      await fillIn('#passkey-rename', 'Mac');
+      await clickButton('Zrušit');
+
+      expect(element('#passkey-rename')).toBeNull();
+      expect(texts('.passkey-name')).toEqual(['iPhone', 'Windows']);
+      expect(document.activeElement?.textContent?.trim()).toBe('Přejmenovat');
+    });
+  });
+
   it('when the session has ended, then the card hands the donor to the sign-in', async () => {
     fixture = TestBed.createComponent(PasskeysCard);
     sessionEnded = 0;
@@ -360,6 +422,7 @@ describe('Given the passkeys card of a donor without a password', () => {
     await render([IPHONE]);
 
     expect(texts('button')).not.toContain('Odebrat');
+    expect(texts('button')).toContain('Přejmenovat');
     expect(element('.passkey .passkeys-hint').textContent).toContain('Jediný způsob přihlášení');
     expect(texts('.passkeys-hint')[1]).toContain('aspoň ve dvou zařízeních');
     expect(counts).toEqual([1]);

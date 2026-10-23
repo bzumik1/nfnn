@@ -68,20 +68,82 @@
                   </button>
                 </div>
               </div>
-            } @else if (lastSignInMethod()) {
-              <p class="passkeys-hint" i18n="@@donor.passkeys.lastOne">
-                Jediný způsob přihlášení. Odebrat půjde, až přidáte další klíč nebo nastavíte heslo.
-              </p>
-            } @else {
-              <button
-                type="button"
-                class="passkeys-action passkeys-action--danger"
-                [disabled]="removing() !== null"
-                (click)="askToRemove(passkey)"
-                i18n="@@donor.passkeys.remove"
+            } @else if (renaming() === passkey.id) {
+              <form
+                #renameForm="ngForm"
+                class="passkey-rename"
+                appFocusFirstInvalid
+                (ngSubmit)="rename(renameForm, passkey)"
+                novalidate
               >
-                Odebrat
-              </button>
+                <app-form-field
+                  label="Nový název klíče"
+                  i18n-label="@@donor.passkeys.rename.name"
+                  [messages]="nameMessages"
+                >
+                  <input
+                    #renameField
+                    appFormControl
+                    id="passkey-rename"
+                    name="newName"
+                    type="text"
+                    autocomplete="off"
+                    [(ngModel)]="newName"
+                    required
+                    [maxlength]="nameMaxLength"
+                  />
+                </app-form-field>
+                @if (renameError()) {
+                  <p class="form-error" role="alert">{{ renameError() }}</p>
+                }
+                <div class="passkeys-buttons">
+                  <button type="submit" class="passkeys-save" [disabled]="renameSaving()">
+                    @if (renameSaving()) {
+                      <span i18n="@@donor.passkeys.rename.saving">Ukládám…</span>
+                    } @else {
+                      <span i18n="@@donor.passkeys.rename.submit">Uložit název</span>
+                    }
+                  </button>
+                  <button
+                    type="button"
+                    class="passkeys-action passkeys-cancel"
+                    (click)="cancelRename(passkey)"
+                    i18n="@@donor.account.cancel"
+                  >
+                    Zrušit
+                  </button>
+                </div>
+              </form>
+            } @else {
+              <div class="passkey-actions">
+                <button
+                  type="button"
+                  class="passkeys-action"
+                  [id]="renameButtonId(passkey)"
+                  [disabled]="removing() !== null"
+                  (click)="openRename(passkey)"
+                  i18n="@@donor.passkeys.rename"
+                >
+                  Přejmenovat
+                </button>
+                @if (!lastSignInMethod()) {
+                  <button
+                    type="button"
+                    class="passkeys-action passkeys-action--danger"
+                    [disabled]="removing() !== null"
+                    (click)="askToRemove(passkey)"
+                    i18n="@@donor.passkeys.remove"
+                  >
+                    Odebrat
+                  </button>
+                }
+              </div>
+              @if (lastSignInMethod()) {
+                <p class="passkeys-hint" i18n="@@donor.passkeys.lastOne">
+                  Jediný způsob přihlášení. Odebrat půjde, až přidáte další klíč nebo nastavíte
+                  heslo.
+                </p>
+              }
             }
           </li>
         }

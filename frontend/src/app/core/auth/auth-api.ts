@@ -149,6 +149,10 @@ export class AuthApi {
     return this.http.post<Passkey>('/api/donors/me/passkeys', { challenge, name, credential });
   }
 
+  renamePasskey(id: string, name: string): Observable<Passkey> {
+    return this.http.patch<Passkey>(`/api/donors/me/passkeys/${encodeURIComponent(id)}`, { name });
+  }
+
   removePasskey(id: string): Observable<void> {
     return this.http.delete<void>(`/api/donors/me/passkeys/${encodeURIComponent(id)}`);
   }

@@ -1309,7 +1309,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     expect(await violations(page)).toEqual([]);
   });
 
-  test('when a signed-in donor adds a passkey with a wrong password and removes one, then the card breaks no rule', async ({
+  test('when a signed-in donor adds a passkey with a wrong password, renames and removes one, then the card breaks no rule', async ({
     page,
   }) => {
     await page.route(
@@ -1347,6 +1347,13 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
 
     await card.getByRole('button', { name: 'Odebrat', exact: true }).click();
     await expect(card).toContainText('Odebrat klíč iPhone?');
+    expect(await violations(page)).toEqual([]);
+
+    await card.getByRole('button', { name: 'Ponechat' }).click();
+    await card.getByRole('button', { name: 'Přejmenovat' }).click();
+    await card.getByLabel('Nový název klíče').fill('');
+    await card.getByRole('button', { name: 'Uložit název' }).click();
+    await expect(card.getByText('Pojmenujte prosím klíč.')).toBeVisible();
     expect(await violations(page)).toEqual([]);
   });
 

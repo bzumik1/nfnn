@@ -115,6 +115,17 @@ public class DonorPasskeyService {
     }
 
     @Transactional
+    public PasskeyView rename(DonorId donorId, PasskeyId passkeyId, String name) {
+        Passkey passkey = passkeys.findById(passkeyId)
+                .filter(found -> found.belongsTo(donorId))
+                .orElseThrow(() -> new PasskeyNotFound(passkeyId));
+        passkey.rename(name);
+        passkeys.save(passkey);
+        log.info("Passkey {} renamed by donor {}", passkeyId, donorId);
+        return PasskeyView.of(passkey);
+    }
+
+    @Transactional
     public void remove(DonorId donorId, boolean secondFactorVerified, PasskeyId passkeyId) {
         Passkey passkey = passkeys.findById(passkeyId)
                 .filter(found -> found.belongsTo(donorId))
