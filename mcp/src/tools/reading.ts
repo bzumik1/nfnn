@@ -186,7 +186,7 @@ export function registerReadingTools(server: McpServer, deps: ToolDependencies):
     {
       title: 'Nastavení webu',
       description:
-        'The settings of the site: public address, mail server and senders, Fio history start, accounts excluded from pairing, receipt signatory and first year. Secrets (SMTP password, Fio token, tunnel token) only say whether they are set or unreadable, never their value.',
+        'The settings of the site: public address, mail server and senders, Fio history start, accounts excluded from pairing, receipt signatory and first year. Secrets (SMTP password, Fio token) only say whether they are set or unreadable, never their value.',
       annotations: READ_ONLY,
     },
     async (ctx) =>
@@ -196,11 +196,39 @@ export function registerReadingTools(server: McpServer, deps: ToolDependencies):
   );
 
   server.registerTool(
+    'nfnn_administrators',
+    {
+      title: 'Správci',
+      description:
+        'Who administers the site: donor id, name, e-mail and whether the second factor is on. Granting or taking away the role and resetting a second factor stay on the web (/sprava/spravci, the donor card).',
+      annotations: READ_ONLY,
+    },
+    async (ctx) =>
+      answer(deps, ctx, 'nfnn_administrators', async ({ apiToken }) =>
+        text(await backend.get('/api/admin/donors/administrators', apiToken)),
+      ),
+  );
+
+  server.registerTool(
+    'nfnn_symbol_claims',
+    {
+      title: 'Odpovědi na starší symboly',
+      description:
+        "Every donor's answer to the question whether an older variable symbol paid from a verified account was theirs, newest first, with the donor, account, symbol, answer and the donations paired through it. Reversing or deleting an answer deletes rows and stays on the web (/sprava/starsi-symboly).",
+      annotations: READ_ONLY,
+    },
+    async (ctx) =>
+      answer(deps, ctx, 'nfnn_symbol_claims', async ({ apiToken }) =>
+        text(await backend.get('/api/admin/donations/symbol-claims', apiToken)),
+      ),
+  );
+
+  server.registerTool(
     'nfnn_content',
     {
       title: 'Aktuality a projekty',
       description:
-        'Every news article and project of the site, drafts included, with their ids and published dates.',
+        'Every news article and project of the site, drafts included, with their ids, slugs, texts, photo and published dates.',
       annotations: READ_ONLY,
     },
     async (ctx) =>
@@ -218,7 +246,7 @@ export function registerReadingTools(server: McpServer, deps: ToolDependencies):
     {
       title: 'Soubory logů',
       description:
-        'The log files on the server (backend.log, backup.log and their rotated .gz copies of the last 14 days) with size on disk and last change; sizes of a .gz copy are the unpacked ones in nfnn_log.',
+        'The log files on the server (backend.log, backup.log, nginx-access.log with every request to the site without addresses or query strings, mcp.log of this connector, and their rotated .gz copies of the last 14 days) with size on disk and last change; sizes of a .gz copy are the unpacked ones in nfnn_log.',
       annotations: READ_ONLY,
     },
     async (ctx) =>

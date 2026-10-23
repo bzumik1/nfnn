@@ -203,6 +203,10 @@ export async function mockDonorApi(
     (url) => url.pathname === '/api/donors/me/connections',
     (route) => route.fulfill({ json: { items: [] } }),
   );
+  await page.route(
+    (url) => url.pathname === '/api/donors/me/passkeys',
+    (route) => route.fulfill({ json: { items: [] } }),
+  );
 }
 
 export const connectionRequest =
@@ -279,7 +283,6 @@ export const adminSettings = {
     adminSetting('RECEIPT_SIGNATORY_NAME', 'RECEIPTS', 'Pavel Znamenáček'),
     adminSetting('RECEIPT_SIGNATORY_ROLE', 'RECEIPTS', 'předseda správní rady'),
     adminSetting('RECEIPT_FIRST_YEAR', 'RECEIPTS', '2026'),
-    adminSetting('TUNNEL_TOKEN', 'TUNNEL', null, { secret: true }),
   ],
   secretsCanBeStored: true,
 };

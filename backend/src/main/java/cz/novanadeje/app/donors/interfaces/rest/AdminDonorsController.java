@@ -85,6 +85,12 @@ class AdminDonorsController {
         administrators.resetSecondFactor(admin(jwt), new DonorId(donorId));
     }
 
+    @DeleteMapping("/{donorId}/passkeys")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    void removePasskeys(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID donorId) {
+        administrators.removePasskeys(admin(jwt), new DonorId(donorId));
+    }
+
     @GetMapping("/actions")
     AdminActionListResponse actions(
             @RequestParam(required = false) Instant before,

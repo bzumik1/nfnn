@@ -20,7 +20,6 @@ Feature: The first setup asks for the settings in the browser and stores them wi
       | MAIL_FROM         | info@nfnn.cz               |
       | CONTACT_RECIPIENT | info@nfnn.cz               |
       | FIO_TOKEN         | fio-read-only-token        |
-      | TUNNEL_TOKEN      |                            |
       | ADMIN_EMAILS      | spravce@example.cz         |
     Then the response status is 202
     And the backend restarts once

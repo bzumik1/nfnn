@@ -5,6 +5,5 @@ public enum SettingGroup {
     MAIL,
     BANK,
     RECEIPTS,
-    ADMINISTRATORS,
-    TUNNEL
+    ADMINISTRATORS
 }

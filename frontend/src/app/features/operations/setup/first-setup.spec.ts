@@ -231,7 +231,6 @@ describe('Given the first setup page', () => {
           { name: 'CONTACT_RECIPIENT', value: 'info@nfnn.cz' },
           { name: 'FIO_TOKEN', value: 'fio-token' },
           { name: 'ADMIN_EMAILS', value: 'spravce@example.cz' },
-          { name: 'TUNNEL_TOKEN', value: '' },
         ],
       });
       vi.useFakeTimers();

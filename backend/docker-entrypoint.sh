@@ -7,12 +7,11 @@
 # With the secrets folder mounted, it generates the access-token signing key and the key that
 # encrypts stored settings on the first start, waits until nfnn-postgres has the database password
 # ready and hands all three to Java as JWT_SECRET, SETTINGS_KEY and DB_PASSWORD (variables set by
-# the environment win). It gives the tunnel folder to the app user, which writes the token there.
+# the environment win).
 set -eu
 
 LOG_DIR=${LOG_DIR:-/logs}
 SECRETS_DIR=${SECRETS_DIR:-/secrets}
-TUNNEL_DIR=${TUNNEL_DIR:-/tunnel}
 
 generate_secret() {
   if [ ! -s "$SECRETS_DIR/$1" ]; then
@@ -26,9 +25,6 @@ generate_secret() {
 if [ "$(id -u)" = 0 ]; then
   mkdir -p "$LOG_DIR" 2>/dev/null || true
   chown app:app "$LOG_DIR" 2>/dev/null || chmod 1777 "$LOG_DIR" 2>/dev/null || echo "Could not make $LOG_DIR writable for the app user; the log file will not be written"
-  if [ -d "$TUNNEL_DIR" ]; then
-    chown app:app "$TUNNEL_DIR" 2>/dev/null || echo "Could not make $TUNNEL_DIR writable for the app user; the tunnel token will not be written"
-  fi
   if [ -d "$SECRETS_DIR" ]; then
     generate_secret jwt-secret
     generate_secret settings-key

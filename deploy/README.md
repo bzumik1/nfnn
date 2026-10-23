@@ -4,19 +4,19 @@ Image se staví na GitHubu, ZimaOS je stáhne a spustí jako aplikaci „Nová n
 
 ```
 PR ─► PR check (GitHub runner): testy backendu a frontendu, build image, start celého stacku
-merge do main ─► Publish Docker images: ghcr.io/bzumik1/nfnn-backend, -frontend, -backup, -postgres, -ops a -mcp (veřejné),
+merge do main ─► Publish Docker images: ghcr.io/bzumik1/nfnn-backend, -frontend, -backup, -postgres a -mcp (veřejné),
                  tagy latest a krátký SHA commitu
 ZimaOS ─► aplikace „Nová naděje“ z compose.yml (App Store → Custom Install)
 ```
 
-`compose.yml` je produkční stack pro ZimaOS: Postgres (obraz `nfnn-postgres`, který si sám vygeneruje heslo), zálohy, backend, frontend na portu 8089 (8080 je na Zimě obsazený) a dvojice `ops` + `cloudflared`, přes kterou Claude čte logy (viz [Logy pro Clauda](#logy-pro-clauda)). Kořenový `docker-compose.yml` je jen pro lokální vývoj.
+`compose.yml` je produkční stack pro ZimaOS: Postgres (obraz `nfnn-postgres`, který si sám vygeneruje heslo), zálohy, backend, frontend na portu 8089 (8080 je na Zimě obsazený) a MCP konektor (viz [MCP konektor](#mcp-konektor)). Kořenový `docker-compose.yml` je jen pro lokální vývoj.
 
 ## Hesla a nastavení serveru
 
 Na serveru se nic nepíše do souborů. `compose.yml` se do ZimaOS vkládá vždy beze změn a nemá v sobě žádné heslo ani hodnotu jen pro tento server.
 
 - **Hesla a klíče si aplikace vygeneruje sama** do `/DATA/AppData/nfnn/secrets/` (jen root, práva 600): `db-password` vytvoří kontejner databáze (obraz `nfnn-postgres`), `jwt-secret` (podpis přihlášení) a `settings-key` (šifruje tajné hodnoty v databázi) backend. Nikdo je nezadává ani nevidí. Doporučení: `settings-key` si ulož do správce hesel (`sudo cat /DATA/AppData/nfnn/secrets/settings-key`); bez něj obnova databáze na jiném serveru nepřečte uložené tajné hodnoty a správa je ukáže jako „zadejte znovu“.
-- **Nastavení webu** (adresa webu, SMTP Brevo, odesílatel a příjemce e-mailů, token Fio, e-mail prvního správce, token tunelu) se zadává v prohlížeči: při první instalaci průvodcem na `/prvni-nastaveni`, potom ve správě webu na `/sprava/nastaveni`. Ukládá se do databáze (tabulka `operations_setting`), heslo SMTP a tokeny zašifrované klíčem ze `secrets/settings-key`. Uložení backend restartuje, web pak asi minutu neodpovídá.
+- **Nastavení webu** (adresa webu, SMTP Brevo, odesílatel a příjemce e-mailů, token Fio, e-mail prvního správce) se zadává v prohlížeči: při první instalaci průvodcem na `/prvni-nastaveni`, potom ve správě webu na `/sprava/nastaveni`. Ukládá se do databáze (tabulka `operations_setting`), heslo SMTP a token Fio zašifrované klíčem ze `secrets/settings-key`. Uložení backend restartuje, web pak asi minutu neodpovídá.
 - Ztratí-li se složka `secrets/` (nový server), heslo databáze i klíče se vygenerují znovu: všichni se jen znovu přihlásí a tajné hodnoty v nastavení je potřeba zadat znovu ve správě.
 - Sken podpisu na potvrzení teď nastavit nejde (viz [Potvrzení o daru](#potvrzení-o-daru)).
 
@@ -24,11 +24,11 @@ Na serveru se nic nepíše do souborů. `compose.yml` se do ZimaOS vkládá vžd
 
 1. Stěhuješ-li data z jiného serveru nebo ze zálohy, dej nejdřív jeden soubor `.dump` do `/DATA/AppData/nfnn/restore/` (viz [Obnova](#obnova)); kontejner záloh ho při prvním startu nahraje do prázdné databáze a backend počká, než bude hotovo.
 2. ZimaOS → App Store → Custom Install → smazat vzor, vložit `deploy/compose.yml` beze změn → Install. Složky v `/DATA/AppData/nfnn/` vytvoří Docker sám.
-3. Klikni v ZimaOS na ikonu aplikace. Web se otevře na adrese Zimy s portem 8089 a protože jde přímo z domácí sítě, ukáže rovnou průvodce prvním nastavením. Otevřeš-li web odjinud (přes doménu, NPM nebo Cloudflare), průvodce chce kód z logu: ZimaOS → aplikace → Terminál a logy → `nfnn-backend`, rámeček „První nastavení webu“ s kódem typu `K7QM-2XPA-9TRD` (mění se s každým startem; do `logs/backend.log` ani přes tunel se nedostane).
+3. Klikni v ZimaOS na ikonu aplikace. Web se otevře na adrese Zimy s portem 8089 a protože jde přímo z domácí sítě, ukáže rovnou průvodce prvním nastavením. Otevřeš-li web odjinud (přes doménu, NPM nebo Cloudflare), průvodce chce kód z logu: ZimaOS → aplikace → Terminál a logy → `nfnn-backend`, rámeček „První nastavení webu“ s kódem typu `K7QM-2XPA-9TRD` (mění se s každým startem; do `logs/backend.log` ani do správy se nedostane).
 4. V průvodci vyplň:
    - **Adresa webu**: adresa, na které ho uvidí návštěvníci (`https://nfnn.cz`, dokud DNS nepřepneš `https://nfnn.znamenacek.duckdns.org`).
    - **E-maily**: server `smtp-relay.brevo.com`, port 587, přihlašovací jméno účtu fondu a SMTP klíč z Brevo ([E-maily](#e-maily)); tlačítkem „Ověřit spojení“ se průvodce k serveru zkusí přihlásit bez odeslání e-mailu.
-   - **Token Fio** (nepovinný, [Fio API](#fio-api)), **e-mail prvního správce** a **token tunelu Cloudflare** (nepovinný, [Logy pro Clauda](#logy-pro-clauda)).
+   - **Token Fio** (nepovinný, [Fio API](#fio-api)) a **e-mail prvního správce**.
 5. „Uložit a spustit“: backend hodnoty nejdřív ověří stejně jako při startu (chybnou vrátí do formuláře, takže server nikdy neuvízne ve smyčce restartů), uloží je a restartuje se. Průvodce počká a nabídne registraci.
 6. Zaregistruj se s e-mailem správce a potvrď ho odkazem z e-mailu: roli správce dostaneš hned po potvrzení. Pak si v přehledu zapni dvoufaktorové ověření a správa (`/sprava`) se otevře. Další správce přidáš ve správě.
 
@@ -36,9 +36,9 @@ Do dokončení průvodce by ho mohl vyplnit kdokoli z domácí sítě; po dokon�
 
 ## Přechod z env souborů
 
-Server nainstalovaný před průvodcem má hesla a nastavení v `/DATA/AppData/nfnn/env/` (`db.env`, `backend.env`, `ops.env`). Jednorázový přechod:
+Server nainstalovaný před průvodcem má hesla a nastavení v `/DATA/AppData/nfnn/env/` (`db.env`, `backend.env`, případně `ops.env`). Jednorázový přechod:
 
-1. Opiš si hodnoty, které budeš zadávat v průvodci: ZimaOS → Soubory → `/DATA/AppData/nfnn/env/`, nebo `sudo cat /DATA/AppData/nfnn/env/backend.env /DATA/AppData/nfnn/env/ops.env`. Potřeba jsou `PUBLIC_URL`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `FIO_TOKEN`, `TUNNEL_TOKEN` a e-mail z `ADMIN_EMAILS`; ostatní mají v průvodci správné výchozí hodnoty. Pokročilé hodnoty (`FIO_HISTORY_FROM`, `PAIRING_EXCLUDED_ACCOUNTS`, `RECEIPT_*`) se po průvodci nastaví ve správě na `/sprava/nastaveni`.
+1. Opiš si hodnoty, které budeš zadávat v průvodci: ZimaOS → Soubory → `/DATA/AppData/nfnn/env/`, nebo `sudo cat /DATA/AppData/nfnn/env/backend.env`. Potřeba jsou `PUBLIC_URL`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `FIO_TOKEN` a e-mail z `ADMIN_EMAILS`; ostatní mají v průvodci správné výchozí hodnoty. Pokročilé hodnoty (`FIO_HISTORY_FROM`, `PAIRING_EXCLUDED_ACCOUNTS`, `RECEIPT_*`) se po průvodci nastaví ve správě na `/sprava/nastaveni`.
 2. Aplikaci odinstaluj (data v `/DATA/AppData/nfnn` zůstanou) a nainstaluj s novým `deploy/compose.yml`, vloženým beze změn.
 3. Heslo databáze se převezme samo: kontejner `nfnn-postgres` při startu nastaví roli v databázi na nově vygenerované heslo ze `secrets/` (přes lokální socket, staré heslo nepotřebuje). V logu `nfnn-postgres` je řádek `the database role uses the password from /secrets/db-password`. Nový `jwt-secret` jen odhlásí všechny přihlášené.
 4. Otevři web ikonou v ZimaOS a vyplň průvodce (Instalace, kroky 3–5). Správce, kteří roli už mají, ji mají dál; dvoufaktorové ověření se nemění.
@@ -61,7 +61,7 @@ Po merge do `main` počkej, až v Actions doběhne zeleně **Publish Docker imag
 Kterou verzi kontejnery mají, ukáže commit, ze kterého image vznikla; má se shodovat s commitem běhu **Publish Docker images**:
 
 ```bash
-sudo docker inspect nfnn-backend nfnn-frontend nfnn-backup nfnn-ops --format '{{.Name}} {{index .Config.Labels "org.opencontainers.image.revision"}}'
+sudo docker inspect nfnn-backend nfnn-frontend nfnn-backup nfnn-mcp --format '{{.Name}} {{index .Config.Labels "org.opencontainers.image.revision"}}'
 ```
 
 Uložení bere compose z poslední instalace, takže změnu `compose.yml` nepřenese; na tu je dál potřeba přeinstalace. Nastavení webu se mění ve správě na `/sprava/nastaveni` a přeinstalaci nepotřebuje.
@@ -104,51 +104,38 @@ sudo docker start nfnn-backend
 
 ### Návrat na předchozí verzi
 
-Každá image má vedle `latest` i tag se zkráceným commitem (7 znaků, např. `418105c`), seznam je v GitHubu u balíčků `nfnn-backend`, `nfnn-frontend`, `nfnn-backup` a `nfnn-ops`. V nastavení aplikace „Nová naděje“ v ZimaOS změň u backendu a frontendu (a zálohování nebo ops, měnily-li se) tag z `latest` na commit předchozí verze a klikni na **Uložit**. Zpátky na nejnovější verzi se vrátíš tagem `latest`.
+Každá image má vedle `latest` i tag se zkráceným commitem (7 znaků, např. `418105c`), seznam je v GitHubu u balíčků `nfnn-backend`, `nfnn-frontend`, `nfnn-backup` a `nfnn-mcp`. V nastavení aplikace „Nová naděje“ v ZimaOS změň u backendu a frontendu (a zálohování nebo konektoru, měnily-li se) tag z `latest` na commit předchozí verze a klikni na **Uložit**. Zpátky na nejnovější verzi se vrátíš tagem `latest`.
 
 Pokud novější verze měnila databázi (v jejím commitu přibyl soubor v `backend/src/main/resources/db/changelog/`), starší backend s novější databází fungovat nemusí. Pak po změně tagu obnov zálohu z doby před aktualizací (viz Obnova); dary a registrace mezi zálohou a obnovou se ztratí, platby z banky z posledních 90 dní se ale při dalším stažení z Fio doplní znovu. Proto před aktualizací, která mění databázi, udělej zálohu na požádání.
 
-## Logy pro Clauda
+## Logy
 
-Backend píše svůj log kromě `docker logs` i do souboru `/DATA/AppData/nfnn/logs/backend.log` (rotace po 10 MB, 14 dní, nejvýš 200 MB; složku si při startu převezme uživatel `app`, pod kterým Java běží) a zálohování připisuje výsledky do `backup.log` ve stejné složce. Při startu backend zapíše řádek `Backend revision <commit> is ready` a totéž vrací `/actuator/info`, takže je vidět, kterou verzi Zima právě spouští. Kontejner `nfnn-ops` (nginx) složku jen pro čtení vystavuje na `/logs/` a přeposílá `/health` a `/info` na backend; žádný port na routeru neotvírá. Ven ho dostane `nfnn-cloudflared`: spojení jde jen ze Zimy do Cloudflare, na adrese `ops.nfnn.cz` sedí Cloudflare Access a pustí jen servisní token (Claude) a tvůj e-mail (prohlížeč). Token tunelu jde při úniku zrušit v Cloudflare během minuty a dovoluje jen číst logy; `JWT_SECRET`, heslo databáze ani Fio token se do logů nedostanou (knihovna Fio je v chybách maskuje).
+Backend píše svůj log kromě `docker logs` i do souboru `/DATA/AppData/nfnn/logs/backend.log` (rotace po 10 MB, 14 dní, nejvýš 200 MB; složku si při startu převezme uživatel `app`, pod kterým Java běží) a zálohování připisuje výsledky do `backup.log` ve stejné složce. Frontendový nginx tam zapisuje `nginx-access.log` (každý požadavek: čas, metoda, adresa stránky bez parametrů za `?`, stav, velikost a doba odpovědi; IP adresu návštěvníka ani hledané výrazy ne) a konektor `mcp.log`; oba soubory se o půlnoci UTC přesunou do `….log.RRRR-MM-DD.gz` a archivy starší 14 dní se mažou. `sudo docker logs nfnn-frontend` dál ukazuje i adresy, jako dosud. Při startu backend zapíše řádek `Backend revision <commit> is ready` a totéž vrací `/actuator/info`, takže je vidět, kterou verzi Zima právě spouští.
 
-Nastavení v Cloudflare (jednou, asi 30 minut; doména `nfnn.cz` už u Cloudflare je):
+Správce je čte ve webu na `/sprava/logy` a Claude přes konektor (viz [MCP konektor](#mcp-konektor)): backend tutéž složku čte sám a vystavuje ji správcům přes `GET /api/admin/operations/logs…` (celá historie po stránkách včetně rotovaných `.gz`, hledání) spolu s dočasnými úrovněmi logování a diagnostikou (`/loggers`, `/diagnostics`). Žádný port na routeru ani nic v Cloudflare k tomu není potřeba. `JWT_SECRET`, heslo databáze ani Fio token se do logů nedostanou (knihovna Fio je v chybách maskuje).
 
-1. [Zero Trust](https://one.dash.cloudflare.com) → Networks → Tunnels → **Create a tunnel** → Cloudflared → název `nfnn-ops`. Z nabídnutého příkazu pro Docker zkopíruj jen hodnotu za `--token` (dlouhý řetězec `eyJ…`) a vlož ji ve správě webu na `/sprava/nastaveni` do „Token tunelu Cloudflare“ (při instalaci rovnou v průvodci). Příkaz samotný nespouštěj, kontejner je v compose. Backend token při každém startu zapíše do `/DATA/AppData/nfnn/tunnel/token`, odkud ho `nfnn-cloudflared` čte (`--token-file`); dokud token není, kontejner `nfnn-cloudflared` jen dokola startuje a zbytek webu běží.
-2. V tunelu → Public Hostname → **Add a public hostname**: subdomain `ops`, domain `nfnn.cz`, type HTTP, URL `ops:80`. Cloudflare sám založí DNS záznam `ops.nfnn.cz`.
-3. Access → Service Auth → Service Tokens → **Create Service Token**: název `claude-nfnn`, platnost podle uvážení (po vypršení ho vytvoříš znovu). Client ID a Client Secret se ukážou jen jednou: ulož je do prostředí projektu na claude.ai jako `NFNN_OPS_CLIENT_ID` a `NFNN_OPS_CLIENT_SECRET` (stejně jako `FIO_TOKEN`).
-4. Access → Applications → **Add an application** → Self-hosted: název `NFNN logy`, domain `ops.nfnn.cz`. Dvě pravidla: `Claude` s akcí **Service Auth** a podmínkou Service Token = `claude-nfnn`; `Jakub` s akcí **Allow** a podmínkou Emails = tvůj e-mail (přihlásíš se jednorázovým kódem z e-mailu).
-5. Uložení tokenu backend restartuje; `nfnn-cloudflared` si nový token vezme při svém dalším startu (bez tokenu startuje dokola sám, při změně tokenu ho v ZimaOS restartuj).
+Web i konektor čtou logy přes backend, takže když backend neběží, ukáže je jen Zima: `sudo docker logs nfnn-backend` nebo `sudo tail -n 200 /DATA/AppData/nfnn/logs/backend.log`. Co v logu není: compose uložený ZimaOS, proměnné v kontejnerech a kontejner, který ZimaOS vůbec nevytvořil; na to zůstává tvůj příkaz na Zimě.
 
-Kontrola z libovolného počítače (hodnoty tokenu dosaď; Claude má totéž v prostředí projektu):
-
-```bash
-curl -sS -H "CF-Access-Client-Id: $NFNN_OPS_CLIENT_ID" -H "CF-Access-Client-Secret: $NFNN_OPS_CLIENT_SECRET" https://ops.nfnn.cz/info
-curl -sS -H "CF-Access-Client-Id: $NFNN_OPS_CLIENT_ID" -H "CF-Access-Client-Secret: $NFNN_OPS_CLIENT_SECRET" -H 'Range: bytes=-20000' https://ops.nfnn.cz/logs/backend.log
-```
-
-V prohlížeči otevři https://ops.nfnn.cz/logs/ a přihlas se e-mailem. Když tunel neběží (`sudo docker logs nfnn-cloudflared` hlásí chybu tokenu), zbytek webu to neovlivní; logy jsou dál v `docker logs` a v souborech na disku. Co v logu není: compose uložený ZimaOS, proměnné v kontejnerech a kontejner, který ZimaOS vůbec nevytvořil; na to zůstává tvůj příkaz na Zimě.
-
-Od úkolu 17 plánu v2 čte backend tutéž složku sám a vystavuje ji správcům přes `GET /api/admin/operations/logs…` (celá historie po stránkách, hledání) spolu s dočasnými úrovněmi logování a diagnostikou (`/loggers`, `/diagnostics`), takže Claude s konektorem (viz [MCP konektor](#mcp-konektor)) k logům tunel nepotřebuje; `ops.nfnn.cz` zůstává záložní cestou, když web neběží.
+Do 23. 10. 2026 složku vystavoval ještě kontejner `nfnn-ops` přes tunel Cloudflare na `ops.nfnn.cz`. Po přeinstalaci s aktuálním `deploy/compose.yml` ho zbývá uklidit: na Zimě zmizí s celou složkou `env/` (viz [Přechod z env souborů](#přechod-z-env-souborů)), v Cloudflare Zero Trust smazat tunel `nfnn-ops` (s ním i DNS záznam `ops`), aplikaci Access `NFNN logy` a servisní token `claude-nfnn`, a z prostředí projektu na claude.ai proměnné `NFNN_OPS_CLIENT_ID` a `NFNN_OPS_CLIENT_SECRET`.
 
 ## MCP konektor
 
-Správce může Claudovi (na claude.ai, v mobilu i v Claude Code) dát přístup do správy fondu konektorem na adrese `https://nfnn.cz/mcp` (na stagingu `https://nfnn.znamenacek.duckdns.org/mcp`). Běží v kontejneru `nfnn-mcp` za frontendovým nginxem, nemá žádné heslo ani klíč: přihlášení jde přes samotný web (stránka `/pripojeni`, účet správce s dvoufaktorovým ověřením) a každý nástroj volá stejná `/api/admin/...` jako web, takže vše je v historii správy pod jménem správce. Nástroje: stav importu a verze, přehled roku, platby, dárci, zálohy, historie správy, report, aktuality a projekty, logy (seznam souborů včetně rotovaných `.gz`, čtení po stránkách od konce i od libovolné pozice, hledání regulárním výrazem), úrovně logování a diagnostika (JVM, databáze, disky, výpis vláken); se zápisem navíc spárování a odpárování platby, odeslání reportu, vyžádání zálohy nebo zkušební obnovy, publikování aktualit a projektů a dočasné zvýšení úrovně logování (např. `cz.novanadeje.app` na DEBUG na 30 minut; vrátí se samo, nejdéle za 24 h, restart ho také zruší; zapsáno v historii správy). Nic nového v nastavení serveru ani v Cloudflare.
+Správce může Claudovi (na claude.ai, v mobilu i v Claude Code) dát přístup do správy fondu konektorem na adrese `https://nfnn.cz/mcp` (na stagingu `https://nfnn.znamenacek.duckdns.org/mcp`). Běží v kontejneru `nfnn-mcp` za frontendovým nginxem, nemá žádné heslo ani klíč: přihlášení jde přes samotný web (stránka `/pripojeni`, účet správce s dvoufaktorovým ověřením) a každý nástroj volá stejná `/api/admin/...` jako web, takže vše je v historii správy pod jménem správce. Nástroje: stav importu a verze, přehled roku, platby, dárci, správci, odpovědi na starší symboly, zálohy, historie správy, report, aktuality a projekty, logy (seznam souborů včetně rotovaných `.gz`, čtení po stránkách od konce i od libovolné pozice, hledání regulárním výrazem), úrovně logování, diagnostika (JVM, databáze, disky, výpis vláken) a nastavení webu (u hesel a tokenů jen to, jestli jsou zadané); se zápisem navíc spárování a odpárování platby, nastavení a odeslání reportu, vyžádání zálohy nebo zkušební obnovy, psaní, úpravy a publikování aktualit a projektů, vypnutí a zapnutí párování z účtu dárce, změna nastavení webu kromě hesel a tokenů (ty mění jen správce v prohlížeči) a dočasné zvýšení úrovně logování (např. `cz.novanadeje.app` na DEBUG na 30 minut; vrátí se samo, nejdéle za 24 h, restart ho také zruší; zapsáno v historii správy). Nic nového v nastavení serveru ani v Cloudflare.
 
 1. Po merge: na Zimě aplikaci odinstaluj a znovu nainstaluj s aktuálním `deploy/compose.yml` (nová služba `mcp`; Save nestačí, stejně jako u záloh a logů). Kontrola: `sudo docker ps` ukáže `nfnn-mcp` jako healthy a `curl -sS -o /dev/null -w '%{http_code}\n' -X POST https://nfnn.cz/mcp` vrátí `401`.
 2. V claude.ai: Nastavení → Konektory → **Přidat vlastní konektor** → název `NFNN`, adresa `https://nfnn.cz/mcp`, nic dalšího (klient se představí sám). Po uložení klikni na Připojit: otevře se web fondu, přihlas se účtem správce včetně kódu z aplikace a na stránce „Povolit přístup ke správě aplikaci claude.ai?“ zvol rozsah a dej Povolit: čtení má aplikace vždy, změny (párování plateb, odeslání reportu, záloha, publikování aktualit a projektů) jen když zaškrtneš „Změny“; výchozí je jen čtení. Od té chvíle má Claude v chatu nástroje `nfnn_…`. Rozsah později změníš jen tak, že konektor v claude.ai odpojíš (nebo ho odebereš v přehledu dárce v části „Připojené aplikace“) a připojíš znovu.
 3. V Claude Code na počítači: `claude mcp add --transport http nfnn https://nfnn.cz/mcp` a při prvním použití `/mcp` → přihlášení v prohlížeči stejně jako výše (stránka upozorní, že jde o aplikaci na tomto počítači).
 4. Odpojení: přehled dárce → karta „Přihlašovací údaje“ → „Připojené aplikace“ → Odpojit. Připojení skončí také změnou hesla, vypnutím dvoufaktorového ověření nebo odebráním role správce; bez použití vyprší po 14 dnech.
 
-Když konektor neodpovídá: `sudo docker logs nfnn-mcp` (při startu zapíše `Authorization server discovered: https://nfnn.cz`; dokud se k backendu nedostane, hlásí `/health` 503 a ZimaOS ho ukazuje jako starting) a `sudo docker logs nfnn-frontend` (nginx hlásí `limiting requests` při více než 10 požadavcích za sekundu z jedné adresy). Konektor sám nic neukládá, takže ho lze kdykoli restartovat.
+Když konektor neodpovídá: `/sprava/logy` nebo `/DATA/AppData/nfnn/logs/mcp.log` a `nginx-access.log` (požadavky na `/mcp` se stavem a dobou odpovědi), případně `sudo docker logs nfnn-mcp` (při startu zapíše `Authorization server discovered: https://nfnn.cz`; dokud se k backendu nedostane, hlásí `/health` 503 a ZimaOS ho ukazuje jako starting) a `sudo docker logs nfnn-frontend` (nginx hlásí `limiting requests` při více než 10 požadavcích za sekundu z jedné adresy). Konektor sám nic neukládá, takže ho lze kdykoli restartovat.
 
 ## Přechod na skutečnou doménu
 
 Doména fondu je `nfnn.cz` (u WEDOS, držitel fond; DNS už u Cloudflare). Od úkolu 14 plánu v2 je `https://nfnn.cz` výchozí `PUBLIC_URL` backendu a stejná adresa je napevno v kanonických odkazech, `og:url`, `og:image`, `robots.txt` a `sitemap.xml` webu, takže web na staging adrese už odkazuje na nfnn.cz. Dokud DNS nepřepneš, musí být v nastavení webu „Adresa webu“ `https://nfnn.znamenacek.duckdns.org` (jinak odkazy v e-mailech a přihlášení konektoru vedou na doménu, která ještě neběží). Postup jako u `nakocarky.cz`:
 
-1. DNS v Cloudflare: `nfnn.cz` CNAME `nfnn.znamenacek.duckdns.org` a `www` CNAME `nfnn.cz`, obojí Proxied; SSL/TLS v režimu Full (strict). (Záznamy `ops` a poštovní záznamy už tam jsou.)
+1. DNS v Cloudflare: `nfnn.cz` CNAME `nfnn.znamenacek.duckdns.org` a `www` CNAME `nfnn.cz`, obojí Proxied; SSL/TLS v režimu Full (strict). (Poštovní záznamy už tam jsou.)
 2. V NPM nový proxy host `nfnn.cz` na `192.168.1.117:8089` s certifikátem Let's Encrypt, Force SSL, HTTP/2 a HSTS, a `www.nfnn.cz` přesměrovat 301 na `https://nfnn.cz` (v Cloudflare jde totéž pravidlem Redirect Rules). V Advanced konfiguraci proxy hostu brát adresu návštěvníka z `CF-Connecting-IP` (viz Obnova hesla), jinak limity na adresu počítají Cloudflare.
-3. Ve správě na `/sprava/nastaveni` změň „Adresa webu“ na `https://nfnn.cz` a ulož (web se restartuje). Zkontroluj odkaz v e-mailu (obnova hesla) a `https://nfnn.cz/.well-known/oauth-authorization-server` (`issuer` má být `https://nfnn.cz`).
+3. Ve správě na `/sprava/nastaveni` změň „Adresa webu“ na `https://nfnn.cz` a ulož (web se restartuje). Zkontroluj odkaz v e-mailu (obnova hesla) a `https://nfnn.cz/.well-known/oauth-authorization-server` (`issuer` má být `https://nfnn.cz`). Přístupové klíče (passkey) patří k doméně z adresy webu: klíč vytvořený na staging adrese na `nfnn.cz` nefunguje, takže je dárci (a ty) přidávejte až po přechodu; staré klíče ze stagingu si každý odebere na kartě Přístupové klíče, nebo je správce odebere na kartě dárce.
 4. Kontrola: `https://nfnn.cz/robots.txt`, `https://nfnn.cz/sitemap.xml`, náhled odkazu (`og:image` je `https://nfnn.cz/images/og-image.jpg`, zatím zástupná fotka z hera, než přijde skutečný obsah, úkol 13). Starý proxy host pro duckdns nech, dokud na něj něco odkazuje; sitemap zatím obsahuje jen úvodní stránku a zásady ochrany osobních údajů, aktuality a projekty do ní přibudou s generovanou mapou webu.
 
 ## E-maily

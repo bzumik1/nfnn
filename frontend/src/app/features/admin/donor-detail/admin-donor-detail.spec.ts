@@ -130,7 +130,7 @@ describe('Given an administrator on a donor card', () => {
       'Načítáme účty, dary a potvrzení…',
     ]);
 
-    await loaded(donorAccount({ administrator: true, secondFactorEnabled: true }));
+    await loaded(donorAccount({ administrator: true, secondFactorEnabled: true, passkeys: 2 }));
 
     expect(text('h1')).toBe('Jana Nováková');
     const account = accountFacts();
@@ -142,7 +142,9 @@ describe('Given an administrator on a donor card', () => {
     expect(account).toContain('Registrace 17. 10. 2026 10:00');
     expect(account).toContain('Role správce');
     expect(account).toContain('Dvoufaktorové ověření zapnuté');
+    expect(account).toContain('Přístupové klíče 2');
     expect(button(section('Účet dárce'), 'Vypnout dvoufaktorové ověření')).toBeTruthy();
+    expect(button(section('Účet dárce'), 'Odebrat přístupové klíče')).toBeTruthy();
   });
 
   it('when the donor is a plain donor, then the account card offers the erasure with its hint', async () => {
@@ -343,6 +345,29 @@ describe('Given an administrator on a donor card', () => {
     http.expectOne(ACCOUNT_URL).flush(donorAccount());
     await settle();
     expect(accountFacts()).toContain('Dvoufaktorové ověření vypnuté');
+    expect(buttonNames(section('Účet dárce'))).toEqual(['Vymazat osobní údaje']);
+  });
+
+  it('when the passkeys are removed after the confirmation, then the request is a DELETE, the account reloads and the status says what happened', async () => {
+    await loaded(donorAccount({ passkeys: 2 }));
+
+    button(section('Účet dárce'), 'Odebrat přístupové klíče').click();
+    fixture.detectChanges();
+    expect(sectionText('Účet dárce')).toContain('Dárce se jimi pak nepřihlásí');
+    button(section('Účet dárce'), 'Ano, odebrat').click();
+    fixture.detectChanges();
+
+    const request = http.expectOne(`/api/admin/donors/${DONOR_ID}/passkeys`);
+    expect(request.request.method).toBe('DELETE');
+    request.flush(null, { status: 204, statusText: 'No Content' });
+    fixture.detectChanges();
+
+    expect(text('.admin-notice--status')).toBe(
+      'Přístupové klíče u Jana Nováková jsme odebrali a všechna přihlášení ukončili. Dárce dostal e-mail; po přihlášení heslem si může přidat nový klíč.',
+    );
+    http.expectOne(ACCOUNT_URL).flush(donorAccount());
+    await settle();
+    expect(accountFacts()).toContain('Přístupové klíče žádné');
     expect(buttonNames(section('Účet dárce'))).toEqual(['Vymazat osobní údaje']);
   });
 

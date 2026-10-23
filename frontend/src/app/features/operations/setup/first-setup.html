@@ -273,27 +273,6 @@
             </app-form-field>
           </fieldset>
 
-          <fieldset class="group">
-            <legend i18n="@@operations.setup.group.tunnel">5. Logy pro Clauda</legend>
-            <app-form-field
-              [label]="labels.TUNNEL_TOKEN"
-              hint="Nepovinné. Token tunelu z Cloudflare Zero Trust → Networks → Tunnels. Bez něj tunel neběží."
-              i18n-hint="@@operations.setup.tunnelToken.hint"
-            >
-              <app-password-reveal>
-                <input
-                  appFormControl
-                  id="setup-tunnel-token"
-                  name="tunnelToken"
-                  type="password"
-                  autocomplete="off"
-                  maxlength="2000"
-                  [(ngModel)]="tunnelToken"
-                />
-              </app-password-reveal>
-            </app-form-field>
-          </fieldset>
-
           @if (saveError()) {
             <div class="form-error" role="alert">
               <p>{{ saveError() }}</p>

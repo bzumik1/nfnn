@@ -35,19 +35,9 @@ Read before building, update in the same PR: `docs/requirements.md` (client deci
 
 ## Production logs
 
-The server writes `backend.log` (Spring Boot, rotated) and `backup.log` into `/DATA/AppData/nfnn/logs/`, served read-only by the `nfnn-ops` container behind a Cloudflare tunnel and Cloudflare Access at `https://ops.nfnn.cz` (`deploy/README.md`, "Logy pro Clauda"). With `NFNN_OPS_CLIENT_ID` and `NFNN_OPS_CLIENT_SECRET` in the environment:
+The server writes `backend.log` (Spring Boot, rotated), `backup.log`, `nginx-access.log` (every request: method, path, status, timing; no address or query) and `mcp.log` (the connector; both rotated daily, `.gz`, 14 days) into `/DATA/AppData/nfnn/logs/`. With the NFNN connector in the session, `nfnn_status` names the running revision, and `nfnn_log_files`, `nfnn_log` (paged windows, the tail by default), `nfnn_log_search`, `nfnn_log_levels`, `nfnn_diagnostics` and `nfnn_thread_dump` read them through `/api/admin/operations/...`, and `nfnn_set_log_level` raises a logger for a while (audited, resets by itself). They all go through the backend: when it is down, ask Jakub for `sudo docker logs nfnn-backend` (`deploy/README.md`, "Logy").
 
-```bash
-h=(-H "CF-Access-Client-Id: $NFNN_OPS_CLIENT_ID" -H "CF-Access-Client-Secret: $NFNN_OPS_CLIENT_SECRET")
-curl -sS "${h[@]}" https://ops.nfnn.cz/info                                   # {"build":{"revision":"<short sha>"}}
-curl -sS "${h[@]}" https://ops.nfnn.cz/health
-curl -sS "${h[@]}" -H 'Range: bytes=-50000' https://ops.nfnn.cz/logs/backend.log   # the tail; /logs/ lists the files
-curl -sS "${h[@]}" https://ops.nfnn.cz/logs/backup.log
-```
-
-With the NFNN connector in the session, `nfnn_log_files`, `nfnn_log` (paged windows, the tail by default), `nfnn_log_search`, `nfnn_log_levels`, `nfnn_diagnostics` and `nfnn_thread_dump` read the same folder through `/api/admin/operations/...`, and `nfnn_set_log_level` raises a logger for a while (audited, resets by itself); prefer them over the tunnel.
-
-After a deploy, check `/info` against the merge commit and `Backend revision … is ready` in the log. The logs carry ids and outcomes, never names or tokens; quote them in a thread only as far as needed. Without the two variables (or a 403) the tunnel or the token is not set up: ask Jakub, never guess at the server.
+After a deploy, check the revision in `nfnn_status` against the merge commit and `Backend revision … is ready` in the log. The logs carry ids and outcomes, never names or tokens; quote them in a thread only as far as needed. Without the connector (or with a 401/403) ask Jakub, never guess at the server.
 
 ## Non-negotiable
 

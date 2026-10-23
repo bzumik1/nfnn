@@ -103,7 +103,6 @@ export class FirstSetup {
   };
   protected fioToken = '';
   protected adminEmail = '';
-  protected tunnelToken = '';
 
   private unlockedCode: string | null = null;
 
@@ -284,7 +283,6 @@ export class FirstSetup {
       CONTACT_RECIPIENT: this.mail.contactRecipient.trim(),
       FIO_TOKEN: this.fioToken.trim(),
       ADMIN_EMAILS: this.adminEmail.trim(),
-      TUNNEL_TOKEN: this.tunnelToken.trim(),
     };
     return Object.entries(values).map(([name, value]) => ({ name: name as SettingName, value }));
   }

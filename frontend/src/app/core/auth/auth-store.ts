@@ -3,14 +3,17 @@ import {
   catchError,
   finalize,
   firstValueFrom,
+  from,
   map,
   Observable,
   of,
   share,
+  switchMap,
   tap,
   throwError,
 } from 'rxjs';
 import { AuthApi } from './auth-api';
+import { PasskeyAuthenticator } from './passkey-authenticator';
 import {
   AuthResponse,
   ChangePasswordRequest,
@@ -29,6 +32,7 @@ export const SESSION_HINT_KEY = 'nfnn.donor-session';
 @Injectable({ providedIn: 'root' })
 export class AuthStore {
   private readonly api = inject(AuthApi);
+  private readonly passkeys = inject(PasskeyAuthenticator);
   private readonly currentDonor = signal<Donor | null>(null);
   private readonly currentStatus = signal<AuthStatus>('unknown');
   private accessToken: string | null = null;
@@ -60,6 +64,17 @@ export class AuthStore {
     return this.api
       .completeSecondFactor(challenge, code)
       .pipe(map((response) => this.adopt(response)));
+  }
+
+  signInWithPasskey(): Observable<Donor> {
+    return this.api.passkeySignInOptions().pipe(
+      switchMap((options) =>
+        from(this.passkeys.get(options)).pipe(
+          switchMap((credential) => this.api.signInWithPasskey(options.challenge, credential)),
+        ),
+      ),
+      map((response) => this.adopt(response)),
+    );
   }
 
   refresh(): Observable<string> {

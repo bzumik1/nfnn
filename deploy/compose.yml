@@ -81,7 +81,6 @@ services:
       - /DATA/AppData/nfnn/restore:/restore:ro
       - /DATA/AppData/nfnn/logs:/logs
       - /DATA/AppData/nfnn/secrets:/secrets
-      - /DATA/AppData/nfnn/tunnel:/tunnel
     healthcheck:
       test:
         - CMD
@@ -114,7 +113,7 @@ services:
     environment:
       TZ: Europe/Prague
     volumes:
-      - /DATA/AppData/nfnn/logs:/logs:ro
+      - /DATA/AppData/nfnn/logs:/logs
     healthcheck:
       test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8081/health"]
       interval: 30s
@@ -142,55 +141,13 @@ services:
       - mcp
     ports:
       - "8089:80"
+    volumes:
+      - /DATA/AppData/nfnn/logs:/logs
     healthcheck:
       test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/"]
       interval: 10s
       timeout: 5s
       retries: 3
-    deploy:
-      resources:
-        limits:
-          memory: 256M
-    logging: *logging
-
-  ops:
-    image: ghcr.io/bzumik1/nfnn-ops:latest
-    container_name: nfnn-ops
-    restart: unless-stopped
-    network_mode: bridge
-    depends_on:
-      backend:
-        condition: service_started
-    links:
-      - backend
-    volumes:
-      - /DATA/AppData/nfnn/logs:/logs:ro
-    healthcheck:
-      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/logs/"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-    deploy:
-      resources:
-        limits:
-          memory: 256M
-    logging: *logging
-
-  cloudflared:
-    image: cloudflare/cloudflared:latest
-    container_name: nfnn-cloudflared
-    restart: unless-stopped
-    network_mode: bridge
-    depends_on:
-      ops:
-        condition: service_started
-    links:
-      - ops
-    environment:
-      TZ: Europe/Prague
-    command: tunnel --no-autoupdate run --token-file /tunnel/token
-    volumes:
-      - /DATA/AppData/nfnn/tunnel:/tunnel:ro
     deploy:
       resources:
         limits:
@@ -210,5 +167,5 @@ x-casaos:
     cs_cz: Web Nadačního fondu Nová naděje
     en_us: Website of the Nová naděje foundation
   description:
-    cs_cz: Web, dárcovský portál a potvrzení o daru. Po instalaci otevřete web a vyplňte první nastavení; později ho změníte ve správě webu. Data v /DATA/AppData/nfnn, vygenerovaná hesla a klíče v secrets, zálohy v backups, obnova ze složky restore, logy v logs (přes tunel Cloudflare pro Clauda), MCP konektor pro správu na /mcp.
-    en_us: Website, donor portal and donation receipts. After the install, open the site and fill in the first setup; the administration changes it later. Data in /DATA/AppData/nfnn, generated passwords and keys in secrets, backups in backups, a restore from the restore folder, logs in logs (read through a Cloudflare tunnel), the MCP connector of the administration at /mcp.
+    cs_cz: Web, dárcovský portál a potvrzení o daru. Po instalaci otevřete web a vyplňte první nastavení; později ho změníte ve správě webu. Data v /DATA/AppData/nfnn, vygenerovaná hesla a klíče v secrets, zálohy v backups, obnova ze složky restore, logy v logs, MCP konektor pro správu na /mcp.
+    en_us: Website, donor portal and donation receipts. After the install, open the site and fill in the first setup; the administration changes it later. Data in /DATA/AppData/nfnn, generated passwords and keys in secrets, backups in backups, a restore from the restore folder, logs in logs, the MCP connector of the administration at /mcp.

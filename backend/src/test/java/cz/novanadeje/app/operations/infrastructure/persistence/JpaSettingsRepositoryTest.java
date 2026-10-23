@@ -33,7 +33,7 @@ class JpaSettingsRepositoryTest {
     @DisplayName("Given plain and sealed settings saved, when read, changed and one deleted, then the rows round-trip and the deletion sticks")
     void should_round_trip_when_saved_given_plain_and_sealed_settings() {
         StoredSetting host = new StoredSetting(Setting.MAIL_HOST, "smtp-relay.brevo.com", false, NOW);
-        StoredSetting token = new StoredSetting(Setting.TUNNEL_TOKEN, "v1:" + "A".repeat(2700), true, NOW);
+        StoredSetting token = new StoredSetting(Setting.FIO_TOKEN, "v1:" + "A".repeat(2700), true, NOW);
 
         settings.save(host);
         settings.save(token);
@@ -41,8 +41,8 @@ class JpaSettingsRepositoryTest {
 
         assertThat(settings.findAll()).containsExactlyInAnyOrder(new StoredSetting(Setting.MAIL_HOST, "smtp.example.cz", false, NOW.plusSeconds(60)), token);
 
-        settings.delete(Setting.TUNNEL_TOKEN);
         settings.delete(Setting.FIO_TOKEN);
+        settings.delete(Setting.MAIL_PASSWORD);
 
         assertThat(settings.findAll()).extracting(StoredSetting::setting).containsExactly(Setting.MAIL_HOST);
     }

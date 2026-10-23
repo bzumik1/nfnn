@@ -6,6 +6,7 @@ import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.donors.domain.DonorNotFound;
 import cz.novanadeje.app.donors.domain.DonorRepository;
 import cz.novanadeje.app.donors.domain.EmailVerificationTokenRepository;
+import cz.novanadeje.app.donors.domain.PasskeyRepository;
 import cz.novanadeje.app.donors.domain.PasswordResetTokenRepository;
 import cz.novanadeje.app.donors.domain.RefreshTokenRepository;
 import cz.novanadeje.app.donors.domain.SecondFactorRepository;
@@ -32,17 +33,19 @@ public class DonorErasureService {
 
     private final DonorRepository donors;
     private final SecondFactorRepository secondFactors;
+    private final PasskeyRepository passkeys;
     private final RefreshTokenRepository refreshTokens;
     private final PasswordResetTokenRepository passwordResetTokens;
     private final EmailVerificationTokenRepository emailVerificationTokens;
     private final ApplicationEventPublisher events;
     private final Clock clock;
 
-    public DonorErasureService(DonorRepository donors, SecondFactorRepository secondFactors, RefreshTokenRepository refreshTokens,
-                               PasswordResetTokenRepository passwordResetTokens, EmailVerificationTokenRepository emailVerificationTokens,
-                               ApplicationEventPublisher events, Clock clock) {
+    public DonorErasureService(DonorRepository donors, SecondFactorRepository secondFactors, PasskeyRepository passkeys,
+                               RefreshTokenRepository refreshTokens, PasswordResetTokenRepository passwordResetTokens,
+                               EmailVerificationTokenRepository emailVerificationTokens, ApplicationEventPublisher events, Clock clock) {
         this.donors = donors;
         this.secondFactors = secondFactors;
+        this.passkeys = passkeys;
         this.refreshTokens = refreshTokens;
         this.passwordResetTokens = passwordResetTokens;
         this.emailVerificationTokens = emailVerificationTokens;
@@ -59,6 +62,7 @@ public class DonorErasureService {
         donor.erase(now);
         donors.save(donor);
         secondFactors.delete(donorId);
+        passkeys.deleteAllOf(donorId);
         refreshTokens.revokeAllOf(donorId, now);
         passwordResetTokens.deleteAllOf(donorId);
         emailVerificationTokens.deleteAllOf(donorId);

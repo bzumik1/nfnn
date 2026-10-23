@@ -7,7 +7,6 @@ on:
       - "backend/**"
       - "frontend/**"
       - "deploy/backup/**"
-      - "deploy/ops/**"
       - "deploy/postgres/**"
       - "mcp/**"
       - ".github/workflows/images.yml"
@@ -35,7 +34,7 @@ jobs:
         run: |
           prefix=ghcr.io/${GITHUB_REPOSITORY,,}
           echo "$TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
-          for image in backend:backend frontend:frontend backup:deploy/backup postgres:deploy/postgres ops:deploy/ops mcp:mcp; do
+          for image in backend:backend frontend:frontend backup:deploy/backup postgres:deploy/postgres mcp:mcp; do
             app=${image%%:*}
             context=${image#*:}
             docker build \

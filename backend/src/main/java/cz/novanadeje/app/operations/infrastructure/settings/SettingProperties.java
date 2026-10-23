@@ -24,8 +24,7 @@ final class SettingProperties {
             Map.entry(Setting.RECEIPT_SIGNATORY_NAME, "app.donations.receipt.signatory-name"),
             Map.entry(Setting.RECEIPT_SIGNATORY_ROLE, "app.donations.receipt.signatory-role"),
             Map.entry(Setting.RECEIPT_FIRST_YEAR, "app.donations.receipt.first-year"),
-            Map.entry(Setting.ADMIN_EMAILS, "app.donors.administrators.emails"),
-            Map.entry(Setting.TUNNEL_TOKEN, "TUNNEL_TOKEN")));
+            Map.entry(Setting.ADMIN_EMAILS, "app.donors.administrators.emails")));
 
     private SettingProperties() {
     }

@@ -20,7 +20,6 @@ export const SETTING_LABELS: Readonly<Record<SettingName, string>> = {
   RECEIPT_SIGNATORY_ROLE: $localize`:@@operations.setting.RECEIPT_SIGNATORY_ROLE:Jeho funkce`,
   RECEIPT_FIRST_YEAR: $localize`:@@operations.setting.RECEIPT_FIRST_YEAR:Potvrzení na webu od roku`,
   ADMIN_EMAILS: $localize`:@@operations.setting.ADMIN_EMAILS:E-mail prvního správce`,
-  TUNNEL_TOKEN: $localize`:@@operations.setting.TUNNEL_TOKEN:Token tunelu Cloudflare`,
 };
 
 export function settingLabel(name: string): string {

@@ -29,8 +29,7 @@ export type SettingName =
   | 'RECEIPT_SIGNATORY_NAME'
   | 'RECEIPT_SIGNATORY_ROLE'
   | 'RECEIPT_FIRST_YEAR'
-  | 'ADMIN_EMAILS'
-  | 'TUNNEL_TOKEN';
+  | 'ADMIN_EMAILS';
 
 export type RestartOutcome = 'restarted' | 'slow';
 

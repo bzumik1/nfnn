@@ -1,4 +1,5 @@
 import AxeBuilder from '@axe-core/playwright';
+import { routeLogsApi } from './admin-logs-api';
 import { expect, Page, test } from '@playwright/test';
 import {
   administrator,
@@ -597,6 +598,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
       emailVerified: false,
       administrator: false,
       secondFactorEnabled: true,
+      passkeys: 2,
     };
     await page.route(
       (url) => url.pathname === '/api/admin/donors',
@@ -709,6 +711,10 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     await page.getByRole('button', { name: 'Vypnout dvoufaktorové ověření' }).click();
     await page.getByRole('button', { name: 'Odebrat účet' }).first().click();
     await expect(page.getByRole('group', { name: 'Odebrat účet?' })).toBeVisible();
+    expect(await violations(page)).toEqual([]);
+
+    await page.getByRole('button', { name: 'Odebrat přístupové klíče' }).click();
+    await expect(page.getByRole('group', { name: 'Odebrat přístupové klíče?' })).toBeVisible();
     expect(await violations(page)).toEqual([]);
 
     await page.getByRole('button', { name: 'Vymazat osobní údaje' }).click();
@@ -877,6 +883,31 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     await page.locator('#setting-RECEIPT_FIRST_YEAR').fill('2025');
     await page.getByRole('button', { name: 'Uložit nastavení' }).click();
     await expect(page.getByRole('button', { name: 'Ano, uložit a restartovat' })).toBeVisible();
+    expect(await violations(page)).toEqual([]);
+  });
+
+  test('when an administrator reads the logs, searches, raises a level and opens the thread dump, then the page breaks no rule', async ({
+    page,
+  }) => {
+    await routeLogsApi(page);
+    await page.route('**/api/donors/auth/refresh', (route) =>
+      route.fulfill(session(200, administrator)),
+    );
+    await page.goto('/');
+    await page.evaluate(() => localStorage.setItem('nfnn.donor-session', '1'));
+    await page.goto('/sprava/logy');
+    await expect(page.getByRole('heading', { level: 1, name: 'Logy a diagnostika' })).toBeFocused();
+    await expect(page.locator('.log-text').first()).toBeVisible();
+    expect(await violations(page)).toEqual([]);
+
+    await page.getByLabel('Hledat', { exact: true }).fill('fio');
+    await page.getByRole('button', { name: 'Hledat', exact: true }).click();
+    await expect(page.locator('.match')).toHaveCount(2);
+    await page.getByLabel('Logger').fill('not a logger!');
+    await page.getByRole('button', { name: 'Nastavit' }).click();
+    await expect(page.getByLabel('Logger')).toHaveAttribute('aria-invalid', 'true');
+    await page.getByRole('button', { name: 'Zobrazit výpis vláken' }).click();
+    await expect(page.locator('#logs-threads .log-text')).toBeVisible();
     expect(await violations(page)).toEqual([]);
   });
 
@@ -1086,6 +1117,46 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     await page.getByRole('button', { name: 'Zapnout dvoufaktorové ověření' }).click();
     await expect(page.getByLabel('Kód z aplikace')).toBeFocused();
 
+    expect(await violations(page)).toEqual([]);
+  });
+
+  test('when a signed-in donor adds a passkey with a wrong password and removes one, then the card breaks no rule', async ({
+    page,
+  }) => {
+    await page.route(
+      (url) => url.pathname === '/api/donors/me/passkeys',
+      (route) =>
+        route.fulfill({
+          json: {
+            items: [
+              {
+                id: '019a1b2c-3d4e-7f00-8000-000000000001',
+                name: 'iPhone',
+                createdAt: '2026-10-17T10:00:00Z',
+                lastUsedAt: '2026-10-22T09:00:00Z',
+              },
+            ],
+          },
+        }),
+    );
+    await page.route('**/api/donors/me/passkeys/options', (route) =>
+      route.fulfill(
+        problem(400, 'donors/wrong-password', 'Nesprávné heslo', 'Zkuste to prosím znovu.'),
+      ),
+    );
+    await signIn(page);
+    const card = page.getByRole('region', { name: 'Přístupové klíče' });
+    await expect(card.locator('.passkey-name')).toHaveText(['iPhone']);
+    expect(await violations(page)).toEqual([]);
+
+    await card.getByRole('button', { name: 'Přidat přístupový klíč' }).click();
+    await card.getByLabel('Současné heslo').fill('wrong horse battery');
+    await card.getByRole('button', { name: 'Vytvořit klíč' }).click();
+    await expect(card.getByRole('alert')).toContainText('Nesprávné heslo');
+    expect(await violations(page)).toEqual([]);
+
+    await card.getByRole('button', { name: 'Odebrat', exact: true }).click();
+    await expect(card).toContainText('Odebrat klíč iPhone?');
     expect(await violations(page)).toEqual([]);
   });
 

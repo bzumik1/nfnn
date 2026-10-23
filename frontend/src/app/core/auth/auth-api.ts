@@ -10,6 +10,12 @@ import {
   Donor,
   RedirectResponse,
   EmailChangeRequest,
+  PasskeyAssertionCredential,
+  PasskeyCreationOptions,
+  Passkey,
+  PasskeyList,
+  PasskeyRegistrationCredential,
+  PasskeySignInOptions,
   RegisterDonorRequest,
   SecondFactorDisableRequest,
   SecondFactorEnrolment,
@@ -41,6 +47,17 @@ export class AuthApi {
       challenge,
       code,
     });
+  }
+
+  passkeySignInOptions(): Observable<PasskeySignInOptions> {
+    return this.http.post<PasskeySignInOptions>('/api/donors/auth/passkey/options', null);
+  }
+
+  signInWithPasskey(
+    challenge: string,
+    credential: PasskeyAssertionCredential,
+  ): Observable<AuthResponse> {
+    return this.http.post<AuthResponse>('/api/donors/auth/passkey', { challenge, credential });
   }
 
   refresh(): Observable<AuthResponse> {
@@ -87,6 +104,26 @@ export class AuthApi {
 
   disableSecondFactor(request: SecondFactorDisableRequest): Observable<AuthResponse> {
     return this.http.post<AuthResponse>('/api/donors/me/second-factor/disable', request);
+  }
+
+  passkeys(): Observable<PasskeyList> {
+    return this.http.get<PasskeyList>('/api/donors/me/passkeys');
+  }
+
+  passkeyCreationOptions(password: string): Observable<PasskeyCreationOptions> {
+    return this.http.post<PasskeyCreationOptions>('/api/donors/me/passkeys/options', { password });
+  }
+
+  addPasskey(
+    challenge: string,
+    name: string,
+    credential: PasskeyRegistrationCredential,
+  ): Observable<Passkey> {
+    return this.http.post<Passkey>('/api/donors/me/passkeys', { challenge, name, credential });
+  }
+
+  removePasskey(id: string): Observable<void> {
+    return this.http.delete<void>(`/api/donors/me/passkeys/${encodeURIComponent(id)}`);
   }
 
   describeClient(clientId: string, redirectUri: string): Observable<ClientDescription> {

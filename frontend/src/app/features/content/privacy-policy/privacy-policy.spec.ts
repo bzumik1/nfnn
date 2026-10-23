@@ -66,8 +66,15 @@ describe('Given the privacy policy page', () => {
   });
 
   it('when it renders, then the date it applies from stands under the heading and in the closing section', () => {
-    expect(texts('.intro .effective')).toEqual(['Platné od 22. října 2026']);
-    expect(sectionText('Účinnost')).toContain('účinné od 22. října 2026');
+    expect(texts('.intro .effective')).toEqual(['Platné od 23. října 2026']);
+    expect(sectionText('Účinnost')).toContain('účinné od 23. října 2026');
+  });
+
+  it('when it renders, then it says what a passkey leaves with us and that no fingerprint or face does', () => {
+    const passkey = texts('li').find((item) => item.includes('přístupového klíče'));
+
+    expect(passkey).toContain('veřejnou část přístupového klíče');
+    expect(passkey).toContain('otisk prstu ani snímek obličeje k nám nikdy nedorazí');
   });
 
   it('when it renders, then it says a gift is assigned by the variable symbol and by a bank account the donor proved', () => {

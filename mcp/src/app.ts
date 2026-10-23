@@ -37,7 +37,7 @@ export function createApp(deps: AppDependencies): App {
         { name: SERVER_NAME, version: deps.version },
         {
           instructions:
-            'Tools of the administration of Nadační fond Nová naděje (nfnn.cz): the bank import, donations, donors, backups, the audit trail, the monthly report, the site content and the server logs. Amounts are in CZK, times in Prague time. Writing tools need the "admin:write" permission of the connection and are audited under the administrator who connected.',
+            'Tools of the administration of Nadační fond Nová naděje (nfnn.cz): the bank import, donations, donors, backups, the audit trail, the monthly report, the site content and the server logs. Amounts are in CZK, times in Prague time. Writing tools need the "admin:write" permission of the connection and are audited under the administrator who connected. Deleting content or account links, the administrator role, second-factor resets, older-symbol reversals, GDPR erasure and backup downloads are done only on the web at /sprava.',
         },
       );
       registerReadingTools(server, deps);

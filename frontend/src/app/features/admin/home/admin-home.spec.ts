@@ -198,7 +198,7 @@ describe('Given an administrator on the administration home', () => {
     expect(navigate).toHaveBeenCalledWith('/');
     expect(TestBed.inject(LoginDialogService).isOpen()).toBe(true);
   });
-  it('when the home is shown, then it links to the bank payments, the donors, the administrators, the older symbols, the report, the news, the projects, the backups, the settings and the history', async () => {
+  it('when the home is shown, then it links to the bank payments, the donors, the administrators, the older symbols, the report, the news, the projects, the backups, the logs, the settings and the history', async () => {
     http.expectOne(IMPORT_STATE_URL).flush(importState());
     fixture.detectChanges();
 
@@ -217,6 +217,7 @@ describe('Given an administrator on the administration home', () => {
       ['/sprava/aktuality', 'Aktuality'],
       ['/sprava/projekty', 'Projekty'],
       ['/sprava/zalohy', 'Zálohy'],
+      ['/sprava/logy', 'Logy a diagnostika'],
       ['/sprava/nastaveni', 'Nastavení'],
       ['/sprava/historie', 'Historie správy'],
     ]);

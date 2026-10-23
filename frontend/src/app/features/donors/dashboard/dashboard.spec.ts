@@ -74,6 +74,7 @@ describe('Given a signed-in donor on the dashboard', () => {
     fixture.detectChanges();
     bankCheck = http.expectOne({ method: 'POST', url: BANK_CHECK_URL });
     http.expectOne({ method: 'GET', url: BANK_ACCOUNTS_URL }).flush({ items: [] });
+    http.expectOne({ method: 'GET', url: '/api/donors/me/passkeys' }).flush({ items: [] });
   });
 
   afterEach(() => {

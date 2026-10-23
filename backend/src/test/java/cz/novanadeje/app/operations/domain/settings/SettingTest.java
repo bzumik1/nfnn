@@ -50,7 +50,7 @@ class SettingTest {
     @Test
     @DisplayName("Given the catalogue, when it is read, then the passwords and tokens are the secret settings")
     void should_mark_secrets_when_read_given_catalogue() {
-        assertThat(Setting.secrets()).containsExactlyInAnyOrder(Setting.MAIL_PASSWORD, Setting.FIO_TOKEN, Setting.TUNNEL_TOKEN);
+        assertThat(Setting.secrets()).containsExactlyInAnyOrder(Setting.MAIL_PASSWORD, Setting.FIO_TOKEN);
     }
 
     @Test

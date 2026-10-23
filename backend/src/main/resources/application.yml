@@ -131,7 +131,6 @@ app:
     settings:
       from-database: false
       key: ${SETTINGS_KEY:}
-      tunnel-directory: /tunnel
   security:
     jwt:
       issuer: nova-nadeje
@@ -151,6 +150,10 @@ app:
       challenge-ttl: PT5M
       challenge-attempts: 5
       issuer: Nová naděje
+    passkeys:
+      challenge-ttl: PT5M
+      max-per-donor: 10
+      relying-party-name: Nová naděje
     administrators:
       emails: ${ADMIN_EMAILS:}
     oauth:

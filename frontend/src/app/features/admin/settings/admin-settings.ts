@@ -63,7 +63,6 @@ const GROUP_TITLES: Readonly<Record<SettingGroup, string>> = {
   BANK: $localize`:@@admin.settings.group.BANK:Banka`,
   RECEIPTS: $localize`:@@admin.settings.group.RECEIPTS:Potvrzení o daru`,
   ADMINISTRATORS: $localize`:@@admin.settings.group.ADMINISTRATORS:Správci`,
-  TUNNEL: $localize`:@@admin.settings.group.TUNNEL:Logy pro Clauda`,
 };
 
 const HINTS: Partial<Readonly<Record<SettingName, string>>> = {
@@ -73,7 +72,6 @@ const HINTS: Partial<Readonly<Record<SettingName, string>>> = {
   FIO_HISTORY_FROM: $localize`:@@admin.settings.hint.FIO_HISTORY_FROM:Prázdné znamená posledních 89 dní. Starší platby Fio vydá jen deset minut po odemčení historie v internetovém bankovnictví.`,
   PAIRING_EXCLUDED_ACCOUNTS: $localize`:@@admin.settings.hint.PAIRING_EXCLUDED_ACCOUNTS:Čísla účtů oddělená čárkou, třeba 2900233333/2010. Platby z nich se párují jen podle variabilního symbolu.`,
   RECEIPT_FIRST_YEAR: $localize`:@@admin.settings.hint.RECEIPT_FIRST_YEAR:Za dřívější roky si dárci potvrzení na webu nestáhnou.`,
-  TUNNEL_TOKEN: $localize`:@@admin.settings.hint.TUNNEL_TOKEN:Token tunelu z Cloudflare Zero Trust. Bez něj tunel k logům neběží.`,
 };
 
 const INPUTS: Partial<Readonly<Record<SettingName, Input>>> = {
