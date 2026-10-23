@@ -10,7 +10,7 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "donor_registration_reminder")
-public class RegistrationReminderJpaEntity {
+class RegistrationReminderJpaEntity {
 
     @Id
     @Column(name = "donor_id")

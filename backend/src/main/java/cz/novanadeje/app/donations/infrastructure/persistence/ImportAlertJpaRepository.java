@@ -10,7 +10,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
-public interface ImportAlertJpaRepository extends JpaRepository<ImportAlertJpaEntity, UUID> {
+interface ImportAlertJpaRepository extends JpaRepository<ImportAlertJpaEntity, UUID> {
 
     @Query("select a from ImportAlertJpaEntity a where a.outcome is null order by a.createdAt, a.id")
     List<ImportAlertJpaEntity> findWaiting();
