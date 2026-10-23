@@ -295,6 +295,26 @@ describe('Given the donate section', () => {
     expect(dialog.initialMode()).toBe('register');
   });
 
+  it('when nobody is signed in and the visitor signs in from it, then the page stays and the bank details with their variable symbol take the focus', async () => {
+    document.body.appendChild(fixture.nativeElement);
+    await openWithQr();
+    button('Přihlásit se').focus();
+    button('Přihlásit se').click();
+    const dialog = TestBed.inject(LoginDialogService);
+    expect(dialog.isOpen()).toBe(true);
+    expect(dialog.initialMode()).toBe('login');
+
+    fixture.componentRef.setInput('variableSymbol', '1234567890');
+    dialog.signedIn();
+    await settle();
+    respond(expectQrRequest());
+    respondToPrefetch();
+
+    expect(document.activeElement).toBe(element('.bank .panel-label'));
+    expect(text('.bank')).toContain('1234567890');
+    fixture.nativeElement.remove();
+  });
+
   it('when it renders, then nothing in it sends the visitor to the contact form', async () => {
     await openWithQr();
 

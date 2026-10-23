@@ -2,7 +2,7 @@ import { Location } from '@angular/common';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
@@ -118,7 +118,7 @@ describe('Given the page that sets a new password from the e-mail link', () => {
       );
     });
 
-    it('and the password is saved, then the success panel takes focus and offers the sign-in dialog', async () => {
+    it('and the password is saved, then the success panel takes focus and offers the sign-in dialog that leads to the overview', async () => {
       const logout = vi.spyOn(store, 'logout');
 
       await submitPasswords('correct horse battery');
@@ -133,6 +133,9 @@ describe('Given the page that sets a new password from the e-mail link', () => {
 
       expect(dialog.isOpen()).toBe(true);
       expect(dialog.initialMode()).toBe('login');
+      const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+      dialog.signedIn();
+      expect(navigate).toHaveBeenCalledWith('/darce/prehled');
     });
 
     it('and the link is no longer valid, then the invalid panel offers a new link', async () => {

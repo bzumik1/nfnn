@@ -1,7 +1,7 @@
 import { HttpRequest, provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
+import { ActivatedRoute, convertToParamMap, provideRouter, Router } from '@angular/router';
 import { authInterceptor } from '../../../core/auth/auth-interceptor';
 import { AuthStore, SESSION_HINT_KEY } from '../../../core/auth/auth-store';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
@@ -110,7 +110,9 @@ describe('Given an application sent the browser to the connection page', () => {
       element<HTMLButtonElement>('.form-submit').click();
 
       expect(dialog.isOpen()).toBe(true);
-      expect(dialog.staysOnPage()).toBe(true);
+      const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+      dialog.signedIn();
+      expect(navigate).not.toHaveBeenCalled();
     });
 
     it('and an administrator signs in, then the consent names the application and its permissions', async () => {

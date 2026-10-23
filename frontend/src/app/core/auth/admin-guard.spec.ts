@@ -64,4 +64,13 @@ describe('Given the administration guard', () => {
     expect(serialized(result)).toBe('/');
     expect(TestBed.inject(LoginDialogService).isOpen()).toBe(true);
   });
+
+  it('when nobody is signed in and then signs in through the dialog, then the page they asked for opens', async () => {
+    await activate();
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+
+    TestBed.inject(LoginDialogService).signedIn();
+
+    expect(navigate).toHaveBeenCalledWith('/sprava');
+  });
 });

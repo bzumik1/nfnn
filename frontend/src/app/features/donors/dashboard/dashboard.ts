@@ -194,7 +194,7 @@ export class DonorDashboard {
   }
 
   protected sendToSignIn(): void {
-    this.loginDialog.open();
+    this.loginDialog.open('login', { returnTo: this.router.url });
     void this.router.navigateByUrl('/');
   }
 

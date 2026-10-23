@@ -149,7 +149,9 @@
 
       @if (bankAccount(); as account) {
         <div class="bank">
-          <p class="panel-label" i18n="@@home.donate.bank.label">Bankovní spojení</p>
+          <p #bankLabel class="panel-label" tabindex="-1" i18n="@@home.donate.bank.label">
+            Bankovní spojení
+          </p>
           <div class="bank-rows">
             <div class="bank-row">
               <span class="bank-key" i18n="@@home.donate.bank.account">Číslo účtu</span>

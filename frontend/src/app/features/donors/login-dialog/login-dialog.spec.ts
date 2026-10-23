@@ -3,7 +3,11 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { AuthStore } from '../../../core/auth/auth-store';
-import { LoginDialogMode, LoginDialogService } from '../../../core/auth/login-dialog.service';
+import {
+  LoginDialogMode,
+  LoginDialogOptions,
+  LoginDialogService,
+} from '../../../core/auth/login-dialog.service';
 import {
   authResponse,
   problem,
@@ -31,8 +35,11 @@ describe('Given the sign-in dialog', () => {
 
   afterEach(() => http.verify());
 
-  async function render(mode: LoginDialogMode = 'login', stayOnPage = false): Promise<void> {
-    dialog.open(mode, { stayOnPage });
+  async function render(
+    mode: LoginDialogMode = 'login',
+    options: LoginDialogOptions = {},
+  ): Promise<void> {
+    dialog.open(mode, options);
     fixture = TestBed.createComponent(LoginDialog);
     fixture.detectChanges();
     await fixture.whenStable();
@@ -88,7 +95,7 @@ describe('Given the sign-in dialog', () => {
   describe('when a donor signs in', () => {
     beforeEach(() => render());
 
-    it('with the right password, then the dialog closes and the donor portal opens', async () => {
+    it('with the right password, then the dialog closes and the page stays', async () => {
       await fillIn('#login-email', 'jana@example.cz');
       await fillIn('#login-password', 'correct horse battery');
 
@@ -103,12 +110,12 @@ describe('Given the sign-in dialog', () => {
 
       expect(TestBed.inject(AuthStore).donor()?.name).toBe('Jana Nováková');
       expect(dialog.isOpen()).toBe(false);
-      expect(navigate).toHaveBeenCalledWith('/darce/prehled');
+      expect(navigate).not.toHaveBeenCalled();
     });
 
-    it('with the right password on a page that asked the dialog to stay, then the dialog closes and the page stays', async () => {
+    it('with the right password in a dialog opened for a protected page, then the dialog closes and that page opens', async () => {
       dialog.close();
-      await render('login', true);
+      await render('login', { returnTo: '/sprava/platby' });
       await fillIn('#login-email', 'jana@example.cz');
       await fillIn('#login-password', 'correct horse battery');
 
@@ -118,7 +125,7 @@ describe('Given the sign-in dialog', () => {
 
       expect(TestBed.inject(AuthStore).signedIn()).toBe(true);
       expect(dialog.isOpen()).toBe(false);
-      expect(navigate).not.toHaveBeenCalled();
+      expect(navigate).toHaveBeenCalledWith('/sprava/platby');
     });
 
     it('with a wrong password, then the dialog stays and shows the reason from the server', async () => {
@@ -199,7 +206,7 @@ describe('Given the sign-in dialog', () => {
         expect(dialog.isOpen()).toBe(true);
       });
 
-      it('and the right code is sent, then the challenge and the code go together and the portal opens', async () => {
+      it('and the right code is sent, then the challenge and the code go together and the page stays', async () => {
         await fillIn('#login-code', ' 287082 ');
 
         await submit('.code-form');
@@ -210,7 +217,7 @@ describe('Given the sign-in dialog', () => {
 
         expect(TestBed.inject(AuthStore).donor()?.name).toBe('Jana Nováková');
         expect(dialog.isOpen()).toBe(false);
-        expect(navigate).toHaveBeenCalledWith('/darce/prehled');
+        expect(navigate).not.toHaveBeenCalled();
       });
 
       it('and a five-digit code is sent, then nothing goes out and the field says the code has six digits', async () => {

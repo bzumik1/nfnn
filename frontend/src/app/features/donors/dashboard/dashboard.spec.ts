@@ -837,9 +837,11 @@ describe('Given a signed-in donor on the dashboard', () => {
     expect(element('[role="alert"]')).toBeNull();
   });
 
-  it('when a download is refused because the session has ended, then the donor is sent home to sign in', async () => {
+  it('when a download is refused because the session has ended, then the donor is sent home to sign in and comes back after it', async () => {
     await respond(twoYearSummary(), twoYearDonations());
-    const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+    const router = TestBed.inject(Router);
+    vi.spyOn(router, 'url', 'get').mockReturnValue('/darce/prehled');
+    const navigate = vi.spyOn(router, 'navigateByUrl').mockResolvedValue(true);
 
     await click(secondRowButton);
     http
@@ -853,6 +855,10 @@ describe('Given a signed-in donor on the dashboard', () => {
     expect(element('[role="alert"]')).toBeNull();
     expect(TestBed.inject(LoginDialogService).isOpen()).toBe(true);
     expect(navigate).toHaveBeenCalledWith('/');
+
+    TestBed.inject(LoginDialogService).signedIn();
+
+    expect(navigate).toHaveBeenLastCalledWith('/darce/prehled');
   });
 
   it('when the donor has no donations yet, then the cards show zeros and the yearly and payments cards explain how a gift appears', async () => {

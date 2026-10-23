@@ -50,6 +50,15 @@ describe('Given the donor area guard', () => {
     expect(TestBed.inject(LoginDialogService).isOpen()).toBe(true);
   });
 
+  it('when nobody is signed in and then signs in through the dialog, then the page they asked for opens', async () => {
+    await activate();
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+
+    TestBed.inject(LoginDialogService).signedIn();
+
+    expect(navigate).toHaveBeenCalledWith('/darce/prehled');
+  });
+
   it('when the session can no longer be refreshed, then the visitor goes to the home page as well', async () => {
     localStorage.setItem(SESSION_HINT_KEY, '1');
 

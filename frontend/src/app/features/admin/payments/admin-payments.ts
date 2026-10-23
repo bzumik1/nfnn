@@ -294,9 +294,10 @@ export class AdminPayments {
   }
 
   private sendToSignIn(): void {
+    const returnTo = this.router.url;
     this.auth.logout().subscribe(() => {
       this.router.navigateByUrl('/');
-      this.loginDialog.open();
+      this.loginDialog.open('login', { returnTo });
     });
   }
 }

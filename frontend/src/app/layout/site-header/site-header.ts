@@ -1,11 +1,13 @@
 /// <reference types="@angular/localize" />
 
 import {
+  afterNextRender,
   ChangeDetectionStrategy,
   Component,
   ElementRef,
   HostListener,
   inject,
+  Injector,
   signal,
   viewChild,
 } from '@angular/core';
@@ -30,7 +32,9 @@ export class SiteHeader {
   protected readonly closeMenuLabel = $localize`:@@layout.header.closeMenu:Zavřít menu`;
 
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+  private readonly injector = inject(Injector);
   private readonly menuButton = viewChild.required<ElementRef<HTMLButtonElement>>('menuButton');
+  private readonly portalLink = viewChild<ElementRef<HTMLAnchorElement>>('portalLink');
 
   @HostListener('window:scroll')
   onScroll(): void {
@@ -62,6 +66,19 @@ export class SiteHeader {
 
   openLogin(): void {
     this.menuOpen.set(false);
-    this.loginDialog.open();
+    this.loginDialog.open('login', { afterSignIn: () => this.focusPortalLink() });
+  }
+
+  private focusPortalLink(): void {
+    afterNextRender(
+      () => {
+        const link = this.portalLink()?.nativeElement;
+        link?.focus();
+        if (link === undefined || this.host.nativeElement.ownerDocument.activeElement !== link) {
+          this.menuButton().nativeElement.focus();
+        }
+      },
+      { injector: this.injector },
+    );
   }
 }

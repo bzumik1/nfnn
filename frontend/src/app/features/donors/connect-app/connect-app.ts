@@ -72,7 +72,7 @@ export class ConnectApp {
   }
 
   signIn(): void {
-    this.dialog.open('login', { stayOnPage: true });
+    this.dialog.open('login');
   }
 
   allow(): void {

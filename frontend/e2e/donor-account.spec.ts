@@ -109,6 +109,8 @@ test.describe('Given a visitor who wants a donor account', () => {
     await page.locator('#login-email').fill('jana@example.cz');
     await page.locator('#login-password').fill('correct horse battery');
     await page.getByRole('dialog').locator('.form-submit').click();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    await page.locator('.nav-login', { hasText: 'Můj přehled' }).click();
     await expect(page).toHaveURL(/\/darce\/prehled$/);
 
     await page.locator('.topbar-logout').click();
@@ -127,12 +129,47 @@ test.describe('Given a visitor who wants a donor account', () => {
     await page.locator('#login-email').fill('jana@example.cz');
     await page.locator('#login-password').fill('correct horse battery');
     await page.getByRole('dialog').locator('.form-submit').click();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    await page.locator('.nav-login', { hasText: 'Můj přehled' }).click();
     await expect(page).toHaveURL(/\/darce\/prehled$/);
 
     await page.getByRole('link', { name: 'Hlavní stránka' }).click();
 
     await expect(page).toHaveURL(/\/$/);
     await expect(page.locator('.nav-login')).toHaveText('Můj přehled');
+  });
+
+  test('when they sign in from the home page, then the page stays and the header offers their overview', async ({
+    page,
+  }) => {
+    await page.route('**/api/donors/auth/login', (route) => route.fulfill(session(200)));
+    await mockDonorApi(page);
+
+    await openSignInDialog(page);
+    await page.locator('#login-email').fill('jana@example.cz');
+    await page.locator('#login-password').fill('correct horse battery');
+    await page.getByRole('dialog').locator('.form-submit').click();
+
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    await expect(page).toHaveURL(/\/$/);
+    await expect(page.locator('.nav-login')).toHaveText('Můj přehled');
+    await expect(page.locator('.nav-login')).toBeFocused();
+  });
+
+  test('when they open the portal without a session and sign in, then the portal opens', async ({
+    page,
+  }) => {
+    await page.route('**/api/donors/auth/login', (route) => route.fulfill(session(200)));
+    await mockDonorApi(page);
+
+    await page.goto('/darce/prehled');
+    await expect(page).toHaveURL(/\/$/);
+    await page.locator('#login-email').fill('jana@example.cz');
+    await page.locator('#login-password').fill('correct horse battery');
+    await page.getByRole('dialog').locator('.form-submit').click();
+
+    await expect(page).toHaveURL(/\/darce\/prehled$/);
+    await expect(page.locator('.topbar-donor')).toContainText('Jana Nováková');
   });
 
   test('when they open the portal without a session, then they land on the home page with the sign-in dialog', async ({
