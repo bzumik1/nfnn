@@ -33,6 +33,7 @@ public class ConnectedAppsStepDefinitions {
     private static final String AUTHORIZE_PATH = "/api/donors/oauth/authorize";
     private static final String TOKEN_PATH = "/api/donors/oauth/token";
     private static final String CONNECTIONS_PATH = "/api/donors/me/connections";
+    private static final String BACKUPS_PATH = "/api/admin/operations/backups";
     private static final String REFRESH_PATH = "/api/donors/auth/refresh";
     private static final String ADMIN_PATH = "/api/admin/donors";
     private static final String ISSUER = "http://localhost:4200";
@@ -183,7 +184,14 @@ public class ConnectedAppsStepDefinitions {
 
     @Given("{string} connected the application {string}")
     public void connectedTheApplication(String alias, String client) {
-        approvedTheConnection(alias, client);
+        connectedTheApplicationWithScope(alias, client, "admin:read");
+    }
+
+    @Given("{string} connected the application {string} with scope {string}")
+    public void connectedTheApplicationWithScope(String alias, String client, String scope) {
+        approvesTheConnection(alias, client, scope, DEFAULT_STATE);
+        assertThat(api.lastResponse().getStatusCode().value()).withFailMessage("Approving answered %s", api.lastResponse().getBody()).isEqualTo(200);
+        rememberCodeFromRedirect();
         theApplicationExchangesTheCodeWithTheRightVerifier();
         assertThat(api.lastResponse().getStatusCode().value()).withFailMessage("The code exchange answered %s", api.lastResponse().getBody())
                 .isEqualTo(200);
@@ -251,6 +259,30 @@ public class ConnectedAppsStepDefinitions {
         api.delete(ADMIN_PATH + "/" + UUID.randomUUID());
     }
 
+    @When("the exchanged API token tries to approve the connection for {string} with scope {string}")
+    public void theExchangedApiTokenTriesToApproveTheConnection(String client, String scope) {
+        actAsExchangedApiToken();
+        postDecision(client, defaultRedirectOf(client), scope, MCP_RESOURCE, DEFAULT_STATE, challenge(VERIFIER), true);
+    }
+
+    @When("the exchanged API token reads the account of the administrator")
+    public void theExchangedApiTokenReadsTheAccountOfTheAdministrator() {
+        actAsExchangedApiToken();
+        api.get("/api/donors/me");
+    }
+
+    @When("the exchanged API token tries to download the backup {string}")
+    public void theExchangedApiTokenTriesToDownloadTheBackup(String fileName) {
+        actAsExchangedApiToken();
+        api.get(BACKUPS_PATH + "/" + fileName);
+    }
+
+    @When("the exchanged API token lists the backups")
+    public void theExchangedApiTokenListsTheBackups() {
+        actAsExchangedApiToken();
+        api.get(BACKUPS_PATH);
+    }
+
     @Then("the API token cannot be exchanged again")
     public void theApiTokenCannotBeExchangedAgain() {
         exchangeToken(apiAccessToken, API_RESOURCE);
@@ -306,7 +338,7 @@ public class ConnectedAppsStepDefinitions {
         assertThat(items).hasSize(1);
         JsonNode item = items.get(0);
         assertThat(item.get("client").asString()).isEqualTo(client);
-        assertThat(strings(item.get("scopes"))).containsExactly(scope);
+        assertThat(strings(item.get("scopes"))).containsExactly(scope.split(" "));
         assertThat(item.get("id").asString()).isNotBlank();
         assertThat(item.get("grantedAt").asString()).isNotBlank();
         assertThat(item.get("lastUsedAt").asString()).isNotBlank();
@@ -337,11 +369,24 @@ public class ConnectedAppsStepDefinitions {
         api.delete(CONNECTIONS_PATH + "/" + id);
     }
 
+    private void actAsExchangedApiToken() {
+        if (api.lastResponseJson().has("access_token")) {
+            apiAccessToken = api.lastResponseJson().get("access_token").asString();
+        }
+        api.forgetCredentials();
+        api.authorize(apiAccessToken);
+    }
+
     private void decide(String alias, String client, String redirect, String scope, String resource, String state, String codeChallenge,
                         boolean approved) {
+        sessions.actAs(alias);
+        postDecision(client, redirect, scope, resource, state, codeChallenge, approved);
+    }
+
+    private void postDecision(String client, String redirect, String scope, String resource, String state, String codeChallenge,
+                              boolean approved) {
         clientId = client;
         redirectUri = redirect;
-        sessions.actAs(alias);
         Map<String, Object> body = new HashMap<>();
         body.put("clientId", client);
         body.put("redirectUri", redirect);

@@ -55,6 +55,23 @@ Feature: An administrator connects an application such as Claude to the administ
     When "Jana" lists the connected applications
     Then the connected applications are "claude.ai" with scopes "admin:read" and "admin:read admin:write"
 
+  Scenario: An exchanged API token administers only: it cannot approve a connection, touch the administrator's account or export the database
+    Given "Jana" connected the application "https://claude.ai/.well-known/oauth-client" with scope "admin:read admin:write"
+    When the connector exchanges the connector token for an API token
+    And the exchanged API token tries to approve the connection for "https://claude.ai/.well-known/oauth-client" with scope "admin:read admin:write"
+    Then the response status is 403
+    And the problem type ends with "auth/forbidden"
+    When the exchanged API token reads the account of the administrator
+    Then the response status is 403
+    And the problem type ends with "auth/forbidden"
+    When the exchanged API token tries to download the backup "nfnn-2026-10-23_0300.dump"
+    Then the response status is 403
+    And the problem type ends with "auth/forbidden"
+    When the exchanged API token lists the backups
+    Then the response status is 200
+    When "Jana" lists the connected applications
+    Then the connected applications are "claude.ai" with scope "admin:read admin:write"
+
   Scenario: A donor without the administrator role cannot connect an application
     When "Petr" approves the connection for "https://claude.ai/.well-known/oauth-client" with scope "admin:read" and state "xyz"
     Then the response status is 403

@@ -4,17 +4,22 @@ import jakarta.servlet.DispatcherType;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.security.authorization.AuthorityAuthorizationManager;
+import org.springframework.security.authorization.AuthorizationManager;
+import org.springframework.security.authorization.AuthorizationManagers;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.access.intercept.RequestAuthorizationContext;
 
 @Configuration(proxyBeanMethods = false)
 @EnableWebSecurity
 class ApiSecurityConfiguration {
 
     static final String ADMIN_ROLE = "ADMIN";
+    private static final String BACKUP_DOWNLOAD = "/api/admin/operations/backups/*";
 
     @Bean
     SecurityFilterChain apiSecurityFilterChain(HttpSecurity http, ProblemDetailSecurityErrorHandler errorHandler,
@@ -31,10 +36,12 @@ class ApiSecurityConfiguration {
                         .requestMatchers(HttpMethod.GET, "/.well-known/oauth-authorization-server").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/donors/oauth/token").permitAll()
                         .requestMatchers("/actuator/health", "/actuator/health/**", "/actuator/info").permitAll()
+                        .requestMatchers(HttpMethod.GET, BACKUP_DOWNLOAD).access(administratorInBrowser())
+                        .requestMatchers(HttpMethod.HEAD, BACKUP_DOWNLOAD).access(administratorInBrowser())
                         .requestMatchers(HttpMethod.GET, "/api/admin/**").hasRole(ADMIN_ROLE)
                         .requestMatchers(HttpMethod.HEAD, "/api/admin/**").hasRole(ADMIN_ROLE)
                         .requestMatchers("/api/admin/**").access(new AdminWriteAuthorizationManager())
-                        .anyRequest().authenticated())
+                        .anyRequest().access(new BrowserSessionAuthorizationManager()))
                 .oauth2ResourceServer(resourceServer -> resourceServer
                         .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter))
                         .authenticationEntryPoint(errorHandler)
@@ -43,5 +50,9 @@ class ApiSecurityConfiguration {
                         .authenticationEntryPoint(errorHandler)
                         .accessDeniedHandler(errorHandler))
                 .build();
+    }
+
+    private static AuthorizationManager<RequestAuthorizationContext> administratorInBrowser() {
+        return AuthorizationManagers.allOf(AuthorityAuthorizationManager.hasRole(ADMIN_ROLE), new BrowserSessionAuthorizationManager());
     }
 }
