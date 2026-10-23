@@ -7,6 +7,7 @@ import { SiteHeader } from './site-header';
 
 describe('Given the site header on a phone', () => {
   let fixture: ComponentFixture<SiteHeader>;
+  let phoneLayout: HTMLStyleElement;
 
   const toggle = () => fixture.nativeElement.querySelector('.mobile-menu-btn') as HTMLButtonElement;
   const menu = () => fixture.nativeElement.querySelector('#mobile-menu') as HTMLElement | null;
@@ -16,12 +17,18 @@ describe('Given the site header on a phone', () => {
       imports: [SiteHeader],
       providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])],
     }).compileComponents();
+    phoneLayout = document.createElement('style');
+    phoneLayout.textContent = '.mobile-menu-btn { display: flex !important; }';
+    document.head.appendChild(phoneLayout);
     fixture = TestBed.createComponent(SiteHeader);
     document.body.appendChild(fixture.nativeElement);
     fixture.detectChanges();
   });
 
-  afterEach(() => fixture.nativeElement.remove());
+  afterEach(() => {
+    fixture.nativeElement.remove();
+    phoneLayout.remove();
+  });
 
   function openMenu(): void {
     toggle().focus();
