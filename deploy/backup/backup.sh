@@ -102,6 +102,25 @@ take_backup() {
   return 1
 }
 
+dumped_rows() {
+  pg_restore --data-only --table="$2" --file=- "$1" | awk '/^COPY /{copying=1; next} /^\\\.$/{copying=0} copying{rows++} END{print rows+0}'
+}
+
+compare_rows() {
+  m_total=0
+  m_mismatch=""
+  for m_table in $(pg_restore --list "$1" | sed -n 's/^[0-9]*; [0-9]* [0-9]* TABLE DATA public \([^ ]*\) .*/\1/p'); do
+    m_dumped=$(dumped_rows "$1" "$m_table" 2>> "$3")
+    m_restored=$(psql --dbname="$2" --tuples-only --no-align --command="select count(*) from public.\"$m_table\"" 2>> "$3" | tr -d '[:space:]')
+    if [ -z "$m_restored" ] || [ "$m_dumped" != "$m_restored" ]; then
+      m_mismatch="$m_mismatch $m_table"
+    else
+      m_total=$((m_total + m_restored))
+    fi
+  done
+  [ -z "$m_mismatch" ]
+}
+
 test_restore() {
   t_request=$1
   t_started=$(now_utc)
@@ -117,13 +136,21 @@ test_restore() {
       && pg_restore --exit-on-error --single-transaction --dbname="$TEST_DATABASE" "$t_newest" 2>> "$STATUS/test-restore.err"; then
     t_tables=$(psql --dbname="$TEST_DATABASE" --tuples-only --no-align --command="select count(*) from information_schema.tables where table_schema = 'public'" 2>> "$STATUS/test-restore.err" | tr -d '[:space:]')
     t_changesets=$(applied_changesets "$TEST_DATABASE" "$STATUS/test-restore.err")
+    t_rows_match=false
+    if compare_rows "$t_newest" "$TEST_DATABASE" "$STATUS/test-restore.err"; then
+      t_rows_match=true
+    fi
     dropdb --if-exists "$TEST_DATABASE" > /dev/null 2>&1
-    if [ "${t_tables:-0}" -gt 0 ] 2>/dev/null && [ "${t_changesets:-0}" -gt 0 ] 2>/dev/null; then
+    if [ "${t_tables:-0}" -gt 0 ] 2>/dev/null && [ "${t_changesets:-0}" -gt 0 ] 2>/dev/null && [ "$t_rows_match" = true ]; then
       write_status test-restore "outcome=ok" "started_at=$t_started" "finished_at=$(now_utc)" "file=$t_file" "size=$(file_size "$t_newest")" "tables=$t_tables" "request=$t_request"
-      log "test restore of $t_file succeeded: $t_tables tables"
+      log "test restore of $t_file succeeded: $t_tables tables and $m_total rows, as many in every table as the backup holds"
       return 0
     fi
-    t_error="the restored database has no tables or no applied changesets"
+    if [ "$t_rows_match" = true ]; then
+      t_error="the restored database has no tables or no applied changesets"
+    else
+      t_error="the restored database holds a different number of rows than the backup in:$m_mismatch"
+    fi
   else
     dropdb --if-exists "$TEST_DATABASE" > /dev/null 2>&1
     t_error=$(tail -n 1 "$STATUS/test-restore.err" | tr -d '\n' | cut -c1-500)
