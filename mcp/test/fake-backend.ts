@@ -173,6 +173,49 @@ function adminRoute(request: RecordedRequest, url: URL, body: string): [number, 
           hasMore: false,
         },
       ];
+    case 'GET /api/admin/donors/administrators':
+      return [
+        200,
+        {
+          items: [
+            {
+              donorId: DONOR_ID,
+              name: 'Jana Nováková',
+              email: 'jana@example.cz',
+              secondFactorEnabled: true,
+            },
+          ],
+        },
+      ];
+    case 'GET /api/admin/donations/symbol-claims':
+      return [
+        200,
+        {
+          items: [
+            {
+              id: UNKNOWN_ID,
+              donorId: DONOR_ID,
+              variableSymbol: '1234567890',
+              answer: 'CONFIRMED',
+              answeredAt: '2026-10-22T10:00:00Z',
+              pairedDonations: 2,
+            },
+          ],
+        },
+      ];
+    case 'PUT /api/admin/donations/report/settings':
+      return [200, JSON.parse(body)];
+    case 'POST /api/admin/content/news':
+      return [201, { id: UNKNOWN_ID, slug: 'letni-tabor', ...JSON.parse(body) }];
+    case `PUT /api/admin/content/news/${UNKNOWN_ID}`:
+    case `PUT /api/admin/content/projects/${UNKNOWN_ID}`:
+      return [200, { id: UNKNOWN_ID, ...JSON.parse(body) }];
+    case 'POST /api/admin/content/projects':
+      return [201, { id: UNKNOWN_ID, slug: 'nova-strecha', ...JSON.parse(body) }];
+    case `POST /api/admin/donations/donors/${DONOR_ID}/bank-accounts/${PAYMENT_ID}/disconnect`:
+      return [204, undefined];
+    case `POST /api/admin/donations/donors/${DONOR_ID}/bank-accounts/${PAYMENT_ID}/reconnect`:
+      return [409, problem(409, 'donations/bank-account-link-active', 'Párování už je zapnuté')];
     case 'GET /api/admin/donations/report':
       return [200, { settings: { recipients: ['info@nfnn.cz'], sendDay: 1 }, sentReports: [] }];
     case 'GET /api/admin/content/news':

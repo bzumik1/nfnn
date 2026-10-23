@@ -131,9 +131,13 @@ describe('Given an application sent the browser to the connection page', () => {
       expect(Array.from(root().querySelectorAll('.scopes li')).map((li) => li.textContent)).toEqual(
         [expect.stringContaining('Čtení:')],
       );
+      expect(element('.scopes li').textContent).toContain('logy a diagnostika');
       const writeOption = element<HTMLInputElement>('#connect-app-write');
       expect(writeOption.checked).toBe(false);
-      expect(element('label[for="connect-app-write"]').textContent).toContain('Změny:');
+      const writeLabel = element('label[for="connect-app-write"]').textContent;
+      expect(writeLabel).toContain('Změny:');
+      expect(writeLabel).toContain('nastavení a odeslání měsíčního reportu');
+      expect(writeLabel).toContain('párování z účtů dárců');
       expect(element('.scope-hint').textContent).toContain('jen čtení');
       expect(document.activeElement).toBe(element('h1'));
     });
