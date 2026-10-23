@@ -19,7 +19,7 @@ Web fondu, který představí fond a jeho pomoc dětem, usnadní darování a d�
 
 ## 3. Úvodní stránka
 
-- ✅ Vzhled a sekce podle původního prototypu (modrý akcent, fullscreen hero, zaoblené karty; dnes hotové v theme `frontend/src/styles/themes/_nova-nadeje.scss` a v komponentách, prototyp byl z repa odstraněn 22. 10. 2026): Domů, O nás, čísla, Projekty (karty dětí), Aktuality, Přispět, Kontakt (formulář), patička s IČO a zápisem v rejstříku.
+- ✅ Vzhled a sekce podle původního prototypu (modrý akcent, fullscreen hero, zaoblené karty; dnes hotové v theme `frontend/src/themes/nova-nadeje/_theme.scss` a v komponentách, prototyp byl z repa odstraněn 22. 10. 2026): Domů, O nás, čísla, Projekty (karty dětí), Aktuality, Přispět, Kontakt (formulář), patička s IČO a zápisem v rejstříku.
 - ✅ Texty, příběhy, čísla, fotky a údaje fondu (účet, IČO, adresa) jsou v prototypu zástupné. Skutečné dodá Jakub.
 - ✅ **Přispět**: návštěvník zvolí částku (100 / 500 / 1000 / jiná) a vygeneruje se QR platba na účet fondu. Přihlášenému dárci QR obsahuje jeho variabilní symbol, takže se dar spáruje sám.
 - 🔸 K tomu jen stránka **Zásady ochrany osobních údajů**, nutná kvůli registraci. Další stránky (detaily projektů a aktualit, dokumenty) až postupně ✅.

@@ -27,7 +27,9 @@
             "browser": "src/main.ts",
             "tsConfig": "tsconfig.app.json",
             "inlineStyleLanguage": "scss",
-            "stylePreprocessorOptions": { "includePaths": ["src/styles"] },
+            "stylePreprocessorOptions": {
+              "includePaths": ["src/styles", "src/themes/nova-nadeje"]
+            },
             "assets": [
               {
                 "glob": "**/*",
@@ -62,6 +64,11 @@
               "optimization": false,
               "extractLicenses": false,
               "sourceMap": true
+            },
+            "control-theme": {
+              "stylePreprocessorOptions": {
+                "includePaths": ["src/styles", "src/themes/control"]
+              }
             }
           },
           "defaultConfiguration": "production"
@@ -77,6 +84,9 @@
             },
             "development": {
               "buildTarget": "frontend:build:development"
+            },
+            "control-theme": {
+              "buildTarget": "frontend:build:development,control-theme"
             }
           },
           "defaultConfiguration": "development"

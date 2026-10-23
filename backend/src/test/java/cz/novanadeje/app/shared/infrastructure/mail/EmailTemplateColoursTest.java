@@ -22,7 +22,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class EmailTemplateColoursTest {
 
     private static final Path TEMPLATES = Path.of("src", "main", "resources", "templates", "email");
-    private static final Path THEME = Path.of("..", "frontend", "src", "styles", "themes", "_nova-nadeje.scss");
+    private static final Path THEME = Path.of("..", "frontend", "src", "themes", "nova-nadeje", "_theme.scss");
     private static final Pattern HEX_COLOUR = Pattern.compile("#[0-9a-fA-F]{6}\\b");
     private static final Pattern THEME_TOKEN = Pattern.compile("--color-[a-z0-9-]+:\\s*(#[0-9a-fA-F]{6})\\s*;");
 
