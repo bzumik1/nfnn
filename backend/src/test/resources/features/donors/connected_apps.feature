@@ -50,7 +50,7 @@ Feature: An administrator connects an application such as Claude to the administ
     And the application exchanges the code with the right verifier
     Then the token response carries a bearer token for 15 minutes, a refresh token and the scope "admin:read admin:write"
     When the connector exchanges the connector token for an API token
-    And the exchanged API token tries to erase an unknown donor
+    And the exchanged API token sends POST "/api/admin/content/news/{id}/unpublish"
     Then the response status is 404
     When "Jana" lists the connected applications
     Then the connected applications are "claude.ai" with scopes "admin:read" and "admin:read admin:write"
@@ -83,6 +83,29 @@ Feature: An administrator connects an application such as Claude to the administ
     Then the response status is 200
     When "Jana" lists the connected applications
     Then the connected applications are "claude.ai" with scope "admin:read admin:write"
+
+  Scenario Outline: A dangerous or irreversible change is refused to a connected application even with the writing permission
+    Given "Jana" connected the application "https://claude.ai/.well-known/oauth-client" with scope "admin:read admin:write"
+    When the connector exchanges the connector token for an API token
+    And the exchanged API token sends <method> "<path>"
+    Then the response status is 403
+    And the problem type ends with "auth/forbidden"
+
+    Examples:
+      | method | path                                                     |
+      | DELETE | /api/admin/donors/{id}                                   |
+      | POST   | /api/admin/donors/administrators                         |
+      | DELETE | /api/admin/donors/administrators/{id}                    |
+      | POST   | /api/admin/donors/{id}/second-factor/reset               |
+      | DELETE | /api/admin/donors/{id}/passkeys                          |
+      | DELETE | /api/admin/content/news/{id}                             |
+      | DELETE | /api/admin/content/projects/{id}                         |
+      | DELETE | /api/admin/donations/donors/{id}/bank-accounts/{id}      |
+      | POST   | /api/admin/donations/symbol-claims/{id}/reverse          |
+      | DELETE | /api/admin/donations/symbol-claims/{id}                  |
+      | POST   | /api/admin/operations/backups/nfnn-2026-10-23_0300.dump/restore |
+      | POST   | /api/admin/donations/receipt-signature                   |
+      | DELETE | /api/admin/donations/receipt-signature                   |
 
   Scenario: A donor without the administrator role cannot connect an application
     When "Petr" approves the connection for "https://claude.ai/.well-known/oauth-client" with scope "admin:read" and state "xyz"

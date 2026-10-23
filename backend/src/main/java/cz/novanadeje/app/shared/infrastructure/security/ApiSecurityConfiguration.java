@@ -21,6 +21,20 @@ class ApiSecurityConfiguration {
     static final String ADMIN_ROLE = "ADMIN";
     private static final String BACKUP_DOWNLOAD = "/api/admin/operations/backups/*";
     private static final String BACKUP_RESTORE = "/api/admin/operations/backups/*/restore";
+    private static final String[] BROWSER_ONLY_DELETES = {
+            "/api/admin/donors/*",
+            "/api/admin/donors/administrators/*",
+            "/api/admin/donors/*/passkeys",
+            "/api/admin/content/news/*",
+            "/api/admin/content/projects/*",
+            "/api/admin/donations/donors/*/bank-accounts/*",
+            "/api/admin/donations/symbol-claims/*",
+            "/api/admin/donations/receipt-signature"};
+    private static final String[] BROWSER_ONLY_POSTS = {
+            "/api/admin/donors/administrators",
+            "/api/admin/donors/*/second-factor/reset",
+            "/api/admin/donations/symbol-claims/*/reverse",
+            "/api/admin/donations/receipt-signature"};
 
     @Bean
     SecurityFilterChain apiSecurityFilterChain(HttpSecurity http, ProblemDetailSecurityErrorHandler errorHandler,
@@ -43,6 +57,8 @@ class ApiSecurityConfiguration {
                         .requestMatchers(HttpMethod.GET, BACKUP_DOWNLOAD).access(administratorInBrowser())
                         .requestMatchers(HttpMethod.HEAD, BACKUP_DOWNLOAD).access(administratorInBrowser())
                         .requestMatchers(HttpMethod.POST, BACKUP_RESTORE).access(administratorInBrowser())
+                        .requestMatchers(HttpMethod.DELETE, BROWSER_ONLY_DELETES).access(administratorInBrowser())
+                        .requestMatchers(HttpMethod.POST, BROWSER_ONLY_POSTS).access(administratorInBrowser())
                         .requestMatchers(HttpMethod.GET, "/api/admin/**").hasRole(ADMIN_ROLE)
                         .requestMatchers(HttpMethod.HEAD, "/api/admin/**").hasRole(ADMIN_ROLE)
                         .requestMatchers("/api/admin/**").access(new AdminWriteAuthorizationManager())

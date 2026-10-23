@@ -259,6 +259,17 @@ public class ConnectedAppsStepDefinitions {
         api.delete(ADMIN_PATH + "/" + UUID.randomUUID());
     }
 
+    @When("the exchanged API token sends {word} {string}")
+    public void theExchangedApiTokenSends(String method, String path) {
+        actAsExchangedApiToken();
+        String target = path.replace("{id}", UUID.randomUUID().toString());
+        switch (method) {
+            case "POST" -> api.post(target, Map.of());
+            case "DELETE" -> api.delete(target);
+            default -> throw new IllegalArgumentException("Unsupported method " + method);
+        }
+    }
+
     @When("the exchanged API token tries to approve the connection for {string} with scope {string}")
     public void theExchangedApiTokenTriesToApproveTheConnection(String client, String scope) {
         actAsExchangedApiToken();
