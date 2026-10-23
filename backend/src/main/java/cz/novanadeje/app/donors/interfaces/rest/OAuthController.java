@@ -41,22 +41,28 @@ class OAuthController {
 
     private final AuthorizationServerService authorizationServer;
     private final OAuthTokenRateLimiter rateLimiter;
+    private final ClientMetadataRateLimiter metadataRateLimiter;
     private final Clock clock;
 
-    OAuthController(AuthorizationServerService authorizationServer, OAuthTokenRateLimiter rateLimiter, Clock clock) {
+    OAuthController(AuthorizationServerService authorizationServer, OAuthTokenRateLimiter rateLimiter, ClientMetadataRateLimiter metadataRateLimiter,
+                    Clock clock) {
         this.authorizationServer = authorizationServer;
         this.rateLimiter = rateLimiter;
+        this.metadataRateLimiter = metadataRateLimiter;
         this.clock = clock;
     }
 
     @GetMapping("/client")
     ClientDescriptionResponse describeClient(@RequestParam @NotBlank @Size(max = MAX_PARAMETER_LENGTH) String clientId,
-                                             @RequestParam @NotBlank @Size(max = MAX_PARAMETER_LENGTH) String redirectUri) {
+                                             @RequestParam @NotBlank @Size(max = MAX_PARAMETER_LENGTH) String redirectUri,
+                                             HttpServletRequest http) {
+        metadataRateLimiter.check(http.getRemoteAddr());
         return ClientDescriptionResponse.of(authorizationServer.describeClient(clientId, redirectUri));
     }
 
     @PostMapping("/authorize")
-    RedirectResponse authorize(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody AuthorizationRequest request) {
+    RedirectResponse authorize(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody AuthorizationRequest request, HttpServletRequest http) {
+        metadataRateLimiter.check(http.getRemoteAddr());
         return new RedirectResponse(authorizationServer.decide(request.toDecision(), DonorId.of(jwt.getSubject()), SessionRoles.of(jwt)).toString());
     }
 

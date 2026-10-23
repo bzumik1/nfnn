@@ -94,6 +94,14 @@ public class ConnectedAppsStepDefinitions {
         api.get(CLIENT_PATH + "?clientId=" + client + "&redirectUri=" + redirect);
     }
 
+    @Given("{string} asked about the client {string} redirecting to {string} {int} times")
+    public void askedAboutTheClientTimes(String alias, String client, String redirect, int times) {
+        for (int i = 0; i < times; i++) {
+            asksAboutTheClient(alias, client, redirect);
+            assertThat(api.lastResponse().getStatusCode().value()).isEqualTo(200);
+        }
+    }
+
     @Then("the client is described as host {string} named {string} and not on this computer")
     public void theClientIsDescribedAsRemote(String host, String name) {
         assertClientDescription(host, name, false);

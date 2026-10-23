@@ -241,3 +241,14 @@ Feature: An administrator connects an application such as Claude to the administ
     When the following requests come from another client address
     And the application asks for the grant type "client_credentials"
     Then the response status is 400
+
+  Scenario: The twenty-first client description within 15 minutes from one address is refused, because each one fetches the client's document
+    Given "Petr" asked about the client "https://claude.ai/.well-known/oauth-client" redirecting to "https://claude.ai/api/mcp/auth_callback" 20 times
+    When "Petr" asks about the client "https://claude.ai/.well-known/oauth-client" redirecting to "https://claude.ai/api/mcp/auth_callback"
+    Then the response status is 429
+    And the problem type ends with "donors/rate-limited"
+    When "Petr" approves the connection for "https://claude.ai/.well-known/oauth-client" with scope "admin:read" and state "xyz"
+    Then the response status is 429
+    When the following requests come from another client address
+    And "Jana" asks about the client "https://claude.ai/.well-known/oauth-client" redirecting to "https://claude.ai/api/mcp/auth_callback"
+    Then the response status is 200
