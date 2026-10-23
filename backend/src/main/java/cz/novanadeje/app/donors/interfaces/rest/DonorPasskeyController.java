@@ -35,7 +35,7 @@ class DonorPasskeyController {
     PasskeyCreationOptionsResponse options(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody PasskeyOptionsRequest request,
                                            HttpServletRequest http) {
         limiter.check(http.getRemoteAddr());
-        return PasskeyCreationOptionsResponse.of(passkeys.creationOptions(DonorId.of(jwt.getSubject()), SessionRoles.secondFactorVerified(jwt), request.password()));
+        return PasskeyCreationOptionsResponse.of(passkeys.creationOptions(DonorId.of(jwt.getSubject()), SessionRoles.secondFactorVerified(jwt), request.confirmation()));
     }
 
     @PostMapping

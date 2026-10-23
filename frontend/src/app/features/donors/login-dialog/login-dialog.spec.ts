@@ -474,6 +474,31 @@ describe('Given the sign-in dialog', () => {
       expect(element('.login-form')).not.toBeNull();
     });
 
+    it('with a passkey instead of a password, then no password is asked for and none is sent', async () => {
+      await fillInPerson();
+      await click('.type-switch[aria-labelledby="register-method-label"] button:nth-child(2)');
+      expect(element('#register-password')).toBeNull();
+      expect(element('.register-hint').textContent).toContain('hned po potvrzení e-mailu');
+
+      await submit('.register-form');
+      const request = http.expectOne('/api/donors/auth/register');
+      expect(request.request.body.password).toBeNull();
+      request.flush(null, { status: 202, statusText: 'Accepted' });
+      await settle();
+
+      expect(element('.reset-success h3').textContent).toContain('Zkontrolujte si e-mail');
+    });
+
+    it('in a browser without passkeys, then only the password is offered', async () => {
+      passkeys.available = false;
+      fixture = TestBed.createComponent(LoginDialog);
+      await settle();
+      await click('.tab-switch button:nth-child(2)');
+
+      expect(element('#register-method-label')).toBeNull();
+      expect(element('#register-password')).not.toBeNull();
+    });
+
     it('as a company, then the identification number travels with the registration', async () => {
       await click('.type-switch button:nth-child(2)');
       await fillIn('#register-name', 'Stavby Novák s.r.o.');

@@ -54,7 +54,7 @@ class BrandedEmailsTest {
                 .contains("lang=\"cs\"")
                 .contains("<title>Obnova hesla</title>")
                 .contains(">Obnova hesla</h1>")
-                .contains("Nastavit nové heslo")
+                .contains("Obnovit přístup")
                 .contains("Máte-li dotaz, napište nám na info@nfnn.cz.")
                 .contains("Nová naděje – nadační fond · IČO 27278794 · Jiráskova 436, 473 01 Nový Bor")
                 .contains("href=\"https://nfnn.cz\"")
@@ -84,7 +84,7 @@ class BrandedEmailsTest {
 
         assertThat(MailContents.html(email))
                 .contains("lang=\"en\"")
-                .contains("Set a new password")
+                .contains("Restore access")
                 .contains("If the button does not work, open this link:")
                 .contains("Kind regards")
                 .contains("Questions? Write to info@nfnn.cz.")

@@ -79,6 +79,7 @@ export class LoginDialog {
   protected readonly passkeysSupported = this.passkeyAuthenticator.supported();
   protected readonly mode = signal<LoginDialogMode>(this.dialog.initialMode());
   protected readonly donorType = signal<DonorType>('PERSON');
+  protected readonly signInMethod = signal<'password' | 'passkey'>('password');
   protected readonly loading = signal(false);
   protected readonly resetSent = signal(false);
   protected readonly registrationSent = signal(false);
@@ -231,7 +232,7 @@ export class LoginDialog {
           postalCode: this.registration.postalCode.trim(),
         },
         email: this.registration.email.trim(),
-        password: this.registration.password,
+        password: this.signInMethod() === 'password' ? this.registration.password : null,
         preferredLocale: preferredLocaleOf(this.document.documentElement.lang),
       })
       .subscribe({

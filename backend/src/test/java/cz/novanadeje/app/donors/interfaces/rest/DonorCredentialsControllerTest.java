@@ -35,7 +35,7 @@ class DonorCredentialsControllerTest {
             passwordLimiter.check(ADDRESS);
         }
 
-        assertThatThrownBy(() -> controller.changePassword(JWT, new ChangePasswordRequest("correct horse battery", "a brand new passphrase"),
+        assertThatThrownBy(() -> controller.changePassword(JWT, new ChangePasswordRequest("correct horse battery", null, "a brand new passphrase"),
                 requestFrom(ADDRESS)))
                 .isInstanceOf(RateLimitExceededException.class);
 
@@ -49,7 +49,7 @@ class DonorCredentialsControllerTest {
             emailLimiter.check(ADDRESS);
         }
 
-        assertThatThrownBy(() -> controller.requestEmailChange(JWT, new EmailChangeRequest("jana.nova@example.cz", "correct horse battery"),
+        assertThatThrownBy(() -> controller.requestEmailChange(JWT, new EmailChangeRequest("jana.nova@example.cz", "correct horse battery", null),
                 requestFrom(ADDRESS)))
                 .isInstanceOf(RateLimitExceededException.class);
 

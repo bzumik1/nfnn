@@ -72,7 +72,7 @@ class DonorRegistrationServiceTest {
         order.verify(donors).save(stored.capture());
         order.verify(emailVerification).issueLink(stored.getValue());
         Donor donor = stored.getValue();
-        assertThat(donor.passwordHash()).isEqualTo(new PasswordHash("$hash"));
+        assertThat(donor.passwordHash()).contains(new PasswordHash("$hash"));
         assertThat(donor.variableSymbol().value()).matches("[1-9][0-9]{9}");
         assertThat(donor.isEmailVerified()).isFalse();
         assertThat(donor.type()).isEqualTo(DonorType.PERSON);
@@ -83,6 +83,21 @@ class DonorRegistrationServiceTest {
         verify(donors, org.mockito.Mockito.times(2)).existsByVariableSymbol(any(VariableSymbol.class));
         verify(donors, never()).delete(any());
         verifyNoInteractions(events);
+    }
+
+    @Test
+    @DisplayName("Given no password, when a person registers, then the donor is stored without a password and nothing is hashed")
+    void should_store_donor_without_password_when_registered_given_no_password() {
+        when(donors.findByEmail(EMAIL)).thenReturn(Optional.empty());
+        when(donors.existsByVariableSymbol(any())).thenReturn(false);
+
+        service.register(personCommand("jana@example.cz", null));
+
+        ArgumentCaptor<Donor> stored = ArgumentCaptor.forClass(Donor.class);
+        verify(donors).save(stored.capture());
+        assertThat(stored.getValue().hasPassword()).isFalse();
+        verify(emailVerification).issueLink(stored.getValue());
+        verifyNoInteractions(passwordHasher);
     }
 
     @Test
@@ -135,7 +150,7 @@ class DonorRegistrationServiceTest {
         order.verify(emailVerification).issueLink(stored.getValue());
         assertThat(stored.getValue().id()).isNotEqualTo(unverified.id());
         assertThat(stored.getValue().name()).isEqualTo("Jana Svobodová");
-        assertThat(stored.getValue().passwordHash()).isEqualTo(new PasswordHash("$new"));
+        assertThat(stored.getValue().passwordHash()).contains(new PasswordHash("$new"));
         assertThat(stored.getValue().isEmailVerified()).isFalse();
         verifyNoInteractions(events);
     }

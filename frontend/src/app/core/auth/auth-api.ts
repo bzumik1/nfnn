@@ -6,6 +6,7 @@ import {
   AuthResponse,
   ChangePasswordRequest,
   ClientDescription,
+  Confirmation,
   ConnectedAppList,
   Donor,
   RedirectResponse,
@@ -76,6 +77,27 @@ export class AuthApi {
     return this.http.post<void>('/api/donors/auth/password-reset/confirm', { token, password });
   }
 
+  passkeyRecoveryOptions(token: string, code: string | null): Observable<PasskeyCreationOptions> {
+    return this.http.post<PasskeyCreationOptions>(
+      '/api/donors/auth/password-reset/passkey/options',
+      code === null ? { token } : { token, code },
+    );
+  }
+
+  recoverWithPasskey(
+    token: string,
+    challenge: string,
+    name: string,
+    credential: PasskeyRegistrationCredential,
+  ): Observable<Passkey> {
+    return this.http.post<Passkey>('/api/donors/auth/password-reset/passkey', {
+      token,
+      challenge,
+      name,
+      credential,
+    });
+  }
+
   profile(): Observable<Donor> {
     return this.http.get<Donor>('/api/donors/me');
   }
@@ -92,10 +114,15 @@ export class AuthApi {
     return this.http.post<void>('/api/donors/me/email-change', request);
   }
 
-  setupSecondFactor(password: string): Observable<SecondFactorEnrolment> {
-    return this.http.post<SecondFactorEnrolment>('/api/donors/me/second-factor/setup', {
-      password,
-    });
+  setupSecondFactor(confirmation: Confirmation): Observable<SecondFactorEnrolment> {
+    return this.http.post<SecondFactorEnrolment>(
+      '/api/donors/me/second-factor/setup',
+      confirmation,
+    );
+  }
+
+  removePassword(confirmation: Confirmation): Observable<AuthResponse> {
+    return this.http.post<AuthResponse>('/api/donors/me/password/remove', confirmation);
   }
 
   confirmSecondFactor(code: string): Observable<AuthResponse> {
@@ -110,8 +137,8 @@ export class AuthApi {
     return this.http.get<PasskeyList>('/api/donors/me/passkeys');
   }
 
-  passkeyCreationOptions(password: string): Observable<PasskeyCreationOptions> {
-    return this.http.post<PasskeyCreationOptions>('/api/donors/me/passkeys/options', { password });
+  passkeyCreationOptions(confirmation: Confirmation): Observable<PasskeyCreationOptions> {
+    return this.http.post<PasskeyCreationOptions>('/api/donors/me/passkeys/options', confirmation);
   }
 
   addPasskey(

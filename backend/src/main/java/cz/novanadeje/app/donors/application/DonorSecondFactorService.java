@@ -4,8 +4,7 @@ import cz.novanadeje.app.donors.domain.Donor;
 import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.donors.domain.DonorNotFound;
 import cz.novanadeje.app.donors.domain.DonorRepository;
-import cz.novanadeje.app.donors.domain.PasswordHasher;
-import cz.novanadeje.app.donors.domain.RawPassword;
+import cz.novanadeje.app.donors.domain.PasskeyConfirmationRejected;
 import cz.novanadeje.app.donors.domain.RefreshTokenRepository;
 import cz.novanadeje.app.donors.domain.SecondFactor;
 import cz.novanadeje.app.donors.domain.SecondFactorAlreadyEnabled;
@@ -14,10 +13,8 @@ import cz.novanadeje.app.donors.domain.SecondFactorNotEnabled;
 import cz.novanadeje.app.donors.domain.SecondFactorNotPending;
 import cz.novanadeje.app.donors.domain.SecondFactorRepository;
 import cz.novanadeje.app.donors.domain.TotpSecret;
-import cz.novanadeje.app.donors.domain.WrongPassword;
 import cz.novanadeje.app.shared.application.qr.QrCodeEncoder;
 import cz.novanadeje.app.shared.application.qr.QrErrorCorrection;
-import cz.novanadeje.app.shared.domain.error.RuleViolation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -34,7 +31,7 @@ public class DonorSecondFactorService {
     private final DonorRepository donors;
     private final SecondFactorRepository secondFactors;
     private final RefreshTokenRepository refreshTokens;
-    private final PasswordHasher passwordHasher;
+    private final DonorConfirmations confirmations;
     private final DonorSessionService sessions;
     private final DonorViews views;
     private final QrCodeEncoder qrCodes;
@@ -43,12 +40,12 @@ public class DonorSecondFactorService {
     private final Clock clock;
 
     public DonorSecondFactorService(DonorRepository donors, SecondFactorRepository secondFactors, RefreshTokenRepository refreshTokens,
-                                    PasswordHasher passwordHasher, DonorSessionService sessions, DonorViews views, QrCodeEncoder qrCodes,
+                                    DonorConfirmations confirmations, DonorSessionService sessions, DonorViews views, QrCodeEncoder qrCodes,
                                     SecondFactorSessionGuard sessionGuard, DonorSecondFactorProperties properties, Clock clock) {
         this.donors = donors;
         this.secondFactors = secondFactors;
         this.refreshTokens = refreshTokens;
-        this.passwordHasher = passwordHasher;
+        this.confirmations = confirmations;
         this.sessions = sessions;
         this.views = views;
         this.qrCodes = qrCodes;
@@ -57,10 +54,10 @@ public class DonorSecondFactorService {
         this.clock = clock;
     }
 
-    @Transactional
-    public SecondFactorEnrolment begin(DonorId donorId, boolean secondFactorVerified, String password) {
+    @Transactional(noRollbackFor = PasskeyConfirmationRejected.class)
+    public SecondFactorEnrolment begin(DonorId donorId, boolean secondFactorVerified, Confirmation confirmation) {
         Donor donor = load(donorId);
-        requireMatching(donor, password);
+        confirmations.confirm(donor, confirmation);
         sessionGuard.requireForFactorChange(donor, secondFactorVerified);
         if (secondFactors.findByDonor(donorId).filter(SecondFactor::isEnabled).isPresent()) {
             throw new SecondFactorAlreadyEnabled();
@@ -87,10 +84,10 @@ public class DonorSecondFactorService {
         return views.authenticated(donor, sessions.open(donor, true));
     }
 
-    @Transactional(noRollbackFor = SecondFactorCodeRejected.class)
-    public AuthenticatedDonor disable(DonorId donorId, String password, String code) {
+    @Transactional(noRollbackFor = {SecondFactorCodeRejected.class, PasskeyConfirmationRejected.class})
+    public AuthenticatedDonor disable(DonorId donorId, Confirmation confirmation, String code) {
         Donor donor = load(donorId);
-        requireMatching(donor, password);
+        confirmations.confirm(donor, confirmation);
         SecondFactor factor = secondFactors.findByDonor(donorId).filter(SecondFactor::isEnabled).orElseThrow(SecondFactorNotEnabled::new);
         Instant now = clock.instant();
         factor.check(code, now);
@@ -98,18 +95,6 @@ public class DonorSecondFactorService {
         refreshTokens.revokeAllOf(donorId, now);
         log.info("Second factor disabled for donor {}, every session revoked", donorId);
         return views.authenticated(donor, sessions.open(donor, false));
-    }
-
-    private void requireMatching(Donor donor, String password) {
-        RawPassword rawPassword;
-        try {
-            rawPassword = new RawPassword(password);
-        } catch (RuleViolation weak) {
-            throw new WrongPassword();
-        }
-        if (!passwordHasher.matches(rawPassword, donor.passwordHash())) {
-            throw new WrongPassword();
-        }
     }
 
     private Donor load(DonorId donorId) {

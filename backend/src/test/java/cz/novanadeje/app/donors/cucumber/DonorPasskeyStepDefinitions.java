@@ -1,9 +1,13 @@
 package cz.novanadeje.app.donors.cucumber;
 
 import cz.novanadeje.app.cucumber.ApiClient;
+import cz.novanadeje.app.cucumber.DonorRegistrations;
 import cz.novanadeje.app.cucumber.DonorSessions;
 import cz.novanadeje.app.cucumber.ScenarioDonors;
+import cz.novanadeje.app.cucumber.TotpCodes;
 import cz.novanadeje.app.donors.SoftwarePasskey;
+import cz.novanadeje.app.shared.domain.VariableSymbol;
+import cz.novanadeje.app.support.MailContents;
 import cz.novanadeje.app.support.RecordingMailSender;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
@@ -12,6 +16,7 @@ import jakarta.mail.Message;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import org.springframework.http.ResponseEntity;
+import org.springframework.jdbc.core.simple.JdbcClient;
 import tools.jackson.databind.JsonNode;
 
 import java.nio.ByteBuffer;
@@ -24,9 +29,12 @@ import java.util.Base64;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 import java.util.function.Function;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
@@ -38,6 +46,16 @@ public class DonorPasskeyStepDefinitions {
     private static final String SIGN_IN_OPTIONS_PATH = "/api/donors/auth/passkey/options";
     private static final String SIGN_IN_PATH = "/api/donors/auth/passkey";
     private static final String ADMIN_DONORS_PATH = "/api/admin/donors/";
+    private static final String PROFILE_PATH = "/api/donors/me";
+    private static final String PASSWORD_PATH = "/api/donors/me/password";
+    private static final String PASSWORD_REMOVAL_PATH = "/api/donors/me/password/remove";
+    private static final String EMAIL_CHANGE_PATH = "/api/donors/me/email-change";
+    private static final String SECOND_FACTOR_SETUP_PATH = "/api/donors/me/second-factor/setup";
+    private static final String SECOND_FACTOR_CONFIRM_PATH = "/api/donors/me/second-factor/confirm";
+    private static final String RECOVERY_OPTIONS_PATH = "/api/donors/auth/password-reset/passkey/options";
+    private static final String RECOVERY_PATH = "/api/donors/auth/password-reset/passkey";
+    private static final Pattern RESET_TOKEN_IN_LINK = Pattern.compile("obnova-hesla#token=([A-Za-z0-9_-]{43})");
+    private static final String REGISTERED_ADDRESS_STREET = "Dlouhá 12";
     private static final Duration MAIL_WAIT = Duration.ofSeconds(5);
     private static final SecureRandom RANDOM = new SecureRandom();
 
@@ -46,19 +64,161 @@ public class DonorPasskeyStepDefinitions {
     private final DonorSessions sessions;
     private final RecordingMailSender mailSender;
     private final Clock clock;
+    private final DonorRegistrations registrations;
+    private final TotpCodes totpCodes;
+    private final JdbcClient jdbc;
     private final Map<String, Map<String, CreatedPasskey>> passkeys = new HashMap<>();
     private final Map<String, String> registrationChallenges = new HashMap<>();
     private JsonNode creationOptions;
     private String creationOptionsAlias;
     private String signInChallenge;
+    private String recoveryChallenge;
 
     public DonorPasskeyStepDefinitions(ApiClient api, ScenarioDonors scenarioDonors, DonorSessions sessions, RecordingMailSender mailSender,
-                                       Clock clock) {
+                                       Clock clock, DonorRegistrations registrations, TotpCodes totpCodes, JdbcClient jdbc) {
         this.api = api;
         this.scenarioDonors = scenarioDonors;
         this.sessions = sessions;
         this.mailSender = mailSender;
         this.clock = clock;
+        this.registrations = registrations;
+        this.totpCodes = totpCodes;
+        this.jdbc = jdbc;
+    }
+
+    @Given("a person {string} is registered without a password")
+    public void aPersonIsRegisteredWithoutAPassword(String alias) {
+        String email = alias.toLowerCase(Locale.ROOT) + "@example.cz";
+        Map<String, Object> body = new HashMap<>();
+        body.put("type", "PERSON");
+        body.put("name", alias + " Nováková");
+        body.put("companyIdentifier", null);
+        body.put("address", Map.of("street", REGISTERED_ADDRESS_STREET, "city", "Ústí nad Labem", "postalCode", "400 01"));
+        body.put("email", email);
+        body.put("password", null);
+        registrations.registerAndConfirm(body);
+        JsonNode user = api.lastResponseJson().get("user");
+        scenarioDonors.remember(alias, UUID.fromString(user.get("id").asString()),
+                new VariableSymbol(user.get("variableSymbol").asString()));
+        scenarioDonors.rememberAccessToken(alias, api.lastResponseJson().get("accessToken").asString());
+        scenarioDonors.rememberCredentials(alias, email, null);
+    }
+
+    @Then("the donor profile of {string} says the account has no password")
+    public void theDonorProfileSaysTheAccountHasNoPassword(String alias) {
+        assertThat(profileOf(alias).get("hasPassword").asBoolean()).isFalse();
+    }
+
+    @Then("the donor profile of {string} says the account has a password")
+    public void theDonorProfileSaysTheAccountHasAPassword(String alias) {
+        assertThat(profileOf(alias).get("hasPassword").asBoolean()).isTrue();
+    }
+
+    @When("{string} asks to add a passkey without confirming it")
+    public void asksToAddAPasskeyWithoutConfirmingIt(String alias) {
+        asksToAddAPasskeyWith(alias, Map.of());
+    }
+
+    @When("{string} asks to add a passkey confirmed with the passkey {string}")
+    public void asksToAddAPasskeyConfirmedWithThePasskey(String alias, String name) {
+        asksToAddAPasskeyWith(alias, Map.of("passkey", passkeyConfirmation(alias, name)));
+    }
+
+    @When("{string} asks to add a passkey confirmed with the passkey {string} of {string}")
+    public void asksToAddAPasskeyConfirmedWithThePasskeyOf(String alias, String name, String owner) {
+        asksToAddAPasskeyWith(alias, Map.of("passkey", passkeyConfirmation(owner, name)));
+    }
+
+    @When("{string} asks to add a passkey confirmed with the passkey {string} answering a spent challenge")
+    public void asksToAddAPasskeyConfirmedAnsweringASpentChallenge(String alias, String name) {
+        Map<String, Object> confirmation = passkeyConfirmation(alias, name);
+        api.post(SIGN_IN_PATH, confirmation);
+        assertThat(api.lastResponse().getStatusCode().value()).withFailMessage("Sign-in answered %s", api.lastResponse().getBody()).isEqualTo(200);
+        asksToAddAPasskeyWith(alias, Map.of("passkey", confirmation));
+    }
+
+    @When("{string} starts the second factor set-up confirmed with the passkey {string}")
+    public void startsTheSecondFactorSetUpConfirmedWithThePasskey(String alias, String name) {
+        Map<String, Object> confirmation = passkeyConfirmation(alias, name);
+        sessions.actAs(alias);
+        api.post(SECOND_FACTOR_SETUP_PATH, Map.of("passkey", confirmation));
+    }
+
+    @Given("{string} turned the second factor on confirmed with the passkey {string}")
+    public void turnedTheSecondFactorOnConfirmedWithThePasskey(String alias, String name) {
+        startsTheSecondFactorSetUpConfirmedWithThePasskey(alias, name);
+        assertThat(api.lastResponse().getStatusCode().value()).withFailMessage("Set-up answered %s", api.lastResponse().getBody()).isEqualTo(200);
+        String secret = api.lastResponseJson().get("secret").asString();
+        scenarioDonors.rememberSecondFactorSecret(alias, secret);
+        ResponseEntity<String> confirmed = api.post(SECOND_FACTOR_CONFIRM_PATH, Map.of("code", totpCodes.freshCode(secret)));
+        assertThat(confirmed.getStatusCode().value()).withFailMessage("Confirmation answered %s", confirmed.getBody()).isEqualTo(200);
+        scenarioDonors.rememberAccessToken(alias, api.lastResponseJson().get("accessToken").asString());
+    }
+
+    @When("{string} asks to change the e-mail to {string} confirmed with the passkey {string}")
+    public void asksToChangeTheEmailConfirmedWithThePasskey(String alias, String newEmail, String name) {
+        Map<String, Object> confirmation = passkeyConfirmation(alias, name);
+        sessions.actAs(alias);
+        api.post(EMAIL_CHANGE_PATH, Map.of("newEmail", newEmail, "passkey", confirmation));
+    }
+
+    @When("{string} sets the password {string} confirmed with the passkey {string}")
+    public void setsThePasswordConfirmedWithThePasskey(String alias, String password, String name) {
+        Map<String, Object> confirmation = passkeyConfirmation(alias, name);
+        sessions.actAs(alias);
+        ResponseEntity<String> response = api.put(PASSWORD_PATH, Map.of("newPassword", password, "passkey", confirmation));
+        if (response.getStatusCode().value() == 200) {
+            adoptSession(alias);
+            scenarioDonors.rememberCredentials(alias, scenarioDonors.credentialsOf(alias).email(), password);
+        }
+    }
+
+    @When("{string} removes the password")
+    public void removesThePassword(String alias) {
+        Map<String, Object> confirmation = confirmationOf(alias);
+        sessions.actAs(alias);
+        ResponseEntity<String> response = api.post(PASSWORD_REMOVAL_PATH, confirmation);
+        if (response.getStatusCode().value() == 200) {
+            adoptSession(alias);
+            scenarioDonors.rememberCredentials(alias, scenarioDonors.credentialsOf(alias).email(), null);
+        }
+    }
+
+    @When("{string} asks for a new passkey with the link from the e-mail")
+    public void asksForANewPasskeyWithTheLink(String alias) {
+        asksForANewPasskey(Map.of("token", resetToken()));
+    }
+
+    @When("{string} asks for a new passkey with the link from the e-mail and code {string}")
+    public void asksForANewPasskeyWithTheLinkAndCode(String alias, String code) {
+        asksForANewPasskey(Map.of("token", resetToken(), "code", code));
+    }
+
+    @When("{string} asks for a new passkey with the link from the e-mail and the current code")
+    public void asksForANewPasskeyWithTheLinkAndTheCurrentCode(String alias) {
+        asksForANewPasskey(Map.of("token", resetToken(), "code", totpCodes.freshCode(scenarioDonors.secondFactorSecretOf(alias))));
+    }
+
+    @When("{string} adds the new passkey named {string} with the link from the e-mail")
+    public void addsTheNewPasskeyWithTheLink(String alias, String name) {
+        SoftwarePasskey key = SoftwarePasskey.forUser(scenarioDonors.idOf(alias));
+        String challenge = recoveryChallenge == null ? randomChallenge() : recoveryChallenge;
+        api.forgetCredentials();
+        ResponseEntity<String> response = api.post(RECOVERY_PATH,
+                Map.of("token", resetToken(), "challenge", challenge, "name", name, "credential", key.registration(challenge)));
+        if (response.getStatusCode().value() == 201) {
+            passkeys.computeIfAbsent(alias, ignored -> new LinkedHashMap<>())
+                    .put(name, new CreatedPasskey(key, api.lastResponseJson().get("id").asString()));
+        }
+    }
+
+    @Then("no session of {string} is live any more")
+    public void noSessionIsLiveAnyMore(String alias) {
+        Integer live = jdbc.sql("select count(*) from donor_refresh_token where donor_id = ? and revoked_at is null and used_at is null")
+                .param(scenarioDonors.idOf(alias))
+                .query(Integer.class)
+                .single();
+        assertThat(live).isZero();
     }
 
     @When("{string} asks to add a passkey with the right password")
@@ -68,8 +228,12 @@ public class DonorPasskeyStepDefinitions {
 
     @When("{string} asks to add a passkey with password {string}")
     public void asksToAddAPasskeyWithPassword(String alias, String password) {
+        asksToAddAPasskeyWith(alias, Map.of("password", password));
+    }
+
+    private void asksToAddAPasskeyWith(String alias, Map<String, ?> confirmation) {
         sessions.actAs(alias);
-        ResponseEntity<String> response = api.post(REGISTRATION_OPTIONS_PATH, Map.of("password", password));
+        ResponseEntity<String> response = api.post(REGISTRATION_OPTIONS_PATH, confirmation);
         if (response.getStatusCode().value() == 200) {
             creationOptions = api.lastResponseJson();
             creationOptionsAlias = alias;
@@ -126,8 +290,10 @@ public class DonorPasskeyStepDefinitions {
 
     @Given("{string} added a passkey named {string}")
     public void addedAPasskeyNamed(String alias, String name) {
+        int mailsBefore = mailSender.sent().size();
         addsAPasskeyNamed(alias, name);
         assertThat(api.lastResponse().getStatusCode().value()).withFailMessage("Adding a passkey answered %s", api.lastResponse().getBody()).isEqualTo(201);
+        await().atMost(MAIL_WAIT).untilAsserted(() -> assertThat(mailSender.sent()).hasSize(mailsBefore + 1));
     }
 
     @Given("{string} added {int} passkeys")
@@ -269,7 +435,7 @@ public class DonorPasskeyStepDefinitions {
     }
 
     private void register(String alias, String name, SoftwarePasskey key, Function<String, Map<String, Object>> credential) {
-        asksToAddAPasskeyWithTheRightPassword(alias);
+        asksToAddAPasskeyWith(alias, confirmationOf(alias));
         if (api.lastResponse().getStatusCode().value() != 200) {
             return;
         }
@@ -296,6 +462,53 @@ public class DonorPasskeyStepDefinitions {
             }
             api.authorize(accessToken);
         }
+    }
+
+    private Map<String, Object> confirmationOf(String alias) {
+        String password = scenarioDonors.credentialsOf(alias).password();
+        if (password != null) {
+            return Map.of("password", password);
+        }
+        Map<String, CreatedPasskey> keys = passkeys.getOrDefault(alias, Map.of());
+        if (keys.isEmpty()) {
+            return Map.of();
+        }
+        return Map.of("passkey", passkeyConfirmation(alias, keys.keySet().iterator().next()));
+    }
+
+    private Map<String, Object> passkeyConfirmation(String alias, String name) {
+        ResponseEntity<String> response = api.post(SIGN_IN_OPTIONS_PATH, Map.of());
+        assertThat(response.getStatusCode().value()).withFailMessage("Sign-in options answered %s", response.getBody()).isEqualTo(200);
+        String challenge = api.lastResponseJson().get("challenge").asString();
+        return Map.of("challenge", challenge, "credential", passkey(alias, name).key().assertion(challenge));
+    }
+
+    private void asksForANewPasskey(Map<String, ?> body) {
+        api.forgetCredentials();
+        ResponseEntity<String> response = api.post(RECOVERY_OPTIONS_PATH, body);
+        if (response.getStatusCode().value() == 200) {
+            recoveryChallenge = api.lastResponseJson().get("challenge").asString();
+        }
+    }
+
+    private String resetToken() {
+        await().atMost(MAIL_WAIT).untilAsserted(() -> assertThat(mailSender.sent()).isNotEmpty());
+        Matcher token = RESET_TOKEN_IN_LINK.matcher(MailContents.plainText(mailSender.sent().getLast()));
+        assertThat(token.find()).withFailMessage("No reset link in the last e-mail").isTrue();
+        return token.group(1);
+    }
+
+    private JsonNode profileOf(String alias) {
+        sessions.actAs(alias);
+        ResponseEntity<String> response = api.get(PROFILE_PATH);
+        assertThat(response.getStatusCode().value()).withFailMessage("Profile answered %s", response.getBody()).isEqualTo(200);
+        return api.lastResponseJson();
+    }
+
+    private void adoptSession(String alias) {
+        String accessToken = api.lastResponseJson().get("accessToken").asString();
+        scenarioDonors.rememberAccessToken(alias, accessToken);
+        api.authorize(accessToken);
     }
 
     private List<String> passkeyNames(String alias) {

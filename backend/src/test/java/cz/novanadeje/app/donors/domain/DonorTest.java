@@ -41,6 +41,30 @@ class DonorTest {
     }
 
     @Test
+    @DisplayName("Given no password, when a donor registers, then the account has no password and keeps a given one otherwise")
+    void should_have_no_password_when_registered_given_no_password() {
+        Donor passwordless = Donor.register(DonorId.newId(NOW), DonorType.PERSON, "Jana Nováková", null, ADDRESS, EMAIL, null, SYMBOL, LocaleCode.CS, NOW);
+        Donor withPassword = Donor.register(DonorId.newId(NOW), DonorType.PERSON, "Jana Nováková", null, ADDRESS, EMAIL, HASH, SYMBOL, LocaleCode.CS, NOW);
+
+        assertThat(passwordless.hasPassword()).isFalse();
+        assertThat(passwordless.passwordHash()).isEmpty();
+        assertThat(withPassword.hasPassword()).isTrue();
+        assertThat(withPassword.passwordHash()).contains(HASH);
+    }
+
+    @Test
+    @DisplayName("Given a donor with a password, when the password is removed and later set again, then the account follows")
+    void should_follow_when_password_removed_and_set_again_given_donor_with_password() {
+        Donor donor = Donor.register(DonorId.newId(NOW), DonorType.PERSON, "Jana Nováková", null, ADDRESS, EMAIL, HASH, SYMBOL, LocaleCode.CS, NOW);
+
+        donor.removePassword();
+
+        assertThat(donor.hasPassword()).isFalse();
+        donor.changePassword(new PasswordHash("$2a$12$other"));
+        assertThat(donor.passwordHash()).contains(new PasswordHash("$2a$12$other"));
+    }
+
+    @Test
     @DisplayName("Given a fresh registration, when the e-mail is verified, then the donor remembers when and is verified")
     void should_remember_time_when_email_verified_given_fresh_registration() {
         Donor donor = Donor.register(DonorId.newId(NOW), DonorType.PERSON, "Jana Nováková", null, ADDRESS, EMAIL, HASH, SYMBOL, LocaleCode.CS, NOW);
@@ -219,8 +243,8 @@ class DonorTest {
         assertThat(donor.type()).isEqualTo(DonorType.COMPANY);
         assertThat(donor.address()).isEqualTo(ErasedPersonalData.ADDRESS);
         assertThat(donor.email()).isEqualTo(new EmailAddress("erased-" + id.value() + "@erased.invalid"));
-        assertThat(donor.passwordHash()).isNotEqualTo(HASH);
-        assertThat(donor.passwordHash().value()).startsWith("$2a$12$");
+        assertThat(donor.passwordHash()).isEmpty();
+        assertThat(donor.hasPassword()).isFalse();
         assertThat(donor.roles()).isEmpty();
         assertThat(donor.isEmailVerified()).isFalse();
         assertThat(donor.variableSymbol()).isEqualTo(SYMBOL);

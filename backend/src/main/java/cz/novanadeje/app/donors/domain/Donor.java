@@ -15,7 +15,6 @@ import java.util.Set;
 public final class Donor {
 
     public static final int MAX_NAME_LENGTH = 160;
-    static final PasswordHash ERASED_PASSWORD_HASH = new PasswordHash("$2a$12$d.Mm0cokxokrs8I.FUbkheX.XAfiajXc0IC06zGzHjAPmJqpwF/cK");
 
     private final DonorId id;
     private final DonorType type;
@@ -40,7 +39,7 @@ public final class Donor {
         this.companyIdentifier = companyIdentifier;
         this.address = require(address, "Address");
         this.email = require(email, "Email");
-        this.passwordHash = require(passwordHash, "Password hash");
+        this.passwordHash = passwordHash;
         this.variableSymbol = require(variableSymbol, "Variable symbol");
         this.preferredLocale = require(preferredLocale, "Preferred locale");
         this.roles = EnumSet.noneOf(Role.class);
@@ -83,7 +82,7 @@ public final class Donor {
         this.companyIdentifier = null;
         this.address = ErasedPersonalData.ADDRESS;
         this.email = ErasedPersonalData.emailFor(id.value());
-        this.passwordHash = ERASED_PASSWORD_HASH;
+        this.passwordHash = null;
         this.roles.clear();
         this.emailVerifiedAt = null;
     }
@@ -121,6 +120,14 @@ public final class Donor {
         this.passwordHash = require(newPasswordHash, "Password hash");
     }
 
+    public void removePassword() {
+        this.passwordHash = null;
+    }
+
+    public boolean hasPassword() {
+        return passwordHash != null;
+    }
+
     public void changeEmail(EmailAddress newEmail) {
         if (emailVerifiedAt == null) {
             throw new IllegalStateException("The e-mail of donor " + id + " is not verified yet");
@@ -155,8 +162,8 @@ public final class Donor {
         return email;
     }
 
-    public PasswordHash passwordHash() {
-        return passwordHash;
+    public Optional<PasswordHash> passwordHash() {
+        return Optional.ofNullable(passwordHash);
     }
 
     public VariableSymbol variableSymbol() {

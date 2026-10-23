@@ -3,7 +3,7 @@
   <p class="passkeys-intro" i18n="@@donor.passkeys.intro">
     Přístupový klíč (passkey) vás přihlásí otiskem prstu, obličejem nebo zámkem obrazovky, bez
     hesla. Uloží ho Hesla od Applu, Správce hesel Google nebo Windows Hello a na podvodné stránce
-    nefunguje. Přihlášení klíčem platí i jako dvoufaktorové ověření. Heslo vám zůstává.
+    nefunguje. Přihlášení klíčem platí i jako dvoufaktorové ověření.
   </p>
 
   @if (loadError()) {
@@ -68,6 +68,10 @@
                   </button>
                 </div>
               </div>
+            } @else if (lastSignInMethod()) {
+              <p class="passkeys-hint" i18n="@@donor.passkeys.lastOne">
+                Jediný způsob přihlášení. Odebrat půjde, až přidáte další klíč nebo nastavíte heslo.
+              </p>
             } @else {
               <button
                 type="button"
@@ -82,9 +86,21 @@
           </li>
         }
       </ul>
-    } @else {
+      @if (!hasPassword() && list.length === 1) {
+        <p class="passkeys-hint" i18n="@@donor.passkeys.addSecond">
+          Účet nemá heslo, proto doporučujeme mít klíč aspoň ve dvou zařízeních, třeba v telefonu a
+          v počítači. Když o všechny klíče přijdete, přístup obnovíte odkazem z e-mailu přes
+          „Zapomenuté heslo“.
+        </p>
+      }
+    } @else if (hasPassword()) {
       <p class="passkeys-empty" i18n="@@donor.passkeys.empty">
         Zatím nemáte žádný přístupový klíč. Přihlašujete se e-mailem a heslem.
+      </p>
+    } @else {
+      <p class="passkeys-warning" i18n="@@donor.passkeys.emptyPasswordless">
+        Účet nemá heslo ani přístupový klíč. Vytvořte si klíč hned; jinak se příště přihlásíte jen
+        přes odkaz z e-mailu („Zapomenuté heslo“).
       </p>
     }
   } @else if (!loadError()) {
@@ -107,9 +123,24 @@
       novalidate
     >
       <h3 class="passkeys-form-title" i18n="@@donor.passkeys.form.title">Nový přístupový klíč</h3>
-      <p class="passkeys-form-intro" i18n="@@donor.passkeys.form.intro">
-        Po potvrzení heslem vás zařízení požádá o otisk prstu, obličej nebo PIN a klíč uloží.
-      </p>
+      @switch (confirmation()) {
+        @case ('password') {
+          <p class="passkeys-form-intro" i18n="@@donor.passkeys.form.intro">
+            Po potvrzení heslem vás zařízení požádá o otisk prstu, obličej nebo PIN a klíč uloží.
+          </p>
+        }
+        @case ('passkey') {
+          <p class="passkeys-form-intro" i18n="@@donor.passkeys.form.introPasskey">
+            Zařízení vás nejdřív požádá o potvrzení jedním z vašich klíčů a pak nový klíč uloží.
+            Klíč v jiném zařízení potvrdíte naskenováním QR kódu telefonem.
+          </p>
+        }
+        @default {
+          <p class="passkeys-form-intro" i18n="@@donor.passkeys.form.introFirst">
+            Zařízení vás požádá o otisk prstu, obličej nebo PIN a klíč uloží.
+          </p>
+        }
+      }
       <app-form-field
         label="Název klíče"
         i18n-label="@@donor.passkeys.name"
@@ -128,24 +159,26 @@
           [maxlength]="nameMaxLength"
         />
       </app-form-field>
-      <app-form-field
-        label="Současné heslo"
-        i18n-label="@@donor.account.currentPassword"
-        [messages]="passwordMessages"
-      >
-        <app-password-reveal>
-          <input
-            appFormControl
-            id="passkey-password"
-            name="password"
-            type="password"
-            autocomplete="current-password"
-            [(ngModel)]="password"
-            required
-            maxlength="128"
-          />
-        </app-password-reveal>
-      </app-form-field>
+      @if (confirmation() === 'password') {
+        <app-form-field
+          label="Současné heslo"
+          i18n-label="@@donor.account.currentPassword"
+          [messages]="passwordMessages"
+        >
+          <app-password-reveal>
+            <input
+              appFormControl
+              id="passkey-password"
+              name="password"
+              type="password"
+              autocomplete="current-password"
+              [(ngModel)]="password"
+              required
+              maxlength="128"
+            />
+          </app-password-reveal>
+        </app-form-field>
+      }
 
       @if (error()) {
         <p class="form-error" role="alert">{{ error() }}</p>

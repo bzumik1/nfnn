@@ -6,7 +6,16 @@ import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
-import { authResponse, problem } from '../../../core/auth/testing/donor-fixtures';
+import { PasskeyAuthenticator } from '../../../core/auth/passkey-authenticator';
+import {
+  authResponse,
+  FakePasskeyAuthenticator,
+  passkeyCreationOptions,
+  problem,
+  SAMPLE_CHALLENGE,
+  SAMPLE_REGISTRATION,
+  samplePasskey,
+} from '../../../core/auth/testing/donor-fixtures';
 import { PasswordReset } from './password-reset';
 
 describe('Given the page that sets a new password from the e-mail link', () => {
@@ -232,5 +241,141 @@ describe('Given the page that sets a new password from the e-mail link', () => {
       expect(dialog.isOpen()).toBe(true);
       expect(dialog.initialMode()).toBe('reset');
     });
+  });
+});
+
+describe('Given the reset link opened in a browser with passkeys', () => {
+  const OPTIONS_URL = '/api/donors/auth/password-reset/passkey/options';
+  const RECOVERY_URL = '/api/donors/auth/password-reset/passkey';
+  let harness: RouterTestingHarness;
+  let http: HttpTestingController;
+  let passkeys: FakePasskeyAuthenticator;
+  let dialog: LoginDialogService;
+
+  beforeEach(async () => {
+    localStorage.clear();
+    passkeys = new FakePasskeyAuthenticator();
+    TestBed.configureTestingModule({
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([{ path: 'obnova-hesla', component: PasswordReset }]),
+        { provide: PasskeyAuthenticator, useValue: passkeys },
+      ],
+    });
+    http = TestBed.inject(HttpTestingController);
+    dialog = TestBed.inject(LoginDialogService);
+    harness = await RouterTestingHarness.create('/obnova-hesla#token=abc');
+    await settle();
+  });
+
+  afterEach(() => http.verify());
+
+  async function settle(): Promise<void> {
+    harness.detectChanges();
+    await harness.fixture.whenStable();
+  }
+
+  function element<T extends HTMLElement>(selector: string): T {
+    return harness.routeNativeElement!.querySelector(selector) as T;
+  }
+
+  async function fillIn(selector: string, value: string): Promise<void> {
+    const input = element<HTMLInputElement>(selector);
+    input.value = value;
+    input.dispatchEvent(new Event('input'));
+    await settle();
+  }
+
+  async function choosePasskey(): Promise<void> {
+    element<HTMLButtonElement>('.method-switch button:nth-child(2)').click();
+    await settle();
+  }
+
+  async function submit(): Promise<void> {
+    element<HTMLFormElement>('form').dispatchEvent(new Event('submit'));
+    await settle();
+  }
+
+  it('when it opens, then it offers a new password or a new passkey with the password chosen', () => {
+    expect(element('#password-reset-title').textContent).toContain('Obnovte si přístup');
+    expect(element('.method-switch button:nth-child(1)').getAttribute('aria-checked')).toBe('true');
+    expect(element('#reset-password')).not.toBeNull();
+  });
+
+  it('when a new passkey is created, then the link and the device register it and the page asks to sign in with it', async () => {
+    await choosePasskey();
+    await fillIn('#reset-passkey-name', 'Nový telefon');
+    await submit();
+
+    const options = http.expectOne(OPTIONS_URL);
+    expect(options.request.body).toEqual({ token: 'abc' });
+    options.flush(passkeyCreationOptions());
+    const recovery = await vi.waitFor(() => http.expectOne(RECOVERY_URL));
+    expect(recovery.request.body).toEqual({
+      token: 'abc',
+      challenge: SAMPLE_CHALLENGE,
+      name: 'Nový telefon',
+      credential: SAMPLE_REGISTRATION,
+    });
+    recovery.flush(samplePasskey({ name: 'Nový telefon' }), {
+      status: 201,
+      statusText: 'Created',
+    });
+    await settle();
+
+    expect(element('#password-reset-title').textContent).toContain('Přístupový klíč je uložený');
+    element<HTMLButtonElement>('.form-submit').click();
+    expect(dialog.isOpen()).toBe(true);
+  });
+
+  it('when the account has the code from the app on, then the page asks for it and sends it along', async () => {
+    await choosePasskey();
+    await fillIn('#reset-passkey-name', 'Nový telefon');
+    await submit();
+    http
+      .expectOne(OPTIONS_URL)
+      .flush(problem('donors/second-factor-code-required', 'Zadejte kód z aplikace'), {
+        status: 400,
+        statusText: 'Bad Request',
+      });
+    await settle();
+
+    expect(element('.form-error')).toBeNull();
+    expect(element('#reset-passkey-code-hint').textContent).toContain(
+      'zapnuté dvoufaktorové ověření',
+    );
+    expect(document.activeElement).toBe(element('#reset-passkey-code'));
+    await fillIn('#reset-passkey-code', '287082');
+    await submit();
+
+    const options = http.expectOne(OPTIONS_URL);
+    expect(options.request.body).toEqual({ token: 'abc', code: '287082' });
+    options.flush(passkeyCreationOptions());
+    (await vi.waitFor(() => http.expectOne(RECOVERY_URL))).flush(samplePasskey(), {
+      status: 201,
+      statusText: 'Created',
+    });
+    await settle();
+  });
+
+  it('when an administrator opens the link, then the reason from the server is shown and no key is created', async () => {
+    await choosePasskey();
+    await fillIn('#reset-passkey-name', 'Nový telefon');
+    await submit();
+    http
+      .expectOne(OPTIONS_URL)
+      .flush(
+        problem(
+          'donors/administrator-recovery-refused',
+          'Účet správce se takto neobnovuje',
+          'Požádejte jiného správce.',
+        ),
+        { status: 403, statusText: 'Forbidden' },
+      );
+    await settle();
+
+    expect(element('.form-error').textContent).toContain('Účet správce se takto neobnovuje');
+    expect(passkeys.created).toHaveLength(0);
   });
 });

@@ -5,20 +5,18 @@ import cz.novanadeje.app.donors.domain.Donor;
 import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.donors.domain.DonorNotFound;
 import cz.novanadeje.app.donors.domain.DonorRepository;
+import cz.novanadeje.app.donors.domain.LastSignInMethod;
 import cz.novanadeje.app.donors.domain.LinkSecret;
 import cz.novanadeje.app.donors.domain.Passkey;
 import cz.novanadeje.app.donors.domain.PasskeyChallenge;
 import cz.novanadeje.app.donors.domain.PasskeyChallengeRepository;
+import cz.novanadeje.app.donors.domain.PasskeyConfirmationRejected;
 import cz.novanadeje.app.donors.domain.PasskeyId;
 import cz.novanadeje.app.donors.domain.PasskeyLimitReached;
 import cz.novanadeje.app.donors.domain.PasskeyNotFound;
 import cz.novanadeje.app.donors.domain.PasskeyRejected;
 import cz.novanadeje.app.donors.domain.PasskeyRepository;
 import cz.novanadeje.app.donors.domain.PasskeyUserHandle;
-import cz.novanadeje.app.donors.domain.PasswordHasher;
-import cz.novanadeje.app.donors.domain.RawPassword;
-import cz.novanadeje.app.donors.domain.WrongPassword;
-import cz.novanadeje.app.shared.domain.error.RuleViolation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
@@ -37,7 +35,7 @@ public class DonorPasskeyService {
     private final DonorRepository donors;
     private final PasskeyRepository passkeys;
     private final PasskeyChallengeRepository challenges;
-    private final PasswordHasher passwordHasher;
+    private final DonorConfirmations confirmations;
     private final PasskeyCeremonies ceremonies;
     private final PasskeyProperties properties;
     private final SecondFactorSessionGuard sessionGuard;
@@ -45,12 +43,12 @@ public class DonorPasskeyService {
     private final Clock clock;
 
     public DonorPasskeyService(DonorRepository donors, PasskeyRepository passkeys, PasskeyChallengeRepository challenges,
-                               PasswordHasher passwordHasher, PasskeyCeremonies ceremonies, PasskeyProperties properties,
+                               DonorConfirmations confirmations, PasskeyCeremonies ceremonies, PasskeyProperties properties,
                                SecondFactorSessionGuard sessionGuard, ApplicationEventPublisher events, Clock clock) {
         this.donors = donors;
         this.passkeys = passkeys;
         this.challenges = challenges;
-        this.passwordHasher = passwordHasher;
+        this.confirmations = confirmations;
         this.ceremonies = ceremonies;
         this.properties = properties;
         this.sessionGuard = sessionGuard;
@@ -58,11 +56,18 @@ public class DonorPasskeyService {
         this.clock = clock;
     }
 
-    @Transactional
-    public PasskeyCreationOptions creationOptions(DonorId donorId, boolean secondFactorVerified, String password) {
+    @Transactional(noRollbackFor = PasskeyConfirmationRejected.class)
+    public PasskeyCreationOptions creationOptions(DonorId donorId, boolean secondFactorVerified, Confirmation confirmation) {
         Donor donor = load(donorId);
-        requireMatching(donor, password);
+        if (!confirmation.isEmpty() || donor.hasPassword() || passkeys.countByDonor(donorId) > 0) {
+            confirmations.confirm(donor, confirmation);
+        }
         sessionGuard.requireForFactorChange(donor, secondFactorVerified);
+        return optionsFor(donor);
+    }
+
+    PasskeyCreationOptions optionsFor(Donor donor) {
+        DonorId donorId = donor.id();
         Instant now = clock.instant();
         challenges.deleteExpiredAt(now);
         LinkSecret challenge = LinkSecret.generate();
@@ -77,7 +82,11 @@ public class DonorPasskeyService {
 
     @Transactional(noRollbackFor = PasskeyRejected.class)
     public PasskeyView register(DonorId donorId, String challenge, String name, PasskeyAttestation attestation) {
-        Donor donor = load(donorId);
+        return registerFor(load(donorId), challenge, name, attestation);
+    }
+
+    PasskeyView registerFor(Donor donor, String challenge, String name, PasskeyAttestation attestation) {
+        DonorId donorId = donor.id();
         Instant now = clock.instant();
         LinkSecret secret = parse(challenge);
         PasskeyChallenge issued = challenges.findByChallengeHash(secret.hash())
@@ -110,7 +119,11 @@ public class DonorPasskeyService {
         Passkey passkey = passkeys.findById(passkeyId)
                 .filter(found -> found.belongsTo(donorId))
                 .orElseThrow(() -> new PasskeyNotFound(passkeyId));
-        sessionGuard.requireForFactorChange(load(donorId), secondFactorVerified);
+        Donor donor = load(donorId);
+        sessionGuard.requireForFactorChange(donor, secondFactorVerified);
+        if (!donor.hasPassword() && passkeys.countByDonor(donorId) <= 1) {
+            throw new LastSignInMethod(donorId);
+        }
         passkeys.delete(passkey.id());
         log.info("Passkey {} removed by donor {}", passkeyId, donorId);
     }
@@ -120,18 +133,6 @@ public class DonorPasskeyService {
             return new LinkSecret(challenge);
         } catch (IllegalArgumentException malformed) {
             throw new PasskeyRejected();
-        }
-    }
-
-    private void requireMatching(Donor donor, String password) {
-        RawPassword rawPassword;
-        try {
-            rawPassword = new RawPassword(password);
-        } catch (RuleViolation weak) {
-            throw new WrongPassword();
-        }
-        if (!passwordHasher.matches(rawPassword, donor.passwordHash())) {
-            throw new WrongPassword();
         }
     }
 

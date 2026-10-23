@@ -3,9 +3,14 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { authInterceptor } from '../../../../core/auth/auth-interceptor';
 import { AuthStore } from '../../../../core/auth/auth-store';
+import { PasskeyAuthenticator } from '../../../../core/auth/passkey-authenticator';
 import {
   authResponse,
+  FakePasskeyAuthenticator,
+  passkeySignInOptions,
   problem,
+  SAMPLE_ASSERTION,
+  SAMPLE_CHALLENGE,
   sampleDonor,
   secondFactorEnrolment,
 } from '../../../../core/auth/testing/donor-fixtures';
@@ -94,7 +99,7 @@ describe('Given the sign-in data card in the overview', () => {
     expect(element('.account-data dd').textContent?.trim()).toBe('jana@example.cz');
     expect(
       Array.from(root().querySelectorAll('.account-data dd')).map((dd) => dd.textContent?.trim()),
-    ).toEqual(['jana@example.cz', 'Vypnuté']);
+    ).toEqual(['jana@example.cz', 'Nastavené', 'Vypnuté']);
     expect(element('.account-hint')).toBeNull();
     expect(
       Array.from(root().querySelectorAll('.account-action')).map((b) => b.textContent?.trim()),
@@ -184,7 +189,7 @@ describe('Given the sign-in data card in the overview', () => {
           Array.from(root().querySelectorAll('.account-data dd')).map((dd) =>
             dd.textContent?.trim(),
           ),
-        ).toEqual(['jana@example.cz', 'Zapnuté']);
+        ).toEqual(['jana@example.cz', 'Nastavené', 'Zapnuté']);
         expect(document.activeElement?.textContent?.trim()).toBe('Vypnout dvoufaktorové ověření');
         store.updateProfile({}).subscribe();
         expect(http.expectOne('/api/donors/me').request.headers.get('Authorization')).toBe(
@@ -404,6 +409,42 @@ describe('Given the sign-in data card in the overview', () => {
     });
   });
 
+  describe('when the donor has a passkey and removes the password', () => {
+    beforeEach(async () => {
+      fixture.componentRef.setInput('passkeyCount', 1);
+      await settle();
+      await clickButton('Odebrat heslo');
+    });
+
+    it('then the password confirms it, the new session is adopted and the card offers to set one again', async () => {
+      expect(document.activeElement).toBe(element('#account-remove-password'));
+      await fillIn('#account-remove-password', 'correct horse battery');
+
+      await submit();
+      const request = http.expectOne({ method: 'POST', url: '/api/donors/me/password/remove' });
+      expect(request.request.body).toEqual({ password: 'correct horse battery' });
+      request.flush(authResponse('token-2', sampleDonor({ hasPassword: false })));
+      await settle();
+
+      expect(element('.account-status').textContent).toContain('Heslo jsme odebrali.');
+      expect(
+        Array.from(root().querySelectorAll('.account-data dd')).map((dd) => dd.textContent?.trim()),
+      ).toEqual(['jana@example.cz', 'Bez hesla, jen přístupové klíče', 'Vypnuté']);
+      expect(
+        Array.from(root().querySelectorAll('.account-action')).map((b) => b.textContent?.trim()),
+      ).toEqual(['Změnit e-mail', 'Nastavit heslo', 'Zapnout dvoufaktorové ověření']);
+    });
+  });
+
+  it('when the donor has no passkey, then the password cannot be removed', async () => {
+    fixture.componentRef.setInput('passkeyCount', 0);
+    await settle();
+
+    expect(
+      Array.from(root().querySelectorAll('.account-action')).map((b) => b.textContent?.trim()),
+    ).not.toContain('Odebrat heslo');
+  });
+
   describe('when the donor changes the password', () => {
     beforeEach(() => clickButton('Změnit heslo'));
 
@@ -581,5 +622,134 @@ describe("Given an administrator's sign-in data card", () => {
 
     expect(element('.connections [role="alert"]')).toBeNull();
     expect(element('.connections-empty')).not.toBeNull();
+  });
+});
+
+describe('Given the sign-in data card of a donor without a password', () => {
+  let fixture: ComponentFixture<AccountCard>;
+  let http: HttpTestingController;
+  let passkeys: FakePasskeyAuthenticator;
+
+  beforeEach(async () => {
+    passkeys = new FakePasskeyAuthenticator();
+    await TestBed.configureTestingModule({
+      imports: [AccountCard],
+      providers: [
+        provideHttpClient(withInterceptors([authInterceptor])),
+        provideHttpClientTesting(),
+        { provide: PasskeyAuthenticator, useValue: passkeys },
+      ],
+    }).compileComponents();
+    http = TestBed.inject(HttpTestingController);
+    TestBed.inject(AuthStore).signInWithPasskey().subscribe();
+    http.expectOne('/api/donors/auth/passkey/options').flush(passkeySignInOptions());
+    const signIn = await vi.waitFor(() => http.expectOne('/api/donors/auth/passkey'));
+    signIn.flush(authResponse('token-1', sampleDonor({ hasPassword: false })));
+    passkeys.requested.length = 0;
+    fixture = TestBed.createComponent(AccountCard);
+    fixture.componentRef.setInput('passkeyCount', 1);
+    await settle();
+  });
+
+  afterEach(() => http.verify());
+
+  const root = () => fixture.nativeElement as HTMLElement;
+
+  function element<T extends HTMLElement>(selector: string): T {
+    return root().querySelector(selector) as T;
+  }
+
+  async function settle(): Promise<void> {
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+  }
+
+  async function clickButton(text: string): Promise<void> {
+    const button = Array.from(root().querySelectorAll('button')).find((candidate) =>
+      candidate.textContent?.includes(text),
+    );
+    button?.click();
+    await settle();
+  }
+
+  async function fillIn(selector: string, value: string): Promise<void> {
+    const input = element<HTMLInputElement>(selector);
+    input.value = value;
+    input.dispatchEvent(new Event('input'));
+    await settle();
+  }
+
+  async function submit(): Promise<void> {
+    element<HTMLFormElement>('.account-form').dispatchEvent(new Event('submit'));
+    await settle();
+  }
+
+  it('when it opens, then it says the account has no password and offers to set one, not to remove it', () => {
+    expect(
+      Array.from(root().querySelectorAll('.account-data dd')).map((dd) => dd.textContent?.trim()),
+    ).toEqual(['jana@example.cz', 'Bez hesla, jen přístupové klíče', 'Vypnuté']);
+    expect(
+      Array.from(root().querySelectorAll('.account-action')).map((b) => b.textContent?.trim()),
+    ).toEqual(['Změnit e-mail', 'Nastavit heslo', 'Zapnout dvoufaktorové ověření']);
+  });
+
+  it('when the e-mail changes, then a passkey confirms it instead of the password', async () => {
+    await clickButton('Změnit e-mail');
+    expect(element('#account-email-password')).toBeNull();
+    expect(element('.account-form').textContent).toContain('jedním z vašich přístupových klíčů');
+    await fillIn('#account-new-email', 'jana.nova@example.cz');
+
+    await submit();
+    http.expectOne('/api/donors/auth/passkey/options').flush(passkeySignInOptions());
+    const request = await vi.waitFor(() => http.expectOne('/api/donors/me/email-change'));
+    expect(request.request.body).toEqual({
+      newEmail: 'jana.nova@example.cz',
+      passkey: { challenge: SAMPLE_CHALLENGE, credential: SAMPLE_ASSERTION },
+    });
+    request.flush(null, { status: 202, statusText: 'Accepted' });
+    await settle();
+
+    expect(element('.account-status').textContent).toContain('jana.nova@example.cz');
+  });
+
+  it('when a password is set, then only the new one is asked for and a passkey confirms it', async () => {
+    await clickButton('Nastavit heslo');
+    expect(element('h3').textContent).toContain('Nastavení hesla');
+    expect(element('#account-current-password')).toBeNull();
+    expect(document.activeElement).toBe(element('#account-new-password'));
+    await fillIn('#account-new-password', 'a brand new passphrase');
+    await fillIn('#account-new-password-confirm', 'a brand new passphrase');
+
+    await submit();
+    http.expectOne('/api/donors/auth/passkey/options').flush(passkeySignInOptions());
+    const request = await vi.waitFor(() => http.expectOne('/api/donors/me/password'));
+    expect(request.request.body).toEqual({
+      passkey: { challenge: SAMPLE_CHALLENGE, credential: SAMPLE_ASSERTION },
+      newPassword: 'a brand new passphrase',
+    });
+    request.flush(authResponse('token-2'));
+    await settle();
+
+    expect(element('.account-status').textContent).toContain('Heslo je nastavené.');
+    expect(
+      Array.from(root().querySelectorAll('.account-action')).map((b) => b.textContent?.trim()),
+    ).toContain('Odebrat heslo');
+  });
+
+  it('when the device does not confirm the passkey, then the form stays and says what to do', async () => {
+    passkeys.failure = 'cancelled';
+    await clickButton('Zapnout dvoufaktorové ověření');
+    expect(element('.account-form-intro').textContent).toContain('obnovovat přístup');
+
+    await submit();
+    http.expectOne('/api/donors/auth/passkey/options').flush(passkeySignInOptions());
+    await vi.waitFor(() => expect(element('.account-form .form-error')).not.toBeNull());
+    await settle();
+
+    expect(element('.account-form .form-error').textContent).toContain(
+      'Změnu se nepodařilo potvrdit přístupovým klíčem',
+    );
+    http.expectNone('/api/donors/me/second-factor/setup');
   });
 });
