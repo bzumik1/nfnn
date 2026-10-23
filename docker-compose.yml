@@ -50,6 +50,16 @@ services:
     volumes:
       - backend-secrets:/secrets
 
+  mcp:
+    build:
+      context: ./mcp
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      LOG_FILE: ""
+
   frontend:
     build:
       context: ./frontend
@@ -57,6 +67,7 @@ services:
     restart: unless-stopped
     depends_on:
       - backend
+      - mcp
     ports:
       - "${FRONTEND_PORT:-8080}:80"
 
