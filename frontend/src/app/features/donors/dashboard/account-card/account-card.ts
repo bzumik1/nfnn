@@ -14,8 +14,15 @@ import {
 } from '@angular/core';
 import { FormsModule, NgForm } from '@angular/forms';
 import { describeProblem, problemTypeEndsWith } from '../../../../core/auth/api-problem';
+import { AuthApi } from '../../../../core/auth/auth-api';
 import { AuthStore } from '../../../../core/auth/auth-store';
-import { PASSWORD_MIN_LENGTH, SecondFactorEnrolment } from '../../../../core/auth/donor';
+import {
+  ConnectedApp,
+  PASSWORD_MIN_LENGTH,
+  SecondFactorEnrolment,
+} from '../../../../core/auth/donor';
+import { formatDonationDate } from '../../../donations/donation-date';
+import { describeScopes } from '../../connect-app/oauth-scopes';
 import { CopyButton } from '../../../../shared/ui/copy-button/copy-button';
 import { FocusFirstInvalid } from '../../../../shared/ui/form-field/focus-first-invalid';
 import { FormControlDirective } from '../../../../shared/ui/form-field/form-control';
@@ -43,6 +50,7 @@ const SECRET_GROUP = 4;
 })
 export class AccountCard {
   private readonly auth = inject(AuthStore);
+  private readonly authApi = inject(AuthApi);
   private readonly injector = inject(Injector);
 
   readonly sessionEnded = output<void>();
@@ -74,6 +82,11 @@ export class AccountCard {
     return secret.match(new RegExp(`.{1,${SECRET_GROUP}}`, 'g'))?.join(' ') ?? '';
   });
   protected readonly passwordMinLength = PASSWORD_MIN_LENGTH;
+  protected readonly isAdmin = this.auth.isAdmin;
+  protected readonly connections = signal<ConnectedApp[] | null>(null);
+  protected readonly connectionsError = signal('');
+  protected readonly disconnecting = signal<string | null>(null);
+  protected readonly disconnected = signal('');
 
   protected readonly newEmailMessages = {
     required: $localize`:@@donor.account.newEmail.required:Vyplňte prosím novou e-mailovou adresu.`,
@@ -102,6 +115,68 @@ export class AccountCard {
   protected newPassword = '';
   protected newPasswordConfirmation = '';
   protected code = '';
+
+  constructor() {
+    if (this.isAdmin()) {
+      this.loadConnections();
+    }
+  }
+
+  loadConnections(): void {
+    this.connectionsError.set('');
+    this.authApi.connections().subscribe({
+      next: (list) => this.connections.set(list.items),
+      error: (failure: unknown) => {
+        if (problemTypeEndsWith(failure, UNAUTHENTICATED) || this.auth.status() === 'anonymous') {
+          this.sessionEnded.emit();
+          return;
+        }
+        this.connectionsError.set(
+          describeProblem(
+            failure,
+            $localize`:@@donor.account.connections.error.load:Připojené aplikace se nepodařilo načíst.`,
+          ),
+        );
+      },
+    });
+  }
+
+  disconnect(app: ConnectedApp): void {
+    if (this.disconnecting() !== null) {
+      return;
+    }
+    this.disconnecting.set(app.id);
+    this.connectionsError.set('');
+    this.disconnected.set('');
+    this.authApi.disconnect(app.id).subscribe({
+      next: () => {
+        this.disconnecting.set(null);
+        this.connections.update((apps) => (apps ?? []).filter((other) => other.id !== app.id));
+        this.disconnected.set(app.client);
+      },
+      error: (failure: unknown) => {
+        this.disconnecting.set(null);
+        if (problemTypeEndsWith(failure, UNAUTHENTICATED) || this.auth.status() === 'anonymous') {
+          this.sessionEnded.emit();
+          return;
+        }
+        this.connectionsError.set(
+          describeProblem(
+            failure,
+            $localize`:@@donor.account.connections.error.disconnect:Aplikaci se nepodařilo odpojit. Zkuste to prosím znovu.`,
+          ),
+        );
+      },
+    });
+  }
+
+  protected scopeLabels(app: ConnectedApp): string[] {
+    return describeScopes(app.scopes);
+  }
+
+  protected formatDate(isoInstant: string): string {
+    return formatDonationDate(isoInstant);
+  }
 
   open(panel: Exclude<Panel, 'closed'>): void {
     this.reset();

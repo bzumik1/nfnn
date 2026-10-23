@@ -1,6 +1,8 @@
 package cz.novanadeje.app.donors.infrastructure.persistence;
 
+import cz.novanadeje.app.donors.domain.ClientId;
 import cz.novanadeje.app.donors.domain.DonorId;
+import cz.novanadeje.app.donors.domain.OAuthScope;
 import cz.novanadeje.app.donors.domain.RefreshToken;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -8,6 +10,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
 import java.time.Instant;
+import java.util.Set;
 import java.util.UUID;
 
 @Entity
@@ -32,6 +35,15 @@ public class RefreshTokenJpaEntity {
     @Column(name = "second_factor_verified", nullable = false)
     private boolean secondFactorVerified;
 
+    @Column(name = "client_id", length = 512)
+    private String clientId;
+
+    @Column(name = "scope", length = 200)
+    private String scope;
+
+    @Column(name = "granted_at", nullable = false)
+    private Instant grantedAt;
+
     @Column(name = "revoked_at")
     private Instant revokedAt;
 
@@ -46,11 +58,16 @@ public class RefreshTokenJpaEntity {
         entity.issuedAt = token.issuedAt();
         entity.expiresAt = token.expiresAt();
         entity.secondFactorVerified = token.secondFactorVerified();
+        entity.clientId = token.clientId().map(ClientId::value).orElse(null);
+        entity.scope = token.scopes().isEmpty() ? null : OAuthScope.format(token.scopes());
+        entity.grantedAt = token.grantedAt();
         entity.revokedAt = token.revokedAt().orElse(null);
         return entity;
     }
 
     RefreshToken toDomain() {
-        return RefreshToken.reconstitute(id, new DonorId(donorId), secretHash, issuedAt, expiresAt, secondFactorVerified, revokedAt);
+        Set<OAuthScope> scopes = scope == null ? Set.of() : OAuthScope.parse(scope);
+        return RefreshToken.reconstitute(id, new DonorId(donorId), secretHash, issuedAt, expiresAt, secondFactorVerified,
+                clientId == null ? null : new ClientId(clientId), scopes, grantedAt, revokedAt);
     }
 }

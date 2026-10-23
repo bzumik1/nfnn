@@ -2,9 +2,13 @@ import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import {
+  AuthorizationRequest,
   AuthResponse,
   ChangePasswordRequest,
+  ClientDescription,
+  ConnectedAppList,
   Donor,
+  RedirectResponse,
   EmailChangeRequest,
   RegisterDonorRequest,
   SecondFactorDisableRequest,
@@ -83,5 +87,23 @@ export class AuthApi {
 
   disableSecondFactor(request: SecondFactorDisableRequest): Observable<AuthResponse> {
     return this.http.post<AuthResponse>('/api/donors/me/second-factor/disable', request);
+  }
+
+  describeClient(clientId: string, redirectUri: string): Observable<ClientDescription> {
+    return this.http.get<ClientDescription>('/api/donors/oauth/client', {
+      params: { clientId, redirectUri },
+    });
+  }
+
+  authorize(request: AuthorizationRequest): Observable<RedirectResponse> {
+    return this.http.post<RedirectResponse>('/api/donors/oauth/authorize', request);
+  }
+
+  connections(): Observable<ConnectedAppList> {
+    return this.http.get<ConnectedAppList>('/api/donors/me/connections');
+  }
+
+  disconnect(id: string): Observable<void> {
+    return this.http.delete<void>(`/api/donors/me/connections/${id}`);
   }
 }

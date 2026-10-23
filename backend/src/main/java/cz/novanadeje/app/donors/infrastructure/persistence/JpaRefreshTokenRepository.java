@@ -6,7 +6,9 @@ import cz.novanadeje.app.donors.domain.RefreshTokenRepository;
 import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Repository
 class JpaRefreshTokenRepository implements RefreshTokenRepository {
@@ -25,6 +27,16 @@ class JpaRefreshTokenRepository implements RefreshTokenRepository {
     @Override
     public Optional<RefreshToken> findBySecretHash(String secretHash) {
         return jpa.findBySecretHash(secretHash).map(RefreshTokenJpaEntity::toDomain);
+    }
+
+    @Override
+    public Optional<RefreshToken> findById(UUID id) {
+        return jpa.findById(id).map(RefreshTokenJpaEntity::toDomain);
+    }
+
+    @Override
+    public List<RefreshToken> findUsableClientTokensOf(DonorId donorId, Instant now) {
+        return jpa.findUsableClientTokensOf(donorId.value(), now).stream().map(RefreshTokenJpaEntity::toDomain).toList();
     }
 
     @Override

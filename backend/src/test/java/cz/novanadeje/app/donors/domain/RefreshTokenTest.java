@@ -45,4 +45,29 @@ class RefreshTokenTest {
         assertThat(token.secretHash()).isNotEqualTo(secret.value());
         assertThat(RefreshTokenSecret.fromValue(secret.value()).hash()).isEqualTo(secret.hash());
     }
+
+    @Test
+    void should_belong_to_no_client_when_issued_for_the_browser() {
+        RefreshToken token = RefreshToken.issue(RefreshTokenSecret.generate(), DONOR, NOW, Duration.ofDays(14), false);
+
+        assertThat(token.clientId()).isEmpty();
+        assertThat(token.scopes()).isEmpty();
+        assertThat(token.grantedAt()).isEqualTo(NOW);
+    }
+
+    @Test
+    void should_keep_the_client_scopes_and_grant_time_when_issued_for_a_connected_application() {
+        ClientId client = new ClientId("https://claude.ai/.well-known/oauth-client");
+        Instant granted = NOW.minus(Duration.ofDays(3));
+
+        RefreshToken token = RefreshToken.issueForClient(RefreshTokenSecret.generate(), DONOR, client, java.util.Set.of(OAuthScope.ADMIN_READ),
+                granted, NOW, Duration.ofDays(14));
+
+        assertThat(token.clientId()).contains(client);
+        assertThat(token.scopes()).containsExactly(OAuthScope.ADMIN_READ);
+        assertThat(token.grantedAt()).isEqualTo(granted);
+        assertThat(token.secondFactorVerified()).isTrue();
+        assertThat(token.belongsToClient(client)).isTrue();
+        assertThat(token.belongsToClient(new ClientId("https://claude.ai/oauth/claude-code-client-metadata"))).isFalse();
+    }
 }

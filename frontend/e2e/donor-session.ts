@@ -193,6 +193,32 @@ export async function mockDonorApi(
     (url) => url.pathname === '/api/donations/me/bank-accounts',
     (route) => route.fulfill({ json: { items: [] } }),
   );
+  await page.route(
+    (url) => url.pathname === '/api/donors/me/connections',
+    (route) => route.fulfill({ json: { items: [] } }),
+  );
+}
+
+export const connectionRequest =
+  '/pripojeni?client_id=https%3A%2F%2Fclaude.ai%2F.well-known%2Foauth-client&redirect_uri=https%3A%2F%2Fclaude.ai%2Fapi%2Fmcp%2Fauth_callback&response_type=code&code_challenge=E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM&code_challenge_method=S256&scope=admin%3Aread%20admin%3Awrite&resource=http%3A%2F%2Flocalhost%3A4200%2Fmcp&state=xyz';
+
+export const claudeConnection = {
+  id: '0192f0f1-0000-7000-8000-000000000011',
+  client: 'claude.ai',
+  scopes: ['admin:read', 'admin:write'],
+  grantedAt: '2026-10-23T06:00:00Z',
+  lastUsedAt: '2026-10-23T09:30:00Z',
+  expiresAt: '2026-11-06T09:30:00Z',
+};
+
+export async function mockConnectApi(page: Page): Promise<void> {
+  await page.route(
+    (url) => url.pathname === '/api/donors/oauth/client',
+    (route) => route.fulfill({ json: { host: 'claude.ai', name: 'Claude', loopback: false } }),
+  );
+  await page.route('https://claude.ai/**', (route) =>
+    route.fulfill({ contentType: 'text/html', body: '<!doctype html><title>Claude</title>' }),
+  );
 }
 
 export async function openSignInDialog(page: Page): Promise<void> {

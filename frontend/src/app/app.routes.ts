@@ -27,6 +27,12 @@ export const routes: Routes = [
           import('./features/donors/password-reset/password-reset').then((m) => m.PasswordReset),
       },
       {
+        path: 'pripojeni',
+        title: $localize`:@@donor.connect.pageTitle:Připojení aplikace | Nová naděje – nadační fond`,
+        loadComponent: () =>
+          import('./features/donors/connect-app/connect-app').then((m) => m.ConnectApp),
+      },
+      {
         path: 'potvrzeni-emailu',
         title: $localize`:@@donor.emailVerification.pageTitle:Potvrzení e-mailu | Nová naděje – nadační fond`,
         loadComponent: () =>

@@ -267,8 +267,11 @@ export class LoginDialog {
 
   private enterPortal(): void {
     this.loading.set(false);
+    const stay = this.dialog.staysOnPage();
     this.dialog.close();
-    this.router.navigateByUrl('/darce/prehled');
+    if (!stay) {
+      this.router.navigateByUrl('/darce/prehled');
+    }
   }
 
   private fail(failure: unknown): void {

@@ -131,6 +131,7 @@ app:
       issuer: nova-nadeje
       secret: ${JWT_SECRET:}
       access-token-ttl: PT15M
+      audience: ${app.site.public-url}/api
   donors:
     session:
       refresh-token-ttl: P14D
@@ -146,6 +147,12 @@ app:
       issuer: Nová naděje
     administrators:
       emails: ${ADMIN_EMAILS:}
+    oauth:
+      issuer: ${app.site.public-url}
+      authorization-path: /pripojeni
+      authorization-code-ttl: PT5M
+      mcp-resource: ${app.site.public-url}/mcp
+      api-resource: ${app.site.public-url}/api
 
 logging:
   level:

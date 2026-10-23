@@ -1,6 +1,7 @@
 package cz.novanadeje.app.cucumber;
 
 import io.cucumber.spring.ScenarioScope;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.JsonNode;
@@ -11,6 +12,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Base64;
+import java.util.HashMap;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -29,6 +31,7 @@ public class DonorSessions {
     private final TotpCodes totpCodes;
     private final Clock clock;
     private final JsonMapper jsonMapper = JsonMapper.builder().build();
+    private final Map<String, String> refreshCookies = new HashMap<>();
 
     public DonorSessions(ApiClient api, ScenarioDonors scenarioDonors, TotpCodes totpCodes, Clock clock) {
         this.api = api;
@@ -55,7 +58,17 @@ public class DonorSessions {
         assertThat(response.getStatusCode().value()).withFailMessage("Signing in again answered %s", response.getBody()).isEqualTo(200);
         String renewed = api.lastResponseJson().get("accessToken").asString();
         scenarioDonors.rememberAccessToken(alias, renewed);
+        String setCookie = response.getHeaders().getFirst(HttpHeaders.SET_COOKIE);
+        if (setCookie != null) {
+            refreshCookies.put(alias, setCookie.split(";", 2)[0]);
+        }
         api.authorize(renewed);
+    }
+
+    public String refreshCookieOf(String alias) {
+        String cookie = refreshCookies.get(alias);
+        assertThat(cookie).withFailMessage("%s has not signed in through the API in this scenario", alias).isNotNull();
+        return cookie;
     }
 
     private String validAccessTokenOf(String alias) {

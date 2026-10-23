@@ -3,7 +3,10 @@ import { expect, Page, test } from '@playwright/test';
 import {
   administrator,
   bankAccountItem,
+  claudeConnection,
+  connectionRequest,
   donationItem,
+  mockConnectApi,
   mockDonorApi,
   openSignInDialog,
   problem,
@@ -187,6 +190,39 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
       page.getByRole('heading', { name: 'Odkaz je neplatný nebo vypršel' }),
     ).toBeVisible();
 
+    expect(await violations(page)).toEqual([]);
+  });
+
+  test('when an application asks an administrator to connect, then the sign-in prompt, the consent and the connected applications break no rule', async ({
+    page,
+  }) => {
+    await mockConnectApi(page);
+    await page.route('**/api/donors/auth/login', (route) =>
+      route.fulfill(session(200, administrator)),
+    );
+    await page.route('**/api/donors/auth/refresh', (route) =>
+      route.fulfill(session(200, administrator)),
+    );
+    await page.goto(connectionRequest);
+    await expect(
+      page.getByRole('heading', { name: 'Aplikace žádá o přístup ke správě' }),
+    ).toBeVisible();
+    expect(await violations(page)).toEqual([]);
+
+    await page.locator('.connect-app').getByRole('button', { name: 'Přihlásit se' }).click();
+    const dialog = page.getByRole('dialog');
+    await dialog.locator('#login-email').fill('jana@example.cz');
+    await dialog.locator('#login-password').fill('correct horse battery');
+    await dialog.locator('.form-submit').click();
+    await expect(page.getByRole('button', { name: 'Povolit' })).toBeVisible();
+    expect(await violations(page)).toEqual([]);
+
+    await page.route(
+      (url) => url.pathname === '/api/donors/me/connections',
+      (route) => route.fulfill({ json: { items: [claudeConnection] } }),
+    );
+    await page.goto('/darce/prehled');
+    await expect(page.locator('.connections .connection-client')).toHaveText('claude.ai');
     expect(await violations(page)).toEqual([]);
   });
 

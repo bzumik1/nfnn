@@ -9,4 +9,6 @@ import java.util.Set;
 public interface AccessTokenIssuer {
 
     IssuedAccessToken issue(DonorId donorId, Set<Role> roles, Instant issuedAt);
+
+    IssuedAccessToken issue(AccessTokenGrant grant);
 }

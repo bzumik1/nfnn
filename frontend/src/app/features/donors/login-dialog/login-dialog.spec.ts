@@ -31,8 +31,8 @@ describe('Given the sign-in dialog', () => {
 
   afterEach(() => http.verify());
 
-  async function render(mode: LoginDialogMode = 'login'): Promise<void> {
-    dialog.open(mode);
+  async function render(mode: LoginDialogMode = 'login', stayOnPage = false): Promise<void> {
+    dialog.open(mode, { stayOnPage });
     fixture = TestBed.createComponent(LoginDialog);
     fixture.detectChanges();
     await fixture.whenStable();
@@ -104,6 +104,21 @@ describe('Given the sign-in dialog', () => {
       expect(TestBed.inject(AuthStore).donor()?.name).toBe('Jana Nováková');
       expect(dialog.isOpen()).toBe(false);
       expect(navigate).toHaveBeenCalledWith('/darce/prehled');
+    });
+
+    it('with the right password on a page that asked the dialog to stay, then the dialog closes and the page stays', async () => {
+      dialog.close();
+      await render('login', true);
+      await fillIn('#login-email', 'jana@example.cz');
+      await fillIn('#login-password', 'correct horse battery');
+
+      await submit('.login-form');
+      http.expectOne('/api/donors/auth/login').flush(authResponse('token-1'));
+      await settle();
+
+      expect(TestBed.inject(AuthStore).signedIn()).toBe(true);
+      expect(dialog.isOpen()).toBe(false);
+      expect(navigate).not.toHaveBeenCalled();
     });
 
     it('with a wrong password, then the dialog stays and shows the reason from the server', async () => {

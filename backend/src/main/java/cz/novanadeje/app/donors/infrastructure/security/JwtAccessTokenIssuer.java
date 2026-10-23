@@ -1,8 +1,10 @@
 package cz.novanadeje.app.donors.infrastructure.security;
 
+import cz.novanadeje.app.donors.application.AccessTokenGrant;
 import cz.novanadeje.app.donors.application.AccessTokenIssuer;
 import cz.novanadeje.app.donors.application.IssuedAccessToken;
 import cz.novanadeje.app.donors.domain.DonorId;
+import cz.novanadeje.app.donors.domain.OAuthScope;
 import cz.novanadeje.app.donors.domain.Role;
 import cz.novanadeje.app.shared.infrastructure.security.JwtProperties;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
@@ -14,6 +16,7 @@ import org.springframework.stereotype.Component;
 
 import java.time.Instant;
 import java.util.Comparator;
+import java.util.List;
 import java.util.Set;
 
 @Component
@@ -29,15 +32,26 @@ class JwtAccessTokenIssuer implements AccessTokenIssuer {
 
     @Override
     public IssuedAccessToken issue(DonorId donorId, Set<Role> roles, Instant issuedAt) {
-        Instant expiresAt = issuedAt.plus(properties.accessTokenTtl());
-        JwtClaimsSet claims = JwtClaimsSet.builder()
+        return issue(new AccessTokenGrant(donorId, roles, properties.audience(), Set.of(), issuedAt, null));
+    }
+
+    @Override
+    public IssuedAccessToken issue(AccessTokenGrant grant) {
+        Instant expiresAt = grant.issuedAt().plus(properties.accessTokenTtl());
+        if (grant.latestExpiry().filter(expiresAt::isAfter).isPresent()) {
+            expiresAt = grant.latestExpiry().get();
+        }
+        JwtClaimsSet.Builder claims = JwtClaimsSet.builder()
                 .issuer(properties.issuer())
-                .subject(donorId.toString())
-                .issuedAt(issuedAt)
+                .subject(grant.donorId().toString())
+                .audience(List.of(grant.audience()))
+                .issuedAt(grant.issuedAt())
                 .expiresAt(expiresAt)
-                .claim(JwtProperties.ROLES_CLAIM, roles.stream().sorted(Comparator.naturalOrder()).map(Role::name).toList())
-                .build();
+                .claim(JwtProperties.ROLES_CLAIM, grant.roles().stream().sorted(Comparator.naturalOrder()).map(Role::name).toList());
+        if (!grant.scopes().isEmpty()) {
+            claims.claim(JwtProperties.SCOPE_CLAIM, OAuthScope.format(grant.scopes()));
+        }
         JwsHeader header = JwsHeader.with(MacAlgorithm.HS256).build();
-        return new IssuedAccessToken(encoder.encode(JwtEncoderParameters.from(header, claims)).getTokenValue(), expiresAt);
+        return new IssuedAccessToken(encoder.encode(JwtEncoderParameters.from(header, claims.build())).getTokenValue(), expiresAt);
     }
 }

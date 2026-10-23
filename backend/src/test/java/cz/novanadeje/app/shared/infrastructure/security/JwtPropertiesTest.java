@@ -20,6 +20,7 @@ import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException
 
 class JwtPropertiesTest {
 
+    private static final String AUDIENCE = "http://localhost:4200/api";
     private static final String SERVER_SECRET = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
 
     private final ApplicationContextRunner contexts = new ApplicationContextRunner()
@@ -68,7 +69,25 @@ class JwtPropertiesTest {
     void should_keep_secret_when_made_given_32_characters() {
         String secret = "a".repeat(32);
 
-        assertThat(new JwtProperties("nova-nadeje", secret, Duration.ofMinutes(15)).secret()).isEqualTo(secret);
+        assertThat(new JwtProperties("nova-nadeje", secret, Duration.ofMinutes(15), AUDIENCE).secret()).isEqualTo(secret);
+    }
+
+    @Test
+    @DisplayName("Given the default dev profile, when the context starts, then tokens are issued for the API of the public URL")
+    void should_derive_audience_from_public_url_when_started_given_dev_profile() {
+        contexts.run(context -> {
+            assertThat(context).hasNotFailed();
+            assertThat(context.getBean(JwtProperties.class).audience()).isEqualTo("http://localhost:4200/api");
+        });
+    }
+
+    @ParameterizedTest
+    @NullSource
+    @ValueSource(strings = {"", "   "})
+    @DisplayName("Given a missing audience, when the properties are made, then they fail naming the property")
+    void should_fail_naming_property_when_made_given_missing_audience(String audience) {
+        assertThatIllegalArgumentException().isThrownBy(() -> new JwtProperties("nova-nadeje", "a".repeat(32), Duration.ofMinutes(15), audience))
+                .withMessageContaining("app.security.jwt.audience");
     }
 
     @ParameterizedTest
@@ -76,7 +95,7 @@ class JwtPropertiesTest {
     @ValueSource(strings = {"", "   ", "too-short-secret-of-31-characte"})
     @DisplayName("Given a missing or short secret, when the properties are made, then they fail naming the environment variable without the value")
     void should_fail_naming_env_var_when_made_given_missing_or_short_secret(String secret) {
-        assertThatIllegalArgumentException().isThrownBy(() -> new JwtProperties("nova-nadeje", secret, Duration.ofMinutes(15)))
+        assertThatIllegalArgumentException().isThrownBy(() -> new JwtProperties("nova-nadeje", secret, Duration.ofMinutes(15), AUDIENCE))
                 .withMessageContaining("JWT_SECRET (app.security.jwt.secret)")
                 .withMessageNotContaining("too-short");
     }

@@ -66,6 +66,43 @@ export interface SecondFactorEnrolment {
   qrPngBase64: string;
 }
 
+export type OAuthScope = 'admin:read' | 'admin:write';
+
+export interface ClientDescription {
+  host: string;
+  name: string;
+  loopback: boolean;
+}
+
+export interface AuthorizationRequest {
+  clientId: string;
+  redirectUri: string;
+  responseType: string | null;
+  codeChallenge: string | null;
+  codeChallengeMethod: string | null;
+  scope: string | null;
+  resource: string | null;
+  state: string | null;
+  approved: boolean;
+}
+
+export interface RedirectResponse {
+  redirectTo: string;
+}
+
+export interface ConnectedApp {
+  id: string;
+  client: string;
+  scopes: OAuthScope[];
+  grantedAt: string;
+  lastUsedAt: string;
+  expiresAt: string;
+}
+
+export interface ConnectedAppList {
+  items: ConnectedApp[];
+}
+
 export interface AuthResponse {
   user: Donor;
   accessToken: string;
