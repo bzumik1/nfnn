@@ -124,7 +124,6 @@ jobs:
           docker build -t ghcr.io/bzumik1/nfnn-backend:latest backend
           docker build -t ghcr.io/bzumik1/nfnn-frontend:latest frontend
           docker build -t ghcr.io/bzumik1/nfnn-backup:latest deploy/backup
-          docker build -t ghcr.io/bzumik1/nfnn-ops:latest deploy/ops
           docker build -t ghcr.io/bzumik1/nfnn-mcp:latest mcp
 
       - name: Compose file has no dollar signs
@@ -136,23 +135,15 @@ jobs:
 
       - name: Compose file names no secret
         run: |
-          if grep -noE '\b(POSTGRES_PASSWORD|PGPASSWORD|DB_PASSWORD|JWT_SECRET|MAIL_PASSWORD|FIO_TOKEN|TUNNEL_TOKEN)\b' deploy/compose.yml; then
+          if grep -noE '\b(POSTGRES_PASSWORD|PGPASSWORD|DB_PASSWORD|JWT_SECRET|MAIL_PASSWORD|FIO_TOKEN)\b' deploy/compose.yml; then
             echo "::error::Secrets live in the env files on the server (deploy/*.env.example), never in deploy/compose.yml"
             exit 1
           fi
 
-      - name: The log reader publishes no port and only cloudflared reads ops.env
+      - name: Only the frontend publishes a port and only the backend reads secrets
         run: |
           if [ "$(yq '[.services[] | select(has("ports"))] | length' deploy/compose.yml)" != 1 ] || [ "$(yq '.services.frontend | has("ports")' deploy/compose.yml)" != true ]; then
-            echo "::error::only the frontend publishes a port; the log reader is reached through the Cloudflare tunnel"
-            exit 1
-          fi
-          if [ "$(yq '[.services[] | select(.env_file[]? == "/DATA/AppData/nfnn/env/ops.env")] | length' deploy/compose.yml)" != 1 ] || [ "$(yq '.services.cloudflared.env_file[0]' deploy/compose.yml)" != /DATA/AppData/nfnn/env/ops.env ]; then
-            echo "::error::ops.env (the tunnel token) goes to the cloudflared service only"
-            exit 1
-          fi
-          if [ "$(yq '.services.ops.volumes[0]' deploy/compose.yml)" != /DATA/AppData/nfnn/logs:/logs:ro ]; then
-            echo "::error::the log reader mounts the logs folder read-only and nothing else"
+            echo "::error::only the frontend publishes a port"
             exit 1
           fi
           if [ "$(yq '.services.mcp.volumes | length' deploy/compose.yml)" != 1 ] || [ "$(yq '.services.mcp.volumes[0]' deploy/compose.yml)" != /DATA/AppData/nfnn/logs:/logs ] || [ "$(yq '.services.mcp | has("env_file")' deploy/compose.yml)" != false ]; then
@@ -202,11 +193,6 @@ jobs:
           jwt_secret=$(openssl rand -hex 32)
           sed -E "s/^(POSTGRES_PASSWORD|PGPASSWORD|DB_PASSWORD)=$/\1=$db_password/" deploy/db.env.example > "$env_dir/db.env"
           sed -E "s/^JWT_SECRET=$/JWT_SECRET=$jwt_secret/" deploy/backend.env.example > "$env_dir/backend.env"
-          sed -E "s/^TUNNEL_TOKEN=$/TUNNEL_TOKEN=not-a-real-token/" deploy/ops.env.example > "$env_dir/ops.env"
-          if ! grep -qE '^TUNNEL_TOKEN=not-a-real-token$' "$env_dir/ops.env"; then
-            echo "::error::deploy/ops.env.example must have the empty line TUNNEL_TOKEN="
-            exit 1
-          fi
           if [ "$(grep -cE '^(POSTGRES_PASSWORD|PGPASSWORD|DB_PASSWORD)=[0-9a-f]{64}$' "$env_dir/db.env")" != 3 ]; then
             echo "::error::deploy/db.env.example must have the empty lines POSTGRES_PASSWORD=, PGPASSWORD= and DB_PASSWORD="
             exit 1
@@ -224,8 +210,8 @@ jobs:
           sed "s#/DATA/AppData/nfnn#$RUNNER_TEMP/nfnn#g" deploy/compose.yml > "$RUNNER_TEMP/compose.yml"
           echo "COMPOSE_FILE=$RUNNER_TEMP/compose.yml" >> "$GITHUB_ENV"
 
-      - name: Start the production stack (cloudflared cannot connect without a real tunnel token)
-        run: docker compose up -d --wait --wait-timeout 300 postgres backup backend mcp frontend ops
+      - name: Start the production stack
+        run: docker compose up -d --wait --wait-timeout 300
 
       - name: Verify
         run: |
@@ -235,25 +221,19 @@ jobs:
           case "$status" in
             502|503|504|000) echo "::error::nginx could not reach the backend"; exit 1 ;;
           esac
-          for container in nfnn-postgres nfnn-backup nfnn-ops nfnn-mcp; do
-            for key in JWT_SECRET FIO_TOKEN MAIL_PASSWORD TUNNEL_TOKEN; do
+          for container in nfnn-postgres nfnn-backup nfnn-mcp nfnn-frontend; do
+            for key in JWT_SECRET FIO_TOKEN MAIL_PASSWORD; do
               if docker exec "$container" printenv "$key" > /dev/null; then
-                echo "::error::$container must not receive $key: only the backend reads backend.env and only cloudflared reads ops.env"
+                echo "::error::$container must not receive $key: only the backend reads backend.env"
                 exit 1
               fi
             done
           done
           docker exec nfnn-backend sh -c 'uid=$(awk "/^Uid:/ {print \$2}" /proc/1/status); [ "$uid" = "$(id -u app)" ]' || { echo "::error::the backend's Java process must run as the app user"; exit 1; }
-          echo "The logs folder holds both logs and the log reader serves them with ranges and the backend's info"
+          echo "The backend and the backup service write their logs into the logs folder"
           logs="$RUNNER_TEMP/nfnn/logs"
           grep -q 'Backend revision dev is ready' "$logs/backend.log" || { echo "::error::the backend did not write its log file"; ls -la "$logs"; exit 1; }
           grep -q 'backup written' "$logs/backup.log" || { echo "::error::the backup service did not write its log file"; ls -la "$logs"; exit 1; }
-          ops() { docker run --rm --network container:nfnn-ops ghcr.io/bzumik1/nfnn-ops:latest wget -S -O - "$@" 2>&1; }
-          ops http://127.0.0.1/logs/ | grep -q 'backend.log' || { echo "::error::the log reader does not list the log files"; exit 1; }
-          ops --header 'Range: bytes=-200' http://127.0.0.1/logs/backend.log | grep -q 'HTTP/1.1 206' || { echo "::error::the log reader does not serve byte ranges"; exit 1; }
-          ops http://127.0.0.1/info | grep -q '"revision":"dev"' || { echo "::error::the log reader does not pass /info to the backend"; exit 1; }
-          ops http://127.0.0.1/health | grep -q '"status":"UP"' || { echo "::error::the log reader does not pass /health to the backend"; exit 1; }
-          [ -z "$(docker port nfnn-ops)" ] || { echo "::error::the log reader must publish no port"; exit 1; }
           echo "The MCP connector answers through the frontend: a challenge without a token, the resource metadata and the authorization server metadata"
           [ -z "$(docker port nfnn-mcp)" ] || { echo "::error::the MCP connector must publish no port"; exit 1; }
           issuer=$(curl -fsS --max-time 10 http://localhost:8089/.well-known/oauth-authorization-server | jq -r '.issuer')
@@ -314,7 +294,7 @@ jobs:
           docker compose stop backend backup
           docker exec nfnn-postgres psql -U novanadeje -d novanadeje -c "insert into admin_action (id, admin_id, action, details, performed_at) values ('019a0000-0000-7000-8000-000000000001', '019a0000-0000-7000-8000-000000000002', 'CI_MARKER', 'to be undone by the restore', now())"
           sudo cp "$dump" "$restore/ci.force.dump"
-          docker compose up -d --wait --wait-timeout 300 postgres backup backend frontend ops
+          docker compose up -d --wait --wait-timeout 300 postgres backup backend frontend
           wait_for "[ -f $restore/ci.force.dump.done ]" 30 "the restore folder dump was not restored"
           grep -q '^outcome=ok$' "$backups/status/restore" || { echo "::error::the restore status file does not say ok"; cat "$backups/status/restore"; exit 1; }
           ls "$backups"/nfnn-*-pred-obnovou.dump > /dev/null || { echo "::error::no safety dump was taken before the forced restore"; exit 1; }
