@@ -325,6 +325,44 @@ describe('Given a signed-in donor in the donor area', () => {
   });
 
   describe('when the donor moves between the sections', () => {
+    it('then the side panel names every section and marks the open one as the current page', async () => {
+      await open('/darce/prehled');
+      await respond(twoYearSummary(), twoYearDonations());
+
+      const nav = element('nav[aria-label="Můj účet"]')!;
+      const links = [...nav.querySelectorAll<HTMLAnchorElement>('a')];
+      expect(
+        links.map((link) => [normalized(link.textContent ?? ''), link.getAttribute('href')]),
+      ).toEqual([
+        ['Přehled', '/darce/prehled'],
+        ['Moje dary', '/darce/dary'],
+        ['Potvrzení o daru', '/darce/potvrzeni'],
+        ['Bankovní účty', '/darce/ucty'],
+        ['Údaje a zabezpečení', '/darce/udaje'],
+      ]);
+      expect(links.map((link) => link.getAttribute('aria-current'))).toEqual([
+        'page',
+        null,
+        null,
+        null,
+        null,
+      ]);
+
+      links[2].dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+      await harness.fixture.whenStable();
+      await settle();
+
+      expect(TestBed.inject(Router).url).toBe('/darce/potvrzeni');
+      expect(links.map((link) => link.getAttribute('aria-current'))).toEqual([
+        null,
+        null,
+        'page',
+        null,
+        null,
+      ]);
+      expect(text('.side-nav-toggle')).toBe('Menu účtu');
+    });
+
     it('then every section has one level-one heading that takes the focus', async () => {
       await open('/darce/prehled');
       await respond(twoYearSummary(), twoYearDonations());

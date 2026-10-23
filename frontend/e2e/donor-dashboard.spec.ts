@@ -87,12 +87,19 @@ test.describe('Given a signed-in donor', () => {
 
     await openDonorSection(page, 'Potvrzení o daru');
 
-    await expect(page.locator('.year-row').first()).toHaveText(
-      /2026\s*2 příspěvky\s*1 500 Kč\s*Ke stažení po skončení roku/,
-    );
-    await expect(page.locator('.year-row').last()).toHaveText(
-      /2025\s*1 příspěvek\s*250 Kč\s*↓ PDF za rok 2025/,
-    );
+    const cells = '.year, .year-count, .year-total, .year-action';
+    await expect(page.locator('.year-row').first().locator(cells)).toHaveText([
+      '2026',
+      '2 příspěvky',
+      '1 500 Kč',
+      'Ke stažení po skončení roku',
+    ]);
+    await expect(page.locator('.year-row').last().locator(cells)).toHaveText([
+      '2025',
+      '1 příspěvek',
+      '250 Kč',
+      '↓ PDF za rok 2025',
+    ]);
   });
 
   test('when they download the receipt of a completed year, then the browser saves the PDF under the name the server gives', async ({
