@@ -1,0 +1,10 @@
+<app-page-title i18n="@@donor.details.heading">Údaje a zabezpečení</app-page-title>
+
+<app-profile-card (sessionEnded)="donations.sendToSignIn()" />
+
+<app-account-card [passkeyCount]="passkeyCount()" (sessionEnded)="donations.sendToSignIn()" />
+
+<app-passkeys-card
+  (sessionEnded)="donations.sendToSignIn()"
+  (countChanged)="passkeyCount.set($event)"
+/>

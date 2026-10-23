@@ -287,3 +287,11 @@ export const adminSettings = {
   ],
   secretsCanBeStored: true,
 };
+
+export async function openDonorSection(page: Page, name: string): Promise<void> {
+  const link = page
+    .getByRole('navigation', { name: 'Můj účet' })
+    .getByRole('link', { name, exact: true });
+  await link.click();
+  await expect(link).toHaveAttribute('aria-current', 'page');
+}

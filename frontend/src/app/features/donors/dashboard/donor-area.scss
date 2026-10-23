@@ -1,0 +1,22 @@
+:host {
+  display: block;
+  min-height: 100vh;
+  background: var(--color-surface-alt);
+}
+
+.container {
+  max-width: 960px;
+  padding: 32px 24px 48px;
+}
+
+.contact-line {
+  margin-top: 24px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--color-text-subtle);
+
+  a {
+    color: var(--color-accent);
+    text-decoration: none;
+  }
+}
