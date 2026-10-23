@@ -104,36 +104,8 @@
   color: var(--color-danger);
 }
 
-.action-btn {
-  background: var(--color-accent-soft);
-  color: var(--color-accent);
-  border: none;
-  padding: var(--space-2-25) var(--space-4-5);
-  border-radius: var(--radius-pill);
-  font-weight: var(--weight-semibold);
-  font-size: var(--text-sm);
-  cursor: pointer;
-  font-family: var(--font-sans);
-}
-
-.action-link {
-  background: none;
-  border: none;
-  color: var(--color-accent);
-  font-family: var(--font-sans);
-  font-size: var(--text-sm);
-  font-weight: var(--weight-semibold);
-  cursor: pointer;
-  padding: var(--space-1-5) var(--space-2);
-}
-
-.action-link--danger {
+.signature-remove {
   color: var(--color-danger);
   padding-left: 0;
   padding-right: 0;
-}
-
-button:disabled {
-  cursor: progress;
-  opacity: 0.7;
 }

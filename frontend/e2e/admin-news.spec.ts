@@ -149,7 +149,7 @@ test.describe('Given an administrator managing the news', () => {
 
     await page.getByRole('button', { name: 'Uložit koncept' }).click();
 
-    await expect(page.locator('.admin-notice--status')).toHaveText(
+    await expect(page.locator('.ui-notice--status')).toHaveText(
       'Aktualitu jsme uložili jako koncept. Na web ji dostanete tlačítkem Zveřejnit.',
     );
     await expect(page).toHaveURL(`/sprava/aktuality/${DRAFT_ID}`);
@@ -167,7 +167,7 @@ test.describe('Given an administrator managing the news', () => {
     await page.getByLabel('Datum zveřejnění').fill('2026-10-23');
     await page.getByRole('button', { name: 'Zveřejnit' }).click();
 
-    await expect(page.locator('.admin-notice--status')).toHaveText(
+    await expect(page.locator('.ui-notice--status')).toHaveText(
       'Aktualita je na webu s datem 23. 10. 2026.',
     );
     await expect(page.getByRole('button', { name: 'Stáhnout z webu' })).toBeVisible();
@@ -252,7 +252,7 @@ test.describe('Given an administrator managing the news', () => {
     await page.goto(`/sprava/aktuality/${ARTICLE_ID}`);
     await page.getByRole('button', { name: 'Stáhnout z webu' }).click();
 
-    await expect(page.locator('.admin-notice--status')).toHaveText(
+    await expect(page.locator('.ui-notice--status')).toHaveText(
       'Aktualitu jsme z webu stáhli. Zůstává tu jako koncept.',
     );
     await expect(page.getByRole('button', { name: 'Zveřejnit' })).toBeVisible();

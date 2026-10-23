@@ -1,22 +1,22 @@
-<div class="container">
-  <h1 #title class="admin-title" tabindex="-1" i18n="@@admin.home.heading">Správa</h1>
+<div class="ui-page container">
+  <h1 #title class="ui-page-title" tabindex="-1" i18n="@@admin.home.heading">Správa</h1>
   <div class="admin-status">
-    <section class="admin-card" aria-labelledby="admin-import-title">
-      <h2 id="admin-import-title" class="admin-card-title" i18n="@@admin.home.import.title">
+    <section class="ui-card" aria-labelledby="admin-import-title">
+      <h2 id="admin-import-title" class="ui-card__title" i18n="@@admin.home.import.title">
         Stav stahování plateb z banky
       </h2>
       @switch (state()) {
         @case ('loading') {
-          <p class="admin-loading" role="status" i18n="@@admin.home.import.loading">
+          <p class="ui-load-state" role="status" i18n="@@admin.home.import.loading">
             Načítáme stav importu…
           </p>
         }
         @case ('error') {
-          <div class="admin-error" role="alert">
+          <div class="ui-load-state ui-load-state--error" role="alert">
             <p i18n="@@admin.home.import.error.text">Stav importu se nepodařilo načíst.</p>
             <button
               type="button"
-              class="admin-retry"
+              class="ui-button"
               (click)="load()"
               i18n="@@admin.home.import.error.retry"
             >
@@ -89,22 +89,22 @@
       }
     </section>
 
-    <section class="admin-card" aria-labelledby="admin-backups-title">
-      <h2 id="admin-backups-title" class="admin-card-title" i18n="@@admin.home.backups.title">
+    <section class="ui-card" aria-labelledby="admin-backups-title">
+      <h2 id="admin-backups-title" class="ui-card__title" i18n="@@admin.home.backups.title">
         Zálohy databáze
       </h2>
       @switch (backupsState()) {
         @case ('loading') {
-          <p class="admin-loading" role="status" i18n="@@admin.home.backups.loading">
+          <p class="ui-load-state" role="status" i18n="@@admin.home.backups.loading">
             Načítáme stav záloh…
           </p>
         }
         @case ('error') {
-          <div class="admin-error" role="alert">
+          <div class="ui-load-state ui-load-state--error" role="alert">
             <p i18n="@@admin.home.backups.error.text">Stav záloh se nepodařilo načíst.</p>
             <button
               type="button"
-              class="admin-retry"
+              class="ui-button"
               (click)="loadBackups()"
               i18n="@@admin.home.backups.error.retry"
             >
@@ -142,9 +142,9 @@
     </section>
   </div>
 
-  <section class="admin-card" aria-labelledby="admin-overview-title">
+  <section class="ui-card" aria-labelledby="admin-overview-title">
     <div class="admin-card-head">
-      <h2 id="admin-overview-title" class="admin-card-title" i18n="@@admin.home.overview.title">
+      <h2 id="admin-overview-title" class="ui-card__title" i18n="@@admin.home.overview.title">
         Dary a dárci
       </h2>
       @if (overview(); as data) {
@@ -160,16 +160,16 @@
     </div>
     @switch (overviewState()) {
       @case ('loading') {
-        <p class="admin-loading" role="status" i18n="@@admin.home.overview.loading">
+        <p class="ui-load-state" role="status" i18n="@@admin.home.overview.loading">
           Načítáme dary po měsících…
         </p>
       }
       @case ('error') {
-        <div class="admin-error" role="alert">
+        <div class="ui-load-state ui-load-state--error" role="alert">
           <p i18n="@@admin.home.overview.error.text">Dary po měsících se nepodařilo načíst.</p>
           <button
             type="button"
-            class="admin-retry"
+            class="ui-button"
             (click)="loadOverview()"
             i18n="@@admin.home.overview.error.retry"
           >

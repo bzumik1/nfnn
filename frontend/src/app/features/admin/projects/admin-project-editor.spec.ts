@@ -296,7 +296,7 @@ describe('Given an administrator editing a published project', () => {
     expect(element<HTMLImageElement>(fixture, '.image-preview').getAttribute('src')).toBe(
       `/api/content/media/${IMAGE_ID}?w=480`,
     );
-    expect(text(fixture, '.publish-state .state')).toBe('Na webu');
+    expect(text(fixture, '.publish-state .ui-badge')).toBe('Na webu');
     expect(text(fixture, '.publish-state')).toContain(
       'Zveřejněno s datem 20. 10. 2026. Web řadí projekty podle roku a pak podle tohoto data.',
     );

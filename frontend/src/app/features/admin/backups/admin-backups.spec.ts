@@ -221,7 +221,7 @@ describe('Given an administrator on the backups page', () => {
       );
       await settle();
 
-      expect(text('.admin-notice--status')).toBe(
+      expect(text('.ui-notice--status')).toBe(
         'Záloha nfnn-2026-10-23_1000-rucni.dump je hotová (2 kB).',
       );
       expect(button('Zálohovat teď').disabled).toBe(false);
@@ -246,7 +246,7 @@ describe('Given an administrator on the backups page', () => {
       );
       await settle();
 
-      expect(text('.admin-notice--alert')).toBe('Záloha selhala: pg_dump: error: out of memory');
+      expect(text('.ui-notice--alert')).toBe('Záloha selhala: pg_dump: error: out of memory');
       expect(texts('.problems li')).toEqual(['Poslední záloha selhala.']);
     });
 
@@ -261,7 +261,7 @@ describe('Given an administrator on the backups page', () => {
         await settle();
       }
 
-      expect(text('.admin-notice--alert')).toContain(
+      expect(text('.ui-notice--alert')).toContain(
         'Kontejner nfnn-backup si požadavek do minuty nevzal.',
       );
       expect(button('Zálohovat teď').disabled).toBe(false);
@@ -281,7 +281,7 @@ describe('Given an administrator on the backups page', () => {
         );
       await settle();
 
-      expect(text('.admin-notice--alert')).toBe(
+      expect(text('.ui-notice--alert')).toBe(
         'Zálohování není připojené. Kontejner nfnn-backup neběží.',
       );
       expect(button('Zálohovat teď').disabled).toBe(false);
@@ -315,7 +315,7 @@ describe('Given an administrator on the backups page', () => {
     );
     await settle();
 
-    expect(text('.admin-notice--status')).toBe(
+    expect(text('.ui-notice--status')).toBe(
       'Zkušební obnova zálohy nfnn-2026-10-23_0300.dump proběhla: 41 tabulek.',
     );
   });
@@ -382,7 +382,7 @@ describe('Given an administrator on the backups page', () => {
       );
       await settle();
 
-      expect(text('.admin-notice--status')).toBe(
+      expect(text('.ui-notice--status')).toBe(
         'Databáze je obnovená ze zálohy nfnn-2026-10-23_0300.dump. Stav před obnovou je uložený jako záloha „Před obnovou“.',
       );
       expect(sessionStorage.getItem(RESTORE_REQUEST_KEY)).toBeNull();
@@ -425,7 +425,7 @@ describe('Given an administrator on the backups page', () => {
       }),
     );
 
-    expect(text('.admin-notice--alert')).toBe(
+    expect(text('.ui-notice--alert')).toBe(
       'Obnova ze zálohy nfnn-2026-10-22_0300.dump se nepovedla: pg_restore: error: unexpected end of file. Web běží dál s daty, jaká měl před obnovou.',
     );
   });
@@ -442,7 +442,7 @@ describe('Given an administrator on the backups page', () => {
 
     await respond(backupsView());
 
-    expect(text('.admin-notice--alert')).toContain('si obnovu do pěti minut nevzal');
+    expect(text('.ui-notice--alert')).toContain('si obnovu do pěti minut nevzal');
   });
 
   it('when a restore is pending, then every action that could interfere is disabled', async () => {
@@ -511,7 +511,7 @@ describe('Given an administrator on the backups page', () => {
     http.expectOne(BACKUPS_URL).flush('down', { status: 500, statusText: 'Error' });
     await settle();
 
-    expect(text('.admin-error')).toContain('Stav záloh se nepodařilo načíst.');
+    expect(text('.ui-load-state--error')).toContain('Stav záloh se nepodařilo načíst.');
     button('Zkusit znovu').click();
     await settle();
     await respond(backupsView());

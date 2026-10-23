@@ -17,7 +17,7 @@
     @case ('error') {
       <div class="signature-error" role="alert">
         <p i18n="@@admin.signature.loadFailed">Podpis se nepodařilo načíst.</p>
-        <button type="button" class="action-btn" (click)="load()" i18n="@@admin.signature.retry">
+        <button type="button" class="ui-button" (click)="load()" i18n="@@admin.signature.retry">
           Zkusit znovu
         </button>
       </div>
@@ -62,7 +62,7 @@
           @if (current.configured && !confirmingRemoval()) {
             <button
               type="button"
-              class="action-link action-link--danger"
+              class="ui-link-button signature-remove"
               [disabled]="uploading() || removing()"
               (click)="askRemoval()"
               i18n="@@admin.signature.remove"
@@ -82,7 +82,7 @@
             <span i18n="@@admin.signature.confirm.question"
               >Potvrzení vystavená potom budou bez podpisu. Odebrat?</span
             >
-            <button type="button" class="action-btn" [disabled]="removing()" (click)="remove()">
+            <button type="button" class="ui-button" [disabled]="removing()" (click)="remove()">
               @if (removing()) {
                 <ng-container i18n="@@admin.signature.removing">Odebíráme…</ng-container>
               } @else {
@@ -91,7 +91,7 @@
             </button>
             <button
               type="button"
-              class="action-link"
+              class="ui-link-button"
               [disabled]="removing()"
               (click)="cancelRemoval()"
               i18n="@@admin.signature.confirm.no"

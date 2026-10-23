@@ -1,8 +1,8 @@
-<div class="container">
-  <p class="admin-crumbs">
+<div class="ui-page container">
+  <p class="ui-crumbs">
     <a routerLink="/sprava/aktuality" i18n="@@admin.newsEditor.backToNews">← Aktuality</a>
   </p>
-  <h1 #title class="admin-title" tabindex="-1">
+  <h1 #title class="ui-page-title" tabindex="-1">
     @if (isNew()) {
       <ng-container i18n="@@admin.newsEditor.heading.new">Nová aktualita</ng-container>
     } @else {
@@ -12,24 +12,24 @@
 
   @if (notice(); as notice) {
     @if (notice.kind === 'status') {
-      <p class="admin-notice admin-notice--status" role="status">{{ notice.text }}</p>
+      <p class="ui-notice ui-notice--status" role="status">{{ notice.text }}</p>
     } @else {
-      <p class="admin-notice admin-notice--alert" role="alert">{{ notice.text }}</p>
+      <p class="ui-notice ui-notice--alert" role="alert">{{ notice.text }}</p>
     }
   }
 
   @switch (state()) {
     @case ('loading') {
-      <p class="admin-loading" role="status" i18n="@@admin.newsEditor.loading">
+      <p class="ui-load-state" role="status" i18n="@@admin.newsEditor.loading">
         Načítáme aktualitu…
       </p>
     }
     @case ('error') {
-      <div class="admin-error" role="alert">
+      <div class="ui-load-state ui-load-state--error" role="alert">
         <p i18n="@@admin.newsEditor.error.text">Aktualitu se nepodařilo načíst.</p>
         <button
           type="button"
-          class="admin-retry"
+          class="ui-button"
           (click)="retry()"
           i18n="@@admin.newsEditor.error.retry"
         >
@@ -38,11 +38,11 @@
       </div>
     }
     @case ('ready') {
-      <section class="admin-card" aria-labelledby="news-content-title">
-        <h2 id="news-content-title" class="admin-card-title" i18n="@@admin.newsEditor.content">
+      <section class="ui-card" aria-labelledby="news-content-title">
+        <h2 id="news-content-title" class="ui-card__title" i18n="@@admin.newsEditor.content">
           Obsah
         </h2>
-        <div class="card-body">
+        <div class="ui-card__body">
           <form
             #articleForm="ngForm"
             class="article-form"
@@ -162,7 +162,7 @@
                 @if (coverImage()) {
                   <button
                     type="button"
-                    class="action-link"
+                    class="ui-link-button"
                     [disabled]="uploading()"
                     (click)="removeImage()"
                     i18n="@@admin.newsEditor.image.remove"
@@ -190,7 +190,11 @@
             }
 
             <div class="form-actions">
-              <button type="submit" class="primary" [disabled]="saving() || uploading()">
+              <button
+                type="submit"
+                class="ui-button ui-button--primary"
+                [disabled]="saving() || uploading()"
+              >
                 @if (saving()) {
                   <span i18n="@@admin.newsEditor.saving">Ukládáme…</span>
                 } @else if (isNew()) {
@@ -209,23 +213,19 @@
         </div>
       </section>
 
-      <section class="admin-card" aria-labelledby="news-publish-title">
-        <h2
-          id="news-publish-title"
-          class="admin-card-title"
-          i18n="@@admin.newsEditor.publish.title"
-        >
+      <section class="ui-card" aria-labelledby="news-publish-title">
+        <h2 id="news-publish-title" class="ui-card__title" i18n="@@admin.newsEditor.publish.title">
           Zveřejnění
         </h2>
-        <div class="card-body">
+        <div class="ui-card__body">
           @if (isNew()) {
-            <p class="card-intro" i18n="@@admin.newsEditor.publish.saveFirst">
+            <p class="ui-card__intro" i18n="@@admin.newsEditor.publish.saveFirst">
               Aktualitu nejdřív uložte, zveřejnit ji půjde potom.
             </p>
           } @else {
             @if (publishedOn(); as date) {
               <p class="publish-state publish-state--published">
-                <span class="state state--published" i18n="@@admin.newsEditor.state.published"
+                <span class="ui-badge ui-badge--success" i18n="@@admin.newsEditor.state.published"
                   >Na webu</span
                 >
                 <span i18n="@@admin.newsEditor.publishedOn"
@@ -234,7 +234,7 @@
               </p>
             } @else {
               <p class="publish-state">
-                <span class="state state--draft" i18n="@@admin.newsEditor.state.draft"
+                <span class="ui-badge ui-badge--warning" i18n="@@admin.newsEditor.state.draft"
                   >Koncept</span
                 >
                 <span i18n="@@admin.newsEditor.draft.text"
@@ -258,7 +258,7 @@
               </label>
               <button
                 type="button"
-                class="action-btn"
+                class="ui-button"
                 [disabled]="publishing() || unpublishing() || !publishDate"
                 (click)="publish()"
               >
@@ -275,7 +275,7 @@
               @if (isPublished()) {
                 <button
                   type="button"
-                  class="action-link"
+                  class="ui-link-button"
                   [disabled]="publishing() || unpublishing()"
                   (click)="unpublish()"
                 >
@@ -292,16 +292,12 @@
       </section>
 
       @if (!isNew()) {
-        <section class="admin-card admin-card--danger" aria-labelledby="news-delete-title">
-          <h2
-            id="news-delete-title"
-            class="admin-card-title"
-            i18n="@@admin.newsEditor.delete.title"
-          >
+        <section class="ui-card ui-card--danger" aria-labelledby="news-delete-title">
+          <h2 id="news-delete-title" class="ui-card__title" i18n="@@admin.newsEditor.delete.title">
             Smazání
           </h2>
-          <div class="card-body">
-            <p class="card-intro" i18n="@@admin.newsEditor.delete.intro">
+          <div class="ui-card__body">
+            <p class="ui-card__intro" i18n="@@admin.newsEditor.delete.intro">
               Smazaná aktualita zmizí z webu i ze správy spolu s fotkou a nejde vrátit. Chcete-li ji
               jen schovat, stáhněte ji z webu.
             </p>
@@ -315,7 +311,12 @@
                 <span i18n="@@admin.newsEditor.delete.confirm.question"
                   >Opravdu smazat aktualitu „{{ articleTitle }}“?</span
                 >
-                <button type="button" class="danger" [disabled]="deleting()" (click)="delete()">
+                <button
+                  type="button"
+                  class="ui-button ui-button--danger"
+                  [disabled]="deleting()"
+                  (click)="delete()"
+                >
                   @if (deleting()) {
                     <ng-container i18n="@@admin.newsEditor.deleting">Mažeme…</ng-container>
                   } @else {
@@ -324,7 +325,7 @@
                 </button>
                 <button
                   type="button"
-                  class="action-link"
+                  class="ui-link-button"
                   [disabled]="deleting()"
                   (click)="cancelDelete()"
                   i18n="@@admin.newsEditor.delete.no"
@@ -335,7 +336,7 @@
             } @else {
               <button
                 type="button"
-                class="danger-outline"
+                class="ui-button ui-button--danger-outline"
                 (click)="askDelete()"
                 i18n="@@admin.newsEditor.delete.open"
               >

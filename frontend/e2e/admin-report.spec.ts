@@ -71,7 +71,7 @@ test.describe('Given an administrator on the monthly report page', () => {
     await page.getByLabel('Platby bez dárce').uncheck();
     await page.getByRole('button', { name: 'Uložit nastavení' }).click();
 
-    await expect(page.locator('.admin-notice--status')).toHaveText(
+    await expect(page.locator('.ui-notice--status')).toHaveText(
       'Nastavení jsme uložili. Příští přehled odejde podle něj.',
     );
     await expect(page.getByText('Naposledy změněno 23. 10. 2026 10:00.')).toBeVisible();
@@ -151,7 +151,7 @@ test.describe('Given an administrator on the monthly report page', () => {
     await expect(question).toContainText('Poslat přehled za říjen 2026 na info@nfnn.cz?');
     await question.getByRole('button', { name: 'Ano, poslat' }).click();
 
-    await expect(page.locator('.admin-notice--status')).toHaveText(
+    await expect(page.locator('.ui-notice--status')).toHaveText(
       'Přehled za říjen 2026 jsme poslali na info@nfnn.cz.',
     );
     await expect(page.locator('tbody tr')).toHaveText([

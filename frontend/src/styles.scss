@@ -1,5 +1,10 @@
 @use 'styles/themes/nova-nadeje';
 @use 'styles/form-controls';
+@use 'styles/ui/page';
+@use 'styles/ui/card';
+@use 'styles/ui/notice';
+@use 'styles/ui/button';
+@use 'styles/ui/table';
 
 *,
 *::before,

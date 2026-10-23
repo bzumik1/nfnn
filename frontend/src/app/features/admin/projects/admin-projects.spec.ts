@@ -83,7 +83,9 @@ describe('Given an administrator on the project list', () => {
     ) as NodeListOf<HTMLAnchorElement>;
     expect(links[0].getAttribute('href')).toBe(`/sprava/projekty/${draftProject().id}`);
     expect(
-      (fixture.nativeElement.querySelector('a.primary') as HTMLAnchorElement).getAttribute('href'),
+      (
+        fixture.nativeElement.querySelector('a.ui-button--primary') as HTMLAnchorElement
+      ).getAttribute('href'),
     ).toBe('/sprava/projekty/nova');
   });
 
@@ -91,7 +93,7 @@ describe('Given an administrator on the project list', () => {
     http.expectOne(LIST_URL).flush({ items: [] });
     await settle();
 
-    expect(texts('.card-intro')).toEqual([
+    expect(texts('.ui-card__intro')).toEqual([
       'Zatím tu žádný projekt není. Napište první tlačítkem Nový projekt.',
     ]);
   });
@@ -101,7 +103,9 @@ describe('Given an administrator on the project list', () => {
     await settle();
 
     expect(texts('[role="alert"]')).toEqual(['Projekty se nepodařilo načíst. Zkusit znovu']);
-    (fixture.nativeElement.querySelector('.admin-retry') as HTMLButtonElement).click();
+    (
+      fixture.nativeElement.querySelector('.ui-load-state--error button') as HTMLButtonElement
+    ).click();
     await settle();
     http.expectOne(LIST_URL).flush({ items: [project()] });
     await settle();

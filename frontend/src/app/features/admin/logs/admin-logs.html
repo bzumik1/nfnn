@@ -1,34 +1,36 @@
-<div class="container">
-  <h1 #title class="admin-title" tabindex="-1" i18n="@@admin.logs.heading">Logy a diagnostika</h1>
-  <p class="admin-intro" i18n="@@admin.logs.intro">
+<div class="ui-page container">
+  <h1 #title class="ui-page-title" tabindex="-1" i18n="@@admin.logs.heading">Logy a diagnostika</h1>
+  <p class="ui-page-intro" i18n="@@admin.logs.intro">
     Log backendu ze serveru (složka /DATA/AppData/nfnn/logs, 14 dní zpět po souborech), hledání v
     něm, dočasné zapnutí podrobnějšího logování a stav aplikace. Totéž umí Claude přes konektor.
   </p>
 
   @switch (state()) {
     @case ('loading') {
-      <p class="admin-loading" role="status" i18n="@@admin.logs.loading">Načítáme logy…</p>
+      <p class="ui-load-state" role="status" i18n="@@admin.logs.loading">Načítáme logy…</p>
     }
     @case ('error') {
-      <div class="admin-error" role="alert">
+      <div class="ui-load-state ui-load-state--error" role="alert">
         <p i18n="@@admin.logs.error.text">Logy a diagnostiku se nepodařilo načíst.</p>
-        <button type="button" class="admin-retry" (click)="load()" i18n="@@admin.logs.error.retry">
+        <button type="button" class="ui-button" (click)="load()" i18n="@@admin.logs.error.retry">
           Zkusit znovu
         </button>
       </div>
     }
     @case ('ready') {
-      <section class="admin-card" aria-labelledby="logs-files-title">
-        <h2 id="logs-files-title" class="admin-card-title" i18n="@@admin.logs.files.title">
+      <section class="ui-card" aria-labelledby="logs-files-title">
+        <h2 id="logs-files-title" class="ui-card__title" i18n="@@admin.logs.files.title">
           Soubory logu
         </h2>
         @if (!available()) {
-          <p class="card-body unavailable" role="alert" i18n="@@admin.logs.files.unavailable">
+          <p class="ui-card__body unavailable" role="alert" i18n="@@admin.logs.files.unavailable">
             Backend nevidí složku logů. Zkontrolujte compose na serveru: backend má mít připojenou
             složku /DATA/AppData/nfnn/logs jako /logs.
           </p>
         } @else if (files().length === 0) {
-          <p class="card-body card-intro" i18n="@@admin.logs.files.none">Složka logů je prázdná.</p>
+          <p class="ui-card__body ui-card__intro" i18n="@@admin.logs.files.none">
+            Složka logů je prázdná.
+          </p>
         } @else {
           <table>
             <thead>
@@ -61,7 +63,7 @@
                   <td class="row-actions">
                     <button
                       type="button"
-                      class="action-btn"
+                      class="ui-button"
                       [attr.aria-label]="openLabel(file)"
                       [attr.aria-pressed]="file.name === selectedFile()"
                       (click)="open(file.name)"
@@ -78,12 +80,12 @@
       </section>
 
       @if (selectedFile(); as file) {
-        <section class="admin-card" aria-labelledby="logs-window-title">
-          <h2 id="logs-window-title" class="admin-card-title">
+        <section class="ui-card" aria-labelledby="logs-window-title">
+          <h2 id="logs-window-title" class="ui-card__title">
             <ng-container i18n="@@admin.logs.window.title">Výpis</ng-container>
             <span class="file-name title-file">{{ file }}</span>
           </h2>
-          <div class="card-body">
+          <div class="ui-card__body">
             <form
               #searchForm="ngForm"
               class="search-form"
@@ -110,7 +112,7 @@
                   required
                 />
               </app-form-field>
-              <button type="submit" class="action-btn" [disabled]="searchState() === 'loading'">
+              <button type="submit" class="ui-button" [disabled]="searchState() === 'loading'">
                 @if (searchState() === 'loading') {
                   <ng-container i18n="@@admin.logs.search.busy">Hledáme…</ng-container>
                 } @else {
@@ -119,16 +121,16 @@
               </button>
             </form>
             @if (searchState() === 'error') {
-              <p class="admin-notice admin-notice--alert" role="alert">{{ searchError() }}</p>
+              <p class="ui-notice ui-notice--alert" role="alert">{{ searchError() }}</p>
             }
             @if (search(); as result) {
               <div class="matches" role="status">
                 @if (matches().length === 0) {
-                  <p class="card-intro" i18n="@@admin.logs.search.none">
+                  <p class="ui-card__intro" i18n="@@admin.logs.search.none">
                     Nic takového v logu není.
                   </p>
                 } @else {
-                  <p class="card-intro" i18n="@@admin.logs.search.count">
+                  <p class="ui-card__intro" i18n="@@admin.logs.search.count">
                     {matches().length, plural,
                       =1 {1 řádek, nejnovější první. Kliknutím ho zobrazíte i s okolím.}
                       =2 {
@@ -161,7 +163,7 @@
                   @if (result.moreOlder) {
                     <button
                       type="button"
-                      class="action-btn"
+                      class="ui-button"
                       [disabled]="searchState() === 'loading'"
                       (click)="olderMatches()"
                       i18n="@@admin.logs.search.older"
@@ -176,7 +178,7 @@
             <div class="pager">
               <button
                 type="button"
-                class="action-btn"
+                class="ui-button"
                 [disabled]="windowState() === 'loading' || !window()?.hasOlder"
                 (click)="older()"
                 i18n="@@admin.logs.window.older"
@@ -185,7 +187,7 @@
               </button>
               <button
                 type="button"
-                class="action-btn"
+                class="ui-button"
                 [disabled]="windowState() === 'loading' || !window()?.hasNewer"
                 (click)="newer()"
                 i18n="@@admin.logs.window.newer"
@@ -194,7 +196,7 @@
               </button>
               <button
                 type="button"
-                class="action-btn"
+                class="ui-button"
                 [disabled]="windowState() === 'loading'"
                 (click)="toEnd()"
                 i18n="@@admin.logs.window.end"
@@ -204,12 +206,12 @@
               <span class="range" aria-live="polite">{{ windowRange() }}</span>
             </div>
             @if (windowState() === 'loading') {
-              <p class="card-intro" role="status" i18n="@@admin.logs.window.loading">
+              <p class="ui-card__intro" role="status" i18n="@@admin.logs.window.loading">
                 Načítáme výpis…
               </p>
             }
             @if (windowState() === 'error') {
-              <p class="admin-notice admin-notice--alert" role="alert">{{ windowError() }}</p>
+              <p class="ui-notice ui-notice--alert" role="alert">{{ windowError() }}</p>
             }
             @if (window(); as window) {
               <pre class="log-text" tabindex="0">{{ window.text }}</pre>
@@ -218,20 +220,20 @@
         </section>
       }
 
-      <section class="admin-card" aria-labelledby="logs-levels-title">
-        <h2 id="logs-levels-title" class="admin-card-title" i18n="@@admin.logs.level.title">
+      <section class="ui-card" aria-labelledby="logs-levels-title">
+        <h2 id="logs-levels-title" class="ui-card__title" i18n="@@admin.logs.level.title">
           Úroveň logování
         </h2>
-        <div class="card-body">
-          <p class="card-intro" i18n="@@admin.logs.level.intro">
+        <div class="ui-card__body">
+          <p class="ui-card__intro" i18n="@@admin.logs.level.intro">
             Podrobnější logování (DEBUG, TRACE) zapněte jen na dobu hledání chyby: po uplynutí času
             i po restartu backendu se úroveň vrátí sama. Změna se zapisuje do historie správy.
           </p>
           @if (levelNotice(); as notice) {
             @if (notice.kind === 'status') {
-              <p class="admin-notice admin-notice--status" role="status">{{ notice.text }}</p>
+              <p class="ui-notice ui-notice--status" role="status">{{ notice.text }}</p>
             } @else {
-              <p class="admin-notice admin-notice--alert" role="alert">{{ notice.text }}</p>
+              <p class="ui-notice ui-notice--alert" role="alert">{{ notice.text }}</p>
             }
           }
           <form
@@ -291,7 +293,11 @@
                 required
               />
             </app-form-field>
-            <button type="submit" class="primary" [disabled]="levelState() === 'loading'">
+            <button
+              type="submit"
+              class="ui-button ui-button--primary"
+              [disabled]="levelState() === 'loading'"
+            >
               @if (levelState() === 'loading') {
                 <ng-container i18n="@@admin.logs.level.busy">Nastavujeme…</ng-container>
               } @else {
@@ -337,7 +343,7 @@
                     @if (entry.override) {
                       <button
                         type="button"
-                        class="action-btn"
+                        class="ui-button"
                         [disabled]="resetting() !== null"
                         [attr.aria-label]="resetLabel(entry)"
                         (click)="reset(entry)"
@@ -357,17 +363,17 @@
         </div>
       </section>
 
-      <section class="admin-card" aria-labelledby="logs-diagnostics-title">
+      <section class="ui-card" aria-labelledby="logs-diagnostics-title">
         <h2
           id="logs-diagnostics-title"
-          class="admin-card-title"
+          class="ui-card__title"
           i18n="@@admin.logs.diagnostics.title"
         >
           Stav aplikace
         </h2>
-        <div class="card-body">
+        <div class="ui-card__body">
           @if (diagnostics(); as diagnostics) {
-            <p class="card-intro" i18n="@@admin.logs.diagnostics.asOf">
+            <p class="ui-card__intro" i18n="@@admin.logs.diagnostics.asOf">
               Stav k {{ time(diagnostics.now) }}.
             </p>
             <dl class="runs">
@@ -414,7 +420,7 @@
           }
           @if (diagnosticsState() === 'error') {
             <p
-              class="admin-notice admin-notice--alert"
+              class="ui-notice ui-notice--alert"
               role="alert"
               i18n="@@admin.logs.diagnostics.failed"
             >
@@ -424,7 +430,7 @@
           <div class="actions">
             <button
               type="button"
-              class="action-btn"
+              class="ui-button"
               [disabled]="diagnosticsState() === 'loading'"
               (click)="refreshDiagnostics()"
             >
@@ -436,7 +442,7 @@
             </button>
             <button
               type="button"
-              class="action-btn"
+              class="ui-button"
               [disabled]="threadsState() === 'loading'"
               [attr.aria-expanded]="threads() !== null"
               aria-controls="logs-threads"
@@ -452,11 +458,7 @@
             </button>
           </div>
           @if (threadsState() === 'error') {
-            <p
-              class="admin-notice admin-notice--alert"
-              role="alert"
-              i18n="@@admin.logs.threads.failed"
-            >
+            <p class="ui-notice ui-notice--alert" role="alert" i18n="@@admin.logs.threads.failed">
               Výpis vláken se nepodařilo načíst.
             </p>
           }

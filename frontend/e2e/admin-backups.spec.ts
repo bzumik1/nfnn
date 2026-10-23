@@ -149,7 +149,7 @@ test.describe('Given an administrator on the backups page', () => {
     await page.getByRole('button', { name: 'Zálohovat teď' }).click();
 
     await expect(page.getByRole('button', { name: 'Zálohujeme…' })).toBeDisabled();
-    await expect(page.locator('.admin-notice--status')).toHaveText(
+    await expect(page.locator('.ui-notice--status')).toHaveText(
       'Záloha nfnn-2026-10-23_1000-rucni.dump je hotová (2 kB).',
       { timeout: 10_000 },
     );
@@ -215,7 +215,7 @@ test.describe('Given an administrator on the backups page', () => {
     await dialog.getByRole('button', { name: 'Obnovit a restartovat web' }).click();
 
     await expect(page.getByRole('heading', { name: 'Obnova ze zálohy' })).toBeVisible();
-    await expect(page.locator('.admin-notice--status')).toHaveText(
+    await expect(page.locator('.ui-notice--status')).toHaveText(
       'Databáze je obnovená ze zálohy nfnn-2026-10-22_0300.dump. Stav před obnovou je uložený jako záloha „Před obnovou“.',
       { timeout: 15_000 },
     );

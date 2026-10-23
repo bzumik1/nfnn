@@ -74,7 +74,7 @@ describe('Given an administrator on a donor card', () => {
 
   function section(title: string): HTMLElement {
     const found = Array.from(
-      fixture.nativeElement.querySelectorAll('section.admin-card') as NodeListOf<HTMLElement>,
+      fixture.nativeElement.querySelectorAll('section.ui-card') as NodeListOf<HTMLElement>,
     ).find((candidate) => candidate.querySelector('h2')?.textContent?.trim() === title);
     if (found === undefined) {
       throw new Error(`No card "${title}"`);
@@ -180,7 +180,7 @@ describe('Given an administrator on a donor card', () => {
     request.flush(null, { status: 204, statusText: 'No Content' });
     fixture.detectChanges();
 
-    expect(text('.admin-notice--status')).toBe(
+    expect(text('.ui-notice--status')).toBe(
       'Osobní údaje dárce jsme vymazali a na jeho dosavadní e-mail poslali potvrzení. Účet už nejde použít; dary a vydaná potvrzení zůstávají bez jména.',
     );
     const erased = donorAccount({
@@ -230,7 +230,7 @@ describe('Given an administrator on a donor card', () => {
     http.expectOne(ACCOUNT_URL).flush(refusal.body, refusal.options);
     fixture.detectChanges();
 
-    expect(text('.admin-notice--alert')).toBe(
+    expect(text('.ui-notice--alert')).toBe(
       'Dárce už je vymazaný. Osobní údaje tohoto dárce byly vymazány dřív.',
     );
     expect(button(section('Účet dárce'), 'Vymazat osobní údaje')).toBeTruthy();
@@ -339,7 +339,7 @@ describe('Given an administrator on a donor card', () => {
     request.flush(null, { status: 204, statusText: 'No Content' });
     fixture.detectChanges();
 
-    expect(text('.admin-notice--status')).toBe(
+    expect(text('.ui-notice--status')).toBe(
       'Dvoufaktorové ověření u Jana Nováková je vypnuté a všechna přihlášení jsme ukončili. Dárce dostal e-mail; po přihlášení heslem si ho může zapnout znovu.',
     );
     http.expectOne(ACCOUNT_URL).flush(donorAccount());
@@ -362,7 +362,7 @@ describe('Given an administrator on a donor card', () => {
     request.flush(null, { status: 204, statusText: 'No Content' });
     fixture.detectChanges();
 
-    expect(text('.admin-notice--status')).toBe(
+    expect(text('.ui-notice--status')).toBe(
       'Přístupové klíče u Jana Nováková jsme odebrali a všechna přihlášení ukončili. Dárce dostal e-mail; po přihlášení heslem si může přidat nový klíč.',
     );
     http.expectOne(ACCOUNT_URL).flush(donorAccount());
@@ -384,7 +384,7 @@ describe('Given an administrator on a donor card', () => {
     expect(disconnect.request.method).toBe('POST');
     disconnect.flush(null, { status: 204, statusText: 'No Content' });
     fixture.detectChanges();
-    expect(text('.admin-notice--status')).toBe(
+    expect(text('.ui-notice--status')).toBe(
       'Párování z účtu 2900233333/2010 je vypnuté: platby bez symbolu z něj už dárci nepřiřadíme, dosavadní dary zůstávají.',
     );
     http.expectOne(DETAIL_URL).flush(
@@ -404,7 +404,7 @@ describe('Given an administrator on a donor card', () => {
     expect(reconnect.request.method).toBe('POST');
     reconnect.flush(null, { status: 204, statusText: 'No Content' });
     fixture.detectChanges();
-    expect(text('.admin-notice--status')).toBe(
+    expect(text('.ui-notice--status')).toBe(
       'Párování z účtu 2900233333/2010 zase zapneme, jakmile z něj přijde platba s variabilním symbolem dárce.',
     );
     http.expectOne(DETAIL_URL).flush(donorDetail());
@@ -427,7 +427,7 @@ describe('Given an administrator on a donor card', () => {
     request.flush(null, { status: 204, statusText: 'No Content' });
     fixture.detectChanges();
 
-    expect(text('.admin-notice--status')).toBe(
+    expect(text('.ui-notice--status')).toBe(
       'Účet 2900233333/2010 jsme dárci odebrali: 2 dary přiřazené přes něj jsme smazali a platby jsou zase nespárované.',
     );
     http.expectOne(DETAIL_URL).flush(donorDetail({ bankAccounts: [] }));
@@ -464,7 +464,7 @@ describe('Given an administrator on a donor card', () => {
     http.expectOne(LINK_URL).flush(refusal.body, refusal.options);
     fixture.detectChanges();
 
-    expect(text('.admin-notice--alert')).toBe(
+    expect(text('.ui-notice--alert')).toBe(
       'Na dary z tohoto účtu odkazuje vydané potvrzení. Účet nejde odebrat.',
     );
     expect(button(section('Bankovní účty'), 'Odebrat účet')).toBeTruthy();
@@ -480,7 +480,7 @@ describe('Given an administrator on a donor card', () => {
     expect(text('h1')).toBe('Dárce');
     expect(sectionText('Účet dárce')).toContain('Takový dárce není.');
     expect(sectionText('Bankovní účty')).toContain('Dárce nemá záznam v evidenci darů');
-    expect(fixture.nativeElement.querySelectorAll('section.admin-card')).toHaveLength(2);
+    expect(fixture.nativeElement.querySelectorAll('section.ui-card')).toHaveLength(2);
   });
 
   it('when a part cannot be loaded, then its card offers a retry that loads it again', async () => {

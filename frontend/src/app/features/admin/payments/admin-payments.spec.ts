@@ -121,7 +121,7 @@ describe('Given an administrator on the bank payments page', () => {
   it('when there is nothing unpaired, then the page says so', async () => {
     await listResponds(paymentList([]));
 
-    expect(text('.admin-empty')).toContain('Všechny platby z banky jsou přiřazené.');
+    expect(text('.ui-card__empty')).toContain('Všechny platby z banky jsou přiřazené.');
   });
 
   it('when unpaired payments arrive, then each row shows date, amount, sender, symbol and message with a pairing button', async () => {
@@ -159,7 +159,7 @@ describe('Given an administrator on the bank payments page', () => {
     button('Zkusit znovu').click();
     await listResponds(paymentList([]));
 
-    expect(text('.admin-empty')).toContain('Všechny platby z banky jsou přiřazené.');
+    expect(text('.ui-card__empty')).toContain('Všechny platby z banky jsou přiřazené.');
   });
 
   it('when the role was taken away, then the administrator lands on the donor overview', async () => {
@@ -220,7 +220,7 @@ describe('Given an administrator on the bank payments page', () => {
       );
 
       expect(text('#payments-title')).toBe('Spárované platby 2025');
-      expect(text('.admin-empty')).toBe('Zatím není přiřazena žádná platba.');
+      expect(text('.ui-card__empty')).toBe('Zatím není přiřazena žádná platba.');
     });
 
     it('then unpairing asks for a confirmation, posts once confirmed, reports the yearly receipt and reloads', async () => {

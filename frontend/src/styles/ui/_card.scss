@@ -1,0 +1,36 @@
+.ui-card {
+  background: var(--color-surface);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-panel);
+  border: 1px solid var(--color-border-soft);
+  overflow: hidden;
+  margin-bottom: var(--space-5);
+}
+
+.ui-card--danger {
+  border-color: var(--color-danger-border);
+}
+
+.ui-card__title {
+  font-family: var(--font-serif);
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-bold);
+  color: var(--color-text);
+  padding: var(--space-5) var(--space-6) var(--space-3);
+}
+
+.ui-card__body {
+  padding: 0 var(--space-6) var(--space-6);
+}
+
+.ui-card__intro {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  line-height: var(--leading-normal);
+}
+
+.ui-card__empty {
+  color: var(--color-text-muted);
+  font-size: var(--text-md);
+  padding: 0 var(--space-6) var(--space-5);
+}

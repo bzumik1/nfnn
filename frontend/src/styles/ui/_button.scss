@@ -1,0 +1,66 @@
+.ui-button {
+  display: inline-block;
+  border: none;
+  border-radius: var(--radius-pill);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  padding: var(--space-2-25) var(--space-4-5);
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
+
+  &:disabled {
+    cursor: progress;
+    opacity: 0.7;
+  }
+}
+
+.ui-button--primary {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  padding: var(--space-2-5) var(--space-6);
+  font-size: var(--text-md);
+  font-weight: var(--weight-bold);
+  box-shadow: var(--shadow-button-sm);
+}
+
+.ui-button--small {
+  padding: var(--space-1-75) var(--space-3-5);
+  font-size: var(--text-xs);
+}
+
+.ui-button--quiet {
+  background: none;
+  border: 1.5px solid var(--color-border);
+  color: var(--color-text-muted);
+}
+
+.ui-button--danger {
+  background: var(--color-danger);
+  color: var(--color-on-danger);
+}
+
+.ui-button--danger-outline {
+  background: none;
+  border: 1px solid var(--color-danger-border);
+  color: var(--color-danger);
+}
+
+.ui-link-button {
+  background: none;
+  border: none;
+  color: var(--color-accent);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  cursor: pointer;
+  padding: var(--space-1-5) var(--space-2);
+
+  &:disabled {
+    cursor: progress;
+    opacity: 0.7;
+  }
+}

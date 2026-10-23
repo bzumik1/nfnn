@@ -223,7 +223,7 @@ describe('Given an administrator on the logs page', () => {
       });
     await settle();
 
-    expect(text('.matches .card-intro')).toBe(
+    expect(text('.matches .ui-card__intro')).toBe(
       '2 řádky, nejnovější první. Kliknutím zobrazíte řádek i s okolím.',
     );
     expect(texts('.match')).toEqual([
@@ -276,7 +276,7 @@ describe('Given an administrator on the logs page', () => {
       .flush(refusal.body, refusal.options);
     await settle();
 
-    expect(text('.admin-notice--alert')).toBe(
+    expect(text('.ui-notice--alert')).toBe(
       'Neplatný výraz. Hledaný výraz není platný regulární výraz.',
     );
   });
@@ -318,7 +318,7 @@ describe('Given an administrator on the logs page', () => {
     );
     await settle();
 
-    expect(text('.admin-notice--status')).toBe(
+    expect(text('.ui-notice--status')).toBe(
       'Logger cz.novanadeje.app má úroveň TRACE do 23. 10. 2026 12:10.',
     );
     expect(texts('.levels tbody tr:nth-child(2) td').slice(1, 4)).toEqual([
@@ -339,7 +339,7 @@ describe('Given an administrator on the logs page', () => {
     http.expectOne(DIAGNOSTICS_URL).flush(diagnostics());
     await settle();
 
-    expect(text('.admin-notice--status')).toBe('Logger cz.novanadeje.app má zase původní úroveň.');
+    expect(text('.ui-notice--status')).toBe('Logger cz.novanadeje.app má zase původní úroveň.');
     expect(fixture.nativeElement.querySelector('.levels tr.overridden')).toBeNull();
   });
 
@@ -378,7 +378,7 @@ describe('Given an administrator on the logs page', () => {
     http.expectOne(`${LOGGERS_URL}/cz.novanadeje.app`).flush(refusal.body, refusal.options);
     await settle();
 
-    expect(text('.admin-notice--alert')).toBe(
+    expect(text('.ui-notice--alert')).toBe(
       'Přístup odepřen. Tato akce vyžaduje oprávnění ke změnám.',
     );
   });

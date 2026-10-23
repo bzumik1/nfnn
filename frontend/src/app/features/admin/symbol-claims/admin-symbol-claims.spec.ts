@@ -124,7 +124,7 @@ describe('Given an administrator on the older symbols page', () => {
   it('when nobody has answered yet, then the card says so', async () => {
     await listed([]);
 
-    expect(text('.admin-empty')).toBe(
+    expect(text('.ui-card__empty')).toBe(
       'Zatím nikdo neodpověděl na otázku o starším variabilním symbolu.',
     );
     expect(rows()).toHaveLength(0);
@@ -142,7 +142,7 @@ describe('Given an administrator on the older symbols page', () => {
     fixture.detectChanges();
 
     expect(text('[role="alert"]')).toContain('Odpovědi se nepodařilo načíst.');
-    element<HTMLButtonElement>('.admin-retry').click();
+    element<HTMLButtonElement>('.ui-load-state--error button').click();
     fixture.detectChanges();
 
     await listed([yes]);
@@ -163,7 +163,7 @@ describe('Given an administrator on the older symbols page', () => {
     request.flush(null, { status: 204, statusText: 'No Content' });
     fixture.detectChanges();
 
-    expect(text('.admin-notice--status')).toBe(
+    expect(text('.ui-notice--status')).toBe(
       'Odpověď Ano u Jana Nováková (VS 6123456789) je zrušená: 3 dary jsme smazali a platby s tímto symbolem jsou zase nespárované. Dárce se už neptáme.',
     );
     await listed([{ ...yes, answer: 'DECLINED', donationCount: 0 }, no]);
@@ -184,7 +184,7 @@ describe('Given an administrator on the older symbols page', () => {
     request.flush(null, { status: 204, statusText: 'No Content' });
     fixture.detectChanges();
 
-    expect(text('.admin-notice--status')).toBe(
+    expect(text('.ui-notice--status')).toBe(
       'Odpověď Ne u Petr Svoboda (VS 777) jsme smazali. Pokud otázka pořád platí, nástěnka se dárce zeptá znovu.',
     );
     await listed([yes]);
@@ -222,7 +222,7 @@ describe('Given an administrator on the older symbols page', () => {
       .flush(refusal.body, refusal.options);
     fixture.detectChanges();
 
-    expect(text('.admin-notice--alert')).toBe(
+    expect(text('.ui-notice--alert')).toBe(
       'Na dary z této odpovědi odkazuje vydané potvrzení. Odpověď nejde zrušit.',
     );
     expect(rows()).toHaveLength(2);

@@ -1,8 +1,8 @@
-<div class="container">
-  <p class="admin-crumbs">
+<div class="ui-page container">
+  <p class="ui-crumbs">
     <a routerLink="/sprava/projekty" i18n="@@admin.projectEditor.backToProjects">← Projekty</a>
   </p>
-  <h1 #title class="admin-title" tabindex="-1">
+  <h1 #title class="ui-page-title" tabindex="-1">
     @if (isNew()) {
       <ng-container i18n="@@admin.projectEditor.heading.new">Nový projekt</ng-container>
     } @else {
@@ -12,24 +12,24 @@
 
   @if (notice(); as notice) {
     @if (notice.kind === 'status') {
-      <p class="admin-notice admin-notice--status" role="status">{{ notice.text }}</p>
+      <p class="ui-notice ui-notice--status" role="status">{{ notice.text }}</p>
     } @else {
-      <p class="admin-notice admin-notice--alert" role="alert">{{ notice.text }}</p>
+      <p class="ui-notice ui-notice--alert" role="alert">{{ notice.text }}</p>
     }
   }
 
   @switch (state()) {
     @case ('loading') {
-      <p class="admin-loading" role="status" i18n="@@admin.projectEditor.loading">
+      <p class="ui-load-state" role="status" i18n="@@admin.projectEditor.loading">
         Načítáme projekt…
       </p>
     }
     @case ('error') {
-      <div class="admin-error" role="alert">
+      <div class="ui-load-state ui-load-state--error" role="alert">
         <p i18n="@@admin.projectEditor.error.text">Projekt se nepodařilo načíst.</p>
         <button
           type="button"
-          class="admin-retry"
+          class="ui-button"
           (click)="retry()"
           i18n="@@admin.projectEditor.error.retry"
         >
@@ -38,15 +38,11 @@
       </div>
     }
     @case ('ready') {
-      <section class="admin-card" aria-labelledby="projects-content-title">
-        <h2
-          id="projects-content-title"
-          class="admin-card-title"
-          i18n="@@admin.projectEditor.content"
-        >
+      <section class="ui-card" aria-labelledby="projects-content-title">
+        <h2 id="projects-content-title" class="ui-card__title" i18n="@@admin.projectEditor.content">
           Obsah
         </h2>
-        <div class="card-body">
+        <div class="ui-card__body">
           <form
             #projectForm="ngForm"
             class="project-form"
@@ -186,7 +182,7 @@
                 @if (coverImage()) {
                   <button
                     type="button"
-                    class="action-link"
+                    class="ui-link-button"
                     [disabled]="uploading()"
                     (click)="removeImage()"
                     i18n="@@admin.projectEditor.image.remove"
@@ -218,7 +214,11 @@
             }
 
             <div class="form-actions">
-              <button type="submit" class="primary" [disabled]="saving() || uploading()">
+              <button
+                type="submit"
+                class="ui-button ui-button--primary"
+                [disabled]="saving() || uploading()"
+              >
                 @if (saving()) {
                   <span i18n="@@admin.projectEditor.saving">Ukládáme…</span>
                 } @else if (isNew()) {
@@ -237,23 +237,25 @@
         </div>
       </section>
 
-      <section class="admin-card" aria-labelledby="projects-publish-title">
+      <section class="ui-card" aria-labelledby="projects-publish-title">
         <h2
           id="projects-publish-title"
-          class="admin-card-title"
+          class="ui-card__title"
           i18n="@@admin.projectEditor.publish.title"
         >
           Zveřejnění
         </h2>
-        <div class="card-body">
+        <div class="ui-card__body">
           @if (isNew()) {
-            <p class="card-intro" i18n="@@admin.projectEditor.publish.saveFirst">
+            <p class="ui-card__intro" i18n="@@admin.projectEditor.publish.saveFirst">
               Projekt nejdřív uložte, zveřejnit ho půjde potom.
             </p>
           } @else {
             @if (publishedOn(); as date) {
               <p class="publish-state publish-state--published">
-                <span class="state state--published" i18n="@@admin.projectEditor.state.published"
+                <span
+                  class="ui-badge ui-badge--success"
+                  i18n="@@admin.projectEditor.state.published"
                   >Na webu</span
                 >
                 <span i18n="@@admin.projectEditor.publishedOn"
@@ -263,7 +265,7 @@
               </p>
             } @else {
               <p class="publish-state">
-                <span class="state state--draft" i18n="@@admin.projectEditor.state.draft"
+                <span class="ui-badge ui-badge--warning" i18n="@@admin.projectEditor.state.draft"
                   >Koncept</span
                 >
                 <span i18n="@@admin.projectEditor.draft.text"
@@ -287,7 +289,7 @@
               </label>
               <button
                 type="button"
-                class="action-btn"
+                class="ui-button"
                 [disabled]="publishing() || unpublishing() || !publishDate"
                 (click)="publish()"
               >
@@ -304,7 +306,7 @@
               @if (isPublished()) {
                 <button
                   type="button"
-                  class="action-link"
+                  class="ui-link-button"
                   [disabled]="publishing() || unpublishing()"
                   (click)="unpublish()"
                 >
@@ -325,16 +327,16 @@
       </section>
 
       @if (!isNew()) {
-        <section class="admin-card admin-card--danger" aria-labelledby="projects-delete-title">
+        <section class="ui-card ui-card--danger" aria-labelledby="projects-delete-title">
           <h2
             id="projects-delete-title"
-            class="admin-card-title"
+            class="ui-card__title"
             i18n="@@admin.projectEditor.delete.title"
           >
             Smazání
           </h2>
-          <div class="card-body">
-            <p class="card-intro" i18n="@@admin.projectEditor.delete.intro">
+          <div class="ui-card__body">
+            <p class="ui-card__intro" i18n="@@admin.projectEditor.delete.intro">
               Smazaný projekt zmizí z webu i ze správy spolu s fotkou a nejde vrátit. Chcete-li ho
               jen schovat, stáhněte ho z webu.
             </p>
@@ -348,7 +350,12 @@
                 <span i18n="@@admin.projectEditor.delete.confirm.question"
                   >Opravdu smazat projekt „{{ projectTitle }}“?</span
                 >
-                <button type="button" class="danger" [disabled]="deleting()" (click)="delete()">
+                <button
+                  type="button"
+                  class="ui-button ui-button--danger"
+                  [disabled]="deleting()"
+                  (click)="delete()"
+                >
                   @if (deleting()) {
                     <ng-container i18n="@@admin.projectEditor.deleting">Mažeme…</ng-container>
                   } @else {
@@ -357,7 +364,7 @@
                 </button>
                 <button
                   type="button"
-                  class="action-link"
+                  class="ui-link-button"
                   [disabled]="deleting()"
                   (click)="cancelDelete()"
                   i18n="@@admin.projectEditor.delete.no"
@@ -368,7 +375,7 @@
             } @else {
               <button
                 type="button"
-                class="danger-outline"
+                class="ui-button ui-button--danger-outline"
                 (click)="askDelete()"
                 i18n="@@admin.projectEditor.delete.open"
               >

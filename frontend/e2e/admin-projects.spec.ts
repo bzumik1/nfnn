@@ -155,7 +155,7 @@ test.describe('Given an administrator managing the projects', () => {
 
     await page.getByRole('button', { name: 'Uložit koncept' }).click();
 
-    await expect(page.locator('.admin-notice--status')).toHaveText(
+    await expect(page.locator('.ui-notice--status')).toHaveText(
       'Projekt jsme uložili jako koncept. Na web ho dostanete tlačítkem Zveřejnit.',
     );
     await expect(page).toHaveURL(`/sprava/projekty/${DRAFT_ID}`);
@@ -174,7 +174,7 @@ test.describe('Given an administrator managing the projects', () => {
     await page.getByLabel('Datum zveřejnění').fill('2026-10-23');
     await page.getByRole('button', { name: 'Zveřejnit' }).click();
 
-    await expect(page.locator('.admin-notice--status')).toHaveText(
+    await expect(page.locator('.ui-notice--status')).toHaveText(
       'Projekt je na webu s datem 23. 10. 2026.',
     );
     await expect(page.getByRole('button', { name: 'Stáhnout z webu' })).toBeVisible();
@@ -259,7 +259,7 @@ test.describe('Given an administrator managing the projects', () => {
     await page.goto(`/sprava/projekty/${PROJECT_ID}`);
     await page.getByRole('button', { name: 'Stáhnout z webu' }).click();
 
-    await expect(page.locator('.admin-notice--status')).toHaveText(
+    await expect(page.locator('.ui-notice--status')).toHaveText(
       'Projekt jsme z webu stáhli. Zůstává tu jako koncept.',
     );
     await expect(page.getByRole('button', { name: 'Zveřejnit' })).toBeVisible();
