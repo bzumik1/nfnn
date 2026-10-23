@@ -4,6 +4,7 @@ import cz.novanadeje.app.donors.domain.Donor;
 import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.donors.domain.DonorNotFound;
 import cz.novanadeje.app.donors.domain.DonorRepository;
+import cz.novanadeje.app.donors.domain.PasskeyRepository;
 import cz.novanadeje.app.donors.domain.PasswordHash;
 import cz.novanadeje.app.donors.domain.PasswordHasher;
 import cz.novanadeje.app.donors.domain.RawPassword;
@@ -15,6 +16,7 @@ import cz.novanadeje.app.donors.domain.SecondFactorCodeRejected;
 import cz.novanadeje.app.donors.domain.SecondFactorNotEnabled;
 import cz.novanadeje.app.donors.domain.SecondFactorNotPending;
 import cz.novanadeje.app.donors.domain.SecondFactorRepository;
+import cz.novanadeje.app.donors.domain.SecondFactorSessionRequired;
 import cz.novanadeje.app.donors.domain.Totp;
 import cz.novanadeje.app.donors.domain.TotpSecret;
 import cz.novanadeje.app.donors.domain.WrongPassword;
@@ -77,12 +79,15 @@ class DonorSecondFactorServiceTest {
     private DonorSessionService sessions;
     @Mock
     private QrCodeEncoder qrCodes;
+    @Mock
+    private PasskeyRepository passkeys;
 
     private DonorSecondFactorService service;
 
     @BeforeEach
     void setUp() {
         service = new DonorSecondFactorService(donors, secondFactors, refreshTokens, passwordHasher, sessions, new DonorViews(secondFactors), qrCodes,
+                new SecondFactorSessionGuard(secondFactors, passkeys),
                 new DonorSecondFactorProperties(Duration.ofMinutes(5), 5, "Nová naděje"), Clock.fixed(NOW, ZoneOffset.UTC));
     }
 
@@ -94,7 +99,7 @@ class DonorSecondFactorServiceTest {
         when(secondFactors.findByDonor(DONOR)).thenReturn(Optional.empty());
         when(qrCodes.encode(anyString(), any())).thenReturn(MODULES);
 
-        SecondFactorEnrolment enrolment = service.begin(DONOR, PASSWORD);
+        SecondFactorEnrolment enrolment = service.begin(DONOR, false, PASSWORD);
 
         ArgumentCaptor<SecondFactor> stored = ArgumentCaptor.forClass(SecondFactor.class);
         verify(secondFactors).save(stored.capture());
@@ -110,6 +115,22 @@ class DonorSecondFactorServiceTest {
     }
 
     @Test
+    @DisplayName("Given an administrator with a passkey in a session opened with the password only, when the set-up begins, then it is refused and nothing is stored")
+    void should_refuse_setup_when_begun_in_password_session_given_administrator_with_passkey() {
+        Donor administrator = donor();
+        administrator.grantAdministration();
+        when(donors.findById(DONOR)).thenReturn(Optional.of(administrator));
+        when(passwordHasher.matches(new RawPassword(PASSWORD), HASH)).thenReturn(true);
+        when(secondFactors.findByDonor(DONOR)).thenReturn(Optional.empty());
+        when(passkeys.countByDonor(DONOR)).thenReturn(1);
+
+        assertThatThrownBy(() -> service.begin(DONOR, false, PASSWORD)).isInstanceOf(SecondFactorSessionRequired.class);
+
+        verify(secondFactors, never()).save(any());
+        verifyNoInteractions(qrCodes);
+    }
+
+    @Test
     @DisplayName("Given a pending factor from an earlier attempt, when the set-up begins again, then a fresh secret replaces it")
     void should_replace_pending_factor_when_setup_begun_given_earlier_attempt() {
         when(donors.findById(DONOR)).thenReturn(Optional.of(donor()));
@@ -117,7 +138,7 @@ class DonorSecondFactorServiceTest {
         when(secondFactors.findByDonor(DONOR)).thenReturn(Optional.of(SecondFactor.enrol(DONOR, SECRET, NOW.minusSeconds(600))));
         when(qrCodes.encode(anyString(), any())).thenReturn(MODULES);
 
-        SecondFactorEnrolment enrolment = service.begin(DONOR, PASSWORD);
+        SecondFactorEnrolment enrolment = service.begin(DONOR, false, PASSWORD);
 
         assertThat(enrolment.secret()).isNotEqualTo(SECRET.value());
         verify(secondFactors).save(any());
@@ -130,7 +151,7 @@ class DonorSecondFactorServiceTest {
         when(passwordHasher.matches(new RawPassword(PASSWORD), HASH)).thenReturn(true);
         when(secondFactors.findByDonor(DONOR)).thenReturn(Optional.of(enabledFactor()));
 
-        assertThatThrownBy(() -> service.begin(DONOR, PASSWORD)).isInstanceOf(SecondFactorAlreadyEnabled.class);
+        assertThatThrownBy(() -> service.begin(DONOR, false, PASSWORD)).isInstanceOf(SecondFactorAlreadyEnabled.class);
 
         verify(secondFactors, never()).save(any());
         verifyNoInteractions(qrCodes);
@@ -142,8 +163,8 @@ class DonorSecondFactorServiceTest {
         when(donors.findById(DONOR)).thenReturn(Optional.of(donor()));
         when(passwordHasher.matches(new RawPassword("wrong horse battery"), HASH)).thenReturn(false);
 
-        assertThatThrownBy(() -> service.begin(DONOR, "wrong horse battery")).isInstanceOf(WrongPassword.class);
-        assertThatThrownBy(() -> service.begin(DONOR, "short")).isInstanceOf(WrongPassword.class);
+        assertThatThrownBy(() -> service.begin(DONOR, false, "wrong horse battery")).isInstanceOf(WrongPassword.class);
+        assertThatThrownBy(() -> service.begin(DONOR, false, "short")).isInstanceOf(WrongPassword.class);
 
         verifyNoInteractions(secondFactors, qrCodes);
     }
@@ -153,7 +174,7 @@ class DonorSecondFactorServiceTest {
     void should_report_not_found_when_setup_begun_given_unknown_donor() {
         when(donors.findById(DONOR)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.begin(DONOR, PASSWORD)).isInstanceOf(DonorNotFound.class);
+        assertThatThrownBy(() -> service.begin(DONOR, false, PASSWORD)).isInstanceOf(DonorNotFound.class);
 
         verifyNoInteractions(passwordHasher, secondFactors);
     }
