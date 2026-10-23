@@ -979,7 +979,7 @@ Tests: `diagnostics.feature` (a raised level audited and listed with its overrid
 
 `GET /api/admin/operations/diagnostics/threads` → `text/plain`, a dump of every live thread (`"name" #id [daemon] state=…`, `waiting on … owned by …`, the frames as `    at …` with `    - locked …`), from `ThreadMXBean.dumpAllThreads(true, true)`; it names no donor, only code. Nothing in the diagnostics is personal data or a secret; both are read-only and not audited.
 
-Tests: `diagnostics.feature` (the database reachable, threads and heap positive, the log folder mounted, a thread dump with frames, 401 without a token), `DiagnosticsServiceTest`.
+Tests: `diagnostics.feature` (the database reachable, threads and heap positive, the log folder mounted, a thread dump with frames, 401 without a token), `DiagnosticsServiceTest`. The page `/sprava/logy` shows the logs, the levels and the diagnostics (`docs/frontend-overview.md`).
 
 #### Audit trail
 
