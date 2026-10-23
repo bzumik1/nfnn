@@ -16,7 +16,6 @@ import { AuthStore } from '../../../core/auth/auth-store';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
 import { NewsApi, NewsArticleResponse } from '../../content/news-api';
 import { formatBankTime, formatDonationDate } from '../../donations/donation-date';
-import { DashboardTopBar } from '../../donors/dashboard/top-bar/top-bar';
 
 type LoadState = 'loading' | 'ready' | 'error';
 
@@ -25,7 +24,7 @@ const FORBIDDEN = 'auth/forbidden';
 
 @Component({
   selector: 'app-admin-news',
-  imports: [DashboardTopBar, RouterLink],
+  imports: [RouterLink],
   templateUrl: './admin-news.html',
   styleUrl: './admin-news.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

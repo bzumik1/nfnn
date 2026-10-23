@@ -365,11 +365,103 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
           },
         }),
     );
+    await page.route(
+      (url) => url.pathname === '/api/admin/operations/backups',
+      (route) =>
+        route.fulfill({
+          json: {
+            available: true,
+            backups: [],
+            lastBackup: {
+              outcome: 'OK',
+              startedAt: '2026-10-23T01:00:00Z',
+              finishedAt: '2026-10-23T01:00:03Z',
+              fileName: 'nfnn-2026-10-23_0300.dump',
+              sizeBytes: 1590,
+              tables: null,
+              requestId: null,
+              error: null,
+            },
+            lastTestRestore: null,
+            lastRestore: null,
+            restoreFiles: [],
+            pendingRequests: 0,
+            problems: [],
+          },
+        }),
+    );
     await signIn(page, administrator);
     await page.getByRole('link', { name: 'Správa' }).click();
     await expect(page.getByRole('heading', { level: 1, name: 'Správa' })).toBeFocused();
     await expect(page.locator('.admin-outage')).toBeVisible();
     await expect(page.locator('.overview-table tbody tr')).toHaveCount(2);
+    await expect(page.getByText('Zálohování je v pořádku.')).toBeVisible();
+
+    expect(await violations(page)).toEqual([]);
+  });
+
+  test('when an administrator opens the administration menu on a phone, then the open side panel breaks no rule', async ({
+    page,
+  }) => {
+    await page.route(
+      (url) => url.pathname === '/api/admin/donations/import-state',
+      (route) =>
+        route.fulfill({
+          json: {
+            coveredFrom: null,
+            coveredTo: null,
+            lastAttemptedAt: null,
+            lastSucceededAt: null,
+            lastFailure: null,
+            consecutiveFailures: 0,
+            reportedOutage: null,
+          },
+        }),
+    );
+    await page.route(
+      (url) => url.pathname === '/api/admin/donations/overview',
+      (route) =>
+        route.fulfill({
+          json: {
+            year: 2026,
+            availableYears: [2026],
+            donorsRegistered: 0,
+            newDonors: 0,
+            donations: { count: 0, totalMinor: 0, currency: 'CZK' },
+            unpairedPayments: { count: 0, totalMinor: 0, currency: 'CZK' },
+            months: [],
+          },
+        }),
+    );
+    await page.route(
+      (url) => url.pathname === '/api/admin/operations/backups',
+      (route) =>
+        route.fulfill({
+          json: {
+            available: true,
+            backups: [],
+            lastBackup: null,
+            lastTestRestore: null,
+            lastRestore: null,
+            restoreFiles: [],
+            pendingRequests: 0,
+            problems: ['BACKUP_MISSING'],
+          },
+        }),
+    );
+    await page.route('**/api/donors/auth/refresh', (route) =>
+      route.fulfill(session(200, administrator)),
+    );
+    await page.goto('/');
+    await page.evaluate(() => localStorage.setItem('nfnn.donor-session', '1'));
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/sprava');
+    await page.getByRole('button', { name: 'Menu správy' }).click();
+    await expect(
+      page
+        .getByRole('navigation', { name: 'Správa' })
+        .getByRole('link', { name: 'Přehled', exact: true }),
+    ).toBeVisible();
 
     expect(await violations(page)).toEqual([]);
   });

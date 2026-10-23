@@ -17,14 +17,17 @@ import { AuthStore } from '../../../core/auth/auth-store';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
 import { formatCrowns } from '../../donations/donation-amount';
 import { formatBankTime, formatDonationDate } from '../../donations/donation-date';
-import { DashboardTopBar } from '../../donors/dashboard/top-bar/top-bar';
 import {
   AdminApi,
+  AdminBackupsResponse,
   AdminOverviewResponse,
+  BackupRunResponse,
   ImportFailureKind,
   ImportStateResponse,
   TallyResponse,
 } from '../admin-api';
+import { formatSize } from '../backups/backup-format';
+import { BACKUP_PROBLEM_TEXTS } from '../backups/backup-texts';
 import { formatReportMonth } from '../report/report-month';
 
 type LoadState = 'loading' | 'ready' | 'error';
@@ -43,7 +46,7 @@ const FAILURE_LABELS: Record<ImportFailureKind, string> = {
 
 @Component({
   selector: 'app-admin-home',
-  imports: [DashboardTopBar, RouterLink],
+  imports: [RouterLink],
   templateUrl: './admin-home.html',
   styleUrl: './admin-home.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -62,6 +65,30 @@ export class AdminHome {
   protected readonly importState = signal<ImportStateResponse | null>(null);
   protected readonly overviewState = signal<LoadState>('loading');
   protected readonly overview = signal<AdminOverviewResponse | null>(null);
+  protected readonly backupsState = signal<LoadState>('loading');
+  protected readonly backups = signal<AdminBackupsResponse | null>(null);
+
+  protected readonly backupProblems = computed(() =>
+    (this.backups()?.problems ?? []).map((problem) => BACKUP_PROBLEM_TEXTS[problem]),
+  );
+  protected readonly lastBackup = computed(() => {
+    const run = this.backups()?.lastBackup;
+    if (!run) {
+      return $localize`:@@admin.home.backups.lastBackup.none:zatím žádná`;
+    }
+    return run.outcome === 'FAILED'
+      ? failedRun(run)
+      : `${formatBankTime(run.finishedAt)} (${formatSize(run.sizeBytes ?? 0)})`;
+  });
+  protected readonly lastTestRestore = computed(() => {
+    const run = this.backups()?.lastTestRestore;
+    if (!run) {
+      return $localize`:@@admin.home.backups.lastTestRestore.none:zatím žádná`;
+    }
+    return run.outcome === 'FAILED'
+      ? failedRun(run)
+      : $localize`:@@admin.home.backups.lastTestRestore.ok:${formatBankTime(run.finishedAt)}:time:, ${run.tables ?? 0}:tables: tabulek`;
+  });
 
   protected readonly coveredPeriod = computed(() => {
     const state = this.importState();
@@ -89,6 +116,7 @@ export class AdminHome {
   constructor() {
     this.load();
     this.loadOverview();
+    this.loadBackups();
     afterNextRender(() => this.title().nativeElement.focus(), { injector: this.injector });
   }
 
@@ -103,6 +131,20 @@ export class AdminHome {
           this.overviewState.set('ready');
         },
         error: () => this.overviewState.set('error'),
+      });
+  }
+
+  protected loadBackups(): void {
+    this.backupsState.set('loading');
+    this.api
+      .backups()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (view) => {
+          this.backups.set(view);
+          this.backupsState.set('ready');
+        },
+        error: () => this.backupsState.set('error'),
       });
   }
 
@@ -149,6 +191,10 @@ export class AdminHome {
       this.loginDialog.open('login', { returnTo });
     });
   }
+}
+
+function failedRun(run: BackupRunResponse): string {
+  return $localize`:@@admin.home.backups.failed:selhala ${formatBankTime(run.finishedAt)}:time:`;
 }
 
 function time(isoInstant: string | null | undefined): string | null {

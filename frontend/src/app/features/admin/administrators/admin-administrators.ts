@@ -11,14 +11,13 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule, NgForm } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { Router } from '@angular/router';
 import { describeProblem, problemTypeEndsWith } from '../../../core/auth/api-problem';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
 import { FocusFirstInvalid } from '../../../shared/ui/form-field/focus-first-invalid';
 import { FormControlDirective } from '../../../shared/ui/form-field/form-control';
 import { FormField } from '../../../shared/ui/form-field/form-field';
-import { DashboardTopBar } from '../../donors/dashboard/top-bar/top-bar';
 import { AdminApi, AdministratorResponse } from '../admin-api';
 
 type LoadState = 'loading' | 'ready' | 'error';
@@ -35,14 +34,7 @@ const FORBIDDEN = 'auth/forbidden';
 
 @Component({
   selector: 'app-admin-administrators',
-  imports: [
-    DashboardTopBar,
-    RouterLink,
-    FormsModule,
-    FormField,
-    FormControlDirective,
-    FocusFirstInvalid,
-  ],
+  imports: [FormsModule, FormField, FormControlDirective, FocusFirstInvalid],
   templateUrl: './admin-administrators.html',
   styleUrl: './admin-administrators.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

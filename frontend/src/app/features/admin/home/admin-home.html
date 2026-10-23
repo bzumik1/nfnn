@@ -1,77 +1,6 @@
-<div class="admin">
-  <app-dashboard-top-bar area="admin" />
-
-  <div class="container">
-    <h1 #title class="admin-title" tabindex="-1" i18n="@@admin.home.heading">Správa</h1>
-    <p class="admin-intro" i18n="@@admin.home.intro">
-      Tady uvidíte, jak se webu daří, najdete dárce a jeho účty, dary a potvrzení, přiřadíte platby,
-      které web nepoznal, opravíte odpovědi dárců na starší symboly, spravujete správce a vidíte,
-      kdo co udělal, nastavíte měsíční přehled, píšete aktuality a projekty na web a hlídáte zálohy
-      databáze.
-    </p>
-
-    <nav class="admin-links" aria-label="Části správy" i18n-aria-label="@@admin.home.links.label">
-      <a class="admin-link" routerLink="/sprava/platby">
-        <span class="admin-link-title" i18n="@@admin.home.links.payments">Platby z banky</span>
-        <span class="admin-link-text" i18n="@@admin.home.links.payments.text"
-          >Nespárované platby přiřadíte dárci ručně, u spárovaných můžete přiřazení zrušit.</span
-        >
-      </a>
-      <a class="admin-link" routerLink="/sprava/darci">
-        <span class="admin-link-title" i18n="@@admin.home.links.donors">Dárci</span>
-        <span class="admin-link-text" i18n="@@admin.home.links.donors.text"
-          >Najdete dárce podle jména, e-mailu nebo variabilního symbolu a uvidíte jeho účet,
-          bankovní účty, dary a potvrzení.</span
-        >
-      </a>
-      <a class="admin-link" routerLink="/sprava/spravci">
-        <span class="admin-link-title" i18n="@@admin.home.links.administrators">Správci</span>
-        <span class="admin-link-text" i18n="@@admin.home.links.administrators.text"
-          >Kdo web spravuje; přidáte dalšího správce, odeberete ho nebo mu vypnete dvoufaktorové
-          ověření po ztrátě telefonu.</span
-        >
-      </a>
-      <a class="admin-link" routerLink="/sprava/starsi-symboly">
-        <span class="admin-link-title" i18n="@@admin.home.links.symbolClaims">Starší symboly</span>
-        <span class="admin-link-text" i18n="@@admin.home.links.symbolClaims.text"
-          >Odpovědi dárců na otázku, zda jsou platby se starším variabilním symbolem jejich; omyl tu
-          opravíte.</span
-        >
-      </a>
-      <a class="admin-link" routerLink="/sprava/prehledy">
-        <span class="admin-link-title" i18n="@@admin.home.links.report">Měsíční přehled</span>
-        <span class="admin-link-text" i18n="@@admin.home.links.report.text"
-          >Komu a kdy chodí měsíční přehled e-mailem a co obsahuje; přehled za skončený měsíc
-          pošlete znovu.</span
-        >
-      </a>
-      <a class="admin-link" routerLink="/sprava/aktuality">
-        <span class="admin-link-title" i18n="@@admin.home.links.news">Aktuality</span>
-        <span class="admin-link-text" i18n="@@admin.home.links.news.text"
-          >Napíšete aktualitu s fotkou, zveřejníte ji s datem nebo ji z webu stáhnete.</span
-        >
-      </a>
-      <a class="admin-link" routerLink="/sprava/projekty">
-        <span class="admin-link-title" i18n="@@admin.home.links.projects">Projekty</span>
-        <span class="admin-link-text" i18n="@@admin.home.links.projects.text"
-          >Představíte projekt fondu s fotkou a rokem, zveřejníte ho nebo ho z webu stáhnete.</span
-        >
-      </a>
-      <a class="admin-link" routerLink="/sprava/zalohy">
-        <span class="admin-link-title" i18n="@@admin.home.links.backups">Zálohy</span>
-        <span class="admin-link-text" i18n="@@admin.home.links.backups.text"
-          >Jak dopadla noční záloha databáze a její zkušební obnova; zálohu spustíte hned a stáhnete
-          si ji.</span
-        >
-      </a>
-      <a class="admin-link" routerLink="/sprava/historie">
-        <span class="admin-link-title" i18n="@@admin.home.links.actions">Historie správy</span>
-        <span class="admin-link-text" i18n="@@admin.home.links.actions.text"
-          >Kdo ze správců co a kdy udělal.</span
-        >
-      </a>
-    </nav>
-
+<div class="container">
+  <h1 #title class="admin-title" tabindex="-1" i18n="@@admin.home.heading">Správa</h1>
+  <div class="admin-status">
     <section class="admin-card" aria-labelledby="admin-import-title">
       <h2 id="admin-import-title" class="admin-card-title" i18n="@@admin.home.import.title">
         Stav stahování plateb z banky
@@ -160,157 +89,211 @@
       }
     </section>
 
-    <section class="admin-card" aria-labelledby="admin-overview-title">
-      <div class="admin-card-head">
-        <h2 id="admin-overview-title" class="admin-card-title" i18n="@@admin.home.overview.title">
-          Dary a dárci
-        </h2>
-        @if (overview(); as data) {
-          <label class="year-select">
-            <span i18n="@@admin.home.overview.year">Rok</span>
-            <select (change)="changeYear($event)">
-              @for (year of data.availableYears; track year) {
-                <option [value]="year" [selected]="year === data.year">{{ year }}</option>
-              }
-            </select>
-          </label>
-        }
-      </div>
-      @switch (overviewState()) {
+    <section class="admin-card" aria-labelledby="admin-backups-title">
+      <h2 id="admin-backups-title" class="admin-card-title" i18n="@@admin.home.backups.title">
+        Zálohy databáze
+      </h2>
+      @switch (backupsState()) {
         @case ('loading') {
-          <p class="admin-loading" role="status" i18n="@@admin.home.overview.loading">
-            Načítáme dary po měsících…
+          <p class="admin-loading" role="status" i18n="@@admin.home.backups.loading">
+            Načítáme stav záloh…
           </p>
         }
         @case ('error') {
           <div class="admin-error" role="alert">
-            <p i18n="@@admin.home.overview.error.text">Dary po měsících se nepodařilo načíst.</p>
+            <p i18n="@@admin.home.backups.error.text">Stav záloh se nepodařilo načíst.</p>
             <button
               type="button"
               class="admin-retry"
-              (click)="loadOverview()"
-              i18n="@@admin.home.overview.error.retry"
+              (click)="loadBackups()"
+              i18n="@@admin.home.backups.error.retry"
             >
               Zkusit znovu
             </button>
           </div>
         }
         @case ('ready') {
-          @if (overview(); as data) {
-            <p class="admin-summary" i18n="@@admin.home.overview.summary">
-              Registrovaní dárci: {{ data.donorsRegistered }}, z toho nových v roce {{ data.year }}:
-              {{ data.newDonors }}.
+          @if (backupProblems().length > 0) {
+            <div class="admin-problems" role="status">
+              <ul>
+                @for (problem of backupProblems(); track problem) {
+                  <li>{{ problem }}</li>
+                }
+              </ul>
+            </div>
+          } @else {
+            <p class="healthy" i18n="@@admin.backups.status.healthy">Zálohování je v pořádku.</p>
+          }
+          <dl class="admin-data">
+            <div>
+              <dt i18n="@@admin.home.backups.lastBackup">Poslední záloha</dt>
+              <dd>{{ lastBackup() }}</dd>
+            </div>
+            <div>
+              <dt i18n="@@admin.home.backups.lastTestRestore">Zkušební obnova</dt>
+              <dd>{{ lastTestRestore() }}</dd>
+            </div>
+          </dl>
+        }
+      }
+      <a class="admin-card-link" routerLink="/sprava/zalohy" i18n="@@admin.home.backups.open"
+        >Otevřít zálohy</a
+      >
+    </section>
+  </div>
+
+  <section class="admin-card" aria-labelledby="admin-overview-title">
+    <div class="admin-card-head">
+      <h2 id="admin-overview-title" class="admin-card-title" i18n="@@admin.home.overview.title">
+        Dary a dárci
+      </h2>
+      @if (overview(); as data) {
+        <label class="year-select">
+          <span i18n="@@admin.home.overview.year">Rok</span>
+          <select (change)="changeYear($event)">
+            @for (year of data.availableYears; track year) {
+              <option [value]="year" [selected]="year === data.year">{{ year }}</option>
+            }
+          </select>
+        </label>
+      }
+    </div>
+    @switch (overviewState()) {
+      @case ('loading') {
+        <p class="admin-loading" role="status" i18n="@@admin.home.overview.loading">
+          Načítáme dary po měsících…
+        </p>
+      }
+      @case ('error') {
+        <div class="admin-error" role="alert">
+          <p i18n="@@admin.home.overview.error.text">Dary po měsících se nepodařilo načíst.</p>
+          <button
+            type="button"
+            class="admin-retry"
+            (click)="loadOverview()"
+            i18n="@@admin.home.overview.error.retry"
+          >
+            Zkusit znovu
+          </button>
+        </div>
+      }
+      @case ('ready') {
+        @if (overview(); as data) {
+          <p class="admin-summary" i18n="@@admin.home.overview.summary">
+            Registrovaní dárci: {{ data.donorsRegistered }}, z toho nových v roce {{ data.year }}:
+            {{ data.newDonors }}.
+          </p>
+          @if (data.unpairedPayments.count > 0) {
+            <a
+              class="admin-card-link admin-card-link--top"
+              routerLink="/sprava/platby"
+              i18n="@@admin.home.overview.unpairedLink"
+              >Přiřadit platby bez dárce</a
+            >
+          }
+          @if (data.months.length === 0) {
+            <p class="admin-empty" i18n="@@admin.home.overview.empty">
+              Rok {{ data.year }} ještě nezačal.
             </p>
-            @if (data.months.length === 0) {
-              <p class="admin-empty" i18n="@@admin.home.overview.empty">
-                Rok {{ data.year }} ještě nezačal.
-              </p>
-            } @else {
-              <table class="overview-table">
-                <thead>
-                  <tr>
-                    <th i18n="@@admin.home.overview.col.month">Měsíc</th>
-                    <th class="num" i18n="@@admin.home.overview.col.count">Dary</th>
-                    <th class="num" i18n="@@admin.home.overview.col.total">Celkem</th>
-                    <th class="num" i18n="@@admin.home.overview.col.newDonors">Noví dárci</th>
-                    <th class="num" i18n="@@admin.home.overview.col.unpaired">Platby bez dárce</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  @for (item of data.months; track item.month) {
-                    <tr>
-                      <td data-label="Měsíc" i18n-data-label="@@admin.home.overview.col.month">
-                        <span class="admin-month">{{ monthLabel(item.month) }}</span>
-                      </td>
-                      <td
-                        class="num"
-                        data-label="Dary"
-                        i18n-data-label="@@admin.home.overview.col.count"
-                      >
-                        {{ item.donations.count }}
-                      </td>
-                      <td
-                        class="num"
-                        data-label="Celkem"
-                        i18n-data-label="@@admin.home.overview.col.total"
-                      >
-                        {{ amount(item.donations) }}
-                      </td>
-                      <td
-                        class="num"
-                        data-label="Noví dárci"
-                        i18n-data-label="@@admin.home.overview.col.newDonors"
-                      >
-                        {{ item.newDonors }}
-                      </td>
-                      <td
-                        class="num"
-                        data-label="Platby bez dárce"
-                        i18n-data-label="@@admin.home.overview.col.unpaired"
-                      >
-                        @if (item.unpairedPayments.count === 0) {
-                          <ng-container i18n="@@admin.home.overview.unpaired.none"
-                            >žádné</ng-container
-                          >
-                        } @else {
-                          {{ item.unpairedPayments.count }} ({{ amount(item.unpairedPayments) }})
-                        }
-                      </td>
-                    </tr>
-                  }
-                </tbody>
-                <tfoot>
+          } @else {
+            <table class="overview-table">
+              <thead>
+                <tr>
+                  <th i18n="@@admin.home.overview.col.month">Měsíc</th>
+                  <th class="num" i18n="@@admin.home.overview.col.count">Dary</th>
+                  <th class="num" i18n="@@admin.home.overview.col.total">Celkem</th>
+                  <th class="num" i18n="@@admin.home.overview.col.newDonors">Noví dárci</th>
+                  <th class="num" i18n="@@admin.home.overview.col.unpaired">Platby bez dárce</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (item of data.months; track item.month) {
                   <tr>
                     <td data-label="Měsíc" i18n-data-label="@@admin.home.overview.col.month">
-                      <span class="admin-month" i18n="@@admin.home.overview.total"
-                        >Celkem {{ data.year }}</span
-                      >
+                      <span class="admin-month">{{ monthLabel(item.month) }}</span>
                     </td>
                     <td
                       class="num"
                       data-label="Dary"
                       i18n-data-label="@@admin.home.overview.col.count"
                     >
-                      {{ data.donations.count }}
+                      {{ item.donations.count }}
                     </td>
                     <td
                       class="num"
                       data-label="Celkem"
                       i18n-data-label="@@admin.home.overview.col.total"
                     >
-                      {{ amount(data.donations) }}
+                      {{ amount(item.donations) }}
                     </td>
                     <td
                       class="num"
                       data-label="Noví dárci"
                       i18n-data-label="@@admin.home.overview.col.newDonors"
                     >
-                      {{ data.newDonors }}
+                      {{ item.newDonors }}
                     </td>
                     <td
                       class="num"
                       data-label="Platby bez dárce"
                       i18n-data-label="@@admin.home.overview.col.unpaired"
                     >
-                      @if (data.unpairedPayments.count === 0) {
+                      @if (item.unpairedPayments.count === 0) {
                         <ng-container i18n="@@admin.home.overview.unpaired.none"
                           >žádné</ng-container
                         >
                       } @else {
-                        {{ data.unpairedPayments.count }} ({{ amount(data.unpairedPayments) }})
+                        {{ item.unpairedPayments.count }} ({{ amount(item.unpairedPayments) }})
                       }
                     </td>
                   </tr>
-                </tfoot>
-              </table>
-            }
+                }
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td data-label="Měsíc" i18n-data-label="@@admin.home.overview.col.month">
+                    <span class="admin-month" i18n="@@admin.home.overview.total"
+                      >Celkem {{ data.year }}</span
+                    >
+                  </td>
+                  <td
+                    class="num"
+                    data-label="Dary"
+                    i18n-data-label="@@admin.home.overview.col.count"
+                  >
+                    {{ data.donations.count }}
+                  </td>
+                  <td
+                    class="num"
+                    data-label="Celkem"
+                    i18n-data-label="@@admin.home.overview.col.total"
+                  >
+                    {{ amount(data.donations) }}
+                  </td>
+                  <td
+                    class="num"
+                    data-label="Noví dárci"
+                    i18n-data-label="@@admin.home.overview.col.newDonors"
+                  >
+                    {{ data.newDonors }}
+                  </td>
+                  <td
+                    class="num"
+                    data-label="Platby bez dárce"
+                    i18n-data-label="@@admin.home.overview.col.unpaired"
+                  >
+                    @if (data.unpairedPayments.count === 0) {
+                      <ng-container i18n="@@admin.home.overview.unpaired.none">žádné</ng-container>
+                    } @else {
+                      {{ data.unpairedPayments.count }} ({{ amount(data.unpairedPayments) }})
+                    }
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
           }
         }
       }
-    </section>
-
-    <p class="admin-back">
-      <a routerLink="/darce/prehled" i18n="@@admin.home.backToOverview">Zpět na můj přehled</a>
-    </p>
-  </div>
+    }
+  </section>
 </div>
