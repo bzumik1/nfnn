@@ -32,7 +32,13 @@ updates:
     directory: /mcp
     schedule:
       interval: monthly
+    ignore:
+      - dependency-name: typescript
+        versions: [">=6.1"]
     groups:
+      mcp-sdk:
+        patterns:
+          - "@modelcontextprotocol/*"
       mcp-minor-and-patch:
         update-types: [minor, patch]
   - package-ecosystem: docker

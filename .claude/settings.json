@@ -3,12 +3,14 @@
   "permissions": {
     "allow": [
       "Bash(./gradlew *)",
+      "Bash(CUCUMBER_FILTER_TAGS=* ./gradlew *)",
       "Bash(npm ci)",
       "Bash(npm start)",
       "Bash(npm test *)",
       "Bash(npm run *)",
       "Bash(npx ng *)",
       "Bash(npx playwright test *)",
+      "Bash(npx playwright install chromium)",
       "Bash(npx prettier *)",
       "Bash(npx stylelint *)",
       "Bash(docker compose *)",
@@ -17,9 +19,25 @@
       "Bash(git log *)",
       "Bash(git branch *)"
     ],
+    "ask": [
+      "Bash(docker compose down*)",
+      "Bash(docker compose * down*)",
+      "Bash(docker compose config*)",
+      "Bash(docker compose * config*)",
+      "Bash(docker compose exec *)",
+      "Bash(docker compose * exec *)",
+      "Bash(docker compose run *)",
+      "Bash(docker compose * run *)",
+      "Bash(docker compose cp *)",
+      "Bash(docker compose * cp *)",
+      "Bash(docker compose rm *)",
+      "Bash(docker compose * rm *)"
+    ],
     "deny": [
-      "Read(./.env)",
-      "Read(./**/*.env)"
+      "Read(.env)",
+      "Read(.env.*)",
+      "Read(*.env)",
+      "Read(!.env.example)"
     ]
   },
   "hooks": {

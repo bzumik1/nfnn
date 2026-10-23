@@ -11,7 +11,7 @@
     "format": "prettier --write \"src/**/*.{ts,html,scss}\" \"e2e/**/*.ts\" \"*.{json,js,ts}\" \".*.json\"",
     "format:check": "prettier --check \"src/**/*.{ts,html,scss}\" \"e2e/**/*.ts\" \"*.{json,js,ts}\" \".*.json\"",
     "e2e": "playwright test",
-    "e2e:install": "playwright install --with-deps",
+    "e2e:install": "playwright install --with-deps chromium",
     "lint": "ng lint"
   },
   "private": true,
