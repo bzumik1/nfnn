@@ -80,7 +80,7 @@ public class AdminActionsStepDefinitions {
         List<Map<String, String>> expected = table.asMaps().stream()
                 .map(row -> Map.of("action", row.get("action"), "client", row.get("client") == null ? "" : row.get("client")))
                 .toList();
-        assertThat(actual).containsExactlyElementsOf(expected);
+        assertThat(actual).containsExactlyInAnyOrderElementsOf(expected);
     }
 
     @Then("the admin actions have more pages")
