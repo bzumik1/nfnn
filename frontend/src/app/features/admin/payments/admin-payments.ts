@@ -17,7 +17,7 @@ import { describeProblem, problemTypeEndsWith } from '../../../core/auth/api-pro
 import { AuthStore } from '../../../core/auth/auth-store';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
 import { Dialog } from '../../../shared/ui/dialog/dialog';
-import { formatCrowns } from '../../donations/donation-amount';
+import { formatMinorUnits } from '../../donations/donation-amount';
 import { formatBankTime, formatDonationDate } from '../../donations/donation-date';
 import {
   AdminApi,
@@ -266,7 +266,7 @@ export class AdminPayments {
   }
 
   protected crowns(amountMinor: number): string {
-    return formatCrowns(amountMinor / 100);
+    return formatMinorUnits(amountMinor);
   }
 
   protected method(method: PairingMethod): string {
@@ -274,7 +274,7 @@ export class AdminPayments {
   }
 
   protected describe(payment: AdminPaymentResponse): string {
-    return `${this.crowns(payment.amountMinor)} Kč z ${this.date(payment.bookedOn)}`;
+    return `${this.crowns(payment.amountMinor)}\u00a0Kč z ${this.date(payment.bookedOn)}`;
   }
 
   private receiptNote(years: number[]): string {

@@ -313,7 +313,7 @@ describe('Given an administrator on the bank payments page', () => {
     }
 
     it('then the dialog names the payment, focuses the search and offers nothing before typing', () => {
-      expect(dialog().textContent).toContain('500 Kč z 10. 10. 2026');
+      expect(dialog().textContent).toContain('500\u00a0Kč z 10. 10. 2026');
       expect(dialog().textContent).toContain('Nováková Jana');
       expect(document.activeElement?.id).toBe('pair-search');
       expect(dialog().querySelector('.pair-results')).toBeNull();

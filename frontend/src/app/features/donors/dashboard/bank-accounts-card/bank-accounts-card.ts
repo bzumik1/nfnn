@@ -46,7 +46,7 @@ import {
   SymbolClaimConfirmation,
   SymbolOffer,
 } from '../../../donations/bank-accounts-api';
-import { formatCrowns } from '../../../donations/donation-amount';
+import { formatMinorUnits } from '../../../donations/donation-amount';
 import { formatDonationDate } from '../../../donations/donation-date';
 import { BankCheckResponse, DonationsApi } from '../../../donations/donations-api';
 import { PaymentQrApi, PaymentQrResponse } from '../../../donations/payment-qr-api';
@@ -98,7 +98,6 @@ const AND = $localize`:@@donor.bankAccounts.claim.and:a`;
 
 const UNAUTHENTICATED = 'auth/unauthenticated';
 const STALE_LIST_STATUSES = [404, 409];
-const MINOR_UNITS_PER_CROWN = 100;
 const VERIFICATION_AMOUNT = 1;
 const PAYMENT_WATCH_INTERVAL_MS = 30_000;
 const PAYMENT_WATCH_CHECKS = 20;
@@ -285,7 +284,7 @@ export class BankAccountsCard {
   }
 
   protected crowns(amountMinor: number): string {
-    return formatCrowns(amountMinor / MINOR_UNITS_PER_CROWN);
+    return formatMinorUnits(amountMinor);
   }
 
   protected askToDisconnect(account: BankAccountItem): void {
