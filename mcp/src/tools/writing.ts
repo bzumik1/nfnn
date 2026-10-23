@@ -11,6 +11,21 @@ const WRITING = {
 const UUID = z.string().regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
 const DAY = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 const MONTH = z.string().regex(/^\d{4}-\d{2}$/);
+const PLAIN_SETTING = z.enum([
+  'PUBLIC_URL',
+  'MAIL_HOST',
+  'MAIL_PORT',
+  'MAIL_USERNAME',
+  'MAIL_AUTH',
+  'MAIL_STARTTLS',
+  'MAIL_FROM',
+  'CONTACT_RECIPIENT',
+  'FIO_HISTORY_FROM',
+  'PAIRING_EXCLUDED_ACCOUNTS',
+  'RECEIPT_SIGNATORY_NAME',
+  'RECEIPT_SIGNATORY_ROLE',
+  'RECEIPT_FIRST_YEAR',
+]);
 
 export function registerWritingTools(server: McpServer, deps: ToolDependencies): void {
   const { backend } = deps;
@@ -151,6 +166,27 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
     async ({ id }, ctx) =>
       answer(deps, ctx, 'nfnn_unpublish_project', async ({ apiToken }) =>
         text(await backend.post(`/api/admin/content/projects/${id}/unpublish`, apiToken)),
+      ),
+  );
+
+  server.registerTool(
+    'nfnn_change_settings',
+    {
+      title: 'Změnit nastavení webu',
+      description:
+        'Changes plain settings of the site (see nfnn_settings for the current values); an empty value returns a setting to its default. Every value is checked as at startup before anything is stored, a refused one comes back with its reason. A real change restarts the backend, so the site does not answer for about a minute; audited as CHANGE_SETTINGS. Secrets (SMTP password, Fio token, tunnel token) are changed only in the web administration.',
+      inputSchema: z.object({
+        changes: z
+          .array(z.object({ name: PLAIN_SETTING, value: z.string().max(1000) }))
+          .min(1)
+          .max(13),
+      }),
+      annotations: WRITING,
+      scopeChallenge,
+    },
+    async ({ changes }, ctx) =>
+      answer(deps, ctx, 'nfnn_change_settings', async ({ apiToken }) =>
+        text(await backend.put('/api/admin/operations/settings', apiToken, { changes })),
       ),
   );
 

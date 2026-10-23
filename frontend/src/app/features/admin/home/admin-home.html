@@ -7,7 +7,7 @@
       Tady uvidíte, jak se webu daří, najdete dárce a jeho účty, dary a potvrzení, přiřadíte platby,
       které web nepoznal, opravíte odpovědi dárců na starší symboly, spravujete správce a vidíte,
       kdo co udělal, nastavíte měsíční přehled, píšete aktuality a projekty na web a hlídáte zálohy
-      databáze.
+      databáze a měníte nastavení webu.
     </p>
 
     <nav class="admin-links" aria-label="Části správy" i18n-aria-label="@@admin.home.links.label">
@@ -62,6 +62,12 @@
         <span class="admin-link-text" i18n="@@admin.home.links.backups.text"
           >Jak dopadla noční záloha databáze a její zkušební obnova; zálohu spustíte hned a stáhnete
           si ji.</span
+        >
+      </a>
+      <a class="admin-link" routerLink="/sprava/nastaveni">
+        <span class="admin-link-title" i18n="@@admin.home.links.settings">Nastavení</span>
+        <span class="admin-link-text" i18n="@@admin.home.links.settings.text"
+          >Adresa webu, odesílání e-mailů, token banky, údaje na potvrzeních a tunel k logům.</span
         >
       </a>
       <a class="admin-link" routerLink="/sprava/historie">

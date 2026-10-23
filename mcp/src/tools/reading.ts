@@ -182,6 +182,20 @@ export function registerReadingTools(server: McpServer, deps: ToolDependencies):
   );
 
   server.registerTool(
+    'nfnn_settings',
+    {
+      title: 'Nastavení webu',
+      description:
+        'The settings of the site: public address, mail server and senders, Fio history start, accounts excluded from pairing, receipt signatory and first year. Secrets (SMTP password, Fio token, tunnel token) only say whether they are set or unreadable, never their value.',
+      annotations: READ_ONLY,
+    },
+    async (ctx) =>
+      answer(deps, ctx, 'nfnn_settings', async ({ apiToken }) =>
+        text(await backend.get('/api/admin/operations/settings', apiToken)),
+      ),
+  );
+
+  server.registerTool(
     'nfnn_content',
     {
       title: 'Aktuality a projekty',

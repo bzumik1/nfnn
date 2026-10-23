@@ -3,6 +3,13 @@ import { inject, Injectable } from '@angular/core';
 import { map, Observable } from 'rxjs';
 import { BankAccountItem } from '../donations/bank-accounts-api';
 import { DonationListResponse, DownloadedFile, downloadedFile } from '../donations/donations-api';
+import {
+  MailServerRequest,
+  MailTestResponse,
+  SettingName,
+  SettingsSavedResponse,
+  SettingValueRequest,
+} from '../operations/setup/setup-api';
 
 export type ImportFailureKind =
   | 'RATE_LIMITED'
@@ -256,6 +263,23 @@ export interface AdminOverviewResponse {
   months: MonthOverviewResponse[];
 }
 
+export type SettingGroup = 'SITE' | 'MAIL' | 'BANK' | 'RECEIPTS' | 'ADMINISTRATORS' | 'TUNNEL';
+
+export interface AdminSettingResponse {
+  name: SettingName;
+  group: SettingGroup;
+  secret: boolean;
+  value: string | null;
+  configured: boolean;
+  stored: boolean;
+  unreadable: boolean;
+}
+
+export interface AdminSettingsResponse {
+  settings: AdminSettingResponse[];
+  secretsCanBeStored: boolean;
+}
+
 export type BackupKind = 'DAILY' | 'REQUESTED' | 'BEFORE_RESTORE' | 'OTHER';
 
 export type RunOutcome = 'OK' | 'FAILED';
@@ -466,6 +490,18 @@ export class AdminApi {
         observe: 'response',
       })
       .pipe(map((response) => downloadedFile(response, fileName)));
+  }
+
+  settings(): Observable<AdminSettingsResponse> {
+    return this.http.get<AdminSettingsResponse>('/api/admin/operations/settings');
+  }
+
+  changeSettings(changes: SettingValueRequest[]): Observable<SettingsSavedResponse> {
+    return this.http.put<SettingsSavedResponse>('/api/admin/operations/settings', { changes });
+  }
+
+  testMailServer(server: MailServerRequest): Observable<MailTestResponse> {
+    return this.http.post<MailTestResponse>('/api/admin/operations/settings/mail-test', server);
   }
 }
 

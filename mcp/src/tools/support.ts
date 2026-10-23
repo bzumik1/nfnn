@@ -63,7 +63,7 @@ export async function answer(
 }
 
 function describeProblem(problem: BackendProblem): string {
-  const { status, type, title, detail } = problem.problem;
+  const { status, type, title, detail, errors } = problem.problem;
   const hint =
     status === 403
       ? ' The connection lacks the permission for this action; connect the application again with the "admin:write" permission, or sign in as an administrator with the second factor.'
@@ -71,5 +71,6 @@ function describeProblem(problem: BackendProblem): string {
         ? ' Too many requests from this address; wait a moment.'
         : '';
   const sentence = `The administration refused the request (${status} ${type}): ${title}${detail ? ` – ${detail}` : ''}`;
-  return `${sentence.endsWith('.') ? sentence : `${sentence}.`}${hint}`;
+  const fields = errors.length > 0 ? ` ${errors.join(' ')}` : '';
+  return `${sentence.endsWith('.') ? sentence : `${sentence}.`}${fields}${hint}`;
 }

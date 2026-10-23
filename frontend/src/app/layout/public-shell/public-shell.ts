@@ -1,7 +1,8 @@
-import { ChangeDetectionStrategy, Component, ElementRef, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, inject, viewChild } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { SiteHeader } from '../site-header/site-header';
 import { SiteFooter } from '../site-footer/site-footer';
+import { SetupRedirect } from '../../features/operations/setup/setup-redirect';
 
 @Component({
   selector: 'app-public-shell',
@@ -12,6 +13,10 @@ import { SiteFooter } from '../site-footer/site-footer';
 })
 export class PublicShell {
   private readonly content = viewChild.required<ElementRef<HTMLElement>>('content');
+
+  constructor() {
+    inject(SetupRedirect).checkOnce();
+  }
 
   skipToContent(event: Event): void {
     event.preventDefault();
