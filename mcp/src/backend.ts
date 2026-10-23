@@ -1,4 +1,5 @@
 import type { FetchLike } from './authorization.js';
+import type { Photo } from './photos.js';
 
 export interface Problem {
   readonly status: number;
@@ -44,6 +45,12 @@ export class BackendClient {
     return this.send('DELETE', path, apiToken);
   }
 
+  async postPhoto(path: string, apiToken: string, photo: Photo): Promise<unknown> {
+    const form = new FormData();
+    form.append('file', new Blob([photo.bytes], { type: photo.contentType }), 'photo');
+    return this.send('POST', path, apiToken, form);
+  }
+
   private async send(
     method: string,
     path: string,
@@ -56,7 +63,9 @@ export class BackendClient {
       headers['authorization'] = `Bearer ${apiToken}`;
     }
     const init: RequestInit = { method, headers };
-    if (body !== undefined) {
+    if (body instanceof FormData) {
+      init.body = body;
+    } else if (body !== undefined) {
       headers['content-type'] = 'application/json';
       init.body = JSON.stringify(body);
     }

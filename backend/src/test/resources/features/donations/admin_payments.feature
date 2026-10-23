@@ -25,6 +25,41 @@ Feature: An administrator pairs bank payments by hand
       | counterpartyName    | Nováková Jana   |
       | messageForRecipient | Dar pro fond    |
 
+  Scenario: The payments are filtered by text and period and paged with the total of all that match
+    Given the bank account has these movements:
+      | id   | date       | amount | account    | bankCode | name          | variableSymbol | message        |
+      | 1001 | 2026-10-10 | 500.00 | 2900233333 | 2010     | Nováková Jana | 1111111111     | Dar pro fond   |
+      | 1002 | 2026-10-15 | 300.00 | 2900233333 | 2010     | Svoboda Petr  | {Petr}         |                |
+      | 1003 | 2026-10-12 | 250.00 | 2900244444 | 0800     | Svoboda Karel |                | Pozdrav z Brna |
+      | 1004 | 2026-09-02 | 100.00 | 2900255555 | 0300     | Dvořák Jan    |                |                |
+    And the application starts the import
+    When "Jana" asks for the unpaired payments with "query=novakova"
+    Then the response status is 200
+    And the unpaired payments are 1001
+    When "Jana" asks for the unpaired payments with "query=2900233333/2010"
+    Then the unpaired payments are 1001
+    When "Jana" asks for the unpaired payments with "from=2026-10-01&to=2026-10-31&limit=1"
+    Then the unpaired payments are 1003
+    And the payment list counts 2 in total
+    When "Jana" asks for the unpaired payments with "from=2026-10-01&to=2026-10-31&limit=1&offset=1"
+    Then the unpaired payments are 1001
+    When "Jana" asks for the paired payments of "Petr"
+    Then the response status is 200
+    And the listed payments are 1002
+    And the payment list counts 1 in total
+    When "Jana" asks for the paired payments of "Jana"
+    Then the listed payments are none
+
+  Scenario: A payment list with a page out of bounds is refused
+    When "Jana" asks for the unpaired payments with "limit=0"
+    Then the response status is 400
+    When "Jana" asks for the unpaired payments with "limit=501"
+    Then the response status is 400
+    When "Jana" asks for the unpaired payments with "offset=-1"
+    Then the response status is 400
+    When "Jana" asks for the unpaired payments with "from=not-a-date"
+    Then the response status is 400
+
   Scenario: Pairing a payment with a donor records a MANUAL donation, audits the action and the donor sees the gift
     Given the bank account has these movements:
       | id   | date       | amount | account    | bankCode | name          | variableSymbol |

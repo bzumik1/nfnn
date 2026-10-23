@@ -25,5 +25,5 @@ public interface DonorRepository {
 
     List<Donor> findByIds(Collection<DonorId> ids);
 
-    List<Donor> search(String query, int limit);
+    List<Donor> search(String query, int offset, int limit);
 }

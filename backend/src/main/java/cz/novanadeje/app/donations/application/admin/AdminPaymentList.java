@@ -4,7 +4,7 @@ import java.time.Year;
 import java.util.List;
 import java.util.Optional;
 
-public record AdminPaymentList(Optional<Year> year, List<Year> availableYears, List<AdminPaymentView> items) {
+public record AdminPaymentList(Optional<Year> year, List<Year> availableYears, List<AdminPaymentView> items, int total) {
 
     public AdminPaymentList {
         if (year == null || availableYears == null || items == null) {
@@ -12,5 +12,8 @@ public record AdminPaymentList(Optional<Year> year, List<Year> availableYears, L
         }
         availableYears = List.copyOf(availableYears);
         items = List.copyOf(items);
+        if (total < items.size()) {
+            throw new IllegalArgumentException("An admin payment list counts at least the items it shows");
+        }
     }
 }

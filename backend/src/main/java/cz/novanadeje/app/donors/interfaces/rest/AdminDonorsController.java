@@ -32,6 +32,7 @@ import java.util.UUID;
 class AdminDonorsController {
 
     static final int MAX_QUERY_LENGTH = 254;
+    static final int MAX_PAGE = 100_000;
 
     private final AdministratorService administrators;
     private final AdministratorActivityService activity;
@@ -47,8 +48,11 @@ class AdminDonorsController {
     }
 
     @GetMapping
-    DonorAccountListResponse search(@RequestParam(defaultValue = "") @Size(max = MAX_QUERY_LENGTH) String query) {
-        return DonorAccountListResponse.from(donors.search(query));
+    DonorAccountListResponse search(@RequestParam(defaultValue = "") @Size(max = MAX_QUERY_LENGTH) String query,
+                                    @RequestParam(defaultValue = "0") @Min(0) @Max(MAX_PAGE) int page,
+                                    @RequestParam(defaultValue = "" + DonorAdministrationService.SEARCH_LIMIT)
+                                    @Min(1) @Max(DonorAdministrationService.MAX_SEARCH_LIMIT) int limit) {
+        return DonorAccountListResponse.from(donors.search(query, page, limit));
     }
 
     @GetMapping("/{donorId}")

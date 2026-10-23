@@ -183,6 +183,7 @@ class AuthorizationServerServiceTest {
             assertThat(grant.getValue().audience()).isEqualTo(MCP);
             assertThat(grant.getValue().roles()).contains(Role.ADMIN);
             assertThat(grant.getValue().scopes()).containsExactly(OAuthScope.ADMIN_READ);
+            assertThat(grant.getValue().connectedClient()).contains("claude.ai");
             ArgumentCaptor<RefreshToken> stored = ArgumentCaptor.forClass(RefreshToken.class);
             verify(refreshTokens).save(stored.capture());
             assertThat(stored.getValue().clientId()).contains(CLAUDE);
@@ -296,11 +297,11 @@ class AuthorizationServerServiceTest {
     class GivenConnectorToken {
 
         @Test
-        @DisplayName("when it is exchanged for the API, then an API token with the donor's current roles and the same scopes expires with the subject")
+        @DisplayName("when it is exchanged for the API, then an API token with the donor's current roles, the same scopes and the same client expires with the subject")
         void should_issue_api_token_when_exchanged_given_connector_token() {
             Instant subjectExpiry = NOW.plusSeconds(300);
             when(verifier.verify("connector")).thenReturn(new VerifiedAccessToken(DONOR, Set.of(Role.DONOR, Role.ADMIN), Set.of(MCP),
-                    Set.of(OAuthScope.ADMIN_READ), subjectExpiry));
+                    Set.of(OAuthScope.ADMIN_READ), subjectExpiry, "claude.ai"));
             when(donors.findById(DONOR)).thenReturn(Optional.of(administrator()));
             when(accessTokens.issue(any(AccessTokenGrant.class))).thenReturn(new IssuedAccessToken("api", subjectExpiry));
 
@@ -309,7 +310,7 @@ class AuthorizationServerServiceTest {
             ArgumentCaptor<AccessTokenGrant> grant = ArgumentCaptor.forClass(AccessTokenGrant.class);
             verify(accessTokens).issue(grant.capture());
             assertThat(grant.getValue()).isEqualTo(new AccessTokenGrant(DONOR, Set.of(Role.DONOR, Role.ADMIN), API, Set.of(OAuthScope.ADMIN_READ), NOW,
-                    subjectExpiry));
+                    subjectExpiry, "claude.ai"));
             assertThat(exchanged).isEqualTo(new ExchangedAccessToken("api", subjectExpiry, Set.of(OAuthScope.ADMIN_READ)));
         }
 
@@ -317,7 +318,7 @@ class AuthorizationServerServiceTest {
         @DisplayName("when a browser or API token is presented as the subject, then the grant is invalid")
         void should_refuse_when_exchanged_given_api_token() {
             when(verifier.verify("browser")).thenReturn(new VerifiedAccessToken(DONOR, Set.of(Role.DONOR, Role.ADMIN), Set.of(API), Set.of(),
-                    NOW.plusSeconds(300)));
+                    NOW.plusSeconds(300), null));
 
             assertThatThrownBy(() -> service.exchangeToken("browser", API)).isInstanceOf(InvalidGrant.class);
         }

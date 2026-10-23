@@ -11,12 +11,20 @@ export const API_TOKEN_OF: Record<string, string> = {
 export const PAYMENT_ID = '019a0000-0000-7000-8000-000000000001';
 export const DONOR_ID = '019a0000-0000-7000-8000-000000000002';
 export const UNKNOWN_ID = '019a0000-0000-7000-8000-00000000ffff';
+export const GIVING_DONOR_ID = '019a0000-0000-7000-8000-000000000003';
+export const MEDIA_ID = '019a0000-0000-7000-8000-000000000004';
+const LOG_MATCHES: Record<string, number[]> = {
+  'backend.log': [36],
+  'backend.log.2026-10-22.0.gz': [70, 50, 10],
+  'backend.log.2026-10-21.0.gz': [5],
+};
 
 export interface RecordedRequest {
   readonly method: string;
   readonly path: string;
   readonly authorization: string | undefined;
   readonly accept: string | undefined;
+  readonly contentType: string | undefined;
   readonly body: string;
 }
 
@@ -59,6 +67,7 @@ export class FakeBackend {
       path: url.pathname + url.search,
       authorization: request.headers['authorization'],
       accept: request.headers['accept'],
+      contentType: request.headers['content-type'],
       body,
     };
     this.requests.push(recorded);
@@ -97,6 +106,10 @@ export class FakeBackend {
 }
 
 function adminRoute(request: RecordedRequest, url: URL, body: string): [number, unknown] {
+  const search = /^\/api\/admin\/operations\/logs\/([^/]+)\/search$/.exec(url.pathname);
+  if (request.method === 'GET' && search) {
+    return logSearch(decodeURIComponent(search[1] ?? ''), url.searchParams);
+  }
   switch (`${request.method} ${url.pathname}`) {
     case 'GET /api/admin/donations/import-state':
       return [
@@ -153,17 +166,47 @@ function adminRoute(request: RecordedRequest, url: URL, body: string): [number, 
               donation: null,
             },
           ],
+          total: 3,
         },
       ];
     case 'GET /api/admin/donors':
       return [
         200,
-        { items: [{ donorId: DONOR_ID, name: 'Jana Nováková', email: 'jana@example.cz' }] },
+        {
+          items: [{ donorId: DONOR_ID, name: 'Jana Nováková', email: 'jana@example.cz' }],
+          hasMore: url.searchParams.get('page') === '0',
+        },
       ];
     case `GET /api/admin/donors/${DONOR_ID}`:
       return [
         200,
         { donorId: DONOR_ID, name: 'Jana Nováková', registeredAt: '2026-10-17T10:00:00Z' },
+      ];
+    case `GET /api/admin/donors/${GIVING_DONOR_ID}`:
+      return [200, { donorId: GIVING_DONOR_ID, ...PETR, email: 'petr@example.cz' }];
+    case `GET /api/admin/donations/donors/${GIVING_DONOR_ID}`:
+      return [
+        200,
+        {
+          donor: {
+            donorId: GIVING_DONOR_ID,
+            ...PETR,
+            variableSymbol: '1234567890',
+            erasedAt: null,
+          },
+          bankAccounts: [],
+          donations: {
+            items: Array.from({ length: 25 }, (_, index) => ({
+              id: `donation-${25 - index}`,
+              receivedAt: '2026-10-01',
+              amountMinor: 10000,
+            })),
+            totalAmountMinor: 250000,
+            currency: 'CZK',
+            count: 25,
+          },
+          receipts: [],
+        },
       ];
     case `GET /api/admin/donations/donors/${DONOR_ID}`:
       return [404, problem(404, 'donations/donor-not-found', 'Dárce nemá záznam')];
@@ -224,9 +267,26 @@ function adminRoute(request: RecordedRequest, url: URL, body: string): [number, 
     case 'GET /api/admin/donations/report':
       return [200, { settings: { recipients: ['info@nfnn.cz'], sendDay: 1 }, sentReports: [] }];
     case 'GET /api/admin/content/news':
-      return [200, { items: [{ id: UNKNOWN_ID, title: 'Koncept' }] }];
+      return [
+        200,
+        { items: [{ id: UNKNOWN_ID, title: 'Koncept', body: 'Dlouhý text aktuality.' }] },
+      ];
     case 'GET /api/admin/content/projects':
       return [200, { items: [] }];
+    case `GET /api/admin/content/news/${UNKNOWN_ID}`:
+      return [200, { id: UNKNOWN_ID, title: 'Koncept', body: 'Dlouhý text aktuality.' }];
+    case `GET /api/admin/content/projects/${UNKNOWN_ID}`:
+      return [200, { id: UNKNOWN_ID, title: 'Střecha', year: 2026, body: 'Text projektu.' }];
+    case 'POST /api/admin/content/media':
+      if (
+        !request.contentType?.startsWith('multipart/form-data') ||
+        !body.includes('name="file"')
+      ) {
+        return [400, problem(400, 'validation', 'Chybí soubor')];
+      }
+      return body.includes('not-an-image')
+        ? [400, problem(400, 'content/unsupported-image', 'Obrázek nejde použít', 'Nejde přečíst.')]
+        : [201, { id: MEDIA_ID, url: `/media/${MEDIA_ID}`, width: 1600, height: 1200 }];
     case 'GET /api/admin/operations/logs':
       return [
         200,
@@ -245,6 +305,18 @@ function adminRoute(request: RecordedRequest, url: URL, body: string): [number, 
               changedAt: '2026-10-22T22:00:00Z',
               compressed: true,
             },
+            {
+              name: 'backend.log.2026-10-21.0.gz',
+              sizeBytes: 80,
+              changedAt: '2026-10-21T22:00:00Z',
+              compressed: true,
+            },
+            {
+              name: 'nginx-access.log',
+              sizeBytes: 50,
+              changedAt: '2026-10-23T06:00:00Z',
+              compressed: false,
+            },
           ],
         },
       ];
@@ -259,27 +331,6 @@ function adminRoute(request: RecordedRequest, url: URL, body: string): [number, 
           hasOlder: true,
           hasNewer: false,
           text: '2026-10-23T10:00:02 INFO third line\n',
-        },
-      ];
-    case 'GET /api/admin/operations/logs/missing.log':
-      return [
-        404,
-        problem(
-          404,
-          'operations/log-not-found',
-          'Log nenalezen',
-          'Takový soubor ve složce logů není.',
-        ),
-      ];
-    case 'GET /api/admin/operations/logs/backend.log/search':
-      return [
-        200,
-        {
-          name: 'backend.log',
-          sizeBytes: 119,
-          matches: [{ offset: 36, line: '2026-10-23T10:00:01 WARN second line about Fio' }],
-          moreOlder: false,
-          scannedFrom: 0,
         },
       ];
     case 'GET /api/admin/operations/loggers':
@@ -397,6 +448,34 @@ function adminRoute(request: RecordedRequest, url: URL, body: string): [number, 
     default:
       return [404, problem(404, 'not-found', 'Nenalezeno')];
   }
+}
+
+const PETR = {
+  name: 'Petr Svoboda',
+  type: 'PERSON',
+  address: { street: 'Hlavní 1', city: 'Nový Bor', postalCode: '47301' },
+  registeredAt: '2026-10-01T08:00:00Z',
+};
+
+function logSearch(name: string, params: URLSearchParams): [number, unknown] {
+  const offsets = LOG_MATCHES[name];
+  if (offsets === undefined) {
+    return [404, problem(404, 'operations/log-not-found', 'Log nenalezen')];
+  }
+  const before = params.has('before') ? Number(params.get('before')) : Infinity;
+  const limit = Number(params.get('limit') ?? 50);
+  const older = offsets.filter((offset) => offset < before);
+  const kept = older.slice(0, limit);
+  return [
+    200,
+    {
+      name,
+      sizeBytes: 119,
+      matches: kept.map((offset) => ({ offset, line: `${name} line at ${offset} about Fio` })),
+      moreOlder: older.length > limit,
+      scannedFrom: older.length > limit ? (kept[kept.length - 1] ?? 0) : 0,
+    },
+  ];
 }
 
 function tokenExchange(form: URLSearchParams): [number, unknown] {
