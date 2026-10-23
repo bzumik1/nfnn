@@ -1,18 +1,20 @@
+@use 'breakpoints' as bp;
+
 .donate {
-  padding: 108px 0;
+  padding: var(--space-27) 0;
   background: var(--color-surface);
 }
 
 .section-inner {
   max-width: var(--content-max);
   margin: 0 auto;
-  padding: 0 32px;
+  padding: 0 var(--space-8);
 }
 
 .two-col {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 80px;
+  gap: var(--space-20);
   align-items: center;
 }
 
@@ -37,64 +39,64 @@
   background: var(--color-text);
   color: var(--color-on-inverse);
   border-radius: var(--radius-media);
-  padding: 18px 24px;
-  font-size: 14px;
-  line-height: 1.5;
+  padding: var(--space-4-5) var(--space-6);
+  font-size: var(--text-md);
+  line-height: var(--leading-normal);
   box-shadow: var(--shadow-media);
   max-width: 200px;
 }
 
 .donate-quote-mark {
-  font-size: 28px;
+  font-size: var(--text-5xl);
   font-family: var(--font-serif);
-  font-weight: 800;
+  font-weight: var(--weight-extrabold);
   color: var(--color-accent);
 }
 
 .donate-quote p {
-  font-size: 13px;
+  font-size: var(--text-sm);
   opacity: 0.85;
 }
 
 .eyebrow {
   color: var(--color-accent);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.2em;
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-widest);
   text-transform: uppercase;
-  margin-bottom: 16px;
+  margin-bottom: var(--space-4);
 }
 
 .title {
   font-family: var(--font-serif);
-  font-size: clamp(26px, 3.5vw, 44px);
-  font-weight: 800;
-  line-height: 1.2;
-  margin-bottom: 20px;
+  font-size: var(--text-cta-title);
+  font-weight: var(--weight-extrabold);
+  line-height: var(--leading-heading);
+  margin-bottom: var(--space-5);
   color: var(--color-text);
 }
 
 .lead {
   color: var(--color-text-muted);
-  line-height: 1.8;
-  font-size: 16px;
-  margin-bottom: 36px;
+  line-height: var(--leading-loose);
+  font-size: var(--text-xl);
+  margin-bottom: var(--space-9);
 }
 
 .bank {
   background: var(--color-surface-accent);
   border-radius: var(--radius-media);
-  padding: 24px 28px;
-  margin-bottom: 32px;
+  padding: var(--space-6) var(--space-7);
+  margin-bottom: var(--space-8);
   border: 1px solid var(--color-border-accent);
 }
 
 .panel-label {
-  font-size: 11px;
-  font-weight: 700;
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-bold);
   color: var(--color-accent);
-  margin-bottom: 14px;
-  letter-spacing: 0.1em;
+  margin-bottom: var(--space-3-5);
+  letter-spacing: var(--tracking-wide);
   text-transform: uppercase;
 
   &:focus {
@@ -103,31 +105,31 @@
 }
 
 .amount {
-  margin-bottom: 28px;
+  margin-bottom: var(--space-7);
 }
 
 .amount-options {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: var(--space-2-5);
 }
 
 .amount-option {
   font-family: var(--font-sans);
-  font-size: 15px;
-  font-weight: 600;
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
   white-space: nowrap;
   color: var(--color-text);
   background: var(--color-surface);
   border: 1.5px solid var(--color-border-accent);
   border-radius: var(--radius-pill);
-  padding: 10px 22px;
+  padding: var(--space-2-5) var(--space-5-5);
   cursor: pointer;
   transition:
-    background 0.2s,
-    border-color 0.2s,
-    color 0.2s,
-    transform 0.2s;
+    background var(--duration-base),
+    border-color var(--duration-base),
+    color var(--duration-base),
+    transform var(--duration-base);
 
   &:hover {
     border-color: var(--color-accent);
@@ -150,20 +152,20 @@
 .custom-amount {
   position: relative;
   max-width: 240px;
-  margin-top: 14px;
+  margin-top: var(--space-3-5);
 
   input {
     width: 100%;
-    padding: 12px 52px 12px 18px;
+    padding: var(--space-3) var(--space-13) var(--space-3) var(--space-4-5);
     border-radius: var(--radius-xl);
     border: 1.5px solid var(--color-border-accent);
     background: var(--color-surface);
     color: var(--color-text);
     font-family: var(--font-sans);
-    font-size: 16px;
-    font-weight: 600;
+    font-size: var(--text-xl);
+    font-weight: var(--weight-semibold);
     outline: none;
-    transition: border-color 0.2s;
+    transition: border-color var(--duration-base);
 
     &:focus {
       border-color: var(--color-accent);
@@ -181,66 +183,66 @@
   right: 18px;
   transform: translateY(-50%);
   color: var(--color-text-soft);
-  font-weight: 600;
+  font-weight: var(--weight-semibold);
   pointer-events: none;
 }
 
 .amount-hint {
-  margin-top: 8px;
-  font-size: 13px;
+  margin-top: var(--space-2);
+  font-size: var(--text-sm);
   color: var(--color-danger);
 }
 
 .bank-rows {
   display: grid;
-  gap: 10px;
+  gap: var(--space-2-5);
 }
 
 .bank-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 16px;
+  gap: var(--space-4);
 }
 
 .bank-key {
   color: var(--color-text-muted);
-  font-size: 14px;
+  font-size: var(--text-md);
 }
 
 .bank-note {
-  margin-top: 12px;
-  font-size: 13px;
-  line-height: 1.5;
+  margin-top: var(--space-3);
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
   color: var(--color-text-muted);
 }
 
 .bank-value {
-  font-weight: 700;
+  font-weight: var(--weight-bold);
   color: var(--color-text);
   font-family: var(--font-mono);
-  font-size: 14px;
+  font-size: var(--text-md);
 }
 
 .qr {
   display: flex;
-  gap: 24px;
+  gap: var(--space-6);
   align-items: center;
-  margin-bottom: 24px;
+  margin-bottom: var(--space-6);
 }
 
 .qr-code {
   flex-shrink: 0;
   background: var(--color-surface);
   border-radius: var(--radius-card);
-  padding: 10px;
+  padding: var(--space-2-5);
   box-shadow: var(--shadow-qr);
   border: 2px solid color-mix(in srgb, var(--color-accent) 13%, transparent);
 }
 
 .qr-image {
   width: 200px;
-  transition: opacity 0.2s ease;
+  transition: opacity var(--duration-base) ease;
 }
 
 .qr-image-stale {
@@ -253,12 +255,12 @@
   justify-content: center;
   width: 200px;
   height: 200px;
-  padding: 16px;
+  padding: var(--space-4);
   border-radius: var(--radius-md);
   background: var(--color-surface-accent);
   color: var(--color-text-soft);
-  font-size: 12px;
-  line-height: 1.5;
+  font-size: var(--text-xs);
+  line-height: var(--leading-normal);
   text-align: center;
 }
 
@@ -277,52 +279,52 @@
 }
 
 .qr-title {
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--text-md);
+  font-weight: var(--weight-semibold);
   color: var(--color-text);
-  margin-bottom: 6px;
+  margin-bottom: var(--space-1-5);
 }
 
 .qr-desc {
-  font-size: 13px;
+  font-size: var(--text-sm);
   color: var(--color-text-soft);
-  line-height: 1.65;
+  line-height: var(--leading-relaxed);
 }
 
 .qr-error {
-  margin-top: 12px;
-  padding: 10px 14px;
+  margin-top: var(--space-3);
+  padding: var(--space-2-5) var(--space-3-5);
   border-radius: var(--radius-md);
   border: 1px solid var(--color-danger-border);
   background: var(--color-danger-bg);
   color: var(--color-danger);
-  font-size: 13px;
-  line-height: 1.5;
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
 }
 
 .qr-retry {
-  margin-top: 6px;
+  margin-top: var(--space-1-5);
   padding: 0;
   border: none;
   background: none;
   color: var(--color-accent);
   font-family: var(--font-sans);
-  font-size: 13px;
-  font-weight: 700;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
   text-decoration: underline;
   cursor: pointer;
 }
 
 .qr-save {
   display: inline-block;
-  margin-top: 10px;
+  margin-top: var(--space-2-5);
   padding: 0;
   border: none;
   background: none;
   color: var(--color-accent);
   font-family: var(--font-sans);
-  font-size: 13px;
-  font-weight: 700;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
   text-decoration: underline;
   cursor: pointer;
 
@@ -337,29 +339,29 @@
   align-items: center;
   flex-wrap: wrap;
   justify-content: flex-end;
-  gap: 8px 12px;
+  gap: var(--space-2) var(--space-3);
 }
 
 .account-actions {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px 20px;
-  margin-top: 16px;
+  gap: var(--space-2) var(--space-5);
+  margin-top: var(--space-4);
 }
 
 .account-register {
   font-family: var(--font-sans);
-  font-size: 15px;
-  font-weight: 700;
+  font-size: var(--text-lg);
+  font-weight: var(--weight-bold);
   color: var(--color-on-accent);
   background: var(--color-accent);
   border: none;
   border-radius: var(--radius-pill);
-  padding: 12px 28px;
+  padding: var(--space-3) var(--space-7);
   box-shadow: var(--shadow-button-sm);
   cursor: pointer;
-  transition: transform 0.2s;
+  transition: transform var(--duration-base);
 
   &:hover {
     transform: translateY(-1px);
@@ -368,28 +370,28 @@
 
 .account-sign-in {
   font-family: var(--font-sans);
-  font-size: 15px;
-  font-weight: 700;
+  font-size: var(--text-lg);
+  font-weight: var(--weight-bold);
   color: var(--color-accent);
   background: none;
   border: none;
-  padding: 12px 4px;
+  padding: var(--space-3) var(--space-1);
   text-decoration: underline;
   cursor: pointer;
 }
 
-@media (max-width: 768px) {
+@include bp.down(tablet) {
   .donate {
-    padding: 64px 0;
+    padding: var(--space-16) 0;
   }
 
   .section-inner {
-    padding: 0 20px;
+    padding: 0 var(--space-5);
   }
 
   .two-col {
     grid-template-columns: 1fr;
-    gap: 40px;
+    gap: var(--space-10);
   }
 
   .donate-img-wrap {
@@ -411,13 +413,13 @@
   }
 
   .bank {
-    padding: 20px;
+    padding: var(--space-5);
   }
 
   .bank-row {
     flex-direction: column;
     align-items: stretch;
-    gap: 4px;
+    gap: var(--space-1);
   }
 
   .bank-value-wrap {
@@ -434,7 +436,7 @@
   }
 }
 
-@media (max-width: 480px) {
+@include bp.down(phone) {
   .qr {
     flex-direction: column;
     align-items: stretch;

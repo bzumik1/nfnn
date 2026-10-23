@@ -20,49 +20,49 @@
 }
 
 .card-body {
-  padding: 20px 24px;
+  padding: var(--space-5) var(--space-6);
 }
 
 .card-meta {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 10px;
+  margin-bottom: var(--space-2-5);
 }
 
 .card-tag {
   background: var(--color-accent-soft);
   color: var(--color-accent);
-  font-size: 11px;
-  font-weight: 700;
-  padding: 3px 10px;
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-bold);
+  padding: var(--space-0-75) var(--space-2-5);
   border-radius: var(--radius-pill);
 }
 
 .card-year {
   color: var(--color-text-subtle);
-  font-size: 12px;
+  font-size: var(--text-xs);
 }
 
 .card-title {
   font-family: var(--font-serif);
-  font-size: 22px;
-  font-weight: 700;
-  margin-bottom: 8px;
+  font-size: var(--text-3xl);
+  font-weight: var(--weight-bold);
+  margin-bottom: var(--space-2);
   color: var(--color-text);
 }
 
 .card-desc {
   color: var(--color-text-soft);
-  font-size: 14px;
-  line-height: 1.65;
+  font-size: var(--text-md);
+  line-height: var(--leading-relaxed);
 }
 
 .card:has(.card-link) {
   position: relative;
   transition:
-    box-shadow 0.25s,
-    transform 0.25s;
+    box-shadow var(--duration-base),
+    transform var(--duration-base);
 
   &:hover {
     box-shadow: var(--shadow-card-hover);

@@ -4,20 +4,20 @@
 
 .copy-button {
   font-family: var(--font-sans);
-  font-size: 13px;
-  font-weight: 600;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
   color: var(--color-accent);
   background: var(--color-surface);
   border: 1.5px solid var(--color-border-accent);
   border-radius: var(--radius-pill);
-  padding: 6px 14px;
+  padding: var(--space-1-5) var(--space-3-5);
   min-height: 32px;
   cursor: pointer;
   white-space: nowrap;
   transition:
-    background 0.2s,
-    border-color 0.2s,
-    color 0.2s;
+    background var(--duration-base),
+    border-color var(--duration-base),
+    color var(--duration-base);
 
   &:hover {
     border-color: var(--color-accent);
@@ -32,11 +32,11 @@
 :host(.has-failed) {
   flex-direction: column;
   align-items: flex-end;
-  gap: 4px;
+  gap: var(--space-1);
 }
 
 .copy-status {
-  font-size: 12px;
+  font-size: var(--text-xs);
   color: var(--color-danger);
   text-align: right;
 }

@@ -119,6 +119,78 @@
   --font-mono: monospace;
   --numeric-figures: lining-nums tabular-nums;
 
+  --text-2xs: 11px;
+  --text-xs: 12px;
+  --text-sm: 13px;
+  --text-md: 14px;
+  --text-lg: 15px;
+  --text-xl: 16px;
+  --text-2xl: 18px;
+  --text-3xl: 22px;
+  --text-4xl: 24px;
+  --text-5xl: 28px;
+  --text-6xl: 44px;
+  --text-heading: clamp(26px, 4vw, 32px);
+  --text-section-title-compact: clamp(28px, 4vw, 46px);
+  --text-section-title: clamp(30px, 4vw, 50px);
+  --text-cta-title: clamp(26px, 3.5vw, 44px);
+  --text-article-title: clamp(34px, 5vw, 56px);
+  --text-page-title: clamp(36px, 5.5vw, 60px);
+  --text-hero: clamp(52px, 8vw, 100px);
+
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+  --weight-extrabold: 800;
+
+  --leading-none: 1;
+  --leading-display: 1.1;
+  --leading-heading: 1.2;
+  --leading-snug: 1.35;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.6;
+  --leading-loose: 1.8;
+
+  --tracking-tight: -0.02em;
+  --tracking-slight: 0.04em;
+  --tracking-wide: 0.08em;
+  --tracking-widest: 0.2em;
+
+  --space-unit: 4px;
+  --space-0-5: calc(var(--space-unit) * 0.5);
+  --space-0-75: calc(var(--space-unit) * 0.75);
+  --space-1: calc(var(--space-unit) * 1);
+  --space-1-5: calc(var(--space-unit) * 1.5);
+  --space-1-75: calc(var(--space-unit) * 1.75);
+  --space-2: calc(var(--space-unit) * 2);
+  --space-2-25: calc(var(--space-unit) * 2.25);
+  --space-2-5: calc(var(--space-unit) * 2.5);
+  --space-3: calc(var(--space-unit) * 3);
+  --space-3-5: calc(var(--space-unit) * 3.5);
+  --space-4: calc(var(--space-unit) * 4);
+  --space-4-5: calc(var(--space-unit) * 4.5);
+  --space-5: calc(var(--space-unit) * 5);
+  --space-5-5: calc(var(--space-unit) * 5.5);
+  --space-6: calc(var(--space-unit) * 6);
+  --space-7: calc(var(--space-unit) * 7);
+  --space-8: calc(var(--space-unit) * 8);
+  --space-9: calc(var(--space-unit) * 9);
+  --space-10: calc(var(--space-unit) * 10);
+  --space-12: calc(var(--space-unit) * 12);
+  --space-13: calc(var(--space-unit) * 13);
+  --space-14: calc(var(--space-unit) * 14);
+  --space-16: calc(var(--space-unit) * 16);
+  --space-18: calc(var(--space-unit) * 18);
+  --space-20: calc(var(--space-unit) * 20);
+  --space-22: calc(var(--space-unit) * 22);
+  --space-27: calc(var(--space-unit) * 27);
+
+  --duration-fast: 0.15s;
+  --duration-base: 0.2s;
+  --duration-slow: 0.3s;
+  --duration-entrance: 0.9s;
+
   --radius-xs: 2px;
   --radius-scrollbar: 3px;
   --radius-sm: 8px;

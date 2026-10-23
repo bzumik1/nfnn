@@ -7,7 +7,7 @@
 }
 
 .payments-head {
-  padding: 20px 24px;
+  padding: var(--space-5) var(--space-6);
   border-bottom: 1px solid var(--color-divider);
 }
 
@@ -16,13 +16,13 @@
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 8px 16px;
+  gap: var(--space-2) var(--space-4);
 }
 
 .payments-title {
   font-family: var(--font-serif);
-  font-size: 22px;
-  font-weight: 700;
+  font-size: var(--text-3xl);
+  font-weight: var(--weight-bold);
   color: var(--color-text);
 }
 
@@ -30,11 +30,11 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px 12px;
+  gap: var(--space-2) var(--space-3);
 }
 
 .bank-check-status {
-  font-size: 13px;
+  font-size: var(--text-sm);
   color: var(--color-text-soft);
 }
 
@@ -42,11 +42,11 @@
   background: var(--color-accent-soft);
   color: var(--color-accent);
   border: none;
-  padding: 7px 14px;
+  padding: var(--space-1-75) var(--space-3-5);
   border-radius: var(--radius-pill);
   font: inherit;
-  font-size: 13px;
-  font-weight: 600;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
   cursor: pointer;
 
   &:disabled {
@@ -56,31 +56,31 @@
 }
 
 .receipt-error {
-  margin-top: 12px;
-  padding: 10px 14px;
+  margin-top: var(--space-3);
+  padding: var(--space-2-5) var(--space-3-5);
   background: var(--color-danger-bg);
   border: 1px solid var(--color-danger-border);
   border-radius: var(--radius-md);
   color: var(--color-danger);
-  font-size: 14px;
-  font-weight: 500;
+  font-size: var(--text-md);
+  font-weight: var(--weight-medium);
 }
 
 .receipts-from,
 .yearly-link,
 .bank-hint {
-  padding: 16px 24px 20px;
+  padding: var(--space-4) var(--space-6) var(--space-5);
   border-top: 1px solid var(--color-divider);
-  font-size: 13px;
-  line-height: 1.6;
+  font-size: var(--text-sm);
+  line-height: var(--leading-relaxed);
   color: var(--color-text-soft);
 }
 
 .payments-empty {
-  padding: 24px;
+  padding: var(--space-6);
   text-align: center;
-  font-size: 14px;
-  line-height: 1.6;
+  font-size: var(--text-md);
+  line-height: var(--leading-relaxed);
   color: var(--color-text-soft);
 }
 

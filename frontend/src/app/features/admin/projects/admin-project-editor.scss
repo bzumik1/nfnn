@@ -5,20 +5,20 @@
 .container {
   max-width: 900px;
   margin: 0;
-  padding: 32px 24px 48px;
+  padding: var(--space-8) var(--space-6) var(--space-12);
 }
 
 .admin-crumbs {
-  font-size: 14px;
-  margin-bottom: 12px;
+  font-size: var(--text-md);
+  margin-bottom: var(--space-3);
 }
 
 .admin-title {
   font-family: var(--font-serif);
-  font-size: clamp(26px, 4vw, 32px);
-  font-weight: 700;
+  font-size: var(--text-heading);
+  font-weight: var(--weight-bold);
   color: var(--color-text);
-  margin: 8px 0 20px;
+  margin: var(--space-2) 0 var(--space-5);
 
   &:focus {
     outline: none;
@@ -27,10 +27,10 @@
 
 .admin-notice {
   border-radius: var(--radius-sm);
-  padding: 12px 16px;
-  font-size: 14px;
-  line-height: 1.5;
-  margin-bottom: 16px;
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--text-md);
+  line-height: var(--leading-normal);
+  margin-bottom: var(--space-4);
 }
 
 .admin-notice--status {
@@ -49,7 +49,7 @@
   box-shadow: var(--shadow-panel);
   border: 1px solid var(--color-border-soft);
   overflow: hidden;
-  margin-bottom: 20px;
+  margin-bottom: var(--space-5);
 }
 
 .admin-card--danger {
@@ -58,21 +58,21 @@
 
 .admin-card-title {
   font-family: var(--font-serif);
-  font-size: 18px;
-  font-weight: 700;
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-bold);
   color: var(--color-text);
-  padding: 20px 24px 12px;
+  padding: var(--space-5) var(--space-6) var(--space-3);
 }
 
 .card-body {
-  padding: 0 24px 24px;
+  padding: 0 var(--space-6) var(--space-6);
 }
 
 .card-intro {
-  font-size: 13px;
+  font-size: var(--text-sm);
   color: var(--color-text-muted);
-  line-height: 1.5;
-  margin-bottom: 14px;
+  line-height: var(--leading-normal);
+  margin-bottom: var(--space-3-5);
 }
 
 .admin-loading,
@@ -80,9 +80,9 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-3);
   color: var(--color-text-muted);
-  font-size: 14px;
+  font-size: var(--text-md);
 }
 
 .admin-error {
@@ -94,15 +94,15 @@
 }
 
 .image-field {
-  margin-bottom: 18px;
+  margin-bottom: var(--space-4-5);
 }
 
 .field-label {
   display: block;
-  font-size: 13px;
-  font-weight: 600;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
   color: var(--color-text-secondary);
-  margin-bottom: 6px;
+  margin-bottom: var(--space-1-5);
 }
 
 .image-preview {
@@ -110,7 +110,7 @@
   max-width: 100%;
   height: auto;
   border-radius: var(--radius-sm);
-  margin-bottom: 10px;
+  margin-bottom: var(--space-2-5);
   background: var(--color-surface-alt);
 }
 
@@ -118,12 +118,12 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px 16px;
+  gap: var(--space-2) var(--space-4);
 }
 
 .image-input {
   font-family: var(--font-sans);
-  font-size: 14px;
+  font-size: var(--text-md);
   color: var(--color-text-secondary);
   max-width: 100%;
 }
@@ -131,9 +131,9 @@
 .field-hint,
 .field-status,
 .field-error {
-  font-size: 12px;
-  line-height: 1.5;
-  margin-top: 6px;
+  font-size: var(--text-xs);
+  line-height: var(--leading-normal);
+  margin-top: var(--space-1-5);
 }
 
 .field-hint {
@@ -147,23 +147,23 @@
 .field-error,
 .form-error {
   color: var(--color-danger);
-  font-weight: 600;
+  font-weight: var(--weight-semibold);
 }
 
 .form-error {
-  font-size: 13px;
-  margin: 4px 0 8px;
+  font-size: var(--text-sm);
+  margin: var(--space-1) 0 var(--space-2);
 }
 
 .form-actions {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 10px 16px;
+  gap: var(--space-2-5) var(--space-4);
 }
 
 .updated-at {
-  font-size: 13px;
+  font-size: var(--text-sm);
   color: var(--color-text-muted);
 }
 
@@ -171,19 +171,19 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px 12px;
-  font-size: 14px;
+  gap: var(--space-2) var(--space-3);
+  font-size: var(--text-md);
   color: var(--color-text);
-  line-height: 1.5;
-  margin-bottom: 14px;
+  line-height: var(--leading-normal);
+  margin-bottom: var(--space-3-5);
 }
 
 .state {
   display: inline-block;
-  padding: 3px 10px;
+  padding: var(--space-0-75) var(--space-2-5);
   border-radius: var(--radius-pill);
-  font-size: 12px;
-  font-weight: 600;
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
   white-space: nowrap;
 }
 
@@ -201,7 +201,7 @@
   display: flex;
   flex-wrap: wrap;
   align-items: flex-end;
-  gap: 12px 16px;
+  gap: var(--space-3) var(--space-4);
 }
 
 .date-field {
@@ -210,9 +210,9 @@
   input {
     display: block;
     font-family: var(--font-sans);
-    font-size: 14px;
+    font-size: var(--text-md);
     color: var(--color-text);
-    padding: 9px 12px;
+    padding: var(--space-2-25) var(--space-3);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-sm);
     background: var(--color-surface);
@@ -228,19 +228,19 @@
   border: none;
   border-radius: var(--radius-pill);
   font-family: var(--font-sans);
-  font-size: 13px;
-  font-weight: 600;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
   cursor: pointer;
-  padding: 9px 18px;
+  padding: var(--space-2-25) var(--space-4-5);
   white-space: nowrap;
 }
 
 .primary {
   background: var(--color-accent);
   color: var(--color-on-accent);
-  padding: 10px 24px;
-  font-weight: 700;
-  font-size: 14px;
+  padding: var(--space-2-5) var(--space-6);
+  font-weight: var(--weight-bold);
+  font-size: var(--text-md);
   box-shadow: var(--shadow-button-sm);
 }
 
@@ -253,13 +253,13 @@
 .action-link {
   background: none;
   color: var(--color-accent);
-  padding: 6px 8px;
+  padding: var(--space-1-5) var(--space-2);
 }
 
 .danger {
   background: var(--color-danger);
   color: var(--color-on-danger);
-  font-weight: 700;
+  font-weight: var(--weight-bold);
 }
 
 .danger-outline {
@@ -272,8 +272,8 @@
   display: inline-flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
-  font-size: 13px;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
   color: var(--color-text);
 }
 

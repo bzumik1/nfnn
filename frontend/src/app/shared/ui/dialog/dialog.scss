@@ -1,3 +1,5 @@
+@use 'breakpoints' as bp;
+
 .dialog {
   position: fixed;
   inset: 0;
@@ -6,7 +8,7 @@
   max-width: none;
   max-height: none;
   margin: 0;
-  padding: 20px;
+  padding: var(--space-5);
   border: 0;
   background: var(--color-backdrop);
   backdrop-filter: blur(6px);
@@ -14,7 +16,7 @@
   color: var(--color-text);
   overflow-y: auto;
   overscroll-behavior: contain;
-  animation: fadeIn 0.2s ease both;
+  animation: fadeIn var(--duration-base) ease both;
 
   &[open] {
     display: flex;
@@ -31,12 +33,12 @@
   position: relative;
   background: var(--color-surface);
   border-radius: var(--radius-dialog);
-  padding: 36px 40px;
+  padding: var(--space-9) var(--space-10);
   width: 100%;
   max-width: 420px;
   box-shadow: var(--shadow-dialog);
-  animation: fadeInUp 0.3s ease both;
-  transition: max-width 0.2s;
+  animation: fadeInUp var(--duration-slow) ease both;
+  transition: max-width var(--duration-base);
 
   &--wide {
     max-width: 520px;
@@ -53,15 +55,15 @@
   border: none;
   background: transparent;
   color: var(--color-text-subtle);
-  font-size: 24px;
-  line-height: 1;
+  font-size: var(--text-4xl);
+  line-height: var(--leading-none);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   transition:
-    background 0.2s,
-    color 0.2s;
+    background var(--duration-base),
+    color var(--duration-base);
 
   &:hover {
     background: var(--color-accent-bg);
@@ -69,7 +71,7 @@
   }
 }
 
-@media (max-width: 480px) {
+@include bp.down(phone) {
   .dialog[open] {
     padding: 0;
     align-items: flex-start;
@@ -79,7 +81,7 @@
     max-width: none;
     min-height: 100%;
     border-radius: 0;
-    padding: 56px 20px 32px;
+    padding: var(--space-14) var(--space-5) var(--space-8);
     box-shadow: none;
   }
 }

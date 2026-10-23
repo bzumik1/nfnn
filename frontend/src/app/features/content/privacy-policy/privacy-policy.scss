@@ -1,3 +1,5 @@
+@use 'breakpoints' as bp;
+
 :host {
   display: block;
 }
@@ -5,7 +7,7 @@
 .section-inner {
   max-width: var(--content-max);
   margin: 0 auto;
-  padding: 0 32px;
+  padding: 0 var(--space-8);
 }
 
 .intro {
@@ -16,87 +18,87 @@
       transparent 60%
     ),
     var(--color-surface-inverse);
-  padding: calc(var(--header-height) + 88px) 0 80px;
+  padding: calc(var(--header-height) + var(--space-22)) 0 var(--space-20);
 }
 
 .eyebrow {
   color: color-mix(in srgb, var(--color-on-inverse) 65%, transparent);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.2em;
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-widest);
   text-transform: uppercase;
-  margin-bottom: 16px;
+  margin-bottom: var(--space-4);
 }
 
 .title {
   font-family: var(--font-serif);
-  font-size: clamp(36px, 5.5vw, 60px);
-  font-weight: 800;
-  line-height: 1.1;
+  font-size: var(--text-page-title);
+  font-weight: var(--weight-extrabold);
+  line-height: var(--leading-display);
   color: var(--color-on-inverse);
   max-width: 18ch;
   text-wrap: balance;
 }
 
 .lead {
-  margin-top: 24px;
+  margin-top: var(--space-6);
   max-width: 62ch;
   color: color-mix(in srgb, var(--color-on-inverse) 70%, transparent);
-  font-size: 17px;
-  line-height: 1.8;
+  font-size: var(--text-2xl);
+  line-height: var(--leading-loose);
 }
 
 .effective {
-  margin-top: 20px;
+  margin-top: var(--space-5);
   color: color-mix(in srgb, var(--color-on-inverse) 65%, transparent);
-  font-size: 14px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
+  font-size: var(--text-md);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-slight);
 }
 
 .body {
-  padding-top: 80px;
-  padding-bottom: 108px;
+  padding-top: var(--space-20);
+  padding-bottom: var(--space-27);
 }
 
 .prose {
   max-width: 70ch;
 
   section + section {
-    margin-top: 64px;
+    margin-top: var(--space-16);
   }
 
   h2 {
     font-family: var(--font-serif);
-    font-size: clamp(24px, 3vw, 32px);
-    font-weight: 800;
-    line-height: 1.25;
+    font-size: var(--text-heading);
+    font-weight: var(--weight-extrabold);
+    line-height: var(--leading-heading);
     color: var(--color-text);
-    margin-bottom: 20px;
+    margin-bottom: var(--space-5);
   }
 
   h3 {
     font-family: var(--font-serif);
-    font-size: 21px;
-    font-weight: 700;
-    line-height: 1.3;
+    font-size: var(--text-3xl);
+    font-weight: var(--weight-bold);
+    line-height: var(--leading-snug);
     color: var(--color-text);
-    margin-bottom: 14px;
+    margin-bottom: var(--space-3-5);
   }
 
   p,
   li,
   dd {
     color: var(--color-text-muted);
-    font-size: 16px;
-    line-height: 1.85;
+    font-size: var(--text-xl);
+    line-height: var(--leading-loose);
     text-wrap: pretty;
   }
 
   p + p,
   ul + p,
   p + ul {
-    margin-top: 16px;
+    margin-top: var(--space-4);
   }
 
   ul {
@@ -104,7 +106,7 @@
   }
 
   li + li {
-    margin-top: 6px;
+    margin-top: var(--space-1-5);
   }
 
   li::marker {
@@ -113,12 +115,12 @@
 
   strong {
     color: var(--color-text);
-    font-weight: 600;
+    font-weight: var(--weight-semibold);
   }
 
   a {
     color: var(--color-accent);
-    font-weight: 600;
+    font-weight: var(--weight-semibold);
     text-decoration: underline;
     text-decoration-thickness: 1.5px;
     text-underline-offset: 3px;
@@ -136,56 +138,56 @@
 }
 
 .purpose {
-  margin-top: 24px;
-  padding: 28px 32px;
+  margin-top: var(--space-6);
+  padding: var(--space-7) var(--space-8);
   background: var(--color-surface-alt);
   border: 1px solid var(--color-border-soft);
   border-radius: var(--radius-card);
 }
 
 .basis {
-  margin-top: 20px;
-  padding-top: 18px;
+  margin-top: var(--space-5);
+  padding-top: var(--space-4-5);
   border-top: 1px solid var(--color-border-accent);
 
   dt {
     color: var(--color-accent);
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.2em;
+    font-size: var(--text-2xs);
+    font-weight: var(--weight-bold);
+    letter-spacing: var(--tracking-widest);
     text-transform: uppercase;
-    margin-bottom: 6px;
+    margin-bottom: var(--space-1-5);
   }
 
   dd {
-    font-size: 15px;
-    line-height: 1.75;
+    font-size: var(--text-lg);
+    line-height: var(--leading-loose);
   }
 }
 
-@media (max-width: 768px) {
+@include bp.down(tablet) {
   .section-inner {
-    padding: 0 20px;
+    padding: 0 var(--space-5);
   }
 
   .intro {
-    padding: calc(var(--header-height) + 48px) 0 56px;
+    padding: calc(var(--header-height) + var(--space-12)) 0 var(--space-14);
   }
 
   .lead {
-    font-size: 16px;
+    font-size: var(--text-xl);
   }
 
   .body {
-    padding-top: 56px;
-    padding-bottom: 72px;
+    padding-top: var(--space-14);
+    padding-bottom: var(--space-18);
   }
 
   .prose section + section {
-    margin-top: 48px;
+    margin-top: var(--space-12);
   }
 
   .purpose {
-    padding: 22px 20px;
+    padding: var(--space-5-5) var(--space-5);
   }
 }

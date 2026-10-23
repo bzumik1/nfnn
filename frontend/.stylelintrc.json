@@ -16,8 +16,29 @@
     ],
     "declaration-property-value-allowed-list": {
       "font-family": ["/^var\\(--font-[a-z0-9-]+\\)$/"],
+      "font-size": ["inherit", "/^var\\(--text-[a-z0-9-]+\\)$/"],
+      "font-weight": ["inherit", "normal", "/^var\\(--weight-[a-z0-9-]+\\)$/"],
+      "line-height": ["inherit", "normal", "/^var\\(--leading-[a-z0-9-]+\\)$/"],
+      "letter-spacing": ["0", "normal", "/^var\\(--tracking-[a-z0-9-]+\\)$/"],
       "border-radius": ["/^(var\\(--radius-[a-z0-9-]+\\)|0)( (var\\(--radius-[a-z0-9-]+\\)|0))*$/"],
       "/^(box|text)-shadow$/": ["none", "/^var\\(--shadow-[a-z0-9-]+\\)$/"]
+    },
+    "declaration-property-value-disallowed-list": {
+      "/^(padding|margin)(-[a-z-]+)?$|^(row-|column-)?gap$/": [
+        "/(^|[\\s(,])-?(?!1px\\b)\\d*\\.?\\d+px/"
+      ],
+      "/^transition(-duration)?$/": ["/(^|[\\s,])\\d*\\.?\\d+m?s\\b/"]
+    },
+    "media-feature-name-disallowed-list": ["/width$/"]
+  },
+  "overrides": [
+    {
+      "files": ["src/styles/_breakpoints.scss"],
+      "rules": { "media-feature-name-disallowed-list": null }
+    },
+    {
+      "files": ["src/styles.scss"],
+      "rules": { "declaration-property-value-disallowed-list": null }
     }
-  }
+  ]
 }
