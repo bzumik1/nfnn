@@ -5,6 +5,7 @@ import cz.novanadeje.app.operations.domain.backup.BackupRequestKind;
 import cz.novanadeje.app.operations.domain.backup.BackupRun;
 import cz.novanadeje.app.operations.domain.backup.RestoreFile;
 
+import java.io.InputStream;
 import java.util.List;
 import java.util.Optional;
 
@@ -27,4 +28,10 @@ public interface BackupStore {
     void request(BackupRequestKind kind, String requestId);
 
     Optional<BackupDownload> open(String fileName);
+
+    boolean restorePending();
+
+    void requestRestore(RestoreRequest request);
+
+    String storeUpload(String requestId, InputStream content);
 }

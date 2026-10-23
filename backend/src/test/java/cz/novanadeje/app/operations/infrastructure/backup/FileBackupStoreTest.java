@@ -1,24 +1,33 @@
 package cz.novanadeje.app.operations.infrastructure.backup;
 
+import cz.novanadeje.app.operations.application.backup.RestoreRequest;
 import cz.novanadeje.app.operations.domain.backup.BackupFile;
 import cz.novanadeje.app.operations.domain.backup.BackupKind;
 import cz.novanadeje.app.operations.domain.backup.BackupRequestKind;
+import cz.novanadeje.app.operations.domain.backup.BackupTooLarge;
 import cz.novanadeje.app.operations.domain.backup.BackupsUnavailable;
+import cz.novanadeje.app.operations.domain.backup.NotABackup;
 import cz.novanadeje.app.operations.domain.backup.RestoreFile;
 import cz.novanadeje.app.operations.domain.backup.RestoreFileState;
+import cz.novanadeje.app.operations.domain.backup.RestoreSource;
 import cz.novanadeje.app.operations.domain.backup.RunOutcome;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.springframework.util.unit.DataSize;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.FileTime;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -28,6 +37,9 @@ class FileBackupStoreTest {
 
     private static final Instant OLDER = Instant.parse("2026-10-22T01:00:00Z");
     private static final Instant NEWER = Instant.parse("2026-10-23T01:00:00Z");
+    private static final int MAX_UPLOAD = 64;
+    private static final String REQUEST = "019a1b2c-0000-7000-8000-000000000001";
+    private static final UUID ADMIN = UUID.fromString("019a1b2c-0000-7000-8000-00000000000a");
 
     @TempDir
     Path root;
@@ -142,8 +154,80 @@ class FileBackupStoreTest {
         assertThat(store.open("../restore/zaloha.dump")).isEmpty();
     }
 
+    @Test
+    @DisplayName("Given an administrator's restore of a backup, when it is requested, then a request file names the source, the file and the administrator and a restore is pending")
+    void should_write_restore_request_when_requested_given_a_backup() throws IOException {
+        Files.createDirectories(backups.resolve("requests"));
+        assertThat(store.restorePending()).isFalse();
+
+        store.requestRestore(new RestoreRequest(REQUEST, RestoreSource.BACKUP, "nfnn-2026-10-22_0300.dump", Optional.of(ADMIN), NEWER));
+
+        assertThat(backups.resolve("requests").resolve(REQUEST + ".restore"))
+                .hasContent("source=backup\nfile=nfnn-2026-10-22_0300.dump\nadmin=" + ADMIN + "\n");
+        assertThat(store.restorePending()).isTrue();
+        assertThat(store.pendingRequests()).isEqualTo(1);
+        assertThat(backups.resolve("requests")).isDirectoryNotContaining("glob:**.part");
+    }
+
+    @Test
+    @DisplayName("Given the backup container is running a restore, when asked, then a restore is pending")
+    void should_be_pending_when_asked_given_a_running_restore() throws IOException {
+        Files.createDirectories(backups.resolve("status"));
+        Files.writeString(backups.resolve("status").resolve("restore.running"), "started_at=2026-10-23T19:20:12Z\n");
+
+        assertThat(store.restorePending()).isTrue();
+    }
+
+    @Test
+    @DisplayName("Given a dump uploaded in the first setup, when it is stored, then it lies in the restore folder under the request and the request names it without an administrator")
+    void should_store_upload_when_stored_given_a_dump() throws IOException {
+        Files.createDirectories(backups.resolve("requests"));
+        byte[] dump = dump(40);
+
+        String stored = store.storeUpload(REQUEST, new ByteArrayInputStream(dump));
+        store.requestRestore(new RestoreRequest(REQUEST, RestoreSource.UPLOAD, stored, Optional.empty(), NEWER));
+
+        assertThat(stored).isEqualTo(REQUEST + ".upload");
+        assertThat(restore.resolve(stored)).hasBinaryContent(dump);
+        assertThat(backups.resolve("requests").resolve(REQUEST + ".restore")).hasContent("source=upload\nfile=" + stored + "\nadmin=\n");
+        assertThat(store.restoreFilesNewestFirst()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Given a file that does not start like a pg_dump archive, when it is stored, then it is refused and nothing is left")
+    void should_refuse_upload_when_stored_given_not_a_dump() {
+        assertThatThrownBy(() -> store.storeUpload(REQUEST, new ByteArrayInputStream("\u00ff\u00d8 a photo".getBytes(StandardCharsets.ISO_8859_1))))
+                .isInstanceOf(NotABackup.class);
+        assertThatThrownBy(() -> store.storeUpload(REQUEST, new ByteArrayInputStream(new byte[0]))).isInstanceOf(NotABackup.class);
+
+        assertThat(restore).isEmptyDirectory();
+    }
+
+    @Test
+    @DisplayName("Given a dump larger than the server takes, when it is stored, then it is refused and nothing is left")
+    void should_refuse_upload_when_stored_given_too_large() {
+        assertThatThrownBy(() -> store.storeUpload(REQUEST, new ByteArrayInputStream(dump(MAX_UPLOAD + 1)))).isInstanceOf(BackupTooLarge.class);
+
+        assertThat(restore).isEmptyDirectory();
+    }
+
+    @Test
+    @DisplayName("Given no restore folder, when an upload is stored, then backups are unavailable")
+    void should_refuse_upload_when_stored_given_no_restore_folder() throws IOException {
+        Files.delete(restore);
+
+        assertThatThrownBy(() -> store.storeUpload(REQUEST, new ByteArrayInputStream(dump(10)))).isInstanceOf(BackupsUnavailable.class);
+    }
+
+    private static byte[] dump(int size) {
+        byte[] bytes = new byte[size];
+        byte[] magic = "PGDMP".getBytes(StandardCharsets.US_ASCII);
+        System.arraycopy(magic, 0, bytes, 0, Math.min(magic.length, size));
+        return bytes;
+    }
+
     private static BackupProperties properties(Path backups, Path restore) {
-        return new BackupProperties(backups, restore, "-", Duration.ofHours(26), Duration.ofDays(8));
+        return new BackupProperties(backups, restore, "-", Duration.ofHours(26), Duration.ofDays(8), DataSize.ofBytes(MAX_UPLOAD));
     }
 
     private static void write(Path file, int size, Instant modified) throws IOException {

@@ -78,7 +78,7 @@ services:
       - /DATA/AppData/nfnn/config:/config:ro
       - /DATA/AppData/nfnn/backups:/backups:ro
       - /DATA/AppData/nfnn/backups/requests:/backups/requests
-      - /DATA/AppData/nfnn/restore:/restore:ro
+      - /DATA/AppData/nfnn/restore:/restore
       - /DATA/AppData/nfnn/logs:/logs
       - /DATA/AppData/nfnn/secrets:/secrets
     healthcheck:

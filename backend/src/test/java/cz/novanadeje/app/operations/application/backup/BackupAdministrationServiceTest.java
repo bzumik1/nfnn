@@ -139,6 +139,6 @@ class BackupAdministrationServiceTest {
 
     private static BackupRun run(RunOutcome outcome, Instant finishedAt) {
         return new BackupRun(outcome, finishedAt.minusSeconds(2), finishedAt, Optional.of(FILE), Optional.of(1590L), Optional.empty(), Optional.empty(),
-                Optional.empty());
+                Optional.empty(), Optional.empty());
     }
 }

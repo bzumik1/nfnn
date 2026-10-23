@@ -214,6 +214,14 @@ describe('Given an administrator on the settings page', () => {
     });
   });
 
+  it('when a stored secret cannot be read, as after a restore on a new server, then the page names it at the top', async () => {
+    await respond(settingsView());
+
+    expect(text('.admin-notice--alert')).toBe(
+      'Tyto tajné údaje jsou uložené jiným klíčem, než má tento server, třeba po obnově ze zálohy na novém serveru: Token Fio API (jen pro čtení). Dokud je znovu nezadáte a neuložíte, nebudou fungovat.',
+    );
+  });
+
   it('when the server has no encryption key, then the page says secrets cannot be saved and their fields are off', async () => {
     await respond(settingsView({ secretsCanBeStored: false }));
 

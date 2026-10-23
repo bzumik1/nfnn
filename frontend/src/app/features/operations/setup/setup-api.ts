@@ -1,4 +1,4 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpEvent, HttpHeaders } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import {
   catchError,
@@ -35,6 +35,8 @@ export type RestartOutcome = 'restarted' | 'slow';
 
 export const RESTART_POLL_MS = 3000;
 const RESTART_MAX_POLLS = 100;
+export const RESTORE_MAX_POLLS = 300;
+export const SETUP_CODE_HEADER = 'X-Nfnn-Setup-Code';
 const RESTART_GRACE_POLLS = 10;
 
 interface RestartProbe {
@@ -48,9 +50,25 @@ export interface SettingValueRequest {
   value: string;
 }
 
+export type RestoreOutcome = 'OK' | 'FAILED';
+
+export interface LastRestoreResponse {
+  requestId: string | null;
+  outcome: RestoreOutcome;
+  finishedAt: string;
+  error: string | null;
+}
+
 export interface SetupStatusResponse {
   required: boolean;
   codeRequired: boolean;
+  lastRestore: LastRestoreResponse | null;
+}
+
+export interface RestoreRequestResponse {
+  requestId: string;
+  fileName: string;
+  requestedAt: string;
 }
 
 export interface SetupRequest {
@@ -99,9 +117,21 @@ export class SetupApi {
     return this.http.post<SettingsSavedResponse>('/api/operations/setup', request);
   }
 
-  watchRestart(): Observable<RestartOutcome> {
+  uploadBackup(code: string | null, file: Blob): Observable<HttpEvent<RestoreRequestResponse>> {
+    let headers = new HttpHeaders({ 'Content-Type': 'application/octet-stream' });
+    if (code) {
+      headers = headers.set(SETUP_CODE_HEADER, code);
+    }
+    return this.http.put<RestoreRequestResponse>('/api/operations/setup/restore', file, {
+      headers,
+      reportProgress: true,
+      observe: 'events',
+    });
+  }
+
+  watchRestart(maxPolls = RESTART_MAX_POLLS): Observable<RestartOutcome> {
     return timer(RESTART_POLL_MS, RESTART_POLL_MS).pipe(
-      take(RESTART_MAX_POLLS),
+      take(maxPolls),
       concatMap((index) =>
         this.status().pipe(
           map(() => ({ index, up: true })),

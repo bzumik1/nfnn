@@ -81,6 +81,19 @@ public class ApiClient {
         return lastResponse;
     }
 
+    public ResponseEntity<String> putBytes(String path, byte[] bytes, Map<String, String> headers) {
+        lastResponse = client.put()
+                .uri(path)
+                .headers(this::addDefaultHeaders)
+                .headers(sent -> headers.forEach(sent::set))
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .body(bytes)
+                .retrieve()
+                .toEntity(String.class);
+        lastResponseBytes = null;
+        return lastResponse;
+    }
+
     public ResponseEntity<String> postForm(String path, Map<String, String> fields) {
         MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
         fields.forEach((name, value) -> {

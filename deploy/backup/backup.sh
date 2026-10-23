@@ -1,6 +1,9 @@
 #!/bin/sh
-# Backs the nfnn database up, restores a dump left in the restore folder and rehearses a restore
-# once a week. Everything is reported in the container log, in $LOGS/backup.log and in key=value
+# Backs the nfnn database up, restores a dump left in the restore folder or asked for by the
+# administration, and rehearses a restore once a week. A restore goes into a staging database first
+# and replaces the live one by renaming only when it succeeded, after a -pred-obnovou backup, so a
+# failed restore leaves the current data as they were; $BACKUPS/status/restore.running exists while
+# one runs and the backend waits for it to go. Everything is reported in the container log, in $LOGS/backup.log and in key=value
 # files under $BACKUPS/status, which the backend reads for the administration page.
 # The database password is read from $SECRETS_DIR/db-password once nfnn-postgres marks it ready.
 
@@ -13,12 +16,15 @@ TEST_RESTORE_DAY=${TEST_RESTORE_DAY:-7}
 TEST_RESTORE_TIME=${TEST_RESTORE_TIME:-04:00}
 KEEP_DAYS=${KEEP_DAYS:-30}
 TEST_DATABASE=${TEST_DATABASE:-nfnn_restore_test}
+STAGING_DATABASE=${STAGING_DATABASE:-nfnn_restore_staging}
+RETIRED_DATABASE=${RETIRED_DATABASE:-nfnn_restore_retired}
 LOGS=${LOGS_DIR:-/logs}
 SECRETS=${SECRETS_DIR:-/secrets}
 POLL_SECONDS=10
 
 STATUS="$BACKUPS/status"
 REQUESTS="$BACKUPS/requests"
+RUNNING="$STATUS/restore.running"
 
 log() {
   log_line="$(date +%Y-%m-%dT%H:%M:%S%z) $*"
@@ -72,6 +78,10 @@ take_backup() {
   b_request=$2
   b_started=$(now_utc)
   b_name="nfnn-$(date +%Y-%m-%d_%H%M)$1.dump"
+  while [ -e "$BACKUPS/$b_name" ]; do
+    sleep 5
+    b_name="nfnn-$(date +%Y-%m-%d_%H%M)$1.dump"
+  done
   if pg_dump --format=custom --compress=zstd:19 --file="$BACKUPS/nfnn.dump.part" 2> "$STATUS/backup.err"; then
     mv "$BACKUPS/nfnn.dump.part" "$BACKUPS/$b_name"
     write_status backup "outcome=ok" "started_at=$b_started" "finished_at=$(now_utc)" "file=$b_name" "size=$(file_size "$BACKUPS/$b_name")" "request=$b_request"
@@ -121,61 +131,170 @@ database_is_empty() {
   [ "${e_tables:-1}" = "0" ]
 }
 
+server_psql() {
+  psql --dbname=postgres --quiet --no-align --tuples-only -v ON_ERROR_STOP=1 "$@"
+}
+
+database_exists() {
+  [ "$(server_psql --command="select count(*) from pg_database where datname = '$1'" 2>/dev/null | tr -d '[:space:]')" = 1 ]
+}
+
+allow_connections() {
+  server_psql --command="alter database \"$PGDATABASE\" with allow_connections true" > /dev/null 2>&1
+}
+
+recover_interrupted_restore() {
+  rm -f "$RUNNING"
+  if ! database_exists "$PGDATABASE" && database_exists "$RETIRED_DATABASE"; then
+    server_psql --command="alter database \"$RETIRED_DATABASE\" rename to \"$PGDATABASE\"" > /dev/null
+    log "an interrupted restore left the database renamed; it is back as $PGDATABASE"
+  elif database_exists "$RETIRED_DATABASE"; then
+    dropdb --if-exists "$RETIRED_DATABASE" > /dev/null 2>&1
+  fi
+  allow_connections
+  dropdb --if-exists "$STAGING_DATABASE" > /dev/null 2>&1
+  find "$RESTORE" -maxdepth 1 -name '*.upload.part' -delete 2>/dev/null
+}
+
+swap_in_staging() {
+  server_psql --command="alter database \"$PGDATABASE\" with allow_connections false" > /dev/null 2>> "$STATUS/restore.err" || return 1
+  s_tries=0
+  until server_psql --command="select pg_terminate_backend(pid) from pg_stat_activity where datname = '$PGDATABASE' and pid <> pg_backend_pid()" > /dev/null 2>&1 \
+      && server_psql --command="alter database \"$PGDATABASE\" rename to \"$RETIRED_DATABASE\"" > /dev/null 2>> "$STATUS/restore.err"; do
+    s_tries=$((s_tries + 1))
+    if [ "$s_tries" -ge 30 ]; then
+      allow_connections
+      return 1
+    fi
+    sleep 1
+  done
+  if ! server_psql --command="alter database \"$STAGING_DATABASE\" rename to \"$PGDATABASE\"" > /dev/null 2>> "$STATUS/restore.err"; then
+    server_psql --command="alter database \"$RETIRED_DATABASE\" rename to \"$PGDATABASE\"" > /dev/null 2>&1
+    allow_connections
+    return 1
+  fi
+  dropdb --if-exists "$RETIRED_DATABASE" > /dev/null 2>&1
+  return 0
+}
+
+restore_dump() {
+  r_dump=$1
+  r_file=$2
+  r_request=$3
+  r_admin=$4
+  r_started=$(now_utc)
+  : > "$STATUS/restore.err"
+  log "restoring $r_file"
+  if ! database_is_empty && ! take_backup "-pred-obnovou" ""; then
+    write_status restore "outcome=failed" "started_at=$r_started" "finished_at=$(now_utc)" "file=$r_file" "request=$r_request" "admin=$r_admin" "error=the safety backup of the current data failed, so nothing was restored"
+    log "restore of $r_file not started: the safety backup failed"
+    return 1
+  fi
+  dropdb --if-exists "$STAGING_DATABASE" > /dev/null 2>&1
+  r_tables=0
+  if createdb "$STAGING_DATABASE" 2>> "$STATUS/restore.err" \
+      && pg_restore --exit-on-error --single-transaction --dbname="$STAGING_DATABASE" "$r_dump" 2>> "$STATUS/restore.err"; then
+    r_tables=$(psql --dbname="$STAGING_DATABASE" --tuples-only --no-align --command="select count(*) from information_schema.tables where table_schema = 'public'" 2>> "$STATUS/restore.err" | tr -d '[:space:]')
+    if [ "${r_tables:-0}" -gt 0 ] 2>/dev/null; then
+      if swap_in_staging; then
+        write_status restore "outcome=ok" "started_at=$r_started" "finished_at=$(now_utc)" "file=$r_file" "size=$(file_size "$r_dump")" "tables=$r_tables" "request=$r_request" "admin=$r_admin"
+        log "restore of $r_file succeeded: $r_tables tables"
+        return 0
+      fi
+      r_error="the restored database could not replace the current one: $(tail -n 1 "$STATUS/restore.err" | tr -d '\n' | cut -c1-400)"
+    else
+      r_error="the backup holds no tables"
+    fi
+  else
+    r_error=$(tail -n 1 "$STATUS/restore.err" | tr -d '\n' | cut -c1-500)
+  fi
+  dropdb --if-exists "$STAGING_DATABASE" > /dev/null 2>&1
+  write_status restore "outcome=failed" "started_at=$r_started" "finished_at=$(now_utc)" "file=$r_file" "request=$r_request" "admin=$r_admin" "error=$r_error"
+  log "restore of $r_file failed, the current data stay: $r_error"
+  return 1
+}
+
 restore_from_folder() {
   [ -d "$RESTORE" ] || return 0
   set -- "$RESTORE"/*.dump
   [ -e "$1" ] || return 0
-  r_started=$(now_utc)
+  f_started=$(now_utc)
+  write_status restore.running "started_at=$f_started" "file=$(basename "$1")"
   if [ $# -gt 1 ]; then
-    for r_other in "$@"; do
-      mv "$r_other" "$r_other.skipped"
+    for f_other in "$@"; do
+      mv "$f_other" "$f_other.skipped"
     done
-    write_status restore "outcome=failed" "started_at=$r_started" "finished_at=$(now_utc)" "file=$(basename "$1")" "error=more than one dump in the restore folder; put exactly one there"
+    write_status restore "outcome=failed" "started_at=$f_started" "finished_at=$(now_utc)" "file=$(basename "$1")" "error=more than one dump in the restore folder; put exactly one there"
     log "restore skipped: more than one dump in $RESTORE"
+    rm -f "$RUNNING"
     return 1
   fi
-  r_dump=$1
-  r_file=$(basename "$r_dump")
-  r_forced=0
-  case "$r_file" in
-    *.force.dump) r_forced=1 ;;
+  f_dump=$1
+  f_file=$(basename "$f_dump")
+  case "$f_file" in
+    *.force.dump) f_forced=1 ;;
+    *) f_forced=0 ;;
   esac
-  if ! database_is_empty && [ "$r_forced" = 0 ]; then
-    mv "$r_dump" "$r_dump.skipped"
-    write_status restore "outcome=failed" "started_at=$r_started" "finished_at=$(now_utc)" "file=$r_file" "error=the database is not empty; name the file .force.dump to replace it"
-    log "restore of $r_file skipped: the database is not empty"
+  if [ "$f_forced" = 0 ] && ! database_is_empty; then
+    mv "$f_dump" "$f_dump.skipped"
+    write_status restore "outcome=failed" "started_at=$f_started" "finished_at=$(now_utc)" "file=$f_file" "error=the database is not empty; name the file .force.dump to replace it"
+    log "restore of $f_file skipped: the database is not empty"
+    rm -f "$RUNNING"
     return 1
   fi
-  log "restoring $r_file"
-  if [ "$r_forced" = 1 ] && ! database_is_empty; then
-    take_backup "-pred-obnovou" "" || return 1
+  if restore_dump "$f_dump" "$f_file" "" ""; then
+    mv "$f_dump" "$f_dump.done"
+  else
+    mv "$f_dump" "$f_dump.failed"
   fi
-  psql --quiet --no-align --tuples-only \
-    --command="select pg_terminate_backend(pid) from pg_stat_activity where datname = current_database() and pid <> pg_backend_pid()" > /dev/null 2>&1
-  if psql --quiet -v ON_ERROR_STOP=1 --command='drop schema public cascade' --command='create schema public' 2> "$STATUS/restore.err" \
-      && pg_restore --exit-on-error --single-transaction --dbname="$PGDATABASE" "$r_dump" 2>> "$STATUS/restore.err"; then
-    mv "$r_dump" "$r_dump.done"
-    write_status restore "outcome=ok" "started_at=$r_started" "finished_at=$(now_utc)" "file=$r_file" "size=$(file_size "$r_dump.done")"
-    log "restore of $r_file succeeded"
-    return 0
+  rm -f "$RUNNING"
+}
+
+request_value() {
+  sed -n "s/^$2=//p" "$1" | head -n 1 | tr -d '\r\n'
+}
+
+restore_requested() {
+  q_request=$1
+  q_id=$(basename "$q_request" .restore)
+  q_source=$(request_value "$q_request" source)
+  q_file=$(request_value "$q_request" file)
+  q_admin=$(request_value "$q_request" admin)
+  q_started=$(now_utc)
+  write_status restore.running "started_at=$q_started" "file=$q_file" "request=$q_id"
+  rm -f "$q_request"
+  case "$q_admin" in
+    *[!0-9a-f-]*) q_admin="" ;;
+  esac
+  q_dump=""
+  case "$q_source:$q_file" in
+    */*|*:.*) ;;
+    backup:nfnn-*.dump) [ -f "$BACKUPS/$q_file" ] && q_dump="$BACKUPS/$q_file" ;;
+    upload:*.upload) [ -f "$RESTORE/$q_file" ] && q_dump="$RESTORE/$q_file" ;;
+  esac
+  if [ -z "$q_dump" ]; then
+    write_status restore "outcome=failed" "started_at=$q_started" "finished_at=$(now_utc)" "file=$q_file" "request=$q_id" "admin=$q_admin" "error=the backup to restore was not found"
+    log "restore request $q_id refused: the backup to restore was not found"
+  else
+    restore_dump "$q_dump" "$q_file" "$q_id" "$q_admin"
   fi
-  r_error=$(tail -n 1 "$STATUS/restore.err" | tr -d '\n' | cut -c1-500)
-  mv "$r_dump" "$r_dump.failed"
-  write_status restore "outcome=failed" "started_at=$r_started" "finished_at=$(now_utc)" "file=$r_file" "error=$r_error"
-  log "restore of $r_file failed: $r_error"
-  return 1
+  if [ "$q_source" = upload ] && [ -n "$q_dump" ]; then
+    rm -f "$q_dump"
+  fi
+  rm -f "$RUNNING"
 }
 
 handle_requests() {
-  for request in "$REQUESTS"/*.backup "$REQUESTS"/*.test-restore; do
+  for request in "$REQUESTS"/*.backup "$REQUESTS"/*.test-restore "$REQUESTS"/*.restore; do
     [ -e "$request" ] || continue
     id=$(basename "$request")
-    rm -f "$request"
     case "$id" in
-      *.backup) take_backup "-rucni" "${id%.backup}" ;;
-      *.test-restore) test_restore "${id%.test-restore}" ;;
+      *.backup) rm -f "$request"; take_backup "-rucni" "${id%.backup}" ;;
+      *.test-restore) rm -f "$request"; test_restore "${id%.test-restore}" ;;
+      *.restore) restore_requested "$request" ;;
     esac
   done
+  find "$RESTORE" -maxdepth 1 -name '*.upload' -mmin +60 -delete 2>/dev/null
 }
 
 mkdir -p "$STATUS" "$REQUESTS"
@@ -185,7 +304,9 @@ log "nfnn backup started: backups in $BACKUPS, restore folder $RESTORE, daily ba
 
 read_database_password
 wait_for_database
+recover_interrupted_restore
 restore_from_folder
+handle_requests
 take_backup "" ""
 
 last_backup_day=""

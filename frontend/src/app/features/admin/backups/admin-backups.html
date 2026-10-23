@@ -1,10 +1,10 @@
 <div class="container">
   <h1 #title class="admin-title" tabindex="-1" i18n="@@admin.backups.heading">Zálohy</h1>
-  <p class="admin-intro" i18n="@@admin.backups.intro">
+  <p class="admin-intro" i18n="@@admin.backups.introRestore">
     Databáze se zálohuje každou noc ve 3:00 do složky /DATA/AppData/nfnn/backups na serveru a každou
     neděli ve 4:00 se nejnovější záloha zkušebně obnoví do dočasné databáze. Tady vidíte, jak to
-    dopadlo, zálohu i zkušební obnovu spustíte hned a zálohu si stáhnete. Zálohy leží na stejném
-    disku jako databáze; kopii mimo server web zatím nedělá.
+    dopadlo, zálohu i zkušební obnovu spustíte hned, zálohu si stáhnete a web z ní obnovíte. Zálohy
+    leží na stejném disku jako databáze; kopii mimo server web zatím nedělá.
   </p>
 
   @if (notice(); as notice) {
@@ -15,177 +15,234 @@
     }
   }
 
-  @switch (state()) {
-    @case ('loading') {
-      <p class="admin-loading" role="status" i18n="@@admin.backups.loading">Načítáme stav záloh…</p>
-    }
-    @case ('error') {
-      <div class="admin-error" role="alert">
-        <p i18n="@@admin.backups.error.text">Stav záloh se nepodařilo načíst.</p>
-        <button
-          type="button"
-          class="admin-retry"
-          (click)="load()"
-          i18n="@@admin.backups.error.retry"
-        >
-          Zkusit znovu
-        </button>
+  @if (restoring(); as restore) {
+    <section class="admin-card" aria-labelledby="restoring-title">
+      <h2 id="restoring-title" class="admin-card-title" i18n="@@admin.backups.restoring.title">
+        Obnova ze zálohy
+      </h2>
+      <div class="card-body">
+        @if (restoreSlow()) {
+          <p class="restoring restoring--slow" role="alert" i18n="@@admin.backups.restoring.slow">
+            Web se ještě nevrátil. Velká záloha se může obnovovat i déle; zkuste to prosím za chvíli
+            znovu.
+          </p>
+          <button
+            type="button"
+            class="primary"
+            (click)="watchRestore()"
+            i18n="@@admin.backups.restoring.retry"
+          >
+            Zkontrolovat znovu
+          </button>
+        } @else {
+          <p class="restoring" role="status" i18n="@@admin.backups.restoring.text">
+            Obnovujeme databázi ze zálohy {{ restore.fileName }}. Web je teď několik minut
+            nedostupný; stránka počká a ukáže výsledek. Možná se pak budete muset znovu přihlásit.
+          </p>
+        }
       </div>
-    }
-    @case ('ready') {
-      <section class="admin-card" aria-labelledby="backups-status-title">
-        <h2 id="backups-status-title" class="admin-card-title" i18n="@@admin.backups.status.title">
-          Stav záloh
-        </h2>
-        <div class="card-body">
-          @if (problems().length > 0) {
-            <div class="problems" role="alert">
-              <ul>
-                @for (problem of problems(); track problem) {
-                  <li>{{ problem }}</li>
+    </section>
+  } @else {
+    @switch (state()) {
+      @case ('loading') {
+        <p class="admin-loading" role="status" i18n="@@admin.backups.loading">
+          Načítáme stav záloh…
+        </p>
+      }
+      @case ('error') {
+        <div class="admin-error" role="alert">
+          <p i18n="@@admin.backups.error.text">Stav záloh se nepodařilo načíst.</p>
+          <button
+            type="button"
+            class="admin-retry"
+            (click)="load()"
+            i18n="@@admin.backups.error.retry"
+          >
+            Zkusit znovu
+          </button>
+        </div>
+      }
+      @case ('ready') {
+        <section class="admin-card" aria-labelledby="backups-status-title">
+          <h2
+            id="backups-status-title"
+            class="admin-card-title"
+            i18n="@@admin.backups.status.title"
+          >
+            Stav záloh
+          </h2>
+          <div class="card-body">
+            @if (problems().length > 0) {
+              <div class="problems" role="alert">
+                <ul>
+                  @for (problem of problems(); track problem) {
+                    <li>{{ problem }}</li>
+                  }
+                </ul>
+              </div>
+            } @else {
+              <p class="healthy" i18n="@@admin.backups.status.healthy">Zálohování je v pořádku.</p>
+            }
+            <dl class="runs">
+              <div class="run">
+                <dt i18n="@@admin.backups.status.backup">Záloha</dt>
+                <dd>{{ lastBackup() }}</dd>
+              </div>
+              <div class="run">
+                <dt i18n="@@admin.backups.status.testRestore">Zkušební obnova</dt>
+                <dd>{{ lastTestRestore() }}</dd>
+              </div>
+              <div class="run">
+                <dt i18n="@@admin.backups.status.restore">Obnova</dt>
+                <dd>{{ lastRestore() }}</dd>
+              </div>
+              <div class="run">
+                <dt i18n="@@admin.backups.status.restoreFolder">Složka restore</dt>
+                <dd>
+                  @if (restoreFiles().length === 0) {
+                    <ng-container i18n="@@admin.backups.restore.emptyGui"
+                      >Prázdná. Web obnovíte tlačítkem Obnovit u zálohy níže, na novém serveru v
+                      průvodci prvním nastavením.</ng-container
+                    >
+                  } @else {
+                    <ul class="restore-files">
+                      @for (file of restoreFiles(); track file.fileName) {
+                        <li>{{ describeRestoreFile(file) }}</li>
+                      }
+                    </ul>
+                  }
+                </dd>
+              </div>
+            </dl>
+            @if (pendingRequests() > 0) {
+              <p class="pending" role="status" i18n="@@admin.backups.pending">
+                {pendingRequests(), plural,
+                  =1 {Na vyřízení čeká 1 požadavek.}
+                  =2 {Na vyřízení čekají {{ pendingRequests() }} požadavky.}
+                  =3 {Na vyřízení čekají {{ pendingRequests() }} požadavky.}
+                  =4 {Na vyřízení čekají {{ pendingRequests() }} požadavky.}
+                  other {Na vyřízení čeká {{ pendingRequests() }} požadavků.}
                 }
-              </ul>
-            </div>
-          } @else {
-            <p class="healthy" i18n="@@admin.backups.status.healthy">Zálohování je v pořádku.</p>
-          }
-          <dl class="runs">
-            <div class="run">
-              <dt i18n="@@admin.backups.status.backup">Záloha</dt>
-              <dd>{{ lastBackup() }}</dd>
-            </div>
-            <div class="run">
-              <dt i18n="@@admin.backups.status.testRestore">Zkušební obnova</dt>
-              <dd>{{ lastTestRestore() }}</dd>
-            </div>
-            <div class="run">
-              <dt i18n="@@admin.backups.status.restoreFolder">Složka restore</dt>
-              <dd>
-                @if (restoreFiles().length === 0) {
-                  <ng-container i18n="@@admin.backups.restore.empty"
-                    >Prázdná. Dump, který do ní na serveru dáte, se při příštím startu kontejneru
-                    nfnn-backup obnoví do prázdné databáze (postup je v deploy/README.md, část
-                    Obnova).</ng-container
+              </p>
+            }
+            <div class="actions">
+              <button
+                type="button"
+                class="primary"
+                [disabled]="actionsDisabled()"
+                (click)="start('BACKUP')"
+              >
+                @if (job()?.kind === 'BACKUP') {
+                  <ng-container i18n="@@admin.backups.backup.busy">Zálohujeme…</ng-container>
+                } @else {
+                  <ng-container i18n="@@admin.backups.backup.start">Zálohovat teď</ng-container>
+                }
+              </button>
+              <button
+                type="button"
+                class="action-btn"
+                [disabled]="actionsDisabled()"
+                (click)="start('TEST_RESTORE')"
+              >
+                @if (job()?.kind === 'TEST_RESTORE') {
+                  <ng-container i18n="@@admin.backups.testRestore.busy"
+                    >Ověřujeme obnovu…</ng-container
                   >
                 } @else {
-                  <ul class="restore-files">
-                    @for (file of restoreFiles(); track file.fileName) {
-                      <li>{{ describeRestoreFile(file) }}</li>
-                    }
-                  </ul>
-                  @if (lastRestoreError(); as error) {
-                    <p class="restore-error" i18n="@@admin.backups.restore.lastError">
-                      Poslední obnova skončila chybou: {{ error }}
-                    </p>
-                  }
-                }
-              </dd>
-            </div>
-          </dl>
-          @if (pendingRequests() > 0) {
-            <p class="pending" role="status" i18n="@@admin.backups.pending">
-              {pendingRequests(), plural,
-                =1 {Na vyřízení čeká 1 požadavek.}
-                =2 {Na vyřízení čekají {{ pendingRequests() }} požadavky.}
-                =3 {Na vyřízení čekají {{ pendingRequests() }} požadavky.}
-                =4 {Na vyřízení čekají {{ pendingRequests() }} požadavky.}
-                other {Na vyřízení čeká {{ pendingRequests() }} požadavků.}
-              }
-            </p>
-          }
-          <div class="actions">
-            <button
-              type="button"
-              class="primary"
-              [disabled]="actionsDisabled()"
-              (click)="start('BACKUP')"
-            >
-              @if (job()?.kind === 'BACKUP') {
-                <ng-container i18n="@@admin.backups.backup.busy">Zálohujeme…</ng-container>
-              } @else {
-                <ng-container i18n="@@admin.backups.backup.start">Zálohovat teď</ng-container>
-              }
-            </button>
-            <button
-              type="button"
-              class="action-btn"
-              [disabled]="actionsDisabled()"
-              (click)="start('TEST_RESTORE')"
-            >
-              @if (job()?.kind === 'TEST_RESTORE') {
-                <ng-container i18n="@@admin.backups.testRestore.busy"
-                  >Ověřujeme obnovu…</ng-container
-                >
-              } @else {
-                <ng-container i18n="@@admin.backups.testRestore.start"
-                  >Ověřit obnovu teď</ng-container
-                >
-              }
-            </button>
-          </div>
-          <p class="actions-hint" i18n="@@admin.backups.actions.hint">
-            Záloha trvá pár sekund, zkušební obnova do minuty; výsledek se ukáže tady.
-          </p>
-        </div>
-      </section>
-
-      <section class="admin-card" aria-labelledby="backups-list-title">
-        <h2 id="backups-list-title" class="admin-card-title" i18n="@@admin.backups.list.title">
-          Zálohy na serveru
-        </h2>
-        @if (backups().length === 0) {
-          <p class="card-body card-intro" i18n="@@admin.backups.list.none">Zatím žádná záloha.</p>
-        } @else {
-          <table>
-            <thead>
-              <tr>
-                <th i18n="@@admin.backups.list.col.file">Soubor</th>
-                <th i18n="@@admin.backups.list.col.kind">Druh</th>
-                <th i18n="@@admin.backups.list.col.createdAt">Vytvořeno</th>
-                <th i18n="@@admin.backups.list.col.size">Velikost</th>
-                <th class="visually-hidden" i18n="@@admin.backups.list.col.actions">Akce</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (item of backups(); track item.fileName) {
-                <tr>
-                  <td data-label="Soubor" i18n-data-label="@@admin.backups.list.col.file">
-                    <span class="file-name">{{ item.fileName }}</span>
-                  </td>
-                  <td data-label="Druh" i18n-data-label="@@admin.backups.list.col.kind">
-                    {{ kindName(item) }}
-                  </td>
-                  <td
-                    class="created"
-                    data-label="Vytvořeno"
-                    i18n-data-label="@@admin.backups.list.col.createdAt"
+                  <ng-container i18n="@@admin.backups.testRestore.start"
+                    >Ověřit obnovu teď</ng-container
                   >
-                    {{ time(item.createdAt) }}
-                  </td>
-                  <td data-label="Velikost" i18n-data-label="@@admin.backups.list.col.size">
-                    {{ size(item.sizeBytes) }}
-                  </td>
-                  <td class="row-actions">
-                    <button
-                      type="button"
-                      class="action-btn"
-                      [disabled]="downloading() !== null"
-                      [attr.aria-label]="downloadLabel(item)"
-                      (click)="download(item)"
-                    >
-                      @if (downloading() === item.fileName) {
-                        <ng-container i18n="@@admin.backups.download.busy">Stahujeme…</ng-container>
-                      } @else {
-                        <ng-container i18n="@@admin.backups.download.start">Stáhnout</ng-container>
-                      }
-                    </button>
-                  </td>
+                }
+              </button>
+            </div>
+            <p class="actions-hint" i18n="@@admin.backups.actions.hint">
+              Záloha trvá pár sekund, zkušební obnova do minuty; výsledek se ukáže tady.
+            </p>
+          </div>
+        </section>
+
+        <section class="admin-card" aria-labelledby="backups-list-title">
+          <h2 id="backups-list-title" class="admin-card-title" i18n="@@admin.backups.list.title">
+            Zálohy na serveru
+          </h2>
+          @if (backups().length === 0) {
+            <p class="card-body card-intro" i18n="@@admin.backups.list.none">Zatím žádná záloha.</p>
+          } @else {
+            <table>
+              <thead>
+                <tr>
+                  <th i18n="@@admin.backups.list.col.file">Soubor</th>
+                  <th i18n="@@admin.backups.list.col.kind">Druh</th>
+                  <th i18n="@@admin.backups.list.col.createdAt">Vytvořeno</th>
+                  <th i18n="@@admin.backups.list.col.size">Velikost</th>
+                  <th class="visually-hidden" i18n="@@admin.backups.list.col.actions">Akce</th>
                 </tr>
-              }
-            </tbody>
-          </table>
-        }
-      </section>
+              </thead>
+              <tbody>
+                @for (item of backups(); track item.fileName) {
+                  <tr>
+                    <td data-label="Soubor" i18n-data-label="@@admin.backups.list.col.file">
+                      <span class="file-name">{{ item.fileName }}</span>
+                    </td>
+                    <td data-label="Druh" i18n-data-label="@@admin.backups.list.col.kind">
+                      {{ kindName(item) }}
+                    </td>
+                    <td
+                      class="created"
+                      data-label="Vytvořeno"
+                      i18n-data-label="@@admin.backups.list.col.createdAt"
+                    >
+                      {{ time(item.createdAt) }}
+                    </td>
+                    <td data-label="Velikost" i18n-data-label="@@admin.backups.list.col.size">
+                      {{ size(item.sizeBytes) }}
+                    </td>
+                    <td class="row-actions">
+                      <button
+                        type="button"
+                        class="action-btn"
+                        [disabled]="actionsDisabled()"
+                        [attr.aria-label]="restoreLabel(item)"
+                        (click)="askRestore(item)"
+                        i18n="@@admin.backups.restore.start"
+                      >
+                        Obnovit
+                      </button>
+                      <button
+                        type="button"
+                        class="action-btn"
+                        [disabled]="downloading() !== null"
+                        [attr.aria-label]="downloadLabel(item)"
+                        (click)="download(item)"
+                      >
+                        @if (downloading() === item.fileName) {
+                          <ng-container i18n="@@admin.backups.download.busy"
+                            >Stahujeme…</ng-container
+                          >
+                        } @else {
+                          <ng-container i18n="@@admin.backups.download.start"
+                            >Stáhnout</ng-container
+                          >
+                        }
+                      </button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          }
+        </section>
+      }
     }
   }
 </div>
+
+@if (restoreCandidate(); as candidate) {
+  <app-restore-dialog
+    [backup]="candidate"
+    [busy]="restoreBusy()"
+    [error]="restoreError()"
+    (confirmed)="confirmRestore()"
+    (dismissed)="cancelRestore()"
+  />
+}

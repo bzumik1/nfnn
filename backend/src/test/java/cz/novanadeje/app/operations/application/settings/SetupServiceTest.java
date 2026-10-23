@@ -1,5 +1,12 @@
 package cz.novanadeje.app.operations.application.settings;
 
+import cz.novanadeje.app.operations.application.backup.BackupRestoreService;
+import cz.novanadeje.app.operations.application.backup.BackupStore;
+import cz.novanadeje.app.operations.application.backup.RestoreRequest;
+import cz.novanadeje.app.operations.domain.backup.BackupRun;
+import cz.novanadeje.app.operations.domain.backup.RestoreRecordRepository;
+import cz.novanadeje.app.operations.domain.backup.RestoreSource;
+import cz.novanadeje.app.operations.domain.backup.RunOutcome;
 import cz.novanadeje.app.operations.domain.settings.Setting;
 import cz.novanadeje.app.operations.domain.settings.SettingChange;
 import cz.novanadeje.app.operations.domain.settings.SettingsRejected;
@@ -11,7 +18,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.context.ApplicationEventPublisher;
 
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
@@ -21,6 +31,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -45,8 +56,11 @@ class SetupServiceTest {
     private final SetupCodeAnnouncer announcer = mock(SetupCodeAnnouncer.class);
     private final MailServerProbe mailProbe = mock(MailServerProbe.class);
     private final ApplicationRestarter restarter = mock(ApplicationRestarter.class);
+    private final BackupStore backups = mock(BackupStore.class);
+    private final Clock clock = Clock.fixed(NOW, ZoneOffset.UTC);
     private final SetupService setup = new SetupService(state, new SettingsWriter(repository, new ReversibleSealer(), validator), announcer,
-            mailProbe, restarter, Clock.fixed(NOW, ZoneOffset.UTC));
+            mailProbe, restarter, backups, new BackupRestoreService(backups, mock(RestoreRecordRepository.class), restarter,
+            mock(ApplicationEventPublisher.class), clock), clock);
 
     private SetupCode code;
 
@@ -62,8 +76,8 @@ class SetupServiceTest {
     @Test
     @DisplayName("Given no setup yet, when the status is asked from the home network, then the setup is required without a code")
     void should_require_setup_without_code_when_asked_given_home_network() {
-        assertThat(setup.status(true)).isEqualTo(new SetupStatusView(true, false));
-        assertThat(setup.status(false)).isEqualTo(new SetupStatusView(true, true));
+        assertThat(setup.status(true)).isEqualTo(new SetupStatusView(true, false, Optional.empty()));
+        assertThat(setup.status(false)).isEqualTo(new SetupStatusView(true, true, Optional.empty()));
     }
 
     @Test
@@ -91,7 +105,7 @@ class SetupServiceTest {
         assertThat(repository.findAll()).hasSize(ESSENTIALS.size());
         assertThat(state.completedAt).contains(NOW);
         verify(restarter).restartAfterCommit();
-        assertThat(setup.status(true)).isEqualTo(new SetupStatusView(false, false));
+        assertThat(setup.status(true)).isEqualTo(new SetupStatusView(false, false, Optional.empty()));
     }
 
     @Test
@@ -144,5 +158,42 @@ class SetupServiceTest {
         public void markCompleted(Instant at) {
             completedAt = Optional.of(at);
         }
+    }
+
+    @Test
+    @DisplayName("Given an open setup, when a backup is uploaded from the home network, then it is stored, a restore is requested and the backend restarts")
+    void should_request_restore_when_uploaded_given_open_setup() {
+        InputStream dump = new ByteArrayInputStream(new byte[] {'P', 'G', 'D', 'M', 'P'});
+        when(backups.storeUpload(any(), eq(dump))).thenAnswer(call -> call.getArgument(0) + ".upload");
+
+        RestoreRequest request = setup.restoreUpload(new SetupAccess(true, null), dump);
+
+        assertThat(request.source()).isEqualTo(RestoreSource.UPLOAD);
+        verify(backups).requestRestore(request);
+        verify(restarter).restartAfterCommit();
+    }
+
+    @Test
+    @DisplayName("Given a locked or completed setup, when a backup is uploaded, then it is refused before anything is read")
+    void should_refuse_upload_when_uploaded_given_locked_or_completed_setup() {
+        InputStream dump = new ByteArrayInputStream(new byte[] {'P', 'G', 'D', 'M', 'P'});
+
+        assertThatThrownBy(() -> setup.restoreUpload(new SetupAccess(false, "AAAA-AAAA-AAAA"), dump)).isInstanceOf(SetupLocked.class);
+        setup.complete(new SetupAccess(true, null), ESSENTIALS);
+        assertThatThrownBy(() -> setup.restoreUpload(new SetupAccess(true, null), dump)).isInstanceOf(SetupCompleted.class);
+
+        verify(backups, never()).storeUpload(any(), any());
+    }
+
+    @Test
+    @DisplayName("Given a last restore, when the status is asked, then it names the restore while the setup is open and nothing once it is done")
+    void should_name_last_restore_when_asked_given_open_setup() {
+        BackupRun failed = new BackupRun(RunOutcome.FAILED, NOW, NOW, Optional.of("u.upload"), Optional.empty(), Optional.empty(),
+                Optional.of("019a1b2c-0000-7000-8000-000000000003"), Optional.empty(), Optional.of("pg_restore: error: x"));
+        when(backups.lastRestore()).thenReturn(Optional.of(failed));
+
+        assertThat(setup.status(true).lastRestore()).contains(failed);
+        setup.complete(new SetupAccess(true, null), ESSENTIALS);
+        assertThat(setup.status(true).lastRestore()).isEmpty();
     }
 }

@@ -106,7 +106,7 @@ class BackupWatchServiceTest {
     }
 
     private static BackupAdministrationView view(Set<BackupProblem> problems) {
-        return new BackupAdministrationView(true, List.of(), Optional.empty(), Optional.empty(), Optional.empty(), List.of(), 0,
+        return new BackupAdministrationView(true, List.of(), Optional.empty(), Optional.empty(), Optional.empty(), List.of(), 0, false,
                 new BackupHealth(problems));
     }
 }

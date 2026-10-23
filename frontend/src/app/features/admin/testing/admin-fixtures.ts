@@ -354,6 +354,7 @@ export function backupsView(overrides: Partial<AdminBackupsResponse> = {}): Admi
     lastRestore: null,
     restoreFiles: [],
     pendingRequests: 0,
+    restorePending: false,
     problems: [],
     ...overrides,
   };

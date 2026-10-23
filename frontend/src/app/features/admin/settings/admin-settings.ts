@@ -4,6 +4,7 @@ import {
   afterNextRender,
   ChangeDetectionStrategy,
   Component,
+  computed,
   DestroyRef,
   ElementRef,
   inject,
@@ -106,6 +107,13 @@ export class AdminSettings {
   protected readonly saving = signal(false);
   protected readonly testingMail = signal(false);
   protected readonly mailNotice = signal<Notice | null>(null);
+  protected readonly unreadableSecrets = computed(() =>
+    this.groups()
+      .flatMap((group) => group.fields)
+      .filter((field) => field.unreadable)
+      .map((field) => field.label)
+      .join(', '),
+  );
 
   constructor() {
     this.load();
