@@ -124,7 +124,7 @@ describe('Given the first setup page', () => {
     await status(false, true);
 
     expect(text('h1')).toBe('Web už je nastavený');
-    expect(element<HTMLAnchorElement>('a.form-submit').getAttribute('href')).toBe(
+    expect(element<HTMLAnchorElement>('a.ui-button--primary').getAttribute('href')).toBe(
       '/sprava/nastaveni',
     );
   });
@@ -147,7 +147,7 @@ describe('Given the first setup page', () => {
 
     it('then it asks for the code from the log and tells where to find it', () => {
       expect(text('h1')).toBe('První nastavení webu');
-      expect(text('.lead')).toContain('kontejner nfnn-backend');
+      expect(text('.ui-panel__lead')).toContain('kontejner nfnn-backend');
       expect(element('#setup-code')).toBeTruthy();
     });
 
@@ -441,7 +441,7 @@ describe('Given the first setup page', () => {
 
       expect(
         Array.from(
-          fixture.nativeElement.querySelectorAll('.form-error li') as NodeListOf<HTMLElement>,
+          fixture.nativeElement.querySelectorAll('.ui-field-error li') as NodeListOf<HTMLElement>,
         ).map((item) => item.textContent?.trim()),
       ).toEqual(['Port: Port je číslo od 1 do 65535.', 'S těmito hodnotami web nenastartuje.']);
       expect(text('h1')).toBe('První nastavení webu');

@@ -64,3 +64,18 @@
     opacity: 0.7;
   }
 }
+
+.ui-button--block {
+  display: block;
+  width: 100%;
+  margin-top: var(--space-1);
+  padding: var(--space-3-5);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-bold);
+  text-align: center;
+  white-space: normal;
+}
+
+.ui-button--primary.ui-button--block {
+  box-shadow: var(--shadow-cta);
+}

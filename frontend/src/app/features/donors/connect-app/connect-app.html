@@ -1,57 +1,59 @@
-<section class="connect-app" aria-labelledby="connect-app-title">
-  <div class="card">
+<section class="ui-panel-page" aria-labelledby="connect-app-title">
+  <div class="ui-panel">
     @switch (panel()) {
       @case ('incomplete') {
-        <div class="notice">
-          <div class="notice-icon notice-icon--warning" aria-hidden="true">!</div>
+        <div class="ui-status">
+          <div class="ui-status__icon ui-status__icon--warning" aria-hidden="true">!</div>
           <h1
             #heading
             id="connect-app-title"
-            class="title"
+            class="ui-panel__title"
             tabindex="-1"
             i18n="@@donor.connect.incomplete.title"
           >
             Žádost o připojení je neúplná
           </h1>
-          <p class="lead" i18n="@@donor.connect.incomplete.text">
+          <p class="ui-panel__lead" i18n="@@donor.connect.incomplete.text">
             Tato stránka se otevírá z aplikace, která žádá o přístup ke správě Nové naděje. Začněte
             prosím připojení v aplikaci znovu.
           </p>
         </div>
       }
       @case ('checking') {
-        <div class="notice">
-          <div class="notice-icon notice-icon--spinner" aria-hidden="true"></div>
+        <div class="ui-status">
+          <div class="ui-status__icon ui-status__icon--spinner" aria-hidden="true"></div>
           <h1
             id="connect-app-title"
-            class="title"
+            class="ui-panel__title"
             tabindex="-1"
             i18n="@@donor.connect.checking.title"
           >
             Ověřujeme aplikaci
           </h1>
-          <p class="lead" role="status" i18n="@@donor.connect.checking.text">Chvilku strpení…</p>
+          <p class="ui-panel__lead" role="status" i18n="@@donor.connect.checking.text">
+            Chvilku strpení…
+          </p>
         </div>
       }
       @case ('sign-in') {
-        <div class="notice">
-          <div class="notice-icon" aria-hidden="true">→</div>
+        <div class="ui-status">
+          <div class="ui-status__icon" aria-hidden="true">→</div>
           <h1
             #heading
             id="connect-app-title"
-            class="title"
+            class="ui-panel__title"
             tabindex="-1"
             i18n="@@donor.connect.signIn.title"
           >
             Aplikace žádá o přístup ke správě
           </h1>
-          <p class="lead" i18n="@@donor.connect.signIn.text">
+          <p class="ui-panel__lead" i18n="@@donor.connect.signIn.text">
             Nejdřív se prosím přihlaste účtem správce, včetně kódu z ověřovací aplikace. Pak
             uvidíte, která aplikace o přístup žádá, a rozhodnete, zda ho dostane.
           </p>
           <button
             type="button"
-            class="form-submit"
+            class="ui-button ui-button--primary ui-button--block"
             (click)="signIn()"
             i18n="@@donor.connect.signIn.action"
           >
@@ -61,12 +63,12 @@
       }
       @case ('consent') {
         @if (client(); as client) {
-          <h1 #heading id="connect-app-title" class="title" tabindex="-1">
+          <h1 #heading id="connect-app-title" class="ui-panel__title" tabindex="-1">
             <span i18n="@@donor.connect.consent.title">Povolit přístup ke správě aplikaci</span
             >&ngsp;<span class="client-host">{{ client.host }}</span
             >?
           </h1>
-          <p class="lead">
+          <p class="ui-panel__lead">
             <span i18n="@@donor.connect.consent.intro"
               >Aplikace se představuje jako „{{ client.name }}“ a bude jednat vaším jménem ({{
                 donorName()
@@ -80,7 +82,7 @@
           </p>
           <h2 class="scopes-title" i18n="@@donor.connect.consent.scopesTitle">Co bude smět</h2>
           @if (unknownScope) {
-            <p class="form-error" role="alert" i18n="@@donor.connect.consent.unknownScope">
+            <p class="ui-field-error" role="alert" i18n="@@donor.connect.consent.unknownScope">
               Aplikace žádá o oprávnění, které web nenabízí. Připojení nelze povolit.
             </p>
           } @else {
@@ -110,17 +112,17 @@
               </p>
             }
           }
-          <p class="lead" i18n="@@donor.connect.consent.after">
+          <p class="ui-panel__lead" i18n="@@donor.connect.consent.after">
             Po povolení vás pošleme zpět do aplikace. Přístup kdykoli odeberete v přehledu dárce v
             části „Připojené aplikace“; ukončí ho i změna hesla nebo odebrání role správce.
           </p>
           @if (error()) {
-            <p class="form-error" role="alert">{{ error() }}</p>
+            <p class="ui-field-error" role="alert">{{ error() }}</p>
           }
           <div class="actions">
             <button
               type="button"
-              class="form-submit"
+              class="ui-button ui-button--primary ui-button--block"
               [disabled]="deciding() !== null || unknownScope"
               (click)="allow()"
             >
@@ -132,7 +134,7 @@
             </button>
             <button
               type="button"
-              class="form-secondary"
+              class="ui-button ui-button--block"
               [disabled]="deciding() !== null"
               (click)="deny()"
             >
@@ -147,18 +149,18 @@
       }
       @case ('not-admin') {
         @if (client(); as client) {
-          <div class="notice">
-            <div class="notice-icon notice-icon--warning" aria-hidden="true">!</div>
+          <div class="ui-status">
+            <div class="ui-status__icon ui-status__icon--warning" aria-hidden="true">!</div>
             <h1
               #heading
               id="connect-app-title"
-              class="title"
+              class="ui-panel__title"
               tabindex="-1"
               i18n="@@donor.connect.notAdmin.title"
             >
               Připojit aplikaci může jen správce
             </h1>
-            <p class="lead">
+            <p class="ui-panel__lead">
               <span i18n="@@donor.connect.notAdmin.text"
                 >Aplikace {{ client.host }} žádá o přístup ke správě Nové naděje. Ten má jen účet
                 správce přihlášený s kódem z ověřovací aplikace; jste přihlášeni jako
@@ -166,11 +168,11 @@
               >
             </p>
             @if (error()) {
-              <p class="form-error" role="alert">{{ error() }}</p>
+              <p class="ui-field-error" role="alert">{{ error() }}</p>
             }
             <button
               type="button"
-              class="form-secondary"
+              class="ui-button ui-button--block"
               [disabled]="deciding() !== null"
               (click)="deny()"
             >
@@ -184,38 +186,38 @@
         }
       }
       @case ('leaving') {
-        <div class="notice">
-          <div class="notice-icon notice-icon--spinner" aria-hidden="true"></div>
+        <div class="ui-status">
+          <div class="ui-status__icon ui-status__icon--spinner" aria-hidden="true"></div>
           <h1
             #heading
             id="connect-app-title"
-            class="title"
+            class="ui-panel__title"
             tabindex="-1"
             i18n="@@donor.connect.leaving.title"
           >
             Vracíme vás do aplikace
           </h1>
-          <p class="lead" role="status" i18n="@@donor.connect.leaving.text">
+          <p class="ui-panel__lead" role="status" i18n="@@donor.connect.leaving.text">
             Pokud se aplikace neotevře sama, vraťte se do ní a zkuste připojení znovu.
           </p>
         </div>
       }
       @default {
-        <div class="notice">
-          <div class="notice-icon notice-icon--warning" aria-hidden="true">!</div>
+        <div class="ui-status">
+          <div class="ui-status__icon ui-status__icon--warning" aria-hidden="true">!</div>
           <h1
             #heading
             id="connect-app-title"
-            class="title"
+            class="ui-panel__title"
             tabindex="-1"
             i18n="@@donor.connect.failed.title"
           >
             Aplikaci se nepodařilo připojit
           </h1>
-          <p class="lead" role="alert">{{ error() }}</p>
+          <p class="ui-panel__lead" role="alert">{{ error() }}</p>
           <button
             type="button"
-            class="form-submit"
+            class="ui-button ui-button--primary ui-button--block"
             (click)="retry()"
             i18n="@@donor.connect.failed.retry"
           >

@@ -159,8 +159,8 @@ describe('Given the sign-in dialog', () => {
       await settle();
 
       expect(dialog.isOpen()).toBe(true);
-      expect(element('.form-error').textContent).toContain('Nesprávný e-mail nebo heslo');
-      expect(element<HTMLButtonElement>('.form-submit').disabled).toBe(false);
+      expect(element('.ui-field-error').textContent).toContain('Nesprávný e-mail nebo heslo');
+      expect(element<HTMLButtonElement>('.ui-button--primary').disabled).toBe(false);
       expect(navigate).not.toHaveBeenCalled();
     });
 
@@ -185,10 +185,10 @@ describe('Given the sign-in dialog', () => {
       await settle();
 
       expect(dialog.isOpen()).toBe(true);
-      expect(element('.form-error').textContent).toContain(
+      expect(element('.ui-field-error').textContent).toContain(
         'Příliš mnoho pokusů z této adresy. Zkuste to prosím za chvíli znovu.',
       );
-      expect(element<HTMLButtonElement>('.form-submit').disabled).toBe(false);
+      expect(element<HTMLButtonElement>('.ui-button--primary').disabled).toBe(false);
       expect(navigate).not.toHaveBeenCalled();
     });
 
@@ -212,7 +212,7 @@ describe('Given the sign-in dialog', () => {
         expect(element('#login-code').getAttribute('inputmode')).toBe('numeric');
         expect(element('#login-code-hint').textContent).toContain('Šest číslic');
         expect(document.activeElement).toBe(element('#login-code'));
-        expect(element('.form-error')).toBeNull();
+        expect(element('.ui-field-error')).toBeNull();
         expect(dialog.isOpen()).toBe(true);
       });
 
@@ -256,8 +256,8 @@ describe('Given the sign-in dialog', () => {
         await settle();
 
         expect(element('#login-code')).not.toBeNull();
-        expect(element('.form-error').textContent).toContain('Nesprávný kód.');
-        expect(element<HTMLButtonElement>('.form-submit').disabled).toBe(false);
+        expect(element('.ui-field-error').textContent).toContain('Nesprávný kód.');
+        expect(element<HTMLButtonElement>('.ui-button--primary').disabled).toBe(false);
       });
 
       it('and the challenge has expired, then the dialog goes back to the password and says why', async () => {
@@ -278,7 +278,7 @@ describe('Given the sign-in dialog', () => {
 
         expect(element('#login-code')).toBeNull();
         expect(element<HTMLInputElement>('#login-email').value).toBe('jana@example.cz');
-        expect(element('.form-error').textContent).toContain(
+        expect(element('.ui-field-error').textContent).toContain(
           'Přihlášení vypršelo. Zadejte prosím znovu e-mail a heslo.',
         );
       });
@@ -288,7 +288,7 @@ describe('Given the sign-in dialog', () => {
 
         expect(element('#login-code')).toBeNull();
         expect(element('#login-password')).not.toBeNull();
-        expect(element('.form-error')).toBeNull();
+        expect(element('.ui-field-error')).toBeNull();
         http.expectNone('/api/donors/auth/login/second-factor');
       });
     });
@@ -310,7 +310,7 @@ describe('Given the sign-in dialog', () => {
         );
       await settle();
 
-      expect(element('.form-error').textContent).toContain('E-mail ještě není potvrzený');
+      expect(element('.ui-field-error').textContent).toContain('E-mail ještě není potvrzený');
       expect(element('.form-note .link-btn').textContent).toContain(
         'Poslat ověřovací e-mail znovu',
       );
@@ -324,7 +324,7 @@ describe('Given the sign-in dialog', () => {
       expect(element('.form-status').getAttribute('role')).toBe('status');
       expect(element('.form-status').textContent).toContain('Ověřovací e-mail jsme poslali znovu.');
       expect(element('.form-note')).toBeNull();
-      expect(element('.form-error')).toBeNull();
+      expect(element('.ui-field-error')).toBeNull();
       expect(navigate).not.toHaveBeenCalled();
     });
 
@@ -361,7 +361,7 @@ describe('Given the sign-in dialog', () => {
       http.expectNone('/api/donors/auth/login');
       expect(element('#login-password-error').textContent).toContain('Vyplňte prosím heslo.');
       expect(element('#login-email-error')).toBeNull();
-      expect(element('.form-error')).toBeNull();
+      expect(element('.ui-field-error')).toBeNull();
     });
   });
 
@@ -391,14 +391,14 @@ describe('Given the sign-in dialog', () => {
       passkeys.failure = 'cancelled';
 
       await choosePasskey();
-      await vi.waitFor(() => expect(element('.form-error')).not.toBeNull());
+      await vi.waitFor(() => expect(element('.ui-field-error')).not.toBeNull());
       await settle();
 
-      expect(element('.form-error').getAttribute('role')).toBe('alert');
-      expect(element('.form-error').textContent).toContain(
+      expect(element('.ui-field-error').getAttribute('role')).toBe('alert');
+      expect(element('.ui-field-error').textContent).toContain(
         'Přihlášení přístupovým klíčem neproběhlo',
       );
-      expect(element<HTMLButtonElement>('.form-submit').disabled).toBe(false);
+      expect(element<HTMLButtonElement>('.ui-button--primary').disabled).toBe(false);
       expect(element<HTMLButtonElement>('.passkey-btn').disabled).toBe(false);
       expect(dialog.isOpen()).toBe(true);
     });
@@ -417,7 +417,7 @@ describe('Given the sign-in dialog', () => {
         );
       await settle();
 
-      expect(element('.form-error').textContent).toContain('Přístupový klíč neznáme.');
+      expect(element('.ui-field-error').textContent).toContain('Přístupový klíč neznáme.');
       expect(TestBed.inject(AuthStore).signedIn()).toBe(false);
     });
 
@@ -469,7 +469,7 @@ describe('Given the sign-in dialog', () => {
       expect(element('.reset-success [role="status"]').textContent).toContain('jana@example.cz');
       expect(element('.register-form')).toBeNull();
 
-      await click('.reset-success .form-submit');
+      await click('.reset-success .ui-button--primary');
 
       expect(element('.login-form')).not.toBeNull();
     });
@@ -573,8 +573,8 @@ describe('Given the sign-in dialog', () => {
         );
       await settle();
 
-      expect(element('.form-error').textContent).toContain('Heslo je příliš běžné');
-      expect(element('.form-error').textContent).toContain('Zvolte prosím méně obvyklé heslo.');
+      expect(element('.ui-field-error').textContent).toContain('Heslo je příliš běžné');
+      expect(element('.ui-field-error').textContent).toContain('Zvolte prosím méně obvyklé heslo.');
     });
 
     it('too many times from one address, then the dialog asks to try again in a while', async () => {
@@ -597,10 +597,10 @@ describe('Given the sign-in dialog', () => {
       await settle();
 
       expect(dialog.isOpen()).toBe(true);
-      expect(element('.form-error').textContent).toContain(
+      expect(element('.ui-field-error').textContent).toContain(
         'Příliš mnoho pokusů z této adresy. Zkuste to prosím za chvíli znovu.',
       );
-      expect(element<HTMLButtonElement>('.register-form .form-submit').disabled).toBe(false);
+      expect(element<HTMLButtonElement>('.register-form .ui-button--primary').disabled).toBe(false);
       expect(navigate).not.toHaveBeenCalled();
     });
 
@@ -613,7 +613,7 @@ describe('Given the sign-in dialog', () => {
         .flush(null, { status: 500, statusText: 'Server Error' });
       await settle();
 
-      expect(element('.form-error').textContent).toContain('nepodařilo');
+      expect(element('.ui-field-error').textContent).toContain('nepodařilo');
     });
   });
 
@@ -640,7 +640,7 @@ describe('Given the sign-in dialog', () => {
     it('with a valid address, then the trimmed address is sent and the sent panel replaces the form', async () => {
       await requestLink('  jana@example.cz ');
 
-      expect(element<HTMLButtonElement>('.reset-form .form-submit').disabled).toBe(true);
+      expect(element<HTMLButtonElement>('.reset-form .ui-button--primary').disabled).toBe(true);
       const request = http.expectOne('/api/donors/auth/password-reset/request');
       expect(request.request.method).toBe('POST');
       expect(request.request.body).toEqual({ email: 'jana@example.cz' });
@@ -680,11 +680,11 @@ describe('Given the sign-in dialog', () => {
         );
       await settle();
 
-      expect(element('.form-error').textContent).toContain(
+      expect(element('.ui-field-error').textContent).toContain(
         'Odeslali jste příliš mnoho žádostí. Zkuste to prosím za hodinu.',
       );
       expect(element('.reset-success')).toBeNull();
-      expect(element<HTMLButtonElement>('.reset-form .form-submit').disabled).toBe(false);
+      expect(element<HTMLButtonElement>('.reset-form .ui-button--primary').disabled).toBe(false);
     });
 
     it('and the server refuses the address, then the problem is shown', async () => {
@@ -698,7 +698,7 @@ describe('Given the sign-in dialog', () => {
       );
       await settle();
 
-      expect(element('.form-error').textContent).toContain(
+      expect(element('.ui-field-error').textContent).toContain(
         'Neplatný požadavek. Zadejte platný e-mail.',
       );
     });
@@ -710,7 +710,7 @@ describe('Given the sign-in dialog', () => {
         .flush(null, { status: 502, statusText: 'Bad Gateway' });
       await settle();
 
-      expect(element('.form-error').textContent).toContain('Spojení se serverem se nepodařilo');
+      expect(element('.ui-field-error').textContent).toContain('Spojení se serverem se nepodařilo');
     });
   });
 });

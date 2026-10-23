@@ -50,7 +50,7 @@ test.describe('Given a donor who forgot the password', () => {
     await expect(page.getByRole('heading', { name: 'Heslo je změněno' })).toBeVisible();
     expect(posted).toEqual([{ token: 'abc', password: 'correct horse battery' }]);
 
-    await page.locator('.password-reset').getByRole('button', { name: 'Přihlásit se' }).click();
+    await page.locator('.ui-panel-page').getByRole('button', { name: 'Přihlásit se' }).click();
 
     await expect(page.getByRole('dialog')).toBeVisible();
     await expect(page.locator('#login-email')).toBeVisible();

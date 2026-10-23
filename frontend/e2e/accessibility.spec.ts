@@ -250,11 +250,11 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     ).toBeVisible();
     expect(await violations(page)).toEqual([]);
 
-    await page.locator('.connect-app').getByRole('button', { name: 'Přihlásit se' }).click();
+    await page.locator('.ui-panel-page').getByRole('button', { name: 'Přihlásit se' }).click();
     const dialog = page.getByRole('dialog');
     await dialog.locator('#login-email').fill('jana@example.cz');
     await dialog.locator('#login-password').fill('correct horse battery');
-    await dialog.locator('.form-submit').click();
+    await dialog.locator('.ui-button--block').click();
     await expect(page.getByRole('button', { name: 'Povolit' })).toBeVisible();
     expect(await violations(page)).toEqual([]);
 
@@ -1411,7 +1411,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     await openSignInDialog(page);
     await page.locator('#login-email').fill('jana@example.cz');
     await page.locator('#login-password').fill('correct horse battery');
-    await page.getByRole('dialog').locator('.form-submit').click();
+    await page.getByRole('dialog').locator('.ui-button--block').click();
     await expect(page.getByLabel('Kód z aplikace')).toBeFocused();
 
     expect(await violations(page)).toEqual([]);

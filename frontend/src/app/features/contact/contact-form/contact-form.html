@@ -167,7 +167,11 @@
             <p class="form-error" role="alert">{{ error() }}</p>
           }
 
-          <button type="submit" class="form-submit" [disabled]="sending()">
+          <button
+            type="submit"
+            class="ui-button ui-button--primary ui-button--block form-submit"
+            [disabled]="sending()"
+          >
             @if (sending()) {
               <ng-container i18n="@@home.contact.form.sending">Odesílám…</ng-container>
             } @else {

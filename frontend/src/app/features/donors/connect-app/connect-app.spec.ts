@@ -104,10 +104,10 @@ describe('Given an application sent the browser to the connection page', () => {
 
     it('then the page asks for an administrator sign-in and opens the dialog without leaving the page', () => {
       expect(element('h1').textContent).toContain('Aplikace žádá o přístup ke správě');
-      expect(element('.lead').textContent).toContain('účtem správce');
+      expect(element('.ui-panel__lead').textContent).toContain('účtem správce');
       http.expectNone(CLIENT_URL);
 
-      element<HTMLButtonElement>('.form-submit').click();
+      element<HTMLButtonElement>('.ui-button--primary').click();
 
       expect(dialog.isOpen()).toBe(true);
       const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
@@ -126,8 +126,8 @@ describe('Given an application sent the browser to the connection page', () => {
 
       expect(element('h1').textContent).toContain('Povolit přístup ke správě aplikaci claude.ai?');
       expect(element('.client-host').textContent).toBe('claude.ai');
-      expect(element('.lead').textContent).toContain('„Claude“');
-      expect(element('.lead').textContent).toContain('Jana Nováková');
+      expect(element('.ui-panel__lead').textContent).toContain('„Claude“');
+      expect(element('.ui-panel__lead').textContent).toContain('Jana Nováková');
       expect(Array.from(root().querySelectorAll('.scopes li')).map((li) => li.textContent)).toEqual(
         [expect.stringContaining('Čtení:')],
       );
@@ -165,8 +165,8 @@ describe('Given an application sent the browser to the connection page', () => {
         state: 'xyz',
         approved: true,
       });
-      expect(element<HTMLButtonElement>('.form-submit').disabled).toBe(true);
-      expect(element('.form-submit').textContent).toContain('Povoluji…');
+      expect(element<HTMLButtonElement>('.ui-button--primary').disabled).toBe(true);
+      expect(element('.ui-button--primary').textContent).toContain('Povoluji…');
       request.flush({
         redirectTo: `${REDIRECT}?code=abc&state=xyz&iss=http%3A%2F%2Flocalhost%3A4200`,
       });
@@ -234,7 +234,7 @@ describe('Given an application sent the browser to the connection page', () => {
 
     it('then the page explains that only an administrator can connect and offers to decline', async () => {
       expect(element('h1').textContent).toContain('Připojit aplikaci může jen správce');
-      expect(element('.lead').textContent).toContain('claude.ai');
+      expect(element('.ui-panel__lead').textContent).toContain('claude.ai');
       expect(root().textContent).not.toContain('Povolit');
 
       await clickButton('Odmítnout');
@@ -287,9 +287,11 @@ describe('Given an application sent the browser to the connection page', () => {
       http.expectOne(CLIENT_URL).flush(CLAUDE);
       await settle();
 
-      expect(element<HTMLButtonElement>('.form-submit').disabled).toBe(true);
+      expect(element<HTMLButtonElement>('.ui-button--primary').disabled).toBe(true);
       expect(element('[role="alert"]').textContent).toContain('oprávnění, které web nenabízí');
-      expect(element<HTMLButtonElement>('.form-secondary').disabled).toBe(false);
+      expect(
+        element<HTMLButtonElement>('.ui-button--block:not(.ui-button--primary)').disabled,
+      ).toBe(false);
     });
 
     it('then an application on this computer is named as such', async () => {
@@ -306,7 +308,7 @@ describe('Given an application sent the browser to the connection page', () => {
         .flush({ host: 'claude.ai', name: 'Claude Code', loopback: true });
       await settle();
 
-      expect(element('.lead').textContent).toContain('Běží na tomto počítači');
+      expect(element('.ui-panel__lead').textContent).toContain('Běží na tomto počítači');
     });
   });
 

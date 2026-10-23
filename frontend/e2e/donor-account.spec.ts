@@ -62,7 +62,7 @@ test.describe('Given a visitor who wants a donor account', () => {
     await openSignInDialog(page);
     await page.locator('#login-email').fill('jana@example.cz');
     await page.locator('#login-password').fill('correct horse battery');
-    await page.getByRole('dialog').locator('.form-submit').click();
+    await page.getByRole('dialog').locator('.ui-button--block').click();
 
     await expect(page.getByRole('alert')).toContainText('E-mail ještě není potvrzený');
     await page.getByRole('button', { name: 'Poslat ověřovací e-mail znovu' }).click();
@@ -91,7 +91,7 @@ test.describe('Given a visitor who wants a donor account', () => {
     await openSignInDialog(page);
     await page.locator('#login-email').fill('jana@example.cz');
     await page.locator('#login-password').fill('wrong horse battery');
-    await page.getByRole('dialog').locator('.form-submit').click();
+    await page.getByRole('dialog').locator('.ui-button--block').click();
 
     await expect(page.getByRole('alert')).toContainText('Nesprávný e-mail nebo heslo');
     await expect(page.getByRole('dialog')).toBeVisible();
@@ -108,7 +108,7 @@ test.describe('Given a visitor who wants a donor account', () => {
     await openSignInDialog(page);
     await page.locator('#login-email').fill('jana@example.cz');
     await page.locator('#login-password').fill('correct horse battery');
-    await page.getByRole('dialog').locator('.form-submit').click();
+    await page.getByRole('dialog').locator('.ui-button--block').click();
     await expect(page.getByRole('dialog')).toHaveCount(0);
     await page.locator('.nav-login', { hasText: 'Můj přehled' }).click();
     await expect(page).toHaveURL(/\/darce\/prehled$/);
@@ -128,7 +128,7 @@ test.describe('Given a visitor who wants a donor account', () => {
     await openSignInDialog(page);
     await page.locator('#login-email').fill('jana@example.cz');
     await page.locator('#login-password').fill('correct horse battery');
-    await page.getByRole('dialog').locator('.form-submit').click();
+    await page.getByRole('dialog').locator('.ui-button--block').click();
     await expect(page.getByRole('dialog')).toHaveCount(0);
     await page.locator('.nav-login', { hasText: 'Můj přehled' }).click();
     await expect(page).toHaveURL(/\/darce\/prehled$/);
@@ -148,7 +148,7 @@ test.describe('Given a visitor who wants a donor account', () => {
     await openSignInDialog(page);
     await page.locator('#login-email').fill('jana@example.cz');
     await page.locator('#login-password').fill('correct horse battery');
-    await page.getByRole('dialog').locator('.form-submit').click();
+    await page.getByRole('dialog').locator('.ui-button--block').click();
 
     await expect(page.getByRole('dialog')).toHaveCount(0);
     await expect(page).toHaveURL(/\/$/);
@@ -168,7 +168,7 @@ test.describe('Given a visitor who wants a donor account', () => {
     await expect(page).toHaveURL(/\/$/);
     await page.locator('#login-email').fill('jana@example.cz');
     await page.locator('#login-password').fill('correct horse battery');
-    await page.getByRole('dialog').locator('.form-submit').click();
+    await page.getByRole('dialog').locator('.ui-button--block').click();
 
     await expect(page).toHaveURL(/\/darce\/prehled$/);
     await expect(page.locator('.topbar-donor')).toContainText('Jana Nováková');

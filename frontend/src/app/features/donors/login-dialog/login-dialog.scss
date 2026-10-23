@@ -1,29 +1,7 @@
 @use 'breakpoints' as bp;
 
 .type-switch {
-  display: flex;
-  gap: var(--space-2);
   margin-bottom: var(--space-4);
-
-  button {
-    flex: 1;
-    padding: var(--space-2-5);
-    border-radius: var(--radius-lg);
-    border: 1.5px solid var(--color-border);
-    background: var(--color-surface);
-    color: var(--color-text-soft);
-    cursor: pointer;
-    font-family: var(--font-sans);
-    font-weight: var(--weight-semibold);
-    font-size: var(--text-md);
-    transition: all var(--duration-base);
-
-    &.is-active {
-      border-color: var(--color-accent);
-      background: var(--color-accent-bg);
-      color: var(--color-accent);
-    }
-  }
 }
 
 .field-row {
@@ -120,12 +98,6 @@
   margin: var(--space-3) 0 var(--space-5);
 }
 
-.form-error {
-  color: var(--color-danger);
-  font-size: var(--text-sm);
-  margin: var(--space-1) 0 var(--space-2);
-}
-
 .form-note {
   font-size: var(--text-sm);
   margin: 0 0 var(--space-3);
@@ -140,27 +112,6 @@
   font-size: var(--text-sm);
   line-height: var(--leading-normal);
   margin: var(--space-1) 0 var(--space-3);
-}
-
-.form-submit {
-  background: var(--color-accent);
-  color: var(--color-on-accent);
-  border: none;
-  padding: var(--space-3-5);
-  width: 100%;
-  border-radius: var(--radius-pill);
-  font-weight: var(--weight-bold);
-  font-size: var(--text-lg);
-  cursor: pointer;
-  font-family: var(--font-sans);
-  box-shadow: var(--shadow-button);
-  margin-top: var(--space-1);
-  transition: opacity var(--duration-base);
-
-  &:disabled {
-    opacity: 0.7;
-    cursor: progress;
-  }
 }
 
 .divider {
