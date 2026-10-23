@@ -8,20 +8,25 @@ import {
   input,
   linkedSignal,
   signal,
+  viewChild,
 } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import {
   catchError,
-  debounceTime,
+  debounce,
   distinctUntilChanged,
   map,
   Observable,
   of,
+  shareReplay,
   startWith,
   switchMap,
+  tap,
+  timer,
 } from 'rxjs';
 import { LoginDialogService } from '../../../../../core/auth/login-dialog.service';
 import { CopyButton } from '../../../../../shared/ui/copy-button/copy-button';
+import { QrCode } from '../../../../../shared/ui/qr-code/qr-code';
 import { formatCrowns } from '../../../../donations/donation-amount';
 import {
   BankAccountResponse,
@@ -33,6 +38,8 @@ const DEFAULT_AMOUNT = 500;
 const MIN_AMOUNT = 1;
 const MAX_AMOUNT = 1_000_000;
 const REQUEST_DEBOUNCE_MS = 300;
+const SAVED_QR_SIDE_PX = 720;
+const SAVED_QR_FILE = 'qr-platba-nova-nadeje.png';
 
 interface AmountPreset {
   readonly amount: number;
@@ -42,6 +49,7 @@ interface AmountPreset {
 interface QrRequest {
   readonly amount: number | null;
   readonly variableSymbol: string | null;
+  readonly typed: boolean;
   readonly attempt: number;
 }
 
@@ -53,7 +61,7 @@ type QrState =
 
 @Component({
   selector: 'app-donate-cta',
-  imports: [CopyButton],
+  imports: [CopyButton, QrCode],
   templateUrl: './donate-cta.html',
   styleUrl: './donate-cta.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -77,6 +85,8 @@ export class DonateCta {
   protected readonly customAmountSeed = signal(DEFAULT_AMOUNT);
   private readonly customAmountLeft = signal(false);
   private readonly attempt = signal(0);
+  private readonly qrCode = viewChild(QrCode);
+  private readonly fetched = new Map<string, Observable<PaymentQrResponse>>();
 
   protected readonly amount = computed(() =>
     this.customChosen() ? wholeAmountInRange(this.customAmount()) : this.presetAmount(),
@@ -89,12 +99,13 @@ export class DonateCta {
   private readonly request = computed<QrRequest>(() => ({
     amount: this.amount(),
     variableSymbol: this.variableSymbol(),
+    typed: this.customChosen(),
     attempt: this.attempt(),
   }));
 
   protected readonly state = toSignal(
     toObservable(this.request).pipe(
-      debounceTime(REQUEST_DEBOUNCE_MS),
+      debounce((request) => (request.typed ? timer(REQUEST_DEBOUNCE_MS) : of(request))),
       distinctUntilChanged(sameRequest),
       switchMap((request) => this.load(request)),
     ),
@@ -105,6 +116,18 @@ export class DonateCta {
     const state = this.state();
     return state.kind === 'ready' ? state.qr : null;
   });
+
+  protected readonly shownQr = linkedSignal<QrState, PaymentQrResponse | null>({
+    source: this.state,
+    computation: (state, previous) => {
+      if (state.kind === 'ready') {
+        return state.qr;
+      }
+      return state.kind === 'loading' ? (previous?.value ?? null) : null;
+    },
+  });
+
+  protected readonly saving = signal(false);
 
   protected readonly bankAccount = linkedSignal<QrState, BankAccountResponse | null>({
     source: this.state,
@@ -152,16 +175,62 @@ export class DonateCta {
     this.attempt.update((attempt) => attempt + 1);
   }
 
+  async saveQr(): Promise<void> {
+    const qrCode = this.qrCode();
+    if (!qrCode || this.saving()) {
+      return;
+    }
+    this.saving.set(true);
+    try {
+      const link = document.createElement('a');
+      link.href = await qrCode.pngDataUrl(SAVED_QR_SIDE_PX);
+      link.download = SAVED_QR_FILE;
+      link.click();
+    } finally {
+      this.saving.set(false);
+    }
+  }
+
   private load(request: QrRequest): Observable<QrState> {
     if (request.amount === null) {
       return of({ kind: 'amountInvalid' });
     }
-    return this.api.paymentQr(request.amount, request.variableSymbol).pipe(
+    const variableSymbol = request.variableSymbol;
+    return this.fetch(request.amount, variableSymbol).pipe(
+      tap(() => this.prefetchPresets(variableSymbol)),
       map((qr): QrState => ({ kind: 'ready', qr })),
       catchError(() => of<QrState>({ kind: 'failed' })),
       startWith<QrState>({ kind: 'loading' }),
     );
   }
+
+  private prefetchPresets(variableSymbol: string | null): void {
+    for (const preset of this.presets) {
+      if (!this.fetched.has(qrKey(preset.amount, variableSymbol))) {
+        this.fetch(preset.amount, variableSymbol).subscribe({ error: () => undefined });
+      }
+    }
+  }
+
+  private fetch(amount: number, variableSymbol: string | null): Observable<PaymentQrResponse> {
+    const key = qrKey(amount, variableSymbol);
+    let qr = this.fetched.get(key);
+    if (!qr) {
+      qr = this.api.paymentQr(amount, variableSymbol).pipe(
+        catchError((error: unknown) => {
+          this.fetched.delete(key);
+          throw error;
+        }),
+        shareReplay(1),
+      );
+      this.fetched.set(key, qr);
+    }
+    return qr;
+  }
+}
+
+function qrKey(amount: number, variableSymbol: string | null): string {
+  return `${amount}|${variableSymbol ?? ''}`;
 }
 
 function wholeCrowns(typed: string): number | null {

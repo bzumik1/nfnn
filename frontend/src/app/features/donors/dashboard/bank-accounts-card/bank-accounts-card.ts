@@ -49,6 +49,7 @@ import { formatCrowns } from '../../../donations/donation-amount';
 import { formatDonationDate } from '../../../donations/donation-date';
 import { BankCheckResponse, DonationsApi } from '../../../donations/donations-api';
 import { PaymentQrApi, PaymentQrResponse } from '../../../donations/payment-qr-api';
+import { QrCode } from '../../../../shared/ui/qr-code/qr-code';
 import { PairingHelp } from './pairing-help/pairing-help';
 import { SymbolClaim, SymbolClaimAnswer } from './symbol-claim/symbol-claim';
 
@@ -105,7 +106,7 @@ const PAYMENT_WATCH_CHECKS = 20;
 
 @Component({
   selector: 'app-bank-accounts-card',
-  imports: [Dialog, CopyButton, NgTemplateOutlet, PairingHelp, SymbolClaim],
+  imports: [Dialog, CopyButton, NgTemplateOutlet, PairingHelp, QrCode, SymbolClaim],
   templateUrl: './bank-accounts-card.html',
   styleUrl: './bank-accounts-card.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

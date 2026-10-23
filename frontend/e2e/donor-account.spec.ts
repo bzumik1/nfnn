@@ -179,6 +179,6 @@ test.describe('Given a visitor who wants a donor account', () => {
 
     await expect(page.locator('#prispet')).toContainText('Variabilní symbol');
     await expect(page.locator('#prispet')).toContainText('1234567890');
-    expect(requestedSymbols).toEqual(['1234567890']);
+    await expect.poll(() => requestedSymbols).toEqual(['1234567890', '1234567890', '1234567890']);
   });
 });

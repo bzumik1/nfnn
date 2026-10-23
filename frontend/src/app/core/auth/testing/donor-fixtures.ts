@@ -1,4 +1,5 @@
 import { AuthResponse, Donor } from '../donor';
+import { checkerboard } from '../../../shared/ui/qr-code/testing/qr-matrices';
 
 export function sampleDonor(overrides: Partial<Donor> = {}): Donor {
   return {
@@ -44,7 +45,6 @@ export function secondFactorEnrolment(): Record<string, unknown> {
     secret: 'GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ',
     otpauthUri:
       'otpauth://totp/Nov%C3%A1%20nad%C4%9Bje:jana%40example.cz?secret=GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ&issuer=Nov%C3%A1%20nad%C4%9Bje&algorithm=SHA1&digits=6&period=30',
-    qrPngBase64:
-      'iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAIAAAAmkwkpAAAAEElEQVR4nGNQTX4NRwzEcQBO0hcxU+9NfQAAAABJRU5ErkJggg==',
+    qrCode: checkerboard(25),
   };
 }

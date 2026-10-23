@@ -28,6 +28,7 @@ import { FocusFirstInvalid } from '../../../../shared/ui/form-field/focus-first-
 import { FormControlDirective } from '../../../../shared/ui/form-field/form-control';
 import { FormField } from '../../../../shared/ui/form-field/form-field';
 import { PasswordReveal } from '../../../../shared/ui/password-reveal/password-reveal';
+import { QrCode } from '../../../../shared/ui/qr-code/qr-code';
 
 type Panel = 'closed' | 'email' | 'password' | 'second-factor-on' | 'second-factor-off';
 
@@ -43,6 +44,7 @@ const SECRET_GROUP = 4;
     FocusFirstInvalid,
     PasswordReveal,
     CopyButton,
+    QrCode,
   ],
   templateUrl: './account-card.html',
   styleUrl: './account-card.scss',
@@ -73,10 +75,6 @@ export class AccountCard {
   protected readonly passwordChanged = signal(false);
   protected readonly secondFactorChanged = signal<'on' | 'off' | null>(null);
   protected readonly enrolment = signal<SecondFactorEnrolment | null>(null);
-  protected readonly qrSource = computed(() => {
-    const enrolment = this.enrolment();
-    return enrolment === null ? '' : `data:image/png;base64,${enrolment.qrPngBase64}`;
-  });
   protected readonly groupedSecret = computed(() => {
     const secret = this.enrolment()?.secret ?? '';
     return secret.match(new RegExp(`.{1,${SECRET_GROUP}}`, 'g'))?.join(' ') ?? '';

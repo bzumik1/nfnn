@@ -10,6 +10,7 @@ import {
   mockDonorApi,
   openSignInDialog,
   problem,
+  samplePngBase64,
   secondFactorEnrolment,
   secondFactorRequired,
   signIn,
@@ -76,7 +77,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
 
   test('when they open the home page, then nothing on it breaks the rules', async ({ page }) => {
     await page.goto('/');
-    await expect(page.locator('.qr-code img')).toBeVisible();
+    await expect(page.locator('.qr-code svg')).toBeVisible();
 
     expect(await violations(page)).toEqual([]);
   });
@@ -123,13 +124,13 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
       (route) =>
         route.fulfill({
           contentType: 'image/png',
-          body: Buffer.from(secondFactorEnrolment.qrPngBase64, 'base64'),
+          body: Buffer.from(samplePngBase64, 'base64'),
         }),
     );
 
     await page.goto('/');
     await expect(page.locator('#aktuality .news-card')).toHaveCount(1);
-    await expect(page.locator('.qr-code img')).toBeVisible();
+    await expect(page.locator('.qr-code svg')).toBeVisible();
 
     expect(await violations(page)).toEqual([]);
 
@@ -869,7 +870,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
       (route) =>
         route.fulfill({
           contentType: 'image/png',
-          body: Buffer.from(secondFactorEnrolment.qrPngBase64, 'base64'),
+          body: Buffer.from(samplePngBase64, 'base64'),
         }),
     );
     await page.route('**/api/donors/auth/refresh', (route) =>
@@ -948,7 +949,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
       (route) =>
         route.fulfill({
           contentType: 'image/png',
-          body: Buffer.from(secondFactorEnrolment.qrPngBase64, 'base64'),
+          body: Buffer.from(samplePngBase64, 'base64'),
         }),
     );
     await page.route('**/api/donors/auth/refresh', (route) =>

@@ -232,20 +232,23 @@
   padding: 10px;
   box-shadow: var(--shadow-qr);
   border: 2px solid color-mix(in srgb, var(--color-accent) 13%, transparent);
+}
 
-  img {
-    display: block;
-    width: 140px;
-    height: 140px;
-  }
+.qr-image {
+  width: 200px;
+  transition: opacity 0.2s ease;
+}
+
+.qr-image-stale {
+  opacity: 0.85;
 }
 
 .qr-placeholder {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 140px;
-  height: 140px;
+  width: 200px;
+  height: 200px;
   padding: 16px;
   border-radius: var(--radius-md);
   background: var(--color-surface-accent);
@@ -309,9 +312,20 @@
 .qr-save {
   display: inline-block;
   margin-top: 10px;
+  padding: 0;
+  border: none;
+  background: none;
   color: var(--color-accent);
+  font-family: var(--font-sans);
   font-size: 13px;
   font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
+
+  &:disabled {
+    cursor: progress;
+    color: var(--color-text-soft);
+  }
 }
 
 .bank-value-wrap {
@@ -413,5 +427,16 @@
 
   app-copy-button {
     flex-shrink: 0;
+  }
+}
+
+@media (max-width: 480px) {
+  .qr {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .qr-code {
+    align-self: center;
   }
 }

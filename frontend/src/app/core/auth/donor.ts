@@ -1,3 +1,5 @@
+import { QrMatrix } from '../../shared/ui/qr-code/qr-matrix';
+
 export const PASSWORD_MIN_LENGTH = 12;
 
 export type DonorType = 'PERSON' | 'COMPANY';
@@ -63,7 +65,7 @@ export interface SecondFactorDisableRequest {
 export interface SecondFactorEnrolment {
   secret: string;
   otpauthUri: string;
-  qrPngBase64: string;
+  qrCode: QrMatrix;
 }
 
 export type OAuthScope = 'admin:read' | 'admin:write';

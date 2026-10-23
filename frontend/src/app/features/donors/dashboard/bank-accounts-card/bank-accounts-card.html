@@ -294,12 +294,11 @@
     <div class="add-account-payment">
       <div class="add-account-qr" [attr.aria-busy]="qr().kind === 'loading'">
         @if (qrResponse(); as response) {
-          <img
-            [src]="'data:image/png;base64,' + response.qrPngBase64"
-            width="160"
-            height="160"
-            alt="QR platba 1 Kč s vaším variabilním symbolem"
-            i18n-alt="@@donor.bankAccounts.addDialog.qrAlt"
+          <app-qr-code
+            class="add-account-qr-image"
+            [matrix]="response.qrCode"
+            label="QR platba 1 Kč s vaším variabilním symbolem"
+            i18n-label="@@donor.bankAccounts.addDialog.qrAlt"
           />
         } @else if (qr().kind === 'loading') {
           <span class="add-account-qr-placeholder" i18n="@@home.donate.qr.loading"

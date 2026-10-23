@@ -115,9 +115,7 @@ test.describe('Given a donor who protects the account with an authenticator app'
 
     const qr = page.getByRole('img', { name: 'QR kód s nastavením pro ověřovací aplikaci' });
     await expect(qr).toBeVisible();
-    expect(await qr.getAttribute('src')).toBe(
-      `data:image/png;base64,${secondFactorEnrolment.qrPngBase64}`,
-    );
+    await expect(qr.locator('.qr-plain')).toHaveAttribute('d', /^M4 4h1v1h-1z/);
     await expect(page.locator('.account-secret-value')).toHaveText(
       'GEZD GNBV GY3T QOJQ GEZD GNBV GY3T QOJQ',
     );

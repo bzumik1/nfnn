@@ -6,7 +6,6 @@ import io.cucumber.java.en.And;
 import io.cucumber.java.en.When;
 import tools.jackson.databind.JsonNode;
 
-import java.util.Base64;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -60,11 +59,9 @@ public class PaymentQrStepDefinitions {
         assertThat(spayd()).doesNotContain("X-VS:");
     }
 
-    @And("the QR code is a PNG image that encodes the QR payment")
-    public void theQrCodeIsAPngImageThatEncodesTheQrPayment() {
-        byte[] png = Base64.getDecoder().decode(api.lastResponseJson().get("qrPngBase64").asString());
-        assertThat(QrCodes.isPng(png)).isTrue();
-        assertThat(QrCodes.decode(png)).isEqualTo(spayd());
+    @And("the QR code modules encode the QR payment")
+    public void theQrCodeModulesEncodeTheQrPayment() {
+        assertThat(QrCodes.decode(api.lastResponseJson().get("qrCode"))).isEqualTo(spayd());
     }
 
     @And("the foundation's bank account is {string} with IBAN {string} held by {string}")

@@ -271,7 +271,7 @@ Any donor can protect the account with a time-based one-time code (TOTP, RFC 623
 
 Turning it on, signed in:
 
-- `POST /api/donors/me/second-factor/setup` with the current password (400 `donors/wrong-password`; 409 `donors/second-factor-already-enabled` while it is on) stores a pending factor with a fresh secret (a second call replaces a pending one) and answers `{ "secret": "GEZD…", "otpauthUri": "otpauth://totp/Nov%C3%A1%20nad%C4%9Bje:jana%40example.cz?secret=…&issuer=Nov%C3%A1%20nad%C4%9Bje&algorithm=SHA1&digits=6&period=30", "qrPngBase64": "…" }` (`SecondFactorEnrolmentResponse`; the issuer is `app.donors.second-factor.issuer`, the label the donor's e-mail; the QR is the link rendered by the shared `ZxingQrCodeRenderer` at 240 px). A pending factor changes nothing about sign-in.
+- `POST /api/donors/me/second-factor/setup` with the current password (400 `donors/wrong-password`; 409 `donors/second-factor-already-enabled` while it is on) stores a pending factor with a fresh secret (a second call replaces a pending one) and answers `{ "secret": "GEZD…", "otpauthUri": "otpauth://totp/Nov%C3%A1%20nad%C4%9Bje:jana%40example.cz?secret=…&issuer=Nov%C3%A1%20nad%C4%9Bje&algorithm=SHA1&digits=6&period=30", "qrCode": { "size": 53, "modules": "1111111…" } }` (`SecondFactorEnrolmentResponse`; the issuer is `app.donors.second-factor.issuer`, the label the donor's e-mail; `qrCode` is the link encoded by the shared `QrCodeEncoder` with error correction level M, in the same shape as the QR payment's, drawn plain by the frontend). A pending factor changes nothing about sign-in.
 - `POST /api/donors/me/second-factor/confirm` with the first code the app shows (400 `donors/second-factor-not-pending` without a set-up, 400 `donors/second-factor-code-rejected`, title "Nesprávný kód", for a code that does not match) marks it confirmed, remembers the step the code came from, revokes every refresh token and opens a session **with** the second factor verified: 200 with the auth response and a fresh cookie, so an administrator is an administrator at once (`roles` contain `ADMIN`).
 - `POST /api/donors/me/second-factor/disable` with the password and a fresh code (400 `donors/wrong-password`, 400 `donors/second-factor-not-enabled`, 400 `donors/second-factor-code-rejected` for a wrong or already used code) deletes the factor, revokes every refresh token and opens a plain session (an administrator loses `ADMIN` until they turn it on again). No e-mail is sent either way.
 - The three endpoints share one counter: 10 requests per 15 minutes per client address (`SecondFactorChangeRateLimiter`) → 429 `donors/rate-limited`, before any hashing.
@@ -357,7 +357,7 @@ The connector is a separate Node 24 container (`mcp/`, TypeScript, MCP TypeScrip
 | `POST` | `/api/donations/me/bank-accounts/{id}/symbol-claim/confirm` | donor | Answers "yes" to the account's question about an older variable symbol (body `{"variableSymbol": "…"}`): stores the answer and pairs the payments with that symbol from the account; 200 with the count and the yearly receipts that changed. See "Older variable symbol confirmation". |
 | `POST` | `/api/donations/me/bank-accounts/{id}/symbol-claim/decline` | donor | Answers "no" to the same question: stores the answer and pairs nothing; 204. |
 | `GET` | `/api/donations/me/receipts/yearly?year=` | donor | PDF receipt of the caller's donations received in a completed year from the first receipt year on. 400 before the first receipt year and while the year is not completed, 404 when it has none. |
-| `GET` | `/api/donations/payment-qr?amount=&variableSymbol=&purpose=` | public | Returns the SPAYD string (Czech "QR platba"), its PNG QR code and the foundation's bank account. A signed-in donor's frontend passes their variable symbol; the 1 Kč payment that verifies an account passes `purpose=ACCOUNT_VERIFICATION`. |
+| `GET` | `/api/donations/payment-qr?amount=&variableSymbol=&purpose=` | public | Returns the SPAYD string (Czech "QR platba"), its QR code modules and the foundation's bank account. A signed-in donor's frontend passes their variable symbol; the 1 Kč payment that verifies an account passes `purpose=ACCOUNT_VERIFICATION`. |
 | `GET` | `/api/admin/donations/import-state` | admin | The Fio import's state for the administration: covered period, last attempt and success, last failure, failures in a row, the outage being reported. See "Administration". |
 | `GET` | `/api/admin/donations/report` | admin | The monthly report's administration: the settings (recipients, send day, sections, when they were last changed), the reports already sent, the next report and its due day, the last ended month. See "Monthly report settings and overview". |
 | `PUT` | `/api/admin/donations/report/settings` | admin | Changes who gets the monthly report, on which day of the month and which sections it carries; audited as `CHANGE_REPORT_SETTINGS` → 200 with the settings. 400 `validation`. |
@@ -535,7 +535,7 @@ Response:
 ```json
 {
   "spayd": "SPD*1.0*ACC:CZ2620100000005544332217*AM:500.00*CC:CZK*X-VS:1234567890*RN:NADACNI FOND NOVA NADEJE*MSG:DAR NADACNI FOND NOVA NADEJE",
-  "qrPngBase64": "iVBORw0KG...",
+  "qrCode": { "size": 49, "modules": "1111111011…" },
   "bankAccount": {
     "accountNumber": "5544332217/2010",
     "iban": "CZ2620100000005544332217",
@@ -544,7 +544,7 @@ Response:
 }
 ```
 
-SPAYD 1.0 rules the backend follows (`donations/domain/payment/QrPayment`): fields joined by `*` in the order `ACC` (IBAN, no spaces), `AM` (two decimals, `.` separator), `CC:CZK`, `X-VS` (only when a variable symbol was given), `RN` (recipient name, max 35 characters), `MSG` (the purpose's message, max 60 characters). `RN` and `MSG` are uppercase ASCII without diacritics, limited to the QR alphanumeric set (`0-9 A-Z space $ % + - . / :`). The PNG is 300x300 px, error correction level M.
+SPAYD 1.0 rules the backend follows (`donations/domain/payment/QrPayment`): fields joined by `*` in the order `ACC` (IBAN, no spaces), `AM` (two decimals, `.` separator), `CC:CZK`, `X-VS` (only when a variable symbol was given), `RN` (recipient name, max 35 characters), `MSG` (the purpose's message, max 60 characters). `RN` and `MSG` are uppercase ASCII without diacritics, limited to the QR alphanumeric set (`0-9 A-Z space $ % + - . / :`). `qrCode` is the QR symbol of the SPAYD as data, not as a picture: `size` modules per side (21 to 177, without the quiet zone) and `modules`, `size × size` characters row by row from the top left, `1` dark and `0` light. It is encoded with error correction level H, so the badge the frontend draws over the centre leaves the code readable; the frontend draws it (`shared/ui/qr-code`) and makes the PNG for "Uložit QR kód" itself.
 
 The bank account comes from `app.donations.bank-account.{account-number,iban,recipient-name}` (env `BANK_ACCOUNT_NUMBER`, `BANK_IBAN`, `BANK_RECIPIENT_NAME`). The defaults are placeholders until the foundation supplies its real account; an IBAN that fails the mod-97 check stops the backend at startup.
 
@@ -1064,7 +1064,7 @@ Belongs in `shared/domain/`:
 - `DonorType` (`PERSON`, `COMPANY`; moved from `donors`, the receipt and the `donations` copy need it)
 - `VariableSymbol`, `PostalAddress`, `Iban`, `UuidV7`
 
-Belongs in `shared/application/event/`: `DonorRegistered`, `DonorProfileChanged`, `DonorErased`, `AdminActionPerformed` (see "Cross-context events"). `shared/infrastructure/audit/` holds the `admin_action` adapter, because the trail serves every context. `shared/application/qr/QrCodeRenderer` (port) and `shared/infrastructure/qr/ZxingQrCodeRenderer` render QR codes for the payment (`donations`) and the authenticator link (`donors`); ZXing stays an adapter library. `shared/application/notification/AlertRecipients` is the port through which `operations` learns where its alerts go; `donations` implements it from the report settings.
+Belongs in `shared/application/event/`: `DonorRegistered`, `DonorProfileChanged`, `DonorErased`, `AdminActionPerformed` (see "Cross-context events"). `shared/infrastructure/audit/` holds the `admin_action` adapter, because the trail serves every context. `shared/application/qr/QrCodeEncoder` (port, returns `QrMatrix`, error correction `QrErrorCorrection.MEDIUM` or `HIGH`) and `shared/infrastructure/qr/ZxingQrCodeEncoder` encode QR codes for the payment (`donations`, `HIGH`) and the authenticator link (`donors`, `MEDIUM`); ZXing core is used only in that one class (its `javase` module only by tests, to decode), so another encoder replaces it without touching the rest. `shared/application/notification/AlertRecipients` is the port through which `operations` learns where its alerts go; `donations` implements it from the report settings.
 
 Does **not** belong in `shared`: JWT types, `Donation`, `Donor`, JPA-related types, Spring `Page`.
 

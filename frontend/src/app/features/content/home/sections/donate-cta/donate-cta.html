@@ -93,13 +93,13 @@
 
       <div class="qr">
         <div class="qr-code" [attr.aria-busy]="state().kind === 'loading'">
-          @if (qr(); as qr) {
-            <img
-              [src]="'data:image/png;base64,' + qr.qrPngBase64"
-              width="140"
-              height="140"
-              alt="QR platba na účet Nadačního fondu Nová naděje"
-              i18n-alt="@@home.donate.qr.imageAlt"
+          @if (shownQr(); as qr) {
+            <app-qr-code
+              class="qr-image"
+              [class.qr-image-stale]="state().kind === 'loading'"
+              [matrix]="qr.qrCode"
+              label="QR platba na účet Nadačního fondu Nová naděje"
+              i18n-label="@@home.donate.qr.imageAlt"
             />
           } @else {
             <div class="qr-placeholder" [class.qr-placeholder-loading]="state().kind === 'loading'">
@@ -120,14 +120,14 @@
             Načtěte QR kód mobilní bankovní aplikací pro okamžitou platbu přímo na účet nadačního
             fondu. Na telefonu si ho uložte a v bankovní aplikaci otevřete z galerie.
           </p>
-          @if (qr(); as qr) {
-            <a
-              class="qr-save"
-              [href]="'data:image/png;base64,' + qr.qrPngBase64"
-              download="qr-platba-nova-nadeje.png"
-              i18n="@@home.donate.qr.save"
-              >Uložit QR kód</a
-            >
+          @if (qr()) {
+            <button type="button" class="qr-save" [disabled]="saving()" (click)="saveQr()">
+              @if (saving()) {
+                <ng-container i18n="@@home.donate.qr.saving">Připravujeme obrázek…</ng-container>
+              } @else {
+                <ng-container i18n="@@home.donate.qr.save">Uložit QR kód</ng-container>
+              }
+            </button>
           }
           @if (state().kind === 'failed') {
             <div class="qr-error">

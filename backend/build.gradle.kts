@@ -45,7 +45,6 @@ dependencies {
 	implementation("io.github.openhtmltopdf:openhtmltopdf-pdfbox:${property("openhtmltopdfVersion")}")
 
 	implementation("com.google.zxing:core:${property("zxingVersion")}")
-	implementation("com.google.zxing:javase:${property("zxingVersion")}")
 
 	implementation("io.github.darkxanter:webp-imageio:${property("webpImageioVersion")}")
 
@@ -64,6 +63,7 @@ dependencies {
 	testImplementation("org.testcontainers:testcontainers-junit-jupiter")
 	testImplementation("org.testcontainers:testcontainers-postgresql")
 
+	testImplementation("com.google.zxing:javase:${property("zxingVersion")}")
 	testImplementation("org.assertj:assertj-core")
 	testImplementation("org.awaitility:awaitility")
 	testImplementation("org.mockito:mockito-core")
