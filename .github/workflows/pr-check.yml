@@ -136,7 +136,7 @@ jobs:
 
       - name: Compose file names no secret
         run: |
-          if grep -noE '\b(POSTGRES_PASSWORD|PGPASSWORD|DB_PASSWORD|JWT_SECRET|MAIL_PASSWORD|FIO_TOKEN)\b' deploy/compose.yml; then
+          if grep -noE '\b(POSTGRES_PASSWORD|PGPASSWORD|DB_PASSWORD|JWT_SECRET|SETTINGS_KEY|MAIL_PASSWORD|FIO_TOKEN)\b' deploy/compose.yml; then
             echo "::error::Secrets are generated into secrets/ or entered in the first setup, never written into deploy/compose.yml"
             exit 1
           fi
@@ -268,9 +268,9 @@ jobs:
             502|503|504|000) echo "::error::nginx could not reach the backend"; exit 1 ;;
           esac
           for container in nfnn-postgres nfnn-backup nfnn-mcp nfnn-frontend; do
-            for key in JWT_SECRET FIO_TOKEN MAIL_PASSWORD; do
-              if docker exec "$container" printenv "$key" > /dev/null; then
-                echo "::error::$container must not receive $key"
+            for key in JWT_SECRET SETTINGS_KEY DB_PASSWORD FIO_TOKEN MAIL_PASSWORD; do
+              if docker exec "$container" printenv "$key" > /dev/null || docker exec "$container" sh -c "tr '\\0' '\\n' < /proc/1/environ" | grep -q "^$key="; then
+                echo "::error::$container must not receive $key, neither in its configuration nor in its main process"
                 exit 1
               fi
             done
