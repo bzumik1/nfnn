@@ -60,8 +60,8 @@ public class LogLevelService {
 
     @Transactional
     public LogLevelOverride override(UUID adminId, LoggerName logger, LogLevel level, int minutes) {
-        if (ProtectedLoggers.covers(logger)) {
-            throw new ProtectedLogger(logger);
+        if (ProtectedLoggers.refuses(logger, level)) {
+            throw new ProtectedLogger(logger, level);
         }
         Instant now = clock.instant();
         LogLevelOverride current = overrides.get(logger.value());

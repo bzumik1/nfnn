@@ -66,14 +66,12 @@ public class AuthorizationServerService {
         this.clock = clock;
     }
 
-    @Transactional(readOnly = true)
     public ClientDescription describeClient(String clientId, String redirectUri) {
         ClientMetadata metadata = clients.fetch(new ClientId(clientId));
         URI redirect = registeredRedirect(metadata, redirectUri);
         return new ClientDescription(metadata.clientId().host(), metadata.displayName(), ClientMetadata.isLoopback(redirect));
     }
 
-    @Transactional
     public URI decide(AuthorizationDecision decision, DonorId donorId, Set<Role> sessionRoles) {
         ClientId clientId = new ClientId(decision.clientId());
         ClientMetadata metadata = clients.fetch(clientId);

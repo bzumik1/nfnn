@@ -25,4 +25,9 @@ public record JwtProperties(String issuer, String secret, Duration accessTokenTt
         }
         audience = audience.trim();
     }
+
+    @Override
+    public String toString() {
+        return "JwtProperties[issuer=" + issuer + ", secret=***, accessTokenTtl=" + accessTokenTtl + ", audience=" + audience + "]";
+    }
 }

@@ -24,4 +24,15 @@ class ProtectedLoggersTest {
     void should_allow_when_checked_given_parent_or_unrelated_logger(String name) {
         assertThat(ProtectedLoggers.covers(new LoggerName(name))).isFalse();
     }
+
+    @org.junit.jupiter.api.Test
+    @DisplayName("Given TRACE, when it is asked for a library or ROOT, then it is refused, and for the site's own code it is allowed")
+    void should_allow_trace_only_for_own_code_when_checked_given_trace() {
+        assertThat(ProtectedLoggers.refuses(new LoggerName("ROOT"), LogLevel.TRACE)).isTrue();
+        assertThat(ProtectedLoggers.refuses(new LoggerName("org.springframework.web"), LogLevel.TRACE)).isTrue();
+        assertThat(ProtectedLoggers.refuses(new LoggerName("cz.novanadeje.app.donations"), LogLevel.TRACE)).isFalse();
+        assertThat(ProtectedLoggers.refuses(new LoggerName("cz.novanadeje.application"), LogLevel.TRACE)).isTrue();
+        assertThat(ProtectedLoggers.refuses(new LoggerName("org.springframework.web"), LogLevel.DEBUG)).isFalse();
+        assertThat(ProtectedLoggers.refuses(new LoggerName("org.postgresql"), LogLevel.DEBUG)).isTrue();
+    }
 }

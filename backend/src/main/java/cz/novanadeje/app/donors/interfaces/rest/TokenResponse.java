@@ -19,6 +19,7 @@ record TokenResponse(
         @JsonProperty("issued_token_type") String issuedTokenType) {
 
     private static final String BEARER = "Bearer";
+    private static final String MASKED = "***";
     private static final String ACCESS_TOKEN_TYPE = "urn:ietf:params:oauth:token-type:access_token";
 
     static TokenResponse of(OAuthTokens tokens, Instant now) {
@@ -33,5 +34,11 @@ record TokenResponse(
 
     private static long secondsUntil(Instant expiresAt, Instant now) {
         return Math.max(0, Duration.between(now, expiresAt).toSeconds());
+    }
+
+    @Override
+    public String toString() {
+        return "TokenResponse[accessToken=" + MASKED + ", tokenType=" + tokenType + ", expiresIn=" + expiresIn + ", refreshToken="
+                + (refreshToken == null ? "none" : MASKED) + ", scope=" + scope + ", issuedTokenType=" + issuedTokenType + "]";
     }
 }
