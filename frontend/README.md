@@ -1,6 +1,6 @@
 # Frontend
 
-Angular 22 (standalone, zoneless, signály), SCSS s tokeny v `src/styles/themes/_nova-nadeje.scss`, Vitest a Playwright. Vyžaduje Node 22.22.3+ nebo 24.15+ (LTS).
+Angular 22 (standalone, zoneless, signály), SCSS s tokeny v `src/styles/themes/_nova-nadeje.scss`, Vitest a Playwright. Vyžaduje Node ^22.22.3, ^24.15 nebo ≥ 26 (CI a image používají 24).
 
 ```bash
 npm ci

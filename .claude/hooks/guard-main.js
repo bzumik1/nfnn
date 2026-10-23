@@ -4,9 +4,9 @@
 // lasting guard belongs in a GitHub ruleset on main.
 // Blocks `git push` that names main as the target (quoted or not), `--all`
 // and `--mirror` (they push main too), any `git push` from a checkout of main
-// (following `cd dir` and `git -C dir`), `gh api` calls that write to main
-// (`branch=main`, `base=main`), and GitHub MCP writes to main or to the
-// default branch by omission. It reads the command as text, so a command that
+// (following `cd dir`, `pushd dir` and `git -C dir`), `gh api` writes to main
+// (contents without a branch or with `branch=main`, and `git/refs/heads/main`),
+// and GitHub MCP writes to main or to the default branch by omission. It reads the command as text, so a command that
 // merely quotes a push to main, such as an echo or a commit message, is
 // blocked too; reword it. A branch named through a shell variable is not
 // seen. Merging a PR is not affected. Exit code 2 blocks the call and shows
@@ -14,8 +14,9 @@
 const { execFileSync } = require('child_process');
 const path = require('path');
 
-// `git push`, also with `-C dir`, `-c key=value` or `--git-dir=…` before the subcommand.
-const GIT_PUSH = /^.*?\bgit((\s+-[Cc]\s+\S+)|(\s+--[\w-]+=\S+))*\s+push\b/;
+// `git push`, also after global options (`-C dir`, `-c key=value`, `--git-dir dir`, `--no-pager`, `-P`).
+const GIT_PUSH =
+  /^.*?\bgit((\s+(-C|-c|--git-dir|--work-tree|--namespace|--exec-path|--super-prefix)\s+\S+)|(\s+-[\w-]+(=\S+)?))*\s+push\b/;
 const MAIN_REF = /(^|[\s:+])(refs\/heads\/)?main(?=\s|$)/;
 
 let input = '';
@@ -36,14 +37,12 @@ process.stdin.on('end', () => {
     const parts = (args.command || '').replace(/['"]/g, '').split(/&&|\|\||[;&|()`\n]/);
     let cwd = call.cwd || process.cwd();
     for (const part of parts) {
-      const cd = part.match(/^\s*cd\s+(\S+)\s*$/);
+      const cd = part.match(/^\s*(?:cd|pushd)\s+(\S+)\s*$/);
       if (cd) {
         cwd = path.resolve(cwd, cd[1].replace(/^~(?=\/|$)/, process.env.HOME || '~'));
         continue;
       }
-      if (/\bgh\s+api\b/.test(part) && /\b(branch|base)=(refs\/heads\/)?main(?=\s|$)/.test(part)) {
-        block('gh api write to main');
-      }
+      if (/\bgh\s+api\b/.test(part) && ghApiWritesMain(part)) block('gh api write to main');
       if (!GIT_PUSH.test(part)) continue;
       const rest = part.replace(GIT_PUSH, ' ');
       // main as a ref of its own: `origin main`, `HEAD:main`, `:main`,
@@ -62,6 +61,16 @@ process.stdin.on('end', () => {
   }
   process.exit(0);
 });
+
+function ghApiWritesMain(part) {
+  const method = part.match(/(?:-X|--method)[\s=]+(\w+)/);
+  const writes = method ? method[1].toUpperCase() !== 'GET' : /\s(-f|-F|--field|--raw-field|--input)[\s=]/.test(part);
+  if (!writes) return false;
+  if (/\/git\/refs\/heads\/main(?=[\s/?]|$)/.test(part)) return true;
+  if (!/\/contents\//.test(part)) return false;
+  const branch = part.match(/\bbranch=(?:refs\/heads\/)?(\S+)/);
+  return !branch || branch[1] === 'main';
+}
 
 function currentBranch(cwd) {
   try {

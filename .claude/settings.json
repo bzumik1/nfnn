@@ -3,6 +3,7 @@
   "permissions": {
     "allow": [
       "Bash(./gradlew *)",
+      "Bash(CUCUMBER_FILTER_TAGS=* ./gradlew *)",
       "Bash(npm ci)",
       "Bash(npm start)",
       "Bash(npm test *)",
@@ -19,9 +20,18 @@
       "Bash(git branch *)"
     ],
     "ask": [
-      "Bash(docker compose down *)",
+      "Bash(docker compose down*)",
+      "Bash(docker compose * down*)",
       "Bash(docker compose config*)",
-      "Bash(docker compose exec *)"
+      "Bash(docker compose * config*)",
+      "Bash(docker compose exec *)",
+      "Bash(docker compose * exec *)",
+      "Bash(docker compose run *)",
+      "Bash(docker compose * run *)",
+      "Bash(docker compose cp *)",
+      "Bash(docker compose * cp *)",
+      "Bash(docker compose rm *)",
+      "Bash(docker compose * rm *)"
     ],
     "deny": [
       "Read(.env)",

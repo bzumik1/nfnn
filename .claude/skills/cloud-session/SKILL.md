@@ -4,18 +4,14 @@ description: Prepare a claude.ai cloud container to build and test nfnn - Node 2
 ---
 # Building and testing in a cloud session
 
-Verified 2026-10-23. Cloud containers start from a fresh clone; the session-start hook installs the frontend's dependencies only in a single-repository session, and a claude.ai project thread runs no hooks at all.
+Verified 2026-10-23. Cloud containers start from a fresh clone; the session-start hook (single-repository cloud sessions) installs Node 24 when needed and runs `npm ci` in `frontend/` and `mcp/`; a claude.ai project thread runs no hooks at all.
 
 ## Node 24 (frontend and connector)
-The image ships Node 22.22.0, below Angular 22's minimum (`^22.22.3 || ^24.15 || >=26`): every `ng` command refuses to start. Install the current Node 24 once and put it first on `PATH` (`/root/.local/bin` comes before `/opt/node22/bin`):
+The image ships Node 22.22.0, below Angular 22's minimum (`^22.22.3 || ^24.15 || >=26`): every `ng` command refuses to start. Where the hook did not run, run it by hand from the repository root; it installs the current Node 24 into `/opt/node24`, links it into `~/.local/bin` (before `/opt/node22/bin` on `PATH`) and runs `npm ci` in `frontend/` and `mcp/`:
 ```bash
-base=https://nodejs.org/dist/latest-v24.x
-v=$(curl -sS $base/SHASUMS256.txt | grep -o 'node-v24[^ ]*-linux-x64\.tar\.xz')
-cd /tmp && curl -sSO $base/$v && curl -sS $base/SHASUMS256.txt | grep " $v\$" | sha256sum -c - \
-  && mkdir -p /opt/node24 && tar -xJf $v -C /opt/node24 --strip-components=1 \
-  && ln -sf /opt/node24/bin/node /opt/node24/bin/npm /opt/node24/bin/npx /root/.local/bin/ && hash -r && node -v
+CLAUDE_CODE_REMOTE=true CLAUDE_PROJECT_DIR=$PWD bash .claude/hooks/session-start.sh && hash -r && node -v
 ```
-Then `npm ci` in `frontend/` and `mcp/`. Run `npm ci` again after a merge to `main` that changed a `package-lock.json`, or `format:check` may pass locally on an older Prettier than CI's.
+Run `npm ci` again after a merge to `main` that changed a `package-lock.json`, or `format:check` may pass locally on an older Prettier than CI's.
 
 ## Playwright
 The preinstalled Chromium (`/opt/pw-browsers`) is older than the build Playwright pins, so `npm run e2e` reports a missing executable: run `npx playwright install chromium` once (about 2 minutes). `PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD` only stops the npm postinstall, not this.

@@ -6,13 +6,13 @@
 # cloud-session). Does nothing on a local machine; a claude.ai project thread
 # runs no hooks, so there the skill's steps are done by hand.
 [ "$CLAUDE_CODE_REMOTE" = "true" ] || exit 0
-root="${CLAUDE_PROJECT_DIR:-$(dirname "$0")/../..}"
+root=$(cd "${CLAUDE_PROJECT_DIR:-$(dirname "$0")/../..}" && pwd) || exit 0
 
 if ! node -e 'const [a,b,c]=process.versions.node.split(".").map(Number);process.exit((a===22&&(b>22||b===22&&c>=3))||(a===24&&b>=15)||a>=26?0:1)' 2>/dev/null; then
   base=https://nodejs.org/dist/latest-v24.x
   v=$(curl -fsS "$base/SHASUMS256.txt" | grep -o 'node-v24[^ ]*-linux-x64\.tar\.xz')
-  if [ -n "$v" ] && cd /tmp && curl -fsSO "$base/$v" && curl -fsS "$base/SHASUMS256.txt" | grep " $v\$" | sha256sum -c - >/dev/null \
-    && mkdir -p /opt/node24 "$HOME/.local/bin" && tar -xJf "$v" -C /opt/node24 --strip-components=1; then
+  if [ -n "$v" ] && (cd /tmp && curl -fsSO "$base/$v" && curl -fsS "$base/SHASUMS256.txt" | grep " $v\$" | sha256sum -c - >/dev/null \
+    && mkdir -p /opt/node24 "$HOME/.local/bin" && tar -xJf "$v" -C /opt/node24 --strip-components=1; s=$?; rm -f "/tmp/$v"; exit $s); then
     ln -sf /opt/node24/bin/node /opt/node24/bin/npm /opt/node24/bin/npx "$HOME/.local/bin/"
     [ -n "$CLAUDE_ENV_FILE" ] && echo "export PATH=\"$HOME/.local/bin:\$PATH\"" >> "$CLAUDE_ENV_FILE"
     export PATH="$HOME/.local/bin:$PATH"
