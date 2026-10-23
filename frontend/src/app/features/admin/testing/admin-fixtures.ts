@@ -77,7 +77,7 @@ export function paymentList(
   items: AdminPaymentResponse[],
   overrides: Partial<AdminPaymentListResponse> = {},
 ): AdminPaymentListResponse {
-  return { year: null, availableYears: [], items, ...overrides };
+  return { year: null, availableYears: [], items, total: items.length, ...overrides };
 }
 
 export function foundDonor(overrides: Partial<AdminDonorResponse> = {}): AdminDonorResponse {

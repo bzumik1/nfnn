@@ -45,7 +45,7 @@ describe('Given the connector verifying tokens by exchanging them at the site', 
     expect(info.extra).toEqual({ apiToken: 'api', donorId: 'donor-jana' });
   });
 
-  it('when the same token comes again while more than five minutes are left, then no second exchange is made, and with less one is', async () => {
+  it('when the same token comes again before it expires, then no second exchange is made, and after the expiry one is', async () => {
     const clock = { now: Date.parse('2026-10-23T07:00:00Z') };
     let exchanges = 0;
     const subject = verifier(
@@ -62,10 +62,7 @@ describe('Given the connector verifying tokens by exchanging them at the site', 
     await subject.verifyAccessToken(READ_TOKEN);
     await subject.verifyAccessToken(READ_TOKEN);
     expect(exchanges).toBe(1);
-    clock.now += 599_000;
-    await subject.verifyAccessToken(READ_TOKEN);
-    expect(exchanges).toBe(1);
-    clock.now += 2_000;
+    clock.now += 901_000;
     expect((await subject.verifyAccessToken(READ_TOKEN)).extra?.['apiToken']).toBe('api-2');
     expect(exchanges).toBe(2);
   });

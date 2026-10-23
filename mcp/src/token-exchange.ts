@@ -10,7 +10,6 @@ import type { AuthorizationServerDiscovery, FetchLike } from './authorization.js
 export const TOKEN_EXCHANGE_GRANT = 'urn:ietf:params:oauth:grant-type:token-exchange';
 export const ACCESS_TOKEN_TYPE = 'urn:ietf:params:oauth:token-type:access_token';
 export const CONNECTOR_CLIENT = 'connector';
-export const RENEWAL_MARGIN_SECONDS = 300;
 
 export interface ExchangedToken {
   readonly apiToken: string;
@@ -47,11 +46,7 @@ export class TokenExchangeVerifier implements OAuthTokenVerifier {
     const key = createHash('sha256').update(token).digest('hex');
     const cached = this.cache.get(key);
     const nowSeconds = Math.floor(this.now() / 1000);
-    if (
-      cached &&
-      cached.expiresAt !== undefined &&
-      cached.expiresAt > nowSeconds + RENEWAL_MARGIN_SECONDS
-    ) {
+    if (cached && cached.expiresAt !== undefined && cached.expiresAt > nowSeconds) {
       return cached;
     }
     this.cache.delete(key);

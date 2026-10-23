@@ -61,6 +61,7 @@ export interface AdminPaymentListResponse {
   year: number | null;
   availableYears: number[];
   items: AdminPaymentResponse[];
+  total: number;
 }
 
 export interface AdminDonorResponse {
@@ -154,6 +155,7 @@ export interface DonorAccountResponse {
 
 export interface DonorAccountListResponse {
   items: DonorAccountResponse[];
+  hasMore: boolean;
 }
 
 export interface AdminDonorRecordResponse {
