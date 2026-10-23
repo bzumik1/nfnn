@@ -1,7 +1,7 @@
 #!/bin/sh
 # Backs the nfnn database up, restores a dump left in the restore folder and rehearses a restore
-# once a week. Everything is reported in the container log and in key=value files under
-# $BACKUPS/status, which the backend reads for the administration page.
+# once a week. Everything is reported in the container log, in $LOGS/backup.log and in key=value
+# files under $BACKUPS/status, which the backend reads for the administration page.
 
 set -u
 
@@ -12,13 +12,18 @@ TEST_RESTORE_DAY=${TEST_RESTORE_DAY:-7}
 TEST_RESTORE_TIME=${TEST_RESTORE_TIME:-04:00}
 KEEP_DAYS=${KEEP_DAYS:-30}
 TEST_DATABASE=${TEST_DATABASE:-nfnn_restore_test}
+LOGS=${LOGS_DIR:-/logs}
 POLL_SECONDS=10
 
 STATUS="$BACKUPS/status"
 REQUESTS="$BACKUPS/requests"
 
 log() {
-  echo "$(date +%Y-%m-%dT%H:%M:%S%z) $*"
+  log_line="$(date +%Y-%m-%dT%H:%M:%S%z) $*"
+  echo "$log_line"
+  if [ -d "$LOGS" ]; then
+    echo "$log_line" >> "$LOGS/backup.log" 2>/dev/null || true
+  fi
 }
 
 now_utc() {

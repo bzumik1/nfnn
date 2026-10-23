@@ -72,6 +72,8 @@ management:
       enabled: false
 
 app:
+  build:
+    revision: ${APP_REVISION:dev}
   site:
     public-url: ${PUBLIC_URL:https://nfnn.znamenacek.duckdns.org}
   mail:

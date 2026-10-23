@@ -7,6 +7,7 @@ on:
       - "backend/**"
       - "frontend/**"
       - "deploy/backup/**"
+      - "deploy/ops/**"
       - ".github/workflows/images.yml"
   workflow_dispatch:
 
@@ -32,10 +33,11 @@ jobs:
         run: |
           prefix=ghcr.io/${GITHUB_REPOSITORY,,}
           echo "$TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
-          for image in backend:backend frontend:frontend backup:deploy/backup; do
+          for image in backend:backend frontend:frontend backup:deploy/backup ops:deploy/ops; do
             app=${image%%:*}
             context=${image#*:}
             docker build \
+              --build-arg REVISION="${GITHUB_SHA::7}" \
               --label org.opencontainers.image.source="https://github.com/$GITHUB_REPOSITORY" \
               --label org.opencontainers.image.revision="$GITHUB_SHA" \
               -t "$prefix-$app:latest" -t "$prefix-$app:${GITHUB_SHA::7}" "$context"
