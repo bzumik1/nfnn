@@ -1,5 +1,6 @@
 import { expect, Page } from '@playwright/test';
 import { PAYMENT_QR_500, SECOND_FACTOR_QR } from './qr-matrices';
+import { noSignature } from './signature-image';
 
 export const donor = {
   id: '01a18e56-bdb0-775a-bd0a-a60756831369',
@@ -171,6 +172,10 @@ export async function mockDonorApi(
   await page.route(
     (url) => url.pathname === '/api/operations/setup',
     (route) => route.fulfill({ json: { required: false, codeRequired: true } }),
+  );
+  await page.route(
+    (url) => url.pathname === '/api/admin/donations/receipt-signature',
+    (route) => route.fulfill({ json: noSignature }),
   );
   await page.route(
     (url) => url.pathname === '/api/content/home',

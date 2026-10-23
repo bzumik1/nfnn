@@ -1,0 +1,118 @@
+<div class="signature" role="group" aria-labelledby="receipt-signature-title">
+  <h3 id="receipt-signature-title" class="signature-title" i18n="@@admin.signature.title">
+    Sken podpisu
+  </h3>
+  <p id="receipt-signature-hint" class="signature-hint" i18n="@@admin.signature.hint">
+    Tiskne se nad jméno podepisujícího na potvrzeních vystavených po nahrání; ta už vystavená se
+    nemění. JPEG, PNG nebo WebP do 10 MB, nejlépe tmavý podpis na bílém papíře. Uloží se hned, bez
+    restartu webu.
+  </p>
+
+  @switch (state()) {
+    @case ('loading') {
+      <p class="signature-status" role="status" i18n="@@admin.signature.loading">
+        Načítáme podpis…
+      </p>
+    }
+    @case ('error') {
+      <div class="signature-error" role="alert">
+        <p i18n="@@admin.signature.loadFailed">Podpis se nepodařilo načíst.</p>
+        <button type="button" class="action-btn" (click)="load()" i18n="@@admin.signature.retry">
+          Zkusit znovu
+        </button>
+      </div>
+    }
+    @case ('ready') {
+      @if (signature(); as current) {
+        @if (current.configured && current.image) {
+          <div class="signature-frame">
+            <img
+              class="signature-preview"
+              [src]="current.image"
+              alt="Nahraný podpis"
+              i18n-alt="@@admin.signature.alt"
+              [attr.width]="current.width"
+              [attr.height]="current.height"
+            />
+          </div>
+          <p class="signature-state">{{ uploadedLine(current) }}</p>
+        } @else {
+          <p class="signature-state" i18n="@@admin.signature.none">
+            Podpis není nahraný. Potvrzení mají místo něj jen čáru se jménem.
+          </p>
+        }
+
+        <div class="signature-actions">
+          <label class="signature-file-label" for="receipt-signature-file">
+            @if (current.configured) {
+              <span i18n="@@admin.signature.replace">Nahrát jiný sken</span>
+            } @else {
+              <span i18n="@@admin.signature.choose">Nahrát sken</span>
+            }
+          </label>
+          <input
+            id="receipt-signature-file"
+            class="signature-input"
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            aria-describedby="receipt-signature-hint"
+            [disabled]="uploading() || removing()"
+            (change)="upload($event)"
+          />
+          @if (current.configured && !confirmingRemoval()) {
+            <button
+              type="button"
+              class="action-link action-link--danger"
+              [disabled]="uploading() || removing()"
+              (click)="askRemoval()"
+              i18n="@@admin.signature.remove"
+            >
+              Odebrat podpis
+            </button>
+          }
+        </div>
+
+        @if (confirmingRemoval()) {
+          <div
+            class="signature-confirm"
+            role="group"
+            aria-label="Odebrat podpis?"
+            i18n-aria-label="@@admin.signature.confirm.label"
+          >
+            <span i18n="@@admin.signature.confirm.question"
+              >Potvrzení vystavená potom budou bez podpisu. Odebrat?</span
+            >
+            <button type="button" class="action-btn" [disabled]="removing()" (click)="remove()">
+              @if (removing()) {
+                <ng-container i18n="@@admin.signature.removing">Odebíráme…</ng-container>
+              } @else {
+                <ng-container i18n="@@admin.signature.confirm.yes">Ano, odebrat</ng-container>
+              }
+            </button>
+            <button
+              type="button"
+              class="action-link"
+              [disabled]="removing()"
+              (click)="cancelRemoval()"
+              i18n="@@admin.signature.confirm.no"
+            >
+              Ne
+            </button>
+          </div>
+        }
+      }
+
+      @if (uploading()) {
+        <p class="signature-status" role="status" i18n="@@admin.signature.uploading">
+          Nahráváme podpis…
+        </p>
+      } @else if (notice(); as notice) {
+        @if (notice.kind === 'status') {
+          <p class="signature-status signature-status--ok" role="status">{{ notice.text }}</p>
+        } @else {
+          <p class="signature-status signature-status--failed" role="alert">{{ notice.text }}</p>
+        }
+      }
+    }
+  }
+</div>

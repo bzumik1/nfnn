@@ -276,6 +276,24 @@ export function registerReadingTools(server: McpServer, deps: ToolDependencies):
   );
 
   server.registerTool(
+    'nfnn_receipt_signature',
+    {
+      title: 'Podpis na potvrzeních',
+      description:
+        'Whether a scan of the signature is uploaded for donation receipts, its size in pixels and when it was uploaded (the image itself is left out). Receipts issued after the upload carry it above the signatory; uploading and removing it stay on the web (/sprava/nastaveni, "Potvrzení o daru").',
+      annotations: READ_ONLY,
+    },
+    async (ctx) =>
+      answer(deps, ctx, 'nfnn_receipt_signature', async ({ apiToken }) => {
+        const { image: _image, ...signature } = (await backend.get(
+          '/api/admin/donations/receipt-signature',
+          apiToken,
+        )) as Record<string, unknown>;
+        return text(signature);
+      }),
+  );
+
+  server.registerTool(
     'nfnn_administrators',
     {
       title: 'Správci',

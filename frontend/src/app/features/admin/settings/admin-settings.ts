@@ -23,6 +23,7 @@ import { FormField } from '../../../shared/ui/form-field/form-field';
 import { PasswordReveal } from '../../../shared/ui/password-reveal/password-reveal';
 import { SETTING_LABELS, settingErrors } from '../../operations/setting-labels';
 import { SettingName, SettingValueRequest, SetupApi } from '../../operations/setup/setup-api';
+import { ReceiptSignature } from './receipt-signature/receipt-signature';
 import { AdminApi, AdminSettingResponse, SettingGroup } from '../admin-api';
 
 type LoadState = 'loading' | 'ready' | 'error' | 'restarting' | 'slow';
@@ -82,7 +83,7 @@ const INPUTS: Partial<Readonly<Record<SettingName, Input>>> = {
 
 @Component({
   selector: 'app-admin-settings',
-  imports: [FormsModule, FormField, FormControlDirective, PasswordReveal],
+  imports: [FormsModule, FormField, FormControlDirective, PasswordReveal, ReceiptSignature],
   templateUrl: './admin-settings.html',
   styleUrl: './admin-settings.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

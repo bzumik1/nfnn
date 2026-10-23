@@ -20,6 +20,7 @@ import {
   signIn,
   session,
 } from './donor-session';
+import { uploadedSignature } from './signature-image';
 
 const WCAG_AA = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 
@@ -1048,6 +1049,10 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
       (url) => url.pathname === '/api/admin/operations/settings',
       (route) => route.fulfill({ json: adminSettings }),
     );
+    await page.route(
+      (url) => url.pathname === '/api/admin/donations/receipt-signature',
+      (route) => route.fulfill({ json: uploadedSignature }),
+    );
     await page.route('**/api/donors/auth/refresh', (route) =>
       route.fulfill(session(200, administrator)),
     );
@@ -1060,6 +1065,10 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     await page.locator('#setting-RECEIPT_FIRST_YEAR').fill('2025');
     await page.getByRole('button', { name: 'Uložit nastavení' }).click();
     await expect(page.getByRole('button', { name: 'Ano, uložit a restartovat' })).toBeVisible();
+    expect(await violations(page)).toEqual([]);
+
+    await page.getByRole('button', { name: 'Odebrat podpis' }).click();
+    await expect(page.getByRole('button', { name: 'Ano, odebrat' })).toBeVisible();
     expect(await violations(page)).toEqual([]);
   });
 

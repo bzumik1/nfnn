@@ -137,7 +137,7 @@ class ReceiptTemplateHistoryTest {
     }
 
     private static ThymeleafPdfReceiptRenderer renderer(ReceiptResources resources, ReceiptTemplate template) {
-        return new ThymeleafPdfReceiptRenderer(resources, template, new ConfiguredSignatureImage(Optional.empty()), Clock.fixed(NOW, ZoneOffset.UTC));
+        return new ThymeleafPdfReceiptRenderer(resources, template, InMemoryReceiptSignatures.holding(Optional.empty()), Clock.fixed(NOW, ZoneOffset.UTC));
     }
 
     private static Map<String, ReceiptDocument> samples() {

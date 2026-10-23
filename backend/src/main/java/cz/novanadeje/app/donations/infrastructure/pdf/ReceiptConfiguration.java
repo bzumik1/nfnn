@@ -9,11 +9,6 @@ import cz.novanadeje.app.shared.domain.PostalAddress;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.Locale;
-import java.util.Optional;
 
 @Configuration(proxyBeanMethods = false)
 class ReceiptConfiguration {
@@ -44,31 +39,5 @@ class ReceiptConfiguration {
     @Bean
     ReceiptRenderingLimit receiptRenderingLimit(ReceiptProperties properties) {
         return new ReceiptRenderingLimit(properties.concurrentRenders());
-    }
-
-    @Bean
-    ConfiguredSignatureImage configuredSignatureImage(ReceiptProperties properties) {
-        return new ConfiguredSignatureImage(properties.signatureImagePath().map(ReceiptConfiguration::readSignature));
-    }
-
-    private static ReceiptImage readSignature(Path path) {
-        String mediaType = mediaTypeOf(path);
-        try {
-            return new ReceiptImage(Files.readAllBytes(path), mediaType);
-        } catch (IOException | IllegalArgumentException unreadable) {
-            throw new IllegalStateException("RECEIPT_SIGNATURE_IMAGE points to " + path + ", which cannot be read as a signature image: "
-                    + unreadable.getMessage(), unreadable);
-        }
-    }
-
-    private static String mediaTypeOf(Path path) {
-        String name = path.getFileName().toString().toLowerCase(Locale.ROOT);
-        if (name.endsWith(".png")) {
-            return "image/png";
-        }
-        if (name.endsWith(".jpg") || name.endsWith(".jpeg")) {
-            return "image/jpeg";
-        }
-        throw new IllegalStateException("RECEIPT_SIGNATURE_IMAGE must name a PNG or JPEG file (.png, .jpg, .jpeg), but is " + path);
     }
 }

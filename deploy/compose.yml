@@ -75,7 +75,6 @@ services:
       JAVA_TOOL_OPTIONS: -XX:MaxRAMPercentage=75
       TZ: Europe/Prague
     volumes:
-      - /DATA/AppData/nfnn/config:/config:ro
       - /DATA/AppData/nfnn/backups:/backups:ro
       - /DATA/AppData/nfnn/backups/requests:/backups/requests
       - /DATA/AppData/nfnn/restore:/restore

@@ -12,6 +12,7 @@ import { AdminSettings } from './admin-settings';
 const SETTINGS_URL = '/api/admin/operations/settings';
 const MAIL_TEST_URL = '/api/admin/operations/settings/mail-test';
 const STATUS_URL = '/api/operations/setup';
+const SIGNATURE_URL = '/api/admin/donations/receipt-signature';
 
 describe('Given an administrator on the settings page', () => {
   let fixture: ComponentFixture<AdminSettings>;
@@ -37,6 +38,7 @@ describe('Given an administrator on the settings page', () => {
   });
 
   afterEach(() => {
+    http.match(SIGNATURE_URL);
     http.verify();
     vi.useRealTimers();
   });

@@ -37,6 +37,8 @@ const ACTION_NAMES: Record<string, string> = {
   ERASE_DONOR: $localize`:@@admin.actions.action.eraseDonor:Výmaz osobních údajů dárce`,
   CHANGE_REPORT_SETTINGS: $localize`:@@admin.actions.action.changeReportSettings:Změna nastavení měsíčního přehledu`,
   SEND_MONTHLY_REPORT: $localize`:@@admin.actions.action.sendMonthlyReport:Ruční odeslání měsíčního přehledu`,
+  CHANGE_RECEIPT_SIGNATURE: $localize`:@@admin.actions.action.changeReceiptSignature:Nahrání podpisu na potvrzení o daru`,
+  REMOVE_RECEIPT_SIGNATURE: $localize`:@@admin.actions.action.removeReceiptSignature:Odebrání podpisu z potvrzení o daru`,
   CREATE_NEWS: $localize`:@@admin.actions.action.createNews:Napsání aktuality`,
   UPDATE_NEWS: $localize`:@@admin.actions.action.updateNews:Úprava aktuality`,
   PUBLISH_NEWS: $localize`:@@admin.actions.action.publishNews:Zveřejnění aktuality`,

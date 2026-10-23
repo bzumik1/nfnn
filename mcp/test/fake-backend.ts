@@ -266,6 +266,17 @@ function adminRoute(request: RecordedRequest, url: URL, body: string): [number, 
       return [409, problem(409, 'donations/bank-account-link-active', 'Párování už je zapnuté')];
     case 'GET /api/admin/donations/report':
       return [200, { settings: { recipients: ['info@nfnn.cz'], sendDay: 1 }, sentReports: [] }];
+    case 'GET /api/admin/donations/receipt-signature':
+      return [
+        200,
+        {
+          configured: true,
+          image: 'data:image/png;base64,iVBORw0KGgo=',
+          width: 1200,
+          height: 400,
+          uploadedAt: '2026-10-23T19:30:00Z',
+        },
+      ];
     case 'GET /api/admin/operations/settings':
       return [
         200,

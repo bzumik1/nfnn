@@ -144,6 +144,9 @@
                   }
                 }
               }
+              @if (group.id === 'RECEIPTS') {
+                <app-receipt-signature />
+              }
               @if (group.id === 'MAIL') {
                 <div class="test-row">
                   <button
