@@ -25,6 +25,7 @@ export interface RecordedRequest {
   readonly authorization: string | undefined;
   readonly accept: string | undefined;
   readonly contentType: string | undefined;
+  readonly forwardedFor: string | undefined;
   readonly body: string;
 }
 
@@ -68,6 +69,7 @@ export class FakeBackend {
       authorization: request.headers['authorization'],
       accept: request.headers['accept'],
       contentType: request.headers['content-type'],
+      forwardedFor: request.headers['x-forwarded-for'] as string | undefined,
       body,
     };
     this.requests.push(recorded);

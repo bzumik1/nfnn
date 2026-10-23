@@ -13,6 +13,8 @@ public interface RefreshTokenRepository {
 
     Optional<RefreshToken> findById(UUID id);
 
+    boolean markUsed(UUID tokenId, Instant at);
+
     List<RefreshToken> findUsableClientTokensOf(DonorId donorId, Instant now);
 
     void revokeAllOf(DonorId donorId, Instant at);

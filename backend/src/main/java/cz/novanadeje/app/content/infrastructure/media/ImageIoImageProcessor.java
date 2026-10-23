@@ -9,8 +9,10 @@ import org.springframework.stereotype.Component;
 
 import javax.imageio.IIOImage;
 import javax.imageio.ImageIO;
+import javax.imageio.ImageReader;
 import javax.imageio.ImageWriteParam;
 import javax.imageio.ImageWriter;
+import javax.imageio.stream.ImageInputStream;
 import javax.imageio.stream.ImageOutputStream;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
@@ -22,6 +24,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
+import java.util.Set;
 
 @Component
 class ImageIoImageProcessor implements ImageProcessor {
@@ -29,6 +33,7 @@ class ImageIoImageProcessor implements ImageProcessor {
     static final int MAX_SIDE = 8000;
     private static final float QUALITY = 0.82f;
     private static final String WEBP = "webp";
+    private static final Set<String> ACCEPTED_FORMATS = Set.of("jpeg", "jpg", "png", "webp");
 
     @Override
     public ProcessedImage process(byte[] upload) {
@@ -52,19 +57,29 @@ class ImageIoImageProcessor implements ImageProcessor {
     }
 
     private static BufferedImage decode(byte[] upload) {
-        BufferedImage image;
-        try {
-            image = ImageIO.read(new ByteArrayInputStream(upload));
+        try (ImageInputStream input = ImageIO.createImageInputStream(new ByteArrayInputStream(upload))) {
+            Iterator<ImageReader> readers = ImageIO.getImageReaders(input);
+            if (!readers.hasNext()) {
+                throw new UnsupportedImage("it is not a JPEG, PNG or WebP image");
+            }
+            ImageReader reader = readers.next();
+            try {
+                if (!ACCEPTED_FORMATS.contains(reader.getFormatName().toLowerCase(Locale.ROOT))) {
+                    throw new UnsupportedImage("it is not a JPEG, PNG or WebP image");
+                }
+                reader.setInput(input, true, true);
+                if (reader.getWidth(0) > MAX_SIDE || reader.getHeight(0) > MAX_SIDE) {
+                    throw new UnsupportedImage("it is larger than " + MAX_SIDE + " pixels on a side");
+                }
+                return reader.read(0);
+            } finally {
+                reader.dispose();
+            }
+        } catch (UnsupportedImage refused) {
+            throw refused;
         } catch (IOException | RuntimeException unreadable) {
             throw new UnsupportedImage("it could not be decoded");
         }
-        if (image == null) {
-            throw new UnsupportedImage("it is not a JPEG, PNG or WebP image");
-        }
-        if (image.getWidth() > MAX_SIDE || image.getHeight() > MAX_SIDE) {
-            throw new UnsupportedImage("it is larger than " + MAX_SIDE + " pixels on a side");
-        }
-        return image;
     }
 
     private static BufferedImage scaleToWidth(BufferedImage source, int width) {

@@ -6,6 +6,9 @@ import cz.novanadeje.app.shared.infrastructure.mail.EmailDraft;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import org.springframework.context.MessageSource;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.mail.MailException;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Async;
@@ -28,6 +31,8 @@ class ContactMessageEmailForwarder {
     private static final String KEYS = "contact.email.";
     private static final String TEMPLATE = "email/contact/message-received";
 
+    private static final Logger log = LoggerFactory.getLogger(ContactMessageEmailForwarder.class);
+
     private final JavaMailSender mailSender;
     private final BrandedEmails emails;
     private final MessageSource messages;
@@ -42,7 +47,15 @@ class ContactMessageEmailForwarder {
 
     @Async
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    public void forward(ContactMessageReceived event) throws MessagingException {
+    public void forward(ContactMessageReceived event) {
+        try {
+            send(event);
+        } catch (MailException | MessagingException e) {
+            log.error("Contact message {} could not be forwarded: {}", event.messageId().value(), e.getClass().getSimpleName());
+        }
+    }
+
+    private void send(ContactMessageReceived event) throws MessagingException {
         String receivedAt = RECEIVED_AT.format(event.receivedAt().atZone(FOUNDATION_ZONE));
         MimeMessage email = emails.compose(new EmailDraft(FOUNDATION_LOCALE, properties.recipientEmail(), text("subject", event.senderName()),
                 text("title"), TEMPLATE,

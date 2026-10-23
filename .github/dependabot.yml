@@ -41,3 +41,10 @@ updates:
           - "@modelcontextprotocol/*"
       mcp-minor-and-patch:
         update-types: [minor, patch]
+  - package-ecosystem: docker
+    directories: [/backend, /frontend, /mcp, /deploy/backup, /deploy/postgres]
+    schedule:
+      interval: monthly
+    groups:
+      base-images:
+        patterns: ["*"]

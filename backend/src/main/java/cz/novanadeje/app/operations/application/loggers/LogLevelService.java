@@ -3,6 +3,8 @@ package cz.novanadeje.app.operations.application.loggers;
 import cz.novanadeje.app.operations.domain.loggers.LogLevel;
 import cz.novanadeje.app.operations.domain.loggers.LogLevelOverride;
 import cz.novanadeje.app.operations.domain.loggers.LoggerName;
+import cz.novanadeje.app.operations.domain.loggers.ProtectedLogger;
+import cz.novanadeje.app.operations.domain.loggers.ProtectedLoggers;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -58,6 +60,9 @@ public class LogLevelService {
 
     @Transactional
     public LogLevelOverride override(UUID adminId, LoggerName logger, LogLevel level, int minutes) {
+        if (ProtectedLoggers.refuses(logger, level)) {
+            throw new ProtectedLogger(logger, level);
+        }
         Instant now = clock.instant();
         LogLevelOverride current = overrides.get(logger.value());
         Optional<LogLevel> configuredBefore = current == null ? levels.configuredLevel(logger) : current.configuredBefore();

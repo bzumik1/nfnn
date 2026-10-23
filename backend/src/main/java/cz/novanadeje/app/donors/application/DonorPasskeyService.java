@@ -92,8 +92,9 @@ public class DonorPasskeyService {
         PasskeyChallenge issued = challenges.findByChallengeHash(secret.hash())
                 .filter(candidate -> candidate.isUsableForRegistrationBy(donorId, now))
                 .orElseThrow(PasskeyRejected::new);
-        issued.markUsed(now);
-        challenges.save(issued);
+        if (!challenges.markUsed(issued.id(), now)) {
+            throw new PasskeyRejected();
+        }
         if (passkeys.countByDonor(donorId) >= properties.maxPerDonor()) {
             throw new PasskeyLimitReached(properties.maxPerDonor());
         }

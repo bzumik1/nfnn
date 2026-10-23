@@ -3,6 +3,7 @@ package cz.novanadeje.app.operations.application.loggers;
 import cz.novanadeje.app.operations.domain.loggers.LogLevel;
 import cz.novanadeje.app.operations.domain.loggers.LogLevelOverride;
 import cz.novanadeje.app.operations.domain.loggers.LoggerName;
+import cz.novanadeje.app.operations.domain.loggers.ProtectedLogger;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -21,10 +22,12 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -113,5 +116,15 @@ class LogLevelServiceTest {
         ArgumentCaptor<AdminActionPerformed> actions = ArgumentCaptor.forClass(AdminActionPerformed.class);
         verify(events, org.mockito.Mockito.times(2)).publishEvent(actions.capture());
         assertThat(actions.getAllValues().getLast().action()).isEqualTo("RESET_LOG_LEVEL");
+    }
+
+    @Test
+    @DisplayName("Given a protected logger, when an administrator raises it, then it is refused and nothing changes or is audited")
+    void should_refuse_when_raised_given_protected_logger() {
+        LoggerName bind = new LoggerName("org.hibernate.orm.jdbc.bind");
+
+        assertThatThrownBy(() -> service.override(ADMIN, bind, LogLevel.TRACE, 5)).isInstanceOf(ProtectedLogger.class);
+
+        verifyNoInteractions(levels, timer, events);
     }
 }

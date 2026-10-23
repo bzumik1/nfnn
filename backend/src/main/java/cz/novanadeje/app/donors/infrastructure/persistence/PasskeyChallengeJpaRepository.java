@@ -14,6 +14,10 @@ interface PasskeyChallengeJpaRepository extends JpaRepository<PasskeyChallengeJp
     Optional<PasskeyChallengeJpaEntity> findByChallengeHash(String challengeHash);
 
     @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("update PasskeyChallengeJpaEntity challenge set challenge.usedAt = :at where challenge.id = :id and challenge.usedAt is null")
+    int markUsed(@Param("id") UUID id, @Param("at") Instant at);
+
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("delete from PasskeyChallengeJpaEntity challenge where challenge.expiresAt <= :now")
     int deleteExpiredAt(@Param("now") Instant now);
 }

@@ -39,6 +39,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.Optional;
+import java.util.OptionalLong;
 import java.util.Set;
 import java.util.UUID;
 
@@ -228,14 +229,49 @@ class DonorAuthenticationServiceTest {
         when(donors.findById(donor.id())).thenReturn(Optional.of(donor));
         when(secondFactors.findByDonor(donor.id())).thenReturn(Optional.of(factor));
         when(sessions.open(donor, true)).thenReturn(TOKENS);
+        when(challenges.reserveAttempt(challenge.id(), NOW, CHALLENGE_ATTEMPTS)).thenReturn(true);
+        when(challenges.markUsed(challenge.id(), NOW)).thenReturn(true);
 
         AuthenticatedDonor result = service.completeSecondFactor(secret.value(), codeAt(NOW));
 
         assertThat(result.tokens()).isEqualTo(TOKENS);
-        assertThat(challenge.usedAt()).contains(NOW);
         assertThat(factor.lastUsedStep()).hasValue(Totp.stepAt(NOW));
-        verify(challenges).save(challenge);
+        verify(challenges).markUsed(challenge.id(), NOW);
         verify(secondFactors).save(factor);
+    }
+
+    @Test
+    @DisplayName("Given a challenge whose attempts other requests used up at the same moment, when the second factor is completed, then the challenge is refused before the code is checked")
+    void should_refuse_challenge_when_second_factor_completed_given_attempts_used_up_concurrently() {
+        LinkSecret secret = LinkSecret.generate();
+        SecondFactorChallenge challenge = SecondFactorChallenge.issue(secret, donor.id(), NOW.minusSeconds(60), CHALLENGE_TTL);
+        SecondFactor factor = enabledFactor();
+        when(challenges.findBySecretHash(secret.hash())).thenReturn(Optional.of(challenge));
+        when(donors.findById(donor.id())).thenReturn(Optional.of(donor));
+        when(secondFactors.findByDonor(donor.id())).thenReturn(Optional.of(factor));
+        when(challenges.reserveAttempt(challenge.id(), NOW, CHALLENGE_ATTEMPTS)).thenReturn(false);
+
+        assertThatThrownBy(() -> service.completeSecondFactor(secret.value(), codeAt(NOW))).isInstanceOf(InvalidSecondFactorChallenge.class);
+
+        assertThat(factor.lastUsedStep()).isNotEqualTo(OptionalLong.of(Totp.stepAt(NOW)));
+        verify(secondFactors, never()).save(any());
+        verify(sessions, never()).open(any(), anyBoolean());
+    }
+
+    @Test
+    @DisplayName("Given a challenge another request completes at the same moment, when the second factor is completed with the right code, then no second session opens")
+    void should_refuse_challenge_when_second_factor_completed_given_challenge_spent_concurrently() {
+        LinkSecret secret = LinkSecret.generate();
+        SecondFactorChallenge challenge = SecondFactorChallenge.issue(secret, donor.id(), NOW.minusSeconds(60), CHALLENGE_TTL);
+        when(challenges.findBySecretHash(secret.hash())).thenReturn(Optional.of(challenge));
+        when(donors.findById(donor.id())).thenReturn(Optional.of(donor));
+        when(secondFactors.findByDonor(donor.id())).thenReturn(Optional.of(enabledFactor()));
+        when(challenges.reserveAttempt(challenge.id(), NOW, CHALLENGE_ATTEMPTS)).thenReturn(true);
+        when(challenges.markUsed(challenge.id(), NOW)).thenReturn(false);
+
+        assertThatThrownBy(() -> service.completeSecondFactor(secret.value(), codeAt(NOW))).isInstanceOf(InvalidSecondFactorChallenge.class);
+
+        verify(sessions, never()).open(any(), anyBoolean());
     }
 
     @Test
@@ -246,12 +282,12 @@ class DonorAuthenticationServiceTest {
         when(challenges.findBySecretHash(secret.hash())).thenReturn(Optional.of(challenge));
         when(donors.findById(donor.id())).thenReturn(Optional.of(donor));
         when(secondFactors.findByDonor(donor.id())).thenReturn(Optional.of(enabledFactor()));
+        when(challenges.reserveAttempt(challenge.id(), NOW, CHALLENGE_ATTEMPTS)).thenReturn(true);
 
         assertThatThrownBy(() -> service.completeSecondFactor(secret.value(), "000000")).isInstanceOf(InvalidSecondFactorCode.class);
 
-        assertThat(challenge.failedAttempts()).isEqualTo(1);
-        assertThat(challenge.usedAt()).isEmpty();
-        verify(challenges).save(challenge);
+        verify(challenges).reserveAttempt(challenge.id(), NOW, CHALLENGE_ATTEMPTS);
+        verify(challenges, never()).markUsed(any(), any());
         verify(secondFactors, never()).save(any());
         verify(sessions, never()).open(any(), anyBoolean());
     }

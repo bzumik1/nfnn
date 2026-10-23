@@ -72,6 +72,23 @@ describe('Given the MCP connector in front of the administration', () => {
     ).toBe(true);
   });
 
+  it('when a token is exchanged, then the site gets the visitor address nginx passed, so a stranger cannot use up the limit of everyone else', async () => {
+    await stack.app.fetch(
+      new Request(MCP_URL, {
+        method: 'GET',
+        headers: { authorization: `Bearer ${READ_TOKEN}`, 'x-real-ip': '203.0.113.7' },
+      }),
+    );
+    await stack.app.fetch(
+      new Request(MCP_URL, {
+        method: 'POST',
+        headers: { authorization: 'Bearer forged', 'x-real-ip': 'not an address' },
+      }),
+    );
+    const exchanges = stack.backend.exchanges();
+    expect(exchanges.map((exchange) => exchange.forwardedFor)).toEqual(['203.0.113.7', undefined]);
+  });
+
   it('when another path is asked, then 404', async () => {
     expect((await stack.app.fetch(new Request(`${ISSUER}/api/admin/donors`))).status).toBe(404);
   });

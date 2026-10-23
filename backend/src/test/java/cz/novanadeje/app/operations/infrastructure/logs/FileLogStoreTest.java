@@ -1,6 +1,7 @@
 package cz.novanadeje.app.operations.infrastructure.logs;
 
 import cz.novanadeje.app.operations.domain.logs.LogFile;
+import cz.novanadeje.app.operations.domain.logs.LogSearchTooSlow;
 import cz.novanadeje.app.operations.domain.logs.LogMatch;
 import cz.novanadeje.app.operations.domain.logs.LogWindow;
 import org.junit.jupiter.api.BeforeEach;
@@ -13,12 +14,14 @@ import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
 import java.util.regex.Pattern;
 import java.util.zip.GZIPOutputStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class FileLogStoreTest {
 
@@ -127,5 +130,31 @@ class FileLogStoreTest {
         assertThat(limited).extracting(LogMatch::line).containsExactly("third line", "second line about Fio");
         assertThat(older).extracting(LogMatch::line).containsExactly("second line about Fio", "first line");
         assertThat(compressed).extracting(LogMatch::line).containsExactly("older second");
+    }
+
+    @Test
+    @DisplayName("Given a link in the log folder that points outside it, when the files are listed or read, then the link is neither listed, found nor searched")
+    void should_ignore_link_when_listed_or_read_given_symlink_to_outside() throws IOException {
+        Path outside = Files.writeString(folder.resolve("sub").resolve("secret"), "JWT_SECRET=very-secret\n");
+        Files.createSymbolicLink(folder.resolve("planted.log"), outside);
+        LogFile planted = new LogFile("planted.log", 0, java.time.Instant.EPOCH, false);
+
+        assertThat(store.files()).extracting(LogFile::name).doesNotContain("planted.log");
+        assertThat(store.file("planted.log")).isEmpty();
+        assertThatThrownBy(() -> store.search(planted, Pattern.compile("."), 10, Optional.empty())).isInstanceOf(java.io.UncheckedIOException.class);
+        assertThatThrownBy(() -> store.read(planted, Optional.of(0L), 100)).isInstanceOf(java.io.UncheckedIOException.class);
+    }
+
+    @Test
+    @DisplayName("Given a pattern that backtracks for minutes, when the log is searched, then the search stops within its time and says so")
+    void should_stop_when_searched_given_catastrophic_pattern() throws IOException {
+        Files.writeString(folder.resolve("long.log"), "a,".repeat(40) + "\n");
+        FileLogStore quick = new FileLogStore(folder, Duration.ofMillis(300));
+        LogFile file = quick.file("long.log").orElseThrow();
+        long started = System.nanoTime();
+
+        assertThatThrownBy(() -> quick.search(file, Pattern.compile("(.*,){12}z"), 10, Optional.empty())).isInstanceOf(LogSearchTooSlow.class);
+
+        assertThat(Duration.ofNanos(System.nanoTime() - started)).isLessThan(Duration.ofSeconds(5));
     }
 }

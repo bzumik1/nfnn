@@ -38,6 +38,15 @@ class ContactMessageEmailForwarderTest {
     }
 
     @Test
+    @DisplayName("Given a mail server that refuses the message, when it is forwarded, then the failure stays in the forwarder instead of reaching the async handler with the addresses in its message")
+    void should_keep_failure_when_forwarded_given_refusing_server() {
+        org.mockito.Mockito.doThrow(new org.springframework.mail.MailSendException("550 jana@example.cz rejected"))
+                .when(mailSender).send(org.mockito.ArgumentMatchers.any(MimeMessage.class));
+
+        org.assertj.core.api.Assertions.assertThatCode(() -> forwarder.forward(event("Jana Nováková", "Dotaz"))).doesNotThrowAnyException();
+    }
+
+    @Test
     @DisplayName("Given a message from Jana, when it is forwarded, then the foundation's mailbox gets it from the site, answerable to Jana, with her name in the subject")
     void should_address_forward_when_forwarded_given_message() throws Exception {
         forwarder.forward(event("Jana Nováková", "Mám dotaz k projektu Dominik."));

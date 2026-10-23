@@ -22,7 +22,6 @@ const UUID = z.string().regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-
 const DAY = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 const MONTH = z.string().regex(/^\d{4}-\d{2}$/);
 const PLAIN_SETTING = z.enum([
-  'PUBLIC_URL',
   'MAIL_HOST',
   'MAIL_PORT',
   'MAIL_USERNAME',
@@ -226,12 +225,12 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
     {
       title: 'Změnit nastavení webu',
       description:
-        'Changes plain settings of the site (see nfnn_settings for the current values); an empty value returns a setting to its default. Every value is checked as at startup before anything is stored, a refused one comes back with its reason. A real change restarts the backend, so the site does not answer for about a minute; audited as CHANGE_SETTINGS. Secrets (SMTP password, Fio token) are changed only in the web administration.',
+        'Changes plain settings of the site (see nfnn_settings for the current values); an empty value returns a setting to its default. Every value is checked as at startup before anything is stored, a refused one comes back with its reason. A real change restarts the backend, so the site does not answer for about a minute; audited as CHANGE_SETTINGS. Secrets (SMTP password, Fio token) and the address of the site are changed only in the web administration; moving the mail server, port, user or STARTTLS needs the SMTP password again, so it is done there too.',
       inputSchema: z.object({
         changes: z
           .array(z.object({ name: PLAIN_SETTING, value: z.string().max(1000) }))
           .min(1)
-          .max(13),
+          .max(12),
       }),
       annotations: WRITING,
     },
@@ -443,7 +442,7 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
     {
       title: 'Dočasně změnit úroveň logování',
       description:
-        'Sets a logger (ROOT or a dotted package or class name, e.g. cz.novanadeje.app, io.github.bzumik1.fio, org.hibernate.SQL) to TRACE, DEBUG, INFO, WARN, ERROR or OFF for `minutes` (30 by default, at most 1440); the level goes back by itself when the time is up. Audited as CHANGE_LOG_LEVEL. Read the result with nfnn_log or nfnn_log_search.',
+        'Sets a logger (ROOT or a dotted package or class name, e.g. cz.novanadeje.app, io.github.bzumik1.fio, org.hibernate.SQL) to TRACE, DEBUG, INFO, WARN, ERROR or OFF for `minutes` (30 by default, at most 1440); the level goes back by itself when the time is up. Loggers that would write SQL values, bodies or raw requests (org.hibernate.orm.jdbc.bind, org.apache.coyote, org.postgresql and the like) keep their level and are refused, and TRACE is refused for every logger outside cz.novanadeje.app (use DEBUG there). Audited as CHANGE_LOG_LEVEL. Read the result with nfnn_log or nfnn_log_search.',
       inputSchema: z.object({
         logger: z.string().min(1).max(200),
         level: z.enum(['TRACE', 'DEBUG', 'INFO', 'WARN', 'ERROR', 'OFF']),

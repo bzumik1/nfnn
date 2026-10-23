@@ -135,7 +135,7 @@ jobs:
 
       - name: Compose file names no secret
         run: |
-          if grep -noE '\b(POSTGRES_PASSWORD|PGPASSWORD|DB_PASSWORD|JWT_SECRET|MAIL_PASSWORD|FIO_TOKEN)\b' deploy/compose.yml; then
+          if grep -noE '\b(POSTGRES_PASSWORD|PGPASSWORD|DB_PASSWORD|JWT_SECRET|SETTINGS_KEY|MAIL_PASSWORD|FIO_TOKEN)\b' deploy/compose.yml; then
             echo "::error::Secrets are generated into secrets/ or entered in the first setup, never written into deploy/compose.yml"
             exit 1
           fi
@@ -161,6 +161,19 @@ jobs:
           fi
           if [ "$(yq '.services.frontend.volumes | length' deploy/compose.yml)" != 1 ] || [ "$(yq '.services.frontend.volumes[0]' deploy/compose.yml)" != /DATA/AppData/nfnn/logs:/logs ] || [ "$(yq '.services.frontend | has("env_file")' deploy/compose.yml)" != false ]; then
             echo "::error::the frontend mounts only the logs folder (for its access log) and reads no env file"
+            exit 1
+          fi
+          if [ "$(yq '[.services[] | select(has("network_mode") or has("links"))] | length' deploy/compose.yml)" != 0 ] || [ "$(yq '.networks.internal.internal' deploy/compose.yml)" != true ]; then
+            echo "::error::the services live on their own networks (not the default bridge that other apps on the server share) and the database network has no way out"
+            exit 1
+          fi
+          networks=$(yq -o=json '[.services | to_entries[] | .key + "=" + (.value.networks | sort | join(","))] | sort | join(" ")' deploy/compose.yml)
+          if [ "$networks" != '"backend=edge,internal backup=internal frontend=edge mcp=edge postgres=internal"' ]; then
+            echo "::error::only the backend and the backup reach the database network, and the database reaches nothing else (found $networks)"
+            exit 1
+          fi
+          if [ "$(yq '[.services[] | select((.security_opt // []) | contains(["no-new-privileges:true"]) | not)] | length' deploy/compose.yml)" != 0 ]; then
+            echo "::error::every service sets no-new-privileges"
             exit 1
           fi
 
@@ -254,14 +267,22 @@ jobs:
             502|503|504|000) echo "::error::nginx could not reach the backend"; exit 1 ;;
           esac
           for container in nfnn-postgres nfnn-backup nfnn-mcp nfnn-frontend; do
-            for key in JWT_SECRET FIO_TOKEN MAIL_PASSWORD; do
-              if docker exec "$container" printenv "$key" > /dev/null; then
-                echo "::error::$container must not receive $key"
+            for key in JWT_SECRET SETTINGS_KEY DB_PASSWORD FIO_TOKEN MAIL_PASSWORD; do
+              if docker exec "$container" printenv "$key" > /dev/null || docker exec "$container" sh -c "tr '\\0' '\\n' < /proc/1/environ" | grep -q "^$key="; then
+                echo "::error::$container must not receive $key, neither in its configuration nor in its main process"
                 exit 1
               fi
             done
           done
           docker exec nfnn-backend sh -c 'uid=$(awk "/^Uid:/ {print \$2}" /proc/1/status); [ "$uid" = "$(id -u app)" ]' || { echo "::error::the backend's Java process must run as the app user"; exit 1; }
+          backend_ip=$(docker inspect -f '{{(index .NetworkSettings.Networks "nfnn-edge").IPAddress}}' nfnn-backend)
+          postgres_ip=$(docker inspect -f '{{(index .NetworkSettings.Networks "nfnn-internal").IPAddress}}' nfnn-postgres)
+          if docker run --rm --network bridge --entrypoint sh ghcr.io/bzumik1/nfnn-postgres:latest -c "wget -q -T 3 -O /dev/null http://$backend_ip:8080/actuator/health || pg_isready -q -h $postgres_ip -t 3"; then
+            echo "::error::a container on the default bridge reached the backend or the database"
+            exit 1
+          fi
+          docker exec nfnn-frontend sh -c '! getent hosts postgres' || { echo "::error::the frontend must not see the database"; exit 1; }
+          docker exec nfnn-mcp sh -c '! getent hosts postgres' || { echo "::error::the connector must not see the database"; exit 1; }
           echo "The backend and the backup service write their logs into the logs folder"
           logs="$RUNNER_TEMP/nfnn/logs"
           grep -q 'Backend revision dev is ready' "$logs/backend.log" || { echo "::error::the backend did not write its log file"; ls -la "$logs"; exit 1; }
@@ -294,6 +315,12 @@ jobs:
           grep -qE ' POST /mcp 401 ' "$logs/nginx-access.log" || { echo "::error::the access log misses the connector's 401"; cat "$logs/nginx-access.log"; exit 1; }
           if grep -nE 'not-in-the-log|([0-9]{1,3}\.){3}[0-9]{1,3}' "$logs/nginx-access.log"; then
             echo "::error::the access log must name no client address, no query string and no healthcheck from inside the container"
+            exit 1
+          fi
+          docker logs nfnn-frontend > "$RUNNER_TEMP/frontend-console.log" 2>&1
+          grep -qE ' GET / 200 ' "$RUNNER_TEMP/frontend-console.log" || { echo "::error::nginx no longer writes its access log to the console"; exit 1; }
+          if grep -E '^[0-9]{4}-[0-9]{2}-[0-9]{2}T' "$RUNNER_TEMP/frontend-console.log" | grep -nE 'not-in-the-log|([0-9]{1,3}\.){3}[0-9]{1,3}'; then
+            echo "::error::the console access log (docker logs) must name no client address and no query string either"
             exit 1
           fi
           for log in nginx-access.log mcp.log; do

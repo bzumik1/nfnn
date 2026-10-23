@@ -94,6 +94,14 @@ public class ConnectedAppsStepDefinitions {
         api.get(CLIENT_PATH + "?clientId=" + client + "&redirectUri=" + redirect);
     }
 
+    @Given("{string} asked about the client {string} redirecting to {string} {int} times")
+    public void askedAboutTheClientTimes(String alias, String client, String redirect, int times) {
+        for (int i = 0; i < times; i++) {
+            asksAboutTheClient(alias, client, redirect);
+            assertThat(api.lastResponse().getStatusCode().value()).isEqualTo(200);
+        }
+    }
+
     @Then("the client is described as host {string} named {string} and not on this computer")
     public void theClientIsDescribedAsRemote(String host, String name) {
         assertClientDescription(host, name, false);
@@ -257,6 +265,17 @@ public class ConnectedAppsStepDefinitions {
         api.forgetCredentials();
         api.authorize(apiAccessToken);
         api.delete(ADMIN_PATH + "/" + UUID.randomUUID());
+    }
+
+    @When("the exchanged API token sends {word} {string}")
+    public void theExchangedApiTokenSends(String method, String path) {
+        actAsExchangedApiToken();
+        String target = path.replace("{id}", UUID.randomUUID().toString());
+        switch (method) {
+            case "POST" -> api.post(target, Map.of());
+            case "DELETE" -> api.delete(target);
+            default -> throw new IllegalArgumentException("Unsupported method " + method);
+        }
     }
 
     @When("the exchanged API token tries to approve the connection for {string} with scope {string}")

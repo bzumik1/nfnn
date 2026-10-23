@@ -108,4 +108,13 @@ class JwtPropertiesTest {
     @EnableConfigurationProperties(JwtProperties.class)
     static class Support {
     }
+
+    @Test
+    @DisplayName("Given the JWT settings, when they are printed, then the signing secret does not appear")
+    void should_mask_secret_when_printed_given_properties() {
+        String secret = "a-signing-secret-that-is-long-enough-1234";
+
+        assertThat(new JwtProperties("https://nfnn.cz", secret, java.time.Duration.ofMinutes(15), "https://nfnn.cz/api").toString())
+                .doesNotContain(secret);
+    }
 }

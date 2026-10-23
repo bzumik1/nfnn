@@ -6,6 +6,7 @@ import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
 import java.util.Optional;
+import java.util.UUID;
 
 @Repository
 class JpaPasskeyChallengeRepository implements PasskeyChallengeRepository {
@@ -24,6 +25,11 @@ class JpaPasskeyChallengeRepository implements PasskeyChallengeRepository {
     @Override
     public Optional<PasskeyChallenge> findByChallengeHash(String challengeHash) {
         return jpa.findByChallengeHash(challengeHash).map(PasskeyChallengeJpaEntity::toDomain);
+    }
+
+    @Override
+    public boolean markUsed(UUID challengeId, Instant at) {
+        return jpa.markUsed(challengeId, at) == 1;
     }
 
     @Override

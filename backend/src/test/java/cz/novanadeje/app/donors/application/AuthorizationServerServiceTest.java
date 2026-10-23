@@ -168,6 +168,7 @@ class AuthorizationServerServiceTest {
             code = AuthorizationCode.issue(secret, DONOR, CLAUDE, CALLBACK, new CodeChallenge(CHALLENGE, "S256"), Set.of(OAuthScope.ADMIN_READ), MCP,
                     true, NOW.minusSeconds(60), Duration.ofMinutes(5));
             when(codes.findBySecretHash(secret.hash())).thenReturn(Optional.of(code));
+            when(codes.markUsed(code.id(), NOW)).thenReturn(true);
         }
 
         @Test
@@ -190,7 +191,19 @@ class AuthorizationServerServiceTest {
             assertThat(stored.getValue().secretHash()).isEqualTo(RefreshTokenSecret.fromValue(tokens.refreshToken()).hash());
             assertThat(stored.getValue().grantedAt()).isEqualTo(NOW);
             assertThat(tokens.accessToken()).isEqualTo("connector");
-            assertThat(code.usedAt()).contains(NOW);
+            verify(codes).markUsed(code.id(), NOW);
+        }
+
+        @Test
+        @DisplayName("when another request spends the code at the same moment, then the grant is invalid and no tokens are issued")
+        void should_refuse_when_exchanged_given_code_spent_concurrently() {
+            when(codes.markUsed(code.id(), NOW)).thenReturn(false);
+
+            assertThatThrownBy(() -> service.exchangeCode(new CodeExchange(secret.value(), CLAUDE.value(), CALLBACK.toString(), VERIFIER, MCP)))
+                    .isInstanceOf(InvalidGrant.class);
+
+            verify(accessTokens, never()).issue(any(AccessTokenGrant.class));
+            verify(refreshTokens, never()).save(any());
         }
 
         @Test
@@ -199,7 +212,7 @@ class AuthorizationServerServiceTest {
             assertThatThrownBy(() -> service.exchangeCode(new CodeExchange(secret.value(), CLAUDE.value(), CALLBACK.toString(), "wrong", MCP)))
                     .isInstanceOf(InvalidGrant.class);
 
-            assertThat(code.usedAt()).contains(NOW);
+            verify(codes).markUsed(code.id(), NOW);
             verify(refreshTokens, never()).save(any());
         }
 
@@ -237,18 +250,31 @@ class AuthorizationServerServiceTest {
         void should_rotate_when_refreshed_given_right_client() {
             when(donors.findById(DONOR)).thenReturn(Optional.of(administrator()));
             when(accessTokens.issue(any(AccessTokenGrant.class))).thenReturn(new IssuedAccessToken("connector", NOW.plusSeconds(900)));
+            when(refreshTokens.markUsed(token.id(), NOW)).thenReturn(true);
 
             OAuthTokens tokens = service.refresh(secret.value(), CLAUDE.value());
 
-            assertThat(token.isUsed()).isTrue();
-            assertThat(token.isRevoked()).isFalse();
+            verify(refreshTokens).markUsed(token.id(), NOW);
+            verify(refreshTokens, never()).revokeAllOf(any(), any());
             ArgumentCaptor<RefreshToken> saved = ArgumentCaptor.forClass(RefreshToken.class);
-            verify(refreshTokens, org.mockito.Mockito.times(2)).save(saved.capture());
-            RefreshToken rotated = saved.getAllValues().get(1);
+            verify(refreshTokens).save(saved.capture());
+            RefreshToken rotated = saved.getValue();
             assertThat(rotated.secretHash()).isEqualTo(RefreshTokenSecret.fromValue(tokens.refreshToken()).hash());
             assertThat(rotated.grantedAt()).isEqualTo(NOW.minus(Duration.ofDays(2)));
             assertThat(rotated.clientId()).contains(CLAUDE);
             assertThat(tokens.scopes()).containsExactly(OAuthScope.ADMIN_READ);
+        }
+
+        @Test
+        @DisplayName("when the same token is presented twice at once, then the second presentation ends every session of the donor")
+        void should_end_every_session_when_refreshed_given_token_used_concurrently() {
+            when(donors.findById(DONOR)).thenReturn(Optional.of(administrator()));
+            when(refreshTokens.markUsed(token.id(), NOW)).thenReturn(false);
+
+            assertThatThrownBy(() -> service.refresh(secret.value(), CLAUDE.value())).isInstanceOf(InvalidGrant.class);
+
+            verify(refreshTokens).revokeAllOf(DONOR, NOW);
+            verify(accessTokens, never()).issue(any(AccessTokenGrant.class));
         }
 
         @Test

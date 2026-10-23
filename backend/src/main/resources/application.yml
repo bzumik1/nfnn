@@ -30,6 +30,10 @@ spring:
           auth: ${MAIL_AUTH:false}
           starttls:
             enable: ${MAIL_STARTTLS:false}
+            required: ${MAIL_STARTTLS:false}
+          connectiontimeout: 10000
+          timeout: 10000
+          writetimeout: 10000
   messages:
     basename: i18n/messages
     encoding: UTF-8
@@ -165,6 +169,15 @@ app:
 
 logging:
   level:
+    org.hibernate.orm.jdbc.bind: INFO
+    org.hibernate.orm.jdbc.extract: INFO
+    org.hibernate.internal.util.EntityPrinter: INFO
+    org.springframework.web.servlet.mvc.method.annotation: INFO
+    org.springframework.web.client: INFO
+    org.apache.coyote: INFO
+    org.apache.tomcat.util.http: INFO
+    org.postgresql: INFO
+    jakarta.mail: INFO
     cz.novanadeje.app: INFO
     org.springframework.web: INFO
     com.openhtmltopdf: WARN

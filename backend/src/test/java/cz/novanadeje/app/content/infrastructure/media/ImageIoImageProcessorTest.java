@@ -83,9 +83,38 @@ class ImageIoImageProcessorTest {
                 .hasMessageContaining("8000");
     }
 
+    @Test
+    @DisplayName("Given a small PNG whose header claims 60000 by 60000 pixels, when it is processed, then it is refused from the header before any pixel is decoded")
+    void should_refuse_from_header_when_processing_given_a_decompression_bomb() {
+        assertThatThrownBy(() -> processor.process(TestImages.pngHeaderOnly(60_000, 60_000)))
+                .isInstanceOf(UnsupportedImage.class)
+                .hasMessageContaining("8000");
+    }
+
     static final class TestImages {
 
         private TestImages() {
+        }
+
+        static byte[] pngHeaderOnly(int width, int height) {
+            java.nio.ByteBuffer header = java.nio.ByteBuffer.allocate(13).putInt(width).putInt(height).put((byte) 1).put((byte) 0)
+                    .put((byte) 0).put((byte) 0).put((byte) 0);
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            out.writeBytes(new byte[]{(byte) 0x89, 'P', 'N', 'G', '\r', '\n', 0x1A, '\n'});
+            chunk(out, "IHDR", header.array());
+            chunk(out, "IDAT", new byte[]{0x78, (byte) 0x9C, 0x03, 0x00, 0x00, 0x00, 0x00, 0x01});
+            chunk(out, "IEND", new byte[0]);
+            return out.toByteArray();
+        }
+
+        private static void chunk(ByteArrayOutputStream out, String type, byte[] data) {
+            java.util.zip.CRC32 crc = new java.util.zip.CRC32();
+            crc.update(type.getBytes(StandardCharsets.US_ASCII));
+            crc.update(data);
+            out.writeBytes(java.nio.ByteBuffer.allocate(4).putInt(data.length).array());
+            out.writeBytes(type.getBytes(StandardCharsets.US_ASCII));
+            out.writeBytes(data);
+            out.writeBytes(java.nio.ByteBuffer.allocate(4).putInt((int) crc.getValue()).array());
         }
 
         static byte[] jpeg(int width, int height) throws IOException {

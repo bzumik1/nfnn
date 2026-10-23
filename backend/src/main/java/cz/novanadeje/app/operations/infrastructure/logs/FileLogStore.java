@@ -4,21 +4,26 @@ import cz.novanadeje.app.operations.application.logs.LogStore;
 import cz.novanadeje.app.operations.domain.logs.LogFile;
 import cz.novanadeje.app.operations.domain.logs.LogMatch;
 import cz.novanadeje.app.operations.domain.logs.LogReadLimits;
+import cz.novanadeje.app.operations.domain.logs.LogSearchTooSlow;
 import cz.novanadeje.app.operations.domain.logs.LogWindow;
 import cz.novanadeje.app.operations.domain.logs.LogsUnavailable;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.RandomAccessFile;
 import java.io.UncheckedIOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.nio.channels.FileChannel;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.LinkOption;
+import java.nio.file.StandardOpenOption;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -36,9 +41,16 @@ class FileLogStore implements LogStore {
     private static final byte NEWLINE = '\n';
 
     private final Path directory;
+    private final Duration searchTime;
 
+    @Autowired
     FileLogStore(LogProperties properties) {
-        this.directory = properties.directory();
+        this(properties.directory(), LogReadLimits.SEARCH_TIME);
+    }
+
+    FileLogStore(Path directory, Duration searchTime) {
+        this.directory = directory;
+        this.searchTime = searchTime;
     }
 
     @Override
@@ -49,7 +61,7 @@ class FileLogStore implements LogStore {
     @Override
     public List<LogFile> files() {
         try (Stream<Path> entries = Files.list(directory)) {
-            return entries.filter(Files::isRegularFile)
+            return entries.filter(FileLogStore::isPlainFile)
                     .filter(path -> LogFile.isValidName(path.getFileName().toString()))
                     .map(FileLogStore::describe)
                     .sorted(Comparator.comparing(LogFile::name))
@@ -62,7 +74,7 @@ class FileLogStore implements LogStore {
     @Override
     public Optional<LogFile> file(String name) {
         Path path = directory.resolve(name);
-        if (!LogFile.isValidName(name) || !Files.isRegularFile(path)) {
+        if (!LogFile.isValidName(name) || !isPlainFile(path)) {
             return Optional.empty();
         }
         return Optional.of(describe(path));
@@ -98,6 +110,7 @@ class FileLogStore implements LogStore {
         Path path = directory.resolve(file.name());
         long stopAt = before.orElse(Long.MAX_VALUE);
         Deque<LogMatch> newest = new ArrayDeque<>(limit);
+        long deadline = System.nanoTime() + searchTime.toNanos();
         try (InputStream input = new BufferedInputStream(open(path, file.compressed()))) {
             ByteArrayOutputStream line = new ByteArrayOutputStream();
             long offset = 0;
@@ -109,7 +122,7 @@ class FileLogStore implements LogStore {
                     if (lineStart >= stopAt) {
                         break;
                     }
-                    remember(newest, limit, pattern, lineStart, line.toByteArray());
+                    remember(newest, limit, pattern, deadline, lineStart, line.toByteArray());
                     line.reset();
                     lineStart = offset;
                 } else {
@@ -117,7 +130,7 @@ class FileLogStore implements LogStore {
                 }
             }
             if (line.size() > 0 && lineStart < stopAt) {
-                remember(newest, limit, pattern, lineStart, line.toByteArray());
+                remember(newest, limit, pattern, deadline, lineStart, line.toByteArray());
             }
         } catch (IOException e) {
             throw new UncheckedIOException(e);
@@ -126,15 +139,27 @@ class FileLogStore implements LogStore {
         return result.reversed();
     }
 
-    private static void remember(Deque<LogMatch> newest, int limit, Pattern pattern, long offset, byte[] bytes) {
+    private static void remember(Deque<LogMatch> newest, int limit, Pattern pattern, long deadline, long offset, byte[] bytes) {
         String text = new String(bytes, StandardCharsets.UTF_8);
-        if (!pattern.matcher(text).find()) {
+        if (!matches(pattern, deadline, text)) {
             return;
         }
         if (newest.size() == limit) {
             newest.removeFirst();
         }
         newest.addLast(new LogMatch(offset, text.length() > LogReadLimits.MAX_LINE_LENGTH ? text.substring(0, LogReadLimits.MAX_LINE_LENGTH) : text));
+    }
+
+    private static boolean matches(Pattern pattern, long deadline, String text) {
+        try {
+            return pattern.matcher(new DeadlineCharSequence(text, deadline)).find();
+        } catch (StackOverflowError e) {
+            throw new LogSearchTooSlow();
+        }
+    }
+
+    private static boolean isPlainFile(Path path) {
+        return Files.isRegularFile(path, LinkOption.NOFOLLOW_LINKS);
     }
 
     private static LogFile describe(Path path) {
@@ -147,23 +172,22 @@ class FileLogStore implements LogStore {
     }
 
     private static InputStream open(Path path, boolean compressed) throws IOException {
-        InputStream input = Files.newInputStream(path);
+        InputStream input = Files.newInputStream(path, StandardOpenOption.READ, LinkOption.NOFOLLOW_LINKS);
         return compressed ? new GZIPInputStream(input) : input;
     }
 
     private static byte[] readPlain(Path path, long start, int length) {
-        try (RandomAccessFile file = new RandomAccessFile(path.toFile(), "r")) {
-            byte[] buffer = new byte[length];
-            file.seek(start);
-            int filled = 0;
-            while (filled < length) {
-                int read = file.read(buffer, filled, length - filled);
+        try (FileChannel channel = openChannel(path)) {
+            ByteBuffer buffer = ByteBuffer.allocate(length);
+            long position = start;
+            while (buffer.hasRemaining()) {
+                int read = channel.read(buffer, position);
                 if (read < 0) {
                     break;
                 }
-                filled += read;
+                position += read;
             }
-            return filled == length ? buffer : java.util.Arrays.copyOf(buffer, filled);
+            return java.util.Arrays.copyOf(buffer.array(), buffer.position());
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
@@ -179,17 +203,23 @@ class FileLogStore implements LogStore {
     }
 
     private static long uncompressedSize(Path path) {
-        try (RandomAccessFile file = new RandomAccessFile(path.toFile(), "r")) {
-            if (file.length() < GZIP_TRAILER_BYTES) {
+        try (FileChannel channel = openChannel(path)) {
+            if (channel.size() < GZIP_TRAILER_BYTES) {
                 return 0;
             }
-            file.seek(file.length() - 4);
-            byte[] trailer = new byte[4];
-            file.readFully(trailer);
-            return Integer.toUnsignedLong(ByteBuffer.wrap(trailer).order(ByteOrder.LITTLE_ENDIAN).getInt());
+            ByteBuffer trailer = ByteBuffer.allocate(4).order(ByteOrder.LITTLE_ENDIAN);
+            long position = channel.size() - 4;
+            while (trailer.hasRemaining() && channel.read(trailer, position + trailer.position()) >= 0) {
+                continue;
+            }
+            return Integer.toUnsignedLong(trailer.getInt(0));
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
+    }
+
+    private static FileChannel openChannel(Path path) throws IOException {
+        return FileChannel.open(path, StandardOpenOption.READ, LinkOption.NOFOLLOW_LINKS);
     }
 
     private static int indexOf(byte[] bytes, int from, int to) {

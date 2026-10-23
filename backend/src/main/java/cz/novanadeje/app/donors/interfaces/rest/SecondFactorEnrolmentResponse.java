@@ -9,6 +9,11 @@ record SecondFactorEnrolmentResponse(String secret, String otpauthUri, QrCodeRes
                 new QrCodeResponse(enrolment.qrModules().size(), enrolment.qrModules().modules()));
     }
 
+    @Override
+    public String toString() {
+        return "SecondFactorEnrolmentResponse[secret=***, otpauthUri=***, qrCode=***]";
+    }
+
     record QrCodeResponse(int size, String modules) {
     }
 }

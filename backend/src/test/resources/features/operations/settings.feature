@@ -61,12 +61,23 @@ Feature: An administrator changes the settings of the site in the administration
     Then the response status is 403
     And the backend does not restart
 
-  Scenario: A connected application changes plain settings but never a password or a token
+  Scenario: A connected application changes plain settings but never a password, a token, the site's address or the mail server
     Given "Jana" connected the application "https://claude.ai/.well-known/oauth-client" with scope "admin:read admin:write"
-    When the connector exchanges the connector token for an API token
+    When "Jana" changes the settings:
+      | name          | value     |
+      | MAIL_PASSWORD | right-key |
+    And the connector exchanges the connector token for an API token
     And the exchanged API token changes the setting "FIO_TOKEN" to "token"
     Then the response status is 403
     And the problem type ends with "operations/secret-settings-in-browser-only"
+    When the connector exchanges the connector token for an API token
+    And the exchanged API token changes the setting "PUBLIC_URL" to "https://nfnn.attacker.example"
+    Then the response status is 403
+    And the problem type ends with "operations/secret-settings-in-browser-only"
+    When the connector exchanges the connector token for an API token
+    And the exchanged API token changes the setting "MAIL_HOST" to "smtp.attacker.example"
+    Then the response status is 400
+    And the problem names the settings "MAIL_PASSWORD"
     When the connector exchanges the connector token for an API token
     And the exchanged API token changes the setting "RECEIPT_FIRST_YEAR" to "2025"
     Then the response status is 202

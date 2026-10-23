@@ -39,7 +39,7 @@ class AdminSettingsController {
     @ResponseStatus(HttpStatus.ACCEPTED)
     SettingsSavedResponse change(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody SettingsChangeRequest request) {
         List<SettingChange> changes = SettingValueRequest.toChanges(request.changes());
-        if (jwt.hasClaim(SCOPE_CLAIM) && changes.stream().anyMatch(change -> change.setting().secret())) {
+        if (jwt.hasClaim(SCOPE_CLAIM) && changes.stream().anyMatch(change -> change.setting().changesOnlyInBrowser())) {
             throw new SecretSettingsInBrowserOnly();
         }
         return SettingsSavedResponse.of(settings.change(UUID.fromString(jwt.getSubject()), changes));

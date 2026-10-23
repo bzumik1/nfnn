@@ -10,4 +10,9 @@ public record ExchangedAccessToken(String accessToken, Instant expiresAt, Set<OA
     public ExchangedAccessToken {
         scopes = Set.copyOf(scopes);
     }
+
+    @Override
+    public String toString() {
+        return "ExchangedAccessToken[accessToken=***, expiresAt=" + expiresAt + ", scopes=" + scopes + "]";
+    }
 }

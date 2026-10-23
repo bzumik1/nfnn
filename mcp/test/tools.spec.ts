@@ -544,16 +544,21 @@ describe('Given an administrator connected with the writing permission', () => {
     expect(textOf(refused)).toContain('RECEIPT_FIRST_YEAR: Rok musí být mezi 2000 a 2100.');
   });
 
-  it('when a secret setting is passed, then the tool refuses it before calling the administration', async () => {
-    const result = await client.callTool({
-      name: 'nfnn_change_settings',
-      arguments: { changes: [{ name: 'FIO_TOKEN', value: 'secret' }] },
-    });
-    expect(result.isError).toBe(true);
-    expect(
-      stack.backend.requests.filter((request) => request.path === '/api/admin/operations/settings'),
-    ).toHaveLength(0);
-  });
+  it.each(['FIO_TOKEN', 'PUBLIC_URL'])(
+    'when %s is passed, then the tool refuses it before calling the administration',
+    async (name) => {
+      const result = await client.callTool({
+        name: 'nfnn_change_settings',
+        arguments: { changes: [{ name, value: 'https://attacker.example' }] },
+      });
+      expect(result.isError).toBe(true);
+      expect(
+        stack.backend.requests.filter(
+          (request) => request.path === '/api/admin/operations/settings',
+        ),
+      ).toHaveLength(0);
+    },
+  );
 
   it('when a log level is raised and reset, then the administration gets the PUT and DELETE and a missing override is explained', async () => {
     const raised = await client.callTool({

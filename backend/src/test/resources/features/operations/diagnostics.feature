@@ -100,7 +100,7 @@ Feature: An administrator reads the server logs, raises a log level for a while 
     And the diagnostics list the temporary level of "org.springframework.security"
     When the temporary levels run out
     Then the logger "org.springframework.security" is listed at "INFO" without a temporary level
-    When "Jana" sets the logger "org.springframework.security" to "TRACE" for 5 minutes
+    When "Jana" sets the logger "org.springframework.security" to "DEBUG" for 5 minutes
     And "Jana" resets the logger "org.springframework.security"
     Then the response status is 204
     And the admin action "RESET_LOG_LEVEL" by "Jana" is recorded with details containing "org.springframework.security went back to inherited"
@@ -111,6 +111,12 @@ Feature: An administrator reads the server logs, raises a log level for a while 
     When "Jana" sets the logger "not a logger!" to "DEBUG" for 5 minutes
     Then the response status is 400
     And the problem type ends with "operations/invalid-logger-name"
+    When "Jana" sets the logger "org.springframework.security" to "TRACE" for 5 minutes
+    Then the response status is 400
+    And the problem type ends with "operations/protected-logger"
+    When "Jana" sets the logger "org.hibernate.orm.jdbc.bind" to "DEBUG" for 5 minutes
+    Then the response status is 400
+    And the problem type ends with "operations/protected-logger"
     When "Jana" sets the logger "org.springframework.security" to "DEBUG" for 0 minutes
     Then the response status is 400
     And the problem lists an error for field "minutes"

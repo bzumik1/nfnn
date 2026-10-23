@@ -18,6 +18,10 @@ public interface RefreshTokenJpaRepository extends JpaRepository<RefreshTokenJpa
             + " and t.revokedAt is null and t.expiresAt > :now order by t.issuedAt desc")
     List<RefreshTokenJpaEntity> findUsableClientTokensOf(@Param("donorId") UUID donorId, @Param("now") Instant now);
 
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("update RefreshTokenJpaEntity t set t.usedAt = :at where t.id = :id and t.usedAt is null")
+    int markUsed(@Param("id") UUID id, @Param("at") Instant at);
+
     @Modifying
     @Query("update RefreshTokenJpaEntity t set t.revokedAt = :at where t.donorId = :donorId and t.revokedAt is null")
     void revokeAllOf(@Param("donorId") UUID donorId, @Param("at") Instant at);
