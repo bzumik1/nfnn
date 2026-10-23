@@ -29,7 +29,8 @@ export type SettingName =
   | 'RECEIPT_SIGNATORY_NAME'
   | 'RECEIPT_SIGNATORY_ROLE'
   | 'RECEIPT_FIRST_YEAR'
-  | 'ADMIN_EMAILS';
+  | 'ADMIN_EMAILS'
+  | 'OAUTH_CLIENT_HOSTS';
 
 export type RestartOutcome = 'restarted' | 'slow';
 

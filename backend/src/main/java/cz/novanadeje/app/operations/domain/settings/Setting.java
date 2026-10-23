@@ -20,7 +20,8 @@ public enum Setting {
     RECEIPT_SIGNATORY_NAME(SettingGroup.RECEIPTS, SettingFormat.TEXT, 200, Kind.ADMINISTRATION_ONLY),
     RECEIPT_SIGNATORY_ROLE(SettingGroup.RECEIPTS, SettingFormat.TEXT, 200, Kind.ADMINISTRATION_ONLY),
     RECEIPT_FIRST_YEAR(SettingGroup.RECEIPTS, SettingFormat.YEAR, 4, Kind.ADMINISTRATION_ONLY),
-    ADMIN_EMAILS(SettingGroup.ADMINISTRATORS, SettingFormat.EMAIL_LIST, 1000, Kind.REQUIRED_IN_SETUP_ONLY);
+    ADMIN_EMAILS(SettingGroup.ADMINISTRATORS, SettingFormat.EMAIL_LIST, 1000, Kind.REQUIRED_IN_SETUP_ONLY),
+    OAUTH_CLIENT_HOSTS(SettingGroup.ADMINISTRATORS, SettingFormat.HOST_LIST, 1000, Kind.ADMINISTRATION_ONLY);
 
     private static final String PLACEHOLDER_START = "${";
 
@@ -73,7 +74,7 @@ public enum Setting {
     }
 
     public boolean changesOnlyInBrowser() {
-        return secret() || this == PUBLIC_URL;
+        return secret() || this == PUBLIC_URL || this == OAUTH_CLIENT_HOSTS;
     }
 
     public boolean decidesWhereMailPasswordGoes() {

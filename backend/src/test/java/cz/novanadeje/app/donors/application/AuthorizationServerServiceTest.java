@@ -5,6 +5,7 @@ import cz.novanadeje.app.donors.domain.AuthorizationCode;
 import cz.novanadeje.app.donors.domain.AuthorizationCodeRepository;
 import cz.novanadeje.app.donors.domain.ClientId;
 import cz.novanadeje.app.donors.domain.ClientMetadata;
+import cz.novanadeje.app.donors.domain.ClientNotAllowed;
 import cz.novanadeje.app.donors.domain.CodeChallenge;
 import cz.novanadeje.app.donors.domain.Donor;
 import cz.novanadeje.app.donors.domain.DonorId;
@@ -82,8 +83,22 @@ class AuthorizationServerServiceTest {
     @BeforeEach
     void setUp() {
         service = new AuthorizationServerService(clients, codes, refreshTokens, donors, accessTokens, verifier,
-                new OAuthProperties(ISSUER, "/pripojeni", Duration.ofMinutes(5), MCP, API), new DonorSessionProperties(REFRESH_TTL),
+                new OAuthProperties(ISSUER, "/pripojeni", Duration.ofMinutes(5), MCP, API, List.of("claude.ai")), new DonorSessionProperties(REFRESH_TTL),
                 Clock.fixed(NOW, ZoneOffset.UTC));
+    }
+
+    @Test
+    @DisplayName("Given only claude.ai may connect, when another client is described or approved, then it is refused before its document is fetched")
+    void should_refuse_without_fetching_when_described_or_decided_given_client_not_allowed() {
+        String other = "https://evil.example/.well-known/oauth-client";
+        AuthorizationDecision decision = new AuthorizationDecision(other, "https://evil.example/callback", "code", CHALLENGE, "S256", "admin:read",
+                MCP, "xyz", true);
+
+        assertThatThrownBy(() -> service.describeClient(other, "https://evil.example/callback")).isInstanceOf(ClientNotAllowed.class);
+        assertThatThrownBy(() -> service.decide(decision, DONOR, Set.of(Role.DONOR, Role.ADMIN))).isInstanceOf(ClientNotAllowed.class);
+
+        verify(clients, never()).fetch(any());
+        verify(codes, never()).save(any());
     }
 
     @Nested
@@ -302,6 +317,20 @@ class AuthorizationServerServiceTest {
             assertThatThrownBy(() -> service.refresh(secret.value(), CLAUDE.value())).isInstanceOf(InvalidGrant.class);
 
             verify(refreshTokens, never()).revokeAllOf(any(), any());
+        }
+
+        @Test
+        @DisplayName("when its client was taken off the allowed hosts, then the token is revoked and the grant is invalid")
+        void should_end_connection_when_refreshed_given_client_no_longer_allowed() {
+            AuthorizationServerService othersOnly = new AuthorizationServerService(clients, codes, refreshTokens, donors, accessTokens, verifier,
+                    new OAuthProperties(ISSUER, "/pripojeni", Duration.ofMinutes(5), MCP, API, List.of("other.example")),
+                    new DonorSessionProperties(REFRESH_TTL), Clock.fixed(NOW, ZoneOffset.UTC));
+
+            assertThatThrownBy(() -> othersOnly.refresh(secret.value(), CLAUDE.value())).isInstanceOf(InvalidGrant.class);
+
+            assertThat(token.isRevoked()).isTrue();
+            verify(refreshTokens).save(token);
+            verify(accessTokens, never()).issue(any(AccessTokenGrant.class));
         }
 
         @Test

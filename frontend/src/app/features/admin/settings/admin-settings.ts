@@ -73,6 +73,7 @@ const HINTS: Partial<Readonly<Record<SettingName, string>>> = {
   FIO_HISTORY_FROM: $localize`:@@admin.settings.hint.FIO_HISTORY_FROM:Prázdné znamená posledních 89 dní. Starší platby Fio vydá jen deset minut po odemčení historie v internetovém bankovnictví.`,
   PAIRING_EXCLUDED_ACCOUNTS: $localize`:@@admin.settings.hint.PAIRING_EXCLUDED_ACCOUNTS:Čísla účtů oddělená čárkou, třeba 2900233333/2010. Platby z nich se párují jen podle variabilního symbolu.`,
   RECEIPT_FIRST_YEAR: $localize`:@@admin.settings.hint.RECEIPT_FIRST_YEAR:Za dřívější roky si dárci potvrzení na webu nestáhnou.`,
+  OAUTH_CLIENT_HOSTS: $localize`:@@admin.settings.hint.OAUTH_CLIENT_HOSTS:Adresy serverů oddělené čárkou, třeba claude.ai. Jiná aplikace dostane chybu dřív, než uvidíte souhlas. Prázdné pole pustí k souhlasu jakoukoli aplikaci. Měnit jde jen tady na webu.`,
 };
 
 const INPUTS: Partial<Readonly<Record<SettingName, Input>>> = {

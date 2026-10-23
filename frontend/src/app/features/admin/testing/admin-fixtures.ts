@@ -454,6 +454,12 @@ export function settingsView(
         stored: false,
       }),
       setting({ name: 'RECEIPT_FIRST_YEAR', group: 'RECEIPTS', value: '2026', stored: false }),
+      setting({
+        name: 'OAUTH_CLIENT_HOSTS',
+        group: 'ADMINISTRATORS',
+        value: 'claude.ai',
+        stored: false,
+      }),
     ],
     secretsCanBeStored: true,
     ...overrides,

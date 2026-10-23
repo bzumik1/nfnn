@@ -13,6 +13,7 @@ Feature: An administrator changes the settings of the site in the administration
     Then the response status is 200
     And the setting "MAIL_HOST" reads "localhost"
     And the setting "FIO_TOKEN" reads "hidden, unset"
+    And the setting "OAUTH_CLIENT_HOSTS" reads "claude.ai"
     And the settings do not list "ADMIN_EMAILS"
 
   Scenario: An administrator changes settings, they are stored and audited by name and the backend restarts
@@ -61,7 +62,7 @@ Feature: An administrator changes the settings of the site in the administration
     Then the response status is 403
     And the backend does not restart
 
-  Scenario: A connected application changes plain settings but never a password, a token, the site's address or the mail server
+  Scenario: A connected application changes plain settings but never a password, a token, the site's address, the allowed applications or the mail server
     Given "Jana" connected the application "https://claude.ai/.well-known/oauth-client" with scope "admin:read admin:write"
     When "Jana" changes the settings:
       | name          | value     |
@@ -72,6 +73,10 @@ Feature: An administrator changes the settings of the site in the administration
     And the problem type ends with "operations/secret-settings-in-browser-only"
     When the connector exchanges the connector token for an API token
     And the exchanged API token changes the setting "PUBLIC_URL" to "https://nfnn.attacker.example"
+    Then the response status is 403
+    And the problem type ends with "operations/secret-settings-in-browser-only"
+    When the connector exchanges the connector token for an API token
+    And the exchanged API token changes the setting "OAUTH_CLIENT_HOSTS" to "claude.ai, attacker.example"
     Then the response status is 403
     And the problem type ends with "operations/secret-settings-in-browser-only"
     When the connector exchanges the connector token for an API token

@@ -3,6 +3,8 @@ package cz.novanadeje.app.operations.domain.settings;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import java.util.Arrays;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 class SettingTest {
@@ -20,6 +22,7 @@ class SettingTest {
         assertThat(Setting.RECEIPT_FIRST_YEAR.check("2026")).isEmpty();
         assertThat(Setting.RECEIPT_SIGNATORY_NAME.check("Pavel Znamenáček")).isEmpty();
         assertThat(Setting.MAIL_PASSWORD.check("xsmtpsib-abc$123")).isEmpty();
+        assertThat(Setting.OAUTH_CLIENT_HOSTS.check("claude.ai, chat.example.org")).isEmpty();
     }
 
     @Test
@@ -35,6 +38,8 @@ class SettingTest {
         assertThat(Setting.ADMIN_EMAILS.check("pavel@example.cz, nobody")).contains(SettingProblem.INVALID_EMAIL_LIST);
         assertThat(Setting.FIO_HISTORY_FROM.check("1. 1. 2025")).contains(SettingProblem.INVALID_DATE);
         assertThat(Setting.RECEIPT_FIRST_YEAR.check("26")).contains(SettingProblem.INVALID_YEAR);
+        assertThat(Setting.OAUTH_CLIENT_HOSTS.check("https://claude.ai")).contains(SettingProblem.INVALID_HOST_LIST);
+        assertThat(Setting.OAUTH_CLIENT_HOSTS.check("claude.ai, ")).contains(SettingProblem.INVALID_HOST_LIST);
     }
 
     @Test
@@ -58,5 +63,12 @@ class SettingTest {
     void should_require_essentials_when_wizard_asks_given_catalogue() {
         assertThat(Setting.requiredInSetup()).containsExactlyInAnyOrder(Setting.PUBLIC_URL, Setting.MAIL_HOST, Setting.MAIL_PORT,
                 Setting.MAIL_FROM, Setting.CONTACT_RECIPIENT, Setting.ADMIN_EMAILS);
+    }
+
+    @Test
+    @DisplayName("Given the catalogue, when it is asked what a connected application may not change, then the secrets, the site address and the allowed applications stay with the browser")
+    void should_keep_secrets_address_and_allowed_clients_in_browser_when_asked_given_catalogue() {
+        assertThat(Arrays.stream(Setting.values()).filter(Setting::changesOnlyInBrowser))
+                .containsExactlyInAnyOrder(Setting.MAIL_PASSWORD, Setting.FIO_TOKEN, Setting.PUBLIC_URL, Setting.OAUTH_CLIENT_HOSTS);
     }
 }

@@ -1,11 +1,15 @@
 package cz.novanadeje.app.donors.application;
 
+import cz.novanadeje.app.donors.domain.ClientId;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 import java.time.Duration;
+import java.util.List;
+import java.util.Locale;
 
 @ConfigurationProperties("app.donors.oauth")
-public record OAuthProperties(String issuer, String authorizationPath, Duration authorizationCodeTtl, String mcpResource, String apiResource) {
+public record OAuthProperties(String issuer, String authorizationPath, Duration authorizationCodeTtl, String mcpResource, String apiResource,
+                              List<String> allowedClientHosts) {
 
     private static final String PREFIX = "app.donors.oauth.";
 
@@ -19,6 +23,12 @@ public record OAuthProperties(String issuer, String authorizationPath, Duration 
         }
         mcpResource = requireAddress("mcp-resource", mcpResource);
         apiResource = requireAddress("api-resource", apiResource);
+        allowedClientHosts = allowedClientHosts == null ? List.of()
+                : allowedClientHosts.stream().map(host -> host.strip().toLowerCase(Locale.ROOT)).filter(host -> !host.isEmpty()).toList();
+    }
+
+    public boolean allowsClient(ClientId clientId) {
+        return allowedClientHosts.isEmpty() || allowedClientHosts.contains(clientId.host().toLowerCase(Locale.ROOT));
     }
 
     public String authorizationEndpoint() {

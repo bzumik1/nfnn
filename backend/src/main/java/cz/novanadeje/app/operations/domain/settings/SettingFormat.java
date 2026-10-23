@@ -37,6 +37,13 @@ public enum SettingFormat {
             return HOST_NAME.matcher(value).matches() ? Optional.empty() : Optional.of(SettingProblem.INVALID_HOST);
         }
     },
+    HOST_LIST {
+        @Override
+        Optional<SettingProblem> problemWith(String value) {
+            boolean valid = Arrays.stream(value.split(",", -1)).map(String::strip).allMatch(host -> HOST_NAME.matcher(host).matches());
+            return valid ? Optional.empty() : Optional.of(SettingProblem.INVALID_HOST_LIST);
+        }
+    },
     PORT {
         @Override
         Optional<SettingProblem> problemWith(String value) {

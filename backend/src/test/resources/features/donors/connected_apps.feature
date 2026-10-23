@@ -118,7 +118,7 @@ Feature: An administrator connects an application such as Claude to the administ
     And the decision redirects to "https://claude.ai/api/mcp/auth_callback" with the error "access_denied" and the state "xyz"
 
   Scenario: An application whose document cannot be read or does not list the redirect address is refused
-    When "Jana" asks about the client "https://evil.example/.well-known/oauth-client" redirecting to "https://claude.ai/api/mcp/auth_callback"
+    When "Jana" asks about the client "https://claude.ai/unknown-client" redirecting to "https://claude.ai/api/mcp/auth_callback"
     Then the response status is 400
     And the problem type ends with "donors/invalid-client"
     When "Jana" asks about the client "https://claude.ai/.well-known/oauth-client" redirecting to "https://evil.example/callback"
@@ -127,6 +127,14 @@ Feature: An administrator connects an application such as Claude to the administ
     When "Jana" asks about the client "not a url" redirecting to "https://claude.ai/api/mcp/auth_callback"
     Then the response status is 400
     And the problem type ends with "donors/invalid-client"
+
+  Scenario: Only an application from an allowed host may ask for access, so a look-alike consent page never shows
+    When "Jana" asks about the client "https://evil.example/.well-known/oauth-client" redirecting to "https://evil.example/callback"
+    Then the response status is 400
+    And the problem type ends with "donors/client-not-allowed"
+    When "Jana" approves the connection for "https://evil.example/.well-known/oauth-client" with scope "admin:read" and state "xyz"
+    Then the response status is 400
+    And the problem type ends with "donors/client-not-allowed"
 
   Scenario: A request for another resource, an unknown scope or a missing code challenge is refused
     When "Jana" approves the connection for "https://claude.ai/.well-known/oauth-client" with scope "admin:read" for the resource "https://elsewhere.example/mcp"

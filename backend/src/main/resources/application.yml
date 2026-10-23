@@ -166,6 +166,7 @@ app:
       authorization-code-ttl: PT5M
       mcp-resource: ${app.site.public-url}/mcp
       api-resource: ${app.site.public-url}/api
+      allowed-client-hosts: ${OAUTH_CLIENT_HOSTS:claude.ai}
 
 logging:
   level:

@@ -5,6 +5,7 @@ import cz.novanadeje.app.donors.domain.AuthorizationCode;
 import cz.novanadeje.app.donors.domain.AuthorizationCodeRepository;
 import cz.novanadeje.app.donors.domain.ClientId;
 import cz.novanadeje.app.donors.domain.ClientMetadata;
+import cz.novanadeje.app.donors.domain.ClientNotAllowed;
 import cz.novanadeje.app.donors.domain.CodeChallenge;
 import cz.novanadeje.app.donors.domain.Donor;
 import cz.novanadeje.app.donors.domain.DonorId;
@@ -67,13 +68,13 @@ public class AuthorizationServerService {
     }
 
     public ClientDescription describeClient(String clientId, String redirectUri) {
-        ClientMetadata metadata = clients.fetch(new ClientId(clientId));
+        ClientMetadata metadata = clients.fetch(allowed(new ClientId(clientId)));
         URI redirect = registeredRedirect(metadata, redirectUri);
         return new ClientDescription(metadata.clientId().host(), metadata.displayName(), ClientMetadata.isLoopback(redirect));
     }
 
     public URI decide(AuthorizationDecision decision, DonorId donorId, Set<Role> sessionRoles) {
-        ClientId clientId = new ClientId(decision.clientId());
+        ClientId clientId = allowed(new ClientId(decision.clientId()));
         ClientMetadata metadata = clients.fetch(clientId);
         URI redirect = registeredRedirect(metadata, decision.redirectUri());
         if (!decision.approved()) {
@@ -153,6 +154,12 @@ public class AuthorizationServerService {
         if (!token.isUsableAt(now) || !token.belongsToClient(clientId)) {
             throw new InvalidGrant("the refresh token expired, was revoked or belongs to another client");
         }
+        if (!properties.allowsClient(clientId)) {
+            token.revoke(now);
+            refreshTokens.save(token);
+            log.info("Client {} is no longer allowed; the connection of donor {} ends", clientId.host(), token.donorId());
+            throw new InvalidGrant("the client is no longer allowed");
+        }
         Donor donor = donors.findById(token.donorId()).filter(found -> !found.isErased()).orElseThrow(() -> new InvalidGrant("unknown donor"));
         if (!donor.isAdministrator()) {
             token.revoke(now);
@@ -192,6 +199,13 @@ public class AuthorizationServerService {
         RefreshTokenSecret secret = RefreshTokenSecret.generate();
         refreshTokens.save(RefreshToken.issueForClient(secret, donor.id(), clientId, scopes, grantedAt, now, sessionProperties.refreshTokenTtl()));
         return new OAuthTokens(access.token(), access.expiresAt(), secret.value(), scopes);
+    }
+
+    private ClientId allowed(ClientId clientId) {
+        if (!properties.allowsClient(clientId)) {
+            throw new ClientNotAllowed(clientId);
+        }
+        return clientId;
     }
 
     private static URI registeredRedirect(ClientMetadata metadata, String redirectUri) {

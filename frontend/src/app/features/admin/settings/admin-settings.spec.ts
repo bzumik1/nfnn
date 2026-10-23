@@ -110,7 +110,11 @@ describe('Given an administrator on the settings page', () => {
     });
 
     it('then they are grouped, plain values fill the fields and secrets only say whether they are set', () => {
-      expect(texts('h2')).toEqual(['Web', 'E-maily', 'Banka', 'Potvrzení o daru']);
+      expect(texts('h2')).toEqual(['Web', 'E-maily', 'Banka', 'Potvrzení o daru', 'Správci']);
+      expect(element<HTMLInputElement>('#setting-OAUTH_CLIENT_HOSTS').value).toBe('claude.ai');
+      expect(fixture.nativeElement.textContent).toContain(
+        'Aplikace, které se smějí připojit ke správě',
+      );
       expect(element<HTMLInputElement>('#setting-PUBLIC_URL').value).toBe('https://nfnn.cz');
       expect(element<HTMLInputElement>('#setting-MAIL_PASSWORD').value).toBe('');
       expect(element<HTMLInputElement>('#setting-MAIL_AUTH').checked).toBe(true);

@@ -9,6 +9,7 @@ public enum SettingProblem {
     PLACEHOLDER,
     INVALID_URL,
     INVALID_HOST,
+    INVALID_HOST_LIST,
     INVALID_PORT,
     INVALID_BOOLEAN,
     INVALID_EMAIL,
