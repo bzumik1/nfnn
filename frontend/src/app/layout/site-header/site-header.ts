@@ -34,7 +34,7 @@ export class SiteHeader {
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly injector = inject(Injector);
   private readonly menuButton = viewChild.required<ElementRef<HTMLButtonElement>>('menuButton');
-  private readonly portalLink = viewChild<ElementRef<HTMLAnchorElement>>('portalLink');
+  private readonly nav = viewChild.required<ElementRef<HTMLElement>>('nav');
 
   @HostListener('window:scroll')
   onScroll(): void {
@@ -66,19 +66,10 @@ export class SiteHeader {
 
   openLogin(): void {
     this.menuOpen.set(false);
-    this.loginDialog.open('login', { afterSignIn: () => this.focusPortalLink() });
+    this.loginDialog.open('login', { afterSignIn: () => this.focusHeader() });
   }
 
-  private focusPortalLink(): void {
-    afterNextRender(
-      () => {
-        const link = this.portalLink()?.nativeElement;
-        link?.focus();
-        if (link === undefined || this.host.nativeElement.ownerDocument.activeElement !== link) {
-          this.menuButton().nativeElement.focus();
-        }
-      },
-      { injector: this.injector },
-    );
+  private focusHeader(): void {
+    afterNextRender(() => this.nav().nativeElement.focus(), { injector: this.injector });
   }
 }

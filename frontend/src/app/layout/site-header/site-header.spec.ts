@@ -93,14 +93,14 @@ describe('Given the site header on a phone', () => {
     expect(TestBed.inject(LoginDialogService).isOpen()).toBe(true);
   });
 
-  it('when the visitor signs in from the menu, then the page stays and the focus is on the menu button', async () => {
+  it('when the visitor signs in from the menu, then the page stays and the focus waits quietly at the top of the header', async () => {
     openMenu();
     (menu()!.querySelector('button.mobile-login') as HTMLButtonElement).click();
     fixture.detectChanges();
 
     await signInThroughTheDialog(fixture);
 
-    expect(document.activeElement).toBe(toggle());
+    expect(document.activeElement).toBe(fixture.nativeElement.querySelector('nav.nav'));
   });
 });
 
@@ -123,7 +123,7 @@ describe('Given the site header on a computer', () => {
 
   afterEach(() => fixture.nativeElement.remove());
 
-  it('when the visitor signs in, then the page stays, the header offers the overview and the focus is on it', async () => {
+  it('when the visitor signs in, then the page stays, the header offers the overview and no control is left highlighted', async () => {
     loginButton().focus();
     loginButton().click();
     fixture.detectChanges();
@@ -134,7 +134,8 @@ describe('Given the site header on a computer', () => {
     expect(loginButton().tagName).toBe('A');
     expect(loginButton().textContent).toContain('Můj přehled');
     expect(loginButton().getAttribute('href')).toBe('/darce/prehled');
-    expect(document.activeElement).toBe(loginButton());
+    expect(document.activeElement).toBe(fixture.nativeElement.querySelector('nav.nav'));
+    expect(document.activeElement?.getAttribute('tabindex')).toBe('-1');
   });
 });
 
