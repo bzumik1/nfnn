@@ -36,6 +36,7 @@ const UNAUTHENTICATED = 'auth/unauthenticated';
 const FORBIDDEN = 'auth/forbidden';
 const RESENDABLE_MONTHS = 24;
 const SEND_DAYS = Array.from({ length: 28 }, (_, index) => index + 1);
+const SEND_HOURS = Array.from({ length: 24 }, (_, index) => index);
 
 @Component({
   selector: 'app-admin-report',
@@ -68,6 +69,7 @@ export class AdminReport {
   protected readonly settingsError = signal<string | null>(null);
   protected readonly confirmingSend = signal(false);
   protected readonly sendDays = SEND_DAYS;
+  protected readonly sendHours = SEND_HOURS;
 
   protected readonly recipientMessages = {
     required: $localize`:@@admin.report.recipients.required:Vyplňte prosím aspoň jednu e-mailovou adresu.`,
@@ -78,6 +80,7 @@ export class AdminReport {
 
   protected recipients = '';
   protected sendDay = 1;
+  protected sendHour = 7;
   protected sections = { donors: true, donations: true, unpairedPayments: true, bankImport: true };
   protected month = '';
 
@@ -85,7 +88,11 @@ export class AdminReport {
   protected readonly nextReport = computed(() => {
     const next = this.report()?.nextReport;
     return next
-      ? { month: formatReportMonth(next.month), dueOn: formatDonationDate(next.dueOn) }
+      ? {
+          month: formatReportMonth(next.month),
+          dueOn: formatDonationDate(next.dueOn),
+          hour: `${this.report()?.settings.sendHour ?? 7}:00`,
+        }
       : null;
   });
   protected readonly sentReports = computed(() => this.report()?.sentReports ?? []);
@@ -127,6 +134,7 @@ export class AdminReport {
           this.report.set(report);
           this.recipients = report.settings.recipients.join('\n');
           this.sendDay = report.settings.sendDay;
+          this.sendHour = report.settings.sendHour;
           this.sections = { ...report.settings.sections };
           this.month = report.lastEndedMonth;
           this.state.set('ready');
@@ -177,6 +185,7 @@ export class AdminReport {
       .changeReportSettings({
         recipients: parseEmailList(this.recipients),
         sendDay: Number(this.sendDay),
+        sendHour: Number(this.sendHour),
         sections: { ...this.sections },
       })
       .pipe(takeUntilDestroyed(this.destroyRef))

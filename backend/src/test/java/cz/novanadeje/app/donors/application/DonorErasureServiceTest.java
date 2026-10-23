@@ -111,8 +111,8 @@ class DonorErasureServiceTest {
         assertThat(action.adminId()).isEqualTo(JANA.value());
         assertThat(action.action()).isEqualTo("ERASE_DONOR");
         assertThat(action.subjectId()).contains(PETR.value());
-        assertThat(action.details()).isEqualTo("Personal data of donor " + PETR + " erased: account anonymized, every session ended,"
-                + " bank accounts and older-symbol answers deleted; donations and receipts kept");
+        assertThat(action.details()).isEqualTo("Osobní údaje dárce " + PETR + " vymazány: účet anonymizován, všechna přihlášení ukončena,"
+                + " bankovní účty a odpovědi o starších symbolech smazány; dary a potvrzení zůstávají");
         assertThat(action.performedAt()).isEqualTo(NOW);
         assertThat(all.get(2)).isEqualTo(new DonorAccountErased(PETR.value(), PETR_EMAIL, LocaleCode.EN));
     }

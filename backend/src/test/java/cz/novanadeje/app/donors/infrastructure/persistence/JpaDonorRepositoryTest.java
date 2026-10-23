@@ -139,6 +139,22 @@ class JpaDonorRepositoryTest {
     }
 
     @Test
+    @DisplayName("Given donors with Czech letters, when searched with or without the accents and in any case, then the same donors match by name and by e-mail")
+    void should_ignore_accents_and_case_when_searched_given_czech_names() {
+        Donor jana = donor("jana@example.cz", "4821937560");
+        Donor stepan = donor("stepan@example.cz", "1000000000");
+        stepan.updateProfile("ŠTĚPÁN ŘÍHA", stepan.address(), stepan.preferredLocale());
+        donors.save(jana);
+        donors.save(stepan);
+        flushAndClear();
+
+        assertThat(donors.search("novakova", 0, 20)).extracting(Donor::name).containsExactly("Jana Nováková");
+        assertThat(donors.search("NOVÁKOVÁ", 0, 20)).extracting(Donor::name).containsExactly("Jana Nováková");
+        assertThat(donors.search("stepan riha", 0, 20)).extracting(Donor::name).containsExactly("ŠTĚPÁN ŘÍHA");
+        assertThat(donors.search("štěpán@", 0, 20)).extracting(Donor::name).containsExactly("ŠTĚPÁN ŘÍHA");
+    }
+
+    @Test
     @DisplayName("Given a saved donor, when erased and saved again, then the placeholders, the empty roles and the time survive a reload, the former address is free and the search finds the donor by symbol, not by the former name")
     void should_keep_erasure_when_saved_given_erased_donor() {
         Donor donor = donor("jana@example.cz", "4821937560");

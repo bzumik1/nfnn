@@ -3,6 +3,7 @@ package cz.novanadeje.app.donations.application.report;
 import cz.novanadeje.app.donations.domain.FoundationCalendar;
 import cz.novanadeje.app.donations.domain.report.MonthlyReportLog;
 import cz.novanadeje.app.donations.domain.report.ReportMonth;
+import cz.novanadeje.app.donations.domain.report.ReportSections;
 import cz.novanadeje.app.donations.domain.report.ReportSettings;
 import cz.novanadeje.app.donations.domain.report.ReportSettingsRepository;
 import cz.novanadeje.app.donations.domain.report.SentReport;
@@ -17,6 +18,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.YearMonth;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -53,11 +55,28 @@ public class ReportSettingsService {
         Instant now = clock.instant();
         settings.save(changed, now);
         events.publishEvent(new AdminActionPerformed(adminId, CHANGE_ACTION, Optional.empty(),
-                "Monthly report settings changed: recipients " + String.join(", ", changed.recipients().values())
-                        + "; sent on day " + changed.sendDay() + " of the month; sections " + String.join(", ", changed.sections().names()), now));
-        log.info("Admin {} changed the monthly report settings: {} recipient(s), day {}, sections {}", adminId, changed.recipients().count(),
-                changed.sendDay(), changed.sections().names());
+                "Nastavení měsíčního přehledu změněno: příjemci " + String.join(", ", changed.recipients().values())
+                        + "; odesílá se " + changed.sendDay() + ". den v měsíci v " + changed.sendHour() + ":00; části " + czechSections(changed.sections()), now));
+        log.info("Admin {} changed the monthly report settings: {} recipient(s), day {} at {}:00, sections {}", adminId, changed.recipients().count(),
+                changed.sendDay(), changed.sendHour(), changed.sections().names());
         return changed;
+    }
+
+    private static String czechSections(ReportSections sections) {
+        List<String> names = new ArrayList<>();
+        if (sections.donors()) {
+            names.add("dárci");
+        }
+        if (sections.donations()) {
+            names.add("dary");
+        }
+        if (sections.unpairedPayments()) {
+            names.add("platby bez dárce");
+        }
+        if (sections.bankImport()) {
+            names.add("stahování z banky");
+        }
+        return String.join(", ", names);
     }
 
     private ReportAdministrationView.NextReport nextReport(ReportSettings current, List<SentReport> sent, LocalDate today) {

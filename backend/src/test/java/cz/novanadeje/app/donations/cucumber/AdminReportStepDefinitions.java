@@ -59,6 +59,10 @@ public class AdminReportStepDefinitions {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("recipients", list(settings.get("recipients")));
         body.put("sendDay", Integer.parseInt(settings.get("sendDay")));
+        String sendHour = settings.containsKey("sendHour") ? settings.get("sendHour") : "7";
+        if (sendHour != null && !sendHour.isBlank()) {
+            body.put("sendHour", Integer.parseInt(sendHour));
+        }
         body.put("sections", Map.of(
                 "donors", sections.contains("donors"),
                 "donations", sections.contains("donations"),

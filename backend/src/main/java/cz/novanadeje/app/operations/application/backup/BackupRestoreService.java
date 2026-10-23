@@ -57,7 +57,7 @@ public class BackupRestoreService {
         RestoreRequest request = new RestoreRequest(UuidV7.generate(now).toString(), RestoreSource.BACKUP, fileName, Optional.of(adminId), now);
         store.requestRestore(request);
         events.publishEvent(new AdminActionPerformed(adminId, RESTORE_BACKUP_ACTION, Optional.empty(),
-                "A restore of " + fileName + " was requested (request " + request.id() + "); the backend restarts and waits for the backup container", now));
+                "Vyžádána obnova ze zálohy " + fileName + " (požadavek " + request.id() + "); backend se restartuje a počká na kontejner záloh", now));
         restarter.restartAfterCommit();
         log.info("Admin {} requested a restore of {} as request {}; the backend restarts", adminId, fileName, request.id());
         return request;
@@ -90,14 +90,14 @@ public class BackupRestoreService {
         }
         String file = run.fileName().orElse("an unnamed backup");
         if (run.succeeded()) {
-            String tables = run.tables().map(count -> ", " + count + " tables").orElse("");
+            String tables = run.tables().map(count -> ", tabulek: " + count).orElse("");
             events.publishEvent(new AdminActionPerformed(run.requestedBy().orElseThrow(), BACKUP_RESTORED_ACTION, Optional.empty(),
-                    "The database was restored from " + file + " (request " + requestId + ")" + tables, now));
+                    "Databáze obnovena ze zálohy " + file + " (požadavek " + requestId + ")" + tables, now));
             log.info("The restore of {} (request {}) finished and is recorded in the administration history", file, requestId);
         } else {
             events.publishEvent(new AdminActionPerformed(run.requestedBy().orElseThrow(), BACKUP_RESTORE_FAILED_ACTION, Optional.empty(),
-                    truncated("The restore of " + file + " (request " + requestId + ") failed: " + run.error().orElse("unknown error")
-                            + "; the data stayed as they were"), now));
+                    truncated("Obnova ze zálohy " + file + " (požadavek " + requestId + ") selhala: " + run.error().orElse("neznámá chyba")
+                            + "; data zůstala, jak byla"), now));
             log.warn("The restore of {} (request {}) failed; the data stayed as they were", file, requestId);
         }
     }

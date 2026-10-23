@@ -100,7 +100,7 @@ app:
     pairing:
       excluded-accounts: ${PAIRING_EXCLUDED_ACCOUNTS:}
     report:
-      cron: "0 0 7 * * *"
+      cron: "0 0 * * * *"
       recipient: ${REPORT_RECIPIENT:${CONTACT_RECIPIENT:info@nfnn.cz}}
     fio:
       token: ${FIO_TOKEN:}

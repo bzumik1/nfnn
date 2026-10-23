@@ -65,7 +65,7 @@ class LogLevelServiceTest {
         ArgumentCaptor<AdminActionPerformed> action = ArgumentCaptor.forClass(AdminActionPerformed.class);
         verify(events).publishEvent(action.capture());
         assertThat(action.getValue().action()).isEqualTo("CHANGE_LOG_LEVEL");
-        assertThat(action.getValue().details()).contains("cz.novanadeje.app was set to DEBUG").contains("before: INFO");
+        assertThat(action.getValue().details()).contains("Logger cz.novanadeje.app nastaven na DEBUG").contains("(předtím: INFO)");
         assertThat(service.view().loggers()).anySatisfy(logger -> {
             assertThat(logger.logger()).isEqualTo("cz.novanadeje.app");
             assertThat(logger.override()).contains(override);

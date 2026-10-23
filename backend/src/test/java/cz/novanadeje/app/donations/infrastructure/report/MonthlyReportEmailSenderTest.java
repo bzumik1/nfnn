@@ -123,7 +123,7 @@ class MonthlyReportEmailSenderTest {
     @Test
     @DisplayName("Given two recipients and only the donations and bank sections, when the report is sent, then one e-mail goes to both with just those sections")
     void should_send_chosen_sections_to_every_recipient_when_sent_given_settings() throws Exception {
-        ReportSettings settings = new ReportSettings(ReportRecipients.parse(List.of("pavel@example.cz", "jakub@example.cz")), 5,
+        ReportSettings settings = new ReportSettings(ReportRecipients.parse(List.of("pavel@example.cz", "jakub@example.cz")), 5, 9,
                 new ReportSections(false, true, false, true));
 
         sender.send(REPORT, settings);

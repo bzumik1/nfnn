@@ -49,7 +49,7 @@ class MonthlyReportServiceTest {
     private static final Instant FIRST_OF_OCTOBER_AT_SEVEN = Instant.parse("2026-10-01T05:00:00Z");
     private static final ReportMonth SEPTEMBER = ReportMonth.of(2026, 9);
     private static final ReportSettings DEFAULTS = ReportSettings.defaults(new EmailAddress("info@nfnn.cz"));
-    private static final ReportSettings ON_THE_FIFTH = new ReportSettings(ReportRecipients.parse(List.of("pavel@example.cz", "jakub@example.cz")), 5,
+    private static final ReportSettings ON_THE_FIFTH = new ReportSettings(ReportRecipients.parse(List.of("pavel@example.cz", "jakub@example.cz")), 5, 9,
             new ReportSections(true, true, false, false));
     private static final UUID ADMIN = UUID.fromString("01a18e56-bdb0-775a-bd0a-a60756831369");
 
@@ -94,8 +94,9 @@ class MonthlyReportServiceTest {
     }
 
     @Test
-    @DisplayName("Given 00:30 on the first of October in Prague while UTC is still in September, when the due report is sent, then it is September's")
+    @DisplayName("Given the report set to midnight and 00:30 on the first of October in Prague while UTC is still in September, when the due report is sent, then it is September's")
     void should_report_september_when_due_report_sent_given_prague_already_in_october() {
+        when(settings.current()).thenReturn(new ReportSettings(DEFAULTS.recipients(), 1, 0, DEFAULTS.sections()));
         clock.set(Instant.parse("2026-09-30T22:30:00Z"));
 
         service.sendDueReport();
@@ -158,10 +159,22 @@ class MonthlyReportServiceTest {
     }
 
     @Test
-    @DisplayName("Given the report set to leave on the 5th, when the due report is checked on the 5th, then September goes out with those settings")
+    @DisplayName("Given the report set to leave on the 5th at 9:00, when the due report is checked on the 5th at 8:00, then nothing is recorded or sent")
+    void should_send_nothing_when_due_report_checked_given_send_hour_not_reached() {
+        when(settings.current()).thenReturn(ON_THE_FIFTH);
+        clock.set(Instant.parse("2026-10-05T06:00:00Z"));
+
+        assertThat(service.sendDueReport()).isEqualTo(MonthlyReportOutcome.notDue(SEPTEMBER));
+
+        verify(reportLog, never()).recordSending(any(), any());
+        verifyNoInteractions(sender);
+    }
+
+    @Test
+    @DisplayName("Given the report set to leave on the 5th at 9:00, when the due report is checked on the 5th at 9:00, then September goes out with those settings")
     void should_send_with_settings_when_due_report_checked_given_send_day_reached() {
         when(settings.current()).thenReturn(ON_THE_FIFTH);
-        clock.set(Instant.parse("2026-10-05T05:00:00Z"));
+        clock.set(Instant.parse("2026-10-05T07:00:00Z"));
 
         MonthlyReportOutcome outcome = service.sendDueReport();
 
@@ -184,7 +197,7 @@ class MonthlyReportServiceTest {
         assertThat(audited.getValue().adminId()).isEqualTo(ADMIN);
         assertThat(audited.getValue().action()).isEqualTo("SEND_MONTHLY_REPORT");
         assertThat(audited.getValue().subjectId()).isEmpty();
-        assertThat(audited.getValue().details()).isEqualTo("Monthly report for 2026-09 sent by hand to pavel@example.cz, jakub@example.cz");
+        assertThat(audited.getValue().details()).isEqualTo("Měsíční přehled za 2026-09 ručně odeslán na pavel@example.cz, jakub@example.cz");
         assertThat(audited.getValue().performedAt()).isEqualTo(FIRST_OF_OCTOBER_AT_SEVEN);
     }
 

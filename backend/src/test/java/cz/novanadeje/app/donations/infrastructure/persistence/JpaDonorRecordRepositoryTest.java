@@ -228,6 +228,21 @@ class JpaDonorRecordRepositoryTest {
     }
 
     @Test
+    @DisplayName("Given records with Czech letters, when searched with or without the accents and in any case, then the same records match")
+    void should_ignore_accents_and_case_when_searched_given_czech_names() {
+        donorRecords.save(person("Jana Nováková", "4821937560"));
+        donorRecords.save(person("Eva Dvořáková", "4899999999"));
+        donorRecords.save(person("ŠTĚPÁN ŘÍHA", "1000000000"));
+        flushAndClear();
+
+        assertThat(donorRecords.searchByNameOrSymbol("novakova", 20)).extracting(DonorRecord::name).containsExactly("Jana Nováková");
+        assertThat(donorRecords.searchByNameOrSymbol("DVORAK", 20)).extracting(DonorRecord::name).containsExactly("Eva Dvořáková");
+        assertThat(donorRecords.searchByNameOrSymbol("štěpán říha", 20)).extracting(DonorRecord::name).containsExactly("ŠTĚPÁN ŘÍHA");
+        assertThat(donorRecords.searchByNameOrSymbol("stepan riha", 20)).extracting(DonorRecord::name).containsExactly("ŠTĚPÁN ŘÍHA");
+        assertThat(donorRecords.searchByNameOrSymbol("ková", 20)).extracting(DonorRecord::name).containsExactly("Eva Dvořáková", "Jana Nováková");
+    }
+
+    @Test
     @DisplayName("Given a stored link, when it is deleted for its donor, then its row is gone, the record no longer lists it, and another donor's link cannot be deleted through it")
     void should_delete_row_when_link_deleted_given_stored_link() {
         DonorRecord jana = person("Jana Nováková", "4821937560");

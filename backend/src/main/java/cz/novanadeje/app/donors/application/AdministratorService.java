@@ -65,7 +65,7 @@ public class AdministratorService {
         donor.grantAdministration();
         donors.save(donor);
         events.publishEvent(new AdminActionPerformed(adminId.value(), GRANT_ACTION, Optional.of(donor.id().value()),
-                "Administrator role granted to donor " + donor.id(), clock.instant()));
+                "Role správce udělena dárci " + donor.id(), clock.instant()));
         log.info("Administrator {} granted the administrator role to donor {}", adminId, donor.id());
         return view(donor);
     }
@@ -81,7 +81,7 @@ public class AdministratorService {
         Instant now = clock.instant();
         refreshTokens.revokeAllOf(donorId, now);
         events.publishEvent(new AdminActionPerformed(adminId.value(), REVOKE_ACTION, Optional.of(donorId.value()),
-                "Administrator role taken from donor " + donorId + "; every session of the donor was ended", now));
+                "Role správce odebrána dárci " + donorId + "; všechna přihlášení dárce ukončena", now));
         log.info("Administrator {} took the administrator role from donor {}", adminId, donorId);
     }
 
@@ -95,7 +95,7 @@ public class AdministratorService {
         Instant now = clock.instant();
         refreshTokens.revokeAllOf(donorId, now);
         events.publishEvent(new AdminActionPerformed(adminId.value(), RESET_SECOND_FACTOR_ACTION, Optional.of(donorId.value()),
-                "Two-factor authentication of donor " + donorId + " turned off; every session of the donor was ended", now));
+                "Dvoufaktorové ověření dárce " + donorId + " vypnuto; všechna přihlášení dárce ukončena", now));
         events.publishEvent(new DonorSecondFactorReset(donorId.value(), donor.email(), donor.preferredLocale()));
         log.info("Administrator {} turned off the second factor of donor {}", adminId, donorId);
     }
@@ -110,7 +110,7 @@ public class AdministratorService {
         Instant now = clock.instant();
         refreshTokens.revokeAllOf(donorId, now);
         events.publishEvent(new AdminActionPerformed(adminId.value(), REMOVE_PASSKEYS_ACTION, Optional.of(donorId.value()),
-                removed + " passkeys of donor " + donorId + " removed; every session of the donor was ended", now));
+                "Odebrané přístupové klíče dárce " + donorId + ": " + removed + "; všechna přihlášení dárce ukončena", now));
         events.publishEvent(new DonorPasskeysRemoved(donorId.value(), donor.email(), donor.preferredLocale()));
         log.info("Administrator {} removed {} passkeys of donor {}", adminId, removed, donorId);
     }

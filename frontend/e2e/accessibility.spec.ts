@@ -587,6 +587,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
             settings: {
               recipients: ['info@nfnn.cz', 'pavel@example.cz'],
               sendDay: 5,
+              sendHour: 7,
               sections: {
                 donors: true,
                 donations: true,
@@ -935,8 +936,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
                 adminEmail: 'jana@example.cz',
                 action: 'PAIR_PAYMENT',
                 subjectId: '019a1c00-0000-7000-8000-000000001001',
-                details:
-                  'Bank payment 019a1c00-0000-7000-8000-000000001001 paired to donor by hand',
+                details: 'Platba 019a1c00-0000-7000-8000-000000001001 ručně přiřazena dárci',
                 performedAt: '2026-10-22T10:00:00Z',
               },
               {

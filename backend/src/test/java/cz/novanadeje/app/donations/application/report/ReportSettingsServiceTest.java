@@ -33,7 +33,7 @@ class ReportSettingsServiceTest {
     private static final Instant NOW = Instant.parse("2026-10-23T08:00:00Z");
     private static final UUID ADMIN = UUID.fromString("01a18e56-bdb0-775a-bd0a-a60756831369");
     private static final ReportSettings DEFAULTS = ReportSettings.defaults(new EmailAddress("info@nfnn.cz"));
-    private static final ReportSettings CHANGED = new ReportSettings(ReportRecipients.parse(List.of("pavel@example.cz", "jakub@example.cz")), 5,
+    private static final ReportSettings CHANGED = new ReportSettings(ReportRecipients.parse(List.of("pavel@example.cz", "jakub@example.cz")), 5, 9,
             new ReportSections(true, true, false, true));
 
     private final ReportSettingsRepository settings = mock(ReportSettingsRepository.class);
@@ -89,8 +89,8 @@ class ReportSettingsServiceTest {
         assertThat(audited.getValue().adminId()).isEqualTo(ADMIN);
         assertThat(audited.getValue().action()).isEqualTo("CHANGE_REPORT_SETTINGS");
         assertThat(audited.getValue().subjectId()).isEmpty();
-        assertThat(audited.getValue().details()).isEqualTo("Monthly report settings changed: recipients pavel@example.cz, jakub@example.cz;"
-                + " sent on day 5 of the month; sections donors, donations, bank import");
+        assertThat(audited.getValue().details()).isEqualTo("Nastavení měsíčního přehledu změněno: příjemci pavel@example.cz, jakub@example.cz;"
+                + " odesílá se 5. den v měsíci v 9:00; části dárci, dary, stahování z banky");
         assertThat(audited.getValue().performedAt()).isEqualTo(NOW);
     }
 }

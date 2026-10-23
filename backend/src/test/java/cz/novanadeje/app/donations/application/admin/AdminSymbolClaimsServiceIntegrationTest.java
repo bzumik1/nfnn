@@ -103,7 +103,7 @@ class AdminSymbolClaimsServiceIntegrationTest {
         });
         assertThat(receipts.yearlyReceipt(jana, YEAR_2025).number()).isEqualTo(issuedBefore);
         assertThat(jdbc.sql("select details from admin_action where admin_id = ? and action = 'REVERSE_SYMBOL_CLAIM' and subject_id = ?")
-                .param(ADMIN).param(claim.value()).query(String.class).single()).contains(OLD_SYMBOL.value(), "3 donation(s)");
+                .param(ADMIN).param(claim.value()).query(String.class).single()).contains(OLD_SYMBOL.value(), "smazané dary spárované přes ni: 3");
     }
 
     @Test

@@ -73,7 +73,7 @@ public class SettingsService {
         }
         String names = changed.stream().map(Enum::name).collect(Collectors.joining(", "));
         events.publishEvent(new AdminActionPerformed(adminId, CHANGE_ACTION, Optional.empty(),
-                "Settings changed: " + names + "; the backend restarts to apply them", now));
+                "Změněna nastavení: " + names + "; backend se restartuje, aby je použil", now));
         restarter.restartAfterCommit();
         log.info("Admin {} changed the settings {}; the backend restarts", adminId, names);
         return changed;

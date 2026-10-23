@@ -59,8 +59,8 @@ public class BackupAdministrationService {
         String id = UuidV7.generate(now).toString();
         store.request(kind, id);
         String action = kind == BackupRequestKind.BACKUP ? REQUEST_BACKUP_ACTION : REQUEST_TEST_RESTORE_ACTION;
-        String what = kind == BackupRequestKind.BACKUP ? "A backup" : "A test restore of the newest backup";
-        events.publishEvent(new AdminActionPerformed(adminId, action, Optional.empty(), what + " was requested (request " + id + ")", now));
+        String what = kind == BackupRequestKind.BACKUP ? "Záloha databáze vyžádána" : "Zkušební obnova nejnovější zálohy vyžádána";
+        events.publishEvent(new AdminActionPerformed(adminId, action, Optional.empty(), what + " (požadavek " + id + ")", now));
         log.info("Admin {} requested {} as request {}", adminId, kind, id);
         return new BackupRequest(id, kind, now);
     }
@@ -73,7 +73,7 @@ public class BackupAdministrationService {
         BackupDownload download = store.open(fileName).orElseThrow(BackupNotFound::new);
         Instant now = clock.instant();
         events.publishEvent(new AdminActionPerformed(adminId, DOWNLOAD_BACKUP_ACTION, Optional.empty(),
-                "The backup " + fileName + " (" + download.file().sizeBytes() + " bytes) was downloaded", now));
+                "Záloha " + fileName + " (" + download.file().sizeBytes() + " B) stažena", now));
         log.info("Admin {} downloaded the backup {}", adminId, fileName);
         return download;
     }

@@ -209,6 +209,7 @@ export interface ReportSectionsResponse {
 export interface ReportSettingsResponse {
   recipients: string[];
   sendDay: number;
+  sendHour: number;
   sections: ReportSectionsResponse;
   changedAt: string | null;
 }
@@ -216,6 +217,7 @@ export interface ReportSettingsResponse {
 export interface ReportSettingsRequest {
   recipients: string[];
   sendDay: number;
+  sendHour: number;
   sections: ReportSectionsResponse;
 }
 

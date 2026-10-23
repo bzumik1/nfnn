@@ -11,10 +11,10 @@ import java.util.Optional;
 
 public record AdminReportResponse(Settings settings, List<Sent> sentReports, Next nextReport, String lastEndedMonth) {
 
-    public record Settings(List<String> recipients, int sendDay, Sections sections, Instant changedAt) {
+    public record Settings(List<String> recipients, int sendDay, int sendHour, Sections sections, Instant changedAt) {
 
         static Settings from(ReportSettings settings, Optional<Instant> changedAt) {
-            return new Settings(settings.recipients().values(), settings.sendDay(),
+            return new Settings(settings.recipients().values(), settings.sendDay(), settings.sendHour(),
                     new Sections(settings.sections().donors(), settings.sections().donations(), settings.sections().unpairedPayments(),
                             settings.sections().bankImport()),
                     changedAt.orElse(null));

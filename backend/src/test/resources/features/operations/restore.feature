@@ -16,7 +16,7 @@ Feature: The database is restored from a backup in the browser: by an administra
     And the backups answer says:
       | fileName | nfnn-2026-10-22_0300.dump |
     And a restore request of the backup "nfnn-2026-10-22_0300.dump" by "Jana" waits for the backup container
-    And the admin action "RESTORE_BACKUP" by "Jana" is recorded with details containing "A restore of nfnn-2026-10-22_0300.dump was requested"
+    And the admin action "RESTORE_BACKUP" by "Jana" is recorded with details containing "Vyžádána obnova ze zálohy nfnn-2026-10-22_0300.dump"
     And the backend restarts once
     When "Jana" asks for the backups
     Then the backups answer says:
@@ -63,14 +63,14 @@ Feature: The database is restored from a backup in the browser: by an administra
     And the backup container restored "nfnn-2026-10-22_0300.dump" for "Jana" under the request "019a1b2c-0000-7000-8000-000000000001"
     When the backend has started
     And the backend has started
-    Then the admin action "BACKUP_RESTORED" by "Jana" is recorded with details containing "The database was restored from nfnn-2026-10-22_0300.dump (request 019a1b2c-0000-7000-8000-000000000001)"
+    Then the admin action "BACKUP_RESTORED" by "Jana" is recorded with details containing "Databáze obnovena ze zálohy nfnn-2026-10-22_0300.dump (požadavek 019a1b2c-0000-7000-8000-000000000001)"
 
   Scenario: A failed restore is recorded in the administration history with its error
     Given a person "Jana" is registered
     And "Jana" is an administrator
     And the backup container failed to restore "nfnn-2026-10-22_0300.dump" for "Jana" under the request "019a1b2c-0000-7000-8000-000000000002" with "pg_restore: error: unexpected end of file"
     When the backend has started
-    Then the admin action "BACKUP_RESTORE_FAILED" by "Jana" is recorded with details containing "pg_restore: error: unexpected end of file; the data stayed as they were"
+    Then the admin action "BACKUP_RESTORE_FAILED" by "Jana" is recorded with details containing "pg_restore: error: unexpected end of file; data zůstala, jak byla"
 
   Scenario: Directly from the home network a new server takes an uploaded backup in the first setup and restarts
     Given the requests come directly from the home network

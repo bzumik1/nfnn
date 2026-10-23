@@ -129,7 +129,7 @@ export function adminAction(overrides: Partial<AdminActionResponse> = {}): Admin
     action: 'PAIR_PAYMENT',
     subjectId: '019a1c00-0000-7000-8000-000000001001',
     details:
-      'Bank payment 019a1c00-0000-7000-8000-000000001001 paired to donor 01a18e56-bdb0-775a-bd0a-a60756831369 by hand',
+      'Platba 019a1c00-0000-7000-8000-000000001001 ručně přiřazena dárci 01a18e56-bdb0-775a-bd0a-a60756831369',
     performedAt: '2026-10-22T10:00:00Z',
     client: null,
     ...overrides,
@@ -258,6 +258,7 @@ export function reportView(overrides: Partial<AdminReportResponse> = {}): AdminR
     settings: {
       recipients: ['info@nfnn.cz'],
       sendDay: 1,
+      sendHour: 7,
       sections: { donors: true, donations: true, unpairedPayments: true, bankImport: true },
       changedAt: null,
     },

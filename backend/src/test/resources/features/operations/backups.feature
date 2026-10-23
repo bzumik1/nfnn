@@ -70,7 +70,7 @@ Feature: An administrator sees the database backups, starts one, downloads one a
     And the backups answer says:
       | kind | BACKUP |
     And a request file for the backup waits for the backup container
-    And the admin action "REQUEST_BACKUP" by "Jana" is recorded with details containing "A backup was requested"
+    And the admin action "REQUEST_BACKUP" by "Jana" is recorded with details containing "Záloha databáze vyžádána"
     When "Jana" asks for the backups
     Then the backups answer says:
       | pendingRequests | 1 |
@@ -81,7 +81,7 @@ Feature: An administrator sees the database backups, starts one, downloads one a
     And the backups answer says:
       | kind | TEST_RESTORE |
     And a request file for the test restore waits for the backup container
-    And the admin action "REQUEST_TEST_RESTORE" by "Jana" is recorded with details containing "A test restore of the newest backup was requested"
+    And the admin action "REQUEST_TEST_RESTORE" by "Jana" is recorded with details containing "Zkušební obnova nejnovější zálohy vyžádána"
 
   Scenario: A backup is downloaded as a file and the download is audited; an unknown or odd name is not found
     Given these backups are in the backup folder:
@@ -90,7 +90,7 @@ Feature: An administrator sees the database backups, starts one, downloads one a
     When "Jana" downloads the backup "nfnn-2026-10-23_0300.dump"
     Then the response status is 200
     And the downloaded backup is 1590 bytes named "nfnn-2026-10-23_0300.dump"
-    And the admin action "DOWNLOAD_BACKUP" by "Jana" is recorded with details containing "nfnn-2026-10-23_0300.dump (1590 bytes)"
+    And the admin action "DOWNLOAD_BACKUP" by "Jana" is recorded with details containing "nfnn-2026-10-23_0300.dump (1590 B) stažena"
     When "Jana" downloads the backup "nfnn-2026-10-22_0300.dump"
     Then the response status is 404
     And the problem type ends with "operations/backup-not-found"

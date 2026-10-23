@@ -22,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -58,10 +59,10 @@ public class MonthlyReportService {
 
     @Transactional
     public MonthlyReportOutcome sendDueReport() {
-        LocalDate today = FoundationCalendar.today(clock);
-        ReportMonth month = ReportMonth.previousTo(today);
+        LocalDateTime now = FoundationCalendar.now(clock);
+        ReportMonth month = ReportMonth.previousTo(now.toLocalDate());
         ReportSettings current = settings.current();
-        if (!current.dueOn(today)) {
+        if (!current.dueAt(now)) {
             return MonthlyReportOutcome.notDue(month);
         }
         return send(month, current);
@@ -81,7 +82,7 @@ public class MonthlyReportService {
         reportLog.recordSending(month, now);
         sender.send(compile(month), current);
         events.publishEvent(new AdminActionPerformed(adminId, SEND_ACTION, Optional.empty(),
-                "Monthly report for " + month + " sent by hand to " + String.join(", ", current.recipients().values()), now));
+                "Měsíční přehled za " + month + " ručně odeslán na " + String.join(", ", current.recipients().values()), now));
         log.info("Admin {} sent the monthly report for {} by hand to {} recipient(s)", adminId, month, current.recipients().count());
         return new ManualReportDelivery(month, current.recipients(), now);
     }

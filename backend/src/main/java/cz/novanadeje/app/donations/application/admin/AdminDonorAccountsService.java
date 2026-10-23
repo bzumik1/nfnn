@@ -85,7 +85,7 @@ public class AdminDonorAccountsService {
         SenderAccountLink link = record.disconnectSenderAccount(linkId, FoundationCalendar.today(clock), now);
         donorRecords.saveSenderAccountLink(donor, link);
         events.publishEvent(new AdminActionPerformed(adminId, DISCONNECT_ACTION, Optional.of(donor.value()),
-                "Pairing from bank account " + link.account().display() + " (link " + linkId + ") of donor " + donor + " turned off", now));
+                "Párování z účtu " + link.account().display() + " (propojení " + linkId + ") dárce " + donor + " vypnuto", now));
         log.info("Admin {} disconnected sender account link {} of donor {}", adminId, linkId, donor);
     }
 
@@ -97,8 +97,8 @@ public class AdminDonorAccountsService {
             throw new SenderAccountAlreadyConnected(linkId);
         }
         events.publishEvent(new AdminActionPerformed(adminId, RECONNECT_ACTION, Optional.of(donor.value()),
-                "Pairing from bank account " + awaiting.account().display() + " (link " + linkId + ") of donor " + donor
-                        + " turned on again as link " + awaiting.id() + ", awaiting a payment with the symbol", now));
+                "Párování z účtu " + awaiting.account().display() + " (propojení " + linkId + ") dárce " + donor
+                        + " znovu zapnuto jako propojení " + awaiting.id() + ", čeká na platbu se symbolem", now));
         log.info("Admin {} asked to reconnect sender account link {} of donor {} as {}", adminId, linkId, donor, awaiting.id());
     }
 
@@ -118,8 +118,8 @@ public class AdminDonorAccountsService {
         record.removeSenderAccountLink(linkId);
         donorRecords.deleteSenderAccountLink(donor, linkId);
         events.publishEvent(new AdminActionPerformed(adminId, REMOVE_ACTION, Optional.of(donor.value()),
-                "Bank account " + link.account().display() + " (link " + linkId + ", " + link.status() + ") removed from donor " + donor + "; "
-                        + paired.size() + " donation(s) paired through it and " + answers.size() + " answer(s) about older symbols deleted", now));
+                "Účet " + link.account().display() + " (propojení " + linkId + ", " + link.status() + ") odebrán dárci " + donor + "; smazané dary spárované přes něj: "
+                        + paired.size() + ", smazané odpovědi o starších symbolech: " + answers.size(), now));
         log.info("Admin {} removed sender account link {} of donor {}: {} donations and {} symbol claims deleted", adminId, linkId, donor,
                 paired.size(), answers.size());
     }

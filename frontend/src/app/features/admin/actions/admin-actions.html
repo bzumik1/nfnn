@@ -2,7 +2,7 @@
   <h1 #title class="ui-page-title" tabindex="-1" i18n="@@admin.actions.heading">Historie správy</h1>
   <p class="ui-page-intro" i18n="@@admin.actions.intro">
     Každý zásah správce se zapisuje: kdo ho udělal, kdy a čeho se týkal. Nejnovější jsou nahoře.
-    Podrobnosti jsou technický zápis s identifikátory, podle kterých se dá zásah dohledat.
+    Podrobnosti popisují, co se změnilo, s identifikátory, podle kterých se dá zásah dohledat.
   </p>
 
   <section class="ui-card" aria-labelledby="actions-title">
@@ -76,7 +76,7 @@
                     }
                   </td>
                   <td data-label="Podrobnosti" i18n-data-label="@@admin.actions.col.details">
-                    <span class="details" lang="en">{{ item.details }}</span>
+                    <span class="details">{{ item.details }}</span>
                   </td>
                 </tr>
               }

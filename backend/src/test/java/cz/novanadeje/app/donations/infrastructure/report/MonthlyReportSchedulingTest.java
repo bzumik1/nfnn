@@ -4,6 +4,7 @@ import cz.novanadeje.app.donations.application.report.MonthlyReportService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.boot.test.context.ConfigDataApplicationContextInitializer;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -27,19 +28,18 @@ class MonthlyReportSchedulingTest {
             .withPropertyValues("app.donations.report.recipient=info@nfnn.cz");
 
     @Test
-    @DisplayName("Given the daily cron, when the context starts, then one check is scheduled for 07:00 Prague time in summer and in winter")
-    void should_schedule_check_at_seven_prague_time_when_started_given_daily_cron() {
-        contexts.withPropertyValues("app.donations.report.cron=0 0 7 * * *").run(context -> {
+    @DisplayName("Given only application.yml, when the context starts, then the check runs at the start of every hour, so any send hour can be chosen")
+    void should_schedule_check_every_hour_when_started_given_defaults() {
+        contexts.withInitializer(new ConfigDataApplicationContextInitializer()).run(context -> {
             assertThat(context).hasNotFailed();
             CronTask task = (CronTask) context.getBean(ScheduledTaskHolder.class).getScheduledTasks().stream()
                     .map(ScheduledTask::getTask)
-                    .reduce((first, second) -> {
-                        throw new AssertionError("More than one scheduled task");
-                    })
+                    .filter(CronTask.class::isInstance)
+                    .filter(candidate -> ((CronTask) candidate).getExpression().equals("0 0 * * * *"))
+                    .findFirst()
                     .orElseThrow();
-            assertThat(task.getExpression()).isEqualTo("0 0 7 * * *");
-            assertThat(nextRunAfter(task, "2026-09-30T23:00:00Z")).isEqualTo(Instant.parse("2026-10-01T05:00:00Z"));
-            assertThat(nextRunAfter(task, "2026-12-01T00:00:00Z")).isEqualTo(Instant.parse("2026-12-01T06:00:00Z"));
+            assertThat(nextRunAfter(task, "2026-09-30T23:30:00Z")).isEqualTo(Instant.parse("2026-10-01T00:00:00Z"));
+            assertThat(nextRunAfter(task, "2026-12-01T06:59:59Z")).isEqualTo(Instant.parse("2026-12-01T07:00:00Z"));
         });
     }
 

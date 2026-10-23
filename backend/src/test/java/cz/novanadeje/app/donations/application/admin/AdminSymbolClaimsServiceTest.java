@@ -132,7 +132,7 @@ class AdminSymbolClaimsServiceTest {
         assertThat(audited.getValue().adminId()).isEqualTo(ADMIN);
         assertThat(audited.getValue().action()).isEqualTo("REVERSE_SYMBOL_CLAIM");
         assertThat(audited.getValue().subjectId()).contains(confirmed.id().value());
-        assertThat(audited.getValue().details()).contains(confirmed.id().toString(), janaId.toString(), OLD_SYMBOL.value(), "2 donation(s)")
+        assertThat(audited.getValue().details()).contains(confirmed.id().toString(), janaId.toString(), OLD_SYMBOL.value(), "smazané dary spárované přes ni: 2")
                 .doesNotContain("Jana", "1234567/0800");
         assertThat(audited.getValue().performedAt()).isEqualTo(NOW);
         verify(receipts).existsYearlyIssuedSince(janaId, Year.of(2025), ANSWERED);

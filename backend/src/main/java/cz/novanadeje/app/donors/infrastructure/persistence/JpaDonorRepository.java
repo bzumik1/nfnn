@@ -4,8 +4,9 @@ import cz.novanadeje.app.donors.domain.Donor;
 import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.donors.domain.DonorRepository;
 import cz.novanadeje.app.donors.domain.Role;
-import cz.novanadeje.app.shared.domain.VariableSymbol;
 import cz.novanadeje.app.shared.domain.EmailAddress;
+import cz.novanadeje.app.shared.domain.VariableSymbol;
+import cz.novanadeje.app.shared.infrastructure.search.AccentFolding;
 import org.springframework.stereotype.Repository;
 
 import java.util.Collection;
@@ -68,7 +69,7 @@ class JpaDonorRepository implements DonorRepository {
 
     @Override
     public List<Donor> search(String query, int offset, int limit) {
-        String escaped = query.replace("!", "!!").replace("%", "!%").replace("_", "!_");
+        String escaped = AccentFolding.fold(query).replace("!", "!!").replace("%", "!%").replace("_", "!_");
         return jpa.search(escaped, new OffsetPage(offset, limit)).stream().map(DonorJpaEntity::toDomain).toList();
     }
 }

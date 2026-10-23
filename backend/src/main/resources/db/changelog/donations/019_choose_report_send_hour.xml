@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <changeSet id="019-choose-report-send-hour" author="nfnn">
+        <addColumn tableName="donation_report_settings">
+            <column name="send_hour" type="smallint" defaultValueNumeric="7">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+        <sql>alter table donation_report_settings add constraint ck_donation_report_settings_send_hour check (send_hour between 0 and 23)</sql>
+    </changeSet>
+
+</databaseChangeLog>
