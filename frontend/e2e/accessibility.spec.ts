@@ -723,6 +723,70 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     expect(await violations(page)).toEqual([]);
   });
 
+  test('when an administrator watches the backups, then the page with its problems and busy action breaks no rule', async ({
+    page,
+  }) => {
+    await page.route(
+      (url) => url.pathname === '/api/admin/operations/backups',
+      (route) =>
+        route.fulfill({
+          json: {
+            available: true,
+            backups: [
+              {
+                fileName: 'nfnn-2026-10-23_0300.dump',
+                kind: 'DAILY',
+                sizeBytes: 1590,
+                createdAt: '2026-10-23T01:00:03Z',
+              },
+            ],
+            lastBackup: {
+              outcome: 'FAILED',
+              startedAt: '2026-10-24T01:00:00Z',
+              finishedAt: '2026-10-24T01:00:01Z',
+              fileName: 'nfnn-2026-10-24_0300.dump',
+              sizeBytes: null,
+              tables: null,
+              requestId: null,
+              error: 'pg_dump: error: connection to server failed',
+            },
+            lastTestRestore: null,
+            lastRestore: null,
+            restoreFiles: [
+              {
+                fileName: 'nfnn-2026-10-20_0300.dump.skipped',
+                state: 'SKIPPED',
+                changedAt: '2026-10-21T06:00:00Z',
+              },
+            ],
+            pendingRequests: 2,
+            problems: ['BACKUP_FAILED', 'TEST_RESTORE_MISSING'],
+          },
+        }),
+    );
+    await page.route(
+      (url) => url.pathname === '/api/admin/operations/backups/requests',
+      (route) =>
+        route.fulfill({
+          status: 202,
+          json: { requestId: 'req-1', kind: 'BACKUP', requestedAt: '2026-10-24T08:00:00Z' },
+        }),
+    );
+    await page.route('**/api/donors/auth/refresh', (route) =>
+      route.fulfill(session(200, administrator)),
+    );
+    await page.goto('/');
+    await page.evaluate(() => localStorage.setItem('nfnn.donor-session', '1'));
+    await page.goto('/sprava/zalohy');
+    await expect(page.getByRole('heading', { level: 1, name: 'Zálohy' })).toBeFocused();
+    await expect(page.locator('.problems li')).toHaveCount(2);
+    expect(await violations(page)).toEqual([]);
+
+    await page.getByRole('button', { name: 'Zálohovat teď' }).click();
+    await expect(page.getByRole('button', { name: 'Zálohujeme…' })).toBeDisabled();
+    expect(await violations(page)).toEqual([]);
+  });
+
   test('when an administrator writes a news article, then the list, the editor with its errors and the deletion confirmation break no rule', async ({
     page,
   }) => {

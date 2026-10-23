@@ -8,7 +8,7 @@ Read before building, update in the same PR: `docs/requirements.md` (client deci
 
 | Path | What |
 |---|---|
-| `backend/` | Spring Boot 4.0, Java 25, Gradle Kotlin DSL. Strict DDD: `cz.novanadeje.app.{content,donors,donations,contact}` + `shared`, each `domain / application / infrastructure / interfaces/rest`, enforced by ArchUnit |
+| `backend/` | Spring Boot 4.0, Java 25, Gradle Kotlin DSL. Strict DDD: `cz.novanadeje.app.{content,donors,donations,contact,operations}` + `shared`, each `domain / application / infrastructure / interfaces/rest`, enforced by ArchUnit |
 | `frontend/` | Angular 22 standalone, zoneless, signals, SCSS design tokens, Vitest, Playwright + axe |
 | `deploy/` | ZimaOS compose and env templates (production); `docker-compose.yml` at the root is the local stack |
 | `.github/workflows/` | `pr-check.yml` on every PR; `images.yml` on push to `main` publishes ghcr.io images |

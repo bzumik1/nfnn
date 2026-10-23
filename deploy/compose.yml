@@ -32,7 +32,7 @@ services:
     logging: *logging
 
   backup:
-    image: postgres:17-alpine
+    image: ghcr.io/bzumik1/nfnn-backup:latest
     container_name: nfnn-backup
     restart: unless-stopped
     network_mode: bridge
@@ -50,22 +50,7 @@ services:
       TZ: Europe/Prague
     volumes:
       - /DATA/AppData/nfnn/backups:/backups
-    entrypoint: ["/bin/sh", "-c"]
-    command:
-      - |
-        while true; do
-          until pg_isready --quiet; do sleep 5; done
-          if pg_dump --format=custom --compress=zstd:19 --file=/backups/nfnn.dump.part; then
-            mv /backups/nfnn.dump.part "/backups/nfnn-`date +%Y-%m-%d_%H%M`.dump"
-            echo "backup written"
-          else
-            rm -f /backups/nfnn.dump.part
-            echo "backup failed" >&2
-          fi
-          find /backups -name 'nfnn-*.dump' -mtime +30 -delete
-          sleep 61
-          until [ "`date +%H:%M`" = "03:00" ]; do sleep 20; done
-        done
+      - /DATA/AppData/nfnn/restore:/restore
     deploy:
       resources:
         limits:
@@ -80,6 +65,8 @@ services:
     depends_on:
       postgres:
         condition: service_started
+      backup:
+        condition: service_started
     links:
       - postgres
     env_file:
@@ -93,6 +80,9 @@ services:
       TZ: Europe/Prague
     volumes:
       - /DATA/AppData/nfnn/config:/config:ro
+      - /DATA/AppData/nfnn/backups:/backups:ro
+      - /DATA/AppData/nfnn/backups/requests:/backups/requests
+      - /DATA/AppData/nfnn/restore:/restore:ro
     healthcheck:
       test:
         - CMD
@@ -148,5 +138,5 @@ x-casaos:
     cs_cz: Web Nadačního fondu Nová naděje
     en_us: Website of the Nová naděje foundation
   description:
-    cs_cz: Web, dárcovský portál a potvrzení o daru. Data v /DATA/AppData/nfnn, hesla a nastavení v /DATA/AppData/nfnn/env.
-    en_us: Website, donor portal and donation receipts. Data in /DATA/AppData/nfnn, secrets and settings in /DATA/AppData/nfnn/env.
+    cs_cz: Web, dárcovský portál a potvrzení o daru. Data v /DATA/AppData/nfnn, hesla a nastavení v /DATA/AppData/nfnn/env, zálohy v backups, obnova ze složky restore.
+    en_us: Website, donor portal and donation receipts. Data in /DATA/AppData/nfnn, secrets and settings in /DATA/AppData/nfnn/env, backups in backups, a restore from the restore folder.

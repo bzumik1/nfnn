@@ -9,6 +9,7 @@
     <includeAll path="db/changelog/donors/" relativeToChangelogFile="false"/>
     <includeAll path="db/changelog/donations/" relativeToChangelogFile="false"/>
     <includeAll path="db/changelog/contact/" relativeToChangelogFile="false"/>
+    <includeAll path="db/changelog/operations/" relativeToChangelogFile="false"/>
     <includeAll path="db/changelog/shared/" relativeToChangelogFile="false"/>
 
 </databaseChangeLog>

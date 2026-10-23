@@ -12,6 +12,7 @@ FROM eclipse-temurin:25-jre
 WORKDIR /app
 RUN groupadd --system app && useradd --system --gid app --home-dir /app app
 COPY --from=build /workspace/build/libs/*.jar app.jar
+COPY --chmod=0755 docker-entrypoint.sh /app/docker-entrypoint.sh
 USER app
 EXPOSE 8080
-ENTRYPOINT ["java", "--enable-native-access=ALL-UNNAMED", "-jar", "/app/app.jar"]
+ENTRYPOINT ["/app/docker-entrypoint.sh"]

@@ -216,6 +216,7 @@ describe('Given an administrator on the administration home', () => {
       ['/sprava/prehledy', 'Měsíční přehled'],
       ['/sprava/aktuality', 'Aktuality'],
       ['/sprava/projekty', 'Projekty'],
+      ['/sprava/zalohy', 'Zálohy'],
       ['/sprava/historie', 'Historie správy'],
     ]);
   });

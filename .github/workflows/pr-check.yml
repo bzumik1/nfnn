@@ -101,6 +101,7 @@ jobs:
         run: |
           docker build -t ghcr.io/bzumik1/nfnn-backend:latest backend
           docker build -t ghcr.io/bzumik1/nfnn-frontend:latest frontend
+          docker build -t ghcr.io/bzumik1/nfnn-backup:latest deploy/backup
 
       - name: Compose file has no dollar signs
         run: |
@@ -177,20 +178,45 @@ jobs:
               fi
             done
           done
-          for _ in $(seq 30); do
-            for dump in "$RUNNER_TEMP"/nfnn/backups/nfnn-*.dump; do
-              [ -f "$dump" ] || continue
-              if ! docker exec nfnn-backup pg_restore --list "/backups/$(basename "$dump")" | grep -q 'Compression: zstd'; then
-                echo "::error::the backup dump is not compressed with zstd"
-                exit 1
-              fi
-              echo "$dump is a zstd dump"
-              exit 0
+          backups="$RUNNER_TEMP/nfnn/backups"
+          wait_for() {
+            for _ in $(seq "$2"); do
+              if eval "$1"; then return 0; fi
+              sleep 2
             done
-            sleep 2
-          done
-          echo "::error::the backup service wrote no dump"
-          exit 1
+            echo "::error::$3"
+            return 1
+          }
+          wait_for "ls $backups/nfnn-*.dump > /dev/null 2>&1" 30 "the backup service wrote no dump"
+          dump=$(ls "$backups"/nfnn-*.dump | head -n 1)
+          if ! docker exec nfnn-backup pg_restore --list "/backups/$(basename "$dump")" | grep -q 'Compression: zstd'; then
+            echo "::error::the backup dump is not compressed with zstd"
+            exit 1
+          fi
+          echo "$dump is a zstd dump"
+          grep -q '^outcome=ok$' "$backups/status/backup" || { echo "::error::the backup status file does not say ok"; cat "$backups/status/backup"; exit 1; }
+          [ "$(stat -c %a "$backups/requests")" = 1777 ] || { echo "::error::the requests folder must be writable for the backend (mode 1777)"; exit 1; }
+
+          echo "A requested backup and a test restore run from request files"
+          docker exec nfnn-backend sh -c 'touch /backups/requests/ci-1.backup && touch /backups/requests/ci-2.test-restore'
+          wait_for "grep -q '^request=ci-1$' $backups/status/backup" 30 "the requested backup did not run"
+          grep -q -- '-rucni.dump$' "$backups/status/backup" || { echo "::error::the requested backup is not named -rucni"; exit 1; }
+          wait_for "grep -q '^request=ci-2$' $backups/status/test-restore" 60 "the requested test restore did not run"
+          grep -q '^outcome=ok$' "$backups/status/test-restore" || { echo "::error::the test restore failed"; cat "$backups/status/test-restore"; exit 1; }
+          grep -E '^tables=[1-9][0-9]*$' "$backups/status/test-restore" || { echo "::error::the test restore counted no tables"; exit 1; }
+
+          echo "A dump in the restore folder is restored into the emptied database before the backend starts"
+          restore="$RUNNER_TEMP/nfnn/restore"
+          docker compose stop backend backup
+          docker exec nfnn-postgres psql -U novanadeje -d novanadeje -c "insert into admin_action (id, admin_id, action, details, performed_at) values ('019a0000-0000-7000-8000-000000000001', '019a0000-0000-7000-8000-000000000002', 'CI_MARKER', 'to be undone by the restore', now())"
+          sudo cp "$dump" "$restore/ci.force.dump"
+          docker compose up -d --wait --wait-timeout 300
+          wait_for "[ -f $restore/ci.force.dump.done ]" 30 "the restore folder dump was not restored"
+          grep -q '^outcome=ok$' "$backups/status/restore" || { echo "::error::the restore status file does not say ok"; cat "$backups/status/restore"; exit 1; }
+          ls "$backups"/nfnn-*-pred-obnovou.dump > /dev/null || { echo "::error::no safety dump was taken before the forced restore"; exit 1; }
+          marker=$(docker exec nfnn-postgres psql -U novanadeje -d novanadeje -tA -c "select count(*) from admin_action where action = 'CI_MARKER'")
+          [ "$marker" = 0 ] || { echo "::error::the forced restore kept a row written after the dump"; exit 1; }
+          curl -fsS --max-time 10 http://localhost:8089/ | grep -q '<app-root'
 
       - name: Logs
         if: failure()

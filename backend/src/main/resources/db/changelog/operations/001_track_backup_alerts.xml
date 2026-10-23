@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <changeSet id="001-track-backup-alerts" author="nfnn">
+        <createTable tableName="backup_alert_state">
+            <column name="id" type="smallint">
+                <constraints primaryKey="true" primaryKeyName="pk_backup_alert_state" nullable="false"/>
+            </column>
+            <column name="reported_problems" type="varchar(200)"/>
+            <column name="reported_at" type="timestamp with time zone"/>
+        </createTable>
+        <sql>alter table backup_alert_state add constraint ck_backup_alert_state_singleton check (id = 1)</sql>
+        <sql>alter table backup_alert_state add constraint ck_backup_alert_state_reported
+            check ((reported_problems is null) = (reported_at is null))</sql>
+    </changeSet>
+
+</databaseChangeLog>

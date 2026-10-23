@@ -118,7 +118,10 @@ export class DonationsApi {
   }
 }
 
-function downloadedFile(response: HttpResponse<Blob>, fallbackFileName: string): DownloadedFile {
+export function downloadedFile(
+  response: HttpResponse<Blob>,
+  fallbackFileName: string,
+): DownloadedFile {
   return {
     blob: response.body ?? new Blob([], { type: 'application/pdf' }),
     fileName: fileNameOf(response.headers.get('Content-Disposition')) ?? fallbackFileName,

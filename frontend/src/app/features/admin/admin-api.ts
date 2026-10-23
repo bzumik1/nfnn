@@ -1,8 +1,8 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
-import { Observable } from 'rxjs';
+import { map, Observable } from 'rxjs';
 import { BankAccountItem } from '../donations/bank-accounts-api';
-import { DonationListResponse } from '../donations/donations-api';
+import { DonationListResponse, DownloadedFile, downloadedFile } from '../donations/donations-api';
 
 export type ImportFailureKind =
   | 'RATE_LIMITED'
@@ -254,6 +254,64 @@ export interface AdminOverviewResponse {
   months: MonthOverviewResponse[];
 }
 
+export type BackupKind = 'DAILY' | 'REQUESTED' | 'BEFORE_RESTORE' | 'OTHER';
+
+export type RunOutcome = 'OK' | 'FAILED';
+
+export type BackupRequestKind = 'BACKUP' | 'TEST_RESTORE';
+
+export type RestoreFileState = 'PENDING' | 'DONE' | 'FAILED' | 'SKIPPED';
+
+export type BackupProblem =
+  | 'BACKUPS_UNAVAILABLE'
+  | 'BACKUP_MISSING'
+  | 'BACKUP_FAILED'
+  | 'BACKUP_STALE'
+  | 'TEST_RESTORE_MISSING'
+  | 'TEST_RESTORE_FAILED'
+  | 'TEST_RESTORE_STALE';
+
+export interface BackupFileResponse {
+  fileName: string;
+  kind: BackupKind;
+  sizeBytes: number;
+  createdAt: string;
+}
+
+export interface BackupRunResponse {
+  outcome: RunOutcome;
+  startedAt: string;
+  finishedAt: string;
+  fileName: string | null;
+  sizeBytes: number | null;
+  tables: number | null;
+  requestId: string | null;
+  error: string | null;
+}
+
+export interface RestoreFileResponse {
+  fileName: string;
+  state: RestoreFileState;
+  changedAt: string;
+}
+
+export interface AdminBackupsResponse {
+  available: boolean;
+  backups: BackupFileResponse[];
+  lastBackup: BackupRunResponse | null;
+  lastTestRestore: BackupRunResponse | null;
+  lastRestore: BackupRunResponse | null;
+  restoreFiles: RestoreFileResponse[];
+  pendingRequests: number;
+  problems: BackupProblem[];
+}
+
+export interface BackupRequestResponse {
+  requestId: string;
+  kind: BackupRequestKind;
+  requestedAt: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class AdminApi {
   private readonly http = inject(HttpClient);
@@ -387,6 +445,25 @@ export class AdminApi {
 
   removeDonorAccount(donorId: string, linkId: string): Observable<void> {
     return this.http.delete<void>(donorAccountUrl(donorId, linkId));
+  }
+
+  backups(): Observable<AdminBackupsResponse> {
+    return this.http.get<AdminBackupsResponse>('/api/admin/operations/backups');
+  }
+
+  requestBackup(kind: BackupRequestKind): Observable<BackupRequestResponse> {
+    return this.http.post<BackupRequestResponse>('/api/admin/operations/backups/requests', {
+      kind,
+    });
+  }
+
+  downloadBackup(fileName: string): Observable<DownloadedFile> {
+    return this.http
+      .get(`/api/admin/operations/backups/${encodeURIComponent(fileName)}`, {
+        responseType: 'blob',
+        observe: 'response',
+      })
+      .pipe(map((response) => downloadedFile(response, fileName)));
   }
 }
 
