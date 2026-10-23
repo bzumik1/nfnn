@@ -44,6 +44,9 @@ public class RefreshTokenJpaEntity {
     @Column(name = "granted_at", nullable = false)
     private Instant grantedAt;
 
+    @Column(name = "used_at")
+    private Instant usedAt;
+
     @Column(name = "revoked_at")
     private Instant revokedAt;
 
@@ -61,6 +64,7 @@ public class RefreshTokenJpaEntity {
         entity.clientId = token.clientId().map(ClientId::value).orElse(null);
         entity.scope = token.scopes().isEmpty() ? null : OAuthScope.format(token.scopes());
         entity.grantedAt = token.grantedAt();
+        entity.usedAt = token.usedAt().orElse(null);
         entity.revokedAt = token.revokedAt().orElse(null);
         return entity;
     }
@@ -68,6 +72,6 @@ public class RefreshTokenJpaEntity {
     RefreshToken toDomain() {
         Set<OAuthScope> scopes = scope == null ? Set.of() : OAuthScope.parse(scope);
         return RefreshToken.reconstitute(id, new DonorId(donorId), secretHash, issuedAt, expiresAt, secondFactorVerified,
-                clientId == null ? null : new ClientId(clientId), scopes, grantedAt, revokedAt);
+                clientId == null ? null : new ClientId(clientId), scopes, grantedAt, usedAt, revokedAt);
     }
 }

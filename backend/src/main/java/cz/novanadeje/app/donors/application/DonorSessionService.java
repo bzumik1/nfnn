@@ -43,7 +43,7 @@ public class DonorSessionService {
         Instant now = clock.instant();
         RefreshToken token = refreshTokens.findBySecretHash(RefreshTokenSecret.fromValue(presentedSecret).hash())
                 .orElseThrow(InvalidRefreshToken::new);
-        if (token.isRevoked()) {
+        if (token.isUsed()) {
             refreshTokens.revokeAllOf(token.donorId(), now);
             throw new InvalidRefreshToken();
         }
@@ -51,7 +51,7 @@ public class DonorSessionService {
             throw new InvalidRefreshToken();
         }
         Donor donor = donors.findById(token.donorId()).orElseThrow(InvalidRefreshToken::new);
-        token.revoke(now);
+        token.markUsed(now);
         refreshTokens.save(token);
         return new RefreshedSession(donor, issue(donor.id(), donor.sessionRoles(token.secondFactorVerified()), token.secondFactorVerified(), now));
     }

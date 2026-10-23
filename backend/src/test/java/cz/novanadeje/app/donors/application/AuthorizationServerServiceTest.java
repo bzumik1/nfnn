@@ -232,14 +232,15 @@ class AuthorizationServerServiceTest {
         }
 
         @Test
-        @DisplayName("when the client refreshes, then the token rotates, keeps the grant date and the old one is revoked")
+        @DisplayName("when the client refreshes, then the token rotates, keeps the grant date and the old one is used up")
         void should_rotate_when_refreshed_given_right_client() {
             when(donors.findById(DONOR)).thenReturn(Optional.of(administrator()));
             when(accessTokens.issue(any(AccessTokenGrant.class))).thenReturn(new IssuedAccessToken("connector", NOW.plusSeconds(900)));
 
             OAuthTokens tokens = service.refresh(secret.value(), CLAUDE.value());
 
-            assertThat(token.isRevoked()).isTrue();
+            assertThat(token.isUsed()).isTrue();
+            assertThat(token.isRevoked()).isFalse();
             ArgumentCaptor<RefreshToken> saved = ArgumentCaptor.forClass(RefreshToken.class);
             verify(refreshTokens, org.mockito.Mockito.times(2)).save(saved.capture());
             RefreshToken rotated = saved.getAllValues().get(1);
@@ -257,13 +258,23 @@ class AuthorizationServerServiceTest {
         }
 
         @Test
-        @DisplayName("when a revoked token is replayed, then every session of the donor ends")
-        void should_end_every_session_when_refreshed_given_revoked_token() {
-            token.revoke(NOW.minusSeconds(10));
+        @DisplayName("when a used token is replayed, then every session of the donor ends")
+        void should_end_every_session_when_refreshed_given_used_token() {
+            token.markUsed(NOW.minusSeconds(10));
 
             assertThatThrownBy(() -> service.refresh(secret.value(), CLAUDE.value())).isInstanceOf(InvalidGrant.class);
 
             verify(refreshTokens).revokeAllOf(DONOR, NOW);
+        }
+
+        @Test
+        @DisplayName("when a disconnected token is presented, then the grant is invalid and no other session ends")
+        void should_refuse_without_ending_other_sessions_when_refreshed_given_revoked_token() {
+            token.revoke(NOW.minusSeconds(10));
+
+            assertThatThrownBy(() -> service.refresh(secret.value(), CLAUDE.value())).isInstanceOf(InvalidGrant.class);
+
+            verify(refreshTokens, never()).revokeAllOf(any(), any());
         }
 
         @Test

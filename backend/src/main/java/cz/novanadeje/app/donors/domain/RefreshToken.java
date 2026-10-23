@@ -19,10 +19,11 @@ public final class RefreshToken {
     private final ClientId clientId;
     private final Set<OAuthScope> scopes;
     private final Instant grantedAt;
+    private Instant usedAt;
     private Instant revokedAt;
 
     private RefreshToken(UUID id, DonorId donorId, String secretHash, Instant issuedAt, Instant expiresAt, boolean secondFactorVerified,
-                         ClientId clientId, Set<OAuthScope> scopes, Instant grantedAt, Instant revokedAt) {
+                         ClientId clientId, Set<OAuthScope> scopes, Instant grantedAt, Instant usedAt, Instant revokedAt) {
         this.id = id;
         this.donorId = donorId;
         this.secretHash = secretHash;
@@ -32,24 +33,25 @@ public final class RefreshToken {
         this.clientId = clientId;
         this.scopes = Set.copyOf(scopes);
         this.grantedAt = grantedAt;
+        this.usedAt = usedAt;
         this.revokedAt = revokedAt;
     }
 
     public static RefreshToken issue(RefreshTokenSecret secret, DonorId donorId, Instant issuedAt, Duration lifetime, boolean secondFactorVerified) {
         return new RefreshToken(UuidV7.generate(issuedAt), donorId, secret.hash(), issuedAt, issuedAt.plus(lifetime), secondFactorVerified, null,
-                Set.of(), issuedAt, null);
+                Set.of(), issuedAt, null, null);
     }
 
     public static RefreshToken issueForClient(RefreshTokenSecret secret, DonorId donorId, ClientId clientId, Set<OAuthScope> scopes,
                                               Instant grantedAt, Instant issuedAt, Duration lifetime) {
         return new RefreshToken(UuidV7.generate(issuedAt), donorId, secret.hash(), issuedAt, issuedAt.plus(lifetime), true, clientId, scopes,
-                grantedAt, null);
+                grantedAt, null, null);
     }
 
     public static RefreshToken reconstitute(UUID id, DonorId donorId, String secretHash, Instant issuedAt, Instant expiresAt,
                                             boolean secondFactorVerified, ClientId clientId, Set<OAuthScope> scopes, Instant grantedAt,
-                                            Instant revokedAt) {
-        return new RefreshToken(id, donorId, secretHash, issuedAt, expiresAt, secondFactorVerified, clientId, scopes, grantedAt, revokedAt);
+                                            Instant usedAt, Instant revokedAt) {
+        return new RefreshToken(id, donorId, secretHash, issuedAt, expiresAt, secondFactorVerified, clientId, scopes, grantedAt, usedAt, revokedAt);
     }
 
     public boolean secondFactorVerified() {
@@ -73,7 +75,17 @@ public final class RefreshToken {
     }
 
     public boolean isUsableAt(Instant now) {
-        return revokedAt == null && now.isBefore(expiresAt);
+        return usedAt == null && revokedAt == null && now.isBefore(expiresAt);
+    }
+
+    public boolean isUsed() {
+        return usedAt != null;
+    }
+
+    public void markUsed(Instant at) {
+        if (usedAt == null) {
+            usedAt = at;
+        }
     }
 
     public boolean isRevoked() {
@@ -104,6 +116,10 @@ public final class RefreshToken {
 
     public Instant expiresAt() {
         return expiresAt;
+    }
+
+    public Optional<Instant> usedAt() {
+        return Optional.ofNullable(usedAt);
     }
 
     public Optional<Instant> revokedAt() {

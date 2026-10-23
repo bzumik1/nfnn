@@ -14,8 +14,8 @@ public interface RefreshTokenJpaRepository extends JpaRepository<RefreshTokenJpa
 
     Optional<RefreshTokenJpaEntity> findBySecretHash(String secretHash);
 
-    @Query("select t from RefreshTokenJpaEntity t where t.donorId = :donorId and t.clientId is not null and t.revokedAt is null"
-            + " and t.expiresAt > :now order by t.issuedAt desc")
+    @Query("select t from RefreshTokenJpaEntity t where t.donorId = :donorId and t.clientId is not null and t.usedAt is null"
+            + " and t.revokedAt is null and t.expiresAt > :now order by t.issuedAt desc")
     List<RefreshTokenJpaEntity> findUsableClientTokensOf(@Param("donorId") UUID donorId, @Param("now") Instant now);
 
     @Modifying

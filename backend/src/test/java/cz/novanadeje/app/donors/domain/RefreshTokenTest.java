@@ -37,6 +37,28 @@ class RefreshTokenTest {
     }
 
     @Test
+    void should_be_used_but_not_revoked_when_marked_used_given_rotation() {
+        RefreshToken token = RefreshToken.issue(RefreshTokenSecret.generate(), DONOR, NOW, Duration.ofDays(14), false);
+
+        token.markUsed(NOW.plusSeconds(10));
+
+        assertThat(token.isUsed()).isTrue();
+        assertThat(token.usedAt()).contains(NOW.plusSeconds(10));
+        assertThat(token.isRevoked()).isFalse();
+        assertThat(token.isUsableAt(NOW.plusSeconds(20))).isFalse();
+    }
+
+    @Test
+    void should_not_count_as_used_when_revoked_given_sign_out_or_password_change() {
+        RefreshToken token = RefreshToken.issue(RefreshTokenSecret.generate(), DONOR, NOW, Duration.ofDays(14), false);
+
+        token.revoke(NOW.plusSeconds(10));
+
+        assertThat(token.isUsed()).isFalse();
+        assertThat(token.usedAt()).isEmpty();
+    }
+
+    @Test
     void should_store_only_hash_when_issued_given_secret() {
         RefreshTokenSecret secret = RefreshTokenSecret.generate();
         RefreshToken token = RefreshToken.issue(secret, DONOR, NOW, Duration.ofDays(14), false);

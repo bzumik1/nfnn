@@ -146,21 +146,23 @@ public class AuthorizationServerService {
         } catch (IllegalArgumentException malformed) {
             throw new InvalidGrant("the refresh token or the client is malformed");
         }
-        if (token.isRevoked()) {
+        if (token.isUsed()) {
             refreshTokens.revokeAllOf(token.donorId(), now);
-            log.warn("A revoked refresh token of donor {} was presented by a client; every session of the donor is ended", token.donorId());
+            log.warn("A used refresh token of donor {} was presented by a client; every session of the donor is ended", token.donorId());
             throw new InvalidGrant("the refresh token was used before");
         }
         if (!token.isUsableAt(now) || !token.belongsToClient(clientId)) {
-            throw new InvalidGrant("the refresh token expired or belongs to another client");
+            throw new InvalidGrant("the refresh token expired, was revoked or belongs to another client");
         }
         Donor donor = donors.findById(token.donorId()).filter(found -> !found.isErased()).orElseThrow(() -> new InvalidGrant("unknown donor"));
-        token.revoke(now);
-        refreshTokens.save(token);
         if (!donor.isAdministrator()) {
+            token.revoke(now);
+            refreshTokens.save(token);
             log.info("Donor {} is no administrator any more; the connection of client {} ends", donor.id(), clientId.host());
             throw new InvalidGrant("the donor is no administrator any more");
         }
+        token.markUsed(now);
+        refreshTokens.save(token);
         return issue(donor, clientId, token.scopes(), properties.mcpResource(), token.secondFactorVerified(), token.grantedAt(), now);
     }
 
