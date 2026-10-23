@@ -30,6 +30,10 @@ spring:
           auth: ${MAIL_AUTH:false}
           starttls:
             enable: ${MAIL_STARTTLS:false}
+            required: ${MAIL_STARTTLS:false}
+          connectiontimeout: 10000
+          timeout: 10000
+          writetimeout: 10000
   messages:
     basename: i18n/messages
     encoding: UTF-8

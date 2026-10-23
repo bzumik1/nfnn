@@ -29,6 +29,7 @@ class JavaMailServerProbe implements MailServerProbe {
         Properties properties = new Properties();
         properties.setProperty("mail.smtp.auth", Boolean.toString(server.auth()));
         properties.setProperty("mail.smtp.starttls.enable", Boolean.toString(server.startTls()));
+        properties.setProperty("mail.smtp.starttls.required", Boolean.toString(server.startTls()));
         properties.setProperty("mail.smtp.connectiontimeout", TIMEOUT_MILLIS);
         properties.setProperty("mail.smtp.timeout", TIMEOUT_MILLIS);
         properties.setProperty("mail.smtp.writetimeout", TIMEOUT_MILLIS);
