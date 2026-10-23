@@ -12,5 +12,5 @@ description: Implement a feature end to end (bounded context, tests first, Liqui
 6. Infrastructure: JPA entity and adapter, Liquibase `db/changelog/<context>/NNN_<change>.xml`, external adapters; a Testcontainers test per new query.
 7. REST: controller with request/response records and validation; `permitAll` line and a rate limiter when public.
 8. Frontend: `features/<context>/<name>-api.ts` with DTOs, components with specs, i18n ids on every text, e2e journey on `mockDonorApi`, an axe case for a new page or dialog, screenshots (skill `visual-check`).
-9. Docs: `docs/system-overview.md` paragraph; `docs/requirements.md` when the client decided something; `deploy/README.md`, `deploy/backend.env.example` and `.env.example` for a new setting.
+9. Docs: `docs/system-overview.md` paragraph; `docs/requirements.md` when the client decided something; `deploy/README.md` and `.env.example` for a new setting; a value the server's operator sets becomes a `Setting` in `operations/domain/settings` with a label in `frontend/src/app/features/operations/setting-labels.ts` (and in the MCP tool's list when it is not a secret).
 10. Run everything (`testing.md`, Running). PR body: what and why, manual server steps, screenshots.

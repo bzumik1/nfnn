@@ -124,6 +124,7 @@ jobs:
           docker build -t ghcr.io/bzumik1/nfnn-backend:latest backend
           docker build -t ghcr.io/bzumik1/nfnn-frontend:latest frontend
           docker build -t ghcr.io/bzumik1/nfnn-backup:latest deploy/backup
+          docker build -t ghcr.io/bzumik1/nfnn-postgres:latest deploy/postgres
           docker build -t ghcr.io/bzumik1/nfnn-ops:latest deploy/ops
           docker build -t ghcr.io/bzumik1/nfnn-mcp:latest mcp
 
@@ -137,78 +138,106 @@ jobs:
       - name: Compose file names no secret
         run: |
           if grep -noE '\b(POSTGRES_PASSWORD|PGPASSWORD|DB_PASSWORD|JWT_SECRET|MAIL_PASSWORD|FIO_TOKEN|TUNNEL_TOKEN)\b' deploy/compose.yml; then
-            echo "::error::Secrets live in the env files on the server (deploy/*.env.example), never in deploy/compose.yml"
+            echo "::error::Secrets are generated into secrets/ or entered in the first setup, never written into deploy/compose.yml"
             exit 1
           fi
 
-      - name: The log reader publishes no port and only cloudflared reads ops.env
+      - name: The log reader publishes no port, nothing reads an env file and secrets reach only their services
         run: |
           if [ "$(yq '[.services[] | select(has("ports"))] | length' deploy/compose.yml)" != 1 ] || [ "$(yq '.services.frontend | has("ports")' deploy/compose.yml)" != true ]; then
             echo "::error::only the frontend publishes a port; the log reader is reached through the Cloudflare tunnel"
             exit 1
           fi
-          if [ "$(yq '[.services[] | select(.env_file[]? == "/DATA/AppData/nfnn/env/ops.env")] | length' deploy/compose.yml)" != 1 ] || [ "$(yq '.services.cloudflared.env_file[0]' deploy/compose.yml)" != /DATA/AppData/nfnn/env/ops.env ]; then
-            echo "::error::ops.env (the tunnel token) goes to the cloudflared service only"
+          if [ "$(yq '[.services[] | select(has("env_file"))] | length' deploy/compose.yml)" != 0 ]; then
+            echo "::error::no service reads an env file: secrets are generated into secrets/ and settings come from the first setup"
+            exit 1
+          fi
+          secrets_mounts=$(yq -o=json '[.services | to_entries[] | select(.value.volumes[]? | test("^/DATA/AppData/nfnn/secrets:")) | .key + "=" + (.value.volumes[] | select(test("^/DATA/AppData/nfnn/secrets:")))] | sort | join(" ")' deploy/compose.yml)
+          if [ "$secrets_mounts" != '"backend=/DATA/AppData/nfnn/secrets:/secrets backup=/DATA/AppData/nfnn/secrets:/secrets:ro postgres=/DATA/AppData/nfnn/secrets:/secrets"' ]; then
+            echo "::error::the secrets folder goes to postgres and the backend, read-only to the backup, and to nothing else (found $secrets_mounts)"
+            exit 1
+          fi
+          if [ "$(yq '.services.cloudflared.volumes | length' deploy/compose.yml)" != 1 ] || [ "$(yq '.services.cloudflared.volumes[0]' deploy/compose.yml)" != /DATA/AppData/nfnn/tunnel:/tunnel:ro ]; then
+            echo "::error::cloudflared mounts only the tunnel folder, read-only"
             exit 1
           fi
           if [ "$(yq '.services.ops.volumes[0]' deploy/compose.yml)" != /DATA/AppData/nfnn/logs:/logs:ro ]; then
             echo "::error::the log reader mounts the logs folder read-only and nothing else"
             exit 1
           fi
-          if [ "$(yq '.services.mcp.volumes | length' deploy/compose.yml)" != 1 ] || [ "$(yq '.services.mcp.volumes[0]' deploy/compose.yml)" != /DATA/AppData/nfnn/logs:/logs:ro ] || [ "$(yq '.services.mcp | has("env_file")' deploy/compose.yml)" != false ]; then
-            echo "::error::the MCP connector mounts only the logs folder read-only and reads no env file (it holds no secret)"
+          if [ "$(yq '.services.mcp.volumes | length' deploy/compose.yml)" != 1 ] || [ "$(yq '.services.mcp.volumes[0]' deploy/compose.yml)" != /DATA/AppData/nfnn/logs:/logs:ro ]; then
+            echo "::error::the MCP connector mounts only the logs folder read-only (it holds no secret)"
             exit 1
           fi
 
-      - name: Env template values survive the YAML copy ZimaOS makes
+      - name: Prepare the compose file
         run: |
-          failed=0
-          while IFS= read -r line; do
-            file=${line%%:*}
-            entry=${line#*:}
-            entry=${entry#\#}
-            key=${entry%%=*}
-            value=${entry#*=}
-            tag=$(printf 'v: %s\n' "$value" | yq '.v | tag' 2>/dev/null) || tag=invalid
-            case "$tag" in
-              '!!str') continue ;;
-              '!!int') [[ $value =~ ^(0|[1-9][0-9]*)$ ]] && continue ;;
-              '!!bool') [[ $value =~ ^(true|false)$ ]] && continue ;;
-              '!!timestamp') [ "$key" = FIO_HISTORY_FROM ] && continue ;;
-            esac
-            echo "::error file=$file::$key=$value is read by YAML as $tag, so ZimaOS stores it in another form; make the backend accept that form and allow it here"
-            failed=1
-          done < <(grep -HE '^#?[A-Z_]+=.+' deploy/*.env.example)
-          exit $failed
-
-      - name: Prepare compose file and env files from the templates
-        run: |
-          env_dir="$RUNNER_TEMP/nfnn/env"
           mkdir -p "$RUNNER_TEMP/nfnn"
-          umask 077
-          mkdir "$env_dir"
-          db_password=$(openssl rand -hex 32)
-          jwt_secret=$(openssl rand -hex 32)
-          sed -E "s/^(POSTGRES_PASSWORD|PGPASSWORD|DB_PASSWORD)=$/\1=$db_password/" deploy/db.env.example > "$env_dir/db.env"
-          sed -E "s/^JWT_SECRET=$/JWT_SECRET=$jwt_secret/" deploy/backend.env.example > "$env_dir/backend.env"
-          sed -E "s/^TUNNEL_TOKEN=$/TUNNEL_TOKEN=not-a-real-token/" deploy/ops.env.example > "$env_dir/ops.env"
-          if ! grep -qE '^TUNNEL_TOKEN=not-a-real-token$' "$env_dir/ops.env"; then
-            echo "::error::deploy/ops.env.example must have the empty line TUNNEL_TOKEN="
-            exit 1
-          fi
-          if [ "$(grep -cE '^(POSTGRES_PASSWORD|PGPASSWORD|DB_PASSWORD)=[0-9a-f]{64}$' "$env_dir/db.env")" != 3 ]; then
-            echo "::error::deploy/db.env.example must have the empty lines POSTGRES_PASSWORD=, PGPASSWORD= and DB_PASSWORD="
-            exit 1
-          fi
-          if ! grep -qE '^JWT_SECRET=[0-9a-f]{64}$' "$env_dir/backend.env"; then
-            echo "::error::deploy/backend.env.example must have the empty line JWT_SECRET="
-            exit 1
-          fi
           sed "s#/DATA/AppData/nfnn#$RUNNER_TEMP/nfnn#g" deploy/compose.yml > "$RUNNER_TEMP/compose.yml"
           echo "COMPOSE_FILE=$RUNNER_TEMP/compose.yml" >> "$GITHUB_ENV"
 
       - name: Start the production stack (cloudflared cannot connect without a real tunnel token)
         run: docker compose up -d --wait --wait-timeout 300 postgres backup backend mcp frontend ops
+
+      - name: First setup
+        run: |
+          secrets="$RUNNER_TEMP/nfnn/secrets"
+          for file in db-password jwt-secret settings-key; do
+            [ "$(sudo stat -c '%a %U' "$secrets/$file")" = '600 root' ] || { echo "::error::secrets/$file must exist, owned by root with mode 600"; sudo ls -la "$secrets"; exit 1; }
+          done
+          status=$(curl -fsS --max-time 10 http://localhost:8089/api/operations/setup)
+          [ "$status" = '{"required":true,"codeRequired":false}' ] || { echo "::error::a fresh install opened directly must ask for the setup without a code (got $status)"; exit 1; }
+          proxied=$(curl -fsS --max-time 10 -H 'X-Forwarded-For: 203.0.113.7' http://localhost:8089/api/operations/setup)
+          [ "$proxied" = '{"required":true,"codeRequired":true}' ] || { echo "::error::a request through a proxy must need the code (got $proxied)"; exit 1; }
+          wrong=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 -H 'X-Forwarded-For: 203.0.113.7' -H 'Content-Type: application/json' --data '{"code":"AAAA-BBBB-CCCC"}' http://localhost:8089/api/operations/setup/unlock)
+          [ "$wrong" = 403 ] || { echo "::error::a wrong code must answer 403 (got $wrong)"; exit 1; }
+          code=$(docker logs nfnn-backend 2>&1 | grep -oE '^ +[2-9A-Z]{4}-[2-9A-Z]{4}-[2-9A-Z]{4} *$' | tail -n 1 | tr -d ' ')
+          [ -n "$code" ] || { echo "::error::the backend printed no setup code into the container log"; exit 1; }
+          if grep -q -- "$code" "$RUNNER_TEMP/nfnn/logs/backend.log"; then
+            echo "::error::the setup code must not reach backend.log, which the tunnel serves"
+            exit 1
+          fi
+          right=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 -H 'X-Forwarded-For: 203.0.113.7' -H 'Content-Type: application/json' --data "{\"code\":\"$code\"}" http://localhost:8089/api/operations/setup/unlock)
+          [ "$right" = 204 ] || { echo "::error::the code from the log must unlock the setup (got $right)"; exit 1; }
+          restarts=$(docker inspect -f '{{.RestartCount}}' nfnn-backend)
+          saved=$(curl -fsS --max-time 30 -H 'X-Forwarded-For: 203.0.113.7' -H 'Content-Type: application/json' --data "{\"code\":\"$code\",\"settings\":[{\"name\":\"PUBLIC_URL\",\"value\":\"http://localhost:8089\"},{\"name\":\"MAIL_HOST\",\"value\":\"localhost\"},{\"name\":\"MAIL_PORT\",\"value\":\"1025\"},{\"name\":\"MAIL_FROM\",\"value\":\"info@nfnn.cz\"},{\"name\":\"CONTACT_RECIPIENT\",\"value\":\"info@nfnn.cz\"},{\"name\":\"ADMIN_EMAILS\",\"value\":\"spravce@example.cz\"},{\"name\":\"TUNNEL_TOKEN\",\"value\":\"not-a-real-token\"}]}" http://localhost:8089/api/operations/setup)
+          echo "$saved" | jq -e '.restarting == true' > /dev/null || { echo "::error::the setup was not saved: $saved"; exit 1; }
+          echo "The backend restarts with the stored settings"
+          for _ in $(seq 90); do
+            if [ "$(docker inspect -f '{{.RestartCount}}' nfnn-backend)" -gt "$restarts" ] && [ "$(docker inspect -f '{{.State.Health.Status}}' nfnn-backend)" = healthy ]; then
+              break
+            fi
+            sleep 2
+          done
+          [ "$(docker inspect -f '{{.State.Health.Status}}' nfnn-backend)" = healthy ] && [ "$(docker inspect -f '{{.RestartCount}}' nfnn-backend)" -gt "$restarts" ] || { echo "::error::the backend did not come back after the setup"; exit 1; }
+          done_status=$(curl -fsS --max-time 10 http://localhost:8089/api/operations/setup)
+          [ "$(echo "$done_status" | jq -r '.required')" = false ] || { echo "::error::the setup still asks after the restart"; exit 1; }
+          grep -q 'Loaded 7 stored settings' "$RUNNER_TEMP/nfnn/logs/backend.log" || { echo "::error::the backend did not load the stored settings"; exit 1; }
+          [ "$(sudo cat "$RUNNER_TEMP/nfnn/tunnel/token")" = not-a-real-token ] || { echo "::error::the backend did not write the tunnel token for cloudflared"; exit 1; }
+          stored=$(docker exec nfnn-postgres psql -U novanadeje -d novanadeje -tA -c "select value from operations_setting where name = 'TUNNEL_TOKEN'")
+          case "$stored" in
+            v1:*) ;;
+            *) echo "::error::the tunnel token must be stored encrypted"; exit 1 ;;
+          esac
+          if echo "$stored" | grep -q not-a-real-token; then
+            echo "::error::the stored tunnel token is readable in the database"
+            exit 1
+          fi
+          closed=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 -H 'Content-Type: application/json' --data '{"code":null,"settings":[]}' http://localhost:8089/api/operations/setup)
+          [ "$closed" = 409 ] || { echo "::error::a completed setup must answer 409 (got $closed)"; exit 1; }
+
+      - name: The database takes the generated password even when it had another one
+        run: |
+          docker exec nfnn-postgres psql -U novanadeje -d novanadeje -c "alter role novanadeje password 'an-old-password'"
+          docker compose restart postgres
+          for _ in $(seq 30); do
+            if docker exec nfnn-postgres sh -c 'PGPASSWORD=$(cat /secrets/db-password) psql -h 127.0.0.1 -U novanadeje -d novanadeje -tA -c "select 1"' 2> /dev/null | grep -q 1; then
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "::error::nfnn-postgres did not set the role's password to the generated one"
+          exit 1
 
       - name: Verify
         run: |
@@ -221,7 +250,7 @@ jobs:
           for container in nfnn-postgres nfnn-backup nfnn-ops nfnn-mcp; do
             for key in JWT_SECRET FIO_TOKEN MAIL_PASSWORD TUNNEL_TOKEN; do
               if docker exec "$container" printenv "$key" > /dev/null; then
-                echo "::error::$container must not receive $key: only the backend reads backend.env and only cloudflared reads ops.env"
+                echo "::error::$container must not receive $key"
                 exit 1
               fi
             done
@@ -282,7 +311,7 @@ jobs:
           docker compose stop backend backup
           docker exec nfnn-postgres psql -U novanadeje -d novanadeje -c "insert into admin_action (id, admin_id, action, details, performed_at) values ('019a0000-0000-7000-8000-000000000001', '019a0000-0000-7000-8000-000000000002', 'CI_MARKER', 'to be undone by the restore', now())"
           sudo cp "$dump" "$restore/ci.force.dump"
-          docker compose up -d --wait --wait-timeout 300 postgres backup backend frontend ops
+          docker compose up -d --wait --wait-timeout 300 postgres backup backend mcp frontend ops
           wait_for "[ -f $restore/ci.force.dump.done ]" 30 "the restore folder dump was not restored"
           grep -q '^outcome=ok$' "$backups/status/restore" || { echo "::error::the restore status file does not say ok"; cat "$backups/status/restore"; exit 1; }
           ls "$backups"/nfnn-*-pred-obnovou.dump > /dev/null || { echo "::error::no safety dump was taken before the forced restore"; exit 1; }

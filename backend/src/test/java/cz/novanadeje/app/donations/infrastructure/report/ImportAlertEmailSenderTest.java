@@ -106,7 +106,7 @@ class ImportAlertEmailSenderTest {
         assertThat(plainText()).contains(
                 "Fio 22. 10. 2026 15:00 odmítlo token, kterým web Nová naděje stahuje platby z účtu fondu.",
                 "Token chybí, ještě neplatí nebo vypršel (platí 180 dní).",
-                "vytvořte nový token typu „Sledování účtu“, zapište ho na serveru do backend.env na řádek FIO_TOKEN a aplikaci přeinstalujte.",
+                "vytvořte nový token typu „Sledování účtu“ a vložte ho ve správě webu v části Nastavení jako Token Fio API.",
                 "Poslední úspěšné stažení plateb z banky: zatím žádné");
         assertThat(plainText()).doesNotContain("za sebou nedokázal");
         MailPreviews.save("import-outage-token", sentEmail());

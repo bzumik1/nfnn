@@ -30,7 +30,7 @@ Feature: The foundation is told when the bank import stops working and when it w
     And both parts of the alert e-mail say:
       | Fio 18. 10. 2026 12:00 odmítlo token, kterým web Nová naděje stahuje platby z účtu fondu. |
       | Token chybí, ještě neplatí nebo vypršel (platí 180 dní).                                 |
-      | zapište ho na serveru do backend.env na řádek FIO_TOKEN a aplikaci přeinstalujte.        |
+      | a vložte ho ve správě webu v části Nastavení jako Token Fio API.                         |
     And the import state reports the outage "UNAUTHORIZED" after 1 failures
 
   Scenario: The recovery after an outage sends one e-mail and the next success sends nothing
