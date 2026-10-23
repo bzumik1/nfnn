@@ -15,6 +15,7 @@ import {
 import { routes } from './app.routes';
 import { authInterceptor } from './core/auth/auth-interceptor';
 import { AuthStore } from './core/auth/auth-store';
+import { CanonicalLink } from './core/seo/canonical-link';
 
 const scrollOptions: InMemoryScrollingOptions = {
   scrollPositionRestoration: 'enabled',
@@ -29,5 +30,6 @@ export const appConfig: ApplicationConfig = {
     provideRouter(routes, inMemoryScrolling),
     provideHttpClient(withFetch(), withInterceptors([authInterceptor])),
     provideAppInitializer(() => inject(AuthStore).restore()),
+    provideAppInitializer(() => inject(CanonicalLink).start()),
   ],
 };

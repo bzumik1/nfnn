@@ -75,7 +75,7 @@ app:
   build:
     revision: ${APP_REVISION:dev}
   site:
-    public-url: ${PUBLIC_URL:https://nfnn.znamenacek.duckdns.org}
+    public-url: ${PUBLIC_URL:https://nfnn.cz}
   mail:
     sender-email: ${MAIL_FROM:${CONTACT_RECIPIENT:info@nfnn.cz}}
   contact:

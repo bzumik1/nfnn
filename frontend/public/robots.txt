@@ -1,0 +1,11 @@
+User-agent: *
+Disallow: /api/
+Disallow: /mcp
+Disallow: /darce/
+Disallow: /sprava/
+Disallow: /obnova-hesla
+Disallow: /potvrzeni-emailu
+Disallow: /pripojeni
+Allow: /
+
+Sitemap: https://nfnn.cz/sitemap.xml
