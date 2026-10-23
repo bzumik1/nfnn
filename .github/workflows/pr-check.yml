@@ -89,6 +89,28 @@ jobs:
       - name: End-to-end and accessibility tests
         run: npm run e2e
 
+  mcp:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: mcp
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: mcp/package-lock.json
+
+      - run: npm ci
+
+      - name: Formatting, types and tests
+        run: npm run check
+
   stack:
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -103,6 +125,7 @@ jobs:
           docker build -t ghcr.io/bzumik1/nfnn-frontend:latest frontend
           docker build -t ghcr.io/bzumik1/nfnn-backup:latest deploy/backup
           docker build -t ghcr.io/bzumik1/nfnn-ops:latest deploy/ops
+          docker build -t ghcr.io/bzumik1/nfnn-mcp:latest mcp
 
       - name: Compose file has no dollar signs
         run: |
@@ -130,6 +153,10 @@ jobs:
           fi
           if [ "$(yq '.services.ops.volumes[0]' deploy/compose.yml)" != /DATA/AppData/nfnn/logs:/logs:ro ]; then
             echo "::error::the log reader mounts the logs folder read-only and nothing else"
+            exit 1
+          fi
+          if [ "$(yq '.services.mcp.volumes | length' deploy/compose.yml)" != 1 ] || [ "$(yq '.services.mcp.volumes[0]' deploy/compose.yml)" != /DATA/AppData/nfnn/logs:/logs:ro ] || [ "$(yq '.services.mcp | has("env_file")' deploy/compose.yml)" != false ]; then
+            echo "::error::the MCP connector mounts only the logs folder read-only and reads no env file (it holds no secret)"
             exit 1
           fi
 
@@ -181,7 +208,7 @@ jobs:
           echo "COMPOSE_FILE=$RUNNER_TEMP/compose.yml" >> "$GITHUB_ENV"
 
       - name: Start the production stack (cloudflared cannot connect without a real tunnel token)
-        run: docker compose up -d --wait --wait-timeout 300 postgres backup backend frontend ops
+        run: docker compose up -d --wait --wait-timeout 300 postgres backup backend mcp frontend ops
 
       - name: Verify
         run: |
@@ -191,7 +218,7 @@ jobs:
           case "$status" in
             502|503|504|000) echo "::error::nginx could not reach the backend"; exit 1 ;;
           esac
-          for container in nfnn-postgres nfnn-backup nfnn-ops; do
+          for container in nfnn-postgres nfnn-backup nfnn-ops nfnn-mcp; do
             for key in JWT_SECRET FIO_TOKEN MAIL_PASSWORD TUNNEL_TOKEN; do
               if docker exec "$container" printenv "$key" > /dev/null; then
                 echo "::error::$container must not receive $key: only the backend reads backend.env and only cloudflared reads ops.env"
@@ -210,6 +237,19 @@ jobs:
           ops http://127.0.0.1/info | grep -q '"revision":"dev"' || { echo "::error::the log reader does not pass /info to the backend"; exit 1; }
           ops http://127.0.0.1/health | grep -q '"status":"UP"' || { echo "::error::the log reader does not pass /health to the backend"; exit 1; }
           [ -z "$(docker port nfnn-ops)" ] || { echo "::error::the log reader must publish no port"; exit 1; }
+          echo "The MCP connector answers through the frontend: a challenge without a token, the resource metadata and the authorization server metadata"
+          [ -z "$(docker port nfnn-mcp)" ] || { echo "::error::the MCP connector must publish no port"; exit 1; }
+          issuer=$(curl -fsS --max-time 10 http://localhost:8089/.well-known/oauth-authorization-server | jq -r '.issuer')
+          [ -n "$issuer" ] && [ "$issuer" != null ] || { echo "::error::the authorization server metadata names no issuer"; exit 1; }
+          echo "The authorization server is $issuer"
+          mcp_headers=$(curl -sS -D - -o /dev/null --max-time 10 -X POST -H 'Content-Type: application/json' -H 'Accept: application/json, text/event-stream' --data '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' http://localhost:8089/mcp)
+          echo "$mcp_headers" | grep -q '^HTTP/1.1 401' || { echo "::error::/mcp without a token must answer 401"; echo "$mcp_headers"; exit 1; }
+          echo "$mcp_headers" | grep -qi "^WWW-Authenticate: Bearer .*resource_metadata=\"$issuer/.well-known/oauth-protected-resource/mcp\"" || { echo "::error::the 401 must point at the protected resource metadata"; echo "$mcp_headers"; exit 1; }
+          metadata=$(curl -fsS --max-time 10 http://localhost:8089/.well-known/oauth-protected-resource/mcp)
+          [ "$(echo "$metadata" | jq -r '.resource')" = "$issuer/mcp" ] || { echo "::error::the protected resource metadata does not name /mcp"; echo "$metadata"; exit 1; }
+          [ "$(echo "$metadata" | jq -r '.authorization_servers[0]')" = "$issuer" ] || { echo "::error::the protected resource metadata does not name the site as its authorization server"; echo "$metadata"; exit 1; }
+          [ "$(echo "$metadata" | jq -r '.scopes_supported | join(" ")')" = "admin:read admin:write" ] || { echo "::error::the protected resource metadata does not list both scopes"; echo "$metadata"; exit 1; }
+          docker exec nfnn-mcp wget -q -O - http://127.0.0.1:8081/health | grep -q '"status":"UP"' || { echo "::error::the MCP connector did not discover the authorization server"; exit 1; }
           backups="$RUNNER_TEMP/nfnn/backups"
           wait_for() {
             for _ in $(seq "$2"); do

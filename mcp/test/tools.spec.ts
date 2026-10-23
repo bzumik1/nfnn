@@ -1,0 +1,231 @@
+import type { Client } from '@modelcontextprotocol/client';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { DONOR_ID, PAYMENT_ID, READ_TOKEN, UNKNOWN_ID, WRITE_TOKEN } from './fake-backend.js';
+import { connect, MCP_URL, startApp, textOf, type TestApp } from './support.js';
+
+describe('Given an administrator connected with the reading permission only', () => {
+  let stack: TestApp;
+  let client: Client;
+
+  beforeEach(async () => {
+    stack = await startApp();
+    client = await connect(stack.app, READ_TOKEN);
+  });
+
+  afterEach(async () => {
+    await client.close();
+    await stack.stop();
+  });
+
+  it('when the tools are listed, then every reading and writing tool is there with its annotations', async () => {
+    const { tools } = await client.listTools();
+    const names = tools.map((tool) => tool.name).sort();
+    expect(names).toEqual([
+      'nfnn_admin_actions',
+      'nfnn_backups',
+      'nfnn_content',
+      'nfnn_donor',
+      'nfnn_find_donors',
+      'nfnn_log',
+      'nfnn_log_files',
+      'nfnn_overview',
+      'nfnn_pair_payment',
+      'nfnn_payments',
+      'nfnn_publish_news',
+      'nfnn_publish_project',
+      'nfnn_report',
+      'nfnn_request_backup',
+      'nfnn_send_report',
+      'nfnn_status',
+      'nfnn_unpair_payment',
+      'nfnn_unpublish_news',
+      'nfnn_unpublish_project',
+    ]);
+    expect(tools.find((tool) => tool.name === 'nfnn_status')?.annotations?.readOnlyHint).toBe(true);
+    expect(
+      tools.find((tool) => tool.name === 'nfnn_unpair_payment')?.annotations?.destructiveHint,
+    ).toBe(true);
+  });
+
+  it('when the status is asked, then the version, the import state and the last backup come as text with Prague times', async () => {
+    const result = await client.callTool({ name: 'nfnn_status', arguments: {} });
+    expect(result.isError).toBeFalsy();
+    const text = textOf(result);
+    expect(text).toContain('"revision": "abc1234"');
+    expect(text).toContain('"health": "UP"');
+    expect(text).toContain('"lastSucceededAt": "23. 10. 2026 07:00:00"');
+    expect(text).toContain('"outcome": "OK"');
+  });
+
+  it('when the payments are asked, then the administration gets the exchanged API token and amounts read in crowns', async () => {
+    const result = await client.callTool({
+      name: 'nfnn_payments',
+      arguments: { pairing: 'unpaired' },
+    });
+    const call = stack.backend.requests.find((request) =>
+      request.path.startsWith('/api/admin/donations/payments'),
+    );
+    expect(call?.path).toBe('/api/admin/donations/payments?pairing=unpaired');
+    expect(call?.authorization).toBe('Bearer api-token-read');
+    expect(textOf(result)).toContain('"amount": "500,00 Kč"');
+    expect(textOf(result)).not.toContain('amountMinor');
+  });
+
+  it('when a year is given, then the overview and the paired payments pass it on', async () => {
+    await client.callTool({ name: 'nfnn_overview', arguments: { year: 2025 } });
+    await client.callTool({ name: 'nfnn_payments', arguments: { pairing: 'paired', year: 2025 } });
+    const paths = stack.backend.requests.map((request) => request.path);
+    expect(paths).toContain('/api/admin/donations/overview?year=2025');
+    expect(paths).toContain('/api/admin/donations/payments?pairing=paired&year=2025');
+  });
+
+  it('when a donor is looked up and opened, then both halves of the card come, a missing record explained', async () => {
+    const found = await client.callTool({ name: 'nfnn_find_donors', arguments: { query: 'nov' } });
+    expect(textOf(found)).toContain('Jana Nováková');
+    expect(stack.backend.requests.map((request) => request.path)).toContain(
+      '/api/admin/donors?query=nov',
+    );
+    const card = await client.callTool({ name: 'nfnn_donor', arguments: { donorId: DONOR_ID } });
+    expect(card.isError).toBeFalsy();
+    expect(textOf(card)).toContain('"registeredAt": "17. 10. 2026 12:00:00"');
+    expect(textOf(card)).toContain('no donation record yet');
+  });
+
+  it('when the history, the report and the content are asked, then they come from the administration', async () => {
+    const actions = await client.callTool({
+      name: 'nfnn_admin_actions',
+      arguments: { limit: 10, before: '2026-10-23T07:00:00Z' },
+    });
+    expect(textOf(actions)).toContain('PAIR_PAYMENT');
+    expect(stack.backend.requests.map((request) => request.path)).toContain(
+      '/api/admin/donors/actions?limit=10&before=2026-10-23T07%3A00%3A00Z',
+    );
+    expect(textOf(await client.callTool({ name: 'nfnn_report', arguments: {} }))).toContain(
+      'info@nfnn.cz',
+    );
+    expect(textOf(await client.callTool({ name: 'nfnn_content', arguments: {} }))).toContain(
+      'Koncept',
+    );
+    expect(textOf(await client.callTool({ name: 'nfnn_backups', arguments: {} }))).toContain(
+      'nfnn-2026-10-23_0300.dump',
+    );
+  });
+
+  it('when the logs folder is not mounted, then the log tools say so as a tool error', async () => {
+    const result = await client.callTool({ name: 'nfnn_log_files', arguments: {} });
+    expect(result.isError).toBe(true);
+    expect(textOf(result)).toContain('not readable');
+  });
+
+  it('when a writing tool is called, then 403 insufficient_scope asks for the writing permission before anything runs', async () => {
+    const response = await stack.app.fetch(
+      new Request(MCP_URL, {
+        method: 'POST',
+        headers: {
+          authorization: `Bearer ${READ_TOKEN}`,
+          'content-type': 'application/json',
+          accept: 'application/json, text/event-stream',
+        },
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          id: 1,
+          method: 'tools/call',
+          params: {
+            name: 'nfnn_pair_payment',
+            arguments: { paymentId: PAYMENT_ID, donorId: DONOR_ID },
+          },
+        }),
+      }),
+    );
+    expect(response.status).toBe(403);
+    const challenge = response.headers.get('www-authenticate') ?? '';
+    expect(challenge).toContain('error="insufficient_scope"');
+    expect(challenge).toContain('scope="admin:write"');
+    expect(
+      stack.backend.requests.filter(
+        (request) => request.method === 'POST' && request.path.includes('/pair'),
+      ),
+    ).toHaveLength(0);
+  });
+});
+
+describe('Given an administrator connected with the writing permission', () => {
+  let stack: TestApp;
+  let client: Client;
+
+  beforeEach(async () => {
+    stack = await startApp();
+    client = await connect(stack.app, WRITE_TOKEN);
+  });
+
+  afterEach(async () => {
+    await client.close();
+    await stack.stop();
+  });
+
+  it('when a payment is paired, then the administration receives the donor and the result comes back', async () => {
+    const result = await client.callTool({
+      name: 'nfnn_pair_payment',
+      arguments: { paymentId: PAYMENT_ID, donorId: DONOR_ID },
+    });
+    expect(result.isError).toBeFalsy();
+    const call = stack.backend.requests.find((request) => request.path.endsWith('/pair'));
+    expect(call?.method).toBe('POST');
+    expect(call?.authorization).toBe('Bearer api-token-write');
+    expect(JSON.parse(call?.body ?? '{}')).toEqual({ donorId: DONOR_ID });
+    expect(textOf(result)).toContain('"pairedBy": "MANUAL"');
+    expect(stack.logLines).toContain('INFO Tool nfnn_pair_payment answered donor donor-jana');
+  });
+
+  it('when the administration refuses, then the tool answers an error with the Czech title and detail', async () => {
+    const unknown = await client.callTool({
+      name: 'nfnn_pair_payment',
+      arguments: { paymentId: UNKNOWN_ID, donorId: DONOR_ID },
+    });
+    expect(unknown.isError).toBe(true);
+    expect(textOf(unknown)).toBe(
+      'The administration refused the request (404 donations/bank-payment-not-found): Platba nenalezena – Platba s tímto id neexistuje.',
+    );
+    const receipt = await client.callTool({
+      name: 'nfnn_unpair_payment',
+      arguments: { paymentId: PAYMENT_ID },
+    });
+    expect(receipt.isError).toBe(true);
+    expect(textOf(receipt)).toContain('409 donations/donation-has-receipt');
+  });
+
+  it('when the report, a backup and a news article are requested, then each reaches its endpoint', async () => {
+    expect(
+      textOf(await client.callTool({ name: 'nfnn_send_report', arguments: { month: '2026-09' } })),
+    ).toContain('"month": "2026-09"');
+    expect(
+      textOf(
+        await client.callTool({ name: 'nfnn_request_backup', arguments: { kind: 'TEST_RESTORE' } }),
+      ),
+    ).toContain('TEST_RESTORE');
+    expect(
+      textOf(
+        await client.callTool({
+          name: 'nfnn_publish_news',
+          arguments: { id: UNKNOWN_ID, publishedOn: '2026-10-23' },
+        }),
+      ),
+    ).toContain('"publishedOn": "2026-10-23"');
+    const bodies = stack.backend.requests
+      .filter((request) => request.method === 'POST' && request.path.startsWith('/api/admin'))
+      .map((request) => request.body);
+    expect(bodies).toContain('{"month":"2026-09"}');
+    expect(bodies).toContain('{"kind":"TEST_RESTORE"}');
+  });
+
+  it('when an argument is malformed, then the tool refuses it before calling the administration', async () => {
+    const result = await client.callTool({
+      name: 'nfnn_send_report',
+      arguments: { month: 'září' },
+    });
+    expect(result.isError).toBe(true);
+    expect(
+      stack.backend.requests.filter((request) => request.path.includes('/report/send')),
+    ).toHaveLength(0);
+  });
+});

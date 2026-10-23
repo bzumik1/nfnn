@@ -188,6 +188,17 @@ curl -sS -H "CF-Access-Client-Id: $NFNN_OPS_CLIENT_ID" -H "CF-Access-Client-Secr
 
 V prohlížeči otevři https://ops.nfnn.cz/logs/ a přihlas se e-mailem. Když tunel neběží (`sudo docker logs nfnn-cloudflared` hlásí chybu tokenu), zbytek webu to neovlivní; logy jsou dál v `docker logs` a v souborech na disku. Co v logu není: compose uložený ZimaOS, proměnné v kontejnerech a kontejner, který ZimaOS vůbec nevytvořil; na to zůstává tvůj příkaz na Zimě.
 
+## MCP konektor
+
+Správce může Claudovi (na claude.ai, v mobilu i v Claude Code) dát přístup do správy fondu konektorem na adrese `https://nfnn.cz/mcp` (na stagingu `https://nfnn.znamenacek.duckdns.org/mcp`). Běží v kontejneru `nfnn-mcp` za frontendovým nginxem, nemá žádné heslo ani klíč: přihlášení jde přes samotný web (stránka `/pripojeni`, účet správce s dvoufaktorovým ověřením) a každý nástroj volá stejná `/api/admin/...` jako web, takže vše je v historii správy pod jménem správce. Nástroje: stav importu a verze, přehled roku, platby, dárci, zálohy, historie správy, report, aktuality a projekty, konec logů; se zápisem navíc spárování a odpárování platby, odeslání reportu, vyžádání zálohy nebo zkušební obnovy a publikování aktualit a projektů. Nic nového v `env/` ani v Cloudflare.
+
+1. Po merge: na Zimě aplikaci odinstaluj a znovu nainstaluj s aktuálním `deploy/compose.yml` (nová služba `mcp`; Save nestačí, stejně jako u záloh a logů). Kontrola: `sudo docker ps` ukáže `nfnn-mcp` jako healthy a `curl -sS -o /dev/null -w '%{http_code}\n' -X POST https://nfnn.cz/mcp` vrátí `401`.
+2. V claude.ai: Nastavení → Konektory → **Přidat vlastní konektor** → název `NFNN`, adresa `https://nfnn.cz/mcp`, nic dalšího (klient se představí sám). Po uložení klikni na Připojit: otevře se web fondu, přihlas se účtem správce včetně kódu z aplikace a na stránce „Povolit přístup ke správě aplikaci claude.ai?“ zvol Povolit. Od té chvíle má Claude v chatu nástroje `nfnn_…`; pro zápis si vyžádá oprávnění „admin:write“ a web se zeptá znovu.
+3. V Claude Code na počítači: `claude mcp add --transport http nfnn https://nfnn.cz/mcp` a při prvním použití `/mcp` → přihlášení v prohlížeči stejně jako výše (stránka upozorní, že jde o aplikaci na tomto počítači).
+4. Odpojení: přehled dárce → karta „Přihlašovací údaje“ → „Připojené aplikace“ → Odpojit. Připojení skončí také změnou hesla, vypnutím dvoufaktorového ověření nebo odebráním role správce; bez použití vyprší po 14 dnech.
+
+Když konektor neodpovídá: `sudo docker logs nfnn-mcp` (při startu zapíše `Authorization server discovered: https://nfnn.cz`; dokud se k backendu nedostane, hlásí `/health` 503 a ZimaOS ho ukazuje jako starting) a `sudo docker logs nfnn-frontend` (nginx hlásí `limiting requests` při více než 10 požadavcích za sekundu z jedné adresy). Konektor sám nic neukládá, takže ho lze kdykoli restartovat.
+
 ## Přechod na skutečnou doménu
 
 Doména fondu je `nfnn.cz` (u WEDOS, držitel fond). Nastavuje se jako `nakocarky.cz`:
