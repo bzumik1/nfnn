@@ -9,19 +9,23 @@ import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.List;
 
-public record YearOverview(Year year, List<MonthOverview> months, Tally donations, long newDonors, Tally unpairedPayments,
+public record YearOverview(Year year, List<MonthOverview> months, Tally paired, long newDonors, Tally unpaired,
                            long donorsRegistered) {
 
     public static final int MONTH_BOUNDARIES = 13;
 
     public YearOverview {
-        if (year == null || months == null || donations == null || unpairedPayments == null) {
+        if (year == null || months == null || paired == null || unpaired == null) {
             throw new IllegalArgumentException("A year overview has its year and every one of its figures");
         }
         if (newDonors < 0 || donorsRegistered < newDonors) {
             throw new IllegalArgumentException("New donors are part of the registered ones: " + newDonors + " of " + donorsRegistered);
         }
         months = List.copyOf(months);
+    }
+
+    public Tally received() {
+        return paired.plus(unpaired);
     }
 
     public static YearOverview compile(Year year, LocalDate today, List<Donation> donations, List<BankPayment> unpairedPayments,

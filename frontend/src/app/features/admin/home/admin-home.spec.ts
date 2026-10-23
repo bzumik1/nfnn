@@ -227,13 +227,20 @@ describe('Given an administrator on the administration home', () => {
       await respondOverview(OVERVIEW_URL, overview());
     });
 
-    it('then the donors are summed up and every started month has a row with a yearly total', () => {
+    it('then every started month shows everything received, new donors, paired and unpaired, with a yearly total', () => {
       expect(text('.admin-summary')).toBe('Registrovaní dárci: 3, z toho nových v roce 2026: 3.');
+      expect(
+        Array.from(
+          fixture.nativeElement.querySelectorAll(
+            '.overview-table thead th',
+          ) as NodeListOf<HTMLElement>,
+        ).map((cell) => cell.textContent?.trim()),
+      ).toEqual(['Měsíc', 'Dary', 'Noví dárci', 'Celkem', 'Spárované', 'Nespárované']);
       expect(overviewRows()).toEqual([
-        'říjen 2026 1 999 Kč 1 žádné',
-        'září 2026 2 1 534,50 Kč 1 1 (150 Kč)',
-        'srpen 2026 1 200 Kč 1 žádné',
-        'Celkem 2026 4 2 733,50 Kč 3 1 (150 Kč)',
+        'říjen 2026 1 1 999 Kč 999 Kč 0 Kč',
+        'září 2026 3 1 1 684,50 Kč 1 534,50 Kč 150 Kč',
+        'srpen 2026 1 1 200 Kč 200 Kč 0 Kč',
+        'Celkem 2026 5 3 2 883,50 Kč 2 733,50 Kč 150 Kč',
       ]);
     });
 
@@ -255,13 +262,15 @@ describe('Given an administrator on the administration home', () => {
         overview({
           year: 2025,
           newDonors: 0,
-          donations: { count: 1, totalMinor: 50000, currency: 'CZK' },
-          unpairedPayments: { count: 0, totalMinor: 0, currency: 'CZK' },
+          received: { count: 1, totalMinor: 50000, currency: 'CZK' },
+          paired: { count: 1, totalMinor: 50000, currency: 'CZK' },
+          unpaired: { count: 0, totalMinor: 0, currency: 'CZK' },
           months: [
             monthOverview({
               month: '2025-12',
-              donations: { count: 1, totalMinor: 50000, currency: 'CZK' },
+              received: { count: 1, totalMinor: 50000, currency: 'CZK' },
               newDonors: 0,
+              paired: { count: 1, totalMinor: 50000, currency: 'CZK' },
             }),
           ],
         }),
@@ -269,8 +278,8 @@ describe('Given an administrator on the administration home', () => {
 
       expect(text('.admin-summary')).toBe('Registrovaní dárci: 3, z toho nových v roce 2025: 0.');
       expect(overviewRows()).toEqual([
-        'prosinec 2025 1 500 Kč 0 žádné',
-        'Celkem 2025 1 500 Kč 0 žádné',
+        'prosinec 2025 1 0 500 Kč 500 Kč 0 Kč',
+        'Celkem 2025 1 0 500 Kč 500 Kč 0 Kč',
       ]);
     });
   });

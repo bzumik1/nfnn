@@ -61,12 +61,13 @@ class MonthlyReportEmailSender implements MonthlyReportSender {
         }
         if (included.donations()) {
             sections.add(new ReportSection(text("donations"), List.of(
-                    tallyLine("donations.month", month, report.donationsInMonth()),
-                    tallyLine("donations.year", MonthlyReportFormats.date(report.month().firstDayOfYear()), report.donationsInYear()))));
+                    tallyLine("donations.month", month, report.receivedInMonth()),
+                    tallyLine("donations.paired", month, report.pairedInMonth()),
+                    tallyLine("donations.year", MonthlyReportFormats.date(report.month().firstDayOfYear()), report.receivedInYear()))));
         }
         if (included.unpairedPayments()) {
             sections.add(new ReportSection(text("unpaired"), List.of(
-                    tallyLine("unpaired.month", month, report.unpairedPaymentsInMonth()),
+                    tallyLine("unpaired.month", month, report.unpairedInMonth()),
                     text("unpaired.hint"))));
         }
         if (included.bankImport()) {

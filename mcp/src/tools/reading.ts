@@ -48,7 +48,7 @@ export function registerReadingTools(server: McpServer, deps: ToolDependencies):
     {
       title: 'Roční přehled',
       description:
-        'Donations, new donors and unpaired payments of a year, month by month (newest first), with the years that have donations.',
+        'Donations and donors of a year, month by month (newest first): everything received (received = paired + unpaired), new donors, the part paired with a registered donor and the unpaired part, with the years that have a donation or a bank payment.',
       inputSchema: z.object({
         year: YEAR.optional().describe('The calendar year; the current one when omitted.'),
       }),

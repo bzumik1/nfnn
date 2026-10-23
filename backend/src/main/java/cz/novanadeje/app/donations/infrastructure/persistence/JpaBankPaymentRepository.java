@@ -9,6 +9,7 @@ import cz.novanadeje.app.shared.domain.VariableSymbol;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
+import java.time.Year;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -91,6 +92,11 @@ class JpaBankPaymentRepository implements BankPaymentRepository {
     @Override
     public List<BankPayment> findUnpairedBookedBetween(LocalDate firstDay, LocalDate lastDay) {
         return toDomain(jpa.findUnpairedBookedBetween(firstDay, lastDay));
+    }
+
+    @Override
+    public List<Year> findBookedYearsNewestFirst() {
+        return jpa.findBookedYearsNewestFirst().stream().map(Year::of).toList();
     }
 
     private static List<BankPayment> toDomain(List<BankPaymentJpaEntity> entities) {

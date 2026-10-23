@@ -132,7 +132,7 @@ function adminRoute(request: RecordedRequest, url: URL, body: string): [number, 
         200,
         {
           year: Number(url.searchParams.get('year') ?? 2026),
-          donations: { count: 1, totalMinor: 99900, currency: 'CZK' },
+          received: { count: 1, totalMinor: 99900, currency: 'CZK' },
         },
       ];
     case 'GET /api/admin/donations/payments':

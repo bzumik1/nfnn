@@ -239,9 +239,10 @@ export interface TallyResponse {
 
 export interface MonthOverviewResponse {
   month: string;
-  donations: TallyResponse;
+  received: TallyResponse;
   newDonors: number;
-  unpairedPayments: TallyResponse;
+  paired: TallyResponse;
+  unpaired: TallyResponse;
 }
 
 export interface AdminOverviewResponse {
@@ -249,8 +250,9 @@ export interface AdminOverviewResponse {
   availableYears: number[];
   donorsRegistered: number;
   newDonors: number;
-  donations: TallyResponse;
-  unpairedPayments: TallyResponse;
+  received: TallyResponse;
+  paired: TallyResponse;
+  unpaired: TallyResponse;
   months: MonthOverviewResponse[];
 }
 

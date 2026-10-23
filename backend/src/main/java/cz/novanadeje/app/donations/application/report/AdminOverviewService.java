@@ -12,9 +12,11 @@ import java.time.Clock;
 import java.time.LocalDate;
 import java.time.Year;
 import java.time.YearMonth;
-import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
+import java.util.SortedSet;
+import java.util.TreeSet;
 import java.util.stream.IntStream;
 
 @Service
@@ -36,11 +38,11 @@ public class AdminOverviewService {
     public OverviewView overview(Optional<Year> requested) {
         LocalDate today = FoundationCalendar.today(clock);
         Year current = Year.from(today);
-        List<Year> years = new ArrayList<>(donations.findReceivedYearsNewestFirst());
-        if (!years.contains(current)) {
-            years.addFirst(current);
-        }
-        years.sort((first, second) -> second.compareTo(first));
+        SortedSet<Year> offered = new TreeSet<>(Comparator.reverseOrder());
+        offered.add(current);
+        offered.addAll(donations.findReceivedYearsNewestFirst());
+        offered.addAll(payments.findBookedYearsNewestFirst());
+        List<Year> years = List.copyOf(offered);
         Year year = requested.orElse(years.getFirst());
         LocalDate firstDay = year.atDay(1);
         LocalDate lastDay = year.atMonth(12).atEndOfMonth();
@@ -49,6 +51,6 @@ public class AdminOverviewService {
                 .map(donorRecords::countRegisteredBefore)
                 .toList();
         return new OverviewView(YearOverview.compile(year, today, donations.findReceivedOnBetween(firstDay, lastDay),
-                payments.findUnpairedBookedBetween(firstDay, lastDay), registrations), List.copyOf(years));
+                payments.findUnpairedBookedBetween(firstDay, lastDay), registrations), years);
     }
 }

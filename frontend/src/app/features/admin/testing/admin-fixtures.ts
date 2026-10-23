@@ -263,9 +263,10 @@ export function monthOverview(
 ): MonthOverviewResponse {
   return {
     month: '2026-10',
-    donations: { count: 1, totalMinor: 99900, currency: 'CZK' },
+    received: { count: 1, totalMinor: 99900, currency: 'CZK' },
     newDonors: 1,
-    unpairedPayments: { count: 0, totalMinor: 0, currency: 'CZK' },
+    paired: { count: 1, totalMinor: 99900, currency: 'CZK' },
+    unpaired: { count: 0, totalMinor: 0, currency: 'CZK' },
     ...overrides,
   };
 }
@@ -276,20 +277,23 @@ export function overview(overrides: Partial<AdminOverviewResponse> = {}): AdminO
     availableYears: [2026, 2025],
     donorsRegistered: 3,
     newDonors: 3,
-    donations: { count: 4, totalMinor: 273350, currency: 'CZK' },
-    unpairedPayments: { count: 1, totalMinor: 15000, currency: 'CZK' },
+    received: { count: 5, totalMinor: 288350, currency: 'CZK' },
+    paired: { count: 4, totalMinor: 273350, currency: 'CZK' },
+    unpaired: { count: 1, totalMinor: 15000, currency: 'CZK' },
     months: [
       monthOverview(),
       monthOverview({
         month: '2026-09',
-        donations: { count: 2, totalMinor: 153450, currency: 'CZK' },
+        received: { count: 3, totalMinor: 168450, currency: 'CZK' },
         newDonors: 1,
-        unpairedPayments: { count: 1, totalMinor: 15000, currency: 'CZK' },
+        paired: { count: 2, totalMinor: 153450, currency: 'CZK' },
+        unpaired: { count: 1, totalMinor: 15000, currency: 'CZK' },
       }),
       monthOverview({
         month: '2026-08',
-        donations: { count: 1, totalMinor: 20000, currency: 'CZK' },
+        received: { count: 1, totalMinor: 20000, currency: 'CZK' },
         newDonors: 1,
+        paired: { count: 1, totalMinor: 20000, currency: 'CZK' },
       }),
     ],
     ...overrides,

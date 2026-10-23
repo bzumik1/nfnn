@@ -47,7 +47,7 @@ class MonthlyReportEmailSenderTest {
     private static final Instant SUCCEEDED_AT = Instant.parse("2026-10-01T10:00:00Z");
     private static final Instant FAILED_AT = Instant.parse("2026-10-02T04:00:00Z");
     private static final MonthlyReport REPORT = new MonthlyReport(SEPTEMBER, DonorCounts.between(1, 2), new Tally(2, Money.czk(153450)),
-            new Tally(3, Money.czk(173450)), new Tally(1, Money.czk(15000)), new BankImportStatus(Optional.of(SUCCEEDED_AT), Optional.empty()));
+            new Tally(1, Money.czk(15000)), new Tally(4, Money.czk(188450)), new BankImportStatus(Optional.of(SUCCEEDED_AT), Optional.empty()));
 
     private final JavaMailSender mailSender = mock(JavaMailSender.class);
     private final MonthlyReportEmailSender sender = new MonthlyReportEmailSender(mailSender,
@@ -86,8 +86,9 @@ class MonthlyReportEmailSenderTest {
         assertThat(plainText()).contains(
                 "Registrovaní dárci k 30. 9. 2026: 2",
                 "Noví dárci za září 2026: 1",
-                "Přijaté dary za září 2026: počet 2, celkem 1 534,50 Kč",
-                "Přijaté dary od 1. 1. 2026: počet 3, celkem 1 734,50 Kč",
+                "Přijaté dary za září 2026: počet 3, celkem 1 684,50 Kč",
+                "Z toho spárované s registrovanými dárci: počet 2, celkem 1 534,50 Kč",
+                "Přijaté dary od 1. 1. 2026: počet 4, celkem 1 884,50 Kč",
                 "Nespárované příchozí platby za září 2026: počet 1, celkem 150,00 Kč",
                 "Poslední úspěšné stažení plateb z banky: 1. 10. 2026 12:00");
         assertThat(plainText()).doesNotContain("selhal");
@@ -130,7 +131,7 @@ class MonthlyReportEmailSenderTest {
         MimeMessage email = MailContents.asReceived(sentEmail());
         assertThat(email.getRecipients(Message.RecipientType.TO)).extracting(Object::toString).containsExactly("pavel@example.cz", "jakub@example.cz");
         assertThat(plainText())
-                .contains("Přijaté dary za září 2026: počet 2, celkem 1 534,50 Kč", "Poslední úspěšné stažení plateb z banky: 1. 10. 2026 12:00")
+                .contains("Přijaté dary za září 2026: počet 3, celkem 1 684,50 Kč", "Poslední úspěšné stažení plateb z banky: 1. 10. 2026 12:00")
                 .doesNotContain("Registrovaní dárci", "Nespárované příchozí platby");
         assertThat(MailContents.html(email)).doesNotContain(">Dárci</h2>", ">Platby bez dárce</h2>").contains(">Dary</h2>", ">Banka</h2>");
     }
