@@ -207,6 +207,17 @@ class AdministratorServiceTest {
     }
 
     @Test
+    @DisplayName("Given the site already has an administrator, when the role is granted at startup to a plain donor, then nothing is saved")
+    void should_grant_nothing_when_granted_at_startup_given_site_with_administrator() {
+        when(donors.findByEmail(PETR_EMAIL)).thenReturn(Optional.of(plainDonor(PETR, "Petr Svoboda", PETR_EMAIL.value())));
+        when(donors.findAdministrators()).thenReturn(List.of(administrator(JANA, "Jana Nováková", "jana@example.cz")));
+
+        assertThat(service.grantAtStartup(PETR_EMAIL)).isEqualTo(StartupGrant.SITE_HAS_ADMINISTRATOR);
+
+        verify(donors, never()).save(any());
+    }
+
+    @Test
     @DisplayName("Given no donor with the e-mail, when the role is granted at startup, then the outcome says so and nothing is saved")
     void should_report_not_registered_when_granted_at_startup_given_unknown_email() {
         when(donors.findByEmail(PETR_EMAIL)).thenReturn(Optional.empty());

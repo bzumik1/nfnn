@@ -32,6 +32,8 @@ public class AdministratorBootstrap {
                 case GRANTED -> log.info("Configured administrator {} of {} received the role", position, properties.addresses().size());
                 case ALREADY_ADMINISTRATOR -> log.debug("Configured administrator {} of {} already holds the role", position,
                         properties.addresses().size());
+                case SITE_HAS_ADMINISTRATOR -> log.debug("Configured administrator {} of {} gets no role because the site already has "
+                        + "an administrator", position, properties.addresses().size());
                 case NOT_REGISTERED -> log.info("Configured administrator {} of {} is not registered yet; the role follows once the "
                         + "address is confirmed", position, properties.addresses().size());
             }
