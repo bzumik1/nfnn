@@ -4,6 +4,7 @@ import cz.novanadeje.app.donations.domain.BankAccount;
 import cz.novanadeje.app.shared.domain.Iban;
 import cz.novanadeje.app.shared.domain.Money;
 import cz.novanadeje.app.shared.domain.VariableSymbol;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -19,6 +20,7 @@ class QrPaymentTest {
     );
 
     @Test
+    @DisplayName("Given a donation that identifies the donor, when the payment is rendered, then the SPAYD carries the variable symbol")
     void should_render_spayd_with_variable_symbol_when_donation_identifies_the_donor() {
         QrPayment payment = QrPayment.donation(FOUNDATION, Money.czk(50_000), new VariableSymbol("1234567890"));
 
@@ -27,6 +29,7 @@ class QrPaymentTest {
     }
 
     @Test
+    @DisplayName("Given an anonymous donation, when the payment is rendered, then the SPAYD leaves out the variable symbol")
     void should_leave_out_variable_symbol_when_donation_is_anonymous() {
         QrPayment payment = QrPayment.donation(FOUNDATION, Money.czk(100_000));
 
@@ -36,6 +39,7 @@ class QrPaymentTest {
     }
 
     @Test
+    @DisplayName("Given an account verification, when the payment is rendered, then it says it verifies the account")
     void should_say_it_verifies_the_account_when_rendered_given_account_verification() {
         QrPayment payment = QrPayment.accountVerification(FOUNDATION, Money.czk(100), new VariableSymbol("1234567890"));
 
@@ -45,12 +49,14 @@ class QrPaymentTest {
     }
 
     @Test
+    @DisplayName("Given an account verification without a variable symbol, when the payment is created, then it is refused")
     void should_refuse_when_created_given_account_verification_without_variable_symbol() {
         assertThatThrownBy(() -> QrPayment.accountVerification(FOUNDATION, Money.czk(100), null))
                 .isInstanceOf(VerificationNeedsVariableSymbol.class);
     }
 
     @Test
+    @DisplayName("Given an amount with hellers, when the payment is rendered, then the amount has two decimals")
     void should_render_amount_with_two_decimals_when_amount_has_hellers() {
         assertThat(QrPayment.donation(FOUNDATION, Money.czk(12_345)).toSpayd()).contains("*AM:123.45*");
         assertThat(QrPayment.donation(FOUNDATION, Money.czk(100)).toSpayd()).contains("*AM:1.00*");
@@ -58,6 +64,7 @@ class QrPaymentTest {
     }
 
     @Test
+    @DisplayName("Given a recipient name with diacritics and punctuation, when the payment is rendered, then the name is uppercase ASCII")
     void should_write_recipient_name_in_uppercase_ascii_when_it_has_diacritics_and_punctuation() {
         BankAccount account = new BankAccount("123456789/0800", FOUNDATION.iban(), "Žluťoučký kůň, z. ú. *Ostrava*");
 
@@ -65,6 +72,7 @@ class QrPaymentTest {
     }
 
     @Test
+    @DisplayName("Given a longer recipient name, when the payment is rendered, then the name is shortened to 35 characters")
     void should_shorten_recipient_name_to_35_characters_when_it_is_longer() {
         BankAccount account = new BankAccount("123456789/0800", FOUNDATION.iban(), "Nadační fond Nová naděje pro děti a mládež v nouzi");
 
@@ -72,28 +80,33 @@ class QrPaymentTest {
     }
 
     @Test
+    @DisplayName("Given any values, when the payment is rendered, then the SPAYD keeps to the allowed characters")
     void should_keep_spayd_within_the_allowed_characters_when_rendered() {
         assertThat(QrPayment.donation(FOUNDATION, Money.czk(50_000), new VariableSymbol("42")).toSpayd())
                 .matches("[0-9A-Z $%*+\\-./:]+");
     }
 
     @Test
+    @DisplayName("Given a donation that is not positive, when the payment is created, then it is rejected")
     void should_reject_when_donation_is_not_positive() {
         assertThatIllegalArgumentException().isThrownBy(() -> QrPayment.donation(FOUNDATION, Money.czk(0)));
         assertThatIllegalArgumentException().isThrownBy(() -> QrPayment.donation(FOUNDATION, Money.czk(-100)));
     }
 
     @Test
+    @DisplayName("Given a donation that does not fit the SPAYD amount field, when the payment is created, then it is rejected")
     void should_reject_when_donation_does_not_fit_the_spayd_amount_field() {
         assertThatIllegalArgumentException().isThrownBy(() -> QrPayment.donation(FOUNDATION, Money.czk(1_000_000_000)));
     }
 
     @Test
+    @DisplayName("Given no recipient, when the payment is created, then it is rejected")
     void should_reject_when_created_given_no_recipient() {
         assertThatIllegalArgumentException().isThrownBy(() -> QrPayment.donation(null, Money.czk(100)));
     }
 
     @Test
+    @DisplayName("Given the same values, when two payments are created, then they are equal")
     void should_be_equal_when_created_from_the_same_values() {
         assertThat(QrPayment.donation(FOUNDATION, Money.czk(100), new VariableSymbol("7")))
                 .isEqualTo(QrPayment.donation(FOUNDATION, Money.czk(100), new VariableSymbol("7")))

@@ -8,6 +8,7 @@ import cz.novanadeje.app.donations.domain.payment.QrPaymentPurpose;
 import cz.novanadeje.app.donations.domain.payment.VerificationNeedsVariableSymbol;
 import cz.novanadeje.app.shared.domain.Iban;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -43,6 +44,7 @@ class GeneratePaymentQrServiceTest {
     }
 
     @Test
+    @DisplayName("Given a variable symbol, when the QR code is generated, then it encodes the SPAYD of a donation in whole crowns")
     void should_encode_the_spayd_of_a_donation_in_whole_crowns_when_generated_given_a_variable_symbol() {
         when(encoder.encode(anyString(), any())).thenReturn(MODULES);
 
@@ -56,6 +58,7 @@ class GeneratePaymentQrServiceTest {
     }
 
     @Test
+    @DisplayName("Given no variable symbol, when the QR code is generated, then the SPAYD has none")
     void should_render_a_spayd_without_variable_symbol_when_generated_given_none() {
         when(encoder.encode(anyString(), any())).thenReturn(MODULES);
 
@@ -65,6 +68,7 @@ class GeneratePaymentQrServiceTest {
     }
 
     @Test
+    @DisplayName("Given an account verification, when the QR code is generated, then it carries the verification message")
     void should_render_the_verification_message_when_generated_given_account_verification() {
         when(encoder.encode(anyString(), any())).thenReturn(MODULES);
 
@@ -74,6 +78,7 @@ class GeneratePaymentQrServiceTest {
     }
 
     @Test
+    @DisplayName("Given an account verification without a variable symbol, when the QR code is generated, then it is rejected before rendering")
     void should_reject_without_rendering_when_generated_given_account_verification_without_variable_symbol() {
         assertThatThrownBy(() -> service.generate(new GeneratePaymentQrQuery(1, null, QrPaymentPurpose.ACCOUNT_VERIFICATION)))
                 .isInstanceOf(VerificationNeedsVariableSymbol.class);
@@ -81,6 +86,7 @@ class GeneratePaymentQrServiceTest {
     }
 
     @Test
+    @DisplayName("Given a malformed variable symbol, when the QR code is generated, then it is rejected before rendering")
     void should_reject_without_rendering_when_generated_given_a_malformed_variable_symbol() {
         assertThatIllegalArgumentException().isThrownBy(() -> service.generate(new GeneratePaymentQrQuery(100, "12A", QrPaymentPurpose.DONATION)));
         verifyNoInteractions(encoder);

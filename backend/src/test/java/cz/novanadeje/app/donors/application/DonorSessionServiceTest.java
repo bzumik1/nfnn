@@ -80,6 +80,7 @@ class DonorSessionServiceTest {
     }
 
     @Test
+    @DisplayName("Given a usable token, when the session is refreshed, then the old token is used up and a new one issued")
     void should_use_up_old_and_issue_new_when_refreshed_given_usable_token() {
         RefreshTokenSecret secret = RefreshTokenSecret.generate();
         RefreshToken existing = RefreshToken.issue(secret, DONOR, NOW.minus(Duration.ofDays(1)), REFRESH_TTL, false);
@@ -113,6 +114,7 @@ class DonorSessionServiceTest {
     }
 
     @Test
+    @DisplayName("Given an already used token, when the session is refreshed, then every session is revoked")
     void should_revoke_every_session_when_refreshed_given_already_used_token() {
         RefreshTokenSecret secret = RefreshTokenSecret.generate();
         RefreshToken used = RefreshToken.issue(secret, DONOR, NOW.minus(Duration.ofDays(1)), REFRESH_TTL, false);
@@ -127,6 +129,7 @@ class DonorSessionServiceTest {
     }
 
     @Test
+    @DisplayName("Given a revoked token, when the session is refreshed, then it is refused without ending other sessions")
     void should_refuse_without_ending_other_sessions_when_refreshed_given_revoked_token() {
         RefreshTokenSecret secret = RefreshTokenSecret.generate();
         RefreshToken revoked = RefreshToken.issue(secret, DONOR, NOW.minus(Duration.ofDays(1)), REFRESH_TTL, false);
@@ -141,6 +144,7 @@ class DonorSessionServiceTest {
     }
 
     @Test
+    @DisplayName("Given an expired token, when the session is refreshed, then it is refused")
     void should_refuse_when_refreshed_given_expired_token() {
         RefreshTokenSecret secret = RefreshTokenSecret.generate();
         RefreshToken expired = RefreshToken.issue(secret, DONOR, NOW.minus(REFRESH_TTL), REFRESH_TTL, false);
@@ -153,6 +157,7 @@ class DonorSessionServiceTest {
     }
 
     @Test
+    @DisplayName("Given an unknown token, when the session is refreshed, then it is refused")
     void should_refuse_when_refreshed_given_unknown_token() {
         when(refreshTokens.findBySecretHash(any())).thenReturn(Optional.empty());
 
@@ -161,6 +166,7 @@ class DonorSessionServiceTest {
     }
 
     @Test
+    @DisplayName("Given a known token, when the session is closed, then the token is revoked")
     void should_revoke_token_when_closed_given_known_token() {
         RefreshTokenSecret secret = RefreshTokenSecret.generate();
         RefreshToken existing = RefreshToken.issue(secret, DONOR, NOW.minus(Duration.ofDays(1)), REFRESH_TTL, false);
@@ -173,6 +179,7 @@ class DonorSessionServiceTest {
     }
 
     @Test
+    @DisplayName("Given an unknown token, when the session is closed, then nothing happens")
     void should_do_nothing_when_closed_given_unknown_token() {
         when(refreshTokens.findBySecretHash(any())).thenReturn(Optional.empty());
 

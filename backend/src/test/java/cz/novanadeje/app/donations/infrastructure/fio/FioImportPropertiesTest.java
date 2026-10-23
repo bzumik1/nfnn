@@ -24,11 +24,13 @@ class FioImportPropertiesTest {
     }
 
     @Test
+    @DisplayName("Given a token text, when the properties are asked, then they have a token")
     void should_have_token_when_asked_given_text() {
         assertThat(properties("abc").hasToken()).isTrue();
     }
 
     @Test
+    @DisplayName("Given an empty, blank or missing token, when the properties are asked, then they have no token")
     void should_have_no_token_when_asked_given_empty_or_blank_or_missing_token() {
         assertThat(properties("").hasToken()).isFalse();
         assertThat(properties("   ").hasToken()).isFalse();

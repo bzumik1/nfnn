@@ -285,6 +285,7 @@ class JpaBankPaymentRepositoryTest {
     }
 
     @Test
+    @DisplayName("Given an unknown id, when a payment is found by id, then the result is empty")
     void should_be_empty_when_found_by_id_given_unknown_id() {
         assertThat(payments.findById(BankPaymentId.newId(NOW))).isEmpty();
     }

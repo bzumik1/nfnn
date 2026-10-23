@@ -29,6 +29,7 @@ class BankCalendarTest {
     }
 
     @Test
+    @DisplayName("Given a UTC afternoon, when today is asked, then it is the same day in Prague")
     void should_be_same_day_when_today_asked_given_utc_afternoon() {
         Clock utc = Clock.fixed(Instant.parse("2026-10-16T12:00:00Z"), ZoneOffset.UTC);
 

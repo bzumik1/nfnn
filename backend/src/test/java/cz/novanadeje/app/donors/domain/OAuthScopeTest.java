@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donors.domain;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.util.Set;
@@ -10,6 +11,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class OAuthScopeTest {
 
     @Test
+    @DisplayName("Given known values, when scopes are parsed, then the space-separated scopes are read")
     void should_parse_space_separated_scopes_when_parsed_given_known_values() {
         assertThat(OAuthScope.parse("admin:read")).containsExactly(OAuthScope.ADMIN_READ);
         assertThat(OAuthScope.parse("  admin:read   admin:read ")).containsExactly(OAuthScope.ADMIN_READ);
@@ -17,6 +19,7 @@ class OAuthScopeTest {
     }
 
     @Test
+    @DisplayName("Given an unknown or an empty scope, when scopes are parsed, then they are refused")
     void should_refuse_when_parsed_given_an_unknown_or_empty_scope() {
         assertThatThrownBy(() -> OAuthScope.parse("admin:delete")).isInstanceOf(InvalidAuthorizationRequest.class);
         assertThatThrownBy(() -> OAuthScope.parse("")).isInstanceOf(InvalidAuthorizationRequest.class);
@@ -24,6 +27,7 @@ class OAuthScopeTest {
     }
 
     @Test
+    @DisplayName("Given scopes, when they are formatted, then they come in their declared order")
     void should_format_scopes_in_their_declared_order_when_formatted() {
         assertThat(OAuthScope.format(Set.of(OAuthScope.ADMIN_READ))).isEqualTo("admin:read");
         assertThat(OAuthScope.format(Set.of(OAuthScope.ADMIN_WRITE, OAuthScope.ADMIN_READ))).isEqualTo("admin:read admin:write");

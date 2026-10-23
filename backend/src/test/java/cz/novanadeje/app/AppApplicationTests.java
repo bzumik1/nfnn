@@ -14,7 +14,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 class AppApplicationTests {
 
 	@Test
-	void contextLoads() {
+	@DisplayName("Given the test configuration, when the application starts, then its context loads")
+	void should_load_context_when_started_given_test_configuration() {
 	}
 
 	@Test

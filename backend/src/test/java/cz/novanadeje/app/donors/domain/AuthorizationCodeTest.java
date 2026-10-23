@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donors.domain;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.net.URI;
@@ -18,6 +19,7 @@ class AuthorizationCodeTest {
     private static final CodeChallenge CHALLENGE = new CodeChallenge("E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM", "S256");
 
     @Test
+    @DisplayName("Given an authorization request, when a code is issued, then it stores only the hash and the request")
     void should_store_only_the_hash_and_the_request_when_issued() {
         LinkSecret secret = LinkSecret.generate();
 
@@ -34,6 +36,7 @@ class AuthorizationCodeTest {
     }
 
     @Test
+    @DisplayName("Given an issued code, when it is used, then it works once and only before it expires")
     void should_be_usable_once_and_only_before_it_expires() {
         AuthorizationCode code = issue(LinkSecret.generate());
 
@@ -47,6 +50,7 @@ class AuthorizationCodeTest {
     }
 
     @Test
+    @DisplayName("Given an issued code, when it is exchanged, then only its client, redirect and verifier are accepted")
     void should_accept_the_exchange_only_with_its_client_redirect_and_verifier() {
         AuthorizationCode code = issue(LinkSecret.generate());
 

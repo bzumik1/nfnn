@@ -287,6 +287,7 @@ class DonationTest {
     }
 
     @Test
+    @DisplayName("Given the text of a donation id, when it is parsed, then it gives back the same id")
     void should_round_trip_when_parsed_given_donation_id_text() {
         assertThat(DonationId.of(DONATION_ID.toString())).isEqualTo(DONATION_ID);
     }

@@ -18,6 +18,7 @@ class BankImportStateTest {
     private static final Duration COOLDOWN = Duration.ofSeconds(30);
 
     @Test
+    @DisplayName("Given a new state, when it is created, then it has no coverage and no attempt")
     void should_have_no_coverage_and_no_attempt_when_created_given_initial_state() {
         BankImportState state = BankImportState.initial(CREATED);
 
@@ -30,6 +31,7 @@ class BankImportStateTest {
     }
 
     @Test
+    @DisplayName("Given a previous failure, when an import succeeds, then the state records the coverage and clears the failure")
     void should_record_coverage_and_clear_failure_when_succeeded_given_previous_failure() {
         BankImportState state = BankImportState.initial(CREATED);
         state.failed(ImportFailureKind.TRANSPORT, "timed out", CREATED);
@@ -45,6 +47,7 @@ class BankImportStateTest {
     }
 
     @Test
+    @DisplayName("Given a covered state, when an import fails, then it keeps the coverage and the last success")
     void should_keep_coverage_and_last_success_when_failed_given_covered_state() {
         BankImportState state = BankImportState.initial(CREATED);
         state.succeeded(coverage("2026-07-20", "2026-10-17"), CREATED);
@@ -60,6 +63,7 @@ class BankImportStateTest {
     }
 
     @Test
+    @DisplayName("Given an overlong message, when an import fails, then the message is cut")
     void should_cut_message_when_failed_given_overlong_message() {
         BankImportState state = BankImportState.initial(CREATED);
 
@@ -69,6 +73,7 @@ class BankImportStateTest {
     }
 
     @Test
+    @DisplayName("Given a blank message, when an import fails, then the state has no message")
     void should_have_no_message_when_failed_given_blank_message() {
         BankImportState state = BankImportState.initial(CREATED);
 
@@ -79,6 +84,7 @@ class BankImportStateTest {
     }
 
     @Test
+    @DisplayName("Given a stored state, when it is reconstituted, then every field is kept")
     void should_keep_every_field_when_reconstituted_given_stored_state() {
         BankImportState state = BankImportState.reconstitute(coverage("2026-07-20", "2026-10-17"), Optional.of(LATER), Optional.of(CREATED),
                 Optional.of(ImportFailureKind.RATE_LIMITED), Optional.of("409"), 2, Optional.of(ImportFailureKind.TRANSPORT), LATER);
@@ -94,6 +100,7 @@ class BankImportStateTest {
     }
 
     @Test
+    @DisplayName("Given fewer failures than the threshold, when an import fails, then no outage is reported")
     void should_report_no_outage_when_failed_given_fewer_failures_than_the_threshold() {
         BankImportState state = BankImportState.initial(CREATED);
         state.succeeded(coverage("2026-07-20", "2026-10-17"), CREATED);
@@ -190,6 +197,7 @@ class BankImportStateTest {
     }
 
     @Test
+    @DisplayName("Given failures below the threshold, when an import succeeds, then no recovery is reported")
     void should_report_no_recovery_when_succeeded_given_failures_below_the_threshold() {
         BankImportState state = BankImportState.initial(CREATED);
         state.failed(ImportFailureKind.TRANSPORT, "timed out", CREATED);
@@ -202,6 +210,7 @@ class BankImportStateTest {
     }
 
     @Test
+    @DisplayName("Given a negative failure count, when the state is reconstituted, then it is refused")
     void should_refuse_when_reconstituted_given_negative_failure_count() {
         assertThatThrownBy(() -> BankImportState.reconstitute(ImportCoverage.none(), Optional.empty(), Optional.empty(), Optional.empty(),
                 Optional.empty(), -1, Optional.empty(), CREATED))
@@ -209,11 +218,13 @@ class BankImportStateTest {
     }
 
     @Test
+    @DisplayName("Given no attempt, when asked, then the state has no recent attempt")
     void should_not_count_as_recent_when_asked_given_no_attempt() {
         assertThat(BankImportState.initial(CREATED).attemptedWithin(COOLDOWN, CREATED)).isFalse();
     }
 
     @Test
+    @DisplayName("Given a successful attempt, when asked before the cooldown ends, then it counts as recent")
     void should_count_as_recent_when_asked_before_the_cooldown_ends_given_successful_attempt() {
         BankImportState state = BankImportState.initial(CREATED);
         state.succeeded(coverage("2026-07-20", "2026-10-17"), LATER);
@@ -222,6 +233,7 @@ class BankImportStateTest {
     }
 
     @Test
+    @DisplayName("Given a failed attempt, when asked before the cooldown ends, then it counts as recent")
     void should_count_as_recent_when_asked_before_the_cooldown_ends_given_failed_attempt() {
         BankImportState state = BankImportState.initial(CREATED);
         state.failed(ImportFailureKind.TRANSPORT, "timed out", LATER);
@@ -230,6 +242,7 @@ class BankImportStateTest {
     }
 
     @Test
+    @DisplayName("Given an attempt, when asked once the cooldown has ended, then it no longer counts as recent")
     void should_not_count_as_recent_when_asked_once_the_cooldown_ended_given_attempt() {
         BankImportState state = BankImportState.initial(CREATED);
         state.succeeded(coverage("2026-07-20", "2026-10-17"), LATER);
