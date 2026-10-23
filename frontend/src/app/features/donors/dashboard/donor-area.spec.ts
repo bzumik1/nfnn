@@ -1,0 +1,1069 @@
+import { provideHttpClient, withInterceptors } from '@angular/common/http';
+import {
+  HttpTestingController,
+  provideHttpClientTesting,
+  TestRequest,
+} from '@angular/common/http/testing';
+import { TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
+import { provideRouter, Router } from '@angular/router';
+import { RouterTestingHarness } from '@angular/router/testing';
+import { authInterceptor } from '../../../core/auth/auth-interceptor';
+import { AuthStore } from '../../../core/auth/auth-store';
+import { LoginDialogService } from '../../../core/auth/login-dialog.service';
+import { authResponse, sampleDonor } from '../../../core/auth/testing/donor-fixtures';
+import { DonationListResponse, DonationSummaryResponse } from '../../donations/donations-api';
+import { bankAccount } from '../../donations/testing/bank-account-fixtures';
+import {
+  donationItem,
+  emptyDonations,
+  emptySummary,
+  twoYearDonations,
+  twoYearSummary,
+} from '../../donations/testing/donation-fixtures';
+import { donorsRoutes } from '../donors.routes';
+import { BankAccountsCard } from './bank-accounts-card/bank-accounts-card';
+
+const OBJECT_URL = 'blob:http://localhost/receipt';
+const BANK_CHECK_URL = '/api/donations/me/bank-check';
+const BANK_ACCOUNTS_URL = '/api/donations/me/bank-accounts';
+const EARLIER = '2026-10-18T08:05:30Z';
+const LATER = '2026-10-18T08:07:10Z';
+
+describe('Given a signed-in donor in the donor area', () => {
+  let harness: RouterTestingHarness;
+  let http: HttpTestingController;
+  let store: AuthStore;
+  let savedFiles: { fileName: string; href: string }[];
+  let createObjectURL: ReturnType<typeof vi.fn>;
+  let bankCheck: TestRequest;
+
+  beforeEach(async () => {
+    localStorage.clear();
+    savedFiles = [];
+    createObjectURL = vi.fn(() => OBJECT_URL);
+    Object.defineProperty(URL, 'createObjectURL', {
+      configurable: true,
+      writable: true,
+      value: createObjectURL,
+    });
+    Object.defineProperty(URL, 'revokeObjectURL', {
+      configurable: true,
+      writable: true,
+      value: vi.fn(),
+    });
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (
+      this: HTMLAnchorElement,
+    ) {
+      savedFiles.push({ fileName: this.download, href: this.href });
+    });
+    await TestBed.configureTestingModule({
+      providers: [
+        provideHttpClient(withInterceptors([authInterceptor])),
+        provideHttpClientTesting(),
+        provideRouter([
+          { path: 'darce', children: donorsRoutes },
+          { path: '', children: [] },
+        ]),
+      ],
+    }).compileComponents();
+    http = TestBed.inject(HttpTestingController);
+    store = TestBed.inject(AuthStore);
+    store.login('jana@example.cz', 'correct horse battery').subscribe();
+    http
+      .expectOne('/api/donors/auth/login')
+      .flush(authResponse('token-1', sampleDonor({ variableSymbol: '9876543210' })));
+    harness = await RouterTestingHarness.create();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    http.verify();
+    vi.restoreAllMocks();
+    Reflect.deleteProperty(URL, 'createObjectURL');
+    Reflect.deleteProperty(URL, 'revokeObjectURL');
+  });
+
+  async function open(url: string): Promise<void> {
+    await harness.navigateByUrl(url);
+    bankCheck = http.expectOne({ method: 'POST', url: BANK_CHECK_URL });
+    await settle();
+  }
+
+  async function go(url: string): Promise<void> {
+    await harness.navigateByUrl(url);
+    await settle();
+  }
+
+  async function openBankAccounts(): Promise<void> {
+    await open('/darce/ucty');
+    http.expectOne({ method: 'GET', url: BANK_ACCOUNTS_URL }).flush({ items: [] });
+  }
+
+  async function respond(
+    summary: DonationSummaryResponse,
+    list: DonationListResponse,
+  ): Promise<void> {
+    http.expectOne('/api/donations/me/summary').flush(summary);
+    http.expectOne('/api/donations/me').flush(list);
+    await settle();
+  }
+
+  async function settle(): Promise<void> {
+    harness.fixture.detectChanges();
+    await harness.fixture.whenStable();
+    harness.fixture.detectChanges();
+  }
+
+  async function settleBlobFailure(): Promise<void> {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await settle();
+  }
+
+  function root(): HTMLElement {
+    return harness.fixture.nativeElement as HTMLElement;
+  }
+
+  function element(selector: string): HTMLElement | null {
+    return root().querySelector(selector);
+  }
+
+  function text(selector: string): string {
+    return normalized(element(selector)?.textContent ?? '');
+  }
+
+  function texts(selector: string): string[] {
+    return [...root().querySelectorAll<HTMLElement>(selector)].map((node) =>
+      normalized(node.textContent ?? ''),
+    );
+  }
+
+  function normalized(value: string): string {
+    return value.replace(/\s+/g, ' ').trim();
+  }
+
+  function button(selector: string): HTMLButtonElement {
+    return element(selector) as HTMLButtonElement;
+  }
+
+  async function click(selector: string): Promise<void> {
+    button(selector).click();
+    await settle();
+  }
+
+  function yearRow(year: number): HTMLElement {
+    return [...root().querySelectorAll<HTMLElement>('.year-row')].find(
+      (row) => normalized(row.querySelector('.year')?.textContent ?? '') === String(year),
+    )!;
+  }
+
+  function yearRows(): string[][] {
+    return [...root().querySelectorAll<HTMLElement>('.year-row')].map((row) =>
+      [...row.children].map((cell) => normalized(cell.textContent ?? '')),
+    );
+  }
+
+  async function downloadYear(year: number): Promise<void> {
+    (yearRow(year).querySelector('.yearly-pdf') as HTMLButtonElement).click();
+    await settle();
+  }
+
+  function pdf(): Blob {
+    return new Blob(['%PDF-1.4\n%%EOF'], { type: 'application/pdf' });
+  }
+
+  function attachment(fileName: string): { headers: Record<string, string> } {
+    return {
+      headers: {
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': `attachment; filename="${fileName}"; filename*=UTF-8''${fileName}`,
+      },
+    };
+  }
+
+  function problemBlob(type: string, title: string, status: number): Blob {
+    return new Blob(
+      [JSON.stringify({ type: `https://nfnn.cz/problems/${type}`, title, detail: '', status })],
+      { type: 'application/problem+json' },
+    );
+  }
+
+  function summaryWithReceiptsFrom2026(): DonationSummaryResponse {
+    return { ...twoYearSummary(), receiptsAvailableFrom: 2026 };
+  }
+
+  function donationsWithoutReceiptsBefore2026(): DonationListResponse {
+    const list = twoYearDonations();
+    return {
+      ...list,
+      items: list.items.map((item) =>
+        item.receivedAt < '2026-01-01' ? { ...item, receiptAvailable: false } : item,
+      ),
+    };
+  }
+
+  const yearlyUrl = (year: number): string => `/api/donations/me/receipts/yearly?year=${year}`;
+  const secondRowButton = '.payments-card tbody tr:nth-child(2) .download-btn';
+  const thirdRowButton = '.payments-card tbody tr:nth-child(3) .download-btn';
+
+  describe('when the area opens', () => {
+    it('then it asks the bank for new payments while the donations load', async () => {
+      await open('/darce/prehled');
+
+      expect(bankCheck.request.method).toBe('POST');
+      expect(bankCheck.request.headers.get('Authorization')).toBe('Bearer token-1');
+      await respond(twoYearSummary(), twoYearDonations());
+    });
+
+    it('then the address without a section opens the overview', async () => {
+      await open('/darce');
+      await respond(twoYearSummary(), twoYearDonations());
+
+      expect(TestBed.inject(Router).url).toBe('/darce/prehled');
+      expect(text('h1')).toBe('Můj přehled');
+    });
+
+    it('then the top bar shows the name of the donor without a greeting and a way back to the home page', async () => {
+      await open('/darce/prehled');
+      await respond(twoYearSummary(), twoYearDonations());
+
+      expect(text('.topbar-donor')).toBe('Jana Nováková');
+      const back = element('.topbar a.topbar-home') as HTMLAnchorElement;
+      expect(normalized(back.querySelector('.topbar-home-label')?.textContent ?? '')).toBe(
+        'Hlavní stránka',
+      );
+      expect(normalized(back.querySelector('.topbar-home-label-short')?.textContent ?? '')).toBe(
+        'Domů',
+      );
+      expect(back.getAttribute('href')).toBe('/');
+    });
+
+    it('then the help line keeps a space before the e-mail address', async () => {
+      await open('/darce/prehled');
+      await respond(twoYearSummary(), twoYearDonations());
+
+      expect(text('.contact-line')).toBe('Máte dotaz k platbě? Napište nám na info@nfnn.cz');
+    });
+
+    it('then the donations cannot be loaded, an alert offers to try again and a retry asks for both again and shows them', async () => {
+      await open('/darce/prehled');
+      http.expectOne('/api/donations/me').flush(twoYearDonations());
+      http
+        .expectOne('/api/donations/me/summary')
+        .flush({ title: 'Chyba' }, { status: 500, statusText: 'Internal Server Error' });
+      await settle();
+
+      expect(text('[role="alert"]')).toContain('Přehled darů se nepodařilo načíst.');
+      expect(element('.stats-grid')).toBeNull();
+      expect(text('.symbol-value')).toBe('9876543210');
+
+      await click('.dashboard-error button');
+      expect(text('.dashboard-loading')).toBe('Načítáme vaše dary…');
+      await respond(twoYearSummary(), twoYearDonations());
+
+      expect(element('[role="alert"]')).toBeNull();
+      expect(texts('.stat-value')).toEqual(['1 750 Kč', '3', '15. 03. 2026']);
+    });
+
+    it('then a session that has ended sends the donor home to sign in instead of offering a retry', async () => {
+      await open('/darce/prehled');
+      const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+      http.expectOne('/api/donations/me').flush(twoYearDonations());
+      http.expectOne('/api/donations/me/summary').flush(
+        {
+          type: 'https://nfnn.cz/problems/auth/unauthenticated',
+          title: 'Přihlaste se',
+          status: 401,
+        },
+        { status: 401, statusText: 'Unauthorized' },
+      );
+      await settle();
+
+      expect(element('[role="alert"]')).toBeNull();
+      expect(TestBed.inject(LoginDialogService).isOpen()).toBe(true);
+      expect(navigate).toHaveBeenCalledWith('/');
+    });
+
+    it('then a session forgotten while the donations were loading sends the donor home to sign in', async () => {
+      await open('/darce/prehled');
+      const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+      const sessionLost = {
+        type: 'https://nfnn.cz/problems/auth/invalid-refresh-token',
+        title: 'Přihlaste se znovu',
+        status: 401,
+      };
+      store.refresh().subscribe({ error: () => undefined });
+      http
+        .expectOne('/api/donors/auth/refresh')
+        .flush(sessionLost, { status: 401, statusText: 'Unauthorized' });
+      http.expectOne('/api/donations/me').flush(twoYearDonations());
+      http
+        .expectOne('/api/donations/me/summary')
+        .flush(sessionLost, { status: 401, statusText: 'Unauthorized' });
+      await settle();
+
+      expect(store.signedIn()).toBe(false);
+      expect(element('[role="alert"]')).toBeNull();
+      expect(TestBed.inject(LoginDialogService).isOpen()).toBe(true);
+      expect(navigate).toHaveBeenCalledWith('/');
+    });
+
+    it('then signing out ends the session and opens the home page', async () => {
+      await open('/darce/prehled');
+      await respond(twoYearSummary(), twoYearDonations());
+      const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+
+      button('.topbar-logout').click();
+      http
+        .expectOne('/api/donors/auth/logout')
+        .flush(null, { status: 204, statusText: 'No Content' });
+      await settle();
+
+      expect(store.signedIn()).toBe(false);
+      expect(navigate).toHaveBeenCalledWith('/');
+    });
+  });
+
+  describe('when the donor moves between the sections', () => {
+    it('then every section has one level-one heading that takes the focus', async () => {
+      await open('/darce/prehled');
+      await respond(twoYearSummary(), twoYearDonations());
+      const headings: string[] = [];
+
+      for (const url of ['/darce/prehled', '/darce/dary', '/darce/potvrzeni', '/darce/udaje']) {
+        await go(url);
+        expect(root().querySelectorAll('h1')).toHaveLength(1);
+        expect(document.activeElement).toBe(element('h1'));
+        headings.push(text('h1'));
+      }
+      await go('/darce/ucty');
+      http.expectOne(BANK_ACCOUNTS_URL).flush({ items: [] });
+      await settle();
+      headings.push(text('h1'));
+
+      expect(headings).toEqual([
+        'Můj přehled',
+        'Moje dary',
+        'Potvrzení o daru',
+        'Údaje a zabezpečení',
+        'Bankovní účty',
+      ]);
+    });
+
+    it('then the donations and the bank are not asked again', async () => {
+      await open('/darce/prehled');
+      await respond(twoYearSummary(), twoYearDonations());
+
+      await go('/darce/dary');
+      await go('/darce/potvrzeni');
+      await go('/darce/prehled');
+
+      http.expectNone('/api/donations/me/summary');
+      http.expectNone({ method: 'POST', url: BANK_CHECK_URL });
+      expect(texts('.stat-value')).toEqual(['1 750 Kč', '3', '15. 03. 2026']);
+    });
+  });
+
+  describe('when the overview opens', () => {
+    it('then the variable symbol can be copied and the donor can give again with it', async () => {
+      await open('/darce/prehled');
+      await respond(twoYearSummary(), twoYearDonations());
+
+      expect(text('.symbol-value')).toBe('9876543210');
+      expect(text('.symbol-card app-copy-button button')).toBe('Kopírovat variabilní symbol');
+      const giveAgain = element('.symbol-card a.give-again') as HTMLAnchorElement;
+      expect(normalized(giveAgain.textContent ?? '')).toBe('Přispět znovu');
+      expect(giveAgain.getAttribute('href')).toBe('/#prispet');
+    });
+
+    it('then while the donations load a loading line stands where the stat cards go and the symbol stays visible', async () => {
+      await open('/darce/prehled');
+
+      expect(text('.dashboard-loading')).toBe('Načítáme vaše dary…');
+      expect(element('.stats-grid')).toBeNull();
+      expect(text('.symbol-value')).toBe('9876543210');
+
+      await respond(twoYearSummary(), twoYearDonations());
+
+      expect(element('.dashboard-loading')).toBeNull();
+    });
+
+    it('then the stat cards show the total, the count and the last donation from the summary', async () => {
+      await open('/darce/prehled');
+      await respond(twoYearSummary(), twoYearDonations());
+
+      expect(texts('.stat-value')).toEqual(['1 750 Kč', '3', '15. 03. 2026']);
+    });
+
+    it('then the last five donations show without receipts and a link leads to all of them', async () => {
+      const list = twoYearDonations();
+      list.items = [
+        ...list.items,
+        donationItem({ id: 'd-0', receivedAt: '2025-06-01', amountMinor: 10000 }),
+        donationItem({ id: 'd-00', receivedAt: '2025-05-01', amountMinor: 10000 }),
+      ];
+      await open('/darce/prehled');
+      await respond(twoYearSummary(), list);
+
+      expect(text('.recent-card h2')).toBe('Poslední dary');
+      expect(texts('.recent-card tbody tr')).toHaveLength(5);
+      expect(texts('.recent-card th')).toEqual(['Datum', 'Částka', 'Účel', 'Stav']);
+      expect(element('.recent-card .download-btn')).toBeNull();
+      const all = element('.recent-card a.recent-all') as HTMLAnchorElement;
+      expect(normalized(all.textContent ?? '')).toBe('Všechny dary');
+      expect(all.getAttribute('href')).toBe('/darce/dary');
+    });
+
+    it('then a donor with no donations yet sees zeros and how a gift appears, with a link to the bank accounts', async () => {
+      await open('/darce/prehled');
+      await respond(emptySummary(), emptyDonations());
+
+      expect(texts('.stat-value')).toEqual(['0 Kč', '0', '—']);
+      expect(element('.recent-card table')).toBeNull();
+      expect(element('.recent-all')).toBeNull();
+      expect(text('.recent-empty')).toBe(
+        'Zatím tu nemáme žádný váš dar. Jakmile dorazí platba s vaším variabilním symbolem, objeví se tady. Posíláte trvalým příkazem?',
+      );
+      expect(element('.recent-empty a')?.getAttribute('href')).toBe('/darce/ucty');
+    });
+  });
+
+  describe('when the donations page opens', () => {
+    it('then the payments table lists every donation newest first with date, amount, purpose and status', async () => {
+      await open('/darce/dary');
+      await respond(twoYearSummary(), twoYearDonations());
+
+      const rows = [...root().querySelectorAll<HTMLElement>('.payments-card tbody tr')].map((row) =>
+        [...row.querySelectorAll('td')]
+          .slice(0, 4)
+          .map((cell) => normalized(cell.textContent ?? '')),
+      );
+      expect(rows).toEqual([
+        ['15. 03. 2026', '500 Kč', 'Obecný příspěvek', 'Přijato'],
+        ['10. 01. 2026', '1 000 Kč', 'Obecný příspěvek', 'Přijato'],
+        ['05. 11. 2025', '250 Kč', 'Obecný příspěvek', 'Přijato'],
+        ['20. 08. 2025', '2 000 Kč', 'Obecný příspěvek', 'Vráceno'],
+      ]);
+    });
+
+    it('then every cell names its column so a phone can show the rows as cards', async () => {
+      await open('/darce/dary');
+      await respond(twoYearSummary(), twoYearDonations());
+
+      const labels = [
+        ...root().querySelectorAll<HTMLElement>('.payments-card tbody tr:first-child td'),
+      ].map((cell) => cell.dataset['label']);
+      expect(labels).toEqual(['Datum', 'Částka', 'Účel', 'Stav', 'Potvrzení']);
+    });
+
+    it('then a donation with hellers shows two decimals', async () => {
+      const list = twoYearDonations();
+      list.items[0] = donationItem({ id: 'd-4', receivedAt: '2026-03-15', amountMinor: 100050 });
+      await open('/darce/dary');
+      await respond(twoYearSummary(), list);
+
+      expect(text('.payments-card tbody tr:first-child td.amount')).toBe('1 000,50 Kč');
+    });
+
+    it('then a donation paired by the sender account carries a tag naming the end of that account', async () => {
+      const list = twoYearDonations();
+      list.items[0] = donationItem({
+        id: 'd-4',
+        pairedBy: 'SENDER_ACCOUNT',
+        senderAccount: '2900233333/2010',
+      });
+      list.items[1] = donationItem({
+        id: 'd-3',
+        pairedBy: 'SENDER_ACCOUNT',
+        senderAccount: '19-2000145399/0800',
+      });
+      await open('/darce/dary');
+      await respond(twoYearSummary(), list);
+
+      const tag = element('.payments-card tbody tr:first-child .pairing-tag');
+      expect(tag?.getAttribute('title')).toBe(
+        'Přiřazeno podle účtu 2900233333/2010, platba přišla bez variabilního symbolu',
+      );
+      expect(normalized(tag?.querySelector('[aria-hidden="true"]')?.textContent ?? '')).toBe(
+        'bez VS · …3333/2010',
+      );
+      expect(normalized(tag?.querySelector('.visually-hidden')?.textContent ?? '')).toBe(
+        'Přiřazeno podle účtu 2900233333/2010, platba přišla bez variabilního symbolu',
+      );
+      expect(text('.payments-card tbody tr:nth-child(2) .pairing-tag [aria-hidden="true"]')).toBe(
+        'bez VS · …5399/0800',
+      );
+    });
+
+    it('then a donation paired by a symbol the donor confirmed carries a tag naming that symbol and the end of the account', async () => {
+      const list = twoYearDonations();
+      list.items[0] = donationItem({
+        id: 'd-4',
+        pairedBy: 'CONFIRMED_SYMBOL',
+        senderAccount: '19-2000145399/0800',
+        confirmedSymbol: '6123456789',
+      });
+      await open('/darce/dary');
+      await respond(twoYearSummary(), list);
+
+      const tag = element('.payments-card tbody tr:first-child .pairing-tag');
+      const sentence =
+        'Přiřazeno podle účtu 19-2000145399/0800 a variabilního symbolu 6123456789, který jste u účtu potvrdili jako svůj';
+      expect(tag?.getAttribute('title')).toBe(sentence);
+      expect(normalized(tag?.querySelector('[aria-hidden="true"]')?.textContent ?? '')).toBe(
+        'VS 6123456789 · …5399/0800',
+      );
+      expect(normalized(tag?.querySelector('.visually-hidden')?.textContent ?? '')).toBe(sentence);
+      expect(texts('.pairing-tag')).toHaveLength(1);
+    });
+
+    it('then donations paired by the variable symbol or by hand carry no tag', async () => {
+      const list = twoYearDonations();
+      list.items[0] = donationItem({ id: 'd-4', pairedBy: null, source: 'MANUAL' });
+      await open('/darce/dary');
+      await respond(twoYearSummary(), list);
+
+      expect(element('.pairing-tag')).toBeNull();
+    });
+
+    it('then a note says how long a payment takes to appear and that it needs the variable symbol', async () => {
+      await open('/darce/dary');
+      await respond(twoYearSummary(), twoYearDonations());
+
+      expect(text('.bank-hint')).toContain('Okamžitá platba se tu obvykle objeví do minuty');
+      expect(text('.bank-hint')).toContain('váš variabilní symbol');
+    });
+
+    it('then a line leads to the yearly receipts', async () => {
+      await open('/darce/dary');
+      await respond(twoYearSummary(), twoYearDonations());
+
+      expect(text('.yearly-link')).toBe(
+        'Souhrnné potvrzení za celý rok najdete v části Potvrzení o daru.',
+      );
+      expect(element('.yearly-link a')?.getAttribute('href')).toBe('/darce/potvrzeni');
+    });
+
+    it('then a donor with no donations yet reads that there is no payment and how a standing order is paired', async () => {
+      await open('/darce/dary');
+      await respond(emptySummary(), emptyDonations());
+
+      expect(element('.payments-card table')).toBeNull();
+      expect(text('.payments-empty')).toBe(
+        'Zatím tu není žádná platba. Posíláte trvalým příkazem?',
+      );
+      expect(element('.payments-empty a')?.getAttribute('href')).toBe('/darce/ucty');
+    });
+
+    it('then the bank was checked recently, the time of the bank data shows and the donations are not loaded again', async () => {
+      await open('/darce/dary');
+      await respond(twoYearSummary(), twoYearDonations());
+
+      bankCheck.flush(
+        { bankDataAsOf: EARLIER, checking: false },
+        { status: 202, statusText: 'Accepted' },
+      );
+      await settle();
+
+      expect(text('.bank-check-status')).toBe('Údaje z banky k 18. 10. 2026 10:05');
+      expect(button('.bank-check-btn').disabled).toBe(false);
+      http.expectNone('/api/donations/me/summary');
+    });
+
+    it('then while the bank is being checked the page says so and loads the donations again once new bank data arrived', async () => {
+      vi.useFakeTimers();
+      await open('/darce/dary');
+      await respond(emptySummary(), emptyDonations());
+
+      bankCheck.flush(
+        { bankDataAsOf: EARLIER, checking: true },
+        { status: 202, statusText: 'Accepted' },
+      );
+      await settle();
+
+      expect(text('.bank-check-status')).toBe('Kontrolujeme nové platby v bance…');
+      expect(button('.bank-check-btn').disabled).toBe(true);
+
+      await vi.advanceTimersByTimeAsync(2000);
+      http
+        .expectOne({ method: 'GET', url: BANK_CHECK_URL })
+        .flush({ bankDataAsOf: EARLIER, checking: true });
+      await vi.advanceTimersByTimeAsync(2000);
+      http
+        .expectOne({ method: 'GET', url: BANK_CHECK_URL })
+        .flush({ bankDataAsOf: LATER, checking: false });
+      await respond(twoYearSummary(), twoYearDonations());
+
+      expect(text('.bank-check-status')).toBe('Údaje z banky k 18. 10. 2026 10:07');
+      expect(button('.bank-check-btn').disabled).toBe(false);
+      expect(texts('.payments-card tbody tr')).toHaveLength(twoYearDonations().items.length);
+    });
+
+    it('then a check that ends without new bank data does not load the donations again', async () => {
+      vi.useFakeTimers();
+      await open('/darce/dary');
+      await respond(twoYearSummary(), twoYearDonations());
+
+      bankCheck.flush(
+        { bankDataAsOf: EARLIER, checking: true },
+        { status: 202, statusText: 'Accepted' },
+      );
+      await vi.advanceTimersByTimeAsync(2000);
+      http
+        .expectOne({ method: 'GET', url: BANK_CHECK_URL })
+        .flush({ bankDataAsOf: EARLIER, checking: false });
+      await settle();
+
+      http.expectNone('/api/donations/me/summary');
+      expect(text('.bank-check-status')).toBe('Údaje z banky k 18. 10. 2026 10:05');
+    });
+
+    it('then pressing Obnovit asks the bank again and loads the donations again even without new bank data', async () => {
+      await open('/darce/dary');
+      await respond(twoYearSummary(), twoYearDonations());
+      bankCheck.flush(
+        { bankDataAsOf: EARLIER, checking: false },
+        { status: 202, statusText: 'Accepted' },
+      );
+      await settle();
+
+      await click('.bank-check-btn');
+      http
+        .expectOne({ method: 'POST', url: BANK_CHECK_URL })
+        .flush({ bankDataAsOf: EARLIER, checking: false });
+
+      await respond(twoYearSummary(), twoYearDonations());
+      expect(text('.bank-check-status')).toBe('Údaje z banky k 18. 10. 2026 10:05');
+    });
+
+    it('then a failed bank check shows no bank time and the donor can try again', async () => {
+      await open('/darce/dary');
+      await respond(twoYearSummary(), twoYearDonations());
+
+      bankCheck.flush(null, { status: 500, statusText: 'Server Error' });
+      await settle();
+
+      expect(element('.bank-check-status')).toBeNull();
+      expect(button('.bank-check-btn').disabled).toBe(false);
+    });
+
+    it('then the receipt of one payment is saved under the name the server gives', async () => {
+      await open('/darce/dary');
+      await respond(twoYearSummary(), twoYearDonations());
+
+      await click(secondRowButton);
+      const request = http.expectOne('/api/donations/me/d-3/receipt');
+      expect(request.request.responseType).toBe('blob');
+      expect(request.request.headers.get('Authorization')).toBe('Bearer token-1');
+      const file = pdf();
+      request.flush(file, attachment('potvrzeni-o-daru-2026-000017.pdf'));
+      await settle();
+
+      expect(createObjectURL).toHaveBeenCalledWith(file);
+      expect(savedFiles).toEqual([
+        { fileName: 'potvrzeni-o-daru-2026-000017.pdf', href: OBJECT_URL },
+      ]);
+      expect(element('[role="alert"]')).toBeNull();
+    });
+
+    it('then a refunded payment offers no receipt download and no line says from when receipts are issued', async () => {
+      await open('/darce/dary');
+      await respond(twoYearSummary(), twoYearDonations());
+
+      const rows = [...root().querySelectorAll<HTMLElement>('.payments-card tbody tr')];
+      expect(rows.map((row) => row.querySelector('.download-btn') !== null)).toEqual([
+        true,
+        true,
+        true,
+        false,
+      ]);
+      expect(element('.receipts-from')).toBeNull();
+    });
+
+    it('then donations received before the first receipt year offer no download and a line says from when receipts are issued', async () => {
+      await open('/darce/dary');
+      await respond(summaryWithReceiptsFrom2026(), donationsWithoutReceiptsBefore2026());
+
+      const rows = [...root().querySelectorAll<HTMLElement>('.payments-card tbody tr')];
+      expect(rows.map((row) => row.querySelector('.download-btn') !== null)).toEqual([
+        true,
+        true,
+        false,
+        false,
+      ]);
+      expect(
+        rows.map((row) => row.querySelector('td.receipt')!.classList.contains('is-empty')),
+      ).toEqual([false, false, true, true]);
+      expect(text('.payments-card .receipts-from')).toBe(
+        'Potvrzení o daru tu vystavujeme za dary přijaté od 1. ledna 2026, u starších darů proto tlačítko „Stáhnout PDF“ chybí.',
+      );
+    });
+
+    it('then a running download disables its button and says the PDF is being prepared until it arrives', async () => {
+      await open('/darce/dary');
+      await respond(twoYearSummary(), twoYearDonations());
+
+      await click(secondRowButton);
+      expect(button(secondRowButton).disabled).toBe(true);
+      expect(text(secondRowButton)).toBe('Připravujeme PDF…');
+      expect(text('.payments-card tbody tr:first-child .download-btn')).toBe('Stáhnout PDF');
+
+      http
+        .expectOne('/api/donations/me/d-3/receipt')
+        .flush(pdf(), attachment('potvrzeni-o-daru-2026-000017.pdf'));
+      await settle();
+      expect(button(secondRowButton).disabled).toBe(false);
+      expect(text(secondRowButton)).toBe('Stáhnout PDF');
+    });
+
+    it('then a receipt no longer available shows the problem title and loads the payments again', async () => {
+      await open('/darce/dary');
+      await respond(twoYearSummary(), twoYearDonations());
+
+      await click(secondRowButton);
+      http
+        .expectOne('/api/donations/me/d-3/receipt')
+        .flush(
+          problemBlob(
+            'donations/receipt-not-available',
+            'Potvrzení k tomuto daru nelze vystavit',
+            404,
+          ),
+          { status: 404, statusText: 'Not Found' },
+        );
+      await settleBlobFailure();
+      const refunded = twoYearDonations();
+      refunded.items[1] = donationItem({
+        id: 'd-3',
+        receivedAt: '2026-01-10',
+        amountMinor: 100000,
+        status: 'REFUNDED',
+        receiptAvailable: false,
+      });
+      await respond(twoYearSummary(), refunded);
+
+      expect(text('.payments-card [role="alert"]')).toBe('Potvrzení k tomuto daru nelze vystavit');
+      expect(text('.payments-card tbody tr:nth-child(2)')).toContain('Vráceno');
+      expect(element(secondRowButton)).toBeNull();
+    });
+
+    it('then a payment from before the first receipt year shows the problem title and loads the payments again', async () => {
+      await open('/darce/dary');
+      await respond(twoYearSummary(), twoYearDonations());
+
+      await click(thirdRowButton);
+      http
+        .expectOne('/api/donations/me/d-2/receipt')
+        .flush(
+          problemBlob(
+            'donations/receipt-before-first-year',
+            'Za dary z této doby potvrzení na webu nevystavujeme',
+            400,
+          ),
+          { status: 400, statusText: 'Bad Request' },
+        );
+      await settleBlobFailure();
+      await respond(summaryWithReceiptsFrom2026(), donationsWithoutReceiptsBefore2026());
+
+      expect(text('.payments-card [role="alert"]')).toBe(
+        'Za dary z této doby potvrzení na webu nevystavujeme',
+      );
+      expect(element(thirdRowButton)).toBeNull();
+      expect(text('.receipts-from')).toContain('od 1. ledna 2026');
+      expect(savedFiles).toEqual([]);
+    });
+
+    it('then a download failing for any other reason asks to try again and a successful retry clears it', async () => {
+      await open('/darce/dary');
+      await respond(twoYearSummary(), twoYearDonations());
+
+      await click(secondRowButton);
+      http
+        .expectOne('/api/donations/me/d-3/receipt')
+        .flush(new Blob(['Bad Gateway'], { type: 'text/html' }), {
+          status: 502,
+          statusText: 'Bad Gateway',
+        });
+      await settleBlobFailure();
+
+      expect(text('.payments-card [role="alert"]')).toBe(
+        'Potvrzení se nepodařilo stáhnout. Zkuste to prosím znovu.',
+      );
+
+      await click(secondRowButton);
+      http
+        .expectOne('/api/donations/me/d-3/receipt')
+        .flush(pdf(), attachment('potvrzeni-o-daru-2026-000017.pdf'));
+      await settle();
+
+      expect(element('[role="alert"]')).toBeNull();
+      expect(savedFiles).toHaveLength(1);
+    });
+
+    it('then a download refused because the session has ended sends the donor home to sign in and back to this page after it', async () => {
+      await open('/darce/dary');
+      await respond(twoYearSummary(), twoYearDonations());
+      const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+
+      await click(secondRowButton);
+      http
+        .expectOne('/api/donations/me/d-3/receipt')
+        .flush(problemBlob('auth/unauthenticated', 'Přihlaste se', 401), {
+          status: 401,
+          statusText: 'Unauthorized',
+        });
+      await settleBlobFailure();
+
+      expect(element('[role="alert"]')).toBeNull();
+      expect(TestBed.inject(LoginDialogService).isOpen()).toBe(true);
+      expect(navigate).toHaveBeenCalledWith('/');
+
+      TestBed.inject(LoginDialogService).signedIn();
+
+      expect(navigate).toHaveBeenLastCalledWith('/darce/dary');
+    });
+  });
+
+  describe('when the receipts page opens', () => {
+    it('then every year shows its count, its total and what can be done with its receipt', async () => {
+      await open('/darce/potvrzeni');
+      await respond(twoYearSummary(), twoYearDonations());
+
+      expect(yearRows()).toEqual([
+        ['2026', '2 příspěvky', '1 500 Kč', 'Ke stažení po skončení roku'],
+        ['2025', '1 příspěvek', '250 Kč', '↓ PDF za rok 2025'],
+      ]);
+      expect(element('.yearly-hint')).toBeNull();
+    });
+
+    it('then a year with five or more donations uses the plural for many', async () => {
+      const summary = twoYearSummary();
+      summary.byYear[0] = { year: 2026, count: 5, totalAmountMinor: 150000 };
+      await open('/darce/potvrzeni');
+      await respond(summary, twoYearDonations());
+
+      expect(yearRows()[0][1]).toBe('5 příspěvků');
+    });
+
+    it('then the receipt of a completed year is saved', async () => {
+      await open('/darce/potvrzeni');
+      await respond(twoYearSummary(), twoYearDonations());
+
+      await downloadYear(2025);
+      http.expectOne(yearlyUrl(2025)).flush(pdf(), attachment('potvrzeni-o-darech-2025.pdf'));
+      await settle();
+
+      expect(savedFiles).toEqual([{ fileName: 'potvrzeni-o-darech-2025.pdf', href: OBJECT_URL }]);
+    });
+
+    it('then a year before the first receipt year offers no PDF and a line says from which year receipts are issued', async () => {
+      await open('/darce/potvrzeni');
+      await respond(summaryWithReceiptsFrom2026(), donationsWithoutReceiptsBefore2026());
+
+      expect(yearRow(2025).querySelector('.yearly-pdf')).toBeNull();
+      expect(normalized(yearRow(2025).querySelector('.year-note')?.textContent ?? '')).toBe(
+        'Za tento rok potvrzení na webu nevystavujeme',
+      );
+      expect(text('.yearly-hint')).toBe('Potvrzení za rok tu vystavujeme za dary od roku 2026.');
+    });
+
+    it('then a running download disables its button and says the PDF is being prepared until it arrives', async () => {
+      await open('/darce/potvrzeni');
+      await respond(twoYearSummary(), twoYearDonations());
+
+      await downloadYear(2025);
+      expect(button('.yearly-pdf').disabled).toBe(true);
+      expect(text('.yearly-pdf')).toBe('Připravujeme PDF…');
+
+      http.expectOne(yearlyUrl(2025)).flush(pdf(), attachment('potvrzeni-o-darech-2025.pdf'));
+      await settle();
+      expect(button('.yearly-pdf').disabled).toBe(false);
+      expect(text('.yearly-pdf')).toBe('↓ PDF za rok 2025');
+    });
+
+    it('then a server saying the year is not completed yet shows the title of that problem', async () => {
+      const summary = twoYearSummary();
+      summary.yearlyReceiptsAvailableThrough = 2026;
+      await open('/darce/potvrzeni');
+      await respond(summary, twoYearDonations());
+
+      await downloadYear(2026);
+      http
+        .expectOne(yearlyUrl(2026))
+        .flush(problemBlob('donations/year-not-yet-completed', 'Rok ještě neskončil', 400), {
+          status: 400,
+          statusText: 'Bad Request',
+        });
+      await settleBlobFailure();
+
+      expect(text('.yearly-card [role="alert"]')).toBe('Rok ještě neskončil');
+      expect(savedFiles).toEqual([]);
+    });
+
+    it('then a server with no donations of that year to confirm shows the title of that problem', async () => {
+      await open('/darce/potvrzeni');
+      await respond(twoYearSummary(), twoYearDonations());
+
+      await downloadYear(2025);
+      http
+        .expectOne(yearlyUrl(2025))
+        .flush(
+          problemBlob(
+            'donations/yearly-receipt-not-available',
+            'Za tento rok nemáme žádný dar',
+            404,
+          ),
+          { status: 404, statusText: 'Not Found' },
+        );
+      await settleBlobFailure();
+
+      expect(text('.yearly-card [role="alert"]')).toBe('Za tento rok nemáme žádný dar');
+    });
+
+    it('then a server issuing no receipts for that year shows the title of that problem', async () => {
+      await open('/darce/potvrzeni');
+      await respond(twoYearSummary(), twoYearDonations());
+
+      await downloadYear(2025);
+      http
+        .expectOne(yearlyUrl(2025))
+        .flush(
+          problemBlob(
+            'donations/receipt-before-first-year',
+            'Za dary z této doby potvrzení na webu nevystavujeme',
+            400,
+          ),
+          { status: 400, statusText: 'Bad Request' },
+        );
+      await settleBlobFailure();
+
+      expect(text('.yearly-card [role="alert"]')).toBe(
+        'Za dary z této doby potvrzení na webu nevystavujeme',
+      );
+      expect(savedFiles).toEqual([]);
+    });
+
+    it('then an access token that expires during a download is refreshed and the PDF is still saved', async () => {
+      await open('/darce/potvrzeni');
+      await respond(twoYearSummary(), twoYearDonations());
+
+      await downloadYear(2025);
+      http
+        .expectOne(yearlyUrl(2025))
+        .flush(problemBlob('auth/expired-token', 'Platnost přihlášení vypršela', 401), {
+          status: 401,
+          statusText: 'Unauthorized',
+        });
+      await settleBlobFailure();
+      http.expectOne('/api/donors/auth/refresh').flush(authResponse('token-2'));
+      const retried = http.expectOne(yearlyUrl(2025));
+      expect(retried.request.headers.get('Authorization')).toBe('Bearer token-2');
+      retried.flush(pdf(), attachment('potvrzeni-o-darech-2025.pdf'));
+      await settle();
+
+      expect(savedFiles).toEqual([{ fileName: 'potvrzeni-o-darech-2025.pdf', href: OBJECT_URL }]);
+      expect(element('[role="alert"]')).toBeNull();
+    });
+
+    it('then a line says that the receipt of a single gift is on the donations page', async () => {
+      await open('/darce/potvrzeni');
+      await respond(twoYearSummary(), twoYearDonations());
+
+      expect(text('.single-card h2')).toBe('Potvrzení k jednotlivému daru');
+      expect(element('.single-card a')?.getAttribute('href')).toBe('/darce/dary');
+    });
+
+    it('then a donor with no donations yet reads how a gift appears, with a link to the bank accounts', async () => {
+      await open('/darce/potvrzeni');
+      await respond(emptySummary(), emptyDonations());
+
+      expect(element('.year-row')).toBeNull();
+      expect(text('.yearly-empty')).toBe(
+        'Zatím tu nemáme žádný váš dar. Jakmile dorazí platba s vaším variabilním symbolem, objeví se tady. Posíláte trvalým příkazem?',
+      );
+      expect(element('.yearly-empty a')?.getAttribute('href')).toBe('/darce/ucty');
+    });
+  });
+
+  describe('when the bank accounts page opens', () => {
+    function card(): BankAccountsCard {
+      return harness.fixture.debugElement.query(By.directive(BankAccountsCard))
+        .componentInstance as BankAccountsCard;
+    }
+
+    it('then the bank accounts card shows with the variable symbol for adding one', async () => {
+      await openBankAccounts();
+      await respond(twoYearSummary(), twoYearDonations());
+
+      expect(text('app-bank-accounts-card h2')).toBe('Moje bankovní účty');
+      expect(text('.page-intro')).toContain('i bez variabilního symbolu');
+    });
+
+    it('then new bank data from the check of the area loads the accounts again', async () => {
+      vi.useFakeTimers();
+      await openBankAccounts();
+      await respond(twoYearSummary(), twoYearDonations());
+
+      bankCheck.flush(
+        { bankDataAsOf: EARLIER, checking: true },
+        { status: 202, statusText: 'Accepted' },
+      );
+      await settle();
+      http.expectNone(BANK_ACCOUNTS_URL);
+      await vi.advanceTimersByTimeAsync(2000);
+      http
+        .expectOne({ method: 'GET', url: BANK_CHECK_URL })
+        .flush({ bankDataAsOf: LATER, checking: false });
+      await settle();
+      http.expectOne(BANK_ACCOUNTS_URL).flush({ items: [bankAccount()] });
+      await respond(twoYearSummary(), twoYearDonations());
+
+      expect(text('app-bank-accounts-card .account-number')).toBe('2900233333/2010');
+    });
+
+    it('then the add account dialog checking the bank with new data loads the donations again', async () => {
+      await openBankAccounts();
+      await respond(twoYearSummary(), twoYearDonations());
+      bankCheck.flush(
+        { bankDataAsOf: EARLIER, checking: false },
+        { status: 202, statusText: 'Accepted' },
+      );
+      await settle();
+
+      card().bankChecked.emit({ bankDataAsOf: EARLIER, checking: false });
+      await settle();
+      http.expectNone('/api/donations/me/summary');
+
+      card().bankChecked.emit({ bankDataAsOf: LATER, checking: false });
+      await respond(twoYearSummary(), twoYearDonations());
+
+      await go('/darce/dary');
+      expect(text('.bank-check-status')).toBe('Údaje z banky k 18. 10. 2026 10:07');
+    });
+
+    it('then a confirmed symbol bringing donations loads the summary and the payments again without the loading line', async () => {
+      await openBankAccounts();
+      await respond(emptySummary(), emptyDonations());
+
+      card().donationsChanged.emit();
+      await settle();
+      await respond(twoYearSummary(), twoYearDonations());
+
+      await go('/darce/prehled');
+      expect(element('.dashboard-loading')).toBeNull();
+      expect(texts('.stat-value')).toEqual(['1 750 Kč', '3', '15. 03. 2026']);
+    });
+  });
+
+  describe('when the details page opens', () => {
+    it('then the details on the receipt and the sign-in details show', async () => {
+      await open('/darce/udaje');
+      await respond(twoYearSummary(), twoYearDonations());
+
+      expect(texts('app-profile-card h2, app-account-card h2')).toEqual([
+        'Údaje na potvrzení o daru',
+        'Přihlašovací údaje',
+      ]);
+    });
+  });
+});

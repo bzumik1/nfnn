@@ -1,0 +1,12 @@
+<app-page-title i18n="@@donor.bankAccountsPage.heading">Bankovní účty</app-page-title>
+<p class="page-intro" i18n="@@donor.bankAccountsPage.intro">
+  Platby z účtu, který si tu ověříte, vám přiřadíme i bez variabilního symbolu, třeba z trvalého
+  příkazu.
+</p>
+
+<app-bank-accounts-card
+  [variableSymbol]="donor()?.variableSymbol ?? null"
+  (sessionEnded)="donations.sendToSignIn()"
+  (bankChecked)="donations.bankCheckedWhileAdding($event)"
+  (donationsChanged)="donations.fetchDonations()"
+/>

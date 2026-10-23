@@ -1,0 +1,99 @@
+<table>
+  <thead>
+    <tr>
+      <th i18n="@@donor.dashboard.payments.col.date">Datum</th>
+      <th class="amount" i18n="@@donor.dashboard.payments.col.amount">Částka</th>
+      <th i18n="@@donor.dashboard.payments.col.purpose">Účel</th>
+      <th i18n="@@donor.dashboard.payments.col.status">Stav</th>
+      @if (withReceipts()) {
+        <th i18n="@@donor.dashboard.payments.col.receipt">Potvrzení</th>
+      }
+    </tr>
+  </thead>
+  <tbody>
+    @for (item of items(); track item.id) {
+      <tr>
+        <td data-label="Datum" i18n-data-label="@@donor.dashboard.payments.col.date">
+          {{ formatDate(item.receivedAt) }}
+        </td>
+        <td
+          data-label="Částka"
+          i18n-data-label="@@donor.dashboard.payments.col.amount"
+          class="amount"
+        >
+          {{ crowns(item.amountMinor) }} Kč
+        </td>
+        <td data-label="Účel" i18n-data-label="@@donor.dashboard.payments.col.purpose">
+          {{ item.purpose }}
+          @if (item.pairedBy === 'SENDER_ACCOUNT' && item.senderAccount) {
+            <span
+              class="pairing-tag"
+              title="Přiřazeno podle účtu {{
+                item.senderAccount
+              }}, platba přišla bez variabilního symbolu"
+              i18n-title="@@donor.dashboard.payments.pairedByAccountTitle"
+            >
+              <span aria-hidden="true"
+                ><span i18n="@@donor.dashboard.payments.withoutSymbol">bez VS</span> ·
+                {{ senderAccountEnd(item.senderAccount) }}</span
+              >
+              <span class="visually-hidden" i18n="@@donor.dashboard.payments.pairedByAccount"
+                >Přiřazeno podle účtu {{ item.senderAccount }}, platba přišla bez variabilního
+                symbolu</span
+              >
+            </span>
+          }
+          @if (item.pairedBy === 'CONFIRMED_SYMBOL' && item.senderAccount && item.confirmedSymbol) {
+            <span
+              class="pairing-tag"
+              title="Přiřazeno podle účtu {{ item.senderAccount }} a variabilního symbolu {{
+                item.confirmedSymbol
+              }}, který jste u účtu potvrdili jako svůj"
+              i18n-title="@@donor.dashboard.payments.pairedByConfirmedSymbolTitle"
+            >
+              <span aria-hidden="true"
+                ><span i18n="@@donor.dashboard.payments.symbolPrefix">VS</span>
+                {{ item.confirmedSymbol }} · {{ senderAccountEnd(item.senderAccount) }}</span
+              >
+              <span
+                class="visually-hidden"
+                i18n="@@donor.dashboard.payments.pairedByConfirmedSymbol"
+                >Přiřazeno podle účtu {{ item.senderAccount }} a variabilního symbolu
+                {{ item.confirmedSymbol }}, který jste u účtu potvrdili jako svůj</span
+              >
+            </span>
+          }
+        </td>
+        <td data-label="Stav" i18n-data-label="@@donor.dashboard.payments.col.status">
+          <span class="status-pill" [class.status-pill--refunded]="item.status === 'REFUNDED'">{{
+            statusLabel(item.status)
+          }}</span>
+        </td>
+        @if (withReceipts()) {
+          <td
+            class="receipt"
+            [class.is-empty]="!item.receiptAvailable"
+            data-label="Potvrzení"
+            i18n-data-label="@@donor.dashboard.payments.col.receipt"
+          >
+            @if (item.receiptAvailable) {
+              <button
+                type="button"
+                class="download-btn"
+                [disabled]="donations.singleDownloading(item)"
+                [attr.aria-busy]="donations.singleDownloading(item)"
+                (click)="donations.downloadSingleReceipt(item)"
+              >
+                @if (donations.singleDownloading(item)) {
+                  <span i18n="@@donor.dashboard.receipt.preparing">Připravujeme PDF…</span>
+                } @else {
+                  <span i18n="@@donor.dashboard.payments.download">Stáhnout PDF</span>
+                }
+              </button>
+            }
+          </td>
+        }
+      </tr>
+    }
+  </tbody>
+</table>

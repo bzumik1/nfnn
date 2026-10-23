@@ -1,0 +1,149 @@
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+thead tr {
+  background: var(--color-surface-alt);
+}
+
+th {
+  padding: 12px 20px;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-text-subtle);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+tbody tr {
+  border-top: 1px solid var(--color-divider);
+  transition: background 0.15s;
+
+  &:hover {
+    background: var(--color-surface-alt);
+  }
+}
+
+td {
+  padding: 14px 20px;
+  font-size: 14px;
+  color: var(--color-text-secondary);
+}
+
+td.amount {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--color-accent);
+  font-family: var(--font-serif);
+  font-variant-numeric: var(--numeric-figures);
+  white-space: nowrap;
+}
+
+th.amount,
+td.amount {
+  text-align: right;
+}
+
+.pairing-tag {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  background: var(--color-accent-bg);
+  color: var(--color-text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  vertical-align: 1px;
+  font-variant-numeric: var(--numeric-figures);
+}
+
+.status-pill {
+  background: var(--color-success-bg);
+  color: var(--color-success);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+}
+
+.status-pill--refunded {
+  background: var(--color-border);
+  color: var(--color-text-muted);
+}
+
+.download-btn {
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
+  border: none;
+  padding: 7px 14px;
+  border-radius: var(--radius-pill);
+  font-weight: 600;
+  font-size: 12px;
+  cursor: pointer;
+  font-family: var(--font-sans);
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+}
+
+@media (max-width: 640px) {
+  thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  table,
+  tbody,
+  tr,
+  td {
+    display: block;
+  }
+
+  tbody tr {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 6px 12px;
+    padding: 14px 20px;
+
+    &:hover {
+      background: none;
+    }
+  }
+
+  td {
+    padding: 0;
+  }
+
+  td::before {
+    content: attr(data-label);
+    display: block;
+    font-family: var(--font-sans);
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--color-text-subtle);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 2px;
+  }
+
+  td.receipt {
+    grid-column: 1 / -1;
+  }
+
+  .pairing-tag {
+    display: table;
+    margin: 4px 0 0;
+  }
+
+  td.receipt.is-empty {
+    display: none;
+  }
+}

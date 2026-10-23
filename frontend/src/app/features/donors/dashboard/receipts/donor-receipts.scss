@@ -1,0 +1,156 @@
+.yearly-card,
+.single-card {
+  background: var(--color-surface);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-panel);
+  border: 1px solid var(--color-border-soft);
+  padding: 20px 24px;
+  margin-bottom: 20px;
+}
+
+.yearly-title {
+  font-family: var(--font-serif);
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--color-text);
+  margin-bottom: 4px;
+}
+
+.yearly-sub {
+  color: var(--color-text-soft);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.years {
+  list-style: none;
+  margin-top: 16px;
+}
+
+.year-row {
+  display: grid;
+  grid-template-columns: 64px 1fr auto minmax(180px, auto);
+  align-items: center;
+  gap: 8px 16px;
+  padding: 14px 16px;
+  border-top: 1px solid var(--color-divider);
+
+  &:first-child {
+    border-top: none;
+  }
+}
+
+.year {
+  font-family: var(--font-serif);
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--color-text);
+  font-variant-numeric: var(--numeric-figures);
+}
+
+.year-count {
+  color: var(--color-text-soft);
+  font-size: 14px;
+}
+
+.year-total {
+  font-family: var(--font-serif);
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--color-accent);
+  font-variant-numeric: var(--numeric-figures);
+  white-space: nowrap;
+}
+
+.year-action {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.year-note {
+  font-size: 13px;
+  color: var(--color-text-soft);
+  text-align: right;
+}
+
+.yearly-pdf {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  border: none;
+  padding: 9px 18px;
+  border-radius: var(--radius-pill);
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  box-shadow: var(--shadow-button-sm);
+  white-space: nowrap;
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.7;
+  }
+}
+
+.yearly-hint {
+  margin-top: 8px;
+  font-size: 13px;
+  color: var(--color-text-soft);
+}
+
+.receipt-error {
+  margin-top: 12px;
+  padding: 10px 14px;
+  background: var(--color-danger-bg);
+  border: 1px solid var(--color-danger-border);
+  border-radius: var(--radius-md);
+  color: var(--color-danger);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.yearly-empty {
+  margin-top: 16px;
+  padding: 12px 16px;
+  background: var(--color-surface-alt);
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--color-text-soft);
+}
+
+a {
+  color: var(--color-accent);
+}
+
+@media (max-width: 640px) {
+  .year-row {
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      'year total'
+      'count count'
+      'action action';
+    padding: 14px 0;
+  }
+
+  .year {
+    grid-area: year;
+  }
+
+  .year-count {
+    grid-area: count;
+  }
+
+  .year-total {
+    grid-area: total;
+  }
+
+  .year-action {
+    grid-area: action;
+    justify-content: flex-start;
+  }
+
+  .year-note {
+    text-align: left;
+  }
+}
