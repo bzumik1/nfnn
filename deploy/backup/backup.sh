@@ -40,6 +40,10 @@ now_utc() {
   date -u +%Y-%m-%dT%H:%M:%SZ
 }
 
+reached() {
+  [ "$(date +%H%M)" -ge "$(echo "$1" | tr -d :)" ]
+}
+
 write_status() {
   status_name=$1
   shift
@@ -333,16 +337,22 @@ handle_requests
 take_backup "" ""
 
 last_backup_day=""
+if reached "$BACKUP_TIME"; then
+  last_backup_day=$(date +%Y-%m-%d)
+fi
 last_test_day=""
+if [ "$(sed -n 's/^started_at=\(.\{10\}\).*/\1/p' "$STATUS/test-restore" 2>/dev/null)" = "$(date +%Y-%m-%d)" ]; then
+  last_test_day=$(date +%Y-%m-%d)
+fi
 while true; do
   sleep "$POLL_SECONDS"
   handle_requests
   today=$(date +%Y-%m-%d)
-  if [ "$(date +%H:%M)" = "$BACKUP_TIME" ] && [ "$last_backup_day" != "$today" ]; then
+  if reached "$BACKUP_TIME" && [ "$last_backup_day" != "$today" ]; then
     last_backup_day=$today
     take_backup "" ""
   fi
-  if [ "$(date +%u)" = "$TEST_RESTORE_DAY" ] && [ "$(date +%H:%M)" = "$TEST_RESTORE_TIME" ] && [ "$last_test_day" != "$today" ]; then
+  if [ "$(date +%u)" = "$TEST_RESTORE_DAY" ] && reached "$TEST_RESTORE_TIME" && [ "$last_test_day" != "$today" ]; then
     last_test_day=$today
     test_restore ""
   fi
