@@ -15,9 +15,17 @@ import { Router, RouterLink } from '@angular/router';
 import { problemTypeEndsWith } from '../../../core/auth/api-problem';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
+import { formatCrowns } from '../../donations/donation-amount';
 import { formatBankTime, formatDonationDate } from '../../donations/donation-date';
 import { DashboardTopBar } from '../../donors/dashboard/top-bar/top-bar';
-import { AdminApi, ImportFailureKind, ImportStateResponse } from '../admin-api';
+import {
+  AdminApi,
+  AdminOverviewResponse,
+  ImportFailureKind,
+  ImportStateResponse,
+  TallyResponse,
+} from '../admin-api';
+import { formatReportMonth } from '../report/report-month';
 
 type LoadState = 'loading' | 'ready' | 'error';
 
@@ -52,6 +60,8 @@ export class AdminHome {
   protected readonly donor = this.auth.donor;
   protected readonly state = signal<LoadState>('loading');
   protected readonly importState = signal<ImportStateResponse | null>(null);
+  protected readonly overviewState = signal<LoadState>('loading');
+  protected readonly overview = signal<AdminOverviewResponse | null>(null);
 
   protected readonly coveredPeriod = computed(() => {
     const state = this.importState();
@@ -78,7 +88,34 @@ export class AdminHome {
 
   constructor() {
     this.load();
+    this.loadOverview();
     afterNextRender(() => this.title().nativeElement.focus(), { injector: this.injector });
+  }
+
+  protected loadOverview(year: number | null = null): void {
+    this.overviewState.set('loading');
+    this.api
+      .overview(year)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (data) => {
+          this.overview.set(data);
+          this.overviewState.set('ready');
+        },
+        error: () => this.overviewState.set('error'),
+      });
+  }
+
+  protected changeYear(event: Event): void {
+    this.loadOverview(Number((event.target as HTMLSelectElement).value));
+  }
+
+  protected monthLabel(isoMonth: string): string {
+    return formatReportMonth(isoMonth);
+  }
+
+  protected amount(tally: TallyResponse): string {
+    return `${formatCrowns(tally.totalMinor / 100)}\u00a0Kč`;
   }
 
   protected load(): void {

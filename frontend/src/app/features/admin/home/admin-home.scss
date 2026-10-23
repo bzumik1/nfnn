@@ -150,6 +150,135 @@
   }
 }
 
+.admin-card-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px 16px;
+}
+
+.year-select {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  margin-bottom: 16px;
+
+  select {
+    font-family: var(--font-sans);
+    font-size: 14px;
+    color: var(--color-text);
+    background: var(--color-surface);
+    border: 1.5px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    padding: 6px 10px;
+
+    &:focus-visible {
+      outline: 3px solid var(--color-focus-ring);
+      outline-offset: 2px;
+    }
+  }
+}
+
+.admin-summary,
+.admin-empty {
+  font-size: 14px;
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+  margin-bottom: 12px;
+}
+
+.overview-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 4px;
+
+  th {
+    padding: 10px 12px;
+    text-align: left;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--color-text-subtle);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    background: var(--color-surface-alt);
+  }
+
+  td {
+    padding: 10px 12px;
+    font-size: 14px;
+    color: var(--color-text-secondary);
+    border-top: 1px solid var(--color-divider);
+    font-variant-numeric: var(--numeric-figures);
+  }
+
+  .num {
+    text-align: right;
+    white-space: nowrap;
+  }
+
+  tfoot td {
+    font-weight: 600;
+    color: var(--color-text);
+    background: var(--color-surface-alt);
+  }
+}
+
+.admin-month {
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+@media (max-width: 640px) {
+  .overview-table {
+    thead {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+    }
+
+    &,
+    tbody,
+    tfoot,
+    tr,
+    td {
+      display: block;
+    }
+
+    tr {
+      display: grid;
+      gap: 6px;
+      padding: 12px 0;
+      border-top: 1px solid var(--color-divider);
+    }
+
+    td {
+      padding: 0;
+      border: none;
+    }
+
+    .num {
+      text-align: left;
+    }
+
+    td::before {
+      content: attr(data-label);
+      display: block;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--color-text-subtle);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 2px;
+    }
+  }
+}
+
 .admin-failure-message {
   color: var(--color-text-muted);
   font-size: 13px;

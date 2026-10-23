@@ -7,7 +7,11 @@ import cz.novanadeje.app.donations.domain.report.DonorCounts;
 import cz.novanadeje.app.donations.domain.report.ImportFailure;
 import cz.novanadeje.app.donations.domain.report.MonthlyReport;
 import cz.novanadeje.app.donations.domain.report.ReportMonth;
+import cz.novanadeje.app.donations.domain.report.ReportRecipients;
+import cz.novanadeje.app.donations.domain.report.ReportSections;
+import cz.novanadeje.app.donations.domain.report.ReportSettings;
 import cz.novanadeje.app.donations.domain.report.Tally;
+import cz.novanadeje.app.shared.domain.EmailAddress;
 import cz.novanadeje.app.shared.domain.Money;
 import cz.novanadeje.app.support.Emails;
 import cz.novanadeje.app.support.MailContents;
@@ -24,6 +28,7 @@ import org.springframework.mail.MailSendException;
 import org.springframework.mail.javamail.JavaMailSender;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.Properties;
 
@@ -38,6 +43,7 @@ import static org.mockito.Mockito.when;
 class MonthlyReportEmailSenderTest {
 
     private static final ReportMonth SEPTEMBER = ReportMonth.of(2026, 9);
+    private static final ReportSettings SETTINGS = ReportSettings.defaults(new EmailAddress("prehled@nfnn.cz"));
     private static final Instant SUCCEEDED_AT = Instant.parse("2026-10-01T10:00:00Z");
     private static final Instant FAILED_AT = Instant.parse("2026-10-02T04:00:00Z");
     private static final MonthlyReport REPORT = new MonthlyReport(SEPTEMBER, DonorCounts.between(1, 2), new Tally(2, Money.czk(153450)),
@@ -45,7 +51,7 @@ class MonthlyReportEmailSenderTest {
 
     private final JavaMailSender mailSender = mock(JavaMailSender.class);
     private final MonthlyReportEmailSender sender = new MonthlyReportEmailSender(mailSender,
-            Emails.branded(mailSender, "info@nfnn.cz", "https://nfnn.cz"), Emails.messages(), new MonthlyReportProperties("0 0 7 * * *", "prehled@nfnn.cz"));
+            Emails.branded(mailSender, "info@nfnn.cz", "https://nfnn.cz"), Emails.messages());
 
     @BeforeEach
     void prepareMail() {
@@ -55,7 +61,7 @@ class MonthlyReportEmailSenderTest {
     @Test
     @DisplayName("Given September's report, when it is sent, then it goes to the report recipient from the foundation with the month in the subject")
     void should_address_report_when_sent_given_september() throws Exception {
-        sender.send(REPORT);
+        sender.send(REPORT, SETTINGS);
 
         MimeMessage email = MailContents.asReceived(sentEmail());
         assertThat(email.getSubject()).isEqualTo("Měsíční přehled Nová naděje – září 2026");
@@ -75,7 +81,7 @@ class MonthlyReportEmailSenderTest {
     @Test
     @DisplayName("Given September's report, when it is sent, then its text lists the donors, the donations, the unpaired payments and the bank import")
     void should_list_every_section_when_sent_given_september() {
-        sender.send(REPORT);
+        sender.send(REPORT, SETTINGS);
 
         assertThat(plainText()).contains(
                 "Registrovaní dárci k 30. 9. 2026: 2",
@@ -91,7 +97,8 @@ class MonthlyReportEmailSenderTest {
     @DisplayName("Given a bank import that never succeeded and last failed on the token, when the report is sent, then it says so in Czech")
     void should_describe_failure_when_sent_given_failed_import_without_success() {
         sender.send(new MonthlyReport(SEPTEMBER, DonorCounts.between(0, 0), new Tally(0, Money.czk(0)), new Tally(0, Money.czk(0)),
-                new Tally(0, Money.czk(0)), new BankImportStatus(Optional.empty(), Optional.of(new ImportFailure(ImportFailureKind.UNAUTHORIZED, FAILED_AT)))));
+                new Tally(0, Money.czk(0)), new BankImportStatus(Optional.empty(), Optional.of(new ImportFailure(ImportFailureKind.UNAUTHORIZED, FAILED_AT)))),
+                SETTINGS);
 
         assertThat(plainText()).contains(
                 "Poslední úspěšné stažení plateb z banky: zatím žádné",
@@ -105,11 +112,27 @@ class MonthlyReportEmailSenderTest {
         MailSendException refused = new MailSendException("refused");
         doThrow(refused).when(mailSender).send(any(MimeMessage.class));
 
-        assertThatThrownBy(() -> sender.send(REPORT))
+        assertThatThrownBy(() -> sender.send(REPORT, SETTINGS))
                 .isInstanceOfSatisfying(MonthlyReportNotDelivered.class, failure -> {
                     assertThat(failure.month()).isEqualTo(SEPTEMBER);
                     assertThat(failure.getCause()).isSameAs(refused);
                 });
+    }
+
+    @Test
+    @DisplayName("Given two recipients and only the donations and bank sections, when the report is sent, then one e-mail goes to both with just those sections")
+    void should_send_chosen_sections_to_every_recipient_when_sent_given_settings() throws Exception {
+        ReportSettings settings = new ReportSettings(ReportRecipients.parse(List.of("pavel@example.cz", "jakub@example.cz")), 5,
+                new ReportSections(false, true, false, true));
+
+        sender.send(REPORT, settings);
+
+        MimeMessage email = MailContents.asReceived(sentEmail());
+        assertThat(email.getRecipients(Message.RecipientType.TO)).extracting(Object::toString).containsExactly("pavel@example.cz", "jakub@example.cz");
+        assertThat(plainText())
+                .contains("Přijaté dary za září 2026: počet 2, celkem 1 534,50 Kč", "Poslední úspěšné stažení plateb z banky: 1. 10. 2026 12:00")
+                .doesNotContain("Registrovaní dárci", "Nespárované příchozí platby");
+        assertThat(MailContents.html(email)).doesNotContain(">Dárci</h2>", ">Platby bez dárce</h2>").contains(">Dary</h2>", ">Banka</h2>");
     }
 
     private MimeMessage sentEmail() {

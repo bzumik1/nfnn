@@ -4,6 +4,8 @@ import cz.novanadeje.app.donations.application.report.MonthlyReportNotDelivered;
 import cz.novanadeje.app.donations.application.report.MonthlyReportSender;
 import cz.novanadeje.app.donations.domain.report.BankImportStatus;
 import cz.novanadeje.app.donations.domain.report.MonthlyReport;
+import cz.novanadeje.app.donations.domain.report.ReportSections;
+import cz.novanadeje.app.donations.domain.report.ReportSettings;
 import cz.novanadeje.app.donations.domain.report.Tally;
 import cz.novanadeje.app.shared.infrastructure.mail.BrandedEmails;
 import cz.novanadeje.app.shared.infrastructure.mail.EmailDraft;
@@ -28,21 +30,19 @@ class MonthlyReportEmailSender implements MonthlyReportSender {
     private final JavaMailSender mailSender;
     private final BrandedEmails emails;
     private final MessageSource messages;
-    private final MonthlyReportProperties properties;
 
-    MonthlyReportEmailSender(JavaMailSender mailSender, BrandedEmails emails, MessageSource messages, MonthlyReportProperties properties) {
+    MonthlyReportEmailSender(JavaMailSender mailSender, BrandedEmails emails, MessageSource messages) {
         this.mailSender = mailSender;
         this.emails = emails;
         this.messages = messages;
-        this.properties = properties;
     }
 
     @Override
-    public void send(MonthlyReport report) {
+    public void send(MonthlyReport report, ReportSettings settings) {
         try {
             String month = MonthlyReportFormats.month(report.month());
-            List<ReportSection> sections = sections(report, month);
-            mailSender.send(emails.compose(new EmailDraft(CZECH, properties.recipient(), text("subject", month), text("title", month), TEMPLATE,
+            List<ReportSection> sections = sections(report, month, settings.sections());
+            mailSender.send(emails.compose(new EmailDraft(CZECH, settings.recipients().values(), text("subject", month), text("title", month), TEMPLATE,
                     Map.of("greeting", text("greeting"), "intro", text("intro", month), "sections", sections,
                             "regards", text("regards"), "signature", text("signature")),
                     plainText(month, sections), text("footer"))));
@@ -51,19 +51,28 @@ class MonthlyReportEmailSender implements MonthlyReportSender {
         }
     }
 
-    private List<ReportSection> sections(MonthlyReport report, String month) {
-        return List.of(
-                new ReportSection(text("donors"), List.of(
-                        text("donors.registered", MonthlyReportFormats.date(report.month().lastDay()),
-                                MonthlyReportFormats.count(report.donors().registered())),
-                        text("donors.new", month, MonthlyReportFormats.count(report.donors().newInMonth())))),
-                new ReportSection(text("donations"), List.of(
-                        tallyLine("donations.month", month, report.donationsInMonth()),
-                        tallyLine("donations.year", MonthlyReportFormats.date(report.month().firstDayOfYear()), report.donationsInYear()))),
-                new ReportSection(text("unpaired"), List.of(
-                        tallyLine("unpaired.month", month, report.unpairedPaymentsInMonth()),
-                        text("unpaired.hint"))),
-                new ReportSection(text("bank"), bankLines(report.bankImport())));
+    private List<ReportSection> sections(MonthlyReport report, String month, ReportSections included) {
+        List<ReportSection> sections = new ArrayList<>();
+        if (included.donors()) {
+            sections.add(new ReportSection(text("donors"), List.of(
+                    text("donors.registered", MonthlyReportFormats.date(report.month().lastDay()),
+                            MonthlyReportFormats.count(report.donors().registered())),
+                    text("donors.new", month, MonthlyReportFormats.count(report.donors().newInMonth())))));
+        }
+        if (included.donations()) {
+            sections.add(new ReportSection(text("donations"), List.of(
+                    tallyLine("donations.month", month, report.donationsInMonth()),
+                    tallyLine("donations.year", MonthlyReportFormats.date(report.month().firstDayOfYear()), report.donationsInYear()))));
+        }
+        if (included.unpairedPayments()) {
+            sections.add(new ReportSection(text("unpaired"), List.of(
+                    tallyLine("unpaired.month", month, report.unpairedPaymentsInMonth()),
+                    text("unpaired.hint"))));
+        }
+        if (included.bankImport()) {
+            sections.add(new ReportSection(text("bank"), bankLines(report.bankImport())));
+        }
+        return List.copyOf(sections);
     }
 
     private List<String> bankLines(BankImportStatus status) {

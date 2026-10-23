@@ -2,6 +2,7 @@ package cz.novanadeje.app.donations.infrastructure.persistence;
 
 import cz.novanadeje.app.donations.domain.report.MonthlyReportLog;
 import cz.novanadeje.app.donations.domain.report.ReportMonth;
+import cz.novanadeje.app.donations.domain.report.SentReport;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -55,6 +56,17 @@ class JpaMonthlyReportLogTest {
 
         assertThat(reportLog.recordSending(ReportMonth.of(2026, 10), NOW)).isTrue();
         assertThat(jdbc.sql("select count(*) from donation_monthly_report").query(Long.class).single()).isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("Given September and October recorded, when the sent reports are listed, then October comes first with its time")
+    void should_list_newest_first_when_listed_given_two_months_recorded() {
+        reportLog.recordSending(SEPTEMBER, NOW);
+        reportLog.recordSending(ReportMonth.of(2026, 10), NOW.plusSeconds(86400));
+
+        assertThat(reportLog.sentReportsNewestFirst()).containsExactly(
+                new SentReport(ReportMonth.of(2026, 10), NOW.plusSeconds(86400)),
+                new SentReport(SEPTEMBER, NOW));
     }
 
     @Test

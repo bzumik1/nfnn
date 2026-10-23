@@ -9,19 +9,28 @@ import cz.novanadeje.app.donations.domain.report.DonorCounts;
 import cz.novanadeje.app.donations.domain.report.MonthlyReport;
 import cz.novanadeje.app.donations.domain.report.MonthlyReportLog;
 import cz.novanadeje.app.donations.domain.report.ReportMonth;
+import cz.novanadeje.app.donations.domain.report.ReportMonthNotEnded;
+import cz.novanadeje.app.donations.domain.report.ReportRecipients;
+import cz.novanadeje.app.donations.domain.report.ReportSections;
+import cz.novanadeje.app.donations.domain.report.ReportSettings;
+import cz.novanadeje.app.donations.domain.report.ReportSettingsRepository;
 import cz.novanadeje.app.donations.domain.report.Tally;
+import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
+import cz.novanadeje.app.shared.domain.EmailAddress;
 import cz.novanadeje.app.shared.domain.Money;
 import cz.novanadeje.app.support.MutableClock;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.context.ApplicationEventPublisher;
 
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 import static cz.novanadeje.app.donations.BankPayments.payment;
 import static cz.novanadeje.app.donations.domain.donation.Donations.received;
@@ -39,19 +48,27 @@ class MonthlyReportServiceTest {
 
     private static final Instant FIRST_OF_OCTOBER_AT_SEVEN = Instant.parse("2026-10-01T05:00:00Z");
     private static final ReportMonth SEPTEMBER = ReportMonth.of(2026, 9);
+    private static final ReportSettings DEFAULTS = ReportSettings.defaults(new EmailAddress("info@nfnn.cz"));
+    private static final ReportSettings ON_THE_FIFTH = new ReportSettings(ReportRecipients.parse(List.of("pavel@example.cz", "jakub@example.cz")), 5,
+            new ReportSections(true, true, false, false));
+    private static final UUID ADMIN = UUID.fromString("01a18e56-bdb0-775a-bd0a-a60756831369");
 
     private final DonorRecordRepository donors = mock(DonorRecordRepository.class);
     private final DonationRepository donations = mock(DonationRepository.class);
     private final BankPaymentRepository payments = mock(BankPaymentRepository.class);
     private final BankImportStateRepository importStates = mock(BankImportStateRepository.class);
     private final MonthlyReportLog reportLog = mock(MonthlyReportLog.class);
+    private final ReportSettingsRepository settings = mock(ReportSettingsRepository.class);
     private final MonthlyReportSender sender = mock(MonthlyReportSender.class);
+    private final ApplicationEventPublisher events = mock(ApplicationEventPublisher.class);
     private final MutableClock clock = new MutableClock(FIRST_OF_OCTOBER_AT_SEVEN, ZoneId.of("Europe/Prague"));
-    private final MonthlyReportService service = new MonthlyReportService(donors, donations, payments, importStates, reportLog, sender, clock);
+    private final MonthlyReportService service = new MonthlyReportService(donors, donations, payments, importStates, reportLog, settings, sender,
+            events, clock);
 
     @BeforeEach
     void stubFacts() {
         when(reportLog.recordSending(any(), any())).thenReturn(true);
+        when(settings.current()).thenReturn(DEFAULTS);
         when(donors.countRegisteredBefore(SEPTEMBER.start())).thenReturn(3L);
         when(donors.countRegisteredBefore(SEPTEMBER.end())).thenReturn(5L);
         when(donations.findReceivedOnBetween(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 9, 30)))
@@ -100,7 +117,7 @@ class MonthlyReportServiceTest {
     @Test
     @DisplayName("Given the first of October, when October's report is asked for, then it is refused before anything is recorded")
     void should_refuse_when_report_asked_given_month_not_completed() {
-        assertThatThrownBy(() -> service.sendReportFor(ReportMonth.of(2026, 10))).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> service.sendReportFor(ReportMonth.of(2026, 10))).isInstanceOf(ReportMonthNotEnded.class);
 
         verify(reportLog, never()).recordSending(any(), any());
         verifyNoInteractions(sender);
@@ -122,14 +139,84 @@ class MonthlyReportServiceTest {
     @DisplayName("Given a mail server that refuses the report, when the due report is sent, then the failure reaches the caller so the record is rolled back")
     void should_propagate_failure_when_due_report_sent_given_refused_delivery() {
         MonthlyReportNotDelivered refused = new MonthlyReportNotDelivered(SEPTEMBER, new IllegalStateException("smtp down"));
-        doThrow(refused).when(sender).send(any());
+        doThrow(refused).when(sender).send(any(), any());
 
         assertThatThrownBy(service::sendDueReport).isSameAs(refused);
     }
 
+    @Test
+    @DisplayName("Given the report set to leave on the 5th, when the due report is checked on the 1st, then nothing is recorded or sent")
+    void should_send_nothing_when_due_report_checked_given_send_day_not_reached() {
+        when(settings.current()).thenReturn(ON_THE_FIFTH);
+
+        MonthlyReportOutcome outcome = service.sendDueReport();
+
+        assertThat(outcome).isEqualTo(MonthlyReportOutcome.notDue(SEPTEMBER));
+        assertThat(outcome.sent()).isFalse();
+        verify(reportLog, never()).recordSending(any(), any());
+        verifyNoInteractions(sender);
+    }
+
+    @Test
+    @DisplayName("Given the report set to leave on the 5th, when the due report is checked on the 5th, then September goes out with those settings")
+    void should_send_with_settings_when_due_report_checked_given_send_day_reached() {
+        when(settings.current()).thenReturn(ON_THE_FIFTH);
+        clock.set(Instant.parse("2026-10-05T05:00:00Z"));
+
+        MonthlyReportOutcome outcome = service.sendDueReport();
+
+        assertThat(outcome).isEqualTo(MonthlyReportOutcome.sent(SEPTEMBER));
+        verify(sender).send(any(), org.mockito.ArgumentMatchers.eq(ON_THE_FIFTH));
+    }
+
+    @Test
+    @DisplayName("Given September already sent, when an administrator sends it again, then it is compiled and sent to the current recipients and the action is audited")
+    void should_send_again_and_audit_when_resent_given_month_already_sent() {
+        when(reportLog.recordSending(any(), any())).thenReturn(false);
+        when(settings.current()).thenReturn(ON_THE_FIFTH);
+
+        ManualReportDelivery delivery = service.resend(ADMIN, SEPTEMBER);
+
+        assertThat(delivery).isEqualTo(new ManualReportDelivery(SEPTEMBER, ON_THE_FIFTH.recipients(), FIRST_OF_OCTOBER_AT_SEVEN));
+        assertThat(sentReport().month()).isEqualTo(SEPTEMBER);
+        ArgumentCaptor<AdminActionPerformed> audited = ArgumentCaptor.forClass(AdminActionPerformed.class);
+        verify(events).publishEvent(audited.capture());
+        assertThat(audited.getValue().adminId()).isEqualTo(ADMIN);
+        assertThat(audited.getValue().action()).isEqualTo("SEND_MONTHLY_REPORT");
+        assertThat(audited.getValue().subjectId()).isEmpty();
+        assertThat(audited.getValue().details()).isEqualTo("Monthly report for 2026-09 sent by hand to pavel@example.cz, jakub@example.cz");
+        assertThat(audited.getValue().performedAt()).isEqualTo(FIRST_OF_OCTOBER_AT_SEVEN);
+    }
+
+    @Test
+    @DisplayName("Given September never sent, when an administrator sends it, then the month is recorded so the morning check does not send it twice")
+    void should_record_month_when_resent_given_month_never_sent() {
+        service.resend(ADMIN, SEPTEMBER);
+
+        verify(reportLog).recordSending(SEPTEMBER, FIRST_OF_OCTOBER_AT_SEVEN);
+    }
+
+    @Test
+    @DisplayName("Given the first of October, when an administrator sends October's report, then it is refused and nothing is audited")
+    void should_refuse_when_resent_given_month_not_ended() {
+        assertThatThrownBy(() -> service.resend(ADMIN, ReportMonth.of(2026, 10))).isInstanceOf(ReportMonthNotEnded.class);
+
+        verifyNoInteractions(sender, events, reportLog);
+    }
+
+    @Test
+    @DisplayName("Given a mail server that refuses the report, when an administrator sends it, then the failure reaches the caller and nothing is audited")
+    void should_propagate_failure_when_resent_given_refused_delivery() {
+        MonthlyReportNotDelivered refused = new MonthlyReportNotDelivered(SEPTEMBER, new IllegalStateException("smtp down"));
+        doThrow(refused).when(sender).send(any(), any());
+
+        assertThatThrownBy(() -> service.resend(ADMIN, SEPTEMBER)).isSameAs(refused);
+        verifyNoInteractions(events);
+    }
+
     private MonthlyReport sentReport() {
         ArgumentCaptor<MonthlyReport> sent = ArgumentCaptor.forClass(MonthlyReport.class);
-        verify(sender).send(sent.capture());
+        verify(sender).send(sent.capture(), any());
         return sent.getValue();
     }
 }

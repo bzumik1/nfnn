@@ -6,10 +6,11 @@ import { authInterceptor } from '../../../core/auth/auth-interceptor';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
 import { authResponse, sampleDonor } from '../../../core/auth/testing/donor-fixtures';
-import { importState } from '../testing/admin-fixtures';
+import { importState, monthOverview, overview } from '../testing/admin-fixtures';
 import { AdminHome } from './admin-home';
 
 const IMPORT_STATE_URL = '/api/admin/donations/import-state';
+const OVERVIEW_URL = '/api/admin/donations/overview';
 
 describe('Given an administrator on the administration home', () => {
   let fixture: ComponentFixture<AdminHome>;
@@ -36,7 +37,10 @@ describe('Given an administrator on the administration home', () => {
     fixture.detectChanges();
   });
 
-  afterEach(() => http.verify());
+  afterEach(() => {
+    http.match(OVERVIEW_URL).forEach((pending) => pending.flush(overview()));
+    http.verify();
+  });
 
   function text(selector: string): string {
     return (fixture.nativeElement.querySelector(selector)?.textContent ?? '')
@@ -62,6 +66,20 @@ describe('Given an administrator on the administration home', () => {
       .flush(body, status === 200 ? undefined : { status, statusText: 'Error' });
     await fixture.whenStable();
     fixture.detectChanges();
+  }
+
+  async function respondOverview(url: string, body: object, status = 200): Promise<void> {
+    http.expectOne(url).flush(body, status === 200 ? undefined : { status, statusText: 'Error' });
+    await fixture.whenStable();
+    fixture.detectChanges();
+  }
+
+  function overviewRows(): string[] {
+    return Array.from(
+      fixture.nativeElement.querySelectorAll(
+        '.overview-table tbody tr, .overview-table tfoot tr',
+      ) as NodeListOf<HTMLTableRowElement>,
+    ).map((row) => (row.textContent ?? '').replace(/\s+/g, ' ').trim());
   }
 
   it('when the page opens, then it asks for the import state with the token and says it is loading', () => {
@@ -195,7 +213,80 @@ describe('Given an administrator on the administration home', () => {
       ['/sprava/darci', 'Dárci'],
       ['/sprava/spravci', 'Správci'],
       ['/sprava/starsi-symboly', 'Starší symboly'],
+      ['/sprava/prehledy', 'Měsíční přehled'],
       ['/sprava/historie', 'Historie správy'],
     ]);
+  });
+
+  describe('when the donations overview arrives', () => {
+    beforeEach(async () => {
+      http.expectOne(IMPORT_STATE_URL).flush(importState());
+      await respondOverview(OVERVIEW_URL, overview());
+    });
+
+    it('then the donors are summed up and every started month has a row with a yearly total', () => {
+      expect(text('.admin-summary')).toBe('Registrovaní dárci: 3, z toho nových v roce 2026: 3.');
+      expect(overviewRows()).toEqual([
+        'říjen 2026 1 999 Kč 1 žádné',
+        'září 2026 2 1 534,50 Kč 1 1 (150 Kč)',
+        'srpen 2026 1 200 Kč 1 žádné',
+        'Celkem 2026 4 2 733,50 Kč 3 1 (150 Kč)',
+      ]);
+    });
+
+    it('then another year can be chosen and its months replace the table', async () => {
+      const select = fixture.nativeElement.querySelector(
+        '.year-select select',
+      ) as HTMLSelectElement;
+      expect(Array.from(select.options).map((option) => option.value)).toEqual(['2026', '2025']);
+
+      select.value = '2025';
+      select.dispatchEvent(new Event('change'));
+      fixture.detectChanges();
+
+      expect(text('.admin-card[aria-labelledby="admin-overview-title"] [role="status"]')).toBe(
+        'Načítáme dary po měsících…',
+      );
+      await respondOverview(
+        `${OVERVIEW_URL}?year=2025`,
+        overview({
+          year: 2025,
+          newDonors: 0,
+          donations: { count: 1, totalMinor: 50000, currency: 'CZK' },
+          unpairedPayments: { count: 0, totalMinor: 0, currency: 'CZK' },
+          months: [
+            monthOverview({
+              month: '2025-12',
+              donations: { count: 1, totalMinor: 50000, currency: 'CZK' },
+              newDonors: 0,
+            }),
+          ],
+        }),
+      );
+
+      expect(text('.admin-summary')).toBe('Registrovaní dárci: 3, z toho nových v roce 2025: 0.');
+      expect(overviewRows()).toEqual([
+        'prosinec 2025 1 500 Kč 0 žádné',
+        'Celkem 2025 1 500 Kč 0 žádné',
+      ]);
+    });
+  });
+
+  it('when the overview cannot be loaded, then its alert offers a retry that asks again', async () => {
+    http.expectOne(IMPORT_STATE_URL).flush(importState());
+    await respondOverview(OVERVIEW_URL, { title: 'Server error' }, 500);
+
+    const card = fixture.nativeElement.querySelector(
+      '.admin-card[aria-labelledby="admin-overview-title"]',
+    ) as HTMLElement;
+    expect(card.querySelector('[role="alert"]')?.textContent).toContain(
+      'Dary po měsících se nepodařilo načíst.',
+    );
+
+    (card.querySelector('.admin-retry') as HTMLButtonElement).click();
+    await respondOverview(OVERVIEW_URL, overview());
+
+    expect(card.querySelector('[role="alert"]')).toBeNull();
+    expect(overviewRows()).toHaveLength(4);
   });
 });

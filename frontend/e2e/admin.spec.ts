@@ -2,6 +2,65 @@ import { expect, Page, test } from '@playwright/test';
 import { administrator, donor, mockDonorApi, problem, session, signIn } from './donor-session';
 
 const IMPORT_STATE = '/api/admin/donations/import-state';
+const OVERVIEW = '/api/admin/donations/overview';
+
+const overview = {
+  year: 2026,
+  availableYears: [2026, 2025],
+  donorsRegistered: 3,
+  newDonors: 3,
+  donations: { count: 4, totalMinor: 273350, currency: 'CZK' },
+  unpairedPayments: { count: 1, totalMinor: 15000, currency: 'CZK' },
+  months: [
+    {
+      month: '2026-10',
+      donations: { count: 1, totalMinor: 99900, currency: 'CZK' },
+      newDonors: 1,
+      unpairedPayments: { count: 0, totalMinor: 0, currency: 'CZK' },
+    },
+    {
+      month: '2026-09',
+      donations: { count: 2, totalMinor: 153450, currency: 'CZK' },
+      newDonors: 1,
+      unpairedPayments: { count: 1, totalMinor: 15000, currency: 'CZK' },
+    },
+    {
+      month: '2026-08',
+      donations: { count: 1, totalMinor: 20000, currency: 'CZK' },
+      newDonors: 1,
+      unpairedPayments: { count: 0, totalMinor: 0, currency: 'CZK' },
+    },
+  ],
+};
+
+async function mockOverview(page: Page): Promise<void> {
+  await page.route(
+    (url) => url.pathname === OVERVIEW,
+    (route) => {
+      const year = new URL(route.request().url()).searchParams.get('year');
+      return route.fulfill({
+        json:
+          year === '2025'
+            ? {
+                ...overview,
+                year: 2025,
+                newDonors: 0,
+                donations: { count: 1, totalMinor: 50000, currency: 'CZK' },
+                unpairedPayments: { count: 0, totalMinor: 0, currency: 'CZK' },
+                months: [
+                  {
+                    month: '2025-12',
+                    donations: { count: 1, totalMinor: 50000, currency: 'CZK' },
+                    newDonors: 0,
+                    unpairedPayments: { count: 0, totalMinor: 0, currency: 'CZK' },
+                  },
+                ],
+              }
+            : overview,
+      });
+    },
+  );
+}
 
 async function mockImportState(page: Page, state: Record<string, unknown>): Promise<void> {
   await page.route(
@@ -23,6 +82,7 @@ function value(page: Page, label: string) {
 test.describe('Given an administrator', () => {
   test.beforeEach(async ({ page }) => {
     await mockDonorApi(page);
+    await mockOverview(page);
   });
 
   test('when they sign in, then the overview offers the administration and it shows how the bank import is doing', async ({
@@ -58,6 +118,26 @@ test.describe('Given an administrator', () => {
     await expect(value(page, 'Poslední chyba')).toHaveText('žádná');
     await expect(page.locator('.admin-outage')).toHaveCount(0);
     expect(authorization).toEqual(['Bearer token-1']);
+    await expect(
+      page.getByText('Registrovaní dárci: 3, z toho nových v roce 2026: 3.'),
+    ).toBeVisible();
+    await expect(page.locator('.overview-table tbody tr')).toHaveText([
+      'říjen 2026 1 999 Kč 1 žádné',
+      'září 2026 2 1 534,50 Kč 1 1 (150 Kč)',
+      'srpen 2026 1 200 Kč 1 žádné',
+    ]);
+    await expect(page.locator('.overview-table tfoot tr')).toHaveText(
+      'Celkem 2026 4 2 733,50 Kč 3 1 (150 Kč)',
+    );
+
+    await page.getByLabel('Rok').selectOption('2025');
+
+    await expect(
+      page.getByText('Registrovaní dárci: 3, z toho nových v roce 2025: 0.'),
+    ).toBeVisible();
+    await expect(page.locator('.overview-table tbody tr')).toHaveText([
+      'prosinec 2025 1 500 Kč 0 žádné',
+    ]);
 
     await page.getByRole('link', { name: 'Můj přehled', exact: true }).click();
 
@@ -84,7 +164,7 @@ test.describe('Given an administrator', () => {
 
     await page.goto('/sprava');
 
-    await expect(page.getByRole('status')).toContainText(
+    await expect(page.locator('.admin-outage')).toContainText(
       'Stahování plateb selhává a fond o tom dostal e-mail: Fio odmítlo token (chybí, ještě neplatí nebo vypršel), selhání za sebou: 1.',
     );
     await expect(value(page, 'Poslední chyba')).toContainText(
@@ -167,6 +247,7 @@ test.describe('Given a donor without the administrator role', () => {
   test('when the role is taken away while the page is open, then the next load sends them to their overview', async ({
     page,
   }) => {
+    await mockOverview(page);
     await page.route(
       (url) => url.pathname === IMPORT_STATE,
       (route) =>

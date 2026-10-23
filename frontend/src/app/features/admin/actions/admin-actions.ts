@@ -31,6 +31,12 @@ const ACTION_NAMES: Record<string, string> = {
   RESET_SECOND_FACTOR: $localize`:@@admin.actions.action.resetSecondFactor:Vypnutí dvoufaktorového ověření`,
   REVERSE_SYMBOL_CLAIM: $localize`:@@admin.actions.action.reverseSymbolClaim:Zrušení odpovědi Ano na starší symbol`,
   RESET_SYMBOL_CLAIM: $localize`:@@admin.actions.action.resetSymbolClaim:Smazání odpovědi Ne na starší symbol`,
+  DISCONNECT_SENDER_ACCOUNT: $localize`:@@admin.actions.action.disconnectSenderAccount:Vypnutí párování bankovního účtu`,
+  RECONNECT_SENDER_ACCOUNT: $localize`:@@admin.actions.action.reconnectSenderAccount:Zapnutí párování bankovního účtu`,
+  REMOVE_SENDER_ACCOUNT_LINK: $localize`:@@admin.actions.action.removeSenderAccountLink:Odebrání bankovního účtu dárce`,
+  ERASE_DONOR: $localize`:@@admin.actions.action.eraseDonor:Výmaz osobních údajů dárce`,
+  CHANGE_REPORT_SETTINGS: $localize`:@@admin.actions.action.changeReportSettings:Změna nastavení měsíčního přehledu`,
+  SEND_MONTHLY_REPORT: $localize`:@@admin.actions.action.sendMonthlyReport:Ruční odeslání měsíčního přehledu`,
 };
 
 @Component({

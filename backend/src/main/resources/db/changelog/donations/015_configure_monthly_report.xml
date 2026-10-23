@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <changeSet id="015-configure-monthly-report" author="nfnn">
+        <createTable tableName="donation_report_settings">
+            <column name="id" type="smallint">
+                <constraints primaryKey="true" primaryKeyName="pk_donation_report_settings" nullable="false"/>
+            </column>
+            <column name="recipients" type="varchar(2600)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="send_day" type="smallint">
+                <constraints nullable="false"/>
+            </column>
+            <column name="include_donors" type="boolean">
+                <constraints nullable="false"/>
+            </column>
+            <column name="include_donations" type="boolean">
+                <constraints nullable="false"/>
+            </column>
+            <column name="include_unpaired_payments" type="boolean">
+                <constraints nullable="false"/>
+            </column>
+            <column name="include_bank_import" type="boolean">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="timestamp with time zone">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <sql>alter table donation_report_settings add constraint ck_donation_report_settings_singleton check (id = 1)</sql>
+        <sql>alter table donation_report_settings add constraint ck_donation_report_settings_send_day check (send_day between 1 and 28)</sql>
+        <sql>alter table donation_report_settings add constraint ck_donation_report_settings_section
+            check (include_donors or include_donations or include_unpaired_payments or include_bank_import)</sql>
+    </changeSet>
+
+</databaseChangeLog>

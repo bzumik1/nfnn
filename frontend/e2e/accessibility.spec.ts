@@ -223,6 +223,34 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     page,
   }) => {
     await page.route(
+      (url) => url.pathname === '/api/admin/donations/overview',
+      (route) =>
+        route.fulfill({
+          json: {
+            year: 2026,
+            availableYears: [2026, 2025],
+            donorsRegistered: 3,
+            newDonors: 3,
+            donations: { count: 4, totalMinor: 273350, currency: 'CZK' },
+            unpairedPayments: { count: 1, totalMinor: 15000, currency: 'CZK' },
+            months: [
+              {
+                month: '2026-10',
+                donations: { count: 1, totalMinor: 99900, currency: 'CZK' },
+                newDonors: 1,
+                unpairedPayments: { count: 0, totalMinor: 0, currency: 'CZK' },
+              },
+              {
+                month: '2026-09',
+                donations: { count: 3, totalMinor: 173450, currency: 'CZK' },
+                newDonors: 2,
+                unpairedPayments: { count: 1, totalMinor: 15000, currency: 'CZK' },
+              },
+            ],
+          },
+        }),
+    );
+    await page.route(
       (url) => url.pathname === '/api/admin/donations/import-state',
       (route) =>
         route.fulfill({
@@ -241,6 +269,49 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     await page.getByRole('link', { name: 'Správa' }).click();
     await expect(page.getByRole('heading', { level: 1, name: 'Správa' })).toBeFocused();
     await expect(page.locator('.admin-outage')).toBeVisible();
+    await expect(page.locator('.overview-table tbody tr')).toHaveCount(2);
+
+    expect(await violations(page)).toEqual([]);
+  });
+
+  test('when an administrator sets up the monthly report, then the page, its form and the sending confirmation break no rule', async ({
+    page,
+  }) => {
+    await page.route(
+      (url) => url.pathname === '/api/admin/donations/report',
+      (route) =>
+        route.fulfill({
+          json: {
+            settings: {
+              recipients: ['info@nfnn.cz', 'pavel@example.cz'],
+              sendDay: 5,
+              sections: {
+                donors: true,
+                donations: true,
+                unpairedPayments: false,
+                bankImport: true,
+              },
+              changedAt: '2026-10-05T07:00:00Z',
+            },
+            sentReports: [{ month: '2026-09', sentAt: '2026-10-05T05:00:00Z' }],
+            nextReport: { month: '2026-10', dueOn: '2026-11-05' },
+            lastEndedMonth: '2026-10',
+          },
+        }),
+    );
+    await page.route('**/api/donors/auth/refresh', (route) =>
+      route.fulfill(session(200, administrator)),
+    );
+    await page.goto('/');
+    await page.evaluate(() => localStorage.setItem('nfnn.donor-session', '1'));
+
+    await page.goto('/sprava/prehledy');
+    await expect(page.getByRole('heading', { level: 1, name: 'Měsíční přehled' })).toBeFocused();
+    await page.getByLabel('Příjemci').fill('pavel');
+    await page.getByRole('button', { name: 'Uložit nastavení' }).click();
+    await expect(page.getByLabel('Příjemci')).toHaveAttribute('aria-invalid', 'true');
+    await page.getByRole('button', { name: 'Poslat', exact: true }).click();
+    await expect(page.getByRole('group', { name: 'Poslat přehled znovu?' })).toBeVisible();
 
     expect(await violations(page)).toEqual([]);
   });
