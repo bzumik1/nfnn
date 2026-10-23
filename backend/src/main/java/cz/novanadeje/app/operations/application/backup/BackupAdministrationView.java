@@ -10,7 +10,8 @@ import java.util.Objects;
 import java.util.Optional;
 
 public record BackupAdministrationView(boolean available, List<BackupFile> backups, Optional<BackupRun> lastBackup, Optional<BackupRun> lastTestRestore,
-                                       Optional<BackupRun> lastRestore, List<RestoreFile> restoreFiles, int pendingRequests, BackupHealth health) {
+                                       Optional<BackupRun> lastRestore, List<RestoreFile> restoreFiles, int pendingRequests, boolean restorePending,
+                                       BackupHealth health) {
 
     public BackupAdministrationView {
         backups = List.copyOf(backups);
@@ -22,6 +23,7 @@ public record BackupAdministrationView(boolean available, List<BackupFile> backu
     }
 
     public static BackupAdministrationView unavailable() {
-        return new BackupAdministrationView(false, List.of(), Optional.empty(), Optional.empty(), Optional.empty(), List.of(), 0, BackupHealth.unavailable());
+        return new BackupAdministrationView(false, List.of(), Optional.empty(), Optional.empty(), Optional.empty(), List.of(), 0, false,
+                BackupHealth.unavailable());
     }
 }

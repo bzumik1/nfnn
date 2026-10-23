@@ -36,6 +36,35 @@ describe('Given the setup API', () => {
     request.flush({ changed: ['MAIL_PORT'], restarting: true });
   });
 
+  it('when a backup is uploaded with a code, then the file goes as the raw body with the code in a header', () => {
+    const file = new Blob(['PGDMP']);
+    api.uploadBackup('K7QM-2XPA-9TRD', file).subscribe();
+
+    const request = http.expectOne('/api/operations/setup/restore');
+    expect(request.request.method).toBe('PUT');
+    expect(request.request.body).toBe(file);
+    expect(request.request.headers.get('Content-Type')).toBe('application/octet-stream');
+    expect(request.request.headers.get('X-Nfnn-Setup-Code')).toBe('K7QM-2XPA-9TRD');
+    expect(request.request.reportProgress).toBe(true);
+    request.flush({
+      requestId: 'r-1',
+      fileName: 'r-1.upload',
+      requestedAt: '2026-10-23T19:30:00Z',
+    });
+  });
+
+  it('when a backup is uploaded from the home network, then no code header is sent', () => {
+    api.uploadBackup(null, new Blob(['PGDMP'])).subscribe();
+
+    const request = http.expectOne('/api/operations/setup/restore');
+    expect(request.request.headers.has('X-Nfnn-Setup-Code')).toBe(false);
+    request.flush({
+      requestId: 'r-1',
+      fileName: 'r-1.upload',
+      requestedAt: '2026-10-23T19:30:00Z',
+    });
+  });
+
   describe('when it watches a restart', () => {
     let outcome: RestartOutcome | null;
 

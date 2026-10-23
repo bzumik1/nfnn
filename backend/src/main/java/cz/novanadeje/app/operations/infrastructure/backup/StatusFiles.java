@@ -14,6 +14,7 @@ import java.time.format.DateTimeParseException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 
 final class StatusFiles {
 
@@ -55,7 +56,7 @@ final class StatusFiles {
         };
         return Optional.of(new BackupRun(outcome, Instant.parse(required(values, "started_at")), Instant.parse(required(values, "finished_at")),
                 optional(values, "file"), optional(values, "size").map(Long::parseLong), optional(values, "tables").map(Integer::parseInt),
-                optional(values, "request"), optional(values, "error")));
+                optional(values, "request"), optional(values, "admin").map(UUID::fromString), optional(values, "error")));
     }
 
     private static String required(Map<String, String> values, String key) {

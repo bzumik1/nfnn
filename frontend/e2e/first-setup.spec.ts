@@ -92,6 +92,70 @@ test.describe('Given a freshly installed site', () => {
     await expect(page.locator('#setup-admin-email')).toBeVisible();
   });
 
+  test('when it is restored from a backup, then the uploaded file restores the site and the administrator signs in', async ({
+    page,
+  }) => {
+    let uploaded: Buffer | null = null;
+    let polls = 0;
+    await page.route(
+      (url) => url.pathname === '/api/content/home',
+      (route) => route.fulfill({ json: { news: [], projects: [] } }),
+    );
+    await page.route(
+      (url) => url.pathname === STATUS,
+      (route) => {
+        if (uploaded === null) {
+          return route.fulfill({
+            json: { required: true, codeRequired: false, lastRestore: null },
+          });
+        }
+        if (polls++ < 1) {
+          return route.fulfill({ status: 502, body: '' });
+        }
+        return route.fulfill({ json: { required: false, codeRequired: true, lastRestore: null } });
+      },
+    );
+    await page.route(
+      (url) => url.pathname === `${STATUS}/restore`,
+      (route) => {
+        uploaded = route.request().postDataBuffer();
+        return route.fulfill({
+          status: 202,
+          json: {
+            requestId: '019a1b2c-0000-7000-8000-000000000001',
+            fileName: '019a1b2c-0000-7000-8000-000000000001.upload',
+            requestedAt: '2026-10-23T18:00:00Z',
+          },
+        });
+      },
+    );
+
+    await page.goto('/prvni-nastaveni');
+    await page.getByRole('button', { name: 'Obnovit ze zálohy' }).click();
+    await expect(
+      page.getByRole('heading', { level: 1, name: 'Obnovit web ze zálohy' }),
+    ).toBeFocused();
+    await expect(page.getByRole('button', { name: 'Nahrát a obnovit' })).toBeDisabled();
+    await page.getByLabel('Soubor zálohy').setInputFiles({
+      name: 'nfnn-2026-10-22_0300.dump',
+      mimeType: 'application/octet-stream',
+      buffer: Buffer.from('PGDMP-backup'),
+    });
+    await page.getByRole('button', { name: 'Nahrát a obnovit' }).click();
+
+    await expect(
+      page.getByRole('heading', { level: 1, name: 'Obnovujeme web ze zálohy' }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole('heading', { level: 1, name: 'Web je obnovený ze zálohy' }),
+    ).toBeVisible({ timeout: 15_000 });
+    expect(uploaded?.toString()).toBe('PGDMP-backup');
+    await expect(page.getByRole('status')).toContainText('token Fio');
+
+    await page.locator('.notice').getByRole('button', { name: 'Přihlásit se' }).click();
+    await expect(page.getByRole('dialog')).toBeVisible();
+  });
+
   test('when it is opened on a 390 px phone, then the form fits the screen', async ({ page }) => {
     await freshInstall(page, false);
     await page.setViewportSize({ width: 390, height: 844 });

@@ -342,6 +342,32 @@ jobs:
           [ "$marker" = 0 ] || { echo "::error::the forced restore kept a row written after the dump"; exit 1; }
           curl -fsS --max-time 10 http://localhost:8089/ | grep -q '<app-root'
 
+          echo "A restore asked for in the administration runs while the restarted backend waits, replaces the data and is recorded once"
+          count_rows() {
+            docker exec nfnn-postgres psql -U novanadeje -d novanadeje -tA -c "select count(*) from admin_action where $1"
+          }
+          docker exec nfnn-postgres psql -U novanadeje -d novanadeje -c "insert into admin_action (id, admin_id, action, details, performed_at) values ('019a0000-0000-7000-8000-000000000003', '019a0000-0000-7000-8000-000000000002', 'CI_MARKER', 'to be undone by the requested restore', now())"
+          docker exec nfnn-backend sh -c "printf 'source=backup\nfile=%s\nadmin=019a0000-0000-7000-8000-000000000002\n' '$(basename "$dump")' > /backups/requests/ci-3.restore"
+          docker restart nfnn-backend
+          wait_for "grep -q '^request=ci-3$' $backups/status/restore" 60 "the requested restore did not run"
+          grep -q '^outcome=ok$' "$backups/status/restore" || { echo "::error::the requested restore failed"; cat "$backups/status/restore"; exit 1; }
+          docker compose up -d --wait --wait-timeout 300 backend
+          [ ! -e "$backups/status/restore.running" ] || { echo "::error::the restore left its running marker"; exit 1; }
+          [ "$(count_rows "action = 'CI_MARKER'")" = 0 ] || { echo "::error::the requested restore kept a row written after the dump"; exit 1; }
+          [ "$(count_rows "action = 'BACKUP_RESTORED' and admin_id = '019a0000-0000-7000-8000-000000000002'")" = 1 ] || { echo "::error::the finished restore is not recorded in the administration history"; exit 1; }
+          docker exec nfnn-postgres psql -U novanadeje -d postgres -tA -c "select datname from pg_database" | grep -q nfnn_restore && { echo "::error::a staging or retired database was left behind"; exit 1; }
+
+          echo "A restore that fails leaves the data as they were, removes the upload and lets the backend start"
+          docker exec nfnn-postgres psql -U novanadeje -d novanadeje -c "insert into admin_action (id, admin_id, action, details, performed_at) values ('019a0000-0000-7000-8000-000000000004', '019a0000-0000-7000-8000-000000000002', 'CI_MARKER', 'kept by the failed restore', now())"
+          docker exec nfnn-backend sh -c "printf 'PGDMP but not a dump' > /restore/ci-4.upload && printf 'source=upload\nfile=ci-4.upload\nadmin=\n' > /backups/requests/ci-4.restore"
+          docker restart nfnn-backend
+          wait_for "grep -q '^request=ci-4$' $backups/status/restore" 60 "the failing restore did not run"
+          grep -q '^outcome=failed$' "$backups/status/restore" || { echo "::error::the broken upload was not reported as failed"; cat "$backups/status/restore"; exit 1; }
+          docker compose up -d --wait --wait-timeout 300 backend
+          [ "$(count_rows "action = 'CI_MARKER'")" = 1 ] || { echo "::error::the failed restore changed the data"; exit 1; }
+          [ ! -e "$restore/ci-4.upload" ] || { echo "::error::the upload was left in the restore folder"; exit 1; }
+          curl -fsS --max-time 10 http://localhost:8089/ | grep -q '<app-root'
+
       - name: Logs
         if: failure()
         run: docker compose logs --no-color --tail 200

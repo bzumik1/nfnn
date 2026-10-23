@@ -3,9 +3,10 @@ package cz.novanadeje.app.operations.domain.backup;
 import java.time.Instant;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.UUID;
 
 public record BackupRun(RunOutcome outcome, Instant startedAt, Instant finishedAt, Optional<String> fileName, Optional<Long> sizeBytes,
-                        Optional<Integer> tables, Optional<String> requestId, Optional<String> error) {
+                        Optional<Integer> tables, Optional<String> requestId, Optional<UUID> requestedBy, Optional<String> error) {
 
     public BackupRun {
         Objects.requireNonNull(outcome, "outcome");
@@ -15,6 +16,7 @@ public record BackupRun(RunOutcome outcome, Instant startedAt, Instant finishedA
         Objects.requireNonNull(sizeBytes, "sizeBytes");
         Objects.requireNonNull(tables, "tables");
         Objects.requireNonNull(requestId, "requestId");
+        Objects.requireNonNull(requestedBy, "requestedBy");
         Objects.requireNonNull(error, "error");
     }
 

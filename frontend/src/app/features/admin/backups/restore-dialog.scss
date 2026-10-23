@@ -1,0 +1,75 @@
+.restore-title {
+  font-family: var(--font-serif);
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--color-text);
+  margin: 0 32px 12px 0;
+}
+
+.restore-lead {
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--color-text);
+  margin: 0 0 12px;
+}
+
+.file-name {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.restore-points {
+  margin: 0 0 18px;
+  padding-left: 18px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--color-text-secondary);
+
+  li + li {
+    margin-top: 8px;
+  }
+}
+
+.restore-error {
+  margin: 0 0 14px;
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.restore-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.restore-confirm,
+.restore-cancel {
+  padding: 10px 20px;
+  border-radius: var(--radius-pill);
+  font-family: var(--font-sans);
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: default;
+  }
+}
+
+.restore-confirm {
+  background: var(--color-danger);
+  color: var(--color-on-danger);
+  border: none;
+}
+
+.restore-cancel {
+  background: none;
+  border: 1.5px solid var(--color-border);
+  color: var(--color-text-muted);
+}

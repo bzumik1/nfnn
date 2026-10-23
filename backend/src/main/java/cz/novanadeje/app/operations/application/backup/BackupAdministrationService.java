@@ -50,7 +50,7 @@ public class BackupAdministrationService {
         Optional<BackupRun> lastTestRestore = store.lastTestRestore();
         BackupHealth health = BackupHealth.assess(lastBackup, lastTestRestore, backups, clock.instant(), limits);
         return new BackupAdministrationView(true, backups, lastBackup, lastTestRestore, store.lastRestore(), store.restoreFilesNewestFirst(),
-                store.pendingRequests(), health);
+                store.pendingRequests(), store.restorePending(), health);
     }
 
     @Transactional

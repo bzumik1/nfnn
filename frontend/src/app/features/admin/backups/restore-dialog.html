@@ -1,0 +1,49 @@
+<app-dialog labelledBy="restore-title" [wide]="true" (dismissed)="dismiss()">
+  <h2 id="restore-title" class="restore-title" i18n="@@admin.backups.restoreDialog.title">
+    Obnovit databázi ze zálohy?
+  </h2>
+  <p class="restore-lead" i18n="@@admin.backups.restoreDialog.lead">
+    Web se vrátí do stavu z {{ createdAt() }}, ze zálohy
+    <span class="file-name">{{ backup().fileName }}</span
+    >.
+  </p>
+  <ul class="restore-points">
+    <li i18n="@@admin.backups.restoreDialog.lost">
+      Co přibylo nebo se změnilo po vytvoření zálohy (registrace, aktuality, nastavení, přiřazené
+      platby), se ztratí. Platby z banky za posledních 90 dní se při dalším stažení z Fio doplní
+      znovu.
+    </li>
+    <li i18n="@@admin.backups.restoreDialog.safety">
+      Současný stav se před obnovou sám uloží jako záloha „Před obnovou“, takže se k němu můžete
+      vrátit stejným tlačítkem.
+    </li>
+    <li i18n="@@admin.backups.restoreDialog.downtime">
+      Web bude několik minut nedostupný a možná se pak budete muset znovu přihlásit. Když se obnova
+      nepovede, web poběží dál s dnešními daty.
+    </li>
+  </ul>
+  @if (error(); as error) {
+    <p class="restore-error" role="alert">{{ error }}</p>
+  }
+  <div class="restore-actions">
+    <button type="button" class="restore-confirm" [disabled]="busy()" (click)="confirm()">
+      @if (busy()) {
+        <ng-container i18n="@@admin.backups.restoreDialog.busy">Předáváme obnovu…</ng-container>
+      } @else {
+        <ng-container i18n="@@admin.backups.restoreDialog.confirm"
+          >Obnovit a restartovat web</ng-container
+        >
+      }
+    </button>
+    <button
+      type="button"
+      class="restore-cancel"
+      autofocus
+      [disabled]="busy()"
+      (click)="dismiss()"
+      i18n="@@admin.backups.restoreDialog.cancel"
+    >
+      Zrušit
+    </button>
+  </div>
+</app-dialog>

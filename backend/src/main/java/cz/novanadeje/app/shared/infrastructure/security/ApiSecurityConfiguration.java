@@ -20,6 +20,7 @@ class ApiSecurityConfiguration {
 
     static final String ADMIN_ROLE = "ADMIN";
     private static final String BACKUP_DOWNLOAD = "/api/admin/operations/backups/*";
+    private static final String BACKUP_RESTORE = "/api/admin/operations/backups/*/restore";
 
     @Bean
     SecurityFilterChain apiSecurityFilterChain(HttpSecurity http, ProblemDetailSecurityErrorHandler errorHandler,
@@ -35,11 +36,13 @@ class ApiSecurityConfiguration {
                         .requestMatchers(HttpMethod.POST, "/api/donors/auth/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/operations/setup").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/operations/setup", "/api/operations/setup/unlock", "/api/operations/setup/mail-test").permitAll()
+                        .requestMatchers(HttpMethod.PUT, "/api/operations/setup/restore").permitAll()
                         .requestMatchers(HttpMethod.GET, "/.well-known/oauth-authorization-server").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/donors/oauth/token").permitAll()
                         .requestMatchers("/actuator/health", "/actuator/health/**", "/actuator/info").permitAll()
                         .requestMatchers(HttpMethod.GET, BACKUP_DOWNLOAD).access(administratorInBrowser())
                         .requestMatchers(HttpMethod.HEAD, BACKUP_DOWNLOAD).access(administratorInBrowser())
+                        .requestMatchers(HttpMethod.POST, BACKUP_RESTORE).access(administratorInBrowser())
                         .requestMatchers(HttpMethod.GET, "/api/admin/**").hasRole(ADMIN_ROLE)
                         .requestMatchers(HttpMethod.HEAD, "/api/admin/**").hasRole(ADMIN_ROLE)
                         .requestMatchers("/api/admin/**").access(new AdminWriteAuthorizationManager())

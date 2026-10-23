@@ -847,6 +847,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
               },
             ],
             pendingRequests: 2,
+            restorePending: false,
             problems: ['BACKUP_FAILED', 'TEST_RESTORE_MISSING'],
           },
         }),
@@ -869,6 +870,13 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     await expect(page.locator('.problems li')).toHaveCount(2);
     expect(await violations(page)).toEqual([]);
 
+    await page
+      .getByRole('button', { name: 'Obnovit databázi ze zálohy nfnn-2026-10-23_0300.dump' })
+      .click();
+    await expect(page.getByRole('dialog')).toBeVisible();
+    expect(await violations(page)).toEqual([]);
+    await page.getByRole('dialog').getByRole('button', { name: 'Zrušit' }).click();
+
     await page.getByRole('button', { name: 'Zálohovat teď' }).click();
     await expect(page.getByRole('button', { name: 'Zálohujeme…' })).toBeDisabled();
     expect(await violations(page)).toEqual([]);
@@ -881,6 +889,18 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     await page.route(
       (url) => url.pathname === '/api/operations/setup',
       (route) => route.fulfill({ json: { required: true, codeRequired: true } }),
+    );
+    await page.route(
+      (url) => url.pathname === '/api/operations/setup/restore',
+      (route) =>
+        route.fulfill(
+          problem(
+            400,
+            'operations/not-a-backup',
+            'Tohle není záloha webu',
+            'Vyberte prosím soubor zálohy s příponou .dump, jak ho stáhnete ve Správě na stránce Zálohy.',
+          ),
+        ),
     );
     await page.route(
       (url) => url.pathname === '/api/operations/setup/unlock',
@@ -901,6 +921,19 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     expect(unlocked).toBe(true);
     await page.getByRole('button', { name: 'Uložit a spustit' }).click();
     await expect(page.locator('#setup-admin-email')).toBeFocused();
+    expect(await violations(page)).toEqual([]);
+
+    await page.getByRole('button', { name: 'Obnovit ze zálohy' }).click();
+    await expect(
+      page.getByRole('heading', { level: 1, name: 'Obnovit web ze zálohy' }),
+    ).toBeFocused();
+    await page.getByLabel('Soubor zálohy').setInputFiles({
+      name: 'fotka.jpg',
+      mimeType: 'image/jpeg',
+      buffer: Buffer.from('JPEG'),
+    });
+    await page.getByRole('button', { name: 'Nahrát a obnovit' }).click();
+    await expect(page.getByRole('alert')).toContainText('není záloha');
     expect(await violations(page)).toEqual([]);
   });
 

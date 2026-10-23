@@ -2,10 +2,13 @@ package cz.novanadeje.app.operations.infrastructure.backup;
 
 import cz.novanadeje.app.operations.application.backup.BackupDownload;
 import cz.novanadeje.app.operations.application.backup.BackupStore;
+import cz.novanadeje.app.operations.application.backup.RestoreRequest;
 import cz.novanadeje.app.operations.domain.backup.BackupFile;
 import cz.novanadeje.app.operations.domain.backup.BackupRequestKind;
 import cz.novanadeje.app.operations.domain.backup.BackupRun;
+import cz.novanadeje.app.operations.domain.backup.BackupTooLarge;
 import cz.novanadeje.app.operations.domain.backup.BackupsUnavailable;
+import cz.novanadeje.app.operations.domain.backup.NotABackup;
 import cz.novanadeje.app.operations.domain.backup.RestoreFile;
 import cz.novanadeje.app.operations.domain.backup.RestoreFileState;
 import org.slf4j.Logger;
@@ -13,14 +16,20 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
 import java.nio.file.attribute.FileTime;
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
@@ -32,15 +41,23 @@ class FileBackupStore implements BackupStore {
     static final String BACKUP_STATUS = "backup";
     static final String TEST_RESTORE_STATUS = "test-restore";
     static final String RESTORE_STATUS = "restore";
+    static final String RESTORE_RUNNING = "restore.running";
+    static final String RESTORE_REQUEST_EXTENSION = ".restore";
+    static final String UPLOAD_EXTENSION = ".upload";
+
+    private static final byte[] DUMP_MAGIC = "PGDMP".getBytes(StandardCharsets.US_ASCII);
+    private static final int COPY_BUFFER = 64 * 1024;
 
     private static final Logger log = LoggerFactory.getLogger(FileBackupStore.class);
 
     private final Path directory;
     private final Path restoreDirectory;
+    private final long maxUploadBytes;
 
     FileBackupStore(BackupProperties properties) {
         this.directory = properties.directory();
         this.restoreDirectory = properties.restoreDirectory();
+        this.maxUploadBytes = properties.maxUploadSize().toBytes();
     }
 
     @Override
@@ -81,7 +98,83 @@ class FileBackupStore implements BackupStore {
 
     @Override
     public int pendingRequests() {
-        return (int) list(directory.resolve(REQUESTS_DIRECTORY), path -> requestKind(fileName(path)).isPresent()).count();
+        return (int) list(directory.resolve(REQUESTS_DIRECTORY),
+                path -> requestKind(fileName(path)).isPresent() || fileName(path).endsWith(RESTORE_REQUEST_EXTENSION)).count();
+    }
+
+    @Override
+    public boolean restorePending() {
+        return Files.exists(directory.resolve(STATUS_DIRECTORY).resolve(RESTORE_RUNNING))
+                || list(directory.resolve(REQUESTS_DIRECTORY), path -> fileName(path).endsWith(RESTORE_REQUEST_EXTENSION)).findAny().isPresent();
+    }
+
+    @Override
+    public void requestRestore(RestoreRequest request) {
+        Path requests = directory.resolve(REQUESTS_DIRECTORY);
+        if (!Files.isDirectory(requests)) {
+            throw new BackupsUnavailable();
+        }
+        String content = "source=" + request.source().requestValue() + "\n"
+                + "file=" + request.fileName() + "\n"
+                + "admin=" + request.requestedBy().map(UUID::toString).orElse("") + "\n";
+        Path part = requests.resolve(request.id() + RESTORE_REQUEST_EXTENSION + ".part");
+        try {
+            Files.writeString(part, content, StandardCharsets.UTF_8, StandardOpenOption.CREATE_NEW);
+            Files.move(part, requests.resolve(request.id() + RESTORE_REQUEST_EXTENSION), StandardCopyOption.ATOMIC_MOVE);
+        } catch (IOException notWritable) {
+            deleteQuietly(part);
+            log.error("The restore request {} could not be written", request.id(), notWritable);
+            throw new BackupsUnavailable();
+        }
+    }
+
+    @Override
+    public String storeUpload(String requestId, InputStream content) {
+        if (!Files.isDirectory(restoreDirectory)) {
+            throw new BackupsUnavailable();
+        }
+        String name = requestId + UPLOAD_EXTENSION;
+        Path part = restoreDirectory.resolve(name + ".part");
+        try {
+            copyDump(content, part);
+            Files.move(part, restoreDirectory.resolve(name), StandardCopyOption.ATOMIC_MOVE);
+            return name;
+        } catch (NotABackup | BackupTooLarge refused) {
+            deleteQuietly(part);
+            throw refused;
+        } catch (IOException notWritable) {
+            deleteQuietly(part);
+            log.error("The uploaded backup {} could not be stored", requestId, notWritable);
+            throw new BackupsUnavailable();
+        }
+    }
+
+    private void copyDump(InputStream content, Path target) throws IOException {
+        byte[] magic = content.readNBytes(DUMP_MAGIC.length);
+        if (!Arrays.equals(magic, DUMP_MAGIC)) {
+            throw new NotABackup();
+        }
+        try (OutputStream out = Files.newOutputStream(target, StandardOpenOption.CREATE_NEW)) {
+            out.write(magic);
+            long written = magic.length;
+            byte[] buffer = new byte[COPY_BUFFER];
+            int read;
+            while ((read = content.read(buffer)) != -1) {
+                written += read;
+                if (written > maxUploadBytes) {
+                    throw new BackupTooLarge();
+                }
+                out.write(buffer, 0, read);
+            }
+        }
+    }
+
+    private static void deleteQuietly(Path file) {
+        try {
+            Files.deleteIfExists(file);
+        } catch (IOException undeletable) {
+            log.warn("The unfinished file {} could not be deleted", file.getFileName());
+        }
     }
 
     @Override

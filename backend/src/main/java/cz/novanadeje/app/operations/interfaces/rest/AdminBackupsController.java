@@ -2,6 +2,7 @@ package cz.novanadeje.app.operations.interfaces.rest;
 
 import cz.novanadeje.app.operations.application.backup.BackupAdministrationService;
 import cz.novanadeje.app.operations.application.backup.BackupDownload;
+import cz.novanadeje.app.operations.application.backup.BackupRestoreService;
 import cz.novanadeje.app.operations.domain.backup.BackupFile;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Size;
@@ -34,9 +35,11 @@ class AdminBackupsController {
     private static final String NOT_STORED_BY_ANY_CACHE = "private, no-store";
 
     private final BackupAdministrationService backups;
+    private final BackupRestoreService restores;
 
-    AdminBackupsController(BackupAdministrationService backups) {
+    AdminBackupsController(BackupAdministrationService backups, BackupRestoreService restores) {
         this.backups = backups;
+        this.restores = restores;
     }
 
     @GetMapping
@@ -60,6 +63,12 @@ class AdminBackupsController {
                 .header(HttpHeaders.CONTENT_DISPOSITION,
                         ContentDisposition.attachment().filename(download.file().name(), StandardCharsets.UTF_8).build().toString())
                 .body(new FileSystemResource(download.path()));
+    }
+
+    @PostMapping("/{fileName}/restore")
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    RestoreRequestResponse restore(@AuthenticationPrincipal Jwt jwt, @PathVariable @Size(max = BackupFile.MAX_NAME_LENGTH) String fileName) {
+        return RestoreRequestResponse.from(restores.restoreBackup(admin(jwt), fileName));
     }
 
     private static UUID admin(Jwt jwt) {

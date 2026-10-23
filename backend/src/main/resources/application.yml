@@ -126,6 +126,7 @@ app:
       check-cron: "0 15 7 * * *"
       max-backup-age: PT26H
       max-test-restore-age: P8D
+      max-upload-size: 4GB
     logs:
       directory: /logs
     settings:

@@ -11,6 +11,7 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
+import { HttpEventType } from '@angular/common/http';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule, NgForm } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -21,9 +22,28 @@ import { FormControlDirective } from '../../../shared/ui/form-field/form-control
 import { FormField } from '../../../shared/ui/form-field/form-field';
 import { PasswordReveal } from '../../../shared/ui/password-reveal/password-reveal';
 import { SETTING_LABELS, settingErrors } from '../setting-labels';
-import { MailServerRequest, SettingName, SettingValueRequest, SetupApi } from './setup-api';
+import {
+  MailServerRequest,
+  RESTORE_MAX_POLLS,
+  SettingName,
+  SettingValueRequest,
+  SetupApi,
+  SetupStatusResponse,
+} from './setup-api';
 
-type Panel = 'loading' | 'error' | 'locked' | 'form' | 'restarting' | 'done' | 'slow' | 'closed';
+type Panel =
+  | 'loading'
+  | 'error'
+  | 'locked'
+  | 'form'
+  | 'restarting'
+  | 'done'
+  | 'slow'
+  | 'closed'
+  | 'restore'
+  | 'restoring'
+  | 'restoreSlow'
+  | 'restored';
 
 interface Notice {
   kind: 'status' | 'alert';
@@ -68,6 +88,10 @@ export class FirstSetup {
   protected readonly fieldErrors = signal<string[]>([]);
   protected readonly testingMail = signal(false);
   protected readonly mailNotice = signal<Notice | null>(null);
+  protected readonly backupFile = signal<File | null>(null);
+  protected readonly uploadPercent = signal<number | null>(null);
+  protected readonly restoreError = signal('');
+  protected readonly restoredBeforeSetup = signal(false);
 
   protected readonly codeMessages = {
     required: $localize`:@@operations.setup.code.required:Opište prosím kód z logu.`,
@@ -105,6 +129,7 @@ export class FirstSetup {
   protected adminEmail = '';
 
   private unlockedCode: string | null = null;
+  private restoreRequestId: string | null = null;
 
   constructor() {
     this.load();
@@ -144,7 +169,7 @@ export class FirstSetup {
         next: () => {
           this.unlocking.set(false);
           this.unlockedCode = code;
-          this.show('form');
+          this.show(this.restoreError() ? 'restore' : 'form');
         },
         error: (failure: unknown) => {
           this.unlocking.set(false);
@@ -250,6 +275,120 @@ export class FirstSetup {
 
   protected signUp(): void {
     this.loginDialog.open('register');
+  }
+
+  protected openRestore(): void {
+    this.restoreError.set('');
+    this.show('restore');
+  }
+
+  protected closeRestore(): void {
+    this.restoreError.set('');
+    this.show('form');
+  }
+
+  protected chooseBackup(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    this.backupFile.set(input.files?.item(0) ?? null);
+    this.restoreError.set('');
+  }
+
+  protected uploadBackup(): void {
+    const file = this.backupFile();
+    if (file === null || this.uploadPercent() !== null) {
+      return;
+    }
+    this.restoreError.set('');
+    this.uploadPercent.set(0);
+    this.api
+      .uploadBackup(this.unlockedCode, file)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (event) => {
+          if (event.type === HttpEventType.UploadProgress) {
+            this.uploadPercent.set(
+              event.total ? Math.min(100, Math.floor((100 * event.loaded) / event.total)) : 0,
+            );
+          } else if (event.type === HttpEventType.Response) {
+            this.uploadPercent.set(null);
+            this.restoreRequestId = event.body?.requestId ?? null;
+            this.show('restoring');
+            this.watchRestore();
+          }
+        },
+        error: (failure: unknown) => {
+          this.uploadPercent.set(null);
+          if (problemTypeEndsWith(failure, SETUP_COMPLETED)) {
+            this.show('closed');
+            return;
+          }
+          if (problemTypeEndsWith(failure, SETUP_LOCKED)) {
+            this.unlockedCode = null;
+            this.code = '';
+            this.show('locked');
+            return;
+          }
+          this.restoreError.set(
+            describeProblem(
+              failure,
+              $localize`:@@operations.setup.restore.uploadFailed:Zálohu se nepodařilo nahrát. Zkuste to prosím znovu.`,
+            ),
+          );
+        },
+      });
+  }
+
+  protected watchRestore(): void {
+    this.show('restoring');
+    this.api
+      .watchRestart(RESTORE_MAX_POLLS)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((outcome) => {
+        if (outcome === 'restarted') {
+          this.checkRestore();
+        } else {
+          this.show('restoreSlow');
+        }
+      });
+  }
+
+  protected signInAfterRestore(): void {
+    this.loginDialog.open('login', { returnTo: '/sprava/nastaveni' });
+  }
+
+  private checkRestore(): void {
+    this.api
+      .status()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (status) => this.reportRestore(status),
+        error: () => this.show('restoreSlow'),
+      });
+  }
+
+  private reportRestore(status: SetupStatusResponse): void {
+    if (!status.required) {
+      this.show('restored');
+      return;
+    }
+    const run = status.lastRestore ?? null;
+    const ours = run !== null && run.requestId === this.restoreRequestId;
+    if (status.codeRequired) {
+      this.unlockedCode = null;
+      this.code = '';
+    }
+    if (ours && run.outcome === 'OK') {
+      this.restoreError.set('');
+      this.restoredBeforeSetup.set(true);
+      this.show(status.codeRequired ? 'locked' : 'form');
+      return;
+    }
+    this.restoreError.set(
+      ours
+        ? $localize`:@@operations.setup.restore.failed:Obnova se nepovedla: ${run.error ?? ''}:error:. Web zůstal prázdný; zkuste prosím jiný soubor zálohy.`
+        : $localize`:@@operations.setup.restore.notPickedUp:Kontejner záloh si obnovu do pěti minut nevzal. Zkuste to prosím znovu; když se to opakuje, podívejte se do logu kontejneru nfnn-backup v ZimaOS.`,
+    );
+    this.show(status.codeRequired ? 'locked' : 'restore');
   }
 
   private watchRestart(): void {
