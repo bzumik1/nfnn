@@ -3,6 +3,7 @@ import {
   CHALLENGE,
   donor,
   mockDonorApi,
+  openDonorSection,
   openSignInDialog,
   problem,
   session,
@@ -144,7 +145,7 @@ test.describe('Given a donor with a passkey', () => {
   });
 });
 
-test.describe('Given a signed-in donor in the overview', () => {
+test.describe('Given a signed-in donor in the account details', () => {
   test.beforeEach(async ({ page }) => {
     await mockDonorApi(page);
   });
@@ -178,6 +179,7 @@ test.describe('Given a signed-in donor in the overview', () => {
       },
     );
     await signIn(page);
+    await openDonorSection(page, 'Údaje a zabezpečení');
 
     const card = page.getByRole('region', { name: 'Přístupové klíče' });
     await expect(card).toContainText('Zatím nemáte žádný přístupový klíč');
@@ -244,7 +246,7 @@ test.describe('Given a visitor who wants an account without a password', () => {
     expect(registration['password']).toBeNull();
   });
 
-  test('when they open the confirmation link, then they create the first passkey and the overview says the account has no password', async ({
+  test('when they open the confirmation link, then they create the first passkey and the account details say the account has no password', async ({
     page,
   }) => {
     await deviceThatWill(page, 'confirm');
@@ -281,6 +283,7 @@ test.describe('Given a visitor who wants an account without a password', () => {
     await expect(page.getByRole('status')).toContainText('Přístupový klíč je uložený');
     expect(requests).toEqual([{}]);
     await page.getByRole('button', { name: 'Přejít do přehledu' }).click();
+    await openDonorSection(page, 'Údaje a zabezpečení');
     const account = page.getByRole('region', { name: 'Přihlašovací údaje' });
     await expect(account).toContainText('Bez hesla, jen přístupové klíče');
     await expect(account.getByRole('button', { name: 'Nastavit heslo' })).toBeVisible();

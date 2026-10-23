@@ -1325,6 +1325,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
       ),
     );
     await signIn(page);
+    await openDonorSection(page, 'Údaje a zabezpečení');
     const card = page.getByRole('region', { name: 'Přístupové klíče' });
     await expect(card.locator('.passkey-name')).toHaveText(['iPhone']);
     expect(await violations(page)).toEqual([]);
@@ -1340,11 +1341,12 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     expect(await violations(page)).toEqual([]);
   });
 
-  test('when a donor without a password and without a passkey opens the overview, then the warning and the password set-up break no rule', async ({
+  test('when a donor without a password and without a passkey opens the account details, then the warning and the password set-up break no rule', async ({
     page,
   }) => {
     await mockDonorApi(page);
     await signIn(page, { ...donor, hasPassword: false });
+    await openDonorSection(page, 'Údaje a zabezpečení');
     const card = page.getByRole('region', { name: 'Přístupové klíče' });
     await expect(card.locator('.passkeys-warning')).toBeVisible();
     expect(await violations(page)).toEqual([]);
@@ -1378,6 +1380,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
         }),
     );
     await signIn(page);
+    await openDonorSection(page, 'Údaje a zabezpečení');
     const account = page.getByRole('region', { name: 'Přihlašovací údaje' });
     await account.getByRole('button', { name: 'Odebrat heslo' }).click();
     await expect(account.getByLabel('Současné heslo')).toBeFocused();

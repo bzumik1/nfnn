@@ -27,6 +27,7 @@ import { BankAccountsCard } from './bank-accounts-card/bank-accounts-card';
 const OBJECT_URL = 'blob:http://localhost/receipt';
 const BANK_CHECK_URL = '/api/donations/me/bank-check';
 const BANK_ACCOUNTS_URL = '/api/donations/me/bank-accounts';
+const PASSKEYS_URL = '/api/donors/me/passkeys';
 const EARLIER = '2026-10-18T08:05:30Z';
 const LATER = '2026-10-18T08:07:10Z';
 
@@ -370,6 +371,10 @@ describe('Given a signed-in donor in the donor area', () => {
 
       for (const url of ['/darce/prehled', '/darce/dary', '/darce/potvrzeni', '/darce/udaje']) {
         await go(url);
+        if (url === '/darce/udaje') {
+          http.expectOne(PASSKEYS_URL).flush({ items: [] });
+          await settle();
+        }
         expect(root().querySelectorAll('h1')).toHaveLength(1);
         expect(document.activeElement).toBe(element('h1'));
         headings.push(text('h1'));
@@ -1094,13 +1099,15 @@ describe('Given a signed-in donor in the donor area', () => {
   });
 
   describe('when the details page opens', () => {
-    it('then the details on the receipt and the sign-in details show', async () => {
+    it('then the details on the receipt, the sign-in details and the passkeys show', async () => {
       await open('/darce/udaje');
+      http.expectOne(PASSKEYS_URL).flush({ items: [] });
       await respond(twoYearSummary(), twoYearDonations());
 
-      expect(texts('app-profile-card h2, app-account-card h2')).toEqual([
+      expect(texts('app-profile-card h2, app-account-card h2, app-passkeys-card h2')).toEqual([
         'Údaje na potvrzení o daru',
         'Přihlašovací údaje',
+        'Přístupové klíče',
       ]);
     });
   });
