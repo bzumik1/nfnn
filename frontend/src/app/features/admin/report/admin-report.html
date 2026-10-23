@@ -1,252 +1,244 @@
-<div class="admin">
-  <app-dashboard-top-bar area="admin" />
+<div class="container">
+  <h1 #title class="admin-title" tabindex="-1" i18n="@@admin.report.heading">Měsíční přehled</h1>
+  <p class="admin-intro" i18n="@@admin.report.intro">
+    Fond dostává každý měsíc e-mailem přehled za minulý měsíc: registrované a nové dárce, přijaté
+    dary, platby bez dárce a stav stahování z banky. Tady nastavíte, komu přehled chodí, v který den
+    a co obsahuje, a přehled za kterýkoli skončený měsíc můžete poslat znovu. Na stejné adresy chodí
+    i upozornění, když stahování plateb z banky selhává.
+  </p>
 
-  <div class="container">
-    <p class="admin-crumbs">
-      <a routerLink="/sprava" i18n="@@admin.report.backToAdmin">← Správa</a>
-    </p>
-    <h1 #title class="admin-title" tabindex="-1" i18n="@@admin.report.heading">Měsíční přehled</h1>
-    <p class="admin-intro" i18n="@@admin.report.intro">
-      Fond dostává každý měsíc e-mailem přehled za minulý měsíc: registrované a nové dárce, přijaté
-      dary, platby bez dárce a stav stahování z banky. Tady nastavíte, komu přehled chodí, v který
-      den a co obsahuje, a přehled za kterýkoli skončený měsíc můžete poslat znovu. Na stejné adresy
-      chodí i upozornění, když stahování plateb z banky selhává.
-    </p>
-
-    @if (notice(); as notice) {
-      @if (notice.kind === 'status') {
-        <p class="admin-notice admin-notice--status" role="status">{{ notice.text }}</p>
-      } @else {
-        <p class="admin-notice admin-notice--alert" role="alert">{{ notice.text }}</p>
-      }
+  @if (notice(); as notice) {
+    @if (notice.kind === 'status') {
+      <p class="admin-notice admin-notice--status" role="status">{{ notice.text }}</p>
+    } @else {
+      <p class="admin-notice admin-notice--alert" role="alert">{{ notice.text }}</p>
     }
+  }
 
-    @switch (state()) {
-      @case ('loading') {
-        <p class="admin-loading" role="status" i18n="@@admin.report.loading">
-          Načítáme nastavení přehledu…
-        </p>
-      }
-      @case ('error') {
-        <div class="admin-error" role="alert">
-          <p i18n="@@admin.report.error.text">Nastavení přehledu se nepodařilo načíst.</p>
-          <button
-            type="button"
-            class="admin-retry"
-            (click)="load()"
-            i18n="@@admin.report.error.retry"
-          >
-            Zkusit znovu
-          </button>
-        </div>
-      }
-      @case ('ready') {
-        <section class="admin-card" aria-labelledby="report-settings-title">
-          <h2
-            id="report-settings-title"
-            class="admin-card-title"
-            i18n="@@admin.report.settings.title"
-          >
-            Nastavení
-          </h2>
-          <div class="card-body">
-            @if (nextReport(); as next) {
-              <p class="next-report" i18n="@@admin.report.next">
-                Příští přehled za {{ next.month }} odejde {{ next.dueOn }} ráno. Byl-li by web ten
-                den vypnutý, odejde při nejbližší další ranní kontrole.
-              </p>
+  @switch (state()) {
+    @case ('loading') {
+      <p class="admin-loading" role="status" i18n="@@admin.report.loading">
+        Načítáme nastavení přehledu…
+      </p>
+    }
+    @case ('error') {
+      <div class="admin-error" role="alert">
+        <p i18n="@@admin.report.error.text">Nastavení přehledu se nepodařilo načíst.</p>
+        <button
+          type="button"
+          class="admin-retry"
+          (click)="load()"
+          i18n="@@admin.report.error.retry"
+        >
+          Zkusit znovu
+        </button>
+      </div>
+    }
+    @case ('ready') {
+      <section class="admin-card" aria-labelledby="report-settings-title">
+        <h2
+          id="report-settings-title"
+          class="admin-card-title"
+          i18n="@@admin.report.settings.title"
+        >
+          Nastavení
+        </h2>
+        <div class="card-body">
+          @if (nextReport(); as next) {
+            <p class="next-report" i18n="@@admin.report.next">
+              Příští přehled za {{ next.month }} odejde {{ next.dueOn }} ráno. Byl-li by web ten den
+              vypnutý, odejde při nejbližší další ranní kontrole.
+            </p>
+          }
+          <p class="changed-at">
+            @if (changedAt(); as at) {
+              <ng-container i18n="@@admin.report.changedAt"
+                >Naposledy změněno {{ at }}.</ng-container
+              >
+            } @else {
+              <ng-container i18n="@@admin.report.defaults"
+                >Zatím platí výchozí nastavení ze serveru.</ng-container
+              >
             }
-            <p class="changed-at">
-              @if (changedAt(); as at) {
-                <ng-container i18n="@@admin.report.changedAt"
-                  >Naposledy změněno {{ at }}.</ng-container
-                >
-              } @else {
-                <ng-container i18n="@@admin.report.defaults"
-                  >Zatím platí výchozí nastavení ze serveru.</ng-container
-                >
-              }
-            </p>
-            <form
-              #settingsForm="ngForm"
-              class="settings-form"
-              appFocusFirstInvalid
-              (ngSubmit)="save(settingsForm)"
-              novalidate
+          </p>
+          <form
+            #settingsForm="ngForm"
+            class="settings-form"
+            appFocusFirstInvalid
+            (ngSubmit)="save(settingsForm)"
+            novalidate
+          >
+            <app-form-field
+              label="Příjemci"
+              i18n-label="@@admin.report.recipients"
+              hint="Každou e-mailovou adresu napište na vlastní řádek, nejvíc deset."
+              i18n-hint="@@admin.report.recipients.hint"
+              [messages]="recipientMessages"
             >
-              <app-form-field
-                label="Příjemci"
-                i18n-label="@@admin.report.recipients"
-                hint="Každou e-mailovou adresu napište na vlastní řádek, nejvíc deset."
-                i18n-hint="@@admin.report.recipients.hint"
-                [messages]="recipientMessages"
-              >
-                <textarea
-                  appFormControl
-                  appEmailList
-                  id="report-recipients"
-                  name="recipients"
-                  rows="3"
-                  autocomplete="off"
-                  spellcheck="false"
-                  [(ngModel)]="recipients"
-                  required
-                ></textarea>
-              </app-form-field>
+              <textarea
+                appFormControl
+                appEmailList
+                id="report-recipients"
+                name="recipients"
+                rows="3"
+                autocomplete="off"
+                spellcheck="false"
+                [(ngModel)]="recipients"
+                required
+              ></textarea>
+            </app-form-field>
 
-              <app-form-field
-                label="Den odeslání"
-                i18n-label="@@admin.report.sendDay"
-                hint="Přehled za minulý měsíc odejde v tento den v 7:00."
-                i18n-hint="@@admin.report.sendDay.hint"
-              >
-                <select appFormControl id="report-send-day" name="sendDay" [(ngModel)]="sendDay">
-                  @for (day of sendDays; track day) {
-                    <option [ngValue]="day">{{ day }}.</option>
-                  }
-                </select>
-              </app-form-field>
-
-              <fieldset class="sections">
-                <legend i18n="@@admin.report.sections">Co přehled obsahuje</legend>
-                <label class="section">
-                  <input type="checkbox" name="donors" [(ngModel)]="sections.donors" />
-                  <span i18n="@@admin.report.sections.donors">Dárci: registrovaní a noví</span>
-                </label>
-                <label class="section">
-                  <input type="checkbox" name="donations" [(ngModel)]="sections.donations" />
-                  <span i18n="@@admin.report.sections.donations"
-                    >Dary: za měsíc a od začátku roku</span
-                  >
-                </label>
-                <label class="section">
-                  <input
-                    type="checkbox"
-                    name="unpairedPayments"
-                    [(ngModel)]="sections.unpairedPayments"
-                  />
-                  <span i18n="@@admin.report.sections.unpairedPayments">Platby bez dárce</span>
-                </label>
-                <label class="section">
-                  <input type="checkbox" name="bankImport" [(ngModel)]="sections.bankImport" />
-                  <span i18n="@@admin.report.sections.bankImport"
-                    >Stahování z banky: poslední úspěch a poslední chyba</span
-                  >
-                </label>
-              </fieldset>
-
-              @if (settingsError()) {
-                <p class="form-error" role="alert">{{ settingsError() }}</p>
-              }
-
-              <button type="submit" class="primary" [disabled]="saving()">
-                @if (saving()) {
-                  <span i18n="@@admin.report.settings.saving">Ukládáme…</span>
-                } @else {
-                  <span i18n="@@admin.report.settings.save">Uložit nastavení</span>
+            <app-form-field
+              label="Den odeslání"
+              i18n-label="@@admin.report.sendDay"
+              hint="Přehled za minulý měsíc odejde v tento den v 7:00."
+              i18n-hint="@@admin.report.sendDay.hint"
+            >
+              <select appFormControl id="report-send-day" name="sendDay" [(ngModel)]="sendDay">
+                @for (day of sendDays; track day) {
+                  <option [ngValue]="day">{{ day }}.</option>
                 }
-              </button>
-            </form>
-          </div>
-        </section>
+              </select>
+            </app-form-field>
 
-        <section class="admin-card" aria-labelledby="report-send-title">
-          <h2 id="report-send-title" class="admin-card-title" i18n="@@admin.report.send.title">
-            Poslat přehled znovu
-          </h2>
-          <div class="card-body">
-            <p class="card-intro" i18n="@@admin.report.send.intro">
-              Přehled za vybraný měsíc odejde hned na adresy z nastavení, i když už jednou odešel.
-              Měsíc, který ještě neskončil, poslat nejde.
-            </p>
-            <div class="send-row">
-              <app-form-field label="Měsíc" i18n-label="@@admin.report.send.month">
-                <select
-                  appFormControl
-                  id="report-month"
-                  name="month"
-                  [(ngModel)]="month"
-                  [disabled]="confirmingSend()"
+            <fieldset class="sections">
+              <legend i18n="@@admin.report.sections">Co přehled obsahuje</legend>
+              <label class="section">
+                <input type="checkbox" name="donors" [(ngModel)]="sections.donors" />
+                <span i18n="@@admin.report.sections.donors">Dárci: registrovaní a noví</span>
+              </label>
+              <label class="section">
+                <input type="checkbox" name="donations" [(ngModel)]="sections.donations" />
+                <span i18n="@@admin.report.sections.donations"
+                  >Dary: za měsíc a od začátku roku</span
                 >
-                  @for (option of monthOptions(); track option.value) {
-                    <option [value]="option.value">{{ option.label }}</option>
-                  }
-                </select>
-              </app-form-field>
-              @if (confirmingSend()) {
-                <span
-                  class="confirm"
-                  role="group"
-                  aria-label="Poslat přehled znovu?"
-                  i18n-aria-label="@@admin.report.send.confirm.label"
+              </label>
+              <label class="section">
+                <input
+                  type="checkbox"
+                  name="unpairedPayments"
+                  [(ngModel)]="sections.unpairedPayments"
+                />
+                <span i18n="@@admin.report.sections.unpairedPayments">Platby bez dárce</span>
+              </label>
+              <label class="section">
+                <input type="checkbox" name="bankImport" [(ngModel)]="sections.bankImport" />
+                <span i18n="@@admin.report.sections.bankImport"
+                  >Stahování z banky: poslední úspěch a poslední chyba</span
                 >
-                  <span i18n="@@admin.report.send.confirm.question"
-                    >Poslat přehled za {{ selectedMonthLabel() }} na
-                    {{ currentRecipients() }}?</span
-                  >
-                  <button type="button" class="primary" [disabled]="sending()" (click)="send()">
-                    @if (sending()) {
-                      <ng-container i18n="@@admin.report.send.busy">Posíláme…</ng-container>
-                    } @else {
-                      <ng-container i18n="@@admin.report.send.yes">Ano, poslat</ng-container>
-                    }
-                  </button>
-                  <button
-                    type="button"
-                    class="action-link"
-                    [disabled]="sending()"
-                    (click)="cancelSend()"
-                    i18n="@@admin.report.send.no"
-                  >
-                    Ne
-                  </button>
-                </span>
+              </label>
+            </fieldset>
+
+            @if (settingsError()) {
+              <p class="form-error" role="alert">{{ settingsError() }}</p>
+            }
+
+            <button type="submit" class="primary" [disabled]="saving()">
+              @if (saving()) {
+                <span i18n="@@admin.report.settings.saving">Ukládáme…</span>
               } @else {
+                <span i18n="@@admin.report.settings.save">Uložit nastavení</span>
+              }
+            </button>
+          </form>
+        </div>
+      </section>
+
+      <section class="admin-card" aria-labelledby="report-send-title">
+        <h2 id="report-send-title" class="admin-card-title" i18n="@@admin.report.send.title">
+          Poslat přehled znovu
+        </h2>
+        <div class="card-body">
+          <p class="card-intro" i18n="@@admin.report.send.intro">
+            Přehled za vybraný měsíc odejde hned na adresy z nastavení, i když už jednou odešel.
+            Měsíc, který ještě neskončil, poslat nejde.
+          </p>
+          <div class="send-row">
+            <app-form-field label="Měsíc" i18n-label="@@admin.report.send.month">
+              <select
+                appFormControl
+                id="report-month"
+                name="month"
+                [(ngModel)]="month"
+                [disabled]="confirmingSend()"
+              >
+                @for (option of monthOptions(); track option.value) {
+                  <option [value]="option.value">{{ option.label }}</option>
+                }
+              </select>
+            </app-form-field>
+            @if (confirmingSend()) {
+              <span
+                class="confirm"
+                role="group"
+                aria-label="Poslat přehled znovu?"
+                i18n-aria-label="@@admin.report.send.confirm.label"
+              >
+                <span i18n="@@admin.report.send.confirm.question"
+                  >Poslat přehled za {{ selectedMonthLabel() }} na {{ currentRecipients() }}?</span
+                >
+                <button type="button" class="primary" [disabled]="sending()" (click)="send()">
+                  @if (sending()) {
+                    <ng-container i18n="@@admin.report.send.busy">Posíláme…</ng-container>
+                  } @else {
+                    <ng-container i18n="@@admin.report.send.yes">Ano, poslat</ng-container>
+                  }
+                </button>
                 <button
                   type="button"
-                  class="action-btn"
-                  (click)="askSend()"
-                  i18n="@@admin.report.send.open"
+                  class="action-link"
+                  [disabled]="sending()"
+                  (click)="cancelSend()"
+                  i18n="@@admin.report.send.no"
                 >
-                  Poslat
+                  Ne
                 </button>
-              }
-            </div>
+              </span>
+            } @else {
+              <button
+                type="button"
+                class="action-btn"
+                (click)="askSend()"
+                i18n="@@admin.report.send.open"
+              >
+                Poslat
+              </button>
+            }
           </div>
-        </section>
+        </div>
+      </section>
 
-        <section class="admin-card" aria-labelledby="report-sent-title">
-          <h2 id="report-sent-title" class="admin-card-title" i18n="@@admin.report.sent.title">
-            Odeslané přehledy
-          </h2>
-          @if (sentReports().length === 0) {
-            <p class="card-body card-intro" i18n="@@admin.report.sent.none">
-              Zatím žádný přehled neodešel.
-            </p>
-          } @else {
-            <table>
-              <thead>
+      <section class="admin-card" aria-labelledby="report-sent-title">
+        <h2 id="report-sent-title" class="admin-card-title" i18n="@@admin.report.sent.title">
+          Odeslané přehledy
+        </h2>
+        @if (sentReports().length === 0) {
+          <p class="card-body card-intro" i18n="@@admin.report.sent.none">
+            Zatím žádný přehled neodešel.
+          </p>
+        } @else {
+          <table>
+            <thead>
+              <tr>
+                <th i18n="@@admin.report.sent.col.month">Měsíc</th>
+                <th i18n="@@admin.report.sent.col.sentAt">Odesláno</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (item of sentReports(); track item.month) {
                 <tr>
-                  <th i18n="@@admin.report.sent.col.month">Měsíc</th>
-                  <th i18n="@@admin.report.sent.col.sentAt">Odesláno</th>
+                  <td data-label="Měsíc" i18n-data-label="@@admin.report.sent.col.month">
+                    <span class="admin-name">{{ formatMonth(item.month) }}</span>
+                  </td>
+                  <td data-label="Odesláno" i18n-data-label="@@admin.report.sent.col.sentAt">
+                    {{ sentTime(item) }}
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                @for (item of sentReports(); track item.month) {
-                  <tr>
-                    <td data-label="Měsíc" i18n-data-label="@@admin.report.sent.col.month">
-                      <span class="admin-name">{{ formatMonth(item.month) }}</span>
-                    </td>
-                    <td data-label="Odesláno" i18n-data-label="@@admin.report.sent.col.sentAt">
-                      {{ sentTime(item) }}
-                    </td>
-                  </tr>
-                }
-              </tbody>
-            </table>
-          }
-        </section>
-      }
+              }
+            </tbody>
+          </table>
+        }
+      </section>
     }
-  </div>
+  }
 </div>

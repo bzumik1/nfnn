@@ -20,6 +20,10 @@
   justify-content: space-between;
 }
 
+.topbar--wide .topbar-inner {
+  max-width: var(--side-nav-layout-max);
+}
+
 .topbar-left {
   display: flex;
   align-items: center;

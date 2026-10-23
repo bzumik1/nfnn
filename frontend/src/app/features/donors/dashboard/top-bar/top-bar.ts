@@ -14,6 +14,7 @@ export class DashboardTopBar {
   private readonly auth = inject(AuthStore);
 
   readonly area = input<'donor' | 'admin'>('donor');
+  readonly wide = input(false);
 
   protected readonly donor = this.auth.donor;
   protected readonly isAdmin = this.auth.isAdmin;

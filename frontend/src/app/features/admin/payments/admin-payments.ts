@@ -11,7 +11,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { Router, RouterLink } from '@angular/router';
+import { Router } from '@angular/router';
 import { debounceTime, distinctUntilChanged, Subject, switchMap } from 'rxjs';
 import { describeProblem, problemTypeEndsWith } from '../../../core/auth/api-problem';
 import { AuthStore } from '../../../core/auth/auth-store';
@@ -19,7 +19,6 @@ import { LoginDialogService } from '../../../core/auth/login-dialog.service';
 import { Dialog } from '../../../shared/ui/dialog/dialog';
 import { formatCrowns } from '../../donations/donation-amount';
 import { formatBankTime, formatDonationDate } from '../../donations/donation-date';
-import { DashboardTopBar } from '../../donors/dashboard/top-bar/top-bar';
 import {
   AdminApi,
   AdminDonorResponse,
@@ -49,7 +48,7 @@ const METHOD_LABELS: Record<PairingMethod, string> = {
 
 @Component({
   selector: 'app-admin-payments',
-  imports: [DashboardTopBar, RouterLink, Dialog],
+  imports: [Dialog],
   templateUrl: './admin-payments.html',
   styleUrl: './admin-payments.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

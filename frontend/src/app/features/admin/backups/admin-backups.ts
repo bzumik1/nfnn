@@ -11,26 +11,25 @@ import {
   viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { Router, RouterLink } from '@angular/router';
+import { Router } from '@angular/router';
 import { switchMap, take, takeWhile, timer } from 'rxjs';
 import { describeProblem, problemTypeEndsWith } from '../../../core/auth/api-problem';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
 import { formatBankTime } from '../../donations/donation-date';
 import { saveBlob } from '../../donations/file-download';
-import { DashboardTopBar } from '../../donors/dashboard/top-bar/top-bar';
 import { RESTORE_MAX_POLLS, SetupApi } from '../../operations/setup/setup-api';
 import {
   AdminApi,
   AdminBackupsResponse,
   BackupFileResponse,
   BackupKind,
-  BackupProblem,
   BackupRequestKind,
   BackupRunResponse,
   RestoreFileResponse,
 } from '../admin-api';
 import { formatSize } from './backup-format';
+import { BACKUP_PROBLEM_TEXTS } from './backup-texts';
 import { RestoreDialog } from './restore-dialog';
 
 type LoadState = 'loading' | 'ready' | 'error';
@@ -62,19 +61,9 @@ const KIND_NAMES: Record<BackupKind, string> = {
   OTHER: $localize`:@@admin.backups.kind.other:Jiná`,
 };
 
-const PROBLEM_TEXTS: Record<BackupProblem, string> = {
-  BACKUPS_UNAVAILABLE: $localize`:@@admin.backups.problem.unavailable:Backend nevidí složku záloh. Zkontrolujte compose na serveru: backend má mít připojenou složku /DATA/AppData/nfnn/backups jako /backups.`,
-  BACKUP_MISSING: $localize`:@@admin.backups.problem.backupMissing:Zatím neproběhla žádná záloha; kontejner nfnn-backup asi neběží.`,
-  BACKUP_FAILED: $localize`:@@admin.backups.problem.backupFailed:Poslední záloha selhala.`,
-  BACKUP_STALE: $localize`:@@admin.backups.problem.backupStale:Poslední záloha je starší než den; kontejner nfnn-backup asi neběží.`,
-  TEST_RESTORE_MISSING: $localize`:@@admin.backups.problem.testRestoreMissing:Zkušební obnova ještě neproběhla, i když zálohy jsou starší než týden.`,
-  TEST_RESTORE_FAILED: $localize`:@@admin.backups.problem.testRestoreFailed:Poslední zkušební obnova selhala; záloha může být nepoužitelná.`,
-  TEST_RESTORE_STALE: $localize`:@@admin.backups.problem.testRestoreStale:Poslední zkušební obnova je starší než týden.`,
-};
-
 @Component({
   selector: 'app-admin-backups',
-  imports: [DashboardTopBar, RouterLink, RestoreDialog],
+  imports: [RestoreDialog],
   templateUrl: './admin-backups.html',
   styleUrl: './admin-backups.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -105,7 +94,7 @@ export class AdminBackups {
   protected readonly restoreFiles = computed(() => this.view()?.restoreFiles ?? []);
   protected readonly pendingRequests = computed(() => this.view()?.pendingRequests ?? 0);
   protected readonly problems = computed(() =>
-    (this.view()?.problems ?? []).map((problem) => PROBLEM_TEXTS[problem]),
+    (this.view()?.problems ?? []).map((problem) => BACKUP_PROBLEM_TEXTS[problem]),
   );
   protected readonly lastBackup = computed(() => this.describeBackup(this.view()?.lastBackup));
   protected readonly lastTestRestore = computed(() =>
