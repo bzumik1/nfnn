@@ -4,6 +4,7 @@ import cz.novanadeje.app.donors.domain.Donor;
 import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.donors.domain.DonorNotFound;
 import cz.novanadeje.app.donors.domain.DonorRepository;
+import cz.novanadeje.app.donors.domain.PasskeyRepository;
 import cz.novanadeje.app.donors.domain.SecondFactor;
 import cz.novanadeje.app.donors.domain.SecondFactorRepository;
 import org.springframework.stereotype.Service;
@@ -19,10 +20,12 @@ public class DonorAdministrationService {
 
     private final DonorRepository donors;
     private final SecondFactorRepository secondFactors;
+    private final PasskeyRepository passkeys;
 
-    public DonorAdministrationService(DonorRepository donors, SecondFactorRepository secondFactors) {
+    public DonorAdministrationService(DonorRepository donors, SecondFactorRepository secondFactors, PasskeyRepository passkeys) {
         this.donors = donors;
         this.secondFactors = secondFactors;
+        this.passkeys = passkeys;
     }
 
     public List<DonorAccountView> search(String query) {
@@ -39,6 +42,6 @@ public class DonorAdministrationService {
 
     private DonorAccountView view(Donor donor) {
         boolean secondFactorEnabled = secondFactors.findByDonor(donor.id()).filter(SecondFactor::isEnabled).isPresent();
-        return new DonorAccountView(donor, secondFactorEnabled);
+        return new DonorAccountView(donor, secondFactorEnabled, passkeys.countByDonor(donor.id()));
     }
 }

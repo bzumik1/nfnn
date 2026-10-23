@@ -148,6 +148,18 @@
                   }
                 </dd>
               </div>
+              <div>
+                <dt i18n="@@admin.donorDetail.account.passkeys">Přístupové klíče</dt>
+                <dd>
+                  @if (account.passkeys > 0) {
+                    {{ account.passkeys }}
+                  } @else {
+                    <ng-container i18n="@@admin.donorDetail.account.passkeys.none"
+                      >žádné</ng-container
+                    >
+                  }
+                </dd>
+              </div>
             </dl>
             @if (account.secondFactorEnabled && !account.erasedAt) {
               <div class="admin-actions">
@@ -197,6 +209,59 @@
                   </button>
                   <span class="admin-hint" i18n="@@admin.donorDetail.reset.hint"
                     >Pro dárce, který přišel o telefon s ověřovací aplikací.</span
+                  >
+                }
+              </div>
+            }
+            @if (account.passkeys > 0 && !account.erasedAt) {
+              <div class="admin-actions">
+                @if (isPendingPasskeys()) {
+                  <span
+                    class="confirm"
+                    role="group"
+                    aria-label="Odebrat přístupové klíče?"
+                    i18n-aria-label="@@admin.donorDetail.passkeys.confirm.label"
+                  >
+                    <span i18n="@@admin.donorDetail.passkeys.confirm.question"
+                      >Dárce se jimi pak nepřihlásí a všechna jeho přihlášení skončí. Odebrat?</span
+                    >
+                    <button
+                      type="button"
+                      class="action-btn action-btn--danger"
+                      [disabled]="busy()"
+                      (click)="removePasskeys()"
+                    >
+                      @if (busy()) {
+                        <ng-container i18n="@@admin.donorDetail.passkeys.busy"
+                          >Odebíráme…</ng-container
+                        >
+                      } @else {
+                        <ng-container i18n="@@admin.donorDetail.passkeys.yes"
+                          >Ano, odebrat</ng-container
+                        >
+                      }
+                    </button>
+                    <button
+                      type="button"
+                      class="action-link"
+                      [disabled]="busy()"
+                      (click)="cancel()"
+                      i18n="@@admin.donorDetail.confirm.no"
+                    >
+                      Ne
+                    </button>
+                  </span>
+                } @else {
+                  <button
+                    type="button"
+                    class="action-btn action-btn--quiet"
+                    (click)="askRemovePasskeys()"
+                    i18n="@@admin.donorDetail.passkeys.open"
+                  >
+                    Odebrat přístupové klíče
+                  </button>
+                  <span class="admin-hint" i18n="@@admin.donorDetail.passkeys.hint"
+                    >Pro dárce, který přišel o zařízení s klíčem.</span
                   >
                 }
               </div>

@@ -1,0 +1,189 @@
+<section class="passkeys-card" aria-labelledby="passkeys-title">
+  <h2 id="passkeys-title" class="passkeys-title" i18n="@@donor.passkeys.title">Přístupové klíče</h2>
+  <p class="passkeys-intro" i18n="@@donor.passkeys.intro">
+    Přístupový klíč (passkey) vás přihlásí otiskem prstu, obličejem nebo zámkem obrazovky, bez
+    hesla. Uloží ho Hesla od Applu, Správce hesel Google nebo Windows Hello a na podvodné stránce
+    nefunguje. Přihlášení klíčem platí i jako dvoufaktorové ověření. Heslo vám zůstává.
+  </p>
+
+  @if (loadError()) {
+    <p class="form-error" role="alert">{{ loadError() }}</p>
+    @if (passkeys() === null) {
+      <button type="button" class="passkeys-action" (click)="load()" i18n="@@donor.passkeys.retry">
+        Načíst znovu
+      </button>
+    }
+  }
+
+  @if (passkeys(); as list) {
+    @if (list.length > 0) {
+      <ul class="passkey-list">
+        @for (passkey of list; track passkey.id) {
+          <li class="passkey">
+            <div class="passkey-body">
+              <span class="passkey-name">{{ passkey.name }}</span>
+              <span class="passkey-dates">
+                <span class="passkey-date"
+                  ><span i18n="@@donor.passkeys.createdAt">přidáno</span>
+                  {{ formatDate(passkey.createdAt) }}</span
+                >
+                ·
+                @if (passkey.lastUsedAt; as lastUsedAt) {
+                  <span class="passkey-date"
+                    ><span i18n="@@donor.passkeys.lastUsedAt">naposledy použito</span>
+                    {{ formatDate(lastUsedAt) }}</span
+                  >
+                } @else {
+                  <span class="passkey-date" i18n="@@donor.passkeys.neverUsed"
+                    >zatím nepoužito</span
+                  >
+                }
+              </span>
+            </div>
+            @if (confirming() === passkey.id) {
+              <div class="passkey-confirm">
+                <p i18n="@@donor.passkeys.confirm">
+                  Odebrat klíč {{ passkey.name }}? Přihlásit se jím pak nepůjde.
+                </p>
+                <div class="passkeys-buttons">
+                  <button
+                    type="button"
+                    class="passkeys-action passkeys-action--danger"
+                    [disabled]="removing() !== null"
+                    (click)="remove(passkey)"
+                  >
+                    @if (removing() === passkey.id) {
+                      <span i18n="@@donor.passkeys.removing">Odebírám…</span>
+                    } @else {
+                      <span i18n="@@donor.passkeys.confirmRemove">Ano, odebrat</span>
+                    }
+                  </button>
+                  <button
+                    type="button"
+                    class="passkeys-action"
+                    (click)="keep()"
+                    i18n="@@donor.passkeys.keep"
+                  >
+                    Ponechat
+                  </button>
+                </div>
+              </div>
+            } @else {
+              <button
+                type="button"
+                class="passkeys-action passkeys-action--danger"
+                [disabled]="removing() !== null"
+                (click)="askToRemove(passkey)"
+                i18n="@@donor.passkeys.remove"
+              >
+                Odebrat
+              </button>
+            }
+          </li>
+        }
+      </ul>
+    } @else {
+      <p class="passkeys-empty" i18n="@@donor.passkeys.empty">
+        Zatím nemáte žádný přístupový klíč. Přihlašujete se e-mailem a heslem.
+      </p>
+    }
+  } @else if (!loadError()) {
+    <p class="passkeys-empty" role="status" i18n="@@donor.passkeys.loading">
+      Načítáme přístupové klíče…
+    </p>
+  }
+
+  @if (!supported) {
+    <p class="passkeys-unsupported" i18n="@@donor.passkeys.unsupported">
+      Tento prohlížeč přístupové klíče neumí. Klíč přidáte v aktuálním Safari, Chromu, Edgi nebo
+      Firefoxu.
+    </p>
+  } @else if (adding()) {
+    <form
+      #addForm="ngForm"
+      class="passkeys-form"
+      appFocusFirstInvalid
+      (ngSubmit)="add(addForm)"
+      novalidate
+    >
+      <h3 class="passkeys-form-title" i18n="@@donor.passkeys.form.title">Nový přístupový klíč</h3>
+      <p class="passkeys-form-intro" i18n="@@donor.passkeys.form.intro">
+        Po potvrzení heslem vás zařízení požádá o otisk prstu, obličej nebo PIN a klíč uloží.
+      </p>
+      <app-form-field
+        label="Název klíče"
+        i18n-label="@@donor.passkeys.name"
+        [hint]="nameHint"
+        [messages]="nameMessages"
+      >
+        <input
+          #nameField
+          appFormControl
+          id="passkey-name"
+          name="name"
+          type="text"
+          autocomplete="off"
+          [(ngModel)]="name"
+          required
+          [maxlength]="nameMaxLength"
+        />
+      </app-form-field>
+      <app-form-field
+        label="Současné heslo"
+        i18n-label="@@donor.account.currentPassword"
+        [messages]="passwordMessages"
+      >
+        <app-password-reveal>
+          <input
+            appFormControl
+            id="passkey-password"
+            name="password"
+            type="password"
+            autocomplete="current-password"
+            [(ngModel)]="password"
+            required
+            maxlength="128"
+          />
+        </app-password-reveal>
+      </app-form-field>
+
+      @if (error()) {
+        <p class="form-error" role="alert">{{ error() }}</p>
+      }
+
+      <div class="passkeys-buttons">
+        <button type="submit" class="passkeys-save" [disabled]="saving()">
+          @if (saving()) {
+            <span i18n="@@donor.passkeys.saving">Čekáme na zařízení…</span>
+          } @else {
+            <span i18n="@@donor.passkeys.submit">Vytvořit klíč</span>
+          }
+        </button>
+        <button
+          type="button"
+          class="passkeys-action passkeys-cancel"
+          (click)="cancel()"
+          i18n="@@donor.account.cancel"
+        >
+          Zrušit
+        </button>
+      </div>
+    </form>
+  } @else {
+    <button
+      #addButton
+      type="button"
+      class="passkeys-action"
+      (click)="openForm()"
+      i18n="@@donor.passkeys.add"
+    >
+      Přidat přístupový klíč
+    </button>
+  }
+
+  <p class="passkeys-status" role="status">
+    @if (status()) {
+      <span>{{ status() }}</span>
+    }
+  </p>
+</section>

@@ -19,7 +19,7 @@ public class DonorViews {
 
     public DonorView forSession(Donor donor, Set<Role> sessionRoles) {
         boolean enabled = secondFactors.findByDonor(donor.id()).filter(SecondFactor::isEnabled).isPresent();
-        return DonorView.of(donor, sessionRoles, new SecondFactorView(enabled, donor.isAdministrator() && !enabled));
+        return DonorView.of(donor, sessionRoles, new SecondFactorView(enabled, donor.isAdministrator() && !sessionRoles.contains(Role.ADMIN)));
     }
 
     public AuthenticatedDonor authenticated(Donor donor, IssuedTokens tokens) {

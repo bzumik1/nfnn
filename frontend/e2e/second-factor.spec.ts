@@ -167,7 +167,7 @@ test.describe('Given a donor who protects the account with an authenticator app'
     });
 
     await expect(page.locator('.account-hint')).toContainText(
-      'Správa se vám otevře, až zapnete dvoufaktorové ověření',
+      'Správa se vám otevře, až se přihlásíte přístupovým klíčem nebo zapnete dvoufaktorové ověření',
     );
     await expect(page.getByRole('link', { name: 'Správa' })).toHaveCount(0);
   });

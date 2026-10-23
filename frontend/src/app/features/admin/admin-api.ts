@@ -147,6 +147,7 @@ export interface DonorAccountResponse {
   emailVerified: boolean;
   administrator: boolean;
   secondFactorEnabled: boolean;
+  passkeys: number;
   erasedAt: string | null;
 }
 
@@ -468,6 +469,10 @@ export class AdminApi {
       `/api/admin/donors/${encodeURIComponent(donorId)}/second-factor/reset`,
       null,
     );
+  }
+
+  removePasskeys(donorId: string): Observable<void> {
+    return this.http.delete<void>(`/api/admin/donors/${encodeURIComponent(donorId)}/passkeys`);
   }
 
   symbolClaims(): Observable<SymbolClaimListResponse> {

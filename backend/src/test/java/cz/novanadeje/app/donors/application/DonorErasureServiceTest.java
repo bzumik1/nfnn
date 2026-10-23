@@ -9,6 +9,7 @@ import cz.novanadeje.app.donors.domain.DonorNotFound;
 import cz.novanadeje.app.donors.domain.DonorRepository;
 import cz.novanadeje.app.donors.domain.EmailVerificationTokenRepository;
 import cz.novanadeje.app.donors.domain.PasswordHash;
+import cz.novanadeje.app.donors.domain.PasskeyRepository;
 import cz.novanadeje.app.donors.domain.PasswordResetTokenRepository;
 import cz.novanadeje.app.donors.domain.RefreshTokenRepository;
 import cz.novanadeje.app.donors.domain.Role;
@@ -62,6 +63,8 @@ class DonorErasureServiceTest {
     @Mock
     private SecondFactorRepository secondFactors;
     @Mock
+    private PasskeyRepository passkeys;
+    @Mock
     private RefreshTokenRepository refreshTokens;
     @Mock
     private PasswordResetTokenRepository passwordResetTokens;
@@ -74,7 +77,7 @@ class DonorErasureServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new DonorErasureService(donors, secondFactors, refreshTokens, passwordResetTokens, emailVerificationTokens, events,
+        service = new DonorErasureService(donors, secondFactors, passkeys, refreshTokens, passwordResetTokens, emailVerificationTokens, events,
                 Clock.fixed(NOW, ZoneOffset.UTC));
     }
 
@@ -86,10 +89,11 @@ class DonorErasureServiceTest {
 
         service.erase(JANA, PETR);
 
-        InOrder order = inOrder(donors, secondFactors, refreshTokens, passwordResetTokens, emailVerificationTokens, events);
+        InOrder order = inOrder(donors, secondFactors, passkeys, refreshTokens, passwordResetTokens, emailVerificationTokens, events);
         ArgumentCaptor<Donor> saved = ArgumentCaptor.forClass(Donor.class);
         order.verify(donors).save(saved.capture());
         order.verify(secondFactors).delete(PETR);
+        order.verify(passkeys).deleteAllOf(PETR);
         order.verify(refreshTokens).revokeAllOf(PETR, NOW);
         order.verify(passwordResetTokens).deleteAllOf(PETR);
         order.verify(emailVerificationTokens).deleteAllOf(PETR);

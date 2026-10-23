@@ -1,6 +1,7 @@
 package cz.novanadeje.app.donors.interfaces.rest;
 
 import cz.novanadeje.app.donors.application.DonorAuthenticationService;
+import cz.novanadeje.app.donors.application.DonorPasskeySignInService;
 import cz.novanadeje.app.donors.application.DonorRegistrationService;
 import cz.novanadeje.app.shared.domain.DonorType;
 import cz.novanadeje.app.shared.interfaces.rest.RateLimitExceededException;
@@ -26,8 +27,10 @@ class DonorAuthControllerTest {
     private final SignInRateLimiter signInLimiter = new SignInRateLimiter(clock);
     private final SecondFactorRateLimiter secondFactorLimiter = new SecondFactorRateLimiter(clock);
     private final RegistrationRateLimiter registrationLimiter = new RegistrationRateLimiter(clock);
-    private final DonorAuthController controller = new DonorAuthController(registration, authentication, signInLimiter, secondFactorLimiter,
-            registrationLimiter, clock);
+    private final DonorPasskeySignInService passkeySignIn = mock(DonorPasskeySignInService.class);
+    private final PasskeySignInRateLimiter passkeySignInLimiter = new PasskeySignInRateLimiter(clock);
+    private final DonorAuthController controller = new DonorAuthController(registration, authentication, passkeySignIn, signInLimiter,
+            secondFactorLimiter, registrationLimiter, passkeySignInLimiter, clock);
 
     @Test
     @DisplayName("Given the address used up its sign-ins, when it signs in again, then it is refused before any password is hashed")

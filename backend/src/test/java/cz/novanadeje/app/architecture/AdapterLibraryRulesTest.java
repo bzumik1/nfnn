@@ -41,4 +41,9 @@ class AdapterLibraryRulesTest {
             .that().resideOutsideOfPackage("cz.novanadeje.app.operations.infrastructure..")
             .should().dependOnClassesThat()
             .resideInAnyPackage("org.springframework.boot.logging..", "com.zaxxer.hikari..", "java.lang.management..");
+
+    @ArchTest
+    static final ArchRule webauthn_library_is_used_only_by_the_donors_webauthn_adapter = noClasses()
+            .that().resideOutsideOfPackage("cz.novanadeje.app.donors.infrastructure.webauthn..")
+            .should().dependOnClassesThat().resideInAPackage("com.webauthn4j..");
 }
