@@ -102,17 +102,22 @@
         }
       }
 
-      @if (uploading()) {
-        <p class="signature-status" role="status" i18n="@@admin.signature.uploading">
-          Nahráváme podpis…
-        </p>
-      } @else if (notice(); as notice) {
-        @if (notice.kind === 'status') {
-          <p class="signature-status signature-status--ok" role="status">{{ notice.text }}</p>
-        } @else {
-          <p class="signature-status signature-status--failed" role="alert">{{ notice.text }}</p>
+      <div role="status">
+        @if (uploading()) {
+          <p class="signature-status" i18n="@@admin.signature.uploading">Nahráváme podpis…</p>
+        } @else if (notice(); as notice) {
+          @if (notice.kind === 'status') {
+            <p class="signature-status signature-status--ok">{{ notice.text }}</p>
+          }
         }
-      }
+      </div>
+      <div role="alert">
+        @if (notice(); as notice) {
+          @if (!uploading() && notice.kind === 'alert') {
+            <p class="signature-status signature-status--failed">{{ notice.text }}</p>
+          }
+        }
+      </div>
     }
   }
 </div>

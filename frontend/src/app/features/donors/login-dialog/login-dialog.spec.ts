@@ -321,7 +321,7 @@ describe('Given the sign-in dialog', () => {
       resend.flush(null, { status: 202, statusText: 'Accepted' });
       await settle();
 
-      expect(element('.form-status').getAttribute('role')).toBe('status');
+      expect(element('.form-status').closest('[role="status"]')).not.toBeNull();
       expect(element('.form-status').textContent).toContain('Ověřovací e-mail jsme poslali znovu.');
       expect(element('.form-note')).toBeNull();
       expect(element('.ui-field-error')).toBeNull();

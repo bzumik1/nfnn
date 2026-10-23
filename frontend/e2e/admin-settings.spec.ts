@@ -1,4 +1,5 @@
-import { expect, Page, test } from '@playwright/test';
+import { Page } from '@playwright/test';
+import { expect, test } from './fixtures';
 import { administrator, adminSettings, mockDonorApi, session } from './donor-session';
 import { noSignature, uploadedSignature } from './signature-image';
 

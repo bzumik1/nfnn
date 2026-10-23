@@ -1,6 +1,7 @@
 package cz.novanadeje.app.contact.infrastructure.mail;
 
 import cz.novanadeje.app.contact.application.event.ContactMessageReceived;
+import cz.novanadeje.app.shared.domain.FoundationZone;
 import cz.novanadeje.app.shared.infrastructure.mail.BrandedEmails;
 import cz.novanadeje.app.shared.infrastructure.mail.EmailDraft;
 import jakarta.mail.MessagingException;
@@ -16,7 +17,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
-import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Locale;
@@ -26,7 +26,6 @@ import java.util.Map;
 class ContactMessageEmailForwarder {
 
     private static final Locale FOUNDATION_LOCALE = Locale.forLanguageTag("cs");
-    private static final ZoneId FOUNDATION_ZONE = ZoneId.of("Europe/Prague");
     private static final DateTimeFormatter RECEIVED_AT = DateTimeFormatter.ofPattern("d. M. yyyy H:mm");
     private static final String KEYS = "contact.email.";
     private static final String TEMPLATE = "email/contact/message-received";
@@ -56,7 +55,7 @@ class ContactMessageEmailForwarder {
     }
 
     private void send(ContactMessageReceived event) throws MessagingException {
-        String receivedAt = RECEIVED_AT.format(event.receivedAt().atZone(FOUNDATION_ZONE));
+        String receivedAt = RECEIVED_AT.format(event.receivedAt().atZone(FoundationZone.ZONE));
         MimeMessage email = emails.compose(new EmailDraft(FOUNDATION_LOCALE, properties.recipientEmail(), text("subject", event.senderName()),
                 text("title"), TEMPLATE,
                 Map.of("senderName", event.senderName(), "senderEmail", event.senderEmail().value(), "body", event.body(), "receivedAt", receivedAt),

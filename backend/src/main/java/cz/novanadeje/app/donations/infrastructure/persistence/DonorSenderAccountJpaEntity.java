@@ -19,7 +19,7 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "donor_sender_account")
-public class DonorSenderAccountJpaEntity {
+class DonorSenderAccountJpaEntity {
 
     @Id
     private UUID id;

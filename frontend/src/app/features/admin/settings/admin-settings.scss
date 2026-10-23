@@ -53,8 +53,11 @@
   margin-top: var(--space-2);
 }
 
-.test-result {
+.test-result-slot:not(:empty) {
   flex: 1 1 220px;
+}
+
+.test-result {
   font-size: var(--text-sm);
   line-height: var(--leading-normal);
 }

@@ -2,8 +2,10 @@
 # Backs the nfnn database up, restores a dump left in the restore folder or asked for by the
 # administration, and rehearses a restore once a week. A restore goes into a staging database first
 # and replaces the live one by renaming only when it succeeded, after a -pred-obnovou backup, so a
-# failed restore leaves the current data as they were; $BACKUPS/status/restore.running exists while
-# one runs and the backend waits for it to go. Everything is reported in the container log, in $LOGS/backup.log and in key=value
+# failed restore leaves the current data as they were. A restored database keeps every sequence (the
+# receipt numbers) at the higher of its current and restored value, and a Liquibase lock caught in
+# the dump is released. $BACKUPS/status/restore.running exists while one runs and the backend waits
+# for it to go. Everything is reported in the container log, in $LOGS/backup.log and in key=value
 # files under $BACKUPS/status, which the backend reads for the administration page.
 # The database password is read from $SECRETS_DIR/db-password once nfnn-postgres marks it ready.
 
@@ -110,13 +112,14 @@ test_restore() {
   if createdb "$TEST_DATABASE" 2> "$STATUS/test-restore.err" \
       && pg_restore --exit-on-error --single-transaction --dbname="$TEST_DATABASE" "$t_newest" 2>> "$STATUS/test-restore.err"; then
     t_tables=$(psql --dbname="$TEST_DATABASE" --tuples-only --no-align --command="select count(*) from information_schema.tables where table_schema = 'public'" 2>> "$STATUS/test-restore.err" | tr -d '[:space:]')
+    t_changesets=$(applied_changesets "$TEST_DATABASE" "$STATUS/test-restore.err")
     dropdb --if-exists "$TEST_DATABASE" > /dev/null 2>&1
-    if [ "${t_tables:-0}" -gt 0 ] 2>/dev/null; then
+    if [ "${t_tables:-0}" -gt 0 ] 2>/dev/null && [ "${t_changesets:-0}" -gt 0 ] 2>/dev/null; then
       write_status test-restore "outcome=ok" "started_at=$t_started" "finished_at=$(now_utc)" "file=$t_file" "size=$(file_size "$t_newest")" "tables=$t_tables" "request=$t_request"
       log "test restore of $t_file succeeded: $t_tables tables"
       return 0
     fi
-    t_error="the restored database has no tables"
+    t_error="the restored database has no tables or no applied changesets"
   else
     dropdb --if-exists "$TEST_DATABASE" > /dev/null 2>&1
     t_error=$(tail -n 1 "$STATUS/test-restore.err" | tr -d '\n' | cut -c1-500)
@@ -143,6 +146,15 @@ allow_connections() {
   server_psql --command="alter database \"$PGDATABASE\" with allow_connections true" > /dev/null 2>&1
 }
 
+release_liquibase_lock() {
+  psql --dbname="$1" --quiet --no-align --tuples-only -v ON_ERROR_STOP=1 \
+    --command="do \$\$ begin if to_regclass('public.databasechangeloglock') is not null then update public.databasechangeloglock set locked = false, lockgranted = null, lockedby = null where locked; end if; end \$\$" > /dev/null 2>> "$2"
+}
+
+applied_changesets() {
+  psql --dbname="$1" --tuples-only --no-align --command="select count(*) from public.databasechangelog" 2>> "$2" | tr -d '[:space:]'
+}
+
 recover_interrupted_restore() {
   rm -f "$RUNNING"
   if ! database_exists "$PGDATABASE" && database_exists "$RETIRED_DATABASE"; then
@@ -154,6 +166,15 @@ recover_interrupted_restore() {
   allow_connections
   dropdb --if-exists "$STAGING_DATABASE" > /dev/null 2>&1
   find "$RESTORE" -maxdepth 1 -name '*.upload.part' -delete 2>/dev/null
+}
+
+keep_sequences_ahead() {
+  server_psql --command="alter database \"$RETIRED_DATABASE\" with allow_connections true" > /dev/null 2>> "$STATUS/restore.err" || return 1
+  k_values=$(psql --dbname="$RETIRED_DATABASE" --quiet --no-align --tuples-only -v ON_ERROR_STOP=1 \
+    --command="select coalesce(string_agg(format('(%L, %s)', sequencename, last_value), ', '), '') from pg_sequences where schemaname = 'public' and last_value is not null" 2>> "$STATUS/restore.err") || return 1
+  [ -n "$k_values" ] || return 0
+  psql --dbname="$STAGING_DATABASE" --quiet --no-align --tuples-only -v ON_ERROR_STOP=1 \
+    --command="select setval(format('public.%I', s.sequencename)::regclass, v.last_value) from pg_sequences s join (values $k_values) as v (sequencename, last_value) on v.sequencename = s.sequencename where s.schemaname = 'public' and (s.last_value is null or s.last_value < v.last_value)" > /dev/null 2>> "$STATUS/restore.err"
 }
 
 swap_in_staging() {
@@ -168,7 +189,8 @@ swap_in_staging() {
     fi
     sleep 1
   done
-  if ! server_psql --command="alter database \"$STAGING_DATABASE\" rename to \"$PGDATABASE\"" > /dev/null 2>> "$STATUS/restore.err"; then
+  if ! keep_sequences_ahead \
+      || ! server_psql --command="alter database \"$STAGING_DATABASE\" rename to \"$PGDATABASE\"" > /dev/null 2>> "$STATUS/restore.err"; then
     server_psql --command="alter database \"$RETIRED_DATABASE\" rename to \"$PGDATABASE\"" > /dev/null 2>&1
     allow_connections
     return 1
@@ -195,15 +217,16 @@ restore_dump() {
   if createdb "$STAGING_DATABASE" 2>> "$STATUS/restore.err" \
       && pg_restore --exit-on-error --single-transaction --dbname="$STAGING_DATABASE" "$r_dump" 2>> "$STATUS/restore.err"; then
     r_tables=$(psql --dbname="$STAGING_DATABASE" --tuples-only --no-align --command="select count(*) from information_schema.tables where table_schema = 'public'" 2>> "$STATUS/restore.err" | tr -d '[:space:]')
-    if [ "${r_tables:-0}" -gt 0 ] 2>/dev/null; then
-      if swap_in_staging; then
+    r_changesets=$(applied_changesets "$STAGING_DATABASE" "$STATUS/restore.err")
+    if [ "${r_tables:-0}" -gt 0 ] 2>/dev/null && [ "${r_changesets:-0}" -gt 0 ] 2>/dev/null; then
+      if release_liquibase_lock "$STAGING_DATABASE" "$STATUS/restore.err" && swap_in_staging; then
         write_status restore "outcome=ok" "started_at=$r_started" "finished_at=$(now_utc)" "file=$r_file" "size=$(file_size "$r_dump")" "tables=$r_tables" "request=$r_request" "admin=$r_admin"
         log "restore of $r_file succeeded: $r_tables tables"
         return 0
       fi
       r_error="the restored database could not replace the current one: $(tail -n 1 "$STATUS/restore.err" | tr -d '\n' | cut -c1-400)"
     else
-      r_error="the backup holds no tables"
+      r_error="the backup holds no tables or no applied changesets, so it is not a backup of this site"
     fi
   else
     r_error=$(tail -n 1 "$STATUS/restore.err" | tr -d '\n' | cut -c1-500)

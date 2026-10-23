@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures';
 import { mockDonorApi, openSignInDialog, paymentQr, problem, session } from './donor-session';
 
 test.describe('Given a visitor who wants a donor account', () => {

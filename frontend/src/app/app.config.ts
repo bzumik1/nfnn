@@ -1,6 +1,7 @@
-import { provideHttpClient, withFetch, withInterceptors } from '@angular/common/http';
+import { provideHttpClient, withInterceptors, withXhr } from '@angular/common/http';
 import {
   ApplicationConfig,
+  EnvironmentProviders,
   inject,
   provideAppInitializer,
   provideBrowserGlobalErrorListeners,
@@ -24,11 +25,16 @@ const scrollOptions: InMemoryScrollingOptions = {
 
 const inMemoryScrolling: InMemoryScrollingFeature = withInMemoryScrolling(scrollOptions);
 
+export const appHttpClient: EnvironmentProviders = provideHttpClient(
+  withXhr(),
+  withInterceptors([authInterceptor]),
+);
+
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
     provideRouter(routes, inMemoryScrolling),
-    provideHttpClient(withFetch(), withInterceptors([authInterceptor])),
+    appHttpClient,
     provideAppInitializer(() => inject(AuthStore).restore()),
     provideAppInitializer(() => inject(CanonicalLink).start()),
   ],

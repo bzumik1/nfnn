@@ -20,7 +20,7 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "donor_record")
-public class DonorRecordJpaEntity {
+class DonorRecordJpaEntity {
 
     @Id
     @Column(name = "donor_id")

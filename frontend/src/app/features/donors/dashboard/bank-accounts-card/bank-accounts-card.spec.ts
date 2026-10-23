@@ -144,6 +144,12 @@ describe('Given the bank accounts card in the overview', () => {
     ]);
   });
 
+  it('when an account has three gifts without a symbol, then the count uses the Czech few form', async () => {
+    await respond([bankAccount({ donationCount: 3, totalAmountMinor: 150000 })]);
+
+    expect(texts('.account-meta > li')).toContain('3 dary bez VS');
+  });
+
   it('when an account has no gifts without a symbol yet, then the row does not count them', async () => {
     await respond([bankAccount({ donationCount: 0, totalAmountMinor: 0, lastDonationOn: null })]);
 

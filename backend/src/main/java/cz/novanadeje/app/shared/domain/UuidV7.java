@@ -11,10 +11,6 @@ public final class UuidV7 {
     private UuidV7() {
     }
 
-    public static UUID generate() {
-        return generate(Instant.now());
-    }
-
     public static UUID generate(Instant instant) {
         long timestampMillis = instant.toEpochMilli();
         long mostSignificant = (timestampMillis << 16) | 0x7000L | (RANDOM.nextLong() & 0x0FFFL);

@@ -4,7 +4,6 @@ import cz.novanadeje.app.cucumber.ApiClient;
 import cz.novanadeje.app.donors.domain.LinkSecret;
 import cz.novanadeje.app.donors.domain.PasswordResetToken;
 import cz.novanadeje.app.donors.domain.PasswordResetTokenRepository;
-import cz.novanadeje.app.donors.infrastructure.persistence.PasswordResetTokenJpaRepository;
 import cz.novanadeje.app.support.MailContents;
 import cz.novanadeje.app.support.RecordingMailSender;
 import io.cucumber.java.en.And;
@@ -15,6 +14,7 @@ import jakarta.mail.Message;
 import jakarta.mail.internet.InternetAddress;
 import jakarta.mail.internet.MimeMessage;
 import org.springframework.http.ResponseEntity;
+import org.springframework.jdbc.core.simple.JdbcClient;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -39,15 +39,15 @@ public class DonorPasswordResetStepDefinitions {
 
     private final ApiClient api;
     private final RecordingMailSender mailSender;
-    private final PasswordResetTokenJpaRepository tokenRows;
+    private final JdbcClient jdbc;
     private final PasswordResetTokenRepository tokens;
     private final List<Integer> requestStatuses = new ArrayList<>();
 
-    public DonorPasswordResetStepDefinitions(ApiClient api, RecordingMailSender mailSender, PasswordResetTokenJpaRepository tokenRows,
+    public DonorPasswordResetStepDefinitions(ApiClient api, RecordingMailSender mailSender, JdbcClient jdbc,
                                              PasswordResetTokenRepository tokens) {
         this.api = api;
         this.mailSender = mailSender;
-        this.tokenRows = tokenRows;
+        this.jdbc = jdbc;
         this.tokens = tokens;
     }
 
@@ -125,7 +125,7 @@ public class DonorPasswordResetStepDefinitions {
 
     @Then("{int} password reset link(s) is/are stored")
     public void passwordResetLinksAreStored(int count) {
-        assertThat(tokenRows.count()).isEqualTo(count);
+        assertThat(tokenRowCount()).isEqualTo(count);
     }
 
     @And("the stored link expires one hour after it was issued")
@@ -217,5 +217,9 @@ public class DonorPasswordResetStepDefinitions {
         Matcher token = TOKEN_IN_LINK.matcher(MailContents.plainText(email));
         assertThat(token.find()).withFailMessage("No reset link in the e-mail").isTrue();
         return token.group(1);
+    }
+
+    private long tokenRowCount() {
+        return jdbc.sql("select count(*) from donor_password_reset_token").query(Long.class).single();
     }
 }

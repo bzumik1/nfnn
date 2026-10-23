@@ -95,7 +95,7 @@ describe('Given an administrator on the backups page', () => {
 
     expect(request.request.headers.get('Authorization')).toBe('Bearer token-1');
     expect(text('h1')).toBe('Zálohy');
-    expect(text('[role="status"]')).toBe('Načítáme stav záloh…');
+    expect(text('[role="status"]:not(:empty)')).toBe('Načítáme stav záloh…');
     request.flush(backupsView());
   });
 
@@ -331,12 +331,15 @@ describe('Given an administrator on the backups page', () => {
       return fixture.nativeElement.querySelector('dialog');
     }
 
-    it('then a dialog names the backup, what is lost and the safety backup, and cancelling posts nothing', async () => {
+    it('then a dialog names the backup, what is lost, the receipts issued since and the safety backup, and cancelling posts nothing', async () => {
       expect(text('#restore-title')).toBe('Obnovit databázi ze zálohy?');
       expect(text('.restore-lead')).toBe(
         'Web se vrátí do stavu z 23. 10. 2026 03:00, ze zálohy nfnn-2026-10-23_0300.dump.',
       );
-      expect(texts('.restore-points li')[1]).toContain('záloha „Před obnovou“');
+      expect(texts('.restore-points li')[1]).toContain(
+        'Potvrzení o daru vydaná po vytvoření zálohy z databáze zmizí',
+      );
+      expect(texts('.restore-points li')[2]).toContain('záloha „Před obnovou“');
 
       button('Zrušit').click();
       await settle();

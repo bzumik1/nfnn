@@ -79,6 +79,11 @@ public final class Receipts {
                 record.preferredLocale(), Optional.empty());
     }
 
+    public static DonationReceipt yearlyReceiptOf(DonorReference donor, Year year) {
+        return DonationReceipt.issueForYear(DonationReceiptId.newId(NOW), donor, year, FIRST_NUMBER, TODAY, NOW, LocaleCode.CS,
+                new ReceiptFingerprint("4".repeat(64)), SNAPSHOT_CONTENT, Optional.empty());
+    }
+
     private static Donation donation(DonorReference donor, LocalDate receivedOn, long amountMinor, DonationStatus status) {
         return Donation.reconstitute(DonationId.newId(NOW), donor, Optional.of(BankPaymentId.newId(NOW)), receivedOn, Money.czk(amountMinor),
                 DonationSource.BANK_TRANSFER, status, Optional.of(PairingMethod.VARIABLE_SYMBOL), NOW);

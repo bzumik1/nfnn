@@ -10,13 +10,7 @@
     }
   </h1>
 
-  @if (notice(); as notice) {
-    @if (notice.kind === 'status') {
-      <p class="ui-notice ui-notice--status" role="status">{{ notice.text }}</p>
-    } @else {
-      <p class="ui-notice ui-notice--alert" role="alert">{{ notice.text }}</p>
-    }
-  }
+  <app-live-notice [notice]="notice()" />
 
   @switch (state()) {
     @case ('loading') {
@@ -175,11 +169,13 @@
                 JPEG, PNG nebo WebP do 10 MB. Web si z fotky vyrobí zmenšené kopie; nahraje se hned,
                 k aktualitě se připojí uložením.
               </p>
-              @if (uploading()) {
-                <p class="field-status" role="status" i18n="@@admin.newsEditor.image.uploading">
-                  Nahráváme fotku…
-                </p>
-              }
+              <div role="status">
+                @if (uploading()) {
+                  <p class="field-status" i18n="@@admin.newsEditor.image.uploading">
+                    Nahráváme fotku…
+                  </p>
+                }
+              </div>
               @if (uploadError(); as error) {
                 <p class="field-error" role="alert">{{ error }}</p>
               }

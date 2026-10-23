@@ -13,22 +13,20 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
 import { describeProblem, problemTypeEndsWith } from '../../../core/auth/api-problem';
 import { AuthStore } from '../../../core/auth/auth-store';
+import { pluralCategory } from '../../../core/i18n/plural-category';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
 import { formatBankTime } from '../../donations/donation-date';
 import { AdminApi, SymbolClaimResponse } from '../admin-api';
+import { LiveNotice, Notice } from '../../../shared/ui/live-notice/live-notice';
 
 type LoadState = 'loading' | 'ready' | 'error';
-
-interface Notice {
-  kind: 'status' | 'alert';
-  text: string;
-}
 
 const UNAUTHENTICATED = 'auth/unauthenticated';
 const FORBIDDEN = 'auth/forbidden';
 
 @Component({
   selector: 'app-admin-symbol-claims',
+  imports: [LiveNotice],
   templateUrl: './admin-symbol-claims.html',
   styleUrl: './admin-symbol-claims.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -86,13 +84,14 @@ export class AdminSymbolClaims {
   }
 
   protected donations(count: number): string {
-    if (count === 1) {
-      return $localize`:@@admin.symbolClaims.donations.one:1 dar`;
+    switch (pluralCategory(count)) {
+      case 'one':
+        return $localize`:@@admin.symbolClaims.donations.one:1 dar`;
+      case 'few':
+        return $localize`:@@admin.symbolClaims.donations.few:${count}:count: dary`;
+      case 'other':
+        return $localize`:@@admin.symbolClaims.donations.many:${count}:count: darů`;
     }
-    if (count >= 2 && count <= 4) {
-      return $localize`:@@admin.symbolClaims.donations.few:${count}:count: dary`;
-    }
-    return $localize`:@@admin.symbolClaims.donations.many:${count}:count: darů`;
   }
 
   protected ask(item: SymbolClaimResponse): void {

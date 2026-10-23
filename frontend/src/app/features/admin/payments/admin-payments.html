@@ -45,13 +45,7 @@
     }
   </div>
 
-  @if (notice(); as notice) {
-    @if (notice.kind === 'status') {
-      <p class="ui-notice ui-notice--status" role="status">{{ notice.text }}</p>
-    } @else {
-      <p class="ui-notice ui-notice--alert" role="alert">{{ notice.text }}</p>
-    }
-  }
+  <app-live-notice [notice]="notice()" />
 
   <section class="ui-card payments-card" aria-labelledby="payments-title">
     <h2 id="payments-title" class="ui-card__title">
@@ -289,16 +283,17 @@
       Nabídneme nejvýše 20 dárců; upřesněte hledání, když mezi nimi ten správný není.
     </p>
 
+    <div role="status">
+      @if (!searchFailed() && results()?.length === 0) {
+        <p class="pair-empty" i18n="@@admin.payments.pair.search.empty">Žádný dárce neodpovídá.</p>
+      }
+    </div>
     @if (results(); as donors) {
       @if (searchFailed()) {
         <p class="pair-alert" role="alert" i18n="@@admin.payments.pair.search.failed">
           Hledání se nepodařilo. Zkuste to prosím znovu.
         </p>
-      } @else if (donors.length === 0) {
-        <p class="pair-empty" role="status" i18n="@@admin.payments.pair.search.empty">
-          Žádný dárce neodpovídá.
-        </p>
-      } @else {
+      } @else if (donors.length > 0) {
         <fieldset class="pair-results">
           <legend class="visually-hidden" i18n="@@admin.payments.pair.results.legend">
             Nalezení dárci

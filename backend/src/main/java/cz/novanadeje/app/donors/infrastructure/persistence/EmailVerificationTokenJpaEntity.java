@@ -13,7 +13,7 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "donor_email_verification_token")
-public class EmailVerificationTokenJpaEntity {
+class EmailVerificationTokenJpaEntity {
 
     @Id
     private UUID id;

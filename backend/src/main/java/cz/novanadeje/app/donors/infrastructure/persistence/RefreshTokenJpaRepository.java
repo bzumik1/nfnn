@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-public interface RefreshTokenJpaRepository extends JpaRepository<RefreshTokenJpaEntity, UUID> {
+interface RefreshTokenJpaRepository extends JpaRepository<RefreshTokenJpaEntity, UUID> {
 
     Optional<RefreshTokenJpaEntity> findBySecretHash(String secretHash);
 

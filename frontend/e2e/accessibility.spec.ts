@@ -1,6 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { routeLogsApi } from './admin-logs-api';
-import { expect, Page, test } from '@playwright/test';
+import { Page } from '@playwright/test';
+import { expect, test } from './fixtures';
 import {
   administrator,
   adminSettings,
@@ -312,6 +313,57 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
 
     await page.getByRole('button', { name: 'Jak přiřazujeme platby' }).click();
     await expect(page.getByRole('region', { name: 'Jak přiřazujeme platby' })).toBeVisible();
+
+    expect(await violations(page)).toEqual([]);
+  });
+
+  test('when a signed-in donor adds a bank account, then the dialog breaks no rule while it waits for the payment or once the account is verified', async ({
+    page,
+  }) => {
+    await page.clock.install();
+    let dialogOpen = false;
+    let paymentBooked = false;
+    await page.route(
+      (url) => url.pathname === '/api/donations/me/bank-check',
+      (route) => {
+        if (route.request().method() === 'POST' && dialogOpen) {
+          paymentBooked = true;
+        }
+        return route.fulfill({
+          status: 202,
+          json: { bankDataAsOf: '2026-10-18T08:05:30Z', checking: false },
+        });
+      },
+    );
+    await page.route(
+      (url) => url.pathname === '/api/donations/me/bank-accounts',
+      (route) =>
+        route.fulfill({
+          json: {
+            items: paymentBooked
+              ? [
+                  bankAccountItem({
+                    accountNumber: '1234567890/0800',
+                    verifiedOn: '2026-10-18',
+                    verificationPaymentOn: '2026-10-18',
+                  }),
+                ]
+              : [],
+          },
+        }),
+    );
+    await signIn(page);
+    await openDonorSection(page, 'Bankovní účty');
+
+    await page.getByRole('button', { name: 'Přidat účet' }).click();
+    dialogOpen = true;
+    const watch = page.getByRole('dialog').locator('.add-account-watch');
+    await expect(watch).toContainText('Čekáme na vaši platbu…');
+
+    expect(await violations(page)).toEqual([]);
+
+    await page.clock.fastForward(30_000);
+    await expect(watch).toContainText('Účet 1234567890/0800 je ověřený');
 
     expect(await violations(page)).toEqual([]);
   });

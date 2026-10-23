@@ -7,13 +7,7 @@
     i upozornění, když stahování plateb z banky selhává.
   </p>
 
-  @if (notice(); as notice) {
-    @if (notice.kind === 'status') {
-      <p class="ui-notice ui-notice--status" role="status">{{ notice.text }}</p>
-    } @else {
-      <p class="ui-notice ui-notice--alert" role="alert">{{ notice.text }}</p>
-    }
-  }
+  <app-live-notice [notice]="notice()" />
 
   @switch (state()) {
     @case ('loading') {

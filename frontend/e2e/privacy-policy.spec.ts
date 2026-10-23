@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures';
 
 const policyHeading = { level: 1, name: 'Zásady ochrany osobních údajů' } as const;
 

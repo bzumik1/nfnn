@@ -6,13 +6,7 @@
     restartuje, takže asi minutu nebude odpovídat.
   </p>
 
-  @if (notice(); as notice) {
-    @if (notice.kind === 'status') {
-      <p class="ui-notice ui-notice--status" role="status">{{ notice.text }}</p>
-    } @else {
-      <p class="ui-notice ui-notice--alert" role="alert">{{ notice.text }}</p>
-    }
-  }
+  <app-live-notice [notice]="notice()" />
 
   @switch (state()) {
     @case ('loading') {
@@ -161,17 +155,20 @@
                       <span i18n="@@admin.settings.mailTest">Ověřit spojení</span>
                     }
                   </button>
-                  @if (mailNotice(); as mailNotice) {
-                    @if (mailNotice.kind === 'status') {
-                      <p class="test-result test-result--ok" role="status">
-                        {{ mailNotice.text }}
-                      </p>
-                    } @else {
-                      <p class="test-result test-result--failed" role="alert">
-                        {{ mailNotice.text }}
-                      </p>
+                  <div class="test-result-slot" role="status">
+                    @if (mailNotice(); as mailNotice) {
+                      @if (mailNotice.kind === 'status') {
+                        <p class="test-result test-result--ok">{{ mailNotice.text }}</p>
+                      }
                     }
-                  }
+                  </div>
+                  <div class="test-result-slot" role="alert">
+                    @if (mailNotice(); as mailNotice) {
+                      @if (mailNotice.kind === 'alert') {
+                        <p class="test-result test-result--failed">{{ mailNotice.text }}</p>
+                      }
+                    }
+                  </div>
                 </div>
               }
             </div>

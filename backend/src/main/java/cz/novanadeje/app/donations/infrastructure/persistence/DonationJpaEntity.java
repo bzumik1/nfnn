@@ -26,7 +26,7 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "donation")
-public class DonationJpaEntity {
+class DonationJpaEntity {
 
     @Id
     private UUID id;

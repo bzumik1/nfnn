@@ -2,6 +2,7 @@ package cz.novanadeje.app.contact.infrastructure.retention;
 
 import cz.novanadeje.app.contact.application.ContactMessagePurge;
 import cz.novanadeje.app.contact.application.ContactMessageRetentionService;
+import cz.novanadeje.app.shared.domain.FoundationZone;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -11,7 +12,6 @@ import org.springframework.stereotype.Component;
 class ContactMessageRetentionScheduler {
 
     private static final Logger log = LoggerFactory.getLogger(ContactMessageRetentionScheduler.class);
-    private static final String FOUNDATION_ZONE = "Europe/Prague";
 
     private final ContactMessageRetentionService service;
 
@@ -19,7 +19,7 @@ class ContactMessageRetentionScheduler {
         this.service = service;
     }
 
-    @Scheduled(cron = "${app.contact.retention.cron}", zone = FOUNDATION_ZONE)
+    @Scheduled(cron = "${app.contact.retention.cron}", zone = FoundationZone.ID)
     void deleteExpiredMessages() {
         try {
             ContactMessagePurge purge = service.deleteExpiredMessages();

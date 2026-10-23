@@ -100,7 +100,7 @@ describe('Given an administrator on the settings page', () => {
 
   it('when the page opens, then it says it is loading', () => {
     expect(text('h1')).toBe('Nastavení');
-    expect(text('[role="status"]')).toBe('Načítáme nastavení…');
+    expect(text('[role="status"]:not(:empty)')).toBe('Načítáme nastavení…');
     http.expectOne(SETTINGS_URL).flush(settingsView());
   });
 
@@ -124,7 +124,7 @@ describe('Given an administrator on the settings page', () => {
     it('then saving without a change says so and sends nothing', async () => {
       await submit();
 
-      expect(text('[role="status"]')).toBe('Nic jste nezměnili.');
+      expect(text('[role="status"]:not(:empty)')).toBe('Nic jste nezměnili.');
     });
 
     it('then saving asks first, sends only what changed and waits for the restart before reloading', async () => {
@@ -155,7 +155,7 @@ describe('Given an administrator on the settings page', () => {
       request.flush({ changed: ['PUBLIC_URL'], restarting: true });
       await vi.advanceTimersByTimeAsync(1);
       fixture.detectChanges();
-      expect(text('[role="status"]')).toContain('web se restartuje');
+      expect(text('[role="status"]:not(:empty)')).toContain('web se restartuje');
 
       await vi.advanceTimersByTimeAsync(RESTART_POLL_MS);
       http.expectOne(STATUS_URL).flush('', { status: 502, statusText: 'Bad Gateway' });

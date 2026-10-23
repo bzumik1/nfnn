@@ -9,7 +9,7 @@ import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 
-public interface PasswordResetTokenJpaRepository extends JpaRepository<PasswordResetTokenJpaEntity, UUID> {
+interface PasswordResetTokenJpaRepository extends JpaRepository<PasswordResetTokenJpaEntity, UUID> {
 
     Optional<PasswordResetTokenJpaEntity> findBySecretHash(String secretHash);
 

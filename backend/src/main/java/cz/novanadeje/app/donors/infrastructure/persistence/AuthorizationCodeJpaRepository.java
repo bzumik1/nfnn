@@ -9,7 +9,7 @@ import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 
-public interface AuthorizationCodeJpaRepository extends JpaRepository<AuthorizationCodeJpaEntity, UUID> {
+interface AuthorizationCodeJpaRepository extends JpaRepository<AuthorizationCodeJpaEntity, UUID> {
 
     Optional<AuthorizationCodeJpaEntity> findBySecretHash(String secretHash);
 

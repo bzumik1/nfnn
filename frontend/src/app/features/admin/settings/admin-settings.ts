@@ -25,15 +25,11 @@ import { SETTING_LABELS, settingErrors } from '../../operations/setting-labels';
 import { SettingName, SettingValueRequest, SetupApi } from '../../operations/setup/setup-api';
 import { ReceiptSignature } from './receipt-signature/receipt-signature';
 import { AdminApi, AdminSettingResponse, SettingGroup } from '../admin-api';
+import { LiveNotice, Notice } from '../../../shared/ui/live-notice/live-notice';
 
 type LoadState = 'loading' | 'ready' | 'error' | 'restarting' | 'slow';
 
 type Input = 'text' | 'date' | 'flag' | 'secret';
-
-interface Notice {
-  kind: 'status' | 'alert';
-  text: string;
-}
 
 interface Field {
   name: SettingName;
@@ -83,7 +79,14 @@ const INPUTS: Partial<Readonly<Record<SettingName, Input>>> = {
 
 @Component({
   selector: 'app-admin-settings',
-  imports: [FormsModule, FormField, FormControlDirective, PasswordReveal, ReceiptSignature],
+  imports: [
+    LiveNotice,
+    FormsModule,
+    FormField,
+    FormControlDirective,
+    PasswordReveal,
+    ReceiptSignature,
+  ],
   templateUrl: './admin-settings.html',
   styleUrl: './admin-settings.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

@@ -1,6 +1,5 @@
 package cz.novanadeje.app.contact.cucumber;
 
-import cz.novanadeje.app.contact.infrastructure.persistence.ContactMessageJpaRepository;
 import cz.novanadeje.app.cucumber.ApiClient;
 import cz.novanadeje.app.support.MailContents;
 import cz.novanadeje.app.support.RecordingMailSender;
@@ -11,6 +10,7 @@ import io.cucumber.java.en.When;
 import jakarta.mail.Message;
 import jakarta.mail.internet.InternetAddress;
 import jakarta.mail.internet.MimeMessage;
+import org.springframework.jdbc.core.simple.JdbcClient;
 
 import java.time.Duration;
 import java.util.Arrays;
@@ -26,13 +26,13 @@ public class ContactMessageStepDefinitions {
 
     private final ApiClient api;
     private final RecordingMailSender mailSender;
-    private final ContactMessageJpaRepository messages;
+    private final JdbcClient jdbc;
     private long messagesBefore;
 
-    public ContactMessageStepDefinitions(ApiClient api, RecordingMailSender mailSender, ContactMessageJpaRepository messages) {
+    public ContactMessageStepDefinitions(ApiClient api, RecordingMailSender mailSender, JdbcClient jdbc) {
         this.api = api;
         this.mailSender = mailSender;
-        this.messages = messages;
+        this.jdbc = jdbc;
     }
 
     @Given("the email server accepts messages")
@@ -50,7 +50,7 @@ public class ContactMessageStepDefinitions {
 
     @When("the visitor submits a contact message")
     public void theVisitorSubmitsAContactMessage(Map<String, String> fields) {
-        messagesBefore = messages.count();
+        messagesBefore = messageCount();
         Map<String, String> body = new HashMap<>(fields);
         body.putIfAbsent("website", "");
         api.post(MESSAGES_PATH, body);
@@ -58,7 +58,7 @@ public class ContactMessageStepDefinitions {
 
     @When("the visitor submits a contact message with a non-empty {string} field")
     public void theVisitorSubmitsAContactMessageWithANonEmptyField(String honeypotField) {
-        messagesBefore = messages.count();
+        messagesBefore = messageCount();
         Map<String, String> body = new HashMap<>(validMessage());
         body.put(honeypotField, "https://spam.example");
         api.post(MESSAGES_PATH, body);
@@ -102,12 +102,12 @@ public class ContactMessageStepDefinitions {
 
     @And("the message is stored")
     public void theMessageIsStored() {
-        assertThat(messages.count()).isEqualTo(messagesBefore + 1);
+        assertThat(messageCount()).isEqualTo(messagesBefore + 1);
     }
 
     @And("no message is stored")
     public void noMessageIsStored() {
-        assertThat(messages.count()).isEqualTo(messagesBefore);
+        assertThat(messageCount()).isEqualTo(messagesBefore);
     }
 
     private static Map<String, String> validMessage() {
@@ -117,5 +117,9 @@ public class ContactMessageStepDefinitions {
                 "message", "Mám dotaz k projektu.",
                 "website", ""
         );
+    }
+
+    private long messageCount() {
+        return jdbc.sql("select count(*) from contact_message").query(Long.class).single();
     }
 }

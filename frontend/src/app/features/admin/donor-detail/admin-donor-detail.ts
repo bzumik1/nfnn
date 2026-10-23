@@ -16,6 +16,7 @@ import { Observable } from 'rxjs';
 import { describeProblem, problemTypeEndsWith } from '../../../core/auth/api-problem';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
+import { pluralCategory } from '../../../core/i18n/plural-category';
 import { BankAccountItem } from '../../donations/bank-accounts-api';
 import { formatCrowns } from '../../donations/donation-amount';
 import { formatBankTime, formatDonationDate } from '../../donations/donation-date';
@@ -26,13 +27,9 @@ import {
   AdminReceiptResponse,
   DonorAccountResponse,
 } from '../admin-api';
+import { LiveNotice, Notice } from '../../../shared/ui/live-notice/live-notice';
 
 type LoadState = 'loading' | 'ready' | 'missing' | 'error';
-
-interface Notice {
-  kind: 'status' | 'alert';
-  text: string;
-}
 
 type PendingAction =
   | { kind: 'reset' | 'erase' | 'passkeys' }
@@ -52,7 +49,7 @@ const PAIRING_LABELS: Record<NonNullable<DonationItem['pairedBy']>, string> = {
 
 @Component({
   selector: 'app-admin-donor-detail',
-  imports: [RouterLink],
+  imports: [LiveNotice, RouterLink],
   templateUrl: './admin-donor-detail.html',
   styleUrl: './admin-donor-detail.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -183,13 +180,14 @@ export class AdminDonorDetail {
   }
 
   protected donationsCount(count: number): string {
-    if (count === 1) {
-      return $localize`:@@admin.donorDetail.donations.one:1 dar`;
+    switch (pluralCategory(count)) {
+      case 'one':
+        return $localize`:@@admin.donorDetail.donations.one:1 dar`;
+      case 'few':
+        return $localize`:@@admin.donorDetail.donations.few:${count}:count: dary`;
+      case 'other':
+        return $localize`:@@admin.donorDetail.donations.many:${count}:count: darů`;
     }
-    if (count >= 2 && count <= 4) {
-      return $localize`:@@admin.donorDetail.donations.few:${count}:count: dary`;
-    }
-    return $localize`:@@admin.donorDetail.donations.many:${count}:count: darů`;
   }
 
   protected askReset(): void {

@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures';
 
 test.describe('Given a visitor on the home page', () => {
   test('when they send a contact message, then the site posts it to the API and thanks them', async ({

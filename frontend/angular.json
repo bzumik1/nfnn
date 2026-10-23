@@ -17,6 +17,9 @@
       "root": "",
       "sourceRoot": "src",
       "prefix": "app",
+      "i18n": {
+        "sourceLocale": "cs"
+      },
       "architect": {
         "build": {
           "builder": "@angular/build:application",
@@ -81,7 +84,8 @@
         "test": {
           "builder": "@angular/build:unit-test",
           "options": {
-            "setupFiles": ["src/test-setup.ts"]
+            "setupFiles": ["src/test-setup.ts"],
+            "providersFile": "src/test-providers.ts"
           }
         },
         "lint": {

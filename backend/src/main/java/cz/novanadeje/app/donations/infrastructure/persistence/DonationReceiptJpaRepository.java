@@ -14,7 +14,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
-public interface DonationReceiptJpaRepository extends JpaRepository<DonationReceiptJpaEntity, UUID> {
+interface DonationReceiptJpaRepository extends JpaRepository<DonationReceiptJpaEntity, UUID> {
 
     Optional<DonationReceiptJpaEntity> findByDonationIdAndSupersededAtIsNull(UUID donationId);
 

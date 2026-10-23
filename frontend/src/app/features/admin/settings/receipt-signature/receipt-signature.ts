@@ -5,13 +5,9 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { describeProblem } from '../../../../core/auth/api-problem';
 import { formatBankTime } from '../../../donations/donation-date';
 import { AdminApi, ReceiptSignatureResponse } from '../../admin-api';
+import { Notice } from '../../../../shared/ui/live-notice/live-notice';
 
 type LoadState = 'loading' | 'ready' | 'error';
-
-interface Notice {
-  kind: 'status' | 'alert';
-  text: string;
-}
 
 const ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 const MAX_BYTES = 10 * 1024 * 1024;

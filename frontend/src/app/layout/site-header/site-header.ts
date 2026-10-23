@@ -5,7 +5,6 @@ import {
   ChangeDetectionStrategy,
   Component,
   ElementRef,
-  HostListener,
   inject,
   Injector,
   signal,
@@ -21,6 +20,11 @@ import { LoginDialogService } from '../../core/auth/login-dialog.service';
   templateUrl: './site-header.html',
   styleUrl: './site-header.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: {
+    '(window:scroll)': 'onScroll()',
+    '(document:keydown.escape)': 'onEscape()',
+    '(document:click)': 'onDocumentClick($event)',
+  },
 })
 export class SiteHeader {
   private readonly loginDialog = inject(LoginDialogService);
@@ -36,21 +40,18 @@ export class SiteHeader {
   private readonly menuButton = viewChild.required<ElementRef<HTMLButtonElement>>('menuButton');
   private readonly nav = viewChild.required<ElementRef<HTMLElement>>('nav');
 
-  @HostListener('window:scroll')
-  onScroll(): void {
+  protected onScroll(): void {
     this.scrolled.set(window.scrollY > 50);
   }
 
-  @HostListener('document:keydown.escape')
-  onEscape(): void {
+  protected onEscape(): void {
     if (this.menuOpen()) {
       this.menuOpen.set(false);
       this.menuButton().nativeElement.focus();
     }
   }
 
-  @HostListener('document:click', ['$event'])
-  onDocumentClick(event: MouseEvent): void {
+  protected onDocumentClick(event: MouseEvent): void {
     if (this.menuOpen() && !this.host.nativeElement.contains(event.target as Node)) {
       this.menuOpen.set(false);
     }

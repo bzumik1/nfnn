@@ -71,7 +71,7 @@ describe('Given the signature section of the receipt settings', () => {
   }
 
   it('when it loads, then it says so until the signature arrives', () => {
-    expect(text('[role="status"]')).toBe('Načítáme podpis…');
+    expect(text('[role="status"]:not(:empty)')).toBe('Načítáme podpis…');
     http.expectOne(SIGNATURE_URL).flush(noReceiptSignature());
   });
 
@@ -97,7 +97,7 @@ describe('Given the signature section of the receipt settings', () => {
     http.expectOne(SIGNATURE_URL).flush(null, { status: 500, statusText: 'Internal Server Error' });
     await settle();
 
-    expect(text('[role="alert"]')).toContain('Podpis se nepodařilo načíst.');
+    expect(text('[role="alert"]:not(:empty)')).toContain('Podpis se nepodařilo načíst.');
 
     button('Zkusit znovu').click();
     await load(noReceiptSignature());
@@ -110,14 +110,14 @@ describe('Given the signature section of the receipt settings', () => {
     it('then it uploads the file, says the upload is running and shows the new scan', async () => {
       await choose(scan());
 
-      expect(text('[role="status"]')).toBe('Nahráváme podpis…');
+      expect(text('[role="status"]:not(:empty)')).toBe('Nahráváme podpis…');
       const request = http.expectOne({ method: 'POST', url: SIGNATURE_URL });
       expect((request.request.body as FormData).get('file')).toBeInstanceOf(File);
       request.flush(receiptSignature());
       await settle();
 
       expect(preview()?.getAttribute('src')).toBe(SIGNATURE_IMAGE);
-      expect(text('[role="status"]')).toBe(
+      expect(text('[role="status"]:not(:empty)')).toBe(
         'Podpis je uložený. Ponesou ho potvrzení vystavená od teď.',
       );
     });
@@ -125,13 +125,15 @@ describe('Given the signature section of the receipt settings', () => {
     it('then a file of another type is refused before uploading', async () => {
       await choose(scan('podpis.pdf', 'application/pdf'));
 
-      expect(text('[role="alert"]')).toBe('Vyberte prosím sken ve formátu JPEG, PNG nebo WebP.');
+      expect(text('[role="alert"]:not(:empty)')).toBe(
+        'Vyberte prosím sken ve formátu JPEG, PNG nebo WebP.',
+      );
     });
 
     it('then a file over 10 MB is refused before uploading', async () => {
       await choose(scan('podpis.jpg', 'image/jpeg', 10 * 1024 * 1024 + 1));
 
-      expect(text('[role="alert"]')).toBe(
+      expect(text('[role="alert"]:not(:empty)')).toBe(
         'Soubor je větší než 10 MB. Zmenšete ho prosím a zkuste to znovu.',
       );
     });
@@ -150,7 +152,7 @@ describe('Given the signature section of the receipt settings', () => {
       );
       await settle();
 
-      expect(text('[role="alert"]')).toContain('Soubor nejde použít jako podpis');
+      expect(text('[role="alert"]:not(:empty)')).toContain('Soubor nejde použít jako podpis');
       expect(preview()).toBeNull();
     });
   });
@@ -182,7 +184,7 @@ describe('Given the signature section of the receipt settings', () => {
       await settle();
 
       expect(preview()).toBeNull();
-      expect(text('[role="status"]')).toBe(
+      expect(text('[role="status"]:not(:empty)')).toBe(
         'Podpis je odebraný. Potvrzení vystavená od teď ho nebudou mít.',
       );
       expect(text('.signature-state')).toContain('Podpis není nahraný.');

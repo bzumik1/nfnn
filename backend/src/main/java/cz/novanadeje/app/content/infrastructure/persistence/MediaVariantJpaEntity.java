@@ -37,7 +37,7 @@ class MediaVariantJpaEntity {
 
     static MediaVariantJpaEntity fromDomain(MediaImageJpaEntity media, MediaVariant variant) {
         MediaVariantJpaEntity entity = new MediaVariantJpaEntity();
-        entity.id = UuidV7.generate();
+        entity.id = UuidV7.generate(media.uploadedAt());
         entity.media = media;
         entity.width = variant.width();
         entity.height = variant.height();

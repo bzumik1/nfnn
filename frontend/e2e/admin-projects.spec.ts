@@ -1,4 +1,5 @@
-import { expect, Page, test } from '@playwright/test';
+import { Page } from '@playwright/test';
+import { expect, test } from './fixtures';
 import { administrator, mockDonorApi, problem, session } from './donor-session';
 
 const PROJECTS = '/api/admin/content/projects';
@@ -224,7 +225,7 @@ test.describe('Given an administrator managing the projects', () => {
     await page.getByLabel('Text', { exact: true }).fill('Text.');
     await page.getByRole('button', { name: 'Uložit koncept' }).click();
 
-    await expect(page.getByRole('alert')).toHaveText(
+    await expect(page.getByRole('alert').filter({ hasText: /\S/ })).toHaveText(
       'Adresa je obsazená. Jiná aktualita nebo projekt už tuto adresu používá; zvolte jinou.',
     );
   });

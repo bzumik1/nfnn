@@ -13,7 +13,7 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "donor_second_factor")
-public class SecondFactorJpaEntity {
+class SecondFactorJpaEntity {
 
     @Id
     @Column(name = "donor_id")

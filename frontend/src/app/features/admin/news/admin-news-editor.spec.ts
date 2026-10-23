@@ -165,7 +165,7 @@ describe('Given an administrator writing a new news article', () => {
     request.flush(draftArticle());
     await settle(fixture);
 
-    expect(text(fixture, '[role="status"]')).toBe(
+    expect(text(fixture, '[role="status"]:not(:empty)')).toBe(
       'Aktualitu jsme uložili jako koncept. Na web ji dostanete tlačítkem Zveřejnit.',
     );
     expect(replaced).toHaveBeenCalledWith(`/sprava/aktuality/${draftArticle().id}`);
@@ -222,7 +222,7 @@ describe('Given an administrator writing a new news article', () => {
   it('when the chosen file is not a photo, then the field says so and nothing is uploaded', async () => {
     await chooseFile(fixture, new File(['text'], 'poznamky.txt', { type: 'text/plain' }));
 
-    expect(text(fixture, '.image-field [role="alert"]')).toBe(
+    expect(text(fixture, '.image-field [role="alert"]:not(:empty)')).toBe(
       'Vyberte prosím fotku ve formátu JPEG, PNG nebo WebP.',
     );
     http.expectNone(MEDIA_URL);
@@ -239,7 +239,7 @@ describe('Given an administrator writing a new news article', () => {
     http.expectOne(MEDIA_URL).flush(refusal.body, refusal.options);
     await settle(fixture);
 
-    expect(text(fixture, '.image-field [role="alert"]')).toBe(
+    expect(text(fixture, '.image-field [role="alert"]:not(:empty)')).toBe(
       'Soubor je příliš velký. Nahrát jde soubor nejvýš 10 MB.',
     );
     expect(fixture.nativeElement.querySelector('.image-preview')).toBeNull();
@@ -302,7 +302,7 @@ describe('Given an administrator editing a published news article', () => {
     request.flush(newsArticle({ coverImage: null }));
     await settle(fixture);
 
-    expect(text(fixture, '[role="status"]')).toBe('Změny jsme uložili.');
+    expect(text(fixture, '[role="status"]:not(:empty)')).toBe('Změny jsme uložili.');
   });
 
   it('when they take the article off the site, then it becomes a draft and the page says so', async () => {
@@ -315,7 +315,7 @@ describe('Given an administrator editing a published news article', () => {
     request.flush(newsArticle({ publishedOn: null }));
     await settle(fixture);
 
-    expect(text(fixture, '[role="status"]')).toBe(
+    expect(text(fixture, '[role="status"]:not(:empty)')).toBe(
       'Aktualitu jsme z webu stáhli. Zůstává tu jako koncept.',
     );
     expect(text(fixture, '.publish-state')).toContain('Koncept');
@@ -336,7 +336,9 @@ describe('Given an administrator editing a published news article', () => {
     request.flush(newsArticle({ publishedOn: '2026-10-01' }));
     await settle(fixture);
 
-    expect(text(fixture, '[role="status"]')).toBe('Aktualita je na webu s datem 01. 10. 2026.');
+    expect(text(fixture, '[role="status"]:not(:empty)')).toBe(
+      'Aktualita je na webu s datem 01. 10. 2026.',
+    );
   });
 
   it('when they confirm the deletion, then the article is deleted and they return to the list', async () => {

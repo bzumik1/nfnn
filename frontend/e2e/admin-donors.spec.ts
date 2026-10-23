@@ -1,4 +1,5 @@
-import { expect, Page, test } from '@playwright/test';
+import { Page } from '@playwright/test';
+import { expect, test } from './fixtures';
 import {
   administrator,
   bankAccountItem,
@@ -348,7 +349,11 @@ test.describe('Given an administrator on the donors page', () => {
     await page.goto(`/sprava/darci/${PETR_ID}`);
 
     await expect(page.getByRole('heading', { level: 1, name: 'Dárce' })).toBeFocused();
-    await expect(page.getByRole('alert').first()).toContainText('Takový dárce není.');
-    await expect(page.getByRole('alert').nth(1)).toContainText('Dárce nemá záznam v evidenci darů');
+    await expect(page.getByRole('alert').filter({ hasText: /\S/ }).first()).toContainText(
+      'Takový dárce není.',
+    );
+    await expect(page.getByRole('alert').filter({ hasText: /\S/ }).nth(1)).toContainText(
+      'Dárce nemá záznam v evidenci darů',
+    );
   });
 });

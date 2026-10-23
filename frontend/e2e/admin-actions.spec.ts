@@ -1,4 +1,5 @@
-import { expect, Page, test } from '@playwright/test';
+import { Page } from '@playwright/test';
+import { expect, test } from './fixtures';
 import { administrator, mockDonorApi, session } from './donor-session';
 
 const ACTIONS = '/api/admin/donors/actions';

@@ -12,7 +12,7 @@ import java.util.Optional;
 
 @Entity
 @Table(name = "operations_setting")
-public class SettingJpaEntity {
+class SettingJpaEntity {
 
     static final int MAX_NAME_LENGTH = 64;
     static final int MAX_VALUE_LENGTH = 4000;

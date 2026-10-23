@@ -12,7 +12,7 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "donor_password_reset_token")
-public class PasswordResetTokenJpaEntity {
+class PasswordResetTokenJpaEntity {
 
     @Id
     private UUID id;

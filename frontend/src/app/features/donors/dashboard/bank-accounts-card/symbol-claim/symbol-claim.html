@@ -4,10 +4,8 @@
       Z tohoto účtu k nám chodí i platby s variabilním symbolem
       <strong class="claim-symbol">{{ offer().variableSymbol }}</strong>
       ({offer().paymentCount, plural,
-        =1 {1&nbsp;platba}
-        =2 {2&nbsp;platby}
-        =3 {3&nbsp;platby}
-        =4 {4&nbsp;platby}
+        one {1&nbsp;platba}
+        few {{{ offer().paymentCount }}&nbsp;platby}
         other {{{ offer().paymentCount }}&nbsp;plateb}
 
       }, {{ months() }}). Jsou to dary od vás ({{ donorName() }})?
@@ -21,10 +19,8 @@
       Z tohoto účtu k nám chodí i platby s variabilním symbolem
       <strong class="claim-symbol">{{ offer().variableSymbol }}</strong>
       ({offer().paymentCount, plural,
-        =1 {1&nbsp;platba}
-        =2 {2&nbsp;platby}
-        =3 {3&nbsp;platby}
-        =4 {4&nbsp;platby}
+        one {1&nbsp;platba}
+        few {{{ offer().paymentCount }}&nbsp;platby}
         other {{{ offer().paymentCount }}&nbsp;plateb}
 
       }, {{ months() }}). Jsou to vaše dary?

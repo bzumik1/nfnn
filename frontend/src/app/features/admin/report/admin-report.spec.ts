@@ -114,7 +114,7 @@ describe('Given an administrator on the monthly report page', () => {
 
     expect(request.request.headers.get('Authorization')).toBe('Bearer token-1');
     expect(text('h1')).toBe('Měsíční přehled');
-    expect(text('[role="status"]')).toBe('Načítáme nastavení přehledu…');
+    expect(text('[role="status"]:not(:empty)')).toBe('Načítáme nastavení přehledu…');
     request.flush(reportView());
   });
 
@@ -365,12 +365,14 @@ describe('Given an administrator on the monthly report page', () => {
   it('when the report cannot be loaded, then an alert offers a retry that asks again', async () => {
     await respond({ title: 'Server error' }, 500);
 
-    expect(text('[role="alert"]')).toContain('Nastavení přehledu se nepodařilo načíst.');
+    expect(text('[role="alert"]:not(:empty)')).toContain(
+      'Nastavení přehledu se nepodařilo načíst.',
+    );
 
     element<HTMLButtonElement>('.ui-load-state--error button').click();
     await respond(reportView());
 
-    expect(fixture.nativeElement.querySelector('[role="alert"]')).toBeNull();
+    expect(fixture.nativeElement.querySelector('[role="alert"]:not(:empty)')).toBeNull();
     expect(element<HTMLTextAreaElement>('#report-recipients').value).toBe('info@nfnn.cz');
   });
 

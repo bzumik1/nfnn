@@ -123,8 +123,8 @@
             @if (searchState() === 'error') {
               <p class="ui-notice ui-notice--alert" role="alert">{{ searchError() }}</p>
             }
-            @if (search(); as result) {
-              <div class="matches" role="status">
+            <div role="status">
+              @if (search()) {
                 @if (matches().length === 0) {
                   <p class="ui-card__intro" i18n="@@admin.logs.search.none">
                     Nic takového v logu není.
@@ -132,16 +132,8 @@
                 } @else {
                   <p class="ui-card__intro" i18n="@@admin.logs.search.count">
                     {matches().length, plural,
-                      =1 {1 řádek, nejnovější první. Kliknutím ho zobrazíte i s okolím.}
-                      =2 {
-                        {{ matches().length }} řádky, nejnovější první. Kliknutím zobrazíte řádek i
-                        s okolím.
-                      }
-                      =3 {
-                        {{ matches().length }} řádky, nejnovější první. Kliknutím zobrazíte řádek i
-                        s okolím.
-                      }
-                      =4 {
+                      one {1 řádek, nejnovější první. Kliknutím ho zobrazíte i s okolím.}
+                      few {
                         {{ matches().length }} řádky, nejnovější první. Kliknutím zobrazíte řádek i
                         s okolím.
                       }
@@ -151,6 +143,12 @@
                       }
                     }
                   </p>
+                }
+              }
+            </div>
+            @if (search(); as result) {
+              <div class="matches">
+                @if (matches().length > 0) {
                   <ul class="match-list">
                     @for (match of matches(); track match.offset) {
                       <li>
@@ -205,11 +203,11 @@
               </button>
               <span class="range" aria-live="polite">{{ windowRange() }}</span>
             </div>
-            @if (windowState() === 'loading') {
-              <p class="ui-card__intro" role="status" i18n="@@admin.logs.window.loading">
-                Načítáme výpis…
-              </p>
-            }
+            <div role="status">
+              @if (windowState() === 'loading') {
+                <p class="ui-card__intro" i18n="@@admin.logs.window.loading">Načítáme výpis…</p>
+              }
+            </div>
             @if (windowState() === 'error') {
               <p class="ui-notice ui-notice--alert" role="alert">{{ windowError() }}</p>
             }
@@ -229,13 +227,7 @@
             Podrobnější logování (DEBUG, TRACE) zapněte jen na dobu hledání chyby: po uplynutí času
             i po restartu backendu se úroveň vrátí sama. Změna se zapisuje do historie správy.
           </p>
-          @if (levelNotice(); as notice) {
-            @if (notice.kind === 'status') {
-              <p class="ui-notice ui-notice--status" role="status">{{ notice.text }}</p>
-            } @else {
-              <p class="ui-notice ui-notice--alert" role="alert">{{ notice.text }}</p>
-            }
-          }
+          <app-live-notice [notice]="levelNotice()" />
           <form
             #levelForm="ngForm"
             class="level-form"

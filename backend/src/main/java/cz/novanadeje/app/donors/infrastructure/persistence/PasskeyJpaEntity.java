@@ -15,7 +15,7 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "donor_passkey")
-public class PasskeyJpaEntity {
+class PasskeyJpaEntity {
 
     private static final String TRANSPORT_SEPARATOR = ",";
 

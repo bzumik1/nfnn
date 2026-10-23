@@ -64,6 +64,7 @@ services:
     image: ghcr.io/bzumik1/nfnn-backend:latest
     container_name: nfnn-backend
     restart: unless-stopped
+    stop_grace_period: 75s
     networks:
       - internal
       - edge

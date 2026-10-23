@@ -26,10 +26,8 @@
             <span class="year">{{ row.year }}</span>
             <span class="year-count" i18n="@@donor.receipts.year.count">
               {row.count, plural,
-                =1 {{{ row.count }} příspěvek}
-                =2 {{{ row.count }} příspěvky}
-                =3 {{{ row.count }} příspěvky}
-                =4 {{{ row.count }} příspěvky}
+                one {{{ row.count }} příspěvek}
+                few {{{ row.count }} příspěvky}
                 other {{{ row.count }} příspěvků}
               }
             </span>

@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures';
 import { mockDonorApi } from './donor-session';
 
 test.describe('Given a crawler or a link preview of the site', () => {

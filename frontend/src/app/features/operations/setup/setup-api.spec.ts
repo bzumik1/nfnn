@@ -45,7 +45,7 @@ describe('Given the setup API', () => {
     expect(request.request.body).toBe(file);
     expect(request.request.headers.get('Content-Type')).toBe('application/octet-stream');
     expect(request.request.headers.get('X-Nfnn-Setup-Code')).toBe('K7QM-2XPA-9TRD');
-    expect(request.request.reportProgress).toBe(true);
+    expect(request.request.reportUploadProgress).toBe(true);
     request.flush({
       requestId: 'r-1',
       fileName: 'r-1.upload',

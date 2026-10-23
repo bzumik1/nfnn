@@ -223,7 +223,7 @@ describe('Given an administrator on the logs page', () => {
       });
     await settle();
 
-    expect(text('.matches .ui-card__intro')).toBe(
+    expect(text('[role="status"] .ui-card__intro')).toBe(
       '2 řádky, nejnovější první. Kliknutím zobrazíte řádek i s okolím.',
     );
     expect(texts('.match')).toEqual([

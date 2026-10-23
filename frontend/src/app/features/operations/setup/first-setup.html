@@ -228,13 +228,20 @@
                   <span i18n="@@operations.setup.mailTest">Ověřit spojení</span>
                 }
               </button>
-              @if (mailNotice(); as notice) {
-                @if (notice.kind === 'status') {
-                  <p class="test-result test-result--ok" role="status">{{ notice.text }}</p>
-                } @else {
-                  <p class="test-result test-result--failed" role="alert">{{ notice.text }}</p>
+              <div class="test-result-slot" role="status">
+                @if (mailNotice(); as notice) {
+                  @if (notice.kind === 'status') {
+                    <p class="test-result test-result--ok">{{ notice.text }}</p>
+                  }
                 }
-              }
+              </div>
+              <div class="test-result-slot" role="alert">
+                @if (mailNotice(); as notice) {
+                  @if (notice.kind === 'alert') {
+                    <p class="test-result test-result--failed">{{ notice.text }}</p>
+                  }
+                }
+              </div>
             </div>
             <app-form-field
               [label]="labels.MAIL_FROM"

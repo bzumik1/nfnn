@@ -30,6 +30,7 @@ import {
   SetupApi,
   SetupStatusResponse,
 } from './setup-api';
+import { Notice } from '../../../shared/ui/live-notice/live-notice';
 
 type Panel =
   | 'loading'
@@ -44,11 +45,6 @@ type Panel =
   | 'restoring'
   | 'restoreSlow'
   | 'restored';
-
-interface Notice {
-  kind: 'status' | 'alert';
-  text: string;
-}
 
 const SETUP_COMPLETED = 'operations/setup-completed';
 const SETUP_LOCKED = 'operations/setup-locked';

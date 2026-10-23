@@ -114,7 +114,7 @@ describe('Given an administrator on the bank payments page', () => {
 
     expect(request.request.headers.get('Authorization')).toBe('Bearer token-1');
     expect(text('h1')).toBe('Platby z banky');
-    expect(text('[role="status"]')).toBe('Načítáme platby…');
+    expect(text('[role="status"]:not(:empty)')).toBe('Načítáme platby…');
     request.flush(paymentList([]));
   });
 
@@ -154,7 +154,7 @@ describe('Given an administrator on the bank payments page', () => {
       .flush({}, { status: 500, statusText: 'Error' });
     await settle();
 
-    expect(text('[role="alert"]')).toContain('Platby se nepodařilo načíst.');
+    expect(text('[role="alert"]:not(:empty)')).toContain('Platby se nepodařilo načíst.');
 
     button('Zkusit znovu').click();
     await listResponds(paymentList([]));
@@ -251,7 +251,7 @@ describe('Given an administrator on the bank payments page', () => {
       await settle();
       await listResponds(paymentList([], { year: null, availableYears: [] }), 'pairing=paired');
 
-      expect(text('[role="status"]')).toBe(
+      expect(text('[role="status"]:not(:empty)')).toBe(
         'Platba 500 Kč z 10. 10. 2026 už není přiřazena. Automatické párování ji přeskočí; najdete ji mezi nespárovanými. Dárce si už stáhl roční potvrzení za 2026; při dalším stažení dostane nové. Dejte mu prosím vědět.',
       );
     });
@@ -280,7 +280,7 @@ describe('Given an administrator on the bank payments page', () => {
         .flush(refused.body, refused.options);
       await settle();
 
-      expect(text('[role="alert"]')).toBe(
+      expect(text('[role="alert"]:not(:empty)')).toBe(
         'K daru už bylo vystaveno potvrzení. Dar s vystaveným potvrzením odpárovat nelze.',
       );
     });
@@ -359,7 +359,7 @@ describe('Given an administrator on the bank payments page', () => {
       await listResponds(paymentList([]));
 
       expect(document.querySelector('dialog')).toBeNull();
-      expect(text('[role="status"]')).toBe(
+      expect(text('[role="status"]:not(:empty)')).toBe(
         'Platba 500 Kč z 10. 10. 2026 je přiřazena dárci Jana Nováková.',
       );
     });
@@ -368,7 +368,7 @@ describe('Given an administrator on the bank payments page', () => {
       search('xyz');
       http.expectOne(`${DONORS_URL}?query=xyz`).flush({ items: [] });
       await settle();
-      expect(dialog().querySelector('[role="status"]')?.textContent?.trim()).toBe(
+      expect(dialog().querySelector('[role="status"]:not(:empty)')?.textContent?.trim()).toBe(
         'Žádný dárce neodpovídá.',
       );
 
@@ -391,7 +391,7 @@ describe('Given an administrator on the bank payments page', () => {
       await settle();
 
       expect(document.querySelector('dialog')).not.toBeNull();
-      expect(dialog().querySelector('[role="alert"]')?.textContent?.trim()).toBe(
+      expect(dialog().querySelector('[role="alert"]:not(:empty)')?.textContent?.trim()).toBe(
         'Platba už je přiřazená. Obnovte prosím seznam.',
       );
     });

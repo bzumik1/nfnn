@@ -31,13 +31,9 @@ import {
 import { formatSize } from './backup-format';
 import { BACKUP_PROBLEM_TEXTS } from './backup-texts';
 import { RestoreDialog } from './restore-dialog';
+import { LiveNotice, Notice } from '../../../shared/ui/live-notice/live-notice';
 
 type LoadState = 'loading' | 'ready' | 'error';
-
-interface Notice {
-  kind: 'status' | 'alert';
-  text: string;
-}
 
 interface RunningJob {
   kind: BackupRequestKind;
@@ -63,7 +59,7 @@ const KIND_NAMES: Record<BackupKind, string> = {
 
 @Component({
   selector: 'app-admin-backups',
-  imports: [RestoreDialog],
+  imports: [LiveNotice, RestoreDialog],
   templateUrl: './admin-backups.html',
   styleUrl: './admin-backups.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

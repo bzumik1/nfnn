@@ -4,12 +4,12 @@ import cz.novanadeje.app.content.domain.news.NewsArticle;
 import cz.novanadeje.app.content.domain.news.NewsArticleNotFound;
 import cz.novanadeje.app.content.domain.news.NewsArticleRepository;
 import cz.novanadeje.app.content.domain.Slug;
+import cz.novanadeje.app.shared.domain.FoundationZone;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.List;
 
 @Service
@@ -17,7 +17,6 @@ import java.util.List;
 public class PublicNewsService {
 
     public static final int MAX_PAGE_SIZE = 50;
-    private static final ZoneId PRAGUE = ZoneId.of("Europe/Prague");
 
     private final NewsArticleRepository news;
     private final Clock clock;
@@ -44,6 +43,6 @@ public class PublicNewsService {
     }
 
     private LocalDate today() {
-        return LocalDate.ofInstant(clock.instant(), PRAGUE);
+        return LocalDate.ofInstant(clock.instant(), FoundationZone.ZONE);
     }
 }

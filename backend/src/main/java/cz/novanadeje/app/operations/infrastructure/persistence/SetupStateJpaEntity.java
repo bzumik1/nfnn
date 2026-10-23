@@ -9,7 +9,7 @@ import java.time.Instant;
 
 @Entity
 @Table(name = "operations_setup")
-public class SetupStateJpaEntity {
+class SetupStateJpaEntity {
 
     static final short SINGLETON_ID = 1;
 

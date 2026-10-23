@@ -9,7 +9,7 @@ import java.time.Instant;
 
 @Entity
 @Table(name = "donation_receipt_signature")
-public class ReceiptSignatureJpaEntity {
+class ReceiptSignatureJpaEntity {
 
     static final short SINGLETON_ID = 1;
 

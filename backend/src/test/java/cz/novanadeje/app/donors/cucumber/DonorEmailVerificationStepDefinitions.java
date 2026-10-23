@@ -5,7 +5,6 @@ import cz.novanadeje.app.cucumber.DonorRegistrations;
 import cz.novanadeje.app.donors.domain.EmailVerificationToken;
 import cz.novanadeje.app.donors.domain.EmailVerificationTokenRepository;
 import cz.novanadeje.app.donors.domain.LinkSecret;
-import cz.novanadeje.app.donors.infrastructure.persistence.EmailVerificationTokenJpaRepository;
 import cz.novanadeje.app.support.MailContents;
 import cz.novanadeje.app.support.RecordingMailSender;
 import io.cucumber.java.en.And;
@@ -16,6 +15,7 @@ import jakarta.mail.Message;
 import jakarta.mail.internet.InternetAddress;
 import jakarta.mail.internet.MimeMessage;
 import org.springframework.http.ResponseEntity;
+import org.springframework.jdbc.core.simple.JdbcClient;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -37,16 +37,16 @@ public class DonorEmailVerificationStepDefinitions {
     private final ApiClient api;
     private final DonorRegistrations registrations;
     private final RecordingMailSender mailSender;
-    private final EmailVerificationTokenJpaRepository tokenRows;
+    private final JdbcClient jdbc;
     private final EmailVerificationTokenRepository tokens;
     private final List<Integer> requestStatuses = new ArrayList<>();
 
     public DonorEmailVerificationStepDefinitions(ApiClient api, DonorRegistrations registrations, RecordingMailSender mailSender,
-                                                 EmailVerificationTokenJpaRepository tokenRows, EmailVerificationTokenRepository tokens) {
+                                                 JdbcClient jdbc, EmailVerificationTokenRepository tokens) {
         this.api = api;
         this.registrations = registrations;
         this.mailSender = mailSender;
-        this.tokenRows = tokenRows;
+        this.jdbc = jdbc;
         this.tokens = tokens;
     }
 
@@ -112,7 +112,7 @@ public class DonorEmailVerificationStepDefinitions {
 
     @Then("{int} verification link(s) is/are stored")
     public void verificationLinksAreStored(int count) {
-        assertThat(tokenRows.count()).isEqualTo(count);
+        assertThat(tokenRowCount()).isEqualTo(count);
     }
 
     @And("the stored verification link expires {int} hours after it was issued")
@@ -166,5 +166,9 @@ public class DonorEmailVerificationStepDefinitions {
     private MimeMessage lastEmail() {
         await().atMost(MAIL_WAIT).untilAsserted(() -> assertThat(mailSender.sent()).withFailMessage("No e-mail was sent").isNotEmpty());
         return mailSender.sent().getLast();
+    }
+
+    private long tokenRowCount() {
+        return jdbc.sql("select count(*) from donor_email_verification_token").query(Long.class).single();
     }
 }
