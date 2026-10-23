@@ -14,4 +14,4 @@ RUN groupadd --system app && useradd --system --gid app --home-dir /app app
 COPY --from=build /workspace/build/libs/*.jar app.jar
 USER app
 EXPOSE 8080
-ENTRYPOINT ["java", "-jar", "/app/app.jar"]
+ENTRYPOINT ["java", "--enable-native-access=ALL-UNNAMED", "-jar", "/app/app.jar"]

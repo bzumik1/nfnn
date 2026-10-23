@@ -29,4 +29,10 @@ class AdapterLibraryRulesTest {
             .that().resideOutsideOfPackage("..infrastructure..")
             .should().dependOnClassesThat()
             .resideInAnyPackage("io.github.openhtmltopdf..", "com.openhtmltopdf..", "org.apache.pdfbox..", "org.thymeleaf..");
+
+    @ArchTest
+    static final ArchRule image_libraries_are_used_only_by_the_content_media_adapter = noClasses()
+            .that().resideOutsideOfPackage("cz.novanadeje.app.content.infrastructure.media..")
+            .should().dependOnClassesThat()
+            .resideInAnyPackage("io.github.darkxanter..", "com.luciad.imageio.webp..", "javax.imageio..", "java.awt.image..");
 }

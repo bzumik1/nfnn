@@ -37,7 +37,7 @@ Value objects `EmailAddress`, `UuidV7`, `Money`, `Currency`, `Iban`, `VariableSy
 
 ## content
 
-Still an empty package; the site's content lives in the Angular components until the admin exists (`docs/requirements.md` §7).
+The news and their photos (plan v2 task 8a; contract "`content` — public CMS"). An administrator writes an article at `/sprava/aktuality` (title, address made from the title, tag, perex, plain-text body, one photo), saves it as a draft, publishes it with a date (also a past or a future one), takes it off the site or deletes it; every change is audited (`CREATE_NEWS` … `DELETE_NEWS`). A photo goes up as JPEG, PNG or WebP up to 10 MB; `ImageIoImageProcessor` turns it upright by its EXIF tag and stores only WebP copies of 480, 960 and 1 440 px (never wider than the original) in `content_media_variant`, so the daily database dump holds the photos too. `GET /api/content/news` and `/news/{slug}` serve what is published up to today (Prague), `GET /api/content/media/{id}?w=` the smallest copy at least that wide with a one-year immutable cache. The site itself does not read any of it yet: the home page keeps its placeholder news until 8c, the projects come with 8b.
 
 ## Frontend
 

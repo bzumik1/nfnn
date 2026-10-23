@@ -42,6 +42,21 @@ export const adminRoutes: Routes = [
     loadComponent: () => import('./report/admin-report').then((m) => m.AdminReport),
   },
   {
+    path: 'aktuality',
+    title: $localize`:@@admin.news.pageTitle:Aktuality | Správa | Nová naděje – nadační fond`,
+    loadComponent: () => import('./news/admin-news').then((m) => m.AdminNews),
+  },
+  {
+    path: 'aktuality/nova',
+    title: $localize`:@@admin.newsEditor.pageTitle.new:Nová aktualita | Správa | Nová naděje – nadační fond`,
+    loadComponent: () => import('./news/admin-news-editor').then((m) => m.AdminNewsEditor),
+  },
+  {
+    path: 'aktuality/:id',
+    title: $localize`:@@admin.newsEditor.pageTitle.edit:Úprava aktuality | Správa | Nová naděje – nadační fond`,
+    loadComponent: () => import('./news/admin-news-editor').then((m) => m.AdminNewsEditor),
+  },
+  {
     path: 'historie',
     title: $localize`:@@admin.actions.pageTitle:Historie správy | Správa | Nová naděje – nadační fond`,
     loadComponent: () => import('./actions/admin-actions').then((m) => m.AdminActions),

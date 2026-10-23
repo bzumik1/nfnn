@@ -23,6 +23,7 @@ extra["archunitVersion"] = "1.5.1"
 extra["openhtmltopdfVersion"] = "1.1.100"
 extra["zxingVersion"] = "3.5.4"
 extra["fioApiVersion"] = "1.0.0"
+extra["webpImageioVersion"] = "0.3.3"
 
 dependencies {
 	implementation("io.github.bzumik1:fio-api:${property("fioApiVersion")}")
@@ -45,6 +46,8 @@ dependencies {
 
 	implementation("com.google.zxing:core:${property("zxingVersion")}")
 	implementation("com.google.zxing:javase:${property("zxingVersion")}")
+
+	implementation("io.github.darkxanter:webp-imageio:${property("webpImageioVersion")}")
 
 	runtimeOnly("org.postgresql:postgresql")
 	annotationProcessor("org.springframework.boot:spring-boot-configuration-processor")
@@ -83,6 +86,8 @@ tasks.withType<Test> {
 		}
 	}
 	systemProperty("cucumber.junit-platform.naming-strategy", "long")
+	System.getenv("CUCUMBER_FILTER_TAGS")?.let { systemProperty("cucumber.filter.tags", it) }
+	jvmArgs("--enable-native-access=ALL-UNNAMED")
 	environment("TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE", "/var/run/docker.sock")
 	inputs.file("../frontend/src/styles/themes/_nova-nadeje.scss").withPropertyName("siteTheme").withPathSensitivity(PathSensitivity.NONE)
 }
