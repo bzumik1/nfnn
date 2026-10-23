@@ -27,13 +27,13 @@ class PairingPropertiesTest {
     }
 
     @Test
-    @DisplayName("Given an entry that is not a Czech account, when read, then the startup is refused with the entry named")
+    @DisplayName("Given an entry that is not a Czech account, when bound, then the startup is refused with the entry named")
     void should_refuse_when_read_given_invalid_entry() {
-        assertThatIllegalArgumentException().isThrownBy(() -> new PairingProperties(List.of("123")).toExcludedSenderAccounts())
+        assertThatIllegalArgumentException().isThrownBy(() -> new PairingProperties(List.of("123")))
                 .withMessageContaining("123");
-        assertThatIllegalArgumentException().isThrownBy(() -> new PairingProperties(List.of("abc/2010")).toExcludedSenderAccounts())
+        assertThatIllegalArgumentException().isThrownBy(() -> new PairingProperties(List.of("abc/2010")))
                 .withMessageContaining("abc/2010");
-        assertThatIllegalArgumentException().isThrownBy(() -> new PairingProperties(List.of("2400000002/20")).toExcludedSenderAccounts())
+        assertThatIllegalArgumentException().isThrownBy(() -> new PairingProperties(List.of("2400000002/20")))
                 .withMessageContaining("2400000002/20");
     }
 }

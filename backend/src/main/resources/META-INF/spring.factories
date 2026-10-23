@@ -1,0 +1,2 @@
+org.springframework.boot.EnvironmentPostProcessor=\
+cz.novanadeje.app.operations.infrastructure.settings.DatabaseSettingsEnvironmentPostProcessor

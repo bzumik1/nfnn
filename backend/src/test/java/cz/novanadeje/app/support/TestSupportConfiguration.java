@@ -50,6 +50,24 @@ public class TestSupportConfiguration {
     }
 
     @Bean
+    @Primary
+    public RecordingSetupCodeAnnouncer recordingSetupCodeAnnouncer() {
+        return new RecordingSetupCodeAnnouncer();
+    }
+
+    @Bean
+    @Primary
+    public RecordingApplicationRestarter recordingApplicationRestarter() {
+        return new RecordingApplicationRestarter();
+    }
+
+    @Bean
+    @Primary
+    public FakeMailServerProbe fakeMailServerProbe() {
+        return new FakeMailServerProbe();
+    }
+
+    @Bean
     public DatabaseCleaner databaseCleaner(JdbcClient jdbcClient) {
         return new DatabaseCleaner(jdbcClient);
     }

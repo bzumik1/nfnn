@@ -128,6 +128,10 @@ app:
       max-test-restore-age: P8D
     logs:
       directory: /logs
+    settings:
+      from-database: false
+      key: ${SETTINGS_KEY:}
+      tunnel-directory: /tunnel
   security:
     jwt:
       issuer: nova-nadeje

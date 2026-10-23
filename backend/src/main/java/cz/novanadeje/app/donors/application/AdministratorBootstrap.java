@@ -1,11 +1,14 @@
 package cz.novanadeje.app.donors.application;
 
+import cz.novanadeje.app.shared.application.event.DonorRegistered;
 import cz.novanadeje.app.shared.domain.EmailAddress;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
 
 @Component
 public class AdministratorBootstrap {
@@ -29,9 +32,17 @@ public class AdministratorBootstrap {
                 case GRANTED -> log.info("Configured administrator {} of {} received the role", position, properties.addresses().size());
                 case ALREADY_ADMINISTRATOR -> log.debug("Configured administrator {} of {} already holds the role", position,
                         properties.addresses().size());
-                case NOT_REGISTERED -> log.warn("Configured administrator {} of {} is not registered yet; the role waits for the next start "
-                        + "after the registration", position, properties.addresses().size());
+                case NOT_REGISTERED -> log.info("Configured administrator {} of {} is not registered yet; the role follows once the "
+                        + "address is confirmed", position, properties.addresses().size());
             }
+        }
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT)
+    public void onRegistered(DonorRegistered registered) {
+        if (properties.addresses().contains(registered.email())
+                && administrators.grantAtStartup(registered.email()) == StartupGrant.GRANTED) {
+            log.info("Configured administrator {} received the role on confirming the address", registered.donorId());
         }
     }
 }
