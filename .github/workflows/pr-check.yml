@@ -194,9 +194,9 @@ jobs:
             [ "$(sudo stat -c '%a %U' "$secrets/$file")" = '600 root' ] || { echo "::error::secrets/$file must exist, owned by root with mode 600"; sudo ls -la "$secrets"; exit 1; }
           done
           status=$(curl -fsS --max-time 10 http://localhost:8089/api/operations/setup)
-          [ "$status" = '{"required":true,"codeRequired":false}' ] || { echo "::error::a fresh install opened directly must ask for the setup without a code (got $status)"; exit 1; }
+          [ "$status" = '{"required":true,"codeRequired":false,"lastRestore":null}' ] || { echo "::error::a fresh install opened directly must ask for the setup without a code (got $status)"; exit 1; }
           proxied=$(curl -fsS --max-time 10 -H 'X-Forwarded-For: 203.0.113.7' http://localhost:8089/api/operations/setup)
-          [ "$proxied" = '{"required":true,"codeRequired":true}' ] || { echo "::error::a request through a proxy must need the code (got $proxied)"; exit 1; }
+          [ "$proxied" = '{"required":true,"codeRequired":true,"lastRestore":null}' ] || { echo "::error::a request through a proxy must need the code (got $proxied)"; exit 1; }
           wrong=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 -H 'X-Forwarded-For: 203.0.113.7' -H 'Content-Type: application/json' --data '{"code":"AAAA-BBBB-CCCC"}' http://localhost:8089/api/operations/setup/unlock)
           [ "$wrong" = 403 ] || { echo "::error::a wrong code must answer 403 (got $wrong)"; exit 1; }
           code=$(docker logs nfnn-backend 2>&1 | grep -oE '^ +[2-9A-Z]{4}-[2-9A-Z]{4}-[2-9A-Z]{4} *$' | tail -n 1 | tr -d ' ')
