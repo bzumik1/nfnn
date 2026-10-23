@@ -1,0 +1,191 @@
+:host {
+  display: block;
+}
+
+.connect-app {
+  min-height: 100svh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: calc(var(--header-height) + 48px) 20px 80px;
+  background:
+    radial-gradient(
+      ellipse at 85% 0%,
+      color-mix(in srgb, var(--color-accent) 28%, transparent) 0%,
+      transparent 60%
+    ),
+    var(--color-surface-inverse);
+}
+
+.card {
+  width: 100%;
+  max-width: 480px;
+  background: var(--color-surface);
+  border-radius: var(--radius-dialog);
+  padding: 36px 40px;
+  box-shadow: var(--shadow-dialog);
+  animation: fadeInUp 0.3s ease both;
+
+  @media (max-width: 480px) {
+    padding: 28px 24px;
+  }
+}
+
+.title {
+  font-family: var(--font-serif);
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.25;
+  color: var(--color-text);
+  margin-bottom: 8px;
+  text-wrap: balance;
+
+  &:focus {
+    outline: none;
+  }
+}
+
+.client-host {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 20px;
+  color: var(--color-accent);
+  overflow-wrap: anywhere;
+}
+
+.lead {
+  color: var(--color-text-soft);
+  font-size: 14px;
+  line-height: 1.6;
+  margin-bottom: 20px;
+}
+
+.scopes-title {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+  margin-bottom: 8px;
+}
+
+.scopes {
+  list-style: none;
+  margin: 0 0 20px;
+  padding: 0;
+
+  li {
+    position: relative;
+    padding-left: 24px;
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--color-text);
+
+    & + li {
+      margin-top: 8px;
+    }
+
+    &::before {
+      content: '✓';
+      position: absolute;
+      left: 0;
+      top: 0;
+      font-weight: 700;
+      color: var(--color-success);
+    }
+  }
+}
+
+.notice {
+  text-align: center;
+}
+
+.notice-icon {
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 16px;
+  border-radius: var(--radius-round);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
+  font-size: 24px;
+  font-weight: 700;
+
+  &--warning {
+    background: var(--color-danger-bg);
+    color: var(--color-danger);
+  }
+
+  &--spinner {
+    background: transparent;
+    border: 4px solid var(--color-accent-soft);
+    border-top-color: var(--color-accent);
+    animation: spin 0.9s linear infinite;
+
+    @media (prefers-reduced-motion: reduce) {
+      animation: none;
+    }
+  }
+}
+
+.form-error {
+  color: var(--color-danger);
+  font-size: 13px;
+  line-height: 1.5;
+  margin: 4px 0 12px;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+
+  .form-submit,
+  .form-secondary {
+    flex: 1 1 160px;
+  }
+}
+
+.form-submit,
+.form-secondary {
+  width: 100%;
+  margin-top: 4px;
+  padding: 14px;
+  border: none;
+  border-radius: var(--radius-pill);
+  font-family: var(--font-sans);
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.2s;
+
+  &:focus-visible {
+    outline: 3px solid var(--color-border-accent);
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    opacity: 0.7;
+    cursor: progress;
+  }
+}
+
+.form-submit {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  box-shadow: var(--shadow-cta);
+}
+
+.form-secondary {
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

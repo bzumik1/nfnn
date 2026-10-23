@@ -28,8 +28,12 @@ class ApiSecurityConfiguration {
                         .requestMatchers(HttpMethod.GET, "/api/donations/payment-qr").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/content/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/donors/auth/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/.well-known/oauth-authorization-server").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/donors/oauth/token").permitAll()
                         .requestMatchers("/actuator/health", "/actuator/health/**", "/actuator/info").permitAll()
-                        .requestMatchers("/api/admin/**").hasRole(ADMIN_ROLE)
+                        .requestMatchers(HttpMethod.GET, "/api/admin/**").hasRole(ADMIN_ROLE)
+                        .requestMatchers(HttpMethod.HEAD, "/api/admin/**").hasRole(ADMIN_ROLE)
+                        .requestMatchers("/api/admin/**").access(new AdminWriteAuthorizationManager())
                         .anyRequest().authenticated())
                 .oauth2ResourceServer(resourceServer -> resourceServer
                         .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter))

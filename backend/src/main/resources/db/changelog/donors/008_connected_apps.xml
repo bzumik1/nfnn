@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <changeSet id="008-connected-apps" author="nfnn">
+        <addColumn tableName="donor_refresh_token">
+            <column name="client_id" type="varchar(512)"/>
+            <column name="scope" type="varchar(200)"/>
+            <column name="granted_at" type="timestamp with time zone"/>
+        </addColumn>
+        <sql>update donor_refresh_token set granted_at = issued_at where granted_at is null</sql>
+        <addNotNullConstraint tableName="donor_refresh_token" columnName="granted_at" columnDataType="timestamp with time zone"/>
+        <createIndex tableName="donor_refresh_token" indexName="ix_donor_refresh_token_client">
+            <column name="donor_id"/>
+            <column name="client_id"/>
+        </createIndex>
+
+        <createTable tableName="oauth_authorization_code">
+            <column name="id" type="uuid">
+                <constraints primaryKey="true" primaryKeyName="pk_oauth_authorization_code" nullable="false"/>
+            </column>
+            <column name="secret_hash" type="varchar(64)">
+                <constraints nullable="false" unique="true" uniqueConstraintName="uq_oauth_authorization_code_secret_hash"/>
+            </column>
+            <column name="donor_id" type="uuid">
+                <constraints nullable="false"/>
+            </column>
+            <column name="client_id" type="varchar(512)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="redirect_uri" type="varchar(2048)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="code_challenge" type="varchar(43)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="scope" type="varchar(200)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="resource" type="varchar(512)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="second_factor_verified" type="boolean">
+                <constraints nullable="false"/>
+            </column>
+            <column name="issued_at" type="timestamp with time zone">
+                <constraints nullable="false"/>
+            </column>
+            <column name="expires_at" type="timestamp with time zone">
+                <constraints nullable="false"/>
+            </column>
+            <column name="used_at" type="timestamp with time zone"/>
+        </createTable>
+        <addForeignKeyConstraint baseTableName="oauth_authorization_code" baseColumnNames="donor_id"
+                                 referencedTableName="donor" referencedColumnNames="id"
+                                 constraintName="fk_oauth_authorization_code_donor" onDelete="CASCADE"/>
+        <createIndex tableName="oauth_authorization_code" indexName="ix_oauth_authorization_code_donor">
+            <column name="donor_id"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>

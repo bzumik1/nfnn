@@ -80,7 +80,7 @@ class DonorSessionServiceTest {
     }
 
     @Test
-    void should_revoke_old_and_issue_new_when_refreshed_given_usable_token() {
+    void should_use_up_old_and_issue_new_when_refreshed_given_usable_token() {
         RefreshTokenSecret secret = RefreshTokenSecret.generate();
         RefreshToken existing = RefreshToken.issue(secret, DONOR, NOW.minus(Duration.ofDays(1)), REFRESH_TTL, false);
         when(refreshTokens.findBySecretHash(secret.hash())).thenReturn(Optional.of(existing));
@@ -89,14 +89,29 @@ class DonorSessionServiceTest {
 
         RefreshedSession refreshed = service.refresh(secret.value());
 
-        assertThat(existing.isRevoked()).isTrue();
+        assertThat(existing.isUsed()).isTrue();
+        assertThat(existing.isRevoked()).isFalse();
         assertThat(refreshed.donor().id()).isEqualTo(DONOR);
         assertThat(refreshed.tokens().refreshToken()).isNotEqualTo(secret.value());
         verify(refreshTokens).save(existing);
     }
 
     @Test
-    void should_revoke_every_session_when_refreshed_given_already_revoked_token() {
+    void should_revoke_every_session_when_refreshed_given_already_used_token() {
+        RefreshTokenSecret secret = RefreshTokenSecret.generate();
+        RefreshToken used = RefreshToken.issue(secret, DONOR, NOW.minus(Duration.ofDays(1)), REFRESH_TTL, false);
+        used.markUsed(NOW.minus(Duration.ofHours(1)));
+        when(refreshTokens.findBySecretHash(secret.hash())).thenReturn(Optional.of(used));
+
+        assertThatThrownBy(() -> service.refresh(secret.value()))
+                .isInstanceOf(InvalidRefreshToken.class);
+
+        verify(refreshTokens).revokeAllOf(DONOR, NOW);
+        verify(accessTokens, never()).issue(any(), any(), any());
+    }
+
+    @Test
+    void should_refuse_without_ending_other_sessions_when_refreshed_given_revoked_token() {
         RefreshTokenSecret secret = RefreshTokenSecret.generate();
         RefreshToken revoked = RefreshToken.issue(secret, DONOR, NOW.minus(Duration.ofDays(1)), REFRESH_TTL, false);
         revoked.revoke(NOW.minus(Duration.ofHours(1)));
@@ -105,7 +120,7 @@ class DonorSessionServiceTest {
         assertThatThrownBy(() -> service.refresh(secret.value()))
                 .isInstanceOf(InvalidRefreshToken.class);
 
-        verify(refreshTokens).revokeAllOf(DONOR, NOW);
+        verify(refreshTokens, never()).revokeAllOf(any(), any());
         verify(accessTokens, never()).issue(any(), any(), any());
     }
 
@@ -190,7 +205,7 @@ class DonorSessionServiceTest {
         assertThat(refreshed.tokens().roles()).containsExactlyInAnyOrder(Role.DONOR, Role.ADMIN);
         ArgumentCaptor<RefreshToken> saved = ArgumentCaptor.forClass(RefreshToken.class);
         verify(refreshTokens, times(2)).save(saved.capture());
-        assertThat(saved.getAllValues()).filteredOn(token -> !token.isRevoked()).singleElement()
+        assertThat(saved.getAllValues()).filteredOn(token -> !token.isUsed()).singleElement()
                 .satisfies(token -> assertThat(token.secondFactorVerified()).isTrue());
     }
 

@@ -5,9 +5,10 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import java.time.Duration;
 
 @ConfigurationProperties("app.security.jwt")
-public record JwtProperties(String issuer, String secret, Duration accessTokenTtl) {
+public record JwtProperties(String issuer, String secret, Duration accessTokenTtl, String audience) {
 
     public static final String ROLES_CLAIM = "roles";
+    public static final String SCOPE_CLAIM = "scope";
     private static final String NAME = "JWT_SECRET (app.security.jwt.secret)";
     private static final int MIN_SECRET_LENGTH = 32;
 
@@ -18,5 +19,9 @@ public record JwtProperties(String issuer, String secret, Duration accessTokenTt
         if (secret.length() < MIN_SECRET_LENGTH) {
             throw new IllegalArgumentException(NAME + " must have at least " + MIN_SECRET_LENGTH + " characters");
         }
+        if (audience == null || audience.isBlank()) {
+            throw new IllegalArgumentException("app.security.jwt.audience is required");
+        }
+        audience = audience.trim();
     }
 }

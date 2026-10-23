@@ -5,6 +5,7 @@ import cz.novanadeje.app.shared.domain.UuidV7;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 public final class RefreshToken {
@@ -15,34 +16,76 @@ public final class RefreshToken {
     private final Instant issuedAt;
     private final Instant expiresAt;
     private final boolean secondFactorVerified;
+    private final ClientId clientId;
+    private final Set<OAuthScope> scopes;
+    private final Instant grantedAt;
+    private Instant usedAt;
     private Instant revokedAt;
 
     private RefreshToken(UUID id, DonorId donorId, String secretHash, Instant issuedAt, Instant expiresAt, boolean secondFactorVerified,
-                         Instant revokedAt) {
+                         ClientId clientId, Set<OAuthScope> scopes, Instant grantedAt, Instant usedAt, Instant revokedAt) {
         this.id = id;
         this.donorId = donorId;
         this.secretHash = secretHash;
         this.issuedAt = issuedAt;
         this.expiresAt = expiresAt;
         this.secondFactorVerified = secondFactorVerified;
+        this.clientId = clientId;
+        this.scopes = Set.copyOf(scopes);
+        this.grantedAt = grantedAt;
+        this.usedAt = usedAt;
         this.revokedAt = revokedAt;
     }
 
     public static RefreshToken issue(RefreshTokenSecret secret, DonorId donorId, Instant issuedAt, Duration lifetime, boolean secondFactorVerified) {
-        return new RefreshToken(UuidV7.generate(issuedAt), donorId, secret.hash(), issuedAt, issuedAt.plus(lifetime), secondFactorVerified, null);
+        return new RefreshToken(UuidV7.generate(issuedAt), donorId, secret.hash(), issuedAt, issuedAt.plus(lifetime), secondFactorVerified, null,
+                Set.of(), issuedAt, null, null);
+    }
+
+    public static RefreshToken issueForClient(RefreshTokenSecret secret, DonorId donorId, ClientId clientId, Set<OAuthScope> scopes,
+                                              Instant grantedAt, Instant issuedAt, Duration lifetime) {
+        return new RefreshToken(UuidV7.generate(issuedAt), donorId, secret.hash(), issuedAt, issuedAt.plus(lifetime), true, clientId, scopes,
+                grantedAt, null, null);
     }
 
     public static RefreshToken reconstitute(UUID id, DonorId donorId, String secretHash, Instant issuedAt, Instant expiresAt,
-                                            boolean secondFactorVerified, Instant revokedAt) {
-        return new RefreshToken(id, donorId, secretHash, issuedAt, expiresAt, secondFactorVerified, revokedAt);
+                                            boolean secondFactorVerified, ClientId clientId, Set<OAuthScope> scopes, Instant grantedAt,
+                                            Instant usedAt, Instant revokedAt) {
+        return new RefreshToken(id, donorId, secretHash, issuedAt, expiresAt, secondFactorVerified, clientId, scopes, grantedAt, usedAt, revokedAt);
     }
 
     public boolean secondFactorVerified() {
         return secondFactorVerified;
     }
 
+    public Optional<ClientId> clientId() {
+        return Optional.ofNullable(clientId);
+    }
+
+    public boolean belongsToClient(ClientId presented) {
+        return clientId != null && clientId.equals(presented);
+    }
+
+    public Set<OAuthScope> scopes() {
+        return scopes;
+    }
+
+    public Instant grantedAt() {
+        return grantedAt;
+    }
+
     public boolean isUsableAt(Instant now) {
-        return revokedAt == null && now.isBefore(expiresAt);
+        return usedAt == null && revokedAt == null && now.isBefore(expiresAt);
+    }
+
+    public boolean isUsed() {
+        return usedAt != null;
+    }
+
+    public void markUsed(Instant at) {
+        if (usedAt == null) {
+            usedAt = at;
+        }
     }
 
     public boolean isRevoked() {
@@ -73,6 +116,10 @@ public final class RefreshToken {
 
     public Instant expiresAt() {
         return expiresAt;
+    }
+
+    public Optional<Instant> usedAt() {
+        return Optional.ofNullable(usedAt);
     }
 
     public Optional<Instant> revokedAt() {

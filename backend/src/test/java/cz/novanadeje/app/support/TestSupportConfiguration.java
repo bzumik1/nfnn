@@ -38,6 +38,12 @@ public class TestSupportConfiguration {
     }
 
     @Bean
+    @Primary
+    public FakeClientMetadataSource fakeClientMetadataSource() {
+        return new FakeClientMetadataSource();
+    }
+
+    @Bean
     public DatabaseCleaner databaseCleaner(JdbcClient jdbcClient) {
         return new DatabaseCleaner(jdbcClient);
     }

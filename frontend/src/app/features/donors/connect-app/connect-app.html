@@ -1,0 +1,208 @@
+<section class="connect-app" aria-labelledby="connect-app-title">
+  <div class="card">
+    @switch (panel()) {
+      @case ('incomplete') {
+        <div class="notice">
+          <div class="notice-icon notice-icon--warning" aria-hidden="true">!</div>
+          <h1
+            #heading
+            id="connect-app-title"
+            class="title"
+            tabindex="-1"
+            i18n="@@donor.connect.incomplete.title"
+          >
+            Žádost o připojení je neúplná
+          </h1>
+          <p class="lead" i18n="@@donor.connect.incomplete.text">
+            Tato stránka se otevírá z aplikace, která žádá o přístup ke správě Nové naděje. Začněte
+            prosím připojení v aplikaci znovu.
+          </p>
+        </div>
+      }
+      @case ('checking') {
+        <div class="notice">
+          <div class="notice-icon notice-icon--spinner" aria-hidden="true"></div>
+          <h1
+            id="connect-app-title"
+            class="title"
+            tabindex="-1"
+            i18n="@@donor.connect.checking.title"
+          >
+            Ověřujeme aplikaci
+          </h1>
+          <p class="lead" role="status" i18n="@@donor.connect.checking.text">Chvilku strpení…</p>
+        </div>
+      }
+      @case ('sign-in') {
+        <div class="notice">
+          <div class="notice-icon" aria-hidden="true">→</div>
+          <h1
+            #heading
+            id="connect-app-title"
+            class="title"
+            tabindex="-1"
+            i18n="@@donor.connect.signIn.title"
+          >
+            Aplikace žádá o přístup ke správě
+          </h1>
+          <p class="lead" i18n="@@donor.connect.signIn.text">
+            Nejdřív se prosím přihlaste účtem správce, včetně kódu z ověřovací aplikace. Pak
+            uvidíte, která aplikace o přístup žádá, a rozhodnete, zda ho dostane.
+          </p>
+          <button
+            type="button"
+            class="form-submit"
+            (click)="signIn()"
+            i18n="@@donor.connect.signIn.action"
+          >
+            Přihlásit se
+          </button>
+        </div>
+      }
+      @case ('consent') {
+        @if (client(); as client) {
+          <h1 #heading id="connect-app-title" class="title" tabindex="-1">
+            <span i18n="@@donor.connect.consent.title">Povolit přístup ke správě aplikaci</span
+            >&ngsp;<span class="client-host">{{ client.host }}</span
+            >?
+          </h1>
+          <p class="lead">
+            <span i18n="@@donor.connect.consent.intro"
+              >Aplikace se představuje jako „{{ client.name }}“ a bude jednat vaším jménem ({{
+                donorName()
+              }}); každá její akce se zapíše do historie správy.</span
+            >
+            @if (client.loopback) {
+              &ngsp;<span i18n="@@donor.connect.consent.loopback"
+                >Běží na tomto počítači (například Claude Code).</span
+              >
+            }
+          </p>
+          <h2 class="scopes-title" i18n="@@donor.connect.consent.scopesTitle">Co bude smět</h2>
+          @if (unknownScope()) {
+            <p class="form-error" role="alert" i18n="@@donor.connect.consent.unknownScope">
+              Aplikace žádá o oprávnění, které web nenabízí. Připojení nelze povolit.
+            </p>
+          } @else {
+            <ul class="scopes">
+              @for (scope of scopes(); track scope) {
+                <li>{{ scope }}</li>
+              }
+            </ul>
+          }
+          <p class="lead" i18n="@@donor.connect.consent.after">
+            Po povolení vás pošleme zpět do aplikace. Přístup kdykoli odeberete v přehledu dárce v
+            části „Připojené aplikace“; ukončí ho i změna hesla nebo odebrání role správce.
+          </p>
+          @if (error()) {
+            <p class="form-error" role="alert">{{ error() }}</p>
+          }
+          <div class="actions">
+            <button
+              type="button"
+              class="form-submit"
+              [disabled]="deciding() !== null || unknownScope()"
+              (click)="allow()"
+            >
+              @if (deciding() === 'allow') {
+                <span i18n="@@donor.connect.consent.allowing">Povoluji…</span>
+              } @else {
+                <span i18n="@@donor.connect.consent.allow">Povolit</span>
+              }
+            </button>
+            <button
+              type="button"
+              class="form-secondary"
+              [disabled]="deciding() !== null"
+              (click)="deny()"
+            >
+              @if (deciding() === 'deny') {
+                <span i18n="@@donor.connect.consent.denying">Odmítám…</span>
+              } @else {
+                <span i18n="@@donor.connect.consent.deny">Odmítnout</span>
+              }
+            </button>
+          </div>
+        }
+      }
+      @case ('not-admin') {
+        @if (client(); as client) {
+          <div class="notice">
+            <div class="notice-icon notice-icon--warning" aria-hidden="true">!</div>
+            <h1
+              #heading
+              id="connect-app-title"
+              class="title"
+              tabindex="-1"
+              i18n="@@donor.connect.notAdmin.title"
+            >
+              Připojit aplikaci může jen správce
+            </h1>
+            <p class="lead">
+              <span i18n="@@donor.connect.notAdmin.text"
+                >Aplikace {{ client.host }} žádá o přístup ke správě Nové naděje. Ten má jen účet
+                správce přihlášený s kódem z ověřovací aplikace; jste přihlášeni jako
+                {{ donorName() }}.</span
+              >
+            </p>
+            @if (error()) {
+              <p class="form-error" role="alert">{{ error() }}</p>
+            }
+            <button
+              type="button"
+              class="form-secondary"
+              [disabled]="deciding() !== null"
+              (click)="deny()"
+            >
+              @if (deciding() === 'deny') {
+                <span i18n="@@donor.connect.consent.denying">Odmítám…</span>
+              } @else {
+                <span i18n="@@donor.connect.notAdmin.back">Odmítnout a vrátit se do aplikace</span>
+              }
+            </button>
+          </div>
+        }
+      }
+      @case ('leaving') {
+        <div class="notice">
+          <div class="notice-icon notice-icon--spinner" aria-hidden="true"></div>
+          <h1
+            #heading
+            id="connect-app-title"
+            class="title"
+            tabindex="-1"
+            i18n="@@donor.connect.leaving.title"
+          >
+            Vracíme vás do aplikace
+          </h1>
+          <p class="lead" role="status" i18n="@@donor.connect.leaving.text">
+            Pokud se aplikace neotevře sama, vraťte se do ní a zkuste připojení znovu.
+          </p>
+        </div>
+      }
+      @default {
+        <div class="notice">
+          <div class="notice-icon notice-icon--warning" aria-hidden="true">!</div>
+          <h1
+            #heading
+            id="connect-app-title"
+            class="title"
+            tabindex="-1"
+            i18n="@@donor.connect.failed.title"
+          >
+            Aplikaci se nepodařilo připojit
+          </h1>
+          <p class="lead" role="alert">{{ error() }}</p>
+          <button
+            type="button"
+            class="form-submit"
+            (click)="retry()"
+            i18n="@@donor.connect.failed.retry"
+          >
+            Zkusit znovu
+          </button>
+        </div>
+      }
+    }
+  </div>
+</section>

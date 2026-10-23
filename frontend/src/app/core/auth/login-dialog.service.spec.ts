@@ -38,4 +38,14 @@ describe('Given the sign-in dialog service', () => {
 
     expect(service.isOpen()).toBe(false);
   });
+
+  it('when the dialog is opened to stay on the page, then it says so until it closes', () => {
+    service.open('login', { stayOnPage: true });
+    expect(service.staysOnPage()).toBe(true);
+
+    service.close();
+    service.open();
+
+    expect(service.staysOnPage()).toBe(false);
+  });
 });

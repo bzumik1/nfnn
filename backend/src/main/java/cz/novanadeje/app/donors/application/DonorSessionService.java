@@ -38,20 +38,20 @@ public class DonorSessionService {
         return issue(donor.id(), donor.sessionRoles(secondFactorVerified), secondFactorVerified, clock.instant());
     }
 
-    @Transactional
+    @Transactional(noRollbackFor = InvalidRefreshToken.class)
     public RefreshedSession refresh(String presentedSecret) {
         Instant now = clock.instant();
         RefreshToken token = refreshTokens.findBySecretHash(RefreshTokenSecret.fromValue(presentedSecret).hash())
                 .orElseThrow(InvalidRefreshToken::new);
-        if (token.isRevoked()) {
+        if (token.isUsed()) {
             refreshTokens.revokeAllOf(token.donorId(), now);
             throw new InvalidRefreshToken();
         }
-        if (!token.isUsableAt(now)) {
+        if (!token.isUsableAt(now) || token.clientId().isPresent()) {
             throw new InvalidRefreshToken();
         }
         Donor donor = donors.findById(token.donorId()).orElseThrow(InvalidRefreshToken::new);
-        token.revoke(now);
+        token.markUsed(now);
         refreshTokens.save(token);
         return new RefreshedSession(donor, issue(donor.id(), donor.sessionRoles(token.secondFactorVerified()), token.secondFactorVerified(), now));
     }
