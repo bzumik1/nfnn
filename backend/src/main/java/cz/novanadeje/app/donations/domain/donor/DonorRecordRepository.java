@@ -14,6 +14,8 @@ public interface DonorRecordRepository {
 
     boolean saveSenderAccountLink(DonorReference donor, SenderAccountLink link);
 
+    void deleteSenderAccountLink(DonorReference donor, SenderAccountLinkId link);
+
     Optional<DonorRecord> findById(DonorReference id);
 
     Optional<DonorRecord> findByVariableSymbol(VariableSymbol symbol);

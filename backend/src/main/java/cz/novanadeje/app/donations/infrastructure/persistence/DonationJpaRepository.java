@@ -27,6 +27,8 @@ public interface DonationJpaRepository extends JpaRepository<DonationJpaEntity, 
 
     List<DonationJpaEntity> findBySymbolClaimIdOrderByReceivedOnAscIdAsc(UUID symbolClaimId);
 
+    List<DonationJpaEntity> findBySenderAccountIdOrderByReceivedOnAscIdAsc(UUID senderAccountId);
+
     @Query("select d.symbolClaimId, count(d) from DonationJpaEntity d where d.symbolClaimId in :claimIds group by d.symbolClaimId")
     List<Object[]> countBySymbolClaimIds(@Param("claimIds") Collection<UUID> claimIds);
 }

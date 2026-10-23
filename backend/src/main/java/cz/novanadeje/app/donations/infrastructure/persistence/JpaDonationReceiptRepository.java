@@ -11,6 +11,7 @@ import org.springframework.stereotype.Repository;
 import java.time.Instant;
 import java.time.Year;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -67,6 +68,11 @@ class JpaDonationReceiptRepository implements DonationReceiptRepository {
     public Map<DonationId, ReceiptNumber> findActiveSingleNumbersFor(DonorReference donor) {
         return jpa.findByDonorIdAndKindAndSupersededAtIsNull(donor.value(), ReceiptKind.SINGLE).stream()
                 .collect(Collectors.toUnmodifiableMap(row -> new DonationId(row.getDonationId()), row -> new ReceiptNumber(row.getNumber())));
+    }
+
+    @Override
+    public List<DonationReceipt> findByDonorNewestFirst(DonorReference donor) {
+        return jpa.findByDonorIdOrderByIssuedAtDescIdDesc(donor.value()).stream().map(DonationReceiptJpaEntity::toDomain).toList();
     }
 
     @Override

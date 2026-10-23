@@ -2,11 +2,13 @@ package cz.novanadeje.app.donors.interfaces.rest;
 
 import cz.novanadeje.app.donors.application.AdministratorActivityService;
 import cz.novanadeje.app.donors.application.AdministratorService;
+import cz.novanadeje.app.donors.application.DonorAdministrationService;
 import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.shared.domain.EmailAddress;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Size;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -28,12 +30,26 @@ import java.util.UUID;
 @RequestMapping("/api/admin/donors")
 class AdminDonorsController {
 
+    static final int MAX_QUERY_LENGTH = 254;
+
     private final AdministratorService administrators;
     private final AdministratorActivityService activity;
+    private final DonorAdministrationService donors;
 
-    AdminDonorsController(AdministratorService administrators, AdministratorActivityService activity) {
+    AdminDonorsController(AdministratorService administrators, AdministratorActivityService activity, DonorAdministrationService donors) {
         this.administrators = administrators;
         this.activity = activity;
+        this.donors = donors;
+    }
+
+    @GetMapping
+    DonorAccountListResponse search(@RequestParam(defaultValue = "") @Size(max = MAX_QUERY_LENGTH) String query) {
+        return DonorAccountListResponse.from(donors.search(query));
+    }
+
+    @GetMapping("/{donorId}")
+    DonorAccountResponse donor(@PathVariable UUID donorId) {
+        return DonorAccountResponse.from(donors.view(new DonorId(donorId)));
     }
 
     @GetMapping("/administrators")

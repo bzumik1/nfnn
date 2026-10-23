@@ -4,9 +4,9 @@
   <div class="container">
     <h1 #title class="admin-title" tabindex="-1" i18n="@@admin.home.heading">Správa</h1>
     <p class="admin-intro" i18n="@@admin.home.intro">
-      Tady uvidíte, jak se webu daří, přiřadíte platby, které web nepoznal, opravíte odpovědi dárců
-      na starší symboly, spravujete správce a vidíte, kdo co udělal; časem tu budete spravovat dárce
-      a obsah webu.
+      Tady uvidíte, jak se webu daří, najdete dárce a jeho účty, dary a potvrzení, přiřadíte platby,
+      které web nepoznal, opravíte odpovědi dárců na starší symboly, spravujete správce a vidíte,
+      kdo co udělal; časem tu budete spravovat i obsah webu.
     </p>
 
     <nav class="admin-links" aria-label="Části správy" i18n-aria-label="@@admin.home.links.label">
@@ -14,6 +14,13 @@
         <span class="admin-link-title" i18n="@@admin.home.links.payments">Platby z banky</span>
         <span class="admin-link-text" i18n="@@admin.home.links.payments.text"
           >Nespárované platby přiřadíte dárci ručně, u spárovaných můžete přiřazení zrušit.</span
+        >
+      </a>
+      <a class="admin-link" routerLink="/sprava/darci">
+        <span class="admin-link-title" i18n="@@admin.home.links.donors">Dárci</span>
+        <span class="admin-link-text" i18n="@@admin.home.links.donors.text"
+          >Najdete dárce podle jména, e-mailu nebo variabilního symbolu a uvidíte jeho účet,
+          bankovní účty, dary a potvrzení.</span
         >
       </a>
       <a class="admin-link" routerLink="/sprava/spravci">

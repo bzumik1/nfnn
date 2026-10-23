@@ -32,6 +32,7 @@ import static cz.novanadeje.app.donations.BankPayments.payment;
 import static cz.novanadeje.app.donations.infrastructure.persistence.BankPersistenceTestConfiguration.NOW;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
@@ -223,6 +224,26 @@ class JpaDonorRecordRepositoryTest {
         assertThat(donorRecords.searchByNameOrSymbol("100%", 20)).extracting(DonorRecord::name).containsExactly("Karel 100% Veselý");
         assertThat(donorRecords.searchByNameOrSymbol("%", 20)).extracting(DonorRecord::name).containsExactly("Karel 100% Veselý");
         assertThat(donorRecords.searchByNameOrSymbol("xyz", 20)).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Given a stored link, when it is deleted for its donor, then its row is gone, the record no longer lists it, and another donor's link cannot be deleted through it")
+    void should_delete_row_when_link_deleted_given_stored_link() {
+        DonorRecord jana = person("Jana Nováková", "4821937560");
+        DonorRecord petr = person("Petr Novák", "7310945528");
+        donorRecords.save(jana);
+        donorRecords.save(petr);
+        SenderAccountLink janas = learn(jana, storedPayment(1001, jana.variableSymbol().value()));
+        donorRecords.saveSenderAccountLink(jana.id(), janas);
+        flushAndClear();
+
+        assertThatThrownBy(() -> donorRecords.deleteSenderAccountLink(petr.id(), janas.id())).isInstanceOf(IllegalArgumentException.class);
+        donorRecords.deleteSenderAccountLink(jana.id(), janas.id());
+        flushAndClear();
+
+        assertThat(accountRows()).isZero();
+        assertThat(donorRecords.findById(jana.id()).orElseThrow().senderAccountLinks()).isEmpty();
+        assertThat(donorRecords.findBySenderAccount(ACCOUNT)).isEmpty();
     }
 
     private static DonorRecord registeredAt(String symbol, Instant at) {

@@ -5,6 +5,7 @@ import cz.novanadeje.app.donations.domain.donation.Donation;
 import cz.novanadeje.app.donations.domain.donation.DonationId;
 import cz.novanadeje.app.donations.domain.donation.DonationRepository;
 import cz.novanadeje.app.donations.domain.donor.DonorReference;
+import cz.novanadeje.app.donations.domain.donor.SenderAccountLinkId;
 import cz.novanadeje.app.donations.domain.donor.SymbolClaimId;
 import org.springframework.stereotype.Repository;
 
@@ -70,6 +71,11 @@ class JpaDonationRepository implements DonationRepository {
     @Override
     public List<Donation> findBySymbolClaim(SymbolClaimId claim) {
         return jpa.findBySymbolClaimIdOrderByReceivedOnAscIdAsc(claim.value()).stream().map(DonationJpaEntity::toDomain).toList();
+    }
+
+    @Override
+    public List<Donation> findBySenderAccountLink(SenderAccountLinkId link) {
+        return jpa.findBySenderAccountIdOrderByReceivedOnAscIdAsc(link.value()).stream().map(DonationJpaEntity::toDomain).toList();
     }
 
     @Override

@@ -14,6 +14,17 @@ export const adminRoutes: Routes = [
     loadComponent: () => import('./payments/admin-payments').then((m) => m.AdminPayments),
   },
   {
+    path: 'darci',
+    title: $localize`:@@admin.donors.pageTitle:Dárci | Správa | Nová naděje – nadační fond`,
+    loadComponent: () => import('./donors/admin-donors').then((m) => m.AdminDonors),
+  },
+  {
+    path: 'darci/:id',
+    title: $localize`:@@admin.donorDetail.pageTitle:Dárce | Správa | Nová naděje – nadační fond`,
+    loadComponent: () =>
+      import('./donor-detail/admin-donor-detail').then((m) => m.AdminDonorDetail),
+  },
+  {
     path: 'spravci',
     title: $localize`:@@admin.administrators.pageTitle:Správci | Správa | Nová naděje – nadační fond`,
     loadComponent: () =>
