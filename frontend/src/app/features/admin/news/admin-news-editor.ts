@@ -36,13 +36,9 @@ import {
   slugFromText,
 } from '../../content/news-api';
 import { formatBankTime, formatDonationDate } from '../../donations/donation-date';
+import { LiveNotice, Notice } from '../../../shared/ui/live-notice/live-notice';
 
 type LoadState = 'loading' | 'ready' | 'error';
-
-interface Notice {
-  kind: 'status' | 'alert';
-  text: string;
-}
 
 const UNAUTHENTICATED = 'auth/unauthenticated';
 const FORBIDDEN = 'auth/forbidden';
@@ -52,7 +48,14 @@ const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
 @Component({
   selector: 'app-admin-news-editor',
-  imports: [RouterLink, FormsModule, FormField, FormControlDirective, FocusFirstInvalid],
+  imports: [
+    LiveNotice,
+    RouterLink,
+    FormsModule,
+    FormField,
+    FormControlDirective,
+    FocusFirstInvalid,
+  ],
   templateUrl: './admin-news-editor.html',
   styleUrl: './admin-news-editor.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

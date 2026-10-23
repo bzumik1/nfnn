@@ -33,14 +33,10 @@ import {
   LogWindowResponse,
 } from '../admin-api';
 import { formatSize } from '../backups/backup-format';
+import { LiveNotice, Notice } from '../../../shared/ui/live-notice/live-notice';
 
 type LoadState = 'loading' | 'ready' | 'error';
 type RequestState = 'idle' | 'loading' | 'error';
-
-interface Notice {
-  kind: 'status' | 'alert';
-  text: string;
-}
 
 const UNAUTHENTICATED = 'auth/unauthenticated';
 const FORBIDDEN = 'auth/forbidden';
@@ -53,7 +49,7 @@ const LOGGER_NAME = /^(ROOT|[A-Za-z0-9_$][A-Za-z0-9_$.]*)$/;
 
 @Component({
   selector: 'app-admin-logs',
-  imports: [FormsModule, FormField, FormControlDirective, FocusFirstInvalid],
+  imports: [LiveNotice, FormsModule, FormField, FormControlDirective, FocusFirstInvalid],
   templateUrl: './admin-logs.html',
   styleUrl: './admin-logs.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

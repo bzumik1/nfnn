@@ -29,6 +29,7 @@ describe('Given the site header on a phone', () => {
   });
 
   afterEach(() => {
+    TestBed.inject(HttpTestingController).verify();
     fixture.nativeElement.remove();
     phoneLayout.remove();
   });
@@ -151,7 +152,10 @@ describe('Given the site header on a computer', () => {
     fixture.detectChanges();
   });
 
-  afterEach(() => fixture.nativeElement.remove());
+  afterEach(() => {
+    TestBed.inject(HttpTestingController).verify();
+    fixture.nativeElement.remove();
+  });
 
   it('when the visitor signs in, then the page stays, the header offers the overview and no control is left highlighted', async () => {
     loginButton().focus();

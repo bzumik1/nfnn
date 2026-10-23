@@ -1,0 +1,14 @@
+<div role="status">
+  @if (notice(); as notice) {
+    @if (notice.kind === 'status') {
+      <p class="ui-notice ui-notice--status">{{ notice.text }}</p>
+    }
+  }
+</div>
+<div role="alert">
+  @if (notice(); as notice) {
+    @if (notice.kind === 'alert') {
+      <p class="ui-notice ui-notice--alert">{{ notice.text }}</p>
+    }
+  }
+</div>

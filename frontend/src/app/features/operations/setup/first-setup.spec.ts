@@ -116,7 +116,7 @@ describe('Given the first setup page', () => {
   }
 
   it('when the page opens, then it says it is finding out whether the site is set up', () => {
-    expect(text('[role="status"]')).toBe('Zjišťujeme, jestli je web nastavený…');
+    expect(text('[role="status"]:not(:empty)')).toBe('Zjišťujeme, jestli je web nastavený…');
     http.expectOne(STATUS_URL).flush({ required: true, codeRequired: false });
   });
 
@@ -133,7 +133,7 @@ describe('Given the first setup page', () => {
     http.expectOne(STATUS_URL).flush('', { status: 502, statusText: 'Bad Gateway' });
     await settle();
 
-    expect(text('[role="alert"]')).toContain('Počkejte prosím minutu');
+    expect(text('[role="alert"]:not(:empty)')).toContain('Počkejte prosím minutu');
 
     button('Zkusit znovu').click();
     await status(true, false);
@@ -167,7 +167,7 @@ describe('Given the first setup page', () => {
       request.flush(refused.body, refused.options);
       await settle();
 
-      expect(text('[role="alert"]')).toBe(
+      expect(text('[role="alert"]:not(:empty)')).toBe(
         'Kód nesedí. Opište prosím ten z posledního startu webu, kód se při každém startu mění.',
       );
     });
@@ -306,7 +306,7 @@ describe('Given the first setup page', () => {
         expect(request.request.headers.has('X-Nfnn-Setup-Code')).toBe(false);
         request.event({ type: HttpEventType.UploadProgress, loaded: 42, total: 100 });
         await settle();
-        expect(text('[role="status"]')).toBe('Nahráváme zálohu… 42 %');
+        expect(text('[role="status"]:not(:empty)')).toBe('Nahráváme zálohu… 42 %');
         expect(button('Nahrát a obnovit').disabled).toBe(true);
         request.flush({
           requestId: REQUEST_ID,
@@ -332,7 +332,9 @@ describe('Given the first setup page', () => {
         http.expectOne(RESTORE_URL).flush(refused.body, refused.options);
         await settle();
 
-        expect(text('[role="alert"]')).toContain('Vyberte prosím soubor zálohy s příponou .dump.');
+        expect(text('[role="alert"]:not(:empty)')).toContain(
+          'Vyberte prosím soubor zálohy s příponou .dump.',
+        );
         expect(button('Nahrát a obnovit').disabled).toBe(false);
       });
 
@@ -352,7 +354,7 @@ describe('Given the first setup page', () => {
         fixture.detectChanges();
 
         expect(text('h1')).toBe('Web je obnovený ze zálohy');
-        expect(text('[role="status"]')).toContain(
+        expect(text('[role="status"]:not(:empty)')).toContain(
           'znovu zadejte heslo pro odesílání e-mailů a token Fio',
         );
         button('Přihlásit se').click();
@@ -398,7 +400,7 @@ describe('Given the first setup page', () => {
         fixture.detectChanges();
 
         expect(text('h1')).toBe('Obnovit web ze zálohy');
-        expect(text('[role="alert"]')).toBe(
+        expect(text('[role="alert"]:not(:empty)')).toBe(
           'Obnova se nepovedla: pg_restore: error: unsupported version. Web zůstal prázdný; zkuste prosím jiný soubor zálohy.',
         );
       });
@@ -412,7 +414,9 @@ describe('Given the first setup page', () => {
         fixture.detectChanges();
 
         expect(text('h1')).toBe('Obnovit web ze zálohy');
-        expect(text('[role="alert"]')).toContain('Kontejner záloh si obnovu do pěti minut nevzal.');
+        expect(text('[role="alert"]:not(:empty)')).toContain(
+          'Kontejner záloh si obnovu do pěti minut nevzal.',
+        );
       });
     });
 

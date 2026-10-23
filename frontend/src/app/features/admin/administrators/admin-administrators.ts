@@ -19,13 +19,9 @@ import { FocusFirstInvalid } from '../../../shared/ui/form-field/focus-first-inv
 import { FormControlDirective } from '../../../shared/ui/form-field/form-control';
 import { FormField } from '../../../shared/ui/form-field/form-field';
 import { AdminApi, AdministratorResponse } from '../admin-api';
+import { LiveNotice, Notice } from '../../../shared/ui/live-notice/live-notice';
 
 type LoadState = 'loading' | 'ready' | 'error';
-
-interface Notice {
-  kind: 'status' | 'alert';
-  text: string;
-}
 
 type PendingAction = { kind: 'revoke' | 'reset'; donorId: string } | null;
 
@@ -34,7 +30,7 @@ const FORBIDDEN = 'auth/forbidden';
 
 @Component({
   selector: 'app-admin-administrators',
-  imports: [FormsModule, FormField, FormControlDirective, FocusFirstInvalid],
+  imports: [LiveNotice, FormsModule, FormField, FormControlDirective, FocusFirstInvalid],
   templateUrl: './admin-administrators.html',
   styleUrl: './admin-administrators.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

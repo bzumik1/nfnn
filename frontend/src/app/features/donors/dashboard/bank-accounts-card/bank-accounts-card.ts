@@ -36,6 +36,7 @@ import {
 } from 'rxjs';
 import { describeProblem, problemOf, problemTypeEndsWith } from '../../../../core/auth/api-problem';
 import { AuthStore } from '../../../../core/auth/auth-store';
+import { pluralCategory } from '../../../../core/i18n/plural-category';
 import { CopyButton } from '../../../../shared/ui/copy-button/copy-button';
 import { Dialog } from '../../../../shared/ui/dialog/dialog';
 import {
@@ -63,8 +64,6 @@ type QrState =
 type PaymentWatch = 'waiting' | 'stopped';
 
 type AccountLabel = 'active' | 'shared' | 'awaiting' | 'excluded' | 'disconnected';
-
-type PluralForm = 'one' | 'few' | 'many';
 
 interface AccountsWhenOpened {
   readonly active: ReadonlySet<string>;
@@ -517,12 +516,12 @@ function pairedMessage(count: number, symbol: string, account: string): string {
   if (count === 0) {
     return $localize`:@@donor.bankAccounts.claim.paired.none:Odpověď jsme uložili. Platby s VS ${symbol}:symbol: z účtu ${account}:account: vám přiřazujeme stejně jako platby bez VS.`;
   }
-  switch (pluralForm(count)) {
+  switch (pluralCategory(count)) {
     case 'one':
       return $localize`:@@donor.bankAccounts.claim.paired.one:Přiřadili jsme vám 1 platbu s VS ${symbol}:symbol: z účtu ${account}:account:.`;
     case 'few':
       return $localize`:@@donor.bankAccounts.claim.paired.few:Přiřadili jsme vám ${count}:count: platby s VS ${symbol}:symbol: z účtu ${account}:account:.`;
-    case 'many':
+    case 'other':
       return $localize`:@@donor.bankAccounts.claim.paired.many:Přiřadili jsme vám ${count}:count: plateb s VS ${symbol}:symbol: z účtu ${account}:account:.`;
   }
 }
@@ -539,13 +538,6 @@ function receiptsChangedMessage(years: readonly number[]): string {
 
 function declinedMessage(symbol: string, account: string): string {
   return $localize`:@@donor.bankAccounts.claim.declined:Odpověď jsme uložili. Platby s VS ${symbol}:symbol: z účtu ${account}:account: vám nepřiřadíme.`;
-}
-
-function pluralForm(count: number): PluralForm {
-  if (count === 1) {
-    return 'one';
-  }
-  return count >= 2 && count <= 4 ? 'few' : 'many';
 }
 
 function joinedList(values: readonly string[]): string {

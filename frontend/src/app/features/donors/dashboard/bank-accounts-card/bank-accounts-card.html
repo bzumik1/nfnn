@@ -88,10 +88,8 @@
                       @if (account.donationCount > 0) {
                         <li i18n="@@donor.bankAccounts.donationCount">
                           {account.donationCount, plural,
-                            =1 {{{ account.donationCount }} dar bez VS}
-                            =2 {{{ account.donationCount }} dary bez VS}
-                            =3 {{{ account.donationCount }} dary bez VS}
-                            =4 {{{ account.donationCount }} dary bez VS}
+                            one {{{ account.donationCount }} dar bez VS}
+                            few {{{ account.donationCount }} dary bez VS}
                             other {{{ account.donationCount }} darů bez VS}
                           }
                         </li>

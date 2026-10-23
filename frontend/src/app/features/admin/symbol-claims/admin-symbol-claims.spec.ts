@@ -101,7 +101,7 @@ describe('Given an administrator on the older symbols page', () => {
   }
 
   it('when the list arrives, then every answer shows the donor, account, symbol, answer with its time, the donations and the fitting action', async () => {
-    expect(text('[role="status"]')).toBe('Načítáme odpovědi…');
+    expect(text('[role="status"]:not(:empty)')).toBe('Načítáme odpovědi…');
 
     await listed();
 
@@ -141,7 +141,7 @@ describe('Given an administrator on the older symbols page', () => {
     http.expectOne(LIST_URL).flush(null, { status: 500, statusText: 'Error' });
     fixture.detectChanges();
 
-    expect(text('[role="alert"]')).toContain('Odpovědi se nepodařilo načíst.');
+    expect(text('[role="alert"]:not(:empty)')).toContain('Odpovědi se nepodařilo načíst.');
     element<HTMLButtonElement>('.ui-load-state--error button').click();
     fixture.detectChanges();
 

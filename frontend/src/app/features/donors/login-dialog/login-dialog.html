@@ -157,11 +157,13 @@
             </button>
           </p>
         }
-        @if (verificationResent()) {
-          <p class="form-status" role="status" i18n="@@donor.login.verificationResent">
-            Ověřovací e-mail jsme poslali znovu. Otevřete odkaz v něm a pak se přihlaste.
-          </p>
-        }
+        <div role="status">
+          @if (verificationResent()) {
+            <p class="form-status" i18n="@@donor.login.verificationResent">
+              Ověřovací e-mail jsme poslali znovu. Otevřete odkaz v něm a pak se přihlaste.
+            </p>
+          }
+        </div>
 
         <button
           type="submit"

@@ -96,7 +96,7 @@ describe('Given an administrator on the administrators page', () => {
   }
 
   it('when the list arrives, then every administrator shows name, e-mail and whether two-factor authentication is on, and the signed-in one has no buttons', async () => {
-    expect(text('[role="status"]')).toBe('Načítáme správce…');
+    expect(text('[role="status"]:not(:empty)')).toBe('Načítáme správce…');
 
     await listed();
 
@@ -117,7 +117,7 @@ describe('Given an administrator on the administrators page', () => {
     http.expectOne(LIST_URL).flush(null, { status: 500, statusText: 'Error' });
     fixture.detectChanges();
 
-    expect(text('[role="alert"]')).toContain('Správce se nepodařilo načíst.');
+    expect(text('[role="alert"]:not(:empty)')).toContain('Správce se nepodařilo načíst.');
     element<HTMLButtonElement>('.ui-load-state--error button').click();
     fixture.detectChanges();
 

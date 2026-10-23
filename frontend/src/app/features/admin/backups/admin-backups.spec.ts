@@ -95,7 +95,7 @@ describe('Given an administrator on the backups page', () => {
 
     expect(request.request.headers.get('Authorization')).toBe('Bearer token-1');
     expect(text('h1')).toBe('Zálohy');
-    expect(text('[role="status"]')).toBe('Načítáme stav záloh…');
+    expect(text('[role="status"]:not(:empty)')).toBe('Načítáme stav záloh…');
     request.flush(backupsView());
   });
 

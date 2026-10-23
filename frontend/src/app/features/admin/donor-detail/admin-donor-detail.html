@@ -16,13 +16,7 @@
     </p>
   }
 
-  @if (notice(); as notice) {
-    @if (notice.kind === 'status') {
-      <p class="ui-notice ui-notice--status" role="status">{{ notice.text }}</p>
-    } @else {
-      <p class="ui-notice ui-notice--alert" role="alert">{{ notice.text }}</p>
-    }
-  }
+  <app-live-notice [notice]="notice()" />
 
   <section class="ui-card" aria-labelledby="account-title">
     <h2 id="account-title" class="ui-card__title" i18n="@@admin.donorDetail.account.title">

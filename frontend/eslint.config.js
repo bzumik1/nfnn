@@ -37,6 +37,7 @@ module.exports = defineConfig([
       '@angular-eslint/prefer-signals': 'error',
       '@angular-eslint/prefer-output-readonly': 'error',
       '@angular-eslint/prefer-on-push-component-change-detection': 'error',
+      '@angular-eslint/prefer-host-metadata-property': 'error',
     },
   },
   {
@@ -51,6 +52,24 @@ module.exports = defineConfig([
     files: ['**/*.spec.ts'],
     rules: {
       '@angular-eslint/prefer-on-push-component-change-detection': 'off',
+    },
+  },
+  {
+    files: ['e2e/**/*.spec.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            {
+              name: '@playwright/test',
+              importNames: ['test', 'expect'],
+              message:
+                "Import test and expect from './fixtures', which answers every unmocked /api request.",
+            },
+          ],
+        },
+      ],
     },
   },
   {

@@ -7,13 +7,7 @@
     leží na stejném disku jako databáze; kopii mimo server web zatím nedělá.
   </p>
 
-  @if (notice(); as notice) {
-    @if (notice.kind === 'status') {
-      <p class="ui-notice ui-notice--status" role="status">{{ notice.text }}</p>
-    } @else {
-      <p class="ui-notice ui-notice--alert" role="alert">{{ notice.text }}</p>
-    }
-  }
+  <app-live-notice [notice]="notice()" />
 
   @if (restoring(); as restore) {
     <section class="ui-card" aria-labelledby="restoring-title">
@@ -110,17 +104,17 @@
                 </dd>
               </div>
             </dl>
-            @if (pendingRequests() > 0) {
-              <p class="pending" role="status" i18n="@@admin.backups.pending">
-                {pendingRequests(), plural,
-                  =1 {Na vyřízení čeká 1 požadavek.}
-                  =2 {Na vyřízení čekají {{ pendingRequests() }} požadavky.}
-                  =3 {Na vyřízení čekají {{ pendingRequests() }} požadavky.}
-                  =4 {Na vyřízení čekají {{ pendingRequests() }} požadavky.}
-                  other {Na vyřízení čeká {{ pendingRequests() }} požadavků.}
-                }
-              </p>
-            }
+            <div role="status">
+              @if (pendingRequests() > 0) {
+                <p class="pending" i18n="@@admin.backups.pending">
+                  {pendingRequests(), plural,
+                    one {Na vyřízení čeká 1 požadavek.}
+                    few {Na vyřízení čekají {{ pendingRequests() }} požadavky.}
+                    other {Na vyřízení čeká {{ pendingRequests() }} požadavků.}
+                  }
+                </p>
+              }
+            </div>
             <div class="actions">
               <button
                 type="button"

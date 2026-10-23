@@ -23,13 +23,9 @@ import { formatBankTime, formatDonationDate } from '../../donations/donation-dat
 import { AdminApi, AdminReportResponse, SentReportResponse } from '../admin-api';
 import { EmailListValidator, MAX_REPORT_RECIPIENTS, parseEmailList } from './email-list';
 import { formatReportMonth, previousMonths } from './report-month';
+import { LiveNotice, Notice } from '../../../shared/ui/live-notice/live-notice';
 
 type LoadState = 'loading' | 'ready' | 'error';
-
-interface Notice {
-  kind: 'status' | 'alert';
-  text: string;
-}
 
 interface MonthOption {
   value: string;
@@ -43,7 +39,14 @@ const SEND_DAYS = Array.from({ length: 28 }, (_, index) => index + 1);
 
 @Component({
   selector: 'app-admin-report',
-  imports: [FormsModule, FormField, FormControlDirective, FocusFirstInvalid, EmailListValidator],
+  imports: [
+    LiveNotice,
+    FormsModule,
+    FormField,
+    FormControlDirective,
+    FocusFirstInvalid,
+    EmailListValidator,
+  ],
   templateUrl: './admin-report.html',
   styleUrl: './admin-report.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

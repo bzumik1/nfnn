@@ -125,7 +125,7 @@ describe('Given an administrator on a donor card', () => {
   }
 
   it('when both parts arrive, then the name heads the page and the account card shows every fact', async () => {
-    expect(texts('[role="status"]')).toEqual([
+    expect(texts('[role="status"]:not(:empty)')).toEqual([
       'Načítáme účet…',
       'Načítáme účty, dary a potvrzení…',
     ]);

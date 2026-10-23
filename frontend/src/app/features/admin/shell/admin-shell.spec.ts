@@ -1,5 +1,5 @@
 import { provideHttpClient } from '@angular/common/http';
-import { provideHttpClientTesting } from '@angular/common/http/testing';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { Component } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
@@ -31,6 +31,8 @@ describe('Given an administrator anywhere in the administration', () => {
     await router.navigateByUrl('/sprava');
     await settle();
   });
+
+  afterEach(() => TestBed.inject(HttpTestingController).verify());
 
   async function settle(): Promise<void> {
     await fixture.whenStable();

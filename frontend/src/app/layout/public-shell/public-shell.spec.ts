@@ -1,7 +1,7 @@
 import { provideHttpClient } from '@angular/common/http';
-import { provideHttpClientTesting } from '@angular/common/http/testing';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { Component } from '@angular/core';
-import { TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router, withInMemoryScrolling } from '@angular/router';
 import { PublicShell } from './public-shell';
 
@@ -13,9 +13,19 @@ describe('Given the public shell', () => {
     }).compileComponents();
   });
 
-  it('when it renders, then the skip link is the first thing a keyboard reaches', () => {
+  afterEach(() => TestBed.inject(HttpTestingController).verify());
+
+  function render(): ComponentFixture<PublicShell> {
     const fixture = TestBed.createComponent(PublicShell);
     fixture.detectChanges();
+    TestBed.inject(HttpTestingController)
+      .expectOne('/api/operations/setup')
+      .flush({ required: false, codeRequired: true });
+    return fixture;
+  }
+
+  it('when it renders, then the skip link is the first thing a keyboard reaches', () => {
+    const fixture = render();
 
     const first = (fixture.nativeElement as HTMLElement).querySelector('a, button');
 
@@ -24,8 +34,7 @@ describe('Given the public shell', () => {
   });
 
   it('when the skip link is activated, then the main content takes the focus and the URL stays', () => {
-    const fixture = TestBed.createComponent(PublicShell);
-    fixture.detectChanges();
+    const fixture = render();
     document.body.appendChild(fixture.nativeElement);
     const host = fixture.nativeElement as HTMLElement;
     const link = host.querySelector<HTMLAnchorElement>('.skip-link')!;
@@ -77,7 +86,14 @@ describe('Given the public shell while the visitor moves around the site', () =>
     await go('/');
   });
 
-  afterEach(() => host.remove());
+  afterEach(() => {
+    const http = TestBed.inject(HttpTestingController);
+    http
+      .match('/api/operations/setup')
+      .forEach((request) => request.flush({ required: false, codeRequired: true }));
+    http.verify();
+    host.remove();
+  });
 
   async function go(url: string): Promise<void> {
     await router.navigateByUrl(url);
