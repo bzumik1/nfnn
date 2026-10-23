@@ -106,12 +106,11 @@ class DonorConfirmationsTest {
         when(challenges.findByChallengeHash(challenge.hash())).thenReturn(Optional.of(issued));
         when(passkeys.findByCredentialId(CREDENTIAL_ID)).thenReturn(Optional.of(passkey));
         when(ceremonies.verifySignIn(assertion, challenge, passkey)).thenReturn(7L);
+        when(challenges.markUsed(issued.id(), NOW)).thenReturn(true);
 
         confirmations.confirm(donor(null), Confirmation.withPasskey(new PasskeyProof(challenge.value(), assertion)));
 
-        ArgumentCaptor<PasskeyChallenge> spent = ArgumentCaptor.forClass(PasskeyChallenge.class);
-        verify(challenges).save(spent.capture());
-        assertThat(spent.getValue().usedAt()).contains(NOW);
+        verify(challenges).markUsed(issued.id(), NOW);
         verify(passkeys).save(passkey);
         assertThat(passkey.signCount()).isEqualTo(7L);
         assertThat(passkey.lastUsedAt()).contains(NOW);
@@ -121,15 +120,31 @@ class DonorConfirmationsTest {
     @DisplayName("Given another donor's passkey, when it confirms a change, then the confirmation is rejected and the challenge is spent anyway")
     void should_reject_and_spend_challenge_when_change_confirmed_given_another_donors_passkey() {
         LinkSecret challenge = LinkSecret.generate();
-        when(challenges.findByChallengeHash(challenge.hash()))
-                .thenReturn(Optional.of(PasskeyChallenge.forSignIn(challenge, NOW.minusSeconds(30), Duration.ofMinutes(5))));
+        PasskeyChallenge issued = PasskeyChallenge.forSignIn(challenge, NOW.minusSeconds(30), Duration.ofMinutes(5));
+        when(challenges.findByChallengeHash(challenge.hash())).thenReturn(Optional.of(issued));
+        when(challenges.markUsed(issued.id(), NOW)).thenReturn(true);
         when(passkeys.findByCredentialId(CREDENTIAL_ID)).thenReturn(Optional.of(passkeyOf(OTHER_DONOR)));
 
         assertThatThrownBy(() -> confirmations.confirm(donor(null), Confirmation.withPasskey(new PasskeyProof(challenge.value(), assertionBy(OTHER_DONOR)))))
                 .isInstanceOf(PasskeyConfirmationRejected.class);
 
-        verify(challenges).save(any());
+        verify(challenges).markUsed(issued.id(), NOW);
         verifyNoInteractions(ceremonies);
+    }
+
+    @Test
+    @DisplayName("Given a challenge another request spends at the same moment, when the donor's own passkey confirms a change, then it is rejected before the signature is checked")
+    void should_reject_when_change_confirmed_given_challenge_spent_concurrently() {
+        LinkSecret challenge = LinkSecret.generate();
+        PasskeyChallenge issued = PasskeyChallenge.forSignIn(challenge, NOW.minusSeconds(30), Duration.ofMinutes(5));
+        when(challenges.findByChallengeHash(challenge.hash())).thenReturn(Optional.of(issued));
+        when(challenges.markUsed(issued.id(), NOW)).thenReturn(false);
+
+        assertThatThrownBy(() -> confirmations.confirm(donor(null), Confirmation.withPasskey(new PasskeyProof(challenge.value(), assertionBy(DONOR)))))
+                .isInstanceOf(PasskeyConfirmationRejected.class);
+
+        verifyNoInteractions(ceremonies);
+        verify(passkeys, never()).save(any());
     }
 
     @Test
@@ -142,8 +157,9 @@ class DonorConfirmationsTest {
         LinkSecret live = LinkSecret.generate();
         Passkey passkey = passkeyOf(DONOR);
         PasskeyAssertion assertion = assertionBy(DONOR);
-        when(challenges.findByChallengeHash(live.hash()))
-                .thenReturn(Optional.of(PasskeyChallenge.forSignIn(live, NOW.minusSeconds(30), Duration.ofMinutes(5))));
+        PasskeyChallenge liveChallenge = PasskeyChallenge.forSignIn(live, NOW.minusSeconds(30), Duration.ofMinutes(5));
+        when(challenges.findByChallengeHash(live.hash())).thenReturn(Optional.of(liveChallenge));
+        when(challenges.markUsed(liveChallenge.id(), NOW)).thenReturn(true);
         when(passkeys.findByCredentialId(CREDENTIAL_ID)).thenReturn(Optional.of(passkey));
         when(ceremonies.verifySignIn(assertion, live, passkey)).thenThrow(new InvalidPasskey());
 

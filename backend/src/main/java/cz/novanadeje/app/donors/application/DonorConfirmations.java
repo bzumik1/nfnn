@@ -70,8 +70,9 @@ public class DonorConfirmations {
         PasskeyChallenge issued = challenges.findByChallengeHash(secret.hash())
                 .filter(candidate -> candidate.isUsableForSignInAt(now))
                 .orElseThrow(PasskeyConfirmationRejected::new);
-        issued.markUsed(now);
-        challenges.save(issued);
+        if (!challenges.markUsed(issued.id(), now)) {
+            throw new PasskeyConfirmationRejected();
+        }
         PasskeyAssertion assertion = proof.assertion();
         Passkey passkey = passkeys.findByCredentialId(assertion.credentialId())
                 .filter(found -> found.belongsTo(donor.id()))

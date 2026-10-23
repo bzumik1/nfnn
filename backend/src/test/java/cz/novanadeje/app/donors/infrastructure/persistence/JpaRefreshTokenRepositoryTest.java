@@ -116,6 +116,20 @@ class JpaRefreshTokenRepositoryTest {
         assertThat(refreshTokens.findBySecretHash(liveSecret.hash()).orElseThrow().revokedAt()).contains(NOW.plusSeconds(120));
     }
 
+    @Test
+    @DisplayName("Given a live token, when it is marked used twice, then only the first use counts and its time stays")
+    void should_count_only_first_use_when_marked_used_twice_given_live_token() {
+        RefreshTokenSecret secret = RefreshTokenSecret.generate();
+        RefreshToken token = RefreshToken.issue(secret, jana, NOW, TTL, false);
+        refreshTokens.save(token);
+        flushAndClear();
+
+        assertThat(refreshTokens.markUsed(token.id(), NOW.plusSeconds(60))).isTrue();
+        assertThat(refreshTokens.markUsed(token.id(), NOW.plusSeconds(61))).isFalse();
+
+        assertThat(refreshTokens.findBySecretHash(secret.hash()).orElseThrow().usedAt()).contains(NOW.plusSeconds(60));
+    }
+
     private DonorId donor(String email, String variableSymbol) {
         Donor donor = Donor.register(DonorId.newId(NOW), DonorType.PERSON, "Jana Nováková", null,
                 new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"), new EmailAddress(email), new PasswordHash("$hash"),

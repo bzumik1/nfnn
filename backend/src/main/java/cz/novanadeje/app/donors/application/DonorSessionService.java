@@ -51,8 +51,10 @@ public class DonorSessionService {
             throw new InvalidRefreshToken();
         }
         Donor donor = donors.findById(token.donorId()).orElseThrow(InvalidRefreshToken::new);
-        token.markUsed(now);
-        refreshTokens.save(token);
+        if (!refreshTokens.markUsed(token.id(), now)) {
+            refreshTokens.revokeAllOf(token.donorId(), now);
+            throw new InvalidRefreshToken();
+        }
         return new RefreshedSession(donor, issue(donor.id(), donor.sessionRoles(token.secondFactorVerified()), token.secondFactorVerified(), now));
     }
 

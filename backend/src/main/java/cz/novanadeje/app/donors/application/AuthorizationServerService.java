@@ -118,8 +118,9 @@ public class AuthorizationServerService {
         if (!code.isUsableAt(now)) {
             throw new InvalidGrant("the code expired or was used");
         }
-        code.markUsed(now);
-        codes.save(code);
+        if (!codes.markUsed(code.id(), now)) {
+            throw new InvalidGrant("the code expired or was used");
+        }
         if (!code.belongsTo(clientId, redirect)) {
             throw new InvalidGrant("the code belongs to another client or redirect address");
         }
@@ -161,8 +162,11 @@ public class AuthorizationServerService {
             log.info("Donor {} is no administrator any more; the connection of client {} ends", donor.id(), clientId.host());
             throw new InvalidGrant("the donor is no administrator any more");
         }
-        token.markUsed(now);
-        refreshTokens.save(token);
+        if (!refreshTokens.markUsed(token.id(), now)) {
+            refreshTokens.revokeAllOf(token.donorId(), now);
+            log.warn("A refresh token of donor {} was presented twice at once by a client; every session of the donor is ended", token.donorId());
+            throw new InvalidGrant("the refresh token was used before");
+        }
         return issue(donor, clientId, token.scopes(), properties.mcpResource(), token.secondFactorVerified(), token.grantedAt(), now);
     }
 

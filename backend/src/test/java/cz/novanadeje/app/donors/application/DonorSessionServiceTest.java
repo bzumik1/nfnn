@@ -86,14 +86,30 @@ class DonorSessionServiceTest {
         when(refreshTokens.findBySecretHash(secret.hash())).thenReturn(Optional.of(existing));
         when(donors.findById(DONOR)).thenReturn(Optional.of(donor()));
         when(accessTokens.issue(eq(DONOR), eq(Set.of(Role.DONOR)), eq(NOW))).thenReturn(new IssuedAccessToken("access2", NOW.plus(Duration.ofMinutes(15))));
+        when(refreshTokens.markUsed(existing.id(), NOW)).thenReturn(true);
 
         RefreshedSession refreshed = service.refresh(secret.value());
 
-        assertThat(existing.isUsed()).isTrue();
-        assertThat(existing.isRevoked()).isFalse();
+        verify(refreshTokens).markUsed(existing.id(), NOW);
+        verify(refreshTokens, never()).revokeAllOf(any(), any());
         assertThat(refreshed.donor().id()).isEqualTo(DONOR);
         assertThat(refreshed.tokens().refreshToken()).isNotEqualTo(secret.value());
-        verify(refreshTokens).save(existing);
+    }
+
+    @Test
+    @DisplayName("Given a refresh token another request uses at the same moment, when it is refreshed, then every session of the donor ends")
+    void should_revoke_every_session_when_refreshed_given_token_used_concurrently() {
+        RefreshTokenSecret secret = RefreshTokenSecret.generate();
+        RefreshToken existing = RefreshToken.issue(secret, DONOR, NOW.minus(Duration.ofDays(1)), REFRESH_TTL, false);
+        when(refreshTokens.findBySecretHash(secret.hash())).thenReturn(Optional.of(existing));
+        when(donors.findById(DONOR)).thenReturn(Optional.of(donor()));
+        when(refreshTokens.markUsed(existing.id(), NOW)).thenReturn(false);
+
+        assertThatThrownBy(() -> service.refresh(secret.value()))
+                .isInstanceOf(InvalidRefreshToken.class);
+
+        verify(refreshTokens).revokeAllOf(DONOR, NOW);
+        verify(accessTokens, never()).issue(any(), any(), any());
     }
 
     @Test
@@ -199,14 +215,14 @@ class DonorSessionServiceTest {
         when(refreshTokens.findBySecretHash(secret.hash())).thenReturn(Optional.of(existing));
         when(donors.findById(DONOR)).thenReturn(Optional.of(administrator()));
         when(accessTokens.issue(DONOR, Set.of(Role.DONOR, Role.ADMIN), NOW)).thenReturn(new IssuedAccessToken("access2", NOW.plus(Duration.ofMinutes(15))));
+        when(refreshTokens.markUsed(existing.id(), NOW)).thenReturn(true);
 
         RefreshedSession refreshed = service.refresh(secret.value());
 
         assertThat(refreshed.tokens().roles()).containsExactlyInAnyOrder(Role.DONOR, Role.ADMIN);
         ArgumentCaptor<RefreshToken> saved = ArgumentCaptor.forClass(RefreshToken.class);
-        verify(refreshTokens, times(2)).save(saved.capture());
-        assertThat(saved.getAllValues()).filteredOn(token -> !token.isUsed()).singleElement()
-                .satisfies(token -> assertThat(token.secondFactorVerified()).isTrue());
+        verify(refreshTokens).save(saved.capture());
+        assertThat(saved.getValue().secondFactorVerified()).isTrue();
     }
 
     private static Donor administrator() {

@@ -60,8 +60,9 @@ public class DonorPasskeySignInService {
         PasskeyChallenge issued = challenges.findByChallengeHash(secret.hash())
                 .filter(candidate -> candidate.isUsableForSignInAt(now))
                 .orElseThrow(InvalidPasskey::new);
-        issued.markUsed(now);
-        challenges.save(issued);
+        if (!challenges.markUsed(issued.id(), now)) {
+            throw new InvalidPasskey();
+        }
         Passkey passkey = passkeys.findByCredentialId(assertion.credentialId()).orElseThrow(InvalidPasskey::new);
         if (!PasskeyUserHandle.of(passkey.donorId()).matches(assertion.userHandle())) {
             throw new InvalidPasskey();

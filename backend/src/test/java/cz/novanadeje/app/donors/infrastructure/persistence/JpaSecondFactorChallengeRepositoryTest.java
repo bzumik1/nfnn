@@ -88,6 +88,45 @@ class JpaSecondFactorChallengeRepositoryTest {
         assertThat(found.usedAt()).contains(NOW.plusSeconds(90));
     }
 
+    @Test
+    @DisplayName("Given a live challenge, when attempts are reserved, then each reservation counts until the limit and none is left afterwards")
+    void should_count_attempts_until_limit_when_reserved_given_live_challenge() {
+        SecondFactorChallenge challenge = SecondFactorChallenge.issue(LinkSecret.generate(), jana, NOW, TTL);
+        challenges.save(challenge);
+        flushAndClear();
+
+        assertThat(challenges.reserveAttempt(challenge.id(), NOW.plusSeconds(10), 2)).isTrue();
+        assertThat(challenges.reserveAttempt(challenge.id(), NOW.plusSeconds(20), 2)).isTrue();
+        assertThat(challenges.reserveAttempt(challenge.id(), NOW.plusSeconds(30), 2)).isFalse();
+
+        assertThat(challenges.findBySecretHash(challenge.secretHash()).orElseThrow().failedAttempts()).isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("Given an expired or spent challenge, when an attempt is reserved, then none is granted")
+    void should_grant_no_attempt_when_reserved_given_expired_or_spent_challenge() {
+        SecondFactorChallenge challenge = SecondFactorChallenge.issue(LinkSecret.generate(), jana, NOW, TTL);
+        challenges.save(challenge);
+        flushAndClear();
+
+        assertThat(challenges.reserveAttempt(challenge.id(), NOW.plus(TTL), 5)).isFalse();
+        assertThat(challenges.markUsed(challenge.id(), NOW.plusSeconds(10))).isTrue();
+        assertThat(challenges.reserveAttempt(challenge.id(), NOW.plusSeconds(20), 5)).isFalse();
+    }
+
+    @Test
+    @DisplayName("Given a challenge, when it is marked used twice, then only the first use counts and its time stays")
+    void should_count_only_first_use_when_marked_used_twice_given_challenge() {
+        SecondFactorChallenge challenge = SecondFactorChallenge.issue(LinkSecret.generate(), jana, NOW, TTL);
+        challenges.save(challenge);
+        flushAndClear();
+
+        assertThat(challenges.markUsed(challenge.id(), NOW.plusSeconds(10))).isTrue();
+        assertThat(challenges.markUsed(challenge.id(), NOW.plusSeconds(20))).isFalse();
+
+        assertThat(challenges.findBySecretHash(challenge.secretHash()).orElseThrow().usedAt()).contains(NOW.plusSeconds(10));
+    }
+
     private DonorId donor(String email, String variableSymbol) {
         Donor donor = Donor.register(DonorId.newId(NOW), DonorType.PERSON, "Jana Nováková", null,
                 new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"), new EmailAddress(email), new PasswordHash("$hash"),

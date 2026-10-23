@@ -35,6 +35,11 @@ class JpaRefreshTokenRepository implements RefreshTokenRepository {
     }
 
     @Override
+    public boolean markUsed(UUID tokenId, Instant at) {
+        return jpa.markUsed(tokenId, at) == 1;
+    }
+
+    @Override
     public List<RefreshToken> findUsableClientTokensOf(DonorId donorId, Instant now) {
         return jpa.findUsableClientTokensOf(donorId.value(), now).stream().map(RefreshTokenJpaEntity::toDomain).toList();
     }

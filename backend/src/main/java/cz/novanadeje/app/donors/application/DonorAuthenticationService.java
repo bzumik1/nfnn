@@ -98,17 +98,19 @@ public class DonorAuthenticationService {
                 .orElseThrow(InvalidSecondFactorChallenge::new);
         Donor donor = donors.findById(found.donorId()).orElseThrow(InvalidSecondFactorChallenge::new);
         SecondFactor factor = secondFactors.findByDonor(donor.id()).filter(SecondFactor::isEnabled).orElseThrow(InvalidSecondFactorChallenge::new);
+        if (!challenges.reserveAttempt(found.id(), now, secondFactorProperties.challengeAttempts())) {
+            throw new InvalidSecondFactorChallenge();
+        }
         try {
             factor.verify(code, now);
         } catch (InvalidSecondFactorCode wrong) {
-            found.recordFailedAttempt();
-            challenges.save(found);
-            log.info("Second factor of donor {} refused, attempt {} of {}", donor.id(), found.failedAttempts(), secondFactorProperties.challengeAttempts());
+            log.info("Second factor of donor {} refused, attempt {} of {}", donor.id(), found.failedAttempts() + 1, secondFactorProperties.challengeAttempts());
             throw wrong;
         }
+        if (!challenges.markUsed(found.id(), now)) {
+            throw new InvalidSecondFactorChallenge();
+        }
         secondFactors.save(factor);
-        found.markUsed(now);
-        challenges.save(found);
         return views.authenticated(donor, sessions.open(donor, true));
     }
 
