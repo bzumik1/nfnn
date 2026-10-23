@@ -26,6 +26,7 @@ import static cz.novanadeje.app.donations.BankPayments.payment;
 import static cz.novanadeje.app.donations.domain.receipt.Receipts.jana;
 import static cz.novanadeje.app.shared.domain.Money.czk;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.Mockito.mock;
@@ -56,7 +57,7 @@ class AdminPaymentsServiceTest {
     void should_list_payments_without_donations_when_unpaired_listed_given_unpaired_payments() {
         when(payments.findUnpairedNewestFirst()).thenReturn(List.of(december, october));
 
-        AdminPaymentList list = service.listUnpaired();
+        AdminPaymentList list = service.listUnpaired(PaymentFilter.none());
 
         assertThat(list.year()).isEmpty();
         assertThat(list.availableYears()).isEmpty();
@@ -73,7 +74,7 @@ class AdminPaymentsServiceTest {
         when(donorRecords.findByIds(anyCollection())).thenReturn(List.of(janaRecord));
         when(receipts.findDonationsWithReceipt(anyCollection())).thenReturn(Set.of(octoberGift.id()));
 
-        AdminPaymentList list = service.listPaired(Optional.empty());
+        AdminPaymentList list = service.listPaired(Optional.empty(), PaymentFilter.none());
 
         assertThat(list.year()).contains(Year.of(2026));
         assertThat(list.availableYears()).containsExactly(Year.of(2026), Year.of(2025));
@@ -97,7 +98,7 @@ class AdminPaymentsServiceTest {
         when(donorRecords.findByIds(anyCollection())).thenReturn(List.of(janaRecord));
         when(receipts.findDonationsWithReceipt(anyCollection())).thenReturn(Set.of());
 
-        AdminPaymentList list = service.listPaired(Optional.of(Year.of(2025)));
+        AdminPaymentList list = service.listPaired(Optional.of(Year.of(2025)), PaymentFilter.none());
 
         assertThat(list.year()).contains(Year.of(2025));
         assertThat(list.items()).singleElement().satisfies(item -> {
@@ -111,12 +112,68 @@ class AdminPaymentsServiceTest {
     void should_answer_empty_list_when_paired_listed_given_no_donations() {
         when(donations.findReceivedYearsNewestFirst()).thenReturn(List.of());
 
-        AdminPaymentList list = service.listPaired(Optional.empty());
+        AdminPaymentList list = service.listPaired(Optional.empty(), PaymentFilter.none());
 
         assertThat(list.year()).isEmpty();
         assertThat(list.availableYears()).isEmpty();
         assertThat(list.items()).isEmpty();
         verifyNoInteractions(payments, receipts);
+    }
+
+
+    @Test
+    @DisplayName("Given unpaired payments, when listed with a text, then only payments whose symbol, account, name, message or transaction id contain it are shown, ignoring case and diacritics")
+    void should_keep_matching_payments_when_unpaired_listed_given_text() {
+        BankPayment named = payment(2001, LocalDate.of(2026, 10, 7), czk(30000), ACCOUNT, null, "Dar pro Nadační fond",
+                Optional.of("Kmínek Pavel"));
+        when(payments.findUnpairedNewestFirst()).thenReturn(List.of(december, named, october));
+
+        assertThat(service.listUnpaired(new PaymentFilter("KMINEK", null, null, null, 0, null)).items())
+                .extracting(AdminPaymentView::payment).containsExactly(named);
+        assertThat(service.listUnpaired(new PaymentFilter("nadacni", null, null, null, 0, null)).items())
+                .extracting(AdminPaymentView::payment).containsExactly(named);
+        assertThat(service.listUnpaired(new PaymentFilter("1111111", null, null, null, 0, null)).items())
+                .extracting(AdminPaymentView::payment).containsExactly(october);
+        assertThat(service.listUnpaired(new PaymentFilter("2900233333/2010", null, null, null, 0, null)).items())
+                .extracting(AdminPaymentView::payment).containsExactly(december, named, october);
+        assertThat(service.listUnpaired(new PaymentFilter("1002", null, null, null, 0, null)).items())
+                .extracting(AdminPaymentView::payment).containsExactly(december);
+    }
+
+    @Test
+    @DisplayName("Given unpaired payments, when listed for a period with an offset and a limit, then the period is kept, the page cut out and the total counts the whole period")
+    void should_cut_page_and_count_period_when_unpaired_listed_given_period_and_page() {
+        when(payments.findUnpairedNewestFirst()).thenReturn(List.of(december, october, lastYear));
+
+        AdminPaymentList list = service.listUnpaired(new PaymentFilter(null, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 12, 31), null, 1, 1));
+
+        assertThat(list.total()).isEqualTo(2);
+        assertThat(list.items()).extracting(AdminPaymentView::payment).containsExactly(october);
+        assertThat(service.listUnpaired(new PaymentFilter(null, LocalDate.of(2026, 10, 5), LocalDate.of(2026, 10, 5), null, 0, null)).items())
+                .extracting(AdminPaymentView::payment).containsExactly(october);
+        assertThat(service.listUnpaired(PaymentFilter.none()).total()).isEqualTo(3);
+    }
+
+    @Test
+    @DisplayName("Given paired donations of two donors, when the paired list is asked for one donor or by the donor's name, then only that donor's payments are shown")
+    void should_keep_one_donor_when_paired_listed_given_donor_or_name() {
+        when(donations.findReceivedYearsNewestFirst()).thenReturn(List.of(Year.of(2026)));
+        when(donations.findReceivedOnBetween(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 12, 31))).thenReturn(List.of(octoberGift, decemberGift));
+        when(payments.findByIds(anyCollection())).thenReturn(List.of(october, december));
+        when(donorRecords.findByIds(anyCollection())).thenReturn(List.of(janaRecord));
+        when(receipts.findDonationsWithReceipt(anyCollection())).thenReturn(Set.of());
+
+        assertThat(service.listPaired(Optional.empty(), new PaymentFilter(null, null, null, janaRecord.id(), 0, null)).items())
+                .extracting(AdminPaymentView::payment).containsExactly(october);
+        assertThat(service.listPaired(Optional.empty(), new PaymentFilter(janaRecord.name(), null, null, null, 0, null)).items())
+                .extracting(AdminPaymentView::payment).containsExactly(october);
+    }
+
+    @Test
+    @DisplayName("Given a negative offset or a limit below one, when a filter is made, then it is refused")
+    void should_refuse_filter_when_made_given_bad_page() {
+        assertThatIllegalArgumentException().isThrownBy(() -> new PaymentFilter(null, null, null, null, -1, null));
+        assertThatIllegalArgumentException().isThrownBy(() -> new PaymentFilter(null, null, null, null, 0, 0));
     }
 
     @Test

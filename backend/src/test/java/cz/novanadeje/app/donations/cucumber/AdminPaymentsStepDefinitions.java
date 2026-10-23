@@ -46,6 +46,23 @@ public class AdminPaymentsStepDefinitions {
         api.get(PAYMENTS_PATH + "?pairing=paired&year=" + year);
     }
 
+    @When("{string} asks for the unpaired payments with {string}")
+    public void asksForTheUnpairedPaymentsWith(String alias, String query) {
+        sessions.actAs(alias);
+        api.get(PAYMENTS_PATH + "?pairing=unpaired&" + scenarioDonors.resolve(query));
+    }
+
+    @When("{string} asks for the paired payments of {string}")
+    public void asksForThePairedPaymentsOfDonor(String alias, String donorAlias) {
+        sessions.actAs(alias);
+        api.get(PAYMENTS_PATH + "?pairing=paired&donorId=" + scenarioDonors.idOf(donorAlias));
+    }
+
+    @Then("the payment list counts {int} in total")
+    public void thePaymentListCountsInTotal(int total) {
+        assertThat(api.lastResponseJson().get("total").asInt()).isEqualTo(total);
+    }
+
     @When("someone without a token asks for the unpaired payments")
     public void someoneWithoutATokenAsksForTheUnpairedPayments() {
         api.forgetCredentials();
@@ -88,12 +105,12 @@ public class AdminPaymentsStepDefinitions {
         api.get(DONORS_PATH + "?query=" + scenarioDonors.resolve(query));
     }
 
-    @Then("the unpaired payments are none")
-    public void theUnpairedPaymentsAreNone() {
+    @Then("the {word} payments are none")
+    public void thePaymentsAreNone(String kind) {
         assertThat(listedTransactionIds()).isEmpty();
     }
 
-    @Then("^the unpaired payments are ([0-9, ]+)$")
+    @Then("^the (?:unpaired|listed) payments are ([0-9, ]+)$")
     public void theUnpairedPaymentsAre(String transactionIds) {
         List<Long> expected = Arrays.stream(transactionIds.split(",")).map(String::trim).map(Long::parseLong).toList();
         assertThat(listedTransactionIds()).containsExactlyElementsOf(expected);

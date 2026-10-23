@@ -79,7 +79,7 @@ export function paymentList(
   items: AdminPaymentResponse[],
   overrides: Partial<AdminPaymentListResponse> = {},
 ): AdminPaymentListResponse {
-  return { year: null, availableYears: [], items, ...overrides };
+  return { year: null, availableYears: [], items, total: items.length, ...overrides };
 }
 
 export function foundDonor(overrides: Partial<AdminDonorResponse> = {}): AdminDonorResponse {
@@ -130,6 +130,7 @@ export function adminAction(overrides: Partial<AdminActionResponse> = {}): Admin
     details:
       'Bank payment 019a1c00-0000-7000-8000-000000001001 paired to donor 01a18e56-bdb0-775a-bd0a-a60756831369 by hand',
     performedAt: '2026-10-22T10:00:00Z',
+    client: null,
     ...overrides,
   };
 }

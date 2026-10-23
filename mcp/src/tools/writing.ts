@@ -1,6 +1,16 @@
 import type { McpServer } from '@modelcontextprotocol/server';
 import * as z from 'zod/v4';
-import { answerChange, plain, text, type ToolDependencies } from './support.js';
+import { MAX_PHOTO_BYTES, PhotoRefused } from '../photos.js';
+import { PHOTO_UPLOAD_HEADER, PHOTO_UPLOAD_PATH } from '../photo-upload.js';
+import {
+  answerChange,
+  asRecord,
+  plain,
+  text,
+  ToolRefusal,
+  withHint,
+  type ToolDependencies,
+} from './support.js';
 
 const WRITING = {
   readOnlyHint: false,
@@ -39,7 +49,7 @@ const ARTICLE = {
   perex: z.string().min(1).max(300).describe('Short summary shown on the cards.'),
   body: z.string().min(1).max(20000).describe('Plain text; an empty line starts a new paragraph.'),
   coverImageId: UUID.optional().describe(
-    'Id of a photo already uploaded on the web; left out means no photo.',
+    'Id of an uploaded photo (nfnn_upload_photo, nfnn_photo_upload_link, or the photo a content item already has); left out means no photo.',
   ),
 };
 const PROJECT = { ...ARTICLE, year: z.number().int().min(2005).max(2100) };
@@ -61,12 +71,17 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
       annotations: WRITING,
     },
     async ({ paymentId, donorId }, ctx) =>
-      answerChange(deps, ctx, 'nfnn_pair_payment', async ({ apiToken }) =>
-        text(
-          await backend.post(`/api/admin/donations/payments/${paymentId}/pair`, apiToken, {
-            donorId,
-          }),
-        ),
+      answerChange(
+        deps,
+        ctx,
+        'nfnn_pair_payment',
+        async ({ apiToken }) =>
+          text(
+            await backend.post(`/api/admin/donations/payments/${paymentId}/pair`, apiToken, {
+              donorId,
+            }),
+          ),
+        `payment ${paymentId}, donor ${donorId}`,
       ),
   );
 
@@ -80,8 +95,13 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
       annotations: { ...WRITING, destructiveHint: true },
     },
     async ({ paymentId }, ctx) =>
-      answerChange(deps, ctx, 'nfnn_unpair_payment', async ({ apiToken }) =>
-        text(await backend.post(`/api/admin/donations/payments/${paymentId}/unpair`, apiToken)),
+      answerChange(
+        deps,
+        ctx,
+        'nfnn_unpair_payment',
+        async ({ apiToken }) =>
+          text(await backend.post(`/api/admin/donations/payments/${paymentId}/unpair`, apiToken)),
+        `payment ${paymentId}`,
       ),
   );
 
@@ -125,10 +145,15 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
       annotations: WRITING,
     },
     async ({ id, publishedOn }, ctx) =>
-      answerChange(deps, ctx, 'nfnn_publish_news', async ({ apiToken }) =>
-        text(
-          await backend.post(`/api/admin/content/news/${id}/publish`, apiToken, { publishedOn }),
-        ),
+      answerChange(
+        deps,
+        ctx,
+        'nfnn_publish_news',
+        async ({ apiToken }) =>
+          text(
+            await backend.post(`/api/admin/content/news/${id}/publish`, apiToken, { publishedOn }),
+          ),
+        `news ${id}`,
       ),
   );
 
@@ -142,8 +167,13 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
       annotations: WRITING,
     },
     async ({ id }, ctx) =>
-      answerChange(deps, ctx, 'nfnn_unpublish_news', async ({ apiToken }) =>
-        text(await backend.post(`/api/admin/content/news/${id}/unpublish`, apiToken)),
+      answerChange(
+        deps,
+        ctx,
+        'nfnn_unpublish_news',
+        async ({ apiToken }) =>
+          text(await backend.post(`/api/admin/content/news/${id}/unpublish`, apiToken)),
+        `news ${id}`,
       ),
   );
 
@@ -157,12 +187,17 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
       annotations: WRITING,
     },
     async ({ id, publishedOn }, ctx) =>
-      answerChange(deps, ctx, 'nfnn_publish_project', async ({ apiToken }) =>
-        text(
-          await backend.post(`/api/admin/content/projects/${id}/publish`, apiToken, {
-            publishedOn,
-          }),
-        ),
+      answerChange(
+        deps,
+        ctx,
+        'nfnn_publish_project',
+        async ({ apiToken }) =>
+          text(
+            await backend.post(`/api/admin/content/projects/${id}/publish`, apiToken, {
+              publishedOn,
+            }),
+          ),
+        `project ${id}`,
       ),
   );
 
@@ -176,8 +211,13 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
       annotations: WRITING,
     },
     async ({ id }, ctx) =>
-      answerChange(deps, ctx, 'nfnn_unpublish_project', async ({ apiToken }) =>
-        text(await backend.post(`/api/admin/content/projects/${id}/unpublish`, apiToken)),
+      answerChange(
+        deps,
+        ctx,
+        'nfnn_unpublish_project',
+        async ({ apiToken }) =>
+          text(await backend.post(`/api/admin/content/projects/${id}/unpublish`, apiToken)),
+        `project ${id}`,
       ),
   );
 
@@ -245,13 +285,18 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
     {
       title: 'Upravit aktualitu',
       description:
-        'Replaces the texts and the photo of a news article, draft or published (the published date stays); send every field, read them with nfnn_content first. Audited as UPDATE_NEWS.',
+        'Replaces the texts and the photo of a news article, draft or published (the published date stays); send every field, read them with nfnn_news_article first. Audited as UPDATE_NEWS.',
       inputSchema: z.object({ id: UUID, ...ARTICLE }),
       annotations: { ...WRITING, idempotentHint: true },
     },
     async ({ id, ...article }, ctx) =>
-      answerChange(deps, ctx, 'nfnn_update_news', async ({ apiToken }) =>
-        text(await backend.put(`/api/admin/content/news/${id}`, apiToken, article)),
+      answerChange(
+        deps,
+        ctx,
+        'nfnn_update_news',
+        async ({ apiToken }) =>
+          text(await backend.put(`/api/admin/content/news/${id}`, apiToken, article)),
+        `news ${id}`,
       ),
   );
 
@@ -275,13 +320,18 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
     {
       title: 'Upravit projekt',
       description:
-        'Replaces the texts, the year and the photo of a project (the published date stays); send every field, read them with nfnn_content first. Audited as UPDATE_PROJECT.',
+        'Replaces the texts, the year and the photo of a project (the published date stays); send every field, read them with nfnn_project first. Audited as UPDATE_PROJECT.',
       inputSchema: z.object({ id: UUID, ...PROJECT }),
       annotations: { ...WRITING, idempotentHint: true },
     },
     async ({ id, ...project }, ctx) =>
-      answerChange(deps, ctx, 'nfnn_update_project', async ({ apiToken }) =>
-        text(await backend.put(`/api/admin/content/projects/${id}`, apiToken, project)),
+      answerChange(
+        deps,
+        ctx,
+        'nfnn_update_project',
+        async ({ apiToken }) =>
+          text(await backend.put(`/api/admin/content/projects/${id}`, apiToken, project)),
+        `project ${id}`,
       ),
   );
 
@@ -295,13 +345,19 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
       annotations: { ...WRITING, idempotentHint: true },
     },
     async ({ donorId, linkId }, ctx) =>
-      answerChange(deps, ctx, 'nfnn_disconnect_bank_account', async ({ apiToken }) => {
-        await backend.post(
-          `/api/admin/donations/donors/${donorId}/bank-accounts/${linkId}/disconnect`,
-          apiToken,
-        );
-        return plain('Pairing from the account is turned off for the donor.');
-      }),
+      answerChange(
+        deps,
+        ctx,
+        'nfnn_disconnect_bank_account',
+        async ({ apiToken }) => {
+          await backend.post(
+            `/api/admin/donations/donors/${donorId}/bank-accounts/${linkId}/disconnect`,
+            apiToken,
+          );
+          return plain('Pairing from the account is turned off for the donor.');
+        },
+        `donor ${donorId}, link ${linkId}`,
+      ),
   );
 
   server.registerTool(
@@ -314,14 +370,71 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
       annotations: { ...WRITING, idempotentHint: true },
     },
     async ({ donorId, linkId }, ctx) =>
-      answerChange(deps, ctx, 'nfnn_reconnect_bank_account', async ({ apiToken }) => {
-        await backend.post(
-          `/api/admin/donations/donors/${donorId}/bank-accounts/${linkId}/reconnect`,
-          apiToken,
-        );
-        return plain(
-          "Pairing from the account is on again; it starts with the next payment carrying the donor's symbol.",
-        );
+      answerChange(
+        deps,
+        ctx,
+        'nfnn_reconnect_bank_account',
+        async ({ apiToken }) => {
+          await backend.post(
+            `/api/admin/donations/donors/${donorId}/bank-accounts/${linkId}/reconnect`,
+            apiToken,
+          );
+          return plain(
+            "Pairing from the account is on again; it starts with the next payment carrying the donor's symbol.",
+          );
+        },
+        `donor ${donorId}, link ${linkId}`,
+      ),
+  );
+
+  server.registerTool(
+    'nfnn_upload_photo',
+    {
+      title: 'Nahrát fotku z adresy',
+      description: `Downloads a photo from a public https address (the image file itself: JPEG, PNG, WebP or GIF, at most ${MAX_PHOTO_BYTES / 1024 / 1024} MB, 3 redirects, 15 s) and uploads it to the site as the web does: turned upright, converted to WebP in sizes for every screen. Answers the photo id for coverImageId of nfnn_create_news, nfnn_update_news, nfnn_create_project or nfnn_update_project; the photo shows nowhere until one of them uses it. Addresses in private networks are refused. For a file on this computer use nfnn_photo_upload_link.`,
+      inputSchema: z.object({ url: z.string().min(1).max(2000) }),
+      annotations: { ...WRITING, openWorldHint: true },
+    },
+    async ({ url }, ctx) =>
+      answerChange(deps, ctx, 'nfnn_upload_photo', async ({ apiToken }) => {
+        const photo = await deps.photos.fetch(url).catch((thrown: unknown) => {
+          throw thrown instanceof PhotoRefused
+            ? new ToolRefusal('photo-refused', `The photo was not uploaded: ${thrown.message}.`)
+            : thrown;
+        });
+        return uploaded(await backend.postPhoto('/api/admin/content/media', apiToken, photo));
+      }),
+  );
+
+  server.registerTool(
+    'nfnn_photo_upload_link',
+    {
+      title: 'Odkaz pro nahrání fotky',
+      description: `A one-time address to upload a photo file from a computer, e.g. from a shell with curl: PUT the file there with the ticket header and the image's Content-Type (at most ${MAX_PHOTO_BYTES / 1024 / 1024} MB). The ticket works once, for at most 10 minutes; the answer of the PUT is the photo id (and its size) for coverImageId, as nfnn_upload_photo answers it.`,
+      annotations: WRITING,
+    },
+    async (ctx) =>
+      answerChange(deps, ctx, 'nfnn_photo_upload_link', async (caller) => {
+        const site = deps.publicUrl();
+        if (site === undefined) {
+          throw new ToolRefusal(
+            'no-public-url',
+            'The address of the site is not known yet; try again in a moment.',
+          );
+        }
+        const { ticket, expiresAt } = deps.tickets.issue(caller);
+        const url = `${site}${PHOTO_UPLOAD_PATH}`;
+        return text({
+          method: 'PUT',
+          url,
+          headers: {
+            [PHOTO_UPLOAD_HEADER]: ticket,
+            'Content-Type': 'image/jpeg, image/png, image/webp or image/gif',
+          },
+          expiresAt: expiresAt.toISOString(),
+          maxBytes: MAX_PHOTO_BYTES,
+          example: `curl -sS -T photo.jpg -H '${PHOTO_UPLOAD_HEADER}: ${ticket}' -H 'Content-Type: image/jpeg' ${url}`,
+        });
       }),
   );
 
@@ -367,5 +480,15 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
         );
         return plain(`The logger ${logger} is back at its configured level.`);
       }),
+  );
+}
+
+function uploaded(image: unknown): ReturnType<typeof text> {
+  const id = asRecord(image)['id'];
+  return withHint(
+    text(image),
+    typeof id === 'string'
+      ? `Use coverImageId "${id}" to put the photo on a news article or project.`
+      : undefined,
   );
 }

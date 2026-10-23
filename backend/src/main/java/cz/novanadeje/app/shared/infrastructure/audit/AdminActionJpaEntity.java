@@ -16,6 +16,8 @@ import java.util.UUID;
 @Table(name = "admin_action")
 class AdminActionJpaEntity {
 
+    static final int MAX_CLIENT_LENGTH = 253;
+
     @Id
     private UUID id;
 
@@ -34,10 +36,13 @@ class AdminActionJpaEntity {
     @Column(name = "performed_at", nullable = false)
     private Instant performedAt;
 
+    @Column(name = "client", length = MAX_CLIENT_LENGTH)
+    private String client;
+
     protected AdminActionJpaEntity() {
     }
 
-    static AdminActionJpaEntity of(AdminActionPerformed event) {
+    static AdminActionJpaEntity of(AdminActionPerformed event, Optional<String> client) {
         AdminActionJpaEntity entity = new AdminActionJpaEntity();
         entity.id = UuidV7.generate(event.performedAt());
         entity.adminId = event.adminId();
@@ -45,10 +50,11 @@ class AdminActionJpaEntity {
         entity.subjectId = event.subjectId().orElse(null);
         entity.details = event.details();
         entity.performedAt = event.performedAt();
+        entity.client = client.map(name -> name.length() > MAX_CLIENT_LENGTH ? name.substring(0, MAX_CLIENT_LENGTH) : name).orElse(null);
         return entity;
     }
 
     AdminActionEntry toEntry() {
-        return new AdminActionEntry(id, adminId, action, Optional.ofNullable(subjectId), details, performedAt);
+        return new AdminActionEntry(id, adminId, action, Optional.ofNullable(subjectId), details, performedAt, Optional.ofNullable(client));
     }
 }

@@ -289,11 +289,12 @@ jobs:
           docker exec nfnn-mcp sh -c 'uid=$(awk "/^Uid:/ {print \$2}" /proc/1/status); [ "$uid" = "$(id -u node)" ]' || { echo "::error::the MCP connector must run as the node user"; exit 1; }
           echo "The frontend and the connector write their logs into the logs folder, without addresses or query strings, and rotated the files left over from an earlier day"
           curl -fsS -o /dev/null --max-time 10 'http://localhost:8089/?q=not-in-the-log'
+          docker exec nfnn-frontend wget -q -O /dev/null http://127.0.0.1/healthcheck-not-in-the-log
           grep -q 'Authorization server discovered' "$logs/mcp.log" || { echo "::error::the MCP connector did not write its log file"; ls -la "$logs"; exit 1; }
           grep -qE ' GET / 200 ' "$logs/nginx-access.log" || { echo "::error::nginx did not write its access log"; ls -la "$logs"; exit 1; }
           grep -qE ' POST /mcp 401 ' "$logs/nginx-access.log" || { echo "::error::the access log misses the connector's 401"; cat "$logs/nginx-access.log"; exit 1; }
           if grep -nE 'not-in-the-log|([0-9]{1,3}\.){3}[0-9]{1,3}' "$logs/nginx-access.log"; then
-            echo "::error::the access log must name no client address and no query string"
+            echo "::error::the access log must name no client address, no query string and no healthcheck from inside the container"
             exit 1
           fi
           for log in nginx-access.log mcp.log; do

@@ -130,8 +130,17 @@ describe('Given an administrator on the history page', () => {
 
     const [settings, raised, reset] = rows();
     expect(rowText(settings)).toContain('Změna nastavení webu');
-    expect(rowText(raised)).toContain('Dočasné zvýšení úrovně logování');
+    expect(rowText(raised)).toContain('Dočasná změna úrovně logování');
     expect(rowText(reset)).toContain('Vrácení úrovně logování');
+  });
+
+  it('when a change came through a connected application, then the row names the application and a change on the web names none', () => {
+    firstPage([adminAction({ action: 'CHANGE_LOG_LEVEL', client: 'claude.ai' }), granted]);
+
+    const [throughApp, onWeb] = rows();
+    expect(rowText(throughApp)).toContain('přes aplikaci claude.ai');
+    expect(rowText(throughApp)).toContain('Dočasná změna úrovně logování');
+    expect(rowText(onWeb)).not.toContain('přes aplikaci');
   });
 
   it('when nothing has been changed yet, then the card says so', () => {

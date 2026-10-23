@@ -283,6 +283,12 @@ public class ConnectedAppsStepDefinitions {
         api.put("/api/admin/operations/settings", Map.of("changes", List.of(Map.of("name", name, "value", value))));
     }
 
+    @When("the exchanged API token sets the logger {string} to {string} for {int} minutes")
+    public void theExchangedApiTokenSetsTheLogger(String logger, String level, int minutes) {
+        actAsExchangedApiToken();
+        api.put("/api/admin/operations/loggers/" + logger, Map.of("level", level, "minutes", minutes));
+    }
+
     @When("the exchanged API token lists the backups")
     public void theExchangedApiTokenListsTheBackups() {
         actAsExchangedApiToken();
