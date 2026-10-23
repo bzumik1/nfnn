@@ -49,6 +49,7 @@ function backupsView(overrides: Record<string, unknown> = {}) {
     lastRestore: null,
     restoreFiles: [],
     pendingRequests: 0,
+    restorePending: false,
     problems: [],
     ...overrides,
   };
@@ -155,6 +156,70 @@ test.describe('Given an administrator on the backups page', () => {
     await expect(page.locator('tbody tr').first()).toContainText('nfnn-2026-10-23_1000-rucni.dump');
     await expect(page.getByRole('button', { name: 'Zálohovat teď' })).toBeEnabled();
     expect(requests).toEqual([{ kind: 'BACKUP' }]);
+  });
+
+  test('when they restore a dump, then the dialog asks first, the page waits for the restart and reports the restore', async ({
+    page,
+  }) => {
+    let restored = false;
+    let polls = 0;
+    const posted: string[] = [];
+    await page.route(
+      (url) => url.pathname === BACKUPS,
+      (route) =>
+        route.fulfill({
+          json: restored
+            ? backupsView({
+                lastRestore: backupRun({
+                  fileName: 'nfnn-2026-10-22_0300.dump',
+                  requestId: 'restore-1',
+                  tables: 37,
+                }),
+              })
+            : backupsView(),
+        }),
+    );
+    await page.route(
+      (url) => url.pathname === `${BACKUPS}/nfnn-2026-10-22_0300.dump/restore`,
+      (route) => {
+        posted.push(route.request().method());
+        restored = true;
+        return route.fulfill({
+          status: 202,
+          json: {
+            requestId: 'restore-1',
+            fileName: 'nfnn-2026-10-22_0300.dump',
+            requestedAt: '2026-10-23T19:30:00Z',
+          },
+        });
+      },
+    );
+    await page.route(
+      (url) => url.pathname === '/api/operations/setup',
+      (route) =>
+        polls++ < 1
+          ? route.fulfill({ status: 502, body: '' })
+          : route.fulfill({ json: { required: false, codeRequired: true, lastRestore: null } }),
+    );
+
+    await page.goto('/sprava/zalohy');
+    await page
+      .getByRole('button', { name: 'Obnovit databázi ze zálohy nfnn-2026-10-22_0300.dump' })
+      .click();
+
+    const dialog = page.getByRole('dialog');
+    await expect(
+      dialog.getByRole('heading', { name: 'Obnovit databázi ze zálohy?' }),
+    ).toBeVisible();
+    await expect(dialog.getByRole('button', { name: 'Zrušit' })).toBeFocused();
+    await dialog.getByRole('button', { name: 'Obnovit a restartovat web' }).click();
+
+    await expect(page.getByRole('heading', { name: 'Obnova ze zálohy' })).toBeVisible();
+    await expect(page.locator('.admin-notice--status')).toHaveText(
+      'Databáze je obnovená ze zálohy nfnn-2026-10-22_0300.dump. Stav před obnovou je uložený jako záloha „Před obnovou“.',
+      { timeout: 15_000 },
+    );
+    expect(posted).toEqual(['POST']);
   });
 
   test('when the backup folder is not connected, then the problems are named and the actions are disabled', async ({

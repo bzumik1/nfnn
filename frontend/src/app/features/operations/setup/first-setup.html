@@ -40,6 +40,9 @@
           pak se na nic neptáme. Odjinud zadejte kód, který web vypsal do svého logu: v ZimaOS u
           aplikace NFNN v nabídce Terminál a logy, kontejner nfnn-backend.
         </p>
+        @if (restoreError()) {
+          <p class="form-error" role="alert">{{ restoreError() }}</p>
+        }
         <form #codeForm="ngForm" appFocusFirstInvalid (ngSubmit)="unlock(codeForm)" novalidate>
           <app-form-field
             label="Kód z logu"
@@ -80,6 +83,26 @@
           Vyplňte, co web potřebuje ke svému chodu. Všechno se uloží do databáze a později to
           změníte ve správě webu. Tajné údaje se ukládají zašifrované.
         </p>
+        @if (restoredBeforeSetup()) {
+          <p class="restore-done" role="status" i18n="@@operations.setup.restore.beforeSetup">
+            Záloha je obnovená. Pochází z doby před prvním nastavením, proto ho prosím doplňte.
+          </p>
+        } @else {
+          <div class="restore-offer">
+            <p i18n="@@operations.setup.restore.offer">
+              Stěhujete web z jiného serveru, nebo ho obnovujete po havárii? Pak nic nevyplňujte a
+              obnovte ho ze zálohy.
+            </p>
+            <button
+              type="button"
+              class="secondary"
+              (click)="openRestore()"
+              i18n="@@operations.setup.restore.open"
+            >
+              Obnovit ze zálohy
+            </button>
+          </div>
+        }
 
         <form
           #setupForm="ngForm"
@@ -364,6 +387,153 @@
             i18n="@@operations.setup.slow.retry"
           >
             Zkusit znovu
+          </button>
+        </div>
+      }
+      @case ('restore') {
+        <h1
+          #heading
+          id="setup-title"
+          class="title"
+          tabindex="-1"
+          i18n="@@operations.setup.restore.title"
+        >
+          Obnovit web ze zálohy
+        </h1>
+        <p class="lead" i18n="@@operations.setup.restore.lead">
+          Vyberte soubor zálohy s příponou .dump: ten, který jste si stáhli ve správě na stránce
+          Zálohy, nebo kopii ze složky backups starého serveru. Web se z něj obnoví celý, i s dárci,
+          dary, nastavením a účty správců.
+        </p>
+        @if (restoreError()) {
+          <p class="form-error" role="alert">{{ restoreError() }}</p>
+        }
+        <label class="file-label" for="backup-file" i18n="@@operations.setup.restore.file"
+          >Soubor zálohy</label
+        >
+        <div class="file-row">
+          <input
+            id="backup-file"
+            class="file-input"
+            type="file"
+            accept=".dump"
+            aria-describedby="backup-file-name backup-file-hint"
+            [disabled]="uploadPercent() !== null"
+            (change)="chooseBackup($event)"
+          />
+          <label
+            class="secondary file-pick"
+            for="backup-file"
+            aria-hidden="true"
+            i18n="@@operations.setup.restore.pick"
+            >Vybrat soubor</label
+          >
+          @if (backupFile(); as file) {
+            <span id="backup-file-name" class="file-name">{{ file.name }}</span>
+          } @else {
+            <span id="backup-file-name" class="file-name" i18n="@@operations.setup.restore.noFile"
+              >Zatím žádný soubor</span
+            >
+          }
+        </div>
+        <p id="backup-file-hint" class="restart-note" i18n="@@operations.setup.restore.hint">
+          Soubor se nahraje rovnou na server. Velká záloha se může nahrávat několik minut, stránku
+          mezitím nezavírejte.
+        </p>
+        @if (uploadPercent() !== null) {
+          <p class="restart-note" role="status" i18n="@@operations.setup.restore.uploading">
+            Nahráváme zálohu… {{ uploadPercent() }} %
+          </p>
+        }
+        <div class="restore-actions">
+          <button
+            type="button"
+            class="form-submit"
+            [disabled]="backupFile() === null || uploadPercent() !== null"
+            (click)="uploadBackup()"
+            i18n="@@operations.setup.restore.submit"
+          >
+            Nahrát a obnovit
+          </button>
+          <button
+            type="button"
+            class="secondary"
+            [disabled]="uploadPercent() !== null"
+            (click)="closeRestore()"
+            i18n="@@operations.setup.restore.back"
+          >
+            Zpět k nastavení
+          </button>
+        </div>
+      }
+      @case ('restoring') {
+        <div class="notice">
+          <div class="notice-icon notice-icon--spinner" aria-hidden="true"></div>
+          <h1
+            #heading
+            id="setup-title"
+            class="title"
+            tabindex="-1"
+            i18n="@@operations.setup.restoring.title"
+          >
+            Obnovujeme web ze zálohy
+          </h1>
+          <p class="lead" role="status" i18n="@@operations.setup.restoring.text">
+            Záloha je nahraná. Web se z ní teď obnovuje a pak se sám spustí; podle velikosti zálohy
+            to trvá několik minut. Stránku prosím nezavírejte.
+          </p>
+        </div>
+      }
+      @case ('restoreSlow') {
+        <div class="notice">
+          <div class="notice-icon notice-icon--warning" aria-hidden="true">!</div>
+          <h1
+            #heading
+            id="setup-title"
+            class="title"
+            tabindex="-1"
+            i18n="@@operations.setup.restoreSlow.title"
+          >
+            Obnova ještě běží
+          </h1>
+          <p class="lead" role="alert" i18n="@@operations.setup.restoreSlow.text">
+            Web se zatím nevrátil. Velká záloha se může obnovovat i déle; zkuste to prosím za chvíli
+            znovu.
+          </p>
+          <button
+            type="button"
+            class="form-submit"
+            (click)="watchRestore()"
+            i18n="@@operations.setup.restoreSlow.retry"
+          >
+            Zkontrolovat znovu
+          </button>
+        </div>
+      }
+      @case ('restored') {
+        <div class="notice">
+          <div class="notice-icon" aria-hidden="true">✓</div>
+          <h1
+            #heading
+            id="setup-title"
+            class="title"
+            tabindex="-1"
+            i18n="@@operations.setup.restored.title"
+          >
+            Web je obnovený ze zálohy
+          </h1>
+          <p class="lead" role="status" i18n="@@operations.setup.restored.text">
+            Přihlaste se svým dosavadním účtem správce. Na novém serveru pak ve správě na stránce
+            Nastavení znovu zadejte heslo pro odesílání e-mailů a token Fio: ze zálohy je přečíst
+            nejde, stránka vám ukáže, které chybí.
+          </p>
+          <button
+            type="button"
+            class="form-submit"
+            (click)="signInAfterRestore()"
+            i18n="@@operations.setup.restored.signIn"
+          >
+            Přihlásit se
           </button>
         </div>
       }

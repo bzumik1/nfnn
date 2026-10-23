@@ -14,12 +14,12 @@ import java.util.List;
 import java.util.Optional;
 
 record AdminBackupsResponse(boolean available, List<Backup> backups, Run lastBackup, Run lastTestRestore, Run lastRestore,
-                            List<RestoreEntry> restoreFiles, int pendingRequests, List<BackupProblem> problems) {
+                            List<RestoreEntry> restoreFiles, int pendingRequests, boolean restorePending, List<BackupProblem> problems) {
 
     static AdminBackupsResponse from(BackupAdministrationView view) {
         return new AdminBackupsResponse(view.available(), view.backups().stream().map(Backup::from).toList(), run(view.lastBackup()),
                 run(view.lastTestRestore()), run(view.lastRestore()), view.restoreFiles().stream().map(RestoreEntry::from).toList(),
-                view.pendingRequests(), view.health().problems().stream().sorted().toList());
+                view.pendingRequests(), view.restorePending(), view.health().problems().stream().sorted().toList());
     }
 
     private static Run run(Optional<BackupRun> run) {

@@ -7,10 +7,13 @@ import { AuthStore } from '../../../core/auth/auth-store';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
 import { authResponse, sampleDonor } from '../../../core/auth/testing/donor-fixtures';
 import { backupFile, backupRun, backupsView } from '../testing/admin-fixtures';
-import { AdminBackups, JOB_POLL_MS } from './admin-backups';
+import { RESTART_POLL_MS } from '../../operations/setup/setup-api';
+import { AdminBackups, JOB_POLL_MS, RESTORE_REQUEST_KEY } from './admin-backups';
 
 const BACKUPS_URL = '/api/admin/operations/backups';
 const REQUESTS_URL = '/api/admin/operations/backups/requests';
+const RESTORE_URL = '/api/admin/operations/backups/nfnn-2026-10-23_0300.dump/restore';
+const SETUP_URL = '/api/operations/setup';
 
 function problem(status: number, type: string, title: string, detail: string) {
   return {
@@ -30,6 +33,7 @@ describe('Given an administrator on the backups page', () => {
 
   beforeEach(async () => {
     localStorage.clear();
+    sessionStorage.clear();
     await TestBed.configureTestingModule({
       imports: [AdminBackups],
       providers: [
@@ -102,11 +106,12 @@ describe('Given an administrator on the backups page', () => {
     expect(texts('.run dd')).toEqual([
       'Poslední záloha: 23. 10. 2026 03:00, nfnn-2026-10-23_0300.dump (2 kB).',
       'Poslední zkušební obnova: 18. 10. 2026 04:00, 37 tabulek ze zálohy nfnn-2026-10-18_0300.dump.',
-      'Prázdná. Dump, který do ní na serveru dáte, se při příštím startu kontejneru nfnn-backup obnoví do prázdné databáze (postup je v deploy/README.md, část Obnova).',
+      'Poslední obnova: zatím žádná.',
+      'Prázdná. Web obnovíte tlačítkem Obnovit u zálohy níže, na novém serveru v průvodci prvním nastavením.',
     ]);
     expect(texts('tbody tr')).toEqual([
-      'nfnn-2026-10-23_0300.dump Noční 23. 10. 2026 03:00 2 kB Stáhnout',
-      'nfnn-2026-10-22_0300.dump Noční 22. 10. 2026 03:00 1 kB Stáhnout',
+      'nfnn-2026-10-23_0300.dump Noční 23. 10. 2026 03:00 2 kB Obnovit Stáhnout',
+      'nfnn-2026-10-22_0300.dump Noční 22. 10. 2026 03:00 1 kB Obnovit Stáhnout',
     ]);
     expect(button('Zálohovat teď').disabled).toBe(false);
     expect(button('Ověřit obnovu teď').disabled).toBe(false);
@@ -149,10 +154,10 @@ describe('Given an administrator on the backups page', () => {
     );
     expect(texts('.restore-files li')).toEqual([
       'zaloha.dump.skipped byl 23. 10. 2026 06:36 přeskočen: databáze nebyla prázdná nebo ve složce leželo víc souborů.',
-      'stara.dump.failed se 22. 10. 2026 06:36 obnovit nepodařilo; backend nenastartuje, dokud soubor ve složce leží.',
+      'stara.dump.failed se 22. 10. 2026 06:36 obnovit nepodařilo; data zůstala, jak byla.',
     ]);
-    expect(text('.restore-error')).toBe(
-      'Poslední obnova skončila chybou: the database is not empty; name the file .force.dump to replace it',
+    expect(texts('.run dd')[2]).toBe(
+      'Poslední obnova 23. 10. 2026 03:00 se nepovedla, data zůstala: the database is not empty; name the file .force.dump to replace it',
     );
     expect(text('.pending')).toBe('Na vyřízení čekají 2 požadavky.');
   });
@@ -315,6 +320,139 @@ describe('Given an administrator on the backups page', () => {
     );
   });
 
+  describe('when a backup is restored', () => {
+    beforeEach(async () => {
+      await respond(backupsView());
+      button('Obnovit').click();
+      await settle();
+    });
+
+    function dialog(): HTMLElement | null {
+      return fixture.nativeElement.querySelector('dialog');
+    }
+
+    it('then a dialog names the backup, what is lost and the safety backup, and cancelling posts nothing', async () => {
+      expect(text('#restore-title')).toBe('Obnovit databázi ze zálohy?');
+      expect(text('.restore-lead')).toBe(
+        'Web se vrátí do stavu z 23. 10. 2026 03:00, ze zálohy nfnn-2026-10-23_0300.dump.',
+      );
+      expect(texts('.restore-points li')[1]).toContain('záloha „Před obnovou“');
+
+      button('Zrušit').click();
+      await settle();
+
+      expect(dialog()).toBeNull();
+      http.expectNone(RESTORE_URL);
+    });
+
+    it('then confirming posts the restore, waits for the backend to come back and reports the restored backup', async () => {
+      vi.useFakeTimers();
+      button('Obnovit a restartovat web').click();
+      await settle();
+      const request = http.expectOne(RESTORE_URL);
+      expect(request.request.method).toBe('POST');
+      request.flush({
+        requestId: 'restore-1',
+        fileName: 'nfnn-2026-10-23_0300.dump',
+        requestedAt: '2026-10-23T19:30:00Z',
+      });
+      await settle();
+
+      expect(dialog()).toBeNull();
+      expect(text('.restoring')).toBe(
+        'Obnovujeme databázi ze zálohy nfnn-2026-10-23_0300.dump. Web je teď několik minut nedostupný; stránka počká a ukáže výsledek. Možná se pak budete muset znovu přihlásit.',
+      );
+      expect(fixture.nativeElement.querySelector('.restoring')?.getAttribute('role')).toBe(
+        'status',
+      );
+      expect(JSON.parse(sessionStorage.getItem(RESTORE_REQUEST_KEY) ?? '{}').requestId).toBe(
+        'restore-1',
+      );
+
+      await vi.advanceTimersByTimeAsync(RESTART_POLL_MS);
+      http.expectOne(SETUP_URL).flush('', { status: 502, statusText: 'Bad Gateway' });
+      await vi.advanceTimersByTimeAsync(RESTART_POLL_MS);
+      http.expectOne(SETUP_URL).flush({ required: false, codeRequired: false, lastRestore: null });
+      await settle();
+
+      http.expectOne(BACKUPS_URL).flush(
+        backupsView({
+          lastRestore: backupRun({ requestId: 'restore-1', finishedAt: '2026-10-23T17:32:00Z' }),
+        }),
+      );
+      await settle();
+
+      expect(text('.admin-notice--status')).toBe(
+        'Databáze je obnovená ze zálohy nfnn-2026-10-23_0300.dump. Stav před obnovou je uložený jako záloha „Před obnovou“.',
+      );
+      expect(sessionStorage.getItem(RESTORE_REQUEST_KEY)).toBeNull();
+    });
+
+    it('then a refused restore is named in the dialog with the problem title', async () => {
+      button('Obnovit a restartovat web').click();
+      await settle();
+      const refused = problem(
+        409,
+        'operations/restore-pending',
+        'Obnova už čeká',
+        'Jedna obnova ze zálohy už čeká na kontejner záloh nebo právě běží. Počkejte, až skončí.',
+      );
+      http.expectOne(RESTORE_URL).flush(refused.body, refused.options);
+      await settle();
+
+      expect(text('.restore-error')).toContain('Obnova už čeká');
+      expect(button('Obnovit a restartovat web').disabled).toBe(false);
+    });
+  });
+
+  it('when the page opens after a restore that failed, then the alert names the error and says the data stayed', async () => {
+    http.expectOne(BACKUPS_URL).flush(backupsView());
+    sessionStorage.setItem(
+      RESTORE_REQUEST_KEY,
+      JSON.stringify({ requestId: 'restore-2', fileName: 'nfnn-2026-10-22_0300.dump' }),
+    );
+    fixture.destroy();
+    fixture = TestBed.createComponent(AdminBackups);
+    fixture.detectChanges();
+
+    await respond(
+      backupsView({
+        lastRestore: backupRun({
+          outcome: 'FAILED',
+          requestId: 'restore-2',
+          error: 'pg_restore: error: unexpected end of file',
+        }),
+      }),
+    );
+
+    expect(text('.admin-notice--alert')).toBe(
+      'Obnova ze zálohy nfnn-2026-10-22_0300.dump se nepovedla: pg_restore: error: unexpected end of file. Web běží dál s daty, jaká měl před obnovou.',
+    );
+  });
+
+  it('when the page opens after a restore the container never took, then the alert says the data are unchanged', async () => {
+    http.expectOne(BACKUPS_URL).flush(backupsView());
+    sessionStorage.setItem(
+      RESTORE_REQUEST_KEY,
+      JSON.stringify({ requestId: 'restore-3', fileName: 'nfnn-2026-10-22_0300.dump' }),
+    );
+    fixture.destroy();
+    fixture = TestBed.createComponent(AdminBackups);
+    fixture.detectChanges();
+
+    await respond(backupsView());
+
+    expect(text('.admin-notice--alert')).toContain('si obnovu do pěti minut nevzal');
+  });
+
+  it('when a restore is pending, then every action that could interfere is disabled', async () => {
+    await respond(backupsView({ restorePending: true, pendingRequests: 1 }));
+
+    expect(button('Obnovit').disabled).toBe(true);
+    expect(button('Zálohovat teď').disabled).toBe(true);
+    expect(button('Ověřit obnovu teď').disabled).toBe(true);
+  });
+
   it('when a dump is downloaded, then the file is fetched as a blob with the token and saved under its name', async () => {
     await respond(backupsView());
     const clicked: string[] = [];
@@ -334,7 +472,11 @@ describe('Given an administrator on the backups page', () => {
       value: vi.fn(),
     });
 
-    (fixture.nativeElement.querySelector('tbody button') as HTMLButtonElement | null)?.click();
+    (
+      fixture.nativeElement.querySelector(
+        'tbody button[aria-label="Stáhnout nfnn-2026-10-23_0300.dump"]',
+      ) as HTMLButtonElement | null
+    )?.click();
     await settle();
 
     const request = http.expectOne(`${BACKUPS_URL}/nfnn-2026-10-23_0300.dump`);
@@ -347,7 +489,7 @@ describe('Given an administrator on the backups page', () => {
     await settle();
 
     expect(clicked).toEqual(['nfnn-2026-10-23_0300.dump']);
-    expect(texts('tbody button')).toEqual(['Stáhnout', 'Stáhnout']);
+    expect(texts('tbody button')).toEqual(['Obnovit', 'Stáhnout', 'Obnovit', 'Stáhnout']);
   });
 
   it('when the token is not accepted, then the administrator is sent home to sign in', async () => {

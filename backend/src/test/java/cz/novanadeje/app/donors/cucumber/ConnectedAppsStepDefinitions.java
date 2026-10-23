@@ -277,6 +277,12 @@ public class ConnectedAppsStepDefinitions {
         api.get(BACKUPS_PATH + "/" + fileName);
     }
 
+    @When("the exchanged API token tries to restore the backup {string}")
+    public void theExchangedApiTokenTriesToRestoreTheBackup(String fileName) {
+        actAsExchangedApiToken();
+        api.post(BACKUPS_PATH + "/" + fileName + "/restore", Map.of());
+    }
+
     @When("the exchanged API token changes the setting {string} to {string}")
     public void theExchangedApiTokenChangesTheSetting(String name, String value) {
         actAsExchangedApiToken();

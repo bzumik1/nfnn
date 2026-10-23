@@ -71,12 +71,12 @@ class BackupHealthTest {
 
     private static BackupRun ok(Instant finishedAt) {
         return new BackupRun(RunOutcome.OK, finishedAt.minusSeconds(3), finishedAt, Optional.of("nfnn-2026-10-23_0300.dump"), Optional.of(1590L),
-                Optional.empty(), Optional.empty(), Optional.empty());
+                Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty());
     }
 
     private static BackupRun failed(Instant finishedAt) {
         return new BackupRun(RunOutcome.FAILED, finishedAt.minusSeconds(3), finishedAt, Optional.of("nfnn-2026-10-23_0300.dump"), Optional.empty(),
-                Optional.empty(), Optional.empty(), Optional.of("pg_dump: error: connection failed"));
+                Optional.empty(), Optional.empty(), Optional.empty(), Optional.of("pg_dump: error: connection failed"));
     }
 
     private static BackupFile file(Instant createdAt) {

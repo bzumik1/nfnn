@@ -1,4 +1,4 @@
-import { provideHttpClient } from '@angular/common/http';
+import { HttpEventType, provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
@@ -9,6 +9,8 @@ import { RESTART_POLL_MS } from './setup-api';
 const STATUS_URL = '/api/operations/setup';
 const UNLOCK_URL = '/api/operations/setup/unlock';
 const MAIL_TEST_URL = '/api/operations/setup/mail-test';
+const RESTORE_URL = '/api/operations/setup/restore';
+const REQUEST_ID = '019a1b2c-0000-7000-8000-000000000001';
 
 function problem(status: number, type: string, title: string, detail: string, extra = {}) {
   return {
@@ -76,6 +78,36 @@ describe('Given the first setup page', () => {
     input.dispatchEvent(new Event('input'));
     input.dispatchEvent(new Event('blur'));
     await settle();
+  }
+
+  async function chooseFile(name: string): Promise<File> {
+    const file = new File(['PGDMP'], name, { type: 'application/octet-stream' });
+    const input = element<HTMLInputElement>('#backup-file');
+    Object.defineProperty(input, 'files', { value: { length: 1, item: () => file } });
+    input.dispatchEvent(new Event('change'));
+    await settle();
+    return file;
+  }
+
+  async function uploadAndRestart(): Promise<void> {
+    await chooseFile('nfnn-2026-10-22_0300.dump');
+    button('Nahrát a obnovit').click();
+    await settle();
+    const request = http.expectOne(RESTORE_URL);
+    vi.useFakeTimers();
+    request.flush({
+      requestId: REQUEST_ID,
+      fileName: `${REQUEST_ID}.upload`,
+      requestedAt: '2026-10-23T18:00:00Z',
+    });
+    await vi.advanceTimersByTimeAsync(1);
+    fixture.detectChanges();
+    expect(text('h1')).toBe('Obnovujeme web ze zálohy');
+    await vi.advanceTimersByTimeAsync(RESTART_POLL_MS);
+    http.expectOne(STATUS_URL).flush('', { status: 502, statusText: 'Bad Gateway' });
+    await vi.advanceTimersByTimeAsync(RESTART_POLL_MS);
+    http.expectOne(STATUS_URL).flush({ required: true, codeRequired: false, lastRestore: null });
+    await vi.advanceTimersByTimeAsync(1);
   }
 
   async function submit(selector: string): Promise<void> {
@@ -251,6 +283,137 @@ describe('Given the first setup page', () => {
       const dialog = TestBed.inject(LoginDialogService);
       expect(dialog.isOpen()).toBe(true);
       expect(dialog.initialMode()).toBe('register');
+    });
+
+    describe('when the site is restored from a backup instead', () => {
+      beforeEach(async () => {
+        button('Obnovit ze zálohy').click();
+        await settle();
+      });
+
+      it('then the page asks for the backup file and uploads only once one is chosen', async () => {
+        expect(text('h1')).toBe('Obnovit web ze zálohy');
+        expect(button('Nahrát a obnovit').disabled).toBe(true);
+
+        const file = await chooseFile('nfnn-2026-10-22_0300.dump');
+        button('Nahrát a obnovit').click();
+        await settle();
+
+        const request = http.expectOne(RESTORE_URL);
+        expect(request.request.method).toBe('PUT');
+        expect(request.request.body).toBe(file);
+        expect(request.request.headers.get('Content-Type')).toBe('application/octet-stream');
+        expect(request.request.headers.has('X-Nfnn-Setup-Code')).toBe(false);
+        request.event({ type: HttpEventType.UploadProgress, loaded: 42, total: 100 });
+        await settle();
+        expect(text('[role="status"]')).toBe('Nahráváme zálohu… 42 %');
+        expect(button('Nahrát a obnovit').disabled).toBe(true);
+        request.flush({
+          requestId: REQUEST_ID,
+          fileName: `${REQUEST_ID}.upload`,
+          requestedAt: '2026-10-23T18:00:00Z',
+        });
+        await settle();
+
+        expect(text('h1')).toBe('Obnovujeme web ze zálohy');
+      });
+
+      it('then a file that is not a backup is refused with the reason and can be replaced', async () => {
+        await chooseFile('fotka.jpg');
+        button('Nahrát a obnovit').click();
+        await settle();
+
+        const refused = problem(
+          400,
+          'operations/not-a-backup',
+          'Soubor není záloha',
+          'Vyberte prosím soubor zálohy s příponou .dump.',
+        );
+        http.expectOne(RESTORE_URL).flush(refused.body, refused.options);
+        await settle();
+
+        expect(text('[role="alert"]')).toContain('Vyberte prosím soubor zálohy s příponou .dump.');
+        expect(button('Nahrát a obnovit').disabled).toBe(false);
+      });
+
+      it('then going back shows the form again', async () => {
+        button('Zpět k nastavení').click();
+        await settle();
+
+        expect(text('h1')).toBe('První nastavení webu');
+      });
+
+      it('then a backup with its administrators ends on the sign-in that leads to the settings', async () => {
+        await uploadAndRestart();
+        http
+          .expectOne(STATUS_URL)
+          .flush({ required: false, codeRequired: true, lastRestore: null });
+        await vi.advanceTimersByTimeAsync(1);
+        fixture.detectChanges();
+
+        expect(text('h1')).toBe('Web je obnovený ze zálohy');
+        expect(text('[role="status"]')).toContain(
+          'znovu zadejte heslo pro odesílání e-mailů a token Fio',
+        );
+        button('Přihlásit se').click();
+        const dialog = TestBed.inject(LoginDialogService);
+        expect(dialog.isOpen()).toBe(true);
+        expect(dialog.initialMode()).toBe('login');
+      });
+
+      it('then a backup from before the setup returns to the form with a note', async () => {
+        await uploadAndRestart();
+        http.expectOne(STATUS_URL).flush({
+          required: true,
+          codeRequired: false,
+          lastRestore: {
+            requestId: REQUEST_ID,
+            outcome: 'OK',
+            finishedAt: '2026-10-23T18:02:00Z',
+            error: null,
+          },
+        });
+        await vi.advanceTimersByTimeAsync(1);
+        fixture.detectChanges();
+
+        expect(text('h1')).toBe('První nastavení webu');
+        expect(text('.restore-done')).toBe(
+          'Záloha je obnovená. Pochází z doby před prvním nastavením, proto ho prosím doplňte.',
+        );
+      });
+
+      it('then a failed restore names the error and offers another file', async () => {
+        await uploadAndRestart();
+        http.expectOne(STATUS_URL).flush({
+          required: true,
+          codeRequired: false,
+          lastRestore: {
+            requestId: REQUEST_ID,
+            outcome: 'FAILED',
+            finishedAt: '2026-10-23T18:02:00Z',
+            error: 'pg_restore: error: unsupported version',
+          },
+        });
+        await vi.advanceTimersByTimeAsync(1);
+        fixture.detectChanges();
+
+        expect(text('h1')).toBe('Obnovit web ze zálohy');
+        expect(text('[role="alert"]')).toBe(
+          'Obnova se nepovedla: pg_restore: error: unsupported version. Web zůstal prázdný; zkuste prosím jiný soubor zálohy.',
+        );
+      });
+
+      it('then a restore the backup container never took says so', async () => {
+        await uploadAndRestart();
+        http
+          .expectOne(STATUS_URL)
+          .flush({ required: true, codeRequired: false, lastRestore: null });
+        await vi.advanceTimersByTimeAsync(1);
+        fixture.detectChanges();
+
+        expect(text('h1')).toBe('Obnovit web ze zálohy');
+        expect(text('[role="alert"]')).toContain('Kontejner záloh si obnovu do pěti minut nevzal.');
+      });
     });
 
     it('then values the backend refuses are listed with their names', async () => {

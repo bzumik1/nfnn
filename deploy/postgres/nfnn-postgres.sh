@@ -40,7 +40,7 @@ if [ -s "$PGDATA/PG_VERSION" ]; then
         -o "-c listen_addresses='' -c unix_socket_directories=$SYNC_SOCKET" start > /dev/null; then
     if printf '%s\n' "ALTER ROLE CURRENT_USER PASSWORD :'password';" \
         | gosu postgres psql -X -q -v ON_ERROR_STOP=1 -h "$SYNC_SOCKET" -U "${POSTGRES_USER:-postgres}" \
-            -d "${POSTGRES_DB:-${POSTGRES_USER:-postgres}}" -v password="$POSTGRES_PASSWORD" > /dev/null; then
+            -d postgres -v password="$POSTGRES_PASSWORD" > /dev/null; then
       touch "$READY_FILE"
       log "the database role uses the password from $PASSWORD_FILE"
     else

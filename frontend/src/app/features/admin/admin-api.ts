@@ -333,7 +333,14 @@ export interface AdminBackupsResponse {
   lastRestore: BackupRunResponse | null;
   restoreFiles: RestoreFileResponse[];
   pendingRequests: number;
+  restorePending: boolean;
   problems: BackupProblem[];
+}
+
+export interface RestoreRequestResponse {
+  requestId: string;
+  fileName: string;
+  requestedAt: string;
 }
 
 export interface BackupRequestResponse {
@@ -585,6 +592,13 @@ export class AdminApi {
     return this.http.post<BackupRequestResponse>('/api/admin/operations/backups/requests', {
       kind,
     });
+  }
+
+  restoreBackup(fileName: string): Observable<RestoreRequestResponse> {
+    return this.http.post<RestoreRequestResponse>(
+      `/api/admin/operations/backups/${encodeURIComponent(fileName)}/restore`,
+      null,
+    );
   }
 
   downloadBackup(fileName: string): Observable<DownloadedFile> {

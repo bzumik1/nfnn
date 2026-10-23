@@ -1,5 +1,8 @@
 package cz.novanadeje.app.operations.application.settings;
 
+import cz.novanadeje.app.operations.application.backup.BackupRestoreService;
+import cz.novanadeje.app.operations.application.backup.BackupStore;
+import cz.novanadeje.app.operations.application.backup.RestoreRequest;
 import cz.novanadeje.app.operations.domain.settings.Setting;
 import cz.novanadeje.app.operations.domain.settings.SettingChange;
 import cz.novanadeje.app.operations.domain.settings.SetupCode;
@@ -13,10 +16,12 @@ import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.InputStream;
 import java.security.SecureRandom;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -29,16 +34,20 @@ public class SetupService {
     private final SetupCodeAnnouncer announcer;
     private final MailServerProbe mailProbe;
     private final ApplicationRestarter restarter;
+    private final BackupStore backups;
+    private final BackupRestoreService restores;
     private final Clock clock;
     private final SetupCode code;
 
     public SetupService(SetupStateRepository state, SettingsWriter writer, SetupCodeAnnouncer announcer, MailServerProbe mailProbe,
-                        ApplicationRestarter restarter, Clock clock) {
+                        ApplicationRestarter restarter, BackupStore backups, BackupRestoreService restores, Clock clock) {
         this.state = state;
         this.writer = writer;
         this.announcer = announcer;
         this.mailProbe = mailProbe;
         this.restarter = restarter;
+        this.backups = backups;
+        this.restores = restores;
         this.clock = clock;
         this.code = SetupCode.generate(new SecureRandom());
     }
@@ -55,7 +64,7 @@ public class SetupService {
     @Transactional(readOnly = true)
     public SetupStatusView status(boolean fromHomeNetwork) {
         boolean required = !state.isCompleted();
-        return new SetupStatusView(required, required && !fromHomeNetwork);
+        return new SetupStatusView(required, required && !fromHomeNetwork, required ? backups.lastRestore() : Optional.empty());
     }
 
     @Transactional(readOnly = true)
@@ -83,6 +92,12 @@ public class SetupService {
                 access.fromHomeNetwork() ? "from the home network" : "with the setup code",
                 changed.stream().map(Enum::name).collect(Collectors.joining(", ")));
         return changed;
+    }
+
+    public RestoreRequest restoreUpload(SetupAccess access, InputStream content) {
+        requireOpen(access);
+        log.info("A backup is uploaded in the first setup {}", access.fromHomeNetwork() ? "from the home network" : "with the setup code");
+        return restores.restoreUpload(content);
     }
 
     private void requireOpen(SetupAccess access) {

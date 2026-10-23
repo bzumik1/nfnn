@@ -69,6 +69,16 @@
             Tajné údaje teď nejde uložit, protože serveru chybí klíč k šifrování (soubor
             secrets/settings-key). Ostatní nastavení uložit jde.
           </p>
+        } @else if (unreadableSecrets()) {
+          <p
+            class="admin-notice admin-notice--alert"
+            role="alert"
+            i18n="@@admin.settings.unreadableSecrets"
+          >
+            Tyto tajné údaje jsou uložené jiným klíčem, než má tento server, třeba po obnově ze
+            zálohy na novém serveru: {{ unreadableSecrets() }}. Dokud je znovu nezadáte a neuložíte,
+            nebudou fungovat.
+          </p>
         }
         <form class="settings-form" (ngSubmit)="askSave()" novalidate>
           @for (group of groups(); track group.id) {
