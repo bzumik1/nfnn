@@ -54,6 +54,7 @@ export class PasskeysCard {
 
   private readonly addButton = viewChild<ElementRef<HTMLButtonElement>>('addButton');
   private readonly nameField = viewChild<ElementRef<HTMLInputElement>>('nameField');
+  private readonly renameField = viewChild<ElementRef<HTMLInputElement>>('renameField');
 
   protected readonly supported = this.authenticator.supported();
   protected readonly passkeys = signal<Passkey[] | null>(null);
@@ -73,6 +74,9 @@ export class PasskeysCard {
   protected readonly error = signal('');
   protected readonly confirming = signal<string | null>(null);
   protected readonly removing = signal<string | null>(null);
+  protected readonly renaming = signal<string | null>(null);
+  protected readonly renameSaving = signal(false);
+  protected readonly renameError = signal('');
   protected readonly status = signal('');
   protected readonly nameMaxLength = PASSKEY_NAME_MAX_LENGTH;
 
@@ -86,6 +90,7 @@ export class PasskeysCard {
 
   protected name = '';
   protected password = '';
+  protected newName = '';
 
   constructor() {
     this.load();
@@ -119,6 +124,7 @@ export class PasskeysCard {
     this.status.set('');
     this.error.set('');
     this.confirming.set(null);
+    this.renaming.set(null);
     this.name = deviceName(this.document);
     this.password = '';
     this.adding.set(true);
@@ -176,7 +182,53 @@ export class PasskeysCard {
   askToRemove(passkey: Passkey): void {
     this.status.set('');
     this.loadError.set('');
+    this.renaming.set(null);
     this.confirming.set(passkey.id);
+  }
+
+  openRename(passkey: Passkey): void {
+    this.status.set('');
+    this.renameError.set('');
+    this.confirming.set(null);
+    this.newName = passkey.name;
+    this.renaming.set(passkey.id);
+    afterNextRender(() => this.renameField()?.nativeElement.focus(), { injector: this.injector });
+  }
+
+  cancelRename(passkey: Passkey): void {
+    this.closeRename(passkey);
+  }
+
+  rename(form: NgForm, passkey: Passkey): void {
+    if (form.invalid || this.renameSaving()) {
+      return;
+    }
+    this.renameSaving.set(true);
+    this.renameError.set('');
+    this.authApi.renamePasskey(passkey.id, this.newName.trim()).subscribe({
+      next: (renamed) => {
+        this.renameSaving.set(false);
+        this.passkeys.update((list) =>
+          (list ?? []).map((other) => (other.id === renamed.id ? renamed : other)),
+        );
+        this.status.set(
+          $localize`:@@donor.passkeys.renamed:Přístupový klíč je přejmenovaný na ${renamed.name}:name:.`,
+        );
+        this.closeRename(passkey);
+      },
+      error: (failure: unknown) => {
+        this.renameSaving.set(false);
+        if (this.sessionLost(failure)) {
+          return;
+        }
+        this.renameError.set(
+          describeProblem(
+            failure,
+            $localize`:@@donor.passkeys.error.rename:Klíč se nepodařilo přejmenovat. Zkuste to prosím znovu.`,
+          ),
+        );
+      },
+    });
   }
 
   keep(): void {
@@ -214,6 +266,19 @@ export class PasskeysCard {
 
   protected formatDate(isoInstant: string): string {
     return formatDonationDate(isoInstant);
+  }
+
+  protected renameButtonId(passkey: Passkey): string {
+    return `passkey-rename-button-${passkey.id}`;
+  }
+
+  private closeRename(passkey: Passkey): void {
+    this.renaming.set(null);
+    this.newName = '';
+    this.renameError.set('');
+    afterNextRender(() => this.document.getElementById(this.renameButtonId(passkey))?.focus(), {
+      injector: this.injector,
+    });
   }
 
   private closeForm(): void {

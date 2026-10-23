@@ -21,7 +21,7 @@ public final class Passkey {
     private final String credentialId;
     private final byte[] credentialData;
     private final List<String> transports;
-    private final String name;
+    private String name;
     private final Instant createdAt;
     private long signCount;
     private Instant lastUsedAt;
@@ -67,6 +67,10 @@ public final class Passkey {
         }
         signCount = newSignCount;
         lastUsedAt = at;
+    }
+
+    public void rename(String newName) {
+        name = validName(newName);
     }
 
     public boolean belongsTo(DonorId donor) {

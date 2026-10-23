@@ -210,6 +210,40 @@ test.describe('Given a signed-in donor in the overview', () => {
       },
     ]);
   });
+
+  test('when they rename a passkey, then the card shows the new name', async ({ page }) => {
+    const iphone = {
+      id: '019a1b2c-3d4e-7f00-8000-000000000001',
+      name: 'iPhone',
+      createdAt: '2026-10-23T10:00:00Z',
+      lastUsedAt: null,
+    };
+    const renames: unknown[] = [];
+    await page.route(
+      (url) => url.pathname === '/api/donors/me/passkeys',
+      (route) => route.fulfill({ json: { items: [iphone] } }),
+    );
+    await page.route(`**/api/donors/me/passkeys/${iphone.id}`, async (route) => {
+      renames.push({ method: route.request().method(), body: route.request().postDataJSON() });
+      await route.fulfill({ json: { ...iphone, name: 'iPhone 16 Pro Max' } });
+    });
+    await signIn(page);
+
+    const card = page.getByRole('region', { name: 'Přístupové klíče' });
+    await card.getByRole('button', { name: 'Přejmenovat' }).click();
+    const field = card.getByLabel('Nový název klíče');
+    await expect(field).toBeFocused();
+    await expect(field).toHaveValue('iPhone');
+    await field.fill('iPhone 16 Pro Max');
+    await card.getByRole('button', { name: 'Uložit název' }).click();
+
+    await expect(card.getByRole('status')).toContainText(
+      'Přístupový klíč je přejmenovaný na iPhone 16 Pro Max.',
+    );
+    await expect(card.locator('.passkey-name')).toHaveText(['iPhone 16 Pro Max']);
+    await expect(card.getByRole('button', { name: 'Přejmenovat' })).toBeFocused();
+    expect(renames).toEqual([{ method: 'PATCH', body: { name: 'iPhone 16 Pro Max' } }]);
+  });
 });
 
 const passwordless = { ...donor, hasPassword: false };

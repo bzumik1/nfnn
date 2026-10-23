@@ -85,6 +85,26 @@
   white-space: nowrap;
 }
 
+.passkey-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.passkey .passkeys-hint {
+  flex: 1 1 100%;
+  margin-bottom: 0;
+}
+
+.passkey-rename {
+  flex: 1 1 100%;
+
+  app-form-field {
+    display: block;
+    max-width: 560px;
+  }
+}
+
 .passkey-confirm {
   flex: 1 1 100%;
   font-size: 13px;

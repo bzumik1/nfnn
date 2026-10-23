@@ -62,4 +62,28 @@ class PasskeyTest {
         assertThat(passkey.signCount()).isEqualTo(4);
         assertThat(passkey.lastUsedAt()).contains(NOW.plusSeconds(60));
     }
+
+    @Test
+    @DisplayName("Given a registered passkey, when the donor renames it, then it keeps the trimmed new name and everything else")
+    void should_keep_trimmed_new_name_when_renamed_given_registered_passkey() {
+        Passkey passkey = Passkey.register(DONOR, CREDENTIAL_ID, new byte[]{1}, 3, List.of("internal"), "iPhone", NOW);
+
+        passkey.rename("  iPhone 16 Pro Max (práce)  ");
+
+        assertThat(passkey.name()).isEqualTo("iPhone 16 Pro Max (práce)");
+        assertThat(passkey.credentialId()).isEqualTo(CREDENTIAL_ID);
+        assertThat(passkey.createdAt()).isEqualTo(NOW);
+        assertThat(passkey.signCount()).isEqualTo(3);
+    }
+
+    @Test
+    @DisplayName("Given a registered passkey, when it is renamed to a blank, too long or control-character name, then it is refused and keeps its name")
+    void should_refuse_invalid_name_when_renamed_given_registered_passkey() {
+        Passkey passkey = Passkey.register(DONOR, CREDENTIAL_ID, new byte[]{1}, 0, List.of(), "Mac", NOW);
+
+        assertThatIllegalArgumentException().isThrownBy(() -> passkey.rename("  "));
+        assertThatIllegalArgumentException().isThrownBy(() -> passkey.rename("a".repeat(Passkey.MAX_NAME_LENGTH + 1)));
+        assertThatIllegalArgumentException().isThrownBy(() -> passkey.rename("a\tb"));
+        assertThat(passkey.name()).isEqualTo("Mac");
+    }
 }

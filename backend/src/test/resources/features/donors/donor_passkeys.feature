@@ -154,6 +154,30 @@ Feature: A donor signs in with a passkey instead of the password
     Then the response status is 401
     And the problem type ends with "auth/invalid-passkey"
 
+  Scenario: A donor renames a passkey, which still opens a session, and cannot rename another donor's passkey
+    Given "Jana" added a passkey named "iPhone"
+    When 5 seconds pass
+    And "Jana" added a passkey named "Windows"
+    When "Petr" renames the passkey "iPhone" of "Jana" to "Můj"
+    Then the response status is 404
+    And the problem type ends with "donors/passkey-not-found"
+    When "Jana" renames the passkey "iPhone" of "Jana" to "  iPhone 16 Pro Max  "
+    Then the response status is 200
+    And the response names the passkey "iPhone 16 Pro Max"
+    And the passkeys of "Jana" are "iPhone 16 Pro Max, Windows"
+    When "Jana" signs in with the passkey "iPhone"
+    Then the response status is 200
+
+  Scenario: A new passkey name is required and at most 64 characters long
+    Given "Jana" added a passkey named "iPhone"
+    When "Jana" renames the passkey "iPhone" of "Jana" to " "
+    Then the response status is 400
+    And the problem type ends with "validation"
+    When "Jana" renames the passkey "iPhone" of "Jana" to "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    Then the response status is 400
+    And the problem type ends with "validation"
+    And the passkeys of "Jana" are "iPhone"
+
   Scenario: A donor keeps at most ten passkeys
     Given "Jana" added 10 passkeys
     When "Jana" adds a passkey named "Jedenáctý"
@@ -186,4 +210,7 @@ Feature: A donor signs in with a passkey instead of the password
 
   Scenario: Without a token the donor's passkeys are not served
     When someone without a token asks for the passkeys
+    Then the response status is 401
+    Given "Jana" added a passkey named "iPhone"
+    When someone without a token renames the passkey "iPhone" of "Jana" to "Můj"
     Then the response status is 401

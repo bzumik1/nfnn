@@ -357,6 +357,25 @@ public class DonorPasskeyStepDefinitions {
         api.delete(PASSKEYS_PATH + "/" + id);
     }
 
+    @When("{string} renames the passkey {string} of {string} to {string}")
+    public void renamesThePasskeyOf(String alias, String name, String owner, String newName) {
+        String id = passkey(owner, name).id();
+        sessions.actAs(alias);
+        api.patch(PASSKEYS_PATH + "/" + id, Map.of("name", newName));
+    }
+
+    @When("someone without a token renames the passkey {string} of {string} to {string}")
+    public void someoneWithoutATokenRenamesThePasskey(String name, String owner, String newName) {
+        String id = passkey(owner, name).id();
+        api.forgetCredentials();
+        api.patch(PASSKEYS_PATH + "/" + id, Map.of("name", newName));
+    }
+
+    @Then("the response names the passkey {string}")
+    public void theResponseNamesThePasskey(String name) {
+        assertThat(api.lastResponseJson().get("name").asString()).isEqualTo(name);
+    }
+
     @When("someone without a token asks for the passkeys")
     public void someoneWithoutATokenAsksForThePasskeys() {
         api.forgetCredentials();

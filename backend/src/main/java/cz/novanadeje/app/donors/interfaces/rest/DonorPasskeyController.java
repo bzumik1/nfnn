@@ -10,6 +10,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -47,6 +48,11 @@ class DonorPasskeyController {
     @GetMapping
     PasskeyListResponse list(@AuthenticationPrincipal Jwt jwt) {
         return PasskeyListResponse.from(passkeys.list(DonorId.of(jwt.getSubject())));
+    }
+
+    @PatchMapping("/{passkeyId}")
+    PasskeyResponse rename(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID passkeyId, @Valid @RequestBody PasskeyRenameRequest request) {
+        return PasskeyResponse.of(passkeys.rename(DonorId.of(jwt.getSubject()), new PasskeyId(passkeyId), request.name()));
     }
 
     @DeleteMapping("/{passkeyId}")
