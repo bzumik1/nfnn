@@ -10,11 +10,14 @@ RUN npm run build && npm prune --omit=dev
 
 FROM node:24-alpine
 ARG REVISION=dev
-ENV NODE_ENV=production APP_REVISION=$REVISION PORT=8081 BACKEND_URL=http://backend:8080
+RUN apk add --no-cache su-exec
+ENV NODE_ENV=production APP_REVISION=$REVISION PORT=8081 BACKEND_URL=http://backend:8080 LOG_FILE=/logs/mcp.log
 WORKDIR /app
 COPY --from=build /workspace/node_modules ./node_modules
 COPY --from=build /workspace/dist ./dist
 COPY package.json ./
-USER node
+COPY --chmod=0755 rotate-log.sh /usr/local/bin/rotate-log
+COPY --chmod=0755 docker-entrypoint.sh /app/docker-entrypoint.sh
 EXPOSE 8081
+ENTRYPOINT ["/app/docker-entrypoint.sh"]
 CMD ["node", "dist/main.js"]
