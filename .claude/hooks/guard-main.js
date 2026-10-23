@@ -1,17 +1,22 @@
 // PreToolUse hook (see .claude/settings.json): refuses any push to main, so
-// every change goes through a pull request (CLAUDE.md). Branch
-// protection would do this on GitHub, but on a private repo it needs Pro.
+// every change goes through a pull request (CLAUDE.md). It is a local
+// backstop only: a claude.ai project thread runs no repository hooks, and the
+// lasting guard belongs in a GitHub ruleset on main.
 // Blocks `git push` that names main as the target (quoted or not), `--all`
-// and `--mirror` (they push main too), any `git push` while main is checked
-// out, and GitHub MCP writes that commit straight to main. It reads the
-// command as text, so a command that merely quotes a push to main, such as
-// an echo or a commit message, is blocked too; reword it.
-// Merging a PR is not affected. Exit code 2 blocks the call and shows the
-// message to Claude.
+// and `--mirror` (they push main too), any `git push` from a checkout of main
+// (following `cd dir` and `git -C dir`), `gh api` calls that write to main
+// (`branch=main`, `base=main`), and GitHub MCP writes to main or to the
+// default branch by omission. It reads the command as text, so a command that
+// merely quotes a push to main, such as an echo or a commit message, is
+// blocked too; reword it. A branch named through a shell variable is not
+// seen. Merging a PR is not affected. Exit code 2 blocks the call and shows
+// the message to Claude.
 const { execFileSync } = require('child_process');
+const path = require('path');
 
-// `git push`, also with `-C dir` or `-c key=value` before the subcommand.
-const GIT_PUSH = /^.*?\bgit(\s+-[Cc]\s+\S+)*\s+push\b/;
+// `git push`, also with `-C dir`, `-c key=value` or `--git-dir=…` before the subcommand.
+const GIT_PUSH = /^.*?\bgit((\s+-[Cc]\s+\S+)|(\s+--[\w-]+=\S+))*\s+push\b/;
+const MAIN_REF = /(^|[\s:+])(refs\/heads\/)?main(?=\s|$)/;
 
 let input = '';
 process.stdin.on('data', (chunk) => (input += chunk));
@@ -28,26 +33,32 @@ process.stdin.on('end', () => {
   if (tool === 'Bash') {
     // Quotes go first, so `'main'` and `bash -c '...'` count; then every way
     // to chain commands, subshells and `$(...)` included.
-    const pushes = (args.command || '')
-      .replace(/['"]/g, '')
-      .split(/&&|\|\||[;&|()`\n]/)
-      .filter((part) => GIT_PUSH.test(part));
-    for (const push of pushes) {
-      const rest = push.replace(GIT_PUSH, ' ');
+    const parts = (args.command || '').replace(/['"]/g, '').split(/&&|\|\||[;&|()`\n]/);
+    let cwd = call.cwd || process.cwd();
+    for (const part of parts) {
+      const cd = part.match(/^\s*cd\s+(\S+)\s*$/);
+      if (cd) {
+        cwd = path.resolve(cwd, cd[1].replace(/^~(?=\/|$)/, process.env.HOME || '~'));
+        continue;
+      }
+      if (/\bgh\s+api\b/.test(part) && /\b(branch|base)=(refs\/heads\/)?main(?=\s|$)/.test(part)) {
+        block('gh api write to main');
+      }
+      if (!GIT_PUSH.test(part)) continue;
+      const rest = part.replace(GIT_PUSH, ' ');
       // main as a ref of its own: `origin main`, `HEAD:main`, `:main`,
       // `+main`, `refs/heads/main`; never a branch that merely contains it.
-      if (/(^|[\s:+])(refs\/heads\/)?main(?=\s|$)/.test(rest)) {
-        block('git push to main');
-      }
-      if (/\s--(all|mirror)\b/.test(rest)) {
-        block('git push --all or --mirror, which push main too');
-      }
-      if (currentBranch(call.cwd) === 'main') {
-        block('git push while main is checked out');
+      if (MAIN_REF.test(rest)) block('git push to main');
+      if (/\s--(all|mirror)\b/.test(rest)) block('git push --all or --mirror, which push main too');
+      const dashC = part.match(/\bgit\s+(?:\S+\s+)*?-C\s+(\S+)/);
+      const repo = dashC ? path.resolve(cwd, dashC[1]) : cwd;
+      if (currentBranch(repo) === 'main') {
+        block('git push from a checkout of main (create a branch first)');
       }
     }
   } else if (/^mcp__github__(push_files|create_or_update_file|delete_file)$/.test(tool)) {
-    if (String(args.branch || '').replace(/^refs\/heads\//, '') === 'main') block(`${tool} on main`);
+    const branch = String(args.branch || '').replace(/^refs\/heads\//, '');
+    if (branch === '' || branch === 'main') block(`${tool} on main`);
   }
   process.exit(0);
 });

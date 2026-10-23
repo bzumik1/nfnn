@@ -52,16 +52,16 @@ Proxy host:
 - Block common exploits: zapnuto
 - SSL: nový Let's Encrypt certifikát, Force SSL, HTTP/2, HSTS
 
-Gzip, cache a bezpečnostní hlavičky řeší nginx ve frontend image, Advanced konfigurace v NPM není potřeba.
+Gzip, cache a bezpečnostní hlavičky řeší nginx ve frontend image, Advanced konfigurace v NPM není potřeba. Výjimkou bude přechod na Cloudflare: pak NPM musí brát adresu návštěvníka z `CF-Connecting-IP` (viz Obnova hesla, Adresa návštěvníka).
 
 ## Nasazení nové verze
 
-Po merge do `main` počkej, až v Actions doběhne zeleně **Publish Docker images**. Pak v ZimaOS otevři nastavení aplikace „Nová naděje“ a klikni na **Uložit** bez jakékoli změny: ZimaOS stáhne nové image `latest` a kontejnery vytvoří znovu; data, `secrets/` i nastavení v databázi zůstanou. Tlačítko Update to neudělá (u tagu `latest` aplikaci považuje za aktuální) a samotné `docker restart` taky ne, kontejner by běžel dál ze staré image. Merge, který mění jen dokumentaci (nic v `backend/` ani `frontend/`), nové image nevydá a nasazovat není co.
+Po merge do `main` počkej, až v Actions doběhne zeleně **Publish Docker images**. Pak v ZimaOS otevři nastavení aplikace „Nová naděje“ a klikni na **Uložit** bez jakékoli změny: ZimaOS stáhne nové image `latest` a kontejnery vytvoří znovu; data, `secrets/` i nastavení v databázi zůstanou. Tlačítko Update to neudělá (u tagu `latest` aplikaci považuje za aktuální) a samotné `docker restart` taky ne, kontejner by běžel dál ze staré image. Merge, který nemění nic v `backend/`, `frontend/`, `mcp/`, `deploy/backup/` ani `deploy/postgres/` (třeba jen dokumentaci), nové image nevydá a nasazovat není co.
 
 Kterou verzi kontejnery mají, ukáže commit, ze kterého image vznikla; má se shodovat s commitem běhu **Publish Docker images**:
 
 ```bash
-sudo docker inspect nfnn-backend nfnn-frontend nfnn-backup nfnn-mcp --format '{{.Name}} {{index .Config.Labels "org.opencontainers.image.revision"}}'
+sudo docker inspect nfnn-backend nfnn-frontend nfnn-backup nfnn-postgres nfnn-mcp --format '{{.Name}} {{index .Config.Labels "org.opencontainers.image.revision"}}'
 ```
 
 Uložení bere compose z poslední instalace, takže změnu `compose.yml` nepřenese; na tu je dál potřeba přeinstalace. Nastavení webu se mění ve správě na `/sprava/nastaveni` a přeinstalaci nepotřebuje.
@@ -93,7 +93,7 @@ Pro pokročilé zůstává i cesta přes složku: soubor `.dump` v `/DATA/AppDat
 
 ### Návrat na předchozí verzi
 
-Každá image má vedle `latest` i tag se zkráceným commitem (7 znaků, např. `418105c`), seznam je v GitHubu u balíčků `nfnn-backend`, `nfnn-frontend`, `nfnn-backup` a `nfnn-mcp`. V nastavení aplikace „Nová naděje“ v ZimaOS změň u backendu a frontendu (a zálohování nebo konektoru, měnily-li se) tag z `latest` na commit předchozí verze a klikni na **Uložit**. Zpátky na nejnovější verzi se vrátíš tagem `latest`.
+Každá image má vedle `latest` i tag se zkráceným commitem (7 znaků, např. `418105c`), seznam je v GitHubu u balíčků `nfnn-backend`, `nfnn-frontend`, `nfnn-backup`, `nfnn-postgres` a `nfnn-mcp`. V nastavení aplikace „Nová naděje“ v ZimaOS změň u backendu a frontendu (a zálohování, databáze nebo konektoru, měnily-li se) tag z `latest` na commit předchozí verze a klikni na **Uložit**. Zpátky na nejnovější verzi se vrátíš tagem `latest`.
 
 Pokud novější verze měnila databázi (v jejím commitu přibyl soubor v `backend/src/main/resources/db/changelog/`), starší backend s novější databází fungovat nemusí. Pak po změně tagu obnov zálohu z doby před aktualizací (viz Obnova); dary a registrace mezi zálohou a obnovou se ztratí, platby z banky z posledních 90 dní se ale při dalším stažení z Fio doplní znovu. Proto před aktualizací, která mění databázi, udělej zálohu na požádání.
 
@@ -228,6 +228,6 @@ Dárce, který zapomněl heslo, si v přihlašovacím okně (záložka „Obnovi
 
 - **Adresa v odkazu.** Odkaz v e-mailu se skládá z `PUBLIC_URL`, adresy, na které návštěvníci web otevírají. Zadává se v průvodci a mění ve správě na `/sprava/nastaveni` (pole „Adresa webu“); dokud web běží jen na staging adrese, musí tam být `https://nfnn.znamenacek.duckdns.org` (po přechodu na doménu ji přepiš na `https://nfnn.cz`). Adresu bez `http://` či `https://` nebo s `?` či `#` průvodce ani správa neuloží.
 - **Bez SMTP e-maily neodcházejí.** Dokud ve správě na `/sprava/nastaveni` nejsou vyplněné server, přihlašovací jméno a heslo SMTP (a případně odesílatel), kontaktní formulář i obnova hesla odpovídají, jako by zprávu odeslaly, ale žádný e-mail neodejde. U obnovy hesla je jediným příznakem řádek `Password reset e-mail for donor … could not be sent: …` v `sudo docker logs nfnn-backend`, zakončený jen třídou výjimky: s přihlášením zapnutým bez jména a hesla je to `MailAuthenticationException`, u nedostupného serveru `MailSendException`; z bezpečnostních důvodů v něm není adresa ani podrobnosti chyby. SMTP proto zkoušej tlačítkem „Ověřit spojení“ ve správě (přihlásí se k serveru bez odeslání e-mailu) nebo kontaktním formulářem, jehož chyba v logu obsahuje celou odpověď serveru.
-- **Odesílatel.** Všechny e-maily (kontaktní formulář, obnova hesla i měsíční přehled) odcházejí z adresy `MAIL_FROM`; bez ní z `CONTACT_RECIPIENT`. E-mail s odkazem má jako jméno odesílatele „Nová naděje – nadační fond“. Řádek `MAIL_FROM=` s prázdnou hodnotou zastaví start s hlášením `MAIL_FROM (app.mail.sender-email) is required`; buď ho vyplň, nebo nech zakomentovaný. Před ostrým provozem potřebuje doména odesílatele SPF, DKIM a DMARC, jinak odkazy skončí ve spamu.
+- **Odesílatel.** Všechny e-maily (kontaktní formulář, obnova hesla i měsíční přehled) odcházejí z adresy v poli „Odesílatel e-mailů“ (`MAIL_FROM`), které průvodce prvním nastavením vyžaduje a správa mění na `/sprava/nastaveni`. E-mail s odkazem má jako jméno odesílatele „Nová naděje – nadační fond“. Před ostrým provozem potřebuje doména odesílatele SPF, DKIM a DMARC, jinak odkazy skončí ve spamu.
 - **Omezení.** Z jedné adresy návštěvníka jde poslat nejvýš 5 žádostí za hodinu (šestá dostane odpověď 429) a jeden dárce má nejvýš 3 platné odkazy najednou; další žádost do hodiny nic nepošle. Kdo zná adresu dárce, může jeho tři odkazy na hodinu obsadit; kdyby se to dělo, řešením je CAPTCHA.
 - **Adresa návštěvníka.** Limit na adresu počítá s tím, že Nginx Proxy Manager posílá hlavičku `X-Forwarded-For` (dělá to sám od sebe) a nginx ve frontend image z ní vezme adresu návštěvníka a hlavičky poslané klientem zahodí. Po přechodu na Cloudflare musí NPM brát adresu návštěvníka z `CF-Connecting-IP` (v Advanced konfiguraci proxy hostu `real_ip_header CF-Connecting-IP;` a `set_real_ip_from` pro rozsahy adres Cloudflare), jinak limit počítá adresy Cloudflare a jedna jeho adresa může zablokovat obnovu hesla, přihlášení i registraci mnoha návštěvníkům naráz. Klient z privátní adresy, který se k frontend nginx dostane přímo a ne přes NPM – v lokálním `docker-compose.yml` i na serveru z domácí sítě přes port 8089 – si svou adresu pro limit může vymyslet; z internetu to nejde, a doma to nevadí.

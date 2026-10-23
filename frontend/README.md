@@ -10,7 +10,7 @@ npm run lint                 # ESLint (angular-eslint): TypeScript, šablony a j
 npm run lint:styles          # Stylelint: v komponentách jen tokeny z theme
 npm test -- --watch=false    # Vitest
 npm run build                # produkční build do dist/frontend/browser/
-npm run e2e                  # Playwright (jednou předtím npm run e2e:install)
+npm run e2e                  # Playwright (jednou předtím npm run e2e:install, v cloudu npx playwright install chromium)
 ```
 
 Co kde je: [docs/frontend-overview.md](../docs/frontend-overview.md). Pravidla: `.claude/rules/frontend.md` a `testing.md`.

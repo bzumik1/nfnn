@@ -1,1 +1,1 @@
-- [Visual check in cloud sessions](visual-check-in-cloud.md) — installing Playwright Chromium and screenshotting the dashboard with e2e mocks
+- [Visual check in cloud sessions](visual-check-in-cloud.md) — Node 24, Playwright Chromium and screenshots with the e2e mocks
