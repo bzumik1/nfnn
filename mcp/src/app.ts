@@ -13,6 +13,7 @@ import type { AuthorizationServer, AuthorizationServerDiscovery } from './author
 import type { BackendClient } from './backend.js';
 import { PHOTO_UPLOAD_PATH, receivePhoto } from './photo-upload.js';
 import type { PhotoSource } from './photos.js';
+import { forVisitor } from './visitor.js';
 import type { Logger } from './token-exchange.js';
 import { registerReadingTools } from './tools/reading.js';
 import { WRITE_SCOPE, type ToolDependencies } from './tools/support.js';
@@ -88,7 +89,7 @@ export function createApp(deps: AppDependencies): App {
       }
       const started = now();
       const methods = await methodsOf(request);
-      const auth = await authenticate(request, deps.verifier, server);
+      const auth = await forVisitor(request, () => authenticate(request, deps.verifier, server));
       const response =
         auth instanceof Response ? auth : await handler.fetch(request, { authInfo: auth });
       const donor =
