@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <changeSet id="002-create-news" author="nfnn">
+        <createTable tableName="content_news">
+            <column name="id" type="uuid">
+                <constraints primaryKey="true" primaryKeyName="pk_content_news" nullable="false"/>
+            </column>
+            <column name="slug" type="varchar(80)">
+                <constraints nullable="false" unique="true" uniqueConstraintName="uq_content_news_slug"/>
+            </column>
+            <column name="title" type="varchar(120)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="tag" type="varchar(40)"/>
+            <column name="perex" type="varchar(300)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="body" type="varchar(20000)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="cover_media_id" type="uuid">
+                <constraints foreignKeyName="fk_content_news_cover_media" references="content_media(id)"/>
+            </column>
+            <column name="published_on" type="date"/>
+            <column name="created_at" type="timestamp with time zone">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="timestamp with time zone">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <createIndex tableName="content_news" indexName="ix_content_news_published_on">
+            <column name="published_on"/>
+        </createIndex>
+        <createIndex tableName="content_news" indexName="ix_content_news_cover_media">
+            <column name="cover_media_id"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>

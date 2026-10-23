@@ -10,6 +10,7 @@ public final class ProblemTypes {
     public static final URI UNAUTHENTICATED = of("auth", "unauthenticated");
     public static final URI EXPIRED_TOKEN = of("auth", "expired-token");
     public static final URI FORBIDDEN = of("auth", "forbidden");
+    public static final URI UPLOAD_TOO_LARGE = of("upload-too-large");
 
     private ProblemTypes() {
     }

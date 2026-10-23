@@ -37,6 +37,10 @@ spring:
   web:
     locale: cs
     locale-resolver: accept_header
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 11MB
   task:
     scheduling:
       pool:
@@ -48,6 +52,8 @@ spring:
 server:
   port: ${SERVER_PORT:8080}
   forward-headers-strategy: framework
+  tomcat:
+    max-swallow-size: 12MB
   error:
     include-message: never
     include-binding-errors: never

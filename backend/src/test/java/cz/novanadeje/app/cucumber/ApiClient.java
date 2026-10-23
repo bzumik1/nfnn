@@ -2,11 +2,15 @@ package cz.novanadeje.app.cucumber;
 
 import io.cucumber.spring.ScenarioScope;
 import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestClient;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
@@ -54,6 +58,27 @@ public class ApiClient {
 
     public ResponseEntity<String> put(String path, Map<String, ?> body) {
         return exchange(HttpMethod.PUT, path, body);
+    }
+
+    public ResponseEntity<String> postFile(String path, String fieldName, String fileName, String contentType, byte[] bytes) {
+        HttpHeaders partHeaders = new HttpHeaders();
+        partHeaders.setContentType(MediaType.parseMediaType(contentType));
+        MultiValueMap<String, Object> parts = new LinkedMultiValueMap<>();
+        parts.add(fieldName, new HttpEntity<>(new ByteArrayResource(bytes) {
+            @Override
+            public String getFilename() {
+                return fileName;
+            }
+        }, partHeaders));
+        lastResponse = client.post()
+                .uri(path)
+                .headers(this::addDefaultHeaders)
+                .contentType(MediaType.MULTIPART_FORM_DATA)
+                .body(parts)
+                .retrieve()
+                .toEntity(String.class);
+        lastResponseBytes = null;
+        return lastResponse;
     }
 
     public ResponseEntity<String> get(String path) {

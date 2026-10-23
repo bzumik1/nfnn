@@ -660,6 +660,83 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     expect(await violations(page)).toEqual([]);
   });
 
+  test('when an administrator writes a news article, then the list, the editor with its errors and the deletion confirmation break no rule', async ({
+    page,
+  }) => {
+    const articleId = '0199f3e0-0000-7000-8000-00000000c001';
+    const imageId = '0199f3e0-0000-7000-8000-00000000a001';
+    const article = {
+      id: articleId,
+      slug: 'zahrada-pro-deti',
+      title: 'Zahrada pro děti',
+      tag: 'Projekt',
+      perex: 'Stavíme zahradu, kde si děti budou hrát.',
+      body: 'První odstavec.\n\nDruhý odstavec.',
+      coverImage: { id: imageId, url: `/api/content/media/${imageId}` },
+      publishedOn: '2026-10-20',
+      createdAt: '2026-10-19T09:00:00Z',
+      updatedAt: '2026-10-20T07:30:00Z',
+    };
+    await page.route(
+      (url) => url.pathname === '/api/admin/content/news',
+      (route) =>
+        route.fulfill({
+          json: {
+            items: [
+              article,
+              {
+                ...article,
+                id: 'x',
+                slug: 'koncept',
+                title: 'Koncept',
+                tag: null,
+                coverImage: null,
+                publishedOn: null,
+              },
+            ],
+          },
+        }),
+    );
+    await page.route(
+      (url) => url.pathname === `/api/admin/content/news/${articleId}`,
+      (route) => route.fulfill({ json: article }),
+    );
+    await page.route(
+      (url) => url.pathname.startsWith('/api/content/media/'),
+      (route) =>
+        route.fulfill({
+          contentType: 'image/png',
+          body: Buffer.from(secondFactorEnrolment.qrPngBase64, 'base64'),
+        }),
+    );
+    await page.route('**/api/donors/auth/refresh', (route) =>
+      route.fulfill(session(200, administrator)),
+    );
+    await page.goto('/');
+    await page.evaluate(() => localStorage.setItem('nfnn.donor-session', '1'));
+
+    await page.goto('/sprava/aktuality');
+    await expect(page.getByRole('heading', { level: 1, name: 'Aktuality' })).toBeFocused();
+    await expect(page.locator('tbody tr')).toHaveCount(2);
+
+    expect(await violations(page)).toEqual([]);
+
+    await page.goto('/sprava/aktuality/nova');
+    await expect(page.getByRole('heading', { level: 1, name: 'Nová aktualita' })).toBeFocused();
+    await page.getByRole('button', { name: 'Uložit koncept' }).click();
+    await expect(page.getByLabel('Titulek')).toHaveAttribute('aria-invalid', 'true');
+
+    expect(await violations(page)).toEqual([]);
+
+    await page.goto(`/sprava/aktuality/${articleId}`);
+    await expect(page.getByRole('heading', { level: 1, name: 'Úprava aktuality' })).toBeFocused();
+    await expect(page.locator('.image-preview')).toBeVisible();
+    await page.getByRole('button', { name: 'Smazat aktualitu' }).click();
+    await expect(page.getByRole('group', { name: 'Smazat aktualitu?' })).toBeVisible();
+
+    expect(await violations(page)).toEqual([]);
+  });
+
   test('when a signed-in donor edits their data, then the form breaks no rule either', async ({
     page,
   }) => {

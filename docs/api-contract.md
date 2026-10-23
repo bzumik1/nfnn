@@ -9,7 +9,7 @@ When adding a new endpoint, update this file in the same change.
 - All endpoints under `/api/<context>/...`. Contexts: `content`, `donors`, `donations`, `contact`. No cross-context HTTP calls — use `ApplicationEvent` for behavioral coordination.
 - JSON in / JSON out. Exception: PDF receipts return `application/pdf`, media returns image binary.
 - Errors follow RFC 7807 `application/problem+json` (Spring `ProblemDetail`). `type` URI namespace: `https://nfnn.cz/problems/<context>/<code>`. Per-field validation errors carried in an `errors: [{ field, message }]` array.
-- Identifiers: UUIDv7 (string) for all entity IDs. Public URLs for content use `slug` (kebab-case, unique, immutable after publish); admin URLs use `id`.
+- Identifiers: UUIDv7 (string) for all entity IDs. Public URLs for content use `slug` (kebab-case, unique; an administrator may still change it after publishing, the old address then answers 404); admin URLs use `id`.
 - Money: `{ amountMinor: long, currency: "CZK" }`. Domain value object `Money` lives in `shared/domain/`. Sealed `Currency` (CZK only for now).
 - Dates: ISO-8601. `LocalDate` as `YYYY-MM-DD`, instants as `YYYY-MM-DDTHH:MM:SSZ`. UI formatting (e.g. `15. 03. 2026`) is the frontend's job.
 - Locale signaling: frontend sends `Accept-Language: cs` (default) or `en` on every request via HTTP interceptor. Used for `ProblemDetail` titles/details and (later) translated CMS content. **Exception:** a PDF receipt is rendered in the donor's `preferredLocale` at the time it is issued and keeps it, never in `Accept-Language` (see "PDF receipts").
@@ -40,61 +40,68 @@ Password rules: 12–128 characters; checked against a small disallow-list of co
 
 ### `content` — public CMS
 
-_Planned, not implemented: the `content` package is empty and the site's content lives in the Angular components until the admin exists (`docs/requirements.md` §7). The sample values below are placeholders._
+Plan v2 task 8 (Jakub, 2026-10-22: news and projects in the database, a form with photo upload, publishing with a date, the home page reads the API). Done in 8a: the news and the photos. Still planned: the projects (8b), `GET /api/content/home` and the public pages `/aktuality/<slug>`, `/projekty/<slug>` (8c); until then the home page keeps its placeholder content (`docs/requirements.md` §7). Design and defaults: `/mnt/project-files/nfnn-plan/obsah-webu.md` (project files).
 
-Public:
+Public (no token, `permitAll` for `GET /api/content/**`):
 
 | Method | Path | Purpose |
 |---|---|---|
-| `GET` | `/api/content/home` | Home page sections (hero, about, stats, donate, contactInfo). |
-| `GET` | `/api/content/projects?page&size&year` | Paginated list of projects. |
+| `GET` | `/api/content/news?page=0&size=10` | Published news (`publishedOn` ≤ today in Prague), newest `publishedOn` first, then newest created; `page` ≥ 0, `size` 1–50 (400 `validation` outside). 200 `{ "items": [article…], "page": 0, "size": 10, "total": 12, "hasMore": true }`. |
+| `GET` | `/api/content/news/{slug}` | One published article. 404 `content/news-not-found` for a draft, a future date, an unknown or malformed slug. |
+| `GET` | `/api/content/media/{id}?w=960` | The WebP variant of an uploaded photo at least `w` pixels wide (the largest one when none is that wide or `w` is absent; `w` ≥ 1, 400 otherwise). 200 `image/webp`, `Cache-Control: public, max-age=31536000, immutable` (an id is never reused), `X-Image-Width`, `X-Image-Height`. 404 `content/media-not-found`. |
+
+Admin (role `ADMIN`, see "Administration"):
+
+| Method | Path | Purpose |
+|---|---|---|
+| `GET` | `/api/admin/content/news` | Every article, drafts first (newest changed first), then published newest first: `{ "items": [article…] }`. |
+| `POST` | `/api/admin/content/news` | Creates a draft from the request below → 201 with the article; audited `CREATE_NEWS`. 400 `validation` (`errors[{field}]`), 404 `content/media-not-found` for an unknown `coverImageId`, 409 `content/slug-taken`. |
+| `GET` | `/api/admin/content/news/{id}` | One article, draft or published. 404 `content/news-not-found`. |
+| `PUT` | `/api/admin/content/news/{id}` | Replaces the texts and the photo (the published date stays); a photo no article uses any more is deleted → 200; audited `UPDATE_NEWS`. 400, 404, 409 as for the creation. |
+| `POST` | `/api/admin/content/news/{id}/publish` | `{ "publishedOn": "2026-10-20" }` (any date, also in the past or the future) puts the article on the site from that day → 200; audited `PUBLISH_NEWS`. Publishing again changes the date. 400 `validation`, 404. |
+| `POST` | `/api/admin/content/news/{id}/unpublish` | Takes the article off the site (the date is cleared, it is a draft again) → 200; audited `UNPUBLISH_NEWS`. 404. |
+| `DELETE` | `/api/admin/content/news/{id}` | Deletes the article and its photo → 204; audited `DELETE_NEWS`. 404. |
+| `POST` | `/api/admin/content/media` | `multipart/form-data` with the part `file` (JPEG, PNG or WebP, at most 10 MB and 8 000 px on a side) → 201 `{ "id": "…", "url": "/api/content/media/…", "width": 1600, "height": 1000 }` (the original's size, the EXIF orientation applied). 400 `content/unsupported-image` (empty, not an image, too large a side), 413 `upload-too-large` (over 10 MB, refused by Spring before any work: `spring.servlet.multipart.max-file-size`; the frontend nginx allows 11 MB on `/api/`). An uploaded photo that no article adopts is kept; nothing cleans it up yet. Not audited on its own: the photo is part of the article that adopts it. |
+
+Article (`NewsArticleResponse`, the same shape on the public and the admin endpoints):
+
+```json
+{
+  "id": "0199f3e0-…",
+  "slug": "zahrada-pro-deti",
+  "title": "Zahrada pro děti",
+  "tag": "Projekt",
+  "perex": "Stavíme zahradu…",
+  "body": "První odstavec.\n\nDruhý odstavec.",
+  "coverImage": { "id": "0199f3e0-…", "url": "/api/content/media/0199f3e0-…" },
+  "publishedOn": "2026-10-20",
+  "createdAt": "2026-10-19T09:00:00Z",
+  "updatedAt": "2026-10-20T07:30:00Z"
+}
+```
+
+`tag`, `coverImage` and `publishedOn` are null when absent. Request (`NewsArticleRequest`): `title` (1–120), `slug` (optional; `^[a-z0-9]+(-[a-z0-9]+)*$`, at most 80; blank or absent means made from the title: diacritics stripped, lower case, anything else a hyphen, cut to 80), `tag` (optional, at most 40, blank means none), `perex` (1–300), `body` (1–20 000; plain text, paragraphs separated by an empty line, never HTML: the site renders it as text, so there is nothing to sanitize), `coverImageId` (optional). Texts are trimmed. The `url` of a cover image is the variant endpoint without `w`; the site adds `?w=` for the size it shows.
+
+Domain (`content/domain`): `news/NewsArticle` (id, `NewsContent`, `Optional<LocalDate> publishedOn`, `createdAt`, `updatedAt`; `create`, `edit`, `publish(on)`, `unpublish`, `isVisibleOn(today)`), `NewsContent` (the length rules above, `Slug`), `Slug` (`fromText`), `NewsArticleRepository`, `NewsArticleNotFound` (404), `SlugTaken` (409); `media/MediaImage` (id, the original's width and height, `MediaVariant`s of 480, 960 and 1 440 px, never wider than the original, `variantFor(width)`), `MediaImageRepository`, `MediaNotFound` (404), `UnsupportedImage` (400). Application: `news/NewsAdminService` (one transaction per use case, drops the photo an edit or a deletion leaves unused, publishes `AdminActionPerformed` with the article as subject and the details "News article <id> '<slug>' created | updated | published on <date> | unpublished | deleted"), `news/PublicNewsService` (read-only, today in Prague from `FoundationCalendar`), `media/UploadImageService` (`ImageProcessor` port, then one short transaction to store), `media/MediaQueryService`. Infrastructure: `media/ImageIoImageProcessor` (ImageIO decodes JPEG, PNG and WebP, `ExifOrientation` reads the JPEG orientation tag, the image is turned upright, resized in halving steps with bilinear filtering, flattened on white and written as WebP at quality 0.82 by `io.github.darkxanter:webp-imageio`, which bundles libwebp for Linux x64 and arm64; the backend runs with `--enable-native-access=ALL-UNNAMED`, see the Dockerfile and the Gradle test task), `persistence/JpaMediaImageRepository`, `JpaNewsArticleRepository`. ArchUnit keeps `javax.imageio`, `java.awt.image` and the WebP library inside `content/infrastructure/media`. REST: `interfaces/rest/{AdminNewsController, AdminMediaController, PublicNewsController, MediaController}`; `ApiExceptionHandler` turns Spring's `MaxUploadSizeExceededException` into 413 `upload-too-large`.
+
+Tables (`db/changelog/content/001_create_media.xml`, `002_create_news.xml`):
+
+| Table | Holds | Columns |
+|---|---|---|
+| `content_media` | One uploaded photo: the original's size and when it came; the bytes live only in the variants, the original is not kept. | `id`, `width`, `height` (1–8000, `ck_content_media_size`), `uploaded_at` |
+| `content_media_variant` | The WebP copies of a photo, one per width (`uq_content_media_variant_width`), deleted with the photo (`ON DELETE CASCADE`). The photos sit in the database on purpose: the daily `pg_dump` backs them up and the server needs no extra volume (`deploy/README.md`, "Aktuality a fotky"). | `id`, `media_id`, `width`, `height`, `data` (`bytea`) |
+| `content_news` | One article, draft or published. | `id`, `slug` (varchar 80, `uq_content_news_slug`), `title` (120), `tag` (40, null), `perex` (300), `body` (varchar 20000), `cover_media_id` (FK `content_media`, null; indexed), `published_on` (date, null for a draft; indexed), `created_at`, `updated_at` |
+
+Tests: `features/content/manage_news.feature` (tagged `@content`; `CUCUMBER_FILTER_TAGS=@content ./gradlew test --tests "*AcceptanceTests"` runs only it): a draft with the slug from its title, its audit record and the empty public list; the upload stored as WebP variants (a 1 600 × 1 000 PNG generated in the test: `?w=500` → 960 × 600, `?w=5000` and no `w` → 1 440 × 900, the cache header, an unknown id); a text file and an 11 MB file refused; publishing with a date, the public order newest first, the detail with the photo, withdrawing; a future date that shows up when the day comes; paging and `size` 51 refused; the administrator's list drafts first; an edit replacing the photo with the old one gone; a deletion with the photo gone; a taken slug; the validation of the texts, the slug and an unknown photo; 403 for a donor and 401 without a token. Glue: `content/cucumber/NewsStepDefinitions`, `cucumber/ApiClient.postFile` (multipart). Units: `SlugTest`, `NewsArticleTest`, `NewsAdminServiceTest`, `ImageIoImageProcessorTest` (the variants of a JPEG, a 700 px PNG, a 300 px image, an EXIF orientation 6 JPEG turned upright, a text file and a 8 001 px image refused), `JpaMediaImageRepositoryTest`, `JpaNewsArticleRepositoryTest`.
+
+#### Planned: projects and the home page (8b, 8c)
+
+| Method | Path | Purpose |
+|---|---|---|
+| `GET` | `/api/content/home` | The three newest published news items and the published projects for the home page; the static sections stay in the Angular components for now. |
+| `GET` | `/api/content/projects?page&size` | Paginated published projects. |
 | `GET` | `/api/content/projects/{slug}` | Project detail. 404 if unknown slug. |
-| `GET` | `/api/content/news?page&size&tag` | Paginated news, newest first. |
-| `GET` | `/api/content/news/{slug}` | News article detail (sanitized HTML body). 404 if unknown slug. |
-| `GET` | `/api/content/media/{id}` | Image binary. `id` is UUIDv7, never raw filename. |
-
-Admin (role `ADMIN` required):
-
-| Method | Path | Purpose |
-|---|---|---|
-| `POST/PATCH/DELETE` | `/api/admin/content/projects[/{id}]` | Project CRUD. |
-| `POST/PATCH/DELETE` | `/api/admin/content/news[/{id}]` | News CRUD. |
-| `PATCH` | `/api/admin/content/home` | Update home page (singleton). |
-| `POST` | `/api/admin/content/media` | Upload image (`multipart/form-data`). Returns `{ id, url, contentType, sizeBytes }`. |
-
-#### `GET /api/content/home` response shape
-
-```json
-{
-  "hero": { "eyebrow": "...", "title": "...", "subtitle": "...", "primaryCtaLabel": "...", "secondaryCtaLabel": "...", "imageUrl": "..." },
-  "about": { "eyebrow": "...", "title": "...", "paragraphs": ["...", "..."], "imageUrl": "...", "highlight": { "title": "...", "text": "..." } },
-  "stats": [{ "value": "19+", "label": "let pomáháme" }],
-  "donate": { "title": "...", "body": "...", "bankAccount": "5544332217/2010", "iban": "CZ26 2010 0000 0055 4433 2217" },
-  "contactInfo": { "email": "info@nfnn.cz", "address": "...", "ico": "27278794" },
-  "latestNews": [ /* 3 newest news items, same shape as /news list item */ ]
-}
-```
-
-**Storage strategy (hybrid):** static sections (`hero`, `about`, `stats`, `donate`, `contactInfo`) read from a YAML config in the backend; `latestNews` joined live from DB. When the foundation needs admin-edit on hero/about, migrate those sections into DB-backed entities. The frontend does not see this distinction.
-
-**SPAYD QR string is not in this response.** It moved to `donations` (see below) so the QR can carry a dynamic amount and the donor's variable symbol. Frontend can also generate the SPAYD string client-side from `bankAccount`/`iban` since the format is deterministic — the endpoint exists as a fallback.
-
-#### Project / news list item shape
-
-```json
-{
-  "id": "...",
-  "slug": "dominik",
-  "name": "Dominik",
-  "year": 2024,
-  "tag": "Kompenzační pomůcky",
-  "shortDescription": "...",
-  "coverImageUrl": "/api/content/media/...",
-  "publishedAt": "2024-09-01T00:00:00Z"
-}
-```
-
-Detail adds: `longDescription`, `gallery: string[]`. News uses `title`/`perex`/`body` instead of `name`/`shortDescription`/`longDescription`.
+| `POST/PUT/DELETE` | `/api/admin/content/projects[/{id}]` | Projects managed like the news. |
 
 ### `donors` — donor accounts and authentication
 
@@ -699,7 +706,7 @@ Not an endpoint. The foundation is e-mailed once when the Fio import stops worki
 
 ### Administration (`/api/admin/**`)
 
-Administrators are donors with the `ADMIN` role (see "Authentication"); there is no admin context, each context serves its own administration under `/api/admin/<context>/...` from its `interfaces/rest`. The Angular area is `/sprava` (`docs/frontend-overview.md`). Done so far: the skeleton (role gate, audit trail, the first read-only endpoint), the second factor (an administrator holds `ADMIN` only in a session opened with the code, see "Second factor") the bank payments (manual pairing and unpairing, see "Bank payments") the administrators (granting and taking away the role, turning a donor's two-factor authentication off, see "Administrators"), the older-symbol answers (reversing a mistaken yes, deleting a mistaken no, see "Symbol claims"), the audit trail itself (see "Audit trail") the donors (search, the donor card, turning a donor's two-factor authentication off, managing a donor's bank accounts, the GDPR erasure, see "Donors" and "Donor accounts") and the monthly report (its settings, sending it again, the yearly overview of donations and donors, see "Monthly report settings and overview"); content follows (`docs/requirements.md` §7).
+Administrators are donors with the `ADMIN` role (see "Authentication"); there is no admin context, each context serves its own administration under `/api/admin/<context>/...` from its `interfaces/rest`. The Angular area is `/sprava` (`docs/frontend-overview.md`). Done so far: the skeleton (role gate, audit trail, the first read-only endpoint), the second factor (an administrator holds `ADMIN` only in a session opened with the code, see "Second factor") the bank payments (manual pairing and unpairing, see "Bank payments") the administrators (granting and taking away the role, turning a donor's two-factor authentication off, see "Administrators"), the older-symbol answers (reversing a mistaken yes, deleting a mistaken no, see "Symbol claims"), the audit trail itself (see "Audit trail") the donors (search, the donor card, turning a donor's two-factor authentication off, managing a donor's bank accounts, the GDPR erasure, see "Donors" and "Donor accounts") the monthly report (its settings, sending it again, the yearly overview of donations and donors, see "Monthly report settings and overview") and the news with their photos (see "`content` — public CMS"); the projects and the home page follow (`docs/requirements.md` §7).
 
 #### `GET /api/admin/donations/import-state`
 
@@ -862,7 +869,7 @@ Tests: `features/donations/admin_monthly_report.feature` (the defaults, changed 
 
 #### Audit trail
 
-Every change an administrator makes is recorded in `admin_action` (Liquibase `shared/001_create_admin_action.xml`, included by the master changelog's new `db/changelog/shared/` folder): `id` (UUIDv7), `admin_id` (the donor id from the JWT), `action` (an upper-case code up to 64 characters, e.g. `PAIR_PAYMENT`), `subject_id` (the affected row's id, nullable), `details` (up to 2000 characters of plain text, never personal data beyond what the action needs), `performed_at`; indexed by `performed_at`, `admin_id` and `subject_id`. A use case publishes `shared/application/event/AdminActionPerformed(adminId, action, Optional<UUID> subjectId, details, performedAt)` from its transaction; `shared/infrastructure/audit/AdminActionLog` stores it `BEFORE_COMMIT`, so the change and its record commit together or neither does, and logs `Admin {id} performed {ACTION} on {subject}` at INFO. The manual pairing publishes `PAIR_PAYMENT` and `UNPAIR_PAYMENT` (see "Bank payments"), the administrators `GRANT_ADMINISTRATION`, `REVOKE_ADMINISTRATION` and `RESET_SECOND_FACTOR` (see "Administrators"), the symbol claims `REVERSE_SYMBOL_CLAIM` and `RESET_SYMBOL_CLAIM` (see "Symbol claims"), the donor card `DISCONNECT_SENDER_ACCOUNT`, `RECONNECT_SENDER_ACCOUNT`, `REMOVE_SENDER_ACCOUNT_LINK` (see "Donor accounts"), `ERASE_DONOR` (see "Donors") and the monthly report `CHANGE_REPORT_SETTINGS` and `SEND_MONTHLY_REPORT` (see "Monthly report settings and overview"); `AdminActionLogTest` proves the commit and the rollback against PostgreSQL, `AdminActionPerformedTest` the record's rules.
+Every change an administrator makes is recorded in `admin_action` (Liquibase `shared/001_create_admin_action.xml`, included by the master changelog's new `db/changelog/shared/` folder): `id` (UUIDv7), `admin_id` (the donor id from the JWT), `action` (an upper-case code up to 64 characters, e.g. `PAIR_PAYMENT`), `subject_id` (the affected row's id, nullable), `details` (up to 2000 characters of plain text, never personal data beyond what the action needs), `performed_at`; indexed by `performed_at`, `admin_id` and `subject_id`. A use case publishes `shared/application/event/AdminActionPerformed(adminId, action, Optional<UUID> subjectId, details, performedAt)` from its transaction; `shared/infrastructure/audit/AdminActionLog` stores it `BEFORE_COMMIT`, so the change and its record commit together or neither does, and logs `Admin {id} performed {ACTION} on {subject}` at INFO. The manual pairing publishes `PAIR_PAYMENT` and `UNPAIR_PAYMENT` (see "Bank payments"), the administrators `GRANT_ADMINISTRATION`, `REVOKE_ADMINISTRATION` and `RESET_SECOND_FACTOR` (see "Administrators"), the symbol claims `REVERSE_SYMBOL_CLAIM` and `RESET_SYMBOL_CLAIM` (see "Symbol claims"), the donor card `DISCONNECT_SENDER_ACCOUNT`, `RECONNECT_SENDER_ACCOUNT`, `REMOVE_SENDER_ACCOUNT_LINK` (see "Donor accounts"), `ERASE_DONOR` (see "Donors") the monthly report `CHANGE_REPORT_SETTINGS` and `SEND_MONTHLY_REPORT` (see "Monthly report settings and overview") and the news `CREATE_NEWS`, `UPDATE_NEWS`, `PUBLISH_NEWS`, `UNPUBLISH_NEWS`, `DELETE_NEWS` with the article as subject (see "`content` — public CMS"); `AdminActionLogTest` proves the commit and the rollback against PostgreSQL, `AdminActionPerformedTest` the record's rules.
 
 Reading the trail: `GET /api/admin/donors/actions?before=2026-10-22T10:00:00Z&limit=50` (`AdminDonorsController` → `donors/application/AdministratorActivityService`, read-only). `shared` owns the table and the read port `shared/application/audit/AdminActionTrail.findPerformedBefore(before, limit)` (`AdminActionEntry` records; `shared/infrastructure/audit/JpaAdminActionTrail`, ordered by `performed_at` desc then id desc), and the `donors` context names the administrators through `DonorRepository.findByIds`, so no context reads another's table. `before` defaults to now, `limit` to 50 and is 1–200 (400 `validation` outside); the service fetches one entry more than the page to answer `hasMore`:
 
@@ -965,13 +972,13 @@ Shared pieces that came with it: the sealed `shared/domain/error/DomainException
 
 `features/donations/admin_import_state.feature` covers `GET /api/admin/donations/import-state` (the state after a rejected token, the empty state, 403 for a donor, 401 without a token, the role taking effect at the next sign-in; glue `cucumber/AdminStepDefinitions`, which grants the role straight in `donor_role` as a test shortcut, and `donations/cucumber/AdminImportStateStepDefinitions`). `features/donations/donor_record_sync.feature`, `fio_payment_import.feature`, `import_outage_alerts.feature`, `payment_pairing.feature` and `symbol_claims.feature` cover the donor copy, the import cycle with its failures and the outage e-mails (see "Import outage alerts") and the pairing rules of "Fio import and pairing" (`symbol_claims.feature` asks and answers the question about an older symbol through the bank accounts endpoints and seeds a claim through `SymbolClaimRepository` with `donations/cucumber/SymbolClaimStepDefinitions` only where no question can be asked, see "Older variable symbol confirmation", and `application/pairing/SymbolClaimPairingConcurrencyTest` proves against PostgreSQL that a confirmation and an import running together pair every payment once and that an import waits for the pairing lock); `bank_check_on_demand.feature` covers "Bank check on demand" (a payment fetched by a check, the 30-second cooldown shared by donors and after a failure, the last update time, 401 without a token), with `support/SynchronousBankImportRequests` running the requested import in the request thread; `donor_donations_overview.feature` covers `GET /api/donations/me` and `/api/donations/me/summary` (empty list and zero summary, ordering, the `year` filter and its validation, the purpose in the caller's language, the account verification purpose, another donor's isolation, 401 without a token). Domain: `Donation` aggregate, `DonationStatus`, `DonationSource`, `PairingMethod`, `DonationPurpose` (`of(BankPayment)`), `BankPayment`, `DonorRecord`, `PaymentPairingPolicy`, the `importing` package (`ImportPlanner`, `ImportCoverage`, `BankImportState`), and for the overview `DonationList` (items with the total and count of `RECEIVED` ones, `inYear`), `DonationSummary` (total, count, last receipt day, `YearTotal` per year newest first) built from `DonationRepository.findByDonorNewestFirst`. Application: the read-only `application/overview/DonorDonationsService`. REST: `interfaces/rest/DonorDonationsController` with `DonationListResponse` and `DonationSummaryResponse`; the controller resolves `donation.purpose.<PURPOSE>` from the message bundles, and ArchUnit keeps `MessageSource` and the web packages out of `domain` and `application`. Liquibase: `donations/001_create_donor_record.xml`, `002_create_bank_payment.xml` (`bank_payment`, `bank_import_state`), `003_create_donation.xml`, `004_create_donor_sender_account.xml`, `010_add_donation_purpose.xml` (fills `ACCOUNT_VERIFICATION` for donations already paired from such a payment), `011_confirm_old_variable_symbols.xml` (`donor_symbol_claim`, `donation.symbol_claim_id` and the pairing checks). `donation_receipts.feature` (seventeen scenarios; glue `donations/cucumber/DonorReceiptStepDefinitions`, which reads the PDF text with PDFBox) covers the rules of "PDF receipts": the yearly receipt of a completed year kept as template and data and the same document served again, the current year and a non-numeric year, a completed year without donations, only that year's donations oldest first, the replacement after a late-paired payment or a changed address, the single receipt and its number in the list, the refunded donation, another donor's or an unknown id, the company and the person party, the bilingual `en` receipt and the language kept after a switch, the Prague year boundary, 401 without a token, `yearlyReceiptsAvailableThrough`, and the first receipt year (older donations listed with `receiptAvailable` false, both receipts refused with `receipt-before-first-year`, `receiptsAvailableFrom`). Domain: `domain/FoundationCalendar` (the Prague `ZONE` and `today(clock)`; `importing/BankCalendar` delegates to it) and the `receipt` package: the `DonationReceipt` aggregate (`issueForDonation`, `issueForYear`, `markSuperseded`, `certifies`), `DonationReceiptId`, `ReceiptKind`, `ReceiptNumber`, `ReceiptFingerprint` (SHA-256 of the certified data), `ReceiptDocument` with `ReceiptLine`, `ReceiptParty`, `ReplacedReceipt`, `FoundationIdentity` and `Signatory`, `ReceiptDocumentFactory`, `ReceiptCalendar` (`isCompleted`, `lastCompleted`), `FirstReceiptYear` (`admits` a day or a year), the `DonationReceiptRepository` interface, the `NotFound` exceptions `DonationNotFound`, `ReceiptNotAvailable` and `YearlyReceiptNotAvailable` and the `RuleViolation`s `YearNotYetCompleted` and `ReceiptBeforeFirstYear`. Application: `application/receipt/DonationReceiptService` (today's Prague date, the first receipt year and the completed-year rule for the yearly receipt, and the rendering limit), `DonationReceiptIssuer` (one `REQUIRES_NEW` transaction per download that locks the donor record first; then `ReceiptRequestReader`, which runs only inside a transaction (`MANDATORY`), finds the caller's donation with `DonationRepository.findByIdForDonor` (refusing a refunded one, then one received before the first receipt year) or the year's `RECEIVED` donations, reads the donor record and builds the `ReceiptRequest` with its fingerprint, and the issuer serves the active receipt whose fingerprint still matches, otherwise renders and stores a new one, superseding the old) returning an `IssuedReceipt`, and the `DonationReceiptRenderer` port; `DonorDonationsService` now returns `DonationOverview` (the list with the active single receipt numbers and `receiptAvailable`) and `DonationSummaryView` (the summary with the last completed year and the first receipt year). Infrastructure: `infrastructure/pdf/ThymeleafPdfReceiptRenderer` (`freeze` stores the `ReceiptTemplate` bundle and the `ReceiptImage`s through the `ReceiptResources` port and writes `ReceiptData`; `render` merges the data with the bundle's `ReceiptTexts` for `cs` and `en` and the images, processes the markup with its own string-template Thymeleaf engine and lays it out with openhtmltopdf and the embedded `fonts/DejaVuSans*.ttf`, deterministically; `ReceiptFormats` for dates and amounts), `persistence/JpaReceiptResources` (`receipt_template`, `receipt_image`), `ReceiptProperties` (`app.donations.receipt.*`) and `ReceiptConfiguration` (the `FoundationIdentity`, `Signatory`, `FirstReceiptYear` and `ConfiguredSignatureImage` beans), `persistence/JpaDonationReceiptRepository` (`nextSerial` from the sequence, `lockDonor` with `select ... for update`; a donor without a record has no row to lock, and the reads that follow answer as before). REST: `interfaces/rest/DonationReceiptController`. Liquibase: `005_create_donation_receipt.xml`, `008_keep_receipts_as_template_and_data.xml`, `009_drop_receipts_stored_as_pdf.xml`. Domain: `ReceiptContent` (the `ReceiptSnapshot` and the issued PDF's `ContentDigest`); application: `ReceiptRenderingLimit` (a fair semaphore around each issuer call, `DonationReceiptIssuer.issueForDonation` and `issueForYear`). `ReceiptTemplateHistoryTest` keeps every template bundle renderable (see "Receipts kept as template and data"). ArchUnit (`AdapterLibraryRulesTest`) keeps openhtmltopdf, PDFBox and Thymeleaf in `..infrastructure..`; `DonationReceiptIssuerConcurrencyTest` proves against PostgreSQL that two parallel downloads yield one receipt and that a download waiting for the donor's row, held by an uncommitted profile change or imported donation, issues from what that transaction committed. Still to come: manual donation recording (admin).
 
-### `content` first features
+### `content` (news and photos done)
 
-Home page returns content; project detail by slug. Domain: `Project`, `NewsArticle`, `Slug`, `PublicationStatus`. Liquibase: `001_create_project.xml`, `002_create_news_article.xml`, `003_create_news_tag.xml`. Media table only when admin upload is implemented.
+`features/content/manage_news.feature` covers the news administration, the photo upload and the public news endpoints (see "`content` — public CMS"). Next: the projects (8b) and the home page with the public detail pages (8c).
 
 ## ArchUnit
 
-`architecture/DddLayeringRulesTest` and `AdapterLibraryRulesTest` (ArchUnit ≥ 1.5 for Java 25 class files; the scaffolding flags `withOptionalLayers` and `allowEmptyShould` are gone, so a rule fails on an empty match): layer dependencies per context, no dependencies between contexts, no `org.springframework..`, `jakarta.persistence..` or `jakarta.validation..` in `domain`, web and servlet types kept out of `domain` and `application`, REST controllers never expose `..infrastructure.persistence..` types, and the adapter libraries (ZXing, openhtmltopdf, PDFBox, Thymeleaf, `io.github.bzumik1.fio..`, `MessageSource`) confined to infrastructure.
+`architecture/DddLayeringRulesTest` and `AdapterLibraryRulesTest` (ArchUnit ≥ 1.5 for Java 25 class files; the scaffolding flags `withOptionalLayers` and `allowEmptyShould` are gone, so a rule fails on an empty match): layer dependencies per context, no dependencies between contexts, no `org.springframework..`, `jakarta.persistence..` or `jakarta.validation..` in `domain`, web and servlet types kept out of `domain` and `application`, REST controllers never expose `..infrastructure.persistence..` types, and the adapter libraries (ZXing, openhtmltopdf, PDFBox, Thymeleaf, `io.github.bzumik1.fio..`, `MessageSource`, and the image libraries ImageIO, `java.awt.image` and `io.github.darkxanter` only in `content/infrastructure/media`) confined to infrastructure.
 
 ## Shared kernel inventory
 

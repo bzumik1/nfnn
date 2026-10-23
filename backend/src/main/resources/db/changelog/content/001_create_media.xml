@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <changeSet id="001-create-media" author="nfnn">
+        <createTable tableName="content_media">
+            <column name="id" type="uuid">
+                <constraints primaryKey="true" primaryKeyName="pk_content_media" nullable="false"/>
+            </column>
+            <column name="width" type="integer">
+                <constraints nullable="false"/>
+            </column>
+            <column name="height" type="integer">
+                <constraints nullable="false"/>
+            </column>
+            <column name="uploaded_at" type="timestamp with time zone">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <createTable tableName="content_media_variant">
+            <column name="id" type="uuid">
+                <constraints primaryKey="true" primaryKeyName="pk_content_media_variant" nullable="false"/>
+            </column>
+            <column name="media_id" type="uuid">
+                <constraints nullable="false" foreignKeyName="fk_content_media_variant_media" references="content_media(id)" deleteCascade="true"/>
+            </column>
+            <column name="width" type="integer">
+                <constraints nullable="false"/>
+            </column>
+            <column name="height" type="integer">
+                <constraints nullable="false"/>
+            </column>
+            <column name="data" type="bytea">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <addUniqueConstraint tableName="content_media_variant" columnNames="media_id, width" constraintName="uq_content_media_variant_width"/>
+        <sql>alter table content_media add constraint ck_content_media_size check (width between 1 and 8000 and height between 1 and 8000)</sql>
+    </changeSet>
+
+</databaseChangeLog>
