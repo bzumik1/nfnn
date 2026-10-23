@@ -23,8 +23,9 @@ Feature: The foundation receives a monthly statistics e-mail
     And both parts of the monthly report e-mail say:
       | Registrovaní dárci k 30. 9. 2026: 2                                  |
       | Noví dárci za září 2026: 1                                           |
-      | Přijaté dary za září 2026: počet 2, celkem 1 534,50 Kč               |
-      | Přijaté dary od 1. 1. 2026: počet 3, celkem 1 734,50 Kč              |
+      | Přijaté dary za září 2026: počet 3, celkem 1 684,50 Kč               |
+      | Z toho spárované s registrovanými dárci: počet 2, celkem 1 534,50 Kč |
+      | Přijaté dary od 1. 1. 2026: počet 5, celkem 1 959,50 Kč              |
       | Nespárované příchozí platby za září 2026: počet 1, celkem 150,00 Kč  |
       | Poslední úspěšné stažení plateb z banky: 1. 10. 2026 12:00           |
     And the report for "2026-09" is recorded as sent

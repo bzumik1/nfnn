@@ -16,6 +16,10 @@ public record Tally(int count, Money total) {
         }
     }
 
+    public Tally plus(Tally other) {
+        return new Tally(count + other.count, total.plus(other.total));
+    }
+
     public static Tally of(List<Money> amounts) {
         return new Tally(amounts.size(), amounts.stream().reduce(Money.zero(Currency.CZK), Money::plus));
     }

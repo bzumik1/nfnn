@@ -54,7 +54,7 @@ class MonthlyReportTest {
                 received(LocalDate.of(2026, 9, 30), 30000),
                 received(LocalDate.of(2026, 10, 1), 99900)), List.of());
 
-        assertThat(report.donationsInMonth()).isEqualTo(new Tally(2, Money.czk(153450)));
+        assertThat(report.pairedInMonth()).isEqualTo(new Tally(2, Money.czk(153450)));
     }
 
     @Test
@@ -67,7 +67,7 @@ class MonthlyReportTest {
                 received(LocalDate.of(2026, 9, 30), 30000),
                 received(LocalDate.of(2026, 10, 1), 99900)), List.of());
 
-        assertThat(report.donationsInYear()).isEqualTo(new Tally(3, Money.czk(70000)));
+        assertThat(report.receivedInYear()).isEqualTo(new Tally(3, Money.czk(70000)));
     }
 
     @Test
@@ -77,8 +77,8 @@ class MonthlyReportTest {
                 received(LocalDate.of(2026, 9, 10), 50000),
                 refunded(LocalDate.of(2026, 9, 12), 70000)), List.of());
 
-        assertThat(report.donationsInMonth()).isEqualTo(new Tally(1, Money.czk(50000)));
-        assertThat(report.donationsInYear()).isEqualTo(new Tally(1, Money.czk(50000)));
+        assertThat(report.pairedInMonth()).isEqualTo(new Tally(1, Money.czk(50000)));
+        assertThat(report.receivedInYear()).isEqualTo(new Tally(1, Money.czk(50000)));
     }
 
     @Test
@@ -90,7 +90,25 @@ class MonthlyReportTest {
                 unpaired(1003, LocalDate.of(2026, 9, 30), 100),
                 unpaired(1004, LocalDate.of(2026, 10, 1), 20000)));
 
-        assertThat(report.unpairedPaymentsInMonth()).isEqualTo(new Tally(2, Money.czk(15100)));
+        assertThat(report.unpairedInMonth()).isEqualTo(new Tally(2, Money.czk(15100)));
+    }
+
+    @Test
+    @DisplayName("Given donations and unpaired payments in August and September, when the report is compiled, then everything received counts both for the month and since 1 January")
+    void should_count_paired_and_unpaired_as_received_when_compiled_given_both_in_year() {
+        MonthlyReport report = compile(NO_DONORS, List.of(
+                received(LocalDate.of(2026, 8, 14), 20000),
+                received(LocalDate.of(2026, 9, 1), 123450),
+                received(LocalDate.of(2026, 10, 1), 99900)), List.of(
+                unpaired(1001, LocalDate.of(2025, 12, 31), 5000),
+                unpaired(1002, LocalDate.of(2026, 8, 20), 7500),
+                unpaired(1003, LocalDate.of(2026, 9, 15), 15000),
+                unpaired(1004, LocalDate.of(2026, 10, 1), 20000)));
+
+        assertThat(report.receivedInMonth()).isEqualTo(new Tally(2, Money.czk(138450)));
+        assertThat(report.pairedInMonth()).isEqualTo(new Tally(1, Money.czk(123450)));
+        assertThat(report.unpairedInMonth()).isEqualTo(new Tally(1, Money.czk(15000)));
+        assertThat(report.receivedInYear()).isEqualTo(new Tally(4, Money.czk(165950)));
     }
 
     @Test
@@ -99,9 +117,10 @@ class MonthlyReportTest {
         MonthlyReport report = compile(NO_DONORS, List.of(), List.of());
 
         assertThat(report.month()).isEqualTo(SEPTEMBER);
-        assertThat(report.donationsInMonth()).isEqualTo(new Tally(0, Money.czk(0)));
-        assertThat(report.donationsInYear()).isEqualTo(new Tally(0, Money.czk(0)));
-        assertThat(report.unpairedPaymentsInMonth()).isEqualTo(new Tally(0, Money.czk(0)));
+        assertThat(report.receivedInMonth()).isEqualTo(new Tally(0, Money.czk(0)));
+        assertThat(report.pairedInMonth()).isEqualTo(new Tally(0, Money.czk(0)));
+        assertThat(report.unpairedInMonth()).isEqualTo(new Tally(0, Money.czk(0)));
+        assertThat(report.receivedInYear()).isEqualTo(new Tally(0, Money.czk(0)));
     }
 
     @Test

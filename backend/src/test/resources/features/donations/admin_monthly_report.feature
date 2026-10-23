@@ -114,7 +114,7 @@ Feature: An administrator sets up the monthly report, sends it again and reads t
     And the problem type ends with "validation"
     And no admin action "CHANGE_REPORT_SETTINGS" is recorded
 
-  Scenario: The yearly overview counts donations, new donors and unpaired payments by month
+  Scenario: The yearly overview counts everything received, new donors, paired and unpaired payments by month
     Given today is 2026-08-20
     And a person "Petr" is registered
     And today is 2026-09-10
@@ -135,21 +135,27 @@ Feature: An administrator sets up the monthly report, sends it again and reads t
       | availableYears.0                 | 2026    |
       | donorsRegistered                 | 3       |
       | newDonors                        | 3       |
-      | donations.count                  | 4       |
-      | donations.totalMinor             | 273350  |
-      | unpairedPayments.count           | 1       |
+      | received.count                   | 5       |
+      | received.totalMinor              | 288350  |
+      | paired.count                     | 4       |
+      | paired.totalMinor                | 273350  |
+      | unpaired.count                   | 1       |
+      | unpaired.totalMinor              | 15000   |
       | months.0.month                   | 2026-10 |
-      | months.0.donations.count         | 1       |
-      | months.0.donations.totalMinor    | 99900   |
+      | months.0.received.count          | 1       |
+      | months.0.received.totalMinor     | 99900   |
+      | months.0.paired.count            | 1       |
       | months.0.newDonors               | 1       |
       | months.1.month                   | 2026-09 |
-      | months.1.donations.count         | 2       |
-      | months.1.donations.totalMinor    | 153450  |
+      | months.1.received.count          | 3       |
+      | months.1.received.totalMinor     | 168450  |
+      | months.1.paired.count            | 2       |
+      | months.1.paired.totalMinor       | 153450  |
       | months.1.newDonors               | 1       |
-      | months.1.unpairedPayments.count  | 1       |
-      | months.1.unpairedPayments.totalMinor | 15000 |
+      | months.1.unpaired.count          | 1       |
+      | months.1.unpaired.totalMinor     | 15000   |
       | months.2.month                   | 2026-08 |
-      | months.2.donations.count         | 1       |
+      | months.2.received.count          | 1       |
       | months.2.newDonors               | 1       |
       | months.9.month                   | 2026-01 |
     And the donations overview lists 10 months
@@ -158,7 +164,7 @@ Feature: An administrator sets up the monthly report, sends it again and reads t
     And the donations overview says:
       | year             | 2025 |
       | donorsRegistered | 0    |
-      | donations.count  | 0    |
+      | received.count   | 0    |
     And the donations overview lists 12 months
 
   Scenario: A donor without the administrator role and a visitor without a token are refused

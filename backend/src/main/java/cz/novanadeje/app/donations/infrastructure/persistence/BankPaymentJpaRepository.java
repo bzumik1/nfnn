@@ -41,4 +41,7 @@ public interface BankPaymentJpaRepository extends JpaRepository<BankPaymentJpaEn
 
     @Query(UNPAIRED + " and p.bookedOn between :firstDay and :lastDay" + BY_BOOKING)
     List<BankPaymentJpaEntity> findUnpairedBookedBetween(@Param("firstDay") LocalDate firstDay, @Param("lastDay") LocalDate lastDay);
+
+    @Query("select distinct year(p.bookedOn) from BankPaymentJpaEntity p order by year(p.bookedOn) desc")
+    List<Integer> findBookedYearsNewestFirst();
 }
