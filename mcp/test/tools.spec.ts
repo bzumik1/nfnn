@@ -112,6 +112,9 @@ describe('Given an administrator connected with the reading permission only', ()
       arguments: { limit: 10, before: '2026-10-23T07:00:00Z' },
     });
     expect(textOf(actions)).toContain('PAIR_PAYMENT');
+    expect(textOf(actions)).toContain(
+      'Older actions: call nfnn_admin_actions again with before "2026-10-23T06:00:00.654321Z".',
+    );
     expect(stack.backend.requests.map((request) => request.path)).toContain(
       '/api/admin/donors/actions?limit=10&before=2026-10-23T07%3A00%3A00Z',
     );
@@ -183,35 +186,22 @@ describe('Given an administrator connected with the reading permission only', ()
     );
   });
 
-  it('when a writing tool is called, then 403 insufficient_scope asks for the writing permission before anything runs', async () => {
-    const response = await stack.app.fetch(
-      new Request(MCP_URL, {
-        method: 'POST',
-        headers: {
-          authorization: `Bearer ${READ_TOKEN}`,
-          'content-type': 'application/json',
-          accept: 'application/json, text/event-stream',
-        },
-        body: JSON.stringify({
-          jsonrpc: '2.0',
-          id: 1,
-          method: 'tools/call',
-          params: {
-            name: 'nfnn_pair_payment',
-            arguments: { paymentId: PAYMENT_ID, donorId: DONOR_ID },
-          },
-        }),
-      }),
-    );
-    expect(response.status).toBe(403);
-    const challenge = response.headers.get('www-authenticate') ?? '';
-    expect(challenge).toContain('error="insufficient_scope"');
-    expect(challenge).toContain('scope="admin:write"');
+  it('when a writing tool is called, then it explains how to allow changes and the administration is not called', async () => {
+    const result = await client.callTool({
+      name: 'nfnn_pair_payment',
+      arguments: { paymentId: PAYMENT_ID, donorId: DONOR_ID },
+    });
+    expect(result.isError).toBe(true);
+    expect(textOf(result)).toContain('This connection may only read');
+    expect(textOf(result)).toContain('„Změny“');
     expect(
       stack.backend.requests.filter(
         (request) => request.method === 'POST' && request.path.includes('/pair'),
       ),
     ).toHaveLength(0);
+    expect(stack.logLines).toContain(
+      'INFO Tool nfnn_pair_payment refused for donor donor-jana: the connection may only read',
+    );
   });
 });
 

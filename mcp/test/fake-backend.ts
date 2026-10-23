@@ -16,6 +16,7 @@ export interface RecordedRequest {
   readonly method: string;
   readonly path: string;
   readonly authorization: string | undefined;
+  readonly accept: string | undefined;
   readonly body: string;
 }
 
@@ -57,6 +58,7 @@ export class FakeBackend {
       method: request.method ?? 'GET',
       path: url.pathname + url.search,
       authorization: request.headers['authorization'],
+      accept: request.headers['accept'],
       body,
     };
     this.requests.push(recorded);
@@ -169,8 +171,11 @@ function adminRoute(request: RecordedRequest, url: URL, body: string): [number, 
       return [
         200,
         {
-          items: [{ action: 'PAIR_PAYMENT', performedAt: '2026-10-23T06:00:00Z' }],
-          hasMore: false,
+          items: [
+            { action: 'SEND_MONTHLY_REPORT', performedAt: '2026-10-23T07:30:00.123456Z' },
+            { action: 'PAIR_PAYMENT', performedAt: '2026-10-23T06:00:00.654321Z' },
+          ],
+          hasMore: true,
         },
       ];
     case 'GET /api/admin/donors/administrators':
@@ -324,7 +329,9 @@ function adminRoute(request: RecordedRequest, url: URL, body: string): [number, 
         },
       ];
     case 'GET /api/admin/operations/diagnostics/threads':
-      return [200, '"main" #1 state=RUNNABLE\n    at java.lang.Thread.run\n'];
+      return request.accept?.includes('text/plain')
+        ? [200, '"main" #1 state=RUNNABLE\n    at java.lang.Thread.run\n']
+        : [406, problem(406, 'not-acceptable', 'Not Acceptable')];
     case 'PUT /api/admin/operations/loggers/cz.novanadeje.app':
       return [
         200,
