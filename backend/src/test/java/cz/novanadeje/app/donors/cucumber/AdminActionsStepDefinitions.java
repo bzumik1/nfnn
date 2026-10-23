@@ -70,6 +70,19 @@ public class AdminActionsStepDefinitions {
         assertThat(actual).containsExactlyElementsOf(expected);
     }
 
+    @Then("the admin actions came through these applications:")
+    public void theAdminActionsCameThroughTheseApplications(DataTable table) {
+        List<Map<String, String>> actual = new ArrayList<>();
+        api.lastResponseJson().get("items").forEach(item -> {
+            JsonNode client = item.get("client");
+            actual.add(Map.of("action", item.get("action").asString(), "client", client == null || client.isNull() ? "" : client.asString()));
+        });
+        List<Map<String, String>> expected = table.asMaps().stream()
+                .map(row -> Map.of("action", row.get("action"), "client", row.get("client") == null ? "" : row.get("client")))
+                .toList();
+        assertThat(actual).containsExactlyElementsOf(expected);
+    }
+
     @Then("the admin actions have more pages")
     public void theAdminActionsHaveMorePages() {
         assertThat(api.lastResponseJson().get("hasMore").asBoolean()).isTrue();

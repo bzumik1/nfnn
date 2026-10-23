@@ -55,6 +55,18 @@ Feature: An administrator connects an application such as Claude to the administ
     When "Jana" lists the connected applications
     Then the connected applications are "claude.ai" with scopes "admin:read" and "admin:read admin:write"
 
+  Scenario: A change through a connected application names the application in the audit trail, a change on the web names none
+    Given "Jana" connected the application "https://claude.ai/.well-known/oauth-client" with scope "admin:read admin:write"
+    When the connector exchanges the connector token for an API token
+    And the exchanged API token sets the logger "cz.novanadeje.app" to "DEBUG" for 5 minutes
+    Then the response status is 200
+    When "Jana" resets the logger "cz.novanadeje.app"
+    And "Jana" asks for the admin actions
+    Then the admin actions came through these applications:
+      | action           | client    |
+      | RESET_LOG_LEVEL  |           |
+      | CHANGE_LOG_LEVEL | claude.ai |
+
   Scenario: An exchanged API token administers only: it cannot approve a connection, touch the administrator's account or export the database
     Given "Jana" connected the application "https://claude.ai/.well-known/oauth-client" with scope "admin:read admin:write"
     When the connector exchanges the connector token for an API token

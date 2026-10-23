@@ -45,18 +45,19 @@ public class AdminPaymentsService {
         this.receipts = receipts;
     }
 
-    public AdminPaymentList listUnpaired() {
-        List<AdminPaymentView> items = payments.findUnpairedNewestFirst().stream()
+    public AdminPaymentList listUnpaired(PaymentFilter filter) {
+        List<AdminPaymentView> matching = payments.findUnpairedNewestFirst().stream()
                 .map(payment -> new AdminPaymentView(payment, Optional.empty()))
+                .filter(filter::matches)
                 .toList();
-        return new AdminPaymentList(Optional.empty(), List.of(), items);
+        return new AdminPaymentList(Optional.empty(), List.of(), filter.page(matching), matching.size());
     }
 
-    public AdminPaymentList listPaired(Optional<Year> requested) {
+    public AdminPaymentList listPaired(Optional<Year> requested, PaymentFilter filter) {
         List<Year> availableYears = donations.findReceivedYearsNewestFirst();
         Optional<Year> year = requested.or(() -> availableYears.stream().findFirst());
         if (year.isEmpty()) {
-            return new AdminPaymentList(Optional.empty(), availableYears, List.of());
+            return new AdminPaymentList(Optional.empty(), availableYears, List.of(), 0);
         }
         List<Donation> paired = donations.findReceivedOnBetween(year.get().atDay(1), year.get().atDay(year.get().length())).stream()
                 .filter(donation -> donation.bankPayment().isPresent())
@@ -67,13 +68,14 @@ public class AdminPaymentsService {
         Map<DonorReference, DonorRecord> donorsById = donorRecords.findByIds(paired.stream().map(Donation::donor).distinct().toList()).stream()
                 .collect(Collectors.toMap(DonorRecord::id, Function.identity()));
         Set<DonationId> withReceipt = receipts.findDonationsWithReceipt(paired.stream().map(Donation::id).toList());
-        List<AdminPaymentView> items = paired.stream()
+        List<AdminPaymentView> matching = paired.stream()
                 .map(donation -> new AdminPaymentView(paymentsById.get(donation.bankPayment().orElseThrow()),
                         Optional.of(new PairedDonationView(donation, Optional.ofNullable(donorsById.get(donation.donor())),
                                 withReceipt.contains(donation.id())))))
+                .filter(filter::matches)
                 .sorted(NEWEST_FIRST)
                 .toList();
-        return new AdminPaymentList(year, availableYears, items);
+        return new AdminPaymentList(year, availableYears, filter.page(matching), matching.size());
     }
 
     public List<DonorRecord> searchDonors(String query) {

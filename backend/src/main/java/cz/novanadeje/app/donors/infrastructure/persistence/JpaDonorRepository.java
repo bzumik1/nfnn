@@ -6,7 +6,6 @@ import cz.novanadeje.app.donors.domain.DonorRepository;
 import cz.novanadeje.app.donors.domain.Role;
 import cz.novanadeje.app.shared.domain.VariableSymbol;
 import cz.novanadeje.app.shared.domain.EmailAddress;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Repository;
 
 import java.util.Collection;
@@ -68,8 +67,8 @@ class JpaDonorRepository implements DonorRepository {
     }
 
     @Override
-    public List<Donor> search(String query, int limit) {
+    public List<Donor> search(String query, int offset, int limit) {
         String escaped = query.replace("!", "!!").replace("%", "!%").replace("_", "!_");
-        return jpa.search(escaped, PageRequest.of(0, limit)).stream().map(DonorJpaEntity::toDomain).toList();
+        return jpa.search(escaped, new OffsetPage(offset, limit)).stream().map(DonorJpaEntity::toDomain).toList();
     }
 }

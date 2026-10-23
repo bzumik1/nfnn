@@ -16,12 +16,12 @@ import java.time.Year;
 import java.util.List;
 import java.util.UUID;
 
-record AdminPaymentListResponse(Integer year, List<Integer> availableYears, List<AdminPaymentResponse> items) {
+record AdminPaymentListResponse(Integer year, List<Integer> availableYears, List<AdminPaymentResponse> items, int total) {
 
     static AdminPaymentListResponse from(AdminPaymentList list) {
         return new AdminPaymentListResponse(list.year().map(Year::getValue).orElse(null),
                 list.availableYears().stream().map(Year::getValue).toList(),
-                list.items().stream().map(AdminPaymentResponse::from).toList());
+                list.items().stream().map(AdminPaymentResponse::from).toList(), list.total());
     }
 
     record AdminPaymentResponse(UUID id, long bankTransactionId, LocalDate bookedOn, long amountMinor, Currency currency, String variableSymbol,

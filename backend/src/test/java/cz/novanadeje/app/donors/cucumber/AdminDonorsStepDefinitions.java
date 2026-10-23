@@ -90,6 +90,22 @@ public class AdminDonorsStepDefinitions {
         api.get(DONORS_PATH + "?query=" + scenarioDonors.resolve(query));
     }
 
+    @When("{string} lists the donors with {string}")
+    public void listsTheDonorsWith(String alias, String parameters) {
+        sessions.actAs(alias);
+        api.get(DONORS_PATH + "?" + parameters);
+    }
+
+    @Then("the donor list has more pages")
+    public void theDonorListHasMorePages() {
+        assertThat(api.lastResponseJson().get("hasMore").asBoolean()).isTrue();
+    }
+
+    @Then("the donor list has no more pages")
+    public void theDonorListHasNoMorePages() {
+        assertThat(api.lastResponseJson().get("hasMore").asBoolean()).isFalse();
+    }
+
     @When("someone without a token searches the donors")
     public void someoneWithoutATokenSearchesTheDonors() {
         api.forgetCredentials();
