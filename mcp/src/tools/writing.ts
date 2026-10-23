@@ -46,10 +46,23 @@ const ARTICLE = {
   slug: SLUG,
   tag: z.string().max(40).optional(),
   perex: z.string().min(1).max(300).describe('Short summary shown on the cards.'),
-  body: z.string().min(1).max(20000).describe('Plain text; an empty line starts a new paragraph.'),
+  body: z
+    .string()
+    .min(1)
+    .max(20000)
+    .describe(
+      'Markdown: an empty line starts a new paragraph; ## or ### a heading, - or 1. a list item, > a quote, **bold**, *italic*, [text](https://…) a link. Raw HTML is shown as text. Plain text works as it is.',
+    ),
   coverImageId: UUID.optional().describe(
     'Id of an uploaded photo (nfnn_upload_photo, nfnn_photo_upload_link, or the photo a content item already has); left out means no photo.',
   ),
+  coverImageAlt: z
+    .string()
+    .max(200)
+    .optional()
+    .describe(
+      'One sentence saying what the photo shows, for screen readers and when it does not load; kept only with a photo.',
+    ),
 };
 const PROJECT = { ...ARTICLE, year: z.number().int().min(2005).max(2100) };
 const ACCOUNT_LINK = z.object({

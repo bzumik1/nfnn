@@ -11,6 +11,6 @@ public record NewsArticleResponse(UUID id, String slug, String title, String tag
 
     static NewsArticleResponse from(NewsArticleView view) {
         return new NewsArticleResponse(view.id().value(), view.slug(), view.title(), view.tag().orElse(null), view.perex(), view.body(),
-                view.coverImage().map(CoverImageResponse::of).orElse(null), view.publishedOn().orElse(null), view.createdAt(), view.updatedAt());
+                view.coverImage().map(image -> CoverImageResponse.of(image, view.coverImageAlt())).orElse(null), view.publishedOn().orElse(null), view.createdAt(), view.updatedAt());
     }
 }

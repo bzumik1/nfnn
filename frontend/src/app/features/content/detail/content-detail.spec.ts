@@ -5,7 +5,7 @@ import { Title } from '@angular/platform-browser';
 import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
 import { IMAGE_ID, newsArticle } from '../testing/news-fixtures';
 import { project } from '../testing/project-fixtures';
-import { ContentDetail, ContentKind, paragraphs } from './content-detail';
+import { ContentDetail, ContentKind } from './content-detail';
 
 function problem(status: number, type: string) {
   return {
@@ -50,16 +50,6 @@ async function settle(fixture: ComponentFixture<unknown>): Promise<void> {
   fixture.detectChanges();
 }
 
-describe('Given the body text of an article', () => {
-  it('when paragraphs are separated by empty lines, then each becomes one paragraph with its line breaks kept', () => {
-    expect(paragraphs('První.\n\nDruhý\nřádek.\n   \n\nTřetí.\n')).toEqual([
-      'První.',
-      'Druhý\nřádek.',
-      'Třetí.',
-    ]);
-  });
-});
-
 describe('Given a visitor opening a news article', () => {
   let fixture: ComponentFixture<ContentDetail>;
   let http: HttpTestingController;
@@ -90,6 +80,27 @@ describe('Given a visitor opening a news article', () => {
     expect(text(fixture, '.crumbs a')).toBe('← Všechny aktuality');
     expect(fixture.nativeElement.querySelector('.crumbs a').getAttribute('href')).toBe(
       '/#aktuality',
+    );
+  });
+
+  it('when the body uses Markdown and the photo has a description, then the text is formatted and the photo is described', async () => {
+    http.expectOne('/api/content/news/zahrada-pro-deti').flush(
+      newsArticle({
+        body: '## Co jsme koupili\n\nDíky vám **nový vozík**.\n\n- vozík\n- lůžko',
+        coverImage: {
+          id: IMAGE_ID,
+          url: `/api/content/media/${IMAGE_ID}`,
+          alt: 'Děti sázejí stromek',
+        },
+      }),
+    );
+    await settle(fixture);
+
+    expect(text(fixture, '.prose h2')).toBe('Co jsme koupili');
+    expect(text(fixture, '.prose strong')).toBe('nový vozík');
+    expect(fixture.nativeElement.querySelectorAll('.prose li')).toHaveLength(2);
+    expect(fixture.nativeElement.querySelector('.photo img').getAttribute('alt')).toBe(
+      'Děti sázejí stromek',
     );
   });
 

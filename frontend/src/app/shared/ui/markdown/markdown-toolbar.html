@@ -1,0 +1,55 @@
+<div
+  class="tools"
+  role="group"
+  aria-label="Formátování textu"
+  i18n-aria-label="@@ui.markdown.toolbar.label"
+>
+  <button
+    type="button"
+    class="ui-button ui-button--small ui-button--quiet tool--bold"
+    (click)="bold()"
+    i18n="@@ui.markdown.bold"
+  >
+    Tučně
+  </button>
+  <button
+    type="button"
+    class="ui-button ui-button--small ui-button--quiet tool--italic"
+    (click)="italic()"
+    i18n="@@ui.markdown.italic"
+  >
+    Kurzíva
+  </button>
+  <button
+    type="button"
+    class="ui-button ui-button--small ui-button--quiet"
+    (click)="heading()"
+    i18n="@@ui.markdown.heading"
+  >
+    Nadpis
+  </button>
+  <button
+    type="button"
+    class="ui-button ui-button--small ui-button--quiet"
+    (click)="bullets()"
+    i18n="@@ui.markdown.bullets"
+  >
+    Odrážky
+  </button>
+  <button
+    type="button"
+    class="ui-button ui-button--small ui-button--quiet"
+    (click)="numbers()"
+    i18n="@@ui.markdown.numbers"
+  >
+    Číslování
+  </button>
+  <button
+    type="button"
+    class="ui-button ui-button--small ui-button--quiet"
+    (click)="link()"
+    i18n="@@ui.markdown.link"
+  >
+    Odkaz
+  </button>
+</div>

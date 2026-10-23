@@ -21,10 +21,11 @@ public record ProjectRequest(
         @Size(max = ProjectContent.MAX_TAG_LENGTH) String tag,
         @NotBlank @Size(max = ProjectContent.MAX_PEREX_LENGTH) String perex,
         @NotBlank @Size(max = ProjectContent.MAX_BODY_LENGTH) String body,
-        UUID coverImageId) {
+        UUID coverImageId,
+        @Size(max = ProjectContent.MAX_COVER_IMAGE_ALT_LENGTH) String coverImageAlt) {
 
     ProjectCommand toCommand() {
         return new ProjectCommand(title, year, Optional.ofNullable(slug), Optional.ofNullable(tag), perex, body,
-                Optional.ofNullable(coverImageId).map(MediaId::new));
+                Optional.ofNullable(coverImageId).map(MediaId::new), Optional.ofNullable(coverImageAlt));
     }
 }

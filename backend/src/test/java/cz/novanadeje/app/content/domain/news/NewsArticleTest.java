@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Optional;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -83,6 +84,40 @@ class NewsArticleTest {
         assertThat(content.title()).isEqualTo("Titulek");
         assertThat(content.perex()).isEqualTo("Perex");
         assertThat(content.body()).isEqualTo("Text");
+    }
+
+    @Test
+    @DisplayName("Given a cover image with a padded description, when content is built, then the description is stripped and kept")
+    void should_keep_stripped_description_when_built_given_a_cover_image() {
+        NewsContent content = new NewsContent(new Slug("a"), "t", Optional.empty(), "p", "b", Optional.of(new MediaId(UUID.randomUUID())),
+                Optional.of("  Dominik na novém vozíku "));
+
+        assertThat(content.coverImageAlt()).contains("Dominik na novém vozíku");
+    }
+
+    @Test
+    @DisplayName("Given a blank description or none, when content is built, then the description is absent")
+    void should_drop_description_when_built_given_a_blank_one() {
+        NewsContent content = new NewsContent(new Slug("a"), "t", Optional.empty(), "p", "b", Optional.of(new MediaId(UUID.randomUUID())),
+                Optional.of("   "));
+
+        assertThat(content.coverImageAlt()).isEmpty();
+        assertThat(new NewsContent(new Slug("a"), "t", Optional.empty(), "p", "b", Optional.empty()).coverImageAlt()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Given a description without a cover image, when content is built, then the description is dropped with the image")
+    void should_drop_description_when_built_given_no_cover_image() {
+        NewsContent content = new NewsContent(new Slug("a"), "t", Optional.empty(), "p", "b", Optional.empty(), Optional.of("Popis"));
+
+        assertThat(content.coverImageAlt()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Given a description over 200 characters, when content is built, then it is refused")
+    void should_refuse_when_built_given_an_overlong_description() {
+        assertThatThrownBy(() -> new NewsContent(new Slug("a"), "t", Optional.empty(), "p", "b", Optional.of(new MediaId(UUID.randomUUID())),
+                Optional.of("x".repeat(201)))).hasMessageContaining("description");
     }
 
     private static NewsContent content() {

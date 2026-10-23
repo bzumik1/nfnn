@@ -11,6 +11,6 @@ public record ProjectResponse(UUID id, String slug, String title, int year, Stri
 
     static ProjectResponse from(ProjectView view) {
         return new ProjectResponse(view.id().value(), view.slug(), view.title(), view.year(), view.tag().orElse(null), view.perex(), view.body(),
-                view.coverImage().map(CoverImageResponse::of).orElse(null), view.publishedOn().orElse(null), view.createdAt(), view.updatedAt());
+                view.coverImage().map(image -> CoverImageResponse.of(image, view.coverImageAlt())).orElse(null), view.publishedOn().orElse(null), view.createdAt(), view.updatedAt());
     }
 }

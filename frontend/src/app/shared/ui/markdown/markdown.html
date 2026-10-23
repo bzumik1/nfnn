@@ -1,0 +1,64 @@
+<ng-template #inlines let-nodes>
+  @for (node of nodes; track $index) {
+    @switch (node.kind) {
+      @case ('text') {
+        <ng-container>{{ node.text }}</ng-container>
+      }
+      @case ('break') {
+        <br />
+      }
+      @case ('strong') {
+        <strong
+          ><ng-container *ngTemplateOutlet="inlines; context: { $implicit: node.children }"
+        /></strong>
+      }
+      @case ('em') {
+        <em><ng-container *ngTemplateOutlet="inlines; context: { $implicit: node.children }" /></em>
+      }
+      @case ('link') {
+        <a [href]="node.href"
+          ><ng-container *ngTemplateOutlet="inlines; context: { $implicit: node.children }"
+        /></a>
+      }
+    }
+  }
+</ng-template>
+
+@for (block of blocks(); track $index) {
+  @switch (block.kind) {
+    @case ('heading') {
+      @if (block.level === 2) {
+        <h2>
+          <ng-container *ngTemplateOutlet="inlines; context: { $implicit: block.content }" />
+        </h2>
+      } @else {
+        <h3>
+          <ng-container *ngTemplateOutlet="inlines; context: { $implicit: block.content }" />
+        </h3>
+      }
+    }
+    @case ('paragraph') {
+      <p><ng-container *ngTemplateOutlet="inlines; context: { $implicit: block.content }" /></p>
+    }
+    @case ('quote') {
+      <blockquote>
+        <p><ng-container *ngTemplateOutlet="inlines; context: { $implicit: block.content }" /></p>
+      </blockquote>
+    }
+    @case ('list') {
+      @if (block.ordered) {
+        <ol>
+          @for (item of block.items; track $index) {
+            <li><ng-container *ngTemplateOutlet="inlines; context: { $implicit: item }" /></li>
+          }
+        </ol>
+      } @else {
+        <ul>
+          @for (item of block.items; track $index) {
+            <li><ng-container *ngTemplateOutlet="inlines; context: { $implicit: item }" /></li>
+          }
+        </ul>
+      }
+    }
+  }
+}

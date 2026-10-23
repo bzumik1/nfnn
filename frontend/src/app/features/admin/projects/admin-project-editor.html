@@ -141,11 +141,13 @@
             <app-form-field
               label="Text"
               i18n-label="@@admin.projectEditor.body"
-              hint="Odstavce oddělte prázdným řádkem. Web zatím neumí odkazy ani zvýraznění."
+              hint="Odstavce oddělte prázdným řádkem."
               i18n-hint="@@admin.projectEditor.body.hint"
               [messages]="bodyMessages"
             >
+              <app-markdown-toolbar [target]="bodyArea" />
               <textarea
+                #bodyArea
                 appFormControl
                 id="projects-body"
                 name="body"
@@ -155,6 +157,7 @@
                 [maxlength]="maxBodyLength"
               ></textarea>
             </app-form-field>
+            <app-markdown-preview [text]="body" previewId="projects-body-preview" />
 
             <div class="image-field">
               <label class="field-label" for="projects-image" i18n="@@admin.projectEditor.image"
@@ -202,6 +205,26 @@
               </div>
               @if (uploadError(); as error) {
                 <p class="field-error" role="alert">{{ error }}</p>
+              }
+              @if (coverImage()) {
+                <app-form-field
+                  class="alt-field"
+                  label="Popis fotky"
+                  i18n-label="@@admin.projectEditor.imageAlt"
+                  hint="Nepovinné. Jednou větou, co je na fotce. Přečte ho nevidomým čtečka obrazovky a ukáže se, když se fotka nenačte."
+                  i18n-hint="@@admin.projectEditor.imageAlt.hint"
+                  [messages]="altMessages"
+                >
+                  <input
+                    appFormControl
+                    id="projects-image-alt"
+                    name="coverImageAlt"
+                    type="text"
+                    autocomplete="off"
+                    [(ngModel)]="coverImageAlt"
+                    [maxlength]="maxAltLength"
+                  />
+                </app-form-field>
               }
             </div>
 

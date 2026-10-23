@@ -183,6 +183,7 @@ describe('Given an administrator writing a new project', () => {
       perex: 'Zveme vás na koncert.',
       body: 'Text o koncertu.',
       coverImageId: null,
+      coverImageAlt: null,
     });
     request.flush(draftProject());
     await settle(fixture);
@@ -234,10 +235,14 @@ describe('Given an administrator writing a new project', () => {
     await type(fixture, '#projects-title', 'S fotkou');
     await type(fixture, '#projects-perex', 'Perex.');
     await type(fixture, '#projects-body', 'Text.');
+    await type(fixture, '#projects-image-alt', '  Děti sázejí stromek ');
     await submit(fixture);
 
     const request = http.expectOne(PROJECTS_URL);
-    expect(request.request.body).toMatchObject({ coverImageId: IMAGE_ID });
+    expect(request.request.body).toMatchObject({
+      coverImageId: IMAGE_ID,
+      coverImageAlt: 'Děti sázejí stromek',
+    });
     request.flush(project());
   });
 
@@ -322,6 +327,7 @@ describe('Given an administrator editing a published project', () => {
       perex: project().perex,
       body: project().body,
       coverImageId: null,
+      coverImageAlt: null,
     });
     request.flush(project({ coverImage: null }));
     await settle(fixture);
@@ -371,7 +377,9 @@ describe('Given an administrator editing a published project', () => {
     button(fixture, 'Smazat projekt').click();
     await settle(fixture);
 
-    expect(text(fixture, '[role="group"]')).toContain('Opravdu smazat projekt „Zahrada pro děti“?');
+    expect(text(fixture, '.confirm[role="group"]')).toContain(
+      'Opravdu smazat projekt „Zahrada pro děti“?',
+    );
     button(fixture, 'Ano, smazat').click();
     await settle(fixture);
 

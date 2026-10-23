@@ -45,7 +45,7 @@ class JpaProjectRepositoryTest {
         MediaImage image = image();
         media.save(image);
         Project project = Project.create(ProjectId.newId(NOW),
-                new ProjectContent(new Slug("dominik"), "Dominik", 2024, Optional.of("Projekt"), "Perex", "Text\n\nDruhý odstavec", Optional.of(image.id())), NOW);
+                new ProjectContent(new Slug("dominik"), "Dominik", 2024, Optional.of("Projekt"), "Perex", "Text\n\nDruhý odstavec", Optional.of(image.id()), Optional.of("Dominik na novém vozíku")), NOW);
 
         projects.save(project);
         flushAndClear();

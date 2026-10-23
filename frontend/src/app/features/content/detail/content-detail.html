@@ -59,16 +59,12 @@
                 sizes="(max-width: 1100px) 100vw, 960px"
                 width="960"
                 height="600"
-                alt=""
+                [alt]="page.imageAlt"
                 class="real-img"
               />
             </figure>
           }
-          <div class="prose">
-            @for (paragraph of page.paragraphs; track $index) {
-              <p>{{ paragraph }}</p>
-            }
-          </div>
+          <app-markdown class="prose" [text]="page.body" />
           <p class="actions">
             <a class="ui-cta" routerLink="/" fragment="prispet" i18n="@@content.detail.donate"
               >Přispět</a

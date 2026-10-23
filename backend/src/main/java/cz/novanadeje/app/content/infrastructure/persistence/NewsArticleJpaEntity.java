@@ -40,6 +40,9 @@ class NewsArticleJpaEntity {
     @Column(name = "cover_media_id")
     private UUID coverMediaId;
 
+    @Column(name = "cover_image_alt", length = NewsContent.MAX_COVER_IMAGE_ALT_LENGTH)
+    private String coverImageAlt;
+
     @Column(name = "published_on")
     private LocalDate publishedOn;
 
@@ -61,6 +64,7 @@ class NewsArticleJpaEntity {
         entity.perex = article.content().perex();
         entity.body = article.content().body();
         entity.coverMediaId = article.content().coverImage().map(MediaId::value).orElse(null);
+        entity.coverImageAlt = article.content().coverImageAlt().orElse(null);
         entity.publishedOn = article.publishedOn().orElse(null);
         entity.createdAt = article.createdAt();
         entity.updatedAt = article.updatedAt();
@@ -69,7 +73,7 @@ class NewsArticleJpaEntity {
 
     NewsArticle toDomain() {
         NewsContent content = new NewsContent(new Slug(slug), title, Optional.ofNullable(tag), perex, body,
-                Optional.ofNullable(coverMediaId).map(MediaId::new));
+                Optional.ofNullable(coverMediaId).map(MediaId::new), Optional.ofNullable(coverImageAlt));
         return new NewsArticle(new NewsArticleId(id), content, Optional.ofNullable(publishedOn), createdAt, updatedAt);
     }
 }

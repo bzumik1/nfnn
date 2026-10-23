@@ -44,21 +44,6 @@
   aspect-ratio: 8 / 5;
 }
 
-.prose {
-  max-width: 70ch;
-
-  p {
-    color: var(--color-text-soft);
-    font-size: var(--text-2xl);
-    line-height: var(--leading-loose);
-    white-space: pre-line;
-  }
-
-  p + p {
-    margin-top: var(--space-5-5);
-  }
-}
-
 .actions {
   display: flex;
   flex-wrap: wrap;

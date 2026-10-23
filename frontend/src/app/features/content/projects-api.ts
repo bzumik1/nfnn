@@ -5,6 +5,7 @@ import { Observable } from 'rxjs';
 export interface CoverImageResponse {
   id: string;
   url: string;
+  alt: string | null;
 }
 
 export interface ProjectResponse {
@@ -40,6 +41,7 @@ export interface ProjectRequest {
   perex: string;
   body: string;
   coverImageId: string | null;
+  coverImageAlt: string | null;
 }
 
 export interface UploadedImageResponse {
@@ -56,6 +58,7 @@ export const MAX_SLUG_LENGTH = 80;
 export const MAX_TAG_LENGTH = 40;
 export const MAX_PEREX_LENGTH = 300;
 export const MAX_BODY_LENGTH = 20_000;
+export const MAX_COVER_IMAGE_ALT_LENGTH = 200;
 export const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 export const SLUG_PATTERN = '[a-z0-9]+(-[a-z0-9]+)*';
 

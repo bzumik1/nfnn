@@ -20,7 +20,7 @@ function article(overrides: Record<string, unknown> = {}) {
     tag: 'Projekt',
     perex: 'Stavíme zahradu, kde si děti budou hrát.',
     body: 'První odstavec.\n\nDruhý odstavec.',
-    coverImage: { id: IMAGE_ID, url: `/api/content/media/${IMAGE_ID}` },
+    coverImage: { id: IMAGE_ID, url: `/api/content/media/${IMAGE_ID}`, alt: null },
     publishedOn: '2026-10-20',
     createdAt: '2026-10-19T09:00:00Z',
     updatedAt: '2026-10-20T07:30:00Z',
@@ -139,7 +139,18 @@ test.describe('Given an administrator managing the news', () => {
       page.getByText('Aktualita bude na nfnn.cz/aktuality/beneficni-koncert.'),
     ).toBeVisible();
     await page.getByLabel('Perex').fill('Zveme vás na koncert.');
-    await page.getByLabel('Text', { exact: true }).fill('Text o koncertu.');
+    const body = page.getByLabel('Text', { exact: true });
+    await body.fill('Text o koncertu.');
+    await body.evaluate((area: HTMLTextAreaElement) => area.setSelectionRange(0, 4));
+    await page
+      .getByRole('group', { name: 'Formátování textu' })
+      .getByRole('button', { name: 'Tučně' })
+      .click();
+    await expect(body).toHaveValue('**Text** o koncertu.');
+    await page.getByRole('button', { name: 'Ukázat náhled' }).click();
+    await expect(page.getByRole('region', { name: 'Náhled textu' }).locator('strong')).toHaveText(
+      'Text',
+    );
     await page.getByLabel('Fotka').setInputFiles({
       name: 'koncert.png',
       mimeType: 'image/png',
@@ -147,6 +158,7 @@ test.describe('Given an administrator managing the news', () => {
     });
     await expect(page.locator('.image-preview')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Odebrat fotku' })).toBeVisible();
+    await page.getByLabel('Popis fotky').fill('Lidé na koncertě');
 
     await page.getByRole('button', { name: 'Uložit koncept' }).click();
 
@@ -160,8 +172,9 @@ test.describe('Given an administrator managing the news', () => {
         slug: 'beneficni-koncert',
         tag: null,
         perex: 'Zveme vás na koncert.',
-        body: 'Text o koncertu.',
+        body: '**Text** o koncertu.',
         coverImageId: IMAGE_ID,
+        coverImageAlt: 'Lidé na koncertě',
       },
     ]);
 

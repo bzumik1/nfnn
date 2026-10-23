@@ -476,7 +476,14 @@ describe('Given an administrator connected with the writing permission', () => {
       arguments: { id: UNKNOWN_ID, ...article, slug: 'tabor-2026' },
     });
     expect(edited.isError).toBeFalsy();
-    const project = { title: 'Nová střecha', year: 2026, perex: 'Střecha.', body: 'Text.' };
+    const project = {
+      title: 'Nová střecha',
+      year: 2026,
+      perex: 'Střecha.',
+      body: '## Co se stalo\n\n**Nová** střecha.',
+      coverImageId: MEDIA_ID,
+      coverImageAlt: 'Nová střecha nad dílnou',
+    };
     await client.callTool({ name: 'nfnn_create_project', arguments: project });
     await client.callTool({
       name: 'nfnn_update_project',

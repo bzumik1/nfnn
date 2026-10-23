@@ -21,7 +21,7 @@ function project(overrides: Record<string, unknown> = {}) {
     tag: 'Projekt',
     perex: 'Stavíme zahradu, kde si děti budou hrát.',
     body: 'První odstavec.\n\nDruhý odstavec.',
-    coverImage: { id: IMAGE_ID, url: `/api/content/media/${IMAGE_ID}` },
+    coverImage: { id: IMAGE_ID, url: `/api/content/media/${IMAGE_ID}`, alt: null },
     publishedOn: '2026-10-20',
     createdAt: '2026-10-19T09:00:00Z',
     updatedAt: '2026-10-20T07:30:00Z',
@@ -169,6 +169,7 @@ test.describe('Given an administrator managing the projects', () => {
         perex: 'Zveme vás na koncert.',
         body: 'Text o koncertu.',
         coverImageId: IMAGE_ID,
+        coverImageAlt: null,
       },
     ]);
 
