@@ -328,12 +328,13 @@ jobs:
           wait_for "grep -q '^request=ci-2$' $backups/status/test-restore" 60 "the requested test restore did not run"
           grep -q '^outcome=ok$' "$backups/status/test-restore" || { echo "::error::the test restore failed"; cat "$backups/status/test-restore"; exit 1; }
           grep -E '^tables=[1-9][0-9]*$' "$backups/status/test-restore" || { echo "::error::the test restore counted no tables"; exit 1; }
+          full_dump=$(ls "$backups"/nfnn-*-rucni.dump | head -n 1)
 
           echo "A dump in the restore folder is restored into the emptied database before the backend starts"
           restore="$RUNNER_TEMP/nfnn/restore"
           docker compose stop backend backup
           docker exec nfnn-postgres psql -U novanadeje -d novanadeje -c "insert into admin_action (id, admin_id, action, details, performed_at) values ('019a0000-0000-7000-8000-000000000001', '019a0000-0000-7000-8000-000000000002', 'CI_MARKER', 'to be undone by the restore', now())"
-          sudo cp "$dump" "$restore/ci.force.dump"
+          sudo cp "$full_dump" "$restore/ci.force.dump"
           docker compose up -d --wait --wait-timeout 300 postgres backup backend frontend
           wait_for "[ -f $restore/ci.force.dump.done ]" 30 "the restore folder dump was not restored"
           grep -q '^outcome=ok$' "$backups/status/restore" || { echo "::error::the restore status file does not say ok"; cat "$backups/status/restore"; exit 1; }
@@ -347,7 +348,7 @@ jobs:
             docker exec nfnn-postgres psql -U novanadeje -d novanadeje -tA -c "select count(*) from admin_action where $1"
           }
           docker exec nfnn-postgres psql -U novanadeje -d novanadeje -c "insert into admin_action (id, admin_id, action, details, performed_at) values ('019a0000-0000-7000-8000-000000000003', '019a0000-0000-7000-8000-000000000002', 'CI_MARKER', 'to be undone by the requested restore', now())"
-          docker exec nfnn-backend sh -c "printf 'source=backup\nfile=%s\nadmin=019a0000-0000-7000-8000-000000000002\n' '$(basename "$dump")' > /backups/requests/ci-3.restore"
+          docker exec nfnn-backend sh -c "printf 'source=backup\nfile=%s\nadmin=019a0000-0000-7000-8000-000000000002\n' '$(basename "$full_dump")' > /backups/requests/ci-3.restore"
           docker restart nfnn-backend
           wait_for "grep -q '^request=ci-3$' $backups/status/restore" 60 "the requested restore did not run"
           grep -q '^outcome=ok$' "$backups/status/restore" || { echo "::error::the requested restore failed"; cat "$backups/status/restore"; exit 1; }
