@@ -38,12 +38,13 @@ public class DonorSecondFactorService {
     private final DonorSessionService sessions;
     private final DonorViews views;
     private final QrCodeEncoder qrCodes;
+    private final SecondFactorSessionGuard sessionGuard;
     private final DonorSecondFactorProperties properties;
     private final Clock clock;
 
     public DonorSecondFactorService(DonorRepository donors, SecondFactorRepository secondFactors, RefreshTokenRepository refreshTokens,
                                     PasswordHasher passwordHasher, DonorSessionService sessions, DonorViews views, QrCodeEncoder qrCodes,
-                                    DonorSecondFactorProperties properties, Clock clock) {
+                                    SecondFactorSessionGuard sessionGuard, DonorSecondFactorProperties properties, Clock clock) {
         this.donors = donors;
         this.secondFactors = secondFactors;
         this.refreshTokens = refreshTokens;
@@ -51,14 +52,16 @@ public class DonorSecondFactorService {
         this.sessions = sessions;
         this.views = views;
         this.qrCodes = qrCodes;
+        this.sessionGuard = sessionGuard;
         this.properties = properties;
         this.clock = clock;
     }
 
     @Transactional
-    public SecondFactorEnrolment begin(DonorId donorId, String password) {
+    public SecondFactorEnrolment begin(DonorId donorId, boolean secondFactorVerified, String password) {
         Donor donor = load(donorId);
         requireMatching(donor, password);
+        sessionGuard.requireForFactorChange(donor, secondFactorVerified);
         if (secondFactors.findByDonor(donorId).filter(SecondFactor::isEnabled).isPresent()) {
             throw new SecondFactorAlreadyEnabled();
         }

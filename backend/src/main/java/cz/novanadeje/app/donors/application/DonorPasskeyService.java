@@ -40,26 +40,29 @@ public class DonorPasskeyService {
     private final PasswordHasher passwordHasher;
     private final PasskeyCeremonies ceremonies;
     private final PasskeyProperties properties;
+    private final SecondFactorSessionGuard sessionGuard;
     private final ApplicationEventPublisher events;
     private final Clock clock;
 
     public DonorPasskeyService(DonorRepository donors, PasskeyRepository passkeys, PasskeyChallengeRepository challenges,
                                PasswordHasher passwordHasher, PasskeyCeremonies ceremonies, PasskeyProperties properties,
-                               ApplicationEventPublisher events, Clock clock) {
+                               SecondFactorSessionGuard sessionGuard, ApplicationEventPublisher events, Clock clock) {
         this.donors = donors;
         this.passkeys = passkeys;
         this.challenges = challenges;
         this.passwordHasher = passwordHasher;
         this.ceremonies = ceremonies;
         this.properties = properties;
+        this.sessionGuard = sessionGuard;
         this.events = events;
         this.clock = clock;
     }
 
     @Transactional
-    public PasskeyCreationOptions creationOptions(DonorId donorId, String password) {
+    public PasskeyCreationOptions creationOptions(DonorId donorId, boolean secondFactorVerified, String password) {
         Donor donor = load(donorId);
         requireMatching(donor, password);
+        sessionGuard.requireForFactorChange(donor, secondFactorVerified);
         Instant now = clock.instant();
         challenges.deleteExpiredAt(now);
         LinkSecret challenge = LinkSecret.generate();
@@ -103,10 +106,11 @@ public class DonorPasskeyService {
     }
 
     @Transactional
-    public void remove(DonorId donorId, PasskeyId passkeyId) {
+    public void remove(DonorId donorId, boolean secondFactorVerified, PasskeyId passkeyId) {
         Passkey passkey = passkeys.findById(passkeyId)
                 .filter(found -> found.belongsTo(donorId))
                 .orElseThrow(() -> new PasskeyNotFound(passkeyId));
+        sessionGuard.requireForFactorChange(load(donorId), secondFactorVerified);
         passkeys.delete(passkey.id());
         log.info("Passkey {} removed by donor {}", passkeyId, donorId);
     }

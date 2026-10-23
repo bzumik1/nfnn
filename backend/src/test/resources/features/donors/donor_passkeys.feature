@@ -50,6 +50,38 @@ Feature: A donor signs in with a passkey instead of the password
     Then the donor profile shows roles "DONOR" and the second factor off
     And the donor profile says the second factor is needed for administration
 
+  Scenario: An administrator with a passkey, signed in with the password only, changes no passkey and sets up no code until signed in with the passkey
+    Given "Jana" is given the administrator role without signing in again
+    And "Jana" added a passkey named "Mac"
+    When "Jana" signs in again
+    And "Jana" asks to add a passkey with the right password
+    Then the response status is 403
+    And the problem type ends with "donors/second-factor-session-required"
+    And the problem has the title "Nejdřív se přihlaste přístupovým klíčem"
+    When "Jana" removes the passkey "Mac" of "Jana"
+    Then the response status is 403
+    And the problem type ends with "donors/second-factor-session-required"
+    When "Jana" starts the second factor set-up with the right password
+    Then the response status is 403
+    And the problem type ends with "donors/second-factor-session-required"
+    And the passkeys of "Jana" are "Mac"
+    When "Jana" signs in with the passkey "Mac"
+    And "Jana" asks to add a passkey with the right password
+    Then the response status is 200
+    When "Jana" starts the second factor set-up with the right password
+    Then the response status is 200
+    When "Jana" removes the passkey "Mac" of "Jana"
+    Then the response status is 204
+    And the passkeys of "Jana" are none
+
+  Scenario: An administrator without any second factor still sets up the first one from a session opened with the password
+    Given "Jana" is given the administrator role without signing in again
+    When "Jana" signs in again
+    And "Jana" asks to add a passkey with the right password
+    Then the response status is 200
+    When "Jana" starts the second factor set-up with the right password
+    Then the response status is 200
+
   Scenario: A donor with the code from the app turned on signs in with a passkey without the code
     Given "Jana" enables the second factor
     And "Jana" added a passkey named "Android"
