@@ -149,8 +149,12 @@
   --shadow-tab: 0 4px 12px color-mix(in srgb, var(--color-accent) 30%, transparent);
   --shadow-badge: 0 16px 48px color-mix(in srgb, var(--color-accent) 40%, transparent);
   --shadow-qr: 0 4px 20px color-mix(in srgb, var(--color-accent) 13%, transparent);
+  --shadow-nav-active: inset 3px 0 0 var(--color-accent);
   --shadow-focus: 0 0 0 3px color-mix(in srgb, var(--color-accent) 40%, transparent);
 
   --content-max: 1200px;
   --header-height: 72px;
+  --side-nav-layout-max: 1320px;
+  --side-nav-width: 240px;
+  --top-bar-height: 65px;
 }

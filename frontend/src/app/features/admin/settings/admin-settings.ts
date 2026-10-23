@@ -14,18 +14,17 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { Router } from '@angular/router';
 import { describeProblem, problemTypeEndsWith } from '../../../core/auth/api-problem';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
 import { FormControlDirective } from '../../../shared/ui/form-field/form-control';
 import { FormField } from '../../../shared/ui/form-field/form-field';
 import { PasswordReveal } from '../../../shared/ui/password-reveal/password-reveal';
-import { DashboardTopBar } from '../../donors/dashboard/top-bar/top-bar';
 import { SETTING_LABELS, settingErrors } from '../../operations/setting-labels';
 import { SettingName, SettingValueRequest, SetupApi } from '../../operations/setup/setup-api';
-import { AdminApi, AdminSettingResponse, SettingGroup } from '../admin-api';
 import { ReceiptSignature } from './receipt-signature/receipt-signature';
+import { AdminApi, AdminSettingResponse, SettingGroup } from '../admin-api';
 
 type LoadState = 'loading' | 'ready' | 'error' | 'restarting' | 'slow';
 
@@ -84,15 +83,7 @@ const INPUTS: Partial<Readonly<Record<SettingName, Input>>> = {
 
 @Component({
   selector: 'app-admin-settings',
-  imports: [
-    DashboardTopBar,
-    RouterLink,
-    FormsModule,
-    FormField,
-    FormControlDirective,
-    PasswordReveal,
-    ReceiptSignature,
-  ],
+  imports: [FormsModule, FormField, FormControlDirective, PasswordReveal, ReceiptSignature],
   templateUrl: './admin-settings.html',
   styleUrl: './admin-settings.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

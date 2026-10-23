@@ -4,6 +4,7 @@ import {
   CHALLENGE,
   donor,
   mockDonorApi,
+  openDonorSection,
   openSignInDialog,
   problem,
   secondFactorEnrolment,
@@ -48,6 +49,7 @@ test.describe('Given a donor who protects the account with an authenticator app'
 
     await expect(page).toHaveURL(/\/darce\/prehled$/);
     expect(completed).toEqual([{ challenge: CHALLENGE, code: '287082' }]);
+    await openDonorSection(page, 'Údaje a zabezpečení');
     await expect(page.locator('.account-data')).toContainText('Zapnuté');
   });
 
@@ -108,6 +110,7 @@ test.describe('Given a donor who protects the account with an authenticator app'
       await route.fulfill(session(200, protectedDonor));
     });
     await signIn(page);
+    await openDonorSection(page, 'Údaje a zabezpečení');
 
     await page.getByRole('button', { name: 'Zapnout dvoufaktorové ověření' }).click();
     await expect(page.getByLabel('Současné heslo')).toBeFocused();
@@ -144,6 +147,7 @@ test.describe('Given a donor who protects the account with an authenticator app'
       await route.fulfill(session(200, donor));
     });
     await signIn(page, protectedDonor);
+    await openDonorSection(page, 'Údaje a zabezpečení');
 
     await page.getByRole('button', { name: 'Vypnout dvoufaktorové ověření' }).click();
     await page.getByLabel('Současné heslo').fill('correct horse battery');
@@ -165,6 +169,7 @@ test.describe('Given a donor who protects the account with an authenticator app'
       roles: ['DONOR'],
       secondFactor: { enabled: false, neededForAdministration: true },
     });
+    await openDonorSection(page, 'Údaje a zabezpečení');
 
     await expect(page.locator('.account-hint')).toContainText(
       'Správa se vám otevře, až se přihlásíte přístupovým klíčem nebo zapnete dvoufaktorové ověření',

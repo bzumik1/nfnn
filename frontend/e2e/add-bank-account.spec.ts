@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { bankAccountItem, mockDonorApi, signIn } from './donor-session';
+import { bankAccountItem, mockDonorApi, openDonorSection, signIn } from './donor-session';
 
 const newAccount = bankAccountItem({
   id: '0192f0c4-0000-7000-8000-000000000002',
@@ -33,6 +33,7 @@ test.describe('Given a signed-in donor adding a bank account', () => {
       (route) => route.fulfill({ json: { items: paymentBooked ? [newAccount] : [] } }),
     );
     await signIn(page);
+    await openDonorSection(page, 'Bankovní účty');
 
     await page.getByRole('button', { name: 'Přidat účet' }).click();
     dialogOpen = true;

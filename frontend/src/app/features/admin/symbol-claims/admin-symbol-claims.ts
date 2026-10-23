@@ -10,12 +10,11 @@ import {
   viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { Router, RouterLink } from '@angular/router';
+import { Router } from '@angular/router';
 import { describeProblem, problemTypeEndsWith } from '../../../core/auth/api-problem';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
 import { formatBankTime } from '../../donations/donation-date';
-import { DashboardTopBar } from '../../donors/dashboard/top-bar/top-bar';
 import { AdminApi, SymbolClaimResponse } from '../admin-api';
 
 type LoadState = 'loading' | 'ready' | 'error';
@@ -30,7 +29,6 @@ const FORBIDDEN = 'auth/forbidden';
 
 @Component({
   selector: 'app-admin-symbol-claims',
-  imports: [DashboardTopBar, RouterLink],
   templateUrl: './admin-symbol-claims.html',
   styleUrl: './admin-symbol-claims.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

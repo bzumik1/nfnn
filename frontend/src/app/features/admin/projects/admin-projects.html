@@ -1,99 +1,90 @@
-<div class="admin">
-  <app-dashboard-top-bar area="admin" />
-
-  <div class="container">
-    <p class="admin-crumbs">
-      <a routerLink="/sprava" i18n="@@admin.projects.backToAdmin">← Správa</a>
-    </p>
-    <div class="admin-head">
-      <h1 #title class="admin-title" tabindex="-1" i18n="@@admin.projects.heading">Projekty</h1>
-      <a class="primary" routerLink="/sprava/projekty/nova" i18n="@@admin.projects.new"
-        >Nový projekt</a
-      >
-    </div>
-    <p class="admin-intro" i18n="@@admin.projects.intro">
-      Projekty se na webu ukazují od data zveřejnění, seřazené od nejnovějšího roku. Koncept vidíte
-      jen vy; zveřejněný projekt můžete kdykoli upravit nebo z webu stáhnout.
-    </p>
-
-    @switch (state()) {
-      @case ('loading') {
-        <p class="admin-loading" role="status" i18n="@@admin.projects.loading">
-          Načítáme projekty…
-        </p>
-      }
-      @case ('error') {
-        <div class="admin-error" role="alert">
-          <p i18n="@@admin.projects.error.text">Projekty se nepodařilo načíst.</p>
-          <button
-            type="button"
-            class="admin-retry"
-            (click)="load()"
-            i18n="@@admin.projects.error.retry"
-          >
-            Zkusit znovu
-          </button>
-        </div>
-      }
-      @case ('ready') {
-        <section class="admin-card" aria-labelledby="projects-list-title">
-          <h2 id="projects-list-title" class="admin-card-title" i18n="@@admin.projects.list.title">
-            Všechny projekty
-          </h2>
-          @if (items().length === 0) {
-            <p class="card-body card-intro" i18n="@@admin.projects.list.empty">
-              Zatím tu žádný projekt není. Napište první tlačítkem Nový projekt.
-            </p>
-          } @else {
-            <table>
-              <thead>
-                <tr>
-                  <th i18n="@@admin.projects.col.title">Titulek</th>
-                  <th i18n="@@admin.projects.col.year">Rok</th>
-                  <th i18n="@@admin.projects.col.tag">Štítek</th>
-                  <th i18n="@@admin.projects.col.state">Stav</th>
-                  <th i18n="@@admin.projects.col.updatedAt">Upraveno</th>
-                </tr>
-              </thead>
-              <tbody>
-                @for (item of items(); track item.id) {
-                  <tr>
-                    <td data-label="Titulek" i18n-data-label="@@admin.projects.col.title">
-                      <a class="admin-name" [routerLink]="['/sprava/projekty', item.id]">{{
-                        item.title
-                      }}</a>
-                    </td>
-                    <td data-label="Rok" i18n-data-label="@@admin.projects.col.year">
-                      {{ item.year }}
-                    </td>
-                    <td data-label="Štítek" i18n-data-label="@@admin.projects.col.tag">
-                      @if (item.tag) {
-                        {{ item.tag }}
-                      } @else {
-                        <span class="muted" i18n="@@admin.projects.tag.none">bez štítku</span>
-                      }
-                    </td>
-                    <td data-label="Stav" i18n-data-label="@@admin.projects.col.state">
-                      @if (publishedOn(item); as date) {
-                        <span class="state state--published" i18n="@@admin.projects.state.published"
-                          >Zveřejněno {{ date }}</span
-                        >
-                      } @else {
-                        <span class="state state--draft" i18n="@@admin.projects.state.draft"
-                          >Koncept</span
-                        >
-                      }
-                    </td>
-                    <td data-label="Upraveno" i18n-data-label="@@admin.projects.col.updatedAt">
-                      {{ updatedAt(item) }}
-                    </td>
-                  </tr>
-                }
-              </tbody>
-            </table>
-          }
-        </section>
-      }
-    }
+<div class="container">
+  <div class="admin-head">
+    <h1 #title class="admin-title" tabindex="-1" i18n="@@admin.projects.heading">Projekty</h1>
+    <a class="primary" routerLink="/sprava/projekty/nova" i18n="@@admin.projects.new"
+      >Nový projekt</a
+    >
   </div>
+  <p class="admin-intro" i18n="@@admin.projects.intro">
+    Projekty se na webu ukazují od data zveřejnění, seřazené od nejnovějšího roku. Koncept vidíte
+    jen vy; zveřejněný projekt můžete kdykoli upravit nebo z webu stáhnout.
+  </p>
+
+  @switch (state()) {
+    @case ('loading') {
+      <p class="admin-loading" role="status" i18n="@@admin.projects.loading">Načítáme projekty…</p>
+    }
+    @case ('error') {
+      <div class="admin-error" role="alert">
+        <p i18n="@@admin.projects.error.text">Projekty se nepodařilo načíst.</p>
+        <button
+          type="button"
+          class="admin-retry"
+          (click)="load()"
+          i18n="@@admin.projects.error.retry"
+        >
+          Zkusit znovu
+        </button>
+      </div>
+    }
+    @case ('ready') {
+      <section class="admin-card" aria-labelledby="projects-list-title">
+        <h2 id="projects-list-title" class="admin-card-title" i18n="@@admin.projects.list.title">
+          Všechny projekty
+        </h2>
+        @if (items().length === 0) {
+          <p class="card-body card-intro" i18n="@@admin.projects.list.empty">
+            Zatím tu žádný projekt není. Napište první tlačítkem Nový projekt.
+          </p>
+        } @else {
+          <table>
+            <thead>
+              <tr>
+                <th i18n="@@admin.projects.col.title">Titulek</th>
+                <th i18n="@@admin.projects.col.year">Rok</th>
+                <th i18n="@@admin.projects.col.tag">Štítek</th>
+                <th i18n="@@admin.projects.col.state">Stav</th>
+                <th i18n="@@admin.projects.col.updatedAt">Upraveno</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (item of items(); track item.id) {
+                <tr>
+                  <td data-label="Titulek" i18n-data-label="@@admin.projects.col.title">
+                    <a class="admin-name" [routerLink]="['/sprava/projekty', item.id]">{{
+                      item.title
+                    }}</a>
+                  </td>
+                  <td data-label="Rok" i18n-data-label="@@admin.projects.col.year">
+                    {{ item.year }}
+                  </td>
+                  <td data-label="Štítek" i18n-data-label="@@admin.projects.col.tag">
+                    @if (item.tag) {
+                      {{ item.tag }}
+                    } @else {
+                      <span class="muted" i18n="@@admin.projects.tag.none">bez štítku</span>
+                    }
+                  </td>
+                  <td data-label="Stav" i18n-data-label="@@admin.projects.col.state">
+                    @if (publishedOn(item); as date) {
+                      <span class="state state--published" i18n="@@admin.projects.state.published"
+                        >Zveřejněno {{ date }}</span
+                      >
+                    } @else {
+                      <span class="state state--draft" i18n="@@admin.projects.state.draft"
+                        >Koncept</span
+                      >
+                    }
+                  </td>
+                  <td data-label="Upraveno" i18n-data-label="@@admin.projects.col.updatedAt">
+                    {{ updatedAt(item) }}
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        }
+      </section>
+    }
+  }
 </div>

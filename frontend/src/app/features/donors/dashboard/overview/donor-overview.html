@@ -1,0 +1,109 @@
+<app-page-title i18n="@@donor.overview.heading">Můj přehled</app-page-title>
+
+<app-symbol-card [variableSymbol]="donor()?.variableSymbol ?? null" />
+
+@if (donations.state() === 'ready') {
+  <div class="stats-grid">
+    <div class="stat-card stat-card--accent">
+      <div class="stat-bar"></div>
+      <div class="stat-icon" aria-hidden="true">
+        <svg
+          width="20"
+          height="20"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path
+            d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"
+          />
+        </svg>
+      </div>
+      <div class="stat-value">{{ crowns(donations.summary()?.totalAmountMinor ?? 0) }} Kč</div>
+      <div class="stat-label" i18n="@@donor.dashboard.stat.total">Celkem darováno</div>
+    </div>
+
+    <div class="stat-card stat-card--indigo">
+      <div class="stat-bar"></div>
+      <div class="stat-icon" aria-hidden="true">
+        <svg
+          width="20"
+          height="20"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+          <polyline points="14 2 14 8 20 8" />
+          <line x1="16" y1="13" x2="8" y2="13" />
+          <line x1="16" y1="17" x2="8" y2="17" />
+          <polyline points="10 9 9 9 8 9" />
+        </svg>
+      </div>
+      <div class="stat-value">{{ donations.summary()?.count ?? 0 }}</div>
+      <div class="stat-label" i18n="@@donor.dashboard.stat.count">Počet příspěvků</div>
+    </div>
+
+    <div class="stat-card stat-card--sky">
+      <div class="stat-bar"></div>
+      <div class="stat-icon" aria-hidden="true">
+        <svg
+          width="20"
+          height="20"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+          <line x1="16" y1="2" x2="16" y2="6" />
+          <line x1="8" y1="2" x2="8" y2="6" />
+          <line x1="3" y1="10" x2="21" y2="10" />
+        </svg>
+      </div>
+      <div class="stat-value">
+        @if (donations.summary()?.lastReceivedAt; as lastReceivedAt) {
+          {{ formatDate(lastReceivedAt) }}
+        } @else {
+          —
+        }
+      </div>
+      <div class="stat-label" i18n="@@donor.dashboard.stat.last">Poslední příspěvek</div>
+    </div>
+  </div>
+
+  <section class="recent-card" aria-labelledby="recent-title">
+    <div class="recent-head">
+      <h2 id="recent-title" class="recent-title" i18n="@@donor.overview.recent.title">
+        Poslední dary
+      </h2>
+      @if (donations.items().length > 0) {
+        <a class="recent-all" routerLink="/darce/dary" i18n="@@donor.overview.recent.all"
+          >Všechny dary</a
+        >
+      }
+    </div>
+    @if (donations.items().length > 0) {
+      <app-donations-table [items]="recent()" [withReceipts]="false" />
+    } @else {
+      <p class="recent-empty">
+        <span i18n="@@donor.dashboard.yearly.empty"
+          >Zatím tu nemáme žádný váš dar. Jakmile dorazí platba s vaším variabilním symbolem, objeví
+          se tady.</span
+        >&ngsp;<a routerLink="/darce/ucty" i18n="@@donor.dashboard.yearly.emptyStandingOrder"
+          >Posíláte trvalým příkazem?</a
+        >
+      </p>
+    }
+  </section>
+} @else {
+  <app-donations-pending />
+}

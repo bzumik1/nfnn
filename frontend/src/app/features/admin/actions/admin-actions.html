@@ -1,117 +1,106 @@
-<div class="admin">
-  <app-dashboard-top-bar area="admin" />
+<div class="container">
+  <h1 #title class="admin-title" tabindex="-1" i18n="@@admin.actions.heading">Historie správy</h1>
+  <p class="admin-intro" i18n="@@admin.actions.intro">
+    Každý zásah správce se zapisuje: kdo ho udělal, kdy a čeho se týkal. Nejnovější jsou nahoře.
+    Podrobnosti jsou technický zápis s identifikátory, podle kterých se dá zásah dohledat.
+  </p>
 
-  <div class="container">
-    <p class="admin-crumbs">
-      <a routerLink="/sprava" i18n="@@admin.actions.backToAdmin">← Správa</a>
-    </p>
-    <h1 #title class="admin-title" tabindex="-1" i18n="@@admin.actions.heading">Historie správy</h1>
-    <p class="admin-intro" i18n="@@admin.actions.intro">
-      Každý zásah správce se zapisuje: kdo ho udělal, kdy a čeho se týkal. Nejnovější jsou nahoře.
-      Podrobnosti jsou technický zápis s identifikátory, podle kterých se dá zásah dohledat.
-    </p>
-
-    <section class="admin-card" aria-labelledby="actions-title">
-      <h2 id="actions-title" class="admin-card-title" i18n="@@admin.actions.list.title">
-        Co správci udělali
-      </h2>
-      @switch (state()) {
-        @case ('loading') {
-          <p class="admin-loading" role="status" i18n="@@admin.actions.loading">
-            Načítáme historii…
-          </p>
-        }
-        @case ('error') {
-          <div class="admin-error" role="alert">
-            <p i18n="@@admin.actions.error.text">Historii se nepodařilo načíst.</p>
-            <button
-              type="button"
-              class="admin-retry"
-              (click)="load()"
-              i18n="@@admin.actions.error.retry"
-            >
-              Zkusit znovu
-            </button>
-          </div>
-        }
-        @case ('ready') {
-          @if (items().length === 0) {
-            <p class="admin-empty" i18n="@@admin.actions.empty">
-              Zatím žádný správce nic nezměnil.
-            </p>
-          } @else {
-            <table>
-              <thead>
+  <section class="admin-card" aria-labelledby="actions-title">
+    <h2 id="actions-title" class="admin-card-title" i18n="@@admin.actions.list.title">
+      Co správci udělali
+    </h2>
+    @switch (state()) {
+      @case ('loading') {
+        <p class="admin-loading" role="status" i18n="@@admin.actions.loading">Načítáme historii…</p>
+      }
+      @case ('error') {
+        <div class="admin-error" role="alert">
+          <p i18n="@@admin.actions.error.text">Historii se nepodařilo načíst.</p>
+          <button
+            type="button"
+            class="admin-retry"
+            (click)="load()"
+            i18n="@@admin.actions.error.retry"
+          >
+            Zkusit znovu
+          </button>
+        </div>
+      }
+      @case ('ready') {
+        @if (items().length === 0) {
+          <p class="admin-empty" i18n="@@admin.actions.empty">Zatím žádný správce nic nezměnil.</p>
+        } @else {
+          <table>
+            <thead>
+              <tr>
+                <th i18n="@@admin.actions.col.when">Kdy</th>
+                <th i18n="@@admin.actions.col.admin">Správce</th>
+                <th i18n="@@admin.actions.col.action">Zásah</th>
+                <th i18n="@@admin.actions.col.details">Podrobnosti</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (item of items(); track item.id) {
                 <tr>
-                  <th i18n="@@admin.actions.col.when">Kdy</th>
-                  <th i18n="@@admin.actions.col.admin">Správce</th>
-                  <th i18n="@@admin.actions.col.action">Zásah</th>
-                  <th i18n="@@admin.actions.col.details">Podrobnosti</th>
-                </tr>
-              </thead>
-              <tbody>
-                @for (item of items(); track item.id) {
-                  <tr>
-                    <td data-label="Kdy" i18n-data-label="@@admin.actions.col.when">
-                      <span class="admin-time">{{ performedAt(item) }}</span>
-                    </td>
-                    <td
-                      class="admin-col"
-                      data-label="Správce"
-                      i18n-data-label="@@admin.actions.col.admin"
-                    >
-                      @if (item.adminName) {
-                        <span class="admin-name">{{ item.adminName }}</span>
-                        <span class="admin-email">{{ item.adminEmail }}</span>
-                      } @else {
-                        <span class="muted" i18n="@@admin.actions.admin.missing"
-                          >správce bez účtu</span
-                        >
-                        <span class="admin-email">{{ item.adminId }}</span>
-                      }
-                      @if (item.client) {
-                        <span class="admin-client" i18n="@@admin.actions.admin.client"
-                          >přes aplikaci {{ item.client }}</span
-                        >
-                      }
-                    </td>
-                    <td data-label="Zásah" i18n-data-label="@@admin.actions.col.action">
-                      <span class="admin-name">{{ actionName(item) }}</span>
-                      @if (isKnownAction(item)) {
-                        <span class="action-code">{{ item.action }}</span>
-                      }
-                    </td>
-                    <td data-label="Podrobnosti" i18n-data-label="@@admin.actions.col.details">
-                      <span class="details" lang="en">{{ item.details }}</span>
-                    </td>
-                  </tr>
-                }
-              </tbody>
-            </table>
-            @if (hasMore()) {
-              <div class="admin-more">
-                <button
-                  type="button"
-                  class="admin-retry"
-                  [disabled]="loadingMore()"
-                  (click)="loadMore()"
-                >
-                  @if (loadingMore()) {
-                    <ng-container i18n="@@admin.actions.more.busy">Načítáme starší…</ng-container>
-                  } @else {
-                    <ng-container i18n="@@admin.actions.more">Načíst starší</ng-container>
-                  }
-                </button>
-                @if (moreFailed()) {
-                  <span role="alert" i18n="@@admin.actions.more.failed"
-                    >Starší záznamy se nepodařilo načíst. Zkuste to prosím znovu.</span
+                  <td data-label="Kdy" i18n-data-label="@@admin.actions.col.when">
+                    <span class="admin-time">{{ performedAt(item) }}</span>
+                  </td>
+                  <td
+                    class="admin-col"
+                    data-label="Správce"
+                    i18n-data-label="@@admin.actions.col.admin"
                   >
+                    @if (item.adminName) {
+                      <span class="admin-name">{{ item.adminName }}</span>
+                      <span class="admin-email">{{ item.adminEmail }}</span>
+                    } @else {
+                      <span class="muted" i18n="@@admin.actions.admin.missing"
+                        >správce bez účtu</span
+                      >
+                      <span class="admin-email">{{ item.adminId }}</span>
+                    }
+                    @if (item.client) {
+                      <span class="admin-client" i18n="@@admin.actions.admin.client"
+                        >přes aplikaci {{ item.client }}</span
+                      >
+                    }
+                  </td>
+                  <td data-label="Zásah" i18n-data-label="@@admin.actions.col.action">
+                    <span class="admin-name">{{ actionName(item) }}</span>
+                    @if (isKnownAction(item)) {
+                      <span class="action-code">{{ item.action }}</span>
+                    }
+                  </td>
+                  <td data-label="Podrobnosti" i18n-data-label="@@admin.actions.col.details">
+                    <span class="details" lang="en">{{ item.details }}</span>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+          @if (hasMore()) {
+            <div class="admin-more">
+              <button
+                type="button"
+                class="admin-retry"
+                [disabled]="loadingMore()"
+                (click)="loadMore()"
+              >
+                @if (loadingMore()) {
+                  <ng-container i18n="@@admin.actions.more.busy">Načítáme starší…</ng-container>
+                } @else {
+                  <ng-container i18n="@@admin.actions.more">Načíst starší</ng-container>
                 }
-              </div>
-            }
+              </button>
+              @if (moreFailed()) {
+                <span role="alert" i18n="@@admin.actions.more.failed"
+                  >Starší záznamy se nepodařilo načíst. Zkuste to prosím znovu.</span
+                >
+              }
+            </div>
           }
         }
       }
-    </section>
-  </div>
+    }
+  </section>
 </div>

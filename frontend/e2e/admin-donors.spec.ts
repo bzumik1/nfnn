@@ -294,7 +294,7 @@ test.describe('Given an administrator on the donors page', () => {
     );
     expect(calls).toEqual(['reset', 'disconnect', 'DELETE', 'erase']);
 
-    await page.getByRole('link', { name: 'Dárci' }).click();
+    await page.getByRole('link', { name: '← Dárci' }).click();
     await expect(page).toHaveURL(/\/sprava\/darci$/);
   });
 

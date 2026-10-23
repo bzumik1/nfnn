@@ -1,5 +1,11 @@
 import { expect, Page, test } from '@playwright/test';
-import { bankAccountItem, donationItem, mockDonorApi, signIn } from './donor-session';
+import {
+  bankAccountItem,
+  donationItem,
+  mockDonorApi,
+  openDonorSection,
+  signIn,
+} from './donor-session';
 
 const ACCOUNT_ID = '0192f0c4-0000-7000-8000-000000000001';
 const ACCOUNT = '19-2000145399/0800';
@@ -137,13 +143,13 @@ test.describe('Given a signed-in donor whose verified account sent payments with
   }) => {
     const answers = await askAboutAnOlderSymbol(page);
     await signIn(page);
+    await openDonorSection(page, 'Bankovní účty');
     const question = page.getByRole('group', {
       name: /Z tohoto účtu k nám chodí i platby s variabilním symbolem/,
     });
     await expect(question).toContainText(
       `Z tohoto účtu k nám chodí i platby s variabilním symbolem ${SYMBOL} (3 platby, listopad 2026 – leden 2027). Jsou to dary od vás (Jana Nováková)?`,
     );
-    await expect(page.locator('.payments-card tbody tr')).toHaveCount(2);
 
     await question.getByRole('button', { name: 'Ano, jsou moje' }).click();
 
@@ -162,12 +168,18 @@ test.describe('Given a signed-in donor whose verified account sent payments with
       `Platby s VS ${SYMBOL} z tohoto účtu jste potvrdili jako své a přiřazujeme vám je stejně jako platby bez VS.`,
     ]);
     await expect(page.getByRole('heading', { name: 'Moje bankovní účty' })).toBeFocused();
+
+    await openDonorSection(page, 'Moje dary');
+
     await expect(page.locator('.payments-card tbody tr')).toHaveCount(5);
     await expect(page.locator('.payments-card .pairing-tag [aria-hidden="true"]')).toHaveText([
       `VS ${SYMBOL} · …5399/0800`,
       `VS ${SYMBOL} · …5399/0800`,
       `VS ${SYMBOL} · …5399/0800`,
     ]);
+
+    await openDonorSection(page, 'Přehled');
+
     await expect(page.locator('.stat-value').first()).toHaveText('1 401 Kč');
   });
 
@@ -176,11 +188,11 @@ test.describe('Given a signed-in donor whose verified account sent payments with
   }) => {
     const answers = await askAboutAnOlderSymbol(page);
     await signIn(page);
+    await openDonorSection(page, 'Bankovní účty');
     const question = page.getByRole('group', {
       name: /Z tohoto účtu k nám chodí i platby s variabilním symbolem/,
     });
     await expect(question).toBeVisible();
-    await expect(page.locator('.payments-card tbody tr')).toHaveCount(2);
 
     await question.getByRole('button', { name: 'Ne, nejsou moje' }).click();
 
@@ -195,6 +207,9 @@ test.describe('Given a signed-in donor whose verified account sent payments with
     ]);
     await expect(question).toHaveCount(0);
     await expect(page.locator('.accounts-list .account-hint')).toHaveText([ACTIVE_HINT]);
+
+    await openDonorSection(page, 'Moje dary');
+
     await expect(page.locator('.payments-card tbody tr')).toHaveCount(2);
     await expect(page.locator('.pairing-tag')).toHaveCount(0);
     expect(answers.overviewLoads).toBe(1);

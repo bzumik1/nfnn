@@ -36,7 +36,6 @@ import {
   slugFromText,
 } from '../../content/news-api';
 import { formatBankTime, formatDonationDate } from '../../donations/donation-date';
-import { DashboardTopBar } from '../../donors/dashboard/top-bar/top-bar';
 
 type LoadState = 'loading' | 'ready' | 'error';
 
@@ -53,14 +52,7 @@ const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
 @Component({
   selector: 'app-admin-news-editor',
-  imports: [
-    DashboardTopBar,
-    RouterLink,
-    FormsModule,
-    FormField,
-    FormControlDirective,
-    FocusFirstInvalid,
-  ],
+  imports: [RouterLink, FormsModule, FormField, FormControlDirective, FocusFirstInvalid],
   templateUrl: './admin-news-editor.html',
   styleUrl: './admin-news-editor.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
