@@ -2,6 +2,9 @@ package cz.novanadeje.app.operations.application.settings;
 
 import cz.novanadeje.app.operations.domain.settings.Setting;
 import cz.novanadeje.app.operations.domain.settings.SettingChange;
+import cz.novanadeje.app.operations.domain.settings.SettingError;
+import cz.novanadeje.app.operations.domain.settings.SettingProblem;
+import cz.novanadeje.app.operations.domain.settings.SettingsRejected;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -62,6 +65,7 @@ public class SettingsService {
         if (changes.stream().anyMatch(change -> !change.setting().isAdministered())) {
             throw new IllegalArgumentException("Only settings of the administration change here");
         }
+        requirePasswordForAnotherMailServer(changes);
         Instant now = clock.instant();
         List<Setting> changed = writer.apply(changes, List.of(), now);
         if (changed.isEmpty()) {
@@ -77,9 +81,37 @@ public class SettingsService {
 
     @Transactional(readOnly = true)
     public boolean testMail(MailServer server) {
-        MailServer probed = server.password() == null || server.password().isBlank()
+        boolean typed = server.password() != null && !server.password().isBlank();
+        MailServer probed = !typed && isRunningServer(server)
                 ? server.withPassword(current.effectiveValue(Setting.MAIL_PASSWORD).orElse(""))
                 : server;
         return mailProbe.canSignIn(probed);
+    }
+
+    private void requirePasswordForAnotherMailServer(List<SettingChange> changes) {
+        boolean passwordChanges = changes.stream().anyMatch(change -> change.setting() == Setting.MAIL_PASSWORD);
+        boolean passwordRuns = running(Setting.MAIL_PASSWORD).isPresent() || writer.storedValues().containsKey(Setting.MAIL_PASSWORD);
+        boolean serverMoves = changes.stream()
+                .filter(change -> change.setting().decidesWhereMailPasswordGoes())
+                .anyMatch(change -> !sameValue(change.value(), running(change.setting()).orElse(null)));
+        if (serverMoves && passwordRuns && !passwordChanges) {
+            throw new SettingsRejected(List.of(SettingError.of(Setting.MAIL_PASSWORD, SettingProblem.PASSWORD_FOR_NEW_MAIL_SERVER)));
+        }
+    }
+
+    private boolean isRunningServer(MailServer server) {
+        return sameValue(server.host(), running(Setting.MAIL_HOST).orElse(null))
+                && sameValue(String.valueOf(server.port()), running(Setting.MAIL_PORT).orElse(null))
+                && sameValue(server.username(), running(Setting.MAIL_USERNAME).orElse(null))
+                && sameValue(String.valueOf(server.startTls()), running(Setting.MAIL_STARTTLS).orElse("false"));
+    }
+
+    private Optional<String> running(Setting setting) {
+        return current.effectiveValue(setting).map(String::strip).filter(value -> !value.isEmpty());
+    }
+
+    private static boolean sameValue(String given, String running) {
+        String normalized = given == null || given.isBlank() ? null : given.strip();
+        return normalized == null ? running == null : normalized.equalsIgnoreCase(running);
     }
 }

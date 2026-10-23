@@ -72,6 +72,14 @@ public enum Setting {
         return kind.secret;
     }
 
+    public boolean changesOnlyInBrowser() {
+        return secret() || this == PUBLIC_URL;
+    }
+
+    public boolean decidesWhereMailPasswordGoes() {
+        return this == MAIL_HOST || this == MAIL_PORT || this == MAIL_USERNAME || this == MAIL_STARTTLS;
+    }
+
     public boolean isAdministered() {
         return kind.administered;
     }

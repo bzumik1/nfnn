@@ -2,6 +2,9 @@ package cz.novanadeje.app.operations.application.settings;
 
 import cz.novanadeje.app.operations.domain.settings.Setting;
 import cz.novanadeje.app.operations.domain.settings.SettingChange;
+import cz.novanadeje.app.operations.domain.settings.SettingError;
+import cz.novanadeje.app.operations.domain.settings.SettingProblem;
+import cz.novanadeje.app.operations.domain.settings.SettingsRejected;
 import cz.novanadeje.app.operations.domain.settings.StoredSetting;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
 import org.junit.jupiter.api.DisplayName;
@@ -19,7 +22,9 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -91,11 +96,78 @@ class SettingsServiceTest {
     @Test
     @DisplayName("Given no password typed, when the mail server is tested, then the running password is used")
     void should_use_running_password_when_tested_given_no_password() {
-        when(current.effectiveValue(Setting.MAIL_PASSWORD)).thenReturn(Optional.of("running-key"));
+        runningMailServer();
         MailServer typed = new MailServer("smtp-relay.brevo.com", 587, "user", "", true, true);
         when(mailProbe.canSignIn(typed.withPassword("running-key"))).thenReturn(true);
 
         assertThat(settings.testMail(typed)).isTrue();
+    }
+
+    @Test
+    @DisplayName("Given a stored password, when another mail server is tested without a password, then the stored password is not sent to it")
+    void should_not_send_running_password_when_tested_given_other_server_without_password() {
+        runningMailServer();
+        MailServer elsewhere = new MailServer("smtp.attacker.example", 587, "user", "", true, true);
+        MailServer otherUser = new MailServer("smtp-relay.brevo.com", 587, "someone-else", "", true, true);
+        MailServer withoutTls = new MailServer("smtp-relay.brevo.com", 587, "user", "", true, false);
+
+        settings.testMail(elsewhere);
+        settings.testMail(otherUser);
+        settings.testMail(withoutTls);
+
+        verify(mailProbe).canSignIn(elsewhere);
+        verify(mailProbe).canSignIn(otherUser);
+        verify(mailProbe).canSignIn(withoutTls);
+        verify(mailProbe, never()).canSignIn(argThat(server -> "running-key".equals(server.password())));
+    }
+
+    @Test
+    @DisplayName("Given a stored password, when the mail server, its port, user or STARTTLS change without the password, then the change is refused at the password")
+    void should_refuse_when_saved_given_mail_server_moved_without_password() {
+        runningMailServer();
+        for (SettingChange moved : List.of(new SettingChange(Setting.MAIL_HOST, "smtp.attacker.example"), new SettingChange(Setting.MAIL_PORT, "2525"),
+                new SettingChange(Setting.MAIL_USERNAME, "someone-else"), new SettingChange(Setting.MAIL_STARTTLS, "false"),
+                new SettingChange(Setting.MAIL_HOST, ""))) {
+            assertThatThrownBy(() -> settings.change(ADMIN, List.of(moved)))
+                    .isInstanceOfSatisfying(SettingsRejected.class, rejected -> assertThat(rejected.errors())
+                            .containsExactly(SettingError.of(Setting.MAIL_PASSWORD, SettingProblem.PASSWORD_FOR_NEW_MAIL_SERVER)));
+        }
+        verifyNoInteractions(events, restarter);
+        assertThat(repository.findAll()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Given a password saved but not yet running, when the mail server changes without the password, then the change is refused at the password")
+    void should_refuse_when_saved_given_password_stored_before_restart_and_server_moved() {
+        when(current.effectiveValue(any())).thenReturn(Optional.empty());
+        repository.save(new StoredSetting(Setting.MAIL_PASSWORD, sealer.seal(Setting.MAIL_PASSWORD, "stored-key"), true, NOW));
+
+        assertThatThrownBy(() -> settings.change(ADMIN, List.of(new SettingChange(Setting.MAIL_HOST, "smtp.attacker.example"))))
+                .isInstanceOfSatisfying(SettingsRejected.class, rejected -> assertThat(rejected.errors())
+                        .containsExactly(SettingError.of(Setting.MAIL_PASSWORD, SettingProblem.PASSWORD_FOR_NEW_MAIL_SERVER)));
+        verifyNoInteractions(events, restarter);
+    }
+
+    @Test
+    @DisplayName("Given a stored password, when the mail server changes with a new password or keeps its values, then the change is saved")
+    void should_save_when_saved_given_mail_server_moved_with_password_or_unchanged() {
+        runningMailServer();
+        when(validator.validate(any(), any(), any())).thenReturn(List.of());
+
+        settings.change(ADMIN, List.of(new SettingChange(Setting.MAIL_HOST, "smtp.example.cz"), new SettingChange(Setting.MAIL_PASSWORD, "new-key")));
+        settings.change(ADMIN, List.of(new SettingChange(Setting.MAIL_HOST, "SMTP-relay.brevo.com"), new SettingChange(Setting.MAIL_FROM, "info@nfnn.cz")));
+
+        assertThat(repository.findAll()).extracting(StoredSetting::setting)
+                .containsExactlyInAnyOrder(Setting.MAIL_HOST, Setting.MAIL_PASSWORD, Setting.MAIL_FROM);
+    }
+
+    private void runningMailServer() {
+        when(current.effectiveValue(any())).thenReturn(Optional.empty());
+        when(current.effectiveValue(Setting.MAIL_HOST)).thenReturn(Optional.of("smtp-relay.brevo.com"));
+        when(current.effectiveValue(Setting.MAIL_PORT)).thenReturn(Optional.of("587"));
+        when(current.effectiveValue(Setting.MAIL_USERNAME)).thenReturn(Optional.of("user"));
+        when(current.effectiveValue(Setting.MAIL_STARTTLS)).thenReturn(Optional.of("true"));
+        when(current.effectiveValue(Setting.MAIL_PASSWORD)).thenReturn(Optional.of("running-key"));
     }
 
     private static SettingView viewOf(SettingsView view, Setting setting) {
