@@ -35,4 +35,10 @@ class AdapterLibraryRulesTest {
             .that().resideOutsideOfPackage("cz.novanadeje.app.content.infrastructure.media..")
             .should().dependOnClassesThat()
             .resideInAnyPackage("io.github.darkxanter..", "com.luciad.imageio.webp..", "javax.imageio..", "java.awt.image..");
+
+    @ArchTest
+    static final ArchRule logging_system_pool_and_jvm_management_are_used_only_by_the_operations_adapters = noClasses()
+            .that().resideOutsideOfPackage("cz.novanadeje.app.operations.infrastructure..")
+            .should().dependOnClassesThat()
+            .resideInAnyPackage("org.springframework.boot.logging..", "com.zaxxer.hikari..", "java.lang.management..");
 }

@@ -44,6 +44,12 @@ public class TestSupportConfiguration {
     }
 
     @Bean
+    @Primary
+    public RecordingResetTimer recordingResetTimer() {
+        return new RecordingResetTimer();
+    }
+
+    @Bean
     public DatabaseCleaner databaseCleaner(JdbcClient jdbcClient) {
         return new DatabaseCleaner(jdbcClient);
     }

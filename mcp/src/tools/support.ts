@@ -1,12 +1,10 @@
 import type { CallToolResult, ServerContext } from '@modelcontextprotocol/server';
 import { BackendClient, BackendProblem } from '../backend.js';
 import { asText } from '../format.js';
-import { LogFileNotFound, LogReader, LogsUnavailable } from '../logs.js';
 import type { Logger } from '../token-exchange.js';
 
 export interface ToolDependencies {
   readonly backend: BackendClient;
-  readonly logs: LogReader;
   readonly logger: Logger;
 }
 
@@ -56,9 +54,6 @@ export async function answer(
         `Tool ${tool} refused for donor ${caller.donorId}: ${thrown.problem.status} ${thrown.problem.type}`,
       );
       return failure(describeProblem(thrown));
-    }
-    if (thrown instanceof LogsUnavailable || thrown instanceof LogFileNotFound) {
-      return failure(thrown.message);
     }
     deps.logger.warn(
       `Tool ${tool} failed for donor ${caller.donorId}: ${thrown instanceof Error ? thrown.constructor.name : 'unknown'}`,
