@@ -31,10 +31,10 @@ class PublicUrlPropertiesTest {
     }
 
     @Test
-    @DisplayName("Given the prod profile without PUBLIC_URL, when the context starts, then links point at the staging host")
-    void should_point_at_staging_host_when_started_given_prod_profile() {
+    @DisplayName("Given the prod profile without PUBLIC_URL, when the context starts, then links point at the foundation's domain")
+    void should_point_at_foundation_domain_when_started_given_prod_profile() {
         contexts.withPropertyValues("spring.profiles.active=prod").run(context ->
-                assertThat(context.getBean(PublicUrlProperties.class).publicUrl()).isEqualTo("https://nfnn.znamenacek.duckdns.org"));
+                assertThat(context.getBean(PublicUrlProperties.class).publicUrl()).isEqualTo("https://nfnn.cz"));
     }
 
     @Test
