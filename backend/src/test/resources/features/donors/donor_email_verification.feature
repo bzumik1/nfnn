@@ -169,3 +169,33 @@ Feature: Donor confirms the e-mail address after registering
     When the e-mail is confirmed with an unknown well-formed token
     Then the response status is 400
     And the problem type ends with "donors/invalid-email-verification-token"
+
+  Scenario: An unconfirmed registration gets one reminder a day after registering, with a fresh link that confirms it
+    Given a person registered with email "jana@example.cz" and password "correct horse battery" but has not confirmed the e-mail
+    When 1430 minutes pass
+    And the registration reminder job runs
+    Then 1 e-mail is sent to "jana@example.cz" with the subject "Potvrďte svůj e-mail – Nová naděje"
+    When 20 minutes pass
+    And the registration reminder job runs
+    Then e-mail 2 goes to "jana@example.cz" with the subject "Připomínka: dokončete registraci – Nová naděje"
+    And both parts of the last e-mail contain "http://localhost:4200/potvrzeni-emailu#token="
+    And both parts of the last e-mail contain "jana@example.cz"
+    When the registration reminder job runs
+    Then 2 e-mails are sent to "jana@example.cz"
+    When the donor confirms the e-mail with the link from the e-mail
+    Then the response status is 200
+    And the response carries an access token and a refresh cookie
+
+  Scenario: A confirmed account and a registration older than a week get no reminder
+    Given a person registered with email "jana@example.cz" and password "correct horse battery"
+    And a person registered with email "petr@example.cz" and password "correct horse battery" but has not confirmed the e-mail
+    When 8 days pass
+    And the registration reminder job runs
+    Then 1 e-mail is sent to "petr@example.cz" with the subject "Potvrďte svůj e-mail – Nová naděje"
+
+  Scenario: A donor who prefers English gets the reminder in English
+    When a person registers with email "john@example.com", password "correct horse battery" and preferred locale "en"
+    Then 1 e-mail is sent to "john@example.com" with the subject "Confirm your e-mail – Nová naděje"
+    When 2 days pass
+    And the registration reminder job runs
+    Then e-mail 2 goes to "john@example.com" with the subject "Reminder: finish your registration – Nová naděje"

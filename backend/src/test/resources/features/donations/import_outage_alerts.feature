@@ -73,12 +73,26 @@ Feature: The foundation is told when the bank import stops working and when it w
     Then no alert e-mail is sent
     And the import state reports no outage
 
-  Scenario: An outage e-mail the mail server refuses is logged and not repeated, the recovery still goes out
+  Scenario: An outage e-mail the mail server refuses goes out after the next import and only once
     Given the mail server refuses the next e-mail
     And Fio refuses the next request because the token is not valid
     When the hourly import runs
     Then no alert e-mail is sent
     And the import state reports the outage "UNAUTHORIZED" after 1 failures
+    Given Fio refuses the next request because the token is not valid
+    When the hourly import runs
+    Then 1 e-mail is sent to "info@nfnn.cz" with the subject "Stahování plateb z banky selhává – Nová naděje"
+    And both parts of the alert e-mail say:
+      | Fio 18. 10. 2026 12:00 odmítlo token, kterým web Nová naděje stahuje platby z účtu fondu. |
+    Given Fio refuses the next request because the token is not valid
+    When the hourly import runs
+    Then 1 e-mail is sent to "info@nfnn.cz" with the subject "Stahování plateb z banky selhává – Nová naděje"
+
+  Scenario: An outage e-mail still waiting when the import works again is replaced by the recovery e-mail
+    Given the mail server refuses the next e-mail
+    And Fio refuses the next request because the token is not valid
+    When the hourly import runs
+    Then no alert e-mail is sent
     When 1 days pass
     And the hourly import runs
     Then 1 e-mail is sent to "info@nfnn.cz" with the subject "Stahování plateb z banky zase funguje – Nová naděje"

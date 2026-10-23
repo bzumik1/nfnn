@@ -7,6 +7,9 @@ Feature: Donor changes the password or the e-mail while signed in
     When the donor changes the password from "correct horse battery" to "a brand new passphrase"
     Then the response status is 200
     And the response carries an access token and a refresh cookie
+    And 1 e-mail is sent to "jana@example.cz" with the subject "Heslo k vašemu účtu bylo změněno – Nová naděje"
+    And both parts of the last e-mail contain "nastavili nové heslo"
+    And neither part of the last e-mail contains "a brand new passphrase"
     When the donor refreshes the session with the previous refresh cookie
     Then the response status is 401
     When the donor refreshes the session

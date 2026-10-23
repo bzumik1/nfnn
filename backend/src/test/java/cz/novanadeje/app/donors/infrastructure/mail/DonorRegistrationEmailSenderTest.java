@@ -6,6 +6,7 @@ import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
 import cz.novanadeje.app.donors.application.DonorEmailVerificationProperties;
 import cz.novanadeje.app.donors.application.event.DonorEmailVerificationRequested;
+import cz.novanadeje.app.donors.application.event.DonorRegistrationReminderDue;
 import cz.novanadeje.app.donors.application.event.DonorRegistrationRepeated;
 import cz.novanadeje.app.donors.domain.LinkSecret;
 import cz.novanadeje.app.shared.domain.EmailAddress;
@@ -150,6 +151,52 @@ class DonorRegistrationEmailSenderTest {
     }
 
     @Test
+    @DisplayName("Given an unconfirmed Czech donor, when the reminder is sent, then it carries the reminder subject, a fresh link as button and text, and says no other reminder follows")
+    void should_write_czech_reminder_when_sent_given_unconfirmed_donor() {
+        reminderSent(LocaleCode.CS, email -> {
+            assertThat(email.getSubject()).isEqualTo("Připomínka: dokončete registraci – Nová naděje");
+            assertThat(email.getRecipients(Message.RecipientType.TO)).extracting(Object::toString).containsExactly("jana@example.cz");
+            assertThat(MailContents.plainText(email).replace("\r\n", "\n")).isEqualTo("""
+                    Dobrý den,
+
+                    nedávno jste začali registraci dárcovského účtu Nová naděje (jana@example.cz), ale adresu jste zatím nepotvrdili. Stačí kliknout:
+
+                    %s
+
+                    Odkaz platí 24 hodin a lze ho použít jen jednou. Do potvrzení se do účtu nepřihlásíte.
+
+                    Pokud jste se neregistrovali vy, tento e-mail prosím ignorujte; další připomínku už nepošleme.
+
+                    Nová naděje – nadační fond
+
+                    Máte-li dotaz, napište nám na info@nfnn.cz.
+                    """.formatted(LINK));
+            assertThat(MailContents.html(email))
+                    .contains("lang=\"cs\"")
+                    .contains(">Dokončete registraci</h1>")
+                    .contains("href=\"" + LINK + "\"")
+                    .contains(">" + LINK + "<")
+                    .contains("Potvrdit e-mail")
+                    .contains("další připomínku už nepošleme");
+            MailPreviews.save("registration-reminder", email);
+        });
+    }
+
+    @Test
+    @DisplayName("Given an unconfirmed English donor, when the reminder is sent, then subject and texts are English")
+    void should_write_english_reminder_when_sent_given_english_donor() {
+        reminderSent(LocaleCode.EN, email -> {
+            assertThat(email.getSubject()).isEqualTo("Reminder: finish your registration – Nová naděje");
+            assertThat(MailContents.plainText(email))
+                    .startsWith("Hello,")
+                    .contains("you recently started registering a Nová naděje donor account (jana@example.cz)")
+                    .contains(LINK)
+                    .contains("we will not remind you again");
+            assertThat(MailContents.html(email)).contains("lang=\"en\"").contains("Confirm e-mail");
+        });
+    }
+
+    @Test
     @DisplayName("Given a verified donor whose address was registered again, when the e-mail is sent, then it names the address, links the site and carries no token")
     void should_tell_about_existing_account_when_sent_given_repeated_registration() {
         RecordingMailSender recording = new RecordingMailSender();
@@ -211,6 +258,17 @@ class DonorRegistrationEmailSenderTest {
         RecordingMailSender recording = new RecordingMailSender();
         contexts.withBean(JavaMailSender.class, () -> recording).run(context -> {
             sender(context, ttl).sendVerification(verificationEvent(locale));
+
+            assertThat(recording.sent()).hasSize(1);
+            assertion.accept(MailContents.asReceived(recording.sent().getFirst()));
+            assertThat(logged.list).noneMatch(line -> line.getLevel() == Level.ERROR);
+        });
+    }
+
+    private void reminderSent(LocaleCode locale, ThrowingAssertion assertion) {
+        RecordingMailSender recording = new RecordingMailSender();
+        contexts.withBean(JavaMailSender.class, () -> recording).run(context -> {
+            sender(context, Duration.ofHours(24)).sendReminder(new DonorRegistrationReminderDue(DONOR_ID, EMAIL, locale, SECRET, EXPIRES_AT));
 
             assertThat(recording.sent()).hasSize(1);
             assertion.accept(MailContents.asReceived(recording.sent().getFirst()));

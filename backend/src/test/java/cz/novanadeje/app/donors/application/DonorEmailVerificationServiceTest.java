@@ -3,6 +3,7 @@ package cz.novanadeje.app.donors.application;
 import cz.novanadeje.app.donors.application.event.DonorEmailChangeRequested;
 import cz.novanadeje.app.donors.application.event.DonorEmailChanged;
 import cz.novanadeje.app.donors.application.event.DonorEmailVerificationRequested;
+import cz.novanadeje.app.donors.application.event.DonorRegistrationReminderDue;
 import cz.novanadeje.app.donors.domain.Donor;
 import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.donors.domain.DonorRepository;
@@ -106,6 +107,37 @@ class DonorEmailVerificationServiceTest {
         assertThat(stored.getValue().issuedAt()).isEqualTo(NOW);
         assertThat(event.toString()).doesNotContain(event.secret().value());
         verifyNoInteractions(sessions);
+    }
+
+    @Test
+    @DisplayName("Given an unverified donor, when a reminder link is issued, then a token is stored and the reminder event carries its secret")
+    void should_store_token_and_publish_reminder_when_reminder_link_issued_given_unverified_donor() {
+        when(tokens.countOf(DONOR)).thenReturn(1);
+
+        service.issueReminderLink(unverifiedDonor(LocaleCode.CS));
+
+        ArgumentCaptor<EmailVerificationToken> stored = ArgumentCaptor.forClass(EmailVerificationToken.class);
+        verify(tokens).save(stored.capture());
+        ArgumentCaptor<DonorRegistrationReminderDue> published = ArgumentCaptor.forClass(DonorRegistrationReminderDue.class);
+        verify(events).publishEvent(published.capture());
+        DonorRegistrationReminderDue event = published.getValue();
+        assertThat(event.secret().hash()).isEqualTo(stored.getValue().secretHash());
+        assertThat(event.donorId()).isEqualTo(DONOR.value());
+        assertThat(event.email()).isEqualTo(EMAIL);
+        assertThat(event.preferredLocale()).isEqualTo(LocaleCode.CS);
+        assertThat(event.expiresAt()).isEqualTo(NOW.plus(TTL));
+        assertThat(event.toString()).doesNotContain(event.secret().value());
+    }
+
+    @Test
+    @DisplayName("Given a donor holding three live links, when a reminder link is issued, then nothing is stored and nothing is published")
+    void should_store_and_publish_nothing_when_reminder_link_issued_given_three_live_links() {
+        when(tokens.countOf(DONOR)).thenReturn(3);
+
+        service.issueReminderLink(unverifiedDonor(LocaleCode.CS));
+
+        verify(tokens, never()).save(any());
+        verifyNoInteractions(events);
     }
 
     @Test

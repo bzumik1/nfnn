@@ -3,7 +3,7 @@ package cz.novanadeje.app.donations.domain.importing;
 import java.time.Instant;
 import java.util.Optional;
 
-public record ImportOutage(ImportFailureKind kind, int consecutiveFailures, Optional<Instant> lastSucceededAt, Instant detectedAt) {
+public record ImportOutage(ImportFailureKind kind, int consecutiveFailures, Optional<Instant> lastSucceededAt, Instant detectedAt) implements ImportAlert {
 
     public ImportOutage {
         if (kind == null || lastSucceededAt == null || detectedAt == null) {

@@ -4,8 +4,6 @@ import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
-import cz.novanadeje.app.donations.application.event.BankImportOutageDetected;
-import cz.novanadeje.app.donations.application.event.BankImportRecovered;
 import cz.novanadeje.app.donations.application.pairing.PairingOutcome;
 import cz.novanadeje.app.donations.application.pairing.PaymentPairingService;
 import cz.novanadeje.app.donations.domain.bank.BankPayment;
@@ -15,6 +13,7 @@ import cz.novanadeje.app.donations.domain.bank.IncomingMovement;
 import cz.novanadeje.app.donations.domain.bank.SenderAccount;
 import cz.novanadeje.app.donations.domain.importing.BankImportState;
 import cz.novanadeje.app.donations.domain.importing.BankImportStateRepository;
+import cz.novanadeje.app.donations.domain.importing.ImportAlertRepository;
 import cz.novanadeje.app.donations.domain.importing.ImportCoverage;
 import cz.novanadeje.app.donations.domain.importing.ImportFailureKind;
 import cz.novanadeje.app.donations.domain.importing.ImportOutage;
@@ -32,7 +31,6 @@ import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.slf4j.LoggerFactory;
-import org.springframework.context.ApplicationEventPublisher;
 
 import java.time.Instant;
 import java.time.LocalDate;
@@ -46,6 +44,7 @@ import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -62,14 +61,14 @@ class BankStatementRecorderTest {
     @Mock
     private BankImportStateRepository states;
     @Mock
-    private ApplicationEventPublisher events;
+    private ImportAlertRepository alerts;
 
     private BankStatementRecorder recorder;
     private ListAppender<ILoggingEvent> log;
 
     @BeforeEach
     void setUp() {
-        recorder = new BankStatementRecorder(payments, pairing, states, events);
+        recorder = new BankStatementRecorder(payments, pairing, states, alerts);
         log = new ListAppender<>();
         log.start();
         logger().addAppender(log);
@@ -198,49 +197,49 @@ class BankStatementRecorderTest {
         assertThat(state.lastFailureKind()).contains(ImportFailureKind.TRANSPORT);
         assertThat(state.lastFailureMessage()).contains("timed out");
         assertThat(state.lastAttemptedAt()).contains(NOW);
-        verify(events, never()).publishEvent(any());
+        verify(alerts, never()).add(any(), any());
     }
 
     @Test
-    @DisplayName("Given two recorded failures, when a third one is recorded, then the outage is published before the state is saved")
-    void should_publish_outage_when_failure_recorded_given_third_failure_in_a_row() {
+    @DisplayName("Given two recorded failures, when a third one is recorded, then the outage alert is queued before the state is saved")
+    void should_queue_outage_alert_when_failure_recorded_given_third_failure_in_a_row() {
         BankImportState state = stateCovering("2026-07-18", "2026-10-15");
         state.failed(ImportFailureKind.TRANSPORT, "timed out", NOW.minusSeconds(7200));
         state.failed(ImportFailureKind.TRANSPORT, "timed out", NOW.minusSeconds(3600));
 
         recorder.recordFailure(ImportFailureKind.TRANSPORT, "timed out", NOW);
 
-        InOrder order = inOrder(events, states);
-        order.verify(events).publishEvent(new BankImportOutageDetected(
-                new ImportOutage(ImportFailureKind.TRANSPORT, 3, Optional.of(Instant.parse("2026-10-15T10:00:00Z")), NOW)));
+        InOrder order = inOrder(alerts, states);
+        order.verify(alerts).add(new ImportOutage(ImportFailureKind.TRANSPORT, 3, Optional.of(Instant.parse("2026-10-15T10:00:00Z")), NOW), NOW);
         order.verify(states).save(state);
         assertThat(errors()).containsExactly("Fio import outage: TRANSPORT failed 3 times in a row, the foundation is being told");
     }
 
     @Test
-    @DisplayName("Given a reported outage, when a statement is recorded, then the recovery is published before the state is saved")
-    void should_publish_recovery_when_recorded_given_reported_outage() {
+    @DisplayName("Given a reported outage, when a statement is recorded, then an outage alert still waiting is dropped and the recovery alert is queued before the state is saved")
+    void should_replace_waiting_outage_alert_by_recovery_when_recorded_given_reported_outage() {
         BankImportState state = stateCovering("2026-07-18", "2026-10-15");
         state.failed(ImportFailureKind.UNAUTHORIZED, "refused with HTTP 401", NOW.minusSeconds(3600));
         noMovementsKnownAndNothingPaired();
 
         recorder.record(new BankStatement(HOURLY_REQUEST, Optional.empty(), List.of(), 0), new ImportPlan(HOURLY_REQUEST, false), NOW);
 
-        InOrder order = inOrder(events, states);
-        order.verify(events).publishEvent(new BankImportRecovered(
-                new ImportRecovery(ImportFailureKind.UNAUTHORIZED, 1, Optional.of(Instant.parse("2026-10-15T10:00:00Z")), NOW)));
+        InOrder order = inOrder(alerts, states);
+        order.verify(alerts).dropWaitingOutages(NOW);
+        order.verify(alerts).add(new ImportRecovery(ImportFailureKind.UNAUTHORIZED, 1, Optional.of(Instant.parse("2026-10-15T10:00:00Z")), NOW), NOW);
         order.verify(states).save(state);
         assertThat(state.reportedOutage()).isEmpty();
     }
 
     @Test
-    void should_publish_nothing_when_recorded_given_no_outage_to_recover_from() {
+    @DisplayName("Given no outage, when a statement is recorded, then no alert is queued or dropped")
+    void should_queue_nothing_when_recorded_given_no_outage_to_recover_from() {
         stateCovering("2026-07-18", "2026-10-15");
         noMovementsKnownAndNothingPaired();
 
         recorder.record(new BankStatement(HOURLY_REQUEST, Optional.empty(), List.of(), 0), new ImportPlan(HOURLY_REQUEST, false), NOW);
 
-        verify(events, never()).publishEvent(any());
+        verifyNoInteractions(alerts);
     }
 
     private BankImportState stateCovering(String from, String to) {

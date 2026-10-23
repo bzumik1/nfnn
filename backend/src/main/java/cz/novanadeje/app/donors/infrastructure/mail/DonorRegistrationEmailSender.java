@@ -2,6 +2,7 @@ package cz.novanadeje.app.donors.infrastructure.mail;
 
 import cz.novanadeje.app.donors.application.DonorEmailVerificationProperties;
 import cz.novanadeje.app.donors.application.event.DonorEmailVerificationRequested;
+import cz.novanadeje.app.donors.application.event.DonorRegistrationReminderDue;
 import cz.novanadeje.app.donors.application.event.DonorRegistrationRepeated;
 import cz.novanadeje.app.shared.infrastructure.config.PublicUrlProperties;
 import cz.novanadeje.app.shared.infrastructure.mail.BrandedEmails;
@@ -29,6 +30,8 @@ class DonorRegistrationEmailSender {
     private static final String VERIFICATION_KEYS = "donors.emailVerification.email.";
     private static final String VERIFICATION_TEMPLATE = "email/donors/email-verification";
     private static final String VERIFICATION_PAGE = "/potvrzeni-emailu#token=";
+    private static final String REMINDER_KEYS = "donors.registrationReminder.email.";
+    private static final String REMINDER_TEMPLATE = "email/donors/registration-reminder";
     private static final String REPEATED_KEYS = "donors.registrationRepeated.email.";
     private static final String REPEATED_TEMPLATE = "email/donors/registration-repeated";
 
@@ -66,6 +69,26 @@ class DonorRegistrationEmailSender {
                 footer);
         send(event.donorId(), "verification", new EmailDraft(locale, event.email().value(), text(VERIFICATION_KEYS, "subject", locale),
                 text(VERIFICATION_KEYS, "title", locale), VERIFICATION_TEMPLATE,
+                Map.of("email", event.email().value(), "link", link, "validHours", validHours), plainText, footer));
+    }
+
+    @Async
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void sendReminder(DonorRegistrationReminderDue event) {
+        Locale locale = event.preferredLocale().toLocale();
+        String link = publicUrl.link(VERIFICATION_PAGE + event.secret().value()).toString();
+        long validHours = properties.tokenTtl().toHours();
+        String footer = text(REMINDER_KEYS, "footer", locale, sender.senderEmail());
+        String plainText = paragraphs(
+                text(REMINDER_KEYS, "greeting", locale),
+                text(REMINDER_KEYS, "intro", locale, event.email().value()),
+                link,
+                text(REMINDER_KEYS, "validity", locale, validHours),
+                text(REMINDER_KEYS, "ignore", locale),
+                text(REMINDER_KEYS, "signature", locale),
+                footer);
+        send(event.donorId(), "registration reminder", new EmailDraft(locale, event.email().value(), text(REMINDER_KEYS, "subject", locale),
+                text(REMINDER_KEYS, "title", locale), REMINDER_TEMPLATE,
                 Map.of("email", event.email().value(), "link", link, "validHours", validHours), plainText, footer));
     }
 

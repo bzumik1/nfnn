@@ -3,6 +3,7 @@ package cz.novanadeje.app.donors.application;
 import cz.novanadeje.app.donors.application.event.DonorEmailChangeRequested;
 import cz.novanadeje.app.donors.application.event.DonorEmailChanged;
 import cz.novanadeje.app.donors.application.event.DonorEmailVerificationRequested;
+import cz.novanadeje.app.donors.application.event.DonorRegistrationReminderDue;
 import cz.novanadeje.app.donors.domain.CompanyIdentifier;
 import cz.novanadeje.app.donors.domain.Donor;
 import cz.novanadeje.app.donors.domain.DonorRepository;
@@ -125,6 +126,14 @@ public class DonorEmailVerificationService {
     }
 
     void issueLink(Donor donor) {
+        issue(donor, false);
+    }
+
+    void issueReminderLink(Donor donor) {
+        issue(donor, true);
+    }
+
+    private void issue(Donor donor, boolean reminder) {
         Instant now = clock.instant();
         tokens.deleteUnusableOf(donor.id(), now);
         int liveLinks = tokens.countOf(donor.id());
@@ -135,6 +144,11 @@ public class DonorEmailVerificationService {
         LinkSecret secret = LinkSecret.generate();
         EmailVerificationToken token = EmailVerificationToken.issue(secret, donor.id(), now, properties.tokenTtl());
         tokens.save(token);
+        if (reminder) {
+            events.publishEvent(new DonorRegistrationReminderDue(donor.id().value(), donor.email(), donor.preferredLocale(), secret, token.expiresAt()));
+            log.info("Registration reminder with a new verification link issued for donor {}", donor.id());
+            return;
+        }
         events.publishEvent(new DonorEmailVerificationRequested(donor.id().value(), donor.email(), donor.preferredLocale(), secret, token.expiresAt()));
         log.info("E-mail verification link issued for donor {}", donor.id());
     }

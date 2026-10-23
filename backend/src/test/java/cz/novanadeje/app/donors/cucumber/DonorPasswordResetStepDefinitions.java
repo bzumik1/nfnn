@@ -201,8 +201,11 @@ public class DonorPasswordResetStepDefinitions {
     }
 
     private MimeMessage lastEmail() {
-        assertThat(mailSender.sent()).withFailMessage("No e-mail was sent").isNotEmpty();
-        return mailSender.sent().getLast();
+        List<MimeMessage> resetEmails = mailSender.sent().stream()
+                .filter(email -> TOKEN_IN_LINK.matcher(MailContents.plainText(email)).find())
+                .toList();
+        assertThat(resetEmails).withFailMessage("No reset e-mail was sent").isNotEmpty();
+        return resetEmails.getLast();
     }
 
     private MimeMessage emailAt(int position) {
