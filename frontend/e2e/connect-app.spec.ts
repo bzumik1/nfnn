@@ -5,6 +5,7 @@ import {
   connectionRequest,
   mockConnectApi,
   mockDonorApi,
+  openDonorSection,
   session,
   signIn,
 } from './donor-session';
@@ -134,6 +135,7 @@ test.describe('Given an administrator with Claude connected', () => {
       },
     );
     await signIn(page, administrator);
+    await openDonorSection(page, 'Údaje a zabezpečení');
 
     const connections = page.locator('.connections');
     await expect(connections.getByRole('heading', { name: 'Připojené aplikace' })).toBeVisible();

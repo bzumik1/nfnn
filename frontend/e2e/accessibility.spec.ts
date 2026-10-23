@@ -11,6 +11,7 @@ import {
   donor,
   mockConnectApi,
   mockDonorApi,
+  openDonorSection,
   openSignInDialog,
   problem,
   samplePngBase64,
@@ -260,7 +261,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
       (url) => url.pathname === '/api/donors/me/connections',
       (route) => route.fulfill({ json: { items: [claudeConnection] } }),
     );
-    await page.goto('/darce/prehled');
+    await page.goto('/darce/udaje');
     await expect(page.locator('.connections .connection-client')).toHaveText('claude.ai');
     expect(await violations(page)).toEqual([]);
   });
@@ -292,12 +293,20 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     expect(await violations(page)).toEqual([]);
   });
 
-  test('when a signed-in donor opens the overview, then nothing on it breaks the rules', async ({
+  test('when a signed-in donor opens each section, then nothing on them breaks the rules', async ({
     page,
   }) => {
     await signIn(page);
     await expect(page.locator('.symbol-value')).toBeVisible();
 
+    expect(await violations(page)).toEqual([]);
+
+    for (const section of ['Moje dary', 'Potvrzení o daru', 'Údaje a zabezpečení']) {
+      await openDonorSection(page, section);
+      expect(await violations(page)).toEqual([]);
+    }
+
+    await openDonorSection(page, 'Bankovní účty');
     expect(await violations(page)).toEqual([]);
 
     await page.getByRole('button', { name: 'Jak přiřazujeme platby' }).click();
@@ -331,6 +340,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
         }),
     );
     await signIn(page);
+    await openDonorSection(page, 'Bankovní účty');
     await expect(page.locator('.account-hint--warning')).toBeVisible();
     expect(await violations(page)).toEqual([]);
 
@@ -345,6 +355,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
   }) => {
     await askAboutAnOlderSymbol(page);
     await signIn(page);
+    await openDonorSection(page, 'Bankovní účty');
     const question = page.getByRole('group', {
       name: /Z tohoto účtu k nám chodí i platby s variabilním symbolem 6123456789/,
     });
@@ -1239,6 +1250,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     page,
   }) => {
     await signIn(page);
+    await openDonorSection(page, 'Údaje a zabezpečení');
     await page.getByRole('button', { name: 'Upravit údaje' }).click();
     await page.getByLabel('Město').fill('');
     await page.getByRole('button', { name: 'Uložit' }).click();
@@ -1251,6 +1263,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     page,
   }) => {
     await signIn(page);
+    await openDonorSection(page, 'Údaje a zabezpečení');
     await page.getByRole('button', { name: 'Změnit e-mail' }).click();
     await page.getByLabel('Nový e-mail').fill('not-an-email');
     await page.getByRole('button', { name: 'Poslat potvrzovací odkaz' }).click();
@@ -1272,6 +1285,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
       route.fulfill({ json: secondFactorEnrolment }),
     );
     await signIn(page);
+    await openDonorSection(page, 'Údaje a zabezpečení');
     await page.getByRole('button', { name: 'Zapnout dvoufaktorové ověření' }).click();
     await page.getByLabel('Současné heslo').fill('correct horse battery');
     await page.getByRole('button', { name: 'Pokračovat' }).click();
@@ -1458,6 +1472,7 @@ test.describe('Given a visitor on a phone who relies on WCAG 2.2 AA', () => {
   }) => {
     await page.setViewportSize({ width: 1280, height: 800 });
     await signIn(page);
+    await openDonorSection(page, 'Bankovní účty');
     await page.setViewportSize({ width: 360, height: 800 });
     const helpButton = page.getByRole('button', { name: 'Jak přiřazujeme platby' });
     await expect(helpButton).toHaveAttribute('aria-expanded', 'false');
@@ -1488,6 +1503,7 @@ test.describe('Given a visitor on a phone who relies on WCAG 2.2 AA', () => {
     await askAboutAnOlderSymbol(page);
     await page.setViewportSize({ width: 1280, height: 800 });
     await signIn(page);
+    await openDonorSection(page, 'Bankovní účty');
     await page.setViewportSize({ width: 360, height: 800 });
     const question = page.getByRole('group', { name: /Z tohoto účtu k nám chodí/ });
     await expect(question).toBeVisible();

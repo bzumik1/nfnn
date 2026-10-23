@@ -287,3 +287,9 @@ export const adminSettings = {
   ],
   secretsCanBeStored: true,
 };
+
+export async function openDonorSection(page: Page, name: string): Promise<void> {
+  const link = page.locator('app-side-nav').getByRole('link', { name, exact: true });
+  await link.click();
+  await expect(link).toHaveAttribute('aria-current', 'page');
+}
