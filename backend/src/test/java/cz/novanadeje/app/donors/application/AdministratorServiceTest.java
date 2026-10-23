@@ -9,8 +9,11 @@ import cz.novanadeje.app.donors.domain.EmailNotRegistered;
 import cz.novanadeje.app.donors.domain.NotAdministrator;
 import cz.novanadeje.app.donors.domain.OwnAdministrationRevoked;
 import cz.novanadeje.app.donors.domain.PasswordHash;
+import cz.novanadeje.app.donors.domain.NoPasskeys;
+import cz.novanadeje.app.donors.domain.PasskeyRepository;
 import cz.novanadeje.app.donors.domain.RefreshTokenRepository;
 import cz.novanadeje.app.donors.domain.Role;
+import cz.novanadeje.app.donors.application.event.DonorPasskeysRemoved;
 import cz.novanadeje.app.donors.application.event.DonorSecondFactorReset;
 import cz.novanadeje.app.donors.domain.SecondFactor;
 import cz.novanadeje.app.donors.domain.SecondFactorNotEnabled;
@@ -61,6 +64,8 @@ class AdministratorServiceTest {
     @Mock
     private SecondFactorRepository secondFactors;
     @Mock
+    private PasskeyRepository passkeys;
+    @Mock
     private RefreshTokenRepository refreshTokens;
     @Mock
     private ApplicationEventPublisher events;
@@ -69,7 +74,7 @@ class AdministratorServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new AdministratorService(donors, secondFactors, refreshTokens, events, Clock.fixed(NOW, ZoneOffset.UTC));
+        service = new AdministratorService(donors, secondFactors, passkeys, refreshTokens, events, Clock.fixed(NOW, ZoneOffset.UTC));
     }
 
     @Test
@@ -254,6 +259,36 @@ class AdministratorServiceTest {
         when(donors.findById(PETR)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.resetSecondFactor(JANA, PETR)).isInstanceOf(DonorNotFound.class);
+
+        verifyNoInteractions(refreshTokens, events);
+    }
+
+    @Test
+    @DisplayName("Given a donor with two passkeys, when an administrator removes them, then they are deleted, every session ends, the action is recorded and the donor is told")
+    void should_delete_passkeys_end_sessions_record_and_notify_when_removed_given_passkeys() {
+        when(donors.findById(PETR)).thenReturn(Optional.of(plainDonor(PETR, "Petr Svoboda", PETR_EMAIL.value())));
+        when(passkeys.deleteAllOf(PETR)).thenReturn(2);
+
+        service.removePasskeys(JANA, PETR);
+
+        verify(refreshTokens).revokeAllOf(PETR, NOW);
+        ArgumentCaptor<Object> published = ArgumentCaptor.forClass(Object.class);
+        verify(events, org.mockito.Mockito.times(2)).publishEvent(published.capture());
+        AdminActionPerformed action = (AdminActionPerformed) published.getAllValues().getFirst();
+        assertThat(action.adminId()).isEqualTo(JANA.value());
+        assertThat(action.action()).isEqualTo("REMOVE_PASSKEYS");
+        assertThat(action.subjectId()).contains(PETR.value());
+        assertThat(action.details()).isEqualTo("2 passkeys of donor " + PETR + " removed; every session of the donor was ended");
+        assertThat(published.getAllValues().getLast()).isEqualTo(new DonorPasskeysRemoved(PETR.value(), PETR_EMAIL, LocaleCode.CS));
+    }
+
+    @Test
+    @DisplayName("Given a donor without passkeys, when an administrator removes them, then the request is refused and no session ends")
+    void should_refuse_when_removed_given_no_passkeys() {
+        when(donors.findById(PETR)).thenReturn(Optional.of(plainDonor(PETR, "Petr Svoboda", PETR_EMAIL.value())));
+        when(passkeys.deleteAllOf(PETR)).thenReturn(0);
+
+        assertThatThrownBy(() -> service.removePasskeys(JANA, PETR)).isInstanceOf(NoPasskeys.class);
 
         verifyNoInteractions(refreshTokens, events);
     }

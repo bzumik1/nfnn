@@ -36,7 +36,7 @@ interface Notice {
 }
 
 type PendingAction =
-  | { kind: 'reset' | 'erase' }
+  | { kind: 'reset' | 'erase' | 'passkeys' }
   | { kind: 'disconnect' | 'reconnect' | 'remove'; linkId: string }
   | null;
 
@@ -216,6 +216,15 @@ export class AdminDonorDetail {
     return this.pending()?.kind === 'reset';
   }
 
+  protected askRemovePasskeys(): void {
+    this.pending.set({ kind: 'passkeys' });
+    this.notice.set(null);
+  }
+
+  protected isPendingPasskeys(): boolean {
+    return this.pending()?.kind === 'passkeys';
+  }
+
   protected isPendingErase(): boolean {
     return this.pending()?.kind === 'erase';
   }
@@ -234,6 +243,16 @@ export class AdminDonorDetail {
       this.api.resetSecondFactor(this.donorId),
       $localize`:@@admin.donorDetail.reset.done:Dvoufaktorové ověření u ${name}:name: je vypnuté a všechna přihlášení jsme ukončili. Dárce dostal e-mail; po přihlášení heslem si ho může zapnout znovu.`,
       $localize`:@@admin.donorDetail.reset.failed:Dvoufaktorové ověření se nepodařilo vypnout. Zkuste to prosím znovu.`,
+      () => this.loadAccount(),
+    );
+  }
+
+  protected removePasskeys(): void {
+    const name = this.name() ?? '';
+    this.run(
+      this.api.removePasskeys(this.donorId),
+      $localize`:@@admin.donorDetail.passkeys.done:Přístupové klíče u ${name}:name: jsme odebrali a všechna přihlášení ukončili. Dárce dostal e-mail; po přihlášení heslem si může přidat nový klíč.`,
+      $localize`:@@admin.donorDetail.passkeys.failed:Přístupové klíče se nepodařilo odebrat. Zkuste to prosím znovu.`,
       () => this.loadAccount(),
     );
   }

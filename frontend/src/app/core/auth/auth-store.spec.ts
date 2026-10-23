@@ -3,16 +3,31 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { TestBed } from '@angular/core/testing';
 import { AuthStore, SESSION_HINT_KEY } from './auth-store';
 import { Donor } from './donor';
-import { authResponse, problem, sampleDonor } from './testing/donor-fixtures';
+import { PasskeyAuthenticator } from './passkey-authenticator';
+import {
+  authResponse,
+  FakePasskeyAuthenticator,
+  passkeySignInOptions,
+  problem,
+  SAMPLE_ASSERTION,
+  SAMPLE_CHALLENGE,
+  sampleDonor,
+} from './testing/donor-fixtures';
 
 describe('Given the auth store', () => {
   let store: AuthStore;
   let http: HttpTestingController;
+  let passkeys: FakePasskeyAuthenticator;
 
   beforeEach(() => {
     localStorage.clear();
+    passkeys = new FakePasskeyAuthenticator();
     TestBed.configureTestingModule({
-      providers: [provideHttpClient(), provideHttpClientTesting()],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: PasskeyAuthenticator, useValue: passkeys },
+      ],
     });
     store = TestBed.inject(AuthStore);
     http = TestBed.inject(HttpTestingController);
@@ -36,6 +51,37 @@ describe('Given the auth store', () => {
       .flush(authResponse('token-2', sampleDonor({ roles: ['DONOR', 'ADMIN'] })));
 
     expect(store.isAdmin()).toBe(true);
+  });
+
+  it('when a passkey signs in, then the browser answers the challenge of the server and the session is adopted', async () => {
+    const signedIn = vi.fn();
+    store.signInWithPasskey().subscribe(signedIn);
+
+    http.expectOne('/api/donors/auth/passkey/options').flush(passkeySignInOptions());
+    await vi.waitFor(() => expect(passkeys.requested).toHaveLength(1));
+    const request = http.expectOne('/api/donors/auth/passkey');
+    expect(request.request.body).toEqual({
+      challenge: SAMPLE_CHALLENGE,
+      credential: SAMPLE_ASSERTION,
+    });
+    request.flush(authResponse('token-3', sampleDonor({ roles: ['DONOR', 'ADMIN'] })));
+
+    expect(signedIn).toHaveBeenCalled();
+    expect(store.currentAccessToken()).toBe('token-3');
+    expect(store.isAdmin()).toBe(true);
+    expect(localStorage.getItem(SESSION_HINT_KEY)).toBe('1');
+  });
+
+  it('when the donor dismisses the passkey prompt, then nothing is sent and no session opens', async () => {
+    passkeys.failure = 'cancelled';
+    const failed = vi.fn();
+    store.signInWithPasskey().subscribe({ error: failed });
+
+    http.expectOne('/api/donors/auth/passkey/options').flush(passkeySignInOptions());
+    await vi.waitFor(() => expect(failed).toHaveBeenCalled());
+
+    http.expectNone('/api/donors/auth/passkey');
+    expect(store.signedIn()).toBe(false);
   });
 
   it('when the second factor completes a sign-in, then the session is adopted like after a password sign-in', () => {

@@ -247,7 +247,7 @@ describe('Given the sign-in data card in the overview', () => {
 
     it('then the card says the administration waits for the second factor', () => {
       expect(element('.account-hint').textContent).toContain(
-        'Správa se vám otevře, až zapnete dvoufaktorové ověření',
+        'Správa se vám otevře, až se přihlásíte přístupovým klíčem nebo zapnete dvoufaktorové ověření',
       );
     });
   });

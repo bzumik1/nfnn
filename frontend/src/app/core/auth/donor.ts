@@ -110,3 +110,62 @@ export interface AuthResponse {
   accessToken: string;
   accessTokenExpiresAt: string;
 }
+
+export interface PasskeyCredentialDescriptor {
+  type: 'public-key';
+  id: string;
+  transports: string[];
+}
+
+export interface PasskeyCreationOptions {
+  challenge: string;
+  rp: { id: string; name: string };
+  user: { id: string; name: string; displayName: string };
+  pubKeyCredParams: { type: 'public-key'; alg: number }[];
+  timeout: number;
+  excludeCredentials: PasskeyCredentialDescriptor[];
+  authenticatorSelection: {
+    residentKey: 'required';
+    requireResidentKey: boolean;
+    userVerification: 'required';
+  };
+  attestation: 'none';
+}
+
+export interface PasskeySignInOptions {
+  challenge: string;
+  rpId: string;
+  timeout: number;
+  userVerification: 'required';
+  allowCredentials: PasskeyCredentialDescriptor[];
+}
+
+export interface PasskeyRegistrationCredential {
+  id: string;
+  rawId: string;
+  type: 'public-key';
+  response: { clientDataJSON: string; attestationObject: string; transports: string[] };
+}
+
+export interface PasskeyAssertionCredential {
+  id: string;
+  rawId: string;
+  type: 'public-key';
+  response: {
+    clientDataJSON: string;
+    authenticatorData: string;
+    signature: string;
+    userHandle: string | null;
+  };
+}
+
+export interface Passkey {
+  id: string;
+  name: string;
+  createdAt: string;
+  lastUsedAt: string | null;
+}
+
+export interface PasskeyList {
+  items: Passkey[];
+}

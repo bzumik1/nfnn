@@ -28,6 +28,7 @@ const janaAccount = {
   emailVerified: true,
   administrator: true,
   secondFactorEnabled: true,
+  passkeys: 0,
   erasedAt: null as string | null,
 };
 

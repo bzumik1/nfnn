@@ -146,6 +146,7 @@ export function donorAccount(overrides: Partial<DonorAccountResponse> = {}): Don
     emailVerified: true,
     administrator: false,
     secondFactorEnabled: false,
+    passkeys: 0,
     erasedAt: null,
     ...overrides,
   };

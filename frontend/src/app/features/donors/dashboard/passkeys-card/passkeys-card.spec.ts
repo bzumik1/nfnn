@@ -1,0 +1,280 @@
+import { provideHttpClient, withInterceptors } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { authInterceptor } from '../../../../core/auth/auth-interceptor';
+import { AuthStore } from '../../../../core/auth/auth-store';
+import { PasskeyAuthenticator } from '../../../../core/auth/passkey-authenticator';
+import {
+  authResponse,
+  FakePasskeyAuthenticator,
+  passkeyCreationOptions,
+  problem,
+  SAMPLE_CHALLENGE,
+  SAMPLE_REGISTRATION,
+  samplePasskey,
+} from '../../../../core/auth/testing/donor-fixtures';
+import { PasskeysCard } from './passkeys-card';
+
+const PASSKEYS_URL = '/api/donors/me/passkeys';
+const OPTIONS_URL = '/api/donors/me/passkeys/options';
+const IPHONE = samplePasskey({ lastUsedAt: '2026-10-22T09:00:00Z' });
+const WINDOWS = samplePasskey({
+  id: '019a1b2c-3d4e-7f00-8000-000000000002',
+  name: 'Windows',
+  createdAt: '2026-10-20T08:00:00Z',
+  lastUsedAt: null,
+});
+
+describe('Given the passkeys card in the overview', () => {
+  let fixture: ComponentFixture<PasskeysCard>;
+  let http: HttpTestingController;
+  let passkeys: FakePasskeyAuthenticator;
+  let sessionEnded: number;
+
+  beforeEach(async () => {
+    passkeys = new FakePasskeyAuthenticator();
+    await TestBed.configureTestingModule({
+      imports: [PasskeysCard],
+      providers: [
+        provideHttpClient(withInterceptors([authInterceptor])),
+        provideHttpClientTesting(),
+        { provide: PasskeyAuthenticator, useValue: passkeys },
+      ],
+    }).compileComponents();
+    http = TestBed.inject(HttpTestingController);
+    const store = TestBed.inject(AuthStore);
+    store.login('jana@example.cz', 'correct horse battery').subscribe();
+    http.expectOne('/api/donors/auth/login').flush(authResponse('token-1'));
+  });
+
+  afterEach(() => http.verify());
+
+  async function render(items = [IPHONE, WINDOWS]): Promise<void> {
+    fixture = TestBed.createComponent(PasskeysCard);
+    sessionEnded = 0;
+    fixture.componentInstance.sessionEnded.subscribe(() => sessionEnded++);
+    await settle();
+    http.expectOne(PASSKEYS_URL).flush({ items });
+    await settle();
+  }
+
+  const root = () => fixture.nativeElement as HTMLElement;
+
+  function element<T extends HTMLElement>(selector: string): T {
+    return root().querySelector(selector) as T;
+  }
+
+  function texts(selector: string): string[] {
+    return Array.from(root().querySelectorAll(selector)).map(
+      (node) => node.textContent?.replace(/\s+/g, ' ').trim() ?? '',
+    );
+  }
+
+  async function settle(): Promise<void> {
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+  }
+
+  async function clickButton(text: string): Promise<void> {
+    const button = Array.from(root().querySelectorAll('button')).find((candidate) =>
+      candidate.textContent?.includes(text),
+    );
+    expect(button, `button "${text}"`).toBeDefined();
+    button?.click();
+    await settle();
+  }
+
+  async function fillIn(selector: string, value: string): Promise<void> {
+    const input = element<HTMLInputElement>(selector);
+    input.value = value;
+    input.dispatchEvent(new Event('input'));
+    await settle();
+  }
+
+  async function submit(): Promise<void> {
+    element<HTMLFormElement>('form').dispatchEvent(new Event('submit'));
+    await settle();
+  }
+
+  it('when it opens, then it explains passkeys and lists the donor passkeys with their dates', async () => {
+    await render();
+
+    expect(element('h2').textContent).toContain('Přístupové klíče');
+    expect(element('.passkeys-intro').textContent).toContain('dvoufaktorové ověření');
+    expect(texts('.passkey-name')).toEqual(['iPhone', 'Windows']);
+    expect(texts('.passkey-dates')[0]).toContain('přidáno 17. 10. 2026');
+    expect(texts('.passkey-dates')[0]).toContain('naposledy použito 22. 10. 2026');
+    expect(texts('.passkey-dates')[1]).toContain('zatím nepoužito');
+  });
+
+  it('when the donor has no passkey, then the card says so and offers to add one', async () => {
+    await render([]);
+
+    expect(element('.passkeys-empty').textContent).toContain('Zatím nemáte žádný přístupový klíč');
+    expect(texts('button')).toContain('Přidat přístupový klíč');
+  });
+
+  it('when the list cannot be loaded, then an alert offers to load it again', async () => {
+    fixture = TestBed.createComponent(PasskeysCard);
+    await settle();
+    http
+      .expectOne(PASSKEYS_URL)
+      .flush(problem('internal', 'Chyba serveru', 'Zkuste to prosím později.'), {
+        status: 500,
+        statusText: 'Server Error',
+      });
+    await settle();
+
+    expect(element('[role="alert"]').textContent).toContain('Chyba serveru');
+    await clickButton('Načíst znovu');
+    http.expectOne(PASSKEYS_URL).flush({ items: [IPHONE] });
+    await settle();
+    expect(texts('.passkey-name')).toEqual(['iPhone']);
+  });
+
+  describe('when the donor adds a passkey', () => {
+    beforeEach(async () => {
+      await render([IPHONE]);
+      await clickButton('Přidat přístupový klíč');
+    });
+
+    it('then the password goes first, the device creates the key and the new key is listed', async () => {
+      await fillIn('#passkey-name', 'MacBook');
+      await fillIn('#passkey-password', 'correct horse battery');
+      await submit();
+
+      const options = http.expectOne(OPTIONS_URL);
+      expect(options.request.body).toEqual({ password: 'correct horse battery' });
+      options.flush(passkeyCreationOptions());
+      await vi.waitFor(() => expect(passkeys.created).toHaveLength(1));
+      await settle();
+      const added = http.expectOne(PASSKEYS_URL);
+      expect(added.request.method).toBe('POST');
+      expect(added.request.body).toEqual({
+        challenge: SAMPLE_CHALLENGE,
+        name: 'MacBook',
+        credential: SAMPLE_REGISTRATION,
+      });
+      added.flush(samplePasskey({ id: 'new', name: 'MacBook', lastUsedAt: null }));
+      await settle();
+
+      expect(texts('.passkey-name')).toEqual(['iPhone', 'MacBook']);
+      expect(element('[role="status"]').textContent).toContain(
+        'Přístupový klíč MacBook je přidaný',
+      );
+      expect(element('form')).toBeNull();
+    });
+
+    it('then the name and the password are required', async () => {
+      await fillIn('#passkey-name', '');
+      await submit();
+
+      http.expectNone(OPTIONS_URL);
+      expect(element('#passkey-name-error').textContent).toContain('Pojmenujte prosím klíč');
+      expect(element('#passkey-password-error').textContent).toContain('Zadejte prosím své heslo');
+    });
+
+    it('and the password is wrong, then the reason from the server is shown at the form', async () => {
+      await fillIn('#passkey-name', 'MacBook');
+      await fillIn('#passkey-password', 'wrong horse battery');
+      await submit();
+
+      http
+        .expectOne(OPTIONS_URL)
+        .flush(problem('donors/wrong-password', 'Nesprávné heslo', 'Zkuste to prosím znovu.'), {
+          status: 400,
+          statusText: 'Bad Request',
+        });
+      await settle();
+
+      expect(element('.form-error').textContent).toContain('Nesprávné heslo');
+      expect(passkeys.created).toHaveLength(0);
+    });
+
+    it('and dismisses the prompt of the device, then the card says nothing was created', async () => {
+      passkeys.failure = 'cancelled';
+      await fillIn('#passkey-name', 'MacBook');
+      await fillIn('#passkey-password', 'correct horse battery');
+      await submit();
+      http.expectOne(OPTIONS_URL).flush(passkeyCreationOptions());
+      await vi.waitFor(() => expect(element('.form-error')).not.toBeNull());
+      await settle();
+
+      expect(element('.form-error').textContent).toContain('Klíč se nevytvořil');
+      expect(element<HTMLButtonElement>('.passkeys-save').disabled).toBe(false);
+    });
+
+    it('and the device already holds a key of the account, then the card says so', async () => {
+      passkeys.failure = 'already-registered';
+      await fillIn('#passkey-name', 'MacBook');
+      await fillIn('#passkey-password', 'correct horse battery');
+      await submit();
+      http.expectOne(OPTIONS_URL).flush(passkeyCreationOptions());
+      await vi.waitFor(() => expect(element('.form-error')).not.toBeNull());
+      await settle();
+
+      expect(element('.form-error').textContent).toContain('už přístupový klíč k vašemu účtu má');
+    });
+
+    it('and cancels, then the form closes without a request', async () => {
+      await clickButton('Zrušit');
+
+      expect(element('form')).toBeNull();
+      expect(texts('button')).toContain('Přidat přístupový klíč');
+    });
+  });
+
+  describe('when the donor removes a passkey', () => {
+    beforeEach(() => render());
+
+    it('then the removal asks first and the confirmed key disappears', async () => {
+      await clickButton('Odebrat');
+      expect(element('.passkey-confirm').textContent).toContain('Odebrat klíč iPhone?');
+
+      await clickButton('Ano, odebrat');
+      const removal = http.expectOne(`${PASSKEYS_URL}/${IPHONE.id}`);
+      expect(removal.request.method).toBe('DELETE');
+      removal.flush(null);
+      await settle();
+
+      expect(texts('.passkey-name')).toEqual(['Windows']);
+      expect(element('[role="status"]').textContent).toContain(
+        'Přístupový klíč iPhone je odebraný',
+      );
+    });
+
+    it('and keeps it after all, then nothing is sent', async () => {
+      await clickButton('Odebrat');
+      await clickButton('Ponechat');
+
+      expect(element('.passkey-confirm')).toBeNull();
+      expect(texts('.passkey-name')).toEqual(['iPhone', 'Windows']);
+    });
+  });
+
+  it('when the session has ended, then the card hands the donor to the sign-in', async () => {
+    fixture = TestBed.createComponent(PasskeysCard);
+    sessionEnded = 0;
+    fixture.componentInstance.sessionEnded.subscribe(() => sessionEnded++);
+    await settle();
+    http
+      .expectOne(PASSKEYS_URL)
+      .flush(problem('auth/unauthenticated', 'Nejste přihlášeni', 'Přihlaste se prosím.'), {
+        status: 401,
+        statusText: 'Unauthorized',
+      });
+    await settle();
+
+    expect(sessionEnded).toBe(1);
+  });
+
+  it('when the browser cannot create passkeys, then the card says so instead of offering to add one', async () => {
+    passkeys.available = false;
+    await render([IPHONE]);
+
+    expect(element('.passkeys-unsupported').textContent).toContain('Tento prohlížeč');
+    expect(texts('button')).not.toContain('Přidat přístupový klíč');
+    expect(texts('.passkey-name')).toEqual(['iPhone']);
+  });
+});

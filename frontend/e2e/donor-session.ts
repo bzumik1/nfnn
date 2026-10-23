@@ -199,6 +199,10 @@ export async function mockDonorApi(
     (url) => url.pathname === '/api/donors/me/connections',
     (route) => route.fulfill({ json: { items: [] } }),
   );
+  await page.route(
+    (url) => url.pathname === '/api/donors/me/passkeys',
+    (route) => route.fulfill({ json: { items: [] } }),
+  );
 }
 
 export const connectionRequest =
