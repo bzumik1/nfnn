@@ -32,6 +32,14 @@ Na serveru se nic nepíše do souborů. `compose.yml` se do ZimaOS vkládá vžd
 5. „Uložit a spustit“: backend hodnoty nejdřív ověří stejně jako při startu (chybnou vrátí do formuláře, takže server nikdy neuvízne ve smyčce restartů), uloží je a restartuje se. Průvodce počká a nabídne registraci.
 6. Zaregistruj se s e-mailem správce a potvrď ho odkazem z e-mailu: roli správce dostaneš hned po potvrzení. Pak si v přehledu zapni dvoufaktorové ověření a správa (`/sprava`) se otevře. Další správce přidáš ve správě.
 
+Kontejnery NFNN mají vlastní sítě, ne výchozí síť Dockeru, kterou sdílejí ostatní aplikace na Zimě: `nfnn-edge` (web, backend, konektor) a `nfnn-internal` bez cesty ven (databáze, zálohy, backend). Jiná aplikace na serveru se tak k backendu ani k databázi nedostane, jen k webu přes port 8089 jako kdokoli jiný. Ověření po instalaci:
+
+```bash
+sudo docker inspect nfnn-postgres nfnn-backup nfnn-backend nfnn-mcp nfnn-frontend --format '{{.Name}} {{range $k, $v := .NetworkSettings.Networks}}{{$k}} {{end}}'
+```
+
+Má vypsat `nfnn-internal` u databáze a záloh, obě sítě u backendu a `nfnn-edge` u konektoru a webu; `bridge` u žádného.
+
 Do dokončení průvodce by ho mohl vyplnit kdokoli z domácí sítě; po dokončení odpovídá 409 a nastavení mění jen správce se druhým faktorem. Změní-li se `compose.yml` v repu, aplikaci přeinstaluj s novým souborem; nastavení v databázi i složka `secrets/` zůstanou.
 
 ## Přechod z env souborů

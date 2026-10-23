@@ -11,7 +11,10 @@ services:
     image: ghcr.io/bzumik1/nfnn-postgres:latest
     container_name: nfnn-postgres
     restart: unless-stopped
-    network_mode: bridge
+    networks:
+      - internal
+    security_opt:
+      - no-new-privileges:true
     environment:
       POSTGRES_DB: novanadeje
       POSTGRES_USER: novanadeje
@@ -34,12 +37,13 @@ services:
     image: ghcr.io/bzumik1/nfnn-backup:latest
     container_name: nfnn-backup
     restart: unless-stopped
-    network_mode: bridge
+    networks:
+      - internal
+    security_opt:
+      - no-new-privileges:true
     depends_on:
       postgres:
         condition: service_started
-    links:
-      - postgres
     environment:
       PGHOST: postgres
       PGDATABASE: novanadeje
@@ -60,14 +64,16 @@ services:
     image: ghcr.io/bzumik1/nfnn-backend:latest
     container_name: nfnn-backend
     restart: unless-stopped
-    network_mode: bridge
+    networks:
+      - internal
+      - edge
+    security_opt:
+      - no-new-privileges:true
     depends_on:
       postgres:
         condition: service_started
       backup:
         condition: service_started
-    links:
-      - postgres
     environment:
       SPRING_PROFILES_ACTIVE: prod
       DB_URL: jdbc:postgresql://postgres:5432/novanadeje
@@ -103,12 +109,13 @@ services:
     image: ghcr.io/bzumik1/nfnn-mcp:latest
     container_name: nfnn-mcp
     restart: unless-stopped
-    network_mode: bridge
+    networks:
+      - edge
+    security_opt:
+      - no-new-privileges:true
     depends_on:
       backend:
         condition: service_started
-    links:
-      - backend
     environment:
       TZ: Europe/Prague
     volumes:
@@ -129,15 +136,15 @@ services:
     image: ghcr.io/bzumik1/nfnn-frontend:latest
     container_name: nfnn-frontend
     restart: unless-stopped
-    network_mode: bridge
+    networks:
+      - edge
+    security_opt:
+      - no-new-privileges:true
     depends_on:
       backend:
         condition: service_started
       mcp:
         condition: service_started
-    links:
-      - backend
-      - mcp
     ports:
       - "8089:80"
     volumes:
@@ -152,6 +159,13 @@ services:
         limits:
           memory: 256M
     logging: *logging
+
+networks:
+  internal:
+    name: nfnn-internal
+    internal: true
+  edge:
+    name: nfnn-edge
 
 x-casaos:
   title:
