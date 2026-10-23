@@ -19,7 +19,7 @@ What the Angular app contains today and the details a change must keep. The rule
 
 ## Layout
 
-`site-header/`: sticky nav, desktop links and a burger menu (signal state; `aria-expanded`, `aria-controls="mobile-menu"`, "Otevřít/Zavřít menu"; Esc closes and refocuses the button; outside click or a link closes; after a sign-in from its "Přihlásit se" the focus moves to the "Můj přehled" link that replaces it, on phones to the menu button). `site-footer/`: columns and bottom bar with the privacy link.
+`site-header/`: sticky nav, desktop links and a burger menu (signal state; `aria-expanded`, `aria-controls="mobile-menu"`, "Otevřít/Zavřít menu"; Esc closes and refocuses the button; outside click or a link closes; after a sign-in from its "Přihlásit se" the focus moves to the `nav` itself (`tabindex="-1"`, no outline), so no control stays highlighted and the next Tab starts at the logo). `site-footer/`: columns and bottom bar with the privacy link.
 
 ## content
 

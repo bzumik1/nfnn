@@ -139,7 +139,7 @@ test.describe('Given a visitor who wants a donor account', () => {
     await expect(page.locator('.nav-login')).toHaveText('Můj přehled');
   });
 
-  test('when they sign in from the home page, then the page stays and the header offers their overview', async ({
+  test('when they sign in from the home page, then the page stays, the header offers their overview and nothing stays highlighted', async ({
     page,
   }) => {
     await page.route('**/api/donors/auth/login', (route) => route.fulfill(session(200)));
@@ -153,7 +153,9 @@ test.describe('Given a visitor who wants a donor account', () => {
     await expect(page.getByRole('dialog')).toHaveCount(0);
     await expect(page).toHaveURL(/\/$/);
     await expect(page.locator('.nav-login')).toHaveText('Můj přehled');
-    await expect(page.locator('.nav-login')).toBeFocused();
+    await expect(page.locator('.nav-login')).not.toBeFocused();
+    await expect(page.locator('nav.nav')).toBeFocused();
+    await expect(page.locator('nav.nav')).toHaveCSS('outline-style', 'none');
   });
 
   test('when they open the portal without a session and sign in, then the portal opens', async ({

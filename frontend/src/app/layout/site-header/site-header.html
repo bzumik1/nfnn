@@ -1,4 +1,4 @@
-<nav class="nav" [class.is-scrolled]="scrolled() || menuOpen()">
+<nav #nav class="nav" tabindex="-1" [class.is-scrolled]="scrolled() || menuOpen()">
   <div class="nav-inner">
     <a class="brand" routerLink="/" fragment="uvod" (click)="closeMenu()">
       <img
@@ -24,11 +24,7 @@
         >Finanční příspěvek</a
       >
       @if (auth.signedIn()) {
-        <a
-          #portalLink
-          class="nav-login"
-          routerLink="/darce/prehled"
-          i18n="@@layout.header.nav.portal"
+        <a class="nav-login" routerLink="/darce/prehled" i18n="@@layout.header.nav.portal"
           >Můj přehled</a
         >
       } @else {
