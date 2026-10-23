@@ -39,6 +39,12 @@ describe('Given the site header on a phone', () => {
     fixture.detectChanges();
   }
 
+  it('when it renders, then its navigation is named for screen readers', () => {
+    expect(fixture.nativeElement.querySelector('nav').getAttribute('aria-label')).toBe(
+      'Hlavní menu',
+    );
+  });
+
   it('when the menu is closed, then its button says it opens the menu and is not expanded', () => {
     expect(toggle().getAttribute('aria-expanded')).toBe('false');
     expect(toggle().getAttribute('aria-controls')).toBe('mobile-menu');
@@ -63,6 +69,30 @@ describe('Given the site header on a phone', () => {
 
     expect(menu()).toBeNull();
     expect(document.activeElement).toBe(toggle());
+  });
+
+  it('when the focus moves past the last link of the open menu, then the menu closes so nothing hides the focused control', () => {
+    const after = document.createElement('button');
+    document.body.appendChild(after);
+    openMenu();
+    const links = menu()!.querySelectorAll<HTMLElement>('a, button');
+    links[links.length - 1].focus();
+
+    after.focus();
+    fixture.detectChanges();
+
+    expect(menu()).toBeNull();
+    after.remove();
+  });
+
+  it('when the focus moves from the open menu back to its button, then the menu stays open', () => {
+    openMenu();
+    (menu()!.querySelector('a') as HTMLAnchorElement).focus();
+
+    toggle().focus();
+    fixture.detectChanges();
+
+    expect(menu()).not.toBeNull();
   });
 
   it('when the page outside the menu is clicked, then the menu closes', () => {

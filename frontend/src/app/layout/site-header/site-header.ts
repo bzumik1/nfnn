@@ -64,6 +64,13 @@ export class SiteHeader {
     this.menuOpen.set(false);
   }
 
+  leaveMenu(event: FocusEvent): void {
+    const next = event.relatedTarget;
+    if (next instanceof Node && !this.host.nativeElement.contains(next)) {
+      this.menuOpen.set(false);
+    }
+  }
+
   openLogin(): void {
     this.menuOpen.set(false);
     this.loginDialog.open('login', { afterSignIn: () => this.focusHeader() });

@@ -1,5 +1,5 @@
 <div class="side-nav-layout">
-  <aside #side class="side-nav">
+  <div #side class="side-nav">
     <button
       #toggle
       type="button"
@@ -58,9 +58,9 @@
         </div>
       }
     </nav>
-  </aside>
-
-  <div class="side-nav-content">
-    <ng-content />
   </div>
+
+  <main id="obsah" class="side-nav-content" tabindex="-1">
+    <ng-content />
+  </main>
 </div>

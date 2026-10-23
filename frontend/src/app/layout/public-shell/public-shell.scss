@@ -6,25 +6,6 @@ main {
   display: block;
 }
 
-.skip-link {
-  position: absolute;
-  top: 16px;
-  left: 16px;
-  z-index: 300;
-  padding: var(--space-3) var(--space-5);
-  border-radius: var(--radius-pill);
-  background: var(--color-surface);
-  color: var(--color-accent);
-  box-shadow: var(--shadow-menu);
-  font-weight: var(--weight-semibold);
-  text-decoration: none;
-  transform: translateY(-200%);
-
-  &:focus-visible {
-    transform: none;
-  }
-}
-
 main:focus {
   outline: none;
 }

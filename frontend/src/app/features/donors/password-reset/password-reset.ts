@@ -29,6 +29,7 @@ import { FocusFirstInvalid } from '../../../shared/ui/form-field/focus-first-inv
 import { FormControlDirective } from '../../../shared/ui/form-field/form-control';
 import { FormField } from '../../../shared/ui/form-field/form-field';
 import { PasswordReveal } from '../../../shared/ui/password-reveal/password-reveal';
+import { RadioGroup } from '../../../shared/ui/radio-group/radio-group';
 
 type Panel = 'missing-link' | 'form' | 'success' | 'passkey-success' | 'invalid';
 type Method = 'password' | 'passkey';
@@ -40,7 +41,14 @@ const PASSKEY_NAME_MAX_LENGTH = 64;
 
 @Component({
   selector: 'app-password-reset',
-  imports: [FormsModule, FormField, FormControlDirective, FocusFirstInvalid, PasswordReveal],
+  imports: [
+    FormsModule,
+    FormField,
+    FormControlDirective,
+    FocusFirstInvalid,
+    PasswordReveal,
+    RadioGroup,
+  ],
   templateUrl: './password-reset.html',
   styleUrl: './password-reset.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
