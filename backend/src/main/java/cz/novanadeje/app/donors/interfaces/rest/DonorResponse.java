@@ -18,6 +18,7 @@ record DonorResponse(
         String variableSymbol,
         List<Role> roles,
         Instant registeredAt,
+        boolean hasPassword,
         SecondFactorResponse secondFactor
 ) {
 
@@ -39,6 +40,7 @@ record DonorResponse(
                 view.variableSymbol(),
                 view.roles(),
                 view.registeredAt(),
+                view.hasPassword(),
                 new SecondFactorResponse(view.secondFactor().enabled(), view.secondFactor().neededForAdministration())
         );
     }

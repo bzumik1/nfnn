@@ -128,3 +128,21 @@
     transform: rotate(360deg);
   }
 }
+
+.link-action {
+  margin-top: 14px;
+  padding: 4px;
+  background: none;
+  border: none;
+  color: var(--color-accent);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+
+  &:focus-visible {
+    outline: 3px solid var(--color-border-accent);
+    outline-offset: 2px;
+  }
+}

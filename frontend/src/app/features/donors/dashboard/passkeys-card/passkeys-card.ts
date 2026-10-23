@@ -5,6 +5,8 @@ import {
   afterNextRender,
   ChangeDetectionStrategy,
   Component,
+  computed,
+  effect,
   ElementRef,
   inject,
   Injector,
@@ -13,16 +15,17 @@ import {
   viewChild,
 } from '@angular/core';
 import { FormsModule, NgForm } from '@angular/forms';
-import { from, switchMap } from 'rxjs';
+import { from, Observable, of, switchMap } from 'rxjs';
 import { describeProblem, problemTypeEndsWith } from '../../../../core/auth/api-problem';
 import { AuthApi } from '../../../../core/auth/auth-api';
 import { AuthStore } from '../../../../core/auth/auth-store';
-import { Passkey } from '../../../../core/auth/donor';
+import { Confirmation, Passkey } from '../../../../core/auth/donor';
 import {
   PasskeyAuthenticator,
   PasskeyCeremonyError,
   PasskeyFailure,
 } from '../../../../core/auth/passkey-authenticator';
+import { deviceName } from '../../../../core/auth/device-name';
 import { formatDonationDate } from '../../../donations/donation-date';
 import { FocusFirstInvalid } from '../../../../shared/ui/form-field/focus-first-invalid';
 import { FormControlDirective } from '../../../../shared/ui/form-field/form-control';
@@ -31,16 +34,6 @@ import { PasswordReveal } from '../../../../shared/ui/password-reveal/password-r
 
 const UNAUTHENTICATED = 'auth/unauthenticated';
 const PASSKEY_NAME_MAX_LENGTH = 64;
-
-const DEVICE_NAMES: [RegExp, string][] = [
-  [/iPhone/, 'iPhone'],
-  [/iPad/, 'iPad'],
-  [/Android/, 'Android'],
-  [/Macintosh|Mac OS X/, 'Mac'],
-  [/Windows/, 'Windows'],
-  [/CrOS/, 'Chromebook'],
-  [/Linux/, 'Linux'],
-];
 
 @Component({
   selector: 'app-passkeys-card',
@@ -57,12 +50,23 @@ export class PasskeysCard {
   private readonly injector = inject(Injector);
 
   readonly sessionEnded = output<void>();
+  readonly countChanged = output<number>();
 
   private readonly addButton = viewChild<ElementRef<HTMLButtonElement>>('addButton');
   private readonly nameField = viewChild<ElementRef<HTMLInputElement>>('nameField');
 
   protected readonly supported = this.authenticator.supported();
   protected readonly passkeys = signal<Passkey[] | null>(null);
+  protected readonly hasPassword = computed(() => this.auth.donor()?.hasPassword ?? true);
+  protected readonly confirmation = computed<'password' | 'passkey' | 'none'>(() => {
+    if (this.hasPassword()) {
+      return 'password';
+    }
+    return (this.passkeys()?.length ?? 0) > 0 ? 'passkey' : 'none';
+  });
+  protected readonly lastSignInMethod = computed(
+    () => !this.hasPassword() && (this.passkeys()?.length ?? 0) <= 1,
+  );
   protected readonly loadError = signal('');
   protected readonly adding = signal(false);
   protected readonly saving = signal(false);
@@ -85,6 +89,12 @@ export class PasskeysCard {
 
   constructor() {
     this.load();
+    effect(() => {
+      const list = this.passkeys();
+      if (list !== null) {
+        this.countChanged.emit(list.length);
+      }
+    });
   }
 
   load(): void {
@@ -109,7 +119,7 @@ export class PasskeysCard {
     this.status.set('');
     this.error.set('');
     this.confirming.set(null);
-    this.name = this.deviceName();
+    this.name = deviceName(this.document);
     this.password = '';
     this.adding.set(true);
     afterNextRender(() => this.nameField()?.nativeElement.focus(), { injector: this.injector });
@@ -126,9 +136,9 @@ export class PasskeysCard {
     const name = this.name.trim();
     this.saving.set(true);
     this.error.set('');
-    this.authApi
-      .passkeyCreationOptions(this.password)
+    this.confirm()
       .pipe(
+        switchMap((confirmation) => this.authApi.passkeyCreationOptions(confirmation)),
         switchMap((options) =>
           from(this.authenticator.create(options)).pipe(
             switchMap((credential) => this.authApi.addPasskey(options.challenge, name, credential)),
@@ -222,9 +232,15 @@ export class PasskeysCard {
     return false;
   }
 
-  private deviceName(): string {
-    const agent = this.document.defaultView?.navigator.userAgent ?? '';
-    return DEVICE_NAMES.find(([pattern]) => pattern.test(agent))?.[1] ?? '';
+  private confirm(): Observable<Confirmation> {
+    switch (this.confirmation()) {
+      case 'password':
+        return of({ password: this.password });
+      case 'passkey':
+        return this.auth.confirmWith(null);
+      default:
+        return of({});
+    }
   }
 }
 

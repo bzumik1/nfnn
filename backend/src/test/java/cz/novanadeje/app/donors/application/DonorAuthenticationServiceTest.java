@@ -124,7 +124,7 @@ class DonorAuthenticationServiceTest {
 
         assertThatThrownBy(() -> service.login(erased.email().value(), "correct horse battery")).isInstanceOf(InvalidCredentials.class);
 
-        verify(passwordHasher, never()).matches(any(), eq(erased.passwordHash()));
+        verify(passwordHasher, never()).matches(any(), eq(HASH));
         verify(sessions, never()).open(any(), anyBoolean());
     }
 

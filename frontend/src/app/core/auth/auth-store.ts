@@ -17,6 +17,7 @@ import { PasskeyAuthenticator } from './passkey-authenticator';
 import {
   AuthResponse,
   ChangePasswordRequest,
+  Confirmation,
   Donor,
   EmailChangeRequest,
   RegisterDonorRequest,
@@ -127,8 +128,27 @@ export class AuthStore {
     return this.api.requestEmailChange(request);
   }
 
-  setupSecondFactor(password: string): Observable<SecondFactorEnrolment> {
-    return this.api.setupSecondFactor(password);
+  confirmWith(password: string | null): Observable<Confirmation> {
+    if (password !== null) {
+      return of({ password });
+    }
+    return this.api
+      .passkeySignInOptions()
+      .pipe(
+        switchMap((options) =>
+          from(this.passkeys.get(options)).pipe(
+            map((credential) => ({ passkey: { challenge: options.challenge, credential } })),
+          ),
+        ),
+      );
+  }
+
+  setupSecondFactor(confirmation: Confirmation): Observable<SecondFactorEnrolment> {
+    return this.api.setupSecondFactor(confirmation);
+  }
+
+  removePassword(confirmation: Confirmation): Observable<Donor> {
+    return this.api.removePassword(confirmation).pipe(map((response) => this.adopt(response)));
   }
 
   confirmSecondFactor(code: string): Observable<Donor> {

@@ -63,7 +63,7 @@ public class DonorRegistrationService {
                 command.companyIdentifier() == null || command.companyIdentifier().isBlank() ? null : new CompanyIdentifier(command.companyIdentifier()),
                 new PostalAddress(command.street(), command.city(), command.postalCode()),
                 email,
-                passwordHasher.hash(new RawPassword(command.password())),
+                command.password() == null ? null : passwordHasher.hash(new RawPassword(command.password())),
                 unusedVariableSymbol(),
                 LocaleCode.fromTag(command.preferredLocale()),
                 now

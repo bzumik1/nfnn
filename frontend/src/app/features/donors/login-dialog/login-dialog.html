@@ -416,26 +416,61 @@
           />
         </app-form-field>
 
-        <app-form-field
-          label="Heslo"
-          i18n-label="@@donor.login.password"
-          [hint]="newPasswordHint"
-          [messages]="newPasswordMessages"
-        >
-          <app-password-reveal>
-            <input
-              appFormControl
-              id="register-password"
-              name="password"
-              type="password"
-              autocomplete="new-password"
-              [(ngModel)]="registration.password"
-              required
-              [minlength]="passwordMinLength"
-              maxlength="128"
-            />
-          </app-password-reveal>
-        </app-form-field>
+        @if (passkeysSupported) {
+          <p id="register-method-label" class="register-label" i18n="@@donor.register.signInMethod">
+            Jak se budete přihlašovat
+          </p>
+          <div class="type-switch" role="radiogroup" aria-labelledby="register-method-label">
+            <button
+              type="button"
+              role="radio"
+              [attr.aria-checked]="signInMethod() === 'password'"
+              [class.is-active]="signInMethod() === 'password'"
+              (click)="signInMethod.set('password')"
+              i18n="@@donor.register.signInMethod.password"
+            >
+              Heslem
+            </button>
+            <button
+              type="button"
+              role="radio"
+              [attr.aria-checked]="signInMethod() === 'passkey'"
+              [class.is-active]="signInMethod() === 'passkey'"
+              (click)="signInMethod.set('passkey')"
+              i18n="@@donor.register.signInMethod.passkey"
+            >
+              Přístupovým klíčem
+            </button>
+          </div>
+        }
+
+        @if (signInMethod() === 'password') {
+          <app-form-field
+            label="Heslo"
+            i18n-label="@@donor.login.password"
+            [hint]="newPasswordHint"
+            [messages]="newPasswordMessages"
+          >
+            <app-password-reveal>
+              <input
+                appFormControl
+                id="register-password"
+                name="password"
+                type="password"
+                autocomplete="new-password"
+                [(ngModel)]="registration.password"
+                required
+                [minlength]="passwordMinLength"
+                maxlength="128"
+              />
+            </app-password-reveal>
+          </app-form-field>
+        } @else {
+          <p class="register-hint" i18n="@@donor.register.passkeyHint">
+            Klíč (otisk prstu, obličej nebo zámek obrazovky) vytvoříte hned po potvrzení e-mailu.
+            Účet pak heslo mít nebude; nastavit ho můžete kdykoli později.
+          </p>
+        }
 
         @if (error()) {
           <p class="form-error" role="alert">{{ error() }}</p>

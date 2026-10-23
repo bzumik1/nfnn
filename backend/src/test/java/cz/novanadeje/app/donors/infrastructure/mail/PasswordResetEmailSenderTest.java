@@ -95,7 +95,7 @@ class PasswordResetEmailSenderTest {
         sent(LocaleCode.CS, Duration.ofHours(1), email -> assertThat(MailContents.plainText(email).replace("\r\n", "\n")).isEqualTo("""
                 Dobrý den,
 
-                pro váš dárcovský účet Nová naděje (jana@example.cz) jsme přijali žádost o nastavení nového hesla. Nové heslo si zvolíte na tomto odkazu:
+                pro váš dárcovský účet Nová naděje (jana@example.cz) jsme přijali žádost o obnovu přístupu. Na tomto odkazu si zvolíte nové heslo, nebo si vytvoříte nový přístupový klíč:
 
                 %s
 
@@ -117,7 +117,7 @@ class PasswordResetEmailSenderTest {
                     .contains("lang=\"cs\"")
                     .contains("href=\"" + LINK + "\"")
                     .contains(">" + LINK + "<")
-                    .contains("Nastavit nové heslo")
+                    .contains("Obnovit přístup")
                     .contains(">Obnova hesla</h1>")
                     .contains("Dobrý den,")
                     .contains("(jana@example.cz)")
@@ -151,13 +151,13 @@ class PasswordResetEmailSenderTest {
             assertThat(((InternetAddress) email.getFrom()[0]).getPersonal()).isEqualTo("Nová naděje – nadační fond");
             assertThat(MailContents.plainText(email))
                     .startsWith("Hello,")
-                    .contains("we received a request to set a new password for your Nová naděje donor account (jana@example.cz).")
+                    .contains("we received a request to restore access to your Nová naděje donor account (jana@example.cz).")
                     .contains(LINK)
                     .contains("The link is valid for 30 minutes and can be used once.")
                     .contains("Questions? Write to info@nfnn.cz.");
             assertThat(MailContents.html(email))
                     .contains("lang=\"en\"")
-                    .contains("Set a new password")
+                    .contains("Restore access")
                     .contains("The link is valid for 30 minutes and can be used once.");
         });
     }

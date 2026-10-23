@@ -6,12 +6,13 @@ import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.donors.domain.DonorNotFound;
 import cz.novanadeje.app.donors.domain.DonorRepository;
 import cz.novanadeje.app.donors.domain.EmailUnchanged;
+import cz.novanadeje.app.donors.domain.LastSignInMethod;
+import cz.novanadeje.app.donors.domain.PasskeyConfirmationRejected;
+import cz.novanadeje.app.donors.domain.PasskeyRepository;
 import cz.novanadeje.app.donors.domain.PasswordHasher;
 import cz.novanadeje.app.donors.domain.RawPassword;
 import cz.novanadeje.app.donors.domain.RefreshTokenRepository;
-import cz.novanadeje.app.donors.domain.WrongPassword;
 import cz.novanadeje.app.shared.domain.EmailAddress;
-import cz.novanadeje.app.shared.domain.error.RuleViolation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
@@ -28,6 +29,8 @@ public class DonorCredentialsService {
 
     private final DonorRepository donors;
     private final PasswordHasher passwordHasher;
+    private final DonorConfirmations confirmations;
+    private final PasskeyRepository passkeys;
     private final RefreshTokenRepository refreshTokens;
     private final DonorSessionService sessions;
     private final DonorEmailVerificationService emailVerification;
@@ -35,11 +38,14 @@ public class DonorCredentialsService {
     private final ApplicationEventPublisher events;
     private final Clock clock;
 
-    public DonorCredentialsService(DonorRepository donors, PasswordHasher passwordHasher, RefreshTokenRepository refreshTokens,
+    public DonorCredentialsService(DonorRepository donors, PasswordHasher passwordHasher, DonorConfirmations confirmations, PasskeyRepository passkeys,
+                                   RefreshTokenRepository refreshTokens,
                                    DonorSessionService sessions, DonorViews views, DonorEmailVerificationService emailVerification,
                                    ApplicationEventPublisher events, Clock clock) {
         this.donors = donors;
         this.passwordHasher = passwordHasher;
+        this.confirmations = confirmations;
+        this.passkeys = passkeys;
         this.refreshTokens = refreshTokens;
         this.sessions = sessions;
         this.views = views;
@@ -48,10 +54,10 @@ public class DonorCredentialsService {
         this.clock = clock;
     }
 
-    @Transactional
-    public AuthenticatedDonor changePassword(DonorId donorId, boolean secondFactorVerified, String currentPassword, String newPassword) {
+    @Transactional(noRollbackFor = PasskeyConfirmationRejected.class)
+    public AuthenticatedDonor changePassword(DonorId donorId, boolean secondFactorVerified, Confirmation confirmation, String newPassword) {
         Donor donor = load(donorId);
-        requireMatching(donor, currentPassword);
+        confirmations.confirm(donor, confirmation);
         RawPassword rawPassword = new RawPassword(newPassword);
         Instant now = clock.instant();
         donor.changePassword(passwordHasher.hash(rawPassword));
@@ -61,10 +67,25 @@ public class DonorCredentialsService {
         return views.authenticated(donor, sessions.open(donor, secondFactorVerified));
     }
 
-    @Transactional
-    public void requestEmailChange(DonorId donorId, String password, EmailAddress newEmail) {
+    @Transactional(noRollbackFor = PasskeyConfirmationRejected.class)
+    public AuthenticatedDonor removePassword(DonorId donorId, boolean secondFactorVerified, Confirmation confirmation) {
         Donor donor = load(donorId);
-        requireMatching(donor, password);
+        confirmations.confirm(donor, confirmation);
+        if (passkeys.countByDonor(donorId) == 0) {
+            throw new LastSignInMethod(donorId);
+        }
+        Instant now = clock.instant();
+        donor.removePassword();
+        donors.save(donor);
+        refreshTokens.revokeAllOf(donor.id(), now);
+        log.info("Password of donor {} removed, every session revoked", donor.id());
+        return views.authenticated(donor, sessions.open(donor, secondFactorVerified));
+    }
+
+    @Transactional(noRollbackFor = PasskeyConfirmationRejected.class)
+    public void requestEmailChange(DonorId donorId, Confirmation confirmation, EmailAddress newEmail) {
+        Donor donor = load(donorId);
+        confirmations.confirm(donor, confirmation);
         if (newEmail.equals(donor.email())) {
             throw new EmailUnchanged();
         }
@@ -75,18 +96,6 @@ public class DonorCredentialsService {
             return;
         }
         emailVerification.issueChangeLink(donor, newEmail);
-    }
-
-    private void requireMatching(Donor donor, String password) {
-        RawPassword rawPassword;
-        try {
-            rawPassword = new RawPassword(password);
-        } catch (RuleViolation weak) {
-            throw new WrongPassword();
-        }
-        if (!passwordHasher.matches(rawPassword, donor.passwordHash())) {
-            throw new WrongPassword();
-        }
     }
 
     private Donor load(DonorId donorId) {

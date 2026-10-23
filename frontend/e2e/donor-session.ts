@@ -12,6 +12,7 @@ export const donor = {
   variableSymbol: '1234567890',
   roles: ['DONOR'],
   registeredAt: '2026-10-17T10:00:00Z',
+  hasPassword: true,
   secondFactor: { enabled: false, neededForAdministration: false },
 };
 
