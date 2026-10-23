@@ -11,6 +11,7 @@ Read before building, update in the same PR: `docs/requirements.md` (client deci
 | `backend/` | Spring Boot 4.0, Java 25, Gradle Kotlin DSL. Strict DDD: `cz.novanadeje.app.{content,donors,donations,contact,operations}` + `shared`, each `domain / application / infrastructure / interfaces/rest`, enforced by ArchUnit |
 | `frontend/` | Angular 22 standalone, zoneless, signals, SCSS design tokens, Vitest, Playwright + axe |
 | `deploy/` | ZimaOS compose and env templates (production); `docker-compose.yml` at the root is the local stack |
+| `mcp/` | MCP connector of the administration (Node 24, TypeScript, MCP SDK v2, Vitest): `npm ci`, `npm run check` (Prettier, `tsc`, tests), `npm run build`; served by the frontend nginx at `/mcp`, contract in `docs/api-contract.md` "MCP connector" |
 | `.github/workflows/` | `pr-check.yml` on every PR; `images.yml` on push to `main` publishes ghcr.io images |
 | `.claude/rules/` | `backend.md`, `frontend.md`, `testing.md`, `security.md`, `reliability.md` load with this file. `deploy-ci.md` (deploy, CI, backups) loads only when a file under `deploy/`, `.github/`, a Dockerfile or nginx config is opened; a claude.ai project thread never loads it, so read it before touching those files |
 

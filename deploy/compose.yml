@@ -104,6 +104,32 @@ services:
           memory: 1G
     logging: *logging
 
+  mcp:
+    image: ghcr.io/bzumik1/nfnn-mcp:latest
+    container_name: nfnn-mcp
+    restart: unless-stopped
+    network_mode: bridge
+    depends_on:
+      backend:
+        condition: service_started
+    links:
+      - backend
+    environment:
+      TZ: Europe/Prague
+    volumes:
+      - /DATA/AppData/nfnn/logs:/logs:ro
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8081/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 120s
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    logging: *logging
+
   frontend:
     image: ghcr.io/bzumik1/nfnn-frontend:latest
     container_name: nfnn-frontend
@@ -112,8 +138,11 @@ services:
     depends_on:
       backend:
         condition: service_started
+      mcp:
+        condition: service_started
     links:
       - backend
+      - mcp
     ports:
       - "8089:80"
     healthcheck:
@@ -184,5 +213,5 @@ x-casaos:
     cs_cz: Web Nadačního fondu Nová naděje
     en_us: Website of the Nová naděje foundation
   description:
-    cs_cz: Web, dárcovský portál a potvrzení o daru. Data v /DATA/AppData/nfnn, hesla a nastavení v /DATA/AppData/nfnn/env, zálohy v backups, obnova ze složky restore, logy v logs (přes tunel Cloudflare pro Clauda).
-    en_us: Website, donor portal and donation receipts. Data in /DATA/AppData/nfnn, secrets and settings in /DATA/AppData/nfnn/env, backups in backups, a restore from the restore folder, logs in logs (read through a Cloudflare tunnel).
+    cs_cz: Web, dárcovský portál a potvrzení o daru. Data v /DATA/AppData/nfnn, hesla a nastavení v /DATA/AppData/nfnn/env, zálohy v backups, obnova ze složky restore, logy v logs (přes tunel Cloudflare pro Clauda), MCP konektor pro správu na /mcp.
+    en_us: Website, donor portal and donation receipts. Data in /DATA/AppData/nfnn, secrets and settings in /DATA/AppData/nfnn/env, backups in backups, a restore from the restore folder, logs in logs (read through a Cloudflare tunnel), the MCP connector of the administration at /mcp.
