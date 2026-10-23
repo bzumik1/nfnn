@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures';
 import { bankAccountItem, mockDonorApi, openDonorSection, signIn } from './donor-session';
 
 const newAccount = bankAccountItem({

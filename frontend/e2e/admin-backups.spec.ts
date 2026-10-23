@@ -1,4 +1,5 @@
-import { expect, Page, test } from '@playwright/test';
+import { Page } from '@playwright/test';
+import { expect, test } from './fixtures';
 import { administrator, mockDonorApi, session } from './donor-session';
 
 const BACKUPS = '/api/admin/operations/backups';
@@ -241,7 +242,9 @@ test.describe('Given an administrator on the backups page', () => {
 
     await page.goto('/sprava/zalohy');
 
-    await expect(page.getByRole('alert')).toContainText('Backend nevidí složku záloh.');
+    await expect(page.getByRole('alert').filter({ hasText: /\S/ })).toContainText(
+      'Backend nevidí složku záloh.',
+    );
     await expect(page.getByRole('button', { name: 'Zálohovat teď' })).toBeDisabled();
     await expect(page.getByRole('button', { name: 'Ověřit obnovu teď' })).toBeDisabled();
     await expect(page.getByText('Zatím žádná záloha.')).toBeVisible();

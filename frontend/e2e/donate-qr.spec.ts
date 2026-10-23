@@ -1,4 +1,5 @@
-import { expect, Locator, Page, test } from '@playwright/test';
+import { Locator, Page } from '@playwright/test';
+import { expect, test } from './fixtures';
 import { PAYMENT_QR_1000, PAYMENT_QR_500, QrMatrixFixture } from './qr-matrices';
 
 const QR_FOR_AMOUNT: Record<string, QrMatrixFixture> = {

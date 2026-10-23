@@ -1,4 +1,5 @@
-import { expect, Page, test } from '@playwright/test';
+import { Page } from '@playwright/test';
+import { expect, test } from './fixtures';
 import { administrator, mockDonorApi, problem, session } from './donor-session';
 
 const CLAIMS = '/api/admin/donations/symbol-claims';

@@ -1,4 +1,5 @@
-import { expect, Page, test } from '@playwright/test';
+import { Page } from '@playwright/test';
+import { expect, test } from './fixtures';
 import { administrator, donor, mockDonorApi, problem, session, signIn } from './donor-session';
 
 const IMPORT_STATE = '/api/admin/donations/import-state';

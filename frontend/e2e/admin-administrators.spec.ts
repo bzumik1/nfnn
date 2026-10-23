@@ -1,4 +1,5 @@
-import { expect, Page, test } from '@playwright/test';
+import { Page } from '@playwright/test';
+import { expect, test } from './fixtures';
 import { administrator, mockDonorApi, problem, session } from './donor-session';
 
 const ADMINISTRATORS = '/api/admin/donors/administrators';
@@ -97,7 +98,9 @@ test.describe('Given an administrator on the administrators page', () => {
     await page.getByLabel('E-mail dárce').fill('nikdo@example.cz');
     await page.getByRole('button', { name: 'Přidat správce' }).click();
 
-    await expect(page.getByRole('alert')).toContainText('S tímto e-mailem není nikdo registrován');
+    await expect(page.getByRole('alert').filter({ hasText: /\S/ })).toContainText(
+      'S tímto e-mailem není nikdo registrován',
+    );
     await expect(page.getByLabel('E-mail dárce')).toHaveValue('nikdo@example.cz');
   });
 

@@ -1,4 +1,5 @@
-import { expect, Page, test } from '@playwright/test';
+import { Page } from '@playwright/test';
+import { expect, test } from './fixtures';
 import { mockDonorApi, openSignInDialog, problem } from './donor-session';
 
 async function chooseNewPassword(page: Page): Promise<void> {

@@ -1,4 +1,5 @@
-import { expect, Page, test } from '@playwright/test';
+import { Page } from '@playwright/test';
+import { expect, test } from './fixtures';
 import { mockDonorApi, problem } from './donor-session';
 
 const IMAGE_ID = '0199f3e0-0000-7000-8000-00000000a001';
