@@ -152,7 +152,7 @@ test.describe('Given a freshly installed site', () => {
     expect(uploaded?.toString()).toBe('PGDMP-backup');
     await expect(page.getByRole('status')).toContainText('token Fio');
 
-    await page.locator('.notice').getByRole('button', { name: 'Přihlásit se' }).click();
+    await page.locator('.ui-status').getByRole('button', { name: 'Přihlásit se' }).click();
     await expect(page.getByRole('dialog')).toBeVisible();
   });
 

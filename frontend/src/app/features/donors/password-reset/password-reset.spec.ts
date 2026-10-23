@@ -105,8 +105,8 @@ describe('Given the page that sets a new password from the e-mail link', () => {
       expect(request.request.method).toBe('POST');
       expect(request.request.body).toEqual({ token: 'abc', password: 'correct horse battery' });
       await settle();
-      expect(element<HTMLButtonElement>('.form-submit').disabled).toBe(true);
-      expect(element('.form-submit').textContent).toContain('Ukládám…');
+      expect(element<HTMLButtonElement>('.ui-button--primary').disabled).toBe(true);
+      expect(element('.ui-button--primary').textContent).toContain('Ukládám…');
       request.flush(null, { status: 204, statusText: 'No Content' });
     });
 
@@ -114,8 +114,8 @@ describe('Given the page that sets a new password from the e-mail link', () => {
       await submitPasswords('correct horse battery', 'correct horse battery!');
 
       http.expectNone('/api/donors/auth/password-reset/confirm');
-      expect(element('.form-error').getAttribute('role')).toBe('alert');
-      expect(element('.form-error').textContent).toContain('Hesla se neshodují.');
+      expect(element('.ui-field-error').getAttribute('role')).toBe('alert');
+      expect(element('.ui-field-error').textContent).toContain('Hesla se neshodují.');
     });
 
     it('and the password is too short, then nothing is sent and the password field says why', async () => {
@@ -134,11 +134,11 @@ describe('Given the page that sets a new password from the e-mail link', () => {
       await answerConfirm(null, 204, 'No Content');
 
       expect(heading().textContent).toContain('Heslo je změněno');
-      expect(element('.lead').textContent).toContain('Přihlaste se prosím novým heslem.');
+      expect(element('.ui-panel__lead').textContent).toContain('Přihlaste se prosím novým heslem.');
       expect(document.activeElement).toBe(heading());
       expect(logout).not.toHaveBeenCalled();
 
-      await click('.form-submit');
+      await click('.ui-button--primary');
 
       expect(dialog.isOpen()).toBe(true);
       expect(dialog.initialMode()).toBe('login');
@@ -160,10 +160,12 @@ describe('Given the page that sets a new password from the e-mail link', () => {
       );
 
       expect(heading().textContent).toContain('Odkaz je neplatný nebo vypršel');
-      expect(element('.lead').textContent).toContain('Odkaz lze použít jen jednou a platí hodinu.');
+      expect(element('.ui-panel__lead').textContent).toContain(
+        'Odkaz lze použít jen jednou a platí hodinu.',
+      );
       expect(document.activeElement).toBe(heading());
 
-      await click('.form-submit');
+      await click('.ui-button--primary');
 
       expect(dialog.isOpen()).toBe(true);
       expect(dialog.initialMode()).toBe('reset');
@@ -177,18 +179,18 @@ describe('Given the page that sets a new password from the e-mail link', () => {
         'Bad Request',
       );
 
-      expect(element('.form-error').textContent).toContain(
+      expect(element('.ui-field-error').textContent).toContain(
         'Heslo je příliš běžné. Zvolte prosím jiné heslo.',
       );
       expect(heading().textContent).toContain('Nastavte si nové heslo');
-      expect(element<HTMLButtonElement>('.form-submit').disabled).toBe(false);
+      expect(element<HTMLButtonElement>('.ui-button--primary').disabled).toBe(false);
     });
 
     it('and the server fails, then a generic error is shown', async () => {
       await submitPasswords('correct horse battery');
       await answerConfirm(null, 502, 'Bad Gateway');
 
-      expect(element('.form-error').textContent).toContain(
+      expect(element('.ui-field-error').textContent).toContain(
         'Heslo se nepodařilo uložit. Zkuste to prosím znovu.',
       );
     });
@@ -236,7 +238,7 @@ describe('Given the page that sets a new password from the e-mail link', () => {
       expect(heading().textContent).toContain('Odkaz je neúplný');
       expect(element('form')).toBeNull();
 
-      await click('.form-submit');
+      await click('.ui-button--primary');
 
       expect(dialog.isOpen()).toBe(true);
       expect(dialog.initialMode()).toBe('reset');
@@ -325,7 +327,7 @@ describe('Given the reset link opened in a browser with passkeys', () => {
     await settle();
 
     expect(element('#password-reset-title').textContent).toContain('Přístupový klíč je uložený');
-    element<HTMLButtonElement>('.form-submit').click();
+    element<HTMLButtonElement>('.ui-button--primary').click();
     expect(dialog.isOpen()).toBe(true);
   });
 
@@ -341,7 +343,7 @@ describe('Given the reset link opened in a browser with passkeys', () => {
       });
     await settle();
 
-    expect(element('.form-error')).toBeNull();
+    expect(element('.ui-field-error')).toBeNull();
     expect(element('#reset-passkey-code-hint').textContent).toContain(
       'zapnuté dvoufaktorové ověření',
     );
@@ -375,7 +377,7 @@ describe('Given the reset link opened in a browser with passkeys', () => {
       );
     await settle();
 
-    expect(element('.form-error').textContent).toContain('Účet správce se takto neobnovuje');
+    expect(element('.ui-field-error').textContent).toContain('Účet správce se takto neobnovuje');
     expect(passkeys.created).toHaveLength(0);
   });
 });

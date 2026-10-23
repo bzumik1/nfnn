@@ -39,11 +39,11 @@ test.describe('Given Claude sent an administrator to the site to connect the adm
       page.getByRole('heading', { name: 'Aplikace žádá o přístup ke správě' }),
     ).toBeVisible();
 
-    await page.locator('.connect-app').getByRole('button', { name: 'Přihlásit se' }).click();
+    await page.locator('.ui-panel-page').getByRole('button', { name: 'Přihlásit se' }).click();
     const dialog = page.getByRole('dialog');
     await dialog.locator('#login-email').fill('jana@example.cz');
     await dialog.locator('#login-password').fill('correct horse battery');
-    await dialog.locator('.form-submit').click();
+    await dialog.locator('.ui-button--block').click();
 
     await expect(dialog).toBeHidden();
     await expect(page).toHaveURL(/\/pripojeni\?client_id=/);

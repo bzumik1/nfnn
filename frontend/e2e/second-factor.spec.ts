@@ -37,7 +37,7 @@ test.describe('Given a donor who protects the account with an authenticator app'
     await expect(page.getByRole('dialog')).toBeVisible();
     await page.locator('#login-email').fill('jana@example.cz');
     await page.locator('#login-password').fill('correct horse battery');
-    await page.getByRole('dialog').locator('.form-submit').click();
+    await page.getByRole('dialog').locator('.ui-button--block').click();
 
     const code = page.getByLabel('Kód z aplikace');
     await expect(code).toBeFocused();
@@ -45,7 +45,7 @@ test.describe('Given a donor who protects the account with an authenticator app'
       'Přihlášení dokončíte kódem z ověřovací aplikace',
     );
     await code.fill('287082');
-    await page.getByRole('dialog').locator('.form-submit').click();
+    await page.getByRole('dialog').locator('.ui-button--block').click();
 
     await expect(page).toHaveURL(/\/darce\/prehled$/);
     expect(completed).toEqual([{ challenge: CHALLENGE, code: '287082' }]);
@@ -80,15 +80,15 @@ test.describe('Given a donor who protects the account with an authenticator app'
     await openSignInDialog(page);
     await page.locator('#login-email').fill('jana@example.cz');
     await page.locator('#login-password').fill('correct horse battery');
-    await page.getByRole('dialog').locator('.form-submit').click();
+    await page.getByRole('dialog').locator('.ui-button--block').click();
     await page.getByLabel('Kód z aplikace').fill('000000');
-    await page.getByRole('dialog').locator('.form-submit').click();
+    await page.getByRole('dialog').locator('.ui-button--block').click();
 
     await expect(page.getByRole('alert')).toContainText('Nesprávný kód.');
     await expect(page.getByLabel('Kód z aplikace')).toBeVisible();
 
     await page.getByLabel('Kód z aplikace').fill('111111');
-    await page.getByRole('dialog').locator('.form-submit').click();
+    await page.getByRole('dialog').locator('.ui-button--block').click();
 
     await expect(page.getByRole('alert')).toContainText(
       'Přihlášení vypršelo. Zadejte prosím znovu e-mail a heslo.',

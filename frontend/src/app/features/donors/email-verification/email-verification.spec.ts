@@ -108,7 +108,7 @@ describe('Given the page that confirms the e-mail from the registration link', (
       expect(element('[role="status"]').textContent).toContain('jste přihlášeni');
       expect(document.activeElement).toBe(heading());
 
-      await click('.form-submit');
+      await click('.ui-button--primary');
 
       expect(navigate).toHaveBeenCalledWith('/darce/prehled');
     });
@@ -126,15 +126,15 @@ describe('Given the page that confirms the e-mail from the registration link', (
 
       expect(store.signedIn()).toBe(false);
       expect(heading().textContent).toContain('Odkaz je neplatný nebo vypršel');
-      expect(element('.lead').textContent).toContain('platí 24 hodin');
+      expect(element('.ui-panel__lead').textContent).toContain('platí 24 hodin');
       expect(document.activeElement).toBe(heading());
 
       await fillIn('#verification-email', ' jana@example.cz ');
       await submitRequest();
       const request = http.expectOne('/api/donors/auth/email-verification/request');
       expect(request.request.body).toEqual({ email: 'jana@example.cz' });
-      expect(element<HTMLButtonElement>('.form-submit').disabled).toBe(true);
-      expect(element('.form-submit').textContent).toContain('Odesílám…');
+      expect(element<HTMLButtonElement>('.ui-button--primary').disabled).toBe(true);
+      expect(element('.ui-button--primary').textContent).toContain('Odesílám…');
       request.flush(null, { status: 202, statusText: 'Accepted' });
       await settle();
 
@@ -165,9 +165,9 @@ describe('Given the page that confirms the e-mail from the registration link', (
         });
       await settle();
 
-      expect(element('.form-error').getAttribute('role')).toBe('alert');
-      expect(element('.form-error').textContent).toContain('Zkuste to prosím za hodinu.');
-      expect(element<HTMLButtonElement>('.form-submit').disabled).toBe(false);
+      expect(element('.ui-field-error').getAttribute('role')).toBe('alert');
+      expect(element('.ui-field-error').textContent).toContain('Zkuste to prosím za hodinu.');
+      expect(element<HTMLButtonElement>('.ui-button--primary').disabled).toBe(false);
     });
 
     it('and the server fails, then the failed panel shows a generic error and retries on request', async () => {
@@ -176,7 +176,7 @@ describe('Given the page that confirms the e-mail from the registration link', (
       expect(heading().textContent).toContain('E-mail se nepodařilo potvrdit');
       expect(element('[role="alert"]').textContent).toContain('Spojení se serverem se nepodařilo.');
 
-      await click('.form-submit');
+      await click('.ui-button--primary');
 
       expect(heading().textContent).toContain('Potvrzujeme váš e-mail');
       await answerConfirm(authResponse('token-1') as unknown as Record<string, unknown>, 200, 'OK');
@@ -251,11 +251,11 @@ describe('Given the registration link of a donor who chose a passkey instead of 
 
   it('when the e-mail is confirmed, then the page asks to create the first passkey right away', () => {
     expect(element('[role="status"]').textContent).toContain('vytvořte přístupový klíč');
-    expect(element('.form-submit').textContent).toContain('Vytvořit přístupový klíč');
+    expect(element('.ui-button--primary').textContent).toContain('Vytvořit přístupový klíč');
   });
 
   it('when the donor creates the passkey, then it is saved without any confirmation and the page leads on', async () => {
-    element<HTMLButtonElement>('.form-submit').click();
+    element<HTMLButtonElement>('.ui-button--primary').click();
     await settle();
     const options = http.expectOne('/api/donors/me/passkeys/options');
     expect(options.request.body).toEqual({});
@@ -269,18 +269,18 @@ describe('Given the registration link of a donor who chose a passkey instead of 
     await settle();
 
     expect(element('[role="status"]').textContent).toContain('Přístupový klíč je uložený');
-    element<HTMLButtonElement>('.form-submit').click();
+    element<HTMLButtonElement>('.ui-button--primary').click();
     expect(navigate).toHaveBeenCalledWith('/darce/prehled');
   });
 
   it('when the device does not create the key, then the page says it can be done later and still leads on', async () => {
     passkeys.failure = 'cancelled';
-    element<HTMLButtonElement>('.form-submit').click();
+    element<HTMLButtonElement>('.ui-button--primary').click();
     await settle();
     http.expectOne('/api/donors/me/passkeys/options').flush(passkeyCreationOptions());
-    await vi.waitFor(() => expect(element('.form-error')).not.toBeNull());
+    await vi.waitFor(() => expect(element('.ui-field-error')).not.toBeNull());
 
-    expect(element('.form-error').textContent).toContain('jde to i později na přehledu');
+    expect(element('.ui-field-error').textContent).toContain('jde to i později na přehledu');
     element<HTMLButtonElement>('.link-action').click();
     expect(navigate).toHaveBeenCalledWith('/darce/prehled');
   });

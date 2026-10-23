@@ -1,0 +1,31 @@
+.ui-field-error {
+  color: var(--color-danger);
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  margin: var(--space-1) 0 var(--space-3);
+}
+
+.ui-segmented {
+  display: flex;
+  gap: var(--space-2);
+
+  button {
+    flex: 1;
+    padding: var(--space-2-5);
+    border-radius: var(--radius-lg);
+    border: 1.5px solid var(--color-border);
+    background: var(--color-surface);
+    color: var(--color-text-soft);
+    cursor: pointer;
+    font-family: var(--font-sans);
+    font-weight: var(--weight-semibold);
+    font-size: var(--text-md);
+    transition: all var(--duration-base);
+
+    &.is-active {
+      border-color: var(--color-accent);
+      background: var(--color-accent-bg);
+      color: var(--color-accent);
+    }
+  }
+}

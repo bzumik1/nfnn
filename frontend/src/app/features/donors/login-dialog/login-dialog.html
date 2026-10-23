@@ -72,10 +72,14 @@
         </app-form-field>
 
         @if (error()) {
-          <p class="form-error" role="alert">{{ error() }}</p>
+          <p class="ui-field-error" role="alert">{{ error() }}</p>
         }
 
-        <button type="submit" class="form-submit" [disabled]="loading()">
+        <button
+          type="submit"
+          class="ui-button ui-button--primary ui-button--block"
+          [disabled]="loading()"
+        >
           @if (loading()) {
             <span i18n="@@donor.login.secondFactor.submitLoading">Ověřuji kód…</span>
           } @else {
@@ -138,7 +142,7 @@
         </app-form-field>
 
         @if (error()) {
-          <p class="form-error" role="alert">{{ error() }}</p>
+          <p class="ui-field-error" role="alert">{{ error() }}</p>
         }
         @if (emailNotVerified()) {
           <p class="form-note">
@@ -159,7 +163,11 @@
           </p>
         }
 
-        <button type="submit" class="form-submit" [disabled]="loading()">
+        <button
+          type="submit"
+          class="ui-button ui-button--primary ui-button--block"
+          [disabled]="loading()"
+        >
           @if (loading()) {
             <span i18n="@@donor.login.submit.login.loading">Přihlašuji…</span>
           } @else {
@@ -219,7 +227,7 @@
         </p>
         <button
           type="button"
-          class="form-submit"
+          class="ui-button ui-button--primary ui-button--block"
           (click)="backToLogin()"
           i18n="@@donor.login.reset.back"
         >
@@ -239,7 +247,7 @@
         novalidate
       >
         <div
-          class="type-switch"
+          class="ui-segmented type-switch"
           appRadioGroup
           aria-label="Typ dárce"
           i18n-aria-label="@@donor.register.type"
@@ -422,7 +430,11 @@
           <p id="register-method-label" class="register-label" i18n="@@donor.register.signInMethod">
             Jak se budete přihlašovat
           </p>
-          <div class="type-switch" appRadioGroup aria-labelledby="register-method-label">
+          <div
+            class="ui-segmented type-switch"
+            appRadioGroup
+            aria-labelledby="register-method-label"
+          >
             <button
               type="button"
               role="radio"
@@ -477,10 +489,14 @@
         }
 
         @if (error()) {
-          <p class="form-error" role="alert">{{ error() }}</p>
+          <p class="ui-field-error" role="alert">{{ error() }}</p>
         }
 
-        <button type="submit" class="form-submit" [disabled]="loading()">
+        <button
+          type="submit"
+          class="ui-button ui-button--primary ui-button--block"
+          [disabled]="loading()"
+        >
           @if (loading()) {
             <span i18n="@@donor.login.submit.register.loading">Registruji…</span>
           } @else {
@@ -506,7 +522,7 @@
         </p>
         <button
           type="button"
-          class="form-submit"
+          class="ui-button ui-button--primary ui-button--block"
           (click)="backToLogin()"
           i18n="@@donor.login.reset.back"
         >
@@ -551,10 +567,14 @@
         </app-form-field>
 
         @if (error()) {
-          <p class="form-error" role="alert">{{ error() }}</p>
+          <p class="ui-field-error" role="alert">{{ error() }}</p>
         }
 
-        <button type="submit" class="form-submit" [disabled]="loading()">
+        <button
+          type="submit"
+          class="ui-button ui-button--primary ui-button--block"
+          [disabled]="loading()"
+        >
           @if (loading()) {
             <span i18n="@@donor.login.reset.submitLoading">Odesílám…</span>
           } @else {
