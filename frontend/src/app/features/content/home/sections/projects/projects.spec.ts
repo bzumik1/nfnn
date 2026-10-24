@@ -20,7 +20,7 @@ describe('Given the projects section', () => {
   it('when it renders, then every child has a plain card that offers nothing to click', () => {
     const cards = Array.from(root().querySelectorAll('app-project-card article'));
 
-    expect(cards).toHaveLength(5);
+    expect(cards).toHaveLength(3);
     for (const card of cards) {
       expect(card.getAttribute('role')).toBeNull();
       expect(card.getAttribute('tabindex')).toBeNull();
@@ -46,16 +46,10 @@ describe('Given the projects section', () => {
       image.getAttribute('alt'),
     );
 
-    expect(alts).toEqual(['', '', '', '', '']);
+    expect(alts).toEqual(['', '', '']);
     expect(
       Array.from(root().querySelectorAll('.card-title')).map((title) => title.textContent?.trim()),
-    ).toEqual([
-      'Dominik, 7 let',
-      'Anička, 5 let',
-      'Tomáš, 9 let',
-      'Eliška, 6 let',
-      'Martin, 11 let',
-    ]);
+    ).toEqual(['Dominik, 7 let', 'Anička, 5 let', 'Tomáš, 9 let']);
   });
 
   it('when it renders, then the photos are small WebP files that wait until they are near', () => {
@@ -65,8 +59,6 @@ describe('Given the projects section', () => {
       '/images/project-1.webp',
       '/images/project-2.webp',
       '/images/project-3.webp',
-      '/images/project-4.webp',
-      '/images/project-5.webp',
     ]);
     for (const image of images) {
       expect(image.getAttribute('loading')).toBe('lazy');

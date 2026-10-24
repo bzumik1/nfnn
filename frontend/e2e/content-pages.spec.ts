@@ -120,7 +120,7 @@ test.describe('Given a visitor on the home page', () => {
     await page.goto('/');
 
     await expect(page.locator('#aktuality .news-card')).toHaveCount(3);
-    await expect(page.locator('#projekty app-project-card')).toHaveCount(5);
+    await expect(page.locator('#projekty app-project-card')).toHaveCount(3);
     await expect(page.getByText('Pomohli jsme Dominikovi získat nový vozík')).toBeVisible();
     await expect(page.locator('#aktuality a, #projekty a')).toHaveCount(0);
   });

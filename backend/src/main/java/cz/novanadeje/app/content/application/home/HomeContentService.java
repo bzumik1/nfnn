@@ -16,7 +16,7 @@ import java.time.LocalDate;
 public class HomeContentService {
 
     public static final int NEWS_ON_HOME = 3;
-    public static final int PROJECTS_ON_HOME = 50;
+    public static final int PROJECTS_ON_HOME = 3;
 
     private final NewsArticleRepository news;
     private final ProjectRepository projects;
