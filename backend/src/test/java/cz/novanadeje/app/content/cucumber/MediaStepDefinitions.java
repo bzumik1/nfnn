@@ -1,5 +1,6 @@
 package cz.novanadeje.app.content.cucumber;
 
+import cz.novanadeje.app.content.application.media.UnusedMediaCleanupService;
 import cz.novanadeje.app.cucumber.ApiClient;
 import cz.novanadeje.app.cucumber.DonorSessions;
 import io.cucumber.java.en.Then;
@@ -27,11 +28,18 @@ public class MediaStepDefinitions {
     private final ApiClient api;
     private final DonorSessions sessions;
     private final UploadedImages images;
+    private final UnusedMediaCleanupService cleanup;
 
-    public MediaStepDefinitions(ApiClient api, DonorSessions sessions, UploadedImages images) {
+    public MediaStepDefinitions(ApiClient api, DonorSessions sessions, UploadedImages images, UnusedMediaCleanupService cleanup) {
         this.api = api;
         this.sessions = sessions;
         this.images = images;
+        this.cleanup = cleanup;
+    }
+
+    @When("the cleanup of unused photos runs")
+    public void theCleanupOfUnusedPhotosRuns() {
+        cleanup.deleteUnusedMedia();
     }
 
     @When("{string} uploads a {int} by {int} pixel PNG image named {string}")

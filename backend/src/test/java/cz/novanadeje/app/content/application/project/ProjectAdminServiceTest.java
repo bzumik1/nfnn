@@ -8,6 +8,7 @@ import cz.novanadeje.app.content.domain.project.ProjectId;
 import cz.novanadeje.app.content.domain.project.ProjectNotFound;
 import cz.novanadeje.app.content.domain.project.ProjectRepository;
 import cz.novanadeje.app.content.domain.project.ProjectContent;
+import cz.novanadeje.app.content.domain.FormerSlugs;
 import cz.novanadeje.app.content.domain.Slug;
 import cz.novanadeje.app.content.domain.SlugTaken;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
@@ -45,10 +46,12 @@ class ProjectAdminServiceTest {
     @Mock
     private MediaImageRepository media;
     @Mock
+    private FormerSlugs formerSlugs;
+    @Mock
     private ApplicationEventPublisher events;
 
     private ProjectAdminService service() {
-        return new ProjectAdminService(projects, media, events, Clock.fixed(NOW, ZoneOffset.UTC));
+        return new ProjectAdminService(projects, media, formerSlugs, events, Clock.fixed(NOW, ZoneOffset.UTC));
     }
 
     @Test
@@ -100,16 +103,51 @@ class ProjectAdminServiceTest {
         when(projects.findById(project.id())).thenReturn(Optional.of(project));
         when(projects.isSlugTakenByAnother(any(), any())).thenReturn(false);
         when(media.exists(newImage)).thenReturn(true);
-        when(projects.isImageUsed(IMAGE)).thenReturn(false);
 
         ProjectView view = service().update(ADMIN, project.id(), command("Dominik znovu", Optional.of("dominik"), Optional.of(newImage)));
 
         assertThat(view.title()).isEqualTo("Dominik znovu");
         assertThat(view.publishedOn()).contains(LocalDate.parse("2026-10-20"));
-        verify(media).delete(IMAGE);
+        verify(media).deleteIfUnused(IMAGE);
         ArgumentCaptor<AdminActionPerformed> audit = ArgumentCaptor.forClass(AdminActionPerformed.class);
         verify(events).publishEvent(audit.capture());
         assertThat(audit.getValue().action()).isEqualTo("UPDATE_PROJECT");
+    }
+
+    @Test
+    @DisplayName("Given a project at one address, when its address changes, then the old address is remembered for it and the new one is released from any other")
+    void should_remember_the_old_slug_when_updated_given_a_new_slug() {
+        Project project = Project.create(ProjectId.newId(NOW), content("dominik", Optional.empty()), NOW);
+        when(projects.findById(project.id())).thenReturn(Optional.of(project));
+        when(projects.isSlugTakenByAnother(any(), any())).thenReturn(false);
+
+        ProjectView view = service().update(ADMIN, project.id(), command("Dominik", Optional.of("dominik-7-let"), Optional.empty()));
+
+        assertThat(view.slug()).isEqualTo("dominik-7-let");
+        verify(formerSlugs).forget(new Slug("dominik-7-let"));
+        verify(formerSlugs).rememberProject(new Slug("dominik"), project.id(), NOW);
+    }
+
+    @Test
+    @DisplayName("Given a project, when it is updated at the same address, then no former address is remembered")
+    void should_remember_nothing_when_updated_given_the_same_slug() {
+        Project project = Project.create(ProjectId.newId(NOW), content("dominik", Optional.empty()), NOW);
+        when(projects.findById(project.id())).thenReturn(Optional.of(project));
+        when(projects.isSlugTakenByAnother(any(), any())).thenReturn(false);
+
+        service().update(ADMIN, project.id(), command("Dominik znovu", Optional.of("dominik"), Optional.empty()));
+
+        verify(formerSlugs, never()).rememberProject(any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("Given an address another item had before, when a project is created there, then the old redirect is released")
+    void should_release_a_former_slug_when_created_given_its_address() {
+        when(projects.isSlugTakenByAnother(any(), any())).thenReturn(false);
+
+        service().create(ADMIN, command("Dominik", Optional.of("dominik"), Optional.empty()));
+
+        verify(formerSlugs).forget(new Slug("dominik"));
     }
 
     @Test
@@ -132,12 +170,11 @@ class ProjectAdminServiceTest {
     void should_delete_with_its_image_when_deleted() {
         Project project = Project.create(ProjectId.newId(NOW), content("dominik", Optional.of(IMAGE)), NOW);
         when(projects.findById(project.id())).thenReturn(Optional.of(project));
-        when(projects.isImageUsed(IMAGE)).thenReturn(false);
 
         service().delete(ADMIN, project.id());
 
         verify(projects).delete(project.id());
-        verify(media).delete(IMAGE);
+        verify(media).deleteIfUnused(IMAGE);
         ArgumentCaptor<AdminActionPerformed> audit = ArgumentCaptor.forClass(AdminActionPerformed.class);
         verify(events).publishEvent(audit.capture());
         assertThat(audit.getValue().action()).isEqualTo("DELETE_PROJECT");

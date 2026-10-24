@@ -8,115 +8,19 @@
     @if (items().length > 0) {
       <div class="news-grid">
         @for (item of items(); track item.id) {
-          <article class="news-card">
-            @if (image(item); as src) {
-              <div class="news-image">
-                <img
-                  loading="lazy"
-                  [src]="src"
-                  [srcset]="imageSet(item)"
-                  sizes="(max-width: 768px) 100vw, 400px"
-                  width="480"
-                  height="300"
-                  alt=""
-                  class="real-img"
-                />
-              </div>
-            }
-            <div class="news-body">
-              <div class="news-meta">
-                @if (item.tag) {
-                  <span class="news-tag">{{ item.tag }}</span>
-                }
-                <span class="news-date">{{ date(item) }}</span>
-              </div>
-              <h3 class="news-title">
-                <a class="news-link" [routerLink]="['/aktuality', item.slug]">{{ item.title }}</a>
-              </h3>
-              <p class="news-perex">{{ item.perex }}</p>
-            </div>
-          </article>
+          <app-news-card [item]="item" />
         }
       </div>
+      <p class="all">
+        <a class="all-link ui-cta ui-cta--ghost" routerLink="/aktuality" i18n="@@home.news.all"
+          >Všechny aktuality</a
+        >
+      </p>
     } @else {
       <div class="news-grid">
-        <article class="news-card">
-          <div class="news-image">
-            <img
-              loading="lazy"
-              src="/images/news-1.webp"
-              width="600"
-              height="400"
-              alt=""
-              class="real-img"
-            />
-          </div>
-          <div class="news-body">
-            <div class="news-meta">
-              <span class="news-tag" i18n="@@home.news.tag.project">Projekt</span>
-              <span class="news-date" i18n="@@home.news.dominik.date">15. dubna 2026</span>
-            </div>
-            <h3 class="news-title" i18n="@@home.news.dominik.title">
-              Pomohli jsme Dominikovi získat nový vozík
-            </h3>
-            <p class="news-perex" i18n="@@home.news.dominik.perex">
-              Díky vašim příspěvkům se podařilo zakoupit speciální elektrický vozík pro sedmiletého
-              Dominika z Ústí nad Labem.
-            </p>
-          </div>
-        </article>
-
-        <article class="news-card">
-          <div class="news-image">
-            <img
-              loading="lazy"
-              src="/images/news-2.webp"
-              width="600"
-              height="400"
-              alt=""
-              class="real-img"
-            />
-          </div>
-          <div class="news-body">
-            <div class="news-meta">
-              <span class="news-tag" i18n="@@home.news.tag.reports">Zprávy</span>
-              <span class="news-date" i18n="@@home.news.report.date">2. března 2026</span>
-            </div>
-            <h3 class="news-title" i18n="@@home.news.report.title">
-              Výroční zpráva 2025 je k dispozici
-            </h3>
-            <p class="news-perex" i18n="@@home.news.report.perex">
-              Zveřejnili jsme výroční zprávu za rok 2025. Děkujeme všem dárcům za jejich podporu a
-              důvěru v naše poslání.
-            </p>
-          </div>
-        </article>
-
-        <article class="news-card">
-          <div class="news-image">
-            <img
-              loading="lazy"
-              src="/images/news-2.webp"
-              width="600"
-              height="400"
-              alt=""
-              class="real-img"
-            />
-          </div>
-          <div class="news-body">
-            <div class="news-meta">
-              <span class="news-tag" i18n="@@home.news.tag.project">Projekt</span>
-              <span class="news-date" i18n="@@home.news.autism.date">18. ledna 2026</span>
-            </div>
-            <h3 class="news-title" i18n="@@home.news.autism.title">
-              Nový projekt: podpora vzdělávání dětí s autismem
-            </h3>
-            <p class="news-perex" i18n="@@home.news.autism.perex">
-              Zahájili jsme nový projekt zaměřený na komunikační pomůcky pro děti s poruchou
-              autistického spektra.
-            </p>
-          </div>
-        </article>
+        <app-news-card placeholder="dominik" />
+        <app-news-card placeholder="report" />
+        <app-news-card placeholder="autism" />
       </div>
     }
   </div>

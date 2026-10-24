@@ -4,6 +4,15 @@ import cz.novanadeje.app.content.domain.media.MediaId;
 import cz.novanadeje.app.content.domain.media.MediaImage;
 import cz.novanadeje.app.content.domain.media.MediaImageRepository;
 import cz.novanadeje.app.content.domain.media.MediaVariant;
+import cz.novanadeje.app.content.domain.Slug;
+import cz.novanadeje.app.content.domain.news.NewsArticle;
+import cz.novanadeje.app.content.domain.news.NewsArticleId;
+import cz.novanadeje.app.content.domain.news.NewsArticleRepository;
+import cz.novanadeje.app.content.domain.news.NewsContent;
+import cz.novanadeje.app.content.domain.project.Project;
+import cz.novanadeje.app.content.domain.project.ProjectContent;
+import cz.novanadeje.app.content.domain.project.ProjectId;
+import cz.novanadeje.app.content.domain.project.ProjectRepository;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -28,6 +37,10 @@ class JpaMediaImageRepositoryTest {
 
     @Autowired
     private MediaImageRepository media;
+    @Autowired
+    private NewsArticleRepository news;
+    @Autowired
+    private ProjectRepository projects;
     @Autowired
     private JdbcClient jdbc;
     @Autowired
@@ -66,16 +79,65 @@ class JpaMediaImageRepositoryTest {
         assertThat(jdbc.sql("select count(*) from content_media_variant").query(Long.class).single()).isZero();
     }
 
+    @Test
+    @DisplayName("Given photos on a news article, on a project and on nothing, when the unused ones uploaded before a moment are deleted, then only the old unused one goes")
+    void should_delete_only_old_unused_photos_when_cleaned_up_given_used_and_unused_photos() {
+        MediaImage onNews = image(700, 500, NOW.minusSeconds(864_000), 480);
+        MediaImage onProject = image(700, 500, NOW.minusSeconds(864_000), 480);
+        MediaImage oldUnused = image(700, 500, NOW.minusSeconds(864_000), 480);
+        MediaImage freshUnused = image(700, 500, NOW.minusSeconds(3_600), 480);
+        List.of(onNews, onProject, oldUnused, freshUnused).forEach(media::save);
+        news.save(NewsArticle.create(NewsArticleId.newId(NOW), new NewsContent(new Slug("koncert"), "Koncert", Optional.empty(), "Perex", "Text",
+                Optional.of(onNews.id())), NOW));
+        projects.save(Project.create(ProjectId.newId(NOW), new ProjectContent(new Slug("dominik"), "Dominik", 2024, Optional.empty(), "Perex", "Text",
+                Optional.of(onProject.id())), NOW));
+        flushAndClear();
+
+        int deleted = media.deleteUnusedUploadedBefore(NOW.minusSeconds(604_800));
+        flushAndClear();
+
+        assertThat(deleted).isEqualTo(1);
+        assertThat(media.exists(oldUnused.id())).isFalse();
+        assertThat(media.exists(onNews.id())).isTrue();
+        assertThat(media.exists(onProject.id())).isTrue();
+        assertThat(media.exists(freshUnused.id())).isTrue();
+    }
+
+    @Test
+    @DisplayName("Given a photo on a project, when it is deleted only if unused, then it stays, and once unused it goes")
+    void should_keep_a_used_photo_when_deleted_if_unused_given_a_project_uses_it() {
+        MediaImage photo = image(700, 500, 480);
+        MediaImage spare = image(700, 500, 480);
+        media.save(photo);
+        media.save(spare);
+        projects.save(Project.create(ProjectId.newId(NOW), new ProjectContent(new Slug("dominik"), "Dominik", 2024, Optional.empty(), "Perex", "Text",
+                Optional.of(photo.id())), NOW));
+        flushAndClear();
+
+        boolean usedDeleted = media.deleteIfUnused(photo.id());
+        boolean spareDeleted = media.deleteIfUnused(spare.id());
+        flushAndClear();
+
+        assertThat(usedDeleted).isFalse();
+        assertThat(spareDeleted).isTrue();
+        assertThat(media.exists(photo.id())).isTrue();
+        assertThat(media.exists(spare.id())).isFalse();
+    }
+
     private void flushAndClear() {
         entityManager.flush();
         entityManager.clear();
     }
 
     private static MediaImage image(int width, int height, int... variantWidths) {
+        return image(width, height, NOW, variantWidths);
+    }
+
+    private static MediaImage image(int width, int height, Instant uploadedAt, int... variantWidths) {
         List<MediaVariant> variants = java.util.Arrays.stream(variantWidths)
                 .mapToObj(variantWidth -> new MediaVariant(variantWidth, variantWidth * height / width, bytes(variantWidth)))
                 .toList();
-        return new MediaImage(MediaId.newId(NOW), width, height, variants, NOW);
+        return new MediaImage(MediaId.newId(uploadedAt), width, height, variants, uploadedAt);
     }
 
     private static byte[] bytes(int width) {

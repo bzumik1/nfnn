@@ -257,3 +257,55 @@ Feature: An administrator writes news articles with photos and publishes them on
     When someone without a token creates a news article
     Then the response status is 401
     And the problem type ends with "auth/unauthenticated"
+
+  Scenario: After its address changes, the old address still leads to the article until another article takes it
+    Given "Jana" creates a news article:
+      | title | Benefiční koncert     |
+      | perex | Zveme vás na koncert. |
+      | body  | Text o koncertu.      |
+    And "Jana" publishes the news article "beneficni-koncert" on 2026-10-20
+    When "Jana" changes the news article "beneficni-koncert":
+      | title | Koncert v kostele     |
+      | slug  | koncert-v-kostele     |
+      | perex | Zveme vás na koncert. |
+      | body  | Text o koncertu.      |
+    Then the response status is 200
+    When someone without a token asks for the news article "beneficni-koncert"
+    Then the response status is 200
+    And the news article says:
+      | slug  | koncert-v-kostele |
+      | title | Koncert v kostele |
+    When someone without a token asks for the project "beneficni-koncert"
+    Then the response status is 404
+    When "Jana" creates a news article:
+      | title | Benefiční koncert       |
+      | perex | Další koncert na jaře.  |
+      | body  | Text o jarním koncertu. |
+    Then the response status is 201
+    When "Jana" publishes the news article "beneficni-koncert" on 2026-10-21
+    And someone without a token asks for the news article "beneficni-koncert"
+    Then the response status is 200
+    And the news article says:
+      | slug  | beneficni-koncert      |
+      | perex | Další koncert na jaře. |
+    When someone without a token asks for the news article "koncert-v-kostele"
+    Then the news article says:
+      | title | Koncert v kostele |
+
+  Scenario: The old address of a deleted article or of a draft leads nowhere
+    Given "Jana" creates a news article:
+      | title | Benefiční koncert     |
+      | perex | Zveme vás na koncert. |
+      | body  | Text o koncertu.      |
+    And "Jana" changes the news article "beneficni-koncert":
+      | title | Koncert v kostele     |
+      | slug  | koncert-v-kostele     |
+      | perex | Zveme vás na koncert. |
+      | body  | Text o koncertu.      |
+    When someone without a token asks for the news article "beneficni-koncert"
+    Then the response status is 404
+    When "Jana" deletes the news article "koncert-v-kostele"
+    Then the response status is 204
+    When someone without a token asks for the news article "beneficni-koncert"
+    Then the response status is 404
+    And the problem type ends with "content/news-not-found"

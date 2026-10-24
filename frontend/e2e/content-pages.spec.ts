@@ -49,6 +49,16 @@ async function publishedContent(page: Page): Promise<void> {
     (route) => route.fulfill({ json: project }),
   );
   await page.route(
+    (url) => url.pathname === '/api/content/news',
+    (route) =>
+      route.fulfill({ json: { items: [article], page: 0, size: 10, total: 1, hasMore: false } }),
+  );
+  await page.route(
+    (url) => url.pathname === '/api/content/projects',
+    (route) =>
+      route.fulfill({ json: { items: [project], page: 0, size: 10, total: 1, hasMore: false } }),
+  );
+  await page.route(
     (url) => url.pathname.startsWith('/api/content/media/'),
     (route) => route.fulfill({ contentType: 'image/png', body: TINY_PNG }),
   );
@@ -88,7 +98,10 @@ test.describe('Given a visitor on the home page', () => {
 
     await page.getByRole('link', { name: '← Všechny aktuality' }).click();
 
-    await expect(page).toHaveURL('/#aktuality');
+    await expect(page).toHaveURL('/aktuality');
+    await expect(page.getByRole('heading', { level: 1, name: 'Aktuality' })).toBeFocused();
+    await expect(page.locator('.news-card')).toHaveCount(1);
+    await page.goto('/');
     await page.getByRole('link', { name: 'Dominik, 7 let' }).click();
 
     await expect(page).toHaveURL('/projekty/dominik-7-let');
@@ -97,7 +110,7 @@ test.describe('Given a visitor on the home page', () => {
     await expect(page.locator('.photo')).toHaveCount(0);
     await expect(page.getByRole('link', { name: 'Zpět na projekty' })).toHaveAttribute(
       'href',
-      '/#projekty',
+      '/projekty',
     );
   });
 
@@ -110,6 +123,43 @@ test.describe('Given a visitor on the home page', () => {
     await expect(page.locator('#projekty app-project-card')).toHaveCount(5);
     await expect(page.getByText('Pomohli jsme Dominikovi získat nový vozík')).toBeVisible();
     await expect(page.locator('#aktuality a, #projekty a')).toHaveCount(0);
+  });
+
+  test('when news and projects are published, then the home page links to their whole lists', async ({
+    page,
+  }) => {
+    await publishedContent(page);
+
+    await page.goto('/');
+    await page.getByRole('link', { name: 'Všechny projekty' }).click();
+
+    await expect(page).toHaveURL('/projekty');
+    await expect(page).toHaveTitle('Projekty | Nová naděje – nadační fond');
+    await expect(page.locator('app-project-card')).toHaveCount(1);
+    await page.goto('/');
+    await page.getByRole('link', { name: 'Všechny aktuality' }).click();
+
+    await expect(page).toHaveURL('/aktuality');
+    await expect(page).toHaveTitle('Aktuality | Nová naděje – nadační fond');
+  });
+
+  test('when the address is one the article had before, then the article shows under its current address', async ({
+    page,
+  }) => {
+    await publishedContent(page);
+    await page.route(
+      (url) => url.pathname === '/api/content/news/stara-zahrada',
+      (route) => route.fulfill({ json: article }),
+    );
+
+    await page.goto('/aktuality/stara-zahrada');
+
+    await expect(page.getByRole('heading', { level: 1, name: 'Zahrada pro děti' })).toBeVisible();
+    await expect(page).toHaveURL('/aktuality/zahrada-pro-deti');
+    await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
+      'href',
+      'https://nfnn.cz/aktuality/zahrada-pro-deti',
+    );
   });
 
   test('when the address names an article that is not published, then the page says it was not found and keeps the address', async ({
@@ -126,5 +176,57 @@ test.describe('Given a visitor on the home page', () => {
       page.getByRole('heading', { level: 1, name: 'Tuhle stránku jsme nenašli' }),
     ).toBeVisible();
     await expect(page).toHaveURL('/aktuality/neznama');
+  });
+});
+
+test.describe('Given a visitor paging through the news', () => {
+  test('when there are more than ten articles, then the list pages by ten and the address names the page', async ({
+    page,
+  }) => {
+    await mockDonorApi(page);
+    const articles = Array.from({ length: 12 }, (_, index) => ({
+      ...article,
+      id: `0199f3e0-0000-7000-8000-0000000d${String(index).padStart(4, '0')}`,
+      slug: `aktualita-${index + 1}`,
+      title: `Aktualita ${index + 1}`,
+      coverImage: null,
+    }));
+    const asked: string[] = [];
+    await page.route(
+      (url) => url.pathname === '/api/content/news',
+      (route) => {
+        const url = new URL(route.request().url());
+        const pageIndex = Number(url.searchParams.get('page'));
+        asked.push(`${url.searchParams.get('page')}/${url.searchParams.get('size')}`);
+        return route.fulfill({
+          json: {
+            items: articles.slice(pageIndex * 10, pageIndex * 10 + 10),
+            page: pageIndex,
+            size: 10,
+            total: articles.length,
+            hasMore: pageIndex === 0,
+          },
+        });
+      },
+    );
+
+    await page.goto('/aktuality');
+
+    await expect(page.locator('.news-card')).toHaveCount(10);
+    await expect(page.getByText('Strana 1 z 2')).toBeVisible();
+    await expect(page.getByRole('link', { name: '← Novější' })).toHaveCount(0);
+    await page
+      .getByRole('navigation', { name: 'Stránky aktualit' })
+      .getByRole('link', { name: 'Starší →' })
+      .click();
+
+    await expect(page).toHaveURL('/aktuality?strana=2');
+    await expect(page.locator('.news-card')).toHaveCount(2);
+    await expect(page.getByRole('link', { name: 'Aktualita 12' })).toBeVisible();
+    await page.getByRole('link', { name: '← Novější' }).click();
+
+    await expect(page).toHaveURL('/aktuality');
+    await expect(page.locator('.news-card')).toHaveCount(10);
+    expect(asked).toEqual(['0/10', '1/10', '0/10']);
   });
 });

@@ -8,6 +8,7 @@ import cz.novanadeje.app.content.domain.project.ProjectId;
 import cz.novanadeje.app.content.domain.project.ProjectNotFound;
 import cz.novanadeje.app.content.domain.project.ProjectRepository;
 import cz.novanadeje.app.content.domain.project.ProjectContent;
+import cz.novanadeje.app.content.domain.FormerSlugs;
 import cz.novanadeje.app.content.domain.SlugTaken;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
 import org.slf4j.Logger;
@@ -37,12 +38,15 @@ public class ProjectAdminService {
 
     private final ProjectRepository projects;
     private final MediaImageRepository media;
+    private final FormerSlugs formerSlugs;
     private final ApplicationEventPublisher events;
     private final Clock clock;
 
-    public ProjectAdminService(ProjectRepository projects, MediaImageRepository media, ApplicationEventPublisher events, Clock clock) {
+    public ProjectAdminService(ProjectRepository projects, MediaImageRepository media, FormerSlugs formerSlugs, ApplicationEventPublisher events,
+                               Clock clock) {
         this.projects = projects;
         this.media = media;
+        this.formerSlugs = formerSlugs;
         this.events = events;
         this.clock = clock;
     }
@@ -63,6 +67,7 @@ public class ProjectAdminService {
         ProjectContent content = checked(command.toContent(), id);
         Project article = Project.create(id, content, now);
         projects.save(article);
+        formerSlugs.forget(content.slug());
         audit(adminId, CREATE_ACTION, article, "Projekt " + id + " „" + content.slug() + "“ napsán", now);
         return ProjectView.from(article);
     }
@@ -73,6 +78,7 @@ public class ProjectAdminService {
         ProjectContent content = checked(command.toContent(), id);
         Project edited = article.edit(content, now);
         projects.save(edited);
+        rememberFormerSlug(article, edited, now);
         dropUnusedImage(article.content().coverImage(), content.coverImage());
         audit(adminId, UPDATE_ACTION, edited, "Projekt " + id + " „" + content.slug() + "“ upraven", now);
         return ProjectView.from(edited);
@@ -102,6 +108,13 @@ public class ProjectAdminService {
         audit(adminId, DELETE_ACTION, article, "Projekt " + id + " „" + article.slug() + "“ smazán", now);
     }
 
+    private void rememberFormerSlug(Project before, Project after, Instant now) {
+        formerSlugs.forget(after.slug());
+        if (!before.slug().equals(after.slug())) {
+            formerSlugs.rememberProject(before.slug(), after.id(), now);
+        }
+    }
+
     private ProjectContent checked(ProjectContent content, ProjectId id) {
         if (projects.isSlugTakenByAnother(content.slug(), id)) {
             throw new SlugTaken(content.slug());
@@ -113,7 +126,7 @@ public class ProjectAdminService {
     }
 
     private void dropUnusedImage(Optional<MediaId> previous, Optional<MediaId> current) {
-        previous.filter(image -> !current.equals(previous) && !projects.isImageUsed(image)).ifPresent(media::delete);
+        previous.filter(image -> !current.equals(previous)).ifPresent(media::deleteIfUnused);
     }
 
     private Project require(ProjectId id) {

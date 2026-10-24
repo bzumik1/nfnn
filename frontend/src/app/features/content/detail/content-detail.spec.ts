@@ -2,7 +2,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Title } from '@angular/platform-browser';
-import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
+import { ActivatedRoute, convertToParamMap, provideRouter, Router } from '@angular/router';
 import { IMAGE_ID, newsArticle } from '../testing/news-fixtures';
 import { project } from '../testing/project-fixtures';
 import { ContentDetail, ContentKind } from './content-detail';
@@ -79,8 +79,27 @@ describe('Given a visitor opening a news article', () => {
     expect(TestBed.inject(Title).getTitle()).toBe('Zahrada pro děti | Nová naděje – nadační fond');
     expect(text(fixture, '.crumbs a')).toBe('← Všechny aktuality');
     expect(fixture.nativeElement.querySelector('.crumbs a').getAttribute('href')).toBe(
-      '/#aktuality',
+      '/aktuality',
     );
+  });
+
+  it('when the article answers under its newer address, then the address bar shows the newer one', async () => {
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+    http
+      .expectOne('/api/content/news/zahrada-pro-deti')
+      .flush(newsArticle({ slug: 'nova-zahrada' }));
+    await settle(fixture);
+
+    expect(text(fixture, 'h1')).toBe('Zahrada pro děti');
+    expect(navigate).toHaveBeenCalledWith(['/aktuality', 'nova-zahrada'], { replaceUrl: true });
+  });
+
+  it('when the article answers under the address it was asked for, then the address stays', async () => {
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigate');
+    http.expectOne('/api/content/news/zahrada-pro-deti').flush(newsArticle());
+    await settle(fixture);
+
+    expect(navigate).not.toHaveBeenCalled();
   });
 
   it('when the body uses Markdown and the photo has a description, then the text is formatted and the photo is described', async () => {
@@ -156,16 +175,14 @@ describe('Given a visitor opening a project', () => {
     expect(text(fixture, '.ui-eyebrow')).toBe('Projekt · 2024');
     expect(text(fixture, 'h1')).toBe('Zahrada pro děti');
     expect(text(fixture, '.crumbs a')).toBe('← Všechny projekty');
-    expect(fixture.nativeElement.querySelector('.crumbs a').getAttribute('href')).toBe(
-      '/#projekty',
-    );
+    expect(fixture.nativeElement.querySelector('.crumbs a').getAttribute('href')).toBe('/projekty');
     expect(
       Array.from(fixture.nativeElement.querySelectorAll('.actions a') as NodeListOf<Element>).map(
         (link) => [link.getAttribute('href'), link.textContent?.trim()],
       ),
     ).toEqual([
       ['/#prispet', 'Přispět'],
-      ['/#projekty', 'Zpět na projekty'],
+      ['/projekty', 'Zpět na projekty'],
     ]);
   });
 

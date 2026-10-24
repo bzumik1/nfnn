@@ -1,6 +1,5 @@
 package cz.novanadeje.app.content.infrastructure.persistence;
 
-import cz.novanadeje.app.content.domain.media.MediaId;
 import cz.novanadeje.app.content.domain.news.NewsArticle;
 import cz.novanadeje.app.content.domain.news.NewsArticleId;
 import cz.novanadeje.app.content.domain.news.NewsArticleRepository;
@@ -39,11 +38,6 @@ class JpaNewsArticleRepository implements NewsArticleRepository {
     @Override
     public boolean isSlugTakenByAnother(Slug slug, NewsArticleId except) {
         return jpa.existsBySlugAndIdNot(slug.value(), except.value());
-    }
-
-    @Override
-    public boolean isImageUsed(MediaId image) {
-        return jpa.existsByCoverMediaId(image.value());
     }
 
     @Override

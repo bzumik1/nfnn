@@ -13,7 +13,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @Import(TestcontainersConfiguration.class)
-@SpringBootTest(properties = {"spring.mail.host=localhost", "spring.mail.port=1", "app.donations.fio.token=", "app.donations.report.cron=-", "app.contact.retention.cron=-", "app.operations.backups.check-cron=-", "app.donors.registration-reminder.cron=-"})
+@SpringBootTest(properties = {"spring.mail.host=localhost", "spring.mail.port=1", "app.donations.fio.token=", "app.donations.report.cron=-", "app.contact.retention.cron=-", "app.content.media-cleanup.cron=-", "app.operations.backups.check-cron=-", "app.donors.registration-reminder.cron=-"})
 @AutoConfigureMockMvc
 class HealthEndpointTests {
 

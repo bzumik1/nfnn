@@ -8,6 +8,7 @@ import cz.novanadeje.app.content.domain.news.NewsArticleId;
 import cz.novanadeje.app.content.domain.news.NewsArticleNotFound;
 import cz.novanadeje.app.content.domain.news.NewsArticleRepository;
 import cz.novanadeje.app.content.domain.news.NewsContent;
+import cz.novanadeje.app.content.domain.FormerSlugs;
 import cz.novanadeje.app.content.domain.Slug;
 import cz.novanadeje.app.content.domain.SlugTaken;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
@@ -45,10 +46,12 @@ class NewsAdminServiceTest {
     @Mock
     private MediaImageRepository media;
     @Mock
+    private FormerSlugs formerSlugs;
+    @Mock
     private ApplicationEventPublisher events;
 
     private NewsAdminService service() {
-        return new NewsAdminService(news, media, events, Clock.fixed(NOW, ZoneOffset.UTC));
+        return new NewsAdminService(news, media, formerSlugs, events, Clock.fixed(NOW, ZoneOffset.UTC));
     }
 
     @Test
@@ -100,16 +103,51 @@ class NewsAdminServiceTest {
         when(news.findById(article.id())).thenReturn(Optional.of(article));
         when(news.isSlugTakenByAnother(any(), any())).thenReturn(false);
         when(media.exists(newImage)).thenReturn(true);
-        when(news.isImageUsed(IMAGE)).thenReturn(false);
 
         NewsArticleView view = service().update(ADMIN, article.id(), command("Dominik znovu", Optional.of("dominik"), Optional.of(newImage)));
 
         assertThat(view.title()).isEqualTo("Dominik znovu");
         assertThat(view.publishedOn()).contains(LocalDate.parse("2026-10-20"));
-        verify(media).delete(IMAGE);
+        verify(media).deleteIfUnused(IMAGE);
         ArgumentCaptor<AdminActionPerformed> audit = ArgumentCaptor.forClass(AdminActionPerformed.class);
         verify(events).publishEvent(audit.capture());
         assertThat(audit.getValue().action()).isEqualTo("UPDATE_NEWS");
+    }
+
+    @Test
+    @DisplayName("Given an article at one address, when its address changes, then the old address is remembered for it and the new one is released from any other")
+    void should_remember_the_old_slug_when_updated_given_a_new_slug() {
+        NewsArticle article = NewsArticle.create(NewsArticleId.newId(NOW), content("dominik", Optional.empty()), NOW);
+        when(news.findById(article.id())).thenReturn(Optional.of(article));
+        when(news.isSlugTakenByAnother(any(), any())).thenReturn(false);
+
+        NewsArticleView view = service().update(ADMIN, article.id(), command("Dominik", Optional.of("dominik-7-let"), Optional.empty()));
+
+        assertThat(view.slug()).isEqualTo("dominik-7-let");
+        verify(formerSlugs).forget(new Slug("dominik-7-let"));
+        verify(formerSlugs).rememberNews(new Slug("dominik"), article.id(), NOW);
+    }
+
+    @Test
+    @DisplayName("Given an article, when it is updated at the same address, then no former address is remembered")
+    void should_remember_nothing_when_updated_given_the_same_slug() {
+        NewsArticle article = NewsArticle.create(NewsArticleId.newId(NOW), content("dominik", Optional.empty()), NOW);
+        when(news.findById(article.id())).thenReturn(Optional.of(article));
+        when(news.isSlugTakenByAnother(any(), any())).thenReturn(false);
+
+        service().update(ADMIN, article.id(), command("Dominik znovu", Optional.of("dominik"), Optional.empty()));
+
+        verify(formerSlugs, never()).rememberNews(any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("Given an address another item had before, when an article is created there, then the old redirect is released")
+    void should_release_a_former_slug_when_created_given_its_address() {
+        when(news.isSlugTakenByAnother(any(), any())).thenReturn(false);
+
+        service().create(ADMIN, command("Dominik", Optional.of("dominik"), Optional.empty()));
+
+        verify(formerSlugs).forget(new Slug("dominik"));
     }
 
     @Test
@@ -132,12 +170,11 @@ class NewsAdminServiceTest {
     void should_delete_with_its_image_when_deleted() {
         NewsArticle article = NewsArticle.create(NewsArticleId.newId(NOW), content("dominik", Optional.of(IMAGE)), NOW);
         when(news.findById(article.id())).thenReturn(Optional.of(article));
-        when(news.isImageUsed(IMAGE)).thenReturn(false);
 
         service().delete(ADMIN, article.id());
 
         verify(news).delete(article.id());
-        verify(media).delete(IMAGE);
+        verify(media).deleteIfUnused(IMAGE);
         ArgumentCaptor<AdminActionPerformed> audit = ArgumentCaptor.forClass(AdminActionPerformed.class);
         verify(events).publishEvent(audit.capture());
         assertThat(audit.getValue().action()).isEqualTo("DELETE_NEWS");

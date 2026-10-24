@@ -149,6 +149,28 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     await expect(page.getByRole('heading', { level: 1, name: 'Dominik, 7 let' })).toBeFocused();
 
     expect(await violations(page)).toEqual([]);
+    await page.route(
+      (url) => url.pathname === '/api/content/news',
+      (route) =>
+        route.fulfill({
+          json: { items: [article], page: 1, size: 10, total: 21, hasMore: true },
+        }),
+    );
+    await page.route(
+      (url) => url.pathname === '/api/content/projects',
+      (route) =>
+        route.fulfill({ json: { items: [], page: 0, size: 10, total: 0, hasMore: false } }),
+    );
+    await page.goto('/aktuality?strana=2');
+    await expect(page.getByRole('heading', { level: 1, name: 'Aktuality' })).toBeFocused();
+    await expect(page.getByText('Strana 2 z 3')).toBeVisible();
+
+    expect(await violations(page)).toEqual([]);
+
+    await page.goto('/projekty');
+    await expect(page.getByText('Zatím tu žádný projekt není.')).toBeVisible();
+
+    expect(await violations(page)).toEqual([]);
   });
 
   test('when they open the privacy policy, then nothing on it breaks the rules', async ({

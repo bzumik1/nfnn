@@ -21,5 +21,12 @@
         <app-project-card project="martin" />
       }
     </div>
+    @if (items().length > 0) {
+      <p class="all">
+        <a class="all-link ui-cta ui-cta--ghost" routerLink="/projekty" i18n="@@home.projects.all"
+          >Všechny projekty</a
+        >
+      </p>
+    }
   </div>
 </section>

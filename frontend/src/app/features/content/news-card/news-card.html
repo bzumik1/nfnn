@@ -1,0 +1,84 @@
+<article class="news-card">
+  @if (item(); as item) {
+    @if (image(); as src) {
+      <div class="news-image">
+        <img
+          loading="lazy"
+          [src]="src"
+          [srcset]="imageSet()"
+          sizes="(max-width: 768px) 100vw, 400px"
+          width="480"
+          height="300"
+          alt=""
+          class="real-img"
+        />
+      </div>
+    }
+    <div class="news-body">
+      <div class="news-meta">
+        @if (item.tag) {
+          <span class="news-tag">{{ item.tag }}</span>
+        }
+        <span class="news-date">{{ date() }}</span>
+      </div>
+      <h3 class="news-title">
+        <a class="news-link" [routerLink]="['/aktuality', item.slug]">{{ item.title }}</a>
+      </h3>
+      <p class="news-perex">{{ item.perex }}</p>
+    </div>
+  } @else {
+    <div class="news-image">
+      <img
+        loading="lazy"
+        [src]="placeholderImage()"
+        width="600"
+        height="400"
+        alt=""
+        class="real-img"
+      />
+    </div>
+    <div class="news-body">
+      @switch (placeholder()) {
+        @case ('dominik') {
+          <div class="news-meta">
+            <span class="news-tag" i18n="@@home.news.tag.project">Projekt</span>
+            <span class="news-date" i18n="@@home.news.dominik.date">15. dubna 2026</span>
+          </div>
+          <h3 class="news-title" i18n="@@home.news.dominik.title">
+            Pomohli jsme Dominikovi získat nový vozík
+          </h3>
+          <p class="news-perex" i18n="@@home.news.dominik.perex">
+            Díky vašim příspěvkům se podařilo zakoupit speciální elektrický vozík pro sedmiletého
+            Dominika z Ústí nad Labem.
+          </p>
+        }
+        @case ('report') {
+          <div class="news-meta">
+            <span class="news-tag" i18n="@@home.news.tag.reports">Zprávy</span>
+            <span class="news-date" i18n="@@home.news.report.date">2. března 2026</span>
+          </div>
+          <h3 class="news-title" i18n="@@home.news.report.title">
+            Výroční zpráva 2025 je k dispozici
+          </h3>
+          <p class="news-perex" i18n="@@home.news.report.perex">
+            Zveřejnili jsme výroční zprávu za rok 2025. Děkujeme všem dárcům za jejich podporu a
+            důvěru v naše poslání.
+          </p>
+        }
+        @case ('autism') {
+          <div class="news-meta">
+            <span class="news-tag" i18n="@@home.news.tag.project">Projekt</span>
+            <span class="news-date" i18n="@@home.news.autism.date">18. ledna 2026</span>
+          </div>
+          <h3 class="news-title" i18n="@@home.news.autism.title">
+            Nový projekt: podpora vzdělávání dětí s autismem
+          </h3>
+          <p class="news-perex" i18n="@@home.news.autism.perex">
+            Zahájili jsme nový projekt zaměřený na komunikační pomůcky pro děti s poruchou
+            autistického spektra.
+          </p>
+        }
+      }
+    </div>
+  }
+</article>

@@ -15,8 +15,6 @@ interface ProjectJpaRepository extends JpaRepository<ProjectJpaEntity, UUID> {
 
     boolean existsBySlugAndIdNot(String slug, UUID id);
 
-    boolean existsByCoverMediaId(UUID coverMediaId);
-
     @Query("select a from ProjectJpaEntity a order by case when a.publishedOn is null then 0 else 1 end, a.year desc, a.publishedOn desc, a.updatedAt desc")
     List<ProjectJpaEntity> findAllDraftsFirst();
 

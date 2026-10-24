@@ -8,6 +8,7 @@ import cz.novanadeje.app.content.domain.news.NewsArticleId;
 import cz.novanadeje.app.content.domain.news.NewsArticleNotFound;
 import cz.novanadeje.app.content.domain.news.NewsArticleRepository;
 import cz.novanadeje.app.content.domain.news.NewsContent;
+import cz.novanadeje.app.content.domain.FormerSlugs;
 import cz.novanadeje.app.content.domain.SlugTaken;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
 import org.slf4j.Logger;
@@ -37,12 +38,15 @@ public class NewsAdminService {
 
     private final NewsArticleRepository news;
     private final MediaImageRepository media;
+    private final FormerSlugs formerSlugs;
     private final ApplicationEventPublisher events;
     private final Clock clock;
 
-    public NewsAdminService(NewsArticleRepository news, MediaImageRepository media, ApplicationEventPublisher events, Clock clock) {
+    public NewsAdminService(NewsArticleRepository news, MediaImageRepository media, FormerSlugs formerSlugs, ApplicationEventPublisher events,
+                            Clock clock) {
         this.news = news;
         this.media = media;
+        this.formerSlugs = formerSlugs;
         this.events = events;
         this.clock = clock;
     }
@@ -63,6 +67,7 @@ public class NewsAdminService {
         NewsContent content = checked(command.toContent(), id);
         NewsArticle article = NewsArticle.create(id, content, now);
         news.save(article);
+        formerSlugs.forget(content.slug());
         audit(adminId, CREATE_ACTION, article, "Aktualita " + id + " „" + content.slug() + "“ napsána", now);
         return NewsArticleView.from(article);
     }
@@ -73,6 +78,7 @@ public class NewsAdminService {
         NewsContent content = checked(command.toContent(), id);
         NewsArticle edited = article.edit(content, now);
         news.save(edited);
+        rememberFormerSlug(article, edited, now);
         dropUnusedImage(article.content().coverImage(), content.coverImage());
         audit(adminId, UPDATE_ACTION, edited, "Aktualita " + id + " „" + content.slug() + "“ upravena", now);
         return NewsArticleView.from(edited);
@@ -102,6 +108,13 @@ public class NewsAdminService {
         audit(adminId, DELETE_ACTION, article, "Aktualita " + id + " „" + article.slug() + "“ smazána", now);
     }
 
+    private void rememberFormerSlug(NewsArticle before, NewsArticle after, Instant now) {
+        formerSlugs.forget(after.slug());
+        if (!before.slug().equals(after.slug())) {
+            formerSlugs.rememberNews(before.slug(), after.id(), now);
+        }
+    }
+
     private NewsContent checked(NewsContent content, NewsArticleId id) {
         if (news.isSlugTakenByAnother(content.slug(), id)) {
             throw new SlugTaken(content.slug());
@@ -113,7 +126,7 @@ public class NewsAdminService {
     }
 
     private void dropUnusedImage(Optional<MediaId> previous, Optional<MediaId> current) {
-        previous.filter(image -> !current.equals(previous) && !news.isImageUsed(image)).ifPresent(media::delete);
+        previous.filter(image -> !current.equals(previous)).ifPresent(media::deleteIfUnused);
     }
 
     private NewsArticle require(NewsArticleId id) {

@@ -67,7 +67,7 @@ Everything read through the connector (log lines, donors, messages, content) and
 ## Gotchas
 
 - ArchUnit ≥ 1.5: older versions import no Java 25 class, so every rule would pass vacuously. Rules fail on an empty match (ArchUnit's default `failOnEmptyShould`); never `allowEmptyShould` or an `archunit.properties` override.
-- Every `@SpringBootTest` turns off the scheduled work: `app.donations.fio.token=`, `app.donations.report.cron=-`, `app.contact.retention.cron=-`, `app.operations.backups.check-cron=-`, `app.donors.registration-reminder.cron=-`. A new scheduled job adds its `-` property to all of them.
+- Every `@SpringBootTest` turns off the scheduled work: `app.donations.fio.token=`, `app.donations.report.cron=-`, `app.contact.retention.cron=-`, `app.operations.backups.check-cron=-`, `app.donors.registration-reminder.cron=-`, `app.content.media-cleanup.cron=-`. A new scheduled job adds its `-` property to all of them.
 - `build.gradle.kts` sets `TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE=/var/run/docker.sock`; keep it.
 - A receipt template or `receipt.*` text change fails `ReceiptTemplateHistoryTest` until its candidate is reviewed and committed (skill `receipt-template`).
 - `@angular/localize` is wired in; never run `ng add @angular/localize` again. Never use H2.

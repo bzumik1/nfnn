@@ -1,7 +1,6 @@
 package cz.novanadeje.app.content.domain.news;
 
 import cz.novanadeje.app.content.domain.Slug;
-import cz.novanadeje.app.content.domain.media.MediaId;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -16,8 +15,6 @@ public interface NewsArticleRepository {
     Optional<NewsArticle> findBySlug(Slug slug);
 
     boolean isSlugTakenByAnother(Slug slug, NewsArticleId except);
-
-    boolean isImageUsed(MediaId image);
 
     List<NewsArticle> findAllDraftsFirst();
 

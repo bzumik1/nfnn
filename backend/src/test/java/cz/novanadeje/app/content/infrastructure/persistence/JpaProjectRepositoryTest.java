@@ -52,7 +52,6 @@ class JpaProjectRepositoryTest {
 
         assertThat(projects.findById(project.id())).contains(project);
         assertThat(projects.findBySlug(new Slug("dominik"))).contains(project);
-        assertThat(projects.isImageUsed(image.id())).isTrue();
         assertThat(projects.isSlugTakenByAnother(new Slug("dominik"), project.id())).isFalse();
         assertThat(projects.isSlugTakenByAnother(new Slug("dominik"), ProjectId.newId(NOW))).isTrue();
     }

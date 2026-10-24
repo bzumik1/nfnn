@@ -1,0 +1,96 @@
+<section class="list">
+  <header class="ui-intro">
+    <div class="ui-container">
+      @if (kind === 'news') {
+        <p class="ui-eyebrow ui-eyebrow--on-inverse" i18n="@@content.list.news.eyebrow">
+          Co je nového
+        </p>
+        <h1 #heading class="ui-intro__title" tabindex="-1" i18n="@@content.list.news.title">
+          Aktuality
+        </h1>
+        <p class="ui-intro__lead" i18n="@@content.list.news.lead">
+          Co se ve fondu děje, komu jsme pomohli a co chystáme. Nejnovější zprávy jsou nahoře.
+        </p>
+      } @else {
+        <p class="ui-eyebrow ui-eyebrow--on-inverse" i18n="@@content.list.projects.eyebrow">
+          Příběhy dětí
+        </p>
+        <h1 #heading class="ui-intro__title" tabindex="-1" i18n="@@content.list.projects.title">
+          Projekty
+        </h1>
+        <p class="ui-intro__lead" i18n="@@content.list.projects.lead">
+          Každý projekt je skutečný příběh skutečného dítěte. Nejnovější projekty jsou nahoře.
+        </p>
+      }
+    </div>
+  </header>
+
+  <div class="content ui-container">
+    <p class="list-state" role="status">
+      @if (state() === 'loading') {
+        @if (kind === 'news') {
+          <span i18n="@@content.list.news.loading">Načítáme aktuality…</span>
+        } @else {
+          <span i18n="@@content.list.projects.loading">Načítáme projekty…</span>
+        }
+      } @else if (state() === 'ready' && empty()) {
+        @if (kind === 'news') {
+          <span i18n="@@content.list.news.empty">Zatím tu žádná aktualita není.</span>
+        } @else {
+          <span i18n="@@content.list.projects.empty">Zatím tu žádný projekt není.</span>
+        }
+      }
+    </p>
+
+    @if (state() === 'error') {
+      <p class="list-error" role="alert" i18n="@@content.list.error">
+        Seznam se nepodařilo načíst.
+      </p>
+      <button
+        type="button"
+        class="retry ui-cta ui-cta--ghost"
+        (click)="retry()"
+        i18n="@@content.list.retry"
+      >
+        Zkusit znovu
+      </button>
+    }
+
+    @if (state() === 'ready' && !empty()) {
+      <div class="grid">
+        @for (item of list().news; track item.id) {
+          <app-news-card [item]="item" />
+        }
+        @for (item of list().projects; track item.id) {
+          <app-project-card [item]="item" />
+        }
+      </div>
+
+      @if (pageCount() > 1) {
+        <nav class="pages" [attr.aria-label]="kind === 'news' ? newsPagesLabel : projectPagesLabel">
+          @if (pageNumber() > 1) {
+            <a
+              class="ui-cta ui-cta--ghost"
+              [routerLink]="basePath"
+              [queryParams]="newerQuery()"
+              i18n="@@content.list.newer"
+              >← Novější</a
+            >
+          }
+          <span class="pages-position" i18n="@@content.list.position"
+            >Strana {{ pageNumber() }} z {{ pageCount() }}</span
+          >
+          @if (pageNumber() < pageCount()) {
+            <a
+              class="ui-cta ui-cta--ghost"
+              [routerLink]="basePath"
+              [queryParams]="olderQuery()"
+              i18n="@@content.list.older"
+              >Starší →</a
+            >
+          }
+        </nav>
+      }
+    }
+  </div>
+</section>

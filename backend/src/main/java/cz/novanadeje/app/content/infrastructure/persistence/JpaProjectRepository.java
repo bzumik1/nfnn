@@ -1,6 +1,5 @@
 package cz.novanadeje.app.content.infrastructure.persistence;
 
-import cz.novanadeje.app.content.domain.media.MediaId;
 import cz.novanadeje.app.content.domain.project.Project;
 import cz.novanadeje.app.content.domain.project.ProjectId;
 import cz.novanadeje.app.content.domain.project.ProjectRepository;
@@ -39,11 +38,6 @@ class JpaProjectRepository implements ProjectRepository {
     @Override
     public boolean isSlugTakenByAnother(Slug slug, ProjectId except) {
         return jpa.existsBySlugAndIdNot(slug.value(), except.value());
-    }
-
-    @Override
-    public boolean isImageUsed(MediaId image) {
-        return jpa.existsByCoverMediaId(image.value());
     }
 
     @Override

@@ -32,7 +32,7 @@
         <header class="ui-intro">
           <div class="ui-container">
             <p class="crumbs">
-              <a routerLink="/" [fragment]="page.backFragment">
+              <a [routerLink]="page.backPath">
                 @if (kind === 'news') {
                   <ng-container i18n="@@content.detail.back.news">← Všechny aktuality</ng-container>
                 } @else {
@@ -69,7 +69,7 @@
             <a class="ui-cta" routerLink="/" fragment="prispet" i18n="@@content.detail.donate"
               >Přispět</a
             >
-            <a class="ui-cta ui-cta--ghost" routerLink="/" [fragment]="page.backFragment">
+            <a class="ui-cta ui-cta--ghost" [routerLink]="page.backPath">
               @if (kind === 'news') {
                 <ng-container i18n="@@content.detail.back.news.again"
                   >Zpět na aktuality</ng-container
