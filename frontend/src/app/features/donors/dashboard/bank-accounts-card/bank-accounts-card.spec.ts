@@ -128,10 +128,10 @@ describe('Given the bank accounts card in the overview', () => {
     );
     expect(texts('.account-meta > li')).toEqual([
       'ověřeno 12. 03. 2026',
-      '14 darů bez VS',
+      '14 darů bez symbolu',
       '7 400 Kč',
     ]);
-    expect(text('.account-action')).toBe('Vypnout párování');
+    expect(text('.account-action')).toBe('Nepřiřazovat platby z tohoto účtu');
   });
 
   it('when an account has one gift without a symbol, then the count uses the singular', async () => {
@@ -139,7 +139,7 @@ describe('Given the bank accounts card in the overview', () => {
 
     expect(texts('.account-meta > li')).toEqual([
       'ověřeno 12. 03. 2026',
-      '1 dar bez VS',
+      '1 dar bez symbolu',
       '500,50 Kč',
     ]);
   });
@@ -147,7 +147,7 @@ describe('Given the bank accounts card in the overview', () => {
   it('when an account has three gifts without a symbol, then the count uses the Czech few form', async () => {
     await respond([bankAccount({ donationCount: 3, totalAmountMinor: 150000 })]);
 
-    expect(texts('.account-meta > li')).toContain('3 dary bez VS');
+    expect(texts('.account-meta > li')).toContain('3 dary bez symbolu');
   });
 
   it('when an account has no gifts without a symbol yet, then the row does not count them', async () => {
@@ -170,7 +170,7 @@ describe('Given the bank accounts card in the overview', () => {
     expect(text('.account-hint--warning')).toBe(
       'Upozornění: ' +
         'Tento účet ověřil i jiný dárce, proto z něj platby bez variabilního symbolu nepřiřazujeme nikomu. ' +
-        'Pokud z něj dary neposíláte vy, vypněte si u tohoto účtu párování. ' +
+        'Pokud z něj dary neposíláte vy, stiskněte „Nepřiřazovat platby z tohoto účtu“. ' +
         'Jinak z něj prosím posílejte vždy s vaším variabilním symbolem.',
     );
   });
@@ -193,7 +193,7 @@ describe('Given the bank accounts card in the overview', () => {
     );
     expect(texts('.account-meta > li')).toEqual([
       'ověřeno 12. 03. 2026',
-      '14 darů bez VS',
+      '14 darů bez symbolu',
       '7 400 Kč',
     ]);
     expect(element('.account-action')).toBeNull();
@@ -216,10 +216,10 @@ describe('Given the bank accounts card in the overview', () => {
     expect(text('.account-hint')).toBe(
       'Z tohoto účtu už přiřazujeme jen platby s variabilním symbolem. Posílejte z něj prosím vždy s vaším variabilním symbolem.',
     );
-    expect(texts('.account-action')).toEqual(['Vypnout párování']);
+    expect(texts('.account-action')).toEqual(['Nepřiřazovat platby z tohoto účtu']);
   });
 
-  it('when a disconnected account only pairs payments with the symbol, then its newest row says why it offers no Zapnout párování', async () => {
+  it('when a disconnected account only pairs payments with the symbol, then its newest row says why it offers no Znovu přiřazovat platby z účtu', async () => {
     await respond([
       bankAccount({
         id: 'a-2',
@@ -240,19 +240,15 @@ describe('Given the bank accounts card in the overview', () => {
       }),
     ]);
 
-    expect(texts('.account-status')).toEqual([
-      'Párování vypnuto',
-      'Párování vypnuto',
-      'Párování vypnuto',
-    ]);
+    expect(texts('.account-status')).toEqual(['Nepřiřazujeme', 'Nepřiřazujeme', 'Nepřiřazujeme']);
     expect(element('.account:nth-child(1) .account-hint--warning')).toBeNull();
     expect(text('.account:nth-child(1) .account-hint')).toBe(
-      'Z tohoto účtu už přiřazujeme jen platby s variabilním symbolem, párování u něj proto znovu zapnout nejde.',
+      'Z tohoto účtu už přiřazujeme jen platby s variabilním symbolem, platby bez symbolu z něj proto znovu přiřazovat nejde.',
     );
     expect(element('.account:nth-child(2) .account-hint')).toBeNull();
     expect(element('.account:nth-child(1) .account-action')).toBeNull();
     expect(element('.account:nth-child(2) .account-action')).toBeNull();
-    expect(texts('.account-action')).toEqual(['Zapnout párování']);
+    expect(texts('.account-action')).toEqual(['Znovu přiřazovat platby z účtu']);
   });
 
   it('when an account waits for a payment, then the row says what to send and can still be disconnected', async () => {
@@ -270,7 +266,7 @@ describe('Given the bank accounts card in the overview', () => {
       'Pošlete z účtu 1 Kč s vaším variabilním symbolem. Jakmile dorazí, přiřadíme vám z něj i platby bez symbolu ode dne zapnutí.',
     );
     expect(texts('.account-meta > li')).toEqual([]);
-    expect(text('.account-action')).toBe('Vypnout párování');
+    expect(text('.account-action')).toBe('Nepřiřazovat platby z tohoto účtu');
   });
 
   it('when accounts were disconnected, then each row is muted and says the day after the last one that counted', async () => {
@@ -285,12 +281,12 @@ describe('Given the bank accounts card in the overview', () => {
       }),
     ]);
 
-    expect(texts('.account-status')).toEqual(['Párování vypnuto', 'Párování vypnuto']);
+    expect(texts('.account-status')).toEqual(['Nepřiřazujeme', 'Nepřiřazujeme']);
     expect(element('.account')?.classList).toContain('account--disconnected');
     expect(texts('.account:nth-child(1) .account-meta > li')).toEqual([
       'ověřeno 12. 03. 2026',
       'vypnuto od 19. 10. 2026',
-      '14 darů bez VS',
+      '14 darů bez symbolu',
       '7 400 Kč',
     ]);
     expect(texts('.account:nth-child(2) .account-meta > li')).toEqual([
@@ -298,28 +294,31 @@ describe('Given the bank accounts card in the overview', () => {
       'vypnuto od 01. 01. 2026',
     ]);
     expect(element('.account-hint')).toBeNull();
-    expect(texts('.account-action')).toEqual(['Zapnout párování', 'Zapnout párování']);
+    expect(texts('.account-action')).toEqual([
+      'Znovu přiřazovat platby z účtu',
+      'Znovu přiřazovat platby z účtu',
+    ]);
   });
 
-  it('when an account was reconnected, then its old row offers no Zapnout párování', async () => {
+  it('when an account was reconnected, then its old row offers no Znovu přiřazovat platby z účtu', async () => {
     await respond([
       bankAccount({ id: 'a-new', status: 'AWAITING_PAYMENT', verifiedOn: null, donationCount: 0 }),
       bankAccount({ status: 'DISCONNECTED', disconnectedOn: '2026-10-18' }),
     ]);
 
-    expect(texts('.account-status')).toEqual(['Čeká na platbu', 'Párování vypnuto']);
-    expect(texts('.account-action')).toEqual(['Vypnout párování']);
+    expect(texts('.account-status')).toEqual(['Čeká na platbu', 'Nepřiřazujeme']);
+    expect(texts('.account-action')).toEqual(['Nepřiřazovat platby z tohoto účtu']);
     expect(texts('.account:nth-child(2) .account-meta > li')).toContain('vypnuto od 19. 10. 2026');
   });
 
-  it('when an account was disconnected twice, then only its newest row offers Zapnout párování', async () => {
+  it('when an account was disconnected twice, then only its newest row offers Znovu přiřazovat platby z účtu', async () => {
     await respond([
       bankAccount({ id: 'a-2', status: 'DISCONNECTED', disconnectedOn: '2026-10-18' }),
       bankAccount({ status: 'DISCONNECTED', disconnectedOn: '2026-09-30' }),
     ]);
 
-    expect(texts('.account-status')).toEqual(['Párování vypnuto', 'Párování vypnuto']);
-    expect(texts('.account-action')).toEqual(['Zapnout párování']);
+    expect(texts('.account-status')).toEqual(['Nepřiřazujeme', 'Nepřiřazujeme']);
+    expect(texts('.account-action')).toEqual(['Znovu přiřazovat platby z účtu']);
     expect(element('.account:nth-child(1) .account-action')).not.toBeNull();
   });
 
@@ -328,7 +327,7 @@ describe('Given the bank accounts card in the overview', () => {
 
     expect(element('.accounts-list')).toBeNull();
     expect(text('.accounts-empty')).toBe(
-      'Zatím jsme od vás nedostali platbu s vaším variabilním symbolem, podle které bychom poznali váš účet.',
+      'Účet se tu objeví sám, jakmile od vás přijde první platba s vaším variabilním symbolem. Nic dalšího dělat nemusíte.',
     );
   });
 
@@ -337,11 +336,9 @@ describe('Given the bank accounts card in the overview', () => {
 
     expect(element('.accounts-empty + .accounts-nudge')).not.toBeNull();
     expect(text('.accounts-nudge')).toBe(
-      'Posíláte nám dary trvalým příkazem se starším variabilním symbolem? ' +
-        'Pošlete 1 Kč přes QR kód v části „Přidat účet“, a to ze stejného účtu, ze kterého trvalý příkaz odchází. ' +
-        'Pak se vás obvykle zeptáme, jestli jsou platby s tím symbolem vaše, a přiřadíme vám i dřívější dary z tohoto účtu, které máme ve výpisech. ' +
-        'Nejjistější je změnit v trvalém příkazu variabilní symbol na 9876543210. ' +
-        'Platí pro účty u českých bank.',
+      'Posíláte trvalým příkazem s jiným symbolem? ' +
+        'Nejjednodušší je změnit v příkazu variabilní symbol na 9876543210. ' +
+        'Jinak pošlete 1 Kč přes „Přidat účet“.',
     );
     expect(text('.accounts-nudge strong')).toBe('9876543210');
   });
@@ -351,18 +348,29 @@ describe('Given the bank accounts card in the overview', () => {
     await respond([]);
 
     expect(text('.accounts-nudge')).toContain(
-      'Nejjistější je změnit v trvalém příkazu variabilní symbol na váš. Platí pro účty u českých bank.',
+      'Nejjednodušší je změnit v příkazu variabilní symbol na váš. Jinak pošlete 1 Kč přes „Přidat účet“.',
     );
     expect(element('.accounts-nudge strong')).toBeNull();
   });
 
-  it('when the donor has known accounts, then a short nudge under the list says a 1 Kč also brings gifts with an older symbol', async () => {
-    await respond([bankAccount()]);
+  it('when the donor has known accounts but none verified, then a short nudge under the list says a 1 Kč also brings gifts with an older symbol', async () => {
+    await respond([bankAccount({ status: 'AWAITING_PAYMENT', verifiedOn: null })]);
 
     expect(element('.accounts-list + .accounts-nudge')).not.toBeNull();
     expect(text('.accounts-nudge')).toBe(
-      'Posíláte trvalým příkazem se starým VS? Ověřte platbou 1 Kč ze stejného účtu a uvidíte i dřívější dary.',
+      'Posíláte trvalým příkazem se starším symbolem? Ověřte platbou 1 Kč ze stejného účtu a uvidíte i dřívější dary.',
     );
+  });
+
+  it('when an account is verified or carries a question, then the list repeats no nudge', async () => {
+    await respond([bankAccount()]);
+    expect(element('.accounts-nudge')).toBeNull();
+
+    fixture.componentInstance.reload();
+    await respond([
+      bankAccount({ status: 'AWAITING_PAYMENT', verifiedOn: null, symbolOffer: symbolOffer() }),
+    ]);
+    expect(element('.accounts-nudge')).toBeNull();
   });
 
   it('when the donor confirmed older symbols at an account, then its row says so and still counts the gifts without a symbol', async () => {
@@ -370,13 +378,13 @@ describe('Given the bank accounts card in the overview', () => {
 
     expect(texts('.account-hint')).toEqual([
       'Platby bez variabilního symbolu z něj vám přiřazujeme automaticky.',
-      'Platby s VS 6123456789 z tohoto účtu jste potvrdili jako své a přiřazujeme vám je stejně jako platby bez VS.',
-      'Platby s VS 7001234567 z tohoto účtu jste potvrdili jako své a přiřazujeme vám je stejně jako platby bez VS.',
+      'Platby se symbolem 6123456789 z tohoto účtu jste potvrdili jako své a přiřazujeme vám je stejně jako platby bez symbolu.',
+      'Platby se symbolem 7001234567 z tohoto účtu jste potvrdili jako své a přiřazujeme vám je stejně jako platby bez symbolu.',
     ]);
     expect(texts('.account-hint strong')).toEqual(['6123456789', '7001234567']);
     expect(texts('.account-meta > li')).toEqual([
       'ověřeno 12. 03. 2026',
-      '14 darů bez VS',
+      '14 darů bez symbolu',
       '7 400 Kč',
     ]);
     expect(element('app-symbol-claim')).toBeNull();
@@ -388,14 +396,16 @@ describe('Given the bank accounts card in the overview', () => {
     await click('.account-action');
 
     expect(text('.account-confirm-text')).toBe(
-      'Platby bez variabilního symbolu ani platby s VS 6123456789, které z tohoto účtu přijdou od zítřka, vám už nebudeme přiřazovat. ' +
+      'Platby bez variabilního symbolu ani platby se symbolem 6123456789, které z tohoto účtu přijdou od zítřka, vám už nebudeme přiřazovat. ' +
         'Dosavadní dary zůstanou; pokud některý z nich není váš, napište nám.',
     );
     expect(element<HTMLAnchorElement>('.account-confirm-text a')?.getAttribute('href')).toBe(
       'mailto:info@nfnn.cz',
     );
     const group = element('.account-confirm') as HTMLElement;
-    expect(text('#' + group.getAttribute('aria-labelledby'))).toContain('platby s VS 6123456789');
+    expect(text('#' + group.getAttribute('aria-labelledby'))).toContain(
+      'platby se symbolem 6123456789',
+    );
   });
 
   it('when the donor switches off pairing at an account with two confirmed symbols, then the confirmation names both', async () => {
@@ -404,7 +414,7 @@ describe('Given the bank accounts card in the overview', () => {
     await click('.account-action');
 
     expect(text('.account-confirm-text')).toContain(
-      'ani platby s VS 6123456789 a 7001234567, které z tohoto účtu přijdou od zítřka',
+      'ani platby se symbolem 6123456789 a 7001234567, které z tohoto účtu přijdou od zítřka',
     );
   });
 
@@ -466,21 +476,23 @@ describe('Given the bank accounts card in the overview', () => {
       return element('#accounts-help-panel') as HTMLElement;
     }
 
-    it('then a round ? button right after the title names what it explains and is collapsed', () => {
+    it('then a button right after the title says in words what it explains and is collapsed', () => {
       const button = helpButton();
       expect(element('.accounts-head h2 + .accounts-help')).toBe(button);
       expect(
         button.compareDocumentPosition(element('.accounts-add') as HTMLElement) &
           Node.DOCUMENT_POSITION_FOLLOWING,
       ).toBeTruthy();
-      expect(normalized(button.textContent ?? '')).toBe('?');
-      expect(button.getAttribute('aria-label')).toBe('Jak přiřazujeme platby');
+      expect(
+        normalized(button.querySelector(':scope > :not([aria-hidden])')?.textContent ?? ''),
+      ).toBe('Jak přiřazujeme platby?');
+      expect(button.hasAttribute('aria-label')).toBe(false);
       expect(button.getAttribute('aria-expanded')).toBe('false');
       expect(button.getAttribute('aria-controls')).toBe('accounts-help-panel');
       expect(helpPanel().hidden).toBe(true);
     });
 
-    it("and presses the ? button, then the labelled panel opens under the head with the donor's symbol", async () => {
+    it("and presses the help button, then the labelled panel opens under the head with the donor's symbol", async () => {
       await click('.accounts-help');
 
       expect(helpButton().getAttribute('aria-expanded')).toBe('true');
@@ -572,7 +584,7 @@ describe('Given the bank accounts card in the overview', () => {
       ]);
     }
 
-    it('then the question stands in that row under the hint, and Vypnout párování stays', () => {
+    it('then the question stands in that row under the hint, and Nepřiřazovat platby z tohoto účtu stays', () => {
       const claim = element('.account .account-main app-symbol-claim') as HTMLElement;
       expect(claim).not.toBeNull();
       expect(
@@ -583,11 +595,12 @@ describe('Given the bank accounts card in the overview', () => {
         'Z tohoto účtu k nám chodí i platby s variabilním symbolem 6123456789 (14 plateb, leden 2025 – říjen 2026). ' +
           'Jsou to dary od vás (Jana Nováková)?',
       );
-      expect(texts('.account-action')).toEqual(['Vypnout párování']);
+      expect(texts('.account-action')).toEqual(['Nepřiřazovat platby z tohoto účtu']);
+      expect(element('.account-action')?.classList).toContain('account-action--apart');
       expect(text('.accounts-status')).toBe('');
     });
 
-    it('and the donor presses Vypnout párování, then the question gives way to the confirmation until that is cancelled', async () => {
+    it('and the donor presses Nepřiřazovat platby z tohoto účtu, then the question gives way to the confirmation until that is cancelled', async () => {
       await click('.account-action');
 
       expect(element('app-symbol-claim')).toBeNull();
@@ -618,14 +631,14 @@ describe('Given the bank accounts card in the overview', () => {
 
       expect(element('app-symbol-claim')).toBeNull();
       expect(texts('.account-hint')).toContain(
-        'Platby s VS 6123456789 z tohoto účtu jste potvrdili jako své a přiřazujeme vám je stejně jako platby bez VS.',
+        'Platby se symbolem 6123456789 z tohoto účtu jste potvrdili jako své a přiřazujeme vám je stejně jako platby bez symbolu.',
       );
       expect(text('.accounts-status')).toBe(
-        'Přiřadili jsme vám 14 plateb s VS 6123456789 z účtu 2900233333/2010.',
+        'Přiřadili jsme vám 14 plateb se symbolem 6123456789 z účtu 2900233333/2010.',
       );
       expect(document.activeElement).toBe(element('h2'));
       expect(donationsChanged).toBe(1);
-      expect(texts('.account-action')).toEqual(['Vypnout párování']);
+      expect(texts('.account-action')).toEqual(['Nepřiřazovat platby z tohoto účtu']);
     });
 
     it('and answers Ano, then the question is gone before the list loads again, so a second press cannot post it again', async () => {
@@ -637,7 +650,7 @@ describe('Given the bank accounts card in the overview', () => {
 
       expect(element('app-symbol-claim')).toBeNull();
       expect(text('.accounts-status')).toBe(
-        'Přiřadili jsme vám 14 plateb s VS 6123456789 z účtu 2900233333/2010.',
+        'Přiřadili jsme vám 14 plateb se symbolem 6123456789 z účtu 2900233333/2010.',
       );
       await respond([
         bankAccount({ confirmedSymbols: ['6123456789'], verificationPaymentOn: '2026-10-16' }),
@@ -654,7 +667,7 @@ describe('Given the bank accounts card in the overview', () => {
 
       expect(element('app-symbol-claim')).toBeNull();
       expect(text('.accounts-status')).toBe(
-        'Odpověď jsme uložili. Platby s VS 6123456789 z účtu 2900233333/2010 vám nepřiřadíme.',
+        'Odpověď jsme uložili. Platby se symbolem 6123456789 z účtu 2900233333/2010 vám nepřiřadíme.',
       );
       await respond([bankAccount({ verificationPaymentOn: '2026-10-16' })]);
     });
@@ -663,7 +676,7 @@ describe('Given the bank accounts card in the overview', () => {
       await answerYes(1);
 
       expect(text('.accounts-status')).toBe(
-        'Přiřadili jsme vám 1 platbu s VS 6123456789 z účtu 2900233333/2010.',
+        'Přiřadili jsme vám 1 platbu se symbolem 6123456789 z účtu 2900233333/2010.',
       );
       expect(donationsChanged).toBe(1);
     });
@@ -672,7 +685,7 @@ describe('Given the bank accounts card in the overview', () => {
       await answerYes(3);
 
       expect(text('.accounts-status')).toBe(
-        'Přiřadili jsme vám 3 platby s VS 6123456789 z účtu 2900233333/2010.',
+        'Přiřadili jsme vám 3 platby se symbolem 6123456789 z účtu 2900233333/2010.',
       );
       expect(donationsChanged).toBe(1);
     });
@@ -681,7 +694,7 @@ describe('Given the bank accounts card in the overview', () => {
       await answerYes(0);
 
       expect(text('.accounts-status')).toBe(
-        'Odpověď jsme uložili. Platby s VS 6123456789 z účtu 2900233333/2010 vám přiřazujeme stejně jako platby bez VS.',
+        'Odpověď jsme uložili. Platby se symbolem 6123456789 z účtu 2900233333/2010 vám přiřazujeme stejně jako platby bez symbolu.',
       );
       expect(donationsChanged).toBe(0);
     });
@@ -690,7 +703,7 @@ describe('Given the bank accounts card in the overview', () => {
       await answerYes(14, [2026]);
 
       expect(text('.accounts-status')).toBe(
-        'Přiřadili jsme vám 14 plateb s VS 6123456789 z účtu 2900233333/2010. Potvrzení za rok 2026 se změnilo, stáhněte si nové.',
+        'Přiřadili jsme vám 14 plateb se symbolem 6123456789 z účtu 2900233333/2010. Potvrzení za rok 2026 se změnilo, stáhněte si nové.',
       );
     });
 
@@ -698,7 +711,7 @@ describe('Given the bank accounts card in the overview', () => {
       await answerYes(14, [2026, 2025]);
 
       expect(text('.accounts-status')).toBe(
-        'Přiřadili jsme vám 14 plateb s VS 6123456789 z účtu 2900233333/2010. Potvrzení za roky 2025 a 2026 se změnila, stáhněte si nová.',
+        'Přiřadili jsme vám 14 plateb se symbolem 6123456789 z účtu 2900233333/2010. Potvrzení za roky 2025 a 2026 se změnila, stáhněte si nová.',
       );
     });
 
@@ -724,7 +737,7 @@ describe('Given the bank accounts card in the overview', () => {
         'Platby bez variabilního symbolu z něj vám přiřazujeme automaticky.',
       ]);
       expect(text('.accounts-status')).toBe(
-        'Odpověď jsme uložili. Platby s VS 6123456789 z účtu 2900233333/2010 vám nepřiřadíme.',
+        'Odpověď jsme uložili. Platby se symbolem 6123456789 z účtu 2900233333/2010 vám nepřiřadíme.',
       );
       expect(document.activeElement).toBe(element('h2'));
       expect(donationsChanged).toBe(0);
@@ -786,7 +799,7 @@ describe('Given the bank accounts card in the overview', () => {
     });
   });
 
-  describe('when the donor presses Vypnout párování', () => {
+  describe('when the donor presses Nepřiřazovat platby z tohoto účtu', () => {
     beforeEach(async () => {
       await respond([bankAccount()]);
       await click('.account-action');
@@ -800,14 +813,14 @@ describe('Given the bank accounts card in the overview', () => {
       expect(element<HTMLAnchorElement>('.account-confirm-text a')?.getAttribute('href')).toBe(
         'mailto:info@nfnn.cz',
       );
-      expect(text('.account-confirm-yes')).toBe('Vypnout párování');
-      expect(text('.account-confirm-no')).toBe('Nechat zapnuté');
+      expect(text('.account-confirm-yes')).toBe('Ano, nepřiřazovat');
+      expect(text('.account-confirm-no')).toBe('Ponechat');
       expect(element('.account-action')).toBeNull();
       expect(document.activeElement).toBe(element('.account-confirm-no'));
       http.expectNone(`${LIST_URL}/${ACCOUNT_ID}/disconnect`);
     });
 
-    it('and cancels, then nothing is sent and the focus goes back to Vypnout párování', async () => {
+    it('and cancels, then nothing is sent and the focus goes back to Nepřiřazovat platby z tohoto účtu', async () => {
       await click('.account-confirm-no');
 
       http.expectNone(`${LIST_URL}/${ACCOUNT_ID}/disconnect`);
@@ -827,8 +840,8 @@ describe('Given the bank accounts card in the overview', () => {
       await settle();
       await respond([bankAccount({ status: 'DISCONNECTED', disconnectedOn: '2026-10-18' })]);
 
-      expect(text('.account-status')).toBe('Párování vypnuto');
-      expect(text('.accounts-status')).toBe('Párování z účtu jsme vypnuli.');
+      expect(text('.account-status')).toBe('Nepřiřazujeme');
+      expect(text('.accounts-status')).toBe('Platby z účtu vám už nebudeme přiřazovat.');
       expect(document.activeElement).toBe(element('h2'));
     });
 
@@ -850,7 +863,7 @@ describe('Given the bank accounts card in the overview', () => {
 
       expect(element('.accounts-error')?.getAttribute('role')).toBe('alert');
       expect(text('.accounts-error')).toBe('Párování z účtu je už vypnuté.');
-      expect(text('.account-status')).toBe('Párování vypnuto');
+      expect(text('.account-status')).toBe('Nepřiřazujeme');
       expect(document.activeElement).toBe(element('h2'));
     });
 
@@ -896,8 +909,8 @@ describe('Given the bank accounts card in the overview', () => {
       bankAccount({ status: 'DISCONNECTED', disconnectedOn: '2026-10-18' }),
     ]);
 
-    expect(texts('.account-status')).toEqual(['Čeká na platbu', 'Párování vypnuto']);
-    expect(texts('.account-action')).toEqual(['Vypnout párování']);
+    expect(texts('.account-status')).toEqual(['Čeká na platbu', 'Nepřiřazujeme']);
+    expect(texts('.account-action')).toEqual(['Nepřiřazovat platby z tohoto účtu']);
     expect(text('.accounts-status')).toBe('Účet čeká na vaši platbu 1 Kč.');
   });
 
@@ -936,13 +949,16 @@ describe('Given the bank accounts card in the overview', () => {
       expect(dialog?.open).toBe(true);
       expect(dialog?.getAttribute('aria-labelledby')).toBe('add-account-title');
       expect(text('#add-account-title')).toBe('Přidat účet');
-      expect(text('.add-account-text')).toBe(
-        'Pošlete z účtu, který chcete přidat, 1 Kč (nebo jakýkoli dar) s vaším variabilním symbolem 9876543210. ' +
-          'Jakmile platba dorazí, účet se tu objeví. ' +
-          'Když ho ověříte poprvé a předtím ho neověřil jiný dárce, přiřadíme vám i dřívější dary z něj, které přišly bez symbolu. ' +
-          'Okamžitá platba dorazí do pár minut, běžný převod obvykle do dalšího pracovního dne. Funguje jen český účet. Neověřujte prosím sběrný účet, přes který posílá peníze víc lidí.',
-      );
-      expect(texts('.add-account-text:first-of-type strong')).toEqual(['1 Kč', '9876543210']);
+      expect(texts('.add-account-text')).toEqual([
+        'Pošlete z účtu, který chcete přidat, 1 Kč podle údajů níže. ' +
+          'Jakmile platba dorazí, účet se tu objeví a platby z něj vám budeme přiřazovat i bez variabilního symbolu.',
+      ]);
+      expect(element('.add-account-text + .add-account-watch')).not.toBeNull();
+      expect(
+        (element('.add-account-watch') as HTMLElement).compareDocumentPosition(
+          element('.add-account-payment') as HTMLElement,
+        ) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
       expect(text('.add-account-qr')).toBe('Připravujeme QR kód…');
 
       const request = http.expectOne({
@@ -963,21 +979,28 @@ describe('Given the bank accounts card in the overview', () => {
       ]);
       expect(texts('.add-account-bank app-copy-button button')).toEqual([
         'Kopírovat číslo účtu',
+        'Kopírovat zprávu pro příjemce',
         'Kopírovat variabilní symbol',
       ]);
     });
 
-    it('then a second paragraph explains that a standing order with an older symbol needs exactly 1 Kč with the message', async () => {
+    it('then a closed disclosure explains when it works and that a standing order with an older symbol needs exactly 1 Kč with the message', async () => {
       http.expectOne((request) => request.url === '/api/donations/payment-qr').flush(paymentQr());
       await settle();
 
-      expect(element('.add-account-text + .add-account-text')).not.toBeNull();
-      expect(texts('.add-account-text')[1]).toBe(
-        'Posíláte z účtu dary trvalým příkazem se starším variabilním symbolem? ' +
-          'Pošlete pak právě 1 Kč se zprávou pro příjemce „Ověření účtu“, jak ji má QR kód; běžný dar nestačí. ' +
-          'Pokud z účtu chodil jen jeden takový symbol, obvykle se vás u účtu zeptáme, jestli jsou platby s ním vaše.',
+      const more = element<HTMLDetailsElement>('details.add-account-more');
+      expect(more?.open).toBe(false);
+      expect(text('.add-account-more summary')).toBe(
+        'Kdy to funguje a co se stane s dřívějšími dary',
       );
-      expect(texts('.add-account-text + .add-account-text strong')).toEqual(['1 Kč']);
+      expect(texts('.add-account-more li')).toEqual([
+        'Funguje jen účet u české banky. Neověřujte prosím sběrný účet, přes který posílá peníze víc lidí.',
+        'Když účet ověříte poprvé a předtím ho neověřil jiný dárce, přiřadíme vám i dřívější dary z něj, které přišly bez symbolu.',
+        'Posíláte z účtu dary trvalým příkazem se starším variabilním symbolem? ' +
+          'Pošlete pak právě 1 Kč se zprávou pro příjemce „Ověření účtu Nadační fond Nová naděje“, jak ji má QR kód; běžný dar nestačí. ' +
+          'Pokud z účtu chodil jen jeden takový symbol, obvykle se vás u účtu zeptáme, jestli jsou platby s ním vaše.',
+        'Okamžitá platba dorazí do pár minut, běžný převod obvykle do dalšího pracovního dne.',
+      ]);
     });
 
     it('and the QR payment cannot be prepared, then the dialog says so and a retry asks again', async () => {
@@ -1104,7 +1127,7 @@ describe('Given the bank accounts card in the overview', () => {
       expect(text('.add-account-watch .account-hint--warning')).toBe(
         'Upozornění: ' +
           'Tento účet ověřil i jiný dárce, proto z něj platby bez variabilního symbolu nepřiřazujeme nikomu. ' +
-          'Pokud z něj dary neposíláte vy, vypněte si u tohoto účtu párování. ' +
+          'Pokud z něj dary neposíláte vy, stiskněte „Nepřiřazovat platby z tohoto účtu“. ' +
           'Jinak z něj prosím posílejte vždy s vaším variabilním symbolem.',
       );
       expect(element('.add-account-watch .watch-detail')).toBeNull();

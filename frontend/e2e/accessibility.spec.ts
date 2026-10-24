@@ -424,8 +424,8 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     await expect(page.locator('.account-hint--warning')).toBeVisible();
     expect(await violations(page)).toEqual([]);
 
-    await page.getByRole('button', { name: 'Vypnout párování' }).click();
-    await expect(page.getByRole('button', { name: 'Nechat zapnuté' })).toBeFocused();
+    await page.getByRole('button', { name: 'Nepřiřazovat platby z tohoto účtu' }).click();
+    await expect(page.getByRole('button', { name: 'Ponechat' })).toBeFocused();
 
     expect(await violations(page)).toEqual([]);
   });
@@ -445,7 +445,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
 
     await question.getByRole('button', { name: 'Ano, jsou moje' }).click();
     await expect(page.locator('.accounts-status')).toHaveText(
-      'Přiřadili jsme vám 14 plateb s VS 6123456789 z účtu 19-2000145399/0800.',
+      'Přiřadili jsme vám 14 plateb se symbolem 6123456789 z účtu 19-2000145399/0800.',
     );
     await expect(question).toHaveCount(0);
 

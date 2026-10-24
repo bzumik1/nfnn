@@ -210,7 +210,7 @@ test.describe('Given a signed-in donor', () => {
     await expect(page).toHaveURL(/\/darce\/ucty$/);
     await expect(page.getByRole('heading', { level: 1, name: 'Bankovní účty' })).toBeFocused();
     await expect(page.locator('.accounts-nudge')).toContainText(
-      'Posíláte nám dary trvalým příkazem se starším variabilním symbolem?',
+      'Posíláte trvalým příkazem s jiným symbolem?',
     );
   });
 

@@ -155,7 +155,7 @@ test.describe('Given a signed-in donor whose verified account sent payments with
     await question.getByRole('button', { name: 'Ano, jsou moje' }).click();
 
     await expect(page.locator('.accounts-status')).toHaveText(
-      `Přiřadili jsme vám 3 platby s VS ${SYMBOL} z účtu ${ACCOUNT}. Potvrzení za rok 2026 se změnilo, stáhněte si nové.`,
+      `Přiřadili jsme vám 3 platby se symbolem ${SYMBOL} z účtu ${ACCOUNT}. Potvrzení za rok 2026 se změnilo, stáhněte si nové.`,
     );
     expect(answers.posted).toEqual([
       {
@@ -166,7 +166,7 @@ test.describe('Given a signed-in donor whose verified account sent payments with
     await expect(question).toHaveCount(0);
     await expect(page.locator('.accounts-list .account-hint')).toHaveText([
       ACTIVE_HINT,
-      `Platby s VS ${SYMBOL} z tohoto účtu jste potvrdili jako své a přiřazujeme vám je stejně jako platby bez VS.`,
+      `Platby se symbolem ${SYMBOL} z tohoto účtu jste potvrdili jako své a přiřazujeme vám je stejně jako platby bez symbolu.`,
     ]);
     await expect(page.getByRole('heading', { name: 'Moje bankovní účty' })).toBeFocused();
 
@@ -174,9 +174,9 @@ test.describe('Given a signed-in donor whose verified account sent payments with
 
     await expect(page.locator('.payments-card tbody tr')).toHaveCount(5);
     await expect(page.locator('.payments-card .pairing-tag [aria-hidden="true"]')).toHaveText([
-      `VS ${SYMBOL} · …5399/0800`,
-      `VS ${SYMBOL} · …5399/0800`,
-      `VS ${SYMBOL} · …5399/0800`,
+      `symbol ${SYMBOL} · účet …5399/0800`,
+      `symbol ${SYMBOL} · účet …5399/0800`,
+      `symbol ${SYMBOL} · účet …5399/0800`,
     ]);
 
     await openDonorSection(page, 'Přehled');
@@ -198,7 +198,7 @@ test.describe('Given a signed-in donor whose verified account sent payments with
     await question.getByRole('button', { name: 'Ne, nejsou moje' }).click();
 
     await expect(page.locator('.accounts-status')).toHaveText(
-      `Odpověď jsme uložili. Platby s VS ${SYMBOL} z účtu ${ACCOUNT} vám nepřiřadíme.`,
+      `Odpověď jsme uložili. Platby se symbolem ${SYMBOL} z účtu ${ACCOUNT} vám nepřiřadíme.`,
     );
     expect(answers.posted).toEqual([
       {
