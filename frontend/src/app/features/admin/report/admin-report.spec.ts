@@ -113,7 +113,7 @@ describe('Given an administrator on the monthly report page', () => {
     const request = http.expectOne(REPORT_URL);
 
     expect(request.request.headers.get('Authorization')).toBe('Bearer token-1');
-    expect(text('h1')).toBe('Měsíční přehled');
+    expect(text('h1')).toBe('Měsíční e-mail');
     expect(text('[role="status"]:not(:empty)')).toBe('Načítáme nastavení přehledu…');
     request.flush(reportView());
   });

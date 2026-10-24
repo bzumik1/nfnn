@@ -37,13 +37,13 @@ export const adminRoutes: Routes = [
       },
       {
         path: 'starsi-symboly',
-        title: $localize`:@@admin.symbolClaims.pageTitle:Starší symboly | Správa | Nová naděje – nadační fond`,
+        title: $localize`:@@admin.symbolClaims.pageTitle:Odpovědi o starších symbolech | Správa | Nová naděje – nadační fond`,
         loadComponent: () =>
           import('./symbol-claims/admin-symbol-claims').then((m) => m.AdminSymbolClaims),
       },
       {
         path: 'prehledy',
-        title: $localize`:@@admin.report.pageTitle:Měsíční přehled | Správa | Nová naděje – nadační fond`,
+        title: $localize`:@@admin.report.pageTitle:Měsíční e-mail | Správa | Nová naděje – nadační fond`,
         loadComponent: () => import('./report/admin-report').then((m) => m.AdminReport),
       },
       {
@@ -99,7 +99,7 @@ export const adminRoutes: Routes = [
       },
       {
         path: 'historie',
-        title: $localize`:@@admin.actions.pageTitle:Historie správy | Správa | Nová naděje – nadační fond`,
+        title: $localize`:@@admin.actions.pageTitle:Historie změn | Správa | Nová naděje – nadační fond`,
         loadComponent: () => import('./actions/admin-actions').then((m) => m.AdminActions),
       },
     ],

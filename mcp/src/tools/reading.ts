@@ -213,7 +213,7 @@ export function registerReadingTools(server: McpServer, deps: ToolDependencies):
   server.registerTool(
     'nfnn_admin_actions',
     {
-      title: 'Historie správy',
+      title: 'Historie změn',
       description: 'The audit trail of the administration, newest first: who did what and when.',
       inputSchema: z.object({
         before: z

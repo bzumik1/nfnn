@@ -70,8 +70,12 @@ test.describe('Given an administrator on the older symbols page', () => {
 
     await page.goto('/sprava/starsi-symboly');
 
-    await expect(page).toHaveTitle('Starší symboly | Správa | Nová naděje – nadační fond');
-    await expect(page.getByRole('heading', { level: 1, name: 'Starší symboly' })).toBeFocused();
+    await expect(page).toHaveTitle(
+      'Odpovědi o starších symbolech | Správa | Nová naděje – nadační fond',
+    );
+    await expect(
+      page.getByRole('heading', { level: 1, name: 'Odpovědi o starších symbolech' }),
+    ).toBeFocused();
     await expect(page.locator('tbody tr')).toHaveCount(2);
     const janaRow = page.locator('tbody tr').nth(0);
     const petrRow = page.locator('tbody tr').nth(1);
