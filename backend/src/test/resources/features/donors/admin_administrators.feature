@@ -40,6 +40,14 @@ Feature: An administrator manages who administers the site
     And the problem type ends with "donors/email-not-registered"
     And the admin action "GRANT_ADMINISTRATION" by "Jana" is not recorded
 
+  Scenario: An account that has not confirmed its e-mail cannot become an administrator
+    Given a person registered with email "nova@example.cz" and password "correct horse battery" but has not confirmed the e-mail
+    When "Jana" makes the e-mail "nova@example.cz" an administrator
+    Then the response status is 409
+    And the problem type ends with "donors/administrator-email-not-confirmed"
+    And the admin action "GRANT_ADMINISTRATION" by "Jana" is not recorded
+    And the e-mail "nova@example.cz" is not an administrator in the database
+
   Scenario: A donor who already is an administrator is not added twice
     When "Jana" makes "Jana" an administrator
     Then the response status is 409
@@ -127,3 +135,10 @@ Feature: An administrator manages who administers the site
     And "Jana" removes "Petr" from the administrators
     And the application starts
     Then "Petr" is not an administrator in the database
+
+  Scenario: A configured e-mail whose account is not confirmed gets no role when the application starts
+    Given nobody administers the site
+    And a person registered with email "nova@example.cz" and password "correct horse battery" but has not confirmed the e-mail
+    And the configuration names the e-mail "nova@example.cz" as the administrator
+    When the application starts
+    Then the e-mail "nova@example.cz" is not an administrator in the database

@@ -154,6 +154,11 @@ public class AdminAdministratorsStepDefinitions {
         configured = new AdministratorProperties(List.of(scenarioDonors.credentialsOf(alias).email(), email));
     }
 
+    @Given("the configuration names the e-mail {string} as the administrator")
+    public void theConfigurationNamesTheEmailAsTheAdministrator(String email) {
+        configured = new AdministratorProperties(List.of(email));
+    }
+
     @When("the application starts")
     public void theApplicationStarts() {
         new AdministratorBootstrap(configured, administrators).run();
@@ -172,6 +177,13 @@ public class AdminAdministratorsStepDefinitions {
     @Then("{string} is not an administrator in the database")
     public void isNotAnAdministratorInTheDatabase(String alias) {
         assertThat(administratorRows(alias)).isZero();
+    }
+
+    @Then("the e-mail {string} is not an administrator in the database")
+    public void theEmailIsNotAnAdministratorInTheDatabase(String email) {
+        long rows = jdbc.sql("select count(*) from donor_role r join donor d on d.id = r.donor_id where r.role = 'ADMIN' and d.email = ?")
+                .param(email).query(Long.class).single();
+        assertThat(rows).isZero();
     }
 
     private long administratorRows(String alias) {

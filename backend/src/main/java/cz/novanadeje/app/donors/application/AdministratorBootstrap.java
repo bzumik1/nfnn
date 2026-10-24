@@ -36,6 +36,8 @@ public class AdministratorBootstrap {
                         + "an administrator", position, properties.addresses().size());
                 case NOT_REGISTERED -> log.info("Configured administrator {} of {} is not registered yet; the role follows once the "
                         + "address is confirmed", position, properties.addresses().size());
+                case NOT_CONFIRMED -> log.info("Configured administrator {} of {} has not confirmed the address yet; the role follows once "
+                        + "it is confirmed", position, properties.addresses().size());
             }
         }
     }

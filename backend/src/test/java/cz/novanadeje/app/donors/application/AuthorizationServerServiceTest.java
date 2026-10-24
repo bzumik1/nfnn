@@ -424,6 +424,7 @@ class AuthorizationServerServiceTest {
     private static Donor administrator() {
         Donor donor = Donor.register(DONOR, DonorType.PERSON, "Jana Nováková", null, new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"),
                 new EmailAddress("jana@example.cz"), new PasswordHash("$hash"), new VariableSymbol("1234567890"), LocaleCode.CS, NOW);
+        donor.verifyEmail(NOW);
         donor.grantAdministration();
         return donor;
     }

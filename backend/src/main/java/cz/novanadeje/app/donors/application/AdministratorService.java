@@ -128,6 +128,9 @@ public class AdministratorService {
         if (!donors.findAdministrators().isEmpty()) {
             return StartupGrant.SITE_HAS_ADMINISTRATOR;
         }
+        if (!donor.isEmailVerified()) {
+            return StartupGrant.NOT_CONFIRMED;
+        }
         donor.grantAdministration();
         donors.save(donor);
         log.info("Administrator role granted at startup to donor {}", donor.id());

@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donors.application;
 
+import cz.novanadeje.app.donors.domain.AdministratorEmailNotConfirmed;
 import cz.novanadeje.app.donors.domain.AlreadyAdministrator;
 import cz.novanadeje.app.donors.domain.Donor;
 import cz.novanadeje.app.donors.domain.DonorId;
@@ -129,6 +130,17 @@ class AdministratorServiceTest {
     }
 
     @Test
+    @DisplayName("Given a donor who has not confirmed the e-mail, when the role is granted, then the request conflicts and nothing is saved")
+    void should_refuse_when_granted_given_unconfirmed_donor() {
+        when(donors.findByEmail(PETR_EMAIL)).thenReturn(Optional.of(unconfirmedDonor(PETR, "Petr Svoboda", PETR_EMAIL.value())));
+
+        assertThatThrownBy(() -> service.grant(JANA, PETR_EMAIL)).isInstanceOf(AdministratorEmailNotConfirmed.class);
+
+        verify(donors, never()).save(any());
+        verifyNoInteractions(refreshTokens, events);
+    }
+
+    @Test
     @DisplayName("Given a donor who already is an administrator, when the role is granted, then the request conflicts and nothing is saved")
     void should_refuse_when_granted_given_administrator() {
         when(donors.findByEmail(PETR_EMAIL)).thenReturn(Optional.of(administrator(PETR, "Petr Svoboda", PETR_EMAIL.value())));
@@ -223,6 +235,16 @@ class AdministratorServiceTest {
     }
 
     @Test
+    @DisplayName("Given a donor who has not confirmed the e-mail, when the role is granted at startup, then the outcome says so and nothing is saved")
+    void should_report_not_confirmed_when_granted_at_startup_given_unconfirmed_donor() {
+        when(donors.findByEmail(PETR_EMAIL)).thenReturn(Optional.of(unconfirmedDonor(PETR, "Petr Svoboda", PETR_EMAIL.value())));
+
+        assertThat(service.grantAtStartup(PETR_EMAIL)).isEqualTo(StartupGrant.NOT_CONFIRMED);
+
+        verify(donors, never()).save(any());
+    }
+
+    @Test
     @DisplayName("Given no donor with the e-mail, when the role is granted at startup, then the outcome says so and nothing is saved")
     void should_report_not_registered_when_granted_at_startup_given_unknown_email() {
         when(donors.findByEmail(PETR_EMAIL)).thenReturn(Optional.empty());
@@ -307,6 +329,11 @@ class AdministratorServiceTest {
     private static Donor plainDonor(DonorId id, String name, String email) {
         return Donor.reconstitute(id, DonorType.PERSON, name, null, ADDRESS, new EmailAddress(email), new PasswordHash("$hash"),
                 new VariableSymbol("4821937560"), LocaleCode.CS, Set.of(Role.DONOR), NOW.minusSeconds(1000), NOW.minusSeconds(900), null);
+    }
+
+    private static Donor unconfirmedDonor(DonorId id, String name, String email) {
+        return Donor.reconstitute(id, DonorType.PERSON, name, null, ADDRESS, new EmailAddress(email), new PasswordHash("$hash"),
+                new VariableSymbol("4821937560"), LocaleCode.CS, Set.of(Role.DONOR), NOW.minusSeconds(1000), null, null);
     }
 
     private static Donor administrator(DonorId id, String name, String email) {
