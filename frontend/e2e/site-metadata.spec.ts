@@ -20,6 +20,8 @@ test.describe('Given a crawler or a link preview of the site', () => {
     const locations = (await sitemap.text()).match(/<loc>([^<]+)<\/loc>/g) ?? [];
     expect(locations).toEqual([
       '<loc>https://nfnn.cz/</loc>',
+      '<loc>https://nfnn.cz/aktuality</loc>',
+      '<loc>https://nfnn.cz/projekty</loc>',
       '<loc>https://nfnn.cz/zasady-ochrany-osobnich-udaju</loc>',
     ]);
   });

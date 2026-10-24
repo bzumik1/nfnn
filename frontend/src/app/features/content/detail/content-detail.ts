@@ -13,7 +13,7 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Title } from '@angular/platform-browser';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Observable } from 'rxjs';
 import { problemTypeEndsWith } from '../../../core/auth/api-problem';
 import { formatDonationDate } from '../../donations/donation-date';
@@ -33,7 +33,8 @@ interface Page {
   body: string;
   imageId: string | null;
   imageAlt: string;
-  backFragment: string;
+  slug: string;
+  backPath: string;
 }
 
 const IMAGE_WIDTH = 960;
@@ -49,6 +50,7 @@ const SITE_NAME = $localize`:@@content.detail.siteName:Nová naděje – nadačn
 })
 export class ContentDetail {
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   private readonly newsApi = inject(NewsApi);
   private readonly projectsApi = inject(ProjectsApi);
   private readonly titleService = inject(Title);
@@ -91,6 +93,9 @@ export class ContentDetail {
           this.page.set(page);
           this.titleService.setTitle(`${page.title} | ${SITE_NAME}`);
           this.state.set('ready');
+          if (page.slug !== slug) {
+            void this.router.navigate([page.backPath, page.slug], { replaceUrl: true });
+          }
         },
         error: (failure: unknown) => {
           this.state.set(
@@ -136,7 +141,8 @@ function newsPage(article: NewsArticleResponse): Page {
     body: article.body,
     imageId: article.coverImage?.id ?? null,
     imageAlt: article.coverImage?.alt ?? '',
-    backFragment: 'aktuality',
+    slug: article.slug,
+    backPath: '/aktuality',
   };
 }
 
@@ -148,6 +154,7 @@ function projectPage(project: ProjectResponse): Page {
     body: project.body,
     imageId: project.coverImage?.id ?? null,
     imageAlt: project.coverImage?.alt ?? '',
-    backFragment: 'projekty',
+    slug: project.slug,
+    backPath: '/projekty',
   };
 }

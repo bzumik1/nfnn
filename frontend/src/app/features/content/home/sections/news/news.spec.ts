@@ -21,6 +21,10 @@ describe('Given the news section', () => {
     expect(root().querySelector('a[href="#"]')).toBeNull();
   });
 
+  it('when only the placeholder cards show, then no link offers a list of articles that does not exist yet', () => {
+    expect(root().querySelector('a.all-link')).toBeNull();
+  });
+
   it('when it renders, then the photos are decorative because each title follows them', () => {
     const alts = Array.from(root().querySelectorAll('img')).map((image) =>
       image.getAttribute('alt'),
@@ -72,5 +76,8 @@ describe('Given the news section with published articles', () => {
     expect(cards[1].querySelector('img')).toBeNull();
     expect(cards[1].querySelector('.news-tag')).toBeNull();
     expect(root.textContent).not.toContain('Dominikovi');
+    const all = root.querySelector('a.all-link') as HTMLAnchorElement;
+    expect(all.getAttribute('href')).toBe('/aktuality');
+    expect(all.textContent?.trim()).toBe('Všechny aktuality');
   });
 });

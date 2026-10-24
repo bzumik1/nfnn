@@ -33,6 +33,11 @@
   align-items: start;
 }
 
+.all {
+  margin-top: var(--space-10);
+  text-align: center;
+}
+
 @include bp.down(tablet) {
   .projects {
     padding: var(--space-16) 0;

@@ -29,6 +29,10 @@ describe('Given the projects section', () => {
     expect(root().textContent).not.toContain('Kliknutím na kartu');
   });
 
+  it('when only the placeholder cards show, then no link offers a list of projects that does not exist yet', () => {
+    expect(root().querySelector('a.all-link')).toBeNull();
+  });
+
   it('when it renders, then the photos are decorative and the card titles name the children', () => {
     const alts = Array.from(root().querySelectorAll('img')).map((image) =>
       image.getAttribute('alt'),
@@ -94,5 +98,8 @@ describe('Given the projects section with published projects', () => {
     expect(cards[1].querySelector('.card-tag')).toBeNull();
     expect(cards[1].querySelector('.card-year')?.textContent).toBe('2026');
     expect(root.textContent).not.toContain('Dominik, 7 let');
+    const all = root.querySelector('a.all-link') as HTMLAnchorElement;
+    expect(all.getAttribute('href')).toBe('/projekty');
+    expect(all.textContent?.trim()).toBe('Všechny projekty');
   });
 });
