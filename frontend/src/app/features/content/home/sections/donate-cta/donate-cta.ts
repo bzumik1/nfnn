@@ -76,6 +76,7 @@ export class DonateCta {
   private readonly bankLabel = viewChild<ElementRef<HTMLElement>>('bankLabel');
 
   readonly variableSymbol = input<string | null>(null);
+  readonly donorName = input<string | null>(null);
 
   protected readonly presets: readonly AmountPreset[] = [
     { amount: 1000, label: $localize`:@@home.donate.amount.preset1000:1 000 Kč` },

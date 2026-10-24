@@ -23,9 +23,7 @@
       <p class="ui-eyebrow" i18n="@@home.donate.eyebrow">Přispět</p>
       <h2 class="title" i18n="@@home.donate.title">Přispějte na pomůcky pro děti</h2>
       <p class="lead" i18n="@@home.donate.lead">
-        Zaujalo vás naše poslání a rádi byste pomáhali s námi? Stačí zvolit částku a zaplatit QR
-        kódem nebo převodem na náš účet. Rázem se budete podílet na našich projektech. Každý
-        příspěvek je plně transparentní a pomáhá přímo konkrétním dětem.
+        Z darů pořizujeme zdravotní a kompenzační pomůcky a přístroje pro konkrétní děti.
       </p>
 
       <div class="amount" role="group" aria-labelledby="donate-amount-label">
@@ -90,6 +88,110 @@
         }
       </div>
 
+      <div class="before-pay">
+        @if (variableSymbol(); as symbol) {
+          @if (donorName(); as name) {
+            <p i18n="@@home.donate.payingAs">
+              Platíte jako <strong>{{ name }}</strong
+              >, variabilní symbol <strong>{{ symbol }}</strong
+              >.
+            </p>
+          } @else {
+            <p i18n="@@home.donate.payingWithSymbol">
+              Platíte s variabilním symbolem <strong>{{ symbol }}</strong
+              >.
+            </p>
+          }
+        } @else {
+          <p i18n="@@home.donate.receiptHint">
+            Chcete potvrzení o daru pro daňové přiznání? Přihlaste se nebo si založte účet ještě
+            před platbou: QR kód pak ponese váš variabilní symbol.
+          </p>
+          <div class="account-actions">
+            <button
+              type="button"
+              class="account-register"
+              (click)="register()"
+              i18n="@@home.donate.account.register"
+            >
+              Založit účet
+            </button>
+            <button
+              type="button"
+              class="account-sign-in"
+              (click)="signIn()"
+              i18n="@@home.donate.account.signIn"
+            >
+              Přihlásit se
+            </button>
+          </div>
+        }
+      </div>
+
+      <h3 class="step-title" i18n="@@home.donate.pay.title">Zaplaťte</h3>
+
+      @if (bankAccount(); as account) {
+        <div class="bank">
+          <p #bankLabel class="panel-label" tabindex="-1" i18n="@@home.donate.bank.label">
+            Bankovní spojení
+          </p>
+          <div class="bank-rows">
+            <div class="bank-row">
+              <span class="bank-key" i18n="@@home.donate.bank.account">Číslo účtu</span>
+              <span class="bank-value-wrap">
+                <span class="bank-value">{{ account.accountNumber }}</span>
+                <app-copy-button
+                  [value]="account.accountNumber"
+                  what="číslo účtu"
+                  i18n-what="@@home.donate.bank.copyAccount"
+                />
+              </span>
+            </div>
+            @if (amount(); as chosen) {
+              <div class="bank-row">
+                <span class="bank-key" i18n="@@home.donate.bank.amount">Částka</span>
+                <span class="bank-value-wrap">
+                  <span class="bank-value"
+                    >{{ crowns(chosen) }}&nbsp;<ng-container i18n="@@home.donate.amount.currency"
+                      >Kč</ng-container
+                    ></span
+                  >
+                  <app-copy-button
+                    [value]="'' + chosen"
+                    what="částku"
+                    i18n-what="@@home.donate.bank.copyAmount"
+                  />
+                </span>
+              </div>
+            }
+            @if (variableSymbol(); as symbol) {
+              <div class="bank-row">
+                <span class="bank-key" i18n="@@home.donate.bank.vs">Variabilní symbol</span>
+                <span class="bank-value-wrap">
+                  <span class="bank-value">{{ symbol }}</span>
+                  <app-copy-button
+                    [value]="symbol"
+                    what="variabilní symbol"
+                    i18n-what="@@home.donate.bank.copyVs"
+                  />
+                </span>
+              </div>
+            }
+            <div class="bank-row">
+              <span class="bank-key" i18n="@@home.donate.bank.iban">IBAN</span>
+              <span class="bank-value-wrap">
+                <span class="bank-value">{{ ibanInGroups() }}</span>
+                <app-copy-button
+                  [value]="account.iban"
+                  what="IBAN"
+                  i18n-what="@@home.donate.bank.copyIban"
+                />
+              </span>
+            </div>
+          </div>
+        </div>
+      }
+
       <div class="qr">
         <div class="qr-code" [attr.aria-busy]="state().kind === 'loading'">
           @if (shownQr(); as qr) {
@@ -153,100 +255,30 @@
         </p>
       </div>
 
-      @if (bankAccount(); as account) {
-        <div class="bank">
-          <p #bankLabel class="panel-label" tabindex="-1" i18n="@@home.donate.bank.label">
-            Bankovní spojení
-          </p>
-          <div class="bank-rows">
-            <div class="bank-row">
-              <span class="bank-key" i18n="@@home.donate.bank.account">Číslo účtu</span>
-              <span class="bank-value-wrap">
-                <span class="bank-value">{{ account.accountNumber }}</span>
-                <app-copy-button
-                  [value]="account.accountNumber"
-                  what="číslo účtu"
-                  i18n-what="@@home.donate.bank.copyAccount"
-                />
-              </span>
-            </div>
-            @if (amount(); as chosen) {
-              <div class="bank-row">
-                <span class="bank-key" i18n="@@home.donate.bank.amount">Částka</span>
-                <span class="bank-value-wrap">
-                  <span class="bank-value"
-                    >{{ crowns(chosen) }}&nbsp;<ng-container i18n="@@home.donate.amount.currency"
-                      >Kč</ng-container
-                    ></span
-                  >
-                  <app-copy-button
-                    [value]="'' + chosen"
-                    what="částku"
-                    i18n-what="@@home.donate.bank.copyAmount"
-                  />
-                </span>
-              </div>
-            }
-            @if (variableSymbol(); as symbol) {
-              <div class="bank-row">
-                <span class="bank-key" i18n="@@home.donate.bank.vs">Variabilní symbol</span>
-                <span class="bank-value-wrap">
-                  <span class="bank-value">{{ symbol }}</span>
-                  <app-copy-button
-                    [value]="symbol"
-                    what="variabilní symbol"
-                    i18n-what="@@home.donate.bank.copyVs"
-                  />
-                </span>
-              </div>
-            }
-            <div class="bank-row">
-              <span class="bank-key" i18n="@@home.donate.bank.iban">IBAN</span>
-              <span class="bank-value-wrap">
-                <span class="bank-value">{{ ibanInGroups() }}</span>
-                <app-copy-button
-                  [value]="account.iban"
-                  what="IBAN"
-                  i18n-what="@@home.donate.bank.copyIban"
-                />
-              </span>
-            </div>
-          </div>
+      <div class="next">
+        <h3 class="step-title" i18n="@@home.donate.next.title">Co bude dál</h3>
+        <ul class="next-list">
           @if (variableSymbol()) {
-            <p class="bank-note" i18n="@@home.donate.bank.noteSignedIn">
-              Dar se ve vašem přehledu objeví do hodiny poté, co ho banka připíše (převod z jiné
-              banky obvykle trvá 1 pracovní den).
-            </p>
+            <li i18n="@@home.donate.bank.noteSignedIn">
+              Dar se ve vašem přehledu objeví do hodiny poté, co ho banka připíše. Převod z jiné
+              banky k nám obvykle dorazí do následujícího pracovního dne.
+            </li>
+            <li i18n="@@home.donate.next.receiptSignedIn">
+              Po skončení roku si ve svém účtu dárce stáhnete roční potvrzení o daru. Dar si můžete
+              odečíst od základu daně podle zákona o daních z příjmů.
+            </li>
           } @else {
-            <p class="bank-note" i18n="@@home.donate.bank.noteAnonymous">
-              Chcete dar vidět ve svém přehledu a stáhnout si potvrzení? Přihlaste se před platbou,
-              QR kód pak ponese váš variabilní symbol.
-            </p>
-            <div class="account-actions">
-              <button
-                type="button"
-                class="account-register"
-                (click)="register()"
-                i18n="@@home.donate.account.register"
-              >
-                Založit účet
-              </button>
-              <button
-                type="button"
-                class="account-sign-in"
-                (click)="signIn()"
-                i18n="@@home.donate.account.signIn"
-              >
-                Přihlásit se
-              </button>
-            </div>
-            <p class="bank-note bank-note-later" i18n="@@home.donate.bank.noteLater">
+            <li i18n="@@home.donate.bank.noteLater">
               Platili jste bez přihlášení? Po registraci pošlete další dar se svým variabilním
               symbolem ze stejného účtu a dřívější dary z něj se vám přiřadí také.
-            </p>
+            </li>
+            <li i18n="@@home.donate.next.receiptAnonymous">
+              S účtem dárce si po skončení roku stáhnete roční potvrzení o daru. Dar si můžete
+              odečíst od základu daně podle zákona o daních z příjmů.
+            </li>
           }
-        </div>
-      }
+        </ul>
+      </div>
     </div>
   </div>
 </section>

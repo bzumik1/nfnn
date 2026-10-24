@@ -17,7 +17,9 @@
 
 .footer-brand {
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
 
   img {
     height: 40px;
@@ -70,6 +72,10 @@
   &.is-active {
     color: var(--color-on-inverse);
   }
+}
+
+.footer-mail {
+  font-size: var(--text-md);
 }
 
 @include bp.down(tablet) {
