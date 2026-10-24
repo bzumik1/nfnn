@@ -203,7 +203,7 @@ describe('Given the donate section', () => {
       fixture.nativeElement.querySelectorAll('.next li') as NodeListOf<Element>,
     ).map((item) => item.textContent?.replace(/\s+/g, ' ').trim());
     expect(items).toEqual([
-      'Platili jste bez přihlášení? Po registraci pošlete další dar se svým variabilním symbolem ze stejného účtu a dřívější dary z něj se vám přiřadí také.',
+      'Platili jste bez přihlášení? Po registraci si v sekci Bankovní účty přidejte svůj účet ověřovací platbou 1 Kč a dřívější dary z něj se vám přiřadí také.',
       'S účtem dárce si po skončení roku stáhnete roční potvrzení o daru. Dar si můžete odečíst od základu daně podle zákona o daních z příjmů.',
     ]);
   });
