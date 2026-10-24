@@ -248,6 +248,7 @@ class FioBankStatementSourceTest {
     }
 
     @Test
+    @DisplayName("Given a rejected token, when a statement is fetched, then the failure is mapped to unauthorized")
     void should_map_unauthorized_when_fetched_given_rejected_token() {
         fio.fail(new FioAuthorizationException("refused with HTTP 500", 500, ""));
 
@@ -258,6 +259,7 @@ class FioBankStatementSourceTest {
     }
 
     @Test
+    @DisplayName("Given a timeout, when a statement is fetched, then the failure is mapped to transport")
     void should_map_transport_when_fetched_given_timeout() {
         fio.fail(new FioTransportException("Fio API request GET /periods/***/ failed: timed out", new HttpTimeoutException("timed out"), true));
 
@@ -265,6 +267,7 @@ class FioBankStatementSourceTest {
     }
 
     @Test
+    @DisplayName("Given a 2xx body that is not a statement, when it is fetched, then the failure is mapped to invalid response")
     void should_map_invalid_response_when_fetched_given_2xx_body_that_is_not_a_statement() {
         fio.fail(new FioMalformedResponseException("answered with HTTP 200 and a body this client does not understand", 200, "<html>", new IOException("x")));
 
@@ -272,6 +275,7 @@ class FioBankStatementSourceTest {
     }
 
     @Test
+    @DisplayName("Given another status, when a statement is fetched, then the failure is mapped to unexpected")
     void should_map_unexpected_when_fetched_given_other_status() {
         fio.fail(new FioTooManyTransactionsException("refused with HTTP 413", ""));
         assertThat(unavailable().kind()).isEqualTo(ImportFailureKind.UNEXPECTED);

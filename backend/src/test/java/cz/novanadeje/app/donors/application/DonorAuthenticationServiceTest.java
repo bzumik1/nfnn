@@ -130,6 +130,7 @@ class DonorAuthenticationServiceTest {
     }
 
     @Test
+    @DisplayName("Given the matching password, when a donor signs in, then a session opens")
     void should_open_session_when_logged_in_given_matching_password() {
         when(donors.findByEmail(EMAIL)).thenReturn(Optional.of(donor));
         when(passwordHasher.matches(new RawPassword("correct horse battery"), HASH)).thenReturn(true);
@@ -142,6 +143,7 @@ class DonorAuthenticationServiceTest {
     }
 
     @Test
+    @DisplayName("Given a wrong password, when a donor signs in, then it is refused")
     void should_refuse_when_logged_in_given_wrong_password() {
         when(donors.findByEmail(EMAIL)).thenReturn(Optional.of(donor));
         when(passwordHasher.matches(any(), any())).thenReturn(false);
@@ -153,6 +155,7 @@ class DonorAuthenticationServiceTest {
     }
 
     @Test
+    @DisplayName("Given an unknown e-mail, when a donor signs in, then it is refused")
     void should_refuse_when_logged_in_given_unknown_email() {
         when(donors.findByEmail(EMAIL)).thenReturn(Optional.empty());
 
@@ -179,6 +182,7 @@ class DonorAuthenticationServiceTest {
     }
 
     @Test
+    @DisplayName("Given a malformed e-mail, when a donor signs in, then it is refused")
     void should_refuse_when_logged_in_given_malformed_email() {
         assertThatThrownBy(() -> service.login("not an email", "correct horse battery"))
                 .isInstanceOf(InvalidCredentials.class);

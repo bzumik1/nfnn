@@ -14,6 +14,7 @@ class BCryptPasswordHasherTest {
     private final BCryptPasswordHasher hasher = new BCryptPasswordHasher();
 
     @Test
+    @DisplayName("Given the password a hash was made from, when it is checked, then it matches")
     void should_match_when_checked_given_the_password_it_was_made_from() {
         RawPassword password = new RawPassword("correct horse battery");
 

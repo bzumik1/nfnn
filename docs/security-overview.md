@@ -6,7 +6,7 @@ Threat model: a public site (the repository is public since 2026-10-22) whose do
 
 ## Donor authentication
 
-- Passwords: 12–128 characters, refused when on the short common-password list in `RawPassword`; stored as BCrypt (cost 12) over the password's SHA-256 hex digest (`BCryptPasswordHasher`), so all 128 characters count. A sign-in with an unknown e-mail, or with a password on an account that has none, costs a real BCrypt compare against `UNKNOWN_DONOR_HASH` and answers `auth/invalid-credentials`.
+- Passwords: 12–128 characters, refused (`RawPassword`) when it is one of the 10,000 most common passwords of 12 characters or more (SecLists, MIT; `donors/domain/common-passwords.txt`, compared in lower case); stored as BCrypt (cost 12) over the password's SHA-256 hex digest (`BCryptPasswordHasher`), so all 128 characters count. A sign-in with an unknown e-mail, or with a password on an account that has none, costs a real BCrypt compare against `UNKNOWN_DONOR_HASH` and answers `auth/invalid-credentials`.
 - Tokens: access token HS256 JWT, 15 min, kept in memory only; refresh token 14 days in an HttpOnly Secure SameSite=Strict cookie on `/api/donors/auth`, stored hashed, rotated on use (`used_at`), and a replayed one revokes every session of the donor (`revoked_at`).
 - Password reset: a 43-character secret in the URL fragment only, stored as SHA-256, single use, 1 h, at most 3 live per donor; confirming it revokes all sessions.
 - E-mail verification: the same kind of link, 24 h. An unconfirmed account cannot sign in (401 `auth/email-not-verified` only with the right password), has no `donor_record` and gets no reset link. Registration always answers 202, so no address can be enumerated.

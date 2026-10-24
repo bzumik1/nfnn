@@ -125,6 +125,7 @@ class SymbolClaimTest {
     }
 
     @Test
+    @DisplayName("Given the text of a symbol claim id, when it is parsed, then it gives back the same id")
     void should_round_trip_when_parsed_given_symbol_claim_id_text() {
         SymbolClaimId id = SymbolClaimId.newId(NOW);
 

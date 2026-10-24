@@ -2,6 +2,7 @@ package cz.novanadeje.app.donations.domain.bank;
 
 import cz.novanadeje.app.shared.domain.Money;
 import cz.novanadeje.app.shared.domain.VariableSymbol;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDate;
@@ -17,16 +18,19 @@ class IncomingMovementTest {
     private static final Optional<SenderAccount> SENDER = SenderAccount.parse("2900233333", "2010");
 
     @Test
+    @DisplayName("Given a zero amount, when a movement is created, then it is rejected")
     void should_reject_when_created_given_zero_amount() {
         assertThatIllegalArgumentException().isThrownBy(() -> movementOf(Money.czk(0)));
     }
 
     @Test
+    @DisplayName("Given a negative amount, when a movement is created, then it is rejected")
     void should_reject_when_created_given_negative_amount() {
         assertThatIllegalArgumentException().isThrownBy(() -> movementOf(Money.czk(-100)));
     }
 
     @Test
+    @DisplayName("Given a padded symbol, when a movement is created, then it keeps the raw symbol next to its matching form")
     void should_keep_raw_symbol_next_to_matching_form_when_created_given_padded_symbol() {
         IncomingMovement movement = movement(Optional.empty(), Optional.empty(), Optional.empty(), Optional.of("0004821937560"),
                 Optional.empty(), Optional.empty(), Optional.empty(), "Bezhotovostní příjem");
@@ -36,6 +40,7 @@ class IncomingMovementTest {
     }
 
     @Test
+    @DisplayName("Given blank texts, when a movement is created, then they become empty")
     void should_turn_blank_into_empty_when_created_given_blank_texts() {
         IncomingMovement movement = movement(Optional.of(" "), Optional.of(""), Optional.of("  "), Optional.of(" "),
                 Optional.of(" "), Optional.of(" "), Optional.of("\t"), "Bezhotovostní příjem");
@@ -51,6 +56,7 @@ class IncomingMovementTest {
     }
 
     @Test
+    @DisplayName("Given surrounding spaces, when a movement is created, then the texts are trimmed")
     void should_trim_when_created_given_surrounding_spaces() {
         IncomingMovement movement = movement(Optional.of(" 2900233333 "), Optional.of(" 2010 "), Optional.of(" Nováková Jana "),
                 Optional.of(" 558 "), Optional.empty(), Optional.empty(), Optional.empty(), " Bezhotovostní příjem ");
@@ -63,24 +69,28 @@ class IncomingMovementTest {
     }
 
     @Test
+    @DisplayName("Given an overlong account, when a movement is created, then the counterparty account is cut")
     void should_cut_counterparty_account_when_created_given_overlong_account() {
         assertThat(withTexts(text(70), null, null, null, null, null, null, "t").counterpartyAccount())
                 .hasValueSatisfying(value -> assertThat(value).hasSize(IncomingMovement.COUNTERPARTY_ACCOUNT_LENGTH));
     }
 
     @Test
+    @DisplayName("Given an overlong bank code, when a movement is created, then the counterparty bank code is cut")
     void should_cut_counterparty_bank_code_when_created_given_overlong_code() {
         assertThat(withTexts(null, text(12), null, null, null, null, null, "t").counterpartyBankCode())
                 .hasValueSatisfying(value -> assertThat(value).hasSize(IncomingMovement.COUNTERPARTY_BANK_CODE_LENGTH));
     }
 
     @Test
+    @DisplayName("Given an overlong name, when a movement is created, then the counterparty name is cut")
     void should_cut_counterparty_name_when_created_given_overlong_name() {
         assertThat(withTexts(null, null, text(300), null, null, null, null, "t").counterpartyName())
                 .hasValueSatisfying(value -> assertThat(value).hasSize(IncomingMovement.COUNTERPARTY_NAME_LENGTH));
     }
 
     @Test
+    @DisplayName("Given an overlong variable symbol, when a movement is created, then it is cut and the matching form follows the cut value")
     void should_cut_variable_symbol_and_match_the_cut_value_when_created_given_overlong_symbol() {
         IncomingMovement movement = withTexts(null, null, null, "0".repeat(15) + "1234567890", null, null, null, "t");
 
@@ -89,30 +99,35 @@ class IncomingMovementTest {
     }
 
     @Test
+    @DisplayName("Given an overlong constant symbol, when a movement is created, then it is cut")
     void should_cut_constant_symbol_when_created_given_overlong_symbol() {
         assertThat(withTexts(null, null, null, null, text(11), null, null, "t").constantSymbol())
                 .hasValueSatisfying(value -> assertThat(value).hasSize(IncomingMovement.CONSTANT_SYMBOL_LENGTH));
     }
 
     @Test
+    @DisplayName("Given an overlong specific symbol, when a movement is created, then it is cut")
     void should_cut_specific_symbol_when_created_given_overlong_symbol() {
         assertThat(withTexts(null, null, null, null, null, text(11), null, "t").specificSymbol())
                 .hasValueSatisfying(value -> assertThat(value).hasSize(IncomingMovement.SPECIFIC_SYMBOL_LENGTH));
     }
 
     @Test
+    @DisplayName("Given an overlong message, when a movement is created, then it is cut")
     void should_cut_message_when_created_given_overlong_message() {
         assertThat(withTexts(null, null, null, null, null, null, text(600), "t").messageForRecipient())
                 .hasValueSatisfying(value -> assertThat(value).hasSize(IncomingMovement.MESSAGE_FOR_RECIPIENT_LENGTH));
     }
 
     @Test
+    @DisplayName("Given an overlong transaction type, when a movement is created, then it is cut")
     void should_cut_transaction_type_when_created_given_overlong_type() {
         assertThat(withTexts(null, null, null, null, null, null, null, text(120)).transactionType())
                 .hasSize(IncomingMovement.TRANSACTION_TYPE_LENGTH);
     }
 
     @Test
+    @DisplayName("Given supplementary characters, when a text is cut, then characters are counted, not code units")
     void should_count_characters_not_code_units_when_cut_given_supplementary_characters() {
         String name = "😀".repeat(300);
 
@@ -121,6 +136,7 @@ class IncomingMovementTest {
     }
 
     @Test
+    @DisplayName("Given an inconsistent matching symbol, when a movement is created, then it is rejected")
     void should_reject_when_created_given_inconsistent_matching_symbol() {
         assertThatIllegalArgumentException().isThrownBy(() -> new IncomingMovement(ID, BOOKED_ON, Money.czk(50000), SENDER,
                 Optional.empty(), Optional.empty(), Optional.empty(), Optional.of("0558"), Optional.of(new VariableSymbol("0558")),
@@ -131,6 +147,7 @@ class IncomingMovementTest {
     }
 
     @Test
+    @DisplayName("Given a consistent matching symbol, when a movement is created, then it is accepted")
     void should_accept_when_created_given_consistent_matching_symbol() {
         IncomingMovement movement = new IncomingMovement(ID, BOOKED_ON, Money.czk(50000), SENDER,
                 Optional.empty(), Optional.empty(), Optional.empty(), Optional.of("0558"), Optional.of(new VariableSymbol("558")),
@@ -140,6 +157,7 @@ class IncomingMovementTest {
     }
 
     @Test
+    @DisplayName("Given missing required values, when a movement is created, then it is rejected")
     void should_reject_when_created_given_missing_required_values() {
         assertThatIllegalArgumentException().isThrownBy(() -> IncomingMovement.of(null, BOOKED_ON, Money.czk(100), SENDER,
                 Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), "t"));

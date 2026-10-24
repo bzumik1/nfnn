@@ -24,6 +24,7 @@ class FixedWindowRateLimiterTest {
     }
 
     @Test
+    @DisplayName("Given two keys, when each is acquired, then the limiter counts them separately")
     void should_count_keys_separately_when_acquired_given_two_keys() {
         limiter.tryAcquire("10.0.0.1");
         limiter.tryAcquire("10.0.0.1");
@@ -32,6 +33,7 @@ class FixedWindowRateLimiterTest {
     }
 
     @Test
+    @DisplayName("Given a window that has passed, when the key is acquired, then the limiter allows it again")
     void should_allow_again_when_acquired_given_window_has_passed() {
         limiter.tryAcquire("10.0.0.1");
         limiter.tryAcquire("10.0.0.1");

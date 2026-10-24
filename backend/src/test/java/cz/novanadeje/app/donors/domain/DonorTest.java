@@ -97,6 +97,7 @@ class DonorTest {
     }
 
     @Test
+    @DisplayName("Given company data, when a donor registers, then the company identifier is kept")
     void should_keep_company_identifier_when_registered_given_company_data() {
         Donor donor = Donor.register(DonorId.newId(NOW), DonorType.COMPANY, "Stavby Novák s.r.o.", new CompanyIdentifier("45274649"), ADDRESS, EMAIL, HASH, SYMBOL, LocaleCode.CS, NOW);
 
@@ -104,6 +105,7 @@ class DonorTest {
     }
 
     @Test
+    @DisplayName("Given a company without an identifier, when it registers, then it is rejected")
     void should_reject_when_registered_given_company_without_identifier() {
         assertThatThrownBy(() -> Donor.register(DonorId.newId(NOW), DonorType.COMPANY, "Stavby Novák s.r.o.", null, ADDRESS, EMAIL, HASH, SYMBOL, LocaleCode.CS, NOW))
                 .isInstanceOf(CompanyIdentifierRequired.class)
@@ -111,18 +113,21 @@ class DonorTest {
     }
 
     @Test
+    @DisplayName("Given a person with an identifier, when they register, then it is rejected")
     void should_reject_when_registered_given_person_with_identifier() {
         assertThatThrownBy(() -> Donor.register(DonorId.newId(NOW), DonorType.PERSON, "Jana Nováková", new CompanyIdentifier("45274649"), ADDRESS, EMAIL, HASH, SYMBOL, LocaleCode.CS, NOW))
                 .isInstanceOf(CompanyIdentifierNotAllowed.class);
     }
 
     @Test
+    @DisplayName("Given a blank name, when a donor registers, then it is rejected")
     void should_reject_when_registered_given_blank_name() {
         assertThatThrownBy(() -> Donor.register(DonorId.newId(NOW), DonorType.PERSON, " ", null, ADDRESS, EMAIL, HASH, SYMBOL, LocaleCode.CS, NOW))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
+    @DisplayName("Given a donor, when the profile is updated, then the name, address and locale change")
     void should_change_name_address_and_locale_when_profile_updated() {
         Donor donor = Donor.register(DonorId.newId(NOW), DonorType.PERSON, "Jana Nováková", null, ADDRESS, EMAIL, HASH, SYMBOL, LocaleCode.CS, NOW);
         PostalAddress moved = new PostalAddress("Krátká 3", "Most", "434 01");

@@ -35,6 +35,7 @@ class ApiSecurityTest {
     }
 
     @Test
+    @DisplayName("Given no credentials, when the health endpoint is requested, then it answers 200")
     void should_answer_200_when_health_requested_given_no_credentials() throws Exception {
         mockMvc.perform(get("/actuator/health"))
                 .andExpect(status().isOk());

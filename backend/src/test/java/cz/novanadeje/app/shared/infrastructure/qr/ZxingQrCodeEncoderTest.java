@@ -3,6 +3,7 @@ package cz.novanadeje.app.shared.infrastructure.qr;
 import cz.novanadeje.app.shared.QrCodes;
 import cz.novanadeje.app.shared.application.qr.QrErrorCorrection;
 import cz.novanadeje.app.shared.application.qr.QrMatrix;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -14,6 +15,7 @@ class ZxingQrCodeEncoderTest {
     private final ZxingQrCodeEncoder encoder = new ZxingQrCodeEncoder();
 
     @Test
+    @DisplayName("Given a payload, when it is encoded, then the modules scan back to that payload")
     void should_produce_modules_that_scan_back_to_the_payload_when_encoded() {
         QrMatrix matrix = encoder.encode(SPAYD, QrErrorCorrection.HIGH);
 
@@ -21,6 +23,7 @@ class ZxingQrCodeEncoderTest {
     }
 
     @Test
+    @DisplayName("Given high error correction, when a payload is encoded, then it uses level H, so a logo may cover the centre")
     void should_use_level_h_when_encoded_with_high_error_correction_so_a_logo_may_cover_the_centre() {
         QrMatrix matrix = encoder.encode(SPAYD, QrErrorCorrection.HIGH);
 
@@ -28,6 +31,7 @@ class ZxingQrCodeEncoderTest {
     }
 
     @Test
+    @DisplayName("Given medium error correction, when a payload is encoded, then it uses level M and fewer modules")
     void should_use_level_m_and_fewer_modules_when_encoded_with_medium_error_correction() {
         QrMatrix medium = encoder.encode(SPAYD, QrErrorCorrection.MEDIUM);
 
@@ -37,6 +41,7 @@ class ZxingQrCodeEncoderTest {
     }
 
     @Test
+    @DisplayName("Given the same payload, when it is encoded twice, then both times give the same modules")
     void should_produce_the_same_modules_when_encoded_twice_given_the_same_payload() {
         assertThat(encoder.encode(SPAYD, QrErrorCorrection.HIGH)).isEqualTo(encoder.encode(SPAYD, QrErrorCorrection.HIGH));
     }
