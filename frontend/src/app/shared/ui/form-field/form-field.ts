@@ -18,6 +18,6 @@ export class FormField {
 
   protected error(): string {
     const key = this.control().errorKey();
-    return key === null ? '' : (this.messages()[key] ?? '');
+    return key === null ? '' : (this.messages()[key] ?? this.control().errorText());
   }
 }

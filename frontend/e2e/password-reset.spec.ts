@@ -4,7 +4,6 @@ import { mockDonorApi, openSignInDialog, problem } from './donor-session';
 
 async function chooseNewPassword(page: Page): Promise<void> {
   await page.locator('#reset-password').fill('correct horse battery');
-  await page.locator('#reset-password-confirm').fill('correct horse battery');
   await page.getByRole('button', { name: 'Uložit nové heslo' }).click();
 }
 
@@ -20,13 +19,18 @@ test.describe('Given a donor who forgot the password', () => {
     await mockDonorApi(page);
 
     await openSignInDialog(page);
-    await page.getByRole('dialog').getByRole('button', { name: 'Obnovit heslo' }).click();
-    await page.locator('#reset-email').fill(' jana@example.cz ');
+    await page.locator('#login-email').fill(' jana@example.cz ');
+    await page.getByRole('dialog').getByRole('button', { name: 'Zapomněli jste heslo?' }).click();
+    await expect(page.locator('#reset-email')).toBeFocused();
+    await expect(page.locator('#reset-email')).toHaveValue('jana@example.cz');
     await page.getByRole('button', { name: 'Odeslat odkaz' }).click();
 
     await expect(
-      page.getByRole('dialog').getByRole('heading', { name: 'E-mail odeslán!' }),
-    ).toBeVisible();
+      page.getByRole('dialog').getByRole('heading', { name: 'Zkontrolujte si e-mail' }),
+    ).toBeFocused();
+    await expect(page.getByRole('dialog')).toContainText(
+      'Pokud k adrese jana@example.cz existuje účet',
+    );
     expect(posted).toEqual([{ email: 'jana@example.cz' }]);
   });
 

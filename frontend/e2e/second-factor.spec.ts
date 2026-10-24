@@ -81,7 +81,8 @@ test.describe('Given a donor who protects the account with an authenticator app'
     await expect(dialog).toContainText('5544332217/2010');
     await expect(dialog).toContainText('OBNOVA K7MP4RXA');
     await expect(dialog).toContainText('Platbu pošlete nejdříve 27. 10. 2026');
-    await expect(dialog).toContainText('Kód platí do 31. 10. 2026 11:00');
+    await expect(dialog).toContainText('Zpráva pro příjemce platí do 31. 10. 2026 11:00');
+    await expect(dialog.getByRole('button', { name: 'Přihlášení', exact: true })).toHaveCount(0);
 
     await dialog.getByRole('button', { name: '← Zpět na kód' }).click();
     await expect(page.getByLabel('Kód z aplikace')).toBeFocused();

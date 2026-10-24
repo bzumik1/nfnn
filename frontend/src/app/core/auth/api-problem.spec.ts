@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { describeProblem, problemOf } from './api-problem';
+import { describeProblem, describeProblemWithoutFields, problemOf } from './api-problem';
 import { problem, SAMPLE_CHALLENGE, secondFactorRequired } from './testing/donor-fixtures';
 
 describe('Given a failed API call to describe', () => {
@@ -33,6 +33,19 @@ describe('Given a failed API call to describe', () => {
     );
 
     expect(description).toBe('Neplatný požadavek. Heslo musí mít 12 až 128 znaků.');
+  });
+
+  it('when the field errors already stand at their fields, then only the title and the detail are joined', () => {
+    const description = describeProblemWithoutFields(
+      failure({
+        ...problem('validation', 'Neplatný požadavek', 'Zkontrolujte prosím údaje.'),
+        errors: [{ field: 'password', message: 'Heslo musí mít 12 až 128 znaků.' }],
+      }),
+      generic,
+    );
+
+    expect(description).toBe('Neplatný požadavek. Zkontrolujte prosím údaje.');
+    expect(describeProblemWithoutFields(failure(null, 500), generic)).toBe(generic);
   });
 
   it('when the response has no problem body, then the generic text is shown', () => {

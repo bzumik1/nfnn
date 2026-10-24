@@ -99,6 +99,19 @@
           Vyplňte, co web potřebuje ke svému chodu. Všechno se uloží do databáze a později to
           změníte ve správě webu. Tajné údaje se ukládají zašifrované.
         </p>
+        <div class="needs">
+          <p class="needs-title" i18n="@@operations.setup.needs.title">Budete potřebovat:</p>
+          <ul>
+            <li i18n="@@operations.setup.needs.smtp">
+              přihlašovací jméno a klíč SMTP z Brevo (Nastavení → SMTP a API),
+            </li>
+            <li i18n="@@operations.setup.needs.domain">ověřenou doménu odesílatele v Brevo,</li>
+            <li i18n="@@operations.setup.needs.admin">e-mail prvního správce,</li>
+            <li i18n="@@operations.setup.needs.fio">
+              nepovinně token Fio API jen pro čtení, aby se stahovaly platby.
+            </li>
+          </ul>
+        </div>
         @if (restoredBeforeSetup()) {
           <p class="restore-done" role="status" i18n="@@operations.setup.restore.beforeSetup">
             Záloha je obnovená. Pochází z doby před prvním nastavením, proto ho prosím doplňte.
@@ -183,7 +196,7 @@
                 />
               </app-form-field>
             </div>
-            <app-form-field [label]="labels.MAIL_USERNAME">
+            <app-form-field [label]="labels.MAIL_USERNAME" [messages]="usernameMessages">
               <input
                 appFormControl
                 id="setup-mail-username"
@@ -192,9 +205,10 @@
                 spellcheck="false"
                 maxlength="254"
                 [(ngModel)]="mail.username"
+                [required]="mail.auth"
               />
             </app-form-field>
-            <app-form-field [label]="labels.MAIL_PASSWORD">
+            <app-form-field [label]="labels.MAIL_PASSWORD" [messages]="passwordMessages">
               <app-password-reveal>
                 <input
                   appFormControl
@@ -204,19 +218,24 @@
                   autocomplete="off"
                   maxlength="500"
                   [(ngModel)]="mail.password"
+                  [required]="mail.auth"
                 />
               </app-password-reveal>
             </app-form-field>
-            <label class="check">
-              <input type="checkbox" name="mailAuth" [(ngModel)]="mail.auth" />
-              <span>{{ labels.MAIL_AUTH }}</span>
-            </label>
-            <label class="check">
-              <input type="checkbox" name="mailStartTls" [(ngModel)]="mail.startTls" />
-              <span>{{ labels.MAIL_STARTTLS }}</span>
-            </label>
+            <details class="advanced">
+              <summary i18n="@@operations.setup.mail.advanced">Pokročilé nastavení serveru</summary>
+              <label class="check">
+                <input type="checkbox" name="mailAuth" [(ngModel)]="mail.auth" />
+                <span>{{ labels.MAIL_AUTH }}</span>
+              </label>
+              <label class="check">
+                <input type="checkbox" name="mailStartTls" [(ngModel)]="mail.startTls" />
+                <span>{{ labels.MAIL_STARTTLS }}</span>
+              </label>
+            </details>
             <div class="test-row">
               <button
+                #mailTestButton
                 type="button"
                 class="ui-button"
                 [disabled]="testingMail()"
@@ -279,8 +298,8 @@
           <fieldset class="group">
             <legend i18n="@@operations.setup.group.bank">3. Banka</legend>
             <app-form-field
-              [label]="labels.FIO_TOKEN"
-              hint="Nepovinné. Ve Fio internetovém bankovnictví: Nastavení → API → přidat token s právem jen pro čtení. Bez něj se platby nestahují."
+              [label]="fioTokenLabel"
+              hint="Ve Fio internetovém bankovnictví: Nastavení → API → přidat token s právem jen pro čtení. Bez něj se platby nestahují."
               i18n-hint="@@operations.setup.fioToken.hint"
             >
               <app-password-reveal>
@@ -332,6 +351,34 @@
             </div>
           }
 
+          @if (mailUnverified()) {
+            <div class="ui-callout ui-callout--warning mail-unverified" role="alert">
+              <p i18n="@@operations.setup.mailUnverified">
+                Spojení s e-mailovým serverem jste neověřili. Bez funkčních e-mailů se správce
+                nepřihlásí.
+              </p>
+              <div class="mail-unverified-actions">
+                <button
+                  type="button"
+                  class="ui-button ui-button--small"
+                  (click)="testMailFromWarning()"
+                  i18n="@@operations.setup.mailTest"
+                >
+                  Ověřit spojení
+                </button>
+                <button
+                  type="button"
+                  class="ui-button ui-button--small ui-button--quiet"
+                  [disabled]="saving()"
+                  (click)="save(setupForm, true)"
+                  i18n="@@operations.setup.mailUnverified.saveAnyway"
+                >
+                  Uložit i tak
+                </button>
+              </div>
+            </div>
+          }
+
           <p class="restart-note" i18n="@@operations.setup.save.note">
             Po uložení se web asi na minutu restartuje.
           </p>
@@ -378,9 +425,22 @@
             Web je nastavený
           </h1>
           <p class="ui-panel__lead" role="status" i18n="@@operations.setup.done.text">
-            Teď se zaregistrujte s e-mailem správce a potvrďte ho odkazem z e-mailu. Pak ve svém
-            účtu zapněte dvoufaktorové ověření a správa webu se vám otevře.
+            Teď už zbývá jen připravit účet správce:
           </p>
+          <ol class="next-steps">
+            <li i18n="@@operations.setup.done.step.register">
+              Zaregistrujte se s adresou {{ adminEmail.trim() }}.
+            </li>
+            <li i18n="@@operations.setup.done.step.confirm">
+              Otevřete odkaz z e-mailu, který vám přijde.
+            </li>
+            <li i18n="@@operations.setup.done.step.secondFactor">
+              V části Údaje a zabezpečení zapněte dvoufaktorové ověření.
+            </li>
+            <li i18n="@@operations.setup.done.step.signIn">
+              Odhlaste se a přihlaste se znovu s kódem z aplikace: nahoře se objeví Správa.
+            </li>
+          </ol>
           <button
             type="button"
             class="ui-button ui-button--primary ui-button--block"
@@ -444,7 +504,12 @@
             class="file-input"
             type="file"
             accept=".dump"
-            aria-describedby="backup-file-name backup-file-hint"
+            [attr.aria-describedby]="
+              backupFileError()
+                ? 'backup-file-name backup-file-error backup-file-hint'
+                : 'backup-file-name backup-file-hint'
+            "
+            [attr.aria-invalid]="backupFileError() ? 'true' : null"
             [disabled]="uploadPercent() !== null"
             (change)="chooseBackup($event)"
           />
@@ -463,6 +528,9 @@
             >
           }
         </div>
+        @if (backupFileError()) {
+          <p id="backup-file-error" class="ui-field-error" role="alert">{{ backupFileError() }}</p>
+        }
         <p id="backup-file-hint" class="restart-note" i18n="@@operations.setup.restore.hint">
           Soubor se nahraje rovnou na server. Velká záloha se může nahrávat několik minut, stránku
           mezitím nezavírejte.
@@ -476,7 +544,9 @@
           <button
             type="button"
             class="ui-button ui-button--primary ui-button--block"
-            [disabled]="backupFile() === null || uploadPercent() !== null"
+            [disabled]="
+              backupFile() === null || backupFileError() !== '' || uploadPercent() !== null
+            "
             (click)="uploadBackup()"
             i18n="@@operations.setup.restore.submit"
           >

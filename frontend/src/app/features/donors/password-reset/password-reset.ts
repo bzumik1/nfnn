@@ -70,9 +70,6 @@ export class PasswordReset {
     required: $localize`:@@donor.form.newPassword.required:Zvolte si prosím heslo.`,
     minlength: $localize`:@@donor.form.newPassword.tooShort:Heslo musí mít alespoň 12 znaků.`,
   };
-  protected readonly confirmationMessages = {
-    required: $localize`:@@donor.passwordReset.form.passwordConfirm.required:Napište prosím nové heslo ještě jednou.`,
-  };
   protected readonly nameMaxLength = PASSKEY_NAME_MAX_LENGTH;
   protected readonly nameHint = $localize`:@@donor.passkeys.name.hint:Podle názvu klíč později poznáte, třeba „iPhone“ nebo „Pracovní notebook“.`;
   protected readonly nameMessages = {
@@ -91,7 +88,6 @@ export class PasswordReset {
   protected readonly error = signal('');
 
   protected password = '';
-  protected passwordConfirmation = '';
   protected name = deviceName(inject(DOCUMENT));
   protected code = '';
 
@@ -106,10 +102,6 @@ export class PasswordReset {
     }
     if (form.invalid) {
       this.error.set('');
-      return;
-    }
-    if (this.password !== this.passwordConfirmation) {
-      this.error.set($localize`:@@donor.passwordReset.form.mismatch:Hesla se neshodují.`);
       return;
     }
     this.loading.set(true);
@@ -220,7 +212,6 @@ export class PasswordReset {
     this.loading.set(false);
     this.error.set('');
     this.password = '';
-    this.passwordConfirmation = '';
     this.code = '';
     this.panel.set(panel);
     afterNextRender(() => this.heading()?.nativeElement.focus(), { injector: this.injector });

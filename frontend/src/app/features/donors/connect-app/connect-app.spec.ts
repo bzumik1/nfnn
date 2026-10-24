@@ -153,17 +153,21 @@ describe('Given an application sent the browser to the connection page', () => {
       expect(element('.client-host').textContent).toBe('claude.ai');
       expect(element('.ui-panel__lead').textContent).toContain('„Claude“');
       expect(element('.ui-panel__lead').textContent).toContain('Jana Nováková');
-      expect(Array.from(root().querySelectorAll('.scopes li')).map((li) => li.textContent)).toEqual(
-        [expect.stringContaining('Čtení:')],
-      );
-      expect(element('.scopes li').textContent).toContain('logy a diagnostika');
+      const bullets = (selector: string) =>
+        Array.from(root().querySelectorAll(selector)).map((li) => li.textContent?.trim());
+      expect(bullets('.scopes li')).toContain('vidět dárce, jejich dary a platby z banky');
+      expect(bullets('.scopes li')).toContain('vidět stav záloh a provozní záznamy webu');
       const writeOption = element<HTMLInputElement>('#connect-app-write');
       expect(writeOption.checked).toBe(false);
-      const writeLabel = element('label[for="connect-app-write"]').textContent;
-      expect(writeLabel).toContain('Změny:');
-      expect(writeLabel).toContain('nastavení a odeslání měsíčního reportu');
-      expect(writeLabel).toContain('párování z účtů dárců');
+      expect(element('label[for="connect-app-write"]').textContent?.trim()).toBe('Povolit i změny');
+      expect(bullets('.write-scopes li')).toContain('nastavit a odeslat měsíční report');
+      expect(writeOption.getAttribute('aria-describedby')).toBe(
+        'connect-app-write-scopes connect-app-write-hint',
+      );
       expect(element('.scope-hint').textContent).toContain('jen čtení');
+      expect(element('.never').textContent).toContain('Nikdy nebude smět');
+      expect(element('.never').textContent).toContain('nic mazat');
+      expect(root().textContent).toContain('v části Údaje a zabezpečení → Připojené aplikace');
       expect(document.activeElement).toBe(element('h1'));
     });
   });
@@ -177,7 +181,12 @@ describe('Given an application sent the browser to the connection page', () => {
 
     it('then the consent asks for a fresh code even though the session was opened with one', () => {
       expect(element('label[for="connect-app-code"]').textContent).toContain('Kód z aplikace');
-      expect(element('.confirm-note').textContent).toContain('i když jste se jím už přihlásili');
+      expect(element('.confirm-note').textContent?.trim()).toBe(
+        'Povolení potvrďte kódem z ověřovací aplikace.',
+      );
+      expect(element('#connect-app-code-hint').textContent).toContain(
+        'Počkejte, až aplikace ukáže nový kód',
+      );
       expect(root().textContent).not.toContain('Povolit přístupovým klíčem');
     });
 
@@ -344,10 +353,33 @@ describe('Given an application sent the browser to the connection page', () => {
       await settle();
     });
 
+    it('then the page offers to sign in with another account and continues to the consent', async () => {
+      await clickButton('Přihlásit se jiným účtem');
+      http
+        .expectOne('/api/donors/auth/logout')
+        .flush(null, { status: 204, statusText: 'No Content' });
+      await settle();
+
+      expect(store.signedIn()).toBe(false);
+      expect(dialog.isOpen()).toBe(true);
+      expect(element('h1').textContent).toContain('Aplikace žádá o přístup ke správě');
+
+      store.login('jana@example.cz', 'correct horse battery').subscribe();
+      http
+        .expectOne('/api/donors/auth/login')
+        .flush(authResponse('token-2', sampleDonor(ADMIN_WITH_CODE)));
+      await settle();
+      http.expectOne(CLIENT_URL).flush(CLAUDE);
+      await settle();
+
+      expect(element('h1').textContent).toContain('Povolit přístup ke správě aplikaci claude.ai?');
+    });
+
     it('then the page explains that only an administrator can connect and offers to decline', async () => {
       expect(element('h1').textContent).toContain('Připojit aplikaci může jen správce');
       expect(element('.ui-panel__lead').textContent).toContain('claude.ai');
       expect(root().textContent).not.toContain('Povolit');
+      expect(element('.ui-button--primary').textContent).toContain('Přihlásit se jiným účtem');
 
       await clickButton('Odmítnout');
       const request = http.expectOne({ method: 'POST', url: '/api/donors/oauth/authorize' });
@@ -403,7 +435,8 @@ describe('Given an application sent the browser to the connection page', () => {
 
       expect(element('#connect-app-write')).toBeNull();
       expect(element('.scope-hint')).toBeNull();
-      expect(root().querySelectorAll('.scopes li')).toHaveLength(1);
+      expect(root().querySelectorAll('.scopes li')).toHaveLength(5);
+      expect(element('.write-scopes')).toBeNull();
     });
 
     it('then an unknown permission disables Povolit and says why', async () => {

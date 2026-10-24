@@ -83,7 +83,10 @@ describe('Given the first setup page', () => {
   async function chooseFile(name: string): Promise<File> {
     const file = new File(['PGDMP'], name, { type: 'application/octet-stream' });
     const input = element<HTMLInputElement>('#backup-file');
-    Object.defineProperty(input, 'files', { value: { length: 1, item: () => file } });
+    Object.defineProperty(input, 'files', {
+      value: { length: 1, item: () => file },
+      configurable: true,
+    });
     input.dispatchEvent(new Event('change'));
     await settle();
     return file;
@@ -113,6 +116,24 @@ describe('Given the first setup page', () => {
   async function submit(selector: string): Promise<void> {
     element<HTMLFormElement>(selector).dispatchEvent(new Event('submit'));
     await settle();
+  }
+
+  async function fillInMailSignIn(): Promise<void> {
+    await type('#setup-mail-username', 'abc@smtp-brevo.com');
+    await type('#setup-mail-password', 'xsmtpsib-key');
+  }
+
+  async function passMailTest(): Promise<void> {
+    button('Ověřit spojení').click();
+    await settle();
+    http.expectOne(MAIL_TEST_URL).flush({ ok: true });
+    await settle();
+  }
+
+  function fieldErrors(): (string | undefined)[] {
+    return Array.from(
+      fixture.nativeElement.querySelectorAll('.field-error') as NodeListOf<HTMLElement>,
+    ).map((error) => error.textContent?.trim());
   }
 
   it('when the page opens, then it says it is finding out whether the site is set up', () => {
@@ -178,8 +199,11 @@ describe('Given the first setup page', () => {
       http.expectOne(UNLOCK_URL).flush(null, { status: 204, statusText: 'No Content' });
       await settle();
 
+      await fillInMailSignIn();
       await type('#setup-admin-email', 'spravce@example.cz');
       await submit('form.setup-form');
+      button('Uložit i tak').click();
+      await settle();
 
       const request = http.expectOne(STATUS_URL);
       expect(request.request.method).toBe('POST');
@@ -203,17 +227,83 @@ describe('Given the first setup page', () => {
       expect(element<HTMLInputElement>('#setup-admin-email').value).toBe('');
     });
 
-    it('then a missing administrator and a bad address are named at their fields', async () => {
+    it('then a missing administrator, a bad address and the missing sign-in to the mail server are named at their fields', async () => {
       await type('#setup-public-url', 'nfnn.cz');
       await submit('form.setup-form');
 
-      const errors = Array.from(
-        fixture.nativeElement.querySelectorAll('.field-error') as NodeListOf<HTMLElement>,
-      ).map((error) => error.textContent?.trim());
-      expect(errors).toEqual([
+      expect(fieldErrors()).toEqual([
         'Napište celou adresu včetně https://, například https://nfnn.cz.',
+        'Vyplňte prosím přihlašovací jméno ze stránky SMTP v Brevo.',
+        'Vyplňte prosím heslo nebo klíč SMTP.',
         'Vyplňte prosím e-mailovou adresu.',
       ]);
+      http.expectNone(STATUS_URL);
+    });
+
+    it('then a mail server without sign-in needs no name and no password', async () => {
+      element('.advanced summary').click();
+      await settle();
+      element<HTMLInputElement>('input[name="mailAuth"]').click();
+      await settle();
+      await type('#setup-admin-email', 'spravce@example.cz');
+      await submit('form.setup-form');
+
+      expect(fieldErrors()).toEqual([]);
+      expect(text('.mail-unverified')).toContain('Spojení s e-mailovým serverem jste neověřili.');
+    });
+
+    it('then it says up front what the operator will need and keeps the server details folded away', () => {
+      expect(text('.needs')).toContain('Budete potřebovat');
+      expect(text('.needs')).toContain('ověřenou doménu odesílatele');
+      expect(element<HTMLDetailsElement>('details.advanced').open).toBe(false);
+      expect(text('label[for="setup-fio-token"]')).toBe('Token Fio API (jen pro čtení, nepovinné)');
+    });
+
+    describe('when everything is filled in', () => {
+      beforeEach(async () => {
+        await fillInMailSignIn();
+        await type('#setup-admin-email', 'spravce@example.cz');
+      });
+
+      it('without trying the mail server first, then saving warns before anything is sent', async () => {
+        await submit('form.setup-form');
+
+        http.expectNone(STATUS_URL);
+        expect(text('[role="alert"].mail-unverified')).toBe(
+          'Spojení s e-mailovým serverem jste neověřili. Bez funkčních e-mailů se správce nepřihlásí. Ověřit spojení Uložit i tak',
+        );
+      });
+
+      it('and the warning asks to try the server, then the test runs and the warning goes away', async () => {
+        await submit('form.setup-form');
+
+        element<HTMLButtonElement>('.mail-unverified .ui-button').click();
+        await settle();
+        http.expectOne(MAIL_TEST_URL).flush({ ok: true });
+        await settle();
+
+        expect(fixture.nativeElement.querySelector('.mail-unverified')).toBeNull();
+        expect(text('.test-result')).toBe('Spojení funguje, server přihlášení přijal.');
+      });
+
+      it('after a successful test with the same values, then saving goes straight on', async () => {
+        await passMailTest();
+
+        await submit('form.setup-form');
+
+        http.expectOne(STATUS_URL).flush({ changed: [], restarting: true });
+        await settle();
+      });
+
+      it('after a successful test and a changed password, then saving warns again', async () => {
+        await passMailTest();
+        await type('#setup-mail-password', 'another-key');
+
+        await submit('form.setup-form');
+
+        http.expectNone(STATUS_URL);
+        expect(text('.mail-unverified')).toContain('neověřili');
+      });
     });
 
     it('then the mail server is tried with what is typed and the answer is shown', async () => {
@@ -242,9 +332,10 @@ describe('Given the first setup page', () => {
     });
 
     it('then saving sends every value, waits for the restart and offers the registration', async () => {
-      await type('#setup-mail-password', 'xsmtpsib-key');
+      await fillInMailSignIn();
       await type('#setup-fio-token', ' fio-token ');
-      await type('#setup-admin-email', 'spravce@example.cz');
+      await type('#setup-admin-email', ' spravce@example.cz ');
+      await passMailTest();
       await submit('form.setup-form');
 
       const request = http.expectOne(STATUS_URL);
@@ -255,7 +346,7 @@ describe('Given the first setup page', () => {
           { name: 'PUBLIC_URL', value: 'https://nfnn.cz' },
           { name: 'MAIL_HOST', value: 'smtp-relay.brevo.com' },
           { name: 'MAIL_PORT', value: '587' },
-          { name: 'MAIL_USERNAME', value: '' },
+          { name: 'MAIL_USERNAME', value: 'abc@smtp-brevo.com' },
           { name: 'MAIL_PASSWORD', value: 'xsmtpsib-key' },
           { name: 'MAIL_AUTH', value: 'true' },
           { name: 'MAIL_STARTTLS', value: 'true' },
@@ -279,10 +370,21 @@ describe('Given the first setup page', () => {
       fixture.detectChanges();
 
       expect(text('h1')).toBe('Web je nastavený');
+      expect(
+        Array.from(
+          fixture.nativeElement.querySelectorAll('.next-steps li') as NodeListOf<HTMLElement>,
+        ).map((step) => step.textContent?.replace(/\s+/g, ' ').trim()),
+      ).toEqual([
+        'Zaregistrujte se s adresou spravce@example.cz.',
+        'Otevřete odkaz z e-mailu, který vám přijde.',
+        'V části Údaje a zabezpečení zapněte dvoufaktorové ověření.',
+        'Odhlaste se a přihlaste se znovu s kódem z aplikace: nahoře se objeví Správa.',
+      ]);
       button('Zaregistrovat se').click();
       const dialog = TestBed.inject(LoginDialogService);
       expect(dialog.isOpen()).toBe(true);
       expect(dialog.initialMode()).toBe('register');
+      expect(dialog.initialEmail()).toBe('spravce@example.cz');
     });
 
     describe('when the site is restored from a backup instead', () => {
@@ -318,8 +420,25 @@ describe('Given the first setup page', () => {
         expect(text('h1')).toBe('Obnovujeme web ze zálohy');
       });
 
-      it('then a file that is not a backup is refused with the reason and can be replaced', async () => {
+      it('then a file without the .dump ending is named at once and cannot be uploaded', async () => {
         await chooseFile('fotka.jpg');
+
+        expect(text('#backup-file-error')).toBe(
+          'Tohle není soubor zálohy. Vyberte prosím soubor s příponou .dump.',
+        );
+        expect(element('#backup-file').getAttribute('aria-describedby')).toContain(
+          'backup-file-error',
+        );
+        expect(button('Nahrát a obnovit').disabled).toBe(true);
+
+        await chooseFile('nfnn-2026-10-22_0300.dump');
+
+        expect(fixture.nativeElement.querySelector('#backup-file-error')).toBeNull();
+        expect(button('Nahrát a obnovit').disabled).toBe(false);
+      });
+
+      it('then a file that is not a backup is refused with the reason and can be replaced', async () => {
+        await chooseFile('fotka.dump');
         button('Nahrát a obnovit').click();
         await settle();
 
@@ -420,9 +539,12 @@ describe('Given the first setup page', () => {
       });
     });
 
-    it('then values the backend refuses are listed with their names', async () => {
+    it('then values the backend refuses stand at their fields and the rest is listed', async () => {
+      await fillInMailSignIn();
       await type('#setup-admin-email', 'spravce@example.cz');
       await submit('form.setup-form');
+      button('Uložit i tak').click();
+      await settle();
 
       const refused = problem(
         400,
@@ -447,7 +569,9 @@ describe('Given the first setup page', () => {
         Array.from(
           fixture.nativeElement.querySelectorAll('.ui-field-error li') as NodeListOf<HTMLElement>,
         ).map((item) => item.textContent?.trim()),
-      ).toEqual(['Port: Port je číslo od 1 do 65535.', 'S těmito hodnotami web nenastartuje.']);
+      ).toEqual(['S těmito hodnotami web nenastartuje.']);
+      expect(text('#setup-mail-port-error')).toBe('Port je číslo od 1 do 65535.');
+      expect(document.activeElement).toBe(element('#setup-mail-port'));
       expect(text('h1')).toBe('První nastavení webu');
     });
   });

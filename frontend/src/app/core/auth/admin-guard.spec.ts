@@ -10,6 +10,8 @@ import {
 } from '@angular/router';
 import { adminGuard } from './admin-guard';
 import { SESSION_HINT_KEY } from './auth-store';
+import { DialogHistory } from '../../shared/ui/dialog/dialog-history';
+import { FakeDialogHistory } from '../../shared/ui/dialog/testing/fake-dialog-history';
 import { LoginDialogService } from './login-dialog.service';
 import { authResponse, sampleDonor } from './testing/donor-fixtures';
 
@@ -19,7 +21,12 @@ describe('Given the administration guard', () => {
   beforeEach(() => {
     localStorage.clear();
     TestBed.configureTestingModule({
-      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([]),
+        { provide: DialogHistory, useValue: new FakeDialogHistory() },
+      ],
     });
     http = TestBed.inject(HttpTestingController);
   });

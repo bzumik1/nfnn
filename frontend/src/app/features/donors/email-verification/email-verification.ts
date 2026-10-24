@@ -14,12 +14,13 @@ import {
   viewChild,
 } from '@angular/core';
 import { FormsModule, NgForm } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { from, switchMap } from 'rxjs';
 import { describeProblem, problemTypeEndsWith } from '../../../core/auth/api-problem';
 import { AuthApi } from '../../../core/auth/auth-api';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { deviceName } from '../../../core/auth/device-name';
+import { LoginDialogService } from '../../../core/auth/login-dialog.service';
 import {
   PasskeyAuthenticator,
   PasskeyCeremonyError,
@@ -31,12 +32,13 @@ import { FormField } from '../../../shared/ui/form-field/form-field';
 type Panel = 'missing-link' | 'confirming' | 'confirmed' | 'invalid' | 'failed' | 'link-requested';
 
 const PAGE_PATH = '/potvrzeni-emailu';
+const PORTAL_PATH = '/darce/prehled';
 const INVALID_TOKEN = 'donors/invalid-email-verification-token';
 const TOO_MANY_REQUESTS = 429;
 
 @Component({
   selector: 'app-email-verification',
-  imports: [FormsModule, FormField, FormControlDirective, FocusFirstInvalid],
+  imports: [FormsModule, RouterLink, FormField, FormControlDirective, FocusFirstInvalid],
   templateUrl: './email-verification.html',
   styleUrl: './email-verification.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -49,6 +51,7 @@ export class EmailVerification {
   private readonly destroyRef = inject(DestroyRef);
   private readonly document = inject(DOCUMENT);
   private readonly authenticator = inject(PasskeyAuthenticator);
+  private readonly loginDialog = inject(LoginDialogService);
   private readonly heading = viewChild<ElementRef<HTMLElement>>('heading');
   private readonly token = tokenOf(inject(ActivatedRoute).snapshot.fragment);
 
@@ -139,18 +142,22 @@ export class EmailVerification {
           this.loading.set(false);
           this.error.set(
             failure instanceof PasskeyCeremonyError
-              ? $localize`:@@donor.emailVerification.passkey.notCreated:Klíč se nevytvořil, zařízení ho nepotvrdilo. Zkuste to prosím znovu; jde to i později na přehledu.`
+              ? $localize`:@@donor.emailVerification.passkey.notCreated:Klíč se nevytvořil, zařízení ho nepotvrdilo. Zkuste to prosím znovu; jde to i později v části Údaje a zabezpečení.`
               : describeProblem(
                   failure,
-                  $localize`:@@donor.emailVerification.passkey.error:Klíč se nepodařilo uložit. Zkuste to prosím znovu; jde to i později na přehledu.`,
+                  $localize`:@@donor.emailVerification.passkey.error:Klíč se nepodařilo uložit. Zkuste to prosím znovu; jde to i později v části Údaje a zabezpečení.`,
                 ),
           );
         },
       });
   }
 
+  signIn(): void {
+    this.loginDialog.open('login', { returnTo: PORTAL_PATH });
+  }
+
   enterPortal(): void {
-    this.router.navigateByUrl('/darce/prehled');
+    this.router.navigateByUrl(PORTAL_PATH);
   }
 
   private confirm(token: string): void {
