@@ -31,7 +31,7 @@ class RegistrationReminderSchedulingTest {
 
     private final ApplicationContextRunner contexts = new ApplicationContextRunner()
             .withInitializer(new ConfigDataApplicationContextInitializer())
-            .withPropertyValues("app.contact.retention.cron=-", "app.operations.backups.check-cron=-")
+            .withPropertyValues("app.contact.retention.cron=-", "app.content.media-cleanup.cron=-", "app.operations.backups.check-cron=-")
             .withBean(DonorRegistrationReminderService.class, () -> mock(DonorRegistrationReminderService.class))
             .withUserConfiguration(RegistrationReminderScheduler.class, Scheduling.class);
 

@@ -44,7 +44,7 @@ class ContactMessageRetentionSchedulingTest {
     @Test
     @DisplayName("Given the cron \"-\", when the context starts, then the job is not scheduled")
     void should_schedule_nothing_when_started_given_disabled_cron() {
-        contexts.withPropertyValues("app.contact.retention.cron=-", "app.operations.backups.check-cron=-", "app.donors.registration-reminder.cron=-").run(context -> {
+        contexts.withPropertyValues("app.contact.retention.cron=-", "app.content.media-cleanup.cron=-", "app.operations.backups.check-cron=-", "app.donors.registration-reminder.cron=-").run(context -> {
             assertThat(context).hasNotFailed();
             assertThat(cronTasks(context.getBean(ScheduledTaskHolder.class))).isEmpty();
         });

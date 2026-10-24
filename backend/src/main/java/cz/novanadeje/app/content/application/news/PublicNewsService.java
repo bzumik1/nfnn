@@ -3,6 +3,7 @@ package cz.novanadeje.app.content.application.news;
 import cz.novanadeje.app.content.domain.news.NewsArticle;
 import cz.novanadeje.app.content.domain.news.NewsArticleNotFound;
 import cz.novanadeje.app.content.domain.news.NewsArticleRepository;
+import cz.novanadeje.app.content.domain.FormerSlugs;
 import cz.novanadeje.app.content.domain.Slug;
 import cz.novanadeje.app.shared.domain.FoundationZone;
 import org.springframework.stereotype.Service;
@@ -19,10 +20,12 @@ public class PublicNewsService {
     public static final int MAX_PAGE_SIZE = 50;
 
     private final NewsArticleRepository news;
+    private final FormerSlugs formerSlugs;
     private final Clock clock;
 
-    public PublicNewsService(NewsArticleRepository news, Clock clock) {
+    public PublicNewsService(NewsArticleRepository news, FormerSlugs formerSlugs, Clock clock) {
         this.news = news;
+        this.formerSlugs = formerSlugs;
         this.clock = clock;
     }
 
@@ -37,6 +40,7 @@ public class PublicNewsService {
 
     public NewsArticleView bySlug(Slug slug) {
         NewsArticle article = news.findBySlug(slug)
+                .or(() -> formerSlugs.newsArticle(slug).flatMap(news::findById))
                 .filter(found -> found.isVisibleOn(today()))
                 .orElseThrow(() -> new NewsArticleNotFound(slug));
         return NewsArticleView.from(article);

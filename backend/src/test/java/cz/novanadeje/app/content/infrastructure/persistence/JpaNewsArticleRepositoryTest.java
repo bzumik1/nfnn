@@ -53,7 +53,6 @@ class JpaNewsArticleRepositoryTest {
 
         assertThat(news.findById(article.id())).contains(article);
         assertThat(news.findBySlug(new Slug("dominik"))).contains(article);
-        assertThat(news.isImageUsed(image.id())).isTrue();
         assertThat(news.isSlugTakenByAnother(new Slug("dominik"), article.id())).isFalse();
         assertThat(news.isSlugTakenByAnother(new Slug("dominik"), NewsArticleId.newId(NOW))).isTrue();
     }

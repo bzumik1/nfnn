@@ -3,6 +3,7 @@ package cz.novanadeje.app.content.application.project;
 import cz.novanadeje.app.content.domain.project.Project;
 import cz.novanadeje.app.content.domain.project.ProjectNotFound;
 import cz.novanadeje.app.content.domain.project.ProjectRepository;
+import cz.novanadeje.app.content.domain.FormerSlugs;
 import cz.novanadeje.app.content.domain.Slug;
 import cz.novanadeje.app.shared.domain.FoundationZone;
 import org.springframework.stereotype.Service;
@@ -19,10 +20,12 @@ public class PublicProjectService {
     public static final int MAX_PAGE_SIZE = 50;
 
     private final ProjectRepository projects;
+    private final FormerSlugs formerSlugs;
     private final Clock clock;
 
-    public PublicProjectService(ProjectRepository projects, Clock clock) {
+    public PublicProjectService(ProjectRepository projects, FormerSlugs formerSlugs, Clock clock) {
         this.projects = projects;
+        this.formerSlugs = formerSlugs;
         this.clock = clock;
     }
 
@@ -37,6 +40,7 @@ public class PublicProjectService {
 
     public ProjectView bySlug(Slug slug) {
         Project article = projects.findBySlug(slug)
+                .or(() -> formerSlugs.project(slug).flatMap(projects::findById))
                 .filter(found -> found.isVisibleOn(today()))
                 .orElseThrow(() -> new ProjectNotFound(slug));
         return ProjectView.from(article);

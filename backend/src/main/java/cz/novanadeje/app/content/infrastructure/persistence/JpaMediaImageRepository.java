@@ -5,6 +5,7 @@ import cz.novanadeje.app.content.domain.media.MediaImage;
 import cz.novanadeje.app.content.domain.media.MediaImageRepository;
 import org.springframework.stereotype.Repository;
 
+import java.time.Instant;
 import java.util.Optional;
 
 @Repository
@@ -34,5 +35,15 @@ class JpaMediaImageRepository implements MediaImageRepository {
     @Override
     public void delete(MediaId id) {
         jpa.deleteById(id.value());
+    }
+
+    @Override
+    public boolean deleteIfUnused(MediaId id) {
+        return jpa.deleteIfUnused(id.value()) > 0;
+    }
+
+    @Override
+    public int deleteUnusedUploadedBefore(Instant moment) {
+        return jpa.deleteUnusedUploadedBefore(moment);
     }
 }

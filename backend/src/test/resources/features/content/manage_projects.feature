@@ -156,3 +156,25 @@ Feature: An administrator writes projects, the stories of the children the found
     When someone without a token creates a project
     Then the response status is 401
     And the problem type ends with "auth/unauthenticated"
+
+  Scenario: After its address changes, the old address still leads to the project
+    Given "Jana" creates a project:
+      | title | Dominik, 7 let                            |
+      | year  | 2024                                      |
+      | perex | Pomohli jsme mu získat speciální kočárek. |
+      | body  | Text o Dominikovi.                        |
+    And "Jana" publishes the project "dominik-7-let" on 2026-10-20
+    When "Jana" changes the project "dominik-7-let":
+      | title | Dominik, 8 let                            |
+      | slug  | dominik-8-let                             |
+      | year  | 2025                                      |
+      | perex | Pomohli jsme mu získat speciální kočárek. |
+      | body  | Text o Dominikovi.                        |
+    Then the response status is 200
+    When someone without a token asks for the project "dominik-7-let"
+    Then the response status is 200
+    And the project says:
+      | slug | dominik-8-let |
+      | year | 2025          |
+    When someone without a token asks for the news article "dominik-7-let"
+    Then the response status is 404

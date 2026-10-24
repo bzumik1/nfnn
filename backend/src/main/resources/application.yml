@@ -82,6 +82,10 @@ app:
     public-url: ${PUBLIC_URL:https://nfnn.cz}
   mail:
     sender-email: ${MAIL_FROM:${CONTACT_RECIPIENT:info@nfnn.cz}}
+  content:
+    media-cleanup:
+      max-age: P7D
+      cron: "0 45 3 * * *"
   contact:
     recipient-email: ${CONTACT_RECIPIENT:info@nfnn.cz}
     retention:

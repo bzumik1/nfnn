@@ -15,8 +15,6 @@ interface NewsArticleJpaRepository extends JpaRepository<NewsArticleJpaEntity, U
 
     boolean existsBySlugAndIdNot(String slug, UUID id);
 
-    boolean existsByCoverMediaId(UUID coverMediaId);
-
     @Query("select a from NewsArticleJpaEntity a order by case when a.publishedOn is null then 0 else 1 end, a.publishedOn desc, a.updatedAt desc")
     List<NewsArticleJpaEntity> findAllDraftsFirst();
 
