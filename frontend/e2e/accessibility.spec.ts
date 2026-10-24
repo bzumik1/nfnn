@@ -529,7 +529,9 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     await signIn(page, administrator);
     await page.getByRole('link', { name: 'Správa' }).click();
     await expect(page.getByRole('heading', { level: 1, name: 'Správa' })).toBeFocused();
-    await expect(page.locator('.admin-outage')).toBeVisible();
+    await expect(page.getByRole('region', { name: 'Co potřebuje vaši pozornost' })).toContainText(
+      'Platby z banky se nestahují',
+    );
     await expect(page.locator('.overview-table tbody tr')).toHaveCount(2);
     await expect(page.getByText('Zálohování je v pořádku.')).toBeVisible();
 

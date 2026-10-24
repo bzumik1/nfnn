@@ -62,8 +62,8 @@
           </li>
         }
         @if (unpairedState() === 'error') {
-          <li class="attention-item" role="alert">
-            <span i18n="@@admin.home.attention.unpaired.failed"
+          <li class="attention-item">
+            <span role="alert" i18n="@@admin.home.attention.unpaired.failed"
               >Platby čekající na přiřazení se nepodařilo zjistit.</span
             >
             <button
@@ -110,8 +110,8 @@
           </li>
         }
         @if (administratorsState() === 'error') {
-          <li class="attention-item" role="alert">
-            <span i18n="@@admin.home.attention.secondFactor.failed"
+          <li class="attention-item">
+            <span role="alert" i18n="@@admin.home.attention.secondFactor.failed"
               >Správce se nepodařilo zkontrolovat.</span
             >
             <button

@@ -489,7 +489,7 @@ describe('Given an administrator on the administration home', () => {
       ]);
       expect(text('.attention [role="alert"]')).toContain('Správce se nepodařilo zkontrolovat.');
 
-      (attention().querySelector('[role="alert"] button') as HTMLButtonElement).click();
+      (attention().querySelector('.attention-list button') as HTMLButtonElement).click();
       fixture.detectChanges();
       http.expectOne(ADMINISTRATORS_URL).flush({ items: [administrator()] });
       await fixture.whenStable();

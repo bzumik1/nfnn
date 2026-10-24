@@ -286,7 +286,7 @@ test.describe('Given an administrator', () => {
       '/sprava/nastaveni',
     );
     await expect(value(page, 'Poslední chyba')).toContainText(
-      'Fio odmítlo token (chybí, ještě neplatí nebo vypršel) (HTTP 401)',
+      'Fio odmítlo token (chybí, ještě neplatí nebo vypršel) 18. 10. 2026 11:00 (HTTP 401)',
     );
   });
 
