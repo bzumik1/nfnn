@@ -30,286 +30,350 @@
       </div>
     }
     @case ('ready') {
-      <section class="ui-card" aria-labelledby="projects-content-title">
-        <h2 id="projects-content-title" class="ui-card__title" i18n="@@admin.projectEditor.content">
-          Obsah
-        </h2>
-        <div class="ui-card__body">
-          <form
-            #projectForm="ngForm"
-            #projectFormElement
-            class="project-form"
-            appFocusFirstInvalid
-            (ngSubmit)="save(projectForm)"
-            novalidate
+      <div
+        class="ui-segmented editor-mode"
+        role="group"
+        aria-label="Zobrazení editoru"
+        i18n-aria-label="@@admin.projectEditor.mode.label"
+      >
+        <button
+          type="button"
+          [class.is-active]="!previewing()"
+          [attr.aria-pressed]="!previewing()"
+          (click)="edit()"
+          i18n="@@admin.projectEditor.mode.edit"
+        >
+          Upravit
+        </button>
+        <button
+          type="button"
+          [class.is-active]="previewing()"
+          [attr.aria-pressed]="previewing()"
+          (click)="showPreview()"
+          i18n="@@admin.projectEditor.mode.preview"
+        >
+          Náhled
+        </button>
+      </div>
+
+      <form
+        #projectForm="ngForm"
+        #projectFormElement
+        class="project-form"
+        appFocusFirstInvalid
+        (ngSubmit)="submit(projectForm)"
+        novalidate
+      >
+        <section
+          #editFields
+          class="ui-card"
+          aria-labelledby="projects-content-title"
+          [hidden]="previewing()"
+        >
+          <h2
+            id="projects-content-title"
+            class="ui-card__title"
+            i18n="@@admin.projectEditor.content"
           >
-            <app-form-field
-              label="Titulek"
-              i18n-label="@@admin.projectEditor.title"
-              [messages]="titleMessages"
-            >
-              <input
-                appFormControl
-                id="projects-title"
-                name="title"
-                type="text"
-                autocomplete="off"
-                [ngModel]="projectTitle"
-                (ngModelChange)="titleChanged($event)"
-                required
-                [maxlength]="maxTitleLength"
-              />
-            </app-form-field>
+            Obsah
+          </h2>
+          <div class="ui-card__body">
+            <div class="fields">
+              <app-form-field
+                label="Titulek"
+                i18n-label="@@admin.projectEditor.title"
+                [messages]="titleMessages"
+              >
+                <input
+                  appFormControl
+                  id="projects-title"
+                  name="title"
+                  type="text"
+                  autocomplete="off"
+                  [ngModel]="projectTitle"
+                  (ngModelChange)="titleChanged($event)"
+                  required
+                  [maxlength]="maxTitleLength"
+                />
+              </app-form-field>
 
-            <app-form-field
-              label="Rok"
-              i18n-label="@@admin.projectEditor.year"
-              hint="Rok, do kterého projekt patří. Web řadí projekty od nejnovějšího roku."
-              i18n-hint="@@admin.projectEditor.year.hint"
-              [messages]="yearMessages"
-            >
-              <input
-                appFormControl
-                id="projects-year"
-                name="year"
-                type="number"
-                inputmode="numeric"
-                [(ngModel)]="year"
-                required
-                [min]="minYear"
-                [max]="maxYear"
-              />
-            </app-form-field>
+              <app-form-field
+                label="Rok"
+                i18n-label="@@admin.projectEditor.year"
+                hint="Rok, do kterého projekt patří. Web řadí projekty od nejnovějšího roku."
+                i18n-hint="@@admin.projectEditor.year.hint"
+                [messages]="yearMessages"
+              >
+                <input
+                  appFormControl
+                  id="projects-year"
+                  name="year"
+                  type="number"
+                  inputmode="numeric"
+                  [(ngModel)]="year"
+                  required
+                  [min]="minYear"
+                  [max]="maxYear"
+                />
+              </app-form-field>
 
-            <app-form-field
-              label="Adresa na webu (nepovinné)"
-              i18n-label="@@admin.projectEditor.slug"
-              [hint]="publicAddressHint()"
-              [messages]="slugMessages"
-            >
-              <input
-                #slugInput
-                appFormControl
-                id="projects-slug"
-                name="slug"
-                type="text"
-                autocomplete="off"
-                spellcheck="false"
-                [ngModel]="slug"
-                (ngModelChange)="slugChanged($event)"
-                [pattern]="slugPattern"
-                [maxlength]="maxSlugLength"
-              />
-            </app-form-field>
+              <app-form-field
+                label="Adresa na webu (nepovinné)"
+                i18n-label="@@admin.projectEditor.slug"
+                [hint]="publicAddressHint()"
+                [messages]="slugMessages"
+              >
+                <input
+                  #slugInput
+                  appFormControl
+                  id="projects-slug"
+                  name="slug"
+                  type="text"
+                  autocomplete="off"
+                  spellcheck="false"
+                  [ngModel]="slug"
+                  (ngModelChange)="slugChanged($event)"
+                  [pattern]="slugPattern"
+                  [maxlength]="maxSlugLength"
+                />
+              </app-form-field>
 
-            <app-form-field
-              label="Štítek (nepovinné)"
-              i18n-label="@@admin.projectEditor.tag"
-              hint="Slovo nad kartou, například Kompenzační pomůcky nebo Vzdělávání."
-              i18n-hint="@@admin.projectEditor.tag.hint"
-              [messages]="tagMessages"
-            >
-              <input
-                appFormControl
-                id="projects-tag"
-                name="tag"
-                type="text"
-                autocomplete="off"
-                [(ngModel)]="tag"
-                [maxlength]="maxTagLength"
-              />
-            </app-form-field>
+              <app-form-field
+                label="Štítek (nepovinné)"
+                i18n-label="@@admin.projectEditor.tag"
+                hint="Slovo nad kartou, například Kompenzační pomůcky nebo Vzdělávání."
+                i18n-hint="@@admin.projectEditor.tag.hint"
+                [messages]="tagMessages"
+              >
+                <input
+                  appFormControl
+                  id="projects-tag"
+                  name="tag"
+                  type="text"
+                  autocomplete="off"
+                  [(ngModel)]="tag"
+                  [maxlength]="maxTagLength"
+                />
+              </app-form-field>
 
-            <app-form-field
-              label="Krátký souhrn"
-              i18n-label="@@admin.projectEditor.perex"
-              hint="Ukáže se na kartě projektu, nejvíc 300 znaků."
-              i18n-hint="@@admin.projectEditor.perex.hint"
-              [messages]="perexMessages"
-            >
-              <textarea
-                appFormControl
-                id="projects-perex"
-                name="perex"
-                rows="3"
-                [(ngModel)]="perex"
-                required
-                [maxlength]="maxPerexLength"
-              ></textarea>
-            </app-form-field>
+              <app-form-field
+                label="Krátký souhrn"
+                i18n-label="@@admin.projectEditor.perex"
+                hint="Ukáže se na kartě projektu, nejvíc 300 znaků."
+                i18n-hint="@@admin.projectEditor.perex.hint"
+                [messages]="perexMessages"
+              >
+                <textarea
+                  appFormControl
+                  id="projects-perex"
+                  name="perex"
+                  rows="3"
+                  [(ngModel)]="perex"
+                  required
+                  [maxlength]="maxPerexLength"
+                ></textarea>
+              </app-form-field>
 
-            <app-form-field
-              label="Text"
-              i18n-label="@@admin.projectEditor.body"
-              hint="Odstavce oddělte prázdným řádkem; formát přidáte tlačítky nad polem a vzhled ověříte tlačítkem Ukázat náhled."
-              i18n-hint="@@admin.projectEditor.body.hint"
-              [messages]="bodyMessages"
-            >
-              <app-markdown-toolbar [target]="bodyArea" [preview]="bodyPreview" />
-              <textarea
-                #bodyArea
-                appFormControl
-                id="projects-body"
-                name="body"
-                rows="12"
-                [(ngModel)]="body"
-                required
-                [maxlength]="maxBodyLength"
-              ></textarea>
-            </app-form-field>
-            <app-markdown-preview #bodyPreview [text]="body" previewId="projects-body-preview" />
+              <app-form-field
+                label="Text"
+                i18n-label="@@admin.projectEditor.body"
+                hint="Odstavce oddělte prázdným řádkem; formát přidáte tlačítky nad polem a vzhled ověříte přepínačem Náhled nahoře."
+                i18n-hint="@@admin.projectEditor.body.hint"
+                [messages]="bodyMessages"
+              >
+                <app-markdown-toolbar [target]="bodyArea" />
+                <textarea
+                  #bodyArea
+                  appFormControl
+                  id="projects-body"
+                  name="body"
+                  rows="12"
+                  [(ngModel)]="body"
+                  required
+                  [maxlength]="maxBodyLength"
+                ></textarea>
+              </app-form-field>
 
-            <div class="image-field">
-              <p class="field-label" i18n="@@admin.projectEditor.image">Fotka (nepovinné)</p>
-              @if (previewUrl(); as url) {
-                <img class="image-preview" [src]="url" alt="" width="480" height="300" />
-              }
-              <div class="image-actions">
-                <app-file-button
-                  inputId="projects-image"
-                  accept="image/jpeg,image/png,image/webp"
-                  describedBy="projects-image-hint"
-                  [disabled]="uploading()"
-                  (chosen)="upload($event)"
-                >
-                  @if (coverImage()) {
-                    <ng-container i18n="@@admin.projectEditor.image.replace"
-                      >Vyměnit fotku</ng-container
-                    >
-                  } @else {
-                    <ng-container i18n="@@admin.projectEditor.image.choose"
-                      >Nahrát fotku</ng-container
-                    >
-                  }
-                </app-file-button>
-                @if (coverImage()) {
-                  <button
-                    type="button"
-                    class="ui-link-button"
+              <div class="image-field">
+                <p class="field-label" i18n="@@admin.projectEditor.image">Fotka (nepovinné)</p>
+                @if (previewUrl(); as url) {
+                  <img class="image-preview" [src]="url" alt="" width="480" height="300" />
+                }
+                <div class="image-actions">
+                  <app-file-button
+                    inputId="projects-image"
+                    accept="image/jpeg,image/png,image/webp"
+                    describedBy="projects-image-hint"
                     [disabled]="uploading()"
-                    (click)="removeImage()"
-                    i18n="@@admin.projectEditor.image.remove"
+                    (chosen)="upload($event)"
                   >
-                    Odebrat fotku
-                  </button>
-                }
-              </div>
-              <p
-                id="projects-image-hint"
-                class="field-hint"
-                i18n="@@admin.projectEditor.image.hint"
-              >
-                Ukáže se na kartě projektu a nahoře v jeho detailu. JPEG, PNG nebo WebP do 10 MB;
-                web si z fotky vyrobí zmenšené kopie.
-              </p>
-              <div role="status">
-                @if (uploading()) {
-                  <p class="field-status" i18n="@@admin.projectEditor.image.uploading">
-                    Nahráváme fotku…
-                  </p>
-                } @else if (coverUnsaved() && coverImage()) {
-                  <p class="field-status" i18n="@@admin.projectEditor.image.uploaded">
-                    Fotka je nahraná. K projektu se připojí, až ho uložíte.
-                  </p>
-                }
-              </div>
-              @if (uploadError(); as error) {
-                <p class="field-error" role="alert">{{ error }}</p>
-              }
-              @if (coverImage()) {
-                <app-form-field
-                  class="alt-field"
-                  label="Popis fotky (nepovinné)"
-                  i18n-label="@@admin.projectEditor.imageAlt"
-                  hint="Jednou větou, co je na fotce. Přečte ho nevidomým čtečka obrazovky a ukáže se, když se fotka nenačte."
-                  i18n-hint="@@admin.projectEditor.imageAlt.hint"
-                  [messages]="altMessages"
+                    @if (coverImage()) {
+                      <ng-container i18n="@@admin.projectEditor.image.replace"
+                        >Vyměnit fotku</ng-container
+                      >
+                    } @else {
+                      <ng-container i18n="@@admin.projectEditor.image.choose"
+                        >Nahrát fotku</ng-container
+                      >
+                    }
+                  </app-file-button>
+                  @if (coverImage()) {
+                    <button
+                      type="button"
+                      class="ui-link-button"
+                      [disabled]="uploading()"
+                      (click)="removeImage()"
+                      i18n="@@admin.projectEditor.image.remove"
+                    >
+                      Odebrat fotku
+                    </button>
+                  }
+                </div>
+                <p
+                  id="projects-image-hint"
+                  class="field-hint"
+                  i18n="@@admin.projectEditor.image.hint"
                 >
-                  <input
-                    appFormControl
-                    id="projects-image-alt"
-                    name="coverImageAlt"
-                    type="text"
-                    autocomplete="off"
-                    [(ngModel)]="coverImageAlt"
-                    [maxlength]="maxAltLength"
-                  />
-                </app-form-field>
-                @if (altMissing()) {
-                  <p class="field-hint alt-missing" i18n="@@admin.projectEditor.imageAlt.missing">
-                    Fotka zatím nemá popis pro nevidomé.
-                  </p>
+                  Ukáže se na kartě projektu a nahoře v jeho detailu. JPEG, PNG nebo WebP do 10 MB;
+                  web si z fotky vyrobí zmenšené kopie.
+                </p>
+                <div role="status">
+                  @if (uploading()) {
+                    <p class="field-status" i18n="@@admin.projectEditor.image.uploading">
+                      Nahráváme fotku…
+                    </p>
+                  } @else if (coverUnsaved() && coverImage()) {
+                    <p class="field-status" i18n="@@admin.projectEditor.image.uploaded">
+                      Fotka je nahraná. K projektu se připojí, až ho uložíte.
+                    </p>
+                  }
+                </div>
+                @if (uploadError(); as error) {
+                  <p class="field-error" role="alert">{{ error }}</p>
+                }
+                @if (coverImage()) {
+                  <app-form-field
+                    class="alt-field"
+                    label="Popis fotky (nepovinné)"
+                    i18n-label="@@admin.projectEditor.imageAlt"
+                    hint="Jednou větou, co je na fotce. Přečte ho nevidomým čtečka obrazovky a ukáže se, když se fotka nenačte."
+                    i18n-hint="@@admin.projectEditor.imageAlt.hint"
+                    [messages]="altMessages"
+                  >
+                    <input
+                      appFormControl
+                      id="projects-image-alt"
+                      name="coverImageAlt"
+                      type="text"
+                      autocomplete="off"
+                      [(ngModel)]="coverImageAlt"
+                      [maxlength]="maxAltLength"
+                    />
+                  </app-form-field>
+                  @if (altMissing()) {
+                    <p class="field-hint alt-missing" i18n="@@admin.projectEditor.imageAlt.missing">
+                      Fotka zatím nemá popis pro nevidomé.
+                    </p>
+                  }
+                }
+              </div>
+
+              <app-form-field
+                class="date-field"
+                label="Datum zveřejnění"
+                i18n-label="@@admin.projectEditor.publishDate"
+                [hint]="publishDateHint()"
+                [messages]="publishDateMessages"
+              >
+                <input
+                  appFormControl
+                  id="projects-publish-date"
+                  name="publishDate"
+                  type="date"
+                  [(ngModel)]="publishDate"
+                />
+              </app-form-field>
+            </div>
+          </div>
+        </section>
+
+        @if (previewing()) {
+          @if (preview(); as content) {
+            <app-content-preview [content]="content" />
+          }
+        }
+
+        <div class="ui-action-bar editor-bar" appActionBar>
+          <div class="bar-row">
+            <p class="publish-state">
+              @switch (publishState()) {
+                @case ('live') {
+                  <span
+                    class="ui-badge ui-badge--success"
+                    i18n="@@admin.projectEditor.state.published"
+                    >Na webu</span
+                  >
+                }
+                @case ('scheduled') {
+                  <span
+                    class="ui-badge ui-badge--accent"
+                    i18n="@@admin.projectEditor.state.scheduled"
+                    >Zveřejní se {{ publishedOn() }}</span
+                  >
+                }
+                @default {
+                  <span class="ui-badge ui-badge--warning" i18n="@@admin.projectEditor.state.draft"
+                    >Koncept</span
+                  >
                 }
               }
-            </div>
-
-            @if (formError(); as error) {
-              <p class="form-error" role="alert">{{ error }}</p>
-            }
-
-            <div class="form-actions">
-              <button
-                #saveButton
-                type="submit"
-                class="ui-button ui-button--primary"
-                [disabled]="saving() || uploading() || publishing()"
-              >
-                @if (saving()) {
-                  <span i18n="@@admin.projectEditor.saving">Ukládáme…</span>
-                } @else if (isPublished()) {
-                  <span i18n="@@admin.projectEditor.save.published">Uložit a ukázat na webu</span>
-                } @else {
-                  <span i18n="@@admin.projectEditor.save.new">Uložit koncept</span>
-                }
-              </button>
-              @if (updatedAt(); as at) {
-                <span class="updated-at" i18n="@@admin.projectEditor.updatedAt"
+              @if (unsaved()) {
+                <span class="save-state" i18n="@@admin.projectEditor.unsaved"
+                  >Máte neuložené změny.</span
+                >
+              } @else if (updatedAt(); as at) {
+                <span class="save-state updated-at" i18n="@@admin.projectEditor.updatedAt"
                   >Naposledy uloženo {{ at }}.</span
                 >
               }
-            </div>
-            <p class="ui-form-status" role="status">
-              @if (saveStatus(); as status) {
-                <span>{{ status }}</span>
-              }
             </p>
-            @if (isPublished()) {
-              <p class="save-hint" i18n="@@admin.projectEditor.save.publishedHint">
-                Projekt je na webu, změny se ukážou hned.
-              </p>
-            }
-          </form>
-        </div>
-      </section>
-
-      <section class="ui-card publish-card" aria-labelledby="projects-publish-title">
-        <h2
-          id="projects-publish-title"
-          class="ui-card__title"
-          i18n="@@admin.projectEditor.publish.title"
-        >
-          Zveřejnění
-        </h2>
-        <div class="ui-card__body">
-          @if (isNew()) {
-            <p class="ui-card__intro" i18n="@@admin.projectEditor.publish.saveFirst">
-              Projekt nejdřív uložte, zveřejnit ho půjde potom.
-            </p>
-          } @else {
-            @if (publishedOn(); as date) {
-              <p class="publish-state publish-state--published">
-                <span
-                  class="ui-badge ui-badge--success"
-                  i18n="@@admin.projectEditor.state.published"
-                  >Na webu</span
+            <div class="bar-actions">
+              @if (isPublished()) {
+                <button
+                  #saveButton
+                  type="submit"
+                  class="ui-button ui-button--primary"
+                  [disabled]="busy() || uploading()"
                 >
-                <span i18n="@@admin.projectEditor.publishedOn"
-                  >Zveřejněno s datem {{ date }}. Web řadí projekty podle roku a pak podle tohoto
-                  data.</span
+                  @if (saving()) {
+                    <span i18n="@@admin.projectEditor.saving">Ukládáme…</span>
+                  } @else if (publishState() === 'live') {
+                    <span i18n="@@admin.projectEditor.save.published">Uložit a ukázat na webu</span>
+                  } @else {
+                    <span i18n="@@admin.projectEditor.save.scheduled">Uložit změny</span>
+                  }
+                </button>
+                <button
+                  type="button"
+                  class="ui-button ui-button--quiet"
+                  [disabled]="busy()"
+                  (click)="unpublish()"
                 >
-              </p>
-              @if (publicUrl(); as url) {
-                <p class="public-link-row">
+                  @if (unpublishing()) {
+                    <ng-container i18n="@@admin.projectEditor.unpublishing"
+                      >Stahujeme…</ng-container
+                    >
+                  } @else if (publishState() === 'live') {
+                    <ng-container i18n="@@admin.projectEditor.unpublish"
+                      >Stáhnout z webu</ng-container
+                    >
+                  } @else {
+                    <ng-container i18n="@@admin.projectEditor.unpublish.scheduled"
+                      >Zrušit zveřejnění</ng-container
+                    >
+                  }
+                </button>
+                @if (publicUrl(); as url) {
                   <a class="public-link" [href]="url" target="_blank" rel="noopener"
                     ><ng-container i18n="@@admin.projectEditor.publicLink"
                       >Otevřít na webu</ng-container
@@ -320,93 +384,40 @@
                       >(v novém okně)</span
                     ></a
                   >
-                </p>
-              }
-            } @else {
-              <p class="publish-state">
-                <span class="ui-badge ui-badge--warning" i18n="@@admin.projectEditor.state.draft"
-                  >Koncept</span
-                >
-                <span i18n="@@admin.projectEditor.draft.text"
-                  >Projekt vidíte jen vy. Zveřejněte ho s datem; pozdější datum ho na web pustí až
-                  ten den.</span
-                >
-              </p>
-            }
-            <div class="publish-row">
-              <label class="date-field">
-                <span class="field-label" i18n="@@admin.projectEditor.publishDate"
-                  >Datum zveřejnění</span
-                >
-                <input
-                  id="projects-publish-date"
-                  name="publishDate"
-                  type="date"
-                  [(ngModel)]="publishDate"
-                  required
-                />
-              </label>
-              <button
-                type="button"
-                class="ui-button"
-                [disabled]="publishing() || unpublishing() || saving() || !publishDate"
-                (click)="publish()"
-              >
-                @if (publishing()) {
-                  <ng-container i18n="@@admin.projectEditor.publishing">Zveřejňujeme…</ng-container>
-                } @else {
-                  @switch (publishAction()) {
-                    @case ('changeDate') {
-                      <ng-container i18n="@@admin.projectEditor.publish.changeDate"
-                        >Změnit datum</ng-container
-                      >
-                    }
-                    @case ('saveAndChangeDate') {
-                      <ng-container i18n="@@admin.projectEditor.publish.saveAndChangeDate"
-                        >Uložit a změnit datum</ng-container
-                      >
-                    }
-                    @case ('saveAndPublish') {
-                      <ng-container i18n="@@admin.projectEditor.publish.saveAndPublish"
-                        >Uložit a zveřejnit</ng-container
-                      >
-                    }
-                    @default {
-                      <ng-container i18n="@@admin.projectEditor.publish.now"
-                        >Zveřejnit</ng-container
-                      >
-                    }
-                  }
                 }
-              </button>
-              @if (isPublished()) {
+              } @else {
                 <button
-                  type="button"
-                  class="ui-link-button"
-                  [disabled]="publishing() || unpublishing()"
-                  (click)="unpublish()"
+                  #saveButton
+                  type="submit"
+                  class="ui-button"
+                  [disabled]="busy() || uploading()"
                 >
-                  @if (unpublishing()) {
-                    <ng-container i18n="@@admin.projectEditor.unpublishing"
-                      >Stahujeme…</ng-container
-                    >
+                  @if (saving() === 'save') {
+                    <span i18n="@@admin.projectEditor.saving">Ukládáme…</span>
                   } @else {
-                    <ng-container i18n="@@admin.projectEditor.unpublish"
-                      >Stáhnout z webu</ng-container
+                    <span i18n="@@admin.projectEditor.save.new">Uložit koncept</span>
+                  }
+                </button>
+                <button
+                  type="submit"
+                  class="ui-button ui-button--primary"
+                  [disabled]="busy() || uploading()"
+                  (click)="requestPublish()"
+                >
+                  @if (saving() === 'publish') {
+                    <span i18n="@@admin.projectEditor.publishing">Zveřejňujeme…</span>
+                  } @else {
+                    <span i18n="@@admin.projectEditor.publish.saveAndPublish"
+                      >Uložit a zveřejnit</span
                     >
                   }
                 </button>
               }
             </div>
-            @if (unsaved()) {
-              <p class="publish-hint" i18n="@@admin.projectEditor.publish.unsavedHint">
-                V obsahu máte neuložené změny; tlačítko je nejdřív uloží.
-              </p>
-            }
-          }
-          <app-live-notice class="card-notice" [notice]="publishNotice()" />
+          </div>
+          <app-live-notice class="bar-notice" [notice]="notice()" />
         </div>
-      </section>
+      </form>
 
       @if (!isNew()) {
         <section

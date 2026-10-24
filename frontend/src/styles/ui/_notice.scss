@@ -52,6 +52,11 @@
   color: var(--color-warning);
 }
 
+.ui-badge--accent {
+  background: var(--color-accent-bg);
+  color: var(--color-accent);
+}
+
 .ui-mono {
   font-family: var(--font-mono);
   font-variant-numeric: var(--numeric-figures);

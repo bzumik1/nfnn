@@ -1,3 +1,5 @@
+@use 'breakpoints' as bp;
+
 :host {
   display: block;
 }
@@ -14,7 +16,12 @@
   margin-bottom: var(--space-3-5);
 }
 
-.project-form {
+.editor-mode {
+  max-width: 320px;
+  margin-bottom: var(--space-5);
+}
+
+.fields {
   max-width: 640px;
 }
 
@@ -62,60 +69,53 @@
   color: var(--color-text-muted);
 }
 
-.field-error,
-.form-error {
+.field-error {
   color: var(--color-danger);
   font-weight: var(--weight-semibold);
 }
 
-.form-error {
-  font-size: var(--text-sm);
-  margin: var(--space-1) 0 var(--space-2);
+.alt-field {
+  display: block;
+  margin-top: var(--space-4);
 }
 
-.form-actions {
+.date-field {
+  display: block;
+  max-width: 260px;
+}
+
+.bar-row {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
+  justify-content: space-between;
   gap: var(--space-2-5) var(--space-4);
-}
-
-.updated-at {
-  font-size: var(--text-sm);
-  color: var(--color-text-muted);
 }
 
 .publish-state {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-2) var(--space-3);
-  font-size: var(--text-md);
-  color: var(--color-text);
+  gap: var(--space-1) var(--space-2-5);
+  font-size: var(--text-sm);
   line-height: var(--leading-normal);
-  margin-bottom: var(--space-3-5);
 }
 
-.publish-row {
+.save-state {
+  color: var(--color-text-muted);
+}
+
+.bar-actions {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-end;
-  gap: var(--space-3) var(--space-4);
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
 }
 
-.date-field {
-  display: block;
-
-  input {
-    display: block;
-    font-family: var(--font-sans);
-    font-size: var(--text-md);
-    color: var(--color-text);
-    padding: var(--space-2-25) var(--space-3);
-    border: 1px solid var(--color-border-field);
-    border-radius: var(--radius-sm);
-    background: var(--color-surface);
-  }
+.public-link {
+  color: var(--color-accent);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
 }
 
 .confirm {
@@ -127,29 +127,16 @@
   color: var(--color-text);
 }
 
-.alt-field {
-  display: block;
-  margin-top: var(--space-4);
-}
-
-.save-hint,
-.publish-hint {
-  font-size: var(--text-sm);
-  line-height: var(--leading-normal);
-  color: var(--color-text-muted);
-  margin-top: var(--space-2);
-}
-
-.public-link-row {
-  margin: 0 0 var(--space-3-5);
-  font-size: var(--text-md);
-}
-
-.public-link {
-  color: var(--color-accent);
-  font-weight: var(--weight-semibold);
-}
-
 .card-notice {
   margin-top: var(--space-3-5);
+}
+
+@include bp.down(phone) {
+  .bar-row {
+    gap: var(--space-2);
+  }
+
+  .publish-state {
+    font-size: var(--text-xs);
+  }
 }

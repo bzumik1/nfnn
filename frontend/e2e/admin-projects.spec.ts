@@ -23,6 +23,7 @@ function project(overrides: Record<string, unknown> = {}) {
     body: 'První odstavec.\n\nDruhý odstavec.',
     coverImage: { id: IMAGE_ID, url: `/api/content/media/${IMAGE_ID}`, alt: null },
     publishedOn: '2026-10-20',
+    live: true,
     createdAt: '2026-10-19T09:00:00Z',
     updatedAt: '2026-10-20T07:30:00Z',
     ...overrides,
@@ -40,6 +41,7 @@ function draft(overrides: Record<string, unknown> = {}) {
     body: 'Text o koncertu.',
     coverImage: null,
     publishedOn: null,
+    live: false,
     createdAt: '2026-10-22T09:00:00Z',
     updatedAt: '2026-10-22T09:00:00Z',
     ...overrides,
@@ -91,7 +93,7 @@ test.describe('Given an administrator managing the projects', () => {
       'Zahrada pro děti',
       '2024',
       'Projekt',
-      'Zveřejněno 20. 10. 2026',
+      'Na webu od 20. 10. 2026',
       '20. 10. 2026 09:30',
     ]);
 
@@ -102,7 +104,10 @@ test.describe('Given an administrator managing the projects', () => {
     await expect(page.getByLabel('Titulek')).toHaveValue('Zahrada pro děti');
     await expect(page.getByLabel('Rok')).toHaveValue('2024');
     await expect(page.locator('.image-preview')).toBeVisible();
-    await expect(page.getByText('Zveřejněno s datem 20. 10. 2026.')).toBeVisible();
+    await expect(page.locator('.publish-state .ui-badge')).toHaveText('Na webu');
+    await expect(
+      page.getByRole('link', { name: 'Otevřít na webu (v novém okně)' }),
+    ).toHaveAttribute('href', '/projekty/zahrada-pro-deti');
   });
 
   test('when they write a new project with a photo and publish it, then each step is confirmed and the requests carry what they typed', async ({
@@ -125,12 +130,20 @@ test.describe('Given an administrator managing the projects', () => {
         return route.fulfill({ status: 201, json: draft({ coverImage: project().coverImage }) });
       },
     );
+    const updated: unknown[] = [];
+    await page.route(
+      (url) => url.pathname === `${PROJECTS}/${DRAFT_ID}`,
+      (route) => {
+        updated.push(route.request().postDataJSON());
+        return route.fulfill({ json: draft({ coverImage: project().coverImage }) });
+      },
+    );
     await page.route(
       (url) => url.pathname === `${PROJECTS}/${DRAFT_ID}/publish`,
       (route) => {
         published.push(route.request().postDataJSON());
         return route.fulfill({
-          json: draft({ coverImage: project().coverImage, publishedOn: '2026-10-23' }),
+          json: draft({ coverImage: project().coverImage, publishedOn: '2026-10-23', live: true }),
         });
       },
     );
@@ -153,11 +166,16 @@ test.describe('Given an administrator managing the projects', () => {
     });
     await expect(page.locator('.image-preview')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Odebrat fotku' })).toBeVisible();
+    await page.getByRole('button', { name: 'Náhled', exact: true }).click();
+    const preview = page.locator('app-content-preview');
+    await expect(preview.locator('.card .card-title')).toHaveText('Benefiční koncert');
+    await expect(preview.locator('.card .card-year')).toHaveText('2026');
+    await expect(preview.locator('h3.ui-intro__title')).toBeVisible();
 
     await page.getByRole('button', { name: 'Uložit koncept' }).click();
 
-    await expect(page.locator('.ui-form-status')).toHaveText(
-      'Projekt jsme uložili jako koncept. Na web ho dostanete tlačítkem Zveřejnit.',
+    await expect(page.locator('.ui-action-bar [role="status"]')).toHaveText(
+      'Projekt jsme uložili jako koncept. Na web ho dostanete tlačítkem Uložit a zveřejnit.',
     );
     await expect(page).toHaveURL(`/sprava/projekty/${DRAFT_ID}`);
     expect(created).toEqual([
@@ -173,14 +191,17 @@ test.describe('Given an administrator managing the projects', () => {
       },
     ]);
 
+    await page.getByRole('button', { name: 'Upravit', exact: true }).click();
     await page.getByLabel('Datum zveřejnění').fill('2026-10-23');
-    await page.getByRole('button', { name: 'Zveřejnit' }).click();
+    await page.getByRole('button', { name: 'Uložit a zveřejnit' }).click();
 
-    await expect(page.locator('.publish-card .ui-notice--status')).toHaveText(
+    await expect(page.locator('.ui-action-bar .ui-notice--status')).toHaveText(
       'Projekt je na webu s datem 23. 10. 2026.',
     );
     await expect(page.getByRole('button', { name: 'Stáhnout z webu' })).toBeVisible();
+    expect(updated).toHaveLength(1);
     expect(published).toEqual([{ publishedOn: '2026-10-23' }]);
+    await expect(page.getByRole('link', { name: 'Otevřít na webu (v novém okně)' })).toBeVisible();
   });
 
   test('when the title is missing, then the field says so, gets focus and nothing is sent', async ({
@@ -266,10 +287,10 @@ test.describe('Given an administrator managing the projects', () => {
     await page.goto(`/sprava/projekty/${PROJECT_ID}`);
     await page.getByRole('button', { name: 'Stáhnout z webu' }).click();
 
-    await expect(page.locator('.publish-card .ui-notice--status')).toHaveText(
+    await expect(page.locator('.ui-action-bar .ui-notice--status')).toHaveText(
       'Projekt jsme z webu stáhli. Zůstává tu jako koncept.',
     );
-    await expect(page.getByRole('button', { name: 'Zveřejnit' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Uložit a zveřejnit' })).toBeVisible();
 
     await page.getByRole('button', { name: 'Smazat projekt' }).click();
     const question = page.getByRole('group', { name: 'Smazat projekt?' });

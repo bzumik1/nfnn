@@ -18,6 +18,7 @@ export interface ProjectResponse {
   body: string;
   coverImage: CoverImageResponse | null;
   publishedOn: string | null;
+  live: boolean;
   createdAt: string;
   updatedAt: string;
 }

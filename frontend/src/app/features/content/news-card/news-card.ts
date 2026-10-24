@@ -23,6 +23,7 @@ const PLACEHOLDER_IMAGES: Record<NewsPlaceholder, string> = {
 export class NewsCard {
   readonly item = input<NewsArticleResponse | null>(null);
   readonly placeholder = input<NewsPlaceholder | null>(null);
+  readonly linked = input(true);
 
   protected readonly placeholderImage = computed(() => {
     const key = this.placeholder();

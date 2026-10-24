@@ -70,13 +70,24 @@ describe('Given an administrator on the news list', () => {
     fixture.detectChanges();
   }
 
-  it('when the list arrives, then every article shows its title as a link, its tag, its state and when it was last saved', async () => {
-    http.expectOne(LIST_URL).flush({ items: [draftArticle(), newsArticle()] });
+  it('when the list arrives, then every article shows its title as a link, its tag, whether the site shows it today or from when, and when it was last saved', async () => {
+    http.expectOne(LIST_URL).flush({
+      items: [
+        draftArticle(),
+        newsArticle({
+          id: '0199f3e0-0000-7000-8000-00000000c003',
+          publishedOn: '2026-10-30',
+          live: false,
+        }),
+        newsArticle(),
+      ],
+    });
     await settle();
 
     expect(rows()).toEqual([
       'Benefiční koncert bez štítku Koncept 22. 10. 2026 11:00',
-      'Zahrada pro děti Projekt Zveřejněno 20. 10. 2026 20. 10. 2026 09:30',
+      'Zahrada pro děti Projekt Zveřejní se 30. 10. 2026 20. 10. 2026 09:30',
+      'Zahrada pro děti Projekt Na webu od 20. 10. 2026 20. 10. 2026 09:30',
     ]);
     const links = fixture.nativeElement.querySelectorAll(
       'tbody a',

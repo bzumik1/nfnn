@@ -17,6 +17,7 @@ export interface NewsArticleResponse {
   body: string;
   coverImage: CoverImageResponse | null;
   publishedOn: string | null;
+  live: boolean;
   createdAt: string;
   updatedAt: string;
 }

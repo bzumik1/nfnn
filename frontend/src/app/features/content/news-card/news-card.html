@@ -22,7 +22,11 @@
         <span class="news-date">{{ date() }}</span>
       </div>
       <h3 class="news-title">
-        <a class="news-link" [routerLink]="['/aktuality', item.slug]">{{ item.title }}</a>
+        @if (linked()) {
+          <a class="news-link" [routerLink]="['/aktuality', item.slug]">{{ item.title }}</a>
+        } @else {
+          {{ item.title }}
+        }
       </h3>
       <p class="news-perex">{{ item.perex }}</p>
       <span class="news-more" aria-hidden="true" i18n="@@home.news.card.more">Číst dál →</span>

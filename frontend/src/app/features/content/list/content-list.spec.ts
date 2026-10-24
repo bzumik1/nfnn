@@ -3,7 +3,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
 import { of } from 'rxjs';
-import { ContentKind } from '../detail/content-detail';
+import { ContentKind } from '../detail/content-page';
 import { newsArticle } from '../testing/news-fixtures';
 import { project } from '../testing/project-fixtures';
 import { ContentList } from './content-list';

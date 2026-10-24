@@ -23,7 +23,7 @@ import { FocusFirstInvalid } from '../../../shared/ui/form-field/focus-first-inv
 import { FormControlDirective } from '../../../shared/ui/form-field/form-control';
 import { FormField } from '../../../shared/ui/form-field/form-field';
 import { FileButton } from '../../../shared/ui/file-button/file-button';
-import { MarkdownPreview } from '../../../shared/ui/markdown/markdown-preview';
+import { ActionBar } from '../../../shared/ui/action-bar/action-bar';
 import { MarkdownToolbar } from '../../../shared/ui/markdown/markdown-toolbar';
 import {
   CoverImageResponse,
@@ -43,10 +43,14 @@ import {
 } from '../../content/news-api';
 import { formatBankTime, formatDonationDate } from '../../donations/donation-date';
 import { LiveNotice, Notice } from '../../../shared/ui/live-notice/live-notice';
+import { ContentPreview, PreviewContent } from '../content-preview/content-preview';
 import { GuardsUnsavedChanges } from '../unsaved-changes/unsaved-changes-guard';
 import { UnsavedChangesDialog } from '../unsaved-changes/unsaved-changes-dialog';
 
 type LoadState = 'loading' | 'ready' | 'error';
+type EditorMode = 'edit' | 'preview';
+type Saving = 'save' | 'publish';
+type PublishState = 'draft' | 'scheduled' | 'live';
 
 const UNAUTHENTICATED = 'auth/unauthenticated';
 const FORBIDDEN = 'auth/forbidden';
@@ -66,9 +70,10 @@ const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
     FormControlDirective,
     FocusFirstInvalid,
     MarkdownToolbar,
-    MarkdownPreview,
     FileButton,
     UnsavedChangesDialog,
+    ContentPreview,
+    ActionBar,
   ],
   templateUrl: './admin-news-editor.html',
   styleUrl: './admin-news-editor.scss',
@@ -91,6 +96,7 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
     viewChild<ElementRef<HTMLFormElement>>('articleFormElement');
   private readonly saveButton = viewChild<ElementRef<HTMLButtonElement>>('saveButton');
   private readonly slugInput = viewChild<ElementRef<HTMLInputElement>>('slugInput');
+  private readonly editFields = viewChild<ElementRef<HTMLElement>>('editFields');
   private readonly deleteButton = viewChild<ElementRef<HTMLButtonElement>>('deleteButton');
   private readonly deleteCancel = viewChild<ElementRef<HTMLButtonElement>>('deleteCancel');
 
@@ -104,12 +110,11 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
 
   protected readonly state = signal<LoadState>('loading');
   protected readonly article = signal<NewsArticleResponse | null>(null);
-  protected readonly saveStatus = signal<string | null>(null);
-  protected readonly publishNotice = signal<Notice | null>(null);
+  protected readonly mode = signal<EditorMode>('edit');
+  protected readonly preview = signal<PreviewContent | null>(null);
+  protected readonly notice = signal<Notice | null>(null);
   protected readonly deleteNotice = signal<Notice | null>(null);
-  protected readonly formError = signal<string | null>(null);
-  protected readonly saving = signal(false);
-  protected readonly publishing = signal(false);
+  protected readonly saving = signal<Saving | null>(null);
   protected readonly unpublishing = signal(false);
   protected readonly deleting = signal(false);
   protected readonly confirmingDelete = signal(false);
@@ -120,6 +125,7 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
   private readonly edited = signal(false);
   private answerLeave: ((leave: boolean) => void) | null = null;
   private discarded = false;
+  private publishRequested = false;
 
   protected readonly titleMessages = {
     required: $localize`:@@admin.newsEditor.title.required:Vyplňte prosím titulek.`,
@@ -141,6 +147,9 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
     required: $localize`:@@admin.newsEditor.body.required:Napište prosím text aktuality.`,
     maxlength: $localize`:@@admin.newsEditor.body.tooLong:Text může mít nejvíc ${MAX_BODY_LENGTH}:max: znaků.`,
   };
+  protected readonly publishDateMessages = {
+    required: $localize`:@@admin.newsEditor.publishDate.required:Vyberte prosím datum zveřejnění.`,
+  };
   protected readonly altMessages = {
     maxlength: $localize`:@@admin.newsEditor.imageAlt.tooLong:Popis fotky může mít nejvíc ${MAX_COVER_IMAGE_ALT_LENGTH}:max: znaků.`,
   };
@@ -156,6 +165,15 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
 
   protected readonly isNew = computed(() => this.article() === null);
   protected readonly isPublished = computed(() => this.article()?.publishedOn != null);
+  protected readonly previewing = computed(() => this.mode() === 'preview');
+  protected readonly busy = computed(() => this.saving() !== null || this.unpublishing());
+  protected readonly publishState = computed<PublishState>(() => {
+    const article = this.article();
+    if (article?.publishedOn == null) {
+      return 'draft';
+    }
+    return article.live ? 'live' : 'scheduled';
+  });
   protected readonly publishedOn = computed(() => {
     const date = this.article()?.publishedOn;
     return date ? formatDonationDate(date) : null;
@@ -168,15 +186,19 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
     () => (this.coverImage()?.id ?? null) !== (this.article()?.coverImage?.id ?? null),
   );
   protected readonly unsaved = computed(() => this.edited() || this.coverUnsaved());
-  protected readonly publishAction = computed(() => {
-    if (this.isPublished()) {
-      return this.unsaved() ? 'saveAndChangeDate' : 'changeDate';
-    }
-    return this.unsaved() ? 'saveAndPublish' : 'publish';
-  });
   protected readonly publicUrl = computed(() => {
     const article = this.article();
-    return article?.publishedOn ? `/aktuality/${article.slug}` : null;
+    return article?.live ? `/aktuality/${article.slug}` : null;
+  });
+  protected readonly publishDateHint = computed(() => {
+    switch (this.publishState()) {
+      case 'live':
+        return $localize`:@@admin.newsEditor.publishDate.hint.live:Aktualita je na webu, změny se ukážou hned. Web řadí aktuality podle data zveřejnění.`;
+      case 'scheduled':
+        return $localize`:@@admin.newsEditor.publishDate.hint.scheduled:Na web se aktualita dostane ${this.publishedOn()}:date:, do té doby ji vidíte jen vy. Web řadí aktuality podle data zveřejnění.`;
+      default:
+        return $localize`:@@admin.newsEditor.publishDate.hint.draft:Aktualitu zatím vidíte jen vy. Tlačítko Uložit a zveřejnit ji pustí na web s tímto datem, s pozdějším datem až ten den.`;
+    }
   });
   protected readonly previewUrl = computed(() => {
     const image = this.coverImage();
@@ -272,6 +294,7 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
 
   protected stayAndSave(): void {
     this.closeLeaveQuestion(false);
+    this.publishRequested = false;
     afterNextRender(
       () => {
         const form = this.articleFormElement()?.nativeElement;
@@ -305,32 +328,60 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
     this.slugOrDraft.set(value);
   }
 
-  protected save(form: NgForm): void {
-    if (this.saving() || this.publishing()) {
+  protected edit(): void {
+    this.mode.set('edit');
+  }
+
+  protected showPreview(): void {
+    this.preview.set({ kind: 'news', item: this.previewArticle() });
+    this.mode.set('preview');
+  }
+
+  protected requestPublish(): void {
+    this.publishRequested = true;
+  }
+
+  protected submit(form: NgForm): void {
+    const publish = this.publishRequested || this.isPublished();
+    this.publishRequested = false;
+    if (this.busy()) {
       return;
     }
-    this.formError.set(null);
-    this.saveStatus.set(null);
+    this.notice.set(null);
+    const dateControl = form.controls['publishDate'];
+    dateControl?.updateValueAndValidity();
+    const date = this.publishDate;
+    if (publish && !date) {
+      dateControl?.setErrors({ required: true });
+      dateControl?.markAsTouched();
+    }
     if (form.invalid) {
+      this.showFirstInvalid();
       return;
     }
-    this.saving.set(true);
     const existing = this.article();
+    const needsPublish = publish && existing?.publishedOn !== date;
+    this.saving.set(publish ? 'publish' : 'save');
+    if (existing && needsPublish && !this.unsaved()) {
+      this.sendPublish(existing.id, date);
+      return;
+    }
     const call = existing
       ? this.api.update(existing.id, this.request())
       : this.api.create(this.request());
     call.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (article) => {
-        this.saving.set(false);
         this.saved(article, existing === null);
-        this.saveStatus.set(
-          existing === null
-            ? $localize`:@@admin.newsEditor.saved.created:Aktualitu jsme uložili jako koncept. Na web ji dostanete tlačítkem Zveřejnit.`
-            : $localize`:@@admin.newsEditor.saved.updated:Změny jsme uložili.`,
-        );
+        if (needsPublish) {
+          this.publishDate = date;
+          this.sendPublish(article.id, date);
+          return;
+        }
+        this.saving.set(null);
+        this.notice.set({ kind: 'status', text: this.savedText(article, existing === null) });
       },
       error: (failure: unknown) => {
-        this.saving.set(false);
+        this.saving.set(null);
         this.saveFailed(failure);
       },
     });
@@ -380,57 +431,25 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
     this.uploadError.set(null);
   }
 
-  protected publish(): void {
-    const existing = this.article();
-    if (!existing || this.publishing() || this.saving() || !this.publishDate) {
-      return;
-    }
-    this.publishNotice.set(null);
-    this.formError.set(null);
-    this.saveStatus.set(null);
-    const date = this.publishDate;
-    if (!this.unsaved()) {
-      this.publishing.set(true);
-      this.sendPublish(existing.id, date);
-      return;
-    }
-    if (this.articleForm()?.invalid) {
-      this.articleFormElement()?.nativeElement.requestSubmit();
-      return;
-    }
-    this.publishing.set(true);
-    this.api
-      .update(existing.id, this.request())
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: (article) => {
-          this.saved(article, false);
-          this.publishDate = date;
-          this.sendPublish(article.id, date);
-        },
-        error: (failure: unknown) => {
-          this.publishing.set(false);
-          this.saveFailed(failure);
-        },
-      });
-  }
-
   private sendPublish(id: string, date: string): void {
     this.api
       .publish(id, date)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (article) => {
-          this.publishing.set(false);
+          this.saving.set(null);
           this.article.set(article);
-          this.publishNotice.set({
+          const on = formatDonationDate(article.publishedOn ?? date);
+          this.notice.set({
             kind: 'status',
-            text: $localize`:@@admin.newsEditor.published:Aktualita je na webu s datem ${formatDonationDate(article.publishedOn ?? date)}:date:.`,
+            text: article.live
+              ? $localize`:@@admin.newsEditor.published:Aktualita je na webu s datem ${on}:date:.`
+              : $localize`:@@admin.newsEditor.scheduled:Aktualita se na webu ukáže ${on}:date:.`,
           });
         },
         error: (failure: unknown) => {
-          this.publishing.set(false);
-          this.publishNotice.set({
+          this.saving.set(null);
+          this.notice.set({
             kind: 'alert',
             text: describeProblem(
               failure,
@@ -443,10 +462,10 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
 
   protected unpublish(): void {
     const existing = this.article();
-    if (!existing || this.unpublishing()) {
+    if (!existing || this.busy()) {
       return;
     }
-    this.publishNotice.set(null);
+    this.notice.set(null);
     this.unpublishing.set(true);
     this.api
       .unpublish(existing.id)
@@ -455,14 +474,15 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
         next: (article) => {
           this.unpublishing.set(false);
           this.article.set(article);
-          this.publishNotice.set({
+          this.publishDate = todayIso();
+          this.notice.set({
             kind: 'status',
             text: $localize`:@@admin.newsEditor.unpublished:Aktualitu jsme z webu stáhli. Zůstává tu jako koncept.`,
           });
         },
         error: (failure: unknown) => {
           this.unpublishing.set(false);
-          this.publishNotice.set({
+          this.notice.set({
             kind: 'alert',
             text: describeProblem(
               failure,
@@ -540,15 +560,59 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
       const control = this.articleForm()?.controls['slug'];
       control?.setErrors({ taken: true });
       control?.markAsTouched();
+      this.mode.set('edit');
       afterNextRender(() => this.slugInput()?.nativeElement.focus(), { injector: this.injector });
       return;
     }
-    this.formError.set(
-      describeProblem(
+    this.notice.set({
+      kind: 'alert',
+      text: describeProblem(
         failure,
         $localize`:@@admin.newsEditor.saved.failed:Aktualitu se nepodařilo uložit. Zkuste to prosím znovu.`,
       ),
+    });
+  }
+
+  private showFirstInvalid(): void {
+    this.mode.set('edit');
+    afterNextRender(
+      () =>
+        this.editFields()
+          ?.nativeElement.querySelector<HTMLElement>('.form-control.ng-invalid')
+          ?.focus(),
+      { injector: this.injector },
     );
+  }
+
+  private savedText(article: NewsArticleResponse, created: boolean): string {
+    if (created) {
+      return $localize`:@@admin.newsEditor.saved.created:Aktualitu jsme uložili jako koncept. Na web ji dostanete tlačítkem Uložit a zveřejnit.`;
+    }
+    if (article.publishedOn === null) {
+      return $localize`:@@admin.newsEditor.saved.updated:Změny jsme uložili.`;
+    }
+    return article.live
+      ? $localize`:@@admin.newsEditor.saved.live:Změny jsme uložili a na webu už jsou.`
+      : $localize`:@@admin.newsEditor.saved.scheduled:Změny jsme uložili. Aktualita se na webu ukáže ${formatDonationDate(article.publishedOn)}:date:.`;
+  }
+
+  private previewArticle(): NewsArticleResponse {
+    const saved = this.article();
+    const request = this.request();
+    const cover = this.coverImage();
+    return {
+      id: saved?.id ?? '',
+      slug: request.slug ?? slugFromText(request.title),
+      title: request.title,
+      tag: request.tag,
+      perex: request.perex,
+      body: request.body,
+      coverImage: cover ? { ...cover, alt: request.coverImageAlt } : null,
+      publishedOn: this.publishDate || todayIso(),
+      live: true,
+      createdAt: saved?.createdAt ?? '',
+      updatedAt: saved?.updatedAt ?? '',
+    };
   }
 
   private show(article: NewsArticleResponse): void {
@@ -562,7 +626,7 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
     this.body = article.body;
     this.coverImage.set(article.coverImage);
     this.coverImageAlt = article.coverImage?.alt ?? '';
-    this.publishDate = article.publishedOn ?? todayIso();
+    this.publishDate = article.publishedOn ?? (this.publishDate || todayIso());
   }
 
   private request(): NewsArticleRequest {
