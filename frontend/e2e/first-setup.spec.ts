@@ -4,7 +4,11 @@ import { problem } from './donor-session';
 
 const STATUS = '/api/operations/setup';
 
-async function freshInstall(page: Page, codeRequired: boolean): Promise<unknown[]> {
+async function freshInstall(
+  page: Page,
+  codeRequired: boolean,
+  testEmails: unknown[] = [],
+): Promise<unknown[]> {
   const posted: unknown[] = [];
   let completed = false;
   let restarting = 0;
@@ -34,8 +38,14 @@ async function freshInstall(page: Page, codeRequired: boolean): Promise<unknown[
         : route.fulfill(problem(403, 'operations/setup-locked', 'Kód nesedí', '')),
   );
   await page.route(
-    (url) => url.pathname === `${STATUS}/mail-test`,
-    (route) => route.fulfill({ json: { ok: true } }),
+    (url) => url.pathname === `${STATUS}/test-email`,
+    (route) => {
+      const request = route.request().postDataJSON();
+      testEmails.push(request);
+      return route.fulfill({
+        json: { outcome: 'SENT', sent: true, recipient: request.recipient },
+      });
+    },
   );
   return posted;
 }
@@ -44,7 +54,8 @@ test.describe('Given a freshly installed site', () => {
   test('when it is opened from the home network, then the home page leads to the setup, which saves everything and waits for the restart', async ({
     page,
   }) => {
-    const posted = await freshInstall(page, false);
+    const testEmails: unknown[] = [];
+    const posted = await freshInstall(page, false, testEmails);
 
     await page.goto('/');
     await expect(page).toHaveURL(/\/prvni-nastaveni$/);
@@ -52,13 +63,21 @@ test.describe('Given a freshly installed site', () => {
       page.getByRole('heading', { level: 1, name: 'První nastavení webu' }),
     ).toBeFocused();
 
+    await page.locator('#setup-admin-email').fill('spravce@example.cz');
     await page.locator('#setup-mail-username').fill('abc@smtp-brevo.com');
     await page.locator('#setup-mail-password').fill('xsmtpsib-key');
-    await page.getByRole('button', { name: 'Ověřit spojení' }).click();
-    await expect(page.locator('.test-result')).toHaveText(
-      'Spojení funguje, server přihlášení přijal.',
+    await page.getByRole('button', { name: 'Poslat zkušební e-mail' }).click();
+    await expect(page.getByRole('status').filter({ hasText: /\S/ })).toContainText(
+      'Zkušební e-mail odešel na spravce@example.cz.',
     );
-    await page.locator('#setup-admin-email').fill('spravce@example.cz');
+    expect(testEmails).toEqual([
+      expect.objectContaining({
+        host: 'smtp-relay.brevo.com',
+        password: 'xsmtpsib-key',
+        sender: 'info@nfnn.cz',
+        recipient: 'spravce@example.cz',
+      }),
+    ]);
     await page.getByRole('button', { name: 'Uložit a spustit' }).click();
 
     await expect(page.getByRole('heading', { level: 1, name: 'Web se restartuje' })).toBeVisible();
@@ -82,14 +101,14 @@ test.describe('Given a freshly installed site', () => {
     await expect(page.getByRole('dialog').getByLabel('E-mail')).toHaveValue('spravce@example.cz');
   });
 
-  test('when the operator saves without trying the mail server, then the page warns first and saves only on request', async ({
+  test('when the operator saves without a test e-mail, then the page warns first and saves only on request', async ({
     page,
   }) => {
     const posted = await freshInstall(page, false);
 
     await page.goto('/prvni-nastaveni');
     await page.getByRole('button', { name: 'Uložit a spustit' }).click();
-    await expect(page.locator('#setup-mail-username')).toBeFocused();
+    await expect(page.locator('#setup-admin-email')).toBeFocused();
     await expect(page.locator('#setup-mail-username-error')).toHaveText(
       'Vyplňte prosím přihlašovací jméno ze stránky SMTP v Brevo.',
     );
@@ -99,7 +118,7 @@ test.describe('Given a freshly installed site', () => {
     await page.locator('#setup-admin-email').fill('spravce@example.cz');
     await page.getByRole('button', { name: 'Uložit a spustit' }).click();
     await expect(page.getByRole('alert').filter({ hasText: /\S/ })).toContainText(
-      'Spojení s e-mailovým serverem jste neověřili.',
+      'Zkušební e-mail s těmito údaji zatím neodešel.',
     );
     expect(posted).toHaveLength(0);
 

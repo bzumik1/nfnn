@@ -37,6 +37,7 @@ import {
   SetupStatusResponse,
 } from './setup-api';
 import { Notice } from '../../../shared/ui/live-notice/live-notice';
+import { testEmailNotice } from '../test-email';
 
 type Panel =
   | 'loading'
@@ -60,6 +61,14 @@ const DEFAULT_MAIL_PORT = 587;
 const DEFAULT_ADDRESS = 'info@nfnn.cz';
 const PORT_INVALID = $localize`:@@operations.setup.mailPort.invalid:Port je číslo od 1 do 65535.`;
 const BACKUP_EXTENSION = '.dump';
+const TEST_EMAIL_FIELDS = [
+  'adminEmail',
+  'mailHost',
+  'mailPort',
+  'mailUsername',
+  'mailPassword',
+  'mailFrom',
+] as const;
 const SETTING_FIELDS: Readonly<Partial<Record<SettingName, string>>> = {
   PUBLIC_URL: 'publicUrl',
   MAIL_HOST: 'mailHost',
@@ -92,7 +101,7 @@ export class FirstSetup {
   private readonly destroyRef = inject(DestroyRef);
   private readonly injector = inject(Injector);
   private readonly heading = viewChild<ElementRef<HTMLElement>>('heading');
-  private readonly mailTestButton = viewChild<ElementRef<HTMLButtonElement>>('mailTestButton');
+  private readonly testEmailButton = viewChild<ElementRef<HTMLButtonElement>>('testEmailButton');
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
 
   protected readonly labels = SETTING_LABELS;
@@ -215,52 +224,71 @@ export class FirstSetup {
       });
   }
 
-  protected testMail(): void {
+  protected sendTestEmail(form: NgForm): void {
     if (this.testingMail()) {
       return;
     }
     this.mailNotice.set(null);
+    const involved = TEST_EMAIL_FIELDS.map((name) => form.controls[name]).filter(
+      (control) => control !== undefined,
+    );
+    if (involved.some((control) => control.invalid)) {
+      involved.forEach((control) => control.markAsTouched());
+      this.mailNotice.set({
+        kind: 'alert',
+        text: $localize`:@@operations.setup.testEmail.incomplete:Než zkušební e-mail pošleme, doplňte prosím označená pole.`,
+      });
+      afterNextRender(
+        () =>
+          this.host
+            .querySelector<HTMLElement>(
+              TEST_EMAIL_FIELDS.map((name) => `.setup-form [name="${name}"].ng-invalid`).join(', '),
+            )
+            ?.focus(),
+        { injector: this.injector },
+      );
+      return;
+    }
     this.testingMail.set(true);
-    const server = this.mailServer();
+    const tried = this.testedValues();
+    const sender = this.mail.from.trim();
     this.api
-      .testMail(this.unlockedCode, server)
+      .sendTestEmail(this.unlockedCode, {
+        ...this.mailServer(),
+        sender,
+        recipient: this.adminEmail.trim(),
+      })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (result) => {
           this.testingMail.set(false);
-          this.verifiedMailServer = result.ok ? JSON.stringify(server) : null;
-          if (result.ok) {
+          this.verifiedMailServer = result.sent ? tried : null;
+          if (result.sent) {
             this.mailUnverified.set(false);
           }
-          this.mailNotice.set(
-            result.ok
-              ? {
-                  kind: 'status',
-                  text: $localize`:@@operations.setup.mailTest.ok:Spojení funguje, server přihlášení přijal.`,
-                }
-              : {
-                  kind: 'alert',
-                  text: $localize`:@@operations.setup.mailTest.refused:Ke serveru se nepodařilo přihlásit. Zkontrolujte prosím server, port, jméno a heslo.`,
-                },
-          );
+          this.mailNotice.set(testEmailNotice(result, { host: this.mail.host.trim(), sender }));
         },
         error: (failure: unknown) => {
           this.testingMail.set(false);
+          if (problemTypeEndsWith(failure, SETUP_COMPLETED)) {
+            this.show('closed');
+            return;
+          }
           this.mailNotice.set({
             kind: 'alert',
             text: describeProblem(
               failure,
-              $localize`:@@operations.setup.mailTest.failed:Spojení se nepodařilo ověřit. Zkuste to prosím znovu.`,
+              $localize`:@@operations.setup.testEmail.failed:Zkušební e-mail se nepodařilo poslat. Zkuste to prosím znovu.`,
             ),
           });
         },
       });
   }
 
-  protected testMailFromWarning(): void {
+  protected sendTestEmailFromWarning(form: NgForm): void {
     this.mailUnverified.set(false);
-    this.testMail();
-    this.mailTestButton()?.nativeElement.focus();
+    this.testEmailButton()?.nativeElement.focus();
+    this.sendTestEmail(form);
   }
 
   protected save(form: NgForm, unverifiedMailAccepted = false): void {
@@ -273,7 +301,7 @@ export class FirstSetup {
       this.mailUnverified.set(false);
       return;
     }
-    if (!unverifiedMailAccepted && this.verifiedMailServer !== JSON.stringify(this.mailServer())) {
+    if (!unverifiedMailAccepted && this.verifiedMailServer !== this.testedValues()) {
       this.mailUnverified.set(true);
       return;
     }
@@ -475,6 +503,10 @@ export class FirstSetup {
       auth: this.mail.auth,
       startTls: this.mail.startTls,
     };
+  }
+
+  private testedValues(): string {
+    return JSON.stringify({ ...this.mailServer(), sender: this.mail.from.trim() });
   }
 
   private settings(): SettingValueRequest[] {

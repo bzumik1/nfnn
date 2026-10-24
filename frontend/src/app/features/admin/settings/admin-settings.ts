@@ -12,24 +12,21 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { describeProblem, problemTypeEndsWith } from '../../../core/auth/api-problem';
+import { describeProblem, problemOf, problemTypeEndsWith } from '../../../core/auth/api-problem';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
 import { FormControlDirective } from '../../../shared/ui/form-field/form-control';
 import { FormField } from '../../../shared/ui/form-field/form-field';
 import { PasswordReveal } from '../../../shared/ui/password-reveal/password-reveal';
 import { SETTING_LABELS, settingErrors } from '../../operations/setting-labels';
-import {
-  MailServerRequest,
-  SettingName,
-  SettingValueRequest,
-  SetupApi,
-} from '../../operations/setup/setup-api';
+import { SettingName, SettingValueRequest, SetupApi } from '../../operations/setup/setup-api';
+import { testEmailNotice } from '../../operations/test-email';
 import { ReceiptSignature } from './receipt-signature/receipt-signature';
-import { AdminApi, AdminSettingResponse, SettingGroup } from '../admin-api';
+import { AdminApi, AdminSettingResponse, AdminTestEmailRequest } from '../admin-api';
 import { LiveNotice, Notice } from '../../../shared/ui/live-notice/live-notice';
 
 type LoadState = 'loading' | 'ready' | 'error' | 'restarting' | 'slow';
@@ -55,23 +52,94 @@ interface Confirmation {
   mailUnverified: boolean;
 }
 
-interface Group {
-  id: SettingGroup;
+type SectionId =
+  'potvrzeni' | 'kontaktni-formular' | 'odesilatel' | 'adresa-webu' | 'odesilani-emailu' | 'banka';
+
+interface SectionPlan {
+  id: SectionId;
   title: string;
+  intro: string;
+  names: readonly SettingName[];
+}
+
+interface Section {
+  id: SectionId;
+  title: string;
+  intro: string;
   fields: Field[];
 }
 
 const UNAUTHENTICATED = 'auth/unauthenticated';
 const FORBIDDEN = 'auth/forbidden';
 const NOTHING_CHANGED = $localize`:@@admin.settings.nothingChanged:Nic jste nezměnili.`;
-const MAIL_CONNECTION: readonly SettingName[] = [
+const MAIL_DELIVERY: readonly SettingName[] = [
   'MAIL_HOST',
   'MAIL_PORT',
   'MAIL_USERNAME',
   'MAIL_PASSWORD',
   'MAIL_AUTH',
   'MAIL_STARTTLS',
+  'MAIL_FROM',
 ];
+const MAIL_PART: SectionId = 'odesilani-emailu';
+const TECHNICAL_HEADING = 'nastaveni-technicke';
+
+const EVERYDAY: readonly SectionPlan[] = [
+  {
+    id: 'potvrzeni',
+    title: $localize`:@@admin.settings.section.receipts:Potvrzení o daru`,
+    intro: $localize`:@@admin.settings.section.receipts.intro:Kdo potvrzení podepisuje a za které roky si je dárci stáhnou na webu.`,
+    names: ['RECEIPT_SIGNATORY_NAME', 'RECEIPT_SIGNATORY_ROLE', 'RECEIPT_FIRST_YEAR'],
+  },
+  {
+    id: 'kontaktni-formular',
+    title: $localize`:@@admin.settings.section.contact:Kontaktní formulář`,
+    intro: $localize`:@@admin.settings.section.contact.intro:Na tuto adresu přicházejí zprávy, které návštěvníci napíšou do kontaktního formuláře.`,
+    names: ['CONTACT_RECIPIENT'],
+  },
+  {
+    id: 'odesilatel',
+    title: $localize`:@@admin.settings.section.sender:Odesílatel e-mailů`,
+    intro: $localize`:@@admin.settings.section.sender.intro:Z této adresy odcházejí všechny e-maily webu: potvrzení registrace, obnova hesla i měsíční přehled.`,
+    names: ['MAIL_FROM'],
+  },
+];
+
+const TECHNICAL: readonly SectionPlan[] = [
+  {
+    id: 'adresa-webu',
+    title: $localize`:@@admin.settings.section.site:Adresa webu`,
+    intro: '',
+    names: ['PUBLIC_URL'],
+  },
+  {
+    id: MAIL_PART,
+    title: $localize`:@@admin.settings.section.mailServer:Server pro odesílání e-mailů`,
+    intro: '',
+    names: [
+      'MAIL_HOST',
+      'MAIL_PORT',
+      'MAIL_USERNAME',
+      'MAIL_PASSWORD',
+      'MAIL_AUTH',
+      'MAIL_STARTTLS',
+    ],
+  },
+  {
+    id: 'banka',
+    title: $localize`:@@admin.settings.section.bank:Banka`,
+    intro: '',
+    names: ['FIO_TOKEN', 'FIO_HISTORY_FROM', 'PAIRING_EXCLUDED_ACCOUNTS'],
+  },
+];
+
+const FRAGMENT_ALIASES: Readonly<Record<string, string>> = {
+  'settings-MAIL': sectionAnchor(MAIL_PART),
+  'settings-SITE': sectionAnchor('adresa-webu'),
+  'settings-BANK': sectionAnchor('banka'),
+  'settings-RECEIPTS': sectionAnchor('potvrzeni'),
+  'technicke-nastaveni': TECHNICAL_HEADING,
+};
 
 const NEW_SECRET_LABELS: Partial<Readonly<Record<SettingName, string>>> = {
   MAIL_PASSWORD: $localize`:@@admin.settings.secret.new.MAIL_PASSWORD:Nové heslo nebo klíč SMTP`,
@@ -81,14 +149,6 @@ const NEW_SECRET_LABELS: Partial<Readonly<Record<SettingName, string>>> = {
 const REMOVAL_EFFECTS: Partial<Readonly<Record<SettingName, string>>> = {
   MAIL_PASSWORD: $localize`:@@admin.settings.secret.removeEffect.MAIL_PASSWORD:Bez hesla web nepošle žádný e-mail: ani obnovu hesla, ani potvrzení registrace, ani měsíční přehled.`,
   FIO_TOKEN: $localize`:@@admin.settings.secret.removeEffect.FIO_TOKEN:Bez tokenu se přestanou stahovat platby z banky.`,
-};
-
-const GROUP_TITLES: Readonly<Record<SettingGroup, string>> = {
-  SITE: $localize`:@@admin.settings.group.SITE:Web`,
-  MAIL: $localize`:@@admin.settings.group.MAIL:E-maily`,
-  BANK: $localize`:@@admin.settings.group.BANK:Banka`,
-  RECEIPTS: $localize`:@@admin.settings.group.RECEIPTS:Potvrzení o daru`,
-  ADMINISTRATORS: $localize`:@@admin.settings.group.ADMINISTRATORS:Správci`,
 };
 
 const HINTS: Partial<Readonly<Record<SettingName, string>>> = {
@@ -111,6 +171,7 @@ const INPUTS: Partial<Readonly<Record<SettingName, Input>>> = {
   imports: [
     LiveNotice,
     FormsModule,
+    NgTemplateOutlet,
     FormField,
     FormControlDirective,
     PasswordReveal,
@@ -134,7 +195,13 @@ export class AdminSettings {
   private readonly confirmCancel = viewChild<ElementRef<HTMLButtonElement>>('confirmCancel');
 
   protected readonly state = signal<LoadState>('loading');
-  protected readonly groups = signal<Group[]>([]);
+  protected readonly fields = signal<Field[]>([]);
+  protected readonly everyday = computed(() => sectionsOf(EVERYDAY, this.fields()));
+  protected readonly technical = computed(() => sectionsOf(TECHNICAL, this.fields()));
+  protected readonly technicalOpen = signal(false);
+  protected readonly mailPart = MAIL_PART;
+  protected readonly technicalHeading = TECHNICAL_HEADING;
+  protected readonly ownEmail = computed(() => this.auth.donor()?.email ?? '');
   protected readonly secretsCanBeStored = signal(true);
   protected readonly notice = signal<Notice | null>(null);
   protected readonly saveError = signal('');
@@ -146,8 +213,7 @@ export class AdminSettings {
   protected readonly mailNotice = signal<Notice | null>(null);
   private verifiedMail: string | null = null;
   protected readonly unreadableSecrets = computed(() =>
-    this.groups()
-      .flatMap((group) => group.fields)
+    this.fields()
       .filter((field) => field.unreadable)
       .map((field) => field.label)
       .join(', '),
@@ -165,8 +231,12 @@ export class AdminSettings {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (response) => {
-          this.groups.set(groupsOf(response.settings));
+          const fields = fieldsOf(response.settings);
+          this.fields.set(fields);
           this.secretsCanBeStored.set(response.secretsCanBeStored);
+          if (fields.some((field) => field.unreadable)) {
+            this.technicalOpen.set(true);
+          }
           this.state.set('ready');
           this.focusFragment();
         },
@@ -206,6 +276,14 @@ export class AdminSettings {
 
   protected setFlag(field: Field, on: boolean): void {
     field.value = String(on);
+  }
+
+  protected anchor(section: Section): string {
+    return sectionAnchor(section.id);
+  }
+
+  protected technicalToggled(event: Event): void {
+    this.technicalOpen.set((event.target as HTMLDetailsElement).open);
   }
 
   protected askSave(): void {
@@ -257,6 +335,9 @@ export class AdminSettings {
             ),
           );
           this.fieldErrors.set(settingErrors(failure));
+          if (this.refusesTechnicalSetting(failure)) {
+            this.technicalOpen.set(true);
+          }
           this.focusSaveButton();
         },
       });
@@ -267,31 +348,21 @@ export class AdminSettings {
     this.watchRestart();
   }
 
-  protected testMail(): void {
+  protected sendTestEmail(): void {
     if (this.testingMail()) {
       return;
     }
-    const tried = this.mailServerRequest();
+    const tried = this.testEmailRequest();
     this.mailNotice.set(null);
     this.testingMail.set(true);
     this.api
-      .testMailServer(tried)
+      .sendTestEmail(tried)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (result) => {
           this.testingMail.set(false);
-          this.verifiedMail = result.ok ? JSON.stringify(tried) : null;
-          this.mailNotice.set(
-            result.ok
-              ? {
-                  kind: 'status',
-                  text: $localize`:@@admin.settings.mailTest.ok:Spojení funguje, server přihlášení přijal.`,
-                }
-              : {
-                  kind: 'alert',
-                  text: $localize`:@@admin.settings.mailTest.refused:Ke serveru se nepodařilo přihlásit. Zkontrolujte prosím server, port, jméno a heslo.`,
-                },
-          );
+          this.verifiedMail = result.sent ? JSON.stringify(tried) : null;
+          this.mailNotice.set(testEmailNotice(result, tried));
         },
         error: (failure: unknown) => {
           this.testingMail.set(false);
@@ -299,7 +370,7 @@ export class AdminSettings {
             kind: 'alert',
             text: describeProblem(
               failure,
-              $localize`:@@admin.settings.mailTest.failed:Spojení se nepodařilo ověřit. Zkuste to prosím znovu.`,
+              $localize`:@@admin.settings.testEmail.failed:Zkušební e-mail se nepodařilo poslat. Zkuste to prosím znovu.`,
             ),
           });
         },
@@ -323,7 +394,7 @@ export class AdminSettings {
       });
   }
 
-  private mailServerRequest(): MailServerRequest {
+  private testEmailRequest(): AdminTestEmailRequest {
     const value = (name: SettingName) => this.field(name)?.value.trim() ?? '';
     return {
       host: value('MAIL_HOST'),
@@ -332,7 +403,13 @@ export class AdminSettings {
       password: this.field('MAIL_PASSWORD')?.value ?? '',
       auth: value('MAIL_AUTH') === 'true',
       startTls: value('MAIL_STARTTLS') === 'true',
+      sender: value('MAIL_FROM'),
     };
+  }
+
+  private refusesTechnicalSetting(failure: unknown): boolean {
+    const technical = TECHNICAL.flatMap((section) => section.names) as readonly string[];
+    return (problemOf(failure)?.errors ?? []).some((error) => technical.includes(error.field));
   }
 
   private confirmationOf(changes: SettingValueRequest[]): Confirmation {
@@ -346,11 +423,11 @@ export class AdminSettings {
         ? $localize`:@@admin.settings.confirm.removed:${label}:label: (odebrat)`
         : label;
     });
-    const mailChanged = changes.some((change) => MAIL_CONNECTION.includes(change.name));
+    const mailChanged = changes.some((change) => MAIL_DELIVERY.includes(change.name));
     return {
       changes: labels.join(', '),
       warnings: removed.map((field) => this.removalEffect(field)).filter((text) => text !== ''),
-      mailUnverified: mailChanged && this.verifiedMail !== JSON.stringify(this.mailServerRequest()),
+      mailUnverified: mailChanged && this.verifiedMail !== JSON.stringify(this.testEmailRequest()),
     };
   }
 
@@ -363,29 +440,32 @@ export class AdminSettings {
     if (!fragment) {
       return;
     }
-    afterNextRender(() => document.getElementById(fragment)?.focus(), { injector: this.injector });
+    const target = FRAGMENT_ALIASES[fragment] ?? fragment;
+    const inTechnical =
+      target === TECHNICAL_HEADING ||
+      TECHNICAL.some((section) => sectionAnchor(section.id) === target);
+    if (inTechnical) {
+      this.technicalOpen.set(true);
+    }
+    afterNextRender(() => document.getElementById(target)?.focus(), { injector: this.injector });
   }
 
   private changes(): SettingValueRequest[] {
-    return this.groups()
-      .flatMap((group) => group.fields)
-      .flatMap((field): SettingValueRequest[] => {
-        if (field.input === 'secret') {
-          if (field.remove) {
-            return [{ name: field.name, value: '' }];
-          }
-          const secret = field.value.trim();
-          return secret === '' ? [] : [{ name: field.name, value: secret }];
+    return this.fields().flatMap((field): SettingValueRequest[] => {
+      if (field.input === 'secret') {
+        if (field.remove) {
+          return [{ name: field.name, value: '' }];
         }
-        const value = field.value.trim();
-        return value === field.original ? [] : [{ name: field.name, value }];
-      });
+        const secret = field.value.trim();
+        return secret === '' ? [] : [{ name: field.name, value: secret }];
+      }
+      const value = field.value.trim();
+      return value === field.original ? [] : [{ name: field.name, value }];
+    });
   }
 
   private field(name: SettingName): Field | undefined {
-    return this.groups()
-      .flatMap((group) => group.fields)
-      .find((field) => field.name === name);
+    return this.fields().find((field) => field.name === name);
   }
 
   private sendToSignIn(): void {
@@ -397,16 +477,27 @@ export class AdminSettings {
   }
 }
 
-function groupsOf(settings: AdminSettingResponse[]): Group[] {
-  const groups: Group[] = [];
-  for (const setting of settings) {
-    let group = groups.find((candidate) => candidate.id === setting.group);
-    if (!group) {
-      group = { id: setting.group, title: GROUP_TITLES[setting.group], fields: [] };
-      groups.push(group);
-    }
+function sectionAnchor(id: SectionId): string {
+  return `nastaveni-${id}`;
+}
+
+function sectionsOf(plans: readonly SectionPlan[], fields: Field[]): Section[] {
+  return plans
+    .map((plan) => ({
+      id: plan.id,
+      title: plan.title,
+      intro: plan.intro,
+      fields: plan.names
+        .map((name) => fields.find((field) => field.name === name))
+        .filter((field): field is Field => field !== undefined),
+    }))
+    .filter((section) => section.fields.length > 0);
+}
+
+function fieldsOf(settings: AdminSettingResponse[]): Field[] {
+  return settings.map((setting) => {
     const original = setting.secret ? '' : (setting.value ?? '');
-    group.fields.push({
+    return {
       name: setting.name,
       label: SETTING_LABELS[setting.name],
       hint: HINTS[setting.name] ?? '',
@@ -417,7 +508,6 @@ function groupsOf(settings: AdminSettingResponse[]): Group[] {
       configured: setting.configured,
       stored: setting.stored,
       unreadable: setting.unreadable,
-    });
-  }
-  return groups;
+    };
+  });
 }
