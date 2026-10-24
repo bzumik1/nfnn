@@ -66,26 +66,58 @@ class AdminPaymentsServiceTest {
     }
 
     @Test
-    @DisplayName("Given donations in two years, when the paired list is asked without a year, then the newest year is shown, newest payment first, with donor and receipt flag")
-    void should_show_newest_year_with_donors_and_receipts_when_paired_listed_given_no_year() {
+    @DisplayName("Given donations in two years, when the paired list is asked without a year, then every year is shown, newest payment first, with donor and receipt flag")
+    void should_show_every_year_with_donors_and_receipts_when_paired_listed_given_no_year() {
+        Donation lastYearGift = Donation.fromBankPayment(DonationId.newId(NOW), janaRecord.id(), lastYear, PairingMethod.MANUAL, NOW);
         when(donations.findReceivedYearsNewestFirst()).thenReturn(List.of(Year.of(2026), Year.of(2025)));
-        when(donations.findReceivedOnBetween(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 12, 31))).thenReturn(List.of(octoberGift, decemberGift));
-        when(payments.findByIds(anyCollection())).thenReturn(List.of(october, december));
+        when(donations.findReceivedOnBetween(LocalDate.of(2025, 1, 1), LocalDate.of(2026, 12, 31)))
+                .thenReturn(List.of(lastYearGift, octoberGift, decemberGift));
+        when(payments.findByIds(anyCollection())).thenReturn(List.of(lastYear, october, december));
         when(donorRecords.findByIds(anyCollection())).thenReturn(List.of(janaRecord));
         when(receipts.findDonationsWithReceipt(anyCollection())).thenReturn(Set.of(octoberGift.id()));
 
         AdminPaymentList list = service.listPaired(Optional.empty(), PaymentFilter.none());
 
-        assertThat(list.year()).contains(Year.of(2026));
+        assertThat(list.year()).isEmpty();
         assertThat(list.availableYears()).containsExactly(Year.of(2026), Year.of(2025));
-        assertThat(list.items()).extracting(AdminPaymentView::payment).containsExactly(december, october);
+        assertThat(list.total()).isEqualTo(3);
+        assertThat(list.items()).extracting(AdminPaymentView::payment).containsExactly(december, october, lastYear);
         PairedDonationView decemberView = list.items().getFirst().donation().orElseThrow();
         assertThat(decemberView.donation()).isEqualTo(decemberGift);
         assertThat(decemberView.donor()).isEmpty();
         assertThat(decemberView.receiptIssued()).isFalse();
-        PairedDonationView octoberView = list.items().getLast().donation().orElseThrow();
+        PairedDonationView octoberView = list.items().get(1).donation().orElseThrow();
         assertThat(octoberView.donor()).contains(janaRecord);
         assertThat(octoberView.receiptIssued()).isTrue();
+    }
+
+    @Test
+    @DisplayName("Given donations in two years, when the paired list is asked for a period without a year, then only the donations of the period are read")
+    void should_read_only_period_when_paired_listed_given_period_without_year() {
+        when(donations.findReceivedYearsNewestFirst()).thenReturn(List.of(Year.of(2026), Year.of(2025)));
+        when(donations.findReceivedOnBetween(LocalDate.of(2025, 12, 1), LocalDate.of(2026, 10, 31))).thenReturn(List.of(octoberGift));
+        when(payments.findByIds(anyCollection())).thenReturn(List.of(october));
+        when(donorRecords.findByIds(anyCollection())).thenReturn(List.of(janaRecord));
+        when(receipts.findDonationsWithReceipt(anyCollection())).thenReturn(Set.of());
+
+        AdminPaymentList list = service.listPaired(Optional.empty(),
+                new PaymentFilter(null, LocalDate.of(2025, 12, 1), LocalDate.of(2026, 10, 31), null, 0, null));
+
+        assertThat(list.year()).isEmpty();
+        assertThat(list.items()).extracting(AdminPaymentView::payment).containsExactly(october);
+    }
+
+    @Test
+    @DisplayName("Given donations, when the paired list is asked for a period that ends before it starts, then it is empty and nothing is read")
+    void should_answer_empty_list_when_paired_listed_given_reversed_period() {
+        when(donations.findReceivedYearsNewestFirst()).thenReturn(List.of(Year.of(2026)));
+
+        AdminPaymentList list = service.listPaired(Optional.empty(),
+                new PaymentFilter(null, LocalDate.of(2026, 10, 31), LocalDate.of(2026, 10, 1), null, 0, null));
+
+        assertThat(list.items()).isEmpty();
+        assertThat(list.total()).isZero();
+        verifyNoInteractions(payments, receipts);
     }
 
     @Test
@@ -138,6 +170,23 @@ class AdminPaymentsServiceTest {
                 .extracting(AdminPaymentView::payment).containsExactly(december, named, october);
         assertThat(service.listUnpaired(new PaymentFilter("1002", null, null, null, 0, null)).items())
                 .extracting(AdminPaymentView::payment).containsExactly(december);
+    }
+
+    @Test
+    @DisplayName("Given unpaired payments, when listed with an amount in crowns, then the payments of exactly that amount are shown, however the amount is written")
+    void should_keep_payments_of_amount_when_unpaired_listed_given_amount() {
+        BankPayment thousand = payment(2002, LocalDate.of(2026, 10, 8), czk(100050), ACCOUNT, null);
+        when(payments.findUnpairedNewestFirst()).thenReturn(List.of(december, thousand, october));
+
+        assertThat(service.listUnpaired(new PaymentFilter("500", null, null, null, 0, null)).items())
+                .extracting(AdminPaymentView::payment).containsExactly(october);
+        assertThat(service.listUnpaired(new PaymentFilter("200 Kč", null, null, null, 0, null)).items())
+                .extracting(AdminPaymentView::payment).containsExactly(december);
+        assertThat(service.listUnpaired(new PaymentFilter("1\u00a0000,50 kč", null, null, null, 0, null)).items())
+                .extracting(AdminPaymentView::payment).containsExactly(thousand);
+        assertThat(service.listUnpaired(new PaymentFilter("1000.5", null, null, null, 0, null)).items())
+                .extracting(AdminPaymentView::payment).containsExactly(thousand);
+        assertThat(service.listUnpaired(new PaymentFilter("1 000", null, null, null, 0, null)).items()).isEmpty();
     }
 
     @Test

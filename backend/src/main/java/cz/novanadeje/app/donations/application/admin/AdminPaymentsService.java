@@ -13,6 +13,7 @@ import cz.novanadeje.app.donations.domain.receipt.DonationReceiptRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.Year;
 import java.util.Comparator;
 import java.util.List;
@@ -55,11 +56,17 @@ public class AdminPaymentsService {
 
     public AdminPaymentList listPaired(Optional<Year> requested, PaymentFilter filter) {
         List<Year> availableYears = donations.findReceivedYearsNewestFirst();
-        Optional<Year> year = requested.or(() -> availableYears.stream().findFirst());
-        if (year.isEmpty()) {
+        if (requested.isEmpty() && availableYears.isEmpty()) {
             return new AdminPaymentList(Optional.empty(), availableYears, List.of(), 0);
         }
-        List<Donation> paired = donations.findReceivedOnBetween(year.get().atDay(1), year.get().atDay(year.get().length())).stream()
+        LocalDate firstDay = requested.map(year -> year.atDay(1))
+                .orElseGet(() -> filter.firstDayNotBefore(availableYears.getLast().atDay(1)));
+        LocalDate lastDay = requested.map(year -> year.atDay(year.length()))
+                .orElseGet(() -> filter.lastDayNotAfter(availableYears.getFirst().atDay(availableYears.getFirst().length())));
+        if (firstDay.isAfter(lastDay)) {
+            return new AdminPaymentList(requested, availableYears, List.of(), 0);
+        }
+        List<Donation> paired = donations.findReceivedOnBetween(firstDay, lastDay).stream()
                 .filter(donation -> donation.bankPayment().isPresent())
                 .toList();
         Map<BankPaymentId, BankPayment> paymentsById = payments.findByIds(paired.stream().map(donation -> donation.bankPayment().orElseThrow()).toList())
@@ -75,7 +82,7 @@ public class AdminPaymentsService {
                 .filter(filter::matches)
                 .sorted(NEWEST_FIRST)
                 .toList();
-        return new AdminPaymentList(year, availableYears, filter.page(matching), matching.size());
+        return new AdminPaymentList(requested, availableYears, filter.page(matching), matching.size());
     }
 
     public List<DonorRecord> searchDonors(String query) {

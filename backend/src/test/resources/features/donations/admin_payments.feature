@@ -51,6 +51,24 @@ Feature: An administrator pairs bank payments by hand
     When "Jana" asks for the paired payments of "Jana"
     Then the listed payments are none
 
+  Scenario: Without a year the paired payments of every year are listed newest first, and an amount in crowns finds a payment
+    Given today is 2027-01-10
+    And the bank account has these movements:
+      | id   | date       | amount | account    | bankCode | name          | variableSymbol |
+      | 1001 | 2026-12-20 | 500.00 | 2900233333 | 2010     | Svoboda Petr  | {Petr}         |
+      | 1002 | 2027-01-05 | 300.00 | 2900233333 | 2010     | Svoboda Petr  | {Petr}         |
+      | 1003 | 2027-01-06 | 250.00 | 2900244444 | 0800     | Svoboda Karel |                |
+    And the application starts the import
+    When "Jana" asks for the paired payments with "limit=50"
+    Then the response status is 200
+    And the listed payments are 1002, 1001
+    And the payment list counts 2 in total
+    And the paired list offers the years 2027, 2026
+    When "Jana" asks for the paired payments with "from=2026-12-01&to=2026-12-31"
+    Then the listed payments are 1001
+    When "Jana" asks for the paired payments with "query=300,00"
+    Then the listed payments are 1002
+
   Scenario: A payment list with a page out of bounds is refused
     When "Jana" asks for the unpaired payments with "limit=0"
     Then the response status is 400

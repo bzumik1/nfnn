@@ -10,6 +10,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
@@ -19,6 +20,9 @@ public record PaymentFilter(String text, LocalDate from, LocalDate to, DonorRefe
     public static final int MAX_LIMIT = 500;
 
     private static final Pattern COMBINING_MARKS = Pattern.compile("\\p{M}+");
+    private static final Pattern SPACES = Pattern.compile("[\\s\\u00a0\\u202f]+");
+    private static final long HELLERS_PER_CROWN = 100;
+    private static final Pattern CROWNS = Pattern.compile("(\\d{1,12})(?:[.,](\\d{1,2}))?(?:kc|czk)?");
 
     public PaymentFilter {
         text = text == null || text.isBlank() ? null : plain(text.trim());
@@ -45,7 +49,16 @@ public record PaymentFilter(String text, LocalDate from, LocalDate to, DonorRefe
         if (donor != null && view.donation().filter(paired -> paired.donation().donor().equals(donor)).isEmpty()) {
             return false;
         }
-        return text == null || searchable(view).anyMatch(value -> plain(value).contains(text));
+        return text == null || searchable(view).anyMatch(value -> plain(value).contains(text))
+                || amountMinor(text).filter(amount -> amount == payment.amount().amountMinor()).isPresent();
+    }
+
+    LocalDate firstDayNotBefore(LocalDate earliest) {
+        return from != null && from.isAfter(earliest) ? from : earliest;
+    }
+
+    LocalDate lastDayNotAfter(LocalDate latest) {
+        return to != null && to.isBefore(latest) ? to : latest;
     }
 
     List<AdminPaymentView> page(List<AdminPaymentView> matching) {
@@ -60,6 +73,15 @@ public record PaymentFilter(String text, LocalDate from, LocalDate to, DonorRefe
         return Stream.of(Optional.of(String.valueOf(payment.transactionId().value())), payment.variableSymbol(), account, payment.counterpartyName(),
                         payment.messageForRecipient(), view.donation().flatMap(PairedDonationView::donor).map(DonorRecord::name))
                 .flatMap(Optional::stream);
+    }
+
+    private static Optional<Long> amountMinor(String text) {
+        Matcher crowns = CROWNS.matcher(SPACES.matcher(text).replaceAll(""));
+        if (!crowns.matches()) {
+            return Optional.empty();
+        }
+        String hellers = crowns.group(2) == null ? "00" : (crowns.group(2) + "0").substring(0, 2);
+        return Optional.of(Long.parseLong(crowns.group(1)) * HELLERS_PER_CROWN + Long.parseLong(hellers));
     }
 
     private static String plain(String value) {
