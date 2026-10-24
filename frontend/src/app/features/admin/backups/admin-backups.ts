@@ -26,9 +26,12 @@ import {
   BackupKind,
   BackupRequestKind,
   BackupRunResponse,
+  BackupScheduleResponse,
   RestoreFileResponse,
 } from '../admin-api';
 import { formatSize } from './backup-format';
+import { describePlan, formatPlanTime, onDay } from './backup-plan';
+import { BackupScheduleCard } from './backup-schedule-card';
 import { BACKUP_PROBLEM_TEXTS } from './backup-texts';
 import { RestoreDialog } from './restore-dialog';
 import { LiveNotice, Notice } from '../../../shared/ui/live-notice/live-notice';
@@ -59,7 +62,7 @@ const KIND_NAMES: Record<BackupKind, string> = {
 
 @Component({
   selector: 'app-admin-backups',
-  imports: [LiveNotice, RestoreDialog],
+  imports: [LiveNotice, RestoreDialog, BackupScheduleCard],
   templateUrl: './admin-backups.html',
   styleUrl: './admin-backups.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -98,6 +101,7 @@ export class AdminBackups {
   );
   protected readonly lastRestore = computed(() => this.describeRestore(this.view()?.lastRestore));
   protected readonly restorePending = computed(() => this.view()?.restorePending ?? false);
+  protected readonly schedule = computed(() => this.view()?.schedule ?? null);
   protected readonly actionsDisabled = computed(
     () => !this.available() || this.job() !== null || this.restorePending(),
   );
@@ -130,6 +134,14 @@ export class AdminBackups {
           this.state.set('error');
         },
       });
+  }
+
+  protected scheduleSaved(schedule: BackupScheduleResponse): void {
+    this.view.update((view) => (view === null ? view : { ...view, schedule }));
+    this.notice.set({
+      kind: 'status',
+      text: $localize`:@@admin.backups.schedule.saved:Plán záloh jsme uložili: ${describePlan(schedule)}:plan:.`,
+    });
   }
 
   protected kindName(item: BackupFileResponse): string {
@@ -392,7 +404,11 @@ export class AdminBackups {
 
   private describeTestRestore(run: BackupRunResponse | null | undefined): string {
     if (!run) {
-      return $localize`:@@admin.backups.lastTestRestore.none:Poslední zkušební obnova: zatím žádná. Běží každou neděli ve 4:00.`;
+      const plan = this.view()?.schedule;
+      if (!plan) {
+        return $localize`:@@admin.backups.lastTestRestore.noneYet:Poslední zkušební obnova: zatím žádná.`;
+      }
+      return $localize`:@@admin.backups.lastTestRestore.planned:Poslední zkušební obnova: zatím žádná. Podle plánu běží ${onDay(plan.testRestoreDay)}:day: ${formatPlanTime(plan.testRestoreTime)}:time:.`;
     }
     const at = formatBankTime(run.finishedAt);
     if (run.outcome === 'FAILED') {

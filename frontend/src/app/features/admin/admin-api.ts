@@ -345,6 +345,17 @@ export interface AdminBackupsResponse {
   pendingRequests: number;
   restorePending: boolean;
   problems: BackupProblem[];
+  schedule: BackupScheduleResponse;
+}
+
+export interface BackupPlan {
+  backupTime: string;
+  testRestoreDay: number;
+  testRestoreTime: string;
+}
+
+export interface BackupScheduleResponse extends BackupPlan {
+  applied: BackupPlan | null;
 }
 
 export interface RestoreRequestResponse {
@@ -596,6 +607,10 @@ export class AdminApi {
 
   backups(): Observable<AdminBackupsResponse> {
     return this.http.get<AdminBackupsResponse>('/api/admin/operations/backups');
+  }
+
+  changeBackupSchedule(plan: BackupPlan): Observable<BackupScheduleResponse> {
+    return this.http.put<BackupScheduleResponse>('/api/admin/operations/backups/schedule', plan);
   }
 
   requestBackup(kind: BackupRequestKind): Observable<BackupRequestResponse> {

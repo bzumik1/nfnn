@@ -3,6 +3,7 @@ package cz.novanadeje.app.operations.application.backup;
 import cz.novanadeje.app.operations.domain.backup.BackupFile;
 import cz.novanadeje.app.operations.domain.backup.BackupRequestKind;
 import cz.novanadeje.app.operations.domain.backup.BackupRun;
+import cz.novanadeje.app.operations.domain.backup.BackupSchedule;
 import cz.novanadeje.app.operations.domain.backup.RestoreFile;
 
 import java.io.InputStream;
@@ -34,4 +35,8 @@ public interface BackupStore {
     void requestRestore(RestoreRequest request);
 
     String storeUpload(String requestId, InputStream content);
+
+    void publishSchedule(BackupSchedule schedule);
+
+    Optional<BackupSchedule> appliedSchedule();
 }

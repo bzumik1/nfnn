@@ -52,6 +52,12 @@ function backupsView(overrides: Record<string, unknown> = {}) {
     pendingRequests: 0,
     restorePending: false,
     problems: [],
+    schedule: {
+      backupTime: '03:00',
+      testRestoreDay: 7,
+      testRestoreTime: '04:00',
+      applied: { backupTime: '03:00', testRestoreDay: 7, testRestoreTime: '04:00' },
+    },
     ...overrides,
   };
 }

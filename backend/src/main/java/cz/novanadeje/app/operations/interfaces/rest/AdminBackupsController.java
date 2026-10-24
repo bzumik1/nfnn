@@ -3,6 +3,7 @@ package cz.novanadeje.app.operations.interfaces.rest;
 import cz.novanadeje.app.operations.application.backup.BackupAdministrationService;
 import cz.novanadeje.app.operations.application.backup.BackupDownload;
 import cz.novanadeje.app.operations.application.backup.BackupRestoreService;
+import cz.novanadeje.app.operations.application.backup.BackupScheduleService;
 import cz.novanadeje.app.operations.domain.backup.BackupFile;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Size;
@@ -19,6 +20,7 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -36,15 +38,23 @@ class AdminBackupsController {
 
     private final BackupAdministrationService backups;
     private final BackupRestoreService restores;
+    private final BackupScheduleService schedules;
 
-    AdminBackupsController(BackupAdministrationService backups, BackupRestoreService restores) {
+    AdminBackupsController(BackupAdministrationService backups, BackupRestoreService restores, BackupScheduleService schedules) {
         this.backups = backups;
         this.restores = restores;
+        this.schedules = schedules;
     }
 
     @GetMapping
     AdminBackupsResponse backups() {
-        return AdminBackupsResponse.from(backups.view());
+        return AdminBackupsResponse.from(backups.view(), schedules.view());
+    }
+
+    @PutMapping("/schedule")
+    BackupScheduleResponse changeSchedule(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody BackupScheduleRequest request) {
+        schedules.change(admin(jwt), request.toSchedule());
+        return BackupScheduleResponse.from(schedules.view());
     }
 
     @PostMapping("/requests")

@@ -6,7 +6,7 @@ import { authInterceptor } from '../../../core/auth/auth-interceptor';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
 import { authResponse, sampleDonor } from '../../../core/auth/testing/donor-fixtures';
-import { backupFile, backupRun, backupsView } from '../testing/admin-fixtures';
+import { backupFile, backupRun, backupSchedule, backupsView } from '../testing/admin-fixtures';
 import { RESTART_POLL_MS } from '../../operations/setup/setup-api';
 import { AdminBackups, JOB_POLL_MS, RESTORE_REQUEST_KEY } from './admin-backups';
 
@@ -150,7 +150,7 @@ describe('Given an administrator on the backups page', () => {
       'Poslední záloha selhala 23. 10. 2026 03:00: pg_dump: error: connection to server failed',
     );
     expect(texts('.run dd')[1]).toBe(
-      'Poslední zkušební obnova: zatím žádná. Běží každou neděli ve 4:00.',
+      'Poslední zkušební obnova: zatím žádná. Podle plánu běží v neděli 4:00.',
     );
     expect(texts('.restore-files li')).toEqual([
       'zaloha.dump.skipped byl 23. 10. 2026 06:36 přeskočen: databáze nebyla prázdná nebo ve složce leželo víc souborů.',
@@ -493,6 +493,28 @@ describe('Given an administrator on the backups page', () => {
 
     expect(clicked).toEqual(['nfnn-2026-10-23_0300.dump']);
     expect(texts('tbody button')).toEqual(['Obnovit', 'Stáhnout', 'Obnovit', 'Stáhnout']);
+  });
+
+  it('when the backup plan is saved, then the page announces the new plan and keeps the card', async () => {
+    await respond(backupsView());
+    const input = fixture.nativeElement.querySelector('#backup-time') as HTMLInputElement;
+    input.value = '02:30';
+    input.dispatchEvent(new Event('input'));
+    await settle();
+    button('Uložit plán').click();
+    await settle();
+
+    http
+      .expectOne('/api/admin/operations/backups/schedule')
+      .flush(backupSchedule({ backupTime: '02:30' }));
+    await settle();
+
+    expect(text('[role="status"]:not(:empty)')).toBe(
+      'Plán záloh jsme uložili: denní záloha 2:30, zkušební obnova v neděli 4:00.',
+    );
+    expect(text('.applied')).toBe(
+      'Kontejner záloh zatím jede podle plánu „denní záloha 3:00, zkušební obnova v neděli 4:00“; nový převezme do minuty.',
+    );
   });
 
   it('when the token is not accepted, then the administrator is sent home to sign in', async () => {

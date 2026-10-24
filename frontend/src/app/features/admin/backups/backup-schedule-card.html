@@ -1,0 +1,90 @@
+<section class="ui-card" aria-labelledby="backups-schedule-title">
+  <h2 id="backups-schedule-title" class="ui-card__title" i18n="@@admin.backups.schedule.title">
+    Plán záloh
+  </h2>
+  <div class="ui-card__body">
+    <p class="ui-card__intro" i18n="@@admin.backups.schedule.intro">
+      Kdy kontejner záloh každý den zálohuje databázi a kdy jednou týdně zkušebně obnoví nejnovější
+      zálohu. Časy jsou pražské; výchozí je záloha ve 3:00 a zkušební obnova v neděli ve 4:00.
+    </p>
+    @if (applied(); as text) {
+      <p class="ui-callout ui-callout--warning applied">{{ text }}</p>
+    }
+    <form
+      #scheduleForm="ngForm"
+      class="schedule-form"
+      appFocusFirstInvalid
+      (ngSubmit)="save(scheduleForm)"
+      novalidate
+    >
+      <div class="fields">
+        <app-form-field
+          label="Denní záloha"
+          i18n-label="@@admin.backups.schedule.backupTime"
+          hint="Čas, kdy se databáze každý den zálohuje."
+          i18n-hint="@@admin.backups.schedule.backupTime.hint"
+          [messages]="timeMessages"
+        >
+          <input
+            appFormControl
+            id="backup-time"
+            name="backupTime"
+            type="time"
+            step="60"
+            required
+            [(ngModel)]="backupTime"
+          />
+        </app-form-field>
+
+        <app-form-field
+          class="restore-day"
+          label="Den zkušební obnovy"
+          i18n-label="@@admin.backups.schedule.testRestoreDay"
+        >
+          <select
+            appFormControl
+            id="test-restore-day"
+            name="testRestoreDay"
+            [(ngModel)]="testRestoreDay"
+          >
+            @for (day of days; track day.value) {
+              <option [ngValue]="day.value">{{ day.name }}</option>
+            }
+          </select>
+        </app-form-field>
+
+        <app-form-field
+          label="Čas zkušební obnovy"
+          i18n-label="@@admin.backups.schedule.testRestoreTime"
+          [messages]="timeMessages"
+        >
+          <input
+            appFormControl
+            id="test-restore-time"
+            name="testRestoreTime"
+            type="time"
+            step="60"
+            required
+            [(ngModel)]="testRestoreTime"
+          />
+        </app-form-field>
+      </div>
+
+      @if (error()) {
+        <p class="ui-field-error" role="alert">{{ error() }}</p>
+      }
+
+      <button
+        type="submit"
+        class="ui-button ui-button--primary"
+        [disabled]="saving() || disabled()"
+      >
+        @if (saving()) {
+          <span i18n="@@admin.backups.schedule.saving">Ukládáme…</span>
+        } @else {
+          <span i18n="@@admin.backups.schedule.save">Uložit plán</span>
+        }
+      </button>
+    </form>
+  </div>
+</section>

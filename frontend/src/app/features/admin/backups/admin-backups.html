@@ -1,10 +1,10 @@
 <div class="ui-page container">
   <h1 #title class="ui-page-title" tabindex="-1" i18n="@@admin.backups.heading">Zálohy</h1>
   <p class="ui-page-intro" i18n="@@admin.backups.introRestore">
-    Databáze se zálohuje každou noc ve 3:00 do složky /DATA/AppData/nfnn/backups na serveru a každou
-    neděli ve 4:00 se nejnovější záloha zkušebně obnoví do dočasné databáze. Tady vidíte, jak to
-    dopadlo, zálohu i zkušební obnovu spustíte hned, zálohu si stáhnete a web z ní obnovíte. Zálohy
-    leží na stejném disku jako databáze; kopii mimo server web zatím nedělá.
+    Databáze se každý den zálohuje do složky /DATA/AppData/nfnn/backups na serveru a jednou týdně se
+    nejnovější záloha zkušebně obnoví do dočasné databáze, obojí v časech z plánu záloh dole. Tady
+    vidíte, jak to dopadlo, zálohu i zkušební obnovu spustíte hned, zálohu si stáhnete a web z ní
+    obnovíte. Zálohy leží na stejném disku jako databáze; kopii mimo server web zatím nedělá.
   </p>
 
   <app-live-notice [notice]="notice()" />
@@ -224,6 +224,14 @@
             </table>
           }
         </section>
+
+        @if (schedule(); as plan) {
+          <app-backup-schedule-card
+            [schedule]="plan"
+            [disabled]="!available()"
+            (saved)="scheduleSaved($event)"
+          />
+        }
       }
     }
   }

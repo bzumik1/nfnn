@@ -362,6 +362,15 @@ jobs:
           grep -q '^outcome=ok$' "$backups/status/backup" || { echo "::error::the backup status file does not say ok"; cat "$backups/status/backup"; exit 1; }
           [ "$(stat -c %a "$backups/requests")" = 1777 ] || { echo "::error::the requests folder must be writable for the backend (mode 1777)"; exit 1; }
 
+          echo "The backend hands the backup schedule to the backup service, which reports the schedule it runs"
+          wait_for "grep -q '^backup_time=03:00$' $backups/requests/schedule 2> /dev/null" 60 "the backend did not hand the backup schedule over at start"
+          wait_for "grep -q '^test_restore_day=7$' $backups/status/schedule 2> /dev/null" 15 "the backup service reports no schedule"
+          docker exec -u app nfnn-backend sh -c "printf 'backup_time=02:30\ntest_restore_day=6\ntest_restore_time=05:15\n' > /backups/requests/schedule"
+          wait_for "grep -q '^backup_time=02:30$' $backups/status/schedule && grep -q '^test_restore_day=6$' $backups/status/schedule" 15 "the backup service did not take the changed schedule"
+          grep -q 'schedule: daily backup at 02:30, test restore on day 6 at 05:15' "$logs/backup.log" || { echo "::error::the backup log does not name the changed schedule"; exit 1; }
+          docker exec -u app nfnn-backend sh -c "printf 'backup_time=25:00\ntest_restore_day=9\ntest_restore_time=05:15\n' > /backups/requests/schedule"
+          wait_for "grep -q '^backup_time=03:00$' $backups/status/schedule && grep -q '^test_restore_day=7$' $backups/status/schedule" 15 "an invalid schedule did not fall back to the defaults"
+
           echo "A requested backup and a test restore run from request files"
           docker exec nfnn-backend sh -c 'touch /backups/requests/ci-1.backup && touch /backups/requests/ci-2.test-restore'
           wait_for "grep -q '^request=ci-1$' $backups/status/backup" 30 "the requested backup did not run"
