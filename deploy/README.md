@@ -15,7 +15,7 @@ ZimaOS ─► aplikace „Nová naděje“ z compose.yml (App Store → Custom I
 
 Na serveru se nic nepíše do souborů. `compose.yml` se do ZimaOS vkládá vždy beze změn a nemá v sobě žádné heslo ani hodnotu jen pro tento server.
 
-- **Hesla a klíče si aplikace vygeneruje sama** do `/DATA/AppData/nfnn/secrets/` (jen root, práva 600): `db-password` vytvoří kontejner databáze (obraz `nfnn-postgres`), `jwt-secret` (podpis přihlášení) a `settings-key` (šifruje tajné hodnoty v databázi) backend. Nikdo je nezadává ani nevidí. Doporučení: `settings-key` si ulož do správce hesel (`sudo cat /DATA/AppData/nfnn/secrets/settings-key`); bez něj obnova databáze na jiném serveru nepřečte uložené tajné hodnoty a správa je ukáže jako „zadejte znovu“.
+- **Hesla a klíče si aplikace vygeneruje sama** do `/DATA/AppData/nfnn/secrets/` (jen root, práva 600): `db-password` (správce databáze, používají ho jen databáze a zálohy) a `db-app-password` (běžná role `novanadeje_app`, pod kterou se přihlašuje backend) vytvoří kontejner databáze (obraz `nfnn-postgres`), `jwt-secret` (podpis přihlášení) a `settings-key` (šifruje tajné hodnoty v databázi) backend. Nikdo je nezadává ani nevidí. Doporučení: `settings-key` si ulož do správce hesel (`sudo cat /DATA/AppData/nfnn/secrets/settings-key`); bez něj obnova databáze na jiném serveru nepřečte uložené tajné hodnoty a správa je ukáže jako „zadejte znovu“.
 - **Nastavení webu** (adresa webu, SMTP Brevo, odesílatel a příjemce e-mailů, token Fio, e-mail prvního správce) se zadává v prohlížeči: při první instalaci průvodcem na `/prvni-nastaveni`, potom ve správě webu na `/sprava/nastaveni`. Ukládá se do databáze (tabulka `operations_setting`), heslo SMTP a token Fio zašifrované klíčem ze `secrets/settings-key`. Uložení backend restartuje, web pak asi minutu neodpovídá.
 - Ztratí-li se složka `secrets/` (nový server), heslo databáze i klíče se vygenerují znovu: všichni se jen znovu přihlásí a tajné hodnoty v nastavení je potřeba zadat znovu ve správě.
 - Sken podpisu na potvrzení se nahrává ve správě na `/sprava/nastaveni` (viz [Potvrzení o daru](#potvrzení-o-daru)).
@@ -40,6 +40,15 @@ sudo docker inspect nfnn-postgres nfnn-backup nfnn-backend nfnn-mcp nfnn-fronten
 
 Má vypsat `nfnn-internal` u databáze a záloh, obě sítě u backendu a `nfnn-edge` u konektoru a webu; `bridge` u žádného.
 
+Kontejnery běží se systémem souborů jen pro čtení (zapisují jen do složek v `/DATA/AppData/nfnn/` a do dočasné paměti `tmpfs`) a bez oprávnění Linuxu, která nepotřebují (`cap_drop: ALL`, každý si přidá jen svých pár). Backend se k databázi přihlašuje jako běžná role `novanadeje_app` bez práv správce databáze: kdyby se v něm našla díra, útočník se přes databázi nedostane k serveru. Roli vytvoří a databázi jí předá kontejner `nfnn-postgres` sám při každém startu. Ověření po instalaci (u každého kontejneru `true ALL`, pak `novanadeje_app f`):
+
+```bash
+sudo docker inspect nfnn-postgres nfnn-backup nfnn-backend nfnn-mcp nfnn-frontend --format '{{.Name}} {{.HostConfig.ReadonlyRootfs}} {{.HostConfig.CapDrop}}'
+sudo docker exec nfnn-postgres psql -U novanadeje -d novanadeje -tA -c "select rolname, rolsuper from pg_roles where rolname = 'novanadeje_app'"
+```
+
+Ukáže-li první příkaz `false []`, ZimaOS tato nastavení při instalaci zahodil; web poběží dál, jen bez tohoto omezení (napiš Claudovi).
+
 Do dokončení průvodce by ho mohl vyplnit kdokoli z domácí sítě; po dokončení odpovídá 409 a nastavení mění jen správce se druhým faktorem. Změní-li se `compose.yml` v repu, aplikaci přeinstaluj s novým souborem; nastavení v databázi i složka `secrets/` zůstanou.
 
 ## Přechod z env souborů
@@ -48,7 +57,7 @@ Server nainstalovaný před průvodcem má hesla a nastavení v `/DATA/AppData/n
 
 1. Opiš si hodnoty, které budeš zadávat v průvodci: ZimaOS → Soubory → `/DATA/AppData/nfnn/env/`, nebo `sudo cat /DATA/AppData/nfnn/env/backend.env`. Potřeba jsou `PUBLIC_URL`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `FIO_TOKEN` a e-mail z `ADMIN_EMAILS`; ostatní mají v průvodci správné výchozí hodnoty. Pokročilé hodnoty (`FIO_HISTORY_FROM`, `PAIRING_EXCLUDED_ACCOUNTS`, `RECEIPT_*`) se po průvodci nastaví ve správě na `/sprava/nastaveni`.
 2. Aplikaci odinstaluj (data v `/DATA/AppData/nfnn` zůstanou) a nainstaluj s novým `deploy/compose.yml`, vloženým beze změn.
-3. Heslo databáze se převezme samo: kontejner `nfnn-postgres` při startu nastaví roli v databázi na nově vygenerované heslo ze `secrets/` (přes lokální socket, staré heslo nepotřebuje). V logu `nfnn-postgres` je řádek `the database role uses the password from /secrets/db-password`. Nový `jwt-secret` jen odhlásí všechny přihlášené.
+3. Heslo databáze se převezme samo: kontejner `nfnn-postgres` při startu nastaví roli v databázi na nově vygenerované heslo ze `secrets/` (přes lokální socket, staré heslo nepotřebuje). V logu `nfnn-postgres` je řádek `the database roles use the passwords from /secrets/db-password and /secrets/db-app-password`. Nový `jwt-secret` jen odhlásí všechny přihlášené.
 4. Otevři web ikonou v ZimaOS a vyplň průvodce (Instalace, kroky 3–5). Správce, kteří roli už mají, ji mají dál; dvoufaktorové ověření se nemění.
 5. Až web běží s novým nastavením, smaž složku `/DATA/AppData/nfnn/env` (`sudo rm -r /DATA/AppData/nfnn/env`); nic ji už nečte.
 
