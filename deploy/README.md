@@ -32,13 +32,13 @@ Na serveru se nic nepíše do souborů. `compose.yml` se do ZimaOS vkládá vžd
 5. „Uložit a spustit“: backend hodnoty nejdřív ověří stejně jako při startu (chybnou vrátí do formuláře, takže server nikdy neuvízne ve smyčce restartů), uloží je a restartuje se. Průvodce počká a nabídne registraci.
 6. Zaregistruj se s e-mailem správce a potvrď ho odkazem z e-mailu: roli správce dostaneš hned po potvrzení. Pak si v portálu dárce v části „Údaje a zabezpečení“ (`/darce/udaje`) zapni dvoufaktorové ověření a správa (`/sprava`) se otevře. Další správce přidáš ve správě.
 
-Kontejnery NFNN mají vlastní sítě, ne výchozí síť Dockeru, kterou sdílejí ostatní aplikace na Zimě: `nfnn-edge` (web, backend, konektor) a `nfnn-internal` bez cesty ven (databáze, zálohy, backend). Jiná aplikace na serveru se tak k backendu ani k databázi nedostane, jen k webu přes port 8089 jako kdokoli jiný. Ověření po instalaci:
+Kontejnery NFNN mají vlastní síť `nfnn-edge`, ne výchozí síť Dockeru, kterou sdílejí ostatní aplikace na Zimě. Jiná aplikace na serveru se tak k backendu ani k databázi nedostane, jen k webu přes port 8089 jako kdokoli jiný. Síť je jedna pro všech pět kontejnerů, protože ZimaOS připojí kontejner jen k první síti, kterou má v compose uvedenou (s oddělenou sítí pro databázi zůstal backend jen v ní a web ho nenašel). K databázi se přihlásí jen backend a zálohy, protože jen ty mají heslo. Ověření po instalaci:
 
 ```bash
 sudo docker inspect nfnn-postgres nfnn-backup nfnn-backend nfnn-mcp nfnn-frontend --format '{{.Name}} {{range $k, $v := .NetworkSettings.Networks}}{{$k}} {{end}}'
 ```
 
-Má vypsat `nfnn-internal` u databáze a záloh, obě sítě u backendu a `nfnn-edge` u konektoru a webu; `bridge` u žádného.
+Má vypsat `nfnn-edge` u všech pěti; `bridge` u žádného. Síť `nfnn-internal` z dřívější instalace už nic nepoužívá a jde smazat: `sudo docker network rm nfnn-internal`.
 
 Kontejnery běží se systémem souborů jen pro čtení (zapisují jen do složek v `/DATA/AppData/nfnn/` a do dočasné paměti `tmpfs`) a bez oprávnění Linuxu, která nepotřebují (`cap_drop: ALL`, každý si přidá jen svých pár). Backend se k databázi přihlašuje jako běžná role `novanadeje_app` bez práv správce databáze: kdyby se v něm našla díra, útočník se přes databázi nedostane k serveru. Roli vytvoří a databázi jí předá kontejner `nfnn-postgres` sám při každém startu. Ověření po instalaci (u každého kontejneru `true ALL`, pak `novanadeje_app f`):
 
