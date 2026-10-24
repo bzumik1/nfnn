@@ -28,6 +28,12 @@
         }
       </svg>
       <span>{{ menuLabel() }}</span>
+      @for (badge of badgesElsewhere(); track $index) {
+        <ng-container
+          [ngTemplateOutlet]="badgeView"
+          [ngTemplateOutletContext]="{ $implicit: badge }"
+        />
+      }
     </button>
     @if (current(); as section) {
       <span class="side-nav-current" aria-hidden="true">{{ section }}</span>
@@ -53,8 +59,14 @@
                   routerLinkActive="side-nav-link--active"
                   ariaCurrentWhenActive="page"
                   [routerLinkActiveOptions]="{ exact: item.exact ?? false }"
-                  >{{ item.label }}</a
-                >
+                  ><span>{{ item.label }}</span>
+                  @if (item.badge; as badge) {
+                    <ng-container
+                      [ngTemplateOutlet]="badgeView"
+                      [ngTemplateOutletContext]="{ $implicit: badge }"
+                    />
+                  }
+                </a>
               </li>
             }
           </ul>
@@ -62,6 +74,13 @@
       }
     </nav>
   </div>
+
+  <ng-template #badgeView let-badge>
+    @if (badge.count > 0) {
+      &ngsp;<span class="side-nav-badge" aria-hidden="true">{{ badge.count }}</span
+      >&ngsp;<span class="visually-hidden">{{ badge.description }}</span>
+    }
+  </ng-template>
 
   <main id="obsah" class="side-nav-content" tabindex="-1">
     <ng-content />

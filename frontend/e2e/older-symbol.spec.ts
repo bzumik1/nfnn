@@ -189,6 +189,11 @@ test.describe('Given a signed-in donor whose verified account sent payments with
   }) => {
     const answers = await askAboutAnOlderSymbol(page);
     await signIn(page);
+    const sections = page.getByRole('navigation', { name: 'Můj účet' });
+    await expect(
+      sections.getByRole('link', { name: 'Bankovní účty 1 otázka čeká na odpověď' }),
+    ).toBeVisible();
+    await expect(sections.locator('.side-nav-badge')).toHaveText('1');
     await openDonorSection(page, 'Bankovní účty');
     const question = page.getByRole('group', {
       name: /Z tohoto účtu k nám chodí i platby s variabilním symbolem/,
@@ -208,6 +213,7 @@ test.describe('Given a signed-in donor whose verified account sent payments with
     ]);
     await expect(question).toHaveCount(0);
     await expect(page.locator('.accounts-list .account-hint')).toHaveText([ACTIVE_HINT]);
+    await expect(sections.locator('.side-nav-badge')).toHaveCount(0);
 
     await openDonorSection(page, 'Moje dary');
 

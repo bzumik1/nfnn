@@ -39,11 +39,12 @@ describe('Given a signed-in donor in the donor area', () => {
   let savedFiles: { fileName: string; href: string }[];
   let createObjectURL: ReturnType<typeof vi.fn>;
   let bankCheck: TestRequest;
-  let overviewAccounts: BankAccountItem[];
+  let areaAccounts: BankAccountItem[];
+  let sectionAccountRequests: TestRequest[];
 
   beforeEach(async () => {
     localStorage.clear();
-    overviewAccounts = [];
+    areaAccounts = [];
     savedFiles = [];
     createObjectURL = vi.fn(() => OBJECT_URL);
     Object.defineProperty(URL, 'createObjectURL', {
@@ -91,6 +92,9 @@ describe('Given a signed-in donor in the donor area', () => {
   async function open(url: string): Promise<void> {
     await harness.navigateByUrl(url);
     bankCheck = http.expectOne({ method: 'POST', url: BANK_CHECK_URL });
+    const [areaRequest, ...sectionRequests] = http.match({ method: 'GET', url: BANK_ACCOUNTS_URL });
+    areaRequest.flush({ items: areaAccounts });
+    sectionAccountRequests = sectionRequests;
     await settle();
   }
 
@@ -101,7 +105,12 @@ describe('Given a signed-in donor in the donor area', () => {
 
   async function openBankAccounts(): Promise<void> {
     await open('/darce/ucty');
-    http.expectOne({ method: 'GET', url: BANK_ACCOUNTS_URL }).flush({ items: [] });
+    flushSectionAccounts([]);
+  }
+
+  function flushSectionAccounts(items: BankAccountItem[]): void {
+    expect(sectionAccountRequests).toHaveLength(1);
+    sectionAccountRequests[0].flush({ items });
   }
 
   async function respond(
@@ -116,11 +125,6 @@ describe('Given a signed-in donor in the donor area', () => {
   async function settle(): Promise<void> {
     harness.fixture.detectChanges();
     await harness.fixture.whenStable();
-    if (element('app-donor-overview')) {
-      http
-        .match({ method: 'GET', url: BANK_ACCOUNTS_URL })
-        .forEach((request) => request.flush({ items: overviewAccounts }));
-    }
     harness.fixture.detectChanges();
   }
 
@@ -228,6 +232,79 @@ describe('Given a signed-in donor in the donor area', () => {
   const yearlyUrl = (year: number): string => `/api/donations/me/receipts/yearly?year=${year}`;
   const secondRowButton = '.payments-card tbody tr:nth-child(2) .download-btn';
   const thirdRowButton = '.payments-card tbody tr:nth-child(3) .download-btn';
+
+  describe('when bank accounts carry questions about an older symbol', () => {
+    function questions(count: number): BankAccountItem[] {
+      return Array.from({ length: count }, (_, index) =>
+        bankAccount({ id: `question-${index}`, symbolOffer: symbolOffer() }),
+      );
+    }
+
+    function badge(container: Element | null): string {
+      return normalized(container?.querySelector('.side-nav-badge')?.textContent ?? '');
+    }
+
+    function hidden(container: Element | null): string {
+      return normalized(container?.querySelector('.visually-hidden')?.textContent ?? '');
+    }
+
+    function bankAccountsLink(): HTMLAnchorElement | null {
+      return element('nav a[href="/darce/ucty"]') as HTMLAnchorElement | null;
+    }
+
+    it('then Bankovní účty in the side panel and the menu button show how many wait for an answer', async () => {
+      areaAccounts = [bankAccount(), ...questions(1)];
+      await open('/darce/dary');
+      await respond(twoYearSummary(), twoYearDonations());
+
+      expect(badge(bankAccountsLink())).toBe('1');
+      expect(hidden(bankAccountsLink())).toBe('1 otázka čeká na odpověď');
+      expect(badge(element('.side-nav-toggle'))).toBe('1');
+      expect(hidden(element('.side-nav-toggle'))).toBe('1 otázka čeká na odpověď');
+      expect(texts('nav .side-nav-badge')).toHaveLength(1);
+    });
+
+    it('then the description takes the Czech plural forms', async () => {
+      areaAccounts = questions(2);
+      await open('/darce/dary');
+      await respond(twoYearSummary(), twoYearDonations());
+      expect(hidden(bankAccountsLink())).toBe('2 otázky čekají na odpověď');
+    });
+
+    it('then five questions take the form for many', async () => {
+      areaAccounts = questions(5);
+      await open('/darce/dary');
+      await respond(twoYearSummary(), twoYearDonations());
+      expect(hidden(bankAccountsLink())).toBe('5 otázek čeká na odpověď');
+    });
+
+    it('then no badge shows while no account carries a question', async () => {
+      areaAccounts = [bankAccount()];
+      await open('/darce/dary');
+      await respond(twoYearSummary(), twoYearDonations());
+
+      expect(element('.side-nav-badge')).toBeNull();
+    });
+
+    it('then the bank accounts section keeps the menu button free of it and its own list updates the badge', async () => {
+      areaAccounts = questions(1);
+      await open('/darce/ucty');
+      flushSectionAccounts(questions(1));
+      await respond(twoYearSummary(), twoYearDonations());
+
+      expect(badge(bankAccountsLink())).toBe('1');
+      expect(element('.side-nav-toggle .side-nav-badge')).toBeNull();
+
+      (
+        harness.fixture.debugElement.query(By.directive(BankAccountsCard))
+          .componentInstance as BankAccountsCard
+      ).reload();
+      http.expectOne({ method: 'GET', url: BANK_ACCOUNTS_URL }).flush({ items: [bankAccount()] });
+      await settle();
+
+      expect(element('.side-nav-badge')).toBeNull();
+    });
+  });
 
   describe('when the area opens', () => {
     it('then it asks the bank for new payments while the donations load', async () => {
@@ -532,7 +609,7 @@ describe('Given a signed-in donor in the donor area', () => {
     });
 
     it('then a bank account with a question about an older symbol is announced with a link to answer it', async () => {
-      overviewAccounts = [
+      areaAccounts = [
         bankAccount(),
         bankAccount({
           id: 'other',
@@ -550,7 +627,7 @@ describe('Given a signed-in donor in the donor area', () => {
     });
 
     it('then no question is announced while no bank account carries one', async () => {
-      overviewAccounts = [bankAccount()];
+      areaAccounts = [bankAccount()];
       await open('/darce/prehled');
       await respond(twoYearSummary(), twoYearDonations());
 

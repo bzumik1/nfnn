@@ -1,3 +1,4 @@
+import { NgTemplateOutlet } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -13,10 +14,16 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { filter } from 'rxjs';
 
+export interface SideNavBadge {
+  readonly count: number;
+  readonly description: string;
+}
+
 export interface SideNavItem {
   readonly path: string;
   readonly label: string;
   readonly exact?: boolean;
+  readonly badge?: SideNavBadge;
 }
 
 export interface SideNavGroup {
@@ -27,7 +34,7 @@ export interface SideNavGroup {
 
 @Component({
   selector: 'app-side-nav',
-  imports: [RouterLink, RouterLinkActive],
+  imports: [NgTemplateOutlet, RouterLink, RouterLinkActive],
   templateUrl: './side-nav.html',
   styleUrl: './side-nav.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -46,16 +53,21 @@ export class SideNav {
 
   private readonly router = inject(Router);
   private readonly path = signal(pathOf(this.router.url));
-  protected readonly current = computed(() => {
+  private readonly items = computed(() => this.groups().flatMap((group) => group.items));
+  private readonly currentItem = computed(() => {
     const path = this.path();
     return (
-      this.groups()
-        .flatMap((group) => group.items)
-        .find((item) =>
-          item.exact ? path === item.path : path === item.path || path.startsWith(`${item.path}/`),
-        )?.label ?? null
+      this.items().find((item) =>
+        item.exact ? path === item.path : path === item.path || path.startsWith(`${item.path}/`),
+      ) ?? null
     );
   });
+  protected readonly current = computed(() => this.currentItem()?.label ?? null);
+  protected readonly badgesElsewhere = computed(() =>
+    this.items()
+      .filter((item) => item !== this.currentItem())
+      .flatMap((item) => (item.badge && item.badge.count > 0 ? [item.badge] : [])),
+  );
 
   constructor() {
     this.router.events

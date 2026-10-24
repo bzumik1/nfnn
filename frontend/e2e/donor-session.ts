@@ -303,10 +303,14 @@ export const adminSettings = {
   secretsCanBeStored: true,
 };
 
+function sectionName(name: string): RegExp {
+  return new RegExp(`^${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}( |$)`);
+}
+
 export async function openDonorSection(page: Page, name: string): Promise<void> {
   const link = page
     .getByRole('navigation', { name: 'Můj účet' })
-    .getByRole('link', { name, exact: true });
+    .getByRole('link', { name: sectionName(name) });
   await link.click();
   await expect(link).toHaveAttribute('aria-current', 'page');
 }

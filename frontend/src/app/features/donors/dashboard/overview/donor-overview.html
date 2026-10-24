@@ -32,7 +32,7 @@
   }
 }
 
-@for (account of accountsWithQuestion(); track account.id) {
+@for (account of donations.accountsWithQuestion(); track account.id) {
   <p class="ui-callout ui-callout--warning overview-question">
     <span i18n="@@donor.overview.question"
       >Máme na vás otázku k platbám z účtu

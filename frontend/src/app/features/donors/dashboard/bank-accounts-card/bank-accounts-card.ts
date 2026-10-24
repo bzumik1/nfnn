@@ -124,6 +124,7 @@ export class BankAccountsCard {
   readonly sessionEnded = output<void>();
   readonly bankChecked = output<BankCheckResponse>();
   readonly donationsChanged = output<void>();
+  readonly accountsChanged = output<readonly BankAccountItem[]>();
 
   protected readonly donorName = computed(() => this.auth.donor()?.name ?? '');
 
@@ -228,6 +229,7 @@ export class BankAccountsCard {
   private showAccounts(items: readonly BankAccountItem[]): void {
     this.accounts.set(items);
     this.state.set('ready');
+    this.accountsChanged.emit(items);
     if (this.adding() && this.accountsWhenOpened() === null) {
       this.accountsWhenOpened.set(accountsWhenOpened(items));
     }
@@ -338,6 +340,7 @@ export class BankAccountsCard {
         account.id === answered.id ? { ...account, symbolOffer: null } : account,
       ),
     );
+    this.accountsChanged.emit(this.accounts());
   }
 
   private confirmSymbol(account: BankAccountItem, offer: SymbolOffer): Observable<string> {

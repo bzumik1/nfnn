@@ -1,8 +1,7 @@
 import { NgTemplateOutlet } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { AuthStore } from '../../../../core/auth/auth-store';
-import { BankAccountItem, BankAccountsApi } from '../../../donations/bank-accounts-api';
 import { formatMinorUnits } from '../../../donations/donation-amount';
 import { formatBankTime, formatDonationDate } from '../../../donations/donation-date';
 import { DonationStatus } from '../../../donations/donations-api';
@@ -41,11 +40,6 @@ export class DonorOverview {
     return { year, totalAmountMinor: total };
   });
 
-  private readonly accounts = signal<readonly BankAccountItem[]>([]);
-  protected readonly accountsWithQuestion = computed(() =>
-    this.accounts().filter((account) => account.symbolOffer !== null),
-  );
-
   protected readonly receiptYear = computed(() => {
     const summary = this.donations.summary();
     if (summary === null) {
@@ -55,15 +49,6 @@ export class DonorOverview {
     const gave = summary.byYear.some((entry) => entry.year === year && entry.count > 0);
     return gave && year >= summary.receiptsAvailableFrom ? year : null;
   });
-
-  constructor() {
-    inject(BankAccountsApi)
-      .list()
-      .subscribe({
-        next: (list) => this.accounts.set(list.items),
-        error: () => this.accounts.set([]),
-      });
-  }
 
   protected crowns(amountMinor: number): string {
     return formatMinorUnits(amountMinor);
