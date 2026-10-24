@@ -1,8 +1,8 @@
 <div class="ui-page container">
   <h1 #title class="ui-page-title" tabindex="-1" i18n="@@admin.actions.heading">Historie správy</h1>
   <p class="ui-page-intro" i18n="@@admin.actions.intro">
-    Každý zásah správce se zapisuje: kdo ho udělal, kdy a čeho se týkal. Nejnovější jsou nahoře.
-    Podrobnosti popisují, co se změnilo, s identifikátory, podle kterých se dá zásah dohledat.
+    Každá změna ve správě se zapisuje: kdo, kdy a co udělal. Nejnovější jsou nahoře. Technické
+    podrobnosti s identifikátory se hodí, když je potřeba změnu dohledat.
   </p>
 
   <section class="ui-card" aria-labelledby="actions-title">
@@ -61,7 +61,6 @@
                       <span class="muted" i18n="@@admin.actions.admin.missing"
                         >správce bez účtu</span
                       >
-                      <span class="admin-email">{{ item.adminId }}</span>
                     }
                     @if (item.client) {
                       <span class="admin-client" i18n="@@admin.actions.admin.client"
@@ -71,12 +70,27 @@
                   </td>
                   <td data-label="Zásah" i18n-data-label="@@admin.actions.col.action">
                     <span class="admin-name">{{ actionName(item) }}</span>
-                    @if (isKnownAction(item)) {
-                      <span class="action-code">{{ item.action }}</span>
+                    @if (donorId(item); as donorId) {
+                      <a
+                        class="donor-link"
+                        [routerLink]="['/sprava/darci', donorId]"
+                        i18n="@@admin.actions.openDonor"
+                        >Otevřít kartu dárce</a
+                      >
                     }
                   </td>
                   <td data-label="Podrobnosti" i18n-data-label="@@admin.actions.col.details">
-                    <span class="details">{{ item.details }}</span>
+                    <details class="details">
+                      <summary i18n="@@admin.actions.details.summary">
+                        Technické podrobnosti
+                      </summary>
+                      <span class="details-text">{{ item.details }}</span>
+                      @if (!item.adminName) {
+                        <span class="details-text" i18n="@@admin.actions.details.adminId"
+                          >Správce: {{ item.adminId }}</span
+                        >
+                      }
+                    </details>
                   </td>
                 </tr>
               }
