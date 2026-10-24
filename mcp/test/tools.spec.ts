@@ -25,6 +25,14 @@ describe('Given an administrator connected with the reading permission only', ()
     await stack.stop();
   });
 
+  it('when the tools are listed, then the content tools say that live tells whether the site shows an item today', async () => {
+    const { tools } = await client.listTools();
+    const description = (name: string) => tools.find((tool) => tool.name === name)?.description;
+    expect(description('nfnn_content')).toContain('live');
+    expect(description('nfnn_news_article')).toContain('live');
+    expect(description('nfnn_project')).toContain('live');
+  });
+
   it('when the tools are listed, then every reading and writing tool is there with its annotations', async () => {
     const { tools } = await client.listTools();
     const names = tools.map((tool) => tool.name).sort();
@@ -197,6 +205,7 @@ describe('Given an administrator connected with the reading permission only', ()
     const content = textOf(await client.callTool({ name: 'nfnn_content', arguments: {} }));
     expect(content).toContain('"title":"Koncept"');
     expect(content).toContain('"bodyLength":22');
+    expect(content).toContain('"publishedOn":"2026-11-01","live":false');
     expect(content).not.toContain('Dlouhý text');
     expect(
       textOf(await client.callTool({ name: 'nfnn_news_article', arguments: { id: UNKNOWN_ID } })),

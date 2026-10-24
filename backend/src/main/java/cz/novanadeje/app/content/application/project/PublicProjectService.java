@@ -34,16 +34,17 @@ public class PublicProjectService {
             throw new IllegalArgumentException("The page is 0 or more and the size 1 to " + MAX_PAGE_SIZE);
         }
         LocalDate today = today();
-        List<ProjectView> items = projects.findVisibleNewestFirst(today, page * size, size).stream().map(ProjectView::from).toList();
+        List<ProjectView> items = projects.findVisibleNewestFirst(today, page * size, size).stream().map(project -> ProjectView.from(project, today)).toList();
         return new ProjectPage(items, page, size, projects.countVisible(today));
     }
 
     public ProjectView bySlug(Slug slug) {
-        Project article = projects.findBySlug(slug)
+        LocalDate today = today();
+        Project project = projects.findBySlug(slug)
                 .or(() -> formerSlugs.project(slug).flatMap(projects::findById))
-                .filter(found -> found.isVisibleOn(today()))
+                .filter(found -> found.isVisibleOn(today))
                 .orElseThrow(() -> new ProjectNotFound(slug));
-        return ProjectView.from(article);
+        return ProjectView.from(project, today);
     }
 
     private LocalDate today() {

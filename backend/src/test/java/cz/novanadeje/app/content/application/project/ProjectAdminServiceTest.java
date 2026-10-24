@@ -51,7 +51,11 @@ class ProjectAdminServiceTest {
     private ApplicationEventPublisher events;
 
     private ProjectAdminService service() {
-        return new ProjectAdminService(projects, media, formerSlugs, events, Clock.fixed(NOW, ZoneOffset.UTC));
+        return service(NOW);
+    }
+
+    private ProjectAdminService service(Instant now) {
+        return new ProjectAdminService(projects, media, formerSlugs, events, Clock.fixed(now, ZoneOffset.UTC));
     }
 
     @Test
@@ -187,6 +191,47 @@ class ProjectAdminServiceTest {
         when(projects.findById(id)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service().unpublish(ADMIN, id)).isInstanceOf(ProjectNotFound.class);
+    }
+
+    @Test
+    @DisplayName("Given a draft, when it is published on the day that has just begun in Prague but not yet in UTC, then it is live")
+    void should_be_live_when_published_given_the_prague_day_has_begun() {
+        Instant pragueJustAfterMidnight = Instant.parse("2026-10-23T22:30:00Z");
+        Project project = Project.create(ProjectId.newId(NOW), content("dominik", Optional.empty()), NOW);
+        when(projects.findById(project.id())).thenReturn(Optional.of(project));
+
+        ProjectView view = service(pragueJustAfterMidnight).publish(ADMIN, project.id(), LocalDate.parse("2026-10-24"));
+
+        assertThat(view.live()).isTrue();
+    }
+
+    @Test
+    @DisplayName("Given a draft, when it is published on a later day, then it is not live yet")
+    void should_not_be_live_when_published_given_a_later_day() {
+        Project project = Project.create(ProjectId.newId(NOW), content("dominik", Optional.empty()), NOW);
+        when(projects.findById(project.id())).thenReturn(Optional.of(project));
+
+        ProjectView view = service().publish(ADMIN, project.id(), LocalDate.parse("2026-10-24"));
+
+        assertThat(view.live()).isFalse();
+    }
+
+    @Test
+    @DisplayName("Given a draft, when it is read, then it is not live")
+    void should_not_be_live_when_read_given_a_draft() {
+        Project project = Project.create(ProjectId.newId(NOW), content("dominik", Optional.empty()), NOW);
+        when(projects.findById(project.id())).thenReturn(Optional.of(project));
+
+        assertThat(service().get(project.id()).live()).isFalse();
+    }
+
+    @Test
+    @DisplayName("Given a draft, when it is published on today, then it is live")
+    void should_be_live_when_published_given_today() {
+        Project project = Project.create(ProjectId.newId(NOW), content("dominik", Optional.empty()), NOW);
+        when(projects.findById(project.id())).thenReturn(Optional.of(project));
+
+        assertThat(service().publish(ADMIN, project.id(), LocalDate.parse("2026-10-23")).live()).isTrue();
     }
 
     private static ProjectCommand command(String title, Optional<String> slug, Optional<MediaId> image) {

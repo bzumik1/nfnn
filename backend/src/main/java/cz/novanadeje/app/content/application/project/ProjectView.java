@@ -9,11 +9,11 @@ import java.time.LocalDate;
 import java.util.Optional;
 
 public record ProjectView(ProjectId id, String slug, String title, int year, Optional<String> tag, String perex, String body,
-                          Optional<MediaId> coverImage, Optional<String> coverImageAlt, Optional<LocalDate> publishedOn, Instant createdAt, Instant updatedAt) {
+                          Optional<MediaId> coverImage, Optional<String> coverImageAlt, Optional<LocalDate> publishedOn, boolean live, Instant createdAt, Instant updatedAt) {
 
-    public static ProjectView from(Project project) {
+    public static ProjectView from(Project project, LocalDate today) {
         return new ProjectView(project.id(), project.slug().value(), project.content().title(), project.content().year(),
                 project.content().tag(), project.content().perex(), project.content().body(), project.content().coverImage(), project.content().coverImageAlt(),
-                project.publishedOn(), project.createdAt(), project.updatedAt());
+                project.publishedOn(), project.isVisibleOn(today), project.createdAt(), project.updatedAt());
     }
 }
