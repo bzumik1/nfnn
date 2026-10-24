@@ -15,7 +15,7 @@ import { Router, RouterLink } from '@angular/router';
 import { problemTypeEndsWith } from '../../../core/auth/api-problem';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
-import { formatCrowns } from '../../donations/donation-amount';
+import { formatMinorUnits } from '../../donations/donation-amount';
 import { formatBankTime, formatDonationDate } from '../../donations/donation-date';
 import {
   AdminApi,
@@ -157,7 +157,7 @@ export class AdminHome {
   }
 
   protected amount(tally: TallyResponse): string {
-    return `${formatCrowns(tally.totalMinor / 100)}\u00a0Kč`;
+    return `${formatMinorUnits(tally.totalMinor)}\u00a0Kč`;
   }
 
   protected load(): void {

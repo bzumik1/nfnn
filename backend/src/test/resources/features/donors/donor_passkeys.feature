@@ -1,3 +1,4 @@
+@donors
 Feature: A donor signs in with a passkey instead of the password
 
   Background:

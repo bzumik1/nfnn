@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { AuthStore } from '../../../../core/auth/auth-store';
-import { formatCrowns } from '../../../donations/donation-amount';
+import { formatMinorUnits } from '../../../donations/donation-amount';
 import { formatDonationDate } from '../../../donations/donation-date';
 import { DonationsPending } from '../donations-pending/donations-pending';
 import { DonationsTable } from '../donations-table/donations-table';
@@ -10,7 +10,6 @@ import { PageTitle } from '../page-title/page-title';
 import { SymbolCard } from '../symbol-card/symbol-card';
 
 const RECENT_DONATIONS_SHOWN = 5;
-const MINOR_UNITS_PER_CROWN = 100;
 
 @Component({
   selector: 'app-donor-overview',
@@ -28,7 +27,7 @@ export class DonorOverview {
   );
 
   protected crowns(amountMinor: number): string {
-    return formatCrowns(amountMinor / MINOR_UNITS_PER_CROWN);
+    return formatMinorUnits(amountMinor);
   }
 
   protected formatDate(isoDate: string): string {

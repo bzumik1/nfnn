@@ -1,3 +1,4 @@
+@contact
 Feature: Visitor sends a contact message
 
   Scenario: Valid message is accepted and forwarded to the foundation

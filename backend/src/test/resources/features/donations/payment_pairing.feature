@@ -1,3 +1,4 @@
+@donations
 Feature: Imported payments are paired with donors
 
   Scenario: A payment carrying the donor's variable symbol becomes the donor's donation

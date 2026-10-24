@@ -1,3 +1,4 @@
+@donors
 Feature: Donor protects the account with a second factor from an authenticator app
 
   Background:

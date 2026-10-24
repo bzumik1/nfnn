@@ -1,3 +1,4 @@
+@donors
 Feature: Donor signs in and keeps a session
 
   Background:

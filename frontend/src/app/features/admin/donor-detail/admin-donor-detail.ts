@@ -18,7 +18,7 @@ import { AuthStore } from '../../../core/auth/auth-store';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
 import { pluralCategory } from '../../../core/i18n/plural-category';
 import { BankAccountItem } from '../../donations/bank-accounts-api';
-import { formatCrowns } from '../../donations/donation-amount';
+import { formatMinorUnits } from '../../donations/donation-amount';
 import { formatBankTime, formatDonationDate } from '../../donations/donation-date';
 import { DonationItem } from '../../donations/donations-api';
 import {
@@ -39,7 +39,6 @@ type PendingAction =
 const UNAUTHENTICATED = 'auth/unauthenticated';
 const FORBIDDEN = 'auth/forbidden';
 const NOT_FOUND = '-not-found';
-const MINOR_UNITS_PER_CROWN = 100;
 
 const PAIRING_LABELS: Record<NonNullable<DonationItem['pairedBy']>, string> = {
   VARIABLE_SYMBOL: $localize`:@@admin.donorDetail.pairing.variableSymbol:podle variabilního symbolu`,
@@ -145,7 +144,7 @@ export class AdminDonorDetail {
   }
 
   protected crowns(amountMinor: number): string {
-    return formatCrowns(amountMinor / MINOR_UNITS_PER_CROWN);
+    return formatMinorUnits(amountMinor);
   }
 
   protected statusLabel(item: BankAccountItem): string {

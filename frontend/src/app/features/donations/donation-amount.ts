@@ -7,3 +7,9 @@ const CROWNS_WITH_HELLERS = new Intl.NumberFormat('cs-CZ', {
 export function formatCrowns(value: number): string {
   return Number.isInteger(value) ? WHOLE_CROWNS.format(value) : CROWNS_WITH_HELLERS.format(value);
 }
+
+const MINOR_UNITS_PER_CROWN = 100;
+
+export function formatMinorUnits(amountMinor: number): string {
+  return formatCrowns(amountMinor / MINOR_UNITS_PER_CROWN);
+}

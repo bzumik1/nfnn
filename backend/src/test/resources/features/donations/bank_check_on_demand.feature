@@ -1,3 +1,4 @@
+@donations
 Feature: A donor opening the overview has the bank checked for new payments
 
   Scenario: A check fetches a payment that arrived after the last import

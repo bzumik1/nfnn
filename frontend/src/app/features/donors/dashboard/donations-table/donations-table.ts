@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, inject, input } from '@angular/core';
-import { formatCrowns } from '../../../donations/donation-amount';
+import { formatMinorUnits } from '../../../donations/donation-amount';
 import { formatDonationDate } from '../../../donations/donation-date';
 import { DonationItem, DonationStatus } from '../../../donations/donations-api';
 import { DonorDonations } from '../donor-donations';
@@ -9,7 +9,6 @@ const STATUS_LABELS: Record<DonationStatus, string> = {
   REFUNDED: $localize`:@@donor.dashboard.payments.status.refunded:Vráceno`,
 };
 
-const MINOR_UNITS_PER_CROWN = 100;
 const SENDER_ACCOUNT_DIGITS_SHOWN = 4;
 
 @Component({
@@ -25,7 +24,7 @@ export class DonationsTable {
   readonly withReceipts = input(true);
 
   protected crowns(amountMinor: number): string {
-    return formatCrowns(amountMinor / MINOR_UNITS_PER_CROWN);
+    return formatMinorUnits(amountMinor);
   }
 
   protected formatDate(isoDate: string): string {

@@ -10,7 +10,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
-public interface RegistrationReminderJpaRepository extends JpaRepository<RegistrationReminderJpaEntity, UUID> {
+interface RegistrationReminderJpaRepository extends JpaRepository<RegistrationReminderJpaEntity, UUID> {
 
     @Query(nativeQuery = true, value = "select d.id from donor d"
             + " where d.email_verified_at is null and d.erased_at is null"

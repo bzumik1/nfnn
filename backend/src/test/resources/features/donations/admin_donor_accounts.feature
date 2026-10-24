@@ -1,3 +1,4 @@
+@donations
 Feature: An administrator sees a donor's bank accounts, donations and receipts and removes a wrongly learned account
 
   Background:

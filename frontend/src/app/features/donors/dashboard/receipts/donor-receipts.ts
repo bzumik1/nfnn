@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { formatCrowns } from '../../../donations/donation-amount';
+import { formatMinorUnits } from '../../../donations/donation-amount';
 import { DonationsPending } from '../donations-pending/donations-pending';
 import { DonorDonations } from '../donor-donations';
 import { PageTitle } from '../page-title/page-title';
@@ -13,8 +13,6 @@ interface YearRow {
   readonly totalAmountMinor: number;
   readonly receipt: YearReceipt;
 }
-
-const MINOR_UNITS_PER_CROWN = 100;
 
 @Component({
   selector: 'app-donor-receipts',
@@ -47,6 +45,6 @@ export class DonorReceipts {
   );
 
   protected crowns(amountMinor: number): string {
-    return formatCrowns(amountMinor / MINOR_UNITS_PER_CROWN);
+    return formatMinorUnits(amountMinor);
   }
 }

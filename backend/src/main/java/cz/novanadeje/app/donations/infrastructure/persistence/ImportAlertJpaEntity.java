@@ -18,7 +18,7 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "donation_import_alert")
-public class ImportAlertJpaEntity {
+class ImportAlertJpaEntity {
 
     enum Kind {
         OUTAGE,

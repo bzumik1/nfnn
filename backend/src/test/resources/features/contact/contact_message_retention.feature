@@ -1,3 +1,4 @@
+@contact
 Feature: Contact messages are deleted from the database a year after they were received
 
   Scenario: The retention job deletes a message older than a year and keeps a recent one

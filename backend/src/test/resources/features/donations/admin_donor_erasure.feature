@@ -1,3 +1,4 @@
+@donations
 Feature: Donations keep an erased donor's gifts and receipts without personal data
 
   Background:

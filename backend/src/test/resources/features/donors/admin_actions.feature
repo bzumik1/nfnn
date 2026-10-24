@@ -1,3 +1,4 @@
+@donors
 Feature: An administrator reads what administrators changed and when
 
   Background:

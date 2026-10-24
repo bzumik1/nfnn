@@ -1,3 +1,4 @@
+@donations
 Feature: The foundation is told when the bank import stops working and when it works again
 
   Background:

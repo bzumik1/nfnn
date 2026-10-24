@@ -1,3 +1,4 @@
+@donations
 Feature: An administrator lists the answers about older variable symbols and corrects a wrong one
 
   Background:

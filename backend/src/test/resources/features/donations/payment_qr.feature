@@ -1,3 +1,4 @@
+@donations
 Feature: Visitor gets a QR payment for a donation
 
   Scenario: Donor's QR payment carries their variable symbol

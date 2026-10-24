@@ -1,3 +1,4 @@
+@donations
 Feature: A donor sees, adds and disconnects the bank accounts the foundation pairs payments from
 
   Scenario: A donor without a payment carrying the symbol has no bank account
