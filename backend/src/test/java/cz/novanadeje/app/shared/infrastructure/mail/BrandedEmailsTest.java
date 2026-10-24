@@ -62,6 +62,21 @@ class BrandedEmailsTest {
     }
 
     @Test
+    @DisplayName("Given another mail server and sender, when a draft is composed through them, then it comes from that sender in that server's session")
+    void should_use_given_sender_and_session_when_composed_through_other_server_given_draft() throws Exception {
+        JavaMailSender other = mock(JavaMailSender.class);
+        Session session = Session.getInstance(new Properties());
+        when(other.createMimeMessage()).thenAnswer(invocation -> new MimeMessage(session));
+
+        MimeMessage composed = emails.compose(draft(CZECH, "Poznámka."), other, "novy@nfnn.cz");
+
+        assertThat(composed.getSession()).isSameAs(session);
+        InternetAddress from = (InternetAddress) MailContents.asReceived(composed).getFrom()[0];
+        assertThat(from.getAddress()).isEqualTo("novy@nfnn.cz");
+        assertThat(from.getPersonal()).isEqualTo("Nová naděje – nadační fond");
+    }
+
+    @Test
     @DisplayName("Given a draft, when it is composed, then the logo travels as an inline PNG that the HTML references by its content id")
     void should_embed_logo_inline_when_composed_given_draft() throws Exception {
         MimeMessage email = MailContents.asReceived(emails.compose(draft(CZECH, "Poznámka.")));

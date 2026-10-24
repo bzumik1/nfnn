@@ -72,10 +72,11 @@ public class SetupService {
         requireOpen(access);
     }
 
-    @Transactional(readOnly = true)
-    public boolean testMail(SetupAccess access, MailServer server) {
+    public TestEmailResult sendTestEmail(SetupAccess access, MailServer server, TestEmail email) {
         requireOpen(access);
-        return mailProbe.canSignIn(server);
+        TestEmailOutcome outcome = mailProbe.sendTestEmail(server, email);
+        log.info("A test e-mail was sent in the first setup: {}", outcome);
+        return new TestEmailResult(outcome, email.recipient());
     }
 
     @Transactional
