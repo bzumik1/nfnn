@@ -30,15 +30,76 @@
   margin-bottom: var(--space-4);
 }
 
-.admin-outage {
-  background: var(--color-warning-bg);
-  border: 1px solid var(--color-warning-border);
-  color: var(--color-warning);
-  border-radius: var(--radius-sm);
+.attention-list {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.attention-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-4);
   padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-alt);
+  color: var(--color-text);
   font-size: var(--text-md);
   line-height: var(--leading-normal);
-  margin-bottom: var(--space-4);
+}
+
+.attention-item--stack {
+  display: block;
+}
+
+.attention-item--warning {
+  background: var(--color-warning-bg);
+  border-color: var(--color-warning-border);
+  color: var(--color-warning);
+}
+
+.attention-item--danger {
+  background: var(--color-danger-bg);
+  border-color: var(--color-danger-bg);
+  color: var(--color-danger);
+}
+
+.attention-problems {
+  flex: 1 1 320px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  li + li {
+    margin-top: var(--space-1);
+  }
+}
+
+.admin-status .ui-card {
+  padding: var(--space-4) var(--space-5);
+}
+
+.admin-status .admin-data dd {
+  font-size: var(--text-md);
+}
+
+.attention-item p + p {
+  margin-top: var(--space-2);
+}
+
+.admin-next-step-label {
+  font-weight: var(--weight-semibold);
+}
+
+.admin-next-step a,
+.admin-pending a {
+  color: inherit;
+  font-weight: var(--weight-semibold);
 }
 
 .admin-data {
@@ -162,7 +223,7 @@
 
     tr {
       display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-template-columns: minmax(0, 0.6fr) minmax(0, 1.3fr) minmax(0, 1.1fr);
       gap: var(--space-2) var(--space-3);
       padding: var(--space-3) 0;
       border-top: 1px solid var(--color-divider);
@@ -190,6 +251,11 @@
       border: none;
     }
 
+    .col-new,
+    .col-paired {
+      display: none;
+    }
+
     .num {
       text-align: left;
     }
@@ -212,25 +278,6 @@
   font-size: var(--text-sm);
 }
 
-.admin-problems {
-  margin: 0 0 var(--space-4);
-  padding: var(--space-3) var(--space-4);
-  background: var(--color-danger-bg);
-  color: var(--color-danger);
-  border-radius: var(--radius-sm);
-  font-size: var(--text-md);
-  line-height: var(--leading-normal);
-
-  ul {
-    margin: 0;
-    padding-left: var(--space-4);
-  }
-
-  li + li {
-    margin-top: var(--space-1);
-  }
-}
-
 .healthy {
   margin: 0 0 var(--space-4);
   padding: var(--space-3) var(--space-4);
@@ -251,8 +298,4 @@
     outline: 3px solid var(--color-focus-ring);
     outline-offset: 2px;
   }
-}
-
-.admin-card-link--top {
-  margin: 0 0 var(--space-3);
 }

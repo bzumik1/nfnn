@@ -11,8 +11,8 @@ import {
   viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { Router } from '@angular/router';
-import { debounceTime, distinctUntilChanged, Subject, switchMap } from 'rxjs';
+import { Router, RouterLink } from '@angular/router';
+import { catchError, EMPTY, Observable, of, Subject, switchMap, timer } from 'rxjs';
 import { describeProblem, problemTypeEndsWith } from '../../../core/auth/api-problem';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
@@ -22,6 +22,7 @@ import { formatBankTime, formatDonationDate } from '../../donations/donation-dat
 import {
   AdminApi,
   AdminDonorResponse,
+  AdminDonorSearchResponse,
   AdminPaymentListResponse,
   AdminPaymentResponse,
   PairingFilter,
@@ -30,6 +31,16 @@ import {
 import { LiveNotice, Notice } from '../../../shared/ui/live-notice/live-notice';
 
 type LoadState = 'loading' | 'ready' | 'error';
+
+interface DonorSearch {
+  readonly query: string;
+  readonly immediate: boolean;
+}
+
+interface ChangedDonor {
+  readonly id: string;
+  readonly name: string;
+}
 
 const UNAUTHENTICATED = 'auth/unauthenticated';
 const FORBIDDEN = 'auth/forbidden';
@@ -44,7 +55,7 @@ const METHOD_LABELS: Record<PairingMethod, string> = {
 
 @Component({
   selector: 'app-admin-payments',
-  imports: [LiveNotice, Dialog],
+  imports: [LiveNotice, Dialog, RouterLink],
   templateUrl: './admin-payments.html',
   styleUrl: './admin-payments.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -57,14 +68,19 @@ export class AdminPayments {
   private readonly destroyRef = inject(DestroyRef);
   private readonly injector = inject(Injector);
   private readonly title = viewChild.required<ElementRef<HTMLHeadingElement>>('title');
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly pairSearch = viewChild<ElementRef<HTMLInputElement>>('pairSearch');
-  private readonly queries = new Subject<string>();
+  private readonly confirmCancel = viewChild<ElementRef<HTMLButtonElement>>('confirmCancel');
+  private readonly noticeElement = viewChild('noticeRegion', { read: ElementRef });
+  private readonly searches = new Subject<DonorSearch | null>();
 
   protected readonly filter = signal<PairingFilter>('unpaired');
   protected readonly year = signal<number | null>(null);
   protected readonly state = signal<LoadState>('loading');
   protected readonly list = signal<AdminPaymentListResponse | null>(null);
   protected readonly notice = signal<Notice | null>(null);
+  protected readonly changedDonor = signal<ChangedDonor | null>(null);
+  protected readonly unpairedCount = signal<number | null>(null);
   protected readonly busy = signal(false);
 
   protected readonly pairing = signal<AdminPaymentResponse | null>(null);
@@ -86,23 +102,20 @@ export class AdminPayments {
   constructor() {
     this.load();
     afterNextRender(() => this.title().nativeElement.focus(), { injector: this.injector });
-    this.queries
+    this.searches
       .pipe(
-        debounceTime(SEARCH_DEBOUNCE_MS),
-        distinctUntilChanged(),
-        switchMap((query) => this.api.searchDonors(query)),
+        switchMap((search) => (search === null ? EMPTY : this.searchAfterPause(search))),
         takeUntilDestroyed(this.destroyRef),
       )
-      .subscribe({
-        next: (response) => {
-          this.searchFailed.set(false);
-          this.results.set(response.items);
-        },
-        error: () => {
-          this.searchFailed.set(true);
-          this.results.set([]);
-        },
+      .subscribe((response) => {
+        this.searchFailed.set(response === null);
+        this.results.set(response?.items ?? []);
       });
+  }
+
+  private searchAfterPause(search: DonorSearch): Observable<AdminDonorSearchResponse | null> {
+    const lookUp = this.api.searchDonors(search.query).pipe(catchError(() => of(null)));
+    return search.immediate ? lookUp : timer(SEARCH_DEBOUNCE_MS).pipe(switchMap(() => lookUp));
   }
 
   protected show(filter: PairingFilter): void {
@@ -112,6 +125,7 @@ export class AdminPayments {
     this.filter.set(filter);
     this.year.set(null);
     this.notice.set(null);
+    this.changedDonor.set(null);
     this.unpairing.set(null);
     this.load();
   }
@@ -130,6 +144,9 @@ export class AdminPayments {
       .subscribe({
         next: (list) => {
           this.list.set(list);
+          if (this.filter() === 'unpaired') {
+            this.unpairedCount.set(list.total);
+          }
           this.state.set('ready');
         },
         error: (failure: unknown) => {
@@ -147,14 +164,24 @@ export class AdminPayments {
   }
 
   protected openPairing(payment: AdminPaymentResponse): void {
+    const prefill = senderSurname(payment);
     this.pairing.set(payment);
-    this.query.set('');
+    this.query.set(prefill);
     this.results.set(null);
     this.searchFailed.set(false);
     this.selectedDonor.set(null);
     this.pairError.set(null);
     this.notice.set(null);
-    afterNextRender(() => this.pairSearch()?.nativeElement.focus(), { injector: this.injector });
+    this.changedDonor.set(null);
+    this.searches.next(prefill === '' ? null : { query: prefill, immediate: true });
+    afterNextRender(
+      () => {
+        const input = this.pairSearch()?.nativeElement;
+        input?.focus();
+        input?.select();
+      },
+      { injector: this.injector },
+    );
   }
 
   protected closePairing(): void {
@@ -168,10 +195,11 @@ export class AdminPayments {
     this.query.set(value);
     this.selectedDonor.set(null);
     if (value.trim() === '') {
+      this.searches.next(null);
       this.results.set(null);
       return;
     }
-    this.queries.next(value.trim());
+    this.searches.next({ query: value.trim(), immediate: false });
   }
 
   protected select(donorId: string): void {
@@ -200,7 +228,9 @@ export class AdminPayments {
               $localize`:@@admin.payments.pair.done:Platba ${this.describe(payment)}:payment: je přiřazena dárci ${donor.name}:donor:.` +
               this.receiptNote(result.changedYearlyReceipts),
           });
+          this.changedDonor.set({ id: donor.donorId, name: donor.name });
           this.load();
+          this.focusAfterRender(() => this.noticeElement()?.nativeElement ?? null);
         },
         error: (failure: unknown) => {
           this.busy.set(false);
@@ -217,10 +247,36 @@ export class AdminPayments {
   protected askUnpair(payment: AdminPaymentResponse): void {
     this.unpairing.set(payment.id);
     this.notice.set(null);
+    this.changedDonor.set(null);
+    this.focusAfterRender(() => this.confirmCancel()?.nativeElement ?? null);
   }
 
-  protected cancelUnpair(): void {
+  protected cancelUnpair(payment: AdminPaymentResponse): void {
     this.unpairing.set(null);
+    this.focusAfterRender(() => this.unpairOpener(payment));
+  }
+
+  protected unpairOpenerId(payment: AdminPaymentResponse): string {
+    return `unpair-open-${payment.id.replace(/[^A-Za-z0-9_-]/g, '_')}`;
+  }
+
+  protected pairLabel(): string {
+    const donor = this.selectedDonorRecord();
+    return donor === null
+      ? $localize`:@@admin.payments.pair.submit:Přiřadit`
+      : $localize`:@@admin.payments.pair.submitTo:Přiřadit dárci ${donor.name}:donor:`;
+  }
+
+  protected unpairQuestion(payment: AdminPaymentResponse): string {
+    const amount = `${this.crowns(payment.amountMinor)}\u00a0Kč`;
+    const donorName = payment.donation?.donorName;
+    return donorName
+      ? $localize`:@@admin.payments.unpair.confirm.question:Dar ${amount}:amount: zmizí z přehledu dárce ${donorName}:donor: a platba se vrátí mezi čekající na přiřazení; web ji sám znovu nepřiřadí. Zrušit přiřazení?`
+      : $localize`:@@admin.payments.unpair.confirm.questionNoDonor:Dar ${amount}:amount: zmizí a platba se vrátí mezi čekající na přiřazení; web ji sám znovu nepřiřadí. Zrušit přiřazení?`;
+  }
+
+  protected unpairLabel(payment: AdminPaymentResponse): string {
+    return $localize`:@@admin.payments.unpair.confirm.label:Zrušit přiřazení platby ${this.describe(payment)}:payment:?`;
   }
 
   protected unpair(payment: AdminPaymentResponse): void {
@@ -238,14 +294,23 @@ export class AdminPayments {
           this.notice.set({
             kind: 'status',
             text:
-              $localize`:@@admin.payments.unpair.done:Platba ${this.describe(payment)}:payment: už není přiřazena. Automatické párování ji přeskočí; najdete ji mezi nespárovanými.` +
+              $localize`:@@admin.payments.unpair.done:Platba ${this.describe(payment)}:payment: už není přiřazena. Web ji sám znovu nepřiřadí; najdete ji mezi platbami čekajícími na přiřazení.` +
               this.receiptNote(result.changedYearlyReceipts),
           });
+          const donation = payment.donation;
+          if (donation?.donorName) {
+            this.changedDonor.set({ id: donation.donorId, name: donation.donorName });
+          }
+          this.unpairedCount.update((count) => (count === null ? null : count + 1));
           this.load();
+          this.focusAfterRender(() => this.noticeElement()?.nativeElement ?? null);
         },
         error: (failure: unknown) => {
           this.busy.set(false);
           this.unpairing.set(null);
+          this.focusAfterRender(
+            () => this.unpairOpener(payment) ?? this.noticeElement()?.nativeElement ?? null,
+          );
           this.notice.set({
             kind: 'alert',
             text: describeProblem(
@@ -288,6 +353,14 @@ export class AdminPayments {
     );
   }
 
+  private unpairOpener(payment: AdminPaymentResponse): HTMLElement | null {
+    return this.host.nativeElement.querySelector<HTMLElement>(`#${this.unpairOpenerId(payment)}`);
+  }
+
+  private focusAfterRender(target: () => HTMLElement | null): void {
+    afterNextRender(() => target()?.focus(), { injector: this.injector });
+  }
+
   private sendToSignIn(): void {
     const returnTo = this.router.url;
     this.auth.logout().subscribe(() => {
@@ -295,4 +368,9 @@ export class AdminPayments {
       this.loginDialog.open('login', { returnTo });
     });
   }
+}
+
+function senderSurname(payment: AdminPaymentResponse): string {
+  const first = (payment.counterpartyName ?? '').trim().split(/\s+/)[0] ?? '';
+  return first.length >= 2 ? first : '';
 }

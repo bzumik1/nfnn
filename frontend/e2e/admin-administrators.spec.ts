@@ -60,12 +60,12 @@ test.describe('Given an administrator on the administrators page', () => {
     await page.getByRole('button', { name: 'Přidat správce' }).click();
 
     await expect(page.getByRole('status').filter({ hasNotText: 'Načítáme' })).toHaveText(
-      'Petr Svoboda je teď správce. Správa se mu otevře, až si zapne dvoufaktorové ověření a přihlásí se s kódem z aplikace.',
+      'Petr Svoboda je teď správce. Správa se mu otevře, až se přihlásí s kódem z ověřovací aplikace nebo přístupovým klíčem.',
     );
     expect(posted).toEqual([{ email: 'petr@example.cz' }]);
     await expect(page.locator('tbody tr')).toHaveCount(2);
     await expect(page.locator('tbody tr').nth(1)).toContainText(
-      'vypnuté, správa se mu ještě neotevře',
+      'vypnuté, správa se mu otevře jen přístupovým klíčem',
     );
     await expect(page.getByLabel('E-mail dárce')).toHaveValue('');
   });
@@ -134,8 +134,12 @@ test.describe('Given an administrator on the administrators page', () => {
     const petrRow = page.locator('tbody tr').nth(1);
 
     await petrRow.getByRole('button', { name: 'Vypnout dvoufaktorové ověření' }).click();
-    await expect(petrRow).toContainText('Ověřili jste, že žádá majitel účtu?');
-    await petrRow.getByRole('button', { name: 'Ne', exact: true }).click();
+    await expect(petrRow).toContainText('Ověřili jste, že žádá majitel účtu');
+    await expect(petrRow.getByRole('button', { name: 'Ponechat' })).toBeFocused();
+    await petrRow.getByRole('button', { name: 'Ponechat' }).click();
+    await expect(
+      petrRow.getByRole('button', { name: 'Vypnout dvoufaktorové ověření' }),
+    ).toBeFocused();
     expect(calls).toEqual([]);
 
     await petrRow.getByRole('button', { name: 'Vypnout dvoufaktorové ověření' }).click();
@@ -143,13 +147,15 @@ test.describe('Given an administrator on the administrators page', () => {
     await expect(page.getByRole('status').filter({ hasNotText: 'Načítáme' })).toContainText(
       'Dvoufaktorové ověření u Petr Svoboda je vypnuté',
     );
-    await expect(petrRow).toContainText('vypnuté, správa se mu ještě neotevře');
+    await expect(petrRow).toContainText('vypnuté, správa se mu otevře jen přístupovým klíčem');
     await expect(
       petrRow.getByRole('button', { name: 'Vypnout dvoufaktorové ověření' }),
     ).toHaveCount(0);
 
-    await petrRow.getByRole('button', { name: 'Odebrat' }).click();
-    await expect(petrRow).toContainText('Opravdu odebrat?');
+    await petrRow.getByRole('button', { name: 'Odebrat roli správce' }).click();
+    await expect(petrRow).toContainText(
+      'Petr Svoboda přestane být správcem a všechna jeho přihlášení skončí. Jeho dárcovský účet zůstane. Odebrat roli správce?',
+    );
     await petrRow.getByRole('button', { name: 'Ano, odebrat' }).click();
 
     await expect(page.getByRole('status').filter({ hasNotText: 'Načítáme' })).toHaveText(

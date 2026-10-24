@@ -94,7 +94,7 @@ describe('Given an administrator on the history page', () => {
     fixture.detectChanges();
   }
 
-  it('when the first page arrives, then every change shows when, who, what in Czech with its code, and the Czech details', () => {
+  it('when the first page arrives, then every change shows when, who and what in Czech, with the details collapsed', () => {
     expect(text('[role="status"]')).toBe('Načítáme historii…');
 
     firstPage();
@@ -104,14 +104,42 @@ describe('Given an administrator on the history page', () => {
     expect(rowText(first)).toContain('Jana Nováková');
     expect(rowText(first)).toContain('jana@example.cz');
     expect(rowText(first)).toContain('Přiřazení platby dárci');
-    expect(rowText(first)).toContain('PAIR_PAYMENT');
+    expect(rowText(first)).not.toContain('PAIR_PAYMENT');
     expect(rowText(first)).toContain('ručně přiřazena dárci');
+    const details = first.querySelector('details') as HTMLDetailsElement;
+    expect(details.open).toBe(false);
+    expect(details.querySelector('summary')?.textContent?.trim()).toBe('Technické podrobnosti');
     expect(first.querySelector('.details')?.closest('[lang]')?.getAttribute('lang')).not.toBe('en');
     expect(rowText(second)).toContain('Přidání správce');
     expect(rowText(third)).toContain('správce bez účtu');
-    expect(rowText(third)).toContain('019a1c00-0000-7000-8000-00000000a009');
+    expect(rowText(third.querySelector('details') as HTMLElement)).toContain(
+      'Správce: 019a1c00-0000-7000-8000-00000000a009',
+    );
     expect(rowText(third)).toContain('SOMETHING_NEW');
     expect(fixture.nativeElement.querySelector('.admin-more')).toBeNull();
+  });
+
+  it('when a change concerns a donor, then the row links to the donor card and a payment change does not', () => {
+    firstPage([
+      paired,
+      adminAction({
+        id: '019a1c00-0000-7000-8000-00000000e007',
+        action: 'RESET_SECOND_FACTOR',
+        subjectId: '019a1c00-0000-7000-8000-00000000a002',
+      }),
+    ]);
+
+    const [payment, donor] = rows();
+    expect(payment.querySelector('a')).toBeNull();
+    const link = donor.querySelector('a') as HTMLAnchorElement;
+    expect(link.textContent?.trim()).toBe('Otevřít kartu dárce');
+    expect(link.getAttribute('href')).toBe('/sprava/darci/019a1c00-0000-7000-8000-00000000a002');
+  });
+
+  it('when the backup schedule was changed, then the change is named in Czech', () => {
+    firstPage([adminAction({ action: 'CHANGE_BACKUP_SCHEDULE', subjectId: null })]);
+
+    expect(rowText(rows()[0])).toContain('Změna plánu záloh');
   });
 
   it('when the settings or a log level were changed, then those changes are named in Czech too', () => {

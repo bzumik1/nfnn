@@ -46,22 +46,33 @@
           @if (results().length === 0) {
             <p class="ui-card__empty" i18n="@@admin.donors.search.empty">Žádný dárce neodpovídá.</p>
           } @else {
-            <p class="visually-hidden" i18n="@@admin.donors.search.count">
-              Nalezení dárci: {{ results().length }}
-            </p>
+            @if (hasMore()) {
+              <p class="search-more" i18n="@@admin.donors.search.more">
+                Zobrazujeme prvních {{ results().length }} dárců. Upřesněte hledání, ať najdete toho
+                správného.
+              </p>
+            } @else {
+              <p class="visually-hidden" i18n="@@admin.donors.search.count">
+                Nalezení dárci: {{ results().length }}
+              </p>
+            }
           }
         }
       }
     </div>
     @switch (state()) {
       @case ('error') {
-        <p
-          class="ui-load-state ui-load-state--error ui-load-state--inset"
-          role="alert"
-          i18n="@@admin.donors.search.failed"
-        >
-          Hledání se nepodařilo. Zkuste to prosím znovu.
-        </p>
+        <div class="ui-load-state ui-load-state--error ui-load-state--inset" role="alert">
+          <p i18n="@@admin.donors.search.failed">Hledání se nepodařilo. Zkuste to prosím znovu.</p>
+          <button
+            type="button"
+            class="ui-button ui-button--small"
+            (click)="retry()"
+            i18n="@@admin.donors.search.retry"
+          >
+            Zkusit znovu
+          </button>
+        </div>
       }
       @case ('ready') {
         @if (results().length > 0) {
@@ -72,7 +83,7 @@
                 <th i18n="@@admin.donors.col.email">E-mail</th>
                 <th i18n="@@admin.donors.col.symbol">Variabilní symbol</th>
                 <th i18n="@@admin.donors.col.registered">Registrace</th>
-                <th i18n="@@admin.donors.col.account">Účet</th>
+                <th i18n="@@admin.donors.col.account">Stav účtu</th>
               </tr>
             </thead>
             <tbody>
@@ -103,9 +114,9 @@
                     <span class="ui-mono">{{ item.variableSymbol }}</span>
                   </td>
                   <td data-label="Registrace" i18n-data-label="@@admin.donors.col.registered">
-                    {{ registeredAt(item) }}
+                    {{ registeredOn(item) }}
                   </td>
-                  <td data-label="Účet" i18n-data-label="@@admin.donors.col.account">
+                  <td data-label="Stav účtu" i18n-data-label="@@admin.donors.col.account">
                     <span class="tags">
                       @if (item.erasedAt) {
                         <span class="tag tag--off" i18n="@@admin.donors.tag.erased"

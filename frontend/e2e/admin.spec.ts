@@ -5,6 +5,8 @@ import { administrator, donor, mockDonorApi, problem, session, signIn } from './
 const IMPORT_STATE = '/api/admin/donations/import-state';
 const OVERVIEW = '/api/admin/donations/overview';
 const BACKUPS = '/api/admin/operations/backups';
+const PAYMENTS = '/api/admin/donations/payments';
+const ADMINISTRATORS = '/api/admin/donors/administrators';
 
 const backups = {
   available: true,
@@ -97,6 +99,52 @@ async function mockBackups(page: Page): Promise<void> {
   );
 }
 
+async function mockAttentionSources(page: Page): Promise<void> {
+  await page.route(
+    (url) => url.pathname === PAYMENTS,
+    (route) =>
+      route.fulfill({
+        json: {
+          year: null,
+          availableYears: [2026, 2025],
+          total: 1,
+          items: [
+            {
+              id: '019a1c00-0000-7000-8000-000000001001',
+              bankTransactionId: 1001,
+              bookedOn: '2026-09-10',
+              amountMinor: 15000,
+              currency: 'CZK',
+              variableSymbol: null,
+              counterpartyAccount: '2900233333/2010',
+              counterpartyName: 'Nováková Jana',
+              messageForRecipient: null,
+              importedAt: '2026-09-10T10:00:00Z',
+              unpairedByAdminAt: null,
+              donation: null,
+            },
+          ],
+        },
+      }),
+  );
+  await page.route(
+    (url) => url.pathname === ADMINISTRATORS,
+    (route) =>
+      route.fulfill({
+        json: {
+          items: [
+            {
+              donorId: administrator.id,
+              name: administrator.name,
+              email: administrator.email,
+              secondFactorEnabled: true,
+            },
+          ],
+        },
+      }),
+  );
+}
+
 async function mockImportState(page: Page, state: Record<string, unknown>): Promise<void> {
   await page.route(
     (url) => url.pathname === IMPORT_STATE,
@@ -132,6 +180,7 @@ test.describe('Given an administrator', () => {
     await mockDonorApi(page);
     await mockOverview(page);
     await mockBackups(page);
+    await mockAttentionSources(page);
   });
 
   test('when they sign in, then the overview offers the administration and it shows how the bank import is doing', async ({
@@ -165,12 +214,17 @@ test.describe('Given an administrator', () => {
     await expect(value(page, 'Stažené období')).toHaveText('20. 07. 2026 – 17. 10. 2026');
     await expect(value(page, 'Poslední úspěšné stažení')).toHaveText('18. 10. 2026 10:05');
     await expect(value(page, 'Poslední chyba')).toHaveText('žádná');
-    await expect(page.locator('.admin-outage')).toHaveCount(0);
     expect(authorization).toEqual(['Bearer token-1']);
-    const backupsCard = page.getByRole('region', { name: 'Zálohy databáze' });
-    await expect(backupsCard).toContainText(
-      'Zkušební obnova ještě neproběhla, i když zálohy jsou starší než týden.',
+    const attention = page.getByRole('region', { name: 'Co potřebuje vaši pozornost' });
+    await expect(attention.locator('.attention-list > li')).toHaveText([
+      '1 platba čeká na přiřazení dárci (150 Kč). Přiřadit platby',
+      'Zkušební obnova ještě neproběhla, i když zálohy jsou starší než týden. Otevřít zálohy',
+    ]);
+    await expect(attention.getByRole('link', { name: 'Přiřadit platby' })).toHaveAttribute(
+      'href',
+      '/sprava/platby',
     );
+    const backupsCard = page.getByRole('region', { name: 'Zálohy databáze' });
     await expect(backupsCard).toContainText('23. 10. 2026 03:00 (2 kB)');
     await expect(backupsCard.getByRole('link', { name: 'Otevřít zálohy' })).toHaveAttribute(
       'href',
@@ -222,11 +276,17 @@ test.describe('Given an administrator', () => {
 
     await page.goto('/sprava');
 
-    await expect(page.locator('.admin-outage')).toContainText(
-      'Stahování plateb selhává a fond o tom dostal e-mail: Fio odmítlo token (chybí, ještě neplatí nebo vypršel), selhání za sebou: 1.',
+    const attention = page.getByRole('region', { name: 'Co potřebuje vaši pozornost' });
+    await expect(attention).toContainText(
+      'Platby z banky se nestahují (1× za sebou) a fond o tom dostal e-mail. Důvod: Fio odmítlo token (chybí, ještě neplatí nebo vypršel).',
+    );
+    await expect(attention).toContainText('vytvořte nový token typu „Sledování účtu“');
+    await expect(attention.getByRole('link', { name: 'Otevřít Nastavení' })).toHaveAttribute(
+      'href',
+      '/sprava/nastaveni',
     );
     await expect(value(page, 'Poslední chyba')).toContainText(
-      'Fio odmítlo token (chybí, ještě neplatí nebo vypršel) (HTTP 401)',
+      'Fio odmítlo token (chybí, ještě neplatí nebo vypršel) 18. 10. 2026 11:00 (HTTP 401)',
     );
   });
 

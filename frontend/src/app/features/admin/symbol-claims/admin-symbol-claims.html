@@ -2,14 +2,21 @@
   <h1 #title class="ui-page-title" tabindex="-1" i18n="@@admin.symbolClaims.heading">
     Starší symboly
   </h1>
-  <p class="ui-page-intro" i18n="@@admin.symbolClaims.intro">
+  <p class="ui-page-intro intro-lead" i18n="@@admin.symbolClaims.intro">
     Když dárce ověří bankovní účet a z toho účtu k nám chodily platby s jiným variabilním symbolem,
-    nástěnka se ho zeptá, jestli jsou jeho. Tady vidíte odpovědi a opravíte omyl: zrušením odpovědi
-    Ano smažete dary, které se přes ni přiřadily, a dárce se už neptáme; smazáním odpovědi Ne se
-    nástěnka dárce zeptá znovu.
+    přehled dárce se ho zeptá, jestli jsou jeho. Tady vidíte odpovědi a opravíte omyl:
   </p>
+  <ul class="ui-page-intro intro-list">
+    <li i18n="@@admin.symbolClaims.intro.yes">
+      Odpověděl Ano omylem? Vraťte přiřazení darů: dary smažeme, platby se vrátí mezi čekající na
+      přiřazení a dárce se už neptáme.
+    </li>
+    <li i18n="@@admin.symbolClaims.intro.no">
+      Odpověděl Ne omylem? Zeptejte se ho znovu: otázku uvidí znovu ve svém přehledu.
+    </li>
+  </ul>
 
-  <app-live-notice [notice]="notice()" />
+  <app-live-notice #noticeRegion tabindex="-1" [notice]="notice()" />
 
   <section class="ui-card" aria-labelledby="claims-title">
     <h2 id="claims-title" class="ui-card__title" i18n="@@admin.symbolClaims.list.title">
@@ -62,7 +69,9 @@
                 <tr>
                   <td data-label="Dárce" i18n-data-label="@@admin.symbolClaims.col.donor">
                     @if (item.donorName) {
-                      <span class="admin-name">{{ item.donorName }}</span>
+                      <a class="admin-name" [routerLink]="['/sprava/darci', item.donorId]">{{
+                        item.donorName
+                      }}</a>
                     } @else {
                       <span class="muted">{{ donorName(item) }}</span>
                     }
@@ -102,12 +111,12 @@
                         <span
                           class="confirm"
                           role="group"
-                          aria-label="Zrušit odpověď Ano?"
+                          aria-label="Vrátit přiřazení darů?"
                           i18n-aria-label="@@admin.symbolClaims.reverse.confirm.label"
                         >
                           <span i18n="@@admin.symbolClaims.reverse.confirm.question"
-                            >Smazat {{ donations(item.donationCount) }} a změnit odpověď na
-                            Ne?</span
+                            >Smažeme {{ donations(item.donationCount) }}, platby se vrátí mezi
+                            čekající na přiřazení a odpověď se změní na Ne. Vrátit?</span
                           >
                           <button
                             type="button"
@@ -121,29 +130,31 @@
                               >
                             } @else {
                               <ng-container i18n="@@admin.symbolClaims.reverse.yes"
-                                >Ano, zrušit</ng-container
+                                >Vrátit přiřazení</ng-container
                               >
                             }
                           </button>
                           <button
+                            #confirmCancel
                             type="button"
                             class="ui-link-button"
                             [disabled]="busy()"
                             (click)="cancel()"
                             i18n="@@admin.symbolClaims.confirm.no"
                           >
-                            Ne
+                            Ponechat
                           </button>
                         </span>
                       } @else {
                         <span
                           class="confirm"
                           role="group"
-                          aria-label="Smazat odpověď Ne?"
+                          aria-label="Zeptat se dárce znovu?"
                           i18n-aria-label="@@admin.symbolClaims.reset.confirm.label"
                         >
                           <span i18n="@@admin.symbolClaims.reset.confirm.question"
-                            >Dárce dostane otázku znovu. Smazat?</span
+                            >Odpověď Ne smažeme a dárce otázku uvidí znovu ve svém přehledu. Zeptat
+                            se znovu?</span
                           >
                           <button
                             type="button"
@@ -157,38 +168,41 @@
                               >
                             } @else {
                               <ng-container i18n="@@admin.symbolClaims.reset.yes"
-                                >Ano, smazat</ng-container
+                                >Zeptat se znovu</ng-container
                               >
                             }
                           </button>
                           <button
+                            #confirmCancel
                             type="button"
                             class="ui-link-button"
                             [disabled]="busy()"
                             (click)="cancel()"
                             i18n="@@admin.symbolClaims.confirm.no"
                           >
-                            Ne
+                            Ponechat
                           </button>
                         </span>
                       }
                     } @else if (item.answer === 'CONFIRMED') {
                       <button
+                        [id]="openerId(item)"
                         type="button"
-                        class="ui-button ui-button--small"
+                        class="ui-button ui-button--small ui-button--danger-outline"
                         (click)="ask(item)"
                         i18n="@@admin.symbolClaims.reverse.open"
                       >
-                        Zrušit Ano
+                        Vrátit přiřazení darů
                       </button>
                     } @else {
                       <button
+                        [id]="openerId(item)"
                         type="button"
                         class="ui-button ui-button--small ui-button--quiet"
                         (click)="ask(item)"
                         i18n="@@admin.symbolClaims.reset.open"
                       >
-                        Smazat Ne
+                        Zeptat se dárce znovu
                       </button>
                     }
                   </td>

@@ -83,13 +83,13 @@ describe('Given an administrator on the donors page', () => {
     fixture.detectChanges();
   }
 
-  async function searched(value: string, items = [jana, stavby]): Promise<void> {
+  async function searched(value: string, items = [jana, stavby], hasMore = false): Promise<void> {
     type(value);
     await vi.advanceTimersByTimeAsync(300);
     fixture.detectChanges();
     const request = http.expectOne((candidate) => candidate.url === SEARCH_URL);
     expect(request.request.params.get('query')).toBe(value.trim());
-    request.flush({ items });
+    request.flush({ items, hasMore });
     fixture.detectChanges();
     await fixture.whenStable();
     fixture.detectChanges();
@@ -109,7 +109,13 @@ describe('Given an administrator on the donors page', () => {
     expect(rowText(first)).toContain('Osoba');
     expect(rowText(first)).toContain('jana@example.cz');
     expect(rowText(first)).toContain('4821937560');
-    expect(rowText(first)).toContain('17. 10. 2026 10:00');
+    expect(rowText(first)).toContain('17. 10. 2026');
+    expect(rowText(first)).not.toContain('10:00');
+    expect(
+      Array.from(fixture.nativeElement.querySelectorAll('thead th') as NodeListOf<HTMLElement>).map(
+        (cell) => cell.textContent?.trim(),
+      ),
+    ).toEqual(['Dárce', 'E-mail', 'Variabilní symbol', 'Registrace', 'Stav účtu']);
     expect(rowText(first)).toContain('Správce');
     expect(rowText(first)).toContain('Dvoufaktorové ověření');
     expect(first.querySelector('a')?.getAttribute('href')).toBe(
@@ -176,7 +182,7 @@ describe('Given an administrator on the donors page', () => {
     expect(rows()).toHaveLength(1);
   });
 
-  it('when the search fails, then an alert says so', async () => {
+  it('when the search fails, then an alert says so and its retry sends the same query again', async () => {
     type('nov');
     await vi.advanceTimersByTimeAsync(300);
     fixture.detectChanges();
@@ -185,7 +191,24 @@ describe('Given an administrator on the donors page', () => {
       .flush(null, { status: 500, statusText: 'Error' });
     fixture.detectChanges();
 
-    expect(text('[role="alert"]')).toBe('Hledání se nepodařilo. Zkuste to prosím znovu.');
+    expect(text('[role="alert"] p')).toBe('Hledání se nepodařilo. Zkuste to prosím znovu.');
+    (fixture.nativeElement.querySelector('[role="alert"] button') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    const again = http.expectOne((candidate) => candidate.url === SEARCH_URL);
+    expect(again.request.params.get('query')).toBe('nov');
+    again.flush({ items: [jana], hasMore: false });
+    fixture.detectChanges();
+
+    expect(rows()).toHaveLength(1);
+    expect(fixture.nativeElement.querySelector('[role="alert"]')).toBeNull();
+  });
+
+  it('when more donors match than the page shows, then the page says only the first ones are shown', async () => {
+    await searched('a', [jana, stavby], true);
+
+    expect(text('[role="status"]')).toBe(
+      'Zobrazujeme prvních 2 dárců. Upřesněte hledání, ať najdete toho správného.',
+    );
   });
 
   it('when the role was taken away meanwhile, then the page goes to the overview', async () => {

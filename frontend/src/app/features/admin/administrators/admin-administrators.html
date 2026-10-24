@@ -2,11 +2,11 @@
   <h1 #title class="ui-page-title" tabindex="-1" i18n="@@admin.administrators.heading">Správci</h1>
   <p class="ui-page-intro" i18n="@@admin.administrators.intro">
     Správce vidí stav webu, přiřazuje platby a spravuje další správce. Správcem může být jen
-    registrovaný dárce; správa se mu otevře, až si zapne dvoufaktorové ověření a přihlásí se s kódem
-    z aplikace.
+    registrovaný dárce; správa se mu otevře, až se přihlásí s kódem z ověřovací aplikace nebo
+    přístupovým klíčem.
   </p>
 
-  <app-live-notice [notice]="notice()" />
+  <app-live-notice #noticeRegion tabindex="-1" [notice]="notice()" />
 
   <section class="ui-card administrators-card" aria-labelledby="administrators-title">
     <h2 id="administrators-title" class="ui-card__title" i18n="@@admin.administrators.list.title">
@@ -51,7 +51,9 @@
             @for (item of items(); track item.donorId) {
               <tr>
                 <td data-label="Jméno" i18n-data-label="@@admin.administrators.col.name">
-                  <span class="admin-name">{{ item.name }}</span>
+                  <a class="admin-name" [routerLink]="['/sprava/darci', item.donorId]">{{
+                    item.name
+                  }}</a>
                   @if (isSelf(item)) {
                     <span class="self-tag" i18n="@@admin.administrators.selfTag">to jste vy</span>
                   }
@@ -71,25 +73,19 @@
                     <span
                       class="factor-tag factor-tag--off"
                       i18n="@@admin.administrators.factor.off"
-                      >vypnuté, správa se mu ještě neotevře</span
+                      >vypnuté, správa se mu otevře jen přístupovým klíčem</span
                     >
                   }
                 </td>
                 <td class="action">
                   @if (isSelf(item)) {
                     <span class="muted" i18n="@@admin.administrators.self.hint"
-                      >Svůj účet spravujete v přehledu.</span
+                      >Svůj účet spravujete v
+                      <a routerLink="/darce/udaje">Údajích a zabezpečení</a>.</span
                     >
                   } @else if (isPending('revoke', item)) {
-                    <span
-                      class="confirm"
-                      role="group"
-                      aria-label="Odebrat správce?"
-                      i18n-aria-label="@@admin.administrators.revoke.confirm.label"
-                    >
-                      <span i18n="@@admin.administrators.revoke.confirm.question"
-                        >Opravdu odebrat?</span
-                      >
+                    <span class="confirm" role="group" [attr.aria-label]="revokeLabel(item)">
+                      <span>{{ revokeQuestion(item) }}</span>
                       <button
                         type="button"
                         class="ui-button ui-button--small ui-button--danger"
@@ -98,7 +94,7 @@
                       >
                         @if (busy()) {
                           <ng-container i18n="@@admin.administrators.revoke.busy"
-                            >Odebírám…</ng-container
+                            >Odebíráme…</ng-container
                           >
                         } @else {
                           <ng-container i18n="@@admin.administrators.revoke.yes"
@@ -107,13 +103,14 @@
                         }
                       </button>
                       <button
+                        #confirmCancel
                         type="button"
                         class="ui-link-button"
                         [disabled]="busy()"
                         (click)="cancel()"
                         i18n="@@admin.administrators.confirm.no"
                       >
-                        Ne
+                        Ponechat
                       </button>
                     </span>
                   } @else if (isPending('reset', item)) {
@@ -124,7 +121,9 @@
                       i18n-aria-label="@@admin.administrators.reset.confirm.label"
                     >
                       <span i18n="@@admin.administrators.reset.confirm.question"
-                        >Ověřili jste, že žádá majitel účtu?</span
+                        >Ověřili jste, že žádá majitel účtu (například odpověděl z registrovaného
+                        e-mailu)? Správce se pak přihlásí jen heslem a všechna jeho přihlášení
+                        skončí.</span
                       >
                       <button
                         type="button"
@@ -134,7 +133,7 @@
                       >
                         @if (busy()) {
                           <ng-container i18n="@@admin.administrators.reset.busy"
-                            >Vypínám…</ng-container
+                            >Vypínáme…</ng-container
                           >
                         } @else {
                           <ng-container i18n="@@admin.administrators.reset.yes"
@@ -143,19 +142,21 @@
                         }
                       </button>
                       <button
+                        #confirmCancel
                         type="button"
                         class="ui-link-button"
                         [disabled]="busy()"
                         (click)="cancel()"
                         i18n="@@admin.administrators.confirm.no"
                       >
-                        Ne
+                        Ponechat
                       </button>
                     </span>
                   } @else {
                     <span class="actions">
                       @if (item.secondFactorEnabled) {
                         <button
+                          [id]="openerId('reset', item)"
                           type="button"
                           class="ui-button ui-button--small ui-button--quiet"
                           (click)="ask('reset', item)"
@@ -165,12 +166,13 @@
                         </button>
                       }
                       <button
+                        [id]="openerId('revoke', item)"
                         type="button"
-                        class="ui-button ui-button--small"
+                        class="ui-button ui-button--small ui-button--danger-outline"
                         (click)="ask('revoke', item)"
                         i18n="@@admin.administrators.revoke.open"
                       >
-                        Odebrat
+                        Odebrat roli správce
                       </button>
                     </span>
                   }
@@ -195,8 +197,9 @@
       novalidate
     >
       <p class="grant-intro" i18n="@@admin.administrators.grant.intro">
-        Zadejte e-mail, kterým je dárce registrovaný. Správa se mu otevře, až si na kartě
-        Přihlašovací údaje zapne dvoufaktorové ověření a přihlásí se s kódem z aplikace.
+        Zadejte e-mail, kterým je dárce registrovaný. Správa se mu otevře, až se přihlásí s kódem z
+        ověřovací aplikace nebo přístupovým klíčem; obojí si nastaví v Mém přehledu v sekci Údaje a
+        zabezpečení.
       </p>
       <app-form-field
         label="E-mail dárce"
@@ -222,7 +225,7 @@
 
       <button type="submit" class="ui-button ui-button--primary grant-submit" [disabled]="busy()">
         @if (busy()) {
-          <span i18n="@@admin.administrators.grant.busy">Přidávám…</span>
+          <span i18n="@@admin.administrators.grant.busy">Přidáváme…</span>
         } @else {
           <span i18n="@@admin.administrators.grant.submit">Přidat správce</span>
         }

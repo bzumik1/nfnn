@@ -16,117 +16,224 @@
     </p>
   }
 
-  <app-live-notice [notice]="notice()" />
-
-  <section class="ui-card" aria-labelledby="account-title">
-    <h2 id="account-title" class="ui-card__title" i18n="@@admin.donorDetail.account.title">
-      Účet dárce
-    </h2>
-    @switch (accountState()) {
-      @case ('loading') {
-        <p
-          class="ui-load-state ui-load-state--inset"
-          role="status"
-          i18n="@@admin.donorDetail.account.loading"
-        >
-          Načítáme účet…
-        </p>
-      }
-      @case ('missing') {
-        <p
-          class="ui-load-state ui-load-state--error ui-load-state--inset"
-          role="alert"
-          i18n="@@admin.donorDetail.account.missing"
-        >
+  @if (accountState() === 'missing') {
+    <section class="ui-card" aria-labelledby="account-title">
+      <h2 id="account-title" class="ui-card__title" i18n="@@admin.donorDetail.account.title">
+        Účet dárce
+      </h2>
+      <div class="ui-load-state ui-load-state--error ui-load-state--inset" role="alert">
+        <p i18n="@@admin.donorDetail.account.missing">
           Takový dárce není. Vraťte se na seznam dárců a vyhledejte ho znovu.
         </p>
-      }
-      @case ('error') {
-        <div class="ui-load-state ui-load-state--error ui-load-state--inset" role="alert">
-          <p i18n="@@admin.donorDetail.account.error.text">Účet se nepodařilo načíst.</p>
-          <button
-            type="button"
-            class="ui-button ui-button--small"
-            (click)="loadAccount()"
-            i18n="@@admin.donorDetail.account.error.retry"
-          >
-            Zkusit znovu
-          </button>
-        </div>
-      }
-      @case ('ready') {
-        @if (account(); as account) {
-          <dl class="admin-data">
-            <div>
-              <dt i18n="@@admin.donorDetail.account.type">Typ</dt>
-              <dd>
-                {{ typeLabel(account) }}
-                @if (account.companyIdentifier) {
-                  ·
-                  <ng-container i18n="@@admin.donorDetail.account.company"
-                    >IČO {{ account.companyIdentifier }}</ng-container
-                  >
-                }
-              </dd>
-            </div>
-            <div>
-              <dt i18n="@@admin.donorDetail.account.email">E-mail</dt>
-              <dd>
-                @if (account.erasedAt) {
-                  <span class="muted-inline" i18n="@@admin.donorDetail.account.email.erased"
-                    >vymazán</span
+        <a
+          class="ui-button ui-button--small"
+          routerLink="/sprava/darci"
+          i18n="@@admin.donorDetail.account.missing.back"
+          >Zpět na hledání dárců</a
+        >
+      </div>
+    </section>
+  } @else {
+    @if (account(); as account) {
+      <section
+        class="ui-card ui-card--padded donor-summary"
+        aria-label="Shrnutí dárce"
+        i18n-aria-label="@@admin.donorDetail.summary.label"
+      >
+        <dl class="summary-list">
+          <div>
+            <dt i18n="@@admin.donorDetail.summary.symbol">VS</dt>
+            <dd class="summary-symbol">
+              <span class="ui-mono">{{ account.variableSymbol }}</span
+              >&ngsp;
+              <app-copy-button
+                [value]="account.variableSymbol"
+                what="variabilní symbol"
+                i18n-what="@@admin.donorDetail.summary.copySymbol"
+              />
+            </dd>
+          </div>
+          <div>
+            <dt i18n="@@admin.donorDetail.account.email">E-mail</dt>
+            <dd>
+              @if (account.erasedAt) {
+                <span class="muted-inline" i18n="@@admin.donorDetail.account.email.erased"
+                  >vymazán</span
+                >
+              } @else {
+                <span class="email">{{ account.email }}</span
+                >&ngsp;
+                @if (account.emailVerified) {
+                  <span class="tag tag--on" i18n="@@admin.donorDetail.account.email.verified"
+                    >ověřen</span
                   >
                 } @else {
-                  <span class="email">{{ account.email }}</span
-                  >&ngsp;
-                  @if (account.emailVerified) {
-                    <span class="tag tag--on" i18n="@@admin.donorDetail.account.email.verified"
-                      >ověřen</span
-                    >
-                  } @else {
-                    <span class="tag tag--warn" i18n="@@admin.donorDetail.account.email.unverified"
-                      >neověřen</span
+                  <span class="tag tag--warn" i18n="@@admin.donorDetail.account.email.unverified"
+                    >neověřen</span
+                  >
+                }
+              }
+            </dd>
+          </div>
+          @if (donationsState() === 'ready') {
+            <div>
+              <dt i18n="@@admin.donorDetail.summary.donations">Dary</dt>
+              <dd i18n="@@admin.donorDetail.summary.donationsTotal">
+                {{ donationsCount(receivedCount()) }} za {{ total() }}&nbsp;Kč
+              </dd>
+            </div>
+          }
+        </dl>
+        <p class="badges">
+          @if (account.administrator) {
+            <span class="tag tag--accent" i18n="@@admin.donorDetail.summary.administrator"
+              >Správce</span
+            >
+          }
+          @if (account.secondFactorEnabled) {
+            <span class="tag tag--on" i18n="@@admin.donorDetail.summary.secondFactor">2FA</span>
+          }
+        </p>
+      </section>
+    }
+
+    <nav
+      class="card-nav"
+      aria-label="Části karty dárce"
+      i18n-aria-label="@@admin.donorDetail.nav.label"
+    >
+      <ul>
+        @for (part of sections(); track part.id) {
+          <li>
+            <a [href]="sectionHref(part)" (click)="goTo($event, part)">{{ part.label }}</a>
+          </li>
+        }
+      </ul>
+    </nav>
+
+    <section [id]="ids.details.id" tabindex="-1" class="ui-card" aria-labelledby="details-title">
+      <h2 id="details-title" class="ui-card__title" i18n="@@admin.donorDetail.details.title">
+        Údaje
+      </h2>
+      @switch (accountState()) {
+        @case ('loading') {
+          <p
+            class="ui-load-state ui-load-state--inset"
+            role="status"
+            i18n="@@admin.donorDetail.account.loading"
+          >
+            Načítáme účet…
+          </p>
+        }
+        @case ('error') {
+          <div class="ui-load-state ui-load-state--error ui-load-state--inset" role="alert">
+            <p i18n="@@admin.donorDetail.account.error.text">Účet se nepodařilo načíst.</p>
+            <button
+              type="button"
+              class="ui-button ui-button--small"
+              (click)="loadAccount()"
+              i18n="@@admin.donorDetail.account.error.retry"
+            >
+              Zkusit znovu
+            </button>
+          </div>
+        }
+        @case ('ready') {
+          @if (account(); as account) {
+            <dl class="admin-data">
+              <div>
+                <dt i18n="@@admin.donorDetail.account.type">Typ</dt>
+                <dd>
+                  {{ typeLabel(account) }}
+                  @if (account.companyIdentifier) {
+                    ·
+                    <ng-container i18n="@@admin.donorDetail.account.company"
+                      >IČO {{ account.companyIdentifier }}</ng-container
                     >
                   }
-                }
-              </dd>
-            </div>
-            <div>
-              <dt i18n="@@admin.donorDetail.account.address">Adresa</dt>
-              <dd>
-                @if (account.erasedAt) {
-                  <span class="muted-inline" i18n="@@admin.donorDetail.account.address.erased"
-                    >vymazána</span
-                  >
-                } @else {
-                  {{ address(account) }}
-                }
-              </dd>
-            </div>
-            <div>
-              <dt i18n="@@admin.donorDetail.account.symbol">Variabilní symbol</dt>
-              <dd>
-                <span class="ui-mono">{{ account.variableSymbol }}</span>
-              </dd>
-            </div>
-            <div>
-              <dt i18n="@@admin.donorDetail.account.locale">Jazyk</dt>
-              <dd>{{ localeLabel(account) }}</dd>
-            </div>
-            <div>
-              <dt i18n="@@admin.donorDetail.account.registered">Registrace</dt>
-              <dd>{{ time(account.registeredAt) }}</dd>
-            </div>
-            <div>
-              <dt i18n="@@admin.donorDetail.account.role">Role</dt>
-              <dd>
-                @if (account.administrator) {
-                  <ng-container i18n="@@admin.donorDetail.account.role.admin">správce</ng-container>
-                } @else {
-                  <ng-container i18n="@@admin.donorDetail.account.role.donor">dárce</ng-container>
-                }
-              </dd>
-            </div>
+                </dd>
+              </div>
+              <div>
+                <dt i18n="@@admin.donorDetail.account.email">E-mail</dt>
+                <dd>
+                  @if (account.erasedAt) {
+                    <span class="muted-inline" i18n="@@admin.donorDetail.account.email.erased"
+                      >vymazán</span
+                    >
+                  } @else {
+                    <span class="email">{{ account.email }}</span
+                    >&ngsp;
+                    @if (account.emailVerified) {
+                      <span class="tag tag--on" i18n="@@admin.donorDetail.account.email.verified"
+                        >ověřen</span
+                      >
+                    } @else {
+                      <span
+                        class="tag tag--warn"
+                        i18n="@@admin.donorDetail.account.email.unverified"
+                        >neověřen</span
+                      >
+                    }
+                  }
+                </dd>
+              </div>
+              <div>
+                <dt i18n="@@admin.donorDetail.account.address">Adresa</dt>
+                <dd>
+                  @if (account.erasedAt) {
+                    <span class="muted-inline" i18n="@@admin.donorDetail.account.address.erased"
+                      >vymazána</span
+                    >
+                  } @else {
+                    {{ address(account) }}
+                  }
+                </dd>
+              </div>
+              <div>
+                <dt i18n="@@admin.donorDetail.account.symbol">Variabilní symbol</dt>
+                <dd>
+                  <span class="ui-mono">{{ account.variableSymbol }}</span>
+                </dd>
+              </div>
+              <div>
+                <dt i18n="@@admin.donorDetail.account.locale">Jazyk</dt>
+                <dd>{{ localeLabel(account) }}</dd>
+              </div>
+              <div>
+                <dt i18n="@@admin.donorDetail.account.registered">Registrace</dt>
+                <dd>{{ time(account.registeredAt) }}</dd>
+              </div>
+              <div>
+                <dt i18n="@@admin.donorDetail.account.role">Role</dt>
+                <dd>
+                  @if (account.administrator) {
+                    <a routerLink="/sprava/spravci" i18n="@@admin.donorDetail.account.role.admin"
+                      >správce</a
+                    >
+                  } @else {
+                    <ng-container i18n="@@admin.donorDetail.account.role.donor">dárce</ng-container>
+                  }
+                </dd>
+              </div>
+            </dl>
+          }
+        }
+      }
+    </section>
+
+    @if (accountState() === 'ready') {
+      @if (account(); as account) {
+        <section [id]="ids.signIn.id" tabindex="-1" class="ui-card" aria-labelledby="sign-in-title">
+          <h2 id="sign-in-title" class="ui-card__title" i18n="@@admin.donorDetail.signIn.title">
+            Přihlášení
+          </h2>
+          <app-live-notice
+            #signInNotice
+            class="card-notice"
+            tabindex="-1"
+            [notice]="noticeIn('signIn')"
+          />
+          <dl class="admin-data">
             <div>
               <dt i18n="@@admin.donorDetail.account.secondFactor">Dvoufaktorové ověření</dt>
               <dd>
@@ -164,8 +271,9 @@
                   i18n-aria-label="@@admin.donorDetail.reset.confirm.label"
                 >
                   <span i18n="@@admin.donorDetail.reset.confirm.question"
-                    >Dárce se pak přihlásí jen heslem a všechna jeho přihlášení skončí.
-                    Vypnout?</span
+                    >Ověřili jste, že žádá majitel účtu (například odpověděl z registrovaného
+                    e-mailu)? Dárce se pak přihlásí jen heslem a všechna jeho přihlášení
+                    skončí.</span
                   >
                   <button
                     type="button"
@@ -180,17 +288,19 @@
                     }
                   </button>
                   <button
+                    #confirmCancel
                     type="button"
                     class="ui-link-button"
                     [disabled]="busy()"
                     (click)="cancel()"
                     i18n="@@admin.donorDetail.confirm.no"
                   >
-                    Ne
+                    Ponechat
                   </button>
                 </span>
               } @else {
                 <button
+                  id="donor-reset-open"
                   type="button"
                   class="ui-button ui-button--small ui-button--quiet"
                   (click)="askReset()"
@@ -199,7 +309,9 @@
                   Vypnout dvoufaktorové ověření
                 </button>
                 <span class="admin-hint" i18n="@@admin.donorDetail.reset.hint"
-                  >Pro dárce, který přišel o telefon s ověřovací aplikací.</span
+                  >Pro dárce, který přišel o telefon s ověřovací aplikací. Dárce to zvládne i sám:
+                  při přihlášení zvolí „Obnovit přístup platbou“ a pošle 1&nbsp;Kč ze svého
+                  účtu.</span
                 >
               }
             </div>
@@ -233,17 +345,19 @@
                     }
                   </button>
                   <button
+                    #confirmCancel
                     type="button"
                     class="ui-link-button"
                     [disabled]="busy()"
                     (click)="cancel()"
                     i18n="@@admin.donorDetail.confirm.no"
                   >
-                    Ne
+                    Ponechat
                   </button>
                 </span>
               } @else {
                 <button
+                  id="donor-passkeys-open"
                   type="button"
                   class="ui-button ui-button--small ui-button--quiet"
                   (click)="askRemovePasskeys()"
@@ -257,344 +371,399 @@
               }
             </div>
           }
-          @if (!account.erasedAt) {
-            <div class="admin-actions admin-actions--erase">
-              @if (account.administrator) {
-                <span class="admin-hint" i18n="@@admin.donorDetail.erase.administrator"
-                  >Správci nejde vymazat osobní údaje. Nejdřív mu odeberte roli správce na stránce
-                  Správci.</span
-                >
-              } @else if (isPendingErase()) {
-                <span
-                  class="confirm"
-                  role="group"
-                  aria-label="Vymazat osobní údaje?"
-                  i18n-aria-label="@@admin.donorDetail.erase.confirm.label"
-                >
-                  <span i18n="@@admin.donorDetail.erase.confirm.question"
-                    >Nevratný krok: jméno, adresu, e-mail a heslo nahradíme zástupnými údaji,
-                    smažeme bankovní účty i odpovědi o starších symbolech a ukončíme všechna
-                    přihlášení. Účet už nepůjde použít. Dary a vydaná potvrzení zůstanou bez jména;
-                    dárce dostane e-mail. Vymazat?</span
-                  >
-                  <button
-                    type="button"
-                    class="ui-button ui-button--small ui-button--danger"
-                    [disabled]="busy()"
-                    (click)="erase()"
-                  >
-                    @if (busy()) {
-                      <ng-container i18n="@@admin.donorDetail.erase.busy">Mažeme…</ng-container>
-                    } @else {
-                      <ng-container i18n="@@admin.donorDetail.erase.yes">Ano, vymazat</ng-container>
-                    }
-                  </button>
-                  <button
-                    type="button"
-                    class="ui-link-button"
-                    [disabled]="busy()"
-                    (click)="cancel()"
-                    i18n="@@admin.donorDetail.confirm.no"
-                  >
-                    Ne
-                  </button>
-                </span>
-              } @else {
-                <button
-                  type="button"
-                  class="ui-button ui-button--small ui-button--quiet"
-                  (click)="askErase()"
-                  i18n="@@admin.donorDetail.erase.open"
-                >
-                  Vymazat osobní údaje
-                </button>
-                <span class="admin-hint" i18n="@@admin.donorDetail.erase.hint"
-                  >Pro dárce, který požádal o výmaz podle GDPR.</span
-                >
-              }
-            </div>
+        </section>
+      }
+    }
+
+    <section [id]="ids.accounts.id" tabindex="-1" class="ui-card" aria-labelledby="accounts-title">
+      <h2 id="accounts-title" class="ui-card__title" i18n="@@admin.donorDetail.accounts.title">
+        Bankovní účty
+      </h2>
+      <app-live-notice
+        #accountsNotice
+        class="card-notice"
+        tabindex="-1"
+        [notice]="noticeIn('accounts')"
+      />
+      @switch (donationsState()) {
+        @case ('loading') {
+          <p
+            class="ui-load-state ui-load-state--inset"
+            role="status"
+            i18n="@@admin.donorDetail.accounts.loading"
+          >
+            Načítáme účty, dary a potvrzení…
+          </p>
+        }
+        @case ('missing') {
+          <p
+            class="ui-load-state ui-load-state--error ui-load-state--inset"
+            role="alert"
+            i18n="@@admin.donorDetail.donations.missing"
+          >
+            Dárce nemá záznam v evidenci darů, takže nemá žádné účty, dary ani potvrzení.
+          </p>
+        }
+        @case ('error') {
+          <div class="ui-load-state ui-load-state--error ui-load-state--inset" role="alert">
+            <p i18n="@@admin.donorDetail.donations.error.text">
+              Účty, dary a potvrzení se nepodařilo načíst.
+            </p>
+            <button
+              type="button"
+              class="ui-button ui-button--small"
+              (click)="loadDonations()"
+              i18n="@@admin.donorDetail.donations.error.retry"
+            >
+              Zkusit znovu
+            </button>
+          </div>
+        }
+        @case ('ready') {
+          @if (erasedAt()) {
+            <p class="ui-card__empty" i18n="@@admin.donorDetail.accounts.erased">
+              Bankovní účty jsme s osobními údaji dárce smazali; další platby se mu už nepřiřadí.
+            </p>
+          } @else if (bankAccounts().length === 0) {
+            <p class="ui-card__empty" i18n="@@admin.donorDetail.accounts.empty">
+              Z žádného účtu zatím nepřišla platba s variabilním symbolem dárce.
+            </p>
+          } @else {
+            <p class="admin-hint admin-hint--card" i18n="@@admin.donorDetail.accounts.hint">
+              Jen nechcete, aby se dárci přiřazovaly další platby bez symbolu? Vypněte párování,
+              dosavadní dary zůstanou. Účet se dárci přiřadil omylem? Odeberte ho: smažeme i dary,
+              které se přes něj přiřadily, a odpovědi o starších symbolech.
+            </p>
+            <table class="ui-table">
+              <thead>
+                <tr>
+                  <th i18n="@@admin.donorDetail.accounts.col.account">Účet</th>
+                  <th i18n="@@admin.donorDetail.accounts.col.status">Stav</th>
+                  <th i18n="@@admin.donorDetail.accounts.col.donations">Dary přes účet</th>
+                  <th class="action">
+                    <span class="visually-hidden" i18n="@@admin.donorDetail.accounts.col.action"
+                      >Akce</span
+                    >
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (item of bankAccounts(); track item.id) {
+                  <tr>
+                    <td
+                      data-label="Účet"
+                      i18n-data-label="@@admin.donorDetail.accounts.col.account"
+                    >
+                      <span class="ui-mono admin-name">{{ item.accountNumber }}</span>
+                      @if (item.shared) {
+                        <span class="tag tag--warn" i18n="@@admin.donorDetail.accounts.shared"
+                          >sdílený</span
+                        >
+                      }
+                      @if (item.pairingExcluded) {
+                        <span class="tag tag--warn" i18n="@@admin.donorDetail.accounts.excluded"
+                          >jen s variabilním symbolem</span
+                        >
+                      }
+                      @if (item.confirmedSymbols.length > 0) {
+                        <span class="muted">
+                          <ng-container i18n="@@admin.donorDetail.accounts.confirmedSymbols"
+                            >Potvrzené starší symboly:</ng-container
+                          >&ngsp;<span class="ui-mono">{{ item.confirmedSymbols.join(', ') }}</span>
+                        </span>
+                      }
+                    </td>
+                    <td data-label="Stav" i18n-data-label="@@admin.donorDetail.accounts.col.status">
+                      {{ statusLabel(item) }}
+                      <span class="muted">
+                        @if (item.verifiedOn) {
+                          <ng-container i18n="@@admin.donorDetail.accounts.verifiedOn"
+                            >ověřen {{ day(item.verifiedOn) }}</ng-container
+                          >
+                        }
+                        @if (item.connectedFrom) {
+                          <ng-container i18n="@@admin.donorDetail.accounts.connectedFrom"
+                            >&ngsp;· od {{ day(item.connectedFrom) }}</ng-container
+                          >
+                        }
+                        @if (item.disconnectedOn) {
+                          <ng-container i18n="@@admin.donorDetail.accounts.disconnectedOn"
+                            >&ngsp;· vypnuto {{ day(item.disconnectedOn) }}</ng-container
+                          >
+                        }
+                      </span>
+                    </td>
+                    <td
+                      data-label="Dary přes účet"
+                      i18n-data-label="@@admin.donorDetail.accounts.col.donations"
+                    >
+                      {{ donationsCount(item.donationCount) }}
+                      @if (item.donationCount > 0) {
+                        <span class="muted">
+                          <ng-container i18n="@@admin.donorDetail.accounts.total"
+                            >celkem {{ crowns(item.totalAmountMinor) }}&nbsp;Kč</ng-container
+                          >
+                          @if (item.lastDonationOn) {
+                            <ng-container i18n="@@admin.donorDetail.accounts.last"
+                              >&ngsp;· poslední {{ day(item.lastDonationOn) }}</ng-container
+                            >
+                          }
+                        </span>
+                      }
+                    </td>
+                    <td class="action">
+                      @switch (pendingFor(item)) {
+                        @case ('disconnect') {
+                          <span
+                            class="confirm"
+                            role="group"
+                            aria-label="Vypnout párování?"
+                            i18n-aria-label="@@admin.donorDetail.disconnect.confirm.label"
+                          >
+                            <span i18n="@@admin.donorDetail.disconnect.confirm.question"
+                              >Dosavadní dary zůstanou, další platby bez symbolu z tohoto účtu už
+                              nepřiřadíme. Vypnout?</span
+                            >
+                            <button
+                              type="button"
+                              class="ui-button ui-button--small ui-button--danger"
+                              [disabled]="busy()"
+                              (click)="disconnect(item)"
+                            >
+                              @if (busy()) {
+                                <ng-container i18n="@@admin.donorDetail.disconnect.busy"
+                                  >Vypínáme…</ng-container
+                                >
+                              } @else {
+                                <ng-container i18n="@@admin.donorDetail.disconnect.yes"
+                                  >Ano, vypnout</ng-container
+                                >
+                              }
+                            </button>
+                            <button
+                              #confirmCancel
+                              type="button"
+                              class="ui-link-button"
+                              [disabled]="busy()"
+                              (click)="cancel()"
+                              i18n="@@admin.donorDetail.confirm.no"
+                            >
+                              Ponechat
+                            </button>
+                          </span>
+                        }
+                        @case ('reconnect') {
+                          <span
+                            class="confirm"
+                            role="group"
+                            aria-label="Zapnout párování?"
+                            i18n-aria-label="@@admin.donorDetail.reconnect.confirm.label"
+                          >
+                            <span i18n="@@admin.donorDetail.reconnect.confirm.question"
+                              >Párování začne znovu, až z účtu přijde platba s variabilním symbolem
+                              dárce. Zapnout?</span
+                            >
+                            <button
+                              type="button"
+                              class="ui-button ui-button--small"
+                              [disabled]="busy()"
+                              (click)="reconnect(item)"
+                            >
+                              @if (busy()) {
+                                <ng-container i18n="@@admin.donorDetail.reconnect.busy"
+                                  >Zapínáme…</ng-container
+                                >
+                              } @else {
+                                <ng-container i18n="@@admin.donorDetail.reconnect.yes"
+                                  >Ano, zapnout</ng-container
+                                >
+                              }
+                            </button>
+                            <button
+                              #confirmCancel
+                              type="button"
+                              class="ui-link-button"
+                              [disabled]="busy()"
+                              (click)="cancel()"
+                              i18n="@@admin.donorDetail.confirm.no"
+                            >
+                              Ponechat
+                            </button>
+                          </span>
+                        }
+                        @case ('remove') {
+                          <span
+                            class="confirm"
+                            role="group"
+                            aria-label="Odebrat účet?"
+                            i18n-aria-label="@@admin.donorDetail.remove.confirm.label"
+                          >
+                            <span i18n="@@admin.donorDetail.remove.confirm.question"
+                              >Smažeme {{ donationsCount(item.donationCount) }} přiřazené přes tento
+                              účet i odpovědi o starších symbolech; platby zůstanou nespárované.
+                              Odebrat?</span
+                            >
+                            <button
+                              type="button"
+                              class="ui-button ui-button--small ui-button--danger"
+                              [disabled]="busy()"
+                              (click)="remove(item)"
+                            >
+                              @if (busy()) {
+                                <ng-container i18n="@@admin.donorDetail.remove.busy"
+                                  >Odebíráme…</ng-container
+                                >
+                              } @else {
+                                <ng-container i18n="@@admin.donorDetail.remove.yes"
+                                  >Ano, odebrat</ng-container
+                                >
+                              }
+                            </button>
+                            <button
+                              #confirmCancel
+                              type="button"
+                              class="ui-link-button"
+                              [disabled]="busy()"
+                              (click)="cancel()"
+                              i18n="@@admin.donorDetail.confirm.no"
+                            >
+                              Ponechat
+                            </button>
+                          </span>
+                        }
+                        @default {
+                          <span class="actions">
+                            @if (isLive(item)) {
+                              <button
+                                [id]="accountOpenerId('disconnect', item)"
+                                type="button"
+                                class="ui-button ui-button--small ui-button--quiet"
+                                (click)="askAccount('disconnect', item)"
+                                i18n="@@admin.donorDetail.disconnect.open"
+                              >
+                                Vypnout párování
+                              </button>
+                            } @else if (!item.pairingExcluded) {
+                              <button
+                                [id]="accountOpenerId('reconnect', item)"
+                                type="button"
+                                class="ui-button ui-button--small ui-button--quiet"
+                                (click)="askAccount('reconnect', item)"
+                                i18n="@@admin.donorDetail.reconnect.open"
+                              >
+                                Zapnout párování
+                              </button>
+                            }
+                            @if (removalBlocked(item)) {
+                              <span class="blocked" i18n="@@admin.donorDetail.remove.blocked"
+                                >Nejde odebrat: k darům z účtu je vystavené potvrzení.</span
+                              >
+                            } @else {
+                              <button
+                                [id]="accountOpenerId('remove', item)"
+                                type="button"
+                                class="ui-button ui-button--small ui-button--danger-outline"
+                                (click)="askAccount('remove', item)"
+                                i18n="@@admin.donorDetail.remove.open"
+                              >
+                                Odebrat účet
+                              </button>
+                            }
+                          </span>
+                        }
+                      }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
           }
         }
       }
-    }
-  </section>
+    </section>
 
-  <section class="ui-card" aria-labelledby="accounts-title">
-    <h2 id="accounts-title" class="ui-card__title" i18n="@@admin.donorDetail.accounts.title">
-      Bankovní účty
-    </h2>
-    @switch (donationsState()) {
-      @case ('loading') {
-        <p
-          class="ui-load-state ui-load-state--inset"
-          role="status"
-          i18n="@@admin.donorDetail.accounts.loading"
-        >
-          Načítáme účty, dary a potvrzení…
-        </p>
-      }
-      @case ('missing') {
-        <p
-          class="ui-load-state ui-load-state--error ui-load-state--inset"
-          role="alert"
-          i18n="@@admin.donorDetail.donations.missing"
-        >
-          Dárce nemá záznam v evidenci darů, takže nemá žádné účty, dary ani potvrzení.
-        </p>
-      }
-      @case ('error') {
-        <div class="ui-load-state ui-load-state--error ui-load-state--inset" role="alert">
-          <p i18n="@@admin.donorDetail.donations.error.text">
-            Účty, dary a potvrzení se nepodařilo načíst.
-          </p>
-          <button
-            type="button"
-            class="ui-button ui-button--small"
-            (click)="loadDonations()"
-            i18n="@@admin.donorDetail.donations.error.retry"
-          >
-            Zkusit znovu
-          </button>
-        </div>
-      }
-      @case ('ready') {
-        @if (erasedAt()) {
-          <p class="ui-card__empty" i18n="@@admin.donorDetail.accounts.erased">
-            Bankovní účty jsme s osobními údaji dárce smazali; další platby se mu už nepřiřadí.
-          </p>
-        } @else if (bankAccounts().length === 0) {
-          <p class="ui-card__empty" i18n="@@admin.donorDetail.accounts.empty">
-            Z žádného účtu zatím nepřišla platba s variabilním symbolem dárce.
+    @if (donationsState() === 'ready') {
+      <section
+        [id]="ids.donations.id"
+        tabindex="-1"
+        class="ui-card"
+        aria-labelledby="donations-title"
+      >
+        <h2 id="donations-title" class="ui-card__title" i18n="@@admin.donorDetail.donations.title">
+          Dary
+        </h2>
+        @if (donations().length === 0) {
+          <p class="ui-card__empty" i18n="@@admin.donorDetail.donations.empty">
+            Dárce zatím nemá žádný přiřazený dar.
           </p>
         } @else {
-          <p class="admin-hint admin-hint--card" i18n="@@admin.donorDetail.accounts.hint">
-            Vypnuté párování nechá dosavadní dary a jen přestane přiřazovat další platby bez
-            symbolu. Odebrání účtu smaže i dary, které se přes něj přiřadily, a odpovědi o starších
-            symbolech; použijte ho, když se účet naučil omylem.
+          <p class="admin-hint admin-hint--card">
+            <ng-container i18n="@@admin.donorDetail.donations.summary"
+              >Celkem {{ donationsCount(receivedCount()) }} za {{ total() }}&nbsp;Kč.</ng-container
+            >
+            @if (refundedCount() > 0) {
+              &ngsp;<ng-container i18n="@@admin.donorDetail.donations.refundedCount"
+                >Vrácené dary ({{ refundedCount() }}) se nezapočítávají.</ng-container
+              >
+            }
           </p>
           <table class="ui-table">
             <thead>
               <tr>
-                <th i18n="@@admin.donorDetail.accounts.col.account">Účet</th>
-                <th i18n="@@admin.donorDetail.accounts.col.status">Stav</th>
-                <th i18n="@@admin.donorDetail.accounts.col.donations">Dary přes účet</th>
-                <th class="action">
-                  <span class="visually-hidden" i18n="@@admin.donorDetail.accounts.col.action"
-                    >Akce</span
-                  >
-                </th>
+                <th i18n="@@admin.donorDetail.donations.col.date">Přijato</th>
+                <th class="amount" i18n="@@admin.donorDetail.donations.col.amount">Částka</th>
+                <th i18n="@@admin.donorDetail.donations.col.purpose">Účel</th>
+                <th i18n="@@admin.donorDetail.donations.col.pairing">Přiřazení</th>
+                <th i18n="@@admin.donorDetail.donations.col.receipt">Potvrzení</th>
               </tr>
             </thead>
             <tbody>
-              @for (item of bankAccounts(); track item.id) {
+              @for (item of donations(); track item.id) {
                 <tr>
-                  <td data-label="Účet" i18n-data-label="@@admin.donorDetail.accounts.col.account">
-                    <span class="ui-mono admin-name">{{ item.accountNumber }}</span>
-                    @if (item.shared) {
-                      <span class="tag tag--warn" i18n="@@admin.donorDetail.accounts.shared"
-                        >sdílený</span
+                  <td data-label="Přijato" i18n-data-label="@@admin.donorDetail.donations.col.date">
+                    {{ day(item.receivedAt) }}
+                    @if (item.status === 'REFUNDED') {
+                      <span class="tag tag--warn" i18n="@@admin.donorDetail.donations.refunded"
+                        >vráceno</span
                       >
                     }
-                    @if (item.pairingExcluded) {
-                      <span class="tag tag--warn" i18n="@@admin.donorDetail.accounts.excluded"
-                        >jen s variabilním symbolem</span
-                      >
-                    }
-                    @if (item.confirmedSymbols.length > 0) {
-                      <span class="muted">
-                        <ng-container i18n="@@admin.donorDetail.accounts.confirmedSymbols"
-                          >Potvrzené starší symboly:</ng-container
-                        >
-                        <span class="ui-mono">{{ item.confirmedSymbols.join(', ') }}</span>
-                      </span>
-                    }
-                  </td>
-                  <td data-label="Stav" i18n-data-label="@@admin.donorDetail.accounts.col.status">
-                    {{ statusLabel(item) }}
-                    <span class="muted">
-                      @if (item.verifiedOn) {
-                        <ng-container i18n="@@admin.donorDetail.accounts.verifiedOn"
-                          >ověřen {{ day(item.verifiedOn) }}</ng-container
-                        >
-                      }
-                      @if (item.connectedFrom) {
-                        <ng-container i18n="@@admin.donorDetail.accounts.connectedFrom"
-                          >&ngsp;· od {{ day(item.connectedFrom) }}</ng-container
-                        >
-                      }
-                      @if (item.disconnectedOn) {
-                        <ng-container i18n="@@admin.donorDetail.accounts.disconnectedOn"
-                          >&ngsp;· vypnuto {{ day(item.disconnectedOn) }}</ng-container
-                        >
-                      }
-                    </span>
                   </td>
                   <td
-                    data-label="Dary přes účet"
-                    i18n-data-label="@@admin.donorDetail.accounts.col.donations"
+                    class="amount"
+                    data-label="Částka"
+                    i18n-data-label="@@admin.donorDetail.donations.col.amount"
                   >
-                    {{ donationsCount(item.donationCount) }}
-                    @if (item.donationCount > 0) {
+                    <span class="ui-mono">{{ crowns(item.amountMinor) }}&nbsp;Kč</span>
+                  </td>
+                  <td data-label="Účel" i18n-data-label="@@admin.donorDetail.donations.col.purpose">
+                    {{ item.purpose }}
+                  </td>
+                  <td
+                    data-label="Přiřazení"
+                    i18n-data-label="@@admin.donorDetail.donations.col.pairing"
+                  >
+                    {{ pairingLabel(item) }}
+                    @if (item.senderAccount) {
+                      <span class="muted ui-mono">{{ item.senderAccount }}</span>
+                    }
+                    @if (item.confirmedSymbol) {
                       <span class="muted">
-                        <ng-container i18n="@@admin.donorDetail.accounts.total"
-                          >celkem {{ crowns(item.totalAmountMinor) }}&nbsp;Kč</ng-container
+                        <ng-container i18n="@@admin.donorDetail.donations.symbol"
+                          >VS {{ item.confirmedSymbol }}</ng-container
                         >
-                        @if (item.lastDonationOn) {
-                          <ng-container i18n="@@admin.donorDetail.accounts.last"
-                            >&ngsp;· poslední {{ day(item.lastDonationOn) }}</ng-container
-                          >
-                        }
                       </span>
                     }
                   </td>
-                  <td class="action">
-                    @switch (pendingFor(item)) {
-                      @case ('disconnect') {
-                        <span
-                          class="confirm"
-                          role="group"
-                          aria-label="Vypnout párování?"
-                          i18n-aria-label="@@admin.donorDetail.disconnect.confirm.label"
-                        >
-                          <span i18n="@@admin.donorDetail.disconnect.confirm.question"
-                            >Dosavadní dary zůstanou, další platby bez symbolu z tohoto účtu už
-                            nepřiřadíme. Vypnout?</span
-                          >
-                          <button
-                            type="button"
-                            class="ui-button ui-button--small ui-button--danger"
-                            [disabled]="busy()"
-                            (click)="disconnect(item)"
-                          >
-                            @if (busy()) {
-                              <ng-container i18n="@@admin.donorDetail.disconnect.busy"
-                                >Vypínáme…</ng-container
-                              >
-                            } @else {
-                              <ng-container i18n="@@admin.donorDetail.disconnect.yes"
-                                >Ano, vypnout</ng-container
-                              >
-                            }
-                          </button>
-                          <button
-                            type="button"
-                            class="ui-link-button"
-                            [disabled]="busy()"
-                            (click)="cancel()"
-                            i18n="@@admin.donorDetail.confirm.no"
-                          >
-                            Ne
-                          </button>
-                        </span>
-                      }
-                      @case ('reconnect') {
-                        <span
-                          class="confirm"
-                          role="group"
-                          aria-label="Zapnout párování?"
-                          i18n-aria-label="@@admin.donorDetail.reconnect.confirm.label"
-                        >
-                          <span i18n="@@admin.donorDetail.reconnect.confirm.question"
-                            >Párování začne znovu, až z účtu přijde platba s variabilním symbolem
-                            dárce. Zapnout?</span
-                          >
-                          <button
-                            type="button"
-                            class="ui-button ui-button--small"
-                            [disabled]="busy()"
-                            (click)="reconnect(item)"
-                          >
-                            @if (busy()) {
-                              <ng-container i18n="@@admin.donorDetail.reconnect.busy"
-                                >Zapínáme…</ng-container
-                              >
-                            } @else {
-                              <ng-container i18n="@@admin.donorDetail.reconnect.yes"
-                                >Ano, zapnout</ng-container
-                              >
-                            }
-                          </button>
-                          <button
-                            type="button"
-                            class="ui-link-button"
-                            [disabled]="busy()"
-                            (click)="cancel()"
-                            i18n="@@admin.donorDetail.confirm.no"
-                          >
-                            Ne
-                          </button>
-                        </span>
-                      }
-                      @case ('remove') {
-                        <span
-                          class="confirm"
-                          role="group"
-                          aria-label="Odebrat účet?"
-                          i18n-aria-label="@@admin.donorDetail.remove.confirm.label"
-                        >
-                          <span i18n="@@admin.donorDetail.remove.confirm.question"
-                            >Smažeme {{ donationsCount(item.donationCount) }} přiřazené přes tento
-                            účet i odpovědi o starších symbolech; platby zůstanou nespárované.
-                            Odebrat?</span
-                          >
-                          <button
-                            type="button"
-                            class="ui-button ui-button--small ui-button--danger"
-                            [disabled]="busy()"
-                            (click)="remove(item)"
-                          >
-                            @if (busy()) {
-                              <ng-container i18n="@@admin.donorDetail.remove.busy"
-                                >Odebíráme…</ng-container
-                              >
-                            } @else {
-                              <ng-container i18n="@@admin.donorDetail.remove.yes"
-                                >Ano, odebrat</ng-container
-                              >
-                            }
-                          </button>
-                          <button
-                            type="button"
-                            class="ui-link-button"
-                            [disabled]="busy()"
-                            (click)="cancel()"
-                            i18n="@@admin.donorDetail.confirm.no"
-                          >
-                            Ne
-                          </button>
-                        </span>
-                      }
-                      @default {
-                        <span class="actions">
-                          @if (isLive(item)) {
-                            <button
-                              type="button"
-                              class="ui-button ui-button--small ui-button--quiet"
-                              (click)="askAccount('disconnect', item)"
-                              i18n="@@admin.donorDetail.disconnect.open"
-                            >
-                              Vypnout párování
-                            </button>
-                          } @else if (!item.pairingExcluded) {
-                            <button
-                              type="button"
-                              class="ui-button ui-button--small ui-button--quiet"
-                              (click)="askAccount('reconnect', item)"
-                              i18n="@@admin.donorDetail.reconnect.open"
-                            >
-                              Zapnout párování
-                            </button>
-                          }
-                          <button
-                            type="button"
-                            class="ui-button ui-button--small"
-                            (click)="askAccount('remove', item)"
-                            i18n="@@admin.donorDetail.remove.open"
-                          >
-                            Odebrat účet
-                          </button>
-                        </span>
-                      }
+                  <td
+                    data-label="Potvrzení"
+                    i18n-data-label="@@admin.donorDetail.donations.col.receipt"
+                  >
+                    @if (item.receiptNumber) {
+                      <span class="ui-mono">{{ item.receiptNumber }}</span>
+                    } @else {
+                      <span class="muted" i18n="@@admin.donorDetail.donations.noReceipt"
+                        >zatím žádné</span
+                      >
                     }
                   </td>
                 </tr>
@@ -602,142 +771,183 @@
             </tbody>
           </table>
         }
+      </section>
+
+      <section
+        [id]="ids.receipts.id"
+        tabindex="-1"
+        class="ui-card"
+        aria-labelledby="receipts-title"
+      >
+        <h2 id="receipts-title" class="ui-card__title" i18n="@@admin.donorDetail.receipts.title">
+          Vydaná potvrzení
+        </h2>
+        @if (receipts().length === 0) {
+          <p class="ui-card__empty" i18n="@@admin.donorDetail.receipts.empty">
+            Dárce si zatím žádné potvrzení nestáhl.
+          </p>
+        } @else {
+          <table class="ui-table">
+            <thead>
+              <tr>
+                <th i18n="@@admin.donorDetail.receipts.col.number">Číslo</th>
+                <th i18n="@@admin.donorDetail.receipts.col.subject">Potvrzuje</th>
+                <th i18n="@@admin.donorDetail.receipts.col.issued">Vystaveno</th>
+                <th i18n="@@admin.donorDetail.receipts.col.state">Stav</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (receipt of receipts(); track receipt.id) {
+                <tr>
+                  <td data-label="Číslo" i18n-data-label="@@admin.donorDetail.receipts.col.number">
+                    <span class="ui-mono admin-name">{{ receipt.number }}</span>
+                  </td>
+                  <td
+                    data-label="Potvrzuje"
+                    i18n-data-label="@@admin.donorDetail.receipts.col.subject"
+                  >
+                    {{ receiptSubject(receipt) }}
+                  </td>
+                  <td
+                    data-label="Vystaveno"
+                    i18n-data-label="@@admin.donorDetail.receipts.col.issued"
+                  >
+                    {{ time(receipt.issuedAt) }}
+                    <span class="muted">{{ receiptLocale(receipt) }}</span>
+                  </td>
+                  <td data-label="Stav" i18n-data-label="@@admin.donorDetail.receipts.col.state">
+                    @if (receipt.active) {
+                      <span class="tag tag--on" i18n="@@admin.donorDetail.receipts.active"
+                        >platné</span
+                      >
+                    } @else {
+                      <span class="tag tag--off" i18n="@@admin.donorDetail.receipts.superseded"
+                        >nahrazeno novějším</span
+                      >
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        }
+      </section>
+    }
+
+    @if (accountState() === 'ready') {
+      @if (account(); as account) {
+        <section class="ui-card" aria-labelledby="erasure-title">
+          <h2 id="erasure-title" class="ui-card__title" i18n="@@admin.donorDetail.erasure.title">
+            Výmaz osobních údajů (GDPR)
+          </h2>
+          <app-live-notice
+            #erasureNotice
+            class="card-notice"
+            tabindex="-1"
+            [notice]="noticeIn('erasure')"
+          />
+          <div class="admin-actions">
+            @if (account.erasedAt) {
+              <span class="admin-hint" i18n="@@admin.donorDetail.erasure.done"
+                >Osobní údaje tohoto dárce jsou vymazané.</span
+              >
+            } @else if (account.administrator) {
+              <span class="admin-hint" i18n="@@admin.donorDetail.erase.administrator"
+                >Správci nejde vymazat osobní údaje. Nejdřív mu odeberte roli správce na stránce
+                Správci.</span
+              >
+            } @else {
+              <button
+                id="donor-erase-open"
+                type="button"
+                class="ui-button ui-button--small ui-button--danger-outline"
+                (click)="openErase()"
+                i18n="@@admin.donorDetail.erase.open"
+              >
+                Vymazat osobní údaje
+              </button>
+              <span class="admin-hint" i18n="@@admin.donorDetail.erase.hint"
+                >Pro dárce, který požádal o výmaz podle GDPR.</span
+              >
+            }
+          </div>
+        </section>
       }
     }
-  </section>
-
-  @if (donationsState() === 'ready') {
-    <section class="ui-card" aria-labelledby="donations-title">
-      <h2 id="donations-title" class="ui-card__title" i18n="@@admin.donorDetail.donations.title">
-        Dary
-      </h2>
-      @if (donations().length === 0) {
-        <p class="ui-card__empty" i18n="@@admin.donorDetail.donations.empty">
-          Dárce zatím nemá žádný přiřazený dar.
-        </p>
-      } @else {
-        <p class="admin-hint admin-hint--card" i18n="@@admin.donorDetail.donations.summary">
-          Celkem {{ donationsCount(donations().length) }} za {{ total() }}&nbsp;Kč.
-        </p>
-        <table class="ui-table">
-          <thead>
-            <tr>
-              <th i18n="@@admin.donorDetail.donations.col.date">Přijato</th>
-              <th class="amount" i18n="@@admin.donorDetail.donations.col.amount">Částka</th>
-              <th i18n="@@admin.donorDetail.donations.col.purpose">Účel</th>
-              <th i18n="@@admin.donorDetail.donations.col.pairing">Přiřazení</th>
-              <th i18n="@@admin.donorDetail.donations.col.receipt">Potvrzení</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (item of donations(); track item.id) {
-              <tr>
-                <td data-label="Přijato" i18n-data-label="@@admin.donorDetail.donations.col.date">
-                  {{ day(item.receivedAt) }}
-                  @if (item.status === 'REFUNDED') {
-                    <span class="tag tag--warn" i18n="@@admin.donorDetail.donations.refunded"
-                      >vráceno</span
-                    >
-                  }
-                </td>
-                <td
-                  class="amount"
-                  data-label="Částka"
-                  i18n-data-label="@@admin.donorDetail.donations.col.amount"
-                >
-                  <span class="ui-mono">{{ crowns(item.amountMinor) }}&nbsp;Kč</span>
-                </td>
-                <td data-label="Účel" i18n-data-label="@@admin.donorDetail.donations.col.purpose">
-                  {{ item.purpose }}
-                </td>
-                <td
-                  data-label="Přiřazení"
-                  i18n-data-label="@@admin.donorDetail.donations.col.pairing"
-                >
-                  {{ pairingLabel(item) }}
-                  @if (item.senderAccount) {
-                    <span class="muted ui-mono">{{ item.senderAccount }}</span>
-                  }
-                  @if (item.confirmedSymbol) {
-                    <span class="muted">
-                      <ng-container i18n="@@admin.donorDetail.donations.symbol"
-                        >VS {{ item.confirmedSymbol }}</ng-container
-                      >
-                    </span>
-                  }
-                </td>
-                <td
-                  data-label="Potvrzení"
-                  i18n-data-label="@@admin.donorDetail.donations.col.receipt"
-                >
-                  @if (item.receiptNumber) {
-                    <span class="ui-mono">{{ item.receiptNumber }}</span>
-                  } @else {
-                    <span class="muted" i18n="@@admin.donorDetail.donations.noReceipt"
-                      >zatím žádné</span
-                    >
-                  }
-                </td>
-              </tr>
-            }
-          </tbody>
-        </table>
-      }
-    </section>
-
-    <section class="ui-card" aria-labelledby="receipts-title">
-      <h2 id="receipts-title" class="ui-card__title" i18n="@@admin.donorDetail.receipts.title">
-        Vydaná potvrzení
-      </h2>
-      @if (receipts().length === 0) {
-        <p class="ui-card__empty" i18n="@@admin.donorDetail.receipts.empty">
-          Dárce si zatím žádné potvrzení nestáhl.
-        </p>
-      } @else {
-        <table class="ui-table">
-          <thead>
-            <tr>
-              <th i18n="@@admin.donorDetail.receipts.col.number">Číslo</th>
-              <th i18n="@@admin.donorDetail.receipts.col.subject">Potvrzuje</th>
-              <th i18n="@@admin.donorDetail.receipts.col.issued">Vystaveno</th>
-              <th i18n="@@admin.donorDetail.receipts.col.state">Stav</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (receipt of receipts(); track receipt.id) {
-              <tr>
-                <td data-label="Číslo" i18n-data-label="@@admin.donorDetail.receipts.col.number">
-                  <span class="ui-mono admin-name">{{ receipt.number }}</span>
-                </td>
-                <td
-                  data-label="Potvrzuje"
-                  i18n-data-label="@@admin.donorDetail.receipts.col.subject"
-                >
-                  {{ receiptSubject(receipt) }}
-                </td>
-                <td
-                  data-label="Vystaveno"
-                  i18n-data-label="@@admin.donorDetail.receipts.col.issued"
-                >
-                  {{ time(receipt.issuedAt) }}
-                  <span class="muted">{{ receipt.locale === 'en' ? 'EN' : 'CZ' }}</span>
-                </td>
-                <td data-label="Stav" i18n-data-label="@@admin.donorDetail.receipts.col.state">
-                  @if (receipt.active) {
-                    <span class="tag tag--on" i18n="@@admin.donorDetail.receipts.active"
-                      >platné</span
-                    >
-                  } @else {
-                    <span class="tag tag--off" i18n="@@admin.donorDetail.receipts.superseded"
-                      >nahrazeno novějším</span
-                    >
-                  }
-                </td>
-              </tr>
-            }
-          </tbody>
-        </table>
-      }
-    </section>
   }
 </div>
+
+@if (erasing()) {
+  <app-dialog labelledBy="erase-title" (dismissed)="closeErase()">
+    <h2 id="erase-title" class="erase-title" i18n="@@admin.donorDetail.erase.dialog.title">
+      Vymazat osobní údaje: {{ name() }}
+    </h2>
+    <p class="erase-lead" i18n="@@admin.donorDetail.erase.dialog.lead">
+      Nevratný krok. Účet už nepůjde použít a všechna přihlášení dárce skončí.
+    </p>
+    <div class="erase-lists">
+      <div>
+        <h3 i18n="@@admin.donorDetail.erase.dialog.deleted">Smažeme</h3>
+        <ul>
+          <li i18n="@@admin.donorDetail.erase.dialog.deleted.personal">
+            jméno, adresu, e-mail a heslo (nahradíme je zástupnými údaji)
+          </li>
+          <li i18n="@@admin.donorDetail.erase.dialog.deleted.accounts">bankovní účty dárce</li>
+          <li i18n="@@admin.donorDetail.erase.dialog.deleted.claims">
+            odpovědi o starších symbolech
+          </li>
+        </ul>
+      </div>
+      <div>
+        <h3 i18n="@@admin.donorDetail.erase.dialog.kept">Zůstane</h3>
+        <ul>
+          <li i18n="@@admin.donorDetail.erase.dialog.kept.donations">
+            dary a vydaná potvrzení, bez jména, kvůli účetnictví
+          </li>
+        </ul>
+      </div>
+    </div>
+    <p class="erase-lead" i18n="@@admin.donorDetail.erase.dialog.mail">
+      Dárce dostane na dosavadní e-mail potvrzení o výmazu.
+    </p>
+    <label class="erase-check">
+      <input
+        type="checkbox"
+        [checked]="eraseConfirmed()"
+        [disabled]="busy()"
+        (change)="confirmErase($event)"
+      />
+      <span i18n="@@admin.donorDetail.erase.dialog.check"
+        >Dárce o výmaz požádal a ověřil(a) jsem, že jde o majitele účtu</span
+      >
+    </label>
+    @if (eraseError(); as error) {
+      <p class="ui-field-error" role="alert">{{ error }}</p>
+    }
+    <div class="erase-actions">
+      <button
+        #eraseSubmit
+        type="button"
+        class="ui-button ui-button--danger"
+        [disabled]="!eraseConfirmed() || busy()"
+        (click)="erase()"
+      >
+        @if (busy()) {
+          <ng-container i18n="@@admin.donorDetail.erase.busy">Mažeme…</ng-container>
+        } @else {
+          <ng-container i18n="@@admin.donorDetail.erase.yes">Vymazat osobní údaje</ng-container>
+        }
+      </button>
+      <button
+        #eraseCancel
+        type="button"
+        class="ui-button ui-button--quiet"
+        [disabled]="busy()"
+        (click)="closeErase()"
+        i18n="@@admin.donorDetail.erase.cancel"
+      >
+        Zrušit
+      </button>
+    </div>
+  </app-dialog>
+}

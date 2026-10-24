@@ -78,25 +78,31 @@ test.describe('Given an administrator on the older symbols page', () => {
     await expect(janaRow).toContainText('Ano, jsou moje');
     await expect(janaRow).toContainText('3 dary');
 
-    await janaRow.getByRole('button', { name: 'Zrušit Ano' }).click();
-    await expect(janaRow).toContainText('Smazat 3 dary a změnit odpověď na Ne?');
-    await janaRow.getByRole('button', { name: 'Ne', exact: true }).click();
+    await janaRow.getByRole('button', { name: 'Vrátit přiřazení darů' }).click();
+    await expect(janaRow).toContainText(
+      'Smažeme 3 dary, platby se vrátí mezi čekající na přiřazení a odpověď se změní na Ne. Vrátit?',
+    );
+    await expect(janaRow.getByRole('button', { name: 'Ponechat' })).toBeFocused();
+    await janaRow.getByRole('button', { name: 'Ponechat' }).click();
+    await expect(janaRow.getByRole('button', { name: 'Vrátit přiřazení darů' })).toBeFocused();
     expect(calls).toEqual([]);
 
-    await janaRow.getByRole('button', { name: 'Zrušit Ano' }).click();
-    await janaRow.getByRole('button', { name: 'Ano, zrušit' }).click();
+    await janaRow.getByRole('button', { name: 'Vrátit přiřazení darů' }).click();
+    await janaRow.getByRole('button', { name: 'Vrátit přiřazení', exact: true }).click();
     await expect(page.getByRole('status').filter({ hasNotText: 'Načítáme' })).toHaveText(
-      'Odpověď Ano u Jana Nováková (VS 6123456789) je zrušená: 3 dary jsme smazali a platby s tímto symbolem jsou zase nespárované. Dárce se už neptáme.',
+      'Přiřazení darů u Jana Nováková (VS 6123456789) jsme vrátili: 3 dary jsme smazali a platby s tímto symbolem zase čekají na přiřazení. Odpověď je teď Ne, dárce se už neptáme.',
     );
     await expect(janaRow).toContainText('Ne, nejsou moje');
-    await expect(janaRow.getByRole('button', { name: 'Smazat Ne' })).toBeVisible();
+    await expect(janaRow.getByRole('button', { name: 'Zeptat se dárce znovu' })).toBeVisible();
 
-    await petrRow.getByRole('button', { name: 'Smazat Ne' }).click();
-    await expect(petrRow).toContainText('Dárce dostane otázku znovu. Smazat?');
-    await petrRow.getByRole('button', { name: 'Ano, smazat' }).click();
+    await petrRow.getByRole('button', { name: 'Zeptat se dárce znovu' }).click();
+    await expect(petrRow).toContainText(
+      'Odpověď Ne smažeme a dárce otázku uvidí znovu ve svém přehledu. Zeptat se znovu?',
+    );
+    await petrRow.getByRole('button', { name: 'Zeptat se znovu', exact: true }).click();
 
     await expect(page.getByRole('status').filter({ hasNotText: 'Načítáme' })).toHaveText(
-      'Odpověď Ne u Petr Svoboda (VS 777) jsme smazali. Pokud otázka pořád platí, nástěnka se dárce zeptá znovu.',
+      'Odpověď Ne u Petr Svoboda (VS 777) jsme smazali. Pokud otázka pořád platí, dárce ji uvidí znovu ve svém přehledu.',
     );
     await expect(page.locator('tbody tr')).toHaveCount(1);
     expect(calls).toEqual(['reverse', 'DELETE']);
@@ -124,13 +130,13 @@ test.describe('Given an administrator on the older symbols page', () => {
 
     await page.goto('/sprava/starsi-symboly');
     const row = page.locator('tbody tr').first();
-    await row.getByRole('button', { name: 'Zrušit Ano' }).click();
-    await row.getByRole('button', { name: 'Ano, zrušit' }).click();
+    await row.getByRole('button', { name: 'Vrátit přiřazení darů' }).click();
+    await row.getByRole('button', { name: 'Vrátit přiřazení', exact: true }).click();
 
     await expect(page.getByRole('alert')).toHaveText(
       'Na dary z této odpovědi odkazuje vydané potvrzení. Odpověď nejde zrušit, dokud potvrzení platí.',
     );
     await expect(row).toContainText('Ano, jsou moje');
-    await expect(row.getByRole('button', { name: 'Zrušit Ano' })).toBeVisible();
+    await expect(row.getByRole('button', { name: 'Vrátit přiřazení darů' })).toBeFocused();
   });
 });

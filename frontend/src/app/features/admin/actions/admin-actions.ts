@@ -10,7 +10,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { problemTypeEndsWith } from '../../../core/auth/api-problem';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
@@ -30,8 +30,8 @@ const ACTION_NAMES: Record<string, string> = {
   RESET_SECOND_FACTOR: $localize`:@@admin.actions.action.resetSecondFactor:Vypnutí dvoufaktorového ověření`,
   RECOVER_SECOND_FACTOR: $localize`:@@admin.actions.action.recoverSecondFactor:Vypnutí dvoufaktorového ověření platbou 1 Kč`,
   REMOVE_PASSKEYS: $localize`:@@admin.actions.action.removePasskeys:Odebrání přístupových klíčů dárce`,
-  REVERSE_SYMBOL_CLAIM: $localize`:@@admin.actions.action.reverseSymbolClaim:Zrušení odpovědi Ano na starší symbol`,
-  RESET_SYMBOL_CLAIM: $localize`:@@admin.actions.action.resetSymbolClaim:Smazání odpovědi Ne na starší symbol`,
+  REVERSE_SYMBOL_CLAIM: $localize`:@@admin.actions.action.reverseSymbolClaim:Vrácení přiřazení darů podle staršího symbolu`,
+  RESET_SYMBOL_CLAIM: $localize`:@@admin.actions.action.resetSymbolClaim:Nová otázka dárci na starší symbol`,
   DISCONNECT_SENDER_ACCOUNT: $localize`:@@admin.actions.action.disconnectSenderAccount:Vypnutí párování bankovního účtu`,
   RECONNECT_SENDER_ACCOUNT: $localize`:@@admin.actions.action.reconnectSenderAccount:Zapnutí párování bankovního účtu`,
   REMOVE_SENDER_ACCOUNT_LINK: $localize`:@@admin.actions.action.removeSenderAccountLink:Odebrání bankovního účtu dárce`,
@@ -50,6 +50,7 @@ const ACTION_NAMES: Record<string, string> = {
   PUBLISH_PROJECT: $localize`:@@admin.actions.action.publishProject:Zveřejnění projektu`,
   UNPUBLISH_PROJECT: $localize`:@@admin.actions.action.unpublishProject:Stažení projektu z webu`,
   DELETE_PROJECT: $localize`:@@admin.actions.action.deleteProject:Smazání projektu`,
+  CHANGE_BACKUP_SCHEDULE: $localize`:@@admin.actions.action.changeBackupSchedule:Změna plánu záloh`,
   REQUEST_BACKUP: $localize`:@@admin.actions.action.requestBackup:Spuštění zálohy databáze`,
   REQUEST_TEST_RESTORE: $localize`:@@admin.actions.action.requestTestRestore:Spuštění zkušební obnovy zálohy`,
   DOWNLOAD_BACKUP: $localize`:@@admin.actions.action.downloadBackup:Stažení zálohy databáze`,
@@ -61,8 +62,21 @@ const ACTION_NAMES: Record<string, string> = {
   CHANGE_SETTINGS: $localize`:@@admin.actions.action.changeSettings:Změna nastavení webu`,
 };
 
+const DONOR_ACTIONS = new Set([
+  'GRANT_ADMINISTRATION',
+  'REVOKE_ADMINISTRATION',
+  'RESET_SECOND_FACTOR',
+  'RECOVER_SECOND_FACTOR',
+  'REMOVE_PASSKEYS',
+  'DISCONNECT_SENDER_ACCOUNT',
+  'RECONNECT_SENDER_ACCOUNT',
+  'REMOVE_SENDER_ACCOUNT_LINK',
+  'ERASE_DONOR',
+]);
+
 @Component({
   selector: 'app-admin-actions',
+  imports: [RouterLink],
   templateUrl: './admin-actions.html',
   styleUrl: './admin-actions.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -143,8 +157,8 @@ export class AdminActions {
     return ACTION_NAMES[item.action] ?? item.action;
   }
 
-  protected isKnownAction(item: AdminActionResponse): boolean {
-    return item.action in ACTION_NAMES;
+  protected donorId(item: AdminActionResponse): string | null {
+    return DONOR_ACTIONS.has(item.action) ? item.subjectId : null;
   }
 
   private sendToSignIn(): void {
