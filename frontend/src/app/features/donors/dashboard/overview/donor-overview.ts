@@ -5,8 +5,9 @@ import { AuthStore } from '../../../../core/auth/auth-store';
 import { BankAccountItem, BankAccountsApi } from '../../../donations/bank-accounts-api';
 import { formatMinorUnits } from '../../../donations/donation-amount';
 import { formatBankTime, formatDonationDate } from '../../../donations/donation-date';
+import { DonationStatus } from '../../../donations/donations-api';
 import { DonationsPending } from '../donations-pending/donations-pending';
-import { DonationsTable } from '../donations-table/donations-table';
+import { donationStatusLabel, DonationsTable } from '../donations-table/donations-table';
 import { DonorDonations } from '../donor-donations';
 import { PageTitle } from '../page-title/page-title';
 import { SymbolCard } from '../symbol-card/symbol-card';
@@ -27,6 +28,18 @@ export class DonorOverview {
   protected readonly recent = computed(() =>
     this.donations.items().slice(0, RECENT_DONATIONS_SHOWN),
   );
+
+  protected readonly lastGift = computed(() => this.donations.items().at(0) ?? null);
+
+  protected readonly currentYear = computed(() => {
+    const summary = this.donations.summary();
+    if (summary === null) {
+      return null;
+    }
+    const year = summary.yearlyReceiptsAvailableThrough + 1;
+    const total = summary.byYear.find((entry) => entry.year === year)?.totalAmountMinor ?? 0;
+    return { year, totalAmountMinor: total };
+  });
 
   private readonly accounts = signal<readonly BankAccountItem[]>([]);
   protected readonly accountsWithQuestion = computed(() =>
@@ -58,6 +71,10 @@ export class DonorOverview {
 
   protected formatBankTime(isoInstant: string): string {
     return formatBankTime(isoInstant);
+  }
+
+  protected statusLabel(status: DonationStatus): string {
+    return donationStatusLabel(status);
   }
 
   protected formatDate(isoDate: string): string {

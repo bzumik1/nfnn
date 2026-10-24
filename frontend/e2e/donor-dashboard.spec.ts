@@ -70,7 +70,10 @@ test.describe('Given a signed-in donor', () => {
 
     await signIn(page);
 
-    await expect(page.locator('.stat-value')).toHaveText(['1 750 Kč', '3', '15. 03. 2026']);
+    await expect(
+      page.locator('.last-gift').locator('.last-gift-amount, .last-gift-date, .last-gift-status'),
+    ).toHaveText(['500 Kč', '15. 03. 2026', 'Přijato']);
+    await expect(page.locator('.stat-value')).toHaveText(['1 750 Kč', '3', '1 500 Kč']);
     await expect(page.locator('.recent-card tbody tr')).toHaveCount(4);
 
     await openDonorSection(page, 'Moje dary');
@@ -179,6 +182,7 @@ test.describe('Given a signed-in donor', () => {
     await signIn(page);
 
     await expect(page.locator('.stat-value')).toHaveCount(0);
+    await expect(page.locator('.last-gift')).toHaveCount(0);
     await expect(page.getByRole('heading', { name: 'Jak poslat první dar' })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Zobrazit číslo účtu a QR kód' })).toHaveAttribute(
       'href',

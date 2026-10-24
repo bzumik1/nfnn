@@ -11,6 +11,10 @@ const STATUS_LABELS: Record<DonationStatus, string> = {
 
 const SENDER_ACCOUNT_DIGITS_SHOWN = 4;
 
+export function donationStatusLabel(status: DonationStatus): string {
+  return STATUS_LABELS[status];
+}
+
 @Component({
   selector: 'app-donations-table',
   templateUrl: './donations-table.html',
@@ -52,6 +56,6 @@ export class DonationsTable {
   }
 
   protected statusLabel(status: DonationStatus): string {
-    return STATUS_LABELS[status];
+    return donationStatusLabel(status);
   }
 }

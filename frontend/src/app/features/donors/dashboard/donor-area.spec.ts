@@ -147,6 +147,20 @@ describe('Given a signed-in donor in the donor area', () => {
     );
   }
 
+  function blockOrder(): string[] {
+    const blocks = [
+      'receipt-ready',
+      'last-gift',
+      'first-gift',
+      'symbol-card',
+      'overview-stats',
+      'recent-card',
+    ];
+    return [
+      ...root().querySelectorAll<HTMLElement>(blocks.map((name) => `.${name}`).join(', ')),
+    ].map((node) => blocks.find((name) => node.classList.contains(name)) ?? '');
+  }
+
   function normalized(value: string): string {
     return value.replace(/\s+/g, ' ').trim();
   }
@@ -263,7 +277,7 @@ describe('Given a signed-in donor in the donor area', () => {
       await settle();
 
       expect(text('[role="alert"]')).toContain('Přehled darů se nepodařilo načíst.');
-      expect(element('.stats-grid')).toBeNull();
+      expect(element('.overview-stats')).toBeNull();
       expect(text('.symbol-value')).toBe('9876543210');
 
       await click('.dashboard-error button');
@@ -271,7 +285,7 @@ describe('Given a signed-in donor in the donor area', () => {
       await respond(twoYearSummary(), twoYearDonations());
 
       expect(element('[role="alert"]')).toBeNull();
-      expect(texts('.stat-value')).toEqual(['1 750 Kč', '3', '15. 03. 2026']);
+      expect(texts('.stat-value')).toEqual(['1 750 Kč', '3', '1 500 Kč']);
     });
 
     it('then a session that has ended sends the donor home to sign in instead of offering a retry', async () => {
@@ -411,7 +425,7 @@ describe('Given a signed-in donor in the donor area', () => {
 
       http.expectNone('/api/donations/me/summary');
       http.expectNone({ method: 'POST', url: BANK_CHECK_URL });
-      expect(texts('.stat-value')).toEqual(['1 750 Kč', '3', '15. 03. 2026']);
+      expect(texts('.stat-value')).toEqual(['1 750 Kč', '3', '1 500 Kč']);
     });
   });
 
@@ -431,7 +445,7 @@ describe('Given a signed-in donor in the donor area', () => {
       await open('/darce/prehled');
 
       expect(text('.dashboard-loading')).toBe('Načítáme vaše dary…');
-      expect(element('.stats-grid')).toBeNull();
+      expect(element('.overview-stats')).toBeNull();
       expect(text('.symbol-value')).toBe('9876543210');
       expect(text('.symbol-card a.give-again')).toBe('Přispět');
 
@@ -440,12 +454,51 @@ describe('Given a signed-in donor in the donor area', () => {
       expect(element('.dashboard-loading')).toBeNull();
     });
 
-    it('then the stat cards show the total, the count and the last donation from the summary', async () => {
+    it('then one row of stats shows the total, the count and the sum of the current year from the summary', async () => {
       await open('/darce/prehled');
       await respond(twoYearSummary(), twoYearDonations());
 
-      expect(texts('.stat-value')).toEqual(['1 750 Kč', '3', '15. 03. 2026']);
-      expect(texts('.stat-label')).toEqual(['Celkem darováno', 'Počet darů', 'Poslední dar']);
+      expect(texts('.overview-stats dt')).toEqual([
+        'Celkem darováno',
+        'Počet darů',
+        'Darováno v roce 2026',
+      ]);
+      expect(texts('.overview-stats dd')).toEqual(['1 750 Kč', '3', '1 500 Kč']);
+    });
+
+    it('then a current year without a gift shows zero in its stat', async () => {
+      const summary = twoYearSummary();
+      summary.byYear = summary.byYear.filter((entry) => entry.year !== 2026);
+      await open('/darce/prehled');
+      await respond(summary, twoYearDonations());
+
+      expect(texts('.overview-stats dd')[2]).toBe('0 Kč');
+    });
+
+    it('then the last gift comes first with its date, amount and state, then the symbol, the stats and the recent gifts', async () => {
+      await open('/darce/prehled');
+      await respond(twoYearSummary(), twoYearDonations());
+
+      expect(text('.last-gift h2')).toBe('Poslední dar');
+      expect(text('.last-gift-amount')).toBe('500 Kč');
+      expect(text('.last-gift-date')).toBe('15. 03. 2026');
+      expect(text('.last-gift-status')).toBe('Přijato');
+      expect(blockOrder()).toEqual([
+        'receipt-ready',
+        'last-gift',
+        'symbol-card',
+        'overview-stats',
+        'recent-card',
+      ]);
+    });
+
+    it('then a refunded last gift says so', async () => {
+      const list = twoYearDonations();
+      list.items = [donationItem({ id: 'd-5', status: 'REFUNDED', receiptAvailable: false })];
+      await open('/darce/prehled');
+      await respond(twoYearSummary(), list);
+
+      expect(text('.last-gift-status')).toBe('Vráceno');
     });
 
     it('then the yearly receipt of the last completed year with a gift is offered for download', async () => {
@@ -504,10 +557,10 @@ describe('Given a signed-in donor in the donor area', () => {
       expect(element('.overview-question')).toBeNull();
     });
 
-    it('then the recent donations say how fresh the bank data is and how long a payment takes', async () => {
+    it('then the last gift says how fresh the bank data is and how long a payment takes', async () => {
       await open('/darce/prehled');
       await respond(twoYearSummary(), twoYearDonations());
-      expect(text('.recent-card [role="status"]')).toBe('Kontrolujeme nové platby v bance…');
+      expect(text('.last-gift [role="status"]')).toBe('Kontrolujeme nové platby v bance…');
 
       bankCheck.flush(
         { bankDataAsOf: EARLIER, checking: false },
@@ -515,8 +568,8 @@ describe('Given a signed-in donor in the donor area', () => {
       );
       await settle();
 
-      expect(text('.recent-card [role="status"]')).toBe('Údaje z banky k 18. 10. 2026 10:05');
-      expect(text('.recent-card .recent-hint')).toContain(
+      expect(text('.last-gift [role="status"]')).toBe('Údaje z banky k 18. 10. 2026 10:05');
+      expect(text('.last-gift .recent-hint')).toContain(
         'běžný převod z jiné banky do dalšího pracovního dne',
       );
     });
@@ -544,9 +597,11 @@ describe('Given a signed-in donor in the donor area', () => {
       await open('/darce/prehled');
       await respond(emptySummary(), emptyDonations());
 
-      expect(element('.stats-grid')).toBeNull();
+      expect(element('.overview-stats')).toBeNull();
+      expect(element('.last-gift')).toBeNull();
       expect(element('.recent-card')).toBeNull();
       expect(element('.receipt-ready')).toBeNull();
+      expect(blockOrder()).toEqual(['first-gift', 'symbol-card']);
       expect(text('.first-gift h2')).toBe('Jak poslat první dar');
       expect(texts('.first-gift-steps li')).toEqual([
         'Pošlete dar na účet nadačního fondu. Číslo účtu a QR kód najdete na hlavní stránce v části Přispět.',
@@ -1217,7 +1272,7 @@ describe('Given a signed-in donor in the donor area', () => {
 
       await go('/darce/prehled');
       expect(element('.dashboard-loading')).toBeNull();
-      expect(texts('.stat-value')).toEqual(['1 750 Kč', '3', '15. 03. 2026']);
+      expect(texts('.stat-value')).toEqual(['1 750 Kč', '3', '1 500 Kč']);
     });
   });
 
