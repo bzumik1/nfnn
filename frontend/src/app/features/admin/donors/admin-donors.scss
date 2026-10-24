@@ -36,6 +36,13 @@
   }
 }
 
+.search-more {
+  padding: 0 var(--space-6) var(--space-4);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  line-height: var(--leading-normal);
+}
+
 .search-hint {
   font-size: var(--text-sm);
   color: var(--color-text-muted);

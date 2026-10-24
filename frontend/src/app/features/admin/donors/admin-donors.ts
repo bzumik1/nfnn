@@ -11,7 +11,16 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { catchError, debounceTime, distinctUntilChanged, map, of, Subject, switchMap } from 'rxjs';
+import {
+  catchError,
+  debounceTime,
+  distinctUntilChanged,
+  map,
+  merge,
+  of,
+  Subject,
+  switchMap,
+} from 'rxjs';
 import { problemTypeEndsWith } from '../../../core/auth/api-problem';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
@@ -23,12 +32,14 @@ type SearchState = 'idle' | 'searching' | 'ready' | 'error';
 interface Outcome {
   state: SearchState;
   items: DonorAccountResponse[];
+  hasMore: boolean;
 }
 
 const UNAUTHENTICATED = 'auth/unauthenticated';
 const FORBIDDEN = 'auth/forbidden';
 const SEARCH_DEBOUNCE_MS = 300;
 const QUERY_PARAM = 'q';
+const PRAGUE_DATE_LENGTH = '17. 10. 2026'.length;
 
 @Component({
   selector: 'app-admin-donors',
@@ -51,6 +62,8 @@ export class AdminDonors {
   protected readonly query = signal('');
   protected readonly state = signal<SearchState>('idle');
   protected readonly results = signal<DonorAccountResponse[]>([]);
+  protected readonly hasMore = signal(false);
+  private readonly retries = new Subject<string>();
 
   constructor() {
     afterNextRender(() => this.title().nativeElement.focus(), { injector: this.injector });
@@ -59,11 +72,13 @@ export class AdminDonors {
         debounceTime(SEARCH_DEBOUNCE_MS),
         map((query) => query.trim()),
         distinctUntilChanged(),
+        (typed) => merge(typed, this.retries),
         switchMap((query) => this.lookUp(query)),
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe((outcome) => {
         this.results.set(outcome.items);
+        this.hasMore.set(outcome.hasMore);
         this.state.set(outcome.state);
       });
     const initial = this.route.snapshot.queryParamMap.get(QUERY_PARAM) ?? '';
@@ -78,8 +93,12 @@ export class AdminDonors {
     this.queries.next(value);
   }
 
-  protected registeredAt(item: DonorAccountResponse): string {
-    return formatBankTime(item.registeredAt);
+  protected retry(): void {
+    this.retries.next(this.query().trim());
+  }
+
+  protected registeredOn(item: DonorAccountResponse): string {
+    return formatBankTime(item.registeredAt).slice(0, PRAGUE_DATE_LENGTH);
   }
 
   protected typeLabel(item: DonorAccountResponse): string {
@@ -91,14 +110,18 @@ export class AdminDonors {
   private lookUp(query: string) {
     this.rememberInUrl(query);
     if (query === '') {
-      return of<Outcome>({ state: 'idle', items: [] });
+      return of<Outcome>({ state: 'idle', items: [], hasMore: false });
     }
     this.state.set('searching');
     return this.api.donors(query).pipe(
-      map((response): Outcome => ({ state: 'ready', items: response.items })),
+      map((response): Outcome => ({
+        state: 'ready',
+        items: response.items,
+        hasMore: response.hasMore,
+      })),
       catchError((failure: unknown) => {
         this.failed(failure);
-        return of<Outcome>({ state: 'error', items: [] });
+        return of<Outcome>({ state: 'error', items: [], hasMore: false });
       }),
     );
   }

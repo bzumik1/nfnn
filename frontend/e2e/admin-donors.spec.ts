@@ -240,11 +240,17 @@ test.describe('Given an administrator on the donors page', () => {
     );
 
     await accountCard.getByRole('button', { name: 'Vypnout dvoufaktorové ověření' }).click();
-    await accountCard.getByRole('button', { name: 'Ne', exact: true }).click();
+    await expect(accountCard.getByRole('button', { name: 'Ponechat' })).toBeFocused();
+    await accountCard.getByRole('button', { name: 'Ponechat' }).click();
+    await expect(
+      accountCard.getByRole('button', { name: 'Vypnout dvoufaktorové ověření' }),
+    ).toBeFocused();
     expect(calls).toEqual([]);
     await accountCard.getByRole('button', { name: 'Vypnout dvoufaktorové ověření' }).click();
     await accountCard.getByRole('button', { name: 'Ano, vypnout' }).click();
-    await expect(page.getByRole('status').filter({ hasNotText: 'Načítáme' })).toHaveText(
+    await expect(
+      page.getByRole('status').filter({ hasText: /\S/ }).filter({ hasNotText: 'Načítáme' }),
+    ).toHaveText(
       'Dvoufaktorové ověření u Petr Svoboda je vypnuté a všechna přihlášení jsme ukončili. Dárce dostal e-mail; po přihlášení heslem si ho může zapnout znovu.',
     );
     await expect(accountCard).toContainText(/Dvoufaktorové ověření\s*vypnuté/);
@@ -252,7 +258,9 @@ test.describe('Given an administrator on the donors page', () => {
 
     await accountsCard.getByRole('button', { name: 'Vypnout párování' }).click();
     await accountsCard.getByRole('button', { name: 'Ano, vypnout' }).click();
-    await expect(page.getByRole('status').filter({ hasNotText: 'Načítáme' })).toHaveText(
+    await expect(
+      page.getByRole('status').filter({ hasText: /\S/ }).filter({ hasNotText: 'Načítáme' }),
+    ).toHaveText(
       'Párování z účtu 2900233333/2010 je vypnuté: platby bez symbolu z něj už dárci nepřiřadíme, dosavadní dary zůstávají.',
     );
     await expect(accountsCard).toContainText('Párování vypnuté');
@@ -263,9 +271,11 @@ test.describe('Given an administrator on the donors page', () => {
       'Smažeme 2 dary přiřazené přes tento účet i odpovědi o starších symbolech; platby zůstanou nespárované. Odebrat?',
     );
     await accountsCard.getByRole('button', { name: 'Ano, odebrat' }).click();
-    await expect(page.getByRole('status').filter({ hasNotText: 'Načítáme' })).toHaveText(
+    const accountsResult = accountsCard.getByRole('status').filter({ hasNotText: 'Načítáme' });
+    await expect(accountsResult).toHaveText(
       'Účet 2900233333/2010 jsme dárci odebrali: 2 dary přiřazené přes něj jsme smazali a platby jsou zase nespárované.',
     );
+    await expect(accountsCard.locator('app-live-notice')).toBeFocused();
     await expect(accountsCard).toContainText('Z žádného účtu zatím nepřišla platba');
     await expect(page.getByRole('region', { name: 'Dary' })).toContainText(
       'Celkem 1 dar za 500 Kč.',
@@ -276,10 +286,12 @@ test.describe('Given an administrator on the donors page', () => {
     await expect(page.getByRole('group', { name: 'Vymazat osobní údaje?' })).toContainText(
       'Nevratný krok',
     );
-    await accountCard.getByRole('button', { name: 'Ne', exact: true }).click();
+    await accountCard.getByRole('button', { name: 'Ponechat' }).click();
     await accountCard.getByRole('button', { name: 'Vymazat osobní údaje' }).click();
     await accountCard.getByRole('button', { name: 'Ano, vymazat' }).click();
-    await expect(page.getByRole('status').filter({ hasNotText: 'Načítáme' })).toHaveText(
+    await expect(
+      page.getByRole('status').filter({ hasText: /\S/ }).filter({ hasNotText: 'Načítáme' }),
+    ).toHaveText(
       'Osobní údaje dárce jsme vymazali a na jeho dosavadní e-mail poslali potvrzení. Účet už nejde použít; dary a vydaná potvrzení zůstávají bez jména.',
     );
     await expect(page.getByRole('heading', { level: 1, name: 'Vymazaný dárce' })).toBeVisible();
@@ -328,14 +340,16 @@ test.describe('Given an administrator on the donors page', () => {
     await accountsCard.getByRole('button', { name: 'Odebrat účet' }).click();
     await accountsCard.getByRole('button', { name: 'Ano, odebrat' }).click();
 
-    await expect(page.getByRole('alert')).toHaveText(
-      'Na dary z tohoto účtu odkazuje vydané potvrzení. Účet nejde odebrat, dokud potvrzení platí.',
+    await expect(accountsCard.getByRole('alert').filter({ hasText: /\S/ })).toHaveText(
+      'Na dary z tohoto účtu odkazuje vydané potvrzení. Účet nejde odebrat, dokud potvrzení platí. Dary s potvrzením musí zůstat. Aby se dárci další platby z účtu nepřiřazovaly, vypněte u něj párování.',
     );
     await expect(accountsCard).toContainText('2900233333/2010');
-    await expect(accountsCard.getByRole('button', { name: 'Odebrat účet' })).toBeVisible();
+    await expect(accountsCard.getByRole('button', { name: 'Odebrat účet' })).toBeFocused();
   });
 
-  test('when the donor does not exist, then both cards say so', async ({ page }) => {
+  test('when the donor does not exist, then one card says so and leads back to the search', async ({
+    page,
+  }) => {
     await page.route(
       (url) => url.pathname === PETR_ACCOUNT,
       (route) => route.fulfill(problem(404, 'donors/donor-not-found', 'Dárce nenalezen', 'Není.')),
@@ -349,11 +363,10 @@ test.describe('Given an administrator on the donors page', () => {
     await page.goto(`/sprava/darci/${PETR_ID}`);
 
     await expect(page.getByRole('heading', { level: 1, name: 'Dárce' })).toBeFocused();
-    await expect(page.getByRole('alert').filter({ hasText: /\S/ }).first()).toContainText(
-      'Takový dárce není.',
-    );
-    await expect(page.getByRole('alert').filter({ hasText: /\S/ }).nth(1)).toContainText(
-      'Dárce nemá záznam v evidenci darů',
-    );
+    const alerts = page.getByRole('alert').filter({ hasText: /\S/ });
+    await expect(alerts).toHaveCount(1);
+    await expect(alerts).toContainText('Takový dárce není.');
+    await alerts.getByRole('link', { name: 'Zpět na hledání dárců' }).click();
+    await expect(page).toHaveURL(/\/sprava\/darci$/);
   });
 });

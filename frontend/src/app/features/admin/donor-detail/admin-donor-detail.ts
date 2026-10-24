@@ -31,14 +31,22 @@ import { LiveNotice, Notice } from '../../../shared/ui/live-notice/live-notice';
 
 type LoadState = 'loading' | 'ready' | 'missing' | 'error';
 
+type AccountAction = 'disconnect' | 'reconnect' | 'remove';
+
 type PendingAction =
-  | { kind: 'reset' | 'erase' | 'passkeys' }
-  | { kind: 'disconnect' | 'reconnect' | 'remove'; linkId: string }
-  | null;
+  { kind: 'reset' | 'erase' | 'passkeys' } | { kind: AccountAction; linkId: string } | null;
+
+type NoticeCard = 'account' | 'accounts';
+
+interface CardNotice {
+  readonly card: NoticeCard;
+  readonly notice: Notice;
+}
 
 const UNAUTHENTICATED = 'auth/unauthenticated';
 const FORBIDDEN = 'auth/forbidden';
 const NOT_FOUND = '-not-found';
+const HAS_RECEIPT = 'donations/bank-account-has-receipt';
 
 const PAIRING_LABELS: Record<NonNullable<DonationItem['pairedBy']>, string> = {
   VARIABLE_SYMBOL: $localize`:@@admin.donorDetail.pairing.variableSymbol:podle variabilního symbolu`,
@@ -61,14 +69,18 @@ export class AdminDonorDetail {
   private readonly loginDialog = inject(LoginDialogService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly injector = inject(Injector);
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly title = viewChild.required<ElementRef<HTMLHeadingElement>>('title');
+  private readonly confirmCancel = viewChild<ElementRef<HTMLButtonElement>>('confirmCancel');
+  private readonly accountNotice = viewChild('accountNotice', { read: ElementRef });
+  private readonly accountsNotice = viewChild('accountsNotice', { read: ElementRef });
 
   protected readonly donorId = this.route.snapshot.paramMap.get('id') ?? '';
   protected readonly accountState = signal<LoadState>('loading');
   protected readonly account = signal<DonorAccountResponse | null>(null);
   protected readonly donationsState = signal<LoadState>('loading');
   protected readonly detail = signal<AdminDonorDetailResponse | null>(null);
-  protected readonly notice = signal<Notice | null>(null);
+  protected readonly cardNotice = signal<CardNotice | null>(null);
   protected readonly busy = signal(false);
   protected readonly pending = signal<PendingAction>(null);
 
@@ -77,6 +89,10 @@ export class AdminDonorDetail {
   );
   protected readonly bankAccounts = computed(() => this.detail()?.bankAccounts ?? []);
   protected readonly donations = computed(() => this.detail()?.donations.items ?? []);
+  protected readonly receivedCount = computed(() => this.detail()?.donations.count ?? 0);
+  protected readonly refundedCount = computed(
+    () => this.donations().filter((item) => item.status === 'REFUNDED').length,
+  );
   protected readonly receipts = computed(() => this.detail()?.receipts ?? []);
   protected readonly total = computed(() =>
     this.crowns(this.detail()?.donations.totalAmountMinor ?? 0),
@@ -135,6 +151,12 @@ export class AdminDonorDetail {
       : $localize`:@@admin.donorDetail.locale.cs:čeština`;
   }
 
+  protected receiptLocale(receipt: AdminReceiptResponse): string {
+    return receipt.locale === 'en'
+      ? $localize`:@@admin.donorDetail.receipts.locale.en:anglicky`
+      : $localize`:@@admin.donorDetail.receipts.locale.cs:česky`;
+  }
+
   protected time(isoInstant: string): string {
     return formatBankTime(isoInstant);
   }
@@ -190,31 +212,29 @@ export class AdminDonorDetail {
   }
 
   protected askReset(): void {
-    this.pending.set({ kind: 'reset' });
-    this.notice.set(null);
+    this.ask({ kind: 'reset' });
   }
 
   protected askErase(): void {
-    this.pending.set({ kind: 'erase' });
-    this.notice.set(null);
+    this.ask({ kind: 'erase' });
   }
 
-  protected askAccount(kind: 'disconnect' | 'reconnect' | 'remove', item: BankAccountItem): void {
-    this.pending.set({ kind, linkId: item.id });
-    this.notice.set(null);
+  protected askRemovePasskeys(): void {
+    this.ask({ kind: 'passkeys' });
+  }
+
+  protected askAccount(kind: AccountAction, item: BankAccountItem): void {
+    this.ask({ kind, linkId: item.id });
   }
 
   protected cancel(): void {
+    const opener = this.openerId(this.pending());
     this.pending.set(null);
+    this.focusAfterRender(() => this.byId(opener));
   }
 
   protected isPendingReset(): boolean {
     return this.pending()?.kind === 'reset';
-  }
-
-  protected askRemovePasskeys(): void {
-    this.pending.set({ kind: 'passkeys' });
-    this.notice.set(null);
   }
 
   protected isPendingPasskeys(): boolean {
@@ -225,12 +245,40 @@ export class AdminDonorDetail {
     return this.pending()?.kind === 'erase';
   }
 
-  protected pendingFor(item: BankAccountItem): 'disconnect' | 'reconnect' | 'remove' | null {
+  protected pendingFor(item: BankAccountItem): AccountAction | null {
     const pending = this.pending();
     if (pending === null || !('linkId' in pending) || pending.linkId !== item.id) {
       return null;
     }
     return pending.kind;
+  }
+
+  protected accountOpenerId(kind: AccountAction, item: BankAccountItem): string {
+    return accountOpenerId(kind, item.id);
+  }
+
+  protected noticeIn(card: NoticeCard): Notice | null {
+    const current = this.cardNotice();
+    return current?.card === card ? current.notice : null;
+  }
+
+  protected removalBlocked(item: BankAccountItem): boolean {
+    const sameNumber = this.bankAccounts().filter(
+      (other) => other.accountNumber === item.accountNumber,
+    );
+    return (
+      sameNumber.length === 1 &&
+      this.donations().some(
+        (donation) =>
+          donation.senderAccount === item.accountNumber && donation.receiptNumber !== null,
+      )
+    );
+  }
+
+  private ask(action: NonNullable<PendingAction>): void {
+    this.pending.set(action);
+    this.cardNotice.set(null);
+    this.focusAfterRender(() => this.confirmCancel()?.nativeElement ?? null);
   }
 
   protected reset(): void {
@@ -240,6 +288,7 @@ export class AdminDonorDetail {
       $localize`:@@admin.donorDetail.reset.done:Dvoufaktorové ověření u ${name}:name: je vypnuté a všechna přihlášení jsme ukončili. Dárce dostal e-mail; po přihlášení heslem si ho může zapnout znovu.`,
       $localize`:@@admin.donorDetail.reset.failed:Dvoufaktorové ověření se nepodařilo vypnout. Zkuste to prosím znovu.`,
       () => this.loadAccount(),
+      'account',
     );
   }
 
@@ -250,6 +299,7 @@ export class AdminDonorDetail {
       $localize`:@@admin.donorDetail.passkeys.done:Přístupové klíče u ${name}:name: jsme odebrali a všechna přihlášení ukončili. Dárce dostal e-mail; po přihlášení heslem si může přidat nový klíč.`,
       $localize`:@@admin.donorDetail.passkeys.failed:Přístupové klíče se nepodařilo odebrat. Zkuste to prosím znovu.`,
       () => this.loadAccount(),
+      'account',
     );
   }
 
@@ -262,6 +312,7 @@ export class AdminDonorDetail {
         this.loadAccount();
         this.loadDonations();
       },
+      'account',
     );
   }
 
@@ -271,6 +322,7 @@ export class AdminDonorDetail {
       $localize`:@@admin.donorDetail.disconnect.done:Párování z účtu ${item.accountNumber}:account: je vypnuté: platby bez symbolu z něj už dárci nepřiřadíme, dosavadní dary zůstávají.`,
       $localize`:@@admin.donorDetail.disconnect.failed:Párování se nepodařilo vypnout. Zkuste to prosím znovu.`,
       () => this.loadDonations(),
+      'accounts',
     );
   }
 
@@ -280,6 +332,7 @@ export class AdminDonorDetail {
       $localize`:@@admin.donorDetail.reconnect.done:Párování z účtu ${item.accountNumber}:account: zase zapneme, jakmile z něj přijde platba s variabilním symbolem dárce.`,
       $localize`:@@admin.donorDetail.reconnect.failed:Párování se nepodařilo zapnout. Zkuste to prosím znovu.`,
       () => this.loadDonations(),
+      'accounts',
     );
   }
 
@@ -289,27 +342,60 @@ export class AdminDonorDetail {
       $localize`:@@admin.donorDetail.remove.done:Účet ${item.accountNumber}:account: jsme dárci odebrali: ${this.donationsCount(item.donationCount)}:donations: přiřazené přes něj jsme smazali a platby jsou zase nespárované.`,
       $localize`:@@admin.donorDetail.remove.failed:Účet se nepodařilo odebrat. Zkuste to prosím znovu.`,
       () => this.loadDonations(),
+      'accounts',
     );
   }
 
-  private run(request: Observable<void>, done: string, failed: string, reload: () => void): void {
+  private run(
+    request: Observable<void>,
+    done: string,
+    failed: string,
+    reload: () => void,
+    card: NoticeCard,
+  ): void {
     if (this.busy()) {
       return;
     }
+    const opener = this.openerId(this.pending());
     this.busy.set(true);
     request.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => {
         this.busy.set(false);
         this.pending.set(null);
-        this.notice.set({ kind: 'status', text: done });
+        this.cardNotice.set({ card, notice: { kind: 'status', text: done } });
         reload();
+        this.focusAfterRender(() => this.noticeElement(card));
       },
       error: (failure: unknown) => {
         this.busy.set(false);
         this.pending.set(null);
-        this.notice.set({ kind: 'alert', text: describeProblem(failure, failed) });
+        this.cardNotice.set({ card, notice: { kind: 'alert', text: refusal(failure, failed) } });
+        this.focusAfterRender(() => this.byId(opener) ?? this.noticeElement(card));
       },
     });
+  }
+
+  private openerId(pending: PendingAction): string | null {
+    if (pending === null) {
+      return null;
+    }
+    if ('linkId' in pending) {
+      return accountOpenerId(pending.kind, pending.linkId);
+    }
+    return `donor-${pending.kind}-open`;
+  }
+
+  private byId(id: string | null): HTMLElement | null {
+    return id === null ? null : this.host.nativeElement.querySelector<HTMLElement>(`#${id}`);
+  }
+
+  private noticeElement(card: NoticeCard): HTMLElement | null {
+    const notice = card === 'account' ? this.accountNotice() : this.accountsNotice();
+    return (notice?.nativeElement as HTMLElement | undefined) ?? null;
+  }
+
+  private focusAfterRender(target: () => HTMLElement | null): void {
+    afterNextRender(() => target()?.focus(), { injector: this.injector });
   }
 
   private stateAfter(failure: unknown): LoadState {
@@ -331,4 +417,15 @@ export class AdminDonorDetail {
       this.loginDialog.open('login', { returnTo });
     });
   }
+}
+
+function accountOpenerId(kind: AccountAction, linkId: string): string {
+  return `account-${kind}-${linkId.replace(/[^A-Za-z0-9_-]/g, '_')}`;
+}
+
+function refusal(failure: unknown, failed: string): string {
+  const described = describeProblem(failure, failed);
+  return problemTypeEndsWith(failure, HAS_RECEIPT)
+    ? `${described} ${$localize`:@@admin.donorDetail.remove.receiptNextStep:Dary s potvrzením musí zůstat. Aby se dárci další platby z účtu nepřiřazovaly, vypněte u něj párování.`}`
+    : described;
 }

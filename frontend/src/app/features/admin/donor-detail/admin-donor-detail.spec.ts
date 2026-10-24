@@ -7,6 +7,7 @@ import { AuthStore } from '../../../core/auth/auth-store';
 import { authResponse, sampleDonor } from '../../../core/auth/testing/donor-fixtures';
 import {
   adminBankAccount,
+  adminDonation,
   adminReceipt,
   donorAccount,
   donorDetail,
@@ -281,7 +282,7 @@ describe('Given an administrator on a donor card', () => {
     const receipts = sectionText('Vydaná potvrzení');
     expect(receipts).toContain('2026-000001');
     expect(receipts).toContain('Dar z 10. 10. 2026');
-    expect(receipts).toContain('17. 10. 2026 11:00 CZ');
+    expect(receipts).toContain('17. 10. 2026 11:00 česky');
     expect(receipts).toContain('platné');
   });
 
@@ -321,7 +322,7 @@ describe('Given an administrator on a donor card', () => {
 
     const receipts = sectionText('Vydaná potvrzení');
     expect(receipts).toContain('Rok 2025');
-    expect(receipts).toContain('EN');
+    expect(receipts).toContain('anglicky');
     expect(receipts).toContain('nahrazeno novějším');
   });
 
@@ -435,17 +436,123 @@ describe('Given an administrator on a donor card', () => {
     expect(sectionText('Bankovní účty')).toContain('Z žádného účtu zatím nepřišla platba');
   });
 
-  it('when "Ne" answers a confirmation, then nothing is sent and the buttons come back', async () => {
+  it('when "Ponechat" answers a confirmation, then nothing is sent, the buttons come back and the focus returns to the opener', async () => {
     await loaded();
 
     button(section('Bankovní účty'), 'Odebrat účet').click();
-    fixture.detectChanges();
-    button(section('Bankovní účty'), 'Ne').click();
-    fixture.detectChanges();
+    await settle();
+    expect(document.activeElement).toBe(button(section('Bankovní účty'), 'Ponechat'));
+    button(section('Bankovní účty'), 'Ponechat').click();
+    await settle();
 
     expect(sectionText('Bankovní účty')).not.toContain('Odebrat?');
-    expect(button(section('Bankovní účty'), 'Odebrat účet')).toBeTruthy();
+    expect(document.activeElement).toBe(button(section('Bankovní účty'), 'Odebrat účet'));
     http.expectNone(LINK_URL);
+  });
+
+  it('when the second factor confirmation opens and is kept, then the focus moves to Ponechat and back to the opener', async () => {
+    await loaded(donorAccount({ secondFactorEnabled: true }));
+
+    const opener = button(section('Účet dárce'), 'Vypnout dvoufaktorové ověření');
+    opener.click();
+    await settle();
+    expect(sectionText('Účet dárce')).toContain(
+      'Ověřili jste, že žádá majitel účtu (například odpověděl z registrovaného e-mailu)? Dárce se pak přihlásí jen heslem a všechna jeho přihlášení skončí.',
+    );
+    expect(document.activeElement).toBe(button(section('Účet dárce'), 'Ponechat'));
+
+    button(section('Účet dárce'), 'Ponechat').click();
+    await settle();
+
+    expect(document.activeElement).toBe(
+      button(section('Účet dárce'), 'Vypnout dvoufaktorové ověření'),
+    );
+  });
+
+  it('when the second factor is on, then its hint says the donor can also recover by a payment', async () => {
+    await loaded(donorAccount({ secondFactorEnabled: true }));
+
+    expect(sectionText('Účet dárce')).toContain(
+      'Pro dárce, který přišel o telefon s ověřovací aplikací. Dárce to zvládne i sám: při přihlášení zvolí „Obnovit přístup platbou“ a pošle 1 Kč ze svého účtu.',
+    );
+  });
+
+  it('when an action on a bank account succeeds, then its result shows in the accounts card and takes the focus', async () => {
+    await loaded();
+
+    button(section('Bankovní účty'), 'Vypnout párování').click();
+    await settle();
+    button(section('Bankovní účty'), 'Ano, vypnout').click();
+    fixture.detectChanges();
+    http.expectOne(`${LINK_URL}/disconnect`).flush(null, { status: 204, statusText: 'No Content' });
+    await settle();
+
+    const notice = section('Bankovní účty').querySelector('app-live-notice') as HTMLElement;
+    expect((notice.textContent ?? '').trim()).toContain(
+      'Párování z účtu 2900233333/2010 je vypnuté',
+    );
+    expect(document.activeElement).toBe(notice);
+    expect(section('Účet dárce').querySelector('.ui-notice')).toBeNull();
+    http.expectOne(DETAIL_URL).flush(donorDetail());
+    await settle();
+  });
+
+  it('when a donation from the account has a receipt, then the removal is not offered and the card says why', async () => {
+    await loaded(
+      donorAccount(),
+      donorDetail({
+        donations: {
+          items: [adminDonation({ receiptNumber: '2026-000002' })],
+          totalAmountMinor: 30000,
+          currency: 'CZK',
+          count: 1,
+        },
+      }),
+    );
+
+    const row = section('Bankovní účty').querySelector('tbody tr') as HTMLElement;
+    expect(buttonNames(row)).toEqual(['Vypnout párování']);
+    expect((row.textContent ?? '').replace(/\s+/g, ' ')).toContain(
+      'Nejde odebrat: k darům z účtu je vystavené potvrzení.',
+    );
+  });
+
+  it('when a donation was refunded, then the summary counts only the received ones and names the refunded', async () => {
+    await loaded(
+      donorAccount(),
+      donorDetail({
+        donations: {
+          items: [
+            adminDonation(),
+            adminDonation({ id: '0192f0f1-0000-7000-8000-000000000003', status: 'REFUNDED' }),
+          ],
+          totalAmountMinor: 30000,
+          currency: 'CZK',
+          count: 1,
+        },
+      }),
+    );
+
+    expect(sectionText('Dary')).toContain(
+      'Celkem 1 dar za 300 Kč. Vrácené dary (1) se nezapočítávají.',
+    );
+  });
+
+  it('when the donor is an administrator, then the role links to the administrators page', async () => {
+    await loaded(donorAccount({ administrator: true }));
+
+    const link = section('Účet dárce').querySelector('dl a') as HTMLAnchorElement;
+    expect(link.textContent?.trim()).toBe('správce');
+    expect(link.getAttribute('href')).toBe('/sprava/spravci');
+  });
+
+  it('when the account has confirmed older symbols, then the label and the symbols are separated by a space', async () => {
+    await loaded(
+      donorAccount(),
+      donorDetail({ bankAccounts: [adminBankAccount({ confirmedSymbols: ['6123456789'] })] }),
+    );
+
+    expect(sectionText('Bankovní účty')).toContain('Potvrzené starší symboly: 6123456789');
   });
 
   it('when the removal is refused because of a receipt, then the alert shows the backend title and detail and the account stays', async () => {
@@ -462,15 +569,17 @@ describe('Given an administrator on a donor card', () => {
       'Účet nejde odebrat.',
     );
     http.expectOne(LINK_URL).flush(refusal.body, refusal.options);
-    fixture.detectChanges();
+    await settle();
 
-    expect(text('.ui-notice--alert')).toBe(
-      'Na dary z tohoto účtu odkazuje vydané potvrzení. Účet nejde odebrat.',
+    expect(
+      (section('Bankovní účty').querySelector('.ui-notice--alert')?.textContent ?? '').trim(),
+    ).toBe(
+      'Na dary z tohoto účtu odkazuje vydané potvrzení. Účet nejde odebrat. Dary s potvrzením musí zůstat. Aby se dárci další platby z účtu nepřiřazovaly, vypněte u něj párování.',
     );
-    expect(button(section('Bankovní účty'), 'Odebrat účet')).toBeTruthy();
+    expect(document.activeElement).toBe(button(section('Bankovní účty'), 'Odebrat účet'));
   });
 
-  it('when the donor does not exist, then the account card says so and the donations card says the record is missing', async () => {
+  it('when the donor does not exist, then one card says so and leads back to the search', async () => {
     const missing = problem(404, 'donors/donor-not-found', 'Dárce nenalezen', 'Není.');
     http.expectOne(ACCOUNT_URL).flush(missing.body, missing.options);
     const noRecord = problem(404, 'donations/donor-not-found', 'Dárce nenalezen', 'Není.');
@@ -479,8 +588,11 @@ describe('Given an administrator on a donor card', () => {
 
     expect(text('h1')).toBe('Dárce');
     expect(sectionText('Účet dárce')).toContain('Takový dárce není.');
-    expect(sectionText('Bankovní účty')).toContain('Dárce nemá záznam v evidenci darů');
-    expect(fixture.nativeElement.querySelectorAll('section.ui-card')).toHaveLength(2);
+    expect(fixture.nativeElement.querySelectorAll('section.ui-card')).toHaveLength(1);
+    expect(texts('[role="alert"]:not(:empty)')).toHaveLength(1);
+    const back = section('Účet dárce').querySelector('a') as HTMLAnchorElement;
+    expect(back.textContent?.trim()).toBe('Zpět na hledání dárců');
+    expect(back.getAttribute('href')).toBe('/sprava/darci');
   });
 
   it('when a part cannot be loaded, then its card offers a retry that loads it again', async () => {
