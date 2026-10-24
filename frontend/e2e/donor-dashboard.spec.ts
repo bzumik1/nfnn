@@ -81,7 +81,7 @@ test.describe('Given a signed-in donor', () => {
       '500 Kč',
       'Obecný příspěvek',
       'Přijato',
-      'Stáhnout PDF',
+      'Stáhnout PDF, dar z 15. 03. 2026, 500 Kč',
     ]);
     await expect(page.locator('.payments-card tbody tr').last()).toContainText('Vráceno');
 
@@ -90,15 +90,15 @@ test.describe('Given a signed-in donor', () => {
     const cells = '.year, .year-count, .year-total, .year-action';
     await expect(page.locator('.year-row').first().locator(cells)).toHaveText([
       '2026',
-      '2 příspěvky',
+      '2 dary',
       '1 500 Kč',
-      'Ke stažení po skončení roku',
+      'Ke stažení od 1. ledna 2027',
     ]);
     await expect(page.locator('.year-row').last().locator(cells)).toHaveText([
       '2025',
-      '1 příspěvek',
+      '1 dar',
       '250 Kč',
-      '↓ PDF za rok 2025',
+      'Stáhnout potvrzení za rok 2025 (PDF)',
     ]);
   });
 
@@ -117,7 +117,7 @@ test.describe('Given a signed-in donor', () => {
     ]);
 
     expect(download.suggestedFilename()).toBe('potvrzeni-o-darech-2025.pdf');
-    await expect(page.locator('.yearly-pdf')).toHaveText('↓ PDF za rok 2025');
+    await expect(page.locator('.yearly-pdf')).toHaveText('Stáhnout potvrzení za rok 2025 (PDF)');
   });
 
   test('when they download the receipt of one payment, then the browser saves that PDF and a refunded payment offers none', async ({
@@ -155,6 +155,7 @@ test.describe('Given a signed-in donor', () => {
     await expect(rows.nth(1).getByRole('button', { name: 'Stáhnout PDF' })).toBeVisible();
     await expect(rows.nth(2)).toContainText('Přijato');
     await expect(rows.nth(2).getByRole('button', { name: 'Stáhnout PDF' })).toHaveCount(0);
+    await expect(rows.nth(2)).toContainText('Potvrzení vystavujeme od roku 2026');
     await expect(page.locator('.payments-card .receipts-from')).toHaveText(
       'Potvrzení o daru tu vystavujeme za dary přijaté od 1. ledna 2026, u starších darů proto tlačítko „Stáhnout PDF“ chybí.',
     );
@@ -170,16 +171,18 @@ test.describe('Given a signed-in donor', () => {
     );
   });
 
-  test('when no donation has arrived yet, then the sections show zeros and explains how a gift appears', async ({
+  test('when no donation has arrived yet, then the overview explains how to send the first gift and the sections stay empty', async ({
     page,
   }) => {
     await mockDonorApi(page, noDonations);
 
     await signIn(page);
 
-    await expect(page.locator('.stat-value')).toHaveText(['0 Kč', '0', '—']);
-    await expect(page.locator('.recent-empty')).toHaveText(
-      'Zatím tu nemáme žádný váš dar. Jakmile dorazí platba s vaším variabilním symbolem, objeví se tady. Posíláte trvalým příkazem?',
+    await expect(page.locator('.stat-value')).toHaveCount(0);
+    await expect(page.getByRole('heading', { name: 'Jak poslat první dar' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Zobrazit číslo účtu a QR kód' })).toHaveAttribute(
+      'href',
+      '/#prispet',
     );
     await expect(page.locator('.symbol-value')).toHaveText('1234567890');
 

@@ -22,6 +22,7 @@ export class DonationsTable {
 
   readonly items = input.required<readonly DonationItem[]>();
   readonly withReceipts = input(true);
+  readonly labelledBy = input<string | null>(null);
 
   protected crowns(amountMinor: number): string {
     return formatMinorUnits(amountMinor);
@@ -35,6 +36,19 @@ export class DonationsTable {
     const [number, bankCode] = senderAccount.split('/');
     const lastDigits = number.replace(/\D/g, '').slice(-SENDER_ACCOUNT_DIGITS_SHOWN);
     return bankCode === undefined ? `…${lastDigits}` : `…${lastDigits}/${bankCode}`;
+  }
+
+  protected missingReceipt(item: DonationItem): 'refunded' | 'before-first-year' | null {
+    if (item.receiptAvailable) {
+      return null;
+    }
+    if (item.status === 'REFUNDED') {
+      return 'refunded';
+    }
+    const firstYear = this.donations.receiptsFrom();
+    return firstYear !== null && Number(item.receivedAt.slice(0, 4)) < firstYear
+      ? 'before-first-year'
+      : null;
   }
 
   protected statusLabel(status: DonationStatus): string {

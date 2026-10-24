@@ -1,8 +1,109 @@
 <app-page-title i18n="@@donor.overview.heading">Můj přehled</app-page-title>
 
-<app-symbol-card [variableSymbol]="donor()?.variableSymbol ?? null" />
+@for (account of accountsWithQuestion(); track account.id) {
+  <p class="ui-callout ui-callout--warning overview-question">
+    <span i18n="@@donor.overview.question"
+      >Máme na vás otázku k platbám z účtu {{ account.accountNumber }}.</span
+    >&ngsp;<a routerLink="/darce/ucty" i18n="@@donor.overview.question.answer">Odpovědět</a>
+  </p>
+}
 
 @if (donations.state() === 'ready') {
+  @if (receiptYear(); as year) {
+    <section class="ui-card ui-card--padded receipt-ready" aria-labelledby="receipt-ready-title">
+      <h2 id="receipt-ready-title" class="ui-card__title" i18n="@@donor.overview.receipt.title">
+        Potvrzení o darech za rok {{ year }} je připravené
+      </h2>
+      <button
+        type="button"
+        class="ui-button ui-button--primary receipt-ready-pdf"
+        [disabled]="donations.yearlyDownloading(year)"
+        [attr.aria-busy]="donations.yearlyDownloading(year)"
+        (click)="donations.downloadYearlyReceipt(year)"
+      >
+        @if (donations.yearlyDownloading(year)) {
+          <span i18n="@@donor.dashboard.receipt.preparing">Připravujeme PDF…</span>
+        } @else {
+          <span i18n="@@donor.overview.receipt.download"
+            >Stáhnout potvrzení za rok {{ year }} (PDF)</span
+          >
+        }
+      </button>
+      @if (donations.receiptError(); as error) {
+        @if (error.scope === 'yearly') {
+          <p class="ui-callout ui-callout--danger receipt-error" role="alert">
+            {{ error.message }}
+          </p>
+        }
+      }
+    </section>
+  }
+}
+
+<app-symbol-card
+  [variableSymbol]="donor()?.variableSymbol ?? null"
+  [hasDonated]="donations.items().length > 0"
+/>
+
+<ng-template #bankStatus>
+  <p class="recent-bank" role="status">
+    @if (donations.checkingBank()) {
+      <span i18n="@@donor.dashboard.bank.checking">Kontrolujeme nové platby v bance…</span>
+    } @else if (donations.bankDataAsOf(); as asOf) {
+      <span
+        ><span i18n="@@donor.dashboard.bank.asOf">Údaje z banky k</span>
+        {{ formatBankTime(asOf) }}</span
+      >
+    }
+  </p>
+  <p class="recent-hint" i18n="@@donor.dashboard.bank.hint">
+    Nové platby hledáme v bance každou hodinu a také když otevřete tento přehled. Okamžitá platba se
+    tu obvykle objeví do minuty, běžný převod z jiné banky do dalšího pracovního dne.
+  </p>
+</ng-template>
+
+@if (donations.state() === 'ready' && donations.items().length === 0) {
+  <section class="ui-card ui-card--padded first-gift" aria-labelledby="first-gift-title">
+    <h2
+      id="first-gift-title"
+      class="ui-card__title ui-card__title--large"
+      i18n="@@donor.overview.firstGift.title"
+    >
+      Jak poslat první dar
+    </h2>
+    <ol class="first-gift-steps">
+      <li i18n="@@donor.overview.firstGift.account">
+        Pošlete dar na účet nadačního fondu. Číslo účtu a QR kód najdete na hlavní stránce v části
+        Přispět.
+      </li>
+      @if (donor()?.variableSymbol; as symbol) {
+        <li i18n="@@donor.overview.firstGift.symbol">
+          Do platby uveďte svůj variabilní symbol <strong>{{ symbol }}</strong
+          >. QR kód na hlavní stránce ho už obsahuje.
+        </li>
+      }
+      <li i18n="@@donor.overview.firstGift.appears">
+        Jakmile platba dorazí, dar se tu objeví sám.
+      </li>
+    </ol>
+    <div class="first-gift-actions">
+      <a
+        class="ui-button ui-button--primary"
+        routerLink="/"
+        fragment="prispet"
+        i18n="@@donor.overview.firstGift.show"
+        >Zobrazit číslo účtu a QR kód</a
+      >
+      <a
+        class="first-gift-standing"
+        routerLink="/darce/ucty"
+        i18n="@@donor.dashboard.yearly.emptyStandingOrder"
+        >Posíláte trvalým příkazem?</a
+      >
+    </div>
+    <ng-container [ngTemplateOutlet]="bankStatus" />
+  </section>
+} @else if (donations.state() === 'ready') {
   <div class="stats-grid">
     <div class="stat-card stat-card--accent">
       <div class="stat-bar"></div>
@@ -47,7 +148,7 @@
         </svg>
       </div>
       <div class="stat-value">{{ donations.summary()?.count ?? 0 }}</div>
-      <div class="stat-label" i18n="@@donor.dashboard.stat.count">Počet příspěvků</div>
+      <div class="stat-label" i18n="@@donor.dashboard.stat.count">Počet darů</div>
     </div>
 
     <div class="stat-card stat-card--sky">
@@ -76,7 +177,7 @@
           —
         }
       </div>
-      <div class="stat-label" i18n="@@donor.dashboard.stat.last">Poslední příspěvek</div>
+      <div class="stat-label" i18n="@@donor.dashboard.stat.last">Poslední dar</div>
     </div>
   </div>
 
@@ -89,27 +190,17 @@
       >
         Poslední dary
       </h2>
-      @if (donations.items().length > 0) {
-        <a
-          class="ui-button ui-button--small recent-all"
-          routerLink="/darce/dary"
-          i18n="@@donor.overview.recent.all"
-          >Všechny dary</a
-        >
-      }
+      <a
+        class="ui-button ui-button--small recent-all"
+        routerLink="/darce/dary"
+        i18n="@@donor.overview.recent.all"
+        >Všechny dary</a
+      >
     </div>
-    @if (donations.items().length > 0) {
-      <app-donations-table [items]="recent()" [withReceipts]="false" />
-    } @else {
-      <p class="recent-empty">
-        <span i18n="@@donor.dashboard.yearly.empty"
-          >Zatím tu nemáme žádný váš dar. Jakmile dorazí platba s vaším variabilním symbolem, objeví
-          se tady.</span
-        >&ngsp;<a routerLink="/darce/ucty" i18n="@@donor.dashboard.yearly.emptyStandingOrder"
-          >Posíláte trvalým příkazem?</a
-        >
-      </p>
-    }
+    <div class="recent-status">
+      <ng-container [ngTemplateOutlet]="bankStatus" />
+    </div>
+    <app-donations-table [items]="recent()" [withReceipts]="false" labelledBy="recent-title" />
   </section>
 } @else {
   <app-donations-pending />
