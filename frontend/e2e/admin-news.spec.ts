@@ -138,7 +138,7 @@ test.describe('Given an administrator managing the news', () => {
     await expect(
       page.getByText('Aktualita bude na nfnn.cz/aktuality/beneficni-koncert.'),
     ).toBeVisible();
-    await page.getByLabel('Perex').fill('Zveme vás na koncert.');
+    await page.getByLabel('Krátký souhrn').fill('Zveme vás na koncert.');
     const body = page.getByLabel('Text', { exact: true });
     await body.fill('Text o koncertu.');
     await body.evaluate((area: HTMLTextAreaElement) => area.setSelectionRange(0, 4));
@@ -151,7 +151,7 @@ test.describe('Given an administrator managing the news', () => {
     await expect(page.getByRole('region', { name: 'Náhled textu' }).locator('strong')).toHaveText(
       'Text',
     );
-    await page.getByLabel('Fotka').setInputFiles({
+    await page.getByLabel('Nahrát fotku').setInputFiles({
       name: 'koncert.png',
       mimeType: 'image/png',
       buffer: TINY_PNG,
@@ -162,7 +162,7 @@ test.describe('Given an administrator managing the news', () => {
 
     await page.getByRole('button', { name: 'Uložit koncept' }).click();
 
-    await expect(page.locator('.ui-notice--status')).toHaveText(
+    await expect(page.locator('.ui-form-status')).toHaveText(
       'Aktualitu jsme uložili jako koncept. Na web ji dostanete tlačítkem Zveřejnit.',
     );
     await expect(page).toHaveURL(`/sprava/aktuality/${DRAFT_ID}`);
@@ -181,7 +181,7 @@ test.describe('Given an administrator managing the news', () => {
     await page.getByLabel('Datum zveřejnění').fill('2026-10-23');
     await page.getByRole('button', { name: 'Zveřejnit' }).click();
 
-    await expect(page.locator('.ui-notice--status')).toHaveText(
+    await expect(page.locator('.publish-card .ui-notice--status')).toHaveText(
       'Aktualita je na webu s datem 23. 10. 2026.',
     );
     await expect(page.getByRole('button', { name: 'Stáhnout z webu' })).toBeVisible();
@@ -201,7 +201,7 @@ test.describe('Given an administrator managing the news', () => {
     );
 
     await page.goto('/sprava/aktuality/nova');
-    await page.getByLabel('Perex').fill('Perex.');
+    await page.getByLabel('Krátký souhrn').fill('Perex.');
     await page.getByLabel('Text', { exact: true }).fill('Text.');
     await page.getByRole('button', { name: 'Uložit koncept' }).click();
 
@@ -211,7 +211,9 @@ test.describe('Given an administrator managing the news', () => {
     expect(sent).toBe(0);
   });
 
-  test('when the address is taken, then the form carries the backend words', async ({ page }) => {
+  test('when the address is taken, then the address field says so and takes the focus', async ({
+    page,
+  }) => {
     await page.route(
       (url) => url.pathname === NEWS,
       (route) =>
@@ -227,13 +229,16 @@ test.describe('Given an administrator managing the news', () => {
 
     await page.goto('/sprava/aktuality/nova');
     await page.getByLabel('Titulek').fill('Zahrada pro děti');
-    await page.getByLabel('Perex').fill('Perex.');
+    await page.getByLabel('Krátký souhrn').fill('Perex.');
     await page.getByLabel('Text', { exact: true }).fill('Text.');
     await page.getByRole('button', { name: 'Uložit koncept' }).click();
 
-    await expect(page.getByRole('alert').filter({ hasText: /\S/ })).toHaveText(
-      'Adresa je obsazená. Jinou aktualitu už najdete na této adrese. Zvolte jinou.',
-    );
+    const address = page.getByLabel('Adresa na webu');
+    await expect(address).toBeFocused();
+    await expect(address).toHaveAttribute('aria-invalid', 'true');
+    await expect(
+      page.getByText('Tuto adresu už má jiná aktualita nebo projekt. Zvolte prosím jinou.'),
+    ).toBeVisible();
   });
 
   test('when they take a published article off the site and then delete it, then the page confirms each step and returns to the list', async ({
@@ -266,7 +271,7 @@ test.describe('Given an administrator managing the news', () => {
     await page.goto(`/sprava/aktuality/${ARTICLE_ID}`);
     await page.getByRole('button', { name: 'Stáhnout z webu' }).click();
 
-    await expect(page.locator('.ui-notice--status')).toHaveText(
+    await expect(page.locator('.publish-card .ui-notice--status')).toHaveText(
       'Aktualitu jsme z webu stáhli. Zůstává tu jako koncept.',
     );
     await expect(page.getByRole('button', { name: 'Zveřejnit' })).toBeVisible();
@@ -274,12 +279,45 @@ test.describe('Given an administrator managing the news', () => {
     await page.getByRole('button', { name: 'Smazat aktualitu' }).click();
     const question = page.getByRole('group', { name: 'Smazat aktualitu?' });
     await expect(question).toContainText('Opravdu smazat aktualitu „Zahrada pro děti“?');
-    await question.getByRole('button', { name: 'Ano, smazat' }).click();
+    await question.getByRole('button', { name: 'Smazat natrvalo' }).click();
 
     await expect(page).toHaveURL('/sprava/aktuality');
     await expect(
       page.getByText('Zatím tu žádná aktualita není. Napište první tlačítkem Nová aktualita.'),
     ).toBeVisible();
+    await expect(page.getByRole('status').filter({ hasText: /\S/ })).toHaveText(
+      'Aktualitu „Zahrada pro děti“ jsme smazali.',
+    );
     expect(deleted).toBe(1);
+  });
+
+  test('when they leave an edited article by the side menu, then the page asks first and leaves only on request', async ({
+    page,
+  }) => {
+    await page.route(
+      (url) => url.pathname === `${NEWS}/${ARTICLE_ID}`,
+      (route) => route.fulfill({ json: article() }),
+    );
+    await page.route(
+      (url) => url.pathname === NEWS,
+      (route) => route.fulfill({ json: { items: [article()] } }),
+    );
+
+    await page.goto(`/sprava/aktuality/${ARTICLE_ID}`);
+    await page.getByLabel('Titulek').fill('Zahrada pro děti a rodiče');
+    await page.getByRole('link', { name: '← Aktuality' }).click();
+
+    const question = page.getByRole('dialog', { name: 'Máte neuložené změny' });
+    await expect(question).toBeVisible();
+    await expect(question.getByRole('button', { name: 'Zůstat a uložit' })).toBeFocused();
+    await page.keyboard.press('Escape');
+    await expect(question).toBeHidden();
+    await expect(page).toHaveURL(`/sprava/aktuality/${ARTICLE_ID}`);
+    await expect(page.getByLabel('Titulek')).toHaveValue('Zahrada pro děti a rodiče');
+
+    await page.getByRole('link', { name: '← Aktuality' }).click();
+    await page.getByRole('button', { name: 'Odejít bez uložení' }).click();
+
+    await expect(page).toHaveURL('/sprava/aktuality');
   });
 });

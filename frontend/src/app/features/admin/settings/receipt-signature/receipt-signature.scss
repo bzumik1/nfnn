@@ -2,17 +2,8 @@
   display: block;
 }
 
-.signature {
-  border-top: 1px solid var(--color-border-soft);
-  margin-top: var(--space-2);
-  padding-top: var(--space-4);
-}
-
-.signature-title {
-  font-size: var(--text-lg);
-  font-weight: var(--weight-bold);
-  color: var(--color-text);
-  margin-bottom: var(--space-1);
+.ui-card__intro {
+  margin-bottom: var(--space-2);
 }
 
 .signature-hint {
@@ -50,20 +41,6 @@
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2) var(--space-4);
-}
-
-.signature-file-label {
-  flex-basis: 100%;
-  font-size: var(--text-md);
-  font-weight: var(--weight-semibold);
-  color: var(--color-text);
-}
-
-.signature-input {
-  font-family: var(--font-sans);
-  font-size: var(--text-md);
-  color: var(--color-text-secondary);
-  max-width: 100%;
 }
 
 .signature-confirm {

@@ -1,7 +1,7 @@
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideRouter, Router } from '@angular/router';
+import { Navigation, provideRouter, Router } from '@angular/router';
 import { authInterceptor } from '../../../core/auth/auth-interceptor';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
@@ -102,7 +102,9 @@ describe('Given an administrator on the news list', () => {
     http.expectOne(LIST_URL).flush(null, { status: 500, statusText: 'Error' });
     await settle();
 
-    expect(texts('[role="alert"]')).toEqual(['Aktuality se nepodařilo načíst. Zkusit znovu']);
+    expect(texts('[role="alert"]:not(:empty)')).toEqual([
+      'Aktuality se nepodařilo načíst. Zkusit znovu',
+    ]);
     (
       fixture.nativeElement.querySelector('.ui-load-state--error button') as HTMLButtonElement
     ).click();
@@ -138,5 +140,35 @@ describe('Given an administrator on the news list', () => {
 
     expect(navigated).toHaveBeenCalledWith('/');
     expect(opened).toHaveBeenCalled();
+  });
+});
+
+describe('Given an administrator who has just deleted an article', () => {
+  it('when the list opens, then it says which article was deleted', async () => {
+    localStorage.clear();
+    await TestBed.configureTestingModule({
+      imports: [AdminNews],
+      providers: [
+        provideHttpClient(withInterceptors([authInterceptor])),
+        provideHttpClientTesting(),
+        provideRouter([]),
+      ],
+    }).compileComponents();
+    const http = TestBed.inject(HttpTestingController);
+    vi.spyOn(TestBed.inject(Router), 'currentNavigation').mockReturnValue({
+      extras: { state: { deleted: 'Zahrada pro děti' } },
+    } as unknown as Navigation);
+    const fixture = TestBed.createComponent(AdminNews);
+    fixture.detectChanges();
+    http.expectOne(LIST_URL).flush({ items: [] });
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(
+      (
+        fixture.nativeElement.querySelector('[role="status"]:not(:empty)')?.textContent ?? ''
+      ).trim(),
+    ).toBe('Aktualitu „Zahrada pro děti“ jsme smazali.');
+    http.verify();
   });
 });

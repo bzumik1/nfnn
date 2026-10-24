@@ -33,6 +33,7 @@ import {
   LogWindowResponse,
 } from '../admin-api';
 import { formatSize } from '../backups/backup-format';
+import { CopyButton } from '../../../shared/ui/copy-button/copy-button';
 import { LiveNotice, Notice } from '../../../shared/ui/live-notice/live-notice';
 
 type LoadState = 'loading' | 'ready' | 'error';
@@ -49,7 +50,14 @@ const LOGGER_NAME = /^(ROOT|[A-Za-z0-9_$][A-Za-z0-9_$.]*)$/;
 
 @Component({
   selector: 'app-admin-logs',
-  imports: [LiveNotice, FormsModule, FormField, FormControlDirective, FocusFirstInvalid],
+  imports: [
+    LiveNotice,
+    FormsModule,
+    FormField,
+    FormControlDirective,
+    FocusFirstInvalid,
+    CopyButton,
+  ],
   templateUrl: './admin-logs.html',
   styleUrl: './admin-logs.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -116,7 +124,16 @@ export class AdminLogs {
     if (window === null) {
       return '';
     }
-    return $localize`:@@admin.logs.window.range:Bajty ${window.from}:from:–${window.to}:to: z ${window.sizeBytes}:size:`;
+    if (!window.hasOlder && !window.hasNewer) {
+      return $localize`:@@admin.logs.window.whole:Celý log`;
+    }
+    if (!window.hasNewer) {
+      return $localize`:@@admin.logs.window.end.label:Konec logu`;
+    }
+    if (!window.hasOlder) {
+      return $localize`:@@admin.logs.window.start:Začátek logu`;
+    }
+    return $localize`:@@admin.logs.window.middle:Starší část logu`;
   });
   protected readonly matches = computed(() => this.search()?.matches ?? []);
   protected readonly jvmRows = computed(() => {

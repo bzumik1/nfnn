@@ -17,16 +17,20 @@ test.describe('Given an administrator on the logs page', () => {
     await expect(page).toHaveTitle('Logy a diagnostika | Správa | Nová naděje – nadační fond');
     await expect(page.getByRole('heading', { level: 1, name: 'Logy a diagnostika' })).toBeFocused();
     await expect(page.locator('.log-text').first()).toContainText('INFO line 39');
-    await expect(page.locator('.range')).toHaveText('Bajty 32000–52000 z 52000');
+    await expect(page.locator('.range')).toHaveText('Konec logu');
 
     await page.getByRole('button', { name: '← Starší' }).click();
-    await expect(page.locator('.range')).toHaveText('Bajty 12000–32000 z 52000');
+    await expect(page.locator('.range')).toHaveText('Starší část logu');
 
     await page.getByLabel('Hledat', { exact: true }).fill('fio');
     await page.getByRole('button', { name: 'Hledat', exact: true }).click();
     await expect(page.locator('.match')).toHaveCount(2);
+    const opened = page.waitForRequest(
+      (request) => new URL(request.url()).searchParams.get('from') === '51000',
+    );
     await page.locator('.match').first().click();
-    await expect(page.locator('.range')).toHaveText('Bajty 51000–71000 z 52000');
+    await opened;
+    await expect(page.locator('.range')).toHaveText('Starší část logu');
   });
 
   test('when they raise a logger for half an hour, then the level is put and the list shows it until it is reset', async ({

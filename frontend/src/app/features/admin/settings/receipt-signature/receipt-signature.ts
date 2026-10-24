@@ -1,11 +1,22 @@
 /// <reference types="@angular/localize" />
 
-import { ChangeDetectionStrategy, Component, DestroyRef, inject, signal } from '@angular/core';
+import {
+  afterNextRender,
+  ChangeDetectionStrategy,
+  Component,
+  DestroyRef,
+  ElementRef,
+  inject,
+  Injector,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { describeProblem } from '../../../../core/auth/api-problem';
 import { formatBankTime } from '../../../donations/donation-date';
 import { AdminApi, ReceiptSignatureResponse } from '../../admin-api';
 import { Notice } from '../../../../shared/ui/live-notice/live-notice';
+import { FileButton } from '../../../../shared/ui/file-button/file-button';
 
 type LoadState = 'loading' | 'ready' | 'error';
 
@@ -15,6 +26,7 @@ const PIXELS = new Intl.NumberFormat('cs-CZ');
 
 @Component({
   selector: 'app-receipt-signature',
+  imports: [FileButton],
   templateUrl: './receipt-signature.html',
   styleUrl: './receipt-signature.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -22,6 +34,10 @@ const PIXELS = new Intl.NumberFormat('cs-CZ');
 export class ReceiptSignature {
   private readonly api = inject(AdminApi);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly injector = inject(Injector);
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+  private readonly removeButton = viewChild<ElementRef<HTMLButtonElement>>('removeButton');
+  private readonly removeCancel = viewChild<ElementRef<HTMLButtonElement>>('removeCancel');
 
   protected readonly state = signal<LoadState>('loading');
   protected readonly signature = signal<ReceiptSignatureResponse | null>(null);
@@ -55,11 +71,8 @@ export class ReceiptSignature {
     return $localize`:@@admin.signature.uploaded:Nahráno ${uploadedAt}:time:, ${width}:width: × ${height}:height: px.`;
   }
 
-  protected upload(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    const file = input.files?.[0];
-    input.value = '';
-    if (!file || this.uploading()) {
+  protected upload(file: File): void {
+    if (this.uploading()) {
       return;
     }
     this.notice.set(null);
@@ -107,10 +120,12 @@ export class ReceiptSignature {
   protected askRemoval(): void {
     this.notice.set(null);
     this.confirmingRemoval.set(true);
+    afterNextRender(() => this.removeCancel()?.nativeElement.focus(), { injector: this.injector });
   }
 
   protected cancelRemoval(): void {
     this.confirmingRemoval.set(false);
+    this.focusRemoveButton();
   }
 
   protected remove(): void {
@@ -136,6 +151,13 @@ export class ReceiptSignature {
             kind: 'status',
             text: $localize`:@@admin.signature.removed:Podpis je odebraný. Potvrzení vystavená od teď ho nebudou mít.`,
           });
+          afterNextRender(
+            () =>
+              this.host.nativeElement
+                .querySelector<HTMLInputElement>('#receipt-signature-file')
+                ?.focus(),
+            { injector: this.injector },
+          );
         },
         error: (failure: unknown) => {
           this.removing.set(false);
@@ -147,7 +169,12 @@ export class ReceiptSignature {
               $localize`:@@admin.signature.removeFailed:Podpis se nepodařilo odebrat. Zkuste to prosím znovu.`,
             ),
           });
+          this.focusRemoveButton();
         },
       });
+  }
+
+  private focusRemoveButton(): void {
+    afterNextRender(() => this.removeButton()?.nativeElement.focus(), { injector: this.injector });
   }
 }

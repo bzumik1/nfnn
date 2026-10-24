@@ -1,6 +1,7 @@
 /// <reference types="@angular/localize" />
 
 import { Routes } from '@angular/router';
+import { unsavedChangesGuard } from './unsaved-changes/unsaved-changes-guard';
 
 export const adminRoutes: Routes = [
   {
@@ -54,11 +55,13 @@ export const adminRoutes: Routes = [
         path: 'aktuality/nova',
         title: $localize`:@@admin.newsEditor.pageTitle.new:Nová aktualita | Správa | Nová naděje – nadační fond`,
         loadComponent: () => import('./news/admin-news-editor').then((m) => m.AdminNewsEditor),
+        canDeactivate: [unsavedChangesGuard],
       },
       {
         path: 'aktuality/:id',
         title: $localize`:@@admin.newsEditor.pageTitle.edit:Úprava aktuality | Správa | Nová naděje – nadační fond`,
         loadComponent: () => import('./news/admin-news-editor').then((m) => m.AdminNewsEditor),
+        canDeactivate: [unsavedChangesGuard],
       },
       {
         path: 'projekty',
@@ -70,12 +73,14 @@ export const adminRoutes: Routes = [
         title: $localize`:@@admin.projectEditor.pageTitle.new:Nový projekt | Správa | Nová naděje – nadační fond`,
         loadComponent: () =>
           import('./projects/admin-project-editor').then((m) => m.AdminProjectEditor),
+        canDeactivate: [unsavedChangesGuard],
       },
       {
         path: 'projekty/:id',
         title: $localize`:@@admin.projectEditor.pageTitle.edit:Úprava projektu | Správa | Nová naděje – nadační fond`,
         loadComponent: () =>
           import('./projects/admin-project-editor').then((m) => m.AdminProjectEditor),
+        canDeactivate: [unsavedChangesGuard],
       },
       {
         path: 'zalohy',

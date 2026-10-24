@@ -83,6 +83,8 @@ describe('Given the signature section of the receipt settings', () => {
       'Podpis není nahraný. Potvrzení mají místo něj jen čáru se jménem.',
     );
     expect(fixture.nativeElement.textContent).not.toContain('Odebrat podpis');
+    expect(text('h2')).toBe('Podpis na potvrzeních');
+    expect(text('label[for="receipt-signature-file"]')).toBe('Nahrát sken');
   });
 
   it('when a signature is uploaded, then it shows the scan with its size and upload time', async () => {
@@ -91,6 +93,7 @@ describe('Given the signature section of the receipt settings', () => {
     expect(preview()?.getAttribute('src')).toBe(SIGNATURE_IMAGE);
     expect(preview()?.getAttribute('alt')).toBe('Nahraný podpis');
     expect(text('.signature-state')).toBe('Nahráno 23. 10. 2026 21:30, 1 200 × 400 px.');
+    expect(text('label[for="receipt-signature-file"]')).toBe('Nahrát jiný sken');
   });
 
   it('when the signature cannot be loaded, then it says so and loads again on request', async () => {
@@ -164,20 +167,40 @@ describe('Given the signature section of the receipt settings', () => {
       await settle();
     });
 
-    it('then it asks first and removing nothing happens on no', async () => {
+    it('then it asks first with the focus on calling it off, and nothing happens on cancel', async () => {
       expect(text('.signature-confirm')).toContain(
         'Potvrzení vystavená potom budou bez podpisu. Odebrat?',
       );
+      expect(document.activeElement).toBe(button('Zrušit'));
 
-      button('Ne').click();
+      button('Zrušit').click();
       await settle();
 
       expect(fixture.nativeElement.querySelector('.signature-confirm')).toBeNull();
       expect(preview()).not.toBeNull();
+      expect(document.activeElement).toBe(button('Odebrat podpis'));
     });
 
-    it('then on yes it removes the signature and says so', async () => {
-      button('Ano, odebrat').click();
+    it('then a failed removal says so and gives the focus back to the remove button', async () => {
+      (
+        fixture.nativeElement.querySelector('.signature-confirm .ui-button--danger') as HTMLElement
+      ).click();
+      await settle();
+      http
+        .expectOne({ method: 'DELETE', url: SIGNATURE_URL })
+        .flush(null, { status: 500, statusText: 'Server Error' });
+      await settle();
+
+      expect(text('[role="alert"]:not(:empty)')).toBe(
+        'Podpis se nepodařilo odebrat. Zkuste to prosím znovu.',
+      );
+      expect(document.activeElement).toBe(button('Odebrat podpis'));
+    });
+
+    it('then on confirming it removes the signature and says so', async () => {
+      (
+        fixture.nativeElement.querySelector('.signature-confirm .ui-button--danger') as HTMLElement
+      ).click();
       await settle();
 
       http.expectOne({ method: 'DELETE', url: SIGNATURE_URL }).flush(null);
@@ -188,6 +211,9 @@ describe('Given the signature section of the receipt settings', () => {
         'Podpis je odebraný. Potvrzení vystavená od teď ho nebudou mít.',
       );
       expect(text('.signature-state')).toContain('Podpis není nahraný.');
+      expect(document.activeElement).toBe(
+        fixture.nativeElement.querySelector('#receipt-signature-file'),
+      );
     });
   });
 });

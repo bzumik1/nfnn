@@ -276,3 +276,9 @@ tr.overridden td:first-child {
     margin-top: 0;
   }
 }
+
+.window-copy {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: var(--space-2);
+}

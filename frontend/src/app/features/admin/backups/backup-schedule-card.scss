@@ -26,3 +26,17 @@
 .restore-day {
   grid-column: 1;
 }
+
+.tech-details {
+  margin-top: var(--space-2);
+  font-size: var(--text-sm);
+
+  summary {
+    cursor: pointer;
+    font-weight: var(--weight-semibold);
+  }
+
+  p {
+    margin-top: var(--space-1-5);
+  }
+}

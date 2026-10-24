@@ -1,0 +1,27 @@
+<app-dialog labelledBy="unsaved-changes-title" (dismissed)="stayed.emit()">
+  <h2 id="unsaved-changes-title" class="unsaved-title" i18n="@@admin.unsavedChanges.title">
+    Máte neuložené změny
+  </h2>
+  <p class="unsaved-lead" i18n="@@admin.unsavedChanges.lead">
+    Když stránku teď opustíte, rozepsané změny i nově nahraná fotka se ztratí.
+  </p>
+  <div class="unsaved-actions">
+    <button
+      type="button"
+      class="ui-button ui-button--primary unsaved-stay"
+      autofocus
+      (click)="saveChosen.emit()"
+      i18n="@@admin.unsavedChanges.stay"
+    >
+      Zůstat a uložit
+    </button>
+    <button
+      type="button"
+      class="ui-button ui-button--large ui-button--danger-outline unsaved-leave"
+      (click)="leaveChosen.emit()"
+      i18n="@@admin.unsavedChanges.leave"
+    >
+      Odejít bez uložení
+    </button>
+  </div>
+</app-dialog>

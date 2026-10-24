@@ -42,14 +42,21 @@ export class BackupScheduleCard {
   protected readonly testRestoreTime = linkedSignal(() => this.schedule().testRestoreTime);
   protected readonly saving = signal(false);
   protected readonly error = signal<string | null>(null);
+  protected readonly status = signal<string | null>(null);
 
   protected readonly applied = computed(() => {
     const schedule = this.schedule();
     if (schedule.applied === null) {
-      return $localize`:@@admin.backups.schedule.applied.unknown:Kontejner záloh zatím nepotvrdil, že plán převzal; obvykle to trvá do minuty. Když hláška po obnovení stránky nezmizí, běží starší verze kontejneru: aktualizujte aplikaci v ZimaOS (Uložit v jejím nastavení).`;
+      return {
+        text: $localize`:@@admin.backups.schedule.applied.unknownText:Plán se na serveru zatím neprojevil; obvykle to trvá do minuty. Když tato zpráva po obnovení stránky nezmizí, pošlete ji správci serveru.`,
+        tech: $localize`:@@admin.backups.schedule.applied.unknown:Kontejner záloh zatím nepotvrdil, že plán převzal; obvykle to trvá do minuty. Když hláška po obnovení stránky nezmizí, běží starší verze kontejneru: aktualizujte aplikaci v ZimaOS (Uložit v jejím nastavení).`,
+      };
     }
     if (!samePlan(schedule, schedule.applied)) {
-      return $localize`:@@admin.backups.schedule.applied.old:Kontejner záloh zatím jede podle plánu „${describePlan(schedule.applied)}:plan:“; nový převezme do minuty.`;
+      return {
+        text: $localize`:@@admin.backups.schedule.applied.old:Zálohy zatím běží podle plánu „${describePlan(schedule.applied)}:plan:“; nový převezme do minuty.`,
+        tech: null,
+      };
     }
     return null;
   });
@@ -59,6 +66,7 @@ export class BackupScheduleCard {
       return;
     }
     this.error.set(null);
+    this.status.set(null);
     if (form.invalid) {
       return;
     }
@@ -73,6 +81,9 @@ export class BackupScheduleCard {
       .subscribe({
         next: (schedule) => {
           this.saving.set(false);
+          this.status.set(
+            $localize`:@@admin.backups.schedule.saved:Plán záloh jsme uložili: ${describePlan(schedule)}:plan:.`,
+          );
           this.saved.emit(schedule);
         },
         error: (failure: unknown) => {

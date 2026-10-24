@@ -47,6 +47,7 @@
   padding: var(--space-1-5) 0;
 
   input {
+    flex-shrink: 0;
     width: 18px;
     height: 18px;
     accent-color: var(--color-accent);
@@ -84,4 +85,18 @@
 .admin-name {
   color: var(--color-text);
   font-weight: var(--weight-semibold);
+}
+
+.send-notice {
+  margin-top: var(--space-4);
+}
+
+.mail-settings {
+  font-size: var(--text-md);
+  margin: 0;
+
+  a {
+    color: var(--color-accent);
+    font-weight: var(--weight-semibold);
+  }
 }

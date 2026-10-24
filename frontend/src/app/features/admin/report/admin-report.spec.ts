@@ -135,10 +135,8 @@ describe('Given an administrator on the monthly report page', () => {
     expect(element<HTMLSelectElement>('#report-send-hour').selectedOptions[0]?.textContent).toBe(
       '7:00',
     );
-    expect(text('.next-report')).toContain(
-      'Příští přehled za září 2026 odejde 01. 10. 2026 v 7:00.',
-    );
-    expect(text('.changed-at')).toBe('Zatím platí výchozí nastavení ze serveru.');
+    expect(text('.next-report')).toBe('Příští přehled za září 2026 odejde 01. 10. 2026 v 7:00.');
+    expect(text('.changed-at')).toBe('Nastavení jste zatím neměnili.');
     expect(text('[aria-labelledby="report-sent-title"]')).toContain(
       'Zatím žádný přehled neodešel.',
     );
@@ -222,7 +220,7 @@ describe('Given an administrator on the monthly report page', () => {
     });
     await settle();
 
-    expect(text('.ui-notice--status')).toBe(
+    expect(text('form.settings-form button[type="submit"] + .ui-form-status')).toBe(
       'Nastavení jsme uložili. Příští přehled odejde podle něj.',
     );
     await respond(
@@ -242,14 +240,14 @@ describe('Given an administrator on the monthly report page', () => {
   it('when an address is not an e-mail, then the field says so and nothing is sent', async () => {
     await respond(reportView());
 
-    await type('#report-recipients', 'pavel');
+    await type('#report-recipients', 'info@nfnn.cz\npavel');
     await submit();
 
     expect(element<HTMLTextAreaElement>('#report-recipients').getAttribute('aria-invalid')).toBe(
       'true',
     );
     expect(text('.field-error')).toBe(
-      'Některá z adres není platná e-mailová adresa. Pište každou na vlastní řádek.',
+      'Adresa „pavel“ není platná e-mailová adresa. Pište každou adresu na vlastní řádek.',
     );
     http.expectNone(SETTINGS_URL);
   });
@@ -259,7 +257,7 @@ describe('Given an administrator on the monthly report page', () => {
 
     await type('#report-recipients', 'pavel@example.cz\nPavel@example.cz');
     await submit();
-    expect(text('.field-error')).toBe('Některá adresa je v seznamu dvakrát.');
+    expect(text('.field-error')).toBe('Adresa „Pavel@example.cz“ je v seznamu dvakrát.');
 
     await type(
       '#report-recipients',
@@ -305,16 +303,17 @@ describe('Given an administrator on the monthly report page', () => {
     );
 
     await type('#report-month', '2026-08');
-    button('Poslat').click();
+    button('Poslat přehled').click();
     await settle();
 
-    expect(text('[role="group"][aria-label="Poslat přehled znovu?"]')).toContain(
+    expect(text('[role="group"][aria-label="Poslat přehled?"]')).toContain(
       'Poslat přehled za srpen 2026 na info@nfnn.cz?',
     );
     expect(element<HTMLSelectElement>('#report-month').disabled).toBe(true);
+    expect(document.activeElement).toBe(button('Zrušit'));
     http.expectNone(SEND_URL);
 
-    button('Ano, poslat').click();
+    button('Poslat přehled').click();
     await settle();
 
     const request = http.expectOne(SEND_URL);
@@ -327,7 +326,10 @@ describe('Given an administrator on the monthly report page', () => {
     });
     await settle();
 
-    expect(text('.ui-notice--status')).toBe('Přehled za srpen 2026 jsme poslali na info@nfnn.cz.');
+    expect(text('.send-card [role="status"]:not(:empty)')).toBe(
+      'Přehled za srpen 2026 jsme poslali na info@nfnn.cz.',
+    );
+    expect(document.activeElement).toBe(button('Poslat přehled'));
     await respond(
       reportView({
         sentReports: [
@@ -343,22 +345,23 @@ describe('Given an administrator on the monthly report page', () => {
   it('when the sending is called off, then nothing is sent and the month can be changed again', async () => {
     await respond(reportView());
 
-    button('Poslat').click();
+    button('Poslat přehled').click();
     await settle();
-    button('Ne').click();
+    button('Zrušit').click();
     await settle();
 
     expect(fixture.nativeElement.querySelector('[role="group"]')).toBeNull();
+    expect(document.activeElement).toBe(button('Poslat přehled'));
     expect(element<HTMLSelectElement>('#report-month').disabled).toBe(false);
     http.expectNone(SEND_URL);
   });
 
-  it('when the mail server refuses the report, then the alert carries the backend words', async () => {
+  it('when the mail server refuses the report, then the alert carries the backend words, leads to the mail settings and the focus returns to the button', async () => {
     await respond(reportView());
 
-    button('Poslat').click();
+    button('Poslat přehled').click();
     await settle();
-    button('Ano, poslat').click();
+    button('Poslat přehled').click();
     await settle();
     const refusal = problem(
       502,
@@ -369,10 +372,14 @@ describe('Given an administrator on the monthly report page', () => {
     http.expectOne(SEND_URL).flush(refusal.body, refusal.options);
     await settle();
 
-    expect(text('.ui-notice--alert')).toBe(
+    expect(text('.send-card .ui-notice--alert')).toBe(
       'Přehled se nepodařilo odeslat. Poštovní server e-mail odmítl. Zkontrolujte nastavení MAIL_* a log backendu.',
     );
     expect(fixture.nativeElement.querySelector('[role="group"]')).toBeNull();
+    expect(document.activeElement).toBe(button('Poslat přehled'));
+    const link = element<HTMLAnchorElement>('.mail-settings-link');
+    expect(link.textContent?.trim()).toBe('Otevřít nastavení e-mailů');
+    expect(link.getAttribute('href')).toBe('/sprava/nastaveni#settings-MAIL');
   });
 
   it('when the report cannot be loaded, then an alert offers a retry that asks again', async () => {

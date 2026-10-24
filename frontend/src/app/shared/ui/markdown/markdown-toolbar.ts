@@ -1,6 +1,7 @@
 /// <reference types="@angular/localize" />
 
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
+import { MarkdownPreview } from './markdown-preview';
 
 const BOLD_PLACEHOLDER = $localize`:@@ui.markdown.bold.placeholder:tučný text`;
 const ITALIC_PLACEHOLDER = $localize`:@@ui.markdown.italic.placeholder:text kurzívou`;
@@ -15,6 +16,7 @@ const LINK_ADDRESS = 'https://';
 })
 export class MarkdownToolbar {
   readonly target = input.required<HTMLTextAreaElement>();
+  readonly preview = input<MarkdownPreview | null>(null);
 
   protected bold(): void {
     this.wrap('**', BOLD_PLACEHOLDER);

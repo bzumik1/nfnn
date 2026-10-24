@@ -166,7 +166,8 @@ describe('Given an administrator on the logs page', () => {
     ]);
     expect(texts('.badge')).toEqual(['komprimovaný']);
     expect(text('.log-text')).toContain('INFO first line');
-    expect(text('.range')).toBe('Bajty 100–220 z 220');
+    expect(text('.range')).toBe('Konec logu');
+    expect(text('.window-copy button')).toBe('Kopírovat výpis logu');
     expect(button('Novější →').disabled).toBe(true);
     expect(button('← Starší').disabled).toBe(false);
 
@@ -175,7 +176,7 @@ describe('Given an administrator on the logs page', () => {
     flushWindow('bytes=20000&from=0', { from: 0, to: 100, hasOlder: false, hasNewer: true });
     await settle();
 
-    expect(text('.range')).toBe('Bajty 0–100 z 220');
+    expect(text('.range')).toBe('Začátek logu');
     expect(button('← Starší').disabled).toBe(true);
 
     button('Novější →').click();
@@ -183,7 +184,7 @@ describe('Given an administrator on the logs page', () => {
     flushWindow('bytes=20000&from=100', { from: 100, to: 220, hasOlder: true, hasNewer: false });
     await settle();
 
-    expect(text('.range')).toBe('Bajty 100–220 z 220');
+    expect(text('.range')).toBe('Konec logu');
 
     button('Zobrazit backend.log.2026-10-22.0.gz').click();
     await settle();
@@ -255,7 +256,7 @@ describe('Given an administrator on the logs page', () => {
     flushWindow('bytes=20000&from=150', { from: 150, to: 220, hasOlder: true, hasNewer: false });
     await settle();
 
-    expect(text('.range')).toBe('Bajty 150–220 z 220');
+    expect(text('.range')).toBe('Konec logu');
   });
 
   it('when the pattern is not a valid expression, then the problem is shown at the search', async () => {

@@ -103,16 +103,24 @@ describe('Given an administrator on the backups page', () => {
     await respond(backupsView());
 
     expect(text('.healthy')).toBe('Zálohování je v pořádku.');
+    expect(texts('.run dt')).toEqual([
+      'Poslední záloha',
+      'Poslední zkušební obnova',
+      'Poslední obnova',
+    ]);
     expect(texts('.run dd')).toEqual([
-      'Poslední záloha: 23. 10. 2026 03:00, nfnn-2026-10-23_0300.dump (2 kB).',
-      'Poslední zkušební obnova: 18. 10. 2026 04:00, 37 tabulek ze zálohy nfnn-2026-10-18_0300.dump.',
-      'Poslední obnova: zatím žádná.',
-      'Prázdná. Web obnovíte tlačítkem Obnovit u zálohy níže, na novém serveru v průvodci prvním nastavením.',
+      '23. 10. 2026 03:00 (2 kB)',
+      '18. 10. 2026 04:00, 37 tabulek ze zálohy nfnn-2026-10-18_0300.dump',
+      'Zatím žádná.',
     ]);
     expect(texts('tbody tr')).toEqual([
-      'nfnn-2026-10-23_0300.dump Noční 23. 10. 2026 03:00 2 kB Obnovit Stáhnout',
-      'nfnn-2026-10-22_0300.dump Noční 22. 10. 2026 03:00 1 kB Obnovit Stáhnout',
+      '23. 10. 2026 03:00 nfnn-2026-10-23_0300.dump Plánovaná 2 kB Stáhnout Obnovit…',
+      '22. 10. 2026 03:00 nfnn-2026-10-22_0300.dump Plánovaná 1 kB Stáhnout Obnovit…',
     ]);
+    expect(text('.off-server')).toBe(
+      'Zálohy leží na stejném disku jako web. Jednou za měsíc si nejnovější stáhněte tlačítkem Stáhnout a uložte jinam, třeba na flash disk nebo do cloudu.',
+    );
+    expect(fixture.nativeElement.querySelector('.actions-blocked')).toBeNull();
     expect(button('Zálohovat teď').disabled).toBe(false);
     expect(button('Ověřit obnovu teď').disabled).toBe(false);
   });
@@ -141,23 +149,31 @@ describe('Given an administrator on the backups page', () => {
       }),
     );
 
-    expect(texts('.problems li')).toEqual([
+    expect(texts('.problems > ul li')).toEqual([
+      'Poslední záloha se nepovedla. Data webu jsou v pořádku, ale nejsou zálohovaná. Zkuste Zálohovat teď; když to nepomůže, pošlete tuto stránku správci serveru.',
+      'Zatím se nevyzkoušelo, že jde zálohu obnovit. Spusťte Ověřit obnovu teď.',
+    ]);
+    expect(texts('.problems details li')).toEqual([
       'Poslední záloha selhala.',
       'Zkušební obnova ještě neproběhla, i když zálohy jsou starší než týden.',
     ]);
     expect(fixture.nativeElement.querySelector('.problems')?.getAttribute('role')).toBe('alert');
-    expect(texts('.run dd')[0]).toBe(
-      'Poslední záloha selhala 23. 10. 2026 03:00: pg_dump: error: connection to server failed',
+    expect(text('.run:nth-child(1) dd .run-text')).toBe('Nepovedla se 23. 10. 2026 03:00.');
+    expect(text('.run:nth-child(1) dd details summary')).toBe('Technické podrobnosti');
+    expect(text('.run:nth-child(1) dd .run-error')).toBe(
+      'pg_dump: error: connection to server failed',
     );
-    expect(texts('.run dd')[1]).toBe(
-      'Poslední zkušební obnova: zatím žádná. Podle plánu běží v neděli 4:00.',
-    );
+    expect(texts('.run dd')[1]).toBe('Zatím žádná. Podle plánu běží v neděli 4:00.');
+    expect(text('.restore-files-title')).toBe('Soubory k obnově');
     expect(texts('.restore-files li')).toEqual([
       'zaloha.dump.skipped byl 23. 10. 2026 06:36 přeskočen: databáze nebyla prázdná nebo ve složce leželo víc souborů.',
       'stara.dump.failed se 22. 10. 2026 06:36 obnovit nepodařilo; data zůstala, jak byla.',
     ]);
-    expect(texts('.run dd')[2]).toBe(
-      'Poslední obnova 23. 10. 2026 03:00 se nepovedla, data zůstala: the database is not empty; name the file .force.dump to replace it',
+    expect(text('.run:nth-child(3) dd .run-text')).toBe(
+      'Nepovedla se 23. 10. 2026 03:00, data zůstala, jak byla.',
+    );
+    expect(text('.run:nth-child(3) dd .run-error')).toBe(
+      'the database is not empty; name the file .force.dump to replace it',
     );
     expect(text('.pending')).toBe('Na vyřízení čekají 2 požadavky.');
   });
@@ -173,9 +189,15 @@ describe('Given an administrator on the backups page', () => {
       }),
     );
 
-    expect(texts('.problems li')[0]).toContain('Backend nevidí složku záloh.');
+    expect(texts('.problems > ul li')[0]).toBe(
+      'Web teď nevidí složku se zálohami, takže zálohy nejde vytvořit ani stáhnout. Data webu jsou v pořádku. Pošlete prosím tuto stránku správci serveru.',
+    );
+    expect(texts('.problems details li')[0]).toContain('Backend nevidí složku záloh.');
     expect(button('Zálohovat teď').disabled).toBe(true);
     expect(button('Ověřit obnovu teď').disabled).toBe(true);
+    expect(text('.actions-blocked')).toBe(
+      'Zálohovat teď ani ověřit obnovu nejde, dokud se nevyřeší problém výše.',
+    );
     expect(text('[aria-labelledby="backups-list-title"]')).toContain('Zatím žádná záloha.');
   });
 
@@ -246,8 +268,10 @@ describe('Given an administrator on the backups page', () => {
       );
       await settle();
 
-      expect(text('.ui-notice--alert')).toBe('Záloha selhala: pg_dump: error: out of memory');
-      expect(texts('.problems li')).toEqual(['Poslední záloha selhala.']);
+      expect(text('.ui-notice--alert')).toBe(
+        'Záloha se nepovedla. Technické podrobnosti najdete níže u Poslední záloha.',
+      );
+      expect(text('.run:nth-child(1) dd details')).toContain('pg_dump: error: out of memory');
     });
 
     it('then a request nobody picks up ends with the hint to check the container', async () => {
@@ -261,8 +285,8 @@ describe('Given an administrator on the backups page', () => {
         await settle();
       }
 
-      expect(text('.ui-notice--alert')).toContain(
-        'Kontejner nfnn-backup si požadavek do minuty nevzal.',
+      expect(text('.ui-notice--alert')).toBe(
+        'Zálohování na serveru na požadavek do minuty neodpovědělo. Obnovte stránku za chvíli; když se výsledek neukáže, pošlete tuto stránku správci serveru (služba záloh nfnn-backup asi neběží).',
       );
       expect(button('Zálohovat teď').disabled).toBe(false);
     });
@@ -323,7 +347,7 @@ describe('Given an administrator on the backups page', () => {
   describe('when a backup is restored', () => {
     beforeEach(async () => {
       await respond(backupsView());
-      button('Obnovit').click();
+      button('Obnovit…').click();
       await settle();
     });
 
@@ -429,7 +453,7 @@ describe('Given an administrator on the backups page', () => {
     );
 
     expect(text('.ui-notice--alert')).toBe(
-      'Obnova ze zálohy nfnn-2026-10-22_0300.dump se nepovedla: pg_restore: error: unexpected end of file. Web běží dál s daty, jaká měl před obnovou.',
+      'Obnova ze zálohy nfnn-2026-10-22_0300.dump se nepovedla. Web běží dál s daty, jaká měl před obnovou; technické podrobnosti najdete níže u Poslední obnova.',
     );
   });
 
@@ -445,13 +469,13 @@ describe('Given an administrator on the backups page', () => {
 
     await respond(backupsView());
 
-    expect(text('.ui-notice--alert')).toContain('si obnovu do pěti minut nevzal');
+    expect(text('.ui-notice--alert')).toContain('na obnovu do pěti minut neodpovědělo');
   });
 
   it('when a restore is pending, then every action that could interfere is disabled', async () => {
     await respond(backupsView({ restorePending: true, pendingRequests: 1 }));
 
-    expect(button('Obnovit').disabled).toBe(true);
+    expect(button('Obnovit…').disabled).toBe(true);
     expect(button('Zálohovat teď').disabled).toBe(true);
     expect(button('Ověřit obnovu teď').disabled).toBe(true);
   });
@@ -492,7 +516,7 @@ describe('Given an administrator on the backups page', () => {
     await settle();
 
     expect(clicked).toEqual(['nfnn-2026-10-23_0300.dump']);
-    expect(texts('tbody button')).toEqual(['Obnovit', 'Stáhnout', 'Obnovit', 'Stáhnout']);
+    expect(texts('tbody button')).toEqual(['Stáhnout', 'Obnovit…', 'Stáhnout', 'Obnovit…']);
   });
 
   it('when the backup plan is saved, then the page announces the new plan and keeps the card', async () => {
@@ -509,11 +533,11 @@ describe('Given an administrator on the backups page', () => {
       .flush(backupSchedule({ backupTime: '02:30' }));
     await settle();
 
-    expect(text('[role="status"]:not(:empty)')).toBe(
+    expect(text('.schedule-form .ui-form-status')).toBe(
       'Plán záloh jsme uložili: denní záloha 2:30, zkušební obnova v neděli 4:00.',
     );
     expect(text('.applied')).toBe(
-      'Kontejner záloh zatím jede podle plánu „denní záloha 3:00, zkušební obnova v neděli 4:00“; nový převezme do minuty.',
+      'Zálohy zatím běží podle plánu „denní záloha 3:00, zkušební obnova v neděli 4:00“; nový převezme do minuty.',
     );
   });
 

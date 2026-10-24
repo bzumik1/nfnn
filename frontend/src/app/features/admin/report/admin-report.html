@@ -7,8 +7,6 @@
     upozornění, když stahování plateb z banky selhává.
   </p>
 
-  <app-live-notice [notice]="notice()" />
-
   @switch (state()) {
     @case ('loading') {
       <p class="ui-load-state" role="status" i18n="@@admin.report.loading">
@@ -31,8 +29,7 @@
         <div class="ui-card__body">
           @if (nextReport(); as next) {
             <p class="next-report" i18n="@@admin.report.next">
-              Příští přehled za {{ next.month }} odejde {{ next.dueOn }} v {{ next.hour }}. Byl-li
-              by web v tu chvíli vypnutý, odejde při nejbližší další kontrole (každou celou hodinu).
+              Příští přehled za {{ next.month }} odejde {{ next.dueOn }} v {{ next.hour }}.
             </p>
           }
           <p class="changed-at">
@@ -42,7 +39,7 @@
               >
             } @else {
               <ng-container i18n="@@admin.report.defaults"
-                >Zatím platí výchozí nastavení ze serveru.</ng-container
+                >Nastavení jste zatím neměnili.</ng-container
               >
             }
           </p>
@@ -58,7 +55,7 @@
               i18n-label="@@admin.report.recipients"
               hint="Každou e-mailovou adresu napište na vlastní řádek, nejvíc deset."
               i18n-hint="@@admin.report.recipients.hint"
-              [messages]="recipientMessages"
+              [messages]="recipientMessages()"
             >
               <textarea
                 appFormControl
@@ -68,7 +65,8 @@
                 rows="3"
                 autocomplete="off"
                 spellcheck="false"
-                [(ngModel)]="recipients"
+                [ngModel]="recipients()"
+                (ngModelChange)="recipients.set($event)"
                 required
               ></textarea>
             </app-form-field>
@@ -138,13 +136,18 @@
                 <span i18n="@@admin.report.settings.save">Uložit nastavení</span>
               }
             </button>
+            <p class="ui-form-status" role="status">
+              @if (settingsStatus(); as status) {
+                <span>{{ status }}</span>
+              }
+            </p>
           </form>
         </div>
       </section>
 
-      <section class="ui-card" aria-labelledby="report-send-title">
+      <section class="ui-card send-card" aria-labelledby="report-send-title">
         <h2 id="report-send-title" class="ui-card__title" i18n="@@admin.report.send.title">
-          Poslat přehled znovu
+          Poslat přehled hned
         </h2>
         <div class="ui-card__body">
           <p class="ui-card__intro" i18n="@@admin.report.send.intro">
@@ -169,7 +172,7 @@
               <span
                 class="confirm"
                 role="group"
-                aria-label="Poslat přehled znovu?"
+                aria-label="Poslat přehled?"
                 i18n-aria-label="@@admin.report.send.confirm.label"
               >
                 <span i18n="@@admin.report.send.confirm.question"
@@ -184,30 +187,44 @@
                   @if (sending()) {
                     <ng-container i18n="@@admin.report.send.busy">Posíláme…</ng-container>
                   } @else {
-                    <ng-container i18n="@@admin.report.send.yes">Ano, poslat</ng-container>
+                    <ng-container i18n="@@admin.report.send.yes">Poslat přehled</ng-container>
                   }
                 </button>
                 <button
+                  #sendCancel
                   type="button"
                   class="ui-link-button"
                   [disabled]="sending()"
                   (click)="cancelSend()"
                   i18n="@@admin.report.send.no"
                 >
-                  Ne
+                  Zrušit
                 </button>
               </span>
             } @else {
               <button
+                #sendButton
                 type="button"
                 class="ui-button"
                 (click)="askSend()"
                 i18n="@@admin.report.send.open"
               >
-                Poslat
+                Poslat přehled
               </button>
             }
           </div>
+          <app-live-notice class="send-notice" [notice]="sendNotice()" />
+          @if (mailRefused()) {
+            <p class="mail-settings">
+              <a
+                class="mail-settings-link"
+                routerLink="/sprava/nastaveni"
+                fragment="settings-MAIL"
+                i18n="@@admin.report.send.mailSettings"
+                >Otevřít nastavení e-mailů</a
+              >
+            </p>
+          }
         </div>
       </section>
 

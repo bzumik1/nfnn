@@ -20,6 +20,7 @@
   margin-bottom: var(--space-2-5);
 
   input {
+    flex-shrink: 0;
     width: 18px;
     height: 18px;
     accent-color: var(--color-accent);
@@ -82,15 +83,46 @@
 }
 
 .confirm {
+  font-size: var(--text-md);
+  line-height: var(--leading-normal);
+  color: var(--color-text);
+
+  .ui-callout {
+    margin: var(--space-2-5) 0 0;
+  }
+}
+
+.confirm-changes {
+  font-weight: var(--weight-semibold);
+}
+
+.confirm-question {
+  margin-top: var(--space-2-5);
+}
+
+.confirm-actions {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2);
-  font-size: var(--text-md);
-  color: var(--color-text);
+  margin-top: var(--space-3);
+}
 
-  > span {
-    flex-basis: 100%;
+.removal-effect {
+  margin: 0 0 var(--space-2-5);
+}
+
+.tech-details {
+  margin-top: var(--space-2-5);
+  font-size: var(--text-sm);
+
+  summary {
+    cursor: pointer;
+    font-weight: var(--weight-semibold);
+  }
+
+  p {
+    margin-top: var(--space-1-5);
   }
 }
 
@@ -111,4 +143,9 @@
   to {
     transform: rotate(360deg);
   }
+}
+
+app-receipt-signature {
+  max-width: 680px;
+  margin-top: var(--space-8);
 }

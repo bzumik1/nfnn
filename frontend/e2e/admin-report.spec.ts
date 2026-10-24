@@ -65,7 +65,7 @@ test.describe('Given an administrator on the monthly report page', () => {
     await expect(
       page.getByText('Příští přehled za říjen 2026 odejde 01. 11. 2026 v 7:00.'),
     ).toBeVisible();
-    await expect(page.getByText('Zatím platí výchozí nastavení ze serveru.')).toBeVisible();
+    await expect(page.getByText('Nastavení jste zatím neměnili.')).toBeVisible();
     await expect(page.locator('tbody tr')).toHaveText(['září 2026 01. 10. 2026 07:00']);
 
     await page.getByLabel('Příjemci').fill('pavel@example.cz\njakub@example.cz');
@@ -74,7 +74,7 @@ test.describe('Given an administrator on the monthly report page', () => {
     await page.getByLabel('Platby bez dárce').uncheck();
     await page.getByRole('button', { name: 'Uložit nastavení' }).click();
 
-    await expect(page.locator('.ui-notice--status')).toHaveText(
+    await expect(page.locator('.ui-form-status')).toHaveText(
       'Nastavení jsme uložili. Příští přehled odejde podle něj.',
     );
     await expect(page.getByText('Naposledy změněno 23. 10. 2026 10:00.')).toBeVisible();
@@ -115,7 +115,7 @@ test.describe('Given an administrator on the monthly report page', () => {
     await expect(page.getByLabel('Příjemci')).toHaveAttribute('aria-invalid', 'true');
     await expect(
       page.getByText(
-        'Některá z adres není platná e-mailová adresa. Pište každou na vlastní řádek.',
+        'Adresa „pavel“ není platná e-mailová adresa. Pište každou adresu na vlastní řádek.',
       ),
     ).toBeVisible();
     expect(saved).toBe(0);
@@ -149,13 +149,13 @@ test.describe('Given an administrator on the monthly report page', () => {
 
     await page.goto('/sprava/prehledy');
     await expect(page.getByLabel('Měsíc', { exact: true })).toHaveValue('2026-10');
-    await page.getByRole('button', { name: 'Poslat', exact: true }).click();
+    await page.getByRole('button', { name: 'Poslat přehled', exact: true }).click();
 
-    const question = page.getByRole('group', { name: 'Poslat přehled znovu?' });
+    const question = page.getByRole('group', { name: 'Poslat přehled?' });
     await expect(question).toContainText('Poslat přehled za říjen 2026 na info@nfnn.cz?');
-    await question.getByRole('button', { name: 'Ano, poslat' }).click();
+    await question.getByRole('button', { name: 'Poslat přehled' }).click();
 
-    await expect(page.locator('.ui-notice--status')).toHaveText(
+    await expect(page.locator('.send-card .ui-notice--status')).toHaveText(
       'Přehled za říjen 2026 jsme poslali na info@nfnn.cz.',
     );
     await expect(page.locator('tbody tr')).toHaveText([
@@ -183,19 +183,22 @@ test.describe('Given an administrator on the monthly report page', () => {
             502,
             'donations/report-not-delivered',
             'Přehled se nepodařilo odeslat',
-            'Poštovní server e-mail odmítl. Zkontrolujte nastavení MAIL_* a log backendu.',
+            'Poštovní server e-mail odmítl. Ověřte odesílání e-mailů v Nastavení tlačítkem Ověřit spojení a zkuste to znovu.',
           ),
         ),
     );
 
     await page.goto('/sprava/prehledy');
-    await page.getByRole('button', { name: 'Poslat', exact: true }).click();
-    await page.getByRole('button', { name: 'Ano, poslat' }).click();
+    await page.getByRole('button', { name: 'Poslat přehled', exact: true }).click();
+    await page
+      .getByRole('group', { name: 'Poslat přehled?' })
+      .getByRole('button', { name: 'Poslat přehled' })
+      .click();
 
     await expect(page.getByRole('alert')).toHaveText(
-      'Přehled se nepodařilo odeslat. Poštovní server e-mail odmítl. Zkontrolujte nastavení MAIL_* a log backendu.',
+      'Přehled se nepodařilo odeslat. Poštovní server e-mail odmítl. Ověřte odesílání e-mailů v Nastavení tlačítkem Ověřit spojení a zkuste to znovu.',
     );
     await expect(page.locator('tbody tr')).toHaveCount(1);
-    await expect(page.getByRole('group', { name: 'Poslat přehled znovu?' })).toHaveCount(0);
+    await expect(page.getByRole('group', { name: 'Poslat přehled?' })).toHaveCount(0);
   });
 });

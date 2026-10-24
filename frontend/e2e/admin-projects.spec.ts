@@ -144,9 +144,9 @@ test.describe('Given an administrator managing the projects', () => {
       page.getByText('Projekt bude na nfnn.cz/projekty/beneficni-koncert.'),
     ).toBeVisible();
     await page.getByLabel('Rok').fill('2026');
-    await page.getByLabel('Perex').fill('Zveme vás na koncert.');
+    await page.getByLabel('Krátký souhrn').fill('Zveme vás na koncert.');
     await page.getByLabel('Text', { exact: true }).fill('Text o koncertu.');
-    await page.getByLabel('Fotka').setInputFiles({
+    await page.getByLabel('Nahrát fotku').setInputFiles({
       name: 'koncert.png',
       mimeType: 'image/png',
       buffer: TINY_PNG,
@@ -156,7 +156,7 @@ test.describe('Given an administrator managing the projects', () => {
 
     await page.getByRole('button', { name: 'Uložit koncept' }).click();
 
-    await expect(page.locator('.ui-notice--status')).toHaveText(
+    await expect(page.locator('.ui-form-status')).toHaveText(
       'Projekt jsme uložili jako koncept. Na web ho dostanete tlačítkem Zveřejnit.',
     );
     await expect(page).toHaveURL(`/sprava/projekty/${DRAFT_ID}`);
@@ -176,7 +176,7 @@ test.describe('Given an administrator managing the projects', () => {
     await page.getByLabel('Datum zveřejnění').fill('2026-10-23');
     await page.getByRole('button', { name: 'Zveřejnit' }).click();
 
-    await expect(page.locator('.ui-notice--status')).toHaveText(
+    await expect(page.locator('.publish-card .ui-notice--status')).toHaveText(
       'Projekt je na webu s datem 23. 10. 2026.',
     );
     await expect(page.getByRole('button', { name: 'Stáhnout z webu' })).toBeVisible();
@@ -196,7 +196,7 @@ test.describe('Given an administrator managing the projects', () => {
     );
 
     await page.goto('/sprava/projekty/nova');
-    await page.getByLabel('Perex').fill('Perex.');
+    await page.getByLabel('Krátký souhrn').fill('Perex.');
     await page.getByLabel('Text', { exact: true }).fill('Text.');
     await page.getByRole('button', { name: 'Uložit koncept' }).click();
 
@@ -206,7 +206,9 @@ test.describe('Given an administrator managing the projects', () => {
     expect(sent).toBe(0);
   });
 
-  test('when the address is taken, then the form carries the backend words', async ({ page }) => {
+  test('when the address is taken, then the address field says so and takes the focus', async ({
+    page,
+  }) => {
     await page.route(
       (url) => url.pathname === PROJECTS,
       (route) =>
@@ -222,13 +224,16 @@ test.describe('Given an administrator managing the projects', () => {
 
     await page.goto('/sprava/projekty/nova');
     await page.getByLabel('Titulek').fill('Zahrada pro děti');
-    await page.getByLabel('Perex').fill('Perex.');
+    await page.getByLabel('Krátký souhrn').fill('Perex.');
     await page.getByLabel('Text', { exact: true }).fill('Text.');
     await page.getByRole('button', { name: 'Uložit koncept' }).click();
 
-    await expect(page.getByRole('alert').filter({ hasText: /\S/ })).toHaveText(
-      'Adresa je obsazená. Jiná aktualita nebo projekt už tuto adresu používá; zvolte jinou.',
-    );
+    const address = page.getByLabel('Adresa na webu');
+    await expect(address).toBeFocused();
+    await expect(address).toHaveAttribute('aria-invalid', 'true');
+    await expect(
+      page.getByText('Tuto adresu už má jiný projekt nebo aktualita. Zvolte prosím jinou.'),
+    ).toBeVisible();
   });
 
   test('when they take a published project off the site and then delete it, then the page confirms each step and returns to the list', async ({
@@ -261,7 +266,7 @@ test.describe('Given an administrator managing the projects', () => {
     await page.goto(`/sprava/projekty/${PROJECT_ID}`);
     await page.getByRole('button', { name: 'Stáhnout z webu' }).click();
 
-    await expect(page.locator('.ui-notice--status')).toHaveText(
+    await expect(page.locator('.publish-card .ui-notice--status')).toHaveText(
       'Projekt jsme z webu stáhli. Zůstává tu jako koncept.',
     );
     await expect(page.getByRole('button', { name: 'Zveřejnit' })).toBeVisible();
@@ -269,12 +274,15 @@ test.describe('Given an administrator managing the projects', () => {
     await page.getByRole('button', { name: 'Smazat projekt' }).click();
     const question = page.getByRole('group', { name: 'Smazat projekt?' });
     await expect(question).toContainText('Opravdu smazat projekt „Zahrada pro děti“?');
-    await question.getByRole('button', { name: 'Ano, smazat' }).click();
+    await question.getByRole('button', { name: 'Smazat natrvalo' }).click();
 
     await expect(page).toHaveURL('/sprava/projekty');
     await expect(
       page.getByText('Zatím tu žádný projekt není. Napište první tlačítkem Nový projekt.'),
     ).toBeVisible();
+    await expect(page.getByRole('status').filter({ hasText: /\S/ })).toHaveText(
+      'Projekt „Zahrada pro děti“ jsme smazali.',
+    );
     expect(deleted).toBe(1);
   });
 });

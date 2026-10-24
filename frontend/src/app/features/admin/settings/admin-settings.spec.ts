@@ -1,7 +1,7 @@
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { ActivatedRoute, provideRouter } from '@angular/router';
 import { authInterceptor } from '../../../core/auth/auth-interceptor';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { authResponse, sampleDonor } from '../../../core/auth/testing/donor-fixtures';
@@ -110,7 +110,13 @@ describe('Given an administrator on the settings page', () => {
     });
 
     it('then they are grouped, plain values fill the fields and secrets only say whether they are set', () => {
-      expect(texts('h2')).toEqual(['Web', 'E-maily', 'Banka', 'Potvrzení o daru']);
+      expect(texts('h2')).toEqual([
+        'Web',
+        'E-maily',
+        'Banka',
+        'Potvrzení o daru',
+        'Podpis na potvrzeních',
+      ]);
       expect(element<HTMLInputElement>('#setting-PUBLIC_URL').value).toBe('https://nfnn.cz');
       expect(element<HTMLInputElement>('#setting-MAIL_PASSWORD').value).toBe('');
       expect(element<HTMLInputElement>('#setting-MAIL_AUTH').checked).toBe(true);
@@ -121,10 +127,64 @@ describe('Given an administrator on the settings page', () => {
       ]);
     });
 
-    it('then saving without a change says so and sends nothing', async () => {
+    it('then each secret field is named after its secret and its group carries the stored state', () => {
+      expect(text('label[for="setting-MAIL_PASSWORD"]')).toBe('Nové heslo nebo klíč SMTP');
+      expect(text('label[for="setting-FIO_TOKEN"]')).toBe('Nový token Fio API');
+      const group = element('#setting-MAIL_PASSWORD').closest('[role="group"]') as HTMLElement;
+      const stateId = group.getAttribute('aria-labelledby') ?? '';
+      expect(text(`#${stateId}`)).toBe('Heslo nebo klíč SMTP: Nastaveno');
+    });
+
+    it('then ticking the removal of a secret says what stops working', async () => {
+      element<HTMLInputElement>('#setting-MAIL_PASSWORD-remove').click();
+      await settle();
+      element<HTMLInputElement>('#setting-FIO_TOKEN-remove').click();
+      await settle();
+
+      expect(texts('.secret .ui-callout--danger')).toEqual([
+        'Bez hesla web nepošle žádný e-mail: ani obnovu hesla, ani potvrzení registrace, ani měsíční přehled.',
+        'Bez tokenu se přestanou stahovat platby z banky.',
+      ]);
+    });
+
+    it('then saving without a change says so right after the button and sends nothing', async () => {
       await submit();
 
-      expect(text('[role="status"]:not(:empty)')).toBe('Nic jste nezměnili.');
+      expect(text('.save-row .ui-form-status')).toBe('Nic jste nezměnili.');
+    });
+
+    it('then the confirmation names every change, says what a removal stops, takes the focus and gives it back when called off', async () => {
+      await type('#setting-MAIL_HOST', 'smtp.example.cz');
+      element<HTMLInputElement>('#setting-MAIL_PASSWORD-remove').click();
+      await settle();
+      await submit();
+
+      expect(text('.confirm-changes')).toBe(
+        'Mění se: Server pro odesílání (SMTP), Heslo nebo klíč SMTP (odebrat).',
+      );
+      expect(texts('.confirm .ui-callout--danger')).toEqual([
+        'Bez hesla web nepošle žádný e-mail: ani obnovu hesla, ani potvrzení registrace, ani měsíční přehled.',
+      ]);
+      expect(text('.confirm .ui-callout--warning')).toContain(
+        'Spojení s poštovním serverem jste s novými údaji neověřili.',
+      );
+      expect(document.activeElement).toBe(button('Zrušit'));
+
+      button('Zrušit').click();
+      await settle();
+
+      expect(document.activeElement).toBe(button('Uložit nastavení'));
+    });
+
+    it('then a connection tried with the same values leaves the confirmation without the warning', async () => {
+      await type('#setting-MAIL_HOST', 'smtp.example.cz');
+      button('Ověřit spojení').click();
+      await settle();
+      http.expectOne(MAIL_TEST_URL).flush({ ok: true });
+      await settle();
+      await submit();
+
+      expect(fixture.nativeElement.querySelector('.confirm .ui-callout--warning')).toBeNull();
     });
 
     it('then saving asks first, sends only what changed and waits for the restart before reloading', async () => {
@@ -137,7 +197,7 @@ describe('Given an administrator on the settings page', () => {
       await submit();
 
       expect(text('.confirm')).toContain('Uložením se web restartuje');
-      button('Ano, uložit a restartovat').click();
+      button('Uložit a restartovat').click();
       await settle();
 
       const request = http.expectOne(SETTINGS_URL);
@@ -172,7 +232,7 @@ describe('Given an administrator on the settings page', () => {
     it('then a value the backend refuses is listed with its name and nothing restarts', async () => {
       await type('#setting-RECEIPT_FIRST_YEAR', '26');
       await submit();
-      button('Ano, uložit a restartovat').click();
+      button('Uložit a restartovat').click();
       await settle();
 
       http.expectOne(SETTINGS_URL).flush(
@@ -190,7 +250,7 @@ describe('Given an administrator on the settings page', () => {
       await settle();
 
       expect(texts('.form-error li')).toEqual(['Potvrzení na webu od roku: Rok mezi 2000 a 2100.']);
-      expect(button('Uložit nastavení')).toBeTruthy();
+      expect(document.activeElement).toBe(button('Uložit nastavení'));
     });
 
     it('then the mail server is tried with the form values and without a typed password', async () => {
@@ -225,7 +285,33 @@ describe('Given an administrator on the settings page', () => {
   it('when the server has no encryption key, then the page says secrets cannot be saved and their fields are off', async () => {
     await respond(settingsView({ secretsCanBeStored: false }));
 
-    expect(text('.ui-notice--alert')).toContain('Tajné údaje teď nejde uložit');
+    expect(text('.ui-notice--alert')).toContain('Tajné údaje (hesla a tokeny) teď nejde uložit');
     expect(element<HTMLInputElement>('#setting-FIO_TOKEN').disabled).toBe(true);
+  });
+});
+
+describe('Given an administrator sent to the mail settings from another page', () => {
+  it('when the settings arrive, then the mail card takes the focus', async () => {
+    localStorage.clear();
+    await TestBed.configureTestingModule({
+      imports: [AdminSettings],
+      providers: [
+        provideHttpClient(withInterceptors([authInterceptor])),
+        provideHttpClientTesting(),
+        provideRouter([]),
+        { provide: ActivatedRoute, useValue: { snapshot: { fragment: 'settings-MAIL' } } },
+      ],
+    }).compileComponents();
+    const http = TestBed.inject(HttpTestingController);
+    const fixture = TestBed.createComponent(AdminSettings);
+    fixture.detectChanges();
+    http.expectOne(SETTINGS_URL).flush(settingsView());
+    await fixture.whenStable();
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(document.activeElement?.id).toBe('settings-MAIL');
+    http.match(SIGNATURE_URL);
+    http.verify();
   });
 });

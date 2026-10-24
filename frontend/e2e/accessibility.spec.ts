@@ -639,8 +639,8 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     await page.getByLabel('Příjemci').fill('pavel');
     await page.getByRole('button', { name: 'Uložit nastavení' }).click();
     await expect(page.getByLabel('Příjemci')).toHaveAttribute('aria-invalid', 'true');
-    await page.getByRole('button', { name: 'Poslat', exact: true }).click();
-    await expect(page.getByRole('group', { name: 'Poslat přehled znovu?' })).toBeVisible();
+    await page.getByRole('button', { name: 'Poslat přehled', exact: true }).click();
+    await expect(page.getByRole('group', { name: 'Poslat přehled?' })).toBeVisible();
 
     expect(await violations(page)).toEqual([]);
   });
@@ -1056,7 +1056,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     await page.evaluate(() => localStorage.setItem('nfnn.donor-session', '1'));
     await page.goto('/sprava/zalohy');
     await expect(page.getByRole('heading', { level: 1, name: 'Zálohy' })).toBeFocused();
-    await expect(page.locator('.problems li')).toHaveCount(2);
+    await expect(page.locator('.problems > ul > li')).toHaveCount(2);
     await expect(page.getByRole('heading', { level: 2, name: 'Plán záloh' })).toBeVisible();
     expect(await violations(page)).toEqual([]);
 
@@ -1149,11 +1149,11 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
 
     await page.locator('#setting-RECEIPT_FIRST_YEAR').fill('2025');
     await page.getByRole('button', { name: 'Uložit nastavení' }).click();
-    await expect(page.getByRole('button', { name: 'Ano, uložit a restartovat' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Uložit a restartovat' })).toBeVisible();
     expect(await violations(page)).toEqual([]);
 
     await page.getByRole('button', { name: 'Odebrat podpis' }).click();
-    await expect(page.getByRole('button', { name: 'Ano, odebrat' })).toBeVisible();
+    await expect(page.getByRole('group', { name: 'Odebrat podpis?' })).toBeVisible();
     expect(await violations(page)).toEqual([]);
   });
 
