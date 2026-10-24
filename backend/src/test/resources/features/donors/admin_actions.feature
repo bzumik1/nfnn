@@ -15,11 +15,25 @@ Feature: An administrator reads what administrators changed and when
     When "Jana" asks for the admin actions
     Then the response status is 200
     And the admin actions are:
-      | action                | adminName     | adminEmail      | subject |
-      | REVOKE_ADMINISTRATION | Jana Nováková | jana@example.cz | Petr    |
-      | GRANT_ADMINISTRATION  | Jana Nováková | jana@example.cz | Petr    |
+      | action                | adminName     | adminEmail      | subject | donor | summary                                                                       |
+      | REVOKE_ADMINISTRATION | Jana Nováková | jana@example.cz | Petr    | Petr  | Role správce odebrána dárci Petr Svoboda; všechna přihlášení dárce skončila. |
+      | GRANT_ADMINISTRATION  | Jana Nováková | jana@example.cz | Petr    | Petr  | Role správce udělena dárci Petr Svoboda.                                      |
     And the admin actions have no more pages
     And every admin action names when it was performed and what it changed
+
+  Scenario: Each change reads as a sentence in Czech or in English, an older English record included, and keeps its stored details
+    Given "Jana" recorded "GRANT_ADMINISTRATION" before the history was written in Czech as "Administrator role granted to donor <Eva>"
+    And "Jana" made "Petr" an administrator
+    When "Jana" asks for the admin actions
+    Then the admin actions are:
+      | action               | donor | summary                                  | details                                    |
+      | GRANT_ADMINISTRATION | Petr  | Role správce udělena dárci Petr Svoboda. | Role správce udělena dárci <Petr>          |
+      | GRANT_ADMINISTRATION | Eva   | Role správce udělena dárci Eva Nováková.     | Administrator role granted to donor <Eva>  |
+    When "Jana" asks for the admin actions in "en"
+    Then the admin actions are:
+      | action               | summary                                               |
+      | GRANT_ADMINISTRATION | Administrator role given to donor Petr Svoboda.       |
+      | GRANT_ADMINISTRATION | Administrator role given to donor Eva Nováková.           |
 
   Scenario: A long trail is read page by page from the newest change back
     Given "Jana" made "Petr" an administrator

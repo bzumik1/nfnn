@@ -73,6 +73,39 @@ class AdministratorActivityServiceTest {
     }
 
     @Test
+    @DisplayName("Given an action on a donor, when the trail is listed, then it carries the facts read from its details and the donor, looked up with the administrators")
+    void should_carry_facts_and_donor_when_listed_given_action_on_donor() {
+        DonorId petrId = DonorId.newId(NOW.minusSeconds(200));
+        AdminActionEntry grant = new AdminActionEntry(UUID.randomUUID(), JANA.value(), "GRANT_ADMINISTRATION", Optional.of(petrId.value()),
+                "Administrator role granted to donor " + petrId, NOW.minusSeconds(10), Optional.empty());
+        when(trail.findPerformedBefore(NOW.plusSeconds(1), 51)).thenReturn(List.of(grant));
+        Donor jana = donor(JANA, "Jana Nováková");
+        Donor petr = donor(petrId, "Petr Svoboda");
+        when(donors.findByIds(List.of(JANA, petrId))).thenReturn(List.of(jana, petr));
+
+        AdminActionView view = service.list(Optional.empty(), 50).items().getFirst();
+
+        assertThat(view.facts()).hasValueSatisfying(facts -> assertThat(facts.summaryKey()).isEqualTo("GRANT_ADMINISTRATION"));
+        assertThat(view.donorId()).contains(petrId.value());
+        assertThat(view.donor()).contains(petr);
+        assertThat(view.admin()).contains(jana);
+    }
+
+    @Test
+    @DisplayName("Given an action whose details have no known shape, when the trail is listed, then it carries no facts and no donor")
+    void should_carry_no_facts_when_listed_given_unknown_details() {
+        AdminActionEntry entry = entry(JANA.value(), "GRANT_ADMINISTRATION", NOW.minusSeconds(10));
+        when(trail.findPerformedBefore(NOW.plusSeconds(1), 51)).thenReturn(List.of(entry));
+        when(donors.findByIds(List.of(JANA))).thenReturn(List.of(donor(JANA, "Jana Nováková")));
+
+        AdminActionView view = service.list(Optional.empty(), 50).items().getFirst();
+
+        assertThat(view.facts()).isEmpty();
+        assertThat(view.donorId()).isEmpty();
+        assertThat(view.donor()).isEmpty();
+    }
+
+    @Test
     @DisplayName("Given more actions than the page holds, when a page is listed, then only the page comes and it says more follow")
     void should_cut_page_and_flag_more_when_listed_given_more_actions_than_limit() {
         Instant before = NOW.minusSeconds(5);

@@ -13,8 +13,10 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Service
 @Transactional(readOnly = true)
@@ -39,11 +41,21 @@ public class AdministratorActivityService {
         }
         List<AdminActionEntry> entries = trail.findPerformedBefore(before.orElseGet(() -> clock.instant().plusSeconds(1)), limit + 1);
         List<AdminActionEntry> page = entries.size() > limit ? entries.subList(0, limit) : entries;
-        Map<DonorId, Donor> adminsById = donors.findByIds(page.stream().map(entry -> new DonorId(entry.adminId())).distinct().toList()).stream()
-                .collect(Collectors.toMap(Donor::id, Function.identity()));
+        Map<UUID, Optional<AdminActionFacts>> factsById = page.stream()
+                .collect(Collectors.toMap(AdminActionEntry::id, entry -> AdminActionFacts.read(entry.action(), entry.details())));
+        List<DonorId> named = Stream.concat(page.stream().map(AdminActionEntry::adminId),
+                        factsById.values().stream().flatMap(Optional::stream).map(AdminActionFacts::donor).flatMap(Optional::stream))
+                .distinct()
+                .map(DonorId::new)
+                .toList();
+        Map<UUID, Donor> donorsById = donors.findByIds(named).stream().collect(Collectors.toMap(donor -> donor.id().value(), Function.identity()));
         List<AdminActionView> items = page.stream()
-                .map(entry -> new AdminActionView(entry.id(), entry.adminId(), Optional.ofNullable(adminsById.get(new DonorId(entry.adminId()))),
-                        entry.action(), entry.subjectId(), entry.details(), entry.performedAt(), entry.client()))
+                .map(entry -> {
+                    Optional<AdminActionFacts> facts = factsById.get(entry.id());
+                    return new AdminActionView(entry.id(), entry.adminId(), Optional.ofNullable(donorsById.get(entry.adminId())), entry.action(),
+                            entry.subjectId(), entry.details(), entry.performedAt(), entry.client(), facts,
+                            facts.flatMap(AdminActionFacts::donor).map(donorsById::get));
+                })
                 .toList();
         return new AdministratorActivity(items, entries.size() > limit);
     }

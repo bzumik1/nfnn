@@ -4,15 +4,20 @@ import cz.novanadeje.app.cucumber.ApiClient;
 import cz.novanadeje.app.cucumber.DonorSessions;
 import cz.novanadeje.app.cucumber.ScenarioDonors;
 import io.cucumber.datatable.DataTable;
+import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
+import org.springframework.jdbc.core.simple.JdbcClient;
 import tools.jackson.databind.JsonNode;
 
+import java.sql.Timestamp;
+import java.time.Clock;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -23,17 +28,35 @@ public class AdminActionsStepDefinitions {
     private final ApiClient api;
     private final DonorSessions sessions;
     private final ScenarioDonors scenarioDonors;
+    private final JdbcClient jdbc;
+    private final Clock clock;
 
-    public AdminActionsStepDefinitions(ApiClient api, DonorSessions sessions, ScenarioDonors scenarioDonors) {
+    public AdminActionsStepDefinitions(ApiClient api, DonorSessions sessions, ScenarioDonors scenarioDonors, JdbcClient jdbc, Clock clock) {
         this.api = api;
         this.sessions = sessions;
         this.scenarioDonors = scenarioDonors;
+        this.jdbc = jdbc;
+        this.clock = clock;
     }
 
     @When("{string} asks for the admin actions")
     public void asksForTheAdminActions(String alias) {
         sessions.actAs(alias);
         api.get(ACTIONS_PATH);
+    }
+
+    @When("{string} asks for the admin actions in {string}")
+    public void asksForTheAdminActionsIn(String alias, String language) {
+        sessions.actAs(alias);
+        api.acceptLanguage(language);
+        api.get(ACTIONS_PATH);
+    }
+
+    @Given("{string} recorded {string} before the history was written in Czech as {string}")
+    public void recordedBeforeTheHistoryWasWrittenInCzech(String alias, String action, String details) {
+        jdbc.sql("insert into admin_action (id, admin_id, action, subject_id, details, performed_at) values (?, ?, ?, ?, ?, ?)")
+                .params(UUID.randomUUID(), scenarioDonors.idOf(alias), action, null, resolveIds(details), Timestamp.from(clock.instant().minusSeconds(3600)))
+                .update();
     }
 
     @When("{string} asks for the {int} newest admin actions")
@@ -58,12 +81,18 @@ public class AdminActionsStepDefinitions {
 
     @Then("the admin actions are:")
     public void theAdminActionsAre(DataTable table) {
-        List<Map<String, String>> expected = table.asMaps();
+        List<Map<String, String>> expected = table.asMaps().stream()
+                .map(row -> row.entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, cell -> resolveIds(cell.getValue()))))
+                .toList();
         List<Map<String, String>> actual = new ArrayList<>();
         api.lastResponseJson().get("items").forEach(item -> {
             Map<String, String> row = new HashMap<>();
             for (String column : expected.getFirst().keySet()) {
-                row.put(column, column.equals("subject") ? aliasOf(item.get("subjectId")) : item.get(column).asString());
+                row.put(column, switch (column) {
+                    case "subject" -> aliasOf(item.get("subjectId"));
+                    case "donor" -> aliasOf(item.get("donorId"));
+                    default -> item.get(column).asString();
+                });
             }
             actual.add(row);
         });
@@ -103,6 +132,15 @@ public class AdminActionsStepDefinitions {
             assertThat(item.get("details").asString()).isNotBlank();
             assertThat(item.get("adminId").asString()).isEqualTo(scenarioDonors.idOf("Jana").toString());
         });
+    }
+
+    private String resolveIds(String details) {
+        String resolved = details;
+        for (String alias : List.of("Jana", "Petr", "Eva")) {
+            String id = scenarioDonors.findIdOf(alias).map(UUID::toString).orElse(alias);
+            resolved = resolved.replace("<" + alias + ">", id);
+        }
+        return resolved;
     }
 
     private String aliasOf(JsonNode subjectId) {
