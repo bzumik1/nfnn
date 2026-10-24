@@ -129,8 +129,10 @@ export function adminAction(overrides: Partial<AdminActionResponse> = {}): Admin
     adminEmail: 'jana@example.cz',
     action: 'PAIR_PAYMENT',
     subjectId: '019a1c00-0000-7000-8000-000000001001',
+    donorId: '01a18e56-bdb0-775a-bd0a-a60756831369',
+    summary: 'Platba 500 Kč ze dne 10. 10. 2026 ručně přiřazena dárci Jana Nováková.',
     details:
-      'Platba 019a1c00-0000-7000-8000-000000001001 ručně přiřazena dárci 01a18e56-bdb0-775a-bd0a-a60756831369',
+      'Platba 1001 (Money[amountMinor=50000, currency=CZK], zaúčtována 2026-10-10) ručně přiřazena dárci 01a18e56-bdb0-775a-bd0a-a60756831369 jako dar 019a1c00-0000-7000-8000-00000000d001',
     performedAt: '2026-10-22T10:00:00Z',
     client: null,
     ...overrides,

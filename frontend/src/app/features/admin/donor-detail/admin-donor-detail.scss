@@ -285,3 +285,8 @@ td.amount {
     margin-right: var(--space-1-5);
   }
 }
+
+.donor-payments a {
+  color: var(--color-accent);
+  font-weight: var(--weight-semibold);
+}

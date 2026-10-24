@@ -2,6 +2,7 @@ import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
+import { RouterTestingHarness } from '@angular/router/testing';
 import { authInterceptor } from '../../../core/auth/auth-interceptor';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { authResponse, sampleDonor } from '../../../core/auth/testing/donor-fixtures';
@@ -28,8 +29,11 @@ function problem(status: number, type: string, title: string, detail: string) {
   };
 }
 
+const FIRST_PAGE = 'pairing=unpaired&limit=50';
+const PAIRED_PAGE = 'pairing=paired&limit=50';
+
 describe('Given an administrator on the bank payments page', () => {
-  let fixture: ComponentFixture<AdminPayments>;
+  let fixture: ComponentFixture<unknown>;
   let http: HttpTestingController;
 
   beforeEach(async () => {
@@ -39,7 +43,7 @@ describe('Given an administrator on the bank payments page', () => {
       providers: [
         provideHttpClient(withInterceptors([authInterceptor])),
         provideHttpClientTesting(),
-        provideRouter([]),
+        provideRouter([{ path: 'sprava/platby', component: AdminPayments }]),
       ],
     }).compileComponents();
     http = TestBed.inject(HttpTestingController);
@@ -48,9 +52,17 @@ describe('Given an administrator on the bank payments page', () => {
     http
       .expectOne('/api/donors/auth/login')
       .flush(authResponse('token-1', sampleDonor({ roles: ['DONOR', 'ADMIN'] })));
-    fixture = TestBed.createComponent(AdminPayments);
-    fixture.detectChanges();
   });
+
+  async function open(url = '/sprava/platby'): Promise<void> {
+    const harness = await RouterTestingHarness.create(url);
+    fixture = harness.fixture;
+    await settle();
+  }
+
+  function url(): string {
+    return TestBed.inject(Router).url;
+  }
 
   afterEach(() => {
     vi.useRealTimers();
@@ -104,13 +116,14 @@ describe('Given an administrator on the bank payments page', () => {
     fixture.detectChanges();
   }
 
-  async function listResponds(body: object, params = 'pairing=unpaired'): Promise<void> {
+  async function listResponds(body: object, params = FIRST_PAGE): Promise<void> {
     http.expectOne(`${PAYMENTS_URL}?${params}`).flush(body);
     await settle();
   }
 
-  it('when the page opens, then it asks for the unpaired payments with the token and says it is loading', () => {
-    const request = http.expectOne(`${PAYMENTS_URL}?pairing=unpaired`);
+  it('when the page opens, then it asks for the first 50 unpaired payments with the token and says it is loading', async () => {
+    await open();
+    const request = http.expectOne(`${PAYMENTS_URL}?${FIRST_PAGE}`);
 
     expect(request.request.headers.get('Authorization')).toBe('Bearer token-1');
     expect(text('h1')).toBe('Platby z banky');
@@ -119,12 +132,14 @@ describe('Given an administrator on the bank payments page', () => {
   });
 
   it('when there is nothing unpaired, then the page says so', async () => {
+    await open();
     await listResponds(paymentList([]));
 
     expect(text('.ui-card__empty')).toContain('Všechny platby z banky jsou přiřazené.');
   });
 
   it('when unpaired payments arrive, then each row shows date, amount, sender, symbol and message with a pairing button', async () => {
+    await open();
     await listResponds(
       paymentList([
         unpairedPayment(),
@@ -152,9 +167,8 @@ describe('Given an administrator on the bank payments page', () => {
   });
 
   it('when the list cannot be loaded, then an alert offers a retry that asks again', async () => {
-    http
-      .expectOne(`${PAYMENTS_URL}?pairing=unpaired`)
-      .flush({}, { status: 500, statusText: 'Error' });
+    await open();
+    http.expectOne(`${PAYMENTS_URL}?${FIRST_PAGE}`).flush({}, { status: 500, statusText: 'Error' });
     await settle();
 
     expect(text('[role="alert"]:not(:empty)')).toContain('Platby se nepodařilo načíst.');
@@ -166,10 +180,11 @@ describe('Given an administrator on the bank payments page', () => {
   });
 
   it('when the role was taken away, then the administrator lands on the donor overview', async () => {
+    await open();
     const router = TestBed.inject(Router);
     const navigate = vi.spyOn(router, 'navigateByUrl').mockResolvedValue(true);
     const refused = problem(403, 'auth/forbidden', 'Nemáte oprávnění', 'Jen pro správce.');
-    http.expectOne(`${PAYMENTS_URL}?pairing=unpaired`).flush(refused.body, refused.options);
+    http.expectOne(`${PAYMENTS_URL}?${FIRST_PAGE}`).flush(refused.body, refused.options);
     await settle();
 
     expect(navigate).toHaveBeenCalledWith('/darce/prehled');
@@ -177,12 +192,13 @@ describe('Given an administrator on the bank payments page', () => {
 
   describe('when the administrator switches to the paired payments', () => {
     beforeEach(async () => {
+      await open();
       await listResponds(paymentList([unpairedPayment()]));
       button('Přiřazené').click();
       await settle();
     });
 
-    it('then the newest year is shown with donor, method and receipt, other years can be chosen', async () => {
+    it('then every year is listed newest first with donor, method and receipt, and the tab is kept in the address', async () => {
       await listResponds(
         paymentList(
           [
@@ -192,7 +208,7 @@ describe('Given an administrator on the bank payments page', () => {
             unpairedPayment({
               id: 'p2',
               bankTransactionId: 1002,
-              bookedOn: '2026-09-01',
+              bookedOn: '2025-09-01',
               donation: pairedDonation({
                 id: 'd2',
                 donorName: null,
@@ -201,46 +217,30 @@ describe('Given an administrator on the bank payments page', () => {
               }),
             }),
           ],
-          { year: 2026, availableYears: [2026, 2025] },
+          { availableYears: [2026, 2025] },
         ),
-        'pairing=paired',
+        PAIRED_PAGE,
       );
 
-      expect(text('#payments-title')).toBe('Přiřazené platby 2026');
+      expect(url()).toBe('/sprava/platby?stav=prirazene');
+      expect(text('#payments-title')).toBe('Přiřazené platby');
+      expect(fixture.nativeElement.querySelector('select')).toBeNull();
       expect(rows()[0]).toContain('Jana Nováková podle variabilního symbolu potvrzení vystaveno');
       expect(rows()[0]).toContain('Nelze zrušit, k daru je vystavené potvrzení.');
       expect(
         fixture.nativeElement.querySelector('tbody tr .donor-name a')?.getAttribute('href'),
       ).toBe('/sprava/darci/01a18e56-bdb0-775a-bd0a-a60756831369');
+      expect(rows()[1]).toContain('01. 09. 2025');
       expect(rows()[1]).toContain('dárce bez záznamu ručně správcem vráceno');
       expect(rows()[1]).toContain('Zrušit přiřazení');
-      const years = Array.from(
-        fixture.nativeElement.querySelectorAll(
-          '.admin-year option',
-        ) as NodeListOf<HTMLOptionElement>,
-      ).map((option) => option.textContent?.trim());
-      expect(years).toEqual(['2026', '2025']);
-
-      const select = element<HTMLSelectElement>('.admin-year select');
-      select.value = '2025';
-      select.dispatchEvent(new Event('change'));
-      await settle();
-      await listResponds(
-        paymentList([], { year: 2025, availableYears: [2026, 2025] }),
-        'pairing=paired&year=2025',
-      );
-
-      expect(text('#payments-title')).toBe('Přiřazené platby 2025');
-      expect(text('.ui-card__empty')).toBe('Zatím není přiřazena žádná platba.');
     });
 
     it('then unpairing asks for a confirmation, posts once confirmed, reports the yearly receipt and reloads', async () => {
       await listResponds(
         paymentList([unpairedPayment({ donation: pairedDonation() })], {
-          year: 2026,
           availableYears: [2026],
         }),
-        'pairing=paired',
+        PAIRED_PAGE,
       );
 
       button('Zrušit přiřazení').click();
@@ -267,7 +267,7 @@ describe('Given an administrator on the bank payments page', () => {
       expect(request.request.method).toBe('POST');
       request.flush({ changedYearlyReceipts: [2026] });
       await settle();
-      await listResponds(paymentList([], { year: null, availableYears: [] }), 'pairing=paired');
+      await listResponds(paymentList([], { availableYears: [] }), PAIRED_PAGE);
 
       expect(text('[role="status"]:not(:empty)')).toBe(
         'Platba 500 Kč z 10. 10. 2026 už není přiřazena. Web ji sám znovu nepřiřadí; najdete ji mezi platbami čekajícími na přiřazení. Dárce si už stáhl roční potvrzení za 2026; při dalším stažení dostane nové. Dejte mu prosím vědět.',
@@ -284,10 +284,9 @@ describe('Given an administrator on the bank payments page', () => {
     it('then a refused unpairing shows the backend reason as an alert', async () => {
       await listResponds(
         paymentList([unpairedPayment({ donation: pairedDonation() })], {
-          year: 2026,
           availableYears: [2026],
         }),
-        'pairing=paired',
+        PAIRED_PAGE,
       );
       button('Zrušit přiřazení').click();
       await settle();
@@ -314,6 +313,7 @@ describe('Given an administrator on the bank payments page', () => {
 
   describe('when the administrator opens the pairing dialog for a payment', () => {
     beforeEach(async () => {
+      await open();
       await listResponds(paymentList([unpairedPayment()]));
       const opener = button('Přiřadit dárci');
       opener.focus();
@@ -436,6 +436,171 @@ describe('Given an administrator on the bank payments page', () => {
 
       expect(document.querySelector('dialog')).toBeNull();
       expect(document.activeElement?.textContent?.trim()).toBe('Přiřadit dárci');
+    });
+  });
+
+  describe('when the administrator searches and narrows the period', () => {
+    function type(selector: string, value: string): void {
+      const input = element<HTMLInputElement>(selector);
+      input.value = value;
+      input.dispatchEvent(new Event('input'));
+    }
+
+    function choose(selector: string, value: string): void {
+      const input = element<HTMLInputElement>(selector);
+      input.value = value;
+      input.dispatchEvent(new Event('change'));
+    }
+
+    it('then a typed text is asked for once the typing pauses, kept in the address and the count is announced', async () => {
+      await open();
+      await listResponds(paymentList([unpairedPayment()]));
+      expect(text('.payments-count')).toBe('');
+
+      vi.useFakeTimers();
+      type('#payments-search', 'nov');
+      vi.advanceTimersByTime(299);
+      http.expectNone((request) => request.url === PAYMENTS_URL);
+      vi.advanceTimersByTime(1);
+      vi.useRealTimers();
+      await settle();
+
+      await listResponds(
+        paymentList([unpairedPayment(), unpairedPayment({ id: 'p2' })], { total: 2 }),
+        'pairing=unpaired&query=nov&limit=50',
+      );
+      expect(url()).toBe('/sprava/platby?q=nov');
+      expect(element<HTMLInputElement>('#payments-search').value).toBe('nov');
+      expect(element('.payments-count').getAttribute('role')).toBe('status');
+      expect(text('.payments-count')).toBe('Nalezeny 2 platby.');
+      expect(text('.admin-tabs')).toBe('Čekají na přiřazení (1) Přiřazené');
+    });
+
+    it('then the dates bound the list at once and an empty result offers to clear the filter, which lists everything again', async () => {
+      await open();
+      await listResponds(paymentList([unpairedPayment()]));
+
+      choose('#payments-from', '2026-10-01');
+      await settle();
+      await listResponds(
+        paymentList([unpairedPayment()]),
+        'pairing=unpaired&from=2026-10-01&limit=50',
+      );
+      choose('#payments-to', '2026-10-05');
+      await settle();
+      await listResponds(
+        paymentList([]),
+        'pairing=unpaired&from=2026-10-01&to=2026-10-05&limit=50',
+      );
+
+      expect(url()).toBe('/sprava/platby?od=2026-10-01&do=2026-10-05');
+      expect(text('.payments-count')).toBe('Nenalezena žádná platba.');
+      expect(text('.ui-card__empty')).toContain('Žádná platba neodpovídá hledání.');
+
+      button('Zrušit filtr').click();
+      await settle();
+      await listResponds(paymentList([unpairedPayment()]));
+
+      expect(url()).toBe('/sprava/platby');
+      expect(element<HTMLInputElement>('#payments-from').value).toBe('');
+      expect(element<HTMLInputElement>('#payments-to').value).toBe('');
+      expect(document.activeElement).toBe(element('#payments-search'));
+      expect(rows()).toHaveLength(1);
+    });
+
+    it('then a shared address opens the same tab, text and period', async () => {
+      await open('/sprava/platby?stav=prirazene&q=jana&od=2026-01-01&do=2026-03-31');
+
+      await listResponds(
+        paymentList([unpairedPayment({ donation: pairedDonation() })]),
+        'pairing=paired&query=jana&from=2026-01-01&to=2026-03-31&limit=50',
+      );
+
+      expect(element<HTMLInputElement>('#payments-search').value).toBe('jana');
+      expect(element<HTMLInputElement>('#payments-from').value).toBe('2026-01-01');
+      expect(element<HTMLInputElement>('#payments-to').value).toBe('2026-03-31');
+      expect(element('.admin-tab.is-active').textContent?.trim()).toBe('Přiřazené');
+      expect(text('.payments-count')).toBe('Nalezena 1 platba.');
+    });
+  });
+
+  describe('when more payments match than one page holds', () => {
+    beforeEach(async () => {
+      await open('/sprava/platby?stav=prirazene');
+      await listResponds(
+        paymentList(
+          Array.from({ length: 50 }, (_, index) =>
+            unpairedPayment({ id: `p${index}`, donation: pairedDonation({ id: `d${index}` }) }),
+          ),
+          { total: 51 },
+        ),
+        PAIRED_PAGE,
+      );
+    });
+
+    it('then "Načíst další" asks for the next page, appends it and moves focus to its first row', async () => {
+      expect(text('.payments-more')).toContain('Zobrazeno 50 z 51.');
+
+      button('Načíst další').click();
+      await settle();
+      expect(button('Načítáme další…').disabled).toBe(true);
+      await listResponds(
+        paymentList(
+          [unpairedPayment({ id: 'p50', bookedOn: '2026-01-02', donation: pairedDonation() })],
+          { total: 51 },
+        ),
+        'pairing=paired&offset=50&limit=50',
+      );
+
+      expect(rows()).toHaveLength(51);
+      expect(document.activeElement).toBe(fixture.nativeElement.querySelectorAll('tbody tr')[50]);
+      expect(fixture.nativeElement.querySelector('.payments-more button')).toBeNull();
+      expect(text('.payments-more')).toBe('');
+    });
+
+    it('then a failed next page says so and keeps the button for another try', async () => {
+      button('Načíst další').click();
+      await settle();
+      http
+        .expectOne(`${PAYMENTS_URL}?pairing=paired&offset=50&limit=50`)
+        .flush({}, { status: 500, statusText: 'Error' });
+      await settle();
+
+      expect(text('.payments-more [role="alert"]')).toBe(
+        'Další platby se nepodařilo načíst. Zkuste to prosím znovu.',
+      );
+      expect(button('Načíst další').disabled).toBe(false);
+      expect(rows()).toHaveLength(50);
+    });
+  });
+
+  describe('when the page opens with one donor from the donor card', () => {
+    beforeEach(async () => {
+      await open('/sprava/platby?stav=prirazene&darce=01a18e56-bdb0-775a-bd0a-a60756831369');
+      await listResponds(
+        paymentList([unpairedPayment({ donation: pairedDonation() })]),
+        'pairing=paired&donorId=01a18e56-bdb0-775a-bd0a-a60756831369&limit=50',
+      );
+    });
+
+    it('then only that donor is listed, named, and the donor filter can be dropped', async () => {
+      expect(text('.payments-donor')).toContain('Jen platby dárce Jana Nováková.');
+      expect(text('.payments-count')).toBe('Nalezena 1 platba.');
+
+      button('Zobrazit platby všech dárců').click();
+      await settle();
+      await listResponds(paymentList([]), PAIRED_PAGE);
+
+      expect(url()).toBe('/sprava/platby?stav=prirazene');
+      expect(fixture.nativeElement.querySelector('.payments-donor')).toBeNull();
+    });
+
+    it('then switching to the payments waiting for a donor drops the donor filter', async () => {
+      button('Čekají na přiřazení').click();
+      await settle();
+      await listResponds(paymentList([]));
+
+      expect(url()).toBe('/sprava/platby');
     });
   });
 });
