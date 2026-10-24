@@ -15,6 +15,18 @@ services:
       - internal
     security_opt:
       - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/run/postgresql
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - DAC_OVERRIDE
+      - FOWNER
+      - SETGID
+      - SETUID
     environment:
       POSTGRES_DB: novanadeje
       POSTGRES_USER: novanadeje
@@ -41,6 +53,14 @@ services:
       - internal
     security_opt:
       - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    cap_add:
+      - DAC_OVERRIDE
+      - FOWNER
     depends_on:
       postgres:
         condition: service_started
@@ -70,6 +90,15 @@ services:
       - edge
     security_opt:
       - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - SETGID
+      - SETUID
     depends_on:
       postgres:
         condition: service_started
@@ -78,7 +107,7 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: prod
       DB_URL: jdbc:postgresql://postgres:5432/novanadeje
-      DB_USERNAME: novanadeje
+      DB_USERNAME: novanadeje_app
       JAVA_TOOL_OPTIONS: -XX:MaxRAMPercentage=75
       TZ: Europe/Prague
     volumes:
@@ -114,6 +143,17 @@ services:
       - edge
     security_opt:
       - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - DAC_OVERRIDE
+      - FOWNER
+      - SETGID
+      - SETUID
     depends_on:
       backend:
         condition: service_started
@@ -141,6 +181,19 @@ services:
       - edge
     security_opt:
       - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m
+      - /run:size=1m
+      - /var/cache/nginx:size=64m
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - DAC_OVERRIDE
+      - NET_BIND_SERVICE
+      - SETGID
+      - SETUID
     depends_on:
       backend:
         condition: service_started

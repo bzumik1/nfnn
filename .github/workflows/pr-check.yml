@@ -182,6 +182,19 @@ jobs:
             echo "::error::every service sets no-new-privileges"
             exit 1
           fi
+          if [ "$(yq '[.services[] | select(.read_only != true or ((.cap_drop // []) | join(",")) != "ALL")] | length' deploy/compose.yml)" != 0 ]; then
+            echo "::error::every service runs on a read-only file system (tmpfs where it writes) and drops every capability, adding back only those its entrypoint needs"
+            exit 1
+          fi
+          caps=$(yq -o=json '[.services | to_entries[] | .key + "=" + ((.value.cap_add // []) | sort | join(","))] | sort | join(" ")' deploy/compose.yml)
+          if [ "$caps" != '"backend=CHOWN,SETGID,SETUID backup=DAC_OVERRIDE,FOWNER frontend=CHOWN,DAC_OVERRIDE,NET_BIND_SERVICE,SETGID,SETUID mcp=CHOWN,DAC_OVERRIDE,FOWNER,SETGID,SETUID postgres=CHOWN,DAC_OVERRIDE,FOWNER,SETGID,SETUID"' ]; then
+            echo "::error::a service adds back a capability nobody reviewed (found $caps)"
+            exit 1
+          fi
+          if [ "$(yq '.services.backend.environment.DB_USERNAME' deploy/compose.yml)" != novanadeje_app ]; then
+            echo "::error::the backend logs in to the database as the application role novanadeje_app, never as the superuser"
+            exit 1
+          fi
 
       - name: The backend gets the time its shutdown waits for before Docker kills it
         run: |
@@ -196,6 +209,13 @@ jobs:
         run: |
           if ! cmp frontend/rotate-log.sh mcp/rotate-log.sh; then
             echo "::error::frontend/rotate-log.sh and mcp/rotate-log.sh are one script copied into two build contexts; change both"
+            exit 1
+          fi
+
+      - name: The database and the backup hand the database to the application role with the same script
+        run: |
+          if ! cmp deploy/postgres/own-by-app-role.sql deploy/backup/own-by-app-role.sql; then
+            echo "::error::deploy/postgres/own-by-app-role.sql and deploy/backup/own-by-app-role.sql are one script copied into two build contexts; change both"
             exit 1
           fi
 
@@ -217,7 +237,7 @@ jobs:
       - name: First setup
         run: |
           secrets="$RUNNER_TEMP/nfnn/secrets"
-          for file in db-password jwt-secret settings-key; do
+          for file in db-password db-app-password jwt-secret settings-key; do
             [ "$(sudo stat -c '%a %U' "$secrets/$file")" = '600 root' ] || { echo "::error::secrets/$file must exist, owned by root with mode 600"; sudo ls -la "$secrets"; exit 1; }
           done
           status=$(curl -fsS --max-time 10 http://localhost:8089/api/operations/setup)
@@ -260,18 +280,37 @@ jobs:
           closed=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 -H 'Content-Type: application/json' --data '{"code":null,"settings":[]}' http://localhost:8089/api/operations/setup)
           [ "$closed" = 409 ] || { echo "::error::a completed setup must answer 409 (got $closed)"; exit 1; }
 
-      - name: The database takes the generated password even when it had another one
+      - name: The backend uses the database as an ordinary role that owns the site's tables
         run: |
-          docker exec nfnn-postgres psql -U novanadeje -d novanadeje -c "alter role novanadeje password 'an-old-password'"
+          sql() {
+            docker exec nfnn-postgres psql -U novanadeje -d novanadeje -tA -c "$1"
+          }
+          [ "$(sql "select rolsuper or rolcreaterole or rolcreatedb or rolreplication or rolbypassrls from pg_roles where rolname = 'novanadeje_app'")" = f ] || { echo "::error::the application role must be no superuser and create neither roles nor databases"; exit 1; }
+          [ "$(sql "select count(*) from pg_auth_members where member = 'novanadeje_app'::regrole")" = 0 ] || { echo "::error::the application role must belong to no other role (pg_read_server_files, pg_execute_server_program and the like)"; exit 1; }
+          [ "$(sql "select string_agg(distinct usename, ',') from pg_stat_activity where datname = 'novanadeje' and usename <> 'novanadeje'")" = novanadeje_app ] || { echo "::error::the backend must log in as novanadeje_app"; sql "select usename, application_name from pg_stat_activity where datname = 'novanadeje'"; exit 1; }
+          [ "$(sql "select count(*) from pg_class c join pg_namespace n on n.oid = c.relnamespace where n.nspname = 'public' and c.relowner <> 'novanadeje_app'::regrole")" = 0 ] || { echo "::error::every table, index and sequence of the site belongs to novanadeje_app"; exit 1; }
+          [ "$(sql "select pg_get_userbyid(datdba) from pg_database where datname = 'novanadeje'")" = novanadeje_app ] || { echo "::error::the site's database belongs to novanadeje_app"; exit 1; }
+          if docker exec -u app nfnn-backend cat /secrets/db-password > /dev/null 2>&1 || docker exec -u app nfnn-backend cat /secrets/db-app-password > /dev/null 2>&1; then
+            echo "::error::the backend's Java process must read no database password from the secrets folder"
+            exit 1
+          fi
+
+      - name: The database takes the generated passwords and hands an older database to the application role
+        run: |
+          docker exec nfnn-postgres psql -U novanadeje -d novanadeje -c "alter role novanadeje password 'an-old-password'" -c "alter role novanadeje_app password 'an-old-password'" -c "alter table admin_action owner to novanadeje" -c "alter database novanadeje owner to novanadeje"
           docker compose restart postgres
+          synced=false
           for _ in $(seq 30); do
-            if docker exec nfnn-postgres sh -c 'PGPASSWORD=$(cat /secrets/db-password) psql -h 127.0.0.1 -U novanadeje -d novanadeje -tA -c "select 1"' 2> /dev/null | grep -q 1; then
-              exit 0
+            if docker exec nfnn-postgres sh -c 'PGPASSWORD=$(cat /secrets/db-password) psql -h 127.0.0.1 -U novanadeje -d novanadeje -tA -c "select 1" > /dev/null && PGPASSWORD=$(cat /secrets/db-app-password) psql -h 127.0.0.1 -U novanadeje_app -d novanadeje -tA -c "select 1"' 2> /dev/null | grep -q 1; then
+              synced=true
+              break
             fi
             sleep 2
           done
-          echo "::error::nfnn-postgres did not set the role's password to the generated one"
-          exit 1
+          [ "$synced" = true ] || { echo "::error::nfnn-postgres did not set the roles' passwords to the generated ones"; exit 1; }
+          [ "$(docker exec nfnn-postgres psql -U novanadeje -d novanadeje -tA -c "select pg_get_userbyid(relowner) from pg_class where oid = 'public.admin_action'::regclass")" = novanadeje_app ] || { echo "::error::nfnn-postgres did not hand a table of an older database to novanadeje_app"; exit 1; }
+          [ "$(docker exec nfnn-postgres psql -U novanadeje -d novanadeje -tA -c "select pg_get_userbyid(datdba) from pg_database where datname = 'novanadeje'")" = novanadeje_app ] || { echo "::error::nfnn-postgres did not hand an older database to novanadeje_app"; exit 1; }
+          docker compose up -d --wait --wait-timeout 300 backend
 
       - name: Verify
         run: |
@@ -282,8 +321,10 @@ jobs:
             502|503|504|000) echo "::error::nginx could not reach the backend"; exit 1 ;;
           esac
           for container in nfnn-postgres nfnn-backup nfnn-mcp nfnn-frontend; do
+            main_environment=$(docker exec --privileged "$container" sh -c "tr '\\0' '\\n' < /proc/1/environ")
+            [ "$container" = nfnn-frontend ] || echo "$main_environment" | grep -q '^PATH=' || { echo "::error::could not read the environment of $container's main process (nginx alone writes its title over it)"; exit 1; }
             for key in JWT_SECRET SETTINGS_KEY DB_PASSWORD FIO_TOKEN MAIL_PASSWORD; do
-              if docker exec "$container" printenv "$key" > /dev/null || docker exec "$container" sh -c "tr '\\0' '\\n' < /proc/1/environ" | grep -q "^$key="; then
+              if docker exec "$container" printenv "$key" > /dev/null || echo "$main_environment" | grep -q "^$key="; then
                 echo "::error::$container must not receive $key, neither in its configuration nor in its main process"
                 exit 1
               fi
@@ -416,10 +457,12 @@ jobs:
           [ "$receipt_number" = 41 ] || { echo "::error::the restore rewound the receipt numbers to $receipt_number, so numbers issued after the backup would be issued again"; exit 1; }
           [ "$(count_rows "action = 'BACKUP_RESTORED' and admin_id = '019a0000-0000-7000-8000-000000000002'")" = 1 ] || { echo "::error::the finished restore is not recorded in the administration history"; exit 1; }
           docker exec nfnn-postgres psql -U novanadeje -d postgres -tA -c "select datname from pg_database" | grep -q nfnn_restore && { echo "::error::a staging or retired database was left behind"; exit 1; }
+          [ "$(docker exec nfnn-postgres psql -U novanadeje -d novanadeje -tA -c "select count(*) from pg_class c join pg_namespace n on n.oid = c.relnamespace where n.nspname = 'public' and c.relowner <> 'novanadeje_app'::regrole")" = 0 ] || { echo "::error::the restored database must belong to novanadeje_app, or the backend cannot migrate it"; exit 1; }
+          [ "$(docker exec nfnn-postgres psql -U novanadeje -d novanadeje -tA -c "select pg_get_userbyid(datdba) from pg_database where datname = 'novanadeje'")" = novanadeje_app ] || { echo "::error::the restored database must belong to novanadeje_app"; exit 1; }
 
           echo "A restore that fails leaves the data as they were, removes the upload and lets the backend start"
           docker exec nfnn-postgres psql -U novanadeje -d novanadeje -c "insert into admin_action (id, admin_id, action, details, performed_at) values ('019a0000-0000-7000-8000-000000000004', '019a0000-0000-7000-8000-000000000002', 'CI_MARKER', 'kept by the failed restore', now())"
-          docker exec nfnn-backend sh -c "printf 'PGDMP but not a dump' > /restore/ci-4.upload && printf 'source=upload\nfile=ci-4.upload\nadmin=\n' > /backups/requests/ci-4.restore"
+          docker exec -u app nfnn-backend sh -c "printf 'PGDMP but not a dump' > /restore/ci-4.upload && printf 'source=upload\nfile=ci-4.upload\nadmin=\n' > /backups/requests/ci-4.restore"
           docker restart nfnn-backend
           wait_for "grep -q '^request=ci-4$' $backups/status/restore" 60 "the failing restore did not run"
           grep -q '^outcome=failed$' "$backups/status/restore" || { echo "::error::the broken upload was not reported as failed"; cat "$backups/status/restore"; exit 1; }

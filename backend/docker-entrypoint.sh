@@ -5,9 +5,10 @@
 # the first setup, or the backup container's restore.running marker. A request the backup container
 # has not taken within five minutes is dropped, so the site comes back with the data it had.
 # With the secrets folder mounted, it generates the access-token signing key and the key that
-# encrypts stored settings on the first start, waits until nfnn-postgres has the database password
-# ready and hands all three to Java as JWT_SECRET, SETTINGS_KEY and DB_PASSWORD (variables set by
-# the environment win).
+# encrypts stored settings on the first start, waits until nfnn-postgres has the password of the
+# application role novanadeje_app ready and hands all three to Java as JWT_SECRET, SETTINGS_KEY and
+# DB_PASSWORD (variables set by the environment win). The superuser's password stays with the
+# database and the backup.
 set -eu
 
 LOG_DIR=${LOG_DIR:-/logs}
@@ -36,14 +37,14 @@ if [ "$(id -u)" = 0 ]; then
     export JWT_SECRET SETTINGS_KEY
     if [ -z "${DB_PASSWORD:-}" ]; then
       waited=0
-      until [ -f "$SECRETS_DIR/db-password.ready" ] && [ -s "$SECRETS_DIR/db-password" ]; do
+      until [ -f "$SECRETS_DIR/db-password.ready" ] && [ -s "$SECRETS_DIR/db-app-password" ]; do
         if [ $((waited % 60)) -eq 0 ]; then
           echo "Waiting for nfnn-postgres to set the database password in $SECRETS_DIR (waited ${waited}s)"
         fi
         sleep 5
         waited=$((waited + 5))
       done
-      DB_PASSWORD=$(cat "$SECRETS_DIR/db-password")
+      DB_PASSWORD=$(cat "$SECRETS_DIR/db-app-password")
       export DB_PASSWORD
     fi
   fi
