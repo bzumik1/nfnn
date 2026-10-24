@@ -11,8 +11,10 @@ import {
   viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { forkJoin, map, Observable, of, switchMap } from 'rxjs';
 import { Router, RouterLink } from '@angular/router';
 import { problemTypeEndsWith } from '../../../core/auth/api-problem';
+import { pluralCategory } from '../../../core/i18n/plural-category';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
 import { formatMinorUnits } from '../../donations/donation-amount';
@@ -21,6 +23,7 @@ import {
   AdminApi,
   AdminBackupsResponse,
   AdminOverviewResponse,
+  AdministratorResponse,
   BackupRunResponse,
   ImportFailureKind,
   ImportStateResponse,
@@ -34,6 +37,45 @@ type LoadState = 'loading' | 'ready' | 'error';
 
 const UNAUTHENTICATED = 'auth/unauthenticated';
 const FORBIDDEN = 'auth/forbidden';
+
+type NextStepLink = 'settings' | 'logs' | null;
+
+interface UnpairedSummary {
+  readonly count: number;
+  readonly totalMinor: number;
+}
+
+interface NextStep {
+  readonly text: string;
+  readonly link: NextStepLink;
+}
+
+const NEXT_STEPS: Record<ImportFailureKind, NextStep> = {
+  RATE_LIMITED: {
+    text: $localize`:@@admin.home.import.next.rateLimited:Banka teď odmítá příliš časté dotazy. Web to zkusí znovu sám, nic dělat nemusíte.`,
+    link: null,
+  },
+  HISTORY_LOCKED: {
+    text: $localize`:@@admin.home.import.next.historyLocked:Odemkněte historii v internetovém bankovnictví Fio (Nastavení → API, ikona zámku) a do 10 minut restartujte backend (v ZimaOS restart aplikace).`,
+    link: null,
+  },
+  UNAUTHORIZED: {
+    text: $localize`:@@admin.home.import.next.unauthorized:V internetovém bankovnictví Fio (Nastavení → API) vytvořte nový token typu „Sledování účtu“ (platí 180 dní) a vložte ho v Nastavení jako Token Fio API.`,
+    link: 'settings',
+  },
+  TRANSPORT: {
+    text: $localize`:@@admin.home.import.next.transport:Banka teď neodpovídá. Web to zkouší znovu sám každou hodinu; pokud to trvá déle, zkontrolujte připojení serveru k internetu.`,
+    link: null,
+  },
+  INVALID_RESPONSE: {
+    text: $localize`:@@admin.home.import.next.invalidResponse:Podrobnosti jsou v logu backendu; může jít o změnu Fio API.`,
+    link: 'logs',
+  },
+  UNEXPECTED: {
+    text: $localize`:@@admin.home.import.next.unexpected:Podrobnosti jsou v logu backendu.`,
+    link: 'logs',
+  },
+};
 
 const FAILURE_LABELS: Record<ImportFailureKind, string> = {
   RATE_LIMITED: $localize`:@@admin.home.import.failure.rateLimited:Fio odmítlo příliš častý dotaz`,
@@ -65,6 +107,10 @@ export class AdminHome {
   protected readonly importState = signal<ImportStateResponse | null>(null);
   protected readonly overviewState = signal<LoadState>('loading');
   protected readonly overview = signal<AdminOverviewResponse | null>(null);
+  protected readonly unpairedState = signal<LoadState>('loading');
+  protected readonly unpaired = signal<UnpairedSummary | null>(null);
+  protected readonly administratorsState = signal<LoadState>('loading');
+  protected readonly withoutSecondFactor = signal<readonly string[]>([]);
   protected readonly backupsState = signal<LoadState>('loading');
   protected readonly backups = signal<AdminBackupsResponse | null>(null);
 
@@ -105,9 +151,59 @@ export class AdminHome {
   protected readonly lastFailureMessage = computed(
     () => this.importState()?.lastFailure?.message ?? null,
   );
+  protected readonly lastFailureAt = computed(() =>
+    time(this.importState()?.lastFailure?.attemptedAt),
+  );
   protected readonly outage = computed(() => {
     const state = this.importState();
     return state?.reportedOutage ? FAILURE_LABELS[state.reportedOutage] : null;
+  });
+  protected readonly nextStep = computed(() => {
+    const state = this.importState();
+    return state?.reportedOutage ? NEXT_STEPS[state.reportedOutage] : null;
+  });
+  protected readonly neverAttempted = computed(
+    () => this.state() === 'ready' && this.importState()?.lastAttemptedAt == null,
+  );
+
+  protected readonly importNeedsAttention = computed(
+    () => this.state() === 'error' || this.outage() !== null || this.neverAttempted(),
+  );
+  protected readonly unpairedNeedsAttention = computed(
+    () => this.unpairedState() === 'error' || (this.unpaired()?.count ?? 0) > 0,
+  );
+  protected readonly backupsNeedAttention = computed(
+    () => this.backupsState() === 'error' || this.backupProblems().length > 0,
+  );
+  protected readonly administratorsNeedAttention = computed(
+    () => this.administratorsState() === 'error' || this.withoutSecondFactor().length > 0,
+  );
+  protected readonly attentionLoading = computed(() =>
+    [this.state(), this.unpairedState(), this.backupsState(), this.administratorsState()].includes(
+      'loading',
+    ),
+  );
+  protected readonly needsAttention = computed(
+    () =>
+      this.importNeedsAttention() ||
+      this.unpairedNeedsAttention() ||
+      this.backupsNeedAttention() ||
+      this.administratorsNeedAttention(),
+  );
+  protected readonly unpairedText = computed(() => {
+    const summary = this.unpaired();
+    return summary === null ? '' : unpairedText(summary);
+  });
+  protected readonly withoutSecondFactorText = computed(() => {
+    const names = this.withoutSecondFactor();
+    const list = names.join(', ');
+    return names.length === 1
+      ? $localize`:@@admin.home.attention.secondFactor.one:Správce ${list}:names: nemá druhý faktor (kód z ověřovací aplikace ani přístupový klíč), správa se mu neotevře.`
+      : $localize`:@@admin.home.attention.secondFactor.many:Správci bez druhého faktoru (kódu z ověřovací aplikace i přístupového klíče), kterým se správa neotevře: ${list}:names:.`;
+  });
+  protected readonly lastBackupTime = computed(() => {
+    const run = this.backups()?.lastBackup;
+    return run && run.outcome === 'OK' ? formatBankTime(run.finishedAt) : null;
   });
   protected readonly consecutiveFailures = computed(
     () => this.importState()?.consecutiveFailures ?? 0,
@@ -117,6 +213,8 @@ export class AdminHome {
     this.load();
     this.loadOverview();
     this.loadBackups();
+    this.loadUnpaired();
+    this.loadAdministrators();
     afterNextRender(() => this.title().nativeElement.focus(), { injector: this.injector });
   }
 
@@ -146,6 +244,52 @@ export class AdminHome {
         },
         error: () => this.backupsState.set('error'),
       });
+  }
+
+  protected loadUnpaired(): void {
+    this.unpairedState.set('loading');
+    this.api
+      .payments('unpaired')
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (list) => {
+          this.unpaired.set({
+            count: list.total,
+            totalMinor: list.items.reduce((sum, item) => sum + item.amountMinor, 0),
+          });
+          this.unpairedState.set('ready');
+        },
+        error: () => this.unpairedState.set('error'),
+      });
+  }
+
+  protected loadAdministrators(): void {
+    this.administratorsState.set('loading');
+    this.api
+      .administrators()
+      .pipe(
+        switchMap(({ items }) => this.withoutAnyFactor(items)),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: (names) => {
+          this.withoutSecondFactor.set(names);
+          this.administratorsState.set('ready');
+        },
+        error: () => this.administratorsState.set('error'),
+      });
+  }
+
+  private withoutAnyFactor(items: AdministratorResponse[]): Observable<string[]> {
+    const withoutCode = items.filter((item) => !item.secondFactorEnabled);
+    if (withoutCode.length === 0) {
+      return of([]);
+    }
+    return forkJoin(withoutCode.map((item) => this.api.donor(item.donorId))).pipe(
+      map((accounts) =>
+        accounts.filter((account) => account.passkeys === 0).map((account) => account.name),
+      ),
+    );
   }
 
   protected changeYear(event: Event): void {
@@ -199,4 +343,16 @@ function failedRun(run: BackupRunResponse): string {
 
 function time(isoInstant: string | null | undefined): string | null {
   return isoInstant ? formatBankTime(isoInstant) : null;
+}
+
+function unpairedText({ count, totalMinor }: UnpairedSummary): string {
+  const total = `${formatMinorUnits(totalMinor)}\u00a0Kč`;
+  switch (pluralCategory(count)) {
+    case 'one':
+      return $localize`:@@admin.home.attention.unpaired.one:1 platba čeká na přiřazení dárci (${total}:total:).`;
+    case 'few':
+      return $localize`:@@admin.home.attention.unpaired.few:${count}:count: platby čekají na přiřazení dárci (${total}:total:).`;
+    case 'other':
+      return $localize`:@@admin.home.attention.unpaired.many:${count}:count: plateb čeká na přiřazení dárci (${total}:total:).`;
+  }
 }

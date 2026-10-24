@@ -1,5 +1,144 @@
 <div class="ui-page container">
   <h1 #title class="ui-page-title" tabindex="-1" i18n="@@admin.home.heading">Správa</h1>
+  <section class="ui-card attention" aria-labelledby="admin-attention-title">
+    <h2 id="admin-attention-title" class="ui-card__title" i18n="@@admin.home.attention.title">
+      Co potřebuje vaši pozornost
+    </h2>
+    @if (attentionLoading()) {
+      <p class="ui-load-state" role="status" i18n="@@admin.home.attention.loading">
+        Zjišťujeme, jestli na vás něco nečeká…
+      </p>
+    } @else if (!needsAttention()) {
+      <p class="healthy" i18n="@@admin.home.attention.allFine">
+        Vše je v pořádku. Platby z banky naposledy stažené {{ lastSuccess() ?? '—' }}, poslední
+        záloha {{ lastBackupTime() ?? '—' }}.
+      </p>
+    }
+    @if (needsAttention()) {
+      <ul class="attention-list">
+        @if (state() === 'error') {
+          <li class="attention-item" i18n="@@admin.home.attention.import.failed">
+            Stav stahování plateb se nepodařilo zjistit; zkuste to znovu v kartě níže.
+          </li>
+        } @else if (outage(); as outage) {
+          <li class="attention-item attention-item--warning attention-item--stack">
+            <p>
+              <span class="visually-hidden" i18n="@@admin.home.import.outage.label"
+                >Upozornění:
+              </span>
+              <span i18n="@@admin.home.import.outage.text"
+                >Platby z banky se nestahují ({{ consecutiveFailures() }}× za sebou) a fond o tom
+                dostal e-mail. Důvod: {{ outage }}.</span
+              >
+            </p>
+            @if (nextStep(); as step) {
+              <p class="admin-next-step">
+                <span class="admin-next-step-label" i18n="@@admin.home.import.next.label"
+                  >Co udělat:</span
+                >
+                {{ step.text }}
+                @switch (step.link) {
+                  @case ('settings') {
+                    <a routerLink="/sprava/nastaveni" i18n="@@admin.home.import.next.settings"
+                      >Otevřít Nastavení</a
+                    >
+                  }
+                  @case ('logs') {
+                    <a routerLink="/sprava/logy" i18n="@@admin.home.import.next.logs"
+                      >Otevřít logy</a
+                    >
+                  }
+                }
+              </p>
+            }
+          </li>
+        } @else if (neverAttempted()) {
+          <li
+            class="attention-item attention-item--warning admin-pending"
+            i18n="@@admin.home.import.neverAttempted"
+          >
+            Stahování plateb ještě neproběhlo. Pokud to trvá déle než hodinu, zkontrolujte v
+            <a routerLink="/sprava/nastaveni">Nastavení</a> token Fio API.
+          </li>
+        }
+        @if (unpairedState() === 'error') {
+          <li class="attention-item" role="alert">
+            <span i18n="@@admin.home.attention.unpaired.failed"
+              >Platby čekající na přiřazení se nepodařilo zjistit.</span
+            >
+            <button
+              type="button"
+              class="ui-button ui-button--small"
+              (click)="loadUnpaired()"
+              i18n="@@admin.home.attention.retry"
+            >
+              Zkusit znovu
+            </button>
+          </li>
+        } @else if (unpairedText(); as text) {
+          @if ((unpaired()?.count ?? 0) > 0) {
+            <li class="attention-item attention-unpaired">
+              <span>{{ text }}</span
+              >&ngsp;
+              <a
+                class="ui-button ui-button--small"
+                routerLink="/sprava/platby"
+                i18n="@@admin.home.attention.unpaired.open"
+                >Přiřadit platby</a
+              >
+            </li>
+          }
+        }
+        @if (backupsState() === 'error') {
+          <li class="attention-item" i18n="@@admin.home.attention.backups.failed">
+            Stav záloh se nepodařilo zjistit; zkuste to znovu v kartě níže.
+          </li>
+        } @else if (backupProblems().length > 0) {
+          <li class="attention-item attention-item--danger attention-backups">
+            <ul class="attention-problems">
+              @for (problem of backupProblems(); track problem) {
+                <li>{{ problem }}</li>
+              }
+            </ul>
+            &ngsp;
+            <a
+              class="ui-button ui-button--small"
+              routerLink="/sprava/zalohy"
+              i18n="@@admin.home.attention.backups.open"
+              >Otevřít zálohy</a
+            >
+          </li>
+        }
+        @if (administratorsState() === 'error') {
+          <li class="attention-item" role="alert">
+            <span i18n="@@admin.home.attention.secondFactor.failed"
+              >Správce se nepodařilo zkontrolovat.</span
+            >
+            <button
+              type="button"
+              class="ui-button ui-button--small"
+              (click)="loadAdministrators()"
+              i18n="@@admin.home.attention.retry"
+            >
+              Zkusit znovu
+            </button>
+          </li>
+        } @else if (withoutSecondFactor().length > 0) {
+          <li class="attention-item attention-administrators">
+            <span>{{ withoutSecondFactorText() }}</span
+            >&ngsp;
+            <a
+              class="ui-button ui-button--small"
+              routerLink="/sprava/spravci"
+              i18n="@@admin.home.attention.secondFactor.open"
+              >Otevřít Správce</a
+            >
+          </li>
+        }
+      </ul>
+    }
+  </section>
+
   <div class="admin-status">
     <section class="ui-card" aria-labelledby="admin-import-title">
       <h2 id="admin-import-title" class="ui-card__title" i18n="@@admin.home.import.title">
@@ -25,16 +164,12 @@
           </div>
         }
         @case ('ready') {
-          @if (outage(); as outage) {
-            <div class="admin-outage" role="status">
-              <span class="visually-hidden" i18n="@@admin.home.import.outage.label"
-                >Upozornění:
-              </span>
-              <span i18n="@@admin.home.import.outage.text"
-                >Stahování plateb selhává a fond o tom dostal e-mail: {{ outage }}, selhání za
-                sebou: {{ consecutiveFailures() }}.</span
-              >
-            </div>
+          @if (!lastFailure() && !neverAttempted()) {
+            @if (lastSuccess(); as at) {
+              <p class="healthy" i18n="@@admin.home.import.healthy">
+                Stahování plateb je v pořádku, naposledy {{ at }}.
+              </p>
+            }
           }
           <dl class="admin-data">
             <div>
@@ -76,6 +211,10 @@
               <dd>
                 @if (lastFailure(); as failure) {
                   {{ failure }}
+                  @if (lastFailureAt(); as at) {
+                    <span class="admin-failure-message">{{ at }}</span
+                    >&ngsp;
+                  }
                   @if (lastFailureMessage(); as message) {
                     <span class="admin-failure-message">({{ message }})</span>
                   }
@@ -113,15 +252,7 @@
           </div>
         }
         @case ('ready') {
-          @if (backupProblems().length > 0) {
-            <div class="admin-problems" role="status">
-              <ul>
-                @for (problem of backupProblems(); track problem) {
-                  <li>{{ problem }}</li>
-                }
-              </ul>
-            </div>
-          } @else {
+          @if (backupProblems().length === 0) {
             <p class="healthy" i18n="@@admin.backups.status.healthy">Zálohování je v pořádku.</p>
           }
           <dl class="admin-data">
@@ -183,14 +314,6 @@
             Registrovaní dárci: {{ data.donorsRegistered }}, z toho nových v roce {{ data.year }}:
             {{ data.newDonors }}.
           </p>
-          @if (data.unpaired.count > 0) {
-            <a
-              class="admin-card-link admin-card-link--top"
-              routerLink="/sprava/platby"
-              i18n="@@admin.home.overview.unpairedLink"
-              >Přiřadit platby bez dárce</a
-            >
-          }
           @if (data.months.length === 0) {
             <p class="admin-empty" i18n="@@admin.home.overview.empty">
               Rok {{ data.year }} ještě nezačal.
@@ -201,10 +324,10 @@
                 <tr>
                   <th i18n="@@admin.home.overview.col.month">Měsíc</th>
                   <th class="num" i18n="@@admin.home.overview.col.count">Dary</th>
-                  <th class="num" i18n="@@admin.home.overview.col.newDonors">Noví dárci</th>
+                  <th class="num col-new" i18n="@@admin.home.overview.col.newDonors">Noví dárci</th>
                   <th class="num" i18n="@@admin.home.overview.col.total">Celkem</th>
-                  <th class="num" i18n="@@admin.home.overview.col.paired">Spárované</th>
-                  <th class="num" i18n="@@admin.home.overview.col.unpaired">Nespárované</th>
+                  <th class="num col-paired" i18n="@@admin.home.overview.col.paired">Přiřazené</th>
+                  <th class="num" i18n="@@admin.home.overview.col.unpaired">Bez dárce</th>
                 </tr>
               </thead>
               <tbody>
@@ -221,7 +344,7 @@
                       {{ item.received.count }}
                     </td>
                     <td
-                      class="num"
+                      class="num col-new"
                       data-label="Noví dárci"
                       i18n-data-label="@@admin.home.overview.col.newDonors"
                     >
@@ -235,15 +358,15 @@
                       {{ amount(item.received) }}
                     </td>
                     <td
-                      class="num"
-                      data-label="Spárované"
+                      class="num col-paired"
+                      data-label="Přiřazené"
                       i18n-data-label="@@admin.home.overview.col.paired"
                     >
                       {{ amount(item.paired) }}
                     </td>
                     <td
                       class="num"
-                      data-label="Nespárované"
+                      data-label="Bez dárce"
                       i18n-data-label="@@admin.home.overview.col.unpaired"
                     >
                       {{ amount(item.unpaired) }}
@@ -266,7 +389,7 @@
                     {{ data.received.count }}
                   </td>
                   <td
-                    class="num"
+                    class="num col-new"
                     data-label="Noví dárci"
                     i18n-data-label="@@admin.home.overview.col.newDonors"
                   >
@@ -280,15 +403,15 @@
                     {{ amount(data.received) }}
                   </td>
                   <td
-                    class="num"
-                    data-label="Spárované"
+                    class="num col-paired"
+                    data-label="Přiřazené"
                     i18n-data-label="@@admin.home.overview.col.paired"
                   >
                     {{ amount(data.paired) }}
                   </td>
                   <td
                     class="num"
-                    data-label="Nespárované"
+                    data-label="Bez dárce"
                     i18n-data-label="@@admin.home.overview.col.unpaired"
                   >
                     {{ amount(data.unpaired) }}

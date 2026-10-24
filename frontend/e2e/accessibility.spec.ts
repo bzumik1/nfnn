@@ -593,6 +593,10 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     await page.evaluate(() => localStorage.setItem('nfnn.donor-session', '1'));
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto('/sprava');
+    await expect(
+      page.getByRole('region', { name: 'Co potřebuje vaši pozornost' }).getByRole('alert'),
+    ).toHaveCount(2);
+    expect(await violations(page)).toEqual([]);
     await page.getByRole('button', { name: 'Menu správy' }).click();
     await expect(
       page
@@ -748,8 +752,12 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
 
     expect(await violations(page)).toEqual([]);
 
-    await page.locator('tbody tr').nth(1).getByRole('button', { name: 'Odebrat' }).click();
-    await expect(page.locator('tbody tr').nth(1)).toContainText('Opravdu odebrat?');
+    await page
+      .locator('tbody tr')
+      .nth(1)
+      .getByRole('button', { name: 'Odebrat roli správce' })
+      .click();
+    await expect(page.locator('tbody tr').nth(1)).toContainText('Odebrat roli správce?');
     await page.getByRole('button', { name: 'Přidat správce' }).click();
     await expect(page.getByLabel('E-mail dárce')).toBeFocused();
 
@@ -800,8 +808,12 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
 
     expect(await violations(page)).toEqual([]);
 
-    await page.locator('tbody tr').first().getByRole('button', { name: 'Zrušit Ano' }).click();
-    await expect(page.locator('tbody tr').first()).toContainText('změnit odpověď na Ne?');
+    await page
+      .locator('tbody tr')
+      .first()
+      .getByRole('button', { name: 'Vrátit přiřazení darů' })
+      .click();
+    await expect(page.locator('tbody tr').first()).toContainText('odpověď se změní na Ne');
 
     expect(await violations(page)).toEqual([]);
   });
