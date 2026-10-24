@@ -1,3 +1,5 @@
+/// <reference types="@angular/localize" />
+
 import {
   afterNextRender,
   ChangeDetectionStrategy,
@@ -12,7 +14,7 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule, NgForm } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { describeProblem, problemTypeEndsWith } from '../../../core/auth/api-problem';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
@@ -21,7 +23,13 @@ import { FormControlDirective } from '../../../shared/ui/form-field/form-control
 import { FormField } from '../../../shared/ui/form-field/form-field';
 import { formatBankTime, formatDonationDate } from '../../donations/donation-date';
 import { AdminApi, AdminReportResponse, SentReportResponse } from '../admin-api';
-import { EmailListValidator, MAX_REPORT_RECIPIENTS, parseEmailList } from './email-list';
+import {
+  EmailListValidator,
+  firstInvalidAddress,
+  firstRepeatedAddress,
+  MAX_REPORT_RECIPIENTS,
+  parseEmailList,
+} from './email-list';
 import { formatReportMonth, previousMonths } from './report-month';
 import { LiveNotice, Notice } from '../../../shared/ui/live-notice/live-notice';
 
@@ -34,6 +42,7 @@ interface MonthOption {
 
 const UNAUTHENTICATED = 'auth/unauthenticated';
 const FORBIDDEN = 'auth/forbidden';
+const NOT_DELIVERED = 'donations/report-not-delivered';
 const RESENDABLE_MONTHS = 24;
 const SEND_DAYS = Array.from({ length: 28 }, (_, index) => index + 1);
 const SEND_HOURS = Array.from({ length: 24 }, (_, index) => index);
@@ -42,6 +51,7 @@ const SEND_HOURS = Array.from({ length: 24 }, (_, index) => index);
   selector: 'app-admin-report',
   imports: [
     LiveNotice,
+    RouterLink,
     FormsModule,
     FormField,
     FormControlDirective,
@@ -60,10 +70,14 @@ export class AdminReport {
   private readonly destroyRef = inject(DestroyRef);
   private readonly injector = inject(Injector);
   private readonly title = viewChild.required<ElementRef<HTMLHeadingElement>>('title');
+  private readonly sendButton = viewChild<ElementRef<HTMLButtonElement>>('sendButton');
+  private readonly sendCancel = viewChild<ElementRef<HTMLButtonElement>>('sendCancel');
 
   protected readonly state = signal<LoadState>('loading');
   protected readonly report = signal<AdminReportResponse | null>(null);
-  protected readonly notice = signal<Notice | null>(null);
+  protected readonly settingsStatus = signal<string | null>(null);
+  protected readonly sendNotice = signal<Notice | null>(null);
+  protected readonly mailRefused = signal(false);
   protected readonly saving = signal(false);
   protected readonly sending = signal(false);
   protected readonly settingsError = signal<string | null>(null);
@@ -71,14 +85,17 @@ export class AdminReport {
   protected readonly sendDays = SEND_DAYS;
   protected readonly sendHours = SEND_HOURS;
 
-  protected readonly recipientMessages = {
-    required: $localize`:@@admin.report.recipients.required:Vyplňte prosím aspoň jednu e-mailovou adresu.`,
-    emailList: $localize`:@@admin.report.recipients.invalid:Některá z adres není platná e-mailová adresa. Pište každou na vlastní řádek.`,
-    emailListLength: $localize`:@@admin.report.recipients.tooMany:Přehled může mít nejvíc ${MAX_REPORT_RECIPIENTS}:max: příjemců.`,
-    emailListDuplicate: $localize`:@@admin.report.recipients.duplicate:Některá adresa je v seznamu dvakrát.`,
-  };
+  protected readonly recipients = signal('');
+  protected readonly recipientMessages = computed(() => {
+    const addresses = parseEmailList(this.recipients());
+    return {
+      required: $localize`:@@admin.report.recipients.required:Vyplňte prosím aspoň jednu e-mailovou adresu.`,
+      emailList: $localize`:@@admin.report.recipients.invalid:Adresa „${firstInvalidAddress(addresses) ?? ''}:address:“ není platná e-mailová adresa. Pište každou adresu na vlastní řádek.`,
+      emailListLength: $localize`:@@admin.report.recipients.tooMany:Přehled může mít nejvíc ${MAX_REPORT_RECIPIENTS}:max: příjemců.`,
+      emailListDuplicate: $localize`:@@admin.report.recipients.duplicate:Adresa „${firstRepeatedAddress(addresses) ?? ''}:address:“ je v seznamu dvakrát.`,
+    };
+  });
 
-  protected recipients = '';
   protected sendDay = 1;
   protected sendHour = 7;
   protected sections = { donors: true, donations: true, unpairedPayments: true, bankImport: true };
@@ -126,13 +143,17 @@ export class AdminReport {
 
   protected load(): void {
     this.state.set('loading');
+    this.fetch();
+  }
+
+  private fetch(): void {
     this.api
       .report()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (report) => {
           this.report.set(report);
-          this.recipients = report.settings.recipients.join('\n');
+          this.recipients.set(report.settings.recipients.join('\n'));
           this.sendDay = report.settings.sendDay;
           this.sendHour = report.settings.sendHour;
           this.sections = { ...report.settings.sections };
@@ -170,7 +191,7 @@ export class AdminReport {
       return;
     }
     this.settingsError.set(null);
-    this.notice.set(null);
+    this.settingsStatus.set(null);
     if (form.invalid) {
       return;
     }
@@ -183,7 +204,7 @@ export class AdminReport {
     this.saving.set(true);
     this.api
       .changeReportSettings({
-        recipients: parseEmailList(this.recipients),
+        recipients: parseEmailList(this.recipients()),
         sendDay: Number(this.sendDay),
         sendHour: Number(this.sendHour),
         sections: { ...this.sections },
@@ -192,11 +213,10 @@ export class AdminReport {
       .subscribe({
         next: () => {
           this.saving.set(false);
-          this.notice.set({
-            kind: 'status',
-            text: $localize`:@@admin.report.settings.saved:Nastavení jsme uložili. Příští přehled odejde podle něj.`,
-          });
-          this.load();
+          this.settingsStatus.set(
+            $localize`:@@admin.report.settings.saved:Nastavení jsme uložili. Příští přehled odejde podle něj.`,
+          );
+          this.fetch();
         },
         error: (failure: unknown) => {
           this.saving.set(false);
@@ -211,12 +231,15 @@ export class AdminReport {
   }
 
   protected askSend(): void {
-    this.notice.set(null);
+    this.sendNotice.set(null);
+    this.mailRefused.set(false);
     this.confirmingSend.set(true);
+    afterNextRender(() => this.sendCancel()?.nativeElement.focus(), { injector: this.injector });
   }
 
   protected cancelSend(): void {
     this.confirmingSend.set(false);
+    this.focusSendButton();
   }
 
   protected send(): void {
@@ -231,24 +254,31 @@ export class AdminReport {
         next: (sent) => {
           this.sending.set(false);
           this.confirmingSend.set(false);
-          this.notice.set({
+          this.sendNotice.set({
             kind: 'status',
             text: $localize`:@@admin.report.send.done:Přehled za ${formatReportMonth(sent.month)}:month: jsme poslali na ${sent.recipients.join(', ')}:recipients:.`,
           });
-          this.load();
+          this.focusSendButton();
+          this.fetch();
         },
         error: (failure: unknown) => {
           this.sending.set(false);
           this.confirmingSend.set(false);
-          this.notice.set({
+          this.mailRefused.set(problemTypeEndsWith(failure, NOT_DELIVERED));
+          this.sendNotice.set({
             kind: 'alert',
             text: describeProblem(
               failure,
               $localize`:@@admin.report.send.failed:Přehled se nepodařilo poslat. Zkuste to prosím znovu.`,
             ),
           });
+          this.focusSendButton();
         },
       });
+  }
+
+  private focusSendButton(): void {
+    afterNextRender(() => this.sendButton()?.nativeElement.focus(), { injector: this.injector });
   }
 
   private sendToSignIn(): void {

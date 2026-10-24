@@ -36,9 +36,15 @@
     @case ('slow') {
       <div class="ui-load-state ui-load-state--error" role="alert">
         <p i18n="@@admin.settings.slow.text">
-          Nastavení je uložené, ale web po restartu zatím neodpovídá. Zkuste to prosím za chvíli
-          znovu; když se nespustí, podívejte se do logu kontejneru nfnn-backend v ZimaOS.
+          Nastavení je uložené, ale web se po restartu zatím nespustil. Počkejte pár minut a zkuste
+          to znovu; když to nepomůže, napište správci serveru.
         </p>
+        <details class="tech-details">
+          <summary i18n="@@admin.settings.techDetails">Technické podrobnosti</summary>
+          <p i18n="@@admin.settings.slow.tech">
+            Backend po restartu neodpovídá. Příčinu najdete v logu kontejneru nfnn-backend v ZimaOS.
+          </p>
+        </details>
         <button
           type="button"
           class="ui-button"
@@ -51,10 +57,16 @@
     }
     @case ('ready') {
       @if (!secretsCanBeStored()) {
-        <p class="ui-notice ui-notice--alert" role="alert" i18n="@@admin.settings.noKey">
-          Tajné údaje teď nejde uložit, protože serveru chybí klíč k šifrování (soubor
-          secrets/settings-key). Ostatní nastavení uložit jde.
-        </p>
+        <div class="ui-notice ui-notice--alert" role="alert">
+          <p i18n="@@admin.settings.noKey">
+            Tajné údaje (hesla a tokeny) teď nejde uložit, protože serveru chybí klíč k šifrování.
+            Ostatní nastavení uložit jde; s klíčem vám pomůže správce serveru.
+          </p>
+          <details class="tech-details">
+            <summary i18n="@@admin.settings.techDetails">Technické podrobnosti</summary>
+            <p i18n="@@admin.settings.noKey.tech">Na serveru chybí soubor secrets/settings-key.</p>
+          </details>
+        </div>
       } @else if (unreadableSecrets()) {
         <p
           class="ui-notice ui-notice--alert"
@@ -69,7 +81,9 @@
       <form class="settings-form" (ngSubmit)="askSave()" novalidate>
         @for (group of groups(); track group.id) {
           <section class="ui-card" [attr.aria-labelledby]="'settings-' + group.id">
-            <h2 [id]="'settings-' + group.id" class="ui-card__title">{{ group.title }}</h2>
+            <h2 [id]="'settings-' + group.id" class="ui-card__title" tabindex="-1">
+              {{ group.title }}
+            </h2>
             <div class="ui-card__body">
               @for (field of group.fields; track field.name) {
                 @switch (field.input) {
@@ -86,16 +100,20 @@
                     </label>
                   }
                   @case ('secret') {
-                    <div class="secret">
-                      <p class="secret-state" [class.secret-state--warning]="field.unreadable">
+                    <div
+                      class="secret"
+                      role="group"
+                      [attr.aria-labelledby]="'setting-' + field.name + '-state'"
+                    >
+                      <p
+                        class="secret-state"
+                        [id]="'setting-' + field.name + '-state'"
+                        [class.secret-state--warning]="field.unreadable"
+                      >
                         <span class="secret-label">{{ field.label }}:</span>
                         {{ secretState(field) }}
                       </p>
-                      <app-form-field
-                        label="Nová hodnota"
-                        i18n-label="@@admin.settings.secret.new"
-                        [hint]="field.hint"
-                      >
+                      <app-form-field [label]="newSecretLabel(field)" [hint]="field.hint">
                         <app-password-reveal>
                           <input
                             appFormControl
@@ -120,6 +138,11 @@
                             >Odebrat uloženou hodnotu</span
                           >
                         </label>
+                        @if (field.remove && removalEffect(field)) {
+                          <p class="ui-callout ui-callout--danger removal-effect">
+                            {{ removalEffect(field) }}
+                          </p>
+                        }
                       }
                     </div>
                   }
@@ -137,9 +160,6 @@
                     </app-form-field>
                   }
                 }
-              }
-              @if (group.id === 'RECEIPTS') {
-                <app-receipt-signature />
               }
               @if (group.id === 'MAIL') {
                 <div class="test-row">
@@ -188,46 +208,78 @@
           </div>
         }
 
-        @if (confirming()) {
-          <div
-            class="confirm"
-            role="group"
-            aria-label="Uložit nastavení?"
-            i18n-aria-label="@@admin.settings.confirm.label"
-          >
-            <span i18n="@@admin.settings.confirm.question"
-              >Uložením se web restartuje a asi minutu nebude odpovídat. Uložit?</span
+        <div class="save-row">
+          @if (confirmation(); as confirmation) {
+            <div
+              class="confirm"
+              role="group"
+              aria-label="Uložit nastavení?"
+              i18n-aria-label="@@admin.settings.confirm.label"
             >
-            <button
-              type="button"
-              class="ui-button ui-button--primary"
-              [disabled]="saving()"
-              (click)="save()"
-            >
-              @if (saving()) {
-                <ng-container i18n="@@admin.settings.saving">Ukládáme…</ng-container>
-              } @else {
-                <ng-container i18n="@@admin.settings.confirm.yes"
-                  >Ano, uložit a restartovat</ng-container
-                >
+              <p class="confirm-changes" i18n="@@admin.settings.confirm.changes">
+                Mění se: {{ confirmation.changes }}.
+              </p>
+              @for (warning of confirmation.warnings; track warning) {
+                <p class="ui-callout ui-callout--danger">{{ warning }}</p>
               }
-            </button>
+              @if (confirmation.mailUnverified) {
+                <p
+                  class="ui-callout ui-callout--warning"
+                  i18n="@@admin.settings.confirm.mailUnverified"
+                >
+                  Spojení s poštovním serverem jste s novými údaji neověřili. Když nebudou správné,
+                  web po restartu nepošle žádný e-mail; zkuste to nejdřív tlačítkem Ověřit spojení.
+                </p>
+              }
+              <p class="confirm-question" i18n="@@admin.settings.confirm.question">
+                Uložením se web restartuje a asi minutu nebude odpovídat. Uložit?
+              </p>
+              <div class="confirm-actions">
+                <button
+                  type="button"
+                  class="ui-button ui-button--primary"
+                  [disabled]="saving()"
+                  (click)="save()"
+                >
+                  @if (saving()) {
+                    <ng-container i18n="@@admin.settings.saving">Ukládáme…</ng-container>
+                  } @else {
+                    <ng-container i18n="@@admin.settings.confirm.yes"
+                      >Uložit a restartovat</ng-container
+                    >
+                  }
+                </button>
+                <button
+                  #confirmCancel
+                  type="button"
+                  class="ui-link-button"
+                  [disabled]="saving()"
+                  (click)="cancelSave()"
+                  i18n="@@admin.settings.confirm.no"
+                >
+                  Zrušit
+                </button>
+              </div>
+            </div>
+          } @else {
             <button
-              type="button"
-              class="ui-link-button"
-              [disabled]="saving()"
-              (click)="cancelSave()"
-              i18n="@@admin.settings.confirm.no"
+              #saveButton
+              type="submit"
+              class="ui-button ui-button--primary"
+              i18n="@@admin.settings.save"
             >
-              Ne
+              Uložit nastavení
             </button>
-          </div>
-        } @else {
-          <button type="submit" class="ui-button ui-button--primary" i18n="@@admin.settings.save">
-            Uložit nastavení
-          </button>
-        }
+          }
+          <p class="ui-form-status" role="status">
+            @if (saveStatus(); as status) {
+              <span>{{ status }}</span>
+            }
+          </p>
+        </div>
       </form>
+
+      <app-receipt-signature />
     }
   }
 </div>

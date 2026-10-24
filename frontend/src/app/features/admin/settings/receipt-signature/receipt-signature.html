@@ -1,123 +1,131 @@
-<div class="signature" role="group" aria-labelledby="receipt-signature-title">
-  <h3 id="receipt-signature-title" class="signature-title" i18n="@@admin.signature.title">
-    Sken podpisu
-  </h3>
-  <p id="receipt-signature-hint" class="signature-hint" i18n="@@admin.signature.hint">
-    Tiskne se nad jméno podepisujícího na potvrzeních vystavených po nahrání; ta už vystavená se
-    nemění. JPEG, PNG nebo WebP do 10 MB, nejlépe tmavý podpis na bílém papíře. Uloží se hned, bez
-    restartu webu.
-  </p>
+<section class="ui-card" aria-labelledby="receipt-signature-title">
+  <h2 id="receipt-signature-title" class="ui-card__title" i18n="@@admin.signature.title">
+    Podpis na potvrzeních
+  </h2>
+  <div class="ui-card__body">
+    <p class="ui-card__intro" i18n="@@admin.signature.saveNow">
+      Ukládá se hned, bez tlačítka Uložit nastavení a bez restartu webu.
+    </p>
+    <p id="receipt-signature-hint" class="signature-hint" i18n="@@admin.signature.hint">
+      Sken se tiskne nad jméno podepisujícího na potvrzeních vystavených po nahrání; ta už vystavená
+      se nemění. JPEG, PNG nebo WebP do 10 MB, nejlépe tmavý podpis na bílém papíře.
+    </p>
 
-  @switch (state()) {
-    @case ('loading') {
-      <p class="signature-status" role="status" i18n="@@admin.signature.loading">
-        Načítáme podpis…
-      </p>
-    }
-    @case ('error') {
-      <div class="signature-error" role="alert">
-        <p i18n="@@admin.signature.loadFailed">Podpis se nepodařilo načíst.</p>
-        <button type="button" class="ui-button" (click)="load()" i18n="@@admin.signature.retry">
-          Zkusit znovu
-        </button>
-      </div>
-    }
-    @case ('ready') {
-      @if (signature(); as current) {
-        @if (current.configured && current.image) {
-          <div class="signature-frame">
-            <img
-              class="signature-preview"
-              [src]="current.image"
-              alt="Nahraný podpis"
-              i18n-alt="@@admin.signature.alt"
-              [attr.width]="current.width"
-              [attr.height]="current.height"
-            />
+    @switch (state()) {
+      @case ('loading') {
+        <p class="signature-status" role="status" i18n="@@admin.signature.loading">
+          Načítáme podpis…
+        </p>
+      }
+      @case ('error') {
+        <div class="signature-error" role="alert">
+          <p i18n="@@admin.signature.loadFailed">Podpis se nepodařilo načíst.</p>
+          <button type="button" class="ui-button" (click)="load()" i18n="@@admin.signature.retry">
+            Zkusit znovu
+          </button>
+        </div>
+      }
+      @case ('ready') {
+        @if (signature(); as current) {
+          @if (current.configured && current.image) {
+            <div class="signature-frame">
+              <img
+                class="signature-preview"
+                [src]="current.image"
+                alt="Nahraný podpis"
+                i18n-alt="@@admin.signature.alt"
+                [attr.width]="current.width"
+                [attr.height]="current.height"
+              />
+            </div>
+            <p class="signature-state">{{ uploadedLine(current) }}</p>
+          } @else {
+            <p class="signature-state" i18n="@@admin.signature.none">
+              Podpis není nahraný. Potvrzení mají místo něj jen čáru se jménem.
+            </p>
+          }
+
+          <div class="signature-actions">
+            <app-file-button
+              inputId="receipt-signature-file"
+              accept="image/jpeg,image/png,image/webp"
+              describedBy="receipt-signature-hint"
+              [disabled]="uploading() || removing()"
+              (chosen)="upload($event)"
+            >
+              @if (current.configured) {
+                <ng-container i18n="@@admin.signature.replace">Nahrát jiný sken</ng-container>
+              } @else {
+                <ng-container i18n="@@admin.signature.choose">Nahrát sken</ng-container>
+              }
+            </app-file-button>
+            @if (current.configured && !confirmingRemoval()) {
+              <button
+                #removeButton
+                type="button"
+                class="ui-link-button signature-remove"
+                [disabled]="uploading() || removing()"
+                (click)="askRemoval()"
+                i18n="@@admin.signature.remove"
+              >
+                Odebrat podpis
+              </button>
+            }
           </div>
-          <p class="signature-state">{{ uploadedLine(current) }}</p>
-        } @else {
-          <p class="signature-state" i18n="@@admin.signature.none">
-            Podpis není nahraný. Potvrzení mají místo něj jen čáru se jménem.
-          </p>
+
+          @if (confirmingRemoval()) {
+            <div
+              class="signature-confirm"
+              role="group"
+              aria-label="Odebrat podpis?"
+              i18n-aria-label="@@admin.signature.confirm.label"
+            >
+              <span i18n="@@admin.signature.confirm.question"
+                >Potvrzení vystavená potom budou bez podpisu. Odebrat?</span
+              >
+              <button
+                type="button"
+                class="ui-button ui-button--danger"
+                [disabled]="removing()"
+                (click)="remove()"
+              >
+                @if (removing()) {
+                  <ng-container i18n="@@admin.signature.removing">Odebíráme…</ng-container>
+                } @else {
+                  <ng-container i18n="@@admin.signature.confirm.yes">Odebrat podpis</ng-container>
+                }
+              </button>
+              <button
+                #removeCancel
+                type="button"
+                class="ui-link-button"
+                [disabled]="removing()"
+                (click)="cancelRemoval()"
+                i18n="@@admin.signature.confirm.no"
+              >
+                Zrušit
+              </button>
+            </div>
+          }
         }
 
-        <div class="signature-actions">
-          <label class="signature-file-label" for="receipt-signature-file">
-            @if (current.configured) {
-              <span i18n="@@admin.signature.replace">Nahrát jiný sken</span>
-            } @else {
-              <span i18n="@@admin.signature.choose">Nahrát sken</span>
+        <div role="status">
+          @if (uploading()) {
+            <p class="signature-status" i18n="@@admin.signature.uploading">Nahráváme podpis…</p>
+          } @else if (notice(); as notice) {
+            @if (notice.kind === 'status') {
+              <p class="signature-status signature-status--ok">{{ notice.text }}</p>
             }
-          </label>
-          <input
-            id="receipt-signature-file"
-            class="signature-input"
-            type="file"
-            accept="image/jpeg,image/png,image/webp"
-            aria-describedby="receipt-signature-hint"
-            [disabled]="uploading() || removing()"
-            (change)="upload($event)"
-          />
-          @if (current.configured && !confirmingRemoval()) {
-            <button
-              type="button"
-              class="ui-link-button signature-remove"
-              [disabled]="uploading() || removing()"
-              (click)="askRemoval()"
-              i18n="@@admin.signature.remove"
-            >
-              Odebrat podpis
-            </button>
           }
         </div>
-
-        @if (confirmingRemoval()) {
-          <div
-            class="signature-confirm"
-            role="group"
-            aria-label="Odebrat podpis?"
-            i18n-aria-label="@@admin.signature.confirm.label"
-          >
-            <span i18n="@@admin.signature.confirm.question"
-              >Potvrzení vystavená potom budou bez podpisu. Odebrat?</span
-            >
-            <button type="button" class="ui-button" [disabled]="removing()" (click)="remove()">
-              @if (removing()) {
-                <ng-container i18n="@@admin.signature.removing">Odebíráme…</ng-container>
-              } @else {
-                <ng-container i18n="@@admin.signature.confirm.yes">Ano, odebrat</ng-container>
-              }
-            </button>
-            <button
-              type="button"
-              class="ui-link-button"
-              [disabled]="removing()"
-              (click)="cancelRemoval()"
-              i18n="@@admin.signature.confirm.no"
-            >
-              Ne
-            </button>
-          </div>
-        }
+        <div role="alert">
+          @if (notice(); as notice) {
+            @if (!uploading() && notice.kind === 'alert') {
+              <p class="signature-status signature-status--failed">{{ notice.text }}</p>
+            }
+          }
+        </div>
       }
-
-      <div role="status">
-        @if (uploading()) {
-          <p class="signature-status" i18n="@@admin.signature.uploading">Nahráváme podpis…</p>
-        } @else if (notice(); as notice) {
-          @if (notice.kind === 'status') {
-            <p class="signature-status signature-status--ok">{{ notice.text }}</p>
-          }
-        }
-      </div>
-      <div role="alert">
-        @if (notice(); as notice) {
-          @if (!uploading() && notice.kind === 'alert') {
-            <p class="signature-status signature-status--failed">{{ notice.text }}</p>
-          }
-        }
-      </div>
     }
-  }
-</div>
+  </div>
+</section>

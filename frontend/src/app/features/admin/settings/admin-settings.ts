@@ -14,7 +14,7 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { describeProblem, problemTypeEndsWith } from '../../../core/auth/api-problem';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
@@ -22,7 +22,12 @@ import { FormControlDirective } from '../../../shared/ui/form-field/form-control
 import { FormField } from '../../../shared/ui/form-field/form-field';
 import { PasswordReveal } from '../../../shared/ui/password-reveal/password-reveal';
 import { SETTING_LABELS, settingErrors } from '../../operations/setting-labels';
-import { SettingName, SettingValueRequest, SetupApi } from '../../operations/setup/setup-api';
+import {
+  MailServerRequest,
+  SettingName,
+  SettingValueRequest,
+  SetupApi,
+} from '../../operations/setup/setup-api';
 import { ReceiptSignature } from './receipt-signature/receipt-signature';
 import { AdminApi, AdminSettingResponse, SettingGroup } from '../admin-api';
 import { LiveNotice, Notice } from '../../../shared/ui/live-notice/live-notice';
@@ -44,6 +49,12 @@ interface Field {
   unreadable: boolean;
 }
 
+interface Confirmation {
+  changes: string;
+  warnings: string[];
+  mailUnverified: boolean;
+}
+
 interface Group {
   id: SettingGroup;
   title: string;
@@ -53,6 +64,24 @@ interface Group {
 const UNAUTHENTICATED = 'auth/unauthenticated';
 const FORBIDDEN = 'auth/forbidden';
 const NOTHING_CHANGED = $localize`:@@admin.settings.nothingChanged:Nic jste nezměnili.`;
+const MAIL_CONNECTION: readonly SettingName[] = [
+  'MAIL_HOST',
+  'MAIL_PORT',
+  'MAIL_USERNAME',
+  'MAIL_PASSWORD',
+  'MAIL_AUTH',
+  'MAIL_STARTTLS',
+];
+
+const NEW_SECRET_LABELS: Partial<Readonly<Record<SettingName, string>>> = {
+  MAIL_PASSWORD: $localize`:@@admin.settings.secret.new.MAIL_PASSWORD:Nové heslo nebo klíč SMTP`,
+  FIO_TOKEN: $localize`:@@admin.settings.secret.new.FIO_TOKEN:Nový token Fio API`,
+};
+
+const REMOVAL_EFFECTS: Partial<Readonly<Record<SettingName, string>>> = {
+  MAIL_PASSWORD: $localize`:@@admin.settings.secret.removeEffect.MAIL_PASSWORD:Bez hesla web nepošle žádný e-mail: ani obnovu hesla, ani potvrzení registrace, ani měsíční přehled.`,
+  FIO_TOKEN: $localize`:@@admin.settings.secret.removeEffect.FIO_TOKEN:Bez tokenu se přestanou stahovat platby z banky.`,
+};
 
 const GROUP_TITLES: Readonly<Record<SettingGroup, string>> = {
   SITE: $localize`:@@admin.settings.group.SITE:Web`,
@@ -96,10 +125,13 @@ export class AdminSettings {
   private readonly setupApi = inject(SetupApi);
   private readonly auth = inject(AuthStore);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
   private readonly loginDialog = inject(LoginDialogService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly injector = inject(Injector);
   private readonly title = viewChild<ElementRef<HTMLHeadingElement>>('title');
+  private readonly saveButton = viewChild<ElementRef<HTMLButtonElement>>('saveButton');
+  private readonly confirmCancel = viewChild<ElementRef<HTMLButtonElement>>('confirmCancel');
 
   protected readonly state = signal<LoadState>('loading');
   protected readonly groups = signal<Group[]>([]);
@@ -107,10 +139,12 @@ export class AdminSettings {
   protected readonly notice = signal<Notice | null>(null);
   protected readonly saveError = signal('');
   protected readonly fieldErrors = signal<string[]>([]);
-  protected readonly confirming = signal(false);
+  protected readonly confirmation = signal<Confirmation | null>(null);
+  protected readonly saveStatus = signal<string | null>(null);
   protected readonly saving = signal(false);
   protected readonly testingMail = signal(false);
   protected readonly mailNotice = signal<Notice | null>(null);
+  private verifiedMail: string | null = null;
   protected readonly unreadableSecrets = computed(() =>
     this.groups()
       .flatMap((group) => group.fields)
@@ -134,6 +168,7 @@ export class AdminSettings {
           this.groups.set(groupsOf(response.settings));
           this.secretsCanBeStored.set(response.secretsCanBeStored);
           this.state.set('ready');
+          this.focusFragment();
         },
         error: (failure: unknown) => {
           if (problemTypeEndsWith(failure, UNAUTHENTICATED)) {
@@ -158,26 +193,38 @@ export class AdminSettings {
       : $localize`:@@admin.settings.secret.unset:Nenastaveno`;
   }
 
+  protected newSecretLabel(field: Field): string {
+    return (
+      NEW_SECRET_LABELS[field.name] ??
+      $localize`:@@admin.settings.secret.new:Nová hodnota: ${field.label}:label:`
+    );
+  }
+
+  protected removalEffect(field: Field): string {
+    return REMOVAL_EFFECTS[field.name] ?? '';
+  }
+
   protected setFlag(field: Field, on: boolean): void {
     field.value = String(on);
   }
 
   protected askSave(): void {
     this.notice.set(null);
+    this.saveStatus.set(null);
     this.saveError.set('');
     this.fieldErrors.set([]);
-    if (this.changes().length === 0) {
-      this.notice.set({
-        kind: 'status',
-        text: NOTHING_CHANGED,
-      });
+    const changes = this.changes();
+    if (changes.length === 0) {
+      this.saveStatus.set(NOTHING_CHANGED);
       return;
     }
-    this.confirming.set(true);
+    this.confirmation.set(this.confirmationOf(changes));
+    afterNextRender(() => this.confirmCancel()?.nativeElement.focus(), { injector: this.injector });
   }
 
   protected cancelSave(): void {
-    this.confirming.set(false);
+    this.confirmation.set(null);
+    this.focusSaveButton();
   }
 
   protected save(): void {
@@ -191,12 +238,10 @@ export class AdminSettings {
       .subscribe({
         next: (saved) => {
           this.saving.set(false);
-          this.confirming.set(false);
+          this.confirmation.set(null);
           if (!saved.restarting) {
-            this.notice.set({
-              kind: 'status',
-              text: NOTHING_CHANGED,
-            });
+            this.saveStatus.set(NOTHING_CHANGED);
+            this.focusSaveButton();
             return;
           }
           this.state.set('restarting');
@@ -204,7 +249,7 @@ export class AdminSettings {
         },
         error: (failure: unknown) => {
           this.saving.set(false);
-          this.confirming.set(false);
+          this.confirmation.set(null);
           this.saveError.set(
             describeProblem(
               failure,
@@ -212,6 +257,7 @@ export class AdminSettings {
             ),
           );
           this.fieldErrors.set(settingErrors(failure));
+          this.focusSaveButton();
         },
       });
   }
@@ -225,22 +271,16 @@ export class AdminSettings {
     if (this.testingMail()) {
       return;
     }
-    const value = (name: SettingName) => this.field(name)?.value.trim() ?? '';
+    const tried = this.mailServerRequest();
     this.mailNotice.set(null);
     this.testingMail.set(true);
     this.api
-      .testMailServer({
-        host: value('MAIL_HOST'),
-        port: Number(value('MAIL_PORT')),
-        username: value('MAIL_USERNAME'),
-        password: this.field('MAIL_PASSWORD')?.value ?? '',
-        auth: value('MAIL_AUTH') === 'true',
-        startTls: value('MAIL_STARTTLS') === 'true',
-      })
+      .testMailServer(tried)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (result) => {
           this.testingMail.set(false);
+          this.verifiedMail = result.ok ? JSON.stringify(tried) : null;
           this.mailNotice.set(
             result.ok
               ? {
@@ -281,6 +321,49 @@ export class AdminSettings {
         });
         this.load();
       });
+  }
+
+  private mailServerRequest(): MailServerRequest {
+    const value = (name: SettingName) => this.field(name)?.value.trim() ?? '';
+    return {
+      host: value('MAIL_HOST'),
+      port: Number(value('MAIL_PORT')),
+      username: value('MAIL_USERNAME'),
+      password: this.field('MAIL_PASSWORD')?.value ?? '',
+      auth: value('MAIL_AUTH') === 'true',
+      startTls: value('MAIL_STARTTLS') === 'true',
+    };
+  }
+
+  private confirmationOf(changes: SettingValueRequest[]): Confirmation {
+    const removed = changes
+      .map((change) => this.field(change.name))
+      .filter((field): field is Field => field?.input === 'secret' && field.remove);
+    const labels = changes.map((change) => {
+      const field = this.field(change.name);
+      const label = field?.label ?? change.name;
+      return field?.input === 'secret' && field.remove
+        ? $localize`:@@admin.settings.confirm.removed:${label}:label: (odebrat)`
+        : label;
+    });
+    const mailChanged = changes.some((change) => MAIL_CONNECTION.includes(change.name));
+    return {
+      changes: labels.join(', '),
+      warnings: removed.map((field) => this.removalEffect(field)).filter((text) => text !== ''),
+      mailUnverified: mailChanged && this.verifiedMail !== JSON.stringify(this.mailServerRequest()),
+    };
+  }
+
+  private focusSaveButton(): void {
+    afterNextRender(() => this.saveButton()?.nativeElement.focus(), { injector: this.injector });
+  }
+
+  private focusFragment(): void {
+    const fragment = this.route.snapshot.fragment;
+    if (!fragment) {
+      return;
+    }
+    afterNextRender(() => document.getElementById(fragment)?.focus(), { injector: this.injector });
   }
 
   private changes(): SettingValueRequest[] {
