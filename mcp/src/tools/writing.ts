@@ -21,6 +21,7 @@ const WRITING = {
 const UUID = z.string().regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
 const DAY = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 const MONTH = z.string().regex(/^\d{4}-\d{2}$/);
+const PLAN_TIME = /^([01][0-9]|2[0-3]):[0-5][0-9]$/;
 const PLAIN_SETTING = z.enum([
   'MAIL_HOST',
   'MAIL_PORT',
@@ -250,6 +251,25 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
     async ({ changes }, ctx) =>
       answerChange(deps, ctx, 'nfnn_change_settings', async ({ apiToken }) =>
         text(await backend.put('/api/admin/operations/settings', apiToken, { changes })),
+      ),
+  );
+
+  server.registerTool(
+    'nfnn_update_backup_schedule',
+    {
+      title: 'Nastavit plán záloh',
+      description:
+        'Replaces the backup plan: the time of the daily backup and the weekday (1 Monday … 7 Sunday) and time of the weekly test restore, in Prague time as HH:MM (defaults 03:00 and Sunday 04:00). nfnn_backups shows the plan and the one the backup container runs (`schedule.applied`), which follows within a minute. Audited as CHANGE_BACKUP_SCHEDULE.',
+      inputSchema: z.object({
+        backupTime: z.string().regex(PLAN_TIME),
+        testRestoreDay: z.number().int().min(1).max(7),
+        testRestoreTime: z.string().regex(PLAN_TIME),
+      }),
+      annotations: { ...WRITING, idempotentHint: true },
+    },
+    async (plan, ctx) =>
+      answerChange(deps, ctx, 'nfnn_update_backup_schedule', async ({ apiToken }) =>
+        text(await backend.put('/api/admin/operations/backups/schedule', apiToken, plan)),
       ),
   );
 

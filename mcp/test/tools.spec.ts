@@ -66,6 +66,7 @@ describe('Given an administrator connected with the reading permission only', ()
       'nfnn_unpair_payment',
       'nfnn_unpublish_news',
       'nfnn_unpublish_project',
+      'nfnn_update_backup_schedule',
       'nfnn_update_news',
       'nfnn_update_project',
       'nfnn_update_report_settings',
@@ -460,6 +461,32 @@ describe('Given an administrator connected with the writing permission', () => {
     expect(put?.path).toBe('/api/admin/donations/report/settings');
     expect(JSON.parse(put?.body ?? '{}')).toEqual(settings);
     expect(put?.authorization).toBe('Bearer api-token-write');
+  });
+
+  it('when the backup plan changes, then the plan reaches the administration and the answer names the plan still applied', async () => {
+    const plan = { backupTime: '02:30', testRestoreDay: 6, testRestoreTime: '05:15' };
+    const result = await client.callTool({ name: 'nfnn_update_backup_schedule', arguments: plan });
+    expect(result.isError).toBeFalsy();
+    expect(textOf(result)).toContain('"applied":{"backupTime":"03:00"');
+    const put = stack.backend.requests.find(
+      (request) =>
+        request.method === 'PUT' && request.path === '/api/admin/operations/backups/schedule',
+    );
+    expect(JSON.parse(put?.body ?? '{}')).toEqual(plan);
+    expect(put?.authorization).toBe('Bearer api-token-write');
+  });
+
+  it('when the backup plan names a time that does not exist, then the tool refuses it before the administration', async () => {
+    const result = await client.callTool({
+      name: 'nfnn_update_backup_schedule',
+      arguments: { backupTime: '24:00', testRestoreDay: 7, testRestoreTime: '04:00' },
+    });
+    expect(result.isError).toBe(true);
+    expect(
+      stack.backend.requests.some(
+        (request) => request.path === '/api/admin/operations/backups/schedule',
+      ),
+    ).toBe(false);
   });
 
   it('when a news article and a project are written and edited, then drafts are created and replaced', async () => {

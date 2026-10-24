@@ -4,6 +4,7 @@ import cz.novanadeje.app.operations.application.backup.RestoreRequest;
 import cz.novanadeje.app.operations.domain.backup.BackupFile;
 import cz.novanadeje.app.operations.domain.backup.BackupKind;
 import cz.novanadeje.app.operations.domain.backup.BackupRequestKind;
+import cz.novanadeje.app.operations.domain.backup.BackupSchedule;
 import cz.novanadeje.app.operations.domain.backup.BackupTooLarge;
 import cz.novanadeje.app.operations.domain.backup.BackupsUnavailable;
 import cz.novanadeje.app.operations.domain.backup.NotABackup;
@@ -23,8 +24,10 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.FileTime;
+import java.time.DayOfWeek;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -217,6 +220,46 @@ class FileBackupStoreTest {
         Files.delete(restore);
 
         assertThatThrownBy(() -> store.storeUpload(REQUEST, new ByteArrayInputStream(dump(10)))).isInstanceOf(BackupsUnavailable.class);
+    }
+
+    @Test
+    @DisplayName("Given the requests folder exists, when the plan is published, then the schedule file holds it for the backup container and counts as no request")
+    void should_write_the_schedule_file_when_published_given_the_requests_folder() throws IOException {
+        Files.createDirectories(backups.resolve("requests"));
+
+        store.publishSchedule(new BackupSchedule(LocalTime.of(2, 30), DayOfWeek.SATURDAY, LocalTime.of(5, 15)));
+
+        assertThat(backups.resolve("requests/schedule")).hasContent("backup_time=02:30\ntest_restore_day=6\ntest_restore_time=05:15\n");
+        assertThat(backups.resolve("requests/schedule.part")).doesNotExist();
+        assertThat(store.pendingRequests()).isZero();
+    }
+
+    @Test
+    @DisplayName("Given no requests folder, when the plan is published, then the backups are unavailable")
+    void should_refuse_when_published_given_no_requests_folder() {
+        assertThatThrownBy(() -> store.publishSchedule(BackupSchedule.DEFAULT)).isInstanceOf(BackupsUnavailable.class);
+    }
+
+    @Test
+    @DisplayName("Given the backup container reported its plan, when the applied plan is read, then it is the reported one")
+    void should_read_the_applied_plan_when_asked_given_the_status_file() throws IOException {
+        Path status = Files.createDirectories(backups.resolve("status"));
+        Files.writeString(status.resolve("schedule"), "backup_time=23:45\ntest_restore_day=1\ntest_restore_time=00:00\n");
+
+        assertThat(store.appliedSchedule()).contains(new BackupSchedule(LocalTime.of(23, 45), DayOfWeek.MONDAY, LocalTime.MIDNIGHT));
+    }
+
+    @Test
+    @DisplayName("Given no or a broken plan reported by the backup container, when the applied plan is read, then there is none")
+    void should_read_no_applied_plan_when_asked_given_a_missing_or_broken_status_file() throws IOException {
+        assertThat(store.appliedSchedule()).isEmpty();
+
+        Path status = Files.createDirectories(backups.resolve("status"));
+        Files.writeString(status.resolve("schedule"), "backup_time=25:00\ntest_restore_day=6\ntest_restore_time=05:15\n");
+        assertThat(store.appliedSchedule()).isEmpty();
+
+        Files.writeString(status.resolve("schedule"), "backup_time=02:30\ntest_restore_day=8\ntest_restore_time=05:15\n");
+        assertThat(store.appliedSchedule()).isEmpty();
     }
 
     private static byte[] dump(int size) {

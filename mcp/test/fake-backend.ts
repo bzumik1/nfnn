@@ -255,6 +255,14 @@ function adminRoute(request: RecordedRequest, url: URL, body: string): [number, 
       ];
     case 'PUT /api/admin/donations/report/settings':
       return [200, JSON.parse(body)];
+    case 'PUT /api/admin/operations/backups/schedule':
+      return [
+        200,
+        {
+          ...JSON.parse(body),
+          applied: { backupTime: '03:00', testRestoreDay: 7, testRestoreTime: '04:00' },
+        },
+      ];
     case 'POST /api/admin/content/news':
       return [201, { id: UNKNOWN_ID, slug: 'letni-tabor', ...JSON.parse(body) }];
     case `PUT /api/admin/content/news/${UNKNOWN_ID}`:

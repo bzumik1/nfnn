@@ -1,6 +1,7 @@
 package cz.novanadeje.app.operations.interfaces.rest;
 
 import cz.novanadeje.app.operations.application.backup.BackupAdministrationView;
+import cz.novanadeje.app.operations.application.backup.BackupScheduleView;
 import cz.novanadeje.app.operations.domain.backup.BackupFile;
 import cz.novanadeje.app.operations.domain.backup.BackupKind;
 import cz.novanadeje.app.operations.domain.backup.BackupProblem;
@@ -14,12 +15,14 @@ import java.util.List;
 import java.util.Optional;
 
 record AdminBackupsResponse(boolean available, List<Backup> backups, Run lastBackup, Run lastTestRestore, Run lastRestore,
-                            List<RestoreEntry> restoreFiles, int pendingRequests, boolean restorePending, List<BackupProblem> problems) {
+                            List<RestoreEntry> restoreFiles, int pendingRequests, boolean restorePending, List<BackupProblem> problems,
+                            BackupScheduleResponse schedule) {
 
-    static AdminBackupsResponse from(BackupAdministrationView view) {
+    static AdminBackupsResponse from(BackupAdministrationView view, BackupScheduleView schedule) {
         return new AdminBackupsResponse(view.available(), view.backups().stream().map(Backup::from).toList(), run(view.lastBackup()),
                 run(view.lastTestRestore()), run(view.lastRestore()), view.restoreFiles().stream().map(RestoreEntry::from).toList(),
-                view.pendingRequests(), view.restorePending(), view.health().problems().stream().sorted().toList());
+                view.pendingRequests(), view.restorePending(), view.health().problems().stream().sorted().toList(),
+                BackupScheduleResponse.from(schedule));
     }
 
     private static Run run(Optional<BackupRun> run) {

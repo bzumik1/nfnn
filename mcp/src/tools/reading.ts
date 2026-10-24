@@ -201,7 +201,7 @@ export function registerReadingTools(server: McpServer, deps: ToolDependencies):
     {
       title: 'Zálohy',
       description:
-        'The database backups: the dumps on the server, the last backup, test restore and restore, the restore folder, pending requests and problems.',
+        'The database backups: the dumps on the server, the last backup, test restore and restore, the restore folder, pending requests, problems and the plan (`schedule`: daily backup time, test restore weekday 1–7 and time, Prague time; `applied` is the plan the backup container reports it runs).',
       annotations: READ_ONLY,
     },
     async (ctx) =>

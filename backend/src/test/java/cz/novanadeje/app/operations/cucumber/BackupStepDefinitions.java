@@ -158,6 +158,38 @@ public class BackupStepDefinitions {
         assertThat(backups.resolve("requests").resolve(api.lastResponseJson().get("requestId").asString() + ".test-restore")).isEmptyFile();
     }
 
+    @When("{string} plans the daily backup at {string} and the test restore on day {int} at {string}")
+    public void plansTheBackups(String alias, String backupTime, int testRestoreDay, String testRestoreTime) {
+        sessions.actAs(alias);
+        api.put(BACKUPS + "/schedule", Map.of("backupTime", backupTime, "testRestoreDay", testRestoreDay, "testRestoreTime", testRestoreTime));
+    }
+
+    @When("someone without a token plans the daily backup at {string} and the test restore on day {int} at {string}")
+    public void someoneWithoutATokenPlansTheBackups(String backupTime, int testRestoreDay, String testRestoreTime) {
+        api.forgetCredentials();
+        api.put(BACKUPS + "/schedule", Map.of("backupTime", backupTime, "testRestoreDay", testRestoreDay, "testRestoreTime", testRestoreTime));
+    }
+
+    @Given("the backup container reports the plan:")
+    public void theBackupContainerReportsThePlan(Map<String, String> lines) {
+        writeStatus("schedule", lines);
+    }
+
+    @Then("the plan file for the backup container says:")
+    public void thePlanFileForTheBackupContainerSays(String content) {
+        assertThat(backups.resolve("requests").resolve("schedule")).hasContent(content);
+    }
+
+    @Then("no plan file waits for the backup container")
+    public void noPlanFileWaitsForTheBackupContainer() {
+        assertThat(backups.resolve("requests").resolve("schedule")).doesNotExist();
+    }
+
+    @Then("the backups answer names no plan applied by the backup container")
+    public void theBackupsAnswerNamesNoAppliedPlan() {
+        assertThat(api.lastResponseJson().get("schedule").get("applied").isNull()).isTrue();
+    }
+
     @Then("the downloaded backup is {int} bytes named {string}")
     public void theDownloadedBackupIsBytesNamed(int size, String fileName) {
         ResponseEntity<String> response = api.lastResponse();

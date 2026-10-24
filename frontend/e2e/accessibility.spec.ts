@@ -1028,6 +1028,12 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
             pendingRequests: 2,
             restorePending: false,
             problems: ['BACKUP_FAILED', 'TEST_RESTORE_MISSING'],
+            schedule: {
+              backupTime: '02:30',
+              testRestoreDay: 6,
+              testRestoreTime: '05:15',
+              applied: { backupTime: '03:00', testRestoreDay: 7, testRestoreTime: '04:00' },
+            },
           },
         }),
     );
@@ -1047,6 +1053,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     await page.goto('/sprava/zalohy');
     await expect(page.getByRole('heading', { level: 1, name: 'Zálohy' })).toBeFocused();
     await expect(page.locator('.problems li')).toHaveCount(2);
+    await expect(page.getByRole('heading', { level: 2, name: 'Plán záloh' })).toBeVisible();
     expect(await violations(page)).toEqual([]);
 
     await page

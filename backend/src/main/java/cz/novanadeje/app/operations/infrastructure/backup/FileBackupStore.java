@@ -6,6 +6,7 @@ import cz.novanadeje.app.operations.application.backup.RestoreRequest;
 import cz.novanadeje.app.operations.domain.backup.BackupFile;
 import cz.novanadeje.app.operations.domain.backup.BackupRequestKind;
 import cz.novanadeje.app.operations.domain.backup.BackupRun;
+import cz.novanadeje.app.operations.domain.backup.BackupSchedule;
 import cz.novanadeje.app.operations.domain.backup.BackupTooLarge;
 import cz.novanadeje.app.operations.domain.backup.BackupsUnavailable;
 import cz.novanadeje.app.operations.domain.backup.NotABackup;
@@ -44,6 +45,7 @@ class FileBackupStore implements BackupStore {
     static final String RESTORE_RUNNING = "restore.running";
     static final String RESTORE_REQUEST_EXTENSION = ".restore";
     static final String UPLOAD_EXTENSION = ".upload";
+    static final String SCHEDULE = "schedule";
 
     private static final byte[] DUMP_MAGIC = "PGDMP".getBytes(StandardCharsets.US_ASCII);
     private static final int COPY_BUFFER = 64 * 1024;
@@ -189,6 +191,28 @@ class FileBackupStore implements BackupStore {
             log.error("The backup request {} could not be written", requestId, notWritable);
             throw new BackupsUnavailable();
         }
+    }
+
+    @Override
+    public void publishSchedule(BackupSchedule schedule) {
+        Path requests = directory.resolve(REQUESTS_DIRECTORY);
+        if (!Files.isDirectory(requests)) {
+            throw new BackupsUnavailable();
+        }
+        Path part = requests.resolve(SCHEDULE + ".part");
+        try {
+            Files.writeString(part, BackupScheduleFiles.format(schedule), StandardCharsets.UTF_8);
+            Files.move(part, requests.resolve(SCHEDULE), StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
+        } catch (IOException notWritable) {
+            deleteQuietly(part);
+            log.error("The backup schedule could not be written", notWritable);
+            throw new BackupsUnavailable();
+        }
+    }
+
+    @Override
+    public Optional<BackupSchedule> appliedSchedule() {
+        return BackupScheduleFiles.read(directory.resolve(STATUS_DIRECTORY).resolve(SCHEDULE));
     }
 
     @Override

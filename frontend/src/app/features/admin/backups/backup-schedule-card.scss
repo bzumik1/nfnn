@@ -1,0 +1,28 @@
+@use 'breakpoints' as bp;
+
+:host {
+  display: block;
+}
+
+.ui-card__intro,
+.applied {
+  margin: 0 0 var(--space-4);
+}
+
+.schedule-form {
+  max-width: 560px;
+}
+
+.fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  column-gap: var(--space-4);
+
+  @include bp.down(phone) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.restore-day {
+  grid-column: 1;
+}

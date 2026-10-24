@@ -8,14 +8,20 @@
 # for it to go. Everything is reported in the container log, in $LOGS/backup.log and in key=value
 # files under $BACKUPS/status, which the backend reads for the administration page.
 # The database password is read from $SECRETS_DIR/db-password once nfnn-postgres marks it ready.
+# The schedule is the one the backend writes to $BACKUPS/requests/schedule (chosen on /sprava/zalohy),
+# read again on every pass; a missing or invalid value keeps the default below, and the schedule in
+# use is reported in $BACKUPS/status/schedule.
 
 set -u
 
 BACKUPS=${BACKUPS_DIR:-/backups}
 RESTORE=${RESTORE_DIR:-/restore}
-BACKUP_TIME=${BACKUP_TIME:-03:00}
-TEST_RESTORE_DAY=${TEST_RESTORE_DAY:-7}
-TEST_RESTORE_TIME=${TEST_RESTORE_TIME:-04:00}
+DEFAULT_BACKUP_TIME=${BACKUP_TIME:-03:00}
+DEFAULT_TEST_RESTORE_DAY=${TEST_RESTORE_DAY:-7}
+DEFAULT_TEST_RESTORE_TIME=${TEST_RESTORE_TIME:-04:00}
+BACKUP_TIME=""
+TEST_RESTORE_DAY=""
+TEST_RESTORE_TIME=""
 KEEP_DAYS=${KEEP_DAYS:-30}
 TEST_DATABASE=${TEST_DATABASE:-nfnn_restore_test}
 STAGING_DATABASE=${STAGING_DATABASE:-nfnn_restore_staging}
@@ -27,6 +33,7 @@ POLL_SECONDS=10
 STATUS="$BACKUPS/status"
 REQUESTS="$BACKUPS/requests"
 RUNNING="$STATUS/restore.running"
+SCHEDULE="$REQUESTS/schedule"
 
 log() {
   log_line="$(date +%Y-%m-%dT%H:%M:%S%z) $*"
@@ -308,6 +315,51 @@ request_value() {
   sed -n "s/^$2=//p" "$1" | head -n 1 | tr -d '\r\n'
 }
 
+valid_time() {
+  case "$1" in
+    [01][0-9]:[0-5][0-9]|2[0-3]:[0-5][0-9]) return 0 ;;
+  esac
+  return 1
+}
+
+valid_day() {
+  case "$1" in
+    [1-7]) return 0 ;;
+  esac
+  return 1
+}
+
+planned_value() {
+  if [ -f "$SCHEDULE" ]; then
+    p_value=$(request_value "$SCHEDULE" "$1")
+    if "$3" "$p_value"; then
+      echo "$p_value"
+      return
+    fi
+  fi
+  echo "$2"
+}
+
+load_schedule() {
+  l_backup_time=$(planned_value backup_time "$DEFAULT_BACKUP_TIME" valid_time)
+  l_test_day=$(planned_value test_restore_day "$DEFAULT_TEST_RESTORE_DAY" valid_day)
+  l_test_time=$(planned_value test_restore_time "$DEFAULT_TEST_RESTORE_TIME" valid_time)
+  [ "$l_backup_time $l_test_day $l_test_time" = "$BACKUP_TIME $TEST_RESTORE_DAY $TEST_RESTORE_TIME" ] && return 0
+  if [ -n "$BACKUP_TIME" ]; then
+    if [ "$l_backup_time" != "$BACKUP_TIME" ] && ! reached "$l_backup_time"; then
+      last_backup_day=""
+    fi
+    if [ "$l_test_day $l_test_time" != "$TEST_RESTORE_DAY $TEST_RESTORE_TIME" ] && ! reached "$l_test_time"; then
+      last_test_day=""
+    fi
+  fi
+  BACKUP_TIME=$l_backup_time
+  TEST_RESTORE_DAY=$l_test_day
+  TEST_RESTORE_TIME=$l_test_time
+  write_status schedule "backup_time=$BACKUP_TIME" "test_restore_day=$TEST_RESTORE_DAY" "test_restore_time=$TEST_RESTORE_TIME"
+  log "schedule: daily backup at $BACKUP_TIME, test restore on day $TEST_RESTORE_DAY at $TEST_RESTORE_TIME"
+}
+
 restore_requested() {
   q_request=$1
   q_id=$(basename "$q_request" .restore)
@@ -354,7 +406,8 @@ handle_requests() {
 mkdir -p "$STATUS" "$REQUESTS"
 chmod 1777 "$REQUESTS"
 rm -f "$REQUESTS"/*.backup "$REQUESTS"/*.test-restore
-log "nfnn backup started: backups in $BACKUPS, restore folder $RESTORE, daily backup at $BACKUP_TIME, test restore on day $TEST_RESTORE_DAY at $TEST_RESTORE_TIME"
+log "nfnn backup started: backups in $BACKUPS, restore folder $RESTORE"
+load_schedule
 
 read_database_password
 wait_for_database
@@ -374,6 +427,7 @@ fi
 while true; do
   sleep "$POLL_SECONDS"
   handle_requests
+  load_schedule
   today=$(date +%Y-%m-%d)
   if reached "$BACKUP_TIME" && [ "$last_backup_day" != "$today" ]; then
     last_backup_day=$today

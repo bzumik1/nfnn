@@ -8,6 +8,7 @@ import {
   AdminBackupsResponse,
   BackupFileResponse,
   BackupRunResponse,
+  BackupScheduleResponse,
   AdminDonorDetailResponse,
   AdminOverviewResponse,
   AdminReportResponse,
@@ -358,6 +359,19 @@ export function backupsView(overrides: Partial<AdminBackupsResponse> = {}): Admi
     pendingRequests: 0,
     restorePending: false,
     problems: [],
+    schedule: backupSchedule(),
+    ...overrides,
+  };
+}
+
+export function backupSchedule(
+  overrides: Partial<BackupScheduleResponse> = {},
+): BackupScheduleResponse {
+  return {
+    backupTime: '03:00',
+    testRestoreDay: 7,
+    testRestoreTime: '04:00',
+    applied: { backupTime: '03:00', testRestoreDay: 7, testRestoreTime: '04:00' },
     ...overrides,
   };
 }
