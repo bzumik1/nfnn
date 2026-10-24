@@ -1,6 +1,7 @@
 package cz.novanadeje.app.cucumber;
 
 import cz.novanadeje.app.support.DatabaseCleaner;
+import cz.novanadeje.app.support.FakeCompanyRegistry;
 import cz.novanadeje.app.support.FakeFioClient;
 import cz.novanadeje.app.support.MutableClock;
 import cz.novanadeje.app.support.RecordingMailSender;
@@ -21,14 +22,16 @@ public class CommonStepDefinitions {
     private final MutableClock clock;
     private final DatabaseCleaner database;
     private final FakeFioClient fioClient;
+    private final FakeCompanyRegistry companyRegistry;
 
     public CommonStepDefinitions(ApiClient api, RecordingMailSender mailSender, MutableClock clock, DatabaseCleaner database,
-                                 FakeFioClient fioClient) {
+                                 FakeFioClient fioClient, FakeCompanyRegistry companyRegistry) {
         this.api = api;
         this.mailSender = mailSender;
         this.clock = clock;
         this.database = database;
         this.fioClient = fioClient;
+        this.companyRegistry = companyRegistry;
     }
 
     @Before
@@ -36,6 +39,7 @@ public class CommonStepDefinitions {
         database.truncateAllTables();
         mailSender.clear();
         fioClient.reset();
+        companyRegistry.reset();
         clock.advance(Duration.ofDays(1));
     }
 

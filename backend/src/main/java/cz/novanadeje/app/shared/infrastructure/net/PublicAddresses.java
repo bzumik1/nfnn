@@ -1,10 +1,10 @@
-package cz.novanadeje.app.donors.infrastructure.oauth;
+package cz.novanadeje.app.shared.infrastructure.net;
 
 import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.util.List;
 
-final class PublicAddresses {
+public final class PublicAddresses {
 
     private static final List<Range> NON_PUBLIC_IPV4 = List.of(
             Range.of(0, 0, 0, 0, 8), Range.of(10, 0, 0, 0, 8), Range.of(100, 64, 0, 0, 10), Range.of(127, 0, 0, 0, 8),
@@ -19,7 +19,7 @@ final class PublicAddresses {
     private PublicAddresses() {
     }
 
-    static boolean isPublic(InetAddress address) {
+    public static boolean isPublic(InetAddress address) {
         byte[] bytes = address.getAddress();
         List<Range> ranges = address instanceof Inet4Address ? NON_PUBLIC_IPV4 : NON_PUBLIC_IPV6;
         return ranges.stream().noneMatch(range -> range.contains(bytes)) && !address.isLoopbackAddress() && !address.isAnyLocalAddress();

@@ -6,6 +6,7 @@ import cz.novanadeje.app.donors.application.ClientMetadataSource;
 import cz.novanadeje.app.donors.domain.ClientId;
 import cz.novanadeje.app.donors.domain.ClientMetadata;
 import cz.novanadeje.app.donors.domain.InvalidClient;
+import cz.novanadeje.app.shared.infrastructure.net.PublicAddresses;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;

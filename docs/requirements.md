@@ -31,6 +31,7 @@ Web představí fond a jeho pomoc dětem, usnadní darování a dárcům dá ú�
 ### Registrace a přihlášení
 
 - Přepínač „člověk / firma“. Člověk zadá jméno, adresu a e-mail, firma název, IČO, sídlo a e-mail. Adresa a IČO jsou povinné hned, protože patří na potvrzení.
+- Firma vyplní nejdřív IČO a web po zadání platného IČO doplní z obchodního rejstříku (ARES) název a sídlo do prázdných polí, dárce je jen zkontroluje. Když ARES nefunguje nebo IČO nezná, formulář se chová jako dřív a dárce nic nepozná, web jen zaloguje varování; na ARES tak nejsme závislí (Jakub 24. 10. 2026).
 - Dárce se přihlašuje heslem, nebo přístupovým klíčem (passkey). Účet může mít jen klíč a žádné heslo; poslední způsob přihlášení odebrat nejde.
 - Registraci dárce potvrdí odkazem z e-mailu (platí 24 hodin). Do té doby se nepřihlásí a platby se k jeho symbolu nepárují. Kdo nepotvrdí do druhého dne, dostane jednou připomínku. Registrace stejného e-mailu nic neprozradí: majitel potvrzeného účtu dostane e-mail, že účet už má.
 - Po registraci dostane dárce vlastní variabilní symbol, který vidí v přehledu.

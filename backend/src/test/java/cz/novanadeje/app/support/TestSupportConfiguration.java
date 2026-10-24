@@ -45,6 +45,12 @@ public class TestSupportConfiguration {
 
     @Bean
     @Primary
+    public FakeCompanyRegistry fakeCompanyRegistry() {
+        return new FakeCompanyRegistry();
+    }
+
+    @Bean
+    @Primary
     public RecordingResetTimer recordingResetTimer() {
         return new RecordingResetTimer();
     }

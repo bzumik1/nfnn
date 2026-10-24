@@ -51,4 +51,9 @@ class AdapterLibraryRulesTest {
     static final ArchRule cache_library_is_used_only_by_infrastructure_adapters = noClasses()
             .that().resideOutsideOfPackage("..infrastructure..")
             .should().dependOnClassesThat().resideInAPackage("com.github.benmanes.caffeine..");
+
+    @ArchTest
+    static final ArchRule outbound_http_clients_are_used_only_by_infrastructure_adapters = noClasses()
+            .that().resideOutsideOfPackage("..infrastructure..")
+            .should().dependOnClassesThat().resideInAnyPackage("java.net.http..", "org.springframework.web.client..");
 }
