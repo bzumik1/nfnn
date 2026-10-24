@@ -11,6 +11,7 @@ public final class Passkey {
 
     public static final int MAX_NAME_LENGTH = 64;
     public static final int MAX_CREDENTIAL_ID_LENGTH = 1366;
+    public static final int MAX_RELYING_PARTY_ID_LENGTH = 253;
     public static final Set<String> KNOWN_TRANSPORTS = Set.of("usb", "nfc", "ble", "smart-card", "hybrid", "internal");
 
     private static final Pattern CREDENTIAL_ID = Pattern.compile("^[A-Za-z0-9_-]{1," + MAX_CREDENTIAL_ID_LENGTH + "}$");
@@ -22,12 +23,13 @@ public final class Passkey {
     private final byte[] credentialData;
     private final List<String> transports;
     private String name;
+    private final String relyingPartyId;
     private final Instant createdAt;
     private long signCount;
     private Instant lastUsedAt;
 
     private Passkey(PasskeyId id, DonorId donorId, String credentialId, byte[] credentialData, long signCount, List<String> transports,
-                    String name, Instant createdAt, Instant lastUsedAt) {
+                    String name, String relyingPartyId, Instant createdAt, Instant lastUsedAt) {
         if (id == null || donorId == null || createdAt == null) {
             throw new IllegalArgumentException("A passkey needs an id, its donor and the time it was created");
         }
@@ -47,18 +49,23 @@ public final class Passkey {
         this.signCount = signCount;
         this.transports = knownTransports(transports);
         this.name = validName(name);
+        this.relyingPartyId = relyingPartyId;
         this.createdAt = createdAt;
         this.lastUsedAt = lastUsedAt;
     }
 
     public static Passkey register(DonorId donorId, String credentialId, byte[] credentialData, long signCount, Collection<String> transports,
-                                   String name, Instant at) {
-        return new Passkey(PasskeyId.newId(at), donorId, credentialId, credentialData, signCount, List.copyOf(transports), name, at, null);
+                                   String name, String relyingPartyId, Instant at) {
+        if (relyingPartyId == null || relyingPartyId.isBlank()) {
+            throw new IllegalArgumentException("A passkey is registered for the host of the site");
+        }
+        return new Passkey(PasskeyId.newId(at), donorId, credentialId, credentialData, signCount, List.copyOf(transports), name, relyingPartyId,
+                at, null);
     }
 
     public static Passkey reconstitute(PasskeyId id, DonorId donorId, String credentialId, byte[] credentialData, long signCount,
-                                       List<String> transports, String name, Instant createdAt, Instant lastUsedAt) {
-        return new Passkey(id, donorId, credentialId, credentialData, signCount, transports, name, createdAt, lastUsedAt);
+                                       List<String> transports, String name, String relyingPartyId, Instant createdAt, Instant lastUsedAt) {
+        return new Passkey(id, donorId, credentialId, credentialData, signCount, transports, name, relyingPartyId, createdAt, lastUsedAt);
     }
 
     public void recordSignIn(long newSignCount, Instant at) {
@@ -103,6 +110,10 @@ public final class Passkey {
 
     public String name() {
         return name;
+    }
+
+    public Optional<String> relyingPartyId() {
+        return Optional.ofNullable(relyingPartyId);
     }
 
     public Instant createdAt() {

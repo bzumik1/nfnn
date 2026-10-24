@@ -53,4 +53,16 @@ class JpaPasskeyRepository implements PasskeyRepository {
     public int deleteAllOf(DonorId donorId) {
         return jpa.deleteAllByDonorId(donorId.value());
     }
+
+    @Override
+    public int adoptUnmarked(String relyingPartyId) {
+        return jpa.adoptUnmarked(relyingPartyId);
+    }
+
+    @Override
+    public List<DonorId> deleteOfOtherSites(String relyingPartyId) {
+        List<DonorId> donors = jpa.findDonorsWithKeysOfOtherSites(relyingPartyId).stream().map(DonorId::new).toList();
+        jpa.deleteOfOtherSites(relyingPartyId);
+        return donors;
+    }
 }

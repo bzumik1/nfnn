@@ -42,13 +42,15 @@ class OAuthController {
     private final AuthorizationServerService authorizationServer;
     private final OAuthTokenRateLimiter rateLimiter;
     private final ClientMetadataRateLimiter metadataRateLimiter;
+    private final SecondFactorRateLimiter codeRateLimiter;
     private final Clock clock;
 
     OAuthController(AuthorizationServerService authorizationServer, OAuthTokenRateLimiter rateLimiter, ClientMetadataRateLimiter metadataRateLimiter,
-                    Clock clock) {
+                    SecondFactorRateLimiter codeRateLimiter, Clock clock) {
         this.authorizationServer = authorizationServer;
         this.rateLimiter = rateLimiter;
         this.metadataRateLimiter = metadataRateLimiter;
+        this.codeRateLimiter = codeRateLimiter;
         this.clock = clock;
     }
 
@@ -63,6 +65,9 @@ class OAuthController {
     @PostMapping("/authorize")
     RedirectResponse authorize(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody AuthorizationRequest request, HttpServletRequest http) {
         metadataRateLimiter.check(http.getRemoteAddr());
+        if (request.carriesCode()) {
+            codeRateLimiter.check(http.getRemoteAddr());
+        }
         return new RedirectResponse(authorizationServer.decide(request.toDecision(), DonorId.of(jwt.getSubject()), SessionRoles.of(jwt)).toString());
     }
 

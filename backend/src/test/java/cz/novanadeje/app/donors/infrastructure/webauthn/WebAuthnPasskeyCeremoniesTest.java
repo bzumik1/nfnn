@@ -42,7 +42,7 @@ class WebAuthnPasskeyCeremoniesTest {
 
         VerifiedPasskey verified = ceremonies.verifyRegistration(attestation(device.registration(registration.value())), registration);
         Passkey passkey = Passkey.register(DONOR, verified.credentialId(), verified.credentialData(), verified.signCount(), verified.transports(),
-                "Mac", NOW);
+                "Mac", "nfnn.cz", NOW);
         LinkSecret signIn = LinkSecret.generate();
         long signCount = ceremonies.verifySignIn(assertion(device.assertion(signIn.value())), signIn, passkey);
 
@@ -74,7 +74,7 @@ class WebAuthnPasskeyCeremoniesTest {
         SoftwarePasskey device = SoftwarePasskey.forUser(DONOR.value()).counting();
         LinkSecret registration = LinkSecret.generate();
         VerifiedPasskey verified = ceremonies.verifyRegistration(attestation(device.registration(registration.value())), registration);
-        Passkey passkey = Passkey.register(DONOR, verified.credentialId(), verified.credentialData(), 5, verified.transports(), "Mac", NOW);
+        Passkey passkey = Passkey.register(DONOR, verified.credentialId(), verified.credentialData(), 5, verified.transports(), "Mac", "nfnn.cz", NOW);
         LinkSecret signIn = LinkSecret.generate();
 
         assertThatThrownBy(() -> ceremonies.verifySignIn(assertion(device.withAnotherKey().assertion(signIn.value())), signIn, passkey))

@@ -48,12 +48,14 @@ public class AuthorizationServerService {
     private final DonorRepository donors;
     private final AccessTokenIssuer accessTokens;
     private final AccessTokenVerifier accessTokenVerifier;
+    private final FreshSecondFactorCheck freshSecondFactor;
     private final OAuthProperties properties;
     private final DonorSessionProperties sessionProperties;
     private final Clock clock;
 
     public AuthorizationServerService(ClientMetadataSource clients, AuthorizationCodeRepository codes, RefreshTokenRepository refreshTokens,
                                       DonorRepository donors, AccessTokenIssuer accessTokens, AccessTokenVerifier accessTokenVerifier,
+                                      FreshSecondFactorCheck freshSecondFactor,
                                       OAuthProperties properties, DonorSessionProperties sessionProperties, Clock clock) {
         this.clients = clients;
         this.codes = codes;
@@ -61,6 +63,7 @@ public class AuthorizationServerService {
         this.donors = donors;
         this.accessTokens = accessTokens;
         this.accessTokenVerifier = accessTokenVerifier;
+        this.freshSecondFactor = freshSecondFactor;
         this.properties = properties;
         this.sessionProperties = sessionProperties;
         this.clock = clock;
@@ -91,6 +94,7 @@ public class AuthorizationServerService {
         if (!properties.mcpResource().equals(decision.resource())) {
             throw new InvalidAuthorizationRequest("resource must be " + properties.mcpResource());
         }
+        freshSecondFactor.require(donorId, decision.proof());
         Instant now = clock.instant();
         LinkSecret secret = LinkSecret.generate();
         codes.save(AuthorizationCode.issue(secret, donorId, clientId, redirect, challenge, scopes, properties.mcpResource(), true, now,

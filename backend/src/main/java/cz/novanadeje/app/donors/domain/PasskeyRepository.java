@@ -18,4 +18,8 @@ public interface PasskeyRepository {
     void delete(PasskeyId id);
 
     int deleteAllOf(DonorId donorId);
+
+    int adoptUnmarked(String relyingPartyId);
+
+    List<DonorId> deleteOfOtherSites(String relyingPartyId);
 }
