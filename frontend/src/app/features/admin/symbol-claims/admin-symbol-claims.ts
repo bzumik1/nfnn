@@ -10,7 +10,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { describeProblem, problemTypeEndsWith } from '../../../core/auth/api-problem';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { pluralCategory } from '../../../core/i18n/plural-category';
@@ -26,7 +26,7 @@ const FORBIDDEN = 'auth/forbidden';
 
 @Component({
   selector: 'app-admin-symbol-claims',
-  imports: [LiveNotice],
+  imports: [LiveNotice, RouterLink],
   templateUrl: './admin-symbol-claims.html',
   styleUrl: './admin-symbol-claims.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -38,7 +38,10 @@ export class AdminSymbolClaims {
   private readonly loginDialog = inject(LoginDialogService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly injector = inject(Injector);
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly title = viewChild.required<ElementRef<HTMLHeadingElement>>('title');
+  private readonly confirmCancel = viewChild<ElementRef<HTMLButtonElement>>('confirmCancel');
+  private readonly noticeRegion = viewChild('noticeRegion', { read: ElementRef });
 
   protected readonly state = signal<LoadState>('loading');
   protected readonly items = signal<SymbolClaimResponse[]>([]);
@@ -97,10 +100,17 @@ export class AdminSymbolClaims {
   protected ask(item: SymbolClaimResponse): void {
     this.pending.set(item.id);
     this.notice.set(null);
+    this.focusAfterRender(() => this.confirmCancel()?.nativeElement ?? null);
   }
 
   protected cancel(): void {
+    const opener = this.openerOf(this.pending());
     this.pending.set(null);
+    this.focusAfterRender(opener);
+  }
+
+  protected openerId(item: SymbolClaimResponse): string {
+    return openerId(item.id);
   }
 
   protected isPending(item: SymbolClaimResponse): boolean {
@@ -110,15 +120,15 @@ export class AdminSymbolClaims {
   protected reverse(item: SymbolClaimResponse): void {
     this.run(
       this.api.reverseSymbolClaim(item.id),
-      $localize`:@@admin.symbolClaims.reverse.done:Odpověď Ano u ${this.donorName(item)}:name: (VS ${item.variableSymbol}:symbol:) je zrušená: ${this.donations(item.donationCount)}:donations: jsme smazali a platby s tímto symbolem jsou zase nespárované. Dárce se už neptáme.`,
-      $localize`:@@admin.symbolClaims.reverse.failed:Odpověď se nepodařilo zrušit. Zkuste to prosím znovu.`,
+      $localize`:@@admin.symbolClaims.reverse.done:Přiřazení darů u ${this.donorName(item)}:name: (VS ${item.variableSymbol}:symbol:) jsme vrátili: ${this.donations(item.donationCount)}:donations: jsme smazali a platby s tímto symbolem zase čekají na přiřazení. Odpověď je teď Ne, dárce se už neptáme.`,
+      $localize`:@@admin.symbolClaims.reverse.failed:Přiřazení darů se nepodařilo vrátit. Zkuste to prosím znovu.`,
     );
   }
 
   protected reset(item: SymbolClaimResponse): void {
     this.run(
       this.api.deleteSymbolClaim(item.id),
-      $localize`:@@admin.symbolClaims.reset.done:Odpověď Ne u ${this.donorName(item)}:name: (VS ${item.variableSymbol}:symbol:) jsme smazali. Pokud otázka pořád platí, nástěnka se dárce zeptá znovu.`,
+      $localize`:@@admin.symbolClaims.reset.done:Odpověď Ne u ${this.donorName(item)}:name: (VS ${item.variableSymbol}:symbol:) jsme smazali. Pokud otázka pořád platí, dárce ji uvidí znovu ve svém přehledu.`,
       $localize`:@@admin.symbolClaims.reset.failed:Odpověď se nepodařilo smazat. Zkuste to prosím znovu.`,
     );
   }
@@ -131,6 +141,7 @@ export class AdminSymbolClaims {
     if (this.busy()) {
       return;
     }
+    const opener = this.openerOf(this.pending());
     this.busy.set(true);
     request.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => {
@@ -138,13 +149,30 @@ export class AdminSymbolClaims {
         this.pending.set(null);
         this.notice.set({ kind: 'status', text: done });
         this.load();
+        this.focusAfterRender(() => this.noticeElement());
       },
       error: (failure: unknown) => {
         this.busy.set(false);
         this.pending.set(null);
         this.notice.set({ kind: 'alert', text: describeProblem(failure, failed) });
+        this.focusAfterRender(() => opener() ?? this.noticeElement());
       },
     });
+  }
+
+  private openerOf(claimId: string | null): () => HTMLElement | null {
+    return () =>
+      claimId === null
+        ? null
+        : this.host.nativeElement.querySelector<HTMLElement>(`#${openerId(claimId)}`);
+  }
+
+  private noticeElement(): HTMLElement | null {
+    return (this.noticeRegion()?.nativeElement as HTMLElement | undefined) ?? null;
+  }
+
+  private focusAfterRender(target: () => HTMLElement | null): void {
+    afterNextRender(() => target()?.focus(), { injector: this.injector });
   }
 
   private sendToSignIn(): void {
@@ -154,4 +182,8 @@ export class AdminSymbolClaims {
       this.loginDialog.open('login', { returnTo });
     });
   }
+}
+
+function openerId(claimId: string): string {
+  return `symbol-claim-action-${claimId.replace(/[^A-Za-z0-9_-]/g, '_')}`;
 }
