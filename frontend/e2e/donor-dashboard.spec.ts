@@ -235,7 +235,7 @@ test.describe('Given a signed-in donor', () => {
     await expect(page.getByLabel('Jméno a příjmení')).toBeFocused();
     await page.getByLabel('Ulice a číslo').fill('Krátká 3');
     await page.getByLabel('Jazyk potvrzení').selectOption('en');
-    await page.getByRole('button', { name: 'Uložit' }).click();
+    await page.getByRole('button', { name: 'Uložit údaje' }).click();
 
     await expect(page.locator('.profile-data')).toContainText('Krátká 3, 400 01 Ústí nad Labem');
     await expect(page.locator('.profile-data')).toContainText('angličtina (dvojjazyčné)');

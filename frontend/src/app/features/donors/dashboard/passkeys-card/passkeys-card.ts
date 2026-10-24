@@ -68,6 +68,9 @@ export class PasskeysCard {
   protected readonly lastSignInMethod = computed(
     () => !this.hasPassword() && (this.passkeys()?.length ?? 0) <= 1,
   );
+  protected readonly withoutSignInMethod = computed(
+    () => !this.hasPassword() && this.passkeys()?.length === 0,
+  );
   protected readonly loadError = signal('');
   protected readonly adding = signal(false);
   protected readonly saving = signal(false);
@@ -154,9 +157,12 @@ export class PasskeysCard {
       .subscribe({
         next: (passkey) => {
           this.saving.set(false);
+          const first = (this.passkeys()?.length ?? 0) === 0;
           this.passkeys.update((list) => [...(list ?? []), passkey]);
           this.status.set(
-            $localize`:@@donor.passkeys.added:Přístupový klíč ${passkey.name}:name: je přidaný. Příště se jím můžete přihlásit bez hesla.`,
+            first && this.hasPassword()
+              ? $localize`:@@donor.passkeys.addedFirst:Přístupový klíč ${passkey.name}:name: je přidaný. Příště se jím můžete přihlásit bez hesla; heslo teď můžete v Přihlašovacích údajích i odebrat.`
+              : $localize`:@@donor.passkeys.added:Přístupový klíč ${passkey.name}:name: je přidaný. Příště se jím můžete přihlásit bez hesla.`,
           );
           this.closeForm();
         },

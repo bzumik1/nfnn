@@ -933,7 +933,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     );
     expect(await violations(page)).toEqual([]);
 
-    await page.getByRole('button', { name: 'Vypnout dvoufaktorové ověření' }).click();
+    await page.getByRole('button', { name: 'Vypnout kód z aplikace' }).click();
     await page.getByRole('button', { name: 'Odebrat účet' }).first().click();
     await expect(page.getByRole('group', { name: 'Odebrat účet?' })).toBeVisible();
     expect(await violations(page)).toEqual([]);
@@ -1350,7 +1350,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     await openDonorSection(page, 'Údaje a zabezpečení');
     await page.getByRole('button', { name: 'Upravit údaje' }).click();
     await page.getByLabel('Město').fill('');
-    await page.getByRole('button', { name: 'Uložit' }).click();
+    await page.getByRole('button', { name: 'Uložit údaje' }).click();
     await expect(page.getByLabel('Město')).toBeFocused();
 
     expect(await violations(page)).toEqual([]);
@@ -1383,7 +1383,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     );
     await signIn(page);
     await openDonorSection(page, 'Údaje a zabezpečení');
-    await page.getByRole('button', { name: 'Zapnout dvoufaktorové ověření' }).click();
+    await page.getByRole('button', { name: 'Zapnout kód z aplikace' }).click();
     await page.getByLabel('Současné heslo').fill('correct horse battery');
     await page.getByRole('button', { name: 'Pokračovat' }).click();
     await expect(page.getByLabel('Kód z aplikace')).toBeFocused();
@@ -1391,7 +1391,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     expect(await violations(page)).toEqual([]);
 
     await page.getByLabel('Kód z aplikace').fill('12345');
-    await page.getByRole('button', { name: 'Zapnout dvoufaktorové ověření' }).click();
+    await page.getByRole('button', { name: 'Zapnout kód z aplikace' }).click();
     await expect(page.getByLabel('Kód z aplikace')).toBeFocused();
 
     expect(await violations(page)).toEqual([]);
@@ -1445,7 +1445,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     expect(await violations(page)).toEqual([]);
   });
 
-  test('when a donor without a password and without a passkey opens the account details, then the warning and the password set-up break no rule', async ({
+  test('when a donor without a password and without a passkey opens the account details, then the warnings and the passkey form break no rule', async ({
     page,
   }) => {
     await mockDonorApi(page);
@@ -1453,13 +1453,12 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     await openDonorSection(page, 'Údaje a zabezpečení');
     const card = page.getByRole('region', { name: 'Přístupové klíče' });
     await expect(card.locator('.passkeys-warning')).toBeVisible();
+    const account = page.getByRole('region', { name: 'Přihlašovací údaje' });
+    await expect(account.getByRole('button', { name: 'Nastavit heslo' })).toHaveCount(0);
     expect(await violations(page)).toEqual([]);
 
-    await page
-      .getByRole('region', { name: 'Přihlašovací údaje' })
-      .getByRole('button', { name: 'Nastavit heslo' })
-      .click();
-    await expect(page.getByLabel('Nové heslo', { exact: true })).toBeFocused();
+    await account.getByRole('button', { name: 'Vytvořit přístupový klíč' }).click();
+    await expect(card.getByLabel('Název klíče')).toBeFocused();
     expect(await violations(page)).toEqual([]);
   });
 

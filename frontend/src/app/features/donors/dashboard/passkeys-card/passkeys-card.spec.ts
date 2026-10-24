@@ -104,7 +104,7 @@ describe('Given the passkeys card in the overview', () => {
     await render();
 
     expect(element('h2').textContent).toContain('Přístupové klíče');
-    expect(element('.passkeys-intro').textContent).toContain('dvoufaktorové ověření');
+    expect(element('.passkeys-intro').textContent).toContain('chráněné i bez kódu z aplikace');
     expect(texts('.passkey-name')).toEqual(['iPhone', 'Windows']);
     expect(texts('.passkey-dates')[0]).toContain('přidáno 17. 10. 2026');
     expect(texts('.passkey-dates')[0]).toContain('naposledy použito 22. 10. 2026');
@@ -116,6 +116,25 @@ describe('Given the passkeys card in the overview', () => {
 
     expect(element('.passkeys-empty').textContent).toContain('Zatím nemáte žádný přístupový klíč');
     expect(texts('button')).toContain('Přidat přístupový klíč');
+    expect(element('.passkeys-action').classList).not.toContain('ui-button--primary');
+  });
+
+  it('when the donor adds the first passkey, then the status says the password can now be removed', async () => {
+    await render([]);
+    await clickButton('Přidat přístupový klíč');
+    await fillIn('#passkey-name', 'MacBook');
+    await fillIn('#passkey-password', 'correct horse battery');
+    await submit();
+
+    http.expectOne(OPTIONS_URL).flush(passkeyCreationOptions());
+    await vi.waitFor(() => expect(passkeys.created).toHaveLength(1));
+    await settle();
+    http.expectOne(PASSKEYS_URL).flush(samplePasskey({ id: 'new', name: 'MacBook' }));
+    await settle();
+
+    expect(element('[role="status"]').textContent).toContain(
+      'heslo teď můžete v Přihlašovacích údajích i odebrat',
+    );
   });
 
   it('when the list cannot be loaded, then an alert offers to load it again', async () => {
@@ -166,6 +185,7 @@ describe('Given the passkeys card in the overview', () => {
       expect(element('[role="status"]').textContent).toContain(
         'Přístupový klíč MacBook je přidaný',
       );
+      expect(element('[role="status"]').textContent).not.toContain('odebrat');
       expect(element('form')).toBeNull();
     });
 
@@ -443,6 +463,7 @@ describe('Given the passkeys card of a donor without a password', () => {
     expect(element('.passkeys-warning').textContent).toContain(
       'Účet nemá heslo ani přístupový klíč',
     );
+    expect(element('.passkeys-action').classList).toContain('ui-button--primary');
     await clickButton('Přidat přístupový klíč');
     expect(element('#passkey-password')).toBeNull();
     await fillIn('#passkey-name', 'iPhone');

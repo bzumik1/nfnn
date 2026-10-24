@@ -99,15 +99,15 @@ describe('Given the sign-in data card in the overview', () => {
     expect(element('.account-data dd').textContent?.trim()).toBe('jana@example.cz');
     expect(
       Array.from(root().querySelectorAll('.account-data dd')).map((dd) => dd.textContent?.trim()),
-    ).toEqual(['jana@example.cz', 'Nastavené', 'Vypnuté']);
+    ).toEqual(['jana@example.cz', 'Nastavené', 'Vypnutý']);
     expect(element('.account-hint')).toBeNull();
     expect(
       Array.from(root().querySelectorAll('.account-action')).map((b) => b.textContent?.trim()),
-    ).toEqual(['Změnit e-mail', 'Změnit heslo', 'Zapnout dvoufaktorové ověření']);
+    ).toEqual(['Změnit e-mail', 'Změnit heslo', 'Zapnout kód z aplikace']);
   });
 
   describe('when the donor turns the second factor on', () => {
-    beforeEach(() => clickButton('Zapnout dvoufaktorové ověření'));
+    beforeEach(() => clickButton('Zapnout kód z aplikace'));
 
     it('then the password field has the focus and the form names the authenticator apps', () => {
       expect(document.activeElement).toBe(element('#account-second-factor-password'));
@@ -136,6 +136,12 @@ describe('Given the sign-in data card in the overview', () => {
         'one-time-code',
       );
       expect(document.activeElement).toBe(element('#account-second-factor-code'));
+      expect(element<HTMLAnchorElement>('.account-otpauth').getAttribute('href')).toBe(
+        secondFactorEnrolment()['otpauthUri'],
+      );
+      expect(element('.account-otpauth').textContent?.trim()).toBe(
+        'Přidat do ověřovací aplikace v tomto telefonu',
+      );
     });
 
     it('and the password is wrong, then the password form stays and shows the reason', async () => {
@@ -182,15 +188,13 @@ describe('Given the sign-in data card in the overview', () => {
         await settle();
 
         expect(element('.account-form')).toBeNull();
-        expect(element('.account-status').textContent).toContain(
-          'Dvoufaktorové ověření je zapnuté.',
-        );
+        expect(element('.account-status').textContent).toContain('Kód z aplikace je zapnutý.');
         expect(
           Array.from(root().querySelectorAll('.account-data dd')).map((dd) =>
             dd.textContent?.trim(),
           ),
-        ).toEqual(['jana@example.cz', 'Nastavené', 'Zapnuté']);
-        expect(document.activeElement?.textContent?.trim()).toBe('Vypnout dvoufaktorové ověření');
+        ).toEqual(['jana@example.cz', 'Nastavené', 'Zapnutý']);
+        expect(document.activeElement?.textContent?.trim()).toBe('Vypnout kód z aplikace');
         store.updateProfile({}).subscribe();
         expect(http.expectOne('/api/donors/me').request.headers.get('Authorization')).toBe(
           'Bearer token-2',
@@ -233,7 +237,7 @@ describe('Given the sign-in data card in the overview', () => {
 
         expect(element('.account-form')).toBeNull();
         expect(element('.account-qr')).toBeNull();
-        expect(document.activeElement?.textContent?.trim()).toBe('Zapnout dvoufaktorové ověření');
+        expect(document.activeElement?.textContent?.trim()).toBe('Zapnout kód z aplikace');
       });
     });
   });
@@ -252,7 +256,7 @@ describe('Given the sign-in data card in the overview', () => {
 
     it('then the card says the administration waits for the second factor', () => {
       expect(element('.account-hint').textContent).toContain(
-        'Správa se vám otevře, až se přihlásíte přístupovým klíčem nebo zapnete dvoufaktorové ověření',
+        'Správa se vám otevře, až se přihlásíte přístupovým klíčem nebo zapnete kód z aplikace a',
       );
     });
   });
@@ -264,7 +268,7 @@ describe('Given the sign-in data card in the overview', () => {
         .expectOne('/api/donors/me')
         .flush(sampleDonor({ secondFactor: { enabled: true, neededForAdministration: false } }));
       await settle();
-      await clickButton('Vypnout dvoufaktorové ověření');
+      await clickButton('Vypnout kód z aplikace');
     });
 
     it('then the card showed the factor as on and the password field has the focus', () => {
@@ -288,13 +292,11 @@ describe('Given the sign-in data card in the overview', () => {
       await settle();
 
       expect(element('.account-form')).toBeNull();
-      expect(element('.account-status').textContent).toContain(
-        'Dvoufaktorové ověření jsme vypnuli.',
-      );
+      expect(element('.account-status').textContent).toContain('Kód z aplikace jsme vypnuli.');
       expect(
         Array.from(root().querySelectorAll('.account-action')).map((b) => b.textContent?.trim()),
-      ).toEqual(['Změnit e-mail', 'Změnit heslo', 'Zapnout dvoufaktorové ověření']);
-      expect(document.activeElement?.textContent?.trim()).toBe('Zapnout dvoufaktorové ověření');
+      ).toEqual(['Změnit e-mail', 'Změnit heslo', 'Zapnout kód z aplikace']);
+      expect(document.activeElement?.textContent?.trim()).toBe('Zapnout kód z aplikace');
     });
 
     it('and the code was already used, then the form stays and shows the reason', async () => {
@@ -429,10 +431,14 @@ describe('Given the sign-in data card in the overview', () => {
       expect(element('.account-status').textContent).toContain('Heslo jsme odebrali.');
       expect(
         Array.from(root().querySelectorAll('.account-data dd')).map((dd) => dd.textContent?.trim()),
-      ).toEqual(['jana@example.cz', 'Bez hesla, jen přístupové klíče', 'Vypnuté']);
+      ).toEqual([
+        'jana@example.cz',
+        'Bez hesla, jen přístupové klíče',
+        'VypnutýPřihlášení přístupovým klíčem je chráněné i bez kódu.',
+      ]);
       expect(
         Array.from(root().querySelectorAll('.account-action')).map((b) => b.textContent?.trim()),
-      ).toEqual(['Změnit e-mail', 'Nastavit heslo', 'Zapnout dvoufaktorové ověření']);
+      ).toEqual(['Změnit e-mail', 'Nastavit heslo', 'Zapnout kód z aplikace']);
     });
   });
 
@@ -595,7 +601,7 @@ describe("Given an administrator's sign-in data card", () => {
 
     element<HTMLButtonElement>('.account-danger').click();
     await settle();
-    expect(element('.account-danger').textContent).toContain('Odpojuji…');
+    expect(element('.account-danger').textContent).toContain('Odpojujeme…');
     http
       .expectOne({ method: 'DELETE', url: `${CONNECTIONS_URL}/${CLAUDE_CONNECTION.id}` })
       .flush(null, { status: 204, statusText: 'No Content' });
@@ -688,10 +694,75 @@ describe('Given the sign-in data card of a donor without a password', () => {
   it('when it opens, then it says the account has no password and offers to set one, not to remove it', () => {
     expect(
       Array.from(root().querySelectorAll('.account-data dd')).map((dd) => dd.textContent?.trim()),
-    ).toEqual(['jana@example.cz', 'Bez hesla, jen přístupové klíče', 'Vypnuté']);
+    ).toEqual([
+      'jana@example.cz',
+      'Bez hesla, jen přístupové klíče',
+      'VypnutýPřihlášení přístupovým klíčem je chráněné i bez kódu.',
+    ]);
     expect(
       Array.from(root().querySelectorAll('.account-action')).map((b) => b.textContent?.trim()),
-    ).toEqual(['Změnit e-mail', 'Nastavit heslo', 'Zapnout dvoufaktorové ověření']);
+    ).toEqual(['Změnit e-mail', 'Nastavit heslo', 'Zapnout kód z aplikace']);
+  });
+
+  it('when the second factor is off, then the row says a passkey sign-in is protected without the code', () => {
+    expect(element('.account-row-note').textContent?.trim()).toBe(
+      'Přihlášení přístupovým klíčem je chráněné i bez kódu.',
+    );
+  });
+
+  describe('when the donor has no passkey either', () => {
+    let creations: number;
+
+    beforeEach(async () => {
+      creations = 0;
+      fixture.componentInstance.createPasskey.subscribe(() => creations++);
+      fixture.componentRef.setInput('passkeyCount', 0);
+      await settle();
+    });
+
+    it('then the card offers no change that a passkey must confirm and asks for a passkey first', () => {
+      expect(root().querySelectorAll('.account-action')).toHaveLength(0);
+      expect(
+        Array.from(root().querySelectorAll('.account-data dd')).map((dd) => dd.textContent?.trim()),
+      ).toEqual(['jana@example.cz', 'Bez hesla', 'Vypnutý']);
+      expect(element('.account-no-method').textContent).toContain(
+        'Nejdřív si vytvořte přístupový klíč',
+      );
+    });
+
+    it('and the donor presses the button, then the card asks the passkeys card to open its form', async () => {
+      await clickButton('Vytvořit přístupový klíč');
+
+      expect(creations).toBe(1);
+    });
+
+    it('and the first passkey arrives, then the changes are offered again', async () => {
+      fixture.componentRef.setInput('passkeyCount', 1);
+      await settle();
+
+      expect(element('.account-no-method')).toBeNull();
+      expect(
+        Array.from(root().querySelectorAll('.account-action')).map((b) => b.textContent?.trim()),
+      ).toEqual(['Změnit e-mail', 'Nastavit heslo', 'Zapnout kód z aplikace']);
+    });
+  });
+
+  it('when the donor turns the code off, then the form says what changes for an account without a password', async () => {
+    TestBed.inject(AuthStore).updateProfile({}).subscribe();
+    http.expectOne('/api/donors/me').flush(
+      sampleDonor({
+        hasPassword: false,
+        secondFactor: { enabled: true, neededForAdministration: false },
+      }),
+    );
+    await settle();
+
+    await clickButton('Vypnout kód z aplikace');
+
+    expect(element('.account-form-intro').textContent).toContain(
+      'Při obnově přístupu odkazem z e-mailu pak kód z aplikace chtít nebudeme.',
+    );
+    expect(element('.account-form').textContent).not.toContain('bude stačit heslo');
   });
 
   it('when the e-mail changes, then a passkey confirms it instead of the password', async () => {
@@ -739,7 +810,7 @@ describe('Given the sign-in data card of a donor without a password', () => {
 
   it('when the device does not confirm the passkey, then the form stays and says what to do', async () => {
     passkeys.failure = 'cancelled';
-    await clickButton('Zapnout dvoufaktorové ověření');
+    await clickButton('Zapnout kód z aplikace');
     expect(element('.account-form-intro').textContent).toContain('obnovovat přístup');
 
     await submit();
@@ -751,5 +822,43 @@ describe('Given the sign-in data card of a donor without a password', () => {
       'Změnu se nepodařilo potvrdit přístupovým klíčem',
     );
     http.expectNone('/api/donors/me/second-factor/setup');
+  });
+});
+
+describe('Given the sign-in data card of a donor without a password in a browser without passkeys', () => {
+  let fixture: ComponentFixture<AccountCard>;
+  let http: HttpTestingController;
+
+  beforeEach(async () => {
+    const passkeys = new FakePasskeyAuthenticator();
+    passkeys.available = false;
+    await TestBed.configureTestingModule({
+      imports: [AccountCard],
+      providers: [
+        provideHttpClient(withInterceptors([authInterceptor])),
+        provideHttpClientTesting(),
+        { provide: PasskeyAuthenticator, useValue: passkeys },
+      ],
+    }).compileComponents();
+    http = TestBed.inject(HttpTestingController);
+    TestBed.inject(AuthStore).login('jana@example.cz', 'correct horse battery').subscribe();
+    http
+      .expectOne('/api/donors/auth/login')
+      .flush(authResponse('token-1', sampleDonor({ hasPassword: false })));
+    fixture = TestBed.createComponent(AccountCard);
+    fixture.componentRef.setInput('passkeyCount', 0);
+    fixture.detectChanges();
+    await fixture.whenStable();
+  });
+
+  afterEach(() => http.verify());
+
+  it('when it opens, then it asks for a passkey first without a button that could not create one', () => {
+    const root = fixture.nativeElement as HTMLElement;
+    expect(root.querySelector('.account-no-method')?.textContent).toContain(
+      'Nejdřív si vytvořte přístupový klíč',
+    );
+    expect(root.querySelector('.account-create-passkey')).toBeNull();
+    expect(root.querySelectorAll('.account-action')).toHaveLength(0);
   });
 });

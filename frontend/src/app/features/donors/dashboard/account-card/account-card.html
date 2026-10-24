@@ -12,26 +12,33 @@
         <dd>
           @if (donor.hasPassword) {
             <span i18n="@@donor.account.password.set">Nastavené</span>
+          } @else if (withoutSignInMethod()) {
+            <span i18n="@@donor.account.password.noneAtAll">Bez hesla</span>
           } @else {
             <span i18n="@@donor.account.password.none">Bez hesla, jen přístupové klíče</span>
           }
         </dd>
       </div>
       <div class="account-row">
-        <dt i18n="@@donor.account.secondFactor">Dvoufaktorové ověření</dt>
+        <dt i18n="@@donor.account.secondFactor">Kód z aplikace při přihlášení</dt>
         <dd>
           @if (secondFactor().enabled) {
-            <span i18n="@@donor.account.secondFactor.on">Zapnuté</span>
+            <span i18n="@@donor.account.secondFactor.on">Zapnutý</span>
           } @else {
-            <span i18n="@@donor.account.secondFactor.off">Vypnuté</span>
+            <span i18n="@@donor.account.secondFactor.off">Vypnutý</span>
+            @if ((passkeyCount() ?? 0) > 0) {
+              <span class="account-row-note" i18n="@@donor.account.secondFactor.passkeyProtects"
+                >Přihlášení přístupovým klíčem je chráněné i bez kódu.</span
+              >
+            }
           }
         </dd>
       </div>
     </dl>
     @if (secondFactor().neededForAdministration) {
       <p class="account-hint" i18n="@@donor.account.secondFactor.neededForAdministration">
-        Správa se vám otevře, až se přihlásíte přístupovým klíčem nebo zapnete dvoufaktorové ověření
-        a přihlásíte se s kódem z aplikace.
+        Správa se vám otevře, až se přihlásíte přístupovým klíčem nebo zapnete kód z aplikace a
+        přihlásíte se s ním.
       </p>
     }
   }
@@ -78,7 +85,7 @@
                   (click)="disconnect(app)"
                 >
                   @if (disconnecting() === app.id) {
-                    <span i18n="@@donor.account.connections.disconnecting">Odpojuji…</span>
+                    <span i18n="@@donor.account.connections.disconnecting">Odpojujeme…</span>
                   } @else {
                     <span i18n="@@donor.account.connections.disconnect">Odpojit</span>
                   }
@@ -100,7 +107,24 @@
     </section>
   }
 
-  @if (panel() === 'closed') {
+  @if (panel() === 'closed' && withoutSignInMethod()) {
+    <div class="ui-callout ui-callout--warning account-no-method">
+      <p i18n="@@donor.account.noSignInMethod">
+        Účet zatím nemá heslo ani přístupový klíč. Nejdřív si vytvořte přístupový klíč, pak tu
+        můžete nastavit heslo, změnit e-mail nebo zapnout kód z aplikace.
+      </p>
+      @if (passkeysSupported) {
+        <button
+          type="button"
+          class="ui-button ui-button--primary account-create-passkey"
+          (click)="createPasskey.emit()"
+          i18n="@@donor.account.createPasskey"
+        >
+          Vytvořit přístupový klíč
+        </button>
+      }
+    </div>
+  } @else if (panel() === 'closed') {
     <div class="account-actions">
       <button
         #emailButton
@@ -123,17 +147,6 @@
           <span i18n="@@donor.account.setPassword">Nastavit heslo</span>
         }
       </button>
-      @if (canRemovePassword()) {
-        <button
-          #removePasswordButton
-          type="button"
-          class="ui-button account-action"
-          (click)="open('password-remove')"
-          i18n="@@donor.account.removePassword"
-        >
-          Odebrat heslo
-        </button>
-      }
       @if (secondFactor().enabled) {
         <button
           #secondFactorButton
@@ -142,7 +155,7 @@
           (click)="open('second-factor-off')"
           i18n="@@donor.account.secondFactor.turnOff"
         >
-          Vypnout dvoufaktorové ověření
+          Vypnout kód z aplikace
         </button>
       } @else {
         <button
@@ -152,7 +165,18 @@
           (click)="open('second-factor-on')"
           i18n="@@donor.account.secondFactor.turnOn"
         >
-          Zapnout dvoufaktorové ověření
+          Zapnout kód z aplikace
+        </button>
+      }
+      @if (canRemovePassword()) {
+        <button
+          #removePasswordButton
+          type="button"
+          class="ui-button ui-button--quiet account-action"
+          (click)="open('password-remove')"
+          i18n="@@donor.account.removePassword"
+        >
+          Odebrat heslo
         </button>
       }
     </div>
@@ -165,7 +189,7 @@
       novalidate
     >
       <h3 class="ui-card__subtitle" i18n="@@donor.account.secondFactor.on.title">
-        Zapnutí dvoufaktorového ověření
+        Zapnutí kódu z aplikace (dvoufaktorové ověření)
       </h3>
       @if (hasPassword()) {
         <p class="ui-card__intro account-form-intro" i18n="@@donor.account.secondFactor.on.intro">
@@ -219,7 +243,7 @@
           [disabled]="saving()"
         >
           @if (saving()) {
-            <span i18n="@@donor.account.secondFactor.preparing">Připravuji…</span>
+            <span i18n="@@donor.account.secondFactor.preparing">Připravujeme…</span>
           } @else {
             <span i18n="@@donor.account.secondFactor.continue">Pokračovat</span>
           }
@@ -258,6 +282,14 @@
             label="QR kód s nastavením pro ověřovací aplikaci"
             i18n-label="@@donor.account.secondFactor.qrAlt"
           />
+        }
+        @if (enrolment(); as current) {
+          <a
+            class="account-otpauth"
+            [href]="current.otpauthUri"
+            i18n="@@donor.account.secondFactor.openApp"
+            >Přidat do ověřovací aplikace v tomto telefonu</a
+          >
         }
         <div class="account-secret">
           <span class="account-secret-label" i18n="@@donor.account.secondFactor.secret">Klíč</span>
@@ -301,9 +333,9 @@
           [disabled]="saving()"
         >
           @if (saving()) {
-            <span i18n="@@donor.account.secondFactor.verifying">Ověřuji kód…</span>
+            <span i18n="@@donor.account.secondFactor.verifying">Ověřujeme kód…</span>
           } @else {
-            <span i18n="@@donor.account.secondFactor.turnOn">Zapnout dvoufaktorové ověření</span>
+            <span i18n="@@donor.account.secondFactor.turnOn">Zapnout kód z aplikace</span>
           }
         </button>
         <button
@@ -325,11 +357,21 @@
       novalidate
     >
       <h3 class="ui-card__subtitle" i18n="@@donor.account.secondFactor.off.title">
-        Vypnutí dvoufaktorového ověření
+        Vypnutí kódu z aplikace
       </h3>
-      <p class="ui-card__intro account-form-intro" i18n="@@donor.account.secondFactor.off.intro">
-        K přihlášení pak bude stačit heslo. Ostatní přihlášení ukončíme, tohle zůstane.
-      </p>
+      @if (hasPassword()) {
+        <p class="ui-card__intro account-form-intro" i18n="@@donor.account.secondFactor.off.intro">
+          K přihlášení pak bude stačit heslo. Ostatní přihlášení ukončíme, tohle zůstane.
+        </p>
+      } @else {
+        <p
+          class="ui-card__intro account-form-intro"
+          i18n="@@donor.account.secondFactor.off.introPasswordless"
+        >
+          Při obnově přístupu odkazem z e-mailu pak kód z aplikace chtít nebudeme. Ostatní
+          přihlášení ukončíme, tohle zůstane.
+        </p>
+      }
       @if (hasPassword()) {
         <app-form-field
           label="Současné heslo"
@@ -386,9 +428,9 @@
           [disabled]="saving()"
         >
           @if (saving()) {
-            <span i18n="@@donor.account.secondFactor.turningOff">Vypínám…</span>
+            <span i18n="@@donor.account.secondFactor.turningOff">Vypínáme…</span>
           } @else {
-            <span i18n="@@donor.account.secondFactor.turnOff">Vypnout dvoufaktorové ověření</span>
+            <span i18n="@@donor.account.secondFactor.turnOff">Vypnout kód z aplikace</span>
           }
         </button>
         <button
@@ -452,7 +494,7 @@
           [disabled]="saving()"
         >
           @if (saving()) {
-            <span i18n="@@donor.account.removePassword.saving">Odebírám…</span>
+            <span i18n="@@donor.account.removePassword.saving">Odebíráme…</span>
           } @else {
             <span i18n="@@donor.account.removePassword">Odebrat heslo</span>
           }
@@ -644,7 +686,7 @@
           [disabled]="saving()"
         >
           @if (saving()) {
-            <span i18n="@@donor.account.password.saving">Ukládám…</span>
+            <span i18n="@@donor.account.password.saving">Ukládáme…</span>
           } @else if (hasPassword()) {
             <span i18n="@@donor.account.password.submit">Změnit heslo</span>
           } @else {
@@ -685,12 +727,12 @@
       </span>
     } @else if (secondFactorChanged() === 'on') {
       <span i18n="@@donor.account.secondFactor.turnedOn">
-        Dvoufaktorové ověření je zapnuté. Při příštím přihlášení zadáte i kód z aplikace; ostatní
-        přihlášení jsme ukončili, tohle zůstává.
+        Kód z aplikace je zapnutý. Při příštím přihlášení ho zadáte; ostatní přihlášení jsme
+        ukončili, tohle zůstává.
       </span>
     } @else if (secondFactorChanged() === 'off') {
       <span i18n="@@donor.account.secondFactor.turnedOff">
-        Dvoufaktorové ověření jsme vypnuli. Ostatní přihlášení jsme ukončili, tohle zůstává.
+        Kód z aplikace jsme vypnuli. Ostatní přihlášení jsme ukončili, tohle zůstává.
       </span>
     } @else if (disconnected(); as client) {
       <span i18n="@@donor.account.connections.disconnected">
