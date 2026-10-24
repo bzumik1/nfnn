@@ -8,6 +8,7 @@ import {
   Component,
   computed,
   DestroyRef,
+  effect,
   ElementRef,
   inject,
   Injector,
@@ -74,6 +75,15 @@ const EMAIL_NOT_VERIFIED = 'auth/email-not-verified';
 const SECOND_FACTOR_REQUIRED = 'auth/second-factor-required';
 const INVALID_SECOND_FACTOR_CHALLENGE = 'auth/invalid-second-factor-challenge';
 const STEP_FOCUS = '[autofocus]';
+const STEP_DEPTH: Readonly<Record<Step, number>> = {
+  login: 0,
+  code: 1,
+  recovery: 2,
+  register: 0,
+  registered: 0,
+  reset: 0,
+  'reset-sent': 0,
+};
 const REGISTRATION_FIELDS: Readonly<Record<string, string>> = {
   name: 'name',
   companyIdentifier: 'companyIdentifier',
@@ -190,7 +200,12 @@ export class LoginDialog {
   private readonly tooManyResetRequests = $localize`:@@donor.login.reset.error.tooMany:Odeslali jste příliš mnoho žádostí. Zkuste to prosím za hodinu.`;
 
   constructor() {
-    inject(DestroyRef).onDestroy(() => this.keepDraft());
+    this.dialog.onStepBack(() => this.stepBack());
+    effect(() => this.dialog.showStep(STEP_DEPTH[this.step()]));
+    inject(DestroyRef).onDestroy(() => {
+      this.dialog.onStepBack(null);
+      this.keepDraft();
+    });
   }
 
   setMode(next: LoginDialogMode): void {
@@ -428,6 +443,18 @@ export class LoginDialog {
 
   closeDialog(): void {
     this.dialog.close();
+  }
+
+  openPrivacyPolicy(): void {
+    this.dialog.closeForNavigation();
+  }
+
+  private stepBack(): void {
+    if (this.step() === 'recovery') {
+      this.backToCode();
+    } else if (this.step() === 'code') {
+      this.backToPassword();
+    }
   }
 
   private readyToSend(form: NgForm): boolean {

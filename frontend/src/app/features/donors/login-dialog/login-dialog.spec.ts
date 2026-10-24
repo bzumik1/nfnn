@@ -17,6 +17,8 @@ import {
   SAMPLE_CHALLENGE,
   secondFactorRequired,
 } from '../../../core/auth/testing/donor-fixtures';
+import { DialogHistory } from '../../../shared/ui/dialog/dialog-history';
+import { FakeDialogHistory } from '../../../shared/ui/dialog/testing/fake-dialog-history';
 import { LoginDialog } from './login-dialog';
 
 describe('Given the sign-in dialog', () => {
@@ -25,10 +27,12 @@ describe('Given the sign-in dialog', () => {
   let dialog: LoginDialogService;
   let navigate: ReturnType<typeof vi.spyOn>;
   let passkeys: FakePasskeyAuthenticator;
+  let history: FakeDialogHistory;
 
   beforeEach(async () => {
     localStorage.clear();
     passkeys = new FakePasskeyAuthenticator();
+    history = new FakeDialogHistory();
     await TestBed.configureTestingModule({
       imports: [LoginDialog],
       providers: [
@@ -36,6 +40,7 @@ describe('Given the sign-in dialog', () => {
         provideHttpClientTesting(),
         provideRouter([]),
         { provide: PasskeyAuthenticator, useValue: passkeys },
+        { provide: DialogHistory, useValue: history },
       ],
     }).compileComponents();
     http = TestBed.inject(HttpTestingController);
@@ -316,6 +321,21 @@ describe('Given the sign-in dialog', () => {
         );
       });
 
+      it('then the code step has a history entry of its own', () => {
+        expect(history.steps).toEqual([0, 1]);
+      });
+
+      it('and the browser goes back, then the password form returns with the focus and the dialog stays', async () => {
+        history.listener?.stepBack();
+        await settle();
+
+        expect(element('#login-code')).toBeNull();
+        expect(element('#login-password')).not.toBeNull();
+        expect(document.activeElement).toBe(element('#login-email'));
+        expect(history.steps.at(-1)).toBe(0);
+        expect(dialog.isOpen()).toBe(true);
+      });
+
       it('and goes back, then the password form is shown again without an error and with the focus', async () => {
         await click('.code-back');
 
@@ -435,6 +455,19 @@ describe('Given the sign-in dialog', () => {
           expect(element('[role="alert"]').textContent).toContain(
             'Příliš mnoho pokusů z této adresy.',
           );
+        });
+
+        it('and the browser goes back, then the code step returns with the focus and its entry stays', async () => {
+          (await askForRecovery()).flush(instructions);
+          await settle();
+          expect(history.steps.at(-1)).toBe(2);
+
+          history.listener?.stepBack();
+          await settle();
+
+          expect(element('.recovery')).toBeNull();
+          expect(document.activeElement).toBe(element('#login-code'));
+          expect(history.steps.at(-1)).toBe(1);
         });
 
         it('and goes back to the code, then the code field returns with the focus', async () => {
@@ -706,6 +739,21 @@ describe('Given the sign-in dialog', () => {
           'aria-describedby',
         ),
       ).toBe('register-method-hint');
+    });
+
+    it('when the privacy policy link is followed, then the dialog closes and the policy takes its place in history', async () => {
+      const link = element<HTMLAnchorElement>('.consent a');
+
+      link.click();
+      await settle();
+
+      expect(dialog.isOpen()).toBe(false);
+      expect(history.released).toBe(1);
+      expect(history.closed).toBe(0);
+      expect(navigate).toHaveBeenCalledWith(
+        expect.objectContaining({}),
+        expect.objectContaining({ replaceUrl: true }),
+      );
     });
 
     it('then the consent stands before the button, which says it creates the account', () => {

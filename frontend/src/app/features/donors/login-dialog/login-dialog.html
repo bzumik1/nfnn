@@ -651,7 +651,10 @@
 
         <p class="consent" i18n="@@donor.register.consent">
           Registrací souhlasíte se zpracováním osobních údajů podle
-          <a routerLink="/zasady-ochrany-osobnich-udaju" (click)="closeDialog()"
+          <a
+            routerLink="/zasady-ochrany-osobnich-udaju"
+            [replaceUrl]="true"
+            (click)="openPrivacyPolicy()"
             >zásad ochrany osobních údajů</a
           >.
         </p>
