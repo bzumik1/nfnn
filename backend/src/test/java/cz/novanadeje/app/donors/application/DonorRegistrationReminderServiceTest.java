@@ -65,7 +65,7 @@ class DonorRegistrationReminderServiceTest {
     void setUp() {
         Clock clock = Clock.fixed(NOW, ZoneOffset.UTC);
         DonorEmailVerificationService emailVerification = new DonorEmailVerificationService(donors, tokens, refreshTokens, sessions,
-                new DonorViews(secondFactors), new DonorEmailVerificationProperties(Duration.ofHours(24), 3), clock, events);
+                new DonorViews(secondFactors, tokens, clock), new DonorEmailVerificationProperties(Duration.ofHours(24), 3), clock, events);
         service = new DonorRegistrationReminderService(reminders, donors, emailVerification,
                 new RegistrationReminderProperties("0 20 * * * *", Duration.ofDays(1), Duration.ofDays(7)), clock);
     }

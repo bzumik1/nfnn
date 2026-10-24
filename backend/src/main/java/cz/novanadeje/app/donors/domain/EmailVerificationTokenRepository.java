@@ -12,6 +12,10 @@ public interface EmailVerificationTokenRepository {
 
     int countOf(DonorId donorId);
 
+    Optional<EmailVerificationToken> findPendingChangeOf(DonorId donorId, Instant now);
+
+    void deleteChangeLinksOf(DonorId donorId);
+
     void deleteUnusableOf(DonorId donorId, Instant now);
 
     boolean markUsed(UUID tokenId, Instant at);

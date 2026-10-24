@@ -2,6 +2,9 @@ package cz.novanadeje.app.donors.application;
 
 import cz.novanadeje.app.donors.domain.Donor;
 import cz.novanadeje.app.donors.domain.DonorId;
+import cz.novanadeje.app.donors.domain.EmailVerificationToken;
+import cz.novanadeje.app.donors.domain.EmailVerificationTokenRepository;
+import cz.novanadeje.app.donors.domain.LinkSecret;
 import cz.novanadeje.app.donors.domain.PasswordHash;
 import cz.novanadeje.app.donors.domain.Role;
 import cz.novanadeje.app.donors.domain.SecondFactor;
@@ -18,7 +21,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.Optional;
 import java.util.Set;
 
@@ -34,13 +40,37 @@ class DonorViewsTest {
 
     @Mock
     private SecondFactorRepository secondFactors;
+    @Mock
+    private EmailVerificationTokenRepository verificationTokens;
+
+    @Test
+    @DisplayName("Given a donor without a pending e-mail change, when the view is built, then it shows no pending change")
+    void should_show_no_pending_change_when_view_built_given_no_change_link() {
+        when(verificationTokens.findPendingChangeOf(DONOR, NOW)).thenReturn(Optional.empty());
+
+        DonorView view = views().forSession(donor(Set.of(Role.DONOR)), Set.of(Role.DONOR));
+
+        assertThat(view.pendingEmailChange()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Given a donor with a live change link, when the view is built, then it shows the new address and when the link expires")
+    void should_show_new_address_and_expiry_when_view_built_given_live_change_link() {
+        when(verificationTokens.findPendingChangeOf(DONOR, NOW)).thenReturn(Optional.of(EmailVerificationToken.issueForChange(
+                LinkSecret.generate(), DONOR, new EmailAddress("jana.nova@example.cz"), NOW.minusSeconds(60), Duration.ofHours(24))));
+
+        DonorView view = views().forSession(donor(Set.of(Role.DONOR)), Set.of(Role.DONOR));
+
+        assertThat(view.pendingEmailChange())
+                .contains(new PendingEmailChangeView("jana.nova@example.cz", NOW.minusSeconds(60).plus(Duration.ofHours(24))));
+    }
 
     @Test
     @DisplayName("Given a plain donor without a second factor, when the view is built, then it is not enabled and not needed")
     void should_report_disabled_and_not_needed_when_view_built_given_plain_donor() {
         when(secondFactors.findByDonor(DONOR)).thenReturn(Optional.empty());
 
-        DonorView view = new DonorViews(secondFactors).forSession(donor(Set.of(Role.DONOR)), Set.of(Role.DONOR));
+        DonorView view = views().forSession(donor(Set.of(Role.DONOR)), Set.of(Role.DONOR));
 
         assertThat(view.secondFactor()).isEqualTo(new SecondFactorView(false, false));
         assertThat(view.roles()).containsExactly(Role.DONOR);
@@ -51,7 +81,7 @@ class DonorViewsTest {
     void should_report_needed_when_view_built_given_administrator_with_pending_factor() {
         when(secondFactors.findByDonor(DONOR)).thenReturn(Optional.of(SecondFactor.enrol(DONOR, SECRET, NOW)));
 
-        DonorView view = new DonorViews(secondFactors).forSession(donor(Set.of(Role.DONOR, Role.ADMIN)), Set.of(Role.DONOR));
+        DonorView view = views().forSession(donor(Set.of(Role.DONOR, Role.ADMIN)), Set.of(Role.DONOR));
 
         assertThat(view.secondFactor()).isEqualTo(new SecondFactorView(false, true));
         assertThat(view.roles()).containsExactly(Role.DONOR);
@@ -62,11 +92,15 @@ class DonorViewsTest {
     void should_report_enabled_when_view_built_given_administrator_with_enabled_factor() {
         when(secondFactors.findByDonor(DONOR)).thenReturn(Optional.of(SecondFactor.reconstitute(DONOR, SECRET, NOW, NOW, 1L)));
 
-        AuthenticatedDonor result = new DonorViews(secondFactors).authenticated(donor(Set.of(Role.DONOR, Role.ADMIN)),
+        AuthenticatedDonor result = views().authenticated(donor(Set.of(Role.DONOR, Role.ADMIN)),
                 new IssuedTokens("access", NOW, "refresh", NOW, Set.of(Role.DONOR, Role.ADMIN)));
 
         assertThat(result.donor().secondFactor()).isEqualTo(new SecondFactorView(true, false));
         assertThat(result.donor().roles()).containsExactlyInAnyOrder(Role.DONOR, Role.ADMIN);
+    }
+
+    private DonorViews views() {
+        return new DonorViews(secondFactors, verificationTokens, Clock.fixed(NOW, ZoneOffset.UTC));
     }
 
     private static Donor donor(Set<Role> roles) {

@@ -56,6 +56,18 @@ class DonorCredentialsControllerTest {
         verifyNoInteractions(credentials);
     }
 
+    @Test
+    @DisplayName("Given the address used up its e-mail change requests, when it asks to send the change link again, then it is refused before any work")
+    void should_refuse_without_work_when_resending_email_change_given_requests_used_up() {
+        for (int i = 0; i < 5; i++) {
+            emailLimiter.check(ADDRESS);
+        }
+
+        assertThatThrownBy(() -> controller.resendEmailChange(JWT, requestFrom(ADDRESS))).isInstanceOf(RateLimitExceededException.class);
+
+        verifyNoInteractions(credentials);
+    }
+
     private static MockHttpServletRequest requestFrom(String address) {
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.setRemoteAddr(address);

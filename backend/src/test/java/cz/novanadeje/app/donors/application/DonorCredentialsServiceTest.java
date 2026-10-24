@@ -1,11 +1,11 @@
 package cz.novanadeje.app.donors.application;
 
-import cz.novanadeje.app.donors.application.event.DonorEmailAddressInUse;
 import cz.novanadeje.app.donors.application.event.DonorPasswordChanged;
 import cz.novanadeje.app.donors.domain.Donor;
 import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.donors.domain.DonorNotFound;
 import cz.novanadeje.app.donors.domain.DonorRepository;
+import cz.novanadeje.app.donors.domain.EmailVerificationTokenRepository;
 import cz.novanadeje.app.donors.domain.EmailUnchanged;
 import cz.novanadeje.app.donors.domain.LastSignInMethod;
 import cz.novanadeje.app.donors.domain.PasskeyChallengeRepository;
@@ -53,7 +53,6 @@ class DonorCredentialsServiceTest {
 
     private static final Instant NOW = Instant.parse("2026-10-22T10:00:00Z");
     private static final DonorId DONOR = DonorId.newId(NOW.minusSeconds(60));
-    private static final DonorId OTHER = DonorId.newId(NOW.minusSeconds(120));
     private static final EmailAddress EMAIL = new EmailAddress("jana@example.cz");
     private static final EmailAddress NEW_EMAIL = new EmailAddress("jana.nova@example.cz");
     private static final PostalAddress ADDRESS = new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01");
@@ -78,6 +77,8 @@ class DonorCredentialsServiceTest {
     @Mock
     private DonorEmailVerificationService emailVerification;
     @Mock
+    private EmailVerificationTokenRepository verificationTokens;
+    @Mock
     private ApplicationEventPublisher events;
     @Mock
     private PasskeyRepository passkeys;
@@ -91,7 +92,7 @@ class DonorCredentialsServiceTest {
     @BeforeEach
     void setUp() {
         service = new DonorCredentialsService(donors, passwordHasher,
-                new DonorConfirmations(passwordHasher, passkeys, challenges, ceremonies, Clock.fixed(NOW, ZoneOffset.UTC)), passkeys, refreshTokens, sessions, new DonorViews(secondFactors), emailVerification, events,
+                new DonorConfirmations(passwordHasher, passkeys, challenges, ceremonies, Clock.fixed(NOW, ZoneOffset.UTC)), passkeys, refreshTokens, sessions, new DonorViews(secondFactors, verificationTokens, Clock.fixed(NOW, ZoneOffset.UTC)), emailVerification, events,
                 Clock.fixed(NOW, ZoneOffset.UTC));
     }
 
@@ -186,12 +187,11 @@ class DonorCredentialsServiceTest {
     }
 
     @Test
-    @DisplayName("Given a free new address and the right password, when an e-mail change is requested, then a change link is issued")
-    void should_issue_change_link_when_email_change_requested_given_free_address() {
+    @DisplayName("Given a new address and the right password, when an e-mail change is requested, then a change link is issued for it")
+    void should_issue_change_link_when_email_change_requested_given_new_address() {
         Donor donor = donor();
         when(donors.findById(DONOR)).thenReturn(Optional.of(donor));
         when(passwordHasher.matches(new RawPassword(CURRENT), OLD_HASH)).thenReturn(true);
-        when(donors.findByEmail(NEW_EMAIL)).thenReturn(Optional.empty());
 
         service.requestEmailChange(DONOR, Confirmation.withPassword(CURRENT), NEW_EMAIL);
 
@@ -200,16 +200,36 @@ class DonorCredentialsServiceTest {
     }
 
     @Test
-    @DisplayName("Given a new address another donor has, when an e-mail change is requested, then that donor is told and no link is issued")
-    void should_tell_owner_and_issue_nothing_when_email_change_requested_given_taken_address() {
-        when(donors.findById(DONOR)).thenReturn(Optional.of(donor()));
-        when(passwordHasher.matches(new RawPassword(CURRENT), OLD_HASH)).thenReturn(true);
-        when(donors.findByEmail(NEW_EMAIL)).thenReturn(Optional.of(Donor.register(OTHER, DonorType.PERSON, "Petr Novák", null, ADDRESS, NEW_EMAIL,
-                new PasswordHash("$other"), new VariableSymbol("1234567890"), LocaleCode.EN, NOW.minusSeconds(120))));
+    @DisplayName("Given a signed-in donor, when the e-mail change link is sent again, then the pending change is sent again without any password")
+    void should_resend_pending_change_when_email_change_resent_given_signed_in_donor() {
+        Donor donor = donor();
+        when(donors.findById(DONOR)).thenReturn(Optional.of(donor));
 
-        service.requestEmailChange(DONOR, Confirmation.withPassword(CURRENT), NEW_EMAIL);
+        service.resendEmailChange(DONOR);
 
-        verify(events).publishEvent(new DonorEmailAddressInUse(OTHER.value(), NEW_EMAIL, LocaleCode.EN));
+        verify(emailVerification).resendChangeLink(donor);
+        verifyNoInteractions(passwordHasher, events);
+    }
+
+    @Test
+    @DisplayName("Given a signed-in donor, when the e-mail change is cancelled, then the pending change is cancelled")
+    void should_cancel_pending_change_when_email_change_cancelled_given_signed_in_donor() {
+        Donor donor = donor();
+        when(donors.findById(DONOR)).thenReturn(Optional.of(donor));
+
+        service.cancelEmailChange(DONOR);
+
+        verify(emailVerification).cancelChange(donor);
+        verifyNoInteractions(passwordHasher, events);
+    }
+
+    @Test
+    @DisplayName("Given an unknown donor, when the e-mail change link is sent again, then the donor is not found and nothing is sent")
+    void should_refuse_when_email_change_resent_given_unknown_donor() {
+        when(donors.findById(DONOR)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.resendEmailChange(DONOR)).isInstanceOf(DonorNotFound.class);
+
         verifyNoInteractions(emailVerification);
     }
 

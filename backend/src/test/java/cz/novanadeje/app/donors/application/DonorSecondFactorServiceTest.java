@@ -16,6 +16,7 @@ import cz.novanadeje.app.donors.domain.SecondFactorAlreadyEnabled;
 import cz.novanadeje.app.donors.domain.SecondFactorCodeRejected;
 import cz.novanadeje.app.donors.domain.SecondFactorNotEnabled;
 import cz.novanadeje.app.donors.domain.SecondFactorNotPending;
+import cz.novanadeje.app.donors.domain.EmailVerificationTokenRepository;
 import cz.novanadeje.app.donors.domain.SecondFactorRepository;
 import cz.novanadeje.app.donors.domain.SecondFactorSessionRequired;
 import cz.novanadeje.app.donors.domain.Totp;
@@ -73,6 +74,8 @@ class DonorSecondFactorServiceTest {
     @Mock
     private SecondFactorRepository secondFactors;
     @Mock
+    private EmailVerificationTokenRepository verificationTokens;
+    @Mock
     private RefreshTokenRepository refreshTokens;
     @Mock
     private PasswordHasher passwordHasher;
@@ -92,7 +95,7 @@ class DonorSecondFactorServiceTest {
     @BeforeEach
     void setUp() {
         service = new DonorSecondFactorService(donors, secondFactors, refreshTokens,
-                new DonorConfirmations(passwordHasher, passkeys, challenges, ceremonies, Clock.fixed(NOW, ZoneOffset.UTC)), sessions, new DonorViews(secondFactors), qrCodes,
+                new DonorConfirmations(passwordHasher, passkeys, challenges, ceremonies, Clock.fixed(NOW, ZoneOffset.UTC)), sessions, new DonorViews(secondFactors, verificationTokens, Clock.fixed(NOW, ZoneOffset.UTC)), qrCodes,
                 new SecondFactorSessionGuard(secondFactors, passkeys),
                 new DonorSecondFactorProperties(Duration.ofMinutes(5), 5, "Nová naděje", Duration.ofDays(14)), Clock.fixed(NOW, ZoneOffset.UTC));
     }
