@@ -336,6 +336,20 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
 
     expect(await violations(page)).toEqual([]);
 
+    await page.route('**/api/donors/company-lookup?*', (route) =>
+      route.fulfill({
+        json: {
+          companyIdentifier: '45274649',
+          name: 'ČEZ, a. s.',
+          address: { street: 'Duhová 1444/2', city: 'Praha 4', postalCode: '140 00' },
+        },
+      }),
+    );
+    await dialog.getByLabel('IČO').fill('45274649');
+    await expect(dialog.getByRole('status').filter({ hasText: /\S/ })).toContainText('ARES');
+
+    expect(await violations(page)).toEqual([]);
+
     await dialog.getByRole('radio', { name: 'Přístupovým klíčem' }).click();
 
     expect(await violations(page)).toEqual([]);

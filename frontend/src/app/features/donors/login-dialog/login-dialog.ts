@@ -5,6 +5,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import {
   afterNextRender,
   ChangeDetectionStrategy,
+  ChangeDetectorRef,
   Component,
   computed,
   DestroyRef,
@@ -16,6 +17,7 @@ import {
 } from '@angular/core';
 import { FormsModule, NgForm } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import { Subscription } from 'rxjs';
 import {
   describeProblem,
   describeProblemWithoutFields,
@@ -50,7 +52,8 @@ import { placeServerErrors } from '../../../shared/ui/form-field/server-errors';
 import { RadioGroup } from '../../../shared/ui/radio-group/radio-group';
 import { formatMinorUnits } from '../../donations/donation-amount';
 import { formatBankTime, formatDonationDate } from '../../donations/donation-date';
-import { CompanyIdentifierValidator } from '../company-identifier';
+import { CompanyIdentifierValidator, hasValidCheckDigit } from '../company-identifier';
+import { CompanyLookupApi, RegisteredCompany } from '../company-lookup-api';
 import {
   CITY_MESSAGES,
   COMPANY_NAME_MESSAGES,
@@ -69,6 +72,8 @@ interface RegistrationFields {
   password: string;
 }
 
+type RegisterField = 'name' | 'street' | 'city' | 'postalCode';
+
 type Step = 'login' | 'code' | 'recovery' | 'register' | 'registered' | 'reset' | 'reset-sent';
 
 const TOO_MANY_REQUESTS = 429;
@@ -85,6 +90,7 @@ const STEP_DEPTH: Readonly<Record<Step, number>> = {
   reset: 0,
   'reset-sent': 0,
 };
+const REGISTER_FIELDS: readonly RegisterField[] = ['name', 'street', 'city', 'postalCode'];
 const REGISTRATION_FIELDS: Readonly<Record<string, string>> = {
   name: 'name',
   companyIdentifier: 'companyIdentifier',
@@ -121,6 +127,8 @@ export class LoginDialog {
   private readonly document = inject(DOCUMENT);
   private readonly injector = inject(Injector);
   private readonly passkeyAuthenticator = inject(PasskeyAuthenticator);
+  private readonly companyLookup = inject(CompanyLookupApi);
+  private readonly changeDetector = inject(ChangeDetectorRef);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
   private readonly draft = this.dialog.registrationDraft();
   private readonly confirmationReturnTo = this.dialog.confirmationReturnTo();
@@ -144,6 +152,7 @@ export class LoginDialog {
   protected readonly recovery = signal<SecondFactorRecovery | null>(null);
   protected readonly error = signal('');
   protected readonly passkeyError = signal('');
+  protected readonly filledFromRegister = signal(false);
   protected readonly step = computed<Step>(() => {
     switch (this.mode()) {
       case 'register':
@@ -203,10 +212,15 @@ export class LoginDialog {
   private readonly passkeyNotUsed = $localize`:@@donor.login.passkey.notUsed:Přihlášení přístupovým klíčem neproběhlo. Zkuste to prosím znovu, nebo se přihlaste heslem.`;
   private readonly tooManyResetRequests = $localize`:@@donor.login.reset.error.tooMany:Odeslali jste příliš mnoho žádostí. Zkuste to prosím za hodinu.`;
 
+  private pendingLookup: Subscription | null = null;
+  private lookedUpIdentifier = '';
+  private fromRegister: Partial<Record<RegisterField, string>> = {};
+
   constructor() {
     this.dialog.onStepBack(() => this.stepBack());
     effect(() => this.dialog.showStep(STEP_DEPTH[this.step()]));
     inject(DestroyRef).onDestroy(() => {
+      this.dropCompanyLookup();
       this.dialog.onStepBack(null);
       this.keepDraft();
     });
@@ -226,6 +240,32 @@ export class LoginDialog {
   setDonorType(type: DonorType): void {
     this.donorType.set(type);
     this.error.set('');
+    if (type === 'PERSON') {
+      this.forgetCompanyLookup();
+    }
+  }
+
+  lookUpCompany(typed: string | null): void {
+    const digits = (typed ?? '').replace(/\s+/g, '');
+    if (digits === this.lookedUpIdentifier) {
+      return;
+    }
+    this.forgetCompanyLookup();
+    if (!hasValidCheckDigit(digits)) {
+      return;
+    }
+    this.lookedUpIdentifier = digits;
+    this.pendingLookup = this.companyLookup.lookUp(digits).subscribe({
+      next: (company) => {
+        this.pendingLookup = null;
+        if (company !== null) {
+          this.fillFromRegister(company);
+        }
+      },
+      error: () => {
+        this.pendingLookup = null;
+      },
+    });
   }
 
   submitLogin(form: NgForm): void {
@@ -353,6 +393,7 @@ export class LoginDialog {
     if (!this.readyToSend(form)) {
       return;
     }
+    this.dropCompanyLookup();
     this.registrationResent.set(false);
     const company = this.donorType() === 'COMPANY';
     this.auth
@@ -530,6 +571,38 @@ export class LoginDialog {
       postalCode: this.registration.postalCode,
       email: this.registration.email,
     });
+  }
+
+  private fillFromRegister(company: RegisteredCompany): void {
+    const offered: Record<RegisterField, string> = {
+      name: company.name,
+      street: company.address?.street ?? '',
+      city: company.address?.city ?? '',
+      postalCode: company.address?.postalCode ?? '',
+    };
+    let filled = false;
+    for (const field of REGISTER_FIELDS) {
+      const current = this.registration[field];
+      if (current.trim() !== '' && current !== this.fromRegister[field]) {
+        continue;
+      }
+      this.registration[field] = offered[field];
+      this.fromRegister[field] = offered[field];
+      filled = filled || offered[field] !== '';
+    }
+    this.filledFromRegister.set(filled);
+    this.changeDetector.markForCheck();
+  }
+
+  private forgetCompanyLookup(): void {
+    this.dropCompanyLookup();
+    this.lookedUpIdentifier = '';
+    this.filledFromRegister.set(false);
+  }
+
+  private dropCompanyLookup(): void {
+    this.pendingLookup?.unsubscribe();
+    this.pendingLookup = null;
   }
 
   private refuseRegistration(form: NgForm, failure: unknown): void {

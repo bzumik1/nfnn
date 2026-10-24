@@ -42,6 +42,97 @@ test.describe('Given a visitor who wants a donor account', () => {
     ]);
   });
 
+  test('when they register a company by its identification number, then the name and seat come from the business register and only need checking', async ({
+    page,
+  }) => {
+    const lookups: string[] = [];
+    await page.route('**/api/donors/company-lookup?*', async (route) => {
+      lookups.push(new URL(route.request().url()).searchParams.get('companyIdentifier') ?? '');
+      await route.fulfill({
+        json: {
+          companyIdentifier: '45274649',
+          name: 'ČEZ, a. s.',
+          address: { street: 'Duhová 1444/2', city: 'Praha 4', postalCode: '140 00' },
+        },
+      });
+    });
+    const posted: unknown[] = [];
+    await page.route('**/api/donors/auth/register', async (route) => {
+      posted.push(route.request().postDataJSON());
+      await route.fulfill({ status: 202 });
+    });
+    await mockDonorApi(page);
+
+    await openSignInDialog(page);
+    const dialog = page.getByRole('dialog');
+    await dialog.getByRole('button', { name: 'Registrace' }).click();
+    await dialog.getByRole('radio', { name: 'Firma' }).click();
+    await dialog.getByLabel('IČO').fill('452 746 49');
+
+    await expect(dialog.getByRole('status').filter({ hasText: /\S/ })).toHaveText(
+      'Údaje jsme doplnili z obchodního rejstříku (ARES). Zkontrolujte je.',
+    );
+    await expect(dialog.getByLabel('Název firmy')).toHaveValue('ČEZ, a. s.');
+    await expect(dialog.getByLabel('Sídlo – ulice a číslo')).toHaveValue('Duhová 1444/2');
+    await expect(dialog.getByLabel('PSČ')).toHaveValue('140 00');
+    await expect(dialog.getByLabel('Město')).toHaveValue('Praha 4');
+    await dialog.getByLabel('E-mail').fill('ucetni@cez.cz');
+    await dialog.locator('#register-password').fill('correct horse battery');
+    await dialog.getByRole('button', { name: 'Vytvořit účet' }).click();
+
+    await expect(dialog.getByRole('heading', { name: 'Zkontrolujte si e-mail' })).toBeVisible();
+    expect(lookups).toEqual(['45274649']);
+    expect(posted).toEqual([
+      {
+        type: 'COMPANY',
+        name: 'ČEZ, a. s.',
+        companyIdentifier: '45274649',
+        address: { street: 'Duhová 1444/2', city: 'Praha 4', postalCode: '140 00' },
+        email: 'ucetni@cez.cz',
+        password: 'correct horse battery',
+        preferredLocale: 'cs',
+      },
+    ]);
+  });
+
+  test('when the company lookup fails while they register a company, then the form behaves as if there were no lookup', async ({
+    page,
+  }) => {
+    let lookups = 0;
+    await page.route('**/api/donors/company-lookup?*', async (route) => {
+      lookups++;
+      await route.fulfill({ status: 503, body: '' });
+    });
+    const posted: unknown[] = [];
+    await page.route('**/api/donors/auth/register', async (route) => {
+      posted.push(route.request().postDataJSON());
+      await route.fulfill({ status: 202 });
+    });
+    await mockDonorApi(page);
+
+    await openSignInDialog(page);
+    const dialog = page.getByRole('dialog');
+    await dialog.getByRole('button', { name: 'Registrace' }).click();
+    await dialog.getByRole('radio', { name: 'Firma' }).click();
+    await dialog.getByLabel('IČO').fill('45274649');
+    await expect.poll(() => lookups).toBe(1);
+
+    await expect(dialog.getByLabel('Název firmy')).toHaveValue('');
+    await expect(dialog.getByLabel('Název firmy')).toBeEditable();
+    await expect(dialog.getByRole('status').filter({ hasText: /\S/ })).toHaveCount(0);
+    await expect(dialog.getByRole('alert').filter({ hasText: /\S/ })).toHaveCount(0);
+    await dialog.getByLabel('Název firmy').fill('Stavby Novák s.r.o.');
+    await dialog.getByLabel('Sídlo – ulice a číslo').fill('Průmyslová 5');
+    await dialog.getByLabel('PSČ').fill('415 01');
+    await dialog.getByLabel('Město').fill('Teplice');
+    await dialog.getByLabel('E-mail').fill('ucetni@stavby.cz');
+    await dialog.locator('#register-password').fill('correct horse battery');
+    await dialog.getByRole('button', { name: 'Vytvořit účet' }).click();
+
+    await expect(dialog.getByRole('heading', { name: 'Zkontrolujte si e-mail' })).toBeVisible();
+    expect(posted).toHaveLength(1);
+  });
+
   test('when they sign in before confirming the e-mail, then the dialog offers to send the link again', async ({
     page,
   }) => {
