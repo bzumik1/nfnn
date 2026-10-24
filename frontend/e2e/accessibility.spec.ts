@@ -336,6 +336,14 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
 
     expect(await violations(page)).toEqual([]);
 
+    await dialog.getByRole('radio', { name: 'Přístupovým klíčem' }).click();
+
+    expect(await violations(page)).toEqual([]);
+  });
+
+  test('when a company registration is filled in from the business register, then the form and its status line break no rule', async ({
+    page,
+  }) => {
     await page.route('**/api/donors/company-lookup?*', (route) =>
       route.fulfill({
         json: {
@@ -345,12 +353,12 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
         },
       }),
     );
+    await openSignInDialog(page);
+    const dialog = page.getByRole('dialog');
+    await dialog.getByRole('button', { name: 'Registrace' }).click();
+    await dialog.getByRole('radio', { name: 'Firma' }).click();
     await dialog.getByLabel('IČO').fill('45274649');
     await expect(dialog.getByRole('status').filter({ hasText: /\S/ })).toContainText('ARES');
-
-    expect(await violations(page)).toEqual([]);
-
-    await dialog.getByRole('radio', { name: 'Přístupovým klíčem' }).click();
 
     expect(await violations(page)).toEqual([]);
   });
