@@ -35,7 +35,9 @@
 @for (account of accountsWithQuestion(); track account.id) {
   <p class="ui-callout ui-callout--warning overview-question">
     <span i18n="@@donor.overview.question"
-      >Máme na vás otázku k platbám z účtu {{ account.accountNumber }}.</span
+      >Máme na vás otázku k platbám z účtu
+      <span class="overview-account">{{ account.accountNumber }}</span
+      >.</span
     >&ngsp;<a routerLink="/darce/ucty" i18n="@@donor.overview.question.answer">Odpovědět</a>
   </p>
 }

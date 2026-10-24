@@ -78,6 +78,10 @@
 .overview-question {
   margin: 0 0 var(--space-4);
 
+  .overview-account {
+    white-space: nowrap;
+  }
+
   a {
     color: inherit;
     font-weight: var(--weight-semibold);
