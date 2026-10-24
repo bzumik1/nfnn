@@ -179,6 +179,29 @@ test.describe('Given a visitor on the home page', () => {
   });
 });
 
+test.describe('Given a visitor reading a news article', () => {
+  test.beforeEach(async ({ page }) => {
+    await mockDonorApi(page);
+    await publishedContent(page);
+  });
+
+  test('when they look at the header, then Aktuality is marked as the current place and leads to the list', async ({
+    page,
+  }) => {
+    await page.goto(`/aktuality/${article.slug}`);
+    const news = page.locator('.desktop-nav').getByRole('link', { name: 'Aktuality' });
+    await expect(news).toHaveAttribute('aria-current', 'page');
+
+    await news.click();
+
+    await expect(page).toHaveURL(/\/aktuality$/);
+    await expect(page.getByRole('heading', { level: 1, name: 'Aktuality' })).toBeVisible();
+    await expect(
+      page.locator('.desktop-nav').getByRole('link', { name: 'Projekty' }),
+    ).toHaveAttribute('href', '/#projekty');
+  });
+});
+
 test.describe('Given a visitor paging through the news', () => {
   test('when there are more than ten articles, then the list pages by ten and the address names the page', async ({
     page,

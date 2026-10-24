@@ -16,8 +16,22 @@
       >
         <a routerLink="/" fragment="uvod" i18n="@@layout.header.nav.home">Domů</a>
         <a routerLink="/" fragment="o-nas" i18n="@@layout.header.nav.about">O nás</a>
-        <a routerLink="/" fragment="projekty" i18n="@@layout.header.nav.projects">Projekty</a>
-        <a routerLink="/" fragment="aktuality" i18n="@@layout.header.nav.news">Aktuality</a>
+        <a
+          [class.is-current]="current() === 'projekty'"
+          [routerLink]="current() === 'projekty' ? '/projekty' : '/'"
+          [fragment]="current() === 'projekty' ? undefined : 'projekty'"
+          [attr.aria-current]="current() === 'projekty' ? 'page' : null"
+          i18n="@@layout.header.nav.projects"
+          >Projekty</a
+        >
+        <a
+          [class.is-current]="current() === 'aktuality'"
+          [routerLink]="current() === 'aktuality' ? '/aktuality' : '/'"
+          [fragment]="current() === 'aktuality' ? undefined : 'aktuality'"
+          [attr.aria-current]="current() === 'aktuality' ? 'page' : null"
+          i18n="@@layout.header.nav.news"
+          >Aktuality</a
+        >
         <a routerLink="/" fragment="kontakt" i18n="@@layout.header.nav.contact">Kontakt</a>
         <a routerLink="/" fragment="prispet" i18n="@@layout.header.nav.donate">Přispět</a>
       </nav>

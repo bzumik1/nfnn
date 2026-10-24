@@ -13,6 +13,7 @@ import {
 import { RouterLink } from '@angular/router';
 import { AuthStore } from '../../core/auth/auth-store';
 import { LoginDialogService } from '../../core/auth/login-dialog.service';
+import { currentListSection } from './current-section';
 
 @Component({
   selector: 'app-site-header',
@@ -30,6 +31,7 @@ export class SiteHeader {
   private readonly loginDialog = inject(LoginDialogService);
 
   protected readonly auth = inject(AuthStore);
+  protected readonly current = currentListSection();
   protected readonly scrolled = signal(false);
   protected readonly menuOpen = signal(false);
   protected readonly openMenuLabel = $localize`:@@layout.header.toggleMenu:Otevřít menu`;

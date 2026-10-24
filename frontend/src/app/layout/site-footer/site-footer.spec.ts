@@ -1,12 +1,12 @@
 import { TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { provideRouter, Router } from '@angular/router';
 import { SiteFooter } from './site-footer';
 
 describe('Given the site footer', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [SiteFooter],
-      providers: [provideRouter([])],
+      providers: [provideRouter([{ path: '**', children: [] }])],
     }).compileComponents();
     vi.useFakeTimers();
   });
@@ -52,5 +52,21 @@ describe('Given the site footer', () => {
     const mail = (fixture.nativeElement as HTMLElement).querySelector('a[href^="mailto:"]');
     expect(mail?.getAttribute('href')).toBe('mailto:info@nfnn.cz');
     expect(mail?.textContent?.trim()).toBe('info@nfnn.cz');
+  });
+
+  it('when the list of news is open, then the footer item Aktuality leads to it and is marked as the current place', async () => {
+    vi.useRealTimers();
+    const fixture = TestBed.createComponent(SiteFooter);
+    fixture.detectChanges();
+
+    await TestBed.inject(Router).navigateByUrl('/aktuality');
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const news = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('nav a')).find(
+      (link) => link.textContent?.trim() === 'Aktuality',
+    );
+    expect(news?.getAttribute('href')).toBe('/aktuality');
+    expect(news?.getAttribute('aria-current')).toBe('page');
   });
 });

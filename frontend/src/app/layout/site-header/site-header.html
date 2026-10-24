@@ -17,10 +17,22 @@
 
     <div class="desktop-nav">
       <a class="nav-link" routerLink="/" fragment="o-nas" i18n="@@layout.header.nav.about">O nás</a>
-      <a class="nav-link" routerLink="/" fragment="projekty" i18n="@@layout.header.nav.projects"
+      <a
+        class="nav-link"
+        [class.is-current]="current() === 'projekty'"
+        [routerLink]="current() === 'projekty' ? '/projekty' : '/'"
+        [fragment]="current() === 'projekty' ? undefined : 'projekty'"
+        [attr.aria-current]="current() === 'projekty' ? 'page' : null"
+        i18n="@@layout.header.nav.projects"
         >Projekty</a
       >
-      <a class="nav-link" routerLink="/" fragment="aktuality" i18n="@@layout.header.nav.news"
+      <a
+        class="nav-link"
+        [class.is-current]="current() === 'aktuality'"
+        [routerLink]="current() === 'aktuality' ? '/aktuality' : '/'"
+        [fragment]="current() === 'aktuality' ? undefined : 'aktuality'"
+        [attr.aria-current]="current() === 'aktuality' ? 'page' : null"
+        i18n="@@layout.header.nav.news"
         >Aktuality</a
       >
       <a class="nav-link" routerLink="/" fragment="kontakt" i18n="@@layout.header.nav.contact"
@@ -74,16 +86,20 @@
     >
     <a
       class="mobile-link"
-      routerLink="/"
-      fragment="projekty"
+      [class.is-current]="current() === 'projekty'"
+      [routerLink]="current() === 'projekty' ? '/projekty' : '/'"
+      [fragment]="current() === 'projekty' ? undefined : 'projekty'"
+      [attr.aria-current]="current() === 'projekty' ? 'page' : null"
       (click)="closeMenu()"
       i18n="@@layout.header.nav.projects"
       >Projekty</a
     >
     <a
       class="mobile-link"
-      routerLink="/"
-      fragment="aktuality"
+      [class.is-current]="current() === 'aktuality'"
+      [routerLink]="current() === 'aktuality' ? '/aktuality' : '/'"
+      [fragment]="current() === 'aktuality' ? undefined : 'aktuality'"
+      [attr.aria-current]="current() === 'aktuality' ? 'page' : null"
       (click)="closeMenu()"
       i18n="@@layout.header.nav.news"
       >Aktuality</a

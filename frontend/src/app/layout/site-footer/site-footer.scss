@@ -39,8 +39,15 @@
     font-size: var(--text-md);
     transition: color var(--duration-base);
 
-    &:hover {
+    &:hover,
+    &.is-current {
       color: var(--color-on-inverse);
+    }
+
+    &.is-current {
+      text-decoration: underline;
+      text-decoration-thickness: 2px;
+      text-underline-offset: 6px;
     }
   }
 }
