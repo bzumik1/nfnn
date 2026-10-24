@@ -20,6 +20,7 @@ import {
   RegisterDonorRequest,
   SecondFactorDisableRequest,
   SecondFactorEnrolment,
+  SecondFactorRecovery,
   UpdateDonorProfileRequest,
 } from './donor';
 
@@ -47,6 +48,12 @@ export class AuthApi {
     return this.http.post<AuthResponse>('/api/donors/auth/login/second-factor', {
       challenge,
       code,
+    });
+  }
+
+  startSecondFactorRecovery(challenge: string): Observable<SecondFactorRecovery> {
+    return this.http.post<SecondFactorRecovery>('/api/donors/auth/login/second-factor/recovery', {
+      challenge,
     });
   }
 

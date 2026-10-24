@@ -3,6 +3,7 @@ package cz.novanadeje.app.donors.interfaces.rest;
 import cz.novanadeje.app.donors.application.DonorAuthenticationService;
 import cz.novanadeje.app.donors.application.DonorPasskeySignInService;
 import cz.novanadeje.app.donors.application.DonorRegistrationService;
+import cz.novanadeje.app.donors.application.SecondFactorRecoveryService;
 import cz.novanadeje.app.shared.domain.DonorType;
 import cz.novanadeje.app.shared.interfaces.rest.RateLimitExceededException;
 import cz.novanadeje.app.support.MutableClock;
@@ -29,7 +30,8 @@ class DonorAuthControllerTest {
     private final RegistrationRateLimiter registrationLimiter = new RegistrationRateLimiter(clock);
     private final DonorPasskeySignInService passkeySignIn = mock(DonorPasskeySignInService.class);
     private final PasskeySignInRateLimiter passkeySignInLimiter = new PasskeySignInRateLimiter(clock);
-    private final DonorAuthController controller = new DonorAuthController(registration, authentication, passkeySignIn, signInLimiter,
+    private final SecondFactorRecoveryService recoveries = mock(SecondFactorRecoveryService.class);
+    private final DonorAuthController controller = new DonorAuthController(registration, authentication, passkeySignIn, recoveries, signInLimiter,
             secondFactorLimiter, registrationLimiter, passkeySignInLimiter, clock);
 
     @Test
@@ -56,6 +58,19 @@ class DonorAuthControllerTest {
                 .isInstanceOf(RateLimitExceededException.class);
 
         verifyNoInteractions(authentication, registration);
+    }
+
+    @Test
+    @DisplayName("Given the address used up its second-factor attempts, when it starts a recovery by payment, then it is refused before the challenge is looked at")
+    void should_refuse_without_opening_a_recovery_when_starting_it_given_attempts_used_up() {
+        for (int i = 0; i < 10; i++) {
+            secondFactorLimiter.check(ADDRESS);
+        }
+
+        assertThatThrownBy(() -> controller.startSecondFactorRecovery(new SecondFactorRecoveryRequest("c".repeat(43)), requestFrom(ADDRESS)))
+                .isInstanceOf(RateLimitExceededException.class);
+
+        verifyNoInteractions(recoveries, authentication);
     }
 
     @Test

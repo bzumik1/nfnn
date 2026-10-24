@@ -28,6 +28,7 @@ const ACTION_NAMES: Record<string, string> = {
   GRANT_ADMINISTRATION: $localize`:@@admin.actions.action.grantAdministration:Přidání správce`,
   REVOKE_ADMINISTRATION: $localize`:@@admin.actions.action.revokeAdministration:Odebrání správce`,
   RESET_SECOND_FACTOR: $localize`:@@admin.actions.action.resetSecondFactor:Vypnutí dvoufaktorového ověření`,
+  RECOVER_SECOND_FACTOR: $localize`:@@admin.actions.action.recoverSecondFactor:Vypnutí dvoufaktorového ověření platbou 1 Kč`,
   REMOVE_PASSKEYS: $localize`:@@admin.actions.action.removePasskeys:Odebrání přístupových klíčů dárce`,
   REVERSE_SYMBOL_CLAIM: $localize`:@@admin.actions.action.reverseSymbolClaim:Zrušení odpovědi Ano na starší symbol`,
   RESET_SYMBOL_CLAIM: $localize`:@@admin.actions.action.resetSymbolClaim:Smazání odpovědi Ne na starší symbol`,

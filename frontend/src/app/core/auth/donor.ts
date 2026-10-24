@@ -68,6 +68,16 @@ export interface EmailChangeRequest extends Confirmation {
   newEmail: string;
 }
 
+export interface SecondFactorRecovery {
+  message: string;
+  expiresAt: string;
+  accountNumber: string;
+  iban: string;
+  amountMinor: number;
+  currency: string;
+  usableFrom: string | null;
+}
+
 export interface SecondFactorDisableRequest extends Confirmation {
   code: string;
 }

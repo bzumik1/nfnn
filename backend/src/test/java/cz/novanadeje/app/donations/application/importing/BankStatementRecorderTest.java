@@ -6,6 +6,7 @@ import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
 import cz.novanadeje.app.donations.application.pairing.PairingOutcome;
 import cz.novanadeje.app.donations.application.pairing.PaymentPairingService;
+import cz.novanadeje.app.donations.application.recovery.SecondFactorRecoveryPayments;
 import cz.novanadeje.app.donations.domain.bank.BankPayment;
 import cz.novanadeje.app.donations.domain.bank.BankPaymentRepository;
 import cz.novanadeje.app.donations.domain.bank.BankTransactionId;
@@ -62,13 +63,15 @@ class BankStatementRecorderTest {
     private BankImportStateRepository states;
     @Mock
     private ImportAlertRepository alerts;
+    @Mock
+    private SecondFactorRecoveryPayments recoveries;
 
     private BankStatementRecorder recorder;
     private ListAppender<ILoggingEvent> log;
 
     @BeforeEach
     void setUp() {
-        recorder = new BankStatementRecorder(payments, pairing, states, alerts);
+        recorder = new BankStatementRecorder(payments, pairing, states, alerts, recoveries);
         log = new ListAppender<>();
         log.start();
         logger().addAppender(log);
@@ -80,7 +83,7 @@ class BankStatementRecorderTest {
     }
 
     @Test
-    @DisplayName("Given a statement with a known and a new movement, when it is recorded, then only the new one is saved, before pairing, and the counts tell both")
+    @DisplayName("Given a statement with a known and a new movement, when it is recorded, then only the new one is saved, before pairing, only it is inspected for a second-factor recovery after pairing, and the counts tell both")
     void should_save_only_new_movements_before_pairing_when_recorded_given_known_movement() {
         stateCovering("2026-07-18", "2026-10-15");
         when(payments.findKnownTransactionIds(anyCollection())).thenReturn(Set.of(new BankTransactionId(1001)));
@@ -91,10 +94,11 @@ class BankStatementRecorderTest {
 
         @SuppressWarnings("unchecked")
         ArgumentCaptor<List<BankPayment>> saved = ArgumentCaptor.forClass(List.class);
-        InOrder order = inOrder(payments, pairing, states);
+        InOrder order = inOrder(payments, pairing, recoveries, states);
         order.verify(payments).findKnownTransactionIds(List.of(new BankTransactionId(1001), new BankTransactionId(1002)));
         order.verify(payments).saveAll(saved.capture());
         order.verify(pairing).pairUnpaired(NOW);
+        order.verify(recoveries).inspect(saved.getValue(), NOW);
         order.verify(states).save(any());
         assertThat(saved.getValue()).singleElement().satisfies(payment -> {
             assertThat(payment.transactionId()).isEqualTo(new BankTransactionId(1002));

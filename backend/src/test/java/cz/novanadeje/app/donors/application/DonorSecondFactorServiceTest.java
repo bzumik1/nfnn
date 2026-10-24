@@ -94,7 +94,7 @@ class DonorSecondFactorServiceTest {
         service = new DonorSecondFactorService(donors, secondFactors, refreshTokens,
                 new DonorConfirmations(passwordHasher, passkeys, challenges, ceremonies, Clock.fixed(NOW, ZoneOffset.UTC)), sessions, new DonorViews(secondFactors), qrCodes,
                 new SecondFactorSessionGuard(secondFactors, passkeys),
-                new DonorSecondFactorProperties(Duration.ofMinutes(5), 5, "Nová naděje"), Clock.fixed(NOW, ZoneOffset.UTC));
+                new DonorSecondFactorProperties(Duration.ofMinutes(5), 5, "Nová naděje", Duration.ofDays(14)), Clock.fixed(NOW, ZoneOffset.UTC));
     }
 
     @Test

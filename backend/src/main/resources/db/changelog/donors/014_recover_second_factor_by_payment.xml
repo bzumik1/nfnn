@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <changeSet id="014-recover-second-factor-by-payment" author="nfnn">
+        <createTable tableName="donor_second_factor_recovery">
+            <column name="id" type="uuid">
+                <constraints primaryKey="true" primaryKeyName="pk_donor_second_factor_recovery" nullable="false"/>
+            </column>
+            <column name="donor_id" type="uuid">
+                <constraints nullable="false"/>
+            </column>
+            <column name="code_hash" type="varchar(64)">
+                <constraints nullable="false" unique="true" uniqueConstraintName="uq_donor_second_factor_recovery_code_hash"/>
+            </column>
+            <column name="created_at" type="timestamp with time zone">
+                <constraints nullable="false"/>
+            </column>
+            <column name="expires_at" type="timestamp with time zone">
+                <constraints nullable="false"/>
+            </column>
+            <column name="used_at" type="timestamp with time zone"/>
+        </createTable>
+        <addForeignKeyConstraint baseTableName="donor_second_factor_recovery" baseColumnNames="donor_id"
+                                 referencedTableName="donor" referencedColumnNames="id"
+                                 constraintName="fk_donor_second_factor_recovery_donor" onDelete="CASCADE"/>
+        <createIndex tableName="donor_second_factor_recovery" indexName="ix_donor_second_factor_recovery_donor">
+            <column name="donor_id"/>
+        </createIndex>
+    </changeSet>
+</databaseChangeLog>
