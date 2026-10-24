@@ -116,35 +116,98 @@
             Po povolení vás pošleme zpět do aplikace. Přístup kdykoli odeberete v přehledu dárce v
             části „Připojené aplikace“; ukončí ho i změna hesla nebo odebrání role správce.
           </p>
-          @if (error()) {
-            <p class="ui-field-error" role="alert">{{ error() }}</p>
-          }
-          <div class="actions">
-            <button
-              type="button"
-              class="ui-button ui-button--primary ui-button--block"
-              [disabled]="deciding() !== null || unknownScope"
-              (click)="allow()"
-            >
-              @if (deciding() === 'allow') {
-                <span i18n="@@donor.connect.consent.allowing">Povoluji…</span>
-              } @else {
-                <span i18n="@@donor.connect.consent.allow">Povolit</span>
+          <form
+            #consentForm="ngForm"
+            class="confirm"
+            appFocusFirstInvalid
+            (ngSubmit)="allow(consentForm)"
+            novalidate
+          >
+            @if (usesCode()) {
+              <p class="ui-panel__lead confirm-note" i18n="@@donor.connect.consent.confirmCode">
+                Povolení potvrďte novým kódem z ověřovací aplikace, i když jste se jím už
+                přihlásili.
+              </p>
+              <app-form-field
+                label="Kód z aplikace"
+                i18n-label="@@donor.connect.consent.code"
+                [hint]="codeHint"
+                [messages]="codeMessages"
+              >
+                <input
+                  #codeField
+                  appFormControl
+                  id="connect-app-code"
+                  name="code"
+                  type="text"
+                  inputmode="numeric"
+                  autocomplete="one-time-code"
+                  placeholder="123456"
+                  [(ngModel)]="code"
+                  required
+                  pattern="\s*\d{6}\s*"
+                  maxlength="8"
+                />
+              </app-form-field>
+              @if (passkeySupported) {
+                <p class="passkey-alternative">
+                  <span i18n="@@donor.connect.consent.orPasskey">Nebo bez kódu:</span>
+                  <button
+                    type="button"
+                    class="ui-link-button"
+                    [disabled]="deciding() !== null || unknownScope"
+                    (click)="allowWithPasskey()"
+                    i18n="@@donor.connect.consent.allowWithPasskey"
+                  >
+                    Povolit přístupovým klíčem
+                  </button>
+                </p>
               }
-            </button>
-            <button
-              type="button"
-              class="ui-button ui-button--block"
-              [disabled]="deciding() !== null"
-              (click)="deny()"
-            >
-              @if (deciding() === 'deny') {
-                <span i18n="@@donor.connect.consent.denying">Odmítám…</span>
-              } @else {
-                <span i18n="@@donor.connect.consent.deny">Odmítnout</span>
-              }
-            </button>
-          </div>
+            } @else if (passkeySupported) {
+              <p class="ui-panel__lead confirm-note" i18n="@@donor.connect.consent.confirmPasskey">
+                Povolení potvrďte svým přístupovým klíčem, i když jste se jím už přihlásili.
+              </p>
+            } @else {
+              <p class="ui-panel__lead confirm-note" i18n="@@donor.connect.consent.passkeyMissing">
+                Povolení se potvrzuje přístupovým klíčem a tento prohlížeč je nepodporuje. Připojení
+                povolte v prohlížeči, ve kterém se klíčem přihlašujete.
+              </p>
+            }
+            @if (error()) {
+              <p class="ui-field-error" role="alert">{{ error() }}</p>
+            }
+            <div class="actions">
+              <button
+                type="submit"
+                class="ui-button ui-button--primary ui-button--block"
+                [disabled]="
+                  deciding() !== null || unknownScope || (!usesCode() && !passkeySupported)
+                "
+              >
+                @if (deciding() === 'allow') {
+                  <span i18n="@@donor.connect.consent.allowing">Povoluji…</span>
+                } @else if (usesCode()) {
+                  <span i18n="@@donor.connect.consent.allow">Povolit</span>
+                } @else {
+                  <span i18n="@@donor.connect.consent.allowWithPasskey"
+                    >Povolit přístupovým klíčem</span
+                  >
+                }
+              </button>
+              <button
+                type="button"
+                class="ui-button ui-button--block"
+                [disabled]="deciding() !== null"
+                (click)="deny()"
+              >
+                @if (deciding() === 'deny') {
+                  <span i18n="@@donor.connect.consent.denying">Odmítám…</span>
+                } @else {
+                  <span i18n="@@donor.connect.consent.deny">Odmítnout</span>
+                }
+              </button>
+            </div>
+          </form>
         }
       }
       @case ('not-admin') {

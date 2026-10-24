@@ -103,7 +103,7 @@ public class DonorPasskeyService {
             throw new PasskeyRejected();
         }
         Passkey passkey = Passkey.register(donorId, verified.credentialId(), verified.credentialData(), verified.signCount(),
-                verified.transports(), name, now);
+                verified.transports(), name, ceremonies.relyingPartyId(), now);
         passkeys.save(passkey);
         events.publishEvent(new DonorPasskeyAdded(donorId.value(), donor.email(), donor.preferredLocale(), passkey.name()));
         log.info("Passkey {} added for donor {}", passkey.id(), donorId);

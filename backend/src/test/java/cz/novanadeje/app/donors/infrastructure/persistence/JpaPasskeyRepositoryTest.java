@@ -67,8 +67,32 @@ class JpaPasskeyRepositoryTest {
         assertThat(passkeys.findByDonor(petr)).extracting(Passkey::id).containsExactly(petrs.id());
     }
 
+    @Test
+    @DisplayName("Given passkeys of the staging host, of the site and written without a host, when the keys of other sites are removed, then the unmarked ones count as the site's and only the staging keys go")
+    void should_delete_only_keys_of_other_sites_when_removed_given_unmarked_keys_count_as_site() {
+        Passkey staging = Passkey.register(jana, "jana-staging", new byte[]{1, 2, 3}, 0, List.of("internal"), "Telefon", "nfnn.znamenacek.duckdns.org", NOW);
+        Passkey site = passkey(petr, "petr-site", NOW);
+        Passkey unmarked = Passkey.register(jana, "jana-unmarked", new byte[]{1, 2, 3}, 0, List.of("internal"), "Mac", "nfnn.cz", NOW.plusSeconds(1));
+        passkeys.save(staging);
+        passkeys.save(site);
+        passkeys.save(unmarked);
+        flushAndClear();
+        entityManager.createNativeQuery("update donor_passkey set relying_party_id = null where credential_id = 'jana-unmarked'").executeUpdate();
+        flushAndClear();
+
+        int adopted = passkeys.adoptUnmarked("nfnn.cz");
+        List<DonorId> affected = passkeys.deleteOfOtherSites("nfnn.cz");
+        flushAndClear();
+
+        assertThat(adopted).isEqualTo(1);
+        assertThat(affected).containsExactly(jana);
+        assertThat(passkeys.findById(staging.id())).isEmpty();
+        assertThat(passkeys.findById(site.id())).isPresent();
+        assertThat(passkeys.findById(unmarked.id())).get().extracting(found -> found.relyingPartyId().orElseThrow()).isEqualTo("nfnn.cz");
+    }
+
     private static Passkey passkey(DonorId donor, String credentialId, Instant at) {
-        return Passkey.register(donor, credentialId, new byte[]{1, 2, 3}, 0, List.of("internal"), "Telefon", at);
+        return Passkey.register(donor, credentialId, new byte[]{1, 2, 3}, 0, List.of("internal"), "Telefon", "nfnn.cz", at);
     }
 
     private DonorId donor(String email, String variableSymbol) {

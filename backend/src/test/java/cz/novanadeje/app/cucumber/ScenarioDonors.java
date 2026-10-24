@@ -38,6 +38,10 @@ public class ScenarioDonors {
         secondFactorSecrets.put(alias, secret);
     }
 
+    public boolean hasSecondFactor(String alias) {
+        return secondFactorSecrets.containsKey(alias);
+    }
+
     public String secondFactorSecretOf(String alias) {
         String secret = secondFactorSecrets.get(alias);
         if (secret == null) {

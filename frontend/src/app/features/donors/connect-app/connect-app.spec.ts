@@ -5,7 +5,16 @@ import { ActivatedRoute, convertToParamMap, provideRouter, Router } from '@angul
 import { authInterceptor } from '../../../core/auth/auth-interceptor';
 import { AuthStore, SESSION_HINT_KEY } from '../../../core/auth/auth-store';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
-import { authResponse, problem, sampleDonor } from '../../../core/auth/testing/donor-fixtures';
+import { PasskeyAuthenticator } from '../../../core/auth/passkey-authenticator';
+import {
+  authResponse,
+  FakePasskeyAuthenticator,
+  passkeySignInOptions,
+  problem,
+  SAMPLE_ASSERTION,
+  SAMPLE_CHALLENGE,
+  sampleDonor,
+} from '../../../core/auth/testing/donor-fixtures';
 import { ExternalNavigation } from '../../../core/navigation/external-navigation';
 import { ConnectApp } from './connect-app';
 
@@ -26,6 +35,10 @@ const CLIENT_URL = (request: HttpRequest<unknown>) =>
   request.params.get('clientId') === CLIENT_ID &&
   request.params.get('redirectUri') === REDIRECT;
 const CLAUDE = { host: 'claude.ai', name: 'Claude', loopback: false };
+const ADMIN_WITH_CODE = {
+  roles: ['DONOR', 'ADMIN'],
+  secondFactor: { enabled: true, neededForAdministration: true },
+};
 
 class FakeNavigation {
   readonly assigned: string[] = [];
@@ -41,13 +54,17 @@ describe('Given an application sent the browser to the connection page', () => {
   let store: AuthStore;
   let dialog: LoginDialogService;
   let navigation: FakeNavigation;
+  let passkeys: FakePasskeyAuthenticator;
 
   async function configure(
     query: Record<string, string>,
     signedInAs?: Parameters<typeof sampleDonor>[0],
+    passkeysSupported = false,
   ) {
     localStorage.clear();
     navigation = new FakeNavigation();
+    passkeys = new FakePasskeyAuthenticator();
+    passkeys.available = passkeysSupported;
     await TestBed.configureTestingModule({
       imports: [ConnectApp],
       providers: [
@@ -55,6 +72,7 @@ describe('Given an application sent the browser to the connection page', () => {
         provideHttpClientTesting(),
         provideRouter([]),
         { provide: ExternalNavigation, useValue: navigation },
+        { provide: PasskeyAuthenticator, useValue: passkeys },
         {
           provide: ActivatedRoute,
           useValue: { snapshot: { queryParamMap: convertToParamMap(query) } },
@@ -88,6 +106,13 @@ describe('Given an application sent the browser to the connection page', () => {
     fixture.detectChanges();
     await fixture.whenStable();
     fixture.detectChanges();
+  }
+
+  async function typeCode(code: string): Promise<void> {
+    const field = element<HTMLInputElement>('#connect-app-code');
+    field.value = code;
+    field.dispatchEvent(new Event('input'));
+    await settle();
   }
 
   async function clickButton(text: string): Promise<void> {
@@ -143,14 +168,30 @@ describe('Given an application sent the browser to the connection page', () => {
     });
   });
 
-  describe('when an administrator is signed in', () => {
+  describe('when an administrator with the code from the app is signed in', () => {
     beforeEach(async () => {
-      await configure(QUERY, { roles: ['DONOR', 'ADMIN'] });
+      await configure(QUERY, ADMIN_WITH_CODE);
       http.expectOne(CLIENT_URL).flush(CLAUDE);
       await settle();
     });
 
+    it('then the consent asks for a fresh code even though the session was opened with one', () => {
+      expect(element('label[for="connect-app-code"]').textContent).toContain('Kód z aplikace');
+      expect(element('.confirm-note').textContent).toContain('i když jste se jím už přihlásili');
+      expect(root().textContent).not.toContain('Povolit přístupovým klíčem');
+    });
+
+    it('and allows without the code, then the field asks for it and nothing is sent', async () => {
+      await clickButton('Povolit');
+
+      expect(element('#connect-app-code').getAttribute('aria-invalid')).toBe('true');
+      expect(root().textContent).toContain('Opište prosím kód z aplikace.');
+      expect(document.activeElement).toBe(element('#connect-app-code'));
+      http.expectNone('/api/donors/oauth/authorize');
+    });
+
     it('and allows the connection, then the decision goes to the API and the browser leaves for the application', async () => {
+      await typeCode(' 123456 ');
       await clickButton('Povolit');
 
       const request = http.expectOne({ method: 'POST', url: '/api/donors/oauth/authorize' });
@@ -164,6 +205,7 @@ describe('Given an application sent the browser to the connection page', () => {
         resource: 'http://localhost:4200/mcp',
         state: 'xyz',
         approved: true,
+        secondFactorCode: '123456',
       });
       expect(element<HTMLButtonElement>('.ui-button--primary').disabled).toBe(true);
       expect(element('.ui-button--primary').textContent).toContain('Povoluji…');
@@ -183,6 +225,7 @@ describe('Given an application sent the browser to the connection page', () => {
       await settle();
       expect(element<HTMLInputElement>('#connect-app-write').checked).toBe(true);
 
+      await typeCode('123456');
       await clickButton('Povolit');
 
       const request = http.expectOne({ method: 'POST', url: '/api/donors/oauth/authorize' });
@@ -205,7 +248,33 @@ describe('Given an application sent the browser to the connection page', () => {
       expect(navigation.assigned).toEqual([`${REDIRECT}?error=access_denied&state=xyz`]);
     });
 
-    it('and the server refuses the request, then the consent shows the reason and stays', async () => {
+    it('and the code is refused, then the consent stays with the reason and the code selected for a new one', async () => {
+      await typeCode('123456');
+      await clickButton('Povolit');
+      http
+        .expectOne({ method: 'POST', url: '/api/donors/oauth/authorize' })
+        .flush(
+          problem(
+            'donors/second-factor-code-rejected',
+            'Nesprávný kód',
+            'Zadejte prosím aktuální kód z ověřovací aplikace; každý kód platí jen jednou.',
+          ),
+          { status: 400, statusText: 'Bad Request' },
+        );
+      await settle();
+
+      expect(element('h1').textContent).toContain('Povolit přístup ke správě aplikaci');
+      expect(element('[role="alert"]').textContent).toContain('Nesprávný kód');
+      const field = element<HTMLInputElement>('#connect-app-code');
+      expect(field.value).toBe('123456');
+      expect(document.activeElement).toBe(field);
+      expect([field.selectionStart, field.selectionEnd]).toEqual([0, 6]);
+      expect(root().textContent).not.toContain('Opište');
+      expect(navigation.assigned).toEqual([]);
+    });
+
+    it('and the server refuses the request, then the page shows the reason', async () => {
+      await typeCode('123456');
       await clickButton('Povolit');
       http
         .expectOne({ method: 'POST', url: '/api/donors/oauth/authorize' })
@@ -222,6 +291,49 @@ describe('Given an application sent the browser to the connection page', () => {
       expect(element('h1').textContent).toContain('Aplikaci se nepodařilo připojit');
       expect(element('[role="alert"]').textContent).toContain('Neplatná žádost o připojení');
       expect(navigation.assigned).toEqual([]);
+    });
+  });
+
+  describe('when an administrator who uses a passkey as the second factor is signed in', () => {
+    beforeEach(async () => {
+      await configure(QUERY, { roles: ['DONOR', 'ADMIN'] }, true);
+      http.expectOne(CLIENT_URL).flush(CLAUDE);
+      await settle();
+    });
+
+    it('and allows with the passkey, then the passkey answer goes with the decision', async () => {
+      expect(element('#connect-app-code')).toBeNull();
+
+      await clickButton('Povolit přístupovým klíčem');
+      http
+        .expectOne({ method: 'POST', url: '/api/donors/auth/passkey/options' })
+        .flush(passkeySignInOptions());
+      await settle();
+
+      const request = http.expectOne({ method: 'POST', url: '/api/donors/oauth/authorize' });
+      expect(request.request.body).toMatchObject({
+        approved: true,
+        passkey: { challenge: SAMPLE_CHALLENGE, credential: SAMPLE_ASSERTION },
+      });
+      expect(request.request.body.secondFactorCode).toBeUndefined();
+      request.flush({ redirectTo: `${REDIRECT}?code=abc&state=xyz` });
+      await settle();
+
+      expect(navigation.assigned).toEqual([`${REDIRECT}?code=abc&state=xyz`]);
+    });
+
+    it('and the device does not confirm, then the consent stays and says so', async () => {
+      passkeys.failure = 'cancelled';
+
+      await clickButton('Povolit přístupovým klíčem');
+      http
+        .expectOne({ method: 'POST', url: '/api/donors/auth/passkey/options' })
+        .flush(passkeySignInOptions());
+      await settle();
+
+      http.expectNone('/api/donors/oauth/authorize');
+      expect(element('[role="alert"]').textContent).toContain('Zařízení připojení nepotvrdilo');
+      expect(element<HTMLButtonElement>('.ui-button--primary').disabled).toBe(false);
     });
   });
 
@@ -270,6 +382,18 @@ describe('Given an application sent the browser to the connection page', () => {
       await settle();
 
       expect(element('h1').textContent).toContain('Povolit přístup ke správě aplikaci');
+    });
+
+    it('then an administrator with the code and a browser with passkeys may confirm either way', async () => {
+      await configure(QUERY, ADMIN_WITH_CODE, true);
+      http.expectOne(CLIENT_URL).flush(CLAUDE);
+      await settle();
+
+      expect(element('#connect-app-code')).not.toBeNull();
+      const labels = Array.from(root().querySelectorAll('form button')).map((button) =>
+        button.textContent?.trim(),
+      );
+      expect(labels).toEqual(['Povolit přístupovým klíčem', 'Povolit', 'Odmítnout']);
     });
 
     it('then an application asking for reading only gets no choice of changes', async () => {

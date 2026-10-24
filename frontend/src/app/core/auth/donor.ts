@@ -96,6 +96,8 @@ export interface AuthorizationRequest {
   resource: string | null;
   state: string | null;
   approved: boolean;
+  secondFactorCode?: string;
+  passkey?: PasskeyConfirmation;
 }
 
 export interface RedirectResponse {

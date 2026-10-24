@@ -495,7 +495,7 @@ public class DonorPasskeyStepDefinitions {
         return Map.of("passkey", passkeyConfirmation(alias, keys.keySet().iterator().next()));
     }
 
-    private Map<String, Object> passkeyConfirmation(String alias, String name) {
+    public Map<String, Object> passkeyConfirmation(String alias, String name) {
         ResponseEntity<String> response = api.post(SIGN_IN_OPTIONS_PATH, Map.of());
         assertThat(response.getStatusCode().value()).withFailMessage("Sign-in options answered %s", response.getBody()).isEqualTo(200);
         String challenge = api.lastResponseJson().get("challenge").asString();

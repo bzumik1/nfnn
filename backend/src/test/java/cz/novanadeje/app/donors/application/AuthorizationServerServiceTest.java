@@ -20,6 +20,7 @@ import cz.novanadeje.app.donors.domain.RefreshToken;
 import cz.novanadeje.app.donors.domain.RefreshTokenRepository;
 import cz.novanadeje.app.donors.domain.RefreshTokenSecret;
 import cz.novanadeje.app.donors.domain.Role;
+import cz.novanadeje.app.donors.domain.SecondFactorCodeRejected;
 import cz.novanadeje.app.shared.domain.DonorType;
 import cz.novanadeje.app.shared.domain.EmailAddress;
 import cz.novanadeje.app.shared.domain.LocaleCode;
@@ -31,6 +32,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -46,8 +48,11 @@ import java.util.Set;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -63,6 +68,7 @@ class AuthorizationServerServiceTest {
     private static final String MCP = ISSUER + "/mcp";
     private static final String API = ISSUER + "/api";
     private static final Duration REFRESH_TTL = Duration.ofDays(14);
+    private static final SecondFactorProof PROOF = SecondFactorProof.withCode("123456");
 
     @Mock
     private ClientMetadataSource clients;
@@ -76,12 +82,14 @@ class AuthorizationServerServiceTest {
     private AccessTokenIssuer accessTokens;
     @Mock
     private AccessTokenVerifier verifier;
+    @Mock
+    private FreshSecondFactorCheck freshSecondFactor;
 
     private AuthorizationServerService service;
 
     @BeforeEach
     void setUp() {
-        service = new AuthorizationServerService(clients, codes, refreshTokens, donors, accessTokens, verifier,
+        service = new AuthorizationServerService(clients, codes, refreshTokens, donors, accessTokens, verifier, freshSecondFactor,
                 new OAuthProperties(ISSUER, "/pripojeni", Duration.ofMinutes(5), MCP, API), new DonorSessionProperties(REFRESH_TTL),
                 Clock.fixed(NOW, ZoneOffset.UTC));
     }
@@ -128,6 +136,34 @@ class AuthorizationServerServiceTest {
         }
 
         @Test
+        @DisplayName("when an administrator approves, then the fresh second factor is checked before the code is stored")
+        void should_check_fresh_second_factor_before_storing_code_when_approved() {
+            service.decide(decision("admin:read", MCP, CHALLENGE, true), DONOR, Set.of(Role.DONOR, Role.ADMIN));
+
+            InOrder order = inOrder(freshSecondFactor, codes);
+            order.verify(freshSecondFactor).require(DONOR, PROOF);
+            order.verify(codes).save(any());
+        }
+
+        @Test
+        @DisplayName("when the fresh second factor is refused, then no code is stored")
+        void should_store_no_code_when_approved_given_refused_second_factor() {
+            doThrow(new SecondFactorCodeRejected()).when(freshSecondFactor).require(DONOR, PROOF);
+
+            assertThatThrownBy(() -> service.decide(decision("admin:read", MCP, CHALLENGE, true), DONOR, Set.of(Role.ADMIN)))
+                    .isInstanceOf(SecondFactorCodeRejected.class);
+            verify(codes, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("when the request is invalid, then the second factor is not spent")
+        void should_not_check_second_factor_when_approved_given_invalid_request() {
+            assertThatThrownBy(() -> service.decide(decision("admin:read", MCP, null, true), DONOR, Set.of(Role.ADMIN)))
+                    .isInstanceOf(InvalidAuthorizationRequest.class);
+            verifyNoInteractions(freshSecondFactor);
+        }
+
+        @Test
         @DisplayName("when a plain donor approves, then the administrator role is required and nothing is stored")
         void should_require_administrator_when_approved_given_plain_donor() {
             assertThatThrownBy(() -> service.decide(decision("admin:read", MCP, CHALLENGE, true), DONOR, Set.of(Role.DONOR)))
@@ -144,6 +180,7 @@ class AuthorizationServerServiceTest {
             assertThat(query(redirect, "state")).isEqualTo("xyz");
             assertThat(redirect.getQuery()).doesNotContain("code=");
             verify(codes, never()).save(any());
+            verifyNoInteractions(freshSecondFactor);
         }
 
         @Test
@@ -371,7 +408,7 @@ class AuthorizationServerServiceTest {
 
     private static AuthorizationDecision decision(String scope, String resource, String challenge, boolean approved) {
         return new AuthorizationDecision(CLAUDE.value(), CALLBACK.toString(), "code", challenge, challenge == null ? null : "S256", scope, resource,
-                "xyz", approved);
+                "xyz", approved, PROOF);
     }
 
     private static String query(URI uri, String name) {

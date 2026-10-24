@@ -20,4 +20,15 @@ interface PasskeyJpaRepository extends JpaRepository<PasskeyJpaEntity, UUID> {
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("delete from PasskeyJpaEntity passkey where passkey.donorId = :donorId")
     int deleteAllByDonorId(@Param("donorId") UUID donorId);
+
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("update PasskeyJpaEntity passkey set passkey.relyingPartyId = :relyingPartyId where passkey.relyingPartyId is null")
+    int adoptUnmarked(@Param("relyingPartyId") String relyingPartyId);
+
+    @Query("select distinct passkey.donorId from PasskeyJpaEntity passkey where passkey.relyingPartyId <> :relyingPartyId order by passkey.donorId")
+    List<UUID> findDonorsWithKeysOfOtherSites(@Param("relyingPartyId") String relyingPartyId);
+
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("delete from PasskeyJpaEntity passkey where passkey.relyingPartyId <> :relyingPartyId")
+    int deleteOfOtherSites(@Param("relyingPartyId") String relyingPartyId);
 }

@@ -177,7 +177,7 @@ class DonorConfirmationsTest {
     }
 
     private static Passkey passkeyOf(DonorId donorId) {
-        return Passkey.register(donorId, CREDENTIAL_ID, new byte[]{1, 2, 3}, 3, List.of("internal"), "iPhone", NOW.minusSeconds(3600));
+        return Passkey.register(donorId, CREDENTIAL_ID, new byte[]{1, 2, 3}, 3, List.of("internal"), "iPhone", "nfnn.cz", NOW.minusSeconds(3600));
     }
 
     private static Donor donor(PasswordHash hash) {

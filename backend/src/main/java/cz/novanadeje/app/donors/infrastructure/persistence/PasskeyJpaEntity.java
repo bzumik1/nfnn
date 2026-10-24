@@ -40,6 +40,9 @@ class PasskeyJpaEntity {
     @Column(name = "name", nullable = false, length = Passkey.MAX_NAME_LENGTH)
     private String name;
 
+    @Column(name = "relying_party_id", length = Passkey.MAX_RELYING_PARTY_ID_LENGTH)
+    private String relyingPartyId;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
@@ -58,6 +61,7 @@ class PasskeyJpaEntity {
         entity.signCount = passkey.signCount();
         entity.transports = String.join(TRANSPORT_SEPARATOR, passkey.transports());
         entity.name = passkey.name();
+        entity.relyingPartyId = passkey.relyingPartyId().orElse(null);
         entity.createdAt = passkey.createdAt();
         entity.lastUsedAt = passkey.lastUsedAt().orElse(null);
         return entity;
@@ -66,6 +70,6 @@ class PasskeyJpaEntity {
     Passkey toDomain() {
         List<String> transportList = transports.isEmpty() ? List.of() : Arrays.asList(transports.split(TRANSPORT_SEPARATOR));
         return Passkey.reconstitute(new PasskeyId(id), new DonorId(donorId), credentialId, credentialData, signCount, transportList, name,
-                createdAt, lastUsedAt);
+                relyingPartyId, createdAt, lastUsedAt);
     }
 }

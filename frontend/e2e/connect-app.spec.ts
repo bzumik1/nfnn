@@ -57,7 +57,12 @@ test.describe('Given Claude sent an administrator to the site to connect the adm
     await expect(changes).toHaveAccessibleDescription(/jen čtení/);
 
     await changes.check();
-    await page.getByRole('button', { name: 'Povolit' }).click();
+    await expect(page.getByText('i když jste se jím už přihlásili')).toBeVisible();
+    await page.getByRole('button', { name: 'Povolit', exact: true }).click();
+    await expect(page.locator('#connect-app-code')).toBeFocused();
+    expect(decisions).toEqual([]);
+    await page.getByLabel('Kód z aplikace').fill('123456');
+    await page.getByRole('button', { name: 'Povolit', exact: true }).click();
 
     await expect(page).toHaveURL(
       'https://claude.ai/api/mcp/auth_callback?code=abc&state=xyz&iss=http%3A%2F%2Flocalhost%3A4200',
@@ -73,8 +78,54 @@ test.describe('Given Claude sent an administrator to the site to connect the adm
         resource: 'http://localhost:4200/mcp',
         state: 'xyz',
         approved: true,
+        secondFactorCode: '123456',
       },
     ]);
+  });
+
+  test('when the code was already used, then the consent stays, says why and takes a new code', async ({
+    page,
+  }) => {
+    const codes: string[] = [];
+    await page.route('**/api/donors/oauth/authorize', async (route) => {
+      const body = route.request().postDataJSON() as { secondFactorCode: string };
+      codes.push(body.secondFactorCode);
+      if (codes.length === 1) {
+        await route.fulfill({
+          status: 400,
+          contentType: 'application/problem+json',
+          body: JSON.stringify({
+            type: 'https://nfnn.cz/problems/donors/second-factor-code-rejected',
+            title: 'Nesprávný kód',
+            detail: 'Zadejte prosím aktuální kód z ověřovací aplikace; každý kód platí jen jednou.',
+            status: 400,
+          }),
+        });
+        return;
+      }
+      await route.fulfill({
+        json: { redirectTo: 'https://claude.ai/api/mcp/auth_callback?code=abc&state=xyz' },
+      });
+    });
+    await page.route('**/api/donors/auth/refresh', (route) =>
+      route.fulfill(session(200, administrator)),
+    );
+    await signIn(page, administrator);
+
+    await page.goto(connectionRequest);
+    await page.getByLabel('Kód z aplikace').fill('111111');
+    await page.getByRole('button', { name: 'Povolit', exact: true }).click();
+
+    await expect(page.getByRole('alert').filter({ hasText: /\S/ })).toContainText('Nesprávný kód');
+    await expect(page.getByLabel('Kód z aplikace')).toBeFocused();
+    await expect(page.getByText('Opište prosím kód z aplikace.')).toHaveCount(0);
+
+    await page.keyboard.type('222222');
+    await expect(page.getByLabel('Kód z aplikace')).toHaveValue('222222');
+    await page.getByRole('button', { name: 'Povolit', exact: true }).click();
+
+    await expect(page).toHaveURL('https://claude.ai/api/mcp/auth_callback?code=abc&state=xyz');
+    expect(codes).toEqual(['111111', '222222']);
   });
 
   test('when a plain donor is signed in, then the page says only an administrator can connect and declining returns them to Claude with the error', async ({

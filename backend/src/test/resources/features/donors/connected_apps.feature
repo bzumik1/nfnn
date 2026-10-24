@@ -39,6 +39,26 @@ Feature: An administrator connects an application such as Claude to the administ
     Then the response status is 200
     And the connected applications are "claude.ai" with scope "admin:read"
 
+  Scenario: Approving a connection needs a fresh code from the authenticator app, even in a session opened with one
+    When "Jana" approves the connection for "https://claude.ai/.well-known/oauth-client" without confirming it again
+    Then the response status is 400
+    And the problem type ends with "donors/fresh-second-factor-required"
+    When "Jana" approves the connection for "https://claude.ai/.well-known/oauth-client" with the code "000000"
+    Then the response status is 400
+    And the problem type ends with "donors/second-factor-code-rejected"
+    When "Jana" approves the connection for "https://claude.ai/.well-known/oauth-client" with scope "admin:read" and state "xyz"
+    Then the response status is 200
+    When "Jana" approves the connection for "https://claude.ai/.well-known/oauth-client" again with the same code
+    Then the response status is 400
+    And the problem type ends with "donors/second-factor-code-rejected"
+
+  Scenario: An administrator approves the connection with a passkey instead of the code
+    Given "Jana" added a passkey named "iPhone"
+    And "Jana" signs in with the passkey "iPhone"
+    When "Jana" approves the connection for "https://claude.ai/.well-known/oauth-client" with the passkey "iPhone"
+    Then the response status is 200
+    And the approval redirects to "https://claude.ai/api/mcp/auth_callback" with a code, the state "xyz" and the issuer "http://localhost:4200"
+
   Scenario: A connection with the reading permission only cannot change anything in the administration
     Given "Jana" connected the application "https://claude.ai/.well-known/oauth-client"
     When the connector exchanges the connector token for an API token

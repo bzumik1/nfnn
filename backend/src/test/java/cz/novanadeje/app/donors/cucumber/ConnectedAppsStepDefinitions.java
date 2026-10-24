@@ -3,6 +3,7 @@ package cz.novanadeje.app.donors.cucumber;
 import cz.novanadeje.app.cucumber.ApiClient;
 import cz.novanadeje.app.cucumber.DonorSessions;
 import cz.novanadeje.app.cucumber.ScenarioDonors;
+import cz.novanadeje.app.cucumber.TotpCodes;
 import cz.novanadeje.app.support.FakeClientMetadataSource;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
@@ -47,6 +48,8 @@ public class ConnectedAppsStepDefinitions {
     private final ApiClient api;
     private final DonorSessions sessions;
     private final ScenarioDonors scenarioDonors;
+    private final TotpCodes totpCodes;
+    private final DonorPasskeyStepDefinitions passkeys;
 
     private String clientId;
     private String redirectUri;
@@ -55,9 +58,13 @@ public class ConnectedAppsStepDefinitions {
     private String connectorRefreshToken;
     private String previousRefreshToken;
     private String apiAccessToken;
+    private String lastSecondFactorCode;
 
-    public ConnectedAppsStepDefinitions(ApiClient api, DonorSessions sessions, ScenarioDonors scenarioDonors) {
+    public ConnectedAppsStepDefinitions(ApiClient api, DonorSessions sessions, ScenarioDonors scenarioDonors, TotpCodes totpCodes,
+                                        DonorPasskeyStepDefinitions passkeys) {
         this.api = api;
+        this.totpCodes = totpCodes;
+        this.passkeys = passkeys;
         this.sessions = sessions;
         this.scenarioDonors = scenarioDonors;
     }
@@ -130,6 +137,31 @@ public class ConnectedAppsStepDefinitions {
     @When("{string} approves the connection for {string} redirecting to {string}")
     public void approvesTheConnectionRedirectingTo(String alias, String client, String redirect) {
         decide(alias, client, redirect, "admin:read", MCP_RESOURCE, DEFAULT_STATE, challenge(VERIFIER), true);
+    }
+
+    @When("{string} approves the connection for {string} without confirming it again")
+    public void approvesTheConnectionWithoutConfirmingItAgain(String alias, String client) {
+        sessions.actAs(alias);
+        postDecision(client, defaultRedirectOf(client), "admin:read", MCP_RESOURCE, DEFAULT_STATE, challenge(VERIFIER), true, Map.of());
+    }
+
+    @When("{string} approves the connection for {string} with the code {string}")
+    public void approvesTheConnectionWithTheCode(String alias, String client, String presentedCode) {
+        sessions.actAs(alias);
+        postDecision(client, defaultRedirectOf(client), "admin:read", MCP_RESOURCE, DEFAULT_STATE, challenge(VERIFIER), true,
+                Map.of("secondFactorCode", presentedCode));
+    }
+
+    @When("{string} approves the connection for {string} again with the same code")
+    public void approvesTheConnectionAgainWithTheSameCode(String alias, String client) {
+        approvesTheConnectionWithTheCode(alias, client, lastSecondFactorCode);
+    }
+
+    @When("{string} approves the connection for {string} with the passkey {string}")
+    public void approvesTheConnectionWithThePasskey(String alias, String client, String name) {
+        sessions.actAs(alias);
+        Map<String, Object> answer = passkeys.passkeyConfirmation(alias, name);
+        postDecision(client, defaultRedirectOf(client), "admin:read", MCP_RESOURCE, DEFAULT_STATE, challenge(VERIFIER), true, Map.of("passkey", answer));
     }
 
     @Given("{string} approved the connection for {string}")
@@ -281,7 +313,7 @@ public class ConnectedAppsStepDefinitions {
     @When("the exchanged API token tries to approve the connection for {string} with scope {string}")
     public void theExchangedApiTokenTriesToApproveTheConnection(String client, String scope) {
         actAsExchangedApiToken();
-        postDecision(client, defaultRedirectOf(client), scope, MCP_RESOURCE, DEFAULT_STATE, challenge(VERIFIER), true);
+        postDecision(client, defaultRedirectOf(client), scope, MCP_RESOURCE, DEFAULT_STATE, challenge(VERIFIER), true, Map.of());
     }
 
     @When("the exchanged API token reads the account of the administrator")
@@ -417,11 +449,16 @@ public class ConnectedAppsStepDefinitions {
     private void decide(String alias, String client, String redirect, String scope, String resource, String state, String codeChallenge,
                         boolean approved) {
         sessions.actAs(alias);
-        postDecision(client, redirect, scope, resource, state, codeChallenge, approved);
+        Map<String, Object> proof = new HashMap<>();
+        if (approved && scenarioDonors.hasSecondFactor(alias)) {
+            lastSecondFactorCode = totpCodes.freshCode(scenarioDonors.secondFactorSecretOf(alias));
+            proof.put("secondFactorCode", lastSecondFactorCode);
+        }
+        postDecision(client, redirect, scope, resource, state, codeChallenge, approved, proof);
     }
 
     private void postDecision(String client, String redirect, String scope, String resource, String state, String codeChallenge,
-                              boolean approved) {
+                              boolean approved, Map<String, Object> proof) {
         clientId = client;
         redirectUri = redirect;
         Map<String, Object> body = new HashMap<>();
@@ -436,6 +473,7 @@ public class ConnectedAppsStepDefinitions {
             body.put("codeChallenge", codeChallenge);
             body.put("codeChallengeMethod", "S256");
         }
+        body.putAll(proof);
         api.post(AUTHORIZE_PATH, body);
     }
 

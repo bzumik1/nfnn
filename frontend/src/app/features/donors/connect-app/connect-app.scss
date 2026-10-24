@@ -85,6 +85,24 @@
   margin: 0 0 var(--space-5) var(--space-6);
 }
 
+.confirm-note {
+  margin-bottom: var(--space-4);
+}
+
+.passkey-alternative {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1);
+  margin: 0 0 var(--space-4);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+
+  .ui-link-button {
+    padding-inline: 0;
+  }
+}
+
 .actions {
   display: flex;
   flex-wrap: wrap;

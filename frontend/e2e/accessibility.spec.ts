@@ -278,7 +278,10 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     await dialog.locator('#login-email').fill('jana@example.cz');
     await dialog.locator('#login-password').fill('correct horse battery');
     await dialog.locator('.ui-button--block').click();
-    await expect(page.getByRole('button', { name: 'Povolit' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Povolit', exact: true })).toBeVisible();
+    expect(await violations(page)).toEqual([]);
+    await page.getByRole('button', { name: 'Povolit', exact: true }).click();
+    await expect(page.getByLabel('Kód z aplikace')).toHaveAttribute('aria-invalid', 'true');
     expect(await violations(page)).toEqual([]);
 
     await page.route(
