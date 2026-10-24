@@ -92,6 +92,7 @@ tasks.withType<Test> {
 	}
 	systemProperty("cucumber.junit-platform.naming-strategy", "long")
 	System.getenv("CUCUMBER_FILTER_TAGS")?.let { systemProperty("cucumber.filter.tags", it) }
+	maxHeapSize = "1g"
 	jvmArgs("--enable-native-access=ALL-UNNAMED")
 	jvmArgumentProviders.add(CommandLineArgumentProvider { listOf("-javaagent:${mockitoAgent.singleFile}", "-Xshare:off") })
 	environment("TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE", "/var/run/docker.sock")
