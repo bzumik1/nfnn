@@ -3,6 +3,7 @@ package cz.novanadeje.app.operations.interfaces.rest;
 import cz.novanadeje.app.operations.application.settings.SettingsService;
 import cz.novanadeje.app.operations.domain.settings.SecretSettingsInBrowserOnly;
 import cz.novanadeje.app.operations.domain.settings.SettingChange;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -25,9 +26,11 @@ class AdminSettingsController {
     private static final String SCOPE_CLAIM = "scope";
 
     private final SettingsService settings;
+    private final TestEmailRateLimiter testEmailRateLimiter;
 
-    AdminSettingsController(SettingsService settings) {
+    AdminSettingsController(SettingsService settings, TestEmailRateLimiter testEmailRateLimiter) {
         this.settings = settings;
+        this.testEmailRateLimiter = testEmailRateLimiter;
     }
 
     @GetMapping
@@ -45,11 +48,12 @@ class AdminSettingsController {
         return SettingsSavedResponse.of(settings.change(UUID.fromString(jwt.getSubject()), changes));
     }
 
-    @PostMapping("/mail-test")
-    MailTestResponse testMail(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody MailTestRequest request) {
-        if (jwt.hasClaim(SCOPE_CLAIM) && request.password() != null && !request.password().isBlank()) {
+    @PostMapping("/test-email")
+    TestEmailResponse sendTestEmail(HttpServletRequest http, @AuthenticationPrincipal Jwt jwt, @Valid @RequestBody AdminTestEmailRequest request) {
+        testEmailRateLimiter.check(http.getRemoteAddr());
+        if (jwt.hasClaim(SCOPE_CLAIM) && request.typesPassword()) {
             throw new SecretSettingsInBrowserOnly();
         }
-        return new MailTestResponse(settings.testMail(request.toServer()));
+        return TestEmailResponse.from(settings.sendTestEmail(UUID.fromString(jwt.getSubject()), request.toServer(), request.sender()));
     }
 }
