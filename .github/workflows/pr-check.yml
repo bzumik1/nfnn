@@ -169,13 +169,13 @@ jobs:
             echo "::error::the frontend mounts only the logs folder (for its access log) and reads no env file"
             exit 1
           fi
-          if [ "$(yq '[.services[] | select(has("network_mode") or has("links"))] | length' deploy/compose.yml)" != 0 ] || [ "$(yq '.networks.internal.internal' deploy/compose.yml)" != true ]; then
-            echo "::error::the services live on their own networks (not the default bridge that other apps on the server share) and the database network has no way out"
+          if [ "$(yq '[.services[] | select(has("network_mode") or has("links"))] | length' deploy/compose.yml)" != 0 ] || [ "$(yq '.networks | keys | join(",")' deploy/compose.yml)" != edge ] || [ "$(yq '.networks.edge.name' deploy/compose.yml)" != nfnn-edge ]; then
+            echo "::error::the services live on their own network nfnn-edge, not the default bridge that other apps on the server share"
             exit 1
           fi
-          networks=$(yq -o=json '[.services | to_entries[] | .key + "=" + (.value.networks | sort | join(","))] | sort | join(" ")' deploy/compose.yml)
-          if [ "$networks" != '"backend=edge,internal backup=internal frontend=edge mcp=edge postgres=internal"' ]; then
-            echo "::error::only the backend and the backup reach the database network, and the database reaches nothing else (found $networks)"
+          networks=$(yq -o=json '[.services | to_entries[] | .key + "=" + ((.value.networks // []) | join(","))] | sort | join(" ")' deploy/compose.yml)
+          if [ "$networks" != '"backend=edge backup=edge frontend=edge mcp=edge postgres=edge"' ]; then
+            echo "::error::every service joins exactly the one network edge: ZimaOS attaches a service only to the first network it lists (found $networks)"
             exit 1
           fi
           if [ "$(yq '[.services[] | select((.security_opt // []) | contains(["no-new-privileges:true"]) | not)] | length' deploy/compose.yml)" != 0 ]; then
@@ -332,13 +332,11 @@ jobs:
           done
           docker exec nfnn-backend sh -c 'uid=$(awk "/^Uid:/ {print \$2}" /proc/1/status); [ "$uid" = "$(id -u app)" ]' || { echo "::error::the backend's Java process must run as the app user"; exit 1; }
           backend_ip=$(docker inspect -f '{{(index .NetworkSettings.Networks "nfnn-edge").IPAddress}}' nfnn-backend)
-          postgres_ip=$(docker inspect -f '{{(index .NetworkSettings.Networks "nfnn-internal").IPAddress}}' nfnn-postgres)
+          postgres_ip=$(docker inspect -f '{{(index .NetworkSettings.Networks "nfnn-edge").IPAddress}}' nfnn-postgres)
           if docker run --rm --network bridge --entrypoint sh ghcr.io/bzumik1/nfnn-postgres:latest -c "wget -q -T 3 -O /dev/null http://$backend_ip:8080/actuator/health || pg_isready -q -h $postgres_ip -t 3"; then
             echo "::error::a container on the default bridge reached the backend or the database"
             exit 1
           fi
-          docker exec nfnn-frontend sh -c '! getent hosts postgres' || { echo "::error::the frontend must not see the database"; exit 1; }
-          docker exec nfnn-mcp sh -c '! getent hosts postgres' || { echo "::error::the connector must not see the database"; exit 1; }
           echo "The backend and the backup service write their logs into the logs folder"
           logs="$RUNNER_TEMP/nfnn/logs"
           grep -q 'Backend revision dev is ready' "$logs/backend.log" || { echo "::error::the backend did not write its log file"; ls -la "$logs"; exit 1; }

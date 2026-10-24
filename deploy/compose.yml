@@ -12,7 +12,7 @@ services:
     container_name: nfnn-postgres
     restart: unless-stopped
     networks:
-      - internal
+      - edge
     security_opt:
       - no-new-privileges:true
     read_only: true
@@ -50,7 +50,7 @@ services:
     container_name: nfnn-backup
     restart: unless-stopped
     networks:
-      - internal
+      - edge
     security_opt:
       - no-new-privileges:true
     read_only: true
@@ -86,7 +86,6 @@ services:
     restart: unless-stopped
     stop_grace_period: 75s
     networks:
-      - internal
       - edge
     security_opt:
       - no-new-privileges:true
@@ -215,9 +214,6 @@ services:
     logging: *logging
 
 networks:
-  internal:
-    name: nfnn-internal
-    internal: true
   edge:
     name: nfnn-edge
 
