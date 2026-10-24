@@ -492,6 +492,25 @@ describe('Given an administrator editing a published news article', () => {
     );
   });
 
+  it('when they change the address of the published one, then the hint warns that the old link stops working', async () => {
+    await loaded();
+    await type(fixture, '#news-slug', 'zahrada');
+
+    expect(text(fixture, '#news-slug-hint')).toContain(
+      'Pozor: dosavadní odkaz nfnn.cz/aktuality/zahrada-pro-deti po uložení přestane fungovat.',
+    );
+
+    await type(fixture, '#news-slug', 'zahrada-pro-deti');
+
+    expect(text(fixture, '#news-slug-hint')).not.toContain('Pozor');
+  });
+
+  it('when its photo has no description, then a quiet line says so', async () => {
+    await loaded();
+
+    expect(text(fixture, '.alt-missing')).toBe('Fotka zatím nemá popis pro nevidomé.');
+  });
+
   it('when the article arrives, then saving says it goes to the site at once and a link opens the article there', async () => {
     await loaded();
 

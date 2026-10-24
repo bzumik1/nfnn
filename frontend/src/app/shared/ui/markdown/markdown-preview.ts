@@ -12,10 +12,11 @@ export class MarkdownPreview {
   readonly text = input.required<string>();
   readonly previewId = input.required<string>();
 
-  protected readonly open = signal(false);
+  private readonly open = signal(false);
+  readonly isOpen = this.open.asReadonly();
   protected readonly empty = computed(() => this.text().trim() === '');
 
-  protected toggle(): void {
+  toggle(): void {
     this.open.update((open) => !open);
   }
 }

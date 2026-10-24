@@ -101,9 +101,7 @@ test.describe('Given an administrator on the backups page', () => {
     await expect(page).toHaveTitle('Zálohy | Správa | Nová naděje – nadační fond');
     await expect(page.getByRole('heading', { level: 1, name: 'Zálohy' })).toBeFocused();
     await expect(page.getByText('Zálohování je v pořádku.')).toBeVisible();
-    await expect(page.locator('.run dd').first()).toHaveText(
-      'Poslední záloha: 23. 10. 2026 03:00, nfnn-2026-10-23_0300.dump (2 kB).',
-    );
+    await expect(page.locator('.run dd').first()).toHaveText('23. 10. 2026 03:00 (2 kB)');
     await expect(page.locator('tbody tr')).toHaveCount(2);
 
     const [download] = await Promise.all([
@@ -249,7 +247,7 @@ test.describe('Given an administrator on the backups page', () => {
     await page.goto('/sprava/zalohy');
 
     await expect(page.getByRole('alert').filter({ hasText: /\S/ })).toContainText(
-      'Backend nevidí složku záloh.',
+      'Web teď nevidí složku se zálohami',
     );
     await expect(page.getByRole('button', { name: 'Zálohovat teď' })).toBeDisabled();
     await expect(page.getByRole('button', { name: 'Ověřit obnovu teď' })).toBeDisabled();

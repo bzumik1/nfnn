@@ -185,9 +185,19 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
   private readonly slugOrDraft = signal('');
   protected readonly publicAddressHint = computed(() => {
     const slug = this.slugOrDraft().trim();
-    return slug === ''
-      ? $localize`:@@admin.newsEditor.slug.hint.empty:Doplní se z titulku; malá písmena bez diakritiky a pomlčky.`
-      : $localize`:@@admin.newsEditor.slug.hint:Aktualita bude na nfnn.cz/aktuality/${slug}:slug:. Můžete upravit.`;
+    const address =
+      slug === ''
+        ? $localize`:@@admin.newsEditor.slug.hint.empty:Doplní se z titulku; malá písmena bez diakritiky a pomlčky.`
+        : $localize`:@@admin.newsEditor.slug.hint:Aktualita bude na nfnn.cz/aktuality/${slug}:slug:. Můžete upravit.`;
+    const saved = this.article();
+    if (saved?.publishedOn == null || slug === saved.slug) {
+      return address;
+    }
+    return `${address} ${$localize`:@@admin.newsEditor.slug.hint.oldLink:Pozor: dosavadní odkaz nfnn.cz/aktuality/${saved.slug}:oldSlug: po uložení přestane fungovat.`}`;
+  });
+  protected readonly altMissing = computed(() => {
+    const cover = this.article()?.coverImage;
+    return cover != null && cover.alt === null && !this.coverUnsaved();
   });
 
   constructor() {

@@ -61,7 +61,7 @@ test.describe('Given an administrator on the settings page', () => {
     await expect(page.getByRole('group', { name: 'Uložit nastavení?' })).toContainText(
       'web restartuje',
     );
-    await page.getByRole('button', { name: 'Ano, uložit a restartovat' }).click();
+    await page.getByRole('button', { name: 'Uložit a restartovat' }).click();
 
     await expect(page.locator('.ui-notice--status')).toHaveText(
       'Nastavení je uložené a web po restartu běží s ním.',
@@ -103,7 +103,7 @@ test.describe('Given an administrator on the settings page', () => {
     );
 
     await page.goto('/sprava/nastaveni');
-    const card = page.getByRole('group', { name: 'Sken podpisu' });
+    const card = page.getByRole('region', { name: 'Podpis na potvrzeních' });
     await expect(card).toContainText('Podpis není nahraný.');
 
     await card.getByLabel('Nahrát sken').setInputFiles({
@@ -120,7 +120,10 @@ test.describe('Given an administrator on the settings page', () => {
 
     await card.getByRole('button', { name: 'Odebrat podpis' }).click();
     await expect(card.getByRole('group', { name: 'Odebrat podpis?' })).toContainText('bez podpisu');
-    await card.getByRole('button', { name: 'Ano, odebrat' }).click();
+    await card
+      .getByRole('group', { name: 'Odebrat podpis?' })
+      .getByRole('button', { name: 'Odebrat podpis' })
+      .click();
 
     await expect(card.getByRole('status')).toHaveText(
       'Podpis je odebraný. Potvrzení vystavená od teď ho nebudou mít.',

@@ -195,9 +195,19 @@ export class AdminProjectEditor implements GuardsUnsavedChanges {
   private readonly slugOrDraft = signal('');
   protected readonly publicAddressHint = computed(() => {
     const slug = this.slugOrDraft().trim();
-    return slug === ''
-      ? $localize`:@@admin.projectEditor.slug.hint.empty:Doplní se z titulku; malá písmena bez diakritiky a pomlčky.`
-      : $localize`:@@admin.projectEditor.slug.hint:Projekt bude na nfnn.cz/projekty/${slug}:slug:. Můžete upravit.`;
+    const address =
+      slug === ''
+        ? $localize`:@@admin.projectEditor.slug.hint.empty:Doplní se z titulku; malá písmena bez diakritiky a pomlčky.`
+        : $localize`:@@admin.projectEditor.slug.hint:Projekt bude na nfnn.cz/projekty/${slug}:slug:. Můžete upravit.`;
+    const saved = this.project();
+    if (saved?.publishedOn == null || slug === saved.slug) {
+      return address;
+    }
+    return `${address} ${$localize`:@@admin.projectEditor.slug.hint.oldLink:Pozor: dosavadní odkaz nfnn.cz/projekty/${saved.slug}:oldSlug: po uložení přestane fungovat.`}`;
+  });
+  protected readonly altMissing = computed(() => {
+    const cover = this.project()?.coverImage;
+    return cover != null && cover.alt === null && !this.coverUnsaved();
   });
 
   constructor() {
