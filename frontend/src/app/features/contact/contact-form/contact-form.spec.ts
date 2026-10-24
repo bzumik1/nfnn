@@ -77,6 +77,55 @@ describe('Given the contact form', () => {
     expect(element('form')).toBeNull();
   });
 
+  describe('when a message is sent', () => {
+    beforeEach(async () => {
+      document.body.appendChild(fixture.nativeElement);
+      await fillInValidMessage();
+      await submit();
+      http.expectOne('/api/contact/messages').flush(null, { status: 202, statusText: 'Accepted' });
+      fixture.detectChanges();
+      await fixture.whenStable();
+    });
+
+    afterEach(() => fixture.nativeElement.remove());
+
+    it('then the status region that was there before announces the thanks and where the reply goes', () => {
+      const status = element('[role="status"]');
+
+      expect(status.textContent?.replace(/\s+/g, ' ')).toContain(
+        'Zpráva odeslána! Děkujeme za zprávu. Odpovíme vám e-mailem na jana@example.cz.',
+      );
+    });
+
+    it('then the focus moves to the thank-you heading', () => {
+      expect(document.activeElement).toBe(element('.form-success-title'));
+    });
+
+    it('and they choose to send another one, then an empty form returns with the focus in the name field', async () => {
+      element<HTMLButtonElement>('.form-success-again').click();
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      expect(element<HTMLInputElement>('#contact-name').value).toBe('');
+      expect(document.activeElement).toBe(element('#contact-name'));
+      expect(element('[role="status"]').textContent?.trim()).toBe('');
+    });
+  });
+
+  it('when it is shown, then the name and e-mail fields carry no example values that could look filled in', () => {
+    expect(element('#contact-name').hasAttribute('placeholder')).toBe(false);
+    expect(element('#contact-email').hasAttribute('placeholder')).toBe(false);
+  });
+
+  it('when the message is on its way, then the button says the foundation is sending it', async () => {
+    await fillInValidMessage();
+
+    await submit();
+
+    expect(element('.form-submit').textContent?.trim()).toBe('Odesíláme…');
+    http.expectOne('/api/contact/messages').flush(null, { status: 202, statusText: 'Accepted' });
+  });
+
   it('when submitted with an empty required field, then nothing is sent and that field says what is missing', async () => {
     await fillIn('#contact-name', 'Jana Nováková');
     await fillIn('#contact-email', 'jana@example.cz');
@@ -116,6 +165,7 @@ describe('Given the contact form', () => {
 
     expect(element('form')).not.toBeNull();
     expect(element('.form-error').textContent).toContain('příliš mnoho zpráv');
+    expect(element('.form-error a')?.getAttribute('href')).toBe('mailto:info@nfnn.cz');
   });
 
   it('when the server fails, then the form stays with a generic error and can be sent again', async () => {
@@ -128,6 +178,7 @@ describe('Given the contact form', () => {
     fixture.detectChanges();
 
     expect(element('.form-error').textContent).toContain('nepodařilo odeslat');
+    expect(element('.form-error a')?.getAttribute('href')).toBe('mailto:info@nfnn.cz');
     expect(element<HTMLButtonElement>('.form-submit').disabled).toBe(false);
   });
 
