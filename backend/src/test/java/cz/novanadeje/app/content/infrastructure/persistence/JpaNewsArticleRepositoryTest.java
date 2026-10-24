@@ -45,7 +45,8 @@ class JpaNewsArticleRepositoryTest {
         MediaImage image = image();
         media.save(image);
         NewsArticle article = NewsArticle.create(NewsArticleId.newId(NOW),
-                new NewsContent(new Slug("dominik"), "Dominik", Optional.of("Projekt"), "Perex", "Text\n\nDruhý odstavec", Optional.of(image.id())), NOW);
+                new NewsContent(new Slug("dominik"), "Dominik", Optional.of("Projekt"), "Perex", "Text\n\nDruhý odstavec", Optional.of(image.id()),
+                        Optional.of("Dominik na novém vozíku")), NOW);
 
         news.save(article);
         flushAndClear();

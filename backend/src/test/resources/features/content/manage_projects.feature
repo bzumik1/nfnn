@@ -31,11 +31,12 @@ Feature: An administrator writes projects, the stories of the children the found
   Scenario: Published projects are listed by year, the newest year first, and withdrawing takes one down
     Given "Jana" uploads a 1600 by 1000 pixel PNG image named "dominik.png"
     And "Jana" creates a project:
-      | title      | Dominik, 7 let |
-      | year       | 2024           |
-      | perex      | Perex.         |
-      | body       | Text.          |
-      | coverImage | {uploaded}     |
+      | title         | Dominik, 7 let          |
+      | year          | 2024                    |
+      | perex         | Perex.                  |
+      | body          | Text.                   |
+      | coverImage    | {uploaded}              |
+      | coverImageAlt | Dominik na novém vozíku |
     And "Jana" creates a project:
       | title | Tomáš, 9 let |
       | year  | 2023         |
@@ -51,6 +52,7 @@ Feature: An administrator writes projects, the stories of the children the found
     And the project says:
       | publishedOn    | 2026-10-23                    |
       | coverImage.url | /api/content/media/{uploaded} |
+      | coverImage.alt | Dominik na novém vozíku       |
     And the admin action "PUBLISH_PROJECT" by "Jana" on the project "dominik-7-let" is recorded with details containing "zveřejněn od 2026-10-23"
     When "Jana" publishes the project "tomas-9-let" on 2026-10-01
     And "Jana" publishes the project "eliska-6-let" on 2026-09-01

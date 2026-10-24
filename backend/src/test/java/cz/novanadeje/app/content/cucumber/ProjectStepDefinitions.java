@@ -173,6 +173,9 @@ public class ProjectStepDefinitions {
         if (fields.containsKey("coverImage")) {
             body.put("coverImageId", images.resolve(fields.get("coverImage")));
         }
+        if (fields.containsKey("coverImageAlt")) {
+            body.put("coverImageAlt", fields.get("coverImageAlt"));
+        }
         return body;
     }
 

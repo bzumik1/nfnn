@@ -1,0 +1,32 @@
+<p class="ui-callout ui-callout--warning warning" i18n="@@ui.markdown.preview.warning">
+  Text můžete formátovat tlačítky nad polem: tučně, kurzívou, nadpisy, seznamy a odkazy. Před
+  zveřejněním si zkontrolujte v náhledu, jak bude na webu vypadat. Obyčejný text bez značek se ukáže
+  tak, jak ho napíšete.
+</p>
+<button
+  type="button"
+  class="ui-button ui-button--small"
+  [attr.aria-expanded]="open()"
+  [attr.aria-controls]="previewId()"
+  (click)="toggle()"
+>
+  @if (open()) {
+    <ng-container i18n="@@ui.markdown.preview.hide">Skrýt náhled</ng-container>
+  } @else {
+    <ng-container i18n="@@ui.markdown.preview.show">Ukázat náhled</ng-container>
+  }
+</button>
+<div
+  class="preview"
+  role="region"
+  aria-label="Náhled textu"
+  i18n-aria-label="@@ui.markdown.preview.label"
+  [id]="previewId()"
+  [hidden]="!open()"
+>
+  @if (empty()) {
+    <p class="preview-empty" i18n="@@ui.markdown.preview.empty">Zatím není co ukázat.</p>
+  } @else {
+    <app-markdown [text]="text()" />
+  }
+</div>

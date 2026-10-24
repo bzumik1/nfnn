@@ -7,16 +7,16 @@ import cz.novanadeje.app.content.domain.Slug;
 import java.util.Optional;
 
 public record ProjectCommand(String title, int year, Optional<String> slug, Optional<String> tag, String perex, String body,
-                             Optional<MediaId> coverImage) {
+                             Optional<MediaId> coverImage, Optional<String> coverImageAlt) {
 
     public ProjectCommand {
-        if (slug == null || tag == null || coverImage == null) {
-            throw new IllegalArgumentException("A project command carries the optional slug, tag and cover image even when absent");
+        if (slug == null || tag == null || coverImage == null || coverImageAlt == null) {
+            throw new IllegalArgumentException("A project command carries the optional slug, tag, cover image and its description even when absent");
         }
     }
 
     ProjectContent toContent() {
         Slug chosen = slug.map(String::trim).filter(value -> !value.isEmpty()).map(Slug::new).orElseGet(() -> Slug.fromText(title));
-        return new ProjectContent(chosen, title, year, tag, perex, body, coverImage);
+        return new ProjectContent(chosen, title, year, tag, perex, body, coverImage, coverImageAlt);
     }
 }

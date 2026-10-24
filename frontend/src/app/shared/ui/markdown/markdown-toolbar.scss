@@ -1,0 +1,18 @@
+:host {
+  display: block;
+}
+
+.tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1-5);
+  margin-bottom: var(--space-2);
+}
+
+.tool--bold {
+  font-weight: var(--weight-extrabold);
+}
+
+.tool--italic {
+  font-style: italic;
+}

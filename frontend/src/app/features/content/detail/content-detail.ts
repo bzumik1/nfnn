@@ -18,6 +18,7 @@ import { Observable } from 'rxjs';
 import { problemTypeEndsWith } from '../../../core/auth/api-problem';
 import { formatDonationDate } from '../../donations/donation-date';
 import { mediaUrl, NewsApi, NewsArticleResponse } from '../news-api';
+import { Markdown } from '../../../shared/ui/markdown/markdown';
 import { NotFound } from '../not-found/not-found';
 import { ProjectResponse, ProjectsApi } from '../projects-api';
 
@@ -29,8 +30,9 @@ interface Page {
   title: string;
   eyebrow: string;
   perex: string;
-  paragraphs: string[];
+  body: string;
   imageId: string | null;
+  imageAlt: string;
   backFragment: string;
 }
 
@@ -40,7 +42,7 @@ const SITE_NAME = $localize`:@@content.detail.siteName:Nová naděje – nadačn
 
 @Component({
   selector: 'app-content-detail',
-  imports: [RouterLink, NotFound],
+  imports: [RouterLink, NotFound, Markdown],
   templateUrl: './content-detail.html',
   styleUrl: './content-detail.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -131,8 +133,9 @@ function newsPage(article: NewsArticleResponse): Page {
     title: article.title,
     eyebrow: article.tag ? `${article.tag} · ${date}` : date,
     perex: article.perex,
-    paragraphs: paragraphs(article.body),
+    body: article.body,
     imageId: article.coverImage?.id ?? null,
+    imageAlt: article.coverImage?.alt ?? '',
     backFragment: 'aktuality',
   };
 }
@@ -142,15 +145,9 @@ function projectPage(project: ProjectResponse): Page {
     title: project.title,
     eyebrow: project.tag ? `${project.tag} · ${project.year}` : String(project.year),
     perex: project.perex,
-    paragraphs: paragraphs(project.body),
+    body: project.body,
     imageId: project.coverImage?.id ?? null,
+    imageAlt: project.coverImage?.alt ?? '',
     backFragment: 'projekty',
   };
-}
-
-export function paragraphs(body: string): string[] {
-  return body
-    .split(/\n\s*\n/)
-    .map((paragraph) => paragraph.trim())
-    .filter((paragraph) => paragraph !== '');
 }

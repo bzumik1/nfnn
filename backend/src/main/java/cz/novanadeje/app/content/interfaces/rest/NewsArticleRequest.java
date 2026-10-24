@@ -17,10 +17,11 @@ public record NewsArticleRequest(
         @Size(max = NewsContent.MAX_TAG_LENGTH) String tag,
         @NotBlank @Size(max = NewsContent.MAX_PEREX_LENGTH) String perex,
         @NotBlank @Size(max = NewsContent.MAX_BODY_LENGTH) String body,
-        UUID coverImageId) {
+        UUID coverImageId,
+        @Size(max = NewsContent.MAX_COVER_IMAGE_ALT_LENGTH) String coverImageAlt) {
 
     NewsArticleCommand toCommand() {
         return new NewsArticleCommand(title, Optional.ofNullable(slug), Optional.ofNullable(tag), perex, body,
-                Optional.ofNullable(coverImageId).map(MediaId::new));
+                Optional.ofNullable(coverImageId).map(MediaId::new), Optional.ofNullable(coverImageAlt));
     }
 }

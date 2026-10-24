@@ -99,7 +99,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
       tag: 'Projekt',
       perex: 'Stavíme zahradu, kde si děti budou hrát.',
       body: 'První odstavec.\n\nDruhý odstavec.',
-      coverImage: { id: imageId, url: `/api/content/media/${imageId}` },
+      coverImage: { id: imageId, url: `/api/content/media/${imageId}`, alt: null },
       publishedOn: '2026-10-20',
       createdAt: '2026-10-19T09:00:00Z',
       updatedAt: '2026-10-20T07:30:00Z',
@@ -1161,7 +1161,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
       tag: 'Projekt',
       perex: 'Stavíme zahradu, kde si děti budou hrát.',
       body: 'První odstavec.\n\nDruhý odstavec.',
-      coverImage: { id: imageId, url: `/api/content/media/${imageId}` },
+      coverImage: { id: imageId, url: `/api/content/media/${imageId}`, alt: null },
       publishedOn: '2026-10-20',
       createdAt: '2026-10-19T09:00:00Z',
       updatedAt: '2026-10-20T07:30:00Z',
@@ -1220,6 +1220,8 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     await page.goto(`/sprava/aktuality/${articleId}`);
     await expect(page.getByRole('heading', { level: 1, name: 'Úprava aktuality' })).toBeFocused();
     await expect(page.locator('.image-preview')).toBeVisible();
+    await page.getByRole('button', { name: 'Ukázat náhled' }).click();
+    await expect(page.getByRole('region', { name: 'Náhled textu' })).toBeVisible();
     await page.getByRole('button', { name: 'Smazat aktualitu' }).click();
     await expect(page.getByRole('group', { name: 'Smazat aktualitu?' })).toBeVisible();
 
@@ -1239,7 +1241,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
       tag: 'Kompenzační pomůcky',
       perex: 'Stavíme zahradu, kde si děti budou hrát.',
       body: 'První odstavec.\n\nDruhý odstavec.',
-      coverImage: { id: imageId, url: `/api/content/media/${imageId}` },
+      coverImage: { id: imageId, url: `/api/content/media/${imageId}`, alt: null },
       publishedOn: '2026-10-20',
       createdAt: '2026-10-19T09:00:00Z',
       updatedAt: '2026-10-20T07:30:00Z',

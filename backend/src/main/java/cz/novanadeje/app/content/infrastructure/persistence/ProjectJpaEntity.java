@@ -43,6 +43,9 @@ class ProjectJpaEntity {
     @Column(name = "cover_media_id")
     private UUID coverMediaId;
 
+    @Column(name = "cover_image_alt", length = ProjectContent.MAX_COVER_IMAGE_ALT_LENGTH)
+    private String coverImageAlt;
+
     @Column(name = "published_on")
     private LocalDate publishedOn;
 
@@ -65,6 +68,7 @@ class ProjectJpaEntity {
         entity.perex = article.content().perex();
         entity.body = article.content().body();
         entity.coverMediaId = article.content().coverImage().map(MediaId::value).orElse(null);
+        entity.coverImageAlt = article.content().coverImageAlt().orElse(null);
         entity.publishedOn = article.publishedOn().orElse(null);
         entity.createdAt = article.createdAt();
         entity.updatedAt = article.updatedAt();
@@ -73,7 +77,7 @@ class ProjectJpaEntity {
 
     Project toDomain() {
         ProjectContent content = new ProjectContent(new Slug(slug), title, year, Optional.ofNullable(tag), perex, body,
-                Optional.ofNullable(coverMediaId).map(MediaId::new));
+                Optional.ofNullable(coverMediaId).map(MediaId::new), Optional.ofNullable(coverImageAlt));
         return new Project(new ProjectId(id), content, Optional.ofNullable(publishedOn), createdAt, updatedAt);
     }
 }

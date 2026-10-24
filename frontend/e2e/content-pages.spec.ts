@@ -15,7 +15,7 @@ const article = {
   tag: 'Projekt',
   perex: 'Stavíme zahradu, kde si děti budou hrát.',
   body: 'První odstavec.\n\nDruhý odstavec.',
-  coverImage: { id: IMAGE_ID, url: `/api/content/media/${IMAGE_ID}` },
+  coverImage: { id: IMAGE_ID, url: `/api/content/media/${IMAGE_ID}`, alt: 'Děti sázejí stromek' },
   publishedOn: '2026-10-20',
   createdAt: '2026-10-19T09:00:00Z',
   updatedAt: '2026-10-20T07:30:00Z',
@@ -84,6 +84,7 @@ test.describe('Given a visitor on the home page', () => {
     await expect(page.locator('.ui-eyebrow')).toHaveText('Projekt · 20. 10. 2026');
     await expect(page.locator('.prose p')).toHaveText(['První odstavec.', 'Druhý odstavec.']);
     await expect(page.locator('.photo img')).toBeVisible();
+    await expect(page.locator('.photo img')).toHaveAttribute('alt', 'Děti sázejí stromek');
 
     await page.getByRole('link', { name: '← Všechny aktuality' }).click();
 

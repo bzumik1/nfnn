@@ -56,11 +56,12 @@ Feature: An administrator writes news articles with photos and publishes them on
   Scenario: Publishing with a date puts the article on the site, newest first, and withdrawing takes it down
     Given "Jana" uploads a 1600 by 1000 pixel PNG image named "zahrada.png"
     And "Jana" creates a news article:
-      | title      | Zahrada pro děti                 |
-      | tag        | Projekt                          |
-      | perex      | Stavíme zahradu.                 |
-      | body       | Text o zahradě.                  |
-      | coverImage | {uploaded}                       |
+      | title         | Zahrada pro děti    |
+      | tag           | Projekt             |
+      | perex         | Stavíme zahradu.    |
+      | body          | Text o zahradě.     |
+      | coverImage    | {uploaded}          |
+      | coverImageAlt | Děti sázejí stromek |
     And "Jana" creates a news article:
       | title | Benefiční koncert       |
       | perex | Zveme vás na koncert.   |
@@ -72,6 +73,7 @@ Feature: An administrator writes news articles with photos and publishes them on
       | tag            | Projekt    |
       | coverImage.id  | {uploaded} |
       | coverImage.url | /api/content/media/{uploaded} |
+      | coverImage.alt | Děti sázejí stromek           |
     And the admin action "PUBLISH_NEWS" by "Jana" on the news article "zahrada-pro-deti" is recorded with details containing "zveřejněna od 2026-10-20"
     When "Jana" publishes the news article "beneficni-koncert" on 2026-10-23
     And someone without a token asks for the news articles
@@ -227,6 +229,13 @@ Feature: An administrator writes news articles with photos and publishes them on
       | body  | Text.        |
     Then the response status is 400
     And the problem lists an error for field "slug"
+    When "Jana" creates a news article:
+      | title         | Titulek |
+      | perex         | Perex.  |
+      | body          | Text.   |
+      | coverImageAlt | xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx |
+    Then the response status is 400
+    And the problem lists an error for field "coverImageAlt"
     When "Jana" creates a news article:
       | title      | Titulek                              |
       | perex      | Perex.                               |

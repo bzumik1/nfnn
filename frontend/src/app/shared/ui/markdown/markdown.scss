@@ -1,0 +1,76 @@
+:host {
+  display: block;
+  max-width: 70ch;
+  color: var(--color-text-soft);
+  font-size: var(--text-2xl);
+  line-height: var(--leading-loose);
+}
+
+p,
+ul,
+ol,
+blockquote {
+  margin: 0;
+}
+
+* + p,
+* + ul,
+* + ol,
+* + blockquote {
+  margin-top: var(--space-5-5);
+}
+
+h2,
+h3 {
+  font-family: var(--font-serif);
+  color: var(--color-text);
+  line-height: var(--leading-heading);
+  margin: var(--space-10) 0 0;
+}
+
+h2 {
+  font-size: var(--text-4xl);
+  font-weight: var(--weight-bold);
+}
+
+h3 {
+  font-size: var(--text-3xl);
+  font-weight: var(--weight-semibold);
+}
+
+:host > :first-child {
+  margin-top: 0;
+}
+
+h2 + *,
+h3 + * {
+  margin-top: var(--space-3);
+}
+
+ul,
+ol {
+  padding-left: var(--space-6);
+}
+
+li + li {
+  margin-top: var(--space-1-5);
+}
+
+blockquote {
+  border-left: var(--space-1) solid var(--color-accent);
+  padding-left: var(--space-5);
+  color: var(--color-text-muted);
+  font-style: italic;
+}
+
+strong {
+  color: var(--color-text);
+  font-weight: var(--weight-semibold);
+}
+
+a {
+  color: var(--color-accent);
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+  overflow-wrap: anywhere;
+}

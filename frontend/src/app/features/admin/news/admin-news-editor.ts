@@ -20,9 +20,12 @@ import { LoginDialogService } from '../../../core/auth/login-dialog.service';
 import { FocusFirstInvalid } from '../../../shared/ui/form-field/focus-first-invalid';
 import { FormControlDirective } from '../../../shared/ui/form-field/form-control';
 import { FormField } from '../../../shared/ui/form-field/form-field';
+import { MarkdownPreview } from '../../../shared/ui/markdown/markdown-preview';
+import { MarkdownToolbar } from '../../../shared/ui/markdown/markdown-toolbar';
 import {
   CoverImageResponse,
   MAX_BODY_LENGTH,
+  MAX_COVER_IMAGE_ALT_LENGTH,
   MAX_IMAGE_BYTES,
   MAX_PEREX_LENGTH,
   MAX_SLUG_LENGTH,
@@ -55,6 +58,8 @@ const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
     FormField,
     FormControlDirective,
     FocusFirstInvalid,
+    MarkdownToolbar,
+    MarkdownPreview,
   ],
   templateUrl: './admin-news-editor.html',
   styleUrl: './admin-news-editor.scss',
@@ -76,6 +81,7 @@ export class AdminNewsEditor {
   protected readonly maxTagLength = MAX_TAG_LENGTH;
   protected readonly maxPerexLength = MAX_PEREX_LENGTH;
   protected readonly maxBodyLength = MAX_BODY_LENGTH;
+  protected readonly maxAltLength = MAX_COVER_IMAGE_ALT_LENGTH;
   protected readonly slugPattern = SLUG_PATTERN;
 
   protected readonly state = signal<LoadState>('loading');
@@ -110,12 +116,16 @@ export class AdminNewsEditor {
     required: $localize`:@@admin.newsEditor.body.required:Napište prosím text aktuality.`,
     maxlength: $localize`:@@admin.newsEditor.body.tooLong:Text může mít nejvíc ${MAX_BODY_LENGTH}:max: znaků.`,
   };
+  protected readonly altMessages = {
+    maxlength: $localize`:@@admin.newsEditor.imageAlt.tooLong:Popis fotky může mít nejvíc ${MAX_COVER_IMAGE_ALT_LENGTH}:max: znaků.`,
+  };
 
   protected articleTitle = '';
   protected slug = '';
   protected tag = '';
   protected perex = '';
   protected body = '';
+  protected coverImageAlt = '';
   protected publishDate = todayIso();
   private slugEdited = false;
 
@@ -268,7 +278,7 @@ export class AdminNewsEditor {
       .subscribe({
         next: (uploaded) => {
           this.uploading.set(false);
-          this.coverImage.set({ id: uploaded.id, url: uploaded.url });
+          this.coverImage.set({ id: uploaded.id, url: uploaded.url, alt: null });
         },
         error: (failure: unknown) => {
           this.uploading.set(false);
@@ -284,6 +294,7 @@ export class AdminNewsEditor {
 
   protected removeImage(): void {
     this.coverImage.set(null);
+    this.coverImageAlt = '';
     this.uploadError.set(null);
   }
 
@@ -398,12 +409,14 @@ export class AdminNewsEditor {
     this.perex = article.perex;
     this.body = article.body;
     this.coverImage.set(article.coverImage);
+    this.coverImageAlt = article.coverImage?.alt ?? '';
     this.publishDate = article.publishedOn ?? todayIso();
   }
 
   private request(): NewsArticleRequest {
     const slug = this.slug.trim();
     const tag = this.tag.trim();
+    const alt = this.coverImageAlt.trim();
     return {
       title: this.articleTitle.trim(),
       slug: slug === '' ? null : slug,
@@ -411,6 +424,7 @@ export class AdminNewsEditor {
       perex: this.perex.trim(),
       body: this.body.trim(),
       coverImageId: this.coverImage()?.id ?? null,
+      coverImageAlt: this.coverImage() && alt !== '' ? alt : null,
     };
   }
 

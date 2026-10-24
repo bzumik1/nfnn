@@ -153,7 +153,7 @@ class NewsAdminServiceTest {
     }
 
     private static NewsArticleCommand command(String title, Optional<String> slug, Optional<MediaId> image) {
-        return new NewsArticleCommand(title, slug, Optional.of("Projekt"), "Perex", "Text", image);
+        return new NewsArticleCommand(title, slug, Optional.of("Projekt"), "Perex", "Text", image, Optional.empty());
     }
 
     private static NewsContent content(String slug, Optional<MediaId> image) {

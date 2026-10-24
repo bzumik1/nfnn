@@ -153,7 +153,7 @@ class ProjectAdminServiceTest {
     }
 
     private static ProjectCommand command(String title, Optional<String> slug, Optional<MediaId> image) {
-        return new ProjectCommand(title, 2024, slug, Optional.of("Projekt"), "Perex", "Text", image);
+        return new ProjectCommand(title, 2024, slug, Optional.of("Projekt"), "Perex", "Text", image, Optional.empty());
     }
 
     private static ProjectContent content(String slug, Optional<MediaId> image) {

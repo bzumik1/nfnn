@@ -5,16 +5,18 @@ import cz.novanadeje.app.content.domain.media.MediaId;
 
 import java.util.Optional;
 
-public record NewsContent(Slug slug, String title, Optional<String> tag, String perex, String body, Optional<MediaId> coverImage) {
+public record NewsContent(Slug slug, String title, Optional<String> tag, String perex, String body, Optional<MediaId> coverImage,
+                          Optional<String> coverImageAlt) {
 
     public static final int MAX_TITLE_LENGTH = 120;
     public static final int MAX_TAG_LENGTH = 40;
     public static final int MAX_PEREX_LENGTH = 300;
     public static final int MAX_BODY_LENGTH = 20_000;
+    public static final int MAX_COVER_IMAGE_ALT_LENGTH = 200;
 
     public NewsContent {
-        if (slug == null || tag == null || coverImage == null) {
-            throw new IllegalArgumentException("News content has a slug, a tag (even when absent) and a cover image (even when absent)");
+        if (slug == null || tag == null || coverImage == null || coverImageAlt == null) {
+            throw new IllegalArgumentException("News content has a slug, a tag, a cover image and its description (each even when absent)");
         }
         title = requireText(title, "title", MAX_TITLE_LENGTH);
         perex = requireText(perex, "perex", MAX_PEREX_LENGTH);
@@ -23,6 +25,14 @@ public record NewsContent(Slug slug, String title, Optional<String> tag, String 
         if (tag.isPresent() && tag.get().length() > MAX_TAG_LENGTH) {
             throw new IllegalArgumentException("The tag of a news article is at most " + MAX_TAG_LENGTH + " characters");
         }
+        coverImageAlt = coverImage.isEmpty() ? Optional.empty() : coverImageAlt.map(String::strip).filter(value -> !value.isEmpty());
+        if (coverImageAlt.isPresent() && coverImageAlt.get().length() > MAX_COVER_IMAGE_ALT_LENGTH) {
+            throw new IllegalArgumentException("The photo description of a news article is at most " + MAX_COVER_IMAGE_ALT_LENGTH + " characters");
+        }
+    }
+
+    public NewsContent(Slug slug, String title, Optional<String> tag, String perex, String body, Optional<MediaId> coverImage) {
+        this(slug, title, tag, perex, body, coverImage, Optional.empty());
     }
 
     private static String requireText(String value, String name, int maxLength) {
