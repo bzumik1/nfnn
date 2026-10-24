@@ -51,7 +51,16 @@ td.admin-col {
   min-width: 200px;
 }
 
+.summary {
+  display: block;
+  color: var(--color-text);
+  font-size: var(--text-md);
+  line-height: var(--leading-normal);
+  overflow-wrap: anywhere;
+}
+
 .details {
+  margin-top: var(--space-1-5);
   color: var(--color-text-muted);
   font-size: var(--text-sm);
   word-break: break-word;

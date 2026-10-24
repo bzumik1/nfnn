@@ -84,12 +84,10 @@ export function registerReadingTools(server: McpServer, deps: ToolDependencies):
     {
       title: 'Platby z banky',
       description:
-        'Incoming bank payments, newest first, a page at a time: "unpaired" are the payments no donation references; "paired" are the donations of a year with their payments and donors. `total` counts every payment that matches, so page on with `offset`.',
+        'Incoming bank payments, newest first, a page at a time: "unpaired" are the payments no donation references; "paired" are the donations with their payments and donors, of one year or of every year. `query` also finds an amount in crowns (e.g. "500" or "1 000,50"). `total` counts every payment that matches, so page on with `offset`.',
       inputSchema: z.object({
         pairing: z.enum(['unpaired', 'paired']).default('unpaired'),
-        year: YEAR.optional().describe(
-          'For "paired": the year; the newest year with a donation when omitted.',
-        ),
+        year: YEAR.optional().describe('For "paired": only this year; every year when omitted.'),
         query: z
           .string()
           .trim()
@@ -214,7 +212,8 @@ export function registerReadingTools(server: McpServer, deps: ToolDependencies):
     'nfnn_admin_actions',
     {
       title: 'Historie změn',
-      description: 'The audit trail of the administration, newest first: who did what and when.',
+      description:
+        'The audit trail of the administration, newest first: who did what and when. `summary` says each change in a sentence (in Czech), `donorId` names the donor it concerned, `details` keeps the stored text with the ids.',
       inputSchema: z.object({
         before: z
           .string()

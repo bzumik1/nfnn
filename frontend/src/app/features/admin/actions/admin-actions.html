@@ -70,7 +70,7 @@
                   </td>
                   <td data-label="Zásah" i18n-data-label="@@admin.actions.col.action">
                     <span class="admin-name">{{ actionName(item) }}</span>
-                    @if (donorId(item); as donorId) {
+                    @if (item.donorId; as donorId) {
                       <a
                         class="donor-link"
                         [routerLink]="['/sprava/darci', donorId]"
@@ -80,6 +80,7 @@
                     }
                   </td>
                   <td data-label="Podrobnosti" i18n-data-label="@@admin.actions.col.details">
+                    <span class="summary">{{ item.summary }}</span>
                     <details class="details">
                       <summary i18n="@@admin.actions.details.summary">
                         Technické podrobnosti

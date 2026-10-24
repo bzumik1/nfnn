@@ -29,6 +29,9 @@ describe('Given an administrator on the history page', () => {
   const granted = adminAction({
     id: '019a1c00-0000-7000-8000-00000000e002',
     action: 'GRANT_ADMINISTRATION',
+    subjectId: '019a1c00-0000-7000-8000-00000000a002',
+    donorId: '019a1c00-0000-7000-8000-00000000a002',
+    summary: 'Role správce udělena dárci Petr Svoboda.',
     details: 'Role správce udělena dárci 019a1c00-0000-7000-8000-00000000a002',
     performedAt: '2026-10-21T15:20:00Z',
   });
@@ -38,7 +41,10 @@ describe('Given an administrator on the history page', () => {
     adminName: null,
     adminEmail: null,
     action: 'SOMETHING_NEW',
-    details: 'details',
+    subjectId: null,
+    donorId: null,
+    summary: 'Something new happened',
+    details: 'Something new happened',
     performedAt: '2026-10-20T15:20:00Z',
   });
 
@@ -94,7 +100,7 @@ describe('Given an administrator on the history page', () => {
     fixture.detectChanges();
   }
 
-  it('when the first page arrives, then every change shows when, who and what in Czech, with the details collapsed', () => {
+  it('when the first page arrives, then every change shows when, who, what and a Czech sentence from the server, with the technical details collapsed', () => {
     expect(text('[role="status"]')).toBe('Načítáme historii…');
 
     firstPage();
@@ -105,10 +111,13 @@ describe('Given an administrator on the history page', () => {
     expect(rowText(first)).toContain('jana@example.cz');
     expect(rowText(first)).toContain('Přiřazení platby dárci');
     expect(rowText(first)).not.toContain('PAIR_PAYMENT');
-    expect(rowText(first)).toContain('ručně přiřazena dárci');
+    expect(rowText(first.querySelector('.summary') as HTMLElement)).toBe(
+      'Platba 500 Kč ze dne 10. 10. 2026 ručně přiřazena dárci Jana Nováková.',
+    );
     const details = first.querySelector('details') as HTMLDetailsElement;
     expect(details.open).toBe(false);
     expect(details.querySelector('summary')?.textContent?.trim()).toBe('Technické podrobnosti');
+    expect(rowText(details)).toContain('Money[amountMinor=50000, currency=CZK]');
     expect(first.querySelector('.details')?.closest('[lang]')?.getAttribute('lang')).not.toBe('en');
     expect(rowText(second)).toContain('Přidání správce');
     expect(rowText(third)).toContain('správce bez účtu');
@@ -119,21 +128,26 @@ describe('Given an administrator on the history page', () => {
     expect(fixture.nativeElement.querySelector('.admin-more')).toBeNull();
   });
 
-  it('when a change concerns a donor, then the row links to the donor card and a payment change does not', () => {
+  it('when a change names the donor it concerned, then the row links to the donor card and a change without a donor does not', () => {
     firstPage([
       paired,
       adminAction({
         id: '019a1c00-0000-7000-8000-00000000e007',
         action: 'RESET_SECOND_FACTOR',
         subjectId: '019a1c00-0000-7000-8000-00000000a002',
+        donorId: '019a1c00-0000-7000-8000-00000000a002',
       }),
+      byFormer,
     ]);
 
-    const [payment, donor] = rows();
-    expect(payment.querySelector('a')).toBeNull();
+    const [payment, donor, other] = rows();
+    expect(payment.querySelector('a')?.getAttribute('href')).toBe(
+      '/sprava/darci/01a18e56-bdb0-775a-bd0a-a60756831369',
+    );
     const link = donor.querySelector('a') as HTMLAnchorElement;
     expect(link.textContent?.trim()).toBe('Otevřít kartu dárce');
     expect(link.getAttribute('href')).toBe('/sprava/darci/019a1c00-0000-7000-8000-00000000a002');
+    expect(other.querySelector('a')).toBeNull();
   });
 
   it('when the backup schedule was changed, then the change is named in Czech', () => {

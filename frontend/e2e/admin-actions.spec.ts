@@ -12,8 +12,12 @@ function action(overrides: Record<string, unknown>) {
     adminEmail: 'jana@example.cz',
     action: 'PAIR_PAYMENT',
     subjectId: '019a1c00-0000-7000-8000-000000001001',
-    details: 'Platba 019a1c00-0000-7000-8000-000000001001 ručně přiřazena dárci',
+    donorId: administrator.id,
+    summary: 'Platba 500 Kč ze dne 10. 10. 2026 ručně přiřazena dárci Jana Nováková.',
+    details:
+      'Platba 1001 (Money[amountMinor=50000, currency=CZK], zaúčtována 2026-10-10) ručně přiřazena dárci 01a18e56-bdb0-775a-bd0a-a60756831369 jako dar 019a1c00-0000-7000-8000-00000000d001',
     performedAt: '2026-10-22T10:00:00Z',
+    client: null,
     ...overrides,
   };
 }
@@ -51,7 +55,12 @@ test.describe('Given an administrator on the history page', () => {
                   adminName: null,
                   adminEmail: null,
                   action: 'REVOKE_ADMINISTRATION',
-                  details: 'Donor 019a1c00-0000-7000-8000-00000000a002 lost the ADMIN role',
+                  subjectId: '019a1c00-0000-7000-8000-00000000a002',
+                  donorId: '019a1c00-0000-7000-8000-00000000a002',
+                  summary:
+                    'Role správce odebrána dárci Petr Svoboda; všechna přihlášení dárce skončila.',
+                  details:
+                    'Administrator role taken from donor 019a1c00-0000-7000-8000-00000000a002; every session of the donor was ended',
                   performedAt: '2026-10-20T08:00:00Z',
                 }),
               ],
@@ -66,7 +75,10 @@ test.describe('Given an administrator on the history page', () => {
               action({
                 id: '019a1c00-0000-7000-8000-00000000e002',
                 action: 'GRANT_ADMINISTRATION',
-                details: 'Donor 019a1c00-0000-7000-8000-00000000a002 granted the ADMIN role',
+                subjectId: '019a1c00-0000-7000-8000-00000000a002',
+                donorId: '019a1c00-0000-7000-8000-00000000a002',
+                summary: 'Role správce udělena dárci Petr Svoboda.',
+                details: 'Role správce udělena dárci 019a1c00-0000-7000-8000-00000000a002',
                 performedAt: '2026-10-21T15:20:00Z',
               }),
             ],
@@ -84,7 +96,22 @@ test.describe('Given an administrator on the history page', () => {
     await expect(page.locator('tbody tr').first()).toContainText('22. 10. 2026 12:00');
     await expect(page.locator('tbody tr').first()).toContainText('Jana Nováková');
     await expect(page.locator('tbody tr').first()).toContainText('Přiřazení platby dárci');
+    await expect(page.locator('tbody tr').first()).toContainText(
+      'Platba 500 Kč ze dne 10. 10. 2026 ručně přiřazena dárci Jana Nováková.',
+    );
+    await expect(
+      page
+        .locator('tbody tr')
+        .first()
+        .getByText(/Money\[/),
+    ).toBeHidden();
     await expect(page.locator('tbody tr').nth(1)).toContainText('Přidání správce');
+    await expect(page.locator('tbody tr').nth(1)).toContainText(
+      'Role správce udělena dárci Petr Svoboda.',
+    );
+    await expect(
+      page.locator('tbody tr').nth(1).getByRole('link', { name: 'Otevřít kartu dárce' }),
+    ).toHaveAttribute('href', '/sprava/darci/019a1c00-0000-7000-8000-00000000a002');
 
     await page.getByRole('button', { name: 'Načíst starší' }).click();
 
