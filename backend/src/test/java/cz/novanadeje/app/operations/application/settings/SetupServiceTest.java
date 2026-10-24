@@ -131,18 +131,28 @@ class SetupServiceTest {
 
         assertThatThrownBy(() -> setup.unlock(new SetupAccess(true, null))).isInstanceOf(SetupCompleted.class);
         assertThatThrownBy(() -> setup.complete(new SetupAccess(false, code.value()), ESSENTIALS)).isInstanceOf(SetupCompleted.class);
-        assertThatThrownBy(() -> setup.testMail(new SetupAccess(true, null), new MailServer("h", 25, "", "", false, false)))
-                .isInstanceOf(SetupCompleted.class);
+        assertThatThrownBy(() -> setup.sendTestEmail(new SetupAccess(true, null), new MailServer("h", 25, "", "", false, false),
+                new TestEmail("info@nfnn.cz", "spravce@example.cz"))).isInstanceOf(SetupCompleted.class);
         verifyNoInteractions(mailProbe);
     }
 
     @Test
-    @DisplayName("Given an open setup, when the mail server is tested, then the probe answers for it")
-    void should_probe_mail_when_tested_given_open_setup() {
+    @DisplayName("Given an open setup, when a test e-mail is sent, then it goes through the typed server to the typed administrator")
+    void should_send_test_email_when_asked_given_open_setup() {
         MailServer server = new MailServer("smtp-relay.brevo.com", 587, "user", "key", true, true);
-        when(mailProbe.canSignIn(server)).thenReturn(true);
+        TestEmail email = new TestEmail("info@nfnn.cz", "spravce@example.cz");
+        when(mailProbe.sendTestEmail(server, email)).thenReturn(TestEmailOutcome.SENT);
 
-        assertThat(setup.testMail(new SetupAccess(true, null), server)).isTrue();
+        assertThat(setup.sendTestEmail(new SetupAccess(true, null), server, email))
+                .isEqualTo(new TestEmailResult(TestEmailOutcome.SENT, "spravce@example.cz"));
+    }
+
+    @Test
+    @DisplayName("Given a locked setup, when a test e-mail is asked for without the code, then it is refused before anything is sent")
+    void should_refuse_test_email_when_asked_given_locked_setup() {
+        assertThatThrownBy(() -> setup.sendTestEmail(new SetupAccess(false, "WRONG"), new MailServer("h", 25, "", "", false, false),
+                new TestEmail("info@nfnn.cz", "x@example.cz"))).isInstanceOf(SetupLocked.class);
+        verifyNoInteractions(mailProbe);
     }
 
     private static final class FakeSetupState implements SetupStateRepository {

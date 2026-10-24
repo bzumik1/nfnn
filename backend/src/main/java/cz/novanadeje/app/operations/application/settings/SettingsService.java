@@ -6,11 +6,13 @@ import cz.novanadeje.app.operations.domain.settings.SettingError;
 import cz.novanadeje.app.operations.domain.settings.SettingProblem;
 import cz.novanadeje.app.operations.domain.settings.SettingsRejected;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
+import cz.novanadeje.app.shared.application.notification.AccountEmails;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionOperations;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -24,6 +26,7 @@ import java.util.stream.Collectors;
 public class SettingsService {
 
     static final String CHANGE_ACTION = "CHANGE_SETTINGS";
+    static final String TEST_EMAIL_ACTION = "SEND_TEST_EMAIL";
 
     private static final Logger log = LoggerFactory.getLogger(SettingsService.class);
 
@@ -31,18 +34,22 @@ public class SettingsService {
     private final CurrentSettings current;
     private final SecretSealer sealer;
     private final MailServerProbe mailProbe;
+    private final AccountEmails accountEmails;
     private final ApplicationRestarter restarter;
     private final ApplicationEventPublisher events;
+    private final TransactionOperations transaction;
     private final Clock clock;
 
-    public SettingsService(SettingsWriter writer, CurrentSettings current, SecretSealer sealer, MailServerProbe mailProbe,
-                           ApplicationRestarter restarter, ApplicationEventPublisher events, Clock clock) {
+    public SettingsService(SettingsWriter writer, CurrentSettings current, SecretSealer sealer, MailServerProbe mailProbe, AccountEmails accountEmails,
+                           ApplicationRestarter restarter, ApplicationEventPublisher events, TransactionOperations transaction, Clock clock) {
         this.writer = writer;
         this.current = current;
         this.sealer = sealer;
         this.mailProbe = mailProbe;
+        this.accountEmails = accountEmails;
         this.restarter = restarter;
         this.events = events;
+        this.transaction = transaction;
         this.clock = clock;
     }
 
@@ -79,13 +86,20 @@ public class SettingsService {
         return changed;
     }
 
-    @Transactional(readOnly = true)
-    public boolean testMail(MailServer server) {
+    public TestEmailResult sendTestEmail(UUID adminId, MailServer server, String sender) {
+        String recipient = accountEmails.emailOf(adminId).orElseThrow(() -> new IllegalStateException("An administrator without an e-mail"));
         boolean typed = server.password() != null && !server.password().isBlank();
         MailServer probed = !typed && isRunningServer(server)
                 ? server.withPassword(current.effectiveValue(Setting.MAIL_PASSWORD).orElse(""))
                 : server;
-        return mailProbe.canSignIn(probed);
+        TestEmail email = new TestEmail(sender, recipient);
+        TestEmailOutcome outcome = mailProbe.sendTestEmail(probed, email);
+        String details = "Zkušební e-mail na vlastní adresu přes " + server.host() + ":" + server.port() + " od " + email.sender() + ": "
+                + (outcome == TestEmailOutcome.SENT ? "odeslán" : "neodeslán (" + outcome + ")");
+        transaction.executeWithoutResult(status -> events.publishEvent(
+                new AdminActionPerformed(adminId, TEST_EMAIL_ACTION, Optional.empty(), details, clock.instant())));
+        log.info("Admin {} sent a test e-mail: {}", adminId, outcome);
+        return new TestEmailResult(outcome, recipient);
     }
 
     private void requirePasswordForAnotherMailServer(List<SettingChange> changes) {

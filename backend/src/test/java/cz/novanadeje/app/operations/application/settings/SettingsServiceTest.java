@@ -7,10 +7,12 @@ import cz.novanadeje.app.operations.domain.settings.SettingProblem;
 import cz.novanadeje.app.operations.domain.settings.SettingsRejected;
 import cz.novanadeje.app.operations.domain.settings.StoredSetting;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
+import cz.novanadeje.app.shared.application.notification.AccountEmails;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.transaction.support.TransactionOperations;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -41,8 +43,9 @@ class SettingsServiceTest {
     private final MailServerProbe mailProbe = mock(MailServerProbe.class);
     private final ApplicationRestarter restarter = mock(ApplicationRestarter.class);
     private final ApplicationEventPublisher events = mock(ApplicationEventPublisher.class);
+    private final AccountEmails accountEmails = mock(AccountEmails.class);
     private final SettingsService settings = new SettingsService(new SettingsWriter(repository, sealer, validator), current, sealer, mailProbe,
-            restarter, events, Clock.fixed(NOW, ZoneOffset.UTC));
+            accountEmails, restarter, events, TransactionOperations.withoutTransaction(), Clock.fixed(NOW, ZoneOffset.UTC));
 
     @Test
     @DisplayName("Given running values, when the settings are viewed, then plain values show, secrets only as set and unreadable ones are marked")
@@ -94,31 +97,50 @@ class SettingsServiceTest {
     }
 
     @Test
-    @DisplayName("Given no password typed, when the mail server is tested, then the running password is used")
-    void should_use_running_password_when_tested_given_no_password() {
+    @DisplayName("Given no password typed, when a test e-mail is sent through the running server, then the running password is used")
+    void should_use_running_password_when_test_email_sent_given_no_password() {
         runningMailServer();
         MailServer typed = new MailServer("smtp-relay.brevo.com", 587, "user", "", true, true);
-        when(mailProbe.canSignIn(typed.withPassword("running-key"))).thenReturn(true);
+        when(mailProbe.sendTestEmail(typed.withPassword("running-key"), new TestEmail("info@nfnn.cz", "jana@example.cz")))
+                .thenReturn(TestEmailOutcome.SENT);
 
-        assertThat(settings.testMail(typed)).isTrue();
+        assertThat(settings.sendTestEmail(ADMIN, typed, "info@nfnn.cz")).isEqualTo(new TestEmailResult(TestEmailOutcome.SENT, "jana@example.cz"));
     }
 
     @Test
-    @DisplayName("Given a stored password, when another mail server is tested without a password, then the stored password is not sent to it")
-    void should_not_send_running_password_when_tested_given_other_server_without_password() {
+    @DisplayName("Given a stored password, when a test e-mail goes through another server without a password, then the stored password is not sent to it")
+    void should_not_send_running_password_when_test_email_sent_given_other_server_without_password() {
         runningMailServer();
         MailServer elsewhere = new MailServer("smtp.attacker.example", 587, "user", "", true, true);
         MailServer otherUser = new MailServer("smtp-relay.brevo.com", 587, "someone-else", "", true, true);
         MailServer withoutTls = new MailServer("smtp-relay.brevo.com", 587, "user", "", true, false);
+        MailServer otherPort = new MailServer("smtp-relay.brevo.com", 2525, "user", "", true, true);
+        when(mailProbe.sendTestEmail(any(), any())).thenReturn(TestEmailOutcome.SIGN_IN_REFUSED);
 
-        settings.testMail(elsewhere);
-        settings.testMail(otherUser);
-        settings.testMail(withoutTls);
+        for (MailServer server : List.of(elsewhere, otherUser, withoutTls, otherPort)) {
+            settings.sendTestEmail(ADMIN, server, "info@nfnn.cz");
+            verify(mailProbe).sendTestEmail(server, new TestEmail("info@nfnn.cz", "jana@example.cz"));
+        }
+        verify(mailProbe, never()).sendTestEmail(argThat(server -> "running-key".equals(server.password())), any());
+    }
 
-        verify(mailProbe).canSignIn(elsewhere);
-        verify(mailProbe).canSignIn(otherUser);
-        verify(mailProbe).canSignIn(withoutTls);
-        verify(mailProbe, never()).canSignIn(argThat(server -> "running-key".equals(server.password())));
+    @Test
+    @DisplayName("Given a typed server, when an administrator sends a test e-mail, then it goes to their own address and is audited with the server and the outcome only")
+    void should_audit_without_password_when_test_email_sent_given_typed_server() {
+        runningMailServer();
+        when(mailProbe.sendTestEmail(any(), any())).thenReturn(TestEmailOutcome.SENDER_REFUSED);
+
+        TestEmailResult result = settings.sendTestEmail(ADMIN, new MailServer("smtp.example.cz", 2525, "user", "typed-key", true, true), "novy@nfnn.cz");
+
+        assertThat(result).isEqualTo(new TestEmailResult(TestEmailOutcome.SENDER_REFUSED, "jana@example.cz"));
+        ArgumentCaptor<AdminActionPerformed> audit = ArgumentCaptor.forClass(AdminActionPerformed.class);
+        verify(events).publishEvent(audit.capture());
+        assertThat(audit.getValue().adminId()).isEqualTo(ADMIN);
+        assertThat(audit.getValue().action()).isEqualTo(SettingsService.TEST_EMAIL_ACTION);
+        assertThat(audit.getValue().performedAt()).isEqualTo(NOW);
+        assertThat(audit.getValue().details()).contains("smtp.example.cz:2525", "novy@nfnn.cz", "SENDER_REFUSED")
+                .doesNotContain("typed-key", "jana@example.cz");
+        verifyNoInteractions(restarter);
     }
 
     @Test
@@ -168,6 +190,7 @@ class SettingsServiceTest {
         when(current.effectiveValue(Setting.MAIL_USERNAME)).thenReturn(Optional.of("user"));
         when(current.effectiveValue(Setting.MAIL_STARTTLS)).thenReturn(Optional.of("true"));
         when(current.effectiveValue(Setting.MAIL_PASSWORD)).thenReturn(Optional.of("running-key"));
+        when(accountEmails.emailOf(ADMIN)).thenReturn(Optional.of("jana@example.cz"));
     }
 
     private static SettingView viewOf(SettingsView view, Setting setting) {
