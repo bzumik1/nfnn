@@ -183,7 +183,7 @@ test.describe('Given an administrator on the monthly report page', () => {
             502,
             'donations/report-not-delivered',
             'Přehled se nepodařilo odeslat',
-            'Poštovní server e-mail odmítl. Ověřte odesílání e-mailů v Nastavení tlačítkem Ověřit spojení a zkuste to znovu.',
+            'Poštovní server e-mail odmítl. V Nastavení si pošlete zkušební e-mail, který řekne, co je špatně, a zkuste to znovu.',
           ),
         ),
     );
@@ -196,7 +196,7 @@ test.describe('Given an administrator on the monthly report page', () => {
       .click();
 
     await expect(page.getByRole('alert')).toHaveText(
-      'Přehled se nepodařilo odeslat. Poštovní server e-mail odmítl. Ověřte odesílání e-mailů v Nastavení tlačítkem Ověřit spojení a zkuste to znovu.',
+      'Přehled se nepodařilo odeslat. Poštovní server e-mail odmítl. V Nastavení si pošlete zkušební e-mail, který řekne, co je špatně, a zkuste to znovu.',
     );
     await expect(page.locator('tbody tr')).toHaveCount(1);
     await expect(page.getByRole('group', { name: 'Poslat přehled?' })).toHaveCount(0);

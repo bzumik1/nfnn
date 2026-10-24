@@ -164,7 +164,29 @@
           </fieldset>
 
           <fieldset class="group">
-            <legend i18n="@@operations.setup.group.mail">2. E-maily</legend>
+            <legend i18n="@@operations.setup.group.administrator">2. Správce</legend>
+            <app-form-field
+              [label]="labels.ADMIN_EMAILS"
+              hint="Kdo se s touto adresou zaregistruje a potvrdí ji, stane se správcem. Pak si zapne dvoufaktorové ověření a další správce přidá ve správě."
+              i18n-hint="@@operations.setup.adminEmail.hint"
+              [messages]="emailMessages"
+            >
+              <input
+                appFormControl
+                id="setup-admin-email"
+                name="adminEmail"
+                type="email"
+                autocomplete="email"
+                maxlength="254"
+                [(ngModel)]="adminEmail"
+                required
+                email
+              />
+            </app-form-field>
+          </fieldset>
+
+          <fieldset class="group">
+            <legend i18n="@@operations.setup.group.mail">3. E-maily</legend>
             <p class="group-intro" i18n="@@operations.setup.mail.intro">
               Web posílá e-maily přes Brevo. Údaje najdete v Brevo v Nastavení → SMTP a API: server,
               port, přihlašovací jméno a klíč SMTP.
@@ -233,35 +255,6 @@
                 <span>{{ labels.MAIL_STARTTLS }}</span>
               </label>
             </details>
-            <div class="test-row">
-              <button
-                #mailTestButton
-                type="button"
-                class="ui-button"
-                [disabled]="testingMail()"
-                (click)="testMail()"
-              >
-                @if (testingMail()) {
-                  <span i18n="@@operations.setup.mailTest.busy">Zkoušíme se přihlásit…</span>
-                } @else {
-                  <span i18n="@@operations.setup.mailTest">Ověřit spojení</span>
-                }
-              </button>
-              <div class="test-result-slot" role="status">
-                @if (mailNotice(); as notice) {
-                  @if (notice.kind === 'status') {
-                    <p class="test-result test-result--ok">{{ notice.text }}</p>
-                  }
-                }
-              </div>
-              <div class="test-result-slot" role="alert">
-                @if (mailNotice(); as notice) {
-                  @if (notice.kind === 'alert') {
-                    <p class="test-result test-result--failed">{{ notice.text }}</p>
-                  }
-                }
-              </div>
-            </div>
             <app-form-field
               [label]="labels.MAIL_FROM"
               hint="Adresa, ze které e-maily odcházejí. Doména musí být v Brevo ověřená."
@@ -293,10 +286,48 @@
                 email
               />
             </app-form-field>
+            <p
+              id="setup-test-email-hint"
+              class="test-hint"
+              i18n="@@operations.setup.testEmail.hint"
+            >
+              Zkušební e-mail přijde na e-mail prvního správce z kroku 2. Odejde přes server výše z
+              adresy odesílatele, takže ověří přihlášení i odesílatele.
+            </p>
+            <div class="test-row">
+              <button
+                #testEmailButton
+                type="button"
+                class="ui-button"
+                [disabled]="testingMail()"
+                aria-describedby="setup-test-email-hint"
+                (click)="sendTestEmail(setupForm)"
+              >
+                @if (testingMail()) {
+                  <span i18n="@@operations.setup.testEmail.busy">Posíláme zkušební e-mail…</span>
+                } @else {
+                  <span i18n="@@operations.setup.testEmail">Poslat zkušební e-mail</span>
+                }
+              </button>
+              <div class="test-result-slot" role="status">
+                @if (mailNotice(); as notice) {
+                  @if (notice.kind === 'status') {
+                    <p class="test-result test-result--ok">{{ notice.text }}</p>
+                  }
+                }
+              </div>
+              <div class="test-result-slot" role="alert">
+                @if (mailNotice(); as notice) {
+                  @if (notice.kind === 'alert') {
+                    <p class="test-result test-result--failed">{{ notice.text }}</p>
+                  }
+                }
+              </div>
+            </div>
           </fieldset>
 
           <fieldset class="group">
-            <legend i18n="@@operations.setup.group.bank">3. Banka</legend>
+            <legend i18n="@@operations.setup.group.bank">4. Banka</legend>
             <app-form-field
               [label]="fioTokenLabel"
               hint="Ve Fio internetovém bankovnictví: Nastavení → API → přidat token s právem jen pro čtení. Bez něj se platby nestahují."
@@ -316,28 +347,6 @@
             </app-form-field>
           </fieldset>
 
-          <fieldset class="group">
-            <legend i18n="@@operations.setup.group.administrator">4. Správce</legend>
-            <app-form-field
-              [label]="labels.ADMIN_EMAILS"
-              hint="Kdo se s touto adresou zaregistruje a potvrdí ji, stane se správcem. Pak si zapne dvoufaktorové ověření a další správce přidá ve správě."
-              i18n-hint="@@operations.setup.adminEmail.hint"
-              [messages]="emailMessages"
-            >
-              <input
-                appFormControl
-                id="setup-admin-email"
-                name="adminEmail"
-                type="email"
-                autocomplete="email"
-                maxlength="254"
-                [(ngModel)]="adminEmail"
-                required
-                email
-              />
-            </app-form-field>
-          </fieldset>
-
           @if (saveError()) {
             <div class="ui-field-error" role="alert">
               <p>{{ saveError() }}</p>
@@ -354,17 +363,17 @@
           @if (mailUnverified()) {
             <div class="ui-callout ui-callout--warning mail-unverified" role="alert">
               <p i18n="@@operations.setup.mailUnverified">
-                Spojení s e-mailovým serverem jste neověřili. Bez funkčních e-mailů se správce
+                Zkušební e-mail s těmito údaji zatím neodešel. Bez funkčních e-mailů se správce
                 nepřihlásí.
               </p>
               <div class="mail-unverified-actions">
                 <button
                   type="button"
                   class="ui-button ui-button--small"
-                  (click)="testMailFromWarning()"
-                  i18n="@@operations.setup.mailTest"
+                  (click)="sendTestEmailFromWarning(setupForm)"
+                  i18n="@@operations.setup.testEmail"
                 >
-                  Ověřit spojení
+                  Poslat zkušební e-mail
                 </button>
                 <button
                   type="button"

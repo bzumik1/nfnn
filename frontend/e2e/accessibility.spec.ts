@@ -1159,7 +1159,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     await expect(page.locator('#setup-admin-email')).toBeVisible();
     expect(unlocked).toBe(true);
     await page.getByRole('button', { name: 'Uložit a spustit' }).click();
-    await expect(page.locator('#setup-mail-username')).toBeFocused();
+    await expect(page.locator('#setup-admin-email')).toBeFocused();
     expect(await violations(page)).toEqual([]);
     await page.locator('#setup-mail-username').fill('abc@smtp-brevo.com');
     await page.locator('#setup-mail-password').fill('xsmtpsib-key');
@@ -1182,12 +1182,19 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     expect(await violations(page)).toEqual([]);
   });
 
-  test('when an administrator changes the settings, then the page and its confirmation break no rule', async ({
+  test('when an administrator changes the settings, then the page, its confirmation and a refused test e-mail break no rule', async ({
     page,
   }) => {
     await page.route(
       (url) => url.pathname === '/api/admin/operations/settings',
       (route) => route.fulfill({ json: adminSettings }),
+    );
+    await page.route(
+      (url) => url.pathname === '/api/admin/operations/settings/test-email',
+      (route) =>
+        route.fulfill({
+          json: { outcome: 'SIGN_IN_REFUSED', sent: false, recipient: 'jana@example.cz' },
+        }),
     );
     await page.route(
       (url) => url.pathname === '/api/admin/donations/receipt-signature',
@@ -1205,6 +1212,11 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     await page.locator('#setting-RECEIPT_FIRST_YEAR').fill('2025');
     await page.getByRole('button', { name: 'Uložit nastavení' }).click();
     await expect(page.getByRole('button', { name: 'Uložit a restartovat' })).toBeVisible();
+    expect(await violations(page)).toEqual([]);
+
+    await page.getByText('Adresa webu, server pro odesílání e-mailů a napojení na banku').click();
+    await page.getByRole('button', { name: 'Poslat zkušební e-mail na moji adresu' }).click();
+    await expect(page.locator('.test-row').getByRole('alert')).toContainText('odmítl přihlášení');
     expect(await violations(page)).toEqual([]);
 
     await page.getByRole('button', { name: 'Odebrat podpis' }).click();

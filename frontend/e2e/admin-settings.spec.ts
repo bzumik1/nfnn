@@ -56,6 +56,7 @@ test.describe('Given an administrator on the settings page', () => {
     );
 
     await page.locator('#setting-RECEIPT_FIRST_YEAR').fill('2025');
+    await page.getByText('Adresa webu, server pro odesílání e-mailů a napojení na banku').click();
     await page.locator('#setting-FIO_TOKEN').fill('new-token');
     await page.getByRole('button', { name: 'Uložit nastavení' }).click();
     await expect(page.getByRole('group', { name: 'Uložit nastavení?' })).toContainText(
@@ -75,6 +76,74 @@ test.describe('Given an administrator on the settings page', () => {
         ],
       },
     ]);
+  });
+
+  test('when they try a new sender with a test e-mail before saving, then it goes to their own address and the confirmation lists the change without a warning', async ({
+    page,
+  }) => {
+    const tested: unknown[] = [];
+    await page.route(
+      (url) => url.pathname === SETTINGS,
+      (route) => route.fulfill({ json: adminSettings }),
+    );
+    await page.route(
+      (url) => url.pathname === `${SETTINGS}/test-email`,
+      (route) => {
+        tested.push(route.request().postDataJSON());
+        return route.fulfill({
+          json: { outcome: 'SENT', sent: true, recipient: administrator.email },
+        });
+      },
+    );
+
+    await page.goto('/sprava/nastaveni');
+    await expect(page.getByRole('heading', { level: 2 })).toHaveText([
+      'Potvrzení o daru',
+      'Podpis na potvrzeních',
+      'Kontaktní formulář',
+      'Odesílatel e-mailů',
+      'Technické nastavení (pro správce serveru)',
+    ]);
+    await expect(page.locator('#setting-MAIL_HOST')).toBeHidden();
+
+    await page.locator('#setting-MAIL_FROM').fill('novy@nfnn.cz');
+    await page.getByText('Adresa webu, server pro odesílání e-mailů a napojení na banku').click();
+    await page.getByRole('button', { name: 'Poslat zkušební e-mail na moji adresu' }).click();
+    await expect(page.locator('.test-row').getByRole('status')).toHaveText(
+      `Zkušební e-mail odešel na ${administrator.email}. Podívejte se prosím do schránky, i do nevyžádané pošty. Když do pár minut nedorazí, zkontrolujte adresu odesílatele a ověření její domény v Brevo.`,
+    );
+    expect(tested).toEqual([
+      {
+        host: 'smtp-relay.brevo.com',
+        port: 587,
+        username: 'abc@smtp-brevo.com',
+        password: '',
+        auth: true,
+        startTls: true,
+        sender: 'novy@nfnn.cz',
+      },
+    ]);
+
+    await page.getByRole('button', { name: 'Uložit nastavení' }).click();
+    const confirmation = page.getByRole('group', { name: 'Uložit nastavení?' });
+    await expect(confirmation).toContainText('Mění se: Odesílatel e-mailů.');
+    await expect(confirmation.locator('.ui-callout--warning')).toHaveCount(0);
+  });
+
+  test('when they follow the link to the mail settings from another page, then the technical settings open at the mail server', async ({
+    page,
+  }) => {
+    await page.route(
+      (url) => url.pathname === SETTINGS,
+      (route) => route.fulfill({ json: adminSettings }),
+    );
+
+    await page.goto('/sprava/nastaveni#settings-MAIL');
+
+    await expect(
+      page.getByRole('heading', { level: 3, name: 'Server pro odesílání e-mailů' }),
+    ).toBeFocused();
+    await expect(page.locator('#setting-MAIL_HOST')).toBeVisible();
   });
 
   test('when they upload a scan of the signature and remove it again, then the receipts card shows it and asks before removing', async ({
