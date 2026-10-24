@@ -195,11 +195,22 @@ class DonorTest {
     @DisplayName("Given a plain donor, when administration is granted, then the donor is an administrator with both roles")
     void should_become_administrator_when_administration_granted_given_plain_donor() {
         Donor donor = Donor.register(DonorId.newId(NOW), DonorType.PERSON, "Jana Nováková", null, ADDRESS, EMAIL, HASH, SYMBOL, LocaleCode.CS, NOW);
+        donor.verifyEmail(NOW);
 
         donor.grantAdministration();
 
         assertThat(donor.isAdministrator()).isTrue();
         assertThat(donor.roles()).containsExactlyInAnyOrder(Role.DONOR, Role.ADMIN);
+    }
+
+    @Test
+    @DisplayName("Given a donor who has not confirmed the e-mail, when administration is granted, then the donor refuses and stays a plain donor")
+    void should_refuse_when_administration_granted_given_unconfirmed_email() {
+        Donor donor = Donor.register(DonorId.newId(NOW), DonorType.PERSON, "Jana Nováková", null, ADDRESS, EMAIL, HASH, SYMBOL, LocaleCode.CS, NOW);
+
+        assertThatThrownBy(donor::grantAdministration).isInstanceOf(AdministratorEmailNotConfirmed.class);
+
+        assertThat(donor.isAdministrator()).isFalse();
     }
 
     @Test
@@ -273,6 +284,7 @@ class DonorTest {
     @DisplayName("Given an administrator, when erased, then it is refused and nothing changes")
     void should_refuse_when_erased_given_administrator() {
         Donor donor = Donor.register(DonorId.newId(NOW), DonorType.PERSON, "Jana Nováková", null, ADDRESS, EMAIL, HASH, SYMBOL, LocaleCode.CS, NOW);
+        donor.verifyEmail(NOW);
         donor.grantAdministration();
 
         assertThatThrownBy(() -> donor.erase(NOW.plusSeconds(10)))

@@ -192,6 +192,9 @@ public final class Donor {
     }
 
     public void grantAdministration() {
+        if (emailVerifiedAt == null) {
+            throw new AdministratorEmailNotConfirmed(id);
+        }
         if (!roles.add(Role.ADMIN)) {
             throw new AlreadyAdministrator(id);
         }
