@@ -933,7 +933,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     );
     expect(await violations(page)).toEqual([]);
 
-    await page.getByRole('button', { name: 'Vypnout kód z aplikace' }).click();
+    await page.getByRole('button', { name: 'Vypnout dvoufaktorové ověření' }).click();
     await page.getByRole('button', { name: 'Odebrat účet' }).first().click();
     await expect(page.getByRole('group', { name: 'Odebrat účet?' })).toBeVisible();
     expect(await violations(page)).toEqual([]);
