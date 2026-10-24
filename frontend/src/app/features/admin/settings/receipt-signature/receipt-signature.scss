@@ -2,6 +2,10 @@
   display: block;
 }
 
+.ui-card__intro {
+  margin-bottom: var(--space-2);
+}
+
 .signature-hint {
   font-size: var(--text-sm);
   line-height: var(--leading-normal);

@@ -144,3 +144,8 @@
     transform: rotate(360deg);
   }
 }
+
+app-receipt-signature {
+  max-width: 680px;
+  margin-top: var(--space-8);
+}
