@@ -24,7 +24,10 @@ import {
   PASSWORD_MIN_LENGTH,
   SecondFactorEnrolment,
 } from '../../../../core/auth/donor';
-import { PasskeyCeremonyError } from '../../../../core/auth/passkey-authenticator';
+import {
+  PasskeyAuthenticator,
+  PasskeyCeremonyError,
+} from '../../../../core/auth/passkey-authenticator';
 import { formatDonationDate } from '../../../donations/donation-date';
 import { describeScopes } from '../../connect-app/oauth-scopes';
 import { CopyButton } from '../../../../shared/ui/copy-button/copy-button';
@@ -63,6 +66,7 @@ export class AccountCard {
 
   readonly passkeyCount = input<number | null>(null);
   readonly sessionEnded = output<void>();
+  readonly createPasskey = output<void>();
 
   private readonly emailButton = viewChild<ElementRef<HTMLButtonElement>>('emailButton');
   private readonly passwordButton = viewChild<ElementRef<HTMLButtonElement>>('passwordButton');
@@ -78,6 +82,10 @@ export class AccountCard {
     () => this.donor()?.secondFactor ?? { enabled: false, neededForAdministration: false },
   );
   protected readonly hasPassword = computed(() => this.donor()?.hasPassword ?? true);
+  protected readonly withoutSignInMethod = computed(
+    () => !this.hasPassword() && this.passkeyCount() === 0,
+  );
+  protected readonly passkeysSupported = inject(PasskeyAuthenticator).supported();
   protected readonly canRemovePassword = computed(
     () => this.hasPassword() && (this.passkeyCount() ?? 0) > 0,
   );
@@ -329,7 +337,7 @@ export class AccountCard {
       error: (failure: unknown) =>
         this.fail(
           failure,
-          $localize`:@@donor.account.secondFactor.error.disable:Dvoufaktorové ověření se nepodařilo vypnout. Zkuste to prosím znovu.`,
+          $localize`:@@donor.account.secondFactor.error.disable:Kód z aplikace se nepodařilo vypnout. Zkuste to prosím znovu.`,
         ),
     });
   }

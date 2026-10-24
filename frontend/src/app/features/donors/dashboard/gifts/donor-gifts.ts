@@ -1,4 +1,12 @@
-import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  ElementRef,
+  inject,
+  viewChild,
+} from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { formatBankTime } from '../../../donations/donation-date';
 import { DonationsPending } from '../donations-pending/donations-pending';
@@ -16,9 +24,15 @@ import { PageTitle } from '../page-title/page-title';
 export class DonorGifts {
   protected readonly donations = inject(DonorDonations);
 
+  private readonly receiptAlert = viewChild<ElementRef<HTMLElement>>('receiptAlert');
+
   protected readonly receivedWithoutReceipt = computed(() =>
     this.donations.items().some((item) => item.status === 'RECEIVED' && !item.receiptAvailable),
   );
+
+  constructor() {
+    effect(() => this.receiptAlert()?.nativeElement.scrollIntoView?.({ block: 'center' }));
+  }
 
   protected formatBankTime(isoInstant: string): string {
     return formatBankTime(isoInstant);

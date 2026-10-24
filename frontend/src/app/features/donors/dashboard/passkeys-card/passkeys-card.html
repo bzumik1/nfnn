@@ -1,9 +1,9 @@
 <section class="ui-card ui-card--padded" aria-labelledby="passkeys-title">
   <h2 id="passkeys-title" class="ui-card__title" i18n="@@donor.passkeys.title">Přístupové klíče</h2>
   <p class="passkeys-intro" i18n="@@donor.passkeys.intro">
-    Přístupový klíč (passkey) vás přihlásí otiskem prstu, obličejem nebo zámkem obrazovky, bez
-    hesla. Uloží ho Hesla od Applu, Správce hesel Google nebo Windows Hello a na podvodné stránce
-    nefunguje. Přihlášení klíčem platí i jako dvoufaktorové ověření.
+    Přihlaste se otiskem prstu, obličejem nebo zámkem obrazovky místo hesla. Klíč uloží Hesla od
+    Applu, Správce hesel Google nebo Windows Hello a na podvodné stránce nefunguje. Přihlášení
+    klíčem je chráněné i bez kódu z aplikace.
   </p>
 
   @if (loadError()) {
@@ -58,7 +58,7 @@
                     (click)="remove(passkey)"
                   >
                     @if (removing() === passkey.id) {
-                      <span i18n="@@donor.passkeys.removing">Odebírám…</span>
+                      <span i18n="@@donor.passkeys.removing">Odebíráme…</span>
                     } @else {
                       <span i18n="@@donor.passkeys.confirmRemove">Ano, odebrat</span>
                     }
@@ -108,7 +108,7 @@
                     [disabled]="renameSaving()"
                   >
                     @if (renameSaving()) {
-                      <span i18n="@@donor.passkeys.rename.saving">Ukládám…</span>
+                      <span i18n="@@donor.passkeys.rename.saving">Ukládáme…</span>
                     } @else {
                       <span i18n="@@donor.passkeys.rename.submit">Uložit název</span>
                     }
@@ -282,6 +282,7 @@
       #addButton
       type="button"
       class="ui-button passkeys-action"
+      [class.ui-button--primary]="withoutSignInMethod()"
       (click)="openForm()"
       i18n="@@donor.passkeys.add"
     >

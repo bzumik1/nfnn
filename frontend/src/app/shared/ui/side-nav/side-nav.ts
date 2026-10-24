@@ -1,6 +1,8 @@
+import { NgTemplateOutlet } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
+  computed,
   DestroyRef,
   ElementRef,
   inject,
@@ -12,10 +14,16 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { filter } from 'rxjs';
 
+export interface SideNavBadge {
+  readonly count: number;
+  readonly description: string;
+}
+
 export interface SideNavItem {
   readonly path: string;
   readonly label: string;
   readonly exact?: boolean;
+  readonly badge?: SideNavBadge;
 }
 
 export interface SideNavGroup {
@@ -26,7 +34,7 @@ export interface SideNavGroup {
 
 @Component({
   selector: 'app-side-nav',
-  imports: [RouterLink, RouterLinkActive],
+  imports: [NgTemplateOutlet, RouterLink, RouterLinkActive],
   templateUrl: './side-nav.html',
   styleUrl: './side-nav.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -43,13 +51,34 @@ export class SideNav {
 
   protected readonly menuOpen = signal(false);
 
+  private readonly router = inject(Router);
+  private readonly path = signal(pathOf(this.router.url));
+  private readonly items = computed(() => this.groups().flatMap((group) => group.items));
+  private readonly currentItem = computed(() => {
+    const path = this.path();
+    return (
+      this.items().find((item) =>
+        item.exact ? path === item.path : path === item.path || path.startsWith(`${item.path}/`),
+      ) ?? null
+    );
+  });
+  protected readonly current = computed(() => this.currentItem()?.label ?? null);
+  protected readonly badgesElsewhere = computed(() =>
+    this.items()
+      .filter((item) => item !== this.currentItem())
+      .flatMap((item) => (item.badge && item.badge.count > 0 ? [item.badge] : [])),
+  );
+
   constructor() {
-    inject(Router)
-      .events.pipe(
+    this.router.events
+      .pipe(
         filter((event) => event instanceof NavigationEnd),
         takeUntilDestroyed(inject(DestroyRef)),
       )
-      .subscribe(() => this.menuOpen.set(false));
+      .subscribe(() => {
+        this.path.set(pathOf(this.router.url));
+        this.menuOpen.set(false);
+      });
   }
 
   protected toggleMenu(): void {
@@ -63,4 +92,8 @@ export class SideNav {
     this.menuOpen.set(false);
     this.toggle().nativeElement.focus();
   }
+}
+
+function pathOf(url: string): string {
+  return url.split(/[?#;]/)[0];
 }

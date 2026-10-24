@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { SideNav, SideNavGroup } from './side-nav';
@@ -22,14 +22,23 @@ const GROUPS: SideNavGroup[] = [
   imports: [SideNav],
   template: `<app-side-nav
     navId="test-nav"
-    [groups]="groups"
+    [groups]="groups()"
     label="Oblast"
     menuLabel="Menu oblasti"
     ><p class="projected">Obsah</p></app-side-nav
   >`,
 })
 class Host {
-  readonly groups = GROUPS;
+  readonly groups = signal<readonly SideNavGroup[]>(GROUPS);
+}
+
+function withBadge(count: number, description: string): SideNavGroup[] {
+  return GROUPS.map((group) => ({
+    ...group,
+    items: group.items.map((item) =>
+      item.path === '/oblast/druha' ? { ...item, badge: { count, description } } : item,
+    ),
+  }));
 }
 
 describe('Given a side panel of an area', () => {
@@ -99,6 +108,18 @@ describe('Given a side panel of an area', () => {
     expect(currentLinks()).toEqual(['První']);
   });
 
+  it('when a page is open, then the current section is named beside the menu button for sighted users', async () => {
+    const current = () => fixture.nativeElement.querySelector('.side-nav-current') as HTMLElement;
+    expect(clean(current().textContent)).toBe('Přehled');
+    expect(current().getAttribute('aria-hidden')).toBe('true');
+    expect(toggle().nextElementSibling).toBe(current());
+
+    await router.navigateByUrl('/oblast/prvni/42?strana=2');
+    await settle();
+
+    expect(clean(current().textContent)).toBe('První');
+  });
+
   it('when the menu button is shown, then it controls the panel and starts collapsed', () => {
     expect(clean(toggle().textContent)).toBe('Menu oblasti');
     expect(toggle().getAttribute('aria-controls')).toBe('test-nav');
@@ -136,6 +157,52 @@ describe('Given a side panel of an area', () => {
 
       expect(toggle().getAttribute('aria-expanded')).toBe('false');
       expect(focus).toHaveBeenCalled();
+    });
+  });
+
+  describe('when an item carries a badge', () => {
+    async function showBadge(count: number): Promise<void> {
+      fixture.componentInstance.groups.set(withBadge(count, `${count} věci čekají`));
+      await settle();
+    }
+
+    function badgeOf(container: Element): string[] {
+      return [
+        clean(container.querySelector('.side-nav-badge')?.textContent),
+        container.querySelector('.side-nav-badge')?.getAttribute('aria-hidden') ?? '',
+        clean(container.querySelector('.visually-hidden')?.textContent),
+      ];
+    }
+
+    it('then its link shows the count to sighted users and says what waits to screen readers', async () => {
+      await showBadge(2);
+
+      const link = nav().querySelector('a[href="/oblast/druha"]')!;
+      expect(badgeOf(link)).toEqual(['2', 'true', '2 věci čekají']);
+      expect(nav().querySelectorAll('.side-nav-badge')).toHaveLength(1);
+    });
+
+    it('then the menu button shows it too while another section is open', async () => {
+      await showBadge(2);
+
+      expect(badgeOf(toggle())).toEqual(['2', 'true', '2 věci čekají']);
+      expect(clean(toggle().textContent)).toBe('Menu oblasti 2 2 věci čekají');
+    });
+
+    it('then the menu button leaves it out while its own section is open', async () => {
+      await showBadge(2);
+      await router.navigateByUrl('/oblast/druha');
+      await settle();
+
+      expect(toggle().querySelector('.side-nav-badge')).toBeNull();
+      expect(clean(toggle().textContent)).toBe('Menu oblasti');
+    });
+
+    it('then a count of zero shows no badge anywhere', async () => {
+      await showBadge(0);
+
+      expect(fixture.nativeElement.querySelector('.side-nav-badge')).toBeNull();
+      expect(fixture.nativeElement.querySelector('.visually-hidden')).toBeNull();
     });
   });
 });

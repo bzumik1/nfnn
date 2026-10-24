@@ -4,8 +4,12 @@
   <div class="ui-card payments-card">
     <div class="ui-card__bar">
       <div class="payments-title-row">
-        <h2 class="ui-card__title ui-card__title--large" i18n="@@donor.dashboard.payments.title">
-          Přehled plateb
+        <h2
+          id="payments-title"
+          class="ui-card__title ui-card__title--large"
+          i18n="@@donor.dashboard.payments.title"
+        >
+          Všechny dary
         </h2>
         <div class="bank-check" aria-live="polite">
           @if (donations.checkingBank()) {
@@ -25,20 +29,20 @@
             (click)="donations.refreshFromBank()"
             i18n="@@donor.dashboard.bank.refresh"
           >
-            Obnovit
+            Zkontrolovat nové platby
           </button>
         </div>
       </div>
       @if (donations.receiptError(); as error) {
         @if (error.scope === 'single') {
-          <p class="ui-callout ui-callout--danger receipt-error" role="alert">
+          <p #receiptAlert class="ui-callout ui-callout--danger receipt-error" role="alert">
             {{ error.message }}
           </p>
         }
       }
     </div>
     @if (donations.items().length > 0) {
-      <app-donations-table [items]="donations.items()" />
+      <app-donations-table [items]="donations.items()" labelledBy="payments-title" />
       @if (receivedWithoutReceipt()) {
         <p class="ui-card__footer receipts-from" i18n="@@donor.dashboard.payments.receiptsFrom">
           Potvrzení o daru tu vystavujeme za dary přijaté od 1.&nbsp;ledna&nbsp;{{
@@ -61,10 +65,8 @@
       </p>
     }
     <p class="ui-card__footer bank-hint" i18n="@@donor.dashboard.bank.hint">
-      Nové platby hledáme v bance každou hodinu a také když otevřete tento přehled nebo stisknete
-      „Obnovit“, nejvýš ale jednou za 30&nbsp;sekund. Okamžitá platba se tu obvykle objeví do
-      minuty, běžný převod z jiné banky může trvat až do dalšího pracovního dne. Dar se přiřadí sám,
-      když platba nese váš variabilní symbol.
+      Nové platby hledáme v bance každou hodinu a také když otevřete tento přehled. Okamžitá platba
+      se tu obvykle objeví do minuty, běžný převod z jiné banky do dalšího pracovního dne.
     </p>
   </div>
 } @else {

@@ -11,4 +11,5 @@ import { CopyButton } from '../../../../shared/ui/copy-button/copy-button';
 })
 export class SymbolCard {
   readonly variableSymbol = input<string | null>(null);
+  readonly hasDonated = input(false);
 }

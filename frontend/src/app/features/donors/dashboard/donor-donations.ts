@@ -5,6 +5,7 @@ import { forkJoin, last, Observable, tap } from 'rxjs';
 import { problemOf, problemTypeEndsWith } from '../../../core/auth/api-problem';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
+import { BankAccountItem, BankAccountsApi } from '../../donations/bank-accounts-api';
 import {
   BankCheckResponse,
   DonationItem,
@@ -40,6 +41,7 @@ export class DonorDonations {
   private readonly auth = inject(AuthStore);
   private readonly loginDialog = inject(LoginDialogService);
   private readonly donations = inject(DonationsApi);
+  private readonly bankAccountsApi = inject(BankAccountsApi);
   private readonly destroyRef = inject(DestroyRef);
 
   readonly state = signal<DonationsState>('loading');
@@ -53,12 +55,28 @@ export class DonorDonations {
   readonly checkingBank = signal(false);
   readonly bankDataArrived = signal(0);
 
+  readonly bankAccounts = signal<readonly BankAccountItem[]>([]);
+  readonly accountsWithQuestion = computed(() =>
+    this.bankAccounts().filter((account) => account.symbolOffer !== null),
+  );
+
   readonly receiptError = signal<ReceiptError | null>(null);
   private readonly downloads = signal<ReadonlySet<string>>(new Set());
 
   constructor() {
     this.load();
     this.checkBank(false);
+    this.bankAccountsApi
+      .list()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: ({ items }) => this.bankAccounts.set(items),
+        error: () => this.bankAccounts.set([]),
+      });
+  }
+
+  showBankAccounts(items: readonly BankAccountItem[]): void {
+    this.bankAccounts.set(items);
   }
 
   load(): void {

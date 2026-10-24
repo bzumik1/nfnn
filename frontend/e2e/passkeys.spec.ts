@@ -297,19 +297,17 @@ test.describe('Given a visitor who wants an account without a password', () => {
     await page.route(
       (url) => url.pathname === '/api/donors/me/passkeys',
       async (route) => {
+        const linux = {
+          id: '019a1b2c-3d4e-7f00-8000-000000000001',
+          name: 'Linux',
+          createdAt: '2026-10-23T10:00:00Z',
+          lastUsedAt: null,
+        };
         if (route.request().method() !== 'POST') {
-          await route.fallback();
+          await route.fulfill({ json: { items: [linux] } });
           return;
         }
-        await route.fulfill({
-          status: 201,
-          json: {
-            id: '019a1b2c-3d4e-7f00-8000-000000000001',
-            name: 'Linux',
-            createdAt: '2026-10-23T10:00:00Z',
-            lastUsedAt: null,
-          },
-        });
+        await route.fulfill({ status: 201, json: linux });
       },
     );
 

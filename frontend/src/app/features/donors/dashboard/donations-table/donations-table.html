@@ -1,4 +1,4 @@
-<table>
+<table [attr.aria-labelledby]="labelledBy()">
   <thead>
     <tr>
       <th i18n="@@donor.dashboard.payments.col.date">Datum</th>
@@ -13,7 +13,7 @@
   <tbody>
     @for (item of items(); track item.id) {
       <tr>
-        <td data-label="Datum" i18n-data-label="@@donor.dashboard.payments.col.date">
+        <td class="date" data-label="Datum" i18n-data-label="@@donor.dashboard.payments.col.date">
           {{ formatDate(item.receivedAt) }}
         </td>
         <td
@@ -26,16 +26,9 @@
         <td data-label="Účel" i18n-data-label="@@donor.dashboard.payments.col.purpose">
           {{ item.purpose }}
           @if (item.pairedBy === 'SENDER_ACCOUNT' && item.senderAccount) {
-            <span
-              class="pairing-tag"
-              title="Přiřazeno podle účtu {{
-                item.senderAccount
-              }}, platba přišla bez variabilního symbolu"
-              i18n-title="@@donor.dashboard.payments.pairedByAccountTitle"
-            >
-              <span aria-hidden="true"
-                ><span i18n="@@donor.dashboard.payments.withoutSymbol">bez VS</span> ·
-                {{ senderAccountEnd(item.senderAccount) }}</span
+            <span class="pairing-tag">
+              <span aria-hidden="true" i18n="@@donor.dashboard.payments.withoutSymbol"
+                >bez symbolu · účet {{ senderAccountEnd(item.senderAccount) }}</span
               >
               <span class="visually-hidden" i18n="@@donor.dashboard.payments.pairedByAccount"
                 >Přiřazeno podle účtu {{ item.senderAccount }}, platba přišla bez variabilního
@@ -44,16 +37,10 @@
             </span>
           }
           @if (item.pairedBy === 'CONFIRMED_SYMBOL' && item.senderAccount && item.confirmedSymbol) {
-            <span
-              class="pairing-tag"
-              title="Přiřazeno podle účtu {{ item.senderAccount }} a variabilního symbolu {{
-                item.confirmedSymbol
-              }}, který jste u účtu potvrdili jako svůj"
-              i18n-title="@@donor.dashboard.payments.pairedByConfirmedSymbolTitle"
-            >
-              <span aria-hidden="true"
-                ><span i18n="@@donor.dashboard.payments.symbolPrefix">VS</span>
-                {{ item.confirmedSymbol }} · {{ senderAccountEnd(item.senderAccount) }}</span
+            <span class="pairing-tag">
+              <span aria-hidden="true" i18n="@@donor.dashboard.payments.symbolPrefix"
+                >symbol {{ item.confirmedSymbol }} · účet
+                {{ senderAccountEnd(item.senderAccount) }}</span
               >
               <span
                 class="visually-hidden"
@@ -72,7 +59,7 @@
         @if (withReceipts()) {
           <td
             class="receipt"
-            [class.is-empty]="!item.receiptAvailable"
+            [class.is-empty]="!item.receiptAvailable && !missingReceipt(item)"
             data-label="Potvrzení"
             i18n-data-label="@@donor.dashboard.payments.col.receipt"
           >
@@ -88,8 +75,27 @@
                   <span i18n="@@donor.dashboard.receipt.preparing">Připravujeme PDF…</span>
                 } @else {
                   <span i18n="@@donor.dashboard.payments.download">Stáhnout PDF</span>
+                  <span class="visually-hidden" i18n="@@donor.dashboard.payments.downloadOf"
+                    >, dar z {{ formatDate(item.receivedAt) }},
+                    {{ crowns(item.amountMinor) }}&nbsp;Kč</span
+                  >
                 }
               </button>
+            } @else {
+              @switch (missingReceipt(item)) {
+                @case ('refunded') {
+                  <span class="receipt-note" i18n="@@donor.dashboard.payments.noReceipt.refunded"
+                    >Vrácený dar potvrzení nemá</span
+                  >
+                }
+                @case ('before-first-year') {
+                  <span
+                    class="receipt-note"
+                    i18n="@@donor.dashboard.payments.noReceipt.beforeFirstYear"
+                    >Potvrzení vystavujeme od roku {{ donations.receiptsFrom() }}</span
+                  >
+                }
+              }
             }
           </td>
         }

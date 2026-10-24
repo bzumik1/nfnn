@@ -26,9 +26,9 @@
             <span class="year">{{ row.year }}</span>
             <span class="year-count" i18n="@@donor.receipts.year.count">
               {row.count, plural,
-                one {{{ row.count }} příspěvek}
-                few {{{ row.count }} příspěvky}
-                other {{{ row.count }} příspěvků}
+                one {{{ row.count }} dar}
+                few {{{ row.count }} dary}
+                other {{{ row.count }} darů}
               }
             </span>
             <span class="year-total">{{ crowns(row.totalAmountMinor) }}&nbsp;Kč</span>
@@ -45,19 +45,37 @@
                     @if (donations.yearlyDownloading(row.year)) {
                       <span i18n="@@donor.dashboard.receipt.preparing">Připravujeme PDF…</span>
                     } @else {
-                      <span i18n="@@donor.dashboard.yearly.pdf">↓ PDF za rok</span>
-                      {{ row.year }}
+                      <svg
+                        class="yearly-pdf-icon"
+                        aria-hidden="true"
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      >
+                        <path d="M12 3v12" />
+                        <path d="m7 10 5 5 5-5" />
+                        <path d="M5 21h14" />
+                      </svg>
+                      <span i18n="@@donor.dashboard.yearly.pdf"
+                        >Stáhnout potvrzení za rok {{ row.year }} (PDF)</span
+                      >
                     }
                   </button>
                 }
                 @case ('after-year-end') {
                   <span class="year-note" i18n="@@donor.receipts.year.afterYearEnd"
-                    >Ke stažení po skončení roku</span
+                    >Ke stažení od 1.&nbsp;ledna&nbsp;{{ row.year + 1 }}</span
                   >
                 }
                 @case ('not-issued') {
                   <span class="year-note" i18n="@@donor.receipts.year.notIssued"
-                    >Za tento rok potvrzení na webu nevystavujeme</span
+                    >Za tento rok potvrzení na webu nevystavujeme. Potřebujete ho? Napište nám na
+                    <a href="mailto:info@nfnn.cz">info&#64;nfnn.cz</a>.</span
                   >
                 }
               }

@@ -1,6 +1,6 @@
 <app-dashboard-top-bar [wide]="true" />
 
-<app-side-nav navId="donor-nav" [groups]="groups" [label]="navLabel" [menuLabel]="menuLabel">
+<app-side-nav navId="donor-nav" [groups]="groups()" [label]="navLabel" [menuLabel]="menuLabel">
   <div class="container">
     <router-outlet />
 

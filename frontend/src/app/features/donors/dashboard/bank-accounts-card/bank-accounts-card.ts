@@ -75,26 +75,27 @@ const LABELS: Record<AccountLabel, string> = {
   shared: $localize`:@@donor.bankAccounts.status.shared:Sdílený`,
   awaiting: $localize`:@@donor.bankAccounts.status.awaiting:Čeká na platbu`,
   excluded: $localize`:@@donor.bankAccounts.status.excluded:Jen s variabilním symbolem`,
-  disconnected: $localize`:@@donor.bankAccounts.status.disconnected:Párování vypnuto`,
+  disconnected: $localize`:@@donor.bankAccounts.status.disconnected:Nepřiřazujeme`,
 };
 
 const EXCLUDED_HINT = $localize`:@@donor.bankAccounts.hint.excluded:Z tohoto účtu už přiřazujeme jen platby s variabilním symbolem. Posílejte z něj prosím vždy s vaším variabilním symbolem.`;
 
 const HINTS: Record<AccountLabel, string> = {
   active: $localize`:@@donor.bankAccounts.hint.active:Platby bez variabilního symbolu z něj vám přiřazujeme automaticky.`,
-  shared: $localize`:@@donor.bankAccounts.hint.shared:Tento účet ověřil i jiný dárce, proto z něj platby bez variabilního symbolu nepřiřazujeme nikomu. Pokud z něj dary neposíláte vy, vypněte si u tohoto účtu párování. Jinak z něj prosím posílejte vždy s vaším variabilním symbolem.`,
+  shared: $localize`:@@donor.bankAccounts.hint.shared:Tento účet ověřil i jiný dárce, proto z něj platby bez variabilního symbolu nepřiřazujeme nikomu. Pokud z něj dary neposíláte vy, stiskněte „Nepřiřazovat platby z tohoto účtu“. Jinak z něj prosím posílejte vždy s vaším variabilním symbolem.`,
   awaiting: $localize`:@@donor.bankAccounts.hint.awaiting:Pošlete z účtu 1 Kč s vaším variabilním symbolem. Jakmile dorazí, přiřadíme vám z něj i platby bez symbolu ode dne zapnutí.`,
   excluded: EXCLUDED_HINT,
   disconnected: '',
 };
 
-const EXCLUDED_DISCONNECTED_HINT = $localize`:@@donor.bankAccounts.hint.excludedDisconnected:Z tohoto účtu už přiřazujeme jen platby s variabilním symbolem, párování u něj proto znovu zapnout nejde.`;
+const EXCLUDED_DISCONNECTED_HINT = $localize`:@@donor.bankAccounts.hint.excludedDisconnected:Z tohoto účtu už přiřazujeme jen platby s variabilním symbolem, platby bez symbolu z něj proto znovu přiřazovat nejde.`;
 
-const DISCONNECTED_MESSAGE = $localize`:@@donor.bankAccounts.disconnected:Párování z účtu jsme vypnuli.`;
+const DISCONNECTED_MESSAGE = $localize`:@@donor.bankAccounts.disconnected:Platby z účtu vám už nebudeme přiřazovat.`;
 const RECONNECTED_MESSAGE = $localize`:@@donor.bankAccounts.reconnected:Účet čeká na vaši platbu 1 Kč.`;
 const CHANGE_FAILED = $localize`:@@donor.bankAccounts.error.change:Účet se nepodařilo změnit. Zkuste to prosím znovu.`;
 const ANSWER_FAILED = $localize`:@@donor.bankAccounts.error.answer:Odpověď se nepodařilo uložit. Zkuste to prosím znovu.`;
 const AND = $localize`:@@donor.bankAccounts.claim.and:a`;
+const VERIFICATION_MESSAGE = $localize`:@@donor.bankAccounts.addDialog.messageValue:Ověření účtu Nadační fond Nová naděje`;
 
 const UNAUTHENTICATED = 'auth/unauthenticated';
 const STALE_LIST_STATUSES = [404, 409];
@@ -123,6 +124,7 @@ export class BankAccountsCard {
   readonly sessionEnded = output<void>();
   readonly bankChecked = output<BankCheckResponse>();
   readonly donationsChanged = output<void>();
+  readonly accountsChanged = output<readonly BankAccountItem[]>();
 
   protected readonly donorName = computed(() => this.auth.donor()?.name ?? '');
 
@@ -146,6 +148,13 @@ export class BankAccountsCard {
     return state.kind === 'ready' ? state.qr : null;
   });
   protected readonly verificationAmount = VERIFICATION_AMOUNT;
+  protected readonly verificationMessage = VERIFICATION_MESSAGE;
+  protected readonly nudgesStandingOrder = computed(
+    () =>
+      !this.accounts().some(
+        (account) => account.status === 'ACTIVE' || account.symbolOffer !== null,
+      ),
+  );
   private qrRequest: Subscription | undefined;
 
   protected readonly paymentWatch = signal<PaymentWatch>('waiting');
@@ -220,6 +229,7 @@ export class BankAccountsCard {
   private showAccounts(items: readonly BankAccountItem[]): void {
     this.accounts.set(items);
     this.state.set('ready');
+    this.accountsChanged.emit(items);
     if (this.adding() && this.accountsWhenOpened() === null) {
       this.accountsWhenOpened.set(accountsWhenOpened(items));
     }
@@ -330,6 +340,7 @@ export class BankAccountsCard {
         account.id === answered.id ? { ...account, symbolOffer: null } : account,
       ),
     );
+    this.accountsChanged.emit(this.accounts());
   }
 
   private confirmSymbol(account: BankAccountItem, offer: SymbolOffer): Observable<string> {
@@ -513,15 +524,15 @@ function confirmedMessage(
 
 function pairedMessage(count: number, symbol: string, account: string): string {
   if (count === 0) {
-    return $localize`:@@donor.bankAccounts.claim.paired.none:Odpověď jsme uložili. Platby s VS ${symbol}:symbol: z účtu ${account}:account: vám přiřazujeme stejně jako platby bez VS.`;
+    return $localize`:@@donor.bankAccounts.claim.paired.none:Odpověď jsme uložili. Platby se symbolem ${symbol}:symbol: z účtu ${account}:account: vám přiřazujeme stejně jako platby bez symbolu.`;
   }
   switch (pluralCategory(count)) {
     case 'one':
-      return $localize`:@@donor.bankAccounts.claim.paired.one:Přiřadili jsme vám 1 platbu s VS ${symbol}:symbol: z účtu ${account}:account:.`;
+      return $localize`:@@donor.bankAccounts.claim.paired.one:Přiřadili jsme vám 1 platbu se symbolem ${symbol}:symbol: z účtu ${account}:account:.`;
     case 'few':
-      return $localize`:@@donor.bankAccounts.claim.paired.few:Přiřadili jsme vám ${count}:count: platby s VS ${symbol}:symbol: z účtu ${account}:account:.`;
+      return $localize`:@@donor.bankAccounts.claim.paired.few:Přiřadili jsme vám ${count}:count: platby se symbolem ${symbol}:symbol: z účtu ${account}:account:.`;
     case 'other':
-      return $localize`:@@donor.bankAccounts.claim.paired.many:Přiřadili jsme vám ${count}:count: plateb s VS ${symbol}:symbol: z účtu ${account}:account:.`;
+      return $localize`:@@donor.bankAccounts.claim.paired.many:Přiřadili jsme vám ${count}:count: plateb se symbolem ${symbol}:symbol: z účtu ${account}:account:.`;
   }
 }
 
@@ -536,7 +547,7 @@ function receiptsChangedMessage(years: readonly number[]): string {
 }
 
 function declinedMessage(symbol: string, account: string): string {
-  return $localize`:@@donor.bankAccounts.claim.declined:Odpověď jsme uložili. Platby s VS ${symbol}:symbol: z účtu ${account}:account: vám nepřiřadíme.`;
+  return $localize`:@@donor.bankAccounts.claim.declined:Odpověď jsme uložili. Platby se symbolem ${symbol}:symbol: z účtu ${account}:account: vám nepřiřadíme.`;
 }
 
 function joinedList(values: readonly string[]): string {
