@@ -43,6 +43,11 @@ public record SenderAccount(String accountNumber, String bankCode) {
         return accountNumber + "/" + bankCode;
     }
 
+    public String shortDisplay() {
+        String number = accountNumber.substring(accountNumber.indexOf('-') + 1);
+        return "…" + number.substring(Math.max(0, number.length() - 4)) + "/" + bankCode;
+    }
+
     private static String withoutSpaces(String value) {
         return value.replaceAll("\\s", "");
     }

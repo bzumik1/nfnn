@@ -17,6 +17,7 @@ import {
   problem,
   samplePngBase64,
   secondFactorEnrolment,
+  secondFactorRecovery,
   secondFactorRequired,
   signIn,
   session,
@@ -1499,6 +1500,27 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     await page.locator('#login-password').fill('correct horse battery');
     await page.getByRole('dialog').locator('.ui-button--block').click();
     await expect(page.getByLabel('Kód z aplikace')).toBeFocused();
+
+    expect(await violations(page)).toEqual([]);
+  });
+
+  test('when a donor who lost the phone asks to recover access by payment, then the instructions break no rule', async ({
+    page,
+  }) => {
+    await page.route('**/api/donors/auth/login', (route) => route.fulfill(secondFactorRequired()));
+    await page.route('**/api/donors/auth/login/second-factor/recovery', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(secondFactorRecovery),
+      }),
+    );
+    await openSignInDialog(page);
+    await page.locator('#login-email').fill('jana@example.cz');
+    await page.locator('#login-password').fill('correct horse battery');
+    await page.getByRole('dialog').locator('.ui-button--block').click();
+    await page.getByRole('button', { name: 'Obnovit přístup platbou' }).click();
+    await expect(page.getByRole('heading', { name: 'Obnova přístupu platbou' })).toBeFocused();
 
     expect(await violations(page)).toEqual([]);
   });

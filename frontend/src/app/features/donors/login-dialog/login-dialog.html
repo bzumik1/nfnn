@@ -37,7 +37,78 @@
       </button>
     </div>
 
-    @if (mode() === 'login' && challenge() !== null) {
+    @if (mode() === 'login' && recovery(); as instructions) {
+      <div class="recovery">
+        <h3
+          #recoveryTitle
+          class="reset-title recovery-title"
+          tabindex="-1"
+          i18n="@@donor.login.recovery.title"
+        >
+          Obnova přístupu platbou
+        </h3>
+        <p class="reset-lead" i18n="@@donor.login.recovery.lead">
+          Pošlete 1&nbsp;Kč se zprávou níže z bankovního účtu, ze kterého jste nám už poslali dar se
+          svým variabilním symbolem. Jakmile platbu načteme, vypneme dvoufaktorové ověření, ukončíme
+          všechna přihlášení a pošleme vám e-mail. Pak se přihlásíte jen heslem.
+        </p>
+        <dl class="recovery-details">
+          <div class="recovery-row">
+            <dt i18n="@@donor.login.recovery.account">Číslo účtu</dt>
+            <dd>
+              <span class="recovery-value">{{ instructions.accountNumber }}</span>
+              <app-copy-button
+                [value]="instructions.accountNumber"
+                what="číslo účtu"
+                i18n-what="@@donor.login.recovery.copyAccount"
+              />
+            </dd>
+          </div>
+          <div class="recovery-row">
+            <dt i18n="@@donor.login.recovery.amount">Částka</dt>
+            <dd>
+              <span class="recovery-value"
+                >{{ amount(instructions) }}&nbsp;<ng-container
+                  i18n="@@donor.login.recovery.currency"
+                  >Kč</ng-container
+                ></span
+              >
+            </dd>
+          </div>
+          <div class="recovery-row">
+            <dt i18n="@@donor.login.recovery.message">Zpráva pro příjemce</dt>
+            <dd>
+              <span class="recovery-value">{{ instructions.message }}</span>
+              <app-copy-button
+                [value]="instructions.message"
+                what="zprávu pro příjemce"
+                i18n-what="@@donor.login.recovery.copyMessage"
+              />
+            </dd>
+          </div>
+        </dl>
+        @if (instructions.usableFrom; as from) {
+          <p class="ui-callout ui-callout--warning" i18n="@@donor.login.recovery.usableFrom">
+            Platbu pošlete nejdříve {{ day(from) }}: obnovu přijmeme jen z účtu, který u nás známe
+            aspoň týden.
+          </p>
+        }
+        <p class="recovery-note" i18n="@@donor.login.recovery.note">
+          Kód platí do {{ time(instructions.expiresAt) }}. Platby z banky načítáme každou hodinu;
+          platba se započítá jako dar.
+        </p>
+        <p class="foot">
+          <button
+            type="button"
+            class="link-btn recovery-back"
+            (click)="backToCode()"
+            i18n="@@donor.login.recovery.back"
+          >
+            ← Zpět na kód
+          </button>
+        </p>
+      </div>
+    } @else if (mode() === 'login' && challenge() !== null) {
       <p class="sub" i18n="@@donor.login.secondFactor.sub">
         Přihlášení dokončíte kódem z ověřovací aplikace
       </p>
@@ -87,6 +158,19 @@
           }
         </button>
       </form>
+
+      <p class="recovery-offer">
+        <span i18n="@@donor.login.recovery.offer">Nemáte telefon s aplikací?</span>
+        <button
+          type="button"
+          class="link-btn recovery-start"
+          [disabled]="loading()"
+          (click)="recoverByPayment()"
+          i18n="@@donor.login.recovery.start"
+        >
+          Obnovit přístup platbou
+        </button>
+      </p>
 
       <p class="foot">
         <button

@@ -17,18 +17,26 @@ import { RouterLink } from '@angular/router';
 import { describeProblem, problemOf, problemTypeEndsWith } from '../../../core/auth/api-problem';
 import { AuthApi } from '../../../core/auth/auth-api';
 import { AuthStore } from '../../../core/auth/auth-store';
-import { DonorLocale, DonorType, PASSWORD_MIN_LENGTH } from '../../../core/auth/donor';
+import {
+  DonorLocale,
+  DonorType,
+  PASSWORD_MIN_LENGTH,
+  SecondFactorRecovery,
+} from '../../../core/auth/donor';
 import { LoginDialogMode, LoginDialogService } from '../../../core/auth/login-dialog.service';
 import {
   PasskeyAuthenticator,
   PasskeyCeremonyError,
 } from '../../../core/auth/passkey-authenticator';
+import { CopyButton } from '../../../shared/ui/copy-button/copy-button';
 import { Dialog } from '../../../shared/ui/dialog/dialog';
 import { FocusFirstInvalid } from '../../../shared/ui/form-field/focus-first-invalid';
 import { FormControlDirective } from '../../../shared/ui/form-field/form-control';
 import { FormField } from '../../../shared/ui/form-field/form-field';
 import { PasswordReveal } from '../../../shared/ui/password-reveal/password-reveal';
 import { RadioGroup } from '../../../shared/ui/radio-group/radio-group';
+import { formatMinorUnits } from '../../donations/donation-amount';
+import { formatBankTime, formatDonationDate } from '../../donations/donation-date';
 import {
   CITY_MESSAGES,
   COMPANY_NAME_MESSAGES,
@@ -63,6 +71,7 @@ const INVALID_SECOND_FACTOR_CHALLENGE = 'auth/invalid-second-factor-challenge';
     FocusFirstInvalid,
     PasswordReveal,
     RadioGroup,
+    CopyButton,
   ],
   templateUrl: './login-dialog.html',
   styleUrl: './login-dialog.scss',
@@ -76,6 +85,7 @@ export class LoginDialog {
   private readonly injector = inject(Injector);
   private readonly passkeyAuthenticator = inject(PasskeyAuthenticator);
   private readonly codeField = viewChild<ElementRef<HTMLInputElement>>('codeField');
+  private readonly recoveryTitle = viewChild<ElementRef<HTMLElement>>('recoveryTitle');
 
   protected readonly passwordMinLength = PASSWORD_MIN_LENGTH;
   protected readonly passkeysSupported = this.passkeyAuthenticator.supported();
@@ -88,6 +98,7 @@ export class LoginDialog {
   protected readonly emailNotVerified = signal(false);
   protected readonly verificationResent = signal(false);
   protected readonly challenge = signal<string | null>(null);
+  protected readonly recovery = signal<SecondFactorRecovery | null>(null);
   protected readonly error = signal('');
 
   protected email = '';
@@ -197,6 +208,48 @@ export class LoginDialog {
     });
   }
 
+  recoverByPayment(): void {
+    const challenge = this.challenge();
+    if (challenge === null || this.loading()) {
+      return;
+    }
+    this.loading.set(true);
+    this.error.set('');
+    this.authApi.startSecondFactorRecovery(challenge).subscribe({
+      next: (recovery) => {
+        this.loading.set(false);
+        this.recovery.set(recovery);
+        afterNextRender(() => this.recoveryTitle()?.nativeElement.focus(), {
+          injector: this.injector,
+        });
+      },
+      error: (failure: unknown) => {
+        if (problemTypeEndsWith(failure, INVALID_SECOND_FACTOR_CHALLENGE)) {
+          this.leaveCodeStep();
+        }
+        this.failUnlessThrottled(failure, this.tooManyAttempts);
+      },
+    });
+  }
+
+  backToCode(): void {
+    this.recovery.set(null);
+    this.error.set('');
+    afterNextRender(() => this.codeField()?.nativeElement.focus(), { injector: this.injector });
+  }
+
+  protected amount(recovery: SecondFactorRecovery): string {
+    return formatMinorUnits(recovery.amountMinor);
+  }
+
+  protected day(isoDate: string): string {
+    return formatDonationDate(isoDate);
+  }
+
+  protected time(isoInstant: string): string {
+    return formatBankTime(isoInstant);
+  }
+
   backToPassword(): void {
     this.leaveCodeStep();
     this.error.set('');
@@ -292,6 +345,7 @@ export class LoginDialog {
 
   private leaveCodeStep(): void {
     this.challenge.set(null);
+    this.recovery.set(null);
     this.code = '';
   }
 

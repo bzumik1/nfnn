@@ -82,6 +82,14 @@ class SenderAccountTest {
     }
 
     @Test
+    @DisplayName("Given accounts with and without a prefix, when they are shown shortened, then only the last four digits and the bank code remain")
+    void should_keep_the_last_four_digits_and_the_bank_code_when_shown_shortened() {
+        assertThat(new SenderAccount("2900233333", "2010").shortDisplay()).isEqualTo("…3333/2010");
+        assertThat(new SenderAccount("19-2000145399", "0800").shortDisplay()).isEqualTo("…5399/0800");
+        assertThat(new SenderAccount("29", "2010").shortDisplay()).isEqualTo("…29/2010");
+    }
+
+    @Test
     @DisplayName("Given non-canonical values, when an account is created, then it is rejected")
     void should_reject_when_created_given_non_canonical_values() {
         assertThatIllegalArgumentException().isThrownBy(() -> new SenderAccount("0029", "2010"));

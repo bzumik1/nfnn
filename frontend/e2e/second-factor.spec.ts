@@ -8,6 +8,7 @@ import {
   openSignInDialog,
   problem,
   secondFactorEnrolment,
+  secondFactorRecovery,
   secondFactorRequired,
   session,
   signIn,
@@ -51,6 +52,39 @@ test.describe('Given a donor who protects the account with an authenticator app'
     expect(completed).toEqual([{ challenge: CHALLENGE, code: '287082' }]);
     await openDonorSection(page, 'Údaje a zabezpečení');
     await expect(page.locator('.account-data')).toContainText('Zapnuté');
+  });
+
+  test('when they lost the phone, then the dialog offers recovery by payment, names what to pay and goes back to the code', async ({
+    page,
+  }) => {
+    await page.route('**/api/donors/auth/login', (route) => route.fulfill(secondFactorRequired()));
+    const asked: unknown[] = [];
+    await page.route('**/api/donors/auth/login/second-factor/recovery', async (route) => {
+      asked.push(route.request().postDataJSON());
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(secondFactorRecovery),
+      });
+    });
+
+    await openSignInDialog(page);
+    await page.locator('#login-email').fill('jana@example.cz');
+    await page.locator('#login-password').fill('correct horse battery');
+    await page.getByRole('dialog').locator('.ui-button--block').click();
+    await expect(page.getByLabel('Kód z aplikace')).toBeFocused();
+    await page.getByRole('button', { name: 'Obnovit přístup platbou' }).click();
+
+    const dialog = page.getByRole('dialog');
+    await expect(dialog.getByRole('heading', { name: 'Obnova přístupu platbou' })).toBeFocused();
+    expect(asked).toEqual([{ challenge: CHALLENGE }]);
+    await expect(dialog).toContainText('5544332217/2010');
+    await expect(dialog).toContainText('OBNOVA K7MP4RXA');
+    await expect(dialog).toContainText('Platbu pošlete nejdříve 27. 10. 2026');
+    await expect(dialog).toContainText('Kód platí do 31. 10. 2026 11:00');
+
+    await dialog.getByRole('button', { name: '← Zpět na kód' }).click();
+    await expect(page.getByLabel('Kód z aplikace')).toBeFocused();
   });
 
   test('when they type a wrong code and then the challenge expires, then the dialog says so and goes back to the password', async ({

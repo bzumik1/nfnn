@@ -4,6 +4,7 @@ import cz.novanadeje.app.donors.application.AuthenticatedDonor;
 import cz.novanadeje.app.donors.application.DonorAuthenticationService;
 import cz.novanadeje.app.donors.application.DonorPasskeySignInService;
 import cz.novanadeje.app.donors.application.DonorRegistrationService;
+import cz.novanadeje.app.donors.application.SecondFactorRecoveryService;
 import cz.novanadeje.app.donors.domain.InvalidRefreshToken;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -25,6 +26,7 @@ class DonorAuthController {
     private final DonorRegistrationService registration;
     private final DonorAuthenticationService authentication;
     private final DonorPasskeySignInService passkeySignIn;
+    private final SecondFactorRecoveryService recoveries;
     private final SignInRateLimiter signInRateLimiter;
     private final SecondFactorRateLimiter secondFactorRateLimiter;
     private final RegistrationRateLimiter registrationRateLimiter;
@@ -32,11 +34,12 @@ class DonorAuthController {
     private final Clock clock;
 
     DonorAuthController(DonorRegistrationService registration, DonorAuthenticationService authentication, DonorPasskeySignInService passkeySignIn,
-                        SignInRateLimiter signInRateLimiter, SecondFactorRateLimiter secondFactorRateLimiter,
+                        SecondFactorRecoveryService recoveries, SignInRateLimiter signInRateLimiter, SecondFactorRateLimiter secondFactorRateLimiter,
                         RegistrationRateLimiter registrationRateLimiter, PasskeySignInRateLimiter passkeySignInRateLimiter, Clock clock) {
         this.registration = registration;
         this.authentication = authentication;
         this.passkeySignIn = passkeySignIn;
+        this.recoveries = recoveries;
         this.signInRateLimiter = signInRateLimiter;
         this.secondFactorRateLimiter = secondFactorRateLimiter;
         this.registrationRateLimiter = registrationRateLimiter;
@@ -61,6 +64,12 @@ class DonorAuthController {
     ResponseEntity<AuthResponse> completeSecondFactor(@Valid @RequestBody SecondFactorLoginRequest request, HttpServletRequest http) {
         secondFactorRateLimiter.check(http.getRemoteAddr());
         return respondWithSession(HttpStatus.OK, authentication.completeSecondFactor(request.challenge(), request.code()));
+    }
+
+    @PostMapping("/login/second-factor/recovery")
+    SecondFactorRecoveryResponse startSecondFactorRecovery(@Valid @RequestBody SecondFactorRecoveryRequest request, HttpServletRequest http) {
+        secondFactorRateLimiter.check(http.getRemoteAddr());
+        return SecondFactorRecoveryResponse.of(recoveries.start(request.challenge()));
     }
 
     @PostMapping("/passkey/options")

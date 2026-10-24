@@ -40,6 +40,16 @@ export function secondFactorRequired() {
   };
 }
 
+export const secondFactorRecovery = {
+  message: 'OBNOVA K7MP4RXA',
+  expiresAt: '2026-10-31T10:00:00Z',
+  accountNumber: '5544332217/2010',
+  iban: 'CZ2620100000005544332217',
+  amountMinor: 100,
+  currency: 'CZK',
+  usableFrom: '2026-10-27',
+};
+
 export const secondFactorEnrolment = {
   secret: 'GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ',
   otpauthUri:

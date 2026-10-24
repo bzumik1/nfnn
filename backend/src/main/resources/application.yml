@@ -162,6 +162,7 @@ app:
       challenge-ttl: PT5M
       challenge-attempts: 5
       issuer: Nová naděje
+      recovery-ttl: P14D
     passkeys:
       challenge-ttl: PT5M
       max-per-donor: 10

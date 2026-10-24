@@ -291,6 +291,109 @@ describe('Given the sign-in dialog', () => {
         expect(element('.ui-field-error')).toBeNull();
         http.expectNone('/api/donors/auth/login/second-factor');
       });
+
+      describe('and asks to recover access by payment', () => {
+        const instructions = {
+          message: 'OBNOVA K7MP4RXA',
+          expiresAt: '2026-10-31T10:00:00Z',
+          accountNumber: '5544332217/2010',
+          iban: 'CZ2620100000005544332217',
+          amountMinor: 100,
+          currency: 'CZK',
+          usableFrom: '2026-10-27',
+        };
+
+        async function askForRecovery(): Promise<ReturnType<HttpTestingController['expectOne']>> {
+          await click('.recovery-start');
+          return http.expectOne('/api/donors/auth/login/second-factor/recovery');
+        }
+
+        it('then the challenge goes out and the dialog names the account, 1 Kč and the message to copy, from when and until when', async () => {
+          const request = await askForRecovery();
+          expect(request.request.body).toEqual({ challenge: SAMPLE_CHALLENGE });
+          request.flush(instructions);
+          await settle();
+
+          const recovery = element('.recovery');
+          expect(element('.code-form')).toBeNull();
+          expect(recovery.textContent).toContain('5544332217/2010');
+          expect(recovery.textContent).toContain('1\u00a0Kč');
+          expect(recovery.textContent).toContain('OBNOVA K7MP4RXA');
+          expect(recovery.textContent).toContain('Platbu pošlete nejdříve 27. 10. 2026');
+          expect(recovery.textContent).toContain('Kód platí do 31. 10. 2026 11:00');
+          expect(
+            [...recovery.querySelectorAll('app-copy-button button')].map((button) =>
+              button.textContent?.replace(/\s+/g, ' ').trim(),
+            ),
+          ).toEqual(['Kopírovat číslo účtu', 'Kopírovat zprávu pro příjemce']);
+          expect(document.activeElement).toBe(element('.recovery-title'));
+        });
+
+        it('from an account usable today, then no later date is named', async () => {
+          (await askForRecovery()).flush({ ...instructions, usableFrom: null });
+          await settle();
+
+          expect(element('.recovery').textContent).not.toContain('nejdříve');
+        });
+
+        it('without a verified bank account, then the code step stays and says why', async () => {
+          (await askForRecovery()).flush(
+            {
+              ...problem(
+                'donors/second-factor-recovery-unavailable',
+                'Obnova platbou není možná',
+                'Platbou 1 Kč lze ověření vypnout jen z účtu, ze kterého jste nám už přispěli.',
+              ),
+              status: 409,
+            },
+            { status: 409, statusText: 'Conflict' },
+          );
+          await settle();
+
+          expect(element('.recovery')).toBeNull();
+          expect(element('#login-code')).not.toBeNull();
+          expect(element('[role="alert"]').textContent).toContain('Obnova platbou není možná.');
+        });
+
+        it('after the sign-in expired, then the dialog goes back to the password and says why', async () => {
+          (await askForRecovery()).flush(
+            problem(
+              'auth/invalid-second-factor-challenge',
+              'Přihlášení vypršelo',
+              'Zadejte prosím znovu e-mail a heslo.',
+            ),
+            { status: 401, statusText: 'Unauthorized' },
+          );
+          await settle();
+
+          expect(element('#login-code')).toBeNull();
+          expect(element('#login-password')).not.toBeNull();
+          expect(element('.ui-field-error').textContent).toContain('Přihlášení vypršelo.');
+        });
+
+        it('too many times from one address, then the dialog asks to try again in a while', async () => {
+          (await askForRecovery()).flush(problem('rate-limited', 'Příliš mnoho pokusů'), {
+            status: 429,
+            statusText: 'Too Many Requests',
+          });
+          await settle();
+
+          expect(element('[role="alert"]').textContent).toContain(
+            'Příliš mnoho pokusů z této adresy.',
+          );
+        });
+
+        it('and goes back to the code, then the code field returns with the focus', async () => {
+          (await askForRecovery()).flush(instructions);
+          await settle();
+
+          await click('.recovery-back');
+          await settle();
+
+          expect(element('.recovery')).toBeNull();
+          expect(document.activeElement).toBe(element('#login-code'));
+        });
+      });
     });
 
     it('before confirming the e-mail, then the dialog explains it and offers to send the link again', async () => {

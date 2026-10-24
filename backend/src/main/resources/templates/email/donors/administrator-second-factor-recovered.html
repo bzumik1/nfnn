@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="cs" th:lang="${#locale.language}" xmlns:th="http://www.thymeleaf.org">
+<body>
+<th:block th:fragment="content">
+    <p style="margin: 0 0 16px;" th:text="#{donors.administratorSecondFactorRecovered.email.greeting}">Dobrý den,</p>
+    <p style="margin: 0 0 16px;" th:text="#{donors.administratorSecondFactorRecovered.email.intro(${administratorName}, ${administratorEmail}, ${senderAccount})}">správce Jana Nováková (jana@example.cz) vypnul dvoufaktorové ověření svého účtu platbou 1 Kč ze svého ověřeného bankovního účtu …5399/0800, nejspíš po ztrátě telefonu. Všechna jeho přihlášení skončila a správu otevře, až si ověření znovu zapne.</p>
+    <p style="margin: 0 0 28px;" th:text="#{donors.administratorSecondFactorRecovered.email.action}">Pokud o tom víte, nemusíte nic dělat; zápis je v Historii správy.</p>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 0 0 28px;">
+        <tr>
+            <td style="background: #fffbeb; border: 1px solid #d97706; border-radius: 12px; padding: 14px 18px; font-size: 14px; color: #92400e;">
+                <span th:text="#{donors.administratorSecondFactorRecovered.email.warning(${senderEmail})}">Pokud vám to nesedí, odeberte mu roli na stránce Správci ve správě webu a spojte se s ním; s dotazem pište na info@nfnn.cz.</span>
+            </td>
+        </tr>
+    </table>
+    <p style="margin: 0;">
+        <span th:text="#{donors.administratorSecondFactorRecovered.email.regards}">S pozdravem</span><br>
+        <span style="font-family: 'Playfair Display', Georgia, serif; font-size: 17px; font-style: italic; color: #1a1a2e;" th:text="#{donors.administratorSecondFactorRecovered.email.signature}">Nová naděje – nadační fond</span>
+    </p>
+</th:block>
+</body>
+</html>

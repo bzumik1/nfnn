@@ -2,6 +2,7 @@ package cz.novanadeje.app.donations.application.importing;
 
 import cz.novanadeje.app.donations.application.pairing.PairingOutcome;
 import cz.novanadeje.app.donations.application.pairing.PaymentPairingService;
+import cz.novanadeje.app.donations.application.recovery.SecondFactorRecoveryPayments;
 import cz.novanadeje.app.donations.domain.bank.BankPayment;
 import cz.novanadeje.app.donations.domain.bank.BankPaymentId;
 import cz.novanadeje.app.donations.domain.bank.BankPaymentRepository;
@@ -33,13 +34,15 @@ public class BankStatementRecorder {
     private final PaymentPairingService pairing;
     private final BankImportStateRepository states;
     private final ImportAlertRepository alerts;
+    private final SecondFactorRecoveryPayments recoveries;
 
     public BankStatementRecorder(BankPaymentRepository payments, PaymentPairingService pairing, BankImportStateRepository states,
-                                 ImportAlertRepository alerts) {
+                                 ImportAlertRepository alerts, SecondFactorRecoveryPayments recoveries) {
         this.payments = payments;
         this.pairing = pairing;
         this.states = states;
         this.alerts = alerts;
+        this.recoveries = recoveries;
     }
 
     @Transactional
@@ -47,6 +50,7 @@ public class BankStatementRecorder {
         List<BankPayment> fresh = freshPayments(statement.incoming(), now);
         payments.saveAll(fresh);
         PairingOutcome outcome = pairing.pairUnpaired(now);
+        recoveries.inspect(fresh, now);
         extendCoverage(statement, plan, now);
         return new ImportCounts(statement.movementsReceived(), fresh.size(), statement.incoming().size() - fresh.size(),
                 outcome.pairedBySymbol(), outcome.pairedByAccount(), outcome.pairedByConfirmedSymbol(), outcome.accountsLearned(),
