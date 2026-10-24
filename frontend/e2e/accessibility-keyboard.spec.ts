@@ -111,6 +111,50 @@ test.describe('Given a visitor who uses only the keyboard or a screen reader', (
   });
 });
 
+test.describe('Given a visitor in a window too narrow for the header links', () => {
+  test.use({ viewport: { width: 800, height: 900 } });
+
+  test('when they open the home page 800 px wide, then the header offers the menu button instead of the links', async ({
+    page,
+  }) => {
+    await page.goto('/');
+
+    await expect(page.getByRole('button', { name: 'Otevřít menu' })).toBeVisible();
+    await expect(page.locator('.desktop-nav')).toBeHidden();
+  });
+});
+
+test.describe('Given a visitor whose browser shows text twice as large on a computer', () => {
+  test('when they open the home page, then every header link stays on one line inside the header', async ({
+    page,
+  }) => {
+    await page.goto('/');
+    await page.addStyleTag({ content: 'html { font-size: 200%; }' });
+
+    const header = await page.locator('nav.nav').boundingBox();
+    const items = await page.locator('.desktop-nav > *').evaluateAll((elements) =>
+      elements.map((element) => ({
+        text: element.textContent!.trim(),
+        ...element.getBoundingClientRect().toJSON(),
+      })),
+    );
+    expect(items.map((item) => item.text)).toEqual([
+      'O nás',
+      'Projekty',
+      'Aktuality',
+      'Kontakt',
+      'Přispět',
+      'Přihlásit se',
+    ]);
+    for (const item of items) {
+      expect(item.top, item.text).toBeGreaterThanOrEqual(header!.y);
+      expect(item.bottom, item.text).toBeLessThanOrEqual(header!.y + header!.height);
+      expect(item.right, item.text).toBeLessThanOrEqual(1280);
+    }
+    expect(await widerThanScreen(page)).toBe(0);
+  });
+});
+
 test.describe('Given a visitor on a phone who uses only the keyboard', () => {
   test.use({ viewport: { width: 390, height: 844 } });
 

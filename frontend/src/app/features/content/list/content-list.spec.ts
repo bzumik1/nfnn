@@ -113,6 +113,17 @@ describe('Given a visitor opening the list of news', () => {
 
     expect(text(fixture, '.list-state')).toBe('Zatím tu žádná aktualita není.');
     expect(fixture.nativeElement.querySelector('nav.pages')).toBeNull();
+    expect(link(fixture, 'Zpět na úvodní stránku')?.getAttribute('href')).toBe('/');
+  });
+
+  it('when a page past the last one is asked for, then the page says it does not exist and leads to the first one', async () => {
+    ({ fixture, http } = await setUp('news', { strana: '99' }));
+    http.expectOne('/api/content/news?page=98&size=10').flush(page([], 98, 12));
+    await settle(fixture);
+
+    expect(text(fixture, '.list-state')).toBe('Tato strana neexistuje.');
+    expect(link(fixture, 'Na první stranu')?.getAttribute('href')).toBe('/aktuality');
+    expect(link(fixture, 'Zpět na úvodní stránku')).toBeUndefined();
   });
 
   it('when the list fails, then an alert offers to try again and the retry loads it', async () => {

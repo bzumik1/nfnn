@@ -55,6 +55,7 @@ export class ContentList {
   protected readonly empty = computed(
     () => this.list().news.length === 0 && this.list().projects.length === 0,
   );
+  protected readonly pastLastPage = computed(() => this.empty() && this.list().total > 0);
   protected readonly newerQuery = computed(() => {
     const previous = this.pageNumber() - 1;
     return previous > 1 ? { strana: previous } : {};

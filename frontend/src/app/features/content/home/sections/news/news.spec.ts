@@ -25,6 +25,13 @@ describe('Given the news section', () => {
     expect(root().querySelector('a.all-link')).toBeNull();
   });
 
+  it('when only the placeholder cards show, then their dates are written like the real ones and nothing invites to read on', () => {
+    expect(
+      Array.from(root().querySelectorAll('.news-date')).map((date) => date.textContent?.trim()),
+    ).toEqual(['15. 04. 2026', '02. 03. 2026', '18. 01. 2026']);
+    expect(root().querySelector('.news-more')).toBeNull();
+  });
+
   it('when it renders, then the photos are decorative because each title follows them', () => {
     const alts = Array.from(root().querySelectorAll('img')).map((image) =>
       image.getAttribute('alt'),
@@ -79,5 +86,8 @@ describe('Given the news section with published articles', () => {
     const all = root.querySelector('a.all-link') as HTMLAnchorElement;
     expect(all.getAttribute('href')).toBe('/aktuality');
     expect(all.textContent?.trim()).toBe('Všechny aktuality');
+    const more = cards[0].querySelector('.news-more');
+    expect(more?.textContent?.trim()).toBe('Číst dál →');
+    expect(more?.getAttribute('aria-hidden')).toBe('true');
   });
 });

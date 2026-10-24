@@ -20,6 +20,10 @@
   margin-bottom: var(--space-6);
 }
 
+.next-step {
+  margin-bottom: var(--space-6);
+}
+
 .grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));

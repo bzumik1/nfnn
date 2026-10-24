@@ -85,10 +85,9 @@ test.describe('Given a visitor on the home page', () => {
       await page.goto('/');
 
       await expect(page.getByRole('heading', { name: 'Kontaktujte nás' })).toBeVisible();
-      await expect(page.getByRole('link', { name: 'info@nfnn.cz' })).toHaveAttribute(
-        'href',
-        'mailto:info@nfnn.cz',
-      );
+      await expect(
+        page.locator('#kontakt').getByRole('link', { name: 'info@nfnn.cz' }),
+      ).toHaveAttribute('href', 'mailto:info@nfnn.cz');
       await expect(page.getByText('Jiráskova 436, 473 01 Nový Bor')).toBeVisible();
     });
   });

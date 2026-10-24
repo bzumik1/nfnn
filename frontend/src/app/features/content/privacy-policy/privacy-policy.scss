@@ -17,6 +17,38 @@
   padding-bottom: var(--space-27);
 }
 
+.toc {
+  max-width: 70ch;
+  margin-bottom: var(--space-16);
+  padding: var(--space-6) var(--space-8);
+  background: var(--color-surface-alt);
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius-card);
+
+  ol {
+    padding-left: 1.25em;
+    columns: 2;
+    column-gap: var(--space-10);
+  }
+
+  li {
+    break-inside: avoid;
+    color: var(--color-text-muted);
+    font-size: var(--text-lg);
+    line-height: var(--leading-loose);
+  }
+
+  li::marker {
+    color: var(--color-accent);
+  }
+
+  a {
+    color: var(--color-accent);
+    font-weight: var(--weight-semibold);
+    text-underline-offset: 3px;
+  }
+}
+
 .prose {
   max-width: 70ch;
 
@@ -131,5 +163,14 @@
 
   .purpose {
     padding: var(--space-5-5) var(--space-5);
+  }
+
+  .toc {
+    margin-bottom: var(--space-12);
+    padding: var(--space-5);
+
+    ol {
+      columns: 1;
+    }
   }
 }

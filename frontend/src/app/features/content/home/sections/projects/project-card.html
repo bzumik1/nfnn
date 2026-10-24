@@ -25,6 +25,9 @@
         <a class="card-link" [routerLink]="['/projekty', item.slug]">{{ item.title }}</a>
       </h3>
       <p class="card-desc">{{ item.perex }}</p>
+      <span class="card-more" aria-hidden="true" i18n="@@home.projects.card.more"
+        >Celý příběh →</span
+      >
     </div>
   } @else {
     <div class="card-image">

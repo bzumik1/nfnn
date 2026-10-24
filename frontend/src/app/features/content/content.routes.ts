@@ -1,4 +1,5 @@
 import { Routes } from '@angular/router';
+import { NOT_FOUND_TITLE } from './not-found/not-found';
 
 export const contentRoutes: Routes = [
   {
@@ -37,7 +38,7 @@ export const contentRoutes: Routes = [
   },
   {
     path: '**',
-    title: $localize`:@@content.notFound.pageTitle:Stránka nenalezena | Nová naděje – nadační fond`,
+    title: NOT_FOUND_TITLE,
     loadComponent: () => import('./not-found/not-found').then((m) => m.NotFound),
   },
 ];

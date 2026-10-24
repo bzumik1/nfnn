@@ -2,18 +2,58 @@
   <div class="ui-container">
     <p class="ui-eyebrow ui-eyebrow--on-inverse" i18n="@@content.notFound.eyebrow">Chyba 404</p>
     <h1 class="ui-intro__title" i18n="@@content.notFound.title">Tuhle stránku jsme nenašli</h1>
-    <p class="ui-intro__lead" i18n="@@content.notFound.lead">
-      Odkaz je možná starý nebo v adrese chybí písmenko. Zbytek webu je na svém místě.
-    </p>
+    @switch (missing()) {
+      @case ('news') {
+        <p class="ui-intro__lead" i18n="@@content.notFound.news.lead">
+          Tato aktualita už na webu není.
+        </p>
+      }
+      @case ('project') {
+        <p class="ui-intro__lead" i18n="@@content.notFound.project.lead">
+          Tento projekt už na webu není.
+        </p>
+      }
+      @default {
+        <p class="ui-intro__lead" i18n="@@content.notFound.lead">
+          Odkaz je možná starý nebo v adrese chybí písmenko. Zbytek webu je na svém místě.
+        </p>
+      }
+    }
     <div class="actions">
-      <a class="ui-cta" routerLink="/" i18n="@@content.notFound.home">Zpět na úvodní stránku</a>
-      <a
-        class="ui-cta ui-cta--ghost ui-cta--on-inverse"
-        routerLink="/"
-        fragment="kontakt"
-        i18n="@@content.notFound.contact"
-        >Napište nám</a
-      >
+      @switch (missing()) {
+        @case ('news') {
+          <a class="ui-cta" routerLink="/aktuality" i18n="@@content.notFound.news.list"
+            >Všechny aktuality</a
+          >
+          <a
+            class="ui-cta ui-cta--ghost ui-cta--on-inverse"
+            routerLink="/"
+            i18n="@@content.notFound.home"
+            >Zpět na úvodní stránku</a
+          >
+        }
+        @case ('project') {
+          <a class="ui-cta" routerLink="/projekty" i18n="@@content.notFound.project.list"
+            >Všechny projekty</a
+          >
+          <a
+            class="ui-cta ui-cta--ghost ui-cta--on-inverse"
+            routerLink="/"
+            i18n="@@content.notFound.home"
+            >Zpět na úvodní stránku</a
+          >
+        }
+        @default {
+          <a class="ui-cta" routerLink="/" i18n="@@content.notFound.home">Zpět na úvodní stránku</a>
+          <a
+            class="ui-cta ui-cta--ghost ui-cta--on-inverse"
+            routerLink="/"
+            fragment="kontakt"
+            i18n="@@content.notFound.contact"
+            >Napište nám</a
+          >
+        }
+      }
     </div>
   </div>
 </section>

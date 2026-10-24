@@ -19,8 +19,76 @@
   </header>
 
   <div class="body ui-container">
+    <nav class="toc" aria-label="Obsah" i18n-aria-label="@@content.privacy.toc.label">
+      <ol>
+        <li>
+          <a
+            routerLink="/zasady-ochrany-osobnich-udaju"
+            fragment="spravce"
+            i18n="@@content.privacy.controller.title"
+            >Správce osobních údajů</a
+          >
+        </li>
+        <li>
+          <a
+            routerLink="/zasady-ochrany-osobnich-udaju"
+            fragment="udaje"
+            i18n="@@content.privacy.data.title"
+            >Jaké údaje zpracováváme a proč</a
+          >
+        </li>
+        <li>
+          <a
+            routerLink="/zasady-ochrany-osobnich-udaju"
+            fragment="uchovavani"
+            i18n="@@content.privacy.retention.title"
+            >Jak dlouho údaje uchováváme</a
+          >
+        </li>
+        <li>
+          <a
+            routerLink="/zasady-ochrany-osobnich-udaju"
+            fragment="prijemci"
+            i18n="@@content.privacy.recipients.title"
+            >Komu údaje předáváme</a
+          >
+        </li>
+        <li>
+          <a
+            routerLink="/zasady-ochrany-osobnich-udaju"
+            fragment="cookies"
+            i18n="@@content.privacy.cookies.title"
+            >Cookies</a
+          >
+        </li>
+        <li>
+          <a
+            routerLink="/zasady-ochrany-osobnich-udaju"
+            fragment="prava"
+            i18n="@@content.privacy.rights.title"
+            >Vaše práva</a
+          >
+        </li>
+        <li>
+          <a
+            routerLink="/zasady-ochrany-osobnich-udaju"
+            fragment="kontakt"
+            i18n="@@content.privacy.contact.title"
+            >Kontakt</a
+          >
+        </li>
+        <li>
+          <a
+            routerLink="/zasady-ochrany-osobnich-udaju"
+            fragment="ucinnost"
+            i18n="@@content.privacy.effective.title"
+            >Účinnost</a
+          >
+        </li>
+      </ol>
+    </nav>
     <div class="prose">
-      <section id="privacy-controller">
+      <section id="spravce">
         <h2 i18n="@@content.privacy.controller.title">Správce osobních údajů</h2>
         <p i18n="@@content.privacy.controller.identity">
           Správcem vašich osobních údajů je Nová naděje - nadační fond, IČO 27278794, se sídlem
@@ -34,7 +102,7 @@
         </p>
       </section>
 
-      <section>
+      <section id="udaje">
         <h2 i18n="@@content.privacy.data.title">Jaké údaje zpracováváme a proč</h2>
         <p i18n="@@content.privacy.data.intro">
           Zpracováváme jen ty údaje, které k danému účelu skutečně potřebujeme. U každého účelu
@@ -186,7 +254,7 @@
         </div>
       </section>
 
-      <section>
+      <section id="uchovavani">
         <h2 i18n="@@content.privacy.retention.title">Jak dlouho údaje uchováváme</h2>
         <p i18n="@@content.privacy.retention.intro">
           Údaje uchováváme jen po dobu, po kterou je potřebujeme:
@@ -217,7 +285,7 @@
         </p>
       </section>
 
-      <section>
+      <section id="prijemci">
         <h2 i18n="@@content.privacy.recipients.title">Komu údaje předáváme</h2>
         <p i18n="@@content.privacy.recipients.intro">
           Vaše údaje neprodáváme a nikomu je nepředáváme pro marketingové účely. Dostanou se jen k
@@ -263,7 +331,7 @@
         </p>
       </section>
 
-      <section>
+      <section id="cookies">
         <h2 i18n="@@content.privacy.cookies.title">Cookies</h2>
         <p i18n="@@content.privacy.cookies.text">
           Nepoužíváme žádné sledovací, analytické ani reklamní cookies. Do vašeho prohlížeče
@@ -273,7 +341,7 @@
         </p>
       </section>
 
-      <section>
+      <section id="prava">
         <h2 i18n="@@content.privacy.rights.title">Vaše práva</h2>
         <p i18n="@@content.privacy.rights.intro">
           V souvislosti se zpracováním osobních údajů máte tato práva:
@@ -323,7 +391,7 @@
         </p>
       </section>
 
-      <section>
+      <section id="kontakt">
         <h2 i18n="@@content.privacy.contact.title">Kontakt</h2>
         <p i18n="@@content.privacy.contact.email">
           S dotazy k ochraně osobních údajů a s žádostmi o uplatnění svých práv se na nás obraťte
@@ -334,7 +402,7 @@
         </p>
       </section>
 
-      <section>
+      <section id="ucinnost">
         <h2 i18n="@@content.privacy.effective.title">Účinnost</h2>
         <p i18n="@@content.privacy.effective.text">
           Tyto zásady jsou účinné od 23.&nbsp;října&nbsp;2026. Pokud je změníme, nové znění

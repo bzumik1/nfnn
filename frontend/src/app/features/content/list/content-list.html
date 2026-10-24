@@ -34,13 +34,29 @@
           <span i18n="@@content.list.projects.loading">Načítáme projekty…</span>
         }
       } @else if (state() === 'ready' && empty()) {
-        @if (kind === 'news') {
+        @if (pastLastPage()) {
+          <span i18n="@@content.list.pastEnd">Tato strana neexistuje.</span>
+        } @else if (kind === 'news') {
           <span i18n="@@content.list.news.empty">Zatím tu žádná aktualita není.</span>
         } @else {
           <span i18n="@@content.list.projects.empty">Zatím tu žádný projekt není.</span>
         }
       }
     </p>
+
+    @if (state() === 'ready' && empty()) {
+      <p class="next-step">
+        @if (pastLastPage()) {
+          <a class="ui-cta ui-cta--ghost" [routerLink]="basePath" i18n="@@content.list.firstPage"
+            >Na první stranu</a
+          >
+        } @else {
+          <a class="ui-cta ui-cta--ghost" routerLink="/" i18n="@@content.list.home"
+            >Zpět na úvodní stránku</a
+          >
+        }
+      </p>
+    }
 
     @if (state() === 'error') {
       <p class="list-error" role="alert" i18n="@@content.list.error">

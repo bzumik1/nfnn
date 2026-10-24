@@ -33,6 +33,14 @@ describe('Given the projects section', () => {
     expect(root().querySelector('a.all-link')).toBeNull();
   });
 
+  it('when only the placeholder cards show, then the lead calls them examples rather than real stories', () => {
+    expect(root().querySelector('.lead')?.textContent?.trim()).toBe('Příklady, jak pomáháme.');
+  });
+
+  it('when only the placeholder cards show, then no card invites the visitor to read on', () => {
+    expect(root().querySelector('.card-more')).toBeNull();
+  });
+
   it('when it renders, then the photos are decorative and the card titles name the children', () => {
     const alts = Array.from(root().querySelectorAll('img')).map((image) =>
       image.getAttribute('alt'),
@@ -101,5 +109,11 @@ describe('Given the projects section with published projects', () => {
     const all = root.querySelector('a.all-link') as HTMLAnchorElement;
     expect(all.getAttribute('href')).toBe('/projekty');
     expect(all.textContent?.trim()).toBe('Všechny projekty');
+    expect(root.querySelector('.lead')?.textContent?.trim()).toBe(
+      'Každý projekt je skutečný příběh skutečného dítěte.',
+    );
+    const more = cards[0].querySelector('.card-more');
+    expect(more?.textContent?.trim()).toBe('Celý příběh →');
+    expect(more?.getAttribute('aria-hidden')).toBe('true');
   });
 });

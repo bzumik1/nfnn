@@ -52,6 +52,31 @@ describe('Given the privacy policy page', () => {
     ]);
   });
 
+  it('when it renders, then a named table of contents under the introduction links every part', () => {
+    const toc = fixture.nativeElement.querySelector('nav.toc') as HTMLElement;
+    expect(toc.getAttribute('aria-label')).toBe('Obsah');
+
+    const entries = Array.from(toc.querySelectorAll('a')).map((link) => {
+      const fragment = link.getAttribute('href')!.split('#')[1];
+      const section = fixture.nativeElement.querySelector(`section#${fragment}`) as HTMLElement;
+      return [link.textContent?.trim(), section?.querySelector('h2')?.textContent?.trim()];
+    });
+    expect(entries).toHaveLength(8);
+    for (const [entry, heading] of entries) {
+      expect(entry).toBe(heading);
+    }
+    expect(Array.from(toc.querySelectorAll('a')).map((link) => link.getAttribute('href'))).toEqual([
+      '/zasady-ochrany-osobnich-udaju#spravce',
+      '/zasady-ochrany-osobnich-udaju#udaje',
+      '/zasady-ochrany-osobnich-udaju#uchovavani',
+      '/zasady-ochrany-osobnich-udaju#prijemci',
+      '/zasady-ochrany-osobnich-udaju#cookies',
+      '/zasady-ochrany-osobnich-udaju#prava',
+      '/zasady-ochrany-osobnich-udaju#kontakt',
+      '/zasady-ochrany-osobnich-udaju#ucinnost',
+    ]);
+  });
+
   it('when it renders, then it explains each processing purpose on its own', () => {
     expect(texts('h3')).toEqual([
       'Dárcovský účet',
@@ -208,7 +233,7 @@ describe('Given the privacy policy page', () => {
   });
 
   it('when it renders, then it names the controller with its company ID and seat', () => {
-    expect(texts('#privacy-controller p').join(' ')).toContain(
+    expect(texts('#spravce p').join(' ')).toContain(
       'Nová naděje - nadační fond, IČO 27278794, se sídlem Jiráskova 436, 473 01 Nový Bor',
     );
   });

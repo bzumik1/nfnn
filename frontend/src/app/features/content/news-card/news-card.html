@@ -25,6 +25,7 @@
         <a class="news-link" [routerLink]="['/aktuality', item.slug]">{{ item.title }}</a>
       </h3>
       <p class="news-perex">{{ item.perex }}</p>
+      <span class="news-more" aria-hidden="true" i18n="@@home.news.card.more">Číst dál →</span>
     </div>
   } @else {
     <div class="news-image">
@@ -42,7 +43,7 @@
         @case ('dominik') {
           <div class="news-meta">
             <span class="news-tag" i18n="@@home.news.tag.project">Projekt</span>
-            <span class="news-date" i18n="@@home.news.dominik.date">15. dubna 2026</span>
+            <span class="news-date" i18n="@@home.news.dominik.date">15. 04. 2026</span>
           </div>
           <h3 class="news-title" i18n="@@home.news.dominik.title">
             Pomohli jsme Dominikovi získat nový vozík
@@ -55,7 +56,7 @@
         @case ('report') {
           <div class="news-meta">
             <span class="news-tag" i18n="@@home.news.tag.reports">Zprávy</span>
-            <span class="news-date" i18n="@@home.news.report.date">2. března 2026</span>
+            <span class="news-date" i18n="@@home.news.report.date">02. 03. 2026</span>
           </div>
           <h3 class="news-title" i18n="@@home.news.report.title">
             Výroční zpráva 2025 je k dispozici
@@ -68,7 +69,7 @@
         @case ('autism') {
           <div class="news-meta">
             <span class="news-tag" i18n="@@home.news.tag.project">Projekt</span>
-            <span class="news-date" i18n="@@home.news.autism.date">18. ledna 2026</span>
+            <span class="news-date" i18n="@@home.news.autism.date">18. 01. 2026</span>
           </div>
           <h3 class="news-title" i18n="@@home.news.autism.title">
             Nový projekt: podpora vzdělávání dětí s autismem

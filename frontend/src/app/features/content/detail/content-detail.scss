@@ -44,11 +44,19 @@
   aspect-ratio: 8 / 5;
 }
 
+.actions-lead {
+  margin-top: var(--space-14);
+  color: var(--color-text);
+  font-size: var(--text-xl);
+  font-weight: var(--weight-semibold);
+  line-height: var(--leading-normal);
+}
+
 .actions {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-3-5);
-  margin-top: var(--space-14);
+  margin-top: var(--space-5);
 }
 
 @include bp.down(tablet) {
