@@ -446,6 +446,7 @@ describe('Given an administrator connected with the writing permission', () => {
     const settings = {
       recipients: ['info@nfnn.cz', 'pavel@example.cz'],
       sendDay: 5,
+      sendHour: 9,
       sections: { donors: true, donations: true, unpairedPayments: false, bankImport: true },
     };
     const result = await client.callTool({
@@ -454,6 +455,7 @@ describe('Given an administrator connected with the writing permission', () => {
     });
     expect(result.isError).toBeFalsy();
     expect(textOf(result)).toContain('"sendDay":5');
+    expect(textOf(result)).toContain('"sendHour":9');
     const put = stack.backend.requests.find((request) => request.method === 'PUT');
     expect(put?.path).toBe('/api/admin/donations/report/settings');
     expect(JSON.parse(put?.body ?? '{}')).toEqual(settings);

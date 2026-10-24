@@ -27,7 +27,7 @@ class JpaReportSettingsRepositoryTest {
 
     private static final String INSERT = "insert into donation_report_settings (id, recipients, send_day, include_donors, include_donations,"
             + " include_unpaired_payments, include_bank_import, updated_at) values (?, 'info@nfnn.cz', ?, ?, true, true, true, now())";
-    private static final ReportSettings CHANGED = new ReportSettings(ReportRecipients.parse(List.of("pavel@example.cz", "jakub@example.cz")), 5,
+    private static final ReportSettings CHANGED = new ReportSettings(ReportRecipients.parse(List.of("pavel@example.cz", "jakub@example.cz")), 5, 9,
             new ReportSections(true, false, true, false));
 
     @Autowired

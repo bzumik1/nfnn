@@ -29,7 +29,7 @@ describe('Given an administrator on the history page', () => {
   const granted = adminAction({
     id: '019a1c00-0000-7000-8000-00000000e002',
     action: 'GRANT_ADMINISTRATION',
-    details: 'Donor 019a1c00-0000-7000-8000-00000000a002 granted the ADMIN role',
+    details: 'Role správce udělena dárci 019a1c00-0000-7000-8000-00000000a002',
     performedAt: '2026-10-21T15:20:00Z',
   });
   const byFormer = adminAction({
@@ -94,7 +94,7 @@ describe('Given an administrator on the history page', () => {
     fixture.detectChanges();
   }
 
-  it('when the first page arrives, then every change shows when, who, what in Czech with its code, and the technical details', () => {
+  it('when the first page arrives, then every change shows when, who, what in Czech with its code, and the Czech details', () => {
     expect(text('[role="status"]')).toBe('Načítáme historii…');
 
     firstPage();
@@ -105,7 +105,8 @@ describe('Given an administrator on the history page', () => {
     expect(rowText(first)).toContain('jana@example.cz');
     expect(rowText(first)).toContain('Přiřazení platby dárci');
     expect(rowText(first)).toContain('PAIR_PAYMENT');
-    expect(rowText(first)).toContain('paired to donor');
+    expect(rowText(first)).toContain('ručně přiřazena dárci');
+    expect(first.querySelector('.details')?.closest('[lang]')?.getAttribute('lang')).not.toBe('en');
     expect(rowText(second)).toContain('Přidání správce');
     expect(rowText(third)).toContain('správce bez účtu');
     expect(rowText(third)).toContain('019a1c00-0000-7000-8000-00000000a009');

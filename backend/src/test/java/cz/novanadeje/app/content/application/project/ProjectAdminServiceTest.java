@@ -67,7 +67,7 @@ class ProjectAdminServiceTest {
         verify(events).publishEvent(audit.capture());
         assertThat(audit.getValue().action()).isEqualTo("CREATE_PROJECT");
         assertThat(audit.getValue().subjectId()).contains(view.id().value());
-        assertThat(audit.getValue().details()).contains("'pomohli-jsme-dominikovi' created");
+        assertThat(audit.getValue().details()).endsWith("„pomohli-jsme-dominikovi“ napsán");
     }
 
     @Test
@@ -124,7 +124,7 @@ class ProjectAdminServiceTest {
         ArgumentCaptor<AdminActionPerformed> audit = ArgumentCaptor.forClass(AdminActionPerformed.class);
         verify(events).publishEvent(audit.capture());
         assertThat(audit.getValue().action()).isEqualTo("PUBLISH_PROJECT");
-        assertThat(audit.getValue().details()).endsWith("published on 2026-10-23");
+        assertThat(audit.getValue().details()).endsWith("„dominik“ zveřejněn od 2026-10-23");
     }
 
     @Test

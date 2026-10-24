@@ -63,7 +63,7 @@ public class NewsAdminService {
         NewsContent content = checked(command.toContent(), id);
         NewsArticle article = NewsArticle.create(id, content, now);
         news.save(article);
-        audit(adminId, CREATE_ACTION, article, "News article " + id + " '" + content.slug() + "' created", now);
+        audit(adminId, CREATE_ACTION, article, "Aktualita " + id + " „" + content.slug() + "“ napsána", now);
         return NewsArticleView.from(article);
     }
 
@@ -74,7 +74,7 @@ public class NewsAdminService {
         NewsArticle edited = article.edit(content, now);
         news.save(edited);
         dropUnusedImage(article.content().coverImage(), content.coverImage());
-        audit(adminId, UPDATE_ACTION, edited, "News article " + id + " '" + content.slug() + "' updated", now);
+        audit(adminId, UPDATE_ACTION, edited, "Aktualita " + id + " „" + content.slug() + "“ upravena", now);
         return NewsArticleView.from(edited);
     }
 
@@ -82,7 +82,7 @@ public class NewsAdminService {
         Instant now = clock.instant();
         NewsArticle published = require(id).publish(on, now);
         news.save(published);
-        audit(adminId, PUBLISH_ACTION, published, "News article " + id + " '" + published.slug() + "' published on " + on, now);
+        audit(adminId, PUBLISH_ACTION, published, "Aktualita " + id + " „" + published.slug() + "“ zveřejněna od " + on, now);
         return NewsArticleView.from(published);
     }
 
@@ -90,7 +90,7 @@ public class NewsAdminService {
         Instant now = clock.instant();
         NewsArticle draft = require(id).unpublish(now);
         news.save(draft);
-        audit(adminId, UNPUBLISH_ACTION, draft, "News article " + id + " '" + draft.slug() + "' unpublished", now);
+        audit(adminId, UNPUBLISH_ACTION, draft, "Aktualita " + id + " „" + draft.slug() + "“ stažena z webu", now);
         return NewsArticleView.from(draft);
     }
 
@@ -99,7 +99,7 @@ public class NewsAdminService {
         NewsArticle article = require(id);
         news.delete(id);
         dropUnusedImage(article.content().coverImage(), Optional.empty());
-        audit(adminId, DELETE_ACTION, article, "News article " + id + " '" + article.slug() + "' deleted", now);
+        audit(adminId, DELETE_ACTION, article, "Aktualita " + id + " „" + article.slug() + "“ smazána", now);
     }
 
     private NewsContent checked(NewsContent content, NewsArticleId id) {

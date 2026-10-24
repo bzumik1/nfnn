@@ -21,7 +21,7 @@ Feature: An administrator uploads the signature printed on donation receipts
     When "Jana" uploads a 3000 by 1000 pixel JPEG scan named "podpis.jpg" as the receipt signature
     Then the response status is 200
     And the receipt signature is set, 1200 by 400 pixels, uploaded at "2026-12-20T11:00:00Z"
-    And the admin action "CHANGE_RECEIPT_SIGNATURE" by "Jana" is recorded with details containing "Signature image for receipts uploaded: 1200x400 px"
+    And the admin action "CHANGE_RECEIPT_SIGNATURE" by "Jana" is recorded with details containing "Nahrán obrázek podpisu na potvrzení o daru: 1200 × 400 px"
     When "Jana" asks for the receipt signature
     Then the receipt signature is set, 1200 by 400 pixels, uploaded at "2026-12-20T11:00:00Z"
     When "Jana" downloads the receipt of her donation received on 2026-10-01
@@ -36,12 +36,12 @@ Feature: An administrator uploads the signature printed on donation receipts
     Given "Jana" uploads a 600 by 200 pixel JPEG scan named "podpis.jpg" as the receipt signature
     When "Jana" removes the receipt signature
     Then the response status is 204
-    And the admin action "REMOVE_RECEIPT_SIGNATURE" by "Jana" is recorded with details containing "Signature image for receipts removed"
+    And the admin action "REMOVE_RECEIPT_SIGNATURE" by "Jana" is recorded with details containing "Obrázek podpisu odebrán"
     When "Jana" asks for the receipt signature
     Then the receipt signature is not set
     When "Jana" removes the receipt signature
     Then the response status is 204
-    And the admin action "REMOVE_RECEIPT_SIGNATURE" by "Jana" is recorded with details containing "Signature image for receipts removed"
+    And the admin action "REMOVE_RECEIPT_SIGNATURE" by "Jana" is recorded with details containing "Obrázek podpisu odebrán"
 
   Scenario: A file that is not a JPEG, PNG or WebP image is refused and the signature stays
     Given "Jana" uploads a 600 by 200 pixel JPEG scan named "podpis.jpg" as the receipt signature

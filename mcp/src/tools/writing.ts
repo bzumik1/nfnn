@@ -245,10 +245,11 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
     {
       title: 'Nastavit měsíční přehled',
       description:
-        'Replaces the monthly report settings: the recipients (1–10 addresses), the day of the month it goes out (1–28) and its sections. Read the current ones with nfnn_report first and send all of them. Audited as CHANGE_REPORT_SETTINGS.',
+        'Replaces the monthly report settings: the recipients (1–10 addresses), the day of the month (1–28) and the hour in Prague time (0–23, default 7) it goes out, and its sections. Read the current ones with nfnn_report first and send all of them. Audited as CHANGE_REPORT_SETTINGS.',
       inputSchema: z.object({
         recipients: z.array(z.string().min(1).max(254)).min(1).max(10),
         sendDay: z.number().int().min(1).max(28),
+        sendHour: z.number().int().min(0).max(23),
         sections: z.object({
           donors: z.boolean(),
           donations: z.boolean(),

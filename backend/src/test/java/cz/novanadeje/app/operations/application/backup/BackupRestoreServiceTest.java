@@ -64,7 +64,7 @@ class BackupRestoreServiceTest {
         verify(events).publishEvent(audit.capture());
         assertThat(audit.getValue().action()).isEqualTo("RESTORE_BACKUP");
         assertThat(audit.getValue().adminId()).isEqualTo(ADMIN);
-        assertThat(audit.getValue().details()).contains("A restore of " + FILE + " was requested (request " + request.id() + ")");
+        assertThat(audit.getValue().details()).contains("Vyžádána obnova ze zálohy " + FILE + " (požadavek " + request.id() + ")");
     }
 
     @Test
@@ -122,7 +122,7 @@ class BackupRestoreServiceTest {
         verify(events).publishEvent(audit.capture());
         assertThat(audit.getValue().action()).isEqualTo("BACKUP_RESTORED");
         assertThat(audit.getValue().adminId()).isEqualTo(ADMIN);
-        assertThat(audit.getValue().details()).isEqualTo("The database was restored from " + FILE + " (request " + REQUEST + "), 37 tables");
+        assertThat(audit.getValue().details()).isEqualTo("Databáze obnovena ze zálohy " + FILE + " (požadavek " + REQUEST + "), tabulek: 37");
     }
 
     @Test
@@ -137,7 +137,7 @@ class BackupRestoreServiceTest {
         verify(events).publishEvent(audit.capture());
         assertThat(audit.getValue().action()).isEqualTo("BACKUP_RESTORE_FAILED");
         assertThat(audit.getValue().details())
-                .isEqualTo("The restore of " + FILE + " (request " + REQUEST + ") failed: pg_restore: error: x; the data stayed as they were");
+                .isEqualTo("Obnova ze zálohy " + FILE + " (požadavek " + REQUEST + ") selhala: pg_restore: error: x; data zůstala, jak byla");
     }
 
     @Test

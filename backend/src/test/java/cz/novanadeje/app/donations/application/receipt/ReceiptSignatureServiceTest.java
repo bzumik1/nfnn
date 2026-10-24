@@ -60,7 +60,7 @@ class ReceiptSignatureServiceTest {
         assertThat(action.adminId()).isEqualTo(ADMIN);
         assertThat(action.action()).isEqualTo("CHANGE_RECEIPT_SIGNATURE");
         assertThat(action.subjectId()).isEmpty();
-        assertThat(action.details()).isEqualTo("Signature image for receipts uploaded: 600x200 px, SHA-256 " + IMAGE.digest());
+        assertThat(action.details()).isEqualTo("Nahrán obrázek podpisu na potvrzení o daru: 600 × 200 px, SHA-256 " + IMAGE.digest());
         assertThat(action.performedAt()).isEqualTo(NOW);
     }
 
@@ -84,7 +84,7 @@ class ReceiptSignatureServiceTest {
 
         AdminActionPerformed action = publishedAction();
         assertThat(action.action()).isEqualTo("REMOVE_RECEIPT_SIGNATURE");
-        assertThat(action.details()).isEqualTo("Signature image for receipts removed; new receipts carry the line and the name only");
+        assertThat(action.details()).isEqualTo("Obrázek podpisu odebrán; nová potvrzení o daru mají jen čáru a jméno");
     }
 
     @Test

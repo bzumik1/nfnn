@@ -28,6 +28,9 @@ class ReportSettingsJpaEntity {
     @Column(name = "send_day", nullable = false)
     private short sendDay;
 
+    @Column(name = "send_hour", nullable = false)
+    private short sendHour;
+
     @Column(name = "include_donors", nullable = false)
     private boolean includeDonors;
 
@@ -51,6 +54,7 @@ class ReportSettingsJpaEntity {
         entity.id = SINGLETON_ID;
         entity.recipients = String.join(SEPARATOR, settings.recipients().values());
         entity.sendDay = (short) settings.sendDay();
+        entity.sendHour = (short) settings.sendHour();
         entity.includeDonors = settings.sections().donors();
         entity.includeDonations = settings.sections().donations();
         entity.includeUnpairedPayments = settings.sections().unpairedPayments();
@@ -60,7 +64,7 @@ class ReportSettingsJpaEntity {
     }
 
     ReportSettings toDomain() {
-        return new ReportSettings(ReportRecipients.parse(Arrays.asList(recipients.split(SEPARATOR))), sendDay,
+        return new ReportSettings(ReportRecipients.parse(Arrays.asList(recipients.split(SEPARATOR))), sendDay, sendHour,
                 new ReportSections(includeDonors, includeDonations, includeUnpairedPayments, includeBankImport));
     }
 

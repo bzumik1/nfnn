@@ -71,8 +71,8 @@ public class LogLevelService {
         levels.setLevel(logger, Optional.of(level));
         timer.at(override.until(), () -> expire(override));
         events.publishEvent(new AdminActionPerformed(adminId, CHANGE_ACTION, Optional.empty(),
-                "The logger " + logger.value() + " was set to " + level + " until " + override.until() + " (before: "
-                        + configuredBefore.map(Enum::name).orElse("inherited") + ")", now));
+                "Logger " + logger.value() + " nastaven na " + level + " do " + override.until() + " (předtím: "
+                        + configuredBefore.map(Enum::name).orElse("zděděná úroveň") + ")", now));
         log.info("Admin {} set the logger {} to {} until {}", adminId, logger.value(), level, override.until());
         return override;
     }
@@ -86,8 +86,8 @@ public class LogLevelService {
         levels.setLevel(logger, removed.configuredBefore());
         Instant now = clock.instant();
         events.publishEvent(new AdminActionPerformed(adminId, RESET_ACTION, Optional.empty(),
-                "The logger " + logger.value() + " went back to " + removed.configuredBefore().map(Enum::name).orElse("inherited")
-                        + " before its override expired", now));
+                "Logger " + logger.value() + " vrácen na " + removed.configuredBefore().map(Enum::name).orElse("zděděnou úroveň")
+                        + " před koncem dočasné změny", now));
         log.info("Admin {} reset the logger {} to {}", adminId, logger.value(), removed.configuredBefore().map(Enum::name).orElse("inherited"));
         return true;
     }

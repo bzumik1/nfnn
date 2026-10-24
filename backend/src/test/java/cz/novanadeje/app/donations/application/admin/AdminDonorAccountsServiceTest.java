@@ -122,7 +122,7 @@ class AdminDonorAccountsServiceTest {
         assertThat(action.adminId()).isEqualTo(ADMIN);
         assertThat(action.action()).isEqualTo("REMOVE_SENDER_ACCOUNT_LINK");
         assertThat(action.subjectId()).contains(PETR.value());
-        assertThat(action.details()).contains("2900233333/2010").contains("2 donation(s)").contains("1 answer(s)");
+        assertThat(action.details()).contains("2900233333/2010").contains("smazané dary spárované přes něj: 2").contains("smazané odpovědi o starších symbolech: 1");
         assertThat(action.performedAt()).isEqualTo(NOW);
     }
 

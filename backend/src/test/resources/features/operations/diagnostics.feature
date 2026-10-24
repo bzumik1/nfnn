@@ -93,7 +93,7 @@ Feature: An administrator reads the server logs, raises a log level for a while 
       | logger | org.springframework.security |
       | level  | DEBUG                        |
     And the logs answer has no "configuredBefore"
-    And the admin action "CHANGE_LOG_LEVEL" by "Jana" is recorded with details containing "org.springframework.security was set to DEBUG"
+    And the admin action "CHANGE_LOG_LEVEL" by "Jana" is recorded with details containing "org.springframework.security nastaven na DEBUG"
     When "Jana" asks for the log levels
     Then the response status is 200
     And the logger "org.springframework.security" is listed at "DEBUG" with a temporary level
@@ -103,7 +103,7 @@ Feature: An administrator reads the server logs, raises a log level for a while 
     When "Jana" sets the logger "org.springframework.security" to "DEBUG" for 5 minutes
     And "Jana" resets the logger "org.springframework.security"
     Then the response status is 204
-    And the admin action "RESET_LOG_LEVEL" by "Jana" is recorded with details containing "org.springframework.security went back to inherited"
+    And the admin action "RESET_LOG_LEVEL" by "Jana" is recorded with details containing "org.springframework.security vrácen na zděděnou úroveň"
     And the logger "org.springframework.security" is listed at "INFO" without a temporary level
     When "Jana" resets the logger "org.springframework.security"
     Then the response status is 404

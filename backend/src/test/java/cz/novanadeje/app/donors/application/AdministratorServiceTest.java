@@ -289,7 +289,7 @@ class AdministratorServiceTest {
         assertThat(action.adminId()).isEqualTo(JANA.value());
         assertThat(action.action()).isEqualTo("REMOVE_PASSKEYS");
         assertThat(action.subjectId()).contains(PETR.value());
-        assertThat(action.details()).isEqualTo("2 passkeys of donor " + PETR + " removed; every session of the donor was ended");
+        assertThat(action.details()).isEqualTo("Odebrané přístupové klíče dárce " + PETR + ": 2; všechna přihlášení dárce ukončena");
         assertThat(published.getAllValues().getLast()).isEqualTo(new DonorPasskeysRemoved(PETR.value(), PETR_EMAIL, LocaleCode.CS));
     }
 

@@ -11,6 +11,7 @@ function reportView(overrides: Record<string, unknown> = {}) {
     settings: {
       recipients: ['info@nfnn.cz'],
       sendDay: 1,
+      sendHour: 7,
       sections: { donors: true, donations: true, unpairedPayments: true, bankImport: true },
       changedAt: null,
     },
@@ -62,13 +63,14 @@ test.describe('Given an administrator on the monthly report page', () => {
     await expect(page).toHaveTitle('Měsíční přehled | Správa | Nová naděje – nadační fond');
     await expect(page.getByRole('heading', { level: 1, name: 'Měsíční přehled' })).toBeFocused();
     await expect(
-      page.getByText('Příští přehled za říjen 2026 odejde 01. 11. 2026 ráno.'),
+      page.getByText('Příští přehled za říjen 2026 odejde 01. 11. 2026 v 7:00.'),
     ).toBeVisible();
     await expect(page.getByText('Zatím platí výchozí nastavení ze serveru.')).toBeVisible();
     await expect(page.locator('tbody tr')).toHaveText(['září 2026 01. 10. 2026 07:00']);
 
     await page.getByLabel('Příjemci').fill('pavel@example.cz\njakub@example.cz');
     await page.getByLabel('Den odeslání').selectOption({ label: '5.' });
+    await page.getByLabel('Hodina odeslání').selectOption({ label: '18:00' });
     await page.getByLabel('Platby bez dárce').uncheck();
     await page.getByRole('button', { name: 'Uložit nastavení' }).click();
 
@@ -77,12 +79,13 @@ test.describe('Given an administrator on the monthly report page', () => {
     );
     await expect(page.getByText('Naposledy změněno 23. 10. 2026 10:00.')).toBeVisible();
     await expect(
-      page.getByText('Příští přehled za říjen 2026 odejde 05. 11. 2026 ráno.'),
+      page.getByText('Příští přehled za říjen 2026 odejde 05. 11. 2026 v 18:00.'),
     ).toBeVisible();
     expect(saved).toEqual([
       {
         recipients: ['pavel@example.cz', 'jakub@example.cz'],
         sendDay: 5,
+        sendHour: 18,
         sections: { donors: true, donations: true, unpairedPayments: false, bankImport: true },
       },
     ]);
@@ -160,7 +163,7 @@ test.describe('Given an administrator on the monthly report page', () => {
       'září 2026 01. 10. 2026 07:00',
     ]);
     await expect(
-      page.getByText('Příští přehled za listopad 2026 odejde 01. 12. 2026 ráno.'),
+      page.getByText('Příští přehled za listopad 2026 odejde 01. 12. 2026 v 7:00.'),
     ).toBeVisible();
     expect(sent).toEqual([{ month: '2026-10' }]);
   });

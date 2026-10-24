@@ -50,7 +50,12 @@ public class MonthlyReportStepDefinitions {
 
     @When("the monthly report check runs on {date}")
     public void theMonthlyReportCheckRunsOn(LocalDate day) {
-        clock.set(day.atTime(CHECK_TIME).atZone(FoundationCalendar.ZONE).toInstant());
+        theMonthlyReportCheckRunsOnAt(day, CHECK_TIME.toString());
+    }
+
+    @When("the monthly report check runs on {date} at {string}")
+    public void theMonthlyReportCheckRunsOnAt(LocalDate day, String time) {
+        clock.set(day.atTime(LocalTime.parse(time)).atZone(FoundationCalendar.ZONE).toInstant());
         lastFailure = null;
         try {
             reports.sendDueReport();

@@ -14,6 +14,7 @@ import java.util.List;
 public record ReportSettingsRequest(
         @NotNull @Size(min = 1, max = ReportRecipients.MAX_RECIPIENTS) List<@NotBlank @Size(max = MAX_ADDRESS_LENGTH) String> recipients,
         @Min(ReportSettings.FIRST_SEND_DAY) @Max(ReportSettings.LAST_SEND_DAY) int sendDay,
+        @NotNull @Min(ReportSettings.FIRST_SEND_HOUR) @Max(ReportSettings.LAST_SEND_HOUR) Integer sendHour,
         @NotNull @Valid Sections sections) {
 
     static final int MAX_ADDRESS_LENGTH = 254;

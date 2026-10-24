@@ -18,7 +18,7 @@ Feature: An administrator writes news articles with photos and publishes them on
       | perex       | Krátký souhrn aktuality.      |
       | publishedOn |                               |
       | coverImage  |                               |
-    And the admin action "CREATE_NEWS" by "Jana" on the news article "novy-projekt-zahrada-pro-deti" is recorded with details containing "created"
+    And the admin action "CREATE_NEWS" by "Jana" on the news article "novy-projekt-zahrada-pro-deti" is recorded with details containing "napsána"
     When someone without a token asks for the news articles
     Then the response status is 200
     And the news list has 0 items
@@ -72,7 +72,7 @@ Feature: An administrator writes news articles with photos and publishes them on
       | tag            | Projekt    |
       | coverImage.id  | {uploaded} |
       | coverImage.url | /api/content/media/{uploaded} |
-    And the admin action "PUBLISH_NEWS" by "Jana" on the news article "zahrada-pro-deti" is recorded with details containing "published on 2026-10-20"
+    And the admin action "PUBLISH_NEWS" by "Jana" on the news article "zahrada-pro-deti" is recorded with details containing "zveřejněna od 2026-10-20"
     When "Jana" publishes the news article "beneficni-koncert" on 2026-10-23
     And someone without a token asks for the news articles
     Then the response status is 200
@@ -94,7 +94,7 @@ Feature: An administrator writes news articles with photos and publishes them on
     Then the response status is 200
     And the news article says:
       | publishedOn |  |
-    And the admin action "UNPUBLISH_NEWS" by "Jana" on the news article "beneficni-koncert" is recorded with details containing "unpublished"
+    And the admin action "UNPUBLISH_NEWS" by "Jana" on the news article "beneficni-koncert" is recorded with details containing "stažena z webu"
     When someone without a token asks for the news articles
     Then the news list titles are:
       | Zahrada pro děti |
@@ -177,7 +177,7 @@ Feature: An administrator writes news articles with photos and publishes them on
       | title          | S novou fotkou                |
       | tag            | Zprávy                        |
       | coverImage.url | /api/content/media/{uploaded} |
-    And the admin action "UPDATE_NEWS" by "Jana" on the news article "s-novou-fotkou" is recorded with details containing "updated"
+    And the admin action "UPDATE_NEWS" by "Jana" on the news article "s-novou-fotkou" is recorded with details containing "upravena"
     When someone without a token asks for the image uploaded as "prvni.png"
     Then the response status is 404
     When someone without a token asks for the image uploaded as "druha.png"
@@ -193,7 +193,7 @@ Feature: An administrator writes news articles with photos and publishes them on
     And "Jana" publishes the news article "ke-smazani" on 2026-10-23
     When "Jana" deletes the news article "ke-smazani"
     Then the response status is 204
-    And the admin action "DELETE_NEWS" by "Jana" on the news article "ke-smazani" is recorded with details containing "deleted"
+    And the admin action "DELETE_NEWS" by "Jana" on the news article "ke-smazani" is recorded with details containing "smazána"
     When "Jana" asks for the news article "ke-smazani"
     Then the response status is 404
     And the problem type ends with "content/news-not-found"

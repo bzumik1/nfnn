@@ -47,7 +47,7 @@ public class ReceiptSignatureService {
         Instant now = clock.instant();
         signatures.replace(image, now);
         events.publishEvent(new AdminActionPerformed(adminId, CHANGE_ACTION, Optional.empty(),
-                "Signature image for receipts uploaded: " + image.width() + "x" + image.height() + " px, SHA-256 " + image.digest(), now));
+                "Nahrán obrázek podpisu na potvrzení o daru: " + image.width() + " × " + image.height() + " px, SHA-256 " + image.digest(), now));
         log.info("Admin {} uploaded a {}x{} signature image for receipts", adminId, image.width(), image.height());
         return new CurrentSignature(image, now);
     }
@@ -59,7 +59,7 @@ public class ReceiptSignatureService {
         }
         Instant now = clock.instant();
         events.publishEvent(new AdminActionPerformed(adminId, REMOVE_ACTION, Optional.empty(),
-                "Signature image for receipts removed; new receipts carry the line and the name only", now));
+                "Obrázek podpisu odebrán; nová potvrzení o daru mají jen čáru a jméno", now));
         log.info("Admin {} removed the signature image for receipts", adminId);
     }
 }

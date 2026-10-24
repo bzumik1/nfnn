@@ -74,8 +74,8 @@ public class ManualPairingService {
         Donation donation = Donation.fromBankPayment(DonationId.newId(now), donor.id(), payment, PairingMethod.MANUAL, now);
         donations.save(donation);
         events.publishEvent(new AdminActionPerformed(adminId, PAIR_ACTION, Optional.of(paymentId.value()),
-                "Bank payment " + payment.transactionId() + " (" + payment.amount() + ", booked " + payment.bookedOn() + ") paired by hand with donor "
-                        + donor.id() + " as donation " + donation.id(), now));
+                "Platba " + payment.transactionId() + " (" + payment.amount() + ", zaúčtována " + payment.bookedOn() + ") ručně přiřazena dárci "
+                        + donor.id() + " jako dar " + donation.id(), now));
         log.info("Admin {} paired bank payment {} with donor {} by hand", adminId, payment.transactionId(), donor.id());
         return new ManualPairingResult(donation.id(), changedYearlyReceipts(donor.id(), donation.receivedYear()));
     }
@@ -92,8 +92,8 @@ public class ManualPairingService {
         donations.delete(donation.id());
         payments.save(payment.unpairedByAdmin(now));
         events.publishEvent(new AdminActionPerformed(adminId, UNPAIR_ACTION, Optional.of(paymentId.value()),
-                "Donation " + donation.id() + " of donor " + donation.donor() + " (paired by " + donation.pairedBy().orElseThrow()
-                        + ") removed from bank payment " + payment.transactionId() + "; the payment is paired by hand only from now on", now));
+                "Dar " + donation.id() + " dárce " + donation.donor() + " (spárován podle " + donation.pairedBy().orElseThrow()
+                        + ") odebrán z platby " + payment.transactionId() + "; platba se od teď páruje jen ručně", now));
         log.info("Admin {} unpaired bank payment {} from donor {}", adminId, payment.transactionId(), donation.donor());
         return changedYearlyReceipts(donation.donor(), donation.receivedYear());
     }

@@ -2,9 +2,9 @@
   <h1 #title class="ui-page-title" tabindex="-1" i18n="@@admin.report.heading">Měsíční přehled</h1>
   <p class="ui-page-intro" i18n="@@admin.report.intro">
     Fond dostává každý měsíc e-mailem přehled za minulý měsíc: registrované a nové dárce, přijaté
-    dary, platby bez dárce a stav stahování z banky. Tady nastavíte, komu přehled chodí, v který den
-    a co obsahuje, a přehled za kterýkoli skončený měsíc můžete poslat znovu. Na stejné adresy chodí
-    i upozornění, když stahování plateb z banky selhává.
+    dary, platby bez dárce a stav stahování z banky. Tady nastavíte, komu přehled chodí, kdy a co
+    obsahuje, a přehled za kterýkoli skončený měsíc můžete poslat znovu. Na stejné adresy chodí i
+    upozornění, když stahování plateb z banky selhává.
   </p>
 
   <app-live-notice [notice]="notice()" />
@@ -31,8 +31,8 @@
         <div class="ui-card__body">
           @if (nextReport(); as next) {
             <p class="next-report" i18n="@@admin.report.next">
-              Příští přehled za {{ next.month }} odejde {{ next.dueOn }} ráno. Byl-li by web ten den
-              vypnutý, odejde při nejbližší další ranní kontrole.
+              Příští přehled za {{ next.month }} odejde {{ next.dueOn }} v {{ next.hour }}. Byl-li
+              by web v tu chvíli vypnutý, odejde při nejbližší další kontrole (každou celou hodinu).
             </p>
           }
           <p class="changed-at">
@@ -76,12 +76,25 @@
             <app-form-field
               label="Den odeslání"
               i18n-label="@@admin.report.sendDay"
-              hint="Přehled za minulý měsíc odejde v tento den v 7:00."
+              hint="Přehled za minulý měsíc odejde v tento den v měsíci."
               i18n-hint="@@admin.report.sendDay.hint"
             >
               <select appFormControl id="report-send-day" name="sendDay" [(ngModel)]="sendDay">
                 @for (day of sendDays; track day) {
                   <option [ngValue]="day">{{ day }}.</option>
+                }
+              </select>
+            </app-form-field>
+
+            <app-form-field
+              label="Hodina odeslání"
+              i18n-label="@@admin.report.sendHour"
+              hint="Pražský čas; výchozí je 7:00."
+              i18n-hint="@@admin.report.sendHour.hint"
+            >
+              <select appFormControl id="report-send-hour" name="sendHour" [(ngModel)]="sendHour">
+                @for (hour of sendHours; track hour) {
+                  <option [ngValue]="hour">{{ hour }}:00</option>
                 }
               </select>
             </app-form-field>

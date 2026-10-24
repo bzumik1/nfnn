@@ -132,7 +132,12 @@ describe('Given an administrator on the monthly report page', () => {
         ) as NodeListOf<HTMLInputElement>,
       ).map((box) => box.checked),
     ).toEqual([true, true, true, true]);
-    expect(text('.next-report')).toContain('Příští přehled za září 2026 odejde 01. 10. 2026 ráno.');
+    expect(element<HTMLSelectElement>('#report-send-hour').selectedOptions[0]?.textContent).toBe(
+      '7:00',
+    );
+    expect(text('.next-report')).toContain(
+      'Příští přehled za září 2026 odejde 01. 10. 2026 v 7:00.',
+    );
     expect(text('.changed-at')).toBe('Zatím platí výchozí nastavení ze serveru.');
     expect(text('[aria-labelledby="report-sent-title"]')).toContain(
       'Zatím žádný přehled neodešel.',
@@ -151,6 +156,7 @@ describe('Given an administrator on the monthly report page', () => {
         settings: {
           recipients: ['pavel@example.cz', 'jakub@example.cz'],
           sendDay: 5,
+          sendHour: 9,
           sections: { donors: false, donations: true, unpairedPayments: false, bankImport: true },
           changedAt: '2026-10-05T07:00:00Z',
         },
@@ -168,11 +174,14 @@ describe('Given an administrator on the monthly report page', () => {
     expect(element<HTMLSelectElement>('#report-send-day').selectedOptions[0]?.textContent).toBe(
       '5.',
     );
+    expect(element<HTMLSelectElement>('#report-send-hour').selectedOptions[0]?.textContent).toBe(
+      '9:00',
+    );
     expect(element<HTMLInputElement>('input[name="donors"]').checked).toBe(false);
     expect(element<HTMLInputElement>('input[name="donations"]').checked).toBe(true);
     expect(text('.changed-at')).toBe('Naposledy změněno 05. 10. 2026 09:00.');
     expect(text('.next-report')).toContain(
-      'Příští přehled za říjen 2026 odejde 05. 11. 2026 ráno.',
+      'Příští přehled za říjen 2026 odejde 05. 11. 2026 v 9:00.',
     );
     expect(
       Array.from(
@@ -184,11 +193,12 @@ describe('Given an administrator on the monthly report page', () => {
     );
   });
 
-  it('when the recipients, the day and the sections are changed and saved, then the settings are sent and the page confirms and reloads', async () => {
+  it('when the recipients, the day, the hour and the sections are changed and saved, then the settings are sent and the page confirms and reloads', async () => {
     await respond(reportView());
 
     await type('#report-recipients', 'pavel@example.cz\njakub@example.cz');
     await choose('#report-send-day', 4);
+    await choose('#report-send-hour', 18);
     element<HTMLInputElement>('input[name="donors"]').click();
     await settle();
     await submit();
@@ -198,6 +208,7 @@ describe('Given an administrator on the monthly report page', () => {
     expect(request.request.body).toEqual({
       recipients: ['pavel@example.cz', 'jakub@example.cz'],
       sendDay: 5,
+      sendHour: 18,
       sections: { donors: false, donations: true, unpairedPayments: true, bankImport: true },
     });
     expect(text('form.settings-form button[type="submit"]')).toBe('Ukládáme…');
@@ -205,6 +216,7 @@ describe('Given an administrator on the monthly report page', () => {
     request.flush({
       recipients: ['pavel@example.cz', 'jakub@example.cz'],
       sendDay: 5,
+      sendHour: 18,
       sections: { donors: false, donations: true, unpairedPayments: true, bankImport: true },
       changedAt: '2026-10-23T08:00:00Z',
     });
@@ -218,6 +230,7 @@ describe('Given an administrator on the monthly report page', () => {
         settings: {
           recipients: ['pavel@example.cz', 'jakub@example.cz'],
           sendDay: 5,
+          sendHour: 18,
           sections: { donors: false, donations: true, unpairedPayments: true, bankImport: true },
           changedAt: '2026-10-23T08:00:00Z',
         },

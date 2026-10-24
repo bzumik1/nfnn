@@ -8,6 +8,7 @@ import cz.novanadeje.app.donations.domain.donor.DonorReference;
 import cz.novanadeje.app.donations.domain.donor.SenderAccountLink;
 import cz.novanadeje.app.donations.domain.donor.SenderAccountLinkId;
 import cz.novanadeje.app.shared.domain.VariableSymbol;
+import cz.novanadeje.app.shared.infrastructure.search.AccentFolding;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Repository;
 
@@ -97,7 +98,7 @@ class JpaDonorRecordRepository implements DonorRecordRepository {
 
     @Override
     public List<DonorRecord> searchByNameOrSymbol(String query, int limit) {
-        String escaped = query.replace("!", "!!").replace("%", "!%").replace("_", "!_");
+        String escaped = AccentFolding.fold(query).replace("!", "!!").replace("%", "!%").replace("_", "!_");
         return jpa.searchByNameOrSymbol(escaped, PageRequest.of(0, limit)).stream().map(this::withAccounts).toList();
     }
 

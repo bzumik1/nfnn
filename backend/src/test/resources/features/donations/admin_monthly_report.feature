@@ -6,12 +6,13 @@ Feature: An administrator sets up the monthly report, sends it again and reads t
     And a person "Jana" is registered
     And "Jana" is an administrator
 
-  Scenario: Without saved settings the report goes to the configured recipient on the 1st with every section
+  Scenario: Without saved settings the report goes to the configured recipient on the 1st at 7:00 with every section
     When "Jana" asks for the monthly report settings
     Then the response status is 200
     And the monthly report settings say:
       | settings.recipients.0            | info@nfnn.cz |
       | settings.sendDay                 | 1            |
+      | settings.sendHour                | 7            |
       | settings.sections.donors         | true         |
       | settings.sections.donations      | true         |
       | settings.sections.unpairedPayments | true       |
@@ -21,23 +22,27 @@ Feature: An administrator sets up the monthly report, sends it again and reads t
       | lastEndedMonth                   | 2026-09      |
     And the monthly report settings list no sent report
 
-  Scenario: Changed settings decide who gets the report, on which day and with which sections
+  Scenario: Changed settings decide who gets the report, on which day and hour and with which sections
     When "Jana" changes the monthly report settings:
       | recipients | pavel@example.cz, jakub@example.cz |
       | sendDay    | 5                                  |
+      | sendHour   | 9                                  |
       | sections   | donations, bankImport              |
     Then the response status is 200
-    And the admin action "CHANGE_REPORT_SETTINGS" by "Jana" is recorded with details containing "pavel@example.cz, jakub@example.cz; sent on day 5"
+    And the admin action "CHANGE_REPORT_SETTINGS" by "Jana" is recorded with details containing "pavel@example.cz, jakub@example.cz; odesílá se 5. den v měsíci v 9:00; části dary, stahování z banky"
     When "Jana" asks for the monthly report settings
     Then the monthly report settings say:
       | settings.recipients.1       | jakub@example.cz |
       | settings.sendDay            | 5                |
+      | settings.sendHour           | 9                |
       | settings.sections.donors    | false            |
       | settings.sections.bankImport | true            |
       | nextReport.dueOn            | 2026-10-05       |
-    When the monthly report check runs on 2026-11-04
+    When the monthly report check runs on 2026-11-04 at "23:00"
     Then no monthly report e-mail is sent
-    When the monthly report check runs on 2026-11-05
+    When the monthly report check runs on 2026-11-05 at "08:00"
+    Then no monthly report e-mail is sent
+    When the monthly report check runs on 2026-11-05 at "09:00"
     Then 1 monthly report e-mail is sent to "pavel@example.cz, jakub@example.cz"
     And monthly report e-mail 1 has the subject "Měsíční přehled Nová naděje – říjen 2026"
     And both parts of the monthly report e-mail say:
@@ -66,7 +71,7 @@ Feature: An administrator sets up the monthly report, sends it again and reads t
       | recipients.0 | info@nfnn.cz |
     And 2 monthly report e-mails are sent to "info@nfnn.cz"
     And monthly report e-mail 2 has the subject "Měsíční přehled Nová naděje – říjen 2026"
-    And the admin action "SEND_MONTHLY_REPORT" by "Jana" is recorded with details containing "Monthly report for 2026-10 sent by hand to info@nfnn.cz"
+    And the admin action "SEND_MONTHLY_REPORT" by "Jana" is recorded with details containing "Měsíční přehled za 2026-10 ručně odeslán na info@nfnn.cz"
     When "Jana" asks for the monthly report settings
     Then the monthly report settings say:
       | sentReports.0.month | 2026-10    |
@@ -94,7 +99,7 @@ Feature: An administrator sets up the monthly report, sends it again and reads t
     And the report for "2026-09" is not recorded
     And no admin action "SEND_MONTHLY_REPORT" is recorded
 
-  Scenario: Settings with a malformed address, a day outside every month or no section are refused
+  Scenario: Settings with a malformed address, a day outside every month, an hour outside the day or no section are refused
     When "Jana" changes the monthly report settings:
       | recipients | pavel            |
       | sendDay    | 1                |
@@ -107,6 +112,20 @@ Feature: An administrator sets up the monthly report, sends it again and reads t
       | sections   | donations        |
     Then the response status is 400
     And the problem lists an error for field "sendDay"
+    When "Jana" changes the monthly report settings:
+      | recipients | pavel@example.cz |
+      | sendDay    | 1                |
+      | sendHour   | 24               |
+      | sections   | donations        |
+    Then the response status is 400
+    And the problem lists an error for field "sendHour"
+    When "Jana" changes the monthly report settings:
+      | recipients | pavel@example.cz |
+      | sendDay    | 1                |
+      | sendHour   |                  |
+      | sections   | donations        |
+    Then the response status is 400
+    And the problem lists an error for field "sendHour"
     When "Jana" changes the monthly report settings:
       | recipients | pavel@example.cz |
       | sendDay    | 1                |

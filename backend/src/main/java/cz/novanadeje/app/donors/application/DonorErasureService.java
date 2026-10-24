@@ -68,8 +68,8 @@ public class DonorErasureService {
         emailVerificationTokens.deleteAllOf(donorId);
         events.publishEvent(new DonorErased(donorId.value(), now));
         events.publishEvent(new AdminActionPerformed(adminId.value(), ERASE_ACTION, Optional.of(donorId.value()),
-                "Personal data of donor " + donorId + " erased: account anonymized, every session ended, bank accounts and older-symbol answers"
-                        + " deleted; donations and receipts kept", now));
+                "Osobní údaje dárce " + donorId + " vymazány: účet anonymizován, všechna přihlášení ukončena, bankovní účty a odpovědi o starších symbolech"
+                        + " smazány; dary a potvrzení zůstávají", now));
         events.publishEvent(new DonorAccountErased(donorId.value(), formerEmail, locale));
         log.info("Administrator {} erased the personal data of donor {}", adminId, donorId);
     }

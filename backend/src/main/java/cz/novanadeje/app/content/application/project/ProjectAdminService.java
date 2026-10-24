@@ -63,7 +63,7 @@ public class ProjectAdminService {
         ProjectContent content = checked(command.toContent(), id);
         Project article = Project.create(id, content, now);
         projects.save(article);
-        audit(adminId, CREATE_ACTION, article, "Project " + id + " '" + content.slug() + "' created", now);
+        audit(adminId, CREATE_ACTION, article, "Projekt " + id + " „" + content.slug() + "“ napsán", now);
         return ProjectView.from(article);
     }
 
@@ -74,7 +74,7 @@ public class ProjectAdminService {
         Project edited = article.edit(content, now);
         projects.save(edited);
         dropUnusedImage(article.content().coverImage(), content.coverImage());
-        audit(adminId, UPDATE_ACTION, edited, "Project " + id + " '" + content.slug() + "' updated", now);
+        audit(adminId, UPDATE_ACTION, edited, "Projekt " + id + " „" + content.slug() + "“ upraven", now);
         return ProjectView.from(edited);
     }
 
@@ -82,7 +82,7 @@ public class ProjectAdminService {
         Instant now = clock.instant();
         Project published = require(id).publish(on, now);
         projects.save(published);
-        audit(adminId, PUBLISH_ACTION, published, "Project " + id + " '" + published.slug() + "' published on " + on, now);
+        audit(adminId, PUBLISH_ACTION, published, "Projekt " + id + " „" + published.slug() + "“ zveřejněn od " + on, now);
         return ProjectView.from(published);
     }
 
@@ -90,7 +90,7 @@ public class ProjectAdminService {
         Instant now = clock.instant();
         Project draft = require(id).unpublish(now);
         projects.save(draft);
-        audit(adminId, UNPUBLISH_ACTION, draft, "Project " + id + " '" + draft.slug() + "' unpublished", now);
+        audit(adminId, UNPUBLISH_ACTION, draft, "Projekt " + id + " „" + draft.slug() + "“ stažen z webu", now);
         return ProjectView.from(draft);
     }
 
@@ -99,7 +99,7 @@ public class ProjectAdminService {
         Project article = require(id);
         projects.delete(id);
         dropUnusedImage(article.content().coverImage(), Optional.empty());
-        audit(adminId, DELETE_ACTION, article, "Project " + id + " '" + article.slug() + "' deleted", now);
+        audit(adminId, DELETE_ACTION, article, "Projekt " + id + " „" + article.slug() + "“ smazán", now);
     }
 
     private ProjectContent checked(ProjectContent content, ProjectId id) {

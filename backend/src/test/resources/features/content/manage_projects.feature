@@ -20,7 +20,7 @@ Feature: An administrator writes projects, the stories of the children the found
       | year        | 2024                |
       | tag         | Kompenzační pomůcky |
       | publishedOn |                     |
-    And the admin action "CREATE_PROJECT" by "Jana" on the project "dominik-7-let" is recorded with details containing "created"
+    And the admin action "CREATE_PROJECT" by "Jana" on the project "dominik-7-let" is recorded with details containing "napsán"
     When someone without a token asks for the projects
     Then the response status is 200
     And the project list has 0 items
@@ -51,7 +51,7 @@ Feature: An administrator writes projects, the stories of the children the found
     And the project says:
       | publishedOn    | 2026-10-23                    |
       | coverImage.url | /api/content/media/{uploaded} |
-    And the admin action "PUBLISH_PROJECT" by "Jana" on the project "dominik-7-let" is recorded with details containing "published on 2026-10-23"
+    And the admin action "PUBLISH_PROJECT" by "Jana" on the project "dominik-7-let" is recorded with details containing "zveřejněn od 2026-10-23"
     When "Jana" publishes the project "tomas-9-let" on 2026-10-01
     And "Jana" publishes the project "eliska-6-let" on 2026-09-01
     And someone without a token asks for the projects
@@ -69,7 +69,7 @@ Feature: An administrator writes projects, the stories of the children the found
       | coverImage.url | /api/content/media/{uploaded} |
     When "Jana" withdraws the project "tomas-9-let"
     Then the response status is 200
-    And the admin action "UNPUBLISH_PROJECT" by "Jana" on the project "tomas-9-let" is recorded with details containing "unpublished"
+    And the admin action "UNPUBLISH_PROJECT" by "Jana" on the project "tomas-9-let" is recorded with details containing "stažen z webu"
     When someone without a token asks for the projects
     Then the project list titles are:
       | Eliška, 6 let  |
@@ -98,12 +98,12 @@ Feature: An administrator writes projects, the stories of the children the found
     And the project says:
       | title | S novou fotkou |
       | year  | 2025           |
-    And the admin action "UPDATE_PROJECT" by "Jana" on the project "s-fotkou" is recorded with details containing "updated"
+    And the admin action "UPDATE_PROJECT" by "Jana" on the project "s-fotkou" is recorded with details containing "upraven"
     When someone without a token asks for the image uploaded as "prvni.png"
     Then the response status is 404
     When "Jana" deletes the project "s-fotkou"
     Then the response status is 204
-    And the admin action "DELETE_PROJECT" by "Jana" on the project "s-fotkou" is recorded with details containing "deleted"
+    And the admin action "DELETE_PROJECT" by "Jana" on the project "s-fotkou" is recorded with details containing "smazán"
     When someone without a token asks for the image uploaded as "druha.png"
     Then the response status is 404
     When "Jana" asks for the project "s-fotkou"

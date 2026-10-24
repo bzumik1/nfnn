@@ -42,7 +42,7 @@ class AdminReportController {
 
     @PutMapping("/settings")
     AdminReportResponse.Settings changeSettings(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody ReportSettingsRequest request) {
-        ReportSettings changed = settings.change(admin(jwt), new ReportSettings(ReportRecipients.parse(request.recipients()), request.sendDay(),
+        ReportSettings changed = settings.change(admin(jwt), new ReportSettings(ReportRecipients.parse(request.recipients()), request.sendDay(), request.sendHour(),
                 new ReportSections(request.sections().donors(), request.sections().donations(), request.sections().unpairedPayments(),
                         request.sections().bankImport())));
         return AdminReportResponse.Settings.from(changed, settings.view().changedAt());

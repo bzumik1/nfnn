@@ -54,10 +54,17 @@ td.admin-col {
 .action-code,
 .details {
   display: block;
-  font-family: var(--font-mono);
-  font-size: var(--text-xs);
   color: var(--color-text-muted);
   word-break: break-word;
+}
+
+.action-code {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+}
+
+.details {
+  font-size: var(--text-sm);
 }
 
 .action-code {

@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donations.infrastructure.persistence;
 
+import cz.novanadeje.app.shared.infrastructure.search.AccentFolding;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -16,7 +17,8 @@ interface DonorRecordJpaRepository extends JpaRepository<DonorRecordJpaEntity, U
 
     long countByRegisteredAtBefore(Instant end);
 
-    @Query("select r from DonorRecordJpaEntity r where r.erasedAt is null and (lower(r.name) like lower(concat('%', :query, '%')) escape '!'"
+    @Query("select r from DonorRecordJpaEntity r where r.erasedAt is null"
+            + " and (lower(function('translate', r.name, '" + AccentFolding.ACCENTED + "', '" + AccentFolding.PLAIN + "')) like concat('%', :query, '%') escape '!'"
             + " or r.variableSymbol like concat(:query, '%') escape '!') order by r.name, r.donorId")
     List<DonorRecordJpaEntity> searchByNameOrSymbol(@Param("query") String query, Pageable page);
 }
