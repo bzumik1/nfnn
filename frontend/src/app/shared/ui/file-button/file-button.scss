@@ -1,0 +1,14 @@
+:host {
+  display: inline-block;
+  position: relative;
+}
+
+.file-input:focus-visible + .file-label {
+  outline: 3px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.file-label--disabled {
+  cursor: progress;
+  opacity: 0.7;
+}

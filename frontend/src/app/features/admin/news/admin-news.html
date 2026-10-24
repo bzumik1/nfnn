@@ -13,6 +13,8 @@
     zveřejněnou aktualitu můžete kdykoli upravit nebo z webu stáhnout.
   </p>
 
+  <app-live-notice [notice]="notice()" />
+
   @switch (state()) {
     @case ('loading') {
       <p class="ui-load-state" role="status" i18n="@@admin.news.loading">Načítáme aktuality…</p>

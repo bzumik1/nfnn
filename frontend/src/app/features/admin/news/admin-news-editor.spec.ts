@@ -2,6 +2,7 @@ import { Location } from '@angular/common';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { Title } from '@angular/platform-browser';
 import { ActivatedRoute, convertToParamMap, provideRouter, Router } from '@angular/router';
 import { authInterceptor } from '../../../core/auth/auth-interceptor';
 import { AuthStore } from '../../../core/auth/auth-store';
@@ -175,7 +176,7 @@ describe('Given an administrator writing a new news article', () => {
     expect(text(fixture, '.publish-state')).toContain('Koncept');
   });
 
-  it('when the address is already taken, then the form shows the backend words and stays editable', async () => {
+  it('when the address is already taken, then the address field says so, takes the focus and the form stays editable', async () => {
     await type(fixture, '#news-title', 'Zahrada pro děti');
     await type(fixture, '#news-perex', 'Perex.');
     await type(fixture, '#news-body', 'Text.');
@@ -190,10 +191,94 @@ describe('Given an administrator writing a new news article', () => {
     http.expectOne(NEWS_URL).flush(refusal.body, refusal.options);
     await settle(fixture);
 
-    expect(text(fixture, '.form-error')).toBe(
-      'Adresa je obsazená. Jinou aktualitu už najdete na této adrese.',
+    const slug = element<HTMLInputElement>(fixture, '#news-slug');
+    expect(slug.getAttribute('aria-invalid')).toBe('true');
+    expect(text(fixture, '#news-slug-error')).toBe(
+      'Tuto adresu už má jiná aktualita nebo projekt. Zvolte prosím jinou.',
     );
+    expect(document.activeElement).toBe(slug);
+    expect(fixture.nativeElement.querySelector('.form-error')).toBeNull();
     expect(button(fixture, 'Uložit koncept').disabled).toBe(false);
+
+    await type(fixture, '#news-slug', 'zahrada-2');
+
+    expect(slug.getAttribute('aria-invalid')).toBeNull();
+  });
+
+  it('when they save a complete draft, then the result shows right after the button and the tab is named after the edit', async () => {
+    const titled = vi.spyOn(TestBed.inject(Title), 'setTitle');
+    await type(fixture, '#news-title', 'Benefiční koncert');
+    await type(fixture, '#news-perex', 'Zveme vás na koncert.');
+    await type(fixture, '#news-body', 'Text o koncertu.');
+    await submit(fixture);
+    http.expectOne(NEWS_URL).flush(draftArticle());
+    await settle(fixture);
+
+    expect(text(fixture, '.form-actions + .ui-form-status')).toBe(
+      'Aktualitu jsme uložili jako koncept. Na web ji dostanete tlačítkem Zveřejnit.',
+    );
+    expect(titled).toHaveBeenCalledWith('Úprava aktuality | Správa | Nová naděje – nadační fond');
+  });
+
+  describe('when they have typed something and try to leave', () => {
+    beforeEach(async () => {
+      await type(fixture, '#news-title', 'Rozepsaná aktualita');
+    });
+
+    it('then the page asks first with staying as the focused choice', async () => {
+      const answer = fixture.componentInstance.canLeave();
+      await settle(fixture);
+
+      expect(answer).toBeInstanceOf(Promise);
+      expect(text(fixture, 'dialog h2')).toBe('Máte neuložené změny');
+      expect(document.activeElement?.textContent?.trim()).toBe('Zůstat a uložit');
+    });
+
+    it('and choose to leave without saving, then the navigation goes on', async () => {
+      const answer = fixture.componentInstance.canLeave();
+      await settle(fixture);
+      button(fixture, 'Odejít bez uložení').click();
+      await settle(fixture);
+
+      await expect(answer).resolves.toBe(true);
+      expect(fixture.nativeElement.querySelector('dialog')).toBeNull();
+    });
+
+    it('and choose to stay and save, then the navigation stops and the form is checked and saved', async () => {
+      const answer = fixture.componentInstance.canLeave();
+      await settle(fixture);
+      button(fixture, 'Zůstat a uložit').click();
+      await settle(fixture);
+      await settle(fixture);
+
+      await expect(answer).resolves.toBe(false);
+      expect(document.activeElement).toBe(element(fixture, '#news-perex'));
+      http.expectNone(NEWS_URL);
+    });
+
+    it('and close the question, then they stay on the page', async () => {
+      const answer = fixture.componentInstance.canLeave();
+      await settle(fixture);
+      element<HTMLButtonElement>(fixture, '.dialog-close').click();
+      await settle(fixture);
+
+      await expect(answer).resolves.toBe(false);
+    });
+
+    it('and close the browser tab, then the browser warns them', () => {
+      const event = new Event('beforeunload', { cancelable: true });
+      window.dispatchEvent(event);
+
+      expect(event.defaultPrevented).toBe(true);
+    });
+  });
+
+  it('when they have changed nothing, then leaving needs no question', () => {
+    const event = new Event('beforeunload', { cancelable: true });
+    window.dispatchEvent(event);
+
+    expect(fixture.componentInstance.canLeave()).toBe(true);
+    expect(event.defaultPrevented).toBe(false);
   });
 
   it('when they choose a photo, then it is uploaded at once, shown as a preview and sent with the article', async () => {
@@ -209,6 +294,11 @@ describe('Given an administrator writing a new news article', () => {
     expect(element<HTMLImageElement>(fixture, '.image-preview').getAttribute('src')).toBe(
       `/api/content/media/${IMAGE_ID}?w=480`,
     );
+    expect(text(fixture, '.image-field [role="status"]')).toBe(
+      'Fotka je nahraná. K aktualitě se připojí, až ji uložíte.',
+    );
+    expect(text(fixture, 'label[for="news-image"]')).toBe('Vyměnit fotku');
+    expect(fixture.componentInstance.canLeave()).toBeInstanceOf(Promise);
 
     await type(fixture, '#news-title', 'S fotkou');
     await type(fixture, '#news-perex', 'Perex.');
@@ -222,6 +312,10 @@ describe('Given an administrator writing a new news article', () => {
       coverImageAlt: 'Děti sázejí stromek',
     });
     request.flush(newsArticle());
+    await settle(fixture);
+
+    expect(text(fixture, '.image-field [role="status"]')).toBe('');
+    expect(fixture.componentInstance.canLeave()).toBe(true);
   });
 
   it('when the chosen file is not a photo, then the field says so and nothing is uploaded', async () => {
@@ -248,6 +342,57 @@ describe('Given an administrator writing a new news article', () => {
       'Soubor je příliš velký. Nahrát jde soubor nejvýš 10 MB.',
     );
     expect(fixture.nativeElement.querySelector('.image-preview')).toBeNull();
+  });
+});
+
+describe('Given an administrator editing a draft', () => {
+  let fixture: ComponentFixture<AdminNewsEditor>;
+  let http: HttpTestingController;
+
+  beforeEach(async () => {
+    ({ fixture, http } = await setUp(draftArticle().id));
+    http.expectOne(`${NEWS_URL}/${draftArticle().id}`).flush(draftArticle());
+    await settle(fixture);
+  });
+
+  afterEach(() => http.verify());
+
+  it('when it arrives, then saving keeps it a draft and no link to the site is offered', () => {
+    expect(button(fixture, 'Uložit koncept').type).toBe('submit');
+    expect(fixture.nativeElement.querySelector('.public-link')).toBeNull();
+  });
+
+  it('when they edit it and publish, then the edit is saved first and then published', async () => {
+    await type(fixture, '#news-body', 'Opravený text o koncertu.');
+    button(fixture, 'Uložit a zveřejnit').click();
+    await settle(fixture);
+
+    const update = http.expectOne(`${NEWS_URL}/${draftArticle().id}`);
+    expect(update.request.body).toMatchObject({ body: 'Opravený text o koncertu.' });
+    update.flush(draftArticle({ body: 'Opravený text o koncertu.' }));
+    await settle(fixture);
+    http
+      .expectOne(`${NEWS_URL}/${draftArticle().id}/publish`)
+      .flush(draftArticle({ body: 'Opravený text o koncertu.', publishedOn: '2026-10-24' }));
+    await settle(fixture);
+
+    expect(text(fixture, '.publish-state .ui-badge')).toBe('Na webu');
+  });
+
+  it('when saving the edit fails while publishing, then the article is not published and the form says why', async () => {
+    await type(fixture, '#news-body', 'Opravený text.');
+    button(fixture, 'Uložit a zveřejnit').click();
+    await settle(fixture);
+    http
+      .expectOne(`${NEWS_URL}/${draftArticle().id}`)
+      .flush(null, { status: 500, statusText: 'Server Error' });
+    await settle(fixture);
+
+    http.expectNone(`${NEWS_URL}/${draftArticle().id}/publish`);
+    expect(text(fixture, '.form-error')).toBe(
+      'Aktualitu se nepodařilo uložit. Zkuste to prosím znovu.',
+    );
+    expect(button(fixture, 'Uložit a zveřejnit').disabled).toBe(false);
   });
 });
 
@@ -342,29 +487,111 @@ describe('Given an administrator editing a published news article', () => {
     request.flush(newsArticle({ publishedOn: '2026-10-01' }));
     await settle(fixture);
 
-    expect(text(fixture, '[role="status"]:not(:empty)')).toBe(
+    expect(text(fixture, '.publish-card [role="status"]:not(:empty)')).toBe(
       'Aktualita je na webu s datem 01. 10. 2026.',
     );
   });
 
-  it('when they confirm the deletion, then the article is deleted and they return to the list', async () => {
-    const navigated = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+  it('when the article arrives, then saving says it goes to the site at once and a link opens the article there', async () => {
     await loaded();
-    button(fixture, 'Smazat aktualitu').click();
+
+    expect(button(fixture, 'Uložit a ukázat na webu').type).toBe('submit');
+    expect(text(fixture, '.save-hint')).toBe('Aktualita je na webu, změny se ukážou hned.');
+    const link = element<HTMLAnchorElement>(fixture, '.public-link');
+    expect(link.getAttribute('href')).toBe('/aktuality/zahrada-pro-deti');
+    expect(link.target).toBe('_blank');
+    expect(link.textContent?.replace(/\s+/g, ' ').trim()).toBe('Otevřít na webu (v novém okně)');
+  });
+
+  it('when they edit the text and change the date, then the edit is saved first and the article is published with it', async () => {
+    await loaded();
+    await type(fixture, '#news-title', 'Zahrada pro děti a rodiče');
+    const date = element<HTMLInputElement>(fixture, '#news-publish-date');
+    date.value = '2026-10-01';
+    date.dispatchEvent(new Event('input'));
+    await settle(fixture);
+    button(fixture, 'Uložit a změnit datum').click();
     await settle(fixture);
 
-    expect(text(fixture, '.confirm[role="group"]')).toContain(
-      'Opravdu smazat aktualitu „Zahrada pro děti“?',
+    const update = http.expectOne(`${NEWS_URL}/${newsArticle().id}`);
+    expect(update.request.method).toBe('PUT');
+    expect(update.request.body).toMatchObject({ title: 'Zahrada pro děti a rodiče' });
+    update.flush(newsArticle({ title: 'Zahrada pro děti a rodiče' }));
+    await settle(fixture);
+
+    const publish = http.expectOne(`${NEWS_URL}/${newsArticle().id}/publish`);
+    expect(publish.request.body).toEqual({ publishedOn: '2026-10-01' });
+    publish.flush(newsArticle({ title: 'Zahrada pro děti a rodiče', publishedOn: '2026-10-01' }));
+    await settle(fixture);
+
+    expect(text(fixture, '.publish-card [role="status"]:not(:empty)')).toBe(
+      'Aktualita je na webu s datem 01. 10. 2026.',
     );
-    button(fixture, 'Ano, smazat').click();
+    expect(button(fixture, 'Změnit datum').disabled).toBe(false);
+    expect(fixture.componentInstance.canLeave()).toBe(true);
+  });
+
+  it('when they publish an edit the form refuses, then nothing is sent and the field with the problem takes the focus', async () => {
+    await loaded();
+    await type(fixture, '#news-perex', '');
+    button(fixture, 'Uložit a změnit datum').click();
     await settle(fixture);
 
-    const request = http.expectOne(`${NEWS_URL}/${newsArticle().id}`);
-    expect(request.request.method).toBe('DELETE');
-    request.flush(null, { status: 204, statusText: 'No Content' });
-    await settle(fixture);
+    expect(document.activeElement).toBe(element(fixture, '#news-perex'));
+    expect(text(fixture, '#news-perex-error')).toBe('Napište prosím krátký souhrn.');
+    http.expectNone(`${NEWS_URL}/${newsArticle().id}/publish`);
+  });
 
-    expect(navigated).toHaveBeenCalledWith('/sprava/aktuality');
+  describe('when they ask to delete it', () => {
+    beforeEach(async () => {
+      await loaded();
+      button(fixture, 'Smazat aktualitu').click();
+      await settle(fixture);
+    });
+
+    it('then the question names the article and the focus moves to the safe choice', () => {
+      expect(text(fixture, '.confirm[role="group"]')).toContain(
+        'Opravdu smazat aktualitu „Zahrada pro děti“?',
+      );
+      expect(document.activeElement).toBe(button(fixture, 'Zrušit'));
+    });
+
+    it('and cancel, then the focus returns to the delete button', async () => {
+      button(fixture, 'Zrušit').click();
+      await settle(fixture);
+
+      expect(document.activeElement).toBe(button(fixture, 'Smazat aktualitu'));
+    });
+
+    it('and confirm, then the article is deleted and the list says so', async () => {
+      const navigated = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+      element<HTMLButtonElement>(fixture, '.confirm .ui-button--danger').click();
+      await settle(fixture);
+
+      const request = http.expectOne(`${NEWS_URL}/${newsArticle().id}`);
+      expect(request.request.method).toBe('DELETE');
+      request.flush(null, { status: 204, statusText: 'No Content' });
+      await settle(fixture);
+
+      expect(navigated).toHaveBeenCalledWith('/sprava/aktuality', {
+        state: { deleted: 'Zahrada pro děti' },
+      });
+      expect(fixture.componentInstance.canLeave()).toBe(true);
+    });
+
+    it('and the deletion fails, then the delete card says so and the focus returns to its button', async () => {
+      element<HTMLButtonElement>(fixture, '.confirm .ui-button--danger').click();
+      await settle(fixture);
+      http
+        .expectOne(`${NEWS_URL}/${newsArticle().id}`)
+        .flush(null, { status: 500, statusText: 'Server Error' });
+      await settle(fixture);
+
+      expect(text(fixture, '.delete-card [role="alert"]:not(:empty)')).toBe(
+        'Aktualitu se nepodařilo smazat. Zkuste to prosím znovu.',
+      );
+      expect(document.activeElement).toBe(button(fixture, 'Smazat aktualitu'));
+    });
   });
 
   it('when the article no longer exists, then the page returns to the list', async () => {

@@ -5,6 +5,7 @@ import {
   Component,
   computed,
   DestroyRef,
+  effect,
   ElementRef,
   inject,
   Injector,
@@ -13,6 +14,7 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule, NgForm } from '@angular/forms';
+import { Title } from '@angular/platform-browser';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { describeProblem, problemTypeEndsWith } from '../../../core/auth/api-problem';
 import { AuthStore } from '../../../core/auth/auth-store';
@@ -20,6 +22,7 @@ import { LoginDialogService } from '../../../core/auth/login-dialog.service';
 import { FocusFirstInvalid } from '../../../shared/ui/form-field/focus-first-invalid';
 import { FormControlDirective } from '../../../shared/ui/form-field/form-control';
 import { FormField } from '../../../shared/ui/form-field/form-field';
+import { FileButton } from '../../../shared/ui/file-button/file-button';
 import { MarkdownPreview } from '../../../shared/ui/markdown/markdown-preview';
 import { MarkdownToolbar } from '../../../shared/ui/markdown/markdown-toolbar';
 import {
@@ -42,12 +45,16 @@ import {
 } from '../../content/projects-api';
 import { formatBankTime, formatDonationDate } from '../../donations/donation-date';
 import { LiveNotice, Notice } from '../../../shared/ui/live-notice/live-notice';
+import { GuardsUnsavedChanges } from '../unsaved-changes/unsaved-changes-guard';
+import { UnsavedChangesDialog } from '../unsaved-changes/unsaved-changes-dialog';
 
 type LoadState = 'loading' | 'ready' | 'error';
 
 const UNAUTHENTICATED = 'auth/unauthenticated';
 const FORBIDDEN = 'auth/forbidden';
 const NOT_FOUND = 'content/project-not-found';
+const SLUG_TAKEN = 'content/slug-taken';
+const EDIT_TITLE = $localize`:@@admin.projectEditor.pageTitle.edit:Úprava projektu | Správa | Nová naděje – nadační fond`;
 const PREVIEW_WIDTH = 480;
 const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
@@ -62,12 +69,15 @@ const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
     FocusFirstInvalid,
     MarkdownToolbar,
     MarkdownPreview,
+    FileButton,
+    UnsavedChangesDialog,
   ],
   templateUrl: './admin-project-editor.html',
   styleUrl: './admin-project-editor.scss',
+  host: { '(window:beforeunload)': 'warnBeforeUnload($event)' },
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class AdminProjectEditor {
+export class AdminProjectEditor implements GuardsUnsavedChanges {
   private readonly api = inject(ProjectsApi);
   private readonly auth = inject(AuthStore);
   private readonly router = inject(Router);
@@ -76,7 +86,15 @@ export class AdminProjectEditor {
   private readonly loginDialog = inject(LoginDialogService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly injector = inject(Injector);
+  private readonly pageTitle = inject(Title);
   private readonly title = viewChild.required<ElementRef<HTMLHeadingElement>>('title');
+  private readonly projectForm = viewChild<NgForm>('projectForm');
+  private readonly projectFormElement =
+    viewChild<ElementRef<HTMLFormElement>>('projectFormElement');
+  private readonly saveButton = viewChild<ElementRef<HTMLButtonElement>>('saveButton');
+  private readonly slugInput = viewChild<ElementRef<HTMLInputElement>>('slugInput');
+  private readonly deleteButton = viewChild<ElementRef<HTMLButtonElement>>('deleteButton');
+  private readonly deleteCancel = viewChild<ElementRef<HTMLButtonElement>>('deleteCancel');
 
   protected readonly maxTitleLength = MAX_TITLE_LENGTH;
   protected readonly maxSlugLength = MAX_SLUG_LENGTH;
@@ -90,7 +108,9 @@ export class AdminProjectEditor {
 
   protected readonly state = signal<LoadState>('loading');
   protected readonly project = signal<ProjectResponse | null>(null);
-  protected readonly notice = signal<Notice | null>(null);
+  protected readonly saveStatus = signal<string | null>(null);
+  protected readonly publishNotice = signal<Notice | null>(null);
+  protected readonly deleteNotice = signal<Notice | null>(null);
   protected readonly formError = signal<string | null>(null);
   protected readonly saving = signal(false);
   protected readonly publishing = signal(false);
@@ -100,6 +120,10 @@ export class AdminProjectEditor {
   protected readonly coverImage = signal<CoverImageResponse | null>(null);
   protected readonly uploading = signal(false);
   protected readonly uploadError = signal<string | null>(null);
+  protected readonly askingToLeave = signal(false);
+  private readonly edited = signal(false);
+  private answerLeave: ((leave: boolean) => void) | null = null;
+  private discarded = false;
 
   protected readonly titleMessages = {
     required: $localize`:@@admin.projectEditor.title.required:Vyplňte prosím titulek.`,
@@ -113,13 +137,14 @@ export class AdminProjectEditor {
   protected readonly slugMessages = {
     pattern: $localize`:@@admin.projectEditor.slug.pattern:Adresa smí mít jen malá písmena bez diakritiky, číslice a pomlčky mezi slovy.`,
     maxlength: $localize`:@@admin.projectEditor.slug.tooLong:Adresa může mít nejvíc ${MAX_SLUG_LENGTH}:max: znaků.`,
+    taken: $localize`:@@admin.projectEditor.slug.taken:Tuto adresu už má jiný projekt nebo aktualita. Zvolte prosím jinou.`,
   };
   protected readonly tagMessages = {
     maxlength: $localize`:@@admin.projectEditor.tag.tooLong:Štítek může mít nejvíc ${MAX_TAG_LENGTH}:max: znaků.`,
   };
   protected readonly perexMessages = {
-    required: $localize`:@@admin.projectEditor.perex.required:Vyplňte prosím perex, krátký souhrn pro kartu projektu.`,
-    maxlength: $localize`:@@admin.projectEditor.perex.tooLong:Perex může mít nejvíc ${MAX_PEREX_LENGTH}:max: znaků.`,
+    required: $localize`:@@admin.projectEditor.perex.required:Napište prosím krátký souhrn.`,
+    maxlength: $localize`:@@admin.projectEditor.perex.tooLong:Krátký souhrn může mít nejvíc ${MAX_PEREX_LENGTH}:max: znaků.`,
   };
   protected readonly bodyMessages = {
     required: $localize`:@@admin.projectEditor.body.required:Napište prosím text projektu.`,
@@ -149,6 +174,20 @@ export class AdminProjectEditor {
     const at = this.project()?.updatedAt;
     return at ? formatBankTime(at) : null;
   });
+  protected readonly coverUnsaved = computed(
+    () => (this.coverImage()?.id ?? null) !== (this.project()?.coverImage?.id ?? null),
+  );
+  protected readonly unsaved = computed(() => this.edited() || this.coverUnsaved());
+  protected readonly publishAction = computed(() => {
+    if (this.isPublished()) {
+      return this.unsaved() ? 'saveAndChangeDate' : 'changeDate';
+    }
+    return this.unsaved() ? 'saveAndPublish' : 'publish';
+  });
+  protected readonly publicUrl = computed(() => {
+    const project = this.project();
+    return project?.publishedOn ? `/projekty/${project.slug}` : null;
+  });
   protected readonly previewUrl = computed(() => {
     const image = this.coverImage();
     return image ? mediaUrl(image.id, PREVIEW_WIDTH) : null;
@@ -169,6 +208,13 @@ export class AdminProjectEditor {
       this.load(id);
     }
     afterNextRender(() => this.title().nativeElement.focus(), { injector: this.injector });
+    effect((onCleanup) => {
+      const form = this.projectForm();
+      if (form) {
+        const edits = form.form.events.subscribe(() => this.edited.set(form.dirty === true));
+        onCleanup(() => edits.unsubscribe());
+      }
+    });
   }
 
   protected load(id: string): void {
@@ -199,6 +245,45 @@ export class AdminProjectEditor {
       });
   }
 
+  canLeave(): boolean | Promise<boolean> {
+    if (this.discarded || !this.unsaved()) {
+      return true;
+    }
+    this.answerLeave?.(false);
+    return new Promise((resolve) => {
+      this.answerLeave = resolve;
+      this.askingToLeave.set(true);
+    });
+  }
+
+  protected warnBeforeUnload(event: BeforeUnloadEvent): void {
+    if (!this.discarded && this.unsaved()) {
+      event.preventDefault();
+    }
+  }
+
+  protected leaveWithoutSaving(): void {
+    this.closeLeaveQuestion(true);
+  }
+
+  protected stay(): void {
+    this.closeLeaveQuestion(false);
+  }
+
+  protected stayAndSave(): void {
+    this.closeLeaveQuestion(false);
+    afterNextRender(
+      () => {
+        const form = this.projectFormElement()?.nativeElement;
+        form?.requestSubmit();
+        if (form && !form.contains(document.activeElement)) {
+          this.saveButton()?.nativeElement.focus();
+        }
+      },
+      { injector: this.injector },
+    );
+  }
+
   protected retry(): void {
     const id = this.route.snapshot.paramMap.get('id');
     if (id !== null) {
@@ -221,11 +306,11 @@ export class AdminProjectEditor {
   }
 
   protected save(form: NgForm): void {
-    if (this.saving()) {
+    if (this.saving() || this.publishing()) {
       return;
     }
     this.formError.set(null);
-    this.notice.set(null);
+    this.saveStatus.set(null);
     if (form.invalid) {
       return;
     }
@@ -237,35 +322,22 @@ export class AdminProjectEditor {
     call.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (project) => {
         this.saving.set(false);
-        const created = existing === null;
-        this.show(project);
-        if (created) {
-          this.location.replaceState(`/sprava/projekty/${project.id}`);
-        }
-        this.notice.set({
-          kind: 'status',
-          text: created
+        this.saved(project, existing === null);
+        this.saveStatus.set(
+          existing === null
             ? $localize`:@@admin.projectEditor.saved.created:Projekt jsme uložili jako koncept. Na web ho dostanete tlačítkem Zveřejnit.`
             : $localize`:@@admin.projectEditor.saved.updated:Změny jsme uložili.`,
-        });
+        );
       },
       error: (failure: unknown) => {
         this.saving.set(false);
-        this.formError.set(
-          describeProblem(
-            failure,
-            $localize`:@@admin.projectEditor.saved.failed:Projekt se nepodařilo uložit. Zkuste to prosím znovu.`,
-          ),
-        );
+        this.saveFailed(failure);
       },
     });
   }
 
-  protected upload(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    const file = input.files?.[0];
-    input.value = '';
-    if (!file || this.uploading()) {
+  protected upload(file: File): void {
+    if (this.uploading()) {
       return;
     }
     this.uploadError.set(null);
@@ -310,26 +382,55 @@ export class AdminProjectEditor {
 
   protected publish(): void {
     const existing = this.project();
-    if (!existing || this.publishing() || !this.publishDate) {
+    if (!existing || this.publishing() || this.saving() || !this.publishDate) {
       return;
     }
-    this.notice.set(null);
+    this.publishNotice.set(null);
+    this.formError.set(null);
+    this.saveStatus.set(null);
+    const date = this.publishDate;
+    if (!this.unsaved()) {
+      this.publishing.set(true);
+      this.sendPublish(existing.id, date);
+      return;
+    }
+    if (this.projectForm()?.invalid) {
+      this.projectFormElement()?.nativeElement.requestSubmit();
+      return;
+    }
     this.publishing.set(true);
     this.api
-      .publish(existing.id, this.publishDate)
+      .update(existing.id, this.request())
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (project) => {
+          this.saved(project, false);
+          this.publishDate = date;
+          this.sendPublish(project.id, date);
+        },
+        error: (failure: unknown) => {
+          this.publishing.set(false);
+          this.saveFailed(failure);
+        },
+      });
+  }
+
+  private sendPublish(id: string, date: string): void {
+    this.api
+      .publish(id, date)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (project) => {
           this.publishing.set(false);
           this.project.set(project);
-          this.notice.set({
+          this.publishNotice.set({
             kind: 'status',
-            text: $localize`:@@admin.projectEditor.published:Projekt je na webu s datem ${formatDonationDate(project.publishedOn ?? this.publishDate)}:date:.`,
+            text: $localize`:@@admin.projectEditor.published:Projekt je na webu s datem ${formatDonationDate(project.publishedOn ?? date)}:date:.`,
           });
         },
         error: (failure: unknown) => {
           this.publishing.set(false);
-          this.notice.set({
+          this.publishNotice.set({
             kind: 'alert',
             text: describeProblem(
               failure,
@@ -345,7 +446,7 @@ export class AdminProjectEditor {
     if (!existing || this.unpublishing()) {
       return;
     }
-    this.notice.set(null);
+    this.publishNotice.set(null);
     this.unpublishing.set(true);
     this.api
       .unpublish(existing.id)
@@ -354,14 +455,14 @@ export class AdminProjectEditor {
         next: (project) => {
           this.unpublishing.set(false);
           this.project.set(project);
-          this.notice.set({
+          this.publishNotice.set({
             kind: 'status',
             text: $localize`:@@admin.projectEditor.unpublished:Projekt jsme z webu stáhli. Zůstává tu jako koncept.`,
           });
         },
         error: (failure: unknown) => {
           this.unpublishing.set(false);
-          this.notice.set({
+          this.publishNotice.set({
             kind: 'alert',
             text: describeProblem(
               failure,
@@ -373,12 +474,14 @@ export class AdminProjectEditor {
   }
 
   protected askDelete(): void {
-    this.notice.set(null);
+    this.deleteNotice.set(null);
     this.confirmingDelete.set(true);
+    afterNextRender(() => this.deleteCancel()?.nativeElement.focus(), { injector: this.injector });
   }
 
   protected cancelDelete(): void {
     this.confirmingDelete.set(false);
+    this.focusDeleteButton();
   }
 
   protected delete(): void {
@@ -393,20 +496,59 @@ export class AdminProjectEditor {
       .subscribe({
         next: () => {
           this.deleting.set(false);
-          this.router.navigateByUrl('/sprava/projekty');
+          this.discarded = true;
+          this.router.navigateByUrl('/sprava/projekty', { state: { deleted: existing.title } });
         },
         error: (failure: unknown) => {
           this.deleting.set(false);
           this.confirmingDelete.set(false);
-          this.notice.set({
+          this.deleteNotice.set({
             kind: 'alert',
             text: describeProblem(
               failure,
               $localize`:@@admin.projectEditor.delete.failed:Projekt se nepodařilo smazat. Zkuste to prosím znovu.`,
             ),
           });
+          this.focusDeleteButton();
         },
       });
+  }
+
+  private focusDeleteButton(): void {
+    afterNextRender(() => this.deleteButton()?.nativeElement.focus(), { injector: this.injector });
+  }
+
+  private closeLeaveQuestion(leave: boolean): void {
+    this.askingToLeave.set(false);
+    const answer = this.answerLeave;
+    this.answerLeave = null;
+    answer?.(leave);
+  }
+
+  private saved(project: ProjectResponse, created: boolean): void {
+    this.show(project);
+    this.projectForm()?.form.markAsPristine();
+    this.edited.set(false);
+    if (created) {
+      this.location.replaceState(`/sprava/projekty/${project.id}`);
+      this.pageTitle.setTitle(EDIT_TITLE);
+    }
+  }
+
+  private saveFailed(failure: unknown): void {
+    if (problemTypeEndsWith(failure, SLUG_TAKEN)) {
+      const control = this.projectForm()?.controls['slug'];
+      control?.setErrors({ taken: true });
+      control?.markAsTouched();
+      afterNextRender(() => this.slugInput()?.nativeElement.focus(), { injector: this.injector });
+      return;
+    }
+    this.formError.set(
+      describeProblem(
+        failure,
+        $localize`:@@admin.projectEditor.saved.failed:Projekt se nepodařilo uložit. Zkuste to prosím znovu.`,
+      ),
+    );
   }
 
   private show(project: ProjectResponse): void {

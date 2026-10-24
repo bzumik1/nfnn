@@ -10,8 +10,6 @@
     }
   </h1>
 
-  <app-live-notice [notice]="notice()" />
-
   @switch (state()) {
     @case ('loading') {
       <p class="ui-load-state" role="status" i18n="@@admin.newsEditor.loading">
@@ -39,6 +37,7 @@
         <div class="ui-card__body">
           <form
             #articleForm="ngForm"
+            #articleFormElement
             class="article-form"
             appFocusFirstInvalid
             (ngSubmit)="save(articleForm)"
@@ -63,12 +62,13 @@
             </app-form-field>
 
             <app-form-field
-              label="Adresa na webu"
+              label="Adresa na webu (nepovinné)"
               i18n-label="@@admin.newsEditor.slug"
               [hint]="publicAddressHint()"
               [messages]="slugMessages"
             >
               <input
+                #slugInput
                 appFormControl
                 id="news-slug"
                 name="slug"
@@ -83,9 +83,9 @@
             </app-form-field>
 
             <app-form-field
-              label="Štítek"
+              label="Štítek (nepovinné)"
               i18n-label="@@admin.newsEditor.tag"
-              hint="Nepovinné slovo nad datem, například Projekt nebo Zprávy."
+              hint="Slovo nad datem, například Projekt nebo Zprávy."
               i18n-hint="@@admin.newsEditor.tag.hint"
               [messages]="tagMessages"
             >
@@ -101,9 +101,9 @@
             </app-form-field>
 
             <app-form-field
-              label="Perex"
+              label="Krátký souhrn"
               i18n-label="@@admin.newsEditor.perex"
-              hint="Krátký souhrn pro seznam aktualit, nejvíc 300 znaků."
+              hint="Ukáže se na kartě v seznamu aktualit, nejvíc 300 znaků."
               i18n-hint="@@admin.newsEditor.perex.hint"
               [messages]="perexMessages"
             >
@@ -140,22 +140,26 @@
             <app-markdown-preview [text]="body" previewId="news-body-preview" />
 
             <div class="image-field">
-              <label class="field-label" for="news-image" i18n="@@admin.newsEditor.image"
-                >Fotka</label
-              >
+              <p class="field-label" i18n="@@admin.newsEditor.image">Fotka (nepovinné)</p>
               @if (previewUrl(); as url) {
                 <img class="image-preview" [src]="url" alt="" width="480" height="300" />
               }
               <div class="image-actions">
-                <input
-                  id="news-image"
-                  class="image-input"
-                  type="file"
+                <app-file-button
+                  inputId="news-image"
                   accept="image/jpeg,image/png,image/webp"
-                  aria-describedby="news-image-hint"
+                  describedBy="news-image-hint"
                   [disabled]="uploading()"
-                  (change)="upload($event)"
-                />
+                  (chosen)="upload($event)"
+                >
+                  @if (coverImage()) {
+                    <ng-container i18n="@@admin.newsEditor.image.replace"
+                      >Vyměnit fotku</ng-container
+                    >
+                  } @else {
+                    <ng-container i18n="@@admin.newsEditor.image.choose">Nahrát fotku</ng-container>
+                  }
+                </app-file-button>
                 @if (coverImage()) {
                   <button
                     type="button"
@@ -169,13 +173,17 @@
                 }
               </div>
               <p id="news-image-hint" class="field-hint" i18n="@@admin.newsEditor.image.hint">
-                JPEG, PNG nebo WebP do 10 MB. Web si z fotky vyrobí zmenšené kopie; nahraje se hned,
-                k aktualitě se připojí uložením.
+                Ukáže se na kartě v seznamu a nahoře v článku. JPEG, PNG nebo WebP do 10 MB; web si
+                z fotky vyrobí zmenšené kopie.
               </p>
               <div role="status">
                 @if (uploading()) {
                   <p class="field-status" i18n="@@admin.newsEditor.image.uploading">
                     Nahráváme fotku…
+                  </p>
+                } @else if (coverUnsaved() && coverImage()) {
+                  <p class="field-status" i18n="@@admin.newsEditor.image.uploaded">
+                    Fotka je nahraná. K aktualitě se připojí, až ji uložíte.
                   </p>
                 }
               </div>
@@ -185,9 +193,9 @@
               @if (coverImage()) {
                 <app-form-field
                   class="alt-field"
-                  label="Popis fotky"
+                  label="Popis fotky (nepovinné)"
                   i18n-label="@@admin.newsEditor.imageAlt"
-                  hint="Nepovinné. Jednou větou, co je na fotce. Přečte ho nevidomým čtečka obrazovky a ukáže se, když se fotka nenačte."
+                  hint="Jednou větou, co je na fotce. Přečte ho nevidomým čtečka obrazovky a ukáže se, když se fotka nenačte."
                   i18n-hint="@@admin.newsEditor.imageAlt.hint"
                   [messages]="altMessages"
                 >
@@ -210,16 +218,17 @@
 
             <div class="form-actions">
               <button
+                #saveButton
                 type="submit"
                 class="ui-button ui-button--primary"
-                [disabled]="saving() || uploading()"
+                [disabled]="saving() || uploading() || publishing()"
               >
                 @if (saving()) {
                   <span i18n="@@admin.newsEditor.saving">Ukládáme…</span>
-                } @else if (isNew()) {
-                  <span i18n="@@admin.newsEditor.save.new">Uložit koncept</span>
+                } @else if (isPublished()) {
+                  <span i18n="@@admin.newsEditor.save.published">Uložit a ukázat na webu</span>
                 } @else {
-                  <span i18n="@@admin.newsEditor.save.edit">Uložit změny</span>
+                  <span i18n="@@admin.newsEditor.save.new">Uložit koncept</span>
                 }
               </button>
               @if (updatedAt(); as at) {
@@ -228,11 +237,21 @@
                 >
               }
             </div>
+            <p class="ui-form-status" role="status">
+              @if (saveStatus(); as status) {
+                <span>{{ status }}</span>
+              }
+            </p>
+            @if (isPublished()) {
+              <p class="save-hint" i18n="@@admin.newsEditor.save.publishedHint">
+                Aktualita je na webu, změny se ukážou hned.
+              </p>
+            }
           </form>
         </div>
       </section>
 
-      <section class="ui-card" aria-labelledby="news-publish-title">
+      <section class="ui-card publish-card" aria-labelledby="news-publish-title">
         <h2 id="news-publish-title" class="ui-card__title" i18n="@@admin.newsEditor.publish.title">
           Zveřejnění
         </h2>
@@ -251,6 +270,18 @@
                   >Zveřejněno s datem {{ date }}. Web řadí aktuality podle tohoto data.</span
                 >
               </p>
+              @if (publicUrl(); as url) {
+                <p class="public-link-row">
+                  <a class="public-link" [href]="url" target="_blank" rel="noopener"
+                    ><ng-container i18n="@@admin.newsEditor.publicLink"
+                      >Otevřít na webu</ng-container
+                    >{{ ' '
+                    }}<span class="visually-hidden" i18n="@@admin.newsEditor.publicLink.newWindow"
+                      >(v novém okně)</span
+                    ></a
+                  >
+                </p>
+              }
             } @else {
               <p class="publish-state">
                 <span class="ui-badge ui-badge--warning" i18n="@@admin.newsEditor.state.draft"
@@ -278,17 +309,32 @@
               <button
                 type="button"
                 class="ui-button"
-                [disabled]="publishing() || unpublishing() || !publishDate"
+                [disabled]="publishing() || unpublishing() || saving() || !publishDate"
                 (click)="publish()"
               >
                 @if (publishing()) {
                   <ng-container i18n="@@admin.newsEditor.publishing">Zveřejňujeme…</ng-container>
-                } @else if (isPublished()) {
-                  <ng-container i18n="@@admin.newsEditor.publish.changeDate"
-                    >Změnit datum</ng-container
-                  >
                 } @else {
-                  <ng-container i18n="@@admin.newsEditor.publish.now">Zveřejnit</ng-container>
+                  @switch (publishAction()) {
+                    @case ('changeDate') {
+                      <ng-container i18n="@@admin.newsEditor.publish.changeDate"
+                        >Změnit datum</ng-container
+                      >
+                    }
+                    @case ('saveAndChangeDate') {
+                      <ng-container i18n="@@admin.newsEditor.publish.saveAndChangeDate"
+                        >Uložit a změnit datum</ng-container
+                      >
+                    }
+                    @case ('saveAndPublish') {
+                      <ng-container i18n="@@admin.newsEditor.publish.saveAndPublish"
+                        >Uložit a zveřejnit</ng-container
+                      >
+                    }
+                    @default {
+                      <ng-container i18n="@@admin.newsEditor.publish.now">Zveřejnit</ng-container>
+                    }
+                  }
                 }
               </button>
               @if (isPublished()) {
@@ -306,12 +352,18 @@
                 </button>
               }
             </div>
+            @if (unsaved()) {
+              <p class="publish-hint" i18n="@@admin.newsEditor.publish.unsavedHint">
+                V obsahu máte neuložené změny; tlačítko je nejdřív uloží.
+              </p>
+            }
           }
+          <app-live-notice class="card-notice" [notice]="publishNotice()" />
         </div>
       </section>
 
       @if (!isNew()) {
-        <section class="ui-card ui-card--danger" aria-labelledby="news-delete-title">
+        <section class="ui-card ui-card--danger delete-card" aria-labelledby="news-delete-title">
           <h2 id="news-delete-title" class="ui-card__title" i18n="@@admin.newsEditor.delete.title">
             Smazání
           </h2>
@@ -339,21 +391,25 @@
                   @if (deleting()) {
                     <ng-container i18n="@@admin.newsEditor.deleting">Mažeme…</ng-container>
                   } @else {
-                    <ng-container i18n="@@admin.newsEditor.delete.yes">Ano, smazat</ng-container>
+                    <ng-container i18n="@@admin.newsEditor.delete.yes"
+                      >Smazat natrvalo</ng-container
+                    >
                   }
                 </button>
                 <button
+                  #deleteCancel
                   type="button"
                   class="ui-link-button"
                   [disabled]="deleting()"
                   (click)="cancelDelete()"
                   i18n="@@admin.newsEditor.delete.no"
                 >
-                  Ne
+                  Zrušit
                 </button>
               </span>
             } @else {
               <button
+                #deleteButton
                 type="button"
                 class="ui-button ui-button--danger-outline"
                 (click)="askDelete()"
@@ -362,9 +418,18 @@
                 Smazat aktualitu
               </button>
             }
+            <app-live-notice class="card-notice" [notice]="deleteNotice()" />
           </div>
         </section>
       }
     }
   }
 </div>
+
+@if (askingToLeave()) {
+  <app-unsaved-changes-dialog
+    (stayed)="stay()"
+    (saveChosen)="stayAndSave()"
+    (leaveChosen)="leaveWithoutSaving()"
+  />
+}

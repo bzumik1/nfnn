@@ -16,6 +16,7 @@ import { AuthStore } from '../../../core/auth/auth-store';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
 import { NewsApi, NewsArticleResponse } from '../../content/news-api';
 import { formatBankTime, formatDonationDate } from '../../donations/donation-date';
+import { LiveNotice, Notice } from '../../../shared/ui/live-notice/live-notice';
 
 type LoadState = 'loading' | 'ready' | 'error';
 
@@ -24,7 +25,7 @@ const FORBIDDEN = 'auth/forbidden';
 
 @Component({
   selector: 'app-admin-news',
-  imports: [RouterLink],
+  imports: [RouterLink, LiveNotice],
   templateUrl: './admin-news.html',
   styleUrl: './admin-news.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -40,8 +41,16 @@ export class AdminNews {
 
   protected readonly state = signal<LoadState>('loading');
   protected readonly items = signal<NewsArticleResponse[]>([]);
+  protected readonly notice = signal<Notice | null>(null);
 
   constructor() {
+    const deleted: unknown = this.router.currentNavigation()?.extras.state?.['deleted'];
+    if (typeof deleted === 'string') {
+      this.notice.set({
+        kind: 'status',
+        text: $localize`:@@admin.news.deleted:Aktualitu „${deleted}:title:“ jsme smazali.`,
+      });
+    }
     this.load();
     afterNextRender(() => this.title().nativeElement.focus(), { injector: this.injector });
   }

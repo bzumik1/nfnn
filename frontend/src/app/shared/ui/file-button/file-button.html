@@ -1,0 +1,12 @@
+<input
+  class="file-input visually-hidden"
+  type="file"
+  [id]="inputId()"
+  [accept]="accept()"
+  [attr.aria-describedby]="describedBy()"
+  [disabled]="disabled()"
+  (change)="choose($event)"
+/>
+<label class="ui-button file-label" [for]="inputId()" [class.file-label--disabled]="disabled()">
+  <ng-content />
+</label>

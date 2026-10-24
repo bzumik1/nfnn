@@ -46,13 +46,6 @@
   gap: var(--space-2) var(--space-4);
 }
 
-.image-input {
-  font-family: var(--font-sans);
-  font-size: var(--text-md);
-  color: var(--color-text-secondary);
-  max-width: 100%;
-}
-
 .field-hint,
 .field-status,
 .field-error {
@@ -137,4 +130,26 @@
 .alt-field {
   display: block;
   margin-top: var(--space-4);
+}
+
+.save-hint,
+.publish-hint {
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  color: var(--color-text-muted);
+  margin-top: var(--space-2);
+}
+
+.public-link-row {
+  margin: 0 0 var(--space-3-5);
+  font-size: var(--text-md);
+}
+
+.public-link {
+  color: var(--color-accent);
+  font-weight: var(--weight-semibold);
+}
+
+.card-notice {
+  margin-top: var(--space-3-5);
 }
