@@ -73,4 +73,4 @@ Everything read through the connector (log lines, donors, messages, content) and
 - `@angular/localize` is wired in; never run `ng add @angular/localize` again. Never use H2.
 - The master changelog `includeAll`s one folder per context (`endsWithFilter=".xml"`); a folder without an `.xml` changelog stops the backend at startup, and a `.gitkeep` does not count. A new context appends its `includeAll` line and brings its first changelog.
 - `spring.profiles.default: dev`: `getActiveProfiles()` is empty then; assert on `getDefaultProfiles()`.
-- The original HTML prototype was removed from the repo (git history keeps it); the theme in `frontend/src/styles/themes/_nova-nadeje.scss` and the existing components are the visual reference.
+- The original HTML prototype was removed from the repo (git history keeps it); the theme in `frontend/src/themes/nova-nadeje/_theme.scss` and the existing components are the visual reference.

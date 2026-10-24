@@ -96,5 +96,5 @@ tasks.withType<Test> {
 	jvmArgs("--enable-native-access=ALL-UNNAMED")
 	jvmArgumentProviders.add(CommandLineArgumentProvider { listOf("-javaagent:${mockitoAgent.singleFile}", "-Xshare:off") })
 	environment("TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE", "/var/run/docker.sock")
-	inputs.file("../frontend/src/styles/themes/_nova-nadeje.scss").withPropertyName("siteTheme").withPathSensitivity(PathSensitivity.NONE)
+	inputs.file("../frontend/src/themes/nova-nadeje/_theme.scss").withPropertyName("siteTheme").withPathSensitivity(PathSensitivity.NONE)
 }

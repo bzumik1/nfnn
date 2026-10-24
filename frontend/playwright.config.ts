@@ -15,7 +15,9 @@ export default defineConfig({
   webServer: process.env.E2E_BASE_URL
     ? undefined
     : {
-        command: 'npm start',
+        command: process.env.E2E_THEME
+          ? `npx ng serve --configuration=${process.env.E2E_THEME}-theme`
+          : 'npm start',
         url: 'http://localhost:4200',
         reuseExistingServer: !process.env.CI,
         timeout: 120_000,

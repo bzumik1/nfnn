@@ -86,6 +86,14 @@ jobs:
       - name: End-to-end and accessibility tests
         run: npm run e2e
 
+      - name: Build with the control theme
+        run: npx ng build --configuration=production,control-theme --output-path=dist/control-theme
+
+      - name: The control theme restyles every page
+        run: npx playwright test e2e/theme.spec.ts
+        env:
+          E2E_THEME: control
+
   mcp:
     runs-on: ubuntu-latest
     timeout-minutes: 10
