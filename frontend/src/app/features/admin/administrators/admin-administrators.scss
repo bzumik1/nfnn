@@ -23,9 +23,23 @@ td.action {
   text-align: right;
 }
 
+.confirm {
+  max-width: 360px;
+  text-align: left;
+}
+
 .admin-name {
   color: var(--color-text);
   font-weight: var(--weight-semibold);
+}
+
+a.admin-name {
+  color: var(--color-accent);
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
 }
 
 .muted {

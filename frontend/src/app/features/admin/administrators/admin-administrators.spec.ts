@@ -105,11 +105,15 @@ describe('Given an administrator on the administrators page', () => {
     expect(rowText(first)).toContain('to jste vy');
     expect(rowText(first)).toContain('jana@example.cz');
     expect(rowText(first)).toContain('zapnuté');
-    expect(rowText(first)).toContain('Svůj účet spravujete v přehledu.');
+    expect(rowText(first)).toContain('Svůj účet spravujete v Údajích a zabezpečení.');
+    expect(first.querySelector('.action a')?.getAttribute('href')).toBe('/darce/udaje');
     expect(first.querySelectorAll('button')).toHaveLength(0);
     expect(rowText(second)).toContain('Petr Svoboda');
-    expect(rowText(second)).toContain('vypnuté, správa se mu ještě neotevře');
-    expect(button(second, 'Odebrat')).toBeTruthy();
+    expect(second.querySelector('a.admin-name')?.getAttribute('href')).toBe(
+      `/sprava/darci/${PETR_ID}`,
+    );
+    expect(rowText(second)).toContain('vypnuté, správa se mu otevře jen přístupovým klíčem');
+    expect(button(second, 'Odebrat roli správce')).toBeTruthy();
     expect(second.querySelectorAll('button')).toHaveLength(1);
   });
 
@@ -143,7 +147,7 @@ describe('Given an administrator on the administrators page', () => {
     fixture.detectChanges();
 
     expect(text('.ui-notice--status')).toBe(
-      'Petr Svoboda je teď správce. Správa se mu otevře, až si zapne dvoufaktorové ověření a přihlásí se s kódem z aplikace.',
+      'Petr Svoboda je teď správce. Správa se mu otevře, až se přihlásí s kódem z ověřovací aplikace nebo přístupovým klíčem.',
     );
     expect(element<HTMLInputElement>('#grant-email').value).toBe('');
     await listed([jana, petr]);
@@ -190,34 +194,44 @@ describe('Given an administrator on the administrators page', () => {
   it('when another administrator is removed after the confirmation, then the list reloads and the status says their sign-ins ended', async () => {
     await listed();
 
-    button(rows()[1], 'Odebrat').click();
+    button(rows()[1], 'Odebrat roli správce').click();
     fixture.detectChanges();
-    expect(rowText(rows()[1])).toContain('Opravdu odebrat?');
+    expect(rowText(rows()[1])).toContain(
+      'Petr Svoboda přestane být správcem a všechna jeho přihlášení skončí. Jeho dárcovský účet zůstane. Odebrat roli správce?',
+    );
+    expect(rows()[1].querySelector('.confirm')?.getAttribute('aria-label')).toBe(
+      'Odebrat roli správce: Petr Svoboda?',
+    );
     button(rows()[1], 'Ano, odebrat').click();
     fixture.detectChanges();
 
     const request = http.expectOne(`/api/admin/donors/administrators/${PETR_ID}`);
     expect(request.request.method).toBe('DELETE');
     request.flush(null, { status: 204, statusText: 'No Content' });
+    await fixture.whenStable();
     fixture.detectChanges();
 
     expect(text('.ui-notice--status')).toBe(
       'Petr Svoboda už není správce. Všechna jeho přihlášení jsme ukončili.',
     );
+    expect(document.activeElement).toBe(element('app-live-notice'));
     await listed([jana]);
     expect(rows()).toHaveLength(1);
   });
 
-  it('when "Ne" answers the confirmation, then nothing is sent and the buttons come back', async () => {
+  it('when "Ponechat" answers the confirmation, then nothing is sent, the buttons come back and the focus returns to the opener', async () => {
     await listed();
 
-    button(rows()[1], 'Odebrat').click();
+    button(rows()[1], 'Odebrat roli správce').click();
     fixture.detectChanges();
-    button(rows()[1], 'Ne').click();
+    await fixture.whenStable();
+    expect(document.activeElement).toBe(button(rows()[1], 'Ponechat'));
+    button(rows()[1], 'Ponechat').click();
     fixture.detectChanges();
+    await fixture.whenStable();
 
-    expect(rowText(rows()[1])).not.toContain('Opravdu odebrat?');
-    expect(button(rows()[1], 'Odebrat')).toBeTruthy();
+    expect(rowText(rows()[1])).not.toContain('Odebrat roli správce?');
+    expect(document.activeElement).toBe(button(rows()[1], 'Odebrat roli správce'));
     http.expectNone(`/api/admin/donors/administrators/${PETR_ID}`);
   });
 
@@ -227,7 +241,9 @@ describe('Given an administrator on the administrators page', () => {
 
     button(rows()[1], 'Vypnout dvoufaktorové ověření').click();
     fixture.detectChanges();
-    expect(rowText(rows()[1])).toContain('Ověřili jste, že žádá majitel účtu?');
+    expect(rowText(rows()[1])).toContain(
+      'Ověřili jste, že žádá majitel účtu (například odpověděl z registrovaného e-mailu)?',
+    );
     button(rows()[1], 'Ano, vypnout').click();
     fixture.detectChanges();
 
@@ -246,7 +262,7 @@ describe('Given an administrator on the administrators page', () => {
   it('when the removal is refused, then the alert shows the backend title and the list stays', async () => {
     await listed();
 
-    button(rows()[1], 'Odebrat').click();
+    button(rows()[1], 'Odebrat roli správce').click();
     fixture.detectChanges();
     button(rows()[1], 'Ano, odebrat').click();
     fixture.detectChanges();
@@ -261,8 +277,12 @@ describe('Given an administrator on the administrators page', () => {
       .flush(refusal.body, refusal.options);
     fixture.detectChanges();
 
+    await fixture.whenStable();
+    fixture.detectChanges();
+
     expect(text('.ui-notice--alert')).toBe('Tento dárce není správce. Není co odebrat.');
     expect(rows()).toHaveLength(2);
+    expect(document.activeElement).toBe(button(rows()[1], 'Odebrat roli správce'));
   });
 
   it('when the role was taken away meanwhile, then the page goes to the overview', async () => {

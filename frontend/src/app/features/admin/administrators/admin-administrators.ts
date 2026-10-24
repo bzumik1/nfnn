@@ -11,7 +11,7 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule, NgForm } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { describeProblem, problemTypeEndsWith } from '../../../core/auth/api-problem';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
@@ -23,14 +23,23 @@ import { LiveNotice, Notice } from '../../../shared/ui/live-notice/live-notice';
 
 type LoadState = 'loading' | 'ready' | 'error';
 
-type PendingAction = { kind: 'revoke' | 'reset'; donorId: string } | null;
+type ActionKind = 'revoke' | 'reset';
+
+type PendingAction = { kind: ActionKind; donorId: string } | null;
 
 const UNAUTHENTICATED = 'auth/unauthenticated';
 const FORBIDDEN = 'auth/forbidden';
 
 @Component({
   selector: 'app-admin-administrators',
-  imports: [LiveNotice, FormsModule, FormField, FormControlDirective, FocusFirstInvalid],
+  imports: [
+    LiveNotice,
+    FormsModule,
+    FormField,
+    FormControlDirective,
+    FocusFirstInvalid,
+    RouterLink,
+  ],
   templateUrl: './admin-administrators.html',
   styleUrl: './admin-administrators.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -42,7 +51,10 @@ export class AdminAdministrators {
   private readonly loginDialog = inject(LoginDialogService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly injector = inject(Injector);
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly title = viewChild.required<ElementRef<HTMLHeadingElement>>('title');
+  private readonly confirmCancel = viewChild<ElementRef<HTMLButtonElement>>('confirmCancel');
+  private readonly noticeRegion = viewChild('noticeRegion', { read: ElementRef });
 
   protected readonly state = signal<LoadState>('loading');
   protected readonly items = signal<AdministratorResponse[]>([]);
@@ -111,9 +123,10 @@ export class AdminAdministrators {
             kind: 'status',
             text: added.secondFactorEnabled
               ? $localize`:@@admin.administrators.grant.doneWithFactor:${added.name}:name: je teď správce. Správa se mu otevře po dalším přihlášení.`
-              : $localize`:@@admin.administrators.grant.done:${added.name}:name: je teď správce. Správa se mu otevře, až si zapne dvoufaktorové ověření a přihlásí se s kódem z aplikace.`,
+              : $localize`:@@admin.administrators.grant.done:${added.name}:name: je teď správce. Správa se mu otevře, až se přihlásí s kódem z ověřovací aplikace nebo přístupovým klíčem.`,
           });
           this.load();
+          this.focusAfterRender(() => this.noticeElement());
         },
         error: (failure: unknown) => {
           this.busy.set(false);
@@ -127,16 +140,31 @@ export class AdminAdministrators {
       });
   }
 
-  protected ask(kind: 'revoke' | 'reset', item: AdministratorResponse): void {
+  protected ask(kind: ActionKind, item: AdministratorResponse): void {
     this.pending.set({ kind, donorId: item.donorId });
     this.notice.set(null);
+    this.focusAfterRender(() => this.confirmCancel()?.nativeElement ?? null);
   }
 
   protected cancel(): void {
+    const opener = this.openerOf(this.pending());
     this.pending.set(null);
+    this.focusAfterRender(opener);
   }
 
-  protected isPending(kind: 'revoke' | 'reset', item: AdministratorResponse): boolean {
+  protected openerId(kind: ActionKind, item: AdministratorResponse): string {
+    return openerId(kind, item.donorId);
+  }
+
+  protected revokeQuestion(item: AdministratorResponse): string {
+    return $localize`:@@admin.administrators.revoke.confirm.question:${item.name}:name: přestane být správcem a všechna jeho přihlášení skončí. Jeho dárcovský účet zůstane. Odebrat roli správce?`;
+  }
+
+  protected revokeLabel(item: AdministratorResponse): string {
+    return $localize`:@@admin.administrators.revoke.confirm.label:Odebrat roli správce: ${item.name}:name:?`;
+  }
+
+  protected isPending(kind: ActionKind, item: AdministratorResponse): boolean {
     const pending = this.pending();
     return pending !== null && pending.kind === kind && pending.donorId === item.donorId;
   }
@@ -145,7 +173,7 @@ export class AdminAdministrators {
     this.run(
       this.api.revokeAdministration(item.donorId),
       $localize`:@@admin.administrators.revoke.done:${item.name}:name: už není správce. Všechna jeho přihlášení jsme ukončili.`,
-      $localize`:@@admin.administrators.revoke.failed:Správce se nepodařilo odebrat. Zkuste to prosím znovu.`,
+      $localize`:@@admin.administrators.revoke.failed:Roli správce se nepodařilo odebrat. Zkuste to prosím znovu.`,
     );
   }
 
@@ -165,6 +193,7 @@ export class AdminAdministrators {
     if (this.busy()) {
       return;
     }
+    const opener = this.openerOf(this.pending());
     this.busy.set(true);
     request.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => {
@@ -172,13 +201,29 @@ export class AdminAdministrators {
         this.pending.set(null);
         this.notice.set({ kind: 'status', text: done });
         this.load();
+        this.focusAfterRender(() => this.noticeElement());
       },
       error: (failure: unknown) => {
         this.busy.set(false);
         this.pending.set(null);
         this.notice.set({ kind: 'alert', text: describeProblem(failure, failed) });
+        this.focusAfterRender(() => opener() ?? this.noticeElement());
       },
     });
+  }
+
+  private openerOf(pending: PendingAction): () => HTMLElement | null {
+    const id = pending === null ? null : openerId(pending.kind, pending.donorId);
+    return () =>
+      id === null ? null : this.host.nativeElement.querySelector<HTMLElement>(`#${id}`);
+  }
+
+  private noticeElement(): HTMLElement | null {
+    return (this.noticeRegion()?.nativeElement as HTMLElement | undefined) ?? null;
+  }
+
+  private focusAfterRender(target: () => HTMLElement | null): void {
+    afterNextRender(() => target()?.focus(), { injector: this.injector });
   }
 
   private sendToSignIn(): void {
@@ -188,4 +233,8 @@ export class AdminAdministrators {
       this.loginDialog.open('login', { returnTo });
     });
   }
+}
+
+function openerId(kind: ActionKind, donorId: string): string {
+  return `administrator-${kind}-${donorId.replace(/[^A-Za-z0-9_-]/g, '_')}`;
 }
