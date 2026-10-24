@@ -15,13 +15,19 @@ import { HttpEventType } from '@angular/common/http';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule, NgForm } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { describeProblem, problemTypeEndsWith } from '../../../core/auth/api-problem';
+import {
+  describeProblem,
+  describeProblemWithoutFields,
+  problemOf,
+  problemTypeEndsWith,
+} from '../../../core/auth/api-problem';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
 import { FocusFirstInvalid } from '../../../shared/ui/form-field/focus-first-invalid';
 import { FormControlDirective } from '../../../shared/ui/form-field/form-control';
 import { FormField } from '../../../shared/ui/form-field/form-field';
 import { PasswordReveal } from '../../../shared/ui/password-reveal/password-reveal';
-import { SETTING_LABELS, settingErrors } from '../setting-labels';
+import { placeServerErrors } from '../../../shared/ui/form-field/server-errors';
+import { SETTING_LABELS, settingLabel } from '../setting-labels';
 import {
   MailServerRequest,
   RESTORE_MAX_POLLS,
@@ -53,6 +59,18 @@ const DEFAULT_MAIL_HOST = 'smtp-relay.brevo.com';
 const DEFAULT_MAIL_PORT = 587;
 const DEFAULT_ADDRESS = 'info@nfnn.cz';
 const PORT_INVALID = $localize`:@@operations.setup.mailPort.invalid:Port je číslo od 1 do 65535.`;
+const BACKUP_EXTENSION = '.dump';
+const SETTING_FIELDS: Readonly<Partial<Record<SettingName, string>>> = {
+  PUBLIC_URL: 'publicUrl',
+  MAIL_HOST: 'mailHost',
+  MAIL_PORT: 'mailPort',
+  MAIL_USERNAME: 'mailUsername',
+  MAIL_PASSWORD: 'mailPassword',
+  MAIL_FROM: 'mailFrom',
+  CONTACT_RECIPIENT: 'contactRecipient',
+  FIO_TOKEN: 'fioToken',
+  ADMIN_EMAILS: 'adminEmail',
+};
 
 @Component({
   selector: 'app-first-setup',
@@ -74,6 +92,8 @@ export class FirstSetup {
   private readonly destroyRef = inject(DestroyRef);
   private readonly injector = inject(Injector);
   private readonly heading = viewChild<ElementRef<HTMLElement>>('heading');
+  private readonly mailTestButton = viewChild<ElementRef<HTMLButtonElement>>('mailTestButton');
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
 
   protected readonly labels = SETTING_LABELS;
   protected readonly panel = signal<Panel>('loading');
@@ -84,6 +104,8 @@ export class FirstSetup {
   protected readonly fieldErrors = signal<string[]>([]);
   protected readonly testingMail = signal(false);
   protected readonly mailNotice = signal<Notice | null>(null);
+  protected readonly mailUnverified = signal(false);
+  protected readonly backupFileError = signal('');
   protected readonly backupFile = signal<File | null>(null);
   protected readonly uploadPercent = signal<number | null>(null);
   protected readonly restoreError = signal('');
@@ -104,6 +126,13 @@ export class FirstSetup {
     min: PORT_INVALID,
     max: PORT_INVALID,
   };
+  protected readonly usernameMessages = {
+    required: $localize`:@@operations.setup.mailUsername.required:Vyplňte prosím přihlašovací jméno ze stránky SMTP v Brevo.`,
+  };
+  protected readonly passwordMessages = {
+    required: $localize`:@@operations.setup.mailPassword.required:Vyplňte prosím heslo nebo klíč SMTP.`,
+  };
+  protected readonly fioTokenLabel = $localize`:@@operations.setup.fioToken.label:Token Fio API (jen pro čtení, nepovinné)`;
   protected readonly emailMessages = {
     required: $localize`:@@operations.setup.email.required:Vyplňte prosím e-mailovou adresu.`,
     email: $localize`:@@operations.setup.email.invalid:Tohle není platná e-mailová adresa.`,
@@ -126,6 +155,7 @@ export class FirstSetup {
 
   private unlockedCode: string | null = null;
   private restoreRequestId: string | null = null;
+  private verifiedMailServer: string | null = null;
 
   constructor() {
     this.load();
@@ -191,12 +221,17 @@ export class FirstSetup {
     }
     this.mailNotice.set(null);
     this.testingMail.set(true);
+    const server = this.mailServer();
     this.api
-      .testMail(this.unlockedCode, this.mailServer())
+      .testMail(this.unlockedCode, server)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (result) => {
           this.testingMail.set(false);
+          this.verifiedMailServer = result.ok ? JSON.stringify(server) : null;
+          if (result.ok) {
+            this.mailUnverified.set(false);
+          }
           this.mailNotice.set(
             result.ok
               ? {
@@ -222,15 +257,27 @@ export class FirstSetup {
       });
   }
 
-  protected save(form: NgForm): void {
+  protected testMailFromWarning(): void {
+    this.mailUnverified.set(false);
+    this.testMail();
+    this.mailTestButton()?.nativeElement.focus();
+  }
+
+  protected save(form: NgForm, unverifiedMailAccepted = false): void {
     if (this.saving()) {
       return;
     }
     this.saveError.set('');
     this.fieldErrors.set([]);
     if (form.invalid) {
+      this.mailUnverified.set(false);
       return;
     }
+    if (!unverifiedMailAccepted && this.verifiedMailServer !== JSON.stringify(this.mailServer())) {
+      this.mailUnverified.set(true);
+      return;
+    }
+    this.mailUnverified.set(false);
     this.saving.set(true);
     this.api
       .complete({ code: this.unlockedCode, settings: this.settings() })
@@ -253,13 +300,7 @@ export class FirstSetup {
             this.show('locked');
             return;
           }
-          this.saveError.set(
-            describeProblem(
-              failure,
-              $localize`:@@operations.setup.save.failed:Nastavení se nepodařilo uložit. Zkuste to prosím znovu.`,
-            ),
-          );
-          this.fieldErrors.set(settingErrors(failure));
+          this.refuseSettings(form, failure);
         },
       });
   }
@@ -270,7 +311,7 @@ export class FirstSetup {
   }
 
   protected signUp(): void {
-    this.loginDialog.open('register');
+    this.loginDialog.open('register', { email: this.adminEmail.trim() });
   }
 
   protected openRestore(): void {
@@ -285,13 +326,19 @@ export class FirstSetup {
 
   protected chooseBackup(event: Event): void {
     const input = event.target as HTMLInputElement;
-    this.backupFile.set(input.files?.item(0) ?? null);
+    const file = input.files?.item(0) ?? null;
+    this.backupFile.set(file);
     this.restoreError.set('');
+    this.backupFileError.set(
+      file === null || file.name.toLowerCase().endsWith(BACKUP_EXTENSION)
+        ? ''
+        : $localize`:@@operations.setup.restore.wrongFile:Tohle není soubor zálohy. Vyberte prosím soubor s příponou .dump.`,
+    );
   }
 
   protected uploadBackup(): void {
     const file = this.backupFile();
-    if (file === null || this.uploadPercent() !== null) {
+    if (file === null || this.backupFileError() !== '' || this.uploadPercent() !== null) {
       return;
     }
     this.restoreError.set('');
@@ -385,6 +432,31 @@ export class FirstSetup {
         : $localize`:@@operations.setup.restore.notPickedUp:Kontejner záloh si obnovu do pěti minut nevzal. Zkuste to prosím znovu; když se to opakuje, podívejte se do logu kontejneru nfnn-backup v ZimaOS.`,
     );
     this.show(status.codeRequired ? 'locked' : 'restore');
+  }
+
+  private refuseSettings(form: NgForm, failure: unknown): void {
+    const errors = problemOf(failure)?.errors ?? [];
+    const unplaced = placeServerErrors(form, errors, SETTING_FIELDS);
+    const generic = $localize`:@@operations.setup.save.failed:Nastavení se nepodařilo uložit. Zkuste to prosím znovu.`;
+    this.saveError.set(
+      unplaced.length === errors.length
+        ? describeProblem(failure, generic)
+        : describeProblemWithoutFields(failure, generic),
+    );
+    this.fieldErrors.set(
+      unplaced
+        .filter((error) => error.message !== '')
+        .map((error) => {
+          const label = settingLabel(error.field);
+          return label === '' ? error.message : `${label}: ${error.message}`;
+        }),
+    );
+    if (unplaced.length < errors.length) {
+      afterNextRender(
+        () => this.host.querySelector<HTMLElement>('.setup-form .form-control.ng-invalid')?.focus(),
+        { injector: this.injector },
+      );
+    }
   }
 
   private watchRestart(): void {

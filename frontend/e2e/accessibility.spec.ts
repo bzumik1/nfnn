@@ -312,6 +312,36 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     expect(await violations(page)).toEqual([]);
   });
 
+  test('when they ask for a reset link and register, then the sent panels of the dialog break no rule', async ({
+    page,
+  }) => {
+    await page.route('**/api/donors/auth/password-reset/request', (route) =>
+      route.fulfill({ status: 202, body: '' }),
+    );
+    await page.route('**/api/donors/auth/register', (route) =>
+      route.fulfill({ status: 202, body: '' }),
+    );
+    await openSignInDialog(page);
+    const dialog = page.getByRole('dialog');
+
+    await dialog.locator('#login-email').fill('jana@example.cz');
+    await dialog.getByRole('button', { name: 'Zapomněli jste heslo?' }).click();
+    await dialog.getByRole('button', { name: 'Odeslat odkaz' }).click();
+    await expect(dialog.getByRole('heading', { name: 'Zkontrolujte si e-mail' })).toBeFocused();
+    expect(await violations(page)).toEqual([]);
+
+    await dialog.getByRole('button', { name: 'Zpět na přihlášení' }).click();
+    await dialog.getByRole('button', { name: 'Registrace' }).click();
+    await dialog.locator('#register-name').fill('Jana Nováková');
+    await dialog.locator('#register-street').fill('Dlouhá 12');
+    await dialog.locator('#register-postal-code').fill('400 01');
+    await dialog.locator('#register-city').fill('Ústí nad Labem');
+    await dialog.locator('#register-password').fill('correct horse battery');
+    await dialog.getByRole('button', { name: 'Vytvořit účet' }).click();
+    await expect(dialog.getByRole('heading', { name: 'Zkontrolujte si e-mail' })).toBeFocused();
+    expect(await violations(page)).toEqual([]);
+  });
+
   test('when they send the contact form empty, then its error messages break no rule either', async ({
     page,
   }) => {
@@ -1127,7 +1157,13 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     await expect(page.locator('#setup-admin-email')).toBeVisible();
     expect(unlocked).toBe(true);
     await page.getByRole('button', { name: 'Uložit a spustit' }).click();
-    await expect(page.locator('#setup-admin-email')).toBeFocused();
+    await expect(page.locator('#setup-mail-username')).toBeFocused();
+    expect(await violations(page)).toEqual([]);
+    await page.locator('#setup-mail-username').fill('abc@smtp-brevo.com');
+    await page.locator('#setup-mail-password').fill('xsmtpsib-key');
+    await page.locator('#setup-admin-email').fill('spravce@example.cz');
+    await page.getByRole('button', { name: 'Uložit a spustit' }).click();
+    await expect(page.locator('.mail-unverified')).toBeVisible();
     expect(await violations(page)).toEqual([]);
 
     await page.getByRole('button', { name: 'Obnovit ze zálohy' }).click();
@@ -1139,8 +1175,8 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
       mimeType: 'image/jpeg',
       buffer: Buffer.from('JPEG'),
     });
-    await page.getByRole('button', { name: 'Nahrát a obnovit' }).click();
-    await expect(page.getByRole('alert')).toContainText('není záloha');
+    await expect(page.getByRole('alert')).toContainText('není soubor zálohy');
+    await expect(page.getByRole('button', { name: 'Nahrát a obnovit' })).toBeDisabled();
     expect(await violations(page)).toEqual([]);
   });
 

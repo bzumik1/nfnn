@@ -1,9 +1,10 @@
-import { Component } from '@angular/core';
+import { Component, viewChild } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { FormsModule } from '@angular/forms';
+import { FormsModule, NgForm } from '@angular/forms';
 import { FocusFirstInvalid } from './focus-first-invalid';
 import { FormControlDirective } from './form-control';
 import { FormField } from './form-field';
+import { placeServerErrors } from './server-errors';
 
 @Component({
   imports: [FormsModule, FormField, FormControlDirective, FocusFirstInvalid],
@@ -28,6 +29,7 @@ import { FormField } from './form-field';
   `,
 })
 class TwoFieldForm {
+  readonly form = viewChild.required(NgForm);
   name = '';
   email = '';
   submits = 0;
@@ -122,5 +124,36 @@ describe('Given a form built from form fields', () => {
 
     expect(errorOf('name')).toBeNull();
     expect(document.activeElement).toBe(input('email'));
+  });
+
+  describe('when the server refuses fields with its own messages', () => {
+    let unplaced: { field: string; message: string }[];
+
+    beforeEach(async () => {
+      await type('name', 'Jan');
+      await type('email', 'jan@example.cz');
+      unplaced = placeServerErrors(
+        fixture.componentInstance.form(),
+        [
+          { field: 'address.email', message: 'Tuto adresu nelze použít.' },
+          { field: 'unknown', message: 'Nepatří k žádnému poli.' },
+        ],
+        { 'address.email': 'email' },
+      );
+      await fixture.whenStable();
+    });
+
+    it('then the message stands at its field and the one without a field is handed back', () => {
+      expect(unplaced).toEqual([{ field: 'unknown', message: 'Nepatří k žádnému poli.' }]);
+      expect(errorOf('email')?.textContent?.trim()).toBe('Tuto adresu nelze použít.');
+      expect(input('email').getAttribute('aria-invalid')).toBe('true');
+      expect(errorOf('name')).toBeNull();
+    });
+
+    it('and the visitor edits the field, then the message goes away', async () => {
+      await type('email', 'jana@example.cz');
+
+      expect(errorOf('email')).toBeNull();
+    });
   });
 });

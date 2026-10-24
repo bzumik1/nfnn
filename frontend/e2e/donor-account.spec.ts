@@ -20,11 +20,14 @@ test.describe('Given a visitor who wants a donor account', () => {
     await page.locator('#register-postal-code').fill('400 01');
     await page.locator('#register-email').fill('jana@example.cz');
     await page.locator('#register-password').fill('correct horse battery');
-    await page.getByRole('button', { name: 'Registrovat' }).click();
+    await page.getByRole('button', { name: 'Vytvořit účet' }).click();
 
     const dialog = page.getByRole('dialog');
     await expect(dialog.getByRole('heading', { name: 'Zkontrolujte si e-mail' })).toBeVisible();
-    await expect(dialog.getByRole('status')).toContainText('jana@example.cz');
+    await expect(dialog.getByRole('heading', { name: 'Zkontrolujte si e-mail' })).toBeFocused();
+    await expect(dialog.getByRole('status').filter({ hasText: /\S/ })).toContainText(
+      'jana@example.cz',
+    );
     await expect(page).toHaveURL(/\/$/);
     expect(posted).toEqual([
       {

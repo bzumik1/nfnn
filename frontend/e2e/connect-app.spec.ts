@@ -50,14 +50,15 @@ test.describe('Given Claude sent an administrator to the site to connect the adm
     const heading = page.getByRole('heading', { level: 1 });
     await expect(heading).toContainText('Povolit přístup ke správě aplikaci claude.ai?');
     await expect(heading).toBeFocused();
-    await expect(page.locator('.scopes li')).toHaveCount(1);
-    await expect(page.locator('.scopes li').first()).toContainText('Čtení');
-    const changes = page.getByRole('checkbox', { name: /Změny/ });
+    await expect(page.locator('.scopes:not(.write-scopes) li')).toHaveCount(5);
+    await expect(page.locator('.scopes li').first()).toContainText('vidět dárce');
+    await expect(page.locator('.never')).toContainText('Nikdy nebude smět');
+    const changes = page.getByRole('checkbox', { name: 'Povolit i změny' });
     await expect(changes).not.toBeChecked();
     await expect(changes).toHaveAccessibleDescription(/jen čtení/);
 
     await changes.check();
-    await expect(page.getByText('i když jste se jím už přihlásili')).toBeVisible();
+    await expect(page.getByText('Povolení potvrďte kódem z ověřovací aplikace.')).toBeVisible();
     await page.getByRole('button', { name: 'Povolit', exact: true }).click();
     await expect(page.locator('#connect-app-code')).toBeFocused();
     expect(decisions).toEqual([]);
@@ -152,6 +153,34 @@ test.describe('Given Claude sent an administrator to the site to connect the adm
 
     await expect(page).toHaveURL(
       'https://claude.ai/api/mcp/auth_callback?error=access_denied&state=xyz',
+    );
+  });
+
+  test('when a plain donor signs in with another account, then the page continues to the consent for the administrator', async ({
+    page,
+  }) => {
+    await page.route('**/api/donors/auth/refresh', (route) => route.fulfill(session(200)));
+    await signIn(page);
+    await page.route('**/api/donors/auth/logout', (route) =>
+      route.fulfill({ status: 204, body: '' }),
+    );
+    await page.route('**/api/donors/auth/login', (route) =>
+      route.fulfill(session(200, administrator)),
+    );
+
+    await page.goto(connectionRequest);
+    await page.getByRole('button', { name: 'Přihlásit se jiným účtem' }).click();
+
+    const dialog = page.getByRole('dialog');
+    await expect(dialog.locator('#login-email')).toBeFocused();
+    await dialog.locator('#login-email').fill('spravce@example.cz');
+    await dialog.locator('#login-password').fill('correct horse battery');
+    await dialog.locator('.ui-button--block').click();
+
+    await expect(dialog).toBeHidden();
+    await expect(page).toHaveURL(/\/pripojeni\?client_id=/);
+    await expect(page.getByRole('heading', { level: 1 })).toContainText(
+      'Povolit přístup ke správě aplikaci claude.ai?',
     );
   });
 

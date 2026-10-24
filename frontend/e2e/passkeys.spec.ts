@@ -276,7 +276,7 @@ test.describe('Given a visitor who wants an account without a password', () => {
     await dialog.getByRole('radio', { name: 'Přístupovým klíčem' }).click();
 
     await expect(dialog.getByLabel('Heslo', { exact: true })).toHaveCount(0);
-    await dialog.getByRole('button', { name: 'Registrovat' }).click();
+    await dialog.getByRole('button', { name: 'Vytvořit účet' }).click();
 
     await expect(dialog.getByRole('heading', { name: 'Zkontrolujte si e-mail' })).toBeVisible();
     expect(registration['password']).toBeNull();

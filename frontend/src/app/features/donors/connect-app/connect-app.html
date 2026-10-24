@@ -87,8 +87,8 @@
             </p>
           } @else {
             <ul class="scopes">
-              @for (scope of scopes; track scope) {
-                <li>{{ scope }}</li>
+              @for (ability of abilities; track ability) {
+                <li>{{ ability }}</li>
               }
             </ul>
             @if (writeRequested) {
@@ -96,12 +96,19 @@
                 <input
                   type="checkbox"
                   id="connect-app-write"
-                  aria-describedby="connect-app-write-hint"
+                  aria-describedby="connect-app-write-scopes connect-app-write-hint"
                   [checked]="allowWrite()"
                   (change)="chooseWrite($event)"
                 />
-                <label for="connect-app-write">{{ writeDescription }}</label>
+                <label for="connect-app-write" i18n="@@donor.connect.consent.writeOption"
+                  >Povolit i změny</label
+                >
               </div>
+              <ul class="scopes write-scopes" id="connect-app-write-scopes">
+                @for (ability of writeAbilities; track ability) {
+                  <li>{{ ability }}</li>
+                }
+              </ul>
               <p
                 class="scope-hint"
                 id="connect-app-write-hint"
@@ -111,10 +118,15 @@
                 novým připojením.
               </p>
             }
+            <p class="never" i18n="@@donor.connect.consent.never">
+              Nikdy nebude smět nic mazat, měnit správce, hesla, přístupové klíče ani dvoufaktorové
+              ověření, stahovat ani obnovovat zálohy, měnit tajné údaje, adresu webu ani podpis na
+              potvrzeních. To jde jen ve správě v prohlížeči.
+            </p>
           }
           <p class="ui-panel__lead" i18n="@@donor.connect.consent.after">
-            Po povolení vás pošleme zpět do aplikace. Přístup kdykoli odeberete v přehledu dárce v
-            části „Připojené aplikace“; ukončí ho i změna hesla nebo odebrání role správce.
+            Po povolení vás pošleme zpět do aplikace. Přístup kdykoli odeberete v části Údaje a
+            zabezpečení → Připojené aplikace; ukončí ho i změna hesla nebo odebrání role správce.
           </p>
           <form
             #consentForm="ngForm"
@@ -125,8 +137,7 @@
           >
             @if (usesCode()) {
               <p class="ui-panel__lead confirm-note" i18n="@@donor.connect.consent.confirmCode">
-                Povolení potvrďte novým kódem z ověřovací aplikace, i když jste se jím už
-                přihlásili.
+                Povolení potvrďte kódem z ověřovací aplikace.
               </p>
               <app-form-field
                 label="Kód z aplikace"
@@ -233,18 +244,31 @@
             @if (error()) {
               <p class="ui-field-error" role="alert">{{ error() }}</p>
             }
-            <button
-              type="button"
-              class="ui-button ui-button--block"
-              [disabled]="deciding() !== null"
-              (click)="deny()"
-            >
-              @if (deciding() === 'deny') {
-                <span i18n="@@donor.connect.consent.denying">Odmítám…</span>
-              } @else {
-                <span i18n="@@donor.connect.notAdmin.back">Odmítnout a vrátit se do aplikace</span>
-              }
-            </button>
+            <div class="not-admin-actions">
+              <button
+                type="button"
+                class="ui-button ui-button--primary ui-button--block"
+                [disabled]="deciding() !== null"
+                (click)="switchAccount()"
+                i18n="@@donor.connect.notAdmin.switch"
+              >
+                Přihlásit se jiným účtem
+              </button>
+              <button
+                type="button"
+                class="ui-button ui-button--block"
+                [disabled]="deciding() !== null"
+                (click)="deny()"
+              >
+                @if (deciding() === 'deny') {
+                  <span i18n="@@donor.connect.consent.denying">Odmítám…</span>
+                } @else {
+                  <span i18n="@@donor.connect.notAdmin.back"
+                    >Odmítnout a vrátit se do aplikace</span
+                  >
+                }
+              </button>
+            </div>
           </div>
         }
       }

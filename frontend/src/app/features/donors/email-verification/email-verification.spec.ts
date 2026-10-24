@@ -5,6 +5,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { AuthStore } from '../../../core/auth/auth-store';
+import { LoginDialogService } from '../../../core/auth/login-dialog.service';
 import { PasskeyAuthenticator } from '../../../core/auth/passkey-authenticator';
 import {
   authResponse,
@@ -141,6 +142,29 @@ describe('Given the page that confirms the e-mail from the registration link', (
       expect(heading().textContent).toContain('E-mail odeslán');
       expect(element('[role="status"]').textContent).toContain('poslali jsme na ni nový odkaz');
       expect(element('form')).toBeNull();
+      expect(element('.ui-status').textContent).toContain(
+        'E-mail nedorazil? Podívejte se do nevyžádané pošty.',
+      );
+      expect(element<HTMLAnchorElement>('a.ui-button--primary').getAttribute('href')).toBe('/');
+    });
+
+    it('and the link was already used, then the page says signing in is enough and opens the dialog for the overview', async () => {
+      await answerConfirm(
+        problem('donors/invalid-email-verification-token', 'Odkaz je neplatný', ''),
+        400,
+        'Bad Request',
+      );
+
+      expect(element('.already-confirmed').textContent).toContain(
+        'Už jste e-mail potvrdili? Pak se stačí přihlásit.',
+      );
+      await click('.already-confirmed + .ui-button');
+
+      const dialog = TestBed.inject(LoginDialogService);
+      expect(dialog.isOpen()).toBe(true);
+      expect(dialog.initialMode()).toBe('login');
+      dialog.signedIn();
+      expect(navigate).toHaveBeenCalledWith('/darce/prehled');
     });
 
     it('and the link is no longer valid and the address is empty, then nothing is sent and the field says what is missing', async () => {
@@ -280,7 +304,9 @@ describe('Given the registration link of a donor who chose a passkey instead of 
     http.expectOne('/api/donors/me/passkeys/options').flush(passkeyCreationOptions());
     await vi.waitFor(() => expect(element('.ui-field-error')).not.toBeNull());
 
-    expect(element('.ui-field-error').textContent).toContain('jde to i později na přehledu');
+    expect(element('.ui-field-error').textContent).toContain(
+      'jde to i později v části Údaje a zabezpečení',
+    );
     element<HTMLButtonElement>('.link-action').click();
     expect(navigate).toHaveBeenCalledWith('/darce/prehled');
   });

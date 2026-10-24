@@ -70,9 +70,8 @@ describe('Given the page that sets a new password from the e-mail link', () => {
     await settle();
   }
 
-  async function submitPasswords(password: string, confirmation = password): Promise<void> {
+  async function submitPasswords(password: string): Promise<void> {
     await fillIn('#reset-password', password);
-    await fillIn('#reset-password-confirm', confirmation);
     element<HTMLFormElement>('form').dispatchEvent(new Event('submit'));
     await settle();
   }
@@ -98,7 +97,7 @@ describe('Given the page that sets a new password from the e-mail link', () => {
       expect(element('#reset-password-hint').textContent).toContain('Alespoň 12 znaků');
     });
 
-    it('and the donor enters the new password twice, then the token and the password are sent', async () => {
+    it('and the donor enters the new password, then the token and the password are sent', async () => {
       await submitPasswords('correct horse battery');
 
       const request = http.expectOne('/api/donors/auth/password-reset/confirm');
@@ -110,12 +109,11 @@ describe('Given the page that sets a new password from the e-mail link', () => {
       request.flush(null, { status: 204, statusText: 'No Content' });
     });
 
-    it('and the two passwords differ, then nothing is sent and the mismatch is explained', async () => {
-      await submitPasswords('correct horse battery', 'correct horse battery!');
-
-      http.expectNone('/api/donors/auth/password-reset/confirm');
-      expect(element('.ui-field-error').getAttribute('role')).toBe('alert');
-      expect(element('.ui-field-error').textContent).toContain('Hesla se neshodují.');
+    it('then the password is asked for once, with a button that shows what was typed', () => {
+      expect(harness.routeNativeElement!.querySelectorAll('input[type="password"]')).toHaveLength(
+        1,
+      );
+      expect(element('#reset-password + .password-reveal')).not.toBeNull();
     });
 
     it('and the password is too short, then nothing is sent and the password field says why', async () => {

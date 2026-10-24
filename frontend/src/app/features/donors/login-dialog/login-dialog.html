@@ -1,6 +1,6 @@
 <app-dialog
   labelledBy="login-dialog-title"
-  [wide]="mode() === 'register'"
+  [wide]="step() === 'register'"
   (dismissed)="closeDialog()"
 >
   <div class="logo">
@@ -15,7 +15,7 @@
     Přihlášení a registrace
   </h2>
 
-  @if (mode() !== 'reset') {
+  @if (atCrossroads()) {
     <div class="tab-switch">
       <button
         type="button"
@@ -24,7 +24,7 @@
         (click)="setMode('login')"
         i18n="@@donor.login.tab.login"
       >
-        Přihlásit se
+        Přihlášení
       </button>
       <button
         type="button"
@@ -36,81 +36,101 @@
         Registrace
       </button>
     </div>
+  }
 
-    @if (mode() === 'login' && recovery(); as instructions) {
-      <div class="recovery">
-        <h3
-          #recoveryTitle
-          class="reset-title recovery-title"
-          tabindex="-1"
-          i18n="@@donor.login.recovery.title"
-        >
-          Obnova přístupu platbou
-        </h3>
-        <p class="reset-lead" i18n="@@donor.login.recovery.lead">
-          Pošlete 1&nbsp;Kč se zprávou níže z bankovního účtu, ze kterého jste nám už poslali dar se
-          svým variabilním symbolem. Jakmile platbu načteme, vypneme dvoufaktorové ověření, ukončíme
-          všechna přihlášení a pošleme vám e-mail. Pak se přihlásíte jen heslem.
-        </p>
-        <dl class="recovery-details">
-          <div class="recovery-row">
-            <dt i18n="@@donor.login.recovery.account">Číslo účtu</dt>
-            <dd>
-              <span class="recovery-value">{{ instructions.accountNumber }}</span>
-              <app-copy-button
-                [value]="instructions.accountNumber"
-                what="číslo účtu"
-                i18n-what="@@donor.login.recovery.copyAccount"
-              />
-            </dd>
-          </div>
-          <div class="recovery-row">
-            <dt i18n="@@donor.login.recovery.amount">Částka</dt>
-            <dd>
-              <span class="recovery-value"
-                >{{ amount(instructions) }}&nbsp;<ng-container
-                  i18n="@@donor.login.recovery.currency"
-                  >Kč</ng-container
-                ></span
-              >
-            </dd>
-          </div>
-          <div class="recovery-row">
-            <dt i18n="@@donor.login.recovery.message">Zpráva pro příjemce</dt>
-            <dd>
-              <span class="recovery-value">{{ instructions.message }}</span>
-              <app-copy-button
-                [value]="instructions.message"
-                what="zprávu pro příjemce"
-                i18n-what="@@donor.login.recovery.copyMessage"
-              />
-            </dd>
-          </div>
-        </dl>
-        @if (instructions.usableFrom; as from) {
-          <p class="ui-callout ui-callout--warning" i18n="@@donor.login.recovery.usableFrom">
-            Platbu pošlete nejdříve {{ day(from) }}: obnovu přijmeme jen z účtu, který u nás známe
-            aspoň týden.
-          </p>
-        }
-        <p class="recovery-note" i18n="@@donor.login.recovery.note">
-          Kód platí do {{ time(instructions.expiresAt) }}. Platby z banky načítáme každou hodinu;
-          platba se započítá jako dar.
-        </p>
-        <p class="foot">
+  @switch (step()) {
+    @case ('recovery') {
+      @if (recovery(); as instructions) {
+        <div class="recovery">
           <button
             type="button"
-            class="link-btn recovery-back"
+            class="step-back recovery-back"
             (click)="backToCode()"
             i18n="@@donor.login.recovery.back"
           >
             ← Zpět na kód
           </button>
-        </p>
-      </div>
-    } @else if (mode() === 'login' && challenge() !== null) {
-      <p class="sub" i18n="@@donor.login.secondFactor.sub">
-        Přihlášení dokončíte kódem z ověřovací aplikace
+          <h3
+            class="step-title recovery-title"
+            tabindex="-1"
+            autofocus
+            i18n="@@donor.login.recovery.title"
+          >
+            Obnova přístupu platbou
+          </h3>
+          <p class="step-lead" i18n="@@donor.login.recovery.lead">
+            Pošlete 1&nbsp;Kč se zprávou níže z bankovního účtu, ze kterého nám už posíláte dary
+            (najdete ho v přehledu dárce v části Bankovní účty). Jakmile platbu načteme, vypneme
+            dvoufaktorové ověření, ukončíme všechna přihlášení a pošleme vám e-mail. Pak se
+            přihlásíte jen heslem.
+          </p>
+          @if (instructions.usableFrom; as from) {
+            <p class="ui-callout ui-callout--warning" i18n="@@donor.login.recovery.usableFrom">
+              Platbu pošlete nejdříve {{ day(from) }}: obnovu přijmeme jen z účtu, který u nás známe
+              aspoň týden.
+            </p>
+          }
+          <dl class="recovery-details">
+            <div class="recovery-row">
+              <dt i18n="@@donor.login.recovery.account">Číslo účtu</dt>
+              <dd>
+                <span class="recovery-value">{{ instructions.accountNumber }}</span>
+                <app-copy-button
+                  [value]="instructions.accountNumber"
+                  what="číslo účtu"
+                  i18n-what="@@donor.login.recovery.copyAccount"
+                />
+              </dd>
+            </div>
+            <div class="recovery-row">
+              <dt i18n="@@donor.login.recovery.amount">Částka</dt>
+              <dd>
+                <span class="recovery-value"
+                  >{{ amount(instructions) }}&nbsp;<ng-container
+                    i18n="@@donor.login.recovery.currency"
+                    >Kč</ng-container
+                  ></span
+                >
+              </dd>
+            </div>
+            <div class="recovery-row">
+              <dt i18n="@@donor.login.recovery.message">Zpráva pro příjemce</dt>
+              <dd>
+                <span class="recovery-value">{{ instructions.message }}</span>
+                <app-copy-button
+                  [value]="instructions.message"
+                  what="zprávu pro příjemce"
+                  i18n-what="@@donor.login.recovery.copyMessage"
+                />
+              </dd>
+            </div>
+          </dl>
+          <p class="recovery-note" i18n="@@donor.login.recovery.note">
+            Zpráva pro příjemce platí do {{ time(instructions.expiresAt) }}. Platby z banky načítáme
+            každou hodinu; platba se započítá jako dar.
+          </p>
+          <p
+            class="ui-callout ui-callout--warning recovery-keep"
+            i18n="@@donor.login.recovery.keep"
+          >
+            Údaje si opište nebo vyfoťte. Když o obnovu požádáte znovu, dostanete novou zprávu pro
+            příjemce a platba se starou zprávou obnovu neprovede.
+          </p>
+        </div>
+      }
+    }
+    @case ('code') {
+      <button
+        type="button"
+        class="step-back code-back"
+        (click)="backToPassword()"
+        i18n="@@donor.login.secondFactor.back"
+      >
+        ← Zpět na heslo
+      </button>
+      <h3 class="step-title" i18n="@@donor.login.secondFactor.title">Ověření kódem z aplikace</h3>
+      <p class="step-lead" i18n="@@donor.login.secondFactor.sub">
+        Přihlášení dokončíte kódem z ověřovací aplikace.
       </p>
 
       <form
@@ -127,9 +147,9 @@
           [messages]="codeMessages"
         >
           <input
-            #codeField
             appFormControl
             id="login-code"
+            autofocus
             name="code"
             type="text"
             inputmode="numeric"
@@ -171,18 +191,8 @@
           Obnovit přístup platbou
         </button>
       </p>
-
-      <p class="foot">
-        <button
-          type="button"
-          class="link-btn"
-          (click)="backToPassword()"
-          i18n="@@donor.login.secondFactor.back"
-        >
-          ← Zpět na heslo
-        </button>
-      </p>
-    } @else if (mode() === 'login') {
+    }
+    @case ('login') {
       <p class="sub" i18n="@@donor.login.sub.login">Přístup do vašeho přehledu příspěvků</p>
 
       <form
@@ -224,6 +234,16 @@
             />
           </app-password-reveal>
         </app-form-field>
+        <p class="forgot">
+          <button
+            type="button"
+            class="link-btn forgot-link"
+            (click)="setMode('reset')"
+            i18n="@@donor.login.forgot"
+          >
+            Zapomněli jste heslo?
+          </button>
+        </p>
 
         @if (error()) {
           <p class="ui-field-error" role="alert">{{ error() }}</p>
@@ -268,7 +288,7 @@
           type="button"
           class="passkey-btn"
           [disabled]="loading()"
-          (click)="signInWithPasskey()"
+          (click)="signInWithPasskey(login)"
         >
           <svg
             aria-hidden="true"
@@ -286,31 +306,69 @@
           </svg>
           <span i18n="@@donor.login.passkey.submit">Přihlásit se přístupovým klíčem</span>
         </button>
+        @if (passkeyError()) {
+          <p class="ui-field-error passkey-error" role="alert">{{ passkeyError() }}</p>
+        }
       }
-
-      <p class="foot">
-        <span i18n="@@donor.login.forgot">Zapomněli jste heslo?</span>
-        <button
-          type="button"
-          class="link-btn"
-          (click)="setMode('reset')"
-          i18n="@@donor.login.reset"
-        >
-          Obnovit heslo
-        </button>
-      </p>
-    } @else if (registrationSent()) {
+    }
+    @case ('registered') {
       <div class="reset-success">
-        <div class="reset-icon" aria-hidden="true">✉️</div>
-        <h3 i18n="@@donor.register.sentTitle">Zkontrolujte si e-mail</h3>
+        <div class="ui-status__icon" aria-hidden="true">
+          <svg
+            aria-hidden="true"
+            width="28"
+            height="28"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <rect x="3" y="5" width="18" height="14" rx="2" />
+            <path d="m3 7 9 6 9-6" />
+          </svg>
+        </div>
+        <h3 tabindex="-1" autofocus i18n="@@donor.register.sentTitle">Zkontrolujte si e-mail</h3>
         <p role="status" i18n="@@donor.register.sentText">
           Na adresu {{ registration.email.trim() }} jsme poslali odkaz pro potvrzení. Platí 24
           hodin; po jeho otevření se účet otevře a budete přihlášeni.
         </p>
         <p class="reset-hint" i18n="@@donor.register.sentHint">
-          E-mail nedorazil? Zkontrolujte složku s nevyžádanou poštou, nebo se přihlaste a nechte si
-          poslat nový odkaz.
+          E-mail nedorazil? Podívejte se do nevyžádané pošty nebo si ho nechte poslat znovu.
         </p>
+        <div class="sent-actions">
+          <button
+            type="button"
+            class="ui-button ui-button--block registration-resend"
+            [disabled]="loading()"
+            (click)="resendRegistrationLink()"
+          >
+            @if (loading()) {
+              <span i18n="@@donor.register.resendLoading">Odesílám…</span>
+            } @else {
+              <span i18n="@@donor.register.resend">Poslat odkaz znovu</span>
+            }
+          </button>
+          <button
+            type="button"
+            class="ui-button ui-button--block registration-edit"
+            (click)="editRegistration()"
+            i18n="@@donor.register.editEmail"
+          >
+            Opravit e-mail
+          </button>
+        </div>
+        <div role="status">
+          @if (registrationResent()) {
+            <p class="form-status" i18n="@@donor.register.resent">
+              Odkaz jsme poslali znovu na {{ registration.email.trim() }}.
+            </p>
+          }
+        </div>
+        @if (error()) {
+          <p class="ui-field-error" role="alert">{{ error() }}</p>
+        }
         <button
           type="button"
           class="ui-button ui-button--primary ui-button--block"
@@ -320,10 +378,18 @@
           Zpět na přihlášení
         </button>
       </div>
-    } @else {
-      <p class="sub" i18n="@@donor.login.sub.register">
-        Vytvořte si účet pro správu potvrzení o darech
-      </p>
+    }
+    @case ('register') {
+      @if (donorType() === 'COMPANY') {
+        <p class="sub register-lead" i18n="@@donor.login.sub.registerCompany">
+          Vytvořte si účet pro potvrzení o darech. Název firmy, IČO a sídlo uvedeme na potvrzení o
+          daru.
+        </p>
+      } @else {
+        <p class="sub register-lead" i18n="@@donor.login.sub.register">
+          Vytvořte si účet pro potvrzení o darech. Jméno a adresu uvedeme na potvrzení o daru.
+        </p>
+      }
 
       <form
         #register="ngForm"
@@ -332,12 +398,10 @@
         (ngSubmit)="submitRegistration(register)"
         novalidate
       >
-        <div
-          class="ui-segmented type-switch"
-          appRadioGroup
-          aria-label="Typ dárce"
-          i18n-aria-label="@@donor.register.type"
-        >
+        <p id="register-type-label" class="register-label" i18n="@@donor.register.type">
+          Registruji se jako
+        </p>
+        <div class="ui-segmented type-switch" appRadioGroup aria-labelledby="register-type-label">
           <button
             type="button"
             role="radio"
@@ -371,6 +435,7 @@
             <input
               appFormControl
               id="register-name"
+              autofocus
               name="name"
               type="text"
               autocomplete="organization"
@@ -390,6 +455,7 @@
           >
             <input
               appFormControl
+              appCompanyIdentifier
               id="register-company-identifier"
               name="companyIdentifier"
               type="text"
@@ -460,23 +526,6 @@
 
         <div class="field-row">
           <app-form-field
-            label="Město"
-            i18n-label="@@donor.register.city"
-            [messages]="cityMessages"
-          >
-            <input
-              appFormControl
-              id="register-city"
-              name="city"
-              type="text"
-              autocomplete="address-level2"
-              placeholder="Ústí nad Labem"
-              [(ngModel)]="registration.city"
-              required
-              maxlength="120"
-            />
-          </app-form-field>
-          <app-form-field
             label="PSČ"
             i18n-label="@@donor.register.postalCode"
             [messages]="postalCodeMessages"
@@ -492,6 +541,23 @@
               [(ngModel)]="registration.postalCode"
               required
               pattern="\s*\d{3}\s*\d{2}\s*"
+            />
+          </app-form-field>
+          <app-form-field
+            label="Město"
+            i18n-label="@@donor.register.city"
+            [messages]="cityMessages"
+          >
+            <input
+              appFormControl
+              id="register-city"
+              name="city"
+              type="text"
+              autocomplete="address-level2"
+              placeholder="Ústí nad Labem"
+              [(ngModel)]="registration.city"
+              required
+              maxlength="120"
             />
           </app-form-field>
         </div>
@@ -516,10 +582,19 @@
           <p id="register-method-label" class="register-label" i18n="@@donor.register.signInMethod">
             Jak se budete přihlašovat
           </p>
+          <p
+            id="register-method-hint"
+            class="register-hint"
+            i18n="@@donor.register.signInMethodHint"
+          >
+            Přístupovým klíčem se přihlásíte otiskem prstu, obličejem nebo PINem tohoto zařízení,
+            bez hesla. Když si nejste jistí, zvolte heslo.
+          </p>
           <div
             class="ui-segmented type-switch"
             appRadioGroup
             aria-labelledby="register-method-label"
+            aria-describedby="register-method-hint"
           >
             <button
               type="button"
@@ -568,11 +643,18 @@
             </app-password-reveal>
           </app-form-field>
         } @else {
-          <p class="register-hint" i18n="@@donor.register.passkeyHint">
+          <p class="register-hint passkey-later" i18n="@@donor.register.passkeyHint">
             Klíč (otisk prstu, obličej nebo zámek obrazovky) vytvoříte hned po potvrzení e-mailu.
             Účet pak heslo mít nebude; nastavit ho můžete kdykoli později.
           </p>
         }
+
+        <p class="consent" i18n="@@donor.register.consent">
+          Registrací souhlasíte se zpracováním osobních údajů podle
+          <a routerLink="/zasady-ochrany-osobnich-udaju" (click)="closeDialog()"
+            >zásad ochrany osobních údajů</a
+          >.
+        </p>
 
         @if (error()) {
           <p class="ui-field-error" role="alert">{{ error() }}</p>
@@ -584,28 +666,63 @@
           [disabled]="loading()"
         >
           @if (loading()) {
-            <span i18n="@@donor.login.submit.register.loading">Registruji…</span>
+            <span i18n="@@donor.login.submit.register.loading">Vytvářím účet…</span>
           } @else {
-            <span i18n="@@donor.login.submit.register">Registrovat</span>
+            <span i18n="@@donor.login.submit.register">Vytvořit účet</span>
           }
         </button>
-
-        <p class="consent" i18n="@@donor.register.consent">
-          Registrací souhlasíte se zpracováním osobních údajů podle
-          <a routerLink="/zasady-ochrany-osobnich-udaju" (click)="closeDialog()"
-            >zásad ochrany osobních údajů</a
-          >.
-        </p>
       </form>
     }
-  } @else {
-    @if (resetSent()) {
+    @case ('reset-sent') {
       <div class="reset-success">
-        <div class="reset-icon" aria-hidden="true">✉️</div>
-        <h3 i18n="@@donor.login.reset.successTitle">E-mail odeslán!</h3>
+        <div class="ui-status__icon" aria-hidden="true">
+          <svg
+            aria-hidden="true"
+            width="28"
+            height="28"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <rect x="3" y="5" width="18" height="14" rx="2" />
+            <path d="m3 7 9 6 9-6" />
+          </svg>
+        </div>
+        <h3 tabindex="-1" autofocus i18n="@@donor.login.reset.successTitle">
+          Zkontrolujte si e-mail
+        </h3>
         <p i18n="@@donor.login.reset.successText">
-          Pokud účet s touto adresou existuje, obdržíte pokyny k obnovení hesla.
+          Pokud k adrese {{ resetEmail.trim() }} existuje účet, poslali jsme na ni odkaz pro
+          nastavení nového hesla. Platí hodinu.
         </p>
+        <p class="reset-hint" i18n="@@donor.login.reset.successHint">
+          E-mail nedorazil? Podívejte se do nevyžádané pošty, nebo si ho nechte poslat znovu.
+        </p>
+        <button
+          type="button"
+          class="ui-button ui-button--block reset-resend"
+          [disabled]="loading()"
+          (click)="resendReset()"
+        >
+          @if (loading()) {
+            <span i18n="@@donor.login.reset.submitLoading">Odesílám…</span>
+          } @else {
+            <span i18n="@@donor.login.reset.resend">Poslat znovu</span>
+          }
+        </button>
+        <div role="status">
+          @if (resetResent()) {
+            <p class="form-status" i18n="@@donor.login.reset.resent">
+              Pokud účet existuje, poslali jsme odkaz znovu.
+            </p>
+          }
+        </div>
+        @if (error()) {
+          <p class="ui-field-error" role="alert">{{ error() }}</p>
+        }
         <button
           type="button"
           class="ui-button ui-button--primary ui-button--block"
@@ -615,17 +732,18 @@
           Zpět na přihlášení
         </button>
       </div>
-    } @else {
+    }
+    @case ('reset') {
       <button
         type="button"
-        class="reset-back"
+        class="step-back reset-back"
         (click)="backToLogin()"
         i18n="@@donor.login.reset.backLink"
       >
         ← Zpět na přihlášení
       </button>
-      <h3 class="reset-title" i18n="@@donor.login.reset.title">Obnovení hesla</h3>
-      <p class="reset-lead" i18n="@@donor.login.reset.lead">
+      <h3 class="step-title reset-title" i18n="@@donor.login.reset.title">Obnovení hesla</h3>
+      <p class="step-lead" i18n="@@donor.login.reset.lead">
         Zadejte svůj e-mail a zašleme vám odkaz pro obnovení hesla.
       </p>
       <form

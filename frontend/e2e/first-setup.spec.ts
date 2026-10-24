@@ -74,8 +74,55 @@ test.describe('Given a freshly installed site', () => {
       ]),
     });
 
+    await expect(page.locator('.next-steps li').first()).toHaveText(
+      'Zaregistrujte se s adresou spravce@example.cz.',
+    );
     await page.getByRole('button', { name: 'Zaregistrovat se' }).click();
     await expect(page.getByRole('dialog')).toBeVisible();
+    await expect(page.getByRole('dialog').getByLabel('E-mail')).toHaveValue('spravce@example.cz');
+  });
+
+  test('when the operator saves without trying the mail server, then the page warns first and saves only on request', async ({
+    page,
+  }) => {
+    const posted = await freshInstall(page, false);
+
+    await page.goto('/prvni-nastaveni');
+    await page.getByRole('button', { name: 'Uložit a spustit' }).click();
+    await expect(page.locator('#setup-mail-username')).toBeFocused();
+    await expect(page.locator('#setup-mail-username-error')).toHaveText(
+      'Vyplňte prosím přihlašovací jméno ze stránky SMTP v Brevo.',
+    );
+
+    await page.locator('#setup-mail-username').fill('abc@smtp-brevo.com');
+    await page.locator('#setup-mail-password').fill('xsmtpsib-key');
+    await page.locator('#setup-admin-email').fill('spravce@example.cz');
+    await page.getByRole('button', { name: 'Uložit a spustit' }).click();
+    await expect(page.getByRole('alert').filter({ hasText: /\S/ })).toContainText(
+      'Spojení s e-mailovým serverem jste neověřili.',
+    );
+    expect(posted).toHaveLength(0);
+
+    await page.getByRole('button', { name: 'Uložit i tak' }).click();
+    await expect(page.getByRole('heading', { level: 1, name: 'Web se restartuje' })).toBeVisible();
+    expect(posted).toHaveLength(1);
+  });
+
+  test('when the operator leaves the setup for the home page, then the setup comes back', async ({
+    page,
+  }) => {
+    await freshInstall(page, false);
+
+    await page.goto('/prvni-nastaveni');
+    await expect(
+      page.getByRole('heading', { level: 1, name: 'První nastavení webu' }),
+    ).toBeFocused();
+    await page.getByRole('navigation').getByRole('link', { name: 'Domů' }).click();
+
+    await expect(page).toHaveURL(/\/prvni-nastaveni$/);
+    await expect(
+      page.getByRole('heading', { level: 1, name: 'První nastavení webu' }),
+    ).toBeVisible();
   });
 
   test('when it is opened from elsewhere, then the code from the log unlocks the form', async ({

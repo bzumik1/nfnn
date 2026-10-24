@@ -39,6 +39,12 @@ export class FormControlDirective {
     return errors ? (Object.keys(errors)[0] ?? null) : null;
   });
 
+  readonly errorText = computed(() => {
+    const key = this.errorKey();
+    const value: unknown = key === null ? null : this.model.errors?.[key];
+    return typeof value === 'string' ? value : '';
+  });
+
   readonly describedBy = computed(() => {
     const ids = [
       this.field.hint() ? `${this.id}-hint` : null,

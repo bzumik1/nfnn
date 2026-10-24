@@ -51,6 +51,14 @@ export function describeProblem(failure: unknown, generic: string): string {
     .join(' ');
 }
 
+export function describeProblemWithoutFields(failure: unknown, generic: string): string {
+  const problem = problemOf(failure);
+  if (problem === null || problem.title === '') {
+    return generic;
+  }
+  return [problem.title + '.', problem.detail].filter((part) => part !== '').join(' ');
+}
+
 function errorOf(value: unknown): ApiProblemError {
   const fields = (value ?? {}) as Record<string, unknown>;
   return { field: stringOf(fields['field']), message: stringOf(fields['message']) };

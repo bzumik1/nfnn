@@ -56,4 +56,31 @@ describe('Given a visitor opening the public site', () => {
 
     expect(router.url).toBe('/');
   });
+
+  describe('when the visitor leaves the setup page while the site still needs it', () => {
+    beforeEach(async () => {
+      TestBed.inject(SetupRedirect).checkOnce();
+      http.expectOne('/api/operations/setup').flush({ required: true, codeRequired: false });
+      await new Promise((resolve) => setTimeout(resolve));
+      await router.navigateByUrl('/');
+    });
+
+    it('then the status is read again and the visitor is taken back to the setup page', async () => {
+      http.expectOne('/api/operations/setup').flush({ required: true, codeRequired: false });
+      await new Promise((resolve) => setTimeout(resolve));
+
+      expect(router.url).toBe('/prvni-nastaveni');
+    });
+
+    it('after the setup is done, then the visitor stays and later pages ask no more', async () => {
+      http.expectOne('/api/operations/setup').flush({ required: false, codeRequired: true });
+      await new Promise((resolve) => setTimeout(resolve));
+
+      await router.navigateByUrl('/prvni-nastaveni');
+      await router.navigateByUrl('/');
+
+      http.expectNone('/api/operations/setup');
+      expect(router.url).toBe('/');
+    });
+  });
 });

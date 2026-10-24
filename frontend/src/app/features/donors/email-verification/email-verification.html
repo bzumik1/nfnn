@@ -40,8 +40,8 @@
             </p>
             @if (!passkeysSupported) {
               <p class="ui-panel__lead" i18n="@@donor.emailVerification.passkey.unsupported">
-                Tento prohlížeč přístupové klíče neumí. Klíč vytvoříte na přehledu v aktuálním
-                Safari, Chromu, Edgi nebo Firefoxu, nebo si tam nastavíte heslo.
+                Tento prohlížeč přístupové klíče neumí. Klíč vytvoříte v části Údaje a zabezpečení v
+                aktuálním Safari, Chromu, Edgi nebo Firefoxu, nebo si tam nastavíte heslo.
               </p>
             } @else {
               @if (error()) {
@@ -77,8 +77,8 @@
                 role="status"
                 i18n="@@donor.emailVerification.passkey.created"
               >
-                Přístupový klíč je uložený a příště se jím přihlásíte. Doporučujeme přidat na
-                přehledu ještě klíč v dalším zařízení.
+                Přístupový klíč je uložený a příště se jím přihlásíte. Doporučujeme přidat v části
+                Údaje a zabezpečení ještě klíč v dalším zařízení.
               </p>
             } @else {
               <p
@@ -140,6 +140,15 @@
             Pokud účet s touto adresou čeká na potvrzení, poslali jsme na ni nový odkaz. Platí 24
             hodin.
           </p>
+          <p class="requested-hint" i18n="@@donor.emailVerification.requested.hint">
+            E-mail nedorazil? Podívejte se do nevyžádané pošty.
+          </p>
+          <a
+            class="ui-button ui-button--primary ui-button--block"
+            routerLink="/"
+            i18n="@@donor.emailVerification.requested.home"
+            >Na úvodní stránku</a
+          >
         </div>
       }
       @default {
@@ -219,6 +228,19 @@
             }
           </button>
         </form>
+        @if (panel() === 'invalid') {
+          <p class="already-confirmed" i18n="@@donor.emailVerification.invalid.alreadyConfirmed">
+            Už jste e-mail potvrdili? Pak se stačí přihlásit.
+          </p>
+          <button
+            type="button"
+            class="ui-button ui-button--block"
+            (click)="signIn()"
+            i18n="@@donor.emailVerification.invalid.signIn"
+          >
+            Přihlásit se
+          </button>
+        }
       }
     }
   </div>

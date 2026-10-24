@@ -28,7 +28,7 @@ import {
 import { FocusFirstInvalid } from '../../../shared/ui/form-field/focus-first-invalid';
 import { FormControlDirective } from '../../../shared/ui/form-field/form-control';
 import { FormField } from '../../../shared/ui/form-field/form-field';
-import { describeScopes, knownScopes, WRITE_SCOPE } from './oauth-scopes';
+import { knownScopes, SCOPE_ABILITIES, WRITE_SCOPE } from './oauth-scopes';
 
 type Panel = 'incomplete' | 'checking' | 'sign-in' | 'consent' | 'not-admin' | 'leaving' | 'failed';
 
@@ -75,11 +75,11 @@ export class ConnectApp {
   protected readonly deciding = signal<'allow' | 'deny' | null>(null);
   protected readonly allowWrite = signal(false);
   private readonly requested = knownScopes(this.request?.scope ?? null);
-  protected readonly scopes = describeScopes(
-    this.requested.filter((scope) => scope !== WRITE_SCOPE),
-  );
+  protected readonly abilities = this.requested
+    .filter((scope) => scope !== WRITE_SCOPE)
+    .flatMap((scope) => SCOPE_ABILITIES[scope]);
   protected readonly writeRequested = this.requested.includes(WRITE_SCOPE);
-  protected readonly writeDescription = describeScopes([WRITE_SCOPE])[0] ?? '';
+  protected readonly writeAbilities = SCOPE_ABILITIES[WRITE_SCOPE];
   protected readonly unknownScope = this.requested.length === 0 && this.request !== null;
   private readonly grantedScope = computed(() =>
     this.requested.filter((scope) => scope !== WRITE_SCOPE || this.allowWrite()).join(' '),
@@ -88,7 +88,7 @@ export class ConnectApp {
   protected readonly usesCode = computed(() => this.auth.donor()?.secondFactor.enabled ?? false);
   protected readonly passkeySupported = inject(PasskeyAuthenticator).supported();
   protected code = '';
-  protected readonly codeHint = $localize`:@@donor.connect.consent.codeHint:Šest číslic z ověřovací aplikace; kód, kterým jste se přihlásili, už neplatí.`;
+  protected readonly codeHint = $localize`:@@donor.connect.consent.codeHint:Počkejte, až aplikace ukáže nový kód (mění se každých 30 sekund), a opište ho.`;
   protected readonly codeMessages = {
     required: $localize`:@@donor.form.code.required:Opište prosím kód z aplikace.`,
     pattern: $localize`:@@donor.form.code.invalid:Kód má přesně šest číslic.`,
@@ -103,6 +103,14 @@ export class ConnectApp {
 
   signIn(): void {
     this.dialog.open('login');
+  }
+
+  switchAccount(): void {
+    if (this.deciding() !== null) {
+      return;
+    }
+    this.error.set('');
+    this.auth.logout().subscribe(() => this.dialog.open('login'));
   }
 
   allow(form: NgForm): void {

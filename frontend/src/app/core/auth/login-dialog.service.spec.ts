@@ -77,4 +77,54 @@ describe('Given the sign-in dialog service', () => {
 
     expect(navigate).not.toHaveBeenCalled();
   });
+
+  it('when the dialog is opened with an address, then it offers that address until it is opened without one', () => {
+    service.open('register', { email: 'spravce@nfnn.cz' });
+
+    expect(service.initialEmail()).toBe('spravce@nfnn.cz');
+
+    service.close();
+    service.open('login');
+
+    expect(service.initialEmail()).toBe('');
+  });
+
+  describe('when a half-filled registration is kept as the dialog closes', () => {
+    const draft = {
+      donorType: 'PERSON' as const,
+      signInMethod: 'password' as const,
+      name: 'Jana Nováková',
+      companyIdentifier: '',
+      street: 'Dlouhá 12',
+      city: '',
+      postalCode: '',
+      email: 'jana@example.cz',
+    };
+
+    beforeEach(() => {
+      service.open('register');
+      service.keepRegistrationDraft(draft);
+      service.close();
+    });
+
+    it('then the next dialog gets it back', () => {
+      service.open('login');
+
+      expect(service.registrationDraft()).toEqual(draft);
+    });
+
+    it('and the donor then signs in, then it is forgotten', () => {
+      service.open('login');
+
+      service.signedIn();
+
+      expect(service.registrationDraft()).toBeNull();
+    });
+
+    it('and it is dropped, then the next dialog starts empty', () => {
+      service.dropRegistrationDraft();
+
+      expect(service.registrationDraft()).toBeNull();
+    });
+  });
 });

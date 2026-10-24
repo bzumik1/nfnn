@@ -6,15 +6,21 @@ import {
   afterNextRender,
   ChangeDetectionStrategy,
   Component,
+  computed,
+  DestroyRef,
   ElementRef,
   inject,
   Injector,
   signal,
-  viewChild,
 } from '@angular/core';
 import { FormsModule, NgForm } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { describeProblem, problemOf, problemTypeEndsWith } from '../../../core/auth/api-problem';
+import {
+  describeProblem,
+  describeProblemWithoutFields,
+  problemOf,
+  problemTypeEndsWith,
+} from '../../../core/auth/api-problem';
 import { AuthApi } from '../../../core/auth/auth-api';
 import { AuthStore } from '../../../core/auth/auth-store';
 import {
@@ -23,7 +29,11 @@ import {
   PASSWORD_MIN_LENGTH,
   SecondFactorRecovery,
 } from '../../../core/auth/donor';
-import { LoginDialogMode, LoginDialogService } from '../../../core/auth/login-dialog.service';
+import {
+  LoginDialogMode,
+  LoginDialogService,
+  RegistrationDraft,
+} from '../../../core/auth/login-dialog.service';
 import {
   PasskeyAuthenticator,
   PasskeyCeremonyError,
@@ -34,9 +44,11 @@ import { FocusFirstInvalid } from '../../../shared/ui/form-field/focus-first-inv
 import { FormControlDirective } from '../../../shared/ui/form-field/form-control';
 import { FormField } from '../../../shared/ui/form-field/form-field';
 import { PasswordReveal } from '../../../shared/ui/password-reveal/password-reveal';
+import { placeServerErrors } from '../../../shared/ui/form-field/server-errors';
 import { RadioGroup } from '../../../shared/ui/radio-group/radio-group';
 import { formatMinorUnits } from '../../donations/donation-amount';
 import { formatBankTime, formatDonationDate } from '../../donations/donation-date';
+import { CompanyIdentifierValidator } from '../company-identifier';
 import {
   CITY_MESSAGES,
   COMPANY_NAME_MESSAGES,
@@ -55,10 +67,22 @@ interface RegistrationFields {
   password: string;
 }
 
+type Step = 'login' | 'code' | 'recovery' | 'register' | 'registered' | 'reset' | 'reset-sent';
+
 const TOO_MANY_REQUESTS = 429;
 const EMAIL_NOT_VERIFIED = 'auth/email-not-verified';
 const SECOND_FACTOR_REQUIRED = 'auth/second-factor-required';
 const INVALID_SECOND_FACTOR_CHALLENGE = 'auth/invalid-second-factor-challenge';
+const STEP_FOCUS = '[autofocus]';
+const REGISTRATION_FIELDS: Readonly<Record<string, string>> = {
+  name: 'name',
+  companyIdentifier: 'companyIdentifier',
+  'address.street': 'street',
+  'address.city': 'city',
+  'address.postalCode': 'postalCode',
+  email: 'email',
+  password: 'password',
+};
 
 @Component({
   selector: 'app-login-dialog',
@@ -72,6 +96,7 @@ const INVALID_SECOND_FACTOR_CHALLENGE = 'auth/invalid-second-factor-challenge';
     PasswordReveal,
     RadioGroup,
     CopyButton,
+    CompanyIdentifierValidator,
   ],
   templateUrl: './login-dialog.html',
   styleUrl: './login-dialog.scss',
@@ -84,28 +109,52 @@ export class LoginDialog {
   private readonly document = inject(DOCUMENT);
   private readonly injector = inject(Injector);
   private readonly passkeyAuthenticator = inject(PasskeyAuthenticator);
-  private readonly codeField = viewChild<ElementRef<HTMLInputElement>>('codeField');
-  private readonly recoveryTitle = viewChild<ElementRef<HTMLElement>>('recoveryTitle');
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
+  private readonly draft = this.dialog.registrationDraft();
 
   protected readonly passwordMinLength = PASSWORD_MIN_LENGTH;
   protected readonly passkeysSupported = this.passkeyAuthenticator.supported();
   protected readonly mode = signal<LoginDialogMode>(this.dialog.initialMode());
-  protected readonly donorType = signal<DonorType>('PERSON');
-  protected readonly signInMethod = signal<'password' | 'passkey'>('password');
+  protected readonly donorType = signal<DonorType>(this.draft?.donorType ?? 'PERSON');
+  protected readonly signInMethod = signal<'password' | 'passkey'>(
+    this.passkeysSupported ? (this.draft?.signInMethod ?? 'password') : 'password',
+  );
   protected readonly loading = signal(false);
   protected readonly resetSent = signal(false);
+  protected readonly resetResent = signal(false);
   protected readonly registrationSent = signal(false);
+  protected readonly registrationResent = signal(false);
   protected readonly emailNotVerified = signal(false);
   protected readonly verificationResent = signal(false);
   protected readonly challenge = signal<string | null>(null);
   protected readonly recovery = signal<SecondFactorRecovery | null>(null);
   protected readonly error = signal('');
+  protected readonly passkeyError = signal('');
+  protected readonly step = computed<Step>(() => {
+    switch (this.mode()) {
+      case 'register':
+        return this.registrationSent() ? 'registered' : 'register';
+      case 'reset':
+        return this.resetSent() ? 'reset-sent' : 'reset';
+      default:
+        if (this.recovery() !== null) {
+          return 'recovery';
+        }
+        return this.challenge() === null ? 'login' : 'code';
+    }
+  });
+  protected readonly atCrossroads = computed(
+    () => this.step() === 'login' || this.step() === 'register',
+  );
 
-  protected email = '';
+  protected email = this.mode() === 'login' ? this.dialog.initialEmail() : '';
   protected password = '';
   protected code = '';
-  protected registration: RegistrationFields = emptyRegistration();
-  protected resetEmail = '';
+  protected registration: RegistrationFields = registrationOf(
+    this.draft,
+    this.mode() === 'register' ? this.dialog.initialEmail() : '',
+  );
+  protected resetEmail = this.mode() === 'reset' ? this.dialog.initialEmail() : '';
 
   protected readonly emailMessages = {
     required: $localize`:@@donor.form.email.required:Vyplňte prosím e-mail.`,
@@ -130,6 +179,7 @@ export class LoginDialog {
   protected readonly companyIdentifierMessages = {
     required: $localize`:@@donor.register.companyIdentifier.required:Vyplňte prosím IČO.`,
     pattern: $localize`:@@donor.register.companyIdentifier.invalid:IČO má osm číslic.`,
+    companyIdentifier: $localize`:@@donor.register.companyIdentifier.checksum:Toto IČO neexistuje, zkontrolujte prosím číslice.`,
   };
   protected readonly streetMessages = STREET_MESSAGES;
   protected readonly cityMessages = CITY_MESSAGES;
@@ -139,12 +189,19 @@ export class LoginDialog {
   private readonly passkeyNotUsed = $localize`:@@donor.login.passkey.notUsed:Přihlášení přístupovým klíčem neproběhlo. Zkuste to prosím znovu, nebo se přihlaste heslem.`;
   private readonly tooManyResetRequests = $localize`:@@donor.login.reset.error.tooMany:Odeslali jste příliš mnoho žádostí. Zkuste to prosím za hodinu.`;
 
+  constructor() {
+    inject(DestroyRef).onDestroy(() => this.keepDraft());
+  }
+
   setMode(next: LoginDialogMode): void {
+    this.carryEmail(next);
     this.mode.set(next);
     this.error.set('');
+    this.passkeyError.set('');
     this.emailNotVerified.set(false);
     this.verificationResent.set(false);
     this.leaveCodeStep();
+    this.focusStep();
   }
 
   setDonorType(type: DonorType): void {
@@ -156,6 +213,7 @@ export class LoginDialog {
     if (!this.readyToSend(form)) {
       return;
     }
+    this.passkeyError.set('');
     this.emailNotVerified.set(false);
     this.verificationResent.set(false);
     this.auth.login(this.email.trim(), this.password).subscribe({
@@ -171,23 +229,25 @@ export class LoginDialog {
     });
   }
 
-  signInWithPasskey(): void {
+  signInWithPasskey(form: NgForm): void {
     if (this.loading()) {
       return;
     }
+    form.form.markAsUntouched();
     this.loading.set(true);
     this.error.set('');
+    this.passkeyError.set('');
     this.emailNotVerified.set(false);
     this.verificationResent.set(false);
     this.auth.signInWithPasskey().subscribe({
       next: () => this.enterPortal(),
       error: (failure: unknown) => {
-        if (failure instanceof PasskeyCeremonyError) {
-          this.loading.set(false);
-          this.error.set(this.passkeyNotUsed);
-          return;
-        }
-        this.failUnlessThrottled(failure, this.tooManyAttempts);
+        this.loading.set(false);
+        this.passkeyError.set(
+          failure instanceof PasskeyCeremonyError
+            ? this.passkeyNotUsed
+            : this.describeFailure(failure, this.tooManyAttempts),
+        );
       },
     });
   }
@@ -219,9 +279,7 @@ export class LoginDialog {
       next: (recovery) => {
         this.loading.set(false);
         this.recovery.set(recovery);
-        afterNextRender(() => this.recoveryTitle()?.nativeElement.focus(), {
-          injector: this.injector,
-        });
+        this.focusStep();
       },
       error: (failure: unknown) => {
         if (problemTypeEndsWith(failure, INVALID_SECOND_FACTOR_CHALLENGE)) {
@@ -235,7 +293,7 @@ export class LoginDialog {
   backToCode(): void {
     this.recovery.set(null);
     this.error.set('');
-    afterNextRender(() => this.codeField()?.nativeElement.focus(), { injector: this.injector });
+    this.focusStep();
   }
 
   protected amount(recovery: SecondFactorRecovery): string {
@@ -253,6 +311,7 @@ export class LoginDialog {
   backToPassword(): void {
     this.leaveCodeStep();
     this.error.set('');
+    this.focusStep();
   }
 
   resendVerification(): void {
@@ -275,6 +334,7 @@ export class LoginDialog {
     if (!this.readyToSend(form)) {
       return;
     }
+    this.registrationResent.set(false);
     const company = this.donorType() === 'COMPANY';
     this.auth
       .register({
@@ -294,19 +354,61 @@ export class LoginDialog {
         next: () => {
           this.loading.set(false);
           this.registrationSent.set(true);
+          this.focusStep();
         },
-        error: (failure: unknown) => this.failUnlessThrottled(failure, this.tooManyAttempts),
+        error: (failure: unknown) => this.refuseRegistration(form, failure),
       });
+  }
+
+  resendRegistrationLink(): void {
+    if (this.loading()) {
+      return;
+    }
+    this.loading.set(true);
+    this.error.set('');
+    this.registrationResent.set(false);
+    this.authApi.requestEmailVerification(this.registration.email.trim()).subscribe({
+      next: () => {
+        this.loading.set(false);
+        this.registrationResent.set(true);
+      },
+      error: (failure: unknown) => this.failUnlessThrottled(failure, this.tooManyResetRequests),
+    });
+  }
+
+  editRegistration(): void {
+    this.registrationSent.set(false);
+    this.registrationResent.set(false);
+    this.error.set('');
+    this.focusStep('#register-email');
   }
 
   submitReset(form: NgForm): void {
     if (!this.readyToSend(form)) {
       return;
     }
+    this.resetResent.set(false);
     this.authApi.requestPasswordReset(this.resetEmail.trim()).subscribe({
       next: () => {
         this.loading.set(false);
         this.resetSent.set(true);
+        this.focusStep();
+      },
+      error: (failure: unknown) => this.failUnlessThrottled(failure, this.tooManyResetRequests),
+    });
+  }
+
+  resendReset(): void {
+    if (this.loading()) {
+      return;
+    }
+    this.loading.set(true);
+    this.error.set('');
+    this.resetResent.set(false);
+    this.authApi.requestPasswordReset(this.resetEmail.trim()).subscribe({
+      next: () => {
+        this.loading.set(false);
+        this.resetResent.set(true);
       },
       error: (failure: unknown) => this.failUnlessThrottled(failure, this.tooManyResetRequests),
     });
@@ -314,7 +416,13 @@ export class LoginDialog {
 
   backToLogin(): void {
     this.resetSent.set(false);
-    this.registrationSent.set(false);
+    this.resetResent.set(false);
+    if (this.registrationSent()) {
+      this.registrationSent.set(false);
+      this.registrationResent.set(false);
+      this.registration = emptyRegistration();
+      this.dialog.dropRegistrationDraft();
+    }
     this.setMode('login');
   }
 
@@ -340,7 +448,65 @@ export class LoginDialog {
     this.error.set('');
     this.code = '';
     this.challenge.set(challenge);
-    afterNextRender(() => this.codeField()?.nativeElement.focus(), { injector: this.injector });
+    this.focusStep();
+  }
+
+  private focusStep(selector = STEP_FOCUS): void {
+    afterNextRender(() => this.host.querySelector<HTMLElement>(selector)?.focus(), {
+      injector: this.injector,
+    });
+  }
+
+  private carryEmail(next: LoginDialogMode): void {
+    const typed = this.emailOf(this.mode()).trim();
+    if (typed === '' || next === this.mode()) {
+      return;
+    }
+    if (next === 'register') {
+      this.registration.email = typed;
+    } else if (next === 'reset') {
+      this.resetEmail = typed;
+    } else {
+      this.email = typed;
+    }
+  }
+
+  private emailOf(mode: LoginDialogMode): string {
+    switch (mode) {
+      case 'register':
+        return this.registration.email;
+      case 'reset':
+        return this.resetEmail;
+      default:
+        return this.email;
+    }
+  }
+
+  private keepDraft(): void {
+    if (this.registrationSent() || !hasContent(this.registration)) {
+      return;
+    }
+    this.dialog.keepRegistrationDraft({
+      donorType: this.donorType(),
+      signInMethod: this.signInMethod(),
+      name: this.registration.name,
+      companyIdentifier: this.registration.companyIdentifier,
+      street: this.registration.street,
+      city: this.registration.city,
+      postalCode: this.registration.postalCode,
+      email: this.registration.email,
+    });
+  }
+
+  private refuseRegistration(form: NgForm, failure: unknown): void {
+    const errors = problemOf(failure)?.errors ?? [];
+    if (placeServerErrors(form, errors, REGISTRATION_FIELDS).length === errors.length) {
+      this.failUnlessThrottled(failure, this.tooManyAttempts);
+      return;
+    }
+    this.loading.set(false);
+    this.error.set(describeProblemWithoutFields(failure, this.genericError()));
+    this.focusStep('.register-form .form-control.ng-invalid');
   }
 
   private leaveCodeStep(): void {
@@ -351,26 +517,24 @@ export class LoginDialog {
 
   private enterPortal(): void {
     this.loading.set(false);
+    this.registration = emptyRegistration();
     this.dialog.signedIn();
   }
 
-  private fail(failure: unknown): void {
-    this.loading.set(false);
-    this.error.set(
-      describeProblem(
-        failure,
-        $localize`:@@donor.login.error.generic:Spojení se serverem se nepodařilo. Zkuste to prosím znovu.`,
-      ),
-    );
+  private genericError(): string {
+    return $localize`:@@donor.login.error.generic:Spojení se serverem se nepodařilo. Zkuste to prosím znovu.`;
+  }
+
+  private describeFailure(failure: unknown, tooMany: string): string {
+    if (failure instanceof HttpErrorResponse && failure.status === TOO_MANY_REQUESTS) {
+      return tooMany;
+    }
+    return describeProblem(failure, this.genericError());
   }
 
   private failUnlessThrottled(failure: unknown, tooMany: string): void {
-    if (failure instanceof HttpErrorResponse && failure.status === TOO_MANY_REQUESTS) {
-      this.loading.set(false);
-      this.error.set(tooMany);
-      return;
-    }
-    this.fail(failure);
+    this.loading.set(false);
+    this.error.set(this.describeFailure(failure, tooMany));
   }
 }
 
@@ -384,6 +548,25 @@ function emptyRegistration(): RegistrationFields {
     email: '',
     password: '',
   };
+}
+
+function registrationOf(draft: RegistrationDraft | null, email: string): RegistrationFields {
+  const fields = draft === null ? emptyRegistration() : { ...emptyRegistration(), ...draft };
+  return {
+    name: fields.name,
+    companyIdentifier: fields.companyIdentifier,
+    street: fields.street,
+    city: fields.city,
+    postalCode: fields.postalCode,
+    email: email === '' ? fields.email : email,
+    password: '',
+  };
+}
+
+function hasContent(fields: RegistrationFields): boolean {
+  return [fields.name, fields.companyIdentifier, fields.street, fields.city, fields.postalCode]
+    .concat(fields.email)
+    .some((value) => value.trim() !== '');
 }
 
 function preferredLocaleOf(locale: string): DonorLocale {
