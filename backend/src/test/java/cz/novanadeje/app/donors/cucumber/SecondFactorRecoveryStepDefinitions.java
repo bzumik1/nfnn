@@ -42,6 +42,7 @@ public class SecondFactorRecoveryStepDefinitions {
     private final Clock clock;
     private String challenge;
     private String recoveryMessage;
+    private String previousRecoveryMessage;
     private long nextMovementId = FIRST_MOVEMENT_ID;
 
     public SecondFactorRecoveryStepDefinitions(ApiClient api, ScenarioDonors scenarioDonors, FakeFioClient fio, RecordingMailSender mailSender,
@@ -68,6 +69,7 @@ public class SecondFactorRecoveryStepDefinitions {
         signsInWithTheRightPasswordUpToTheCode(alias);
         ResponseEntity<String> response = api.post(RECOVERY_PATH, Map.of("challenge", challenge));
         if (response.getStatusCode().is2xxSuccessful()) {
+            previousRecoveryMessage = recoveryMessage;
             recoveryMessage = api.lastResponseJson().get("message").asString();
         }
     }
@@ -108,14 +110,56 @@ public class SecondFactorRecoveryStepDefinitions {
         assertThat(Instant.parse(body.get("expiresAt").asString())).isEqualTo(Instant.parse(expiresAt));
     }
 
+    @Then("the instructions open a new recovery started {string}")
+    public void theInstructionsOpenANewRecoveryStarted(String startedAt) {
+        JsonNode body = api.lastResponseJson();
+        assertThat(body.get("resumed").asBoolean()).withFailMessage("Instructions %s", api.lastResponse().getBody()).isFalse();
+        assertThat(Instant.parse(body.get("startedAt").asString())).isEqualTo(Instant.parse(startedAt));
+    }
+
+    @Then("the instructions open a new recovery started {string} with another message")
+    public void theInstructionsOpenANewRecoveryStartedWithAnotherMessage(String startedAt) {
+        theInstructionsOpenANewRecoveryStarted(startedAt);
+        assertThat(recoveryMessage).isNotEqualTo(previousRecoveryMessage);
+    }
+
+    @Then("the instructions repeat the open recovery started {string}")
+    public void theInstructionsRepeatTheOpenRecoveryStarted(String startedAt) {
+        JsonNode body = api.lastResponseJson();
+        assertThat(body.get("resumed").asBoolean()).withFailMessage("Instructions %s", api.lastResponse().getBody()).isTrue();
+        assertThat(Instant.parse(body.get("startedAt").asString())).isEqualTo(Instant.parse(startedAt));
+        assertThat(recoveryMessage).isEqualTo(previousRecoveryMessage);
+    }
+
+    @Then("the instructions carry a payment QR code of 1 Kč with the recovery message and no variable symbol")
+    public void theInstructionsCarryAPaymentQrCode() {
+        JsonNode body = api.lastResponseJson();
+        String spayd = body.get("spayd").asString();
+        assertThat(spayd).startsWith("SPD*1.0*ACC:" + body.get("iban").asString().replace(" ", "") + "*AM:1.00*CC:CZK*")
+                .endsWith("*MSG:" + recoveryMessage)
+                .doesNotContain("X-VS");
+        int size = body.get("qrCode").get("size").asInt();
+        assertThat(size).isGreaterThanOrEqualTo(21);
+        assertThat(body.get("qrCode").get("modules").asString()).hasSize(size * size).matches("[01]+");
+    }
+
+    @When("the bank account receives {string} with the previous recovery message from {string} today")
+    public void theBankAccountReceivesWithThePreviousRecoveryMessageFromToday(String amount, String account) {
+        receives(amount, account, previousRecoveryMessage);
+    }
+
     @When("the bank account receives {string} with the recovery message from {string} today")
     public void theBankAccountReceivesWithTheRecoveryMessageFromToday(String amount, String account) {
+        receives(amount, account, recoveryMessage);
+    }
+
+    private void receives(String amount, String account, String message) {
         String[] numberAndBank = account.split("/");
         LocalDate today = LocalDate.ofInstant(clock.instant(), FoundationZone.ZONE);
         fio.addMovement(FioMovements.incoming(nextMovementId++, today, amount)
                 .from(numberAndBank[0], numberAndBank[1])
                 .named("Novakova Jana")
-                .withMessage(recoveryMessage)
+                .withMessage(message)
                 .build());
     }
 

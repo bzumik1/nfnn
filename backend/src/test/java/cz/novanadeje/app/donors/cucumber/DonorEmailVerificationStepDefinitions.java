@@ -17,11 +17,16 @@ import jakarta.mail.internet.MimeMessage;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.simple.JdbcClient;
 
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
@@ -33,6 +38,7 @@ public class DonorEmailVerificationStepDefinitions {
     private static final String PROFILE_PATH = "/api/donors/me";
     private static final Duration MAIL_WAIT = Duration.ofSeconds(5);
     private static final Duration SETTLE = Duration.ofMillis(300);
+    private static final Pattern LINK_RETURN = Pattern.compile("potvrzeni-emailu#token=[A-Za-z0-9_-]{43}(?:&returnTo=(\\S+))?");
 
     private final ApiClient api;
     private final DonorRegistrations registrations;
@@ -40,6 +46,7 @@ public class DonorEmailVerificationStepDefinitions {
     private final JdbcClient jdbc;
     private final EmailVerificationTokenRepository tokens;
     private final List<Integer> requestStatuses = new ArrayList<>();
+    private int mailsBefore;
 
     public DonorEmailVerificationStepDefinitions(ApiClient api, DonorRegistrations registrations, RecordingMailSender mailSender,
                                                  JdbcClient jdbc, EmailVerificationTokenRepository tokens) {
@@ -74,6 +81,22 @@ public class DonorEmailVerificationStepDefinitions {
     @When("a verification e-mail is asked for {string}")
     public void aVerificationEmailIsAskedFor(String email) {
         askForVerification(email);
+    }
+
+    @When("a verification e-mail is asked for {string} returning to {string}")
+    public void aVerificationEmailIsAskedForReturningTo(String email, String returnTo) {
+        mailsBefore = mailSender.sent().size();
+        api.post(REQUEST_PATH, Map.of("email", email, "returnTo", returnTo));
+    }
+
+    @Then("the verification link of the last e-mail returns to {string}")
+    public void theVerificationLinkOfTheLastEmailReturnsTo(String returnTo) {
+        assertThat(returnOf(newestEmail())).contains(returnTo);
+    }
+
+    @Then("the verification link of the last e-mail returns nowhere")
+    public void theVerificationLinkOfTheLastEmailReturnsNowhere() {
+        assertThat(returnOf(newestEmail())).isEmpty();
     }
 
     @When("a verification e-mail is asked for {string} {int} times")
@@ -160,11 +183,23 @@ public class DonorEmailVerificationStepDefinitions {
     }
 
     private ResponseEntity<String> askForVerification(String email) {
+        mailsBefore = mailSender.sent().size();
         return api.post(REQUEST_PATH, Map.of("email", email));
+    }
+
+    private static Optional<String> returnOf(MimeMessage email) {
+        Matcher link = LINK_RETURN.matcher(MailContents.plainText(email));
+        assertThat(link.find()).withFailMessage("No verification link in the e-mail").isTrue();
+        return Optional.ofNullable(link.group(1)).map(encoded -> URLDecoder.decode(encoded, StandardCharsets.UTF_8));
     }
 
     private MimeMessage lastEmail() {
         await().atMost(MAIL_WAIT).untilAsserted(() -> assertThat(mailSender.sent()).withFailMessage("No e-mail was sent").isNotEmpty());
+        return mailSender.sent().getLast();
+    }
+
+    private MimeMessage newestEmail() {
+        await().atMost(MAIL_WAIT).untilAsserted(() -> assertThat(mailSender.sent()).withFailMessage("No new e-mail was sent").hasSizeGreaterThan(mailsBefore));
         return mailSender.sent().getLast();
     }
 

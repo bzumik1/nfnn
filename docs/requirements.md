@@ -34,6 +34,7 @@ Web představí fond a jeho pomoc dětem, usnadní darování a dárcům dá ú�
 - Dárce se přihlašuje heslem, nebo přístupovým klíčem (passkey). Účet může mít jen klíč a žádné heslo; poslední způsob přihlášení odebrat nejde.
 - Registraci dárce potvrdí odkazem z e-mailu (platí 24 hodin). Do té doby se nepřihlásí a platby se k jeho symbolu nepárují. Kdo nepotvrdí do druhého dne, dostane jednou připomínku. Registrace stejného e-mailu nic neprozradí: majitel potvrzeného účtu dostane e-mail, že účet už má.
 - Po registraci dostane dárce vlastní variabilní symbol, který vidí v přehledu.
+- Kdo se zaregistruje ze sekce Přispět, je po potvrzení e-mailu přihlášený a tlačítko „Pokračovat k příspěvku“ ho vrátí na `/#prispet`, kde QR už nese jeho symbol; registrace odjinud vede do přehledu (Jakub 24. 10. 2026).
 - Po přihlášení dárce zůstane na stránce, odkud se přihlásil. Jen když přihlášení vyvolala chráněná stránka, vrátí se na ni; ze stránky obnovy hesla vede do přehledu.
 - Účet si dárce sám smazat nemůže. Výmaz podle GDPR vyřídí na žádost správce (§6).
 
@@ -43,6 +44,7 @@ Web představí fond a jeho pomoc dětem, usnadní darování a dárcům dá ú�
 - Na stránce Údaje a zabezpečení je všechno k přihlášení v jedné kartě „Přihlášení a zabezpečení“: řádky E-mail, Heslo, Dvoufaktorové ověření a Přístupové klíče, každý se stavem a jednou akcí, formulář se otevře pod řádkem. Rozpracovaná změna e-mailu je vidět („Čeká na potvrzení: adresa“) a jde poslat znovu (starý odkaz přestane platit) nebo zrušit (Jakub 24. 10. 2026).
 - Dvoufaktorové ověření kódem z aplikace v telefonu si může zapnout každý dárce; správce ho mít musí (nebo se přihlásit klíčem, který platí jako druhý faktor). Záložní kódy nejsou.
 - Ztracený telefon: jiný správce ověření vypne, nebo ho dárce vypne sám platbou 1 Kč s jednorázovým kódem z bankovního účtu, který má u fondu ověřený aspoň 7 dní. Ztracené klíče odebere správce.
+- Kdo obnovu platbou zahájí znovu, dokud předchozí platí, dostane stejný kód a platnost s větou „Tuto obnovu už jste zahájili …“; obnova ukazuje i QR platbu 1 Kč se zprávou OBNOVA … bez VS (Jakub 24. 10. 2026, kód se proto ukládá i čitelně).
 - Přístupové klíče přidá dárce v přehledu (se současným heslem nebo klíčem), přejmenuje a odebere; o přidání i odebrání dostane e-mail; nejvýš 10. Klíče ze zkušební adresy se po přechodu na nfnn.cz smažou samy.
 - Bezpečnostní e-maily k účtu (ověření, obnova, změna e-mailu, hesla, klíče nebo druhého faktoru) chodí vždy.
 

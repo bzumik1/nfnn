@@ -64,57 +64,72 @@
             dvoufaktorové ověření, ukončíme všechna přihlášení a pošleme vám e-mail. Pak se
             přihlásíte jen heslem.
           </p>
+          @if (instructions.resumed) {
+            <p
+              class="ui-callout ui-callout--warning recovery-resumed"
+              i18n="@@donor.login.recovery.resumed"
+            >
+              Tuto obnovu už jste zahájili {{ time(instructions.startedAt) }}. Pošlete platbu s
+              tímto kódem.
+            </p>
+          }
           @if (instructions.usableFrom; as from) {
             <p class="ui-callout ui-callout--warning" i18n="@@donor.login.recovery.usableFrom">
               Platbu pošlete nejdříve {{ day(from) }}: obnovu přijmeme jen z účtu, který u nás známe
               aspoň týden.
             </p>
           }
-          <dl class="recovery-details">
-            <div class="recovery-row">
-              <dt i18n="@@donor.login.recovery.account">Číslo účtu</dt>
-              <dd>
-                <span class="recovery-value">{{ instructions.accountNumber }}</span>
-                <app-copy-button
-                  [value]="instructions.accountNumber"
-                  what="číslo účtu"
-                  i18n-what="@@donor.login.recovery.copyAccount"
-                />
-              </dd>
+          <div class="recovery-payment">
+            <dl class="recovery-details">
+              <div class="recovery-row">
+                <dt i18n="@@donor.login.recovery.account">Číslo účtu</dt>
+                <dd>
+                  <span class="recovery-value">{{ instructions.accountNumber }}</span>
+                  <app-copy-button
+                    [value]="instructions.accountNumber"
+                    what="číslo účtu"
+                    i18n-what="@@donor.login.recovery.copyAccount"
+                  />
+                </dd>
+              </div>
+              <div class="recovery-row">
+                <dt i18n="@@donor.login.recovery.amount">Částka</dt>
+                <dd>
+                  <span class="recovery-value"
+                    >{{ amount(instructions) }}&nbsp;<ng-container
+                      i18n="@@donor.login.recovery.currency"
+                      >Kč</ng-container
+                    ></span
+                  >
+                </dd>
+              </div>
+              <div class="recovery-row">
+                <dt i18n="@@donor.login.recovery.message">Zpráva pro příjemce</dt>
+                <dd>
+                  <span class="recovery-value">{{ instructions.message }}</span>
+                  <app-copy-button
+                    [value]="instructions.message"
+                    what="zprávu pro příjemce"
+                    i18n-what="@@donor.login.recovery.copyMessage"
+                  />
+                </dd>
+              </div>
+            </dl>
+            <div class="recovery-qr">
+              <app-qr-code
+                class="recovery-qr-image"
+                [matrix]="instructions.qrCode"
+                [label]="recoveryQrLabel"
+              />
             </div>
-            <div class="recovery-row">
-              <dt i18n="@@donor.login.recovery.amount">Částka</dt>
-              <dd>
-                <span class="recovery-value"
-                  >{{ amount(instructions) }}&nbsp;<ng-container
-                    i18n="@@donor.login.recovery.currency"
-                    >Kč</ng-container
-                  ></span
-                >
-              </dd>
-            </div>
-            <div class="recovery-row">
-              <dt i18n="@@donor.login.recovery.message">Zpráva pro příjemce</dt>
-              <dd>
-                <span class="recovery-value">{{ instructions.message }}</span>
-                <app-copy-button
-                  [value]="instructions.message"
-                  what="zprávu pro příjemce"
-                  i18n-what="@@donor.login.recovery.copyMessage"
-                />
-              </dd>
-            </div>
-          </dl>
+          </div>
           <p class="recovery-note" i18n="@@donor.login.recovery.note">
             Zpráva pro příjemce platí do {{ time(instructions.expiresAt) }}. Platby z banky načítáme
             každou hodinu; platba se započítá jako dar.
           </p>
-          <p
-            class="ui-callout ui-callout--warning recovery-keep"
-            i18n="@@donor.login.recovery.keep"
-          >
-            Údaje si opište nebo vyfoťte. Když o obnovu požádáte znovu, dostanete novou zprávu pro
-            příjemce a platba se starou zprávou obnovu neprovede.
+          <p class="recovery-note recovery-keep" i18n="@@donor.login.recovery.keep">
+            Dialog můžete zavřít. Když obnovu zahájíte znovu, než zpráva přestane platit, ukážeme
+            vám stejné údaje.
           </p>
         </div>
       }

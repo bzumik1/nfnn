@@ -352,7 +352,7 @@ describe('Given the donate section', () => {
     vi.restoreAllMocks();
   });
 
-  it('when nobody is signed in, then it offers to create an account and opens the registration', async () => {
+  it('when nobody is signed in, then it offers to create an account and opens the registration that leads back here after the e-mail', async () => {
     await openWithQr();
 
     button('Založit účet').click();
@@ -360,6 +360,7 @@ describe('Given the donate section', () => {
     const dialog = TestBed.inject(LoginDialogService);
     expect(dialog.isOpen()).toBe(true);
     expect(dialog.initialMode()).toBe('register');
+    expect(dialog.confirmationReturnTo()).toBe('/#prispet');
   });
 
   it('when nobody is signed in and the visitor signs in from it, then the page stays and the bank details with their variable symbol take the focus', async () => {
@@ -370,6 +371,7 @@ describe('Given the donate section', () => {
     const dialog = TestBed.inject(LoginDialogService);
     expect(dialog.isOpen()).toBe(true);
     expect(dialog.initialMode()).toBe('login');
+    expect(dialog.confirmationReturnTo()).toBe('/#prispet');
 
     fixture.componentRef.setInput('variableSymbol', '1234567890');
     dialog.signedIn();

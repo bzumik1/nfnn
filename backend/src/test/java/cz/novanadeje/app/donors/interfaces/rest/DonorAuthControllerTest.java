@@ -88,7 +88,7 @@ class DonorAuthControllerTest {
 
     private static RegisterDonorRequest registrationRequest() {
         return new RegisterDonorRequest(DonorType.PERSON, "Jana Nováková", null, new AddressRequest("Dlouhá 12", "Ústí nad Labem", "400 01"),
-                "jana@example.cz", "correct horse battery", "cs");
+                "jana@example.cz", "correct horse battery", "cs", null);
     }
 
     private static MockHttpServletRequest requestFrom(String address) {

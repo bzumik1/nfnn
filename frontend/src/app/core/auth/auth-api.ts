@@ -1,6 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
+import { ConfirmationReturn } from './confirmation-return';
 import {
   AuthorizationRequest,
   AuthResponse,
@@ -32,8 +33,14 @@ export class AuthApi {
     return this.http.post<void>('/api/donors/auth/register', request);
   }
 
-  requestEmailVerification(email: string): Observable<void> {
-    return this.http.post<void>('/api/donors/auth/email-verification/request', { email });
+  requestEmailVerification(
+    email: string,
+    returnTo: ConfirmationReturn | null = null,
+  ): Observable<void> {
+    return this.http.post<void>(
+      '/api/donors/auth/email-verification/request',
+      returnTo === null ? { email } : { email, returnTo },
+    );
   }
 
   confirmEmailVerification(token: string): Observable<AuthResponse> {

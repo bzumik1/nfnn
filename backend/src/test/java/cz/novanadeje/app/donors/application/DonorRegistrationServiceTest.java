@@ -7,6 +7,7 @@ import cz.novanadeje.app.donors.domain.DonorRepository;
 import cz.novanadeje.app.donors.domain.PasswordHash;
 import cz.novanadeje.app.donors.domain.PasswordHasher;
 import cz.novanadeje.app.donors.domain.RawPassword;
+import cz.novanadeje.app.donors.domain.RegistrationReturn;
 import cz.novanadeje.app.shared.domain.DonorType;
 import cz.novanadeje.app.shared.domain.EmailAddress;
 import cz.novanadeje.app.shared.domain.LocaleCode;
@@ -86,6 +87,22 @@ class DonorRegistrationServiceTest {
     }
 
     @Test
+    @DisplayName("Given a registration started from the donate section, when a person registers, then the verification link is issued with the way back there")
+    void should_issue_the_link_with_the_way_back_when_registered_given_a_start_from_the_donate_section() {
+        when(donors.findByEmail(EMAIL)).thenReturn(Optional.empty());
+        when(donors.existsByVariableSymbol(any())).thenReturn(false);
+        when(passwordHasher.hash(new RawPassword("correct horse battery"))).thenReturn(new PasswordHash("$hash"));
+
+        service.register(new RegisterDonorCommand(DonorType.PERSON, "Jana Nováková", null, "Dlouhá 12", "Ústí nad Labem", "400 01",
+                "jana@example.cz", "correct horse battery", "cs", Optional.of(RegistrationReturn.DONATE)));
+
+        ArgumentCaptor<Donor> stored = ArgumentCaptor.forClass(Donor.class);
+        verify(donors).save(stored.capture());
+        verify(emailVerification).issueLink(stored.getValue(), RegistrationReturn.DONATE);
+        verify(emailVerification, never()).issueLink(any());
+    }
+
+    @Test
     @DisplayName("Given no password, when a person registers, then the donor is stored without a password and nothing is hashed")
     void should_store_donor_without_password_when_registered_given_no_password() {
         when(donors.findByEmail(EMAIL)).thenReturn(Optional.empty());
@@ -108,7 +125,7 @@ class DonorRegistrationServiceTest {
         when(passwordHasher.hash(new RawPassword("correct horse battery"))).thenReturn(new PasswordHash("$hash"));
 
         service.register(new RegisterDonorCommand(DonorType.COMPANY, "Stavby Novák s.r.o.", "45274649", "Dlouhá 12", "Ústí nad Labem", "400 01",
-                "info@stavby.example.cz", "correct horse battery", "en"));
+                "info@stavby.example.cz", "correct horse battery", "en", Optional.empty()));
 
         ArgumentCaptor<Donor> stored = ArgumentCaptor.forClass(Donor.class);
         verify(donors).save(stored.capture());
@@ -141,7 +158,7 @@ class DonorRegistrationServiceTest {
         when(passwordHasher.hash(new RawPassword("another passphrase"))).thenReturn(new PasswordHash("$new"));
 
         service.register(new RegisterDonorCommand(DonorType.PERSON, "Jana Svobodová", null, "Krátká 3", "Most", "434 01",
-                "jana@example.cz", "another passphrase", "cs"));
+                "jana@example.cz", "another passphrase", "cs", Optional.empty()));
 
         ArgumentCaptor<Donor> stored = ArgumentCaptor.forClass(Donor.class);
         InOrder order = inOrder(donors, emailVerification);
@@ -161,6 +178,6 @@ class DonorRegistrationServiceTest {
     }
 
     private static RegisterDonorCommand personCommand(String email, String password) {
-        return new RegisterDonorCommand(DonorType.PERSON, "Jana Nováková", null, "Dlouhá 12", "Ústí nad Labem", "400 01", email, password, "cs");
+        return new RegisterDonorCommand(DonorType.PERSON, "Jana Nováková", null, "Dlouhá 12", "Ústí nad Labem", "400 01", email, password, "cs", Optional.empty());
     }
 }

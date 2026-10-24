@@ -10,5 +10,7 @@ public interface SecondFactorRecoveryRepository {
 
     Optional<SecondFactorRecovery> findByCodeHash(String codeHash);
 
+    Optional<SecondFactorRecovery> findOpenOf(DonorId donorId, Instant at);
+
     boolean markUsed(UUID recoveryId, Instant at);
 }

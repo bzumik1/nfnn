@@ -74,13 +74,23 @@ public class SecondFactorRecoveryService {
         Donor donor = donors.findById(waiting.donorId()).orElseThrow(InvalidSecondFactorChallenge::new);
         secondFactors.findByDonor(donor.id()).filter(SecondFactor::isEnabled).orElseThrow(InvalidSecondFactorChallenge::new);
         SecondFactorRecoveryTarget target = targets.targetFor(donor.id().value()).orElseThrow(SecondFactorRecoveryUnavailable::new);
-        SecondFactorRecoveryCode code = SecondFactorRecoveryCode.generate(RANDOM);
-        SecondFactorRecovery recovery = SecondFactorRecovery.open(donor.id(), code, now, properties.recoveryTtl());
+        Optional<SecondFactorRecovery> open = recoveries.findOpenOf(donor.id(), now).filter(found -> found.code().isPresent());
+        SecondFactorRecovery recovery = open.orElseGet(() -> openNew(donor, now));
+        if (open.isPresent()) {
+            log.info("Donor {} returned to the open second-factor recovery {}, open until {}", donor.id(), recovery.id(), recovery.expiresAt());
+        }
+        SecondFactorRecoveryCode code = recovery.code().orElseThrow();
+        LocalDate today = LocalDate.ofInstant(now, FoundationZone.ZONE);
+        return new SecondFactorRecoveryInstructions(code.message(), recovery.createdAt(), recovery.expiresAt(), open.isPresent(),
+                target.accountNumber(), target.iban(), target.amount(), Optional.of(target.usableFrom()).filter(from -> from.isAfter(today)),
+                targets.paymentQrFor(code));
+    }
+
+    private SecondFactorRecovery openNew(Donor donor, Instant now) {
+        SecondFactorRecovery recovery = SecondFactorRecovery.open(donor.id(), SecondFactorRecoveryCode.generate(RANDOM), now, properties.recoveryTtl());
         recoveries.replaceOpenOf(donor.id(), recovery);
         log.info("Donor {} started a second-factor recovery by payment, open until {}", donor.id(), recovery.expiresAt());
-        LocalDate today = LocalDate.ofInstant(now, FoundationZone.ZONE);
-        return new SecondFactorRecoveryInstructions(code.message(), recovery.expiresAt(), target.accountNumber(), target.iban(), target.amount(),
-                Optional.of(target.usableFrom()).filter(from -> from.isAfter(today)));
+        return recovery;
     }
 
     @Transactional

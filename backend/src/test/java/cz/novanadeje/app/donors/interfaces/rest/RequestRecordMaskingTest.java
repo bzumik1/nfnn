@@ -26,8 +26,9 @@ class RequestRecordMaskingTest {
     @Test
     @DisplayName("Given a verification request, when it is printed, then the address is masked and was trimmed")
     void should_mask_email_when_printed_given_verification_request() {
-        assertThat(new EmailVerificationRequest("  jana@example.cz ").toString()).isEqualTo("EmailVerificationRequest[email=***]");
-        assertThat(new EmailVerificationRequest("  JANA@Example.cz ").email()).isEqualTo("JANA@Example.cz");
+        assertThat(new EmailVerificationRequest("  jana@example.cz ", "/#prispet").toString())
+                .isEqualTo("EmailVerificationRequest[email=***, returnTo=/#prispet]");
+        assertThat(new EmailVerificationRequest("  JANA@Example.cz ", null).email()).isEqualTo("JANA@Example.cz");
     }
 
     @Test
@@ -46,10 +47,10 @@ class RequestRecordMaskingTest {
     @DisplayName("Given a registration request, when it is printed, then the name, the address, the e-mail and the password are masked")
     void should_mask_personal_data_when_printed_given_registration_request() {
         RegisterDonorRequest request = new RegisterDonorRequest(DonorType.COMPANY, "Jana Nováková", "25596641",
-                new AddressRequest("Dlouhá 12", "Ústí nad Labem", "400 01"), "jana@example.cz", PASSWORD, "cs");
+                new AddressRequest("Dlouhá 12", "Ústí nad Labem", "400 01"), "jana@example.cz", PASSWORD, "cs", "/#prispet");
 
         assertThat(request.toString()).isEqualTo("RegisterDonorRequest[type=COMPANY, name=***, companyIdentifier=25596641, "
-                + "address=***, email=***, password=***, preferredLocale=cs]");
+                + "address=***, email=***, password=***, preferredLocale=cs, returnTo=/#prispet]");
     }
 
     @Test

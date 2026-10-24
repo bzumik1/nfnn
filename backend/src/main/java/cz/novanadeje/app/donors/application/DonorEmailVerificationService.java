@@ -14,6 +14,7 @@ import cz.novanadeje.app.donors.domain.InvalidEmailVerificationToken;
 import cz.novanadeje.app.donors.domain.LinkSecret;
 import cz.novanadeje.app.donors.domain.NoPendingEmailChange;
 import cz.novanadeje.app.donors.domain.RefreshTokenRepository;
+import cz.novanadeje.app.donors.domain.RegistrationReturn;
 import cz.novanadeje.app.shared.application.event.DonorRegistered;
 import cz.novanadeje.app.shared.domain.EmailAddress;
 import org.slf4j.Logger;
@@ -24,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.util.Optional;
 
 @Service
 public class DonorEmailVerificationService {
@@ -54,16 +56,12 @@ public class DonorEmailVerificationService {
 
     @Transactional
     public void requestVerification(EmailAddress email) {
-        Donor donor = donors.findByEmail(email).orElse(null);
-        if (donor == null) {
-            log.debug("E-mail verification requested for an address without a donor");
-            return;
-        }
-        if (donor.isEmailVerified()) {
-            log.info("E-mail verification requested for donor {}, whose address is already verified", donor.id());
-            return;
-        }
-        issueLink(donor);
+        awaitingVerification(email).ifPresent(this::issueLink);
+    }
+
+    @Transactional
+    public void requestVerification(EmailAddress email, RegistrationReturn returnTo) {
+        awaitingVerification(email).ifPresent(donor -> issueLink(donor, returnTo));
     }
 
     @Transactional
@@ -141,30 +139,60 @@ public class DonorEmailVerificationService {
     }
 
     void issueLink(Donor donor) {
-        issue(donor, false);
+        newLink(donor).ifPresent(link -> announceVerification(new DonorEmailVerificationRequested(donor.id().value(), donor.email(),
+                donor.preferredLocale(), link.secret(), link.expiresAt(), Optional.empty())));
+    }
+
+    void issueLink(Donor donor, RegistrationReturn returnTo) {
+        newLink(donor).ifPresent(link -> announceVerification(new DonorEmailVerificationRequested(donor.id().value(), donor.email(),
+                donor.preferredLocale(), link.secret(), link.expiresAt(), Optional.of(returnTo))));
     }
 
     void issueReminderLink(Donor donor) {
-        issue(donor, true);
+        newLink(donor).ifPresent(link -> {
+            events.publishEvent(new DonorRegistrationReminderDue(donor.id().value(), donor.email(), donor.preferredLocale(), link.secret(),
+                    link.expiresAt()));
+            log.info("Registration reminder with a new verification link issued for donor {}", donor.id());
+        });
     }
 
-    private void issue(Donor donor, boolean reminder) {
+    private Optional<Donor> awaitingVerification(EmailAddress email) {
+        Donor donor = donors.findByEmail(email).orElse(null);
+        if (donor == null) {
+            log.debug("E-mail verification requested for an address without a donor");
+            return Optional.empty();
+        }
+        if (donor.isEmailVerified()) {
+            log.info("E-mail verification requested for donor {}, whose address is already verified", donor.id());
+            return Optional.empty();
+        }
+        return Optional.of(donor);
+    }
+
+    private void announceVerification(DonorEmailVerificationRequested requested) {
+        events.publishEvent(requested);
+        log.info("E-mail verification link issued for donor {}", requested.donorId());
+    }
+
+    private Optional<IssuedLink> newLink(Donor donor) {
         Instant now = clock.instant();
         tokens.deleteUnusableOf(donor.id(), now);
         int liveLinks = tokens.countOf(donor.id());
         if (liveLinks >= properties.maxLiveLinks()) {
             log.info("E-mail verification for donor {} not sent: {} live links", donor.id(), liveLinks);
-            return;
+            return Optional.empty();
         }
         LinkSecret secret = LinkSecret.generate();
         EmailVerificationToken token = EmailVerificationToken.issue(secret, donor.id(), now, properties.tokenTtl());
         tokens.save(token);
-        if (reminder) {
-            events.publishEvent(new DonorRegistrationReminderDue(donor.id().value(), donor.email(), donor.preferredLocale(), secret, token.expiresAt()));
-            log.info("Registration reminder with a new verification link issued for donor {}", donor.id());
-            return;
+        return Optional.of(new IssuedLink(secret, token.expiresAt()));
+    }
+
+    private record IssuedLink(LinkSecret secret, Instant expiresAt) {
+
+        @Override
+        public String toString() {
+            return "IssuedLink[secret=***, expiresAt=" + expiresAt + "]";
         }
-        events.publishEvent(new DonorEmailVerificationRequested(donor.id().value(), donor.email(), donor.preferredLocale(), secret, token.expiresAt()));
-        log.info("E-mail verification link issued for donor {}", donor.id());
     }
 }

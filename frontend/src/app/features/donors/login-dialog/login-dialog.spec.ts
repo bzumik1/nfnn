@@ -3,6 +3,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { AuthStore } from '../../../core/auth/auth-store';
+import { SecondFactorRecovery } from '../../../core/auth/donor';
 import {
   LoginDialogMode,
   LoginDialogOptions,
@@ -18,6 +19,7 @@ import {
   secondFactorRequired,
 } from '../../../core/auth/testing/donor-fixtures';
 import { DialogHistory } from '../../../shared/ui/dialog/dialog-history';
+import { checkerboard } from '../../../shared/ui/qr-code/testing/qr-matrices';
 import { FakeDialogHistory } from '../../../shared/ui/dialog/testing/fake-dialog-history';
 import { LoginDialog } from './login-dialog';
 
@@ -348,14 +350,18 @@ describe('Given the sign-in dialog', () => {
       });
 
       describe('and asks to recover access by payment', () => {
-        const instructions = {
+        const instructions: SecondFactorRecovery = {
           message: 'OBNOVA K7MP4RXA',
+          startedAt: '2026-10-17T10:00:00Z',
           expiresAt: '2026-10-31T10:00:00Z',
+          resumed: false,
           accountNumber: '5544332217/2010',
           iban: 'CZ2620100000005544332217',
           amountMinor: 100,
           currency: 'CZK',
           usableFrom: '2026-10-27',
+          spayd: 'SPD*1.0*ACC:CZ2620100000005544332217*AM:1.00*CC:CZK*MSG:OBNOVA K7MP4RXA',
+          qrCode: checkerboard(25),
         };
 
         async function askForRecovery(): Promise<ReturnType<HttpTestingController['expectOne']>> {
@@ -384,7 +390,7 @@ describe('Given the sign-in dialog', () => {
           expect(document.activeElement).toBe(element('.recovery-title'));
         });
 
-        it('then the earliest day comes before the payment details and a note says a new request replaces them', async () => {
+        it('then the earliest day comes before the payment details and a note says a new request shows the same details', async () => {
           (await askForRecovery()).flush(instructions);
           await settle();
 
@@ -393,14 +399,40 @@ describe('Given the sign-in dialog', () => {
           expect(callout.compareDocumentPosition(element('.recovery-details'))).toBe(
             Node.DOCUMENT_POSITION_FOLLOWING,
           );
-          expect(element('.recovery-keep').textContent).toContain('Údaje si opište nebo vyfoťte.');
           expect(element('.recovery-keep').textContent).toContain(
-            'dostanete novou zprávu pro příjemce',
+            'Když obnovu zahájíte znovu, než zpráva přestane platit, ukážeme vám stejné údaje.',
           );
+          expect(element('.recovery-resumed')).toBeNull();
           expect(element('.tab-switch')).toBeNull();
           expect(
             element('.recovery-back').compareDocumentPosition(element('.recovery-title')),
           ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+        });
+
+        it('then a payment QR code with the same payment stands after the details', async () => {
+          (await askForRecovery()).flush(instructions);
+          await settle();
+
+          const qr = element('.recovery-qr svg[role="img"]');
+          expect(qr.getAttribute('aria-label')).toBe(
+            'QR platba 1 Kč se zprávou pro obnovu přístupu',
+          );
+          expect(element('.recovery-details').compareDocumentPosition(qr)).toBe(
+            Node.DOCUMENT_POSITION_FOLLOWING,
+          );
+        });
+
+        it('again while the earlier recovery is open, then the dialog says when it started and asks to pay with that message', async () => {
+          (await askForRecovery()).flush({ ...instructions, resumed: true });
+          await settle();
+
+          expect(element('.recovery-resumed').textContent?.replace(/\s+/g, ' ').trim()).toBe(
+            'Tuto obnovu už jste zahájili 17. 10. 2026 12:00. Pošlete platbu s tímto kódem.',
+          );
+          expect(
+            element('.recovery-resumed').compareDocumentPosition(element('.recovery-details')),
+          ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+          expect(element('.recovery').textContent).toContain('OBNOVA K7MP4RXA');
         });
 
         it('from an account usable today, then no later date is named', async () => {
@@ -632,6 +664,66 @@ describe('Given the sign-in dialog', () => {
       await render();
 
       expect(element('.passkey-btn')).toBeNull();
+    });
+  });
+
+  describe('when a visitor opened it from the donate section', () => {
+    async function register(): Promise<void> {
+      await fillIn('#register-name', 'Jana Nováková');
+      await fillIn('#register-street', 'Dlouhá 12');
+      await fillIn('#register-city', 'Ústí nad Labem');
+      await fillIn('#register-postal-code', '400 01');
+      await fillIn('#register-email', 'jana@example.cz');
+      await fillIn('#register-password', 'correct horse battery');
+      await submit('.register-form');
+    }
+
+    it('then the registration asks the e-mail link to lead back to the donate section, and so does a new link', async () => {
+      await render('register', { confirmationReturnTo: '/#prispet' });
+
+      await register();
+      const request = http.expectOne('/api/donors/auth/register');
+      expect(request.request.body).toEqual(expect.objectContaining({ returnTo: '/#prispet' }));
+      request.flush(null, { status: 202, statusText: 'Accepted' });
+      await settle();
+      await click('.registration-resend');
+
+      expect(http.expectOne('/api/donors/auth/email-verification/request').request.body).toEqual({
+        email: 'jana@example.cz',
+        returnTo: '/#prispet',
+      });
+    });
+
+    it('but signs in before confirming the e-mail, then the link sent again also leads back there', async () => {
+      await render('login', { confirmationReturnTo: '/#prispet' });
+      await fillIn('#login-email', 'jana@example.cz');
+      await fillIn('#login-password', 'correct horse battery');
+      await submit('.login-form');
+      http
+        .expectOne('/api/donors/auth/login')
+        .flush(problem('auth/email-not-verified', 'E-mail ještě není potvrzený'), {
+          status: 401,
+          statusText: 'Unauthorized',
+        });
+      await settle();
+
+      await click('.form-note .link-btn');
+
+      expect(http.expectOne('/api/donors/auth/email-verification/request').request.body).toEqual({
+        email: 'jana@example.cz',
+        returnTo: '/#prispet',
+      });
+    });
+
+    it('after switching from the sign-in tab, then the registration still leads back there', async () => {
+      await render('login', { confirmationReturnTo: '/#prispet' });
+      await click('.tab-switch button:nth-child(2)');
+
+      await register();
+
+      expect(http.expectOne('/api/donors/auth/register').request.body).toEqual(
+        expect.objectContaining({ returnTo: '/#prispet' }),
+      );
     });
   });
 

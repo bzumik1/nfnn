@@ -12,6 +12,7 @@ import cz.novanadeje.app.shared.domain.EmailAddress;
 import cz.novanadeje.app.shared.domain.LocaleCode;
 import cz.novanadeje.app.shared.domain.PostalAddress;
 import cz.novanadeje.app.shared.domain.SecondFactorRecoveryCode;
+import cz.novanadeje.app.shared.domain.UuidV7;
 import cz.novanadeje.app.shared.domain.VariableSymbol;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
@@ -21,7 +22,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 import org.springframework.context.annotation.Import;
+import org.springframework.jdbc.core.simple.JdbcClient;
 
+import java.sql.Timestamp;
 import java.time.Duration;
 import java.time.Instant;
 
@@ -43,6 +46,8 @@ class JpaSecondFactorRecoveryRepositoryTest {
     private DonorRepository donors;
     @Autowired
     private EntityManager entityManager;
+    @Autowired
+    private JdbcClient jdbc;
 
     private DonorId jana;
     private DonorId petr;
@@ -68,7 +73,40 @@ class JpaSecondFactorRecoveryRepositoryTest {
         assertThat(found.createdAt()).isEqualTo(NOW);
         assertThat(found.expiresAt()).isEqualTo(NOW.plus(TTL));
         assertThat(found.usedAt()).isEmpty();
+        assertThat(found.code()).contains(FIRST);
         assertThat(recoveries.findByCodeHash(SECOND.hash())).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Given a used, an expired and an open recovery of a donor and an open one of another donor, when the donor's open recovery is looked up, then only the open one comes back with its code")
+    void should_find_only_the_donors_open_recovery_when_looked_up() {
+        SecondFactorRecovery used = SecondFactorRecovery.open(jana, new SecondFactorRecoveryCode("QRST2345"), NOW.minus(TTL), TTL.multipliedBy(2));
+        recoveries.replaceOpenOf(jana, used);
+        recoveries.markUsed(used.id(), NOW.minusSeconds(10));
+        jdbc.sql("insert into donor_second_factor_recovery (id, donor_id, code_hash, code, created_at, expires_at) values (?, ?, ?, ?, ?, ?)")
+                .params(UuidV7.generate(NOW.minus(TTL)), jana.value(), new SecondFactorRecoveryCode("MNPQ2345").hash(), "MNPQ2345",
+                        Timestamp.from(NOW.minus(TTL)), Timestamp.from(NOW))
+                .update();
+        SecondFactorRecovery open = SecondFactorRecovery.open(jana, FIRST, NOW.minusSeconds(60), TTL);
+        recoveries.replaceOpenOf(jana, open);
+        recoveries.replaceOpenOf(petr, SecondFactorRecovery.open(petr, SECOND, NOW, TTL));
+        flushAndClear();
+
+        SecondFactorRecovery found = recoveries.findOpenOf(jana, NOW).orElseThrow();
+
+        assertThat(found.id()).isEqualTo(open.id());
+        assertThat(found.code()).contains(FIRST);
+        assertThat(recoveries.findOpenOf(jana, NOW.plus(TTL))).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Given an open recovery stored before codes were kept, when it is looked up, then it comes back without a code")
+    void should_return_no_code_when_looked_up_given_a_recovery_stored_without_one() {
+        jdbc.sql("insert into donor_second_factor_recovery (id, donor_id, code_hash, created_at, expires_at) values (?, ?, ?, ?, ?)")
+                .params(UuidV7.generate(NOW), jana.value(), FIRST.hash(), Timestamp.from(NOW), Timestamp.from(NOW.plus(TTL)))
+                .update();
+
+        assertThat(recoveries.findOpenOf(jana, NOW.plusSeconds(1)).orElseThrow().code()).isEmpty();
     }
 
     @Test

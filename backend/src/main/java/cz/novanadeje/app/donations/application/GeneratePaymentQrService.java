@@ -5,8 +5,10 @@ import cz.novanadeje.app.shared.application.qr.QrCodeEncoder;
 import cz.novanadeje.app.shared.application.qr.QrErrorCorrection;
 import cz.novanadeje.app.donations.domain.payment.QrPayment;
 import cz.novanadeje.app.donations.domain.payment.QrPaymentPurpose;
+import cz.novanadeje.app.donations.domain.recovery.SecondFactorRecoveryPolicy;
 import cz.novanadeje.app.shared.domain.Currency;
 import cz.novanadeje.app.shared.domain.Money;
+import cz.novanadeje.app.shared.domain.SecondFactorRecoveryCode;
 import cz.novanadeje.app.shared.domain.VariableSymbol;
 import org.springframework.stereotype.Service;
 
@@ -25,6 +27,14 @@ public class GeneratePaymentQrService {
 
     public PaymentQr generate(GeneratePaymentQrQuery query) {
         QrPayment payment = payment(Money.of(BigDecimal.valueOf(query.amountCzk()), Currency.CZK), query.variableSymbol(), query.purpose());
+        return render(payment);
+    }
+
+    public PaymentQr generateForRecovery(SecondFactorRecoveryCode code) {
+        return render(QrPayment.secondFactorRecovery(foundationAccount, SecondFactorRecoveryPolicy.AMOUNT, code));
+    }
+
+    private PaymentQr render(QrPayment payment) {
         String spayd = payment.toSpayd();
         return new PaymentQr(spayd, encoder.encode(spayd, QrErrorCorrection.HIGH), foundationAccount);
     }

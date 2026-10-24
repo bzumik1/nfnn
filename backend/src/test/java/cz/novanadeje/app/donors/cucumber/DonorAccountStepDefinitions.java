@@ -243,6 +243,7 @@ public class DonorAccountStepDefinitions {
         body.put("email", fields.get("email"));
         body.put("password", fields.get("password"));
         body.put("preferredLocale", fields.get("preferredLocale"));
+        body.put("returnTo", fields.get("returnTo"));
         return body;
     }
 }

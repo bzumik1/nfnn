@@ -19,6 +19,7 @@ import { from, switchMap } from 'rxjs';
 import { describeProblem, problemTypeEndsWith } from '../../../core/auth/api-problem';
 import { AuthApi } from '../../../core/auth/auth-api';
 import { AuthStore } from '../../../core/auth/auth-store';
+import { confirmationReturnOf, DONATE_SECTION } from '../../../core/auth/confirmation-return';
 import { deviceName } from '../../../core/auth/device-name';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
 import {
@@ -53,7 +54,10 @@ export class EmailVerification {
   private readonly authenticator = inject(PasskeyAuthenticator);
   private readonly loginDialog = inject(LoginDialogService);
   private readonly heading = viewChild<ElementRef<HTMLElement>>('heading');
-  private readonly token = tokenOf(inject(ActivatedRoute).snapshot.fragment);
+  private readonly fragment = new URLSearchParams(inject(ActivatedRoute).snapshot.fragment ?? '');
+  private readonly token = tokenOf(this.fragment);
+  private readonly confirmationReturnTo = confirmationReturnOf(this.fragment.get('returnTo'));
+  private readonly destination = this.confirmationReturnTo ?? PORTAL_PATH;
 
   protected readonly emailMessages = {
     required: $localize`:@@donor.form.email.required:Vyplňte prosím e-mail.`,
@@ -66,6 +70,7 @@ export class EmailVerification {
   protected readonly needsPasskey = signal(false);
   protected readonly passkeyCreated = signal(false);
   protected readonly passkeysSupported = this.authenticator.supported();
+  protected readonly returnsToDonation = this.destination === DONATE_SECTION;
 
   protected email = '';
 
@@ -87,7 +92,7 @@ export class EmailVerification {
     }
     this.loading.set(true);
     this.error.set('');
-    this.authApi.requestEmailVerification(this.email.trim()).subscribe({
+    this.authApi.requestEmailVerification(this.email.trim(), this.confirmationReturnTo).subscribe({
       next: () => this.show('link-requested'),
       error: (failure: unknown) => {
         this.loading.set(false);
@@ -153,11 +158,11 @@ export class EmailVerification {
   }
 
   signIn(): void {
-    this.loginDialog.open('login', { returnTo: PORTAL_PATH });
+    this.loginDialog.open('login', { returnTo: this.destination });
   }
 
   enterPortal(): void {
-    this.router.navigateByUrl(PORTAL_PATH);
+    this.router.navigateByUrl(this.destination);
   }
 
   private confirm(token: string): void {
@@ -193,7 +198,7 @@ export class EmailVerification {
   }
 }
 
-function tokenOf(fragment: string | null): string | null {
-  const token = new URLSearchParams(fragment ?? '').get('token');
+function tokenOf(fragment: URLSearchParams): string | null {
+  const token = fragment.get('token');
   return token === null || token === '' ? null : token;
 }

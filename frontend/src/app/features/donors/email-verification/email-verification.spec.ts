@@ -217,6 +217,71 @@ describe('Given the page that confirms the e-mail from the registration link', (
     });
   });
 
+  describe('when the link carries a token and the way back to the donate section', () => {
+    beforeEach(() => open('/potvrzeni-emailu#token=abc&returnTo=%2F%23prispet'));
+
+    it('then only the token is sent and the address bar keeps neither', () => {
+      expect(TestBed.inject(Location).path(true)).toBe('/potvrzeni-emailu');
+      const request = http.expectOne('/api/donors/auth/email-verification/confirm');
+      expect(request.request.body).toEqual({ token: 'abc' });
+      request.flush(authResponse('token-1'));
+    });
+
+    it('and the server confirms it, then the page says the QR code now carries the symbol and leads back to the donate section', async () => {
+      await answerConfirm(authResponse('token-1') as unknown as Record<string, unknown>, 200, 'OK');
+
+      expect(store.signedIn()).toBe(true);
+      expect(element('[role="status"]').textContent).toContain(
+        'QR kód pro platbu už ponese váš variabilní symbol',
+      );
+      expect(element('.ui-button--primary').textContent?.trim()).toBe('Pokračovat k příspěvku');
+
+      await click('.ui-button--primary');
+
+      expect(navigate).toHaveBeenCalledWith('/#prispet');
+    });
+
+    it('and the link is no longer valid, then a new link asked for keeps the way back', async () => {
+      await answerConfirm(
+        problem('donors/invalid-email-verification-token', 'Odkaz je neplatný', ''),
+        400,
+        'Bad Request',
+      );
+
+      await fillIn('#verification-email', 'jana@example.cz');
+      await submitRequest();
+      const request = http.expectOne('/api/donors/auth/email-verification/request');
+      expect(request.request.body).toEqual({ email: 'jana@example.cz', returnTo: '/#prispet' });
+      request.flush(null, { status: 202, statusText: 'Accepted' });
+      await settle();
+    });
+
+    it('and the link was already used, then signing in leads back to the donate section', async () => {
+      await answerConfirm(
+        problem('donors/invalid-email-verification-token', 'Odkaz je neplatný', ''),
+        400,
+        'Bad Request',
+      );
+
+      await click('.already-confirmed + .ui-button');
+      TestBed.inject(LoginDialogService).signedIn();
+
+      expect(navigate).toHaveBeenCalledWith('/#prispet');
+    });
+  });
+
+  describe('when the link names a way back that is not on the list', () => {
+    beforeEach(() => open('/potvrzeni-emailu#token=abc&returnTo=https%3A%2F%2Fevil.example'));
+
+    it('and the server confirms it, then the page leads to the overview as usual', async () => {
+      await answerConfirm(authResponse('token-1') as unknown as Record<string, unknown>, 200, 'OK');
+
+      await click('.ui-button--primary');
+
+      expect(navigate).toHaveBeenCalledWith('/darce/prehled');
+    });
+  });
+
   describe('when the link has no token', () => {
     beforeEach(() => open('/potvrzeni-emailu'));
 
@@ -309,5 +374,44 @@ describe('Given the registration link of a donor who chose a passkey instead of 
     );
     element<HTMLButtonElement>('.link-action').click();
     expect(navigate).toHaveBeenCalledWith('/darce/prehled');
+  });
+});
+
+describe('Given the registration link from the donate section of a donor who chose a passkey', () => {
+  let harness: RouterTestingHarness;
+  let http: HttpTestingController;
+  let navigate: ReturnType<typeof vi.spyOn>;
+
+  beforeEach(async () => {
+    localStorage.clear();
+    TestBed.configureTestingModule({
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([{ path: 'potvrzeni-emailu', component: EmailVerification }]),
+        { provide: PasskeyAuthenticator, useValue: new FakePasskeyAuthenticator() },
+      ],
+    });
+    http = TestBed.inject(HttpTestingController);
+    harness = await RouterTestingHarness.create(
+      '/potvrzeni-emailu#token=abc&returnTo=%2F%23prispet',
+    );
+    navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+    http
+      .expectOne('/api/donors/auth/email-verification/confirm')
+      .flush(authResponse('token-1', sampleDonor({ hasPassword: false })));
+    harness.detectChanges();
+    await harness.fixture.whenStable();
+  });
+
+  afterEach(() => http.verify());
+
+  it('when the donor skips the key, then the page leads back to the donate section', () => {
+    const later = harness.routeNativeElement!.querySelector('.link-action') as HTMLButtonElement;
+    expect(later.textContent?.trim()).toBe('Pokračovat k příspěvku bez klíče');
+
+    later.click();
+
+    expect(navigate).toHaveBeenCalledWith('/#prispet');
   });
 });

@@ -43,12 +43,16 @@ export function secondFactorRequired() {
 
 export const secondFactorRecovery = {
   message: 'OBNOVA K7MP4RXA',
+  startedAt: '2026-10-17T10:00:00Z',
   expiresAt: '2026-10-31T10:00:00Z',
+  resumed: false,
   accountNumber: '5544332217/2010',
   iban: 'CZ2620100000005544332217',
   amountMinor: 100,
   currency: 'CZK',
   usableFrom: '2026-10-27',
+  spayd: 'SPD*1.0*ACC:CZ2620100000005544332217*AM:1.00*CC:CZK*MSG:OBNOVA K7MP4RXA',
+  qrCode: PAYMENT_QR_500,
 };
 
 export const secondFactorEnrolment = {

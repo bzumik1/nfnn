@@ -1,10 +1,12 @@
 package cz.novanadeje.app.donors.application.event;
 
 import cz.novanadeje.app.donors.domain.LinkSecret;
+import cz.novanadeje.app.donors.domain.RegistrationReturn;
 import cz.novanadeje.app.shared.domain.EmailAddress;
 import cz.novanadeje.app.shared.domain.LocaleCode;
 
 import java.time.Instant;
+import java.util.Optional;
 import java.util.UUID;
 
 public record DonorEmailVerificationRequested(
@@ -12,6 +14,7 @@ public record DonorEmailVerificationRequested(
         EmailAddress email,
         LocaleCode preferredLocale,
         LinkSecret secret,
-        Instant expiresAt
+        Instant expiresAt,
+        Optional<RegistrationReturn> returnTo
 ) {
 }
