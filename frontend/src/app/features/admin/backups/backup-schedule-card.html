@@ -4,11 +4,19 @@
   </h2>
   <div class="ui-card__body">
     <p class="ui-card__intro" i18n="@@admin.backups.schedule.intro">
-      Kdy kontejner záloh každý den zálohuje databázi a kdy jednou týdně zkušebně obnoví nejnovější
-      zálohu. Časy jsou pražské; výchozí je záloha ve 3:00 a zkušební obnova v neděli ve 4:00.
+      Kdy se web každý den zálohuje a kdy jednou týdně zkusí nejnovější zálohu obnovit. Časy jsou
+      pražské; výchozí je záloha ve 3:00 a zkušební obnova v neděli ve 4:00.
     </p>
-    @if (applied(); as text) {
-      <p class="ui-callout ui-callout--warning applied">{{ text }}</p>
+    @if (applied(); as applied) {
+      <div class="ui-callout ui-callout--warning applied">
+        <p>{{ applied.text }}</p>
+        @if (applied.tech; as tech) {
+          <details class="tech-details">
+            <summary i18n="@@admin.backups.techDetails">Technické podrobnosti</summary>
+            <p>{{ tech }}</p>
+          </details>
+        }
+      </div>
     }
     <form
       #scheduleForm="ngForm"
@@ -85,6 +93,11 @@
           <span i18n="@@admin.backups.schedule.save">Uložit plán</span>
         }
       </button>
+      <p class="ui-form-status" role="status">
+        @if (status(); as status) {
+          <span>{{ status }}</span>
+        }
+      </p>
     </form>
   </div>
 </section>

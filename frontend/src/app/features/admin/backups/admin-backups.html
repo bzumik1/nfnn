@@ -1,10 +1,8 @@
 <div class="ui-page container">
   <h1 #title class="ui-page-title" tabindex="-1" i18n="@@admin.backups.heading">Zálohy</h1>
   <p class="ui-page-intro" i18n="@@admin.backups.introRestore">
-    Databáze se každý den zálohuje do složky /DATA/AppData/nfnn/backups na serveru a jednou týdně se
-    nejnovější záloha zkušebně obnoví do dočasné databáze, obojí v časech z plánu záloh dole. Tady
-    vidíte, jak to dopadlo, zálohu i zkušební obnovu spustíte hned, zálohu si stáhnete a web z ní
-    obnovíte. Zálohy leží na stejném disku jako databáze; kopii mimo server web zatím nedělá.
+    Web se každý den sám zálohuje a jednou týdně si vyzkouší, že jde zálohu obnovit. Tady vidíte,
+    jak to dopadlo, zálohu spustíte hned, stáhnete si ji nebo z ní web obnovíte.
   </p>
 
   <app-live-notice [notice]="notice()" />
@@ -69,41 +67,59 @@
                     <li>{{ problem }}</li>
                   }
                 </ul>
+                <details class="tech-details">
+                  <summary i18n="@@admin.backups.techDetails">Technické podrobnosti</summary>
+                  <ul>
+                    @for (detail of problemDetails(); track detail) {
+                      <li>{{ detail }}</li>
+                    }
+                  </ul>
+                </details>
               </div>
             } @else {
               <p class="healthy" i18n="@@admin.backups.status.healthy">Zálohování je v pořádku.</p>
             }
             <dl class="runs">
               <div class="run">
-                <dt i18n="@@admin.backups.status.backup">Záloha</dt>
-                <dd>{{ lastBackup() }}</dd>
-              </div>
-              <div class="run">
-                <dt i18n="@@admin.backups.status.testRestore">Zkušební obnova</dt>
-                <dd>{{ lastTestRestore() }}</dd>
-              </div>
-              <div class="run">
-                <dt i18n="@@admin.backups.status.restore">Obnova</dt>
-                <dd>{{ lastRestore() }}</dd>
-              </div>
-              <div class="run">
-                <dt i18n="@@admin.backups.status.restoreFolder">Složka restore</dt>
+                <dt i18n="@@admin.backups.status.backup">Poslední záloha</dt>
                 <dd>
-                  @if (restoreFiles().length === 0) {
-                    <ng-container i18n="@@admin.backups.restore.emptyGui"
-                      >Prázdná. Web obnovíte tlačítkem Obnovit u zálohy níže, na novém serveru v
-                      průvodci prvním nastavením.</ng-container
-                    >
-                  } @else {
-                    <ul class="restore-files">
-                      @for (file of restoreFiles(); track file.fileName) {
-                        <li>{{ describeRestoreFile(file) }}</li>
-                      }
-                    </ul>
-                  }
+                  <ng-container
+                    [ngTemplateOutlet]="runLine"
+                    [ngTemplateOutletContext]="{ $implicit: lastBackup() }"
+                  />
+                </dd>
+              </div>
+              <div class="run">
+                <dt i18n="@@admin.backups.status.testRestore">Poslední zkušební obnova</dt>
+                <dd>
+                  <ng-container
+                    [ngTemplateOutlet]="runLine"
+                    [ngTemplateOutletContext]="{ $implicit: lastTestRestore() }"
+                  />
+                </dd>
+              </div>
+              <div class="run">
+                <dt i18n="@@admin.backups.status.restore">Poslední obnova</dt>
+                <dd>
+                  <ng-container
+                    [ngTemplateOutlet]="runLine"
+                    [ngTemplateOutletContext]="{ $implicit: lastRestore() }"
+                  />
                 </dd>
               </div>
             </dl>
+            @if (restoreFiles().length > 0) {
+              <div class="restore-folder">
+                <p class="restore-files-title" i18n="@@admin.backups.status.restoreFolder">
+                  Soubory k obnově
+                </p>
+                <ul class="restore-files">
+                  @for (file of restoreFiles(); track file.fileName) {
+                    <li>{{ describeRestoreFile(file) }}</li>
+                  }
+                </ul>
+              </div>
+            }
             <div role="status">
               @if (pendingRequests() > 0) {
                 <p class="pending" i18n="@@admin.backups.pending">
@@ -145,8 +161,17 @@
                 }
               </button>
             </div>
+            @if (!available()) {
+              <p class="actions-blocked" i18n="@@admin.backups.actions.blocked">
+                Zálohovat teď ani ověřit obnovu nejde, dokud se nevyřeší problém výše.
+              </p>
+            }
             <p class="actions-hint" i18n="@@admin.backups.actions.hint">
               Záloha trvá pár sekund, zkušební obnova do minuty; výsledek se ukáže tady.
+            </p>
+            <p class="ui-callout ui-callout--warning off-server" i18n="@@admin.backups.offServer">
+              Zálohy leží na stejném disku jako web. Jednou za měsíc si nejnovější stáhněte
+              tlačítkem Stáhnout a uložte jinam, třeba na flash disk nebo do cloudu.
             </p>
           </div>
         </section>
@@ -163,9 +188,8 @@
             <table>
               <thead>
                 <tr>
-                  <th i18n="@@admin.backups.list.col.file">Soubor</th>
-                  <th i18n="@@admin.backups.list.col.kind">Druh</th>
                   <th i18n="@@admin.backups.list.col.createdAt">Vytvořeno</th>
+                  <th i18n="@@admin.backups.list.col.kind">Druh</th>
                   <th i18n="@@admin.backups.list.col.size">Velikost</th>
                   <th class="visually-hidden" i18n="@@admin.backups.list.col.actions">Akce</th>
                 </tr>
@@ -173,33 +197,21 @@
               <tbody>
                 @for (item of backups(); track item.fileName) {
                   <tr>
-                    <td data-label="Soubor" i18n-data-label="@@admin.backups.list.col.file">
-                      <span class="file-name">{{ item.fileName }}</span>
-                    </td>
-                    <td data-label="Druh" i18n-data-label="@@admin.backups.list.col.kind">
-                      {{ kindName(item) }}
-                    </td>
                     <td
                       class="created"
                       data-label="Vytvořeno"
                       i18n-data-label="@@admin.backups.list.col.createdAt"
                     >
                       {{ time(item.createdAt) }}
+                      <span class="file-name">{{ item.fileName }}</span>
+                    </td>
+                    <td data-label="Druh" i18n-data-label="@@admin.backups.list.col.kind">
+                      {{ kindName(item) }}
                     </td>
                     <td data-label="Velikost" i18n-data-label="@@admin.backups.list.col.size">
                       {{ size(item.sizeBytes) }}
                     </td>
                     <td class="row-actions">
-                      <button
-                        type="button"
-                        class="ui-button"
-                        [disabled]="actionsDisabled()"
-                        [attr.aria-label]="restoreLabel(item)"
-                        (click)="askRestore(item)"
-                        i18n="@@admin.backups.restore.start"
-                      >
-                        Obnovit
-                      </button>
                       <button
                         type="button"
                         class="ui-button"
@@ -216,6 +228,16 @@
                             >Stáhnout</ng-container
                           >
                         }
+                      </button>
+                      <button
+                        type="button"
+                        class="ui-button ui-button--danger-outline"
+                        [disabled]="actionsDisabled()"
+                        [attr.aria-label]="restoreLabel(item)"
+                        (click)="askRestore(item)"
+                        i18n="@@admin.backups.restore.start"
+                      >
+                        Obnovit…
                       </button>
                     </td>
                   </tr>
@@ -246,3 +268,13 @@
     (dismissed)="cancelRestore()"
   />
 }
+
+<ng-template #runLine let-line>
+  <span class="run-text">{{ line.text }}</span>
+  @if (line.error) {
+    <details class="tech-details">
+      <summary i18n="@@admin.backups.techDetails">Technické podrobnosti</summary>
+      <p class="run-error">{{ line.error }}</p>
+    </details>
+  }
+</ng-template>

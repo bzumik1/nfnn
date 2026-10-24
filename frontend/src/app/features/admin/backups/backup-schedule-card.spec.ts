@@ -101,6 +101,9 @@ describe('Given the backup plan card', () => {
 
       expect(saved).toEqual([answer]);
       expect(text('button[type="submit"]')).toBe('Uložit plán');
+      expect(text('button[type="submit"] + .ui-form-status')).toBe(
+        'Plán záloh jsme uložili: denní záloha 2:30, zkušební obnova v sobotu 5:15.',
+      );
     });
 
     it('and a time is cleared, then the field says what to enter and nothing is sent', async () => {
@@ -141,13 +144,16 @@ describe('Given the backup plan card', () => {
     );
 
     expect(text('.applied')).toBe(
-      'Kontejner záloh zatím jede podle plánu „denní záloha 3:00, zkušební obnova v neděli 4:00“; nový převezme do minuty.',
+      'Zálohy zatím běží podle plánu „denní záloha 3:00, zkušební obnova v neděli 4:00“; nový převezme do minuty.',
     );
   });
 
   it('when the backup container has not confirmed any plan, then a warning says how to update it', async () => {
     await render(backupSchedule({ applied: null }));
 
-    expect(text('.applied')).toContain('Kontejner záloh zatím nepotvrdil, že plán převzal');
+    expect(text('.applied p')).toBe(
+      'Plán se na serveru zatím neprojevil; obvykle to trvá do minuty. Když tato zpráva po obnovení stránky nezmizí, pošlete ji správci serveru.',
+    );
+    expect(text('.applied details')).toContain('Kontejner záloh zatím nepotvrdil, že plán převzal');
   });
 });

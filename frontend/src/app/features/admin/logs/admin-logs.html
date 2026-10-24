@@ -1,8 +1,8 @@
 <div class="ui-page container">
   <h1 #title class="ui-page-title" tabindex="-1" i18n="@@admin.logs.heading">Logy a diagnostika</h1>
   <p class="ui-page-intro" i18n="@@admin.logs.intro">
-    Log backendu ze serveru (složka /DATA/AppData/nfnn/logs, 14 dní zpět po souborech), hledání v
-    něm, dočasné zapnutí podrobnějšího logování a stav aplikace. Totéž umí Claude přes konektor.
+    Tato stránka je pro technickou pomoc. Když web nefunguje, správce serveru tu najde podrobnosti;
+    vy tu nic nastavovat nemusíte.
   </p>
 
   @switch (state()) {
@@ -212,6 +212,13 @@
               <p class="ui-notice ui-notice--alert" role="alert">{{ windowError() }}</p>
             }
             @if (window(); as window) {
+              <div class="window-copy">
+                <app-copy-button
+                  [value]="window.text"
+                  what="výpis logu"
+                  i18n-what="@@admin.logs.window.copyWhat"
+                />
+              </div>
               <pre class="log-text" tabindex="0">{{ window.text }}</pre>
             }
           </div>

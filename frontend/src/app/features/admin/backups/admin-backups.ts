@@ -10,6 +10,7 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
 import { switchMap, take, takeWhile, timer } from 'rxjs';
@@ -30,9 +31,9 @@ import {
   RestoreFileResponse,
 } from '../admin-api';
 import { formatSize } from './backup-format';
-import { describePlan, formatPlanTime, onDay } from './backup-plan';
+import { formatPlanTime, onDay } from './backup-plan';
 import { BackupScheduleCard } from './backup-schedule-card';
-import { BACKUP_PROBLEM_TEXTS } from './backup-texts';
+import { BACKUP_PROBLEM_HELP, BACKUP_PROBLEM_TEXTS } from './backup-texts';
 import { RestoreDialog } from './restore-dialog';
 import { LiveNotice, Notice } from '../../../shared/ui/live-notice/live-notice';
 
@@ -40,6 +41,11 @@ type LoadState = 'loading' | 'ready' | 'error';
 
 interface RunningJob {
   kind: BackupRequestKind;
+}
+
+interface RunLine {
+  text: string;
+  error: string | null;
 }
 
 interface RequestedRestore {
@@ -54,15 +60,21 @@ export const JOB_MAX_POLLS = 20;
 export const RESTORE_REQUEST_KEY = 'nfnn.restore-request';
 
 const KIND_NAMES: Record<BackupKind, string> = {
-  DAILY: $localize`:@@admin.backups.kind.daily:Noční`,
+  DAILY: $localize`:@@admin.backups.kind.daily:Plánovaná`,
   REQUESTED: $localize`:@@admin.backups.kind.requested:Na požádání`,
   BEFORE_RESTORE: $localize`:@@admin.backups.kind.beforeRestore:Před obnovou`,
   OTHER: $localize`:@@admin.backups.kind.other:Jiná`,
 };
 
+const NONE_YET = $localize`:@@admin.backups.run.none:Zatím žádná.`;
+
+function failedAt(at: string): string {
+  return $localize`:@@admin.backups.run.failed:Nepovedla se ${at}:time:.`;
+}
+
 @Component({
   selector: 'app-admin-backups',
-  imports: [LiveNotice, RestoreDialog, BackupScheduleCard],
+  imports: [LiveNotice, RestoreDialog, BackupScheduleCard, NgTemplateOutlet],
   templateUrl: './admin-backups.html',
   styleUrl: './admin-backups.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -93,6 +105,9 @@ export class AdminBackups {
   protected readonly restoreFiles = computed(() => this.view()?.restoreFiles ?? []);
   protected readonly pendingRequests = computed(() => this.view()?.pendingRequests ?? 0);
   protected readonly problems = computed(() =>
+    (this.view()?.problems ?? []).map((problem) => BACKUP_PROBLEM_HELP[problem]),
+  );
+  protected readonly problemDetails = computed(() =>
     (this.view()?.problems ?? []).map((problem) => BACKUP_PROBLEM_TEXTS[problem]),
   );
   protected readonly lastBackup = computed(() => this.describeBackup(this.view()?.lastBackup));
@@ -138,10 +153,6 @@ export class AdminBackups {
 
   protected scheduleSaved(schedule: BackupScheduleResponse): void {
     this.view.update((view) => (view === null ? view : { ...view, schedule }));
-    this.notice.set({
-      kind: 'status',
-      text: $localize`:@@admin.backups.schedule.saved:Plán záloh jsme uložili: ${describePlan(schedule)}:plan:.`,
-    });
   }
 
   protected kindName(item: BackupFileResponse): string {
@@ -168,7 +179,7 @@ export class AdminBackups {
     const at = formatBankTime(file.changedAt);
     switch (file.state) {
       case 'PENDING':
-        return $localize`:@@admin.backups.restore.pending:${file.fileName}:file: čeká a obnoví se při příštím startu kontejneru nfnn-backup.`;
+        return $localize`:@@admin.backups.restore.pending:${file.fileName}:file: čeká a obnoví se, až se na serveru příště spustí zálohování.`;
       case 'DONE':
         return $localize`:@@admin.backups.restore.done:${file.fileName}:file: byl obnoven ${at}:time:.`;
       case 'FAILED':
@@ -323,7 +334,7 @@ export class AdminBackups {
     if (run === null || pending) {
       this.notice.set({
         kind: 'alert',
-        text: $localize`:@@admin.backups.request.notPickedUp:Kontejner nfnn-backup si požadavek do minuty nevzal. Zkontrolujte na serveru sudo docker logs nfnn-backup; výsledek se ukáže po obnovení stránky.`,
+        text: $localize`:@@admin.backups.request.notPickedUp:Zálohování na serveru na požadavek do minuty neodpovědělo. Obnovte stránku za chvíli; když se výsledek neukáže, pošlete tuto stránku správci serveru (služba záloh nfnn-backup asi neběží).`,
       });
       return;
     }
@@ -331,7 +342,6 @@ export class AdminBackups {
   }
 
   private outcomeNotice(kind: BackupRequestKind, run: BackupRunResponse): Notice {
-    const error = run.error ?? '';
     if (kind === 'BACKUP') {
       return run.outcome === 'OK'
         ? {
@@ -340,7 +350,7 @@ export class AdminBackups {
           }
         : {
             kind: 'alert',
-            text: $localize`:@@admin.backups.backup.failed:Záloha selhala: ${error}:error:`,
+            text: $localize`:@@admin.backups.backup.failed:Záloha se nepovedla. Technické podrobnosti najdete níže u Poslední záloha.`,
           };
     }
     return run.outcome === 'OK'
@@ -350,7 +360,7 @@ export class AdminBackups {
         }
       : {
           kind: 'alert',
-          text: $localize`:@@admin.backups.testRestore.failed:Zkušební obnova selhala: ${error}:error:`,
+          text: $localize`:@@admin.backups.testRestore.failed:Zkušební obnova se nepovedla. Technické podrobnosti najdete níže u Poslední zkušební obnova.`,
         };
   }
 
@@ -363,7 +373,7 @@ export class AdminBackups {
     if (run === null || run.requestId !== requested.requestId) {
       this.notice.set({
         kind: 'alert',
-        text: $localize`:@@admin.backups.restore.notPickedUp:Kontejner nfnn-backup si obnovu do pěti minut nevzal, takže web běží s daty, jaká měl. Zkuste to prosím znovu; když se to opakuje, kontejner asi neběží.`,
+        text: $localize`:@@admin.backups.restore.notPickedUp:Zálohování na serveru na obnovu do pěti minut neodpovědělo, takže web běží s daty, jaká měl. Zkuste to prosím znovu; když se to opakuje, pošlete tuto stránku správci serveru (služba záloh nfnn-backup asi neběží).`,
       });
       return;
     }
@@ -375,46 +385,61 @@ export class AdminBackups {
           }
         : {
             kind: 'alert',
-            text: $localize`:@@admin.backups.restore.failedNow:Obnova ze zálohy ${requested.fileName}:file: se nepovedla: ${run.error ?? ''}:error:. Web běží dál s daty, jaká měl před obnovou.`,
+            text: $localize`:@@admin.backups.restore.failedNow:Obnova ze zálohy ${requested.fileName}:file: se nepovedla. Web běží dál s daty, jaká měl před obnovou; technické podrobnosti najdete níže u Poslední obnova.`,
           },
     );
   }
 
-  private describeRestore(run: BackupRunResponse | null | undefined): string {
+  private describeRestore(run: BackupRunResponse | null | undefined): RunLine {
     if (!run) {
-      return $localize`:@@admin.backups.lastRestore.none:Poslední obnova: zatím žádná.`;
+      return { text: NONE_YET, error: null };
     }
     const at = formatBankTime(run.finishedAt);
     if (run.outcome === 'FAILED') {
-      return $localize`:@@admin.backups.lastRestore.failed:Poslední obnova ${at}:time: se nepovedla, data zůstala: ${run.error ?? ''}:error:`;
+      return {
+        text: $localize`:@@admin.backups.lastRestore.failed:Nepovedla se ${at}:time:, data zůstala, jak byla.`,
+        error: run.error,
+      };
     }
-    return $localize`:@@admin.backups.lastRestore.ok:Poslední obnova: ${at}:time: ze zálohy ${run.fileName ?? ''}:file:.`;
+    return {
+      text: $localize`:@@admin.backups.lastRestore.ok:${at}:time: ze zálohy ${run.fileName ?? ''}:file:`,
+      error: null,
+    };
   }
 
-  private describeBackup(run: BackupRunResponse | null | undefined): string {
+  private describeBackup(run: BackupRunResponse | null | undefined): RunLine {
     if (!run) {
-      return $localize`:@@admin.backups.lastBackup.none:Poslední záloha: zatím žádná.`;
+      return { text: NONE_YET, error: null };
     }
     const at = formatBankTime(run.finishedAt);
     if (run.outcome === 'FAILED') {
-      return $localize`:@@admin.backups.lastBackup.failed:Poslední záloha selhala ${at}:time:: ${run.error ?? ''}:error:`;
+      return { text: failedAt(at), error: run.error };
     }
-    return $localize`:@@admin.backups.lastBackup.ok:Poslední záloha: ${at}:time:, ${run.fileName ?? ''}:file: (${formatSize(run.sizeBytes ?? 0)}:size:).`;
+    return {
+      text: $localize`:@@admin.backups.lastBackup.ok:${at}:time: (${formatSize(run.sizeBytes ?? 0)}:size:)`,
+      error: null,
+    };
   }
 
-  private describeTestRestore(run: BackupRunResponse | null | undefined): string {
+  private describeTestRestore(run: BackupRunResponse | null | undefined): RunLine {
     if (!run) {
       const plan = this.view()?.schedule;
       if (!plan) {
-        return $localize`:@@admin.backups.lastTestRestore.noneYet:Poslední zkušební obnova: zatím žádná.`;
+        return { text: NONE_YET, error: null };
       }
-      return $localize`:@@admin.backups.lastTestRestore.planned:Poslední zkušební obnova: zatím žádná. Podle plánu běží ${onDay(plan.testRestoreDay)}:day: ${formatPlanTime(plan.testRestoreTime)}:time:.`;
+      return {
+        text: $localize`:@@admin.backups.lastTestRestore.planned:Zatím žádná. Podle plánu běží ${onDay(plan.testRestoreDay)}:day: ${formatPlanTime(plan.testRestoreTime)}:time:.`,
+        error: null,
+      };
     }
     const at = formatBankTime(run.finishedAt);
     if (run.outcome === 'FAILED') {
-      return $localize`:@@admin.backups.lastTestRestore.failed:Poslední zkušební obnova selhala ${at}:time:: ${run.error ?? ''}:error:`;
+      return { text: failedAt(at), error: run.error };
     }
-    return $localize`:@@admin.backups.lastTestRestore.ok:Poslední zkušební obnova: ${at}:time:, ${run.tables ?? 0}:tables: tabulek ze zálohy ${run.fileName ?? ''}:file:.`;
+    return {
+      text: $localize`:@@admin.backups.lastTestRestore.ok:${at}:time:, ${run.tables ?? 0}:tables: tabulek ze zálohy ${run.fileName ?? ''}:file:`,
+      error: null,
+    };
   }
 
   private sendToSignIn(): void {
