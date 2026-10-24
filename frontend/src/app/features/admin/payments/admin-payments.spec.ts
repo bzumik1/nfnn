@@ -144,8 +144,11 @@ describe('Given an administrator on the bank payments page', () => {
 
     expect(rows()).toEqual([
       '10. 10. 2026 500 Kč Nováková Jana 2900233333/2010 1111111111 Dar pro fond Přiřadit dárci',
-      '12. 10. 2026 jen ručně 250,50 Kč — bez VS Přiřadit dárci',
+      '12. 10. 2026 jen ručně Správce zrušil přiřazení, web ji proto sám nepřiřadí. 250,50 Kč — bez VS Přiřadit dárci',
     ]);
+    expect(fixture.nativeElement.querySelector('.held-tag')?.getAttribute('title')).toBeNull();
+    expect(text('.admin-tabs')).toBe('Čekají na přiřazení (2) Přiřazené');
+    expect(text('#payments-title')).toBe('Platby čekající na přiřazení');
   });
 
   it('when the list cannot be loaded, then an alert offers a retry that asks again', async () => {
@@ -175,7 +178,7 @@ describe('Given an administrator on the bank payments page', () => {
   describe('when the administrator switches to the paired payments', () => {
     beforeEach(async () => {
       await listResponds(paymentList([unpairedPayment()]));
-      button('Spárované').click();
+      button('Přiřazené').click();
       await settle();
     });
 
@@ -190,7 +193,12 @@ describe('Given an administrator on the bank payments page', () => {
               id: 'p2',
               bankTransactionId: 1002,
               bookedOn: '2026-09-01',
-              donation: pairedDonation({ id: 'd2', donorName: null, pairedBy: 'MANUAL' }),
+              donation: pairedDonation({
+                id: 'd2',
+                donorName: null,
+                pairedBy: 'MANUAL',
+                status: 'REFUNDED',
+              }),
             }),
           ],
           { year: 2026, availableYears: [2026, 2025] },
@@ -198,10 +206,13 @@ describe('Given an administrator on the bank payments page', () => {
         'pairing=paired',
       );
 
-      expect(text('#payments-title')).toBe('Spárované platby 2026');
+      expect(text('#payments-title')).toBe('Přiřazené platby 2026');
       expect(rows()[0]).toContain('Jana Nováková podle variabilního symbolu potvrzení vystaveno');
       expect(rows()[0]).toContain('Nelze zrušit, k daru je vystavené potvrzení.');
-      expect(rows()[1]).toContain('dárce bez záznamu ručně správcem');
+      expect(
+        fixture.nativeElement.querySelector('tbody tr .donor-name a')?.getAttribute('href'),
+      ).toBe('/sprava/darci/01a18e56-bdb0-775a-bd0a-a60756831369');
+      expect(rows()[1]).toContain('dárce bez záznamu ručně správcem vráceno');
       expect(rows()[1]).toContain('Zrušit přiřazení');
       const years = Array.from(
         fixture.nativeElement.querySelectorAll(
@@ -219,7 +230,7 @@ describe('Given an administrator on the bank payments page', () => {
         'pairing=paired&year=2025',
       );
 
-      expect(text('#payments-title')).toBe('Spárované platby 2025');
+      expect(text('#payments-title')).toBe('Přiřazené platby 2025');
       expect(text('.ui-card__empty')).toBe('Zatím není přiřazena žádná platba.');
     });
 
@@ -234,16 +245,23 @@ describe('Given an administrator on the bank payments page', () => {
 
       button('Zrušit přiřazení').click();
       await settle();
-      expect(text('.confirm')).toContain('Opravdu zrušit?');
+      expect(text('.confirm')).toContain(
+        'Dar 500 Kč zmizí z přehledu dárce Jana Nováková a platba se vrátí mezi čekající na přiřazení; web ji sám znovu nepřiřadí. Zrušit přiřazení?',
+      );
+      expect(element('.confirm').getAttribute('aria-label')).toBe(
+        'Zrušit přiřazení platby 500\u00a0Kč z 10. 10. 2026?',
+      );
+      expect(document.activeElement).toBe(button('Ponechat'));
       http.expectNone(`/api/admin/donations/payments/${PAYMENT_ID}/unpair`);
 
-      button('Ne').click();
+      button('Ponechat').click();
       await settle();
       expect(fixture.nativeElement.querySelector('.confirm')).toBeNull();
+      expect(document.activeElement).toBe(button('Zrušit přiřazení'));
 
       button('Zrušit přiřazení').click();
       await settle();
-      button('Ano, zrušit').click();
+      element('.confirm .ui-button--danger').click();
       await settle();
       const request = http.expectOne(`/api/admin/donations/payments/${PAYMENT_ID}/unpair`);
       expect(request.request.method).toBe('POST');
@@ -252,8 +270,15 @@ describe('Given an administrator on the bank payments page', () => {
       await listResponds(paymentList([], { year: null, availableYears: [] }), 'pairing=paired');
 
       expect(text('[role="status"]:not(:empty)')).toBe(
-        'Platba 500 Kč z 10. 10. 2026 už není přiřazena. Automatické párování ji přeskočí; najdete ji mezi nespárovanými. Dárce si už stáhl roční potvrzení za 2026; při dalším stažení dostane nové. Dejte mu prosím vědět.',
+        'Platba 500 Kč z 10. 10. 2026 už není přiřazena. Web ji sám znovu nepřiřadí; najdete ji mezi platbami čekajícími na přiřazení. Dárce si už stáhl roční potvrzení za 2026; při dalším stažení dostane nové. Dejte mu prosím vědět.',
       );
+      expect(document.activeElement).toBe(element('app-live-notice'));
+      const donorLink = element<HTMLAnchorElement>('.donor-link a');
+      expect(donorLink.textContent?.trim()).toBe('Otevřít kartu dárce Jana Nováková');
+      expect(donorLink.getAttribute('href')).toBe(
+        '/sprava/darci/01a18e56-bdb0-775a-bd0a-a60756831369',
+      );
+      expect(text('.admin-tabs')).toBe('Čekají na přiřazení (2) Přiřazené');
     });
 
     it('then a refused unpairing shows the backend reason as an alert', async () => {
@@ -266,7 +291,7 @@ describe('Given an administrator on the bank payments page', () => {
       );
       button('Zrušit přiřazení').click();
       await settle();
-      button('Ano, zrušit').click();
+      element('.confirm .ui-button--danger').click();
       await settle();
 
       const refused = problem(
@@ -283,6 +308,7 @@ describe('Given an administrator on the bank payments page', () => {
       expect(text('[role="alert"]:not(:empty)')).toBe(
         'K daru už bylo vystaveno potvrzení. Dar s vystaveným potvrzením odpárovat nelze.',
       );
+      expect(document.activeElement).toBe(button('Zrušit přiřazení'));
     });
   });
 
@@ -292,6 +318,8 @@ describe('Given an administrator on the bank payments page', () => {
       const opener = button('Přiřadit dárci');
       opener.focus();
       opener.click();
+      await settle();
+      http.expectOne((request) => request.url === DONORS_URL).flush({ items: [foundDonor()] });
       await settle();
     });
 
@@ -312,13 +340,16 @@ describe('Given an administrator on the bank payments page', () => {
       vi.useRealTimers();
     }
 
-    it('then the dialog names the payment, focuses the search and offers nothing before typing', () => {
+    it("then the dialog names the payment, searches by the first word of the sender's name at once and focuses the search", () => {
       expect(dialog().textContent).toContain('500\u00a0Kč z 10. 10. 2026');
       expect(dialog().textContent).toContain('Nováková Jana');
-      expect(document.activeElement?.id).toBe('pair-search');
-      expect(dialog().querySelector('.pair-results')).toBeNull();
+      const input = dialog().querySelector('#pair-search') as HTMLInputElement;
+      expect(input.value).toBe('Nováková');
+      expect(document.activeElement).toBe(input);
+      expect(Array.from(dialog().querySelectorAll('.pair-result')).map(rowText)).toEqual([
+        'Jana Nováková VS 4821937560',
+      ]);
       expect((button('Přiřadit') as HTMLButtonElement).disabled).toBe(true);
-      http.expectNone((request) => request.url.startsWith(DONORS_URL));
     });
 
     it('then typing searches once the typing pauses, a chosen donor enables the button and pairing reports success', async () => {
@@ -347,9 +378,9 @@ describe('Given an administrator on the bank payments page', () => {
 
       (dialog().querySelectorAll('input[type="radio"]')[0] as HTMLInputElement).click();
       await settle();
-      expect((button('Přiřadit') as HTMLButtonElement).disabled).toBe(false);
+      expect(button('Přiřadit dárci Jana Nováková').disabled).toBe(false);
 
-      button('Přiřadit').click();
+      button('Přiřadit dárci Jana Nováková').click();
       await settle();
       const pairing = http.expectOne(`/api/admin/donations/payments/${PAYMENT_ID}/pair`);
       expect(pairing.request.body).toEqual({ donorId: '01a18e56-bdb0-775a-bd0a-a60756831369' });
@@ -362,6 +393,9 @@ describe('Given an administrator on the bank payments page', () => {
       expect(text('[role="status"]:not(:empty)')).toBe(
         'Platba 500 Kč z 10. 10. 2026 je přiřazena dárci Jana Nováková.',
       );
+      expect(document.activeElement).toBe(element('app-live-notice'));
+      expect(text('.donor-link')).toBe('Otevřít kartu dárce Jana Nováková');
+      expect(text('.admin-tabs')).toBe('Čekají na přiřazení Přiřazené');
     });
 
     it('then an empty search result says so and a refused pairing stays in the dialog with the reason', async () => {
@@ -377,7 +411,7 @@ describe('Given an administrator on the bank payments page', () => {
       await settle();
       (dialog().querySelector('input[type="radio"]') as HTMLInputElement).click();
       await settle();
-      button('Přiřadit').click();
+      button('Přiřadit dárci Jana Nováková').click();
       await settle();
       const refused = problem(
         409,

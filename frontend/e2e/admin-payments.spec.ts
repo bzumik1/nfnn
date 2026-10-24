@@ -132,13 +132,15 @@ test.describe('Given an administrator with an unpaired bank payment', () => {
     await expect(
       dialog.getByLabel('Hledat dárce podle jména nebo variabilního symbolu'),
     ).toBeFocused();
-    await expect(dialog.getByRole('button', { name: 'Přiřadit' })).toBeDisabled();
+    await expect(dialog.getByRole('searchbox')).toHaveValue('Nováková');
+    await expect(dialog.getByRole('button', { name: 'Přiřadit', exact: true })).toBeDisabled();
 
     await page.getByRole('dialog').getByRole('searchbox').fill('nov');
     await expect(dialog.getByRole('radio', { name: /Jana Nováková/ })).toBeVisible();
     await dialog.getByRole('radio', { name: /Jana Nováková/ }).check();
-    await expect(dialog.getByRole('button', { name: 'Přiřadit' })).toBeEnabled();
-    await dialog.getByRole('button', { name: 'Přiřadit' }).click();
+    const submit = dialog.getByRole('button', { name: 'Přiřadit dárci Jana Nováková' });
+    await expect(submit).toBeEnabled();
+    await submit.click();
 
     await expect(dialog).toHaveCount(0);
     await expect(page.getByRole('status').filter({ hasNotText: 'Načítáme' })).toHaveText(
@@ -149,7 +151,7 @@ test.describe('Given an administrator with an unpaired bank payment', () => {
     );
     expect(pairRequests).toEqual([{ donorId: administrator.id }]);
 
-    await page.getByRole('button', { name: 'Spárované', exact: true }).click();
+    await page.getByRole('button', { name: 'Přiřazené', exact: true }).click();
 
     await expect(page.locator('tbody tr')).toContainText('Jana Nováková');
     await expect(page.locator('tbody tr')).toContainText('ručně správcem');
@@ -186,23 +188,26 @@ test.describe('Given an administrator with an unpaired bank payment', () => {
     );
     await rememberedSession(page);
     await page.goto('/sprava/platby');
-    await page.getByRole('button', { name: 'Spárované', exact: true }).click();
+    await page.getByRole('button', { name: 'Přiřazené', exact: true }).click();
     await expect(page.locator('tbody tr')).toContainText('Jana Nováková');
     await expect(page.getByLabel('Rok')).toHaveValue('2026');
 
     await page.getByRole('button', { name: 'Zrušit přiřazení' }).click();
-    await expect(page.getByText('Opravdu zrušit?')).toBeVisible();
-    await page.getByRole('button', { name: 'Ne', exact: true }).click();
-    await expect(page.getByText('Opravdu zrušit?')).toHaveCount(0);
+    const question = page.getByRole('group', { name: /Zrušit přiřazení platby/ });
+    await expect(question).toContainText('zmizí z přehledu dárce Jana Nováková');
+    await expect(question.getByRole('button', { name: 'Ponechat' })).toBeFocused();
+    await question.getByRole('button', { name: 'Ponechat' }).click();
+    await expect(question).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Zrušit přiřazení' })).toBeFocused();
     await page.getByRole('button', { name: 'Zrušit přiřazení' }).click();
-    await page.getByRole('button', { name: 'Ano, zrušit' }).click();
+    await question.getByRole('button', { name: 'Zrušit přiřazení' }).click();
 
     await expect(page.getByRole('status').filter({ hasNotText: 'Načítáme' })).toContainText(
       'už není přiřazena',
     );
     await expect(page.locator('.ui-card__empty')).toHaveText('Zatím není přiřazena žádná platba.');
 
-    await page.getByRole('button', { name: 'Nespárované', exact: true }).click();
+    await page.getByRole('button', { name: /^Čekají na přiřazení/ }).click();
 
     await expect(page.locator('tbody tr')).toContainText('jen ručně');
   });
@@ -250,7 +255,7 @@ test.describe('Given an administrator with an unpaired bank payment', () => {
     await page.getByRole('dialog').getByRole('searchbox').fill('jana');
     await dialog.getByRole('radio', { name: /Jana Nováková/ }).check();
 
-    await dialog.getByRole('button', { name: 'Přiřadit' }).click();
+    await dialog.getByRole('button', { name: 'Přiřadit dárci Jana Nováková' }).click();
 
     await expect(dialog.getByRole('alert')).toHaveText(
       'Platba už je přiřazená. Obnovte prosím seznam.',

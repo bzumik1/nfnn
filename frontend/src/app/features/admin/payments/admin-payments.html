@@ -2,7 +2,7 @@
   <h1 #title class="ui-page-title" tabindex="-1" i18n="@@admin.payments.heading">Platby z banky</h1>
   <p class="ui-page-intro" i18n="@@admin.payments.intro">
     Platby, které web nedokázal přiřadit žádnému dárci, tu přiřadíte ručně. U přiřazených plateb
-    můžete přiřazení zrušit; platba pak zůstane mimo automatické párování a čeká na vaše rozhodnutí.
+    můžete přiřazení zrušit; web pak platbu sám znovu nepřiřadí a čeká na vaše rozhodnutí.
   </p>
 
   <div class="admin-toolbar">
@@ -18,9 +18,14 @@
         [class.is-active]="filter() === 'unpaired'"
         [attr.aria-pressed]="filter() === 'unpaired'"
         (click)="show('unpaired')"
-        i18n="@@admin.payments.filter.unpaired"
       >
-        Nespárované
+        @if (unpairedCount(); as count) {
+          <ng-container i18n="@@admin.payments.filter.unpairedCount"
+            >Čekají na přiřazení ({{ count }})</ng-container
+          >
+        } @else {
+          <ng-container i18n="@@admin.payments.filter.unpaired">Čekají na přiřazení</ng-container>
+        }
       </button>
       <button
         type="button"
@@ -30,7 +35,7 @@
         (click)="show('paired')"
         i18n="@@admin.payments.filter.paired"
       >
-        Spárované
+        Přiřazené
       </button>
     </div>
     @if (filter() === 'paired' && availableYears().length > 0) {
@@ -45,15 +50,24 @@
     }
   </div>
 
-  <app-live-notice [notice]="notice()" />
+  <app-live-notice #noticeRegion tabindex="-1" [notice]="notice()" />
+  @if (changedDonor(); as donor) {
+    <p class="donor-link">
+      <a [routerLink]="['/sprava/darci', donor.id]" i18n="@@admin.payments.openDonor"
+        >Otevřít kartu dárce {{ donor.name }}</a
+      >
+    </p>
+  }
 
   <section class="ui-card payments-card" aria-labelledby="payments-title">
     <h2 id="payments-title" class="ui-card__title">
       @if (filter() === 'unpaired') {
-        <ng-container i18n="@@admin.payments.list.unpairedTitle">Nespárované platby</ng-container>
+        <ng-container i18n="@@admin.payments.list.unpairedTitle"
+          >Platby čekající na přiřazení</ng-container
+        >
       } @else {
         <ng-container i18n="@@admin.payments.list.pairedTitle"
-          >Spárované platby {{ shownYear() }}</ng-container
+          >Přiřazené platby {{ shownYear() }}</ng-container
         >
       }
     </h2>
@@ -110,12 +124,9 @@
                   <td data-label="Datum" i18n-data-label="@@admin.payments.col.date">
                     {{ date(item.bookedOn) }}
                     @if (item.unpairedByAdminAt) {
-                      <span
-                        class="held-tag"
-                        i18n="@@admin.payments.heldTag"
-                        title="Správce zrušil přiřazení; automatické párování tuto platbu přeskakuje."
-                        i18n-title="@@admin.payments.heldTag.title"
-                        >jen ručně</span
+                      <span class="held-tag" i18n="@@admin.payments.heldTag">jen ručně</span>
+                      <span class="held-note" i18n="@@admin.payments.heldTag.title"
+                        >Správce zrušil přiřazení, web ji proto sám nepřiřadí.</span
                       >
                     }
                   </td>
@@ -147,7 +158,9 @@
                       @if (item.donation; as donation) {
                         <span class="donor-name">
                           @if (donation.donorName) {
-                            {{ donation.donorName }}
+                            <a [routerLink]="['/sprava/darci', donation.donorId]">{{
+                              donation.donorName
+                            }}</a>
                           } @else {
                             <ng-container i18n="@@admin.payments.donor.unknown"
                               >dárce bez záznamu</ng-container
@@ -155,6 +168,9 @@
                           }
                         </span>
                         <span class="donor-method">{{ method(donation.pairedBy) }}</span>
+                        @if (donation.status === 'REFUNDED') {
+                          <span class="refunded-tag" i18n="@@admin.payments.refunded">vráceno</span>
+                        }
                         @if (donation.receiptIssued) {
                           <span class="receipt-tag" i18n="@@admin.payments.receiptIssued"
                             >potvrzení vystaveno</span
@@ -178,13 +194,8 @@
                         >Nelze zrušit, k daru je vystavené potvrzení.</span
                       >
                     } @else if (unpairing() === item.id) {
-                      <span
-                        class="confirm"
-                        role="group"
-                        aria-label="Zrušit přiřazení?"
-                        i18n-aria-label="@@admin.payments.unpair.confirm.label"
-                      >
-                        <span i18n="@@admin.payments.unpair.confirm.question">Opravdu zrušit?</span>
+                      <span class="confirm" role="group" [attr.aria-label]="unpairLabel(item)">
+                        <span class="confirm-question">{{ unpairQuestion(item) }}</span>
                         <button
                           type="button"
                           class="ui-button ui-button--small ui-button--danger"
@@ -192,25 +203,27 @@
                           (click)="unpair(item)"
                         >
                           @if (busy()) {
-                            <ng-container i18n="@@admin.payments.unpair.busy">Ruším…</ng-container>
+                            <ng-container i18n="@@admin.payments.unpair.busy">Rušíme…</ng-container>
                           } @else {
                             <ng-container i18n="@@admin.payments.unpair.yes"
-                              >Ano, zrušit</ng-container
+                              >Zrušit přiřazení</ng-container
                             >
                           }
                         </button>
                         <button
+                          #confirmCancel
                           type="button"
                           class="ui-link-button"
                           [disabled]="busy()"
-                          (click)="cancelUnpair()"
+                          (click)="cancelUnpair(item)"
                           i18n="@@admin.payments.unpair.no"
                         >
-                          Ne
+                          Ponechat
                         </button>
                       </span>
                     } @else {
                       <button
+                        [id]="unpairOpenerId(item)"
                         type="button"
                         class="ui-button ui-button--small ui-button--quiet"
                         (click)="askUnpair(item)"
@@ -339,7 +352,7 @@
         @if (busy()) {
           <ng-container i18n="@@admin.payments.pair.busy">Přiřazujeme…</ng-container>
         } @else {
-          <ng-container i18n="@@admin.payments.pair.submit">Přiřadit</ng-container>
+          {{ pairLabel() }}
         }
       </button>
       <button
