@@ -1056,7 +1056,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     await page.evaluate(() => localStorage.setItem('nfnn.donor-session', '1'));
     await page.goto('/sprava/zalohy');
     await expect(page.getByRole('heading', { level: 1, name: 'Zálohy' })).toBeFocused();
-    await expect(page.locator('.problems li')).toHaveCount(2);
+    await expect(page.locator('.problems > ul > li')).toHaveCount(2);
     await expect(page.getByRole('heading', { level: 2, name: 'Plán záloh' })).toBeVisible();
     expect(await violations(page)).toEqual([]);
 
