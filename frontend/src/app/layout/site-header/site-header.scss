@@ -52,6 +52,7 @@
 }
 
 .nav-link {
+  white-space: nowrap;
   color: var(--color-on-image);
   text-decoration: none;
   font-size: var(--text-md);
@@ -66,9 +67,17 @@
   &:hover {
     background: color-mix(in srgb, var(--color-on-image) 15%, transparent);
   }
+
+  &.is-current {
+    font-weight: var(--weight-semibold);
+    text-decoration: underline;
+    text-decoration-thickness: 2px;
+    text-underline-offset: 6px;
+  }
 }
 
 .nav-cta {
+  white-space: nowrap;
   background: var(--color-accent);
   color: var(--color-on-accent);
   text-decoration: none;
@@ -81,6 +90,7 @@
 }
 
 .nav-login {
+  white-space: nowrap;
   background: color-mix(in srgb, var(--color-on-image) 15%, transparent);
   backdrop-filter: blur(10px);
   border: 1.5px solid color-mix(in srgb, var(--color-on-image) 45%, transparent);
@@ -181,6 +191,14 @@
   padding: var(--space-3) var(--space-2);
   border-bottom: 1px solid var(--color-divider);
   display: block;
+
+  &.is-current {
+    color: var(--color-accent);
+    font-weight: var(--weight-semibold);
+    text-decoration: underline;
+    text-decoration-thickness: 2px;
+    text-underline-offset: 6px;
+  }
 }
 
 .mobile-cta {
@@ -223,7 +241,7 @@
   }
 }
 
-@include bp.down(tablet) {
+@include bp.down(nav) {
   .desktop-nav {
     display: none;
   }
@@ -237,7 +255,7 @@
   }
 }
 
-@include bp.up(tablet) {
+@include bp.up(nav) {
   .mobile-menu {
     display: none;
   }

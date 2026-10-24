@@ -1,7 +1,7 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { provideRouter, Router } from '@angular/router';
 import { AuthStore } from '../../core/auth/auth-store';
 import { LoginDialogService } from '../../core/auth/login-dialog.service';
 import { authResponse } from '../../core/auth/testing/donor-fixtures';
@@ -114,6 +114,15 @@ describe('Given the site header on a phone', () => {
     expect(menu()).toBeNull();
   });
 
+  it('when the menu opens, then it lists the sections without a separate home link and the donate one as Přispět', () => {
+    openMenu();
+
+    const links = Array.from(menu()!.querySelectorAll('a') as NodeListOf<HTMLAnchorElement>).map(
+      (link) => link.textContent?.trim(),
+    );
+    expect(links).toEqual(['O nás', 'Projekty', 'Aktuality', 'Kontakt', 'Přispět']);
+  });
+
   it('when the visitor signs in from the menu, then the menu closes and the sign-in dialog opens', () => {
     openMenu();
 
@@ -157,6 +166,15 @@ describe('Given the site header on a computer', () => {
     fixture.nativeElement.remove();
   });
 
+  it('when it renders, then the logo leads home and the links name each section, the donate one as Přispět', () => {
+    const links = Array.from(
+      fixture.nativeElement.querySelectorAll('.desktop-nav a') as NodeListOf<HTMLAnchorElement>,
+    ).map((link) => link.textContent?.trim());
+
+    expect(links).toEqual(['O nás', 'Projekty', 'Aktuality', 'Kontakt', 'Přispět']);
+    expect(fixture.nativeElement.querySelector('.brand').getAttribute('href')).toBe('/#uvod');
+  });
+
   it('when the visitor signs in, then the page stays, the header offers the overview and no control is left highlighted', async () => {
     loginButton().focus();
     loginButton().click();
@@ -182,3 +200,67 @@ async function signInThroughTheDialog(fixture: ComponentFixture<SiteHeader>): Pr
   fixture.detectChanges();
   await fixture.whenStable();
 }
+
+describe('Given the site header on the pages of news and projects', () => {
+  let fixture: ComponentFixture<SiteHeader>;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [SiteHeader],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([{ path: '**', children: [] }]),
+      ],
+    }).compileComponents();
+    fixture = TestBed.createComponent(SiteHeader);
+    fixture.detectChanges();
+  });
+
+  afterEach(() => TestBed.inject(HttpTestingController).verify());
+
+  async function open(url: string): Promise<void> {
+    await TestBed.inject(Router).navigateByUrl(url);
+    fixture.detectChanges();
+    await fixture.whenStable();
+  }
+
+  function links(container: string): [string | null, string | null, string | null][] {
+    return Array.from(
+      fixture.nativeElement.querySelectorAll(`${container} a`) as NodeListOf<HTMLAnchorElement>,
+    ).map((link) => [
+      link.textContent?.trim() ?? null,
+      link.getAttribute('href'),
+      link.getAttribute('aria-current'),
+    ]);
+  }
+
+  it('when an article of the news is open, then Aktuality leads to the list and is marked as the current place', async () => {
+    await open('/aktuality/zahrada-pro-deti');
+
+    expect(links('.desktop-nav')).toContainEqual(['Aktuality', '/aktuality', 'page']);
+    expect(links('.desktop-nav')).toContainEqual(['Projekty', '/#projekty', null]);
+  });
+
+  it('when the list of projects is open, then Projekty leads to the list and is marked, also in the phone menu', async () => {
+    await open('/projekty?strana=2');
+    (fixture.nativeElement.querySelector('.mobile-menu-btn') as HTMLButtonElement).click();
+    fixture.detectChanges();
+
+    expect(links('.desktop-nav')).toContainEqual(['Projekty', '/projekty', 'page']);
+    expect(links('#mobile-menu')).toContainEqual(['Projekty', '/projekty', 'page']);
+    expect(links('#mobile-menu')).toContainEqual(['Aktuality', '/#aktuality', null]);
+  });
+
+  it('when the home page is open, then every item leads to its section and none is marked', async () => {
+    await open('/');
+
+    expect(links('.desktop-nav').map(([, href, current]) => [href, current])).toEqual([
+      ['/#o-nas', null],
+      ['/#projekty', null],
+      ['/#aktuality', null],
+      ['/#kontakt', null],
+      ['/#prispet', null],
+    ]);
+  });
+});

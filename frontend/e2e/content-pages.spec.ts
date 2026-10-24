@@ -120,7 +120,7 @@ test.describe('Given a visitor on the home page', () => {
     await page.goto('/');
 
     await expect(page.locator('#aktuality .news-card')).toHaveCount(3);
-    await expect(page.locator('#projekty app-project-card')).toHaveCount(5);
+    await expect(page.locator('#projekty app-project-card')).toHaveCount(3);
     await expect(page.getByText('Pomohli jsme Dominikovi získat nový vozík')).toBeVisible();
     await expect(page.locator('#aktuality a, #projekty a')).toHaveCount(0);
   });
@@ -176,6 +176,29 @@ test.describe('Given a visitor on the home page', () => {
       page.getByRole('heading', { level: 1, name: 'Tuhle stránku jsme nenašli' }),
     ).toBeVisible();
     await expect(page).toHaveURL('/aktuality/neznama');
+  });
+});
+
+test.describe('Given a visitor reading a news article', () => {
+  test.beforeEach(async ({ page }) => {
+    await mockDonorApi(page);
+    await publishedContent(page);
+  });
+
+  test('when they look at the header, then Aktuality is marked as the current place and leads to the list', async ({
+    page,
+  }) => {
+    await page.goto(`/aktuality/${article.slug}`);
+    const news = page.locator('.desktop-nav').getByRole('link', { name: 'Aktuality' });
+    await expect(news).toHaveAttribute('aria-current', 'page');
+
+    await news.click();
+
+    await expect(page).toHaveURL(/\/aktuality$/);
+    await expect(page.getByRole('heading', { level: 1, name: 'Aktuality' })).toBeVisible();
+    await expect(
+      page.locator('.desktop-nav').getByRole('link', { name: 'Projekty' }),
+    ).toHaveAttribute('href', '/#projekty');
   });
 });
 

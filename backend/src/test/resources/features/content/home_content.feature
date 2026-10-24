@@ -6,7 +6,7 @@ Feature: The home page reads the newest news and the published projects in one r
     And a person "Jana" is registered
     And "Jana" is an administrator
 
-  Scenario: The home content carries the three newest news articles and every published project, newest year first
+  Scenario: The home content carries the three newest news articles and the three newest published projects, newest year first
     Given "Jana" has published 4 news articles titled "Aktualita" from 2026-09-01 on
     And "Jana" creates a project:
       | title | Tomáš, 9 let |
@@ -21,6 +21,18 @@ Feature: The home page reads the newest news and the published projects in one r
       | body  | Text.          |
     And "Jana" publishes the project "dominik-7-let" on 2026-09-01
     And "Jana" creates a project:
+      | title | Anička, 5 let |
+      | year  | 2022          |
+      | perex | Perex.        |
+      | body  | Text.         |
+    And "Jana" publishes the project "anicka-5-let" on 2026-08-01
+    And "Jana" creates a project:
+      | title | Martin, 11 let |
+      | year  | 2021           |
+      | perex | Perex.         |
+      | body  | Text.          |
+    And "Jana" publishes the project "martin-11-let" on 2026-07-01
+    And "Jana" creates a project:
       | title | Eliška, 6 let |
       | year  | 2025          |
       | perex | Perex.        |
@@ -34,6 +46,7 @@ Feature: The home page reads the newest news and the published projects in one r
     And the home project titles are:
       | Dominik, 7 let |
       | Tomáš, 9 let   |
+      | Anička, 5 let  |
 
   Scenario: A news article published with a future date is left out until that day
     Given "Jana" creates a news article:

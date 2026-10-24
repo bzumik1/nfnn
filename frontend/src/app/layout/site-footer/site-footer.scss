@@ -17,7 +17,9 @@
 
 .footer-brand {
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
 
   img {
     height: 40px;
@@ -37,8 +39,15 @@
     font-size: var(--text-md);
     transition: color var(--duration-base);
 
-    &:hover {
+    &:hover,
+    &.is-current {
       color: var(--color-on-inverse);
+    }
+
+    &.is-current {
+      text-decoration: underline;
+      text-decoration-thickness: 2px;
+      text-underline-offset: 6px;
     }
   }
 }
@@ -60,7 +69,7 @@
   }
 }
 
-.footer-privacy {
+.footer-link {
   color: color-mix(in srgb, var(--color-on-inverse) 50%, transparent);
   font-size: var(--text-sm);
   text-decoration: none;
@@ -70,12 +79,10 @@
   &.is-active {
     color: var(--color-on-inverse);
   }
+}
 
-  &:focus-visible {
-    outline: 2px solid var(--color-accent);
-    outline-offset: 3px;
-    border-radius: var(--radius-xs);
-  }
+.footer-mail {
+  font-size: var(--text-md);
 }
 
 @include bp.down(tablet) {

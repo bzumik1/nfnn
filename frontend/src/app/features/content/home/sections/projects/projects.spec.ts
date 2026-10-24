@@ -20,7 +20,7 @@ describe('Given the projects section', () => {
   it('when it renders, then every child has a plain card that offers nothing to click', () => {
     const cards = Array.from(root().querySelectorAll('app-project-card article'));
 
-    expect(cards).toHaveLength(5);
+    expect(cards).toHaveLength(3);
     for (const card of cards) {
       expect(card.getAttribute('role')).toBeNull();
       expect(card.getAttribute('tabindex')).toBeNull();
@@ -33,21 +33,23 @@ describe('Given the projects section', () => {
     expect(root().querySelector('a.all-link')).toBeNull();
   });
 
+  it('when only the placeholder cards show, then the lead calls them examples rather than real stories', () => {
+    expect(root().querySelector('.lead')?.textContent?.trim()).toBe('Příklady, jak pomáháme.');
+  });
+
+  it('when only the placeholder cards show, then no card invites the visitor to read on', () => {
+    expect(root().querySelector('.card-more')).toBeNull();
+  });
+
   it('when it renders, then the photos are decorative and the card titles name the children', () => {
     const alts = Array.from(root().querySelectorAll('img')).map((image) =>
       image.getAttribute('alt'),
     );
 
-    expect(alts).toEqual(['', '', '', '', '']);
+    expect(alts).toEqual(['', '', '']);
     expect(
       Array.from(root().querySelectorAll('.card-title')).map((title) => title.textContent?.trim()),
-    ).toEqual([
-      'Dominik, 7 let',
-      'Anička, 5 let',
-      'Tomáš, 9 let',
-      'Eliška, 6 let',
-      'Martin, 11 let',
-    ]);
+    ).toEqual(['Dominik, 7 let', 'Anička, 5 let', 'Tomáš, 9 let']);
   });
 
   it('when it renders, then the photos are small WebP files that wait until they are near', () => {
@@ -57,8 +59,6 @@ describe('Given the projects section', () => {
       '/images/project-1.webp',
       '/images/project-2.webp',
       '/images/project-3.webp',
-      '/images/project-4.webp',
-      '/images/project-5.webp',
     ]);
     for (const image of images) {
       expect(image.getAttribute('loading')).toBe('lazy');
@@ -101,5 +101,11 @@ describe('Given the projects section with published projects', () => {
     const all = root.querySelector('a.all-link') as HTMLAnchorElement;
     expect(all.getAttribute('href')).toBe('/projekty');
     expect(all.textContent?.trim()).toBe('Všechny projekty');
+    expect(root.querySelector('.lead')?.textContent?.trim()).toBe(
+      'Každý projekt je skutečný příběh skutečného dítěte.',
+    );
+    const more = cards[0].querySelector('.card-more');
+    expect(more?.textContent?.trim()).toBe('Celý příběh →');
+    expect(more?.getAttribute('aria-hidden')).toBe('true');
   });
 });

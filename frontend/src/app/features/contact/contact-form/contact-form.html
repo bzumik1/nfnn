@@ -5,9 +5,7 @@
         Spojte se s námi
       </p>
       <h2 class="title" i18n="@@home.contact.title">Kontaktujte nás</h2>
-      <p class="lead" i18n="@@home.contact.lead">
-        Máte dotaz, chcete se zapojit nebo potřebujete více informací? Neváhejte nás kontaktovat.
-      </p>
+      <p class="lead" i18n="@@home.contact.lead">Máte dotaz nebo se chcete zapojit? Napište nám.</p>
       <div class="contact-info">
         <div class="info-row">
           <div class="info-icon" aria-hidden="true">
@@ -77,13 +75,26 @@
     </div>
 
     <div class="contact-form-wrap">
+      <div role="status">
+        @if (sent()) {
+          <div class="form-success">
+            <div class="form-success-icon" aria-hidden="true">✓</div>
+            <h3
+              #successTitle
+              class="form-success-title"
+              tabindex="-1"
+              i18n="@@home.contact.success.title"
+            >
+              Zpráva odeslána!
+            </h3>
+            <p class="form-success-text" i18n="@@home.contact.success.text">
+              Děkujeme za zprávu. Odpovíme vám e-mailem na {{ sentTo() }}.
+            </p>
+          </div>
+        }
+      </div>
       @if (sent()) {
-        <div class="form-success">
-          <div class="form-success-icon" aria-hidden="true">✓</div>
-          <h3 class="form-success-title" i18n="@@home.contact.success.title">Zpráva odeslána!</h3>
-          <p class="form-success-text" i18n="@@home.contact.success.text">
-            Děkujeme za váš zájem. Ozveme se co nejdříve.
-          </p>
+        <div class="form-success-actions">
           <button
             type="button"
             class="form-success-again"
@@ -103,13 +114,12 @@
             [messages]="nameMessages"
           >
             <input
+              #nameField
               appFormControl
               id="contact-name"
               name="fullName"
               type="text"
               autocomplete="name"
-              placeholder="Jan Novák"
-              i18n-placeholder="@@home.contact.form.namePlaceholder"
               [(ngModel)]="model.fullName"
               required
               maxlength="120"
@@ -127,7 +137,6 @@
               name="email"
               type="email"
               autocomplete="email"
-              placeholder="jan@example.com"
               [(ngModel)]="model.email"
               required
               email
@@ -165,8 +174,27 @@
             />
           </div>
 
-          @if (error()) {
-            <p class="ui-callout ui-callout--danger form-error" role="alert">{{ error() }}</p>
+          @switch (failure()) {
+            @case ('tooMany') {
+              <p
+                class="ui-callout ui-callout--danger form-error"
+                role="alert"
+                i18n="@@home.contact.form.error.tooMany"
+              >
+                Odeslali jste příliš mnoho zpráv. Zkuste to prosím za hodinu, nebo nám napište na
+                <a href="mailto:info&#64;nfnn.cz">info&#64;nfnn.cz</a>.
+              </p>
+            }
+            @case ('generic') {
+              <p
+                class="ui-callout ui-callout--danger form-error"
+                role="alert"
+                i18n="@@home.contact.form.error.generic"
+              >
+                Zprávu se nepodařilo odeslat. Zkuste to prosím znovu, nebo nám napište na
+                <a href="mailto:info&#64;nfnn.cz">info&#64;nfnn.cz</a>.
+              </p>
+            }
           }
 
           <button
@@ -175,7 +203,7 @@
             [disabled]="sending()"
           >
             @if (sending()) {
-              <ng-container i18n="@@home.contact.form.sending">Odesílám…</ng-container>
+              <ng-container i18n="@@home.contact.form.sending">Odesíláme…</ng-container>
             } @else {
               <ng-container i18n="@@home.contact.form.submit">Odeslat zprávu</ng-container>
             }

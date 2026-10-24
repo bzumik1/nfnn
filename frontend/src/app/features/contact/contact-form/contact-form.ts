@@ -1,7 +1,16 @@
 /// <reference types="@angular/localize" />
 
 import { HttpErrorResponse } from '@angular/common/http';
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import {
+  afterNextRender,
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  inject,
+  Injector,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { FormsModule, NgForm } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { FocusFirstInvalid } from '../../../shared/ui/form-field/focus-first-invalid';
@@ -20,10 +29,14 @@ const TOO_MANY_REQUESTS = 429;
 })
 export class ContactForm {
   private readonly api = inject(ContactApi);
+  private readonly injector = inject(Injector);
+  private readonly successTitle = viewChild<ElementRef<HTMLElement>>('successTitle');
+  private readonly nameField = viewChild<ElementRef<HTMLInputElement>>('nameField');
 
   protected readonly sent = signal(false);
+  protected readonly sentTo = signal('');
   protected readonly sending = signal(false);
-  protected readonly error = signal('');
+  protected readonly failure = signal<Failure | null>(null);
   protected model: ContactMessageRequest = emptyMessage();
 
   protected readonly nameMessages = {
@@ -42,33 +55,42 @@ export class ContactForm {
       return;
     }
     this.sending.set(true);
-    this.error.set('');
-    this.api.submit({ ...this.model }).subscribe({
+    this.failure.set(null);
+    const message = { ...this.model };
+    this.api.submit(message).subscribe({
       next: () => {
         this.sending.set(false);
+        this.sentTo.set(message.email);
         this.sent.set(true);
+        this.focusAfterRender(() => this.successTitle()?.nativeElement);
       },
       error: (failure: unknown) => {
         this.sending.set(false);
-        this.error.set(describeFailure(failure));
+        this.failure.set(classifyFailure(failure));
       },
     });
   }
 
   reset(): void {
     this.model = emptyMessage();
-    this.error.set('');
+    this.failure.set(null);
     this.sent.set(false);
+    this.focusAfterRender(() => this.nameField()?.nativeElement);
+  }
+
+  private focusAfterRender(target: () => HTMLElement | undefined): void {
+    afterNextRender(() => target()?.focus(), { injector: this.injector });
   }
 }
+
+type Failure = 'tooMany' | 'generic';
 
 function emptyMessage(): ContactMessageRequest {
   return { fullName: '', email: '', message: '', website: '' };
 }
 
-function describeFailure(failure: unknown): string {
-  if (failure instanceof HttpErrorResponse && failure.status === TOO_MANY_REQUESTS) {
-    return $localize`:@@home.contact.form.error.tooMany:Odeslali jste příliš mnoho zpráv. Zkuste to prosím za hodinu.`;
-  }
-  return $localize`:@@home.contact.form.error.generic:Zprávu se nepodařilo odeslat. Zkuste to prosím znovu, nebo nám napište e-mail.`;
+function classifyFailure(failure: unknown): Failure {
+  return failure instanceof HttpErrorResponse && failure.status === TOO_MANY_REQUESTS
+    ? 'tooMany'
+    : 'generic';
 }

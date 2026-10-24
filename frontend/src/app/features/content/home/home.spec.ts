@@ -117,7 +117,7 @@ describe('Given the home page', () => {
 
     const root = fixture.nativeElement as HTMLElement;
     expect(root.querySelectorAll('#aktuality .news-card')).toHaveLength(3);
-    expect(root.querySelectorAll('#projekty app-project-card')).toHaveLength(5);
+    expect(root.querySelectorAll('#projekty app-project-card')).toHaveLength(3);
     expect(root.querySelector('#aktuality a, #projekty a')).toBeNull();
   });
 
@@ -129,6 +129,22 @@ describe('Given the home page', () => {
 
       expectHomeRequest();
       expect(expectQrRequest().request.params.get('variableSymbol')).toBe('4242424242');
+    });
+
+    it('when the page opens, then the donate section says who pays and with which symbol', async () => {
+      donor.set(sampleDonor({ name: 'Jana Nováková', variableSymbol: '4242424242' }));
+
+      await settle();
+
+      expectHomeRequest();
+      expectQrRequest();
+      fixture.detectChanges();
+      expect(
+        (fixture.nativeElement as HTMLElement)
+          .querySelector('.before-pay')
+          ?.textContent?.replace(/\s+/g, ' ')
+          .trim(),
+      ).toBe('Platíte jako Jana Nováková, variabilní symbol 4242424242.');
     });
   });
 });

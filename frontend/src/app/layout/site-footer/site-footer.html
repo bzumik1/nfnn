@@ -7,14 +7,34 @@
           alt="Nová naděje – nadační fond"
           i18n-alt="@@layout.header.logoAlt"
         />
+        <a class="footer-link footer-mail" href="mailto:info&#64;nfnn.cz">info&#64;nfnn.cz</a>
       </div>
-      <div class="footer-links">
+      <nav
+        class="footer-links"
+        aria-label="Odkazy v patičce"
+        i18n-aria-label="@@layout.footer.navLabel"
+      >
         <a routerLink="/" fragment="uvod" i18n="@@layout.header.nav.home">Domů</a>
         <a routerLink="/" fragment="o-nas" i18n="@@layout.header.nav.about">O nás</a>
-        <a routerLink="/" fragment="projekty" i18n="@@layout.header.nav.projects">Projekty</a>
-        <a routerLink="/" fragment="aktuality" i18n="@@layout.header.nav.news">Aktuality</a>
+        <a
+          [class.is-current]="current() === 'projekty'"
+          [routerLink]="current() === 'projekty' ? '/projekty' : '/'"
+          [fragment]="current() === 'projekty' ? undefined : 'projekty'"
+          [attr.aria-current]="current() === 'projekty' ? 'page' : null"
+          i18n="@@layout.header.nav.projects"
+          >Projekty</a
+        >
+        <a
+          [class.is-current]="current() === 'aktuality'"
+          [routerLink]="current() === 'aktuality' ? '/aktuality' : '/'"
+          [fragment]="current() === 'aktuality' ? undefined : 'aktuality'"
+          [attr.aria-current]="current() === 'aktuality' ? 'page' : null"
+          i18n="@@layout.header.nav.news"
+          >Aktuality</a
+        >
         <a routerLink="/" fragment="kontakt" i18n="@@layout.header.nav.contact">Kontakt</a>
-      </div>
+        <a routerLink="/" fragment="prispet" i18n="@@layout.header.nav.donate">Přispět</a>
+      </nav>
     </div>
     <div class="footer-bottom">
       <p i18n="@@layout.footer.copyright">
@@ -24,7 +44,7 @@
         Zapsán u KS Ústí nad Labem, oddíl N, vložka 78 · IČO 27278794
       </p>
       <a
-        class="footer-privacy"
+        class="footer-link"
         routerLink="/zasady-ochrany-osobnich-udaju"
         routerLinkActive="is-active"
         ariaCurrentWhenActive="page"

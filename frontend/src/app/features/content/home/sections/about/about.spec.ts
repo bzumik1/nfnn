@@ -24,4 +24,14 @@ describe('Given the about section', () => {
     expect(image.getAttribute('width')).toBe('720');
     expect(image.getAttribute('height')).toBe('480');
   });
+
+  it('when it renders, then it opens with what the foundation does, then the work with FOD and then its founding', () => {
+    const paragraphs = Array.from(
+      (fixture.nativeElement as HTMLElement).querySelectorAll('.paragraph'),
+    ).map((paragraph) => paragraph.textContent?.trim());
+
+    expect(paragraphs[0]).toMatch(/^Nejsme velká organizace/);
+    expect(paragraphs[1]).toMatch(/^Od svého počátku úzce spolupracujeme/);
+    expect(paragraphs[2]).toMatch(/^Nová naděje – nadační fond byl zřízen/);
+  });
 });

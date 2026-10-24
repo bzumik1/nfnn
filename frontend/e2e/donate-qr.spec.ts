@@ -83,6 +83,35 @@ test.describe('Given a visitor on the home page', () => {
     expect(Buffer.concat(chunks).subarray(1, 4).toString('ascii')).toBe('PNG');
   });
 
+  test('when they Tab past the amounts, then the line before paying, the copy buttons and then the QR follow in the order they see', async ({
+    page,
+  }) => {
+    await servePaymentQr(page, []);
+    await page.goto('/');
+    await expect(page.locator('#prispet .bank')).toContainText('5544332217/2010');
+    await page.getByRole('button', { name: 'Jiná částka' }).focus();
+
+    const reached: string[] = [];
+    for (let step = 0; step < 7; step += 1) {
+      await page.keyboard.press('Tab');
+      reached.push(
+        await page.evaluate(
+          () => document.activeElement?.textContent?.replace(/\s+/g, ' ').trim() ?? '',
+        ),
+      );
+    }
+
+    expect(reached).toEqual([
+      'Založit účet',
+      'Přihlásit se',
+      'Kopírovat číslo účtu',
+      'Kopírovat částku',
+      'Kopírovat IBAN',
+      'Uložit QR kód',
+      expect.any(String),
+    ]);
+  });
+
   test.describe('on a phone', () => {
     test.use({
       viewport: { width: 390, height: 844 },

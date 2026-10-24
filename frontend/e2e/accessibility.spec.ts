@@ -62,6 +62,7 @@ async function askAboutAnOlderSymbol(page: Page): Promise<void> {
 
 async function violations(page: Page): Promise<string[]> {
   await page.evaluate(() => document.fonts.ready);
+  await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
   await page.waitForFunction(() =>
     document
       .getAnimations()

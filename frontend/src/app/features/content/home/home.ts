@@ -30,6 +30,7 @@ export class Home {
   private readonly destroyRef = inject(DestroyRef);
 
   protected readonly variableSymbol = computed(() => this.auth.donor()?.variableSymbol ?? null);
+  protected readonly donorName = computed(() => this.auth.donor()?.name ?? null);
   protected readonly content = signal<HomeResponse | null>(null);
   protected readonly news = computed(() => this.content()?.news ?? []);
   protected readonly projects = computed(() => this.content()?.projects ?? []);

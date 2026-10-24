@@ -24,7 +24,7 @@
     </section>
   }
   @case ('missing') {
-    <app-not-found />
+    <app-not-found [missing]="kind" />
   }
   @case ('ready') {
     @if (page(); as page) {
@@ -65,6 +65,9 @@
             </figure>
           }
           <app-markdown class="prose" [text]="page.body" />
+          <p class="actions-lead" i18n="@@content.detail.donateLead">
+            Chcete pomoct dalším dětem? Přispějte na jejich pomůcky.
+          </p>
           <p class="actions">
             <a class="ui-cta" routerLink="/" fragment="prispet" i18n="@@content.detail.donate"
               >Přispět</a

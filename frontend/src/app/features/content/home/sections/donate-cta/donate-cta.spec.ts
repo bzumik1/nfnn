@@ -154,10 +154,58 @@ describe('Given the donate section', () => {
     expect(button('500 Kč').getAttribute('aria-pressed')).toBe('true');
   });
 
-  it('when nobody is signed in, then a note says to sign in before paying so the gift shows in the donor overview', async () => {
+  function squashed(selector: string): string {
+    return text(selector).replace(/\s+/g, ' ').trim();
+  }
+
+  function stepOrder(): string[] {
+    const steps = ['.amount', '.before-pay', '.bank', '.qr', '.next'];
+    return Array.from(
+      fixture.nativeElement.querySelectorAll(steps.join(', ')) as NodeListOf<Element>,
+    ).map((step) => steps.find((selector) => step.matches(selector)) ?? '');
+  }
+
+  it('when it renders, then the section is introduced as Přispět with a heading about the gift and one sentence why', async () => {
     await openWithQr();
 
-    expect(text('.bank-note')).toContain('Přihlaste se před platbou');
+    expect(text('.ui-eyebrow').trim()).toBe('Přispět');
+    expect(text('h2').trim()).toBe('Přispějte na pomůcky pro děti');
+    expect(squashed('.lead')).toBe(
+      'Z darů pořizujeme zdravotní a kompenzační pomůcky a přístroje pro konkrétní děti.',
+    );
+  });
+
+  it('when it renders, then the steps follow one order: amount, the line before paying, bank details, QR and what comes next', async () => {
+    await openWithQr();
+
+    expect(stepOrder()).toEqual(['.amount', '.before-pay', '.bank', '.qr', '.next']);
+    expect(
+      Array.from(fixture.nativeElement.querySelectorAll('h3') as NodeListOf<Element>).map(
+        (heading) => heading.textContent?.trim(),
+      ),
+    ).toEqual(['Zaplaťte', 'Co bude dál']);
+  });
+
+  it('when nobody is signed in, then before the payment a line offers the receipt for the tax return with the account actions', async () => {
+    await openWithQr();
+
+    expect(squashed('.before-pay p')).toBe(
+      'Chcete potvrzení o daru pro daňové přiznání? Přihlaste se nebo si založte účet ještě před platbou: QR kód pak ponese váš variabilní symbol.',
+    );
+    expect(element('.before-pay .account-register')).not.toBeNull();
+    expect(element('.before-pay .account-sign-in')).not.toBeNull();
+  });
+
+  it('when nobody is signed in, then what comes next says how an earlier gift can still be paired and where the yearly receipt is', async () => {
+    await openWithQr();
+
+    const items = Array.from(
+      fixture.nativeElement.querySelectorAll('.next li') as NodeListOf<Element>,
+    ).map((item) => item.textContent?.replace(/\s+/g, ' ').trim());
+    expect(items).toEqual([
+      'Platili jste bez přihlášení? Po registraci si v sekci Bankovní účty přidejte svůj účet ověřovací platbou 1 Kč a dřívější dary z něj se vám přiřadí také.',
+      'S účtem dárce si po skončení roku stáhnete roční potvrzení o daru. Dar si můžete odečíst od základu daně podle zákona o daních z příjmů.',
+    ]);
   });
 
   it('when it opens, then it offers the amounts from the largest down, with another amount last', async () => {
@@ -217,9 +265,28 @@ describe('Given the donate section', () => {
 
     expect(element('.qr-code').getAttribute('aria-busy')).toBe('true');
     expect(drawnMatrixIs(matrixFor('500'))).toBe(true);
-    expect(fixture.nativeElement.querySelector('.qr-save')).toBeNull();
+    expect(element<HTMLButtonElement>('.qr-save').disabled).toBe(true);
     respond(expectQrRequest());
     expect(element('.qr-code').getAttribute('aria-busy')).toBe('false');
+    expect(element<HTMLButtonElement>('.qr-save').disabled).toBe(false);
+  });
+
+  it('when the section opens, then its status region is there and stays quiet', async () => {
+    await openWithQr();
+
+    expect(element('.qr-announcement[role="status"]').textContent?.trim()).toBe('');
+    expect(element('.qr-text').hasAttribute('aria-live')).toBe(false);
+  });
+
+  it('when the visitor picks another amount, then the status region says the QR for that amount is ready', async () => {
+    await openWithQr();
+
+    button('1 000 Kč').click();
+    await settle();
+
+    expect(element('.qr-announcement[role="status"]').textContent?.replace(/\s/g, ' ').trim()).toBe(
+      'QR platba na 1 000 Kč je připravená.',
+    );
   });
 
   it('when the visitor enters an amount that is not a whole number from 1 to 1 000 000, then nothing is asked for and a hint explains why', async () => {
@@ -377,6 +444,7 @@ describe('Given the donate section', () => {
   describe('Given a signed-in donor with a variable symbol', () => {
     it('when the section opens, then the variable symbol travels with the request and is shown with the bank account', async () => {
       fixture.componentRef.setInput('variableSymbol', '1234567890');
+      fixture.componentRef.setInput('donorName', 'Jana Nováková');
 
       await settle();
 
@@ -392,7 +460,16 @@ describe('Given the donate section', () => {
       prefetched.forEach((pending) => respond(pending));
       expect(text('.bank')).toContain('Variabilní symbol');
       expect(text('.bank')).toContain('1234567890');
-      expect(text('.bank-note')).toContain('dar uvidíte ve svém přehledu dárce');
+      const items = Array.from(
+        fixture.nativeElement.querySelectorAll('.next li') as NodeListOf<Element>,
+      ).map((item) => item.textContent?.replace(/\s+/g, ' ').trim());
+      expect(items).toEqual([
+        'Dar se ve vašem přehledu objeví do hodiny poté, co ho banka připíše. Převod z jiné banky k nám obvykle dorazí do následujícího pracovního dne.',
+        'Po skončení roku si ve svém účtu dárce stáhnete roční potvrzení o daru. Dar si můžete odečíst od základu daně podle zákona o daních z příjmů.',
+      ]);
+      expect(squashed('.before-pay')).toBe(
+        'Platíte jako Jana Nováková, variabilní symbol 1234567890.',
+      );
       const keys = Array.from(fixture.nativeElement.querySelectorAll('.bank-key')).map((key) =>
         (key as HTMLElement).textContent?.trim(),
       );

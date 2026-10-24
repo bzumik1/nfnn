@@ -16,7 +16,10 @@ test.describe('Given a visitor on the home page', () => {
     await page.locator('#contact-message').fill('Mám dotaz k projektu.');
     await page.getByRole('button', { name: 'Odeslat zprávu' }).click();
 
-    await expect(page.getByText('Zpráva odeslána!')).toBeVisible();
+    await expect(page.getByRole('status').filter({ hasText: 'Zpráva odeslána!' })).toContainText(
+      'Odpovíme vám e-mailem na jana@example.cz.',
+    );
+    await expect(page.getByRole('heading', { name: 'Zpráva odeslána!' })).toBeFocused();
     expect(posted).toEqual([
       {
         fullName: 'Jana Nováková',
@@ -40,7 +43,12 @@ test.describe('Given a visitor on the home page', () => {
     await page.locator('#contact-message').fill('Ještě jedna.');
     await page.getByRole('button', { name: 'Odeslat zprávu' }).click();
 
-    await expect(page.getByRole('alert')).toContainText('příliš mnoho zpráv');
+    const alert = page.getByRole('alert').filter({ hasText: /\S/ });
+    await expect(alert).toContainText('příliš mnoho zpráv');
+    await expect(alert.getByRole('link', { name: 'info@nfnn.cz' })).toHaveAttribute(
+      'href',
+      'mailto:info@nfnn.cz',
+    );
     await expect(page.locator('#contact-message')).toHaveValue('Ještě jedna.');
   });
 
@@ -77,10 +85,9 @@ test.describe('Given a visitor on the home page', () => {
       await page.goto('/');
 
       await expect(page.getByRole('heading', { name: 'Kontaktujte nás' })).toBeVisible();
-      await expect(page.getByRole('link', { name: 'info@nfnn.cz' })).toHaveAttribute(
-        'href',
-        'mailto:info@nfnn.cz',
-      );
+      await expect(
+        page.locator('#kontakt').getByRole('link', { name: 'info@nfnn.cz' }),
+      ).toHaveAttribute('href', 'mailto:info@nfnn.cz');
       await expect(page.getByText('Jiráskova 436, 473 01 Nový Bor')).toBeVisible();
     });
   });

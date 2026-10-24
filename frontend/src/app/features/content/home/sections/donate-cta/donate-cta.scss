@@ -9,11 +9,12 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: var(--space-20);
-  align-items: center;
+  align-items: start;
 }
 
 .donate-img-wrap {
-  position: relative;
+  position: sticky;
+  top: calc(var(--header-height) + var(--space-6));
 }
 
 .donate-img {
@@ -68,12 +69,50 @@
   margin-bottom: var(--space-9);
 }
 
+.before-pay {
+  margin-bottom: var(--space-9);
+  color: var(--color-text-muted);
+  font-size: var(--text-md);
+  line-height: var(--leading-normal);
+
+  strong {
+    color: var(--color-text);
+    font-weight: var(--weight-semibold);
+  }
+}
+
+.step-title {
+  font-family: var(--font-serif);
+  font-size: var(--text-3xl);
+  font-weight: var(--weight-bold);
+  line-height: var(--leading-snug);
+  color: var(--color-text);
+  margin-bottom: var(--space-4);
+}
+
 .bank {
   background: var(--color-surface-accent);
   border-radius: var(--radius-media);
   padding: var(--space-6) var(--space-7);
-  margin-bottom: var(--space-8);
+  margin-bottom: var(--space-6);
   border: 1px solid var(--color-border-accent);
+}
+
+.next {
+  margin-top: var(--space-9);
+}
+
+.next-list {
+  display: grid;
+  gap: var(--space-2-5);
+  padding-left: 1.25em;
+  color: var(--color-text-muted);
+  font-size: var(--text-md);
+  line-height: var(--leading-relaxed);
+
+  li::marker {
+    color: var(--color-accent);
+  }
 }
 
 .panel-label {
@@ -121,11 +160,6 @@
     transform: translateY(-1px);
   }
 
-  &:focus-visible {
-    outline: 2px solid var(--color-accent);
-    outline-offset: 2px;
-  }
-
   &.active {
     background: var(--color-accent);
     border-color: var(--color-accent);
@@ -149,7 +183,6 @@
     font-family: var(--font-sans);
     font-size: var(--text-xl);
     font-weight: var(--weight-semibold);
-    outline: none;
     transition: border-color var(--duration-base);
 
     &:focus {
@@ -195,13 +228,6 @@
   font-size: var(--text-md);
 }
 
-.bank-note {
-  margin-top: var(--space-3);
-  font-size: var(--text-sm);
-  line-height: var(--leading-normal);
-  color: var(--color-text-muted);
-}
-
 .bank-value {
   font-weight: var(--weight-bold);
   color: var(--color-text);
@@ -213,7 +239,6 @@
   display: flex;
   gap: var(--space-6);
   align-items: center;
-  margin-bottom: var(--space-6);
 }
 
 .qr-code {
@@ -372,17 +397,7 @@
     display: none;
   }
 
-  .donate-text {
-    display: flex;
-    flex-direction: column;
-  }
-
-  .bank {
-    order: 1;
-  }
-
   .qr {
-    order: 2;
     align-items: flex-start;
   }
 

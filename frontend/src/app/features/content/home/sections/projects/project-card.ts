@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, input } from '@angular/co
 import { RouterLink } from '@angular/router';
 import { mediaUrl, ProjectResponse } from '../../../projects-api';
 
-export type ProjectKey = 'dominik' | 'anicka' | 'tomas' | 'eliska' | 'martin';
+export type ProjectKey = 'dominik' | 'anicka' | 'tomas';
 
 const CARD_WIDTH = 480;
 const CARD_WIDTH_SHARP = 960;
@@ -23,8 +23,6 @@ export class ProjectCard {
       dominik: '/images/project-1.webp',
       anicka: '/images/project-2.webp',
       tomas: '/images/project-3.webp',
-      eliska: '/images/project-4.webp',
-      martin: '/images/project-5.webp',
     };
     const key = this.project();
     return key ? map[key] : '';

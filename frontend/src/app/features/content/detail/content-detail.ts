@@ -19,7 +19,7 @@ import { problemTypeEndsWith } from '../../../core/auth/api-problem';
 import { formatDonationDate } from '../../donations/donation-date';
 import { mediaUrl, NewsApi, NewsArticleResponse } from '../news-api';
 import { Markdown } from '../../../shared/ui/markdown/markdown';
-import { NotFound } from '../not-found/not-found';
+import { NOT_FOUND_TITLE, NotFound } from '../not-found/not-found';
 import { ProjectResponse, ProjectsApi } from '../projects-api';
 
 export type ContentKind = 'news' | 'project';
@@ -98,12 +98,13 @@ export class ContentDetail {
           }
         },
         error: (failure: unknown) => {
-          this.state.set(
+          const missing =
             problemTypeEndsWith(failure, 'content/news-not-found') ||
-              problemTypeEndsWith(failure, 'content/project-not-found')
-              ? 'missing'
-              : 'error',
-          );
+            problemTypeEndsWith(failure, 'content/project-not-found');
+          if (missing) {
+            this.titleService.setTitle(NOT_FOUND_TITLE);
+          }
+          this.state.set(missing ? 'missing' : 'error');
         },
       });
   }

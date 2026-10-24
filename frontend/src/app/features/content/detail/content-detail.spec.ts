@@ -140,6 +140,10 @@ describe('Given a visitor opening a news article', () => {
 
     expect(fixture.nativeElement.querySelector('app-not-found')).not.toBeNull();
     expect(text(fixture, 'h1')).toBe('Tuhle stránku jsme nenašli');
+    expect(text(fixture, '.ui-intro__lead')).toBe('Tato aktualita už na webu není.');
+    expect(TestBed.inject(Title).getTitle()).toBe(
+      'Stránka nenalezena | Nová naděje – nadační fond',
+    );
   });
 
   it('when the server fails, then an alert offers a retry that asks again', async () => {
@@ -184,6 +188,9 @@ describe('Given a visitor opening a project', () => {
       ['/#prispet', 'Přispět'],
       ['/projekty', 'Zpět na projekty'],
     ]);
+    expect(text(fixture, '.actions-lead')).toBe(
+      'Chcete pomoct dalším dětem? Přispějte na jejich pomůcky.',
+    );
   });
 
   it('when the project is unknown, then the page says it was not found', async () => {
@@ -192,5 +199,6 @@ describe('Given a visitor opening a project', () => {
     await settle(fixture);
 
     expect(fixture.nativeElement.querySelector('app-not-found')).not.toBeNull();
+    expect(text(fixture, 'app-not-found a')).toBe('Všechny projekty');
   });
 });
