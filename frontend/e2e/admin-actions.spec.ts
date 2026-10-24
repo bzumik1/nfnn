@@ -78,8 +78,8 @@ test.describe('Given an administrator on the history page', () => {
 
     await page.goto('/sprava/historie');
 
-    await expect(page).toHaveTitle('Historie správy | Správa | Nová naděje – nadační fond');
-    await expect(page.getByRole('heading', { level: 1, name: 'Historie správy' })).toBeFocused();
+    await expect(page).toHaveTitle('Historie změn | Správa | Nová naděje – nadační fond');
+    await expect(page.getByRole('heading', { level: 1, name: 'Historie změn' })).toBeFocused();
     await expect(page.locator('tbody tr')).toHaveCount(2);
     await expect(page.locator('tbody tr').first()).toContainText('22. 10. 2026 12:00');
     await expect(page.locator('tbody tr').first()).toContainText('Jana Nováková');

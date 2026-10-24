@@ -57,7 +57,7 @@ describe('Given an administrator anywhere in the administration', () => {
     );
   }
 
-  it('when the panel is shown, then it lists the overview and the sections grouped into money, people, web and operations', () => {
+  it('when the panel is shown, then it lists the overview and the sections grouped by how often they are needed', () => {
     const groups = Array.from(nav().querySelectorAll('ul')).map((list) => ({
       label: clean(
         list.hasAttribute('aria-labelledby')
@@ -75,34 +75,29 @@ describe('Given an administrator anywhere in the administration', () => {
     expect(groups).toEqual([
       { label: '', links: [['Přehled', '/sprava']] },
       {
-        label: 'Peníze',
+        label: 'Každý den',
         links: [
           ['Platby z banky', '/sprava/platby'],
-          ['Starší symboly', '/sprava/starsi-symboly'],
-          ['Měsíční přehled', '/sprava/prehledy'],
-        ],
-      },
-      {
-        label: 'Lidé',
-        links: [
           ['Dárci', '/sprava/darci'],
-          ['Správci', '/sprava/spravci'],
-        ],
-      },
-      {
-        label: 'Web',
-        links: [
           ['Aktuality', '/sprava/aktuality'],
           ['Projekty', '/sprava/projekty'],
         ],
       },
       {
-        label: 'Provoz',
+        label: 'Občas',
         links: [
+          ['Správci', '/sprava/spravci'],
+          ['Měsíční e-mail', '/sprava/prehledy'],
           ['Zálohy', '/sprava/zalohy'],
-          ['Logy a diagnostika', '/sprava/logy'],
+          ['Historie změn', '/sprava/historie'],
+        ],
+      },
+      {
+        label: 'Pro technika',
+        links: [
           ['Nastavení', '/sprava/nastaveni'],
-          ['Historie správy', '/sprava/historie'],
+          ['Logy a diagnostika', '/sprava/logy'],
+          ['Odpovědi o starších symbolech', '/sprava/starsi-symboly'],
         ],
       },
     ]);

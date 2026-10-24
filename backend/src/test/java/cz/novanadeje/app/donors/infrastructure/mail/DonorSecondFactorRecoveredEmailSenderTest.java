@@ -138,7 +138,7 @@ class DonorSecondFactorRecoveredEmailSenderTest {
 
                     na účtu správce Jana Nováková (jana@example.cz) se platbou 1 Kč z ověřeného bankovního účtu …5399/0800 vypnulo dvoufaktorové ověření, nejspíš po ztrátě telefonu. Všechna přihlášení tohoto účtu skončila a správa se z něj otevře, až se na něm ověření znovu zapne.
 
-                    Pokud o tom víte, nemusíte nic dělat; zápis je v Historii správy.
+                    Pokud o tom víte, nemusíte nic dělat; zápis je v Historii změn.
 
                     Pokud vám to nesedí, odeberte účtu roli správce na stránce Správci ve správě webu a ověřte to přímo u majitele účtu; s dotazem pište na info@nfnn.cz.
 

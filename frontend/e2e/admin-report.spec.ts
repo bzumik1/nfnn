@@ -60,8 +60,8 @@ test.describe('Given an administrator on the monthly report page', () => {
 
     await page.goto('/sprava/prehledy');
 
-    await expect(page).toHaveTitle('Měsíční přehled | Správa | Nová naděje – nadační fond');
-    await expect(page.getByRole('heading', { level: 1, name: 'Měsíční přehled' })).toBeFocused();
+    await expect(page).toHaveTitle('Měsíční e-mail | Správa | Nová naděje – nadační fond');
+    await expect(page.getByRole('heading', { level: 1, name: 'Měsíční e-mail' })).toBeFocused();
     await expect(
       page.getByText('Příští přehled za říjen 2026 odejde 01. 11. 2026 v 7:00.'),
     ).toBeVisible();

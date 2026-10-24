@@ -672,7 +672,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     await page.evaluate(() => localStorage.setItem('nfnn.donor-session', '1'));
 
     await page.goto('/sprava/prehledy');
-    await expect(page.getByRole('heading', { level: 1, name: 'Měsíční přehled' })).toBeFocused();
+    await expect(page.getByRole('heading', { level: 1, name: 'Měsíční e-mail' })).toBeFocused();
     await page.getByLabel('Příjemci').fill('pavel');
     await page.getByRole('button', { name: 'Uložit nastavení' }).click();
     await expect(page.getByLabel('Příjemci')).toHaveAttribute('aria-invalid', 'true');
@@ -835,7 +835,9 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     await page.goto('/');
     await page.evaluate(() => localStorage.setItem('nfnn.donor-session', '1'));
     await page.goto('/sprava/starsi-symboly');
-    await expect(page.getByRole('heading', { level: 1, name: 'Starší symboly' })).toBeFocused();
+    await expect(
+      page.getByRole('heading', { level: 1, name: 'Odpovědi o starších symbolech' }),
+    ).toBeFocused();
     await expect(page.locator('tbody tr')).toHaveCount(2);
 
     expect(await violations(page)).toEqual([]);
@@ -1033,7 +1035,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     await page.goto('/');
     await page.evaluate(() => localStorage.setItem('nfnn.donor-session', '1'));
     await page.goto('/sprava/historie');
-    await expect(page.getByRole('heading', { level: 1, name: 'Historie správy' })).toBeFocused();
+    await expect(page.getByRole('heading', { level: 1, name: 'Historie změn' })).toBeFocused();
     await expect(page.locator('tbody tr')).toHaveCount(2);
     await expect(page.getByRole('button', { name: 'Načíst starší' })).toBeVisible();
 

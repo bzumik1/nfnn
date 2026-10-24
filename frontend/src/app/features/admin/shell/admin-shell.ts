@@ -12,41 +12,35 @@ export const ADMIN_SECTIONS: readonly SideNavGroup[] = [
     items: [{ path: '/sprava', label: $localize`:@@admin.nav.home:Přehled`, exact: true }],
   },
   {
-    id: 'admin-nav-money',
-    label: $localize`:@@admin.nav.group.money:Peníze`,
+    id: 'admin-nav-daily',
+    label: $localize`:@@admin.nav.group.daily:Každý den`,
     items: [
       { path: '/sprava/platby', label: $localize`:@@admin.nav.payments:Platby z banky` },
-      {
-        path: '/sprava/starsi-symboly',
-        label: $localize`:@@admin.nav.symbolClaims:Starší symboly`,
-      },
-      { path: '/sprava/prehledy', label: $localize`:@@admin.nav.report:Měsíční přehled` },
-    ],
-  },
-  {
-    id: 'admin-nav-people',
-    label: $localize`:@@admin.nav.group.people:Lidé`,
-    items: [
       { path: '/sprava/darci', label: $localize`:@@admin.nav.donors:Dárci` },
-      { path: '/sprava/spravci', label: $localize`:@@admin.nav.administrators:Správci` },
-    ],
-  },
-  {
-    id: 'admin-nav-web',
-    label: $localize`:@@admin.nav.group.web:Web`,
-    items: [
       { path: '/sprava/aktuality', label: $localize`:@@admin.nav.news:Aktuality` },
       { path: '/sprava/projekty', label: $localize`:@@admin.nav.projects:Projekty` },
     ],
   },
   {
-    id: 'admin-nav-operations',
-    label: $localize`:@@admin.nav.group.operations:Provoz`,
+    id: 'admin-nav-occasional',
+    label: $localize`:@@admin.nav.group.occasional:Občas`,
     items: [
+      { path: '/sprava/spravci', label: $localize`:@@admin.nav.administrators:Správci` },
+      { path: '/sprava/prehledy', label: $localize`:@@admin.nav.report:Měsíční e-mail` },
       { path: '/sprava/zalohy', label: $localize`:@@admin.nav.backups:Zálohy` },
-      { path: '/sprava/logy', label: $localize`:@@admin.nav.logs:Logy a diagnostika` },
+      { path: '/sprava/historie', label: $localize`:@@admin.nav.actions:Historie změn` },
+    ],
+  },
+  {
+    id: 'admin-nav-technical',
+    label: $localize`:@@admin.nav.group.technical:Pro technika`,
+    items: [
       { path: '/sprava/nastaveni', label: $localize`:@@admin.nav.settings:Nastavení` },
-      { path: '/sprava/historie', label: $localize`:@@admin.nav.actions:Historie správy` },
+      { path: '/sprava/logy', label: $localize`:@@admin.nav.logs:Logy a diagnostika` },
+      {
+        path: '/sprava/starsi-symboly',
+        label: $localize`:@@admin.nav.symbolClaims:Odpovědi o starších symbolech`,
+      },
     ],
   },
 ];
