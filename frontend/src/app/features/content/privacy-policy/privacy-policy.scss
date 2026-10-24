@@ -84,12 +84,6 @@
     &:hover {
       text-decoration-thickness: 2.5px;
     }
-
-    &:focus-visible {
-      outline: 2px solid var(--color-accent);
-      outline-offset: 2px;
-      border-radius: var(--radius-xs);
-    }
   }
 }
 

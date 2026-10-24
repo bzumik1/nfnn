@@ -89,6 +89,7 @@ export class DonateCta {
   protected readonly customAmount = signal<number | null>(DEFAULT_AMOUNT);
   protected readonly customAmountSeed = signal(DEFAULT_AMOUNT);
   private readonly customAmountLeft = signal(false);
+  private readonly amountChanged = signal(false);
   private readonly attempt = signal(0);
   private readonly qrCode = viewChild(QrCode);
   private readonly fetched = new Map<string, Observable<PaymentQrResponse>>();
@@ -134,6 +135,11 @@ export class DonateCta {
 
   protected readonly saving = signal(false);
 
+  protected readonly announcedAmount = computed(() => {
+    const amount = this.amount();
+    return this.amountChanged() && this.qr() && amount !== null ? amount : null;
+  });
+
   protected readonly bankAccount = linkedSignal<QrState, BankAccountResponse | null>({
     source: this.state,
     computation: (state, previous) =>
@@ -146,6 +152,7 @@ export class DonateCta {
   });
 
   choosePreset(amount: number): void {
+    this.amountChanged.set(true);
     this.customChosen.set(false);
     this.presetAmount.set(amount);
   }
@@ -161,6 +168,7 @@ export class DonateCta {
   }
 
   enterCustomAmount(event: Event): void {
+    this.amountChanged.set(true);
     this.customAmount.set(wholeCrowns((event.target as HTMLInputElement).value));
   }
 

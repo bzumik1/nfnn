@@ -52,6 +52,7 @@
 }
 
 .nav-link {
+  white-space: nowrap;
   color: var(--color-on-image);
   text-decoration: none;
   font-size: var(--text-md);
@@ -69,6 +70,7 @@
 }
 
 .nav-cta {
+  white-space: nowrap;
   background: var(--color-accent);
   color: var(--color-on-accent);
   text-decoration: none;
@@ -81,6 +83,7 @@
 }
 
 .nav-login {
+  white-space: nowrap;
   background: color-mix(in srgb, var(--color-on-image) 15%, transparent);
   backdrop-filter: blur(10px);
   border: 1.5px solid color-mix(in srgb, var(--color-on-image) 45%, transparent);
@@ -223,7 +226,7 @@
   }
 }
 
-@include bp.down(tablet) {
+@include bp.down(nav) {
   .desktop-nav {
     display: none;
   }
@@ -237,7 +240,7 @@
   }
 }
 
-@include bp.up(tablet) {
+@include bp.up(nav) {
   .mobile-menu {
     display: none;
   }

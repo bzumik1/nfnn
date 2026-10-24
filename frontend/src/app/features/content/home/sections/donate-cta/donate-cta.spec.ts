@@ -154,10 +154,25 @@ describe('Given the donate section', () => {
     expect(button('500 Kč').getAttribute('aria-pressed')).toBe('true');
   });
 
+  it('when it renders, then the section is introduced as Přispět with a heading about the gift', async () => {
+    await openWithQr();
+
+    expect(text('.ui-eyebrow').trim()).toBe('Přispět');
+    expect(text('h2').trim()).toBe('Přispějte na pomůcky pro děti');
+  });
+
   it('when nobody is signed in, then a note says to sign in before paying so the gift shows in the donor overview', async () => {
     await openWithQr();
 
     expect(text('.bank-note')).toContain('Přihlaste se před platbou');
+  });
+
+  it('when nobody is signed in, then a note says how a gift already paid without signing in can still be paired', async () => {
+    await openWithQr();
+
+    expect(text('.bank-note-later').replace(/\s+/g, ' ').trim()).toBe(
+      'Platili jste bez přihlášení? Po registraci pošlete další dar se svým variabilním symbolem ze stejného účtu a dřívější dary z něj se vám přiřadí také.',
+    );
   });
 
   it('when it opens, then it offers the amounts from the largest down, with another amount last', async () => {
@@ -217,9 +232,28 @@ describe('Given the donate section', () => {
 
     expect(element('.qr-code').getAttribute('aria-busy')).toBe('true');
     expect(drawnMatrixIs(matrixFor('500'))).toBe(true);
-    expect(fixture.nativeElement.querySelector('.qr-save')).toBeNull();
+    expect(element<HTMLButtonElement>('.qr-save').disabled).toBe(true);
     respond(expectQrRequest());
     expect(element('.qr-code').getAttribute('aria-busy')).toBe('false');
+    expect(element<HTMLButtonElement>('.qr-save').disabled).toBe(false);
+  });
+
+  it('when the section opens, then its status region is there and stays quiet', async () => {
+    await openWithQr();
+
+    expect(element('.qr-announcement[role="status"]').textContent?.trim()).toBe('');
+    expect(element('.qr-text').hasAttribute('aria-live')).toBe(false);
+  });
+
+  it('when the visitor picks another amount, then the status region says the QR for that amount is ready', async () => {
+    await openWithQr();
+
+    button('1 000 Kč').click();
+    await settle();
+
+    expect(element('.qr-announcement[role="status"]').textContent?.replace(/\s/g, ' ').trim()).toBe(
+      'QR platba na 1 000 Kč je připravená.',
+    );
   });
 
   it('when the visitor enters an amount that is not a whole number from 1 to 1 000 000, then nothing is asked for and a hint explains why', async () => {
@@ -392,7 +426,9 @@ describe('Given the donate section', () => {
       prefetched.forEach((pending) => respond(pending));
       expect(text('.bank')).toContain('Variabilní symbol');
       expect(text('.bank')).toContain('1234567890');
-      expect(text('.bank-note')).toContain('dar uvidíte ve svém přehledu dárce');
+      expect(text('.bank-note').replace(/\s+/g, ' ').trim()).toBe(
+        'Dar se ve vašem přehledu objeví do hodiny poté, co ho banka připíše (převod z jiné banky obvykle trvá 1 pracovní den).',
+      );
       const keys = Array.from(fixture.nativeElement.querySelectorAll('.bank-key')).map((key) =>
         (key as HTMLElement).textContent?.trim(),
       );

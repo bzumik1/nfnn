@@ -114,6 +114,15 @@ describe('Given the site header on a phone', () => {
     expect(menu()).toBeNull();
   });
 
+  it('when the menu opens, then it lists the sections without a separate home link and the donate one as Přispět', () => {
+    openMenu();
+
+    const links = Array.from(menu()!.querySelectorAll('a') as NodeListOf<HTMLAnchorElement>).map(
+      (link) => link.textContent?.trim(),
+    );
+    expect(links).toEqual(['O nás', 'Projekty', 'Aktuality', 'Kontakt', 'Přispět']);
+  });
+
   it('when the visitor signs in from the menu, then the menu closes and the sign-in dialog opens', () => {
     openMenu();
 
@@ -155,6 +164,15 @@ describe('Given the site header on a computer', () => {
   afterEach(() => {
     TestBed.inject(HttpTestingController).verify();
     fixture.nativeElement.remove();
+  });
+
+  it('when it renders, then the logo leads home and the links name each section, the donate one as Přispět', () => {
+    const links = Array.from(
+      fixture.nativeElement.querySelectorAll('.desktop-nav a') as NodeListOf<HTMLAnchorElement>,
+    ).map((link) => link.textContent?.trim());
+
+    expect(links).toEqual(['O nás', 'Projekty', 'Aktuality', 'Kontakt', 'Přispět']);
+    expect(fixture.nativeElement.querySelector('.brand').getAttribute('href')).toBe('/#uvod');
   });
 
   it('when the visitor signs in, then the page stays, the header offers the overview and no control is left highlighted', async () => {

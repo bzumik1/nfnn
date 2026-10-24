@@ -16,7 +16,6 @@
     </a>
 
     <div class="desktop-nav">
-      <a class="nav-link" routerLink="/" fragment="uvod" i18n="@@layout.header.nav.home">Domů</a>
       <a class="nav-link" routerLink="/" fragment="o-nas" i18n="@@layout.header.nav.about">O nás</a>
       <a class="nav-link" routerLink="/" fragment="projekty" i18n="@@layout.header.nav.projects"
         >Projekty</a
@@ -28,7 +27,7 @@
         >Kontakt</a
       >
       <a class="nav-cta" routerLink="/" fragment="prispet" i18n="@@layout.header.nav.donate"
-        >Finanční příspěvek</a
+        >Přispět</a
       >
       @if (auth.signedIn()) {
         <a class="nav-login" routerLink="/darce/prehled" i18n="@@layout.header.nav.portal"
@@ -68,14 +67,6 @@
     <a
       class="mobile-link"
       routerLink="/"
-      fragment="uvod"
-      (click)="closeMenu()"
-      i18n="@@layout.header.nav.home"
-      >Domů</a
-    >
-    <a
-      class="mobile-link"
-      routerLink="/"
       fragment="o-nas"
       (click)="closeMenu()"
       i18n="@@layout.header.nav.about"
@@ -111,7 +102,7 @@
       fragment="prispet"
       (click)="closeMenu()"
       i18n="@@layout.header.nav.donate"
-      >Finanční příspěvek</a
+      >Přispět</a
     >
     @if (auth.signedIn()) {
       <a class="mobile-login" routerLink="/darce/prehled" (click)="closeMenu()">

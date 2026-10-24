@@ -25,4 +25,11 @@ describe('Given the hero', () => {
     expect(image.getAttribute('fetchpriority')).toBe('high');
     expect(image.getAttribute('loading')).toBeNull();
   });
+
+  it('when it renders, then its main action says Přispět and leads to the donate section', () => {
+    const action = (fixture.nativeElement as HTMLElement).querySelector('.hero-btns a')!;
+
+    expect(action.textContent?.trim()).toBe('Přispět');
+    expect(action.getAttribute('href')).toBe('/#prispet');
+  });
 });

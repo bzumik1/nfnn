@@ -60,7 +60,7 @@
   }
 }
 
-.footer-privacy {
+.footer-link {
   color: color-mix(in srgb, var(--color-on-inverse) 50%, transparent);
   font-size: var(--text-sm);
   text-decoration: none;
@@ -69,12 +69,6 @@
   &:hover,
   &.is-active {
     color: var(--color-on-inverse);
-  }
-
-  &:focus-visible {
-    outline: 2px solid var(--color-accent);
-    outline-offset: 3px;
-    border-radius: var(--radius-xs);
   }
 }
 

@@ -8,13 +8,18 @@
           i18n-alt="@@layout.header.logoAlt"
         />
       </div>
-      <div class="footer-links">
+      <nav
+        class="footer-links"
+        aria-label="Odkazy v patičce"
+        i18n-aria-label="@@layout.footer.navLabel"
+      >
         <a routerLink="/" fragment="uvod" i18n="@@layout.header.nav.home">Domů</a>
         <a routerLink="/" fragment="o-nas" i18n="@@layout.header.nav.about">O nás</a>
         <a routerLink="/" fragment="projekty" i18n="@@layout.header.nav.projects">Projekty</a>
         <a routerLink="/" fragment="aktuality" i18n="@@layout.header.nav.news">Aktuality</a>
         <a routerLink="/" fragment="kontakt" i18n="@@layout.header.nav.contact">Kontakt</a>
-      </div>
+        <a routerLink="/" fragment="prispet" i18n="@@layout.header.nav.donate">Přispět</a>
+      </nav>
     </div>
     <div class="footer-bottom">
       <p i18n="@@layout.footer.copyright">
@@ -23,8 +28,9 @@
       <p i18n="@@layout.footer.registry">
         Zapsán u KS Ústí nad Labem, oddíl N, vložka 78 · IČO 27278794
       </p>
+      <a class="footer-link" href="mailto:info&#64;nfnn.cz">info&#64;nfnn.cz</a>
       <a
-        class="footer-privacy"
+        class="footer-link"
         routerLink="/zasady-ochrany-osobnich-udaju"
         routerLinkActive="is-active"
         ariaCurrentWhenActive="page"

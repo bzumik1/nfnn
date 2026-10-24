@@ -20,13 +20,12 @@
     </div>
 
     <div class="donate-text">
-      <p class="ui-eyebrow" i18n="@@home.donate.eyebrow">Podpora dětí</p>
-      <h2 class="title" i18n="@@home.donate.title">
-        Zaujalo vás naše poslání a rádi byste pomáhali s námi?
-      </h2>
+      <p class="ui-eyebrow" i18n="@@home.donate.eyebrow">Přispět</p>
+      <h2 class="title" i18n="@@home.donate.title">Přispějte na pomůcky pro děti</h2>
       <p class="lead" i18n="@@home.donate.lead">
-        Stačí zvolit částku a zaplatit QR kódem nebo převodem na náš účet. Rázem se budete podílet
-        na našich projektech. Každý příspěvek je plně transparentní a pomáhá přímo konkrétním dětem.
+        Zaujalo vás naše poslání a rádi byste pomáhali s námi? Stačí zvolit částku a zaplatit QR
+        kódem nebo převodem na náš účet. Rázem se budete podílet na našich projektech. Každý
+        příspěvek je plně transparentní a pomáhá přímo konkrétním dětem.
       </p>
 
       <div class="amount" role="group" aria-labelledby="donate-amount-label">
@@ -114,14 +113,14 @@
             </div>
           }
         </div>
-        <div class="qr-text" aria-live="polite">
+        <div class="qr-text">
           <p class="qr-title" i18n="@@home.donate.qr.title">Naskenujte a přispějte</p>
           <p class="qr-desc" i18n="@@home.donate.qr.desc">
             Načtěte QR kód mobilní bankovní aplikací pro okamžitou platbu přímo na účet nadačního
             fondu. Na telefonu si ho uložte a v bankovní aplikaci otevřete z galerie.
           </p>
-          @if (qr()) {
-            <button type="button" class="qr-save" [disabled]="saving()" (click)="saveQr()">
+          @if (shownQr()) {
+            <button type="button" class="qr-save" [disabled]="saving() || !qr()" (click)="saveQr()">
               @if (saving()) {
                 <ng-container i18n="@@home.donate.qr.saving">Připravujeme obrázek…</ng-container>
               } @else {
@@ -145,6 +144,13 @@
             </div>
           }
         </div>
+        <p class="visually-hidden qr-announcement" role="status">
+          @if (announcedAmount(); as announced) {
+            <span i18n="@@home.donate.qr.ready"
+              >QR platba na {{ crowns(announced) }}&nbsp;Kč je připravená.</span
+            >
+          }
+        </p>
       </div>
 
       @if (bankAccount(); as account) {
@@ -208,7 +214,8 @@
           </div>
           @if (variableSymbol()) {
             <p class="bank-note" i18n="@@home.donate.bank.noteSignedIn">
-              Jakmile banka platbu připíše, dar uvidíte ve svém přehledu dárce.
+              Dar se ve vašem přehledu objeví do hodiny poté, co ho banka připíše (převod z jiné
+              banky obvykle trvá 1 pracovní den).
             </p>
           } @else {
             <p class="bank-note" i18n="@@home.donate.bank.noteAnonymous">
@@ -233,6 +240,10 @@
                 Přihlásit se
               </button>
             </div>
+            <p class="bank-note bank-note-later" i18n="@@home.donate.bank.noteLater">
+              Platili jste bez přihlášení? Po registraci pošlete další dar se svým variabilním
+              symbolem ze stejného účtu a dřívější dary z něj se vám přiřadí také.
+            </p>
           }
         </div>
       }
