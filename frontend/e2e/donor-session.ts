@@ -15,6 +15,7 @@ export const donor = {
   registeredAt: '2026-10-17T10:00:00Z',
   hasPassword: true,
   secondFactor: { enabled: false, neededForAdministration: false },
+  pendingEmailChange: null as { newEmail: string; expiresAt: string } | null,
 };
 
 export const administrator = {

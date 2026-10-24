@@ -4,8 +4,7 @@ import { formatMinorUnits } from '../../../donations/donation-amount';
 import { DonationsPending } from '../donations-pending/donations-pending';
 import { DonorDonations } from '../donor-donations';
 import { PageTitle } from '../page-title/page-title';
-
-type YearReceipt = 'available' | 'after-year-end' | 'not-issued';
+import { YearReceipt, yearReceipt } from '../yearly-receipt';
 
 interface YearRow {
   readonly year: number;
@@ -31,12 +30,7 @@ export class DonorReceipts {
     }
     return summary.byYear.map((entry) => ({
       ...entry,
-      receipt:
-        entry.year < summary.receiptsAvailableFrom
-          ? 'not-issued'
-          : entry.year > summary.yearlyReceiptsAvailableThrough
-            ? 'after-year-end'
-            : 'available',
+      receipt: yearReceipt(entry.year, summary),
     }));
   });
 

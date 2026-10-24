@@ -2,14 +2,8 @@
 
 <app-profile-card (sessionEnded)="donations.sendToSignIn()" />
 
-<app-account-card
-  [passkeyCount]="passkeyCount()"
-  (sessionEnded)="donations.sendToSignIn()"
-  (createPasskey)="passkeys.openForm()"
-/>
+<app-account-card (sessionEnded)="donations.sendToSignIn()" />
 
-<app-passkeys-card
-  #passkeys
-  (sessionEnded)="donations.sendToSignIn()"
-  (countChanged)="passkeyCount.set($event)"
-/>
+@if (isAdmin()) {
+  <app-connected-apps-card (sessionEnded)="donations.sendToSignIn()" />
+}

@@ -226,7 +226,9 @@ test.describe('Given an administrator with Claude connected', () => {
     await connections.getByRole('button', { name: 'Odpojit' }).click();
 
     await expect(connections.locator('.connection')).toHaveCount(0);
-    await expect(page.locator('.account-status')).toContainText('Aplikace claude.ai je odpojená');
+    await expect(page.locator('.connections-status')).toContainText(
+      'Aplikace claude.ai je odpojená',
+    );
     expect(deleted).toEqual([`/api/donors/me/connections/${claudeConnection.id}`]);
   });
 });
