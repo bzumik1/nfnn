@@ -87,8 +87,8 @@ describe('Given an administrator on a donor card', () => {
     return (section(title).textContent ?? '').replace(/\s+/g, ' ').trim();
   }
 
-  function accountFacts(): string {
-    return Array.from(section('Účet dárce').querySelectorAll('dl > div'))
+  function facts(title: string): string {
+    return Array.from(section(title).querySelectorAll('dl > div'))
       .map((row) =>
         Array.from(row.children)
           .map((cell) => (cell.textContent ?? '').replace(/\s+/g, ' ').trim())
@@ -113,6 +113,10 @@ describe('Given an administrator on a donor card', () => {
     return found;
   }
 
+  function eraseDialog(): HTMLDialogElement | null {
+    return fixture.nativeElement.querySelector('dialog');
+  }
+
   async function settle(): Promise<void> {
     fixture.detectChanges();
     await fixture.whenStable();
@@ -134,7 +138,7 @@ describe('Given an administrator on a donor card', () => {
     await loaded(donorAccount({ administrator: true, secondFactorEnabled: true, passkeys: 2 }));
 
     expect(text('h1')).toBe('Jana Nováková');
-    const account = accountFacts();
+    const account = facts('Údaje');
     expect(account).toContain('Typ Osoba');
     expect(account).toContain('E-mail jana@example.cz ověřen');
     expect(account).toContain('Adresa Dlouhá 12, 400 01 Ústí nad Labem');
@@ -142,48 +146,133 @@ describe('Given an administrator on a donor card', () => {
     expect(account).toContain('Jazyk čeština');
     expect(account).toContain('Registrace 17. 10. 2026 10:00');
     expect(account).toContain('Role správce');
-    expect(account).toContain('Dvoufaktorové ověření zapnuté');
-    expect(account).toContain('Přístupové klíče 2');
-    expect(button(section('Účet dárce'), 'Vypnout dvoufaktorové ověření')).toBeTruthy();
-    expect(button(section('Účet dárce'), 'Odebrat přístupové klíče')).toBeTruthy();
+    const signIn = facts('Přihlášení');
+    expect(signIn).toContain('Dvoufaktorové ověření zapnuté');
+    expect(signIn).toContain('Přístupové klíče 2');
+    expect(buttonNames(section('Přihlášení'))).toEqual([
+      'Vypnout dvoufaktorové ověření',
+      'Odebrat přístupové klíče',
+    ]);
   });
 
-  it('when the donor is a plain donor, then the account card offers the erasure with its hint', async () => {
+  it('when both parts arrive, then a summary on top shows the symbol to copy, the e-mail, the gifts and the badges', async () => {
+    await loaded(donorAccount({ administrator: true, secondFactorEnabled: true }));
+
+    const summary = fixture.nativeElement.querySelector('.donor-summary') as HTMLElement;
+    expect(summary.getAttribute('aria-label')).toBe('Shrnutí dárce');
+    const rows = Array.from(summary.querySelectorAll('dl > div')).map((row) =>
+      Array.from(row.children)
+        .map((cell) => (cell.textContent ?? '').replace(/\s+/g, ' ').trim())
+        .join(' '),
+    );
+    expect(rows).toEqual([
+      'VS 4821937560 Kopírovat variabilní symbol',
+      'E-mail jana@example.cz ověřen',
+      'Dary 2 dary za 800 Kč',
+    ]);
+    expect(texts('.donor-summary .badges .tag')).toEqual(['Správce', '2FA']);
+    expect(text('.donor-summary app-copy-button button')).toBe('Kopírovat variabilní symbol');
+  });
+
+  it('when the card opens, then a list of links leads to each part and moves the focus there', async () => {
     await loaded();
 
-    expect(button(section('Účet dárce'), 'Vymazat osobní údaje')).toBeTruthy();
-    expect(sectionText('Účet dárce')).toContain('Pro dárce, který požádal o výmaz podle GDPR.');
+    const nav = fixture.nativeElement.querySelector('nav.card-nav') as HTMLElement;
+    expect(nav.getAttribute('aria-label')).toBe('Části karty dárce');
+    const links = Array.from(nav.querySelectorAll('a')) as HTMLAnchorElement[];
+    expect(links.map((link) => link.textContent?.trim())).toEqual([
+      'Údaje',
+      'Přihlášení',
+      'Bankovní účty',
+      'Dary',
+      'Potvrzení',
+    ]);
+    expect(links.map((link) => link.getAttribute('href'))).toEqual([
+      `/sprava/darci/${DONOR_ID}#udaje`,
+      `/sprava/darci/${DONOR_ID}#prihlaseni`,
+      `/sprava/darci/${DONOR_ID}#bankovni-ucty`,
+      `/sprava/darci/${DONOR_ID}#dary`,
+      `/sprava/darci/${DONOR_ID}#potvrzeni`,
+    ]);
+
+    links[3].click();
+    await settle();
+
+    expect(document.activeElement).toBe(section('Dary'));
+    expect(section('Dary').id).toBe('dary');
+    expect(section('Dary').getAttribute('tabindex')).toBe('-1');
+  });
+
+  it('when the donor is a plain donor, then the erasure card at the end offers the erasure with its hint', async () => {
+    await loaded();
+
+    const cards = texts('section.ui-card > h2');
+    expect(cards[cards.length - 1]).toBe('Výmaz osobních údajů (GDPR)');
+    expect(buttonNames(section('Výmaz osobních údajů (GDPR)'))).toEqual(['Vymazat osobní údaje']);
+    expect(sectionText('Výmaz osobních údajů (GDPR)')).toContain(
+      'Pro dárce, který požádal o výmaz podle GDPR.',
+    );
     expect(fixture.nativeElement.querySelector('.admin-erased')).toBeNull();
+    expect(eraseDialog()).toBeNull();
   });
 
   it('when the donor is an administrator, then the card explains the role has to go first and offers no erasure', async () => {
     await loaded(donorAccount({ administrator: true }));
 
-    expect(sectionText('Účet dárce')).toContain(
+    expect(sectionText('Výmaz osobních údajů (GDPR)')).toContain(
       'Správci nejde vymazat osobní údaje. Nejdřív mu odeberte roli správce na stránce Správci.',
     );
-    expect(section('Účet dárce').querySelectorAll('button')).toHaveLength(0);
+    expect(section('Výmaz osobních údajů (GDPR)').querySelectorAll('button')).toHaveLength(0);
+  });
+
+  it('when the erasure is opened, then a dialog names the donor, says what goes and what stays and keeps the button off until the check', async () => {
+    await loaded();
+
+    button(section('Výmaz osobních údajů (GDPR)'), 'Vymazat osobní údaje').click();
+    await settle();
+
+    const dialog = eraseDialog() as HTMLDialogElement;
+    expect(text('dialog h2')).toBe('Vymazat osobní údaje: Jana Nováková');
+    const dialogText = (dialog.textContent ?? '').replace(/\s+/g, ' ');
+    expect(dialogText).toContain('Smažeme');
+    expect(dialogText).toContain('jméno, adresu, e-mail a heslo');
+    expect(dialogText).toContain('Zůstane');
+    expect(dialogText).toContain('dary a vydaná potvrzení, bez jména');
+    expect(dialogText).toContain('Dárce dostane na dosavadní e-mail potvrzení o výmazu.');
+    expect(dialogText).toContain('Dárce o výmaz požádal a ověřil(a) jsem, že jde o majitele účtu');
+    expect(document.activeElement).toBe(button(dialog, 'Zrušit'));
+    expect(button(dialog, 'Vymazat osobní údaje').disabled).toBe(true);
+
+    button(dialog, 'Zrušit').click();
+    await settle();
+    expect(eraseDialog()).toBeNull();
+    http.expectNone(ACCOUNT_URL);
   });
 
   it('when the personal data are erased after the confirmation, then the request is a DELETE, both parts reload and the page shows the erased state', async () => {
     await loaded(donorAccount({ secondFactorEnabled: true }));
 
-    button(section('Účet dárce'), 'Vymazat osobní údaje').click();
+    button(section('Výmaz osobních údajů (GDPR)'), 'Vymazat osobní údaje').click();
+    await settle();
+    const check = eraseDialog()?.querySelector('input[type="checkbox"]') as HTMLInputElement;
+    check.click();
     fixture.detectChanges();
-    expect(sectionText('Účet dárce')).toContain(
-      'Nevratný krok: jméno, adresu, e-mail a heslo nahradíme zástupnými údaji, smažeme bankovní účty i odpovědi o starších symbolech a ukončíme všechna přihlášení. Účet už nepůjde použít. Dary a vydaná potvrzení zůstanou bez jména; dárce dostane e-mail. Vymazat?',
-    );
-    button(section('Účet dárce'), 'Ano, vymazat').click();
+    button(eraseDialog() as HTMLElement, 'Vymazat osobní údaje').click();
     fixture.detectChanges();
 
     const request = http.expectOne(ACCOUNT_URL);
     expect(request.request.method).toBe('DELETE');
     request.flush(null, { status: 204, statusText: 'No Content' });
-    fixture.detectChanges();
+    await settle();
 
+    expect(eraseDialog()).toBeNull();
+    const notice = section('Výmaz osobních údajů (GDPR)').querySelector(
+      'app-live-notice',
+    ) as HTMLElement;
     expect(text('.ui-notice--status')).toBe(
       'Osobní údaje dárce jsme vymazali a na jeho dosavadní e-mail poslali potvrzení. Účet už nejde použít; dary a vydaná potvrzení zůstávají bez jména.',
     );
+    expect(document.activeElement).toBe(notice);
     const erased = donorAccount({
       name: 'Vymazaný dárce',
       email: 'erased-01a18e56-bdb0-775a-bd0a-a60756831369@erased.invalid',
@@ -204,10 +293,15 @@ describe('Given an administrator on a donor card', () => {
     expect(text('.admin-erased')).toBe(
       'Osobní údaje tohoto dárce jsme vymazali 23. 10. 2026 11:00. Účet už nejde použít; dary a vydaná potvrzení zůstávají kvůli účetnictví, bez jména.',
     );
-    expect(accountFacts()).toContain('E-mail vymazán |');
-    expect(accountFacts()).toContain('Adresa vymazána');
-    expect(accountFacts()).not.toContain('erased.invalid');
-    expect(section('Účet dárce').querySelectorAll('button')).toHaveLength(0);
+    expect(facts('Údaje')).toContain('E-mail vymazán |');
+    expect(facts('Údaje')).toContain('Adresa vymazána');
+    expect(facts('Údaje')).not.toContain('erased.invalid');
+    expect(section('Přihlášení').querySelectorAll('button')).toHaveLength(0);
+    expect(section('Výmaz osobních údajů (GDPR)').querySelectorAll('button')).toHaveLength(0);
+    expect(sectionText('Výmaz osobních údajů (GDPR)')).toContain(
+      'Osobní údaje tohoto dárce jsou vymazané.',
+    );
+    expect(document.activeElement).toBe(notice);
     expect(sectionText('Bankovní účty')).toContain(
       'Bankovní účty jsme s osobními údaji dárce smazali; další platby se mu už nepřiřadí.',
     );
@@ -215,12 +309,14 @@ describe('Given an administrator on a donor card', () => {
     expect(sectionText('Vydaná potvrzení')).toContain('2026-000001');
   });
 
-  it('when the erasure is refused, then the alert shows the backend title and detail and the button comes back', async () => {
+  it('when the erasure is refused, then the dialog stays open with the backend title and detail', async () => {
     await loaded();
 
-    button(section('Účet dárce'), 'Vymazat osobní údaje').click();
+    button(section('Výmaz osobních údajů (GDPR)'), 'Vymazat osobní údaje').click();
+    await settle();
+    (eraseDialog()?.querySelector('input[type="checkbox"]') as HTMLInputElement).click();
     fixture.detectChanges();
-    button(section('Účet dárce'), 'Ano, vymazat').click();
+    button(eraseDialog() as HTMLElement, 'Vymazat osobní údaje').click();
     fixture.detectChanges();
     const refusal = problem(
       409,
@@ -229,12 +325,12 @@ describe('Given an administrator on a donor card', () => {
       'Osobní údaje tohoto dárce byly vymazány dřív.',
     );
     http.expectOne(ACCOUNT_URL).flush(refusal.body, refusal.options);
-    fixture.detectChanges();
+    await settle();
 
-    expect(text('.ui-notice--alert')).toBe(
+    expect(text('dialog [role="alert"]')).toBe(
       'Dárce už je vymazaný. Osobní údaje tohoto dárce byly vymazány dřív.',
     );
-    expect(button(section('Účet dárce'), 'Vymazat osobní údaje')).toBeTruthy();
+    expect(button(eraseDialog() as HTMLElement, 'Vymazat osobní údaje').disabled).toBe(false);
   });
 
   it('when the donor is a company without the second factor, then the card names the company and offers no reset', async () => {
@@ -247,12 +343,13 @@ describe('Given an administrator on a donor card', () => {
       }),
     );
 
-    const account = accountFacts();
+    const account = facts('Údaje');
     expect(account).toContain('Typ Firma · IČO 45274649');
     expect(account).toContain('neověřen');
     expect(account).toContain('Role dárce');
-    expect(account).toContain('Dvoufaktorové ověření vypnuté');
-    expect(buttonNames(section('Účet dárce'))).toEqual(['Vymazat osobní údaje']);
+    expect(facts('Přihlášení')).toContain('Dvoufaktorové ověření vypnuté');
+    expect(buttonNames(section('Přihlášení'))).toEqual([]);
+    expect(texts('.donor-summary .badges .tag')).toEqual([]);
   });
 
   it('when the donations part arrives, then the bank accounts, donations and receipts cards list it', async () => {
@@ -329,10 +426,10 @@ describe('Given an administrator on a donor card', () => {
   it('when the second factor is turned off after the confirmation, then the account reloads and the status says what happened', async () => {
     await loaded(donorAccount({ secondFactorEnabled: true }));
 
-    button(section('Účet dárce'), 'Vypnout dvoufaktorové ověření').click();
+    button(section('Přihlášení'), 'Vypnout dvoufaktorové ověření').click();
     fixture.detectChanges();
-    expect(sectionText('Účet dárce')).toContain('Dárce se pak přihlásí jen heslem');
-    button(section('Účet dárce'), 'Ano, vypnout').click();
+    expect(sectionText('Přihlášení')).toContain('Dárce se pak přihlásí jen heslem');
+    button(section('Přihlášení'), 'Ano, vypnout').click();
     fixture.detectChanges();
 
     const request = http.expectOne(`/api/admin/donors/${DONOR_ID}/second-factor/reset`);
@@ -340,22 +437,25 @@ describe('Given an administrator on a donor card', () => {
     request.flush(null, { status: 204, statusText: 'No Content' });
     fixture.detectChanges();
 
-    expect(text('.ui-notice--status')).toBe(
+    expect(
+      (section('Přihlášení').querySelector('.ui-notice--status')?.textContent ?? '').trim(),
+    ).toBe(
       'Dvoufaktorové ověření u Jana Nováková je vypnuté a všechna přihlášení jsme ukončili. Dárce dostal e-mail; po přihlášení heslem si ho může zapnout znovu.',
     );
     http.expectOne(ACCOUNT_URL).flush(donorAccount());
     await settle();
-    expect(accountFacts()).toContain('Dvoufaktorové ověření vypnuté');
-    expect(buttonNames(section('Účet dárce'))).toEqual(['Vymazat osobní údaje']);
+    expect(facts('Přihlášení')).toContain('Dvoufaktorové ověření vypnuté');
+    expect(buttonNames(section('Přihlášení'))).toEqual([]);
+    expect(document.activeElement).toBe(section('Přihlášení').querySelector('app-live-notice'));
   });
 
   it('when the passkeys are removed after the confirmation, then the request is a DELETE, the account reloads and the status says what happened', async () => {
     await loaded(donorAccount({ passkeys: 2 }));
 
-    button(section('Účet dárce'), 'Odebrat přístupové klíče').click();
+    button(section('Přihlášení'), 'Odebrat přístupové klíče').click();
     fixture.detectChanges();
-    expect(sectionText('Účet dárce')).toContain('Dárce se jimi pak nepřihlásí');
-    button(section('Účet dárce'), 'Ano, odebrat').click();
+    expect(sectionText('Přihlášení')).toContain('Dárce se jimi pak nepřihlásí');
+    button(section('Přihlášení'), 'Ano, odebrat').click();
     fixture.detectChanges();
 
     const request = http.expectOne(`/api/admin/donors/${DONOR_ID}/passkeys`);
@@ -368,8 +468,8 @@ describe('Given an administrator on a donor card', () => {
     );
     http.expectOne(ACCOUNT_URL).flush(donorAccount());
     await settle();
-    expect(accountFacts()).toContain('Přístupové klíče žádné');
-    expect(buttonNames(section('Účet dárce'))).toEqual(['Vymazat osobní údaje']);
+    expect(facts('Přihlášení')).toContain('Přístupové klíče žádné');
+    expect(buttonNames(section('Přihlášení'))).toEqual([]);
   });
 
   it('when the pairing is turned off and on again, then each asks for a confirmation, posts and reloads the donations part', async () => {
@@ -453,26 +553,26 @@ describe('Given an administrator on a donor card', () => {
   it('when the second factor confirmation opens and is kept, then the focus moves to Ponechat and back to the opener', async () => {
     await loaded(donorAccount({ secondFactorEnabled: true }));
 
-    const opener = button(section('Účet dárce'), 'Vypnout dvoufaktorové ověření');
+    const opener = button(section('Přihlášení'), 'Vypnout dvoufaktorové ověření');
     opener.click();
     await settle();
-    expect(sectionText('Účet dárce')).toContain(
+    expect(sectionText('Přihlášení')).toContain(
       'Ověřili jste, že žádá majitel účtu (například odpověděl z registrovaného e-mailu)? Dárce se pak přihlásí jen heslem a všechna jeho přihlášení skončí.',
     );
-    expect(document.activeElement).toBe(button(section('Účet dárce'), 'Ponechat'));
+    expect(document.activeElement).toBe(button(section('Přihlášení'), 'Ponechat'));
 
-    button(section('Účet dárce'), 'Ponechat').click();
+    button(section('Přihlášení'), 'Ponechat').click();
     await settle();
 
     expect(document.activeElement).toBe(
-      button(section('Účet dárce'), 'Vypnout dvoufaktorové ověření'),
+      button(section('Přihlášení'), 'Vypnout dvoufaktorové ověření'),
     );
   });
 
   it('when the second factor is on, then its hint says the donor can also recover by a payment', async () => {
     await loaded(donorAccount({ secondFactorEnabled: true }));
 
-    expect(sectionText('Účet dárce')).toContain(
+    expect(sectionText('Přihlášení')).toContain(
       'Pro dárce, který přišel o telefon s ověřovací aplikací. Dárce to zvládne i sám: při přihlášení zvolí „Obnovit přístup platbou“ a pošle 1 Kč ze svého účtu.',
     );
   });
@@ -492,7 +592,7 @@ describe('Given an administrator on a donor card', () => {
       'Párování z účtu 2900233333/2010 je vypnuté',
     );
     expect(document.activeElement).toBe(notice);
-    expect(section('Účet dárce').querySelector('.ui-notice')).toBeNull();
+    expect(section('Přihlášení').querySelector('.ui-notice')).toBeNull();
     http.expectOne(DETAIL_URL).flush(donorDetail());
     await settle();
   });
@@ -541,7 +641,7 @@ describe('Given an administrator on a donor card', () => {
   it('when the donor is an administrator, then the role links to the administrators page', async () => {
     await loaded(donorAccount({ administrator: true }));
 
-    const link = section('Účet dárce').querySelector('dl a') as HTMLAnchorElement;
+    const link = section('Údaje').querySelector('dl a') as HTMLAnchorElement;
     expect(link.textContent?.trim()).toBe('správce');
     expect(link.getAttribute('href')).toBe('/sprava/spravci');
   });
@@ -600,8 +700,8 @@ describe('Given an administrator on a donor card', () => {
     http.expectOne(DETAIL_URL).flush(donorDetail());
     await settle();
 
-    expect(sectionText('Účet dárce')).toContain('Účet se nepodařilo načíst.');
-    button(section('Účet dárce'), 'Zkusit znovu').click();
+    expect(sectionText('Údaje')).toContain('Účet se nepodařilo načíst.');
+    button(section('Údaje'), 'Zkusit znovu').click();
     fixture.detectChanges();
     http.expectOne(ACCOUNT_URL).flush(donorAccount());
     await settle();

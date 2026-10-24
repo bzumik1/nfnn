@@ -957,7 +957,9 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     expect(await violations(page)).toEqual([]);
 
     await page.getByRole('button', { name: 'Vymazat osobní údaje' }).click();
-    await expect(page.getByRole('group', { name: 'Vymazat osobní údaje?' })).toBeVisible();
+    await expect(
+      page.getByRole('dialog', { name: 'Vymazat osobní údaje: Petr Svoboda' }),
+    ).toBeVisible();
     expect(await violations(page)).toEqual([]);
   });
 

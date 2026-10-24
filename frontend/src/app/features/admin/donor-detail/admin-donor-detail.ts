@@ -27,6 +27,8 @@ import {
   AdminReceiptResponse,
   DonorAccountResponse,
 } from '../admin-api';
+import { CopyButton } from '../../../shared/ui/copy-button/copy-button';
+import { Dialog } from '../../../shared/ui/dialog/dialog';
 import { LiveNotice, Notice } from '../../../shared/ui/live-notice/live-notice';
 
 type LoadState = 'loading' | 'ready' | 'missing' | 'error';
@@ -34,9 +36,14 @@ type LoadState = 'loading' | 'ready' | 'missing' | 'error';
 type AccountAction = 'disconnect' | 'reconnect' | 'remove';
 
 type PendingAction =
-  { kind: 'reset' | 'erase' | 'passkeys' } | { kind: AccountAction; linkId: string } | null;
+  { kind: 'reset' | 'passkeys' } | { kind: AccountAction; linkId: string } | null;
 
-type NoticeCard = 'account' | 'accounts';
+type NoticeCard = 'signIn' | 'accounts' | 'erasure';
+
+interface CardSection {
+  readonly id: string;
+  readonly label: string;
+}
 
 interface CardNotice {
   readonly card: NoticeCard;
@@ -48,6 +55,17 @@ const FORBIDDEN = 'auth/forbidden';
 const NOT_FOUND = '-not-found';
 const HAS_RECEIPT = 'donations/bank-account-has-receipt';
 
+const SECTIONS = {
+  details: { id: 'udaje', label: $localize`:@@admin.donorDetail.nav.details:Údaje` },
+  signIn: { id: 'prihlaseni', label: $localize`:@@admin.donorDetail.nav.signIn:Přihlášení` },
+  accounts: {
+    id: 'bankovni-ucty',
+    label: $localize`:@@admin.donorDetail.nav.accounts:Bankovní účty`,
+  },
+  donations: { id: 'dary', label: $localize`:@@admin.donorDetail.nav.donations:Dary` },
+  receipts: { id: 'potvrzeni', label: $localize`:@@admin.donorDetail.nav.receipts:Potvrzení` },
+} satisfies Record<string, CardSection>;
+
 const PAIRING_LABELS: Record<NonNullable<DonationItem['pairedBy']>, string> = {
   VARIABLE_SYMBOL: $localize`:@@admin.donorDetail.pairing.variableSymbol:podle variabilního symbolu`,
   SENDER_ACCOUNT: $localize`:@@admin.donorDetail.pairing.senderAccount:podle účtu`,
@@ -56,7 +74,7 @@ const PAIRING_LABELS: Record<NonNullable<DonationItem['pairedBy']>, string> = {
 
 @Component({
   selector: 'app-admin-donor-detail',
-  imports: [LiveNotice, RouterLink],
+  imports: [CopyButton, Dialog, LiveNotice, RouterLink],
   templateUrl: './admin-donor-detail.html',
   styleUrl: './admin-donor-detail.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -72,8 +90,11 @@ export class AdminDonorDetail {
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly title = viewChild.required<ElementRef<HTMLHeadingElement>>('title');
   private readonly confirmCancel = viewChild<ElementRef<HTMLButtonElement>>('confirmCancel');
-  private readonly accountNotice = viewChild('accountNotice', { read: ElementRef });
+  private readonly signInNotice = viewChild('signInNotice', { read: ElementRef });
   private readonly accountsNotice = viewChild('accountsNotice', { read: ElementRef });
+  private readonly erasureNotice = viewChild('erasureNotice', { read: ElementRef });
+  private readonly eraseCancel = viewChild<ElementRef<HTMLButtonElement>>('eraseCancel');
+  private readonly eraseSubmit = viewChild<ElementRef<HTMLButtonElement>>('eraseSubmit');
 
   protected readonly donorId = this.route.snapshot.paramMap.get('id') ?? '';
   protected readonly accountState = signal<LoadState>('loading');
@@ -83,6 +104,10 @@ export class AdminDonorDetail {
   protected readonly cardNotice = signal<CardNotice | null>(null);
   protected readonly busy = signal(false);
   protected readonly pending = signal<PendingAction>(null);
+  protected readonly erasing = signal(false);
+  protected readonly eraseConfirmed = signal(false);
+  protected readonly eraseError = signal<string | null>(null);
+  protected readonly ids = SECTIONS;
 
   protected readonly name = computed(
     () => this.account()?.name ?? this.detail()?.donor.name ?? null,
@@ -97,6 +122,12 @@ export class AdminDonorDetail {
   protected readonly total = computed(() =>
     this.crowns(this.detail()?.donations.totalAmountMinor ?? 0),
   );
+  protected readonly sections = computed<CardSection[]>(() => [
+    SECTIONS.details,
+    ...(this.accountState() === 'ready' ? [SECTIONS.signIn] : []),
+    SECTIONS.accounts,
+    ...(this.donationsState() === 'ready' ? [SECTIONS.donations, SECTIONS.receipts] : []),
+  ]);
   protected readonly erasedAt = computed(
     () => this.account()?.erasedAt ?? this.detail()?.donor.erasedAt ?? null,
   );
@@ -121,6 +152,19 @@ export class AdminDonorDetail {
       });
   }
 
+  private refreshAccount(): void {
+    this.api
+      .donor(this.donorId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (account) => {
+          this.account.set(account);
+          this.accountState.set('ready');
+        },
+        error: (failure: unknown) => this.accountState.set(this.stateAfter(failure)),
+      });
+  }
+
   protected loadDonations(): void {
     this.donationsState.set('loading');
     this.api
@@ -133,6 +177,15 @@ export class AdminDonorDetail {
         },
         error: (failure: unknown) => this.donationsState.set(this.stateAfter(failure)),
       });
+  }
+
+  protected sectionHref(section: CardSection): string {
+    return `/sprava/darci/${this.donorId}#${section.id}`;
+  }
+
+  protected goTo(event: Event, section: CardSection): void {
+    event.preventDefault();
+    this.byId(section.id)?.focus();
   }
 
   protected typeLabel(account: DonorAccountResponse): string {
@@ -215,8 +268,24 @@ export class AdminDonorDetail {
     this.ask({ kind: 'reset' });
   }
 
-  protected askErase(): void {
-    this.ask({ kind: 'erase' });
+  protected openErase(): void {
+    this.pending.set(null);
+    this.eraseConfirmed.set(false);
+    this.eraseError.set(null);
+    this.cardNotice.set(null);
+    this.erasing.set(true);
+    this.focusAfterRender(() => this.eraseCancel()?.nativeElement ?? null);
+  }
+
+  protected closeErase(): void {
+    if (this.busy()) {
+      return;
+    }
+    this.erasing.set(false);
+  }
+
+  protected confirmErase(event: Event): void {
+    this.eraseConfirmed.set((event.target as HTMLInputElement).checked);
   }
 
   protected askRemovePasskeys(): void {
@@ -239,10 +308,6 @@ export class AdminDonorDetail {
 
   protected isPendingPasskeys(): boolean {
     return this.pending()?.kind === 'passkeys';
-  }
-
-  protected isPendingErase(): boolean {
-    return this.pending()?.kind === 'erase';
   }
 
   protected pendingFor(item: BankAccountItem): AccountAction | null {
@@ -287,8 +352,8 @@ export class AdminDonorDetail {
       this.api.resetSecondFactor(this.donorId),
       $localize`:@@admin.donorDetail.reset.done:Dvoufaktorové ověření u ${name}:name: je vypnuté a všechna přihlášení jsme ukončili. Dárce dostal e-mail; po přihlášení heslem si ho může zapnout znovu.`,
       $localize`:@@admin.donorDetail.reset.failed:Dvoufaktorové ověření se nepodařilo vypnout. Zkuste to prosím znovu.`,
-      () => this.loadAccount(),
-      'account',
+      () => this.refreshAccount(),
+      'signIn',
     );
   }
 
@@ -298,22 +363,46 @@ export class AdminDonorDetail {
       this.api.removePasskeys(this.donorId),
       $localize`:@@admin.donorDetail.passkeys.done:Přístupové klíče u ${name}:name: jsme odebrali a všechna přihlášení ukončili. Dárce dostal e-mail; po přihlášení heslem si může přidat nový klíč.`,
       $localize`:@@admin.donorDetail.passkeys.failed:Přístupové klíče se nepodařilo odebrat. Zkuste to prosím znovu.`,
-      () => this.loadAccount(),
-      'account',
+      () => this.refreshAccount(),
+      'signIn',
     );
   }
 
   protected erase(): void {
-    this.run(
-      this.api.eraseDonor(this.donorId),
-      $localize`:@@admin.donorDetail.erase.done:Osobní údaje dárce jsme vymazali a na jeho dosavadní e-mail poslali potvrzení. Účet už nejde použít; dary a vydaná potvrzení zůstávají bez jména.`,
-      $localize`:@@admin.donorDetail.erase.failed:Osobní údaje se nepodařilo vymazat. Zkuste to prosím znovu.`,
-      () => {
-        this.loadAccount();
-        this.loadDonations();
-      },
-      'account',
-    );
+    if (this.busy() || !this.eraseConfirmed()) {
+      return;
+    }
+    this.busy.set(true);
+    this.eraseError.set(null);
+    this.api
+      .eraseDonor(this.donorId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.busy.set(false);
+          this.erasing.set(false);
+          this.cardNotice.set({
+            card: 'erasure',
+            notice: {
+              kind: 'status',
+              text: $localize`:@@admin.donorDetail.erase.done:Osobní údaje dárce jsme vymazali a na jeho dosavadní e-mail poslali potvrzení. Účet už nejde použít; dary a vydaná potvrzení zůstávají bez jména.`,
+            },
+          });
+          this.refreshAccount();
+          this.loadDonations();
+          this.focusAfterRender(() => this.noticeElement('erasure'));
+        },
+        error: (failure: unknown) => {
+          this.busy.set(false);
+          this.eraseError.set(
+            describeProblem(
+              failure,
+              $localize`:@@admin.donorDetail.erase.failed:Osobní údaje se nepodařilo vymazat. Zkuste to prosím znovu.`,
+            ),
+          );
+          this.focusAfterRender(() => this.eraseSubmit()?.nativeElement ?? null);
+        },
+      });
   }
 
   protected disconnect(item: BankAccountItem): void {
@@ -390,7 +479,12 @@ export class AdminDonorDetail {
   }
 
   private noticeElement(card: NoticeCard): HTMLElement | null {
-    const notice = card === 'account' ? this.accountNotice() : this.accountsNotice();
+    const notice =
+      card === 'signIn'
+        ? this.signInNotice()
+        : card === 'accounts'
+          ? this.accountsNotice()
+          : this.erasureNotice();
     return (notice?.nativeElement as HTMLElement | undefined) ?? null;
   }
 
