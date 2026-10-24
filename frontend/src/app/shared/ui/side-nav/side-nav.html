@@ -29,6 +29,9 @@
       </svg>
       <span>{{ menuLabel() }}</span>
     </button>
+    @if (current(); as section) {
+      <span class="side-nav-current" aria-hidden="true">{{ section }}</span>
+    }
 
     <nav
       class="side-nav-panel"

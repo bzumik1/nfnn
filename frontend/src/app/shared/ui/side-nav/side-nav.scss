@@ -20,7 +20,8 @@
   padding: var(--space-8) 0 var(--space-8) var(--space-6);
 }
 
-.side-nav-toggle {
+.side-nav-toggle,
+.side-nav-current {
   display: none;
 }
 
@@ -121,6 +122,15 @@
       outline: 3px solid var(--color-focus-ring);
       outline-offset: 2px;
     }
+  }
+
+  .side-nav-current {
+    display: inline;
+    margin-left: var(--space-3);
+    font-size: var(--text-md);
+    font-weight: var(--weight-semibold);
+    color: var(--color-text-muted);
+    vertical-align: middle;
   }
 
   .side-nav-panel {

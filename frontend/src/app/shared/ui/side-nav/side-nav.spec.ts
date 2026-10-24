@@ -99,6 +99,18 @@ describe('Given a side panel of an area', () => {
     expect(currentLinks()).toEqual(['První']);
   });
 
+  it('when a page is open, then the current section is named beside the menu button for sighted users', async () => {
+    const current = () => fixture.nativeElement.querySelector('.side-nav-current') as HTMLElement;
+    expect(clean(current().textContent)).toBe('Přehled');
+    expect(current().getAttribute('aria-hidden')).toBe('true');
+    expect(toggle().nextElementSibling).toBe(current());
+
+    await router.navigateByUrl('/oblast/prvni/42?strana=2');
+    await settle();
+
+    expect(clean(current().textContent)).toBe('První');
+  });
+
   it('when the menu button is shown, then it controls the panel and starts collapsed', () => {
     expect(clean(toggle().textContent)).toBe('Menu oblasti');
     expect(toggle().getAttribute('aria-controls')).toBe('test-nav');
