@@ -91,7 +91,7 @@ Zbývá před spuštěním na nfnn.cz:
 - Skutečný obsah úvodní stránky (texty, příběhy, čísla, fotky) od Jakuba a Pavla; rozhodnout o „100 % transparentně“ a o vlastních fotkách místo fotobanky.
 - Řádek „Výroční zprávy“ v O nás, až budou PDF.
 - Přechod na doménu nfnn.cz na serveru (postup v `deploy/README.md`).
-- Hlídání dostupnosti zvenčí; kopie záloh mimo server až po spuštění.
+- Hlídání dostupnosti zvenčí; kopie záloh mimo server až po spuštění (šifrované, viz „Šifrované zálohy“ v backlogu).
 - Sběrné účty a vlastní účty fondu vyloučit z párování (`/sprava/nastaveni`).
 - Odemčení historie ve Fio a hluboký import do 1. 1. 2027, aby potvrzení za rok 2026 obsahovala všechny dary.
 - Zátěžová zkouška vydávání potvrzení před Novým rokem.
@@ -165,6 +165,7 @@ Veřejný web a provoz:
 - Jedna hláška „Web se právě aktualizuje“ při restartu serveru.
 - E-mail při docházejícím místě na disku.
 - Smazání registrací, které nikdo nepotvrdil do 30 dnů.
+- Šifrované zálohy (Jakub 28. 10. 2026): každá záloha je zašifrovaná; dnes jsou výpisy databáze nešifrované a zapečetěné jsou jen heslo k poště a token Fio. Klíč vznikne v prvním nastavení, které nepokračuje, dokud správce nepotvrdí, že si ho uložil (opíše jeho poslední 4 znaky; nabídne se stažení nebo tisk). Klíč zůstává i na serveru, takže zkušební obnova a obnova ve správě fungují dál. Ve správě u záloh ho jde zobrazit jen z prohlížeče, každé zobrazení vyžaduje nové ověření druhým faktorem (kód nebo passkey), zapíše se do historie a konektor k němu nemá přístup. Dokud správce uložení nepotvrdí, správa ho upozorňuje. K rozhodnutí: zda klíč chrání i klíč nastavení, aby obnova na novém serveru zachovala heslo k poště a token Fio. Je to první krok záloh mimo server, ať vyhraje jakékoli úložiště.
 
 ### Možná později
 
