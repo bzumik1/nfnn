@@ -150,6 +150,13 @@ E-maily:
 - Odeslané e-maily na kartě dárce (datum, druh, stav, bez obsahu).
 - „Poslat zkušebně mně“ před každým hromadným e-mailem.
 
+Web jako aplikace (Jakub 28. 10. 2026; zařadit až za funkce pro lednová potvrzení):
+
+- Instalovatelný web: manifest se stávajícími ikonami, service worker jen pro upozornění (bez offline ukládání), po nasazení výzva „Nová verze, načíst znovu“.
+- Upozornění na telefon pro správce (Web Push s klíči vygenerovanými v prvním nastavení, bez Firebase): správce je zapne na každém zařízení zvlášť ve správě; posílají se stejné poruchy jako dnes e-mailem (výpadek a obnovení importu, hlídání záloh) a nově selhání odesílání pošty, takže upozornění nezávisí na e-mailu. Každé má vypínač a tlačítko na zkoušku; zpráva nese jen druh problému a odkaz, žádná jména ani částky. Adresa pro doručení projde stejnou kontrolou jako stahování fotek, mrtvá přihlášení se mažou. Volitelně počet otevřených problémů na ikoně. Později stejný základ pro dárce s přihlášením k odběru v profilu.
+- Délka přihlášení: v nainstalované aplikaci 90 dní od posledního použití pro dárce i správce; v prohlížeči 14 dní jen se zaškrtnutým „Zapamatovat si mě“ (výchozí vypnuto), jinak do zavření prohlížeče. Obě délky nastavuje správce.
+- Omezení: na iPhonu upozornění chodí až po přidání webu na plochu (iOS 16.4 a novější); výpadek celého serveru dál pozná jen hlídání dostupnosti zvenčí.
+
 Veřejný web a provoz:
 
 - Tlačítko Sdílet u aktualit a projektů (Web Share API, kopírování odkazu).
