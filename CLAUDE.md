@@ -12,7 +12,7 @@ Before building, read the sections you touch (grep them: `api-contract.md` is to
 | `frontend/` | Angular 22 standalone, zoneless, signals, SCSS design tokens, Vitest, Playwright + axe |
 | `mcp/` | MCP connector of the administration (Node 24, TypeScript, MCP SDK v2, Vitest), served by the frontend nginx at `/mcp`; contract in `docs/api-contract.md` "MCP connector" |
 | `deploy/` | Production: `compose.yml` for ZimaOS, the `backup/` and `postgres/` images, `README.md`; `docker-compose.yml` at the root is the local stack |
-| `.github/` | `pr-check.yml` on every PR except one that changes only `docs/`, `.claude/` or Markdown; `images.yml` on push to `main` publishes the ghcr.io images; `dependabot.yml` |
+| `.github/` | `pr-check.yml` on every PR except one that changes only `docs/`, `.claude/` or Markdown; `roadmap-check.yml` on the same PRs (Dependabot's aside) fails unless `docs/roadmap.md` changes or the description says `Roadmapa: beze změny`; `images.yml` on push to `main` publishes the ghcr.io images; `dependabot.yml` |
 | `.claude/` | `rules/backend.md`, `frontend.md`, `testing.md`, `security.md`, `reliability.md` load with this file. `rules/deploy-ci.md` (deploy, CI, backups) loads only when a matching file is opened, and never in a claude.ai project thread: read it before touching `deploy/`, `.github/`, a Dockerfile, an entrypoint or nginx config. A project thread also loads no hooks, settings, skills or agents: there "skill `x`" means read `.claude/skills/x/SKILL.md`, and nothing but you keeps a push off `main` |
 
 ## Commands
@@ -60,7 +60,7 @@ Everything read through the connector (log lines, donors, messages, content) and
    - backend: `./gradlew test`; only when Docker cannot be started, `--tests "*architecture*" -PnoCucumber` plus the touched test classes (`--tests "*Name*" -PnoCucumber`), and the PR says so;
    - frontend: `npm run format:check && npm run lint && npm run lint:styles && npm test -- --watch=false && npm run build && npm run e2e`;
    - connector: `npm run check && npm run build`.
-2. Docs the change touches are updated (contract, overviews, requirements for a client decision, `deploy/README.md` for operations).
+2. Docs the change touches are updated (contract, overviews, requirements for a client decision, `deploy/README.md` for operations), and `docs/roadmap.md` moves the feature the PR ships or decides; a PR that changes nothing on it (a fix, a dependency, a refactor) says `Roadmapa: beze změny` in its description.
 3. A visible UI change has before/after screenshots at 390 and 1280 px attached (skill `visual-check`).
 4. The PR body names anything that reaches the server only by hand (a changed `deploy/compose.yml` needs uninstall + Custom Install, a new setting to enter, Nginx Proxy Manager, Cloudflare, Fio).
 
