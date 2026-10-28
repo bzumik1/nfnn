@@ -20,13 +20,13 @@ class StatusFilesTest {
                 outcome=ok
                 started_at=2026-10-23T04:36:41Z
                 finished_at=2026-10-23T04:36:43Z
-                file=nfnn-2026-10-23_0636-rucni.dump
+                file=nfnn-2026-10-23_0636-rucni.dump.age
                 size=1590
                 request=req-1
                 """);
 
         assertThat(run).contains(new BackupRun(RunOutcome.OK, Instant.parse("2026-10-23T04:36:41Z"), Instant.parse("2026-10-23T04:36:43Z"),
-                Optional.of("nfnn-2026-10-23_0636-rucni.dump"), Optional.of(1590L), Optional.empty(), Optional.of("req-1"), Optional.empty(), Optional.empty()));
+                Optional.of("nfnn-2026-10-23_0636-rucni.dump.age"), Optional.of(1590L), Optional.empty(), Optional.of("req-1"), Optional.empty(), Optional.empty()));
     }
 
     @Test
@@ -36,7 +36,7 @@ class StatusFilesTest {
                 outcome=failed
                 started_at=2026-10-23T04:33:33Z
                 finished_at=2026-10-23T04:33:33Z
-                file=nfnn-2026-10-23_0633-rucni.dump
+                file=nfnn-2026-10-23_0633-rucni.dump.age
                 request=
                 error=pg_restore: error: could not execute query: ERROR:  relation "x" already exists
                 """);
@@ -56,7 +56,7 @@ class StatusFilesTest {
                 outcome=ok
                 started_at=2026-10-23T19:20:12Z
                 finished_at=2026-10-23T19:20:13Z
-                file=nfnn-2026-10-22_0300.dump
+                file=nfnn-2026-10-22_0300.dump.age
                 tables=37
                 request=019a1b2c-0000-7000-8000-000000000001
                 admin=019a1b2c-0000-7000-8000-00000000000a

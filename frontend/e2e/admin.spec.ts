@@ -15,7 +15,7 @@ const backups = {
     outcome: 'OK',
     startedAt: '2026-10-23T01:00:00Z',
     finishedAt: '2026-10-23T01:00:03Z',
-    fileName: 'nfnn-2026-10-23_0300.dump',
+    fileName: 'nfnn-2026-10-23_0300.dump.age',
     sizeBytes: 1590,
     tables: null,
     requestId: null,

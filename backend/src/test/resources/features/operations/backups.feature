@@ -9,56 +9,56 @@ Feature: An administrator sees the database backups, starts one, downloads one a
 
   Scenario: The backups answer lists the dumps newest first with the last backup, the last test restore and the restore folder
     Given these backups are in the backup folder:
-      | file                            | size | createdAt            |
-      | nfnn-2026-10-22_0300.dump       | 1000 | 2026-10-22T01:00:00Z |
-      | nfnn-2026-10-23_0300.dump       | 1590 | 2026-10-23T01:00:03Z |
-      | nfnn-2026-10-23_0633-rucni.dump | 1590 | 2026-10-23T04:33:00Z |
+      | file                                | size | createdAt            |
+      | nfnn-2026-10-22_0300.dump.age       | 1000 | 2026-10-22T01:00:00Z |
+      | nfnn-2026-10-23_0300.dump.age       | 1590 | 2026-10-23T01:00:03Z |
+      | nfnn-2026-10-23_0633-rucni.dump.age | 1590 | 2026-10-23T04:33:00Z |
     And the backup status says:
-      | outcome     | ok                        |
-      | started_at  | 2026-10-23T01:00:00Z      |
-      | finished_at | 2026-10-23T01:00:03Z      |
-      | file        | nfnn-2026-10-23_0300.dump |
-      | size        | 1590                      |
+      | outcome     | ok                            |
+      | started_at  | 2026-10-23T01:00:00Z          |
+      | finished_at | 2026-10-23T01:00:03Z          |
+      | file        | nfnn-2026-10-23_0300.dump.age |
+      | size        | 1590                          |
     And the test restore status says:
-      | outcome     | ok                        |
-      | started_at  | 2026-10-18T02:00:00Z      |
-      | finished_at | 2026-10-18T02:00:05Z      |
-      | file        | nfnn-2026-10-18_0300.dump |
-      | tables      | 37                        |
+      | outcome     | ok                            |
+      | started_at  | 2026-10-18T02:00:00Z          |
+      | finished_at | 2026-10-18T02:00:05Z          |
+      | file        | nfnn-2026-10-18_0300.dump.age |
+      | tables      | 37                            |
     And the restore folder holds "zaloha.dump.done"
     When "Jana" asks for the backups
     Then the response status is 200
     And the backups answer says:
-      | available               | true                            |
-      | backups.0.fileName      | nfnn-2026-10-23_0633-rucni.dump |
-      | backups.0.kind          | REQUESTED                       |
-      | backups.0.sizeBytes     | 1590                            |
-      | backups.1.fileName      | nfnn-2026-10-23_0300.dump       |
-      | backups.2.fileName      | nfnn-2026-10-22_0300.dump       |
-      | backups.2.kind          | DAILY                           |
-      | lastBackup.outcome      | OK                              |
-      | lastBackup.fileName     | nfnn-2026-10-23_0300.dump       |
-      | lastTestRestore.tables  | 37                              |
-      | restoreFiles.0.fileName | zaloha.dump.done                |
-      | restoreFiles.0.state    | DONE                            |
-      | pendingRequests         | 0                               |
+      | available               | true                                |
+      | backups.0.fileName      | nfnn-2026-10-23_0633-rucni.dump.age |
+      | backups.0.kind          | REQUESTED                           |
+      | backups.0.sizeBytes     | 1590                                |
+      | backups.1.fileName      | nfnn-2026-10-23_0300.dump.age       |
+      | backups.2.fileName      | nfnn-2026-10-22_0300.dump.age       |
+      | backups.2.kind          | DAILY                               |
+      | lastBackup.outcome      | OK                                  |
+      | lastBackup.fileName     | nfnn-2026-10-23_0300.dump.age       |
+      | lastTestRestore.tables  | 37                                  |
+      | restoreFiles.0.fileName | zaloha.dump.done                    |
+      | restoreFiles.0.state    | DONE                                |
+      | pendingRequests         | 0                                   |
     And the backups answer lists no problem
 
   Scenario: An old backup and a failed test restore are named as problems
     Given these backups are in the backup folder:
-      | file                      | size | createdAt            |
-      | nfnn-2026-10-21_0300.dump | 1000 | 2026-10-21T01:00:00Z |
+      | file                          | size | createdAt            |
+      | nfnn-2026-10-21_0300.dump.age | 1000 | 2026-10-21T01:00:00Z |
     And the backup status says:
-      | outcome     | ok                        |
-      | started_at  | 2026-10-21T01:00:00Z      |
-      | finished_at | 2026-10-21T01:00:03Z      |
-      | file        | nfnn-2026-10-21_0300.dump |
-      | size        | 1000                      |
+      | outcome     | ok                            |
+      | started_at  | 2026-10-21T01:00:00Z          |
+      | finished_at | 2026-10-21T01:00:03Z          |
+      | file        | nfnn-2026-10-21_0300.dump.age |
+      | size        | 1000                          |
     And the test restore status says:
-      | outcome     | failed                                 |
-      | started_at  | 2026-10-18T02:00:00Z                   |
-      | finished_at | 2026-10-18T02:00:05Z                   |
-      | file        | nfnn-2026-10-18_0300.dump              |
+      | outcome     | failed                                    |
+      | started_at  | 2026-10-18T02:00:00Z                      |
+      | finished_at | 2026-10-18T02:00:05Z                      |
+      | file        | nfnn-2026-10-18_0300.dump.age             |
       | error       | pg_restore: error: unexpected end of file |
     When "Jana" asks for the backups
     Then the response status is 200
@@ -85,13 +85,13 @@ Feature: An administrator sees the database backups, starts one, downloads one a
 
   Scenario: A backup is downloaded as a file and the download is audited; an unknown or odd name is not found
     Given these backups are in the backup folder:
-      | file                      | size | createdAt            |
-      | nfnn-2026-10-23_0300.dump | 1590 | 2026-10-23T01:00:03Z |
-    When "Jana" downloads the backup "nfnn-2026-10-23_0300.dump"
+      | file                          | size | createdAt            |
+      | nfnn-2026-10-23_0300.dump.age | 1590 | 2026-10-23T01:00:03Z |
+    When "Jana" downloads the backup "nfnn-2026-10-23_0300.dump.age"
     Then the response status is 200
-    And the downloaded backup is 1590 bytes named "nfnn-2026-10-23_0300.dump"
-    And the admin action "DOWNLOAD_BACKUP" by "Jana" is recorded with details containing "nfnn-2026-10-23_0300.dump (1590 B) stažena"
-    When "Jana" downloads the backup "nfnn-2026-10-22_0300.dump"
+    And the downloaded backup is 1590 bytes named "nfnn-2026-10-23_0300.dump.age"
+    And the admin action "DOWNLOAD_BACKUP" by "Jana" is recorded with details containing "nfnn-2026-10-23_0300.dump.age (1590 B) stažena"
+    When "Jana" downloads the backup "nfnn-2026-10-22_0300.dump.age"
     Then the response status is 404
     And the problem type ends with "operations/backup-not-found"
     When "Jana" downloads the backup "nfnn.dump.part"
@@ -124,7 +124,7 @@ Feature: An administrator sees the database backups, starts one, downloads one a
       | outcome     | failed                                      |
       | started_at  | 2026-10-23T01:00:00Z                        |
       | finished_at | 2026-10-23T01:00:01Z                        |
-      | file        | nfnn-2026-10-23_0300.dump                   |
+      | file        | nfnn-2026-10-23_0300.dump.age               |
       | error       | pg_dump: error: connection to server failed |
     When the backup check runs
     Then 1 e-mail is sent to "info@nfnn.cz" with the subject "Zálohování databáze má problém – Nová naděje"
@@ -134,18 +134,18 @@ Feature: An administrator sees the database backups, starts one, downloads one a
     When the backup check runs
     Then 1 e-mail is sent to "info@nfnn.cz" with the subject "Zálohování databáze má problém – Nová naděje"
     Given the backup status says:
-      | outcome     | ok                        |
-      | started_at  | 2026-10-23T05:00:00Z      |
-      | finished_at | 2026-10-23T05:00:02Z      |
-      | file        | nfnn-2026-10-23_0700.dump |
-      | size        | 1590                      |
+      | outcome     | ok                            |
+      | started_at  | 2026-10-23T05:00:00Z          |
+      | finished_at | 2026-10-23T05:00:02Z          |
+      | file        | nfnn-2026-10-23_0700.dump.age |
+      | size        | 1590                          |
     When the backup check runs
     Then 2 e-mails are sent to "info@nfnn.cz"
     And alert e-mail 2 has the subject "Zálohování databáze zase funguje – Nová naděje"
     And both parts of the alert e-mail say:
-      | Skončilo: selhání zálohy.                                           |
-      | Poslední záloha: nfnn-2026-10-23_0700.dump z 23. 10. 2026 7:00 (2 kB). |
-      | Poslední zkušební obnova: zatím žádná.                              |
+      | Skončilo: selhání zálohy.                                                  |
+      | Poslední záloha: nfnn-2026-10-23_0700.dump.age z 23. 10. 2026 7:00 (2 kB). |
+      | Poslední zkušební obnova: zatím žádná.                                     |
     When the backup check runs
     Then 2 e-mails are sent to "info@nfnn.cz"
 

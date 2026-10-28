@@ -10,6 +10,11 @@
 # for it to go. Everything is reported in the container log, in $LOGS/backup.log and in key=value
 # files under $BACKUPS/status, which the backend reads for the administration page.
 # The database password is read from $SECRETS_DIR/db-password once nfnn-postgres marks it ready.
+# Every dump is encrypted with age to the backup key in $SECRETS_DIR/backup-key, which the backend
+# generates, and named .dump.age; an older unencrypted dump is encrypted at start. A restore decrypts
+# into $BACKUPS/work (root only) and deletes the plain copy afterwards. A backup uploaded in the first
+# setup may come with the key it was made with ($RESTORE/<id>.key); after a successful restore that
+# key becomes $RESTORE/backup-key.adopt, which the backend's entrypoint makes the server's backup key.
 # The schedule is the one the backend writes to $BACKUPS/requests/schedule (chosen on /sprava/zalohy),
 # read again on every pass; a missing or invalid value keeps the default below, and the schedule in
 # use is reported in $BACKUPS/status/schedule.
@@ -31,11 +36,15 @@ RETIRED_DATABASE=${RETIRED_DATABASE:-nfnn_restore_retired}
 OWNERSHIP_SQL=${OWNERSHIP_SQL:-/usr/local/share/nfnn/own-by-app-role.sql}
 LOGS=${LOGS_DIR:-/logs}
 SECRETS=${SECRETS_DIR:-/secrets}
+KEY_FILE=${BACKUP_KEY_FILE:-$SECRETS/backup-key}
 POLL_SECONDS=10
+AGE_HEADER="age-encryption.org/v1"
 
 STATUS="$BACKUPS/status"
 REQUESTS="$BACKUPS/requests"
 RUNNING="$STATUS/restore.running"
+WORK="$BACKUPS/work"
+ADOPTED_KEY="$RESTORE/backup-key.adopt"
 SCHEDULE="$REQUESTS/schedule"
 
 log() {
@@ -84,6 +93,55 @@ read_database_password() {
   export PGPASSWORD
 }
 
+valid_key() {
+  [ -s "$1" ] && age-keygen -y "$1" > /dev/null 2>&1
+}
+
+wait_for_backup_key() {
+  k_waited=0
+  until valid_key "$KEY_FILE"; do
+    if [ $((k_waited % 60)) -eq 0 ]; then
+      log "waiting for the backup key in $KEY_FILE (the backend generates it; waited ${k_waited}s)"
+    fi
+    sleep 5
+    k_waited=$((k_waited + 5))
+  done
+}
+
+is_encrypted() {
+  [ "$(head -c ${#AGE_HEADER} "$1" 2>/dev/null | tr -d '\000')" = "$AGE_HEADER" ]
+}
+
+decrypted_copy() {
+  d_plain="$WORK/$2.dump"
+  rm -f "$d_plain"
+  if ! is_encrypted "$1"; then
+    echo "$1"
+    return 0
+  fi
+  mkdir -p "$WORK" && chmod 700 "$WORK"
+  if (umask 077 && age --decrypt --identity "$3" --output "$d_plain" "$1") 2>> "$4"; then
+    echo "$d_plain"
+    return 0
+  fi
+  rm -f "$d_plain"
+  return 1
+}
+
+encrypt_older_backups() {
+  for o_plain in "$BACKUPS"/nfnn-*.dump; do
+    [ -f "$o_plain" ] || continue
+    if age --encrypt --identity "$KEY_FILE" --output "$o_plain.age.part" "$o_plain" 2>/dev/null \
+        && touch -r "$o_plain" "$o_plain.age.part" && mv "$o_plain.age.part" "$o_plain.age"; then
+      rm -f "$o_plain"
+      log "encrypted the older backup $(basename "$o_plain")"
+    else
+      rm -f "$o_plain.age.part"
+      log "the older backup $(basename "$o_plain") could not be encrypted and stays as it was"
+    fi
+  done
+}
+
 wait_for_database() {
   until pg_isready --quiet; do
     sleep 5
@@ -93,20 +151,27 @@ wait_for_database() {
 take_backup() {
   b_request=$2
   b_started=$(now_utc)
-  b_name="nfnn-$(date +%Y-%m-%d_%H%M)$1.dump"
+  b_name="nfnn-$(date +%Y-%m-%d_%H%M)$1.dump.age"
   while [ -e "$BACKUPS/$b_name" ]; do
     sleep 5
-    b_name="nfnn-$(date +%Y-%m-%d_%H%M)$1.dump"
+    b_name="nfnn-$(date +%Y-%m-%d_%H%M)$1.dump.age"
   done
-  if pg_dump --format=custom --compress=zstd:19 --file="$BACKUPS/nfnn.dump.part" 2> "$STATUS/backup.err"; then
-    mv "$BACKUPS/nfnn.dump.part" "$BACKUPS/$b_name"
+  : > "$STATUS/backup.err"
+  if valid_key "$KEY_FILE" \
+      && (set -o pipefail && pg_dump --format=custom --compress=zstd:19 2>> "$STATUS/backup.err" \
+        | age --encrypt --identity "$KEY_FILE" --output "$BACKUPS/nfnn.dump.age.part" 2>> "$STATUS/backup.err"); then
+    mv "$BACKUPS/nfnn.dump.age.part" "$BACKUPS/$b_name"
     write_status backup "outcome=ok" "started_at=$b_started" "finished_at=$(now_utc)" "file=$b_name" "size=$(file_size "$BACKUPS/$b_name")" "request=$b_request"
     log "backup written: $b_name"
-    find "$BACKUPS" -maxdepth 1 -name 'nfnn-*.dump' -mtime "+$KEEP_DAYS" -delete
+    find "$BACKUPS" -maxdepth 1 -name 'nfnn-*.dump.age' -mtime "+$KEEP_DAYS" -delete
     return 0
   fi
-  rm -f "$BACKUPS/nfnn.dump.part"
-  b_error=$(tail -n 1 "$STATUS/backup.err" | tr -d '\n' | cut -c1-500)
+  rm -f "$BACKUPS/nfnn.dump.age.part"
+  if valid_key "$KEY_FILE"; then
+    b_error=$(tail -n 1 "$STATUS/backup.err" | tr -d '\n' | cut -c1-500)
+  else
+    b_error="the backup key in the secrets folder is missing or invalid, so nothing could be encrypted"
+  fi
   write_status backup "outcome=failed" "started_at=$b_started" "finished_at=$(now_utc)" "file=$b_name" "request=$b_request" "error=$b_error"
   log "backup failed: $b_error"
   return 1
@@ -134,23 +199,31 @@ compare_rows() {
 test_restore() {
   t_request=$1
   t_started=$(now_utc)
-  t_newest=$(ls -t "$BACKUPS"/nfnn-*.dump 2>/dev/null | head -n 1)
+  t_newest=$(ls -t "$BACKUPS"/nfnn-*.dump.age 2>/dev/null | head -n 1)
   if [ -z "$t_newest" ]; then
     write_status test-restore "outcome=failed" "started_at=$t_started" "finished_at=$(now_utc)" "request=$t_request" "error=no backup to restore"
     log "test restore failed: no backup to restore"
     return 1
   fi
   t_file=$(basename "$t_newest")
+  : > "$STATUS/test-restore.err"
+  if ! t_dump=$(decrypted_copy "$t_newest" test-restore "$KEY_FILE" "$STATUS/test-restore.err"); then
+    t_error="the backup cannot be decrypted with the backup key in the secrets folder"
+    write_status test-restore "outcome=failed" "started_at=$t_started" "finished_at=$(now_utc)" "file=$t_file" "request=$t_request" "error=$t_error"
+    log "test restore of $t_file failed: $t_error"
+    return 1
+  fi
   dropdb --if-exists "$TEST_DATABASE" > /dev/null 2>&1
-  if createdb "$TEST_DATABASE" 2> "$STATUS/test-restore.err" \
-      && pg_restore --exit-on-error --single-transaction --dbname="$TEST_DATABASE" "$t_newest" 2>> "$STATUS/test-restore.err"; then
+  if createdb "$TEST_DATABASE" 2>> "$STATUS/test-restore.err" \
+      && pg_restore --exit-on-error --single-transaction --dbname="$TEST_DATABASE" "$t_dump" 2>> "$STATUS/test-restore.err"; then
     t_tables=$(psql --dbname="$TEST_DATABASE" --tuples-only --no-align --command="select count(*) from information_schema.tables where table_schema = 'public'" 2>> "$STATUS/test-restore.err" | tr -d '[:space:]')
     t_changesets=$(applied_changesets "$TEST_DATABASE" "$STATUS/test-restore.err")
     t_rows_match=false
-    if compare_rows "$t_newest" "$TEST_DATABASE" "$STATUS/test-restore.err"; then
+    if compare_rows "$t_dump" "$TEST_DATABASE" "$STATUS/test-restore.err"; then
       t_rows_match=true
     fi
     dropdb --if-exists "$TEST_DATABASE" > /dev/null 2>&1
+    rm -f "$WORK/test-restore.dump"
     if [ "${t_tables:-0}" -gt 0 ] 2>/dev/null && [ "${t_changesets:-0}" -gt 0 ] 2>/dev/null && [ "$t_rows_match" = true ]; then
       write_status test-restore "outcome=ok" "started_at=$t_started" "finished_at=$(now_utc)" "file=$t_file" "size=$(file_size "$t_newest")" "tables=$t_tables" "request=$t_request"
       log "test restore of $t_file succeeded: $t_tables tables and $m_total rows, as many in every table as the backup holds"
@@ -163,6 +236,7 @@ test_restore() {
     fi
   else
     dropdb --if-exists "$TEST_DATABASE" > /dev/null 2>&1
+    rm -f "$WORK/test-restore.dump"
     t_error=$(tail -n 1 "$STATUS/test-restore.err" | tr -d '\n' | cut -c1-500)
   fi
   write_status test-restore "outcome=failed" "started_at=$t_started" "finished_at=$(now_utc)" "file=$t_file" "request=$t_request" "error=$t_error"
@@ -210,6 +284,7 @@ recover_interrupted_restore() {
   fi
   allow_connections
   dropdb --if-exists "$STAGING_DATABASE" > /dev/null 2>&1
+  rm -rf "$WORK"
   find "$RESTORE" -maxdepth 1 -name '*.upload.part' -delete 2>/dev/null
 }
 
@@ -249,10 +324,17 @@ restore_dump() {
   r_file=$2
   r_request=$3
   r_admin=$4
+  r_identity=$5
   r_started=$(now_utc)
   : > "$STATUS/restore.err"
   log "restoring $r_file"
+  if ! r_plain=$(decrypted_copy "$r_dump" restore "$r_identity" "$STATUS/restore.err"); then
+    write_status restore "outcome=failed" "started_at=$r_started" "finished_at=$(now_utc)" "file=$r_file" "request=$r_request" "admin=$r_admin" "error=the backup cannot be decrypted with the backup key, so nothing was restored"
+    log "restore of $r_file not started: the backup cannot be decrypted with the backup key"
+    return 1
+  fi
   if ! database_is_empty && ! take_backup "-pred-obnovou" ""; then
+    rm -f "$WORK/restore.dump"
     write_status restore "outcome=failed" "started_at=$r_started" "finished_at=$(now_utc)" "file=$r_file" "request=$r_request" "admin=$r_admin" "error=the safety backup of the current data failed, so nothing was restored"
     log "restore of $r_file not started: the safety backup failed"
     return 1
@@ -260,7 +342,8 @@ restore_dump() {
   dropdb --if-exists "$STAGING_DATABASE" > /dev/null 2>&1
   r_tables=0
   if createdb "$STAGING_DATABASE" 2>> "$STATUS/restore.err" \
-      && pg_restore --exit-on-error --single-transaction --dbname="$STAGING_DATABASE" "$r_dump" 2>> "$STATUS/restore.err"; then
+      && pg_restore --exit-on-error --single-transaction --dbname="$STAGING_DATABASE" "$r_plain" 2>> "$STATUS/restore.err"; then
+    rm -f "$WORK/restore.dump"
     r_tables=$(psql --dbname="$STAGING_DATABASE" --tuples-only --no-align --command="select count(*) from information_schema.tables where table_schema = 'public'" 2>> "$STATUS/restore.err" | tr -d '[:space:]')
     r_changesets=$(applied_changesets "$STAGING_DATABASE" "$STATUS/restore.err")
     if [ "${r_tables:-0}" -gt 0 ] 2>/dev/null && [ "${r_changesets:-0}" -gt 0 ] 2>/dev/null; then
@@ -276,6 +359,7 @@ restore_dump() {
       r_error="the backup holds no tables or no applied changesets, so it is not a backup of this site"
     fi
   else
+    rm -f "$WORK/restore.dump"
     r_error=$(tail -n 1 "$STATUS/restore.err" | tr -d '\n' | cut -c1-500)
   fi
   dropdb --if-exists "$STAGING_DATABASE" > /dev/null 2>&1
@@ -286,8 +370,11 @@ restore_dump() {
 
 restore_from_folder() {
   [ -d "$RESTORE" ] || return 0
-  set -- "$RESTORE"/*.dump
-  [ -e "$1" ] || return 0
+  set --
+  for f_candidate in "$RESTORE"/*.dump "$RESTORE"/*.dump.age; do
+    [ -f "$f_candidate" ] && set -- "$@" "$f_candidate"
+  done
+  [ $# -gt 0 ] || return 0
   f_started=$(now_utc)
   write_status restore.running "started_at=$f_started" "file=$(basename "$1")"
   if [ $# -gt 1 ]; then
@@ -302,17 +389,17 @@ restore_from_folder() {
   f_dump=$1
   f_file=$(basename "$f_dump")
   case "$f_file" in
-    *.force.dump) f_forced=1 ;;
+    *.force.dump|*.force.dump.age) f_forced=1 ;;
     *) f_forced=0 ;;
   esac
   if [ "$f_forced" = 0 ] && ! database_is_empty; then
     mv "$f_dump" "$f_dump.skipped"
-    write_status restore "outcome=failed" "started_at=$f_started" "finished_at=$(now_utc)" "file=$f_file" "error=the database is not empty; name the file .force.dump to replace it"
+    write_status restore "outcome=failed" "started_at=$f_started" "finished_at=$(now_utc)" "file=$f_file" "error=the database is not empty; name the file .force.dump.age to replace it"
     log "restore of $f_file skipped: the database is not empty"
     rm -f "$RUNNING"
     return 1
   fi
-  if restore_dump "$f_dump" "$f_file" "" ""; then
+  if restore_dump "$f_dump" "$f_file" "" "" "$KEY_FILE"; then
     mv "$f_dump" "$f_dump.done"
   else
     mv "$f_dump" "$f_dump.failed"
@@ -382,19 +469,28 @@ restore_requested() {
     *[!0-9a-f-]*) q_admin="" ;;
   esac
   q_dump=""
+  q_key=""
+  q_identity=$KEY_FILE
   case "$q_source:$q_file" in
     */*|*:.*) ;;
-    backup:nfnn-*.dump) [ -f "$BACKUPS/$q_file" ] && q_dump="$BACKUPS/$q_file" ;;
-    upload:*.upload) [ -f "$RESTORE/$q_file" ] && q_dump="$RESTORE/$q_file" ;;
+    backup:nfnn-*.dump.age) [ -f "$BACKUPS/$q_file" ] && q_dump="$BACKUPS/$q_file" ;;
+    upload:*.upload)
+      if [ -f "$RESTORE/$q_file" ]; then
+        q_dump="$RESTORE/$q_file"
+        q_key="$RESTORE/${q_file%.upload}.key"
+        [ -f "$q_key" ] && q_identity=$q_key
+      fi
+      ;;
   esac
   if [ -z "$q_dump" ]; then
     write_status restore "outcome=failed" "started_at=$q_started" "finished_at=$(now_utc)" "file=$q_file" "request=$q_id" "admin=$q_admin" "error=the backup to restore was not found"
     log "restore request $q_id refused: the backup to restore was not found"
-  else
-    restore_dump "$q_dump" "$q_file" "$q_id" "$q_admin"
+  elif restore_dump "$q_dump" "$q_file" "$q_id" "$q_admin" "$q_identity" && [ "$q_identity" = "$q_key" ] && valid_key "$q_key"; then
+    mv "$q_key" "$ADOPTED_KEY"
+    log "the backup key entered with request $q_id becomes the server's backup key when the backend starts"
   fi
   if [ "$q_source" = upload ] && [ -n "$q_dump" ]; then
-    rm -f "$q_dump"
+    rm -f "$q_dump" "$q_key"
   fi
   rm -f "$RUNNING"
 }
@@ -409,7 +505,7 @@ handle_requests() {
       *.restore) restore_requested "$request" ;;
     esac
   done
-  find "$RESTORE" -maxdepth 1 -name '*.upload' -mmin +60 -delete 2>/dev/null
+  find "$RESTORE" -maxdepth 1 \( -name '*.upload' -o -name '*.key' \) -mmin +60 -delete 2>/dev/null
 }
 
 mkdir -p "$STATUS" "$REQUESTS"
@@ -420,6 +516,8 @@ load_schedule
 
 read_database_password
 wait_for_database
+wait_for_backup_key
+encrypt_older_backups
 recover_interrupted_restore
 restore_from_folder
 handle_requests

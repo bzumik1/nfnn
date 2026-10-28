@@ -22,9 +22,13 @@ describe('Given the setup API', () => {
     vi.useRealTimers();
   });
 
-  it('when the first setup is completed, then the code and the settings are posted', () => {
+  it('when the first setup is completed, then the code, the settings and the end of the backup key are posted', () => {
     api
-      .complete({ code: 'K7QM-2XPA-9TRD', settings: [{ name: 'MAIL_PORT', value: '587' }] })
+      .complete({
+        code: 'K7QM-2XPA-9TRD',
+        settings: [{ name: 'MAIL_PORT', value: '587' }],
+        backupKeyCheck: '6GWH',
+      })
       .subscribe();
 
     const request = http.expectOne(STATUS_URL);
@@ -32,6 +36,7 @@ describe('Given the setup API', () => {
     expect(request.request.body).toEqual({
       code: 'K7QM-2XPA-9TRD',
       settings: [{ name: 'MAIL_PORT', value: '587' }],
+      backupKeyCheck: '6GWH',
     });
     request.flush({ changed: ['MAIL_PORT'], restarting: true });
   });
@@ -53,11 +58,41 @@ describe('Given the setup API', () => {
     });
   });
 
+  it('when the backup key is asked for with a code, then the code goes in a header', () => {
+    api.backupKey('K7QM-2XPA-9TRD').subscribe();
+
+    const request = http.expectOne('/api/operations/setup/backup-key');
+    expect(request.request.method).toBe('GET');
+    expect(request.request.headers.get('X-Nfnn-Setup-Code')).toBe('K7QM-2XPA-9TRD');
+    request.flush({ key: 'AGE-SECRET-KEY-1' });
+  });
+
+  it('when the backup key is asked for from the home network, then no code header is sent', () => {
+    api.backupKey(null).subscribe();
+
+    const request = http.expectOne('/api/operations/setup/backup-key');
+    expect(request.request.headers.has('X-Nfnn-Setup-Code')).toBe(false);
+    request.flush({ key: 'AGE-SECRET-KEY-1' });
+  });
+
+  it('when an encrypted backup is uploaded with its key, then the key goes in a header', () => {
+    api.uploadBackup(null, new Blob(['age-encryption.org/v1']), 'AGE-SECRET-KEY-1ABC').subscribe();
+
+    const request = http.expectOne('/api/operations/setup/restore');
+    expect(request.request.headers.get('X-Nfnn-Backup-Key')).toBe('AGE-SECRET-KEY-1ABC');
+    request.flush({
+      requestId: 'r-1',
+      fileName: 'r-1.upload',
+      requestedAt: '2026-10-23T19:30:00Z',
+    });
+  });
+
   it('when a backup is uploaded from the home network, then no code header is sent', () => {
     api.uploadBackup(null, new Blob(['PGDMP'])).subscribe();
 
     const request = http.expectOne('/api/operations/setup/restore');
     expect(request.request.headers.has('X-Nfnn-Setup-Code')).toBe(false);
+    expect(request.request.headers.has('X-Nfnn-Backup-Key')).toBe(false);
     request.flush({
       requestId: 'r-1',
       fileName: 'r-1.upload',

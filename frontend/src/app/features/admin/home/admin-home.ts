@@ -175,6 +175,10 @@ export class AdminHome {
   protected readonly backupsNeedAttention = computed(
     () => this.backupsState() === 'error' || this.backupProblems().length > 0,
   );
+  protected readonly backupKeyUnconfirmed = computed(() => {
+    const key = this.backups()?.key;
+    return key !== undefined && key.available && !key.confirmed;
+  });
   protected readonly administratorsNeedAttention = computed(
     () => this.administratorsState() === 'error' || this.withoutSecondFactor().length > 0,
   );
@@ -188,6 +192,7 @@ export class AdminHome {
       this.importNeedsAttention() ||
       this.unpairedNeedsAttention() ||
       this.backupsNeedAttention() ||
+      this.backupKeyUnconfirmed() ||
       this.administratorsNeedAttention(),
   );
   protected readonly unpairedText = computed(() => {

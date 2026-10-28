@@ -9,20 +9,20 @@ Feature: The database is restored from a backup in the browser: by an administra
     Given a person "Jana" is registered
     And "Jana" is an administrator
     And these backups are in the backup folder:
-      | file                      | size | createdAt            |
-      | nfnn-2026-10-22_0300.dump | 1000 | 2026-10-22T01:00:00Z |
-    When "Jana" restores the backup "nfnn-2026-10-22_0300.dump"
+      | file                          | size | createdAt            |
+      | nfnn-2026-10-22_0300.dump.age | 1000 | 2026-10-22T01:00:00Z |
+    When "Jana" restores the backup "nfnn-2026-10-22_0300.dump.age"
     Then the response status is 202
     And the backups answer says:
-      | fileName | nfnn-2026-10-22_0300.dump |
-    And a restore request of the backup "nfnn-2026-10-22_0300.dump" by "Jana" waits for the backup container
-    And the admin action "RESTORE_BACKUP" by "Jana" is recorded with details containing "Vyžádána obnova ze zálohy nfnn-2026-10-22_0300.dump"
+      | fileName | nfnn-2026-10-22_0300.dump.age |
+    And a restore request of the backup "nfnn-2026-10-22_0300.dump.age" by "Jana" waits for the backup container
+    And the admin action "RESTORE_BACKUP" by "Jana" is recorded with details containing "Vyžádána obnova ze zálohy nfnn-2026-10-22_0300.dump.age"
     And the backend restarts once
     When "Jana" asks for the backups
     Then the backups answer says:
       | pendingRequests | 1    |
       | restorePending  | true |
-    When "Jana" restores the backup "nfnn-2026-10-22_0300.dump"
+    When "Jana" restores the backup "nfnn-2026-10-22_0300.dump.age"
     Then the response status is 409
     And the problem type ends with "operations/restore-pending"
     And the backend restarts once
@@ -30,7 +30,7 @@ Feature: The database is restored from a backup in the browser: by an administra
   Scenario: An unknown or odd backup name is not found and nothing restarts
     Given a person "Jana" is registered
     And "Jana" is an administrator
-    When "Jana" restores the backup "nfnn-2026-10-21_0300.dump"
+    When "Jana" restores the backup "nfnn-2026-10-21_0300.dump.age"
     Then the response status is 404
     And the problem type ends with "operations/backup-not-found"
     When "Jana" restores the backup "nfnn.dump.part"
@@ -43,16 +43,16 @@ Feature: The database is restored from a backup in the browser: by an administra
     And "Jana" is an administrator
     And a person "Petr" is registered
     And these backups are in the backup folder:
-      | file                      | size | createdAt            |
-      | nfnn-2026-10-22_0300.dump | 1000 | 2026-10-22T01:00:00Z |
+      | file                          | size | createdAt            |
+      | nfnn-2026-10-22_0300.dump.age | 1000 | 2026-10-22T01:00:00Z |
     And "Jana" connected the application "https://claude.ai/.well-known/oauth-client" with scope "admin:read admin:write"
     When the connector exchanges the connector token for an API token
-    And the exchanged API token tries to restore the backup "nfnn-2026-10-22_0300.dump"
+    And the exchanged API token tries to restore the backup "nfnn-2026-10-22_0300.dump.age"
     Then the response status is 403
     And the problem type ends with "auth/forbidden"
-    When "Petr" restores the backup "nfnn-2026-10-22_0300.dump"
+    When "Petr" restores the backup "nfnn-2026-10-22_0300.dump.age"
     Then the response status is 403
-    When someone without a token restores the backup "nfnn-2026-10-22_0300.dump"
+    When someone without a token restores the backup "nfnn-2026-10-22_0300.dump.age"
     Then the response status is 401
     And no restore request waits for the backup container
     And the backend does not restart
@@ -60,15 +60,15 @@ Feature: The database is restored from a backup in the browser: by an administra
   Scenario: A finished restore is recorded in the administration history once, under the administrator who asked for it
     Given a person "Jana" is registered
     And "Jana" is an administrator
-    And the backup container restored "nfnn-2026-10-22_0300.dump" for "Jana" under the request "019a1b2c-0000-7000-8000-000000000001"
+    And the backup container restored "nfnn-2026-10-22_0300.dump.age" for "Jana" under the request "019a1b2c-0000-7000-8000-000000000001"
     When the backend has started
     And the backend has started
-    Then the admin action "BACKUP_RESTORED" by "Jana" is recorded with details containing "Databáze obnovena ze zálohy nfnn-2026-10-22_0300.dump (požadavek 019a1b2c-0000-7000-8000-000000000001)"
+    Then the admin action "BACKUP_RESTORED" by "Jana" is recorded with details containing "Databáze obnovena ze zálohy nfnn-2026-10-22_0300.dump.age (požadavek 019a1b2c-0000-7000-8000-000000000001)"
 
   Scenario: A failed restore is recorded in the administration history with its error
     Given a person "Jana" is registered
     And "Jana" is an administrator
-    And the backup container failed to restore "nfnn-2026-10-22_0300.dump" for "Jana" under the request "019a1b2c-0000-7000-8000-000000000002" with "pg_restore: error: unexpected end of file"
+    And the backup container failed to restore "nfnn-2026-10-22_0300.dump.age" for "Jana" under the request "019a1b2c-0000-7000-8000-000000000002" with "pg_restore: error: unexpected end of file"
     When the backend has started
     Then the admin action "BACKUP_RESTORE_FAILED" by "Jana" is recorded with details containing "pg_restore: error: unexpected end of file; data zůstala, jak byla"
 
@@ -87,6 +87,20 @@ Feature: The database is restored from a backup in the browser: by an administra
     And no restore request waits for the backup container
     And the restore folder holds no upload
     And the backend does not restart
+
+  Scenario: An encrypted backup is taken only with its key, which waits beside it for the backup container
+    Given the requests come directly from the home network
+    When an encrypted backup is uploaded in the first setup without its key
+    Then the response status is 400
+    And the problem type ends with "operations/backup-key-required"
+    And the restore folder holds no upload
+    When an encrypted backup is uploaded in the first setup with the key "AGE-SECRET-KEY-1R45A984EXXAFC85YZSYGY9R6XJTD4E9AKY65ZCRGPDQ89E7ANW8QKT6GWX"
+    Then the response status is 400
+    And the problem type ends with "operations/invalid-backup-key"
+    When an encrypted backup is uploaded in the first setup with the key "AGE-SECRET-KEY-1R45A984EXXAFC85YZSYGY9R6XJTD4E9AKY65ZCRGPDQ89E7ANW8QKT6GWH"
+    Then the response status is 202
+    And the uploaded backup waits in the restore folder beside the key "AGE-SECRET-KEY-1R45A984EXXAFC85YZSYGY9R6XJTD4E9AKY65ZCRGPDQ89E7ANW8QKT6GWH"
+    And the backend restarts once
 
   Scenario: Through the proxy the upload needs the code from the container log, and after the setup it is closed
     Given the requests come through the proxy

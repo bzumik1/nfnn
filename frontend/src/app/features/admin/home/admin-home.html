@@ -109,6 +109,21 @@
             >
           </li>
         }
+        @if (backupKeyUnconfirmed()) {
+          <li class="attention-item attention-item--warning attention-backup-key">
+            <span i18n="@@admin.home.attention.backupKey"
+              >Klíč k zálohám si zatím nikdo neuložil. Bez něj žádnou zálohu neobnovíte.</span
+            >
+            &ngsp;
+            <a
+              class="ui-button ui-button--small"
+              routerLink="/sprava/zalohy"
+              fragment="klic-k-zaloham"
+              i18n="@@admin.home.attention.backupKey.open"
+              >Uložit klíč</a
+            >
+          </li>
+        }
         @if (administratorsState() === 'error') {
           <li class="attention-item">
             <span role="alert" i18n="@@admin.home.attention.secondFactor.failed"

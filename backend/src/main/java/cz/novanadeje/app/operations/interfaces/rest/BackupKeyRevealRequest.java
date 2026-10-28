@@ -1,0 +1,46 @@
+package cz.novanadeje.app.operations.interfaces.rest;
+
+import cz.novanadeje.app.shared.application.secondfactor.FreshSecondFactorProof;
+import cz.novanadeje.app.shared.application.secondfactor.FreshSecondFactorProof.PasskeyEvidence;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
+
+import java.util.Optional;
+
+record BackupKeyRevealRequest(@Pattern(regexp = CODE_SHAPE) String secondFactorCode, @Valid Passkey passkey) {
+
+    static final String CODE_SHAPE = "^[0-9]{6}$";
+
+    record Passkey(@NotBlank @Size(max = 43) String challenge, @NotNull @Valid Credential credential) {
+    }
+
+    record Credential(@NotBlank @Size(max = 1366) String id, @NotNull @Valid Response response) {
+    }
+
+    record Response(
+            @NotBlank @Size(max = 4096) String clientDataJSON,
+            @NotBlank @Size(max = 4096) String authenticatorData,
+            @NotBlank @Size(max = 1024) String signature,
+            @NotBlank @Size(max = 128) String userHandle
+    ) {
+    }
+
+    boolean carriesCode() {
+        return secondFactorCode != null;
+    }
+
+    FreshSecondFactorProof toProof() {
+        Optional<PasskeyEvidence> evidence = Optional.ofNullable(passkey).map(given -> new PasskeyEvidence(given.challenge(), given.credential().id(),
+                given.credential().response().clientDataJSON(), given.credential().response().authenticatorData(),
+                given.credential().response().signature(), given.credential().response().userHandle()));
+        return new FreshSecondFactorProof(Optional.ofNullable(secondFactorCode), evidence);
+    }
+
+    @Override
+    public String toString() {
+        return "BackupKeyRevealRequest[secondFactorCode=***, passkey=***]";
+    }
+}

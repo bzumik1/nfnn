@@ -3,6 +3,7 @@ import { expect, test } from './fixtures';
 import { problem } from './donor-session';
 
 const STATUS = '/api/operations/setup';
+const BACKUP_KEY = 'AGE-SECRET-KEY-1R45A984EXXAFC85YZSYGY9R6XJTD4E9AKY65ZCRGPDQ89E7ANW8QKT6GWH';
 
 async function freshInstall(page: Page, codeRequired: boolean): Promise<unknown[]> {
   const posted: unknown[] = [];
@@ -34,6 +35,10 @@ async function freshInstall(page: Page, codeRequired: boolean): Promise<unknown[
         : route.fulfill(problem(403, 'operations/setup-locked', 'Kód nesedí', '')),
   );
   await page.route(
+    (url) => url.pathname === `${STATUS}/backup-key`,
+    (route) => route.fulfill({ json: { key: BACKUP_KEY } }),
+  );
+  await page.route(
     (url) => url.pathname === `${STATUS}/mail-test`,
     (route) => route.fulfill({ json: { ok: true } }),
   );
@@ -59,6 +64,11 @@ test.describe('Given a freshly installed site', () => {
       'Spojení funguje, server přihlášení přijal.',
     );
     await page.locator('#setup-admin-email').fill('spravce@example.cz');
+    await expect(page.locator('.backup-key')).toHaveText(BACKUP_KEY);
+    const download = page.waitForEvent('download');
+    await page.getByRole('button', { name: 'Stáhnout jako soubor' }).click();
+    expect((await download).suggestedFilename()).toBe('nfnn-klic-k-zaloham.txt');
+    await page.locator('#setup-backup-key-check').fill('6gwh');
     await page.getByRole('button', { name: 'Uložit a spustit' }).click();
 
     await expect(page.getByRole('heading', { level: 1, name: 'Web se restartuje' })).toBeVisible();
@@ -68,6 +78,7 @@ test.describe('Given a freshly installed site', () => {
     expect(posted).toHaveLength(1);
     expect(posted[0]).toMatchObject({
       code: null,
+      backupKeyCheck: '6gwh',
       settings: expect.arrayContaining([
         { name: 'MAIL_PASSWORD', value: 'xsmtpsib-key' },
         { name: 'ADMIN_EMAILS', value: 'spravce@example.cz' },
@@ -97,6 +108,7 @@ test.describe('Given a freshly installed site', () => {
     await page.locator('#setup-mail-username').fill('abc@smtp-brevo.com');
     await page.locator('#setup-mail-password').fill('xsmtpsib-key');
     await page.locator('#setup-admin-email').fill('spravce@example.cz');
+    await page.locator('#setup-backup-key-check').fill('6GWH');
     await page.getByRole('button', { name: 'Uložit a spustit' }).click();
     await expect(page.getByRole('alert').filter({ hasText: /\S/ })).toContainText(
       'Spojení s e-mailovým serverem jste neověřili.',

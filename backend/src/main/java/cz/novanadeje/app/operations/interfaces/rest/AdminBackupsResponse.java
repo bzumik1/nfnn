@@ -1,6 +1,7 @@
 package cz.novanadeje.app.operations.interfaces.rest;
 
 import cz.novanadeje.app.operations.application.backup.BackupAdministrationView;
+import cz.novanadeje.app.operations.application.backup.BackupKeyView;
 import cz.novanadeje.app.operations.application.backup.BackupScheduleView;
 import cz.novanadeje.app.operations.domain.backup.BackupFile;
 import cz.novanadeje.app.operations.domain.backup.BackupKind;
@@ -16,13 +17,13 @@ import java.util.Optional;
 
 record AdminBackupsResponse(boolean available, List<Backup> backups, Run lastBackup, Run lastTestRestore, Run lastRestore,
                             List<RestoreEntry> restoreFiles, int pendingRequests, boolean restorePending, List<BackupProblem> problems,
-                            BackupScheduleResponse schedule) {
+                            BackupScheduleResponse schedule, Key key) {
 
-    static AdminBackupsResponse from(BackupAdministrationView view, BackupScheduleView schedule) {
+    static AdminBackupsResponse from(BackupAdministrationView view, BackupScheduleView schedule, BackupKeyView key) {
         return new AdminBackupsResponse(view.available(), view.backups().stream().map(Backup::from).toList(), run(view.lastBackup()),
                 run(view.lastTestRestore()), run(view.lastRestore()), view.restoreFiles().stream().map(RestoreEntry::from).toList(),
                 view.pendingRequests(), view.restorePending(), view.health().problems().stream().sorted().toList(),
-                BackupScheduleResponse.from(schedule));
+                BackupScheduleResponse.from(schedule), Key.from(key));
     }
 
     private static Run run(Optional<BackupRun> run) {
@@ -41,6 +42,13 @@ record AdminBackupsResponse(boolean available, List<Backup> backups, Run lastBac
         static Run from(BackupRun run) {
             return new Run(run.outcome(), run.startedAt(), run.finishedAt(), run.fileName().orElse(null), run.sizeBytes().orElse(null),
                     run.tables().orElse(null), run.requestId().orElse(null), run.error().orElse(null));
+        }
+    }
+
+    record Key(boolean available, boolean confirmed, Instant confirmedAt) {
+
+        static Key from(BackupKeyView view) {
+            return new Key(view.available(), view.confirmed(), view.confirmedAt().orElse(null));
         }
     }
 

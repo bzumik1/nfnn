@@ -1,0 +1,30 @@
+.backup-key-body {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.backup-key-body > p,
+.key-form > p {
+  margin: 0;
+}
+
+.revealed {
+  outline: none;
+}
+
+.key-form {
+  display: grid;
+  gap: var(--space-3);
+  max-width: 28rem;
+}
+
+.key-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.key-note,
+.passkey-alternative {
+  color: var(--color-text-muted);
+}

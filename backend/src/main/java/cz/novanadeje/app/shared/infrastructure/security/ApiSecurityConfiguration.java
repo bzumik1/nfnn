@@ -34,7 +34,9 @@ class ApiSecurityConfiguration {
             "/api/admin/donors/administrators",
             "/api/admin/donors/*/second-factor/reset",
             "/api/admin/donations/symbol-claims/*/reverse",
-            "/api/admin/donations/receipt-signature"};
+            "/api/admin/donations/receipt-signature",
+            "/api/admin/operations/backups/key/reveal",
+            "/api/admin/operations/backups/key/confirmation"};
 
     @Bean
     SecurityFilterChain apiSecurityFilterChain(HttpSecurity http, ProblemDetailSecurityErrorHandler errorHandler,
@@ -48,7 +50,7 @@ class ApiSecurityConfiguration {
                         .requestMatchers(HttpMethod.GET, "/api/donations/payment-qr").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/content/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/donors/auth/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/operations/setup").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/operations/setup", "/api/operations/setup/backup-key").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/operations/setup", "/api/operations/setup/unlock", "/api/operations/setup/mail-test").permitAll()
                         .requestMatchers(HttpMethod.PUT, "/api/operations/setup/restore").permitAll()
                         .requestMatchers(HttpMethod.GET, "/.well-known/oauth-authorization-server").permitAll()

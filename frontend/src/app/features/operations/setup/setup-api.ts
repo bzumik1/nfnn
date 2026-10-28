@@ -37,6 +37,7 @@ export const RESTART_POLL_MS = 3000;
 const RESTART_MAX_POLLS = 100;
 export const RESTORE_MAX_POLLS = 300;
 export const SETUP_CODE_HEADER = 'X-Nfnn-Setup-Code';
+export const BACKUP_KEY_HEADER = 'X-Nfnn-Backup-Key';
 const RESTART_GRACE_POLLS = 10;
 
 interface RestartProbe {
@@ -74,6 +75,11 @@ export interface RestoreRequestResponse {
 export interface SetupRequest {
   code: string | null;
   settings: SettingValueRequest[];
+  backupKeyCheck: string | null;
+}
+
+export interface BackupKeyResponse {
+  key: string;
 }
 
 export interface MailServerRequest {
@@ -113,14 +119,27 @@ export class SetupApi {
     });
   }
 
+  backupKey(code: string | null): Observable<BackupKeyResponse> {
+    return this.http.get<BackupKeyResponse>('/api/operations/setup/backup-key', {
+      headers: code ? new HttpHeaders({ [SETUP_CODE_HEADER]: code }) : undefined,
+    });
+  }
+
   complete(request: SetupRequest): Observable<SettingsSavedResponse> {
     return this.http.post<SettingsSavedResponse>('/api/operations/setup', request);
   }
 
-  uploadBackup(code: string | null, file: Blob): Observable<HttpEvent<RestoreRequestResponse>> {
+  uploadBackup(
+    code: string | null,
+    file: Blob,
+    backupKey: string | null = null,
+  ): Observable<HttpEvent<RestoreRequestResponse>> {
     let headers = new HttpHeaders({ 'Content-Type': 'application/octet-stream' });
     if (code) {
       headers = headers.set(SETUP_CODE_HEADER, code);
+    }
+    if (backupKey) {
+      headers = headers.set(BACKUP_KEY_HEADER, backupKey);
     }
     return this.http.put<RestoreRequestResponse>('/api/operations/setup/restore', file, {
       headers,

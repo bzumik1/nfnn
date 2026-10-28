@@ -542,7 +542,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
               outcome: 'OK',
               startedAt: '2026-10-23T01:00:00Z',
               finishedAt: '2026-10-23T01:00:03Z',
-              fileName: 'nfnn-2026-10-23_0300.dump',
+              fileName: 'nfnn-2026-10-23_0300.dump.age',
               sizeBytes: 1590,
               tables: null,
               requestId: null,
@@ -1053,7 +1053,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
             available: true,
             backups: [
               {
-                fileName: 'nfnn-2026-10-23_0300.dump',
+                fileName: 'nfnn-2026-10-23_0300.dump.age',
                 kind: 'DAILY',
                 sizeBytes: 1590,
                 createdAt: '2026-10-23T01:00:03Z',
@@ -1063,7 +1063,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
               outcome: 'FAILED',
               startedAt: '2026-10-24T01:00:00Z',
               finishedAt: '2026-10-24T01:00:01Z',
-              fileName: 'nfnn-2026-10-24_0300.dump',
+              fileName: 'nfnn-2026-10-24_0300.dump.age',
               sizeBytes: null,
               tables: null,
               requestId: null,
@@ -1073,7 +1073,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
             lastRestore: null,
             restoreFiles: [
               {
-                fileName: 'nfnn-2026-10-20_0300.dump.skipped',
+                fileName: 'nfnn-2026-10-20_0300.dump.age.skipped',
                 state: 'SKIPPED',
                 changedAt: '2026-10-21T06:00:00Z',
               },
@@ -1087,6 +1087,16 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
               testRestoreTime: '05:15',
               applied: { backupTime: '03:00', testRestoreDay: 7, testRestoreTime: '04:00' },
             },
+            key: { available: true, confirmed: false, confirmedAt: null },
+          },
+        }),
+    );
+    await page.route(
+      (url) => url.pathname === '/api/admin/operations/backups/key/reveal',
+      (route) =>
+        route.fulfill({
+          json: {
+            key: 'AGE-SECRET-KEY-1R45A984EXXAFC85YZSYGY9R6XJTD4E9AKY65ZCRGPDQ89E7ANW8QKT6GWH',
           },
         }),
     );
@@ -1109,8 +1119,16 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     await expect(page.getByRole('heading', { level: 2, name: 'Plán záloh' })).toBeVisible();
     expect(await violations(page)).toEqual([]);
 
+    await page.getByRole('button', { name: 'Zobrazit klíč…' }).click();
+    await page.locator('#backup-key-code').fill('123456');
+    await page.getByRole('button', { name: 'Zobrazit klíč', exact: true }).click();
+    await expect(page.locator('.backup-key')).toBeVisible();
+    await page.getByRole('button', { name: 'Potvrdit uložení' }).click();
+    await expect(page.locator('#backup-key-check-error')).toBeVisible();
+    expect(await violations(page)).toEqual([]);
+
     await page
-      .getByRole('button', { name: 'Obnovit databázi ze zálohy nfnn-2026-10-23_0300.dump' })
+      .getByRole('button', { name: 'Obnovit databázi ze zálohy nfnn-2026-10-23_0300.dump.age' })
       .click();
     await expect(page.getByRole('dialog')).toBeVisible();
     expect(await violations(page)).toEqual([]);
@@ -1148,6 +1166,15 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
         return route.fulfill({ status: 204, body: '' });
       },
     );
+    await page.route(
+      (url) => url.pathname === '/api/operations/setup/backup-key',
+      (route) =>
+        route.fulfill({
+          json: {
+            key: 'AGE-SECRET-KEY-1R45A984EXXAFC85YZSYGY9R6XJTD4E9AKY65ZCRGPDQ89E7ANW8QKT6GWH',
+          },
+        }),
+    );
     await page.goto('/prvni-nastaveni');
     await expect(
       page.getByRole('heading', { level: 1, name: 'První nastavení webu' }),
@@ -1164,6 +1191,8 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     await page.locator('#setup-mail-username').fill('abc@smtp-brevo.com');
     await page.locator('#setup-mail-password').fill('xsmtpsib-key');
     await page.locator('#setup-admin-email').fill('spravce@example.cz');
+    await expect(page.locator('.backup-key')).toBeVisible();
+    await page.locator('#setup-backup-key-check').fill('6GWH');
     await page.getByRole('button', { name: 'Uložit a spustit' }).click();
     await expect(page.locator('.mail-unverified')).toBeVisible();
     expect(await violations(page)).toEqual([]);
@@ -1179,6 +1208,14 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     });
     await expect(page.getByRole('alert')).toContainText('není soubor zálohy');
     await expect(page.getByRole('button', { name: 'Nahrát a obnovit' })).toBeDisabled();
+    expect(await violations(page)).toEqual([]);
+    await page.getByLabel('Soubor zálohy').setInputFiles({
+      name: 'nfnn-2026-10-22_0300.dump.age',
+      mimeType: 'application/octet-stream',
+      buffer: Buffer.from('age-encryption.org/v1'),
+    });
+    await page.getByRole('button', { name: 'Nahrát a obnovit' }).click();
+    await expect(page.locator('#setup-restore-key-error')).toBeVisible();
     expect(await violations(page)).toEqual([]);
   });
 

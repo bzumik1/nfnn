@@ -4,6 +4,7 @@ import {
   afterNextRender,
   ChangeDetectionStrategy,
   Component,
+  computed,
   DestroyRef,
   ElementRef,
   inject,
@@ -28,6 +29,8 @@ import { FormField } from '../../../shared/ui/form-field/form-field';
 import { PasswordReveal } from '../../../shared/ui/password-reveal/password-reveal';
 import { placeServerErrors } from '../../../shared/ui/form-field/server-errors';
 import { SETTING_LABELS, settingLabel } from '../setting-labels';
+import { BackupKeyPanel } from '../backup-key/backup-key-panel';
+import { backupKeyCheckPattern } from '../backup-key/backup-key-check';
 import {
   MailServerRequest,
   RESTORE_MAX_POLLS,
@@ -37,6 +40,8 @@ import {
   SetupStatusResponse,
 } from './setup-api';
 import { Notice } from '../../../shared/ui/live-notice/live-notice';
+
+type BackupKeyState = 'idle' | 'loading' | 'ready' | 'unavailable' | 'error';
 
 type Panel =
   | 'loading'
@@ -54,12 +59,15 @@ type Panel =
 
 const SETUP_COMPLETED = 'operations/setup-completed';
 const SETUP_LOCKED = 'operations/setup-locked';
+const BACKUP_KEY_UNAVAILABLE = 'operations/backup-key-unavailable';
+const BACKUP_KEY_CHECK_MISMATCH = 'operations/backup-key-check-mismatch';
 const DEFAULT_PUBLIC_URL = 'https://nfnn.cz';
 const DEFAULT_MAIL_HOST = 'smtp-relay.brevo.com';
 const DEFAULT_MAIL_PORT = 587;
 const DEFAULT_ADDRESS = 'info@nfnn.cz';
 const PORT_INVALID = $localize`:@@operations.setup.mailPort.invalid:Port je číslo od 1 do 65535.`;
-const BACKUP_EXTENSION = '.dump';
+const BACKUP_EXTENSIONS = ['.dump', '.dump.age'];
+const ENCRYPTED_BACKUP_EXTENSION = '.age';
 const SETTING_FIELDS: Readonly<Partial<Record<SettingName, string>>> = {
   PUBLIC_URL: 'publicUrl',
   MAIL_HOST: 'mailHost',
@@ -81,6 +89,7 @@ const SETTING_FIELDS: Readonly<Partial<Record<SettingName, string>>> = {
     FormControlDirective,
     FocusFirstInvalid,
     PasswordReveal,
+    BackupKeyPanel,
   ],
   templateUrl: './first-setup.html',
   styleUrl: './first-setup.scss',
@@ -110,6 +119,14 @@ export class FirstSetup {
   protected readonly uploadPercent = signal<number | null>(null);
   protected readonly restoreError = signal('');
   protected readonly restoredBeforeSetup = signal(false);
+  protected readonly backupKey = signal<string | null>(null);
+  protected readonly backupKeyState = signal<BackupKeyState>('idle');
+  protected readonly backupKeyPattern = computed(() =>
+    backupKeyCheckPattern(this.backupKey() ?? ''),
+  );
+  protected readonly backupEncrypted = computed(
+    () => this.backupFile()?.name.toLowerCase().endsWith(ENCRYPTED_BACKUP_EXTENSION) ?? false,
+  );
 
   protected readonly codeMessages = {
     required: $localize`:@@operations.setup.code.required:Opište prosím kód z logu.`,
@@ -132,6 +149,14 @@ export class FirstSetup {
   protected readonly passwordMessages = {
     required: $localize`:@@operations.setup.mailPassword.required:Vyplňte prosím heslo nebo klíč SMTP.`,
   };
+  protected readonly backupKeyCheckMessages = {
+    required: $localize`:@@operations.setup.backupKeyCheck.required:Opište prosím poslední čtyři znaky klíče.`,
+    pattern: $localize`:@@operations.setup.backupKeyCheck.mismatch:Znaky nesedí s koncem klíče. Zkontrolujte prosím, že jste uložili celý klíč.`,
+  };
+  protected readonly restoreKeyMessages = {
+    required: $localize`:@@operations.setup.restoreKey.required:Vložte prosím klíč k zálohám, se kterým záloha vznikla.`,
+    pattern: $localize`:@@operations.setup.restoreKey.invalid:Klíč začíná AGE-SECRET-KEY-1 a má 74 znaků. Zkontrolujte, že jste ho vložili celý.`,
+  };
   protected readonly fioTokenLabel = $localize`:@@operations.setup.fioToken.label:Token Fio API (jen pro čtení, nepovinné)`;
   protected readonly emailMessages = {
     required: $localize`:@@operations.setup.email.required:Vyplňte prosím e-mailovou adresu.`,
@@ -152,6 +177,8 @@ export class FirstSetup {
   };
   protected fioToken = '';
   protected adminEmail = '';
+  protected backupKeyCheck = '';
+  protected restoreKey = '';
 
   private unlockedCode: string | null = null;
   private restoreRequestId: string | null = null;
@@ -280,7 +307,11 @@ export class FirstSetup {
     this.mailUnverified.set(false);
     this.saving.set(true);
     this.api
-      .complete({ code: this.unlockedCode, settings: this.settings() })
+      .complete({
+        code: this.unlockedCode,
+        settings: this.settings(),
+        backupKeyCheck: this.backupKeyState() === 'ready' ? this.backupKeyCheck.trim() : null,
+      })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: () => {
@@ -300,7 +331,29 @@ export class FirstSetup {
             this.show('locked');
             return;
           }
+          if (problemTypeEndsWith(failure, BACKUP_KEY_CHECK_MISMATCH)) {
+            this.loadBackupKey();
+          }
           this.refuseSettings(form, failure);
+        },
+      });
+  }
+
+  protected loadBackupKey(): void {
+    this.backupKeyState.set('loading');
+    this.api
+      .backupKey(this.unlockedCode)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (response) => {
+          this.backupKey.set(response.key);
+          this.backupKeyState.set('ready');
+        },
+        error: (failure: unknown) => {
+          this.backupKey.set(null);
+          this.backupKeyState.set(
+            problemTypeEndsWith(failure, BACKUP_KEY_UNAVAILABLE) ? 'unavailable' : 'error',
+          );
         },
       });
   }
@@ -329,22 +382,26 @@ export class FirstSetup {
     const file = input.files?.item(0) ?? null;
     this.backupFile.set(file);
     this.restoreError.set('');
+    const name = file?.name.toLowerCase() ?? '';
     this.backupFileError.set(
-      file === null || file.name.toLowerCase().endsWith(BACKUP_EXTENSION)
+      file === null || BACKUP_EXTENSIONS.some((extension) => name.endsWith(extension))
         ? ''
-        : $localize`:@@operations.setup.restore.wrongFile:Tohle není soubor zálohy. Vyberte prosím soubor s příponou .dump.`,
+        : $localize`:@@operations.setup.restore.wrongFile:Tohle není soubor zálohy. Vyberte prosím soubor s příponou .dump.age (nebo starší .dump).`,
     );
   }
 
-  protected uploadBackup(): void {
+  protected uploadBackup(form: NgForm): void {
     const file = this.backupFile();
     if (file === null || this.backupFileError() !== '' || this.uploadPercent() !== null) {
+      return;
+    }
+    if (this.backupEncrypted() && form.invalid) {
       return;
     }
     this.restoreError.set('');
     this.uploadPercent.set(0);
     this.api
-      .uploadBackup(this.unlockedCode, file)
+      .uploadBackup(this.unlockedCode, file, this.backupEncrypted() ? this.restoreKey.trim() : null)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (event) => {
@@ -422,6 +479,7 @@ export class FirstSetup {
     }
     if (ours && run.outcome === 'OK') {
       this.restoreError.set('');
+      this.backupKeyState.set('idle');
       this.restoredBeforeSetup.set(true);
       this.show(status.codeRequired ? 'locked' : 'form');
       return;
@@ -496,6 +554,9 @@ export class FirstSetup {
 
   private show(panel: Panel): void {
     this.panel.set(panel);
+    if (panel === 'form' && ['idle', 'error'].includes(this.backupKeyState())) {
+      this.loadBackupKey();
+    }
     afterNextRender(() => this.heading()?.nativeElement.focus(), { injector: this.injector });
   }
 }

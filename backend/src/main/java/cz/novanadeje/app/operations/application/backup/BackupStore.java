@@ -1,6 +1,7 @@
 package cz.novanadeje.app.operations.application.backup;
 
 import cz.novanadeje.app.operations.domain.backup.BackupFile;
+import cz.novanadeje.app.operations.domain.backup.BackupKey;
 import cz.novanadeje.app.operations.domain.backup.BackupRequestKind;
 import cz.novanadeje.app.operations.domain.backup.BackupRun;
 import cz.novanadeje.app.operations.domain.backup.BackupSchedule;
@@ -34,7 +35,7 @@ public interface BackupStore {
 
     void requestRestore(RestoreRequest request);
 
-    String storeUpload(String requestId, InputStream content);
+    String storeUpload(String requestId, InputStream content, Optional<BackupKey> key);
 
     void publishSchedule(BackupSchedule schedule);
 

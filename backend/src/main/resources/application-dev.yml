@@ -9,6 +9,8 @@ app:
   site:
     public-url: ${PUBLIC_URL:http://localhost:4200}
   operations:
+    backup-key:
+      value: ${BACKUP_KEY:AGE-SECRET-KEY-1CZSEH9JWJ74WWUA7EFSLLS5DFA24G5NE59ZHTVN0505ACQH8CSYQVPZ2PD}
     settings:
       key: ${SETTINGS_KEY:ZGV2LW9ubHktc2V0dGluZ3Mta2V5LTMyLWJ5dGVzLSE=}
   security:

@@ -4,6 +4,8 @@ import cz.novanadeje.app.operations.application.backup.BackupDownload;
 import cz.novanadeje.app.operations.application.backup.BackupStore;
 import cz.novanadeje.app.operations.application.backup.RestoreRequest;
 import cz.novanadeje.app.operations.domain.backup.BackupFile;
+import cz.novanadeje.app.operations.domain.backup.BackupKey;
+import cz.novanadeje.app.operations.domain.backup.BackupKeyRequired;
 import cz.novanadeje.app.operations.domain.backup.BackupRequestKind;
 import cz.novanadeje.app.operations.domain.backup.BackupRun;
 import cz.novanadeje.app.operations.domain.backup.BackupSchedule;
@@ -25,6 +27,7 @@ import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
 import java.nio.file.attribute.FileTime;
+import java.nio.file.attribute.PosixFilePermissions;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -45,9 +48,11 @@ class FileBackupStore implements BackupStore {
     static final String RESTORE_RUNNING = "restore.running";
     static final String RESTORE_REQUEST_EXTENSION = ".restore";
     static final String UPLOAD_EXTENSION = ".upload";
+    static final String KEY_EXTENSION = ".key";
     static final String SCHEDULE = "schedule";
 
     private static final byte[] DUMP_MAGIC = "PGDMP".getBytes(StandardCharsets.US_ASCII);
+    private static final byte[] AGE_MAGIC = "age-encryption.org/v1".getBytes(StandardCharsets.US_ASCII);
     private static final int COPY_BUFFER = 64 * 1024;
 
     private static final Logger log = LoggerFactory.getLogger(FileBackupStore.class);
@@ -131,34 +136,57 @@ class FileBackupStore implements BackupStore {
     }
 
     @Override
-    public String storeUpload(String requestId, InputStream content) {
+    public String storeUpload(String requestId, InputStream content, Optional<BackupKey> key) {
         if (!Files.isDirectory(restoreDirectory)) {
             throw new BackupsUnavailable();
         }
         String name = requestId + UPLOAD_EXTENSION;
         Path part = restoreDirectory.resolve(name + ".part");
+        Path keyFile = restoreDirectory.resolve(requestId + KEY_EXTENSION);
         try {
-            copyDump(content, part);
+            byte[] header = content.readNBytes(AGE_MAGIC.length);
+            boolean encrypted = startsWith(header, AGE_MAGIC);
+            if (!encrypted && !startsWith(header, DUMP_MAGIC)) {
+                throw new NotABackup();
+            }
+            if (encrypted && key.isEmpty()) {
+                throw new BackupKeyRequired();
+            }
+            copyDump(header, content, part);
+            if (encrypted) {
+                writeKey(keyFile, key.orElseThrow());
+            }
             Files.move(part, restoreDirectory.resolve(name), StandardCopyOption.ATOMIC_MOVE);
             return name;
-        } catch (NotABackup | BackupTooLarge refused) {
+        } catch (NotABackup | BackupTooLarge | BackupKeyRequired refused) {
             deleteQuietly(part);
             throw refused;
         } catch (IOException notWritable) {
             deleteQuietly(part);
+            deleteQuietly(keyFile);
             log.error("The uploaded backup {} could not be stored", requestId, notWritable);
             throw new BackupsUnavailable();
         }
     }
 
-    private void copyDump(InputStream content, Path target) throws IOException {
-        byte[] magic = content.readNBytes(DUMP_MAGIC.length);
-        if (!Arrays.equals(magic, DUMP_MAGIC)) {
-            throw new NotABackup();
+    private static boolean startsWith(byte[] header, byte[] magic) {
+        return header.length >= magic.length && Arrays.equals(header, 0, magic.length, magic, 0, magic.length);
+    }
+
+    private static void writeKey(Path keyFile, BackupKey key) throws IOException {
+        Files.deleteIfExists(keyFile);
+        try {
+            Files.createFile(keyFile, PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rw-------")));
+        } catch (UnsupportedOperationException noPosix) {
+            Files.createFile(keyFile);
         }
+        Files.writeString(keyFile, key.value() + "\n", StandardCharsets.US_ASCII, StandardOpenOption.TRUNCATE_EXISTING);
+    }
+
+    private void copyDump(byte[] header, InputStream content, Path target) throws IOException {
         try (OutputStream out = Files.newOutputStream(target, StandardOpenOption.CREATE_NEW)) {
-            out.write(magic);
-            long written = magic.length;
+            out.write(header);
+            long written = header.length;
             byte[] buffer = new byte[COPY_BUFFER];
             int read;
             while ((read = content.read(buffer)) != -1) {

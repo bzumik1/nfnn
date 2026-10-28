@@ -171,10 +171,15 @@
             </p>
             <p class="ui-callout ui-callout--warning off-server" i18n="@@admin.backups.offServer">
               Zálohy leží na stejném disku jako web. Jednou za měsíc si nejnovější stáhněte
-              tlačítkem Stáhnout a uložte jinam, třeba na flash disk nebo do cloudu.
+              tlačítkem Stáhnout a uložte jinam, třeba na flash disk nebo do cloudu. Jsou
+              zašifrované, takže je bez klíče k zálohám nikdo nepřečte.
             </p>
           </div>
         </section>
+
+        @if (key(); as status) {
+          <app-backup-key-card [status]="status" (changed)="keyChanged($event)" />
+        }
 
         <section class="ui-card" aria-labelledby="backups-list-title">
           <h2 id="backups-list-title" class="ui-card__title" i18n="@@admin.backups.list.title">

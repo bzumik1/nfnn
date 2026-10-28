@@ -141,7 +141,7 @@ jobs:
 
       - name: Compose file names no secret
         run: |
-          if grep -noE '\b(POSTGRES_PASSWORD|PGPASSWORD|DB_PASSWORD|JWT_SECRET|SETTINGS_KEY|MAIL_PASSWORD|FIO_TOKEN)\b' deploy/compose.yml; then
+          if grep -noE '\b(POSTGRES_PASSWORD|PGPASSWORD|DB_PASSWORD|JWT_SECRET|SETTINGS_KEY|BACKUP_KEY|MAIL_PASSWORD|FIO_TOKEN)\b' deploy/compose.yml; then
             echo "::error::Secrets are generated into secrets/ or entered in the first setup, never written into deploy/compose.yml"
             exit 1
           fi
@@ -237,7 +237,7 @@ jobs:
       - name: First setup
         run: |
           secrets="$RUNNER_TEMP/nfnn/secrets"
-          for file in db-password db-app-password jwt-secret settings-key; do
+          for file in db-password db-app-password jwt-secret settings-key backup-key; do
             [ "$(sudo stat -c '%a %U' "$secrets/$file")" = '600 root' ] || { echo "::error::secrets/$file must exist, owned by root with mode 600"; sudo ls -la "$secrets"; exit 1; }
           done
           status=$(curl -fsS --max-time 10 http://localhost:8089/api/operations/setup)
@@ -254,8 +254,18 @@ jobs:
           fi
           right=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 -H 'X-Forwarded-For: 203.0.113.7' -H 'Content-Type: application/json' --data "{\"code\":\"$code\"}" http://localhost:8089/api/operations/setup/unlock)
           [ "$right" = 204 ] || { echo "::error::the code from the log must unlock the setup (got $right)"; exit 1; }
+          sudo grep -qE '^AGE-SECRET-KEY-1[0-9A-Z]{58}$' "$secrets/backup-key" || { echo "::error::secrets/backup-key must hold one age identity"; exit 1; }
+          key_headers=$(curl -sS -D - -o "$RUNNER_TEMP/backup-key.json" --max-time 10 -H 'X-Forwarded-For: 203.0.113.7' -H "X-Nfnn-Setup-Code: $code" http://localhost:8089/api/operations/setup/backup-key)
+          echo "$key_headers" | grep -qi '^Cache-Control: private, no-store' || { echo "::error::the backup key must not be cached"; echo "$key_headers"; exit 1; }
+          backup_key=$(jq -r '.key' "$RUNNER_TEMP/backup-key.json")
+          rm -f "$RUNNER_TEMP/backup-key.json"
+          [ "$backup_key" = "$(sudo grep -m 1 '^AGE-SECRET-KEY-' "$secrets/backup-key")" ] || { echo "::error::the setup must show the generated backup key"; exit 1; }
+          echo "::add-mask::$backup_key"
+          key_check=$(printf '%s' "$backup_key" | tail -c 4)
+          mismatch=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 -H 'X-Forwarded-For: 203.0.113.7' -H 'Content-Type: application/json' --data "{\"code\":\"$code\",\"settings\":[],\"backupKeyCheck\":\"****\"}" http://localhost:8089/api/operations/setup)
+          [ "$mismatch" = 400 ] || { echo "::error::the setup must refuse other characters than the end of the backup key (got $mismatch)"; exit 1; }
           restarts=$(docker inspect -f '{{.RestartCount}}' nfnn-backend)
-          saved=$(curl -fsS --max-time 30 -H 'X-Forwarded-For: 203.0.113.7' -H 'Content-Type: application/json' --data "{\"code\":\"$code\",\"settings\":[{\"name\":\"PUBLIC_URL\",\"value\":\"http://localhost:8089\"},{\"name\":\"MAIL_HOST\",\"value\":\"localhost\"},{\"name\":\"MAIL_PORT\",\"value\":\"1025\"},{\"name\":\"MAIL_FROM\",\"value\":\"info@nfnn.cz\"},{\"name\":\"CONTACT_RECIPIENT\",\"value\":\"info@nfnn.cz\"},{\"name\":\"ADMIN_EMAILS\",\"value\":\"spravce@example.cz\"},{\"name\":\"MAIL_PASSWORD\",\"value\":\"not-a-real-password\"}]}" http://localhost:8089/api/operations/setup)
+          saved=$(curl -fsS --max-time 30 -H 'X-Forwarded-For: 203.0.113.7' -H 'Content-Type: application/json' --data "{\"code\":\"$code\",\"backupKeyCheck\":\"$key_check\",\"settings\":[{\"name\":\"PUBLIC_URL\",\"value\":\"http://localhost:8089\"},{\"name\":\"MAIL_HOST\",\"value\":\"localhost\"},{\"name\":\"MAIL_PORT\",\"value\":\"1025\"},{\"name\":\"MAIL_FROM\",\"value\":\"info@nfnn.cz\"},{\"name\":\"CONTACT_RECIPIENT\",\"value\":\"info@nfnn.cz\"},{\"name\":\"ADMIN_EMAILS\",\"value\":\"spravce@example.cz\"},{\"name\":\"MAIL_PASSWORD\",\"value\":\"not-a-real-password\"}]}" http://localhost:8089/api/operations/setup)
           echo "$saved" | jq -e '.restarting == true' > /dev/null || { echo "::error::the setup was not saved: $saved"; exit 1; }
           echo "The backend restarts with the stored settings"
           for _ in $(seq 90); do
@@ -268,6 +278,11 @@ jobs:
           done_status=$(curl -fsS --max-time 10 http://localhost:8089/api/operations/setup)
           [ "$(echo "$done_status" | jq -r '.required')" = false ] || { echo "::error::the setup still asks after the restart"; exit 1; }
           grep -q 'Loaded 7 stored settings' "$RUNNER_TEMP/nfnn/logs/backend.log" || { echo "::error::the backend did not load the stored settings"; exit 1; }
+          if sudo grep -rqF "$backup_key" "$RUNNER_TEMP/nfnn/logs"; then
+            echo "::error::the backup key must reach no log file"
+            exit 1
+          fi
+          [ "$(docker exec nfnn-postgres psql -U novanadeje -d novanadeje -tA -c "select count(*) from operations_backup_key_confirmation where confirmed_by is null")" = 1 ] || { echo "::error::the setup did not record the backup key as saved"; exit 1; }
           stored=$(docker exec nfnn-postgres psql -U novanadeje -d novanadeje -tA -c "select value from operations_setting where name = 'MAIL_PASSWORD'")
           case "$stored" in
             v1:*) ;;
@@ -323,7 +338,7 @@ jobs:
           for container in nfnn-postgres nfnn-backup nfnn-mcp nfnn-frontend; do
             main_environment=$(docker exec --privileged "$container" sh -c "tr '\\0' '\\n' < /proc/1/environ")
             [ "$container" = nfnn-frontend ] || echo "$main_environment" | grep -q '^PATH=' || { echo "::error::could not read the environment of $container's main process (nginx alone writes its title over it)"; exit 1; }
-            for key in JWT_SECRET SETTINGS_KEY DB_PASSWORD FIO_TOKEN MAIL_PASSWORD; do
+            for key in JWT_SECRET SETTINGS_KEY BACKUP_KEY DB_PASSWORD FIO_TOKEN MAIL_PASSWORD; do
               if docker exec "$container" printenv "$key" > /dev/null || echo "$main_environment" | grep -q "^$key="; then
                 echo "::error::$container must not receive $key, neither in its configuration nor in its main process"
                 exit 1
@@ -391,13 +406,22 @@ jobs:
             echo "::error::$3"
             return 1
           }
-          wait_for "ls $backups/nfnn-*.dump > /dev/null 2>&1" 30 "the backup service wrote no dump"
-          dump=$(ls "$backups"/nfnn-*.dump | head -n 1)
-          if ! docker exec nfnn-backup pg_restore --list "/backups/$(basename "$dump")" | grep -q 'Compression: zstd'; then
-            echo "::error::the backup dump is not compressed with zstd"
+          wait_for "ls $backups/nfnn-*.dump.age > /dev/null 2>&1" 30 "the backup service wrote no encrypted dump"
+          if ls "$backups"/nfnn-*.dump > /dev/null 2>&1; then
+            echo "::error::a backup was written without encryption"
             exit 1
           fi
-          echo "$dump is a zstd dump"
+          dump=$(ls "$backups"/nfnn-*.dump.age | head -n 1)
+          [ "$(head -c 21 "$dump")" = 'age-encryption.org/v1' ] || { echo "::error::the backup is not an age file"; exit 1; }
+          if docker exec nfnn-backup pg_restore --list "/backups/$(basename "$dump")" > /dev/null 2>&1; then
+            echo "::error::the encrypted backup reads without its key"
+            exit 1
+          fi
+          if ! docker exec nfnn-backup sh -c "age --decrypt --identity /secrets/backup-key '/backups/$(basename "$dump")' | pg_restore --list" | grep -q 'Compression: zstd'; then
+            echo "::error::the decrypted backup is not a dump compressed with zstd"
+            exit 1
+          fi
+          echo "$dump is an encrypted zstd dump"
           grep -q '^outcome=ok$' "$backups/status/backup" || { echo "::error::the backup status file does not say ok"; cat "$backups/status/backup"; exit 1; }
           [ "$(stat -c %a "$backups/requests")" = 1777 ] || { echo "::error::the requests folder must be writable for the backend (mode 1777)"; exit 1; }
 
@@ -413,21 +437,21 @@ jobs:
           echo "A requested backup and a test restore run from request files"
           docker exec nfnn-backend sh -c 'touch /backups/requests/ci-1.backup && touch /backups/requests/ci-2.test-restore'
           wait_for "grep -q '^request=ci-1$' $backups/status/backup" 30 "the requested backup did not run"
-          grep -q -- '-rucni.dump$' "$backups/status/backup" || { echo "::error::the requested backup is not named -rucni"; exit 1; }
+          grep -q -- '-rucni.dump.age$' "$backups/status/backup" || { echo "::error::the requested backup is not named -rucni"; exit 1; }
           wait_for "grep -q '^request=ci-2$' $backups/status/test-restore" 60 "the requested test restore did not run"
           grep -q '^outcome=ok$' "$backups/status/test-restore" || { echo "::error::the test restore failed"; cat "$backups/status/test-restore"; exit 1; }
           grep -E '^tables=[1-9][0-9]*$' "$backups/status/test-restore" || { echo "::error::the test restore counted no tables"; exit 1; }
-          full_dump=$(ls "$backups"/nfnn-*-rucni.dump | head -n 1)
+          full_dump=$(ls "$backups"/nfnn-*-rucni.dump.age | head -n 1)
 
           echo "A dump in the restore folder is restored into the emptied database before the backend starts"
           restore="$RUNNER_TEMP/nfnn/restore"
           docker compose stop backend backup
           docker exec nfnn-postgres psql -U novanadeje -d novanadeje -c "insert into admin_action (id, admin_id, action, details, performed_at) values ('019a0000-0000-7000-8000-000000000001', '019a0000-0000-7000-8000-000000000002', 'CI_MARKER', 'to be undone by the restore', now())"
-          sudo cp "$full_dump" "$restore/ci.force.dump"
+          sudo cp "$full_dump" "$restore/ci.force.dump.age"
           docker compose up -d --wait --wait-timeout 300 postgres backup backend frontend
-          wait_for "[ -f $restore/ci.force.dump.done ]" 30 "the restore folder dump was not restored"
+          wait_for "[ -f $restore/ci.force.dump.age.done ]" 30 "the restore folder dump was not restored"
           grep -q '^outcome=ok$' "$backups/status/restore" || { echo "::error::the restore status file does not say ok"; cat "$backups/status/restore"; exit 1; }
-          ls "$backups"/nfnn-*-pred-obnovou.dump > /dev/null || { echo "::error::no safety dump was taken before the forced restore"; exit 1; }
+          ls "$backups"/nfnn-*-pred-obnovou.dump.age > /dev/null || { echo "::error::no safety dump was taken before the forced restore"; exit 1; }
           marker=$(docker exec nfnn-postgres psql -U novanadeje -d novanadeje -tA -c "select count(*) from admin_action where action = 'CI_MARKER'")
           [ "$marker" = 0 ] || { echo "::error::the forced restore kept a row written after the dump"; exit 1; }
           curl -fsS --max-time 10 http://localhost:8089/ | grep -q '<app-root'

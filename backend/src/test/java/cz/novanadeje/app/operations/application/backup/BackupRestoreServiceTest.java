@@ -2,6 +2,7 @@ package cz.novanadeje.app.operations.application.backup;
 
 import cz.novanadeje.app.operations.application.settings.ApplicationRestarter;
 import cz.novanadeje.app.operations.domain.backup.BackupFile;
+import cz.novanadeje.app.operations.domain.backup.BackupKey;
 import cz.novanadeje.app.operations.domain.backup.BackupNotFound;
 import cz.novanadeje.app.operations.domain.backup.BackupRun;
 import cz.novanadeje.app.operations.domain.backup.RestorePending;
@@ -17,6 +18,7 @@ import org.springframework.context.ApplicationEventPublisher;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.time.ZoneId;
@@ -37,7 +39,7 @@ class BackupRestoreServiceTest {
 
     private static final Instant NOW = Instant.parse("2026-10-23T19:30:00Z");
     private static final UUID ADMIN = UUID.fromString("01a18e56-bdb0-775a-bd0a-a60756831369");
-    private static final String FILE = "nfnn-2026-10-22_0300.dump";
+    private static final String FILE = "nfnn-2026-10-22_0300.dump.age";
     private static final String REQUEST = "019a1b2c-0000-7000-8000-000000000001";
 
     private final BackupStore store = mock(BackupStore.class);
@@ -86,20 +88,21 @@ class BackupRestoreServiceTest {
         when(store.restorePending()).thenReturn(true);
 
         assertThatThrownBy(() -> service.restoreBackup(ADMIN, FILE)).isInstanceOf(RestorePending.class);
-        assertThatThrownBy(() -> service.restoreUpload(new ByteArrayInputStream(new byte[1]))).isInstanceOf(RestorePending.class);
+        assertThatThrownBy(() -> service.restoreUpload(new ByteArrayInputStream(new byte[1]), Optional.empty())).isInstanceOf(RestorePending.class);
 
         verify(store, never()).requestRestore(any());
-        verify(store, never()).storeUpload(any(), any());
+        verify(store, never()).storeUpload(any(), any(), any());
         verifyNoInteractions(restarter, events);
     }
 
     @Test
     @DisplayName("Given an uploaded dump, when it is restored, then it is stored under the request, the request names it without an administrator and the backend restarts")
     void should_request_restore_when_uploaded_given_a_dump() {
-        InputStream content = new ByteArrayInputStream(new byte[] {'P', 'G', 'D', 'M', 'P'});
-        when(store.storeUpload(any(), eq(content))).thenAnswer(call -> call.getArgument(0) + ".upload");
+        InputStream content = new ByteArrayInputStream("age-encryption.org/v1".getBytes(StandardCharsets.US_ASCII));
+        Optional<BackupKey> key = Optional.of(new BackupKey("AGE-SECRET-KEY-1R45A984EXXAFC85YZSYGY9R6XJTD4E9AKY65ZCRGPDQ89E7ANW8QKT6GWH"));
+        when(store.storeUpload(any(), eq(content), eq(key))).thenAnswer(call -> call.getArgument(0) + ".upload");
 
-        RestoreRequest request = service.restoreUpload(content);
+        RestoreRequest request = service.restoreUpload(content, key);
 
         assertThat(request.source()).isEqualTo(RestoreSource.UPLOAD);
         assertThat(request.fileName()).isEqualTo(request.id() + ".upload");
