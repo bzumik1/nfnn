@@ -94,7 +94,6 @@ Zbývá před spuštěním na nfnn.cz:
 - Hlídání dostupnosti zvenčí; kopie záloh mimo server až po spuštění (šifrované, viz „Šifrované zálohy“ v backlogu).
 - Sběrné účty a vlastní účty fondu vyloučit z párování (`/sprava/nastaveni`).
 - Odemčení historie ve Fio a hluboký import do 1. 1. 2027, aby potvrzení za rok 2026 obsahovala všechny dary.
-- Zátěžová zkouška vydávání potvrzení před Novým rokem.
 - Odpovědi od Pavla: seznam dřívějších VS dárců, zda fond vystavil potvrzení za rok 2025 (pak potvrzení na webu i za 2025), zda je účet transparentní.
 - Provozní kroky Jakuba z bezpečnostního auditu (seznam je mimo veřejné repo).
 
@@ -118,6 +117,8 @@ Peníze a potvrzení:
 - Karta „Připraveno na potvrzení“ od prosince a vzorové PDF s vodoznakem VZOR, které se nevydá.
 - Data pro výroční zprávu a export pro účetní; dárce může odmítnout uvedení jménem (zákonné požadavky ověřit před stavbou).
 - Přehled, kdo si nestáhl roční potvrzení, a jedna připomínka 15. února s odkazem na web.
+- QR platba v prohlížeči (Jakub 28. 10. 2026): platební řetězec a QR kód se počítají v prohlížeči podle stejných pravidel jako dnes na serveru (přepsat i s testy), QR se překreslí hned při psaní částky a web si od serveru načte jen údaje účtu, které jde ukládat do mezipaměti.
+- PDF potvrzení vykresluje prohlížeč (Jakub 28. 10. 2026, až po QR): čekání asi 2 s vyplní ukazatel průběhu, písma s českou abecedou se načtou jen na stránce potvrzení. Server dál počítá otisk údajů, čísluje pod zámkem a ukládá údaje potvrzení; otisk PDF odpadne, verze knihovny se zamkne a kontrola historie šablon se přesune na frontend. Měření ukázalo, že ani dnešní vykreslování na serveru není úzké hrdlo (46–64 ms na potvrzení), takže zátěžová zkouška před Novým rokem odpadá.
 
 Dárci:
 
