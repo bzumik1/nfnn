@@ -2,7 +2,7 @@
 
 Web of Nadační fond Nová naděje (nfnn.cz): public site, donor portal with PDF donation receipts, administration at `/sprava`, contact form, MCP connector for the administration. Gifts arrive by bank transfer and are imported from the Fio API. Czech UI; English code, identifiers, commits.
 
-Before building, read the sections you touch (grep them: `api-contract.md` is too large to read whole) and update them in the same PR: `docs/requirements.md` (client decisions, Czech), `docs/api-contract.md` (HTTP and MCP contract), `docs/system-overview.md` (how each context works today), `docs/security-overview.md` (how authentication, connected applications and the connector are secured), `docs/frontend-overview.md` (what the Angular app contains), `deploy/README.md` (server, Czech).
+Before building, read the sections you touch (grep them: `api-contract.md` is too large to read whole) and update them in the same PR: `docs/requirements.md` (client decisions, Czech), `docs/roadmap.md` (versions and backlog, Czech: a feature moves when it ships or Jakub decides on it), `docs/api-contract.md` (HTTP and MCP contract), `docs/system-overview.md` (how each context works today), `docs/security-overview.md` (how authentication, connected applications and the connector are secured), `docs/frontend-overview.md` (what the Angular app contains), `deploy/README.md` (server, Czech).
 
 ## Layout
 
