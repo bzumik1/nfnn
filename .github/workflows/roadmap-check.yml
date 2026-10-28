@@ -1,0 +1,44 @@
+name: Roadmap check
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, edited]
+    paths:
+      - "**"
+      - "!docs/**"
+      - "!.claude/**"
+      - "!**/*.md"
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: roadmap-check-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  roadmap:
+    if: github.event.pull_request.user.login != 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Require a roadmap update or a reason to skip it
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          PULL_NUMBER: ${{ github.event.pull_request.number }}
+          PULL_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          files=$(gh api "repos/$REPOSITORY/pulls/$PULL_NUMBER/files" --paginate --jq '.[].filename')
+          if grep -qx 'docs/roadmap.md' <<<"$files"; then
+            echo "docs/roadmap.md is updated."
+            exit 0
+          fi
+          if grep -Eiq '^[[:space:]]*roadmapa:[[:space:]]*beze[[:space:]]+zm(ě|e)ny[[:space:]]*$' <<<"$PULL_BODY"; then
+            echo "The description says the roadmap stays as it is."
+            exit 0
+          fi
+          echo "::error::Update docs/roadmap.md (move the feature this PR ships or decides), or write 'Roadmapa: beze změny' on a line of its own in the PR description, then save it (the check runs again)."
+          exit 1
