@@ -103,7 +103,7 @@ Web představí fond a jeho pomoc dětem, usnadní darování a dárcům dá ú�
 - E-mail fondu `info@nfnn.cz`: příchozí pošta se přeposílá, web odesílá přes Brevo.
 - Web sbírá jen to, co potvrzení a párování potřebují. Zprávy z kontaktního formuláře maže rok po odeslání; kopii ve schránce fondu drží fond jen do vyřízení.
 - Zásady ochrany osobních údajů popisují párování podle symbolu i účtu, uložené údaje z výpisu, IP adresy v limitech a logech, Brevo (měří otevření a kliky), Cloudflare, Gmail včetně předání do USA a zálohy. Platí od 18. 10. 2026 a mění se s každou funkcí, která mění údaje.
-- Co jde udělat v prohlížeči, dělá prohlížeč (local first, Jakub 28. 10. 2026): QR kód platby i PDF potvrzení bude prohlížeč vytvářet sám a nainstalovaná aplikace půjde používat i offline (`roadmap.md`). Server přihlašuje, vydává čísla potvrzení, páruje dary, importuje z Fio, posílá e-maily, počítá přehledy správy a slouží konektoru.
+- Co jde udělat v prohlížeči, dělá prohlížeč (local first, Jakub 28. 10. 2026): QR kód platby i PDF potvrzení bude prohlížeč vytvářet sám a web i nainstalovaná aplikace půjdou používat i offline: data dárce i správy zůstanou v zařízení natrvalo, šifrovaná a čitelná jen po přihlášení (`roadmap.md`). Fotky k obsahu zatím zpracovává server. Server přihlašuje, vydává čísla potvrzení, páruje dary, importuje z Fio, posílá e-maily, počítá přehledy správy a slouží konektoru.
 - Čeština; angličtina je připravená na později.
 
 ## 9. Otevřené otázky
