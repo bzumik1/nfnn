@@ -153,7 +153,7 @@ E-maily:
 Veřejný web a provoz:
 
 - Tlačítko Sdílet u aktualit a projektů (Web Share API, kopírování odkazu).
-- Instagram (Jakub 28. 10. 2026, až fond založí profesionální účet na Instagramu, zatím žádný nemá): při zveřejnění projektu nebo aktuality nabídnout publikaci fotky s popiskem na Instagram fondu, s náhledem, zaškrtávátkem a vypínačem ve správě. Instagram API s přihlášením přes Instagram, bez stránky na Facebooku; token vloží správce jen z prohlížeče a web ho sám obnovuje.
+- Instagram (Jakub 28. 10. 2026, plně automaticky, protože ho nikdo nebude mít čas spravovat): zveřejnění projektu nebo aktuality na webu ji samo publikuje na Instagram fondu (titulní fotka a krátký popisek s odkazem), bez dalšího kroku. Zapíná a vypíná se ve správě, token se obnovuje sám a při selhání přijde e-mail. Jednorázově je potřeba založit profesionální účet na Instagramu a aplikaci Meta; fond zatím účet nemá.
 - Chyby z prohlížeče do logu, bez osobních údajů.
 - Jedna hláška „Web se právě aktualizuje“ při restartu serveru.
 - E-mail při docházejícím místě na disku.
