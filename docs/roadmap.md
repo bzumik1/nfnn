@@ -117,7 +117,8 @@ Peníze a potvrzení:
 - Karta „Připraveno na potvrzení“ od prosince a vzorové PDF s vodoznakem VZOR, které se nevydá.
 - Data pro výroční zprávu a export pro účetní; dárce může odmítnout uvedení jménem (zákonné požadavky ověřit před stavbou).
 - Přehled, kdo si nestáhl roční potvrzení, a jedna připomínka 15. února s odkazem na web.
-- QR platba v prohlížeči (Jakub 28. 10. 2026): platební řetězec a QR kód se počítají v prohlížeči podle stejných pravidel jako dnes na serveru (přepsat i s testy), QR se překreslí hned při psaní částky a web si od serveru načte jen údaje účtu, které jde ukládat do mezipaměti.
+- QR platba v prohlížeči (Jakub 28. 10. 2026): platební řetězec a QR kód se počítají v prohlížeči podle stejných pravidel jako dnes na serveru (přepsat i s testy), QR se překreslí hned při psaní částky a web si od serveru načte jen údaje účtu, které jde ukládat do mezipaměti. Stejně prohlížeč zakóduje i QR pro aplikaci s kódem (druhý faktor) z adresy `otpauth`; server pak QR kódy nekreslí vůbec, pokud je nepotřebuje nic jiného.
+- Přehled dárce počítá prohlížeč (zásada „local first“, Jakub 28. 10. 2026): server pošle všechny dary dárce najednou a celkovou částku, počet, poslední dar, souhrn po letech i filtr roku spočítá prohlížeč; hodí se i pro offline režim aplikace. Od kdy a do kterého roku jdou potvrzení stáhnout, dál určuje server, ne hodiny v zařízení.
 - PDF potvrzení vykresluje prohlížeč (Jakub 28. 10. 2026, až po QR): čekání asi 2 s vyplní ukazatel průběhu, písma s českou abecedou se načtou jen na stránce potvrzení. Server dál počítá otisk údajů, čísluje pod zámkem a ukládá údaje potvrzení; otisk PDF odpadne, verze knihovny se zamkne a kontrola historie šablon se přesune na frontend. Měření ukázalo, že ani dnešní vykreslování na serveru není úzké hrdlo (46–64 ms na potvrzení), takže zátěžová zkouška před Novým rokem odpadá.
 
 Dárci:
