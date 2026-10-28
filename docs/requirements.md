@@ -1,6 +1,6 @@
 # Zadání: web Nadačního fondu Nová naděje
 
-Výsledek rozhovoru s Jakubem (klient), 17. 10. 2026. Popisuje **první verzi** a rozhodnutí k ní; co přijde dál, je v `roadmap.md` (část 7).
+Výsledek rozhovoru s Jakubem (klient), 17. 10. 2026. Popisuje **první verzi** a rozhodnutí k ní; co přijde dál, je v `roadmap.md` (viz §7).
 Legenda: ✅ potvrdil Jakub · 🔸 návrh nebo převzato z repa, nenamítal · ❓ otevřené
 
 Výchozí volby, které Claude zvolil v plánu v2, prošel Jakub 23. 10. 2026 jednu po druhé a potvrdil je; co změnil, je zapsané u příslušného bodu s poznámkou „připravuje se“, dokud to není hotové.

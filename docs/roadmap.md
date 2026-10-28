@@ -2,20 +2,20 @@
 
 Co web umí po verzích a co čeká v zásobníku. Verze je ucelený blok práce, aplikace sama číslo verze nenese (nasazuje se podle commitu). Podrobnosti hotových funkcí jsou v `requirements.md` (rozhodnutí klienta) a v přehledech `system-overview.md`, `frontend-overview.md` a `security-overview.md`.
 
-Udržuje se v každém PR, který funkci dokončí nebo o ní rozhodne: funkce se přesune z backlogu do verze, nebo mezi částmi backlogu. Další verzi vybere Jakub z části „Schváleno“; do té doby žádná plánovaná verze není.
+Udržuje se v každém PR, který funkci dokončí nebo o ní rozhodne, i v PR jen s dokumentací, které kontrola v CI nehlídá: hotová funkce se přesune z backlogu nebo z části „Rozpracováno“ do tabulky aktuální verze nebo do jejího řádku „Mimo očíslované úkoly“, rozhodnutí o nápadu ji přesune mezi částmi backlogu. Číslo PR se doplní dalším commitem po otevření PR. Oprava, aktualizace závislostí nebo úprava uvnitř hotové funkce do roadmapy nepatří; takový PR má v popisu řádek `Roadmapa: beze změny`. Další verzi vybere Jakub z části „Schváleno“; do té doby žádná plánovaná verze není.
 
 ## v1: hotovo (17.–22. 10. 2026)
 
-Veřejný web a účet dárce. Úkoly 1–8 a 13–17 plánu v1; úkoly 9–12 a 18 přešly do v2.
+Veřejný web a účet dárce. Čísla jsou úkoly plánu v1; úkoly 9–12 a 18 toho plánu dokončila v2 (obsah z API, logy, MCP, vzhled e-mailů, ověření e-mailu).
 
 | # | Úkol | PR |
 |---|---|---|
 | 1 | Kontaktní formulář: e-mail fondu, honeypot, limit, chyby jako `problem+json` | #5 |
 | 2 | Registrace a přihlášení dárce (člověk i firma), vlastní VS, `/darce` | #9 |
 | 3 | QR platba v sekci Přispět, přihlášenému s jeho VS; skutečný účet a údaje fondu | #8, #10, #18 |
-| 4 | Hodinový import z Fio a párování podle VS a naučeného účtu; vlastní knihovna `fio-api` na Maven Central | #7, #11, #15 |
+| 4 | Hodinový import z Fio a párování podle VS a naučeného účtu, kontrola banky při otevření přehledu; vlastní knihovna `fio-api` na Maven Central | #7, #11, #15, #19 |
 | 5 | Přehled darů dárce se souhrnem po letech | #12 |
-| 6 | Potvrzení o daru v PDF, roční i k jednomu daru, zmrazené s náhradou při změně | #13, #53 |
+| 6 | Potvrzení o daru v PDF, roční i k jednomu daru, zmrazené s náhradou při změně; prohlášení a podepisující | #13, #20, #45, #53 |
 | 7 | Obnova hesla e-mailem | #16 |
 | 8 | Zásady ochrany osobních údajů, mazání zpráv z formuláře po roce | #6, #54 |
 | 13 | Prettier v CI | #65 |
@@ -26,12 +26,12 @@ Veřejný web a účet dárce. Úkoly 1–8 a 13–17 plánu v1; úkoly 9–12 a
 
 Mimo očíslované úkoly:
 
-- Nasazení na ZimaOS, zálohy a obnova, postup návratu na předchozí verzi (#3, #43, #44).
+- Obrazy z GitHubu a nasazení na ZimaOS, tajné údaje v env souborech (později nahradilo první nastavení), zálohy a obnova, postup návratu na předchozí verzi (#1, #3, #17, #43, #44, #55).
 - Pošta přes doménu nfnn.cz a Brevo (#24, #35, #36), zprávy pro příjemce v QR platbách (#40).
 - Bankovní účty dárce: ověření platbou 1 Kč, vypnutí a zapnutí párování, sdílené a vyloučené účty, dialog „Přidat účet“ (#34, #48, #56, #57); účel daru „Ověření účtu“ (#50).
 - Starší VS: dárce po ověření účtu potvrdí svůj dřívější symbol (#71).
 - Měsíční přehled e-mailem (#41); potvrzení jako šablona a data místo uložených PDF (#42, #46).
-- Audit vzhledu a oddělení vzhledu od chování (#21–#33), limity přihlášení a registrace, ikona webu (#51, #52).
+- Audit vzhledu a oddělení vzhledu od chování, kontrast a klávesnice, kopírování údajů, úprava údajů dárce (#21–#23, #25–#33), limity přihlášení a registrace, ikona webu (#51, #52).
 - Pravidla pro Clauda, Dependabot (#58).
 
 ## v2: aktuální (od 22. 10. 2026)
@@ -61,10 +61,10 @@ Mimo očíslované úkoly:
 | 18 | Konektor: všechna nastavení a data kromě nevratných akcí | #112 |
 | 19 | Opravy konektoru z auditu, fotky přes konektor | #115, #118 |
 | | **Blok 4: spuštění na nfnn.cz** | |
-| 13 | Skutečný obsah úvodní stránky | zbývá (Jakub a Pavel) |
-| 14 | Přechod na nfnn.cz: canonical, `og:*`, `robots.txt`, `sitemap.xml` | #99; zbývá krok na serveru |
-| 15 | Bezpečnostní revize před spuštěním | #100 |
-| 16 | Zálohy mimo server a hlídání dostupnosti | zbývá (zálohy mimo server odloženy po spuštění) |
+| 13 | Skutečný obsah úvodní stránky | zbývá, viz níže |
+| 14 | Přechod na nfnn.cz: canonical, `og:*`, `robots.txt`, `sitemap.xml` | #99; krok na serveru zbývá, viz níže |
+| 15 | Bezpečnostní revize před spuštěním a oprava jejího nálezu (token připojené aplikace jen pro správu) | #100 |
+| 16 | Zálohy mimo server a hlídání dostupnosti | zbývá, viz níže |
 
 Mimo očíslované úkoly:
 
@@ -73,7 +73,7 @@ Mimo očíslované úkoly:
 - Postranní panel správy a účtu dárce (#109, #122), cíl po přihlášení (#103), čtení nebo změny při připojení aplikace (#102), součty všech přijatých darů (#106), hledání bez diakritiky, historie česky, volitelná hodina přehledu (#139), Markdown a popisky fotek (#143), staré adresy obsahu, mazání nepoužitých fotek, seznamy po stránkách (#144), e-maily k účtu a opakování upozornění (#134).
 - Bezpečnostní audit: vlastní databázová role, zpevněné kontejnery, jedna síť `nfnn-edge`, role správce jen s potvrzeným e-mailem (#125, #148, #149, #150).
 - Vzhled a přístupnost: české adresy (#78), vzhled QR kódu (#101), fotka a ikona (#107, #111), vyměnitelný vzhled a sdílené bloky (#124, #126, #127, #132, #136, #138, #140), přístupnost pro klávesnici, čtečky a zvětšení (#133), audit přehlednosti celého webu (#151–#156).
-- Údržba: úspora minut CI (#82), aktualizace závislostí (#83), cizí klíče s indexy a test migrací nad daty (#141), čísla potvrzení po obnově a české locale (#129), pravidla pro Clauda (#128).
+- Údržba: úspora minut CI (#82), aktualizace závislostí (#83, #96), fokus po přihlášení (#104), cizí klíče s indexy a test migrací nad daty (#141), čísla potvrzení po obnově a české locale (#129), pravidla pro Clauda (#128).
 
 Rozpracováno (audit přehlednosti, rozhodnuto 24. 10. 2026):
 
@@ -96,7 +96,7 @@ Zbývá před spuštěním na nfnn.cz:
 - Odemčení historie ve Fio a hluboký import do 1. 1. 2027, aby potvrzení za rok 2026 obsahovala všechny dary.
 - Zátěžová zkouška vydávání potvrzení před Novým rokem.
 - Odpovědi od Pavla: seznam dřívějších VS dárců, zda fond vystavil potvrzení za rok 2025 (pak potvrzení na webu i za 2025), zda je účet transparentní.
-- Provozní kroky Jakuba z bezpečnostního auditu (seznam je mimo veřejné repo); bezpečnostní aktualizace Dependabotu zapnout v GitHubu.
+- Provozní kroky Jakuba z bezpečnostního auditu (seznam je mimo veřejné repo).
 
 ## Backlog
 
@@ -185,8 +185,9 @@ Veřejný web a provoz:
 - Platba kartou online (vlastní brána nebo Darujme.cz).
 - Angličtina.
 - Změna odpovědi na starší VS dárcem samým; účty s více staršími VS v měsíčním přehledu.
+- Další rozšíření přehledu dárce (z původního zadání; část pokrývají schválené funkce).
 - Strukturovaná data fondu pro vyhledávače (`Organization`, IČO, účet).
-- Znovu provést výmazy podle GDPR po obnově ze zálohy pořízené před nimi.
+- Výmazy podle GDPR zachovat i po obnově ze starší zálohy.
 - Zkušební prostředí (staging).
 
 ### Zamítnuto
@@ -200,3 +201,4 @@ Veřejný web a provoz:
 - E-mail o přihlášení z nového zařízení.
 - Oznámení dárci, že se změnilo jeho stažené potvrzení.
 - Sídlo a číslo účtu v patičce.
+- Seznam povolených aplikací pro připojení ke správě: připojit se smí jakákoli aplikace se souhlasem správce.

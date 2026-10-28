@@ -31,13 +31,14 @@ jobs:
           PULL_NUMBER: ${{ github.event.pull_request.number }}
           PULL_BODY: ${{ github.event.pull_request.body }}
         run: |
-          if gh api "repos/$REPOSITORY/pulls/$PULL_NUMBER/files" --paginate --jq '.[].filename' | grep -qx 'docs/roadmap.md'; then
+          files=$(gh api "repos/$REPOSITORY/pulls/$PULL_NUMBER/files" --paginate --jq '.[].filename')
+          if grep -qx 'docs/roadmap.md' <<<"$files"; then
             echo "docs/roadmap.md is updated."
             exit 0
           fi
-          if printf '%s' "$PULL_BODY" | grep -Eiq 'roadmapa:[[:space:]]*beze[[:space:]]+zm(ě|e)ny'; then
+          if grep -Eiq '^[[:space:]]*roadmapa:[[:space:]]*beze[[:space:]]+zm(ě|e)ny[[:space:]]*$' <<<"$PULL_BODY"; then
             echo "The description says the roadmap stays as it is."
             exit 0
           fi
-          echo "::error::Update docs/roadmap.md (move the feature this PR ships or decides), or write the line 'Roadmapa: beze změny' into the PR description."
+          echo "::error::Update docs/roadmap.md (move the feature this PR ships or decides), or write 'Roadmapa: beze změny' on a line of its own in the PR description, then save it (the check runs again)."
           exit 1
