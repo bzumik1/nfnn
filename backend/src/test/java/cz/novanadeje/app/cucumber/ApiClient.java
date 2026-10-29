@@ -179,6 +179,10 @@ public class ApiClient {
         clientAddress = nextClientAddress();
     }
 
+    public void comeFrom(String address) {
+        clientAddress = address;
+    }
+
     public void comeFromPublicAddress() {
         clientAddress = "203.0.113." + (CLIENT_ADDRESSES.incrementAndGet() & 0xff);
     }

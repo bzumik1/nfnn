@@ -54,6 +54,11 @@ public class CommonStepDefinitions {
         api.comeFromAnotherAddress();
     }
 
+    @When("the following requests come from the client address {string}")
+    public void theFollowingRequestsComeFromTheClientAddress(String clientAddress) {
+        api.comeFrom(clientAddress);
+    }
+
     @Then("the response status is {int}")
     public void theResponseStatusIs(int status) {
         assertThat(api.lastResponse().getStatusCode().value())

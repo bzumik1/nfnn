@@ -1,5 +1,6 @@
 package cz.novanadeje.app.contact.interfaces.rest;
 
+import cz.novanadeje.app.shared.infrastructure.ratelimit.ClientAddressKey;
 import cz.novanadeje.app.shared.infrastructure.ratelimit.FixedWindowRateLimiter;
 import org.springframework.stereotype.Component;
 
@@ -19,6 +20,6 @@ class ContactMessageRateLimiter {
     }
 
     boolean allows(String clientAddress) {
-        return limiter.tryAcquire(clientAddress);
+        return limiter.tryAcquire(new ClientAddressKey(clientAddress));
     }
 }

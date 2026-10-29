@@ -11,7 +11,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public final class FixedWindowRateLimiter {
 
     private final int limit;
-    private final Cache<String, AtomicInteger> windows;
+    private final Cache<ClientAddressKey, AtomicInteger> windows;
 
     public FixedWindowRateLimiter(int limit, Duration window, Clock clock) {
         this.limit = limit;
@@ -21,8 +21,13 @@ public final class FixedWindowRateLimiter {
                 .build();
     }
 
-    public boolean tryAcquire(String key) {
+    public boolean tryAcquire(ClientAddressKey key) {
         AtomicInteger counter = windows.get(key, ignored -> new AtomicInteger());
         return counter.incrementAndGet() <= limit;
+    }
+
+    long trackedKeys() {
+        windows.cleanUp();
+        return windows.estimatedSize();
     }
 }
