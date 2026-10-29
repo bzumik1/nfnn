@@ -9,8 +9,10 @@ import {
 import {
   InMemoryScrollingFeature,
   InMemoryScrollingOptions,
+  NavigationErrorHandlerFeature,
   provideRouter,
   withInMemoryScrolling,
+  withNavigationErrorHandler,
 } from '@angular/router';
 
 import { routes } from './app.routes';
@@ -24,6 +26,10 @@ const scrollOptions: InMemoryScrollingOptions = {
 };
 
 const inMemoryScrolling: InMemoryScrollingFeature = withInMemoryScrolling(scrollOptions);
+
+export const chunkLoadRecoveryFeature: NavigationErrorHandlerFeature = withNavigationErrorHandler(
+  () => undefined,
+);
 
 export const appHttpClient: EnvironmentProviders = provideHttpClient(
   withXhr(),

@@ -22,6 +22,7 @@ import {
   signIn,
   session,
 } from './donor-session';
+import { chunkLoadNotice, openHomeThenLoseNewChunks, openPolicyFromFooter } from './lost-chunks';
 import { uploadedSignature } from './signature-image';
 
 const WCAG_AA = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
@@ -179,6 +180,16 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     page,
   }) => {
     await page.goto('/zasady-ochrany-osobnich-udaju');
+
+    expect(await violations(page)).toEqual([]);
+  });
+
+  test('when a page cannot be loaded and the reload notice shows, then the notice breaks no rule', async ({
+    page,
+  }) => {
+    await openHomeThenLoseNewChunks(page);
+    await openPolicyFromFooter(page);
+    await expect(chunkLoadNotice(page)).toBeVisible();
 
     expect(await violations(page)).toEqual([]);
   });

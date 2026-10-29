@@ -1,6 +1,9 @@
 import { TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { NavigationError, provideRouter } from '@angular/router';
 import { App } from './app';
+import { ExternalNavigation } from './core/navigation/external-navigation';
+import { ChunkLoadRecovery } from './core/reload/chunk-load-recovery';
+import { ReloadGuard } from './core/reload/reload-guard';
 
 describe('Given the App component', () => {
   beforeEach(async () => {
@@ -13,5 +16,30 @@ describe('Given the App component', () => {
   it('when bootstrapped, then it creates without errors', () => {
     const fixture = TestBed.createComponent(App);
     expect(fixture.componentInstance).toBeTruthy();
+  });
+});
+
+describe('Given the App component after a page failed to load twice', () => {
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [App],
+      providers: [
+        provideRouter([]),
+        { provide: ReloadGuard, useValue: { claim: () => false } },
+        { provide: ExternalNavigation, useValue: { assign: vi.fn() } },
+      ],
+    }).compileComponents();
+  });
+
+  it('when it renders, then it offers to load the page again', async () => {
+    const fixture = TestBed.createComponent(App);
+    TestBed.inject(ChunkLoadRecovery).handleNavigationError(
+      new NavigationError(1, '/projekty', new TypeError('Importing a module script failed.')),
+    );
+    await fixture.whenStable();
+
+    expect(
+      (fixture.nativeElement.querySelector('[role="alert"]') as HTMLElement).textContent,
+    ).toContain('Načíst znovu');
   });
 });
