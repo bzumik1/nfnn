@@ -5,7 +5,10 @@ import org.junit.jupiter.api.Test;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
+import java.nio.ByteBuffer;
+import java.util.Base64;
 import java.util.Map;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -69,6 +72,70 @@ class TranscriptNormaliserTest {
     }
 
     @Test
+    @DisplayName("Given known values with a numbered label, when they appear, then each gets its number by first appearance")
+    void should_number_known_values_by_first_appearance_when_they_appear_given_a_numbered_label() {
+        TranscriptNormaliser normaliser = new TranscriptNormaliser(Map.of("1111111111", "<vs:#>", "2222222222", "<vs:#>"));
+
+        String normalised = normaliser.text("2222222222, 1111111111, 2222222222");
+
+        assertThat(normalised).isEqualTo("<vs:1>, <vs:2>, <vs:1>");
+    }
+
+    @Test
+    @DisplayName("Given a donor's id written as base64url in a passkey's user handle and in the options' user id, when a body is normalised, then both are numbered like the id itself")
+    void should_number_base64url_ids_like_the_id_itself_when_a_body_is_normalised_given_passkey_user_handles() {
+        TranscriptNormaliser normaliser = new TranscriptNormaliser(Map.of());
+        normaliser.text(FIRST_ID);
+
+        JsonNode body = normaliser.json(json.readTree("{\"user\":{\"id\":\"" + base64Url(FIRST_ID) + "\"},\"response\":{\"userHandle\":\"" + base64Url(FIRST_ID) + "\"}}"));
+
+        assertThat(body.toString()).isEqualTo("{\"user\":{\"id\":\"<id:1>\"},\"response\":{\"userHandle\":\"<id:1>\"}}");
+    }
+
+    @Test
+    @DisplayName("Given a random id written as base64url, as a foreign passkey's user handle is, when a body is normalised, then it is numbered as an id")
+    void should_number_a_random_base64url_user_handle_when_a_body_is_normalised() {
+        TranscriptNormaliser normaliser = new TranscriptNormaliser(Map.of());
+
+        assertThat(normaliser.json(json.readTree("{\"userHandle\":\"" + base64Url("6f1c2a3b-4d5e-4f60-8a9b-0c1d2e3f4a5b") + "\"}")).toString())
+                .isEqualTo("{\"userHandle\":\"<id:1>\"}");
+    }
+
+    @Test
+    @DisplayName("Given names of 22 letters that decode like an id and long CamelCase names, when text is normalised, then they stay as they are")
+    void should_keep_names_that_decode_like_an_id_when_text_is_normalised() {
+        TranscriptNormaliser normaliser = new TranscriptNormaliser(Map.of());
+        String text = "ScenarioTranscriptTest AesGcmSecretSealerTest RECEIPT_SIGNATORY_NAME ContactMessageRetentionSchedulerTest shouldRejectEveryUnknownConnectedApplication";
+
+        assertThat(normaliser.text(text)).isEqualTo(text);
+    }
+
+    @Test
+    @DisplayName("Given a known value typed in lowercase, when text is normalised, then it is still replaced")
+    void should_replace_a_known_value_in_any_case_when_text_is_normalised() {
+        TranscriptNormaliser normaliser = new TranscriptNormaliser(Map.of("HPNN-QW32-5QVD", "<setup-code>"));
+
+        assertThat(normaliser.text("code hpnn-qw32-5qvd")).isEqualTo("code <setup-code>");
+    }
+
+    @Test
+    @DisplayName("Given a second-factor recovery message, when text is normalised, then the random code goes and the word stays")
+    void should_mask_the_recovery_code_and_keep_the_word_when_text_is_normalised() {
+        TranscriptNormaliser normaliser = new TranscriptNormaliser(Map.of());
+
+        assertThat(normaliser.text("Zpráva pro příjemce: OBNOVA DHG66PK2, nebo OBNOVA RFFT WBF9")).isEqualTo("Zpráva pro příjemce: OBNOVA <recovery-code>, nebo OBNOVA <recovery-code>");
+    }
+
+    @Test
+    @DisplayName("Given a field whose name ends with code and holds six digits, when a body is normalised, then the value is masked")
+    void should_mask_six_digit_codes_when_a_body_is_normalised_given_a_field_ending_with_code() {
+        TranscriptNormaliser normaliser = new TranscriptNormaliser(Map.of());
+
+        assertThat(normaliser.json(json.readTree("{\"secondFactorCode\":\"575581\",\"postalCode\":\"400 01\"}")).toString())
+                .isEqualTo("{\"secondFactorCode\":\"<secret>\",\"postalCode\":\"400 01\"}");
+    }
+
+    @Test
     @DisplayName("Given secret fields, when a body is normalised, then their values are masked and the shape stays")
     void should_mask_values_and_keep_the_shape_when_a_body_is_normalised_given_secret_fields() {
         TranscriptNormaliser normaliser = new TranscriptNormaliser(Map.of());
@@ -93,6 +160,12 @@ class TranscriptNormaliserTest {
         JsonNode raw = json.readTree("{\"spayd\":\"SPD*1.0\",\"qrCode\":{\"size\":21,\"modules\":\"0101\"},\"code\":\"donations/rule\"}");
 
         assertThat(normaliser.json(raw)).isEqualTo(raw);
+    }
+
+    private static String base64Url(String id) {
+        UUID uuid = UUID.fromString(id);
+        ByteBuffer bytes = ByteBuffer.allocate(16).putLong(uuid.getMostSignificantBits()).putLong(uuid.getLeastSignificantBits());
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes.array());
     }
 
     @Test

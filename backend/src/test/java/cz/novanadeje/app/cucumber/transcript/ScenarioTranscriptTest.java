@@ -3,6 +3,8 @@ package cz.novanadeje.app.cucumber.transcript;
 import jakarta.mail.Session;
 import jakarta.mail.internet.InternetAddress;
 import jakarta.mail.internet.MimeMessage;
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.pdmodel.PDPage;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -12,6 +14,7 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.JsonNodeFactory;
 
+import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
@@ -70,7 +73,7 @@ class ScenarioTranscriptTest {
         headers.add("Cache-Control", "no-store");
         headers.add("Date", "Thu, 29 Oct 2026 12:00:00 GMT");
         headers.add("Content-Length", "12");
-        headers.add("Set-Cookie", "refresh_token=q3Yb7xP0aZ9mN2kLw8RtUv5sC1dE4fGhJiKoMnBvCxZ; Path=/api/donors/auth; Max-Age=2592000; HttpOnly; Secure; SameSite=Strict");
+        headers.add("Set-Cookie", "refresh_token=q3Yb7xP0aZ9mN2kLw8RtUv5sC1dE4fGhJiKoMnBvCxZ; Path=/api/donors/auth; Max-Age=2592000; Expires=Thu, 12 Nov 2026 14:05:22 GMT; HttpOnly; Secure; SameSite=Strict");
         transcript.exchange(new RecordedExchange("POST", "/api/donors/auth/login", Map.of("Authorization", "Bearer eyJh.eyJz.c2ln", "X-Forwarded-For", "10.0.0.7"),
                 JsonNodeFactory.instance.objectNode().put("password", "Heslo-12345"), 200, headers, "{}".getBytes(StandardCharsets.UTF_8)));
 
@@ -78,8 +81,125 @@ class ScenarioTranscriptTest {
 
         assertThat(call.get("request").get("headers").toString()).isEqualTo("{\"Authorization\":\"Bearer <jwt>\"}");
         assertThat(call.get("request").get("body").get("password").asString()).isEqualTo("<secret>");
-        assertThat(call.get("response").get("headers").toString()).isEqualTo("{\"Cache-Control\":[\"no-store\"],\"Content-Type\":[\"application/json\"],"
-                + "\"Set-Cookie\":[\"refresh_token=<secret>; Path=/api/donors/auth; Max-Age=2592000; HttpOnly; Secure; SameSite=Strict\"]}");
+        assertThat(call.get("response").get("headers").toString()).isEqualTo("{\"Cache-Control\":\"no-store\",\"Content-Type\":\"application/json\","
+                + "\"Set-Cookie\":\"refresh_token=<secret>; Path=/api/donors/auth; Max-Age=2592000; Expires=<time>; HttpOnly; Secure; SameSite=Strict\"}");
+    }
+
+    @Test
+    @DisplayName("Given a request body from a map without order, when the transcript is written, then its fields are sorted at every level")
+    void should_sort_request_body_fields_at_every_level_when_written_given_a_map_without_order() {
+        ScenarioTranscript transcript = new ScenarioTranscript();
+        transcript.exchange(new RecordedExchange("POST", "/api/contact/messages", Map.of(),
+                json.readTree("{\"message\":\"Dobrý den\",\"address\":{\"street\":\"Nádražní 1\",\"city\":\"Tišnov\"},\"email\":\"jana@example.cz\"}"),
+                202, new HttpHeaders(), new byte[0]));
+
+        JsonNode body = transcript.toJson(Map.of()).get("requests").get("POST /api/contact/messages #1").get("request").get("body");
+
+        assertThat(body.toString()).isEqualTo("{\"address\":{\"city\":\"Tišnov\",\"street\":\"Nádražní 1\"},\"email\":\"jana@example.cz\",\"message\":\"Dobrý den\"}");
+    }
+
+    @Test
+    @DisplayName("Given the diagnostics and a thread dump, when the transcript is written, then only the shape of their machine-dependent bodies is kept")
+    void should_keep_only_the_shape_of_machine_dependent_bodies_when_written_given_diagnostics_and_a_thread_dump() {
+        ScenarioTranscript transcript = new ScenarioTranscript();
+        transcript.exchange(exchange("GET", "/api/admin/operations/diagnostics", 200,
+                "{\"jvm\":{\"javaVersion\":\"25.0.5\",\"heapUsedBytes\":415889472,\"virtual\":false},\"disks\":[{\"path\":\"/data\",\"freeBytes\":1},{\"path\":\"/logs\",\"freeBytes\":2}],\"error\":null}"));
+        transcript.exchange(new RecordedExchange("GET", "/api/admin/operations/diagnostics/threads", Map.of(), null, 200, textHeaders(),
+                "\"main\" #1 RUNNABLE".getBytes(StandardCharsets.UTF_8)));
+
+        JsonNode requests = transcript.toJson(Map.of()).get("requests");
+
+        assertThat(requests.get("GET /api/admin/operations/diagnostics #1").get("response").get("body").toString())
+                .isEqualTo("{\"disks\":[{\"freeBytes\":\"<number>\",\"path\":\"<string>\"}],\"error\":null,"
+                        + "\"jvm\":{\"heapUsedBytes\":\"<number>\",\"javaVersion\":\"<string>\",\"virtual\":\"<boolean>\"}}");
+        assertThat(requests.get("GET /api/admin/operations/diagnostics/threads #1").get("response").get("body").asString()).isEqualTo("<string>");
+    }
+
+    @Test
+    @DisplayName("Given the log files and the backups with file times, when the transcript is written, then the file times are masked")
+    void should_mask_file_times_when_written_given_log_files_and_backups() {
+        ScenarioTranscript transcript = new ScenarioTranscript();
+        transcript.exchange(exchange("GET", "/api/admin/operations/logs", 200,
+                "{\"files\":[{\"name\":\"backend.log\",\"changedAt\":\"2026-10-29T14:15:53.473507833Z\"}]}"));
+        transcript.exchange(exchange("GET", "/api/admin/operations/backups", 200,
+                "{\"restoreFiles\":[{\"fileName\":\"zaloha.dump.done\",\"changedAt\":\"2026-10-29T14:15:37.772514924Z\"}],\"lastBackup\":{\"startedAt\":\"2026-10-23T01:00:00Z\"}}"));
+
+        JsonNode requests = transcript.toJson(Map.of()).get("requests");
+
+        assertThat(requests.get("GET /api/admin/operations/logs #1").get("response").get("body").toString())
+                .isEqualTo("{\"files\":[{\"changedAt\":\"<file-time>\",\"name\":\"backend.log\"}]}");
+        assertThat(requests.get("GET /api/admin/operations/backups #1").get("response").get("body").toString())
+                .isEqualTo("{\"lastBackup\":{\"startedAt\":\"2026-10-23T01:00:00Z\"},\"restoreFiles\":[{\"changedAt\":\"<file-time>\",\"fileName\":\"zaloha.dump.done\"}]}");
+    }
+
+    @Test
+    @DisplayName("Given field errors in any order, when the transcript is written, then they are sorted by field and message")
+    void should_sort_field_errors_when_written_given_them_in_any_order() {
+        ScenarioTranscript transcript = new ScenarioTranscript();
+        transcript.exchange(exchange("POST", "/api/admin/content/news", 400,
+                "{\"type\":\"https://nfnn.cz/problems/validation\",\"errors\":[{\"field\":\"title\",\"message\":\"b\"},{\"field\":\"perex\",\"message\":\"a\"}]}"));
+
+        JsonNode errors = transcript.toJson(Map.of()).get("requests").get("POST /api/admin/content/news #1").get("response").get("body").get("errors");
+
+        assertThat(errors.toString()).isEqualTo("[{\"field\":\"perex\",\"message\":\"a\"},{\"field\":\"title\",\"message\":\"b\"}]");
+    }
+
+    @Test
+    @DisplayName("Given an answer whose fields v2 writes in an order that changes per JVM, when two runs write it, then both transcripts are identical, ids included")
+    void should_write_identical_answers_when_two_runs_write_their_fields_in_other_orders() {
+        ScenarioTranscript first = new ScenarioTranscript();
+        first.exchange(exchange("POST", "/api/donors/me/passkeys/challenge", 200,
+                "{\"challenge\":\"" + DONOR_ID + "\",\"challengeExpiresAt\":\"2026-11-04T09:05:00Z\",\"user\":{\"id\":\"" + PAYMENT_ID + "\",\"name\":\"jana@example.cz\"}}"));
+        ScenarioTranscript second = new ScenarioTranscript();
+        second.exchange(exchange("POST", "/api/donors/me/passkeys/challenge", 200,
+                "{\"user\":{\"name\":\"jana@example.cz\",\"id\":\"" + PAYMENT_ID + "\"},\"challengeExpiresAt\":\"2026-11-04T09:05:00Z\",\"challenge\":\"" + DONOR_ID + "\"}"));
+
+        assertThat(json.writeValueAsString(second.toJson(Map.of()))).isEqualTo(json.writeValueAsString(first.toJson(Map.of())));
+    }
+
+    @Test
+    @DisplayName("Given field errors whose fields v2 writes in any order, when two runs write them, then both transcripts are identical")
+    void should_write_identical_errors_when_two_runs_write_their_fields_in_other_orders() {
+        ScenarioTranscript first = new ScenarioTranscript();
+        first.exchange(exchange("PUT", "/api/admin/operations/settings", 400,
+                "{\"errors\":[{\"field\":\"MAIL_PORT\",\"code\":\"invalid-port\"},{\"field\":\"PUBLIC_URL\",\"code\":\"placeholder\"}]}"));
+        ScenarioTranscript second = new ScenarioTranscript();
+        second.exchange(exchange("PUT", "/api/admin/operations/settings", 400,
+                "{\"errors\":[{\"code\":\"placeholder\",\"field\":\"PUBLIC_URL\"},{\"code\":\"invalid-port\",\"field\":\"MAIL_PORT\"}]}"));
+
+        assertThat(json.writeValueAsString(second.toJson(Map.of()))).isEqualTo(json.writeValueAsString(first.toJson(Map.of())));
+    }
+
+    @Test
+    @DisplayName("Given list items stamped with the same instant, which v2 orders by random ids, when two runs list them in other orders, then both transcripts are identical")
+    void should_write_identical_transcripts_when_items_stamped_with_the_same_instant_come_in_other_orders() {
+        String older = "{\"id\":\"" + DONOR_ID + "\",\"action\":\"RESET_LOG_LEVEL\",\"performedAt\":\"2026-10-23T10:00:00Z\"}";
+        String newer = "{\"id\":\"" + PAYMENT_ID + "\",\"action\":\"CHANGE_LOG_LEVEL\",\"performedAt\":\"2026-10-23T10:00:00Z\"}";
+        String first = "{\"id\":\"019a2b3c-4d5e-7f60-8a9b-0c1d2e3f4a5d\",\"action\":\"SIGN_IN\",\"performedAt\":\"2026-10-23T09:00:00Z\"}";
+        ScenarioTranscript oneRun = new ScenarioTranscript();
+        oneRun.exchange(exchange("GET", "/api/admin/donors/actions", 200, "{\"items\":[" + older + "," + newer + "," + first + "]}"));
+        ScenarioTranscript otherRun = new ScenarioTranscript();
+        otherRun.exchange(exchange("GET", "/api/admin/donors/actions", 200, "{\"items\":[" + newer + "," + older + "," + first + "]}"));
+
+        JsonNode items = oneRun.toJson(Map.of()).get("requests").get("GET /api/admin/donors/actions #1").get("response").get("body").get("items");
+
+        assertThat(json.writeValueAsString(oneRun.toJson(Map.of()))).isEqualTo(json.writeValueAsString(otherRun.toJson(Map.of())));
+        assertThat(items.get(2).get("action").asString()).isEqualTo("SIGN_IN");
+    }
+
+    @Test
+    @DisplayName("Given a PDF answer, when the transcript is written, then its page count and text are kept and its bytes, which differ per run, are not")
+    void should_keep_page_count_and_text_but_not_the_bytes_when_written_given_a_pdf_answer() throws Exception {
+        HttpHeaders headers = new HttpHeaders();
+        headers.add("Content-Type", "application/pdf");
+        ScenarioTranscript transcript = new ScenarioTranscript();
+        transcript.exchange(new RecordedExchange("GET", "/api/donations/me/receipts/yearly?year=2025", Map.of(), null, 200, headers, onePagePdf()));
+
+        JsonNode body = transcript.toJson(Map.of()).get("requests").get("GET /api/donations/me/receipts/yearly #1").get("response").get("body");
+
+        assertThat(body.get("pages").asInt()).isEqualTo(1);
+        assertThat(body.get("text").get(0).asString()).isEmpty();
+        assertThat(body.has("sha256")).isFalse();
     }
 
     @Test
@@ -108,8 +228,34 @@ class ScenarioTranscriptTest {
 
         JsonNode logs = transcript.toJson(Map.of()).get("logs");
 
-        assertThat(logs.toString()).isEqualTo("[{\"level\":\"INFO\",\"logger\":\"cz.novanadeje.app.donations.Y\",\"message\":\"Imported 2 payments\"},"
-                + "{\"level\":\"WARN\",\"logger\":\"cz.novanadeje.app.donors.X\",\"message\":\"Donor <id:1> refused\",\"exception\":\"IllegalStateException\"}]");
+        assertThat(logs.toString()).isEqualTo("[\"INFO donations.Y: Imported 2 payments\",\"WARN donors.X: Donor <id:1> refused [IllegalStateException]\"]");
+    }
+
+    @Test
+    @DisplayName("Given log lines with new ids that threads wrote in either order, when both transcripts are written, then they are identical")
+    void should_write_identical_logs_when_threads_wrote_them_in_either_order_given_lines_with_new_ids() {
+        RecordedLogLine refused = new RecordedLogLine("WARN", "cz.novanadeje.app.donors.X", "Donor " + DONOR_ID + " refused", "");
+        RecordedLogLine paired = new RecordedLogLine("INFO", "cz.novanadeje.app.donations.Y", "Payment " + PAYMENT_ID + " paired", "");
+        ScenarioTranscript first = new ScenarioTranscript();
+        first.logs(List.of(refused, paired));
+        ScenarioTranscript second = new ScenarioTranscript();
+        second.logs(List.of(paired, refused));
+
+        assertThat(second.toJson(Map.of()).get("logs")).isEqualTo(first.toJson(Map.of()).get("logs"));
+    }
+
+    @Test
+    @DisplayName("Given a header sent with several values, when the transcript is written, then it keeps them all in order")
+    void should_keep_every_value_in_order_when_written_given_a_header_with_several_values() {
+        ScenarioTranscript transcript = new ScenarioTranscript();
+        HttpHeaders headers = new HttpHeaders();
+        headers.add("Vary", "Origin");
+        headers.add("Vary", "Access-Control-Request-Method");
+        transcript.exchange(new RecordedExchange("GET", "/api/content/home", Map.of(), null, 200, headers, new byte[0]));
+
+        JsonNode call = transcript.toJson(Map.of()).get("requests").get("GET /api/content/home #1");
+
+        assertThat(call.get("response").get("headers").toString()).isEqualTo("{\"Vary\":[\"Origin\",\"Access-Control-Request-Method\"]}");
     }
 
     @Test
@@ -130,6 +276,20 @@ class ScenarioTranscriptTest {
             headers.add("Content-Type", "application/json");
         }
         return new RecordedExchange(method, uri, Map.of(), null, status, headers, body == null ? new byte[0] : body.getBytes(StandardCharsets.UTF_8));
+    }
+
+    private static byte[] onePagePdf() throws Exception {
+        try (PDDocument document = new PDDocument(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            document.addPage(new PDPage());
+            document.save(out);
+            return out.toByteArray();
+        }
+    }
+
+    private static HttpHeaders textHeaders() {
+        HttpHeaders headers = new HttpHeaders();
+        headers.add("Content-Type", "text/plain;charset=UTF-8");
+        return headers;
     }
 
     private static MimeMessage mail(String to, String subject, String text) throws Exception {

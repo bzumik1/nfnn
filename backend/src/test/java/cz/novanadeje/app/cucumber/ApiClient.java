@@ -1,5 +1,8 @@
 package cz.novanadeje.app.cucumber;
 
+import cz.novanadeje.app.cucumber.transcript.ApiTranscriptRecorder;
+import cz.novanadeje.app.cucumber.transcript.RecordedExchange;
+import cz.novanadeje.app.cucumber.transcript.ScenarioTranscript;
 import io.cucumber.spring.ScenarioScope;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.core.io.ByteArrayResource;
@@ -14,6 +17,8 @@ import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestClient;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
+import tools.jackson.databind.node.JsonNodeFactory;
+import tools.jackson.databind.node.ObjectNode;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -33,14 +38,16 @@ public class ApiClient {
 
     private final RestClient client;
     private final int port;
+    private final ApiTranscriptRecorder transcript;
     private final JsonMapper jsonMapper = JsonMapper.builder().build();
     private final Map<String, String> defaultHeaders = new LinkedHashMap<>();
     private ResponseEntity<String> lastResponse;
     private byte[] lastResponseBytes;
     private String clientAddress = nextClientAddress();
 
-    public ApiClient(@LocalServerPort int port) {
+    public ApiClient(@LocalServerPort int port, ApiTranscriptRecorder transcript) {
         this.port = port;
+        this.transcript = transcript;
         this.client = RestClient.builder()
                 .baseUrl("http://localhost:" + port)
                 .defaultStatusHandler(status -> true, (request, response) -> {
@@ -78,6 +85,9 @@ public class ApiClient {
                 .retrieve()
                 .toEntity(String.class);
         lastResponseBytes = null;
+        ObjectNode file = JsonNodeFactory.instance.objectNode().put("fileName", fileName).put("contentType", contentType)
+                .put("size", bytes.length).put("sha256", ScenarioTranscript.sha256(bytes));
+        record("POST", path, Map.of(), JsonNodeFactory.instance.objectNode().set(fieldName, file));
         return lastResponse;
     }
 
@@ -91,6 +101,7 @@ public class ApiClient {
                 .retrieve()
                 .toEntity(String.class);
         lastResponseBytes = null;
+        record("PUT", path, headers, JsonNodeFactory.instance.objectNode().put("size", bytes.length).put("sha256", ScenarioTranscript.sha256(bytes)));
         return lastResponse;
     }
 
@@ -109,6 +120,9 @@ public class ApiClient {
                 .retrieve()
                 .toEntity(String.class);
         lastResponseBytes = null;
+        ObjectNode fieldsSent = JsonNodeFactory.instance.objectNode();
+        form.forEach((name, values) -> fieldsSent.put(name, String.join(",", values)));
+        record("POST", path, Map.of(), fieldsSent);
         return lastResponse;
     }
 
@@ -130,6 +144,7 @@ public class ApiClient {
         lastResponse = ResponseEntity.status(response.getStatusCode())
                 .headers(response.getHeaders())
                 .body(new String(lastResponseBytes, StandardCharsets.UTF_8));
+        recordBytes("GET", path, Map.of(), null, response.getStatusCode().value(), response.getHeaders(), lastResponseBytes);
         return response;
     }
 
@@ -153,6 +168,7 @@ public class ApiClient {
             int bodyStart = raw.indexOf("\r\n\r\n");
             lastResponse = ResponseEntity.status(status).body(bodyStart < 0 ? "" : raw.substring(bodyStart + 4));
             lastResponseBytes = null;
+            recordBytes("POST", path, sent, rawBody(json), status, rawHeaders(raw, bodyStart), lastResponse.getBody().getBytes(StandardCharsets.UTF_8));
             return lastResponse;
         } catch (IOException unreachable) {
             throw new IllegalStateException("The raw request to " + path + " failed", unreachable);
@@ -215,7 +231,41 @@ public class ApiClient {
         }
         lastResponse = request.retrieve().toEntity(String.class);
         lastResponseBytes = null;
+        record(method.name(), path, Map.of(), body == null ? null : jsonMapper.valueToTree(body));
         return lastResponse;
+    }
+
+    private void record(String method, String path, Map<String, String> extraHeaders, JsonNode requestBody) {
+        String body = lastResponse.getBody();
+        recordBytes(method, path, extraHeaders, requestBody, lastResponse.getStatusCode().value(), lastResponse.getHeaders(),
+                body == null ? new byte[0] : body.getBytes(StandardCharsets.UTF_8));
+    }
+
+    private void recordBytes(String method, String path, Map<String, String> extraHeaders, JsonNode requestBody, int status, HttpHeaders responseHeaders,
+                             byte[] responseBody) {
+        Map<String, String> sent = new LinkedHashMap<>(defaultHeaders);
+        sent.putAll(extraHeaders);
+        transcript.exchange(new RecordedExchange(method, path, sent, requestBody, status, responseHeaders, responseBody));
+    }
+
+    private JsonNode rawBody(String json) {
+        try {
+            return jsonMapper.readTree(json);
+        } catch (RuntimeException notJson) {
+            return JsonNodeFactory.instance.stringNode(json);
+        }
+    }
+
+    private static HttpHeaders rawHeaders(String raw, int bodyStart) {
+        HttpHeaders headers = new HttpHeaders();
+        String head = bodyStart < 0 ? raw : raw.substring(0, bodyStart);
+        head.lines().skip(1).forEach(line -> {
+            int colon = line.indexOf(':');
+            if (colon > 0) {
+                headers.add(line.substring(0, colon).trim(), line.substring(colon + 1).trim());
+            }
+        });
+        return headers;
     }
 
     private void addDefaultHeaders(HttpHeaders headers) {

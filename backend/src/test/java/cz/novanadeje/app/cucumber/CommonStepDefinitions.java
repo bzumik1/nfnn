@@ -1,5 +1,6 @@
 package cz.novanadeje.app.cucumber;
 
+import cz.novanadeje.app.cucumber.transcript.ApiTranscripts;
 import cz.novanadeje.app.support.DatabaseCleaner;
 import cz.novanadeje.app.support.FakeCompanyRegistry;
 import cz.novanadeje.app.support.FakeFioClient;
@@ -40,7 +41,11 @@ public class CommonStepDefinitions {
         mailSender.clear();
         fioClient.reset();
         companyRegistry.reset();
-        clock.advance(Duration.ofDays(1));
+        if (ApiTranscripts.recording()) {
+            clock.set(ApiTranscripts.RECORDING_CLOCK);
+        } else {
+            clock.advance(Duration.ofDays(1));
+        }
     }
 
     @When("{int} seconds pass")

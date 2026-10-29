@@ -4,7 +4,9 @@ import cz.novanadeje.app.shared.domain.VariableSymbol;
 import io.cucumber.spring.ScenarioScope;
 import org.springframework.stereotype.Component;
 
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -76,6 +78,16 @@ public class ScenarioDonors {
 
     public VariableSymbol variableSymbolOf(String alias) {
         return donor(alias).variableSymbol();
+    }
+
+    public Map<String, String> variableSymbolsByAlias() {
+        Map<String, String> symbols = new HashMap<>();
+        donors.forEach((alias, donor) -> symbols.put(alias, donor.variableSymbol().value()));
+        return symbols;
+    }
+
+    public Collection<String> secondFactorSecrets() {
+        return List.copyOf(secondFactorSecrets.values());
     }
 
     public String resolve(String cell) {
