@@ -93,8 +93,16 @@ describe('Given the privacy policy page', () => {
   });
 
   it('when it renders, then the date it applies from stands under the heading and in the closing section', () => {
-    expect(texts('.ui-intro .effective')).toEqual(['Platné od 23. října 2026']);
-    expect(sectionText('Účinnost')).toContain('účinné od 23. října 2026');
+    expect(texts('.ui-intro .effective')).toEqual(['Platné od 29. října 2026']);
+    expect(sectionText('Účinnost')).toContain('účinné od 29. října 2026');
+  });
+
+  it('when it renders, then it says a company ID fills the name and seat from ARES, which gets only the ID', () => {
+    const account = purposeText('Dárcovský účet');
+
+    expect(account).toContain('z veřejného registru ARES Ministerstva financí');
+    expect(account).toContain('Registru pošleme jen IČO.');
+    expect(account).toContain('před registrací zkontrolujete a můžete je změnit');
   });
 
   it('when it renders, then it says what a passkey leaves with us and that no fingerprint or face does', () => {
