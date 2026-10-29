@@ -6,7 +6,7 @@ import { DonationListResponse, DownloadedFile, downloadedFile } from '../donatio
 import { PasskeyConfirmation } from '../../core/auth/donor';
 import {
   MailServerRequest,
-  MailTestResponse,
+  TestEmailResponse,
   SettingName,
   SettingsSavedResponse,
   SettingValueRequest,
@@ -271,6 +271,10 @@ export interface AdminOverviewResponse {
 }
 
 export type SettingGroup = 'SITE' | 'MAIL' | 'BANK' | 'RECEIPTS' | 'ADMINISTRATORS';
+
+export interface AdminTestEmailRequest extends MailServerRequest {
+  sender: string;
+}
 
 export interface AdminSettingResponse {
   name: SettingName;
@@ -684,8 +688,8 @@ export class AdminApi {
     return this.http.delete<void>(RECEIPT_SIGNATURE_URL);
   }
 
-  testMailServer(server: MailServerRequest): Observable<MailTestResponse> {
-    return this.http.post<MailTestResponse>('/api/admin/operations/settings/mail-test', server);
+  sendTestEmail(request: AdminTestEmailRequest): Observable<TestEmailResponse> {
+    return this.http.post<TestEmailResponse>('/api/admin/operations/settings/test-email', request);
   }
 
   logFiles(): Observable<LogFilesResponse> {

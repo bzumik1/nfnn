@@ -340,6 +340,20 @@ public class ConnectedAppsStepDefinitions {
         api.put("/api/admin/operations/settings", Map.of("changes", List.of(Map.of("name", name, "value", value))));
     }
 
+    @When("the exchanged API token sends a test e-mail with the password {string}")
+    public void theExchangedApiTokenSendsATestEmailWithThePassword(String password) {
+        actAsExchangedApiToken();
+        api.post("/api/admin/operations/settings/test-email", Map.of("host", "smtp.example.cz", "port", 587, "username", "user",
+                "password", password, "auth", true, "startTls", true, "sender", "info@nfnn.cz"));
+    }
+
+    @When("the exchanged API token sends a test e-mail through the running mail server")
+    public void theExchangedApiTokenSendsATestEmailThroughTheRunningMailServer() {
+        actAsExchangedApiToken();
+        api.post("/api/admin/operations/settings/test-email", Map.of("host", "localhost", "port", 1025, "username", "",
+                "auth", false, "startTls", false, "sender", "info@nfnn.cz"));
+    }
+
     @When("the exchanged API token sets the logger {string} to {string} for {int} minutes")
     public void theExchangedApiTokenSetsTheLogger(String logger, String level, int minutes) {
         actAsExchangedApiToken();

@@ -87,19 +87,45 @@ Feature: The first setup asks for the settings in the browser and stores them wi
     Then the response status is 400
     And the stored settings are ""
 
-  Scenario: The mail server is tested before saving
+  Scenario: A test e-mail goes through the typed server to the typed first administrator before anything is saved
     Given the requests come directly from the home network
-    When the mail server "smtp.example.cz" is tested in the setup with the password "right-key"
-    Then the mail test says true
-    When the mail server "smtp.example.cz" is tested in the setup with the password "wrong-key"
-    Then the mail test says false
+    When a test e-mail is sent in the setup through "smtp.example.cz" with the password "right-key" from "info@nfnn.cz" to "spravce@example.cz"
+    Then the test e-mail says "SENT" to "spravce@example.cz"
+    When a test e-mail is sent in the setup through "smtp.example.cz" with the password "wrong-key" from "info@nfnn.cz" to "spravce@example.cz"
+    Then the test e-mail says "SIGN_IN_REFUSED" to "spravce@example.cz"
+    When a test e-mail is sent in the setup through "smtp.example.cz" with the password "right-key" from "neovereny@example.cz" to "spravce@example.cz"
+    Then the test e-mail says "SENDER_REFUSED" to "spravce@example.cz"
+    When a test e-mail is sent in the setup through "smtp.nowhere.example" with the password "right-key" from "info@nfnn.cz" to "spravce@example.cz"
+    Then the test e-mail says "UNREACHABLE" to "spravce@example.cz"
+    And the stored settings are ""
+    And the backend does not restart
+
+  Scenario: A test e-mail in the setup needs the code through the proxy and a valid sender and recipient
+    Given the requests come through the proxy
+    When a test e-mail is sent in the setup through "smtp.example.cz" with the password "right-key" from "info@nfnn.cz" to "spravce@example.cz"
+    Then the response status is 403
+    And the problem type ends with "operations/setup-locked"
+    When a test e-mail is sent in the setup with the code from the container log through "smtp.example.cz" from "info@nfnn.cz" to "spravce@example.cz"
+    Then the test e-mail says "SENT" to "spravce@example.cz"
+    When a test e-mail is sent in the setup with the code from the container log through "smtp.example.cz" from "info@nfnn.cz" to "not-an-address"
+    Then the response status is 400
+
+  Scenario: Test e-mails in the setup are limited to 10 an hour from one address
+    Given the requests come directly from the home network
+    And 10 test e-mails were sent in the setup from this address
+    When a test e-mail is sent in the setup through "smtp.example.cz" with the password "right-key" from "info@nfnn.cz" to "spravce@example.cz"
+    Then the response status is 429
+    And the problem type ends with "operations/rate-limited"
+    When 60 minutes pass
+    And a test e-mail is sent in the setup through "smtp.example.cz" with the password "right-key" from "info@nfnn.cz" to "spravce@example.cz"
+    Then the test e-mail says "SENT" to "spravce@example.cz"
 
   Scenario: Once the setup is done, the setup answers that it is done to everyone
     Given the first setup was completed
     When the setup is unlocked without a code
     Then the response status is 409
     And the problem type ends with "operations/setup-completed"
-    When the mail server "smtp.example.cz" is tested in the setup with the password "right-key"
+    When a test e-mail is sent in the setup through "smtp.example.cz" with the password "right-key" from "info@nfnn.cz" to "spravce@example.cz"
     Then the response status is 409
     When the first setup is completed with:
       | name       | value                   |

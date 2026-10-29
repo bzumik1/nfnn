@@ -17,6 +17,7 @@ const CARD_WIDTH_SHARP = 960;
 export class ProjectCard {
   readonly project = input<ProjectKey | null>(null);
   readonly item = input<ProjectResponse | null>(null);
+  readonly linked = input(true);
 
   protected readonly imageSrc = computed(() => {
     const map: Record<ProjectKey, string> = {

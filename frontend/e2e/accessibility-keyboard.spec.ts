@@ -1,6 +1,6 @@
 import { Page } from '@playwright/test';
 import { expect, test } from './fixtures';
-import { mockDonorApi, openSignInDialog, signIn } from './donor-session';
+import { mockDonorApi, openDonorSection, openSignInDialog, signIn } from './donor-session';
 import {
   chunkLoadNotice,
   openHomeThenLoseNewChunks,
@@ -121,6 +121,27 @@ test.describe('Given a visitor who uses only the keyboard or a screen reader', (
 
     await expect(page.getByRole('main')).toBeFocused();
     await expect(page.getByRole('main')).toContainText('Můj přehled');
+  });
+
+  test('when a signed-in donor opens a row of the security card with Enter, then its form takes the focus and Zrušit returns it to the row', async ({
+    page,
+  }) => {
+    await signIn(page);
+    await openDonorSection(page, 'Údaje a zabezpečení');
+    const changeEmail = page.getByRole('button', { name: 'Změnit e-mail' });
+    await expect(changeEmail).toHaveAttribute('aria-expanded', 'false');
+
+    await changeEmail.focus();
+    await page.keyboard.press('Enter');
+
+    await expect(changeEmail).toHaveAttribute('aria-expanded', 'true');
+    await expect(page.getByLabel('Nový e-mail')).toBeFocused();
+
+    await page.getByRole('button', { name: 'Zrušit', exact: true }).focus();
+    await page.keyboard.press('Enter');
+
+    await expect(changeEmail).toHaveAttribute('aria-expanded', 'false');
+    await expect(changeEmail).toBeFocused();
   });
 
   test('when the browser shows text twice as large, then the text of the page grows with it', async ({

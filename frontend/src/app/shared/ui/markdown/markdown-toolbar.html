@@ -52,19 +52,4 @@
   >
     Odkaz
   </button>
-  @if (preview(); as preview) {
-    <button
-      type="button"
-      class="ui-button ui-button--small tool--preview"
-      [attr.aria-expanded]="preview.isOpen()"
-      [attr.aria-controls]="preview.previewId()"
-      (click)="preview.toggle()"
-    >
-      @if (preview.isOpen()) {
-        <ng-container i18n="@@ui.markdown.preview.hide">Skrýt náhled</ng-container>
-      } @else {
-        <ng-container i18n="@@ui.markdown.preview.show">Ukázat náhled</ng-container>
-      }
-    </button>
-  }
 </div>

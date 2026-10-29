@@ -121,6 +121,14 @@ export class AuthApi {
     return this.http.post<void>('/api/donors/me/email-change', request);
   }
 
+  resendEmailChange(): Observable<void> {
+    return this.http.post<void>('/api/donors/me/email-change/resend', {});
+  }
+
+  cancelEmailChange(): Observable<void> {
+    return this.http.delete<void>('/api/donors/me/email-change');
+  }
+
   setupSecondFactor(confirmation: Confirmation): Observable<SecondFactorEnrolment> {
     return this.http.post<SecondFactorEnrolment>(
       '/api/donors/me/second-factor/setup',

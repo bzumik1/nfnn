@@ -1,9 +1,10 @@
 <div class="ui-page container">
   <h1 #title class="ui-page-title" tabindex="-1" i18n="@@admin.settings.heading">Nastavení</h1>
   <p class="ui-page-intro" i18n="@@admin.settings.intro">
-    Adresa webu, odesílání e-mailů, napojení na banku a údaje na potvrzeních o daru. Tajné údaje se
-    ukládají zašifrované a nikdy se nezobrazují; můžete je jen přepsat nebo odebrat. Uložení web
-    restartuje, takže asi minutu nebude odpovídat.
+    Údaje na potvrzeních o daru, kam chodí zprávy z kontaktního formuláře a odkud odcházejí e-maily;
+    technické hodnoty serveru jsou až dole. Tajné údaje se ukládají zašifrované a nikdy se
+    nezobrazují; můžete je jen přepsat nebo odebrat. Uložení web restartuje, takže asi minutu nebude
+    odpovídat.
   </p>
 
   <app-live-notice [notice]="notice()" />
@@ -79,121 +80,193 @@
         </p>
       }
       <form class="settings-form" (ngSubmit)="askSave()" novalidate>
-        @for (group of groups(); track group.id) {
-          <section class="ui-card" [attr.aria-labelledby]="'settings-' + group.id">
-            <h2 [id]="'settings-' + group.id" class="ui-card__title" tabindex="-1">
-              {{ group.title }}
-            </h2>
-            <div class="ui-card__body">
-              @for (field of group.fields; track field.name) {
-                @switch (field.input) {
-                  @case ('flag') {
-                    <label class="check">
-                      <input
-                        type="checkbox"
-                        [id]="'setting-' + field.name"
-                        [name]="field.name"
-                        [ngModel]="field.value === 'true'"
-                        (ngModelChange)="setFlag(field, $event)"
-                      />
-                      <span>{{ field.label }}</span>
-                    </label>
-                  }
-                  @case ('secret') {
-                    <div
-                      class="secret"
-                      role="group"
-                      [attr.aria-labelledby]="'setting-' + field.name + '-state'"
-                    >
-                      <p
-                        class="secret-state"
-                        [id]="'setting-' + field.name + '-state'"
-                        [class.secret-state--warning]="field.unreadable"
-                      >
-                        <span class="secret-label">{{ field.label }}:</span>
-                        {{ secretState(field) }}
-                      </p>
-                      <app-form-field [label]="newSecretLabel(field)" [hint]="field.hint">
-                        <app-password-reveal>
-                          <input
-                            appFormControl
-                            type="password"
-                            autocomplete="off"
-                            [id]="'setting-' + field.name"
-                            [name]="field.name"
-                            [disabled]="!secretsCanBeStored() || field.remove"
-                            [(ngModel)]="field.value"
-                          />
-                        </app-password-reveal>
-                      </app-form-field>
-                      @if (field.stored) {
-                        <label class="check">
-                          <input
-                            type="checkbox"
-                            [id]="'setting-' + field.name + '-remove'"
-                            [name]="field.name + '-remove'"
-                            [(ngModel)]="field.remove"
-                          />
-                          <span i18n="@@admin.settings.secret.remove"
-                            >Odebrat uloženou hodnotu</span
-                          >
-                        </label>
-                        @if (field.remove && removalEffect(field)) {
-                          <p class="ui-callout ui-callout--danger removal-effect">
-                            {{ removalEffect(field) }}
-                          </p>
-                        }
-                      }
-                    </div>
-                  }
-                  @default {
-                    <app-form-field [label]="field.label" [hint]="field.hint">
-                      <input
-                        appFormControl
-                        autocomplete="off"
-                        spellcheck="false"
-                        [type]="field.input"
-                        [id]="'setting-' + field.name"
-                        [name]="field.name"
-                        [(ngModel)]="field.value"
-                      />
-                    </app-form-field>
+        <ng-template #settingField let-field>
+          @switch (field.input) {
+            @case ('flag') {
+              <label class="check">
+                <input
+                  type="checkbox"
+                  [id]="'setting-' + field.name"
+                  [name]="field.name"
+                  [ngModel]="field.value === 'true'"
+                  (ngModelChange)="setFlag(field, $event)"
+                />
+                <span>{{ field.label }}</span>
+              </label>
+            }
+            @case ('secret') {
+              <div
+                class="secret"
+                role="group"
+                [attr.aria-labelledby]="'setting-' + field.name + '-state'"
+              >
+                <p
+                  class="secret-state"
+                  [id]="'setting-' + field.name + '-state'"
+                  [class.secret-state--warning]="field.unreadable"
+                >
+                  <span class="secret-label">{{ field.label }}:</span>
+                  {{ secretState(field) }}
+                </p>
+                <app-form-field [label]="newSecretLabel(field)" [hint]="field.hint">
+                  <app-password-reveal>
+                    <input
+                      appFormControl
+                      type="password"
+                      autocomplete="off"
+                      [id]="'setting-' + field.name"
+                      [name]="field.name"
+                      [disabled]="!secretsCanBeStored() || field.remove"
+                      [(ngModel)]="field.value"
+                    />
+                  </app-password-reveal>
+                </app-form-field>
+                @if (field.stored) {
+                  <label class="check">
+                    <input
+                      type="checkbox"
+                      [id]="'setting-' + field.name + '-remove'"
+                      [name]="field.name + '-remove'"
+                      [(ngModel)]="field.remove"
+                    />
+                    <span i18n="@@admin.settings.secret.remove">Odebrat uloženou hodnotu</span>
+                  </label>
+                  @if (field.remove && removalEffect(field)) {
+                    <p class="ui-callout ui-callout--danger removal-effect">
+                      {{ removalEffect(field) }}
+                    </p>
                   }
                 }
+              </div>
+            }
+            @default {
+              <app-form-field [label]="field.label" [hint]="field.hint">
+                <input
+                  appFormControl
+                  autocomplete="off"
+                  spellcheck="false"
+                  [type]="field.input"
+                  [id]="'setting-' + field.name"
+                  [name]="field.name"
+                  [(ngModel)]="field.value"
+                />
+              </app-form-field>
+            }
+          }
+        </ng-template>
+
+        @for (section of everyday(); track section.id) {
+          <section class="ui-card" [attr.aria-labelledby]="anchor(section)">
+            <h2 [id]="anchor(section)" class="ui-card__title" tabindex="-1">
+              {{ section.title }}
+            </h2>
+            <div class="ui-card__body">
+              @if (section.intro) {
+                <p class="ui-card__intro section-intro">{{ section.intro }}</p>
               }
-              @if (group.id === 'MAIL') {
-                <div class="test-row">
-                  <button
-                    type="button"
-                    class="ui-button"
-                    [disabled]="testingMail()"
-                    (click)="testMail()"
-                  >
-                    @if (testingMail()) {
-                      <span i18n="@@admin.settings.mailTest.busy">Zkoušíme se přihlásit…</span>
-                    } @else {
-                      <span i18n="@@admin.settings.mailTest">Ověřit spojení</span>
-                    }
-                  </button>
-                  <div class="test-result-slot" role="status">
-                    @if (mailNotice(); as mailNotice) {
-                      @if (mailNotice.kind === 'status') {
-                        <p class="test-result test-result--ok">{{ mailNotice.text }}</p>
-                      }
-                    }
-                  </div>
-                  <div class="test-result-slot" role="alert">
-                    @if (mailNotice(); as mailNotice) {
-                      @if (mailNotice.kind === 'alert') {
-                        <p class="test-result test-result--failed">{{ mailNotice.text }}</p>
-                      }
-                    }
-                  </div>
-                </div>
+              @for (field of section.fields; track field.name) {
+                <ng-container
+                  [ngTemplateOutlet]="settingField"
+                  [ngTemplateOutletContext]="{ $implicit: field }"
+                />
               }
             </div>
           </section>
+          @if (section.id === 'potvrzeni') {
+            <app-receipt-signature />
+          }
         }
+
+        <section class="ui-card technical" [attr.aria-labelledby]="technicalHeading">
+          <h2
+            [id]="technicalHeading"
+            class="ui-card__title"
+            tabindex="-1"
+            i18n="@@admin.settings.technical.title"
+          >
+            Technické nastavení (pro správce serveru)
+          </h2>
+          <div class="ui-card__body">
+            <p
+              class="ui-callout ui-callout--warning technical-warning"
+              i18n="@@admin.settings.technical.warning"
+            >
+              Chybná hodnota tady může zastavit odesílání e-mailů nebo stahování plateb z banky. Než
+              změny e-mailů uložíte, pošlete si zkušební e-mail.
+            </p>
+            <details
+              id="technicke-nastaveni"
+              class="technical-details"
+              [open]="technicalOpen()"
+              (toggle)="technicalToggled($event)"
+            >
+              <summary i18n="@@admin.settings.technical.summary">
+                Adresa webu, server pro odesílání e-mailů a napojení na banku
+              </summary>
+              @for (section of technical(); track section.id) {
+                <section class="technical-part" [attr.aria-labelledby]="anchor(section)">
+                  <h3
+                    [id]="anchor(section)"
+                    class="ui-card__subtitle technical-title"
+                    tabindex="-1"
+                  >
+                    {{ section.title }}
+                  </h3>
+                  @for (field of section.fields; track field.name) {
+                    <ng-container
+                      [ngTemplateOutlet]="settingField"
+                      [ngTemplateOutletContext]="{ $implicit: field }"
+                    />
+                  }
+                  @if (section.id === mailPart) {
+                    <p
+                      id="settings-test-email-hint"
+                      class="test-hint"
+                      i18n="@@admin.settings.testEmail.hint"
+                    >
+                      Pošle e-mail na vaši adresu {{ ownEmail() }} s údaji z formuláře, i když ještě
+                      nejsou uložené, a s odesílatelem z části Odesílatel e-mailů. Ověří tak server,
+                      přihlášení i odesílatele.
+                    </p>
+                    <div class="test-row">
+                      <button
+                        type="button"
+                        class="ui-button"
+                        aria-describedby="settings-test-email-hint"
+                        [disabled]="testingMail()"
+                        (click)="sendTestEmail()"
+                      >
+                        @if (testingMail()) {
+                          <span i18n="@@admin.settings.testEmail.busy"
+                            >Posíláme zkušební e-mail…</span
+                          >
+                        } @else {
+                          <span i18n="@@admin.settings.testEmail"
+                            >Poslat zkušební e-mail na moji adresu</span
+                          >
+                        }
+                      </button>
+                      <div class="test-result-slot" role="status">
+                        @if (mailNotice(); as mailNotice) {
+                          @if (mailNotice.kind === 'status') {
+                            <p class="test-result test-result--ok">{{ mailNotice.text }}</p>
+                          }
+                        }
+                      </div>
+                      <div class="test-result-slot" role="alert">
+                        @if (mailNotice(); as mailNotice) {
+                          @if (mailNotice.kind === 'alert') {
+                            <p class="test-result test-result--failed">{{ mailNotice.text }}</p>
+                          }
+                        }
+                      </div>
+                    </div>
+                  }
+                </section>
+              }
+            </details>
+          </div>
+        </section>
 
         @if (saveError()) {
           <div class="form-error" role="alert">
@@ -227,8 +300,9 @@
                   class="ui-callout ui-callout--warning"
                   i18n="@@admin.settings.confirm.mailUnverified"
                 >
-                  Spojení s poštovním serverem jste s novými údaji neověřili. Když nebudou správné,
-                  web po restartu nepošle žádný e-mail; zkuste to nejdřív tlačítkem Ověřit spojení.
+                  Zkušební e-mail jste s novými údaji neposlali. Když nebudou správné, web po
+                  restartu nepošle žádný e-mail; zkuste to nejdřív tlačítkem Poslat zkušební e-mail
+                  na moji adresu.
                 </p>
               }
               <p class="confirm-question" i18n="@@admin.settings.confirm.question">
@@ -278,8 +352,6 @@
           </p>
         </div>
       </form>
-
-      <app-receipt-signature />
     }
   }
 </div>

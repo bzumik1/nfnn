@@ -40,14 +40,16 @@ Web představí fond a jeho pomoc dětem, usnadní darování a dárcům dá ú�
 ### Zabezpečení účtu
 
 - Heslo a e-mail se mění jen se současným heslem (nebo klíčem). Nový e-mail se potvrdí z nové adresy a stará adresa dostane oznámení. Po změně hesla dostane dárce e-mail.
+- Na stránce Údaje a zabezpečení je všechno k přihlášení v jedné kartě „Přihlášení a zabezpečení“: řádky E-mail, Heslo, Dvoufaktorové ověření a Přístupové klíče, každý se stavem a jednou akcí, formulář se otevře pod řádkem. Rozpracovaná změna e-mailu je vidět („Čeká na potvrzení: adresa“) a jde poslat znovu (starý odkaz přestane platit) nebo zrušit (Jakub 24. 10. 2026).
 - Dvoufaktorové ověření kódem z aplikace v telefonu si může zapnout každý dárce; správce ho mít musí (nebo se přihlásit klíčem, který platí jako druhý faktor). Záložní kódy nejsou.
 - Ztracený telefon: jiný správce ověření vypne, nebo ho dárce vypne sám platbou 1 Kč s jednorázovým kódem z bankovního účtu, který má u fondu ověřený aspoň 7 dní. Ztracené klíče odebere správce.
-- Přístupové klíče přidá dárce v přehledu (se současným heslem nebo klíčem, dostane o tom e-mail), přejmenuje a odebere; nejvýš 10. Klíče ze zkušební adresy se po přechodu na nfnn.cz smažou samy.
+- Přístupové klíče přidá dárce v přehledu (se současným heslem nebo klíčem), přejmenuje a odebere; o přidání i odebrání dostane e-mail; nejvýš 10. Klíče ze zkušební adresy se po přechodu na nfnn.cz smažou samy.
 - Bezpečnostní e-maily k účtu (ověření, obnova, změna e-mailu, hesla, klíče nebo druhého faktoru) chodí vždy.
 
 ### Přehled
 
 - Celkem darováno, počet darů, poslední dar, tabulka plateb a souhrn po letech (rok, počet darů, částka).
+- Moje dary jsou seskupené po letech od nejnovějšího, každý rok s počtem darů, částkou a tlačítkem na roční potvrzení, jakmile je k dispozici (Jakub 24. 10. 2026).
 - Bankovní účty, ze kterých se dárci přiřazují platby bez symbolu (§5), s počtem a součtem darů z každého.
 
 ### Potvrzení o daru
@@ -82,12 +84,13 @@ Web představí fond a jeho pomoc dětem, usnadní darování a dárcům dá ú�
 - **Výmaz podle GDPR** na kartě dárce: jméno, adresa, e-mail a přihlašovací údaje se nahradí zástupnými, dary a vydaná potvrzení zůstávají kvůli účetnictví, symbol se už nepáruje a dárce dostane e-mail. Výmaz je nevratný; správce vymazat nejde.
 - **Platby z banky**: nespárované platby s hledáním dárce a ručním přiřazením, spárované po letech se zrušením přiřazení.
 - **Aktuality a projekty**: titulek, adresa, štítek, perex, text v Markdownu s náhledem a jedna fotka s popisem pro nevidomé. Koncept vidí jen správce; zveřejnění s datem (i zpětně nebo dopředu), stažení z webu a smazání po potvrzení. Projekt má navíc rok, podle kterého se řadí. Stará adresa po přejmenování vede dál na novou.
+- Editor aktualit a projektů je jeden formulář s přepínačem „Upravit / Náhled“ (náhled ukáže neuložené hodnoty jako veřejný web: kartu i celou stránku) a lištou akcí u spodního okraje: u konceptu „Uložit koncept“ a „Uložit a zveřejnit“, u zveřejněné „Uložit a ukázat na webu“, „Stáhnout z webu“ a „Otevřít na webu“. Zda je položka na webu, nebo se zveřejní později, určuje server podle dnešního data v Praze, ne hodiny v prohlížeči (Jakub 24. 10. 2026).
 - **Měsíční e-mail**: přehled za minulý měsíc (dárci, dary včetně nespárovaných, platby bez dárce, stav stahování z banky). Správce nastaví příjemce, den, hodinu a části a pošle kterýkoli skončený měsíc znovu. Zároveň udržuje naživu klíč k odesílání pošty.
 - **Zálohy**: každou noc a při každém startu, 30 dní zpět; jednou týdně zkušební obnova. Správce vidí stav, spustí zálohu nebo zkušební obnovu hned, nastaví časy, zálohu stáhne a kteroukoli obnoví (před obnovou se udělá záloha, nepovedená obnova nechá data, jak byla). Nová instalace se dá obnovit ze zálohy v prvním nastavení.
 - **Šifrované zálohy** (Jakub 28. 10. 2026): každá záloha je zašifrovaná klíčem k zálohám, který si server vygeneruje sám a drží ho. Průvodce prvním nastavením klíč ukáže a pokračuje až po opsání jeho posledních 4 znaků; ve správě na stránce Zálohy jde klíč zobrazit jen z prohlížeče, pokaždé s novým kódem nebo přístupovým klíčem, a každé zobrazení je v historii změn. Dokud nikdo nepotvrdí, že si klíč uložil, správa na to upozorňuje. Obnova na novém serveru chce zálohu a klíč starého serveru, který nový server převezme. Záloha nese i heslo k poště a token Fio, zamčené klíčem k zálohám (Jakub 29. 10. 2026), takže po obnově na jiném serveru fungují hned.
 - **Upozornění e-mailem** příjemcům měsíčního e-mailu: porucha stahování z banky (třikrát za sebou nebo odmítnutý token) a chybějící, nepovedená nebo stará záloha či zkušební obnova (26 hodin, 8 dní). Jednou za poruchu a jednou, až zase funguje.
 - **Historie změn**: každý zásah správce i připojené aplikace, česky, s tím, kdo, kdy a co.
-- **Nastavení**: adresa webu, pošta, token Fio, podpis potvrzení, vyloučené účty a další hodnoty serveru. Hesla a tokeny mění jen správce v prohlížeči.
+- **Nastavení**: nahoře to, co se mění častěji (potvrzení o daru a podpis, kontaktní formulář, odesílatel e-mailů), dole sbalené „Technické nastavení (pro správce serveru)“ s varováním (adresa webu, pošta, banka, vyloučené účty a další hodnoty serveru); ukládá se jedním tlačítkem. Hesla a tokeny mění jen správce v prohlížeči. Před uložením pošty jde tady i v prvním nastavení poslat skutečný zkušební e-mail s údaji z formuláře (na adresu přihlášeného správce, v prvním nastavení prvnímu správci); výsledek řekne, kam odešel, nebo lidsky, co je špatně. Uložit jde i bez zkoušky, jen s varováním (Jakub 24. 10. 2026).
 - **Logy a diagnostika**: logy serveru, úrovně logování a diagnostika. Logy nesou jen identifikátory a výsledky, ne jména, adresy ani tokeny.
 - **První nastavení** po instalaci: průvodce v prohlížeči, bez úprav souborů na serveru. Klíče si server vygeneruje sám. Z domácí sítě se otevře bez kódu, odjinud s kódem z výpisu kontejneru.
 

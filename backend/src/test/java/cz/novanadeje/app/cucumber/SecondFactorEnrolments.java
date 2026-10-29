@@ -1,5 +1,6 @@
 package cz.novanadeje.app.cucumber;
 
+import cz.novanadeje.app.support.RecordingMailSender;
 import io.cucumber.spring.ScenarioScope;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
@@ -14,17 +15,21 @@ public class SecondFactorEnrolments {
 
     public static final String SETUP_PATH = "/api/donors/me/second-factor/setup";
     public static final String CONFIRM_PATH = "/api/donors/me/second-factor/confirm";
+    public static final String ENABLED_NOTICE_SUBJECT = "Dvoufaktorové ověření vašeho účtu bylo zapnuto – Nová naděje";
 
     private final ApiClient api;
     private final ScenarioDonors scenarioDonors;
     private final DonorSessions sessions;
     private final TotpCodes totpCodes;
+    private final RecordingMailSender mailSender;
 
-    public SecondFactorEnrolments(ApiClient api, ScenarioDonors scenarioDonors, DonorSessions sessions, TotpCodes totpCodes) {
+    public SecondFactorEnrolments(ApiClient api, ScenarioDonors scenarioDonors, DonorSessions sessions, TotpCodes totpCodes,
+                                  RecordingMailSender mailSender) {
         this.api = api;
         this.scenarioDonors = scenarioDonors;
         this.sessions = sessions;
         this.totpCodes = totpCodes;
+        this.mailSender = mailSender;
     }
 
     public void enable(String alias) {
@@ -38,5 +43,10 @@ public class SecondFactorEnrolments {
         String renewed = api.lastResponseJson().get("accessToken").asString();
         scenarioDonors.rememberAccessToken(alias, renewed);
         api.authorize(renewed);
+        forgetEnabledNotice();
+    }
+
+    public void forgetEnabledNotice() {
+        mailSender.forgetOnceSent(ENABLED_NOTICE_SUBJECT);
     }
 }

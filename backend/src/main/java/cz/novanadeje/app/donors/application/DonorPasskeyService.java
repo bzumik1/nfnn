@@ -1,6 +1,7 @@
 package cz.novanadeje.app.donors.application;
 
 import cz.novanadeje.app.donors.application.event.DonorPasskeyAdded;
+import cz.novanadeje.app.donors.application.event.DonorPasskeyRemoved;
 import cz.novanadeje.app.donors.domain.Donor;
 import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.donors.domain.DonorNotFound;
@@ -137,6 +138,7 @@ public class DonorPasskeyService {
             throw new LastSignInMethod(donorId);
         }
         passkeys.delete(passkey.id());
+        events.publishEvent(new DonorPasskeyRemoved(donorId.value(), donor.email(), donor.preferredLocale(), passkey.name()));
         log.info("Passkey {} removed by donor {}", passkeyId, donorId);
     }
 

@@ -141,16 +141,6 @@ describe('Given an administrator writing a new project', () => {
     );
   });
 
-  it('when they save with the title and the perex empty, then both fields say so and nothing is sent', async () => {
-    await type(fixture, '#projects-body', 'Text.');
-    await submit(fixture);
-
-    expect(element(fixture, '#projects-title').getAttribute('aria-invalid')).toBe('true');
-    expect(element(fixture, '#projects-perex').getAttribute('aria-invalid')).toBe('true');
-    expect(text(fixture, '#projects-title-error')).toBe('Vyplňte prosím titulek.');
-    http.expectNone(PROJECTS_URL);
-  });
-
   it('when the year is before the fund was founded, then the field says so and nothing is sent', async () => {
     await type(fixture, '#projects-title', 'Starý projekt');
     await type(fixture, '#projects-year', '2004');
@@ -162,6 +152,16 @@ describe('Given an administrator writing a new project', () => {
     expect(text(fixture, '#projects-year-error')).toBe(
       'Rok nemůže být před založením fondu, tedy před 2005.',
     );
+    http.expectNone(PROJECTS_URL);
+  });
+
+  it('when they save with the title and the perex empty, then both fields say so and nothing is sent', async () => {
+    await type(fixture, '#projects-body', 'Text.');
+    await submit(fixture);
+
+    expect(element(fixture, '#projects-title').getAttribute('aria-invalid')).toBe('true');
+    expect(element(fixture, '#projects-perex').getAttribute('aria-invalid')).toBe('true');
+    expect(text(fixture, '#projects-title-error')).toBe('Vyplňte prosím titulek.');
     http.expectNone(PROJECTS_URL);
   });
 
@@ -190,12 +190,12 @@ describe('Given an administrator writing a new project', () => {
     await settle(fixture);
 
     expect(text(fixture, '[role="status"]:not(:empty)')).toBe(
-      'Projekt jsme uložili jako koncept. Na web ho dostanete tlačítkem Zveřejnit.',
+      'Projekt jsme uložili jako koncept. Na web ho dostanete tlačítkem Uložit a zveřejnit.',
     );
     expect(replaced).toHaveBeenCalledWith(`/sprava/projekty/${draftProject().id}`);
     expect(text(fixture, 'h1')).toBe('Úprava projektu');
-    expect(button(fixture, 'Zveřejnit').disabled).toBe(false);
-    expect(text(fixture, '.publish-state')).toContain('Koncept');
+    expect(button(fixture, 'Uložit a zveřejnit').disabled).toBe(false);
+    expect(text(fixture, '.publish-state .ui-badge')).toBe('Koncept');
   });
 
   it('when the address is already taken, then the address field says so, takes the focus and the form stays editable', async () => {
@@ -208,7 +208,7 @@ describe('Given an administrator writing a new project', () => {
       409,
       'content/slug-taken',
       'Adresa je obsazená',
-      'Jiná aktualita nebo projekt už tuto adresu používá; zvolte jinou.',
+      'Jinou aktualitu už najdete na této adrese.',
     );
     http.expectOne(PROJECTS_URL).flush(refusal.body, refusal.options);
     await settle(fixture);
@@ -227,7 +227,7 @@ describe('Given an administrator writing a new project', () => {
     expect(slug.getAttribute('aria-invalid')).toBeNull();
   });
 
-  it('when they save a complete draft, then the result shows right after the button and the tab is named after the edit', async () => {
+  it('when they save a complete draft, then the result shows in the action bar and the tab is named after the edit', async () => {
     const titled = vi.spyOn(TestBed.inject(Title), 'setTitle');
     await type(fixture, '#projects-title', 'Benefiční koncert');
     await type(fixture, '#projects-perex', 'Zveme vás na koncert.');
@@ -236,10 +236,136 @@ describe('Given an administrator writing a new project', () => {
     http.expectOne(PROJECTS_URL).flush(draftProject());
     await settle(fixture);
 
-    expect(text(fixture, '.form-actions + .ui-form-status')).toBe(
-      'Projekt jsme uložili jako koncept. Na web ho dostanete tlačítkem Zveřejnit.',
+    expect(text(fixture, '.ui-action-bar [role="status"]')).toBe(
+      'Projekt jsme uložili jako koncept. Na web ho dostanete tlačítkem Uložit a zveřejnit.',
     );
     expect(titled).toHaveBeenCalledWith('Úprava projektu | Správa | Nová naděje – nadační fond');
+  });
+
+  it('when they write it and save and publish at once, then it is created and published with the chosen date', async () => {
+    await type(fixture, '#projects-title', 'Benefiční koncert');
+    await type(fixture, '#projects-perex', 'Zveme vás na koncert.');
+    await type(fixture, '#projects-body', 'Text o koncertu.');
+    await type(fixture, '#projects-publish-date', '2026-10-30');
+    button(fixture, 'Uložit a zveřejnit').click();
+    await settle(fixture);
+
+    const create = http.expectOne(PROJECTS_URL);
+    expect(create.request.method).toBe('POST');
+    create.flush(draftProject());
+    await settle(fixture);
+    expect(button(fixture, 'Zveřejňujeme…').disabled).toBe(true);
+    const publish = http.expectOne(`${PROJECTS_URL}/${draftProject().id}/publish`);
+    expect(publish.request.body).toEqual({ publishedOn: '2026-10-30' });
+    publish.flush(draftProject({ publishedOn: '2026-10-30', live: false }));
+    await settle(fixture);
+
+    expect(text(fixture, '.ui-action-bar [role="status"]')).toBe(
+      'Projekt se na webu ukáže 30. 10. 2026.',
+    );
+    expect(text(fixture, '.publish-state .ui-badge')).toBe('Zveřejní se 30. 10. 2026');
+    expect(fixture.nativeElement.querySelector('.public-link')).toBeNull();
+  });
+
+  it('when they publish without a date, then the date field says so, takes the focus and nothing is sent', async () => {
+    await type(fixture, '#projects-title', 'Benefiční koncert');
+    await type(fixture, '#projects-perex', 'Zveme vás na koncert.');
+    await type(fixture, '#projects-body', 'Text o koncertu.');
+    await type(fixture, '#projects-publish-date', '');
+    button(fixture, 'Uložit a zveřejnit').click();
+    await settle(fixture);
+
+    expect(text(fixture, '#projects-publish-date-error')).toBe('Vyberte prosím datum zveřejnění.');
+    expect(document.activeElement).toBe(element(fixture, '#projects-publish-date'));
+    http.expectNone(PROJECTS_URL);
+  });
+
+  it('when they save it as a draft with a date chosen, then the date stays for publishing later', async () => {
+    await type(fixture, '#projects-title', 'Benefiční koncert');
+    await type(fixture, '#projects-perex', 'Zveme vás na koncert.');
+    await type(fixture, '#projects-body', 'Text o koncertu.');
+    await type(fixture, '#projects-publish-date', '2026-10-30');
+    await submit(fixture);
+    http.expectOne(PROJECTS_URL).flush(draftProject());
+    await settle(fixture);
+
+    expect(element<HTMLInputElement>(fixture, '#projects-publish-date').value).toBe('2026-10-30');
+    expect(text(fixture, '.publish-state .ui-badge')).toBe('Koncept');
+  });
+
+  describe('when they switch to the preview', () => {
+    beforeEach(async () => {
+      await type(fixture, '#projects-title', 'Benefiční koncert');
+      await type(fixture, '#projects-tag', 'Pozvánka');
+      await type(fixture, '#projects-perex', 'Zveme vás na koncert.');
+      await type(fixture, '#projects-body', '**Hrají** děti.');
+      await type(fixture, '#projects-publish-date', '2026-10-30');
+      await chooseFile(fixture, new File(['png'], 'koncert.png', { type: 'image/png' }));
+      http.expectOne(MEDIA_URL).flush(uploadedImage());
+      await settle(fixture);
+      button(fixture, 'Náhled').click();
+      await settle(fixture);
+    });
+
+    it('then the unsaved texts and the uploaded photo show as the public card and page, and the fields are hidden', () => {
+      expect(button(fixture, 'Náhled').getAttribute('aria-pressed')).toBe('true');
+      expect(button(fixture, 'Upravit').getAttribute('aria-pressed')).toBe('false');
+      expect(element(fixture, '.ui-card[aria-labelledby="projects-content-title"]').hidden).toBe(
+        true,
+      );
+      expect(text(fixture, 'app-content-preview .card-title')).toBe('Benefiční koncert');
+      expect(text(fixture, 'app-content-preview .card-tag')).toBe('Pozvánka');
+      expect(text(fixture, 'app-content-preview .card-year')).toBe('2026');
+      expect(
+        element<HTMLImageElement>(fixture, 'app-content-preview .card img').getAttribute('src'),
+      ).toBe(`/api/content/media/${IMAGE_ID}?w=480`);
+      expect(text(fixture, 'app-content-preview h3.ui-intro__title')).toBe('Benefiční koncert');
+      expect(text(fixture, 'app-content-preview .prose strong')).toBe('Hrají');
+      expect(fixture.nativeElement.querySelectorAll('h1')).toHaveLength(1);
+      http.expectNone(PROJECTS_URL);
+    });
+
+    it('and back to editing, then the fields keep what they typed and the changes are still unsaved', async () => {
+      button(fixture, 'Upravit').click();
+      await settle(fixture);
+
+      expect(element(fixture, '.ui-card[aria-labelledby="projects-content-title"]').hidden).toBe(
+        false,
+      );
+      expect(fixture.nativeElement.querySelector('app-content-preview')).toBeNull();
+      expect(element<HTMLInputElement>(fixture, '#projects-title').value).toBe('Benefiční koncert');
+      expect(element<HTMLTextAreaElement>(fixture, '#projects-body').value).toBe('**Hrají** děti.');
+      expect(text(fixture, '.publish-state')).toContain('Máte neuložené změny.');
+      expect(fixture.componentInstance.canLeave()).toBeInstanceOf(Promise);
+    });
+
+    it('and save from the bar, then the project is sent from the preview as typed', async () => {
+      await submit(fixture);
+
+      const request = http.expectOne(PROJECTS_URL);
+      expect(request.request.body).toMatchObject({
+        title: 'Benefiční koncert',
+        tag: 'Pozvánka',
+        coverImageId: IMAGE_ID,
+      });
+      request.flush(draftProject());
+      await settle(fixture);
+
+      expect(button(fixture, 'Náhled').getAttribute('aria-pressed')).toBe('true');
+    });
+  });
+
+  it('when they save from the preview with a field missing, then the editor comes back and the field takes the focus', async () => {
+    await type(fixture, '#projects-title', 'Benefiční koncert');
+    button(fixture, 'Náhled').click();
+    await settle(fixture);
+
+    await submit(fixture);
+    await settle(fixture);
+
+    expect(button(fixture, 'Upravit').getAttribute('aria-pressed')).toBe('true');
+    expect(document.activeElement).toBe(element(fixture, '#projects-perex'));
+    http.expectNone(PROJECTS_URL);
   });
 
   describe('when they have typed something and try to leave', () => {
@@ -381,7 +507,24 @@ describe('Given an administrator editing a draft project', () => {
 
   it('when it arrives, then saving keeps it a draft and no link to the site is offered', () => {
     expect(button(fixture, 'Uložit koncept').type).toBe('submit');
+    expect(text(fixture, '.publish-state .ui-badge')).toBe('Koncept');
+    expect(text(fixture, '#projects-publish-date-hint')).toBe(
+      'Projekt zatím vidíte jen vy. Tlačítko Uložit a zveřejnit ho pustí na web s tímto datem, s pozdějším datem až ten den.',
+    );
     expect(fixture.nativeElement.querySelector('.public-link')).toBeNull();
+  });
+
+  it('when they publish it unchanged, then only the publication is sent with the date shown', async () => {
+    const shown = element<HTMLInputElement>(fixture, '#projects-publish-date').value;
+    button(fixture, 'Uložit a zveřejnit').click();
+    await settle(fixture);
+
+    const publish = http.expectOne(`${PROJECTS_URL}/${draftProject().id}/publish`);
+    expect(publish.request.body).toEqual({ publishedOn: shown });
+    publish.flush(draftProject({ publishedOn: shown, live: true }));
+    await settle(fixture);
+
+    expect(text(fixture, '.publish-state .ui-badge')).toBe('Na webu');
   });
 
   it('when they edit it and publish, then the edit is saved first and then published', async () => {
@@ -395,10 +538,18 @@ describe('Given an administrator editing a draft project', () => {
     await settle(fixture);
     http
       .expectOne(`${PROJECTS_URL}/${draftProject().id}/publish`)
-      .flush(draftProject({ body: 'Opravený text o koncertu.', publishedOn: '2026-10-24' }));
+      .flush(
+        draftProject({ body: 'Opravený text o koncertu.', publishedOn: '2026-10-24', live: true }),
+      );
     await settle(fixture);
 
     expect(text(fixture, '.publish-state .ui-badge')).toBe('Na webu');
+    expect(text(fixture, '.ui-action-bar [role="status"]')).toBe(
+      'Projekt je na webu s datem 24. 10. 2026.',
+    );
+    expect(element<HTMLAnchorElement>(fixture, '.public-link').getAttribute('href')).toBe(
+      '/projekty/beneficni-koncert',
+    );
   });
 
   it('when saving the edit fails while publishing, then the project is not published and the form says why', async () => {
@@ -411,7 +562,7 @@ describe('Given an administrator editing a draft project', () => {
     await settle(fixture);
 
     http.expectNone(`${PROJECTS_URL}/${draftProject().id}/publish`);
-    expect(text(fixture, '.form-error')).toBe(
+    expect(text(fixture, '.ui-action-bar [role="alert"]')).toBe(
       'Projekt se nepodařilo uložit. Zkuste to prosím znovu.',
     );
     expect(button(fixture, 'Uložit a zveřejnit').disabled).toBe(false);
@@ -437,8 +588,8 @@ describe('Given an administrator editing a published project', () => {
     await loaded();
 
     expect(element<HTMLInputElement>(fixture, '#projects-title').value).toBe('Zahrada pro děti');
-    expect(element<HTMLInputElement>(fixture, '#projects-slug').value).toBe('zahrada-pro-deti');
     expect(element<HTMLInputElement>(fixture, '#projects-year').value).toBe('2024');
+    expect(element<HTMLInputElement>(fixture, '#projects-slug').value).toBe('zahrada-pro-deti');
     expect(element<HTMLInputElement>(fixture, '#projects-tag').value).toBe('Projekt');
     expect(element<HTMLTextAreaElement>(fixture, '#projects-body').value).toBe(
       'První odstavec textu.\n\nDruhý odstavec textu.',
@@ -447,8 +598,8 @@ describe('Given an administrator editing a published project', () => {
       `/api/content/media/${IMAGE_ID}?w=480`,
     );
     expect(text(fixture, '.publish-state .ui-badge')).toBe('Na webu');
-    expect(text(fixture, '.publish-state')).toContain(
-      'Zveřejněno s datem 20. 10. 2026. Web řadí projekty podle roku a pak podle tohoto data.',
+    expect(text(fixture, '#projects-publish-date-hint')).toBe(
+      'Projekt je na webu, změny se ukážou hned. Web řadí projekty podle roku a pak podle data zveřejnění.',
     );
     expect(element<HTMLInputElement>(fixture, '#projects-publish-date').value).toBe('2026-10-20');
     expect(text(fixture, '.updated-at')).toBe('Naposledy uloženo 20. 10. 2026 09:30.');
@@ -477,7 +628,9 @@ describe('Given an administrator editing a published project', () => {
     request.flush(project({ coverImage: null }));
     await settle(fixture);
 
-    expect(text(fixture, '[role="status"]:not(:empty)')).toBe('Změny jsme uložili.');
+    expect(text(fixture, '[role="status"]:not(:empty)')).toBe(
+      'Změny jsme uložili a na webu už jsou.',
+    );
   });
 
   it('when they take the project off the site, then it becomes a draft and the page says so', async () => {
@@ -493,25 +646,25 @@ describe('Given an administrator editing a published project', () => {
     expect(text(fixture, '[role="status"]:not(:empty)')).toBe(
       'Projekt jsme z webu stáhli. Zůstává tu jako koncept.',
     );
-    expect(text(fixture, '.publish-state')).toContain('Koncept');
-    expect(button(fixture, 'Zveřejnit').disabled).toBe(false);
+    expect(text(fixture, '.publish-state .ui-badge')).toBe('Koncept');
+    expect(button(fixture, 'Uložit a zveřejnit').disabled).toBe(false);
+    expect(fixture.nativeElement.querySelector('.public-link')).toBeNull();
   });
 
-  it('when they change the date, then the project is published again with it', async () => {
+  it('when they change the date, then the project is saved and published again with it', async () => {
     await loaded();
-    const date = element<HTMLInputElement>(fixture, '#projects-publish-date');
-    date.value = '2026-10-01';
-    date.dispatchEvent(new Event('input'));
-    await settle(fixture);
-    button(fixture, 'Změnit datum').click();
+    await type(fixture, '#projects-publish-date', '2026-10-01');
+    button(fixture, 'Uložit a ukázat na webu').click();
     await settle(fixture);
 
+    http.expectOne(`${PROJECTS_URL}/${project().id}`).flush(project());
+    await settle(fixture);
     const request = http.expectOne(`${PROJECTS_URL}/${project().id}/publish`);
     expect(request.request.body).toEqual({ publishedOn: '2026-10-01' });
     request.flush(project({ publishedOn: '2026-10-01' }));
     await settle(fixture);
 
-    expect(text(fixture, '.publish-card [role="status"]:not(:empty)')).toBe(
+    expect(text(fixture, '.ui-action-bar [role="status"]')).toBe(
       'Projekt je na webu s datem 01. 10. 2026.',
     );
   });
@@ -539,7 +692,7 @@ describe('Given an administrator editing a published project', () => {
     await loaded();
 
     expect(button(fixture, 'Uložit a ukázat na webu').type).toBe('submit');
-    expect(text(fixture, '.save-hint')).toBe('Projekt je na webu, změny se ukážou hned.');
+    expect(button(fixture, 'Stáhnout z webu').type).toBe('button');
     const link = element<HTMLAnchorElement>(fixture, '.public-link');
     expect(link.getAttribute('href')).toBe('/projekty/zahrada-pro-deti');
     expect(link.target).toBe('_blank');
@@ -549,11 +702,8 @@ describe('Given an administrator editing a published project', () => {
   it('when they edit the text and change the date, then the edit is saved first and the project is published with it', async () => {
     await loaded();
     await type(fixture, '#projects-title', 'Zahrada pro děti a rodiče');
-    const date = element<HTMLInputElement>(fixture, '#projects-publish-date');
-    date.value = '2026-10-01';
-    date.dispatchEvent(new Event('input'));
-    await settle(fixture);
-    button(fixture, 'Uložit a změnit datum').click();
+    await type(fixture, '#projects-publish-date', '2026-10-01');
+    button(fixture, 'Uložit a ukázat na webu').click();
     await settle(fixture);
 
     const update = http.expectOne(`${PROJECTS_URL}/${project().id}`);
@@ -567,22 +717,57 @@ describe('Given an administrator editing a published project', () => {
     publish.flush(project({ title: 'Zahrada pro děti a rodiče', publishedOn: '2026-10-01' }));
     await settle(fixture);
 
-    expect(text(fixture, '.publish-card [role="status"]:not(:empty)')).toBe(
+    expect(text(fixture, '.ui-action-bar [role="status"]')).toBe(
       'Projekt je na webu s datem 01. 10. 2026.',
     );
-    expect(button(fixture, 'Změnit datum').disabled).toBe(false);
+    expect(button(fixture, 'Uložit a ukázat na webu').disabled).toBe(false);
     expect(fixture.componentInstance.canLeave()).toBe(true);
   });
 
   it('when they publish an edit the form refuses, then nothing is sent and the field with the problem takes the focus', async () => {
     await loaded();
     await type(fixture, '#projects-perex', '');
-    button(fixture, 'Uložit a změnit datum').click();
+    button(fixture, 'Uložit a ukázat na webu').click();
     await settle(fixture);
 
     expect(document.activeElement).toBe(element(fixture, '#projects-perex'));
     expect(text(fixture, '#projects-perex-error')).toBe('Napište prosím krátký souhrn.');
     http.expectNone(`${PROJECTS_URL}/${project().id}/publish`);
+  });
+
+  it('when it is published with a later date, then the editor says when it goes live and offers no link yet', async () => {
+    http
+      .expectOne(`${PROJECTS_URL}/${project().id}`)
+      .flush(project({ publishedOn: '2026-10-30', live: false }));
+    await settle(fixture);
+
+    expect(text(fixture, '.publish-state .ui-badge')).toBe('Zveřejní se 30. 10. 2026');
+    expect(text(fixture, '#projects-publish-date-hint')).toBe(
+      'Na web se projekt dostane 30. 10. 2026, do té doby ho vidíte jen vy. Web řadí projekty podle roku a pak podle data zveřejnění.',
+    );
+    expect(fixture.nativeElement.querySelector('.public-link')).toBeNull();
+    expect(button(fixture, 'Uložit změny').type).toBe('submit');
+
+    await type(fixture, '#projects-title', 'Zahrada pro děti a rodiče');
+    await submit(fixture);
+    http
+      .expectOne(`${PROJECTS_URL}/${project().id}`)
+      .flush(
+        project({ title: 'Zahrada pro děti a rodiče', publishedOn: '2026-10-30', live: false }),
+      );
+    await settle(fixture);
+
+    expect(text(fixture, '.ui-action-bar [role="status"]')).toBe(
+      'Změny jsme uložili. Projekt se na webu ukáže 30. 10. 2026.',
+    );
+    button(fixture, 'Zrušit zveřejnění').click();
+    await settle(fixture);
+    http
+      .expectOne(`${PROJECTS_URL}/${project().id}/unpublish`)
+      .flush(project({ publishedOn: null, live: false }));
+    await settle(fixture);
+
+    expect(text(fixture, '.publish-state .ui-badge')).toBe('Koncept');
   });
 
   describe('when they ask to delete it', () => {

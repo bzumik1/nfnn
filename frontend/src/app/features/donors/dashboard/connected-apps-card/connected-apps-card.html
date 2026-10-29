@@ -1,0 +1,69 @@
+<section class="ui-card ui-card--padded connections" aria-labelledby="connections-title">
+  <h2 id="connections-title" class="ui-card__title" i18n="@@donor.account.connections.title">
+    Připojené aplikace
+  </h2>
+  @if (connectionsError()) {
+    <p class="ui-field-error" role="alert">{{ connectionsError() }}</p>
+    <button
+      type="button"
+      class="ui-button connections-retry"
+      (click)="loadConnections()"
+      i18n="@@donor.account.connections.retry"
+    >
+      Načíst znovu
+    </button>
+  } @else if (connections(); as apps) {
+    @if (apps.length > 0) {
+      <ul class="connection-list">
+        @for (app of apps; track app.id) {
+          <li class="connection">
+            <div class="connection-body">
+              <span class="connection-client">{{ app.client }}</span>
+              <span class="connection-dates">
+                <span i18n="@@donor.account.connections.since">připojeno</span>
+                {{ formatDate(app.grantedAt) }}
+                ·
+                <span i18n="@@donor.account.connections.lastUsed">naposledy použito</span>
+                {{ formatDate(app.lastUsedAt) }}
+              </span>
+              <ul class="connection-scopes">
+                @for (scope of scopeLabels(app); track scope) {
+                  <li>{{ scope }}</li>
+                }
+              </ul>
+            </div>
+            <button
+              type="button"
+              class="ui-button ui-button--danger-soft connection-disconnect"
+              [disabled]="disconnecting() !== null"
+              (click)="disconnect(app)"
+            >
+              @if (disconnecting() === app.id) {
+                <span i18n="@@donor.account.connections.disconnecting">Odpojujeme…</span>
+              } @else {
+                <span i18n="@@donor.account.connections.disconnect">Odpojit</span>
+              }
+            </button>
+          </li>
+        }
+      </ul>
+    } @else {
+      <p class="connections-empty" i18n="@@donor.account.connections.empty">
+        Žádná aplikace není připojená. Připojení začíná v aplikaci, například přidáním konektoru
+        Nové naděje v Claude; vy ho tu pak jen povolíte a kdykoli odpojíte.
+      </p>
+    }
+  } @else {
+    <p class="connections-empty" role="status" i18n="@@donor.account.connections.loading">
+      Načítáme připojené aplikace…
+    </p>
+  }
+
+  <p class="ui-form-status connections-status" role="status">
+    @if (disconnected(); as client) {
+      <span i18n="@@donor.account.connections.disconnected">
+        Aplikace {{ client }} je odpojená. Přístup získá znovu jen novým připojením, které povolíte.
+      </span>
+    }
+  </p>
+</section>

@@ -1,0 +1,42 @@
+:host {
+  display: block;
+}
+
+.preview-intro {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  line-height: var(--leading-normal);
+  margin-bottom: var(--space-5);
+}
+
+.preview-part {
+  margin-bottom: var(--space-8);
+}
+
+.preview-title {
+  font-family: var(--font-serif);
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-bold);
+  color: var(--color-text);
+  margin-bottom: var(--space-3);
+}
+
+.card-band {
+  background: var(--color-surface-alt);
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius-card);
+  padding: var(--space-8) var(--space-5);
+}
+
+.card-frame {
+  max-width: 360px;
+  margin: 0 auto;
+}
+
+.page-frame {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-panel);
+  overflow: hidden;
+}

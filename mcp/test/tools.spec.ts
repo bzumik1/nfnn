@@ -25,6 +25,14 @@ describe('Given an administrator connected with the reading permission only', ()
     await stack.stop();
   });
 
+  it('when the tools are listed, then the content tools say that live tells whether the site shows an item today', async () => {
+    const { tools } = await client.listTools();
+    const description = (name: string) => tools.find((tool) => tool.name === name)?.description;
+    expect(description('nfnn_content')).toContain('live');
+    expect(description('nfnn_news_article')).toContain('live');
+    expect(description('nfnn_project')).toContain('live');
+  });
+
   it('when the tools are listed, then every reading and writing tool is there with its annotations', async () => {
     const { tools } = await client.listTools();
     const names = tools.map((tool) => tool.name).sort();
@@ -58,6 +66,7 @@ describe('Given an administrator connected with the reading permission only', ()
       'nfnn_request_backup',
       'nfnn_reset_log_level',
       'nfnn_send_report',
+      'nfnn_send_test_email',
       'nfnn_set_log_level',
       'nfnn_settings',
       'nfnn_status',
@@ -196,6 +205,7 @@ describe('Given an administrator connected with the reading permission only', ()
     const content = textOf(await client.callTool({ name: 'nfnn_content', arguments: {} }));
     expect(content).toContain('"title":"Koncept"');
     expect(content).toContain('"bodyLength":22');
+    expect(content).toContain('"publishedOn":"2026-11-01","live":false');
     expect(content).not.toContain('Dlouhý text');
     expect(
       textOf(await client.callTool({ name: 'nfnn_news_article', arguments: { id: UNKNOWN_ID } })),
@@ -357,6 +367,16 @@ describe('Given an administrator connected with the reading permission only', ()
     expect(stack.logLines).toContain(
       'INFO Tool nfnn_pair_payment refused for donor donor-jana: the connection may only read',
     );
+  });
+
+  it('when a test e-mail is asked for, then it is refused like every change and nothing is sent', async () => {
+    const result = await client.callTool({ name: 'nfnn_send_test_email', arguments: {} });
+
+    expect(result.isError).toBe(true);
+    expect(textOf(result)).toContain('This connection may only read');
+    expect(
+      stack.backend.requests.filter((request) => request.path.endsWith('/test-email')),
+    ).toHaveLength(0);
   });
 
   it('when a photo upload is asked, then it is refused like every change and nothing is fetched', async () => {
@@ -578,6 +598,27 @@ describe('Given an administrator connected with the writing permission', () => {
     });
     expect(refused.isError).toBe(true);
     expect(textOf(refused)).toContain('RECEIPT_FIRST_YEAR: Rok musí být mezi 2000 a 2100.');
+  });
+
+  it('when a test e-mail is asked for, then it goes through the running mail settings without a password to the administrator', async () => {
+    const result = await client.callTool({ name: 'nfnn_send_test_email', arguments: {} });
+
+    expect(result.isError).toBeFalsy();
+    expect(textOf(result)).toContain('"outcome":"SENT"');
+    expect(textOf(result)).toContain('"recipient":"jana@example.cz"');
+    const post = stack.backend.requests.find(
+      (request) =>
+        request.method === 'POST' && request.path === '/api/admin/operations/settings/test-email',
+    );
+    expect(post?.authorization).toBe('Bearer api-token-write');
+    expect(JSON.parse(post?.body ?? '{}')).toEqual({
+      host: 'smtp-relay.brevo.com',
+      port: 587,
+      username: 'abc@smtp-brevo.com',
+      auth: true,
+      startTls: true,
+      sender: 'info@nfnn.cz',
+    });
   });
 
   it.each(['FIO_TOKEN', 'PUBLIC_URL'])(

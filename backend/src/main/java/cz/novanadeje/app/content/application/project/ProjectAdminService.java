@@ -11,6 +11,7 @@ import cz.novanadeje.app.content.domain.project.ProjectContent;
 import cz.novanadeje.app.content.domain.FormerSlugs;
 import cz.novanadeje.app.content.domain.SlugTaken;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
+import cz.novanadeje.app.shared.domain.FoundationZone;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
@@ -53,12 +54,13 @@ public class ProjectAdminService {
 
     @Transactional(readOnly = true)
     public List<ProjectView> list() {
-        return projects.findAllDraftsFirst().stream().map(ProjectView::from).toList();
+        LocalDate today = today(clock.instant());
+        return projects.findAllDraftsFirst().stream().map(project -> ProjectView.from(project, today)).toList();
     }
 
     @Transactional(readOnly = true)
     public ProjectView get(ProjectId id) {
-        return ProjectView.from(require(id));
+        return ProjectView.from(require(id), today(clock.instant()));
     }
 
     public ProjectView create(UUID adminId, ProjectCommand command) {
@@ -69,7 +71,7 @@ public class ProjectAdminService {
         projects.save(article);
         formerSlugs.forget(content.slug());
         audit(adminId, CREATE_ACTION, article, "Projekt " + id + " „" + content.slug() + "“ napsán", now);
-        return ProjectView.from(article);
+        return ProjectView.from(article, today(now));
     }
 
     public ProjectView update(UUID adminId, ProjectId id, ProjectCommand command) {
@@ -81,7 +83,7 @@ public class ProjectAdminService {
         rememberFormerSlug(article, edited, now);
         dropUnusedImage(article.content().coverImage(), content.coverImage());
         audit(adminId, UPDATE_ACTION, edited, "Projekt " + id + " „" + content.slug() + "“ upraven", now);
-        return ProjectView.from(edited);
+        return ProjectView.from(edited, today(now));
     }
 
     public ProjectView publish(UUID adminId, ProjectId id, LocalDate on) {
@@ -89,7 +91,7 @@ public class ProjectAdminService {
         Project published = require(id).publish(on, now);
         projects.save(published);
         audit(adminId, PUBLISH_ACTION, published, "Projekt " + id + " „" + published.slug() + "“ zveřejněn od " + on, now);
-        return ProjectView.from(published);
+        return ProjectView.from(published, today(now));
     }
 
     public ProjectView unpublish(UUID adminId, ProjectId id) {
@@ -97,7 +99,7 @@ public class ProjectAdminService {
         Project draft = require(id).unpublish(now);
         projects.save(draft);
         audit(adminId, UNPUBLISH_ACTION, draft, "Projekt " + id + " „" + draft.slug() + "“ stažen z webu", now);
-        return ProjectView.from(draft);
+        return ProjectView.from(draft, today(now));
     }
 
     public void delete(UUID adminId, ProjectId id) {
@@ -131,6 +133,10 @@ public class ProjectAdminService {
 
     private Project require(ProjectId id) {
         return projects.findById(id).orElseThrow(() -> new ProjectNotFound(id));
+    }
+
+    private static LocalDate today(Instant now) {
+        return LocalDate.ofInstant(now, FoundationZone.ZONE);
     }
 
     private void audit(UUID adminId, String action, Project article, String details, Instant now) {

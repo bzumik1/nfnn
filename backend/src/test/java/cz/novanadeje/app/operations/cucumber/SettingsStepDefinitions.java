@@ -131,9 +131,64 @@ public class SettingsStepDefinitions {
         restarter.reset();
     }
 
-    @When("the mail server {string} is tested in the setup with the password {string}")
-    public void theMailServerIsTestedInTheSetup(String host, String password) {
-        api.post(SETUP + "/mail-test", Map.of("host", host, "port", 587, "username", "user", "password", password, "auth", true, "startTls", true));
+    @When("a test e-mail is sent in the setup through {string} with the password {string} from {string} to {string}")
+    public void aTestEmailIsSentInTheSetup(String host, String password, String sender, String recipient) {
+        api.post(SETUP + "/test-email", testEmail(host, password, sender, Map.of("recipient", recipient)));
+    }
+
+    @When("a test e-mail is sent in the setup with the code from the container log through {string} from {string} to {string}")
+    public void aTestEmailIsSentInTheSetupWithTheCode(String host, String sender, String recipient) {
+        api.post(SETUP + "/test-email", testEmail(host, FakeMailServerProbe.PASSWORD, sender,
+                Map.of("recipient", recipient, "code", announcer.announced().value())));
+    }
+
+    @Given("{int} test e-mails were sent in the setup from this address")
+    public void testEmailsWereSentInTheSetupFromThisAddress(int count) {
+        for (int i = 0; i < count; i++) {
+            aTestEmailIsSentInTheSetup(FakeMailServerProbe.HOST, FakeMailServerProbe.PASSWORD, "info@nfnn.cz", "spravce@example.cz");
+            assertThat(api.lastResponse().getStatusCode().value()).isEqualTo(200);
+        }
+    }
+
+    @When("{string} sends a test e-mail through {string} with the password {string} from {string}")
+    public void sendsATestEmail(String alias, String host, String password, String sender) {
+        sessions.actAs(alias);
+        api.post(SETTINGS + "/test-email", testEmail(host, password, sender, Map.of()));
+    }
+
+    @When("{string} sent {int} test e-mails")
+    public void sentTestEmails(String alias, int count) {
+        for (int i = 0; i < count; i++) {
+            sendsATestEmail(alias, FakeMailServerProbe.HOST, FakeMailServerProbe.PASSWORD, "info@nfnn.cz");
+            assertThat(api.lastResponse().getStatusCode().value()).isEqualTo(200);
+        }
+    }
+
+    @When("someone without a token sends a test e-mail through {string}")
+    public void someoneWithoutATokenSendsATestEmail(String host) {
+        api.forgetCredentials();
+        api.post(SETTINGS + "/test-email", testEmail(host, FakeMailServerProbe.PASSWORD, "info@nfnn.cz", Map.of()));
+    }
+
+    @Then("the test e-mail says {string} to {string}")
+    public void theTestEmailSays(String outcome, String recipient) {
+        assertThat(api.lastResponse().getStatusCode().value()).withFailMessage("The test e-mail answered %s", api.lastResponse().getBody()).isEqualTo(200);
+        JsonNode result = api.lastResponseJson();
+        assertThat(result.get("outcome").asString()).isEqualTo(outcome);
+        assertThat(result.get("sent").asBoolean()).isEqualTo(outcome.equals("SENT"));
+        assertThat(result.get("recipient").asString()).isEqualTo(recipient);
+    }
+
+    @Then("the test e-mail says {string} to the e-mail of {string}")
+    public void theTestEmailSaysToTheEmailOf(String outcome, String alias) {
+        theTestEmailSays(outcome, donors.credentialsOf(alias).email());
+    }
+
+    static Map<String, Object> testEmail(String host, String password, String sender, Map<String, String> extra) {
+        Map<String, Object> body = new HashMap<>(Map.of("host", host, "port", 587, "username", "user", "password", password, "auth", true,
+                "startTls", true, "sender", sender));
+        body.putAll(extra);
+        return body;
     }
 
     @When("{int} setup requests were made from this address")
@@ -141,12 +196,6 @@ public class SettingsStepDefinitions {
         for (int i = 0; i < count; i++) {
             theSetupIsUnlockedWithTheCode("WRONG-CODE-0000");
         }
-    }
-
-    @Then("the mail test says {word}")
-    public void theMailTestSays(String outcome) {
-        assertThat(api.lastResponse().getStatusCode().value()).withFailMessage("The mail test answered %s", api.lastResponse().getBody()).isEqualTo(200);
-        assertThat(api.lastResponseJson().get("ok").asBoolean()).isEqualTo(Boolean.parseBoolean(outcome));
     }
 
     @Then("the backend restarts once")
@@ -202,12 +251,6 @@ public class SettingsStepDefinitions {
     public void changesTheSettings(String alias, DataTable changes) {
         sessions.actAs(alias);
         api.put(SETTINGS, Map.of("changes", values(changes)));
-    }
-
-    @When("{string} tests the mail server {string} without a password")
-    public void testsTheMailServerWithoutAPassword(String alias, String host) {
-        sessions.actAs(alias);
-        api.post(SETTINGS + "/mail-test", Map.of("host", host, "port", 587, "username", "user", "auth", true, "startTls", true));
     }
 
     @Then("the setting {string} reads {string}")

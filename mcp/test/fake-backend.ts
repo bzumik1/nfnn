@@ -293,11 +293,20 @@ function adminRoute(request: RecordedRequest, url: URL, body: string): [number, 
         {
           settings: [
             { name: 'PUBLIC_URL', group: 'SITE', secret: false, value: 'https://nfnn.cz' },
+            { name: 'MAIL_HOST', group: 'MAIL', secret: false, value: 'smtp-relay.brevo.com' },
+            { name: 'MAIL_PORT', group: 'MAIL', secret: false, value: '587' },
+            { name: 'MAIL_USERNAME', group: 'MAIL', secret: false, value: 'abc@smtp-brevo.com' },
+            { name: 'MAIL_PASSWORD', group: 'MAIL', secret: true, value: null, configured: true },
+            { name: 'MAIL_AUTH', group: 'MAIL', secret: false, value: 'true' },
+            { name: 'MAIL_STARTTLS', group: 'MAIL', secret: false, value: 'true' },
+            { name: 'MAIL_FROM', group: 'MAIL', secret: false, value: 'info@nfnn.cz' },
             { name: 'FIO_TOKEN', group: 'BANK', secret: true, value: null, configured: true },
           ],
           secretsCanBeStored: true,
         },
       ];
+    case 'POST /api/admin/operations/settings/test-email':
+      return [200, { outcome: 'SENT', sent: true, recipient: 'jana@example.cz' }];
     case 'PUT /api/admin/operations/settings':
       return body.includes('"26"')
         ? [
@@ -317,7 +326,17 @@ function adminRoute(request: RecordedRequest, url: URL, body: string): [number, 
     case 'GET /api/admin/content/news':
       return [
         200,
-        { items: [{ id: UNKNOWN_ID, title: 'Koncept', body: 'Dlouhý text aktuality.' }] },
+        {
+          items: [
+            {
+              id: UNKNOWN_ID,
+              title: 'Koncept',
+              publishedOn: '2026-11-01',
+              live: false,
+              body: 'Dlouhý text aktuality.',
+            },
+          ],
+        },
       ];
     case 'GET /api/admin/content/projects':
       return [200, { items: [] }];

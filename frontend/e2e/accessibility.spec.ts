@@ -110,6 +110,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
       body: 'První odstavec.\n\nDruhý odstavec.',
       coverImage: { id: imageId, url: `/api/content/media/${imageId}`, alt: null },
       publishedOn: '2026-10-20',
+      live: true,
       createdAt: '2026-10-19T09:00:00Z',
       updatedAt: '2026-10-20T07:30:00Z',
     };
@@ -1214,7 +1215,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     await expect(page.locator('#setup-admin-email')).toBeVisible();
     expect(unlocked).toBe(true);
     await page.getByRole('button', { name: 'Uložit a spustit' }).click();
-    await expect(page.locator('#setup-mail-username')).toBeFocused();
+    await expect(page.locator('#setup-admin-email')).toBeFocused();
     expect(await violations(page)).toEqual([]);
     await page.locator('#setup-mail-username').fill('abc@smtp-brevo.com');
     await page.locator('#setup-mail-password').fill('xsmtpsib-key');
@@ -1247,12 +1248,19 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     expect(await violations(page)).toEqual([]);
   });
 
-  test('when an administrator changes the settings, then the page and its confirmation break no rule', async ({
+  test('when an administrator changes the settings, then the page, its confirmation and a refused test e-mail break no rule', async ({
     page,
   }) => {
     await page.route(
       (url) => url.pathname === '/api/admin/operations/settings',
       (route) => route.fulfill({ json: adminSettings }),
+    );
+    await page.route(
+      (url) => url.pathname === '/api/admin/operations/settings/test-email',
+      (route) =>
+        route.fulfill({
+          json: { outcome: 'SIGN_IN_REFUSED', sent: false, recipient: 'jana@example.cz' },
+        }),
     );
     await page.route(
       (url) => url.pathname === '/api/admin/donations/receipt-signature',
@@ -1270,6 +1278,11 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     await page.locator('#setting-RECEIPT_FIRST_YEAR').fill('2025');
     await page.getByRole('button', { name: 'Uložit nastavení' }).click();
     await expect(page.getByRole('button', { name: 'Uložit a restartovat' })).toBeVisible();
+    expect(await violations(page)).toEqual([]);
+
+    await page.getByText('Adresa webu, server pro odesílání e-mailů a napojení na banku').click();
+    await page.getByRole('button', { name: 'Poslat zkušební e-mail na moji adresu' }).click();
+    await expect(page.locator('.test-row').getByRole('alert')).toContainText('odmítl přihlášení');
     expect(await violations(page)).toEqual([]);
 
     await page.getByRole('button', { name: 'Odebrat podpis' }).click();
@@ -1302,7 +1315,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     expect(await violations(page)).toEqual([]);
   });
 
-  test('when an administrator writes a news article, then the list, the editor with its errors and the deletion confirmation break no rule', async ({
+  test('when an administrator writes a news article, then the list, the editor with its errors, its preview and the deletion confirmation break no rule', async ({
     page,
   }) => {
     const articleId = '0199f3e0-0000-7000-8000-00000000c001';
@@ -1316,6 +1329,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
       body: 'První odstavec.\n\nDruhý odstavec.',
       coverImage: { id: imageId, url: `/api/content/media/${imageId}`, alt: null },
       publishedOn: '2026-10-20',
+      live: true,
       createdAt: '2026-10-19T09:00:00Z',
       updatedAt: '2026-10-20T07:30:00Z',
     };
@@ -1334,7 +1348,9 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
                 tag: null,
                 coverImage: null,
                 publishedOn: null,
+                live: false,
               },
+              { ...article, id: 'y', slug: 'pozdeji', publishedOn: '2026-12-01', live: false },
             ],
           },
         }),
@@ -1359,7 +1375,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
 
     await page.goto('/sprava/aktuality');
     await expect(page.getByRole('heading', { level: 1, name: 'Aktuality' })).toBeFocused();
-    await expect(page.locator('tbody tr')).toHaveCount(2);
+    await expect(page.locator('tbody tr')).toHaveCount(3);
 
     expect(await violations(page)).toEqual([]);
 
@@ -1373,15 +1389,19 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     await page.goto(`/sprava/aktuality/${articleId}`);
     await expect(page.getByRole('heading', { level: 1, name: 'Úprava aktuality' })).toBeFocused();
     await expect(page.locator('.image-preview')).toBeVisible();
-    await page.getByRole('button', { name: 'Ukázat náhled' }).click();
-    await expect(page.getByRole('region', { name: 'Náhled textu' })).toBeVisible();
+    await page.getByRole('button', { name: 'Náhled', exact: true }).click();
+    await expect(page.getByRole('heading', { level: 2, name: 'Stránka aktuality' })).toBeVisible();
+
+    expect(await violations(page)).toEqual([]);
+
+    await page.getByRole('button', { name: 'Upravit', exact: true }).click();
     await page.getByRole('button', { name: 'Smazat aktualitu' }).click();
     await expect(page.getByRole('group', { name: 'Smazat aktualitu?' })).toBeVisible();
 
     expect(await violations(page)).toEqual([]);
   });
 
-  test('when an administrator writes a project, then the list, the editor with its errors and the deletion confirmation break no rule', async ({
+  test('when an administrator writes a project, then the list, the editor with its errors, its preview and the deletion confirmation break no rule', async ({
     page,
   }) => {
     const projectId = '0199f3e0-0000-7000-8000-00000000c001';
@@ -1415,7 +1435,9 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
                 tag: null,
                 coverImage: null,
                 publishedOn: null,
+                live: false,
               },
+              { ...project, id: 'y', slug: 'pozdeji', publishedOn: '2026-12-01', live: false },
             ],
           },
         }),
@@ -1440,7 +1462,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
 
     await page.goto('/sprava/projekty');
     await expect(page.getByRole('heading', { level: 1, name: 'Projekty' })).toBeFocused();
-    await expect(page.locator('tbody tr')).toHaveCount(2);
+    await expect(page.locator('tbody tr')).toHaveCount(3);
 
     expect(await violations(page)).toEqual([]);
 
@@ -1456,6 +1478,12 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     await page.goto(`/sprava/projekty/${projectId}`);
     await expect(page.getByRole('heading', { level: 1, name: 'Úprava projektu' })).toBeFocused();
     await expect(page.locator('.image-preview')).toBeVisible();
+    await page.getByRole('button', { name: 'Náhled', exact: true }).click();
+    await expect(page.getByRole('heading', { level: 2, name: 'Stránka projektu' })).toBeVisible();
+
+    expect(await violations(page)).toEqual([]);
+
+    await page.getByRole('button', { name: 'Upravit', exact: true }).click();
     await page.getByRole('button', { name: 'Smazat projekt' }).click();
     await expect(page.getByRole('group', { name: 'Smazat projekt?' })).toBeVisible();
 
@@ -1494,6 +1522,31 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     expect(await violations(page)).toEqual([]);
   });
 
+  test('when a signed-in donor has an e-mail change waiting and its re-send is refused, then the row breaks no rule', async ({
+    page,
+  }) => {
+    await page.route('**/api/donors/me/email-change/resend', (route) =>
+      route.fulfill(
+        problem(429, 'donors/rate-limited', 'Příliš mnoho požadavků', 'Zkuste to později.'),
+      ),
+    );
+    await signIn(page, {
+      ...donor,
+      pendingEmailChange: { newEmail: 'jana.nova@example.cz', expiresAt: '2026-10-25T10:00:00Z' },
+    });
+    await openDonorSection(page, 'Údaje a zabezpečení');
+    await expect(page.locator('.account-pending-address')).toHaveText(
+      'Čeká na potvrzení: jana.nova@example.cz',
+    );
+    expect(await violations(page)).toEqual([]);
+
+    await page.getByRole('button', { name: 'Poslat znovu potvrzovací odkaz' }).click();
+    await expect(page.locator('.account-pending').getByRole('alert')).toContainText(
+      'Příliš mnoho požadavků',
+    );
+    expect(await violations(page)).toEqual([]);
+  });
+
   test('when a signed-in donor sets up the second factor, then the QR step breaks no rule, with its error shown either', async ({
     page,
   }) => {
@@ -1502,7 +1555,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     );
     await signIn(page);
     await openDonorSection(page, 'Údaje a zabezpečení');
-    await page.getByRole('button', { name: 'Zapnout kód z aplikace' }).click();
+    await page.getByRole('button', { name: 'Zapnout dvoufaktorové ověření' }).click();
     await page.getByLabel('Současné heslo').fill('correct horse battery');
     await page.getByRole('button', { name: 'Pokračovat' }).click();
     await expect(page.getByLabel('Kód z aplikace')).toBeFocused();
@@ -1542,6 +1595,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     );
     await signIn(page);
     await openDonorSection(page, 'Údaje a zabezpečení');
+    await page.getByRole('button', { name: 'Spravovat přístupové klíče' }).click();
     const card = page.getByRole('region', { name: 'Přístupové klíče' });
     await expect(card.locator('.passkey-name')).toHaveText(['iPhone']);
     expect(await violations(page)).toEqual([]);
@@ -1570,13 +1624,14 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     await mockDonorApi(page);
     await signIn(page, { ...donor, hasPassword: false });
     await openDonorSection(page, 'Údaje a zabezpečení');
-    const card = page.getByRole('region', { name: 'Přístupové klíče' });
-    await expect(card.locator('.passkeys-warning')).toBeVisible();
-    const account = page.getByRole('region', { name: 'Přihlašovací údaje' });
+    const account = page.getByRole('region', { name: 'Přihlášení a zabezpečení' });
+    await expect(account.locator('.account-no-method')).toBeVisible();
     await expect(account.getByRole('button', { name: 'Nastavit heslo' })).toHaveCount(0);
     expect(await violations(page)).toEqual([]);
 
     await account.getByRole('button', { name: 'Vytvořit přístupový klíč' }).click();
+    const card = page.getByRole('region', { name: 'Přístupové klíče' });
+    await expect(card.locator('.passkeys-warning')).toBeVisible();
     await expect(card.getByLabel('Název klíče')).toBeFocused();
     expect(await violations(page)).toEqual([]);
   });
@@ -1603,7 +1658,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     );
     await signIn(page);
     await openDonorSection(page, 'Údaje a zabezpečení');
-    const account = page.getByRole('region', { name: 'Přihlašovací údaje' });
+    const account = page.getByRole('region', { name: 'Přihlášení a zabezpečení' });
     await account.getByRole('button', { name: 'Odebrat heslo' }).click();
     await expect(account.getByLabel('Současné heslo')).toBeFocused();
 

@@ -7,7 +7,6 @@ import {
   computed,
   ElementRef,
   inject,
-  input,
   Injector,
   output,
   signal,
@@ -16,11 +15,9 @@ import {
 import { FormsModule, NgForm } from '@angular/forms';
 import { Observable, switchMap } from 'rxjs';
 import { describeProblem, problemTypeEndsWith } from '../../../../core/auth/api-problem';
-import { AuthApi } from '../../../../core/auth/auth-api';
 import { AuthStore } from '../../../../core/auth/auth-store';
 import {
   Confirmation,
-  ConnectedApp,
   PASSWORD_MIN_LENGTH,
   SecondFactorEnrolment,
 } from '../../../../core/auth/donor';
@@ -28,17 +25,23 @@ import {
   PasskeyAuthenticator,
   PasskeyCeremonyError,
 } from '../../../../core/auth/passkey-authenticator';
-import { formatDonationDate } from '../../../donations/donation-date';
-import { describeScopes } from '../../connect-app/oauth-scopes';
+import { formatBankTime } from '../../../donations/donation-date';
 import { CopyButton } from '../../../../shared/ui/copy-button/copy-button';
 import { FocusFirstInvalid } from '../../../../shared/ui/form-field/focus-first-invalid';
 import { FormControlDirective } from '../../../../shared/ui/form-field/form-control';
 import { FormField } from '../../../../shared/ui/form-field/form-field';
 import { PasswordReveal } from '../../../../shared/ui/password-reveal/password-reveal';
 import { QrCode } from '../../../../shared/ui/qr-code/qr-code';
+import { PasskeysPanel } from '../passkeys-panel/passkeys-panel';
 
 type Panel =
-  'closed' | 'email' | 'password' | 'password-remove' | 'second-factor-on' | 'second-factor-off';
+  | 'closed'
+  | 'email'
+  | 'password'
+  | 'password-remove'
+  | 'second-factor-on'
+  | 'second-factor-off'
+  | 'passkeys';
 
 const UNAUTHENTICATED = 'auth/unauthenticated';
 const SECRET_GROUP = 4;
@@ -53,6 +56,7 @@ const SECRET_GROUP = 4;
     PasswordReveal,
     CopyButton,
     QrCode,
+    PasskeysPanel,
   ],
   templateUrl: './account-card.html',
   styleUrl: './account-card.scss',
@@ -60,13 +64,10 @@ const SECRET_GROUP = 4;
 })
 export class AccountCard {
   private readonly auth = inject(AuthStore);
-  private readonly authApi = inject(AuthApi);
   private readonly injector = inject(Injector);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
 
-  readonly passkeyCount = input<number | null>(null);
   readonly sessionEnded = output<void>();
-  readonly createPasskey = output<void>();
 
   private readonly emailButton = viewChild<ElementRef<HTMLButtonElement>>('emailButton');
   private readonly passwordButton = viewChild<ElementRef<HTMLButtonElement>>('passwordButton');
@@ -74,10 +75,14 @@ export class AccountCard {
     viewChild<ElementRef<HTMLButtonElement>>('removePasswordButton');
   private readonly secondFactorButton =
     viewChild<ElementRef<HTMLButtonElement>>('secondFactorButton');
+  private readonly passkeysButton = viewChild<ElementRef<HTMLButtonElement>>('passkeysButton');
+  private readonly passkeysPanel = viewChild.required(PasskeysPanel);
   private readonly firstField = viewChild<ElementRef<HTMLInputElement>>('firstField');
   private readonly codeField = viewChild<ElementRef<HTMLInputElement>>('codeField');
 
   protected readonly donor = this.auth.donor;
+  protected readonly passkeyCount = signal<number | null>(null);
+  protected readonly pendingEmailChange = computed(() => this.donor()?.pendingEmailChange ?? null);
   protected readonly secondFactor = computed(
     () => this.donor()?.secondFactor ?? { enabled: false, neededForAdministration: false },
   );
@@ -102,10 +107,9 @@ export class AccountCard {
   });
   protected readonly passwordMinLength = PASSWORD_MIN_LENGTH;
   protected readonly isAdmin = this.auth.isAdmin;
-  protected readonly connections = signal<ConnectedApp[] | null>(null);
-  protected readonly connectionsError = signal('');
-  protected readonly disconnecting = signal<string | null>(null);
-  protected readonly disconnected = signal('');
+  protected readonly pendingAction = signal<'resend' | 'cancel' | null>(null);
+  protected readonly pendingError = signal('');
+  protected readonly emailChange = signal<'resent' | 'cancelled' | null>(null);
 
   protected readonly newEmailMessages = {
     required: $localize`:@@donor.account.newEmail.required:Vyplňte prosím novou e-mailovou adresu.`,
@@ -135,72 +139,67 @@ export class AccountCard {
   protected newPasswordConfirmation = '';
   protected code = '';
 
-  constructor() {
-    if (this.isAdmin()) {
-      this.loadConnections();
-    }
+  protected formatTime(isoInstant: string): string {
+    return formatBankTime(isoInstant);
   }
 
-  loadConnections(): void {
-    this.connectionsError.set('');
-    this.authApi.connections().subscribe({
-      next: (list) => this.connections.set(list.items),
-      error: (failure: unknown) => {
-        if (problemTypeEndsWith(failure, UNAUTHENTICATED) || this.auth.status() === 'anonymous') {
-          this.sessionEnded.emit();
-          return;
-        }
-        this.connectionsError.set(
-          describeProblem(
-            failure,
-            $localize`:@@donor.account.connections.error.load:Připojené aplikace se nepodařilo načíst.`,
-          ),
-        );
-      },
-    });
-  }
-
-  disconnect(app: ConnectedApp): void {
-    if (this.disconnecting() !== null) {
+  toggle(panel: Exclude<Panel, 'closed'>): void {
+    if (this.panel() === panel) {
+      this.close(panel);
       return;
     }
-    this.disconnecting.set(app.id);
-    this.connectionsError.set('');
-    this.disconnected.set('');
-    this.authApi.disconnect(app.id).subscribe({
+    this.open(panel);
+  }
+
+  createPasskey(): void {
+    this.reset();
+    this.panel.set('passkeys');
+    this.passkeysPanel().openForm();
+  }
+
+  resendEmailChange(): void {
+    if (this.pendingAction() !== null) {
+      return;
+    }
+    this.startPendingAction('resend');
+    this.auth.resendEmailChange().subscribe({
       next: () => {
-        this.disconnecting.set(null);
-        this.connections.update((apps) => (apps ?? []).filter((other) => other.id !== app.id));
-        this.disconnected.set(app.client);
+        this.pendingAction.set(null);
+        this.emailChange.set('resent');
       },
-      error: (failure: unknown) => {
-        this.disconnecting.set(null);
-        if (problemTypeEndsWith(failure, UNAUTHENTICATED) || this.auth.status() === 'anonymous') {
-          this.sessionEnded.emit();
-          return;
-        }
-        this.connectionsError.set(
-          describeProblem(
-            failure,
-            $localize`:@@donor.account.connections.error.disconnect:Aplikaci se nepodařilo odpojit. Zkuste to prosím znovu.`,
-          ),
-        );
-      },
+      error: (failure: unknown) =>
+        this.pendingActionFailed(
+          failure,
+          $localize`:@@donor.account.email.error.resend:Odkaz se nepodařilo poslat znovu. Zkuste to prosím za chvíli.`,
+        ),
     });
   }
 
-  protected scopeLabels(app: ConnectedApp): string[] {
-    return describeScopes(app.scopes);
-  }
-
-  protected formatDate(isoInstant: string): string {
-    return formatDonationDate(isoInstant);
+  cancelEmailChange(): void {
+    if (this.pendingAction() !== null) {
+      return;
+    }
+    this.startPendingAction('cancel');
+    this.auth.cancelEmailChange().subscribe({
+      next: () => {
+        this.pendingAction.set(null);
+        this.emailChange.set('cancelled');
+        afterNextRender(() => this.emailButton()?.nativeElement.focus(), {
+          injector: this.injector,
+        });
+      },
+      error: (failure: unknown) =>
+        this.pendingActionFailed(
+          failure,
+          $localize`:@@donor.account.email.error.cancel:Změnu se nepodařilo zrušit. Zkuste to prosím znovu.`,
+        ),
+    });
   }
 
   open(panel: Exclude<Panel, 'closed'>): void {
     this.reset();
     this.panel.set(panel);
-    afterNextRender(() => this.firstControl()?.focus(), { injector: this.injector });
+    afterNextRender(() => this.firstControl(panel)?.focus(), { injector: this.injector });
   }
 
   cancel(): void {
@@ -342,13 +341,32 @@ export class AccountCard {
     });
   }
 
-  private firstControl(): HTMLElement | null {
+  private firstControl(panel: Panel): HTMLElement | null {
+    if (panel === 'passkeys') {
+      return this.passkeysPanel().focusTarget();
+    }
     return (
       this.firstField()?.nativeElement ??
       this.host.nativeElement.querySelector<HTMLElement>(
         '.account-form input, .account-form button[type="submit"]',
       )
     );
+  }
+
+  private startPendingAction(action: 'resend' | 'cancel'): void {
+    this.pendingAction.set(action);
+    this.pendingError.set('');
+    this.emailChange.set(null);
+    this.linkSentTo.set('');
+  }
+
+  private pendingActionFailed(failure: unknown, fallback: string): void {
+    this.pendingAction.set(null);
+    if (problemTypeEndsWith(failure, UNAUTHENTICATED) || this.auth.status() === 'anonymous') {
+      this.sessionEnded.emit();
+      return;
+    }
+    this.pendingError.set(describeProblem(failure, fallback));
   }
 
   private confirmed<T>(
@@ -361,6 +379,7 @@ export class AccountCard {
   private start(): void {
     this.saving.set(true);
     this.error.set('');
+    this.emailChange.set(null);
     this.linkSentTo.set('');
     this.passwordChanged.set(null);
     this.secondFactorChanged.set(null);
@@ -383,6 +402,9 @@ export class AccountCard {
 
   private reset(): void {
     this.error.set('');
+    this.pendingError.set('');
+    this.emailChange.set(null);
+    this.passkeysPanel().collapse();
     this.linkSentTo.set('');
     this.passwordChanged.set(null);
     this.secondFactorChanged.set(null);
@@ -391,6 +413,7 @@ export class AccountCard {
 
   private close(panel: Panel): void {
     this.panel.set('closed');
+    this.passkeysPanel().collapse();
     this.clearFields();
     afterNextRender(() => this.buttonFor(panel)?.nativeElement.focus(), {
       injector: this.injector,
@@ -415,6 +438,8 @@ export class AccountCard {
         return this.passwordButton();
       case 'password-remove':
         return this.removePasswordButton();
+      case 'passkeys':
+        return this.passkeysButton();
       default:
         return this.secondFactorButton();
     }

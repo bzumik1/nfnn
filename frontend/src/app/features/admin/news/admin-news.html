@@ -63,9 +63,15 @@
                   </td>
                   <td data-label="Stav" i18n-data-label="@@admin.news.col.state">
                     @if (publishedOn(item); as date) {
-                      <span class="ui-badge ui-badge--success" i18n="@@admin.news.state.published"
-                        >Zveřejněno {{ date }}</span
-                      >
+                      @if (item.live) {
+                        <span class="ui-badge ui-badge--success" i18n="@@admin.news.state.published"
+                          >Na webu od {{ date }}</span
+                        >
+                      } @else {
+                        <span class="ui-badge ui-badge--accent" i18n="@@admin.news.state.scheduled"
+                          >Zveřejní se {{ date }}</span
+                        >
+                      }
                     } @else {
                       <span class="ui-badge ui-badge--warning" i18n="@@admin.news.state.draft"
                         >Koncept</span

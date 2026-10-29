@@ -9,6 +9,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -58,5 +59,18 @@ class DonorCredentialsController {
     void requestEmailChange(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody EmailChangeRequest request, HttpServletRequest http) {
         emailLimiter.check(http.getRemoteAddr());
         credentials.requestEmailChange(DonorId.of(jwt.getSubject()), request.confirmation(), new EmailAddress(request.newEmail()));
+    }
+
+    @PostMapping("/email-change/resend")
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    void resendEmailChange(@AuthenticationPrincipal Jwt jwt, HttpServletRequest http) {
+        emailLimiter.check(http.getRemoteAddr());
+        credentials.resendEmailChange(DonorId.of(jwt.getSubject()));
+    }
+
+    @DeleteMapping("/email-change")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    void cancelEmailChange(@AuthenticationPrincipal Jwt jwt) {
+        credentials.cancelEmailChange(DonorId.of(jwt.getSubject()));
     }
 }

@@ -91,8 +91,25 @@ export interface MailServerRequest {
   startTls: boolean;
 }
 
-export interface MailTestResponse {
-  ok: boolean;
+export interface SetupTestEmailRequest extends MailServerRequest {
+  sender: string;
+  recipient: string;
+}
+
+export type TestEmailOutcome =
+  | 'SENT'
+  | 'UNREACHABLE'
+  | 'TIMEOUT'
+  | 'STARTTLS_UNAVAILABLE'
+  | 'SIGN_IN_REFUSED'
+  | 'SENDER_REFUSED'
+  | 'RECIPIENT_REFUSED'
+  | 'FAILED';
+
+export interface TestEmailResponse {
+  outcome: TestEmailOutcome;
+  sent: boolean;
+  recipient: string;
 }
 
 export interface SettingsSavedResponse {
@@ -112,10 +129,13 @@ export class SetupApi {
     return this.http.post<void>('/api/operations/setup/unlock', { code });
   }
 
-  testMail(code: string | null, server: MailServerRequest): Observable<MailTestResponse> {
-    return this.http.post<MailTestResponse>('/api/operations/setup/mail-test', {
+  sendTestEmail(
+    code: string | null,
+    request: SetupTestEmailRequest,
+  ): Observable<TestEmailResponse> {
+    return this.http.post<TestEmailResponse>('/api/operations/setup/test-email', {
       code,
-      ...server,
+      ...request,
     });
   }
 

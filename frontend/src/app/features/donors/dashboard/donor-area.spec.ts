@@ -230,8 +230,10 @@ describe('Given a signed-in donor in the donor area', () => {
   }
 
   const yearlyUrl = (year: number): string => `/api/donations/me/receipts/yearly?year=${year}`;
-  const secondRowButton = '.payments-card tbody tr:nth-child(2) .download-btn';
-  const thirdRowButton = '.payments-card tbody tr:nth-child(3) .download-btn';
+  const yearSection = (year: number): string =>
+    `.payments-card section[aria-labelledby="gifts-year-${year}"]`;
+  const secondRowButton = `${yearSection(2026)} tbody tr:nth-child(2) .download-btn`;
+  const thirdRowButton = `${yearSection(2025)} tbody tr:nth-child(1) .download-btn`;
 
   describe('when bank accounts carry questions about an older symbol', () => {
     function questions(count: number): BankAccountItem[] {
@@ -715,13 +717,89 @@ describe('Given a signed-in donor in the donor area', () => {
       ]);
     });
 
-    it('then the table is named by the heading of its card', async () => {
+    it('then the donations are grouped by year, newest first, each under a heading with the count and the sum from the summary', async () => {
       await open('/darce/dary');
       await respond(twoYearSummary(), twoYearDonations());
 
-      const table = element('.payments-card table');
-      expect(table?.getAttribute('aria-labelledby')).toBe('payments-title');
+      expect(texts('.gift-year-title')).toEqual(['2026', '2025']);
+      expect(texts('.gift-year-sum')).toEqual(['2 dary · 1 500 Kč', '1 dar · 250 Kč']);
+      expect(
+        [...root().querySelectorAll<HTMLElement>('.gift-year')].map(
+          (year) => year.querySelectorAll('tbody tr').length,
+        ),
+      ).toEqual([2, 2]);
       expect(text('#payments-title')).toBe('Všechny dary');
+    });
+
+    it('then every year table is named by the heading of its year', async () => {
+      await open('/darce/dary');
+      await respond(twoYearSummary(), twoYearDonations());
+
+      const tables = [...root().querySelectorAll<HTMLElement>('.payments-card table')];
+      expect(tables.map((table) => table.getAttribute('aria-labelledby'))).toEqual([
+        'gifts-year-2026',
+        'gifts-year-2025',
+      ]);
+      expect(text('#gifts-year-2026')).toBe('2026');
+      expect(element(yearSection(2025))?.getAttribute('aria-labelledby')).toBe('gifts-year-2025');
+    });
+
+    it('then a year the API counts as completed offers its yearly receipt and the current year says it comes after the year ends', async () => {
+      await open('/darce/dary');
+      await respond(twoYearSummary(), twoYearDonations());
+
+      expect(text(`${yearSection(2025)} .yearly-pdf`)).toBe('Stáhnout potvrzení za rok 2025 (PDF)');
+      expect(element(`${yearSection(2026)} .yearly-pdf`)).toBeNull();
+      expect(text(`${yearSection(2026)} .gift-year-note`)).toBe(
+        'Roční potvrzení za rok 2026 stáhnete po skončení roku, od 1. ledna 2027.',
+      );
+    });
+
+    it('then the yearly receipt offered at a year heading is saved', async () => {
+      await open('/darce/dary');
+      await respond(twoYearSummary(), twoYearDonations());
+
+      await click(`${yearSection(2025)} .yearly-pdf`);
+      expect(text(`${yearSection(2025)} .yearly-pdf`)).toBe('Připravujeme PDF…');
+      http.expectOne(yearlyUrl(2025)).flush(pdf(), attachment('potvrzeni-o-darech-2025.pdf'));
+      await settle();
+
+      expect(savedFiles).toEqual([{ fileName: 'potvrzeni-o-darech-2025.pdf', href: OBJECT_URL }]);
+    });
+
+    it('then a yearly receipt the server refuses shows the reason on the donations page', async () => {
+      await open('/darce/dary');
+      await respond(twoYearSummary(), twoYearDonations());
+
+      await click(`${yearSection(2025)} .yearly-pdf`);
+      http
+        .expectOne(yearlyUrl(2025))
+        .flush(problemBlob('donations/yearly-receipt-not-available', 'Za rok 2025 nic', 404), {
+          status: 404,
+          statusText: 'Not Found',
+        });
+      await settleBlobFailure();
+
+      expect(text('.payments-card [role="alert"]')).toBe('Za rok 2025 nic');
+    });
+
+    it('then a year before the first receipt year offers no yearly receipt at its heading', async () => {
+      await open('/darce/dary');
+      await respond(summaryWithReceiptsFrom2026(), donationsWithoutReceiptsBefore2026());
+
+      expect(element(`${yearSection(2025)} .yearly-pdf`)).toBeNull();
+      expect(element(`${yearSection(2025)} .gift-year-note`)).toBeNull();
+    });
+
+    it('then the year comes from what the API says is completed, not from the clock of the device', async () => {
+      const summary = { ...twoYearSummary(), yearlyReceiptsAvailableThrough: 2026 };
+      await open('/darce/dary');
+      await respond(summary, twoYearDonations());
+
+      expect(texts('.yearly-pdf')).toEqual([
+        'Stáhnout potvrzení za rok 2026 (PDF)',
+        'Stáhnout potvrzení za rok 2025 (PDF)',
+      ]);
     });
 
     it('then every cell names its column so a phone can show the rows as cards', async () => {
@@ -729,7 +807,7 @@ describe('Given a signed-in donor in the donor area', () => {
       await respond(twoYearSummary(), twoYearDonations());
 
       const labels = [
-        ...root().querySelectorAll<HTMLElement>('.payments-card tbody tr:first-child td'),
+        ...root().querySelectorAll<HTMLElement>(`${yearSection(2026)} tbody tr:first-child td`),
       ].map((cell) => cell.dataset['label']);
       expect(labels).toEqual(['Datum', 'Částka', 'Účel', 'Stav', 'Potvrzení']);
     });
@@ -808,16 +886,6 @@ describe('Given a signed-in donor in the donor area', () => {
 
       expect(text('.bank-hint')).toContain('Okamžitá platba se tu obvykle objeví do minuty');
       expect(text('.bank-hint')).toContain('každou hodinu');
-    });
-
-    it('then a line leads to the yearly receipts', async () => {
-      await open('/darce/dary');
-      await respond(twoYearSummary(), twoYearDonations());
-
-      expect(text('.yearly-link')).toBe(
-        'Souhrnné potvrzení za celý rok najdete v části Potvrzení o daru.',
-      );
-      expect(element('.yearly-link a')?.getAttribute('href')).toBe('/darce/potvrzeni');
     });
 
     it('then a donor with no donations yet reads that there is no payment and how a standing order is paired', async () => {
@@ -953,7 +1021,7 @@ describe('Given a signed-in donor in the donor area', () => {
         true,
         false,
       ]);
-      expect(text('.payments-card tbody tr:nth-child(4) .receipt-note')).toBe(
+      expect(text(`${yearSection(2025)} tbody tr:nth-child(2) .receipt-note`)).toBe(
         'Vrácený dar potvrzení nemá',
       );
       expect(element('.receipts-from')).toBeNull();
@@ -1354,16 +1422,20 @@ describe('Given a signed-in donor in the donor area', () => {
   });
 
   describe('when the details page opens', () => {
-    it('then the details on the receipt, the sign-in details and the passkeys show', async () => {
+    it('then the details on the receipt and one card for sign-in and security show, without connected applications for a donor', async () => {
       await open('/darce/udaje');
       http.expectOne(PASSKEYS_URL).flush({ items: [] });
       await respond(twoYearSummary(), twoYearDonations());
 
-      expect(texts('app-profile-card h2, app-account-card h2, app-passkeys-card h2')).toEqual([
-        'Údaje na potvrzení o daru',
-        'Přihlašovací údaje',
+      expect(texts('h2')).toEqual(['Údaje na potvrzení o daru', 'Přihlášení a zabezpečení']);
+      expect(texts('app-account-card .account-row dt')).toEqual([
+        'E-mail',
+        'Heslo',
+        'Dvoufaktorové ověření',
         'Přístupové klíče',
       ]);
+      expect(element('app-connected-apps-card')).toBeNull();
+      http.expectNone('/api/donors/me/connections');
     });
   });
 });

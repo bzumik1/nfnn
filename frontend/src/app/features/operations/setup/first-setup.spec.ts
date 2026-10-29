@@ -8,7 +8,7 @@ import { RESTART_POLL_MS } from './setup-api';
 
 const STATUS_URL = '/api/operations/setup';
 const UNLOCK_URL = '/api/operations/setup/unlock';
-const MAIL_TEST_URL = '/api/operations/setup/mail-test';
+const TEST_EMAIL_URL = '/api/operations/setup/test-email';
 const RESTORE_URL = '/api/operations/setup/restore';
 const BACKUP_KEY_URL = '/api/operations/setup/backup-key';
 const BACKUP_KEY = 'AGE-SECRET-KEY-1R45A984EXXAFC85YZSYGY9R6XJTD4E9AKY65ZCRGPDQ89E7ANW8QKT6GWH';
@@ -134,10 +134,12 @@ describe('Given the first setup page', () => {
     await type('#setup-backup-key-check', '6gwh');
   }
 
-  async function passMailTest(): Promise<void> {
-    button('Ověřit spojení').click();
+  async function sendSuccessfulTestEmail(): Promise<void> {
+    button('Poslat zkušební e-mail').click();
     await settle();
-    http.expectOne(MAIL_TEST_URL).flush({ ok: true });
+    http
+      .expectOne(TEST_EMAIL_URL)
+      .flush({ outcome: 'SENT', sent: true, recipient: 'spravce@example.cz' });
     await settle();
   }
 
@@ -249,9 +251,9 @@ describe('Given the first setup page', () => {
 
       expect(fieldErrors()).toEqual([
         'Napište celou adresu včetně https://, například https://nfnn.cz.',
+        'Vyplňte prosím e-mailovou adresu.',
         'Vyplňte prosím přihlašovací jméno ze stránky SMTP v Brevo.',
         'Vyplňte prosím heslo nebo klíč SMTP.',
-        'Vyplňte prosím e-mailovou adresu.',
         'Opište prosím poslední čtyři znaky klíče.',
       ]);
       http.expectNone(STATUS_URL);
@@ -267,7 +269,7 @@ describe('Given the first setup page', () => {
       await submit('form.setup-form');
 
       expect(fieldErrors()).toEqual([]);
-      expect(text('.mail-unverified')).toContain('Spojení s e-mailovým serverem jste neověřili.');
+      expect(text('.mail-unverified')).toContain('Zkušební e-mail s těmito údaji zatím neodešel.');
     });
 
     it('then it says up front what the operator will need and keeps the server details folded away', () => {
@@ -288,7 +290,7 @@ describe('Given the first setup page', () => {
 
         http.expectNone(STATUS_URL);
         expect(text('[role="alert"].mail-unverified')).toBe(
-          'Spojení s e-mailovým serverem jste neověřili. Bez funkčních e-mailů se správce nepřihlásí. Ověřit spojení Uložit i tak',
+          'Zkušební e-mail s těmito údaji zatím neodešel. Bez funkčních e-mailů se správce nepřihlásí. Poslat zkušební e-mail Uložit i tak',
         );
       });
 
@@ -297,15 +299,19 @@ describe('Given the first setup page', () => {
 
         element<HTMLButtonElement>('.mail-unverified .ui-button').click();
         await settle();
-        http.expectOne(MAIL_TEST_URL).flush({ ok: true });
+        http
+          .expectOne(TEST_EMAIL_URL)
+          .flush({ outcome: 'SENT', sent: true, recipient: 'spravce@example.cz' });
         await settle();
 
         expect(fixture.nativeElement.querySelector('.mail-unverified')).toBeNull();
-        expect(text('.test-result')).toBe('Spojení funguje, server přihlášení přijal.');
+        expect(text('[role="status"] .test-result')).toBe(
+          'Zkušební e-mail odešel na spravce@example.cz. Podívejte se prosím do schránky, i do nevyžádané pošty. Když do pár minut nedorazí, zkontrolujte adresu odesílatele a ověření její domény v Brevo.',
+        );
       });
 
       it('after a successful test with the same values, then saving goes straight on', async () => {
-        await passMailTest();
+        await sendSuccessfulTestEmail();
 
         await submit('form.setup-form');
 
@@ -314,23 +320,37 @@ describe('Given the first setup page', () => {
       });
 
       it('after a successful test and a changed password, then saving warns again', async () => {
-        await passMailTest();
+        await sendSuccessfulTestEmail();
         await type('#setup-mail-password', 'another-key');
 
         await submit('form.setup-form');
 
         http.expectNone(STATUS_URL);
-        expect(text('.mail-unverified')).toContain('neověřili');
+        expect(text('.mail-unverified')).toContain('neodešel');
+      });
+
+      it('after a successful test and another sender, then saving warns again', async () => {
+        await sendSuccessfulTestEmail();
+        await type('#setup-mail-from', 'novy@nfnn.cz');
+
+        await submit('form.setup-form');
+
+        http.expectNone(STATUS_URL);
+        expect(text('.mail-unverified')).toContain('neodešel');
       });
     });
 
-    it('then the mail server is tried with what is typed and the answer is shown', async () => {
+    it('then the test e-mail goes with what is typed to the first administrator and a refusal is explained', async () => {
+      await type('#setup-admin-email', ' spravce@example.cz ');
       await type('#setup-mail-username', 'abc@smtp-brevo.com');
       await type('#setup-mail-password', 'xsmtpsib-key');
-      button('Ověřit spojení').click();
+      expect(text('.test-hint')).toContain(
+        'Zkušební e-mail přijde na e-mail prvního správce z kroku 2.',
+      );
+      button('Poslat zkušební e-mail').click();
       await settle();
 
-      const request = http.expectOne(MAIL_TEST_URL);
+      const request = http.expectOne(TEST_EMAIL_URL);
       expect(request.request.body).toEqual({
         code: null,
         host: 'smtp-relay.brevo.com',
@@ -339,21 +359,36 @@ describe('Given the first setup page', () => {
         password: 'xsmtpsib-key',
         auth: true,
         startTls: true,
+        sender: 'info@nfnn.cz',
+        recipient: 'spravce@example.cz',
       });
-      expect(button('Zkoušíme se přihlásit…').disabled).toBe(true);
-      request.flush({ ok: false });
+      expect(button('Posíláme zkušební e-mail…').disabled).toBe(true);
+      request.flush({ outcome: 'SIGN_IN_REFUSED', sent: false, recipient: 'spravce@example.cz' });
       await settle();
 
-      expect(text('.test-result')).toBe(
-        'Ke serveru se nepodařilo přihlásit. Zkontrolujte prosím server, port, jméno a heslo.',
+      expect(text('[role="alert"] .test-result')).toBe(
+        'Server odmítl přihlášení. Zkontrolujte prosím přihlašovací jméno a heslo nebo klíč SMTP.',
       );
+    });
+
+    it('then a test e-mail without the first administrator is not sent and the empty field is named', async () => {
+      await fillInSecrets();
+      button('Poslat zkušební e-mail').click();
+      await settle();
+
+      http.expectNone(TEST_EMAIL_URL);
+      expect(text('[role="alert"] .test-result')).toBe(
+        'Než zkušební e-mail pošleme, doplňte prosím označená pole.',
+      );
+      expect(fieldErrors()).toEqual(['Vyplňte prosím e-mailovou adresu.']);
+      expect(document.activeElement?.id).toBe('setup-admin-email');
     });
 
     it('then saving sends every value, waits for the restart and offers the registration', async () => {
       await fillInSecrets();
       await type('#setup-fio-token', ' fio-token ');
       await type('#setup-admin-email', ' spravce@example.cz ');
-      await passMailTest();
+      await sendSuccessfulTestEmail();
       await submit('form.setup-form');
 
       const request = http.expectOne(STATUS_URL);

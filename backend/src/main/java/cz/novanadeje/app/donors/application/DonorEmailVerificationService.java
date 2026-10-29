@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donors.application;
 
+import cz.novanadeje.app.donors.application.event.DonorEmailAddressInUse;
 import cz.novanadeje.app.donors.application.event.DonorEmailChangeRequested;
 import cz.novanadeje.app.donors.application.event.DonorEmailChanged;
 import cz.novanadeje.app.donors.application.event.DonorEmailVerificationRequested;
@@ -11,6 +12,7 @@ import cz.novanadeje.app.donors.domain.EmailVerificationToken;
 import cz.novanadeje.app.donors.domain.EmailVerificationTokenRepository;
 import cz.novanadeje.app.donors.domain.InvalidEmailVerificationToken;
 import cz.novanadeje.app.donors.domain.LinkSecret;
+import cz.novanadeje.app.donors.domain.NoPendingEmailChange;
 import cz.novanadeje.app.donors.domain.RefreshTokenRepository;
 import cz.novanadeje.app.shared.application.event.DonorRegistered;
 import cz.novanadeje.app.shared.domain.EmailAddress;
@@ -112,17 +114,30 @@ public class DonorEmailVerificationService {
 
     void issueChangeLink(Donor donor, EmailAddress newEmail) {
         Instant now = clock.instant();
-        tokens.deleteUnusableOf(donor.id(), now);
-        int liveLinks = tokens.countOf(donor.id());
-        if (liveLinks >= properties.maxLiveLinks()) {
-            log.info("E-mail change for donor {} not sent: {} live links", donor.id(), liveLinks);
-            return;
-        }
+        tokens.deleteChangeLinksOf(donor.id());
         LinkSecret secret = LinkSecret.generate();
         EmailVerificationToken token = EmailVerificationToken.issueForChange(secret, donor.id(), newEmail, now, properties.tokenTtl());
         tokens.save(token);
+        Donor owner = donors.findByEmail(newEmail).orElse(null);
+        if (owner != null) {
+            events.publishEvent(new DonorEmailAddressInUse(owner.id().value(), newEmail, owner.preferredLocale()));
+            log.info("E-mail change for donor {} pending without a link: the new address belongs to donor {}", donor.id(), owner.id());
+            return;
+        }
         events.publishEvent(new DonorEmailChangeRequested(donor.id().value(), newEmail, donor.preferredLocale(), secret, token.expiresAt()));
         log.info("E-mail change link issued for donor {}", donor.id());
+    }
+
+    void resendChangeLink(Donor donor) {
+        EmailAddress newEmail = tokens.findPendingChangeOf(donor.id(), clock.instant())
+                .flatMap(EmailVerificationToken::newEmail)
+                .orElseThrow(() -> new NoPendingEmailChange(donor.id()));
+        issueChangeLink(donor, newEmail);
+    }
+
+    void cancelChange(Donor donor) {
+        tokens.deleteChangeLinksOf(donor.id());
+        log.info("E-mail change of donor {} cancelled", donor.id());
     }
 
     void issueLink(Donor donor) {

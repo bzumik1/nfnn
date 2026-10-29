@@ -125,7 +125,15 @@ export class AuthStore {
   }
 
   requestEmailChange(request: EmailChangeRequest): Observable<void> {
-    return this.api.requestEmailChange(request);
+    return this.api.requestEmailChange(request).pipe(switchMap(() => this.reloadProfile()));
+  }
+
+  resendEmailChange(): Observable<void> {
+    return this.api.resendEmailChange().pipe(switchMap(() => this.reloadProfile()));
+  }
+
+  cancelEmailChange(): Observable<void> {
+    return this.api.cancelEmailChange().pipe(switchMap(() => this.reloadProfile()));
   }
 
   confirmWith(password: string | null): Observable<Confirmation> {
@@ -157,6 +165,14 @@ export class AuthStore {
 
   disableSecondFactor(request: SecondFactorDisableRequest): Observable<Donor> {
     return this.api.disableSecondFactor(request).pipe(map((response) => this.adopt(response)));
+  }
+
+  private reloadProfile(): Observable<void> {
+    return this.api.profile().pipe(
+      tap((donor) => this.currentDonor.set(donor)),
+      map(() => undefined),
+      catchError(() => of(undefined)),
+    );
   }
 
   private adopt(response: AuthResponse): Donor {

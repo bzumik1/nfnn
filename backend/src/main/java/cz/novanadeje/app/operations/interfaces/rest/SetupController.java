@@ -35,11 +35,13 @@ class SetupController {
     private final SetupService setup;
     private final HomeNetworkRequests homeNetwork;
     private final SetupRateLimiter rateLimiter;
+    private final TestEmailRateLimiter testEmailRateLimiter;
 
-    SetupController(SetupService setup, HomeNetworkRequests homeNetwork, SetupRateLimiter rateLimiter) {
+    SetupController(SetupService setup, HomeNetworkRequests homeNetwork, SetupRateLimiter rateLimiter, TestEmailRateLimiter testEmailRateLimiter) {
         this.setup = setup;
         this.homeNetwork = homeNetwork;
         this.rateLimiter = rateLimiter;
+        this.testEmailRateLimiter = testEmailRateLimiter;
     }
 
     @GetMapping
@@ -54,10 +56,11 @@ class SetupController {
         setup.unlock(access(http, request.code()));
     }
 
-    @PostMapping("/mail-test")
-    MailTestResponse testMail(HttpServletRequest http, @Valid @RequestBody MailTestRequest request) {
+    @PostMapping("/test-email")
+    TestEmailResponse sendTestEmail(HttpServletRequest http, @Valid @RequestBody SetupTestEmailRequest request) {
         rateLimiter.check(http.getRemoteAddr());
-        return new MailTestResponse(setup.testMail(access(http, request.code()), request.toServer()));
+        testEmailRateLimiter.check(http.getRemoteAddr());
+        return TestEmailResponse.from(setup.sendTestEmail(access(http, request.code()), request.toServer(), request.toEmail()));
     }
 
     @GetMapping("/backup-key")

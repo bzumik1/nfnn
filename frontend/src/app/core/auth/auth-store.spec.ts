@@ -14,6 +14,8 @@ import {
   sampleDonor,
 } from './testing/donor-fixtures';
 
+const PENDING = { newEmail: 'jana.nova@example.cz', expiresAt: '2026-10-18T12:00:00Z' };
+
 describe('Given the auth store', () => {
   let store: AuthStore;
   let http: HttpTestingController;
@@ -260,7 +262,7 @@ describe('Given the auth store', () => {
     expect(store.currentAccessToken()).toBe('token-2');
   });
 
-  it('when an e-mail change is requested, then the request goes out and the store keeps the current address', () => {
+  it('when an e-mail change is requested, then the request goes out and the store keeps the current address with the pending one beside it', () => {
     signIn();
 
     store
@@ -269,7 +271,58 @@ describe('Given the auth store', () => {
     const request = http.expectOne('/api/donors/me/email-change');
     expect(request.request.method).toBe('POST');
     request.flush(null, { status: 202, statusText: 'Accepted' });
+    const profile = http.expectOne({ method: 'GET', url: '/api/donors/me' });
+    profile.flush(sampleDonor({ pendingEmailChange: PENDING }));
 
     expect(store.donor()?.email).toBe('jana@example.cz');
+    expect(store.donor()?.pendingEmailChange).toEqual(PENDING);
+  });
+
+  it('when the profile cannot be loaded after the e-mail change, then the change still counts as sent and the donor stays as it was', () => {
+    signIn();
+    let sent = false;
+    let failed = false;
+
+    store.requestEmailChange({ newEmail: 'jana.nova@example.cz', password: 'x' }).subscribe({
+      next: () => (sent = true),
+      error: () => (failed = true),
+    });
+    http
+      .expectOne('/api/donors/me/email-change')
+      .flush(null, { status: 202, statusText: 'Accepted' });
+    http
+      .expectOne({ method: 'GET', url: '/api/donors/me' })
+      .flush(null, { status: 500, statusText: 'Server Error' });
+
+    expect(sent).toBe(true);
+    expect(failed).toBe(false);
+    expect(store.donor()?.email).toBe('jana@example.cz');
+  });
+
+  it('when the change link is sent again, then the request goes out and the store takes the new expiry', () => {
+    signIn();
+
+    store.resendEmailChange().subscribe();
+    const request = http.expectOne('/api/donors/me/email-change/resend');
+    expect(request.request.method).toBe('POST');
+    request.flush(null, { status: 202, statusText: 'Accepted' });
+    const later = { ...PENDING, expiresAt: '2026-10-19T12:00:00Z' };
+    http
+      .expectOne({ method: 'GET', url: '/api/donors/me' })
+      .flush(sampleDonor({ pendingEmailChange: later }));
+
+    expect(store.donor()?.pendingEmailChange).toEqual(later);
+  });
+
+  it('when the e-mail change is cancelled, then the request goes out and the store holds no pending change', () => {
+    signIn();
+
+    store.cancelEmailChange().subscribe();
+    const request = http.expectOne('/api/donors/me/email-change');
+    expect(request.request.method).toBe('DELETE');
+    request.flush(null, { status: 204, statusText: 'No Content' });
+    http.expectOne({ method: 'GET', url: '/api/donors/me' }).flush(sampleDonor());
+
+    expect(store.donor()?.pendingEmailChange).toBeNull();
   });
 });

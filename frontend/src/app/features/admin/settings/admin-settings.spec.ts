@@ -10,7 +10,7 @@ import { settingsView } from '../testing/admin-fixtures';
 import { AdminSettings } from './admin-settings';
 
 const SETTINGS_URL = '/api/admin/operations/settings';
-const MAIL_TEST_URL = '/api/admin/operations/settings/mail-test';
+const TEST_EMAIL_URL = '/api/admin/operations/settings/test-email';
 const STATUS_URL = '/api/operations/setup';
 const SIGNATURE_URL = '/api/admin/donations/receipt-signature';
 
@@ -109,14 +109,39 @@ describe('Given an administrator on the settings page', () => {
       await respond(settingsView());
     });
 
-    it('then they are grouped, plain values fill the fields and secrets only say whether they are set', () => {
+    it('then the everyday parts come first and the technical ones follow under a warning, opened because a secret needs entering again', () => {
       expect(texts('h2')).toEqual([
-        'Web',
-        'E-maily',
-        'Banka',
         'Potvrzení o daru',
         'Podpis na potvrzeních',
+        'Kontaktní formulář',
+        'Odesílatel e-mailů',
+        'Technické nastavení (pro správce serveru)',
       ]);
+      expect(texts('h3')).toEqual(['Adresa webu', 'Server pro odesílání e-mailů', 'Banka']);
+      expect(
+        element('#nastaveni-potvrzeni')
+          .closest('section')
+          ?.querySelector('#setting-RECEIPT_FIRST_YEAR'),
+      ).not.toBeNull();
+      expect(
+        element('#nastaveni-kontaktni-formular')
+          .closest('section')
+          ?.querySelector('#setting-CONTACT_RECIPIENT'),
+      ).not.toBeNull();
+      expect(
+        element('#nastaveni-odesilatel').closest('section')?.querySelector('#setting-MAIL_FROM'),
+      ).not.toBeNull();
+      const technical = element<HTMLDetailsElement>('details#technicke-nastaveni');
+      expect(technical.querySelector('#setting-PUBLIC_URL')).not.toBeNull();
+      expect(technical.querySelector('#setting-MAIL_HOST')).not.toBeNull();
+      expect(technical.querySelector('#setting-FIO_TOKEN')).not.toBeNull();
+      expect(technical.open).toBe(true);
+      expect(text('.technical-warning')).toBe(
+        'Chybná hodnota tady může zastavit odesílání e-mailů nebo stahování plateb z banky. Než změny e-mailů uložíte, pošlete si zkušební e-mail.',
+      );
+    });
+
+    it('then plain values fill the fields and secrets only say whether they are set', () => {
       expect(element<HTMLInputElement>('#setting-PUBLIC_URL').value).toBe('https://nfnn.cz');
       expect(element<HTMLInputElement>('#setting-MAIL_PASSWORD').value).toBe('');
       expect(element<HTMLInputElement>('#setting-MAIL_AUTH').checked).toBe(true);
@@ -166,7 +191,7 @@ describe('Given an administrator on the settings page', () => {
         'Bez hesla web nepošle žádný e-mail: ani obnovu hesla, ani potvrzení registrace, ani měsíční přehled.',
       ]);
       expect(text('.confirm .ui-callout--warning')).toContain(
-        'Spojení s poštovním serverem jste s novými údaji neověřili.',
+        'Zkušební e-mail jste s novými údaji neposlali.',
       );
       expect(document.activeElement).toBe(button('Zrušit'));
 
@@ -176,15 +201,43 @@ describe('Given an administrator on the settings page', () => {
       expect(document.activeElement).toBe(button('Uložit nastavení'));
     });
 
-    it('then a connection tried with the same values leaves the confirmation without the warning', async () => {
+    it('then a test e-mail sent with the same values leaves the confirmation without the warning', async () => {
       await type('#setting-MAIL_HOST', 'smtp.example.cz');
-      button('Ověřit spojení').click();
+      button('Poslat zkušební e-mail na moji adresu').click();
       await settle();
-      http.expectOne(MAIL_TEST_URL).flush({ ok: true });
+      http
+        .expectOne(TEST_EMAIL_URL)
+        .flush({ outcome: 'SENT', sent: true, recipient: 'jana@example.cz' });
       await settle();
       await submit();
 
       expect(fixture.nativeElement.querySelector('.confirm .ui-callout--warning')).toBeNull();
+    });
+
+    it('then another sender without a test e-mail brings the warning into the confirmation', async () => {
+      await type('#setting-MAIL_FROM', 'novy@nfnn.cz');
+      await submit();
+
+      expect(text('.confirm-changes')).toBe('Mění se: Odesílatel e-mailů.');
+      expect(text('.confirm .ui-callout--warning')).toContain(
+        'Zkušební e-mail jste s novými údaji neposlali.',
+      );
+    });
+
+    it('then a refused test e-mail says in plain words what went wrong and the warning stays', async () => {
+      await type('#setting-MAIL_FROM', 'novy@nfnn.cz');
+      button('Poslat zkušební e-mail na moji adresu').click();
+      await settle();
+      http
+        .expectOne(TEST_EMAIL_URL)
+        .flush({ outcome: 'SENDER_REFUSED', sent: false, recipient: 'jana@example.cz' });
+      await settle();
+
+      expect(text('.test-row [role="alert"]')).toBe(
+        'Server odmítl e-mail od adresy novy@nfnn.cz. Zkontrolujte prosím, že je adresa odesílatele i její doména v Brevo ověřená.',
+      );
+      await submit();
+      expect(text('.confirm .ui-callout--warning')).toContain('neposlali');
     });
 
     it('then saving asks first, sends only what changed and waits for the restart before reloading', async () => {
@@ -253,12 +306,13 @@ describe('Given an administrator on the settings page', () => {
       expect(document.activeElement).toBe(button('Uložit nastavení'));
     });
 
-    it('then the mail server is tried with the form values and without a typed password', async () => {
+    it('then the test e-mail goes to the administrator with the form values and without a typed password', async () => {
+      expect(text('.test-hint')).toContain('jana@example.cz');
       await type('#setting-MAIL_PORT', '465');
-      button('Ověřit spojení').click();
+      button('Poslat zkušební e-mail na moji adresu').click();
       await settle();
 
-      const request = http.expectOne(MAIL_TEST_URL);
+      const request = http.expectOne(TEST_EMAIL_URL);
       expect(request.request.body).toEqual({
         host: 'smtp-relay.brevo.com',
         port: 465,
@@ -266,12 +320,29 @@ describe('Given an administrator on the settings page', () => {
         password: '',
         auth: true,
         startTls: true,
+        sender: 'info@nfnn.cz',
       });
-      request.flush({ ok: true });
+      expect(button('Posíláme zkušební e-mail…').disabled).toBe(true);
+      request.flush({ outcome: 'SENT', sent: true, recipient: 'jana@example.cz' });
       await settle();
 
-      expect(text('.test-result')).toBe('Spojení funguje, server přihlášení přijal.');
+      expect(text('.test-row [role="status"]')).toBe(
+        'Zkušební e-mail odešel na jana@example.cz. Podívejte se prosím do schránky, i do nevyžádané pošty. Když do pár minut nedorazí, zkontrolujte adresu odesílatele a ověření její domény v Brevo.',
+      );
     });
+  });
+
+  it('when every secret can be read, then the technical settings stay folded away', async () => {
+    await respond(
+      settingsView({
+        settings: settingsView().settings.map((setting) => ({ ...setting, unreadable: false })),
+      }),
+    );
+
+    expect(element<HTMLDetailsElement>('details#technicke-nastaveni').open).toBe(false);
+    expect(text('details#technicke-nastaveni summary')).toBe(
+      'Adresa webu, server pro odesílání e-mailů a napojení na banku',
+    );
   });
 
   it('when a stored secret cannot be read, as after a restore on a new server, then the page names it at the top', async () => {
@@ -291,7 +362,7 @@ describe('Given an administrator on the settings page', () => {
 });
 
 describe('Given an administrator sent to the mail settings from another page', () => {
-  it('when the settings arrive, then the mail card takes the focus', async () => {
+  it('when the settings arrive, then the technical settings open and the mail part takes the focus', async () => {
     localStorage.clear();
     await TestBed.configureTestingModule({
       imports: [AdminSettings],
@@ -305,12 +376,20 @@ describe('Given an administrator sent to the mail settings from another page', (
     const http = TestBed.inject(HttpTestingController);
     const fixture = TestBed.createComponent(AdminSettings);
     fixture.detectChanges();
-    http.expectOne(SETTINGS_URL).flush(settingsView());
+    http.expectOne(SETTINGS_URL).flush(
+      settingsView({
+        settings: settingsView().settings.map((setting) => ({ ...setting, unreadable: false })),
+      }),
+    );
     await fixture.whenStable();
     fixture.detectChanges();
     await fixture.whenStable();
 
-    expect(document.activeElement?.id).toBe('settings-MAIL');
+    expect(document.activeElement?.id).toBe('nastaveni-odesilani-emailu');
+    expect(
+      (fixture.nativeElement.querySelector('details#technicke-nastaveni') as HTMLDetailsElement)
+        .open,
+    ).toBe(true);
     http.match(SIGNATURE_URL);
     http.verify();
   });

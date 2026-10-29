@@ -7,7 +7,8 @@
 }
 
 .group-intro,
-.restart-note {
+.restart-note,
+.test-hint {
   color: var(--color-text-soft);
   font-size: var(--text-sm);
   line-height: var(--leading-relaxed);
@@ -64,6 +65,10 @@ app-backup-key-panel {
     height: 18px;
     accent-color: var(--color-accent);
   }
+}
+
+.test-hint {
+  margin: var(--space-2) 0 0;
 }
 
 .test-row {
@@ -199,7 +204,7 @@ app-backup-key-panel {
 }
 
 .advanced {
-  margin: var(--space-1) 0 0;
+  margin: var(--space-1) 0 var(--space-3);
 
   summary {
     cursor: pointer;

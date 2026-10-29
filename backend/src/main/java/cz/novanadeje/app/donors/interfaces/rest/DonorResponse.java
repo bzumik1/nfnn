@@ -19,13 +19,17 @@ record DonorResponse(
         List<Role> roles,
         Instant registeredAt,
         boolean hasPassword,
-        SecondFactorResponse secondFactor
+        SecondFactorResponse secondFactor,
+        PendingEmailChangeResponse pendingEmailChange
 ) {
 
     record AddressResponse(String street, String city, String postalCode) {
     }
 
     record SecondFactorResponse(boolean enabled, boolean neededForAdministration) {
+    }
+
+    record PendingEmailChangeResponse(String newEmail, Instant expiresAt) {
     }
 
     static DonorResponse of(DonorView view) {
@@ -41,7 +45,8 @@ record DonorResponse(
                 view.roles(),
                 view.registeredAt(),
                 view.hasPassword(),
-                new SecondFactorResponse(view.secondFactor().enabled(), view.secondFactor().neededForAdministration())
+                new SecondFactorResponse(view.secondFactor().enabled(), view.secondFactor().neededForAdministration()),
+                view.pendingEmailChange().map(pending -> new PendingEmailChangeResponse(pending.newEmail(), pending.expiresAt())).orElse(null)
         );
     }
 }

@@ -10,6 +10,7 @@ import {
   ElementRef,
   inject,
   Injector,
+  input,
   output,
   signal,
   viewChild,
@@ -36,22 +37,24 @@ const UNAUTHENTICATED = 'auth/unauthenticated';
 const PASSKEY_NAME_MAX_LENGTH = 64;
 
 @Component({
-  selector: 'app-passkeys-card',
+  selector: 'app-passkeys-panel',
   imports: [FormsModule, FormField, FormControlDirective, FocusFirstInvalid, PasswordReveal],
-  templateUrl: './passkeys-card.html',
-  styleUrl: './passkeys-card.scss',
+  templateUrl: './passkeys-panel.html',
+  styleUrl: './passkeys-panel.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class PasskeysCard {
+export class PasskeysPanel {
   private readonly auth = inject(AuthStore);
   private readonly authApi = inject(AuthApi);
   private readonly authenticator = inject(PasskeyAuthenticator);
   private readonly document = inject(DOCUMENT);
   private readonly injector = inject(Injector);
 
+  readonly labelledBy = input<string | null>(null);
   readonly sessionEnded = output<void>();
   readonly countChanged = output<number>();
 
+  private readonly region = viewChild.required<ElementRef<HTMLElement>>('region');
   private readonly addButton = viewChild<ElementRef<HTMLButtonElement>>('addButton');
   private readonly nameField = viewChild<ElementRef<HTMLInputElement>>('nameField');
   private readonly renameField = viewChild<ElementRef<HTMLInputElement>>('renameField');
@@ -123,6 +126,22 @@ export class PasskeysCard {
     });
   }
 
+  focusTarget(): HTMLElement {
+    return this.region().nativeElement;
+  }
+
+  collapse(): void {
+    this.adding.set(false);
+    this.confirming.set(null);
+    this.renaming.set(null);
+    this.name = '';
+    this.password = '';
+    this.newName = '';
+    this.error.set('');
+    this.renameError.set('');
+    this.status.set('');
+  }
+
   openForm(): void {
     this.status.set('');
     this.error.set('');
@@ -161,7 +180,7 @@ export class PasskeysCard {
           this.passkeys.update((list) => [...(list ?? []), passkey]);
           this.status.set(
             first && this.hasPassword()
-              ? $localize`:@@donor.passkeys.addedFirst:Přístupový klíč ${passkey.name}:name: je přidaný. Příště se jím můžete přihlásit bez hesla; heslo teď můžete v Přihlašovacích údajích i odebrat.`
+              ? $localize`:@@donor.passkeys.addedFirst:Přístupový klíč ${passkey.name}:name: je přidaný. Příště se jím můžete přihlásit bez hesla; heslo teď můžete u řádku Heslo i odebrat.`
               : $localize`:@@donor.passkeys.added:Přístupový klíč ${passkey.name}:name: je přidaný. Příště se jím můžete přihlásit bez hesla.`,
           );
           this.closeForm();

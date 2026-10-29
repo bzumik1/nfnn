@@ -49,6 +49,10 @@ Feature: Donor changes the password or the e-mail while signed in
     Then the response status is 401
     When the donor asks to change the e-mail to "jana.nova@example.cz" with password "correct horse battery"
     Then the response status is 401
+    When the donor asks to send the e-mail change link again
+    Then the response status is 401
+    When the donor cancels the e-mail change
+    Then the response status is 401
 
   Scenario: The eleventh password change within 15 minutes from one address is refused, even with the right password
     Given a person registered with email "jana@example.cz" and password "correct horse battery"
@@ -112,8 +116,11 @@ Feature: Donor changes the password or the e-mail while signed in
     Then the response status is 202
     And 1 e-mail is sent to "petr@example.cz" with the subject "Vaši adresu chtěl použít jiný účet – Nová naděje"
     And neither part of the last e-mail contains "jana@example.cz"
-    And 0 verification links are stored
     And the donor profile shows type "PERSON", name "Jana Nováková" and email "jana@example.cz"
+    And the donor profile shows a pending e-mail change to "petr@example.cz" expiring 24 hours from now
+    When the donor asks to send the e-mail change link again
+    Then the response status is 202
+    And e-mail 2 goes to "petr@example.cz" with the subject "Vaši adresu chtěl použít jiný účet – Nová naděje"
 
   Scenario: The current address, a wrong password and a malformed address are refused without sending anything
     Given a person registered with email "jana@example.cz" and password "correct horse battery"
@@ -153,4 +160,83 @@ Feature: Donor changes the password or the e-mail while signed in
     Then the response status is 429
     And the problem type ends with "donors/rate-limited"
     And the problem has the title "Příliš mnoho požadavků"
-    And 3 verification links are stored
+    And 1 verification link is stored
+
+  Scenario: A pending e-mail change shows on the profile with its expiry until the new address is confirmed
+    Given a person registered with email "jana@example.cz" and password "correct horse battery"
+    And the donor signed in with email "jana@example.cz" and password "correct horse battery"
+    And the donor profile shows no pending e-mail change
+    When the donor asks to change the e-mail to "Jana.Nova@Example.cz" with password "correct horse battery"
+    Then the response status is 202
+    And the donor profile shows a pending e-mail change to "jana.nova@example.cz" expiring 24 hours from now
+    When the donor confirms the e-mail with the link from the e-mail
+    Then the response status is 200
+    And the response carries an access token and a refresh cookie
+    And the donor profile shows type "PERSON", name "Jana Nováková" and email "jana.nova@example.cz"
+    And the donor profile shows no pending e-mail change
+
+  Scenario: A new request replaces the pending change and the link sent before stops working
+    Given a person registered with email "jana@example.cz" and password "correct horse battery"
+    And the donor signed in with email "jana@example.cz" and password "correct horse battery"
+    When the donor asks to change the e-mail to "jana.prvni@example.cz" with password "correct horse battery"
+    And the donor asks to change the e-mail to "jana.nova@example.cz" with password "correct horse battery"
+    Then the response status is 202
+    And 1 verification link is stored
+    And the donor profile shows a pending e-mail change to "jana.nova@example.cz" expiring 24 hours from now
+    When the donor confirms the e-mail with the link from e-mail 1
+    Then the response status is 400
+    And the problem type ends with "donors/invalid-email-verification-token"
+
+  Scenario: Sending the change link again issues a new link to the pending address and only the new one switches the account
+    Given a person registered with email "jana@example.cz" and password "correct horse battery"
+    And the donor signed in with email "jana@example.cz" and password "correct horse battery"
+    When the donor asks to change the e-mail to "jana.nova@example.cz" with password "correct horse battery"
+    And the donor asks to send the e-mail change link again
+    Then the response status is 202
+    And e-mail 2 goes to "jana.nova@example.cz" with the subject "Potvrďte novou e-mailovou adresu – Nová naděje"
+    And 1 verification link is stored
+    And the donor profile shows a pending e-mail change to "jana.nova@example.cz" expiring 24 hours from now
+    When the donor confirms the e-mail with the link from e-mail 1
+    Then the response status is 400
+    And the problem type ends with "donors/invalid-email-verification-token"
+    When the donor confirms the e-mail with the link from e-mail 2
+    Then the response status is 200
+    And the response carries an access token and a refresh cookie
+    And the donor profile shows type "PERSON", name "Jana Nováková" and email "jana.nova@example.cz"
+
+  Scenario: Cancelling the pending change keeps the address, the sent link stops working and cancelling again changes nothing
+    Given a person registered with email "jana@example.cz" and password "correct horse battery"
+    And the donor signed in with email "jana@example.cz" and password "correct horse battery"
+    When the donor asks to change the e-mail to "jana.nova@example.cz" with password "correct horse battery"
+    And the donor cancels the e-mail change
+    Then the response status is 204
+    And 0 verification links are stored
+    And the donor profile shows no pending e-mail change
+    When the donor cancels the e-mail change
+    Then the response status is 204
+    When the donor confirms the e-mail with the link from the e-mail
+    Then the response status is 400
+    And the problem type ends with "donors/invalid-email-verification-token"
+    When the donor signs in with email "jana@example.cz" and password "correct horse battery"
+    Then the response status is 200
+
+  Scenario: Without a pending change the link cannot be sent again
+    Given a person registered with email "jana@example.cz" and password "correct horse battery"
+    And the donor signed in with email "jana@example.cz" and password "correct horse battery"
+    When the donor asks to send the e-mail change link again
+    Then the response status is 409
+    And the problem type ends with "donors/no-pending-email-change"
+    And the problem has the title "Žádná změna e-mailu nečeká na potvrzení"
+    And no email is sent
+
+  Scenario: Sending the change link again counts toward the hourly limit of e-mail changes from one address
+    Given a person registered with email "jana@example.cz" and password "correct horse battery"
+    And the donor signed in with email "jana@example.cz" and password "correct horse battery"
+    And the donor asked to change the e-mail with password "correct horse battery" 1 times
+    And the donor asked to send the e-mail change link again 4 times
+    When the donor asks to send the e-mail change link again
+    Then the response status is 429
+    And the problem type ends with "donors/rate-limited"
+    When the following requests come from another client address
+    And the donor asks to send the e-mail change link again
+    Then the response status is 202

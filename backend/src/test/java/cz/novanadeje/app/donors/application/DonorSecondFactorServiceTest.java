@@ -1,5 +1,7 @@
 package cz.novanadeje.app.donors.application;
 
+import cz.novanadeje.app.donors.application.event.DonorSecondFactorDisabled;
+import cz.novanadeje.app.donors.application.event.DonorSecondFactorEnabled;
 import cz.novanadeje.app.donors.domain.Donor;
 import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.donors.domain.DonorNotFound;
@@ -16,6 +18,7 @@ import cz.novanadeje.app.donors.domain.SecondFactorAlreadyEnabled;
 import cz.novanadeje.app.donors.domain.SecondFactorCodeRejected;
 import cz.novanadeje.app.donors.domain.SecondFactorNotEnabled;
 import cz.novanadeje.app.donors.domain.SecondFactorNotPending;
+import cz.novanadeje.app.donors.domain.EmailVerificationTokenRepository;
 import cz.novanadeje.app.donors.domain.SecondFactorRepository;
 import cz.novanadeje.app.donors.domain.SecondFactorSessionRequired;
 import cz.novanadeje.app.donors.domain.Totp;
@@ -37,6 +40,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 
 import java.time.Clock;
 import java.time.Duration;
@@ -73,6 +77,8 @@ class DonorSecondFactorServiceTest {
     @Mock
     private SecondFactorRepository secondFactors;
     @Mock
+    private EmailVerificationTokenRepository verificationTokens;
+    @Mock
     private RefreshTokenRepository refreshTokens;
     @Mock
     private PasswordHasher passwordHasher;
@@ -86,15 +92,17 @@ class DonorSecondFactorServiceTest {
     private PasskeyChallengeRepository challenges;
     @Mock
     private PasskeyCeremonies ceremonies;
+    @Mock
+    private ApplicationEventPublisher events;
 
     private DonorSecondFactorService service;
 
     @BeforeEach
     void setUp() {
         service = new DonorSecondFactorService(donors, secondFactors, refreshTokens,
-                new DonorConfirmations(passwordHasher, passkeys, challenges, ceremonies, Clock.fixed(NOW, ZoneOffset.UTC)), sessions, new DonorViews(secondFactors), qrCodes,
+                new DonorConfirmations(passwordHasher, passkeys, challenges, ceremonies, Clock.fixed(NOW, ZoneOffset.UTC)), sessions, new DonorViews(secondFactors, verificationTokens, Clock.fixed(NOW, ZoneOffset.UTC)), qrCodes,
                 new SecondFactorSessionGuard(secondFactors, passkeys),
-                new DonorSecondFactorProperties(Duration.ofMinutes(5), 5, "Nová naděje", Duration.ofDays(14)), Clock.fixed(NOW, ZoneOffset.UTC));
+                new DonorSecondFactorProperties(Duration.ofMinutes(5), 5, "Nová naděje", Duration.ofDays(14)), events, Clock.fixed(NOW, ZoneOffset.UTC));
     }
 
     @Test
@@ -117,7 +125,7 @@ class DonorSecondFactorServiceTest {
                         + "&issuer=Nov%C3%A1%20nad%C4%9Bje&algorithm=SHA1&digits=6&period=30");
         assertThat(enrolment.qrModules()).isEqualTo(MODULES);
         verify(qrCodes).encode(enrolment.otpauthUri(), QrErrorCorrection.MEDIUM);
-        verifyNoInteractions(sessions, refreshTokens);
+        verifyNoInteractions(sessions, refreshTokens, events);
     }
 
     @Test
@@ -186,7 +194,7 @@ class DonorSecondFactorServiceTest {
     }
 
     @Test
-    @DisplayName("Given a pending factor and the current code, when it is confirmed, then the factor is enabled, every session is revoked and a verified session opens")
+    @DisplayName("Given a pending factor and the current code, when it is confirmed, then the factor is enabled, every session is revoked, a verified session opens and the donor is to be told")
     void should_enable_revoke_sessions_and_open_verified_one_when_confirmed_given_pending_factor_and_right_code() {
         Donor donor = donor();
         SecondFactor factor = SecondFactor.enrol(DONOR, SECRET, NOW.minusSeconds(60));
@@ -203,6 +211,7 @@ class DonorSecondFactorServiceTest {
         assertThat(factor.isEnabled()).isTrue();
         assertThat(result.donor().secondFactor().enabled()).isTrue();
         assertThat(result.tokens()).isEqualTo(TOKENS);
+        verify(events).publishEvent(new DonorSecondFactorEnabled(DONOR.value(), new EmailAddress("jana@example.cz"), LocaleCode.CS));
     }
 
     @Test
@@ -216,7 +225,7 @@ class DonorSecondFactorServiceTest {
 
         assertThat(factor.isEnabled()).isFalse();
         verify(secondFactors, never()).save(any());
-        verifyNoInteractions(refreshTokens, sessions);
+        verifyNoInteractions(refreshTokens, sessions, events);
     }
 
     @Test
@@ -228,11 +237,11 @@ class DonorSecondFactorServiceTest {
         assertThatThrownBy(() -> service.confirm(DONOR, codeAt(NOW))).isInstanceOf(SecondFactorNotPending.class);
         assertThatThrownBy(() -> service.confirm(DONOR, codeAt(NOW))).isInstanceOf(SecondFactorAlreadyEnabled.class);
 
-        verifyNoInteractions(refreshTokens, sessions);
+        verifyNoInteractions(refreshTokens, sessions, events);
     }
 
     @Test
-    @DisplayName("Given an enabled factor, the right password and a fresh code, when it is disabled, then the factor is deleted, every session is revoked and a plain session opens")
+    @DisplayName("Given an enabled factor, the right password and a fresh code, when it is disabled, then the factor is deleted, every session is revoked, a plain session opens and the donor is to be told")
     void should_delete_factor_revoke_sessions_and_open_plain_one_when_disabled_given_right_password_and_code() {
         Donor donor = donor();
         when(donors.findById(DONOR)).thenReturn(Optional.of(donor));
@@ -247,6 +256,7 @@ class DonorSecondFactorServiceTest {
         order.verify(refreshTokens).revokeAllOf(DONOR, NOW);
         order.verify(sessions).open(donor, false);
         assertThat(result.donor().secondFactor().enabled()).isFalse();
+        verify(events).publishEvent(new DonorSecondFactorDisabled(DONOR.value(), new EmailAddress("jana@example.cz"), LocaleCode.CS));
     }
 
     @Test
@@ -261,7 +271,7 @@ class DonorSecondFactorServiceTest {
         assertThatThrownBy(() -> service.disable(DONOR, Confirmation.withPassword(PASSWORD), codeAt(NOW))).isInstanceOf(SecondFactorCodeRejected.class);
 
         verify(secondFactors, never()).delete(any());
-        verifyNoInteractions(refreshTokens, sessions);
+        verifyNoInteractions(refreshTokens, sessions, events);
     }
 
     @Test
@@ -275,6 +285,7 @@ class DonorSecondFactorServiceTest {
 
         verify(secondFactors, never()).delete(any());
         verify(sessions, never()).open(any(), anyBoolean());
+        verifyNoInteractions(events);
     }
 
     @Test
@@ -285,7 +296,7 @@ class DonorSecondFactorServiceTest {
 
         assertThatThrownBy(() -> service.disable(DONOR, Confirmation.withPassword("wrong horse battery"), codeAt(NOW))).isInstanceOf(WrongPassword.class);
 
-        verifyNoInteractions(secondFactors, refreshTokens, sessions);
+        verifyNoInteractions(secondFactors, refreshTokens, sessions, events);
     }
 
     private static SecondFactor enabledFactor() {

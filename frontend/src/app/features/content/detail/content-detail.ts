@@ -2,10 +2,8 @@ import {
   afterNextRender,
   ChangeDetectionStrategy,
   Component,
-  computed,
   DestroyRef,
   effect,
-  ElementRef,
   inject,
   Injector,
   signal,
@@ -13,37 +11,22 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Title } from '@angular/platform-browser';
-import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { Observable } from 'rxjs';
 import { problemTypeEndsWith } from '../../../core/auth/api-problem';
-import { formatDonationDate } from '../../donations/donation-date';
-import { mediaUrl, NewsApi, NewsArticleResponse } from '../news-api';
-import { Markdown } from '../../../shared/ui/markdown/markdown';
+import { NewsApi } from '../news-api';
 import { NOT_FOUND_TITLE, NotFound } from '../not-found/not-found';
-import { ProjectResponse, ProjectsApi } from '../projects-api';
-
-export type ContentKind = 'news' | 'project';
+import { ProjectsApi } from '../projects-api';
+import { ContentArticle } from './content-article';
+import { ContentKind, ContentPage, newsPage, projectPage } from './content-page';
 
 type LoadState = 'loading' | 'ready' | 'missing' | 'error';
 
-interface Page {
-  title: string;
-  eyebrow: string;
-  perex: string;
-  body: string;
-  imageId: string | null;
-  imageAlt: string;
-  slug: string;
-  backPath: string;
-}
-
-const IMAGE_WIDTH = 960;
-const IMAGE_WIDTHS = [480, 960, 1440];
 const SITE_NAME = $localize`:@@content.detail.siteName:Nová naděje – nadační fond`;
 
 @Component({
   selector: 'app-content-detail',
-  imports: [RouterLink, NotFound, Markdown],
+  imports: [NotFound, ContentArticle],
   templateUrl: './content-detail.html',
   styleUrl: './content-detail.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -56,25 +39,17 @@ export class ContentDetail {
   private readonly titleService = inject(Title);
   private readonly destroyRef = inject(DestroyRef);
   private readonly injector = inject(Injector);
-  private readonly heading = viewChild<ElementRef<HTMLHeadingElement>>('heading');
+  private readonly article = viewChild(ContentArticle);
 
   protected readonly kind: ContentKind = this.route.snapshot.data['kind'] as ContentKind;
   protected readonly state = signal<LoadState>('loading');
-  protected readonly page = signal<Page | null>(null);
-  protected readonly image = computed(() => {
-    const id = this.page()?.imageId;
-    return id ? mediaUrl(id, IMAGE_WIDTH) : null;
-  });
-  protected readonly imageSet = computed(() => {
-    const id = this.page()?.imageId;
-    return id ? IMAGE_WIDTHS.map((width) => `${mediaUrl(id, width)} ${width}w`).join(', ') : null;
-  });
+  protected readonly page = signal<ContentPage | null>(null);
 
   constructor() {
     this.load();
     effect(() => {
       if (this.state() === 'ready') {
-        afterNextRender(() => this.heading()?.nativeElement.focus(), { injector: this.injector });
+        afterNextRender(() => this.article()?.focusHeading(), { injector: this.injector });
       }
     });
   }
@@ -109,7 +84,7 @@ export class ContentDetail {
       });
   }
 
-  private fetch(slug: string): Observable<Page> {
+  private fetch(slug: string): Observable<ContentPage> {
     if (this.kind === 'news') {
       return new Observable((subscriber) =>
         this.newsApi.publishedBySlug(slug).subscribe({
@@ -131,31 +106,4 @@ export class ContentDetail {
       }),
     );
   }
-}
-
-function newsPage(article: NewsArticleResponse): Page {
-  const date = article.publishedOn ? formatDonationDate(article.publishedOn) : '';
-  return {
-    title: article.title,
-    eyebrow: article.tag ? `${article.tag} · ${date}` : date,
-    perex: article.perex,
-    body: article.body,
-    imageId: article.coverImage?.id ?? null,
-    imageAlt: article.coverImage?.alt ?? '',
-    slug: article.slug,
-    backPath: '/aktuality',
-  };
-}
-
-function projectPage(project: ProjectResponse): Page {
-  return {
-    title: project.title,
-    eyebrow: project.tag ? `${project.tag} · ${project.year}` : String(project.year),
-    perex: project.perex,
-    body: project.body,
-    imageId: project.coverImage?.id ?? null,
-    imageAlt: project.coverImage?.alt ?? '',
-    slug: project.slug,
-    backPath: '/projekty',
-  };
 }

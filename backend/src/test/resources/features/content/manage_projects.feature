@@ -82,6 +82,30 @@ Feature: An administrator writes projects, the stories of the children the found
       | Eliška, 6 let  |
       | Dominik, 7 let |
 
+  Scenario: A project published with a future date appears on the site on that day, and the administration says when it is live
+    Given "Jana" creates a project:
+      | title | Klára, 4 roky |
+      | year  | 2026          |
+      | perex | Perex.        |
+      | body  | Text.         |
+    And the project says:
+      | live | false |
+    When "Jana" publishes the project "klara-4-roky" on 2026-11-01
+    Then the project says:
+      | publishedOn | 2026-11-01 |
+      | live        | false      |
+    When someone without a token asks for the projects
+    Then the project list has 0 items
+    When today is 2026-11-01
+    And "Jana" asks for the project "klara-4-roky"
+    Then the project says:
+      | live | true |
+    When someone without a token asks for the projects
+    Then the project list titles are:
+      | Klára, 4 roky |
+    And the project list says:
+      | items.0.live | true |
+
   Scenario: Editing a project replaces its photo and deleting it removes the photo too
     Given "Jana" uploads a 1600 by 1000 pixel PNG image named "prvni.png"
     And "Jana" creates a project:

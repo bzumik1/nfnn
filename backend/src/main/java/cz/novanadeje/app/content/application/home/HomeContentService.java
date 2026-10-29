@@ -31,7 +31,7 @@ public class HomeContentService {
     public HomeContent read() {
         LocalDate today = LocalDate.ofInstant(clock.instant(), FoundationZone.ZONE);
         return new HomeContent(
-                news.findVisibleNewestFirst(today, 0, NEWS_ON_HOME).stream().map(NewsArticleView::from).toList(),
-                projects.findVisibleNewestFirst(today, 0, PROJECTS_ON_HOME).stream().map(ProjectView::from).toList());
+                news.findVisibleNewestFirst(today, 0, NEWS_ON_HOME).stream().map(article -> NewsArticleView.from(article, today)).toList(),
+                projects.findVisibleNewestFirst(today, 0, PROJECTS_ON_HOME).stream().map(project -> ProjectView.from(project, today)).toList());
     }
 }
