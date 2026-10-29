@@ -153,6 +153,10 @@ public final class Donation {
         return status == DonationStatus.RECEIVED;
     }
 
+    public boolean isAccountVerification() {
+        return purpose == DonationPurpose.ACCOUNT_VERIFICATION;
+    }
+
     public Year receivedYear() {
         return Year.from(receivedOn);
     }

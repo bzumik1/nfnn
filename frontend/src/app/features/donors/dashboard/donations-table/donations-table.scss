@@ -48,6 +48,16 @@ td.amount {
   text-align: right;
 }
 
+tr.is-verification td {
+  color: var(--color-text-muted);
+}
+
+tr.is-verification td.amount {
+  font-size: var(--text-md);
+  font-weight: var(--weight-medium);
+  color: var(--color-text-muted);
+}
+
 .pairing-tag {
   display: inline-block;
   margin-left: var(--space-2);

@@ -9,6 +9,7 @@ import cz.novanadeje.app.donations.domain.receipt.FirstReceiptYear;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptBeforeFirstYear;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptDocumentFactory;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptNotAvailable;
+import cz.novanadeje.app.donations.domain.receipt.VerificationWithoutReceipt;
 import cz.novanadeje.app.donations.domain.receipt.YearlyReceiptNotAvailable;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -24,6 +25,7 @@ import static cz.novanadeje.app.donations.domain.receipt.Receipts.YEAR_2026;
 import static cz.novanadeje.app.donations.domain.receipt.Receipts.jana;
 import static cz.novanadeje.app.donations.domain.receipt.Receipts.receivedFromJana;
 import static cz.novanadeje.app.donations.domain.receipt.Receipts.refundedToJana;
+import static cz.novanadeje.app.donations.domain.receipt.Receipts.verificationFromJana;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -40,6 +42,7 @@ class ReceiptRequestReaderTest {
     private static final Donation NEW_YEARS_EVE_2025 = receivedFromJana(LocalDate.of(2025, 12, 31), 40000);
     private static final Donation NEW_YEARS_DAY_2026 = receivedFromJana(LocalDate.of(2026, 1, 1), 60000);
     private static final Donation REFUNDED_2025 = refundedToJana(LocalDate.of(2025, 11, 2), 10000);
+    private static final Donation VERIFICATION_2026 = verificationFromJana(LocalDate.of(2026, 5, 4));
 
     private final DonationRepository donations = mock(DonationRepository.class);
     private final DonorRecordRepository donorRecords = mock(DonorRecordRepository.class);
@@ -89,6 +92,28 @@ class ReceiptRequestReaderTest {
         assertThatThrownBy(() -> reader.forDonation(JANA, REFUNDED_2026.id(), TODAY))
                 .isInstanceOf(ReceiptNotAvailable.class)
                 .extracting("code").isEqualTo("donations/receipt-not-available");
+    }
+
+    @Test
+    @DisplayName("Given a payment of the caller that verified an account, when its receipt request is read, then it has no receipt of its own")
+    void should_refuse_receipt_when_read_given_account_verification() {
+        when(donations.findByIdForDonor(VERIFICATION_2026.id(), JANA)).thenReturn(Optional.of(VERIFICATION_2026));
+        when(donorRecords.findById(JANA)).thenReturn(Optional.of(jana()));
+
+        assertThatThrownBy(() -> reader.forDonation(JANA, VERIFICATION_2026.id(), TODAY))
+                .isInstanceOf(VerificationWithoutReceipt.class)
+                .extracting("code").isEqualTo("donations/verification-without-receipt");
+    }
+
+    @Test
+    @DisplayName("Given a year with a gift and a payment that verified an account, when the yearly receipt request is read, then both are in it")
+    void should_read_verification_too_when_read_given_year_with_gift_and_verification() {
+        when(donations.findByDonorNewestFirst(JANA)).thenReturn(List.of(VERIFICATION_2026, MARCH_2026));
+        when(donorRecords.findById(JANA)).thenReturn(Optional.of(jana()));
+
+        ReceiptRequest.ForYear request = (ReceiptRequest.ForYear) reader.forYear(JANA, YEAR_2026, TODAY);
+
+        assertThat(request.donations()).containsExactly(MARCH_2026, VERIFICATION_2026);
     }
 
     @Test

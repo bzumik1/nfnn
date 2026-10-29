@@ -20,6 +20,7 @@ export interface DonationItem {
   pairedBy: DonationPairing | null;
   senderAccount: string | null;
   confirmedSymbol: string | null;
+  accountVerification: boolean;
   receiptAvailable: boolean;
 }
 

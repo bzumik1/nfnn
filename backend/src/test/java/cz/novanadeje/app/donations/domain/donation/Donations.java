@@ -33,6 +33,12 @@ public final class Donations {
         return donation(donor, receivedOn, amountMinor, DonationStatus.REFUNDED);
     }
 
+    public static Donation accountVerification(LocalDate receivedOn) {
+        return Donation.reconstitute(DonationId.newId(NOW), JANA, Optional.of(BankPaymentId.newId(NOW)), receivedOn, Money.czk(100),
+                DonationSource.BANK_TRANSFER, DonationStatus.RECEIVED, Optional.of(PairingMethod.VARIABLE_SYMBOL), Optional.empty(),
+                Optional.empty(), DonationPurpose.ACCOUNT_VERIFICATION, NOW);
+    }
+
     private static Donation donation(DonorReference donor, LocalDate receivedOn, long amountMinor, DonationStatus status) {
         return Donation.reconstitute(DonationId.newId(NOW), donor, Optional.of(BankPaymentId.newId(NOW)), receivedOn, Money.czk(amountMinor),
                 DonationSource.BANK_TRANSFER, status, Optional.of(PairingMethod.VARIABLE_SYMBOL), NOW);

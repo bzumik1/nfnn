@@ -16,6 +16,7 @@ import { DonationListResponse, DonationSummaryResponse } from '../../donations/d
 import { BankAccountItem } from '../../donations/bank-accounts-api';
 import { bankAccount, symbolOffer } from '../../donations/testing/bank-account-fixtures';
 import {
+  accountVerificationItem,
   donationItem,
   emptyDonations,
   emptySummary,
@@ -581,6 +582,28 @@ describe('Given a signed-in donor in the donor area', () => {
         'overview-stats',
         'recent-card',
       ]);
+    });
+
+    it('then a payment that verified an account never becomes the last gift: the newest gift does', async () => {
+      const list = twoYearDonations();
+      list.items = [accountVerificationItem({ receivedAt: '2026-03-20' }), ...list.items];
+      await open('/darce/prehled');
+      await respond(twoYearSummary(), list);
+
+      expect(text('.last-gift-amount')).toBe('500 Kč');
+      expect(text('.last-gift-date')).toBe('15. 03. 2026');
+      expect(texts('.recent-card tbody tr td:nth-child(3)')[0]).toBe('Ověření účtu');
+    });
+
+    it('then a donor whose only payment verified an account reads how to send the first gift', async () => {
+      const list = emptyDonations();
+      list.items = [accountVerificationItem()];
+      await open('/darce/prehled');
+      await respond(emptySummary(), list);
+
+      expect(element('.last-gift')).toBeNull();
+      expect(element('.recent-card')).toBeNull();
+      expect(text('.first-gift h2')).toBe('Jak poslat první dar');
     });
 
     it('then a refunded last gift says so', async () => {
@@ -1240,6 +1263,26 @@ describe('Given a signed-in donor in the donor area', () => {
       expect(text('.payments-card .receipts-from')).toBe(
         'Potvrzení o daru tu vystavujeme za dary přijaté od 1. ledna 2026, u starších darů proto tlačítko „Stáhnout PDF“ chybí.',
       );
+    });
+
+    it('then a payment that verified an account reads as a verification, offers no PDF and says it counts in the yearly receipt', async () => {
+      const list = twoYearDonations();
+      list.items = [accountVerificationItem({ receivedAt: '2026-03-20' }), ...list.items];
+      await open('/darce/dary');
+      await respond(twoYearSummary(), list);
+
+      const first = element(`${yearSection(2026)} tbody tr:nth-child(1)`)!;
+      expect(
+        [...first.querySelectorAll('td')].map((cell) => normalized(cell.textContent ?? '')),
+      ).toEqual([
+        '20. 03. 2026',
+        '1 Kč',
+        'Ověření účtu',
+        'Přijato',
+        'Započítá se do ročního potvrzení',
+      ]);
+      expect(first.querySelector('.download-btn')).toBeNull();
+      expect(element('.receipts-from')).toBeNull();
     });
 
     it('then a running download disables its button and says the PDF is being prepared until it arrives', async () => {

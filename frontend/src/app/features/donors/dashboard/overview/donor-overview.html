@@ -56,7 +56,7 @@
   }
 </ng-template>
 
-@if (donations.state() === 'ready' && donations.items().length === 0) {
+@if (donations.state() === 'ready' && !hasGift()) {
   <section class="ui-card ui-card--padded first-gift" aria-labelledby="first-gift-title">
     <h2
       id="first-gift-title"

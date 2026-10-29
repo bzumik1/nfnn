@@ -194,6 +194,7 @@ export function adminDonation(overrides: Partial<DonationItem> = {}): DonationIt
     pairedBy: 'SENDER_ACCOUNT',
     senderAccount: '2900233333/2010',
     confirmedSymbol: null,
+    accountVerification: false,
     receiptAvailable: true,
     ...overrides,
   };

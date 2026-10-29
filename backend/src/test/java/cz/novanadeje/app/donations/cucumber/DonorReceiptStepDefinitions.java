@@ -211,6 +211,16 @@ public class DonorReceiptStepDefinitions {
         assertReceiptAvailable(receivedOn, false);
     }
 
+    @Then("the donation received on {date} is listed as an account verification")
+    public void theDonationIsListedAsAnAccountVerification(LocalDate receivedOn) {
+        assertAccountVerification(receivedOn, true);
+    }
+
+    @Then("the donation received on {date} is listed as a gift")
+    public void theDonationIsListedAsAGift(LocalDate receivedOn) {
+        assertAccountVerification(receivedOn, false);
+    }
+
     @Then("the summary makes receipts available from {int}")
     public void theSummaryMakesReceiptsAvailableFrom(int year) {
         JsonNode json = api.lastResponseJson();
@@ -254,6 +264,14 @@ public class DonorReceiptStepDefinitions {
         assertThat(donation.get("receiptAvailable")).withFailMessage("No receiptAvailable in %s", donation).isNotNull();
         assertThat(donation.get("receiptAvailable").isBoolean()).withFailMessage("No boolean receiptAvailable in %s", donation).isTrue();
         assertThat(donation.get("receiptAvailable").asBoolean()).withFailMessage("Unexpected receiptAvailable in %s", donation).isEqualTo(available);
+    }
+
+    private void assertAccountVerification(LocalDate receivedOn, boolean verification) {
+        JsonNode donation = listedDonation(receivedOn);
+        assertThat(donation.get("accountVerification")).withFailMessage("No accountVerification in %s", donation).isNotNull();
+        assertThat(donation.get("accountVerification").isBoolean()).withFailMessage("No boolean accountVerification in %s", donation).isTrue();
+        assertThat(donation.get("accountVerification").asBoolean()).withFailMessage("Unexpected accountVerification in %s", donation)
+                .isEqualTo(verification);
     }
 
     private JsonNode listedDonation(LocalDate receivedOn) {

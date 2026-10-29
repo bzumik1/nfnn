@@ -114,6 +114,7 @@ export function donationItem(overrides: Record<string, unknown> = {}) {
     pairedBy: 'VARIABLE_SYMBOL',
     senderAccount: null,
     confirmedSymbol: null,
+    accountVerification: false,
     receiptAvailable: true,
     ...overrides,
   };

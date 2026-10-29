@@ -45,6 +45,7 @@ import java.util.Optional;
 
 import static cz.novanadeje.app.donations.domain.donation.Donations.JANA;
 import static cz.novanadeje.app.donations.domain.donation.Donations.NOW;
+import static cz.novanadeje.app.donations.domain.donation.Donations.accountVerification;
 import static cz.novanadeje.app.donations.domain.donation.Donations.received;
 import static cz.novanadeje.app.donations.domain.donation.Donations.refunded;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -159,6 +160,18 @@ class DonorDonationsServiceTest {
         assertThat(overview.receiptAvailable(newYearsEve)).isFalse();
         assertThat(overview.receiptAvailable(DECEMBER_2025)).isFalse();
         assertThat(overview.receiptAvailable(REFUNDED_2026)).isFalse();
+    }
+
+    @Test
+    @DisplayName("Given a payment that verified an account, when listed, then it has no receipt of its own")
+    void should_make_no_receipt_available_when_listed_given_account_verification() {
+        Donation verification = accountVerification(LocalDate.of(2026, 3, 1));
+        when(donations.findByDonorNewestFirst(JANA)).thenReturn(List.of(verification, JANUARY_2026));
+
+        DonationOverview overview = service.listDonations(JANA, Optional.empty());
+
+        assertThat(overview.receiptAvailable(verification)).isFalse();
+        assertThat(overview.receiptAvailable(JANUARY_2026)).isTrue();
     }
 
     @Test

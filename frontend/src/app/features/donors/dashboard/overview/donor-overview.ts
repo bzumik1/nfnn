@@ -41,7 +41,13 @@ export class DonorOverview {
     this.donations.items().slice(0, RECENT_DONATIONS_SHOWN),
   );
 
-  protected readonly lastGift = computed(() => this.donations.items().at(0) ?? null);
+  private readonly gifts = computed(() =>
+    this.donations.items().filter((item) => !item.accountVerification),
+  );
+
+  protected readonly hasGift = computed(() => this.gifts().length > 0);
+
+  protected readonly lastGift = computed(() => this.gifts().at(0) ?? null);
 
   protected readonly currentYear = computed(() => {
     const summary = this.donations.summary();
