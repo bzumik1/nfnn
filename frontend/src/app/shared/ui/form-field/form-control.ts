@@ -1,4 +1,4 @@
-import { Directive, ElementRef, computed, inject } from '@angular/core';
+import { Directive, ElementRef, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NgForm, NgModel } from '@angular/forms';
 import { merge } from 'rxjs';
@@ -10,6 +10,9 @@ import { FormField } from './form-field';
     class: 'form-control',
     '[attr.aria-invalid]': 'showsError() ? "true" : null',
     '[attr.aria-describedby]': 'describedBy()',
+    '(document:pointerdown)': 'pressStarted()',
+    '(document:pointerup)': 'pressEnded()',
+    '(document:pointercancel)': 'pressEnded()',
   },
 })
 export class FormControlDirective {
@@ -26,10 +29,15 @@ export class FormControlDirective {
     return this.element.id;
   }
 
+  private readonly pressing = signal(false);
+  private readonly touchedBeforePress = signal(false);
+
   readonly showsError = computed(() => {
     this.lastEvent();
+    const touchedDuringPress = this.pressing() && !this.touchedBeforePress();
     return (
-      this.model.invalid === true && (this.model.touched === true || this.form?.submitted === true)
+      this.model.invalid === true &&
+      ((this.model.touched === true && !touchedDuringPress) || this.form?.submitted === true)
     );
   });
 
@@ -44,6 +52,15 @@ export class FormControlDirective {
     const value: unknown = key === null ? null : this.model.errors?.[key];
     return typeof value === 'string' ? value : '';
   });
+
+  pressStarted(): void {
+    this.touchedBeforePress.set(this.model.touched === true);
+    this.pressing.set(true);
+  }
+
+  pressEnded(): void {
+    this.pressing.set(false);
+  }
 
   readonly describedBy = computed(() => {
     const ids = [

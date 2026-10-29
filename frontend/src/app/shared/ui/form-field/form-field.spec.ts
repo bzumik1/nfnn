@@ -108,6 +108,46 @@ describe('Given a form built from form fields', () => {
     expect(input('email').getAttribute('aria-invalid')).toBeNull();
   });
 
+  describe('when the visitor presses the pointer on the send button while leaving an invalid field', () => {
+    beforeEach(async () => {
+      await type('email', 'jan@');
+      host()
+        .querySelector('button[type=submit]')!
+        .dispatchEvent(new Event('pointerdown', { bubbles: true }));
+      await leave('email');
+    });
+
+    it('then the message waits, so the button stays under the pointer', () => {
+      expect(errorOf('email')).toBeNull();
+      expect(input('email').getAttribute('aria-invalid')).toBeNull();
+    });
+
+    it('and releases it, then the message appears', async () => {
+      document.dispatchEvent(new Event('pointerup'));
+      await fixture.whenStable();
+
+      expect(errorOf('email')?.textContent?.trim()).toBe('Zadejte e-mail ve tvaru jan@example.cz.');
+      expect(input('email').getAttribute('aria-invalid')).toBe('true');
+    });
+
+    it('and the press is cancelled, then the message appears', async () => {
+      document.dispatchEvent(new Event('pointercancel'));
+      await fixture.whenStable();
+
+      expect(errorOf('email')?.textContent?.trim()).toBe('Zadejte e-mail ve tvaru jan@example.cz.');
+    });
+  });
+
+  it('when a field already shows its message and the visitor presses the pointer anywhere, then the message stays', async () => {
+    await type('email', 'jan@');
+    await leave('email');
+
+    document.body.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+    await fixture.whenStable();
+
+    expect(errorOf('email')?.textContent?.trim()).toBe('Zadejte e-mail ve tvaru jan@example.cz.');
+  });
+
   it('when the form is sent with empty fields, then every field says what is missing and the first one takes the focus', async () => {
     await submit();
 

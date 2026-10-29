@@ -2,7 +2,7 @@
 # SessionStart hook: a cloud session starts from a fresh clone. Puts Node 24
 # first on PATH when the image's Node is too old for Angular 22, then installs
 # the frontend's and the connector's dependencies. Playwright's browser build
-# is not installed here: run npx playwright install chromium once (skill
+# is not installed here: run npx playwright install --only-shell chromium once (skill
 # cloud-session). Does nothing on a local machine; a claude.ai project thread
 # runs no hooks, so there the skill's steps are done by hand.
 [ "$CLAUDE_CODE_REMOTE" = "true" ] || exit 0
