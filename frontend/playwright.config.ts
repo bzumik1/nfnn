@@ -30,6 +30,12 @@ export default defineConfig({
       use: {
         ...devices['Desktop Chrome'],
         launchOptions: {
+          args: [
+            '--num-raster-threads=1',
+            '--disable-partial-raster',
+            '--disable-skia-runtime-opts',
+            '--disable-gpu',
+          ],
           env: { ...process.env, LANG: 'cs_CZ.UTF-8', LANGUAGE: 'cs', LC_ALL: 'cs_CZ.UTF-8' },
         },
       },
