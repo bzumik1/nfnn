@@ -198,6 +198,16 @@ class TranscriptNormaliserTest {
         assertThat(normaliser.json(raw)).isEqualTo(raw);
     }
 
+    @Test
+    @DisplayName("Given a payment QR whose SPAYD carries a recovery code, when a body is normalised, then its modules are masked and its size stays")
+    void should_mask_the_modules_and_keep_the_size_when_a_body_is_normalised_given_a_payment_qr_of_a_recovery_code() {
+        TranscriptNormaliser normaliser = new TranscriptNormaliser(Map.of());
+        JsonNode raw = json.readTree("{\"message\":\"OBNOVA DHG66PK2\",\"spayd\":\"SPD*1.0*MSG:OBNOVA DHG66PK2\",\"qrCode\":{\"size\":49,\"modules\":\"0101\"}}");
+
+        assertThat(normaliser.json(raw)).isEqualTo(json.readTree("""
+                {"message":"OBNOVA <recovery-code>","spayd":"SPD*1.0*MSG:OBNOVA <recovery-code>","qrCode":{"size":49,"modules":"<qr-of-masked-text>"}}"""));
+    }
+
     private static String base64Url(String id) {
         UUID uuid = UUID.fromString(id);
         ByteBuffer bytes = ByteBuffer.allocate(16).putLong(uuid.getMostSignificantBits()).putLong(uuid.getLeastSignificantBits());

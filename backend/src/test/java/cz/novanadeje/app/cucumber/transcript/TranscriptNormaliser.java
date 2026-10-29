@@ -52,6 +52,9 @@ public final class TranscriptNormaliser {
     private static final String CODE_SUFFIX = "code";
     private static final String TOTP_URI_FIELD = "otpauthUri";
     private static final String TOTP_QR_FIELD = "qrCode";
+    private static final String SPAYD_FIELD = "spayd";
+    private static final String QR_MODULES_FIELD = "modules";
+    private static final String QR_OF_MASKED_TEXT = "<qr-of-masked-text>";
 
     private final Map<String, String> knownValues;
     private final Pattern knownValuePattern;
@@ -135,10 +138,17 @@ public final class TranscriptNormaliser {
         if (raw.isObject()) {
             ObjectNode normalised = JsonNodeFactory.instance.objectNode();
             boolean totpEnrolment = raw.has(TOTP_URI_FIELD);
+            boolean qrOfRecoveryCode = raw.path(SPAYD_FIELD).isString() && RECOVERY_CODE.matcher(raw.path(SPAYD_FIELD).asString()).find();
             boolean secretSetting = raw.path(SETTING_NAME_FIELD).isString() && SECRET_SETTING.matcher(raw.path(SETTING_NAME_FIELD).asString()).matches();
             for (Map.Entry<String, JsonNode> field : raw.properties()) {
                 boolean secret = isSecretField(field.getKey(), field.getValue(), totpEnrolment)
                         || secretSetting && SETTING_VALUE_FIELD.equals(field.getKey()) && !field.getValue().isNull();
+                if (qrOfRecoveryCode && TOTP_QR_FIELD.equals(field.getKey()) && field.getValue().isObject()) {
+                    ObjectNode qr = (ObjectNode) json(field.getValue(), field.getKey());
+                    qr.put(QR_MODULES_FIELD, QR_OF_MASKED_TEXT);
+                    normalised.set(field.getKey(), qr);
+                    continue;
+                }
                 normalised.set(field.getKey(), secret ? masked(field.getValue())
                         : passkeyUserHandle(parentField, field.getKey(), field.getValue()).map(id -> (JsonNode) JsonNodeFactory.instance.stringNode(id(id)))
                         .orElseGet(() -> json(field.getValue(), field.getKey())));
