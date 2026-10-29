@@ -14,6 +14,6 @@ export const adminGuard: CanActivateFn = async (_route, state) => {
   if (store.signedIn()) {
     return router.createUrlTree(['/darce/prehled']);
   }
-  loginDialog.open('login', { returnTo: state.url });
+  loginDialog.open('login', { returnTo: state.url, forAdministration: true });
   return router.createUrlTree(['/']);
 };

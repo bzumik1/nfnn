@@ -4,6 +4,7 @@ import {
   afterNextRender,
   ChangeDetectionStrategy,
   Component,
+  computed,
   ElementRef,
   inject,
   Injector,
@@ -13,7 +14,7 @@ import {
 import { RouterLink } from '@angular/router';
 import { AuthStore } from '../../core/auth/auth-store';
 import { LoginDialogService } from '../../core/auth/login-dialog.service';
-import { currentListSection } from './current-section';
+import { currentListSection, onHomePage } from './current-section';
 
 @Component({
   selector: 'app-site-header',
@@ -34,6 +35,10 @@ export class SiteHeader {
   protected readonly current = currentListSection();
   protected readonly scrolled = signal(false);
   protected readonly menuOpen = signal(false);
+  private readonly onHome = onHomePage();
+  protected readonly logoOnDark = computed(
+    () => !this.onHome() && !this.scrolled() && !this.menuOpen(),
+  );
   protected readonly openMenuLabel = $localize`:@@layout.header.toggleMenu:Otevřít menu`;
   protected readonly closeMenuLabel = $localize`:@@layout.header.closeMenu:Zavřít menu`;
 

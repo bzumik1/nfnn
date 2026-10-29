@@ -72,6 +72,12 @@ describe('Given the administration guard', () => {
     expect(TestBed.inject(LoginDialogService).isOpen()).toBe(true);
   });
 
+  it('when nobody is signed in, then the sign-in dialog says it leads into the administration', async () => {
+    await activate();
+
+    expect(TestBed.inject(LoginDialogService).forAdministration()).toBe(true);
+  });
+
   it('when nobody is signed in and then signs in through the dialog, then the page they asked for opens', async () => {
     await activate();
     const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);

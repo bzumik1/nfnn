@@ -182,6 +182,9 @@ test.describe('Given a donor who protects the account with an authenticator app'
 
     await page.getByRole('button', { name: 'Zapnout dvoufaktorové ověření' }).click();
     await expect(page.getByLabel('Současné heslo')).toBeFocused();
+    await expect(page.locator('.account-lost-phone')).toContainText(
+      'přístup obnovíte platbou 1 Kč z bankovního účtu, který u nás máte ověřený aspoň týden',
+    );
     await page.getByLabel('Současné heslo').fill('correct horse battery');
     await page.getByRole('button', { name: 'Pokračovat' }).click();
 

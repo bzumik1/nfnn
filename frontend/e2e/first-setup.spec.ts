@@ -237,7 +237,7 @@ test.describe('Given a freshly installed site', () => {
       page.getByRole('heading', { level: 1, name: 'Web je obnovený ze zálohy' }),
     ).toBeVisible({ timeout: 15_000 });
     expect(uploaded?.toString()).toBe('PGDMP-backup');
-    await expect(page.getByRole('status')).toContainText('token Fio');
+    await expect(page.getByRole('status').filter({ hasText: /\S/ })).toContainText('token Fio');
 
     await page.locator('.ui-status').getByRole('button', { name: 'Přihlásit se' }).click();
     await expect(page.getByRole('dialog')).toBeVisible();

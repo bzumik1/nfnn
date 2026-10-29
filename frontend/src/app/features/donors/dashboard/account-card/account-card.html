@@ -509,6 +509,14 @@
                 stejné.
               </p>
             }
+            <p
+              class="ui-card__intro account-form-intro account-lost-phone"
+              i18n="@@donor.account.secondFactor.on.lostPhone"
+            >
+              Když telefon s aplikací ztratíte, přístup obnovíte platbou 1&nbsp;Kč z bankovního
+              účtu, který u nás máte ověřený aspoň týden. Dřív to nejde; do té doby nám napište a
+              kód z aplikace vám vypneme.
+            </p>
             @if (hasPassword()) {
               <app-form-field
                 label="Současné heslo"
@@ -627,6 +635,7 @@
                 inputmode="numeric"
                 autocomplete="one-time-code"
                 [(ngModel)]="code"
+                (ngModelChange)="codeChanged()"
                 required
                 pattern="\s*\d{6}\s*"
                 maxlength="8"

@@ -11,6 +11,7 @@ export interface LoginDialogOptions {
   afterSignIn?: () => void;
   email?: string;
   confirmationReturnTo?: ConfirmationReturn;
+  forAdministration?: boolean;
 }
 
 export interface RegistrationDraft {
@@ -33,6 +34,7 @@ export class LoginDialogService {
   private readonly email = signal('');
   private readonly returnAfterConfirmation = signal<ConfirmationReturn | null>(null);
   private readonly draft = signal<RegistrationDraft | null>(null);
+  private readonly administration = signal(false);
   private options: LoginDialogOptions = {};
   private stepBack: (() => void) | null = null;
   readonly isOpen = this.opened.asReadonly();
@@ -40,11 +42,13 @@ export class LoginDialogService {
   readonly initialEmail = this.email.asReadonly();
   readonly confirmationReturnTo = this.returnAfterConfirmation.asReadonly();
   readonly registrationDraft = this.draft.asReadonly();
+  readonly forAdministration = this.administration.asReadonly();
 
   open(mode: LoginDialogMode = 'login', options: LoginDialogOptions = {}): void {
     this.mode.set(mode);
     this.email.set(options.email ?? '');
     this.returnAfterConfirmation.set(options.confirmationReturnTo ?? null);
+    this.administration.set(options.forAdministration ?? false);
     this.options = options;
     this.opened.set(true);
     this.history.open({

@@ -2,6 +2,8 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
+import { AuthStore } from '../../../core/auth/auth-store';
+import { authResponse, sampleDonor } from '../../../core/auth/testing/donor-fixtures';
 import { ContactForm } from './contact-form';
 
 describe('Given the contact form', () => {
@@ -154,6 +156,67 @@ describe('Given the contact form', () => {
     );
   });
 
+  it('when it is shown, then the e-mail field says the reply goes to that address', () => {
+    expect(element('#contact-email-hint').textContent?.trim()).toBe(
+      'Odpovíme vám na zadaný e-mail.',
+    );
+    expect(element('#contact-email').getAttribute('aria-describedby')).toContain(
+      'contact-email-hint',
+    );
+  });
+
+  it('when submitted with an e-mail without a dot in its domain, then nothing is sent and the e-mail field explains the expected form', async () => {
+    await fillIn('#contact-name', 'Jana Nováková');
+    await fillIn('#contact-email', 'jana@example');
+    await fillIn('#contact-message', 'Dobrý den');
+
+    await submit();
+
+    http.expectNone('/api/contact/messages');
+    expect(element('#contact-email-error').textContent).toContain(
+      'Zadejte e-mail ve tvaru jan@example.com.',
+    );
+  });
+
+  describe('when the server refuses the e-mail of a message', () => {
+    beforeEach(async () => {
+      document.body.appendChild(fixture.nativeElement);
+      await fillInValidMessage();
+      await submit();
+      http.expectOne('/api/contact/messages').flush(
+        {
+          type: 'https://nfnn.cz/problems/validation',
+          title: 'Neplatný požadavek',
+          status: 400,
+          errors: [{ field: 'email', message: 'musí odpovídat tvaru e-mailové adresy' }],
+        },
+        { status: 400, statusText: 'Bad Request' },
+      );
+      fixture.detectChanges();
+      await fixture.whenStable();
+    });
+
+    it('then the e-mail field says what is wrong instead of a general failure', () => {
+      expect(element('#contact-email-error').textContent).toContain(
+        'Zadejte e-mail ve tvaru jan@example.com.',
+      );
+      expect(element('#contact-email').getAttribute('aria-invalid')).toBe('true');
+      expect(document.activeElement).toBe(element('#contact-email'));
+      expect(element('.form-error')).toBeNull();
+      expect(element<HTMLButtonElement>('.form-submit').disabled).toBe(false);
+    });
+
+    afterEach(() => fixture.nativeElement.remove());
+
+    it('and the address is corrected, then the message goes out again', async () => {
+      await fillIn('#contact-email', 'jana@example.cz');
+
+      expect(element('#contact-email-error')).toBeNull();
+      await submit();
+      http.expectOne('/api/contact/messages').flush(null, { status: 202, statusText: 'Accepted' });
+    });
+  });
+
   it('when the server refuses with 429, then the form stays and explains the hourly limit', async () => {
     await fillInValidMessage();
 
@@ -191,5 +254,105 @@ describe('Given the contact form', () => {
     const request = http.expectOne('/api/contact/messages');
     expect(request.request.body.website).toBe('https://spam.example');
     request.flush(null, { status: 202, statusText: 'Accepted' });
+  });
+});
+
+describe('Given the contact form seen by a signed-in donor', () => {
+  let fixture: ComponentFixture<ContactForm>;
+  let http: HttpTestingController;
+
+  beforeEach(async () => {
+    localStorage.clear();
+    await TestBed.configureTestingModule({
+      imports: [ContactForm],
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])],
+    }).compileComponents();
+    http = TestBed.inject(HttpTestingController);
+  });
+
+  afterEach(() => http.verify());
+
+  function signIn(type: 'PERSON' | 'COMPANY' = 'PERSON'): void {
+    TestBed.inject(AuthStore).login('jana@example.cz', 'correct horse battery').subscribe();
+    http
+      .expectOne('/api/donors/auth/login')
+      .flush(
+        authResponse(
+          'token-1',
+          sampleDonor(
+            type === 'PERSON'
+              ? {}
+              : { type, name: 'Zahrady Beneš s.r.o.', email: 'ucetni@zahrady.cz' },
+          ),
+        ),
+      );
+  }
+
+  async function show(): Promise<void> {
+    fixture = TestBed.createComponent(ContactForm);
+    fixture.detectChanges();
+    await fixture.whenStable();
+  }
+
+  function value(selector: string): string {
+    return (fixture.nativeElement.querySelector(selector) as HTMLInputElement).value;
+  }
+
+  it('when the form is shown, then their name and e-mail are already filled in and can be changed', async () => {
+    signIn();
+    await show();
+
+    expect(value('#contact-name')).toBe('Jana Nováková');
+    expect(value('#contact-email')).toBe('jana@example.cz');
+    const name = fixture.nativeElement.querySelector('#contact-name') as HTMLInputElement;
+    expect(name.readOnly).toBe(false);
+    expect(value('#contact-message')).toBe('');
+  });
+
+  it('when the donor is a company, then only the e-mail is filled in, because the name asks for a person', async () => {
+    signIn('COMPANY');
+    await show();
+
+    expect(value('#contact-name')).toBe('');
+    expect(value('#contact-email')).toBe('ucetni@zahrady.cz');
+  });
+
+  it('when the session arrives after the form is shown, then the empty fields are filled in and a typed one stays', async () => {
+    await show();
+    const name = fixture.nativeElement.querySelector('#contact-name') as HTMLInputElement;
+    name.value = 'Jana N.';
+    name.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    signIn();
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(value('#contact-name')).toBe('Jana N.');
+    expect(value('#contact-email')).toBe('jana@example.cz');
+  });
+
+  it('when a message was sent and they write another, then their name and e-mail are filled in again', async () => {
+    signIn();
+    await show();
+    const message = fixture.nativeElement.querySelector('#contact-message') as HTMLTextAreaElement;
+    message.value = 'Dobrý den';
+    message.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+    (fixture.nativeElement.querySelector('form') as HTMLFormElement).dispatchEvent(
+      new Event('submit'),
+    );
+    http.expectOne('/api/contact/messages').flush(null, { status: 202, statusText: 'Accepted' });
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    (fixture.nativeElement.querySelector('.form-success-again') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(value('#contact-name')).toBe('Jana Nováková');
+    expect(value('#contact-email')).toBe('jana@example.cz');
+    expect(value('#contact-message')).toBe('');
   });
 });

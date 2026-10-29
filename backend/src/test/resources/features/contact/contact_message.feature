@@ -30,6 +30,16 @@ Feature: Visitor sends a contact message
     And the problem lists errors for fields "fullName" and "email"
     And no message is stored
 
+  Scenario: An e-mail without a dot in its domain is rejected at the e-mail field
+    When the visitor submits a contact message
+      | fullName | Jana Nováková |
+      | email    | jana@example  |
+      | message  | Dobrý den     |
+    Then the response status is 400
+    And the problem type ends with "validation"
+    And the problem lists an error for field "email"
+    And no message is stored
+
   Scenario: Sixth message within an hour from one address is refused
     Given the visitor already sent 5 contact messages within the last hour
     When the visitor submits a contact message

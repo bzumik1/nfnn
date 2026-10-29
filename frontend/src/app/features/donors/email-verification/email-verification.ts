@@ -34,6 +34,7 @@ type Panel = 'missing-link' | 'confirming' | 'confirmed' | 'invalid' | 'failed' 
 
 const PAGE_PATH = '/potvrzeni-emailu';
 const PORTAL_PATH = '/darce/prehled';
+const EMAIL_CHANGE = 'email';
 const INVALID_TOKEN = 'donors/invalid-email-verification-token';
 const TOO_MANY_REQUESTS = 429;
 
@@ -58,6 +59,8 @@ export class EmailVerification {
   private readonly token = tokenOf(this.fragment);
   private readonly confirmationReturnTo = confirmationReturnOf(this.fragment.get('returnTo'));
   private readonly destination = this.confirmationReturnTo ?? PORTAL_PATH;
+  protected readonly changesEmail = this.fragment.get('change') === EMAIL_CHANGE;
+  protected readonly portalPath = PORTAL_PATH;
 
   protected readonly emailMessages = {
     required: $localize`:@@donor.form.email.required:Vyplňte prosím e-mail.`,
@@ -67,6 +70,7 @@ export class EmailVerification {
   protected readonly loading = signal(false);
   protected readonly error = signal('');
   protected readonly donorName = signal('');
+  protected readonly donorEmail = signal('');
   protected readonly needsPasskey = signal(false);
   protected readonly passkeyCreated = signal(false);
   protected readonly passkeysSupported = this.authenticator.supported();
@@ -169,7 +173,8 @@ export class EmailVerification {
     this.auth.confirmEmail(token).subscribe({
       next: (donor) => {
         this.donorName.set(donor.name);
-        this.needsPasskey.set(!donor.hasPassword);
+        this.donorEmail.set(donor.email);
+        this.needsPasskey.set(!this.changesEmail && !donor.hasPassword);
         this.show('confirmed');
       },
       error: (failure: unknown) => {

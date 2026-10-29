@@ -1,0 +1,15 @@
+<div role="status">
+  @if (notice.shown()) {
+    <div #bar class="ui-notice ui-notice--status ui-notice--floating">
+      <p class="ui-notice__text" i18n="@@layout.signedOut.message">Odhlásili jste se.</p>
+      <button
+        type="button"
+        class="ui-button ui-button--small signed-out-close"
+        (click)="close()"
+        i18n="@@layout.signedOut.close"
+      >
+        Zavřít
+      </button>
+    </div>
+  }
+</div>
