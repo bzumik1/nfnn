@@ -74,16 +74,16 @@ class SetupController {
     @ResponseStatus(HttpStatus.ACCEPTED)
     SettingsSavedResponse complete(HttpServletRequest http, @Valid @RequestBody SetupRequest request) {
         rateLimiter.check(http.getRemoteAddr());
-        return SettingsSavedResponse.of(setup.complete(access(http, request.code()), SettingValueRequest.toChanges(request.settings()), request.backupKeyCheck()));
+        return SettingsSavedResponse.of(setup.complete(access(http, request.code()), SettingValueRequest.toChanges(request.settings()), BackupKeyWordRequest.toChecks(request.backupKeyWords())));
     }
 
     @PutMapping(path = "/restore", consumes = MediaType.APPLICATION_OCTET_STREAM_VALUE)
     @ResponseStatus(HttpStatus.ACCEPTED)
     RestoreRequestResponse restore(HttpServletRequest http, @RequestHeader(name = CODE_HEADER, required = false) @Size(max = SetupCodeRequest.MAX_CODE_LENGTH) String code,
-                                   @RequestHeader(name = BACKUP_KEY_HEADER, required = false) @Size(max = BackupKey.MAX_LENGTH) String backupKey)
+                                   @RequestHeader(name = BACKUP_KEY_HEADER, required = false) @Size(max = BackupKey.MAX_PARSED_LENGTH) String backupKey)
             throws IOException {
         rateLimiter.check(http.getRemoteAddr());
-        Optional<BackupKey> key = Optional.ofNullable(backupKey).filter(value -> !value.isBlank()).map(BackupKey::new);
+        Optional<BackupKey> key = Optional.ofNullable(backupKey).filter(value -> !value.isBlank()).map(BackupKey::parse);
         return RestoreRequestResponse.from(setup.restoreUpload(access(http, code), http.getInputStream(), key));
     }
 

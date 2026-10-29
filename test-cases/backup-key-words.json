@@ -1,0 +1,218 @@
+{
+  "description": "Shared cases for the 24-word form of the backup key (BIP39 Czech wordlist over the 32 bytes of the age identity). The backend (BackupKeyWordsCasesTest) and the frontend (backup-key-words.spec.ts) both run every case.",
+  "wordlistSha256": "7e80e161c3e93d9554c2efb78d4e3cebf8fc727e9c52e03b83b94406bdcc95fc",
+  "keys": [
+    {
+      "key": "AGE-SECRET-KEY-1QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ8H00W3",
+      "words": [
+        "abdikace",
+        "abdikace",
+        "abdikace",
+        "abdikace",
+        "abdikace",
+        "abdikace",
+        "abdikace",
+        "abdikace",
+        "abdikace",
+        "abdikace",
+        "abdikace",
+        "abdikace",
+        "abdikace",
+        "abdikace",
+        "abdikace",
+        "abdikace",
+        "abdikace",
+        "abdikace",
+        "abdikace",
+        "abdikace",
+        "abdikace",
+        "abdikace",
+        "abdikace",
+        "branka"
+      ]
+    },
+    {
+      "key": "AGE-SECRET-KEY-1LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLS9FV78X",
+      "words": [
+        "zvyk",
+        "zvyk",
+        "zvyk",
+        "zvyk",
+        "zvyk",
+        "zvyk",
+        "zvyk",
+        "zvyk",
+        "zvyk",
+        "zvyk",
+        "zvyk",
+        "zvyk",
+        "zvyk",
+        "zvyk",
+        "zvyk",
+        "zvyk",
+        "zvyk",
+        "zvyk",
+        "zvyk",
+        "zvyk",
+        "zvyk",
+        "zvyk",
+        "zvyk",
+        "zavolat"
+      ]
+    },
+    {
+      "key": "AGE-SECRET-KEY-1QQQSYQCYQ5RQWZQFPG9SCRGWPUGPZYSNZS23V9CCRYDPK8QARC0SWRYDWG",
+      "words": [
+        "abdikace",
+        "bidlo",
+        "obvykle",
+        "bidlo",
+        "kopnout",
+        "bachor",
+        "doma",
+        "doprovod",
+        "bojovat",
+        "lobista",
+        "kachna",
+        "dobytek",
+        "amputace",
+        "olizovat",
+        "koalice",
+        "odeslat",
+        "chrup",
+        "sazba",
+        "batoh",
+        "hmota",
+        "rodokmen",
+        "buchta",
+        "nepokoj",
+        "vymezit"
+      ]
+    },
+    {
+      "key": "AGE-SECRET-KEY-19KX0TXRMKS4X7EJPXK7TDV8K86G5NFLUFFR4HL4TZNZLW24MV3AQEZUFGE",
+      "words": [
+        "funkce",
+        "medovina",
+        "masakr",
+        "zdroj",
+        "jizva",
+        "horstvo",
+        "plemeno",
+        "ekonomie",
+        "seznam",
+        "rozruch",
+        "inovace",
+        "obec",
+        "chmura",
+        "tmel",
+        "vzpoura",
+        "keramika",
+        "leden",
+        "zatknout",
+        "soudce",
+        "orloj",
+        "najmout",
+        "lepidlo",
+        "panovat",
+        "kaple"
+      ]
+    }
+  ],
+  "typedWords": [
+    {
+      "typed": "abdikace",
+      "word": "abdikace"
+    },
+    {
+      "typed": "  ABDIKACE ",
+      "word": "abdikace"
+    },
+    {
+      "typed": "Abdi",
+      "word": "abdikace"
+    },
+    {
+      "typed": "abdik",
+      "word": "abdikace"
+    },
+    {
+      "typed": "abdíkáce",
+      "word": "abdikace"
+    },
+    {
+      "typed": "akce",
+      "word": "akce"
+    },
+    {
+      "typed": "ASIS",
+      "word": "asistent"
+    },
+    {
+      "typed": "asiste",
+      "word": "asistent"
+    },
+    {
+      "typed": "abd",
+      "word": null
+    },
+    {
+      "typed": "abdix",
+      "word": null
+    },
+    {
+      "typed": "abdikacex",
+      "word": null
+    },
+    {
+      "typed": "",
+      "word": null
+    },
+    {
+      "typed": "zzzz",
+      "word": null
+    }
+  ],
+  "parse": [
+    {
+      "input": "age-secret-key-19kx0txrmks4x7ejpxk7tdv8k86g5nfluffr4hl4tznzlw24mv3aqezufge",
+      "key": "AGE-SECRET-KEY-19KX0TXRMKS4X7EJPXK7TDV8K86G5NFLUFFR4HL4TZNZLW24MV3AQEZUFGE"
+    },
+    {
+      "input": "  AGE-SECRET-KEY-1QQQSYQCYQ5RQWZQFPG9SCRGWPUGPZYSNZS23V9CCRYDPK8QARC0SWRYDWG\n",
+      "key": "AGE-SECRET-KEY-1QQQSYQCYQ5RQWZQFPG9SCRGWPUGPZYSNZS23V9CCRYDPK8QARC0SWRYDWG"
+    },
+    {
+      "input": "abdikace abdikace abdikace abdikace abdikace abdikace abdikace abdikace abdikace abdikace abdikace abdikace abdikace abdikace abdikace abdikace abdikace abdikace abdikace abdikace abdikace abdikace abdikace branka",
+      "key": "AGE-SECRET-KEY-1QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ8H00W3"
+    },
+    {
+      "input": "  funkce MEDO masakr ZDRO jizva HORS\nplemeno EKON seznam ROZR inovace OBEC\nchmura TMEL vzpoura KERA leden ZATK\nsoudce ORLO najmout LEPI panovat KAPL\n",
+      "key": "AGE-SECRET-KEY-19KX0TXRMKS4X7EJPXK7TDV8K86G5NFLUFFR4HL4TZNZLW24MV3AQEZUFGE"
+    },
+    {
+      "input": "1. zvyk, 2. zvyk, 3. zvyk, 4. zvyk, 5. zvyk, 6. zvyk, 7. zvyk, 8. zvyk, 9. zvyk, 10. zvyk, 11. zvyk, 12. zvyk, 13. zvyk, 14. zvyk, 15. zvyk, 16. zvyk, 17. zvyk, 18. zvyk, 19. zvyk, 20. zvyk, 21. zvyk, 22. zvyk, 23. zvyk, 24. zavolat",
+      "key": "AGE-SECRET-KEY-1LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLS9FV78X"
+    },
+    {
+      "input": "funkce medovina masakr zdroj jizva horstvo plemeno ekonomie seznam rozruch inovace obec chmura tmel vzpoura keramika leden zatknout soudce orloj najmout lepidlo panovat kapota",
+      "key": null
+    },
+    {
+      "input": "funkce medovina masakr zdroj jizva horstvo plemeno ekonomie seznam rozruch inovace obec chmura tmel vzpoura keramika leden zatknout soudce orloj najmout lepidlo panovat",
+      "key": null
+    },
+    {
+      "input": "funkce medovina masakr zdroj jizva horstvo plemeno ekonomie seznam rozruch inovace obec chmura tmel vzpoura keramika leden zatknout soudce orloj najmout lepidlo panovat kaple funkce",
+      "key": null
+    },
+    {
+      "input": "AGE-SECRET-KEY-19KX0TXRMKS4X7EJPXK7TDV8K86G5NFLUFFR4HL4TZNZLW24MV3AQEZUFGQ",
+      "key": null
+    },
+    {
+      "input": "",
+      "key": null
+    }
+  ]
+}

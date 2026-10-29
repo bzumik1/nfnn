@@ -7,17 +7,23 @@ Feature: The backups are encrypted with a key that an administrator sees only af
     And "Jana" is an administrator
     And the backup folder exists
 
-  Scenario: The key waits to be confirmed until the administrator retypes its last four characters
+  Scenario: The key waits to be confirmed until the administrator retypes the three of its words asked for when it was shown
     When "Jana" asks for the backups
     Then the response status is 200
     And the backups answer says:
       | key.available | true  |
       | key.confirmed | false |
     And the answer carries no backup key
-    When "Jana" confirms the backup key with the characters "AAAA"
+    When "Jana" confirms the backup key with the words "abeceda", "abeceda" and "abeceda" at 1, 2 and 3
+    Then the response status is 409
+    And the problem type ends with "operations/backup-key-confirmation-expired"
+    When "Jana" reveals the backup key with a fresh code
+    Then the answer carries the backup key of this server and no cache keeps it
+    And the answer asks for three different words of the key
+    When "Jana" confirms the backup key with the asked words in the wrong order
     Then the response status is 400
     And the problem type ends with "operations/backup-key-check-mismatch"
-    When "Jana" confirms the backup key with its last four characters
+    When "Jana" confirms the backup key with the asked words
     Then the response status is 200
     And the admin action "CONFIRM_BACKUP_KEY" by "Jana" is recorded with details containing "Potvrzeno uložení klíče k zálohám"
     When "Jana" asks for the backups
@@ -71,14 +77,14 @@ Feature: The backups are encrypted with a key that an administrator sees only af
     When "Petr" reveals the backup key with the code "123456"
     Then the response status is 403
     And the problem type ends with "auth/forbidden"
-    When "Petr" confirms the backup key with the characters "AAAA"
+    When "Petr" confirms the backup key with the words "abeceda", "abeceda" and "abeceda" at 1, 2 and 3
     Then the response status is 403
     When someone without a token reveals the backup key with the code "123456"
     Then the response status is 401
 
   Scenario: Guessing at the key is stopped after ten attempts from one address
     Given "Jana" tried to confirm the backup key 10 times
-    When "Jana" confirms the backup key with its last four characters
+    When "Jana" confirms the backup key with the words "abeceda", "abeceda" and "abeceda" at 1, 2 and 3
     Then the response status is 429
     And the problem type ends with "operations/rate-limited"
     When "Jana" reveals the backup key with a fresh code

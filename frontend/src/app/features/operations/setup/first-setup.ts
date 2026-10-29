@@ -30,7 +30,16 @@ import { PasswordReveal } from '../../../shared/ui/password-reveal/password-reve
 import { placeServerErrors } from '../../../shared/ui/form-field/server-errors';
 import { SETTING_LABELS, settingLabel } from '../setting-labels';
 import { BackupKeyPanel } from '../backup-key/backup-key-panel';
-import { backupKeyCheckPattern } from '../backup-key/backup-key-check';
+import {
+  BACKUP_KEY_WORD_MESSAGES,
+  BackupKeyValidator,
+  BackupKeyWordEntry,
+  BackupKeyWordValidator,
+  backupKeyWordChecks,
+  backupKeyWordEntries,
+  backupKeyWordLabel,
+} from '../backup-key/backup-key-word-check';
+import { parseBackupKey } from '../backup-key/backup-key-words';
 import {
   MailServerRequest,
   RESTORE_MAX_POLLS,
@@ -99,6 +108,8 @@ const SETTING_FIELDS: Readonly<Partial<Record<SettingName, string>>> = {
     FocusFirstInvalid,
     PasswordReveal,
     BackupKeyPanel,
+    BackupKeyWordValidator,
+    BackupKeyValidator,
   ],
   templateUrl: './first-setup.html',
   styleUrl: './first-setup.scss',
@@ -130,9 +141,9 @@ export class FirstSetup {
   protected readonly restoredBeforeSetup = signal(false);
   protected readonly backupKey = signal<string | null>(null);
   protected readonly backupKeyState = signal<BackupKeyState>('idle');
-  protected readonly backupKeyPattern = computed(() =>
-    backupKeyCheckPattern(this.backupKey() ?? ''),
-  );
+  protected readonly backupKeyWords = signal<BackupKeyWordEntry[]>([]);
+  protected readonly backupKeyWordMessages = BACKUP_KEY_WORD_MESSAGES;
+  protected readonly backupKeyWordLabel = backupKeyWordLabel;
   protected readonly backupEncrypted = computed(
     () => this.backupFile()?.name.toLowerCase().endsWith(ENCRYPTED_BACKUP_EXTENSION) ?? false,
   );
@@ -158,13 +169,9 @@ export class FirstSetup {
   protected readonly passwordMessages = {
     required: $localize`:@@operations.setup.mailPassword.required:Vyplňte prosím heslo nebo klíč SMTP.`,
   };
-  protected readonly backupKeyCheckMessages = {
-    required: $localize`:@@operations.setup.backupKeyCheck.required:Opište prosím poslední čtyři znaky klíče.`,
-    pattern: $localize`:@@operations.setup.backupKeyCheck.mismatch:Znaky nesedí s koncem klíče. Zkontrolujte prosím, že jste uložili celý klíč.`,
-  };
   protected readonly restoreKeyMessages = {
     required: $localize`:@@operations.setup.restoreKey.required:Vložte prosím klíč k zálohám, se kterým záloha vznikla.`,
-    pattern: $localize`:@@operations.setup.restoreKey.invalid:Klíč začíná AGE-SECRET-KEY-1 a má 74 znaků. Zkontrolujte, že jste ho vložili celý.`,
+    backupKey: $localize`:@@operations.setup.restoreKey.invalid:Klíč začíná AGE-SECRET-KEY-1 a má 74 znaků, nebo je to 24 slov. Zkontrolujte, že jste ho vložili celý a bez překlepu.`,
   };
   protected readonly fioTokenLabel = $localize`:@@operations.setup.fioToken.label:Token Fio API (jen pro čtení, nepovinné)`;
   protected readonly emailMessages = {
@@ -186,7 +193,6 @@ export class FirstSetup {
   };
   protected fioToken = '';
   protected adminEmail = '';
-  protected backupKeyCheck = '';
   protected restoreKey = '';
 
   private unlockedCode: string | null = null;
@@ -338,7 +344,8 @@ export class FirstSetup {
       .complete({
         code: this.unlockedCode,
         settings: this.settings(),
-        backupKeyCheck: this.backupKeyState() === 'ready' ? this.backupKeyCheck.trim() : null,
+        backupKeyWords:
+          this.backupKeyState() === 'ready' ? backupKeyWordChecks(this.backupKeyWords()) : null,
       })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
@@ -374,6 +381,7 @@ export class FirstSetup {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (response) => {
+          this.backupKeyWords.set(backupKeyWordEntries(response.key, response.checkPositions));
           this.backupKey.set(response.key);
           this.backupKeyState.set('ready');
         },
@@ -429,7 +437,11 @@ export class FirstSetup {
     this.restoreError.set('');
     this.uploadPercent.set(0);
     this.api
-      .uploadBackup(this.unlockedCode, file, this.backupEncrypted() ? this.restoreKey.trim() : null)
+      .uploadBackup(
+        this.unlockedCode,
+        file,
+        this.backupEncrypted() ? parseBackupKey(this.restoreKey) : null,
+      )
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (event) => {

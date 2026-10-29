@@ -351,34 +351,36 @@
             <legend i18n="@@operations.setup.group.backupKey">5. Klíč k zálohám</legend>
             <p class="group-intro" i18n="@@operations.setup.backupKey.intro">
               Web se každý den zálohuje a zálohy šifruje tímto klíčem. Bez něj žádnou zálohu
-              neobnovíte, ani po havárii serveru. Uložte si ho teď mimo server a pak opište jeho
-              poslední čtyři znaky. Ve správě si ho později zobrazíte znovu.
+              neobnovíte, ani po havárii serveru. Uložte si ho teď mimo server a pak opište tři jeho
+              slova. Ve správě si ho později zobrazíte znovu.
             </p>
             @switch (backupKeyState()) {
               @case ('ready') {
                 @if (backupKey(); as key) {
                   <app-backup-key-panel [key]="key" />
                 }
-                <app-form-field
-                  label="Poslední čtyři znaky klíče"
-                  i18n-label="@@operations.setup.backupKeyCheck"
-                  hint="Opište je z uloženého klíče, tak si ověříte, že se uložil celý."
-                  i18n-hint="@@operations.setup.backupKeyCheck.hint"
-                  [messages]="backupKeyCheckMessages"
-                >
-                  <input
-                    appFormControl
-                    id="setup-backup-key-check"
-                    name="backupKeyCheck"
-                    autocomplete="off"
-                    autocapitalize="characters"
-                    spellcheck="false"
-                    maxlength="6"
-                    [(ngModel)]="backupKeyCheck"
-                    required
-                    [pattern]="backupKeyPattern()"
-                  />
-                </app-form-field>
+                @for (entry of backupKeyWords(); track entry.position) {
+                  <app-form-field
+                    [label]="backupKeyWordLabel(entry.position)"
+                    hint="Opište ho z uloženého klíče, tak si ověříte, že se uložil celý."
+                    i18n-hint="@@operations.setup.backupKeyWord.hint"
+                    [messages]="backupKeyWordMessages"
+                  >
+                    <input
+                      appFormControl
+                      [id]="'setup-backup-key-word-' + entry.position"
+                      [name]="'backupKeyWord' + entry.position"
+                      autocomplete="off"
+                      autocorrect="off"
+                      autocapitalize="none"
+                      spellcheck="false"
+                      maxlength="40"
+                      [(ngModel)]="entry.typed"
+                      required
+                      [appBackupKeyWord]="entry.expected"
+                    />
+                  </app-form-field>
+                }
               }
               @case ('unavailable') {
                 <p
@@ -618,7 +620,7 @@
             <app-form-field
               label="Klíč k zálohám"
               i18n-label="@@operations.setup.restoreKey"
-              hint="Ten, který jste si uložili ze správy nebo z prvního nastavení původního serveru. Začíná AGE-SECRET-KEY-1."
+              hint="Ten, který jste si uložili ze správy nebo z prvního nastavení původního serveru: buď začíná AGE-SECRET-KEY-1, nebo je to 24 slov."
               i18n-hint="@@operations.setup.restoreKey.hint"
               [messages]="restoreKeyMessages"
             >
@@ -630,10 +632,10 @@
                   type="password"
                   autocomplete="off"
                   spellcheck="false"
-                  maxlength="100"
-                  pattern="\s*[Aa][Gg][Ee]-[Ss][Ee][Cc][Rr][Ee][Tt]-[Kk][Ee][Yy]-1[0-9A-Za-z]{58}\s*"
+                  maxlength="600"
                   [(ngModel)]="restoreKey"
                   required
+                  appBackupKey
                 />
               </app-password-reveal>
             </app-form-field>

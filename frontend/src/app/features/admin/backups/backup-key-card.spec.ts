@@ -100,7 +100,7 @@ describe('Given the backup key card', () => {
     await submit();
     const request = http.expectOne(REVEAL_URL);
     expect(request.request.body).toEqual({ secondFactorCode: '123456' });
-    request.flush({ key: KEY });
+    request.flush({ key: KEY, checkPositions: [2, 13, 24] });
     await settle();
   }
 
@@ -140,33 +140,56 @@ describe('Given the backup key card', () => {
       expect(root().textContent).not.toContain(KEY);
     });
 
-    it('and the right code is typed, then the key is shown with copy and download', async () => {
+    it('and the right code is typed, then the key is shown with its 24 words, copy, saving and download', async () => {
       await revealWithCode();
 
       expect(text('.backup-key')).toBe(KEY);
+      const words = Array.from(root().querySelectorAll('.backup-key-word-list li'));
+      expect(words).toHaveLength(24);
+      expect(words[0].textContent?.trim()).toBe('divoch');
+      expect(words[23].textContent?.trim()).toBe('studna');
       expect(root().querySelector('app-copy-button')).not.toBeNull();
+      expect(text('.backup-key-save')).toBe('Uložit do správce hesel');
       expect(text('.backup-key-download')).toBe('Stáhnout jako soubor');
       expect(document.activeElement).toBe(root().querySelector('.revealed'));
+      expect(text('label[for="backup-key-word-13"]')).toBe('13. slovo klíče');
+      for (const id of ['backup-key-word-2', 'backup-key-word-13', 'backup-key-word-24']) {
+        const field = root().querySelector(`#${id}`);
+        expect(field?.getAttribute('autocomplete')).toBe('off');
+        expect(field?.getAttribute('spellcheck')).toBe('false');
+        expect(field?.getAttribute('autocapitalize')).toBe('none');
+        expect(field?.getAttribute('autocorrect')).toBe('off');
+      }
     });
 
-    it('and other characters are typed, then the confirmation is refused at the field', async () => {
+    it('and a word from another position is typed, then the confirmation is refused at the field', async () => {
       await revealWithCode();
-      await type('backup-key-check', 'AAAA');
+      await type('backup-key-word-2', 'divoch');
+      await type('backup-key-word-13', 'motivace');
+      await type('backup-key-word-24', 'studna');
       await submit();
 
-      expect(text('#backup-key-check-error')).toBe(
-        'Znaky nesedí s koncem klíče. Zkontrolujte prosím, že jste uložili celý klíč.',
+      expect(text('#backup-key-word-2-error')).toBe(
+        'Slovo nesedí s klíčem. Zkontrolujte, že opisujete slovo se správným číslem.',
       );
       http.expectNone(CONFIRM_URL);
     });
 
-    it('and the last four characters are typed, then saving is confirmed and the key hides', async () => {
+    it('and the three asked words are typed, then saving is confirmed and the key hides', async () => {
       await revealWithCode();
-      await type('backup-key-check', '6gwh');
+      await type('backup-key-word-2', 'KOMO');
+      await type('backup-key-word-13', ' motivace ');
+      await type('backup-key-word-24', 'studna');
       await submit();
 
       const request = http.expectOne(CONFIRM_URL);
-      expect(request.request.body).toEqual({ check: '6gwh' });
+      expect(request.request.body).toEqual({
+        words: [
+          { position: 2, word: 'KOMO' },
+          { position: 13, word: 'motivace' },
+          { position: 24, word: 'studna' },
+        ],
+      });
       request.flush(CONFIRMED);
       await settle();
 
@@ -175,6 +198,28 @@ describe('Given the backup key card', () => {
       expect(text('[role="status"]:not(:empty)')).toBe(
         'Děkujeme, uložení klíče jsme si poznamenali. Klíč jsme zase skryli.',
       );
+    });
+
+    it('and the confirmation came too late, then the key hides and the reason says to show it again', async () => {
+      await revealWithCode();
+      await type('backup-key-word-2', 'komora');
+      await type('backup-key-word-13', 'motivace');
+      await type('backup-key-word-24', 'studna');
+      await submit();
+      http.expectOne(CONFIRM_URL).flush(
+        {
+          type: 'https://nfnn.cz/problems/operations/backup-key-confirmation-expired',
+          title: 'Zobrazte si klíč znovu',
+          detail: 'Slova klíče jde potvrdit do půl hodiny od zobrazení a nejvýš pětkrát.',
+          status: 409,
+        },
+        { status: 409, statusText: 'Conflict' },
+      );
+      await settle();
+
+      expect(root().textContent).not.toContain(KEY);
+      expect(text('[role="alert"]:not(:empty)')).toContain('do půl hodiny od zobrazení');
+      expect(document.activeElement?.textContent?.trim()).toBe('Zobrazit klíč…');
     });
 
     it('and the key is hidden again, then nothing is sent', async () => {
@@ -197,7 +242,7 @@ describe('Given the backup key card', () => {
       expect(request.request.body).toEqual({
         passkey: { challenge: SAMPLE_CHALLENGE, credential: SAMPLE_ASSERTION },
       });
-      request.flush({ key: KEY });
+      request.flush({ key: KEY, checkPositions: [2, 13, 24] });
       await settle();
       expect(text('.backup-key')).toBe(KEY);
     });

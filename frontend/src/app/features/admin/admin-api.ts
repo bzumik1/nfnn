@@ -1,3 +1,4 @@
+import { BackupKeyWordCheck } from '../operations/backup-key/backup-key-word-check';
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { map, Observable } from 'rxjs';
@@ -378,6 +379,7 @@ export interface BackupKeyRevealRequest {
 
 export interface BackupKeyResponse {
   key: string;
+  checkPositions: number[];
 }
 
 export interface BackupPlan {
@@ -656,9 +658,9 @@ export class AdminApi {
     return this.http.post<BackupKeyResponse>('/api/admin/operations/backups/key/reveal', request);
   }
 
-  confirmBackupKey(check: string): Observable<BackupKeyStatus> {
+  confirmBackupKey(words: BackupKeyWordCheck[]): Observable<BackupKeyStatus> {
     return this.http.post<BackupKeyStatus>('/api/admin/operations/backups/key/confirmation', {
-      check,
+      words,
     });
   }
 

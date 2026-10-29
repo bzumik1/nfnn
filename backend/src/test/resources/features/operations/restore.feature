@@ -79,6 +79,15 @@ Feature: The database is restored from a backup in the browser: by an administra
     And the uploaded backup waits in the restore folder with a restore request
     And the backend restarts once
 
+  Scenario: The key of an encrypted backup may be typed as its 24 words, and waits beside it in its usual form
+    Given the requests come directly from the home network
+    When an encrypted backup is uploaded in the first setup with the key "divoch komora probudit najednou dekl komando nikl odebrat biograf bytovka dodnes mikrofon MOTI naiv zdaleka ekonomie jeseter azyl atlas obyvatel glazura vytesat moudrost studna"
+    Then the response status is 202
+    And the uploaded backup waits in the restore folder beside the key "AGE-SECRET-KEY-1R45A984EXXAFC85YZSYGY9R6XJTD4E9AKY65ZCRGPDQ89E7ANW8QKT6GWH"
+    When an encrypted backup is uploaded in the first setup with the key "divoch komora probudit najednou dekl komando nikl odebrat biograf bytovka dodnes mikrofon motivace naivita zdaleka ekonomie jeseter azyl atlas obyvatel glazura vytesat studna moudrost"
+    Then the response status is 400
+    And the problem type ends with "operations/invalid-backup-key"
+
   Scenario: A file that is not a database backup is refused and nothing is stored
     Given the requests come directly from the home network
     When the file "fotka.jpg" is uploaded in the first setup

@@ -22,12 +22,12 @@ describe('Given the setup API', () => {
     vi.useRealTimers();
   });
 
-  it('when the first setup is completed, then the code, the settings and the end of the backup key are posted', () => {
+  it('when the first setup is completed, then the code, the settings and the words of the backup key are posted', () => {
     api
       .complete({
         code: 'K7QM-2XPA-9TRD',
         settings: [{ name: 'MAIL_PORT', value: '587' }],
-        backupKeyCheck: '6GWH',
+        backupKeyWords: [{ position: 2, word: 'komora' }],
       })
       .subscribe();
 
@@ -36,7 +36,7 @@ describe('Given the setup API', () => {
     expect(request.request.body).toEqual({
       code: 'K7QM-2XPA-9TRD',
       settings: [{ name: 'MAIL_PORT', value: '587' }],
-      backupKeyCheck: '6GWH',
+      backupKeyWords: [{ position: 2, word: 'komora' }],
     });
     request.flush({ changed: ['MAIL_PORT'], restarting: true });
   });

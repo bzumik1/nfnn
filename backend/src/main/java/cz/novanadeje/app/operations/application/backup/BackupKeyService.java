@@ -6,6 +6,8 @@ import cz.novanadeje.app.operations.domain.backup.BackupKeyConfirmation;
 import cz.novanadeje.app.operations.domain.backup.BackupKeyConfirmationRepository;
 import cz.novanadeje.app.operations.domain.backup.BackupKeyRevealPaused;
 import cz.novanadeje.app.operations.domain.backup.BackupKeyUnavailable;
+import cz.novanadeje.app.operations.domain.backup.BackupKeyWordCheck;
+import cz.novanadeje.app.operations.domain.backup.BackupKeyWordPositions;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
 import cz.novanadeje.app.shared.application.event.BackupKeyRevealed;
 import cz.novanadeje.app.shared.application.secondfactor.FreshSecondFactor;
@@ -19,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -34,15 +37,17 @@ public class BackupKeyService {
     private final BackupKeyConfirmationRepository confirmations;
     private final FreshSecondFactor freshSecondFactor;
     private final BackupKeyRevealRefusals refusals;
+    private final BackupKeyWordChallenges challenges;
     private final ApplicationEventPublisher events;
     private final Clock clock;
 
     public BackupKeyService(BackupKeySource keys, BackupKeyConfirmationRepository confirmations, FreshSecondFactor freshSecondFactor,
-                            BackupKeyRevealRefusals refusals, ApplicationEventPublisher events, Clock clock) {
+                            BackupKeyRevealRefusals refusals, BackupKeyWordChallenges challenges, ApplicationEventPublisher events, Clock clock) {
         this.keys = keys;
         this.confirmations = confirmations;
         this.freshSecondFactor = freshSecondFactor;
         this.refusals = refusals;
+        this.challenges = challenges;
         this.events = events;
         this.clock = clock;
     }
@@ -58,7 +63,7 @@ public class BackupKeyService {
     }
 
     @Transactional
-    public BackupKey reveal(UUID adminId, FreshSecondFactorProof proof) {
+    public RevealedBackupKey reveal(UUID adminId, FreshSecondFactorProof proof) {
         BackupKey key = keys.current().orElseThrow(BackupKeyUnavailable::new);
         Instant now = clock.instant();
         if (refusals.paused(adminId, now)) {
@@ -75,39 +80,49 @@ public class BackupKeyService {
                 "Zobrazen klíč k zálohám (ověřeno druhým faktorem)", now));
         events.publishEvent(new BackupKeyRevealed(adminId, now));
         log.info("Admin {} viewed the backup key after a fresh second-factor check", adminId);
-        return key;
+        return new RevealedBackupKey(key, challenges.issue(adminId, now));
     }
 
     @Transactional
-    public BackupKeyView confirm(UUID adminId, String check) {
+    public BackupKeyView confirm(UUID adminId, List<BackupKeyWordCheck> words) {
         BackupKey key = keys.current().orElseThrow(BackupKeyUnavailable::new);
         Instant now = clock.instant();
-        record(key, check, now, Optional.of(adminId));
+        BackupKeyWordPositions asked = challenges.asked(adminId, now);
+        try {
+            requireWords(key, words, Optional.of(asked));
+        } catch (BackupKeyCheckMismatch mismatch) {
+            challenges.refused(adminId);
+            log.info("Admin {} typed words that are not the words of the backup key", adminId);
+            throw mismatch;
+        }
+        challenges.settled(adminId);
+        confirmations.save(BackupKeyConfirmation.of(key, now, Optional.of(adminId)));
         events.publishEvent(new AdminActionPerformed(adminId, CONFIRM_BACKUP_KEY_ACTION, Optional.empty(),
                 "Potvrzeno uložení klíče k zálohám", now));
         log.info("Admin {} confirmed that the backup key is saved", adminId);
         return view();
     }
 
-    public Optional<BackupKey> keyForSetup() {
-        return keys.current();
+    public Optional<RevealedBackupKey> keyForSetup() {
+        return keys.current().map(key -> new RevealedBackupKey(key, challenges.draw()));
     }
 
     @Transactional
-    public void confirmInSetup(String check, Instant at) {
+    public void confirmInSetup(List<BackupKeyWordCheck> words, Instant at) {
         Optional<BackupKey> key = keys.current();
         if (key.isEmpty()) {
             log.warn("The first setup was completed without a backup key; the backups wait for one");
             return;
         }
-        record(key.get(), check, at, Optional.empty());
+        requireWords(key.get(), words, Optional.empty());
+        confirmations.save(BackupKeyConfirmation.of(key.get(), at, Optional.empty()));
         log.info("The backup key was confirmed as saved in the first setup");
     }
 
-    private void record(BackupKey key, String check, Instant at, Optional<UUID> by) {
-        if (!key.matchesCheck(check)) {
+    private static void requireWords(BackupKey key, List<BackupKeyWordCheck> words, Optional<BackupKeyWordPositions> asked) {
+        BackupKeyWordPositions typed = BackupKeyWordPositions.of(words);
+        if (asked.filter(positions -> !positions.equals(typed)).isPresent() || !key.matches(words)) {
             throw new BackupKeyCheckMismatch();
         }
-        confirmations.save(BackupKeyConfirmation.of(key, at, by));
     }
 }

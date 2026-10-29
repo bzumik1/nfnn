@@ -133,7 +133,7 @@ test.describe('Given an administrator on the backups page', () => {
       (url) => url.pathname === `${BACKUPS}/key/reveal`,
       (route) => {
         revealed.push(route.request().postDataJSON());
-        return route.fulfill({ json: { key } });
+        return route.fulfill({ json: { key, checkPositions: [2, 13, 24] } });
       },
     );
     await page.route(
@@ -154,13 +154,30 @@ test.describe('Given an administrator on the backups page', () => {
 
     await expect(page.locator('.backup-key')).toHaveText(key);
     expect(revealed).toEqual([{ secondFactorCode: '123456' }]);
-    await page.locator('#backup-key-check').fill('6gwh');
+    await expect(
+      page.getByRole('list', { name: 'Stejný klíč jako 24 slov' }).getByRole('listitem'),
+    ).toHaveCount(24);
+    await page.getByRole('button', { name: 'Uložit do správce hesel' }).click();
+    await expect(page.getByRole('status').filter({ hasText: /\S/ })).toContainText(
+      'Pokud prohlížeč nabídl uložení',
+    );
+    await page.getByLabel('2. slovo klíče', { exact: true }).fill('komora');
+    await page.getByLabel('13. slovo klíče', { exact: true }).fill('moti');
+    await page.getByLabel('24. slovo klíče', { exact: true }).fill('studna');
     await page.getByRole('button', { name: 'Potvrdit uložení' }).click();
 
     await expect(page.getByRole('status').filter({ hasText: /\S/ })).toContainText(
       'uložení klíče jsme si poznamenali',
     );
-    expect(confirmed).toEqual([{ check: '6gwh' }]);
+    expect(confirmed).toEqual([
+      {
+        words: [
+          { position: 2, word: 'komora' },
+          { position: 13, word: 'moti' },
+          { position: 24, word: 'studna' },
+        ],
+      },
+    ]);
     await expect(page.locator('.backup-key')).toHaveCount(0);
     await expect(page.getByText('Klíč si zatím nikdo neuložil.')).toHaveCount(0);
     await expect(page.getByText('Uložení klíče jste potvrdili 28. 10. 2026 10:00.')).toBeVisible();

@@ -12,9 +12,11 @@ import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
 import org.springframework.http.HttpHeaders;
+import tools.jackson.databind.JsonNode;
 
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -35,6 +37,7 @@ public class BackupKeyStepDefinitions {
     private final BackupKeySource keys;
     private final Path restore;
     private String lastCode;
+    private List<Integer> askedPositions = List.of();
 
     public BackupKeyStepDefinitions(ApiClient api, DonorSessions sessions, ScenarioDonors donors, TotpCodes totpCodes,
                                     DonorPasskeyStepDefinitions passkeys, BackupKeySource keys, BackupProperties properties) {
@@ -84,23 +87,46 @@ public class BackupKeyStepDefinitions {
         api.post(KEY + "/reveal", Map.of("secondFactorCode", code));
     }
 
-    @When("{string} confirms the backup key with the characters {string}")
-    public void confirmsTheBackupKeyWithTheCharacters(String alias, String characters) {
-        sessions.actAs(alias);
-        api.post(KEY + "/confirmation", Map.of("check", characters));
+    @When("{string} confirms the backup key with the words {string}, {string} and {string} at {int}, {int} and {int}")
+    public void confirmsTheBackupKeyWithTheWords(String alias, String first, String second, String third, int firstAt, int secondAt, int thirdAt) {
+        confirmsTheBackupKeyWith(alias, List.of(word(firstAt, first), word(secondAt, second), word(thirdAt, third)));
     }
 
-    @When("{string} confirms the backup key with its last four characters")
-    public void confirmsTheBackupKeyWithItsLastFourCharacters(String alias) {
-        confirmsTheBackupKeyWithTheCharacters(alias, serverKey().lastCharacters().toLowerCase());
+    @Then("the answer asks for three different words of the key")
+    public void theAnswerAsksForThreeDifferentWordsOfTheKey() {
+        askedPositions = api.lastResponseJson().get("checkPositions").valueStream().map(JsonNode::asInt).toList();
+        assertThat(askedPositions).hasSize(3).doesNotHaveDuplicates().isSorted().allSatisfy(position -> assertThat(position).isBetween(1, 24));
+    }
+
+    @When("{string} confirms the backup key with the asked words")
+    public void confirmsTheBackupKeyWithTheAskedWords(String alias) {
+        List<String> words = serverKey().words();
+        confirmsTheBackupKeyWith(alias, askedPositions.stream().map(position -> word(position, words.get(position - 1).toUpperCase())).toList());
+    }
+
+    @When("{string} confirms the backup key with the asked words in the wrong order")
+    public void confirmsTheBackupKeyWithTheAskedWordsInTheWrongOrder(String alias) {
+        List<String> words = serverKey().words();
+        List<Integer> shifted = List.of(askedPositions.get(1), askedPositions.get(2), askedPositions.getFirst());
+        confirmsTheBackupKeyWith(alias, List.of(word(askedPositions.get(0), words.get(shifted.get(0) - 1)),
+                word(askedPositions.get(1), words.get(shifted.get(1) - 1)), word(askedPositions.get(2), words.get(shifted.get(2) - 1))));
     }
 
     @Given("{string} tried to confirm the backup key {int} times")
     public void triedToConfirmTheBackupKey(String alias, int times) {
         for (int i = 0; i < times; i++) {
-            confirmsTheBackupKeyWithTheCharacters(alias, "AAAA");
-            assertThat(api.lastResponse().getStatusCode().value()).withFailMessage("Confirming answered %s", api.lastResponse().getBody()).isEqualTo(400);
+            confirmsTheBackupKeyWithTheWords(alias, "abeceda", "abeceda", "abeceda", 1, 2, 3);
+            assertThat(api.lastResponse().getStatusCode().value()).withFailMessage("Confirming answered %s", api.lastResponse().getBody()).isEqualTo(409);
         }
+    }
+
+    private void confirmsTheBackupKeyWith(String alias, List<Map<String, Object>> words) {
+        sessions.actAs(alias);
+        api.post(KEY + "/confirmation", Map.of("words", words));
+    }
+
+    private static Map<String, Object> word(int position, String word) {
+        return Map.of("position", position, "word", word);
     }
 
     @Given("{string} tried to reveal the backup key with a wrong code {int} times")

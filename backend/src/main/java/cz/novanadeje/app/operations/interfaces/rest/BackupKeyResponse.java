@@ -1,11 +1,13 @@
 package cz.novanadeje.app.operations.interfaces.rest;
 
-import cz.novanadeje.app.operations.domain.backup.BackupKey;
+import cz.novanadeje.app.operations.application.backup.RevealedBackupKey;
 
-record BackupKeyResponse(String key) {
+import java.util.List;
 
-    static BackupKeyResponse of(BackupKey key) {
-        return new BackupKeyResponse(key.value());
+record BackupKeyResponse(String key, List<Integer> checkPositions) {
+
+    static BackupKeyResponse of(RevealedBackupKey revealed) {
+        return new BackupKeyResponse(revealed.key().value(), revealed.checkPositions().positions());
     }
 
     @Override

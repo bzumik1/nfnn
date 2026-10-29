@@ -3,23 +3,30 @@ package cz.novanadeje.app.operations.application.backup;
 import cz.novanadeje.app.operations.domain.backup.BackupKey;
 import cz.novanadeje.app.operations.domain.backup.BackupKeyCheckMismatch;
 import cz.novanadeje.app.operations.domain.backup.BackupKeyConfirmation;
+import cz.novanadeje.app.operations.domain.backup.BackupKeyConfirmationExpired;
 import cz.novanadeje.app.operations.domain.backup.BackupKeyRevealPaused;
 import cz.novanadeje.app.operations.domain.backup.BackupKeyUnavailable;
+import cz.novanadeje.app.operations.domain.backup.BackupKeyWordCheck;
+import cz.novanadeje.app.operations.domain.backup.BackupKeyWordPositions;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
 import cz.novanadeje.app.shared.application.event.BackupKeyRevealed;
 import cz.novanadeje.app.shared.application.secondfactor.FreshSecondFactor;
 import cz.novanadeje.app.shared.application.secondfactor.FreshSecondFactorProof;
 import cz.novanadeje.app.shared.domain.error.RuleViolation;
+import cz.novanadeje.app.support.MutableClock;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.context.ApplicationEventPublisher;
 
-import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.List;
 import java.util.Optional;
+import java.util.Random;
 import java.util.UUID;
+import java.util.stream.IntStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -29,6 +36,7 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
@@ -44,10 +52,23 @@ class BackupKeyServiceTest {
     private final FreshSecondFactor freshSecondFactor = mock(FreshSecondFactor.class);
     private final ApplicationEventPublisher events = mock(ApplicationEventPublisher.class);
     private final BackupKeyRevealRefusals refusals = mock(BackupKeyRevealRefusals.class);
-    private final Clock clock = Clock.fixed(NOW, ZoneOffset.UTC);
+    private static final List<String> WORDS = List.of("divoch", "komora", "probudit", "najednou", "dekl", "komando", "nikl", "odebrat",
+            "biograf", "bytovka", "dodnes", "mikrofon", "motivace", "naivita", "zdaleka", "ekonomie", "jeseter", "azyl", "atlas", "obyvatel",
+            "glazura", "vytesat", "moudrost", "studna");
+
+    private final MutableClock clock = new MutableClock(NOW, ZoneOffset.UTC);
+    private final BackupKeyWordChallenges challenges = new BackupKeyWordChallenges(new Random(20261029));
 
     private BackupKeyService service(Optional<BackupKey> key) {
-        return new BackupKeyService(() -> key, confirmations, freshSecondFactor, refusals, events, clock);
+        return new BackupKeyService(() -> key, confirmations, freshSecondFactor, refusals, challenges, events, clock);
+    }
+
+    private static List<BackupKeyWordCheck> wordsAt(BackupKeyWordPositions positions) {
+        return positions.positions().stream().map(position -> new BackupKeyWordCheck(position, WORDS.get(position - 1))).toList();
+    }
+
+    private static List<BackupKeyWordCheck> wrongWordsAt(BackupKeyWordPositions positions) {
+        return positions.positions().stream().map(position -> new BackupKeyWordCheck(position, WORDS.get(position % WORDS.size()))).toList();
     }
 
     @Test
@@ -73,15 +94,17 @@ class BackupKeyServiceTest {
     @Test
     @DisplayName("Given a fresh second factor, when the key is revealed, then the key comes back, the view is audited and the administrators are told")
     void should_reveal_key_when_revealed_given_fresh_second_factor() {
-        BackupKey revealed = service(Optional.of(KEY)).reveal(ADMIN, CODE);
+        RevealedBackupKey revealed = service(Optional.of(KEY)).reveal(ADMIN, CODE);
 
-        assertThat(revealed).isEqualTo(KEY);
+        assertThat(revealed.key()).isEqualTo(KEY);
+        assertThat(revealed.checkPositions().positions()).hasSize(3);
+        assertThat(revealed.toString()).doesNotContain(KEY.value());
         verify(freshSecondFactor).require(ADMIN, CODE);
         ArgumentCaptor<AdminActionPerformed> audited = ArgumentCaptor.forClass(AdminActionPerformed.class);
         verify(events).publishEvent(audited.capture());
         assertThat(audited.getValue().action()).isEqualTo(BackupKeyService.VIEW_BACKUP_KEY_ACTION);
         assertThat(audited.getValue().adminId()).isEqualTo(ADMIN);
-        assertThat(audited.getValue().details()).doesNotContain(KEY.value()).doesNotContain(KEY.lastCharacters());
+        assertThat(audited.getValue().details()).doesNotContain(KEY.value()).doesNotContain(WORDS.getFirst());
         verify(events).publishEvent(new BackupKeyRevealed(ADMIN, NOW));
     }
 
@@ -116,30 +139,80 @@ class BackupKeyServiceTest {
     }
 
     @Test
-    @DisplayName("Given the last four characters, when the administrator confirms the key is saved, then it counts as confirmed and is audited")
-    void should_confirm_when_confirmed_given_last_four_characters() {
-        BackupKeyView view = service(Optional.of(KEY)).confirm(ADMIN, "6gwh");
+    @DisplayName("Given a revealed key, when the administrator types its words at the asked positions, then it counts as confirmed and is audited")
+    void should_confirm_when_confirmed_given_words_at_asked_positions() {
+        BackupKeyService service = service(Optional.of(KEY));
+        BackupKeyWordPositions asked = service.reveal(ADMIN, CODE).checkPositions();
+        clock.advance(Duration.ofMinutes(29));
 
-        assertThat(view).isEqualTo(new BackupKeyView(true, true, Optional.of(NOW)));
-        assertThat(confirmations.find()).contains(BackupKeyConfirmation.of(KEY, NOW, Optional.of(ADMIN)));
+        BackupKeyView view = service.confirm(ADMIN, wordsAt(asked));
+
+        assertThat(view).isEqualTo(new BackupKeyView(true, true, Optional.of(clock.instant())));
+        assertThat(confirmations.find()).contains(BackupKeyConfirmation.of(KEY, clock.instant(), Optional.of(ADMIN)));
         ArgumentCaptor<AdminActionPerformed> audited = ArgumentCaptor.forClass(AdminActionPerformed.class);
-        verify(events).publishEvent(audited.capture());
+        verify(events, times(2)).publishEvent(audited.capture());
         assertThat(audited.getValue().action()).isEqualTo(BackupKeyService.CONFIRM_BACKUP_KEY_ACTION);
+        assertThatThrownBy(() -> service.confirm(ADMIN, wordsAt(asked))).isInstanceOf(BackupKeyConfirmationExpired.class);
     }
 
     @Test
-    @DisplayName("Given other characters, when the administrator confirms the key is saved, then it is refused and nothing changes")
-    void should_refuse_confirmation_when_confirmed_given_other_characters() {
-        assertThatThrownBy(() -> service(Optional.of(KEY)).confirm(ADMIN, "AAAA")).isInstanceOf(BackupKeyCheckMismatch.class);
+    @DisplayName("Given a revealed key, when the administrator types wrong words or words at other positions, then it is refused and nothing changes")
+    void should_refuse_confirmation_when_confirmed_given_wrong_words() {
+        BackupKeyService service = service(Optional.of(KEY));
+        BackupKeyWordPositions asked = service.reveal(ADMIN, CODE).checkPositions();
+        List<Integer> other = IntStream.rangeClosed(1, 24).boxed().filter(position -> !asked.positions().contains(position)).limit(3).toList();
+
+        assertThatThrownBy(() -> service.confirm(ADMIN, wrongWordsAt(asked))).isInstanceOf(BackupKeyCheckMismatch.class);
+        assertThatThrownBy(() -> service.confirm(ADMIN, wordsAt(new BackupKeyWordPositions(other)))).isInstanceOf(BackupKeyCheckMismatch.class);
+        assertThatThrownBy(() -> service.confirm(ADMIN, wordsAt(asked).subList(0, 2))).isInstanceOf(BackupKeyCheckMismatch.class);
 
         assertThat(confirmations.find()).isEmpty();
-        verifyNoInteractions(events);
+        assertThat(service.confirm(ADMIN, wordsAt(asked)).confirmed()).isTrue();
+    }
+
+    @Test
+    @DisplayName("Given five wrong attempts, when the administrator then types the right words, then the reveal has to be repeated")
+    void should_expire_confirmation_when_confirmed_given_five_wrong_attempts() {
+        BackupKeyService service = service(Optional.of(KEY));
+        BackupKeyWordPositions asked = service.reveal(ADMIN, CODE).checkPositions();
+        for (int attempt = 0; attempt < 5; attempt++) {
+            assertThatThrownBy(() -> service.confirm(ADMIN, wrongWordsAt(asked))).isInstanceOf(BackupKeyCheckMismatch.class);
+        }
+
+        assertThatThrownBy(() -> service.confirm(ADMIN, wordsAt(asked))).isInstanceOf(BackupKeyConfirmationExpired.class);
+        assertThat(confirmations.find()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Given no reveal or one older than half an hour, when the administrator confirms the key, then the reveal has to be repeated")
+    void should_expire_confirmation_when_confirmed_given_no_recent_reveal() {
+        BackupKeyService service = service(Optional.of(KEY));
+        assertThatThrownBy(() -> service.confirm(ADMIN, wordsAt(new BackupKeyWordPositions(List.of(1, 2, 3))))).isInstanceOf(BackupKeyConfirmationExpired.class);
+        BackupKeyWordPositions asked = service.reveal(ADMIN, CODE).checkPositions();
+        clock.advance(Duration.ofMinutes(30).plusSeconds(1));
+
+        assertThatThrownBy(() -> service.confirm(ADMIN, wordsAt(asked))).isInstanceOf(BackupKeyConfirmationExpired.class);
+        assertThat(confirmations.find()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Given the first setup, when it asks for the key and then confirms its words, then the key counts as confirmed by nobody in particular")
+    void should_confirm_in_setup_when_words_typed_given_key() {
+        BackupKeyService service = service(Optional.of(KEY));
+        RevealedBackupKey revealed = service.keyForSetup().orElseThrow();
+
+        assertThatThrownBy(() -> service.confirmInSetup(wrongWordsAt(revealed.checkPositions()), NOW)).isInstanceOf(BackupKeyCheckMismatch.class);
+        assertThatThrownBy(() -> service.confirmInSetup(List.of(), NOW)).isInstanceOf(BackupKeyCheckMismatch.class);
+        service.confirmInSetup(wordsAt(revealed.checkPositions()), NOW);
+
+        assertThat(revealed.key()).isEqualTo(KEY);
+        assertThat(confirmations.find()).contains(BackupKeyConfirmation.of(KEY, NOW, Optional.empty()));
     }
 
     @Test
     @DisplayName("Given no backup key, when the setup confirms it, then the setup goes on without a confirmation")
     void should_skip_confirmation_when_confirmed_in_setup_given_no_key() {
-        service(Optional.empty()).confirmInSetup(null, NOW);
+        service(Optional.empty()).confirmInSetup(List.of(), NOW);
 
         assertThat(confirmations.find()).isEmpty();
     }

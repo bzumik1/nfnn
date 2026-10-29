@@ -262,14 +262,30 @@ jobs:
           key_headers=$(curl -sS -D - -o "$RUNNER_TEMP/backup-key.json" --max-time 10 -H 'X-Forwarded-For: 203.0.113.7' -H "X-Nfnn-Setup-Code: $code" http://localhost:8089/api/operations/setup/backup-key)
           echo "$key_headers" | grep -qi '^Cache-Control: private, no-store' || { echo "::error::the backup key must not be cached"; echo "$key_headers"; exit 1; }
           backup_key=$(jq -r '.key' "$RUNNER_TEMP/backup-key.json")
-          rm -f "$RUNNER_TEMP/backup-key.json"
           [ "$backup_key" = "$(sudo grep -m 1 '^AGE-SECRET-KEY-' "$secrets/backup-key")" ] || { echo "::error::the setup must show the generated backup key"; exit 1; }
           echo "::add-mask::$backup_key"
-          key_check=$(printf '%s' "$backup_key" | tail -c 4)
-          mismatch=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 -H 'X-Forwarded-For: 203.0.113.7' -H 'Content-Type: application/json' --data "{\"code\":\"$code\",\"settings\":[],\"backupKeyCheck\":\"****\"}" http://localhost:8089/api/operations/setup)
-          [ "$mismatch" = 400 ] || { echo "::error::the setup must refuse other characters than the end of the backup key (got $mismatch)"; exit 1; }
+          [ "$(jq -c '.checkPositions | length' "$RUNNER_TEMP/backup-key.json")" = 3 ] || { echo "::error::the setup must ask for three words of the backup key"; exit 1; }
+          key_words=$(BACKUP_KEY_TEXT="$backup_key" CHECK_POSITIONS="$(jq -c '.checkPositions' "$RUNNER_TEMP/backup-key.json")" python3 - backend/src/main/resources/cz/novanadeje/app/operations/domain/backup/bip39-czech.txt <<'PY'
+          import hashlib, json, os, sys
+          alphabet = 'qpzry9x8gf2tvdw0s3jn54khce6mua7l'
+          text = os.environ['BACKUP_KEY_TEXT'].lower()
+          accumulator, bits, key = 0, 0, []
+          for character in text[text.rfind('1') + 1:-6]:
+              accumulator, bits = (accumulator << 5) | alphabet.index(character), bits + 5
+              if bits >= 8:
+                  bits -= 8
+                  key.append((accumulator >> bits) & 255)
+          wordlist = open(sys.argv[1]).read().split()
+          number = int.from_bytes(bytes(key) + hashlib.sha256(bytes(key)).digest()[:1], 'big')
+          words = [wordlist[(number >> (11 * (23 - index))) & 2047] for index in range(24)]
+          print(json.dumps([{'position': position, 'word': words[position - 1]} for position in json.loads(os.environ['CHECK_POSITIONS'])]))
+          PY
+          )
+          mismatch=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 -H 'X-Forwarded-For: 203.0.113.7' -H 'Content-Type: application/json' --data "{\"code\":\"$code\",\"settings\":[],\"backupKeyWords\":[{\"position\":1,\"word\":\"****\"},{\"position\":2,\"word\":\"****\"},{\"position\":3,\"word\":\"****\"}]}" http://localhost:8089/api/operations/setup)
+          rm -f "$RUNNER_TEMP/backup-key.json"
+          [ "$mismatch" = 400 ] || { echo "::error::the setup must refuse words that are not the backup key's (got $mismatch)"; exit 1; }
           restarts=$(docker inspect -f '{{.RestartCount}}' nfnn-backend)
-          saved=$(curl -fsS --max-time 30 -H 'X-Forwarded-For: 203.0.113.7' -H 'Content-Type: application/json' --data "{\"code\":\"$code\",\"backupKeyCheck\":\"$key_check\",\"settings\":[{\"name\":\"PUBLIC_URL\",\"value\":\"http://localhost:8089\"},{\"name\":\"MAIL_HOST\",\"value\":\"localhost\"},{\"name\":\"MAIL_PORT\",\"value\":\"1025\"},{\"name\":\"MAIL_FROM\",\"value\":\"info@nfnn.cz\"},{\"name\":\"CONTACT_RECIPIENT\",\"value\":\"info@nfnn.cz\"},{\"name\":\"ADMIN_EMAILS\",\"value\":\"spravce@example.cz\"},{\"name\":\"MAIL_PASSWORD\",\"value\":\"not-a-real-password\"}]}" http://localhost:8089/api/operations/setup)
+          saved=$(curl -fsS --max-time 30 -H 'X-Forwarded-For: 203.0.113.7' -H 'Content-Type: application/json' --data "{\"code\":\"$code\",\"backupKeyWords\":$key_words,\"settings\":[{\"name\":\"PUBLIC_URL\",\"value\":\"http://localhost:8089\"},{\"name\":\"MAIL_HOST\",\"value\":\"localhost\"},{\"name\":\"MAIL_PORT\",\"value\":\"1025\"},{\"name\":\"MAIL_FROM\",\"value\":\"info@nfnn.cz\"},{\"name\":\"CONTACT_RECIPIENT\",\"value\":\"info@nfnn.cz\"},{\"name\":\"ADMIN_EMAILS\",\"value\":\"spravce@example.cz\"},{\"name\":\"MAIL_PASSWORD\",\"value\":\"not-a-real-password\"}]}" http://localhost:8089/api/operations/setup)
           echo "$saved" | jq -e '.restarting == true' > /dev/null || { echo "::error::the setup was not saved: $saved"; exit 1; }
           echo "The backend restarts with the stored settings"
           for _ in $(seq 90); do

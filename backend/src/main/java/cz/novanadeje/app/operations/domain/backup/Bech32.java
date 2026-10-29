@@ -1,6 +1,7 @@
 package cz.novanadeje.app.operations.domain.backup;
 
 import java.util.Locale;
+import java.util.Optional;
 
 final class Bech32 {
 
@@ -13,26 +14,88 @@ final class Bech32 {
     }
 
     static boolean holds(String text, String humanReadablePart, int byteCount) {
+        return decode(text, humanReadablePart, byteCount).isPresent();
+    }
+
+    static Optional<byte[]> decode(String text, String humanReadablePart, int byteCount) {
         String lower = text.toLowerCase(Locale.ROOT);
         int separator = lower.lastIndexOf(SEPARATOR);
         if (separator < 1 || !lower.substring(0, separator).equals(humanReadablePart)) {
-            return false;
+            return Optional.empty();
         }
         String encoded = lower.substring(separator + 1);
         if (encoded.length() < CHECKSUM_LENGTH) {
-            return false;
+            return Optional.empty();
         }
         int[] values = new int[encoded.length()];
         for (int i = 0; i < encoded.length(); i++) {
             values[i] = CHARSET.indexOf(encoded.charAt(i));
             if (values[i] < 0) {
-                return false;
+                return Optional.empty();
             }
         }
-        return checksumHolds(humanReadablePart, values) && carriesBytes(values, values.length - CHECKSUM_LENGTH, byteCount);
+        int dataLength = values.length - CHECKSUM_LENGTH;
+        if (!checksumHolds(humanReadablePart, values) || !carriesBytes(values, dataLength, byteCount)) {
+            return Optional.empty();
+        }
+        return Optional.of(toBytes(values, dataLength, byteCount));
+    }
+
+    static String encode(String humanReadablePart, byte[] bytes) {
+        int[] data = toFiveBitValues(bytes);
+        int[] withChecksum = new int[data.length + CHECKSUM_LENGTH];
+        System.arraycopy(data, 0, withChecksum, 0, data.length);
+        int polymod = polymod(humanReadablePart, withChecksum) ^ 1;
+        for (int i = 0; i < CHECKSUM_LENGTH; i++) {
+            withChecksum[data.length + i] = (polymod >>> (5 * (CHECKSUM_LENGTH - 1 - i))) & 31;
+        }
+        StringBuilder text = new StringBuilder(humanReadablePart).append(SEPARATOR);
+        for (int value : withChecksum) {
+            text.append(CHARSET.charAt(value));
+        }
+        return text.toString();
+    }
+
+    private static byte[] toBytes(int[] values, int dataLength, int byteCount) {
+        byte[] bytes = new byte[byteCount];
+        int accumulator = 0;
+        int bits = 0;
+        int next = 0;
+        for (int i = 0; i < dataLength && next < byteCount; i++) {
+            accumulator = (accumulator << 5) | values[i];
+            bits += 5;
+            if (bits >= 8) {
+                bits -= 8;
+                bytes[next++] = (byte) ((accumulator >>> bits) & 0xff);
+            }
+        }
+        return bytes;
+    }
+
+    private static int[] toFiveBitValues(byte[] bytes) {
+        int[] values = new int[(bytes.length * 8 + 4) / 5];
+        int accumulator = 0;
+        int bits = 0;
+        int next = 0;
+        for (byte value : bytes) {
+            accumulator = (accumulator << 8) | (value & 0xff);
+            bits += 8;
+            while (bits >= 5) {
+                bits -= 5;
+                values[next++] = (accumulator >>> bits) & 31;
+            }
+        }
+        if (bits > 0) {
+            values[next] = (accumulator << (5 - bits)) & 31;
+        }
+        return values;
     }
 
     private static boolean checksumHolds(String humanReadablePart, int[] values) {
+        return polymod(humanReadablePart, values) == 1;
+    }
+
+    private static int polymod(String humanReadablePart, int[] values) {
         int checksum = 1;
         for (int i = 0; i < humanReadablePart.length(); i++) {
             checksum = step(checksum, humanReadablePart.charAt(i) >> 5);
@@ -44,7 +107,7 @@ final class Bech32 {
         for (int value : values) {
             checksum = step(checksum, value);
         }
-        return checksum == 1;
+        return checksum;
     }
 
     private static int step(int checksum, int value) {
