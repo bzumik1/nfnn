@@ -819,7 +819,7 @@ describe('Given the sign-in dialog', () => {
       beforeEach(async () => {
         await click('.type-switch button:nth-child(2)');
         await fillIn('#register-name', 'Stavby Novák s.r.o.');
-        await fillIn('#register-email', 'ucetni@stavby.cz');
+        await fillIn('#register-email', 'ucetni@stavby.example.cz');
         await fillIn('#register-password', 'correct horse battery');
         fixture.destroy();
         dialog.close();
@@ -830,7 +830,7 @@ describe('Given the sign-in dialog', () => {
 
         expect(element('.type-switch button.is-active').textContent).toContain('Firma');
         expect(element<HTMLInputElement>('#register-name').value).toBe('Stavby Novák s.r.o.');
-        expect(element<HTMLInputElement>('#register-email').value).toBe('ucetni@stavby.cz');
+        expect(element<HTMLInputElement>('#register-email').value).toBe('ucetni@stavby.example.cz');
         expect(element<HTMLInputElement>('#register-password').value).toBe('');
       });
     });
@@ -867,7 +867,7 @@ describe('Given the sign-in dialog', () => {
       await fillIn('#register-street', 'Průmyslová 5');
       await fillIn('#register-city', 'Teplice');
       await fillIn('#register-postal-code', '415 01');
-      await fillIn('#register-email', 'ucetni@stavby.cz');
+      await fillIn('#register-email', 'ucetni@stavby.example.cz');
       await fillIn('#register-password', 'correct horse battery');
 
       await submit('.register-form');

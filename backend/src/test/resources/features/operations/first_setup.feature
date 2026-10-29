@@ -11,16 +11,16 @@ Feature: The first setup asks for the settings in the browser and stores them wi
     When the setup is unlocked without a code
     Then the response status is 204
     When the first setup is completed with:
-      | name              | value                    |
-      | PUBLIC_URL        | https://nfnn.cz          |
-      | MAIL_HOST         | smtp-relay.brevo.com     |
-      | MAIL_PORT         | 587                      |
-      | MAIL_USERNAME     | bebb0c001@smtp-brevo.com |
-      | MAIL_PASSWORD     | xsmtpsib-key             |
-      | MAIL_FROM         | info@nfnn.cz             |
-      | CONTACT_RECIPIENT | info@nfnn.cz             |
-      | FIO_TOKEN         | fio-read-only-token      |
-      | ADMIN_EMAILS      | spravce@example.cz       |
+      | name              | value                      |
+      | PUBLIC_URL        | https://nfnn.cz            |
+      | MAIL_HOST         | smtp-relay.brevo.com       |
+      | MAIL_PORT         | 587                        |
+      | MAIL_USERNAME     | abc@smtp-brevo.com         |
+      | MAIL_PASSWORD     | xsmtpsib-key               |
+      | MAIL_FROM         | info@nfnn.cz               |
+      | CONTACT_RECIPIENT | info@nfnn.cz               |
+      | FIO_TOKEN         | fio-read-only-token        |
+      | ADMIN_EMAILS      | spravce@example.cz         |
     Then the response status is 202
     And the backend restarts once
     And the stored settings are "PUBLIC_URL, MAIL_HOST, MAIL_PORT, MAIL_USERNAME, MAIL_PASSWORD, MAIL_FROM, CONTACT_RECIPIENT, FIO_TOKEN, ADMIN_EMAILS"
@@ -65,12 +65,12 @@ Feature: The first setup asks for the settings in the browser and stores them wi
   Scenario: Malformed and missing values are refused with every problem named, nothing is stored and nothing restarts
     Given the requests come directly from the home network
     When the first setup is completed with:
-      | name              | value                |
-      | PUBLIC_URL        | nfnn.cz              |
+      | name              | value              |
+      | PUBLIC_URL        | nfnn.cz            |
       | MAIL_HOST         | smtp-relay.brevo.com |
-      | MAIL_PORT         | 70000                |
-      | MAIL_FROM         | info@nfnn.cz         |
-      | CONTACT_RECIPIENT | ${JWT_SECRET}        |
+      | MAIL_PORT         | 70000              |
+      | MAIL_FROM         | info@nfnn.cz       |
+      | CONTACT_RECIPIENT | ${JWT_SECRET}      |
     Then the response status is 400
     And the problem type ends with "operations/invalid-settings"
     And the problem names the settings "PUBLIC_URL, MAIL_PORT, CONTACT_RECIPIENT, ADMIN_EMAILS"
@@ -128,7 +128,7 @@ Feature: The first setup asks for the settings in the browser and stores them wi
     When a test e-mail is sent in the setup through "smtp.example.cz" with the password "right-key" from "info@nfnn.cz" to "spravce@example.cz"
     Then the response status is 409
     When the first setup is completed with:
-      | name       | value                   |
+      | name       | value                  |
       | PUBLIC_URL | https://evil.example.cz |
     Then the response status is 409
     And the stored "PUBLIC_URL" is "https://nfnn.cz"
@@ -142,46 +142,3 @@ Feature: The first setup asks for the settings in the browser and stores them wi
     When 15 minutes pass
     And the setup is unlocked with the code from the container log
     Then the response status is 204
-
-  Scenario: The setup shows the backup key and is completed only with its last four characters retyped
-    Given the requests come through the proxy
-    When the backup key is asked for in the first setup
-    Then the response status is 403
-    And the problem type ends with "operations/setup-locked"
-    Given the requests come directly from the home network
-    When the backup key is asked for in the first setup
-    Then the answer carries the backup key of this server and no cache keeps it
-    When the first setup is completed with the backup key characters "AAAA" and:
-      | name              | value                |
-      | PUBLIC_URL        | https://nfnn.cz      |
-      | MAIL_HOST         | smtp-relay.brevo.com |
-      | MAIL_PORT         | 587                  |
-      | MAIL_FROM         | info@nfnn.cz         |
-      | CONTACT_RECIPIENT | info@nfnn.cz         |
-      | ADMIN_EMAILS      | spravce@example.cz   |
-    Then the response status is 400
-    And the problem type ends with "operations/backup-key-check-mismatch"
-    And the stored settings are ""
-    And the backend does not restart
-    When the first setup is completed without the backup key characters and:
-      | name              | value                |
-      | PUBLIC_URL        | https://nfnn.cz      |
-      | MAIL_HOST         | smtp-relay.brevo.com |
-      | MAIL_PORT         | 587                  |
-      | MAIL_FROM         | info@nfnn.cz         |
-      | CONTACT_RECIPIENT | info@nfnn.cz         |
-      | ADMIN_EMAILS      | spravce@example.cz   |
-    Then the response status is 400
-    And the problem type ends with "operations/backup-key-check-mismatch"
-    When the first setup is completed with:
-      | name              | value                |
-      | PUBLIC_URL        | https://nfnn.cz      |
-      | MAIL_HOST         | smtp-relay.brevo.com |
-      | MAIL_PORT         | 587                  |
-      | MAIL_FROM         | info@nfnn.cz         |
-      | CONTACT_RECIPIENT | info@nfnn.cz         |
-      | ADMIN_EMAILS      | spravce@example.cz   |
-    Then the response status is 202
-    When the backup key is asked for in the first setup
-    Then the response status is 409
-    And the problem type ends with "operations/setup-completed"

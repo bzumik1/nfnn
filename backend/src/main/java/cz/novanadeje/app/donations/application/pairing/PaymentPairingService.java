@@ -166,8 +166,7 @@ public class PaymentPairingService {
         learned.ifPresent(link -> {
             if (donorRecords.saveSenderAccountLink(donor.id(), link)) {
                 tally.accountsLearned++;
-                log.debug("Donor {} learned sender account {} from bank payment {}", donor.id(), link.account().display(),
-                        payment.transactionId());
+                log.debug("Donor {} learned sender account link {} from bank payment {}", donor.id(), link.id(), payment.transactionId());
             }
         });
         return learned;
@@ -242,8 +241,8 @@ public class PaymentPairingService {
 
     private static void leaveUnpaired(BankPayment payment, UnpairedReason reason, Tally tally) {
         tally.leftUnpaired++;
-        log.debug("Bank payment {} stays unpaired: {} (symbol {}, sender {})", payment.transactionId(), reason,
-                payment.variableSymbol().orElse("none"), payment.sender().map(SenderAccount::display).orElse("none"));
+        log.debug("Bank payment {} stays unpaired: {} (variable symbol {}, sender account {})", payment.transactionId(), reason,
+                payment.variableSymbol().isPresent() ? "given" : "missing", payment.sender().isPresent() ? "given" : "missing");
     }
 
     private static final class Tally {

@@ -103,12 +103,12 @@ class DonorRegistrationServiceTest {
     @Test
     @DisplayName("Given a free email, when a company registers, then the stored donor carries the identification number and the preferred locale")
     void should_store_company_identifier_and_locale_when_registered_given_company() {
-        when(donors.findByEmail(new EmailAddress("info@stavby.cz"))).thenReturn(Optional.empty());
+        when(donors.findByEmail(new EmailAddress("info@stavby.example.cz"))).thenReturn(Optional.empty());
         when(donors.existsByVariableSymbol(any())).thenReturn(false);
         when(passwordHasher.hash(new RawPassword("correct horse battery"))).thenReturn(new PasswordHash("$hash"));
 
         service.register(new RegisterDonorCommand(DonorType.COMPANY, "Stavby Novák s.r.o.", "45274649", "Dlouhá 12", "Ústí nad Labem", "400 01",
-                "info@stavby.cz", "correct horse battery", "en"));
+                "info@stavby.example.cz", "correct horse battery", "en"));
 
         ArgumentCaptor<Donor> stored = ArgumentCaptor.forClass(Donor.class);
         verify(donors).save(stored.capture());
