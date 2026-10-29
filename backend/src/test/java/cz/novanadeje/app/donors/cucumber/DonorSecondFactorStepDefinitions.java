@@ -6,6 +6,7 @@ import cz.novanadeje.app.cucumber.ScenarioDonors;
 import cz.novanadeje.app.cucumber.SecondFactorEnrolments;
 import cz.novanadeje.app.cucumber.TotpCodes;
 import cz.novanadeje.app.shared.QrCodes;
+import cz.novanadeje.app.support.RecordingMailSender;
 import io.cucumber.java.en.And;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
@@ -40,11 +41,12 @@ public class DonorSecondFactorStepDefinitions {
     private final DonorAccountStepDefinitions accounts;
     private final DonorSessions sessions;
     private final ScenarioDonors scenarioDonors;
+    private final RecordingMailSender mailSender;
     private String secret;
     private String challenge;
 
     public DonorSecondFactorStepDefinitions(ApiClient api, TotpCodes totpCodes, JdbcClient jdbc, Clock clock, DonorAccountStepDefinitions accounts,
-                                            DonorSessions sessions, ScenarioDonors scenarioDonors) {
+                                            DonorSessions sessions, ScenarioDonors scenarioDonors, RecordingMailSender mailSender) {
         this.api = api;
         this.totpCodes = totpCodes;
         this.jdbc = jdbc;
@@ -52,6 +54,7 @@ public class DonorSecondFactorStepDefinitions {
         this.accounts = accounts;
         this.sessions = sessions;
         this.scenarioDonors = scenarioDonors;
+        this.mailSender = mailSender;
     }
 
     @Given("the donor with email {string} is given the administrator role")
@@ -98,6 +101,7 @@ public class DonorSecondFactorStepDefinitions {
         theDonorConfirmsTheSecondFactorWithTheCurrentCode();
         assertThat(api.lastResponse().getStatusCode().value()).withFailMessage("Confirmation answered %s", api.lastResponse().getBody()).isEqualTo(200);
         accounts.theResponseCarriesAnAccessTokenAndARefreshCookie();
+        mailSender.forgetOnceSent(SecondFactorEnrolments.ENABLED_NOTICE_SUBJECT);
     }
 
     @When("the donor turns the second factor off with password {string} and the current code")
