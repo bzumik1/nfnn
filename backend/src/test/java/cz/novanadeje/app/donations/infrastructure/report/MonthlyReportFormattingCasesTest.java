@@ -24,7 +24,7 @@ class MonthlyReportFormattingCasesTest {
     private static final List<Long> AMOUNTS = List.of(0L, 1L, 50L, 100L, 50000L, 100050L, 99999999L, 100000000L, 1234567890L);
     private static final List<Long> COUNTS = List.of(0L, 1L, 999L, 1000L, 1234567L);
     private static final List<String> MONTHS = List.of("2026-01", "2026-02", "2026-03", "2026-05", "2026-07", "2026-11", "2026-12");
-    private static final List<String> DATES = List.of("2026-01-01", "2026-02-28", "2026-10-05", "2026-12-31");
+    private static final List<String> DATES = List.of("2026-01-01", "2026-02-28", "2026-10-05", "2026-12-31", "2028-02-29");
     private static final List<String> TIMES = List.of("2026-01-15T09:05:00Z", "2026-03-29T00:59:00Z", "2026-03-29T01:00:00Z", "2026-07-31T22:30:00Z",
             "2026-10-25T00:59:00Z", "2026-10-25T01:00:00Z", "2026-12-31T22:59:00Z", "2026-12-31T23:00:00Z");
 
@@ -49,7 +49,7 @@ class MonthlyReportFormattingCasesTest {
     private static ObjectNode cases() {
         ArrayNode cases = NODES.arrayNode();
         for (long amount : AMOUNTS) {
-            cases.add(entry(amount + " hellers", input("amount").put("amountMinor", amount), MonthlyReportFormats.amount(Money.czk(amount))));
+            cases.add(entry(hellers(amount), input("amount").put("amountMinor", amount), MonthlyReportFormats.amount(Money.czk(amount))));
         }
         for (long count : COUNTS) {
             cases.add(entry("a count of " + count, input("count").put("count", count), MonthlyReportFormats.count(count)));
@@ -70,6 +70,10 @@ class MonthlyReportFormattingCasesTest {
                 + "and year; dates d. M. yyyy; bank times as d. M. yyyy H:mm in Prague time. input.format names the formatter, expected.text is the printed text");
         file.set("cases", cases);
         return file;
+    }
+
+    private static String hellers(long amount) {
+        return amount == 1 ? "1 heller" : amount + " hellers";
     }
 
     private static ObjectNode input(String format) {

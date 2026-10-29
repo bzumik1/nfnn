@@ -65,9 +65,9 @@ class ReceiptFormattingCasesTest {
     private static ObjectNode cases() {
         ArrayNode cases = NODES.arrayNode();
         for (long amount : AMOUNTS) {
-            cases.add(entry(amount + " hellers in Czech", input("czechAmount").put("amountMinor", amount),
+            cases.add(entry(hellers(amount) + " in Czech", input("czechAmount").put("amountMinor", amount),
                     ReceiptFormats.czechAmount(Money.czk(amount))));
-            cases.add(entry(amount + " hellers in English", input("englishAmount").put("amountMinor", amount),
+            cases.add(entry(hellers(amount) + " in English", input("englishAmount").put("amountMinor", amount),
                     ReceiptFormats.englishAmount(Money.czk(amount))));
         }
         for (String date : DATES) {
@@ -119,6 +119,10 @@ class ReceiptFormattingCasesTest {
         entry.set("input", input);
         entry.set("expected", expected);
         return entry;
+    }
+
+    private static String hellers(long amount) {
+        return amount == 1 ? "1 heller" : amount + " hellers";
     }
 
     private static ObjectNode input(String format) {

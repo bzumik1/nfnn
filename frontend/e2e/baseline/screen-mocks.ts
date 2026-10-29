@@ -421,16 +421,22 @@ const adminAnswers: Record<string, unknown> = {
   '/api/admin/operations/settings': fictionalSettings,
   '/api/admin/content/news': { items: [article, draft] },
   '/api/admin/content/projects': { items: [project] },
+  [`/api/admin/content/news/${article.id}`]: article,
+  [`/api/admin/content/projects/${project.id}`]: project,
 };
 
 export const PETR_DETAIL_PATH = `/sprava/darci/${PETR_ID}`;
 
-export async function mockPublicContent(page: Page): Promise<void> {
+async function mockMedia(page: Page): Promise<void> {
   const cover = readFileSync(join(process.cwd(), 'public', 'images', 'news-1.webp'));
   await page.route(
     (url) => url.pathname.startsWith('/api/content/media/'),
     (route) => route.fulfill({ contentType: 'image/webp', body: cover }),
   );
+}
+
+export async function mockPublicContent(page: Page): Promise<void> {
+  await mockMedia(page);
   await page.route(
     (url) => url.pathname === '/api/content/home',
     (route) => route.fulfill({ json: { news: [article], projects: [project] } }),
@@ -457,6 +463,7 @@ export async function mockPublicContent(page: Page): Promise<void> {
 
 export async function mockAdministration(page: Page): Promise<void> {
   await routeLogsApi(page);
+  await mockMedia(page);
   await page.route(
     (url) => url.pathname in adminAnswers,
     (route) => route.fulfill({ json: adminAnswers[new URL(route.request().url()).pathname] }),

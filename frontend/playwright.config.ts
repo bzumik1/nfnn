@@ -11,7 +11,6 @@ const served = process.env.E2E_DIST ?? builtApp;
 
 export default defineConfig({
   testDir: './e2e',
-  snapshotPathTemplate: `${process.env.BASELINE_SCREENS_DIR ?? join(tmpdir(), 'nfnn-baseline-screens')}/{arg}{ext}`,
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   failOnFlakyTests: !!process.env.CI,
@@ -22,7 +21,20 @@ export default defineConfig({
     baseURL: process.env.E2E_BASE_URL ?? 'http://localhost:4200',
     trace: 'on-first-retry',
   },
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
+  projects: [
+    { name: 'chromium', testIgnore: /baseline\//, use: { ...devices['Desktop Chrome'] } },
+    {
+      name: 'baseline',
+      testMatch: /baseline\/.*\.spec\.ts$/,
+      snapshotPathTemplate: `${process.env.BASELINE_SCREENS_DIR ?? join(tmpdir(), 'nfnn-baseline-screens')}/{arg}{ext}`,
+      use: {
+        ...devices['Desktop Chrome'],
+        launchOptions: {
+          env: { ...process.env, LANG: 'cs_CZ.UTF-8', LANGUAGE: 'cs', LC_ALL: 'cs_CZ.UTF-8' },
+        },
+      },
+    },
+  ],
   webServer: process.env.E2E_BASE_URL
     ? undefined
     : {

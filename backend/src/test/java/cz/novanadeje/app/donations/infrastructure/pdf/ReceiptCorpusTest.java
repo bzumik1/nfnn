@@ -34,6 +34,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestFactory;
+import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.ArrayNode;
 import tools.jackson.databind.node.JsonNodeFactory;
@@ -65,6 +66,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.TreeSet;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -88,6 +91,7 @@ class ReceiptCorpusTest {
 
     static final String CORPUS = "regression/v2/receipts";
     static final String REFUSALS = CORPUS + "/refusals.json";
+    static final String DIGESTS = CORPUS + "/digests.json";
     private static final Path HISTORY = Path.of("src/test/resources/receipts/history");
     private static final Path PREVIEW = Path.of("build/receipt-corpus");
     private static final String HISTORY_TEMPLATE = "7b30974aef2fdaf01f6e4990c8c4b526a0de8d8371452023be783677b69bf7e7";
@@ -96,6 +100,11 @@ class ReceiptCorpusTest {
     private static final Signatory FICTIONAL_SIGNATORY = new Signatory("Petr Vzorový", SIGNATORY.role());
     private static final JsonNodeFactory NODES = JsonNodeFactory.instance;
     private static final JsonMapper JSON = JsonMapper.builder().build();
+    private static final String SAMPLE_LOGIC = "A receipt v2 freezes (ThymeleafPdfReceiptRenderer.freeze: data is the frozen JSON) and renders (render, at renderer.issuedAt): "
+            + "the PDF's page count and fonts (PDFBox; a subset prefix is dropped), each page's size in points and its text lines (PDFTextStripper per page, "
+            + "every line stripped, empty lines dropped, U+00A0 written as a space). The PDF's and the page rasters' digests depend on the PDF libraries "
+            + "and the JDK, so they are kept apart in digests.json";
+    private static final Map<String, Rendered> RENDERED = new ConcurrentHashMap<>();
     private static final List<String> HISTORY_SAMPLES = List.of("single-person-cs", "yearly-person-en", "single-company-replacement-cs",
             "yearly-person-many-gifts-cs");
 
@@ -107,11 +116,19 @@ class ReceiptCorpusTest {
     }
 
     @Test
-    @DisplayName("Given the corpus folder, when it is listed, then it holds one file per sample and the refusals, nothing else")
-    void should_hold_one_file_per_sample_and_the_refusals_when_the_corpus_folder_is_listed() throws IOException {
+    @EnabledIfSystemProperty(named = "golden.files", matches = "write|digests")
+    @DisplayName("Given the receipt corpus on the recording machine, when v2 renders every sample, then the PDF digests and the page raster digests equal the recorded ones")
+    void should_equal_the_recorded_digests_when_v2_renders_every_sample_on_the_recording_machine() {
+        GoldenFiles.assertMatches(DIGESTS, digests());
+    }
+
+    @Test
+    @DisplayName("Given the corpus folder, when it is listed, then it holds one file per sample, the refusals and the digests, nothing else")
+    void should_hold_one_file_per_sample_the_refusals_and_the_digests_when_the_corpus_folder_is_listed() throws IOException {
         TreeSet<String> expected = new TreeSet<>();
         samples().forEach(sample -> expected.add(sample.name() + ".json"));
         expected.add("refusals.json");
+        expected.add("digests.json");
 
         try (Stream<Path> files = Files.list(GoldenFiles.repositoryRoot().resolve(CORPUS))) {
             assertThat(files.map(file -> file.getFileName().toString()).sorted().toList()).containsExactlyElementsOf(expected);
@@ -125,7 +142,7 @@ class ReceiptCorpusTest {
         samples().forEach(sample -> byName.put(sample.name(), sample));
 
         for (String name : HISTORY_SAMPLES) {
-            Rendered rendered = render(byName.get(name));
+            Rendered rendered = rendered(byName.get(name));
             ObjectNode history = (ObjectNode) JSON.readTree(Files.readString(HISTORY.resolve(HISTORY_TEMPLATE).resolve(name + ".data.json"), StandardCharsets.UTF_8));
             history.put("signatoryName", FICTIONAL_SIGNATORY.name());
             String recordedText = Files.readString(HISTORY.resolve(HISTORY_TEMPLATE).resolve(name + ".txt"), StandardCharsets.UTF_8)
@@ -147,7 +164,10 @@ class ReceiptCorpusTest {
     @DisplayName("Given every sample, when it is frozen and rendered twice, then both runs give the same data, the same PDF bytes and the same page rasters")
     void should_give_identical_output_when_every_sample_is_rendered_twice() {
         for (Sample sample : samples()) {
-            assertThat(GoldenFiles.canonical(corpusEntry(sample))).as(sample.name()).isEqualTo(GoldenFiles.canonical(corpusEntry(sample)));
+            Rendered first = render(sample);
+            Rendered second = render(sample);
+            assertThat(GoldenFiles.canonical(corpusEntry(sample, second))).as(sample.name()).isEqualTo(GoldenFiles.canonical(corpusEntry(sample, first)));
+            assertThat(GoldenFiles.canonical(digestsOf(sample, second))).as(sample.name()).isEqualTo(GoldenFiles.canonical(digestsOf(sample, first)));
         }
     }
 
@@ -166,7 +186,8 @@ class ReceiptCorpusTest {
                 receivedFromJana(LocalDate.of(2026, 3, 15), 50000), FOUNDATION, FICTIONAL_SIGNATORY, FIRST_NUMBER, TODAY, LocaleCode.CS, Optional.empty()));
         ObjectNode file = NODES.objectNode();
         file.put("source", Baseline.SOURCE);
-        file.put("logic", "Receipts that ReceiptDocumentFactory refuses to put together, with the refusal's message; v2 never renders them");
+        file.put("logic", "Receipts that ReceiptDocumentFactory refuses to put together, with the refusal's message (ids written <id>); v2 never renders them. "
+                + "The cases have no input: the name says what was attempted, and the documents are built in ReceiptCorpusTest from the receipt fixtures");
         file.set("cases", cases);
 
         GoldenFiles.assertMatches(REFUSALS, file);
@@ -181,9 +202,13 @@ class ReceiptCorpusTest {
     }
 
     private static ObjectNode corpusEntry(Sample sample) {
-        Rendered rendered = render(sample);
+        return corpusEntry(sample, rendered(sample));
+    }
+
+    private static ObjectNode corpusEntry(Sample sample, Rendered rendered) {
         ObjectNode entry = NODES.objectNode();
         entry.put("source", Baseline.SOURCE);
+        entry.put("logic", SAMPLE_LOGIC);
         entry.put("sample", sample.name());
         entry.put("description", sample.description());
         ObjectNode renderer = entry.putObject("renderer");
@@ -194,7 +219,6 @@ class ReceiptCorpusTest {
         renderer.put("signatureImage", sample.signature().isPresent());
         entry.set("data", JSON.readTree(rendered.snapshot().data()));
         ObjectNode pdf = entry.putObject("pdf");
-        pdf.put("sha256", rendered.sha256());
         pdf.put("pageCount", rendered.pages().size());
         ArrayNode fonts = pdf.putArray("fonts");
         rendered.fonts().forEach(fonts::add);
@@ -204,15 +228,42 @@ class ReceiptCorpusTest {
             node.put("number", page.number());
             node.put("widthPt", page.widthPt());
             node.put("heightPt", page.heightPt());
-            ObjectNode raster = node.putObject("raster");
-            raster.put("dpi", DPI);
-            raster.put("width", page.rasterWidth());
-            raster.put("height", page.rasterHeight());
-            raster.put("rgbSha256", page.rasterSha256());
             ArrayNode lines = node.putArray("lines");
             page.lines().forEach(lines::add);
         }
         return entry;
+    }
+
+    private static ObjectNode digests() {
+        ObjectNode file = NODES.objectNode();
+        file.put("source", Baseline.SOURCE);
+        file.put("logic", "The digests of each corpus sample as rendered on the recording machine: the SHA-256 of the PDF's bytes and, per page, of its "
+                + "raster (PDFBox PDFRenderer at " + DPI + " DPI, RGB, every pixel as a big-endian int without alpha). They change with the PDF libraries "
+                + "and the JDK, so only scripts/record-baseline-data.sh checks them (GOLDEN_FILES=digests); compare page text and the look by eye before "
+                + "recording them again. The rendered PDFs and page PNGs are kept beside the screens, in receipts/");
+        ArrayNode samples = file.putArray("samples");
+        samples().forEach(sample -> samples.add(digestsOf(sample, rendered(sample))));
+        return file;
+    }
+
+    private static ObjectNode digestsOf(Sample sample, Rendered rendered) {
+        ObjectNode node = NODES.objectNode();
+        node.put("sample", sample.name());
+        node.put("pdfSha256", rendered.sha256());
+        ArrayNode pages = node.putArray("pages");
+        for (Page page : rendered.pages()) {
+            ObjectNode raster = pages.addObject();
+            raster.put("number", page.number());
+            raster.put("dpi", DPI);
+            raster.put("width", page.rasterWidth());
+            raster.put("height", page.rasterHeight());
+            raster.put("rgbSha256", page.rasterSha256());
+        }
+        return node;
+    }
+
+    private static Rendered rendered(Sample sample) {
+        return RENDERED.computeIfAbsent(sample.name(), name -> render(sample));
     }
 
     private static Rendered render(Sample sample) {
@@ -222,6 +273,8 @@ class ReceiptCorpusTest {
         ReceiptSnapshot snapshot = renderer.freeze(sample.document());
         byte[] bytes = renderer.render(snapshot, sample.document().number(), ISSUED_AT);
         try (PDDocument document = Loader.loadPDF(bytes)) {
+            Files.createDirectories(PREVIEW);
+            Files.write(PREVIEW.resolve(sample.name() + ".pdf"), bytes);
             PDFRenderer raster = new PDFRenderer(document);
             List<Page> pages = new ArrayList<>();
             TreeSet<String> fonts = new TreeSet<>();
@@ -266,7 +319,6 @@ class ReceiptCorpusTest {
     }
 
     private static void preview(String sample, int page, BufferedImage image) throws IOException {
-        Files.createDirectories(PREVIEW);
         ImageIO.write(image, "png", PREVIEW.resolve(sample + "-" + page + ".png").toFile());
     }
 
@@ -315,6 +367,15 @@ class ReceiptCorpusTest {
         samples.add(new Sample("yearly-large-amounts-cs", "A company's year with the largest single amount, hellers and a total over a million, Czech",
                 yearly(acme(), Year.of(2026), List.of(receivedFromAcme(LocalDate.of(2026, 1, 1), 100000000), receivedFromAcme(LocalDate.of(2026, 2, 2), 99999999),
                         receivedFromAcme(LocalDate.of(2026, 3, 3), 125050), receivedFromAcme(LocalDate.of(2026, 4, 4), 1)), LocaleCode.CS), Optional.empty()));
+        samples.add(new Sample("yearly-40-gifts-cs", "A person's year with 40 gifts, Czech. Three are received on 5 May and given in this order: "
+                + "5,000.00 CZK recorded at 12:00, 100.00 CZK recorded at 8:00 with the higher id and 200.00 CZK recorded at 8:00 with the lower id; "
+                + "v2 lists gifts by the day received, then the time recorded, then the id",
+                yearly(jana(), Year.of(2026), fortyGifts(), LocaleCode.CS), Optional.empty()));
+        samples.add(new Sample("yearly-366-gifts-leap-2028-en", "A person's leap year 2028 with one gift on each of its 366 days, English",
+                ReceiptDocumentFactory.forYear(janaSpeakingEnglish(), Year.of(2028), IntStream.range(0, 366)
+                                .mapToObj(day -> receivedFromJana(LocalDate.of(2028, 1, 1).plusDays(day), 10000 + day * 101L)).toList(), FOUNDATION,
+                        FICTIONAL_SIGNATORY, ReceiptNumber.of(Year.of(2029), 8), LocalDate.of(2029, 1, 2), LocaleCode.EN, Optional.empty()),
+                Optional.empty()));
         samples.add(new Sample("yearly-leap-year-en", "A person's leap year with gifts on 1 January, 29 February and 31 December, English",
                 ReceiptDocumentFactory.forYear(janaSpeakingEnglish(), Year.of(2028), List.of(receivedFromJana(LocalDate.of(2028, 1, 1), 50000),
                                 receivedFromJana(LocalDate.of(2028, 2, 29), 29029), receivedFromJana(LocalDate.of(2028, 12, 31), 123456)), FOUNDATION,
@@ -329,6 +390,22 @@ class ReceiptCorpusTest {
 
     private static ReceiptDocument yearly(DonorRecord record, Year year, List<Donation> donations, LocaleCode locale) {
         return ReceiptDocumentFactory.forYear(record, year, donations, FOUNDATION, FICTIONAL_SIGNATORY, FIRST_NUMBER, TODAY, locale, Optional.empty());
+    }
+
+    private static List<Donation> fortyGifts() {
+        LocalDate fifthOfMay = LocalDate.of(2026, 5, 5);
+        List<Donation> gifts = new ArrayList<>();
+        gifts.add(recorded(fifthOfMay, 500000, "2026-05-05T12:00:00Z", 3));
+        gifts.add(recorded(fifthOfMay, 10000, "2026-05-05T08:00:00Z", 2));
+        gifts.add(recorded(fifthOfMay, 20000, "2026-05-05T08:00:00Z", 1));
+        IntStream.range(0, 37).mapToObj(index -> receivedFromJana(LocalDate.of(2026, 1, 3).plusDays(index * 9L), 10000 + index * 250L)).forEach(gifts::add);
+        return gifts;
+    }
+
+    private static Donation recorded(LocalDate receivedOn, long amountMinor, String recordedAt, long id) {
+        return Donation.reconstitute(new DonationId(new UUID(0x0190a000_0000_7000L, 0x8000_0000_0000_0000L + id)), JANA,
+                Optional.of(BankPaymentId.newId(NOW)), receivedOn, Money.czk(amountMinor), DonationSource.BANK_TRANSFER, DonationStatus.RECEIVED,
+                Optional.of(PairingMethod.VARIABLE_SYMBOL), Instant.parse(recordedAt));
     }
 
     private static DonorRecord diacritics() {

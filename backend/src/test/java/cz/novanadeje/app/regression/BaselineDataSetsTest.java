@@ -3,7 +3,7 @@ package cz.novanadeje.app.regression;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.params.provider.FieldSource;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -12,10 +12,18 @@ import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.text.Normalizer;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.HexFormat;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.util.TreeSet;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -24,11 +32,19 @@ class BaselineDataSetsTest {
 
     static final List<String> SHARED_CASE_TOPICS = List.of("shared-cases/admin-overview", "shared-cases/donor-summary", "shared-cases/monthly-report",
             "shared-cases/receipts");
-    static final List<String> REAL_LOOKING_VALUES = List.of("smtp-brevo.com", "znamenáčková", "znamenáček", "ucetni@stavby.cz");
+    static final Set<String> REAL_LOOKING_TOKEN_DIGESTS = Set.of(
+            "dfea280e2e6a6ad8bbeffc4309acabbd9437f8dbb882ed547149439c4e8c2b6f",
+            "ad1fe375c28a8a829c83918892923d9ac5dfb4c11cbd12f57558afd8c492399c",
+            "135d9d4fbb41478fcc20d0252ab5731885d5216a1408e82d541b1c9320970b43",
+            "e2a4f96eabc4b89488f83967f4d878f9e7a0214e8815540d984c0a39eb732f87");
+    static final String SCREENS_SPEC = "frontend/e2e/baseline/screens.spec.ts";
+    static final String SCREENS_MANIFEST = "regression/v2/screens/manifest.json";
+    private static final Pattern TOKEN = Pattern.compile("[\\p{L}\\p{N}][\\p{L}\\p{N}._@+-]*[\\p{L}\\p{N}]");
+    private static final Pattern SCREEN_NAME = Pattern.compile("^  (?:publicPage|donorPage|adminPage)\\('([^']+)'|^    name: '([^']+)'", Pattern.MULTILINE);
     private static final JsonMapper JSON = JsonMapper.builder().build();
 
     @ParameterizedTest
-    @ValueSource(strings = {"shared-cases/admin-overview", "shared-cases/donor-summary", "shared-cases/monthly-report", "shared-cases/receipts"})
+    @FieldSource("SHARED_CASE_TOPICS")
     @DisplayName("Given a topic of shared cases, when its files are read, then each holds the source, the logic and named cases with an input and an expected value")
     void should_hold_source_logic_and_named_cases_when_the_files_of_a_shared_case_topic_are_read(String topic) throws IOException {
         List<Path> files = jsonFiles(topic);
@@ -56,15 +72,58 @@ class BaselineDataSetsTest {
         assertThat(files).isNotEmpty();
 
         for (Path file : files) {
-            String text = Files.readString(file, StandardCharsets.UTF_8).toLowerCase(Locale.ROOT);
-            assertThat(REAL_LOOKING_VALUES).as("real-looking values in %s", file).noneMatch(text::contains);
+            assertThat(realLookingTokens(Files.readString(file, StandardCharsets.UTF_8), REAL_LOOKING_TOKEN_DIGESTS)).as("real-looking values in %s", file).isEmpty();
         }
     }
 
     @Test
-    @DisplayName("Given the screens manifest, when it is read, then every route and state has a shot at 390 and at 1280 px with its digest")
+    @DisplayName("Given text with an address, a domain and a name whose digests are listed, when its tokens are checked, then each is reported whatever its case")
+    void should_report_each_listed_token_whatever_its_case_when_text_is_checked_given_listed_digests() {
+        String text = "Psal Zkušební.Člověk@Dvůr.example; doména Pokus-Mail.invalid, jméno Zkušebníková, ale ne zkušební.";
+        Set<String> listed = Set.of(sha256("zkušební.člověk@dvůr.example"), sha256("pokus-mail.invalid"), sha256("zkušebníková"));
+
+        assertThat(realLookingTokens(text, listed)).containsExactlyInAnyOrder("zkušební.člověk@dvůr.example", "pokus-mail.invalid", "zkušebníková");
+    }
+
+    @Test
+    @DisplayName("Given the screens spec and the manifest, when their states are compared, then the manifest has a shot of every state of the spec and no other")
+    void should_list_exactly_the_states_of_the_spec_when_the_screens_manifest_is_compared_with_the_spec() throws IOException {
+        String spec = Files.readString(GoldenFiles.repositoryRoot().resolve(SCREENS_SPEC), StandardCharsets.UTF_8);
+        String screens = spec.substring(spec.indexOf("const SCREENS: Screen[] = ["), spec.indexOf("\n];", spec.indexOf("const SCREENS: Screen[] = [")));
+        Set<String> specStates = new TreeSet<>();
+        Matcher name = SCREEN_NAME.matcher(screens);
+        while (name.find()) {
+            specStates.add(name.group(1) != null ? name.group(1) : name.group(2));
+        }
+        JsonNode manifest = JSON.readTree(Files.readString(GoldenFiles.repositoryRoot().resolve(SCREENS_MANIFEST), StandardCharsets.UTF_8));
+
+        assertThat(specStates).as("states in %s", SCREENS_SPEC).hasSizeGreaterThan(30);
+        assertThat(new TreeSet<>(manifest.get("shots").valueStream().map(shot -> shot.get("state").asString()).toList())).isEqualTo(specStates);
+    }
+
+    static Set<String> realLookingTokens(String text, Set<String> digests) {
+        Set<String> found = new TreeSet<>();
+        Matcher token = TOKEN.matcher(Normalizer.normalize(text, Normalizer.Form.NFC).toLowerCase(Locale.ROOT));
+        while (token.find()) {
+            List<String> candidates = new ArrayList<>(List.of(token.group()));
+            candidates.addAll(List.of(token.group().split("@")));
+            candidates.stream().filter(candidate -> digests.contains(sha256(candidate))).forEach(found::add);
+        }
+        return found;
+    }
+
+    private static String sha256(String text) {
+        try {
+            return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(text.getBytes(StandardCharsets.UTF_8)));
+        } catch (NoSuchAlgorithmException missing) {
+            throw new IllegalStateException(missing);
+        }
+    }
+
+    @Test
+    @DisplayName("Given the screens manifest, when it is read, then every route and state has a shot at 390 and at 1280 px with the digest of its pixels")
     void should_list_every_state_at_both_widths_when_the_screens_manifest_is_read() throws IOException {
-        JsonNode manifest = JSON.readTree(Files.readString(GoldenFiles.repositoryRoot().resolve("regression/v2/screens/manifest.json"), StandardCharsets.UTF_8));
+        JsonNode manifest = JSON.readTree(Files.readString(GoldenFiles.repositoryRoot().resolve(SCREENS_MANIFEST), StandardCharsets.UTF_8));
 
         assertThat(manifest.get("source").asString()).isEqualTo(Baseline.SOURCE);
         JsonNode shots = manifest.get("shots");
@@ -74,7 +133,7 @@ class BaselineDataSetsTest {
         for (JsonNode shot : shots) {
             states.add(shot.get("state").asString());
             assertThat(files.add(shot.get("file").asString())).as("%s is listed once", shot.get("file").asString()).isTrue();
-            assertThat(shot.get("sha256").asString()).matches("[0-9a-f]{64}");
+            assertThat(shot.get("pixelsSha256").asString()).matches("[0-9a-f]{64}");
             assertThat(shot.get("width").asInt()).isIn(390, 1280);
         }
         for (String state : states) {

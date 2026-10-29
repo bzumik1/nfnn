@@ -6,6 +6,8 @@ import {
   mockDonorApi,
   openSignInDialog,
   problem,
+  secondFactorRequired,
+  session,
 } from '../donor-session';
 import { expect, test } from '../fixtures';
 import {
@@ -81,12 +83,34 @@ const SCREENS: Screen[] = [
   publicPage('not-found', '/neexistuje'),
   publicPage('password-reset-without-link', '/obnova-hesla'),
   publicPage('email-verification-without-link', '/potvrzeni-emailu'),
+  publicPage('password-reset-with-link', '/obnova-hesla#token=abc'),
+  {
+    name: 'email-verification-with-link',
+    open: async (page) => {
+      await mockDonorApi(page);
+      await page.route('**/api/donors/auth/email-verification/confirm', (route) =>
+        route.fulfill(session(200)),
+      );
+      await page.goto('/potvrzeni-emailu#token=abc');
+      await expect(page.getByRole('heading', { name: 'E-mail je potvrzený' })).toBeVisible();
+    },
+  },
   {
     name: 'connect-app-signed-out',
     open: async (page) => {
       await mockDonorApi(page);
       await mockConnectApi(page);
       await page.goto(connectionRequest);
+    },
+  },
+  {
+    name: 'connect-app-signed-in',
+    open: async (page) => {
+      await mockDonorApi(page);
+      await mockConnectApi(page);
+      await rememberedSession(page);
+      await page.goto(connectionRequest);
+      await expect(page.getByLabel('Kód z aplikace')).toBeVisible();
     },
   },
   {
@@ -115,6 +139,21 @@ const SCREENS: Screen[] = [
       await openDialogAt(page, width);
       await page.getByRole('dialog').getByRole('button', { name: 'Registrace' }).click();
       await expect(page.getByRole('dialog').locator('#register-name')).toBeVisible();
+    },
+  },
+  {
+    name: 'sign-in-second-factor',
+    viewportOnly: true,
+    open: async (page, width) => {
+      await mockDonorApi(page);
+      await page.route('**/api/donors/auth/login', (route) =>
+        route.fulfill(secondFactorRequired()),
+      );
+      await openDialogAt(page, width);
+      await page.locator('#login-email').fill('jana@example.cz');
+      await page.locator('#login-password').fill('correct horse battery');
+      await page.getByRole('dialog').locator('.ui-button--block').click();
+      await expect(page.getByLabel('Kód z aplikace')).toBeFocused();
     },
   },
   donorPage('donor-overview', '/darce/prehled'),
@@ -168,8 +207,10 @@ const SCREENS: Screen[] = [
   adminPage('admin-reports', '/sprava/prehledy'),
   adminPage('admin-news', '/sprava/aktuality'),
   adminPage('admin-news-new', '/sprava/aktuality/nova'),
+  adminPage('admin-news-edit', `/sprava/aktuality/${article.id}`),
   adminPage('admin-projects', '/sprava/projekty'),
   adminPage('admin-projects-new', '/sprava/projekty/nova'),
+  adminPage('admin-projects-edit', `/sprava/projekty/${project.id}`),
   adminPage('admin-backups', '/sprava/zalohy'),
   adminPage('admin-logs', '/sprava/logy'),
   adminPage('admin-settings', '/sprava/nastaveni'),
