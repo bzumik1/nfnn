@@ -65,7 +65,10 @@ const METHODS: Record<string, string> = {
   delete: 'DELETE',
   postPhoto: 'POST',
 };
-const HOLE = '\u0000';
+const ID_HOLE = '\u0000';
+const NAME_HOLE = '\u0001';
+const HOLES = /[\u0000\u0001]/;
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const SHAPE_ONLY: Record<string, Kind> = {
   '<number>': 'number',
   '<boolean>': 'boolean',
@@ -94,8 +97,14 @@ function literalAt(text: string, start: number): string | undefined {
   let index = start + 1;
   while (index < text.length && text[index] !== '`') {
     if (text[index] === '$' && text[index + 1] === '{') {
-      index = interpolationEnd(text, index + 2);
-      literal += HOLE;
+      const end = interpolationEnd(text, index + 2);
+      literal += text
+        .slice(index + 2, end)
+        .trimStart()
+        .startsWith('encodeURIComponent(')
+        ? NAME_HOLE
+        : ID_HOLE;
+      index = end;
     } else {
       literal += text[index];
       index += 1;
@@ -138,7 +147,13 @@ function pathTemplate(literal: string): string {
   const path = literal.split('?')[0] ?? '';
   return path
     .split('/')
-    .map((segment) => (segment.startsWith(HOLE) ? '{}' : (segment.split(HOLE)[0] ?? '')))
+    .map((segment) =>
+      segment.startsWith(ID_HOLE)
+        ? '{id}'
+        : segment.startsWith(NAME_HOLE)
+          ? '{name}'
+          : (segment.split(HOLES)[0] ?? ''),
+    )
     .join('/');
 }
 
@@ -255,7 +270,18 @@ export function fakeBackendRequests(
 const segments = (path: string) => path.split('?')[0]?.split('/') ?? [];
 
 function literalCount(template: string): number {
-  return segments(template).filter((segment) => segment !== '{}').length;
+  return segments(template).filter((segment) => segment !== '{id}' && segment !== '{name}').length;
+}
+
+function segmentMatches(wanted: string, given: string): boolean {
+  const isId = given === '{id}' || UUID.test(given);
+  if (wanted === '{id}') {
+    return isId;
+  }
+  if (wanted === '{name}') {
+    return given !== '' && !isId;
+  }
+  return wanted === given;
 }
 
 function matches(call: ConnectorCall, method: string, path: string): boolean {
@@ -266,7 +292,7 @@ function matches(call: ConnectorCall, method: string, path: string): boolean {
   const given = segments(path);
   return (
     wanted.length === given.length &&
-    wanted.every((segment, index) => segment === '{}' || segment === given[index])
+    wanted.every((segment, index) => segmentMatches(segment, given[index] ?? ''))
   );
 }
 
@@ -381,9 +407,19 @@ interface Mismatch {
   readonly recorded?: readonly Kind[];
 }
 
-function mismatches(value: unknown, shape: Shape, path: string, out: Mismatch[]): void {
+function mismatches(
+  value: unknown,
+  shape: Shape,
+  path: string,
+  out: Mismatch[],
+  nullable: ReadonlySet<string>,
+): void {
   const kind = kindOf(value);
-  if (shape.kinds.size === 1 && shape.kinds.has('null')) {
+  if (
+    shape.kinds.size === 1 &&
+    shape.kinds.has('null') &&
+    nullable.has(path.replace(/\[\d+\]/g, '[]'))
+  ) {
     return;
   }
   if (!shape.kinds.has(kind)) {
@@ -396,12 +432,12 @@ function mismatches(value: unknown, shape: Shape, path: string, out: Mismatch[])
       if (fieldShape === undefined) {
         out.push({ path: `${path}.${field}` });
       } else {
-        mismatches(inner, fieldShape, `${path}.${field}`, out);
+        mismatches(inner, fieldShape, `${path}.${field}`, out, nullable);
       }
     }
   } else if (kind === 'array' && shape.items !== undefined) {
     (value as unknown[]).forEach((item, index) =>
-      mismatches(item, shape.items as Shape, `${path}[${index}]`, out),
+      mismatches(item, shape.items as Shape, `${path}[${index}]`, out, nullable),
     );
   }
 }
@@ -456,7 +492,12 @@ export function checkBackendShapes(input: {
     const shape = emptyShape();
     sameStatus.forEach((answer) => widen(shape, answer.body ?? null));
     const found: Mismatch[] = [];
-    mismatches(fixture.body, shape, '$', found);
+    const nullable = new Set(
+      Object.keys(input.recordedOnlyAsNull ?? {})
+        .filter((key) => key.startsWith(`${name} $`))
+        .map((key) => key.slice(name.length + 1)),
+    );
+    mismatches(fixture.body, shape, '$', found, nullable);
     for (const { path, kind, recorded: kinds } of found) {
       problems.push(
         `the fake's ${fixture.status} answer to ${request} has ${path}${

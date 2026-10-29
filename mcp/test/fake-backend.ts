@@ -272,6 +272,8 @@ function adminRoute(request: RecordedRequest, url: URL, body: string): [number, 
       return [200, { id: UNKNOWN_ID, ...content(body) }];
     case 'POST /api/admin/content/projects':
       return [201, { id: UNKNOWN_ID, slug: 'nova-strecha', ...content(body) }];
+    case `POST /api/admin/donations/donors/${DONOR_ID}/bank-accounts/${LINK_ID}/disconnect`:
+      return [204, undefined];
     case `POST /api/admin/donations/donors/${DONOR_ID}/bank-accounts/${PAYMENT_ID}/disconnect`:
       return [
         409,

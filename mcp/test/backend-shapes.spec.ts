@@ -345,6 +345,7 @@ describe('Given the connector, its fake backend and the recorded transcripts', (
         recordedDirectory === undefined
           ? declaredAdditions(join(REPOSITORY, 'regression/v2/changes'))
           : [],
+      recordedOnlyAsNull: RECORDED_ONLY_AS_NULL,
     });
     expect(problems).toEqual([]);
     expect(calls.map((call) => `${call.method} ${call.template}`)).toContain(
@@ -353,6 +354,13 @@ describe('Given the connector, its fake backend and the recorded transcripts', (
     expect(fixtures.filter((fixture) => fixture.status === 200).length).toBeGreaterThan(30);
   });
 });
+
+const RECORDED_ONLY_AS_NULL = {
+  'PUT /api/admin/operations/backups/schedule $.applied':
+    'the plan the backup container applied; no scenario runs that container',
+  'GET /api/admin/operations/loggers $.loggers[].override.configuredBefore':
+    'the level configured before an override; the scenarios override loggers without one',
+};
 
 const FAKE_ROUTES_OUTSIDE_CASES: FakeRequest[] = [
   { method: 'GET', path: '/.well-known/oauth-authorization-server' },

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
-import { join, relative, resolve, sep } from 'node:path';
+import { isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = resolve(fileURLToPath(new URL('..', import.meta.url)));
@@ -11,6 +11,7 @@ const defaults = {
   'inventory-baseline': 'regression/v2/test-inventory.json',
   inventory: '',
   report: '',
+  changed: '',
 };
 
 const TRANSCRIPT_KINDS = [
@@ -24,7 +25,21 @@ const TRANSCRIPT_KINDS = [
   'removed',
 ];
 const KINDS = [...TRANSCRIPT_KINDS, 'log-field', 'retired'];
+const NEEDS_SECURITY = new Set(['logs', 'log-field']);
 const LISTED = 20;
+const LISTED_LOG_LINES = 200;
+const SHORT_NUMBER = 4;
+const FOUNDATION_ADDRESS = 'info@nfnn.cz';
+const BASELINE_FILES = [/^regression\/v2\/api\//, /^regression\/v2\/test-inventory\.json$/];
+const WATCHED_FILES = [
+  /^backend\/src\/test\/java\/.*\/transcript\//,
+  /(?:^|\/)ApiTranscripts[^/]*$/,
+  /^scripts\/compare-v2[^/]*\.mjs$/,
+  /^scripts\/test-inventory\.mjs$/,
+  /^mcp\/test\/backend-shapes[^/]*\.ts$/,
+];
+const UPPER_WORD = /\p{Lu}[\p{Lu}\d_]*/gu;
+const SLOT = /<[a-z-]+(?::\d+)?>/g;
 
 class InvalidInput extends Error {}
 
@@ -33,6 +48,7 @@ const shown = (value) =>
   typeof value === 'string' ? JSON.stringify(value) : (JSON.stringify(value) ?? 'nic');
 const shorten = (text, length = 160) =>
   text.length > length ? `${text.slice(0, length - 1)}…` : text;
+const onlyStars = (pattern) => /^\**$/.test(pattern.trim());
 
 function options(argv) {
   const chosen = { ...defaults };
@@ -87,6 +103,41 @@ function glob(pattern) {
   return new RegExp(`^${escaped.join('.*')}$`, 's');
 }
 
+function validatedSecurity(entry, problem) {
+  if ('securityOk' in entry) {
+    problem(
+      'securityOk is gone: name the approval as security: {approvedIn: "<PR or review and date>", fields: {"<slot>": "what it holds"}}',
+    );
+  }
+  if (!('security' in entry)) {
+    if (NEEDS_SECURITY.has(entry.kind)) {
+      problem(
+        'a log change needs security: {approvedIn: "<PR or review and date>", fields: {"<slot>": "what it holds"}}, set once Jakub approved it (security.md, Logs)',
+      );
+    }
+    return;
+  }
+  const { security } = entry;
+  if (typeof security !== 'object' || security === null || Array.isArray(security)) {
+    problem('security must be an object {approvedIn, fields}');
+  }
+  if (typeof security.approvedIn !== 'string' || security.approvedIn.trim() === '') {
+    problem('security.approvedIn must name the PR or review and the date of the approval');
+  }
+  if (
+    typeof security.fields !== 'object' ||
+    security.fields === null ||
+    Array.isArray(security.fields)
+  ) {
+    problem('security.fields must map every slot of the line, such as "<id>", to what it holds');
+  }
+  for (const [slot, meaning] of Object.entries(security.fields)) {
+    if (typeof meaning !== 'string' || meaning.trim() === '') {
+      problem(`security.fields["${slot}"] must say what the slot holds`);
+    }
+  }
+}
+
 function validated(entry, file, index) {
   const where = `${file} entry ${index + 1}`;
   const problem = (message) => {
@@ -99,7 +150,7 @@ function validated(entry, file, index) {
     problem(`kind ${shown(entry.kind)} is not one of ${KINDS.join(', ')}`);
   }
   if (typeof entry.reason !== 'string' || entry.reason.trim() === '') {
-    problem('needs a reason naming the decision and the contract section');
+    problem('needs a reason naming the decision');
   }
   for (const field of ['path', 'scenario', 'line', 'suite', 'test', 'replacement', 'contract']) {
     if (field in entry && typeof entry[field] !== 'string') {
@@ -114,9 +165,15 @@ function validated(entry, file, index) {
         );
       }
     }
+    if (onlyStars(entry.suite)) {
+      problem('suite must name the suite, not *');
+    }
+    if (onlyStars(entry.test)) {
+      problem('test must name the tests, not only *');
+    }
   } else if (entry.kind === 'log-field') {
-    if (!entry.line?.trim()) {
-      problem('a new log field needs line: the shape of the log line, * allowed');
+    if (!entry.line?.trim() || onlyStars(entry.line)) {
+      problem('a new log field needs line: the shape of the log line, more than *');
     }
   } else {
     for (const field of ['path', 'scenario']) {
@@ -124,7 +181,14 @@ function validated(entry, file, index) {
         problem(`needs ${field} (* allowed)`);
       }
     }
+    if (onlyStars(entry.path) && onlyStars(entry.scenario)) {
+      problem('path and scenario cannot both be *: name the request or the scenario');
+    }
+    if (!entry.contract?.trim()) {
+      problem('needs contract: the contract or overview section that describes the change');
+    }
   }
+  validatedSecurity(entry, problem);
   return {
     ...entry,
     file,
@@ -283,15 +347,6 @@ function unmatched(baseline, recorded) {
   return { missing, extra: left };
 }
 
-export function logShape(line) {
-  return line
-    .replace(/^[A-Z]+ /, '')
-    .replace(/<([a-z-]+):[^>]*>/g, '<$1>')
-    .replace(/\d+/g, '<n>')
-    .replace(/\b[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)*\b/g, (word) => (word.length > 1 ? '<enum>' : word))
-    .replace(/<enum>(?:, <enum>)+/g, '<enum>, …');
-}
-
 function compareCall(scenario, key, baseline, recorded, differences, counts) {
   const at = { scenario, key };
   let changed = false;
@@ -347,7 +402,65 @@ function compareCall(scenario, key, baseline, recorded, differences, counts) {
   return changed;
 }
 
-function compareScenario(scenario, baseline, recorded, differences, counts) {
+function enumWords(baseline) {
+  const words = new Set();
+  for (const scenarios of baseline.values()) {
+    for (const scenario of Object.values(scenarios)) {
+      for (const line of scenario.logs ?? []) {
+        for (const [word] of line
+          .replace(/^\p{Lu}+ /u, '')
+          .replace(/<[^>]*>/g, ' ')
+          .matchAll(UPPER_WORD)) {
+          if (word.length > 1) {
+            words.add(word);
+          }
+        }
+      }
+    }
+  }
+  return words;
+}
+
+export function logShaper(enums) {
+  return (line) =>
+    line
+      .replace(/^\p{Lu}+ /u, '')
+      .replace(/<([a-z-]+):[^>]*>/g, '<$1>')
+      .replace(/\d+/g, (digits) =>
+        digits.length <= SHORT_NUMBER ? '<n>' : `<digits:${digits.length}>`,
+      )
+      .replace(UPPER_WORD, (word) =>
+        word.length > 1 && (word.includes('_') || enums.has(word)) ? '<enum>' : word,
+      )
+      .replace(/<enum>(?:, <enum>)+/g, '<enum>, …');
+}
+
+const slotsOf = (shape) => [...new Set(shape.match(SLOT) ?? [])].sort();
+
+function recipientKind(mail) {
+  const recipients = [...(mail.to ?? []), ...(mail.cc ?? []), ...(mail.bcc ?? [])];
+  return [
+    ...new Set(
+      recipients.map((address) => (address.includes(FOUNDATION_ADDRESS) ? 'fond' : 'dárce')),
+    ),
+  ].join(', ');
+}
+
+function addedLog(counts, scenario, line) {
+  const known = counts.addedLogLines.get(line);
+  counts.addedLogLines.set(line, {
+    scenario: known?.scenario ?? scenario,
+    count: (known?.count ?? 0) + 1,
+  });
+}
+
+function addedMail(counts, scenario, mail) {
+  counts.addedMails.push(
+    `${scenario}: „${String(mail.subject ?? '').replace(/\d+/g, '<n>')}“ → ${recipientKind(mail)}`,
+  );
+}
+
+function compareScenario(scenario, baseline, recorded, differences, counts, shape) {
   let changed = false;
   for (const [key, call] of Object.entries(baseline.requests ?? {})) {
     const recordedCall = recorded.requests?.[key];
@@ -366,7 +479,7 @@ function compareScenario(scenario, baseline, recorded, differences, counts) {
     if (!(key in (baseline.requests ?? {}))) {
       counts.requests.added += 1;
       counts.addedRequests.push(`${scenario} · ${key}`);
-      counts.addedTemplates.add(template(key));
+      counts.addedPairs.push({ scenario, path: template(key) });
     }
   }
 
@@ -380,27 +493,33 @@ function compareScenario(scenario, baseline, recorded, differences, counts) {
       kind: 'mails',
       detail: partner
         ? `změněno „${mail.subject}“: ${mailDifference(mail, partner)}`
-        : `odebráno „${mail.subject}“ (${(mail.to ?? []).join(', ')})`,
+        : `odebráno „${mail.subject}“ (${recipientKind(mail)})`,
     });
     counts.mails[partner ? 'changed' : 'removed'] += 1;
     changed = true;
   }
   counts.mails.added += mails.extra.length;
+  mails.extra.forEach((mail) => addedMail(counts, scenario, mail));
 
   const logs = unmatched(baseline.logs ?? [], recorded.logs ?? []);
   counts.logs.unchanged += (baseline.logs ?? []).length - logs.missing.length;
   for (const line of logs.missing) {
-    const index = logs.extra.findIndex((candidate) => logShape(candidate) === logShape(line));
+    const index = logs.extra.findIndex((candidate) => shape(candidate) === shape(line));
     const partner = index >= 0 ? logs.extra.splice(index, 1)[0] : undefined;
     differences.push({
       scenario,
       kind: 'logs',
+      slots: partner === undefined ? [] : slotsOf(shape(partner)),
       detail: partner ? `změněno ${shown(line)} → ${shown(partner)}` : `odebráno ${shown(line)}`,
     });
+    if (partner !== undefined) {
+      counts.changedLogLines.push(`${scenario}: ${shown(line)} → ${shown(partner)}`);
+    }
     counts.logs[partner ? 'changed' : 'removed'] += 1;
     changed = true;
   }
   counts.logs.added += logs.extra.length;
+  logs.extra.forEach((line) => addedLog(counts, scenario, line));
   return changed;
 }
 
@@ -413,20 +532,24 @@ function emptyCounts() {
     logs: tally(),
     tests: tally(),
     addedRequests: [],
-    addedTemplates: new Set(),
+    addedPairs: [],
     addedScenarios: [],
     addedFields: new Set(),
     addedHeaders: new Set(),
+    addedMails: [],
+    addedLogLines: new Map(),
+    changedLogLines: [],
     addedTests: [],
     newLogFields: 0,
   };
 }
 
 function compareTranscripts(baseline, recording, differences, counts) {
+  const shape = logShaper(enumWords(baseline));
   const knownShapes = new Set();
   for (const scenarios of baseline.values()) {
     for (const scenario of Object.values(scenarios)) {
-      (scenario.logs ?? []).forEach((line) => knownShapes.add(logShape(line)));
+      (scenario.logs ?? []).forEach((line) => knownShapes.add(shape(line)));
     }
   }
   for (const [feature, scenarios] of baseline) {
@@ -436,7 +559,9 @@ function compareTranscripts(baseline, recording, differences, counts) {
       if (!(name in recordedScenarios)) {
         differences.push({ scenario: label, kind: 'removed', detail: 'scénář odebrán' });
         counts.scenarios.removed += 1;
-      } else if (compareScenario(label, scenario, recordedScenarios[name], differences, counts)) {
+      } else if (
+        compareScenario(label, scenario, recordedScenarios[name], differences, counts, shape)
+      ) {
         counts.scenarios.changed += 1;
       } else {
         counts.scenarios.unchanged += 1;
@@ -446,14 +571,17 @@ function compareTranscripts(baseline, recording, differences, counts) {
   for (const [feature, scenarios] of recording) {
     for (const [name, scenario] of Object.entries(scenarios)) {
       if (!(name in (baseline.get(feature) ?? {}))) {
+        const label = `${feature}: ${name}`;
         counts.scenarios.added += 1;
-        counts.addedScenarios.push(`${feature}: ${name}`);
+        counts.addedScenarios.push(label);
         counts.requests.added += Object.keys(scenario.requests ?? {}).length;
         Object.keys(scenario.requests ?? {}).forEach((key) =>
-          counts.addedTemplates.add(template(key)),
+          counts.addedPairs.push({ scenario: label, path: template(key) }),
         );
         counts.mails.added += (scenario.mails ?? []).length;
+        (scenario.mails ?? []).forEach((mail) => addedMail(counts, label, mail));
         counts.logs.added += (scenario.logs ?? []).length;
+        (scenario.logs ?? []).forEach((line) => addedLog(counts, label, line));
       }
     }
   }
@@ -461,14 +589,15 @@ function compareTranscripts(baseline, recording, differences, counts) {
   for (const [feature, scenarios] of recording) {
     for (const [name, scenario] of Object.entries(scenarios)) {
       for (const line of scenario.logs ?? []) {
-        const shape = logShape(line);
-        if (!knownShapes.has(shape) && !reported.has(shape)) {
-          reported.add(shape);
+        const lineShape = shape(line);
+        if (!knownShapes.has(lineShape) && !reported.has(lineShape)) {
+          reported.add(lineShape);
           differences.push({
             scenario: `${feature}: ${name}`,
             kind: 'log-field',
-            line: shape,
-            detail: `nový tvar řádku logu ${shown(shape)}`,
+            line: lineShape,
+            slots: slotsOf(lineShape),
+            detail: `nový tvar řádku logu ${shown(lineShape)}`,
           });
           counts.newLogFields += 1;
         }
@@ -503,6 +632,18 @@ function compareInventory(baseline, fresh, differences, counts) {
   }
 }
 
+export function changedPaths(paths) {
+  const relativePaths = paths
+    .map((path) => path.trim())
+    .filter((path) => path !== '')
+    .map((path) => (isAbsolute(path) ? posix(relative(root, path)) : posix(path)));
+  return {
+    all: new Set(paths.map((path) => resolve(root, path.trim()))),
+    baseline: relativePaths.filter((path) => BASELINE_FILES.some((rule) => rule.test(path))),
+    watched: relativePaths.filter((path) => WATCHED_FILES.some((rule) => rule.test(path))),
+  };
+}
+
 function where(difference) {
   if (difference.kind === 'retired') {
     return `${difference.suite} › ${difference.test}`;
@@ -514,38 +655,32 @@ function cell(text) {
   return String(text).replace(/\|/g, '\\|').replace(/\n/g, ' ');
 }
 
-function list(items, empty) {
+function list(items, empty, limit = LISTED) {
   if (items.length === 0) {
     return [`- ${empty}`];
   }
-  const lines = items.slice(0, LISTED).map((item) => `- ${cell(item)}`);
-  if (items.length > LISTED) {
-    lines.push(`- … a dalších ${items.length - LISTED}`);
+  const lines = items.slice(0, limit).map((item) => `- ${cell(item)}`);
+  if (items.length > limit) {
+    lines.push(`- … a dalších ${items.length - limit}`);
   }
   return lines;
 }
 
-function render({
-  chosen,
-  counts,
-  undeclared,
-  declared,
-  invalidLogFields,
-  entries,
-  files,
-  inventoryChecked,
-}) {
+const describeEntry = (entry) =>
+  `${entry.file}: \`${entry.kind}\` ${entry.path ?? entry.line ?? entry.test ?? ''} ${entry.scenario ?? entry.suite ?? ''}`.trim();
+
+function render(result) {
+  const { chosen, counts, errors, declared, entries, files, inventoryChecked, changed } = result;
   const relativeToRoot = (path) => posix(relative(root, resolve(root, path))) || '.';
   const lines = ['## Srovnání s v2', ''];
   lines.push(
     `Nahrávka \`${relativeToRoot(chosen.recording)}\` proti \`${relativeToRoot(chosen.baseline)}\`; deklarace z \`${relativeToRoot(chosen.changes)}\`: ${files.length} souborů, ${entries.length} položek.`,
     '',
   );
-  const blocking = undeclared.length + invalidLogFields.length;
   lines.push(
-    blocking === 0
+    errors.length === 0
       ? '**Žádný nedeklarovaný rozdíl.**'
-      : `**${blocking} nedeklarovaných rozdílů: srovnání neprošlo.**`,
+      : `**${errors.length} chyb: srovnání neprošlo.**`,
     '',
   );
   const row = (name, tally) =>
@@ -564,22 +699,51 @@ function render({
       : '| Testy (inventář) | neprovedeno | | | |',
   );
   lines.push('');
-  lines.push('### Nedeklarované rozdíly', '');
+  lines.push('### Nedeklarované rozdíly a chyby', '');
   lines.push(
     ...list(
-      [
-        ...undeclared.map(
-          (difference) => `\`${difference.kind}\` ${where(difference)}: ${difference.detail}`,
-        ),
-        ...invalidLogFields.map(
-          ({ difference, entry }) =>
-            `\`log-field\` ${where(difference)}: ${difference.detail}; deklarace v ${entry.file} nemá \`securityOk: true\``,
-        ),
-      ],
+      errors.map((error) => error.report),
       'žádné',
+      errors.length,
     ),
     '',
   );
+  if (changed) {
+    lines.push('### Změny nahrávání a srovnání', '');
+    lines.push(
+      ...list(
+        changed.watched.map((path) => `\`${path}\``),
+        'žádné: nahrávání, maskování ani srovnání se nemění',
+        changed.watched.length,
+      ),
+      '',
+    );
+  }
+  lines.push('### Schváleno bezpečností', '');
+  const approved = entries.filter((entry) => entry.security);
+  lines.push(
+    ...list(
+      approved.map(
+        (entry) =>
+          `${describeEntry(entry)}; schváleno v ${entry.security.approvedIn}; pole: ${
+            Object.entries(entry.security.fields)
+              .map(([slot, meaning]) => `\`${slot}\` = ${meaning}`)
+              .join(', ') || 'žádná'
+          }; použito ${entry.used}×`,
+      ),
+      'žádné',
+      approved.length,
+    ),
+    '',
+  );
+  lines.push('### Změněné a přidané řádky logu', '');
+  const logLines = [
+    ...counts.changedLogLines.map((line) => `změněno ${line}`),
+    ...[...counts.addedLogLines].map(
+      ([line, { scenario, count }]) => `přidáno ${shown(line)} (${count}×, poprvé v ${scenario})`,
+    ),
+  ];
+  lines.push(...list(logLines, 'žádné', LISTED_LOG_LINES), '');
   lines.push('### Deklarované rozdíly', '');
   if (declared.length === 0) {
     lines.push('- žádné', '');
@@ -618,6 +782,7 @@ function render({
     ...list([...counts.addedHeaders].sort(), 'žádné'),
     '',
   );
+  lines.push(`E-maily (${counts.addedMails.length}):`, ...list(counts.addedMails, 'žádné'), '');
   if (inventoryChecked) {
     lines.push(`Testy (${counts.addedTests.length}):`, ...list(counts.addedTests, 'žádné'), '');
   }
@@ -625,10 +790,12 @@ function render({
   lines.push('### Nepoužité deklarace', '');
   lines.push(
     ...list(
-      unused.map((entry) =>
-        `${entry.file}: \`${entry.kind}\` ${entry.path ?? entry.line ?? entry.test ?? ''} ${entry.scenario ?? entry.suite ?? ''}`.trim(),
+      unused.map(
+        (entry) =>
+          `${describeEntry(entry)}${entry.changedInPr ? ' (soubor mění tento PR: chyba)' : ' (starší soubor: jen upozornění)'}`,
       ),
       'žádné',
+      unused.length,
     ),
   );
   lines.push('');
@@ -638,7 +805,15 @@ function render({
 export function run(argv) {
   const chosen = options(argv);
   const at = (path) => resolve(root, path);
-  const { files, entries } = declarations(at(chosen.changes));
+  const changesDirectory = at(chosen.changes);
+  const { files, entries } = declarations(changesDirectory);
+  const changed =
+    chosen.changed === ''
+      ? undefined
+      : changedPaths(readFileSync(at(chosen.changed), 'utf8').split('\n'));
+  for (const entry of entries) {
+    entry.changedInPr = changed?.all.has(join(changesDirectory, entry.file)) ?? false;
+  }
   const baseline = transcripts(at(chosen.baseline), 'baseline');
   const recording = transcripts(at(chosen.recording), 'recording');
   const differences = [];
@@ -653,58 +828,72 @@ export function run(argv) {
       counts,
     );
   }
-  const undeclared = [];
+  const errors = [];
   const declared = [];
-  const invalidLogFields = [];
+  for (const path of changed?.baseline ?? []) {
+    errors.push({
+      report: `\`baseline\` ${path}: tento PR mění základ v2, který se nikdy nepřegeneruje; deklarujte rozdíl v \`regression/v2/changes/\``,
+      error: `the pull request changes the v2 baseline file ${path}; declare the difference in regression/v2/changes/ instead`,
+    });
+  }
   for (const difference of differences) {
     const entry = declare(difference, entries);
     if (!entry) {
-      undeclared.push(difference);
-    } else if (difference.kind === 'log-field' && entry.securityOk !== true) {
-      invalidLogFields.push({ difference, entry });
-    } else {
-      declared.push({ difference, entry });
+      errors.push({
+        report: `\`${difference.kind}\` ${where(difference)}: ${difference.detail}`,
+        error: `undeclared ${difference.kind} difference at ${where(difference)}: ${difference.detail}`,
+      });
+      continue;
     }
+    const missing = (difference.slots ?? []).filter(
+      (slot) => !(entry.security && slot in entry.security.fields),
+    );
+    if (missing.length > 0) {
+      errors.push({
+        report: `\`${difference.kind}\` ${where(difference)}: ${difference.detail}; schválení v ${entry.file} neříká, co drží ${missing.join(', ')}`,
+        error: `the approval in ${entry.file} does not say what ${missing.join(', ')} holds in ${difference.line ?? difference.detail}`,
+      });
+      continue;
+    }
+    declared.push({ difference, entry });
   }
   for (const entry of entries.filter((candidate) => candidate.kind === 'added')) {
-    entry.used = [...counts.addedTemplates].filter((path) => entry.matches.path.test(path)).length;
+    entry.used = counts.addedPairs.filter(
+      (pair) => entry.matches.scenario.test(pair.scenario) && entry.matches.path.test(pair.path),
+    ).length;
+  }
+  for (const entry of entries.filter(
+    (candidate) => candidate.used === 0 && candidate.changedInPr,
+  )) {
+    errors.push({
+      report: `nepoužitá deklarace ${describeEntry(entry)}: soubor mění tento PR, takže musí pokrýt skutečný rozdíl`,
+      error: `the declaration ${describeEntry(entry)} is unused, and its file ${entry.file} is part of this pull request`,
+    });
   }
   const report = render({
     chosen,
     counts,
-    undeclared,
+    errors,
     declared,
-    invalidLogFields,
     entries,
     files,
     inventoryChecked,
+    changed,
   });
-  return {
-    report,
-    undeclared,
-    invalidLogFields,
-    output: chosen.report === '' ? '' : at(chosen.report),
-  };
+  return { report, errors, output: chosen.report === '' ? '' : at(chosen.report) };
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   try {
-    const { report, undeclared, invalidLogFields, output } = run(process.argv.slice(2));
+    const { report, errors, output } = run(process.argv.slice(2));
     if (output !== '') {
       writeFileSync(output, `${report}\n`);
     }
     console.log(report);
-    for (const difference of undeclared) {
-      console.error(
-        `::error::undeclared ${difference.kind} difference at ${where(difference)}: ${difference.detail}`,
-      );
+    for (const { error } of errors) {
+      console.error(`::error::${error}`);
     }
-    for (const { difference, entry } of invalidLogFields) {
-      console.error(
-        `::error::the new log field ${difference.line} is declared in ${entry.file} without securityOk: true`,
-      );
-    }
-    process.exit(undeclared.length + invalidLogFields.length === 0 ? 0 : 1);
+    process.exit(errors.length === 0 ? 0 : 1);
   } catch (failure) {
     if (failure instanceof InvalidInput) {
       console.error(`::error::${failure.message}`);

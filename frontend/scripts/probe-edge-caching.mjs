@@ -8,15 +8,16 @@ const EDGE_HEADER = 'cloudflare-cdn-cache-control';
 const PROBE_ADDRESS = '198.51.100.29';
 const SIGN_IN_ATTEMPTS = 12;
 const OWN_CACHE_CONTROL = new Map([
-  ['/api/donations/payment-details', /^private, max-age=\d+$/],
-  ['/api/donations/receipt-keys', /^private, max-age=\d+$/],
+  ['/api/donations/payment-details', 'private, max-age=300'],
+  ['/api/donations/receipt-keys', 'public, max-age=3600'],
 ]);
+const NOT_THERE_YET = [401, 404];
+const ACCESS_TOKEN = process.env.PROBE_ACCESS_TOKEN ?? '';
 const API_ANSWERS = [
   { status: 200, method: 'GET', path: '/api/operations/setup' },
   { status: 200, method: 'GET', path: '/api/content/home' },
   { status: 401, method: 'GET', path: '/api/donors/me' },
   { status: 404, method: 'GET', path: '/api/content/news/probe-neexistuje' },
-  ...[...OWN_CACHE_CONTROL.keys()].map((path) => ({ method: 'GET', path })),
 ];
 const EDGE_ONLY = [
   { method: 'POST', path: '/mcp' },
@@ -36,11 +37,13 @@ async function request({ method, path, headers = {}, body }) {
     body,
     redirect: 'manual',
   });
-  await response.arrayBuffer();
+  const text = await response.text();
   return {
     status: response.status,
     cacheControl: response.headers.get('cache-control') ?? '',
     edge: response.headers.get(EDGE_HEADER) ?? '',
+    setCookie: response.headers.get('set-cookie') ?? '',
+    text,
   };
 }
 
@@ -52,12 +55,8 @@ function expectEdgeNoStore(label, answer) {
   }
 }
 
-function expectApiNoStore(label, path, answer) {
+function expectApiNoStore(label, answer) {
   expectEdgeNoStore(label, answer);
-  const own = OWN_CACHE_CONTROL.get(path);
-  if (answer.status === 200 && own?.test(answer.cacheControl)) {
-    return;
-  }
   if (!answer.cacheControl.split(',').some((part) => part.trim() === 'no-store')) {
     fail(
       `${label} answered ${answer.status} with Cache-Control "${answer.cacheControl}", expected no-store`,
@@ -73,7 +72,43 @@ for (const probe of API_ANSWERS) {
   if (probe.status !== undefined && answer.status !== probe.status) {
     fail(`${label} answered ${answer.status}, expected ${probe.status}`);
   }
-  expectApiNoStore(label, probe.path, answer);
+  expectApiNoStore(label, answer);
+}
+
+for (const [path, cacheControl] of OWN_CACHE_CONTROL) {
+  const label = `GET ${path}`;
+  const answer = await request({ method: 'GET', path });
+  seen.add(answer.status);
+  expectEdgeNoStore(label, answer);
+  if (answer.status !== 200) {
+    if (!NOT_THERE_YET.includes(answer.status)) {
+      fail(`${label} answered ${answer.status}, expected 200 or, until it exists, 401 or 404`);
+    }
+    expectApiNoStore(label, answer);
+    continue;
+  }
+  if (answer.cacheControl !== cacheControl) {
+    fail(
+      `${label} answered 200 with Cache-Control "${answer.cacheControl}", expected "${cacheControl}"`,
+    );
+  }
+  if (answer.setCookie !== '') {
+    fail(`${label} sets a cookie, so a cache could hand it to another visitor`);
+  }
+  if (ACCESS_TOKEN === '') {
+    fail(
+      `${label} answers 200: set PROBE_ACCESS_TOKEN to a donor's access token so the probe can show it answers everyone alike`,
+    );
+    continue;
+  }
+  const signedIn = await request({
+    method: 'GET',
+    path,
+    headers: { Authorization: `Bearer ${ACCESS_TOKEN}` },
+  });
+  if (signedIn.status !== 200 || signedIn.text !== answer.text) {
+    fail(`${label} answers a signed-in donor otherwise than an anonymous visitor`);
+  }
 }
 
 const signIn = {
@@ -85,7 +120,7 @@ const signIn = {
 let limited;
 for (let attempt = 1; attempt <= SIGN_IN_ATTEMPTS && !limited; attempt++) {
   const answer = await request(signIn);
-  expectApiNoStore(`POST ${signIn.path} #${attempt}`, signIn.path, answer);
+  expectApiNoStore(`POST ${signIn.path} #${attempt}`, answer);
   if (answer.status === 429) {
     limited = answer;
   }
