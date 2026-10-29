@@ -53,6 +53,7 @@ Web představí fond a jeho pomoc dětem, usnadní darování a dárcům dá ú�
 
 - Celkem darováno, počet darů, poslední dar, tabulka plateb a souhrn po letech (rok, počet darů, částka).
 - Moje dary jsou seskupené po letech od nejnovějšího, každý rok s počtem darů, částkou a tlačítkem na roční potvrzení, jakmile je k dispozici (Jakub 24. 10. 2026).
+- Částky v přehledu, v Moje dary, v potvrzeních a v platbách a kartě dárce ve správě jsou tučné v barvě textu; modrá zůstává odkazům a tlačítkům (Jakub 29. 10. 2026).
 - Bankovní účty, ze kterých se dárci přiřazují platby bez symbolu (§5), s počtem a součtem darů z každého.
 
 ### Potvrzení o daru
