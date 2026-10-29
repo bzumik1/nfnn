@@ -9,8 +9,11 @@
 # nfnn-postgres has the password of the application role novanadeje_app ready and hands them to Java
 # as JWT_SECRET, SETTINGS_KEY, BACKUP_KEY and DB_PASSWORD (variables set by the environment win).
 # After a restore of a backup uploaded in the first setup with its own key, the backup container
-# leaves that key as /restore/backup-key.adopt; once the restore is over it replaces the generated
-# backup key, so the backups made before and after the restore open with the same key.
+# leaves that key as /restore/backup-key.adopt and records its public recipient in
+# /backups/status/adopted-key, which this container mounts read-only; once the restore is over the
+# key replaces the generated backup key only when it matches that record (the previous key is kept
+# as backup-key.replaced-<time>), so the backups made before and after the restore open with the
+# same key and the app user, who can write to /restore, cannot plant a key of its own.
 # The superuser's password stays with the database and the backup.
 set -eu
 
@@ -22,6 +25,7 @@ RUNNING_FILE=${RESTORE_RUNNING_FILE:-/backups/status/restore.running}
 REQUEST_PATIENCE_MINUTES=${REQUEST_PATIENCE_MINUTES:-5}
 BACKUP_KEY_FILE="$SECRETS_DIR/backup-key"
 ADOPTED_BACKUP_KEY="$RESTORE_DIR/backup-key.adopt"
+ADOPTED_KEY_RECORD=${ADOPTED_KEY_RECORD:-/backups/status/adopted-key}
 
 generate_secret() {
   if [ ! -s "$SECRETS_DIR/$1" ]; then
@@ -44,16 +48,26 @@ generate_backup_key() {
 
 adopt_backup_key() {
   [ -f "$ADOPTED_BACKUP_KEY" ] || return 0
-  if age-keygen -y "$ADOPTED_BACKUP_KEY" > /dev/null 2>&1 \
-      && (umask 077 && grep -m 1 '^AGE-SECRET-KEY-' "$ADOPTED_BACKUP_KEY" > "$BACKUP_KEY_FILE.part"); then
-    mv "$BACKUP_KEY_FILE.part" "$BACKUP_KEY_FILE"
-    chmod 600 "$BACKUP_KEY_FILE"
-    echo "The backup key entered with the restored backup is now the server's backup key"
-  else
-    rm -f "$BACKUP_KEY_FILE.part"
-    echo "The backup key left by the restore is not a valid age key; the server keeps its own"
-  fi
+  candidate=$(umask 077 && mktemp "$SECRETS_DIR/backup-key.adopt.XXXXXX")
+  head -c 200 "$ADOPTED_BACKUP_KEY" | grep -m 1 '^AGE-SECRET-KEY-' > "$candidate" || true
   rm -f "$ADOPTED_BACKUP_KEY"
+  recorded=$(sed -n 's/^recipient=//p' "$ADOPTED_KEY_RECORD" 2>/dev/null | head -n 1)
+  recipient=$(age-keygen -y "$candidate" 2>/dev/null || true)
+  if [ -z "$recipient" ]; then
+    echo "The backup key left by the restore is not a valid age key; the server keeps its own"
+  elif [ "$recipient" != "$recorded" ]; then
+    echo "WARNING: the backup key left in $RESTORE_DIR is not the one the backup container recorded after a restore; the server keeps its own"
+  elif [ "$recipient" = "$(age-keygen -y "$BACKUP_KEY_FILE" 2>/dev/null || true)" ]; then
+    echo "The backup key left by the restore is already the server's backup key"
+  else
+    replaced="$BACKUP_KEY_FILE.replaced-$(date -u +%Y%m%dT%H%M%SZ)"
+    cp -p "$BACKUP_KEY_FILE" "$replaced"
+    chmod 600 "$replaced"
+    mv "$candidate" "$BACKUP_KEY_FILE"
+    chmod 600 "$BACKUP_KEY_FILE"
+    echo "WARNING: the backup key entered with the restored backup is now the server's backup key; the previous one is kept as $replaced"
+  fi
+  rm -f "$candidate"
 }
 
 restore_due() {

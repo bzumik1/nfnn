@@ -506,6 +506,34 @@ jobs:
           [ ! -e "$restore/ci-4.upload" ] || { echo "::error::the upload was left in the restore folder"; exit 1; }
           curl -fsS --max-time 10 http://localhost:8089/ | grep -q '<app-root'
 
+          echo "A key planted in the restore folder is not adopted, and a backup uploaded with its own key is restored and its key becomes the server's"
+          secrets="$RUNNER_TEMP/nfnn/secrets"
+          server_key() {
+            sudo grep -m 1 '^AGE-SECRET-KEY-' "$secrets/backup-key"
+          }
+          first_key=$(server_key)
+          planted_key=$(docker exec nfnn-backup age-keygen 2> /dev/null | grep '^AGE-SECRET-KEY-')
+          printf '%s\n' "$planted_key" | docker exec -i -u app nfnn-backend sh -c 'cat > /restore/backup-key.adopt'
+          docker restart nfnn-backend
+          docker compose up -d --wait --wait-timeout 300 backend
+          [ "$(server_key)" = "$first_key" ] || { echo "::error::the backend adopted a backup key the app user left in the restore folder"; exit 1; }
+          docker logs nfnn-backend 2>&1 | grep -q 'is not the one the backup container recorded' || { echo "::error::the backend did not warn about the planted backup key"; exit 1; }
+          uploaded_key=$(docker exec nfnn-backup age-keygen 2> /dev/null | grep '^AGE-SECRET-KEY-')
+          uploaded_recipient=$(printf '%s\n' "$uploaded_key" | docker exec -i nfnn-backup age-keygen -y)
+          docker exec nfnn-backup sh -c "age --decrypt --identity /secrets/backup-key '/backups/$(basename "$full_dump")' | age --recipient '$uploaded_recipient'" | docker exec -i -u app nfnn-backend sh -c 'cat > /restore/ci-5.upload'
+          printf '%s\n' "$uploaded_key" | docker exec -i -u app nfnn-backend sh -c 'cat > /restore/ci-5.key'
+          docker exec -u app nfnn-backend sh -c "printf 'source=upload\nfile=ci-5.upload\nadmin=\n' > /backups/requests/ci-5.restore"
+          docker restart nfnn-backend
+          wait_for "grep -q '^request=ci-5$' $backups/status/restore" 60 "the restore of the upload with its own key did not run"
+          grep -q '^outcome=ok$' "$backups/status/restore" || { echo "::error::the restore of the upload with its own key failed"; cat "$backups/status/restore"; exit 1; }
+          docker compose up -d --wait --wait-timeout 300 backend
+          grep -qx "recipient=$uploaded_recipient" "$backups/status/adopted-key" || { echo "::error::the backup container did not record the adopted key"; exit 1; }
+          [ "$(server_key)" = "$uploaded_key" ] || { echo "::error::the key uploaded with the backup did not become the server's backup key"; exit 1; }
+          [ "$(sudo sh -c "grep -h -m 1 '^AGE-SECRET-KEY-' '$secrets'/backup-key.replaced-*")" = "$first_key" ] || { echo "::error::the replaced backup key was not kept"; exit 1; }
+          [ -z "$(sudo find "$restore" -maxdepth 1 \( -name '*.key' -o -name '*.adopt' -o -name '*.upload' \))" ] || { echo "::error::the restore left the upload or a key in the restore folder"; exit 1; }
+          [ -z "$(sudo find "$backups" \( -name '*.dump' -o -name work \))" ] || { echo "::error::a backup, a restore or a test restore left an unencrypted copy in the backups folder"; sudo find "$backups"; exit 1; }
+          curl -fsS --max-time 10 http://localhost:8089/ | grep -q '<app-root'
+
       - name: Hashed bundles are cached for good and a missing file answers 404, never the app
         run: |
           docker cp nfnn-frontend:/usr/share/nginx/html "$RUNNER_TEMP/frontend-html"
