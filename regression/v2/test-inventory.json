@@ -1,7 +1,7 @@
 {
   "source": "v2-baseline",
   "counts": {
-    "backend-junit": 2036,
+    "backend-junit": 2040,
     "backend-cucumber": 453,
     "frontend-vitest": 1088,
     "frontend-playwright": 225,
@@ -162,10 +162,12 @@
       "cucumber.transcript.ApiTranscriptsTest > Given an executor that cannot report its work, when the recorder waits for asynchronous work, then it fails instead of skipping the wait",
       "cucumber.transcript.ApiTranscriptsTest > Given real mail, Fio, JWT or settings secrets in the environment, when recording starts, then it is refused without naming their values",
       "cucumber.transcript.ApiTranscriptsTest > Given the baseline, when its source is named, then it is the tag the regeneration checks out",
+      "cucumber.transcript.ApiTranscriptsTest > Given transcript files left by an earlier run, when a recording run starts, then the folder is emptied, so no stale file survives",
       "cucumber.transcript.ScenarioTranscriptTest > Given a PDF answer, when the transcript is written, then its page count and text are kept and its bytes, which differ per run, are not",
       "cucumber.transcript.ScenarioTranscriptTest > Given a header sent with several values, when the transcript is written, then it keeps them all in order",
       "cucumber.transcript.ScenarioTranscriptTest > Given a known random value, when it is still present URL-encoded after normalising, then writing the transcript fails",
       "cucumber.transcript.ScenarioTranscriptTest > Given a mail with an HTML part, when the transcript is written, then its visible text and its links are kept normalised beside its digest",
+      "cucumber.transcript.ScenarioTranscriptTest > Given a masked value with spaces, hyphens or characters JSON escapes, when another part still carries it compacted or escaped, then writing the transcript fails",
       "cucumber.transcript.ScenarioTranscriptTest > Given a request body from a map without order, when the transcript is written, then its fields are sorted at every level",
       "cucumber.transcript.ScenarioTranscriptTest > Given a value masked in a request body, when a log line or a path still carries it, also URL-encoded, then writing the transcript fails without naming the value",
       "cucumber.transcript.ScenarioTranscriptTest > Given an answer whose fields v2 writes in an order that changes per JVM, when two runs write it, then both transcripts are identical, ids included",
@@ -1807,6 +1809,7 @@
       "regression.BaselineHygieneTest > Given a TOTP secret outside the test secrets and an unmasked secret parameter, when text is checked, then each is reported and the test secrets, also as a parameter, are not",
       "regression.BaselineHygieneTest > Given a file that is not valid JSON among the JSON artefacts, when it is checked, then it is reported, so no rule can be skipped",
       "regression.BaselineHygieneTest > Given a setting whose name marks a secret, when a JSON file is checked, then an unmasked value is reported and a masked, empty or other one is not",
+      "regression.BaselineHygieneTest > Given an address on the deny list, when text is checked, then it is reported even though a test spells it out",
       "regression.BaselineHygieneTest > Given masked placeholders, an IBAN, a hex digest, a secret the sources spell out, fixture addresses and addresses on an example domain, when text is checked, then nothing is reported",
       "regression.BaselineHygieneTest > Given text with an id, an id in base64url, a JWT, a random secret, an unmasked cookie and an address no fixture uses, when it is checked, then each is reported",
       "regression.BaselineHygieneTest > Given the TOTP golden cases, when their secrets are read, then they are exactly the test secrets the hygiene scan allows",
@@ -2043,6 +2046,7 @@
       "shared.interfaces.rest.ApiExceptionHandlerTest > Given a required query parameter is missing, when requested, then the answer is a validation problem naming that parameter",
       "shared.interfaces.rest.ApiExceptionHandlerTest > Given an English client, when a query parameter is invalid, then the problem title is in English",
       "support.RateLimiterWindowsTest > Given a limiter exhausted under a fixed clock, when its windows are reset, then it lets the next request through",
+      "support.RateLimiterWindowsTest > Given a rate limiter bean whose limiter it cannot read, when windows are reset, then it fails naming the bean, so no window survives unseen",
       "support.RateLimiterWindowsTest > Given beans that hold no limiter, when windows are reset, then it fails, so a changed limiter cannot slip past the reset",
       "support.RecordingMailSenderTest > Given a step that cleared the mail between two sends, when the scenario's mail is read, then both mails are there until the next scenario starts"
     ],
