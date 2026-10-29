@@ -229,6 +229,18 @@ describe('Given a signed-in donor in the donor area', () => {
     };
   }
 
+  function expectMissingGiftIn(container: string): void {
+    const block = `${container} .missing-gift`;
+    expect(text(`${block} h3`)).toBe('Poslali jste dar a nevidíte ho?');
+    expect(text(`${block} .missing-gift-text`)).toBe(
+      'Platbu bez vašeho variabilního symbolu, s jiným symbolem nebo z doby před založením účtu vám zatím přiřadit neumíme. ' +
+        'Ověřte účet, ze kterého jste platili, platbou 1 Kč a dřívější dary z něj vám obvykle přiřadíme také.',
+    );
+    const link = element(`${block} a`) as HTMLAnchorElement;
+    expect(normalized(link.textContent ?? '')).toBe('Přidat účet, ze kterého jste platili');
+    expect(link.getAttribute('href')).toBe('/darce/ucty?pridat=ucet');
+  }
+
   const yearlyUrl = (year: number): string => `/api/donations/me/receipts/yearly?year=${year}`;
   const yearSection = (year: number): string =>
     `.payments-card section[aria-labelledby="gifts-year-${year}"]`;
@@ -645,11 +657,47 @@ describe('Given a signed-in donor in the donor area', () => {
         { bankDataAsOf: EARLIER, checking: false },
         { status: 202, statusText: 'Accepted' },
       );
-      await settle();
+      await respond(twoYearSummary(), twoYearDonations());
 
       expect(text('.last-gift [role="status"]')).toBe('Údaje z banky k 18. 10. 2026 10:05');
       expect(text('.last-gift .recent-hint')).toContain(
         'běžný převod z jiné banky do dalšího pracovního dne',
+      );
+    });
+
+    it('then a donor waiting for the first gift sees it replace Jak poslat první dar as soon as the check of the area ends', async () => {
+      await open('/darce/prehled');
+      await respond(emptySummary(), emptyDonations());
+      expect(text('.first-gift h2')).toBe('Jak poslat první dar');
+
+      bankCheck.flush(
+        { bankDataAsOf: EARLIER, checking: false },
+        { status: 202, statusText: 'Accepted' },
+      );
+      await respond(twoYearSummary(), twoYearDonations());
+
+      expect(element('.first-gift')).toBeNull();
+      expect(text('.last-gift .last-gift-amount')).toBe('500 Kč');
+    });
+
+    it('then the donor waiting for the first gift can check for new payments from the overview and reads the outcome', async () => {
+      await open('/darce/prehled');
+      await respond(emptySummary(), emptyDonations());
+      bankCheck.flush(
+        { bankDataAsOf: EARLIER, checking: false },
+        { status: 202, statusText: 'Accepted' },
+      );
+      await respond(emptySummary(), emptyDonations());
+
+      await click('.first-gift .bank-check-btn');
+      expect(text('.first-gift .bank-check-status')).toBe('Kontrolujeme nové platby v bance…');
+      http
+        .expectOne({ method: 'POST', url: BANK_CHECK_URL })
+        .flush({ bankDataAsOf: EARLIER, checking: false });
+      await respond(emptySummary(), emptyDonations());
+
+      expect(text('.first-gift .bank-check-status')).toBe(
+        'Žádný nový dar zatím nepřišel. Údaje z banky k 18. 10. 2026 10:05',
       );
     });
 
@@ -690,12 +738,29 @@ describe('Given a signed-in donor in the donor area', () => {
       const links = [...root().querySelectorAll<HTMLAnchorElement>('.first-gift-actions a')];
       expect(
         links.map((link) => [normalized(link.textContent ?? ''), link.getAttribute('href')]),
-      ).toEqual([
-        ['Zobrazit číslo účtu a QR kód', '/#prispet'],
-        ['Posíláte trvalým příkazem?', '/darce/ucty'],
-      ]);
+      ).toEqual([['Zobrazit číslo účtu a QR kód', '/#prispet']]);
+      expect(text('.first-gift app-standing-order .standing-toggle')).toBe(
+        'Jak nastavit trvalý příkaz',
+      );
       expect(text('.first-gift .recent-hint')).toContain('Okamžitá platba');
       expect(text('.symbol-card a.give-again')).toBe('Přispět');
+    });
+
+    it('then a donor with no donations yet who sent a gift without the symbol finds the way to add the account it came from', async () => {
+      await open('/darce/prehled');
+      await respond(emptySummary(), emptyDonations());
+
+      expectMissingGiftIn('.first-gift');
+    });
+
+    it('then a donor with gifts can still open the standing order guide at the last gift', async () => {
+      await open('/darce/prehled');
+      await respond(twoYearSummary(), twoYearDonations());
+
+      expect(text('.last-gift app-standing-order .standing-toggle')).toBe(
+        'Jak nastavit trvalý příkaz',
+      );
+      expect(element('.missing-gift')).toBeNull();
     });
   });
 
@@ -888,18 +953,29 @@ describe('Given a signed-in donor in the donor area', () => {
       expect(text('.bank-hint')).toContain('každou hodinu');
     });
 
-    it('then a donor with no donations yet reads that there is no payment and how a standing order is paired', async () => {
+    it('then a donor with no donations yet reads that there is no payment, finds the way to add the account of a missing gift and the standing order guide', async () => {
       await open('/darce/dary');
       await respond(emptySummary(), emptyDonations());
 
       expect(element('.payments-card table')).toBeNull();
-      expect(text('.payments-empty')).toBe(
-        'Zatím tu není žádná platba. Posíláte trvalým příkazem?',
+      expect(text('.payments-empty')).toBe('Zatím tu není žádná platba.');
+      expectMissingGiftIn('.payments-card');
+      expect(text('.payments-card app-standing-order .standing-toggle')).toBe(
+        'Jak nastavit trvalý příkaz',
       );
-      expect(element('.payments-empty a')?.getAttribute('href')).toBe('/darce/ucty');
     });
 
-    it('then the bank was checked recently, the time of the bank data shows and the donations are not loaded again', async () => {
+    it('then a donor with gifts can still open the standing order guide and is not asked about a missing gift', async () => {
+      await open('/darce/dary');
+      await respond(twoYearSummary(), twoYearDonations());
+
+      expect(text('.payments-card app-standing-order .standing-toggle')).toBe(
+        'Jak nastavit trvalý příkaz',
+      );
+      expect(element('.missing-gift')).toBeNull();
+    });
+
+    it('then the bank was checked recently, the donations load again when the check ends and the time of the bank data shows without an outcome', async () => {
       await open('/darce/dary');
       await respond(twoYearSummary(), twoYearDonations());
 
@@ -908,10 +984,12 @@ describe('Given a signed-in donor in the donor area', () => {
         { status: 202, statusText: 'Accepted' },
       );
       await settle();
+      expect(text('.bank-check-status')).toBe('Kontrolujeme nové platby v bance…');
+      await respond(twoYearSummary(), twoYearDonations());
 
+      expect(element('.bank-check-status')?.getAttribute('role')).toBe('status');
       expect(text('.bank-check-status')).toBe('Údaje z banky k 18. 10. 2026 10:05');
       expect(button('.bank-check-btn').disabled).toBe(false);
-      http.expectNone('/api/donations/me/summary');
     });
 
     it('then while the bank is being checked the page says so and loads the donations again once new bank data arrived', async () => {
@@ -943,10 +1021,10 @@ describe('Given a signed-in donor in the donor area', () => {
       expect(texts('.payments-card tbody tr')).toHaveLength(twoYearDonations().items.length);
     });
 
-    it('then a check that ends without new bank data does not load the donations again', async () => {
+    it('then a check that ends without new bank data still loads the donations again, so a gift imported meanwhile shows', async () => {
       vi.useFakeTimers();
       await open('/darce/dary');
-      await respond(twoYearSummary(), twoYearDonations());
+      await respond(emptySummary(), emptyDonations());
 
       bankCheck.flush(
         { bankDataAsOf: EARLIER, checking: true },
@@ -956,28 +1034,141 @@ describe('Given a signed-in donor in the donor area', () => {
       http
         .expectOne({ method: 'GET', url: BANK_CHECK_URL })
         .flush({ bankDataAsOf: EARLIER, checking: false });
-      await settle();
+      await respond(twoYearSummary(), twoYearDonations());
 
-      http.expectNone('/api/donations/me/summary');
+      expect(texts('.payments-card tbody tr')).toHaveLength(twoYearDonations().items.length);
       expect(text('.bank-check-status')).toBe('Údaje z banky k 18. 10. 2026 10:05');
     });
 
-    it('then pressing Zkontrolovat nové platby asks the bank again and loads the donations again even without new bank data', async () => {
-      await open('/darce/dary');
-      await respond(twoYearSummary(), twoYearDonations());
-      bankCheck.flush(
-        { bankDataAsOf: EARLIER, checking: false },
-        { status: 202, statusText: 'Accepted' },
-      );
-      await settle();
+    describe('when the donor presses Zkontrolovat nové platby', () => {
+      async function pressAfterAreaCheck(list = twoYearDonations()): Promise<void> {
+        await open('/darce/dary');
+        await respond(twoYearSummary(), list);
+        bankCheck.flush(
+          { bankDataAsOf: EARLIER, checking: false },
+          { status: 202, statusText: 'Accepted' },
+        );
+        await settle();
+        await respond(twoYearSummary(), list);
+        await click('.bank-check-btn');
+      }
 
-      await click('.bank-check-btn');
-      http
-        .expectOne({ method: 'POST', url: BANK_CHECK_URL })
-        .flush({ bankDataAsOf: EARLIER, checking: false });
+      it('then the bank is asked again, the page says so until the donations are loaded again, and then that no gift is new', async () => {
+        await pressAfterAreaCheck();
+        expect(text('.bank-check-status')).toBe('Kontrolujeme nové platby v bance…');
+        expect(button('.bank-check-btn').disabled).toBe(true);
 
-      await respond(twoYearSummary(), twoYearDonations());
-      expect(text('.bank-check-status')).toBe('Údaje z banky k 18. 10. 2026 10:05');
+        http
+          .expectOne({ method: 'POST', url: BANK_CHECK_URL })
+          .flush({ bankDataAsOf: EARLIER, checking: false });
+        await settle();
+        expect(text('.bank-check-status')).toBe('Kontrolujeme nové platby v bance…');
+        await respond(twoYearSummary(), twoYearDonations());
+
+        expect(text('.bank-check-status')).toBe(
+          'Žádný nový dar zatím nepřišel. Údaje z banky k 18. 10. 2026 10:05',
+        );
+        expect(button('.bank-check-btn').disabled).toBe(false);
+      });
+
+      it('and one gift arrives, then the outcome says one new gift was added', async () => {
+        const list = twoYearDonations();
+        await pressAfterAreaCheck({ ...list, items: list.items.slice(1) });
+
+        http
+          .expectOne({ method: 'POST', url: BANK_CHECK_URL })
+          .flush({ bankDataAsOf: LATER, checking: false });
+        await respond(twoYearSummary(), list);
+
+        expect(text('.bank-check-status')).toBe(
+          'Přibyl 1 nový dar. Údaje z banky k 18. 10. 2026 10:07',
+        );
+      });
+
+      it('and three gifts arrive, then the outcome uses the Czech few form', async () => {
+        const list = twoYearDonations();
+        await pressAfterAreaCheck({ ...list, items: list.items.slice(3) });
+
+        http
+          .expectOne({ method: 'POST', url: BANK_CHECK_URL })
+          .flush({ bankDataAsOf: LATER, checking: false });
+        await respond(twoYearSummary(), list);
+
+        expect(text('.bank-check-status')).toBe(
+          'Přibyly 3 nové dary. Údaje z banky k 18. 10. 2026 10:07',
+        );
+      });
+
+      it('and five gifts arrive, then the outcome uses the form for many', async () => {
+        const list = twoYearDonations();
+        const more = {
+          ...list,
+          items: [
+            donationItem({ id: 'd-6', receivedAt: '2026-05-01' }),
+            donationItem({ id: 'd-5', receivedAt: '2026-04-01' }),
+            ...list.items,
+          ],
+        };
+        await pressAfterAreaCheck(emptyDonations());
+
+        http
+          .expectOne({ method: 'POST', url: BANK_CHECK_URL })
+          .flush({ bankDataAsOf: LATER, checking: false });
+        await respond(twoYearSummary(), more);
+
+        expect(text('.bank-check-status')).toBe(
+          'Přibylo 5 nových darů. Údaje z banky k 18. 10. 2026 10:07',
+        );
+      });
+
+      it('and the check fails, then an alert asks to try again in a while', async () => {
+        await pressAfterAreaCheck();
+
+        http
+          .expectOne({ method: 'POST', url: BANK_CHECK_URL })
+          .flush(null, { status: 500, statusText: 'Server Error' });
+        await settle();
+
+        expect(text('.bank-check-error')).toBe(
+          'Nové platby se nepodařilo zkontrolovat. Zkuste to prosím za chvíli znovu.',
+        );
+        expect(element('.bank-check-error')?.getAttribute('role')).toBe('alert');
+        expect(button('.bank-check-btn').disabled).toBe(false);
+      });
+
+      it('and the bank is still busy after the last poll, then the donations load again and the outcome says to try again later', async () => {
+        vi.useFakeTimers();
+        await pressAfterAreaCheck();
+        http
+          .expectOne({ method: 'POST', url: BANK_CHECK_URL })
+          .flush({ bankDataAsOf: EARLIER, checking: true });
+        for (let poll = 0; poll < 45; poll++) {
+          await vi.advanceTimersByTimeAsync(2000);
+          http
+            .expectOne({ method: 'GET', url: BANK_CHECK_URL })
+            .flush({ bankDataAsOf: EARLIER, checking: true });
+        }
+        await vi.advanceTimersByTimeAsync(2000);
+        http.expectNone({ method: 'GET', url: BANK_CHECK_URL });
+        await respond(twoYearSummary(), twoYearDonations());
+
+        expect(text('.bank-check-status')).toBe(
+          'Banka zatím neodpověděla. Zkuste to prosím za chvíli znovu. Údaje z banky k 18. 10. 2026 10:05',
+        );
+      });
+
+      it('and then moves to another section and back, then the outcome is gone', async () => {
+        await pressAfterAreaCheck();
+        http
+          .expectOne({ method: 'POST', url: BANK_CHECK_URL })
+          .flush({ bankDataAsOf: EARLIER, checking: false });
+        await respond(twoYearSummary(), twoYearDonations());
+
+        await go('/darce/potvrzeni');
+        await go('/darce/dary');
+
+        expect(text('.bank-check-status')).toBe('Údaje z banky k 18. 10. 2026 10:05');
+      });
     });
 
     it('then a failed bank check shows no bank time and the donor can try again', async () => {
@@ -987,7 +1178,8 @@ describe('Given a signed-in donor in the donor area', () => {
       bankCheck.flush(null, { status: 500, statusText: 'Server Error' });
       await settle();
 
-      expect(element('.bank-check-status')).toBeNull();
+      expect(text('.bank-check-status')).toBe('');
+      expect(element('.bank-check-error')).toBeNull();
       expect(button('.bank-check-btn').disabled).toBe(false);
     });
 
@@ -1339,15 +1531,25 @@ describe('Given a signed-in donor in the donor area', () => {
       expect(element('.single-card a')?.getAttribute('href')).toBe('/darce/dary');
     });
 
-    it('then a donor with no donations yet reads how a gift appears, with a link to the bank accounts', async () => {
+    it('then a donor with no donations yet reads how a gift appears and finds the way to add the account of a missing gift', async () => {
       await open('/darce/potvrzeni');
       await respond(emptySummary(), emptyDonations());
 
       expect(element('.year-row')).toBeNull();
       expect(text('.yearly-empty')).toBe(
-        'Zatím tu nemáme žádný váš dar. Jakmile dorazí platba s vaším variabilním symbolem, objeví se tady. Posíláte trvalým příkazem?',
+        'Zatím tu nemáme žádný váš dar. Jakmile dorazí platba s vaším variabilním symbolem, objeví se tady.',
       );
-      expect(element('.yearly-empty a')?.getAttribute('href')).toBe('/darce/ucty');
+      expectMissingGiftIn('.yearly-card');
+    });
+
+    it('then one plain line says to use either the yearly receipt or those of single gifts, and that a new download after a change of name or address replaces the earlier one', async () => {
+      await open('/darce/potvrzeni');
+      await respond(twoYearSummary(), twoYearDonations());
+
+      expect(text('.receipts-intro')).toBe(
+        'Do daňového přiznání přiložte buď roční potvrzení, nebo potvrzení k jednotlivým darům, ne obojí. ' +
+          'Když změníte jméno nebo adresu, nově stažené potvrzení dostane nové číslo a nahradí to dřívější.',
+      );
     });
   });
 
@@ -1356,6 +1558,31 @@ describe('Given a signed-in donor in the donor area', () => {
       return harness.fixture.debugElement.query(By.directive(BankAccountsCard))
         .componentInstance as BankAccountsCard;
     }
+
+    it('then the link of a missing gift opens Přidat účet at once, leaves no trace in the address and closing returns the focus to Přidat účet', async () => {
+      await open('/darce/ucty?pridat=ucet');
+      sectionAccountRequests.forEach((request) => request.flush({ items: [] }));
+      await respond(emptySummary(), emptyDonations());
+      await settle();
+
+      http
+        .expectOne((request) => request.url === '/api/donations/payment-qr')
+        .flush({
+          spayd: 'SPD*1.0',
+          qrCode: { size: 1, modules: '1' },
+          bankAccount: {
+            accountNumber: '5544332217/2010',
+            iban: 'CZ2620100000005544332217',
+            recipientName: 'Nadační fond Nová naděje',
+          },
+        });
+      await settle();
+
+      expect((element('dialog') as HTMLDialogElement).open).toBe(true);
+      expect(TestBed.inject(Router).url).toBe('/darce/ucty');
+      await click('.add-account-close');
+      expect(document.activeElement).toBe(element('.accounts-add'));
+    });
 
     it('then the bank accounts card shows with the variable symbol for adding one', async () => {
       await openBankAccounts();
@@ -1394,7 +1621,7 @@ describe('Given a signed-in donor in the donor area', () => {
         { bankDataAsOf: EARLIER, checking: false },
         { status: 202, statusText: 'Accepted' },
       );
-      await settle();
+      await respond(twoYearSummary(), twoYearDonations());
 
       card().bankChecked.emit({ bankDataAsOf: EARLIER, checking: false });
       await settle();

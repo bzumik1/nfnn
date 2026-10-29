@@ -1,0 +1,17 @@
+<div class="missing-gift">
+  <h3 class="missing-gift-title" i18n="@@donor.dashboard.missingGift.title">
+    Poslali jste dar a nevidíte ho?
+  </h3>
+  <p class="missing-gift-text" i18n="@@donor.dashboard.missingGift.text">
+    Platbu bez vašeho variabilního symbolu, s jiným symbolem nebo z doby před založením účtu vám
+    zatím přiřadit neumíme. Ověřte účet, ze kterého jste platili, platbou 1&nbsp;Kč a dřívější dary
+    z něj vám obvykle přiřadíme také.
+  </p>
+  <a
+    class="ui-button missing-gift-add"
+    routerLink="/darce/ucty"
+    [queryParams]="addAccountQuery"
+    i18n="@@donor.dashboard.missingGift.add"
+    >Přidat účet, ze kterého jste platili</a
+  >
+</div>

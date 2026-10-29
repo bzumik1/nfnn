@@ -1,7 +1,7 @@
 import { computed, DestroyRef, inject, Injectable, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
-import { forkJoin, last, Observable, tap } from 'rxjs';
+import { catchError, forkJoin, last, map, Observable, of, tap } from 'rxjs';
 import { problemOf, problemTypeEndsWith } from '../../../core/auth/api-problem';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
@@ -18,6 +18,12 @@ import { saveBlob } from '../../donations/file-download';
 export type DonationsState = 'loading' | 'ready' | 'error';
 
 export type ReceiptScope = 'yearly' | 'single';
+
+export type BankCheckOutcome =
+  | { readonly kind: 'found'; readonly count: number }
+  | { readonly kind: 'none' }
+  | { readonly kind: 'unfinished' }
+  | { readonly kind: 'failed' };
 
 export interface ReceiptError {
   readonly scope: ReceiptScope;
@@ -53,6 +59,7 @@ export class DonorDonations {
 
   readonly bankDataAsOf = signal<string | null>(null);
   readonly checkingBank = signal(false);
+  readonly bankCheckOutcome = signal<BankCheckOutcome | null>(null);
   readonly bankDataArrived = signal(0);
 
   readonly bankAccounts = signal<readonly BankAccountItem[]>([]);
@@ -62,6 +69,7 @@ export class DonorDonations {
 
   readonly receiptError = signal<ReceiptError | null>(null);
   private readonly downloads = signal<ReadonlySet<string>>(new Set());
+  private latestDonationsRequest = 0;
 
   constructor() {
     this.load();
@@ -88,6 +96,10 @@ export class DonorDonations {
     this.checkBank(true);
   }
 
+  clearBankCheckOutcome(): void {
+    this.bankCheckOutcome.set(null);
+  }
+
   bankCheckedWhileAdding(check: BankCheckResponse): void {
     const asOfBefore = this.bankDataAsOf();
     this.bankDataAsOf.set(check.bankDataAsOf);
@@ -97,22 +109,30 @@ export class DonorDonations {
   }
 
   fetchDonations(): void {
-    forkJoin({ summary: this.donations.summary(), list: this.donations.list() })
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: ({ summary, list }) => {
+    this.reloadDonations().subscribe();
+  }
+
+  private reloadDonations(): Observable<readonly DonationItem[] | null> {
+    const request = ++this.latestDonationsRequest;
+    return forkJoin({ summary: this.donations.summary(), list: this.donations.list() }).pipe(
+      map(({ summary, list }) => {
+        if (request === this.latestDonationsRequest) {
           this.summary.set(summary);
           this.items.set(list.items);
           this.state.set('ready');
-        },
-        error: (failure: unknown) => {
-          if (this.sessionEnded(failure)) {
-            this.sendToSignIn();
-            return;
-          }
+        }
+        return list.items;
+      }),
+      catchError((failure: unknown) => {
+        if (this.sessionEnded(failure)) {
+          this.sendToSignIn();
+        } else if (request === this.latestDonationsRequest) {
           this.state.set('error');
-        },
-      });
+        }
+        return of(null);
+      }),
+      takeUntilDestroyed(this.destroyRef),
+    );
   }
 
   sendToSignIn(): void {
@@ -145,11 +165,13 @@ export class DonorDonations {
     this.download(singleKey(item.id), 'single', this.donations.singleReceipt(item.id));
   }
 
-  private checkBank(reloadAlways: boolean): void {
+  private checkBank(byDonor: boolean): void {
     if (this.checkingBank()) {
       return;
     }
     this.checkingBank.set(true);
+    this.bankCheckOutcome.set(null);
+    const known = new Set(this.items().map((item) => item.id));
     let asOfBefore: string | null | undefined;
     this.donations
       .checkBankUntilDone()
@@ -163,13 +185,27 @@ export class DonorDonations {
       )
       .subscribe({
         next: (check: BankCheckResponse) => {
-          this.checkingBank.set(false);
-          if (reloadAlways || check.bankDataAsOf !== asOfBefore) {
-            this.fetchDonations();
+          if (byDonor || check.bankDataAsOf !== asOfBefore) {
             this.bankDataArrived.update((count) => count + 1);
           }
+          this.reloadDonations().subscribe((items) => {
+            this.checkingBank.set(false);
+            if (byDonor && items !== null) {
+              this.bankCheckOutcome.set(outcomeOf(check, items, known));
+            }
+          });
         },
-        error: () => this.checkingBank.set(false),
+        error: (failure: unknown) => {
+          this.checkingBank.set(false);
+          if (!byDonor) {
+            return;
+          }
+          if (this.sessionEnded(failure)) {
+            this.sendToSignIn();
+            return;
+          }
+          this.bankCheckOutcome.set({ kind: 'failed' });
+        },
       });
   }
 
@@ -225,6 +261,18 @@ export class DonorDonations {
     }
     this.receiptError.set({ scope, message: RECEIPT_FAILED });
   }
+}
+
+function outcomeOf(
+  check: BankCheckResponse,
+  items: readonly DonationItem[],
+  known: ReadonlySet<string>,
+): BankCheckOutcome {
+  if (check.checking) {
+    return { kind: 'unfinished' };
+  }
+  const count = items.filter((item) => item.status === 'RECEIVED' && !known.has(item.id)).length;
+  return count > 0 ? { kind: 'found', count } : { kind: 'none' };
 }
 
 function yearlyKey(year: number): string {

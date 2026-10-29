@@ -1,0 +1,36 @@
+<div class="bank-check">
+  <p class="bank-check-status" role="status">
+    @if (donations.checkingBank()) {
+      <span i18n="@@donor.dashboard.bank.checking">Kontrolujeme nové platby v bance…</span>
+    } @else {
+      @if (outcome(); as outcome) {
+        <span class="bank-check-outcome">{{ outcome }}</span
+        >&ngsp;
+      }
+      @if (donations.bankDataAsOf(); as asOf) {
+        <span
+          ><span i18n="@@donor.dashboard.bank.asOf">Údaje z banky k</span>
+          {{ formatBankTime(asOf) }}</span
+        >
+      }
+    }
+  </p>
+  <button
+    type="button"
+    class="ui-button ui-button--small bank-check-btn"
+    [disabled]="donations.checkingBank()"
+    (click)="donations.refreshFromBank()"
+    i18n="@@donor.dashboard.bank.refresh"
+  >
+    Zkontrolovat nové platby
+  </button>
+  @if (failed()) {
+    <p
+      class="ui-callout ui-callout--danger bank-check-error"
+      role="alert"
+      i18n="@@donor.dashboard.bank.outcome.failed"
+    >
+      Nové platby se nepodařilo zkontrolovat. Zkuste to prosím za chvíli znovu.
+    </p>
+  }
+</div>

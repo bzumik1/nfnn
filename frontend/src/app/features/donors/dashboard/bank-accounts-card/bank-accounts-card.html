@@ -24,6 +24,7 @@
       </button>
     </div>
     <button
+      #addButton
       type="button"
       class="ui-button ui-button--primary accounts-add"
       [disabled]="!variableSymbol()"
@@ -116,7 +117,7 @@
                   </p>
                 }
                 @if (account.symbolOffer; as offer) {
-                  @if (confirming() !== account.id) {
+                  @if (confirming() !== account.id && !asksInDialog(account)) {
                     <app-symbol-claim
                       [accountId]="account.id"
                       [offer]="offer"
@@ -215,8 +216,10 @@
         }
       } @else {
         <p class="accounts-empty" i18n="@@donor.bankAccounts.empty">
-          Účet se tu objeví sám, jakmile od vás přijde první platba s vaším variabilním symbolem.
-          Nic dalšího dělat nemusíte.
+          Účet se tu objeví sám, jakmile z něj pošlete dar s vaším variabilním symbolem. Poslali
+          jste dar bez symbolu, s jiným symbolem nebo ještě před založením účtu? Přidejte účet, ze
+          kterého jste platili, tlačítkem „Přidat účet“ a dřívější dary z něj vám obvykle přiřadíme
+          také.
         </p>
         @if (variableSymbol(); as symbol) {
           <p class="accounts-nudge" i18n="@@donor.bankAccounts.nudge.empty">
@@ -272,10 +275,12 @@
     >
       Přidat účet
     </h2>
-    <p class="add-account-text" i18n="@@donor.bankAccounts.addDialog.text">
-      Pošlete z účtu, který chcete přidat, <strong>1 Kč</strong> podle údajů níže. Jakmile platba
-      dorazí, účet se tu objeví a platby z něj vám budeme přiřazovat i bez variabilního symbolu.
-    </p>
+    @if (!newlyVerified()) {
+      <p class="add-account-text" i18n="@@donor.bankAccounts.addDialog.text">
+        Pošlete z účtu, který chcete přidat, <strong>1 Kč</strong> podle údajů níže. Jakmile platba
+        dorazí, účet se tu objeví a platby z něj vám budeme přiřazovat i bez variabilního symbolu.
+      </p>
+    }
 
     <div
       class="add-account-watch"
@@ -289,26 +294,33 @@
         </svg>
         <div class="watch-text">
           @if (wasActiveWhenOpened(account)) {
-            <p class="watch-title" i18n="@@donor.bankAccounts.addDialog.paymentArrived">
+            <p
+              #addResult
+              class="watch-title"
+              tabindex="-1"
+              i18n="@@donor.bankAccounts.addDialog.paymentArrived"
+            >
               Platba z účtu <span class="watch-account">{{ account.accountNumber }}</span> dorazila
             </p>
           } @else {
-            <p class="watch-title" i18n="@@donor.bankAccounts.addDialog.verified">
+            <p
+              #addResult
+              class="watch-title"
+              tabindex="-1"
+              i18n="@@donor.bankAccounts.addDialog.verified"
+            >
               Účet <span class="watch-account">{{ account.accountNumber }}</span> je ověřený
             </p>
           }
-          @if (account.symbolOffer) {
-            <p class="watch-detail" i18n="@@donor.bankAccounts.addDialog.offerWaiting">
-              U účtu na vás čeká otázka k platbám se starším variabilním symbolem. Najdete ji v
-              seznamu účtů po zavření okna.
-            </p>
-          } @else if (warns(account)) {
-            <ng-container
-              [ngTemplateOutlet]="warning"
-              [ngTemplateOutletContext]="{ $implicit: hint(account) }"
-            />
-          } @else {
-            <p class="watch-detail">{{ hint(account) }}</p>
+          @if (account.symbolOffer === null) {
+            @if (warns(account)) {
+              <ng-container
+                [ngTemplateOutlet]="warning"
+                [ngTemplateOutletContext]="{ $implicit: hint(account) }"
+              />
+            } @else {
+              <p class="watch-detail">{{ hint(account) }}</p>
+            }
           }
         </div>
       } @else if (paymentWatch() === 'waiting') {
@@ -345,119 +357,142 @@
       }
     </div>
 
-    <div class="add-account-payment">
-      <div class="add-account-qr" [attr.aria-busy]="qr().kind === 'loading'">
-        @if (qrResponse(); as response) {
-          <app-qr-code
-            class="add-account-qr-image"
-            [matrix]="response.qrCode"
-            label="QR platba 1 Kč s vaším variabilním symbolem"
-            i18n-label="@@donor.bankAccounts.addDialog.qrAlt"
-          />
-        } @else if (qr().kind === 'loading') {
-          <span class="add-account-qr-placeholder" i18n="@@home.donate.qr.loading"
-            >Připravujeme QR kód…</span
-          >
-        } @else {
-          <div class="add-account-qr-error" role="alert">
-            <p i18n="@@home.donate.qr.error">
-              QR platbu se nepodařilo připravit. Zkuste to prosím znovu.
-            </p>
-            <button
-              type="button"
-              class="ui-button add-account-qr-retry"
-              (click)="loadQr()"
-              i18n="@@home.donate.qr.retry"
+    @if (newlyVerified(); as account) {
+      @if (account.symbolOffer; as offer) {
+        <app-symbol-claim
+          class="add-account-claim"
+          [accountId]="account.id"
+          [offer]="offer"
+          [donorName]="donorName()"
+          [busy]="busy() === account.id"
+          (answer)="answer(account, offer, $event)"
+        />
+      }
+      @if (actionError()) {
+        <p
+          #addError
+          class="ui-callout ui-callout--danger add-account-error"
+          role="alert"
+          tabindex="-1"
+        >
+          {{ actionError() }}
+        </p>
+      }
+      <p #addAnswer class="add-account-answer" role="status" tabindex="-1">{{ actionDone() }}</p>
+    } @else {
+      <div class="add-account-payment">
+        <div class="add-account-qr" [attr.aria-busy]="qr().kind === 'loading'">
+          @if (qrResponse(); as response) {
+            <app-qr-code
+              class="add-account-qr-image"
+              [matrix]="response.qrCode"
+              label="QR platba 1 Kč s vaším variabilním symbolem"
+              i18n-label="@@donor.bankAccounts.addDialog.qrAlt"
+            />
+          } @else if (qr().kind === 'loading') {
+            <span class="add-account-qr-placeholder" i18n="@@home.donate.qr.loading"
+              >Připravujeme QR kód…</span
             >
-              Zkusit znovu
-            </button>
-          </div>
-        }
-      </div>
-
-      @if (qrResponse(); as response) {
-        <dl class="add-account-bank">
-          <div class="add-account-row">
-            <dt i18n="@@home.donate.bank.account">Číslo účtu</dt>
-            <dd>
-              <span class="bank-value">{{ response.bankAccount.accountNumber }}</span>
-              <app-copy-button
-                [value]="response.bankAccount.accountNumber"
-                what="číslo účtu"
-                i18n-what="@@home.donate.bank.copyAccount"
-              />
-            </dd>
-          </div>
-          <div class="add-account-row">
-            <dt i18n="@@home.donate.bank.amount">Částka</dt>
-            <dd>
-              <span class="bank-value"
-                >{{ verificationAmount }}&nbsp;<ng-container i18n="@@home.donate.amount.currency"
-                  >Kč</ng-container
-                ></span
+          } @else {
+            <div class="add-account-qr-error" role="alert">
+              <p i18n="@@home.donate.qr.error">
+                QR platbu se nepodařilo připravit. Zkuste to prosím znovu.
+              </p>
+              <button
+                type="button"
+                class="ui-button add-account-qr-retry"
+                (click)="loadQr()"
+                i18n="@@home.donate.qr.retry"
               >
-            </dd>
-          </div>
-          <div class="add-account-row">
-            <dt i18n="@@donor.bankAccounts.addDialog.message">Zpráva pro příjemce</dt>
-            <dd>
-              <span class="bank-value">{{ verificationMessage }}</span>
-              <app-copy-button
-                [value]="verificationMessage"
-                what="zprávu pro příjemce"
-                i18n-what="@@donor.bankAccounts.addDialog.copyMessage"
-              />
-            </dd>
-          </div>
-          @if (variableSymbol(); as symbol) {
+                Zkusit znovu
+              </button>
+            </div>
+          }
+        </div>
+
+        @if (qrResponse(); as response) {
+          <dl class="add-account-bank">
             <div class="add-account-row">
-              <dt i18n="@@home.donate.bank.vs">Variabilní symbol</dt>
+              <dt i18n="@@home.donate.bank.account">Číslo účtu</dt>
               <dd>
-                <span class="bank-value">{{ symbol }}</span>
+                <span class="bank-value">{{ response.bankAccount.accountNumber }}</span>
                 <app-copy-button
-                  [value]="symbol"
-                  what="variabilní symbol"
-                  i18n-what="@@home.donate.bank.copyVs"
+                  [value]="response.bankAccount.accountNumber"
+                  what="číslo účtu"
+                  i18n-what="@@home.donate.bank.copyAccount"
                 />
               </dd>
             </div>
-          }
-        </dl>
+            <div class="add-account-row">
+              <dt i18n="@@home.donate.bank.amount">Částka</dt>
+              <dd>
+                <span class="bank-value"
+                  >{{ verificationAmount }}&nbsp;<ng-container i18n="@@home.donate.amount.currency"
+                    >Kč</ng-container
+                  ></span
+                >
+              </dd>
+            </div>
+            <div class="add-account-row">
+              <dt i18n="@@donor.bankAccounts.addDialog.message">Zpráva pro příjemce</dt>
+              <dd>
+                <span class="bank-value">{{ verificationMessage }}</span>
+                <app-copy-button
+                  [value]="verificationMessage"
+                  what="zprávu pro příjemce"
+                  i18n-what="@@donor.bankAccounts.addDialog.copyMessage"
+                />
+              </dd>
+            </div>
+            @if (variableSymbol(); as symbol) {
+              <div class="add-account-row">
+                <dt i18n="@@home.donate.bank.vs">Variabilní symbol</dt>
+                <dd>
+                  <span class="bank-value">{{ symbol }}</span>
+                  <app-copy-button
+                    [value]="symbol"
+                    what="variabilní symbol"
+                    i18n-what="@@home.donate.bank.copyVs"
+                  />
+                </dd>
+              </div>
+            }
+          </dl>
+        }
+      </div>
+
+      <details class="add-account-more">
+        <summary i18n="@@donor.bankAccounts.addDialog.more">
+          Kdy to funguje a co se stane s dřívějšími dary
+        </summary>
+        <ul class="add-account-more-list">
+          <li i18n="@@donor.bankAccounts.addDialog.czechOnly">
+            Funguje jen účet u české banky. Neověřujte prosím sběrný účet, přes který posílá peníze
+            víc lidí.
+          </li>
+          <li i18n="@@donor.bankAccounts.addDialog.earlier">
+            Když účet ověříte poprvé a předtím ho neověřil jiný dárce, přiřadíme vám i dřívější dary
+            z něj, které přišly bez symbolu.
+          </li>
+          <li i18n="@@donor.bankAccounts.addDialog.standingOrder">
+            Posíláte z účtu dary trvalým příkazem se starším variabilním symbolem? Pošlete pak právě
+            <strong>1&nbsp;Kč</strong> se zprávou pro příjemce „{{ verificationMessage }}“, jak ji
+            má QR kód; běžný dar nestačí. Pokud z účtu chodil jen jeden takový symbol, obvykle se
+            vás u účtu zeptáme, jestli jsou platby s ním vaše.
+          </li>
+          <li i18n="@@donor.bankAccounts.addDialog.timing">
+            Okamžitá platba dorazí do pár minut, běžný převod obvykle do dalšího pracovního dne.
+          </li>
+        </ul>
+      </details>
+    }
+
+    <button type="button" class="add-account-close" (click)="closeAdd()">
+      @if (newlyVerified()) {
+        <span i18n="@@donor.bankAccounts.addDialog.done">Hotovo</span>
+      } @else {
+        <span i18n="@@donor.bankAccounts.addDialog.close">Zavřít</span>
       }
-    </div>
-
-    <details class="add-account-more">
-      <summary i18n="@@donor.bankAccounts.addDialog.more">
-        Kdy to funguje a co se stane s dřívějšími dary
-      </summary>
-      <ul class="add-account-more-list">
-        <li i18n="@@donor.bankAccounts.addDialog.czechOnly">
-          Funguje jen účet u české banky. Neověřujte prosím sběrný účet, přes který posílá peníze
-          víc lidí.
-        </li>
-        <li i18n="@@donor.bankAccounts.addDialog.earlier">
-          Když účet ověříte poprvé a předtím ho neověřil jiný dárce, přiřadíme vám i dřívější dary z
-          něj, které přišly bez symbolu.
-        </li>
-        <li i18n="@@donor.bankAccounts.addDialog.standingOrder">
-          Posíláte z účtu dary trvalým příkazem se starším variabilním symbolem? Pošlete pak právě
-          <strong>1&nbsp;Kč</strong> se zprávou pro příjemce „{{ verificationMessage }}“, jak ji má
-          QR kód; běžný dar nestačí. Pokud z účtu chodil jen jeden takový symbol, obvykle se vás u
-          účtu zeptáme, jestli jsou platby s ním vaše.
-        </li>
-        <li i18n="@@donor.bankAccounts.addDialog.timing">
-          Okamžitá platba dorazí do pár minut, běžný převod obvykle do dalšího pracovního dne.
-        </li>
-      </ul>
-    </details>
-
-    <button
-      type="button"
-      class="add-account-close"
-      (click)="closeAdd()"
-      i18n="@@donor.bankAccounts.addDialog.close"
-    >
-      Zavřít
     </button>
   </app-dialog>
 }

@@ -1,0 +1,23 @@
+:host {
+  display: block;
+}
+
+.missing-gift {
+  margin-top: var(--space-4);
+  padding: var(--space-4);
+  background: var(--color-surface-alt);
+  border-radius: var(--radius-md);
+}
+
+.missing-gift-title {
+  font-size: var(--text-lg);
+  font-weight: var(--weight-bold);
+  color: var(--color-text);
+}
+
+.missing-gift-text {
+  margin: var(--space-1) 0 var(--space-3);
+  font-size: var(--text-md);
+  line-height: var(--leading-relaxed);
+  color: var(--color-text-soft);
+}
