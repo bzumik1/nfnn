@@ -45,7 +45,9 @@ function attribute(tag, name) {
 function junit(directory) {
   const backend = [];
   const cucumber = [];
-  for (const file of readdirSync(directory).filter((name) => name.endsWith('.xml')).sort()) {
+  for (const file of readdirSync(directory)
+    .filter((name) => name.endsWith('.xml'))
+    .sort()) {
     const xml = readFileSync(join(directory, file), 'utf8');
     const suite = attribute(xml.match(/<testsuite\b[^>]*>/)?.[0] ?? '', 'name');
     for (const [tag] of xml.matchAll(/<testcase\b[^>]*>/g)) {
@@ -100,7 +102,9 @@ function inventory(names) {
 
 for (const [name, path] of Object.entries(options).filter(([name]) => name !== 'out')) {
   if (!existsSync(at(path))) {
-    console.error(`Missing ${name} report ${path}; see .claude/rules/testing.md "Regression against v2"`);
+    console.error(
+      `Missing ${name} report ${path}; see .claude/rules/testing.md "Regression against v2"`,
+    );
     process.exit(1);
   }
 }
@@ -113,7 +117,9 @@ const suites = {
   'frontend-playwright': inventory(playwright(at(options.playwright))),
   'mcp-vitest': inventory(vitest(at(options.mcpVitest), at('mcp'))),
 };
-const counts = Object.fromEntries(Object.entries(suites).map(([name, tests]) => [name, tests.length]));
+const counts = Object.fromEntries(
+  Object.entries(suites).map(([name, tests]) => [name, tests.length]),
+);
 const empty = Object.entries(counts).filter(([, count]) => count === 0);
 if (empty.length > 0) {
   console.error(`No tests found for ${empty.map(([name]) => name).join(', ')}`);
