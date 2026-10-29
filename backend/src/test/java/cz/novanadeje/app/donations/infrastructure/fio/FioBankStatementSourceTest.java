@@ -59,6 +59,7 @@ class FioBankStatementSourceTest {
     private StubFioClient fio;
     private FioBankStatementSource source;
     private ListAppender<ILoggingEvent> log;
+    private Level configuredLevel;
 
     @BeforeEach
     void setUp() {
@@ -68,11 +69,13 @@ class FioBankStatementSourceTest {
         log = new ListAppender<>();
         log.start();
         logger().addAppender(log);
+        configuredLevel = logger().getLevel();
     }
 
     @AfterEach
     void releaseLog() {
         logger().detachAppender(log);
+        logger().setLevel(configuredLevel);
     }
 
     @Test
@@ -130,6 +133,23 @@ class FioBankStatementSourceTest {
         source.fetch(REQUESTED);
 
         assertThat(messages(Level.WARN)).singleElement().asString().doesNotContain("Nováková").doesNotContain("2900233333");
+    }
+
+    @Test
+    @DisplayName("Given debug logging and a named payer with an account and a symbol, when the statement is fetched, then the debug line names the movement and what it carries but never the payer, the account or the symbol")
+    void should_keep_payer_account_and_symbol_out_of_debug_line_when_fetched_given_debug_logging() {
+        logger().setLevel(Level.DEBUG);
+        fio.answer(statement(null, null,
+                FioMovements.incoming(1001, DAY, "500.00").from("2900233333", "2010").named("Nováková Jana").withVariableSymbol("4821937561").build(),
+                FioMovements.incoming(1002, DAY, "300.00").build()));
+
+        source.fetch(REQUESTED);
+
+        assertThat(messages(Level.DEBUG)).containsExactly(
+                "Fio movement 1001 is incoming: sender account given, payer name given, variable symbol given",
+                "Fio movement 1002 is incoming: sender account missing, payer name missing, variable symbol missing");
+        assertThat(String.join("\n", messages(Level.DEBUG)))
+                .doesNotContain("Nováková").doesNotContain("2900233333").doesNotContain("2010").doesNotContain("4821937561");
     }
 
     @Test

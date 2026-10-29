@@ -93,8 +93,9 @@ class FioBankStatementSource implements BankStatementSource {
         }
         Optional<String> account = sent(transaction, COUNTERPARTY_ACCOUNT_COLUMN);
         Optional<String> bankCode = sent(transaction, COUNTERPARTY_BANK_CODE_COLUMN);
-        log.debug("Fio movement {} from {}/{} ({}) with variable symbol {}", transaction.id(), account.orElse(null), bankCode.orElse(null),
-                transaction.counterparty().name(), transaction.symbols().variable());
+        log.debug("Fio movement {} is incoming: sender account {}, payer name {}, variable symbol {}", transaction.id(),
+                givenOrMissing(account.isPresent()), givenOrMissing(isGiven(transaction.counterparty().name())),
+                givenOrMissing(isGiven(transaction.symbols().variable())));
         return Optional.of(IncomingMovement.of(
                 new BankTransactionId(transaction.id()),
                 transaction.date(),
@@ -108,6 +109,14 @@ class FioBankStatementSource implements BankStatementSource {
                 Optional.ofNullable(transaction.symbols().specific()),
                 Optional.ofNullable(transaction.messageForRecipient()),
                 transaction.typeLabel()));
+    }
+
+    private static boolean isGiven(String value) {
+        return value != null && !value.isBlank();
+    }
+
+    private static String givenOrMissing(boolean given) {
+        return given ? "given" : "missing";
     }
 
     private static Optional<String> sent(Transaction transaction, int column) {
