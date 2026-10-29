@@ -124,6 +124,10 @@ jobs:
         with:
           persist-credentials: false
 
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+
       - name: Build images
         run: |
           docker build -t ghcr.io/bzumik1/nfnn-backend:latest backend
@@ -468,6 +472,11 @@ jobs:
           [ "$(count_rows "action = 'CI_MARKER'")" = 1 ] || { echo "::error::the failed restore changed the data"; exit 1; }
           [ ! -e "$restore/ci-4.upload" ] || { echo "::error::the upload was left in the restore folder"; exit 1; }
           curl -fsS --max-time 10 http://localhost:8089/ | grep -q '<app-root'
+
+      - name: Hashed bundles are cached for good and a missing file answers 404, never the app
+        run: |
+          docker cp nfnn-frontend:/usr/share/nginx/html "$RUNNER_TEMP/frontend-html"
+          node frontend/scripts/probe-asset-caching.mjs http://localhost:8089 "$RUNNER_TEMP/frontend-html" frontend/nginx.conf
 
       - name: Logs
         if: failure()

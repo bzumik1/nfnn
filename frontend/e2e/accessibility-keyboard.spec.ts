@@ -1,6 +1,12 @@
 import { Page } from '@playwright/test';
 import { expect, test } from './fixtures';
 import { mockDonorApi, openSignInDialog, signIn } from './donor-session';
+import {
+  chunkLoadNotice,
+  openHomeThenLoseNewChunks,
+  openPolicyFromFooter,
+  withoutSessionStorage,
+} from './lost-chunks';
 
 const WCAG_TEXT_SPACING =
   '* { line-height: 1.5 !important; letter-spacing: 0.12em !important; word-spacing: 0.16em !important; } p { margin-bottom: 2em !important; }';
@@ -25,6 +31,26 @@ async function clippedTexts(page: Page): Promise<string[]> {
       })
       .map((element) => element.textContent!.trim().slice(0, 40)),
   );
+}
+
+async function settledOverlapWithBar(page: Page): Promise<number> {
+  const overlap = () =>
+    page.evaluate(() => {
+      const bar = document.querySelector('app-chunk-load-notice [role="alert"]')!;
+      return Math.round(
+        document.activeElement!.getBoundingClientRect().bottom - bar.getBoundingClientRect().top,
+      );
+    });
+  let previous = await overlap();
+  for (let check = 0; check < 30; check += 1) {
+    await page.waitForTimeout(100);
+    const current = await overlap();
+    if (current === previous) {
+      return current;
+    }
+    previous = current;
+  }
+  return previous;
 }
 
 async function widerThanScreen(page: Page): Promise<number> {
@@ -178,6 +204,75 @@ test.describe('Given a visitor on a phone who uses only the keyboard', () => {
     );
   });
 });
+
+for (const width of [320, 390, 1280]) {
+  test.describe(`Given a visitor ${width} px wide whose next page could not be loaded`, () => {
+    test.use({ viewport: { width, height: 800 } });
+
+    test.beforeEach(async ({ page }) => {
+      await mockDonorApi(page);
+      await withoutSessionStorage(page);
+      await openHomeThenLoseNewChunks(page);
+      await openPolicyFromFooter(page);
+      await expect(chunkLoadNotice(page)).toBeVisible();
+    });
+
+    test('when they Tab back from the reload bar, then the bar hides neither the focused control nor the end of the page', async ({
+      page,
+    }) => {
+      await page.keyboard.press('Shift+Tab');
+
+      expect(await settledOverlapWithBar(page)).toBeLessThanOrEqual(0);
+      const pageEndCovered = await page.evaluate(() => {
+        const bar = document.querySelector('app-chunk-load-notice [role="alert"]')!;
+        window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'instant' });
+        const lastText = document.querySelector('footer .ui-container')!.getBoundingClientRect();
+        return lastText.bottom > bar.getBoundingClientRect().top;
+      });
+      expect(pageEndCovered).toBe(false);
+    });
+
+    test('when they scroll to the end of the page, then the footer reaches down to the bar with its own colour', async ({
+      page,
+    }) => {
+      const gapUnderFooter = await page.evaluate(() => {
+        window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'instant' });
+        const footer = document.querySelector('footer')!.getBoundingClientRect();
+        return Math.round(document.documentElement.clientHeight - footer.bottom);
+      });
+
+      expect(gapUnderFooter).toBeLessThanOrEqual(0);
+    });
+
+    test('when they Tab through the contact form and leave its fields empty, then the bar never hides the focused control', async ({
+      page,
+    }) => {
+      await page.locator('#contact-name').focus();
+      for (const control of ['#contact-email', '#contact-message', 'button[type="submit"]']) {
+        await page.keyboard.press('Tab');
+        await expect(page.locator(`#kontakt ${control}`)).toBeFocused();
+
+        expect(await settledOverlapWithBar(page), control).toBeLessThanOrEqual(0);
+      }
+    });
+
+    test('when they open the sign-in dialog, then the page behind it does not move', async ({
+      page,
+    }) => {
+      test.skip(width < 900, 'the header shows the sign-in button from 900 px');
+      await page.setViewportSize({ width, height: 560 });
+      await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
+      const before = await page.evaluate(() => window.scrollY);
+
+      await page.locator('.nav-login').click();
+      await expect(page.getByRole('dialog')).toBeVisible();
+      await page.keyboard.press('Tab');
+      await page.keyboard.press('Tab');
+
+      expect(await page.evaluate(() => window.scrollY)).toBe(before);
+    });
+  });
+}
 
 test.describe('Given a visitor who zooms to 400 % or sets wider text spacing', () => {
   test.beforeEach(async ({ page }) => {
