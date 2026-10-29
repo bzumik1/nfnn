@@ -80,11 +80,11 @@ class JpaDonorRepositoryTest {
     @DisplayName("Given two administrators and a plain donor, when the administrators are listed, then only they come, ordered by name")
     void should_list_administrators_by_name_when_asked_given_mixed_donors() {
         Donor zdena = donor("zdena@example.cz", "4821937570");
-        zdena.updateProfile("Zdeňka Znamenáčková", zdena.address(), zdena.preferredLocale());
+        zdena.updateProfile("Zdeňka Horáčková", zdena.address(), zdena.preferredLocale());
         zdena.verifyEmail(NOW);
         zdena.grantAdministration();
         Donor andrea = donor("andrea@example.cz", "4821937571");
-        andrea.updateProfile("Andrea Znamenáčková", andrea.address(), andrea.preferredLocale());
+        andrea.updateProfile("Andrea Horáčková", andrea.address(), andrea.preferredLocale());
         andrea.verifyEmail(NOW);
         andrea.grantAdministration();
         Donor plain = donor("jana@example.cz", "4821937572");
@@ -93,7 +93,7 @@ class JpaDonorRepositoryTest {
         donors.save(plain);
         flushAndClear();
 
-        assertThat(donors.findAdministrators()).extracting(Donor::name).containsExactly("Andrea Znamenáčková", "Zdeňka Znamenáčková");
+        assertThat(donors.findAdministrators()).extracting(Donor::name).containsExactly("Andrea Horáčková", "Zdeňka Horáčková");
         assertThat(donors.findAdministrators()).allMatch(Donor::isAdministrator);
     }
 

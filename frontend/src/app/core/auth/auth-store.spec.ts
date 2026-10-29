@@ -144,7 +144,7 @@ describe('Given the auth store', () => {
         name: 'Stavby Novák s.r.o.',
         companyIdentifier: '45274649',
         address: { street: 'Průmyslová 5', city: 'Teplice', postalCode: '415 01' },
-        email: 'ucetni@stavby.cz',
+        email: 'ucetni@stavby.example.cz',
         password: 'correct horse battery',
         preferredLocale: 'cs',
       })

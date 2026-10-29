@@ -83,6 +83,7 @@ class PaymentPairingServiceTest {
     private PaymentPairingService service;
     private ListAppender<ILoggingEvent> logs;
     private Logger logger;
+    private Level configuredLevel;
 
     private final DonorRecord jana = donor("Jana Nováková", JANA_SYMBOL);
     private final DonorRecord petr = donor("Petr Svoboda", PETR_SYMBOL);
@@ -94,11 +95,13 @@ class PaymentPairingServiceTest {
         logs = new ListAppender<>();
         logs.start();
         logger.addAppender(logs);
+        configuredLevel = logger.getLevel();
     }
 
     @AfterEach
     void tearDown() {
         logger.detachAppender(logs);
+        logger.setLevel(configuredLevel);
     }
 
     @Test
@@ -134,6 +137,35 @@ class PaymentPairingServiceTest {
         assertThat(learned.getValue().provedBy()).contains(newer.id());
         assertThat(learned.getValue().validFrom()).isEmpty();
         verify(donorRecords, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Given debug logging, when unpaired payments are learned from, paired and left unpaired, then the debug lines name payments, donors, links, methods and reasons but never an account or a symbol")
+    void should_keep_accounts_and_symbols_out_of_debug_lines_when_unpaired_paired_given_debug_logging() {
+        logger.setLevel(Level.DEBUG);
+        BankPayment older = payment(1001, LocalDate.of(2026, 10, 10), Money.czk(20000), Optional.of(ACCOUNT), null);
+        BankPayment newer = payment(1002, LocalDate.of(2026, 10, 16), Money.czk(50000), Optional.of(ACCOUNT), JANA_SYMBOL.value());
+        BankPayment stranger = payment(1003, Optional.of(ACCOUNT), "1111111111");
+        BankPayment anonymous = payment(1004, Optional.empty(), null);
+        when(payments.findUnpairedOrderedByBooking()).thenReturn(List.of(older, newer, stranger, anonymous));
+        when(donorRecords.findByVariableSymbol(JANA_SYMBOL)).thenReturn(Optional.of(jana));
+        when(donorRecords.findByVariableSymbol(new VariableSymbol("1111111111"))).thenReturn(Optional.empty());
+        DonorRecord storedJana = withAccount(jana);
+        when(donorRecords.findBySenderAccount(ACCOUNT)).thenReturn(List.of(storedJana));
+        when(donorRecords.saveSenderAccountLink(any(), any())).thenReturn(true);
+
+        service.pairUnpaired(NOW);
+
+        ArgumentCaptor<SenderAccountLink> learned = ArgumentCaptor.forClass(SenderAccountLink.class);
+        verify(donorRecords).saveSenderAccountLink(eq(jana.id()), learned.capture());
+        assertThat(debugLines()).containsExactlyInAnyOrder(
+                "Bank payment 1002 paired with donor " + jana.id() + " by VARIABLE_SYMBOL",
+                "Donor " + jana.id() + " learned sender account link " + learned.getValue().id() + " from bank payment 1002",
+                "Bank payment 1003 stays unpaired: UNKNOWN_VARIABLE_SYMBOL (variable symbol given, sender account given)",
+                "Bank payment 1001 paired with donor " + jana.id() + " by SENDER_ACCOUNT",
+                "Bank payment 1004 stays unpaired: NO_IDENTIFICATION (variable symbol missing, sender account missing)");
+        assertThat(String.join("\n", debugLines()))
+                .doesNotContain(ACCOUNT.accountNumber()).doesNotContain(JANA_SYMBOL.value()).doesNotContain("1111111111");
     }
 
     @Test
@@ -488,6 +520,10 @@ class PaymentPairingServiceTest {
         ArgumentCaptor<Donation> saved = ArgumentCaptor.forClass(Donation.class);
         verify(donations, times(count)).save(saved.capture());
         return saved.getAllValues();
+    }
+
+    private List<String> debugLines() {
+        return logs.list.stream().filter(event -> event.getLevel() == Level.DEBUG).map(ILoggingEvent::getFormattedMessage).toList();
     }
 
     private List<String> warnings() {

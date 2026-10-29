@@ -168,7 +168,7 @@ Implemented: register with e-mail verification, login, refresh, logout, profile,
   "name": "Stavby Novák s.r.o.",
   "companyIdentifier": "45274649",
   "address": { "street": "Průmyslová 5", "city": "Teplice", "postalCode": "415 01" },
-  "email": "ucetni@stavby.cz",
+  "email": "ucetni@stavby.example.cz",
   "password": "correct horse battery",
   "preferredLocale": "cs"
 }
@@ -798,7 +798,7 @@ The dashboard calls `POST /api/donations/me/bank-check` every time it opens and 
 - `FioImportScheduler` implements the `application/importing/BankImportRequests` port: the request is queued on the same single-thread `TaskScheduler` as the hourly run, so the two never overlap, and runs `ImportBankPaymentsService.importOnDemand`, which checks the cooldown again against the stored state and then imports like an hourly run (`ON_DEMAND` trigger, never the locked history). A 409 becomes a follow-up as for any run. Without `FIO_TOKEN` the port is `DisabledBankImportRequests`: nothing is asked and `checking` is always false.
 - The dashboard shows "Údaje z banky k {čas}" (Prague time) or "Kontrolujeme nové platby v bance…", polls `GET` every 2 seconds for at most 90 seconds while `checking` is true, and loads the summary and the list again when `bankDataAsOf` changed (always after "Obnovit"). A note under the payments says that an instant payment usually shows within a minute, an ordinary transfer from another bank can take until the next business day, and that pairing needs the donor's variable symbol.
 
-`spring.task.scheduling.pool.size` is 1; on shutdown the scheduler drops tasks still waiting for their time (the next hourly tick, a pending follow-up) and waits up to 30 s only for a running import. Logging: the token is never logged (`FioImportProperties.toString()` masks it and the Fio library masks it in every message); counterparty names, account numbers and symbols appear only at DEBUG. At INFO every run logs what the bank answered (`FioBankStatementSource`) and one completion line `Fio import {trigger} {period} completed: ... covered {coverage}` with the counts (`ImportBankPaymentsService`); the pairing after a registration logs one INFO line with its counts.
+`spring.task.scheduling.pool.size` is 1; on shutdown the scheduler drops tasks still waiting for their time (the next hourly tick, a pending follow-up) and waits up to 30 s only for a running import. Logging: the token is never logged (`FioImportProperties.toString()` masks it and the Fio library masks it in every message); counterparty names, account numbers and symbols are never logged, at any level. At DEBUG `FioBankStatementSource` names each incoming movement by its transaction id and says only whether it carries a sender account, a payer name and a variable symbol (`given` or `missing`), and `PaymentPairingService` names payments by transaction id, donors by id and learned sender accounts by their link id, with the pairing method or the reason a payment stays unpaired (again only whether a symbol and a sender account are given). At INFO every run logs what the bank answered (`FioBankStatementSource`) and one completion line `Fio import {trigger} {period} completed: ... covered {coverage}` with the counts (`ImportBankPaymentsService`); the pairing after a registration logs one INFO line with its counts.
 
 #### Monthly report
 

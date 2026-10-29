@@ -131,6 +131,6 @@ class DonorRecordSynchronizerTest {
 
     private static DonorRegistered registered() {
         return new DonorRegistered(DONOR_ID, DonorType.COMPANY, "Stavby Novák s.r.o.", Optional.of("45274649"), ADDRESS,
-                new EmailAddress("ucetni@stavby.cz"), SYMBOL, LocaleCode.EN, REGISTERED_AT);
+                new EmailAddress("ucetni@stavby.example.cz"), SYMBOL, LocaleCode.EN, REGISTERED_AT);
     }
 }

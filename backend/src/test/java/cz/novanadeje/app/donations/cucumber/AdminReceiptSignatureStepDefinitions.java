@@ -58,7 +58,7 @@ public class AdminReceiptSignatureStepDefinitions {
     @When("{string} uploads a text file as the receipt signature")
     public void uploadsATextFileAsTheReceiptSignature(String alias) {
         sessions.actAs(alias);
-        api.postFile(SIGNATURE, "file", "podpis.txt", "text/plain", "Pavel Znamenáček".getBytes(StandardCharsets.UTF_8));
+        api.postFile(SIGNATURE, "file", "podpis.txt", "text/plain", "Josef Dvořáček".getBytes(StandardCharsets.UTF_8));
     }
 
     @When("{string} removes the receipt signature")
