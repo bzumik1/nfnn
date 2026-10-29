@@ -260,7 +260,7 @@ describe('Given a recording with a log line of a shape v2 never wrote', () => {
     'pr-200.json': [
       {
         kind: 'log-field',
-        line: 'donors.application.DonorAuthenticationService: Sign-in of donor <id> from *',
+        line: 'donors.application.DonorAuthenticationService: Sign-in of donor <id> from <n>.<n>.<n>.<n>',
         reason: 'the sign-in names the client address',
         ...extra,
       },
@@ -272,6 +272,26 @@ describe('Given a recording with a log line of a shape v2 never wrote', () => {
     assert.equal(result.status, 1, result.output);
     assert.match(result.report, /log-field/);
     assert.match(result.report, /Sign-in of donor <id> from <n>\.<n>\.<n>\.<n>/);
+  });
+
+  it('when the declared line is another shape, then it still fails as a new log field', () => {
+    const result = compare(
+      workspace({
+        change: newField,
+        changes: {
+          'pr-200.json': [
+            {
+              kind: 'log-field',
+              line: 'donors.application.DonorAuthenticationService: Sign-in of donor <id> from <n>.<n>.<n>',
+              reason: 'r',
+              security: approval,
+            },
+          ],
+        },
+      }),
+    );
+    assert.equal(result.status, 1, result.output);
+    assert.match(result.output, /::error::.*log-field/);
   });
 
   it('when it is allowed without a security approval, then the comparison refuses the declaration', () => {
@@ -370,7 +390,7 @@ describe('Given a recording that lost a scenario and a request', () => {
           '1.4.json': [
             {
               path: 'GET /api/admin/donors/{id}',
-              scenario: '*',
+              scenario: `${FEATURE}: *`,
               kind: 'removed',
               reason: '1.4 drops it',
               contract: 'docs/api-contract.md, Administration',
@@ -378,7 +398,7 @@ describe('Given a recording that lost a scenario and a request', () => {
           ],
           '1.6.json': [
             {
-              path: '*',
+              line: 'donors.application.DonorEmailVerificationService: E-mail of donor * verified',
               scenario: `${FEATURE}: *`,
               kind: 'logs',
               reason: '1.6 logs elsewhere',
@@ -392,6 +412,63 @@ describe('Given a recording that lost a scenario and a request', () => {
     assert.equal(result.status, 0, result.output);
     assert.match(result.report, /1\.4\.json/);
     assert.match(result.report, /1\.6\.json/);
+  });
+});
+
+describe('Given declarations that name another line or the whole scenario', () => {
+  const lostLog = (recorded) => (scenarioOf(recorded).logs = []);
+  const lostRequest = (recorded) => (scenarioOf(recorded).requests = {});
+  const logsEntry = (line) => ({
+    line,
+    scenario: `${FEATURE}: *`,
+    kind: 'logs',
+    reason: 'r',
+    contract: 'docs/system-overview.md, Donors',
+    security: { approvedIn: 'PR #210', fields: {} },
+  });
+
+  it('when a logs declaration names another logger, then the lost line stays undeclared', () => {
+    const result = compare(
+      workspace({
+        change: lostLog,
+        changes: { '1.6.json': [logsEntry('donors.application.DonorAuthenticationService: *')] },
+      }),
+    );
+    assert.equal(result.status, 1, result.output);
+    assert.match(result.output, /::error::.*logs/);
+  });
+
+  it('when a logs declaration names the lost line, then it passes', () => {
+    const result = compare(
+      workspace({
+        change: lostLog,
+        changes: {
+          '1.6.json': [logsEntry('donors.application.DonorEmailVerificationService: E-mail of *')],
+        },
+      }),
+    );
+    assert.equal(result.status, 0, result.output);
+  });
+
+  it('when a removal names no path, then it covers the removed scenario and not a removed request', () => {
+    const removal = {
+      scenario: `${FEATURE}: An administrator reads a donor*`,
+      kind: 'removed',
+      reason: '1.4 drops the scenario',
+      contract: 'docs/api-contract.md, Administration',
+    };
+    const scenarioGone = compare(
+      workspace({
+        change: (recorded) => (recorded.scenarios = {}),
+        changes: { '1.4.json': [removal] },
+      }),
+    );
+    assert.equal(scenarioGone.status, 0, scenarioGone.output);
+    const requestGone = compare(
+      workspace({ change: lostRequest, changes: { '1.4.json': [removal] } }),
+    );
+    assert.equal(requestGone.status, 1, requestGone.output);
+    assert.match(requestGone.output, /::error::.*removed/);
   });
 });
 
@@ -411,40 +488,89 @@ describe('Given a slice file that is not a valid declaration', () => {
   };
   const body = { kind: 'body', reason: 'r', contract: 'docs/api-contract.md, Administration' };
 
+  const anywhere = `${FEATURE}: *`;
+  const approved = { approvedIn: 'PR #1', fields: {} };
+  const logs = {
+    ...body,
+    kind: 'logs',
+    scenario: anywhere,
+    line: 'donors.application.DonorEmailVerificationService: *',
+    security: approved,
+  };
+  const logField = {
+    kind: 'log-field',
+    reason: 'r',
+    line: 'donors.application.DonorAuthenticationService: Sign-in of donor <id>',
+    security: approved,
+  };
+
   it('when an entry covers every path of every scenario, then the comparison refuses it', () => {
-    refused({ ...body, path: '*', scenario: '*' }, /0\.9\.json.*entry 1.*path and scenario/);
+    refused({ ...body, path: '*', scenario: '*' }, /0\.9\.json.*entry 1.*path/);
+  });
+
+  it('when a path does not start with a method and a literal segment, then the comparison refuses it', () => {
+    for (const path of ['* *', '*/*', 'GET *', 'GET /*', '*', 'get /api/x']) {
+      refused({ ...body, path, scenario: anywhere }, /entry 1.*path.*METHOD \/segment/);
+    }
+  });
+
+  it('when a scenario does not start with a literal context and feature, then the comparison refuses it', () => {
+    for (const scenario of ['*: *', '*', 'donors/*', 'donors/admin*', '*/admin_donors: *']) {
+      refused(
+        { ...body, path: 'GET /api/admin/donors/{id}', scenario },
+        /entry 1.*scenario.*<context>\/<feature>: /,
+      );
+    }
+  });
+
+  it('when a mails or logs entry names a path, then the comparison refuses it', () => {
+    refused(
+      { ...body, kind: 'mails', path: 'GET /api/admin/donors/{id}', scenario: anywhere },
+      /entry 1.*mails.*path/,
+    );
+    refused({ ...logs, path: 'GET /api/admin/donors/{id}' }, /entry 1.*logs.*path/);
   });
 
   it('when a transcript entry names no contract section, then the comparison refuses it', () => {
-    refused({ kind: 'body', reason: 'r', path: 'GET /api/x', scenario: '*' }, /entry 1.*contract/);
+    refused(
+      { kind: 'body', reason: 'r', path: 'GET /api/x', scenario: anywhere },
+      /entry 1.*contract/,
+    );
   });
 
   it('when a logs entry carries no security approval, then the comparison refuses it', () => {
-    refused({ ...body, kind: 'logs', path: '*', scenario: 'donors/*' }, /entry 1.*security/);
+    const { security, ...withoutApproval } = logs;
+    assert.ok(security);
+    refused(withoutApproval, /entry 1.*security/);
   });
 
   it('when an approval names no review or no fields, then the comparison refuses it', () => {
-    refused(
-      { ...body, kind: 'logs', path: '*', scenario: 'donors/*', security: { fields: {} } },
-      /approvedIn/,
-    );
-    refused(
-      { ...body, kind: 'logs', path: '*', scenario: 'donors/*', security: { approvedIn: 'PR #1' } },
-      /fields/,
-    );
+    refused({ ...logs, security: { fields: {} } }, /approvedIn/);
+    refused({ ...logs, security: { approvedIn: 'PR #1' } }, /fields/);
   });
 
-  it('when a new log field allows any line, then the comparison refuses it', () => {
-    refused(
-      { kind: 'log-field', line: '*', reason: 'r', security: { approvedIn: 'PR #1', fields: {} } },
-      /entry 1.*line/,
-    );
+  it('when a logs entry names no line or no literal logger, then the comparison refuses it', () => {
+    const { line, ...withoutLine } = logs;
+    assert.ok(line);
+    refused(withoutLine, /entry 1.*logs.*line/);
+    for (const pattern of ['*:*', '* *', '*', 'donors.*: x', 'Donors.Service: x', '*Service: x']) {
+      refused({ ...logs, line: pattern }, /entry 1.*line.*logger/);
+    }
   });
 
-  it('when a retirement covers every test or every suite, then the comparison refuses it', () => {
+  it('when a new log field is anything but the exact shape the report printed, then the comparison refuses it', () => {
+    for (const line of ['*', '*:*', '* *', `${logField.line} *`, 'Sign-in of donor <id>']) {
+      refused({ ...logField, line }, /entry 1.*line/);
+    }
+  });
+
+  it('when a retirement covers every test, a test file or every suite, then the comparison refuses it', () => {
     const retired = { kind: 'retired', reason: 'r', replacement: 'x' };
     refused({ ...retired, suite: 'backend-junit', test: '*' }, /entry 1.*test/);
+    refused({ ...retired, suite: 'backend-junit', test: '* > *' }, /entry 1.*test/);
+    refused({ ...retired, suite: 'backend-junit', test: 'donors.* > x' }, /entry 1.*test/);
     refused({ ...retired, suite: '*', test: 'donors.DonorTest > x' }, /entry 1.*suite/);
+    refused({ ...retired, suite: 'backend-*', test: 'donors.DonorTest > x' }, /entry 1.*suite/);
   });
 
   it('when an entry names an unknown kind, then the comparison refuses to run', () => {
@@ -540,6 +666,14 @@ describe('Given the files the pull request changes', () => {
       assert.ok(result.report.includes(path), result.report);
       assert.match(result.output, /::error::.*baseline/);
     }
+  });
+
+  it('when it changes the CI job or the test JVM settings, then the report names those files', () => {
+    const files = ['.github/workflows/pr-check.yml', 'backend/build.gradle.kts'];
+    const result = compare(workspace({ changed: files }));
+    assert.equal(result.status, 0, result.output);
+    assert.match(result.report, /### Změny nahrávání a srovnání/);
+    files.forEach((file) => assert.ok(result.report.includes(file), result.report));
   });
 
   it('when it changes the recorder, the masking or the comparison, then the report names those files', () => {
