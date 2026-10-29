@@ -14,6 +14,7 @@ import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.text.PDFTextStripper;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.web.util.HtmlUtils;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.ArrayNode;
@@ -23,6 +24,7 @@ import tools.jackson.databind.node.ObjectNode;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -52,6 +54,11 @@ public final class ScenarioTranscript {
     private static final Pattern COOKIE_EXPIRES = Pattern.compile("(?i)(;\\s*Expires=)[^;]*");
     private static final Pattern ANY_ID = Pattern.compile("(?i)[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}");
     private static final String ERRORS = "errors";
+    private static final String ROOT = "$";
+    private static final Pattern HEAD = Pattern.compile("(?is)<(head|style|script)\\b.*?</\\1>|<!--.*?-->");
+    private static final Pattern TAG = Pattern.compile("(?s)<[^>]*>");
+    private static final Pattern HREF = Pattern.compile("(?i)\\bhref\\s*=\\s*\"([^\"]*)\"");
+    private static final Pattern WHITESPACE = Pattern.compile("[\\s\\u00a0]+");
     private static final String INSTANT_SUFFIX = "At";
     private static final Pattern REQUEST_COOKIE_VALUE = Pattern.compile("([^=;\\s]+)=[^;]*");
 
@@ -63,9 +70,18 @@ public final class ScenarioTranscript {
     private static final String APPLICATION_PACKAGE = "cz.novanadeje.app.";
     private static final Pattern NUMBERED_LABEL = Pattern.compile("<([a-z-]+):\\d+>");
 
+    private final List<UnorderedTie> unorderedTies;
     private final List<RecordedExchange> exchanges = new ArrayList<>();
     private final List<MimeMessage> mails = new ArrayList<>();
     private final List<RecordedLogLine> logs = new ArrayList<>();
+
+    public ScenarioTranscript() {
+        this(UnorderedTie.V2);
+    }
+
+    public ScenarioTranscript(List<UnorderedTie> unorderedTies) {
+        this.unorderedTies = List.copyOf(unorderedTies);
+    }
 
     public void exchange(RecordedExchange exchange) {
         exchanges.add(exchange);
@@ -95,10 +111,20 @@ public final class ScenarioTranscript {
         }
         transcript.set("mails", described(inSettledOrder(mails, knownValues, ScenarioTranscript::mail), normaliser, ScenarioTranscript::mail));
         transcript.set("logs", described(inSettledOrder(logs, knownValues, ScenarioTranscript::logLine), normaliser, ScenarioTranscript::logLine));
+        refuseMaskedValuesLeft(JSON.writeValueAsString(transcript), normaliser.maskedValues());
         return transcript;
     }
 
-    private static ObjectNode call(String template, RecordedExchange exchange, TranscriptNormaliser normaliser) {
+    private static void refuseMaskedValuesLeft(String written, Set<String> maskedValues) {
+        for (String masked : maskedValues) {
+            if (written.contains(masked) || written.contains(URLEncoder.encode(masked, StandardCharsets.UTF_8))) {
+                throw new IllegalStateException("A value of " + masked.length() + " characters that the transcript masks is still in it, "
+                        + "raw or URL-encoded; extend the masking in TranscriptNormaliser before recording");
+            }
+        }
+    }
+
+    private ObjectNode call(String template, RecordedExchange exchange, TranscriptNormaliser normaliser) {
         ObjectNode call = NODES.objectNode();
         ObjectNode request = call.putObject("request");
         request.put("path", normaliser.path(exchange.uri()));
@@ -133,7 +159,7 @@ public final class ScenarioTranscript {
             }
         });
         response.set("headers", responseHeaders);
-        JsonNode body = body(exchange, normaliser);
+        JsonNode body = body(template, exchange, normaliser);
         if (body != null) {
             response.set("body", machineIndependent(template, body));
         }
@@ -198,7 +224,7 @@ public final class ScenarioTranscript {
         return node;
     }
 
-    private static JsonNode body(RecordedExchange exchange, TranscriptNormaliser normaliser) {
+    private JsonNode body(String template, RecordedExchange exchange, TranscriptNormaliser normaliser) {
         byte[] bytes = exchange.responseBody();
         if (bytes == null || bytes.length == 0) {
             return null;
@@ -206,7 +232,7 @@ public final class ScenarioTranscript {
         MediaType type = contentType(exchange.responseHeaders());
         if (isJson(type)) {
             try {
-                return normaliser.json(settled(sortedFields(JSON.readTree(bytes))));
+                return normaliser.json(settled(template, sortedFields(JSON.readTree(bytes)), ROOT));
             } catch (RuntimeException notJson) {
                 return NODES.stringNode(normaliser.text(new String(bytes, StandardCharsets.UTF_8)));
             }
@@ -220,30 +246,40 @@ public final class ScenarioTranscript {
         return binary(bytes);
     }
 
-    private static JsonNode settled(JsonNode node) {
+    private JsonNode settled(String template, JsonNode node, String path) {
         if (node.isObject()) {
             ObjectNode settled = NODES.objectNode();
-            node.properties().forEach(field -> settled.set(field.getKey(), ERRORS.equals(field.getKey()) && field.getValue().isArray()
-                    ? sortedByContent(settled(field.getValue())) : settled(field.getValue())));
+            node.properties().forEach(field -> {
+                JsonNode value = settled(template, field.getValue(), path + "." + field.getKey());
+                settled.set(field.getKey(), ERRORS.equals(field.getKey()) && value.isArray() ? sortedByContent(value) : value);
+            });
             return settled;
         }
         if (node.isArray()) {
             List<JsonNode> elements = new ArrayList<>();
-            node.values().forEach(element -> elements.add(settled(element)));
-            ArrayNode settled = NODES.arrayNode();
-            int start = 0;
-            while (start < elements.size()) {
-                int end = start + 1;
-                Map<String, JsonNode> stamp = instants(elements.get(start));
-                while (end < elements.size() && !stamp.isEmpty() && stamp.equals(instants(elements.get(end)))) {
-                    end++;
-                }
-                elements.subList(start, end).stream().sorted(Comparator.comparing(ScenarioTranscript::contentKey)).forEach(settled::add);
-                start = end;
-            }
-            return settled;
+            node.values().forEach(element -> elements.add(settled(template, element, path + "[]")));
+            return isUnordered(template, path) ? withTiesSorted(elements) : NODES.arrayNode().addAll(elements);
         }
         return node;
+    }
+
+    private boolean isUnordered(String template, String path) {
+        return unorderedTies.stream().anyMatch(tie -> tie.request().equals(template) && tie.path().equals(path));
+    }
+
+    private static ArrayNode withTiesSorted(List<JsonNode> elements) {
+        ArrayNode settled = NODES.arrayNode();
+        int start = 0;
+        while (start < elements.size()) {
+            int end = start + 1;
+            Map<String, JsonNode> stamp = instants(elements.get(start));
+            while (end < elements.size() && !stamp.isEmpty() && stamp.equals(instants(elements.get(end)))) {
+                end++;
+            }
+            elements.subList(start, end).stream().sorted(Comparator.comparing(ScenarioTranscript::contentKey)).forEach(settled::add);
+            start = end;
+        }
+        return settled;
     }
 
     private static Map<String, JsonNode> instants(JsonNode element) {
@@ -317,7 +353,7 @@ public final class ScenarioTranscript {
             parts.getOrDefault("text/plain", List.of()).stream().findFirst()
                     .ifPresent(text -> mail.put("text", normaliser.text(content(text).replace("\r\n", "\n"))));
             parts.getOrDefault("text/html", List.of()).stream().findFirst()
-                    .ifPresent(html -> mail.put("htmlSha256", sha256(normaliser.text(content(html).replace("\r\n", "\n")).getBytes(StandardCharsets.UTF_8))));
+                    .ifPresent(html -> mail.set("html", html(content(html).replace("\r\n", "\n"), normaliser)));
             ArrayNode attachments = NODES.arrayNode();
             for (Part attachment : parts.getOrDefault("attachment", List.of())) {
                 ObjectNode described = NODES.objectNode();
@@ -338,6 +374,16 @@ public final class ScenarioTranscript {
         } catch (MessagingException | IOException unreadable) {
             throw new IllegalStateException("A recorded e-mail cannot be read", unreadable);
         }
+    }
+
+    private static ObjectNode html(String html, TranscriptNormaliser normaliser) {
+        ObjectNode described = NODES.objectNode();
+        String visible = HtmlUtils.htmlUnescape(TAG.matcher(HEAD.matcher(html).replaceAll(" ")).replaceAll(" "));
+        described.put("text", normaliser.text(WHITESPACE.matcher(visible).replaceAll(" ").strip()));
+        ArrayNode links = described.putArray("links");
+        HREF.matcher(html).results().map(link -> normaliser.text(HtmlUtils.htmlUnescape(link.group(1)))).forEach(links::add);
+        described.put("sha256", sha256(normaliser.text(html).getBytes(StandardCharsets.UTF_8)));
+        return described;
     }
 
     private static void collect(Part part, Map<String, List<Part>> parts) throws MessagingException, IOException {

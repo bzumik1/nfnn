@@ -26,6 +26,7 @@ import java.io.OutputStream;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -256,13 +257,13 @@ public class ApiClient {
         }
     }
 
-    private static HttpHeaders rawHeaders(String raw, int bodyStart) {
+    static HttpHeaders rawHeaders(String raw, int bodyStart) {
         HttpHeaders headers = new HttpHeaders();
         String head = bodyStart < 0 ? raw : raw.substring(0, bodyStart);
         head.lines().skip(1).forEach(line -> {
             int colon = line.indexOf(':');
             if (colon > 0) {
-                headers.add(line.substring(0, colon).trim(), line.substring(colon + 1).trim());
+                headers.add(line.substring(0, colon).trim().toLowerCase(Locale.ROOT), line.substring(colon + 1).trim());
             }
         });
         return headers;

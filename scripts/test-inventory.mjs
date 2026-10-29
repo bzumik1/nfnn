@@ -3,6 +3,7 @@ import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+const SOURCE = 'v2-baseline';
 const root = resolve(fileURLToPath(new URL('..', import.meta.url)));
 const defaults = {
   junit: 'backend/build/test-results/test',
@@ -118,5 +119,5 @@ if (empty.length > 0) {
   console.error(`No tests found for ${empty.map(([name]) => name).join(', ')}`);
   process.exit(1);
 }
-writeFileSync(at(options.out), `${JSON.stringify({ source: 'v2-baseline@70e9233', counts, suites }, null, 2)}\n`);
+writeFileSync(at(options.out), `${JSON.stringify({ source: SOURCE, counts, suites }, null, 2)}\n`);
 console.log(`Wrote ${options.out}: ${JSON.stringify(counts)}`);

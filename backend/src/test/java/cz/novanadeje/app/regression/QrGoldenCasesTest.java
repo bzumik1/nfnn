@@ -10,6 +10,7 @@ import com.google.zxing.qrcode.encoder.ByteMatrix;
 import com.google.zxing.qrcode.encoder.Encoder;
 import com.google.zxing.qrcode.encoder.QRCode;
 import cz.novanadeje.app.TestcontainersConfiguration;
+import cz.novanadeje.app.cucumber.transcript.ApiTranscripts;
 import cz.novanadeje.app.donations.application.GeneratePaymentQrQuery;
 import cz.novanadeje.app.donations.application.GeneratePaymentQrService;
 import cz.novanadeje.app.donations.application.PaymentQr;
@@ -51,7 +52,7 @@ class QrGoldenCasesTest {
 
     static final String PAYMENT_CASES = "shared-cases/qr/payment.json";
     static final String TOTP_CASES = "shared-cases/qr/totp.json";
-    private static final String SOURCE = "v2-baseline@70e9233";
+    private static final String SOURCE = ApiTranscripts.SOURCE;
     private static final JsonNodeFactory NODES = JsonNodeFactory.instance;
     private static final int ECI_MODE = 0b0111;
     private static final Map<EncodeHintType, Object> PRODUCTION_HINTS = Map.of(EncodeHintType.CHARACTER_SET, StandardCharsets.ISO_8859_1.name());
@@ -83,7 +84,9 @@ class QrGoldenCasesTest {
     private static final List<RecipientCase> RECIPIENT_CASES = List.of(
             new RecipientCase("a recipient name of exactly 35 characters is kept whole", "Spolek přátel školy Tišnov 1234 ABC"),
             new RecipientCase("a recipient name over 35 characters is cut at 35", "Nadační fond Nová naděje pro děti a mládež z Tišnova"),
-            new RecipientCase("lowercase, diacritics and symbols in a recipient name become SPAYD text", "Žluťoučký kůň 100% + *hvězda* & spol."));
+            new RecipientCase("lowercase, diacritics and symbols in a recipient name become SPAYD text", "Žluťoučký kůň 100% + *hvězda* & spol."),
+            new RecipientCase("a recipient name whose cut at 35 ends in a space loses the space", "Spolek rodičů při škole Tišnov 123 Brno"),
+            new RecipientCase("a recipient name of symbols only becomes empty and the RN field is left out", "*** & ***"));
 
     private static final List<TotpCase> TOTP_REQUESTS = List.of(
             new TotpCase("a short address", "JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP", "jana@example.cz"),
@@ -123,6 +126,16 @@ class QrGoldenCasesTest {
     void should_give_identical_files_when_the_qr_cases_are_generated_twice() throws Exception {
         assertThat(GoldenFiles.canonical(paymentCases())).isEqualTo(GoldenFiles.canonical(paymentCases()));
         assertThat(GoldenFiles.canonical(totpCases())).isEqualTo(GoldenFiles.canonical(totpCases()));
+    }
+
+    @Test
+    @DisplayName("Given recipient names that the cut at 35 leaves with a trailing space or that hold symbols only, when v2 builds the SPAYD, then the space is trimmed and the RN field is left out")
+    void should_trim_the_cut_name_and_leave_out_an_empty_name_when_v2_builds_the_spayd() throws Exception {
+        String cut = recipientCase(new RecipientCase("cut", "Spolek rodičů při škole Tišnov 123 Brno")).get("expected").get("spayd").asString();
+        String empty = recipientCase(new RecipientCase("empty", "*** & ***")).get("expected").get("spayd").asString();
+
+        assertThat(cut).contains("*RN:SPOLEK RODICU PRI SKOLE TISNOV 123*");
+        assertThat(empty).doesNotContain("RN:");
     }
 
     @Test

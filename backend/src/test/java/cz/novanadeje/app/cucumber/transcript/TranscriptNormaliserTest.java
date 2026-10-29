@@ -154,6 +154,42 @@ class TranscriptNormaliserTest {
     }
 
     @Test
+    @DisplayName("Given settings whose names mark a secret, when a body is normalised, then their values are masked, the boolean secret flag stays and other values stay")
+    void should_mask_values_of_secret_settings_and_keep_the_flag_when_a_body_is_normalised() {
+        TranscriptNormaliser normaliser = new TranscriptNormaliser(Map.of());
+        JsonNode raw = json.readTree("""
+                {"items":[{"name":"MAIL_PASSWORD","secret":true,"value":"xsmtpsib-key"},{"name":"FIO_TOKEN","secret":true,"value":"fio-read-only-token"},
+                 {"name":"SIGNING_KEY","value":"k"},{"name":"CLIENT_SECRET","value":"s"},{"name":"PUBLIC_URL","secret":false,"value":"http://localhost:4200"},
+                 {"name":"MAIL_PASSWORD","value":null}]}
+                """);
+
+        assertThat(normaliser.json(raw).toString()).isEqualTo("""
+                {"items":[{"name":"MAIL_PASSWORD","secret":true,"value":"<secret>"},{"name":"FIO_TOKEN","secret":true,"value":"<secret>"},\
+                {"name":"SIGNING_KEY","value":"<secret>"},{"name":"CLIENT_SECRET","value":"<secret>"},\
+                {"name":"PUBLIC_URL","secret":false,"value":"http://localhost:4200"},{"name":"MAIL_PASSWORD","value":null}]}""");
+    }
+
+    @Test
+    @DisplayName("Given an image as a data URI, when text is normalised, then it becomes its type, size and SHA-256")
+    void should_describe_an_image_data_uri_by_type_size_and_digest_when_text_is_normalised() {
+        TranscriptNormaliser normaliser = new TranscriptNormaliser(Map.of());
+
+        assertThat(normaliser.text("{\"image\":\"data:image/png;base64,aGVsbG8gd29ybGQ=\"}"))
+                .isEqualTo("{\"image\":\"<data:image/png size=11 sha256=b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9>\"}");
+    }
+
+    @Test
+    @DisplayName("Given secrets in fields, known values and recovery codes, when they are normalised, then each raw value is remembered for the leak check")
+    void should_remember_every_masked_raw_value_when_normalised() {
+        TranscriptNormaliser normaliser = new TranscriptNormaliser(Map.of("JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP", "<secret>"));
+
+        normaliser.json(json.readTree("{\"password\":\"Heslo-12345\",\"changes\":[{\"name\":\"MAIL_PASSWORD\",\"value\":\"xsmtpsib-key\"}]}"));
+        normaliser.text("OBNOVA DHG66PK2");
+
+        assertThat(normaliser.maskedValues()).contains("Heslo-12345", "xsmtpsib-key", "JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP", "DHG66PK2");
+    }
+
+    @Test
     @DisplayName("Given a payment QR without a TOTP URI beside it, when a body is normalised, then its modules are kept")
     void should_keep_payment_qr_modules_when_a_body_is_normalised_given_no_totp_uri_beside_them() {
         TranscriptNormaliser normaliser = new TranscriptNormaliser(Map.of());

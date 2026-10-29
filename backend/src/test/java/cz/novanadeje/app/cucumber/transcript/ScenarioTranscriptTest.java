@@ -21,6 +21,7 @@ import java.util.Map;
 import java.util.Properties;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class ScenarioTranscriptTest {
 
@@ -171,20 +172,79 @@ class ScenarioTranscriptTest {
     }
 
     @Test
-    @DisplayName("Given list items stamped with the same instant, which v2 orders by random ids, when two runs list them in other orders, then both transcripts are identical")
+    @DisplayName("Given list items stamped with the same instant on a list whose ties v2 orders by random ids, when two runs list them in other orders, then both transcripts are identical")
     void should_write_identical_transcripts_when_items_stamped_with_the_same_instant_come_in_other_orders() {
         String older = "{\"id\":\"" + DONOR_ID + "\",\"action\":\"RESET_LOG_LEVEL\",\"performedAt\":\"2026-10-23T10:00:00Z\"}";
         String newer = "{\"id\":\"" + PAYMENT_ID + "\",\"action\":\"CHANGE_LOG_LEVEL\",\"performedAt\":\"2026-10-23T10:00:00Z\"}";
         String first = "{\"id\":\"019a2b3c-4d5e-7f60-8a9b-0c1d2e3f4a5d\",\"action\":\"SIGN_IN\",\"performedAt\":\"2026-10-23T09:00:00Z\"}";
-        ScenarioTranscript oneRun = new ScenarioTranscript();
+        List<UnorderedTie> ties = List.of(new UnorderedTie("GET /api/admin/donors/actions", "$.items", "ordered by performedAt, then by random id bits"));
+        ScenarioTranscript oneRun = new ScenarioTranscript(ties);
         oneRun.exchange(exchange("GET", "/api/admin/donors/actions", 200, "{\"items\":[" + older + "," + newer + "," + first + "]}"));
-        ScenarioTranscript otherRun = new ScenarioTranscript();
+        ScenarioTranscript otherRun = new ScenarioTranscript(ties);
         otherRun.exchange(exchange("GET", "/api/admin/donors/actions", 200, "{\"items\":[" + newer + "," + older + "," + first + "]}"));
 
         JsonNode items = oneRun.toJson(Map.of()).get("requests").get("GET /api/admin/donors/actions #1").get("response").get("body").get("items");
 
         assertThat(json.writeValueAsString(oneRun.toJson(Map.of()))).isEqualTo(json.writeValueAsString(otherRun.toJson(Map.of())));
         assertThat(items.get(2).get("action").asString()).isEqualTo("SIGN_IN");
+    }
+
+    @Test
+    @DisplayName("Given list items stamped with the same instant on a list whose order v2 defines, when the transcript is written, then v2's order is kept")
+    void should_keep_the_order_of_v2_when_written_given_items_with_equal_instants_on_a_list_v2_orders() {
+        ScenarioTranscript transcript = new ScenarioTranscript(List.of(new UnorderedTie("GET /api/admin/donors/actions", "$.items", "random id bits")));
+        transcript.exchange(exchange("GET", "/api/content/news", 200, "{\"items\":["
+                + "{\"title\":\"B\",\"publishedOn\":\"2026-10-22\",\"updatedAt\":\"2026-11-04T09:00:00Z\"},"
+                + "{\"title\":\"A\",\"publishedOn\":\"2026-10-20\",\"updatedAt\":\"2026-11-04T09:00:00Z\"}]}"));
+
+        JsonNode items = transcript.toJson(Map.of()).get("requests").get("GET /api/content/news #1").get("response").get("body").get("items");
+
+        assertThat(items.get(0).get("publishedOn").asString()).isEqualTo("2026-10-22");
+        assertThat(items.get(1).get("publishedOn").asString()).isEqualTo("2026-10-20");
+    }
+
+    @Test
+    @DisplayName("Given a value masked in a request body, when a log line or a path still carries it, also URL-encoded, then writing the transcript fails without naming the value")
+    void should_fail_without_naming_the_value_when_a_masked_value_is_still_present() {
+        RecordedExchange signIn = new RecordedExchange("POST", "/api/donors/auth/login", Map.of(), json.readTree("{\"password\":\"Heslo+12345\"}"), 200, new HttpHeaders(), new byte[0]);
+        ScenarioTranscript inALog = new ScenarioTranscript();
+        inALog.exchange(signIn);
+        inALog.logs(List.of(new RecordedLogLine("INFO", "cz.novanadeje.app.donors.X", "Signed in with Heslo+12345", "")));
+        ScenarioTranscript inAPath = new ScenarioTranscript();
+        inAPath.exchange(signIn);
+        inAPath.exchange(exchange("GET", "/api/donors/check?p=Heslo%2B12345", 200, null));
+
+        assertThatThrownBy(() -> inALog.toJson(Map.of())).isInstanceOf(IllegalStateException.class).hasMessageNotContaining("Heslo");
+        assertThatThrownBy(() -> inAPath.toJson(Map.of())).isInstanceOf(IllegalStateException.class).hasMessageNotContaining("Heslo");
+    }
+
+    @Test
+    @DisplayName("Given a known random value, when it is still present URL-encoded after normalising, then writing the transcript fails")
+    void should_fail_when_a_known_value_is_still_present_url_encoded() {
+        ScenarioTranscript transcript = new ScenarioTranscript();
+        transcript.exchange(exchange("GET", "/api/operations/setup?code=HPNN%2FQW32", 200, null));
+
+        assertThatThrownBy(() -> transcript.toJson(Map.of("HPNN/QW32", "<setup-code>"))).isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
+    @DisplayName("Given a mail with an HTML part, when the transcript is written, then its visible text and its links are kept normalised beside its digest")
+    void should_keep_the_visible_text_and_links_of_the_html_part_when_written() throws Exception {
+        ScenarioTranscript transcript = new ScenarioTranscript();
+        MimeMessage message = new MimeMessage(Session.getInstance(new Properties()));
+        MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+        helper.setFrom(new InternetAddress("info@nfnn.cz"));
+        helper.setTo("jana@example.cz");
+        helper.setSubject("Zapomenuté heslo");
+        helper.setText("Odkaz", "<html><head><style>p { color: red; }</style></head><body><p>Dobrý&nbsp;den,</p>\n<p><a href=\"https://nfnn.cz/heslo#q3Yb7xP0aZ9mN2kLw8RtUv5sC1dE4fGhJiKoMnBvCxZ\">nastavit heslo</a> &amp; hotovo</p></body></html>");
+        message.saveChanges();
+        transcript.mails(List.of(message));
+
+        JsonNode mail = transcript.toJson(Map.of()).get("mails").get(0);
+
+        assertThat(mail.get("html").get("text").asString()).isEqualTo("Dobrý den, nastavit heslo & hotovo");
+        assertThat(mail.get("html").get("links").toString()).isEqualTo("[\"https://nfnn.cz/heslo#<token>\"]");
+        assertThat(mail.get("html").get("sha256").asString()).hasSize(64);
     }
 
     @Test
@@ -216,7 +276,7 @@ class ScenarioTranscriptTest {
         assertThat(mails.get(0).get("text").asString()).isEqualTo("Váš variabilní symbol je <vs:Jana>.");
         assertThat(mails.get(1).get("subject").asString()).isEqualTo("Zapomenuté heslo");
         assertThat(mails.get(1).get("text").asString()).isEqualTo("Odkaz https://nfnn.cz/heslo#<token>");
-        assertThat(mails.get(1).get("htmlSha256").asString()).hasSize(64);
+        assertThat(mails.get(1).get("html").get("sha256").asString()).hasSize(64);
     }
 
     @Test

@@ -13,6 +13,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.regex.Matcher;
@@ -33,8 +34,13 @@ public final class TranscriptNormaliser {
     private static final Pattern CAMEL_CASE_NAME = Pattern.compile("[a-z]*(?:[A-Z][a-z]+)+");
     private static final Pattern CODE_SHAPE = Pattern.compile("^[0-9A-Z-]{4,}$");
     private static final Pattern DIGIT_CODE = Pattern.compile("^[0-9]{6,8}$");
-    private static final Pattern RECOVERY_CODE = Pattern.compile("(?<![A-Z0-9])(OBNOVA[\\s:-]*)[A-HJ-NP-Z2-9]{4}[\\s-]?[A-HJ-NP-Z2-9]{4}(?![A-Z0-9])");
-    private static final String RECOVERY = "$1<recovery-code>";
+    private static final Pattern RECOVERY_CODE = Pattern.compile("(?<![A-Z0-9])(OBNOVA[\\s:-]*)([A-HJ-NP-Z2-9]{4}[\\s-]?[A-HJ-NP-Z2-9]{4})(?![A-Z0-9])");
+    private static final String RECOVERY = "<recovery-code>";
+    private static final Pattern DATA_URI = Pattern.compile("data:(image/[a-z0-9.+-]+);base64,([A-Za-z0-9+/]+=*)");
+    private static final Pattern SECRET_SETTING = Pattern.compile("[A-Z0-9_]*(PASSWORD|TOKEN|SECRET|KEY)");
+    private static final String SETTING_NAME_FIELD = "name";
+    private static final String SETTING_VALUE_FIELD = "value";
+    private static final int LEAK_CHECK_MINIMUM_LENGTH = 8;
     private static final int UUID_BYTES = 16;
     private static final String USER_HANDLE_FIELD = "userHandle";
     private static final String USER_FIELD = "user";
@@ -52,11 +58,13 @@ public final class TranscriptNormaliser {
     private final Map<String, String> ids = new HashMap<>();
     private final Map<String, String> numberedLabels = new HashMap<>();
     private final Map<String, Integer> labelCounters = new HashMap<>();
+    private final Set<String> maskedValues = new TreeSet<>();
 
     public TranscriptNormaliser(Map<String, String> knownValues) {
         Map<String, String> caseInsensitive = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
         caseInsensitive.putAll(knownValues);
         this.knownValues = caseInsensitive;
+        this.maskedValues.addAll(knownValues.keySet());
         this.knownValuePattern = knownValues.isEmpty() ? null : Pattern.compile(knownValues.keySet().stream()
                 .sorted((first, second) -> second.length() - first.length())
                 .map(Pattern::quote)
@@ -67,14 +75,49 @@ public final class TranscriptNormaliser {
         if (raw == null) {
             return null;
         }
-        String normalised = replace(UUID_SHAPE, raw, this::id);
-        normalised = JWT_SHAPE.matcher(normalised).replaceAll(JWT);
-        normalised = RECOVERY_CODE.matcher(normalised).replaceAll(RECOVERY);
-        normalised = replace(TOKEN_CANDIDATE, normalised, candidate -> isRandom(candidate) ? TOKEN : candidate);
+        String normalised = replace(DATA_URI, raw, TranscriptNormaliser::dataUri);
+        normalised = replace(UUID_SHAPE, normalised, this::id);
+        normalised = replace(JWT_SHAPE, normalised, jwt -> masking(jwt, JWT));
+        normalised = recoveryCodesMasked(normalised);
+        normalised = replace(TOKEN_CANDIDATE, normalised, candidate -> isRandom(candidate) ? masking(candidate, TOKEN) : candidate);
         if (knownValuePattern != null) {
             normalised = replace(knownValuePattern, normalised, this::label);
         }
         return normalised;
+    }
+
+    public Set<String> maskedValues() {
+        return maskedValues.stream().filter(value -> value.length() >= LEAK_CHECK_MINIMUM_LENGTH).collect(Collectors.toUnmodifiableSet());
+    }
+
+    private String masking(String raw, String placeholder) {
+        maskedValues.add(raw);
+        return placeholder;
+    }
+
+    private String recoveryCodesMasked(String text) {
+        Matcher matcher = RECOVERY_CODE.matcher(text);
+        StringBuilder result = new StringBuilder();
+        while (matcher.find()) {
+            maskedValues.add(matcher.group(2));
+            matcher.appendReplacement(result, Matcher.quoteReplacement(matcher.group(1) + RECOVERY));
+        }
+        matcher.appendTail(result);
+        return result.toString();
+    }
+
+    private static String dataUri(String uri) {
+        Matcher parts = DATA_URI.matcher(uri);
+        if (!parts.matches()) {
+            return uri;
+        }
+        byte[] bytes;
+        try {
+            bytes = Base64.getDecoder().decode(parts.group(2));
+        } catch (IllegalArgumentException notBase64) {
+            return uri;
+        }
+        return "<data:" + parts.group(1) + " size=" + bytes.length + " sha256=" + ScenarioTranscript.sha256(bytes) + ">";
     }
 
     public String path(String uri) {
@@ -92,8 +135,11 @@ public final class TranscriptNormaliser {
         if (raw.isObject()) {
             ObjectNode normalised = JsonNodeFactory.instance.objectNode();
             boolean totpEnrolment = raw.has(TOTP_URI_FIELD);
+            boolean secretSetting = raw.path(SETTING_NAME_FIELD).isString() && SECRET_SETTING.matcher(raw.path(SETTING_NAME_FIELD).asString()).matches();
             for (Map.Entry<String, JsonNode> field : raw.properties()) {
-                normalised.set(field.getKey(), isSecretField(field.getKey(), field.getValue(), totpEnrolment) ? masked(field.getValue())
+                boolean secret = isSecretField(field.getKey(), field.getValue(), totpEnrolment)
+                        || secretSetting && SETTING_VALUE_FIELD.equals(field.getKey()) && !field.getValue().isNull();
+                normalised.set(field.getKey(), secret ? masked(field.getValue())
                         : passkeyUserHandle(parentField, field.getKey(), field.getValue()).map(id -> (JsonNode) JsonNodeFactory.instance.stringNode(id(id)))
                         .orElseGet(() -> json(field.getValue(), field.getKey())));
             }
@@ -117,7 +163,7 @@ public final class TranscriptNormaliser {
     }
 
     private static boolean isSecretField(String name, JsonNode value, boolean totpEnrolment) {
-        if (value.isNull()) {
+        if (value.isNull() || value.isBoolean() || value.isNumber()) {
             return false;
         }
         String key = name.toLowerCase(Locale.ROOT);
@@ -153,7 +199,7 @@ public final class TranscriptNormaliser {
         return Optional.of(new UUID(buffer.getLong(), buffer.getLong()).toString());
     }
 
-    private static JsonNode masked(JsonNode value) {
+    private JsonNode masked(JsonNode value) {
         if (value.isNull()) {
             return value;
         }
@@ -166,6 +212,9 @@ public final class TranscriptNormaliser {
             ArrayNode masked = JsonNodeFactory.instance.arrayNode();
             value.values().forEach(element -> masked.add(masked(element)));
             return masked;
+        }
+        if (value.isString()) {
+            maskedValues.add(value.asString());
         }
         return JsonNodeFactory.instance.stringNode(SECRET);
     }

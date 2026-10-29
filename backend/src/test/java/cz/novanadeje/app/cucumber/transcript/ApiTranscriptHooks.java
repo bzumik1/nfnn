@@ -47,6 +47,7 @@ public class ApiTranscriptHooks {
     @Before(order = AFTER_EVERY_OTHER_SET_UP)
     public void startCapturingLogLines() {
         if (ApiTranscripts.recording()) {
+            ApiTranscripts.refuseRealSecrets(System.getenv());
             logLines = LogLineCapture.attach();
         }
     }
@@ -56,12 +57,13 @@ public class ApiTranscriptHooks {
         if (!ApiTranscripts.recording()) {
             return;
         }
-        awaitAsyncWork();
+        awaitIdle(context.getBean(ASYNC_EXECUTOR), ASYNC_WAIT);
         logLines.detach();
         ScenarioTranscript transcript = recorder.transcript();
-        transcript.mails(mailSender.sent());
+        transcript.mails(mailSender.sentInScenario());
         transcript.logs(logLines.lines());
-        ApiTranscripts.store(scenario.getUri().toString(), scenario.getName(), transcript.toJson(knownValues()));
+        String key = ApiTranscripts.scenarioKey(ApiTranscripts.featureText(scenario.getUri()), scenario.getName(), scenario.getLine());
+        ApiTranscripts.store(scenario.getUri().toString(), key, transcript.toJson(knownValues()));
     }
 
     private Map<String, String> knownValues() {
@@ -70,7 +72,7 @@ public class ApiTranscriptHooks {
                 .query(String.class).list()
                 .forEach(symbol -> known.put(symbol, NUMBERED_VARIABLE_SYMBOL));
         donors.variableSymbolsByAlias().forEach((alias, symbol) -> known.put(symbol, "<vs:" + alias + ">"));
-        donors.secondFactorSecrets().forEach(secret -> known.put(secret, TranscriptNormaliser.SECRET));
+        donors.everySecondFactorSecret().forEach(secret -> known.put(secret, TranscriptNormaliser.SECRET));
         Optional.ofNullable(context.getEnvironment().getProperty(SIGNATORY_NAME_PROPERTY)).filter(name -> !name.isBlank())
                 .ifPresent(name -> known.put(name, SIGNATORY_NAME));
         setupCodes.findAnnounced().ifPresent(code -> {
@@ -80,14 +82,15 @@ public class ApiTranscriptHooks {
         return known;
     }
 
-    private void awaitAsyncWork() throws InterruptedException {
-        if (!(context.getBean(ASYNC_EXECUTOR) instanceof ThreadPoolTaskExecutor executor)) {
-            return;
+    static void awaitIdle(Object executor, Duration timeout) throws InterruptedException {
+        if (!(executor instanceof ThreadPoolTaskExecutor pool)) {
+            throw new IllegalStateException("The application task executor is a " + executor.getClass().getName()
+                    + ", which cannot report its running work, so the recorder cannot wait for asynchronous mails and log lines");
         }
-        long deadline = System.nanoTime() + ASYNC_WAIT.toNanos();
-        while (executor.getActiveCount() > 0 || !executor.getThreadPoolExecutor().getQueue().isEmpty()) {
+        long deadline = System.nanoTime() + timeout.toNanos();
+        while (pool.getActiveCount() > 0 || !pool.getThreadPoolExecutor().getQueue().isEmpty()) {
             if (System.nanoTime() > deadline) {
-                throw new IllegalStateException("Asynchronous work did not finish within " + ASYNC_WAIT);
+                throw new IllegalStateException("Asynchronous work did not finish within " + timeout);
             }
             Thread.sleep(20);
         }

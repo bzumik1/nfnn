@@ -1,9 +1,13 @@
 package cz.novanadeje.app.regression;
 
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.json.JsonMapper;
+
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
@@ -28,7 +32,20 @@ final class BaselineHygiene {
     private static final Pattern EMAIL = Pattern.compile("[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\\.[A-Za-z0-9-]+)*\\.[A-Za-z]{2,}");
     private static final Set<String> FIXTURE_DOMAINS = Set.of("example.cz", "example.com", "example.org", "example.net");
     private static final String RESERVED_EXAMPLE_TLD = ".example";
+    private static final String JSON_FILE = ".json";
     private static final Set<String> TEXT_FILES = Set.of(".json", ".txt", ".md", ".java", ".feature", ".properties", ".yml", ".yaml", ".html", ".xml", ".sql", ".ts");
+
+    static final Set<String> TEST_TOTP_SECRETS = Set.of("JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP", "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+            "MFRGGZDFMZTWQ2LKNNWG23TPOBYXE43U", "KRUGKIDROVUWG2ZAMJZG653OEBTG66BA", "ONSWG4TFOQQGC3TEEBZWK4TWMVZCAMZS");
+    private static final Set<String> EXPLICIT_ADDRESSES = Set.of("info@nfnn.cz");
+    private static final Pattern TOTP_SECRET = Pattern.compile("(?<![A-Za-z0-9])[A-Z2-7]{32}(?![A-Za-z0-9])");
+    private static final Pattern SECRET_PARAMETER = Pattern.compile("(?i)secret=(?!<)");
+    private static final Pattern SECRET_SETTING = Pattern.compile("[A-Z0-9_]*(PASSWORD|TOKEN|SECRET|KEY)");
+    private static final Pattern DIACRITICS = Pattern.compile("\\p{M}+");
+    private static final Pattern ANY_WHITESPACE = Pattern.compile("\\s+");
+    private static final List<String> REAL_SURNAME_FAMILIES = List.of("znamenac");
+    private static final String MASKED = "<secret>";
+    private static final JsonMapper JSON = JsonMapper.builder().build();
 
     private BaselineHygiene() {
     }
@@ -59,6 +76,24 @@ final class BaselineHygiene {
                 .filter(candidate -> !fixtures.values().contains(candidate))
                 .forEach(candidate -> findings.add(file + ": a random secret starting " + candidate.substring(0, 8)));
         UNMASKED_COOKIE.matcher(text).results().forEach(match -> findings.add(file + ": an unmasked cookie " + match.group(1)));
+        TOTP_SECRET.matcher(text).results().map(match -> match.group()).filter(candidate -> !TEST_TOTP_SECRETS.contains(candidate))
+                .forEach(candidate -> findings.add(file + ": a TOTP secret starting " + candidate.substring(0, 8)));
+        SECRET_PARAMETER.matcher(text).results()
+                .filter(match -> TEST_TOTP_SECRETS.stream().noneMatch(secret -> text.startsWith(secret, match.end())))
+                .forEach(match -> findings.add(file + ": an unmasked secret parameter"));
+        String folded = ANY_WHITESPACE.matcher(DIACRITICS.matcher(Normalizer.normalize(text, Normalizer.Form.NFD)).replaceAll("")).replaceAll("").toLowerCase(Locale.ROOT);
+        for (String family : REAL_SURNAME_FAMILIES) {
+            for (int at = folded.indexOf(family); at >= 0; at = folded.indexOf(family, at + family.length())) {
+                findings.add(file + ": a real surname of the family " + family + "*");
+            }
+        }
+        if (file.endsWith(JSON_FILE)) {
+            try {
+                unmaskedSecretSettings(JSON.readTree(text), findings, file);
+            } catch (RuntimeException unparsable) {
+                findings.add(file + ": not valid JSON, so the secret-setting rule cannot run");
+            }
+        }
         Matcher addresses = EMAIL.matcher(text);
         while (addresses.find()) {
             String address = addresses.group().toLowerCase(Locale.ROOT);
@@ -67,6 +102,20 @@ final class BaselineHygiene {
             }
         }
         return findings;
+    }
+
+    private static void unmaskedSecretSettings(JsonNode node, List<String> findings, String file) {
+        if (node.isObject()) {
+            JsonNode name = node.path("name");
+            JsonNode value = node.path("value");
+            if (name.isString() && SECRET_SETTING.matcher(name.asString()).matches() && value.isString()
+                    && !value.asString().isEmpty() && !MASKED.equals(value.asString())) {
+                findings.add(file + ": an unmasked value of the secret setting " + name.asString());
+            }
+            node.values().forEach(child -> unmaskedSecretSettings(child, findings, file));
+        } else if (node.isArray()) {
+            node.values().forEach(child -> unmaskedSecretSettings(child, findings, file));
+        }
     }
 
     private static boolean isFixtureDomain(String domain) {
@@ -81,10 +130,10 @@ final class BaselineHygiene {
         }
     }
 
-    static Fixtures fixtures(Path sources) throws IOException {
-        Set<String> addresses = new TreeSet<>();
+    static Fixtures fixtures(Path testSources) throws IOException {
+        Set<String> addresses = new TreeSet<>(EXPLICIT_ADDRESSES);
         Set<String> values = new TreeSet<>();
-        try (Stream<Path> files = Files.walk(sources)) {
+        try (Stream<Path> files = Files.walk(testSources)) {
             for (Path file : files.filter(Files::isRegularFile).filter(BaselineHygiene::isText).toList()) {
                 String text = Files.readString(file, StandardCharsets.UTF_8);
                 EMAIL.matcher(text).results().map(match -> match.group().toLowerCase(Locale.ROOT)).forEach(addresses::add);

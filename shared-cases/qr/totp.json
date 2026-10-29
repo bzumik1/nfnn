@@ -1,5 +1,5 @@
 {
-  "source": "v2-baseline@70e9233",
+  "source": "v2-baseline",
   "logic": "The otpauth:// URI that DonorSecondFactorService builds for a fixed test secret and its QR matrix (ZXing 3.5.4, level M, ISO-8859-1 hint); the secrets are test values, never used anywhere else",
   "cases": [
     {
