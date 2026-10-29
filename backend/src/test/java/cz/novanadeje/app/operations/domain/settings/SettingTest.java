@@ -48,6 +48,16 @@ class SettingTest {
     }
 
     @Test
+    @DisplayName("Given the backup key filled in by a password manager, when it is checked as a password or a token, then it is refused, so it never reaches the mail server or the bank")
+    void should_refuse_backup_key_when_checked_as_secret() {
+        String key = "AGE-SECRET-KEY-1R45A984EXXAFC85YZSYGY9R6XJTD4E9AKY65ZCRGPDQ89E7ANW8QKT6GWH";
+
+        assertThat(Setting.MAIL_PASSWORD.check(key)).contains(SettingProblem.BACKUP_KEY);
+        assertThat(Setting.FIO_TOKEN.check(" " + key.toLowerCase())).contains(SettingProblem.BACKUP_KEY);
+        assertThat(Setting.MAIL_PASSWORD.check("xsmtpsib-0123456789abcdef")).isEmpty();
+    }
+
+    @Test
     @DisplayName("Given the catalogue, when it is read, then the passwords and tokens are the secret settings")
     void should_mark_secrets_when_read_given_catalogue() {
         assertThat(Setting.secrets()).containsExactlyInAnyOrder(Setting.MAIL_PASSWORD, Setting.FIO_TOKEN);

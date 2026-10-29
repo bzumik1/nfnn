@@ -40,7 +40,7 @@ async function freshInstall(
   );
   await page.route(
     (url) => url.pathname === `${STATUS}/backup-key`,
-    (route) => route.fulfill({ json: { key: BACKUP_KEY } }),
+    (route) => route.fulfill({ json: { key: BACKUP_KEY, checkPositions: [2, 13, 24] } }),
   );
   await page.route(
     (url) => url.pathname === `${STATUS}/test-email`,
@@ -87,7 +87,9 @@ test.describe('Given a freshly installed site', () => {
     const download = page.waitForEvent('download');
     await page.getByRole('button', { name: 'Stáhnout jako soubor' }).click();
     expect((await download).suggestedFilename()).toBe('nfnn-klic-k-zaloham.txt');
-    await page.locator('#setup-backup-key-check').fill('6gwh');
+    await page.getByLabel('2. slovo klíče', { exact: true }).fill('komora');
+    await page.getByLabel('13. slovo klíče', { exact: true }).fill('MOTIVACE');
+    await page.getByLabel('24. slovo klíče', { exact: true }).fill('studna');
     await page.getByRole('button', { name: 'Uložit a spustit' }).click();
 
     await expect(page.getByRole('heading', { level: 1, name: 'Web se restartuje' })).toBeVisible();
@@ -97,7 +99,11 @@ test.describe('Given a freshly installed site', () => {
     expect(posted).toHaveLength(1);
     expect(posted[0]).toMatchObject({
       code: null,
-      backupKeyCheck: '6gwh',
+      backupKeyWords: [
+        { position: 2, word: 'komora' },
+        { position: 13, word: 'MOTIVACE' },
+        { position: 24, word: 'studna' },
+      ],
       settings: expect.arrayContaining([
         { name: 'MAIL_PASSWORD', value: 'xsmtpsib-key' },
         { name: 'ADMIN_EMAILS', value: 'spravce@example.cz' },
@@ -127,7 +133,9 @@ test.describe('Given a freshly installed site', () => {
     await page.locator('#setup-mail-username').fill('abc@smtp-brevo.com');
     await page.locator('#setup-mail-password').fill('xsmtpsib-key');
     await page.locator('#setup-admin-email').fill('spravce@example.cz');
-    await page.locator('#setup-backup-key-check').fill('6GWH');
+    await page.getByLabel('2. slovo klíče', { exact: true }).fill('komora');
+    await page.getByLabel('13. slovo klíče', { exact: true }).fill('motivace');
+    await page.getByLabel('24. slovo klíče', { exact: true }).fill('studna');
     await page.getByRole('button', { name: 'Uložit a spustit' }).click();
     await expect(page.getByRole('alert').filter({ hasText: /\S/ })).toContainText(
       'Zkušební e-mail s těmito údaji zatím neodešel.',

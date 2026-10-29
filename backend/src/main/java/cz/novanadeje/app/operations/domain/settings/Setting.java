@@ -1,5 +1,7 @@
 package cz.novanadeje.app.operations.domain.settings;
 
+import cz.novanadeje.app.operations.domain.backup.BackupKey;
+
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -93,6 +95,9 @@ public enum Setting {
         }
         if (value.chars().anyMatch(Character::isISOControl)) {
             return Optional.of(SettingProblem.INVALID_TEXT);
+        }
+        if (secret() && BackupKey.looksLikeOne(value)) {
+            return Optional.of(SettingProblem.BACKUP_KEY);
         }
         return format.problemWith(value);
     }

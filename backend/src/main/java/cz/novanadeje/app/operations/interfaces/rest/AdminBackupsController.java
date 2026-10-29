@@ -69,7 +69,7 @@ class AdminBackupsController {
     @PostMapping("/key/confirmation")
     AdminBackupsResponse.Key confirmKey(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody BackupKeyConfirmationRequest request, HttpServletRequest http) {
         keyRateLimiter.check(http.getRemoteAddr());
-        return AdminBackupsResponse.Key.from(keys.confirm(admin(jwt), request.check()));
+        return AdminBackupsResponse.Key.from(keys.confirm(admin(jwt), BackupKeyWordRequest.toChecks(request.words())));
     }
 
     @PutMapping("/schedule")

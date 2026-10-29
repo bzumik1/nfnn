@@ -1,3 +1,4 @@
+import { BackupKeyWordCheck } from '../backup-key/backup-key-word-check';
 import { HttpClient, HttpEvent, HttpHeaders } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import {
@@ -75,11 +76,12 @@ export interface RestoreRequestResponse {
 export interface SetupRequest {
   code: string | null;
   settings: SettingValueRequest[];
-  backupKeyCheck: string | null;
+  backupKeyWords: BackupKeyWordCheck[] | null;
 }
 
 export interface BackupKeyResponse {
   key: string;
+  checkPositions: number[];
 }
 
 export interface MailServerRequest {

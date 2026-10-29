@@ -5,6 +5,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import java.util.List;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -49,24 +51,57 @@ class BackupKeyTest {
     }
 
     @Test
-    @DisplayName("Given a key, when its check is asked for, then it is the last four characters")
-    void should_give_last_four_characters_when_check_asked() {
-        assertThat(new BackupKey(AGE_KEYGEN_KEY).lastCharacters()).isEqualTo("6GWH");
+    @DisplayName("Given a key, when three of its words are checked as written on paper, then they match")
+    void should_match_words_when_checked_given_words_of_key() {
+        BackupKey key = new BackupKey(AGE_KEYGEN_KEY);
+
+        assertThat(key.matches(List.of(new BackupKeyWordCheck(2, "komora"), new BackupKeyWordCheck(13, "MOTI"), new BackupKeyWordCheck(24, " studna ")))).isTrue();
+        assertThat(key.words()).hasSize(24).startsWith("divoch", "komora").endsWith("moudrost", "studna");
+    }
+
+    @Test
+    @DisplayName("Given a key, when a word at another position or a mistyped word is checked, then they do not match")
+    void should_not_match_words_when_checked_given_wrong_word() {
+        BackupKey key = new BackupKey(AGE_KEYGEN_KEY);
+
+        assertThat(key.matches(List.of(new BackupKeyWordCheck(2, "komora"), new BackupKeyWordCheck(13, "motivace"), new BackupKeyWordCheck(24, "moudrost")))).isFalse();
+        assertThat(key.matches(List.of(new BackupKeyWordCheck(2, "komoda"), new BackupKeyWordCheck(13, "motivace"), new BackupKeyWordCheck(24, "studna")))).isFalse();
+        assertThat(key.matches(List.of(new BackupKeyWordCheck(2, "kom"), new BackupKeyWordCheck(13, "motivace"), new BackupKeyWordCheck(24, "studna")))).isFalse();
+    }
+
+    @Test
+    @DisplayName("Given no checked words, when they are checked, then they do not match")
+    void should_not_match_words_when_checked_given_none() {
+        assertThat(new BackupKey(AGE_KEYGEN_KEY).matches(List.of())).isFalse();
+    }
+
+    @Test
+    @DisplayName("Given a key, when it is read from its 24 words, then it is the same key")
+    void should_read_key_when_parsed_given_its_words() {
+        assertThat(BackupKey.parse("divoch komora probudit najednou dekl komando nikl odebrat biograf bytovka dodnes mikrofon "
+                + "motivace naivita zdaleka ekonomie jeseter azyl atlas obyvatel glazura vytesat moudrost studna")).isEqualTo(new BackupKey(AGE_KEYGEN_KEY));
+        assertThat(BackupKey.parse(AGE_KEYGEN_KEY.toLowerCase())).isEqualTo(new BackupKey(AGE_KEYGEN_KEY));
+    }
+
+    @Test
+    @DisplayName("Given no text, when it is parsed, then it is refused")
+    void should_refuse_text_when_parsed_given_null() {
+        assertThatThrownBy(() -> BackupKey.parse(null)).isInstanceOf(InvalidBackupKey.class);
+        assertThatThrownBy(() -> BackupKey.parse("slovo ".repeat(BackupKey.MAX_PARSED_LENGTH))).isInstanceOf(InvalidBackupKey.class);
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"6GWH", "6gwh", " 6GWH "})
-    @DisplayName("Given the last four characters typed in any case, when they are checked, then they match")
-    void should_match_check_when_checked_given_last_four_characters(String typed) {
-        assertThat(new BackupKey(AGE_KEYGEN_KEY).matchesCheck(typed)).isTrue();
+    @ValueSource(strings = {AGE_KEYGEN_KEY, " age-secret-key-1r45a984exxafc85yzsygy9r6xjtd4e9aky65zcrgpdq89e7anw8qkt6gwh ", "AGE-SECRET-KEY-1"})
+    @DisplayName("Given a value that starts like a backup key, when it is looked at, then it looks like one")
+    void should_look_like_key_when_looked_at_given_key_prefix(String value) {
+        assertThat(BackupKey.looksLikeOne(value)).isTrue();
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"6GWJ", "GWH", "T6GWH", ""})
-    @DisplayName("Given other characters, when they are checked, then they do not match")
-    void should_not_match_check_when_checked_given_other_characters(String typed) {
-        assertThat(new BackupKey(AGE_KEYGEN_KEY).matchesCheck(typed)).isFalse();
-        assertThat(new BackupKey(AGE_KEYGEN_KEY).matchesCheck(null)).isFalse();
+    @ValueSource(strings = {"xkeysib-0123456789abcdef", "AGE1R45A984EXXAFC85", ""})
+    @DisplayName("Given a password or a token, when it is looked at, then it does not look like a backup key")
+    void should_not_look_like_key_when_looked_at_given_other_secret(String value) {
+        assertThat(BackupKey.looksLikeOne(value)).isFalse();
     }
 
     @Test

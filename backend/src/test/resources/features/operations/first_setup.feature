@@ -79,6 +79,49 @@ Feature: The first setup asks for the settings in the browser and stores them wi
     When the setup status is asked
     Then the setup is required: true, with a code: false
 
+  Scenario: The setup shows the backup key, asks for three of its words and goes on only with the right ones
+    Given the requests come directly from the home network
+    When the backup key is asked for in the first setup
+    Then the answer carries the backup key of this server and no cache keeps it
+    And the answer asks for three different words of the key
+    When the first setup is completed with wrong backup key words and:
+      | name              | value                |
+      | PUBLIC_URL        | https://nfnn.cz      |
+      | MAIL_HOST         | smtp-relay.brevo.com |
+      | MAIL_PORT         | 587                  |
+      | MAIL_FROM         | info@nfnn.cz         |
+      | CONTACT_RECIPIENT | info@nfnn.cz         |
+      | ADMIN_EMAILS      | spravce@example.cz   |
+    Then the response status is 400
+    And the problem type ends with "operations/backup-key-check-mismatch"
+    And the stored settings are ""
+    And the backend does not restart
+
+  Scenario: The backup key filled in by a password manager as the mail password or the Fio token is refused
+    Given the requests come directly from the home network
+    When the first setup is completed with the backup key as "MAIL_PASSWORD" and:
+      | name              | value                |
+      | PUBLIC_URL        | https://nfnn.cz      |
+      | MAIL_HOST         | smtp-relay.brevo.com |
+      | MAIL_PORT         | 587                  |
+      | MAIL_FROM         | info@nfnn.cz         |
+      | CONTACT_RECIPIENT | info@nfnn.cz         |
+      | ADMIN_EMAILS      | spravce@example.cz   |
+    Then the response status is 400
+    And the problem type ends with "operations/invalid-settings"
+    And the problem names the settings "MAIL_PASSWORD"
+    And the stored settings are ""
+    When the first setup is completed with the backup key as "FIO_TOKEN" and:
+      | name              | value                |
+      | PUBLIC_URL        | https://nfnn.cz      |
+      | MAIL_HOST         | smtp-relay.brevo.com |
+      | MAIL_PORT         | 587                  |
+      | MAIL_FROM         | info@nfnn.cz         |
+      | CONTACT_RECIPIENT | info@nfnn.cz         |
+      | ADMIN_EMAILS      | spravce@example.cz   |
+    Then the response status is 400
+    And the problem names the settings "FIO_TOKEN"
+
   Scenario: Settings that belong only to the administration are refused in the setup
     Given the requests come directly from the home network
     When the first setup is completed with:

@@ -2,12 +2,14 @@ package cz.novanadeje.app.operations.application.settings;
 
 import cz.novanadeje.app.operations.application.backup.BackupKeyRevealRefusals;
 import cz.novanadeje.app.operations.application.backup.BackupKeyService;
+import cz.novanadeje.app.operations.application.backup.BackupKeyWordChallenges;
 import cz.novanadeje.app.operations.application.backup.BackupRestoreService;
 import cz.novanadeje.app.operations.application.backup.BackupStore;
 import cz.novanadeje.app.operations.application.backup.InMemoryBackupKeyConfirmations;
 import cz.novanadeje.app.operations.application.backup.RestoreRequest;
 import cz.novanadeje.app.operations.domain.backup.BackupKey;
 import cz.novanadeje.app.operations.domain.backup.BackupKeyCheckMismatch;
+import cz.novanadeje.app.operations.domain.backup.BackupKeyWordCheck;
 import cz.novanadeje.app.operations.domain.backup.BackupRun;
 import cz.novanadeje.app.operations.domain.backup.RestoreRecordRepository;
 import cz.novanadeje.app.operations.domain.backup.RestoreSource;
@@ -64,12 +66,13 @@ class SetupServiceTest {
     private final ApplicationRestarter restarter = mock(ApplicationRestarter.class);
     private final BackupStore backups = mock(BackupStore.class);
     private static final BackupKey BACKUP_KEY = new BackupKey("AGE-SECRET-KEY-1R45A984EXXAFC85YZSYGY9R6XJTD4E9AKY65ZCRGPDQ89E7ANW8QKT6GWH");
-    private static final String KEY_CHECK = "6GWH";
+    private static final List<BackupKeyWordCheck> KEY_CHECK = List.of(new BackupKeyWordCheck(2, "komora"), new BackupKeyWordCheck(13, "motivace"),
+            new BackupKeyWordCheck(24, "studna"));
 
     private final Clock clock = Clock.fixed(NOW, ZoneOffset.UTC);
     private final InMemoryBackupKeyConfirmations keyConfirmations = new InMemoryBackupKeyConfirmations();
     private final BackupKeyService backupKeys = new BackupKeyService(() -> Optional.of(BACKUP_KEY), keyConfirmations, mock(FreshSecondFactor.class),
-            mock(BackupKeyRevealRefusals.class), mock(ApplicationEventPublisher.class), clock);
+            mock(BackupKeyRevealRefusals.class), new BackupKeyWordChallenges(), mock(ApplicationEventPublisher.class), clock);
     private final SetupService setup = new SetupService(state, new SettingsWriter(repository, new ReversibleSealer(), validator), announcer,
             mailProbe, restarter, backups, new BackupRestoreService(backups, mock(RestoreRecordRepository.class), restarter,
             mock(ApplicationEventPublisher.class), clock), backupKeys, clock);
@@ -123,7 +126,7 @@ class SetupServiceTest {
     @Test
     @DisplayName("Given an open setup, when the backup key is asked for, then it is shown; once the setup is done or without the code it is not")
     void should_show_backup_key_when_asked_given_open_setup() {
-        assertThat(setup.backupKey(new SetupAccess(true, null))).isEqualTo(BACKUP_KEY);
+        assertThat(setup.backupKey(new SetupAccess(true, null)).key()).isEqualTo(BACKUP_KEY);
         assertThatThrownBy(() -> setup.backupKey(new SetupAccess(false, "AAAA-AAAA-AAAA"))).isInstanceOf(SetupLocked.class);
 
         setup.complete(new SetupAccess(true, null), ESSENTIALS, KEY_CHECK);
@@ -132,9 +135,9 @@ class SetupServiceTest {
     }
 
     @Test
-    @DisplayName("Given the essentials, when the setup is completed with the last four characters of the backup key, then the key counts as saved")
-    void should_confirm_backup_key_when_completed_given_its_last_characters() {
-        setup.complete(new SetupAccess(true, null), ESSENTIALS, KEY_CHECK.toLowerCase());
+    @DisplayName("Given the essentials, when the setup is completed with three words of the backup key, then the key counts as saved")
+    void should_confirm_backup_key_when_completed_given_three_of_its_words() {
+        setup.complete(new SetupAccess(true, null), ESSENTIALS, KEY_CHECK);
 
         assertThat(keyConfirmations.find()).hasValueSatisfying(confirmation -> {
             assertThat(confirmation.confirms(BACKUP_KEY)).isTrue();
@@ -144,10 +147,11 @@ class SetupServiceTest {
     }
 
     @Test
-    @DisplayName("Given other characters than the end of the backup key, when the setup is completed, then it is refused, stays open and stores nothing")
+    @DisplayName("Given other words than those of the backup key, when the setup is completed, then it is refused, stays open and stores nothing")
     void should_refuse_when_completed_given_wrong_backup_key_check() {
-        assertThatThrownBy(() -> setup.complete(new SetupAccess(true, null), ESSENTIALS, "AAAA")).isInstanceOf(BackupKeyCheckMismatch.class);
-        assertThatThrownBy(() -> setup.complete(new SetupAccess(true, null), ESSENTIALS, null)).isInstanceOf(BackupKeyCheckMismatch.class);
+        assertThatThrownBy(() -> setup.complete(new SetupAccess(true, null), ESSENTIALS, List.of(new BackupKeyWordCheck(1, "komora"), new BackupKeyWordCheck(13, "motivace"),
+                new BackupKeyWordCheck(24, "studna")))).isInstanceOf(BackupKeyCheckMismatch.class);
+        assertThatThrownBy(() -> setup.complete(new SetupAccess(true, null), ESSENTIALS, List.of())).isInstanceOf(BackupKeyCheckMismatch.class);
 
         assertThat(repository.findAll()).isEmpty();
         assertThat(state.completedAt).isEmpty();

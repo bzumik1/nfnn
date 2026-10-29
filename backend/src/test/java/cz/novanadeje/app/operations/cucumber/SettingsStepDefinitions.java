@@ -4,6 +4,7 @@ import cz.novanadeje.app.cucumber.ApiClient;
 import cz.novanadeje.app.cucumber.DonorSessions;
 import cz.novanadeje.app.cucumber.ScenarioDonors;
 import cz.novanadeje.app.operations.application.backup.BackupKeySource;
+import cz.novanadeje.app.operations.domain.backup.BackupKey;
 import cz.novanadeje.app.support.FakeMailServerProbe;
 import cz.novanadeje.app.support.RecordingApplicationRestarter;
 import cz.novanadeje.app.support.RecordingSetupCodeAnnouncer;
@@ -15,6 +16,7 @@ import io.cucumber.java.en.When;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import tools.jackson.databind.JsonNode;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -98,22 +100,26 @@ public class SettingsStepDefinitions {
 
     @When("the first setup is completed with:")
     public void theFirstSetupIsCompletedWith(DataTable settings) {
-        api.post(SETUP, Map.of("settings", values(settings), "backupKeyCheck", backupKeyCheck()));
+        api.post(SETUP, Map.of("settings", values(settings), "backupKeyWords", backupKeyWords()));
     }
 
-    @When("the first setup is completed with the backup key characters {string} and:")
-    public void theFirstSetupIsCompletedWithTheBackupKeyCharacters(String characters, DataTable settings) {
-        api.post(SETUP, Map.of("settings", values(settings), "backupKeyCheck", characters));
+    @When("the first setup is completed with wrong backup key words and:")
+    public void theFirstSetupIsCompletedWithWrongBackupKeyWords(DataTable settings) {
+        List<String> words = serverKey().words();
+        api.post(SETUP, Map.of("settings", values(settings), "backupKeyWords",
+                List.of(word(1, words.get(1)), word(2, words.get(2)), word(3, words.get(0)))));
     }
 
-    @When("the first setup is completed without the backup key characters and:")
-    public void theFirstSetupIsCompletedWithoutTheBackupKeyCharacters(DataTable settings) {
-        api.post(SETUP, Map.of("settings", values(settings)));
+    @When("the first setup is completed with the backup key as {string} and:")
+    public void theFirstSetupIsCompletedWithTheBackupKeyAs(String name, DataTable settings) {
+        List<Map<String, String>> withKey = new ArrayList<>(values(settings));
+        withKey.add(Map.of("name", name, "value", serverKey().value()));
+        api.post(SETUP, Map.of("settings", withKey, "backupKeyWords", backupKeyWords()));
     }
 
     @When("the first setup is completed with the code from the container log and:")
     public void theFirstSetupIsCompletedWithTheCodeAnd(DataTable settings) {
-        api.post(SETUP, Map.of("code", announcer.announced().value(), "settings", values(settings), "backupKeyCheck", backupKeyCheck()));
+        api.post(SETUP, Map.of("code", announcer.announced().value(), "settings", values(settings), "backupKeyWords", backupKeyWords()));
     }
 
     @Given("the first setup was completed")
@@ -126,7 +132,7 @@ public class SettingsStepDefinitions {
                 List.of("MAIL_PORT", "587"),
                 List.of("MAIL_FROM", "info@nfnn.cz"),
                 List.of("CONTACT_RECIPIENT", "info@nfnn.cz"),
-                List.of("ADMIN_EMAILS", "spravce@example.cz"))), "backupKeyCheck", backupKeyCheck()));
+                List.of("ADMIN_EMAILS", "spravce@example.cz"))), "backupKeyWords", backupKeyWords()));
         assertThat(api.lastResponse().getStatusCode().value()).withFailMessage("The setup answered %s", api.lastResponse().getBody()).isEqualTo(202);
         restarter.reset();
     }
@@ -281,8 +287,17 @@ public class SettingsStepDefinitions {
         assertThat(details).doesNotContain(FakeMailServerProbe.PASSWORD);
     }
 
-    private String backupKeyCheck() {
-        return backupKeys.current().orElseThrow(() -> new AssertionError("The test backend has no backup key")).lastCharacters();
+    private List<Map<String, Object>> backupKeyWords() {
+        List<String> words = serverKey().words();
+        return List.of(word(4, words.get(3)), word(11, words.get(10).substring(0, 4)), word(24, words.get(23).toUpperCase()));
+    }
+
+    private static Map<String, Object> word(int position, String word) {
+        return Map.of("position", position, "word", word);
+    }
+
+    private BackupKey serverKey() {
+        return backupKeys.current().orElseThrow(() -> new AssertionError("The test backend has no backup key"));
     }
 
     private JsonNode setting(String name) {

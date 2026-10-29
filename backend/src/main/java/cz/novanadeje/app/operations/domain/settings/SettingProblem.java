@@ -7,6 +7,7 @@ public enum SettingProblem {
     TOO_LONG,
     INVALID_TEXT,
     PLACEHOLDER,
+    BACKUP_KEY,
     INVALID_URL,
     INVALID_HOST,
     INVALID_PORT,

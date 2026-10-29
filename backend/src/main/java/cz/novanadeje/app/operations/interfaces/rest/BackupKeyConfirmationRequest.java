@@ -1,8 +1,11 @@
 package cz.novanadeje.app.operations.interfaces.rest;
 
-import cz.novanadeje.app.operations.domain.backup.BackupKey;
-import jakarta.validation.constraints.NotBlank;
+import cz.novanadeje.app.operations.domain.backup.BackupKeyWordPositions;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
-record BackupKeyConfirmationRequest(@NotBlank @Size(max = BackupKey.CHECK_LENGTH + 2) String check) {
+import java.util.List;
+
+record BackupKeyConfirmationRequest(@NotNull @Size(min = BackupKeyWordPositions.ASKED, max = BackupKeyWordPositions.ASKED) List<@Valid @NotNull BackupKeyWordRequest> words) {
 }

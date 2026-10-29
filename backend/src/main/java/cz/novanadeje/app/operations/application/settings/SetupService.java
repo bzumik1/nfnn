@@ -1,11 +1,13 @@
 package cz.novanadeje.app.operations.application.settings;
 
 import cz.novanadeje.app.operations.application.backup.BackupKeyService;
+import cz.novanadeje.app.operations.application.backup.RevealedBackupKey;
 import cz.novanadeje.app.operations.application.backup.BackupRestoreService;
 import cz.novanadeje.app.operations.application.backup.BackupStore;
 import cz.novanadeje.app.operations.application.backup.RestoreRequest;
 import cz.novanadeje.app.operations.domain.backup.BackupKey;
 import cz.novanadeje.app.operations.domain.backup.BackupKeyUnavailable;
+import cz.novanadeje.app.operations.domain.backup.BackupKeyWordCheck;
 import cz.novanadeje.app.operations.domain.settings.Setting;
 import cz.novanadeje.app.operations.domain.settings.SettingChange;
 import cz.novanadeje.app.operations.domain.settings.SetupCode;
@@ -86,19 +88,19 @@ public class SetupService {
     }
 
     @Transactional(readOnly = true)
-    public BackupKey backupKey(SetupAccess access) {
+    public RevealedBackupKey backupKey(SetupAccess access) {
         requireOpen(access);
         return backupKeys.keyForSetup().orElseThrow(BackupKeyUnavailable::new);
     }
 
     @Transactional
-    public List<Setting> complete(SetupAccess access, List<SettingChange> changes, String backupKeyCheck) {
+    public List<Setting> complete(SetupAccess access, List<SettingChange> changes, List<BackupKeyWordCheck> backupKeyWords) {
         requireOpen(access);
         if (changes.stream().anyMatch(change -> !Setting.inSetup().contains(change.setting()))) {
             throw new IllegalArgumentException("Only settings of the first setup are set here");
         }
         Instant now = clock.instant();
-        backupKeys.confirmInSetup(backupKeyCheck, now);
+        backupKeys.confirmInSetup(backupKeyWords, now);
         List<Setting> changed = writer.apply(changes, Setting.requiredInSetup(), now);
         state.markCompleted(now);
         restarter.restartAfterCommit();

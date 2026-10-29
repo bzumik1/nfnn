@@ -16,7 +16,7 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule, NgForm } from '@angular/forms';
-import { describeProblem } from '../../../core/auth/api-problem';
+import { describeProblem, problemTypeEndsWith } from '../../../core/auth/api-problem';
 import { AuthStore } from '../../../core/auth/auth-store';
 import {
   PasskeyAuthenticator,
@@ -28,7 +28,14 @@ import { FieldMessages, FormField } from '../../../shared/ui/form-field/form-fie
 import { LiveNotice, Notice } from '../../../shared/ui/live-notice/live-notice';
 import { formatBankTime } from '../../donations/donation-date';
 import { BackupKeyPanel } from '../../operations/backup-key/backup-key-panel';
-import { backupKeyCheckPattern } from '../../operations/backup-key/backup-key-check';
+import {
+  BACKUP_KEY_WORD_MESSAGES,
+  BackupKeyWordEntry,
+  BackupKeyWordValidator,
+  backupKeyWordChecks,
+  backupKeyWordEntries,
+  backupKeyWordLabel,
+} from '../../operations/backup-key/backup-key-word-check';
 import { AdminApi, BackupKeyRevealRequest, BackupKeyStatus } from '../admin-api';
 
 const CODE_MESSAGES: FieldMessages = {
@@ -36,10 +43,7 @@ const CODE_MESSAGES: FieldMessages = {
   pattern: $localize`:@@donor.form.code.invalid:Kód má přesně šest číslic.`,
 };
 
-const CHECK_MESSAGES: FieldMessages = {
-  required: $localize`:@@admin.backups.key.check.required:Opište prosím poslední čtyři znaky klíče.`,
-  pattern: $localize`:@@admin.backups.key.check.mismatch:Znaky nesedí s koncem klíče. Zkontrolujte prosím, že jste uložili celý klíč.`,
-};
+const CONFIRMATION_EXPIRED = 'operations/backup-key-confirmation-expired';
 
 const REVEAL_FAILED = $localize`:@@admin.backups.key.reveal.failed:Klíč se nepodařilo zobrazit. Zkuste to prosím znovu.`;
 
@@ -52,6 +56,7 @@ const REVEAL_FAILED = $localize`:@@admin.backups.key.reveal.failed:Klíč se nep
     FocusFirstInvalid,
     LiveNotice,
     BackupKeyPanel,
+    BackupKeyWordValidator,
   ],
   templateUrl: './backup-key-card.html',
   styleUrl: './backup-key-card.scss',
@@ -70,7 +75,8 @@ export class BackupKeyCard {
   readonly changed = output<BackupKeyStatus>();
 
   protected readonly codeMessages = CODE_MESSAGES;
-  protected readonly checkMessages = CHECK_MESSAGES;
+  protected readonly wordMessages = BACKUP_KEY_WORD_MESSAGES;
+  protected readonly wordLabel = backupKeyWordLabel;
   protected readonly codeHint = $localize`:@@admin.backups.key.codeHint:Počkejte, až aplikace ukáže nový kód (mění se každých 30 sekund), a opište ho.`;
   protected readonly passkeySupported = inject(PasskeyAuthenticator).supported();
   protected readonly usesCode = computed(() => this.auth.donor()?.secondFactor.enabled ?? false);
@@ -80,14 +86,13 @@ export class BackupKeyCard {
   protected readonly revealed = signal<string | null>(null);
   protected readonly error = signal('');
   protected readonly notice = signal<Notice | null>(null);
-  protected readonly checkPattern = computed(() => backupKeyCheckPattern(this.revealed() ?? ''));
+  protected readonly words = signal<BackupKeyWordEntry[]>([]);
   protected readonly confirmedAt = computed(() => {
     const at = this.status().confirmedAt;
     return at === null ? '' : formatBankTime(at);
   });
 
   protected code = '';
-  protected check = '';
 
   protected ask(): void {
     this.notice.set(null);
@@ -151,13 +156,13 @@ export class BackupKeyCard {
     this.confirming.set(true);
     this.notice.set(null);
     this.api
-      .confirmBackupKey(this.check.trim())
+      .confirmBackupKey(backupKeyWordChecks(this.words()))
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (status) => {
           this.confirming.set(false);
           this.revealed.set(null);
-          this.check = '';
+          this.words.set([]);
           this.notice.set({
             kind: 'status',
             text: $localize`:@@admin.backups.key.confirmed:Děkujeme, uložení klíče jsme si poznamenali. Klíč jsme zase skryli.`,
@@ -174,13 +179,18 @@ export class BackupKeyCard {
               $localize`:@@admin.backups.key.confirmFailed:Uložení klíče se nepodařilo potvrdit. Zkuste to prosím znovu.`,
             ),
           });
+          if (problemTypeEndsWith(failure, CONFIRMATION_EXPIRED)) {
+            this.revealed.set(null);
+            this.words.set([]);
+            this.focusShowButton();
+          }
         },
       });
   }
 
   protected hide(): void {
     this.revealed.set(null);
-    this.check = '';
+    this.words.set([]);
     this.notice.set(null);
     this.focusShowButton();
   }
@@ -196,6 +206,7 @@ export class BackupKeyCard {
           this.revealing.set(false);
           this.asking.set(false);
           this.code = '';
+          this.words.set(backupKeyWordEntries(response.key, response.checkPositions));
           this.revealed.set(response.key);
           afterNextRender(() => this.revealedRegion()?.nativeElement.focus(), {
             injector: this.injector,

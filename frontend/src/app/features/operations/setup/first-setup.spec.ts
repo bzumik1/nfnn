@@ -78,7 +78,7 @@ describe('Given the first setup page', () => {
   }
 
   async function backupKey(): Promise<void> {
-    http.expectOne(BACKUP_KEY_URL).flush({ key: BACKUP_KEY });
+    http.expectOne(BACKUP_KEY_URL).flush({ key: BACKUP_KEY, checkPositions: [2, 13, 24] });
     await settle();
   }
 
@@ -131,7 +131,17 @@ describe('Given the first setup page', () => {
   async function fillInSecrets(): Promise<void> {
     await type('#setup-mail-username', 'abc@smtp-brevo.com');
     await type('#setup-mail-password', 'xsmtpsib-key');
-    await type('#setup-backup-key-check', '6gwh');
+    await typeBackupKeyWords('komora', 'motivace', 'studna');
+  }
+
+  async function typeBackupKeyWords(
+    second: string,
+    thirteenth: string,
+    last: string,
+  ): Promise<void> {
+    await type('#setup-backup-key-word-2', second);
+    await type('#setup-backup-key-word-13', thirteenth);
+    await type('#setup-backup-key-word-24', last);
   }
 
   async function sendSuccessfulTestEmail(): Promise<void> {
@@ -152,7 +162,7 @@ describe('Given the first setup page', () => {
   it('when the page opens, then it says it is finding out whether the site is set up', () => {
     expect(text('[role="status"]:not(:empty)')).toBe('Zjišťujeme, jestli je web nastavený…');
     http.expectOne(STATUS_URL).flush({ required: true, codeRequired: false });
-    http.expectOne(BACKUP_KEY_URL).flush({ key: BACKUP_KEY });
+    http.expectOne(BACKUP_KEY_URL).flush({ key: BACKUP_KEY, checkPositions: [2, 13, 24] });
   });
 
   it('when the site is already set up, then the page says so and points to the administration', async () => {
@@ -214,7 +224,7 @@ describe('Given the first setup page', () => {
       await settle();
       const keyRequest = http.expectOne(BACKUP_KEY_URL);
       expect(keyRequest.request.headers.get('X-Nfnn-Setup-Code')).toBe('k7qm-2xpa-9trd');
-      keyRequest.flush({ key: BACKUP_KEY });
+      keyRequest.flush({ key: BACKUP_KEY, checkPositions: [2, 13, 24] });
       await settle();
 
       await fillInSecrets();
@@ -254,7 +264,9 @@ describe('Given the first setup page', () => {
         'Vyplňte prosím e-mailovou adresu.',
         'Vyplňte prosím přihlašovací jméno ze stránky SMTP v Brevo.',
         'Vyplňte prosím heslo nebo klíč SMTP.',
-        'Opište prosím poslední čtyři znaky klíče.',
+        'Opište prosím toto slovo z uloženého klíče.',
+        'Opište prosím toto slovo z uloženého klíče.',
+        'Opište prosím toto slovo z uloženého klíče.',
       ]);
       http.expectNone(STATUS_URL);
     });
@@ -265,7 +277,7 @@ describe('Given the first setup page', () => {
       element<HTMLInputElement>('input[name="mailAuth"]').click();
       await settle();
       await type('#setup-admin-email', 'spravce@example.cz');
-      await type('#setup-backup-key-check', '6GWH');
+      await typeBackupKeyWords('KOMO', 'motivace', 'studna');
       await submit('form.setup-form');
 
       expect(fieldErrors()).toEqual([]);
@@ -408,7 +420,11 @@ describe('Given the first setup page', () => {
           { name: 'FIO_TOKEN', value: 'fio-token' },
           { name: 'ADMIN_EMAILS', value: 'spravce@example.cz' },
         ],
-        backupKeyCheck: '6gwh',
+        backupKeyWords: [
+          { position: 2, word: 'komora' },
+          { position: 13, word: 'motivace' },
+          { position: 24, word: 'studna' },
+        ],
       });
       vi.useFakeTimers();
       request.flush({ changed: ['PUBLIC_URL'], restarting: true });
@@ -526,10 +542,10 @@ describe('Given the first setup page', () => {
         await settle();
         http.expectNone(RESTORE_URL);
         expect(text('#setup-restore-key-error')).toBe(
-          'Klíč začíná AGE-SECRET-KEY-1 a má 74 znaků. Zkontrolujte, že jste ho vložili celý.',
+          'Klíč začíná AGE-SECRET-KEY-1 a má 74 znaků, nebo je to 24 slov. Zkontrolujte, že jste ho vložili celý a bez překlepu.',
         );
 
-        await type('#setup-restore-key', ` ${BACKUP_KEY} `);
+        await type('#setup-restore-key', ` ${BACKUP_KEY.toLowerCase()} `);
         button('Nahrát a obnovit').click();
         await settle();
 
@@ -542,6 +558,28 @@ describe('Given the first setup page', () => {
         });
         await settle();
         expect(text('h1')).toBe('Obnovujeme web ze zálohy');
+      });
+
+      it('then the key may be typed as its 24 words and goes to the server as the key', async () => {
+        await chooseFile('nfnn-2026-10-22_0300.dump.age', 'age-encryption.org/v1');
+        await type(
+          '#setup-restore-key',
+          '1. divoch 2. komora 3. probudit 4. najednou 5. dekl 6. komando 7. nikl 8. odebrat ' +
+            '9. biograf 10. bytovka 11. dodnes 12. mikrofon 13. moti 14. naivita 15. zdaleka ' +
+            '16. ekonomie 17. jeseter 18. azyl 19. atlas 20. obyvatel 21. glazura 22. vytesat ' +
+            '23. moudrost 24. studna',
+        );
+        button('Nahrát a obnovit').click();
+        await settle();
+
+        const request = http.expectOne(RESTORE_URL);
+        expect(request.request.headers.get('X-Nfnn-Backup-Key')).toBe(BACKUP_KEY);
+        request.flush({
+          requestId: REQUEST_ID,
+          fileName: `${REQUEST_ID}.upload`,
+          requestedAt: '2026-10-23T18:00:00Z',
+        });
+        await settle();
       });
 
       it('then going back shows the form again', async () => {
@@ -583,7 +621,7 @@ describe('Given the first setup page', () => {
         });
         await vi.advanceTimersByTimeAsync(1);
         fixture.detectChanges();
-        http.expectOne(BACKUP_KEY_URL).flush({ key: BACKUP_KEY });
+        http.expectOne(BACKUP_KEY_URL).flush({ key: BACKUP_KEY, checkPositions: [2, 13, 24] });
         await vi.advanceTimersByTimeAsync(1);
         fixture.detectChanges();
 
@@ -629,16 +667,18 @@ describe('Given the first setup page', () => {
       });
     });
 
-    it('then the backup key is shown and saving waits for its last four characters', async () => {
+    it('then the backup key is shown with its words and saving waits for three of them', async () => {
       expect(text('.backup-key')).toBe(BACKUP_KEY);
+      expect(element('.backup-key-word-list').querySelectorAll('li')).toHaveLength(24);
       await fillInSecrets();
       await type('#setup-admin-email', 'spravce@example.cz');
-      await type('#setup-backup-key-check', 'AAAA');
+      await typeBackupKeyWords('komora', 'motivace', 'moudrost');
       await submit('form.setup-form');
 
       http.expectNone(STATUS_URL);
-      expect(text('#setup-backup-key-check-error')).toBe(
-        'Znaky nesedí s koncem klíče. Zkontrolujte prosím, že jste uložili celý klíč.',
+      expect(text('label[for="setup-backup-key-word-24"]')).toBe('24. slovo klíče');
+      expect(text('#setup-backup-key-word-24-error')).toBe(
+        'Slovo nesedí s klíčem. Zkontrolujte, že opisujete slovo se správným číslem.',
       );
     });
 
@@ -699,14 +739,14 @@ describe('Given the first setup page on a server whose backup key is not there y
 
   afterEach(() => http.verify());
 
-  it('when the key cannot be found, then the page says the backups wait and saving sends no characters', async () => {
+  it('when the key cannot be found, then the page says the backups wait and saving sends no words', async () => {
     const missing = problem(409, 'operations/backup-key-unavailable', 'Klíč chybí', '');
     http.expectOne(BACKUP_KEY_URL).flush(missing.body, missing.options);
     await fixture.whenStable();
     fixture.detectChanges();
 
     expect(fixture.nativeElement.textContent).toContain('Klíč k zálohám se ještě nevytvořil');
-    expect(fixture.nativeElement.querySelector('#setup-backup-key-check')).toBeNull();
+    expect(fixture.nativeElement.querySelector('#setup-backup-key-word-2')).toBeNull();
   });
 
   it('when the key fails to load, then it can be loaded again', async () => {
@@ -720,10 +760,10 @@ describe('Given the first setup page on a server whose backup key is not there y
     ).find((candidate) => candidate.textContent?.trim() === 'Načíst znovu');
     retry?.click();
     await fixture.whenStable();
-    http.expectOne(BACKUP_KEY_URL).flush({ key: BACKUP_KEY });
+    http.expectOne(BACKUP_KEY_URL).flush({ key: BACKUP_KEY, checkPositions: [2, 13, 24] });
     await fixture.whenStable();
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.querySelector('#setup-backup-key-check')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('#setup-backup-key-word-2')).not.toBeNull();
   });
 });
