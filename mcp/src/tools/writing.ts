@@ -255,6 +255,33 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
   );
 
   server.registerTool(
+    'nfnn_send_test_email',
+    {
+      title: 'Poslat zkušební e-mail',
+      description:
+        "Sends a test e-mail to the connected administrator's own address through the running mail settings (server, port, user, STARTTLS and sender as nfnn_settings shows them; the stored SMTP password is used by the backend and never passes the connector). Answers the outcome: SENT, UNREACHABLE, TIMEOUT, STARTTLS_UNAVAILABLE, SIGN_IN_REFUSED, SENDER_REFUSED, RECIPIENT_REFUSED or FAILED, and the address it went to. Use it when e-mails seem not to arrive. Nothing is saved; at most 10 an hour; audited as SEND_TEST_EMAIL.",
+      inputSchema: z.object({}),
+      annotations: WRITING,
+    },
+    async (_input, ctx) =>
+      answerChange(deps, ctx, 'nfnn_send_test_email', async ({ apiToken }) => {
+        const running = runningSettings(
+          await backend.get('/api/admin/operations/settings', apiToken),
+        );
+        return text(
+          await backend.post('/api/admin/operations/settings/test-email', apiToken, {
+            host: running['MAIL_HOST'] ?? '',
+            port: Number(running['MAIL_PORT'] ?? '0'),
+            username: running['MAIL_USERNAME'] ?? '',
+            auth: running['MAIL_AUTH'] === 'true',
+            startTls: running['MAIL_STARTTLS'] === 'true',
+            sender: running['MAIL_FROM'] ?? '',
+          }),
+        );
+      }),
+  );
+
+  server.registerTool(
     'nfnn_update_backup_schedule',
     {
       title: 'Nastavit plán záloh',
@@ -524,4 +551,18 @@ function uploaded(image: unknown): ReturnType<typeof text> {
       ? `Use coverImageId "${id}" to put the photo on a news article or project.`
       : undefined,
   );
+}
+
+function runningSettings(view: unknown): Record<string, string | undefined> {
+  const settings = asRecord(view)['settings'];
+  const values: Record<string, string | undefined> = {};
+  if (Array.isArray(settings)) {
+    for (const setting of settings) {
+      const { name, value } = asRecord(setting);
+      if (typeof name === 'string' && typeof value === 'string') {
+        values[name] = value;
+      }
+    }
+  }
+  return values;
 }
