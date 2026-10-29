@@ -10,7 +10,8 @@ const SCRIPT = fileURLToPath(new URL('compare-v2.mjs', import.meta.url));
 const FEATURE = 'donors/admin_donors';
 const SCENARIO = 'An administrator reads a donor #1';
 const REQUEST = 'GET /api/admin/donors/{id} #1';
-const LOG = 'INFO donors.application.DonorEmailVerificationService: E-mail of donor <id:1> verified';
+const LOG =
+  'INFO donors.application.DonorEmailVerificationService: E-mail of donor <id:1> verified';
 const MAIL = {
   from: ['"Nová naděje – nadační fond" <info@nfnn.cz>'],
   to: ['jana@example.cz'],
@@ -26,7 +27,10 @@ function transcriptFile() {
       [SCENARIO]: {
         requests: {
           [REQUEST]: {
-            request: { path: '/api/admin/donors/<id:2>', headers: { Authorization: 'Bearer <jwt>' } },
+            request: {
+              path: '/api/admin/donors/<id:2>',
+              headers: { Authorization: 'Bearer <jwt>' },
+            },
             response: {
               status: 200,
               headers: {
@@ -252,13 +256,17 @@ describe('Given a recording with a log line of a shape v2 never wrote', () => {
   });
 
   it('when it is allowed with the security OK, then it passes', () => {
-    const result = compare(workspace({ change: newField, changes: declared({ securityOk: true }) }));
+    const result = compare(
+      workspace({ change: newField, changes: declared({ securityOk: true }) }),
+    );
     assert.equal(result.status, 0, result.output);
   });
 
   it('when a known log line changed, then it fails as a changed log line', () => {
     const result = compare(
-      workspace({ change: (recorded) => (scenarioOf(recorded).logs = [LOG.replace('INFO', 'WARN')]) }),
+      workspace({
+        change: (recorded) => (scenarioOf(recorded).logs = [LOG.replace('INFO', 'WARN')]),
+      }),
     );
     assert.equal(result.status, 1, result.output);
     assert.match(result.report, /logs/);
@@ -281,8 +289,17 @@ describe('Given a recording that lost a scenario and a request', () => {
           scenarioOf(recorded).logs = [];
         },
         changes: {
-          '1.4.json': [{ path: 'GET /api/admin/donors/{id}', scenario: '*', kind: 'removed', reason: '1.4 drops it' }],
-          '1.6.json': [{ path: '*', scenario: `${FEATURE}: *`, kind: 'logs', reason: '1.6 logs elsewhere' }],
+          '1.4.json': [
+            {
+              path: 'GET /api/admin/donors/{id}',
+              scenario: '*',
+              kind: 'removed',
+              reason: '1.4 drops it',
+            },
+          ],
+          '1.6.json': [
+            { path: '*', scenario: `${FEATURE}: *`, kind: 'logs', reason: '1.6 logs elsewhere' },
+          ],
         },
       }),
     );
@@ -303,7 +320,9 @@ describe('Given a slice file that is not a valid declaration', () => {
 
   it('when an entry names an unknown kind, then the comparison refuses to run', () => {
     const result = compare(
-      workspace({ changes: { '0.9.json': [{ path: '*', scenario: '*', kind: 'whatever', reason: 'x' }] } }),
+      workspace({
+        changes: { '0.9.json': [{ path: '*', scenario: '*', kind: 'whatever', reason: 'x' }] },
+      }),
     );
     assert.equal(result.status, 2, result.output);
     assert.match(result.output, /0\.9\.json.*entry 1.*kind/);
@@ -314,7 +333,10 @@ describe('Given a fresh test inventory', () => {
   const withoutBackendTest = { ...INVENTORY, 'backend-junit': [] };
 
   it('when every v2 test is still there and one is new, then it passes', () => {
-    const fresh = { ...INVENTORY, 'mcp-vitest': [...INVENTORY['mcp-vitest'], 'test/new.spec.ts > Given x > when y, then z'] };
+    const fresh = {
+      ...INVENTORY,
+      'mcp-vitest': [...INVENTORY['mcp-vitest'], 'test/new.spec.ts > Given x > when y, then z'],
+    };
     const root = workspace({ freshInventory: fresh });
     const result = compare(root, [`--inventory=${join(root, 'inventory.json')}`]);
     assert.equal(result.status, 0, result.output);
@@ -353,7 +375,9 @@ describe('Given a fresh test inventory', () => {
   it('when a retirement names no replacement, then the comparison refuses to run', () => {
     const root = workspace({
       freshInventory: withoutBackendTest,
-      changes: { '1.2.json': [{ kind: 'retired', suite: 'backend-junit', test: '*', reason: 'gone' }] },
+      changes: {
+        '1.2.json': [{ kind: 'retired', suite: 'backend-junit', test: '*', reason: 'gone' }],
+      },
     });
     const result = compare(root, [`--inventory=${join(root, 'inventory.json')}`]);
     assert.equal(result.status, 2, result.output);

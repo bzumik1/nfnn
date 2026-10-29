@@ -13,6 +13,7 @@ export const DONOR_ID = '019a0000-0000-7000-8000-000000000002';
 export const UNKNOWN_ID = '019a0000-0000-7000-8000-00000000ffff';
 export const GIVING_DONOR_ID = '019a0000-0000-7000-8000-000000000003';
 export const MEDIA_ID = '019a0000-0000-7000-8000-000000000004';
+export const DONATION_ID = '019a0000-0000-7000-8000-000000000005';
 const LOG_MATCHES: Record<string, number[]> = {
   'backend.log': [36],
   'backend.log.2026-10-22.0.gz': [70, 50, 10],
@@ -248,7 +249,7 @@ function adminRoute(request: RecordedRequest, url: URL, body: string): [number, 
               variableSymbol: '1234567890',
               answer: 'CONFIRMED',
               answeredAt: '2026-10-22T10:00:00Z',
-              pairedDonations: 2,
+              donationCount: 2,
             },
           ],
         },
@@ -264,16 +265,23 @@ function adminRoute(request: RecordedRequest, url: URL, body: string): [number, 
         },
       ];
     case 'POST /api/admin/content/news':
-      return [201, { id: UNKNOWN_ID, slug: 'letni-tabor', ...JSON.parse(body) }];
+      return [201, { id: UNKNOWN_ID, slug: 'letni-tabor', ...content(body) }];
     case `PUT /api/admin/content/news/${UNKNOWN_ID}`:
     case `PUT /api/admin/content/projects/${UNKNOWN_ID}`:
-      return [200, { id: UNKNOWN_ID, ...JSON.parse(body) }];
+      return [200, { id: UNKNOWN_ID, ...content(body) }];
     case 'POST /api/admin/content/projects':
-      return [201, { id: UNKNOWN_ID, slug: 'nova-strecha', ...JSON.parse(body) }];
+      return [201, { id: UNKNOWN_ID, slug: 'nova-strecha', ...content(body) }];
     case `POST /api/admin/donations/donors/${DONOR_ID}/bank-accounts/${PAYMENT_ID}/disconnect`:
-      return [204, undefined];
+      return [
+        409,
+        problem(
+          409,
+          'donations/bank-account-already-disconnected',
+          'Párování z účtu je už vypnuté',
+        ),
+      ];
     case `POST /api/admin/donations/donors/${DONOR_ID}/bank-accounts/${PAYMENT_ID}/reconnect`:
-      return [409, problem(409, 'donations/bank-account-link-active', 'Párování už je zapnuté')];
+      return [204, undefined];
     case 'GET /api/admin/donations/report':
       return [200, { settings: { recipients: ['info@nfnn.cz'], sendDay: 1 }, sentReports: [] }];
     case 'GET /api/admin/donations/receipt-signature':
@@ -470,16 +478,7 @@ function adminRoute(request: RecordedRequest, url: URL, body: string): [number, 
         problem(404, 'operations/log-override-not-found', 'Logger nemá dočasnou úroveň'),
       ];
     case `POST /api/admin/donations/payments/${PAYMENT_ID}/pair`:
-      return [
-        200,
-        {
-          id: PAYMENT_ID,
-          donation: {
-            donorId: (JSON.parse(body) as { donorId: string }).donorId,
-            pairedBy: 'MANUAL',
-          },
-        },
-      ];
+      return [200, { donationId: DONATION_ID, changedYearlyReceipts: [] }];
     case `POST /api/admin/donations/payments/${UNKNOWN_ID}/pair`:
       return [
         404,
@@ -515,6 +514,21 @@ function adminRoute(request: RecordedRequest, url: URL, body: string): [number, 
     default:
       return [404, problem(404, 'not-found', 'Nenalezeno')];
   }
+}
+
+function content(body: string): Record<string, unknown> {
+  const { coverImageId, coverImageAlt, ...fields } = JSON.parse(body) as Record<string, unknown>;
+  return {
+    ...fields,
+    coverImage:
+      typeof coverImageId === 'string'
+        ? {
+            id: coverImageId,
+            url: `/api/content/media/${coverImageId}`,
+            alt: coverImageAlt ?? null,
+          }
+        : null,
+  };
 }
 
 const PETR = {

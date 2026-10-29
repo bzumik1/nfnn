@@ -196,6 +196,22 @@ describe('Given recorded transcripts', () => {
     ]);
   });
 
+  it('when a field is recorded only as null, then the fixture may give it any value', () => {
+    const problems = checkBackendShapes({
+      calls: [OVERVIEW],
+      recorded: recordedAnswers(
+        transcripts({
+          'GET /api/admin/donations/overview #1': {
+            status: 200,
+            body: { year: 2026, applied: null },
+          },
+        }),
+      ),
+      fixtures: [answer({ applied: { backupTime: '03:00' } })],
+    });
+    expect(problems).toEqual([]);
+  });
+
   it('when a fixture answers with a status no transcript records, then the check names the recorded ones', () => {
     const problems = checkBackendShapes({
       calls: [OVERVIEW],

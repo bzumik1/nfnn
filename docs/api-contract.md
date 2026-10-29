@@ -16,7 +16,7 @@ When adding a new endpoint, update this file in the same change.
 - Lists answer an object with `items`: paged lists add `hasMore` (`{ "items": [...], "hasMore": true }`, offset or `before` paging), the public content pages also `page`, `size` and `total`; short lists are `{ "items": [...] }`. Each endpoint below gives its shape.
 - CORS: not configured. Production is same-origin via the nginx in `frontend/Dockerfile`; dev uses Angular's `proxy.conf.json`. Re-evaluate if a non-browser client appears.
 - Text bodies (news and projects) are stored as typed: plain text or a small Markdown subset (below), rendered by the site's own parser into Angular elements and bindings; HTML is never rendered, a tag shows as text.
-- Caching: media `Cache-Control: public, max-age=31536000, immutable`; receipt and backup downloads `private, no-store`; the OAuth answers `no-store`; every other API answer carries Spring Security's default `no-cache, no-store, max-age=0, must-revalidate`. No ETags. The static files' caching is the frontend nginx's (`frontend/nginx.conf`).
+- Caching: media `Cache-Control: public, max-age=31536000, immutable`; receipt and backup downloads `private, no-store`; the OAuth answers `no-store`; every other API answer carries Spring Security's default `no-cache, no-store, max-age=0, must-revalidate`. No ETags. The frontend nginx adds `Cloudflare-CDN-Cache-Control: no-store` to every `/api`, `/mcp` and `/.well-known` answer, errors included, so Cloudflare never stores one (`docs/security-overview.md`, Browser and transport). The static files' caching is the frontend nginx's (`frontend/nginx.conf`).
 
 ## Authentication
 

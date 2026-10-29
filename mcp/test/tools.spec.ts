@@ -1,6 +1,7 @@
 import type { Client } from '@modelcontextprotocol/client';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
+  DONATION_ID,
   DONOR_ID,
   GIVING_DONOR_ID,
   MEDIA_ID,
@@ -416,7 +417,7 @@ describe('Given an administrator connected with the writing permission', () => {
     expect(call?.method).toBe('POST');
     expect(call?.authorization).toBe('Bearer api-token-write');
     expect(JSON.parse(call?.body ?? '{}')).toEqual({ donorId: DONOR_ID });
-    expect(textOf(result)).toContain('"pairedBy":"MANUAL"');
+    expect(textOf(result)).toContain(`"donationId":"${DONATION_ID}"`);
     expect(stack.logLines).toContain(
       `INFO Tool nfnn_pair_payment answered donor donor-jana about payment ${PAYMENT_ID}, donor ${DONOR_ID}`,
     );
@@ -553,14 +554,14 @@ describe('Given an administrator connected with the writing permission', () => {
       name: 'nfnn_disconnect_bank_account',
       arguments: { donorId: DONOR_ID, linkId: PAYMENT_ID },
     });
-    expect(off.isError).toBeFalsy();
-    expect(textOf(off)).toContain('turned off');
+    expect(off.isError).toBe(true);
+    expect(textOf(off)).toContain('409 donations/bank-account-already-disconnected');
     const on = await client.callTool({
       name: 'nfnn_reconnect_bank_account',
       arguments: { donorId: DONOR_ID, linkId: PAYMENT_ID },
     });
-    expect(on.isError).toBe(true);
-    expect(textOf(on)).toContain('409 donations/bank-account-link-active');
+    expect(on.isError).toBeFalsy();
+    expect(textOf(on)).toContain('on again');
     expect(
       stack.backend.requests
         .filter((request) => request.path.includes('/bank-accounts/'))
