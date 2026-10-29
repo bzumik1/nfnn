@@ -16,6 +16,12 @@ class ClientAddressKeyTest {
     }
 
     @Test
+    @DisplayName("Given an IPv4 address with surrounding spaces, when it becomes a key, then the key is that address")
+    void should_strip_spaces_when_keyed_given_ipv4_with_surrounding_spaces() {
+        assertThat(new ClientAddressKey(" 203.0.113.7 ").value()).isEqualTo("203.0.113.7");
+    }
+
+    @Test
     @DisplayName("Given two IPv4 addresses, when they become keys, then the keys differ")
     void should_keep_keys_apart_when_keyed_given_two_ipv4_addresses() {
         assertThat(new ClientAddressKey("203.0.113.7")).isNotEqualTo(new ClientAddressKey("203.0.113.8"));
@@ -39,7 +45,8 @@ class ClientAddressKeyTest {
             "2001:db8:1:2::a, 2001:db8:1:2::b",
             "[2001:db8:1:2::1], 2001:db8:1:2:ffff:ffff:ffff:ffff",
             "2001:DB8:1:2::1, 2001:0db8:0001:0002:0:0:0:9",
-            "fe80::1%eth0, [fe80::2]"
+            "fe80::1%eth0, [fe80::2]",
+            "[fe80::1%eth0], fe80::2"
     })
     @DisplayName("Given two IPv6 addresses in one /64, when they become keys, then they share one key")
     void should_share_key_when_keyed_given_ipv6_addresses_in_one_slash_64(String first, String second) {
@@ -76,5 +83,14 @@ class ClientAddressKeyTest {
         assertThat(new ClientAddressKey("example.com")).isEqualTo(unknown);
         assertThat(new ClientAddressKey("")).isEqualTo(unknown);
         assertThat(unknown).isNotEqualTo(new ClientAddressKey("0.0.0.0")).isNotEqualTo(new ClientAddressKey("::"));
+        assertThat(unknown.isAddress()).isFalse();
+        assertThat(new ClientAddressKey("203.0.113.7").isAddress()).isTrue();
+        assertThat(new ClientAddressKey("2001:db8::1").isAddress()).isTrue();
+    }
+
+    @Test
+    @DisplayName("Given no client address at all, when it becomes a key, then it shares the key of values that are no address")
+    void should_share_no_address_key_when_keyed_given_no_client_address() {
+        assertThat(new ClientAddressKey(null)).isEqualTo(new ClientAddressKey("unknown"));
     }
 }

@@ -17,6 +17,10 @@ public record ClientAddressKey(String value) {
         value = normalise(Objects.requireNonNull(value, "clientAddress"));
     }
 
+    public boolean isAddress() {
+        return true;
+    }
+
     private static String normalise(String clientAddress) {
         return parse(withoutZone(clientAddress))
                 .map(address -> switch (address) {
