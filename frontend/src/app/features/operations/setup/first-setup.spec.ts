@@ -526,7 +526,7 @@ describe('Given the first setup page', () => {
 
         expect(text('h1')).toBe('Web je obnovený ze zálohy');
         expect(text('[role="status"]:not(:empty)')).toContain(
-          'znovu zadejte heslo pro odesílání e-mailů a token Fio',
+          'Heslo pro odesílání e-mailů a token Fio přenesla záloha spolu s klíčem k zálohám.',
         );
         button('Přihlásit se').click();
         const dialog = TestBed.inject(LoginDialogService);

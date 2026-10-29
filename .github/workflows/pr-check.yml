@@ -296,6 +296,15 @@ jobs:
             echo "::error::the stored SMTP password is readable in the database"
             exit 1
           fi
+          carried=$(docker exec nfnn-postgres psql -U novanadeje -d novanadeje -tA -c "select wrapped from operations_carried_settings_key")
+          case "$carried" in
+            v1:*) ;;
+            *) echo "::error::the backend must carry its settings key, wrapped under the backup key, into the database for the backups"; exit 1 ;;
+          esac
+          if echo "$carried" | grep -qF "$(sudo cat "$secrets/settings-key")"; then
+            echo "::error::the carried settings key must be wrapped, not stored as it is"
+            exit 1
+          fi
           closed=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 -H 'Content-Type: application/json' --data '{"code":null,"settings":[]}' http://localhost:8089/api/operations/setup)
           [ "$closed" = 409 ] || { echo "::error::a completed setup must answer 409 (got $closed)"; exit 1; }
 

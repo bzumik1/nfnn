@@ -6,10 +6,17 @@ import java.util.Optional;
 
 class ReversibleSealer implements SecretSealer {
 
-    private static final String PREFIX = "sealed:";
-
+    private final String prefix;
     private boolean available = true;
     private boolean readable = true;
+
+    ReversibleSealer() {
+        this("sealed:");
+    }
+
+    ReversibleSealer(String keyName) {
+        this.prefix = keyName;
+    }
 
     @Override
     public boolean available() {
@@ -18,16 +25,16 @@ class ReversibleSealer implements SecretSealer {
 
     @Override
     public String seal(Setting setting, String value) {
-        return PREFIX + setting + ":" + new StringBuilder(value).reverse();
+        return prefix + setting + ":" + new StringBuilder(value).reverse();
     }
 
     @Override
     public Optional<String> unseal(Setting setting, String sealed) {
-        String prefix = PREFIX + setting + ":";
-        if (!readable || !sealed.startsWith(prefix)) {
+        String expected = prefix + setting + ":";
+        if (!readable || !sealed.startsWith(expected)) {
             return Optional.empty();
         }
-        return Optional.of(new StringBuilder(sealed.substring(prefix.length())).reverse().toString());
+        return Optional.of(new StringBuilder(sealed.substring(expected.length())).reverse().toString());
     }
 
     void withoutKey() {
