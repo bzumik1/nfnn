@@ -11,8 +11,7 @@ import { DonationsPending } from '../donations-pending/donations-pending';
 import { donationStatusLabel, DonationsTable } from '../donations-table/donations-table';
 import { DonorDonations } from '../donor-donations';
 import { PageTitle } from '../page-title/page-title';
-import { StandingOrder } from '../standing-order/standing-order';
-import { SymbolCard } from '../symbol-card/symbol-card';
+import { SendGift } from '../send-gift/send-gift';
 
 const RECENT_DONATIONS_SHOWN = 5;
 
@@ -24,8 +23,7 @@ const RECENT_DONATIONS_SHOWN = 5;
     PageTitle,
     BankCheck,
     MissingGift,
-    StandingOrder,
-    SymbolCard,
+    SendGift,
     DonationsPending,
     DonationsTable,
   ],

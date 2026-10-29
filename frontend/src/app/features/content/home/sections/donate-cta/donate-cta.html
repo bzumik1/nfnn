@@ -26,237 +26,52 @@
         Z darů pořizujeme zdravotní a kompenzační pomůcky a přístroje pro konkrétní děti.
       </p>
 
-      <div class="amount" role="group" aria-labelledby="donate-amount-label">
-        <p id="donate-amount-label" class="panel-label" i18n="@@home.donate.amount.label">
-          Zvolte částku
-        </p>
-        <div class="amount-options">
-          @for (preset of presets; track preset.amount) {
-            <button
-              type="button"
-              class="amount-option"
-              [class.active]="!customChosen() && presetAmount() === preset.amount"
-              [attr.aria-pressed]="!customChosen() && presetAmount() === preset.amount"
-              (click)="choosePreset(preset.amount)"
-            >
-              {{ preset.label }}
-            </button>
-          }
-          <button
-            type="button"
-            class="amount-option"
-            [class.active]="customChosen()"
-            [attr.aria-pressed]="customChosen()"
-            (click)="chooseCustomAmount()"
-            i18n="@@home.donate.amount.other"
-          >
-            Jiná částka
-          </button>
-        </div>
-
-        @if (customChosen()) {
-          <div class="custom-amount">
-            <label
-              for="donate-custom-amount"
-              class="visually-hidden"
-              i18n="@@home.donate.amount.customLabel"
-              >Vlastní částka v korunách</label
-            >
-            <input
-              id="donate-custom-amount"
-              type="text"
-              inputmode="numeric"
-              autocomplete="off"
-              [value]="customAmountSeed()"
-              [attr.aria-invalid]="showAmountHint()"
-              [attr.aria-describedby]="showAmountHint() ? 'donate-amount-hint' : null"
-              (input)="enterCustomAmount($event)"
-              (blur)="leaveCustomAmount()"
-            />
-            <span
-              class="custom-amount-currency"
-              aria-hidden="true"
-              i18n="@@home.donate.amount.currency"
-              >Kč</span
-            >
-          </div>
-          @if (showAmountHint()) {
-            <p id="donate-amount-hint" class="amount-hint" i18n="@@home.donate.amount.invalid">
-              Zadejte celou částku od 1 do 1 000 000 Kč.
-            </p>
-          }
-        }
-      </div>
-
-      <div class="before-pay">
-        @if (variableSymbol(); as symbol) {
-          @if (donorName(); as name) {
-            <p i18n="@@home.donate.payingAs">
-              Platíte jako <strong>{{ name }}</strong
-              >, variabilní symbol <strong>{{ symbol }}</strong
-              >.
-            </p>
-          } @else {
-            <p i18n="@@home.donate.payingWithSymbol">
-              Platíte s variabilním symbolem <strong>{{ symbol }}</strong
-              >.
-            </p>
-          }
-        } @else {
-          <p i18n="@@home.donate.receiptHint">
-            Chcete potvrzení o daru pro daňové přiznání? Přihlaste se nebo si založte účet ještě
-            před platbou: QR kód pak ponese váš variabilní symbol.
-          </p>
-          <p class="company-hint" i18n="@@home.donate.companyHint">
-            Potvrzení vystavíme i na firmu: při registraci zvolte Firma a vyplňte IČO.
-          </p>
-          <div class="account-actions">
-            <button
-              type="button"
-              class="account-register"
-              (click)="register()"
-              i18n="@@home.donate.account.register"
-            >
-              Založit účet
-            </button>
-            <button
-              type="button"
-              class="account-sign-in"
-              (click)="signIn()"
-              i18n="@@home.donate.account.signIn"
-            >
-              Přihlásit se
-            </button>
-          </div>
-        }
-      </div>
-
-      <h3 class="step-title" i18n="@@home.donate.pay.title">Zaplaťte</h3>
-
-      @if (bankAccount(); as account) {
-        <div class="bank">
-          <p #bankLabel class="panel-label" tabindex="-1" i18n="@@home.donate.bank.label">
-            Bankovní spojení
-          </p>
-          <div class="bank-rows">
-            <div class="bank-row">
-              <span class="bank-key" i18n="@@home.donate.bank.account">Číslo účtu</span>
-              <span class="bank-value-wrap">
-                <span class="bank-value">{{ account.accountNumber }}</span>
-                <app-copy-button
-                  [value]="account.accountNumber"
-                  what="číslo účtu"
-                  i18n-what="@@home.donate.bank.copyAccount"
-                />
-              </span>
-            </div>
-            @if (amount(); as chosen) {
-              <div class="bank-row">
-                <span class="bank-key" i18n="@@home.donate.bank.amount">Částka</span>
-                <span class="bank-value-wrap">
-                  <span class="bank-value"
-                    >{{ crowns(chosen) }}&nbsp;<ng-container i18n="@@home.donate.amount.currency"
-                      >Kč</ng-container
-                    ></span
-                  >
-                  <app-copy-button
-                    [value]="'' + chosen"
-                    what="částku"
-                    i18n-what="@@home.donate.bank.copyAmount"
-                  />
-                </span>
-              </div>
-            }
-            @if (variableSymbol(); as symbol) {
-              <div class="bank-row">
-                <span class="bank-key" i18n="@@home.donate.bank.vs">Variabilní symbol</span>
-                <span class="bank-value-wrap">
-                  <span class="bank-value">{{ symbol }}</span>
-                  <app-copy-button
-                    [value]="symbol"
-                    what="variabilní symbol"
-                    i18n-what="@@home.donate.bank.copyVs"
-                  />
-                </span>
-              </div>
-            }
-            <div class="bank-row">
-              <span class="bank-key" i18n="@@home.donate.bank.iban">IBAN</span>
-              <span class="bank-value-wrap">
-                <span class="bank-value">{{ ibanInGroups() }}</span>
-                <app-copy-button
-                  [value]="account.iban"
-                  what="IBAN"
-                  i18n-what="@@home.donate.bank.copyIban"
-                />
-              </span>
-            </div>
-          </div>
-        </div>
-      }
-
-      <div class="qr">
-        <div class="qr-code" [attr.aria-busy]="state().kind === 'loading'">
-          @if (shownQr(); as qr) {
-            <app-qr-code
-              class="qr-image"
-              [class.qr-image-stale]="state().kind === 'loading'"
-              [matrix]="qr.qrCode"
-              label="QR platba na účet Nadačního fondu Nová naděje"
-              i18n-label="@@home.donate.qr.imageAlt"
-            />
-          } @else {
-            <div class="qr-placeholder" [class.qr-placeholder-loading]="state().kind === 'loading'">
-              @switch (state().kind) {
-                @case ('loading') {
-                  <span i18n="@@home.donate.qr.loading">Připravujeme QR kód…</span>
-                }
-                @case ('amountInvalid') {
-                  <span i18n="@@home.donate.qr.amountMissing">Nejprve zadejte částku</span>
-                }
-              }
-            </div>
-          }
-        </div>
-        <div class="qr-text">
-          <p class="qr-title" i18n="@@home.donate.qr.title">Naskenujte a přispějte</p>
-          <p class="qr-desc" i18n="@@home.donate.qr.desc">
-            Načtěte QR kód mobilní bankovní aplikací pro okamžitou platbu přímo na účet nadačního
-            fondu. Na telefonu si ho uložte a v bankovní aplikaci otevřete z galerie.
-          </p>
-          @if (shownQr()) {
-            <button type="button" class="qr-save" [disabled]="saving() || !qr()" (click)="saveQr()">
-              @if (saving()) {
-                <ng-container i18n="@@home.donate.qr.saving">Připravujeme obrázek…</ng-container>
-              } @else {
-                <ng-container i18n="@@home.donate.qr.save">Uložit QR kód</ng-container>
-              }
-            </button>
-          }
-          @if (state().kind === 'failed') {
-            <div class="ui-callout ui-callout--danger qr-error">
-              <p i18n="@@home.donate.qr.error">
-                QR platbu se nepodařilo připravit. Zkuste to prosím znovu.
+      <app-payment-panel [variableSymbol]="variableSymbol()">
+        <div class="before-pay">
+          @if (variableSymbol(); as symbol) {
+            @if (donorName(); as name) {
+              <p i18n="@@home.donate.payingAs">
+                Platíte jako <strong>{{ name }}</strong
+                >, variabilní symbol <strong>{{ symbol }}</strong
+                >.
               </p>
+            } @else {
+              <p i18n="@@home.donate.payingWithSymbol">
+                Platíte s variabilním symbolem <strong>{{ symbol }}</strong
+                >.
+              </p>
+            }
+          } @else {
+            <p i18n="@@home.donate.receiptHint">
+              Chcete potvrzení o daru pro daňové přiznání? Přihlaste se nebo si založte účet ještě
+              před platbou: QR kód pak ponese váš variabilní symbol.
+            </p>
+            <p class="company-hint" i18n="@@home.donate.companyHint">
+              Potvrzení vystavíme i na firmu: při registraci zvolte Firma a vyplňte IČO.
+            </p>
+            <div class="account-actions">
               <button
                 type="button"
-                class="qr-retry"
-                (click)="retry()"
-                i18n="@@home.donate.qr.retry"
+                class="account-register"
+                (click)="register()"
+                i18n="@@home.donate.account.register"
               >
-                Zkusit znovu
+                Založit účet
+              </button>
+              <button
+                type="button"
+                class="account-sign-in"
+                (click)="signIn()"
+                i18n="@@home.donate.account.signIn"
+              >
+                Přihlásit se
               </button>
             </div>
           }
         </div>
-        <p class="visually-hidden qr-announcement" role="status">
-          @if (announcedAmount(); as announced) {
-            <span i18n="@@home.donate.qr.ready"
-              >QR platba na {{ crowns(announced) }}&nbsp;Kč je připravená.</span
-            >
-          }
-        </p>
-      </div>
+
+        <h3 class="step-title" i18n="@@home.donate.pay.title">Zaplaťte</h3>
+      </app-payment-panel>
 
       <div class="next">
         <h3 class="step-title" i18n="@@home.donate.next.title">Co bude dál</h3>

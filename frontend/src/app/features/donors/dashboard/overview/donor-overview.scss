@@ -118,23 +118,11 @@
   }
 }
 
-.first-gift-actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-3) var(--space-5);
-  margin-bottom: var(--space-4);
-}
-
 .recent-hint {
   margin-top: var(--space-2);
   font-size: var(--text-sm);
   line-height: var(--leading-normal);
   color: var(--color-text-muted);
-}
-
-.overview-standing {
-  margin-top: var(--space-3);
 }
 
 @include bp.down(cards) {

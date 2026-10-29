@@ -50,12 +50,6 @@
   </p>
 </ng-template>
 
-<ng-template #standingOrder>
-  @if (donor()?.variableSymbol; as symbol) {
-    <app-standing-order class="overview-standing" [variableSymbol]="symbol" />
-  }
-</ng-template>
-
 @if (donations.state() === 'ready' && !hasGift()) {
   <section class="ui-card ui-card--padded first-gift" aria-labelledby="first-gift-title">
     <h2
@@ -66,34 +60,22 @@
       Jak poslat první dar
     </h2>
     <ol class="first-gift-steps">
-      <li i18n="@@donor.overview.firstGift.account">
-        Pošlete dar na účet nadačního fondu. Číslo účtu a QR kód najdete na hlavní stránce v části
-        Přispět.
+      <li i18n="@@donor.overview.firstGift.chooseInCard">
+        Zvolte částku v kartě Poslat dar níže a pošlete dar na účet nadačního fondu, převodem nebo
+        QR kódem.
       </li>
       @if (donor()?.variableSymbol; as symbol) {
-        <li i18n="@@donor.overview.firstGift.symbol">
+        <li i18n="@@donor.overview.firstGift.symbolInCard">
           Do platby uveďte svůj variabilní symbol <strong>{{ symbol }}</strong
-          >. QR kód na hlavní stránce ho už obsahuje.
+          >. Údaje i QR kód v kartě Poslat dar ho už obsahují.
         </li>
       }
       <li i18n="@@donor.overview.firstGift.appears">
         Jakmile platba dorazí, dar se tu objeví sám.
       </li>
     </ol>
-    <div class="first-gift-actions">
-      <a
-        class="ui-button ui-button--primary"
-        routerLink="/"
-        fragment="prispet"
-        i18n="@@donor.overview.firstGift.show"
-        >Zobrazit číslo účtu a QR kód</a
-      >
-    </div>
     <ng-container [ngTemplateOutlet]="bankStatus" />
-    <ng-container [ngTemplateOutlet]="standingOrder" />
-    <app-missing-gift />
   </section>
-  <app-symbol-card [variableSymbol]="donor()?.variableSymbol ?? null" />
 } @else if (donations.state() === 'ready') {
   @if (lastGift(); as gift) {
     <section class="ui-card ui-card--padded last-gift" aria-labelledby="last-gift-title">
@@ -110,11 +92,19 @@
         >
       </p>
       <ng-container [ngTemplateOutlet]="bankStatus" />
-      <ng-container [ngTemplateOutlet]="standingOrder" />
     </section>
   }
-  <app-symbol-card [variableSymbol]="donor()?.variableSymbol ?? null" [hasDonated]="true" />
+} @else {
+  <app-donations-pending />
+}
 
+<app-send-gift [variableSymbol]="donor()?.variableSymbol ?? null">
+  @if (donations.state() === 'ready' && !hasGift()) {
+    <app-missing-gift />
+  }
+</app-send-gift>
+
+@if (donations.state() === 'ready' && hasGift()) {
   <dl class="ui-card overview-stats">
     <div class="overview-stat">
       <dt i18n="@@donor.dashboard.stat.total">Celkem darováno</dt>
@@ -150,8 +140,4 @@
     </div>
     <app-donations-table [items]="recent()" [withReceipts]="false" labelledBy="recent-title" />
   </section>
-} @else {
-  <app-symbol-card [variableSymbol]="donor()?.variableSymbol ?? null" />
-
-  <app-donations-pending />
 }
