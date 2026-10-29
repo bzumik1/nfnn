@@ -4,10 +4,13 @@ import cz.novanadeje.app.operations.domain.backup.BackupKey;
 import cz.novanadeje.app.operations.domain.backup.BackupKeyCheckMismatch;
 import cz.novanadeje.app.operations.domain.backup.BackupKeyConfirmation;
 import cz.novanadeje.app.operations.domain.backup.BackupKeyConfirmationRepository;
+import cz.novanadeje.app.operations.domain.backup.BackupKeyRevealPaused;
 import cz.novanadeje.app.operations.domain.backup.BackupKeyUnavailable;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
+import cz.novanadeje.app.shared.application.event.BackupKeyRevealed;
 import cz.novanadeje.app.shared.application.secondfactor.FreshSecondFactor;
 import cz.novanadeje.app.shared.application.secondfactor.FreshSecondFactorProof;
+import cz.novanadeje.app.shared.domain.error.DomainException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
@@ -30,14 +33,16 @@ public class BackupKeyService {
     private final BackupKeySource keys;
     private final BackupKeyConfirmationRepository confirmations;
     private final FreshSecondFactor freshSecondFactor;
+    private final BackupKeyRevealRefusals refusals;
     private final ApplicationEventPublisher events;
     private final Clock clock;
 
     public BackupKeyService(BackupKeySource keys, BackupKeyConfirmationRepository confirmations, FreshSecondFactor freshSecondFactor,
-                            ApplicationEventPublisher events, Clock clock) {
+                            BackupKeyRevealRefusals refusals, ApplicationEventPublisher events, Clock clock) {
         this.keys = keys;
         this.confirmations = confirmations;
         this.freshSecondFactor = freshSecondFactor;
+        this.refusals = refusals;
         this.events = events;
         this.clock = clock;
     }
@@ -55,9 +60,20 @@ public class BackupKeyService {
     @Transactional
     public BackupKey reveal(UUID adminId, FreshSecondFactorProof proof) {
         BackupKey key = keys.current().orElseThrow(BackupKeyUnavailable::new);
-        freshSecondFactor.require(adminId, proof);
+        Instant now = clock.instant();
+        if (refusals.paused(adminId, now)) {
+            log.warn("Admin {} asked for the backup key while it is paused after refused second factors", adminId);
+            throw new BackupKeyRevealPaused();
+        }
+        try {
+            freshSecondFactor.require(adminId, proof);
+        } catch (DomainException refused) {
+            refusals.record(adminId, now);
+            throw refused;
+        }
         events.publishEvent(new AdminActionPerformed(adminId, VIEW_BACKUP_KEY_ACTION, Optional.empty(),
-                "Zobrazen klíč k zálohám (ověřeno druhým faktorem)", clock.instant()));
+                "Zobrazen klíč k zálohám (ověřeno druhým faktorem)", now));
+        events.publishEvent(new BackupKeyRevealed(adminId, now));
         log.info("Admin {} viewed the backup key after a fresh second-factor check", adminId);
         return key;
     }

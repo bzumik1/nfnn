@@ -3,8 +3,10 @@ package cz.novanadeje.app.operations.application.backup;
 import cz.novanadeje.app.operations.domain.backup.BackupKey;
 import cz.novanadeje.app.operations.domain.backup.BackupKeyCheckMismatch;
 import cz.novanadeje.app.operations.domain.backup.BackupKeyConfirmation;
+import cz.novanadeje.app.operations.domain.backup.BackupKeyRevealPaused;
 import cz.novanadeje.app.operations.domain.backup.BackupKeyUnavailable;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
+import cz.novanadeje.app.shared.application.event.BackupKeyRevealed;
 import cz.novanadeje.app.shared.application.secondfactor.FreshSecondFactor;
 import cz.novanadeje.app.shared.application.secondfactor.FreshSecondFactorProof;
 import cz.novanadeje.app.shared.domain.error.RuleViolation;
@@ -26,7 +28,9 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 
 class BackupKeyServiceTest {
 
@@ -39,10 +43,11 @@ class BackupKeyServiceTest {
     private final InMemoryBackupKeyConfirmations confirmations = new InMemoryBackupKeyConfirmations();
     private final FreshSecondFactor freshSecondFactor = mock(FreshSecondFactor.class);
     private final ApplicationEventPublisher events = mock(ApplicationEventPublisher.class);
+    private final BackupKeyRevealRefusals refusals = mock(BackupKeyRevealRefusals.class);
     private final Clock clock = Clock.fixed(NOW, ZoneOffset.UTC);
 
     private BackupKeyService service(Optional<BackupKey> key) {
-        return new BackupKeyService(() -> key, confirmations, freshSecondFactor, events, clock);
+        return new BackupKeyService(() -> key, confirmations, freshSecondFactor, refusals, events, clock);
     }
 
     @Test
@@ -66,7 +71,7 @@ class BackupKeyServiceTest {
     }
 
     @Test
-    @DisplayName("Given a fresh second factor, when the key is revealed, then the key comes back and the view is audited")
+    @DisplayName("Given a fresh second factor, when the key is revealed, then the key comes back, the view is audited and the administrators are told")
     void should_reveal_key_when_revealed_given_fresh_second_factor() {
         BackupKey revealed = service(Optional.of(KEY)).reveal(ADMIN, CODE);
 
@@ -77,16 +82,29 @@ class BackupKeyServiceTest {
         assertThat(audited.getValue().action()).isEqualTo(BackupKeyService.VIEW_BACKUP_KEY_ACTION);
         assertThat(audited.getValue().adminId()).isEqualTo(ADMIN);
         assertThat(audited.getValue().details()).doesNotContain(KEY.value()).doesNotContain(KEY.lastCharacters());
+        verify(events).publishEvent(new BackupKeyRevealed(ADMIN, NOW));
     }
 
     @Test
-    @DisplayName("Given the second factor refuses, when the key is revealed, then nothing is shown and nothing is audited")
+    @DisplayName("Given the second factor refuses, when the key is revealed, then nothing is shown, the refusal is recorded and nobody is told of a view")
     void should_refuse_reveal_when_revealed_given_refused_second_factor() {
         doThrow(new RuleViolation("donors/second-factor-code-rejected", "rejected")).when(freshSecondFactor).require(eq(ADMIN), any());
 
         assertThatThrownBy(() -> service(Optional.of(KEY)).reveal(ADMIN, CODE)).isInstanceOf(RuleViolation.class);
 
+        verify(refusals).record(ADMIN, NOW);
         verifyNoInteractions(events);
+    }
+
+    @Test
+    @DisplayName("Given the reveal is paused after refusals, when the key is revealed, then it is refused before any second factor is checked")
+    void should_refuse_reveal_when_revealed_given_paused() {
+        when(refusals.paused(ADMIN, NOW)).thenReturn(true);
+
+        assertThatThrownBy(() -> service(Optional.of(KEY)).reveal(ADMIN, CODE)).isInstanceOf(BackupKeyRevealPaused.class);
+
+        verifyNoInteractions(freshSecondFactor, events);
+        verify(refusals, never()).record(any(), any());
     }
 
     @Test

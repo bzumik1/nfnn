@@ -7,6 +7,7 @@ import org.springframework.stereotype.Component;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.UUID;
 
 @Component
 class JpaAdminActionTrail implements AdminActionTrail {
@@ -22,5 +23,10 @@ class JpaAdminActionTrail implements AdminActionTrail {
         return actions.findByPerformedAtLessThanOrderByPerformedAtDescIdDesc(before, Limit.of(limit)).stream()
                 .map(AdminActionJpaEntity::toEntry)
                 .toList();
+    }
+
+    @Override
+    public long countPerformedSince(UUID adminId, String action, Instant since) {
+        return actions.countByAdminIdAndActionAndPerformedAtGreaterThanEqual(adminId, action, since);
     }
 }

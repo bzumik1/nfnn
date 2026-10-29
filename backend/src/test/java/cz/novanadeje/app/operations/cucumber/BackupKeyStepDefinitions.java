@@ -61,8 +61,9 @@ public class BackupKeyStepDefinitions {
 
     @When("{string} reveals the backup key with a fresh code")
     public void revealsTheBackupKeyWithAFreshCode(String alias) {
+        sessions.actAs(alias);
         lastCode = totpCodes.freshCode(donors.secondFactorSecretOf(alias));
-        revealsTheBackupKeyWithTheCode(alias, lastCode);
+        api.post(KEY + "/reveal", Map.of("secondFactorCode", lastCode));
     }
 
     @When("{string} reveals the backup key again with the same code")
@@ -99,6 +100,14 @@ public class BackupKeyStepDefinitions {
         for (int i = 0; i < times; i++) {
             confirmsTheBackupKeyWithTheCharacters(alias, "AAAA");
             assertThat(api.lastResponse().getStatusCode().value()).withFailMessage("Confirming answered %s", api.lastResponse().getBody()).isEqualTo(400);
+        }
+    }
+
+    @Given("{string} tried to reveal the backup key with a wrong code {int} times")
+    public void triedToRevealTheBackupKeyWithAWrongCode(String alias, int times) {
+        for (int i = 0; i < times; i++) {
+            revealsTheBackupKeyWithTheCode(alias, "000000");
+            assertThat(api.lastResponse().getStatusCode().value()).withFailMessage("Revealing answered %s", api.lastResponse().getBody()).isEqualTo(400);
         }
     }
 

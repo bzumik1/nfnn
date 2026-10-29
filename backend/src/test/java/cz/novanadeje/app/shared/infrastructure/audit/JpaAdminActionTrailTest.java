@@ -67,4 +67,16 @@ class JpaAdminActionTrailTest {
 
         assertThat(entries).extracting(AdminActionEntry::details).containsExactly("second");
     }
+
+    @Test
+    @DisplayName("Given three stored actions, when the actions of one kind by the administrator since a time are counted, then only those at or after it count")
+    void should_count_actions_of_one_kind_when_counted_given_since() {
+        transactions.executeWithoutResult(status ->
+                events.publishEvent(new AdminActionPerformed(admin, "PAIR_PAYMENT", Optional.empty(), "fourth", AT.plusSeconds(180))));
+
+        assertThat(trail.countPerformedSince(admin, "PAIR_PAYMENT", AT)).isEqualTo(2);
+        assertThat(trail.countPerformedSince(admin, "PAIR_PAYMENT", AT.plusSeconds(1))).isEqualTo(1);
+        assertThat(trail.countPerformedSince(admin, "UNPAIR_PAYMENT", AT.plusSeconds(61))).isZero();
+        assertThat(trail.countPerformedSince(UUID.randomUUID(), "PAIR_PAYMENT", AT)).isZero();
+    }
 }

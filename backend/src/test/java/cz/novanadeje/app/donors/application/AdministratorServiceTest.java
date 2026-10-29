@@ -96,6 +96,20 @@ class AdministratorServiceTest {
     }
 
     @Test
+    @DisplayName("Given two administrators, when their contacts are asked for, then each comes with the address and the language to write in")
+    void should_give_address_and_language_of_each_administrator_when_contacts_asked_given_two_administrators() {
+        Donor jana = administrator(JANA, "Jana Nováková", "jana@example.cz");
+        Donor petr = Donor.reconstitute(PETR, DonorType.PERSON, "Petr Svoboda", null, ADDRESS, PETR_EMAIL, new PasswordHash("$hash"),
+                new VariableSymbol("4821937561"), LocaleCode.EN, Set.of(Role.DONOR, Role.ADMIN), NOW.minusSeconds(1000), NOW.minusSeconds(900), null);
+        when(donors.findAdministrators()).thenReturn(List.of(jana, petr));
+
+        assertThat(service.contacts()).containsExactly(
+                new AdministratorContact(JANA, new EmailAddress("jana@example.cz"), LocaleCode.CS),
+                new AdministratorContact(PETR, PETR_EMAIL, LocaleCode.EN));
+        verifyNoInteractions(secondFactors, passkeys, refreshTokens, events);
+    }
+
+    @Test
     @DisplayName("Given a registered plain donor, when an administrator grants the role by e-mail, then the donor is saved as an administrator and the action is recorded")
     void should_grant_role_and_record_action_when_granted_given_registered_donor() {
         Donor petr = plainDonor(PETR, "Petr Svoboda", PETR_EMAIL.value());

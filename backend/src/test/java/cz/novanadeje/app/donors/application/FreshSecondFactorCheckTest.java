@@ -65,12 +65,23 @@ class FreshSecondFactorCheckTest {
     @DisplayName("Given the donor's code from the app, when it is checked, then it passes once and its step is remembered")
     void should_accept_code_and_remember_step_when_checked_given_current_code() {
         when(secondFactors.findByDonor(DONOR)).thenReturn(Optional.of(enabledFactor(Totp.stepAt(NOW) - 1)));
+        when(secondFactors.recordUse(any())).thenReturn(true);
 
         check.require(DONOR, SecondFactorProof.withCode(Totp.codeAt(SECRET, Totp.stepAt(NOW))));
 
-        ArgumentCaptor<SecondFactor> saved = ArgumentCaptor.forClass(SecondFactor.class);
-        verify(secondFactors).save(saved.capture());
-        assertThat(saved.getValue().lastUsedStep()).hasValue(Totp.stepAt(NOW));
+        ArgumentCaptor<SecondFactor> recorded = ArgumentCaptor.forClass(SecondFactor.class);
+        verify(secondFactors).recordUse(recorded.capture());
+        assertThat(recorded.getValue().lastUsedStep()).hasValue(Totp.stepAt(NOW));
+    }
+
+    @Test
+    @DisplayName("Given another check took the same code a moment earlier, when it is checked, then it is rejected")
+    void should_reject_code_when_checked_given_concurrent_check_took_it_first() {
+        when(secondFactors.findByDonor(DONOR)).thenReturn(Optional.of(enabledFactor(Totp.stepAt(NOW) - 1)));
+        when(secondFactors.recordUse(any())).thenReturn(false);
+
+        assertThatThrownBy(() -> check.require(DONOR, SecondFactorProof.withCode(Totp.codeAt(SECRET, Totp.stepAt(NOW)))))
+                .isInstanceOf(SecondFactorCodeRejected.class);
     }
 
     @Test
@@ -80,7 +91,7 @@ class FreshSecondFactorCheckTest {
 
         assertThatThrownBy(() -> check.require(DONOR, SecondFactorProof.withCode(Totp.codeAt(SECRET, Totp.stepAt(NOW)))))
                 .isInstanceOf(SecondFactorCodeRejected.class);
-        verify(secondFactors, never()).save(any());
+        verify(secondFactors, never()).recordUse(any());
     }
 
     @Test

@@ -10,4 +10,6 @@ import java.util.UUID;
 interface AdminActionJpaRepository extends JpaRepository<AdminActionJpaEntity, UUID> {
 
     List<AdminActionJpaEntity> findByPerformedAtLessThanOrderByPerformedAtDescIdDesc(Instant before, Limit limit);
+
+    long countByAdminIdAndActionAndPerformedAtGreaterThanEqual(UUID adminId, String action, Instant since);
 }

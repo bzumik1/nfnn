@@ -6,6 +6,8 @@ public interface SecondFactorRepository {
 
     void save(SecondFactor factor);
 
+    boolean recordUse(SecondFactor factor);
+
     Optional<SecondFactor> findByDonor(DonorId donorId);
 
     void delete(DonorId donorId);

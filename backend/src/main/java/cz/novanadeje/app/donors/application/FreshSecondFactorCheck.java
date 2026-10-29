@@ -40,6 +40,8 @@ public class FreshSecondFactorCheck {
         String code = proof.givenCode().orElseThrow(FreshSecondFactorRequired::new);
         SecondFactor factor = secondFactors.findByDonor(donorId).filter(SecondFactor::isEnabled).orElseThrow(SecondFactorCodeRejected::new);
         factor.check(code, clock.instant());
-        secondFactors.save(factor);
+        if (!secondFactors.recordUse(factor)) {
+            throw new SecondFactorCodeRejected();
+        }
     }
 }

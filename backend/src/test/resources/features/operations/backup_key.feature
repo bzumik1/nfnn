@@ -40,6 +40,27 @@ Feature: The backups are encrypted with a key that an administrator sees only af
     Then the response status is 400
     And the problem type ends with "donors/second-factor-code-rejected"
 
+  Scenario: A refused second factor is recorded, and five refusals in a quarter of an hour keep the key hidden even from a right code
+    When "Jana" reveals the backup key with the code "000000"
+    Then the response status is 400
+    And the admin action "VIEW_BACKUP_KEY_REFUSED" by "Jana" is recorded with details containing "druhý faktor nesouhlasil"
+    Given "Jana" tried to reveal the backup key with a wrong code 4 times
+    When "Jana" reveals the backup key with a fresh code
+    Then the response status is 409
+    And the problem type ends with "operations/backup-key-reveal-paused"
+    And the answer carries no backup key
+    When 15 minutes pass
+    And "Jana" reveals the backup key with a fresh code
+    Then the answer carries the backup key of this server and no cache keeps it
+
+  Scenario: Every administrator is told by e-mail whenever the key is shown
+    Given a person "Petr" is registered
+    And "Petr" is an administrator
+    When "Jana" reveals the backup key with a fresh code
+    Then the answer carries the backup key of this server and no cache keeps it
+    And an e-mail goes to the address of "Jana" with the subject "Klíč k zálohám byl zobrazen – Nová naděje"
+    And an e-mail goes to the address of "Petr" with the subject "Klíč k zálohám byl zobrazen – Nová naděje"
+
   Scenario: An administrator shows the key with a passkey instead of the code
     Given "Jana" added a passkey named "iPhone"
     When "Jana" reveals the backup key with the passkey "iPhone"

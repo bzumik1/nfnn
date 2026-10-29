@@ -1,5 +1,6 @@
 package cz.novanadeje.app.operations.application.settings;
 
+import cz.novanadeje.app.operations.application.backup.BackupKeyRevealRefusals;
 import cz.novanadeje.app.operations.application.backup.BackupKeyService;
 import cz.novanadeje.app.operations.application.backup.BackupRestoreService;
 import cz.novanadeje.app.operations.application.backup.BackupStore;
@@ -68,7 +69,7 @@ class SetupServiceTest {
     private final Clock clock = Clock.fixed(NOW, ZoneOffset.UTC);
     private final InMemoryBackupKeyConfirmations keyConfirmations = new InMemoryBackupKeyConfirmations();
     private final BackupKeyService backupKeys = new BackupKeyService(() -> Optional.of(BACKUP_KEY), keyConfirmations, mock(FreshSecondFactor.class),
-            mock(ApplicationEventPublisher.class), clock);
+            mock(BackupKeyRevealRefusals.class), mock(ApplicationEventPublisher.class), clock);
     private final SetupService setup = new SetupService(state, new SettingsWriter(repository, new ReversibleSealer(), validator), announcer,
             mailProbe, restarter, backups, new BackupRestoreService(backups, mock(RestoreRecordRepository.class), restarter,
             mock(ApplicationEventPublisher.class), clock), backupKeys, clock);
