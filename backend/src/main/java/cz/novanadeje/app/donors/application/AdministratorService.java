@@ -59,6 +59,13 @@ public class AdministratorService {
         return donors.findAdministrators().stream().map(this::view).toList();
     }
 
+    @Transactional(readOnly = true)
+    public List<AdministratorContact> contacts() {
+        return donors.findAdministrators().stream()
+                .map(administrator -> new AdministratorContact(administrator.id(), administrator.email(), administrator.preferredLocale()))
+                .toList();
+    }
+
     @Transactional
     public AdministratorView grant(DonorId adminId, EmailAddress email) {
         Donor donor = donors.findByEmail(email).orElseThrow(EmailNotRegistered::new);
