@@ -1,5 +1,6 @@
 package cz.novanadeje.app.support;
 
+import cz.novanadeje.app.shared.infrastructure.ratelimit.ClientAddressKey;
 import cz.novanadeje.app.shared.infrastructure.ratelimit.FixedWindowRateLimiter;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -21,13 +22,13 @@ class RateLimiterWindowsTest {
     @DisplayName("Given a limiter exhausted under a fixed clock, when its windows are reset, then it lets the next request through")
     void should_let_the_next_request_through_when_windows_are_reset_given_an_exhausted_limiter() {
         LimiterHolder holder = new LimiterHolder(new FixedWindowRateLimiter(1, Duration.ofMinutes(15), fixed));
-        holder.limiter().tryAcquire("10.0.0.1");
-        assertThat(holder.limiter().tryAcquire("10.0.0.1")).isFalse();
+        holder.limiter().tryAcquire(new ClientAddressKey("10.0.0.1"));
+        assertThat(holder.limiter().tryAcquire(new ClientAddressKey("10.0.0.1"))).isFalse();
 
         int reset = RateLimiterWindows.reset(List.of(holder, "not a limiter"));
 
         assertThat(reset).isEqualTo(1);
-        assertThat(holder.limiter().tryAcquire("10.0.0.1")).isTrue();
+        assertThat(holder.limiter().tryAcquire(new ClientAddressKey("10.0.0.1"))).isTrue();
     }
 
     @Test
