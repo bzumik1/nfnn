@@ -25,7 +25,7 @@ describe('Given the chunk-load notice', () => {
       providers: [
         provideRouter([
           { path: 'jinam', component: Page },
-          { path: 'dale', component: Page },
+          { path: 'dale', component: Page, title: 'Dále | Nová naděje – nadační fond' },
         ]),
         { provide: ReloadGuard, useValue: { claim: () => false } },
         { provide: ExternalNavigation, useValue: { loadFromServer } },
@@ -77,6 +77,61 @@ describe('Given the chunk-load notice', () => {
       expect(document.activeElement).toBe(reloadButton());
     });
 
+    it('then its button is described by the message, so moving the focus there keeps it announced', () => {
+      const describedBy = reloadButton()?.getAttribute('aria-describedby') ?? '';
+
+      expect(document.getElementById(describedBy)?.textContent?.replace(/\s+/g, ' ').trim()).toBe(
+        MESSAGE,
+      );
+    });
+
+    describe('and the focus moves to a control the bar covers', () => {
+      let scrollBy: ReturnType<typeof vi.fn>;
+      let frames: FrameRequestCallback[];
+      let control: HTMLInputElement;
+
+      beforeEach(() => {
+        frames = [];
+        vi.spyOn(window, 'requestAnimationFrame').mockImplementation((frame) => {
+          frames.push(frame);
+          return frames.length;
+        });
+        scrollBy = vi.fn();
+        window.scrollBy = scrollBy as unknown as typeof window.scrollBy;
+        const bar = element().querySelector('[role="alert"]') as HTMLElement;
+        vi.spyOn(bar, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 700, 800, 60));
+        control = document.createElement('input');
+        vi.spyOn(control, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 690, 200, 40));
+      });
+
+      afterEach(() => {
+        control.closest('dialog')?.remove();
+        control.remove();
+        vi.restoreAllMocks();
+      });
+
+      it('then it scrolls the control above the bar only after the page has laid out again', () => {
+        document.body.append(control);
+        control.focus();
+
+        expect(scrollBy).not.toHaveBeenCalled();
+        frames.forEach((frame) => frame(0));
+        expect(scrollBy).toHaveBeenCalledOnce();
+        expect(scrollBy.mock.calls[0][0].top).toBeGreaterThanOrEqual(30);
+      });
+
+      it('and the control is inside an open dialog, then the page behind it does not move', () => {
+        const dialog = document.createElement('dialog');
+        dialog.setAttribute('open', '');
+        dialog.append(control);
+        document.body.append(dialog);
+        control.focus();
+
+        frames.forEach((frame) => frame(0));
+        expect(scrollBy).not.toHaveBeenCalled();
+      });
+    });
+
     it('then the page keeps room for it at its end', () => {
       expect(document.documentElement.classList).toContain('has-floating-notice');
     });
@@ -114,6 +169,15 @@ describe('Given the chunk-load notice', () => {
       const home = element().querySelector<HTMLAnchorElement>('main a');
       expect(home?.textContent?.trim()).toBe('Přejít na úvod');
       expect(home?.getAttribute('href')).toBe('/');
+    });
+
+    it('then the tab says the page did not open, until a later page opens', async () => {
+      expect(document.title).toBe('Stránku se nepodařilo otevřít | Nová naděje – nadační fond');
+
+      await TestBed.inject(Router).navigateByUrl('/dale');
+      await fixture.whenStable();
+
+      expect(document.title).toBe('Dále | Nová naděje – nadační fond');
     });
 
     it('then it reserves no room for a bar', () => {

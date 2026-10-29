@@ -33,6 +33,26 @@ async function clippedTexts(page: Page): Promise<string[]> {
   );
 }
 
+async function settledOverlapWithBar(page: Page): Promise<number> {
+  const overlap = () =>
+    page.evaluate(() => {
+      const bar = document.querySelector('app-chunk-load-notice [role="alert"]')!;
+      return Math.round(
+        document.activeElement!.getBoundingClientRect().bottom - bar.getBoundingClientRect().top,
+      );
+    });
+  let previous = await overlap();
+  for (let check = 0; check < 30; check += 1) {
+    await page.waitForTimeout(100);
+    const current = await overlap();
+    if (current === previous) {
+      return current;
+    }
+    previous = current;
+  }
+  return previous;
+}
+
 async function widerThanScreen(page: Page): Promise<number> {
   return page.evaluate(() => document.body.scrollWidth - document.documentElement.clientWidth);
 }
@@ -202,16 +222,54 @@ for (const width of [320, 390, 1280]) {
     }) => {
       await page.keyboard.press('Shift+Tab');
 
-      const covered = await page.evaluate(() => {
+      expect(await settledOverlapWithBar(page)).toBeLessThanOrEqual(0);
+      const pageEndCovered = await page.evaluate(() => {
         const bar = document.querySelector('app-chunk-load-notice [role="alert"]')!;
-        const barTop = bar.getBoundingClientRect().top;
-        const focused = document.activeElement!.getBoundingClientRect();
+        window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'instant' });
+        const lastText = document.querySelector('footer .ui-container')!.getBoundingClientRect();
+        return lastText.bottom > bar.getBoundingClientRect().top;
+      });
+      expect(pageEndCovered).toBe(false);
+    });
+
+    test('when they scroll to the end of the page, then the footer reaches down to the bar with its own colour', async ({
+      page,
+    }) => {
+      const gapUnderFooter = await page.evaluate(() => {
         window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'instant' });
         const footer = document.querySelector('footer')!.getBoundingClientRect();
-        return { focused: focused.bottom > barTop, pageEnd: footer.bottom > barTop };
+        return Math.round(document.documentElement.clientHeight - footer.bottom);
       });
 
-      expect(covered).toEqual({ focused: false, pageEnd: false });
+      expect(gapUnderFooter).toBeLessThanOrEqual(0);
+    });
+
+    test('when they Tab through the contact form and leave its fields empty, then the bar never hides the focused control', async ({
+      page,
+    }) => {
+      await page.locator('#contact-name').focus();
+      for (const control of ['#contact-email', '#contact-message', 'button[type="submit"]']) {
+        await page.keyboard.press('Tab');
+        await expect(page.locator(`#kontakt ${control}`)).toBeFocused();
+
+        expect(await settledOverlapWithBar(page), control).toBeLessThanOrEqual(0);
+      }
+    });
+
+    test('when they open the sign-in dialog, then the page behind it does not move', async ({
+      page,
+    }) => {
+      test.skip(width < 900, 'the header shows the sign-in button from 900 px');
+      await page.setViewportSize({ width, height: 560 });
+      await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
+      const before = await page.evaluate(() => window.scrollY);
+
+      await page.locator('.nav-login').click();
+      await expect(page.getByRole('dialog')).toBeVisible();
+      await page.keyboard.press('Tab');
+      await page.keyboard.press('Tab');
+
+      expect(await page.evaluate(() => window.scrollY)).toBe(before);
     });
   });
 }
