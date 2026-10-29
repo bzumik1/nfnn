@@ -10,12 +10,15 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public final class FixedWindowRateLimiter {
 
+    private static final int MAXIMUM_TRACKED_KEYS = 50_000;
+
     private final int limit;
     private final Cache<ClientAddressKey, AtomicInteger> windows;
 
     public FixedWindowRateLimiter(int limit, Duration window, Clock clock) {
         this.limit = limit;
         this.windows = Caffeine.newBuilder()
+                .maximumSize(MAXIMUM_TRACKED_KEYS)
                 .expireAfterWrite(window)
                 .ticker(() -> TimeUnit.MILLISECONDS.toNanos(clock.millis()))
                 .build();
