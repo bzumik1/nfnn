@@ -2,6 +2,8 @@ package cz.novanadeje.app.cucumber;
 
 import cz.novanadeje.app.cucumber.transcript.ApiTranscripts;
 import cz.novanadeje.app.donors.application.CompanyLookupService;
+import cz.novanadeje.app.operations.application.backup.BackupKeyWordChallenges;
+import cz.novanadeje.app.support.BackupKeyWordDraws;
 import cz.novanadeje.app.support.CompanyLookupPause;
 import cz.novanadeje.app.support.DatabaseCleaner;
 import cz.novanadeje.app.support.FakeCompanyRegistry;
@@ -52,6 +54,7 @@ public class CommonStepDefinitions {
             clock.set(ApiTranscripts.RECORDING_CLOCK);
             RateLimiterWindows.reset(context);
             CompanyLookupPause.reset(context.getBean(CompanyLookupService.class));
+            BackupKeyWordDraws.reseed(context.getBean(BackupKeyWordChallenges.class));
         } else {
             clock.advance(Duration.ofDays(1));
         }
