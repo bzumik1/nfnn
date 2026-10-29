@@ -1,0 +1,486 @@
+{
+  "source": "v2-baseline",
+  "logic": "How a v2 receipt prints amounts (ReceiptFormats: hellers as Czech crowns with U+00A0 as the thousands separator and before Kč, hellers only when not whole; English as CZK with a comma and a point), dates (Czech d. M. yyyy without leading zeros, which the web's 15. 03. 2026 is not; English d MMMM yyyy) and the donor (ReceiptData from the donor record: trimmed name, identifier of a company, address as street, postal code city). input.format names the formatter; expected.text or expected.donor is what the receipt's frozen data holds",
+  "cases": [
+    {
+      "name": "1 heller in Czech",
+      "input": {
+        "format": "czechAmount",
+        "amountMinor": 1
+      },
+      "expected": {
+        "text": "0,01 Kč"
+      }
+    },
+    {
+      "name": "1 heller in English",
+      "input": {
+        "format": "englishAmount",
+        "amountMinor": 1
+      },
+      "expected": {
+        "text": "CZK 0.01"
+      }
+    },
+    {
+      "name": "50 hellers in Czech",
+      "input": {
+        "format": "czechAmount",
+        "amountMinor": 50
+      },
+      "expected": {
+        "text": "0,50 Kč"
+      }
+    },
+    {
+      "name": "50 hellers in English",
+      "input": {
+        "format": "englishAmount",
+        "amountMinor": 50
+      },
+      "expected": {
+        "text": "CZK 0.50"
+      }
+    },
+    {
+      "name": "100 hellers in Czech",
+      "input": {
+        "format": "czechAmount",
+        "amountMinor": 100
+      },
+      "expected": {
+        "text": "1 Kč"
+      }
+    },
+    {
+      "name": "100 hellers in English",
+      "input": {
+        "format": "englishAmount",
+        "amountMinor": 100
+      },
+      "expected": {
+        "text": "CZK 1"
+      }
+    },
+    {
+      "name": "99900 hellers in Czech",
+      "input": {
+        "format": "czechAmount",
+        "amountMinor": 99900
+      },
+      "expected": {
+        "text": "999 Kč"
+      }
+    },
+    {
+      "name": "99900 hellers in English",
+      "input": {
+        "format": "englishAmount",
+        "amountMinor": 99900
+      },
+      "expected": {
+        "text": "CZK 999"
+      }
+    },
+    {
+      "name": "50000 hellers in Czech",
+      "input": {
+        "format": "czechAmount",
+        "amountMinor": 50000
+      },
+      "expected": {
+        "text": "500 Kč"
+      }
+    },
+    {
+      "name": "50000 hellers in English",
+      "input": {
+        "format": "englishAmount",
+        "amountMinor": 50000
+      },
+      "expected": {
+        "text": "CZK 500"
+      }
+    },
+    {
+      "name": "100000 hellers in Czech",
+      "input": {
+        "format": "czechAmount",
+        "amountMinor": 100000
+      },
+      "expected": {
+        "text": "1 000 Kč"
+      }
+    },
+    {
+      "name": "100000 hellers in English",
+      "input": {
+        "format": "englishAmount",
+        "amountMinor": 100000
+      },
+      "expected": {
+        "text": "CZK 1,000"
+      }
+    },
+    {
+      "name": "100050 hellers in Czech",
+      "input": {
+        "format": "czechAmount",
+        "amountMinor": 100050
+      },
+      "expected": {
+        "text": "1 000,50 Kč"
+      }
+    },
+    {
+      "name": "100050 hellers in English",
+      "input": {
+        "format": "englishAmount",
+        "amountMinor": 100050
+      },
+      "expected": {
+        "text": "CZK 1,000.50"
+      }
+    },
+    {
+      "name": "125050 hellers in Czech",
+      "input": {
+        "format": "czechAmount",
+        "amountMinor": 125050
+      },
+      "expected": {
+        "text": "1 250,50 Kč"
+      }
+    },
+    {
+      "name": "125050 hellers in English",
+      "input": {
+        "format": "englishAmount",
+        "amountMinor": 125050
+      },
+      "expected": {
+        "text": "CZK 1,250.50"
+      }
+    },
+    {
+      "name": "1000000 hellers in Czech",
+      "input": {
+        "format": "czechAmount",
+        "amountMinor": 1000000
+      },
+      "expected": {
+        "text": "10 000 Kč"
+      }
+    },
+    {
+      "name": "1000000 hellers in English",
+      "input": {
+        "format": "englishAmount",
+        "amountMinor": 1000000
+      },
+      "expected": {
+        "text": "CZK 10,000"
+      }
+    },
+    {
+      "name": "99999999 hellers in Czech",
+      "input": {
+        "format": "czechAmount",
+        "amountMinor": 99999999
+      },
+      "expected": {
+        "text": "999 999,99 Kč"
+      }
+    },
+    {
+      "name": "99999999 hellers in English",
+      "input": {
+        "format": "englishAmount",
+        "amountMinor": 99999999
+      },
+      "expected": {
+        "text": "CZK 999,999.99"
+      }
+    },
+    {
+      "name": "100000000 hellers in Czech",
+      "input": {
+        "format": "czechAmount",
+        "amountMinor": 100000000
+      },
+      "expected": {
+        "text": "1 000 000 Kč"
+      }
+    },
+    {
+      "name": "100000000 hellers in English",
+      "input": {
+        "format": "englishAmount",
+        "amountMinor": 100000000
+      },
+      "expected": {
+        "text": "CZK 1,000,000"
+      }
+    },
+    {
+      "name": "1234567890 hellers in Czech",
+      "input": {
+        "format": "czechAmount",
+        "amountMinor": 1234567890
+      },
+      "expected": {
+        "text": "12 345 678,90 Kč"
+      }
+    },
+    {
+      "name": "1234567890 hellers in English",
+      "input": {
+        "format": "englishAmount",
+        "amountMinor": 1234567890
+      },
+      "expected": {
+        "text": "CZK 12,345,678.90"
+      }
+    },
+    {
+      "name": "2026-01-01 in Czech",
+      "input": {
+        "format": "czechDate",
+        "date": "2026-01-01"
+      },
+      "expected": {
+        "text": "1. 1. 2026"
+      }
+    },
+    {
+      "name": "2026-01-01 in English",
+      "input": {
+        "format": "englishDate",
+        "date": "2026-01-01"
+      },
+      "expected": {
+        "text": "1 January 2026"
+      }
+    },
+    {
+      "name": "2026-03-15 in Czech",
+      "input": {
+        "format": "czechDate",
+        "date": "2026-03-15"
+      },
+      "expected": {
+        "text": "15. 3. 2026"
+      }
+    },
+    {
+      "name": "2026-03-15 in English",
+      "input": {
+        "format": "englishDate",
+        "date": "2026-03-15"
+      },
+      "expected": {
+        "text": "15 March 2026"
+      }
+    },
+    {
+      "name": "2026-10-05 in Czech",
+      "input": {
+        "format": "czechDate",
+        "date": "2026-10-05"
+      },
+      "expected": {
+        "text": "5. 10. 2026"
+      }
+    },
+    {
+      "name": "2026-10-05 in English",
+      "input": {
+        "format": "englishDate",
+        "date": "2026-10-05"
+      },
+      "expected": {
+        "text": "5 October 2026"
+      }
+    },
+    {
+      "name": "2026-12-31 in Czech",
+      "input": {
+        "format": "czechDate",
+        "date": "2026-12-31"
+      },
+      "expected": {
+        "text": "31. 12. 2026"
+      }
+    },
+    {
+      "name": "2026-12-31 in English",
+      "input": {
+        "format": "englishDate",
+        "date": "2026-12-31"
+      },
+      "expected": {
+        "text": "31 December 2026"
+      }
+    },
+    {
+      "name": "2028-02-29 in Czech",
+      "input": {
+        "format": "czechDate",
+        "date": "2028-02-29"
+      },
+      "expected": {
+        "text": "29. 2. 2028"
+      }
+    },
+    {
+      "name": "2028-02-29 in English",
+      "input": {
+        "format": "englishDate",
+        "date": "2028-02-29"
+      },
+      "expected": {
+        "text": "29 February 2028"
+      }
+    },
+    {
+      "name": "2027-11-30 in Czech",
+      "input": {
+        "format": "czechDate",
+        "date": "2027-11-30"
+      },
+      "expected": {
+        "text": "30. 11. 2027"
+      }
+    },
+    {
+      "name": "2027-11-30 in English",
+      "input": {
+        "format": "englishDate",
+        "date": "2027-11-30"
+      },
+      "expected": {
+        "text": "30 November 2027"
+      }
+    },
+    {
+      "name": "a person",
+      "input": {
+        "format": "donor",
+        "company": false,
+        "name": "Jana Nováková",
+        "companyIdentifier": null,
+        "street": "Dlouhá 12",
+        "city": "Ústí nad Labem",
+        "postalCode": "400 01"
+      },
+      "expected": {
+        "donor": {
+          "company": false,
+          "donorName": "Jana Nováková",
+          "donorIdentifier": null,
+          "donorAddress": "Dlouhá 12, 400 01 Ústí nad Labem"
+        }
+      }
+    },
+    {
+      "name": "a person whose fields carry spaces at both ends",
+      "input": {
+        "format": "donor",
+        "company": false,
+        "name": "  Jana Nováková ",
+        "companyIdentifier": null,
+        "street": " Dlouhá 12 ",
+        "city": " Ústí nad Labem  ",
+        "postalCode": " 400 01 "
+      },
+      "expected": {
+        "donor": {
+          "company": false,
+          "donorName": "Jana Nováková",
+          "donorIdentifier": null,
+          "donorAddress": "Dlouhá 12, 400 01 Ústí nad Labem"
+        }
+      }
+    },
+    {
+      "name": "a company with its identifier",
+      "input": {
+        "format": "donor",
+        "company": true,
+        "name": "Acme Třebíč s.r.o.",
+        "companyIdentifier": "25596641",
+        "street": "Průmyslová 5",
+        "city": "Česká Lípa",
+        "postalCode": "470 01"
+      },
+      "expected": {
+        "donor": {
+          "company": true,
+          "donorName": "Acme Třebíč s.r.o.",
+          "donorIdentifier": "25596641",
+          "donorAddress": "Průmyslová 5, 470 01 Česká Lípa"
+        }
+      }
+    },
+    {
+      "name": "a postal code without a space",
+      "input": {
+        "format": "donor",
+        "company": false,
+        "name": "Eva Malá",
+        "companyIdentifier": null,
+        "street": "Krátká 3",
+        "city": "Děčín",
+        "postalCode": "40502"
+      },
+      "expected": {
+        "donor": {
+          "company": false,
+          "donorName": "Eva Malá",
+          "donorIdentifier": null,
+          "donorAddress": "Krátká 3, 40502 Děčín"
+        }
+      }
+    },
+    {
+      "name": "a person living abroad, the country in the city",
+      "input": {
+        "format": "donor",
+        "company": false,
+        "name": "Lena Beispielová",
+        "companyIdentifier": null,
+        "street": "Hauptstraße 7",
+        "city": "Dresden, Německo",
+        "postalCode": "01067"
+      },
+      "expected": {
+        "donor": {
+          "company": false,
+          "donorName": "Lena Beispielová",
+          "donorIdentifier": null,
+          "donorAddress": "Hauptstraße 7, 01067 Dresden, Německo"
+        }
+      }
+    },
+    {
+      "name": "every Czech letter with a diacritic",
+      "input": {
+        "format": "donor",
+        "company": false,
+        "name": "Řehoř Ďáblík-Šťastný Žluťoučký",
+        "companyIdentifier": null,
+        "street": "Úvozní 1287/15a, áčďéěíňóřšťúůýž",
+        "city": "Ústí nad Orlicí – ÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ",
+        "postalCode": "562 01"
+      },
+      "expected": {
+        "donor": {
+          "company": false,
+          "donorName": "Řehoř Ďáblík-Šťastný Žluťoučký",
+          "donorIdentifier": null,
+          "donorAddress": "Úvozní 1287/15a, áčďéěíňóřšťúůýž, 562 01 Ústí nad Orlicí – ÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ"
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,346 @@
+{
+  "source": "v2-baseline",
+  "logic": "How the monthly report e-mail prints its figures (MonthlyReportFormats): amounts in hellers always with two decimals, U+00A0 as the thousands separator and before Kč; counts with U+00A0 between thousands; months as the Czech nominative month name and year; dates d. M. yyyy; bank times as d. M. yyyy H:mm in Prague time. input.format names the formatter, expected.text is the printed text",
+  "cases": [
+    {
+      "name": "0 hellers",
+      "input": {
+        "format": "amount",
+        "amountMinor": 0
+      },
+      "expected": {
+        "text": "0,00 Kč"
+      }
+    },
+    {
+      "name": "1 heller",
+      "input": {
+        "format": "amount",
+        "amountMinor": 1
+      },
+      "expected": {
+        "text": "0,01 Kč"
+      }
+    },
+    {
+      "name": "50 hellers",
+      "input": {
+        "format": "amount",
+        "amountMinor": 50
+      },
+      "expected": {
+        "text": "0,50 Kč"
+      }
+    },
+    {
+      "name": "100 hellers",
+      "input": {
+        "format": "amount",
+        "amountMinor": 100
+      },
+      "expected": {
+        "text": "1,00 Kč"
+      }
+    },
+    {
+      "name": "50000 hellers",
+      "input": {
+        "format": "amount",
+        "amountMinor": 50000
+      },
+      "expected": {
+        "text": "500,00 Kč"
+      }
+    },
+    {
+      "name": "100050 hellers",
+      "input": {
+        "format": "amount",
+        "amountMinor": 100050
+      },
+      "expected": {
+        "text": "1 000,50 Kč"
+      }
+    },
+    {
+      "name": "99999999 hellers",
+      "input": {
+        "format": "amount",
+        "amountMinor": 99999999
+      },
+      "expected": {
+        "text": "999 999,99 Kč"
+      }
+    },
+    {
+      "name": "100000000 hellers",
+      "input": {
+        "format": "amount",
+        "amountMinor": 100000000
+      },
+      "expected": {
+        "text": "1 000 000,00 Kč"
+      }
+    },
+    {
+      "name": "1234567890 hellers",
+      "input": {
+        "format": "amount",
+        "amountMinor": 1234567890
+      },
+      "expected": {
+        "text": "12 345 678,90 Kč"
+      }
+    },
+    {
+      "name": "a count of 0",
+      "input": {
+        "format": "count",
+        "count": 0
+      },
+      "expected": {
+        "text": "0"
+      }
+    },
+    {
+      "name": "a count of 1",
+      "input": {
+        "format": "count",
+        "count": 1
+      },
+      "expected": {
+        "text": "1"
+      }
+    },
+    {
+      "name": "a count of 999",
+      "input": {
+        "format": "count",
+        "count": 999
+      },
+      "expected": {
+        "text": "999"
+      }
+    },
+    {
+      "name": "a count of 1000",
+      "input": {
+        "format": "count",
+        "count": 1000
+      },
+      "expected": {
+        "text": "1 000"
+      }
+    },
+    {
+      "name": "a count of 1234567",
+      "input": {
+        "format": "count",
+        "count": 1234567
+      },
+      "expected": {
+        "text": "1 234 567"
+      }
+    },
+    {
+      "name": "the month 2026-01",
+      "input": {
+        "format": "month",
+        "month": "2026-01"
+      },
+      "expected": {
+        "text": "leden 2026"
+      }
+    },
+    {
+      "name": "the month 2026-02",
+      "input": {
+        "format": "month",
+        "month": "2026-02"
+      },
+      "expected": {
+        "text": "únor 2026"
+      }
+    },
+    {
+      "name": "the month 2026-03",
+      "input": {
+        "format": "month",
+        "month": "2026-03"
+      },
+      "expected": {
+        "text": "březen 2026"
+      }
+    },
+    {
+      "name": "the month 2026-05",
+      "input": {
+        "format": "month",
+        "month": "2026-05"
+      },
+      "expected": {
+        "text": "květen 2026"
+      }
+    },
+    {
+      "name": "the month 2026-07",
+      "input": {
+        "format": "month",
+        "month": "2026-07"
+      },
+      "expected": {
+        "text": "červenec 2026"
+      }
+    },
+    {
+      "name": "the month 2026-11",
+      "input": {
+        "format": "month",
+        "month": "2026-11"
+      },
+      "expected": {
+        "text": "listopad 2026"
+      }
+    },
+    {
+      "name": "the month 2026-12",
+      "input": {
+        "format": "month",
+        "month": "2026-12"
+      },
+      "expected": {
+        "text": "prosinec 2026"
+      }
+    },
+    {
+      "name": "the date 2026-01-01",
+      "input": {
+        "format": "date",
+        "date": "2026-01-01"
+      },
+      "expected": {
+        "text": "1. 1. 2026"
+      }
+    },
+    {
+      "name": "the date 2026-02-28",
+      "input": {
+        "format": "date",
+        "date": "2026-02-28"
+      },
+      "expected": {
+        "text": "28. 2. 2026"
+      }
+    },
+    {
+      "name": "the date 2026-10-05",
+      "input": {
+        "format": "date",
+        "date": "2026-10-05"
+      },
+      "expected": {
+        "text": "5. 10. 2026"
+      }
+    },
+    {
+      "name": "the date 2026-12-31",
+      "input": {
+        "format": "date",
+        "date": "2026-12-31"
+      },
+      "expected": {
+        "text": "31. 12. 2026"
+      }
+    },
+    {
+      "name": "the date 2028-02-29",
+      "input": {
+        "format": "date",
+        "date": "2028-02-29"
+      },
+      "expected": {
+        "text": "29. 2. 2028"
+      }
+    },
+    {
+      "name": "the bank time 2026-01-15T09:05:00Z",
+      "input": {
+        "format": "time",
+        "instant": "2026-01-15T09:05:00Z"
+      },
+      "expected": {
+        "text": "15. 1. 2026 10:05"
+      }
+    },
+    {
+      "name": "the bank time 2026-03-29T00:59:00Z",
+      "input": {
+        "format": "time",
+        "instant": "2026-03-29T00:59:00Z"
+      },
+      "expected": {
+        "text": "29. 3. 2026 1:59"
+      }
+    },
+    {
+      "name": "the bank time 2026-03-29T01:00:00Z",
+      "input": {
+        "format": "time",
+        "instant": "2026-03-29T01:00:00Z"
+      },
+      "expected": {
+        "text": "29. 3. 2026 3:00"
+      }
+    },
+    {
+      "name": "the bank time 2026-07-31T22:30:00Z",
+      "input": {
+        "format": "time",
+        "instant": "2026-07-31T22:30:00Z"
+      },
+      "expected": {
+        "text": "1. 8. 2026 0:30"
+      }
+    },
+    {
+      "name": "the bank time 2026-10-25T00:59:00Z",
+      "input": {
+        "format": "time",
+        "instant": "2026-10-25T00:59:00Z"
+      },
+      "expected": {
+        "text": "25. 10. 2026 2:59"
+      }
+    },
+    {
+      "name": "the bank time 2026-10-25T01:00:00Z",
+      "input": {
+        "format": "time",
+        "instant": "2026-10-25T01:00:00Z"
+      },
+      "expected": {
+        "text": "25. 10. 2026 2:00"
+      }
+    },
+    {
+      "name": "the bank time 2026-12-31T22:59:00Z",
+      "input": {
+        "format": "time",
+        "instant": "2026-12-31T22:59:00Z"
+      },
+      "expected": {
+        "text": "31. 12. 2026 23:59"
+      }
+    },
+    {
+      "name": "the bank time 2026-12-31T23:00:00Z",
+      "input": {
+        "format": "time",
+        "instant": "2026-12-31T23:00:00Z"
+      },
+      "expected": {
+        "text": "1. 1. 2027 0:00"
+      }
+    }
+  ]
+}

@@ -1,0 +1,415 @@
+{
+  "source": "v2-baseline",
+  "logic": "The donor's summary that GET /api/donations/me/summary answers to input.donor (DonorDonationsService over the real query, then DonationSummary): firstReceiptYear is the setting RECEIPT_FIRST_YEAR; the expected value is the answer as sent. The rows hold only the columns the computation reads: a runner fills every other column with any valid value. A donor is a donor_record row (registeredAt and erasedAt instants); a payment a bank_payment row (bookedOn, amountMinor, unpairedByAdmin); a donation a donation row of a donor, with the payment it was paired from (a bank transfer) or none (MANUAL), status RECEIVED or REFUNDED and purpose GENERAL or ACCOUNT_VERIFICATION. A payment no donation points to is unpaired. now is the server clock; the foundation's calendar is Prague's.",
+  "cases": [
+    {
+      "name": "a donor without gifts",
+      "input": {
+        "now": "2026-10-20T10:00:00Z",
+        "donors": [
+          {
+            "alias": "jana",
+            "registeredAt": "2026-01-15T10:00:00Z",
+            "erasedAt": null
+          }
+        ],
+        "payments": [],
+        "donations": [],
+        "donor": "jana",
+        "firstReceiptYear": 2026
+      },
+      "expected": {
+        "totalAmountMinor": 0,
+        "currency": "CZK",
+        "count": 0,
+        "lastReceivedAt": null,
+        "byYear": [],
+        "yearlyReceiptsAvailableThrough": 2025,
+        "receiptsAvailableFrom": 2026
+      }
+    },
+    {
+      "name": "gifts in three years, a refund and another donor's gifts",
+      "input": {
+        "now": "2026-10-20T10:00:00Z",
+        "donors": [
+          {
+            "alias": "jana",
+            "registeredAt": "2024-01-15T10:00:00Z",
+            "erasedAt": null
+          },
+          {
+            "alias": "petr",
+            "registeredAt": "2024-01-15T10:00:00Z",
+            "erasedAt": null
+          }
+        ],
+        "payments": [
+          {
+            "alias": "p1",
+            "bookedOn": "2024-12-31",
+            "amountMinor": 10000,
+            "unpairedByAdmin": false
+          },
+          {
+            "alias": "p2",
+            "bookedOn": "2025-01-01",
+            "amountMinor": 20050,
+            "unpairedByAdmin": false
+          },
+          {
+            "alias": "p3",
+            "bookedOn": "2025-06-30",
+            "amountMinor": 30000,
+            "unpairedByAdmin": false
+          },
+          {
+            "alias": "p4",
+            "bookedOn": "2026-09-30",
+            "amountMinor": 99900,
+            "unpairedByAdmin": false
+          },
+          {
+            "alias": "p5",
+            "bookedOn": "2026-03-15",
+            "amountMinor": 50000,
+            "unpairedByAdmin": false
+          },
+          {
+            "alias": "p6",
+            "bookedOn": "2026-05-05",
+            "amountMinor": 100,
+            "unpairedByAdmin": false
+          },
+          {
+            "alias": "p7",
+            "bookedOn": "2026-03-16",
+            "amountMinor": 1000000,
+            "unpairedByAdmin": false
+          }
+        ],
+        "donations": [
+          {
+            "donor": "jana",
+            "payment": "p1",
+            "receivedOn": "2024-12-31",
+            "amountMinor": 10000,
+            "status": "RECEIVED",
+            "source": "BANK_TRANSFER",
+            "purpose": "GENERAL"
+          },
+          {
+            "donor": "jana",
+            "payment": "p2",
+            "receivedOn": "2025-01-01",
+            "amountMinor": 20050,
+            "status": "RECEIVED",
+            "source": "BANK_TRANSFER",
+            "purpose": "GENERAL"
+          },
+          {
+            "donor": "jana",
+            "payment": "p3",
+            "receivedOn": "2025-06-30",
+            "amountMinor": 30000,
+            "status": "RECEIVED",
+            "source": "BANK_TRANSFER",
+            "purpose": "GENERAL"
+          },
+          {
+            "donor": "jana",
+            "payment": "p4",
+            "receivedOn": "2026-09-30",
+            "amountMinor": 99900,
+            "status": "REFUNDED",
+            "source": "BANK_TRANSFER",
+            "purpose": "GENERAL"
+          },
+          {
+            "donor": "jana",
+            "payment": "p5",
+            "receivedOn": "2026-03-15",
+            "amountMinor": 50000,
+            "status": "RECEIVED",
+            "source": "BANK_TRANSFER",
+            "purpose": "GENERAL"
+          },
+          {
+            "donor": "jana",
+            "payment": null,
+            "receivedOn": "2026-04-01",
+            "amountMinor": 7000,
+            "status": "RECEIVED",
+            "source": "MANUAL",
+            "purpose": "GENERAL"
+          },
+          {
+            "donor": "jana",
+            "payment": "p6",
+            "receivedOn": "2026-05-05",
+            "amountMinor": 100,
+            "status": "RECEIVED",
+            "source": "BANK_TRANSFER",
+            "purpose": "ACCOUNT_VERIFICATION"
+          },
+          {
+            "donor": "petr",
+            "payment": "p7",
+            "receivedOn": "2026-03-16",
+            "amountMinor": 1000000,
+            "status": "RECEIVED",
+            "source": "BANK_TRANSFER",
+            "purpose": "GENERAL"
+          }
+        ],
+        "donor": "jana",
+        "firstReceiptYear": 2026
+      },
+      "expected": {
+        "totalAmountMinor": 117150,
+        "currency": "CZK",
+        "count": 6,
+        "lastReceivedAt": "2026-05-05",
+        "byYear": [
+          {
+            "year": 2026,
+            "count": 3,
+            "totalAmountMinor": 57100
+          },
+          {
+            "year": 2025,
+            "count": 2,
+            "totalAmountMinor": 50050
+          },
+          {
+            "year": 2024,
+            "count": 1,
+            "totalAmountMinor": 10000
+          }
+        ],
+        "yearlyReceiptsAvailableThrough": 2025,
+        "receiptsAvailableFrom": 2026
+      }
+    },
+    {
+      "name": "only a refunded gift",
+      "input": {
+        "now": "2026-10-20T10:00:00Z",
+        "donors": [
+          {
+            "alias": "jana",
+            "registeredAt": "2026-01-15T10:00:00Z",
+            "erasedAt": null
+          }
+        ],
+        "payments": [
+          {
+            "alias": "p1",
+            "bookedOn": "2026-02-02",
+            "amountMinor": 50000,
+            "unpairedByAdmin": false
+          }
+        ],
+        "donations": [
+          {
+            "donor": "jana",
+            "payment": "p1",
+            "receivedOn": "2026-02-02",
+            "amountMinor": 50000,
+            "status": "REFUNDED",
+            "source": "BANK_TRANSFER",
+            "purpose": "GENERAL"
+          }
+        ],
+        "donor": "jana",
+        "firstReceiptYear": 2026
+      },
+      "expected": {
+        "totalAmountMinor": 0,
+        "currency": "CZK",
+        "count": 0,
+        "lastReceivedAt": null,
+        "byYear": [],
+        "yearlyReceiptsAvailableThrough": 2025,
+        "receiptsAvailableFrom": 2026
+      }
+    },
+    {
+      "name": "the last evening of the year in Prague",
+      "input": {
+        "now": "2026-12-31T22:59:59Z",
+        "donors": [
+          {
+            "alias": "jana",
+            "registeredAt": "2026-01-15T10:00:00Z",
+            "erasedAt": null
+          }
+        ],
+        "payments": [
+          {
+            "alias": "p1",
+            "bookedOn": "2026-12-31",
+            "amountMinor": 50000,
+            "unpairedByAdmin": false
+          }
+        ],
+        "donations": [
+          {
+            "donor": "jana",
+            "payment": "p1",
+            "receivedOn": "2026-12-31",
+            "amountMinor": 50000,
+            "status": "RECEIVED",
+            "source": "BANK_TRANSFER",
+            "purpose": "GENERAL"
+          }
+        ],
+        "donor": "jana",
+        "firstReceiptYear": 2026
+      },
+      "expected": {
+        "totalAmountMinor": 50000,
+        "currency": "CZK",
+        "count": 1,
+        "lastReceivedAt": "2026-12-31",
+        "byYear": [
+          {
+            "year": 2026,
+            "count": 1,
+            "totalAmountMinor": 50000
+          }
+        ],
+        "yearlyReceiptsAvailableThrough": 2025,
+        "receiptsAvailableFrom": 2026
+      }
+    },
+    {
+      "name": "the first minute of the new year in Prague",
+      "input": {
+        "now": "2026-12-31T23:00:00Z",
+        "donors": [
+          {
+            "alias": "jana",
+            "registeredAt": "2026-01-15T10:00:00Z",
+            "erasedAt": null
+          }
+        ],
+        "payments": [
+          {
+            "alias": "p1",
+            "bookedOn": "2026-12-31",
+            "amountMinor": 50000,
+            "unpairedByAdmin": false
+          }
+        ],
+        "donations": [
+          {
+            "donor": "jana",
+            "payment": "p1",
+            "receivedOn": "2026-12-31",
+            "amountMinor": 50000,
+            "status": "RECEIVED",
+            "source": "BANK_TRANSFER",
+            "purpose": "GENERAL"
+          }
+        ],
+        "donor": "jana",
+        "firstReceiptYear": 2026
+      },
+      "expected": {
+        "totalAmountMinor": 50000,
+        "currency": "CZK",
+        "count": 1,
+        "lastReceivedAt": "2026-12-31",
+        "byYear": [
+          {
+            "year": 2026,
+            "count": 1,
+            "totalAmountMinor": 50000
+          }
+        ],
+        "yearlyReceiptsAvailableThrough": 2026,
+        "receiptsAvailableFrom": 2026
+      }
+    },
+    {
+      "name": "large amounts and hellers",
+      "input": {
+        "now": "2026-10-20T10:00:00Z",
+        "donors": [
+          {
+            "alias": "jana",
+            "registeredAt": "2026-01-15T10:00:00Z",
+            "erasedAt": null
+          }
+        ],
+        "payments": [
+          {
+            "alias": "p1",
+            "bookedOn": "2026-01-02",
+            "amountMinor": 100000000,
+            "unpairedByAdmin": false
+          },
+          {
+            "alias": "p2",
+            "bookedOn": "2026-01-03",
+            "amountMinor": 99999999,
+            "unpairedByAdmin": false
+          },
+          {
+            "alias": "p3",
+            "bookedOn": "2026-01-04",
+            "amountMinor": 1,
+            "unpairedByAdmin": false
+          }
+        ],
+        "donations": [
+          {
+            "donor": "jana",
+            "payment": "p1",
+            "receivedOn": "2026-01-02",
+            "amountMinor": 100000000,
+            "status": "RECEIVED",
+            "source": "BANK_TRANSFER",
+            "purpose": "GENERAL"
+          },
+          {
+            "donor": "jana",
+            "payment": "p2",
+            "receivedOn": "2026-01-03",
+            "amountMinor": 99999999,
+            "status": "RECEIVED",
+            "source": "BANK_TRANSFER",
+            "purpose": "GENERAL"
+          },
+          {
+            "donor": "jana",
+            "payment": "p3",
+            "receivedOn": "2026-01-04",
+            "amountMinor": 1,
+            "status": "RECEIVED",
+            "source": "BANK_TRANSFER",
+            "purpose": "GENERAL"
+          }
+        ],
+        "donor": "jana",
+        "firstReceiptYear": 2026
+      },
+      "expected": {
+        "totalAmountMinor": 200000000,
+        "currency": "CZK",
+        "count": 3,
+        "lastReceivedAt": "2026-01-04",
+        "byYear": [
+          {
+            "year": 2026,
+            "count": 3,
+            "totalAmountMinor": 200000000
+          }
+        ],
+        "yearlyReceiptsAvailableThrough": 2025,
+        "receiptsAvailableFrom": 2026
+      }
+    }
+  ]
+}
