@@ -30,6 +30,7 @@ import org.apache.pdfbox.pdmodel.font.PDFont;
 import org.apache.pdfbox.rendering.ImageType;
 import org.apache.pdfbox.rendering.PDFRenderer;
 import org.apache.pdfbox.text.PDFTextStripper;
+import org.apache.pdfbox.text.TextPosition;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.Test;
@@ -102,14 +103,15 @@ class ReceiptCorpusTest {
     private static final JsonMapper JSON = JsonMapper.builder().build();
     private static final String SAMPLE_LOGIC = "A receipt v2 freezes (ThymeleafPdfReceiptRenderer.freeze: data is the frozen JSON) and renders (render, at renderer.issuedAt): "
             + "the PDF's page count and fonts (PDFBox; a subset prefix is dropped), each page's size in points and its text lines (PDFTextStripper per page, "
-            + "every line stripped, empty lines dropped, U+00A0 written as a space). The PDF's and the page rasters' digests depend on the PDF libraries "
+            + "every line stripped, empty lines dropped, U+00A0 written as a space) with the position of its first character in points from the page's top left, "
+            + "rounded to whole points (x, and y at the baseline; TextPosition xDirAdj and yDirAdj). The PDF's and the page rasters' digests depend on the PDF libraries "
             + "and the JDK, so they are kept apart in digests.json";
     private static final Map<String, Rendered> RENDERED = new ConcurrentHashMap<>();
     private static final List<String> HISTORY_SAMPLES = List.of("single-person-cs", "yearly-person-en", "single-company-replacement-cs",
             "yearly-person-many-gifts-cs");
 
     @TestFactory
-    @DisplayName("Given the receipt corpus, when v2 freezes and renders every sample, then data, page text, page count, fonts and page rasters equal the recorded ones")
+    @DisplayName("Given the receipt corpus, when v2 freezes and renders every sample, then data, page count, fonts, page sizes and each line's text and position equal the recorded ones")
     Stream<DynamicTest> should_equal_the_recorded_corpus_when_v2_freezes_and_renders_every_sample() {
         return samples().stream().map(sample -> DynamicTest.dynamicTest(sample.name(),
                 () -> GoldenFiles.assertMatches(CORPUS + "/" + sample.name() + ".json", corpusEntry(sample))));
@@ -149,7 +151,7 @@ class ReceiptCorpusTest {
                     .replace(SIGNATORY.name(), FICTIONAL_SIGNATORY.name());
 
             assertThat(JSON.readTree(rendered.snapshot().data())).as(name).isEqualTo(history);
-            assertThat(rendered.pages().stream().map(page -> String.join(" ", page.lines()).replaceAll("\\s+", " ")).toList())
+            assertThat(rendered.pages().stream().map(page -> String.join(" ", page.lines().stream().map(Line::text).toList()).replaceAll("\\s+", " ")).toList())
                     .as(name).containsExactlyElementsOf(recordedText.lines().toList());
         }
     }
@@ -229,7 +231,7 @@ class ReceiptCorpusTest {
             node.put("widthPt", page.widthPt());
             node.put("heightPt", page.heightPt());
             ArrayNode lines = node.putArray("lines");
-            page.lines().forEach(lines::add);
+            page.lines().forEach(line -> lines.addObject().put("text", line.text()).put("x", line.x()).put("y", line.y()));
         }
         return entry;
     }
@@ -302,11 +304,12 @@ class ReceiptCorpusTest {
                 + (subset ? ", subset" : "") + ")";
     }
 
-    private static List<String> lines(PDDocument document, int page) throws IOException {
-        PDFTextStripper stripper = new PDFTextStripper();
+    private static List<Line> lines(PDDocument document, int page) throws IOException {
+        LineLayout stripper = new LineLayout();
         stripper.setStartPage(page);
         stripper.setEndPage(page);
-        return stripper.getText(document).lines().map(line -> line.replace(' ', ' ').strip()).filter(line -> !line.isEmpty()).toList();
+        stripper.getText(document);
+        return stripper.lines();
     }
 
     private static String rasterDigest(BufferedImage image) {
@@ -447,6 +450,55 @@ class ReceiptCorpusTest {
     private record Rendered(ReceiptSnapshot snapshot, String sha256, List<String> fonts, List<Page> pages) {
     }
 
-    private record Page(int number, float widthPt, float heightPt, List<String> lines, int rasterWidth, int rasterHeight, String rasterSha256) {
+    private record Line(String text, int x, int y) {
+    }
+
+    private static final class LineLayout extends PDFTextStripper {
+
+        private final List<Line> lines = new ArrayList<>();
+        private final StringBuilder text = new StringBuilder();
+        private Optional<TextPosition> first = Optional.empty();
+
+        @Override
+        protected void writeString(String chunk, List<TextPosition> positions) throws IOException {
+            if (first.isEmpty() && !positions.isEmpty()) {
+                first = Optional.of(positions.getFirst());
+            }
+            text.append(chunk);
+            super.writeString(chunk, positions);
+        }
+
+        @Override
+        protected void writeWordSeparator() throws IOException {
+            text.append(' ');
+            super.writeWordSeparator();
+        }
+
+        @Override
+        protected void writeLineSeparator() throws IOException {
+            endLine();
+            super.writeLineSeparator();
+        }
+
+        @Override
+        protected void writePageEnd() throws IOException {
+            endLine();
+            super.writePageEnd();
+        }
+
+        private void endLine() {
+            String line = text.toString().replace('\u00a0', ' ').strip();
+            first.filter(position -> !line.isEmpty())
+                    .ifPresent(position -> lines.add(new Line(line, Math.round(position.getXDirAdj()), Math.round(position.getYDirAdj()))));
+            text.setLength(0);
+            first = Optional.empty();
+        }
+
+        List<Line> lines() {
+            return List.copyOf(lines);
+        }
+    }
+
+    private record Page(int number, float widthPt, float heightPt, List<Line> lines, int rasterWidth, int rasterHeight, String rasterSha256) {
     }
 }

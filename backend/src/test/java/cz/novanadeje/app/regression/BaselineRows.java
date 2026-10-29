@@ -3,6 +3,7 @@ package cz.novanadeje.app.regression;
 import cz.novanadeje.app.support.DatabaseCleaner;
 import cz.novanadeje.app.support.MutableClock;
 import org.springframework.jdbc.core.simple.JdbcClient;
+import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.node.ArrayNode;
 import tools.jackson.databind.node.JsonNodeFactory;
 import tools.jackson.databind.node.ObjectNode;
@@ -41,6 +42,22 @@ public final class BaselineRows {
 
     public static BaselineRows at(String now) {
         return new BaselineRows(now);
+    }
+
+    public static BaselineRows fromJson(JsonNode input) {
+        BaselineRows rows = new BaselineRows(input.get("now").asString());
+        input.get("donors").forEach(donor -> rows.donors.add(new Donor(donor.get("alias").asString(), donor.get("registeredAt").asString(),
+                optional(donor.get("erasedAt")))));
+        input.get("payments").forEach(payment -> rows.payments.add(new Payment(payment.get("alias").asString(), payment.get("bookedOn").asString(),
+                payment.get("amountMinor").asLong(), payment.get("unpairedByAdmin").asBoolean())));
+        input.get("donations").forEach(gift -> rows.donations.add(new Gift(gift.get("donor").asString(), optional(gift.get("payment")),
+                gift.get("receivedOn").asString(), gift.get("amountMinor").asLong(), gift.get("status").asString(), gift.get("source").asString(),
+                gift.get("purpose").asString())));
+        return rows;
+    }
+
+    private static Optional<String> optional(JsonNode value) {
+        return value == null || value.isNull() ? Optional.empty() : Optional.of(value.asString());
     }
 
     public BaselineRows now(String instant) {
