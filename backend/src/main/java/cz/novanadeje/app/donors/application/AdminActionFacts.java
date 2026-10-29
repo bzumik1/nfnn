@@ -127,6 +127,8 @@ public record AdminActionFacts(String summaryKey, Map<String, String> values) {
                 full("Plán záloh změněn z „(?<from>[^“]*)“ na „(?<to>[^“]*)“")));
         shapes.put("VIEW_BACKUP_KEY", List.of(
                 full("Zobrazen klíč k zálohám \\(ověřeno druhým faktorem\\)")));
+        shapes.put("VIEW_BACKUP_KEY_REFUSED", List.of(
+                full("Klíč k zálohám se nezobrazil: druhý faktor nesouhlasil")));
         shapes.put("REQUEST_BACKUP", List.of(
                 full("Záloha databáze vyžádána \\(požadavek " + ID + "\\)"),
                 full("A backup was requested \\(request " + ID + "\\)")));

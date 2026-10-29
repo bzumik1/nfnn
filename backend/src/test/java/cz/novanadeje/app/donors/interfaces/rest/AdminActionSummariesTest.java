@@ -77,6 +77,9 @@ class AdminActionSummariesTest {
                 arguments("VIEW_BACKUP_KEY", "Zobrazen klíč k zálohám (ověřeno druhým faktorem)",
                         "Zobrazen klíč k zálohám (ověřeno druhým faktorem).",
                         "Backup key shown (confirmed with the second factor)."),
+                arguments("VIEW_BACKUP_KEY_REFUSED", "Klíč k zálohám se nezobrazil: druhý faktor nesouhlasil",
+                        "Klíč k zálohám se nezobrazil: druhý faktor nesouhlasil.",
+                        "Backup key not shown: the second factor did not match."),
                 arguments("PUBLISH_NEWS", "Aktualita " + ID + " „nove-kocarky“ zveřejněna od 2026-10-20",
                         "Aktualita „nove-kocarky“ zveřejněna od 20. 10. 2026.",
                         "News article “nove-kocarky” published from 20 Oct 2026."));
