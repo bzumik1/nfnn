@@ -1,0 +1,388 @@
+{
+  "source": "v2-baseline@70e9233",
+  "feature": "contact/contact_message",
+  "scenarios": {
+    "Valid message is accepted and forwarded to the foundation #1": {
+      "requests": {
+        "POST /api/contact/messages #1": {
+          "request": {
+            "path": "/api/contact/messages",
+            "body": {
+              "email": "jana@example.cz",
+              "fullName": "Jana Nováková",
+              "message": "Mám dotaz k projektu Dominik.",
+              "website": ""
+            }
+          },
+          "response": {
+            "status": 202,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            }
+          }
+        }
+      },
+      "mails": [
+        {
+          "from": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "to": [
+            "info@nfnn.cz"
+          ],
+          "replyTo": [
+            "jana@example.cz"
+          ],
+          "subject": "Nová zpráva z webu od Jana Nováková",
+          "text": "Jméno: Jana Nováková\nE-mail: jana@example.cz\nPřijato: 4. 11. 2026 10:00\n\nZpráva:\nMám dotaz k projektu Dominik.\n\nOdpovězte přímo na tento e-mail, odpověď dorazí odesílateli.\n",
+          "htmlSha256": "03be377e33dff1f190c8343ac94ebfd63d0e721114f72057ad17b88cbb3198a8",
+          "attachments": [
+            {
+              "fileName": "inline",
+              "contentType": "image/png",
+              "size": 41502,
+              "sha256": "aecbb8a4c043690e9918174f51cd419a3f1c02d34161454fe40e759db6e7dfcb"
+            }
+          ]
+        }
+      ],
+      "logs": []
+    },
+    "Honeypot blocks a bot #1": {
+      "requests": {
+        "POST /api/contact/messages #1": {
+          "request": {
+            "path": "/api/contact/messages",
+            "body": {
+              "email": "jana@example.cz",
+              "fullName": "Jana Nováková",
+              "message": "Mám dotaz k projektu.",
+              "website": "https://spam.example"
+            }
+          },
+          "response": {
+            "status": 202,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            }
+          }
+        }
+      },
+      "mails": [],
+      "logs": []
+    },
+    "Incomplete message is rejected with field errors #1": {
+      "requests": {
+        "POST /api/contact/messages #1": {
+          "request": {
+            "path": "/api/contact/messages",
+            "body": {
+              "email": "not-an-email",
+              "fullName": null,
+              "message": "Dobrý den",
+              "website": ""
+            }
+          },
+          "response": {
+            "status": 400,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/problem+json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "detail": "Zkontrolujte prosím označená pole.",
+              "errors": [
+                {
+                  "field": "email",
+                  "message": "musí mít správně utvořenou e-mailovou adresu"
+                },
+                {
+                  "field": "fullName",
+                  "message": "nesmí být prázdná"
+                }
+              ],
+              "instance": "/api/contact/messages",
+              "status": 400,
+              "title": "Neplatné údaje",
+              "type": "https://nfnn.cz/problems/validation"
+            }
+          }
+        }
+      },
+      "mails": [],
+      "logs": []
+    },
+    "Sixth message within an hour from one address is refused #1": {
+      "requests": {
+        "POST /api/contact/messages #1": {
+          "request": {
+            "path": "/api/contact/messages",
+            "body": {
+              "email": "jana@example.cz",
+              "fullName": "Jana Nováková",
+              "message": "Mám dotaz k projektu.",
+              "website": ""
+            }
+          },
+          "response": {
+            "status": 202,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            }
+          }
+        },
+        "POST /api/contact/messages #2": {
+          "request": {
+            "path": "/api/contact/messages",
+            "body": {
+              "email": "jana@example.cz",
+              "fullName": "Jana Nováková",
+              "message": "Mám dotaz k projektu.",
+              "website": ""
+            }
+          },
+          "response": {
+            "status": 202,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            }
+          }
+        },
+        "POST /api/contact/messages #3": {
+          "request": {
+            "path": "/api/contact/messages",
+            "body": {
+              "email": "jana@example.cz",
+              "fullName": "Jana Nováková",
+              "message": "Mám dotaz k projektu.",
+              "website": ""
+            }
+          },
+          "response": {
+            "status": 202,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            }
+          }
+        },
+        "POST /api/contact/messages #4": {
+          "request": {
+            "path": "/api/contact/messages",
+            "body": {
+              "email": "jana@example.cz",
+              "fullName": "Jana Nováková",
+              "message": "Mám dotaz k projektu.",
+              "website": ""
+            }
+          },
+          "response": {
+            "status": 202,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            }
+          }
+        },
+        "POST /api/contact/messages #5": {
+          "request": {
+            "path": "/api/contact/messages",
+            "body": {
+              "email": "jana@example.cz",
+              "fullName": "Jana Nováková",
+              "message": "Mám dotaz k projektu.",
+              "website": ""
+            }
+          },
+          "response": {
+            "status": 202,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            }
+          }
+        },
+        "POST /api/contact/messages #6": {
+          "request": {
+            "path": "/api/contact/messages",
+            "body": {
+              "email": "jana@example.cz",
+              "fullName": "Jana Nováková",
+              "message": "Ještě jedna.",
+              "website": ""
+            }
+          },
+          "response": {
+            "status": 429,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/problem+json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "detail": "Zkuste to prosím znovu později.",
+              "instance": "/api/contact/messages",
+              "status": 429,
+              "title": "Příliš mnoho požadavků",
+              "type": "https://nfnn.cz/problems/contact/rate-limited"
+            }
+          }
+        }
+      },
+      "mails": [
+        {
+          "from": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "to": [
+            "info@nfnn.cz"
+          ],
+          "replyTo": [
+            "jana@example.cz"
+          ],
+          "subject": "Nová zpráva z webu od Jana Nováková",
+          "text": "Jméno: Jana Nováková\nE-mail: jana@example.cz\nPřijato: 4. 11. 2026 10:00\n\nZpráva:\nMám dotaz k projektu.\n\nOdpovězte přímo na tento e-mail, odpověď dorazí odesílateli.\n",
+          "htmlSha256": "063d4288dc28c3df53a2a65247f878bd9b64be3dee83b47fb44ce988ea300680",
+          "attachments": [
+            {
+              "fileName": "inline",
+              "contentType": "image/png",
+              "size": 41502,
+              "sha256": "aecbb8a4c043690e9918174f51cd419a3f1c02d34161454fe40e759db6e7dfcb"
+            }
+          ]
+        },
+        {
+          "from": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "to": [
+            "info@nfnn.cz"
+          ],
+          "replyTo": [
+            "jana@example.cz"
+          ],
+          "subject": "Nová zpráva z webu od Jana Nováková",
+          "text": "Jméno: Jana Nováková\nE-mail: jana@example.cz\nPřijato: 4. 11. 2026 10:00\n\nZpráva:\nMám dotaz k projektu.\n\nOdpovězte přímo na tento e-mail, odpověď dorazí odesílateli.\n",
+          "htmlSha256": "063d4288dc28c3df53a2a65247f878bd9b64be3dee83b47fb44ce988ea300680",
+          "attachments": [
+            {
+              "fileName": "inline",
+              "contentType": "image/png",
+              "size": 41502,
+              "sha256": "aecbb8a4c043690e9918174f51cd419a3f1c02d34161454fe40e759db6e7dfcb"
+            }
+          ]
+        },
+        {
+          "from": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "to": [
+            "info@nfnn.cz"
+          ],
+          "replyTo": [
+            "jana@example.cz"
+          ],
+          "subject": "Nová zpráva z webu od Jana Nováková",
+          "text": "Jméno: Jana Nováková\nE-mail: jana@example.cz\nPřijato: 4. 11. 2026 10:00\n\nZpráva:\nMám dotaz k projektu.\n\nOdpovězte přímo na tento e-mail, odpověď dorazí odesílateli.\n",
+          "htmlSha256": "063d4288dc28c3df53a2a65247f878bd9b64be3dee83b47fb44ce988ea300680",
+          "attachments": [
+            {
+              "fileName": "inline",
+              "contentType": "image/png",
+              "size": 41502,
+              "sha256": "aecbb8a4c043690e9918174f51cd419a3f1c02d34161454fe40e759db6e7dfcb"
+            }
+          ]
+        },
+        {
+          "from": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "to": [
+            "info@nfnn.cz"
+          ],
+          "replyTo": [
+            "jana@example.cz"
+          ],
+          "subject": "Nová zpráva z webu od Jana Nováková",
+          "text": "Jméno: Jana Nováková\nE-mail: jana@example.cz\nPřijato: 4. 11. 2026 10:00\n\nZpráva:\nMám dotaz k projektu.\n\nOdpovězte přímo na tento e-mail, odpověď dorazí odesílateli.\n",
+          "htmlSha256": "063d4288dc28c3df53a2a65247f878bd9b64be3dee83b47fb44ce988ea300680",
+          "attachments": [
+            {
+              "fileName": "inline",
+              "contentType": "image/png",
+              "size": 41502,
+              "sha256": "aecbb8a4c043690e9918174f51cd419a3f1c02d34161454fe40e759db6e7dfcb"
+            }
+          ]
+        },
+        {
+          "from": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "to": [
+            "info@nfnn.cz"
+          ],
+          "replyTo": [
+            "jana@example.cz"
+          ],
+          "subject": "Nová zpráva z webu od Jana Nováková",
+          "text": "Jméno: Jana Nováková\nE-mail: jana@example.cz\nPřijato: 4. 11. 2026 10:00\n\nZpráva:\nMám dotaz k projektu.\n\nOdpovězte přímo na tento e-mail, odpověď dorazí odesílateli.\n",
+          "htmlSha256": "063d4288dc28c3df53a2a65247f878bd9b64be3dee83b47fb44ce988ea300680",
+          "attachments": [
+            {
+              "fileName": "inline",
+              "contentType": "image/png",
+              "size": 41502,
+              "sha256": "aecbb8a4c043690e9918174f51cd419a3f1c02d34161454fe40e759db6e7dfcb"
+            }
+          ]
+        }
+      ],
+      "logs": []
+    }
+  }
+}

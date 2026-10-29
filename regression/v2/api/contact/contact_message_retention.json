@@ -1,0 +1,16 @@
+{
+  "source": "v2-baseline@70e9233",
+  "feature": "contact/contact_message_retention",
+  "scenarios": {
+    "The retention job deletes a message older than a year and keeps a recent one #1": {
+      "requests": {},
+      "mails": [],
+      "logs": []
+    },
+    "A message received just under a year ago is kept #1": {
+      "requests": {},
+      "mails": [],
+      "logs": []
+    }
+  }
+}

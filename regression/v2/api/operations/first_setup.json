@@ -1,0 +1,1433 @@
+{
+  "source": "v2-baseline@70e9233",
+  "feature": "operations/first_setup",
+  "scenarios": {
+    "Directly from the home network the setup opens without a code, stores the settings, seals the secrets and restarts once #1": {
+      "requests": {
+        "GET /api/operations/setup #1": {
+          "request": {
+            "path": "/api/operations/setup",
+            "headers": {
+              "X-Nfnn-Direct": "1"
+            }
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "codeRequired": false,
+              "lastRestore": null,
+              "required": true
+            }
+          }
+        },
+        "POST /api/operations/setup/unlock #1": {
+          "request": {
+            "path": "/api/operations/setup/unlock",
+            "headers": {
+              "X-Nfnn-Direct": "1"
+            },
+            "body": {}
+          },
+          "response": {
+            "status": 204,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            }
+          }
+        },
+        "POST /api/operations/setup #1": {
+          "request": {
+            "path": "/api/operations/setup",
+            "headers": {
+              "X-Nfnn-Direct": "1"
+            },
+            "body": {
+              "settings": [
+                {
+                  "name": "PUBLIC_URL",
+                  "value": "https://nfnn.cz"
+                },
+                {
+                  "name": "MAIL_HOST",
+                  "value": "smtp-relay.brevo.com"
+                },
+                {
+                  "name": "MAIL_PORT",
+                  "value": "587"
+                },
+                {
+                  "name": "MAIL_USERNAME",
+                  "value": "bebb0c001@smtp-brevo.com"
+                },
+                {
+                  "name": "MAIL_PASSWORD",
+                  "value": "xsmtpsib-key"
+                },
+                {
+                  "name": "MAIL_FROM",
+                  "value": "info@nfnn.cz"
+                },
+                {
+                  "name": "CONTACT_RECIPIENT",
+                  "value": "info@nfnn.cz"
+                },
+                {
+                  "name": "FIO_TOKEN",
+                  "value": "fio-read-only-token"
+                },
+                {
+                  "name": "ADMIN_EMAILS",
+                  "value": "spravce@example.cz"
+                }
+              ]
+            }
+          },
+          "response": {
+            "status": 202,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "changed": [
+                "PUBLIC_URL",
+                "MAIL_HOST",
+                "MAIL_PORT",
+                "MAIL_USERNAME",
+                "MAIL_PASSWORD",
+                "MAIL_FROM",
+                "CONTACT_RECIPIENT",
+                "FIO_TOKEN",
+                "ADMIN_EMAILS"
+              ],
+              "restarting": true
+            }
+          }
+        },
+        "GET /api/operations/setup #2": {
+          "request": {
+            "path": "/api/operations/setup",
+            "headers": {
+              "X-Nfnn-Direct": "1"
+            }
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "codeRequired": false,
+              "lastRestore": null,
+              "required": false
+            }
+          }
+        }
+      },
+      "mails": [],
+      "logs": [
+        "INFO operations.application.settings.SetupService: The first setup was completed from the home network; settings stored: PUBLIC_URL, MAIL_HOST, MAIL_PORT, MAIL_USERNAME, MAIL_PASSWORD, MAIL_FROM, CONTACT_RECIPIENT, FIO_TOKEN, ADMIN_EMAILS; the backend restarts"
+      ]
+    },
+    "Through the proxy the setup needs the code from the container log #1": {
+      "requests": {
+        "GET /api/operations/setup #1": {
+          "request": {
+            "path": "/api/operations/setup",
+            "headers": {
+              "X-Nfnn-Direct": "0"
+            }
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "codeRequired": true,
+              "lastRestore": null,
+              "required": true
+            }
+          }
+        },
+        "POST /api/operations/setup/unlock #1": {
+          "request": {
+            "path": "/api/operations/setup/unlock",
+            "headers": {
+              "X-Nfnn-Direct": "0"
+            },
+            "body": {}
+          },
+          "response": {
+            "status": 403,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/problem+json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "detail": "Otevřete web přímo z domácí sítě (ikona aplikace v ZimaOS), nebo zadejte kód z logu kontejneru nfnn-backend.",
+              "instance": "/api/operations/setup/unlock",
+              "status": 403,
+              "title": "Průvodce je zamčený",
+              "type": "https://nfnn.cz/problems/operations/setup-locked"
+            }
+          }
+        },
+        "POST /api/operations/setup/unlock #2": {
+          "request": {
+            "path": "/api/operations/setup/unlock",
+            "headers": {
+              "X-Nfnn-Direct": "0"
+            },
+            "body": {
+              "code": "<secret>"
+            }
+          },
+          "response": {
+            "status": 403,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/problem+json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "detail": "Otevřete web přímo z domácí sítě (ikona aplikace v ZimaOS), nebo zadejte kód z logu kontejneru nfnn-backend.",
+              "instance": "/api/operations/setup/unlock",
+              "status": 403,
+              "title": "Průvodce je zamčený",
+              "type": "https://nfnn.cz/problems/operations/setup-locked"
+            }
+          }
+        },
+        "POST /api/operations/setup/unlock #3": {
+          "request": {
+            "path": "/api/operations/setup/unlock",
+            "headers": {
+              "X-Nfnn-Direct": "0"
+            },
+            "body": {
+              "code": "<setup-code>"
+            }
+          },
+          "response": {
+            "status": 204,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            }
+          }
+        },
+        "POST /api/operations/setup #1": {
+          "request": {
+            "path": "/api/operations/setup",
+            "headers": {
+              "X-Nfnn-Direct": "0"
+            },
+            "body": {
+              "code": "<secret>",
+              "settings": [
+                {
+                  "name": "PUBLIC_URL",
+                  "value": "https://nfnn.cz"
+                },
+                {
+                  "name": "MAIL_HOST",
+                  "value": "smtp-relay.brevo.com"
+                },
+                {
+                  "name": "MAIL_PORT",
+                  "value": "587"
+                },
+                {
+                  "name": "MAIL_FROM",
+                  "value": "info@nfnn.cz"
+                },
+                {
+                  "name": "CONTACT_RECIPIENT",
+                  "value": "info@nfnn.cz"
+                },
+                {
+                  "name": "ADMIN_EMAILS",
+                  "value": "spravce@example.cz"
+                }
+              ]
+            }
+          },
+          "response": {
+            "status": 202,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "changed": [
+                "PUBLIC_URL",
+                "MAIL_HOST",
+                "MAIL_PORT",
+                "MAIL_FROM",
+                "CONTACT_RECIPIENT",
+                "ADMIN_EMAILS"
+              ],
+              "restarting": true
+            }
+          }
+        }
+      },
+      "mails": [],
+      "logs": [
+        "INFO operations.application.settings.SetupService: The first setup was completed with the setup code; settings stored: PUBLIC_URL, MAIL_HOST, MAIL_PORT, MAIL_FROM, CONTACT_RECIPIENT, ADMIN_EMAILS; the backend restarts"
+      ]
+    },
+    "A request that claims to be direct but comes from a public address needs the code #1": {
+      "requests": {
+        "GET /api/operations/setup #1": {
+          "request": {
+            "path": "/api/operations/setup",
+            "headers": {
+              "X-Nfnn-Direct": "1"
+            }
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "codeRequired": true,
+              "lastRestore": null,
+              "required": true
+            }
+          }
+        },
+        "POST /api/operations/setup #1": {
+          "request": {
+            "path": "/api/operations/setup",
+            "headers": {
+              "X-Nfnn-Direct": "1"
+            },
+            "body": {
+              "settings": [
+                {
+                  "name": "PUBLIC_URL",
+                  "value": "https://nfnn.cz"
+                }
+              ]
+            }
+          },
+          "response": {
+            "status": 403,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/problem+json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "detail": "Otevřete web přímo z domácí sítě (ikona aplikace v ZimaOS), nebo zadejte kód z logu kontejneru nfnn-backend.",
+              "instance": "/api/operations/setup",
+              "status": 403,
+              "title": "Průvodce je zamčený",
+              "type": "https://nfnn.cz/problems/operations/setup-locked"
+            }
+          }
+        }
+      },
+      "mails": [],
+      "logs": []
+    },
+    "Malformed and missing values are refused with every problem named, nothing is stored and nothing restarts #1": {
+      "requests": {
+        "POST /api/operations/setup #1": {
+          "request": {
+            "path": "/api/operations/setup",
+            "headers": {
+              "X-Nfnn-Direct": "1"
+            },
+            "body": {
+              "settings": [
+                {
+                  "name": "PUBLIC_URL",
+                  "value": "nfnn.cz"
+                },
+                {
+                  "name": "MAIL_HOST",
+                  "value": "smtp-relay.brevo.com"
+                },
+                {
+                  "name": "MAIL_PORT",
+                  "value": "70000"
+                },
+                {
+                  "name": "MAIL_FROM",
+                  "value": "info@nfnn.cz"
+                },
+                {
+                  "name": "CONTACT_RECIPIENT",
+                  "value": "${JWT_SECRET}"
+                }
+              ]
+            }
+          },
+          "response": {
+            "status": 400,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/problem+json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "detail": "Opravte označené hodnoty a uložte znovu.",
+              "errors": [
+                {
+                  "code": "invalid-port",
+                  "field": "MAIL_PORT",
+                  "message": "Zadejte číslo portu od 1 do 65535."
+                },
+                {
+                  "code": "invalid-url",
+                  "field": "PUBLIC_URL",
+                  "message": "Zadejte adresu začínající https:// nebo http://, bez otazníku a mřížky."
+                },
+                {
+                  "code": "placeholder",
+                  "field": "CONTACT_RECIPIENT",
+                  "message": "Hodnota nesmí obsahovat ${."
+                },
+                {
+                  "code": "required",
+                  "field": "ADMIN_EMAILS",
+                  "message": "Vyplňte tuto hodnotu."
+                }
+              ],
+              "instance": "/api/operations/setup",
+              "status": 400,
+              "title": "Nastavení nejde uložit",
+              "type": "https://nfnn.cz/problems/operations/invalid-settings"
+            }
+          }
+        },
+        "GET /api/operations/setup #1": {
+          "request": {
+            "path": "/api/operations/setup",
+            "headers": {
+              "X-Nfnn-Direct": "1"
+            }
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "codeRequired": false,
+              "lastRestore": null,
+              "required": true
+            }
+          }
+        }
+      },
+      "mails": [],
+      "logs": []
+    },
+    "Settings that belong only to the administration are refused in the setup #1": {
+      "requests": {
+        "POST /api/operations/setup #1": {
+          "request": {
+            "path": "/api/operations/setup",
+            "headers": {
+              "X-Nfnn-Direct": "1"
+            },
+            "body": {
+              "settings": [
+                {
+                  "name": "RECEIPT_FIRST_YEAR",
+                  "value": "2026"
+                }
+              ]
+            }
+          },
+          "response": {
+            "status": 400,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/problem+json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "detail": "Only settings of the first setup are set here",
+              "instance": "/api/operations/setup",
+              "status": 400,
+              "title": "Neplatné údaje",
+              "type": "https://nfnn.cz/problems/validation"
+            }
+          }
+        }
+      },
+      "mails": [],
+      "logs": []
+    },
+    "The mail server is tested before saving #1": {
+      "requests": {
+        "POST /api/operations/setup/mail-test #1": {
+          "request": {
+            "path": "/api/operations/setup/mail-test",
+            "headers": {
+              "X-Nfnn-Direct": "1"
+            },
+            "body": {
+              "auth": true,
+              "host": "smtp.example.cz",
+              "password": "<secret>",
+              "port": 587,
+              "startTls": true,
+              "username": "user"
+            }
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "ok": true
+            }
+          }
+        },
+        "POST /api/operations/setup/mail-test #2": {
+          "request": {
+            "path": "/api/operations/setup/mail-test",
+            "headers": {
+              "X-Nfnn-Direct": "1"
+            },
+            "body": {
+              "auth": true,
+              "host": "smtp.example.cz",
+              "password": "<secret>",
+              "port": 587,
+              "startTls": true,
+              "username": "user"
+            }
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "ok": false
+            }
+          }
+        }
+      },
+      "mails": [],
+      "logs": []
+    },
+    "Once the setup is done, the setup answers that it is done to everyone #1": {
+      "requests": {
+        "POST /api/operations/setup #1": {
+          "request": {
+            "path": "/api/operations/setup",
+            "headers": {
+              "X-Nfnn-Direct": "1"
+            },
+            "body": {
+              "settings": [
+                {
+                  "name": "PUBLIC_URL",
+                  "value": "https://nfnn.cz"
+                },
+                {
+                  "name": "MAIL_HOST",
+                  "value": "smtp-relay.brevo.com"
+                },
+                {
+                  "name": "MAIL_PORT",
+                  "value": "587"
+                },
+                {
+                  "name": "MAIL_FROM",
+                  "value": "info@nfnn.cz"
+                },
+                {
+                  "name": "CONTACT_RECIPIENT",
+                  "value": "info@nfnn.cz"
+                },
+                {
+                  "name": "ADMIN_EMAILS",
+                  "value": "spravce@example.cz"
+                }
+              ]
+            }
+          },
+          "response": {
+            "status": 202,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "changed": [
+                "PUBLIC_URL",
+                "MAIL_HOST",
+                "MAIL_PORT",
+                "MAIL_FROM",
+                "CONTACT_RECIPIENT",
+                "ADMIN_EMAILS"
+              ],
+              "restarting": true
+            }
+          }
+        },
+        "POST /api/operations/setup/unlock #1": {
+          "request": {
+            "path": "/api/operations/setup/unlock",
+            "headers": {
+              "X-Nfnn-Direct": "1"
+            },
+            "body": {}
+          },
+          "response": {
+            "status": 409,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/problem+json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "detail": "Nastavení teď mění správce webu ve Správě v části Nastavení.",
+              "instance": "/api/operations/setup/unlock",
+              "status": 409,
+              "title": "První nastavení už proběhlo",
+              "type": "https://nfnn.cz/problems/operations/setup-completed"
+            }
+          }
+        },
+        "POST /api/operations/setup/mail-test #1": {
+          "request": {
+            "path": "/api/operations/setup/mail-test",
+            "headers": {
+              "X-Nfnn-Direct": "1"
+            },
+            "body": {
+              "auth": true,
+              "host": "smtp.example.cz",
+              "password": "<secret>",
+              "port": 587,
+              "startTls": true,
+              "username": "user"
+            }
+          },
+          "response": {
+            "status": 409,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/problem+json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "detail": "Nastavení teď mění správce webu ve Správě v části Nastavení.",
+              "instance": "/api/operations/setup/mail-test",
+              "status": 409,
+              "title": "První nastavení už proběhlo",
+              "type": "https://nfnn.cz/problems/operations/setup-completed"
+            }
+          }
+        },
+        "POST /api/operations/setup #2": {
+          "request": {
+            "path": "/api/operations/setup",
+            "headers": {
+              "X-Nfnn-Direct": "1"
+            },
+            "body": {
+              "settings": [
+                {
+                  "name": "PUBLIC_URL",
+                  "value": "https://evil.example.cz"
+                }
+              ]
+            }
+          },
+          "response": {
+            "status": 409,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/problem+json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "detail": "Nastavení teď mění správce webu ve Správě v části Nastavení.",
+              "instance": "/api/operations/setup",
+              "status": 409,
+              "title": "První nastavení už proběhlo",
+              "type": "https://nfnn.cz/problems/operations/setup-completed"
+            }
+          }
+        }
+      },
+      "mails": [],
+      "logs": [
+        "INFO operations.application.settings.SetupService: The first setup was completed from the home network; settings stored: PUBLIC_URL, MAIL_HOST, MAIL_PORT, MAIL_FROM, CONTACT_RECIPIENT, ADMIN_EMAILS; the backend restarts"
+      ]
+    },
+    "Setup requests are limited to 20 per 15 minutes from one address #1": {
+      "requests": {
+        "POST /api/operations/setup/unlock #1": {
+          "request": {
+            "path": "/api/operations/setup/unlock",
+            "headers": {
+              "X-Nfnn-Direct": "0"
+            },
+            "body": {
+              "code": "<secret>"
+            }
+          },
+          "response": {
+            "status": 403,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/problem+json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "detail": "Otevřete web přímo z domácí sítě (ikona aplikace v ZimaOS), nebo zadejte kód z logu kontejneru nfnn-backend.",
+              "instance": "/api/operations/setup/unlock",
+              "status": 403,
+              "title": "Průvodce je zamčený",
+              "type": "https://nfnn.cz/problems/operations/setup-locked"
+            }
+          }
+        },
+        "POST /api/operations/setup/unlock #2": {
+          "request": {
+            "path": "/api/operations/setup/unlock",
+            "headers": {
+              "X-Nfnn-Direct": "0"
+            },
+            "body": {
+              "code": "<secret>"
+            }
+          },
+          "response": {
+            "status": 403,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/problem+json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "detail": "Otevřete web přímo z domácí sítě (ikona aplikace v ZimaOS), nebo zadejte kód z logu kontejneru nfnn-backend.",
+              "instance": "/api/operations/setup/unlock",
+              "status": 403,
+              "title": "Průvodce je zamčený",
+              "type": "https://nfnn.cz/problems/operations/setup-locked"
+            }
+          }
+        },
+        "POST /api/operations/setup/unlock #3": {
+          "request": {
+            "path": "/api/operations/setup/unlock",
+            "headers": {
+              "X-Nfnn-Direct": "0"
+            },
+            "body": {
+              "code": "<secret>"
+            }
+          },
+          "response": {
+            "status": 403,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/problem+json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "detail": "Otevřete web přímo z domácí sítě (ikona aplikace v ZimaOS), nebo zadejte kód z logu kontejneru nfnn-backend.",
+              "instance": "/api/operations/setup/unlock",
+              "status": 403,
+              "title": "Průvodce je zamčený",
+              "type": "https://nfnn.cz/problems/operations/setup-locked"
+            }
+          }
+        },
+        "POST /api/operations/setup/unlock #4": {
+          "request": {
+            "path": "/api/operations/setup/unlock",
+            "headers": {
+              "X-Nfnn-Direct": "0"
+            },
+            "body": {
+              "code": "<secret>"
+            }
+          },
+          "response": {
+            "status": 403,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/problem+json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "detail": "Otevřete web přímo z domácí sítě (ikona aplikace v ZimaOS), nebo zadejte kód z logu kontejneru nfnn-backend.",
+              "instance": "/api/operations/setup/unlock",
+              "status": 403,
+              "title": "Průvodce je zamčený",
+              "type": "https://nfnn.cz/problems/operations/setup-locked"
+            }
+          }
+        },
+        "POST /api/operations/setup/unlock #5": {
+          "request": {
+            "path": "/api/operations/setup/unlock",
+            "headers": {
+              "X-Nfnn-Direct": "0"
+            },
+            "body": {
+              "code": "<secret>"
+            }
+          },
+          "response": {
+            "status": 403,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/problem+json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "detail": "Otevřete web přímo z domácí sítě (ikona aplikace v ZimaOS), nebo zadejte kód z logu kontejneru nfnn-backend.",
+              "instance": "/api/operations/setup/unlock",
+              "status": 403,
+              "title": "Průvodce je zamčený",
+              "type": "https://nfnn.cz/problems/operations/setup-locked"
+            }
+          }
+        },
+        "POST /api/operations/setup/unlock #6": {
+          "request": {
+            "path": "/api/operations/setup/unlock",
+            "headers": {
+              "X-Nfnn-Direct": "0"
+            },
+            "body": {
+              "code": "<secret>"
+            }
+          },
+          "response": {
+            "status": 403,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/problem+json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "detail": "Otevřete web přímo z domácí sítě (ikona aplikace v ZimaOS), nebo zadejte kód z logu kontejneru nfnn-backend.",
+              "instance": "/api/operations/setup/unlock",
+              "status": 403,
+              "title": "Průvodce je zamčený",
+              "type": "https://nfnn.cz/problems/operations/setup-locked"
+            }
+          }
+        },
+        "POST /api/operations/setup/unlock #7": {
+          "request": {
+            "path": "/api/operations/setup/unlock",
+            "headers": {
+              "X-Nfnn-Direct": "0"
+            },
+            "body": {
+              "code": "<secret>"
+            }
+          },
+          "response": {
+            "status": 403,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/problem+json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "detail": "Otevřete web přímo z domácí sítě (ikona aplikace v ZimaOS), nebo zadejte kód z logu kontejneru nfnn-backend.",
+              "instance": "/api/operations/setup/unlock",
+              "status": 403,
+              "title": "Průvodce je zamčený",
+              "type": "https://nfnn.cz/problems/operations/setup-locked"
+            }
+          }
+        },
+        "POST /api/operations/setup/unlock #8": {
+          "request": {
+            "path": "/api/operations/setup/unlock",
+            "headers": {
+              "X-Nfnn-Direct": "0"
+            },
+            "body": {
+              "code": "<secret>"
+            }
+          },
+          "response": {
+            "status": 403,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/problem+json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "detail": "Otevřete web přímo z domácí sítě (ikona aplikace v ZimaOS), nebo zadejte kód z logu kontejneru nfnn-backend.",
+              "instance": "/api/operations/setup/unlock",
+              "status": 403,
+              "title": "Průvodce je zamčený",
+              "type": "https://nfnn.cz/problems/operations/setup-locked"
+            }
+          }
+        },
+        "POST /api/operations/setup/unlock #9": {
+          "request": {
+            "path": "/api/operations/setup/unlock",
+            "headers": {
+              "X-Nfnn-Direct": "0"
+            },
+            "body": {
+              "code": "<secret>"
+            }
+          },
+          "response": {
+            "status": 403,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/problem+json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "detail": "Otevřete web přímo z domácí sítě (ikona aplikace v ZimaOS), nebo zadejte kód z logu kontejneru nfnn-backend.",
+              "instance": "/api/operations/setup/unlock",
+              "status": 403,
+              "title": "Průvodce je zamčený",
+              "type": "https://nfnn.cz/problems/operations/setup-locked"
+            }
+          }
+        },
+        "POST /api/operations/setup/unlock #10": {
+          "request": {
+            "path": "/api/operations/setup/unlock",
+            "headers": {
+              "X-Nfnn-Direct": "0"
+            },
+            "body": {
+              "code": "<secret>"
+            }
+          },
+          "response": {
+            "status": 403,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/problem+json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "detail": "Otevřete web přímo z domácí sítě (ikona aplikace v ZimaOS), nebo zadejte kód z logu kontejneru nfnn-backend.",
+              "instance": "/api/operations/setup/unlock",
+              "status": 403,
+              "title": "Průvodce je zamčený",
+              "type": "https://nfnn.cz/problems/operations/setup-locked"
+            }
+          }
+        },
+        "POST /api/operations/setup/unlock #11": {
+          "request": {
+            "path": "/api/operations/setup/unlock",
+            "headers": {
+              "X-Nfnn-Direct": "0"
+            },
+            "body": {
+              "code": "<secret>"
+            }
+          },
+          "response": {
+            "status": 403,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/problem+json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "detail": "Otevřete web přímo z domácí sítě (ikona aplikace v ZimaOS), nebo zadejte kód z logu kontejneru nfnn-backend.",
+              "instance": "/api/operations/setup/unlock",
+              "status": 403,
+              "title": "Průvodce je zamčený",
+              "type": "https://nfnn.cz/problems/operations/setup-locked"
+            }
+          }
+        },
+        "POST /api/operations/setup/unlock #12": {
+          "request": {
+            "path": "/api/operations/setup/unlock",
+            "headers": {
+              "X-Nfnn-Direct": "0"
+            },
+            "body": {
+              "code": "<secret>"
+            }
+          },
+          "response": {
+            "status": 403,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/problem+json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "detail": "Otevřete web přímo z domácí sítě (ikona aplikace v ZimaOS), nebo zadejte kód z logu kontejneru nfnn-backend.",
+              "instance": "/api/operations/setup/unlock",
+              "status": 403,
+              "title": "Průvodce je zamčený",
+              "type": "https://nfnn.cz/problems/operations/setup-locked"
+            }
+          }
+        },
+        "POST /api/operations/setup/unlock #13": {
+          "request": {
+            "path": "/api/operations/setup/unlock",
+            "headers": {
+              "X-Nfnn-Direct": "0"
+            },
+            "body": {
+              "code": "<secret>"
+            }
+          },
+          "response": {
+            "status": 403,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/problem+json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "detail": "Otevřete web přímo z domácí sítě (ikona aplikace v ZimaOS), nebo zadejte kód z logu kontejneru nfnn-backend.",
+              "instance": "/api/operations/setup/unlock",
+              "status": 403,
+              "title": "Průvodce je zamčený",
+              "type": "https://nfnn.cz/problems/operations/setup-locked"
+            }
+          }
+        },
+        "POST /api/operations/setup/unlock #14": {
+          "request": {
+            "path": "/api/operations/setup/unlock",
+            "headers": {
+              "X-Nfnn-Direct": "0"
+            },
+            "body": {
+              "code": "<secret>"
+            }
+          },
+          "response": {
+            "status": 403,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/problem+json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "detail": "Otevřete web přímo z domácí sítě (ikona aplikace v ZimaOS), nebo zadejte kód z logu kontejneru nfnn-backend.",
+              "instance": "/api/operations/setup/unlock",
+              "status": 403,
+              "title": "Průvodce je zamčený",
+              "type": "https://nfnn.cz/problems/operations/setup-locked"
+            }
+          }
+        },
+        "POST /api/operations/setup/unlock #15": {
+          "request": {
+            "path": "/api/operations/setup/unlock",
+            "headers": {
+              "X-Nfnn-Direct": "0"
+            },
+            "body": {
+              "code": "<secret>"
+            }
+          },
+          "response": {
+            "status": 403,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/problem+json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "detail": "Otevřete web přímo z domácí sítě (ikona aplikace v ZimaOS), nebo zadejte kód z logu kontejneru nfnn-backend.",
+              "instance": "/api/operations/setup/unlock",
+              "status": 403,
+              "title": "Průvodce je zamčený",
+              "type": "https://nfnn.cz/problems/operations/setup-locked"
+            }
+          }
+        },
+        "POST /api/operations/setup/unlock #16": {
+          "request": {
+            "path": "/api/operations/setup/unlock",
+            "headers": {
+              "X-Nfnn-Direct": "0"
+            },
+            "body": {
+              "code": "<secret>"
+            }
+          },
+          "response": {
+            "status": 403,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/problem+json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "detail": "Otevřete web přímo z domácí sítě (ikona aplikace v ZimaOS), nebo zadejte kód z logu kontejneru nfnn-backend.",
+              "instance": "/api/operations/setup/unlock",
+              "status": 403,
+              "title": "Průvodce je zamčený",
+              "type": "https://nfnn.cz/problems/operations/setup-locked"
+            }
+          }
+        },
+        "POST /api/operations/setup/unlock #17": {
+          "request": {
+            "path": "/api/operations/setup/unlock",
+            "headers": {
+              "X-Nfnn-Direct": "0"
+            },
+            "body": {
+              "code": "<secret>"
+            }
+          },
+          "response": {
+            "status": 403,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/problem+json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "detail": "Otevřete web přímo z domácí sítě (ikona aplikace v ZimaOS), nebo zadejte kód z logu kontejneru nfnn-backend.",
+              "instance": "/api/operations/setup/unlock",
+              "status": 403,
+              "title": "Průvodce je zamčený",
+              "type": "https://nfnn.cz/problems/operations/setup-locked"
+            }
+          }
+        },
+        "POST /api/operations/setup/unlock #18": {
+          "request": {
+            "path": "/api/operations/setup/unlock",
+            "headers": {
+              "X-Nfnn-Direct": "0"
+            },
+            "body": {
+              "code": "<secret>"
+            }
+          },
+          "response": {
+            "status": 403,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/problem+json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "detail": "Otevřete web přímo z domácí sítě (ikona aplikace v ZimaOS), nebo zadejte kód z logu kontejneru nfnn-backend.",
+              "instance": "/api/operations/setup/unlock",
+              "status": 403,
+              "title": "Průvodce je zamčený",
+              "type": "https://nfnn.cz/problems/operations/setup-locked"
+            }
+          }
+        },
+        "POST /api/operations/setup/unlock #19": {
+          "request": {
+            "path": "/api/operations/setup/unlock",
+            "headers": {
+              "X-Nfnn-Direct": "0"
+            },
+            "body": {
+              "code": "<secret>"
+            }
+          },
+          "response": {
+            "status": 403,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/problem+json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "detail": "Otevřete web přímo z domácí sítě (ikona aplikace v ZimaOS), nebo zadejte kód z logu kontejneru nfnn-backend.",
+              "instance": "/api/operations/setup/unlock",
+              "status": 403,
+              "title": "Průvodce je zamčený",
+              "type": "https://nfnn.cz/problems/operations/setup-locked"
+            }
+          }
+        },
+        "POST /api/operations/setup/unlock #20": {
+          "request": {
+            "path": "/api/operations/setup/unlock",
+            "headers": {
+              "X-Nfnn-Direct": "0"
+            },
+            "body": {
+              "code": "<secret>"
+            }
+          },
+          "response": {
+            "status": 403,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/problem+json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "detail": "Otevřete web přímo z domácí sítě (ikona aplikace v ZimaOS), nebo zadejte kód z logu kontejneru nfnn-backend.",
+              "instance": "/api/operations/setup/unlock",
+              "status": 403,
+              "title": "Průvodce je zamčený",
+              "type": "https://nfnn.cz/problems/operations/setup-locked"
+            }
+          }
+        },
+        "POST /api/operations/setup/unlock #21": {
+          "request": {
+            "path": "/api/operations/setup/unlock",
+            "headers": {
+              "X-Nfnn-Direct": "0"
+            },
+            "body": {
+              "code": "<setup-code>"
+            }
+          },
+          "response": {
+            "status": 429,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/problem+json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "detail": "Zkuste to prosím znovu později.",
+              "instance": "/api/operations/setup/unlock",
+              "status": 429,
+              "title": "Příliš mnoho požadavků",
+              "type": "https://nfnn.cz/problems/operations/rate-limited"
+            }
+          }
+        },
+        "POST /api/operations/setup/unlock #22": {
+          "request": {
+            "path": "/api/operations/setup/unlock",
+            "headers": {
+              "X-Nfnn-Direct": "0"
+            },
+            "body": {
+              "code": "<setup-code>"
+            }
+          },
+          "response": {
+            "status": 204,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            }
+          }
+        }
+      },
+      "mails": [],
+      "logs": []
+    }
+  }
+}
