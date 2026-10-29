@@ -977,8 +977,8 @@ describe('Given the sign-in dialog', () => {
       const LOOKUP = '/api/donors/company-lookup?companyIdentifier=45274649';
       const CEZ = {
         companyIdentifier: '45274649',
-        name: 'ČEZ, a. s.',
-        address: { street: 'Duhová 1444/2', city: 'Praha 4', postalCode: '140 00' },
+        name: 'Stavby Novák s.r.o.',
+        address: { street: 'Dlouhá 12', city: 'Ústí nad Labem', postalCode: '400 01' },
       };
 
       beforeEach(() => click('.type-switch button:nth-child(2)'));
@@ -1006,10 +1006,10 @@ describe('Given the sign-in dialog', () => {
         http.expectOne(LOOKUP).flush(CEZ);
         await settle();
 
-        expect(value('#register-name')).toBe('ČEZ, a. s.');
-        expect(value('#register-street')).toBe('Duhová 1444/2');
-        expect(value('#register-postal-code')).toBe('140 00');
-        expect(value('#register-city')).toBe('Praha 4');
+        expect(value('#register-name')).toBe('Stavby Novák s.r.o.');
+        expect(value('#register-street')).toBe('Dlouhá 12');
+        expect(value('#register-postal-code')).toBe('400 01');
+        expect(value('#register-city')).toBe('Ústí nad Labem');
         expect(element('.company-lookup-status').closest('[role="status"]')).not.toBeNull();
         expect(status()).toBe(
           'Údaje jsme doplnili z obchodního rejstříku (ARES). Zkontrolujte je.',
@@ -1017,22 +1017,22 @@ describe('Given the sign-in dialog', () => {
       });
 
       it('after typing the name and street, then only the empty fields are filled in', async () => {
-        await fillIn('#register-name', 'ČEZ');
-        await fillIn('#register-street', 'Duhová 2');
+        await fillIn('#register-name', 'Stavby Novák');
+        await fillIn('#register-street', 'Dlouhá 2');
         await fillIn('#register-company-identifier', '45274649');
         http.expectOne(LOOKUP).flush(CEZ);
         await settle();
 
-        expect(value('#register-name')).toBe('ČEZ');
-        expect(value('#register-street')).toBe('Duhová 2');
-        expect(value('#register-city')).toBe('Praha 4');
-        expect(value('#register-postal-code')).toBe('140 00');
+        expect(value('#register-name')).toBe('Stavby Novák');
+        expect(value('#register-street')).toBe('Dlouhá 2');
+        expect(value('#register-city')).toBe('Ústí nad Labem');
+        expect(value('#register-postal-code')).toBe('400 01');
         expect(status()).toContain('ARES');
       });
 
       it('after filling in every field, then nothing changes and nothing is said', async () => {
-        await fillIn('#register-name', 'ČEZ');
-        await fillIn('#register-street', 'Duhová 2');
+        await fillIn('#register-name', 'Stavby Novák');
+        await fillIn('#register-street', 'Dlouhá 2');
         await fillIn('#register-city', 'Praha');
         await fillIn('#register-postal-code', '140 53');
         await fillIn('#register-company-identifier', '45274649');
@@ -1048,13 +1048,13 @@ describe('Given the sign-in dialog', () => {
         http.expectOne(LOOKUP).flush({ ...CEZ, address: null });
         await settle();
 
-        expect(value('#register-name')).toBe('ČEZ, a. s.');
+        expect(value('#register-name')).toBe('Stavby Novák s.r.o.');
         expect(value('#register-street')).toBe('');
         expect(status()).toContain('ARES');
       });
 
       it('and then corrects it to another company, then the filled-in fields follow and the typed ones stay', async () => {
-        await fillIn('#register-street', 'Duhová 2');
+        await fillIn('#register-street', 'Dlouhá 2');
         await fillIn('#register-company-identifier', '45274649');
         http.expectOne(LOOKUP).flush(CEZ);
         await settle();
@@ -1068,7 +1068,7 @@ describe('Given the sign-in dialog', () => {
         await settle();
 
         expect(value('#register-name')).toBe('Ministerstvo financí');
-        expect(value('#register-street')).toBe('Duhová 2');
+        expect(value('#register-street')).toBe('Dlouhá 2');
         expect(value('#register-city')).toBe('Praha 1');
         expect(value('#register-postal-code')).toBe('118 00');
       });
@@ -1096,12 +1096,12 @@ describe('Given the sign-in dialog', () => {
       }
 
       it('that cannot be reached, then the fields stay as typed and nothing is said', async () => {
-        await fillIn('#register-name', 'ČEZ');
+        await fillIn('#register-name', 'Stavby Novák');
         await fillIn('#register-company-identifier', '45274649');
         http.expectOne(LOOKUP).error(new ProgressEvent('error'));
         await settle();
 
-        expect(value('#register-name')).toBe('ČEZ');
+        expect(value('#register-name')).toBe('Stavby Novák');
         expect(fixture.nativeElement.querySelector('[role="alert"]:not(:empty)')).toBeNull();
         expect(status()).toBe('');
       });
@@ -1120,7 +1120,7 @@ describe('Given the sign-in dialog', () => {
         await fillIn('#register-street', 'Průmyslová 5');
         await fillIn('#register-city', 'Teplice');
         await fillIn('#register-postal-code', '415 01');
-        await fillIn('#register-email', 'ucetni@stavby.cz');
+        await fillIn('#register-email', 'ucetni@stavby.example.cz');
         await fillIn('#register-password', 'correct horse battery');
 
         await submit('.register-form');

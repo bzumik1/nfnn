@@ -174,7 +174,7 @@ class AresCompanyRegistryTest {
     @DisplayName("Given garbage, another company, a missing name or not JSON, when a company is found, then the register is unavailable as an unexpected response")
     void should_be_unavailable_when_found_given_unexpected_body() {
         for (Answer answer : new Answer[]{Answer.json(200, "<html>oops"), Answer.json(200, "[]"),
-                Answer.json(200, "{\"ico\":\"45274649\",\"obchodniJmeno\":\"ČEZ\"}"), Answer.json(200, "{\"ico\":\"00006947\"}"),
+                Answer.json(200, "{\"ico\":\"45274649\",\"obchodniJmeno\":\"Stavby Novák\"}"), Answer.json(200, "{\"ico\":\"00006947\"}"),
                 Answer.json(200, "{\"ico\":\"00006947\",\"obchodniJmeno\":\"" + "x".repeat(200) + "\"}"),
                 new Answer(200, "text/html", MINISTRY_JSON, Duration.ZERO)}) {
             answers.put(MINISTRY.value(), answer);

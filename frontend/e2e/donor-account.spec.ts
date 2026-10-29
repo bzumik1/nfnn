@@ -51,8 +51,8 @@ test.describe('Given a visitor who wants a donor account', () => {
       await route.fulfill({
         json: {
           companyIdentifier: '45274649',
-          name: 'ČEZ, a. s.',
-          address: { street: 'Duhová 1444/2', city: 'Praha 4', postalCode: '140 00' },
+          name: 'Stavby Novák s.r.o.',
+          address: { street: 'Dlouhá 12', city: 'Ústí nad Labem', postalCode: '400 01' },
         },
       });
     });
@@ -72,11 +72,11 @@ test.describe('Given a visitor who wants a donor account', () => {
     await expect(dialog.getByRole('status').filter({ hasText: /\S/ })).toHaveText(
       'Údaje jsme doplnili z obchodního rejstříku (ARES). Zkontrolujte je.',
     );
-    await expect(dialog.getByLabel('Název firmy')).toHaveValue('ČEZ, a. s.');
-    await expect(dialog.getByLabel('Sídlo – ulice a číslo')).toHaveValue('Duhová 1444/2');
-    await expect(dialog.getByLabel('PSČ')).toHaveValue('140 00');
-    await expect(dialog.getByLabel('Město')).toHaveValue('Praha 4');
-    await dialog.getByLabel('E-mail').fill('ucetni@cez.cz');
+    await expect(dialog.getByLabel('Název firmy')).toHaveValue('Stavby Novák s.r.o.');
+    await expect(dialog.getByLabel('Sídlo – ulice a číslo')).toHaveValue('Dlouhá 12');
+    await expect(dialog.getByLabel('PSČ')).toHaveValue('400 01');
+    await expect(dialog.getByLabel('Město')).toHaveValue('Ústí nad Labem');
+    await dialog.getByLabel('E-mail').fill('ucetni@stavby.example.cz');
     await dialog.locator('#register-password').fill('correct horse battery');
     await dialog.getByRole('button', { name: 'Vytvořit účet' }).click();
 
@@ -85,10 +85,10 @@ test.describe('Given a visitor who wants a donor account', () => {
     expect(posted).toEqual([
       {
         type: 'COMPANY',
-        name: 'ČEZ, a. s.',
+        name: 'Stavby Novák s.r.o.',
         companyIdentifier: '45274649',
-        address: { street: 'Duhová 1444/2', city: 'Praha 4', postalCode: '140 00' },
-        email: 'ucetni@cez.cz',
+        address: { street: 'Dlouhá 12', city: 'Ústí nad Labem', postalCode: '400 01' },
+        email: 'ucetni@stavby.example.cz',
         password: 'correct horse battery',
         preferredLocale: 'cs',
       },
@@ -125,7 +125,7 @@ test.describe('Given a visitor who wants a donor account', () => {
     await dialog.getByLabel('Sídlo – ulice a číslo').fill('Průmyslová 5');
     await dialog.getByLabel('PSČ').fill('415 01');
     await dialog.getByLabel('Město').fill('Teplice');
-    await dialog.getByLabel('E-mail').fill('ucetni@stavby.cz');
+    await dialog.getByLabel('E-mail').fill('ucetni@stavby.example.cz');
     await dialog.locator('#register-password').fill('correct horse battery');
     await dialog.getByRole('button', { name: 'Vytvořit účet' }).click();
 

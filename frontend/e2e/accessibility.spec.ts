@@ -348,8 +348,8 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
       route.fulfill({
         json: {
           companyIdentifier: '45274649',
-          name: 'ČEZ, a. s.',
-          address: { street: 'Duhová 1444/2', city: 'Praha 4', postalCode: '140 00' },
+          name: 'Stavby Novák s.r.o.',
+          address: { street: 'Dlouhá 12', city: 'Ústí nad Labem', postalCode: '400 01' },
         },
       }),
     );

@@ -20,8 +20,8 @@ describe('Given the company lookup API', () => {
   it('when the register knows the company, then its name and seat come back', () => {
     const company: RegisteredCompany = {
       companyIdentifier: '45274649',
-      name: 'ČEZ, a. s.',
-      address: { street: 'Duhová 1444/2', city: 'Praha 4', postalCode: '140 00' },
+      name: 'Stavby Novák s.r.o.',
+      address: { street: 'Dlouhá 12', city: 'Ústí nad Labem', postalCode: '400 01' },
     };
     let answer: RegisteredCompany | null | undefined;
 

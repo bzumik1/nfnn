@@ -31,8 +31,8 @@ import static org.mockito.Mockito.when;
 class CompanyLookupServiceTest {
 
     private static final CompanyIdentifier ICO = new CompanyIdentifier("45274649");
-    private static final RegisteredCompany COMPANY = new RegisteredCompany(ICO, "ČEZ, a. s.",
-            Optional.of(new PostalAddress("Duhová 1444/2", "Praha 4", "140 00")));
+    private static final RegisteredCompany COMPANY = new RegisteredCompany(ICO, "Stavby Novák s.r.o.",
+            Optional.of(new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01")));
 
     private final MutableClock clock = new MutableClock(Instant.parse("2026-10-24T10:00:00Z"), ZoneOffset.UTC);
     private final CompanyRegistry registry = mock(CompanyRegistry.class);
