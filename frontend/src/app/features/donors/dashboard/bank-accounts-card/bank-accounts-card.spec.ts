@@ -505,7 +505,11 @@ describe('Given the bank accounts card in the overview', () => {
       ).toBeTruthy();
       expect(panel.getAttribute('role')).toBe('region');
       expect(text('#' + panel.getAttribute('aria-labelledby'))).toBe('Jak přiřazujeme platby');
-      expect(texts('#accounts-help-panel .help-symbol')).toEqual(['9876543210', '9876543210']);
+      expect(texts('#accounts-help-panel .help-symbol')).toEqual([
+        '9876543210',
+        '9876543210',
+        '9876543210',
+      ]);
     });
 
     it('and has no variable symbol yet, then the panel shows no number', async () => {

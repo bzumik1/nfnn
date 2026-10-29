@@ -3,6 +3,7 @@ import { PairingHelp } from './pairing-help';
 
 const HELP_ITEMS = [
   'Jak se k vám dostane můj dar? Platbu s vaším variabilním symbolem 9876543210 přiřadíme vám, ať přijde z jakéhokoli účtu.',
+  'Moje banka nemá pole pro variabilní symbol Napište symbol 9876543210 do zprávy pro příjemce. Platbu vám přiřadíme stejně, jako kdyby byl v poli pro symbol.',
   'Co když pošlu platbu bez symbolu? Přiřadíme ji podle účtu, ze kterého přišla, pokud jste ho ověřili platbou s vaším symbolem (stačí 1 Kč přes „Přidat účet“). ' +
     'Když účet ověříte jako první dárce, přiřadíme vám i dřívější platby z něj bez symbolu.',
   'Posílám trvalým příkazem se starým symbolem Nejjistější je změnit v příkazu symbol na váš 9876543210. ' +
@@ -78,7 +79,11 @@ describe('Given the help on how payments are paired', () => {
     expect(element('#accounts-help-title')?.tagName).toBe('H3');
     expect(text('#accounts-help-title')).toBe('Jak přiřazujeme platby');
     expect(texts('#accounts-help-panel .help-list > li')).toEqual(HELP_ITEMS);
-    expect(texts('#accounts-help-panel .help-symbol')).toEqual(['9876543210', '9876543210']);
+    expect(texts('#accounts-help-panel .help-symbol')).toEqual([
+      '9876543210',
+      '9876543210',
+      '9876543210',
+    ]);
     expect(text('#accounts-help-panel .help-contact')).toBe(
       'Chybí vám nějaký dar, nebo tu vidíte dar, který není váš? Napište nám na info@nfnn.cz.',
     );
@@ -95,10 +100,12 @@ describe('Given the help on how payments are paired', () => {
       HELP_ITEMS.map((item, index) =>
         index === 0
           ? 'Jak se k vám dostane můj dar? Platbu s vaším variabilním symbolem přiřadíme vám, ať přijde z jakéhokoli účtu.'
-          : index === 2
-            ? 'Posílám trvalým příkazem se starým symbolem Nejjistější je změnit v příkazu symbol na váš. ' +
-              'Jinak pošlete z účtu 1 Kč se zprávou z QR kódu v „Přidat účet“ (běžný dar nestačí) a my se vás u účtu obvykle zeptáme, jestli jsou platby se starým symbolem vaše.'
-            : item,
+          : index === 1
+            ? 'Moje banka nemá pole pro variabilní symbol Napište svůj variabilní symbol do zprávy pro příjemce. Platbu vám přiřadíme stejně, jako kdyby byl v poli pro symbol.'
+            : index === 3
+              ? 'Posílám trvalým příkazem se starým symbolem Nejjistější je změnit v příkazu symbol na váš. ' +
+                'Jinak pošlete z účtu 1 Kč se zprávou z QR kódu v „Přidat účet“ (běžný dar nestačí) a my se vás u účtu obvykle zeptáme, jestli jsou platby se starým symbolem vaše.'
+              : item,
       ),
     );
     expect(element('#accounts-help-panel .help-symbol')).toBeNull();
