@@ -12,7 +12,7 @@ import { AdminBackups, JOB_POLL_MS, RESTORE_REQUEST_KEY } from './admin-backups'
 
 const BACKUPS_URL = '/api/admin/operations/backups';
 const REQUESTS_URL = '/api/admin/operations/backups/requests';
-const RESTORE_URL = '/api/admin/operations/backups/nfnn-2026-10-23_0300.dump/restore';
+const RESTORE_URL = '/api/admin/operations/backups/nfnn-2026-10-23_0300.dump.age/restore';
 const SETUP_URL = '/api/operations/setup';
 
 function problem(status: number, type: string, title: string, detail: string) {
@@ -110,15 +110,15 @@ describe('Given an administrator on the backups page', () => {
     ]);
     expect(texts('.run dd')).toEqual([
       '23. 10. 2026 03:00 (2 kB)',
-      '18. 10. 2026 04:00, 37 tabulek ze zálohy nfnn-2026-10-18_0300.dump',
+      '18. 10. 2026 04:00, 37 tabulek ze zálohy nfnn-2026-10-18_0300.dump.age',
       'Zatím žádná.',
     ]);
     expect(texts('tbody tr')).toEqual([
-      '23. 10. 2026 03:00 nfnn-2026-10-23_0300.dump Plánovaná 2 kB Stáhnout Obnovit…',
-      '22. 10. 2026 03:00 nfnn-2026-10-22_0300.dump Plánovaná 1 kB Stáhnout Obnovit…',
+      '23. 10. 2026 03:00 nfnn-2026-10-23_0300.dump.age Plánovaná 2 kB Stáhnout Obnovit…',
+      '22. 10. 2026 03:00 nfnn-2026-10-22_0300.dump.age Plánovaná 1 kB Stáhnout Obnovit…',
     ]);
     expect(text('.off-server')).toBe(
-      'Zálohy leží na stejném disku jako web. Jednou za měsíc si nejnovější stáhněte tlačítkem Stáhnout a uložte jinam, třeba na flash disk nebo do cloudu.',
+      'Zálohy leží na stejném disku jako web. Jednou za měsíc si nejnovější stáhněte tlačítkem Stáhnout a uložte jinam, třeba na flash disk nebo do cloudu. Jsou zašifrované, takže je bez klíče k zálohám nikdo nepřečte.',
     );
     expect(fixture.nativeElement.querySelector('.actions-blocked')).toBeNull();
     expect(button('Zálohovat teď').disabled).toBe(false);
@@ -228,14 +228,14 @@ describe('Given an administrator on the backups page', () => {
         backupsView({
           backups: [
             backupFile({
-              fileName: 'nfnn-2026-10-23_1000-rucni.dump',
+              fileName: 'nfnn-2026-10-23_1000-rucni.dump.age',
               kind: 'REQUESTED',
               createdAt: '2026-10-23T08:00:04Z',
             }),
             backupFile(),
           ],
           lastBackup: backupRun({
-            fileName: 'nfnn-2026-10-23_1000-rucni.dump',
+            fileName: 'nfnn-2026-10-23_1000-rucni.dump.age',
             finishedAt: '2026-10-23T08:00:04Z',
             requestId: 'req-1',
           }),
@@ -244,10 +244,10 @@ describe('Given an administrator on the backups page', () => {
       await settle();
 
       expect(text('.ui-notice--status')).toBe(
-        'Záloha nfnn-2026-10-23_1000-rucni.dump je hotová (2 kB).',
+        'Záloha nfnn-2026-10-23_1000-rucni.dump.age je hotová (2 kB).',
       );
       expect(button('Zálohovat teď').disabled).toBe(false);
-      expect(texts('tbody tr')[0]).toContain('nfnn-2026-10-23_1000-rucni.dump Na požádání');
+      expect(texts('tbody tr')[0]).toContain('nfnn-2026-10-23_1000-rucni.dump.age Na požádání');
     });
 
     it('then a failed run is reported in an alert with its error', async () => {
@@ -330,7 +330,7 @@ describe('Given an administrator on the backups page', () => {
     http.expectOne(BACKUPS_URL).flush(
       backupsView({
         lastTestRestore: backupRun({
-          fileName: 'nfnn-2026-10-23_0300.dump',
+          fileName: 'nfnn-2026-10-23_0300.dump.age',
           finishedAt: '2026-10-23T08:00:20Z',
           tables: 41,
           requestId: 'req-2',
@@ -340,7 +340,7 @@ describe('Given an administrator on the backups page', () => {
     await settle();
 
     expect(text('.ui-notice--status')).toBe(
-      'Zkušební obnova zálohy nfnn-2026-10-23_0300.dump proběhla: 41 tabulek.',
+      'Zkušební obnova zálohy nfnn-2026-10-23_0300.dump.age proběhla: 41 tabulek.',
     );
   });
 
@@ -358,7 +358,7 @@ describe('Given an administrator on the backups page', () => {
     it('then a dialog names the backup, what is lost, the receipts issued since and the safety backup, and cancelling posts nothing', async () => {
       expect(text('#restore-title')).toBe('Obnovit databázi ze zálohy?');
       expect(text('.restore-lead')).toBe(
-        'Web se vrátí do stavu z 23. 10. 2026 03:00, ze zálohy nfnn-2026-10-23_0300.dump.',
+        'Web se vrátí do stavu z 23. 10. 2026 03:00, ze zálohy nfnn-2026-10-23_0300.dump.age.',
       );
       expect(texts('.restore-points li')[1]).toContain(
         'Potvrzení o daru vydaná po vytvoření zálohy z databáze zmizí',
@@ -380,14 +380,14 @@ describe('Given an administrator on the backups page', () => {
       expect(request.request.method).toBe('POST');
       request.flush({
         requestId: 'restore-1',
-        fileName: 'nfnn-2026-10-23_0300.dump',
+        fileName: 'nfnn-2026-10-23_0300.dump.age',
         requestedAt: '2026-10-23T19:30:00Z',
       });
       await settle();
 
       expect(dialog()).toBeNull();
       expect(text('.restoring')).toBe(
-        'Obnovujeme databázi ze zálohy nfnn-2026-10-23_0300.dump. Web je teď několik minut nedostupný; stránka počká a ukáže výsledek. Možná se pak budete muset znovu přihlásit.',
+        'Obnovujeme databázi ze zálohy nfnn-2026-10-23_0300.dump.age. Web je teď několik minut nedostupný; stránka počká a ukáže výsledek. Možná se pak budete muset znovu přihlásit.',
       );
       expect(fixture.nativeElement.querySelector('.restoring')?.getAttribute('role')).toBe(
         'status',
@@ -410,7 +410,7 @@ describe('Given an administrator on the backups page', () => {
       await settle();
 
       expect(text('.ui-notice--status')).toBe(
-        'Databáze je obnovená ze zálohy nfnn-2026-10-23_0300.dump. Stav před obnovou je uložený jako záloha „Před obnovou“.',
+        'Databáze je obnovená ze zálohy nfnn-2026-10-23_0300.dump.age. Stav před obnovou je uložený jako záloha „Před obnovou“.',
       );
       expect(sessionStorage.getItem(RESTORE_REQUEST_KEY)).toBeNull();
     });
@@ -436,7 +436,7 @@ describe('Given an administrator on the backups page', () => {
     http.expectOne(BACKUPS_URL).flush(backupsView());
     sessionStorage.setItem(
       RESTORE_REQUEST_KEY,
-      JSON.stringify({ requestId: 'restore-2', fileName: 'nfnn-2026-10-22_0300.dump' }),
+      JSON.stringify({ requestId: 'restore-2', fileName: 'nfnn-2026-10-22_0300.dump.age' }),
     );
     fixture.destroy();
     fixture = TestBed.createComponent(AdminBackups);
@@ -453,7 +453,7 @@ describe('Given an administrator on the backups page', () => {
     );
 
     expect(text('.ui-notice--alert')).toBe(
-      'Obnova ze zálohy nfnn-2026-10-22_0300.dump se nepovedla. Web běží dál s daty, jaká měl před obnovou; technické podrobnosti najdete níže u Poslední obnova.',
+      'Obnova ze zálohy nfnn-2026-10-22_0300.dump.age se nepovedla. Web běží dál s daty, jaká měl před obnovou; technické podrobnosti najdete níže u Poslední obnova.',
     );
   });
 
@@ -461,7 +461,7 @@ describe('Given an administrator on the backups page', () => {
     http.expectOne(BACKUPS_URL).flush(backupsView());
     sessionStorage.setItem(
       RESTORE_REQUEST_KEY,
-      JSON.stringify({ requestId: 'restore-3', fileName: 'nfnn-2026-10-22_0300.dump' }),
+      JSON.stringify({ requestId: 'restore-3', fileName: 'nfnn-2026-10-22_0300.dump.age' }),
     );
     fixture.destroy();
     fixture = TestBed.createComponent(AdminBackups);
@@ -501,21 +501,21 @@ describe('Given an administrator on the backups page', () => {
 
     (
       fixture.nativeElement.querySelector(
-        'tbody button[aria-label="Stáhnout nfnn-2026-10-23_0300.dump"]',
+        'tbody button[aria-label="Stáhnout nfnn-2026-10-23_0300.dump.age"]',
       ) as HTMLButtonElement | null
     )?.click();
     await settle();
 
-    const request = http.expectOne(`${BACKUPS_URL}/nfnn-2026-10-23_0300.dump`);
+    const request = http.expectOne(`${BACKUPS_URL}/nfnn-2026-10-23_0300.dump.age`);
     expect(request.request.responseType).toBe('blob');
     expect(request.request.headers.get('Authorization')).toBe('Bearer token-1');
     expect(button('Stahujeme…').disabled).toBe(true);
     request.flush(new Blob([new Uint8Array(1590)], { type: 'application/octet-stream' }), {
-      headers: { 'Content-Disposition': 'attachment; filename="nfnn-2026-10-23_0300.dump"' },
+      headers: { 'Content-Disposition': 'attachment; filename="nfnn-2026-10-23_0300.dump.age"' },
     });
     await settle();
 
-    expect(clicked).toEqual(['nfnn-2026-10-23_0300.dump']);
+    expect(clicked).toEqual(['nfnn-2026-10-23_0300.dump.age']);
     expect(texts('tbody button')).toEqual(['Stáhnout', 'Obnovit…', 'Stáhnout', 'Obnovit…']);
   });
 

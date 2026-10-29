@@ -347,6 +347,71 @@
             </app-form-field>
           </fieldset>
 
+          <fieldset class="group">
+            <legend i18n="@@operations.setup.group.backupKey">5. Klíč k zálohám</legend>
+            <p class="group-intro" i18n="@@operations.setup.backupKey.intro">
+              Web se každý den zálohuje a zálohy šifruje tímto klíčem. Bez něj žádnou zálohu
+              neobnovíte, ani po havárii serveru. Uložte si ho teď mimo server a pak opište jeho
+              poslední čtyři znaky. Ve správě si ho později zobrazíte znovu.
+            </p>
+            @switch (backupKeyState()) {
+              @case ('ready') {
+                @if (backupKey(); as key) {
+                  <app-backup-key-panel [key]="key" />
+                }
+                <app-form-field
+                  label="Poslední čtyři znaky klíče"
+                  i18n-label="@@operations.setup.backupKeyCheck"
+                  hint="Opište je z uloženého klíče, tak si ověříte, že se uložil celý."
+                  i18n-hint="@@operations.setup.backupKeyCheck.hint"
+                  [messages]="backupKeyCheckMessages"
+                >
+                  <input
+                    appFormControl
+                    id="setup-backup-key-check"
+                    name="backupKeyCheck"
+                    autocomplete="off"
+                    autocapitalize="characters"
+                    spellcheck="false"
+                    maxlength="6"
+                    [(ngModel)]="backupKeyCheck"
+                    required
+                    [pattern]="backupKeyPattern()"
+                  />
+                </app-form-field>
+              }
+              @case ('unavailable') {
+                <p
+                  class="ui-callout ui-callout--warning"
+                  i18n="@@operations.setup.backupKey.unavailable"
+                >
+                  Klíč k zálohám se ještě nevytvořil, ukážeme ho ve správě na stránce Zálohy. Do té
+                  doby se zálohy nedělají.
+                </p>
+              }
+              @case ('error') {
+                <div class="ui-field-error" role="alert">
+                  <p i18n="@@operations.setup.backupKey.failed">
+                    Klíč k zálohám se nepodařilo načíst.
+                  </p>
+                  <button
+                    type="button"
+                    class="ui-button ui-button--small"
+                    (click)="loadBackupKey()"
+                    i18n="@@operations.setup.backupKey.retry"
+                  >
+                    Načíst znovu
+                  </button>
+                </div>
+              }
+              @default {
+                <p class="restart-note" role="status" i18n="@@operations.setup.backupKey.loading">
+                  Načítáme klíč k zálohám…
+                </p>
+              }
+            }
+          </fieldset>
+
           @if (saveError()) {
             <div class="ui-field-error" role="alert">
               <p>{{ saveError() }}</p>
@@ -497,80 +562,113 @@
           Obnovit web ze zálohy
         </h1>
         <p class="ui-panel__lead" i18n="@@operations.setup.restore.lead">
-          Vyberte soubor zálohy s příponou .dump: ten, který jste si stáhli ve správě na stránce
-          Zálohy, nebo kopii ze složky backups starého serveru. Web se z něj obnoví celý, i s dárci,
-          dary, nastavením a účty správců.
+          Vyberte soubor zálohy s příponou .dump.age: ten, který jste si stáhli ve správě na stránce
+          Zálohy, nebo kopii ze složky backups starého serveru, a vložte klíč k zálohám. Web se z ní
+          obnoví celý, i s dárci, dary, nastavením a účty správců.
         </p>
         @if (restoreError()) {
           <p class="ui-field-error" role="alert">{{ restoreError() }}</p>
         }
-        <label class="file-label" for="backup-file" i18n="@@operations.setup.restore.file"
-          >Soubor zálohy</label
+        <form
+          #restoreForm="ngForm"
+          class="restore-form"
+          appFocusFirstInvalid
+          (ngSubmit)="uploadBackup(restoreForm)"
+          novalidate
         >
-        <div class="file-row">
-          <input
-            id="backup-file"
-            class="file-input"
-            type="file"
-            accept=".dump"
-            [attr.aria-describedby]="
-              backupFileError()
-                ? 'backup-file-name backup-file-error backup-file-hint'
-                : 'backup-file-name backup-file-hint'
-            "
-            [attr.aria-invalid]="backupFileError() ? 'true' : null"
-            [disabled]="uploadPercent() !== null"
-            (change)="chooseBackup($event)"
-          />
-          <label
-            class="ui-button file-pick"
-            for="backup-file"
-            aria-hidden="true"
-            i18n="@@operations.setup.restore.pick"
-            >Vybrat soubor</label
+          <label class="file-label" for="backup-file" i18n="@@operations.setup.restore.file"
+            >Soubor zálohy</label
           >
-          @if (backupFile(); as file) {
-            <span id="backup-file-name" class="file-name">{{ file.name }}</span>
-          } @else {
-            <span id="backup-file-name" class="file-name" i18n="@@operations.setup.restore.noFile"
-              >Zatím žádný soubor</span
+          <div class="file-row">
+            <input
+              id="backup-file"
+              class="file-input"
+              type="file"
+              accept=".age,.dump"
+              [attr.aria-describedby]="
+                backupFileError()
+                  ? 'backup-file-name backup-file-error backup-file-hint'
+                  : 'backup-file-name backup-file-hint'
+              "
+              [attr.aria-invalid]="backupFileError() ? 'true' : null"
+              [disabled]="uploadPercent() !== null"
+              (change)="chooseBackup($event)"
+            />
+            <label
+              class="ui-button file-pick"
+              for="backup-file"
+              aria-hidden="true"
+              i18n="@@operations.setup.restore.pick"
+              >Vybrat soubor</label
             >
+            @if (backupFile(); as file) {
+              <span id="backup-file-name" class="file-name">{{ file.name }}</span>
+            } @else {
+              <span id="backup-file-name" class="file-name" i18n="@@operations.setup.restore.noFile"
+                >Zatím žádný soubor</span
+              >
+            }
+          </div>
+          @if (backupFileError()) {
+            <p id="backup-file-error" class="ui-field-error" role="alert">
+              {{ backupFileError() }}
+            </p>
           }
-        </div>
-        @if (backupFileError()) {
-          <p id="backup-file-error" class="ui-field-error" role="alert">{{ backupFileError() }}</p>
-        }
-        <p id="backup-file-hint" class="restart-note" i18n="@@operations.setup.restore.hint">
-          Soubor se nahraje rovnou na server. Velká záloha se může nahrávat několik minut, stránku
-          mezitím nezavírejte.
-        </p>
-        @if (uploadPercent() !== null) {
-          <p class="restart-note" role="status" i18n="@@operations.setup.restore.uploading">
-            Nahráváme zálohu… {{ uploadPercent() }} %
+          @if (backupEncrypted()) {
+            <app-form-field
+              label="Klíč k zálohám"
+              i18n-label="@@operations.setup.restoreKey"
+              hint="Ten, který jste si uložili ze správy nebo z prvního nastavení původního serveru. Začíná AGE-SECRET-KEY-1."
+              i18n-hint="@@operations.setup.restoreKey.hint"
+              [messages]="restoreKeyMessages"
+            >
+              <app-password-reveal>
+                <input
+                  appFormControl
+                  id="setup-restore-key"
+                  name="restoreKey"
+                  type="password"
+                  autocomplete="off"
+                  spellcheck="false"
+                  maxlength="100"
+                  pattern="\s*[Aa][Gg][Ee]-[Ss][Ee][Cc][Rr][Ee][Tt]-[Kk][Ee][Yy]-1[0-9A-Za-z]{58}\s*"
+                  [(ngModel)]="restoreKey"
+                  required
+                />
+              </app-password-reveal>
+            </app-form-field>
+          }
+          <p id="backup-file-hint" class="restart-note" i18n="@@operations.setup.restore.hint">
+            Soubor se nahraje rovnou na server. Velká záloha se může nahrávat několik minut, stránku
+            mezitím nezavírejte.
           </p>
-        }
-        <div class="restore-actions">
-          <button
-            type="button"
-            class="ui-button ui-button--primary ui-button--block"
-            [disabled]="
-              backupFile() === null || backupFileError() !== '' || uploadPercent() !== null
-            "
-            (click)="uploadBackup()"
-            i18n="@@operations.setup.restore.submit"
-          >
-            Nahrát a obnovit
-          </button>
-          <button
-            type="button"
-            class="ui-button"
-            [disabled]="uploadPercent() !== null"
-            (click)="closeRestore()"
-            i18n="@@operations.setup.restore.back"
-          >
-            Zpět k nastavení
-          </button>
-        </div>
+          @if (uploadPercent() !== null) {
+            <p class="restart-note" role="status" i18n="@@operations.setup.restore.uploading">
+              Nahráváme zálohu… {{ uploadPercent() }} %
+            </p>
+          }
+          <div class="restore-actions">
+            <button
+              type="submit"
+              class="ui-button ui-button--primary ui-button--block"
+              [disabled]="
+                backupFile() === null || backupFileError() !== '' || uploadPercent() !== null
+              "
+              i18n="@@operations.setup.restore.submit"
+            >
+              Nahrát a obnovit
+            </button>
+            <button
+              type="button"
+              class="ui-button"
+              [disabled]="uploadPercent() !== null"
+              (click)="closeRestore()"
+              i18n="@@operations.setup.restore.back"
+            >
+              Zpět k nastavení
+            </button>
+          </div>
+        </form>
       }
       @case ('restoring') {
         <div class="ui-status">
@@ -629,9 +727,9 @@
             Web je obnovený ze zálohy
           </h1>
           <p class="ui-panel__lead" role="status" i18n="@@operations.setup.restored.text">
-            Přihlaste se svým dosavadním účtem správce. Na novém serveru pak ve správě na stránce
-            Nastavení znovu zadejte heslo pro odesílání e-mailů a token Fio: ze zálohy je přečíst
-            nejde, stránka vám ukáže, které chybí.
+            Přihlaste se svým dosavadním účtem správce. Heslo pro odesílání e-mailů a token Fio
+            přenesla záloha spolu s klíčem k zálohám. Jen pokud byla záloha z dřívější verze webu,
+            zadejte je znovu ve správě na stránce Nastavení; stránka vám ukáže, které chybí.
           </p>
           <button
             type="button"

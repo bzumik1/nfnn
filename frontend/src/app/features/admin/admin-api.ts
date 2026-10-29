@@ -3,6 +3,7 @@ import { inject, Injectable } from '@angular/core';
 import { map, Observable } from 'rxjs';
 import { BankAccountItem } from '../donations/bank-accounts-api';
 import { DonationListResponse, DownloadedFile, downloadedFile } from '../donations/donations-api';
+import { PasskeyConfirmation } from '../../core/auth/donor';
 import {
   MailServerRequest,
   TestEmailResponse,
@@ -350,6 +351,22 @@ export interface AdminBackupsResponse {
   restorePending: boolean;
   problems: BackupProblem[];
   schedule: BackupScheduleResponse;
+  key: BackupKeyStatus;
+}
+
+export interface BackupKeyStatus {
+  available: boolean;
+  confirmed: boolean;
+  confirmedAt: string | null;
+}
+
+export interface BackupKeyRevealRequest {
+  secondFactorCode?: string;
+  passkey?: PasskeyConfirmation;
+}
+
+export interface BackupKeyResponse {
+  key: string;
 }
 
 export interface BackupPlan {
@@ -615,6 +632,16 @@ export class AdminApi {
 
   changeBackupSchedule(plan: BackupPlan): Observable<BackupScheduleResponse> {
     return this.http.put<BackupScheduleResponse>('/api/admin/operations/backups/schedule', plan);
+  }
+
+  revealBackupKey(request: BackupKeyRevealRequest): Observable<BackupKeyResponse> {
+    return this.http.post<BackupKeyResponse>('/api/admin/operations/backups/key/reveal', request);
+  }
+
+  confirmBackupKey(check: string): Observable<BackupKeyStatus> {
+    return this.http.post<BackupKeyStatus>('/api/admin/operations/backups/key/confirmation', {
+      check,
+    });
   }
 
   requestBackup(kind: BackupRequestKind): Observable<BackupRequestResponse> {

@@ -35,7 +35,7 @@ class BackupAdministrationServiceTest {
 
     private static final Instant NOW = Instant.parse("2026-10-23T05:15:00Z");
     private static final UUID ADMIN = UUID.fromString("01a18e56-bdb0-775a-bd0a-a60756831369");
-    private static final String FILE = "nfnn-2026-10-23_0300.dump";
+    private static final String FILE = "nfnn-2026-10-23_0300.dump.age";
 
     private final BackupStore store = mock(BackupStore.class);
     private final ApplicationEventPublisher events = mock(ApplicationEventPublisher.class);

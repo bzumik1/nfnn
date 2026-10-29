@@ -2,6 +2,8 @@ package cz.novanadeje.app.operations.infrastructure.backup;
 
 import cz.novanadeje.app.operations.application.backup.RestoreRequest;
 import cz.novanadeje.app.operations.domain.backup.BackupFile;
+import cz.novanadeje.app.operations.domain.backup.BackupKey;
+import cz.novanadeje.app.operations.domain.backup.BackupKeyRequired;
 import cz.novanadeje.app.operations.domain.backup.BackupKind;
 import cz.novanadeje.app.operations.domain.backup.BackupRequestKind;
 import cz.novanadeje.app.operations.domain.backup.BackupSchedule;
@@ -24,6 +26,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.FileTime;
+import java.nio.file.attribute.PosixFilePermissions;
 import java.time.DayOfWeek;
 import java.time.Duration;
 import java.time.Instant;
@@ -43,6 +46,7 @@ class FileBackupStoreTest {
     private static final int MAX_UPLOAD = 64;
     private static final String REQUEST = "019a1b2c-0000-7000-8000-000000000001";
     private static final UUID ADMIN = UUID.fromString("019a1b2c-0000-7000-8000-00000000000a");
+    private static final BackupKey KEY = new BackupKey("AGE-SECRET-KEY-1R45A984EXXAFC85YZSYGY9R6XJTD4E9AKY65ZCRGPDQ89E7ANW8QKT6GWH");
 
     @TempDir
     Path root;
@@ -61,17 +65,17 @@ class FileBackupStoreTest {
     @Test
     @DisplayName("Given dumps and other files in the folder, when the backups are listed, then only the dumps come, newest first, with size and kind")
     void should_list_dumps_newest_first_when_listed_given_mixed_files() throws IOException {
-        write(backups.resolve("nfnn-2026-10-22_0300.dump"), 1000, OLDER);
-        write(backups.resolve("nfnn-2026-10-23_0300.dump"), 1590, NEWER);
-        write(backups.resolve("nfnn-2026-10-23_0633-rucni.dump"), 1590, NEWER.plusSeconds(60));
-        write(backups.resolve("nfnn.dump.part"), 5, NEWER);
+        write(backups.resolve("nfnn-2026-10-22_0300.dump.age"), 1000, OLDER);
+        write(backups.resolve("nfnn-2026-10-23_0300.dump.age"), 1590, NEWER);
+        write(backups.resolve("nfnn-2026-10-23_0633-rucni.dump.age"), 1590, NEWER.plusSeconds(60));
+        write(backups.resolve("nfnn.dump.age.part"), 5, NEWER);
         write(backups.resolve("notes.txt"), 5, NEWER);
         Files.createDirectories(backups.resolve("status"));
 
         List<BackupFile> listed = store.backupsNewestFirst();
 
-        assertThat(listed).extracting(BackupFile::name).containsExactly("nfnn-2026-10-23_0633-rucni.dump", "nfnn-2026-10-23_0300.dump",
-                "nfnn-2026-10-22_0300.dump");
+        assertThat(listed).extracting(BackupFile::name).containsExactly("nfnn-2026-10-23_0633-rucni.dump.age", "nfnn-2026-10-23_0300.dump.age",
+                "nfnn-2026-10-22_0300.dump.age");
         assertThat(listed.getFirst().kind()).isEqualTo(BackupKind.REQUESTED);
         assertThat(listed.getFirst().sizeBytes()).isEqualTo(1590);
         assertThat(listed.getLast().createdAt()).isEqualTo(OLDER);
@@ -81,13 +85,13 @@ class FileBackupStoreTest {
     @DisplayName("Given the status files written by the script, when the runs are read, then each status comes from its file")
     void should_read_runs_when_asked_given_status_files() throws IOException {
         Path status = Files.createDirectories(backups.resolve("status"));
-        Files.writeString(status.resolve("backup"), "outcome=ok\nstarted_at=2026-10-23T01:00:00Z\nfinished_at=2026-10-23T01:00:03Z\nfile=nfnn-2026-10-23_0300.dump\nsize=1590\nrequest=\n");
+        Files.writeString(status.resolve("backup"), "outcome=ok\nstarted_at=2026-10-23T01:00:00Z\nfinished_at=2026-10-23T01:00:03Z\nfile=nfnn-2026-10-23_0300.dump.age\nsize=1590\nrequest=\n");
         Files.writeString(status.resolve("test-restore"), "outcome=failed\nstarted_at=2026-10-18T02:00:00Z\nfinished_at=2026-10-18T02:00:01Z\nerror=no backup to restore\n");
         Files.writeString(status.resolve("backup.err"), "garbage");
 
         assertThat(store.lastBackup()).hasValueSatisfying(run -> {
             assertThat(run.outcome()).isEqualTo(RunOutcome.OK);
-            assertThat(run.fileName()).contains("nfnn-2026-10-23_0300.dump");
+            assertThat(run.fileName()).contains("nfnn-2026-10-23_0300.dump.age");
         });
         assertThat(store.lastTestRestore()).hasValueSatisfying(run -> assertThat(run.error()).contains("no backup to restore"));
         assertThat(store.lastRestore()).isEmpty();
@@ -96,8 +100,8 @@ class FileBackupStoreTest {
     @Test
     @DisplayName("Given dumps in every state in the restore folder, when they are listed, then each has its state, newest change first")
     void should_list_restore_files_when_listed_given_every_state() throws IOException {
-        write(restore.resolve("zaloha.dump"), 10, NEWER);
-        write(restore.resolve("stara.dump.done"), 10, OLDER);
+        write(restore.resolve("zaloha.dump.age"), 10, NEWER);
+        write(restore.resolve("stara.dump.age.done"), 10, OLDER);
         write(restore.resolve("spatna.dump.failed"), 10, OLDER.plusSeconds(1));
         write(restore.resolve("a.dump.skipped"), 10, OLDER.plusSeconds(2));
         write(restore.resolve("README.txt"), 10, NEWER);
@@ -105,10 +109,10 @@ class FileBackupStoreTest {
         List<RestoreFile> listed = store.restoreFilesNewestFirst();
 
         assertThat(listed).extracting(RestoreFile::name, RestoreFile::state).containsExactly(
-                tuple("zaloha.dump", RestoreFileState.PENDING),
+                tuple("zaloha.dump.age", RestoreFileState.PENDING),
                 tuple("a.dump.skipped", RestoreFileState.SKIPPED),
                 tuple("spatna.dump.failed", RestoreFileState.FAILED),
-                tuple("stara.dump.done", RestoreFileState.DONE));
+                tuple("stara.dump.age.done", RestoreFileState.DONE));
         assertThat(listed.getFirst().pending()).isTrue();
     }
 
@@ -147,13 +151,13 @@ class FileBackupStoreTest {
     @Test
     @DisplayName("Given a dump in the folder, when it is opened, then its path and size come back; an unknown or odd name opens nothing")
     void should_open_dump_when_opened_given_it_exists() throws IOException {
-        write(backups.resolve("nfnn-2026-10-23_0300.dump"), 1590, NEWER);
+        write(backups.resolve("nfnn-2026-10-23_0300.dump.age"), 1590, NEWER);
 
-        assertThat(store.open("nfnn-2026-10-23_0300.dump")).hasValueSatisfying(download -> {
-            assertThat(download.path()).isEqualTo(backups.resolve("nfnn-2026-10-23_0300.dump"));
+        assertThat(store.open("nfnn-2026-10-23_0300.dump.age")).hasValueSatisfying(download -> {
+            assertThat(download.path()).isEqualTo(backups.resolve("nfnn-2026-10-23_0300.dump.age"));
             assertThat(download.file().sizeBytes()).isEqualTo(1590);
         });
-        assertThat(store.open("nfnn-2026-10-22_0300.dump")).isEmpty();
+        assertThat(store.open("nfnn-2026-10-22_0300.dump.age")).isEmpty();
         assertThat(store.open("../restore/zaloha.dump")).isEmpty();
     }
 
@@ -163,10 +167,10 @@ class FileBackupStoreTest {
         Files.createDirectories(backups.resolve("requests"));
         assertThat(store.restorePending()).isFalse();
 
-        store.requestRestore(new RestoreRequest(REQUEST, RestoreSource.BACKUP, "nfnn-2026-10-22_0300.dump", Optional.of(ADMIN), NEWER));
+        store.requestRestore(new RestoreRequest(REQUEST, RestoreSource.BACKUP, "nfnn-2026-10-22_0300.dump.age", Optional.of(ADMIN), NEWER));
 
         assertThat(backups.resolve("requests").resolve(REQUEST + ".restore"))
-                .hasContent("source=backup\nfile=nfnn-2026-10-22_0300.dump\nadmin=" + ADMIN + "\n");
+                .hasContent("source=backup\nfile=nfnn-2026-10-22_0300.dump.age\nadmin=" + ADMIN + "\n");
         assertThat(store.restorePending()).isTrue();
         assertThat(store.pendingRequests()).isEqualTo(1);
         assertThat(backups.resolve("requests")).isDirectoryNotContaining("glob:**.part");
@@ -187,7 +191,7 @@ class FileBackupStoreTest {
         Files.createDirectories(backups.resolve("requests"));
         byte[] dump = dump(40);
 
-        String stored = store.storeUpload(REQUEST, new ByteArrayInputStream(dump));
+        String stored = store.storeUpload(REQUEST, new ByteArrayInputStream(dump), Optional.empty());
         store.requestRestore(new RestoreRequest(REQUEST, RestoreSource.UPLOAD, stored, Optional.empty(), NEWER));
 
         assertThat(stored).isEqualTo(REQUEST + ".upload");
@@ -197,11 +201,42 @@ class FileBackupStoreTest {
     }
 
     @Test
+    @DisplayName("Given an encrypted backup uploaded with its key, when it is stored, then the backup and the key lie in the restore folder under the request, the key readable by its owner only")
+    void should_store_upload_and_key_when_stored_given_an_encrypted_backup_and_its_key() throws IOException {
+        byte[] encrypted = encrypted(64);
+
+        String stored = store.storeUpload(REQUEST, new ByteArrayInputStream(encrypted), Optional.of(KEY));
+
+        assertThat(restore.resolve(stored)).hasBinaryContent(encrypted);
+        assertThat(restore.resolve(REQUEST + ".key")).hasContent(KEY.value());
+        assertThat(PosixFilePermissions.toString(Files.getPosixFilePermissions(restore.resolve(REQUEST + ".key")))).isEqualTo("rw-------");
+        assertThat(store.restoreFilesNewestFirst()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Given an encrypted backup uploaded without a key, when it is stored, then it is refused and nothing is left")
+    void should_refuse_upload_when_stored_given_an_encrypted_backup_without_key() {
+        assertThatThrownBy(() -> store.storeUpload(REQUEST, new ByteArrayInputStream(encrypted(64)), Optional.empty()))
+                .isInstanceOf(BackupKeyRequired.class);
+
+        assertThat(restore).isEmptyDirectory();
+    }
+
+    @Test
+    @DisplayName("Given an unencrypted dump uploaded with a key, when it is stored, then only the dump is kept")
+    void should_store_only_the_dump_when_stored_given_an_unencrypted_dump_with_a_key() throws IOException {
+        String stored = store.storeUpload(REQUEST, new ByteArrayInputStream(dump(40)), Optional.of(KEY));
+
+        assertThat(restore.resolve(stored)).exists();
+        assertThat(restore.resolve(REQUEST + ".key")).doesNotExist();
+    }
+
+    @Test
     @DisplayName("Given a file that does not start like a pg_dump archive, when it is stored, then it is refused and nothing is left")
     void should_refuse_upload_when_stored_given_not_a_dump() {
-        assertThatThrownBy(() -> store.storeUpload(REQUEST, new ByteArrayInputStream("\u00ff\u00d8 a photo".getBytes(StandardCharsets.ISO_8859_1))))
+        assertThatThrownBy(() -> store.storeUpload(REQUEST, new ByteArrayInputStream("\u00ff\u00d8 a photo".getBytes(StandardCharsets.ISO_8859_1)), Optional.empty()))
                 .isInstanceOf(NotABackup.class);
-        assertThatThrownBy(() -> store.storeUpload(REQUEST, new ByteArrayInputStream(new byte[0]))).isInstanceOf(NotABackup.class);
+        assertThatThrownBy(() -> store.storeUpload(REQUEST, new ByteArrayInputStream(new byte[0]), Optional.empty())).isInstanceOf(NotABackup.class);
 
         assertThat(restore).isEmptyDirectory();
     }
@@ -209,7 +244,7 @@ class FileBackupStoreTest {
     @Test
     @DisplayName("Given a dump larger than the server takes, when it is stored, then it is refused and nothing is left")
     void should_refuse_upload_when_stored_given_too_large() {
-        assertThatThrownBy(() -> store.storeUpload(REQUEST, new ByteArrayInputStream(dump(MAX_UPLOAD + 1)))).isInstanceOf(BackupTooLarge.class);
+        assertThatThrownBy(() -> store.storeUpload(REQUEST, new ByteArrayInputStream(dump(MAX_UPLOAD + 1)), Optional.empty())).isInstanceOf(BackupTooLarge.class);
 
         assertThat(restore).isEmptyDirectory();
     }
@@ -219,7 +254,7 @@ class FileBackupStoreTest {
     void should_refuse_upload_when_stored_given_no_restore_folder() throws IOException {
         Files.delete(restore);
 
-        assertThatThrownBy(() -> store.storeUpload(REQUEST, new ByteArrayInputStream(dump(10)))).isInstanceOf(BackupsUnavailable.class);
+        assertThatThrownBy(() -> store.storeUpload(REQUEST, new ByteArrayInputStream(dump(10)), Optional.empty())).isInstanceOf(BackupsUnavailable.class);
     }
 
     @Test
@@ -260,6 +295,13 @@ class FileBackupStoreTest {
 
         Files.writeString(status.resolve("schedule"), "backup_time=02:30\ntest_restore_day=8\ntest_restore_time=05:15\n");
         assertThat(store.appliedSchedule()).isEmpty();
+    }
+
+    private static byte[] encrypted(int size) {
+        byte[] bytes = new byte[size];
+        byte[] header = "age-encryption.org/v1\n-> X25519".getBytes(StandardCharsets.US_ASCII);
+        System.arraycopy(header, 0, bytes, 0, Math.min(header.length, size));
+        return bytes;
     }
 
     private static byte[] dump(int size) {

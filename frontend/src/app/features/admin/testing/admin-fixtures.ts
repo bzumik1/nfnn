@@ -314,7 +314,7 @@ export function overview(overrides: Partial<AdminOverviewResponse> = {}): AdminO
 
 export function backupFile(overrides: Partial<BackupFileResponse> = {}): BackupFileResponse {
   return {
-    fileName: 'nfnn-2026-10-23_0300.dump',
+    fileName: 'nfnn-2026-10-23_0300.dump.age',
     kind: 'DAILY',
     sizeBytes: 1590,
     createdAt: '2026-10-23T01:00:03Z',
@@ -327,7 +327,7 @@ export function backupRun(overrides: Partial<BackupRunResponse> = {}): BackupRun
     outcome: 'OK',
     startedAt: '2026-10-23T01:00:00Z',
     finishedAt: '2026-10-23T01:00:03Z',
-    fileName: 'nfnn-2026-10-23_0300.dump',
+    fileName: 'nfnn-2026-10-23_0300.dump.age',
     sizeBytes: 1590,
     tables: null,
     requestId: null,
@@ -342,7 +342,7 @@ export function backupsView(overrides: Partial<AdminBackupsResponse> = {}): Admi
     backups: [
       backupFile(),
       backupFile({
-        fileName: 'nfnn-2026-10-22_0300.dump',
+        fileName: 'nfnn-2026-10-22_0300.dump.age',
         sizeBytes: 1000,
         createdAt: '2026-10-22T01:00:03Z',
       }),
@@ -351,7 +351,7 @@ export function backupsView(overrides: Partial<AdminBackupsResponse> = {}): Admi
     lastTestRestore: backupRun({
       startedAt: '2026-10-18T02:00:00Z',
       finishedAt: '2026-10-18T02:00:05Z',
-      fileName: 'nfnn-2026-10-18_0300.dump',
+      fileName: 'nfnn-2026-10-18_0300.dump.age',
       tables: 37,
     }),
     lastRestore: null,
@@ -360,6 +360,7 @@ export function backupsView(overrides: Partial<AdminBackupsResponse> = {}): Admi
     restorePending: false,
     problems: [],
     schedule: backupSchedule(),
+    key: { available: true, confirmed: true, confirmedAt: '2026-10-23T08:00:00Z' },
     ...overrides,
   };
 }

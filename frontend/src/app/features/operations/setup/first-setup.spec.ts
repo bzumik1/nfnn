@@ -10,6 +10,8 @@ const STATUS_URL = '/api/operations/setup';
 const UNLOCK_URL = '/api/operations/setup/unlock';
 const TEST_EMAIL_URL = '/api/operations/setup/test-email';
 const RESTORE_URL = '/api/operations/setup/restore';
+const BACKUP_KEY_URL = '/api/operations/setup/backup-key';
+const BACKUP_KEY = 'AGE-SECRET-KEY-1R45A984EXXAFC85YZSYGY9R6XJTD4E9AKY65ZCRGPDQ89E7ANW8QKT6GWH';
 const REQUEST_ID = '019a1b2c-0000-7000-8000-000000000001';
 
 function problem(status: number, type: string, title: string, detail: string, extra = {}) {
@@ -70,6 +72,14 @@ describe('Given the first setup page', () => {
   async function status(required: boolean, codeRequired: boolean): Promise<void> {
     http.expectOne(STATUS_URL).flush({ required, codeRequired });
     await settle();
+    if (required && !codeRequired) {
+      await backupKey();
+    }
+  }
+
+  async function backupKey(): Promise<void> {
+    http.expectOne(BACKUP_KEY_URL).flush({ key: BACKUP_KEY });
+    await settle();
   }
 
   async function type(selector: string, value: string): Promise<void> {
@@ -80,8 +90,8 @@ describe('Given the first setup page', () => {
     await settle();
   }
 
-  async function chooseFile(name: string): Promise<File> {
-    const file = new File(['PGDMP'], name, { type: 'application/octet-stream' });
+  async function chooseFile(name: string, content = 'PGDMP'): Promise<File> {
+    const file = new File([content], name, { type: 'application/octet-stream' });
     const input = element<HTMLInputElement>('#backup-file');
     Object.defineProperty(input, 'files', {
       value: { length: 1, item: () => file },
@@ -118,9 +128,10 @@ describe('Given the first setup page', () => {
     await settle();
   }
 
-  async function fillInMailSignIn(): Promise<void> {
+  async function fillInSecrets(): Promise<void> {
     await type('#setup-mail-username', 'abc@smtp-brevo.com');
     await type('#setup-mail-password', 'xsmtpsib-key');
+    await type('#setup-backup-key-check', '6gwh');
   }
 
   async function sendSuccessfulTestEmail(): Promise<void> {
@@ -141,6 +152,7 @@ describe('Given the first setup page', () => {
   it('when the page opens, then it says it is finding out whether the site is set up', () => {
     expect(text('[role="status"]:not(:empty)')).toBe('Zjišťujeme, jestli je web nastavený…');
     http.expectOne(STATUS_URL).flush({ required: true, codeRequired: false });
+    http.expectOne(BACKUP_KEY_URL).flush({ key: BACKUP_KEY });
   });
 
   it('when the site is already set up, then the page says so and points to the administration', async () => {
@@ -200,8 +212,12 @@ describe('Given the first setup page', () => {
       await submit('form');
       http.expectOne(UNLOCK_URL).flush(null, { status: 204, statusText: 'No Content' });
       await settle();
+      const keyRequest = http.expectOne(BACKUP_KEY_URL);
+      expect(keyRequest.request.headers.get('X-Nfnn-Setup-Code')).toBe('k7qm-2xpa-9trd');
+      keyRequest.flush({ key: BACKUP_KEY });
+      await settle();
 
-      await fillInMailSignIn();
+      await fillInSecrets();
       await type('#setup-admin-email', 'spravce@example.cz');
       await submit('form.setup-form');
       button('Uložit i tak').click();
@@ -238,6 +254,7 @@ describe('Given the first setup page', () => {
         'Vyplňte prosím e-mailovou adresu.',
         'Vyplňte prosím přihlašovací jméno ze stránky SMTP v Brevo.',
         'Vyplňte prosím heslo nebo klíč SMTP.',
+        'Opište prosím poslední čtyři znaky klíče.',
       ]);
       http.expectNone(STATUS_URL);
     });
@@ -248,6 +265,7 @@ describe('Given the first setup page', () => {
       element<HTMLInputElement>('input[name="mailAuth"]').click();
       await settle();
       await type('#setup-admin-email', 'spravce@example.cz');
+      await type('#setup-backup-key-check', '6GWH');
       await submit('form.setup-form');
 
       expect(fieldErrors()).toEqual([]);
@@ -263,7 +281,7 @@ describe('Given the first setup page', () => {
 
     describe('when everything is filled in', () => {
       beforeEach(async () => {
-        await fillInMailSignIn();
+        await fillInSecrets();
         await type('#setup-admin-email', 'spravce@example.cz');
       });
 
@@ -354,7 +372,7 @@ describe('Given the first setup page', () => {
     });
 
     it('then a test e-mail without the first administrator is not sent and the empty field is named', async () => {
-      await fillInMailSignIn();
+      await fillInSecrets();
       button('Poslat zkušební e-mail').click();
       await settle();
 
@@ -367,7 +385,7 @@ describe('Given the first setup page', () => {
     });
 
     it('then saving sends every value, waits for the restart and offers the registration', async () => {
-      await fillInMailSignIn();
+      await fillInSecrets();
       await type('#setup-fio-token', ' fio-token ');
       await type('#setup-admin-email', ' spravce@example.cz ');
       await sendSuccessfulTestEmail();
@@ -390,6 +408,7 @@ describe('Given the first setup page', () => {
           { name: 'FIO_TOKEN', value: 'fio-token' },
           { name: 'ADMIN_EMAILS', value: 'spravce@example.cz' },
         ],
+        backupKeyCheck: '6gwh',
       });
       vi.useFakeTimers();
       request.flush({ changed: ['PUBLIC_URL'], restarting: true });
@@ -459,7 +478,7 @@ describe('Given the first setup page', () => {
         await chooseFile('fotka.jpg');
 
         expect(text('#backup-file-error')).toBe(
-          'Tohle není soubor zálohy. Vyberte prosím soubor s příponou .dump.',
+          'Tohle není soubor zálohy. Vyberte prosím soubor s příponou .dump.age (nebo starší .dump).',
         );
         expect(element('#backup-file').getAttribute('aria-describedby')).toContain(
           'backup-file-error',
@@ -492,6 +511,39 @@ describe('Given the first setup page', () => {
         expect(button('Nahrát a obnovit').disabled).toBe(false);
       });
 
+      it('then an encrypted backup asks for its key and sends it beside the file', async () => {
+        await chooseFile('nfnn-2026-10-22_0300.dump.age', 'age-encryption.org/v1');
+        button('Nahrát a obnovit').click();
+        await settle();
+
+        http.expectNone(RESTORE_URL);
+        expect(text('#setup-restore-key-error')).toBe(
+          'Vložte prosím klíč k zálohám, se kterým záloha vznikla.',
+        );
+
+        await type('#setup-restore-key', 'AGE-SECRET-KEY-1TOOSHORT');
+        button('Nahrát a obnovit').click();
+        await settle();
+        http.expectNone(RESTORE_URL);
+        expect(text('#setup-restore-key-error')).toBe(
+          'Klíč začíná AGE-SECRET-KEY-1 a má 74 znaků. Zkontrolujte, že jste ho vložili celý.',
+        );
+
+        await type('#setup-restore-key', ` ${BACKUP_KEY} `);
+        button('Nahrát a obnovit').click();
+        await settle();
+
+        const request = http.expectOne(RESTORE_URL);
+        expect(request.request.headers.get('X-Nfnn-Backup-Key')).toBe(BACKUP_KEY);
+        request.flush({
+          requestId: REQUEST_ID,
+          fileName: `${REQUEST_ID}.upload`,
+          requestedAt: '2026-10-23T18:00:00Z',
+        });
+        await settle();
+        expect(text('h1')).toBe('Obnovujeme web ze zálohy');
+      });
+
       it('then going back shows the form again', async () => {
         button('Zpět k nastavení').click();
         await settle();
@@ -509,7 +561,7 @@ describe('Given the first setup page', () => {
 
         expect(text('h1')).toBe('Web je obnovený ze zálohy');
         expect(text('[role="status"]:not(:empty)')).toContain(
-          'znovu zadejte heslo pro odesílání e-mailů a token Fio',
+          'Heslo pro odesílání e-mailů a token Fio přenesla záloha spolu s klíčem k zálohám.',
         );
         button('Přihlásit se').click();
         const dialog = TestBed.inject(LoginDialogService);
@@ -529,6 +581,9 @@ describe('Given the first setup page', () => {
             error: null,
           },
         });
+        await vi.advanceTimersByTimeAsync(1);
+        fixture.detectChanges();
+        http.expectOne(BACKUP_KEY_URL).flush({ key: BACKUP_KEY });
         await vi.advanceTimersByTimeAsync(1);
         fixture.detectChanges();
 
@@ -574,8 +629,21 @@ describe('Given the first setup page', () => {
       });
     });
 
+    it('then the backup key is shown and saving waits for its last four characters', async () => {
+      expect(text('.backup-key')).toBe(BACKUP_KEY);
+      await fillInSecrets();
+      await type('#setup-admin-email', 'spravce@example.cz');
+      await type('#setup-backup-key-check', 'AAAA');
+      await submit('form.setup-form');
+
+      http.expectNone(STATUS_URL);
+      expect(text('#setup-backup-key-check-error')).toBe(
+        'Znaky nesedí s koncem klíče. Zkontrolujte prosím, že jste uložili celý klíč.',
+      );
+    });
+
     it('then values the backend refuses stand at their fields and the rest is listed', async () => {
-      await fillInMailSignIn();
+      await fillInSecrets();
       await type('#setup-admin-email', 'spravce@example.cz');
       await submit('form.setup-form');
       button('Uložit i tak').click();
@@ -609,5 +677,53 @@ describe('Given the first setup page', () => {
       expect(document.activeElement).toBe(element('#setup-mail-port'));
       expect(text('h1')).toBe('První nastavení webu');
     });
+  });
+});
+
+describe('Given the first setup page on a server whose backup key is not there yet', () => {
+  let fixture: ComponentFixture<FirstSetup>;
+  let http: HttpTestingController;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [FirstSetup],
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])],
+    }).compileComponents();
+    http = TestBed.inject(HttpTestingController);
+    fixture = TestBed.createComponent(FirstSetup);
+    fixture.detectChanges();
+    http.expectOne(STATUS_URL).flush({ required: true, codeRequired: false });
+    await fixture.whenStable();
+    fixture.detectChanges();
+  });
+
+  afterEach(() => http.verify());
+
+  it('when the key cannot be found, then the page says the backups wait and saving sends no characters', async () => {
+    const missing = problem(409, 'operations/backup-key-unavailable', 'Klíč chybí', '');
+    http.expectOne(BACKUP_KEY_URL).flush(missing.body, missing.options);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('Klíč k zálohám se ještě nevytvořil');
+    expect(fixture.nativeElement.querySelector('#setup-backup-key-check')).toBeNull();
+  });
+
+  it('when the key fails to load, then it can be loaded again', async () => {
+    http.expectOne(BACKUP_KEY_URL).flush('', { status: 502, statusText: 'Bad Gateway' });
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('Klíč k zálohám se nepodařilo načíst.');
+    const retry = Array.from(
+      fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>,
+    ).find((candidate) => candidate.textContent?.trim() === 'Načíst znovu');
+    retry?.click();
+    await fixture.whenStable();
+    http.expectOne(BACKUP_KEY_URL).flush({ key: BACKUP_KEY });
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('#setup-backup-key-check')).not.toBeNull();
   });
 });

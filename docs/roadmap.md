@@ -69,7 +69,7 @@ Mimo očíslované úkoly:
 Mimo očíslované úkoly:
 
 - Přístupové klíče: přihlášení klíčem, účet jen s klíči, přejmenování klíčů (#113, #119, #120); druhý faktor pro změny faktorů správce a pro připojení aplikace (#117, #146); vypnutí druhého faktoru platbou 1 Kč (#147); odmítání běžných hesel (#142).
-- První nastavení serveru v prohlížeči místo env souborů (#116), obnova ze zálohy v prohlížeči (#121), plán záloh ve správě (#145), podpis potvrzení nahraný ve správě (#123), silnější komprese záloh (#80).
+- První nastavení serveru v prohlížeči místo env souborů (#116), obnova ze zálohy v prohlížeči (#121), plán záloh ve správě (#145), podpis potvrzení nahraný ve správě (#123), silnější komprese záloh (#80), šifrované zálohy s klíčem v prvním nastavení a ve správě, které nesou i heslo k poště a token Fio (#162).
 - Postranní panel správy a účtu dárce (#109, #122), cíl po přihlášení (#103), čtení nebo změny při připojení aplikace (#102), součty všech přijatých darů (#106), hledání bez diakritiky, historie česky, volitelná hodina přehledu (#139), Markdown a popisky fotek (#143), staré adresy obsahu, mazání nepoužitých fotek, seznamy po stránkách (#144), e-maily k účtu a opakování upozornění (#134).
 - Bezpečnostní audit: vlastní databázová role, zpevněné kontejnery, jedna síť `nfnn-edge`, role správce jen s potvrzeným e-mailem (#125, #148, #149, #150).
 - Vzhled a přístupnost: české adresy (#78), vzhled QR kódu (#101), fotka a ikona (#107, #111), vyměnitelný vzhled a sdílené bloky (#124, #126, #127, #132, #136, #138, #140), přístupnost pro klávesnici, čtečky a zvětšení (#133), audit přehlednosti celého webu (#151–#156), zkušební e-mail z nastavení pošty a nastavení seřazené podle četnosti (#157), karta „Přihlášení a zabezpečení“, dary po letech a čekající změna e-mailu v účtu dárce (#183), editor aktualit a projektů s náhledem a lištou akcí (#185).
@@ -87,7 +87,7 @@ Zbývá před spuštěním na nfnn.cz:
 - Skutečný obsah úvodní stránky (texty, příběhy, čísla, fotky) od Jakuba a Pavla; rozhodnout o „100 % transparentně“ a o vlastních fotkách místo fotobanky.
 - Řádek „Výroční zprávy“ v O nás, až budou PDF.
 - Přechod na doménu nfnn.cz na serveru (postup v `deploy/README.md`).
-- Hlídání dostupnosti zvenčí; kopie záloh mimo server až po spuštění (šifrované, viz „Šifrované zálohy“ v backlogu).
+- Hlídání dostupnosti zvenčí; kopie záloh mimo server až po spuštění (zálohy jsou už šifrované; Jakub vybírá úložiště: Cloudflare R2, iCloud přes zkratku v iPhonu, nebo obojí).
 - Sběrné účty a vlastní účty fondu vyloučit z párování (`/sprava/nastaveni`).
 - Odemčení historie ve Fio a hluboký import do 1. 1. 2027, aby potvrzení za rok 2026 obsahovala všechny dary.
 - Odpovědi od Pavla: seznam dřívějších VS dárců, zda fond vystavil potvrzení za rok 2025 (pak potvrzení na webu i za 2025), zda je účet transparentní.
@@ -198,7 +198,6 @@ Veřejný web a provoz:
 - Jedna hláška „Web se právě aktualizuje“ při restartu serveru.
 - E-mail při docházejícím místě na disku.
 - Smazání registrací, které nikdo nepotvrdil do 30 dnů.
-- Šifrované zálohy (Jakub 28. 10. 2026): každá záloha je zašifrovaná; dnes jsou výpisy databáze nešifrované a zapečetěné jsou jen heslo k poště a token Fio. Klíč vznikne v prvním nastavení, které nepokračuje, dokud správce nepotvrdí, že si ho uložil (opíše jeho poslední 4 znaky; nabídne se stažení nebo tisk). Klíč zůstává i na serveru, takže zkušební obnova a obnova ve správě fungují dál. Ve správě u záloh ho jde zobrazit jen z prohlížeče, každé zobrazení vyžaduje nové ověření druhým faktorem (kód nebo passkey), zapíše se do historie a konektor k němu nemá přístup. Dokud správce uložení nepotvrdí, správa ho upozorňuje. K rozhodnutí: zda klíč chrání i klíč nastavení, aby obnova na novém serveru zachovala heslo k poště a token Fio. Je to první krok záloh mimo server, ať vyhraje jakékoli úložiště.
 
 ### Možná později
 

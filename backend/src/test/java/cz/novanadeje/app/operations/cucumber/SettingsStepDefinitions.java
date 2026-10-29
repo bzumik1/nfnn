@@ -3,6 +3,7 @@ package cz.novanadeje.app.operations.cucumber;
 import cz.novanadeje.app.cucumber.ApiClient;
 import cz.novanadeje.app.cucumber.DonorSessions;
 import cz.novanadeje.app.cucumber.ScenarioDonors;
+import cz.novanadeje.app.operations.application.backup.BackupKeySource;
 import cz.novanadeje.app.support.FakeMailServerProbe;
 import cz.novanadeje.app.support.RecordingApplicationRestarter;
 import cz.novanadeje.app.support.RecordingSetupCodeAnnouncer;
@@ -33,15 +34,17 @@ public class SettingsStepDefinitions {
     private final RecordingApplicationRestarter restarter;
     private final JdbcClient jdbc;
     private final ScenarioDonors donors;
+    private final BackupKeySource backupKeys;
 
     public SettingsStepDefinitions(ApiClient api, DonorSessions sessions, RecordingSetupCodeAnnouncer announcer,
-                                   RecordingApplicationRestarter restarter, JdbcClient jdbc, ScenarioDonors donors) {
+                                   RecordingApplicationRestarter restarter, JdbcClient jdbc, ScenarioDonors donors, BackupKeySource backupKeys) {
         this.api = api;
         this.sessions = sessions;
         this.announcer = announcer;
         this.restarter = restarter;
         this.jdbc = jdbc;
         this.donors = donors;
+        this.backupKeys = backupKeys;
     }
 
     @Before
@@ -95,12 +98,22 @@ public class SettingsStepDefinitions {
 
     @When("the first setup is completed with:")
     public void theFirstSetupIsCompletedWith(DataTable settings) {
+        api.post(SETUP, Map.of("settings", values(settings), "backupKeyCheck", backupKeyCheck()));
+    }
+
+    @When("the first setup is completed with the backup key characters {string} and:")
+    public void theFirstSetupIsCompletedWithTheBackupKeyCharacters(String characters, DataTable settings) {
+        api.post(SETUP, Map.of("settings", values(settings), "backupKeyCheck", characters));
+    }
+
+    @When("the first setup is completed without the backup key characters and:")
+    public void theFirstSetupIsCompletedWithoutTheBackupKeyCharacters(DataTable settings) {
         api.post(SETUP, Map.of("settings", values(settings)));
     }
 
     @When("the first setup is completed with the code from the container log and:")
     public void theFirstSetupIsCompletedWithTheCodeAnd(DataTable settings) {
-        api.post(SETUP, Map.of("code", announcer.announced().value(), "settings", values(settings)));
+        api.post(SETUP, Map.of("code", announcer.announced().value(), "settings", values(settings), "backupKeyCheck", backupKeyCheck()));
     }
 
     @Given("the first setup was completed")
@@ -113,7 +126,7 @@ public class SettingsStepDefinitions {
                 List.of("MAIL_PORT", "587"),
                 List.of("MAIL_FROM", "info@nfnn.cz"),
                 List.of("CONTACT_RECIPIENT", "info@nfnn.cz"),
-                List.of("ADMIN_EMAILS", "spravce@example.cz")))));
+                List.of("ADMIN_EMAILS", "spravce@example.cz"))), "backupKeyCheck", backupKeyCheck()));
         assertThat(api.lastResponse().getStatusCode().value()).withFailMessage("The setup answered %s", api.lastResponse().getBody()).isEqualTo(202);
         restarter.reset();
     }
@@ -266,6 +279,10 @@ public class SettingsStepDefinitions {
         String details = jdbc.sql("select details from admin_action where action = ? and admin_id = ?").param(action).param(donors.idOf(alias))
                 .query(String.class).single();
         assertThat(details).doesNotContain(FakeMailServerProbe.PASSWORD);
+    }
+
+    private String backupKeyCheck() {
+        return backupKeys.current().orElseThrow(() -> new AssertionError("The test backend has no backup key")).lastCharacters();
     }
 
     private JsonNode setting(String name) {

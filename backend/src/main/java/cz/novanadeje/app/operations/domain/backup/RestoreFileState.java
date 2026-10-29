@@ -1,9 +1,12 @@
 package cz.novanadeje.app.operations.domain.backup;
 
+import java.util.List;
 import java.util.Optional;
 
 public enum RestoreFileState {
-    PENDING(".dump"), DONE(".dump.done"), FAILED(".dump.failed"), SKIPPED(".dump.skipped");
+    PENDING(""), DONE(".done"), FAILED(".failed"), SKIPPED(".skipped");
+
+    private static final List<String> DUMP_EXTENSIONS = List.of(".dump", ".dump.age");
 
     private final String suffix;
 
@@ -13,8 +16,10 @@ public enum RestoreFileState {
 
     public static Optional<RestoreFileState> ofFileName(String fileName) {
         for (RestoreFileState state : values()) {
-            if (fileName.endsWith(state.suffix)) {
-                return Optional.of(state);
+            for (String extension : DUMP_EXTENSIONS) {
+                if (fileName.endsWith(extension + state.suffix)) {
+                    return Optional.of(state);
+                }
             }
         }
         return Optional.empty();

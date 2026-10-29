@@ -24,6 +24,7 @@ import {
   AdminApi,
   AdminBackupsResponse,
   BackupFileResponse,
+  BackupKeyStatus,
   BackupKind,
   BackupRequestKind,
   BackupRunResponse,
@@ -32,6 +33,7 @@ import {
 } from '../admin-api';
 import { formatSize } from './backup-format';
 import { formatPlanTime, onDay } from './backup-plan';
+import { BackupKeyCard } from './backup-key-card';
 import { BackupScheduleCard } from './backup-schedule-card';
 import { BACKUP_PROBLEM_HELP, BACKUP_PROBLEM_TEXTS } from './backup-texts';
 import { RestoreDialog } from './restore-dialog';
@@ -74,7 +76,7 @@ function failedAt(at: string): string {
 
 @Component({
   selector: 'app-admin-backups',
-  imports: [LiveNotice, RestoreDialog, BackupScheduleCard, NgTemplateOutlet],
+  imports: [LiveNotice, RestoreDialog, BackupKeyCard, BackupScheduleCard, NgTemplateOutlet],
   templateUrl: './admin-backups.html',
   styleUrl: './admin-backups.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -117,6 +119,7 @@ export class AdminBackups {
   protected readonly lastRestore = computed(() => this.describeRestore(this.view()?.lastRestore));
   protected readonly restorePending = computed(() => this.view()?.restorePending ?? false);
   protected readonly schedule = computed(() => this.view()?.schedule ?? null);
+  protected readonly key = computed(() => this.view()?.key ?? null);
   protected readonly actionsDisabled = computed(
     () => !this.available() || this.job() !== null || this.restorePending(),
   );
@@ -153,6 +156,10 @@ export class AdminBackups {
 
   protected scheduleSaved(schedule: BackupScheduleResponse): void {
     this.view.update((view) => (view === null ? view : { ...view, schedule }));
+  }
+
+  protected keyChanged(key: BackupKeyStatus): void {
+    this.view.update((view) => (view === null ? view : { ...view, key }));
   }
 
   protected kindName(item: BackupFileResponse): string {

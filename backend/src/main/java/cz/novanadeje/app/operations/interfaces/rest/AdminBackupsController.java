@@ -2,9 +2,11 @@ package cz.novanadeje.app.operations.interfaces.rest;
 
 import cz.novanadeje.app.operations.application.backup.BackupAdministrationService;
 import cz.novanadeje.app.operations.application.backup.BackupDownload;
+import cz.novanadeje.app.operations.application.backup.BackupKeyService;
 import cz.novanadeje.app.operations.application.backup.BackupRestoreService;
 import cz.novanadeje.app.operations.application.backup.BackupScheduleService;
 import cz.novanadeje.app.operations.domain.backup.BackupFile;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Size;
 import org.springframework.core.io.FileSystemResource;
@@ -39,16 +41,35 @@ class AdminBackupsController {
     private final BackupAdministrationService backups;
     private final BackupRestoreService restores;
     private final BackupScheduleService schedules;
+    private final BackupKeyService keys;
+    private final BackupKeyRateLimiter keyRateLimiter;
 
-    AdminBackupsController(BackupAdministrationService backups, BackupRestoreService restores, BackupScheduleService schedules) {
+    AdminBackupsController(BackupAdministrationService backups, BackupRestoreService restores, BackupScheduleService schedules, BackupKeyService keys,
+                           BackupKeyRateLimiter keyRateLimiter) {
         this.backups = backups;
         this.restores = restores;
         this.schedules = schedules;
+        this.keys = keys;
+        this.keyRateLimiter = keyRateLimiter;
     }
 
     @GetMapping
     AdminBackupsResponse backups() {
-        return AdminBackupsResponse.from(backups.view(), schedules.view());
+        return AdminBackupsResponse.from(backups.view(), schedules.view(), keys.view());
+    }
+
+    @PostMapping("/key/reveal")
+    ResponseEntity<BackupKeyResponse> revealKey(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody BackupKeyRevealRequest request, HttpServletRequest http) {
+        keyRateLimiter.check(http.getRemoteAddr());
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CACHE_CONTROL, NOT_STORED_BY_ANY_CACHE)
+                .body(BackupKeyResponse.of(keys.reveal(admin(jwt), request.toProof())));
+    }
+
+    @PostMapping("/key/confirmation")
+    AdminBackupsResponse.Key confirmKey(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody BackupKeyConfirmationRequest request, HttpServletRequest http) {
+        keyRateLimiter.check(http.getRemoteAddr());
+        return AdminBackupsResponse.Key.from(keys.confirm(admin(jwt), request.check()));
     }
 
     @PutMapping("/schedule")

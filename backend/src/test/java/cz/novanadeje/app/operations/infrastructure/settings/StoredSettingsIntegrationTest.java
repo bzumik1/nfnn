@@ -4,6 +4,7 @@ import com.zaxxer.hikari.HikariDataSource;
 import cz.novanadeje.app.TestcontainersConfiguration;
 import cz.novanadeje.app.operations.application.settings.SettingsValidator;
 import cz.novanadeje.app.operations.application.settings.SettingsWriter;
+import cz.novanadeje.app.operations.domain.settings.CarriedSettingsKey;
 import cz.novanadeje.app.operations.domain.settings.Setting;
 import cz.novanadeje.app.operations.domain.settings.SettingChange;
 import cz.novanadeje.app.operations.domain.settings.SettingError;
@@ -20,6 +21,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 import javax.sql.DataSource;
 import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.Base64;
 import java.util.List;
@@ -35,6 +37,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class StoredSettingsIntegrationTest {
 
     private static final Instant NOW = Instant.parse("2026-10-23T16:00:00Z");
+    private static final String OTHER_SETTINGS_KEY = Base64.getEncoder().encodeToString("another-key-of-thirty-two-bytes!".getBytes());
+    private static final String BACKUP_KEY = "AGE-SECRET-KEY-1R45A984EXXAFC85YZSYGY9R6XJTD4E9AKY65ZCRGPDQ89E7ANW8QKT6GWH";
+    private static final String OTHER_BACKUP_KEY = "AGE-SECRET-KEY-1ARXU2VF0GAFA8YLTUXNPDZE0UV33WNCJJEUWM3C2RKSR7A829JTS8HRKXT";
 
     @Autowired
     private SettingsValidator validator;
@@ -57,6 +62,7 @@ class StoredSettingsIntegrationTest {
     @AfterEach
     void clean() {
         jdbc.sql("delete from operations_setting").update();
+        jdbc.sql("delete from operations_carried_settings_key").update();
     }
 
     @Test
@@ -97,10 +103,42 @@ class StoredSettingsIntegrationTest {
         transactions.executeWithoutResult(status -> writer.apply(List.of(new SettingChange(Setting.MAIL_HOST, "smtp.example.cz"),
                 new SettingChange(Setting.MAIL_PASSWORD, "password")), List.of(), NOW));
 
-        MockEnvironment next = nextStart(Base64.getEncoder().encodeToString("another-key-of-thirty-two-bytes!".getBytes()));
+        MockEnvironment next = nextStart(OTHER_SETTINGS_KEY);
         new DatabaseSettingsEnvironmentPostProcessor(destination -> destination.get()).postProcessEnvironment(next, null);
 
         assertThat(next.getProperty("MAIL_HOST")).isEqualTo("smtp.example.cz");
+        assertThat(next.getProperty("MAIL_PASSWORD")).isNull();
+    }
+
+    @Test
+    @DisplayName("Given secrets of another server whose settings key the backup carries under this backup key, when the next start reads them, then they are read")
+    void should_read_secret_when_started_given_settings_key_carried_under_backup_key() throws SQLException {
+        transactions.executeWithoutResult(status -> writer.apply(List.of(new SettingChange(Setting.MAIL_PASSWORD, "password"),
+                new SettingChange(Setting.FIO_TOKEN, "fio-token")), List.of(), NOW));
+        String oldSettingsKey = environment.getProperty(DatabaseSettingsEnvironmentPostProcessor.KEY_PROPERTY);
+        CarriedSettingsKey carried = BackupKeySettingsKeyCarrier.of(oldSettingsKey, BACKUP_KEY).carryCurrentKey(NOW);
+        jdbc.sql("insert into operations_carried_settings_key (id, wrapped, stored_at) values (1, ?, ?)")
+                .params(carried.wrapped(), Timestamp.from(NOW)).update();
+
+        MockEnvironment next = nextStart(OTHER_SETTINGS_KEY).withProperty(DatabaseSettingsEnvironmentPostProcessor.BACKUP_KEY_PROPERTY, BACKUP_KEY);
+        new DatabaseSettingsEnvironmentPostProcessor(destination -> destination.get()).postProcessEnvironment(next, null);
+
+        assertThat(next.getProperty("MAIL_PASSWORD")).isEqualTo("password");
+        assertThat(next.getProperty("FIO_TOKEN")).isEqualTo("fio-token");
+    }
+
+    @Test
+    @DisplayName("Given a carried settings key under another backup key, when the next start reads the settings, then the secrets stay unreadable")
+    void should_skip_secret_when_started_given_settings_key_carried_under_other_backup_key() throws SQLException {
+        transactions.executeWithoutResult(status -> writer.apply(List.of(new SettingChange(Setting.MAIL_PASSWORD, "password")), List.of(), NOW));
+        CarriedSettingsKey carried = BackupKeySettingsKeyCarrier.of(environment.getProperty(DatabaseSettingsEnvironmentPostProcessor.KEY_PROPERTY),
+                OTHER_BACKUP_KEY).carryCurrentKey(NOW);
+        jdbc.sql("insert into operations_carried_settings_key (id, wrapped, stored_at) values (1, ?, ?)")
+                .params(carried.wrapped(), Timestamp.from(NOW)).update();
+
+        MockEnvironment next = nextStart(OTHER_SETTINGS_KEY).withProperty(DatabaseSettingsEnvironmentPostProcessor.BACKUP_KEY_PROPERTY, BACKUP_KEY);
+        new DatabaseSettingsEnvironmentPostProcessor(destination -> destination.get()).postProcessEnvironment(next, null);
+
         assertThat(next.getProperty("MAIL_PASSWORD")).isNull();
     }
 

@@ -96,7 +96,7 @@ Feature: An administrator connects an application such as Claude to the administ
     When the exchanged API token reads the account of the administrator
     Then the response status is 403
     And the problem type ends with "auth/forbidden"
-    When the exchanged API token tries to download the backup "nfnn-2026-10-23_0300.dump"
+    When the exchanged API token tries to download the backup "nfnn-2026-10-23_0300.dump.age"
     Then the response status is 403
     And the problem type ends with "auth/forbidden"
     When the exchanged API token lists the backups
@@ -112,20 +112,22 @@ Feature: An administrator connects an application such as Claude to the administ
     And the problem type ends with "auth/forbidden"
 
     Examples:
-      | method | path                                                     |
-      | DELETE | /api/admin/donors/{id}                                   |
-      | POST   | /api/admin/donors/administrators                         |
-      | DELETE | /api/admin/donors/administrators/{id}                    |
-      | POST   | /api/admin/donors/{id}/second-factor/reset               |
-      | DELETE | /api/admin/donors/{id}/passkeys                          |
-      | DELETE | /api/admin/content/news/{id}                             |
-      | DELETE | /api/admin/content/projects/{id}                         |
-      | DELETE | /api/admin/donations/donors/{id}/bank-accounts/{id}      |
-      | POST   | /api/admin/donations/symbol-claims/{id}/reverse          |
-      | DELETE | /api/admin/donations/symbol-claims/{id}                  |
-      | POST   | /api/admin/operations/backups/nfnn-2026-10-23_0300.dump/restore |
-      | POST   | /api/admin/donations/receipt-signature                   |
-      | DELETE | /api/admin/donations/receipt-signature                   |
+      | method | path                                                                |
+      | DELETE | /api/admin/donors/{id}                                              |
+      | POST   | /api/admin/donors/administrators                                    |
+      | DELETE | /api/admin/donors/administrators/{id}                               |
+      | POST   | /api/admin/donors/{id}/second-factor/reset                          |
+      | DELETE | /api/admin/donors/{id}/passkeys                                     |
+      | DELETE | /api/admin/content/news/{id}                                        |
+      | DELETE | /api/admin/content/projects/{id}                                    |
+      | DELETE | /api/admin/donations/donors/{id}/bank-accounts/{id}                 |
+      | POST   | /api/admin/donations/symbol-claims/{id}/reverse                     |
+      | DELETE | /api/admin/donations/symbol-claims/{id}                             |
+      | POST   | /api/admin/operations/backups/nfnn-2026-10-23_0300.dump.age/restore |
+      | POST   | /api/admin/donations/receipt-signature                              |
+      | POST   | /api/admin/operations/backups/key/reveal                            |
+      | POST   | /api/admin/operations/backups/key/confirmation                      |
+      | DELETE | /api/admin/donations/receipt-signature                              |
 
   Scenario: A donor without the administrator role cannot connect an application
     When "Petr" approves the connection for "https://claude.ai/.well-known/oauth-client" with scope "admin:read" and state "xyz"

@@ -1,0 +1,22 @@
+<p
+  class="backup-key ui-mono"
+  i18n-aria-label="@@operations.backupKey.value"
+  aria-label="Klíč k zálohám"
+>
+  {{ key() }}
+</p>
+<div class="backup-key-actions">
+  <app-copy-button [value]="key()" [what]="what" />
+  <button
+    type="button"
+    class="ui-button ui-button--small backup-key-download"
+    (click)="download()"
+    i18n="@@operations.backupKey.download"
+  >
+    Stáhnout jako soubor
+  </button>
+</div>
+<p class="backup-key-hint" i18n="@@operations.backupKey.hint">
+  Uložte ho do správce hesel, nebo si ho vytiskněte a schovejte. Na serveru ho nenechávejte jako
+  jedinou kopii: když server odejde, odejde s ním.
+</p>

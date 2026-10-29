@@ -475,6 +475,21 @@ describe('Given an administrator on the administration home', () => {
       expect(attention().querySelector('.healthy')).toBeNull();
     });
 
+    it('then a backup key nobody saved yet gets a row leading to the backups', async () => {
+      await sources(
+        paymentList([]),
+        [administrator()],
+        backupsView({ key: { available: true, confirmed: false, confirmedAt: null } }),
+      );
+
+      expect(items()).toEqual([
+        'Klíč k zálohám si zatím nikdo neuložil. Bez něj žádnou zálohu neobnovíte. Uložit klíč',
+      ]);
+      expect(attention().querySelector('a')?.getAttribute('href')).toBe(
+        '/sprava/zalohy#klic-k-zaloham',
+      );
+    });
+
     it('then a source that fails says so with a retry while the others still show', async () => {
       http.expectOne(IMPORT_STATE_URL).flush(importState());
       http.expectOne(BACKUPS_URL).flush(backupsView());

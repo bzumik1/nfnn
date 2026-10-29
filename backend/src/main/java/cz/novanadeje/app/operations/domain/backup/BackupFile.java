@@ -9,13 +9,13 @@ public record BackupFile(String name, long sizeBytes, Instant createdAt) {
 
     public static final int MAX_NAME_LENGTH = 80;
 
-    private static final Pattern NAME = Pattern.compile("nfnn-\\d{4}-\\d{2}-\\d{2}_\\d{4}(-[a-z0-9-]{1,40})?\\.dump");
+    private static final Pattern NAME = Pattern.compile("nfnn-\\d{4}-\\d{2}-\\d{2}_\\d{4}(-[a-z0-9-]{1,40})?\\.dump\\.age");
     private static final String REQUESTED_SUFFIX = "-rucni";
     private static final String BEFORE_RESTORE_SUFFIX = "-pred-obnovou";
 
     public BackupFile {
         if (!isValidName(name)) {
-            throw new IllegalArgumentException("A backup is named nfnn-<date>_<time>[-<suffix>].dump");
+            throw new IllegalArgumentException("A backup is named nfnn-<date>_<time>[-<suffix>].dump.age");
         }
         if (sizeBytes < 0) {
             throw new IllegalArgumentException("A backup's size is not negative");

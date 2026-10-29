@@ -7,7 +7,7 @@ const REQUESTS = '/api/admin/operations/backups/requests';
 
 function backupFile(overrides: Record<string, unknown> = {}) {
   return {
-    fileName: 'nfnn-2026-10-23_0300.dump',
+    fileName: 'nfnn-2026-10-23_0300.dump.age',
     kind: 'DAILY',
     sizeBytes: 1590,
     createdAt: '2026-10-23T01:00:03Z',
@@ -20,7 +20,7 @@ function backupRun(overrides: Record<string, unknown> = {}) {
     outcome: 'OK',
     startedAt: '2026-10-23T01:00:00Z',
     finishedAt: '2026-10-23T01:00:03Z',
-    fileName: 'nfnn-2026-10-23_0300.dump',
+    fileName: 'nfnn-2026-10-23_0300.dump.age',
     sizeBytes: 1590,
     tables: null,
     requestId: null,
@@ -35,7 +35,7 @@ function backupsView(overrides: Record<string, unknown> = {}) {
     backups: [
       backupFile(),
       backupFile({
-        fileName: 'nfnn-2026-10-22_0300.dump',
+        fileName: 'nfnn-2026-10-22_0300.dump.age',
         sizeBytes: 1000,
         createdAt: '2026-10-22T01:00:03Z',
       }),
@@ -44,7 +44,7 @@ function backupsView(overrides: Record<string, unknown> = {}) {
     lastTestRestore: backupRun({
       startedAt: '2026-10-18T02:00:00Z',
       finishedAt: '2026-10-18T02:00:05Z',
-      fileName: 'nfnn-2026-10-18_0300.dump',
+      fileName: 'nfnn-2026-10-18_0300.dump.age',
       tables: 37,
     }),
     lastRestore: null,
@@ -58,6 +58,7 @@ function backupsView(overrides: Record<string, unknown> = {}) {
       testRestoreTime: '04:00',
       applied: { backupTime: '03:00', testRestoreDay: 7, testRestoreTime: '04:00' },
     },
+    key: { available: true, confirmed: true, confirmedAt: '2026-10-23T08:00:00Z' },
     ...overrides,
   };
 }
@@ -84,13 +85,13 @@ test.describe('Given an administrator on the backups page', () => {
       (route) => route.fulfill({ json: backupsView() }),
     );
     await page.route(
-      (url) => url.pathname === `${BACKUPS}/nfnn-2026-10-22_0300.dump`,
+      (url) => url.pathname === `${BACKUPS}/nfnn-2026-10-22_0300.dump.age`,
       (route) =>
         route.fulfill({
           status: 200,
           headers: {
             'Content-Type': 'application/octet-stream',
-            'Content-Disposition': 'attachment; filename="nfnn-2026-10-22_0300.dump"',
+            'Content-Disposition': 'attachment; filename="nfnn-2026-10-22_0300.dump.age"',
           },
           body: Buffer.from('PGDMP'),
         }),
@@ -106,13 +107,63 @@ test.describe('Given an administrator on the backups page', () => {
 
     const [download] = await Promise.all([
       page.waitForEvent('download'),
-      page.getByRole('button', { name: 'Stáhnout nfnn-2026-10-22_0300.dump' }).click(),
+      page.getByRole('button', { name: 'Stáhnout nfnn-2026-10-22_0300.dump.age' }).click(),
     ]);
 
-    expect(download.suggestedFilename()).toBe('nfnn-2026-10-22_0300.dump');
+    expect(download.suggestedFilename()).toBe('nfnn-2026-10-22_0300.dump.age');
     await expect(
-      page.getByRole('button', { name: 'Stáhnout nfnn-2026-10-22_0300.dump' }),
+      page.getByRole('button', { name: 'Stáhnout nfnn-2026-10-22_0300.dump.age' }),
     ).toBeEnabled();
+  });
+
+  test('when they show the backup key with a code and confirm saving it, then the key hides and the warning goes', async ({
+    page,
+  }) => {
+    const key = 'AGE-SECRET-KEY-1R45A984EXXAFC85YZSYGY9R6XJTD4E9AKY65ZCRGPDQ89E7ANW8QKT6GWH';
+    const revealed: unknown[] = [];
+    const confirmed: unknown[] = [];
+    await page.route(
+      (url) => url.pathname === BACKUPS,
+      (route) =>
+        route.fulfill({
+          json: backupsView({ key: { available: true, confirmed: false, confirmedAt: null } }),
+        }),
+    );
+    await page.route(
+      (url) => url.pathname === `${BACKUPS}/key/reveal`,
+      (route) => {
+        revealed.push(route.request().postDataJSON());
+        return route.fulfill({ json: { key } });
+      },
+    );
+    await page.route(
+      (url) => url.pathname === `${BACKUPS}/key/confirmation`,
+      (route) => {
+        confirmed.push(route.request().postDataJSON());
+        return route.fulfill({
+          json: { available: true, confirmed: true, confirmedAt: '2026-10-28T09:00:00Z' },
+        });
+      },
+    );
+
+    await page.goto('/sprava/zalohy');
+    await expect(page.getByText('Klíč si zatím nikdo neuložil.')).toBeVisible();
+    await page.getByRole('button', { name: 'Zobrazit klíč…' }).click();
+    await page.locator('#backup-key-code').fill('123456');
+    await page.getByRole('button', { name: 'Zobrazit klíč', exact: true }).click();
+
+    await expect(page.locator('.backup-key')).toHaveText(key);
+    expect(revealed).toEqual([{ secondFactorCode: '123456' }]);
+    await page.locator('#backup-key-check').fill('6gwh');
+    await page.getByRole('button', { name: 'Potvrdit uložení' }).click();
+
+    await expect(page.getByRole('status').filter({ hasText: /\S/ })).toContainText(
+      'uložení klíče jsme si poznamenali',
+    );
+    expect(confirmed).toEqual([{ check: '6gwh' }]);
+    await expect(page.locator('.backup-key')).toHaveCount(0);
+    await expect(page.getByText('Klíč si zatím nikdo neuložil.')).toHaveCount(0);
+    await expect(page.getByText('Uložení klíče jste potvrdili 28. 10. 2026 10:00.')).toBeVisible();
   });
 
   test('when they start a backup, then the request is posted and the page reports the finished dump', async ({
@@ -131,14 +182,14 @@ test.describe('Given an administrator on the backups page', () => {
         view = backupsView({
           backups: [
             backupFile({
-              fileName: 'nfnn-2026-10-23_1000-rucni.dump',
+              fileName: 'nfnn-2026-10-23_1000-rucni.dump.age',
               kind: 'REQUESTED',
               createdAt: '2026-10-23T08:00:04Z',
             }),
             ...backupsView().backups,
           ],
           lastBackup: backupRun({
-            fileName: 'nfnn-2026-10-23_1000-rucni.dump',
+            fileName: 'nfnn-2026-10-23_1000-rucni.dump.age',
             finishedAt: '2026-10-23T08:00:04Z',
             requestId: 'req-1',
           }),
@@ -155,10 +206,12 @@ test.describe('Given an administrator on the backups page', () => {
 
     await expect(page.getByRole('button', { name: 'Zálohujeme…' })).toBeDisabled();
     await expect(page.locator('.ui-notice--status')).toHaveText(
-      'Záloha nfnn-2026-10-23_1000-rucni.dump je hotová (2 kB).',
+      'Záloha nfnn-2026-10-23_1000-rucni.dump.age je hotová (2 kB).',
       { timeout: 10_000 },
     );
-    await expect(page.locator('tbody tr').first()).toContainText('nfnn-2026-10-23_1000-rucni.dump');
+    await expect(page.locator('tbody tr').first()).toContainText(
+      'nfnn-2026-10-23_1000-rucni.dump.age',
+    );
     await expect(page.getByRole('button', { name: 'Zálohovat teď' })).toBeEnabled();
     expect(requests).toEqual([{ kind: 'BACKUP' }]);
   });
@@ -176,7 +229,7 @@ test.describe('Given an administrator on the backups page', () => {
           json: restored
             ? backupsView({
                 lastRestore: backupRun({
-                  fileName: 'nfnn-2026-10-22_0300.dump',
+                  fileName: 'nfnn-2026-10-22_0300.dump.age',
                   requestId: 'restore-1',
                   tables: 37,
                 }),
@@ -185,7 +238,7 @@ test.describe('Given an administrator on the backups page', () => {
         }),
     );
     await page.route(
-      (url) => url.pathname === `${BACKUPS}/nfnn-2026-10-22_0300.dump/restore`,
+      (url) => url.pathname === `${BACKUPS}/nfnn-2026-10-22_0300.dump.age/restore`,
       (route) => {
         posted.push(route.request().method());
         restored = true;
@@ -193,7 +246,7 @@ test.describe('Given an administrator on the backups page', () => {
           status: 202,
           json: {
             requestId: 'restore-1',
-            fileName: 'nfnn-2026-10-22_0300.dump',
+            fileName: 'nfnn-2026-10-22_0300.dump.age',
             requestedAt: '2026-10-23T19:30:00Z',
           },
         });
@@ -209,7 +262,7 @@ test.describe('Given an administrator on the backups page', () => {
 
     await page.goto('/sprava/zalohy');
     await page
-      .getByRole('button', { name: 'Obnovit databázi ze zálohy nfnn-2026-10-22_0300.dump' })
+      .getByRole('button', { name: 'Obnovit databázi ze zálohy nfnn-2026-10-22_0300.dump.age' })
       .click();
 
     const dialog = page.getByRole('dialog');
@@ -221,7 +274,7 @@ test.describe('Given an administrator on the backups page', () => {
 
     await expect(page.getByRole('heading', { name: 'Obnova ze zálohy' })).toBeVisible();
     await expect(page.locator('.ui-notice--status')).toHaveText(
-      'Databáze je obnovená ze zálohy nfnn-2026-10-22_0300.dump. Stav před obnovou je uložený jako záloha „Před obnovou“.',
+      'Databáze je obnovená ze zálohy nfnn-2026-10-22_0300.dump.age. Stav před obnovou je uložený jako záloha „Před obnovou“.',
       { timeout: 15_000 },
     );
     expect(posted).toEqual(['POST']);

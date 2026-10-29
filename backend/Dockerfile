@@ -11,7 +11,8 @@ RUN --mount=type=cache,target=/root/.gradle ./gradlew --no-daemon clean bootJar 
 FROM eclipse-temurin:25-jre
 ARG REVISION=dev
 WORKDIR /app
-RUN groupadd --system app && useradd --system --gid app --home-dir /app app
+RUN apt-get update && apt-get install -y --no-install-recommends age && rm -rf /var/lib/apt/lists/* \
+    && groupadd --system app && useradd --system --gid app --home-dir /app app
 COPY --from=build /workspace/build/libs/*.jar app.jar
 COPY --chmod=0755 docker-entrypoint.sh /app/docker-entrypoint.sh
 ENV APP_REVISION=$REVISION
