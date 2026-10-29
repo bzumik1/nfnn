@@ -140,7 +140,8 @@ public class NewsAdminService {
     }
 
     private void audit(UUID adminId, String action, NewsArticle article, String details, Instant now) {
-        events.publishEvent(new AdminActionPerformed(adminId, action, Optional.of(article.id().value()), details, now));
+        String titled = details + "; titulek „" + article.content().title() + "“";
+        events.publishEvent(new AdminActionPerformed(adminId, action, Optional.of(article.id().value()), titled, now));
         log.info("{} on news article {} by admin {}", action, article.id(), adminId);
     }
 }
