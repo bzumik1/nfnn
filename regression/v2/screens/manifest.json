@@ -2,7 +2,7 @@
   "source": "v2-baseline",
   "logic": "Screenshots of frontend/e2e/baseline/screens.spec.ts, of the whole page or, for a dialog, of the viewport (Playwright Chromium, the e2e API mocks, clock fixed at 2026-10-28T09:00:00Z, cs-CZ, Europe/Prague, reduced motion, animations off) at 390 and 1280 px wide, 900 px viewport height; a second recording on the same machine gives the same pixels, which the recording script checks, and a comparison run (testing.md) accepts up to 0.2 % of pixels. The PNGs are kept outside the repository, in `stored`. pixelsSha256 is the SHA-256 of the decoded pixels (8-bit RGBA, row by row), so a chunk a file store adds does not change it; bytes is the size as recorded. The digests hold on the recording machine; another browser build renders other pixels, so a differing digest means comparing pixels (testing.md), never recording again.",
   "stored": "/mnt/project-files/nfnn-ux/snimky/v2-baseline",
-  "totalBytes": 17991126,
+  "totalBytes": 18071271,
   "shots": [
     {
       "state": "admin-administrators",
@@ -345,16 +345,16 @@
       "width": 1280,
       "height": 900,
       "file": "donor-bank-accounts-1280.png",
-      "bytes": 62923,
-      "pixelsSha256": "b712aac21ef26dfa42760e4a67e33dbf660c528854642060a72dec39e5ac833a"
+      "bytes": 70053,
+      "pixelsSha256": "5f658ad18ef1ef6c747b4e99672939cbb9d82880dd4c6d8097db23abd55615b6"
     },
     {
       "state": "donor-bank-accounts",
       "width": 390,
       "height": 900,
       "file": "donor-bank-accounts-390.png",
-      "bytes": 51026,
-      "pixelsSha256": "ae37fa5487b3ef2ee0fc819129ee5e8b61e21d52a536c4dd8aeb82f0fe757414"
+      "bytes": 56661,
+      "pixelsSha256": "d8e506e23493b53bb1111ba1944f9bbcd3e4b9e6011655598844a31639726b02"
     },
     {
       "state": "donor-details",
@@ -377,48 +377,48 @@
       "width": 1280,
       "height": 900,
       "file": "donor-donations-1280.png",
-      "bytes": 93890,
-      "pixelsSha256": "d5c854b4af40f49bbf7ac287f604839d9755d109030b124ab0ef9403055c950d"
+      "bytes": 96482,
+      "pixelsSha256": "2dce7db5a9344c01baa1065f10e1185151f1cc4a249e6422503290b8cfe11c29"
     },
     {
       "state": "donor-donations",
       "width": 390,
-      "height": 1315,
+      "height": 1352,
       "file": "donor-donations-390.png",
-      "bytes": 85699,
-      "pixelsSha256": "a040a81f44cae9a7df8b84563577021568032580d8fadc4d6158bcae8cef514d"
+      "bytes": 87976,
+      "pixelsSha256": "5af07fecb0e6946d40fcc157114109410435383d498e2a3f886ec832e7d1e916"
     },
     {
       "state": "donor-overview",
       "width": 1280,
-      "height": 1125,
+      "height": 1183,
       "file": "donor-overview-1280.png",
-      "bytes": 119578,
-      "pixelsSha256": "49a679de5f49f6c13027377f860e63f2103e6b3220077d05d7b008a3f9e4d513"
+      "bytes": 124255,
+      "pixelsSha256": "41b5506d4552825f1342805fae965736302520e4c267c54e5f15090b488275d2"
     },
     {
       "state": "donor-overview",
       "width": 390,
-      "height": 1588,
+      "height": 1670,
       "file": "donor-overview-390.png",
-      "bytes": 106891,
-      "pixelsSha256": "bb8f3f23e715e80863f8d66dc676d4559bc3ec12276fe4bf5bd4dc84e11a59ad"
+      "bytes": 111361,
+      "pixelsSha256": "b7429bbfcf30e894458a73127216cee62756802c076f393799f0a66d94c37b22"
     },
     {
       "state": "donor-overview-empty",
       "width": 1280,
-      "height": 900,
+      "height": 929,
       "file": "donor-overview-empty-1280.png",
-      "bytes": 87367,
-      "pixelsSha256": "d7212c5f9808c1de451687e00f67e8461b332eddbbc51ea8f42e3842d3affa9c"
+      "bytes": 104554,
+      "pixelsSha256": "dcde41baa090469e8bdf0150475bc425813b90490ad46af02022898b8966866c"
     },
     {
       "state": "donor-overview-empty",
       "width": 390,
-      "height": 1057,
+      "height": 1384,
       "file": "donor-overview-empty-390.png",
-      "bytes": 71468,
-      "pixelsSha256": "1185e3030edfdf1f9e5daf7256c9de54b5718d85d56be3e410c0f50cfc56c333"
+      "bytes": 90480,
+      "pixelsSha256": "caa123dff93e0f239b253399141bba6796bca3db80245594d186a4d55f5fab8e"
     },
     {
       "state": "donor-overview-error",
@@ -441,16 +441,16 @@
       "width": 1280,
       "height": 900,
       "file": "donor-receipts-1280.png",
-      "bytes": 68135,
-      "pixelsSha256": "35f326456b5889d01d105ad9e7ff1784be455b537f4e1d146ce05ac0300e17b7"
+      "bytes": 77036,
+      "pixelsSha256": "8e30bcd90e8b2676cdd963df510dbddb54b0e3f2ef1d5ea0a1be21544f14c203"
     },
     {
       "state": "donor-receipts",
       "width": 390,
-      "height": 901,
+      "height": 1033,
       "file": "donor-receipts-390.png",
-      "bytes": 57382,
-      "pixelsSha256": "b5f4bec34c1d0e16f9a11c3eb6483649fa912fb9ff7838fcd9cc09917a2f126d"
+      "bytes": 65646,
+      "pixelsSha256": "d8441a48d75cc241fded5eb54c71998caa49b7af6567c5a7c78b4f7219598879"
     },
     {
       "state": "email-verification-with-link",
