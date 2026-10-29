@@ -84,6 +84,7 @@ echo "== Every suite, which reads the recorded files back with their digests, an
 (cd "$root/mcp" && npx vitest run --reporter=json --outputFile="$work/inventory-mcp-vitest.json" >/dev/null)
 node "$root/scripts/test-inventory.mjs" --playwright="$work/inventory-playwright.json" --frontendVitest="$work/inventory-vitest.json" \
   --mcpVitest="$work/inventory-mcp-vitest.json"
+(cd "$root/backend" && ./gradlew test --rerun --tests "*BaselineHygieneTest*" --tests "*BaselineDataSetsTest*" -PnoCucumber "${gradle_init[@]}" -q)
 
 echo "== The screenshots and the rendered receipts, staged in $store/.incoming and checked there"
 rm -rf "$store/.incoming"

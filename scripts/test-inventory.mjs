@@ -91,7 +91,12 @@ function playwright(file) {
 function inventory(names) {
   const seen = new Map();
   return names
-    .map((name) => name.replace(/\s+/g, ' ').trim())
+    .map((name) =>
+      name
+        .replace(/\s+/g, ' ')
+        .replace(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, '<id>')
+        .trim(),
+    )
     .sort()
     .map((name) => {
       const count = (seen.get(name) ?? 0) + 1;
