@@ -1,0 +1,384 @@
+{
+  "source": "v2-baseline",
+  "logic": "A receipt v2 freezes (ThymeleafPdfReceiptRenderer.freeze: data is the frozen JSON) and renders (render, at renderer.issuedAt): the PDF's page count and fonts (PDFBox; a subset prefix is dropped), each page's size in points and its text lines (PDFTextStripper per page, every line stripped, empty lines dropped, U+00A0 written as a space) with the position of its first character in points from the page's top left, rounded to whole points (x, and y at the baseline; TextPosition xDirAdj and yDirAdj). The PDF's and the page rasters' digests depend on the PDF libraries and the JDK, so they are kept apart in digests.json",
+  "sample": "yearly-leap-year-en",
+  "description": "A person's leap year with gifts on 1 January, 29 February and 31 December, English",
+  "renderer": {
+    "profile": 1,
+    "template": "7b30974aef2fdaf01f6e4990c8c4b526a0de8d8371452023be783677b69bf7e7",
+    "number": "2029-000007",
+    "issuedAt": "2027-01-15T09:30:00Z",
+    "signatureImage": false
+  },
+  "data": {
+    "locale": "en",
+    "single": false,
+    "bilingual": true,
+    "documentTitle": "Potvrzení o přijatých darech za rok 2028",
+    "year": "2028",
+    "number": "2029-000007",
+    "issuedOnCs": "2. 1. 2029",
+    "issuedOnEn": "2 January 2029",
+    "replaced": false,
+    "replacedNumber": null,
+    "replacedOnCs": null,
+    "replacedOnEn": null,
+    "foundationName": "Nová naděje - nadační fond",
+    "foundationIdentifier": "27278794",
+    "foundationAddress": "Jiráskova 436, 473 01 Nový Bor",
+    "registryFile": "N 78",
+    "registryCourt": "Krajský soud v Ústí nad Labem",
+    "accountNumber": "5544332217/2010",
+    "issuePlace": "V Novém Boru",
+    "issuePlaceEn": "Nový Bor",
+    "company": false,
+    "donorName": "Jana Nováková",
+    "donorIdentifier": null,
+    "donorAddress": "Dlouhá 12, 400 01 Ústí nad Labem",
+    "variableSymbol": "4821937560",
+    "giftFormKey": "receipt.gift.form.BANK_TRANSFER",
+    "receivedOnCs": "1. 1. 2028",
+    "receivedOnEn": "1 January 2028",
+    "lines": [
+      {
+        "receivedOnCs": "1. 1. 2028",
+        "receivedOnEn": "1 January 2028",
+        "amountCs": "500 Kč",
+        "amountEn": "CZK 500"
+      },
+      {
+        "receivedOnCs": "29. 2. 2028",
+        "receivedOnEn": "29 February 2028",
+        "amountCs": "290,29 Kč",
+        "amountEn": "CZK 290.29"
+      },
+      {
+        "receivedOnCs": "31. 12. 2028",
+        "receivedOnEn": "31 December 2028",
+        "amountCs": "1 234,56 Kč",
+        "amountEn": "CZK 1,234.56"
+      }
+    ],
+    "count": "3",
+    "totalCs": "2 024,85 Kč",
+    "totalEn": "CZK 2,024.85",
+    "signatoryName": "Petr Vzorový",
+    "signatoryRole": "předseda správní rady"
+  },
+  "pdf": {
+    "pageCount": 1,
+    "fonts": [
+      "DejaVuSans (Type0, embedded, subset)",
+      "DejaVuSans-Bold (Type0, embedded, subset)"
+    ]
+  },
+  "pages": [
+    {
+      "number": 1,
+      "widthPt": 595.275,
+      "heightPt": 841.875,
+      "lines": [
+        {
+          "text": "Nová naděje - nadační fond · IČO 27278794 · Jiráskova 436, 473 01 Nový Bor · Číslo potvrzení: 2029-000007 1 / 1",
+          "x": 88,
+          "y": 804
+        },
+        {
+          "text": "Potvrzení o přijatých darech za rok 2028",
+          "x": 540,
+          "y": 56
+        },
+        {
+          "text": "Confirmation of donations received in 2028",
+          "x": 381,
+          "y": 72
+        },
+        {
+          "text": "Číslo potvrzení: 2029-000007",
+          "x": 404,
+          "y": 90
+        },
+        {
+          "text": "Confirmation No.: 2029-000007",
+          "x": 425,
+          "y": 100
+        },
+        {
+          "text": "Datum vystavení: 2. 1. 2029",
+          "x": 409,
+          "y": 112
+        },
+        {
+          "text": "Date of issue: 2 January 2029",
+          "x": 433,
+          "y": 123
+        },
+        {
+          "text": "Obdarovaný / Donee",
+          "x": 123,
+          "y": 147
+        },
+        {
+          "text": "Název: Nová naděje - nadační fond",
+          "x": 51,
+          "y": 167
+        },
+        {
+          "text": "Name: Nová naděje - nadační fond",
+          "x": 51,
+          "y": 177
+        },
+        {
+          "text": "IČO: 27278794",
+          "x": 51,
+          "y": 192
+        },
+        {
+          "text": "Company ID: 27278794",
+          "x": 51,
+          "y": 202
+        },
+        {
+          "text": "Sídlo: Jiráskova 436, 473 01 Nový Bor",
+          "x": 51,
+          "y": 217
+        },
+        {
+          "text": "Registered office: Jiráskova 436, 473 01 Nový Bor",
+          "x": 51,
+          "y": 227
+        },
+        {
+          "text": "zapsaný v nadačním rejstříku, spisová značka",
+          "x": 51,
+          "y": 242
+        },
+        {
+          "text": "N 78, rejstříkový soud: Krajský soud v Ústí nad",
+          "x": 51,
+          "y": 254
+        },
+        {
+          "text": "Labem",
+          "x": 51,
+          "y": 266
+        },
+        {
+          "text": "registered in the Register of Foundations, file No. N 78,",
+          "x": 51,
+          "y": 277
+        },
+        {
+          "text": "registry court: Krajský soud v Ústí nad Labem",
+          "x": 51,
+          "y": 286
+        },
+        {
+          "text": "Dárce / Donor",
+          "x": 332,
+          "y": 147
+        },
+        {
+          "text": "Jméno a příjmení: Jana Nováková",
+          "x": 298,
+          "y": 167
+        },
+        {
+          "text": "Name and surname: Jana Nováková",
+          "x": 298,
+          "y": 177
+        },
+        {
+          "text": "Bydliště: Dlouhá 12, 400 01 Ústí nad Labem",
+          "x": 298,
+          "y": 192
+        },
+        {
+          "text": "Residence: Dlouhá 12, 400 01 Ústí nad Labem",
+          "x": 298,
+          "y": 202
+        },
+        {
+          "text": "Variabilní symbol: 4821937560",
+          "x": 298,
+          "y": 217
+        },
+        {
+          "text": "Variable symbol: 4821937560",
+          "x": 298,
+          "y": 227
+        },
+        {
+          "text": "Účet příjemce: 5544332217/2010",
+          "x": 51,
+          "y": 312
+        },
+        {
+          "text": "Recipient account: 5544332217/2010",
+          "x": 51,
+          "y": 323
+        },
+        {
+          "text": "Datum připsání na účet",
+          "x": 182,
+          "y": 344
+        },
+        {
+          "text": "Date credited to the account",
+          "x": 57,
+          "y": 357
+        },
+        {
+          "text": "Částka",
+          "x": 535,
+          "y": 344
+        },
+        {
+          "text": "Amount",
+          "x": 506,
+          "y": 357
+        },
+        {
+          "text": "1. 1. 2028 (1 January 2028)  500 Kč (CZK 500)",
+          "x": 105,
+          "y": 377
+        },
+        {
+          "text": "29. 2. 2028 (29 February 2028)  290,29 Kč (CZK 290.29)",
+          "x": 111,
+          "y": 397
+        },
+        {
+          "text": "31. 12. 2028 (31 December 2028)  1 234,56 Kč (CZK 1,234.56)",
+          "x": 117,
+          "y": 417
+        },
+        {
+          "text": "Počet darů: 3",
+          "x": 51,
+          "y": 438
+        },
+        {
+          "text": "Number of gifts: 3",
+          "x": 51,
+          "y": 449
+        },
+        {
+          "text": "Celkem darováno v roce 2028: 2 024,85 Kč",
+          "x": 51,
+          "y": 460
+        },
+        {
+          "text": "Total donated in 2028: CZK 2,024.85",
+          "x": 51,
+          "y": 471
+        },
+        {
+          "text": "Nová naděje - nadační fond potvrzuje, že od výše uvedeného dárce přijal v roce 2028 peněžité dary",
+          "x": 51,
+          "y": 494
+        },
+        {
+          "text": "uvedené v tomto potvrzení v celkové výši 2 024,85 Kč, poukázané bankovním převodem na účet",
+          "x": 51,
+          "y": 506
+        },
+        {
+          "text": "nadačního fondu č. 5544332217/2010. Dary byly poskytnuty bezúplatně a bez jakéhokoli protiplnění",
+          "x": 51,
+          "y": 518
+        },
+        {
+          "text": "na účely sociální, zdravotnické, charitativní a na podporu a ochranu mládeže ve smyslu § 15 odst. 1 a",
+          "x": 51,
+          "y": 531
+        },
+        {
+          "text": "§ 20 odst. 8 zákona č. 586/1992 Sb., o daních z příjmů, ve znění pozdějších předpisů, a to v souladu s",
+          "x": 51,
+          "y": 543
+        },
+        {
+          "text": "účelem nadačního fondu. Potvrzení se vydává na žádost dárce pro účely uplatnění odpočtu hodnoty",
+          "x": 51,
+          "y": 555
+        },
+        {
+          "text": "darů od základu daně podle § 15 odst. 1 (poplatník daně z příjmů fyzických osob) nebo § 20 odst. 8",
+          "x": 51,
+          "y": 568
+        },
+        {
+          "text": "(poplatník daně z příjmů právnických osob) uvedeného zákona.",
+          "x": 51,
+          "y": 580
+        },
+        {
+          "text": "Nová naděje - nadační fond confirms that in 2028 it received from the above donor the monetary gifts listed in this confirmation",
+          "x": 51,
+          "y": 595
+        },
+        {
+          "text": "totalling CZK 2,024.85, transferred by bank transfer to the account of the foundation No. 5544332217/2010. The gifts were given",
+          "x": 51,
+          "y": 605
+        },
+        {
+          "text": "free of charge and without any consideration for social, health and charitable purposes and for the support and protection of",
+          "x": 51,
+          "y": 614
+        },
+        {
+          "text": "youth within the meaning of § 15 odst. 1 and § 20 odst. 8 of zákon č. 586/1992 Sb., o daních z příjmů (Section 15(1) and Section",
+          "x": 51,
+          "y": 624
+        },
+        {
+          "text": "20(8) of Act No. 586/1992 Coll., on Income Taxes), as amended, in accordance with the purpose of the foundation. This",
+          "x": 51,
+          "y": 634
+        },
+        {
+          "text": "confirmation is issued at the request of the donor for the purpose of deducting the value of the gifts from the tax base under",
+          "x": 51,
+          "y": 644
+        },
+        {
+          "text": "Section 15(1) (individual income taxpayer) or Section 20(8) (corporate income taxpayer) of that Act.",
+          "x": 51,
+          "y": 653
+        },
+        {
+          "text": "V Novém Boru, dne 2. 1. 2029",
+          "x": 51,
+          "y": 682
+        },
+        {
+          "text": "In Nový Bor, on 2 January 2029",
+          "x": 51,
+          "y": 692
+        },
+        {
+          "text": "Za Nová naděje - nadační fond:",
+          "x": 51,
+          "y": 704
+        },
+        {
+          "text": "For Nová naděje - nadační fond:",
+          "x": 51,
+          "y": 714
+        },
+        {
+          "text": "Petr Vzorový",
+          "x": 51,
+          "y": 764
+        },
+        {
+          "text": "předseda správní rady",
+          "x": 51,
+          "y": 776
+        }
+      ]
+    }
+  ]
+}

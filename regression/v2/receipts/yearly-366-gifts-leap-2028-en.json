@@ -1,0 +1,4709 @@
+{
+  "source": "v2-baseline",
+  "logic": "A receipt v2 freezes (ThymeleafPdfReceiptRenderer.freeze: data is the frozen JSON) and renders (render, at renderer.issuedAt): the PDF's page count and fonts (PDFBox; a subset prefix is dropped), each page's size in points and its text lines (PDFTextStripper per page, every line stripped, empty lines dropped, U+00A0 written as a space) with the position of its first character in points from the page's top left, rounded to whole points (x, and y at the baseline; TextPosition xDirAdj and yDirAdj). The PDF's and the page rasters' digests depend on the PDF libraries and the JDK, so they are kept apart in digests.json",
+  "sample": "yearly-366-gifts-leap-2028-en",
+  "description": "A person's leap year 2028 with one gift on each of its 366 days, English",
+  "renderer": {
+    "profile": 1,
+    "template": "7b30974aef2fdaf01f6e4990c8c4b526a0de8d8371452023be783677b69bf7e7",
+    "number": "2029-000008",
+    "issuedAt": "2027-01-15T09:30:00Z",
+    "signatureImage": false
+  },
+  "data": {
+    "locale": "en",
+    "single": false,
+    "bilingual": true,
+    "documentTitle": "Potvrzení o přijatých darech za rok 2028",
+    "year": "2028",
+    "number": "2029-000008",
+    "issuedOnCs": "2. 1. 2029",
+    "issuedOnEn": "2 January 2029",
+    "replaced": false,
+    "replacedNumber": null,
+    "replacedOnCs": null,
+    "replacedOnEn": null,
+    "foundationName": "Nová naděje - nadační fond",
+    "foundationIdentifier": "27278794",
+    "foundationAddress": "Jiráskova 436, 473 01 Nový Bor",
+    "registryFile": "N 78",
+    "registryCourt": "Krajský soud v Ústí nad Labem",
+    "accountNumber": "5544332217/2010",
+    "issuePlace": "V Novém Boru",
+    "issuePlaceEn": "Nový Bor",
+    "company": false,
+    "donorName": "Jana Nováková",
+    "donorIdentifier": null,
+    "donorAddress": "Dlouhá 12, 400 01 Ústí nad Labem",
+    "variableSymbol": "4821937560",
+    "giftFormKey": "receipt.gift.form.BANK_TRANSFER",
+    "receivedOnCs": "1. 1. 2028",
+    "receivedOnEn": "1 January 2028",
+    "lines": [
+      {
+        "receivedOnCs": "1. 1. 2028",
+        "receivedOnEn": "1 January 2028",
+        "amountCs": "100 Kč",
+        "amountEn": "CZK 100"
+      },
+      {
+        "receivedOnCs": "2. 1. 2028",
+        "receivedOnEn": "2 January 2028",
+        "amountCs": "101,01 Kč",
+        "amountEn": "CZK 101.01"
+      },
+      {
+        "receivedOnCs": "3. 1. 2028",
+        "receivedOnEn": "3 January 2028",
+        "amountCs": "102,02 Kč",
+        "amountEn": "CZK 102.02"
+      },
+      {
+        "receivedOnCs": "4. 1. 2028",
+        "receivedOnEn": "4 January 2028",
+        "amountCs": "103,03 Kč",
+        "amountEn": "CZK 103.03"
+      },
+      {
+        "receivedOnCs": "5. 1. 2028",
+        "receivedOnEn": "5 January 2028",
+        "amountCs": "104,04 Kč",
+        "amountEn": "CZK 104.04"
+      },
+      {
+        "receivedOnCs": "6. 1. 2028",
+        "receivedOnEn": "6 January 2028",
+        "amountCs": "105,05 Kč",
+        "amountEn": "CZK 105.05"
+      },
+      {
+        "receivedOnCs": "7. 1. 2028",
+        "receivedOnEn": "7 January 2028",
+        "amountCs": "106,06 Kč",
+        "amountEn": "CZK 106.06"
+      },
+      {
+        "receivedOnCs": "8. 1. 2028",
+        "receivedOnEn": "8 January 2028",
+        "amountCs": "107,07 Kč",
+        "amountEn": "CZK 107.07"
+      },
+      {
+        "receivedOnCs": "9. 1. 2028",
+        "receivedOnEn": "9 January 2028",
+        "amountCs": "108,08 Kč",
+        "amountEn": "CZK 108.08"
+      },
+      {
+        "receivedOnCs": "10. 1. 2028",
+        "receivedOnEn": "10 January 2028",
+        "amountCs": "109,09 Kč",
+        "amountEn": "CZK 109.09"
+      },
+      {
+        "receivedOnCs": "11. 1. 2028",
+        "receivedOnEn": "11 January 2028",
+        "amountCs": "110,10 Kč",
+        "amountEn": "CZK 110.10"
+      },
+      {
+        "receivedOnCs": "12. 1. 2028",
+        "receivedOnEn": "12 January 2028",
+        "amountCs": "111,11 Kč",
+        "amountEn": "CZK 111.11"
+      },
+      {
+        "receivedOnCs": "13. 1. 2028",
+        "receivedOnEn": "13 January 2028",
+        "amountCs": "112,12 Kč",
+        "amountEn": "CZK 112.12"
+      },
+      {
+        "receivedOnCs": "14. 1. 2028",
+        "receivedOnEn": "14 January 2028",
+        "amountCs": "113,13 Kč",
+        "amountEn": "CZK 113.13"
+      },
+      {
+        "receivedOnCs": "15. 1. 2028",
+        "receivedOnEn": "15 January 2028",
+        "amountCs": "114,14 Kč",
+        "amountEn": "CZK 114.14"
+      },
+      {
+        "receivedOnCs": "16. 1. 2028",
+        "receivedOnEn": "16 January 2028",
+        "amountCs": "115,15 Kč",
+        "amountEn": "CZK 115.15"
+      },
+      {
+        "receivedOnCs": "17. 1. 2028",
+        "receivedOnEn": "17 January 2028",
+        "amountCs": "116,16 Kč",
+        "amountEn": "CZK 116.16"
+      },
+      {
+        "receivedOnCs": "18. 1. 2028",
+        "receivedOnEn": "18 January 2028",
+        "amountCs": "117,17 Kč",
+        "amountEn": "CZK 117.17"
+      },
+      {
+        "receivedOnCs": "19. 1. 2028",
+        "receivedOnEn": "19 January 2028",
+        "amountCs": "118,18 Kč",
+        "amountEn": "CZK 118.18"
+      },
+      {
+        "receivedOnCs": "20. 1. 2028",
+        "receivedOnEn": "20 January 2028",
+        "amountCs": "119,19 Kč",
+        "amountEn": "CZK 119.19"
+      },
+      {
+        "receivedOnCs": "21. 1. 2028",
+        "receivedOnEn": "21 January 2028",
+        "amountCs": "120,20 Kč",
+        "amountEn": "CZK 120.20"
+      },
+      {
+        "receivedOnCs": "22. 1. 2028",
+        "receivedOnEn": "22 January 2028",
+        "amountCs": "121,21 Kč",
+        "amountEn": "CZK 121.21"
+      },
+      {
+        "receivedOnCs": "23. 1. 2028",
+        "receivedOnEn": "23 January 2028",
+        "amountCs": "122,22 Kč",
+        "amountEn": "CZK 122.22"
+      },
+      {
+        "receivedOnCs": "24. 1. 2028",
+        "receivedOnEn": "24 January 2028",
+        "amountCs": "123,23 Kč",
+        "amountEn": "CZK 123.23"
+      },
+      {
+        "receivedOnCs": "25. 1. 2028",
+        "receivedOnEn": "25 January 2028",
+        "amountCs": "124,24 Kč",
+        "amountEn": "CZK 124.24"
+      },
+      {
+        "receivedOnCs": "26. 1. 2028",
+        "receivedOnEn": "26 January 2028",
+        "amountCs": "125,25 Kč",
+        "amountEn": "CZK 125.25"
+      },
+      {
+        "receivedOnCs": "27. 1. 2028",
+        "receivedOnEn": "27 January 2028",
+        "amountCs": "126,26 Kč",
+        "amountEn": "CZK 126.26"
+      },
+      {
+        "receivedOnCs": "28. 1. 2028",
+        "receivedOnEn": "28 January 2028",
+        "amountCs": "127,27 Kč",
+        "amountEn": "CZK 127.27"
+      },
+      {
+        "receivedOnCs": "29. 1. 2028",
+        "receivedOnEn": "29 January 2028",
+        "amountCs": "128,28 Kč",
+        "amountEn": "CZK 128.28"
+      },
+      {
+        "receivedOnCs": "30. 1. 2028",
+        "receivedOnEn": "30 January 2028",
+        "amountCs": "129,29 Kč",
+        "amountEn": "CZK 129.29"
+      },
+      {
+        "receivedOnCs": "31. 1. 2028",
+        "receivedOnEn": "31 January 2028",
+        "amountCs": "130,30 Kč",
+        "amountEn": "CZK 130.30"
+      },
+      {
+        "receivedOnCs": "1. 2. 2028",
+        "receivedOnEn": "1 February 2028",
+        "amountCs": "131,31 Kč",
+        "amountEn": "CZK 131.31"
+      },
+      {
+        "receivedOnCs": "2. 2. 2028",
+        "receivedOnEn": "2 February 2028",
+        "amountCs": "132,32 Kč",
+        "amountEn": "CZK 132.32"
+      },
+      {
+        "receivedOnCs": "3. 2. 2028",
+        "receivedOnEn": "3 February 2028",
+        "amountCs": "133,33 Kč",
+        "amountEn": "CZK 133.33"
+      },
+      {
+        "receivedOnCs": "4. 2. 2028",
+        "receivedOnEn": "4 February 2028",
+        "amountCs": "134,34 Kč",
+        "amountEn": "CZK 134.34"
+      },
+      {
+        "receivedOnCs": "5. 2. 2028",
+        "receivedOnEn": "5 February 2028",
+        "amountCs": "135,35 Kč",
+        "amountEn": "CZK 135.35"
+      },
+      {
+        "receivedOnCs": "6. 2. 2028",
+        "receivedOnEn": "6 February 2028",
+        "amountCs": "136,36 Kč",
+        "amountEn": "CZK 136.36"
+      },
+      {
+        "receivedOnCs": "7. 2. 2028",
+        "receivedOnEn": "7 February 2028",
+        "amountCs": "137,37 Kč",
+        "amountEn": "CZK 137.37"
+      },
+      {
+        "receivedOnCs": "8. 2. 2028",
+        "receivedOnEn": "8 February 2028",
+        "amountCs": "138,38 Kč",
+        "amountEn": "CZK 138.38"
+      },
+      {
+        "receivedOnCs": "9. 2. 2028",
+        "receivedOnEn": "9 February 2028",
+        "amountCs": "139,39 Kč",
+        "amountEn": "CZK 139.39"
+      },
+      {
+        "receivedOnCs": "10. 2. 2028",
+        "receivedOnEn": "10 February 2028",
+        "amountCs": "140,40 Kč",
+        "amountEn": "CZK 140.40"
+      },
+      {
+        "receivedOnCs": "11. 2. 2028",
+        "receivedOnEn": "11 February 2028",
+        "amountCs": "141,41 Kč",
+        "amountEn": "CZK 141.41"
+      },
+      {
+        "receivedOnCs": "12. 2. 2028",
+        "receivedOnEn": "12 February 2028",
+        "amountCs": "142,42 Kč",
+        "amountEn": "CZK 142.42"
+      },
+      {
+        "receivedOnCs": "13. 2. 2028",
+        "receivedOnEn": "13 February 2028",
+        "amountCs": "143,43 Kč",
+        "amountEn": "CZK 143.43"
+      },
+      {
+        "receivedOnCs": "14. 2. 2028",
+        "receivedOnEn": "14 February 2028",
+        "amountCs": "144,44 Kč",
+        "amountEn": "CZK 144.44"
+      },
+      {
+        "receivedOnCs": "15. 2. 2028",
+        "receivedOnEn": "15 February 2028",
+        "amountCs": "145,45 Kč",
+        "amountEn": "CZK 145.45"
+      },
+      {
+        "receivedOnCs": "16. 2. 2028",
+        "receivedOnEn": "16 February 2028",
+        "amountCs": "146,46 Kč",
+        "amountEn": "CZK 146.46"
+      },
+      {
+        "receivedOnCs": "17. 2. 2028",
+        "receivedOnEn": "17 February 2028",
+        "amountCs": "147,47 Kč",
+        "amountEn": "CZK 147.47"
+      },
+      {
+        "receivedOnCs": "18. 2. 2028",
+        "receivedOnEn": "18 February 2028",
+        "amountCs": "148,48 Kč",
+        "amountEn": "CZK 148.48"
+      },
+      {
+        "receivedOnCs": "19. 2. 2028",
+        "receivedOnEn": "19 February 2028",
+        "amountCs": "149,49 Kč",
+        "amountEn": "CZK 149.49"
+      },
+      {
+        "receivedOnCs": "20. 2. 2028",
+        "receivedOnEn": "20 February 2028",
+        "amountCs": "150,50 Kč",
+        "amountEn": "CZK 150.50"
+      },
+      {
+        "receivedOnCs": "21. 2. 2028",
+        "receivedOnEn": "21 February 2028",
+        "amountCs": "151,51 Kč",
+        "amountEn": "CZK 151.51"
+      },
+      {
+        "receivedOnCs": "22. 2. 2028",
+        "receivedOnEn": "22 February 2028",
+        "amountCs": "152,52 Kč",
+        "amountEn": "CZK 152.52"
+      },
+      {
+        "receivedOnCs": "23. 2. 2028",
+        "receivedOnEn": "23 February 2028",
+        "amountCs": "153,53 Kč",
+        "amountEn": "CZK 153.53"
+      },
+      {
+        "receivedOnCs": "24. 2. 2028",
+        "receivedOnEn": "24 February 2028",
+        "amountCs": "154,54 Kč",
+        "amountEn": "CZK 154.54"
+      },
+      {
+        "receivedOnCs": "25. 2. 2028",
+        "receivedOnEn": "25 February 2028",
+        "amountCs": "155,55 Kč",
+        "amountEn": "CZK 155.55"
+      },
+      {
+        "receivedOnCs": "26. 2. 2028",
+        "receivedOnEn": "26 February 2028",
+        "amountCs": "156,56 Kč",
+        "amountEn": "CZK 156.56"
+      },
+      {
+        "receivedOnCs": "27. 2. 2028",
+        "receivedOnEn": "27 February 2028",
+        "amountCs": "157,57 Kč",
+        "amountEn": "CZK 157.57"
+      },
+      {
+        "receivedOnCs": "28. 2. 2028",
+        "receivedOnEn": "28 February 2028",
+        "amountCs": "158,58 Kč",
+        "amountEn": "CZK 158.58"
+      },
+      {
+        "receivedOnCs": "29. 2. 2028",
+        "receivedOnEn": "29 February 2028",
+        "amountCs": "159,59 Kč",
+        "amountEn": "CZK 159.59"
+      },
+      {
+        "receivedOnCs": "1. 3. 2028",
+        "receivedOnEn": "1 March 2028",
+        "amountCs": "160,60 Kč",
+        "amountEn": "CZK 160.60"
+      },
+      {
+        "receivedOnCs": "2. 3. 2028",
+        "receivedOnEn": "2 March 2028",
+        "amountCs": "161,61 Kč",
+        "amountEn": "CZK 161.61"
+      },
+      {
+        "receivedOnCs": "3. 3. 2028",
+        "receivedOnEn": "3 March 2028",
+        "amountCs": "162,62 Kč",
+        "amountEn": "CZK 162.62"
+      },
+      {
+        "receivedOnCs": "4. 3. 2028",
+        "receivedOnEn": "4 March 2028",
+        "amountCs": "163,63 Kč",
+        "amountEn": "CZK 163.63"
+      },
+      {
+        "receivedOnCs": "5. 3. 2028",
+        "receivedOnEn": "5 March 2028",
+        "amountCs": "164,64 Kč",
+        "amountEn": "CZK 164.64"
+      },
+      {
+        "receivedOnCs": "6. 3. 2028",
+        "receivedOnEn": "6 March 2028",
+        "amountCs": "165,65 Kč",
+        "amountEn": "CZK 165.65"
+      },
+      {
+        "receivedOnCs": "7. 3. 2028",
+        "receivedOnEn": "7 March 2028",
+        "amountCs": "166,66 Kč",
+        "amountEn": "CZK 166.66"
+      },
+      {
+        "receivedOnCs": "8. 3. 2028",
+        "receivedOnEn": "8 March 2028",
+        "amountCs": "167,67 Kč",
+        "amountEn": "CZK 167.67"
+      },
+      {
+        "receivedOnCs": "9. 3. 2028",
+        "receivedOnEn": "9 March 2028",
+        "amountCs": "168,68 Kč",
+        "amountEn": "CZK 168.68"
+      },
+      {
+        "receivedOnCs": "10. 3. 2028",
+        "receivedOnEn": "10 March 2028",
+        "amountCs": "169,69 Kč",
+        "amountEn": "CZK 169.69"
+      },
+      {
+        "receivedOnCs": "11. 3. 2028",
+        "receivedOnEn": "11 March 2028",
+        "amountCs": "170,70 Kč",
+        "amountEn": "CZK 170.70"
+      },
+      {
+        "receivedOnCs": "12. 3. 2028",
+        "receivedOnEn": "12 March 2028",
+        "amountCs": "171,71 Kč",
+        "amountEn": "CZK 171.71"
+      },
+      {
+        "receivedOnCs": "13. 3. 2028",
+        "receivedOnEn": "13 March 2028",
+        "amountCs": "172,72 Kč",
+        "amountEn": "CZK 172.72"
+      },
+      {
+        "receivedOnCs": "14. 3. 2028",
+        "receivedOnEn": "14 March 2028",
+        "amountCs": "173,73 Kč",
+        "amountEn": "CZK 173.73"
+      },
+      {
+        "receivedOnCs": "15. 3. 2028",
+        "receivedOnEn": "15 March 2028",
+        "amountCs": "174,74 Kč",
+        "amountEn": "CZK 174.74"
+      },
+      {
+        "receivedOnCs": "16. 3. 2028",
+        "receivedOnEn": "16 March 2028",
+        "amountCs": "175,75 Kč",
+        "amountEn": "CZK 175.75"
+      },
+      {
+        "receivedOnCs": "17. 3. 2028",
+        "receivedOnEn": "17 March 2028",
+        "amountCs": "176,76 Kč",
+        "amountEn": "CZK 176.76"
+      },
+      {
+        "receivedOnCs": "18. 3. 2028",
+        "receivedOnEn": "18 March 2028",
+        "amountCs": "177,77 Kč",
+        "amountEn": "CZK 177.77"
+      },
+      {
+        "receivedOnCs": "19. 3. 2028",
+        "receivedOnEn": "19 March 2028",
+        "amountCs": "178,78 Kč",
+        "amountEn": "CZK 178.78"
+      },
+      {
+        "receivedOnCs": "20. 3. 2028",
+        "receivedOnEn": "20 March 2028",
+        "amountCs": "179,79 Kč",
+        "amountEn": "CZK 179.79"
+      },
+      {
+        "receivedOnCs": "21. 3. 2028",
+        "receivedOnEn": "21 March 2028",
+        "amountCs": "180,80 Kč",
+        "amountEn": "CZK 180.80"
+      },
+      {
+        "receivedOnCs": "22. 3. 2028",
+        "receivedOnEn": "22 March 2028",
+        "amountCs": "181,81 Kč",
+        "amountEn": "CZK 181.81"
+      },
+      {
+        "receivedOnCs": "23. 3. 2028",
+        "receivedOnEn": "23 March 2028",
+        "amountCs": "182,82 Kč",
+        "amountEn": "CZK 182.82"
+      },
+      {
+        "receivedOnCs": "24. 3. 2028",
+        "receivedOnEn": "24 March 2028",
+        "amountCs": "183,83 Kč",
+        "amountEn": "CZK 183.83"
+      },
+      {
+        "receivedOnCs": "25. 3. 2028",
+        "receivedOnEn": "25 March 2028",
+        "amountCs": "184,84 Kč",
+        "amountEn": "CZK 184.84"
+      },
+      {
+        "receivedOnCs": "26. 3. 2028",
+        "receivedOnEn": "26 March 2028",
+        "amountCs": "185,85 Kč",
+        "amountEn": "CZK 185.85"
+      },
+      {
+        "receivedOnCs": "27. 3. 2028",
+        "receivedOnEn": "27 March 2028",
+        "amountCs": "186,86 Kč",
+        "amountEn": "CZK 186.86"
+      },
+      {
+        "receivedOnCs": "28. 3. 2028",
+        "receivedOnEn": "28 March 2028",
+        "amountCs": "187,87 Kč",
+        "amountEn": "CZK 187.87"
+      },
+      {
+        "receivedOnCs": "29. 3. 2028",
+        "receivedOnEn": "29 March 2028",
+        "amountCs": "188,88 Kč",
+        "amountEn": "CZK 188.88"
+      },
+      {
+        "receivedOnCs": "30. 3. 2028",
+        "receivedOnEn": "30 March 2028",
+        "amountCs": "189,89 Kč",
+        "amountEn": "CZK 189.89"
+      },
+      {
+        "receivedOnCs": "31. 3. 2028",
+        "receivedOnEn": "31 March 2028",
+        "amountCs": "190,90 Kč",
+        "amountEn": "CZK 190.90"
+      },
+      {
+        "receivedOnCs": "1. 4. 2028",
+        "receivedOnEn": "1 April 2028",
+        "amountCs": "191,91 Kč",
+        "amountEn": "CZK 191.91"
+      },
+      {
+        "receivedOnCs": "2. 4. 2028",
+        "receivedOnEn": "2 April 2028",
+        "amountCs": "192,92 Kč",
+        "amountEn": "CZK 192.92"
+      },
+      {
+        "receivedOnCs": "3. 4. 2028",
+        "receivedOnEn": "3 April 2028",
+        "amountCs": "193,93 Kč",
+        "amountEn": "CZK 193.93"
+      },
+      {
+        "receivedOnCs": "4. 4. 2028",
+        "receivedOnEn": "4 April 2028",
+        "amountCs": "194,94 Kč",
+        "amountEn": "CZK 194.94"
+      },
+      {
+        "receivedOnCs": "5. 4. 2028",
+        "receivedOnEn": "5 April 2028",
+        "amountCs": "195,95 Kč",
+        "amountEn": "CZK 195.95"
+      },
+      {
+        "receivedOnCs": "6. 4. 2028",
+        "receivedOnEn": "6 April 2028",
+        "amountCs": "196,96 Kč",
+        "amountEn": "CZK 196.96"
+      },
+      {
+        "receivedOnCs": "7. 4. 2028",
+        "receivedOnEn": "7 April 2028",
+        "amountCs": "197,97 Kč",
+        "amountEn": "CZK 197.97"
+      },
+      {
+        "receivedOnCs": "8. 4. 2028",
+        "receivedOnEn": "8 April 2028",
+        "amountCs": "198,98 Kč",
+        "amountEn": "CZK 198.98"
+      },
+      {
+        "receivedOnCs": "9. 4. 2028",
+        "receivedOnEn": "9 April 2028",
+        "amountCs": "199,99 Kč",
+        "amountEn": "CZK 199.99"
+      },
+      {
+        "receivedOnCs": "10. 4. 2028",
+        "receivedOnEn": "10 April 2028",
+        "amountCs": "201 Kč",
+        "amountEn": "CZK 201"
+      },
+      {
+        "receivedOnCs": "11. 4. 2028",
+        "receivedOnEn": "11 April 2028",
+        "amountCs": "202,01 Kč",
+        "amountEn": "CZK 202.01"
+      },
+      {
+        "receivedOnCs": "12. 4. 2028",
+        "receivedOnEn": "12 April 2028",
+        "amountCs": "203,02 Kč",
+        "amountEn": "CZK 203.02"
+      },
+      {
+        "receivedOnCs": "13. 4. 2028",
+        "receivedOnEn": "13 April 2028",
+        "amountCs": "204,03 Kč",
+        "amountEn": "CZK 204.03"
+      },
+      {
+        "receivedOnCs": "14. 4. 2028",
+        "receivedOnEn": "14 April 2028",
+        "amountCs": "205,04 Kč",
+        "amountEn": "CZK 205.04"
+      },
+      {
+        "receivedOnCs": "15. 4. 2028",
+        "receivedOnEn": "15 April 2028",
+        "amountCs": "206,05 Kč",
+        "amountEn": "CZK 206.05"
+      },
+      {
+        "receivedOnCs": "16. 4. 2028",
+        "receivedOnEn": "16 April 2028",
+        "amountCs": "207,06 Kč",
+        "amountEn": "CZK 207.06"
+      },
+      {
+        "receivedOnCs": "17. 4. 2028",
+        "receivedOnEn": "17 April 2028",
+        "amountCs": "208,07 Kč",
+        "amountEn": "CZK 208.07"
+      },
+      {
+        "receivedOnCs": "18. 4. 2028",
+        "receivedOnEn": "18 April 2028",
+        "amountCs": "209,08 Kč",
+        "amountEn": "CZK 209.08"
+      },
+      {
+        "receivedOnCs": "19. 4. 2028",
+        "receivedOnEn": "19 April 2028",
+        "amountCs": "210,09 Kč",
+        "amountEn": "CZK 210.09"
+      },
+      {
+        "receivedOnCs": "20. 4. 2028",
+        "receivedOnEn": "20 April 2028",
+        "amountCs": "211,10 Kč",
+        "amountEn": "CZK 211.10"
+      },
+      {
+        "receivedOnCs": "21. 4. 2028",
+        "receivedOnEn": "21 April 2028",
+        "amountCs": "212,11 Kč",
+        "amountEn": "CZK 212.11"
+      },
+      {
+        "receivedOnCs": "22. 4. 2028",
+        "receivedOnEn": "22 April 2028",
+        "amountCs": "213,12 Kč",
+        "amountEn": "CZK 213.12"
+      },
+      {
+        "receivedOnCs": "23. 4. 2028",
+        "receivedOnEn": "23 April 2028",
+        "amountCs": "214,13 Kč",
+        "amountEn": "CZK 214.13"
+      },
+      {
+        "receivedOnCs": "24. 4. 2028",
+        "receivedOnEn": "24 April 2028",
+        "amountCs": "215,14 Kč",
+        "amountEn": "CZK 215.14"
+      },
+      {
+        "receivedOnCs": "25. 4. 2028",
+        "receivedOnEn": "25 April 2028",
+        "amountCs": "216,15 Kč",
+        "amountEn": "CZK 216.15"
+      },
+      {
+        "receivedOnCs": "26. 4. 2028",
+        "receivedOnEn": "26 April 2028",
+        "amountCs": "217,16 Kč",
+        "amountEn": "CZK 217.16"
+      },
+      {
+        "receivedOnCs": "27. 4. 2028",
+        "receivedOnEn": "27 April 2028",
+        "amountCs": "218,17 Kč",
+        "amountEn": "CZK 218.17"
+      },
+      {
+        "receivedOnCs": "28. 4. 2028",
+        "receivedOnEn": "28 April 2028",
+        "amountCs": "219,18 Kč",
+        "amountEn": "CZK 219.18"
+      },
+      {
+        "receivedOnCs": "29. 4. 2028",
+        "receivedOnEn": "29 April 2028",
+        "amountCs": "220,19 Kč",
+        "amountEn": "CZK 220.19"
+      },
+      {
+        "receivedOnCs": "30. 4. 2028",
+        "receivedOnEn": "30 April 2028",
+        "amountCs": "221,20 Kč",
+        "amountEn": "CZK 221.20"
+      },
+      {
+        "receivedOnCs": "1. 5. 2028",
+        "receivedOnEn": "1 May 2028",
+        "amountCs": "222,21 Kč",
+        "amountEn": "CZK 222.21"
+      },
+      {
+        "receivedOnCs": "2. 5. 2028",
+        "receivedOnEn": "2 May 2028",
+        "amountCs": "223,22 Kč",
+        "amountEn": "CZK 223.22"
+      },
+      {
+        "receivedOnCs": "3. 5. 2028",
+        "receivedOnEn": "3 May 2028",
+        "amountCs": "224,23 Kč",
+        "amountEn": "CZK 224.23"
+      },
+      {
+        "receivedOnCs": "4. 5. 2028",
+        "receivedOnEn": "4 May 2028",
+        "amountCs": "225,24 Kč",
+        "amountEn": "CZK 225.24"
+      },
+      {
+        "receivedOnCs": "5. 5. 2028",
+        "receivedOnEn": "5 May 2028",
+        "amountCs": "226,25 Kč",
+        "amountEn": "CZK 226.25"
+      },
+      {
+        "receivedOnCs": "6. 5. 2028",
+        "receivedOnEn": "6 May 2028",
+        "amountCs": "227,26 Kč",
+        "amountEn": "CZK 227.26"
+      },
+      {
+        "receivedOnCs": "7. 5. 2028",
+        "receivedOnEn": "7 May 2028",
+        "amountCs": "228,27 Kč",
+        "amountEn": "CZK 228.27"
+      },
+      {
+        "receivedOnCs": "8. 5. 2028",
+        "receivedOnEn": "8 May 2028",
+        "amountCs": "229,28 Kč",
+        "amountEn": "CZK 229.28"
+      },
+      {
+        "receivedOnCs": "9. 5. 2028",
+        "receivedOnEn": "9 May 2028",
+        "amountCs": "230,29 Kč",
+        "amountEn": "CZK 230.29"
+      },
+      {
+        "receivedOnCs": "10. 5. 2028",
+        "receivedOnEn": "10 May 2028",
+        "amountCs": "231,30 Kč",
+        "amountEn": "CZK 231.30"
+      },
+      {
+        "receivedOnCs": "11. 5. 2028",
+        "receivedOnEn": "11 May 2028",
+        "amountCs": "232,31 Kč",
+        "amountEn": "CZK 232.31"
+      },
+      {
+        "receivedOnCs": "12. 5. 2028",
+        "receivedOnEn": "12 May 2028",
+        "amountCs": "233,32 Kč",
+        "amountEn": "CZK 233.32"
+      },
+      {
+        "receivedOnCs": "13. 5. 2028",
+        "receivedOnEn": "13 May 2028",
+        "amountCs": "234,33 Kč",
+        "amountEn": "CZK 234.33"
+      },
+      {
+        "receivedOnCs": "14. 5. 2028",
+        "receivedOnEn": "14 May 2028",
+        "amountCs": "235,34 Kč",
+        "amountEn": "CZK 235.34"
+      },
+      {
+        "receivedOnCs": "15. 5. 2028",
+        "receivedOnEn": "15 May 2028",
+        "amountCs": "236,35 Kč",
+        "amountEn": "CZK 236.35"
+      },
+      {
+        "receivedOnCs": "16. 5. 2028",
+        "receivedOnEn": "16 May 2028",
+        "amountCs": "237,36 Kč",
+        "amountEn": "CZK 237.36"
+      },
+      {
+        "receivedOnCs": "17. 5. 2028",
+        "receivedOnEn": "17 May 2028",
+        "amountCs": "238,37 Kč",
+        "amountEn": "CZK 238.37"
+      },
+      {
+        "receivedOnCs": "18. 5. 2028",
+        "receivedOnEn": "18 May 2028",
+        "amountCs": "239,38 Kč",
+        "amountEn": "CZK 239.38"
+      },
+      {
+        "receivedOnCs": "19. 5. 2028",
+        "receivedOnEn": "19 May 2028",
+        "amountCs": "240,39 Kč",
+        "amountEn": "CZK 240.39"
+      },
+      {
+        "receivedOnCs": "20. 5. 2028",
+        "receivedOnEn": "20 May 2028",
+        "amountCs": "241,40 Kč",
+        "amountEn": "CZK 241.40"
+      },
+      {
+        "receivedOnCs": "21. 5. 2028",
+        "receivedOnEn": "21 May 2028",
+        "amountCs": "242,41 Kč",
+        "amountEn": "CZK 242.41"
+      },
+      {
+        "receivedOnCs": "22. 5. 2028",
+        "receivedOnEn": "22 May 2028",
+        "amountCs": "243,42 Kč",
+        "amountEn": "CZK 243.42"
+      },
+      {
+        "receivedOnCs": "23. 5. 2028",
+        "receivedOnEn": "23 May 2028",
+        "amountCs": "244,43 Kč",
+        "amountEn": "CZK 244.43"
+      },
+      {
+        "receivedOnCs": "24. 5. 2028",
+        "receivedOnEn": "24 May 2028",
+        "amountCs": "245,44 Kč",
+        "amountEn": "CZK 245.44"
+      },
+      {
+        "receivedOnCs": "25. 5. 2028",
+        "receivedOnEn": "25 May 2028",
+        "amountCs": "246,45 Kč",
+        "amountEn": "CZK 246.45"
+      },
+      {
+        "receivedOnCs": "26. 5. 2028",
+        "receivedOnEn": "26 May 2028",
+        "amountCs": "247,46 Kč",
+        "amountEn": "CZK 247.46"
+      },
+      {
+        "receivedOnCs": "27. 5. 2028",
+        "receivedOnEn": "27 May 2028",
+        "amountCs": "248,47 Kč",
+        "amountEn": "CZK 248.47"
+      },
+      {
+        "receivedOnCs": "28. 5. 2028",
+        "receivedOnEn": "28 May 2028",
+        "amountCs": "249,48 Kč",
+        "amountEn": "CZK 249.48"
+      },
+      {
+        "receivedOnCs": "29. 5. 2028",
+        "receivedOnEn": "29 May 2028",
+        "amountCs": "250,49 Kč",
+        "amountEn": "CZK 250.49"
+      },
+      {
+        "receivedOnCs": "30. 5. 2028",
+        "receivedOnEn": "30 May 2028",
+        "amountCs": "251,50 Kč",
+        "amountEn": "CZK 251.50"
+      },
+      {
+        "receivedOnCs": "31. 5. 2028",
+        "receivedOnEn": "31 May 2028",
+        "amountCs": "252,51 Kč",
+        "amountEn": "CZK 252.51"
+      },
+      {
+        "receivedOnCs": "1. 6. 2028",
+        "receivedOnEn": "1 June 2028",
+        "amountCs": "253,52 Kč",
+        "amountEn": "CZK 253.52"
+      },
+      {
+        "receivedOnCs": "2. 6. 2028",
+        "receivedOnEn": "2 June 2028",
+        "amountCs": "254,53 Kč",
+        "amountEn": "CZK 254.53"
+      },
+      {
+        "receivedOnCs": "3. 6. 2028",
+        "receivedOnEn": "3 June 2028",
+        "amountCs": "255,54 Kč",
+        "amountEn": "CZK 255.54"
+      },
+      {
+        "receivedOnCs": "4. 6. 2028",
+        "receivedOnEn": "4 June 2028",
+        "amountCs": "256,55 Kč",
+        "amountEn": "CZK 256.55"
+      },
+      {
+        "receivedOnCs": "5. 6. 2028",
+        "receivedOnEn": "5 June 2028",
+        "amountCs": "257,56 Kč",
+        "amountEn": "CZK 257.56"
+      },
+      {
+        "receivedOnCs": "6. 6. 2028",
+        "receivedOnEn": "6 June 2028",
+        "amountCs": "258,57 Kč",
+        "amountEn": "CZK 258.57"
+      },
+      {
+        "receivedOnCs": "7. 6. 2028",
+        "receivedOnEn": "7 June 2028",
+        "amountCs": "259,58 Kč",
+        "amountEn": "CZK 259.58"
+      },
+      {
+        "receivedOnCs": "8. 6. 2028",
+        "receivedOnEn": "8 June 2028",
+        "amountCs": "260,59 Kč",
+        "amountEn": "CZK 260.59"
+      },
+      {
+        "receivedOnCs": "9. 6. 2028",
+        "receivedOnEn": "9 June 2028",
+        "amountCs": "261,60 Kč",
+        "amountEn": "CZK 261.60"
+      },
+      {
+        "receivedOnCs": "10. 6. 2028",
+        "receivedOnEn": "10 June 2028",
+        "amountCs": "262,61 Kč",
+        "amountEn": "CZK 262.61"
+      },
+      {
+        "receivedOnCs": "11. 6. 2028",
+        "receivedOnEn": "11 June 2028",
+        "amountCs": "263,62 Kč",
+        "amountEn": "CZK 263.62"
+      },
+      {
+        "receivedOnCs": "12. 6. 2028",
+        "receivedOnEn": "12 June 2028",
+        "amountCs": "264,63 Kč",
+        "amountEn": "CZK 264.63"
+      },
+      {
+        "receivedOnCs": "13. 6. 2028",
+        "receivedOnEn": "13 June 2028",
+        "amountCs": "265,64 Kč",
+        "amountEn": "CZK 265.64"
+      },
+      {
+        "receivedOnCs": "14. 6. 2028",
+        "receivedOnEn": "14 June 2028",
+        "amountCs": "266,65 Kč",
+        "amountEn": "CZK 266.65"
+      },
+      {
+        "receivedOnCs": "15. 6. 2028",
+        "receivedOnEn": "15 June 2028",
+        "amountCs": "267,66 Kč",
+        "amountEn": "CZK 267.66"
+      },
+      {
+        "receivedOnCs": "16. 6. 2028",
+        "receivedOnEn": "16 June 2028",
+        "amountCs": "268,67 Kč",
+        "amountEn": "CZK 268.67"
+      },
+      {
+        "receivedOnCs": "17. 6. 2028",
+        "receivedOnEn": "17 June 2028",
+        "amountCs": "269,68 Kč",
+        "amountEn": "CZK 269.68"
+      },
+      {
+        "receivedOnCs": "18. 6. 2028",
+        "receivedOnEn": "18 June 2028",
+        "amountCs": "270,69 Kč",
+        "amountEn": "CZK 270.69"
+      },
+      {
+        "receivedOnCs": "19. 6. 2028",
+        "receivedOnEn": "19 June 2028",
+        "amountCs": "271,70 Kč",
+        "amountEn": "CZK 271.70"
+      },
+      {
+        "receivedOnCs": "20. 6. 2028",
+        "receivedOnEn": "20 June 2028",
+        "amountCs": "272,71 Kč",
+        "amountEn": "CZK 272.71"
+      },
+      {
+        "receivedOnCs": "21. 6. 2028",
+        "receivedOnEn": "21 June 2028",
+        "amountCs": "273,72 Kč",
+        "amountEn": "CZK 273.72"
+      },
+      {
+        "receivedOnCs": "22. 6. 2028",
+        "receivedOnEn": "22 June 2028",
+        "amountCs": "274,73 Kč",
+        "amountEn": "CZK 274.73"
+      },
+      {
+        "receivedOnCs": "23. 6. 2028",
+        "receivedOnEn": "23 June 2028",
+        "amountCs": "275,74 Kč",
+        "amountEn": "CZK 275.74"
+      },
+      {
+        "receivedOnCs": "24. 6. 2028",
+        "receivedOnEn": "24 June 2028",
+        "amountCs": "276,75 Kč",
+        "amountEn": "CZK 276.75"
+      },
+      {
+        "receivedOnCs": "25. 6. 2028",
+        "receivedOnEn": "25 June 2028",
+        "amountCs": "277,76 Kč",
+        "amountEn": "CZK 277.76"
+      },
+      {
+        "receivedOnCs": "26. 6. 2028",
+        "receivedOnEn": "26 June 2028",
+        "amountCs": "278,77 Kč",
+        "amountEn": "CZK 278.77"
+      },
+      {
+        "receivedOnCs": "27. 6. 2028",
+        "receivedOnEn": "27 June 2028",
+        "amountCs": "279,78 Kč",
+        "amountEn": "CZK 279.78"
+      },
+      {
+        "receivedOnCs": "28. 6. 2028",
+        "receivedOnEn": "28 June 2028",
+        "amountCs": "280,79 Kč",
+        "amountEn": "CZK 280.79"
+      },
+      {
+        "receivedOnCs": "29. 6. 2028",
+        "receivedOnEn": "29 June 2028",
+        "amountCs": "281,80 Kč",
+        "amountEn": "CZK 281.80"
+      },
+      {
+        "receivedOnCs": "30. 6. 2028",
+        "receivedOnEn": "30 June 2028",
+        "amountCs": "282,81 Kč",
+        "amountEn": "CZK 282.81"
+      },
+      {
+        "receivedOnCs": "1. 7. 2028",
+        "receivedOnEn": "1 July 2028",
+        "amountCs": "283,82 Kč",
+        "amountEn": "CZK 283.82"
+      },
+      {
+        "receivedOnCs": "2. 7. 2028",
+        "receivedOnEn": "2 July 2028",
+        "amountCs": "284,83 Kč",
+        "amountEn": "CZK 284.83"
+      },
+      {
+        "receivedOnCs": "3. 7. 2028",
+        "receivedOnEn": "3 July 2028",
+        "amountCs": "285,84 Kč",
+        "amountEn": "CZK 285.84"
+      },
+      {
+        "receivedOnCs": "4. 7. 2028",
+        "receivedOnEn": "4 July 2028",
+        "amountCs": "286,85 Kč",
+        "amountEn": "CZK 286.85"
+      },
+      {
+        "receivedOnCs": "5. 7. 2028",
+        "receivedOnEn": "5 July 2028",
+        "amountCs": "287,86 Kč",
+        "amountEn": "CZK 287.86"
+      },
+      {
+        "receivedOnCs": "6. 7. 2028",
+        "receivedOnEn": "6 July 2028",
+        "amountCs": "288,87 Kč",
+        "amountEn": "CZK 288.87"
+      },
+      {
+        "receivedOnCs": "7. 7. 2028",
+        "receivedOnEn": "7 July 2028",
+        "amountCs": "289,88 Kč",
+        "amountEn": "CZK 289.88"
+      },
+      {
+        "receivedOnCs": "8. 7. 2028",
+        "receivedOnEn": "8 July 2028",
+        "amountCs": "290,89 Kč",
+        "amountEn": "CZK 290.89"
+      },
+      {
+        "receivedOnCs": "9. 7. 2028",
+        "receivedOnEn": "9 July 2028",
+        "amountCs": "291,90 Kč",
+        "amountEn": "CZK 291.90"
+      },
+      {
+        "receivedOnCs": "10. 7. 2028",
+        "receivedOnEn": "10 July 2028",
+        "amountCs": "292,91 Kč",
+        "amountEn": "CZK 292.91"
+      },
+      {
+        "receivedOnCs": "11. 7. 2028",
+        "receivedOnEn": "11 July 2028",
+        "amountCs": "293,92 Kč",
+        "amountEn": "CZK 293.92"
+      },
+      {
+        "receivedOnCs": "12. 7. 2028",
+        "receivedOnEn": "12 July 2028",
+        "amountCs": "294,93 Kč",
+        "amountEn": "CZK 294.93"
+      },
+      {
+        "receivedOnCs": "13. 7. 2028",
+        "receivedOnEn": "13 July 2028",
+        "amountCs": "295,94 Kč",
+        "amountEn": "CZK 295.94"
+      },
+      {
+        "receivedOnCs": "14. 7. 2028",
+        "receivedOnEn": "14 July 2028",
+        "amountCs": "296,95 Kč",
+        "amountEn": "CZK 296.95"
+      },
+      {
+        "receivedOnCs": "15. 7. 2028",
+        "receivedOnEn": "15 July 2028",
+        "amountCs": "297,96 Kč",
+        "amountEn": "CZK 297.96"
+      },
+      {
+        "receivedOnCs": "16. 7. 2028",
+        "receivedOnEn": "16 July 2028",
+        "amountCs": "298,97 Kč",
+        "amountEn": "CZK 298.97"
+      },
+      {
+        "receivedOnCs": "17. 7. 2028",
+        "receivedOnEn": "17 July 2028",
+        "amountCs": "299,98 Kč",
+        "amountEn": "CZK 299.98"
+      },
+      {
+        "receivedOnCs": "18. 7. 2028",
+        "receivedOnEn": "18 July 2028",
+        "amountCs": "300,99 Kč",
+        "amountEn": "CZK 300.99"
+      },
+      {
+        "receivedOnCs": "19. 7. 2028",
+        "receivedOnEn": "19 July 2028",
+        "amountCs": "302 Kč",
+        "amountEn": "CZK 302"
+      },
+      {
+        "receivedOnCs": "20. 7. 2028",
+        "receivedOnEn": "20 July 2028",
+        "amountCs": "303,01 Kč",
+        "amountEn": "CZK 303.01"
+      },
+      {
+        "receivedOnCs": "21. 7. 2028",
+        "receivedOnEn": "21 July 2028",
+        "amountCs": "304,02 Kč",
+        "amountEn": "CZK 304.02"
+      },
+      {
+        "receivedOnCs": "22. 7. 2028",
+        "receivedOnEn": "22 July 2028",
+        "amountCs": "305,03 Kč",
+        "amountEn": "CZK 305.03"
+      },
+      {
+        "receivedOnCs": "23. 7. 2028",
+        "receivedOnEn": "23 July 2028",
+        "amountCs": "306,04 Kč",
+        "amountEn": "CZK 306.04"
+      },
+      {
+        "receivedOnCs": "24. 7. 2028",
+        "receivedOnEn": "24 July 2028",
+        "amountCs": "307,05 Kč",
+        "amountEn": "CZK 307.05"
+      },
+      {
+        "receivedOnCs": "25. 7. 2028",
+        "receivedOnEn": "25 July 2028",
+        "amountCs": "308,06 Kč",
+        "amountEn": "CZK 308.06"
+      },
+      {
+        "receivedOnCs": "26. 7. 2028",
+        "receivedOnEn": "26 July 2028",
+        "amountCs": "309,07 Kč",
+        "amountEn": "CZK 309.07"
+      },
+      {
+        "receivedOnCs": "27. 7. 2028",
+        "receivedOnEn": "27 July 2028",
+        "amountCs": "310,08 Kč",
+        "amountEn": "CZK 310.08"
+      },
+      {
+        "receivedOnCs": "28. 7. 2028",
+        "receivedOnEn": "28 July 2028",
+        "amountCs": "311,09 Kč",
+        "amountEn": "CZK 311.09"
+      },
+      {
+        "receivedOnCs": "29. 7. 2028",
+        "receivedOnEn": "29 July 2028",
+        "amountCs": "312,10 Kč",
+        "amountEn": "CZK 312.10"
+      },
+      {
+        "receivedOnCs": "30. 7. 2028",
+        "receivedOnEn": "30 July 2028",
+        "amountCs": "313,11 Kč",
+        "amountEn": "CZK 313.11"
+      },
+      {
+        "receivedOnCs": "31. 7. 2028",
+        "receivedOnEn": "31 July 2028",
+        "amountCs": "314,12 Kč",
+        "amountEn": "CZK 314.12"
+      },
+      {
+        "receivedOnCs": "1. 8. 2028",
+        "receivedOnEn": "1 August 2028",
+        "amountCs": "315,13 Kč",
+        "amountEn": "CZK 315.13"
+      },
+      {
+        "receivedOnCs": "2. 8. 2028",
+        "receivedOnEn": "2 August 2028",
+        "amountCs": "316,14 Kč",
+        "amountEn": "CZK 316.14"
+      },
+      {
+        "receivedOnCs": "3. 8. 2028",
+        "receivedOnEn": "3 August 2028",
+        "amountCs": "317,15 Kč",
+        "amountEn": "CZK 317.15"
+      },
+      {
+        "receivedOnCs": "4. 8. 2028",
+        "receivedOnEn": "4 August 2028",
+        "amountCs": "318,16 Kč",
+        "amountEn": "CZK 318.16"
+      },
+      {
+        "receivedOnCs": "5. 8. 2028",
+        "receivedOnEn": "5 August 2028",
+        "amountCs": "319,17 Kč",
+        "amountEn": "CZK 319.17"
+      },
+      {
+        "receivedOnCs": "6. 8. 2028",
+        "receivedOnEn": "6 August 2028",
+        "amountCs": "320,18 Kč",
+        "amountEn": "CZK 320.18"
+      },
+      {
+        "receivedOnCs": "7. 8. 2028",
+        "receivedOnEn": "7 August 2028",
+        "amountCs": "321,19 Kč",
+        "amountEn": "CZK 321.19"
+      },
+      {
+        "receivedOnCs": "8. 8. 2028",
+        "receivedOnEn": "8 August 2028",
+        "amountCs": "322,20 Kč",
+        "amountEn": "CZK 322.20"
+      },
+      {
+        "receivedOnCs": "9. 8. 2028",
+        "receivedOnEn": "9 August 2028",
+        "amountCs": "323,21 Kč",
+        "amountEn": "CZK 323.21"
+      },
+      {
+        "receivedOnCs": "10. 8. 2028",
+        "receivedOnEn": "10 August 2028",
+        "amountCs": "324,22 Kč",
+        "amountEn": "CZK 324.22"
+      },
+      {
+        "receivedOnCs": "11. 8. 2028",
+        "receivedOnEn": "11 August 2028",
+        "amountCs": "325,23 Kč",
+        "amountEn": "CZK 325.23"
+      },
+      {
+        "receivedOnCs": "12. 8. 2028",
+        "receivedOnEn": "12 August 2028",
+        "amountCs": "326,24 Kč",
+        "amountEn": "CZK 326.24"
+      },
+      {
+        "receivedOnCs": "13. 8. 2028",
+        "receivedOnEn": "13 August 2028",
+        "amountCs": "327,25 Kč",
+        "amountEn": "CZK 327.25"
+      },
+      {
+        "receivedOnCs": "14. 8. 2028",
+        "receivedOnEn": "14 August 2028",
+        "amountCs": "328,26 Kč",
+        "amountEn": "CZK 328.26"
+      },
+      {
+        "receivedOnCs": "15. 8. 2028",
+        "receivedOnEn": "15 August 2028",
+        "amountCs": "329,27 Kč",
+        "amountEn": "CZK 329.27"
+      },
+      {
+        "receivedOnCs": "16. 8. 2028",
+        "receivedOnEn": "16 August 2028",
+        "amountCs": "330,28 Kč",
+        "amountEn": "CZK 330.28"
+      },
+      {
+        "receivedOnCs": "17. 8. 2028",
+        "receivedOnEn": "17 August 2028",
+        "amountCs": "331,29 Kč",
+        "amountEn": "CZK 331.29"
+      },
+      {
+        "receivedOnCs": "18. 8. 2028",
+        "receivedOnEn": "18 August 2028",
+        "amountCs": "332,30 Kč",
+        "amountEn": "CZK 332.30"
+      },
+      {
+        "receivedOnCs": "19. 8. 2028",
+        "receivedOnEn": "19 August 2028",
+        "amountCs": "333,31 Kč",
+        "amountEn": "CZK 333.31"
+      },
+      {
+        "receivedOnCs": "20. 8. 2028",
+        "receivedOnEn": "20 August 2028",
+        "amountCs": "334,32 Kč",
+        "amountEn": "CZK 334.32"
+      },
+      {
+        "receivedOnCs": "21. 8. 2028",
+        "receivedOnEn": "21 August 2028",
+        "amountCs": "335,33 Kč",
+        "amountEn": "CZK 335.33"
+      },
+      {
+        "receivedOnCs": "22. 8. 2028",
+        "receivedOnEn": "22 August 2028",
+        "amountCs": "336,34 Kč",
+        "amountEn": "CZK 336.34"
+      },
+      {
+        "receivedOnCs": "23. 8. 2028",
+        "receivedOnEn": "23 August 2028",
+        "amountCs": "337,35 Kč",
+        "amountEn": "CZK 337.35"
+      },
+      {
+        "receivedOnCs": "24. 8. 2028",
+        "receivedOnEn": "24 August 2028",
+        "amountCs": "338,36 Kč",
+        "amountEn": "CZK 338.36"
+      },
+      {
+        "receivedOnCs": "25. 8. 2028",
+        "receivedOnEn": "25 August 2028",
+        "amountCs": "339,37 Kč",
+        "amountEn": "CZK 339.37"
+      },
+      {
+        "receivedOnCs": "26. 8. 2028",
+        "receivedOnEn": "26 August 2028",
+        "amountCs": "340,38 Kč",
+        "amountEn": "CZK 340.38"
+      },
+      {
+        "receivedOnCs": "27. 8. 2028",
+        "receivedOnEn": "27 August 2028",
+        "amountCs": "341,39 Kč",
+        "amountEn": "CZK 341.39"
+      },
+      {
+        "receivedOnCs": "28. 8. 2028",
+        "receivedOnEn": "28 August 2028",
+        "amountCs": "342,40 Kč",
+        "amountEn": "CZK 342.40"
+      },
+      {
+        "receivedOnCs": "29. 8. 2028",
+        "receivedOnEn": "29 August 2028",
+        "amountCs": "343,41 Kč",
+        "amountEn": "CZK 343.41"
+      },
+      {
+        "receivedOnCs": "30. 8. 2028",
+        "receivedOnEn": "30 August 2028",
+        "amountCs": "344,42 Kč",
+        "amountEn": "CZK 344.42"
+      },
+      {
+        "receivedOnCs": "31. 8. 2028",
+        "receivedOnEn": "31 August 2028",
+        "amountCs": "345,43 Kč",
+        "amountEn": "CZK 345.43"
+      },
+      {
+        "receivedOnCs": "1. 9. 2028",
+        "receivedOnEn": "1 September 2028",
+        "amountCs": "346,44 Kč",
+        "amountEn": "CZK 346.44"
+      },
+      {
+        "receivedOnCs": "2. 9. 2028",
+        "receivedOnEn": "2 September 2028",
+        "amountCs": "347,45 Kč",
+        "amountEn": "CZK 347.45"
+      },
+      {
+        "receivedOnCs": "3. 9. 2028",
+        "receivedOnEn": "3 September 2028",
+        "amountCs": "348,46 Kč",
+        "amountEn": "CZK 348.46"
+      },
+      {
+        "receivedOnCs": "4. 9. 2028",
+        "receivedOnEn": "4 September 2028",
+        "amountCs": "349,47 Kč",
+        "amountEn": "CZK 349.47"
+      },
+      {
+        "receivedOnCs": "5. 9. 2028",
+        "receivedOnEn": "5 September 2028",
+        "amountCs": "350,48 Kč",
+        "amountEn": "CZK 350.48"
+      },
+      {
+        "receivedOnCs": "6. 9. 2028",
+        "receivedOnEn": "6 September 2028",
+        "amountCs": "351,49 Kč",
+        "amountEn": "CZK 351.49"
+      },
+      {
+        "receivedOnCs": "7. 9. 2028",
+        "receivedOnEn": "7 September 2028",
+        "amountCs": "352,50 Kč",
+        "amountEn": "CZK 352.50"
+      },
+      {
+        "receivedOnCs": "8. 9. 2028",
+        "receivedOnEn": "8 September 2028",
+        "amountCs": "353,51 Kč",
+        "amountEn": "CZK 353.51"
+      },
+      {
+        "receivedOnCs": "9. 9. 2028",
+        "receivedOnEn": "9 September 2028",
+        "amountCs": "354,52 Kč",
+        "amountEn": "CZK 354.52"
+      },
+      {
+        "receivedOnCs": "10. 9. 2028",
+        "receivedOnEn": "10 September 2028",
+        "amountCs": "355,53 Kč",
+        "amountEn": "CZK 355.53"
+      },
+      {
+        "receivedOnCs": "11. 9. 2028",
+        "receivedOnEn": "11 September 2028",
+        "amountCs": "356,54 Kč",
+        "amountEn": "CZK 356.54"
+      },
+      {
+        "receivedOnCs": "12. 9. 2028",
+        "receivedOnEn": "12 September 2028",
+        "amountCs": "357,55 Kč",
+        "amountEn": "CZK 357.55"
+      },
+      {
+        "receivedOnCs": "13. 9. 2028",
+        "receivedOnEn": "13 September 2028",
+        "amountCs": "358,56 Kč",
+        "amountEn": "CZK 358.56"
+      },
+      {
+        "receivedOnCs": "14. 9. 2028",
+        "receivedOnEn": "14 September 2028",
+        "amountCs": "359,57 Kč",
+        "amountEn": "CZK 359.57"
+      },
+      {
+        "receivedOnCs": "15. 9. 2028",
+        "receivedOnEn": "15 September 2028",
+        "amountCs": "360,58 Kč",
+        "amountEn": "CZK 360.58"
+      },
+      {
+        "receivedOnCs": "16. 9. 2028",
+        "receivedOnEn": "16 September 2028",
+        "amountCs": "361,59 Kč",
+        "amountEn": "CZK 361.59"
+      },
+      {
+        "receivedOnCs": "17. 9. 2028",
+        "receivedOnEn": "17 September 2028",
+        "amountCs": "362,60 Kč",
+        "amountEn": "CZK 362.60"
+      },
+      {
+        "receivedOnCs": "18. 9. 2028",
+        "receivedOnEn": "18 September 2028",
+        "amountCs": "363,61 Kč",
+        "amountEn": "CZK 363.61"
+      },
+      {
+        "receivedOnCs": "19. 9. 2028",
+        "receivedOnEn": "19 September 2028",
+        "amountCs": "364,62 Kč",
+        "amountEn": "CZK 364.62"
+      },
+      {
+        "receivedOnCs": "20. 9. 2028",
+        "receivedOnEn": "20 September 2028",
+        "amountCs": "365,63 Kč",
+        "amountEn": "CZK 365.63"
+      },
+      {
+        "receivedOnCs": "21. 9. 2028",
+        "receivedOnEn": "21 September 2028",
+        "amountCs": "366,64 Kč",
+        "amountEn": "CZK 366.64"
+      },
+      {
+        "receivedOnCs": "22. 9. 2028",
+        "receivedOnEn": "22 September 2028",
+        "amountCs": "367,65 Kč",
+        "amountEn": "CZK 367.65"
+      },
+      {
+        "receivedOnCs": "23. 9. 2028",
+        "receivedOnEn": "23 September 2028",
+        "amountCs": "368,66 Kč",
+        "amountEn": "CZK 368.66"
+      },
+      {
+        "receivedOnCs": "24. 9. 2028",
+        "receivedOnEn": "24 September 2028",
+        "amountCs": "369,67 Kč",
+        "amountEn": "CZK 369.67"
+      },
+      {
+        "receivedOnCs": "25. 9. 2028",
+        "receivedOnEn": "25 September 2028",
+        "amountCs": "370,68 Kč",
+        "amountEn": "CZK 370.68"
+      },
+      {
+        "receivedOnCs": "26. 9. 2028",
+        "receivedOnEn": "26 September 2028",
+        "amountCs": "371,69 Kč",
+        "amountEn": "CZK 371.69"
+      },
+      {
+        "receivedOnCs": "27. 9. 2028",
+        "receivedOnEn": "27 September 2028",
+        "amountCs": "372,70 Kč",
+        "amountEn": "CZK 372.70"
+      },
+      {
+        "receivedOnCs": "28. 9. 2028",
+        "receivedOnEn": "28 September 2028",
+        "amountCs": "373,71 Kč",
+        "amountEn": "CZK 373.71"
+      },
+      {
+        "receivedOnCs": "29. 9. 2028",
+        "receivedOnEn": "29 September 2028",
+        "amountCs": "374,72 Kč",
+        "amountEn": "CZK 374.72"
+      },
+      {
+        "receivedOnCs": "30. 9. 2028",
+        "receivedOnEn": "30 September 2028",
+        "amountCs": "375,73 Kč",
+        "amountEn": "CZK 375.73"
+      },
+      {
+        "receivedOnCs": "1. 10. 2028",
+        "receivedOnEn": "1 October 2028",
+        "amountCs": "376,74 Kč",
+        "amountEn": "CZK 376.74"
+      },
+      {
+        "receivedOnCs": "2. 10. 2028",
+        "receivedOnEn": "2 October 2028",
+        "amountCs": "377,75 Kč",
+        "amountEn": "CZK 377.75"
+      },
+      {
+        "receivedOnCs": "3. 10. 2028",
+        "receivedOnEn": "3 October 2028",
+        "amountCs": "378,76 Kč",
+        "amountEn": "CZK 378.76"
+      },
+      {
+        "receivedOnCs": "4. 10. 2028",
+        "receivedOnEn": "4 October 2028",
+        "amountCs": "379,77 Kč",
+        "amountEn": "CZK 379.77"
+      },
+      {
+        "receivedOnCs": "5. 10. 2028",
+        "receivedOnEn": "5 October 2028",
+        "amountCs": "380,78 Kč",
+        "amountEn": "CZK 380.78"
+      },
+      {
+        "receivedOnCs": "6. 10. 2028",
+        "receivedOnEn": "6 October 2028",
+        "amountCs": "381,79 Kč",
+        "amountEn": "CZK 381.79"
+      },
+      {
+        "receivedOnCs": "7. 10. 2028",
+        "receivedOnEn": "7 October 2028",
+        "amountCs": "382,80 Kč",
+        "amountEn": "CZK 382.80"
+      },
+      {
+        "receivedOnCs": "8. 10. 2028",
+        "receivedOnEn": "8 October 2028",
+        "amountCs": "383,81 Kč",
+        "amountEn": "CZK 383.81"
+      },
+      {
+        "receivedOnCs": "9. 10. 2028",
+        "receivedOnEn": "9 October 2028",
+        "amountCs": "384,82 Kč",
+        "amountEn": "CZK 384.82"
+      },
+      {
+        "receivedOnCs": "10. 10. 2028",
+        "receivedOnEn": "10 October 2028",
+        "amountCs": "385,83 Kč",
+        "amountEn": "CZK 385.83"
+      },
+      {
+        "receivedOnCs": "11. 10. 2028",
+        "receivedOnEn": "11 October 2028",
+        "amountCs": "386,84 Kč",
+        "amountEn": "CZK 386.84"
+      },
+      {
+        "receivedOnCs": "12. 10. 2028",
+        "receivedOnEn": "12 October 2028",
+        "amountCs": "387,85 Kč",
+        "amountEn": "CZK 387.85"
+      },
+      {
+        "receivedOnCs": "13. 10. 2028",
+        "receivedOnEn": "13 October 2028",
+        "amountCs": "388,86 Kč",
+        "amountEn": "CZK 388.86"
+      },
+      {
+        "receivedOnCs": "14. 10. 2028",
+        "receivedOnEn": "14 October 2028",
+        "amountCs": "389,87 Kč",
+        "amountEn": "CZK 389.87"
+      },
+      {
+        "receivedOnCs": "15. 10. 2028",
+        "receivedOnEn": "15 October 2028",
+        "amountCs": "390,88 Kč",
+        "amountEn": "CZK 390.88"
+      },
+      {
+        "receivedOnCs": "16. 10. 2028",
+        "receivedOnEn": "16 October 2028",
+        "amountCs": "391,89 Kč",
+        "amountEn": "CZK 391.89"
+      },
+      {
+        "receivedOnCs": "17. 10. 2028",
+        "receivedOnEn": "17 October 2028",
+        "amountCs": "392,90 Kč",
+        "amountEn": "CZK 392.90"
+      },
+      {
+        "receivedOnCs": "18. 10. 2028",
+        "receivedOnEn": "18 October 2028",
+        "amountCs": "393,91 Kč",
+        "amountEn": "CZK 393.91"
+      },
+      {
+        "receivedOnCs": "19. 10. 2028",
+        "receivedOnEn": "19 October 2028",
+        "amountCs": "394,92 Kč",
+        "amountEn": "CZK 394.92"
+      },
+      {
+        "receivedOnCs": "20. 10. 2028",
+        "receivedOnEn": "20 October 2028",
+        "amountCs": "395,93 Kč",
+        "amountEn": "CZK 395.93"
+      },
+      {
+        "receivedOnCs": "21. 10. 2028",
+        "receivedOnEn": "21 October 2028",
+        "amountCs": "396,94 Kč",
+        "amountEn": "CZK 396.94"
+      },
+      {
+        "receivedOnCs": "22. 10. 2028",
+        "receivedOnEn": "22 October 2028",
+        "amountCs": "397,95 Kč",
+        "amountEn": "CZK 397.95"
+      },
+      {
+        "receivedOnCs": "23. 10. 2028",
+        "receivedOnEn": "23 October 2028",
+        "amountCs": "398,96 Kč",
+        "amountEn": "CZK 398.96"
+      },
+      {
+        "receivedOnCs": "24. 10. 2028",
+        "receivedOnEn": "24 October 2028",
+        "amountCs": "399,97 Kč",
+        "amountEn": "CZK 399.97"
+      },
+      {
+        "receivedOnCs": "25. 10. 2028",
+        "receivedOnEn": "25 October 2028",
+        "amountCs": "400,98 Kč",
+        "amountEn": "CZK 400.98"
+      },
+      {
+        "receivedOnCs": "26. 10. 2028",
+        "receivedOnEn": "26 October 2028",
+        "amountCs": "401,99 Kč",
+        "amountEn": "CZK 401.99"
+      },
+      {
+        "receivedOnCs": "27. 10. 2028",
+        "receivedOnEn": "27 October 2028",
+        "amountCs": "403 Kč",
+        "amountEn": "CZK 403"
+      },
+      {
+        "receivedOnCs": "28. 10. 2028",
+        "receivedOnEn": "28 October 2028",
+        "amountCs": "404,01 Kč",
+        "amountEn": "CZK 404.01"
+      },
+      {
+        "receivedOnCs": "29. 10. 2028",
+        "receivedOnEn": "29 October 2028",
+        "amountCs": "405,02 Kč",
+        "amountEn": "CZK 405.02"
+      },
+      {
+        "receivedOnCs": "30. 10. 2028",
+        "receivedOnEn": "30 October 2028",
+        "amountCs": "406,03 Kč",
+        "amountEn": "CZK 406.03"
+      },
+      {
+        "receivedOnCs": "31. 10. 2028",
+        "receivedOnEn": "31 October 2028",
+        "amountCs": "407,04 Kč",
+        "amountEn": "CZK 407.04"
+      },
+      {
+        "receivedOnCs": "1. 11. 2028",
+        "receivedOnEn": "1 November 2028",
+        "amountCs": "408,05 Kč",
+        "amountEn": "CZK 408.05"
+      },
+      {
+        "receivedOnCs": "2. 11. 2028",
+        "receivedOnEn": "2 November 2028",
+        "amountCs": "409,06 Kč",
+        "amountEn": "CZK 409.06"
+      },
+      {
+        "receivedOnCs": "3. 11. 2028",
+        "receivedOnEn": "3 November 2028",
+        "amountCs": "410,07 Kč",
+        "amountEn": "CZK 410.07"
+      },
+      {
+        "receivedOnCs": "4. 11. 2028",
+        "receivedOnEn": "4 November 2028",
+        "amountCs": "411,08 Kč",
+        "amountEn": "CZK 411.08"
+      },
+      {
+        "receivedOnCs": "5. 11. 2028",
+        "receivedOnEn": "5 November 2028",
+        "amountCs": "412,09 Kč",
+        "amountEn": "CZK 412.09"
+      },
+      {
+        "receivedOnCs": "6. 11. 2028",
+        "receivedOnEn": "6 November 2028",
+        "amountCs": "413,10 Kč",
+        "amountEn": "CZK 413.10"
+      },
+      {
+        "receivedOnCs": "7. 11. 2028",
+        "receivedOnEn": "7 November 2028",
+        "amountCs": "414,11 Kč",
+        "amountEn": "CZK 414.11"
+      },
+      {
+        "receivedOnCs": "8. 11. 2028",
+        "receivedOnEn": "8 November 2028",
+        "amountCs": "415,12 Kč",
+        "amountEn": "CZK 415.12"
+      },
+      {
+        "receivedOnCs": "9. 11. 2028",
+        "receivedOnEn": "9 November 2028",
+        "amountCs": "416,13 Kč",
+        "amountEn": "CZK 416.13"
+      },
+      {
+        "receivedOnCs": "10. 11. 2028",
+        "receivedOnEn": "10 November 2028",
+        "amountCs": "417,14 Kč",
+        "amountEn": "CZK 417.14"
+      },
+      {
+        "receivedOnCs": "11. 11. 2028",
+        "receivedOnEn": "11 November 2028",
+        "amountCs": "418,15 Kč",
+        "amountEn": "CZK 418.15"
+      },
+      {
+        "receivedOnCs": "12. 11. 2028",
+        "receivedOnEn": "12 November 2028",
+        "amountCs": "419,16 Kč",
+        "amountEn": "CZK 419.16"
+      },
+      {
+        "receivedOnCs": "13. 11. 2028",
+        "receivedOnEn": "13 November 2028",
+        "amountCs": "420,17 Kč",
+        "amountEn": "CZK 420.17"
+      },
+      {
+        "receivedOnCs": "14. 11. 2028",
+        "receivedOnEn": "14 November 2028",
+        "amountCs": "421,18 Kč",
+        "amountEn": "CZK 421.18"
+      },
+      {
+        "receivedOnCs": "15. 11. 2028",
+        "receivedOnEn": "15 November 2028",
+        "amountCs": "422,19 Kč",
+        "amountEn": "CZK 422.19"
+      },
+      {
+        "receivedOnCs": "16. 11. 2028",
+        "receivedOnEn": "16 November 2028",
+        "amountCs": "423,20 Kč",
+        "amountEn": "CZK 423.20"
+      },
+      {
+        "receivedOnCs": "17. 11. 2028",
+        "receivedOnEn": "17 November 2028",
+        "amountCs": "424,21 Kč",
+        "amountEn": "CZK 424.21"
+      },
+      {
+        "receivedOnCs": "18. 11. 2028",
+        "receivedOnEn": "18 November 2028",
+        "amountCs": "425,22 Kč",
+        "amountEn": "CZK 425.22"
+      },
+      {
+        "receivedOnCs": "19. 11. 2028",
+        "receivedOnEn": "19 November 2028",
+        "amountCs": "426,23 Kč",
+        "amountEn": "CZK 426.23"
+      },
+      {
+        "receivedOnCs": "20. 11. 2028",
+        "receivedOnEn": "20 November 2028",
+        "amountCs": "427,24 Kč",
+        "amountEn": "CZK 427.24"
+      },
+      {
+        "receivedOnCs": "21. 11. 2028",
+        "receivedOnEn": "21 November 2028",
+        "amountCs": "428,25 Kč",
+        "amountEn": "CZK 428.25"
+      },
+      {
+        "receivedOnCs": "22. 11. 2028",
+        "receivedOnEn": "22 November 2028",
+        "amountCs": "429,26 Kč",
+        "amountEn": "CZK 429.26"
+      },
+      {
+        "receivedOnCs": "23. 11. 2028",
+        "receivedOnEn": "23 November 2028",
+        "amountCs": "430,27 Kč",
+        "amountEn": "CZK 430.27"
+      },
+      {
+        "receivedOnCs": "24. 11. 2028",
+        "receivedOnEn": "24 November 2028",
+        "amountCs": "431,28 Kč",
+        "amountEn": "CZK 431.28"
+      },
+      {
+        "receivedOnCs": "25. 11. 2028",
+        "receivedOnEn": "25 November 2028",
+        "amountCs": "432,29 Kč",
+        "amountEn": "CZK 432.29"
+      },
+      {
+        "receivedOnCs": "26. 11. 2028",
+        "receivedOnEn": "26 November 2028",
+        "amountCs": "433,30 Kč",
+        "amountEn": "CZK 433.30"
+      },
+      {
+        "receivedOnCs": "27. 11. 2028",
+        "receivedOnEn": "27 November 2028",
+        "amountCs": "434,31 Kč",
+        "amountEn": "CZK 434.31"
+      },
+      {
+        "receivedOnCs": "28. 11. 2028",
+        "receivedOnEn": "28 November 2028",
+        "amountCs": "435,32 Kč",
+        "amountEn": "CZK 435.32"
+      },
+      {
+        "receivedOnCs": "29. 11. 2028",
+        "receivedOnEn": "29 November 2028",
+        "amountCs": "436,33 Kč",
+        "amountEn": "CZK 436.33"
+      },
+      {
+        "receivedOnCs": "30. 11. 2028",
+        "receivedOnEn": "30 November 2028",
+        "amountCs": "437,34 Kč",
+        "amountEn": "CZK 437.34"
+      },
+      {
+        "receivedOnCs": "1. 12. 2028",
+        "receivedOnEn": "1 December 2028",
+        "amountCs": "438,35 Kč",
+        "amountEn": "CZK 438.35"
+      },
+      {
+        "receivedOnCs": "2. 12. 2028",
+        "receivedOnEn": "2 December 2028",
+        "amountCs": "439,36 Kč",
+        "amountEn": "CZK 439.36"
+      },
+      {
+        "receivedOnCs": "3. 12. 2028",
+        "receivedOnEn": "3 December 2028",
+        "amountCs": "440,37 Kč",
+        "amountEn": "CZK 440.37"
+      },
+      {
+        "receivedOnCs": "4. 12. 2028",
+        "receivedOnEn": "4 December 2028",
+        "amountCs": "441,38 Kč",
+        "amountEn": "CZK 441.38"
+      },
+      {
+        "receivedOnCs": "5. 12. 2028",
+        "receivedOnEn": "5 December 2028",
+        "amountCs": "442,39 Kč",
+        "amountEn": "CZK 442.39"
+      },
+      {
+        "receivedOnCs": "6. 12. 2028",
+        "receivedOnEn": "6 December 2028",
+        "amountCs": "443,40 Kč",
+        "amountEn": "CZK 443.40"
+      },
+      {
+        "receivedOnCs": "7. 12. 2028",
+        "receivedOnEn": "7 December 2028",
+        "amountCs": "444,41 Kč",
+        "amountEn": "CZK 444.41"
+      },
+      {
+        "receivedOnCs": "8. 12. 2028",
+        "receivedOnEn": "8 December 2028",
+        "amountCs": "445,42 Kč",
+        "amountEn": "CZK 445.42"
+      },
+      {
+        "receivedOnCs": "9. 12. 2028",
+        "receivedOnEn": "9 December 2028",
+        "amountCs": "446,43 Kč",
+        "amountEn": "CZK 446.43"
+      },
+      {
+        "receivedOnCs": "10. 12. 2028",
+        "receivedOnEn": "10 December 2028",
+        "amountCs": "447,44 Kč",
+        "amountEn": "CZK 447.44"
+      },
+      {
+        "receivedOnCs": "11. 12. 2028",
+        "receivedOnEn": "11 December 2028",
+        "amountCs": "448,45 Kč",
+        "amountEn": "CZK 448.45"
+      },
+      {
+        "receivedOnCs": "12. 12. 2028",
+        "receivedOnEn": "12 December 2028",
+        "amountCs": "449,46 Kč",
+        "amountEn": "CZK 449.46"
+      },
+      {
+        "receivedOnCs": "13. 12. 2028",
+        "receivedOnEn": "13 December 2028",
+        "amountCs": "450,47 Kč",
+        "amountEn": "CZK 450.47"
+      },
+      {
+        "receivedOnCs": "14. 12. 2028",
+        "receivedOnEn": "14 December 2028",
+        "amountCs": "451,48 Kč",
+        "amountEn": "CZK 451.48"
+      },
+      {
+        "receivedOnCs": "15. 12. 2028",
+        "receivedOnEn": "15 December 2028",
+        "amountCs": "452,49 Kč",
+        "amountEn": "CZK 452.49"
+      },
+      {
+        "receivedOnCs": "16. 12. 2028",
+        "receivedOnEn": "16 December 2028",
+        "amountCs": "453,50 Kč",
+        "amountEn": "CZK 453.50"
+      },
+      {
+        "receivedOnCs": "17. 12. 2028",
+        "receivedOnEn": "17 December 2028",
+        "amountCs": "454,51 Kč",
+        "amountEn": "CZK 454.51"
+      },
+      {
+        "receivedOnCs": "18. 12. 2028",
+        "receivedOnEn": "18 December 2028",
+        "amountCs": "455,52 Kč",
+        "amountEn": "CZK 455.52"
+      },
+      {
+        "receivedOnCs": "19. 12. 2028",
+        "receivedOnEn": "19 December 2028",
+        "amountCs": "456,53 Kč",
+        "amountEn": "CZK 456.53"
+      },
+      {
+        "receivedOnCs": "20. 12. 2028",
+        "receivedOnEn": "20 December 2028",
+        "amountCs": "457,54 Kč",
+        "amountEn": "CZK 457.54"
+      },
+      {
+        "receivedOnCs": "21. 12. 2028",
+        "receivedOnEn": "21 December 2028",
+        "amountCs": "458,55 Kč",
+        "amountEn": "CZK 458.55"
+      },
+      {
+        "receivedOnCs": "22. 12. 2028",
+        "receivedOnEn": "22 December 2028",
+        "amountCs": "459,56 Kč",
+        "amountEn": "CZK 459.56"
+      },
+      {
+        "receivedOnCs": "23. 12. 2028",
+        "receivedOnEn": "23 December 2028",
+        "amountCs": "460,57 Kč",
+        "amountEn": "CZK 460.57"
+      },
+      {
+        "receivedOnCs": "24. 12. 2028",
+        "receivedOnEn": "24 December 2028",
+        "amountCs": "461,58 Kč",
+        "amountEn": "CZK 461.58"
+      },
+      {
+        "receivedOnCs": "25. 12. 2028",
+        "receivedOnEn": "25 December 2028",
+        "amountCs": "462,59 Kč",
+        "amountEn": "CZK 462.59"
+      },
+      {
+        "receivedOnCs": "26. 12. 2028",
+        "receivedOnEn": "26 December 2028",
+        "amountCs": "463,60 Kč",
+        "amountEn": "CZK 463.60"
+      },
+      {
+        "receivedOnCs": "27. 12. 2028",
+        "receivedOnEn": "27 December 2028",
+        "amountCs": "464,61 Kč",
+        "amountEn": "CZK 464.61"
+      },
+      {
+        "receivedOnCs": "28. 12. 2028",
+        "receivedOnEn": "28 December 2028",
+        "amountCs": "465,62 Kč",
+        "amountEn": "CZK 465.62"
+      },
+      {
+        "receivedOnCs": "29. 12. 2028",
+        "receivedOnEn": "29 December 2028",
+        "amountCs": "466,63 Kč",
+        "amountEn": "CZK 466.63"
+      },
+      {
+        "receivedOnCs": "30. 12. 2028",
+        "receivedOnEn": "30 December 2028",
+        "amountCs": "467,64 Kč",
+        "amountEn": "CZK 467.64"
+      },
+      {
+        "receivedOnCs": "31. 12. 2028",
+        "receivedOnEn": "31 December 2028",
+        "amountCs": "468,65 Kč",
+        "amountEn": "CZK 468.65"
+      }
+    ],
+    "count": "366",
+    "totalCs": "104 062,95 Kč",
+    "totalEn": "CZK 104,062.95",
+    "signatoryName": "Petr Vzorový",
+    "signatoryRole": "předseda správní rady"
+  },
+  "pdf": {
+    "pageCount": 12,
+    "fonts": [
+      "DejaVuSans (Type0, embedded, subset)",
+      "DejaVuSans-Bold (Type0, embedded, subset)"
+    ]
+  },
+  "pages": [
+    {
+      "number": 1,
+      "widthPt": 595.275,
+      "heightPt": 841.875,
+      "lines": [
+        {
+          "text": "Nová naděje - nadační fond · IČO 27278794 · Jiráskova 436, 473 01 Nový Bor · Číslo potvrzení: 2029-000008 1 / 12",
+          "x": 88,
+          "y": 804
+        },
+        {
+          "text": "Potvrzení o přijatých darech za rok 2028",
+          "x": 540,
+          "y": 56
+        },
+        {
+          "text": "Confirmation of donations received in 2028",
+          "x": 381,
+          "y": 72
+        },
+        {
+          "text": "Číslo potvrzení: 2029-000008",
+          "x": 404,
+          "y": 90
+        },
+        {
+          "text": "Confirmation No.: 2029-000008",
+          "x": 425,
+          "y": 100
+        },
+        {
+          "text": "Datum vystavení: 2. 1. 2029",
+          "x": 409,
+          "y": 112
+        },
+        {
+          "text": "Date of issue: 2 January 2029",
+          "x": 433,
+          "y": 123
+        },
+        {
+          "text": "Obdarovaný / Donee",
+          "x": 123,
+          "y": 147
+        },
+        {
+          "text": "Název: Nová naděje - nadační fond",
+          "x": 51,
+          "y": 167
+        },
+        {
+          "text": "Name: Nová naděje - nadační fond",
+          "x": 51,
+          "y": 177
+        },
+        {
+          "text": "IČO: 27278794",
+          "x": 51,
+          "y": 192
+        },
+        {
+          "text": "Company ID: 27278794",
+          "x": 51,
+          "y": 202
+        },
+        {
+          "text": "Sídlo: Jiráskova 436, 473 01 Nový Bor",
+          "x": 51,
+          "y": 217
+        },
+        {
+          "text": "Registered office: Jiráskova 436, 473 01 Nový Bor",
+          "x": 51,
+          "y": 227
+        },
+        {
+          "text": "zapsaný v nadačním rejstříku, spisová značka",
+          "x": 51,
+          "y": 242
+        },
+        {
+          "text": "N 78, rejstříkový soud: Krajský soud v Ústí nad",
+          "x": 51,
+          "y": 254
+        },
+        {
+          "text": "Labem",
+          "x": 51,
+          "y": 266
+        },
+        {
+          "text": "registered in the Register of Foundations, file No. N 78,",
+          "x": 51,
+          "y": 277
+        },
+        {
+          "text": "registry court: Krajský soud v Ústí nad Labem",
+          "x": 51,
+          "y": 286
+        },
+        {
+          "text": "Dárce / Donor",
+          "x": 332,
+          "y": 147
+        },
+        {
+          "text": "Jméno a příjmení: Jana Nováková",
+          "x": 298,
+          "y": 167
+        },
+        {
+          "text": "Name and surname: Jana Nováková",
+          "x": 298,
+          "y": 177
+        },
+        {
+          "text": "Bydliště: Dlouhá 12, 400 01 Ústí nad Labem",
+          "x": 298,
+          "y": 192
+        },
+        {
+          "text": "Residence: Dlouhá 12, 400 01 Ústí nad Labem",
+          "x": 298,
+          "y": 202
+        },
+        {
+          "text": "Variabilní symbol: 4821937560",
+          "x": 298,
+          "y": 217
+        },
+        {
+          "text": "Variable symbol: 4821937560",
+          "x": 298,
+          "y": 227
+        },
+        {
+          "text": "Účet příjemce: 5544332217/2010",
+          "x": 51,
+          "y": 312
+        },
+        {
+          "text": "Recipient account: 5544332217/2010",
+          "x": 51,
+          "y": 323
+        },
+        {
+          "text": "Datum připsání na účet",
+          "x": 182,
+          "y": 344
+        },
+        {
+          "text": "Date credited to the account",
+          "x": 57,
+          "y": 357
+        },
+        {
+          "text": "Částka",
+          "x": 535,
+          "y": 344
+        },
+        {
+          "text": "Amount",
+          "x": 506,
+          "y": 357
+        },
+        {
+          "text": "1. 1. 2028 (1 January 2028)  100 Kč (CZK 100)",
+          "x": 105,
+          "y": 377
+        },
+        {
+          "text": "2. 1. 2028 (2 January 2028)  101,01 Kč (CZK 101.01)",
+          "x": 105,
+          "y": 397
+        },
+        {
+          "text": "3. 1. 2028 (3 January 2028)  102,02 Kč (CZK 102.02)",
+          "x": 105,
+          "y": 417
+        },
+        {
+          "text": "4. 1. 2028 (4 January 2028)  103,03 Kč (CZK 103.03)",
+          "x": 105,
+          "y": 436
+        },
+        {
+          "text": "5. 1. 2028 (5 January 2028)  104,04 Kč (CZK 104.04)",
+          "x": 105,
+          "y": 456
+        },
+        {
+          "text": "6. 1. 2028 (6 January 2028)  105,05 Kč (CZK 105.05)",
+          "x": 105,
+          "y": 476
+        },
+        {
+          "text": "7. 1. 2028 (7 January 2028)  106,06 Kč (CZK 106.06)",
+          "x": 105,
+          "y": 495
+        },
+        {
+          "text": "8. 1. 2028 (8 January 2028)  107,07 Kč (CZK 107.07)",
+          "x": 105,
+          "y": 515
+        },
+        {
+          "text": "9. 1. 2028 (9 January 2028)  108,08 Kč (CZK 108.08)",
+          "x": 105,
+          "y": 535
+        },
+        {
+          "text": "10. 1. 2028 (10 January 2028)  109,09 Kč (CZK 109.09)",
+          "x": 111,
+          "y": 554
+        },
+        {
+          "text": "11. 1. 2028 (11 January 2028)  110,10 Kč (CZK 110.10)",
+          "x": 111,
+          "y": 574
+        },
+        {
+          "text": "12. 1. 2028 (12 January 2028)  111,11 Kč (CZK 111.11)",
+          "x": 111,
+          "y": 593
+        },
+        {
+          "text": "13. 1. 2028 (13 January 2028)  112,12 Kč (CZK 112.12)",
+          "x": 111,
+          "y": 613
+        },
+        {
+          "text": "14. 1. 2028 (14 January 2028)  113,13 Kč (CZK 113.13)",
+          "x": 111,
+          "y": 633
+        },
+        {
+          "text": "15. 1. 2028 (15 January 2028)  114,14 Kč (CZK 114.14)",
+          "x": 111,
+          "y": 652
+        },
+        {
+          "text": "16. 1. 2028 (16 January 2028)  115,15 Kč (CZK 115.15)",
+          "x": 111,
+          "y": 672
+        },
+        {
+          "text": "17. 1. 2028 (17 January 2028)  116,16 Kč (CZK 116.16)",
+          "x": 111,
+          "y": 692
+        },
+        {
+          "text": "18. 1. 2028 (18 January 2028)  117,17 Kč (CZK 117.17)",
+          "x": 111,
+          "y": 711
+        },
+        {
+          "text": "19. 1. 2028 (19 January 2028)  118,18 Kč (CZK 118.18)",
+          "x": 111,
+          "y": 731
+        },
+        {
+          "text": "20. 1. 2028 (20 January 2028)  119,19 Kč (CZK 119.19)",
+          "x": 111,
+          "y": 751
+        },
+        {
+          "text": "21. 1. 2028 (21 January 2028)  120,20 Kč (CZK 120.20)",
+          "x": 111,
+          "y": 770
+        }
+      ]
+    },
+    {
+      "number": 2,
+      "widthPt": 595.275,
+      "heightPt": 841.875,
+      "lines": [
+        {
+          "text": "Nová naděje - nadační fond · IČO 27278794 · Jiráskova 436, 473 01 Nový Bor · Číslo potvrzení: 2029-000008 2 / 12",
+          "x": 88,
+          "y": 804
+        },
+        {
+          "text": "Datum připsání na účet",
+          "x": 182,
+          "y": 56
+        },
+        {
+          "text": "Date credited to the account",
+          "x": 57,
+          "y": 69
+        },
+        {
+          "text": "Částka",
+          "x": 535,
+          "y": 56
+        },
+        {
+          "text": "Amount",
+          "x": 506,
+          "y": 69
+        },
+        {
+          "text": "22. 1. 2028 (22 January 2028)  121,21 Kč (CZK 121.21)",
+          "x": 111,
+          "y": 89
+        },
+        {
+          "text": "23. 1. 2028 (23 January 2028)  122,22 Kč (CZK 122.22)",
+          "x": 111,
+          "y": 109
+        },
+        {
+          "text": "24. 1. 2028 (24 January 2028)  123,23 Kč (CZK 123.23)",
+          "x": 111,
+          "y": 128
+        },
+        {
+          "text": "25. 1. 2028 (25 January 2028)  124,24 Kč (CZK 124.24)",
+          "x": 111,
+          "y": 148
+        },
+        {
+          "text": "26. 1. 2028 (26 January 2028)  125,25 Kč (CZK 125.25)",
+          "x": 111,
+          "y": 168
+        },
+        {
+          "text": "27. 1. 2028 (27 January 2028)  126,26 Kč (CZK 126.26)",
+          "x": 111,
+          "y": 187
+        },
+        {
+          "text": "28. 1. 2028 (28 January 2028)  127,27 Kč (CZK 127.27)",
+          "x": 111,
+          "y": 207
+        },
+        {
+          "text": "29. 1. 2028 (29 January 2028)  128,28 Kč (CZK 128.28)",
+          "x": 111,
+          "y": 227
+        },
+        {
+          "text": "30. 1. 2028 (30 January 2028)  129,29 Kč (CZK 129.29)",
+          "x": 111,
+          "y": 246
+        },
+        {
+          "text": "31. 1. 2028 (31 January 2028)  130,30 Kč (CZK 130.30)",
+          "x": 111,
+          "y": 266
+        },
+        {
+          "text": "1. 2. 2028 (1 February 2028)  131,31 Kč (CZK 131.31)",
+          "x": 105,
+          "y": 286
+        },
+        {
+          "text": "2. 2. 2028 (2 February 2028)  132,32 Kč (CZK 132.32)",
+          "x": 105,
+          "y": 305
+        },
+        {
+          "text": "3. 2. 2028 (3 February 2028)  133,33 Kč (CZK 133.33)",
+          "x": 105,
+          "y": 325
+        },
+        {
+          "text": "4. 2. 2028 (4 February 2028)  134,34 Kč (CZK 134.34)",
+          "x": 105,
+          "y": 345
+        },
+        {
+          "text": "5. 2. 2028 (5 February 2028)  135,35 Kč (CZK 135.35)",
+          "x": 105,
+          "y": 364
+        },
+        {
+          "text": "6. 2. 2028 (6 February 2028)  136,36 Kč (CZK 136.36)",
+          "x": 105,
+          "y": 384
+        },
+        {
+          "text": "7. 2. 2028 (7 February 2028)  137,37 Kč (CZK 137.37)",
+          "x": 105,
+          "y": 404
+        },
+        {
+          "text": "8. 2. 2028 (8 February 2028)  138,38 Kč (CZK 138.38)",
+          "x": 105,
+          "y": 423
+        },
+        {
+          "text": "9. 2. 2028 (9 February 2028)  139,39 Kč (CZK 139.39)",
+          "x": 105,
+          "y": 443
+        },
+        {
+          "text": "10. 2. 2028 (10 February 2028)  140,40 Kč (CZK 140.40)",
+          "x": 111,
+          "y": 463
+        },
+        {
+          "text": "11. 2. 2028 (11 February 2028)  141,41 Kč (CZK 141.41)",
+          "x": 111,
+          "y": 482
+        },
+        {
+          "text": "12. 2. 2028 (12 February 2028)  142,42 Kč (CZK 142.42)",
+          "x": 111,
+          "y": 502
+        },
+        {
+          "text": "13. 2. 2028 (13 February 2028)  143,43 Kč (CZK 143.43)",
+          "x": 111,
+          "y": 521
+        },
+        {
+          "text": "14. 2. 2028 (14 February 2028)  144,44 Kč (CZK 144.44)",
+          "x": 111,
+          "y": 541
+        },
+        {
+          "text": "15. 2. 2028 (15 February 2028)  145,45 Kč (CZK 145.45)",
+          "x": 111,
+          "y": 561
+        },
+        {
+          "text": "16. 2. 2028 (16 February 2028)  146,46 Kč (CZK 146.46)",
+          "x": 111,
+          "y": 580
+        },
+        {
+          "text": "17. 2. 2028 (17 February 2028)  147,47 Kč (CZK 147.47)",
+          "x": 111,
+          "y": 600
+        },
+        {
+          "text": "18. 2. 2028 (18 February 2028)  148,48 Kč (CZK 148.48)",
+          "x": 111,
+          "y": 620
+        },
+        {
+          "text": "19. 2. 2028 (19 February 2028)  149,49 Kč (CZK 149.49)",
+          "x": 111,
+          "y": 639
+        },
+        {
+          "text": "20. 2. 2028 (20 February 2028)  150,50 Kč (CZK 150.50)",
+          "x": 111,
+          "y": 659
+        },
+        {
+          "text": "21. 2. 2028 (21 February 2028)  151,51 Kč (CZK 151.51)",
+          "x": 111,
+          "y": 679
+        },
+        {
+          "text": "22. 2. 2028 (22 February 2028)  152,52 Kč (CZK 152.52)",
+          "x": 111,
+          "y": 698
+        },
+        {
+          "text": "23. 2. 2028 (23 February 2028)  153,53 Kč (CZK 153.53)",
+          "x": 111,
+          "y": 718
+        },
+        {
+          "text": "24. 2. 2028 (24 February 2028)  154,54 Kč (CZK 154.54)",
+          "x": 111,
+          "y": 738
+        },
+        {
+          "text": "25. 2. 2028 (25 February 2028)  155,55 Kč (CZK 155.55)",
+          "x": 111,
+          "y": 757
+        },
+        {
+          "text": "26. 2. 2028 (26 February 2028)  156,56 Kč (CZK 156.56)",
+          "x": 111,
+          "y": 777
+        }
+      ]
+    },
+    {
+      "number": 3,
+      "widthPt": 595.275,
+      "heightPt": 841.875,
+      "lines": [
+        {
+          "text": "Nová naděje - nadační fond · IČO 27278794 · Jiráskova 436, 473 01 Nový Bor · Číslo potvrzení: 2029-000008 3 / 12",
+          "x": 88,
+          "y": 804
+        },
+        {
+          "text": "Datum připsání na účet",
+          "x": 182,
+          "y": 56
+        },
+        {
+          "text": "Date credited to the account",
+          "x": 57,
+          "y": 69
+        },
+        {
+          "text": "Částka",
+          "x": 535,
+          "y": 56
+        },
+        {
+          "text": "Amount",
+          "x": 506,
+          "y": 69
+        },
+        {
+          "text": "27. 2. 2028 (27 February 2028)  157,57 Kč (CZK 157.57)",
+          "x": 111,
+          "y": 89
+        },
+        {
+          "text": "28. 2. 2028 (28 February 2028)  158,58 Kč (CZK 158.58)",
+          "x": 111,
+          "y": 109
+        },
+        {
+          "text": "29. 2. 2028 (29 February 2028)  159,59 Kč (CZK 159.59)",
+          "x": 111,
+          "y": 128
+        },
+        {
+          "text": "1. 3. 2028 (1 March 2028)  160,60 Kč (CZK 160.60)",
+          "x": 105,
+          "y": 148
+        },
+        {
+          "text": "2. 3. 2028 (2 March 2028)  161,61 Kč (CZK 161.61)",
+          "x": 105,
+          "y": 168
+        },
+        {
+          "text": "3. 3. 2028 (3 March 2028)  162,62 Kč (CZK 162.62)",
+          "x": 105,
+          "y": 187
+        },
+        {
+          "text": "4. 3. 2028 (4 March 2028)  163,63 Kč (CZK 163.63)",
+          "x": 105,
+          "y": 207
+        },
+        {
+          "text": "5. 3. 2028 (5 March 2028)  164,64 Kč (CZK 164.64)",
+          "x": 105,
+          "y": 227
+        },
+        {
+          "text": "6. 3. 2028 (6 March 2028)  165,65 Kč (CZK 165.65)",
+          "x": 105,
+          "y": 246
+        },
+        {
+          "text": "7. 3. 2028 (7 March 2028)  166,66 Kč (CZK 166.66)",
+          "x": 105,
+          "y": 266
+        },
+        {
+          "text": "8. 3. 2028 (8 March 2028)  167,67 Kč (CZK 167.67)",
+          "x": 105,
+          "y": 286
+        },
+        {
+          "text": "9. 3. 2028 (9 March 2028)  168,68 Kč (CZK 168.68)",
+          "x": 105,
+          "y": 305
+        },
+        {
+          "text": "10. 3. 2028 (10 March 2028)  169,69 Kč (CZK 169.69)",
+          "x": 111,
+          "y": 325
+        },
+        {
+          "text": "11. 3. 2028 (11 March 2028)  170,70 Kč (CZK 170.70)",
+          "x": 111,
+          "y": 345
+        },
+        {
+          "text": "12. 3. 2028 (12 March 2028)  171,71 Kč (CZK 171.71)",
+          "x": 111,
+          "y": 364
+        },
+        {
+          "text": "13. 3. 2028 (13 March 2028)  172,72 Kč (CZK 172.72)",
+          "x": 111,
+          "y": 384
+        },
+        {
+          "text": "14. 3. 2028 (14 March 2028)  173,73 Kč (CZK 173.73)",
+          "x": 111,
+          "y": 404
+        },
+        {
+          "text": "15. 3. 2028 (15 March 2028)  174,74 Kč (CZK 174.74)",
+          "x": 111,
+          "y": 423
+        },
+        {
+          "text": "16. 3. 2028 (16 March 2028)  175,75 Kč (CZK 175.75)",
+          "x": 111,
+          "y": 443
+        },
+        {
+          "text": "17. 3. 2028 (17 March 2028)  176,76 Kč (CZK 176.76)",
+          "x": 111,
+          "y": 463
+        },
+        {
+          "text": "18. 3. 2028 (18 March 2028)  177,77 Kč (CZK 177.77)",
+          "x": 111,
+          "y": 482
+        },
+        {
+          "text": "19. 3. 2028 (19 March 2028)  178,78 Kč (CZK 178.78)",
+          "x": 111,
+          "y": 502
+        },
+        {
+          "text": "20. 3. 2028 (20 March 2028)  179,79 Kč (CZK 179.79)",
+          "x": 111,
+          "y": 521
+        },
+        {
+          "text": "21. 3. 2028 (21 March 2028)  180,80 Kč (CZK 180.80)",
+          "x": 111,
+          "y": 541
+        },
+        {
+          "text": "22. 3. 2028 (22 March 2028)  181,81 Kč (CZK 181.81)",
+          "x": 111,
+          "y": 561
+        },
+        {
+          "text": "23. 3. 2028 (23 March 2028)  182,82 Kč (CZK 182.82)",
+          "x": 111,
+          "y": 580
+        },
+        {
+          "text": "24. 3. 2028 (24 March 2028)  183,83 Kč (CZK 183.83)",
+          "x": 111,
+          "y": 600
+        },
+        {
+          "text": "25. 3. 2028 (25 March 2028)  184,84 Kč (CZK 184.84)",
+          "x": 111,
+          "y": 620
+        },
+        {
+          "text": "26. 3. 2028 (26 March 2028)  185,85 Kč (CZK 185.85)",
+          "x": 111,
+          "y": 639
+        },
+        {
+          "text": "27. 3. 2028 (27 March 2028)  186,86 Kč (CZK 186.86)",
+          "x": 111,
+          "y": 659
+        },
+        {
+          "text": "28. 3. 2028 (28 March 2028)  187,87 Kč (CZK 187.87)",
+          "x": 111,
+          "y": 679
+        },
+        {
+          "text": "29. 3. 2028 (29 March 2028)  188,88 Kč (CZK 188.88)",
+          "x": 111,
+          "y": 698
+        },
+        {
+          "text": "30. 3. 2028 (30 March 2028)  189,89 Kč (CZK 189.89)",
+          "x": 111,
+          "y": 718
+        },
+        {
+          "text": "31. 3. 2028 (31 March 2028)  190,90 Kč (CZK 190.90)",
+          "x": 111,
+          "y": 738
+        },
+        {
+          "text": "1. 4. 2028 (1 April 2028)  191,91 Kč (CZK 191.91)",
+          "x": 105,
+          "y": 757
+        },
+        {
+          "text": "2. 4. 2028 (2 April 2028)  192,92 Kč (CZK 192.92)",
+          "x": 105,
+          "y": 777
+        }
+      ]
+    },
+    {
+      "number": 4,
+      "widthPt": 595.275,
+      "heightPt": 841.875,
+      "lines": [
+        {
+          "text": "Nová naděje - nadační fond · IČO 27278794 · Jiráskova 436, 473 01 Nový Bor · Číslo potvrzení: 2029-000008 4 / 12",
+          "x": 88,
+          "y": 804
+        },
+        {
+          "text": "Datum připsání na účet",
+          "x": 182,
+          "y": 56
+        },
+        {
+          "text": "Date credited to the account",
+          "x": 57,
+          "y": 69
+        },
+        {
+          "text": "Částka",
+          "x": 535,
+          "y": 56
+        },
+        {
+          "text": "Amount",
+          "x": 506,
+          "y": 69
+        },
+        {
+          "text": "3. 4. 2028 (3 April 2028)  193,93 Kč (CZK 193.93)",
+          "x": 105,
+          "y": 89
+        },
+        {
+          "text": "4. 4. 2028 (4 April 2028)  194,94 Kč (CZK 194.94)",
+          "x": 105,
+          "y": 109
+        },
+        {
+          "text": "5. 4. 2028 (5 April 2028)  195,95 Kč (CZK 195.95)",
+          "x": 105,
+          "y": 128
+        },
+        {
+          "text": "6. 4. 2028 (6 April 2028)  196,96 Kč (CZK 196.96)",
+          "x": 105,
+          "y": 148
+        },
+        {
+          "text": "7. 4. 2028 (7 April 2028)  197,97 Kč (CZK 197.97)",
+          "x": 105,
+          "y": 168
+        },
+        {
+          "text": "8. 4. 2028 (8 April 2028)  198,98 Kč (CZK 198.98)",
+          "x": 105,
+          "y": 187
+        },
+        {
+          "text": "9. 4. 2028 (9 April 2028)  199,99 Kč (CZK 199.99)",
+          "x": 105,
+          "y": 207
+        },
+        {
+          "text": "10. 4. 2028 (10 April 2028)  201 Kč (CZK 201)",
+          "x": 111,
+          "y": 227
+        },
+        {
+          "text": "11. 4. 2028 (11 April 2028)  202,01 Kč (CZK 202.01)",
+          "x": 111,
+          "y": 246
+        },
+        {
+          "text": "12. 4. 2028 (12 April 2028)  203,02 Kč (CZK 203.02)",
+          "x": 111,
+          "y": 266
+        },
+        {
+          "text": "13. 4. 2028 (13 April 2028)  204,03 Kč (CZK 204.03)",
+          "x": 111,
+          "y": 286
+        },
+        {
+          "text": "14. 4. 2028 (14 April 2028)  205,04 Kč (CZK 205.04)",
+          "x": 111,
+          "y": 305
+        },
+        {
+          "text": "15. 4. 2028 (15 April 2028)  206,05 Kč (CZK 206.05)",
+          "x": 111,
+          "y": 325
+        },
+        {
+          "text": "16. 4. 2028 (16 April 2028)  207,06 Kč (CZK 207.06)",
+          "x": 111,
+          "y": 345
+        },
+        {
+          "text": "17. 4. 2028 (17 April 2028)  208,07 Kč (CZK 208.07)",
+          "x": 111,
+          "y": 364
+        },
+        {
+          "text": "18. 4. 2028 (18 April 2028)  209,08 Kč (CZK 209.08)",
+          "x": 111,
+          "y": 384
+        },
+        {
+          "text": "19. 4. 2028 (19 April 2028)  210,09 Kč (CZK 210.09)",
+          "x": 111,
+          "y": 404
+        },
+        {
+          "text": "20. 4. 2028 (20 April 2028)  211,10 Kč (CZK 211.10)",
+          "x": 111,
+          "y": 423
+        },
+        {
+          "text": "21. 4. 2028 (21 April 2028)  212,11 Kč (CZK 212.11)",
+          "x": 111,
+          "y": 443
+        },
+        {
+          "text": "22. 4. 2028 (22 April 2028)  213,12 Kč (CZK 213.12)",
+          "x": 111,
+          "y": 463
+        },
+        {
+          "text": "23. 4. 2028 (23 April 2028)  214,13 Kč (CZK 214.13)",
+          "x": 111,
+          "y": 482
+        },
+        {
+          "text": "24. 4. 2028 (24 April 2028)  215,14 Kč (CZK 215.14)",
+          "x": 111,
+          "y": 502
+        },
+        {
+          "text": "25. 4. 2028 (25 April 2028)  216,15 Kč (CZK 216.15)",
+          "x": 111,
+          "y": 521
+        },
+        {
+          "text": "26. 4. 2028 (26 April 2028)  217,16 Kč (CZK 217.16)",
+          "x": 111,
+          "y": 541
+        },
+        {
+          "text": "27. 4. 2028 (27 April 2028)  218,17 Kč (CZK 218.17)",
+          "x": 111,
+          "y": 561
+        },
+        {
+          "text": "28. 4. 2028 (28 April 2028)  219,18 Kč (CZK 219.18)",
+          "x": 111,
+          "y": 580
+        },
+        {
+          "text": "29. 4. 2028 (29 April 2028)  220,19 Kč (CZK 220.19)",
+          "x": 111,
+          "y": 600
+        },
+        {
+          "text": "30. 4. 2028 (30 April 2028)  221,20 Kč (CZK 221.20)",
+          "x": 111,
+          "y": 620
+        },
+        {
+          "text": "1. 5. 2028 (1 May 2028)  222,21 Kč (CZK 222.21)",
+          "x": 105,
+          "y": 639
+        },
+        {
+          "text": "2. 5. 2028 (2 May 2028)  223,22 Kč (CZK 223.22)",
+          "x": 105,
+          "y": 659
+        },
+        {
+          "text": "3. 5. 2028 (3 May 2028)  224,23 Kč (CZK 224.23)",
+          "x": 105,
+          "y": 679
+        },
+        {
+          "text": "4. 5. 2028 (4 May 2028)  225,24 Kč (CZK 225.24)",
+          "x": 105,
+          "y": 698
+        },
+        {
+          "text": "5. 5. 2028 (5 May 2028)  226,25 Kč (CZK 226.25)",
+          "x": 105,
+          "y": 718
+        },
+        {
+          "text": "6. 5. 2028 (6 May 2028)  227,26 Kč (CZK 227.26)",
+          "x": 105,
+          "y": 738
+        },
+        {
+          "text": "7. 5. 2028 (7 May 2028)  228,27 Kč (CZK 228.27)",
+          "x": 105,
+          "y": 757
+        },
+        {
+          "text": "8. 5. 2028 (8 May 2028)  229,28 Kč (CZK 229.28)",
+          "x": 105,
+          "y": 777
+        }
+      ]
+    },
+    {
+      "number": 5,
+      "widthPt": 595.275,
+      "heightPt": 841.875,
+      "lines": [
+        {
+          "text": "Nová naděje - nadační fond · IČO 27278794 · Jiráskova 436, 473 01 Nový Bor · Číslo potvrzení: 2029-000008 5 / 12",
+          "x": 88,
+          "y": 804
+        },
+        {
+          "text": "Datum připsání na účet",
+          "x": 182,
+          "y": 56
+        },
+        {
+          "text": "Date credited to the account",
+          "x": 57,
+          "y": 69
+        },
+        {
+          "text": "Částka",
+          "x": 535,
+          "y": 56
+        },
+        {
+          "text": "Amount",
+          "x": 506,
+          "y": 69
+        },
+        {
+          "text": "9. 5. 2028 (9 May 2028)  230,29 Kč (CZK 230.29)",
+          "x": 105,
+          "y": 89
+        },
+        {
+          "text": "10. 5. 2028 (10 May 2028)  231,30 Kč (CZK 231.30)",
+          "x": 111,
+          "y": 109
+        },
+        {
+          "text": "11. 5. 2028 (11 May 2028)  232,31 Kč (CZK 232.31)",
+          "x": 111,
+          "y": 128
+        },
+        {
+          "text": "12. 5. 2028 (12 May 2028)  233,32 Kč (CZK 233.32)",
+          "x": 111,
+          "y": 148
+        },
+        {
+          "text": "13. 5. 2028 (13 May 2028)  234,33 Kč (CZK 234.33)",
+          "x": 111,
+          "y": 168
+        },
+        {
+          "text": "14. 5. 2028 (14 May 2028)  235,34 Kč (CZK 235.34)",
+          "x": 111,
+          "y": 187
+        },
+        {
+          "text": "15. 5. 2028 (15 May 2028)  236,35 Kč (CZK 236.35)",
+          "x": 111,
+          "y": 207
+        },
+        {
+          "text": "16. 5. 2028 (16 May 2028)  237,36 Kč (CZK 237.36)",
+          "x": 111,
+          "y": 227
+        },
+        {
+          "text": "17. 5. 2028 (17 May 2028)  238,37 Kč (CZK 238.37)",
+          "x": 111,
+          "y": 246
+        },
+        {
+          "text": "18. 5. 2028 (18 May 2028)  239,38 Kč (CZK 239.38)",
+          "x": 111,
+          "y": 266
+        },
+        {
+          "text": "19. 5. 2028 (19 May 2028)  240,39 Kč (CZK 240.39)",
+          "x": 111,
+          "y": 286
+        },
+        {
+          "text": "20. 5. 2028 (20 May 2028)  241,40 Kč (CZK 241.40)",
+          "x": 111,
+          "y": 305
+        },
+        {
+          "text": "21. 5. 2028 (21 May 2028)  242,41 Kč (CZK 242.41)",
+          "x": 111,
+          "y": 325
+        },
+        {
+          "text": "22. 5. 2028 (22 May 2028)  243,42 Kč (CZK 243.42)",
+          "x": 111,
+          "y": 345
+        },
+        {
+          "text": "23. 5. 2028 (23 May 2028)  244,43 Kč (CZK 244.43)",
+          "x": 111,
+          "y": 364
+        },
+        {
+          "text": "24. 5. 2028 (24 May 2028)  245,44 Kč (CZK 245.44)",
+          "x": 111,
+          "y": 384
+        },
+        {
+          "text": "25. 5. 2028 (25 May 2028)  246,45 Kč (CZK 246.45)",
+          "x": 111,
+          "y": 404
+        },
+        {
+          "text": "26. 5. 2028 (26 May 2028)  247,46 Kč (CZK 247.46)",
+          "x": 111,
+          "y": 423
+        },
+        {
+          "text": "27. 5. 2028 (27 May 2028)  248,47 Kč (CZK 248.47)",
+          "x": 111,
+          "y": 443
+        },
+        {
+          "text": "28. 5. 2028 (28 May 2028)  249,48 Kč (CZK 249.48)",
+          "x": 111,
+          "y": 463
+        },
+        {
+          "text": "29. 5. 2028 (29 May 2028)  250,49 Kč (CZK 250.49)",
+          "x": 111,
+          "y": 482
+        },
+        {
+          "text": "30. 5. 2028 (30 May 2028)  251,50 Kč (CZK 251.50)",
+          "x": 111,
+          "y": 502
+        },
+        {
+          "text": "31. 5. 2028 (31 May 2028)  252,51 Kč (CZK 252.51)",
+          "x": 111,
+          "y": 521
+        },
+        {
+          "text": "1. 6. 2028 (1 June 2028)  253,52 Kč (CZK 253.52)",
+          "x": 105,
+          "y": 541
+        },
+        {
+          "text": "2. 6. 2028 (2 June 2028)  254,53 Kč (CZK 254.53)",
+          "x": 105,
+          "y": 561
+        },
+        {
+          "text": "3. 6. 2028 (3 June 2028)  255,54 Kč (CZK 255.54)",
+          "x": 105,
+          "y": 580
+        },
+        {
+          "text": "4. 6. 2028 (4 June 2028)  256,55 Kč (CZK 256.55)",
+          "x": 105,
+          "y": 600
+        },
+        {
+          "text": "5. 6. 2028 (5 June 2028)  257,56 Kč (CZK 257.56)",
+          "x": 105,
+          "y": 620
+        },
+        {
+          "text": "6. 6. 2028 (6 June 2028)  258,57 Kč (CZK 258.57)",
+          "x": 105,
+          "y": 639
+        },
+        {
+          "text": "7. 6. 2028 (7 June 2028)  259,58 Kč (CZK 259.58)",
+          "x": 105,
+          "y": 659
+        },
+        {
+          "text": "8. 6. 2028 (8 June 2028)  260,59 Kč (CZK 260.59)",
+          "x": 105,
+          "y": 679
+        },
+        {
+          "text": "9. 6. 2028 (9 June 2028)  261,60 Kč (CZK 261.60)",
+          "x": 105,
+          "y": 698
+        },
+        {
+          "text": "10. 6. 2028 (10 June 2028)  262,61 Kč (CZK 262.61)",
+          "x": 111,
+          "y": 718
+        },
+        {
+          "text": "11. 6. 2028 (11 June 2028)  263,62 Kč (CZK 263.62)",
+          "x": 111,
+          "y": 738
+        },
+        {
+          "text": "12. 6. 2028 (12 June 2028)  264,63 Kč (CZK 264.63)",
+          "x": 111,
+          "y": 757
+        },
+        {
+          "text": "13. 6. 2028 (13 June 2028)  265,64 Kč (CZK 265.64)",
+          "x": 111,
+          "y": 777
+        }
+      ]
+    },
+    {
+      "number": 6,
+      "widthPt": 595.275,
+      "heightPt": 841.875,
+      "lines": [
+        {
+          "text": "Nová naděje - nadační fond · IČO 27278794 · Jiráskova 436, 473 01 Nový Bor · Číslo potvrzení: 2029-000008 6 / 12",
+          "x": 88,
+          "y": 804
+        },
+        {
+          "text": "Datum připsání na účet",
+          "x": 182,
+          "y": 56
+        },
+        {
+          "text": "Date credited to the account",
+          "x": 57,
+          "y": 69
+        },
+        {
+          "text": "Částka",
+          "x": 535,
+          "y": 56
+        },
+        {
+          "text": "Amount",
+          "x": 506,
+          "y": 69
+        },
+        {
+          "text": "14. 6. 2028 (14 June 2028)  266,65 Kč (CZK 266.65)",
+          "x": 111,
+          "y": 89
+        },
+        {
+          "text": "15. 6. 2028 (15 June 2028)  267,66 Kč (CZK 267.66)",
+          "x": 111,
+          "y": 109
+        },
+        {
+          "text": "16. 6. 2028 (16 June 2028)  268,67 Kč (CZK 268.67)",
+          "x": 111,
+          "y": 128
+        },
+        {
+          "text": "17. 6. 2028 (17 June 2028)  269,68 Kč (CZK 269.68)",
+          "x": 111,
+          "y": 148
+        },
+        {
+          "text": "18. 6. 2028 (18 June 2028)  270,69 Kč (CZK 270.69)",
+          "x": 111,
+          "y": 168
+        },
+        {
+          "text": "19. 6. 2028 (19 June 2028)  271,70 Kč (CZK 271.70)",
+          "x": 111,
+          "y": 187
+        },
+        {
+          "text": "20. 6. 2028 (20 June 2028)  272,71 Kč (CZK 272.71)",
+          "x": 111,
+          "y": 207
+        },
+        {
+          "text": "21. 6. 2028 (21 June 2028)  273,72 Kč (CZK 273.72)",
+          "x": 111,
+          "y": 227
+        },
+        {
+          "text": "22. 6. 2028 (22 June 2028)  274,73 Kč (CZK 274.73)",
+          "x": 111,
+          "y": 246
+        },
+        {
+          "text": "23. 6. 2028 (23 June 2028)  275,74 Kč (CZK 275.74)",
+          "x": 111,
+          "y": 266
+        },
+        {
+          "text": "24. 6. 2028 (24 June 2028)  276,75 Kč (CZK 276.75)",
+          "x": 111,
+          "y": 286
+        },
+        {
+          "text": "25. 6. 2028 (25 June 2028)  277,76 Kč (CZK 277.76)",
+          "x": 111,
+          "y": 305
+        },
+        {
+          "text": "26. 6. 2028 (26 June 2028)  278,77 Kč (CZK 278.77)",
+          "x": 111,
+          "y": 325
+        },
+        {
+          "text": "27. 6. 2028 (27 June 2028)  279,78 Kč (CZK 279.78)",
+          "x": 111,
+          "y": 345
+        },
+        {
+          "text": "28. 6. 2028 (28 June 2028)  280,79 Kč (CZK 280.79)",
+          "x": 111,
+          "y": 364
+        },
+        {
+          "text": "29. 6. 2028 (29 June 2028)  281,80 Kč (CZK 281.80)",
+          "x": 111,
+          "y": 384
+        },
+        {
+          "text": "30. 6. 2028 (30 June 2028)  282,81 Kč (CZK 282.81)",
+          "x": 111,
+          "y": 404
+        },
+        {
+          "text": "1. 7. 2028 (1 July 2028)  283,82 Kč (CZK 283.82)",
+          "x": 105,
+          "y": 423
+        },
+        {
+          "text": "2. 7. 2028 (2 July 2028)  284,83 Kč (CZK 284.83)",
+          "x": 105,
+          "y": 443
+        },
+        {
+          "text": "3. 7. 2028 (3 July 2028)  285,84 Kč (CZK 285.84)",
+          "x": 105,
+          "y": 463
+        },
+        {
+          "text": "4. 7. 2028 (4 July 2028)  286,85 Kč (CZK 286.85)",
+          "x": 105,
+          "y": 482
+        },
+        {
+          "text": "5. 7. 2028 (5 July 2028)  287,86 Kč (CZK 287.86)",
+          "x": 105,
+          "y": 502
+        },
+        {
+          "text": "6. 7. 2028 (6 July 2028)  288,87 Kč (CZK 288.87)",
+          "x": 105,
+          "y": 521
+        },
+        {
+          "text": "7. 7. 2028 (7 July 2028)  289,88 Kč (CZK 289.88)",
+          "x": 105,
+          "y": 541
+        },
+        {
+          "text": "8. 7. 2028 (8 July 2028)  290,89 Kč (CZK 290.89)",
+          "x": 105,
+          "y": 561
+        },
+        {
+          "text": "9. 7. 2028 (9 July 2028)  291,90 Kč (CZK 291.90)",
+          "x": 105,
+          "y": 580
+        },
+        {
+          "text": "10. 7. 2028 (10 July 2028)  292,91 Kč (CZK 292.91)",
+          "x": 111,
+          "y": 600
+        },
+        {
+          "text": "11. 7. 2028 (11 July 2028)  293,92 Kč (CZK 293.92)",
+          "x": 111,
+          "y": 620
+        },
+        {
+          "text": "12. 7. 2028 (12 July 2028)  294,93 Kč (CZK 294.93)",
+          "x": 111,
+          "y": 639
+        },
+        {
+          "text": "13. 7. 2028 (13 July 2028)  295,94 Kč (CZK 295.94)",
+          "x": 111,
+          "y": 659
+        },
+        {
+          "text": "14. 7. 2028 (14 July 2028)  296,95 Kč (CZK 296.95)",
+          "x": 111,
+          "y": 679
+        },
+        {
+          "text": "15. 7. 2028 (15 July 2028)  297,96 Kč (CZK 297.96)",
+          "x": 111,
+          "y": 698
+        },
+        {
+          "text": "16. 7. 2028 (16 July 2028)  298,97 Kč (CZK 298.97)",
+          "x": 111,
+          "y": 718
+        },
+        {
+          "text": "17. 7. 2028 (17 July 2028)  299,98 Kč (CZK 299.98)",
+          "x": 111,
+          "y": 738
+        },
+        {
+          "text": "18. 7. 2028 (18 July 2028)  300,99 Kč (CZK 300.99)",
+          "x": 111,
+          "y": 757
+        },
+        {
+          "text": "19. 7. 2028 (19 July 2028)  302 Kč (CZK 302)",
+          "x": 111,
+          "y": 777
+        }
+      ]
+    },
+    {
+      "number": 7,
+      "widthPt": 595.275,
+      "heightPt": 841.875,
+      "lines": [
+        {
+          "text": "Nová naděje - nadační fond · IČO 27278794 · Jiráskova 436, 473 01 Nový Bor · Číslo potvrzení: 2029-000008 7 / 12",
+          "x": 88,
+          "y": 804
+        },
+        {
+          "text": "Datum připsání na účet",
+          "x": 182,
+          "y": 56
+        },
+        {
+          "text": "Date credited to the account",
+          "x": 57,
+          "y": 69
+        },
+        {
+          "text": "Částka",
+          "x": 535,
+          "y": 56
+        },
+        {
+          "text": "Amount",
+          "x": 506,
+          "y": 69
+        },
+        {
+          "text": "20. 7. 2028 (20 July 2028)  303,01 Kč (CZK 303.01)",
+          "x": 111,
+          "y": 89
+        },
+        {
+          "text": "21. 7. 2028 (21 July 2028)  304,02 Kč (CZK 304.02)",
+          "x": 111,
+          "y": 109
+        },
+        {
+          "text": "22. 7. 2028 (22 July 2028)  305,03 Kč (CZK 305.03)",
+          "x": 111,
+          "y": 128
+        },
+        {
+          "text": "23. 7. 2028 (23 July 2028)  306,04 Kč (CZK 306.04)",
+          "x": 111,
+          "y": 148
+        },
+        {
+          "text": "24. 7. 2028 (24 July 2028)  307,05 Kč (CZK 307.05)",
+          "x": 111,
+          "y": 168
+        },
+        {
+          "text": "25. 7. 2028 (25 July 2028)  308,06 Kč (CZK 308.06)",
+          "x": 111,
+          "y": 187
+        },
+        {
+          "text": "26. 7. 2028 (26 July 2028)  309,07 Kč (CZK 309.07)",
+          "x": 111,
+          "y": 207
+        },
+        {
+          "text": "27. 7. 2028 (27 July 2028)  310,08 Kč (CZK 310.08)",
+          "x": 111,
+          "y": 227
+        },
+        {
+          "text": "28. 7. 2028 (28 July 2028)  311,09 Kč (CZK 311.09)",
+          "x": 111,
+          "y": 246
+        },
+        {
+          "text": "29. 7. 2028 (29 July 2028)  312,10 Kč (CZK 312.10)",
+          "x": 111,
+          "y": 266
+        },
+        {
+          "text": "30. 7. 2028 (30 July 2028)  313,11 Kč (CZK 313.11)",
+          "x": 111,
+          "y": 286
+        },
+        {
+          "text": "31. 7. 2028 (31 July 2028)  314,12 Kč (CZK 314.12)",
+          "x": 111,
+          "y": 305
+        },
+        {
+          "text": "1. 8. 2028 (1 August 2028)  315,13 Kč (CZK 315.13)",
+          "x": 105,
+          "y": 325
+        },
+        {
+          "text": "2. 8. 2028 (2 August 2028)  316,14 Kč (CZK 316.14)",
+          "x": 105,
+          "y": 345
+        },
+        {
+          "text": "3. 8. 2028 (3 August 2028)  317,15 Kč (CZK 317.15)",
+          "x": 105,
+          "y": 364
+        },
+        {
+          "text": "4. 8. 2028 (4 August 2028)  318,16 Kč (CZK 318.16)",
+          "x": 105,
+          "y": 384
+        },
+        {
+          "text": "5. 8. 2028 (5 August 2028)  319,17 Kč (CZK 319.17)",
+          "x": 105,
+          "y": 404
+        },
+        {
+          "text": "6. 8. 2028 (6 August 2028)  320,18 Kč (CZK 320.18)",
+          "x": 105,
+          "y": 423
+        },
+        {
+          "text": "7. 8. 2028 (7 August 2028)  321,19 Kč (CZK 321.19)",
+          "x": 105,
+          "y": 443
+        },
+        {
+          "text": "8. 8. 2028 (8 August 2028)  322,20 Kč (CZK 322.20)",
+          "x": 105,
+          "y": 463
+        },
+        {
+          "text": "9. 8. 2028 (9 August 2028)  323,21 Kč (CZK 323.21)",
+          "x": 105,
+          "y": 482
+        },
+        {
+          "text": "10. 8. 2028 (10 August 2028)  324,22 Kč (CZK 324.22)",
+          "x": 111,
+          "y": 502
+        },
+        {
+          "text": "11. 8. 2028 (11 August 2028)  325,23 Kč (CZK 325.23)",
+          "x": 111,
+          "y": 521
+        },
+        {
+          "text": "12. 8. 2028 (12 August 2028)  326,24 Kč (CZK 326.24)",
+          "x": 111,
+          "y": 541
+        },
+        {
+          "text": "13. 8. 2028 (13 August 2028)  327,25 Kč (CZK 327.25)",
+          "x": 111,
+          "y": 561
+        },
+        {
+          "text": "14. 8. 2028 (14 August 2028)  328,26 Kč (CZK 328.26)",
+          "x": 111,
+          "y": 580
+        },
+        {
+          "text": "15. 8. 2028 (15 August 2028)  329,27 Kč (CZK 329.27)",
+          "x": 111,
+          "y": 600
+        },
+        {
+          "text": "16. 8. 2028 (16 August 2028)  330,28 Kč (CZK 330.28)",
+          "x": 111,
+          "y": 620
+        },
+        {
+          "text": "17. 8. 2028 (17 August 2028)  331,29 Kč (CZK 331.29)",
+          "x": 111,
+          "y": 639
+        },
+        {
+          "text": "18. 8. 2028 (18 August 2028)  332,30 Kč (CZK 332.30)",
+          "x": 111,
+          "y": 659
+        },
+        {
+          "text": "19. 8. 2028 (19 August 2028)  333,31 Kč (CZK 333.31)",
+          "x": 111,
+          "y": 679
+        },
+        {
+          "text": "20. 8. 2028 (20 August 2028)  334,32 Kč (CZK 334.32)",
+          "x": 111,
+          "y": 698
+        },
+        {
+          "text": "21. 8. 2028 (21 August 2028)  335,33 Kč (CZK 335.33)",
+          "x": 111,
+          "y": 718
+        },
+        {
+          "text": "22. 8. 2028 (22 August 2028)  336,34 Kč (CZK 336.34)",
+          "x": 111,
+          "y": 738
+        },
+        {
+          "text": "23. 8. 2028 (23 August 2028)  337,35 Kč (CZK 337.35)",
+          "x": 111,
+          "y": 757
+        },
+        {
+          "text": "24. 8. 2028 (24 August 2028)  338,36 Kč (CZK 338.36)",
+          "x": 111,
+          "y": 777
+        }
+      ]
+    },
+    {
+      "number": 8,
+      "widthPt": 595.275,
+      "heightPt": 841.875,
+      "lines": [
+        {
+          "text": "Nová naděje - nadační fond · IČO 27278794 · Jiráskova 436, 473 01 Nový Bor · Číslo potvrzení: 2029-000008 8 / 12",
+          "x": 88,
+          "y": 804
+        },
+        {
+          "text": "Datum připsání na účet",
+          "x": 182,
+          "y": 56
+        },
+        {
+          "text": "Date credited to the account",
+          "x": 57,
+          "y": 69
+        },
+        {
+          "text": "Částka",
+          "x": 535,
+          "y": 56
+        },
+        {
+          "text": "Amount",
+          "x": 506,
+          "y": 69
+        },
+        {
+          "text": "25. 8. 2028 (25 August 2028)  339,37 Kč (CZK 339.37)",
+          "x": 111,
+          "y": 89
+        },
+        {
+          "text": "26. 8. 2028 (26 August 2028)  340,38 Kč (CZK 340.38)",
+          "x": 111,
+          "y": 109
+        },
+        {
+          "text": "27. 8. 2028 (27 August 2028)  341,39 Kč (CZK 341.39)",
+          "x": 111,
+          "y": 128
+        },
+        {
+          "text": "28. 8. 2028 (28 August 2028)  342,40 Kč (CZK 342.40)",
+          "x": 111,
+          "y": 148
+        },
+        {
+          "text": "29. 8. 2028 (29 August 2028)  343,41 Kč (CZK 343.41)",
+          "x": 111,
+          "y": 168
+        },
+        {
+          "text": "30. 8. 2028 (30 August 2028)  344,42 Kč (CZK 344.42)",
+          "x": 111,
+          "y": 187
+        },
+        {
+          "text": "31. 8. 2028 (31 August 2028)  345,43 Kč (CZK 345.43)",
+          "x": 111,
+          "y": 207
+        },
+        {
+          "text": "1. 9. 2028 (1 September 2028)  346,44 Kč (CZK 346.44)",
+          "x": 105,
+          "y": 227
+        },
+        {
+          "text": "2. 9. 2028 (2 September 2028)  347,45 Kč (CZK 347.45)",
+          "x": 105,
+          "y": 246
+        },
+        {
+          "text": "3. 9. 2028 (3 September 2028)  348,46 Kč (CZK 348.46)",
+          "x": 105,
+          "y": 266
+        },
+        {
+          "text": "4. 9. 2028 (4 September 2028)  349,47 Kč (CZK 349.47)",
+          "x": 105,
+          "y": 286
+        },
+        {
+          "text": "5. 9. 2028 (5 September 2028)  350,48 Kč (CZK 350.48)",
+          "x": 105,
+          "y": 305
+        },
+        {
+          "text": "6. 9. 2028 (6 September 2028)  351,49 Kč (CZK 351.49)",
+          "x": 105,
+          "y": 325
+        },
+        {
+          "text": "7. 9. 2028 (7 September 2028)  352,50 Kč (CZK 352.50)",
+          "x": 105,
+          "y": 345
+        },
+        {
+          "text": "8. 9. 2028 (8 September 2028)  353,51 Kč (CZK 353.51)",
+          "x": 105,
+          "y": 364
+        },
+        {
+          "text": "9. 9. 2028 (9 September 2028)  354,52 Kč (CZK 354.52)",
+          "x": 105,
+          "y": 384
+        },
+        {
+          "text": "10. 9. 2028 (10 September 2028)  355,53 Kč (CZK 355.53)",
+          "x": 111,
+          "y": 404
+        },
+        {
+          "text": "11. 9. 2028 (11 September 2028)  356,54 Kč (CZK 356.54)",
+          "x": 111,
+          "y": 423
+        },
+        {
+          "text": "12. 9. 2028 (12 September 2028)  357,55 Kč (CZK 357.55)",
+          "x": 111,
+          "y": 443
+        },
+        {
+          "text": "13. 9. 2028 (13 September 2028)  358,56 Kč (CZK 358.56)",
+          "x": 111,
+          "y": 463
+        },
+        {
+          "text": "14. 9. 2028 (14 September 2028)  359,57 Kč (CZK 359.57)",
+          "x": 111,
+          "y": 482
+        },
+        {
+          "text": "15. 9. 2028 (15 September 2028)  360,58 Kč (CZK 360.58)",
+          "x": 111,
+          "y": 502
+        },
+        {
+          "text": "16. 9. 2028 (16 September 2028)  361,59 Kč (CZK 361.59)",
+          "x": 111,
+          "y": 521
+        },
+        {
+          "text": "17. 9. 2028 (17 September 2028)  362,60 Kč (CZK 362.60)",
+          "x": 111,
+          "y": 541
+        },
+        {
+          "text": "18. 9. 2028 (18 September 2028)  363,61 Kč (CZK 363.61)",
+          "x": 111,
+          "y": 561
+        },
+        {
+          "text": "19. 9. 2028 (19 September 2028)  364,62 Kč (CZK 364.62)",
+          "x": 111,
+          "y": 580
+        },
+        {
+          "text": "20. 9. 2028 (20 September 2028)  365,63 Kč (CZK 365.63)",
+          "x": 111,
+          "y": 600
+        },
+        {
+          "text": "21. 9. 2028 (21 September 2028)  366,64 Kč (CZK 366.64)",
+          "x": 111,
+          "y": 620
+        },
+        {
+          "text": "22. 9. 2028 (22 September 2028)  367,65 Kč (CZK 367.65)",
+          "x": 111,
+          "y": 639
+        },
+        {
+          "text": "23. 9. 2028 (23 September 2028)  368,66 Kč (CZK 368.66)",
+          "x": 111,
+          "y": 659
+        },
+        {
+          "text": "24. 9. 2028 (24 September 2028)  369,67 Kč (CZK 369.67)",
+          "x": 111,
+          "y": 679
+        },
+        {
+          "text": "25. 9. 2028 (25 September 2028)  370,68 Kč (CZK 370.68)",
+          "x": 111,
+          "y": 698
+        },
+        {
+          "text": "26. 9. 2028 (26 September 2028)  371,69 Kč (CZK 371.69)",
+          "x": 111,
+          "y": 718
+        },
+        {
+          "text": "27. 9. 2028 (27 September 2028)  372,70 Kč (CZK 372.70)",
+          "x": 111,
+          "y": 738
+        },
+        {
+          "text": "28. 9. 2028 (28 September 2028)  373,71 Kč (CZK 373.71)",
+          "x": 111,
+          "y": 757
+        },
+        {
+          "text": "29. 9. 2028 (29 September 2028)  374,72 Kč (CZK 374.72)",
+          "x": 111,
+          "y": 777
+        }
+      ]
+    },
+    {
+      "number": 9,
+      "widthPt": 595.275,
+      "heightPt": 841.875,
+      "lines": [
+        {
+          "text": "Nová naděje - nadační fond · IČO 27278794 · Jiráskova 436, 473 01 Nový Bor · Číslo potvrzení: 2029-000008 9 / 12",
+          "x": 88,
+          "y": 804
+        },
+        {
+          "text": "Datum připsání na účet",
+          "x": 182,
+          "y": 56
+        },
+        {
+          "text": "Date credited to the account",
+          "x": 57,
+          "y": 69
+        },
+        {
+          "text": "Částka",
+          "x": 535,
+          "y": 56
+        },
+        {
+          "text": "Amount",
+          "x": 506,
+          "y": 69
+        },
+        {
+          "text": "30. 9. 2028 (30 September 2028)  375,73 Kč (CZK 375.73)",
+          "x": 111,
+          "y": 89
+        },
+        {
+          "text": "1. 10. 2028 (1 October 2028)  376,74 Kč (CZK 376.74)",
+          "x": 111,
+          "y": 109
+        },
+        {
+          "text": "2. 10. 2028 (2 October 2028)  377,75 Kč (CZK 377.75)",
+          "x": 111,
+          "y": 128
+        },
+        {
+          "text": "3. 10. 2028 (3 October 2028)  378,76 Kč (CZK 378.76)",
+          "x": 111,
+          "y": 148
+        },
+        {
+          "text": "4. 10. 2028 (4 October 2028)  379,77 Kč (CZK 379.77)",
+          "x": 111,
+          "y": 168
+        },
+        {
+          "text": "5. 10. 2028 (5 October 2028)  380,78 Kč (CZK 380.78)",
+          "x": 111,
+          "y": 187
+        },
+        {
+          "text": "6. 10. 2028 (6 October 2028)  381,79 Kč (CZK 381.79)",
+          "x": 111,
+          "y": 207
+        },
+        {
+          "text": "7. 10. 2028 (7 October 2028)  382,80 Kč (CZK 382.80)",
+          "x": 111,
+          "y": 227
+        },
+        {
+          "text": "8. 10. 2028 (8 October 2028)  383,81 Kč (CZK 383.81)",
+          "x": 111,
+          "y": 246
+        },
+        {
+          "text": "9. 10. 2028 (9 October 2028)  384,82 Kč (CZK 384.82)",
+          "x": 111,
+          "y": 266
+        },
+        {
+          "text": "10. 10. 2028 (10 October 2028)  385,83 Kč (CZK 385.83)",
+          "x": 117,
+          "y": 286
+        },
+        {
+          "text": "11. 10. 2028 (11 October 2028)  386,84 Kč (CZK 386.84)",
+          "x": 117,
+          "y": 305
+        },
+        {
+          "text": "12. 10. 2028 (12 October 2028)  387,85 Kč (CZK 387.85)",
+          "x": 117,
+          "y": 325
+        },
+        {
+          "text": "13. 10. 2028 (13 October 2028)  388,86 Kč (CZK 388.86)",
+          "x": 117,
+          "y": 345
+        },
+        {
+          "text": "14. 10. 2028 (14 October 2028)  389,87 Kč (CZK 389.87)",
+          "x": 117,
+          "y": 364
+        },
+        {
+          "text": "15. 10. 2028 (15 October 2028)  390,88 Kč (CZK 390.88)",
+          "x": 117,
+          "y": 384
+        },
+        {
+          "text": "16. 10. 2028 (16 October 2028)  391,89 Kč (CZK 391.89)",
+          "x": 117,
+          "y": 404
+        },
+        {
+          "text": "17. 10. 2028 (17 October 2028)  392,90 Kč (CZK 392.90)",
+          "x": 117,
+          "y": 423
+        },
+        {
+          "text": "18. 10. 2028 (18 October 2028)  393,91 Kč (CZK 393.91)",
+          "x": 117,
+          "y": 443
+        },
+        {
+          "text": "19. 10. 2028 (19 October 2028)  394,92 Kč (CZK 394.92)",
+          "x": 117,
+          "y": 463
+        },
+        {
+          "text": "20. 10. 2028 (20 October 2028)  395,93 Kč (CZK 395.93)",
+          "x": 117,
+          "y": 482
+        },
+        {
+          "text": "21. 10. 2028 (21 October 2028)  396,94 Kč (CZK 396.94)",
+          "x": 117,
+          "y": 502
+        },
+        {
+          "text": "22. 10. 2028 (22 October 2028)  397,95 Kč (CZK 397.95)",
+          "x": 117,
+          "y": 521
+        },
+        {
+          "text": "23. 10. 2028 (23 October 2028)  398,96 Kč (CZK 398.96)",
+          "x": 117,
+          "y": 541
+        },
+        {
+          "text": "24. 10. 2028 (24 October 2028)  399,97 Kč (CZK 399.97)",
+          "x": 117,
+          "y": 561
+        },
+        {
+          "text": "25. 10. 2028 (25 October 2028)  400,98 Kč (CZK 400.98)",
+          "x": 117,
+          "y": 580
+        },
+        {
+          "text": "26. 10. 2028 (26 October 2028)  401,99 Kč (CZK 401.99)",
+          "x": 117,
+          "y": 600
+        },
+        {
+          "text": "27. 10. 2028 (27 October 2028)  403 Kč (CZK 403)",
+          "x": 117,
+          "y": 620
+        },
+        {
+          "text": "28. 10. 2028 (28 October 2028)  404,01 Kč (CZK 404.01)",
+          "x": 117,
+          "y": 639
+        },
+        {
+          "text": "29. 10. 2028 (29 October 2028)  405,02 Kč (CZK 405.02)",
+          "x": 117,
+          "y": 659
+        },
+        {
+          "text": "30. 10. 2028 (30 October 2028)  406,03 Kč (CZK 406.03)",
+          "x": 117,
+          "y": 679
+        },
+        {
+          "text": "31. 10. 2028 (31 October 2028)  407,04 Kč (CZK 407.04)",
+          "x": 117,
+          "y": 698
+        },
+        {
+          "text": "1. 11. 2028 (1 November 2028)  408,05 Kč (CZK 408.05)",
+          "x": 111,
+          "y": 718
+        },
+        {
+          "text": "2. 11. 2028 (2 November 2028)  409,06 Kč (CZK 409.06)",
+          "x": 111,
+          "y": 738
+        },
+        {
+          "text": "3. 11. 2028 (3 November 2028)  410,07 Kč (CZK 410.07)",
+          "x": 111,
+          "y": 757
+        },
+        {
+          "text": "4. 11. 2028 (4 November 2028)  411,08 Kč (CZK 411.08)",
+          "x": 111,
+          "y": 777
+        }
+      ]
+    },
+    {
+      "number": 10,
+      "widthPt": 595.275,
+      "heightPt": 841.875,
+      "lines": [
+        {
+          "text": "Nová naděje - nadační fond · IČO 27278794 · Jiráskova 436, 473 01 Nový Bor · Číslo potvrzení: 2029-000008 10 / 12",
+          "x": 88,
+          "y": 804
+        },
+        {
+          "text": "Datum připsání na účet",
+          "x": 182,
+          "y": 56
+        },
+        {
+          "text": "Date credited to the account",
+          "x": 57,
+          "y": 69
+        },
+        {
+          "text": "Částka",
+          "x": 535,
+          "y": 56
+        },
+        {
+          "text": "Amount",
+          "x": 506,
+          "y": 69
+        },
+        {
+          "text": "5. 11. 2028 (5 November 2028)  412,09 Kč (CZK 412.09)",
+          "x": 111,
+          "y": 89
+        },
+        {
+          "text": "6. 11. 2028 (6 November 2028)  413,10 Kč (CZK 413.10)",
+          "x": 111,
+          "y": 109
+        },
+        {
+          "text": "7. 11. 2028 (7 November 2028)  414,11 Kč (CZK 414.11)",
+          "x": 111,
+          "y": 128
+        },
+        {
+          "text": "8. 11. 2028 (8 November 2028)  415,12 Kč (CZK 415.12)",
+          "x": 111,
+          "y": 148
+        },
+        {
+          "text": "9. 11. 2028 (9 November 2028)  416,13 Kč (CZK 416.13)",
+          "x": 111,
+          "y": 168
+        },
+        {
+          "text": "10. 11. 2028 (10 November 2028)  417,14 Kč (CZK 417.14)",
+          "x": 117,
+          "y": 187
+        },
+        {
+          "text": "11. 11. 2028 (11 November 2028)  418,15 Kč (CZK 418.15)",
+          "x": 117,
+          "y": 207
+        },
+        {
+          "text": "12. 11. 2028 (12 November 2028)  419,16 Kč (CZK 419.16)",
+          "x": 117,
+          "y": 227
+        },
+        {
+          "text": "13. 11. 2028 (13 November 2028)  420,17 Kč (CZK 420.17)",
+          "x": 117,
+          "y": 246
+        },
+        {
+          "text": "14. 11. 2028 (14 November 2028)  421,18 Kč (CZK 421.18)",
+          "x": 117,
+          "y": 266
+        },
+        {
+          "text": "15. 11. 2028 (15 November 2028)  422,19 Kč (CZK 422.19)",
+          "x": 117,
+          "y": 286
+        },
+        {
+          "text": "16. 11. 2028 (16 November 2028)  423,20 Kč (CZK 423.20)",
+          "x": 117,
+          "y": 305
+        },
+        {
+          "text": "17. 11. 2028 (17 November 2028)  424,21 Kč (CZK 424.21)",
+          "x": 117,
+          "y": 325
+        },
+        {
+          "text": "18. 11. 2028 (18 November 2028)  425,22 Kč (CZK 425.22)",
+          "x": 117,
+          "y": 345
+        },
+        {
+          "text": "19. 11. 2028 (19 November 2028)  426,23 Kč (CZK 426.23)",
+          "x": 117,
+          "y": 364
+        },
+        {
+          "text": "20. 11. 2028 (20 November 2028)  427,24 Kč (CZK 427.24)",
+          "x": 117,
+          "y": 384
+        },
+        {
+          "text": "21. 11. 2028 (21 November 2028)  428,25 Kč (CZK 428.25)",
+          "x": 117,
+          "y": 404
+        },
+        {
+          "text": "22. 11. 2028 (22 November 2028)  429,26 Kč (CZK 429.26)",
+          "x": 117,
+          "y": 423
+        },
+        {
+          "text": "23. 11. 2028 (23 November 2028)  430,27 Kč (CZK 430.27)",
+          "x": 117,
+          "y": 443
+        },
+        {
+          "text": "24. 11. 2028 (24 November 2028)  431,28 Kč (CZK 431.28)",
+          "x": 117,
+          "y": 463
+        },
+        {
+          "text": "25. 11. 2028 (25 November 2028)  432,29 Kč (CZK 432.29)",
+          "x": 117,
+          "y": 482
+        },
+        {
+          "text": "26. 11. 2028 (26 November 2028)  433,30 Kč (CZK 433.30)",
+          "x": 117,
+          "y": 502
+        },
+        {
+          "text": "27. 11. 2028 (27 November 2028)  434,31 Kč (CZK 434.31)",
+          "x": 117,
+          "y": 521
+        },
+        {
+          "text": "28. 11. 2028 (28 November 2028)  435,32 Kč (CZK 435.32)",
+          "x": 117,
+          "y": 541
+        },
+        {
+          "text": "29. 11. 2028 (29 November 2028)  436,33 Kč (CZK 436.33)",
+          "x": 117,
+          "y": 561
+        },
+        {
+          "text": "30. 11. 2028 (30 November 2028)  437,34 Kč (CZK 437.34)",
+          "x": 117,
+          "y": 580
+        },
+        {
+          "text": "1. 12. 2028 (1 December 2028)  438,35 Kč (CZK 438.35)",
+          "x": 111,
+          "y": 600
+        },
+        {
+          "text": "2. 12. 2028 (2 December 2028)  439,36 Kč (CZK 439.36)",
+          "x": 111,
+          "y": 620
+        },
+        {
+          "text": "3. 12. 2028 (3 December 2028)  440,37 Kč (CZK 440.37)",
+          "x": 111,
+          "y": 639
+        },
+        {
+          "text": "4. 12. 2028 (4 December 2028)  441,38 Kč (CZK 441.38)",
+          "x": 111,
+          "y": 659
+        },
+        {
+          "text": "5. 12. 2028 (5 December 2028)  442,39 Kč (CZK 442.39)",
+          "x": 111,
+          "y": 679
+        },
+        {
+          "text": "6. 12. 2028 (6 December 2028)  443,40 Kč (CZK 443.40)",
+          "x": 111,
+          "y": 698
+        },
+        {
+          "text": "7. 12. 2028 (7 December 2028)  444,41 Kč (CZK 444.41)",
+          "x": 111,
+          "y": 718
+        },
+        {
+          "text": "8. 12. 2028 (8 December 2028)  445,42 Kč (CZK 445.42)",
+          "x": 111,
+          "y": 738
+        },
+        {
+          "text": "9. 12. 2028 (9 December 2028)  446,43 Kč (CZK 446.43)",
+          "x": 111,
+          "y": 757
+        },
+        {
+          "text": "10. 12. 2028 (10 December 2028)  447,44 Kč (CZK 447.44)",
+          "x": 117,
+          "y": 777
+        }
+      ]
+    },
+    {
+      "number": 11,
+      "widthPt": 595.275,
+      "heightPt": 841.875,
+      "lines": [
+        {
+          "text": "Nová naděje - nadační fond · IČO 27278794 · Jiráskova 436, 473 01 Nový Bor · Číslo potvrzení: 2029-000008 11 / 12",
+          "x": 88,
+          "y": 804
+        },
+        {
+          "text": "Datum připsání na účet",
+          "x": 182,
+          "y": 56
+        },
+        {
+          "text": "Date credited to the account",
+          "x": 57,
+          "y": 69
+        },
+        {
+          "text": "Částka",
+          "x": 535,
+          "y": 56
+        },
+        {
+          "text": "Amount",
+          "x": 506,
+          "y": 69
+        },
+        {
+          "text": "11. 12. 2028 (11 December 2028)  448,45 Kč (CZK 448.45)",
+          "x": 117,
+          "y": 89
+        },
+        {
+          "text": "12. 12. 2028 (12 December 2028)  449,46 Kč (CZK 449.46)",
+          "x": 117,
+          "y": 109
+        },
+        {
+          "text": "13. 12. 2028 (13 December 2028)  450,47 Kč (CZK 450.47)",
+          "x": 117,
+          "y": 128
+        },
+        {
+          "text": "14. 12. 2028 (14 December 2028)  451,48 Kč (CZK 451.48)",
+          "x": 117,
+          "y": 148
+        },
+        {
+          "text": "15. 12. 2028 (15 December 2028)  452,49 Kč (CZK 452.49)",
+          "x": 117,
+          "y": 168
+        },
+        {
+          "text": "16. 12. 2028 (16 December 2028)  453,50 Kč (CZK 453.50)",
+          "x": 117,
+          "y": 187
+        },
+        {
+          "text": "17. 12. 2028 (17 December 2028)  454,51 Kč (CZK 454.51)",
+          "x": 117,
+          "y": 207
+        },
+        {
+          "text": "18. 12. 2028 (18 December 2028)  455,52 Kč (CZK 455.52)",
+          "x": 117,
+          "y": 227
+        },
+        {
+          "text": "19. 12. 2028 (19 December 2028)  456,53 Kč (CZK 456.53)",
+          "x": 117,
+          "y": 246
+        },
+        {
+          "text": "20. 12. 2028 (20 December 2028)  457,54 Kč (CZK 457.54)",
+          "x": 117,
+          "y": 266
+        },
+        {
+          "text": "21. 12. 2028 (21 December 2028)  458,55 Kč (CZK 458.55)",
+          "x": 117,
+          "y": 286
+        },
+        {
+          "text": "22. 12. 2028 (22 December 2028)  459,56 Kč (CZK 459.56)",
+          "x": 117,
+          "y": 305
+        },
+        {
+          "text": "23. 12. 2028 (23 December 2028)  460,57 Kč (CZK 460.57)",
+          "x": 117,
+          "y": 325
+        },
+        {
+          "text": "24. 12. 2028 (24 December 2028)  461,58 Kč (CZK 461.58)",
+          "x": 117,
+          "y": 345
+        },
+        {
+          "text": "25. 12. 2028 (25 December 2028)  462,59 Kč (CZK 462.59)",
+          "x": 117,
+          "y": 364
+        },
+        {
+          "text": "26. 12. 2028 (26 December 2028)  463,60 Kč (CZK 463.60)",
+          "x": 117,
+          "y": 384
+        },
+        {
+          "text": "27. 12. 2028 (27 December 2028)  464,61 Kč (CZK 464.61)",
+          "x": 117,
+          "y": 404
+        },
+        {
+          "text": "28. 12. 2028 (28 December 2028)  465,62 Kč (CZK 465.62)",
+          "x": 117,
+          "y": 423
+        },
+        {
+          "text": "29. 12. 2028 (29 December 2028)  466,63 Kč (CZK 466.63)",
+          "x": 117,
+          "y": 443
+        },
+        {
+          "text": "30. 12. 2028 (30 December 2028)  467,64 Kč (CZK 467.64)",
+          "x": 117,
+          "y": 463
+        },
+        {
+          "text": "31. 12. 2028 (31 December 2028)  468,65 Kč (CZK 468.65)",
+          "x": 117,
+          "y": 482
+        },
+        {
+          "text": "Počet darů: 366",
+          "x": 51,
+          "y": 504
+        },
+        {
+          "text": "Number of gifts: 366",
+          "x": 51,
+          "y": 514
+        },
+        {
+          "text": "Celkem darováno v roce 2028: 104 062,95 Kč",
+          "x": 51,
+          "y": 526
+        },
+        {
+          "text": "Total donated in 2028: CZK 104,062.95",
+          "x": 51,
+          "y": 536
+        }
+      ]
+    },
+    {
+      "number": 12,
+      "widthPt": 595.275,
+      "heightPt": 841.875,
+      "lines": [
+        {
+          "text": "Nová naděje - nadační fond · IČO 27278794 · Jiráskova 436, 473 01 Nový Bor · Číslo potvrzení: 2029-000008 12 / 12",
+          "x": 88,
+          "y": 804
+        },
+        {
+          "text": "Nová naděje - nadační fond potvrzuje, že od výše uvedeného dárce přijal v roce 2028 peněžité dary",
+          "x": 51,
+          "y": 52
+        },
+        {
+          "text": "uvedené v tomto potvrzení v celkové výši 104 062,95 Kč, poukázané bankovním převodem na účet",
+          "x": 51,
+          "y": 64
+        },
+        {
+          "text": "nadačního fondu č. 5544332217/2010. Dary byly poskytnuty bezúplatně a bez jakéhokoli protiplnění",
+          "x": 51,
+          "y": 77
+        },
+        {
+          "text": "na účely sociální, zdravotnické, charitativní a na podporu a ochranu mládeže ve smyslu § 15 odst. 1 a",
+          "x": 51,
+          "y": 89
+        },
+        {
+          "text": "§ 20 odst. 8 zákona č. 586/1992 Sb., o daních z příjmů, ve znění pozdějších předpisů, a to v souladu s",
+          "x": 51,
+          "y": 101
+        },
+        {
+          "text": "účelem nadačního fondu. Potvrzení se vydává na žádost dárce pro účely uplatnění odpočtu hodnoty",
+          "x": 51,
+          "y": 114
+        },
+        {
+          "text": "darů od základu daně podle § 15 odst. 1 (poplatník daně z příjmů fyzických osob) nebo § 20 odst. 8",
+          "x": 51,
+          "y": 126
+        },
+        {
+          "text": "(poplatník daně z příjmů právnických osob) uvedeného zákona.",
+          "x": 51,
+          "y": 138
+        },
+        {
+          "text": "Nová naděje - nadační fond confirms that in 2028 it received from the above donor the monetary gifts listed in this confirmation",
+          "x": 51,
+          "y": 153
+        },
+        {
+          "text": "totalling CZK 104,062.95, transferred by bank transfer to the account of the foundation No. 5544332217/2010. The gifts were",
+          "x": 51,
+          "y": 163
+        },
+        {
+          "text": "given free of charge and without any consideration for social, health and charitable purposes and for the support and protection",
+          "x": 51,
+          "y": 172
+        },
+        {
+          "text": "of youth within the meaning of § 15 odst. 1 and § 20 odst. 8 of zákon č. 586/1992 Sb., o daních z příjmů (Section 15(1) and",
+          "x": 51,
+          "y": 182
+        },
+        {
+          "text": "Section 20(8) of Act No. 586/1992 Coll., on Income Taxes), as amended, in accordance with the purpose of the foundation. This",
+          "x": 51,
+          "y": 192
+        },
+        {
+          "text": "confirmation is issued at the request of the donor for the purpose of deducting the value of the gifts from the tax base under",
+          "x": 51,
+          "y": 202
+        },
+        {
+          "text": "Section 15(1) (individual income taxpayer) or Section 20(8) (corporate income taxpayer) of that Act.",
+          "x": 51,
+          "y": 211
+        },
+        {
+          "text": "V Novém Boru, dne 2. 1. 2029",
+          "x": 51,
+          "y": 240
+        },
+        {
+          "text": "In Nový Bor, on 2 January 2029",
+          "x": 51,
+          "y": 251
+        },
+        {
+          "text": "Za Nová naděje - nadační fond:",
+          "x": 51,
+          "y": 262
+        },
+        {
+          "text": "For Nová naděje - nadační fond:",
+          "x": 51,
+          "y": 273
+        },
+        {
+          "text": "Petr Vzorový",
+          "x": 51,
+          "y": 322
+        },
+        {
+          "text": "předseda správní rady",
+          "x": 51,
+          "y": 334
+        }
+      ]
+    }
+  ]
+}
