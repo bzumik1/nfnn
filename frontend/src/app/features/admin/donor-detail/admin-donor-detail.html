@@ -770,6 +770,14 @@
               }
             </tbody>
           </table>
+          <p class="ui-card__footer donor-payments">
+            <a
+              routerLink="/sprava/platby"
+              [queryParams]="{ stav: 'prirazene', darce: donorId }"
+              i18n="@@admin.donorDetail.donations.payments"
+              >Platby tohoto dárce</a
+            >
+          </p>
         }
       </section>
 

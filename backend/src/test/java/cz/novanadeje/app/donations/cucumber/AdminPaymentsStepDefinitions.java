@@ -52,6 +52,12 @@ public class AdminPaymentsStepDefinitions {
         api.get(PAYMENTS_PATH + "?pairing=unpaired&" + scenarioDonors.resolve(query));
     }
 
+    @When("{string} asks for the paired payments with {string}")
+    public void asksForThePairedPaymentsWith(String alias, String query) {
+        sessions.actAs(alias);
+        api.get(PAYMENTS_PATH + "?pairing=paired&" + scenarioDonors.resolve(query));
+    }
+
     @When("{string} asks for the paired payments of {string}")
     public void asksForThePairedPaymentsOfDonor(String alias, String donorAlias) {
         sessions.actAs(alias);

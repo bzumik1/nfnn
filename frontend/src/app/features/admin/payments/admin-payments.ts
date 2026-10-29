@@ -1,3 +1,5 @@
+/// <reference types="@angular/localize" />
+
 import {
   afterNextRender,
   ChangeDetectionStrategy,
@@ -11,8 +13,18 @@ import {
   viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { Router, RouterLink } from '@angular/router';
-import { catchError, EMPTY, Observable, of, Subject, switchMap, timer } from 'rxjs';
+import { ActivatedRoute, ParamMap, Router, RouterLink } from '@angular/router';
+import {
+  catchError,
+  debounceTime,
+  EMPTY,
+  map,
+  Observable,
+  of,
+  Subject,
+  switchMap,
+  timer,
+} from 'rxjs';
 import { describeProblem, problemTypeEndsWith } from '../../../core/auth/api-problem';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
@@ -27,10 +39,23 @@ import {
   AdminPaymentResponse,
   PairingFilter,
   PairingMethod,
+  PaymentQuery,
 } from '../admin-api';
 import { LiveNotice, Notice } from '../../../shared/ui/live-notice/live-notice';
 
 type LoadState = 'loading' | 'ready' | 'error';
+
+interface PaymentFilters {
+  readonly pairing: PairingFilter;
+  readonly text: string;
+  readonly from: string;
+  readonly to: string;
+  readonly donorId: string;
+}
+
+type PageOutcome =
+  | { readonly kind: 'loaded'; readonly list: AdminPaymentListResponse }
+  | { readonly kind: 'failed'; readonly failure: unknown };
 
 interface DonorSearch {
   readonly query: string;
@@ -45,6 +70,9 @@ interface ChangedDonor {
 const UNAUTHENTICATED = 'auth/unauthenticated';
 const FORBIDDEN = 'auth/forbidden';
 const SEARCH_DEBOUNCE_MS = 300;
+const PAGE_SIZE = 50;
+const PAIRED_TAB = 'prirazene';
+const PARAMS = { tab: 'stav', text: 'q', from: 'od', to: 'do', donor: 'darce' } as const;
 
 const METHOD_LABELS: Record<PairingMethod, string> = {
   VARIABLE_SYMBOL: $localize`:@@admin.payments.method.variableSymbol:podle variabilního symbolu`,
@@ -64,20 +92,31 @@ export class AdminPayments {
   private readonly api = inject(AdminApi);
   private readonly auth = inject(AuthStore);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
   private readonly loginDialog = inject(LoginDialogService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly injector = inject(Injector);
   private readonly title = viewChild.required<ElementRef<HTMLHeadingElement>>('title');
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly pairSearch = viewChild<ElementRef<HTMLInputElement>>('pairSearch');
+  private readonly paymentsSearch = viewChild<ElementRef<HTMLInputElement>>('paymentsSearch');
   private readonly confirmCancel = viewChild<ElementRef<HTMLButtonElement>>('confirmCancel');
   private readonly noticeElement = viewChild('noticeRegion', { read: ElementRef });
   private readonly searches = new Subject<DonorSearch | null>();
+  private readonly typed = new Subject<string>();
+  private readonly pages = new Subject<PaymentFilters>();
 
-  protected readonly filter = signal<PairingFilter>('unpaired');
-  protected readonly year = signal<number | null>(null);
+  protected readonly filters = signal<PaymentFilters>(
+    filtersFrom(this.route.snapshot.queryParamMap),
+  );
+  protected readonly filter = computed(() => this.filters().pairing);
+  protected readonly filtered = computed(() => isFiltered(this.filters()));
+  protected readonly searchText = signal(this.filters().text);
   protected readonly state = signal<LoadState>('loading');
-  protected readonly list = signal<AdminPaymentListResponse | null>(null);
+  protected readonly items = signal<AdminPaymentResponse[]>([]);
+  protected readonly total = signal(0);
+  protected readonly loadingMore = signal(false);
+  protected readonly moreFailed = signal(false);
   protected readonly notice = signal<Notice | null>(null);
   protected readonly changedDonor = signal<ChangedDonor | null>(null);
   protected readonly unpairedCount = signal<number | null>(null);
@@ -92,16 +131,40 @@ export class AdminPayments {
 
   protected readonly unpairing = signal<string | null>(null);
 
-  protected readonly items = computed(() => this.list()?.items ?? []);
-  protected readonly availableYears = computed(() => this.list()?.availableYears ?? []);
-  protected readonly shownYear = computed(() => this.list()?.year ?? null);
+  protected readonly hasMore = computed(() => this.items().length < this.total());
+  protected readonly filteredDonorName = computed(
+    () =>
+      this.items().find((item) => item.donation?.donorId === this.filters().donorId)?.donation
+        ?.donorName ?? null,
+  );
   protected readonly selectedDonorRecord = computed(
     () => this.results()?.find((donor) => donor.donorId === this.selectedDonor()) ?? null,
   );
 
   constructor() {
-    this.load();
     afterNextRender(() => this.title().nativeElement.focus(), { injector: this.injector });
+    this.pages
+      .pipe(
+        switchMap((filters) => this.firstPage(filters)),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe((outcome) => this.showFirstPage(outcome));
+    this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
+      const filters = filtersFrom(params);
+      this.filters.set(filters);
+      if (this.searchText().trim() !== filters.text) {
+        this.searchText.set(filters.text);
+      }
+      this.unpairing.set(null);
+      this.load();
+    });
+    this.typed
+      .pipe(debounceTime(SEARCH_DEBOUNCE_MS), takeUntilDestroyed(this.destroyRef))
+      .subscribe((text) => {
+        if (text.trim() !== this.filters().text) {
+          this.navigate({ text: text.trim() });
+        }
+      });
     this.searches
       .pipe(
         switchMap((search) => (search === null ? EMPTY : this.searchAfterPause(search))),
@@ -122,45 +185,118 @@ export class AdminPayments {
     if (this.filter() === filter) {
       return;
     }
-    this.filter.set(filter);
-    this.year.set(null);
     this.notice.set(null);
     this.changedDonor.set(null);
-    this.unpairing.set(null);
-    this.load();
+    this.navigate({
+      pairing: filter,
+      donorId: filter === 'unpaired' ? '' : this.filters().donorId,
+    });
   }
 
-  protected showYear(value: string): void {
-    this.year.set(Number(value));
-    this.unpairing.set(null);
-    this.load();
+  protected searchPayments(value: string): void {
+    this.searchText.set(value);
+    this.typed.next(value);
+  }
+
+  protected choosePeriod(bound: 'from' | 'to', value: string): void {
+    this.navigate(bound === 'from' ? { from: value } : { to: value });
+  }
+
+  protected clearFilters(): void {
+    this.searchText.set('');
+    this.navigate({ text: '', from: '', to: '', donorId: '' });
+    this.focusAfterRender(() => this.paymentsSearch()?.nativeElement ?? null);
+  }
+
+  protected showAllDonors(): void {
+    this.navigate({ donorId: '' });
   }
 
   protected load(): void {
     this.state.set('loading');
+    this.moreFailed.set(false);
+    this.pages.next(this.filters());
+  }
+
+  protected loadMore(): void {
+    if (this.loadingMore()) {
+      return;
+    }
+    const filters = this.filters();
+    const offset = this.items().length;
+    this.loadingMore.set(true);
+    this.moreFailed.set(false);
     this.api
-      .payments(this.filter(), this.year())
+      .payments(filters.pairing, { ...queryOf(filters), offset, limit: PAGE_SIZE })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (list) => {
-          this.list.set(list);
-          if (this.filter() === 'unpaired') {
-            this.unpairedCount.set(list.total);
-          }
-          this.state.set('ready');
+          this.items.update((current) => [...current, ...list.items]);
+          this.total.set(list.total);
+          this.loadingMore.set(false);
+          this.focusAfterRender(
+            () =>
+              this.host.nativeElement.querySelectorAll<HTMLElement>('.payments-card tbody tr')[
+                offset
+              ] ?? null,
+          );
         },
         error: (failure: unknown) => {
-          if (problemTypeEndsWith(failure, UNAUTHENTICATED)) {
-            this.sendToSignIn();
-            return;
+          this.loadingMore.set(false);
+          if (!this.leaveOnRefusal(failure)) {
+            this.moreFailed.set(true);
           }
-          if (problemTypeEndsWith(failure, FORBIDDEN)) {
-            this.router.navigateByUrl('/darce/prehled');
-            return;
-          }
-          this.state.set('error');
         },
       });
+  }
+
+  private firstPage(filters: PaymentFilters): Observable<PageOutcome> {
+    return this.api.payments(filters.pairing, { ...queryOf(filters), limit: PAGE_SIZE }).pipe(
+      map((list): PageOutcome => ({ kind: 'loaded', list })),
+      catchError((failure: unknown) => of<PageOutcome>({ kind: 'failed', failure })),
+    );
+  }
+
+  private showFirstPage(outcome: PageOutcome): void {
+    if (outcome.kind === 'failed') {
+      if (!this.leaveOnRefusal(outcome.failure)) {
+        this.state.set('error');
+      }
+      return;
+    }
+    this.items.set(outcome.list.items);
+    this.total.set(outcome.list.total);
+    if (this.filter() === 'unpaired' && !this.filtered()) {
+      this.unpairedCount.set(outcome.list.total);
+    }
+    this.state.set('ready');
+  }
+
+  private leaveOnRefusal(failure: unknown): boolean {
+    if (problemTypeEndsWith(failure, UNAUTHENTICATED)) {
+      this.sendToSignIn();
+      return true;
+    }
+    if (problemTypeEndsWith(failure, FORBIDDEN)) {
+      this.router.navigateByUrl('/darce/prehled');
+      return true;
+    }
+    return false;
+  }
+
+  private navigate(change: Partial<PaymentFilters>): void {
+    const next = { ...this.filters(), ...change };
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: {
+        [PARAMS.tab]: next.pairing === 'paired' ? PAIRED_TAB : null,
+        [PARAMS.text]: next.text || null,
+        [PARAMS.from]: next.from || null,
+        [PARAMS.to]: next.to || null,
+        [PARAMS.donor]: next.donorId || null,
+      },
+      replaceUrl: true,
+    });
   }
 
   protected openPairing(payment: AdminPaymentResponse): void {
@@ -368,6 +504,24 @@ export class AdminPayments {
       this.loginDialog.open('login', { returnTo });
     });
   }
+}
+
+function filtersFrom(params: ParamMap): PaymentFilters {
+  return {
+    pairing: params.get(PARAMS.tab) === PAIRED_TAB ? 'paired' : 'unpaired',
+    text: (params.get(PARAMS.text) ?? '').trim(),
+    from: params.get(PARAMS.from) ?? '',
+    to: params.get(PARAMS.to) ?? '',
+    donorId: params.get(PARAMS.donor) ?? '',
+  };
+}
+
+function isFiltered(filters: PaymentFilters): boolean {
+  return [filters.text, filters.from, filters.to, filters.donorId].some((value) => value !== '');
+}
+
+function queryOf(filters: PaymentFilters): PaymentQuery {
+  return { text: filters.text, from: filters.from, to: filters.to, donorId: filters.donorId };
 }
 
 function senderSurname(payment: AdminPaymentResponse): string {

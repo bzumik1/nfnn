@@ -38,16 +38,54 @@
         Přiřazené
       </button>
     </div>
-    @if (filter() === 'paired' && availableYears().length > 0) {
-      <label class="admin-year">
-        <span i18n="@@admin.payments.year.label">Rok</span>
-        <select [value]="shownYear()" (change)="showYear($any($event.target).value)">
-          @for (year of availableYears(); track year) {
-            <option [value]="year" [selected]="year === shownYear()">{{ year }}</option>
-          }
-        </select>
-      </label>
-    }
+  </div>
+
+  <div
+    class="payments-filter"
+    role="search"
+    aria-label="Hledat platby"
+    i18n-aria-label="@@admin.payments.search.region"
+  >
+    <div class="payments-field payments-field--text">
+      <label for="payments-search" i18n="@@admin.payments.search.label">Hledat</label>
+      <input
+        #paymentsSearch
+        id="payments-search"
+        class="form-control"
+        type="search"
+        autocomplete="off"
+        [value]="searchText()"
+        (input)="searchPayments($any($event.target).value)"
+        placeholder="např. Nováková, 2900233333 nebo 500"
+        i18n-placeholder="@@admin.payments.search.placeholder"
+        aria-describedby="payments-search-hint"
+      />
+      <p id="payments-search-hint" class="payments-hint" i18n="@@admin.payments.search.hint">
+        Jméno odesílatele nebo dárce, účet, variabilní symbol, zpráva nebo částka v korunách.
+      </p>
+    </div>
+    <div class="payments-field">
+      <label for="payments-from" i18n="@@admin.payments.period.from">Od</label>
+      <input
+        id="payments-from"
+        class="form-control"
+        type="date"
+        [value]="filters().from"
+        [attr.max]="filters().to || null"
+        (change)="choosePeriod('from', $any($event.target).value)"
+      />
+    </div>
+    <div class="payments-field">
+      <label for="payments-to" i18n="@@admin.payments.period.to">Do</label>
+      <input
+        id="payments-to"
+        class="form-control"
+        type="date"
+        [value]="filters().to"
+        [attr.min]="filters().from || null"
+        (change)="choosePeriod('to', $any($event.target).value)"
+      />
+    </div>
   </div>
 
   <app-live-notice #noticeRegion tabindex="-1" [notice]="notice()" />
@@ -59,6 +97,39 @@
     </p>
   }
 
+  @if (filters().donorId !== '') {
+    <p class="payments-donor">
+      @if (filteredDonorName(); as name) {
+        <ng-container i18n="@@admin.payments.donorFilter.named"
+          >Jen platby dárce {{ name }}.</ng-container
+        >
+      } @else {
+        <ng-container i18n="@@admin.payments.donorFilter.unnamed"
+          >Jen platby jednoho dárce.</ng-container
+        >
+      }
+      &ngsp;<button
+        type="button"
+        class="ui-link-button"
+        (click)="showAllDonors()"
+        i18n="@@admin.payments.donorFilter.clear"
+      >
+        Zobrazit platby všech dárců
+      </button>
+    </p>
+  }
+
+  <p class="payments-count" role="status">
+    @if (state() === 'ready' && filtered()) {
+      <span i18n="@@admin.payments.found">{total(), plural,
+        =0 {Nenalezena žádná platba.}
+        one {Nalezena 1 platba.}
+        few {Nalezeny {{ total() }} platby.}
+        other {Nalezeno {{ total() }} plateb.}
+      }</span>
+    }
+  </p>
+
   <section class="ui-card payments-card" aria-labelledby="payments-title">
     <h2 id="payments-title" class="ui-card__title">
       @if (filter() === 'unpaired') {
@@ -66,9 +137,7 @@
           >Platby čekající na přiřazení</ng-container
         >
       } @else {
-        <ng-container i18n="@@admin.payments.list.pairedTitle"
-          >Přiřazené platby {{ shownYear() }}</ng-container
-        >
+        <ng-container i18n="@@admin.payments.list.pairedTitle">Přiřazené platby</ng-container>
       }
     </h2>
     @switch (state()) {
@@ -92,7 +161,19 @@
       }
       @case ('ready') {
         @if (items().length === 0) {
-          @if (filter() === 'unpaired') {
+          @if (filtered()) {
+            <div class="ui-card__empty payments-empty">
+              <p i18n="@@admin.payments.empty.filtered">Žádná platba neodpovídá hledání.</p>
+              <button
+                type="button"
+                class="ui-button ui-button--small"
+                (click)="clearFilters()"
+                i18n="@@admin.payments.filter.clear"
+              >
+                Zrušit filtr
+              </button>
+            </div>
+          } @else if (filter() === 'unpaired') {
             <p class="ui-card__empty" i18n="@@admin.payments.empty.unpaired">
               Všechny platby z banky jsou přiřazené. Nová platba se tu objeví po dalším stažení z
               banky (každou hodinu).
@@ -120,7 +201,7 @@
             </thead>
             <tbody>
               @for (item of items(); track item.id) {
-                <tr>
+                <tr tabindex="-1">
                   <td data-label="Datum" i18n-data-label="@@admin.payments.col.date">
                     {{ date(item.bookedOn) }}
                     @if (item.unpairedByAdminAt) {
@@ -238,6 +319,30 @@
             </tbody>
           </table>
         }
+        <div class="payments-more">
+          @if (hasMore()) {
+            <span i18n="@@admin.payments.more.shown"
+              >Zobrazeno {{ items().length }} z {{ total() }}.</span
+            >
+            <button
+              type="button"
+              class="ui-button ui-button--small"
+              [disabled]="loadingMore()"
+              (click)="loadMore()"
+            >
+              @if (loadingMore()) {
+                <ng-container i18n="@@admin.payments.more.busy">Načítáme další…</ng-container>
+              } @else {
+                <ng-container i18n="@@admin.payments.more">Načíst další</ng-container>
+              }
+            </button>
+            @if (moreFailed()) {
+              <span role="alert" i18n="@@admin.payments.more.failed"
+                >Další platby se nepodařilo načíst. Zkuste to prosím znovu.</span
+              >
+            }
+          }
+        </div>
       }
     }
   </section>

@@ -1,3 +1,5 @@
+/// <reference types="@angular/localize" />
+
 import {
   afterNextRender,
   ChangeDetectionStrategy,
@@ -61,18 +63,6 @@ const ACTION_NAMES: Record<string, string> = {
   RESET_LOG_LEVEL: $localize`:@@admin.actions.action.resetLogLevel:Vrácení úrovně logování`,
   CHANGE_SETTINGS: $localize`:@@admin.actions.action.changeSettings:Změna nastavení webu`,
 };
-
-const DONOR_ACTIONS = new Set([
-  'GRANT_ADMINISTRATION',
-  'REVOKE_ADMINISTRATION',
-  'RESET_SECOND_FACTOR',
-  'RECOVER_SECOND_FACTOR',
-  'REMOVE_PASSKEYS',
-  'DISCONNECT_SENDER_ACCOUNT',
-  'RECONNECT_SENDER_ACCOUNT',
-  'REMOVE_SENDER_ACCOUNT_LINK',
-  'ERASE_DONOR',
-]);
 
 @Component({
   selector: 'app-admin-actions',
@@ -155,10 +145,6 @@ export class AdminActions {
 
   protected actionName(item: AdminActionResponse): string {
     return ACTION_NAMES[item.action] ?? item.action;
-  }
-
-  protected donorId(item: AdminActionResponse): string | null {
-    return DONOR_ACTIONS.has(item.action) ? item.subjectId : null;
   }
 
   private sendToSignIn(): void {

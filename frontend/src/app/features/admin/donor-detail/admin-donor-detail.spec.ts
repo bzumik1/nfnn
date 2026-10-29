@@ -383,6 +383,14 @@ describe('Given an administrator on a donor card', () => {
     expect(receipts).toContain('platné');
   });
 
+  it('when the donor has donations, then the donations card links to the paired payments of this donor', async () => {
+    await loaded();
+
+    const link = section('Dary').querySelector('.donor-payments a') as HTMLAnchorElement;
+    expect(link.textContent?.trim()).toBe('Platby tohoto dárce');
+    expect(link.getAttribute('href')).toBe(`/sprava/platby?stav=prirazene&darce=${DONOR_ID}`);
+  });
+
   it('when the donor has no accounts, donations or receipts, then each card says so', async () => {
     await loaded(
       donorAccount(),

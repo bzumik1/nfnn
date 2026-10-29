@@ -10,6 +10,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Size;
+import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -38,13 +39,15 @@ class AdminDonorsController {
     private final AdministratorActivityService activity;
     private final DonorAdministrationService donors;
     private final DonorErasureService erasure;
+    private final AdminActionSummaries summaries;
 
     AdminDonorsController(AdministratorService administrators, AdministratorActivityService activity, DonorAdministrationService donors,
-                          DonorErasureService erasure) {
+                          DonorErasureService erasure, AdminActionSummaries summaries) {
         this.administrators = administrators;
         this.activity = activity;
         this.donors = donors;
         this.erasure = erasure;
+        this.summaries = summaries;
     }
 
     @GetMapping
@@ -101,7 +104,7 @@ class AdminDonorsController {
             @RequestParam(defaultValue = "" + AdministratorActivityService.DEFAULT_PAGE_SIZE)
             @Min(1) @Max(AdministratorActivityService.MAX_PAGE_SIZE) int limit
     ) {
-        return AdminActionListResponse.from(activity.list(Optional.ofNullable(before), limit));
+        return AdminActionListResponse.from(activity.list(Optional.ofNullable(before), limit), summaries, LocaleContextHolder.getLocale());
     }
 
     private static DonorId admin(Jwt jwt) {

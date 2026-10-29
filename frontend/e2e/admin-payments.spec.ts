@@ -143,7 +143,9 @@ test.describe('Given an administrator with an unpaired bank payment', () => {
     await submit.click();
 
     await expect(dialog).toHaveCount(0);
-    await expect(page.getByRole('status').filter({ hasNotText: 'Načítáme' })).toHaveText(
+    await expect(
+      page.getByRole('status').filter({ hasText: /\S/ }).filter({ hasNotText: 'Načítáme' }),
+    ).toHaveText(
       'Platba 500 Kč z 10. 10. 2026 je přiřazena dárci Jana Nováková. Dárce si už stáhl roční potvrzení za 2026; při dalším stažení dostane nové. Dejte mu prosím vědět.',
     );
     await expect(page.locator('.ui-card__empty')).toContainText(
@@ -190,7 +192,7 @@ test.describe('Given an administrator with an unpaired bank payment', () => {
     await page.goto('/sprava/platby');
     await page.getByRole('button', { name: 'Přiřazené', exact: true }).click();
     await expect(page.locator('tbody tr')).toContainText('Jana Nováková');
-    await expect(page.getByLabel('Rok')).toHaveValue('2026');
+    await expect(page).toHaveURL(/\/sprava\/platby\?stav=prirazene$/);
 
     await page.getByRole('button', { name: 'Zrušit přiřazení' }).click();
     const question = page.getByRole('group', { name: /Zrušit přiřazení platby/ });
@@ -202,9 +204,9 @@ test.describe('Given an administrator with an unpaired bank payment', () => {
     await page.getByRole('button', { name: 'Zrušit přiřazení' }).click();
     await question.getByRole('button', { name: 'Zrušit přiřazení' }).click();
 
-    await expect(page.getByRole('status').filter({ hasNotText: 'Načítáme' })).toContainText(
-      'už není přiřazena',
-    );
+    await expect(
+      page.getByRole('status').filter({ hasText: /\S/ }).filter({ hasNotText: 'Načítáme' }),
+    ).toContainText('už není přiřazena');
     await expect(page.locator('.ui-card__empty')).toHaveText('Zatím není přiřazena žádná platba.');
 
     await page.getByRole('button', { name: /^Čekají na přiřazení/ }).click();
@@ -266,5 +268,62 @@ test.describe('Given an administrator with an unpaired bank payment', () => {
 
     await expect(dialog).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Přiřadit dárci' })).toBeFocused();
+  });
+});
+
+test.describe('Given an administrator with many paired payments', () => {
+  test.beforeEach(async ({ page }) => {
+    await mockDonorApi(page);
+  });
+
+  test('when they search, load the next page and open a donor, then Back returns to the same search', async ({
+    page,
+  }) => {
+    const requests: string[] = [];
+    await page.route(
+      (url) => url.pathname === PAYMENTS,
+      (route) => {
+        const params = new URL(route.request().url()).searchParams;
+        requests.push(params.toString());
+        if (params.get('pairing') !== 'paired') {
+          return route.fulfill({ json: { year: null, availableYears: [], items: [], total: 0 } });
+        }
+        const offset = Number(params.get('offset') ?? '0');
+        const total = params.get('query') === 'nov' ? 51 : 120;
+        const items = Array.from({ length: Math.min(50, total - offset) }, (_, index) => ({
+          ...paired,
+          id: `019a1c00-0000-7000-8000-${String(offset + index).padStart(12, '0')}`,
+          bankTransactionId: 2000 + offset + index,
+        }));
+        return route.fulfill({ json: { year: null, availableYears: [2026], items, total } });
+      },
+    );
+    await rememberedSession(page);
+    await page.goto('/sprava/platby');
+    await page.getByRole('button', { name: 'Přiřazené', exact: true }).click();
+    await expect(page.locator('tbody tr')).toHaveCount(50);
+    await expect(page.getByText('Zobrazeno 50 z 120.')).toBeVisible();
+
+    await page.getByRole('searchbox', { name: 'Hledat', exact: true }).fill('nov');
+
+    await expect(page).toHaveURL(/\/sprava\/platby\?stav=prirazene&q=nov$/);
+    await expect(page.getByRole('status').filter({ hasText: /\S/ })).toHaveText(
+      'Nalezeno 51 plateb.',
+    );
+    await page.getByRole('button', { name: 'Načíst další' }).click();
+    await expect(page.locator('tbody tr')).toHaveCount(51);
+    await expect(page.locator('tbody tr').nth(50)).toBeFocused();
+    await expect(page.getByRole('button', { name: 'Načíst další' })).toHaveCount(0);
+    expect(requests).toContain('pairing=paired&query=nov&offset=50&limit=50');
+
+    await page.locator('tbody tr').first().getByRole('link', { name: 'Jana Nováková' }).click();
+    await expect(page).toHaveURL(/\/sprava\/darci\//);
+    await page.goBack();
+
+    await expect(page).toHaveURL(/\/sprava\/platby\?stav=prirazene&q=nov$/);
+    await expect(page.getByRole('searchbox', { name: 'Hledat', exact: true })).toHaveValue('nov');
+    await expect(page.getByRole('status').filter({ hasText: /\S/ })).toHaveText(
+      'Nalezeno 51 plateb.',
+    );
   });
 });

@@ -65,6 +65,15 @@ export interface AdminPaymentResponse {
   donation: PairedDonationResponse | null;
 }
 
+export interface PaymentQuery {
+  text?: string;
+  from?: string;
+  to?: string;
+  donorId?: string;
+  offset?: number;
+  limit?: number;
+}
+
 export interface AdminPaymentListResponse {
   year: number | null;
   availableYears: number[];
@@ -128,6 +137,8 @@ export interface AdminActionResponse {
   adminEmail: string | null;
   action: string;
   subjectId: string | null;
+  donorId: string | null;
+  summary: string;
   details: string;
   performedAt: string;
   client: string | null;
@@ -495,13 +506,20 @@ export class AdminApi {
     return this.http.get<ImportStateResponse>('/api/admin/donations/import-state');
   }
 
-  payments(
-    pairing: PairingFilter,
-    year: number | null = null,
-  ): Observable<AdminPaymentListResponse> {
+  payments(pairing: PairingFilter, query: PaymentQuery = {}): Observable<AdminPaymentListResponse> {
     const params: Record<string, string> = { pairing };
-    if (year !== null) {
-      params['year'] = String(year);
+    const filters: [string, string | number | undefined][] = [
+      ['query', query.text],
+      ['from', query.from],
+      ['to', query.to],
+      ['donorId', query.donorId],
+      ['offset', query.offset],
+      ['limit', query.limit],
+    ];
+    for (const [name, value] of filters) {
+      if (value !== undefined && value !== '' && !(name === 'offset' && value === 0)) {
+        params[name] = String(value);
+      }
     }
     return this.http.get<AdminPaymentListResponse>('/api/admin/donations/payments', { params });
   }
