@@ -14,6 +14,7 @@ import {
   SAMPLE_ASSERTION,
   SAMPLE_CHALLENGE,
   sampleDonor,
+  samplePasskey,
 } from '../../../core/auth/testing/donor-fixtures';
 import { ExternalNavigation } from '../../../core/navigation/external-navigation';
 import { ConnectApp } from './connect-app';
@@ -416,9 +417,10 @@ describe('Given an application sent the browser to the connection page', () => {
       expect(element('h1').textContent).toContain('Povolit přístup ke správě aplikaci');
     });
 
-    it('then an administrator with the code and a browser with passkeys may confirm either way', async () => {
+    it('then an administrator with the code and a browser with passkeys but no passkey of their own confirms with the code', async () => {
       await configure(QUERY, ADMIN_WITH_CODE, true);
       http.expectOne(CLIENT_URL).flush(CLAUDE);
+      http.expectOne('/api/donors/me/passkeys').flush({ items: [] });
       await settle();
 
       expect(element('#connect-app-code')).not.toBeNull();
@@ -426,6 +428,50 @@ describe('Given an application sent the browser to the connection page', () => {
         button.textContent?.trim(),
       );
       expect(labels).toEqual(['Povolit přístupovým klíčem', 'Povolit', 'Odmítnout']);
+    });
+
+    it('then an administrator with the code and a passkey is offered the passkey first and the code on request', async () => {
+      await configure(QUERY, ADMIN_WITH_CODE, true);
+      http.expectOne(CLIENT_URL).flush(CLAUDE);
+      http.expectOne('/api/donors/me/passkeys').flush({ items: [samplePasskey()] });
+      await settle();
+
+      expect(element('#connect-app-code')).toBeNull();
+      expect(element('.confirm-note').textContent?.trim()).toBe(
+        'Povolení potvrďte svým přístupovým klíčem, i když jste se jím už přihlásili.',
+      );
+      const labels = Array.from(root().querySelectorAll('form button')).map((button) =>
+        button.textContent?.trim(),
+      );
+      expect(labels).toEqual(['Zadat kód z aplikace', 'Povolit přístupovým klíčem', 'Odmítnout']);
+
+      await clickButton('Zadat kód z aplikace');
+      expect(document.activeElement).toBe(element('#connect-app-code'));
+      await typeCode('654321');
+      element<HTMLFormElement>('form').dispatchEvent(new Event('submit'));
+      await settle();
+      const request = http.expectOne({ method: 'POST', url: '/api/donors/oauth/authorize' });
+      expect(request.request.body.secondFactorCode).toBe('654321');
+    });
+
+    it('then an administrator with the code and a passkey allows with the passkey by the main button', async () => {
+      await configure(QUERY, ADMIN_WITH_CODE, true);
+      http.expectOne(CLIENT_URL).flush(CLAUDE);
+      http.expectOne('/api/donors/me/passkeys').flush({ items: [samplePasskey()] });
+      await settle();
+
+      element<HTMLFormElement>('form').dispatchEvent(new Event('submit'));
+      await settle();
+      http
+        .expectOne({ method: 'POST', url: '/api/donors/auth/passkey/options' })
+        .flush(passkeySignInOptions());
+      await settle();
+
+      const request = http.expectOne({ method: 'POST', url: '/api/donors/oauth/authorize' });
+      expect(request.request.body.passkey).toEqual({
+        challenge: SAMPLE_CHALLENGE,
+        credential: SAMPLE_ASSERTION,
+      });
     });
 
     it('then an application asking for reading only gets no choice of changes', async () => {

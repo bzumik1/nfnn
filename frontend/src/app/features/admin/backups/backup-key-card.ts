@@ -13,6 +13,7 @@ import {
   output,
   signal,
   viewChild,
+  viewChildren,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule, NgForm } from '@angular/forms';
@@ -69,7 +70,9 @@ export class BackupKeyCard {
   private readonly injector = inject(Injector);
   private readonly showButton = viewChild<ElementRef<HTMLButtonElement>>('showButton');
   private readonly codeField = viewChild<ElementRef<HTMLInputElement>>('codeField');
+  private readonly revealButton = viewChild<ElementRef<HTMLButtonElement>>('revealButton');
   private readonly revealedRegion = viewChild<ElementRef<HTMLElement>>('revealedRegion');
+  private readonly wordFields = viewChildren<ElementRef<HTMLInputElement>>('wordField');
 
   readonly status = input.required<BackupKeyStatus>();
   readonly changed = output<BackupKeyStatus>();
@@ -80,10 +83,17 @@ export class BackupKeyCard {
   protected readonly codeHint = $localize`:@@admin.backups.key.codeHint:Počkejte, až aplikace ukáže nový kód (mění se každých 30 sekund), a opište ho.`;
   protected readonly passkeySupported = inject(PasskeyAuthenticator).supported();
   protected readonly usesCode = computed(() => this.auth.donor()?.secondFactor.enabled ?? false);
+  private readonly hasPasskey = signal(false);
+  private readonly codeChosen = signal(false);
+  protected readonly asksCode = computed(
+    () => this.usesCode() && !(this.passkeySupported && this.hasPasskey() && !this.codeChosen()),
+  );
+  protected readonly opening = signal(false);
   protected readonly asking = signal(false);
   protected readonly revealing = signal(false);
   protected readonly confirming = signal(false);
   protected readonly revealed = signal<string | null>(null);
+  protected readonly checking = signal(false);
   protected readonly error = signal('');
   protected readonly notice = signal<Notice | null>(null);
   protected readonly words = signal<BackupKeyWordEntry[]>([]);
@@ -95,11 +105,43 @@ export class BackupKeyCard {
   protected code = '';
 
   protected ask(): void {
+    if (this.opening()) {
+      return;
+    }
     this.notice.set(null);
     this.error.set('');
     this.code = '';
+    this.codeChosen.set(false);
+    if (!this.usesCode() || !this.passkeySupported) {
+      this.open(false);
+      return;
+    }
+    this.opening.set(true);
+    this.auth
+      .hasPasskeys()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((hasPasskey) => {
+        this.opening.set(false);
+        this.open(hasPasskey);
+      });
+  }
+
+  protected chooseCode(): void {
+    this.error.set('');
+    this.codeChosen.set(true);
+    this.focusProof();
+  }
+
+  private open(hasPasskey: boolean): void {
+    this.hasPasskey.set(hasPasskey);
     this.asking.set(true);
-    afterNextRender(() => this.codeField()?.nativeElement.focus(), { injector: this.injector });
+    this.focusProof();
+  }
+
+  private focusProof(): void {
+    afterNextRender(() => (this.codeField() ?? this.revealButton())?.nativeElement.focus(), {
+      injector: this.injector,
+    });
   }
 
   protected cancel(): void {
@@ -112,7 +154,7 @@ export class BackupKeyCard {
     if (this.revealing()) {
       return;
     }
-    if (!this.usesCode()) {
+    if (!this.asksCode()) {
       this.revealWithPasskey();
       return;
     }
@@ -161,6 +203,7 @@ export class BackupKeyCard {
       .subscribe({
         next: (status) => {
           this.confirming.set(false);
+          this.checking.set(false);
           this.revealed.set(null);
           this.words.set([]);
           this.notice.set({
@@ -180,6 +223,7 @@ export class BackupKeyCard {
             ),
           });
           if (problemTypeEndsWith(failure, CONFIRMATION_EXPIRED)) {
+            this.checking.set(false);
             this.revealed.set(null);
             this.words.set([]);
             this.focusShowButton();
@@ -188,11 +232,29 @@ export class BackupKeyCard {
       });
   }
 
+  protected check(): void {
+    this.checking.set(true);
+    this.notice.set(null);
+    afterNextRender(() => this.wordFields()[0]?.nativeElement.focus(), { injector: this.injector });
+  }
+
+  protected showWordsAgain(): void {
+    this.checking.set(false);
+    this.focusRevealed();
+  }
+
   protected hide(): void {
+    this.checking.set(false);
     this.revealed.set(null);
     this.words.set([]);
     this.notice.set(null);
     this.focusShowButton();
+  }
+
+  private focusRevealed(): void {
+    afterNextRender(() => this.revealedRegion()?.nativeElement.focus(), {
+      injector: this.injector,
+    });
   }
 
   private send(proof: BackupKeyRevealRequest): void {
@@ -207,10 +269,9 @@ export class BackupKeyCard {
           this.asking.set(false);
           this.code = '';
           this.words.set(backupKeyWordEntries(response.key, response.checkPositions));
+          this.checking.set(false);
           this.revealed.set(response.key);
-          afterNextRender(() => this.revealedRegion()?.nativeElement.focus(), {
-            injector: this.injector,
-          });
+          this.focusRevealed();
         },
         error: (failure: unknown) => {
           this.revealing.set(false);

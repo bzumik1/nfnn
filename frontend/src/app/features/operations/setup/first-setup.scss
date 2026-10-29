@@ -240,3 +240,13 @@ app-backup-key-panel {
     margin-top: var(--space-1-5);
   }
 }
+
+.backup-key-step {
+  display: grid;
+  gap: var(--space-2);
+  justify-items: start;
+}
+
+.backup-key-step .ui-field-error {
+  margin: 0;
+}

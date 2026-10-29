@@ -136,6 +136,13 @@ export class AuthStore {
     return this.api.cancelEmailChange().pipe(switchMap(() => this.reloadProfile()));
   }
 
+  hasPasskeys(): Observable<boolean> {
+    return this.api.passkeys().pipe(
+      map((list) => list.items.length > 0),
+      catchError(() => of(false)),
+    );
+  }
+
   confirmWith(password: string | null): Observable<Confirmation> {
     if (password !== null) {
       return of({ password });

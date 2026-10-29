@@ -83,10 +83,13 @@ test.describe('Given a freshly installed site', () => {
         recipient: 'spravce@example.cz',
       }),
     ]);
-    await expect(page.locator('.backup-key')).toHaveText(BACKUP_KEY);
+    await expect(
+      page.getByRole('list', { name: 'Klíč k zálohám je těchto 24 slov' }).getByRole('listitem'),
+    ).toHaveCount(24);
     const download = page.waitForEvent('download');
     await page.getByRole('button', { name: 'Stáhnout jako soubor' }).click();
     expect((await download).suggestedFilename()).toBe('nfnn-klic-k-zaloham.txt');
+    await page.getByRole('button', { name: 'Mám uloženo, ověřit' }).click();
     await page.getByLabel('2. slovo klíče', { exact: true }).fill('komora');
     await page.getByLabel('13. slovo klíče', { exact: true }).fill('MOTIVACE');
     await page.getByLabel('24. slovo klíče', { exact: true }).fill('studna');
@@ -133,6 +136,7 @@ test.describe('Given a freshly installed site', () => {
     await page.locator('#setup-mail-username').fill('abc@smtp-brevo.com');
     await page.locator('#setup-mail-password').fill('xsmtpsib-key');
     await page.locator('#setup-admin-email').fill('spravce@example.cz');
+    await page.getByRole('button', { name: 'Mám uloženo, ověřit' }).click();
     await page.getByLabel('2. slovo klíče', { exact: true }).fill('komora');
     await page.getByLabel('13. slovo klíče', { exact: true }).fill('motivace');
     await page.getByLabel('24. slovo klíče', { exact: true }).fill('studna');

@@ -1,20 +1,17 @@
 <p
-  class="backup-key ui-mono"
-  i18n-aria-label="@@operations.backupKey.value"
-  aria-label="Klíč k zálohám"
+  id="backup-key-words-title"
+  class="backup-key-words-title"
+  i18n="@@operations.backupKey.words.title"
 >
-  {{ key() }}
+  Klíč k zálohám je těchto 24 slov
 </p>
+<ol class="backup-key-word-list ui-mono" aria-labelledby="backup-key-words-title">
+  @for (word of words(); track $index) {
+    <li>{{ word }}</li>
+  }
+</ol>
 <div class="backup-key-actions">
-  <app-copy-button [value]="key()" [what]="what" />
-  <button
-    type="button"
-    class="ui-button ui-button--small backup-key-save"
-    (click)="saveToPasswordManager()"
-    i18n="@@operations.backupKey.passwordManager.save"
-  >
-    Uložit do správce hesel
-  </button>
+  <app-copy-button [value]="copied()" [what]="what" />
   <button
     type="button"
     class="ui-button ui-button--small backup-key-download"
@@ -24,26 +21,8 @@
     Stáhnout jako soubor
   </button>
 </div>
-<app-live-notice [notice]="notice()" />
-<div class="backup-key-words">
-  <p
-    id="backup-key-words-title"
-    class="backup-key-words-title"
-    i18n="@@operations.backupKey.words.title"
-  >
-    Stejný klíč jako 24 slov
-  </p>
-  <ol class="backup-key-word-list ui-mono" aria-labelledby="backup-key-words-title">
-    @for (word of words(); track $index) {
-      <li>{{ word }}</li>
-    }
-  </ol>
-  <p class="backup-key-hint" i18n="@@operations.backupKey.words.hint">
-    Slova se dobře opisují na papír. Obnova přijme klíč i tato slova a u každého slova stačí první
-    čtyři písmena.
-  </p>
-</div>
 <p class="backup-key-hint" i18n="@@operations.backupKey.hint">
-  Uložte ho do správce hesel, nebo si ho vytiskněte a schovejte. Na serveru ho nenechávejte jako
-  jedinou kopii: když server odejde, odejde s ním.
+  Uložte si slova do správce hesel, nebo si je vytiskněte či opište na papír a schovejte. U každého
+  slova stačí první čtyři písmena. Na serveru je nenechávejte jako jedinou kopii: když server
+  odejde, odejdou s ním.
 </p>
