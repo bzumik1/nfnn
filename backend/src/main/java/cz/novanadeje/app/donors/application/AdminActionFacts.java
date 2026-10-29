@@ -125,6 +125,8 @@ public record AdminActionFacts(String summaryKey, Map<String, String> values) {
         content(shapes, "PROJECT", "Projekt", "Project", List.of("napsán", "upraven", "zveřejněn od", "stažen z webu", "smazán"));
         shapes.put("CHANGE_BACKUP_SCHEDULE", List.of(
                 full("Plán záloh změněn z „(?<from>[^“]*)“ na „(?<to>[^“]*)“")));
+        shapes.put("VIEW_BACKUP_KEY", List.of(
+                full("Zobrazen klíč k zálohám \\(ověřeno druhým faktorem\\)")));
         shapes.put("REQUEST_BACKUP", List.of(
                 full("Záloha databáze vyžádána \\(požadavek " + ID + "\\)"),
                 full("A backup was requested \\(request " + ID + "\\)")));

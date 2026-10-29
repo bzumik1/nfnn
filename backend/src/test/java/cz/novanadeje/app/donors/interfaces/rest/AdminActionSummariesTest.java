@@ -74,6 +74,9 @@ class AdminActionSummariesTest {
                 arguments("DOWNLOAD_BACKUP", "Záloha nfnn-2026-10-20.sql.gz (1572864 B) stažena",
                         "Stažena záloha nfnn-2026-10-20.sql.gz (1,5 MB).",
                         "Backup nfnn-2026-10-20.sql.gz downloaded (1.5 MB)."),
+                arguments("VIEW_BACKUP_KEY", "Zobrazen klíč k zálohám (ověřeno druhým faktorem)",
+                        "Zobrazen klíč k zálohám (ověřeno druhým faktorem).",
+                        "Backup key shown (confirmed with the second factor)."),
                 arguments("PUBLISH_NEWS", "Aktualita " + ID + " „nove-kocarky“ zveřejněna od 2026-10-20",
                         "Aktualita „nove-kocarky“ zveřejněna od 20. 10. 2026.",
                         "News article “nove-kocarky” published from 20 Oct 2026."));

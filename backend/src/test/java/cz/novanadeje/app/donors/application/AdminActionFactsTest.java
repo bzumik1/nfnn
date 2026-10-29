@@ -138,6 +138,7 @@ class AdminActionFactsTest {
                         "Plán záloh změněn z „denní záloha 03:00, zkušební obnova v neděli 04:00“ na „denní záloha 02:30, zkušební obnova v sobotu 05:00“",
                         "CHANGE_BACKUP_SCHEDULE", Map.of("from", "denní záloha 03:00, zkušební obnova v neděli 04:00",
                                 "to", "denní záloha 02:30, zkušební obnova v sobotu 05:00")),
+                arguments("VIEW_BACKUP_KEY", "Zobrazen klíč k zálohám (ověřeno druhým faktorem)", "VIEW_BACKUP_KEY", Map.of()),
                 arguments("REQUEST_BACKUP", "Záloha databáze vyžádána (požadavek " + OTHER + ")", "REQUEST_BACKUP", Map.of()),
                 arguments("REQUEST_BACKUP", "A backup was requested (request " + OTHER + ")", "REQUEST_BACKUP", Map.of()),
                 arguments("REQUEST_TEST_RESTORE", "Zkušební obnova nejnovější zálohy vyžádána (požadavek " + OTHER + ")", "REQUEST_TEST_RESTORE", Map.of()),
