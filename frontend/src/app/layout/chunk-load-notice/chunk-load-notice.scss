@@ -1,0 +1,20 @@
+.chunk-load-notice {
+  position: fixed;
+  inset-inline: var(--space-4);
+  bottom: var(--space-4);
+  z-index: 200;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3) var(--space-4);
+  max-width: var(--content-max);
+  margin: 0 auto;
+  border: 1px solid var(--color-danger-border);
+  box-shadow: var(--shadow-menu);
+}
+
+.chunk-load-notice__text {
+  flex: 1 1 16rem;
+  margin: 0;
+}

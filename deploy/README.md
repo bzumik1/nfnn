@@ -81,6 +81,8 @@ Kterou verzi kontejnery mají, ukáže commit, ze kterého image vznikla; má se
 sudo docker inspect nfnn-backend nfnn-frontend nfnn-backup nfnn-postgres nfnn-mcp --format '{{.Name}} {{index .Config.Labels "org.opencontainers.image.revision"}}'
 ```
 
+Návštěvník, který má web otevřený z dřívější verze, o nasazení nic neví: soubory stránek mají v názvu otisk obsahu a staré po nasazení zmizí (nginx na ně odpoví 404). Když pak v otevřené záložce přejde na stránku, kterou ještě nenačetl, web se sám jednou načte znovu už v nové verzi rovnou na té stránce; kdyby se ani to nepovedlo (výpadek připojení), ukáže hlášku s tlačítkem „Načíst znovu“. Na serveru se kvůli tomu nic nenastavuje.
+
 Uložení bere compose z poslední instalace, takže změnu `compose.yml` nepřenese; na tu je dál potřeba přeinstalace. Nastavení webu se mění ve správě na `/sprava/nastaveni` a přeinstalaci nepotřebuje.
 
 ## Zálohy

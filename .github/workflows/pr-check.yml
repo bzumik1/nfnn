@@ -469,6 +469,11 @@ jobs:
           [ ! -e "$restore/ci-4.upload" ] || { echo "::error::the upload was left in the restore folder"; exit 1; }
           curl -fsS --max-time 10 http://localhost:8089/ | grep -q '<app-root'
 
+      - name: Hashed bundles are cached for good and a missing file answers 404, never the app
+        run: |
+          docker cp nfnn-frontend:/usr/share/nginx/html "$RUNNER_TEMP/frontend-html"
+          node frontend/scripts/probe-asset-caching.mjs http://localhost:8089 "$RUNNER_TEMP/frontend-html" frontend/nginx.conf
+
       - name: Logs
         if: failure()
         run: |

@@ -1,7 +1,7 @@
 import { expect, test } from './fixtures';
 import { chunkLoadNotice, openHomeThenLoseNewChunks, openPolicyFromFooter } from './lost-chunks';
 
-const policyPath = /\/zasady-ochrany-osobnich-udaju$/;
+const policyPath = '/zasady-ochrany-osobnich-udaju';
 const policyHeading = { level: 1, name: 'Zásady ochrany osobních údajů' } as const;
 
 test.describe('Given a visitor whose open tab is older than the deployed version', () => {
@@ -12,16 +12,16 @@ test.describe('Given a visitor whose open tab is older than the deployed version
 
     await openPolicyFromFooter(page);
 
-    await expect(page).toHaveURL(policyPath);
     await expect(chunkLoadNotice(page)).toBeVisible();
-    expect(chunks.documentLoads()).toBe(2);
+    expect(chunks.documents()).toEqual(['/', policyPath]);
 
     await chunks.restore();
     await chunkLoadNotice(page).getByRole('button', { name: 'Načíst znovu' }).click();
 
+    await expect(page).toHaveURL(new RegExp(`${policyPath}$`));
     await expect(page.getByRole('heading', policyHeading)).toBeVisible();
     await expect(chunkLoadNotice(page)).toHaveCount(0);
-    expect(chunks.documentLoads()).toBe(3);
+    expect(chunks.documents()).toEqual(['/', policyPath, policyPath]);
   });
 });
 
@@ -45,13 +45,13 @@ test.describe('Given a visitor whose browser keeps no session storage', () => {
     await openPolicyFromFooter(page);
 
     await expect(chunkLoadNotice(page)).toBeVisible();
-    await expect(page).toHaveURL(/\/$/);
-    expect(chunks.documentLoads()).toBe(1);
+    expect(chunks.documents()).toEqual(['/']);
 
     await chunks.restore();
     await chunkLoadNotice(page).getByRole('button', { name: 'Načíst znovu' }).click();
 
-    await expect(page).toHaveURL(policyPath);
+    await expect(page).toHaveURL(new RegExp(`${policyPath}$`));
     await expect(page.getByRole('heading', policyHeading)).toBeVisible();
+    expect(chunks.documents()).toEqual(['/', policyPath]);
   });
 });

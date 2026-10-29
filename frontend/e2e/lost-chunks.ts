@@ -6,16 +6,16 @@ export const chunkLoadNoticeText =
   'Stránku se nepodařilo otevřít. Web mezitím mohl dostat novou verzi, nebo vypadlo připojení.';
 
 export interface LostChunks {
-  readonly documentLoads: () => number;
+  readonly documents: () => readonly string[];
   readonly restore: () => Promise<void>;
 }
 
 export async function openHomeThenLoseNewChunks(page: Page): Promise<LostChunks> {
   const loadedScripts = new Set<string>();
-  let documentLoads = 0;
+  const documents: string[] = [];
   page.on('request', (request) => {
     if (request.resourceType() === 'document') {
-      documentLoads += 1;
+      documents.push(new URL(request.url()).pathname);
     }
   });
   page.on('response', (response) => {
@@ -34,7 +34,7 @@ export async function openHomeThenLoseNewChunks(page: Page): Promise<LostChunks>
   );
 
   return {
-    documentLoads: () => documentLoads,
+    documents: () => [...documents],
     restore: () => page.unroute(newChunk),
   };
 }

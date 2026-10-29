@@ -1,0 +1,15 @@
+@if (recovery.failedUrl()) {
+  <div class="chunk-load-notice ui-notice ui-notice--alert" role="alert">
+    <p class="chunk-load-notice__text" i18n="@@layout.chunk-load.message">
+      Stránku se nepodařilo otevřít. Web mezitím mohl dostat novou verzi, nebo vypadlo připojení.
+    </p>
+    <button
+      type="button"
+      class="ui-button ui-button--primary ui-button--small chunk-load-notice__reload"
+      (click)="recovery.reload()"
+      i18n="@@layout.chunk-load.reload"
+    >
+      Načíst znovu
+    </button>
+  </div>
+}

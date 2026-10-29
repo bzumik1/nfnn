@@ -23,8 +23,22 @@ export class ReloadGuard {
   private readonly storage = inject(SESSION_STORAGE);
 
   claim(reason: ReloadReason): boolean {
-    void this.storage;
-    void reason;
-    return false;
+    const key = `nfnn.reload.${reason}`;
+    const now = String(Date.now());
+    try {
+      const storage = this.storage();
+      if (this.reloadedRecently(storage.getItem(key))) {
+        return false;
+      }
+      storage.setItem(key, now);
+      return storage.getItem(key) === now;
+    } catch {
+      return false;
+    }
+  }
+
+  private reloadedRecently(stored: string | null): boolean {
+    const elapsed = Date.now() - Number(stored);
+    return stored !== null && elapsed >= 0 && elapsed < RELOAD_WINDOW_MS;
   }
 }
