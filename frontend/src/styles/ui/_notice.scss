@@ -79,10 +79,6 @@
   color: var(--color-warning);
 }
 
-:root {
-  --floating-notice-height: 0rem;
-}
-
 .ui-notice--floating {
   position: fixed;
   inset-inline: var(--space-4);
@@ -114,7 +110,7 @@
 .has-floating-notice {
   scroll-padding-bottom: calc(var(--floating-notice-height) + var(--space-8));
 
-  body {
+  body:not(:has(app-site-footer)) {
     padding-bottom: calc(var(--floating-notice-height) + var(--space-8));
   }
 }

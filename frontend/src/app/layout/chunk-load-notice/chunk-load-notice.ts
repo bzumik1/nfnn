@@ -8,6 +8,8 @@ import {
   viewChild,
 } from '@angular/core';
 
+import { Title } from '@angular/platform-browser';
+
 import { ChunkLoadRecovery } from '../../core/reload/chunk-load-recovery';
 
 const ROOM_CLASS = 'has-floating-notice';
@@ -22,13 +24,22 @@ const ROOM_HEIGHT = '--floating-notice-height';
 export class ChunkLoadNotice {
   protected readonly recovery = inject(ChunkLoadRecovery);
   private readonly document = inject(DOCUMENT);
+  private readonly title = inject(Title);
   private readonly bar = viewChild<ElementRef<HTMLElement>>('bar');
   private readonly barButton = viewChild<ElementRef<HTMLButtonElement>>('barButton');
   private readonly pageHeading = viewChild<ElementRef<HTMLElement>>('pageHeading');
 
   constructor() {
     afterRenderEffect(() => this.barButton()?.nativeElement.focus());
-    afterRenderEffect(() => this.pageHeading()?.nativeElement.focus());
+    afterRenderEffect(() => {
+      const heading = this.pageHeading()?.nativeElement;
+      if (heading) {
+        this.title.setTitle(
+          $localize`:@@layout.chunk-load.pageTitle:Stránku se nepodařilo otevřít | Nová naděje – nadační fond`,
+        );
+        heading.focus();
+      }
+    });
     afterRenderEffect((onCleanup) => {
       const bar = this.bar()?.nativeElement;
       if (bar) {
@@ -42,16 +53,23 @@ export class ChunkLoadNotice {
     const measure = () => root.style.setProperty(ROOM_HEIGHT, `${bar.offsetHeight}px`);
     const view = this.document.defaultView;
     const observer = view?.ResizeObserver ? new view.ResizeObserver(measure) : null;
-    const uncover = (event: FocusEvent) => {
-      const focused = event.target;
-      if (!(focused instanceof Element) || bar.contains(focused)) {
-        return;
-      }
+    const scrollAboveBar = (focused: Element) => {
       const hidden = focused.getBoundingClientRect().bottom - bar.getBoundingClientRect().top;
       if (hidden > 0) {
         const gap = parseFloat(view?.getComputedStyle(bar).bottom ?? '0') || 0;
         view?.scrollBy({ top: hidden + gap, behavior: 'instant' });
       }
+    };
+    const uncover = (event: FocusEvent) => {
+      const focused = event.target;
+      if (
+        !(focused instanceof Element) ||
+        bar.contains(focused) ||
+        focused.closest('dialog[open]')
+      ) {
+        return;
+      }
+      view?.requestAnimationFrame(() => scrollAboveBar(focused));
     };
     measure();
     observer?.observe(bar);

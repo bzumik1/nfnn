@@ -28,13 +28,14 @@
     </main>
   } @else {
     <div #bar class="ui-notice ui-notice--alert ui-notice--floating" role="alert">
-      <p class="ui-notice__text" i18n="@@layout.chunk-load.message">
+      <p id="chunk-load-message" class="ui-notice__text" i18n="@@layout.chunk-load.message">
         Stránku se nepodařilo otevřít. Web byl mezitím možná aktualizován nebo vypadlo připojení.
         Zkuste ji načíst znovu.
       </p>
       <button
         #barButton
         type="button"
+        aria-describedby="chunk-load-message"
         class="ui-button ui-button--primary ui-button--small"
         (click)="recovery.reload()"
         i18n="@@layout.chunk-load.reload"
