@@ -22,6 +22,13 @@ import {
   signIn,
   session,
 } from './donor-session';
+import {
+  chunkLoadNotice,
+  chunkLoadPageHeading,
+  openHomeThenLoseNewChunks,
+  openPolicyFromFooter,
+  withoutSessionStorage,
+} from './lost-chunks';
 import { uploadedSignature } from './signature-image';
 
 const WCAG_AA = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
@@ -179,6 +186,27 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     page,
   }) => {
     await page.goto('/zasady-ochrany-osobnich-udaju');
+
+    expect(await violations(page)).toEqual([]);
+  });
+
+  test('when a page cannot be loaded and the reload bar shows over the page, then nothing breaks the rules', async ({
+    page,
+  }) => {
+    await withoutSessionStorage(page);
+    await openHomeThenLoseNewChunks(page);
+    await openPolicyFromFooter(page);
+    await expect(chunkLoadNotice(page)).toBeVisible();
+
+    expect(await violations(page)).toEqual([]);
+  });
+
+  test('when the first page cannot be loaded and its own page offers a reload, then nothing breaks the rules', async ({
+    page,
+  }) => {
+    await openHomeThenLoseNewChunks(page);
+    await openPolicyFromFooter(page);
+    await expect(page.getByRole('heading', chunkLoadPageHeading)).toBeVisible();
 
     expect(await violations(page)).toEqual([]);
   });

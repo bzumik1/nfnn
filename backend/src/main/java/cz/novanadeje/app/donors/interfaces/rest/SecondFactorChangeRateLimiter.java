@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donors.interfaces.rest;
 
+import cz.novanadeje.app.shared.infrastructure.ratelimit.ClientAddressKey;
 import cz.novanadeje.app.shared.infrastructure.ratelimit.FixedWindowRateLimiter;
 import cz.novanadeje.app.shared.interfaces.rest.ProblemTypes;
 import cz.novanadeje.app.shared.interfaces.rest.RateLimitExceededException;
@@ -21,7 +22,7 @@ class SecondFactorChangeRateLimiter {
     }
 
     void check(String clientAddress) {
-        if (!limiter.tryAcquire(clientAddress)) {
+        if (!limiter.tryAcquire(new ClientAddressKey(clientAddress))) {
             throw new RateLimitExceededException(ProblemTypes.of("donors", "rate-limited"));
         }
     }

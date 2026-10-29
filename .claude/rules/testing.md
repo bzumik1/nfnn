@@ -14,7 +14,7 @@ Test support:
 - External ports have fakes in `support/`, registered `@Primary` by `TestSupportConfiguration` (`FakeFioClient`, `RecordingMailSender`, `SynchronousBankImportRequests`, `FakeClientMetadataSource`, `FakeMailServerProbe`, the `Recording…` timers and announcers); a new port adds its fake there. `MailContents` reads sent mail; `FioMovements` builds bank movements.
 - `CommonStepDefinitions.isolateScenario` (`@Before`) truncates every table and restarts sequences (`DatabaseCleaner`; receipt numbers start at `000001`), clears mail, resets the fake Fio client and advances `MutableClock` a day. `Given today is {date}` sets the clock, and an `@After` in `FioImportStepDefinitions` moves it forward again so tokens and rate windows never go backwards; `DonorSessions` signs a donor in again after the clock expired the token.
 - `FakeFioClient` refuses history older than 90 days until `unlockHistory()` and throws on every bookmark call (`transactions().sinceBookmark()`, `bookmark().moveAfterTransaction/moveToDate`), so `/last/` can never pass.
-- In tables `{Jana}` is Jana's variable symbol (`ScenarioDonors`); `{date}` is ISO (`ParameterTypes`). Each scenario sends from its own client address (`X-Forwarded-For`, trusted by the backend); `When the following requests come from another client address` switches.
+- In tables `{Jana}` is Jana's variable symbol (`ScenarioDonors`); `{date}` is ISO (`ParameterTypes`). Each scenario sends from its own client address (`X-Forwarded-For`, trusted by the backend); `When the following requests come from another client address` switches; `When the following requests come from the client address {string}` sets a fixed one, safe because `isolateScenario` moves the clock a day forward, past every limit window.
 
 A new feature covers: happy path and each rule as scenarios; validation and problem types; 401 without token and 404 for another donor's resource; rate limits; time boundaries with `MutableClock`; scheduler on and off; a repository test for every derived or hand-written query; a rendering test per new template; `cs` and `en` texts for every new key.
 
@@ -25,6 +25,9 @@ A new feature covers: happy path and each rule as scenarios; validation and prob
 
 ## Connector (`mcp/`)
 - Vitest specs in `mcp/test/*.spec.ts`, same naming (`describe('Given …')` → `it('when …, then …')`); the backend is `test/fake-backend.ts`, never a real one.
+
+## Logic on both sides
+- A computation the backend and the frontend both perform (local first, `backend.md`: the administration's overviews and totals, receipt data formatting, the verification QR data the backend signs and the browser checks) is specified once as shared test cases, inputs and expected outputs in one data file, and the backend and the frontend suites both run every case (Jakub 2026-10-28). A change to the computation changes the cases first, so neither side can pass with its own idea of the result.
 
 ## Running
 What to run before "done" is in `CLAUDE.md` (Done means); `./gradlew build` is what the PR check runs for the backend. In a cloud session: skill `cloud-session`.

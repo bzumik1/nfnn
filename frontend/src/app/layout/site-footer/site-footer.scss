@@ -6,6 +6,10 @@
   color: color-mix(in srgb, var(--color-on-inverse) 50%, transparent);
 }
 
+:host-context(.has-floating-notice) .footer {
+  padding-bottom: calc(var(--space-7) + var(--floating-notice-height) + var(--space-8));
+}
+
 .footer-top {
   display: flex;
   justify-content: space-between;

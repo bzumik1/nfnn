@@ -69,6 +69,17 @@ Feature: Donor signs in and keeps a session
     And the donor signs in with email "jana@example.cz" and password "correct horse battery"
     Then the response status is 200
 
+  Scenario: Addresses in one IPv6 /64 share the sign-in window, and the neighbouring /64 has its own
+    Given the following requests come from the client address "2001:db8:5:7::1"
+    And 10 sign-in attempts were made with email "jana@example.cz" and password "wrong horse battery"
+    When the following requests come from the client address "2001:db8:5:7:abcd:ef01:2345:6789"
+    And the donor signs in with email "jana@example.cz" and password "correct horse battery"
+    Then the response status is 429
+    And the problem type ends with "donors/rate-limited"
+    When the following requests come from the client address "2001:db8:5:8::1"
+    And the donor signs in with email "jana@example.cz" and password "correct horse battery"
+    Then the response status is 200
+
   Scenario: Successful and unknown sign-ins count too, and the address may sign in again 15 minutes after its first attempt
     Given 5 sign-in attempts were made with email "jana@example.cz" and password "correct horse battery"
     And 5 sign-in attempts were made with email "nobody@example.cz" and password "correct horse battery"
