@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 const SOURCE = 'v2-baseline';
 const root = resolve(fileURLToPath(new URL('..', import.meta.url)));
 const defaults = {
-  junit: 'backend/build/test-results/test',
+  junit: 'backend/build/test-results/test,backend/build/test-results/acceptanceTest',
   frontendVitest: 'frontend/test-results/inventory-vitest.json',
   playwright: 'frontend/test-results/inventory-playwright.json',
   mcpVitest: 'mcp/test-results/inventory-vitest.json',
@@ -46,13 +46,16 @@ function attribute(tag, name) {
   return match ? decodeXml(match[1]) : '';
 }
 
-function junit(directory) {
+function junit(directories) {
   const backend = [];
   const cucumber = [];
-  for (const file of readdirSync(directory)
-    .filter((name) => name.endsWith('.xml'))
-    .sort()) {
-    const xml = readFileSync(join(directory, file), 'utf8');
+  for (const file of directories.flatMap((directory) =>
+    readdirSync(directory)
+      .filter((name) => name.endsWith('.xml'))
+      .sort()
+      .map((name) => join(directory, name)),
+  )) {
+    const xml = readFileSync(file, 'utf8');
     const suite = attribute(xml.match(/<testsuite\b[^>]*>/)?.[0] ?? '', 'name');
     for (const [tag] of xml.matchAll(/<testcase\b[^>]*>/g)) {
       const name = attribute(tag, 'name');
@@ -121,7 +124,10 @@ const needed = Object.entries(options).filter(
 if (options.backend !== '') {
   needed.push(['backend', options.backend]);
 }
-for (const [name, path] of needed) {
+const paths = (name, value) => (name === 'junit' ? value.split(',') : [value]);
+for (const [name, path] of needed.flatMap(([name, value]) =>
+  paths(name, value).map((path) => [name, path]),
+)) {
   if (!existsSync(at(path))) {
     console.error(
       `Missing ${name} report ${path}; see .claude/rules/testing.md "Regression against v2"`,
@@ -135,7 +141,7 @@ function backendSuites() {
     const part = JSON.parse(readFileSync(at(options.backend), 'utf8')).suites;
     return Object.fromEntries(BACKEND_SUITES.map((name) => [name, part[name] ?? []]));
   }
-  const { backend, cucumber } = junit(at(options.junit));
+  const { backend, cucumber } = junit(paths('junit', options.junit).map(at));
   return { 'backend-junit': inventory(backend), 'backend-cucumber': inventory(cucumber) };
 }
 

@@ -80,6 +80,34 @@ describe('Given the backend JUnit reports', () => {
     assert.doesNotMatch(written, /jana@example\.cz/);
   });
 
+  it('when the unit tests and the scenarios sit in report folders of their own, then the backend part lists both', () => {
+    const root = reports();
+    mkdirSync(join(root, 'unit'));
+    mkdirSync(join(root, 'acceptance'));
+    const [unit, scenario] = readFileSync(join(root, 'junit', 'TEST-a.xml'), 'utf8')
+      .split('\n')
+      .filter((line) => line.startsWith('<testcase'));
+    writeFileSync(join(root, 'unit', 'TEST-a.xml'), `<testsuite name="a">\n${unit}\n</testsuite>`);
+    writeFileSync(
+      join(root, 'acceptance', 'TEST-b.xml'),
+      `<testsuite name="b">\n${scenario}\n</testsuite>`,
+    );
+    inventory(root, [
+      `--junit=${join(root, 'junit')}`,
+      '--part=backend',
+      `--out=${join(root, 'together.json')}`,
+    ]);
+    inventory(root, [
+      `--junit=${join(root, 'unit')},${join(root, 'acceptance')}`,
+      '--part=backend',
+      `--out=${join(root, 'apart.json')}`,
+    ]);
+    assert.equal(
+      readFileSync(join(root, 'apart.json'), 'utf8'),
+      readFileSync(join(root, 'together.json'), 'utf8'),
+    );
+  });
+
   it('when the whole inventory reads that part instead of the reports, then it equals the inventory from the reports', () => {
     const root = reports();
     inventory(root, [`--junit=${join(root, 'junit')}`, `--out=${join(root, 'direct.json')}`]);

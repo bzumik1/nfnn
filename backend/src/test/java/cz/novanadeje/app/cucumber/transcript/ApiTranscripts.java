@@ -14,13 +14,11 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.Arrays;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
-import java.util.stream.Stream;
 
 public final class ApiTranscripts {
 
@@ -59,19 +57,9 @@ public final class ApiTranscripts {
         }
     }
 
-    static synchronized void startRun(Path directory) {
+    static synchronized void startRun() {
         FEATURES.clear();
         SCENARIO_ORDINALS.clear();
-        if (!Files.exists(directory)) {
-            return;
-        }
-        try (Stream<Path> stale = Files.walk(directory)) {
-            for (Path path : stale.sorted(Comparator.reverseOrder()).filter(path -> !path.equals(directory)).toList()) {
-                Files.delete(path);
-            }
-        } catch (IOException undeletable) {
-            throw new UncheckedIOException(undeletable);
-        }
     }
 
     static Path directory() {

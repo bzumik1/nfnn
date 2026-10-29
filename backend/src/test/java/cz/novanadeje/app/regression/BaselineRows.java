@@ -121,7 +121,7 @@ public final class BaselineRows {
     }
 
     public void write(JdbcClient jdbc, MutableClock clock) {
-        new DatabaseCleaner(jdbc).truncateAllTables();
+        new DatabaseCleaner(jdbc).emptyAllTables();
         clock.set(Instant.parse(now));
         ids.clear();
         int sequence = 0;

@@ -1,6 +1,6 @@
 package cz.novanadeje.app.regression;
 
-import cz.novanadeje.app.TestcontainersConfiguration;
+import cz.novanadeje.app.IntegrationTest;
 import cz.novanadeje.app.cucumber.transcript.ApiTranscripts;
 import cz.novanadeje.app.donations.application.report.MonthlyReportSender;
 import cz.novanadeje.app.donations.application.report.MonthlyReportService;
@@ -19,12 +19,11 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
@@ -47,10 +46,9 @@ import static org.mockito.Mockito.verify;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 
-@Import({TestcontainersConfiguration.class, TestSupportConfiguration.class})
-@SpringBootTest(properties = {"app.donations.fio.token=", "app.donations.report.cron=-", "app.contact.retention.cron=-", "app.content.media-cleanup.cron=-", "app.operations.backups.check-cron=-", "app.donors.registration-reminder.cron=-",
-        "app.donations.receipt.first-year=" + OverviewGoldenCasesTest.FIRST_RECEIPT_YEAR})
-@AutoConfigureMockMvc
+@IntegrationTest
+@Import(TestSupportConfiguration.class)
+@TestPropertySource(properties = "app.donations.receipt.first-year=" + OverviewGoldenCasesTest.FIRST_RECEIPT_YEAR)
 class OverviewGoldenCasesTest {
 
     static final String ADMIN_OVERVIEW_CASES = "shared-cases/admin-overview/year-overview.json";
@@ -76,7 +74,7 @@ class OverviewGoldenCasesTest {
 
     @AfterEach
     void truncate() {
-        new DatabaseCleaner(jdbc).truncateAllTables();
+        new DatabaseCleaner(jdbc).emptyAllTables();
     }
 
     @Test
