@@ -102,14 +102,14 @@ describe('Given connector source files', () => {
       },
       {
         method: 'GET',
-        template: '/api/admin/operations/logs/{}',
+        template: '/api/admin/operations/logs/{name}',
         source: 'tools/reading.ts:5',
         accept: 'text/plain',
         photo: false,
       },
       {
         method: 'DELETE',
-        template: '/api/admin/donations/donors/{}/bank-accounts/{}',
+        template: '/api/admin/donations/donors/{id}/bank-accounts/{id}',
         source: 'tools/reading.ts:6',
         accept: 'application/json',
         photo: false,
@@ -196,20 +196,64 @@ describe('Given recorded transcripts', () => {
     ]);
   });
 
-  it('when a field is recorded only as null, then the fixture may give it any value', () => {
+  const onlyNull = () =>
+    recordedAnswers(
+      transcripts({
+        'GET /api/admin/donations/overview #1': {
+          status: 200,
+          body: { year: 2026, applied: null },
+        },
+      }),
+    );
+
+  it('when a field recorded only as null has a value in the fixture, then the check names it', () => {
     const problems = checkBackendShapes({
       calls: [OVERVIEW],
-      recorded: recordedAnswers(
-        transcripts({
-          'GET /api/admin/donations/overview #1': {
-            status: 200,
-            body: { year: 2026, applied: null },
-          },
-        }),
-      ),
+      recorded: onlyNull(),
       fixtures: [answer({ applied: { backupTime: '03:00' } })],
     });
+    expect(problems).toEqual([
+      "the fake's 200 answer to GET /api/admin/donations/overview?year=2026 has $.applied as object, recorded only as null",
+    ]);
+  });
+
+  it('when that field is listed as recorded only as null, then the fixture may give it a value', () => {
+    const problems = checkBackendShapes({
+      calls: [OVERVIEW],
+      recorded: onlyNull(),
+      fixtures: [answer({ applied: { backupTime: '03:00' } })],
+      recordedOnlyAsNull: {
+        'GET /api/admin/donations/overview $.applied': 'no scenario applies a plan',
+      },
+    });
     expect(problems).toEqual([]);
+  });
+
+  it('when an id placeholder meets only a named path segment, then the call has no transcript', () => {
+    const donor: ConnectorCall = {
+      ...OVERVIEW,
+      template: '/api/admin/donors/{id}',
+      source: 'r.ts:1',
+    };
+    const log: ConnectorCall = {
+      ...OVERVIEW,
+      template: '/api/admin/operations/logs/{name}',
+      source: 'r.ts:2',
+    };
+    const problems = checkBackendShapes({
+      calls: [donor, log],
+      recorded: recordedAnswers(
+        transcripts({
+          'GET /api/admin/donors/actions #1': { status: 200, body: {} },
+          'GET /api/admin/operations/logs/{id} #1': { status: 200, body: {} },
+          'GET /api/admin/operations/logs/backend.log #1': { status: 200, body: {} },
+        }),
+      ),
+      fixtures: [],
+    });
+    expect(problems).toEqual([
+      'GET /api/admin/donors/{id} (r.ts:1) is called by the connector, but no transcript records it',
+    ]);
   });
 
   it('when a fixture answers with a status no transcript records, then the check names the recorded ones', () => {

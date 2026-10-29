@@ -14,6 +14,7 @@ export const UNKNOWN_ID = '019a0000-0000-7000-8000-00000000ffff';
 export const GIVING_DONOR_ID = '019a0000-0000-7000-8000-000000000003';
 export const MEDIA_ID = '019a0000-0000-7000-8000-000000000004';
 export const DONATION_ID = '019a0000-0000-7000-8000-000000000005';
+export const LINK_ID = '019a0000-0000-7000-8000-000000000006';
 const LOG_MATCHES: Record<string, number[]> = {
   'backend.log': [36],
   'backend.log.2026-10-22.0.gz': [70, 50, 10],

@@ -1,6 +1,6 @@
 import { strict as assert } from 'node:assert';
 import { spawnSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -63,14 +63,22 @@ const INVENTORY = {
 
 const workspaces = [];
 
-function workspace({ change = () => {}, changes = {}, freshInventory } = {}) {
+function workspace({
+  change = () => {},
+  changeBaseline = () => {},
+  changes = {},
+  freshInventory,
+  changed,
+} = {}) {
   const root = mkdtempSync(join(tmpdir(), 'compare-v2-'));
   workspaces.push(root);
   const write = (path, value) => {
     mkdirSync(dirname(join(root, path)), { recursive: true });
     writeFileSync(join(root, path), `${JSON.stringify(value, null, 2)}\n`);
   };
-  write(`baseline/${FEATURE}.json`, transcriptFile());
+  const baseline = transcriptFile();
+  changeBaseline(baseline);
+  write(`baseline/${FEATURE}.json`, baseline);
   const recorded = transcriptFile();
   change(recorded, write);
   write(`recording/${FEATURE}.json`, recorded);
@@ -81,6 +89,12 @@ function workspace({ change = () => {}, changes = {}, freshInventory } = {}) {
   write('inventory-baseline.json', inventory(INVENTORY));
   if (freshInventory) {
     write('inventory.json', inventory(freshInventory));
+  }
+  if (changed) {
+    writeFileSync(
+      join(root, 'changed.txt'),
+      changed.map((path) => path.replace('<changes>', join(root, 'changes'))).join('\n'),
+    );
   }
   return root;
 }
@@ -95,6 +109,7 @@ function compare(root, extra = []) {
       `--changes=${join(root, 'changes')}`,
       `--inventory-baseline=${join(root, 'inventory-baseline.json')}`,
       `--report=${join(root, 'report.md')}`,
+      ...(existsSync(join(root, 'changed.txt')) ? [`--changed=${join(root, 'changed.txt')}`] : []),
       ...extra,
     ],
     { encoding: 'utf8' },
@@ -155,7 +170,13 @@ describe('Given a recording whose response lost a field', () => {
   });
 
   it('when only another slice declares a different kind, then it still fails', () => {
-    const declaration = { path: '*', scenario: '*', kind: 'status', reason: 'unrelated' };
+    const declaration = {
+      path: 'GET /api/admin/donors',
+      scenario: 'donors/admin_donors: *',
+      kind: 'status',
+      reason: 'unrelated',
+      contract: 'docs/api-contract.md, Administration',
+    };
     const result = compare(workspace({ change: removed, changes: { '0.5.json': [declaration] } }));
     assert.equal(result.status, 1, result.output);
     assert.match(result.report, /Nepoužité deklarace/);
@@ -231,6 +252,10 @@ describe('Given a recording with a log line of a shape v2 never wrote', () => {
     scenarioOf(recorded).logs.push(
       'INFO donors.application.DonorAuthenticationService: Sign-in of donor <id:1> from 203.0.113.7',
     );
+  const approval = {
+    approvedIn: 'PR #200, Jakub 2026-11-12',
+    fields: { '<id>': 'the donor id', '<n>': 'the parts of the client address' },
+  };
   const declared = (extra) => ({
     'pr-200.json': [
       {
@@ -249,17 +274,42 @@ describe('Given a recording with a log line of a shape v2 never wrote', () => {
     assert.match(result.report, /Sign-in of donor <id> from <n>\.<n>\.<n>\.<n>/);
   });
 
-  it('when it is allowed without the security OK, then it still fails and says the flag is missing', () => {
+  it('when it is allowed without a security approval, then the comparison refuses the declaration', () => {
     const result = compare(workspace({ change: newField, changes: declared({}) }));
-    assert.equal(result.status, 1, result.output);
-    assert.match(result.report, /securityOk/);
+    assert.equal(result.status, 2, result.output);
+    assert.match(result.output, /pr-200\.json.*entry 1.*security/);
   });
 
-  it('when it is allowed with the security OK, then it passes', () => {
+  it('when it is allowed with the old boolean flag, then the comparison refuses the declaration', () => {
     const result = compare(
       workspace({ change: newField, changes: declared({ securityOk: true }) }),
     );
+    assert.equal(result.status, 2, result.output);
+    assert.match(result.output, /security/);
+  });
+
+  it('when the approval does not name every slot of the line, then it fails and names the slot', () => {
+    const result = compare(
+      workspace({
+        change: newField,
+        changes: declared({ security: { ...approval, fields: { '<id>': 'the donor id' } } }),
+      }),
+    );
+    assert.equal(result.status, 1, result.output);
+    assert.match(result.report, /<n>/);
+    assert.match(result.output, /::error::.*<n>/);
+  });
+
+  it('when the approval names every slot, then it passes and the report shows the approval and the line', () => {
+    const result = compare(
+      workspace({ change: newField, changes: declared({ security: approval }) }),
+    );
     assert.equal(result.status, 0, result.output);
+    assert.match(result.report, /### Schváleno bezpečností/);
+    assert.match(result.report, /PR #200, Jakub 2026-11-12/);
+    assert.match(result.report, /the parts of the client address/);
+    assert.match(result.report, /### Změněné a přidané řádky logu/);
+    assert.match(result.report, /Sign-in of donor <id:1> from 203\.0\.113\.7/);
   });
 
   it('when a known log line changed, then it fails as a changed log line', () => {
@@ -271,6 +321,34 @@ describe('Given a recording with a log line of a shape v2 never wrote', () => {
     assert.equal(result.status, 1, result.output);
     assert.match(result.report, /logs/);
     assert.match(result.report, /WARN donors\.application\.DonorEmailVerificationService/);
+  });
+
+  it('when a sender account is logged where a payment id was, then it is a new log field', () => {
+    const line = (payment) =>
+      `DEBUG donations.application.pairing.PaymentPairingService: Bank payment ${payment} paired with donor <id:2> by VARIABLE_SYMBOL`;
+    const result = compare(
+      workspace({
+        changeBaseline: (baseline) => scenarioOf(baseline).logs.push(line('1001')),
+        change: (recorded) => scenarioOf(recorded).logs.push(line('1001'), line('1234567/0800')),
+      }),
+    );
+    assert.equal(result.status, 1, result.output);
+    assert.match(result.report, /log-field.*Bank payment <digits:7>\/<n> paired/);
+  });
+
+  it('when an upper-case name appears where v2 wrote no such word, then it is a new log field', () => {
+    const line = (word) =>
+      `INFO donations.application.importing.ImportBankPaymentsService: Fio import ${word} completed`;
+    const result = compare(
+      workspace({
+        changeBaseline: (baseline) => scenarioOf(baseline).logs.push(line('STARTUP')),
+        change: (recorded) =>
+          scenarioOf(recorded).logs.push(line('STARTUP'), line('NOVÁKOVÁ'), line('HOURLY_RUN')),
+      }),
+    );
+    assert.equal(result.status, 1, result.output);
+    assert.match(result.report, /log-field.*Fio import NOVÁKOVÁ completed/);
+    assert.doesNotMatch(result.report, /log-field.*HOURLY_RUN/);
   });
 });
 
@@ -295,10 +373,18 @@ describe('Given a recording that lost a scenario and a request', () => {
               scenario: '*',
               kind: 'removed',
               reason: '1.4 drops it',
+              contract: 'docs/api-contract.md, Administration',
             },
           ],
           '1.6.json': [
-            { path: '*', scenario: `${FEATURE}: *`, kind: 'logs', reason: '1.6 logs elsewhere' },
+            {
+              path: '*',
+              scenario: `${FEATURE}: *`,
+              kind: 'logs',
+              reason: '1.6 logs elsewhere',
+              contract: 'docs/system-overview.md, Donors',
+              security: { approvedIn: 'PR #210', fields: {} },
+            },
           ],
         },
       }),
@@ -316,6 +402,49 @@ describe('Given a slice file that is not a valid declaration', () => {
     );
     assert.equal(result.status, 2, result.output);
     assert.match(result.output, /0\.9\.json.*entry 1.*reason/);
+  });
+
+  const refused = (entry, message) => {
+    const result = compare(workspace({ changes: { '0.9.json': [entry] } }));
+    assert.equal(result.status, 2, result.output);
+    assert.match(result.output, message);
+  };
+  const body = { kind: 'body', reason: 'r', contract: 'docs/api-contract.md, Administration' };
+
+  it('when an entry covers every path of every scenario, then the comparison refuses it', () => {
+    refused({ ...body, path: '*', scenario: '*' }, /0\.9\.json.*entry 1.*path and scenario/);
+  });
+
+  it('when a transcript entry names no contract section, then the comparison refuses it', () => {
+    refused({ kind: 'body', reason: 'r', path: 'GET /api/x', scenario: '*' }, /entry 1.*contract/);
+  });
+
+  it('when a logs entry carries no security approval, then the comparison refuses it', () => {
+    refused({ ...body, kind: 'logs', path: '*', scenario: 'donors/*' }, /entry 1.*security/);
+  });
+
+  it('when an approval names no review or no fields, then the comparison refuses it', () => {
+    refused(
+      { ...body, kind: 'logs', path: '*', scenario: 'donors/*', security: { fields: {} } },
+      /approvedIn/,
+    );
+    refused(
+      { ...body, kind: 'logs', path: '*', scenario: 'donors/*', security: { approvedIn: 'PR #1' } },
+      /fields/,
+    );
+  });
+
+  it('when a new log field allows any line, then the comparison refuses it', () => {
+    refused(
+      { kind: 'log-field', line: '*', reason: 'r', security: { approvedIn: 'PR #1', fields: {} } },
+      /entry 1.*line/,
+    );
+  });
+
+  it('when a retirement covers every test or every suite, then the comparison refuses it', () => {
+    const retired = { kind: 'retired', reason: 'r', replacement: 'x' };
+    refused({ ...retired, suite: 'backend-junit', test: '*' }, /entry 1.*test/);
+    refused({ ...retired, suite: '*', test: 'donors.DonorTest > x' }, /entry 1.*suite/);
   });
 
   it('when an entry names an unknown kind, then the comparison refuses to run', () => {
@@ -376,11 +505,99 @@ describe('Given a fresh test inventory', () => {
     const root = workspace({
       freshInventory: withoutBackendTest,
       changes: {
-        '1.2.json': [{ kind: 'retired', suite: 'backend-junit', test: '*', reason: 'gone' }],
+        '1.2.json': [
+          {
+            kind: 'retired',
+            suite: 'backend-junit',
+            test: 'donors.DonorTest > Given a donor, when read, then shown',
+            reason: 'gone',
+          },
+        ],
       },
     });
     const result = compare(root, [`--inventory=${join(root, 'inventory.json')}`]);
     assert.equal(result.status, 2, result.output);
     assert.match(result.output, /replacement/);
+  });
+});
+
+describe('Given the files the pull request changes', () => {
+  const status = {
+    path: 'GET /api/admin/donors/{id}',
+    scenario: 'donors/admin_donors: *',
+    kind: 'status',
+    reason: 'nothing changed',
+    contract: 'docs/api-contract.md, Administration',
+  };
+
+  it('when it touches a baseline transcript or the baseline inventory, then the comparison fails and names the file', () => {
+    for (const path of [
+      'regression/v2/api/donors/admin_donors.json',
+      'regression/v2/test-inventory.json',
+    ]) {
+      const result = compare(workspace({ changed: ['docs/api-contract.md', path] }));
+      assert.equal(result.status, 1, result.output);
+      assert.ok(result.report.includes(path), result.report);
+      assert.match(result.output, /::error::.*baseline/);
+    }
+  });
+
+  it('when it changes the recorder, the masking or the comparison, then the report names those files', () => {
+    const recorder =
+      'backend/src/test/java/cz/novanadeje/app/cucumber/transcript/TranscriptNormaliser.java';
+    const result = compare(workspace({ changed: [recorder, 'scripts/compare-v2.mjs'] }));
+    assert.equal(result.status, 0, result.output);
+    assert.match(result.report, /### Změny nahrávání a srovnání/);
+    assert.ok(result.report.includes(recorder));
+    assert.ok(result.report.includes('scripts/compare-v2.mjs'));
+  });
+
+  it('when a file it adds holds an unused declaration, then the comparison fails', () => {
+    const result = compare(
+      workspace({ changes: { '1.8.json': [status] }, changed: ['<changes>/1.8.json'] }),
+    );
+    assert.equal(result.status, 1, result.output);
+    assert.match(result.output, /::error::.*1\.8\.json.*unused/);
+  });
+
+  it('when an older file holds an unused declaration, then the comparison only warns', () => {
+    const result = compare(workspace({ changes: { '1.2.json': [status] }, changed: [] }));
+    assert.equal(result.status, 0, result.output);
+    assert.match(result.report, /Nepoužité deklarace/);
+    assert.match(result.report, /1\.2\.json/);
+  });
+
+  it('when an added request is declared for another scenario, then the declaration is unused', () => {
+    const added = {
+      path: 'GET /api/admin/donors',
+      scenario: 'donors/admin_donors: Someone else*',
+      kind: 'added',
+      reason: 'r',
+      contract: 'docs/api-contract.md, Administration',
+    };
+    const result = compare(
+      workspace({
+        change: (recorded) =>
+          (scenarioOf(recorded).requests['GET /api/admin/donors #1'] = callOf(recorded)),
+        changes: { '1.8.json': [added] },
+        changed: ['<changes>/1.8.json'],
+      }),
+    );
+    assert.equal(result.status, 1, result.output);
+  });
+});
+
+describe('Given a recording with an added mail', () => {
+  it('when compared, then the report lists its subject and the kind of recipient without the address', () => {
+    const result = compare(
+      workspace({
+        change: (recorded) =>
+          scenarioOf(recorded).mails.push({ ...MAIL, subject: 'Přehled darů za 10/2026' }),
+      }),
+    );
+    assert.equal(result.status, 0, result.output);
+    assert.match(result.report, /Přehled darů za <n>\/<n>/);
+    assert.match(result.report, /dárce/);
+    assert.doesNotMatch(result.report.split('### Přidáno')[1], /jana@example\.cz/);
   });
 });

@@ -4,6 +4,7 @@ import {
   DONATION_ID,
   DONOR_ID,
   GIVING_DONOR_ID,
+  LINK_ID,
   MEDIA_ID,
   PAYMENT_ID,
   READ_TOKEN,
@@ -552,10 +553,16 @@ describe('Given an administrator connected with the writing permission', () => {
   it('when the pairing from a donor account is turned off and on, then the administration gets both and a refusal comes back', async () => {
     const off = await client.callTool({
       name: 'nfnn_disconnect_bank_account',
+      arguments: { donorId: DONOR_ID, linkId: LINK_ID },
+    });
+    expect(off.isError).toBeFalsy();
+    expect(textOf(off)).toContain('turned off');
+    const again = await client.callTool({
+      name: 'nfnn_disconnect_bank_account',
       arguments: { donorId: DONOR_ID, linkId: PAYMENT_ID },
     });
-    expect(off.isError).toBe(true);
-    expect(textOf(off)).toContain('409 donations/bank-account-already-disconnected');
+    expect(again.isError).toBe(true);
+    expect(textOf(again)).toContain('409 donations/bank-account-already-disconnected');
     const on = await client.callTool({
       name: 'nfnn_reconnect_bank_account',
       arguments: { donorId: DONOR_ID, linkId: PAYMENT_ID },
@@ -567,6 +574,7 @@ describe('Given an administrator connected with the writing permission', () => {
         .filter((request) => request.path.includes('/bank-accounts/'))
         .map((request) => `${request.method} ${request.path}`),
     ).toEqual([
+      `POST /api/admin/donations/donors/${DONOR_ID}/bank-accounts/${LINK_ID}/disconnect`,
       `POST /api/admin/donations/donors/${DONOR_ID}/bank-accounts/${PAYMENT_ID}/disconnect`,
       `POST /api/admin/donations/donors/${DONOR_ID}/bank-accounts/${PAYMENT_ID}/reconnect`,
     ]);

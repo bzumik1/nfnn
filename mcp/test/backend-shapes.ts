@@ -411,6 +411,7 @@ export function checkBackendShapes(input: {
   readonly recorded: RecordedAnswers;
   readonly fixtures: readonly FixtureAnswer[];
   readonly addedSinceV2?: readonly string[];
+  readonly recordedOnlyAsNull?: Readonly<Record<string, string>>;
 }): string[] {
   const { calls, recorded, fixtures } = input;
   const added = new Set(input.addedSinceV2 ?? []);
