@@ -72,14 +72,11 @@ Mimo očíslované úkoly:
 - První nastavení serveru v prohlížeči místo env souborů (#116), obnova ze zálohy v prohlížeči (#121), plán záloh ve správě (#145), podpis potvrzení nahraný ve správě (#123), silnější komprese záloh (#80).
 - Postranní panel správy a účtu dárce (#109, #122), cíl po přihlášení (#103), čtení nebo změny při připojení aplikace (#102), součty všech přijatých darů (#106), hledání bez diakritiky, historie česky, volitelná hodina přehledu (#139), Markdown a popisky fotek (#143), staré adresy obsahu, mazání nepoužitých fotek, seznamy po stránkách (#144), e-maily k účtu a opakování upozornění (#134).
 - Bezpečnostní audit: vlastní databázová role, zpevněné kontejnery, jedna síť `nfnn-edge`, role správce jen s potvrzeným e-mailem (#125, #148, #149, #150).
-- Vzhled a přístupnost: české adresy (#78), vzhled QR kódu (#101), fotka a ikona (#107, #111), vyměnitelný vzhled a sdílené bloky (#124, #126, #127, #132, #136, #138, #140), přístupnost pro klávesnici, čtečky a zvětšení (#133), audit přehlednosti celého webu (#151–#156), zkušební e-mail z nastavení pošty a nastavení seřazené podle četnosti (#157).
+- Vzhled a přístupnost: české adresy (#78), vzhled QR kódu (#101), fotka a ikona (#107, #111), vyměnitelný vzhled a sdílené bloky (#124, #126, #127, #132, #136, #138, #140), přístupnost pro klávesnici, čtečky a zvětšení (#133), audit přehlednosti celého webu (#151–#156), zkušební e-mail z nastavení pošty a nastavení seřazené podle četnosti (#157), karta „Přihlášení a zabezpečení“, dary po letech a čekající změna e-mailu v účtu dárce (#183).
 - Údržba: úspora minut CI (#82), aktualizace závislostí (#83, #96), fokus po přihlášení (#104), cizí klíče s indexy a test migrací nad daty (#141), čísla potvrzení po obnově a české locale (#129), pravidla pro Clauda (#128).
 
 Rozpracováno (audit přehlednosti, rozhodnuto 24. 10. 2026):
 
-- Karta „Přihlášení a zabezpečení“ v účtu dárce: řádky e-mail, heslo, klíče, kód z telefonu, každý se svou akcí.
-- Moje dary seskupené po letech s odkazem na potvrzení roku.
-- Čekající změna e-mailu zůstane vidět i po obnovení stránky (Poslat znovu, Zrušit).
 - Hledání, období a stránkování plateb ve správě.
 - Registrace firmy s doplněním názvu a sídla z ARES (bez ARES registrace funguje dál).
 - Obnova platbou 1 Kč vrátí už zahájenou obnovu se stejným kódem a ukáže QR kód.

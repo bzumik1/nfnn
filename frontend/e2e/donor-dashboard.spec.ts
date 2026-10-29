@@ -87,6 +87,14 @@ test.describe('Given a signed-in donor', () => {
       'Stáhnout PDF, dar z 15. 03. 2026, 500 Kč',
     ]);
     await expect(page.locator('.payments-card tbody tr').last()).toContainText('Vráceno');
+    await expect(page.locator('.gift-year-title')).toHaveText(['2026', '2025']);
+    await expect(page.locator('.gift-year-sum')).toHaveText([
+      '2 dary · 1 500 Kč',
+      '1 dar · 250 Kč',
+    ]);
+    await expect(page.locator('.gift-year').first().locator('.gift-year-note')).toHaveText(
+      'Roční potvrzení za rok 2026 stáhnete po skončení roku, od 1. ledna 2027.',
+    );
 
     await openDonorSection(page, 'Potvrzení o daru');
 
@@ -274,7 +282,7 @@ test.describe('Given a signed-in donor', () => {
     await page.getByLabel('Současné heslo').fill('correct horse battery');
     await page.getByLabel('Nové heslo', { exact: true }).fill('a brand new passphrase');
     await page.getByLabel('Nové heslo znovu').fill('a brand new passphrase');
-    await page.getByRole('button', { name: 'Změnit heslo' }).last().click();
+    await page.getByRole('button', { name: 'Změnit heslo', exact: true }).last().click();
 
     await expect(page.getByRole('status').filter({ hasText: 'Heslo jsme změnili.' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Změnit heslo' })).toBeFocused();
@@ -293,6 +301,19 @@ test.describe('Given a signed-in donor', () => {
       sent.push(route.request().postDataJSON());
       await route.fulfill({ status: 202 });
     });
+    await page.route(
+      (url) => url.pathname === '/api/donors/me',
+      (route) =>
+        route.fulfill({
+          json: {
+            ...donor,
+            pendingEmailChange: {
+              newEmail: 'jana.nova@example.cz',
+              expiresAt: '2026-10-25T10:00:00Z',
+            },
+          },
+        }),
+    );
 
     await signIn(page);
     await openDonorSection(page, 'Údaje a zabezpečení');
@@ -305,9 +326,54 @@ test.describe('Given a signed-in donor', () => {
     await expect(
       page.getByRole('status').filter({ hasText: 'Odkaz jsme poslali na jana.nova@example.cz.' }),
     ).toBeVisible();
-    await expect(page.locator('.account-data')).toContainText('jana@example.cz');
+    await expect(page.locator('.account-email')).toHaveText('jana@example.cz');
+    await expect(page.locator('.account-pending-address')).toHaveText(
+      'Čeká na potvrzení: jana.nova@example.cz',
+    );
     await expect(page.getByRole('button', { name: 'Změnit e-mail' })).toBeFocused();
     expect(sent).toEqual([{ newEmail: 'jana.nova@example.cz', password: 'correct horse battery' }]);
+  });
+
+  test('when an e-mail change waits for confirmation, then the details page shows it and the donor can send the link again or cancel the change', async ({
+    page,
+  }) => {
+    await mockDonorApi(page, noDonations);
+    const pending = { newEmail: 'jana.nova@example.cz', expiresAt: '2026-10-21T10:00:00Z' };
+    let current: typeof pending | null = pending;
+    const calls: string[] = [];
+    await page.route('**/api/donors/me/email-change/resend', async (route) => {
+      calls.push('resend');
+      current = { ...pending, expiresAt: '2026-10-21T11:00:00Z' };
+      await route.fulfill({ status: 202 });
+    });
+    await page.route('**/api/donors/me/email-change', async (route) => {
+      calls.push(route.request().method());
+      current = null;
+      await route.fulfill({ status: 204 });
+    });
+    await page.route(
+      (url) => url.pathname === '/api/donors/me',
+      (route) => route.fulfill({ json: { ...donor, pendingEmailChange: current } }),
+    );
+
+    await signIn(page, { ...donor, pendingEmailChange: pending });
+    await openDonorSection(page, 'Údaje a zabezpečení');
+    const row = page.locator('.account-row').filter({ hasText: 'Čeká na potvrzení' });
+    await expect(row).toContainText('Potvrzovací odkaz platí do 21. 10. 2026 12:00.');
+
+    await row.getByRole('button', { name: 'Poslat znovu potvrzovací odkaz' }).click();
+    await expect(
+      page.getByRole('status').filter({ hasText: 'Nový potvrzovací odkaz je na cestě.' }),
+    ).toBeVisible();
+    await expect(row).toContainText('Potvrzovací odkaz platí do 21. 10. 2026 13:00.');
+
+    await row.getByRole('button', { name: 'Zrušit změnu e-mailu' }).click();
+    await expect(
+      page.getByRole('status').filter({ hasText: 'Změnu e-mailu jsme zrušili.' }),
+    ).toBeVisible();
+    await expect(page.locator('.account-pending')).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Změnit e-mail' })).toBeFocused();
+    expect(calls).toEqual(['resend', 'DELETE']);
   });
 
   test('when the current password is wrong, then the e-mail form stays and shows the reason', async ({

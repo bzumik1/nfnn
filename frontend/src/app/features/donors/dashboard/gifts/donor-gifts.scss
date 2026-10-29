@@ -22,6 +22,44 @@
   color: var(--color-text-soft);
 }
 
+.gift-year + .gift-year {
+  border-top: 1px solid var(--color-divider);
+}
+
+.gift-year-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+  padding: var(--space-4) var(--space-5) var(--space-3);
+}
+
+.gift-year-title {
+  font-family: var(--font-serif);
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-bold);
+  color: var(--color-text);
+  font-variant-numeric: var(--numeric-figures);
+}
+
+.gift-year-sum {
+  flex: 1 1 auto;
+  color: var(--color-text-soft);
+  font-size: var(--text-md);
+}
+
+.gift-year-total {
+  font-weight: var(--weight-bold);
+  color: var(--color-accent);
+  font-variant-numeric: var(--numeric-figures);
+  white-space: nowrap;
+}
+
+.gift-year-note {
+  font-size: var(--text-sm);
+  color: var(--color-text-soft);
+}
+
 .payments-empty {
   padding: var(--space-6);
   text-align: center;

@@ -16,7 +16,7 @@ import {
   sampleDonor,
   samplePasskey,
 } from '../../../../core/auth/testing/donor-fixtures';
-import { PasskeysCard } from './passkeys-card';
+import { PasskeysPanel } from './passkeys-panel';
 
 const PASSKEYS_URL = '/api/donors/me/passkeys';
 const OPTIONS_URL = '/api/donors/me/passkeys/options';
@@ -28,8 +28,8 @@ const WINDOWS = samplePasskey({
   lastUsedAt: null,
 });
 
-describe('Given the passkeys card in the overview', () => {
-  let fixture: ComponentFixture<PasskeysCard>;
+describe('Given the passkeys panel of the sign-in card', () => {
+  let fixture: ComponentFixture<PasskeysPanel>;
   let http: HttpTestingController;
   let passkeys: FakePasskeyAuthenticator;
   let sessionEnded: number;
@@ -37,7 +37,7 @@ describe('Given the passkeys card in the overview', () => {
   beforeEach(async () => {
     passkeys = new FakePasskeyAuthenticator();
     await TestBed.configureTestingModule({
-      imports: [PasskeysCard],
+      imports: [PasskeysPanel],
       providers: [
         provideHttpClient(withInterceptors([authInterceptor])),
         provideHttpClientTesting(),
@@ -53,7 +53,7 @@ describe('Given the passkeys card in the overview', () => {
   afterEach(() => http.verify());
 
   async function render(items = [IPHONE, WINDOWS]): Promise<void> {
-    fixture = TestBed.createComponent(PasskeysCard);
+    fixture = TestBed.createComponent(PasskeysPanel);
     sessionEnded = 0;
     fixture.componentInstance.sessionEnded.subscribe(() => sessionEnded++);
     await settle();
@@ -103,7 +103,6 @@ describe('Given the passkeys card in the overview', () => {
   it('when it opens, then it explains passkeys and lists the donor passkeys with their dates', async () => {
     await render();
 
-    expect(element('h2').textContent).toContain('Přístupové klíče');
     expect(element('.passkeys-intro').textContent).toContain('chráněné i bez kódu z aplikace');
     expect(texts('.passkey-name')).toEqual(['iPhone', 'Windows']);
     expect(texts('.passkey-dates')[0]).toContain('přidáno 17. 10. 2026');
@@ -133,12 +132,12 @@ describe('Given the passkeys card in the overview', () => {
     await settle();
 
     expect(element('[role="status"]').textContent).toContain(
-      'heslo teď můžete v Přihlašovacích údajích i odebrat',
+      'heslo teď můžete u řádku Heslo i odebrat',
     );
   });
 
   it('when the list cannot be loaded, then an alert offers to load it again', async () => {
-    fixture = TestBed.createComponent(PasskeysCard);
+    fixture = TestBed.createComponent(PasskeysPanel);
     await settle();
     http
       .expectOne(PASSKEYS_URL)
@@ -340,8 +339,33 @@ describe('Given the passkeys card in the overview', () => {
     });
   });
 
+  it('when it is named by the row that holds it, then its region carries that name and can take the focus', async () => {
+    fixture = TestBed.createComponent(PasskeysPanel);
+    fixture.componentRef.setInput('labelledBy', 'account-passkeys-label');
+    await settle();
+    http.expectOne(PASSKEYS_URL).flush({ items: [IPHONE] });
+    await settle();
+
+    const region = element('section');
+    expect(region.getAttribute('aria-labelledby')).toBe('account-passkeys-label');
+    expect(fixture.componentInstance.focusTarget()).toBe(region);
+    expect(region.getAttribute('tabindex')).toBe('-1');
+  });
+
+  it('when it collapses with a form open, then the form goes and the list shows its actions again', async () => {
+    await render([IPHONE]);
+    await clickButton('Přejmenovat');
+
+    fixture.componentInstance.collapse();
+    await settle();
+
+    expect(element('#passkey-rename')).toBeNull();
+    expect(element('form')).toBeNull();
+    expect(texts('button')).toEqual(['Přejmenovat', 'Odebrat', 'Přidat přístupový klíč']);
+  });
+
   it('when the session has ended, then the card hands the donor to the sign-in', async () => {
-    fixture = TestBed.createComponent(PasskeysCard);
+    fixture = TestBed.createComponent(PasskeysPanel);
     sessionEnded = 0;
     fixture.componentInstance.sessionEnded.subscribe(() => sessionEnded++);
     await settle();
@@ -366,8 +390,8 @@ describe('Given the passkeys card in the overview', () => {
   });
 });
 
-describe('Given the passkeys card of a donor without a password', () => {
-  let fixture: ComponentFixture<PasskeysCard>;
+describe('Given the passkeys panel of a donor without a password', () => {
+  let fixture: ComponentFixture<PasskeysPanel>;
   let http: HttpTestingController;
   let passkeys: FakePasskeyAuthenticator;
   let counts: number[];
@@ -375,7 +399,7 @@ describe('Given the passkeys card of a donor without a password', () => {
   beforeEach(async () => {
     passkeys = new FakePasskeyAuthenticator();
     await TestBed.configureTestingModule({
-      imports: [PasskeysCard],
+      imports: [PasskeysPanel],
       providers: [
         provideHttpClient(withInterceptors([authInterceptor])),
         provideHttpClientTesting(),
@@ -393,7 +417,7 @@ describe('Given the passkeys card of a donor without a password', () => {
   afterEach(() => http.verify());
 
   async function render(items = [IPHONE]): Promise<void> {
-    fixture = TestBed.createComponent(PasskeysCard);
+    fixture = TestBed.createComponent(PasskeysPanel);
     counts = [];
     fixture.componentInstance.countChanged.subscribe((count) => counts.push(count));
     await settle();

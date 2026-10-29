@@ -5,6 +5,7 @@ import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.donors.domain.DonorRepository;
 import cz.novanadeje.app.donors.domain.PasswordHash;
 import cz.novanadeje.app.donors.domain.Role;
+import cz.novanadeje.app.donors.domain.EmailVerificationTokenRepository;
 import cz.novanadeje.app.donors.domain.SecondFactorRepository;
 import cz.novanadeje.app.shared.application.event.DonorProfileChanged;
 import cz.novanadeje.app.shared.domain.DonorType;
@@ -20,7 +21,9 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
 
+import java.time.Clock;
 import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.Optional;
 import java.util.Set;
 
@@ -38,13 +41,15 @@ class DonorProfileServiceTest {
     @Mock
     private SecondFactorRepository secondFactors;
     @Mock
+    private EmailVerificationTokenRepository verificationTokens;
+    @Mock
     private ApplicationEventPublisher events;
 
     private DonorProfileService service;
 
     @BeforeEach
     void setUp() {
-        service = new DonorProfileService(donors, new DonorViews(secondFactors), events);
+        service = new DonorProfileService(donors, new DonorViews(secondFactors, verificationTokens, Clock.fixed(NOW, ZoneOffset.UTC)), events);
     }
 
     @Test

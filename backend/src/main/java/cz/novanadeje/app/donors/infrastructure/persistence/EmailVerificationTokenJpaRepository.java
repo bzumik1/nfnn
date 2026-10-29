@@ -15,6 +15,13 @@ interface EmailVerificationTokenJpaRepository extends JpaRepository<EmailVerific
 
     int countByDonorId(UUID donorId);
 
+    Optional<EmailVerificationTokenJpaEntity> findFirstByDonorIdAndNewEmailIsNotNullAndUsedAtIsNullAndExpiresAtGreaterThanOrderByIssuedAtDesc(
+            UUID donorId, Instant now);
+
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("delete from EmailVerificationTokenJpaEntity t where t.donorId = :donorId and t.newEmail is not null")
+    int deleteChangeLinksOfDonor(@Param("donorId") UUID donorId);
+
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("delete from EmailVerificationTokenJpaEntity t where t.donorId = :donorId and (t.usedAt is not null or t.expiresAt <= :now)")
     int deleteUnusable(@Param("donorId") UUID donorId, @Param("now") Instant now);

@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donors.application;
 
+import cz.novanadeje.app.donors.application.event.DonorEmailAddressInUse;
 import cz.novanadeje.app.donors.application.event.DonorEmailChangeRequested;
 import cz.novanadeje.app.donors.application.event.DonorEmailChanged;
 import cz.novanadeje.app.donors.application.event.DonorEmailVerificationRequested;
@@ -11,6 +12,7 @@ import cz.novanadeje.app.donors.domain.EmailVerificationToken;
 import cz.novanadeje.app.donors.domain.EmailVerificationTokenRepository;
 import cz.novanadeje.app.donors.domain.InvalidEmailVerificationToken;
 import cz.novanadeje.app.donors.domain.LinkSecret;
+import cz.novanadeje.app.donors.domain.NoPendingEmailChange;
 import cz.novanadeje.app.donors.domain.PasswordHash;
 import cz.novanadeje.app.donors.domain.RefreshTokenRepository;
 import cz.novanadeje.app.donors.domain.Role;
@@ -57,6 +59,7 @@ class DonorEmailVerificationServiceTest {
     private static final EmailAddress EMAIL = new EmailAddress("jana@example.cz");
     private static final PostalAddress ADDRESS = new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01");
     private static final VariableSymbol SYMBOL = new VariableSymbol("4821937560");
+    private static final DonorId OWNER = DonorId.newId(NOW.minusSeconds(120));
     private static final EmailAddress NEW_EMAIL = new EmailAddress("jana.nova@example.cz");
     private static final IssuedTokens TOKENS = new IssuedTokens("access", NOW.plus(Duration.ofMinutes(15)), "refresh", NOW.plus(Duration.ofDays(14)),
             Set.of(Role.DONOR));
@@ -78,7 +81,7 @@ class DonorEmailVerificationServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new DonorEmailVerificationService(donors, tokens, refreshTokens, sessions, new DonorViews(secondFactors),
+        service = new DonorEmailVerificationService(donors, tokens, refreshTokens, sessions, new DonorViews(secondFactors, tokens, Clock.fixed(NOW, ZoneOffset.UTC)),
                 new DonorEmailVerificationProperties(TTL, 3),
                 Clock.fixed(NOW, ZoneOffset.UTC), events);
     }
@@ -286,14 +289,14 @@ class DonorEmailVerificationServiceTest {
     }
 
     @Test
-    @DisplayName("Given a verified donor, when a change link is issued, then the stored token carries the new address and the event its secret")
-    void should_store_change_token_and_publish_secret_when_change_link_issued_given_verified_donor() {
-        when(tokens.countOf(DONOR)).thenReturn(0);
+    @DisplayName("Given a verified donor and a free address, when a change link is issued, then the earlier change links go, the stored token carries the new address and the event its secret")
+    void should_replace_change_links_and_publish_secret_when_change_link_issued_given_free_address() {
+        when(donors.findByEmail(NEW_EMAIL)).thenReturn(Optional.empty());
 
         service.issueChangeLink(verifiedDonor(), NEW_EMAIL);
 
         InOrder order = inOrder(tokens, events);
-        order.verify(tokens).deleteUnusableOf(DONOR, NOW);
+        order.verify(tokens).deleteChangeLinksOf(DONOR);
         ArgumentCaptor<EmailVerificationToken> stored = ArgumentCaptor.forClass(EmailVerificationToken.class);
         order.verify(tokens).save(stored.capture());
         ArgumentCaptor<DonorEmailChangeRequested> published = ArgumentCaptor.forClass(DonorEmailChangeRequested.class);
@@ -309,13 +312,61 @@ class DonorEmailVerificationServiceTest {
     }
 
     @Test
-    @DisplayName("Given a donor holding three live links, when a change link is issued, then nothing is stored and nothing is published")
-    void should_store_and_publish_nothing_when_change_link_issued_given_three_live_links() {
-        when(tokens.countOf(DONOR)).thenReturn(3);
+    @DisplayName("Given an address another donor has, when a change link is issued, then the change is stored as pending all the same and only the owner is told")
+    void should_store_pending_change_and_tell_owner_when_change_link_issued_given_taken_address() {
+        when(donors.findByEmail(NEW_EMAIL)).thenReturn(Optional.of(owner()));
 
         service.issueChangeLink(verifiedDonor(), NEW_EMAIL);
 
+        InOrder order = inOrder(tokens, events);
+        order.verify(tokens).deleteChangeLinksOf(DONOR);
+        ArgumentCaptor<EmailVerificationToken> stored = ArgumentCaptor.forClass(EmailVerificationToken.class);
+        order.verify(tokens).save(stored.capture());
+        order.verify(events).publishEvent(new DonorEmailAddressInUse(OWNER.value(), NEW_EMAIL, LocaleCode.EN));
+        assertThat(stored.getValue().newEmail()).contains(NEW_EMAIL);
+        verify(events, never()).publishEvent(any(DonorEmailChangeRequested.class));
+    }
+
+    @Test
+    @DisplayName("Given a pending change, when its link is sent again, then a new link to the same address replaces the old one and only the new secret is published")
+    void should_replace_link_and_publish_new_secret_when_change_link_resent_given_pending_change() {
+        LinkSecret oldSecret = LinkSecret.generate();
+        when(tokens.findPendingChangeOf(DONOR, NOW))
+                .thenReturn(Optional.of(EmailVerificationToken.issueForChange(oldSecret, DONOR, NEW_EMAIL, NOW.minusSeconds(600), TTL)));
+        when(donors.findByEmail(NEW_EMAIL)).thenReturn(Optional.empty());
+
+        service.resendChangeLink(verifiedDonor());
+
+        InOrder order = inOrder(tokens, events);
+        order.verify(tokens).deleteChangeLinksOf(DONOR);
+        ArgumentCaptor<EmailVerificationToken> stored = ArgumentCaptor.forClass(EmailVerificationToken.class);
+        order.verify(tokens).save(stored.capture());
+        ArgumentCaptor<DonorEmailChangeRequested> published = ArgumentCaptor.forClass(DonorEmailChangeRequested.class);
+        order.verify(events).publishEvent(published.capture());
+        assertThat(stored.getValue().newEmail()).contains(NEW_EMAIL);
+        assertThat(stored.getValue().expiresAt()).isEqualTo(NOW.plus(TTL));
+        assertThat(stored.getValue().secretHash()).isNotEqualTo(oldSecret.hash());
+        assertThat(published.getValue().secret().hash()).isEqualTo(stored.getValue().secretHash());
+    }
+
+    @Test
+    @DisplayName("Given no pending change, when its link is sent again, then it is refused and nothing is stored or sent")
+    void should_refuse_when_change_link_resent_given_no_pending_change() {
+        when(tokens.findPendingChangeOf(DONOR, NOW)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.resendChangeLink(verifiedDonor())).isInstanceOf(NoPendingEmailChange.class);
+
+        verify(tokens, never()).deleteChangeLinksOf(any());
         verify(tokens, never()).save(any());
+        verifyNoInteractions(events);
+    }
+
+    @Test
+    @DisplayName("Given a pending change, when it is cancelled, then every change link of the donor goes and nothing is sent")
+    void should_delete_change_links_when_change_cancelled_given_pending_change() {
+        service.cancelChange(verifiedDonor());
+
+        verify(tokens).deleteChangeLinksOf(DONOR);
         verifyNoInteractions(events);
     }
 
@@ -365,6 +416,11 @@ class DonorEmailVerificationServiceTest {
     private static Donor unverifiedDonor(LocaleCode locale) {
         return Donor.register(DONOR, DonorType.PERSON, "Jana Nováková", null, ADDRESS, EMAIL, new PasswordHash("$hash"), SYMBOL, locale,
                 NOW.minusSeconds(60));
+    }
+
+    private static Donor owner() {
+        return Donor.register(OWNER, DonorType.PERSON, "Petr Novák", null, ADDRESS, NEW_EMAIL, new PasswordHash("$other"),
+                new VariableSymbol("1234567890"), LocaleCode.EN, NOW.minusSeconds(120));
     }
 
     private static Donor verifiedDonor() {

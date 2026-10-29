@@ -182,6 +182,7 @@ test.describe('Given a signed-in donor in the account details', () => {
     await signIn(page);
     await openDonorSection(page, 'Údaje a zabezpečení');
 
+    await page.getByRole('button', { name: 'Spravovat přístupové klíče' }).click();
     const card = page.getByRole('region', { name: 'Přístupové klíče' });
     await expect(card).toContainText('Zatím nemáte žádný přístupový klíč');
     await card.getByRole('button', { name: 'Přidat přístupový klíč' }).click();
@@ -233,6 +234,7 @@ test.describe('Given a signed-in donor in the account details', () => {
     await signIn(page);
     await openDonorSection(page, 'Údaje a zabezpečení');
 
+    await page.getByRole('button', { name: 'Spravovat přístupové klíče' }).click();
     const card = page.getByRole('region', { name: 'Přístupové klíče' });
     await card.getByRole('button', { name: 'Přejmenovat' }).click();
     const field = card.getByLabel('Nový název klíče');
@@ -318,7 +320,7 @@ test.describe('Given a visitor who wants an account without a password', () => {
     expect(requests).toEqual([{}]);
     await page.getByRole('button', { name: 'Přejít do přehledu' }).click();
     await openDonorSection(page, 'Údaje a zabezpečení');
-    const account = page.getByRole('region', { name: 'Přihlašovací údaje' });
+    const account = page.getByRole('region', { name: 'Přihlášení a zabezpečení' });
     await expect(account).toContainText('Bez hesla, jen přístupové klíče');
     await expect(account.getByRole('button', { name: 'Nastavit heslo' })).toBeVisible();
   });

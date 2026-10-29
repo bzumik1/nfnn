@@ -16,6 +16,7 @@ import cz.novanadeje.app.donors.domain.Role;
 import cz.novanadeje.app.donors.domain.SecondFactor;
 import cz.novanadeje.app.donors.domain.SecondFactorChallenge;
 import cz.novanadeje.app.donors.domain.SecondFactorChallengeRepository;
+import cz.novanadeje.app.donors.domain.EmailVerificationTokenRepository;
 import cz.novanadeje.app.donors.domain.SecondFactorRepository;
 import cz.novanadeje.app.donors.domain.SecondFactorRequired;
 import cz.novanadeje.app.donors.domain.Totp;
@@ -75,6 +76,8 @@ class DonorAuthenticationServiceTest {
     @Mock
     private SecondFactorRepository secondFactors;
     @Mock
+    private EmailVerificationTokenRepository verificationTokens;
+    @Mock
     private SecondFactorChallengeRepository challenges;
 
     private DonorAuthenticationService service;
@@ -82,7 +85,7 @@ class DonorAuthenticationServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new DonorAuthenticationService(donors, passwordHasher, sessions, new DonorViews(secondFactors), secondFactors, challenges,
+        service = new DonorAuthenticationService(donors, passwordHasher, sessions, new DonorViews(secondFactors, verificationTokens, Clock.fixed(NOW, ZoneOffset.UTC)), secondFactors, challenges,
                 new DonorSecondFactorProperties(CHALLENGE_TTL, CHALLENGE_ATTEMPTS, "Nová naděje", Duration.ofDays(14)), Clock.fixed(NOW, ZoneOffset.UTC));
         donor = Donor.register(DonorId.newId(NOW), DonorType.COMPANY, "Stavby Novák s.r.o.", new CompanyIdentifier("45274649"),
                 new PostalAddress("Průmyslová 5", "Teplice", "415 01"), EMAIL, HASH, new VariableSymbol("1234567890"), LocaleCode.CS, NOW);

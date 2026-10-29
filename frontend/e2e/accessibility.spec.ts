@@ -1469,6 +1469,31 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     expect(await violations(page)).toEqual([]);
   });
 
+  test('when a signed-in donor has an e-mail change waiting and its re-send is refused, then the row breaks no rule', async ({
+    page,
+  }) => {
+    await page.route('**/api/donors/me/email-change/resend', (route) =>
+      route.fulfill(
+        problem(429, 'donors/rate-limited', 'Příliš mnoho požadavků', 'Zkuste to později.'),
+      ),
+    );
+    await signIn(page, {
+      ...donor,
+      pendingEmailChange: { newEmail: 'jana.nova@example.cz', expiresAt: '2026-10-25T10:00:00Z' },
+    });
+    await openDonorSection(page, 'Údaje a zabezpečení');
+    await expect(page.locator('.account-pending-address')).toHaveText(
+      'Čeká na potvrzení: jana.nova@example.cz',
+    );
+    expect(await violations(page)).toEqual([]);
+
+    await page.getByRole('button', { name: 'Poslat znovu potvrzovací odkaz' }).click();
+    await expect(page.locator('.account-pending').getByRole('alert')).toContainText(
+      'Příliš mnoho požadavků',
+    );
+    expect(await violations(page)).toEqual([]);
+  });
+
   test('when a signed-in donor sets up the second factor, then the QR step breaks no rule, with its error shown either', async ({
     page,
   }) => {
@@ -1477,7 +1502,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     );
     await signIn(page);
     await openDonorSection(page, 'Údaje a zabezpečení');
-    await page.getByRole('button', { name: 'Zapnout kód z aplikace' }).click();
+    await page.getByRole('button', { name: 'Zapnout dvoufaktorové ověření' }).click();
     await page.getByLabel('Současné heslo').fill('correct horse battery');
     await page.getByRole('button', { name: 'Pokračovat' }).click();
     await expect(page.getByLabel('Kód z aplikace')).toBeFocused();
@@ -1517,6 +1542,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     );
     await signIn(page);
     await openDonorSection(page, 'Údaje a zabezpečení');
+    await page.getByRole('button', { name: 'Spravovat přístupové klíče' }).click();
     const card = page.getByRole('region', { name: 'Přístupové klíče' });
     await expect(card.locator('.passkey-name')).toHaveText(['iPhone']);
     expect(await violations(page)).toEqual([]);
@@ -1545,13 +1571,14 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     await mockDonorApi(page);
     await signIn(page, { ...donor, hasPassword: false });
     await openDonorSection(page, 'Údaje a zabezpečení');
-    const card = page.getByRole('region', { name: 'Přístupové klíče' });
-    await expect(card.locator('.passkeys-warning')).toBeVisible();
-    const account = page.getByRole('region', { name: 'Přihlašovací údaje' });
+    const account = page.getByRole('region', { name: 'Přihlášení a zabezpečení' });
+    await expect(account.locator('.account-no-method')).toBeVisible();
     await expect(account.getByRole('button', { name: 'Nastavit heslo' })).toHaveCount(0);
     expect(await violations(page)).toEqual([]);
 
     await account.getByRole('button', { name: 'Vytvořit přístupový klíč' }).click();
+    const card = page.getByRole('region', { name: 'Přístupové klíče' });
+    await expect(card.locator('.passkeys-warning')).toBeVisible();
     await expect(card.getByLabel('Název klíče')).toBeFocused();
     expect(await violations(page)).toEqual([]);
   });
@@ -1578,7 +1605,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     );
     await signIn(page);
     await openDonorSection(page, 'Údaje a zabezpečení');
-    const account = page.getByRole('region', { name: 'Přihlašovací údaje' });
+    const account = page.getByRole('region', { name: 'Přihlášení a zabezpečení' });
     await account.getByRole('button', { name: 'Odebrat heslo' }).click();
     await expect(account.getByLabel('Současné heslo')).toBeFocused();
 

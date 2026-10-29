@@ -1,6 +1,5 @@
 package cz.novanadeje.app.donors.application;
 
-import cz.novanadeje.app.donors.application.event.DonorEmailAddressInUse;
 import cz.novanadeje.app.donors.application.event.DonorPasswordChanged;
 import cz.novanadeje.app.donors.domain.Donor;
 import cz.novanadeje.app.donors.domain.DonorId;
@@ -91,13 +90,17 @@ public class DonorCredentialsService {
         if (newEmail.equals(donor.email())) {
             throw new EmailUnchanged();
         }
-        Donor owner = donors.findByEmail(newEmail).orElse(null);
-        if (owner != null) {
-            events.publishEvent(new DonorEmailAddressInUse(owner.id().value(), newEmail, owner.preferredLocale()));
-            log.info("E-mail change for donor {} not started: the new address belongs to donor {}", donor.id(), owner.id());
-            return;
-        }
         emailVerification.issueChangeLink(donor, newEmail);
+    }
+
+    @Transactional
+    public void resendEmailChange(DonorId donorId) {
+        emailVerification.resendChangeLink(load(donorId));
+    }
+
+    @Transactional
+    public void cancelEmailChange(DonorId donorId) {
+        emailVerification.cancelChange(load(donorId));
     }
 
     private Donor load(DonorId donorId) {

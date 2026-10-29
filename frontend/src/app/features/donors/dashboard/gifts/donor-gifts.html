@@ -34,15 +34,56 @@
         </div>
       </div>
       @if (donations.receiptError(); as error) {
-        @if (error.scope === 'single') {
-          <p #receiptAlert class="ui-callout ui-callout--danger receipt-error" role="alert">
-            {{ error.message }}
-          </p>
-        }
+        <p #receiptAlert class="ui-callout ui-callout--danger receipt-error" role="alert">
+          {{ error.message }}
+        </p>
       }
     </div>
     @if (donations.items().length > 0) {
-      <app-donations-table [items]="donations.items()" labelledBy="payments-title" />
+      @for (group of years(); track group.year) {
+        <section class="gift-year" [attr.aria-labelledby]="yearHeadingId(group.year)">
+          <div class="gift-year-head">
+            <h3 class="gift-year-title" [id]="yearHeadingId(group.year)">{{ group.year }}</h3>
+            <p class="gift-year-sum">
+              <span i18n="@@donor.gifts.year.count">
+                {group.count, plural,
+                  one {{{ group.count }} dar}
+                  few {{{ group.count }} dary}
+                  other {{{ group.count }} darů}
+                }
+              </span>
+              ·
+              <span class="gift-year-total">{{ crowns(group.totalAmountMinor) }}&nbsp;Kč</span>
+            </p>
+            @switch (group.receipt) {
+              @case ('available') {
+                <button
+                  type="button"
+                  class="ui-button ui-button--small yearly-pdf"
+                  [disabled]="donations.yearlyDownloading(group.year)"
+                  [attr.aria-busy]="donations.yearlyDownloading(group.year)"
+                  (click)="donations.downloadYearlyReceipt(group.year)"
+                >
+                  @if (donations.yearlyDownloading(group.year)) {
+                    <span i18n="@@donor.dashboard.receipt.preparing">Připravujeme PDF…</span>
+                  } @else {
+                    <span i18n="@@donor.dashboard.yearly.pdf"
+                      >Stáhnout potvrzení za rok {{ group.year }} (PDF)</span
+                    >
+                  }
+                </button>
+              }
+              @case ('after-year-end') {
+                <p class="gift-year-note" i18n="@@donor.gifts.year.afterYearEnd">
+                  Roční potvrzení za rok {{ group.year }} stáhnete po skončení roku, od
+                  1.&nbsp;ledna&nbsp;{{ group.year + 1 }}.
+                </p>
+              }
+            }
+          </div>
+          <app-donations-table [items]="group.items" [labelledBy]="yearHeadingId(group.year)" />
+        </section>
+      }
       @if (receivedWithoutReceipt()) {
         <p class="ui-card__footer receipts-from" i18n="@@donor.dashboard.payments.receiptsFrom">
           Potvrzení o daru tu vystavujeme za dary přijaté od 1.&nbsp;ledna&nbsp;{{
@@ -50,11 +91,6 @@
           }}, u starších darů proto tlačítko „Stáhnout PDF“ chybí.
         </p>
       }
-      <p class="ui-card__footer yearly-link">
-        <span i18n="@@donor.gifts.yearlyHint">Souhrnné potvrzení za celý rok najdete v části</span
-        >&ngsp;<a routerLink="/darce/potvrzeni" i18n="@@donor.gifts.yearlyLink">Potvrzení o daru</a
-        >.
-      </p>
     } @else {
       <p class="payments-empty">
         <span i18n="@@donor.dashboard.payments.empty">Zatím tu není žádná platba.</span>&ngsp;<a

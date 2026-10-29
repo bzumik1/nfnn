@@ -160,6 +160,59 @@ class JpaEmailVerificationTokenRepositoryTest {
         assertThat(tokens.countOf(petr)).isEqualTo(1);
     }
 
+    @Test
+    @DisplayName("Given change links of a donor, one used, one expired and two live, when the pending change is looked up, then the newest live one is found")
+    void should_find_newest_live_change_when_pending_change_looked_up_given_mixed_change_links() {
+        EmailVerificationToken used = issueForChange(jana, "jana.used@example.cz", NOW);
+        issueForChange(jana, "jana.expired@example.cz", NOW.minus(HOUR).minusSeconds(1));
+        issueForChange(jana, "jana.older@example.cz", NOW.minusSeconds(120));
+        EmailVerificationToken newest = issueForChange(jana, "jana.nova@example.cz", NOW.minusSeconds(60));
+        issue(jana, NOW);
+        issueForChange(petr, "petr.novy@example.cz", NOW);
+        tokens.markUsed(used.id(), NOW);
+        flushAndClear();
+
+        EmailVerificationToken pending = tokens.findPendingChangeOf(jana, NOW).orElseThrow();
+
+        assertThat(pending.id()).isEqualTo(newest.id());
+        assertThat(pending.newEmail()).contains(new EmailAddress("jana.nova@example.cz"));
+        assertThat(pending.expiresAt()).isEqualTo(NOW.minusSeconds(60).plus(HOUR));
+    }
+
+    @Test
+    @DisplayName("Given only a verification link and a used change link, when the pending change is looked up, then none is found")
+    void should_find_nothing_when_pending_change_looked_up_given_no_live_change_link() {
+        EmailVerificationToken used = issueForChange(jana, "jana.nova@example.cz", NOW);
+        issue(jana, NOW);
+        tokens.markUsed(used.id(), NOW);
+        flushAndClear();
+
+        assertThat(tokens.findPendingChangeOf(jana, NOW)).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Given change links and a verification link of a donor and a change link of another, when the donor's change links are deleted, then only the verification link and the other donor's link stay")
+    void should_keep_verification_and_other_donor_links_when_change_links_deleted_given_mixed_links() {
+        issueForChange(jana, "jana.nova@example.cz", NOW);
+        issueForChange(jana, "jana.jina@example.cz", NOW.minusSeconds(60));
+        EmailVerificationToken verification = issue(jana, NOW);
+        issueForChange(petr, "petr.novy@example.cz", NOW);
+        flushAndClear();
+
+        tokens.deleteChangeLinksOf(jana);
+        flushAndClear();
+
+        assertThat(tokens.countOf(jana)).isEqualTo(1);
+        assertThat(tokens.findBySecretHash(verification.secretHash())).isPresent();
+        assertThat(tokens.countOf(petr)).isEqualTo(1);
+    }
+
+    private EmailVerificationToken issueForChange(DonorId donorId, String newEmail, Instant issuedAt) {
+        EmailVerificationToken token = EmailVerificationToken.issueForChange(LinkSecret.generate(), donorId, new EmailAddress(newEmail), issuedAt, HOUR);
+        tokens.save(token);
+        return token;
+    }
+
     private EmailVerificationToken issue(DonorId donorId, Instant issuedAt) {
         EmailVerificationToken token = EmailVerificationToken.issue(LinkSecret.generate(), donorId, issuedAt, HOUR);
         tokens.save(token);

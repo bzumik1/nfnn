@@ -17,6 +17,11 @@ export interface SecondFactorState {
   neededForAdministration: boolean;
 }
 
+export interface PendingEmailChange {
+  newEmail: string;
+  expiresAt: string;
+}
+
 export interface Donor {
   id: string;
   type: DonorType;
@@ -30,6 +35,7 @@ export interface Donor {
   registeredAt: string;
   hasPassword: boolean;
   secondFactor: SecondFactorState;
+  pendingEmailChange: PendingEmailChange | null;
 }
 
 export interface RegisterDonorRequest {

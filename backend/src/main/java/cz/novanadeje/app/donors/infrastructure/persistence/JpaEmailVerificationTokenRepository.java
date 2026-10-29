@@ -34,6 +34,17 @@ class JpaEmailVerificationTokenRepository implements EmailVerificationTokenRepos
     }
 
     @Override
+    public Optional<EmailVerificationToken> findPendingChangeOf(DonorId donorId, Instant now) {
+        return jpa.findFirstByDonorIdAndNewEmailIsNotNullAndUsedAtIsNullAndExpiresAtGreaterThanOrderByIssuedAtDesc(donorId.value(), now)
+                .map(EmailVerificationTokenJpaEntity::toDomain);
+    }
+
+    @Override
+    public void deleteChangeLinksOf(DonorId donorId) {
+        jpa.deleteChangeLinksOfDonor(donorId.value());
+    }
+
+    @Override
     public void deleteUnusableOf(DonorId donorId, Instant now) {
         jpa.deleteUnusable(donorId.value(), now);
     }
