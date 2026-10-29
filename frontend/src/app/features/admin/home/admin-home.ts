@@ -18,8 +18,9 @@ import { pluralCategory } from '../../../core/i18n/plural-category';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
 import { formatMinorUnits } from '../../donations/donation-amount';
-import { formatBankTime, formatDonationDate } from '../../donations/donation-date';
+import { formatBankTime, formatDonationDate, pragueDay } from '../../donations/donation-date';
 import {
+  AdminActivitySinceResponse,
   AdminApi,
   AdminBackupsResponse,
   AdminOverviewResponse,
@@ -43,6 +44,18 @@ type NextStepLink = 'settings' | 'logs' | null;
 interface UnpairedSummary {
   readonly count: number;
   readonly totalMinor: number;
+}
+
+interface SinceSignIn {
+  readonly previousSignInAt: string | null;
+  readonly activity: AdminActivitySinceResponse | null;
+}
+
+interface SinceFigure {
+  readonly label: string;
+  readonly text: string;
+  readonly link: string | null;
+  readonly query: Record<string, string> | null;
 }
 
 interface NextStep {
@@ -111,6 +124,8 @@ export class AdminHome {
   protected readonly unpaired = signal<UnpairedSummary | null>(null);
   protected readonly administratorsState = signal<LoadState>('loading');
   protected readonly withoutSecondFactor = signal<readonly string[]>([]);
+  protected readonly sinceState = signal<LoadState>('loading');
+  protected readonly since = signal<SinceSignIn | null>(null);
   protected readonly backupsState = signal<LoadState>('loading');
   protected readonly backups = signal<AdminBackupsResponse | null>(null);
 
@@ -134,6 +149,55 @@ export class AdminHome {
     return run.outcome === 'FAILED'
       ? failedRun(run)
       : $localize`:@@admin.home.backups.lastTestRestore.ok:${formatBankTime(run.finishedAt)}:time:, ${run.tables ?? 0}:tables: tabulek`;
+  });
+
+  protected readonly sinceLead = computed(() => {
+    const since = this.since();
+    if (since === null) {
+      return '';
+    }
+    if (since.previousSignInAt === null || since.activity === null) {
+      return $localize`:@@admin.home.since.firstTime:Jste tu poprvé. Od příštího přihlášení tu uvidíte nové platby a nové dárce.`;
+    }
+    const at = formatBankTime(since.previousSignInAt);
+    const { payments, newDonors } = since.activity;
+    if (payments.count === 0 && newDonors === 0) {
+      return $localize`:@@admin.home.since.nothing:Poslední přihlášení ${at}:time:. Od té doby nepřišla žádná platba a nikdo nový se nezaregistroval.`;
+    }
+    return payments.count === 0
+      ? $localize`:@@admin.home.since.lead.noPayments:Poslední přihlášení ${at}:time:. Od té doby nepřišla žádná platba.`
+      : leadWithPayments(at, payments);
+  });
+  protected readonly sinceFigures = computed((): readonly SinceFigure[] => {
+    const since = this.since();
+    const activity = since?.activity;
+    if (!since?.previousSignInAt || !activity) {
+      return [];
+    }
+    const day = pragueDay(since.previousSignInAt);
+    const figures: SinceFigure[] = [];
+    if (activity.payments.count > 0) {
+      figures.push(
+        paymentFigure($localize`:@@admin.home.since.paired:Přiřazené dárcům`, activity.paired, {
+          stav: 'prirazene',
+          od: day,
+        }),
+        paymentFigure(
+          $localize`:@@admin.home.since.unpaired:Čekají na přiřazení`,
+          activity.unpaired,
+          { od: day },
+        ),
+      );
+    }
+    if (activity.payments.count > 0 || activity.newDonors > 0) {
+      figures.push({
+        label: $localize`:@@admin.home.since.newDonors:Noví dárci`,
+        text: activity.newDonors > 0 ? registrationsText(activity.newDonors) : NONE,
+        link: activity.newDonors > 0 ? '/sprava/darci' : null,
+        query: null,
+      });
+    }
+    return figures;
   });
 
   protected readonly coveredPeriod = computed(() => {
@@ -215,6 +279,7 @@ export class AdminHome {
   );
 
   constructor() {
+    this.loadSince();
     this.load();
     this.loadOverview();
     this.loadBackups();
@@ -234,6 +299,29 @@ export class AdminHome {
           this.overviewState.set('ready');
         },
         error: () => this.overviewState.set('error'),
+      });
+  }
+
+  protected loadSince(): void {
+    this.sinceState.set('loading');
+    this.api
+      .previousSignIn()
+      .pipe(
+        switchMap(({ previousSignInAt }) =>
+          previousSignInAt === null
+            ? of({ previousSignInAt, activity: null })
+            : this.api
+                .overviewSince(previousSignInAt)
+                .pipe(map((activity) => ({ previousSignInAt, activity }))),
+        ),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: (since) => {
+          this.since.set(since);
+          this.sinceState.set('ready');
+        },
+        error: () => this.sinceState.set('error'),
       });
   }
 
@@ -339,6 +427,59 @@ export class AdminHome {
       this.router.navigateByUrl('/');
       this.loginDialog.open('login', { returnTo });
     });
+  }
+}
+
+const NONE = $localize`:@@admin.home.since.none:žádná`;
+
+function crowns(tally: TallyResponse): string {
+  return `${formatMinorUnits(tally.totalMinor)}\u00a0Kč`;
+}
+
+function leadWithPayments(at: string, payments: TallyResponse): string {
+  const { count } = payments;
+  const total = crowns(payments);
+  switch (pluralCategory(count)) {
+    case 'one':
+      return $localize`:@@admin.home.since.lead.one:Poslední přihlášení ${at}:time:. Od té doby přišla 1 platba za ${total}:total:.`;
+    case 'few':
+      return $localize`:@@admin.home.since.lead.few:Poslední přihlášení ${at}:time:. Od té doby přišly ${count}:count: platby za ${total}:total:.`;
+    case 'other':
+      return $localize`:@@admin.home.since.lead.many:Poslední přihlášení ${at}:time:. Od té doby přišlo ${count}:count: plateb za ${total}:total:.`;
+  }
+}
+
+function paymentFigure(
+  label: string,
+  tally: TallyResponse,
+  query: Record<string, string>,
+): SinceFigure {
+  return tally.count === 0
+    ? { label, text: NONE, link: null, query: null }
+    : { label, text: paymentsText(tally), link: '/sprava/platby', query };
+}
+
+function paymentsText(tally: TallyResponse): string {
+  const { count } = tally;
+  const total = crowns(tally);
+  switch (pluralCategory(count)) {
+    case 'one':
+      return $localize`:@@admin.home.since.payments.one:1 platba za ${total}:total:`;
+    case 'few':
+      return $localize`:@@admin.home.since.payments.few:${count}:count: platby za ${total}:total:`;
+    case 'other':
+      return $localize`:@@admin.home.since.payments.many:${count}:count: plateb za ${total}:total:`;
+  }
+}
+
+function registrationsText(count: number): string {
+  switch (pluralCategory(count)) {
+    case 'one':
+      return $localize`:@@admin.home.since.registrations.one:1 nová registrace`;
+    case 'few':
+      return $localize`:@@admin.home.since.registrations.few:${count}:count: nové registrace`;
+    case 'other':
+      return $localize`:@@admin.home.since.registrations.many:${count}:count: nových registrací`;
   }
 }
 

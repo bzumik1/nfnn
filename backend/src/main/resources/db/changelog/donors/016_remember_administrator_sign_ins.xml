@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <changeSet id="016-remember-administrator-sign-ins" author="nfnn">
+        <addColumn tableName="donor">
+            <column name="last_signed_in_at" type="timestamp with time zone"/>
+            <column name="previous_signed_in_at" type="timestamp with time zone"/>
+        </addColumn>
+    </changeSet>
+</databaseChangeLog>

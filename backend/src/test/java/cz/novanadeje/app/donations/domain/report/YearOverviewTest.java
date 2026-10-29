@@ -2,10 +2,13 @@ package cz.novanadeje.app.donations.domain.report;
 
 import cz.novanadeje.app.donations.domain.bank.BankPayment;
 import cz.novanadeje.app.donations.domain.bank.SenderAccount;
+import cz.novanadeje.app.donations.domain.donor.DonorReference;
 import cz.novanadeje.app.shared.domain.Money;
+import cz.novanadeje.app.shared.domain.UuidV7;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.Year;
 import java.util.List;
@@ -23,6 +26,8 @@ class YearOverviewTest {
     private static final LocalDate TODAY = LocalDate.of(2026, 10, 23);
     private static final Optional<SenderAccount> UNKNOWN = Optional.of(new SenderAccount("2900255555", "0800"));
     private static final List<Long> REGISTRATIONS = List.of(0L, 0L, 1L, 1L, 1L, 1L, 1L, 2L, 2L, 4L, 5L, 5L, 5L);
+    private static final DonorReference JANA = new DonorReference(UuidV7.generate(Instant.parse("2026-01-10T10:00:00Z")));
+    private static final DonorReference PETR = new DonorReference(UuidV7.generate(Instant.parse("2026-02-10T10:00:00Z")));
 
     @Test
     @DisplayName("Given donations, unpaired payments and registrations through October, when the year is compiled, then the started months come newest first and everything received is paired plus unpaired")
@@ -36,18 +41,43 @@ class YearOverviewTest {
                 REGISTRATIONS);
 
         assertThat(overview.months()).hasSize(10);
-        assertThat(overview.months().getFirst()).isEqualTo(new MonthOverview(ReportMonth.of(2026, 10), new Tally(1, Money.czk(50000)), 1,
+        assertThat(overview.months().getFirst()).isEqualTo(new MonthOverview(ReportMonth.of(2026, 10), new Tally(1, Money.czk(50000)), 1, 1,
                 new Tally(1, Money.czk(20000))));
-        assertThat(overview.months().get(1)).isEqualTo(new MonthOverview(ReportMonth.of(2026, 9), new Tally(2, Money.czk(153450)), 2,
+        assertThat(overview.months().get(1)).isEqualTo(new MonthOverview(ReportMonth.of(2026, 9), new Tally(2, Money.czk(153450)), 1, 2,
                 new Tally(1, Money.czk(15000))));
         assertThat(overview.months().get(1).received()).isEqualTo(new Tally(3, Money.czk(168450)));
-        assertThat(overview.months().getLast()).isEqualTo(new MonthOverview(ReportMonth.of(2026, 1), new Tally(1, Money.czk(10000)), 0,
+        assertThat(overview.months().getLast()).isEqualTo(new MonthOverview(ReportMonth.of(2026, 1), new Tally(1, Money.czk(10000)), 1, 0,
                 new Tally(0, Money.czk(0))));
         assertThat(overview.paired()).isEqualTo(new Tally(4, Money.czk(213450)));
         assertThat(overview.unpaired()).isEqualTo(new Tally(2, Money.czk(35000)));
         assertThat(overview.received()).isEqualTo(new Tally(6, Money.czk(248450)));
         assertThat(overview.newDonors()).isEqualTo(5);
         assertThat(overview.donorsRegistered()).isEqualTo(5);
+    }
+
+    @Test
+    @DisplayName("Given two donors who gave several times and a refund, when the year is compiled, then each month and the year count every donor with a received donation once")
+    void should_count_each_giving_donor_once_when_compiled_given_repeated_donations() {
+        YearOverview overview = YearOverview.compile(YEAR, TODAY,
+                List.of(received(JANA, LocalDate.of(2026, 9, 1), 10000), received(JANA, LocalDate.of(2026, 9, 20), 10000),
+                        received(PETR, LocalDate.of(2026, 9, 30), 30000), refunded(PETR, LocalDate.of(2026, 10, 3), 70000),
+                        received(JANA, LocalDate.of(2026, 8, 15), 5000)),
+                List.of(payment(1007, LocalDate.of(2026, 10, 20), Money.czk(20000), UNKNOWN, "2222222222")),
+                REGISTRATIONS);
+
+        assertThat(overview.months().getFirst().givingDonors()).isZero();
+        assertThat(overview.months().get(1).givingDonors()).isEqualTo(2);
+        assertThat(overview.months().get(1).paired().count()).isEqualTo(3);
+        assertThat(overview.months().get(2).givingDonors()).isEqualTo(1);
+        assertThat(overview.givingDonors()).isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("Given more giving donors than paired donations, when a month overview is built, then it is refused")
+    void should_refuse_when_built_given_more_giving_donors_than_donations() {
+        assertThatThrownBy(() -> new MonthOverview(ReportMonth.of(2026, 9), new Tally(1, Money.czk(100)), 2, 0, new Tally(0, Money.czk(0))))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Giving donors");
     }
 
     @Test

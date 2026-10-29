@@ -66,6 +66,11 @@ public class AdministratorService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
+    public Optional<Instant> previousSignIn(DonorId adminId) {
+        return donors.findPreviousSignIn(adminId);
+    }
+
     @Transactional
     public AdministratorView grant(DonorId adminId, EmailAddress email) {
         Donor donor = donors.findByEmail(email).orElseThrow(EmailNotRegistered::new);
@@ -87,6 +92,7 @@ public class AdministratorService {
         donors.save(donor);
         Instant now = clock.instant();
         refreshTokens.revokeAllOf(donorId, now);
+        donors.forgetSignIns(donorId);
         events.publishEvent(new AdminActionPerformed(adminId.value(), REVOKE_ACTION, Optional.of(donorId.value()),
                 "Role správce odebrána dárci " + donorId + "; všechna přihlášení dárce ukončena", now));
         log.info("Administrator {} took the administrator role from donor {}", adminId, donorId);

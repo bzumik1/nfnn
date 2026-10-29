@@ -62,7 +62,7 @@ export function registerReadingTools(server: McpServer, deps: ToolDependencies):
     {
       title: 'Roční přehled',
       description:
-        'Donations and donors of a year, month by month (newest first): everything received (received = paired + unpaired), new donors, the part paired with a registered donor and the unpaired part, with the years that have a donation or a bank payment.',
+        'Donations and donors of a year, month by month (newest first): everything received (received = paired + unpaired), new donors (registrations), givingDonors (the distinct donors with a received donation, so only paired ones count), the part paired with a registered donor and the unpaired part, with the years that have a donation or a bank payment.',
       inputSchema: z.object({
         year: YEAR.optional().describe('The calendar year; the current one when omitted.'),
       }),
@@ -77,6 +77,41 @@ export function registerReadingTools(server: McpServer, deps: ToolDependencies):
           ),
         ),
       ),
+  );
+
+  server.registerTool(
+    'nfnn_since_last_sign_in',
+    {
+      title: 'Od posledního přihlášení',
+      description:
+        'What came in since the administrator who connected signed in to the administration before the current sign-in (previousSignInAt), or since `from`: the bank payments imported since then (count and total), the part paired with a donor, the part that still waits to be paired, and the donors who registered since then (newDonors). This is the block at the top of /sprava.',
+      inputSchema: z.object({
+        from: z
+          .string()
+          .datetime({ offset: true })
+          .optional()
+          .describe('Count from this instant (ISO 8601) instead of the previous sign-in.'),
+      }),
+      annotations: READ_ONLY,
+    },
+    async ({ from }, ctx) =>
+      answer(deps, ctx, 'nfnn_since_last_sign_in', async ({ apiToken }) => {
+        const previous = asRecord(
+          await backend.get('/api/admin/donors/me/previous-sign-in', apiToken),
+        )['previousSignInAt'];
+        const previousSignInAt = typeof previous === 'string' ? previous : null;
+        const since = from ?? previousSignInAt;
+        if (since === null) {
+          return plain(
+            'The administrator has no earlier sign-in to the administration: this is the first one. Pass `from` to count from a moment of your choice.',
+          );
+        }
+        const activity = await backend.get(
+          `/api/admin/donations/overview/since?${new URLSearchParams({ from: since })}`,
+          apiToken,
+        );
+        return text({ previousSignInAt, activity });
+      }),
   );
 
   server.registerTool(

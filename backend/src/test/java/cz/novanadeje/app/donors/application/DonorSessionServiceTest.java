@@ -95,6 +95,48 @@ class DonorSessionServiceTest {
         verify(refreshTokens, never()).revokeAllOf(any(), any());
         assertThat(refreshed.donor().id()).isEqualTo(DONOR);
         assertThat(refreshed.tokens().refreshToken()).isNotEqualTo(secret.value());
+        verify(donors, never()).recordSignIn(any(), any());
+    }
+
+    @Test
+    @DisplayName("Given an administrator, when they sign in with the second factor, then the sign-in is recorded and the session opens for the administration")
+    void should_record_sign_in_when_signed_in_given_administrator_with_second_factor() {
+        when(accessTokens.issue(DONOR, Set.of(Role.DONOR, Role.ADMIN), NOW)).thenReturn(new IssuedAccessToken("access", NOW.plus(Duration.ofMinutes(15))));
+
+        IssuedTokens tokens = service.signIn(administrator(), true);
+
+        verify(donors).recordSignIn(DONOR, NOW);
+        assertThat(tokens.roles()).containsExactlyInAnyOrder(Role.DONOR, Role.ADMIN);
+    }
+
+    @Test
+    @DisplayName("Given an administrator without the second factor, when they sign in as a plain donor, then no sign-in to the administration is recorded")
+    void should_not_record_sign_in_when_signed_in_given_administrator_without_second_factor() {
+        when(accessTokens.issue(DONOR, Set.of(Role.DONOR), NOW)).thenReturn(new IssuedAccessToken("access", NOW.plus(Duration.ofMinutes(15))));
+
+        service.signIn(administrator(), false);
+
+        verify(donors, never()).recordSignIn(any(), any());
+    }
+
+    @Test
+    @DisplayName("Given a plain donor, when they sign in, then no sign-in is recorded")
+    void should_not_record_sign_in_when_signed_in_given_plain_donor() {
+        when(accessTokens.issue(DONOR, Set.of(Role.DONOR), NOW)).thenReturn(new IssuedAccessToken("access", NOW.plus(Duration.ofMinutes(15))));
+
+        service.signIn(donor(), true);
+
+        verify(donors, never()).recordSignIn(any(), any());
+    }
+
+    @Test
+    @DisplayName("Given an administrator, when a session opens again after a credential change, then it is not counted as a sign-in")
+    void should_not_record_sign_in_when_session_opened_given_administrator() {
+        when(accessTokens.issue(DONOR, Set.of(Role.DONOR, Role.ADMIN), NOW)).thenReturn(new IssuedAccessToken("access", NOW.plus(Duration.ofMinutes(15))));
+
+        service.open(administrator(), true);
+
+        verify(donors, never()).recordSignIn(any(), any());
     }
 
     @Test

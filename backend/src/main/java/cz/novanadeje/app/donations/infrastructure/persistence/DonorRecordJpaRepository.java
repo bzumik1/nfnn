@@ -17,6 +17,8 @@ interface DonorRecordJpaRepository extends JpaRepository<DonorRecordJpaEntity, U
 
     long countByRegisteredAtBefore(Instant end);
 
+    long countByRegisteredAtGreaterThanEqual(Instant from);
+
     @Query("select r from DonorRecordJpaEntity r where r.erasedAt is null"
             + " and (lower(function('translate', r.name, '" + AccentFolding.ACCENTED + "', '" + AccentFolding.PLAIN + "')) like concat('%', :query, '%') escape '!'"
             + " or r.variableSymbol like concat(:query, '%') escape '!') order by r.name, r.donorId")

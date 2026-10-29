@@ -18,15 +18,23 @@ public final class Donations {
     }
 
     public static Donation received(LocalDate receivedOn, long amountMinor) {
-        return donation(receivedOn, amountMinor, DonationStatus.RECEIVED);
+        return received(JANA, receivedOn, amountMinor);
+    }
+
+    public static Donation received(DonorReference donor, LocalDate receivedOn, long amountMinor) {
+        return donation(donor, receivedOn, amountMinor, DonationStatus.RECEIVED);
     }
 
     public static Donation refunded(LocalDate receivedOn, long amountMinor) {
-        return donation(receivedOn, amountMinor, DonationStatus.REFUNDED);
+        return refunded(JANA, receivedOn, amountMinor);
     }
 
-    private static Donation donation(LocalDate receivedOn, long amountMinor, DonationStatus status) {
-        return Donation.reconstitute(DonationId.newId(NOW), JANA, Optional.of(BankPaymentId.newId(NOW)), receivedOn, Money.czk(amountMinor),
+    public static Donation refunded(DonorReference donor, LocalDate receivedOn, long amountMinor) {
+        return donation(donor, receivedOn, amountMinor, DonationStatus.REFUNDED);
+    }
+
+    private static Donation donation(DonorReference donor, LocalDate receivedOn, long amountMinor, DonationStatus status) {
+        return Donation.reconstitute(DonationId.newId(NOW), donor, Optional.of(BankPaymentId.newId(NOW)), receivedOn, Money.czk(amountMinor),
                 DonationSource.BANK_TRANSFER, status, Optional.of(PairingMethod.VARIABLE_SYMBOL), NOW);
     }
 }

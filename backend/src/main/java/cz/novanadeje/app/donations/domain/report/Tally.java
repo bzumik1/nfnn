@@ -20,6 +20,10 @@ public record Tally(int count, Money total) {
         return new Tally(count + other.count, total.plus(other.total));
     }
 
+    public Tally minus(Tally part) {
+        return new Tally(count - part.count, total.plus(part.total.negated()));
+    }
+
     public static Tally of(List<Money> amounts) {
         return new Tally(amounts.size(), amounts.stream().reduce(Money.zero(Currency.CZK), Money::plus));
     }

@@ -234,6 +234,21 @@ class JpaBankPaymentRepositoryTest {
     }
 
     @Test
+    @DisplayName("Given payments imported before, at and after an instant, one of the later ones paired, when those imported since it are asked for, then the instant and the later ones come, and the unpaired ones leave out the paired")
+    void should_find_payments_imported_from_the_instant_on_when_asked_given_imports_around_it() {
+        BankPayment paired = importedAt(1003, NOW.plusSeconds(60));
+        payments.saveAll(List.of(importedAt(1001, NOW.minusSeconds(1)), importedAt(1002, NOW), paired, importedAt(1004, NOW.plusSeconds(120))));
+        pair(paired, PairingMethod.SENDER_ACCOUNT);
+        flushAndClear();
+
+        assertThat(payments.findImportedSince(NOW)).extracting(payment -> payment.transactionId().value())
+                .containsExactlyInAnyOrder(1002L, 1003L, 1004L);
+        assertThat(payments.findUnpairedImportedSince(NOW)).extracting(payment -> payment.transactionId().value())
+                .containsExactlyInAnyOrder(1002L, 1004L);
+        assertThat(payments.findImportedSince(NOW.plusSeconds(121))).isEmpty();
+    }
+
+    @Test
     @DisplayName("Given paired and unpaired payments from several accounts, when an account's payments are asked for, then all of its payments come, paired or not, by booking date and then by transaction id")
     void should_find_paired_and_unpaired_payments_of_account_in_booking_order_when_asked_by_account() {
         BankPayment paired = payment(1003, "2026-10-14", JANA_ACCOUNT, "6123456789");
@@ -354,8 +369,16 @@ class JpaBankPaymentRepositoryTest {
         entityManager.clear();
     }
 
+    private static BankPayment importedAt(long transactionId, Instant importedAt) {
+        return payment(transactionId, "2026-10-15", JANA_ACCOUNT, null, importedAt);
+    }
+
     private static BankPayment payment(long transactionId, String bookedOn, Optional<SenderAccount> sender, String variableSymbol) {
-        Instant importedAt = NOW;
+        return payment(transactionId, bookedOn, sender, variableSymbol, NOW);
+    }
+
+    private static BankPayment payment(long transactionId, String bookedOn, Optional<SenderAccount> sender, String variableSymbol,
+                                       Instant importedAt) {
         return BankPayment.incoming(BankPaymentId.newId(importedAt), IncomingMovement.of(new BankTransactionId(transactionId),
                 LocalDate.parse(bookedOn), Money.czk(20000), sender, sender.map(SenderAccount::accountNumber),
                 sender.map(SenderAccount::bankCode), Optional.empty(), Optional.ofNullable(variableSymbol), Optional.empty(),
