@@ -18,13 +18,13 @@ Feature: Donor registers an account
 
   Scenario: A company registers with its identification number
     When a company registers
-      | name              | Stavby Novák s.r.o.   |
-      | companyIdentifier | 45274649              |
-      | street            | Průmyslová 5          |
-      | city              | Teplice               |
-      | postalCode        | 415 01                |
-      | email             | ucetni@stavby.cz      |
-      | password          | correct horse battery |
+      | name              | Stavby Novák s.r.o.      |
+      | companyIdentifier | 45274649                 |
+      | street            | Průmyslová 5             |
+      | city              | Teplice                  |
+      | postalCode        | 415 01                   |
+      | email             | ucetni@stavby.example.cz |
+      | password          | correct horse battery    |
     Then the response status is 202
     When the donor confirms the e-mail with the link from the e-mail
     Then the response status is 200
@@ -33,24 +33,24 @@ Feature: Donor registers an account
 
   Scenario: A company cannot register without an identification number
     When a company registers
-      | name       | Stavby Novák s.r.o.   |
-      | street     | Průmyslová 5          |
-      | city       | Teplice               |
-      | postalCode | 415 01                |
-      | email      | ucetni@stavby.cz      |
-      | password   | correct horse battery |
+      | name       | Stavby Novák s.r.o.      |
+      | street     | Průmyslová 5             |
+      | city       | Teplice                  |
+      | postalCode | 415 01                   |
+      | email      | ucetni@stavby.example.cz |
+      | password   | correct horse battery    |
     Then the response status is 400
     And the problem type ends with "donors/company-identifier-required"
 
   Scenario: An identification number with a wrong check digit is refused
     When a company registers
-      | name              | Stavby Novák s.r.o.   |
-      | companyIdentifier | 45274648              |
-      | street            | Průmyslová 5          |
-      | city              | Teplice               |
-      | postalCode        | 415 01                |
-      | email             | ucetni@stavby.cz      |
-      | password          | correct horse battery |
+      | name              | Stavby Novák s.r.o.      |
+      | companyIdentifier | 45274648                 |
+      | street            | Průmyslová 5             |
+      | city              | Teplice                  |
+      | postalCode        | 415 01                   |
+      | email             | ucetni@stavby.example.cz |
+      | password          | correct horse battery    |
     Then the response status is 400
     And the problem lists an error for field "companyIdentifier"
 

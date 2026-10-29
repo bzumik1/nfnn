@@ -18,7 +18,7 @@ class SettingTest {
         assertThat(Setting.ADMIN_EMAILS.check("pavel@example.cz, jakub@example.cz")).isEmpty();
         assertThat(Setting.FIO_HISTORY_FROM.check("2025-01-01")).isEmpty();
         assertThat(Setting.RECEIPT_FIRST_YEAR.check("2026")).isEmpty();
-        assertThat(Setting.RECEIPT_SIGNATORY_NAME.check("Pavel Znamenáček")).isEmpty();
+        assertThat(Setting.RECEIPT_SIGNATORY_NAME.check("Josef Dvořáček")).isEmpty();
         assertThat(Setting.MAIL_PASSWORD.check("xsmtpsib-abc$123")).isEmpty();
     }
 

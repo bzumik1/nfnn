@@ -15,7 +15,7 @@ Feature: The first setup asks for the settings in the browser and stores them wi
       | PUBLIC_URL        | https://nfnn.cz            |
       | MAIL_HOST         | smtp-relay.brevo.com       |
       | MAIL_PORT         | 587                        |
-      | MAIL_USERNAME     | bebb0c001@smtp-brevo.com   |
+      | MAIL_USERNAME     | abc@smtp-brevo.com         |
       | MAIL_PASSWORD     | xsmtpsib-key               |
       | MAIL_FROM         | info@nfnn.cz               |
       | CONTACT_RECIPIENT | info@nfnn.cz               |
