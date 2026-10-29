@@ -379,8 +379,8 @@ describe('Given an administrator on the administration home', () => {
           (fixture.nativeElement as HTMLElement).querySelectorAll('.attention-problems li'),
         ).map((item) => (item.textContent ?? '').trim()),
       ).toEqual([
-        'Poslední záloha selhala.',
-        'Zkušební obnova ještě neproběhla, i když zálohy jsou starší než týden.',
+        'Poslední záloha se nepovedla. Data webu jsou v pořádku, ale nejsou zálohovaná. Zkuste Zálohovat teď; když to nepomůže, pošlete stránku Zálohy správci serveru.',
+        'Zatím se nevyzkoušelo, že jde zálohu obnovit. Spusťte Ověřit obnovu teď.',
       ]);
       expect(backupsCard().querySelector('.healthy')).toBeNull();
       expect(dataRows('admin-backups-title')).toEqual({
@@ -465,7 +465,7 @@ describe('Given an administrator on the administration home', () => {
 
       expect(items()).toEqual([
         '3 platby čekají na přiřazení dárci (850 Kč). Přiřadit platby',
-        'Poslední záloha selhala. Otevřít zálohy',
+        'Poslední záloha se nepovedla. Data webu jsou v pořádku, ale nejsou zálohovaná. Zkuste Zálohovat teď; když to nepomůže, pošlete stránku Zálohy správci serveru. Otevřít zálohy',
         'Správce Petr Svoboda nemá druhý faktor (kód z ověřovací aplikace ani přístupový klíč), správa se mu neotevře. Otevřít Správce',
       ]);
       const links = Array.from(
@@ -473,6 +473,19 @@ describe('Given an administrator on the administration home', () => {
       ).map((link) => link.getAttribute('href'));
       expect(links).toEqual(['/sprava/platby', '/sprava/zalohy', '/sprava/spravci']);
       expect(attention().querySelector('.healthy')).toBeNull();
+    });
+
+    it('then a backup folder the backend cannot see is told in plain words, without the server details', async () => {
+      await sources(
+        paymentList([]),
+        [administrator()],
+        backupsView({ available: false, problems: ['BACKUPS_UNAVAILABLE'] }),
+      );
+
+      expect(items()).toEqual([
+        'Web teď nevidí složku se zálohami, takže zálohy nejde vytvořit ani stáhnout. Data webu jsou v pořádku. Pošlete prosím stránku Zálohy správci serveru. Otevřít zálohy',
+      ]);
+      expect(attention().textContent).not.toContain('compose');
     });
 
     it('then a backup key nobody saved yet gets a row leading to the backups', async () => {

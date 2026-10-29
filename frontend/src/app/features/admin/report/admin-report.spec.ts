@@ -297,6 +297,28 @@ describe('Given an administrator on the monthly report page', () => {
     expect(text('.form-error')).toBe('Neplatný požadavek. Zkontrolujte prosím zadané údaje.');
   });
 
+  it('when the page is ready, then the send card names the saved recipients and why the running month is not offered', async () => {
+    await respond(
+      reportView({
+        settings: { ...reportView().settings, recipients: ['info@nfnn.cz', 'pavel@example.cz'] },
+        lastEndedMonth: '2026-09',
+      }),
+    );
+
+    expect(text('.send-card .send-recipients')).toBe(
+      'Přehled dostanou: info@nfnn.cz, pavel@example.cz. To jsou příjemci uložení v nastavení výše.',
+    );
+    expect(text('#report-month-hint')).toBe(
+      'Nabízíme jen skončené měsíce. Přehled za říjen 2026 půjde poslat, až měsíc skončí.',
+    );
+    expect(element<HTMLSelectElement>('#report-month').getAttribute('aria-describedby')).toContain(
+      'report-month-hint',
+    );
+    expect(element<HTMLSelectElement>('#report-month').options[0]?.textContent).toBe(
+      'září 2026 (zatím neodesláno)',
+    );
+  });
+
   it('when a month is chosen and the sending is confirmed, then the report goes out and the page says to whom', async () => {
     await respond(
       reportView({ sentReports: [{ month: '2026-09', sentAt: '2026-10-01T05:00:00Z' }] }),

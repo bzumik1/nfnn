@@ -218,7 +218,7 @@ test.describe('Given an administrator', () => {
     const attention = page.getByRole('region', { name: 'Co potřebuje vaši pozornost' });
     await expect(attention.locator('.attention-list > li')).toHaveText([
       '1 platba čeká na přiřazení dárci (150 Kč). Přiřadit platby',
-      'Zkušební obnova ještě neproběhla, i když zálohy jsou starší než týden. Otevřít zálohy',
+      'Zatím se nevyzkoušelo, že jde zálohu obnovit. Spusťte Ověřit obnovu teď. Otevřít zálohy',
     ]);
     await expect(attention.getByRole('link', { name: 'Přiřadit platby' })).toHaveAttribute(
       'href',

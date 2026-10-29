@@ -30,7 +30,7 @@ import {
   MAX_REPORT_RECIPIENTS,
   parseEmailList,
 } from './email-list';
-import { formatReportMonth, previousMonths } from './report-month';
+import { followingMonth, formatReportMonth, previousMonths } from './report-month';
 import { LiveNotice, Notice } from '../../../shared/ui/live-notice/live-notice';
 
 type LoadState = 'loading' | 'ready' | 'error';
@@ -128,6 +128,12 @@ export class AdminReport {
           : $localize`:@@admin.report.send.option.unsent:${formatReportMonth(value)}:month: (zatím neodesláno)`,
       };
     });
+  });
+  protected readonly monthHint = computed(() => {
+    const report = this.report();
+    return report
+      ? $localize`:@@admin.report.send.month.hint:Nabízíme jen skončené měsíce. Přehled za ${formatReportMonth(followingMonth(report.lastEndedMonth))}:month: půjde poslat, až měsíc skončí.`
+      : '';
   });
   protected readonly selectedMonthLabel = computed(() =>
     formatReportMonth(this.month || '2000-01'),

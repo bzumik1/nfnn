@@ -16,3 +16,9 @@ export function previousMonths(lastIsoMonth: string, count: number): string[] {
   }
   return months;
 }
+
+export function followingMonth(isoMonth: string): string {
+  const [year, month] = isoMonth.split('-').map(Number);
+  const index = year * 12 + month;
+  return `${Math.floor(index / 12)}-${String((index % 12) + 1).padStart(2, '0')}`;
+}

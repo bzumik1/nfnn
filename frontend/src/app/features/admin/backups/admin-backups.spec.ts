@@ -150,7 +150,7 @@ describe('Given an administrator on the backups page', () => {
     );
 
     expect(texts('.problems > ul li')).toEqual([
-      'Poslední záloha se nepovedla. Data webu jsou v pořádku, ale nejsou zálohovaná. Zkuste Zálohovat teď; když to nepomůže, pošlete tuto stránku správci serveru.',
+      'Poslední záloha se nepovedla. Data webu jsou v pořádku, ale nejsou zálohovaná. Zkuste Zálohovat teď; když to nepomůže, pošlete stránku Zálohy správci serveru.',
       'Zatím se nevyzkoušelo, že jde zálohu obnovit. Spusťte Ověřit obnovu teď.',
     ]);
     expect(texts('.problems details li')).toEqual([
@@ -190,7 +190,7 @@ describe('Given an administrator on the backups page', () => {
     );
 
     expect(texts('.problems > ul li')[0]).toBe(
-      'Web teď nevidí složku se zálohami, takže zálohy nejde vytvořit ani stáhnout. Data webu jsou v pořádku. Pošlete prosím tuto stránku správci serveru.',
+      'Web teď nevidí složku se zálohami, takže zálohy nejde vytvořit ani stáhnout. Data webu jsou v pořádku. Pošlete prosím stránku Zálohy správci serveru.',
     );
     expect(texts('.problems details li')[0]).toContain('Backend nevidí složku záloh.');
     expect(button('Zálohovat teď').disabled).toBe(true);
