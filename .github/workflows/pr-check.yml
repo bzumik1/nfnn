@@ -3,6 +3,8 @@ name: PR check
 on:
   pull_request:
     branches: [main]
+  push:
+    branches: [main]
     paths:
       - "**"
       - "!docs/**"
@@ -13,11 +15,42 @@ permissions:
   contents: read
 
 concurrency:
-  group: pr-check-${{ github.event.pull_request.number }}
-  cancel-in-progress: true
+  group: pr-check-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      pull-requests: read
+    outputs:
+      code: ${{ steps.files.outputs.code }}
+    steps:
+      - name: Find whether the change touches code or only docs/, .claude/ and Markdown
+        id: files
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          PULL_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          if [ -z "$PULL_NUMBER" ]; then
+            echo "A push to main runs every job."
+            echo "code=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          files=$(gh api "repos/$REPOSITORY/pulls/$PULL_NUMBER/files" --paginate --jq '.[].filename')
+          if grep -Ev '^(docs/|\.claude/)|\.md$' <<<"$files" | grep -q .; then
+            echo "The pull request changes code, so every job runs."
+            echo "code=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "The pull request changes only docs/, .claude/ or Markdown, so no job runs and the gate passes."
+            echo "code=false" >> "$GITHUB_OUTPUT"
+          fi
+
   backend:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 25
     defaults:
@@ -66,6 +99,8 @@ jobs:
           retention-days: 3
 
   frontend:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     defaults:
@@ -84,6 +119,10 @@ jobs:
 
       - run: npm ci
 
+      - name: Start installing Playwright's Chromium headless shell while the checks run
+        run: |
+          (npx playwright install --with-deps --only-shell chromium > "$RUNNER_TEMP/playwright-install.log" 2>&1; echo $? > "$RUNNER_TEMP/playwright-install.status") &
+
       - name: Formatting follows Prettier
         run: npm run format:check
 
@@ -101,8 +140,14 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Install Playwright's Chromium
-        run: npx playwright install --with-deps chromium
+      - name: Playwright's Chromium headless shell is installed
+        run: |
+          for _ in $(seq 300); do
+            [ -s "$RUNNER_TEMP/playwright-install.status" ] && break
+            sleep 1
+          done
+          cat "$RUNNER_TEMP/playwright-install.log"
+          [ "$(cat "$RUNNER_TEMP/playwright-install.status" 2>/dev/null)" = 0 ] || { echo "::error::Playwright's Chromium headless shell was not installed (log above)"; exit 1; }
 
       - name: End-to-end and accessibility tests
         run: npm run e2e
@@ -130,6 +175,8 @@ jobs:
           E2E_DIST: dist/control-theme/browser
 
   mcp:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     defaults:
@@ -238,24 +285,14 @@ jobs:
           retention-days: 14
 
   stack:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
         with:
           persist-credentials: false
-
-      - uses: actions/setup-node@v7
-        with:
-          node-version: "24"
-
-      - name: Build images
-        run: |
-          docker build -t ghcr.io/bzumik1/nfnn-backend:latest backend
-          docker build -t ghcr.io/bzumik1/nfnn-frontend:latest frontend
-          docker build -t ghcr.io/bzumik1/nfnn-backup:latest deploy/backup
-          docker build -t ghcr.io/bzumik1/nfnn-postgres:latest deploy/postgres
-          docker build -t ghcr.io/bzumik1/nfnn-mcp:latest mcp
 
       - name: Compose file has no dollar signs
         run: |
@@ -344,6 +381,23 @@ jobs:
             exit 1
           fi
 
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+
+      - uses: docker/setup-buildx-action@v4
+
+      - name: Build images
+        uses: docker/bake-action@v7
+        env:
+          CACHE_FROM_GHA: "true"
+          CACHE_TO_GHA: ${{ github.event_name == 'push' }}
+          DOCKER_BUILD_RECORD_UPLOAD: "false"
+        with:
+          source: .
+          files: .github/docker-bake.hcl
+          load: true
+
       - name: Prepare the compose file
         run: |
           mkdir -p "$RUNNER_TEMP/nfnn"
@@ -354,10 +408,16 @@ jobs:
             touch -d '2 days ago' "$RUNNER_TEMP/nfnn/logs/$log"
           done
           sed "s#/DATA/AppData/nfnn#$RUNNER_TEMP/nfnn#g" deploy/compose.yml > "$RUNNER_TEMP/compose.yml"
+          yq -i '.services.backup.environment.POLL_SECONDS = "1"' "$RUNNER_TEMP/compose.yml"
           echo "COMPOSE_FILE=$RUNNER_TEMP/compose.yml" >> "$GITHUB_ENV"
 
       - name: Start the production stack
-        run: docker compose up -d --wait --wait-timeout 300
+        run: |
+          docker compose up -d --wait --wait-timeout 300
+          for container in nfnn-postgres nfnn-backup nfnn-backend nfnn-mcp nfnn-frontend; do
+            restarts=$(docker inspect -f '{{.RestartCount}}' "$container")
+            [ "$restarts" = 0 ] || { echo "::error::$container restarted $restarts times while a fresh install started: the backend waits until the database accepts connections, so nothing restarts"; exit 1; }
+          done
 
       - name: First setup
         run: |
@@ -690,3 +750,21 @@ jobs:
       - name: Stop
         if: always()
         run: docker compose down
+
+  gate:
+    if: always()
+    needs: [changes, backend, frontend, mcp, compare-v2, stack]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Every job passed, or the change touches no code and no job ran
+        env:
+          CODE: ${{ needs.changes.outputs.code }}
+          NEEDS: ${{ toJSON(needs) }}
+        run: |
+          jq -r 'to_entries[] | "\(.key): \(.value.result)"' <<<"$NEEDS"
+          if [ "$CODE" = true ]; then expected=success; else expected=skipped; fi
+          if ! jq -e --arg expected "$expected" '.changes.result == "success" and ([del(.changes)[] | .result] | all(. == $expected))' <<<"$NEEDS" > /dev/null; then
+            echo "::error::every job must pass on a change to code (and none run on a change to docs/, .claude/ or Markdown only); see the results above"
+            exit 1
+          fi
