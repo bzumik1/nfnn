@@ -2,6 +2,7 @@ import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { NavigationError, provideRouter, Router } from '@angular/router';
 
+import { Connectivity } from '../navigation/connectivity';
 import { ExternalNavigation } from '../navigation/external-navigation';
 import { ChunkLoadRecovery, isChunkLoadError } from './chunk-load-recovery';
 import { ReloadGuard } from './reload-guard';
@@ -47,64 +48,97 @@ describe('Given errors thrown while a page loads', () => {
 
 describe('Given the chunk-load recovery', () => {
   let claim: ReturnType<typeof vi.fn>;
-  let assign: ReturnType<typeof vi.fn>;
+  let loadFromServer: ReturnType<typeof vi.fn>;
+  let isOffline: ReturnType<typeof vi.fn>;
   let recovery: ChunkLoadRecovery;
 
   beforeEach(() => {
     claim = vi.fn(() => true);
-    assign = vi.fn();
+    loadFromServer = vi.fn();
+    isOffline = vi.fn(() => false);
     TestBed.configureTestingModule({
       providers: [
-        provideRouter([{ path: 'jinam', component: Page }]),
+        provideRouter([
+          { path: 'jinam', component: Page },
+          { path: 'dale', component: Page },
+        ]),
         { provide: ReloadGuard, useValue: { claim } },
-        { provide: ExternalNavigation, useValue: { assign } },
+        { provide: ExternalNavigation, useValue: { loadFromServer } },
+        { provide: Connectivity, useValue: { isOffline } },
       ],
     });
     recovery = TestBed.inject(ChunkLoadRecovery);
   });
 
-  const failure = (error: unknown) => new NavigationError(1, '/darce/prehled', error);
+  const failure = (error: unknown, url = '/darce/prehled') => new NavigationError(1, url, error);
+  const showPage = () => TestBed.inject(Router).navigateByUrl('/jinam');
 
   describe('when a lazy page fails to load and the guard allows a reload', () => {
-    beforeEach(() => recovery.handleNavigationError(failure(CHROME)));
+    beforeEach(() => recovery.handleNavigationError(failure(CHROME, '/#prispet')));
 
     it('then it claims the chunk-load reload', () => {
       expect(claim).toHaveBeenCalledWith('chunk-load');
     });
 
-    it('then it loads the page that was asked for from the server', () => {
-      expect(assign).toHaveBeenCalledExactlyOnceWith('/darce/prehled');
+    it('then it loads the page that was asked for from the server, fragment included', () => {
+      expect(loadFromServer).toHaveBeenCalledExactlyOnceWith('/#prispet');
     });
 
     it('then it offers nothing', () => {
-      expect(recovery.failedUrl()).toBeNull();
+      expect(recovery.failure()).toBeNull();
     });
   });
 
-  describe('when a lazy page fails to load and the guard refuses a reload', () => {
-    beforeEach(() => {
+  describe('when a lazy page fails to load after a page was shown and the guard refuses a reload', () => {
+    beforeEach(async () => {
+      await showPage();
       claim.mockReturnValue(false);
       recovery.handleNavigationError(failure(CHROME));
     });
 
     it('then it does not reload', () => {
-      expect(assign).not.toHaveBeenCalled();
+      expect(loadFromServer).not.toHaveBeenCalled();
     });
 
-    it('then it offers a reload of the page that was asked for', () => {
-      expect(recovery.failedUrl()).toBe('/darce/prehled');
+    it('then it offers a reload of the page that was asked for over the page still shown', () => {
+      expect(recovery.failure()).toEqual({ url: '/darce/prehled', initial: false });
     });
 
-    it('and the visitor asks for the reload, then it loads that page', () => {
+    it('and the visitor asks for the reload, then it loads that page from the server', () => {
       recovery.reload();
 
-      expect(assign).toHaveBeenCalledExactlyOnceWith('/darce/prehled');
+      expect(loadFromServer).toHaveBeenCalledExactlyOnceWith('/darce/prehled');
     });
 
     it('and a later navigation succeeds, then the offer goes away', async () => {
-      await TestBed.inject(Router).navigateByUrl('/jinam');
+      await TestBed.inject(Router).navigateByUrl('/dale');
 
-      expect(recovery.failedUrl()).toBeNull();
+      expect(recovery.failure()).toBeNull();
+    });
+  });
+
+  it('when the first page fails to load and the guard refuses a reload, then the offer says no page is shown', () => {
+    claim.mockReturnValue(false);
+
+    recovery.handleNavigationError(failure(CHROME));
+
+    expect(recovery.failure()).toEqual({ url: '/darce/prehled', initial: true });
+  });
+
+  describe('when a lazy page fails to load while the browser is offline', () => {
+    beforeEach(async () => {
+      await showPage();
+      isOffline.mockReturnValue(true);
+      recovery.handleNavigationError(failure(CHROME));
+    });
+
+    it('then it keeps the reload of the guard and does not reload', () => {
+      expect(claim).not.toHaveBeenCalled();
+      expect(loadFromServer).not.toHaveBeenCalled();
+    });
+
+    it('then it offers a reload of that page', () => {
+      expect(recovery.failure()).toEqual({ url: '/darce/prehled', initial: false });
     });
   });
 
@@ -112,7 +146,7 @@ describe('Given the chunk-load recovery', () => {
     recovery.handleNavigationError(failure(new Error('guard failed')));
 
     expect(claim).not.toHaveBeenCalled();
-    expect(assign).not.toHaveBeenCalled();
-    expect(recovery.failedUrl()).toBeNull();
+    expect(loadFromServer).not.toHaveBeenCalled();
+    expect(recovery.failure()).toBeNull();
   });
 });

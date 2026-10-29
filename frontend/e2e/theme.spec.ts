@@ -3,6 +3,13 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { administrator, mockDonorApi, openSignInDialog, session } from './donor-session';
 import { expect, test } from './fixtures';
+import {
+  chunkLoadNotice,
+  chunkLoadPageHeading,
+  openHomeThenLoseNewChunks,
+  openPolicyFromFooter,
+  withoutSessionStorage,
+} from './lost-chunks';
 
 const THEME = process.env.E2E_THEME;
 const REFERENCE_THEME = 'nova-nadeje';
@@ -126,6 +133,27 @@ test.describe('Given the site built with another theme', () => {
       }
     });
   }
+
+  test('when the first page cannot be loaded, then its page of its own shows no colour or font of the default theme', async ({
+    page,
+  }) => {
+    await openHomeThenLoseNewChunks(page);
+    await openPolicyFromFooter(page);
+    await expect(page.getByRole('heading', chunkLoadPageHeading)).toBeVisible();
+
+    expect(await lookOfTheReferenceTheme(page)).toEqual([]);
+  });
+
+  test('when a later page cannot be loaded, then the reload bar shows no colour or font of the default theme', async ({
+    page,
+  }) => {
+    await withoutSessionStorage(page);
+    await openHomeThenLoseNewChunks(page);
+    await openPolicyFromFooter(page);
+    await expect(chunkLoadNotice(page)).toBeVisible();
+
+    expect(await lookOfTheReferenceTheme(page)).toEqual([]);
+  });
 
   test('when a visitor opens the sign-in dialog, then it shows no colour or font of the default theme', async ({
     page,

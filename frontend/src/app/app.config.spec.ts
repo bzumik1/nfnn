@@ -15,10 +15,10 @@ describe('Given the HTTP client of the app', () => {
 });
 
 describe('Given the router of the app', () => {
-  let assign: ReturnType<typeof vi.fn>;
+  let loadFromServer: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
-    assign = vi.fn();
+    loadFromServer = vi.fn();
     TestBed.configureTestingModule({
       providers: [
         provideRouter(
@@ -36,7 +36,7 @@ describe('Given the router of the app', () => {
           chunkLoadRecoveryFeature,
         ),
         { provide: ReloadGuard, useValue: { claim: () => true } },
-        { provide: ExternalNavigation, useValue: { assign } },
+        { provide: ExternalNavigation, useValue: { loadFromServer } },
       ],
     });
   });
@@ -46,6 +46,6 @@ describe('Given the router of the app', () => {
       .navigateByUrl('/aktuality')
       .catch(() => false);
 
-    expect(assign).toHaveBeenCalledExactlyOnceWith('/aktuality');
+    expect(loadFromServer).toHaveBeenCalledExactlyOnceWith('/aktuality');
   });
 });

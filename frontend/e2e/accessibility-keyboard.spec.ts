@@ -1,6 +1,12 @@
 import { Page } from '@playwright/test';
 import { expect, test } from './fixtures';
 import { mockDonorApi, openSignInDialog, signIn } from './donor-session';
+import {
+  chunkLoadNotice,
+  openHomeThenLoseNewChunks,
+  openPolicyFromFooter,
+  withoutSessionStorage,
+} from './lost-chunks';
 
 const WCAG_TEXT_SPACING =
   '* { line-height: 1.5 !important; letter-spacing: 0.12em !important; word-spacing: 0.16em !important; } p { margin-bottom: 2em !important; }';
@@ -178,6 +184,37 @@ test.describe('Given a visitor on a phone who uses only the keyboard', () => {
     );
   });
 });
+
+for (const width of [320, 390, 1280]) {
+  test.describe(`Given a visitor ${width} px wide whose next page could not be loaded`, () => {
+    test.use({ viewport: { width, height: 800 } });
+
+    test.beforeEach(async ({ page }) => {
+      await mockDonorApi(page);
+      await withoutSessionStorage(page);
+      await openHomeThenLoseNewChunks(page);
+      await openPolicyFromFooter(page);
+      await expect(chunkLoadNotice(page)).toBeVisible();
+    });
+
+    test('when they Tab back from the reload bar, then the bar hides neither the focused control nor the end of the page', async ({
+      page,
+    }) => {
+      await page.keyboard.press('Shift+Tab');
+
+      const covered = await page.evaluate(() => {
+        const bar = document.querySelector('app-chunk-load-notice [role="alert"]')!;
+        const barTop = bar.getBoundingClientRect().top;
+        const focused = document.activeElement!.getBoundingClientRect();
+        window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'instant' });
+        const footer = document.querySelector('footer')!.getBoundingClientRect();
+        return { focused: focused.bottom > barTop, pageEnd: footer.bottom > barTop };
+      });
+
+      expect(covered).toEqual({ focused: false, pageEnd: false });
+    });
+  });
+}
 
 test.describe('Given a visitor who zooms to 400 % or sets wider text spacing', () => {
   test.beforeEach(async ({ page }) => {

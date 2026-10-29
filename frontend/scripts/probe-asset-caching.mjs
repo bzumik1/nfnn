@@ -19,6 +19,8 @@ const NEVER_IMMUTABLE = [
   'manifest.json',
   'favicon.ico',
   'robots.txt',
+  'nested/chunk-ABCDEFGH.js',
+  'ngsw-ABCDEFGH.js',
 ];
 const MISSING_HASHED = ['/chunk-Zz_-9aBc.js', '/chunk-ZZZZZZZZ.js', '/styles-Ab-c_D12.css'];
 const MISSING_ASSETS = [
@@ -28,7 +30,11 @@ const MISSING_ASSETS = [
   '/ngsw-worker.js',
   '/manifest.webmanifest',
   '/fonts/missing-probe.woff2',
+  '/images/missing-probe.webp',
+  '/media/missing-probe.woff2',
 ];
+const IMMUTABLE_RULE = 'add_header Cache-Control $immutable_cache_control always;';
+const UNCACHED_ERROR = new Set(['no-store', 'no-cache']);
 const APP_ROUTES = ['/', '/darce/prehled', '/sprava', '/aktuality/nejaka-zprava'];
 
 const failures = [];
@@ -53,7 +59,7 @@ function expectedCacheControl(file) {
 
 function immutableLocationPatterns(conf) {
   return [...conf.matchAll(/location\s+~\*?\s+"([^"]+)"\s*\{([^{}]*)\}/g)]
-    .filter((match) => match[2].includes('immutable'))
+    .filter((match) => match[2].split('\n').some((line) => line.trim() === IMMUTABLE_RULE))
     .map((match) => new RegExp(match[1]));
 }
 
@@ -65,6 +71,7 @@ async function request(path) {
     cacheControl: response.headers.get('cache-control') ?? '',
     contentType: response.headers.get('content-type') ?? '',
     csp: response.headers.get('content-security-policy') ?? '',
+    server: response.headers.get('server') ?? '',
     body,
   };
 }
@@ -106,6 +113,9 @@ for (const file of built) {
   if (!answer.csp) {
     fail(`/${file} carries no Content-Security-Policy`);
   }
+  if (answer.server !== 'nginx') {
+    fail(`/${file} names the server as "${answer.server}", expected "nginx" without its version`);
+  }
 }
 
 for (const path of [...MISSING_HASHED, ...MISSING_ASSETS]) {
@@ -119,10 +129,8 @@ for (const path of [...MISSING_HASHED, ...MISSING_ASSETS]) {
   if (answer.body.includes('<app-root')) {
     fail(`missing ${path} answered with the app's index.html`);
   }
-  if (answer.cacheControl.includes('immutable')) {
-    fail(
-      `missing ${path} answered with "${answer.cacheControl}", so a 404 would be kept for a year`,
-    );
+  if (!UNCACHED_ERROR.has(answer.cacheControl)) {
+    fail(`missing ${path} answered with "${answer.cacheControl}", so its 404 could be kept`);
   }
   if (!answer.csp) {
     fail(`missing ${path} carries no Content-Security-Policy`);

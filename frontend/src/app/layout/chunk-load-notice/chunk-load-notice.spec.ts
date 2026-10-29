@@ -1,32 +1,50 @@
+import { Component } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { NavigationError, provideRouter } from '@angular/router';
+import { NavigationError, provideRouter, Router } from '@angular/router';
 
+import { Connectivity } from '../../core/navigation/connectivity';
 import { ExternalNavigation } from '../../core/navigation/external-navigation';
 import { ChunkLoadRecovery } from '../../core/reload/chunk-load-recovery';
 import { ReloadGuard } from '../../core/reload/reload-guard';
 import { ChunkLoadNotice } from './chunk-load-notice';
 
+@Component({ template: '' })
+class Page {}
+
+const MESSAGE =
+  'Stránku se nepodařilo otevřít. Web byl mezitím možná aktualizován nebo vypadlo připojení. Zkuste ji načíst znovu.';
+
 describe('Given the chunk-load notice', () => {
   let fixture: ComponentFixture<ChunkLoadNotice>;
-  let assign: ReturnType<typeof vi.fn>;
+  let loadFromServer: ReturnType<typeof vi.fn>;
 
   beforeEach(async () => {
-    assign = vi.fn();
+    loadFromServer = vi.fn();
     await TestBed.configureTestingModule({
       imports: [ChunkLoadNotice],
       providers: [
-        provideRouter([]),
+        provideRouter([
+          { path: 'jinam', component: Page },
+          { path: 'dale', component: Page },
+        ]),
         { provide: ReloadGuard, useValue: { claim: () => false } },
-        { provide: ExternalNavigation, useValue: { assign } },
+        { provide: ExternalNavigation, useValue: { loadFromServer } },
+        { provide: Connectivity, useValue: { isOffline: () => false } },
       ],
     }).compileComponents();
     fixture = TestBed.createComponent(ChunkLoadNotice);
     fixture.detectChanges();
   });
 
-  const alert = () => fixture.nativeElement.querySelector('[role="alert"]') as HTMLElement | null;
+  afterEach(() => document.documentElement.classList.remove('has-floating-notice'));
+
+  const element = () => fixture.nativeElement as HTMLElement;
+  const text = (selector: string) =>
+    element().querySelector(selector)?.textContent?.replace(/\s+/g, ' ').trim();
   const reloadButton = () =>
-    fixture.nativeElement.querySelector('button') as HTMLButtonElement | null;
+    Array.from(element().querySelectorAll('button')).find(
+      (button) => button.textContent?.trim() === 'Načíst znovu',
+    );
 
   async function failToLoad(): Promise<void> {
     TestBed.inject(ChunkLoadRecovery).handleNavigationError(
@@ -39,28 +57,73 @@ describe('Given the chunk-load notice', () => {
     await fixture.whenStable();
   }
 
-  it('when every page loaded, then it shows nothing', () => {
-    expect(alert()).toBeNull();
-    expect(reloadButton()).toBeNull();
+  it('when every page loaded, then it shows nothing and reserves no room', () => {
+    expect(element().textContent?.trim()).toBe('');
+    expect(document.documentElement.classList).not.toContain('has-floating-notice');
   });
 
-  describe('when a page could not be loaded and no automatic reload is left', () => {
-    beforeEach(failToLoad);
-
-    it('then an alert says the page did not open and why that may be', () => {
-      expect(alert()?.textContent?.replace(/\s+/g, ' ').trim()).toContain(
-        'Stránku se nepodařilo otevřít. Web mezitím mohl dostat novou verzi, nebo vypadlo připojení.',
-      );
+  describe('when a later page could not be loaded and no automatic reload is left', () => {
+    beforeEach(async () => {
+      await TestBed.inject(Router).navigateByUrl('/jinam');
+      await failToLoad();
     });
 
-    it('then it offers to load the page again', () => {
-      expect(reloadButton()?.textContent?.trim()).toBe('Načíst znovu');
+    it('then an alert over the page says the page did not open and what to do', () => {
+      expect(text('[role="alert"]')).toBe(`${MESSAGE} Načíst znovu`);
+      expect(element().querySelector('main')).toBeNull();
+    });
+
+    it('then its button takes the focus', () => {
+      expect(document.activeElement).toBe(reloadButton());
+    });
+
+    it('then the page keeps room for it at its end', () => {
+      expect(document.documentElement.classList).toContain('has-floating-notice');
     });
 
     it('and the visitor presses the button, then the page is loaded from the server', () => {
       reloadButton()?.click();
 
-      expect(assign).toHaveBeenCalledExactlyOnceWith('/aktuality');
+      expect(loadFromServer).toHaveBeenCalledExactlyOnceWith('/aktuality');
+    });
+
+    it('and a later navigation succeeds, then the alert goes and the room is given back', async () => {
+      await TestBed.inject(Router).navigateByUrl('/dale');
+      await fixture.whenStable();
+
+      expect(element().querySelector('[role="alert"]')).toBeNull();
+      expect(document.documentElement.classList).not.toContain('has-floating-notice');
+    });
+  });
+
+  describe('when the first page could not be loaded and no automatic reload is left', () => {
+    beforeEach(failToLoad);
+
+    it('then a page of its own says so under a main heading that takes the focus', () => {
+      const heading = element().querySelector('main h1');
+
+      expect(heading?.textContent?.trim()).toBe('Stránku se nepodařilo otevřít');
+      expect(document.activeElement).toBe(heading);
+      expect(text('main p')).toBe(
+        'Web byl mezitím možná aktualizován nebo vypadlo připojení. Zkuste ji načíst znovu.',
+      );
+    });
+
+    it('then it offers to load the page again or to go to the home page', () => {
+      expect(reloadButton()).toBeTruthy();
+      const home = element().querySelector<HTMLAnchorElement>('main a');
+      expect(home?.textContent?.trim()).toBe('Přejít na úvod');
+      expect(home?.getAttribute('href')).toBe('/');
+    });
+
+    it('then it reserves no room for a bar', () => {
+      expect(document.documentElement.classList).not.toContain('has-floating-notice');
+    });
+
+    it('and the visitor presses the button, then the page is loaded from the server', () => {
+      reloadButton()?.click();
+
+      expect(loadFromServer).toHaveBeenCalledExactlyOnceWith('/aktuality');
     });
   });
 });

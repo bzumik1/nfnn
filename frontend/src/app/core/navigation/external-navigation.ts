@@ -8,4 +8,8 @@ export class ExternalNavigation {
   assign(url: string): void {
     this.document.defaultView?.location.assign(url);
   }
+
+  loadFromServer(url: string): void {
+    this.assign(url);
+  }
 }

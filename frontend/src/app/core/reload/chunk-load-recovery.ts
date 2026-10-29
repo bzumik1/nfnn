@@ -17,13 +17,18 @@ export function isChunkLoadError(error: unknown): boolean {
   );
 }
 
+export interface ChunkLoadFailure {
+  readonly url: string;
+  readonly initial: boolean;
+}
+
 @Injectable({ providedIn: 'root' })
 export class ChunkLoadRecovery {
   private readonly guard = inject(ReloadGuard);
   private readonly navigation = inject(ExternalNavigation);
-  private readonly failed = signal<string | null>(null);
+  private readonly failed = signal<ChunkLoadFailure | null>(null);
 
-  readonly failedUrl = this.failed.asReadonly();
+  readonly failure = this.failed.asReadonly();
 
   constructor() {
     const subscription = inject(Router).events.subscribe((event) => {
@@ -39,16 +44,16 @@ export class ChunkLoadRecovery {
       return;
     }
     if (this.guard.claim('chunk-load')) {
-      this.navigation.assign(error.url);
+      this.navigation.loadFromServer(error.url);
       return;
     }
-    this.failed.set(error.url);
+    this.failed.set({ url: error.url, initial: false });
   }
 
   reload(): void {
-    const url = this.failed();
-    if (url !== null) {
-      this.navigation.assign(url);
+    const failure = this.failed();
+    if (failure !== null) {
+      this.navigation.loadFromServer(failure.url);
     }
   }
 }

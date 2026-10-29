@@ -19,27 +19,27 @@ describe('Given the App component', () => {
   });
 });
 
-describe('Given the App component after a page failed to load twice', () => {
+describe('Given the App component when no automatic reload is left', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [App],
       providers: [
         provideRouter([]),
         { provide: ReloadGuard, useValue: { claim: () => false } },
-        { provide: ExternalNavigation, useValue: { assign: vi.fn() } },
+        { provide: ExternalNavigation, useValue: { loadFromServer: vi.fn() } },
       ],
     }).compileComponents();
   });
 
-  it('when it renders, then it offers to load the page again', async () => {
+  it('when the first page fails to load, then it offers to load the page again', async () => {
     const fixture = TestBed.createComponent(App);
     TestBed.inject(ChunkLoadRecovery).handleNavigationError(
       new NavigationError(1, '/projekty', new TypeError('Importing a module script failed.')),
     );
     await fixture.whenStable();
 
-    expect(
-      (fixture.nativeElement.querySelector('[role="alert"]') as HTMLElement).textContent,
-    ).toContain('Načíst znovu');
+    expect((fixture.nativeElement.querySelector('main') as HTMLElement).textContent).toContain(
+      'Načíst znovu',
+    );
   });
 });
