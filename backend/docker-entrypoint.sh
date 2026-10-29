@@ -49,8 +49,9 @@ generate_backup_key() {
 adopt_backup_key() {
   [ -f "$ADOPTED_BACKUP_KEY" ] || return 0
   candidate=$(umask 077 && mktemp "$SECRETS_DIR/backup-key.adopt.XXXXXX")
-  head -c 200 "$ADOPTED_BACKUP_KEY" | grep -m 1 '^AGE-SECRET-KEY-' > "$candidate" || true
-  rm -f "$ADOPTED_BACKUP_KEY"
+  head -c 200 "$ADOPTED_BACKUP_KEY" 2>/dev/null | grep -m 1 '^AGE-SECRET-KEY-' > "$candidate" || true
+  setpriv --reuid=app --regid=app --clear-groups rm -f "$ADOPTED_BACKUP_KEY" 2>/dev/null || rm -f "$ADOPTED_BACKUP_KEY" 2>/dev/null \
+    || echo "Could not remove $ADOPTED_BACKUP_KEY; it is checked again at the next start"
   recorded=$(sed -n 's/^recipient=//p' "$ADOPTED_KEY_RECORD" 2>/dev/null | head -n 1)
   recipient=$(age-keygen -y "$candidate" 2>/dev/null || true)
   if [ -z "$recipient" ]; then
