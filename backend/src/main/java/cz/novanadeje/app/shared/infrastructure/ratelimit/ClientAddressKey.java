@@ -3,7 +3,6 @@ package cz.novanadeje.app.shared.infrastructure.ratelimit;
 import java.net.Inet4Address;
 import java.net.Inet6Address;
 import java.net.InetAddress;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -14,11 +13,11 @@ public record ClientAddressKey(String value) {
     private static final int NETWORK_HEXTETS = 4;
 
     public ClientAddressKey {
-        value = normalise(Objects.requireNonNull(value, "clientAddress"));
+        value = value == null ? NO_ADDRESS : normalise(value.strip());
     }
 
     public boolean isAddress() {
-        return true;
+        return !NO_ADDRESS.equals(value);
     }
 
     private static String normalise(String clientAddress) {
