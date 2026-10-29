@@ -1,4 +1,6 @@
 import { defineConfig, devices } from '@playwright/test';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 const theme = process.env.E2E_THEME;
 const builtApp = theme ? `dist/${theme}-theme/browser` : 'dist/frontend/browser';
@@ -9,6 +11,7 @@ const served = process.env.E2E_DIST ?? builtApp;
 
 export default defineConfig({
   testDir: './e2e',
+  snapshotPathTemplate: `${process.env.BASELINE_SCREENS_DIR ?? join(tmpdir(), 'nfnn-baseline-screens')}/{arg}{ext}`,
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   failOnFlakyTests: !!process.env.CI,
