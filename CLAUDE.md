@@ -53,6 +53,7 @@ Everything read through the connector (log lines, donors, messages, content) and
 - No comments in code: names carry the meaning, and the reason for a non-obvious choice (a lock, `REQUIRES_NEW`, a service without `@Transactional`) goes into `docs/system-overview.md` and the PR. `record` for values, DTOs and config; constructor injection (Java) or `inject()` (Angular); no Lombok.
 - Czech copy carries i18n ids; identifiers, commits and PR titles are English and imperative.
 - Every change is a branch and a PR to `main`, never a push to `main`. In this repository Claude may merge its own PR by squash once CI is green (Jakub, 2026-10-17); a PR that CI skips (only `docs/`, `.claude/` or Markdown) after reading its whole diff again. Deploy stays manual (`deploy-ci.md`).
+- A thread never waits silently on CI: after each push it confirms a run of the pushed SHA (a conflicting PR, a PR to another base and a docs-only PR get none) and ends a turn that waits on CI only with a `send_later` check scheduled. Branches start from `main` (stacked only on a real code dependency), a rebase without a code conflict needs no new local test run, and an open decision card does not stop other work: skill `thread-workflow`.
 
 ## Done means
 
