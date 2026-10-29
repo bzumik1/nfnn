@@ -2,10 +2,15 @@ package cz.novanadeje.app.cucumber.transcript;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.springframework.core.task.SimpleAsyncTaskExecutor;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Map;
+import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
@@ -58,6 +63,19 @@ class ApiTranscriptsTest {
     void should_fail_when_the_recorder_cannot_wait_for_asynchronous_work() {
         assertThatThrownBy(() -> ApiTranscriptHooks.awaitIdle(new SimpleAsyncTaskExecutor(), Duration.ofSeconds(1)))
                 .isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
+    @DisplayName("Given transcript files left by an earlier run, when a recording run starts, then the folder is emptied, so no stale file survives")
+    void should_empty_the_folder_when_a_recording_run_starts_given_files_of_an_earlier_run(@TempDir Path transcripts) throws IOException {
+        Files.createDirectories(transcripts.resolve("donors"));
+        Files.writeString(transcripts.resolve("donors/removed_feature.json"), "{}");
+
+        ApiTranscripts.startRun(transcripts);
+
+        try (Stream<Path> left = Files.walk(transcripts)) {
+            assertThat(left.filter(Files::isRegularFile)).isEmpty();
+        }
     }
 
     @Test

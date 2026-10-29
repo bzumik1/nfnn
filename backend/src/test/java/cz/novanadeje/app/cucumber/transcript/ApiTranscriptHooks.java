@@ -5,6 +5,7 @@ import cz.novanadeje.app.support.RecordingMailSender;
 import cz.novanadeje.app.support.RecordingSetupCodeAnnouncer;
 import io.cucumber.java.After;
 import io.cucumber.java.Before;
+import io.cucumber.java.BeforeAll;
 import io.cucumber.java.Scenario;
 import org.springframework.context.ApplicationContext;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -42,6 +43,13 @@ public class ApiTranscriptHooks {
         this.donors = donors;
         this.jdbc = jdbc;
         this.context = context;
+    }
+
+    @BeforeAll
+    public static void startRecordingRun() {
+        if (ApiTranscripts.recording()) {
+            ApiTranscripts.startRun(ApiTranscripts.directory());
+        }
     }
 
     @Before(order = AFTER_EVERY_OTHER_SET_UP)

@@ -93,7 +93,7 @@ class QrGoldenCasesTest {
             new TotpCase("an address with a dot", "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ", "jana.novakova@example.cz"),
             new TotpCase("an address with a plus sign", "MFRGGZDFMZTWQ2LKNNWG23TPOBYXE43U", "jana+sprava@example.cz"),
             new TotpCase("a long address", "KRUGKIDROVUWG2ZAMJZG653OEBTG66BA", "administrace.nadacniho.fondu.nova.nadeje@example.cz"),
-            new TotpCase("an address of a company domain", "ONSWG4TFOQQGC3TEEBZWK4TWMVZCAMZS", "ucetni@stavby.cz"));
+            new TotpCase("an address of a company domain", "ONSWG4TFOQQGC3TEEBZWK4TWMVZCAMZS", "ucetni@stavby.example.cz"));
 
     private final JsonMapper json = JsonMapper.builder().build();
 

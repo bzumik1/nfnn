@@ -219,6 +219,22 @@ class ScenarioTranscriptTest {
     }
 
     @Test
+    @DisplayName("Given a masked value with spaces, hyphens or characters JSON escapes, when another part still carries it compacted or escaped, then writing the transcript fails")
+    void should_fail_when_a_masked_value_is_still_present_compacted_or_json_escaped() {
+        ScenarioTranscript compacted = new ScenarioTranscript();
+        compacted.logs(List.of(new RecordedLogLine("INFO", "cz.novanadeje.app.donors.X", "Recovery with OBNOVA RFFT WBF9", ""),
+                new RecordedLogLine("INFO", "cz.novanadeje.app.donors.Y", "Code RFFTWBF9 was used", "")));
+        RecordedExchange signIn = new RecordedExchange("POST", "/api/donors/auth/login", Map.of(), json.readTree("{\"password\":\"Heslo\\\"12\\\\34\"}"), 200,
+                new HttpHeaders(), new byte[0]);
+        ScenarioTranscript escaped = new ScenarioTranscript();
+        escaped.exchange(signIn);
+        escaped.logs(List.of(new RecordedLogLine("INFO", "cz.novanadeje.app.donors.X", "Signed in with Heslo\"12\\34", "")));
+
+        assertThatThrownBy(() -> compacted.toJson(Map.of())).isInstanceOf(IllegalStateException.class);
+        assertThatThrownBy(() -> escaped.toJson(Map.of())).isInstanceOf(IllegalStateException.class).hasMessageNotContaining("Heslo");
+    }
+
+    @Test
     @DisplayName("Given a known random value, when it is still present URL-encoded after normalising, then writing the transcript fails")
     void should_fail_when_a_known_value_is_still_present_url_encoded() {
         ScenarioTranscript transcript = new ScenarioTranscript();

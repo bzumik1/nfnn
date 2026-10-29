@@ -38,6 +38,7 @@ final class BaselineHygiene {
     static final Set<String> TEST_TOTP_SECRETS = Set.of("JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP", "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
             "MFRGGZDFMZTWQ2LKNNWG23TPOBYXE43U", "KRUGKIDROVUWG2ZAMJZG653OEBTG66BA", "ONSWG4TFOQQGC3TEEBZWK4TWMVZCAMZS");
     private static final Set<String> EXPLICIT_ADDRESSES = Set.of("info@nfnn.cz");
+    private static final Set<String> DENIED_ADDRESSES = Set.of("ucetni@stavby.cz");
     private static final Pattern TOTP_SECRET = Pattern.compile("(?<![A-Za-z0-9])[A-Z2-7]{32}(?![A-Za-z0-9])");
     private static final Pattern SECRET_PARAMETER = Pattern.compile("(?i)secret=(?!<)");
     private static final Pattern SECRET_SETTING = Pattern.compile("[A-Z0-9_]*(PASSWORD|TOKEN|SECRET|KEY)");
@@ -97,7 +98,9 @@ final class BaselineHygiene {
         Matcher addresses = EMAIL.matcher(text);
         while (addresses.find()) {
             String address = addresses.group().toLowerCase(Locale.ROOT);
-            if (!fixtures.addresses().contains(address) && !isFixtureDomain(address.substring(address.indexOf('@') + 1))) {
+            if (DENIED_ADDRESSES.contains(address)) {
+                findings.add(file + ": a denied address " + address);
+            } else if (!fixtures.addresses().contains(address) && !isFixtureDomain(address.substring(address.indexOf('@') + 1))) {
                 findings.add(file + ": an address no fixture uses " + address);
             }
         }

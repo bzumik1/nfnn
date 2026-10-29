@@ -14,11 +14,13 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.stream.Stream;
 
 public final class ApiTranscripts {
 
@@ -48,13 +50,32 @@ public final class ApiTranscripts {
         int ordinal = SCENARIO_ORDINALS.merge(feature + "\n" + scenarioName, 1, Integer::sum);
         ObjectNode file = FEATURES.computeIfAbsent(feature, ApiTranscripts::emptyFeature);
         ((ObjectNode) file.get("scenarios")).set(scenarioName + " #" + ordinal, transcript);
-        Path target = Path.of(System.getProperty(DIRECTORY, "build/api-transcripts")).resolve(feature + ".json");
+        Path target = directory().resolve(feature + ".json");
         try {
             Files.createDirectories(target.getParent());
             Files.writeString(target, CanonicalJson.write(file), StandardCharsets.UTF_8);
         } catch (IOException unwritable) {
             throw new UncheckedIOException(unwritable);
         }
+    }
+
+    static synchronized void startRun(Path directory) {
+        FEATURES.clear();
+        SCENARIO_ORDINALS.clear();
+        if (!Files.exists(directory)) {
+            return;
+        }
+        try (Stream<Path> stale = Files.walk(directory)) {
+            for (Path path : stale.sorted(Comparator.reverseOrder()).filter(path -> !path.equals(directory)).toList()) {
+                Files.delete(path);
+            }
+        } catch (IOException undeletable) {
+            throw new UncheckedIOException(undeletable);
+        }
+    }
+
+    static Path directory() {
+        return Path.of(System.getProperty(DIRECTORY, "build/api-transcripts"));
     }
 
     static String scenarioKey(String featureText, String name, int line) {

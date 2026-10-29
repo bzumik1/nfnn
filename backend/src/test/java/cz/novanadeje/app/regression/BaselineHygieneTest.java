@@ -66,6 +66,15 @@ class BaselineHygieneTest {
     }
 
     @Test
+    @DisplayName("Given an address on the deny list, when text is checked, then it is reported even though a test spells it out")
+    void should_report_a_denied_address_when_text_is_checked_even_if_a_test_spells_it_out() {
+        BaselineHygiene.Fixtures fixtures = new BaselineHygiene.Fixtures(Set.of("ucetni@stavby.cz"), Set.of());
+
+        assertThat(BaselineHygiene.findings("totp.json", "{\"accountName\":\"Ucetni@stavby.cz\"}", fixtures))
+                .singleElement().satisfies(finding -> assertThat(finding).contains("a denied address ucetni@stavby.cz"));
+    }
+
+    @Test
     @DisplayName("Given a setting whose name marks a secret, when a JSON file is checked, then an unmasked value is reported and a masked, empty or other one is not")
     void should_report_an_unmasked_secret_setting_when_a_json_file_is_checked() {
         String text = """

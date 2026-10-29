@@ -37,6 +37,19 @@ class RateLimiterWindowsTest {
         assertThatThrownBy(() -> RateLimiterWindows.reset(List.of("not a limiter"))).isInstanceOf(IllegalStateException.class);
     }
 
+    @Test
+    @DisplayName("Given a rate limiter bean whose limiter it cannot read, when windows are reset, then it fails naming the bean, so no window survives unseen")
+    void should_fail_naming_the_bean_when_a_rate_limiter_bean_hides_its_limiter() {
+        LimiterHolder readable = new LimiterHolder(new FixedWindowRateLimiter(1, Duration.ofMinutes(15), fixed));
+        HiddenRateLimiter hidden = new HiddenRateLimiter(new FixedWindowRateLimiter(1, Duration.ofMinutes(15), fixed));
+
+        assertThatThrownBy(() -> RateLimiterWindows.reset(List.of(readable, hidden)))
+                .isInstanceOf(IllegalStateException.class).hasMessageContaining("HiddenRateLimiter");
+    }
+
+    private record HiddenRateLimiter(Object limiter) {
+    }
+
     private record LimiterHolder(FixedWindowRateLimiter limiter) {
     }
 }

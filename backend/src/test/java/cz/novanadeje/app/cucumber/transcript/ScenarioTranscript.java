@@ -55,6 +55,8 @@ public final class ScenarioTranscript {
     private static final Pattern ANY_ID = Pattern.compile("(?i)[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}");
     private static final String ERRORS = "errors";
     private static final String ROOT = "$";
+    private static final Pattern SPACES_AND_HYPHENS = Pattern.compile("[\\s-]+");
+    private static final int LEAK_CHECK_MINIMUM_LENGTH = 8;
     private static final Pattern HEAD = Pattern.compile("(?is)<(head|style|script)\\b.*?</\\1>|<!--.*?-->");
     private static final Pattern TAG = Pattern.compile("(?s)<[^>]*>");
     private static final Pattern HREF = Pattern.compile("(?i)\\bhref\\s*=\\s*\"([^\"]*)\"");
@@ -117,9 +119,13 @@ public final class ScenarioTranscript {
 
     private static void refuseMaskedValuesLeft(String written, Set<String> maskedValues) {
         for (String masked : maskedValues) {
-            if (written.contains(masked) || written.contains(URLEncoder.encode(masked, StandardCharsets.UTF_8))) {
+            String compacted = SPACES_AND_HYPHENS.matcher(masked).replaceAll("");
+            String escaped = JSON.writeValueAsString(masked);
+            List<String> forms = List.of(masked, URLEncoder.encode(masked, StandardCharsets.UTF_8), escaped.substring(1, escaped.length() - 1),
+                    compacted.length() >= masked.length() || compacted.length() < LEAK_CHECK_MINIMUM_LENGTH ? masked : compacted);
+            if (forms.stream().anyMatch(written::contains)) {
                 throw new IllegalStateException("A value of " + masked.length() + " characters that the transcript masks is still in it, "
-                        + "raw or URL-encoded; extend the masking in TranscriptNormaliser before recording");
+                        + "raw, URL-encoded, JSON-escaped or without spaces and hyphens; extend the masking in TranscriptNormaliser before recording");
             }
         }
     }

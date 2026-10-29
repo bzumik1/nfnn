@@ -2,6 +2,7 @@ package cz.novanadeje.app.support;
 
 import cz.novanadeje.app.shared.infrastructure.ratelimit.FixedWindowRateLimiter;
 import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.util.ClassUtils;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
@@ -14,6 +15,7 @@ import java.util.stream.Stream;
 
 public final class RateLimiterWindows {
 
+    private static final String RATE_LIMITER = "RateLimiter";
     private static final String CAFFEINE_CACHE = "com.github.benmanes.caffeine.cache.Cache";
 
     private RateLimiterWindows() {
@@ -28,7 +30,13 @@ public final class RateLimiterWindows {
     public static int reset(Collection<?> beans) {
         int reset = 0;
         for (Object bean : beans) {
-            for (FixedWindowRateLimiter limiter : limitersOf(bean)) {
+            List<FixedWindowRateLimiter> limiters = limitersOf(bean);
+            Class<?> type = ClassUtils.getUserClass(bean);
+            if (limiters.isEmpty() && type != FixedWindowRateLimiter.class && type.getSimpleName().endsWith(RATE_LIMITER)) {
+                throw new IllegalStateException("The bean " + type.getName() + " holds no FixedWindowRateLimiter that RateLimiterWindows can read, "
+                        + "so its windows would survive into the next scenario; adapt RateLimiterWindows");
+            }
+            for (FixedWindowRateLimiter limiter : limiters) {
                 invalidateWindows(limiter);
                 reset++;
             }
