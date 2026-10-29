@@ -26,5 +26,8 @@ A new feature covers: happy path and each rule as scenarios; validation and prob
 ## Connector (`mcp/`)
 - Vitest specs in `mcp/test/*.spec.ts`, same naming (`describe('Given …')` → `it('when …, then …')`); the backend is `test/fake-backend.ts`, never a real one.
 
+## Logic on both sides
+- A computation the backend and the frontend both perform (local first, `backend.md`: the administration's overviews and totals, receipt data formatting, the payment QR text) is specified once as shared test cases, inputs and expected outputs in one data file, and the backend and the frontend suites both run every case (Jakub 2026-10-28). A change to the computation changes the cases first, so neither side can pass with its own idea of the result.
+
 ## Running
 What to run before "done" is in `CLAUDE.md` (Done means); `./gradlew build` is what the PR check runs for the backend. In a cloud session: skill `cloud-session`.
