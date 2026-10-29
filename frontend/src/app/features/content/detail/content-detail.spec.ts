@@ -5,7 +5,8 @@ import { Title } from '@angular/platform-browser';
 import { ActivatedRoute, convertToParamMap, provideRouter, Router } from '@angular/router';
 import { IMAGE_ID, newsArticle } from '../testing/news-fixtures';
 import { project } from '../testing/project-fixtures';
-import { ContentDetail, ContentKind } from './content-detail';
+import { ContentDetail } from './content-detail';
+import { ContentKind } from './content-page';
 
 function problem(status: number, type: string) {
   return {

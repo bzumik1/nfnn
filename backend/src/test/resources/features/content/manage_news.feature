@@ -103,18 +103,28 @@ Feature: An administrator writes news articles with photos and publishes them on
     When someone without a token asks for the news article "beneficni-koncert"
     Then the response status is 404
 
-  Scenario: An article published with a future date appears on the site on that day
+  Scenario: An article published with a future date appears on the site on that day, and the administration says when it is live
     Given "Jana" creates a news article:
       | title | Vánoční sbírka       |
       | perex | Sbírka začne brzy.   |
       | body  | Text o sbírce.       |
+    And the news article says:
+      | live | false |
     When "Jana" publishes the news article "vanocni-sbirka" on 2026-11-01
-    And someone without a token asks for the news articles
+    Then the news article says:
+      | publishedOn | 2026-11-01 |
+      | live        | false      |
+    When someone without a token asks for the news articles
     Then the news list has 0 items
     When today is 2026-11-01
-    And someone without a token asks for the news articles
+    And "Jana" asks for the news article "vanocni-sbirka"
+    Then the news article says:
+      | live | true |
+    When someone without a token asks for the news articles
     Then the news list titles are:
       | Vánoční sbírka |
+    And the news list says:
+      | items.0.live | true |
 
   Scenario: The public list is paged
     Given "Jana" has published 12 news articles titled "Aktualita" from 2026-09-01 on

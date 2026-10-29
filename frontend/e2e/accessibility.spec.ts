@@ -110,6 +110,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
       body: 'První odstavec.\n\nDruhý odstavec.',
       coverImage: { id: imageId, url: `/api/content/media/${imageId}`, alt: null },
       publishedOn: '2026-10-20',
+      live: true,
       createdAt: '2026-10-19T09:00:00Z',
       updatedAt: '2026-10-20T07:30:00Z',
     };
@@ -1277,7 +1278,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     expect(await violations(page)).toEqual([]);
   });
 
-  test('when an administrator writes a news article, then the list, the editor with its errors and the deletion confirmation break no rule', async ({
+  test('when an administrator writes a news article, then the list, the editor with its errors, its preview and the deletion confirmation break no rule', async ({
     page,
   }) => {
     const articleId = '0199f3e0-0000-7000-8000-00000000c001';
@@ -1291,6 +1292,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
       body: 'První odstavec.\n\nDruhý odstavec.',
       coverImage: { id: imageId, url: `/api/content/media/${imageId}`, alt: null },
       publishedOn: '2026-10-20',
+      live: true,
       createdAt: '2026-10-19T09:00:00Z',
       updatedAt: '2026-10-20T07:30:00Z',
     };
@@ -1309,7 +1311,9 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
                 tag: null,
                 coverImage: null,
                 publishedOn: null,
+                live: false,
               },
+              { ...article, id: 'y', slug: 'pozdeji', publishedOn: '2026-12-01', live: false },
             ],
           },
         }),
@@ -1334,7 +1338,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
 
     await page.goto('/sprava/aktuality');
     await expect(page.getByRole('heading', { level: 1, name: 'Aktuality' })).toBeFocused();
-    await expect(page.locator('tbody tr')).toHaveCount(2);
+    await expect(page.locator('tbody tr')).toHaveCount(3);
 
     expect(await violations(page)).toEqual([]);
 
@@ -1348,15 +1352,19 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     await page.goto(`/sprava/aktuality/${articleId}`);
     await expect(page.getByRole('heading', { level: 1, name: 'Úprava aktuality' })).toBeFocused();
     await expect(page.locator('.image-preview')).toBeVisible();
-    await page.getByRole('button', { name: 'Ukázat náhled' }).click();
-    await expect(page.getByRole('region', { name: 'Náhled textu' })).toBeVisible();
+    await page.getByRole('button', { name: 'Náhled', exact: true }).click();
+    await expect(page.getByRole('heading', { level: 2, name: 'Stránka aktuality' })).toBeVisible();
+
+    expect(await violations(page)).toEqual([]);
+
+    await page.getByRole('button', { name: 'Upravit', exact: true }).click();
     await page.getByRole('button', { name: 'Smazat aktualitu' }).click();
     await expect(page.getByRole('group', { name: 'Smazat aktualitu?' })).toBeVisible();
 
     expect(await violations(page)).toEqual([]);
   });
 
-  test('when an administrator writes a project, then the list, the editor with its errors and the deletion confirmation break no rule', async ({
+  test('when an administrator writes a project, then the list, the editor with its errors, its preview and the deletion confirmation break no rule', async ({
     page,
   }) => {
     const projectId = '0199f3e0-0000-7000-8000-00000000c001';
@@ -1390,7 +1398,9 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
                 tag: null,
                 coverImage: null,
                 publishedOn: null,
+                live: false,
               },
+              { ...project, id: 'y', slug: 'pozdeji', publishedOn: '2026-12-01', live: false },
             ],
           },
         }),
@@ -1415,7 +1425,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
 
     await page.goto('/sprava/projekty');
     await expect(page.getByRole('heading', { level: 1, name: 'Projekty' })).toBeFocused();
-    await expect(page.locator('tbody tr')).toHaveCount(2);
+    await expect(page.locator('tbody tr')).toHaveCount(3);
 
     expect(await violations(page)).toEqual([]);
 
@@ -1431,6 +1441,12 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     await page.goto(`/sprava/projekty/${projectId}`);
     await expect(page.getByRole('heading', { level: 1, name: 'Úprava projektu' })).toBeFocused();
     await expect(page.locator('.image-preview')).toBeVisible();
+    await page.getByRole('button', { name: 'Náhled', exact: true }).click();
+    await expect(page.getByRole('heading', { level: 2, name: 'Stránka projektu' })).toBeVisible();
+
+    expect(await violations(page)).toEqual([]);
+
+    await page.getByRole('button', { name: 'Upravit', exact: true }).click();
     await page.getByRole('button', { name: 'Smazat projekt' }).click();
     await expect(page.getByRole('group', { name: 'Smazat projekt?' })).toBeVisible();
 

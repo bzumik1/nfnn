@@ -1,0 +1,54 @@
+<article class="detail" [class.detail--preview]="preview()">
+  <header class="ui-intro">
+    <div class="ui-container">
+      <p class="crumbs">
+        <a [routerLink]="page().backPath">
+          @if (kind() === 'news') {
+            <ng-container i18n="@@content.detail.back.news">← Všechny aktuality</ng-container>
+          } @else {
+            <ng-container i18n="@@content.detail.back.projects">← Všechny projekty</ng-container>
+          }
+        </a>
+      </p>
+      <p class="ui-eyebrow ui-eyebrow--on-inverse">{{ page().eyebrow }}</p>
+      @if (preview()) {
+        <h3 class="ui-intro__title ui-intro__title--article">{{ page().title }}</h3>
+      } @else {
+        <h1 #heading class="ui-intro__title ui-intro__title--article" tabindex="-1">
+          {{ page().title }}
+        </h1>
+      }
+      <p class="ui-intro__lead">{{ page().perex }}</p>
+    </div>
+  </header>
+
+  <div class="body ui-container">
+    @if (image(); as src) {
+      <figure class="photo">
+        <img
+          [src]="src"
+          [srcset]="imageSet()"
+          sizes="(max-width: 1100px) 100vw, 960px"
+          width="960"
+          height="600"
+          [alt]="page().imageAlt"
+          class="real-img"
+        />
+      </figure>
+    }
+    <app-markdown class="prose" [text]="page().body" />
+    <p class="actions-lead" i18n="@@content.detail.donateLead">
+      Chcete pomoct dalším dětem? Přispějte na jejich pomůcky.
+    </p>
+    <p class="actions">
+      <a class="ui-cta" routerLink="/" fragment="prispet" i18n="@@content.detail.donate">Přispět</a>
+      <a class="ui-cta ui-cta--ghost" [routerLink]="page().backPath">
+        @if (kind() === 'news') {
+          <ng-container i18n="@@content.detail.back.news.again">Zpět na aktuality</ng-container>
+        } @else {
+          <ng-container i18n="@@content.detail.back.projects.again">Zpět na projekty</ng-container>
+        }
+      </a>
+    </p>
+  </div>
+</article>

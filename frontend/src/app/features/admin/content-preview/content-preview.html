@@ -1,0 +1,43 @@
+<div class="content-preview">
+  <p class="preview-intro" i18n="@@admin.contentPreview.intro">
+    Takhle to uvidí návštěvníci webu, včetně neuložených změn. Zpět k psaní se vrátíte tlačítkem
+    Upravit.
+  </p>
+
+  <section class="preview-part" aria-labelledby="content-preview-card">
+    <h2 id="content-preview-card" class="preview-title">
+      @if (news()) {
+        <ng-container i18n="@@admin.contentPreview.card.news"
+          >Karta na úvodní stránce a v seznamu aktualit</ng-container
+        >
+      } @else {
+        <ng-container i18n="@@admin.contentPreview.card.project"
+          >Karta na úvodní stránce a v seznamu projektů</ng-container
+        >
+      }
+    </h2>
+    <div class="card-band">
+      <div class="card-frame">
+        @if (news(); as item) {
+          <app-news-card [item]="item" [linked]="false" />
+        }
+        @if (project(); as item) {
+          <app-project-card [item]="item" [linked]="false" />
+        }
+      </div>
+    </div>
+  </section>
+
+  <section class="preview-part" aria-labelledby="content-preview-page">
+    <h2 id="content-preview-page" class="preview-title">
+      @if (news()) {
+        <ng-container i18n="@@admin.contentPreview.page.news">Stránka aktuality</ng-container>
+      } @else {
+        <ng-container i18n="@@admin.contentPreview.page.project">Stránka projektu</ng-container>
+      }
+    </h2>
+    <div class="page-frame">
+      <app-content-article [page]="page()" [kind]="content().kind" [preview]="true" />
+    </div>
+  </section>
+</div>

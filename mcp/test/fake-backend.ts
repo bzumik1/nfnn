@@ -326,7 +326,17 @@ function adminRoute(request: RecordedRequest, url: URL, body: string): [number, 
     case 'GET /api/admin/content/news':
       return [
         200,
-        { items: [{ id: UNKNOWN_ID, title: 'Koncept', body: 'Dlouhý text aktuality.' }] },
+        {
+          items: [
+            {
+              id: UNKNOWN_ID,
+              title: 'Koncept',
+              publishedOn: '2026-11-01',
+              live: false,
+              body: 'Dlouhý text aktuality.',
+            },
+          ],
+        },
       ];
     case 'GET /api/admin/content/projects':
       return [200, { items: [] }];
