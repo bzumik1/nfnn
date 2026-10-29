@@ -246,9 +246,9 @@
             }
           }
         },
-        "POST /api/admin/operations/backups/nfnn-2026-10-22_0300.dump/restore #1": {
+        "POST /api/admin/operations/backups/nfnn-2026-10-22_0300.dump.age/restore #1": {
           "request": {
-            "path": "/api/admin/operations/backups/nfnn-2026-10-22_0300.dump/restore",
+            "path": "/api/admin/operations/backups/nfnn-2026-10-22_0300.dump.age/restore",
             "headers": {
               "Authorization": "Bearer <jwt>"
             },
@@ -266,7 +266,7 @@
               "x-xss-protection": "0"
             },
             "body": {
-              "fileName": "nfnn-2026-10-22_0300.dump",
+              "fileName": "nfnn-2026-10-22_0300.dump.age",
               "requestId": "<id:2>",
               "requestedAt": "2026-10-23T10:00:00Z"
             }
@@ -295,11 +295,16 @@
               "backups": [
                 {
                   "createdAt": "2026-10-22T01:00:00Z",
-                  "fileName": "nfnn-2026-10-22_0300.dump",
+                  "fileName": "nfnn-2026-10-22_0300.dump.age",
                   "kind": "DAILY",
                   "sizeBytes": 1000
                 }
               ],
+              "key": {
+                "available": true,
+                "confirmed": false,
+                "confirmedAt": null
+              },
               "lastBackup": null,
               "lastRestore": null,
               "lastTestRestore": null,
@@ -318,9 +323,9 @@
             }
           }
         },
-        "POST /api/admin/operations/backups/nfnn-2026-10-22_0300.dump/restore #2": {
+        "POST /api/admin/operations/backups/nfnn-2026-10-22_0300.dump.age/restore #2": {
           "request": {
-            "path": "/api/admin/operations/backups/nfnn-2026-10-22_0300.dump/restore",
+            "path": "/api/admin/operations/backups/nfnn-2026-10-22_0300.dump.age/restore",
             "headers": {
               "Authorization": "Bearer <jwt>"
             },
@@ -339,7 +344,7 @@
             },
             "body": {
               "detail": "Jedna obnova ze zálohy už čeká na kontejner záloh nebo právě běží. Počkejte, až skončí.",
-              "instance": "/api/admin/operations/backups/nfnn-2026-10-22_0300.dump/restore",
+              "instance": "/api/admin/operations/backups/nfnn-2026-10-22_0300.dump.age/restore",
               "status": 409,
               "title": "Obnova už čeká",
               "type": "https://nfnn.cz/problems/operations/restore-pending"
@@ -414,7 +419,7 @@
         "INFO donors.application.DonorEmailVerificationService: E-mail verification link issued for donor <id:1>",
         "INFO donors.application.DonorSecondFactorService: Second factor enabled for donor <id:1>, every session revoked",
         "INFO donors.application.DonorSecondFactorService: Second factor set-up started for donor <id:1>",
-        "INFO operations.application.backup.BackupRestoreService: Admin <id:1> requested a restore of nfnn-2026-10-22_0300.dump as request <id:2>; the backend restarts",
+        "INFO operations.application.backup.BackupRestoreService: Admin <id:1> requested a restore of nfnn-2026-10-22_0300.dump.age as request <id:2>; the backend restarts",
         "INFO shared.infrastructure.audit.AdminActionLog: Admin <id:1> performed RESTORE_BACKUP on nothing"
       ]
     },
@@ -662,9 +667,9 @@
             }
           }
         },
-        "POST /api/admin/operations/backups/nfnn-2026-10-21_0300.dump/restore #1": {
+        "POST /api/admin/operations/backups/nfnn-2026-10-21_0300.dump.age/restore #1": {
           "request": {
-            "path": "/api/admin/operations/backups/nfnn-2026-10-21_0300.dump/restore",
+            "path": "/api/admin/operations/backups/nfnn-2026-10-21_0300.dump.age/restore",
             "headers": {
               "Authorization": "Bearer <jwt>"
             },
@@ -683,7 +688,7 @@
             },
             "body": {
               "detail": "Taková záloha ve složce záloh není.",
-              "instance": "/api/admin/operations/backups/nfnn-2026-10-21_0300.dump/restore",
+              "instance": "/api/admin/operations/backups/nfnn-2026-10-21_0300.dump.age/restore",
               "status": 404,
               "title": "Záloha nenalezena",
               "type": "https://nfnn.cz/problems/operations/backup-not-found"
@@ -1204,9 +1209,9 @@
             }
           }
         },
-        "POST /api/admin/operations/backups/nfnn-2026-10-22_0300.dump/restore #1": {
+        "POST /api/admin/operations/backups/nfnn-2026-10-22_0300.dump.age/restore #1": {
           "request": {
-            "path": "/api/admin/operations/backups/nfnn-2026-10-22_0300.dump/restore",
+            "path": "/api/admin/operations/backups/nfnn-2026-10-22_0300.dump.age/restore",
             "headers": {
               "Authorization": "Bearer <jwt>"
             },
@@ -1224,16 +1229,16 @@
               "x-xss-protection": "0"
             },
             "body": {
-              "instance": "/api/admin/operations/backups/nfnn-2026-10-22_0300.dump/restore",
+              "instance": "/api/admin/operations/backups/nfnn-2026-10-22_0300.dump.age/restore",
               "status": 403,
               "title": "Access denied",
               "type": "https://nfnn.cz/problems/auth/forbidden"
             }
           }
         },
-        "POST /api/admin/operations/backups/nfnn-2026-10-22_0300.dump/restore #2": {
+        "POST /api/admin/operations/backups/nfnn-2026-10-22_0300.dump.age/restore #2": {
           "request": {
-            "path": "/api/admin/operations/backups/nfnn-2026-10-22_0300.dump/restore",
+            "path": "/api/admin/operations/backups/nfnn-2026-10-22_0300.dump.age/restore",
             "headers": {
               "Authorization": "Bearer <jwt>"
             },
@@ -1251,16 +1256,16 @@
               "x-xss-protection": "0"
             },
             "body": {
-              "instance": "/api/admin/operations/backups/nfnn-2026-10-22_0300.dump/restore",
+              "instance": "/api/admin/operations/backups/nfnn-2026-10-22_0300.dump.age/restore",
               "status": 403,
               "title": "Access denied",
               "type": "https://nfnn.cz/problems/auth/forbidden"
             }
           }
         },
-        "POST /api/admin/operations/backups/nfnn-2026-10-22_0300.dump/restore #3": {
+        "POST /api/admin/operations/backups/nfnn-2026-10-22_0300.dump.age/restore #3": {
           "request": {
-            "path": "/api/admin/operations/backups/nfnn-2026-10-22_0300.dump/restore",
+            "path": "/api/admin/operations/backups/nfnn-2026-10-22_0300.dump.age/restore",
             "body": {}
           },
           "response": {
@@ -1275,7 +1280,7 @@
               "x-xss-protection": "0"
             },
             "body": {
-              "instance": "/api/admin/operations/backups/nfnn-2026-10-22_0300.dump/restore",
+              "instance": "/api/admin/operations/backups/nfnn-2026-10-22_0300.dump.age/restore",
               "status": 401,
               "title": "Sign-in required",
               "type": "https://nfnn.cz/problems/auth/unauthenticated"
@@ -1700,7 +1705,7 @@
         "INFO donors.application.DonorEmailVerificationService: E-mail verification link issued for donor <id:1>",
         "INFO donors.application.DonorSecondFactorService: Second factor enabled for donor <id:1>, every session revoked",
         "INFO donors.application.DonorSecondFactorService: Second factor set-up started for donor <id:1>",
-        "INFO operations.application.backup.BackupRestoreService: The restore of nfnn-2026-10-22_0300.dump (request <id:2>) finished and is recorded in the administration history",
+        "INFO operations.application.backup.BackupRestoreService: The restore of nfnn-2026-10-22_0300.dump.age (request <id:2>) finished and is recorded in the administration history",
         "INFO shared.infrastructure.audit.AdminActionLog: Admin <id:1> performed BACKUP_RESTORED on nothing"
       ]
     },
@@ -2017,7 +2022,7 @@
         "INFO donors.application.DonorSecondFactorService: Second factor enabled for donor <id:1>, every session revoked",
         "INFO donors.application.DonorSecondFactorService: Second factor set-up started for donor <id:1>",
         "INFO shared.infrastructure.audit.AdminActionLog: Admin <id:1> performed BACKUP_RESTORE_FAILED on nothing",
-        "WARN operations.application.backup.BackupRestoreService: The restore of nfnn-2026-10-22_0300.dump (request <id:2>) failed; the data stayed as they were"
+        "WARN operations.application.backup.BackupRestoreService: The restore of nfnn-2026-10-22_0300.dump.age (request <id:2>) failed; the data stayed as they were"
       ]
     },
     "Directly from the home network a new server takes an uploaded backup in the first setup and restarts #1": {
@@ -2058,6 +2063,75 @@
         "INFO operations.application.settings.SetupService: A backup is uploaded in the first setup from the home network"
       ]
     },
+    "The key of an encrypted backup may be typed as its 24 words, and waits beside it in its usual form #1": {
+      "requests": {
+        "PUT /api/operations/setup/restore #1": {
+          "request": {
+            "path": "/api/operations/setup/restore",
+            "headers": {
+              "X-Nfnn-Direct": "1"
+            },
+            "body": {
+              "sha256": "bc1f9fe259c75170ba7f7975b8d3074e9bf5b6fc19912722936f84f867bce0ce",
+              "size": 46
+            }
+          },
+          "response": {
+            "status": 202,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "fileName": "<id:1>.upload",
+              "requestId": "<id:1>",
+              "requestedAt": "2026-10-23T10:00:00Z"
+            }
+          }
+        },
+        "PUT /api/operations/setup/restore #2": {
+          "request": {
+            "path": "/api/operations/setup/restore",
+            "headers": {
+              "X-Nfnn-Direct": "1"
+            },
+            "body": {
+              "sha256": "bc1f9fe259c75170ba7f7975b8d3074e9bf5b6fc19912722936f84f867bce0ce",
+              "size": 46
+            }
+          },
+          "response": {
+            "status": 400,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/problem+json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "detail": "Klíč začíná AGE-SECRET-KEY-1 a má 74 znaků, nebo je to 24 slov. Zkontrolujte, že jste ho opsali nebo vložili celý a bez překlepu.",
+              "instance": "/api/operations/setup/restore",
+              "status": 400,
+              "title": "Tohle není klíč k zálohám",
+              "type": "https://nfnn.cz/problems/operations/invalid-backup-key"
+            }
+          }
+        }
+      },
+      "mails": [],
+      "logs": [
+        "INFO operations.application.backup.BackupRestoreService: A backup uploaded in the first setup waits for the backup container as request <id:1>; the backend restarts",
+        "INFO operations.application.settings.SetupService: A backup is uploaded in the first setup from the home network"
+      ]
+    },
     "A file that is not a database backup is refused and nothing is stored #1": {
       "requests": {
         "PUT /api/operations/setup/restore #1": {
@@ -2083,7 +2157,7 @@
               "x-xss-protection": "0"
             },
             "body": {
-              "detail": "Vyberte prosím soubor zálohy s příponou .dump, jak ho stáhnete ve Správě na stránce Zálohy.",
+              "detail": "Vyberte prosím soubor zálohy s příponou .dump.age, jak ho stáhnete ve Správě na stránce Zálohy.",
               "instance": "/api/operations/setup/restore",
               "status": 400,
               "title": "Tohle není záloha webu",
@@ -2094,6 +2168,107 @@
       },
       "mails": [],
       "logs": [
+        "INFO operations.application.settings.SetupService: A backup is uploaded in the first setup from the home network"
+      ]
+    },
+    "An encrypted backup is taken only with its key, which waits beside it for the backup container #1": {
+      "requests": {
+        "PUT /api/operations/setup/restore #1": {
+          "request": {
+            "path": "/api/operations/setup/restore",
+            "headers": {
+              "X-Nfnn-Direct": "1"
+            },
+            "body": {
+              "sha256": "bc1f9fe259c75170ba7f7975b8d3074e9bf5b6fc19912722936f84f867bce0ce",
+              "size": 46
+            }
+          },
+          "response": {
+            "status": 400,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/problem+json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "detail": "Záloha je zašifrovaná. Vložte prosím klíč k zálohám, se kterým vznikla.",
+              "instance": "/api/operations/setup/restore",
+              "status": 400,
+              "title": "Záloha potřebuje svůj klíč",
+              "type": "https://nfnn.cz/problems/operations/backup-key-required"
+            }
+          }
+        },
+        "PUT /api/operations/setup/restore #2": {
+          "request": {
+            "path": "/api/operations/setup/restore",
+            "headers": {
+              "X-Nfnn-Direct": "1"
+            },
+            "body": {
+              "sha256": "bc1f9fe259c75170ba7f7975b8d3074e9bf5b6fc19912722936f84f867bce0ce",
+              "size": 46
+            }
+          },
+          "response": {
+            "status": 400,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/problem+json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "detail": "Klíč začíná AGE-SECRET-KEY-1 a má 74 znaků, nebo je to 24 slov. Zkontrolujte, že jste ho opsali nebo vložili celý a bez překlepu.",
+              "instance": "/api/operations/setup/restore",
+              "status": 400,
+              "title": "Tohle není klíč k zálohám",
+              "type": "https://nfnn.cz/problems/operations/invalid-backup-key"
+            }
+          }
+        },
+        "PUT /api/operations/setup/restore #3": {
+          "request": {
+            "path": "/api/operations/setup/restore",
+            "headers": {
+              "X-Nfnn-Direct": "1"
+            },
+            "body": {
+              "sha256": "bc1f9fe259c75170ba7f7975b8d3074e9bf5b6fc19912722936f84f867bce0ce",
+              "size": 46
+            }
+          },
+          "response": {
+            "status": 202,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "fileName": "<id:1>.upload",
+              "requestId": "<id:1>",
+              "requestedAt": "2026-10-23T10:00:00Z"
+            }
+          }
+        }
+      },
+      "mails": [],
+      "logs": [
+        "INFO operations.application.backup.BackupRestoreService: A backup uploaded in the first setup waits for the backup container as request <id:1>; the backend restarts",
+        "INFO operations.application.settings.SetupService: A backup is uploaded in the first setup from the home network",
         "INFO operations.application.settings.SetupService: A backup is uploaded in the first setup from the home network"
       ]
     },
@@ -2166,6 +2341,20 @@
               "X-Nfnn-Direct": "1"
             },
             "body": {
+              "backupKeyWords": [
+                {
+                  "position": 4,
+                  "word": "poezie"
+                },
+                {
+                  "position": 11,
+                  "word": "posu"
+                },
+                {
+                  "position": 24,
+                  "word": "CVAL"
+                }
+              ],
               "settings": [
                 {
                   "name": "PUBLIC_URL",
@@ -2252,6 +2441,7 @@
       },
       "mails": [],
       "logs": [
+        "INFO operations.application.backup.BackupKeyService: The backup key was confirmed as saved in the first setup",
         "INFO operations.application.backup.BackupRestoreService: A backup uploaded in the first setup waits for the backup container as request <id:1>; the backend restarts",
         "INFO operations.application.settings.SetupService: A backup is uploaded in the first setup with the setup code",
         "INFO operations.application.settings.SetupService: The first setup was completed from the home network; settings stored: PUBLIC_URL, MAIL_HOST, MAIL_PORT, MAIL_FROM, CONTACT_RECIPIENT, ADMIN_EMAILS; the backend restarts"
@@ -2296,6 +2486,20 @@
               "X-Nfnn-Direct": "1"
             },
             "body": {
+              "backupKeyWords": [
+                {
+                  "position": 4,
+                  "word": "poezie"
+                },
+                {
+                  "position": 11,
+                  "word": "posu"
+                },
+                {
+                  "position": 24,
+                  "word": "CVAL"
+                }
+              ],
               "settings": [
                 {
                   "name": "PUBLIC_URL",
@@ -2376,6 +2580,7 @@
       },
       "mails": [],
       "logs": [
+        "INFO operations.application.backup.BackupKeyService: The backup key was confirmed as saved in the first setup",
         "INFO operations.application.settings.SetupService: The first setup was completed from the home network; settings stored: PUBLIC_URL, MAIL_HOST, MAIL_PORT, MAIL_FROM, CONTACT_RECIPIENT, ADMIN_EMAILS; the backend restarts"
       ]
     }

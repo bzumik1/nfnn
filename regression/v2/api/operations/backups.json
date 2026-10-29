@@ -269,26 +269,31 @@
               "backups": [
                 {
                   "createdAt": "2026-10-23T04:33:00Z",
-                  "fileName": "nfnn-2026-10-23_0633-rucni.dump",
+                  "fileName": "nfnn-2026-10-23_0633-rucni.dump.age",
                   "kind": "REQUESTED",
                   "sizeBytes": 1590
                 },
                 {
                   "createdAt": "2026-10-23T01:00:03Z",
-                  "fileName": "nfnn-2026-10-23_0300.dump",
+                  "fileName": "nfnn-2026-10-23_0300.dump.age",
                   "kind": "DAILY",
                   "sizeBytes": 1590
                 },
                 {
                   "createdAt": "2026-10-22T01:00:00Z",
-                  "fileName": "nfnn-2026-10-22_0300.dump",
+                  "fileName": "nfnn-2026-10-22_0300.dump.age",
                   "kind": "DAILY",
                   "sizeBytes": 1000
                 }
               ],
+              "key": {
+                "available": true,
+                "confirmed": false,
+                "confirmedAt": null
+              },
               "lastBackup": {
                 "error": null,
-                "fileName": "nfnn-2026-10-23_0300.dump",
+                "fileName": "nfnn-2026-10-23_0300.dump.age",
                 "finishedAt": "2026-10-23T01:00:03Z",
                 "outcome": "OK",
                 "requestId": null,
@@ -299,7 +304,7 @@
               "lastRestore": null,
               "lastTestRestore": {
                 "error": null,
-                "fileName": "nfnn-2026-10-18_0300.dump",
+                "fileName": "nfnn-2026-10-18_0300.dump.age",
                 "finishedAt": "2026-10-18T02:00:05Z",
                 "outcome": "OK",
                 "requestId": null,
@@ -663,14 +668,19 @@
               "backups": [
                 {
                   "createdAt": "2026-10-21T01:00:00Z",
-                  "fileName": "nfnn-2026-10-21_0300.dump",
+                  "fileName": "nfnn-2026-10-21_0300.dump.age",
                   "kind": "DAILY",
                   "sizeBytes": 1000
                 }
               ],
+              "key": {
+                "available": true,
+                "confirmed": false,
+                "confirmedAt": null
+              },
               "lastBackup": {
                 "error": null,
-                "fileName": "nfnn-2026-10-21_0300.dump",
+                "fileName": "nfnn-2026-10-21_0300.dump.age",
                 "finishedAt": "2026-10-21T01:00:03Z",
                 "outcome": "OK",
                 "requestId": null,
@@ -681,7 +691,7 @@
               "lastRestore": null,
               "lastTestRestore": {
                 "error": "pg_restore: error: unexpected end of file",
-                "fileName": "nfnn-2026-10-18_0300.dump",
+                "fileName": "nfnn-2026-10-18_0300.dump.age",
                 "finishedAt": "2026-10-18T02:00:05Z",
                 "outcome": "FAILED",
                 "requestId": null,
@@ -1068,6 +1078,11 @@
             "body": {
               "available": true,
               "backups": [],
+              "key": {
+                "available": true,
+                "confirmed": false,
+                "confirmedAt": null
+              },
               "lastBackup": null,
               "lastRestore": null,
               "lastTestRestore": null,
@@ -1746,9 +1761,9 @@
             }
           }
         },
-        "GET /api/admin/operations/backups/nfnn-2026-10-23_0300.dump #1": {
+        "GET /api/admin/operations/backups/nfnn-2026-10-23_0300.dump.age #1": {
           "request": {
-            "path": "/api/admin/operations/backups/nfnn-2026-10-23_0300.dump",
+            "path": "/api/admin/operations/backups/nfnn-2026-10-23_0300.dump.age",
             "headers": {
               "Authorization": "Bearer <jwt>"
             }
@@ -1758,7 +1773,7 @@
             "headers": {
               "accept-ranges": "bytes",
               "cache-control": "private, no-store",
-              "content-disposition": "attachment; filename=\"nfnn-2026-10-23_0300.dump\"; filename*=UTF-8''nfnn-2026-10-23_0300.dump",
+              "content-disposition": "attachment; filename=\"nfnn-2026-10-23_0300.dump.age\"; filename*=UTF-8''nfnn-2026-10-23_0300.dump.age",
               "content-type": "application/octet-stream",
               "x-content-type-options": "nosniff",
               "x-frame-options": "DENY",
@@ -1770,9 +1785,9 @@
             }
           }
         },
-        "GET /api/admin/operations/backups/nfnn-2026-10-22_0300.dump #1": {
+        "GET /api/admin/operations/backups/nfnn-2026-10-22_0300.dump.age #1": {
           "request": {
-            "path": "/api/admin/operations/backups/nfnn-2026-10-22_0300.dump",
+            "path": "/api/admin/operations/backups/nfnn-2026-10-22_0300.dump.age",
             "headers": {
               "Authorization": "Bearer <jwt>"
             }
@@ -1791,7 +1806,7 @@
             },
             "body": {
               "detail": "Taková záloha ve složce záloh není.",
-              "instance": "/api/admin/operations/backups/nfnn-2026-10-22_0300.dump",
+              "instance": "/api/admin/operations/backups/nfnn-2026-10-22_0300.dump.age",
               "status": 404,
               "title": "Záloha nenalezena",
               "type": "https://nfnn.cz/problems/operations/backup-not-found"
@@ -1894,7 +1909,7 @@
         "INFO donors.application.DonorEmailVerificationService: E-mail verification link issued for donor <id:1>",
         "INFO donors.application.DonorSecondFactorService: Second factor enabled for donor <id:1>, every session revoked",
         "INFO donors.application.DonorSecondFactorService: Second factor set-up started for donor <id:1>",
-        "INFO operations.application.backup.BackupAdministrationService: Admin <id:1> downloaded the backup nfnn-2026-10-23_0300.dump",
+        "INFO operations.application.backup.BackupAdministrationService: Admin <id:1> downloaded the backup nfnn-2026-10-23_0300.dump.age",
         "INFO shared.infrastructure.audit.AdminActionLog: Admin <id:1> performed DOWNLOAD_BACKUP on nothing"
       ]
     },
@@ -2163,6 +2178,11 @@
             "body": {
               "available": false,
               "backups": [],
+              "key": {
+                "available": true,
+                "confirmed": false,
+                "confirmedAt": null
+              },
               "lastBackup": null,
               "lastRestore": null,
               "lastTestRestore": null,
@@ -3068,13 +3088,13 @@
             "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
           ],
           "subject": "Zálohování databáze zase funguje – Nová naděje",
-          "text": "Dobrý den,\n\ndenní kontrola 23. 10. 2026 12:00 našla zálohování databáze webu Nová naděje zase v pořádku.\n\nSkončilo: selhání zálohy.\n\nPoslední záloha: nfnn-2026-10-23_0700.dump z 23. 10. 2026 7:00 (2 kB).\n\nPoslední zkušební obnova: zatím žádná.\n\nNová naděje – nadační fond\n\nTuto zprávu posílá web automaticky, když denní kontrola najde problém se zálohami databáze nebo jejich zkušební obnovou, a znovu, až problém skončí.\n",
+          "text": "Dobrý den,\n\ndenní kontrola 23. 10. 2026 12:00 našla zálohování databáze webu Nová naděje zase v pořádku.\n\nSkončilo: selhání zálohy.\n\nPoslední záloha: nfnn-2026-10-23_0700.dump.age z 23. 10. 2026 7:00 (2 kB).\n\nPoslední zkušební obnova: zatím žádná.\n\nNová naděje – nadační fond\n\nTuto zprávu posílá web automaticky, když denní kontrola najde problém se zálohami databáze nebo jejich zkušební obnovou, a znovu, až problém skončí.\n",
           "html": {
-            "text": "Zálohování databáze zase funguje Dobrý den, denní kontrola 23. 10. 2026 12:00 našla zálohování databáze webu Nová naděje zase v pořádku. Skončilo: selhání zálohy. Poslední záloha: nfnn-2026-10-23_0700.dump z 23. 10. 2026 7:00 (2 kB). Poslední zkušební obnova: zatím žádná. S pozdravem Nová naděje – nadační fond Tuto zprávu posílá web automaticky, když denní kontrola najde problém se zálohami databáze nebo jejich zkušební obnovou, a znovu, až problém skončí. Nová naděje – nadační fond · IČO 27278794 · Jiráskova 436, 473 01 Nový Bor localhost",
+            "text": "Zálohování databáze zase funguje Dobrý den, denní kontrola 23. 10. 2026 12:00 našla zálohování databáze webu Nová naděje zase v pořádku. Skončilo: selhání zálohy. Poslední záloha: nfnn-2026-10-23_0700.dump.age z 23. 10. 2026 7:00 (2 kB). Poslední zkušební obnova: zatím žádná. S pozdravem Nová naděje – nadační fond Tuto zprávu posílá web automaticky, když denní kontrola najde problém se zálohami databáze nebo jejich zkušební obnovou, a znovu, až problém skončí. Nová naděje – nadační fond · IČO 27278794 · Jiráskova 436, 473 01 Nový Bor localhost",
             "links": [
               "http://localhost:4200"
             ],
-            "sha256": "a6829d5e05372c9d1f58badbe6f8e2fb08e93f9c087d4bcb5ff0dad296136608"
+            "sha256": "ce08dec104a17f188c6cb1ed2a73588ddf23b3a52dd36178ebc0015193ff1708"
           },
           "attachments": [
             {

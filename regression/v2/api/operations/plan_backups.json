@@ -267,6 +267,11 @@
             "body": {
               "available": true,
               "backups": [],
+              "key": {
+                "available": true,
+                "confirmed": false,
+                "confirmedAt": null
+              },
               "lastBackup": null,
               "lastRestore": null,
               "lastTestRestore": null,
@@ -651,6 +656,11 @@
             "body": {
               "available": true,
               "backups": [],
+              "key": {
+                "available": true,
+                "confirmed": false,
+                "confirmedAt": null
+              },
               "lastBackup": null,
               "lastRestore": null,
               "lastTestRestore": null,
@@ -1470,6 +1480,11 @@
             "body": {
               "available": false,
               "backups": [],
+              "key": {
+                "available": true,
+                "confirmed": false,
+                "confirmedAt": null
+              },
               "lastBackup": null,
               "lastRestore": null,
               "lastTestRestore": null,

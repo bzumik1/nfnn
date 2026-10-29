@@ -11,6 +11,20 @@
               "X-Nfnn-Direct": "1"
             },
             "body": {
+              "backupKeyWords": [
+                {
+                  "position": 4,
+                  "word": "poezie"
+                },
+                {
+                  "position": 11,
+                  "word": "posu"
+                },
+                {
+                  "position": 24,
+                  "word": "CVAL"
+                }
+              ],
               "settings": [
                 {
                   "name": "PUBLIC_URL",
@@ -643,6 +657,7 @@
         "INFO donors.application.DonorEmailVerificationService: E-mail verification link issued for donor <id:2>",
         "INFO donors.application.DonorSecondFactorService: Second factor enabled for donor <id:1>, every session revoked",
         "INFO donors.application.DonorSecondFactorService: Second factor set-up started for donor <id:1>",
+        "INFO operations.application.backup.BackupKeyService: The backup key was confirmed as saved in the first setup",
         "INFO operations.application.settings.SetupService: The first setup was completed from the home network; settings stored: PUBLIC_URL, MAIL_HOST, MAIL_PORT, MAIL_FROM, CONTACT_RECIPIENT, ADMIN_EMAILS; the backend restarts"
       ]
     },
@@ -655,6 +670,20 @@
               "X-Nfnn-Direct": "1"
             },
             "body": {
+              "backupKeyWords": [
+                {
+                  "position": 4,
+                  "word": "poezie"
+                },
+                {
+                  "position": 11,
+                  "word": "posu"
+                },
+                {
+                  "position": 24,
+                  "word": "CVAL"
+                }
+              ],
               "settings": [
                 {
                   "name": "PUBLIC_URL",
@@ -1176,6 +1205,7 @@
         "INFO donors.application.DonorEmailVerificationService: E-mail verification link issued for donor <id:2>",
         "INFO donors.application.DonorSecondFactorService: Second factor enabled for donor <id:1>, every session revoked",
         "INFO donors.application.DonorSecondFactorService: Second factor set-up started for donor <id:1>",
+        "INFO operations.application.backup.BackupKeyService: The backup key was confirmed as saved in the first setup",
         "INFO operations.application.settings.SettingsService: Admin <id:1> changed the settings RECEIPT_SIGNATORY_NAME, PAIRING_EXCLUDED_ACCOUNTS, MAIL_PASSWORD, MAIL_HOST; the backend restarts",
         "INFO operations.application.settings.SetupService: The first setup was completed from the home network; settings stored: PUBLIC_URL, MAIL_HOST, MAIL_PORT, MAIL_FROM, CONTACT_RECIPIENT, ADMIN_EMAILS; the backend restarts",
         "INFO shared.infrastructure.audit.AdminActionLog: Admin <id:1> performed CHANGE_SETTINGS on nothing"
@@ -1190,6 +1220,20 @@
               "X-Nfnn-Direct": "1"
             },
             "body": {
+              "backupKeyWords": [
+                {
+                  "position": 4,
+                  "word": "poezie"
+                },
+                {
+                  "position": 11,
+                  "word": "posu"
+                },
+                {
+                  "position": 24,
+                  "word": "CVAL"
+                }
+              ],
               "settings": [
                 {
                   "name": "PUBLIC_URL",
@@ -1750,6 +1794,7 @@
         "INFO donors.application.DonorEmailVerificationService: E-mail verification link issued for donor <id:2>",
         "INFO donors.application.DonorSecondFactorService: Second factor enabled for donor <id:1>, every session revoked",
         "INFO donors.application.DonorSecondFactorService: Second factor set-up started for donor <id:1>",
+        "INFO operations.application.backup.BackupKeyService: The backup key was confirmed as saved in the first setup",
         "INFO operations.application.settings.SetupService: The first setup was completed from the home network; settings stored: PUBLIC_URL, MAIL_HOST, MAIL_PORT, MAIL_FROM, CONTACT_RECIPIENT, ADMIN_EMAILS; the backend restarts",
         "INFO operations.infrastructure.settings.StartupBindingSettingsValidator: Candidate settings refused by app.donations.pairing: BindException",
         "INFO operations.infrastructure.settings.StartupBindingSettingsValidator: Candidate settings refused by app.donations.pairing: BindException"
@@ -1764,6 +1809,20 @@
               "X-Nfnn-Direct": "1"
             },
             "body": {
+              "backupKeyWords": [
+                {
+                  "position": 4,
+                  "word": "poezie"
+                },
+                {
+                  "position": 11,
+                  "word": "posu"
+                },
+                {
+                  "position": 24,
+                  "word": "CVAL"
+                }
+              ],
               "settings": [
                 {
                   "name": "PUBLIC_URL",
@@ -2338,6 +2397,7 @@
         "INFO donors.application.DonorEmailVerificationService: E-mail verification link issued for donor <id:2>",
         "INFO donors.application.DonorSecondFactorService: Second factor enabled for donor <id:1>, every session revoked",
         "INFO donors.application.DonorSecondFactorService: Second factor set-up started for donor <id:1>",
+        "INFO operations.application.backup.BackupKeyService: The backup key was confirmed as saved in the first setup",
         "INFO operations.application.settings.SettingsService: Admin <id:1> sent a test e-mail: SENDER_REFUSED",
         "INFO operations.application.settings.SettingsService: Admin <id:1> sent a test e-mail: SENT",
         "INFO operations.application.settings.SettingsService: Admin <id:1> sent a test e-mail: SIGN_IN_REFUSED",
@@ -2356,6 +2416,20 @@
               "X-Nfnn-Direct": "1"
             },
             "body": {
+              "backupKeyWords": [
+                {
+                  "position": 4,
+                  "word": "poezie"
+                },
+                {
+                  "position": 11,
+                  "word": "posu"
+                },
+                {
+                  "position": 24,
+                  "word": "CVAL"
+                }
+              ],
               "settings": [
                 {
                   "name": "PUBLIC_URL",
@@ -3313,6 +3387,7 @@
         "INFO donors.application.DonorEmailVerificationService: E-mail verification link issued for donor <id:2>",
         "INFO donors.application.DonorSecondFactorService: Second factor enabled for donor <id:1>, every session revoked",
         "INFO donors.application.DonorSecondFactorService: Second factor set-up started for donor <id:1>",
+        "INFO operations.application.backup.BackupKeyService: The backup key was confirmed as saved in the first setup",
         "INFO operations.application.settings.SettingsService: Admin <id:1> sent a test e-mail: SENT",
         "INFO operations.application.settings.SettingsService: Admin <id:1> sent a test e-mail: SENT",
         "INFO operations.application.settings.SettingsService: Admin <id:1> sent a test e-mail: SENT",
@@ -3345,6 +3420,20 @@
               "X-Nfnn-Direct": "1"
             },
             "body": {
+              "backupKeyWords": [
+                {
+                  "position": 4,
+                  "word": "poezie"
+                },
+                {
+                  "position": 11,
+                  "word": "posu"
+                },
+                {
+                  "position": 24,
+                  "word": "CVAL"
+                }
+              ],
               "settings": [
                 {
                   "name": "PUBLIC_URL",
@@ -3900,6 +3989,7 @@
         "INFO donors.application.DonorEmailVerificationService: E-mail verification link issued for donor <id:2>",
         "INFO donors.application.DonorSecondFactorService: Second factor enabled for donor <id:1>, every session revoked",
         "INFO donors.application.DonorSecondFactorService: Second factor set-up started for donor <id:1>",
+        "INFO operations.application.backup.BackupKeyService: The backup key was confirmed as saved in the first setup",
         "INFO operations.application.settings.SetupService: The first setup was completed from the home network; settings stored: PUBLIC_URL, MAIL_HOST, MAIL_PORT, MAIL_FROM, CONTACT_RECIPIENT, ADMIN_EMAILS; the backend restarts"
       ]
     },
@@ -3912,6 +4002,20 @@
               "X-Nfnn-Direct": "1"
             },
             "body": {
+              "backupKeyWords": [
+                {
+                  "position": 4,
+                  "word": "poezie"
+                },
+                {
+                  "position": 11,
+                  "word": "posu"
+                },
+                {
+                  "position": 24,
+                  "word": "CVAL"
+                }
+              ],
               "settings": [
                 {
                   "name": "PUBLIC_URL",
@@ -4752,6 +4856,7 @@
         "INFO donors.application.DonorEmailVerificationService: E-mail verification link issued for donor <id:2>",
         "INFO donors.application.DonorSecondFactorService: Second factor enabled for donor <id:1>, every session revoked",
         "INFO donors.application.DonorSecondFactorService: Second factor set-up started for donor <id:1>",
+        "INFO operations.application.backup.BackupKeyService: The backup key was confirmed as saved in the first setup",
         "INFO operations.application.settings.SettingsService: Admin <id:1> changed the settings MAIL_PASSWORD; the backend restarts",
         "INFO operations.application.settings.SettingsService: Admin <id:1> changed the settings RECEIPT_FIRST_YEAR; the backend restarts",
         "INFO operations.application.settings.SetupService: The first setup was completed from the home network; settings stored: PUBLIC_URL, MAIL_HOST, MAIL_PORT, MAIL_FROM, CONTACT_RECIPIENT, ADMIN_EMAILS; the backend restarts",
@@ -4768,6 +4873,20 @@
               "X-Nfnn-Direct": "1"
             },
             "body": {
+              "backupKeyWords": [
+                {
+                  "position": 4,
+                  "word": "poezie"
+                },
+                {
+                  "position": 11,
+                  "word": "posu"
+                },
+                {
+                  "position": 24,
+                  "word": "CVAL"
+                }
+              ],
               "settings": [
                 {
                   "name": "PUBLIC_URL",
@@ -5437,6 +5556,7 @@
         "INFO donors.application.DonorEmailVerificationService: E-mail verification link issued for donor <id:2>",
         "INFO donors.application.DonorSecondFactorService: Second factor enabled for donor <id:1>, every session revoked",
         "INFO donors.application.DonorSecondFactorService: Second factor set-up started for donor <id:1>",
+        "INFO operations.application.backup.BackupKeyService: The backup key was confirmed as saved in the first setup",
         "INFO operations.application.settings.SettingsService: Admin <id:1> sent a test e-mail: SENT",
         "INFO operations.application.settings.SetupService: The first setup was completed from the home network; settings stored: PUBLIC_URL, MAIL_HOST, MAIL_PORT, MAIL_FROM, CONTACT_RECIPIENT, ADMIN_EMAILS; the backend restarts",
         "INFO shared.infrastructure.audit.AdminActionLog: Admin <id:1> performed SEND_TEST_EMAIL on nothing through claude.ai"

@@ -1,0 +1,932 @@
+{
+  "source": "v2-baseline",
+  "feature": "donors/company_lookup",
+  "scenarios": {
+    "A company the register knows comes back with its name and seat, without signing in #1": {
+      "requests": {
+        "GET /api/donors/company-lookup #1": {
+          "request": {
+            "path": "/api/donors/company-lookup?companyIdentifier=452 746 49"
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "address": {
+                "city": "Ústí nad Labem",
+                "postalCode": "400 01",
+                "street": "Dlouhá 12"
+              },
+              "companyIdentifier": "45274649",
+              "name": "Stavby Novák s.r.o."
+            }
+          }
+        }
+      },
+      "mails": [],
+      "logs": []
+    },
+    "A company the register knows without a usable seat comes back with its name only #1": {
+      "requests": {
+        "GET /api/donors/company-lookup #1": {
+          "request": {
+            "path": "/api/donors/company-lookup?companyIdentifier=45274649"
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "address": null,
+              "companyIdentifier": "45274649",
+              "name": "Stavby Novák s.r.o."
+            }
+          }
+        }
+      },
+      "mails": [],
+      "logs": []
+    },
+    "A valid identifier the register does not know answers with no content #1": {
+      "requests": {
+        "GET /api/donors/company-lookup #1": {
+          "request": {
+            "path": "/api/donors/company-lookup?companyIdentifier=10000011"
+          },
+          "response": {
+            "status": 204,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            }
+          }
+        }
+      },
+      "mails": [],
+      "logs": []
+    },
+    "A register that is down answers exactly like an unknown company #1": {
+      "requests": {
+        "GET /api/donors/company-lookup #1": {
+          "request": {
+            "path": "/api/donors/company-lookup?companyIdentifier=45274649"
+          },
+          "response": {
+            "status": 204,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            }
+          }
+        }
+      },
+      "mails": [],
+      "logs": [
+        "WARN donors.application.CompanyLookupService: The company register lookup failed: status 503"
+      ]
+    },
+    "After three failures in a row the register is left alone for five minutes #1": {
+      "requests": {
+        "GET /api/donors/company-lookup #1": {
+          "request": {
+            "path": "/api/donors/company-lookup?companyIdentifier=45274649"
+          },
+          "response": {
+            "status": 204,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            }
+          }
+        },
+        "GET /api/donors/company-lookup #2": {
+          "request": {
+            "path": "/api/donors/company-lookup?companyIdentifier=45274649"
+          },
+          "response": {
+            "status": 204,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            }
+          }
+        },
+        "GET /api/donors/company-lookup #3": {
+          "request": {
+            "path": "/api/donors/company-lookup?companyIdentifier=45274649"
+          },
+          "response": {
+            "status": 204,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            }
+          }
+        },
+        "GET /api/donors/company-lookup #4": {
+          "request": {
+            "path": "/api/donors/company-lookup?companyIdentifier=45274649"
+          },
+          "response": {
+            "status": 204,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            }
+          }
+        },
+        "GET /api/donors/company-lookup #5": {
+          "request": {
+            "path": "/api/donors/company-lookup?companyIdentifier=45274649"
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "address": {
+                "city": "Ústí nad Labem",
+                "postalCode": "400 01",
+                "street": "Dlouhá 12"
+              },
+              "companyIdentifier": "45274649",
+              "name": "Stavby Novák s.r.o."
+            }
+          }
+        }
+      },
+      "mails": [],
+      "logs": [
+        "WARN donors.application.CompanyLookupService: The company register lookup failed: status 503",
+        "WARN donors.application.CompanyLookupService: The company register lookup failed: status 503",
+        "WARN donors.application.CompanyLookupService: The company register lookup failed: status 503; 3 failures in a row, so it is skipped for 5 minutes"
+      ]
+    },
+    "An identifier that cannot exist is refused before the register is asked [45274648] #1": {
+      "requests": {
+        "GET /api/donors/company-lookup #1": {
+          "request": {
+            "path": "/api/donors/company-lookup?companyIdentifier=45274648"
+          },
+          "response": {
+            "status": 400,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/problem+json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "detail": "Zkontrolujte prosím označená pole.",
+              "errors": [
+                {
+                  "field": "companyIdentifier",
+                  "message": "IČO musí mít 8 číslic a správný kontrolní součet."
+                }
+              ],
+              "instance": "/api/donors/company-lookup",
+              "status": 400,
+              "title": "Neplatné údaje",
+              "type": "https://nfnn.cz/problems/validation"
+            }
+          }
+        }
+      },
+      "mails": [],
+      "logs": []
+    },
+    "An identifier that cannot exist is refused before the register is asked [4527464] #1": {
+      "requests": {
+        "GET /api/donors/company-lookup #1": {
+          "request": {
+            "path": "/api/donors/company-lookup?companyIdentifier=4527464"
+          },
+          "response": {
+            "status": 400,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/problem+json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "detail": "Zkontrolujte prosím označená pole.",
+              "errors": [
+                {
+                  "field": "companyIdentifier",
+                  "message": "IČO musí mít 8 číslic a správný kontrolní součet."
+                }
+              ],
+              "instance": "/api/donors/company-lookup",
+              "status": 400,
+              "title": "Neplatné údaje",
+              "type": "https://nfnn.cz/problems/validation"
+            }
+          }
+        }
+      },
+      "mails": [],
+      "logs": []
+    },
+    "An identifier that cannot exist is refused before the register is asked [4527464A] #1": {
+      "requests": {
+        "GET /api/donors/company-lookup #1": {
+          "request": {
+            "path": "/api/donors/company-lookup?companyIdentifier=4527464A"
+          },
+          "response": {
+            "status": 400,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/problem+json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "detail": "Zkontrolujte prosím označená pole.",
+              "errors": [
+                {
+                  "field": "companyIdentifier",
+                  "message": "IČO musí mít 8 číslic a správný kontrolní součet."
+                }
+              ],
+              "instance": "/api/donors/company-lookup",
+              "status": 400,
+              "title": "Neplatné údaje",
+              "type": "https://nfnn.cz/problems/validation"
+            }
+          }
+        }
+      },
+      "mails": [],
+      "logs": []
+    },
+    "An identifier that cannot exist is refused before the register is asked [] #1": {
+      "requests": {
+        "GET /api/donors/company-lookup #1": {
+          "request": {
+            "path": "/api/donors/company-lookup?companyIdentifier="
+          },
+          "response": {
+            "status": 400,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/problem+json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "detail": "Zkontrolujte prosím označená pole.",
+              "errors": [
+                {
+                  "field": "companyIdentifier",
+                  "message": "nesmí být prázdná"
+                }
+              ],
+              "instance": "/api/donors/company-lookup",
+              "status": 400,
+              "title": "Neplatné údaje",
+              "type": "https://nfnn.cz/problems/validation"
+            }
+          }
+        }
+      },
+      "mails": [],
+      "logs": []
+    },
+    "The twenty-first lookup within 15 minutes from one address is refused before the register is asked #1": {
+      "requests": {
+        "GET /api/donors/company-lookup #1": {
+          "request": {
+            "path": "/api/donors/company-lookup?companyIdentifier=45274649"
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "address": {
+                "city": "Ústí nad Labem",
+                "postalCode": "400 01",
+                "street": "Dlouhá 12"
+              },
+              "companyIdentifier": "45274649",
+              "name": "Stavby Novák s.r.o."
+            }
+          }
+        },
+        "GET /api/donors/company-lookup #2": {
+          "request": {
+            "path": "/api/donors/company-lookup?companyIdentifier=45274649"
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "address": {
+                "city": "Ústí nad Labem",
+                "postalCode": "400 01",
+                "street": "Dlouhá 12"
+              },
+              "companyIdentifier": "45274649",
+              "name": "Stavby Novák s.r.o."
+            }
+          }
+        },
+        "GET /api/donors/company-lookup #3": {
+          "request": {
+            "path": "/api/donors/company-lookup?companyIdentifier=45274649"
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "address": {
+                "city": "Ústí nad Labem",
+                "postalCode": "400 01",
+                "street": "Dlouhá 12"
+              },
+              "companyIdentifier": "45274649",
+              "name": "Stavby Novák s.r.o."
+            }
+          }
+        },
+        "GET /api/donors/company-lookup #4": {
+          "request": {
+            "path": "/api/donors/company-lookup?companyIdentifier=45274649"
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "address": {
+                "city": "Ústí nad Labem",
+                "postalCode": "400 01",
+                "street": "Dlouhá 12"
+              },
+              "companyIdentifier": "45274649",
+              "name": "Stavby Novák s.r.o."
+            }
+          }
+        },
+        "GET /api/donors/company-lookup #5": {
+          "request": {
+            "path": "/api/donors/company-lookup?companyIdentifier=45274649"
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "address": {
+                "city": "Ústí nad Labem",
+                "postalCode": "400 01",
+                "street": "Dlouhá 12"
+              },
+              "companyIdentifier": "45274649",
+              "name": "Stavby Novák s.r.o."
+            }
+          }
+        },
+        "GET /api/donors/company-lookup #6": {
+          "request": {
+            "path": "/api/donors/company-lookup?companyIdentifier=45274649"
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "address": {
+                "city": "Ústí nad Labem",
+                "postalCode": "400 01",
+                "street": "Dlouhá 12"
+              },
+              "companyIdentifier": "45274649",
+              "name": "Stavby Novák s.r.o."
+            }
+          }
+        },
+        "GET /api/donors/company-lookup #7": {
+          "request": {
+            "path": "/api/donors/company-lookup?companyIdentifier=45274649"
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "address": {
+                "city": "Ústí nad Labem",
+                "postalCode": "400 01",
+                "street": "Dlouhá 12"
+              },
+              "companyIdentifier": "45274649",
+              "name": "Stavby Novák s.r.o."
+            }
+          }
+        },
+        "GET /api/donors/company-lookup #8": {
+          "request": {
+            "path": "/api/donors/company-lookup?companyIdentifier=45274649"
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "address": {
+                "city": "Ústí nad Labem",
+                "postalCode": "400 01",
+                "street": "Dlouhá 12"
+              },
+              "companyIdentifier": "45274649",
+              "name": "Stavby Novák s.r.o."
+            }
+          }
+        },
+        "GET /api/donors/company-lookup #9": {
+          "request": {
+            "path": "/api/donors/company-lookup?companyIdentifier=45274649"
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "address": {
+                "city": "Ústí nad Labem",
+                "postalCode": "400 01",
+                "street": "Dlouhá 12"
+              },
+              "companyIdentifier": "45274649",
+              "name": "Stavby Novák s.r.o."
+            }
+          }
+        },
+        "GET /api/donors/company-lookup #10": {
+          "request": {
+            "path": "/api/donors/company-lookup?companyIdentifier=45274649"
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "address": {
+                "city": "Ústí nad Labem",
+                "postalCode": "400 01",
+                "street": "Dlouhá 12"
+              },
+              "companyIdentifier": "45274649",
+              "name": "Stavby Novák s.r.o."
+            }
+          }
+        },
+        "GET /api/donors/company-lookup #11": {
+          "request": {
+            "path": "/api/donors/company-lookup?companyIdentifier=45274649"
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "address": {
+                "city": "Ústí nad Labem",
+                "postalCode": "400 01",
+                "street": "Dlouhá 12"
+              },
+              "companyIdentifier": "45274649",
+              "name": "Stavby Novák s.r.o."
+            }
+          }
+        },
+        "GET /api/donors/company-lookup #12": {
+          "request": {
+            "path": "/api/donors/company-lookup?companyIdentifier=45274649"
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "address": {
+                "city": "Ústí nad Labem",
+                "postalCode": "400 01",
+                "street": "Dlouhá 12"
+              },
+              "companyIdentifier": "45274649",
+              "name": "Stavby Novák s.r.o."
+            }
+          }
+        },
+        "GET /api/donors/company-lookup #13": {
+          "request": {
+            "path": "/api/donors/company-lookup?companyIdentifier=45274649"
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "address": {
+                "city": "Ústí nad Labem",
+                "postalCode": "400 01",
+                "street": "Dlouhá 12"
+              },
+              "companyIdentifier": "45274649",
+              "name": "Stavby Novák s.r.o."
+            }
+          }
+        },
+        "GET /api/donors/company-lookup #14": {
+          "request": {
+            "path": "/api/donors/company-lookup?companyIdentifier=45274649"
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "address": {
+                "city": "Ústí nad Labem",
+                "postalCode": "400 01",
+                "street": "Dlouhá 12"
+              },
+              "companyIdentifier": "45274649",
+              "name": "Stavby Novák s.r.o."
+            }
+          }
+        },
+        "GET /api/donors/company-lookup #15": {
+          "request": {
+            "path": "/api/donors/company-lookup?companyIdentifier=45274649"
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "address": {
+                "city": "Ústí nad Labem",
+                "postalCode": "400 01",
+                "street": "Dlouhá 12"
+              },
+              "companyIdentifier": "45274649",
+              "name": "Stavby Novák s.r.o."
+            }
+          }
+        },
+        "GET /api/donors/company-lookup #16": {
+          "request": {
+            "path": "/api/donors/company-lookup?companyIdentifier=45274649"
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "address": {
+                "city": "Ústí nad Labem",
+                "postalCode": "400 01",
+                "street": "Dlouhá 12"
+              },
+              "companyIdentifier": "45274649",
+              "name": "Stavby Novák s.r.o."
+            }
+          }
+        },
+        "GET /api/donors/company-lookup #17": {
+          "request": {
+            "path": "/api/donors/company-lookup?companyIdentifier=45274649"
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "address": {
+                "city": "Ústí nad Labem",
+                "postalCode": "400 01",
+                "street": "Dlouhá 12"
+              },
+              "companyIdentifier": "45274649",
+              "name": "Stavby Novák s.r.o."
+            }
+          }
+        },
+        "GET /api/donors/company-lookup #18": {
+          "request": {
+            "path": "/api/donors/company-lookup?companyIdentifier=45274649"
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "address": {
+                "city": "Ústí nad Labem",
+                "postalCode": "400 01",
+                "street": "Dlouhá 12"
+              },
+              "companyIdentifier": "45274649",
+              "name": "Stavby Novák s.r.o."
+            }
+          }
+        },
+        "GET /api/donors/company-lookup #19": {
+          "request": {
+            "path": "/api/donors/company-lookup?companyIdentifier=45274649"
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "address": {
+                "city": "Ústí nad Labem",
+                "postalCode": "400 01",
+                "street": "Dlouhá 12"
+              },
+              "companyIdentifier": "45274649",
+              "name": "Stavby Novák s.r.o."
+            }
+          }
+        },
+        "GET /api/donors/company-lookup #20": {
+          "request": {
+            "path": "/api/donors/company-lookup?companyIdentifier=45274649"
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "address": {
+                "city": "Ústí nad Labem",
+                "postalCode": "400 01",
+                "street": "Dlouhá 12"
+              },
+              "companyIdentifier": "45274649",
+              "name": "Stavby Novák s.r.o."
+            }
+          }
+        },
+        "GET /api/donors/company-lookup #21": {
+          "request": {
+            "path": "/api/donors/company-lookup?companyIdentifier=45274649"
+          },
+          "response": {
+            "status": 429,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/problem+json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "detail": "Zkuste to prosím znovu později.",
+              "instance": "/api/donors/company-lookup",
+              "status": 429,
+              "title": "Příliš mnoho požadavků",
+              "type": "https://nfnn.cz/problems/donors/rate-limited"
+            }
+          }
+        },
+        "GET /api/donors/company-lookup #22": {
+          "request": {
+            "path": "/api/donors/company-lookup?companyIdentifier=45274649"
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "address": {
+                "city": "Ústí nad Labem",
+                "postalCode": "400 01",
+                "street": "Dlouhá 12"
+              },
+              "companyIdentifier": "45274649",
+              "name": "Stavby Novák s.r.o."
+            }
+          }
+        }
+      },
+      "mails": [],
+      "logs": []
+    }
+  }
+}

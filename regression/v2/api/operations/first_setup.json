@@ -56,6 +56,20 @@
               "X-Nfnn-Direct": "1"
             },
             "body": {
+              "backupKeyWords": [
+                {
+                  "position": 4,
+                  "word": "poezie"
+                },
+                {
+                  "position": 11,
+                  "word": "posu"
+                },
+                {
+                  "position": 24,
+                  "word": "CVAL"
+                }
+              ],
               "settings": [
                 {
                   "name": "PUBLIC_URL",
@@ -151,6 +165,7 @@
       },
       "mails": [],
       "logs": [
+        "INFO operations.application.backup.BackupKeyService: The backup key was confirmed as saved in the first setup",
         "INFO operations.application.settings.SetupService: The first setup was completed from the home network; settings stored: PUBLIC_URL, MAIL_HOST, MAIL_PORT, MAIL_USERNAME, MAIL_PASSWORD, MAIL_FROM, CONTACT_RECIPIENT, FIO_TOKEN, ADMIN_EMAILS; the backend restarts"
       ]
     },
@@ -268,6 +283,20 @@
               "X-Nfnn-Direct": "0"
             },
             "body": {
+              "backupKeyWords": [
+                {
+                  "position": 4,
+                  "word": "poezie"
+                },
+                {
+                  "position": 11,
+                  "word": "posu"
+                },
+                {
+                  "position": 24,
+                  "word": "CVAL"
+                }
+              ],
               "code": "<secret>",
               "settings": [
                 {
@@ -324,6 +353,7 @@
       },
       "mails": [],
       "logs": [
+        "INFO operations.application.backup.BackupKeyService: The backup key was confirmed as saved in the first setup",
         "INFO operations.application.settings.SetupService: The first setup was completed with the setup code; settings stored: PUBLIC_URL, MAIL_HOST, MAIL_PORT, MAIL_FROM, CONTACT_RECIPIENT, ADMIN_EMAILS; the backend restarts"
       ]
     },
@@ -361,6 +391,20 @@
               "X-Nfnn-Direct": "1"
             },
             "body": {
+              "backupKeyWords": [
+                {
+                  "position": 4,
+                  "word": "poezie"
+                },
+                {
+                  "position": 11,
+                  "word": "posu"
+                },
+                {
+                  "position": 24,
+                  "word": "CVAL"
+                }
+              ],
               "settings": [
                 {
                   "name": "PUBLIC_URL",
@@ -402,6 +446,20 @@
               "X-Nfnn-Direct": "1"
             },
             "body": {
+              "backupKeyWords": [
+                {
+                  "position": 4,
+                  "word": "poezie"
+                },
+                {
+                  "position": 11,
+                  "word": "posu"
+                },
+                {
+                  "position": 24,
+                  "word": "CVAL"
+                }
+              ],
               "settings": [
                 {
                   "name": "PUBLIC_URL",
@@ -495,7 +553,279 @@
         }
       },
       "mails": [],
+      "logs": [
+        "INFO operations.application.backup.BackupKeyService: The backup key was confirmed as saved in the first setup"
+      ]
+    },
+    "The setup shows the backup key, asks for three of its words and goes on only with the right ones #1": {
+      "requests": {
+        "GET /api/operations/setup/backup-key #1": {
+          "request": {
+            "path": "/api/operations/setup/backup-key",
+            "headers": {
+              "X-Nfnn-Direct": "1"
+            }
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "cache-control": "private, no-store",
+              "content-type": "application/json",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "checkPositions": [
+                3,
+                12,
+                24
+              ],
+              "key": "AGE-SECRET-KEY-1CZSEH9JWJ74WWUA7EFSLLS5DFA24G5NE59ZHTVN0505ACQH8CSYQVPZ2PD"
+            }
+          }
+        },
+        "POST /api/operations/setup #1": {
+          "request": {
+            "path": "/api/operations/setup",
+            "headers": {
+              "X-Nfnn-Direct": "1"
+            },
+            "body": {
+              "backupKeyWords": [
+                {
+                  "position": 1,
+                  "word": "branka"
+                },
+                {
+                  "position": 2,
+                  "word": "vlak"
+                },
+                {
+                  "position": 3,
+                  "word": "sledovat"
+                }
+              ],
+              "settings": [
+                {
+                  "name": "PUBLIC_URL",
+                  "value": "https://nfnn.cz"
+                },
+                {
+                  "name": "MAIL_HOST",
+                  "value": "smtp-relay.brevo.com"
+                },
+                {
+                  "name": "MAIL_PORT",
+                  "value": "587"
+                },
+                {
+                  "name": "MAIL_FROM",
+                  "value": "info@nfnn.cz"
+                },
+                {
+                  "name": "CONTACT_RECIPIENT",
+                  "value": "info@nfnn.cz"
+                },
+                {
+                  "name": "ADMIN_EMAILS",
+                  "value": "spravce@example.cz"
+                }
+              ]
+            }
+          },
+          "response": {
+            "status": 400,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/problem+json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "detail": "Opište prosím slova klíče k zálohám na požadovaných pořadích tak, jak je máte uložená.",
+              "instance": "/api/operations/setup",
+              "status": 400,
+              "title": "Slova nesedí",
+              "type": "https://nfnn.cz/problems/operations/backup-key-check-mismatch"
+            }
+          }
+        }
+      },
+      "mails": [],
       "logs": []
+    },
+    "The backup key filled in by a password manager as the mail password or the Fio token is refused #1": {
+      "requests": {
+        "POST /api/operations/setup #1": {
+          "request": {
+            "path": "/api/operations/setup",
+            "headers": {
+              "X-Nfnn-Direct": "1"
+            },
+            "body": {
+              "backupKeyWords": [
+                {
+                  "position": 4,
+                  "word": "poezie"
+                },
+                {
+                  "position": 11,
+                  "word": "posu"
+                },
+                {
+                  "position": 24,
+                  "word": "CVAL"
+                }
+              ],
+              "settings": [
+                {
+                  "name": "PUBLIC_URL",
+                  "value": "https://nfnn.cz"
+                },
+                {
+                  "name": "MAIL_HOST",
+                  "value": "smtp-relay.brevo.com"
+                },
+                {
+                  "name": "MAIL_PORT",
+                  "value": "587"
+                },
+                {
+                  "name": "MAIL_FROM",
+                  "value": "info@nfnn.cz"
+                },
+                {
+                  "name": "CONTACT_RECIPIENT",
+                  "value": "info@nfnn.cz"
+                },
+                {
+                  "name": "ADMIN_EMAILS",
+                  "value": "spravce@example.cz"
+                },
+                {
+                  "name": "MAIL_PASSWORD",
+                  "value": "<secret>"
+                }
+              ]
+            }
+          },
+          "response": {
+            "status": 400,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/problem+json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "detail": "Opravte označené hodnoty a uložte znovu.",
+              "errors": [
+                {
+                  "code": "backup-key",
+                  "field": "MAIL_PASSWORD",
+                  "message": "Tohle je klíč k zálohám, ne heslo ani token. Správce hesel ho sem nejspíš vyplnil sám; vložte sem prosím heslo nebo token služby."
+                }
+              ],
+              "instance": "/api/operations/setup",
+              "status": 400,
+              "title": "Nastavení nejde uložit",
+              "type": "https://nfnn.cz/problems/operations/invalid-settings"
+            }
+          }
+        },
+        "POST /api/operations/setup #2": {
+          "request": {
+            "path": "/api/operations/setup",
+            "headers": {
+              "X-Nfnn-Direct": "1"
+            },
+            "body": {
+              "backupKeyWords": [
+                {
+                  "position": 4,
+                  "word": "poezie"
+                },
+                {
+                  "position": 11,
+                  "word": "posu"
+                },
+                {
+                  "position": 24,
+                  "word": "CVAL"
+                }
+              ],
+              "settings": [
+                {
+                  "name": "PUBLIC_URL",
+                  "value": "https://nfnn.cz"
+                },
+                {
+                  "name": "MAIL_HOST",
+                  "value": "smtp-relay.brevo.com"
+                },
+                {
+                  "name": "MAIL_PORT",
+                  "value": "587"
+                },
+                {
+                  "name": "MAIL_FROM",
+                  "value": "info@nfnn.cz"
+                },
+                {
+                  "name": "CONTACT_RECIPIENT",
+                  "value": "info@nfnn.cz"
+                },
+                {
+                  "name": "ADMIN_EMAILS",
+                  "value": "spravce@example.cz"
+                },
+                {
+                  "name": "FIO_TOKEN",
+                  "value": "<secret>"
+                }
+              ]
+            }
+          },
+          "response": {
+            "status": 400,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/problem+json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "detail": "Opravte označené hodnoty a uložte znovu.",
+              "errors": [
+                {
+                  "code": "backup-key",
+                  "field": "FIO_TOKEN",
+                  "message": "Tohle je klíč k zálohám, ne heslo ani token. Správce hesel ho sem nejspíš vyplnil sám; vložte sem prosím heslo nebo token služby."
+                }
+              ],
+              "instance": "/api/operations/setup",
+              "status": 400,
+              "title": "Nastavení nejde uložit",
+              "type": "https://nfnn.cz/problems/operations/invalid-settings"
+            }
+          }
+        }
+      },
+      "mails": [],
+      "logs": [
+        "INFO operations.application.backup.BackupKeyService: The backup key was confirmed as saved in the first setup",
+        "INFO operations.application.backup.BackupKeyService: The backup key was confirmed as saved in the first setup"
+      ]
     },
     "Settings that belong only to the administration are refused in the setup #1": {
       "requests": {
@@ -506,6 +836,20 @@
               "X-Nfnn-Direct": "1"
             },
             "body": {
+              "backupKeyWords": [
+                {
+                  "position": 4,
+                  "word": "poezie"
+                },
+                {
+                  "position": 11,
+                  "word": "posu"
+                },
+                {
+                  "position": 24,
+                  "word": "CVAL"
+                }
+              ],
               "settings": [
                 {
                   "name": "RECEIPT_FIRST_YEAR",
@@ -1263,6 +1607,20 @@
               "X-Nfnn-Direct": "1"
             },
             "body": {
+              "backupKeyWords": [
+                {
+                  "position": 4,
+                  "word": "poezie"
+                },
+                {
+                  "position": 11,
+                  "word": "posu"
+                },
+                {
+                  "position": 24,
+                  "word": "CVAL"
+                }
+              ],
               "settings": [
                 {
                   "name": "PUBLIC_URL",
@@ -1387,6 +1745,20 @@
               "X-Nfnn-Direct": "1"
             },
             "body": {
+              "backupKeyWords": [
+                {
+                  "position": 4,
+                  "word": "poezie"
+                },
+                {
+                  "position": 11,
+                  "word": "posu"
+                },
+                {
+                  "position": 24,
+                  "word": "CVAL"
+                }
+              ],
               "settings": [
                 {
                   "name": "PUBLIC_URL",
@@ -1418,6 +1790,7 @@
       },
       "mails": [],
       "logs": [
+        "INFO operations.application.backup.BackupKeyService: The backup key was confirmed as saved in the first setup",
         "INFO operations.application.settings.SetupService: The first setup was completed from the home network; settings stored: PUBLIC_URL, MAIL_HOST, MAIL_PORT, MAIL_FROM, CONTACT_RECIPIENT, ADMIN_EMAILS; the backend restarts"
       ]
     },
