@@ -510,7 +510,37 @@ describe('Given a slice file that is not a valid declaration', () => {
 
   it('when a path does not start with a method and a literal segment, then the comparison refuses it', () => {
     for (const path of ['* *', '*/*', 'GET *', 'GET /*', '*', 'get /api/x']) {
-      refused({ ...body, path, scenario: anywhere }, /entry 1.*path.*METHOD \/segment/);
+      refused({ ...body, path, scenario: anywhere }, /entry 1.*path.*METHOD \/api\/<context>\//);
+    }
+  });
+
+  it('when a path names one letter, a bare /api or an unknown first segment, then the comparison refuses it', () => {
+    for (const path of [
+      'GET /a*',
+      'GET /api*',
+      'GET /api/*',
+      'GET /api/donors*',
+      'GET /api/donor/x',
+      'GET /actuator*',
+      'GET /.well-known*',
+      'GET /sprava/x',
+    ]) {
+      refused({ ...body, path, scenario: anywhere }, /entry 1.*path.*METHOD \/api\/<context>\//);
+    }
+  });
+
+  it('when a path starts with a context, the actuator, a well-known document or OAuth, then the comparison accepts it', () => {
+    for (const path of [
+      'GET /api/admin/donors/{id}',
+      'POST /api/donors/auth/login',
+      'GET /actuator/health',
+      'GET /.well-known/oauth-authorization-server',
+      'POST /oauth/token',
+    ]) {
+      const result = compare(
+        workspace({ changes: { '0.9.json': [{ ...body, path, scenario: anywhere }] } }),
+      );
+      assert.equal(result.status, 0, result.output);
     }
   });
 
@@ -533,7 +563,7 @@ describe('Given a slice file that is not a valid declaration', () => {
 
   it('when a transcript entry names no contract section, then the comparison refuses it', () => {
     refused(
-      { kind: 'body', reason: 'r', path: 'GET /api/x', scenario: anywhere },
+      { kind: 'body', reason: 'r', path: 'GET /api/admin/donors/{id}', scenario: anywhere },
       /entry 1.*contract/,
     );
   });
