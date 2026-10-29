@@ -1,5 +1,7 @@
 package cz.novanadeje.app.donors.application;
 
+import cz.novanadeje.app.donors.application.event.DonorSecondFactorDisabled;
+import cz.novanadeje.app.donors.application.event.DonorSecondFactorEnabled;
 import cz.novanadeje.app.donors.domain.Donor;
 import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.donors.domain.DonorNotFound;
@@ -17,6 +19,7 @@ import cz.novanadeje.app.shared.application.qr.QrCodeEncoder;
 import cz.novanadeje.app.shared.application.qr.QrErrorCorrection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -37,11 +40,13 @@ public class DonorSecondFactorService {
     private final QrCodeEncoder qrCodes;
     private final SecondFactorSessionGuard sessionGuard;
     private final DonorSecondFactorProperties properties;
+    private final ApplicationEventPublisher events;
     private final Clock clock;
 
     public DonorSecondFactorService(DonorRepository donors, SecondFactorRepository secondFactors, RefreshTokenRepository refreshTokens,
                                     DonorConfirmations confirmations, DonorSessionService sessions, DonorViews views, QrCodeEncoder qrCodes,
-                                    SecondFactorSessionGuard sessionGuard, DonorSecondFactorProperties properties, Clock clock) {
+                                    SecondFactorSessionGuard sessionGuard, DonorSecondFactorProperties properties, ApplicationEventPublisher events,
+                                    Clock clock) {
         this.donors = donors;
         this.secondFactors = secondFactors;
         this.refreshTokens = refreshTokens;
@@ -51,6 +56,7 @@ public class DonorSecondFactorService {
         this.qrCodes = qrCodes;
         this.sessionGuard = sessionGuard;
         this.properties = properties;
+        this.events = events;
         this.clock = clock;
     }
 
@@ -80,6 +86,7 @@ public class DonorSecondFactorService {
         factor.confirm(code, now);
         secondFactors.save(factor);
         refreshTokens.revokeAllOf(donorId, now);
+        events.publishEvent(new DonorSecondFactorEnabled(donorId.value(), donor.email(), donor.preferredLocale()));
         log.info("Second factor enabled for donor {}, every session revoked", donorId);
         return views.authenticated(donor, sessions.open(donor, true));
     }
@@ -93,6 +100,7 @@ public class DonorSecondFactorService {
         factor.check(code, now);
         secondFactors.delete(donorId);
         refreshTokens.revokeAllOf(donorId, now);
+        events.publishEvent(new DonorSecondFactorDisabled(donorId.value(), donor.email(), donor.preferredLocale()));
         log.info("Second factor disabled for donor {}, every session revoked", donorId);
         return views.authenticated(donor, sessions.open(donor, false));
     }

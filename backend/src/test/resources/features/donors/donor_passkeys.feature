@@ -142,7 +142,7 @@ Feature: A donor signs in with a passkey instead of the password
     Then the response status is 400
     And the problem type ends with "validation"
 
-  Scenario: A donor removes a passkey, which then opens no session, and cannot remove another donor's passkey
+  Scenario: A donor removes a passkey, is told by e-mail, the passkey then opens no session, and nobody removes another donor's passkey
     Given "Jana" added a passkey named "iPhone"
     And "Jana" added a passkey named "Windows"
     When "Petr" removes the passkey "iPhone" of "Jana"
@@ -151,6 +151,7 @@ Feature: A donor signs in with a passkey instead of the password
     When "Jana" removes the passkey "iPhone" of "Jana"
     Then the response status is 204
     And the passkeys of "Jana" are "Windows"
+    And an e-mail goes to the address of "Jana" with the subject "Z vašeho účtu byl odebrán přístupový klíč – Nová naděje"
     When "Jana" signs in with the passkey "iPhone"
     Then the response status is 401
     And the problem type ends with "auth/invalid-passkey"

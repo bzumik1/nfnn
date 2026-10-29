@@ -4,6 +4,7 @@ import cz.novanadeje.app.cucumber.ApiClient;
 import cz.novanadeje.app.cucumber.DonorRegistrations;
 import cz.novanadeje.app.cucumber.DonorSessions;
 import cz.novanadeje.app.cucumber.ScenarioDonors;
+import cz.novanadeje.app.cucumber.SecondFactorEnrolments;
 import cz.novanadeje.app.cucumber.TotpCodes;
 import cz.novanadeje.app.donors.SoftwarePasskey;
 import cz.novanadeje.app.shared.domain.VariableSymbol;
@@ -153,6 +154,7 @@ public class DonorPasskeyStepDefinitions {
         ResponseEntity<String> confirmed = api.post(SECOND_FACTOR_CONFIRM_PATH, Map.of("code", totpCodes.freshCode(secret)));
         assertThat(confirmed.getStatusCode().value()).withFailMessage("Confirmation answered %s", confirmed.getBody()).isEqualTo(200);
         scenarioDonors.rememberAccessToken(alias, api.lastResponseJson().get("accessToken").asString());
+        mailSender.forgetOnceSent(SecondFactorEnrolments.ENABLED_NOTICE_SUBJECT);
     }
 
     @When("{string} asks to change the e-mail to {string} confirmed with the passkey {string}")

@@ -1,13 +1,17 @@
 package cz.novanadeje.app.support;
 
+import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import org.springframework.mail.MailSendException;
 import org.springframework.mail.javamail.JavaMailSenderImpl;
 
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
+
+import static org.awaitility.Awaitility.await;
 
 public class RecordingMailSender extends JavaMailSenderImpl {
 
@@ -30,8 +34,21 @@ public class RecordingMailSender extends JavaMailSenderImpl {
         return List.copyOf(sent);
     }
 
+    public void forgetOnceSent(String subject) {
+        await().atMost(Duration.ofSeconds(5)).until(() -> sent.stream().anyMatch(message -> hasSubject(message, subject)));
+        sent.stream().filter(message -> hasSubject(message, subject)).findFirst().ifPresent(sent::remove);
+    }
+
     public void clear() {
         sent.clear();
         refuseNext.set(false);
+    }
+
+    private static boolean hasSubject(MimeMessage message, String subject) {
+        try {
+            return subject.equals(message.getSubject());
+        } catch (MessagingException unreadable) {
+            return false;
+        }
     }
 }

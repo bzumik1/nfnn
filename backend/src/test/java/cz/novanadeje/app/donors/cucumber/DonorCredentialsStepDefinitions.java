@@ -131,4 +131,12 @@ public class DonorCredentialsStepDefinitions {
         assertThat(sent.getRecipients(Message.RecipientType.TO)).extracting(Object::toString).containsExactly(recipient);
         assertThat(sent.getSubject()).isEqualTo(subject);
     }
+
+    @Then("an e-mail goes to {string} with the subject {string}")
+    public void anEmailGoesToWithTheSubject(String recipient, String subject) {
+        await().atMost(MAIL_WAIT).untilAsserted(() -> assertThat(mailSender.sent()).anySatisfy(sent -> {
+            assertThat(sent.getRecipients(Message.RecipientType.TO)).extracting(Object::toString).containsExactly(recipient);
+            assertThat(sent.getSubject()).isEqualTo(subject);
+        }));
+    }
 }
