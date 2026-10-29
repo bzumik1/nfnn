@@ -50,7 +50,8 @@ const shown = (value) =>
   typeof value === 'string' ? JSON.stringify(value) : (JSON.stringify(value) ?? 'nic');
 const shorten = (text, length = 160) =>
   text.length > length ? `${text.slice(0, length - 1)}…` : text;
-const REQUEST_ANCHOR = /^(?:GET|POST|PUT|PATCH|DELETE) \/\w/;
+const REQUEST_ANCHOR =
+  /^(?:GET|POST|PUT|PATCH|DELETE) (?:\/api\/(?:content|donors|donations|contact|operations|admin)\/|\/actuator\/|\/\.well-known\/|\/oauth)/;
 const SCENARIO_ANCHOR = /^[a-z]+\/\w+: /;
 const LOGGER_ANCHOR = /^[a-z]+\.[\w.]+:/;
 const TEST_ANCHOR = /^[^*]+? > /;
@@ -198,7 +199,7 @@ function validated(entry, file, index) {
     } else if ('path' in entry || !PATH_OPTIONAL.has(entry.kind)) {
       if (!REQUEST_ANCHOR.test(entry.path ?? '')) {
         problem(
-          'path must start with "METHOD /segment" (GET, POST, PUT, PATCH or DELETE and a literal first segment)',
+          'path must start with "METHOD /api/<context>/" (GET, POST, PUT, PATCH or DELETE; content, donors, donations, contact, operations or admin), "METHOD /actuator/", "METHOD /.well-known/" or "METHOD /oauth"',
         );
       }
     }
