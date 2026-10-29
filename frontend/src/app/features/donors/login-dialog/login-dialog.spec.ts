@@ -956,6 +956,9 @@ describe('Given the sign-in dialog', () => {
       await click('.type-switch button:nth-child(2)');
       await fillIn('#register-name', 'Stavby Novák s.r.o.');
       await fillIn('#register-company-identifier', '452 746 49');
+      http
+        .expectOne('/api/donors/company-lookup?companyIdentifier=45274649')
+        .flush(null, { status: 204, statusText: 'No Content' });
       await fillIn('#register-street', 'Průmyslová 5');
       await fillIn('#register-city', 'Teplice');
       await fillIn('#register-postal-code', '415 01');
@@ -968,6 +971,175 @@ describe('Given the sign-in dialog', () => {
       expect(request.request.body.name).toBe('Stavby Novák s.r.o.');
       expect(request.request.body.companyIdentifier).toBe('45274649');
       request.flush(null, { status: 202, statusText: 'Accepted' });
+    });
+
+    describe('as a company and types an identification number', () => {
+      const LOOKUP = '/api/donors/company-lookup?companyIdentifier=45274649';
+      const CEZ = {
+        companyIdentifier: '45274649',
+        name: 'Stavby Novák s.r.o.',
+        address: { street: 'Dlouhá 12', city: 'Ústí nad Labem', postalCode: '400 01' },
+      };
+
+      beforeEach(() => click('.type-switch button:nth-child(2)'));
+
+      function value(selector: string): string {
+        return element<HTMLInputElement>(selector).value;
+      }
+
+      function status(): string {
+        return (
+          fixture.nativeElement.querySelector('.company-lookup-status')?.textContent?.trim() ?? ''
+        );
+      }
+
+      it('then the identification number is the first field', () => {
+        const fields = [...fixture.nativeElement.querySelectorAll('.register-form input')].map(
+          (input) => (input as HTMLInputElement).id,
+        );
+
+        expect(fields[0]).toBe('register-company-identifier');
+      });
+
+      it('that the register knows, then the name and seat are filled in and a status line asks to check them', async () => {
+        await fillIn('#register-company-identifier', '452 746 49');
+        http.expectOne(LOOKUP).flush(CEZ);
+        await settle();
+
+        expect(value('#register-name')).toBe('Stavby Novák s.r.o.');
+        expect(value('#register-street')).toBe('Dlouhá 12');
+        expect(value('#register-postal-code')).toBe('400 01');
+        expect(value('#register-city')).toBe('Ústí nad Labem');
+        expect(element('.company-lookup-status').closest('[role="status"]')).not.toBeNull();
+        expect(status()).toBe(
+          'Údaje jsme doplnili z obchodního rejstříku (ARES). Zkontrolujte je.',
+        );
+      });
+
+      it('after typing the name and street, then only the empty fields are filled in', async () => {
+        await fillIn('#register-name', 'Stavby Novák');
+        await fillIn('#register-street', 'Dlouhá 2');
+        await fillIn('#register-company-identifier', '45274649');
+        http.expectOne(LOOKUP).flush(CEZ);
+        await settle();
+
+        expect(value('#register-name')).toBe('Stavby Novák');
+        expect(value('#register-street')).toBe('Dlouhá 2');
+        expect(value('#register-city')).toBe('Ústí nad Labem');
+        expect(value('#register-postal-code')).toBe('400 01');
+        expect(status()).toContain('ARES');
+      });
+
+      it('after filling in every field, then nothing changes and nothing is said', async () => {
+        await fillIn('#register-name', 'Stavby Novák');
+        await fillIn('#register-street', 'Dlouhá 2');
+        await fillIn('#register-city', 'Praha');
+        await fillIn('#register-postal-code', '140 53');
+        await fillIn('#register-company-identifier', '45274649');
+        http.expectOne(LOOKUP).flush(CEZ);
+        await settle();
+
+        expect(value('#register-city')).toBe('Praha');
+        expect(status()).toBe('');
+      });
+
+      it('that the register knows without a seat, then only the name is filled in', async () => {
+        await fillIn('#register-company-identifier', '45274649');
+        http.expectOne(LOOKUP).flush({ ...CEZ, address: null });
+        await settle();
+
+        expect(value('#register-name')).toBe('Stavby Novák s.r.o.');
+        expect(value('#register-street')).toBe('');
+        expect(status()).toContain('ARES');
+      });
+
+      it('and then corrects it to another company, then the filled-in fields follow and the typed ones stay', async () => {
+        await fillIn('#register-street', 'Dlouhá 2');
+        await fillIn('#register-company-identifier', '45274649');
+        http.expectOne(LOOKUP).flush(CEZ);
+        await settle();
+
+        await fillIn('#register-company-identifier', '00006947');
+        http.expectOne('/api/donors/company-lookup?companyIdentifier=00006947').flush({
+          companyIdentifier: '00006947',
+          name: 'Ministerstvo financí',
+          address: { street: 'Letenská 525/15', city: 'Praha 1', postalCode: '118 00' },
+        });
+        await settle();
+
+        expect(value('#register-name')).toBe('Ministerstvo financí');
+        expect(value('#register-street')).toBe('Dlouhá 2');
+        expect(value('#register-city')).toBe('Praha 1');
+        expect(value('#register-postal-code')).toBe('118 00');
+      });
+
+      for (const [outcome, status, body] of [
+        ['has nothing about', 204, null],
+        ['fails on', 500, null],
+        [
+          'refuses too many lookups of',
+          429,
+          problem('donors/rate-limited', 'Příliš mnoho požadavků'),
+        ],
+      ] as const) {
+        it(`that the server ${outcome}, then the fields stay empty and nothing is said`, async () => {
+          await fillIn('#register-company-identifier', '45274649');
+          http.expectOne(LOOKUP).flush(body, { status, statusText: 'Answer' });
+          await settle();
+
+          expect(value('#register-name')).toBe('');
+          expect(value('#register-street')).toBe('');
+          expect(fixture.nativeElement.querySelector('[role="alert"]:not(:empty)')).toBeNull();
+          expect(element('.register-form > .ui-field-error')).toBeNull();
+          expect(fixture.nativeElement.textContent).not.toContain('ARES');
+        });
+      }
+
+      it('that cannot be reached, then the fields stay as typed and nothing is said', async () => {
+        await fillIn('#register-name', 'Stavby Novák');
+        await fillIn('#register-company-identifier', '45274649');
+        http.expectOne(LOOKUP).error(new ProgressEvent('error'));
+        await settle();
+
+        expect(value('#register-name')).toBe('Stavby Novák');
+        expect(fixture.nativeElement.querySelector('[role="alert"]:not(:empty)')).toBeNull();
+        expect(status()).toBe('');
+      });
+
+      it('with a wrong check digit or seven digits, then the register is not asked', async () => {
+        await fillIn('#register-company-identifier', '45274648');
+        await fillIn('#register-company-identifier', '4527464');
+
+        http.expectNone((request) => request.url.startsWith('/api/donors/company-lookup'));
+      });
+
+      it('and sends the registration before the register answers, then the registration goes out and the late answer is dropped', async () => {
+        await fillIn('#register-company-identifier', '45274649');
+        const lookup = http.expectOne(LOOKUP);
+        await fillIn('#register-name', 'Stavby Novák s.r.o.');
+        await fillIn('#register-street', 'Průmyslová 5');
+        await fillIn('#register-city', 'Teplice');
+        await fillIn('#register-postal-code', '415 01');
+        await fillIn('#register-email', 'ucetni@stavby.example.cz');
+        await fillIn('#register-password', 'correct horse battery');
+
+        await submit('.register-form');
+
+        expect(lookup.cancelled).toBe(true);
+        const registration = http.expectOne('/api/donors/auth/register');
+        expect(registration.request.body.name).toBe('Stavby Novák s.r.o.');
+        registration.flush(null, { status: 202, statusText: 'Accepted' });
+      });
+
+      it('and switches to a person, then the pending lookup is dropped and nothing is said', async () => {
+        await fillIn('#register-company-identifier', '45274649');
+        const lookup = http.expectOne(LOOKUP);
+
+        await click('.type-switch button:nth-child(1)');
+
+        expect(lookup.cancelled).toBe(true);
+        expect(fixture.nativeElement.textContent).not.toContain('ARES');
+      });
     });
 
     it('as a company without the identification number, then nothing is sent', async () => {
