@@ -30,7 +30,7 @@ class DonorEmailVerificationControllerTest {
             limiter.check(ADDRESS);
         }
 
-        assertThatThrownBy(() -> controller.request(new EmailVerificationRequest("jana@example.cz"), requestFrom(ADDRESS)))
+        assertThatThrownBy(() -> controller.request(new EmailVerificationRequest("jana@example.cz", null), requestFrom(ADDRESS)))
                 .isInstanceOf(RateLimitExceededException.class);
 
         verifyNoInteractions(emailVerification);

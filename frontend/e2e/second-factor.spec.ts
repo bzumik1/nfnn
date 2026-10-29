@@ -88,6 +88,39 @@ test.describe('Given a donor who protects the account with an authenticator app'
     await expect(page.getByLabel('Kód z aplikace')).toBeFocused();
   });
 
+  test('when they start the recovery again on a phone while it is open, then the dialog shows the same message, says when it started and puts the bank details before the QR code', async ({
+    page,
+  }) => {
+    await page.route('**/api/donors/auth/login', (route) => route.fulfill(secondFactorRequired()));
+    await page.route('**/api/donors/auth/login/second-factor/recovery', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ ...secondFactorRecovery, resumed: true }),
+      }),
+    );
+
+    await openSignInDialog(page);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.locator('#login-email').fill('jana@example.cz');
+    await page.locator('#login-password').fill('correct horse battery');
+    await page.getByRole('dialog').locator('.ui-button--block').click();
+    await page.getByRole('button', { name: 'Obnovit přístup platbou' }).click();
+
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toContainText(
+      'Tuto obnovu už jste zahájili 17. 10. 2026 12:00. Pošlete platbu s tímto kódem.',
+    );
+    await expect(dialog).toContainText('OBNOVA K7MP4RXA');
+    const qrCode = dialog.getByRole('img', {
+      name: 'QR platba 1 Kč se zprávou pro obnovu přístupu',
+    });
+    await expect(qrCode).toBeVisible();
+    const detailsTop = (await dialog.locator('.recovery-details').boundingBox())!.y;
+    const qrTop = (await qrCode.boundingBox())!.y;
+    expect(detailsTop).toBeLessThan(qrTop);
+  });
+
   test('when they type a wrong code and then the challenge expires, then the dialog says so and goes back to the password', async ({
     page,
   }) => {

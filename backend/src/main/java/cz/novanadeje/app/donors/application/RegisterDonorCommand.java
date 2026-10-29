@@ -1,6 +1,9 @@
 package cz.novanadeje.app.donors.application;
 
+import cz.novanadeje.app.donors.domain.RegistrationReturn;
 import cz.novanadeje.app.shared.domain.DonorType;
+
+import java.util.Optional;
 
 public record RegisterDonorCommand(
         DonorType type,
@@ -11,6 +14,7 @@ public record RegisterDonorCommand(
         String postalCode,
         String email,
         String password,
-        String preferredLocale
+        String preferredLocale,
+        Optional<RegistrationReturn> returnTo
 ) {
 }

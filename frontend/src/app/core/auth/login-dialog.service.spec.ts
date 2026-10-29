@@ -40,6 +40,17 @@ describe('Given the sign-in dialog service', () => {
     expect(service.initialMode()).toBe('reset');
   });
 
+  it('when the dialog is opened from the donate section and then from elsewhere, then only the first registration leads back after the e-mail', () => {
+    service.open('register', { confirmationReturnTo: '/#prispet' });
+
+    expect(service.confirmationReturnTo()).toBe('/#prispet');
+
+    service.close();
+    service.open('register');
+
+    expect(service.confirmationReturnTo()).toBeNull();
+  });
+
   it('when the dialog is closed, then it is no longer open', () => {
     service.open('register');
 

@@ -255,8 +255,27 @@
   margin: 0 0 var(--space-4);
 }
 
-.recovery .recovery-keep {
-  margin: var(--space-4) 0 0;
+.recovery-payment {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.recovery-qr {
+  align-self: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 224px;
+  padding: var(--space-3);
+  background: var(--color-surface);
+  border-radius: var(--radius-card);
+  border: 2px solid color-mix(in srgb, var(--color-accent) 13%, transparent);
+  box-shadow: var(--shadow-qr);
+}
+
+.recovery-qr-image {
+  width: 200px;
 }
 
 .recovery-details {

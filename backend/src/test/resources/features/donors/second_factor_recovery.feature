@@ -15,6 +15,7 @@ Feature: A donor who lost the authenticator turns the second factor off by payin
     When "Jana" asks to recover the second factor by payment
     Then the response status is 200
     And the instructions ask for 100 hellers to "5544332217/2010" with a recovery message, valid until "2026-10-31T10:00:00Z", from today
+    And the instructions carry a payment QR code of 1 Kč with the recovery message and no variable symbol
     When the bank account receives "1.00" with the recovery message from "2000145399/0800" today
     And the hourly import runs
     Then "Jana" has the second factor off
@@ -50,6 +51,36 @@ Feature: A donor who lost the authenticator turns the second factor off by payin
     When the bank account receives "1.00" with the recovery message from "2000145399/0800" today
     And the hourly import runs
     Then "Jana" has the second factor on
+
+  Scenario: Starting the recovery again while it is open returns the same message, start and expiry, and its payment still counts
+    Given 7 days pass
+    When "Jana" asks to recover the second factor by payment
+    Then the response status is 200
+    And the instructions open a new recovery started "2026-10-17T10:00:00Z"
+    Given 2 days pass
+    When "Jana" asks to recover the second factor by payment
+    Then the response status is 200
+    And the instructions repeat the open recovery started "2026-10-17T10:00:00Z"
+    And the instructions ask for 100 hellers to "5544332217/2010" with a recovery message, valid until "2026-10-31T10:00:00Z", from today
+    And the instructions carry a payment QR code of 1 Kč with the recovery message and no variable symbol
+    When the bank account receives "1.00" with the recovery message from "2000145399/0800" today
+    And the hourly import runs
+    Then "Jana" has the second factor off
+
+  Scenario: Once the recovery expired, starting it again gives a new message, and a payment with the old one changes nothing
+    When "Jana" asks to recover the second factor by payment
+    Then the response status is 200
+    Given 15 days pass
+    When "Jana" asks to recover the second factor by payment
+    Then the response status is 200
+    And the instructions open a new recovery started "2026-10-25T10:00:00Z" with another message
+    And the instructions ask for 100 hellers to "5544332217/2010" with a recovery message, valid until "2026-11-08T10:00:00Z", from today
+    When the bank account receives "1.00" with the previous recovery message from "2000145399/0800" today
+    And the hourly import runs
+    Then "Jana" has the second factor on
+    When the bank account receives "1.00" with the recovery message from "2000145399/0800" today
+    And the hourly import runs
+    Then "Jana" has the second factor off
 
   Scenario: An administrator recovers the same way, the step is audited and the other administrators are told
     Given a person "Petr" is registered

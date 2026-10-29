@@ -20,6 +20,8 @@ import cz.novanadeje.app.donors.domain.SecondFactorRepository;
 import cz.novanadeje.app.donors.domain.TotpSecret;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
 import cz.novanadeje.app.shared.application.event.SecondFactorRecoveryPaid;
+import cz.novanadeje.app.shared.application.qr.QrMatrix;
+import cz.novanadeje.app.shared.application.recovery.SecondFactorRecoveryPaymentQr;
 import cz.novanadeje.app.shared.application.recovery.SecondFactorRecoveryTarget;
 import cz.novanadeje.app.shared.application.recovery.SecondFactorRecoveryTargets;
 import cz.novanadeje.app.shared.domain.DonorType;
@@ -28,6 +30,7 @@ import cz.novanadeje.app.shared.domain.LocaleCode;
 import cz.novanadeje.app.shared.domain.Money;
 import cz.novanadeje.app.shared.domain.PostalAddress;
 import cz.novanadeje.app.shared.domain.SecondFactorRecoveryCode;
+import cz.novanadeje.app.shared.domain.UuidV7;
 import cz.novanadeje.app.shared.domain.VariableSymbol;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -70,6 +73,8 @@ class SecondFactorRecoveryServiceTest {
     private static final SecondFactorRecoveryCode CODE = new SecondFactorRecoveryCode("ABCD2345");
     private static final SecondFactorRecoveryTarget TARGET = new SecondFactorRecoveryTarget("5544332217/2010", "CZ2620100000005544332217",
             Money.czk(100), LocalDate.of(2026, 10, 27));
+    private static final SecondFactorRecoveryPaymentQr PAYMENT_QR = new SecondFactorRecoveryPaymentQr(
+            "SPD*1.0*ACC:CZ2620100000005544332217*AM:1.00*CC:CZK*MSG:OBNOVA ABCD2345", new QrMatrix(21, "0".repeat(21 * 21)));
 
     @Mock
     private DonorRepository donors;
@@ -101,6 +106,8 @@ class SecondFactorRecoveryServiceTest {
         when(donors.findById(JANA)).thenReturn(Optional.of(donor(JANA, "Jana Nováková", "jana@example.cz", false)));
         when(secondFactors.findByDonor(JANA)).thenReturn(Optional.of(enabledFactor(JANA)));
         when(targets.targetFor(JANA.value())).thenReturn(Optional.of(TARGET));
+        when(recoveries.findOpenOf(JANA, NOW)).thenReturn(Optional.empty());
+        when(targets.paymentQrFor(any())).thenReturn(PAYMENT_QR);
 
         SecondFactorRecoveryInstructions instructions = service.start(challenge.value());
 
@@ -115,6 +122,10 @@ class SecondFactorRecoveryServiceTest {
         assertThat(instructions.iban()).isEqualTo("CZ2620100000005544332217");
         assertThat(instructions.amount()).isEqualTo(Money.czk(100));
         assertThat(instructions.usableFrom()).contains(LocalDate.of(2026, 10, 27));
+        assertThat(instructions.startedAt()).isEqualTo(NOW);
+        assertThat(instructions.resumed()).isFalse();
+        assertThat(instructions.paymentQr()).isEqualTo(PAYMENT_QR);
+        verify(targets).paymentQrFor(new SecondFactorRecoveryCode(instructions.message().substring(7)));
         assertThat(instructions.toString()).doesNotContain(instructions.message());
         verify(challenges, never()).reserveAttempt(any(), any(), org.mockito.ArgumentMatchers.anyInt());
         verify(challenges, never()).markUsed(any(), any());
@@ -128,10 +139,52 @@ class SecondFactorRecoveryServiceTest {
         when(secondFactors.findByDonor(JANA)).thenReturn(Optional.of(enabledFactor(JANA)));
         when(targets.targetFor(JANA.value())).thenReturn(Optional.of(new SecondFactorRecoveryTarget(TARGET.accountNumber(), TARGET.iban(),
                 TARGET.amount(), LocalDate.of(2026, 10, 24))));
+        when(recoveries.findOpenOf(JANA, NOW)).thenReturn(Optional.empty());
+        when(targets.paymentQrFor(any())).thenReturn(PAYMENT_QR);
 
         SecondFactorRecoveryInstructions instructions = service.start(challenge.value());
 
         assertThat(instructions.usableFrom()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Given an open recovery of the donor, when the donor starts the recovery again, then the same code, start and expiry come back as resumed and nothing new opens")
+    void should_return_the_open_recovery_when_started_again_given_it_is_still_open() {
+        LinkSecret challenge = waitingSignIn(JANA);
+        when(donors.findById(JANA)).thenReturn(Optional.of(donor(JANA, "Jana Nováková", "jana@example.cz", false)));
+        when(secondFactors.findByDonor(JANA)).thenReturn(Optional.of(enabledFactor(JANA)));
+        when(targets.targetFor(JANA.value())).thenReturn(Optional.of(TARGET));
+        Instant startedAt = NOW.minus(Duration.ofDays(3));
+        when(recoveries.findOpenOf(JANA, NOW)).thenReturn(Optional.of(SecondFactorRecovery.open(JANA, CODE, startedAt, RECOVERY_TTL)));
+        when(targets.paymentQrFor(CODE)).thenReturn(PAYMENT_QR);
+
+        SecondFactorRecoveryInstructions instructions = service.start(challenge.value());
+
+        assertThat(instructions.message()).isEqualTo("OBNOVA ABCD2345");
+        assertThat(instructions.startedAt()).isEqualTo(startedAt);
+        assertThat(instructions.expiresAt()).isEqualTo(startedAt.plus(RECOVERY_TTL));
+        assertThat(instructions.resumed()).isTrue();
+        assertThat(instructions.paymentQr()).isEqualTo(PAYMENT_QR);
+        verify(recoveries, never()).replaceOpenOf(any(), any());
+    }
+
+    @Test
+    @DisplayName("Given an open recovery stored without its code, when the donor starts the recovery again, then a new code replaces it")
+    void should_open_a_new_recovery_when_started_again_given_the_open_one_kept_no_code() {
+        LinkSecret challenge = waitingSignIn(JANA);
+        when(donors.findById(JANA)).thenReturn(Optional.of(donor(JANA, "Jana Nováková", "jana@example.cz", false)));
+        when(secondFactors.findByDonor(JANA)).thenReturn(Optional.of(enabledFactor(JANA)));
+        when(targets.targetFor(JANA.value())).thenReturn(Optional.of(TARGET));
+        SecondFactorRecovery withoutCode = SecondFactorRecovery.reconstitute(UuidV7.generate(NOW.minusSeconds(60)), JANA, CODE.hash(), null,
+                NOW.minusSeconds(60), NOW.plus(RECOVERY_TTL), null);
+        when(recoveries.findOpenOf(JANA, NOW)).thenReturn(Optional.of(withoutCode));
+        when(targets.paymentQrFor(any())).thenReturn(PAYMENT_QR);
+
+        SecondFactorRecoveryInstructions instructions = service.start(challenge.value());
+
+        assertThat(instructions.resumed()).isFalse();
+        assertThat(instructions.startedAt()).isEqualTo(NOW);
+        verify(recoveries).replaceOpenOf(org.mockito.ArgumentMatchers.eq(JANA), any());
     }
 
     @Test

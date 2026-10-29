@@ -62,13 +62,16 @@
                 }
               </button>
             }
-            <button
-              type="button"
-              class="link-action"
-              (click)="enterPortal()"
-              i18n="@@donor.emailVerification.passkey.later"
-            >
-              Přejít do přehledu bez klíče
+            <button type="button" class="link-action" (click)="enterPortal()">
+              @if (returnsToDonation) {
+                <ng-container i18n="@@donor.emailVerification.passkey.laterDonate"
+                  >Pokračovat k příspěvku bez klíče</ng-container
+                >
+              } @else {
+                <ng-container i18n="@@donor.emailVerification.passkey.later"
+                  >Přejít do přehledu bez klíče</ng-container
+                >
+              }
             </button>
           } @else {
             @if (passkeyCreated()) {
@@ -79,6 +82,15 @@
               >
                 Přístupový klíč je uložený a příště se jím přihlásíte. Doporučujeme přidat v části
                 Údaje a zabezpečení ještě klíč v dalším zařízení.
+              </p>
+            } @else if (returnsToDonation) {
+              <p
+                class="ui-panel__lead"
+                role="status"
+                i18n="@@donor.emailVerification.confirmed.donateText"
+              >
+                Účet je připravený a jste přihlášeni. QR kód pro platbu už ponese váš variabilní
+                symbol, takže dar uvedeme na potvrzení o daru.
               </p>
             } @else {
               <p
@@ -94,9 +106,16 @@
               type="button"
               class="ui-button ui-button--primary ui-button--block"
               (click)="enterPortal()"
-              i18n="@@donor.emailVerification.confirmed.action"
             >
-              Přejít do přehledu
+              @if (returnsToDonation) {
+                <ng-container i18n="@@donor.emailVerification.confirmed.donateAction"
+                  >Pokračovat k příspěvku</ng-container
+                >
+              } @else {
+                <ng-container i18n="@@donor.emailVerification.confirmed.action"
+                  >Přejít do přehledu</ng-container
+                >
+              }
             </button>
           }
         </div>

@@ -2,6 +2,7 @@ package cz.novanadeje.app.donations.domain.payment;
 
 import cz.novanadeje.app.donations.domain.BankAccount;
 import cz.novanadeje.app.shared.domain.Money;
+import cz.novanadeje.app.shared.domain.SecondFactorRecoveryCode;
 import cz.novanadeje.app.shared.domain.VariableSymbol;
 
 import java.text.Normalizer;
@@ -21,9 +22,9 @@ public final class QrPayment {
     private final BankAccount recipient;
     private final Money amount;
     private final VariableSymbol variableSymbol;
-    private final QrPaymentPurpose purpose;
+    private final String message;
 
-    private QrPayment(BankAccount recipient, Money amount, VariableSymbol variableSymbol, QrPaymentPurpose purpose) {
+    private QrPayment(BankAccount recipient, Money amount, VariableSymbol variableSymbol, String message) {
         if (recipient == null) {
             throw new IllegalArgumentException("Recipient account is required");
         }
@@ -36,25 +37,32 @@ public final class QrPayment {
         this.recipient = recipient;
         this.amount = amount;
         this.variableSymbol = variableSymbol;
-        this.purpose = purpose;
+        this.message = message;
     }
 
     public static QrPayment donation(BankAccount recipient, Money amount) {
-        return new QrPayment(recipient, amount, null, QrPaymentPurpose.DONATION);
+        return new QrPayment(recipient, amount, null, QrPaymentPurpose.DONATION.message());
     }
 
     public static QrPayment donation(BankAccount recipient, Money amount, VariableSymbol variableSymbol) {
         if (variableSymbol == null) {
             throw new IllegalArgumentException("Variable symbol is required for an identified donation");
         }
-        return new QrPayment(recipient, amount, variableSymbol, QrPaymentPurpose.DONATION);
+        return new QrPayment(recipient, amount, variableSymbol, QrPaymentPurpose.DONATION.message());
     }
 
     public static QrPayment accountVerification(BankAccount recipient, Money amount, VariableSymbol variableSymbol) {
         if (variableSymbol == null) {
             throw new VerificationNeedsVariableSymbol();
         }
-        return new QrPayment(recipient, amount, variableSymbol, QrPaymentPurpose.ACCOUNT_VERIFICATION);
+        return new QrPayment(recipient, amount, variableSymbol, QrPaymentPurpose.ACCOUNT_VERIFICATION.message());
+    }
+
+    public static QrPayment secondFactorRecovery(BankAccount recipient, Money amount, SecondFactorRecoveryCode code) {
+        if (code == null) {
+            throw new IllegalArgumentException("A recovery code is required for a second-factor recovery payment");
+        }
+        return new QrPayment(recipient, amount, null, code.message());
     }
 
     public BankAccount recipient() {
@@ -69,8 +77,8 @@ public final class QrPayment {
         return Optional.ofNullable(variableSymbol);
     }
 
-    public QrPaymentPurpose purpose() {
-        return purpose;
+    public String message() {
+        return message;
     }
 
     public String toSpayd() {
@@ -80,7 +88,7 @@ public final class QrPayment {
                 .add("CC:" + amount.currency().name());
         variableSymbol().ifPresent(symbol -> spayd.add("X-VS:" + symbol.value()));
         addText(spayd, "RN:", recipient.recipientName(), MAX_RECIPIENT_NAME_LENGTH);
-        addText(spayd, "MSG:", purpose.message(), MAX_MESSAGE_LENGTH);
+        addText(spayd, "MSG:", message, MAX_MESSAGE_LENGTH);
         return spayd.toString();
     }
 
@@ -107,16 +115,16 @@ public final class QrPayment {
                 && recipient.equals(payment.recipient)
                 && amount.equals(payment.amount)
                 && Objects.equals(variableSymbol, payment.variableSymbol)
-                && purpose == payment.purpose;
+                && message.equals(payment.message);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(recipient, amount, variableSymbol, purpose);
+        return Objects.hash(recipient, amount, variableSymbol, message);
     }
 
     @Override
     public String toString() {
-        return toSpayd();
+        return "QrPayment[amount=" + amount + ", variableSymbol=" + variableSymbol().map(VariableSymbol::value).orElse("none") + ", message=***]";
     }
 }

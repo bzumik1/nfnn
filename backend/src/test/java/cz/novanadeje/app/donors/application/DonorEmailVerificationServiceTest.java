@@ -15,6 +15,7 @@ import cz.novanadeje.app.donors.domain.LinkSecret;
 import cz.novanadeje.app.donors.domain.NoPendingEmailChange;
 import cz.novanadeje.app.donors.domain.PasswordHash;
 import cz.novanadeje.app.donors.domain.RefreshTokenRepository;
+import cz.novanadeje.app.donors.domain.RegistrationReturn;
 import cz.novanadeje.app.donors.domain.Role;
 import cz.novanadeje.app.donors.domain.SecondFactorRepository;
 import cz.novanadeje.app.shared.application.event.DonorRegistered;
@@ -109,7 +110,33 @@ class DonorEmailVerificationServiceTest {
         assertThat(stored.getValue().donorId()).isEqualTo(DONOR);
         assertThat(stored.getValue().issuedAt()).isEqualTo(NOW);
         assertThat(event.toString()).doesNotContain(event.secret().value());
+        assertThat(event.returnTo()).isEmpty();
         verifyNoInteractions(sessions);
+    }
+
+    @Test
+    @DisplayName("Given an unverified donor who registered from the donate section, when a link is issued, then the event carries the way back there")
+    void should_carry_the_way_back_when_link_issued_given_a_registration_from_the_donate_section() {
+        when(tokens.countOf(DONOR)).thenReturn(0);
+
+        service.issueLink(unverifiedDonor(LocaleCode.CS), RegistrationReturn.DONATE);
+
+        ArgumentCaptor<DonorEmailVerificationRequested> published = ArgumentCaptor.forClass(DonorEmailVerificationRequested.class);
+        verify(events).publishEvent(published.capture());
+        assertThat(published.getValue().returnTo()).contains(RegistrationReturn.DONATE);
+    }
+
+    @Test
+    @DisplayName("Given an unverified donor, when a verification is requested from the donate section, then the new link carries the way back there")
+    void should_carry_the_way_back_when_requested_from_the_donate_section_given_unverified_donor() {
+        when(donors.findByEmail(EMAIL)).thenReturn(Optional.of(unverifiedDonor(LocaleCode.CS)));
+        when(tokens.countOf(DONOR)).thenReturn(0);
+
+        service.requestVerification(EMAIL, RegistrationReturn.DONATE);
+
+        ArgumentCaptor<DonorEmailVerificationRequested> published = ArgumentCaptor.forClass(DonorEmailVerificationRequested.class);
+        verify(events).publishEvent(published.capture());
+        assertThat(published.getValue().returnTo()).contains(RegistrationReturn.DONATE);
     }
 
     @Test

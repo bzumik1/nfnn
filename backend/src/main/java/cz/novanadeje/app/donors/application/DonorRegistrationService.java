@@ -69,7 +69,7 @@ public class DonorRegistrationService {
                 now
         );
         donors.save(donor);
-        emailVerification.issueLink(donor);
+        command.returnTo().ifPresentOrElse(returnTo -> emailVerification.issueLink(donor, returnTo), () -> emailVerification.issueLink(donor));
     }
 
     private VariableSymbol unusedVariableSymbol() {

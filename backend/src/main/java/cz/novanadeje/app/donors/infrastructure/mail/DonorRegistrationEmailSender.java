@@ -18,6 +18,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -30,6 +32,7 @@ class DonorRegistrationEmailSender {
     private static final String VERIFICATION_KEYS = "donors.emailVerification.email.";
     private static final String VERIFICATION_TEMPLATE = "email/donors/email-verification";
     private static final String VERIFICATION_PAGE = "/potvrzeni-emailu#token=";
+    private static final String RETURN_PARAMETER = "&returnTo=";
     private static final String REMINDER_KEYS = "donors.registrationReminder.email.";
     private static final String REMINDER_TEMPLATE = "email/donors/registration-reminder";
     private static final String REPEATED_KEYS = "donors.registrationRepeated.email.";
@@ -56,7 +59,9 @@ class DonorRegistrationEmailSender {
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void sendVerification(DonorEmailVerificationRequested event) {
         Locale locale = event.preferredLocale().toLocale();
-        String link = publicUrl.link(VERIFICATION_PAGE + event.secret().value()).toString();
+        String link = publicUrl.link(VERIFICATION_PAGE + event.secret().value() + event.returnTo()
+                .map(returnTo -> RETURN_PARAMETER + URLEncoder.encode(returnTo.path(), StandardCharsets.UTF_8))
+                .orElse("")).toString();
         long validHours = properties.tokenTtl().toHours();
         String footer = text(VERIFICATION_KEYS, "footer", locale, sender.senderEmail());
         String plainText = paragraphs(

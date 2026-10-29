@@ -2,6 +2,7 @@ package cz.novanadeje.app.donors.infrastructure.persistence;
 
 import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.donors.domain.SecondFactorRecovery;
+import cz.novanadeje.app.shared.domain.SecondFactorRecoveryCode;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -23,6 +24,9 @@ class SecondFactorRecoveryJpaEntity {
     @Column(name = "code_hash", nullable = false, length = 64, unique = true)
     private String codeHash;
 
+    @Column(name = "code", length = SecondFactorRecoveryCode.LENGTH)
+    private String code;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
@@ -40,6 +44,7 @@ class SecondFactorRecoveryJpaEntity {
         entity.id = recovery.id();
         entity.donorId = recovery.donorId().value();
         entity.codeHash = recovery.codeHash();
+        entity.code = recovery.code().map(SecondFactorRecoveryCode::value).orElse(null);
         entity.createdAt = recovery.createdAt();
         entity.expiresAt = recovery.expiresAt();
         entity.usedAt = recovery.usedAt().orElse(null);
@@ -47,6 +52,7 @@ class SecondFactorRecoveryJpaEntity {
     }
 
     SecondFactorRecovery toDomain() {
-        return SecondFactorRecovery.reconstitute(id, new DonorId(donorId), codeHash, createdAt, expiresAt, usedAt);
+        return SecondFactorRecovery.reconstitute(id, new DonorId(donorId), codeHash, code == null ? null : new SecondFactorRecoveryCode(code),
+                createdAt, expiresAt, usedAt);
     }
 }

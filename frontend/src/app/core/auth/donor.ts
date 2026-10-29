@@ -1,4 +1,5 @@
 import { QrMatrix } from '../../shared/ui/qr-code/qr-matrix';
+import { ConfirmationReturn } from './confirmation-return';
 
 export const PASSWORD_MIN_LENGTH = 12;
 
@@ -46,6 +47,7 @@ export interface RegisterDonorRequest {
   email: string;
   password: string | null;
   preferredLocale: DonorLocale;
+  returnTo?: ConfirmationReturn;
 }
 
 export interface UpdateDonorProfileRequest {
@@ -76,12 +78,16 @@ export interface EmailChangeRequest extends Confirmation {
 
 export interface SecondFactorRecovery {
   message: string;
+  startedAt: string;
   expiresAt: string;
+  resumed: boolean;
   accountNumber: string;
   iban: string;
   amountMinor: number;
   currency: string;
   usableFrom: string | null;
+  spayd: string;
+  qrCode: QrMatrix;
 }
 
 export interface SecondFactorDisableRequest extends Confirmation {

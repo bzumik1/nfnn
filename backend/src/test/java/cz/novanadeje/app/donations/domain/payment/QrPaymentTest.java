@@ -3,6 +3,7 @@ package cz.novanadeje.app.donations.domain.payment;
 import cz.novanadeje.app.donations.domain.BankAccount;
 import cz.novanadeje.app.shared.domain.Iban;
 import cz.novanadeje.app.shared.domain.Money;
+import cz.novanadeje.app.shared.domain.SecondFactorRecoveryCode;
 import cz.novanadeje.app.shared.domain.VariableSymbol;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -45,7 +46,18 @@ class QrPaymentTest {
 
         assertThat(payment.toSpayd()).isEqualTo(
                 "SPD*1.0*ACC:CZ6508000000192000145399*AM:1.00*CC:CZK*X-VS:1234567890*RN:NADACNI FOND NOVA NADEJE*MSG:OVERENI UCTU NADACNI FOND NOVA NADEJE");
-        assertThat(payment.purpose()).isEqualTo(QrPaymentPurpose.ACCOUNT_VERIFICATION);
+        assertThat(payment.message()).isEqualTo(QrPaymentPurpose.ACCOUNT_VERIFICATION.message());
+    }
+
+    @Test
+    @DisplayName("Given a second-factor recovery, when the payment is rendered, then it carries the recovery message and no variable symbol")
+    void should_carry_the_recovery_message_and_no_variable_symbol_when_rendered_given_a_second_factor_recovery() {
+        QrPayment payment = QrPayment.secondFactorRecovery(FOUNDATION, Money.czk(100), new SecondFactorRecoveryCode("ABCD2345"));
+
+        assertThat(payment.toSpayd()).isEqualTo(
+                "SPD*1.0*ACC:CZ6508000000192000145399*AM:1.00*CC:CZK*RN:NADACNI FOND NOVA NADEJE*MSG:OBNOVA ABCD2345");
+        assertThat(payment.variableSymbol()).isEmpty();
+        assertThat(SecondFactorRecoveryCode.findIn(payment.message())).contains(new SecondFactorRecoveryCode("ABCD2345"));
     }
 
     @Test

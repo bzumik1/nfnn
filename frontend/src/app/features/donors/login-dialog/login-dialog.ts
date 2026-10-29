@@ -45,6 +45,7 @@ import { FocusFirstInvalid } from '../../../shared/ui/form-field/focus-first-inv
 import { FormControlDirective } from '../../../shared/ui/form-field/form-control';
 import { FormField } from '../../../shared/ui/form-field/form-field';
 import { PasswordReveal } from '../../../shared/ui/password-reveal/password-reveal';
+import { QrCode } from '../../../shared/ui/qr-code/qr-code';
 import { placeServerErrors } from '../../../shared/ui/form-field/server-errors';
 import { RadioGroup } from '../../../shared/ui/radio-group/radio-group';
 import { formatMinorUnits } from '../../donations/donation-amount';
@@ -106,6 +107,7 @@ const REGISTRATION_FIELDS: Readonly<Record<string, string>> = {
     PasswordReveal,
     RadioGroup,
     CopyButton,
+    QrCode,
     CompanyIdentifierValidator,
   ],
   templateUrl: './login-dialog.html',
@@ -121,8 +123,10 @@ export class LoginDialog {
   private readonly passkeyAuthenticator = inject(PasskeyAuthenticator);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
   private readonly draft = this.dialog.registrationDraft();
+  private readonly confirmationReturnTo = this.dialog.confirmationReturnTo();
 
   protected readonly passwordMinLength = PASSWORD_MIN_LENGTH;
+  protected readonly recoveryQrLabel = $localize`:@@donor.login.recovery.qrAlt:QR platba 1 Kč se zprávou pro obnovu přístupu`;
   protected readonly passkeysSupported = this.passkeyAuthenticator.supported();
   protected readonly mode = signal<LoginDialogMode>(this.dialog.initialMode());
   protected readonly donorType = signal<DonorType>(this.draft?.donorType ?? 'PERSON');
@@ -335,7 +339,7 @@ export class LoginDialog {
     }
     this.loading.set(true);
     this.error.set('');
-    this.authApi.requestEmailVerification(this.email.trim()).subscribe({
+    this.authApi.requestEmailVerification(this.email.trim(), this.confirmationReturnTo).subscribe({
       next: () => {
         this.loading.set(false);
         this.emailNotVerified.set(false);
@@ -364,6 +368,7 @@ export class LoginDialog {
         email: this.registration.email.trim(),
         password: this.signInMethod() === 'password' ? this.registration.password : null,
         preferredLocale: preferredLocaleOf(this.document.documentElement.lang),
+        ...(this.confirmationReturnTo === null ? {} : { returnTo: this.confirmationReturnTo }),
       })
       .subscribe({
         next: () => {
@@ -382,13 +387,15 @@ export class LoginDialog {
     this.loading.set(true);
     this.error.set('');
     this.registrationResent.set(false);
-    this.authApi.requestEmailVerification(this.registration.email.trim()).subscribe({
-      next: () => {
-        this.loading.set(false);
-        this.registrationResent.set(true);
-      },
-      error: (failure: unknown) => this.failUnlessThrottled(failure, this.tooManyResetRequests),
-    });
+    this.authApi
+      .requestEmailVerification(this.registration.email.trim(), this.confirmationReturnTo)
+      .subscribe({
+        next: () => {
+          this.loading.set(false);
+          this.registrationResent.set(true);
+        },
+        error: (failure: unknown) => this.failUnlessThrottled(failure, this.tooManyResetRequests),
+      });
   }
 
   editRegistration(): void {

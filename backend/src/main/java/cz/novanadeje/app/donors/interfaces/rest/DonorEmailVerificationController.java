@@ -1,6 +1,7 @@
 package cz.novanadeje.app.donors.interfaces.rest;
 
 import cz.novanadeje.app.donors.application.DonorEmailVerificationService;
+import cz.novanadeje.app.donors.domain.RegistrationReturn;
 import cz.novanadeje.app.shared.domain.EmailAddress;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -32,7 +33,10 @@ class DonorEmailVerificationController {
     @ResponseStatus(HttpStatus.ACCEPTED)
     void request(@Valid @RequestBody EmailVerificationRequest request, HttpServletRequest http) {
         rateLimiter.check(http.getRemoteAddr());
-        emailVerification.requestVerification(new EmailAddress(request.email()));
+        EmailAddress email = new EmailAddress(request.email());
+        RegistrationReturn.ofPath(request.returnTo()).ifPresentOrElse(
+                returnTo -> emailVerification.requestVerification(email, returnTo),
+                () -> emailVerification.requestVerification(email));
     }
 
     @PostMapping("/confirm")

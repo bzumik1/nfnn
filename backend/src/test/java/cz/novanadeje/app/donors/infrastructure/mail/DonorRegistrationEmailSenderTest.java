@@ -9,6 +9,7 @@ import cz.novanadeje.app.donors.application.event.DonorEmailVerificationRequeste
 import cz.novanadeje.app.donors.application.event.DonorRegistrationReminderDue;
 import cz.novanadeje.app.donors.application.event.DonorRegistrationRepeated;
 import cz.novanadeje.app.donors.domain.LinkSecret;
+import cz.novanadeje.app.donors.domain.RegistrationReturn;
 import cz.novanadeje.app.shared.domain.EmailAddress;
 import cz.novanadeje.app.shared.domain.LocaleCode;
 import cz.novanadeje.app.shared.infrastructure.config.PublicUrlProperties;
@@ -39,6 +40,7 @@ import org.thymeleaf.ITemplateEngine;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Optional;
 import java.util.Properties;
 import java.util.UUID;
 import java.util.function.Consumer;
@@ -254,6 +256,21 @@ class DonorRegistrationEmailSenderTest {
         });
     }
 
+    @Test
+    @DisplayName("Given a registration started from the donate section, when the verification e-mail is sent, then both parts link to the confirmation with the way back there")
+    void should_link_back_to_the_donate_section_when_sent_given_a_registration_from_there() {
+        RecordingMailSender recording = new RecordingMailSender();
+        contexts.withBean(JavaMailSender.class, () -> recording).run(context -> {
+            sender(context, Duration.ofHours(24)).sendVerification(new DonorEmailVerificationRequested(DONOR_ID, EMAIL, LocaleCode.CS, SECRET,
+                    EXPIRES_AT, Optional.of(RegistrationReturn.DONATE)));
+
+            MimeMessage email = MailContents.asReceived(recording.sent().getFirst());
+            String link = LINK + "&returnTo=%2F%23prispet";
+            assertThat(MailContents.plainText(email)).contains(link + "\r\n");
+            assertThat(MailContents.html(email)).contains("href=\"" + link.replace("&", "&amp;") + "\"");
+        });
+    }
+
     private void verificationSent(LocaleCode locale, Duration ttl, ThrowingAssertion assertion) {
         RecordingMailSender recording = new RecordingMailSender();
         contexts.withBean(JavaMailSender.class, () -> recording).run(context -> {
@@ -287,7 +304,7 @@ class DonorRegistrationEmailSenderTest {
     }
 
     private static DonorEmailVerificationRequested verificationEvent(LocaleCode locale) {
-        return new DonorEmailVerificationRequested(DONOR_ID, EMAIL, locale, SECRET, EXPIRES_AT);
+        return new DonorEmailVerificationRequested(DONOR_ID, EMAIL, locale, SECRET, EXPIRES_AT, Optional.empty());
     }
 
     @FunctionalInterface

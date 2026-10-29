@@ -13,6 +13,8 @@ interface SecondFactorRecoveryJpaRepository extends JpaRepository<SecondFactorRe
 
     Optional<SecondFactorRecoveryJpaEntity> findByCodeHash(String codeHash);
 
+    Optional<SecondFactorRecoveryJpaEntity> findFirstByDonorIdAndUsedAtIsNullAndExpiresAtAfterOrderByCreatedAtDesc(UUID donorId, Instant at);
+
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("delete from SecondFactorRecoveryJpaEntity r where r.donorId = :donorId and r.usedAt is null")
     int deleteOpenOf(@Param("donorId") UUID donorId);

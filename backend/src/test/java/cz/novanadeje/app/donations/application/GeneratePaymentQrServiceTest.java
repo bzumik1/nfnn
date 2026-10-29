@@ -7,6 +7,7 @@ import cz.novanadeje.app.shared.application.qr.QrMatrix;
 import cz.novanadeje.app.donations.domain.payment.QrPaymentPurpose;
 import cz.novanadeje.app.donations.domain.payment.VerificationNeedsVariableSymbol;
 import cz.novanadeje.app.shared.domain.Iban;
+import cz.novanadeje.app.shared.domain.SecondFactorRecoveryCode;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -41,6 +42,19 @@ class GeneratePaymentQrServiceTest {
     @BeforeEach
     void setUp() {
         service = new GeneratePaymentQrService(FOUNDATION, encoder);
+    }
+
+    @Test
+    @DisplayName("Given a second-factor recovery code, when its QR code is generated, then it encodes 1 Kč with the recovery message and no variable symbol")
+    void should_encode_one_crown_with_the_recovery_message_when_generated_given_a_recovery_code() {
+        when(encoder.encode(anyString(), any())).thenReturn(MODULES);
+
+        PaymentQr qr = service.generateForRecovery(new SecondFactorRecoveryCode("ABCD2345"));
+
+        String expected = "SPD*1.0*ACC:CZ6508000000192000145399*AM:1.00*CC:CZK*RN:NADACNI FOND NOVA NADEJE*MSG:OBNOVA ABCD2345";
+        assertThat(qr.spayd()).isEqualTo(expected);
+        assertThat(qr.modules()).isEqualTo(MODULES);
+        verify(encoder).encode(expected, QrErrorCorrection.HIGH);
     }
 
     @Test

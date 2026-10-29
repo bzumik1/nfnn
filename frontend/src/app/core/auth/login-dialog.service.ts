@@ -1,6 +1,7 @@
 import { inject, Injectable, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { DialogHistory } from '../../shared/ui/dialog/dialog-history';
+import { ConfirmationReturn } from './confirmation-return';
 import { DonorType } from './donor';
 
 export type LoginDialogMode = 'login' | 'register' | 'reset';
@@ -9,6 +10,7 @@ export interface LoginDialogOptions {
   returnTo?: string;
   afterSignIn?: () => void;
   email?: string;
+  confirmationReturnTo?: ConfirmationReturn;
 }
 
 export interface RegistrationDraft {
@@ -29,17 +31,20 @@ export class LoginDialogService {
   private readonly opened = signal(false);
   private readonly mode = signal<LoginDialogMode>('login');
   private readonly email = signal('');
+  private readonly returnAfterConfirmation = signal<ConfirmationReturn | null>(null);
   private readonly draft = signal<RegistrationDraft | null>(null);
   private options: LoginDialogOptions = {};
   private stepBack: (() => void) | null = null;
   readonly isOpen = this.opened.asReadonly();
   readonly initialMode = this.mode.asReadonly();
   readonly initialEmail = this.email.asReadonly();
+  readonly confirmationReturnTo = this.returnAfterConfirmation.asReadonly();
   readonly registrationDraft = this.draft.asReadonly();
 
   open(mode: LoginDialogMode = 'login', options: LoginDialogOptions = {}): void {
     this.mode.set(mode);
     this.email.set(options.email ?? '');
+    this.returnAfterConfirmation.set(options.confirmationReturnTo ?? null);
     this.options = options;
     this.opened.set(true);
     this.history.open({

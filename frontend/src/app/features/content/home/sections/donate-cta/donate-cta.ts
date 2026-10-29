@@ -27,6 +27,7 @@ import {
   tap,
   timer,
 } from 'rxjs';
+import { DONATE_SECTION } from '../../../../../core/auth/confirmation-return';
 import { LoginDialogService } from '../../../../../core/auth/login-dialog.service';
 import { CopyButton } from '../../../../../shared/ui/copy-button/copy-button';
 import { QrCode } from '../../../../../shared/ui/qr-code/qr-code';
@@ -178,11 +179,14 @@ export class DonateCta {
   }
 
   register(): void {
-    this.loginDialog.open('register');
+    this.loginDialog.open('register', { confirmationReturnTo: DONATE_SECTION });
   }
 
   signIn(): void {
-    this.loginDialog.open('login', { afterSignIn: () => this.focusBankDetails() });
+    this.loginDialog.open('login', {
+      afterSignIn: () => this.focusBankDetails(),
+      confirmationReturnTo: DONATE_SECTION,
+    });
   }
 
   private focusBankDetails(): void {

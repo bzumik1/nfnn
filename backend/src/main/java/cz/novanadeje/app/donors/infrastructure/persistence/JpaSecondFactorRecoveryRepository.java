@@ -30,6 +30,12 @@ class JpaSecondFactorRecoveryRepository implements SecondFactorRecoveryRepositor
     }
 
     @Override
+    public Optional<SecondFactorRecovery> findOpenOf(DonorId donorId, Instant at) {
+        return jpa.findFirstByDonorIdAndUsedAtIsNullAndExpiresAtAfterOrderByCreatedAtDesc(donorId.value(), at)
+                .map(SecondFactorRecoveryJpaEntity::toDomain);
+    }
+
+    @Override
     public boolean markUsed(UUID recoveryId, Instant at) {
         return jpa.markUsed(recoveryId, at) == 1;
     }

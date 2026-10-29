@@ -34,6 +34,53 @@ Feature: Donor confirms the e-mail address after registering
     When the donor signs in with email "jana@example.cz" and password "correct horse battery"
     Then the response status is 200
 
+  Scenario: A registration started from the donate section links back to it, also in a new link asked for from there, and confirms as usual
+    When a person registers
+      | name       | Jana Nováková         |
+      | street     | Dlouhá 12             |
+      | city       | Ústí nad Labem        |
+      | postalCode | 400 01                |
+      | email      | jana@example.cz       |
+      | password   | correct horse battery |
+      | returnTo   | /#prispet             |
+    Then the response status is 202
+    And the verification link of the last e-mail returns to "/#prispet"
+    And both parts of the last e-mail contain "returnTo=%2F%23prispet"
+    When a verification e-mail is asked for "jana@example.cz" returning to "/#prispet"
+    Then the response status is 202
+    And the verification link of the last e-mail returns to "/#prispet"
+    When a verification e-mail is asked for "jana@example.cz"
+    Then the response status is 202
+    And the verification link of the last e-mail returns nowhere
+    When the donor confirms the e-mail with the link from e-mail 2
+    Then the response status is 200
+    And the response carries an access token and a refresh cookie
+
+  Scenario: A registration started elsewhere links to the confirmation alone, and a return address outside the list is refused
+    When a person registers
+      | name       | Jana Nováková         |
+      | street     | Dlouhá 12             |
+      | city       | Ústí nad Labem        |
+      | postalCode | 400 01                |
+      | email      | jana@example.cz       |
+      | password   | correct horse battery |
+    Then the response status is 202
+    And the verification link of the last e-mail returns nowhere
+    When a person registers
+      | name       | Petr Svoboda          |
+      | street     | Dlouhá 12             |
+      | city       | Ústí nad Labem        |
+      | postalCode | 400 01                |
+      | email      | petr@example.cz       |
+      | password   | correct horse battery |
+      | returnTo   | https://evil.example  |
+    Then the response status is 400
+    And the problem lists an error for field "returnTo"
+    When a verification e-mail is asked for "jana@example.cz" returning to "//evil.example"
+    Then the response status is 400
+    And the problem lists an error for field "returnTo"
+    And 1 e-mail is sent to "jana@example.cz" with the subject "Potvrďte svůj e-mail – Nová naděje"
+
   Scenario: A wrong password at an unconfirmed account is refused as a wrong password, not as unconfirmed
     Given a person registered with email "jana@example.cz" and password "correct horse battery" but has not confirmed the e-mail
     When the donor signs in with email "jana@example.cz" and password "wrong horse battery"
