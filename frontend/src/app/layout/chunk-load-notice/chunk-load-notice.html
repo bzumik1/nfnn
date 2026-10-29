@@ -1,15 +1,46 @@
-@if (recovery.failure()) {
-  <div class="chunk-load-notice ui-notice ui-notice--alert" role="alert">
-    <p class="chunk-load-notice__text" i18n="@@layout.chunk-load.message">
-      Stránku se nepodařilo otevřít. Web mezitím mohl dostat novou verzi, nebo vypadlo připojení.
-    </p>
-    <button
-      type="button"
-      class="ui-button ui-button--primary ui-button--small chunk-load-notice__reload"
-      (click)="recovery.reload()"
-      i18n="@@layout.chunk-load.reload"
-    >
-      Načíst znovu
-    </button>
-  </div>
+@if (recovery.failure(); as failure) {
+  @if (failure.initial) {
+    <main id="obsah" class="ui-panel-page">
+      <div class="ui-panel">
+        <h1 #pageHeading class="ui-panel__title" tabindex="-1" i18n="@@layout.chunk-load.title">
+          Stránku se nepodařilo otevřít
+        </h1>
+        <p class="ui-panel__lead" i18n="@@layout.chunk-load.lead">
+          Web byl mezitím možná aktualizován nebo vypadlo připojení. Zkuste ji načíst znovu.
+        </p>
+        <div class="chunk-load-page__actions">
+          <button
+            type="button"
+            class="ui-button ui-button--primary"
+            (click)="recovery.reload()"
+            i18n="@@layout.chunk-load.reload"
+          >
+            Načíst znovu
+          </button>
+          <a
+            class="ui-button ui-button--quiet ui-button--large"
+            href="/"
+            i18n="@@layout.chunk-load.home"
+            >Přejít na úvod</a
+          >
+        </div>
+      </div>
+    </main>
+  } @else {
+    <div #bar class="ui-notice ui-notice--alert ui-notice--floating" role="alert">
+      <p class="ui-notice__text" i18n="@@layout.chunk-load.message">
+        Stránku se nepodařilo otevřít. Web byl mezitím možná aktualizován nebo vypadlo připojení.
+        Zkuste ji načíst znovu.
+      </p>
+      <button
+        #barButton
+        type="button"
+        class="ui-button ui-button--primary ui-button--small"
+        (click)="recovery.reload()"
+        i18n="@@layout.chunk-load.reload"
+      >
+        Načíst znovu
+      </button>
+    </div>
+  }
 }

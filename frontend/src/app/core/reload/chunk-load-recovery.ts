@@ -1,6 +1,7 @@
 import { DestroyRef, inject, Injectable, signal } from '@angular/core';
 import { NavigationEnd, NavigationError, Router } from '@angular/router';
 
+import { Connectivity } from '../navigation/connectivity';
 import { ExternalNavigation } from '../navigation/external-navigation';
 import { ReloadGuard } from './reload-guard';
 
@@ -24,14 +25,16 @@ export interface ChunkLoadFailure {
 
 @Injectable({ providedIn: 'root' })
 export class ChunkLoadRecovery {
+  private readonly router = inject(Router);
   private readonly guard = inject(ReloadGuard);
   private readonly navigation = inject(ExternalNavigation);
+  private readonly connectivity = inject(Connectivity);
   private readonly failed = signal<ChunkLoadFailure | null>(null);
 
   readonly failure = this.failed.asReadonly();
 
   constructor() {
-    const subscription = inject(Router).events.subscribe((event) => {
+    const subscription = this.router.events.subscribe((event) => {
       if (event instanceof NavigationEnd) {
         this.failed.set(null);
       }
@@ -43,11 +46,11 @@ export class ChunkLoadRecovery {
     if (!isChunkLoadError(error.error)) {
       return;
     }
-    if (this.guard.claim('chunk-load')) {
+    if (!this.connectivity.isOffline() && this.guard.claim('chunk-load')) {
       this.navigation.loadFromServer(error.url);
       return;
     }
-    this.failed.set({ url: error.url, initial: false });
+    this.failed.set({ url: error.url, initial: !this.router.navigated });
   }
 
   reload(): void {

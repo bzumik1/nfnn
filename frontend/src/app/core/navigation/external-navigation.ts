@@ -10,6 +10,17 @@ export class ExternalNavigation {
   }
 
   loadFromServer(url: string): void {
-    this.assign(url);
+    const view = this.document.defaultView;
+    if (!view) {
+      return;
+    }
+    const current = new URL(view.location.href);
+    const target = new URL(url, current);
+    if (target.pathname !== current.pathname || target.search !== current.search) {
+      view.location.assign(url);
+      return;
+    }
+    view.history.replaceState(null, '', url);
+    view.location.reload();
   }
 }
