@@ -35,6 +35,8 @@ const WATCHED_FILES = [
   /^backend\/src\/test\/java\/.*\/transcript\//,
   /(?:^|\/)ApiTranscripts[^/]*$/,
   /^scripts\/compare-v2[^/]*\.mjs$/,
+  /^\.github\/workflows\/pr-check\.yml$/,
+  /^backend\/build\.gradle\.kts$/,
   /^scripts\/test-inventory\.mjs$/,
   /^mcp\/test\/backend-shapes[^/]*\.ts$/,
 ];
@@ -48,7 +50,13 @@ const shown = (value) =>
   typeof value === 'string' ? JSON.stringify(value) : (JSON.stringify(value) ?? 'nic');
 const shorten = (text, length = 160) =>
   text.length > length ? `${text.slice(0, length - 1)}…` : text;
-const onlyStars = (pattern) => /^\**$/.test(pattern.trim());
+const REQUEST_ANCHOR = /^(?:GET|POST|PUT|PATCH|DELETE) \/\w/;
+const SCENARIO_ANCHOR = /^[a-z]+\/\w+: /;
+const LOGGER_ANCHOR = /^[a-z]+\.[\w.]+:/;
+const TEST_ANCHOR = /^[^*]+? > /;
+const PATH_OPTIONAL = new Set(['removed']);
+const PATH_REFUSED = new Set(['mails', 'logs']);
+const withoutLevel = (line) => line.replace(/^\p{Lu}+ /u, '');
 
 function options(argv) {
   const chosen = { ...defaults };
@@ -102,6 +110,8 @@ function glob(pattern) {
   const escaped = pattern.split('*').map((part) => part.replace(/[.+?^${}()|[\]\\]/g, '\\$&'));
   return new RegExp(`^${escaped.join('.*')}$`, 's');
 }
+
+const exactly = (text) => ({ test: (candidate) => candidate === text });
 
 function validatedSecurity(entry, problem) {
   if ('securityOk' in entry) {
@@ -165,24 +175,43 @@ function validated(entry, file, index) {
         );
       }
     }
-    if (onlyStars(entry.suite)) {
-      problem('suite must name the suite, not *');
+    if (entry.suite.includes('*')) {
+      problem('suite must be the literal suite name, without *');
     }
-    if (onlyStars(entry.test)) {
-      problem('test must name the tests, not only *');
+    if (!TEST_ANCHOR.test(entry.test)) {
+      problem('test must start with its literal class or file and " > "');
     }
   } else if (entry.kind === 'log-field') {
-    if (!entry.line?.trim() || onlyStars(entry.line)) {
-      problem('a new log field needs line: the shape of the log line, more than *');
+    if (!entry.line?.trim() || entry.line.includes('*') || !LOGGER_ANCHOR.test(entry.line)) {
+      problem(
+        'a new log field needs line: the exact shape the report printed, starting with the logger name, without *',
+      );
+    }
+    if ('scenario' in entry && !SCENARIO_ANCHOR.test(entry.scenario)) {
+      problem('scenario must start with the literal "<context>/<feature>: "');
     }
   } else {
-    for (const field of ['path', 'scenario']) {
-      if (!entry[field]?.trim()) {
-        problem(`needs ${field} (* allowed)`);
+    if (PATH_REFUSED.has(entry.kind)) {
+      if ('path' in entry) {
+        problem(`${entry.kind} belong to the scenario, not to a request: drop path`);
+      }
+    } else if ('path' in entry || !PATH_OPTIONAL.has(entry.kind)) {
+      if (!REQUEST_ANCHOR.test(entry.path ?? '')) {
+        problem(
+          'path must start with "METHOD /segment" (GET, POST, PUT, PATCH or DELETE and a literal first segment)',
+        );
       }
     }
-    if (onlyStars(entry.path) && onlyStars(entry.scenario)) {
-      problem('path and scenario cannot both be *: name the request or the scenario');
+    if (!entry.scenario?.trim()) {
+      problem('needs scenario: "<context>/<feature>: <scenario>", * allowed after the feature');
+    }
+    if (!SCENARIO_ANCHOR.test(entry.scenario)) {
+      problem('scenario must start with the literal "<context>/<feature>: "');
+    }
+    if (entry.kind === 'logs' && !LOGGER_ANCHOR.test(entry.line ?? '')) {
+      problem(
+        'logs needs line: the v2 line without its level, starting with the literal logger name ("donors.application.X: …"), * allowed after it',
+      );
     }
     if (!entry.contract?.trim()) {
       problem('needs contract: the contract or overview section that describes the change');
@@ -196,7 +225,7 @@ function validated(entry, file, index) {
     matches: {
       path: glob(entry.path ?? '*'),
       scenario: glob(entry.scenario ?? '*'),
-      line: glob(entry.line ?? '*'),
+      line: entry.kind === 'log-field' ? exactly(entry.line) : glob(entry.line ?? '*'),
       suite: glob(entry.suite ?? '*'),
       test: glob(entry.test ?? '*'),
     },
@@ -235,10 +264,20 @@ function declare(difference, entries) {
         entry.matches.line.test(difference.line) && entry.matches.scenario.test(difference.scenario)
       );
     }
-    const path = difference.key ?? '';
+    if (!entry.matches.scenario.test(difference.scenario)) {
+      return false;
+    }
+    if (difference.kind === 'logs') {
+      return entry.matches.line.test(difference.baselineLine);
+    }
+    if (difference.kind === 'mails') {
+      return true;
+    }
+    if (!('path' in entry) || difference.key === undefined) {
+      return !('path' in entry) && difference.key === undefined;
+    }
     return (
-      entry.matches.scenario.test(difference.scenario) &&
-      (entry.matches.path.test(template(path)) || entry.matches.path.test(path))
+      entry.matches.path.test(template(difference.key)) || entry.matches.path.test(difference.key)
     );
   });
   if (found) {
@@ -423,8 +462,7 @@ function enumWords(baseline) {
 
 export function logShaper(enums) {
   return (line) =>
-    line
-      .replace(/^\p{Lu}+ /u, '')
+    withoutLevel(line)
       .replace(/<([a-z-]+):[^>]*>/g, '<$1>')
       .replace(/\d+/g, (digits) =>
         digits.length <= SHORT_NUMBER ? '<n>' : `<digits:${digits.length}>`,
@@ -509,6 +547,7 @@ function compareScenario(scenario, baseline, recorded, differences, counts, shap
     differences.push({
       scenario,
       kind: 'logs',
+      baselineLine: withoutLevel(line),
       slots: partner === undefined ? [] : slotsOf(shape(partner)),
       detail: partner ? `změněno ${shown(line)} → ${shown(partner)}` : `odebráno ${shown(line)}`,
     });
