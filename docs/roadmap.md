@@ -126,6 +126,8 @@ Fáze 2 (až po lednových potvrzeních, včetně dat v zařízení):
 - Veřejná část bez připojení (Jakub 28. 10. 2026): aktuality, projekty a Přispět (s QR platbou z uložených údajů účtu) se ukážou v naposledy viděné podobě s upozorněním, že nemusí být aktuální. Kontaktní formulář potřebuje připojení. K rozhodnutí: fotky aktualit a projektů bez připojení (návrh: jen už viděné, ve velikosti pro danou obrazovku).
 - Rozhraní jako aplikace (Jakub 28. 10. 2026): správa a účet dárce nemají zvláštní verzi pro aplikaci, ale všude dostanou rozvržení jako mobilní aplikace, v nainstalované aplikaci (telefon, Mac přes „Přidat do Docku“) i v prohlížeči. Na telefonu spodní lišta se záložkami, řádky seznamu místo tabulek a karet, panely zespodu místo dialogů, šipka zpět v hlavičce (nainstalovaná aplikace na iPhonu nemá tlačítko zpět) a respektované okraje displeje; na širokých obrazovkách zůstává boční panel. Barvy, písma a logo dál určuje vyměnitelné téma. Veřejná část zůstává webem (úvod, aktuality, projekty a jejich stránky, zásady ochrany údajů, přihlášení, registrace, obnova hesla). Nainstalovaná aplikace se otevře správci ve správě, dárci v jeho přehledu, jinak na úvodu. Aplikace má i sekci „Novinky“: jeden proud aktualit a projektů od nejnovějších, karta s fotkou přes celou šířku a detail přes celou obrazovku se šipkou zpět; čte stejný obsah a stejnou správu jako web, liší se jen rozvržením. Návrh lišty dárce: Přehled, Dary (i s potvrzeními), Novinky, Účet; později možná upozornění na nový projekt pro dárce, kteří o ně stojí. Před stavbou návrhy obrazovek na telefonu (přehled, platby, karta dárce).
 - Tlačítko „Sdílet“ u aktualit a projektů (Jakub 29. 10. 2026), na jejich veřejných stránkách i v sekci „Novinky“ aplikace: otevře sdílení zařízení s názvem a odkazem na stránku; kde ho prohlížeč nemá, odkaz zkopíruje. Nic nenačítá odjinud a server se nemění.
+- Co se změnilo od poslední návštěvy (Jakub 29. 10. 2026; s daty v zařízení): při otevření správy nahoře souhrn toho, co přibylo od minula na tomto zařízení: nové platby a kolik z nich čeká na přiřazení, noví registrovaní dárci, vydaná potvrzení a co mezitím udělal jiný správce. Prohlížeč to pozná porovnáním uložené kopie s tím, co právě stáhl, server nic nového nepočítá ani neukládá. Souhrn jde jedním kliknutím zavřít a každý řádek vede na svou stránku.
+- Rozepsaný text se neztratí (Jakub 29. 10. 2026): rozepsaná aktualita, projekt, nastavení, profil dárce a později poznámka ke kartě dárce zůstanou v zařízení (osobní údaje v šifrované kopii) i po zavření karty, vybití telefonu nebo konci přihlášení; při dalším otevření se nabídne „Pokračovat v rozepsaném“ nebo „Zahodit“. Uložení dál potřebuje připojení a kliknutí. Veřejný kontaktní formulář ne, na cizím počítači by text zůstal dalšímu člověku.
 - Upozornění na telefon pro správce (Web Push s klíči vygenerovanými v prvním nastavení, bez Firebase): správce je zapne na každém zařízení zvlášť ve správě; posílají se stejné poruchy jako dnes e-mailem (výpadek a obnovení importu, hlídání záloh) a nově selhání odesílání pošty, takže upozornění nezávisí na e-mailu. Každé má vypínač a tlačítko na zkoušku; zpráva nese jen druh problému a odkaz, žádná jména ani částky. Adresa pro doručení projde stejnou kontrolou jako stahování fotek, mrtvá přihlášení se mažou. Volitelně počet otevřených problémů na ikoně. Později stejný základ pro dárce s přihlášením k odběru v profilu.
 - Délka přihlášení: v nainstalované aplikaci přihlášení nikdy nevyprší, pro dárce i správce (Jakub 29. 10. 2026); skončí jen odhlášením, odhlášením na dálku ze seznamu zařízení nebo změnou hesla. Správu dál chrání odemykání při každém otevření a odhlášení na dálku. V prohlížeči 14 dní jen se zaškrtnutým „Zapamatovat si mě“ (výchozí vypnuto), jinak do zavření prohlížeče; tuto délku nastavuje správce.
 - Omezení: na iPhonu upozornění chodí až po přidání webu na plochu (iOS 16.4 a novější); výpadek celého serveru dál pozná jen hlídání dostupnosti zvenčí.
@@ -175,12 +177,23 @@ Správa:
 - Tisknutelný QR kód pro akce a letáky.
 - Prohlídka všech funkcí správy při první návštěvě, znovu spustitelná z „Nápověda / průvodce“.
 - E-mail správci o nové registraci s odkazem na kartu dárce.
+- Připomínky termínů fondu (Jakub 29. 10. 2026): seznam termínů ve správě (název, datum, každý rok nebo jednou, poznámka). Měsíc a týden předem přijde správcům e-mail a úvod správy ukáže kartu „Blíží se termín“, dokud ho někdo neoznačí jako vyřízený; předstih jde nastavit a e-mail vypnout. Konec registrace domény nfnn.cz si server zjišťuje sám jednou denně z veřejného registru, takže se po prodloužení posune bez zásahu; ostatní termíny (výroční zpráva do sbírky listin, funkční období správní rady) zadá správce.
+- Náhled dopadu před přiřazením nebo zrušením přiřazení platby (Jakub 29. 10. 2026): ještě před potvrzením správa ukáže, kterému dárci a za který rok se nahradí potvrzení, zda si ho dárce už stáhl a jak se změní jeho součet a měsíc v přehledech. Spočítá to prohlížeč z dat správy, rozhoduje dál server a při mezitímní změně platí jeho odpověď. Stejně u vrácení daru a označení „není dar“.
+
+Zabezpečení správy (Jakub 29. 10. 2026, návrhy bezpečnostního experta):
+
+- Ostatní správci se dozví o každém zásahu do přístupů: krátký e-mail všem správcům při přidání nebo odebrání správce, připojení nebo odpojení aplikace, stažení nebo obnově zálohy, změně podpisu potvrzení, vypnutí druhého faktoru či klíčů jinému správci a změně, kam web posílá e-maily (příjemci přehledu a upozornění, adresa kontaktního formuláře; tu dostanou i dosavadní příjemci). Připojení a odpojení aplikace se zapíše do historie změn. Jsou to bezpečnostní e-maily, nejdou vypnout; o přihlášeních nechodí.
+- Nevratná akce ve správě chce nové ověření kódem nebo klíčem (otisk, Face ID) těsně před sebou: výmaz dárce, obnova a stažení zálohy, udělení a odebrání role správce, vypnutí druhého faktoru nebo klíčů jinému, podpis potvrzení, hesla, tokeny a adresa webu. Běžná práce (párování, obsah, nastavení) se to netýká.
+- Přístupy všech správců na stránce Správci: jak se kdo přihlašuje (klíč, nebo heslo s kódem), kdy se naposledy přihlásil a jaké aplikace má připojené, s jakým oprávněním a kdy byly naposledy použité. Jiný správce takovou aplikaci odpojí (majitel si ji může připojit znovu). Kdo se dlouho nepřihlásil (lhůta ve správě, výchozí 6 měsíců), má štítek „dlouho nepřihlášen“ a ostatním se nabídne odebrání role; sama se role nikdy neodebere.
+- Konektor Claudovi řekne, které údaje pocházejí zvenku (zpráva pro příjemce, jméno odesílatele, údaje dárce, zprávy z formuláře) a že se podle nich nesmí jednat; Claude se u změny, kterou by takový text vyvolal, napřed zeptá správce a podezřelou zprávu označí.
+- Kontakt pro hlášení bezpečnostních chyb: standardní soubor `security.txt` na webu s e-mailem fondu a datem platnosti (nastavitelné, obnovu připomenou termíny fondu) a v repozitáři návod, jak chybu nahlásit soukromě.
 
 E-maily:
 
 - Fronta automatických a hromadných e-mailů s denním limitem (výchozí 250), opakováním a stavem odesláno / čeká / selhalo; bezpečnostní e-maily jdou hned.
 - Odeslané e-maily na kartě dárce (datum, druh, stav, bez obsahu).
 - „Poslat zkušebně mně“ před každým hromadným e-mailem.
+- E-maily od fondu na jednom místě (Jakub 29. 10. 2026): v profilu dárce vypínač pro každý druh e-mailu (poděkování, lednový e-mail, únorová připomínka, aktuality); každý takový e-mail má odkaz „Odhlásit tyto e-maily“, který funguje bez přihlášení, a schránky jako Gmail u něj ukážou vlastní tlačítko Odhlásit. Bezpečnostní e-maily se odhlásit nedají.
 
 Veřejný web a provoz:
 
@@ -193,6 +206,13 @@ Veřejný web a provoz:
 ### Možná později
 
 - „Stáhnout moje data“ (Jakub 28. 10. 2026: možná později): dárce si stáhne všechna svá data v jednom souboru sestaveném v prohlížeči; pokryje i přenositelnost podle GDPR.
+- Sloučení dvou účtů jednoho dárce ve správě (dary, ověřené účty a odpovědi o starších symbolech na jeden účet, náhradní roční potvrzení, jen na webu).
+- Prosincová výzva dárcům ke kontrole jména a adresy, jak budou na potvrzení.
+- Upozornění ve správě, když má web jen jednoho správce.
+- Správa jen s přístupovým klíčem (volitelný přepínač, až budou mít klíč všichni správci).
+- Jedno hledání napříč celou správou z dat v zařízení.
+- Grafy darů v přehledech správy a dárce.
+- Trvalý příkaz dárce jako jeden řádek v jeho přehledu.
 - Návrhy párování pro nespárované platby.
 - Dar na konkrétní projekt s ukazatelem vybrané částky.
 - Dárkový certifikát.
@@ -234,3 +254,4 @@ Veřejný web a provoz:
 - Oznámení dárci, že se změnilo jeho stažené potvrzení.
 - Sídlo a číslo účtu v patičce.
 - Seznam povolených aplikací pro připojení ke správě: připojit se smí jakákoli aplikace se souhlasem správce.
+- Doplnění plateb z nahraného výpisu banky: chybějící historii řeší odemčení historie ve Fio.
