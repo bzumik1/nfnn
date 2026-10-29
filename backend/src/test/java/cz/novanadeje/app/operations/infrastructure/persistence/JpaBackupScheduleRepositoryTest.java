@@ -1,6 +1,5 @@
 package cz.novanadeje.app.operations.infrastructure.persistence;
 
-import cz.novanadeje.app.TestcontainersConfiguration;
 import cz.novanadeje.app.operations.domain.backup.BackupSchedule;
 import cz.novanadeje.app.operations.domain.backup.BackupScheduleRepository;
 import org.junit.jupiter.api.DisplayName;
@@ -17,7 +16,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import({TestcontainersConfiguration.class, JpaBackupScheduleRepository.class})
+@Import(OperationsPersistenceTestConfiguration.class)
 class JpaBackupScheduleRepositoryTest {
 
     @Autowired

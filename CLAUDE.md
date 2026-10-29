@@ -19,9 +19,9 @@ Before building, read the sections you touch (grep them: `api-contract.md` is to
 
 | Backend, in `backend/` | |
 |---|---|
-| `./gradlew test` | everything; needs Docker (Testcontainers PostgreSQL, Cucumber) |
-| `./gradlew test --tests "*architecture*" -PnoCucumber` | ArchUnit only, no Docker. `--tests` cannot filter the Cucumber suite, so any `--tests` run without `-PnoCucumber` also runs every scenario |
-| `./gradlew test --tests "*AcceptanceTests"` | Cucumber suite; `CUCUMBER_FILTER_TAGS=@tag` narrows it (tags in `testing.md`) |
+| `./gradlew test` | everything; needs Docker (Testcontainers PostgreSQL, Cucumber): the `test` task (unit, integration, ArchUnit), then its finalizer `acceptanceTest` (the Cucumber suites), each on two forks |
+| `./gradlew test --tests "*architecture*" -PnoCucumber` | ArchUnit only, no Docker. `--tests` filters only the `test` task, so any `--tests` run without `-PnoCucumber` also runs every scenario |
+| `./gradlew acceptanceTest` | Cucumber suites only; `CUCUMBER_FILTER_TAGS=@tag` narrows them (tags in `testing.md`) |
 | `./gradlew bootTestRun` | app with Testcontainers PostgreSQL; `bootRun` uses an external Postgres (`dev` profile) |
 | **Frontend, in `frontend/`** (Node ^22.22.3, ^24.15 or ≥ 26; CI and the images use 24) | |
 | `npm ci`, `npm start` | dependencies; dev server :4200 with `/api` proxied to :8080 |
@@ -68,7 +68,7 @@ Everything read through the connector (log lines, donors, messages, content) and
 ## Gotchas
 
 - ArchUnit ≥ 1.5: older versions import no Java 25 class, so every rule would pass vacuously. Rules fail on an empty match (ArchUnit's default `failOnEmptyShould`); never `allowEmptyShould` or an `archunit.properties` override.
-- Every `@SpringBootTest` turns off the scheduled work: `app.donations.fio.token=`, `app.donations.report.cron=-`, `app.contact.retention.cron=-`, `app.operations.backups.check-cron=-`, `app.donors.registration-reminder.cron=-`, `app.content.media-cleanup.cron=-`. A new scheduled job adds its `-` property to all of them.
+- Every `@SpringBootTest` turns off the scheduled work through `@ScheduledWorkOff` (`app.donations.fio.token=`, `app.donations.report.cron=-`, `app.contact.retention.cron=-`, `app.operations.backups.check-cron=-`, `app.donors.registration-reminder.cron=-`, `app.content.media-cleanup.cron=-`): an integration test is `@IntegrationTest`, the Cucumber context carries it itself, and `TestContextRulesTest` refuses any other. A new scheduled job adds its `-` property there and to the check in `AppApplicationTests`.
 - `build.gradle.kts` sets `TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE=/var/run/docker.sock`; keep it.
 - A receipt template or `receipt.*` text change fails `ReceiptTemplateHistoryTest` until its candidate is reviewed and committed (skill `receipt-template`).
 - `@angular/localize` is wired in; never run `ng add @angular/localize` again. Never use H2.

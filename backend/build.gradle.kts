@@ -84,17 +84,41 @@ dependencies {
 	testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
+class JavaAgent(@get:Classpath val jar: FileCollection) : CommandLineArgumentProvider {
+	override fun asArguments() = listOf("-javaagent:${jar.singleFile.absolutePath}")
+}
+
+val runsCucumber = !project.hasProperty("noCucumber")
+
 tasks.withType<Test> {
-	useJUnitPlatform {
-		if (project.hasProperty("noCucumber")) {
-			excludeEngines("cucumber", "junit-platform-suite")
-		}
-	}
 	systemProperty("cucumber.junit-platform.naming-strategy", "long")
 	System.getenv("CUCUMBER_FILTER_TAGS")?.let { systemProperty("cucumber.filter.tags", it) }
 	maxHeapSize = "1g"
-	jvmArgs("--enable-native-access=ALL-UNNAMED")
-	jvmArgumentProviders.add(CommandLineArgumentProvider { listOf("-javaagent:${mockitoAgent.singleFile}", "-Xshare:off") })
+	maxParallelForks = 2
+	jvmArgs("--enable-native-access=ALL-UNNAMED", "-Xshare:off")
+	jvmArgumentProviders.add(JavaAgent(mockitoAgent))
 	environment("TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE", "/var/run/docker.sock")
 	inputs.file("../frontend/src/themes/nova-nadeje/_theme.scss").withPropertyName("siteTheme").withPathSensitivity(PathSensitivity.NONE)
+}
+
+val acceptanceTest = tasks.register<Test>("acceptanceTest") {
+	description = "Runs the Cucumber acceptance scenarios, one suite per fork."
+	group = LifecycleBasePlugin.VERIFICATION_GROUP
+	testClassesDirs = sourceSets.test.get().output.classesDirs
+	classpath = sourceSets.test.get().runtimeClasspath
+	useJUnitPlatform {
+		includeEngines("junit-platform-suite")
+	}
+	include("**/*AcceptanceTests.class")
+	enabled = runsCucumber
+}
+
+tasks.test {
+	useJUnitPlatform {
+		excludeEngines("cucumber", "junit-platform-suite")
+	}
+	filter {
+		isFailOnNoMatchingTests = !runsCucumber
+	}
+	finalizedBy(acceptanceTest)
 }

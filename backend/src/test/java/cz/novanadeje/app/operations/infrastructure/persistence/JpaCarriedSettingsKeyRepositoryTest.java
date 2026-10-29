@@ -1,6 +1,5 @@
 package cz.novanadeje.app.operations.infrastructure.persistence;
 
-import cz.novanadeje.app.TestcontainersConfiguration;
 import cz.novanadeje.app.operations.domain.settings.CarriedSettingsKey;
 import cz.novanadeje.app.operations.domain.settings.CarriedSettingsKeyRepository;
 import org.junit.jupiter.api.DisplayName;
@@ -16,7 +15,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import({TestcontainersConfiguration.class, JpaCarriedSettingsKeyRepository.class})
+@Import(OperationsPersistenceTestConfiguration.class)
 class JpaCarriedSettingsKeyRepositoryTest {
 
     @Autowired

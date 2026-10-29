@@ -1,7 +1,7 @@
 package cz.novanadeje.app.operations.infrastructure.settings;
 
+import cz.novanadeje.app.IntegrationTest;
 import com.zaxxer.hikari.HikariDataSource;
-import cz.novanadeje.app.TestcontainersConfiguration;
 import cz.novanadeje.app.operations.application.settings.SettingsValidator;
 import cz.novanadeje.app.operations.application.settings.SettingsWriter;
 import cz.novanadeje.app.operations.domain.settings.CarriedSettingsKey;
@@ -13,8 +13,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.mock.env.MockEnvironment;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -31,9 +29,7 @@ import java.util.Set;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-@Import(TestcontainersConfiguration.class)
-@SpringBootTest(properties = {"app.donations.fio.token=", "app.donations.report.cron=-", "app.contact.retention.cron=-", "app.content.media-cleanup.cron=-",
-        "app.operations.backups.check-cron=-", "app.donors.registration-reminder.cron=-"})
+@IntegrationTest
 class StoredSettingsIntegrationTest {
 
     private static final Instant NOW = Instant.parse("2026-10-23T16:00:00Z");
