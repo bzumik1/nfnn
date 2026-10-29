@@ -4,7 +4,7 @@ Feature: Donor protects the account with a second factor from an authenticator a
   Background:
     Given a person registered with email "jana@example.cz" and password "correct horse battery"
 
-  Scenario: Setting up the authenticator and confirming its first code turns the second factor on and ends the other sessions
+  Scenario: Setting up the authenticator and confirming its first code turns the second factor on, ends the other sessions and tells the donor by e-mail
     Given the donor signed in with email "jana@example.cz" and password "correct horse battery"
     And the donor signed in with email "jana@example.cz" and password "correct horse battery"
     When the donor starts the second factor set-up with password "correct horse battery"
@@ -15,6 +15,7 @@ Feature: Donor protects the account with a second factor from an authenticator a
     Then the response status is 200
     And the response carries an access token and a refresh cookie
     And the donor profile shows roles "DONOR" and the second factor on
+    And an e-mail goes to "jana@example.cz" with the subject "Dvoufaktorové ověření vašeho účtu bylo zapnuto – Nová naděje"
     When the donor refreshes the session with the previous refresh cookie
     Then the response status is 401
     When the donor refreshes the session
@@ -105,7 +106,7 @@ Feature: Donor protects the account with a second factor from an authenticator a
     And the response carries an access token and a refresh cookie
     And the donor profile shows roles "DONOR, ADMIN" and the second factor on
 
-  Scenario: Turning the second factor off needs the password and a fresh code, ends the other sessions and the password alone signs in again
+  Scenario: Turning the second factor off needs the password and a fresh code, ends the other sessions, tells the donor by e-mail and the password alone signs in again
     Given the donor signed in with email "jana@example.cz" and password "correct horse battery"
     And the donor turned the second factor on with password "correct horse battery"
     And the donor signed in with email "jana@example.cz" and password "correct horse battery" up to the code
@@ -127,6 +128,7 @@ Feature: Donor protects the account with a second factor from an authenticator a
     Then the response status is 200
     And the response carries an access token and a refresh cookie
     And the donor profile shows roles "DONOR" and the second factor off
+    And an e-mail goes to "jana@example.cz" with the subject "Dvoufaktorové ověření vašeho účtu bylo vypnuto – Nová naděje"
     When the donor refreshes the session with the previous refresh cookie
     Then the response status is 401
     When the donor signs in with email "jana@example.cz" and password "correct horse battery"

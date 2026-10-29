@@ -1,6 +1,7 @@
 package cz.novanadeje.app.donors.infrastructure.mail;
 
 import cz.novanadeje.app.donors.application.event.DonorPasskeyAdded;
+import cz.novanadeje.app.donors.application.event.DonorPasskeyRemoved;
 import cz.novanadeje.app.donors.application.event.DonorPasskeysRemoved;
 import cz.novanadeje.app.shared.domain.EmailAddress;
 import cz.novanadeje.app.shared.infrastructure.mail.BrandedEmails;
@@ -29,6 +30,8 @@ class DonorPasskeyEmailSender {
     private static final String ADDED_TEMPLATE = "email/donors/passkey-added";
     private static final String REMOVED_KEYS = "donors.passkeysRemoved.email.";
     private static final String REMOVED_TEMPLATE = "email/donors/passkeys-removed";
+    private static final String REMOVED_BY_DONOR_KEYS = "donors.passkeyRemoved.email.";
+    private static final String REMOVED_BY_DONOR_TEMPLATE = "email/donors/passkey-removed";
 
     private final JavaMailSender mailSender;
     private final BrandedEmails emails;
@@ -56,6 +59,15 @@ class DonorPasskeyEmailSender {
         Locale locale = event.preferredLocale().toLocale();
         send(event.donorId(), event.email(), locale, REMOVED_KEYS, REMOVED_TEMPLATE, text(REMOVED_KEYS, "intro", locale),
                 Map.of("senderEmail", sender.senderEmail()));
+    }
+
+    @Async
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void sendRemovedByDonorNotice(DonorPasskeyRemoved event) {
+        Locale locale = event.preferredLocale().toLocale();
+        send(event.donorId(), event.email(), locale, REMOVED_BY_DONOR_KEYS, REMOVED_BY_DONOR_TEMPLATE,
+                text(REMOVED_BY_DONOR_KEYS, "intro", locale, event.passkeyName()),
+                Map.of("senderEmail", sender.senderEmail(), "passkeyName", event.passkeyName()));
     }
 
     private void send(UUID donorId, EmailAddress recipient, Locale locale, String keys, String template, String intro, Map<String, Object> model) {

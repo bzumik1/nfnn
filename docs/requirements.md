@@ -42,7 +42,7 @@ Web představí fond a jeho pomoc dětem, usnadní darování a dárcům dá ú�
 - Heslo a e-mail se mění jen se současným heslem (nebo klíčem). Nový e-mail se potvrdí z nové adresy a stará adresa dostane oznámení. Po změně hesla dostane dárce e-mail.
 - Dvoufaktorové ověření kódem z aplikace v telefonu si může zapnout každý dárce; správce ho mít musí (nebo se přihlásit klíčem, který platí jako druhý faktor). Záložní kódy nejsou.
 - Ztracený telefon: jiný správce ověření vypne, nebo ho dárce vypne sám platbou 1 Kč s jednorázovým kódem z bankovního účtu, který má u fondu ověřený aspoň 7 dní. Ztracené klíče odebere správce.
-- Přístupové klíče přidá dárce v přehledu (se současným heslem nebo klíčem, dostane o tom e-mail), přejmenuje a odebere; nejvýš 10. Klíče ze zkušební adresy se po přechodu na nfnn.cz smažou samy.
+- Přístupové klíče přidá dárce v přehledu (se současným heslem nebo klíčem), přejmenuje a odebere; o přidání i odebrání dostane e-mail; nejvýš 10. Klíče ze zkušební adresy se po přechodu na nfnn.cz smažou samy.
 - Bezpečnostní e-maily k účtu (ověření, obnova, změna e-mailu, hesla, klíče nebo druhého faktoru) chodí vždy.
 
 ### Přehled
