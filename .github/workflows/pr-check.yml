@@ -85,6 +85,8 @@ jobs:
 
       - name: End-to-end and accessibility tests
         run: npm run e2e
+        env:
+          E2E_DIST: dist/frontend/browser
 
       - name: Build with the control theme
         run: npx ng build --configuration=production,control-theme --output-path=dist/control-theme
@@ -93,6 +95,7 @@ jobs:
         run: npx playwright test e2e/theme.spec.ts
         env:
           E2E_THEME: control
+          E2E_DIST: dist/control-theme/browser
 
   mcp:
     runs-on: ubuntu-latest
