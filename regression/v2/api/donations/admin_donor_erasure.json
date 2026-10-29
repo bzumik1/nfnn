@@ -1,5 +1,5 @@
 {
-  "source": "v2-baseline@70e9233",
+  "source": "v2-baseline",
   "feature": "donations/admin_donor_erasure",
   "scenarios": {
     "Erasing a donor anonymizes the record, drops the bank accounts and answers, and keeps the donations and receipts #1": {
@@ -65,6 +65,7 @@
                 "hasPassword": true,
                 "id": "<id:1>",
                 "name": "Jana Nováková",
+                "pendingEmailChange": null,
                 "preferredLocale": "cs",
                 "registeredAt": "2026-10-17T10:00:00Z",
                 "roles": [
@@ -141,6 +142,7 @@
                 "hasPassword": true,
                 "id": "<id:2>",
                 "name": "Petr Svoboda",
+                "pendingEmailChange": null,
                 "preferredLocale": "cs",
                 "registeredAt": "2026-10-17T10:00:00Z",
                 "roles": [
@@ -223,6 +225,7 @@
                 "hasPassword": true,
                 "id": "<id:1>",
                 "name": "Jana Nováková",
+                "pendingEmailChange": null,
                 "preferredLocale": "cs",
                 "registeredAt": "2026-10-17T10:00:00Z",
                 "roles": [
@@ -303,6 +306,7 @@
                 "hasPassword": true,
                 "id": "<id:1>",
                 "name": "Jana Nováková",
+                "pendingEmailChange": null,
                 "preferredLocale": "cs",
                 "registeredAt": "2026-10-17T10:00:00Z",
                 "roles": [
@@ -558,6 +562,94 @@
             "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
           ],
           "to": [
+            "jana@example.cz"
+          ],
+          "replyTo": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "subject": "Dvoufaktorové ověření vašeho účtu bylo zapnuto – Nová naděje",
+          "text": "Dobrý den,\n\nu vašeho dárcovského účtu Nová naděje jste právě zapnuli dvoufaktorové ověření. Od teď se kromě hesla přihlásíte také kódem z aplikace v telefonu; všechna ostatní přihlášení jsme ukončili.\n\nOvěření najdete po přihlášení na kartě Přihlašovací údaje, kde ho můžete také vypnout.\n\nPokud jste ověření nezapínali vy, zná někdo vaše heslo. Napište nám prosím co nejdříve na info@nfnn.cz.\n\nNová naděje – nadační fond\n\nMáte-li dotaz, napište nám na info@nfnn.cz.\n",
+          "html": {
+            "text": "Dvoufaktorové ověření bylo zapnuto Dobrý den, u vašeho dárcovského účtu Nová naděje jste právě zapnuli dvoufaktorové ověření. Od teď se kromě hesla přihlásíte také kódem z aplikace v telefonu; všechna ostatní přihlášení jsme ukončili. Ověření najdete po přihlášení na kartě Přihlašovací údaje, kde ho můžete také vypnout. Pokud jste ověření nezapínali vy, zná někdo vaše heslo. Napište nám prosím co nejdříve na info@nfnn.cz. S pozdravem Nová naděje – nadační fond Máte-li dotaz, napište nám na info@nfnn.cz. Nová naděje – nadační fond · IČO 27278794 · Jiráskova 436, 473 01 Nový Bor localhost",
+            "links": [
+              "http://localhost:4200"
+            ],
+            "sha256": "569eecb1a69179063482395aaf12247ec254c1362045d6b1607bd9c8a6757b88"
+          },
+          "attachments": [
+            {
+              "fileName": "inline",
+              "contentType": "image/png",
+              "size": 41502,
+              "sha256": "aecbb8a4c043690e9918174f51cd419a3f1c02d34161454fe40e759db6e7dfcb"
+            }
+          ]
+        },
+        {
+          "from": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "to": [
+            "jana@example.cz"
+          ],
+          "replyTo": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "subject": "Potvrďte svůj e-mail – Nová naděje",
+          "text": "Dobrý den,\n\nděkujeme za registraci dárcovského účtu Nová naděje (jana@example.cz). Zbývá potvrdit, že je tato adresa vaše:\n\nhttp://localhost:4200/potvrzeni-emailu#token=<token>\n\nOdkaz platí 24 hodin a lze ho použít jen jednou. Do potvrzení se do účtu nepřihlásíte.\n\nPokud jste se neregistrovali vy, tento e-mail prosím ignorujte. Účet bez potvrzení zůstane neaktivní.\n\nNová naděje – nadační fond\n\nMáte-li dotaz, napište nám na info@nfnn.cz.\n",
+          "html": {
+            "text": "Vítejte v Nové naději Dobrý den, děkujeme za registraci dárcovského účtu Nová naděje (jana@example.cz). Zbývá potvrdit, že je tato adresa vaše: Potvrdit e-mail Pokud tlačítko nefunguje, otevřete tento odkaz: http://localhost:4200/potvrzeni-emailu#token=<token> Odkaz platí 24 hodin a lze ho použít jen jednou. Do potvrzení se do účtu nepřihlásíte. Pokud jste se neregistrovali vy, tento e-mail prosím ignorujte. Účet bez potvrzení zůstane neaktivní. S pozdravem Nová naděje – nadační fond Máte-li dotaz, napište nám na info@nfnn.cz. Nová naděje – nadační fond · IČO 27278794 · Jiráskova 436, 473 01 Nový Bor localhost",
+            "links": [
+              "http://localhost:4200/potvrzeni-emailu#token=<token>",
+              "http://localhost:4200/potvrzeni-emailu#token=<token>",
+              "http://localhost:4200"
+            ],
+            "sha256": "b997ca057549e76a39c2ee069bfabc9ff801bcc4fe1f95bdc05ff48d5e5057b2"
+          },
+          "attachments": [
+            {
+              "fileName": "inline",
+              "contentType": "image/png",
+              "size": 41502,
+              "sha256": "aecbb8a4c043690e9918174f51cd419a3f1c02d34161454fe40e759db6e7dfcb"
+            }
+          ]
+        },
+        {
+          "from": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "to": [
+            "petr@example.cz"
+          ],
+          "replyTo": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "subject": "Potvrďte svůj e-mail – Nová naděje",
+          "text": "Dobrý den,\n\nděkujeme za registraci dárcovského účtu Nová naděje (petr@example.cz). Zbývá potvrdit, že je tato adresa vaše:\n\nhttp://localhost:4200/potvrzeni-emailu#token=<token>\n\nOdkaz platí 24 hodin a lze ho použít jen jednou. Do potvrzení se do účtu nepřihlásíte.\n\nPokud jste se neregistrovali vy, tento e-mail prosím ignorujte. Účet bez potvrzení zůstane neaktivní.\n\nNová naděje – nadační fond\n\nMáte-li dotaz, napište nám na info@nfnn.cz.\n",
+          "html": {
+            "text": "Vítejte v Nové naději Dobrý den, děkujeme za registraci dárcovského účtu Nová naděje (petr@example.cz). Zbývá potvrdit, že je tato adresa vaše: Potvrdit e-mail Pokud tlačítko nefunguje, otevřete tento odkaz: http://localhost:4200/potvrzeni-emailu#token=<token> Odkaz platí 24 hodin a lze ho použít jen jednou. Do potvrzení se do účtu nepřihlásíte. Pokud jste se neregistrovali vy, tento e-mail prosím ignorujte. Účet bez potvrzení zůstane neaktivní. S pozdravem Nová naděje – nadační fond Máte-li dotaz, napište nám na info@nfnn.cz. Nová naděje – nadační fond · IČO 27278794 · Jiráskova 436, 473 01 Nový Bor localhost",
+            "links": [
+              "http://localhost:4200/potvrzeni-emailu#token=<token>",
+              "http://localhost:4200/potvrzeni-emailu#token=<token>",
+              "http://localhost:4200"
+            ],
+            "sha256": "c3c281ed47557190235a9c6bef2f512e9ca9a504963a99c291365fc0343efddf"
+          },
+          "attachments": [
+            {
+              "fileName": "inline",
+              "contentType": "image/png",
+              "size": 41502,
+              "sha256": "aecbb8a4c043690e9918174f51cd419a3f1c02d34161454fe40e759db6e7dfcb"
+            }
+          ]
+        },
+        {
+          "from": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "to": [
             "petr@example.cz"
           ],
           "replyTo": [
@@ -565,7 +657,13 @@
           ],
           "subject": "Vaše osobní údaje jsme vymazali – Nová naděje",
           "text": "Dobrý den,\n\nna vaši žádost jsme vymazali osobní údaje z vašeho dárcovského účtu Nová naděje: jméno, adresu, e-mail, heslo a bankovní účty. Účet už nejde použít a všechna přihlášení jsme ukončili.\n\nZáznamy o přijatých darech a vydaná potvrzení o daru musíme podle účetních předpisů uchovat; nejsou už ale spojené s vaším jménem.\n\nKdybyste se k nám chtěli někdy vrátit, stačí se znovu zaregistrovat. Děkujeme za vaši podporu.\n\nNová naděje – nadační fond\n\nMáte-li dotaz, napište nám na info@nfnn.cz.\n",
-          "htmlSha256": "af0bddb3c9d7998690edb11a28e87046fbbbad8a6e1475b508d392a916f98612",
+          "html": {
+            "text": "Osobní údaje vymazány Dobrý den, na vaši žádost jsme vymazali osobní údaje z vašeho dárcovského účtu Nová naděje: jméno, adresu, e-mail, heslo a bankovní účty. Účet už nejde použít a všechna přihlášení jsme ukončili. Záznamy o přijatých darech a vydaná potvrzení o daru musíme podle účetních předpisů uchovat; nejsou už ale spojené s vaším jménem. Kdybyste se k nám chtěli někdy vrátit, stačí se znovu zaregistrovat. Děkujeme za vaši podporu. S pozdravem Nová naděje – nadační fond Máte-li dotaz, napište nám na info@nfnn.cz. Nová naděje – nadační fond · IČO 27278794 · Jiráskova 436, 473 01 Nový Bor localhost",
+            "links": [
+              "http://localhost:4200"
+            ],
+            "sha256": "af0bddb3c9d7998690edb11a28e87046fbbbad8a6e1475b508d392a916f98612"
+          },
           "attachments": [
             {
               "fileName": "inline",
@@ -578,15 +676,15 @@
       ],
       "logs": [
         "DEBUG donations.application.pairing.PaymentPairingService: Bank payment 1001 paired with donor <id:2> by CONFIRMED_SYMBOL",
-        "DEBUG donations.application.pairing.PaymentPairingService: Bank payment 1001 stays unpaired: UNKNOWN_VARIABLE_SYMBOL (symbol 6123456789, sender 2900233333/2010)",
+        "DEBUG donations.application.pairing.PaymentPairingService: Bank payment 1001 stays unpaired: UNKNOWN_VARIABLE_SYMBOL (variable symbol given, sender account given)",
         "DEBUG donations.application.pairing.PaymentPairingService: Bank payment 1002 paired with donor <id:2> by SENDER_ACCOUNT",
         "DEBUG donations.application.pairing.PaymentPairingService: Bank payment 1003 paired with donor <id:2> by VARIABLE_SYMBOL",
         "DEBUG donations.application.pairing.PaymentPairingService: Bank payment 1004 paired with donor <id:2> by VARIABLE_SYMBOL",
-        "DEBUG donations.application.pairing.PaymentPairingService: Donor <id:2> learned sender account 2900233333/2010 from bank payment 1003",
-        "DEBUG donations.infrastructure.fio.FioBankStatementSource: Fio movement 1001 from 2900233333/2010 (Svoboda Petr) with variable symbol 6123456789",
-        "DEBUG donations.infrastructure.fio.FioBankStatementSource: Fio movement 1002 from 2900233333/2010 (Svoboda Petr) with variable symbol null",
-        "DEBUG donations.infrastructure.fio.FioBankStatementSource: Fio movement 1003 from 2900233333/2010 (Svoboda Petr) with variable symbol <vs:Petr>",
-        "DEBUG donations.infrastructure.fio.FioBankStatementSource: Fio movement 1004 from 2900233333/2010 (Svoboda Petr) with variable symbol <vs:Petr>",
+        "DEBUG donations.application.pairing.PaymentPairingService: Donor <id:2> learned sender account link <id:3> from bank payment 1003",
+        "DEBUG donations.infrastructure.fio.FioBankStatementSource: Fio movement 1001 is incoming: sender account given, payer name given, variable symbol given",
+        "DEBUG donations.infrastructure.fio.FioBankStatementSource: Fio movement 1002 is incoming: sender account given, payer name given, variable symbol missing",
+        "DEBUG donations.infrastructure.fio.FioBankStatementSource: Fio movement 1003 is incoming: sender account given, payer name given, variable symbol given",
+        "DEBUG donations.infrastructure.fio.FioBankStatementSource: Fio movement 1004 is incoming: sender account given, payer name given, variable symbol given",
         "INFO donations.application.bankaccount.SymbolClaimService: Donor <id:2> confirmed symbol claim <id:9> at sender account link <id:3>: 1 payments paired",
         "INFO donations.application.donor.DonorRecordService: Donor record <id:2> erased: 1 sender account link(s) and 1 older-symbol answer(s) deleted, 2 donation(s) keep only their pairing method",
         "INFO donations.application.importing.ImportBankPaymentsService: Fio import STARTUP 2026-07-20/2026-10-17 completed: bank reported 2026-07-20/2026-10-17, 4 movements, 4 new incoming, 0 known, 2 paired by symbol, 1 by account, 0 by confirmed symbol, 1 accounts learned, 1 left unpaired, covered 2026-07-20/2026-10-17",
@@ -668,6 +766,7 @@
                 "hasPassword": true,
                 "id": "<id:1>",
                 "name": "Jana Nováková",
+                "pendingEmailChange": null,
                 "preferredLocale": "cs",
                 "registeredAt": "2026-10-17T10:00:00Z",
                 "roles": [
@@ -744,6 +843,7 @@
                 "hasPassword": true,
                 "id": "<id:2>",
                 "name": "Petr Svoboda",
+                "pendingEmailChange": null,
                 "preferredLocale": "cs",
                 "registeredAt": "2026-10-17T10:00:00Z",
                 "roles": [
@@ -826,6 +926,7 @@
                 "hasPassword": true,
                 "id": "<id:1>",
                 "name": "Jana Nováková",
+                "pendingEmailChange": null,
                 "preferredLocale": "cs",
                 "registeredAt": "2026-10-17T10:00:00Z",
                 "roles": [
@@ -906,6 +1007,7 @@
                 "hasPassword": true,
                 "id": "<id:1>",
                 "name": "Jana Nováková",
+                "pendingEmailChange": null,
                 "preferredLocale": "cs",
                 "registeredAt": "2026-10-17T10:00:00Z",
                 "roles": [
@@ -994,6 +1096,94 @@
             "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
           ],
           "to": [
+            "jana@example.cz"
+          ],
+          "replyTo": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "subject": "Dvoufaktorové ověření vašeho účtu bylo zapnuto – Nová naděje",
+          "text": "Dobrý den,\n\nu vašeho dárcovského účtu Nová naděje jste právě zapnuli dvoufaktorové ověření. Od teď se kromě hesla přihlásíte také kódem z aplikace v telefonu; všechna ostatní přihlášení jsme ukončili.\n\nOvěření najdete po přihlášení na kartě Přihlašovací údaje, kde ho můžete také vypnout.\n\nPokud jste ověření nezapínali vy, zná někdo vaše heslo. Napište nám prosím co nejdříve na info@nfnn.cz.\n\nNová naděje – nadační fond\n\nMáte-li dotaz, napište nám na info@nfnn.cz.\n",
+          "html": {
+            "text": "Dvoufaktorové ověření bylo zapnuto Dobrý den, u vašeho dárcovského účtu Nová naděje jste právě zapnuli dvoufaktorové ověření. Od teď se kromě hesla přihlásíte také kódem z aplikace v telefonu; všechna ostatní přihlášení jsme ukončili. Ověření najdete po přihlášení na kartě Přihlašovací údaje, kde ho můžete také vypnout. Pokud jste ověření nezapínali vy, zná někdo vaše heslo. Napište nám prosím co nejdříve na info@nfnn.cz. S pozdravem Nová naděje – nadační fond Máte-li dotaz, napište nám na info@nfnn.cz. Nová naděje – nadační fond · IČO 27278794 · Jiráskova 436, 473 01 Nový Bor localhost",
+            "links": [
+              "http://localhost:4200"
+            ],
+            "sha256": "569eecb1a69179063482395aaf12247ec254c1362045d6b1607bd9c8a6757b88"
+          },
+          "attachments": [
+            {
+              "fileName": "inline",
+              "contentType": "image/png",
+              "size": 41502,
+              "sha256": "aecbb8a4c043690e9918174f51cd419a3f1c02d34161454fe40e759db6e7dfcb"
+            }
+          ]
+        },
+        {
+          "from": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "to": [
+            "jana@example.cz"
+          ],
+          "replyTo": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "subject": "Potvrďte svůj e-mail – Nová naděje",
+          "text": "Dobrý den,\n\nděkujeme za registraci dárcovského účtu Nová naděje (jana@example.cz). Zbývá potvrdit, že je tato adresa vaše:\n\nhttp://localhost:4200/potvrzeni-emailu#token=<token>\n\nOdkaz platí 24 hodin a lze ho použít jen jednou. Do potvrzení se do účtu nepřihlásíte.\n\nPokud jste se neregistrovali vy, tento e-mail prosím ignorujte. Účet bez potvrzení zůstane neaktivní.\n\nNová naděje – nadační fond\n\nMáte-li dotaz, napište nám na info@nfnn.cz.\n",
+          "html": {
+            "text": "Vítejte v Nové naději Dobrý den, děkujeme za registraci dárcovského účtu Nová naděje (jana@example.cz). Zbývá potvrdit, že je tato adresa vaše: Potvrdit e-mail Pokud tlačítko nefunguje, otevřete tento odkaz: http://localhost:4200/potvrzeni-emailu#token=<token> Odkaz platí 24 hodin a lze ho použít jen jednou. Do potvrzení se do účtu nepřihlásíte. Pokud jste se neregistrovali vy, tento e-mail prosím ignorujte. Účet bez potvrzení zůstane neaktivní. S pozdravem Nová naděje – nadační fond Máte-li dotaz, napište nám na info@nfnn.cz. Nová naděje – nadační fond · IČO 27278794 · Jiráskova 436, 473 01 Nový Bor localhost",
+            "links": [
+              "http://localhost:4200/potvrzeni-emailu#token=<token>",
+              "http://localhost:4200/potvrzeni-emailu#token=<token>",
+              "http://localhost:4200"
+            ],
+            "sha256": "b997ca057549e76a39c2ee069bfabc9ff801bcc4fe1f95bdc05ff48d5e5057b2"
+          },
+          "attachments": [
+            {
+              "fileName": "inline",
+              "contentType": "image/png",
+              "size": 41502,
+              "sha256": "aecbb8a4c043690e9918174f51cd419a3f1c02d34161454fe40e759db6e7dfcb"
+            }
+          ]
+        },
+        {
+          "from": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "to": [
+            "petr@example.cz"
+          ],
+          "replyTo": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "subject": "Potvrďte svůj e-mail – Nová naděje",
+          "text": "Dobrý den,\n\nděkujeme za registraci dárcovského účtu Nová naděje (petr@example.cz). Zbývá potvrdit, že je tato adresa vaše:\n\nhttp://localhost:4200/potvrzeni-emailu#token=<token>\n\nOdkaz platí 24 hodin a lze ho použít jen jednou. Do potvrzení se do účtu nepřihlásíte.\n\nPokud jste se neregistrovali vy, tento e-mail prosím ignorujte. Účet bez potvrzení zůstane neaktivní.\n\nNová naděje – nadační fond\n\nMáte-li dotaz, napište nám na info@nfnn.cz.\n",
+          "html": {
+            "text": "Vítejte v Nové naději Dobrý den, děkujeme za registraci dárcovského účtu Nová naděje (petr@example.cz). Zbývá potvrdit, že je tato adresa vaše: Potvrdit e-mail Pokud tlačítko nefunguje, otevřete tento odkaz: http://localhost:4200/potvrzeni-emailu#token=<token> Odkaz platí 24 hodin a lze ho použít jen jednou. Do potvrzení se do účtu nepřihlásíte. Pokud jste se neregistrovali vy, tento e-mail prosím ignorujte. Účet bez potvrzení zůstane neaktivní. S pozdravem Nová naděje – nadační fond Máte-li dotaz, napište nám na info@nfnn.cz. Nová naděje – nadační fond · IČO 27278794 · Jiráskova 436, 473 01 Nový Bor localhost",
+            "links": [
+              "http://localhost:4200/potvrzeni-emailu#token=<token>",
+              "http://localhost:4200/potvrzeni-emailu#token=<token>",
+              "http://localhost:4200"
+            ],
+            "sha256": "c3c281ed47557190235a9c6bef2f512e9ca9a504963a99c291365fc0343efddf"
+          },
+          "attachments": [
+            {
+              "fileName": "inline",
+              "contentType": "image/png",
+              "size": 41502,
+              "sha256": "aecbb8a4c043690e9918174f51cd419a3f1c02d34161454fe40e759db6e7dfcb"
+            }
+          ]
+        },
+        {
+          "from": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "to": [
             "petr@example.cz"
           ],
           "replyTo": [
@@ -1001,7 +1191,13 @@
           ],
           "subject": "Vaše osobní údaje jsme vymazali – Nová naděje",
           "text": "Dobrý den,\n\nna vaši žádost jsme vymazali osobní údaje z vašeho dárcovského účtu Nová naděje: jméno, adresu, e-mail, heslo a bankovní účty. Účet už nejde použít a všechna přihlášení jsme ukončili.\n\nZáznamy o přijatých darech a vydaná potvrzení o daru musíme podle účetních předpisů uchovat; nejsou už ale spojené s vaším jménem.\n\nKdybyste se k nám chtěli někdy vrátit, stačí se znovu zaregistrovat. Děkujeme za vaši podporu.\n\nNová naděje – nadační fond\n\nMáte-li dotaz, napište nám na info@nfnn.cz.\n",
-          "htmlSha256": "af0bddb3c9d7998690edb11a28e87046fbbbad8a6e1475b508d392a916f98612",
+          "html": {
+            "text": "Osobní údaje vymazány Dobrý den, na vaši žádost jsme vymazali osobní údaje z vašeho dárcovského účtu Nová naděje: jméno, adresu, e-mail, heslo a bankovní účty. Účet už nejde použít a všechna přihlášení jsme ukončili. Záznamy o přijatých darech a vydaná potvrzení o daru musíme podle účetních předpisů uchovat; nejsou už ale spojené s vaším jménem. Kdybyste se k nám chtěli někdy vrátit, stačí se znovu zaregistrovat. Děkujeme za vaši podporu. S pozdravem Nová naděje – nadační fond Máte-li dotaz, napište nám na info@nfnn.cz. Nová naděje – nadační fond · IČO 27278794 · Jiráskova 436, 473 01 Nový Bor localhost",
+            "links": [
+              "http://localhost:4200"
+            ],
+            "sha256": "af0bddb3c9d7998690edb11a28e87046fbbbad8a6e1475b508d392a916f98612"
+          },
           "attachments": [
             {
               "fileName": "inline",
@@ -1014,12 +1210,12 @@
       ],
       "logs": [
         "DEBUG donations.application.pairing.PaymentPairingService: Bank payment 1001 paired with donor <id:2> by VARIABLE_SYMBOL",
-        "DEBUG donations.application.pairing.PaymentPairingService: Bank payment 1002 stays unpaired: UNKNOWN_VARIABLE_SYMBOL (symbol <vs:Petr>, sender 2900233333/2010)",
-        "DEBUG donations.application.pairing.PaymentPairingService: Bank payment 1003 stays unpaired: UNKNOWN_SENDER_ACCOUNT (symbol none, sender 2900233333/2010)",
-        "DEBUG donations.application.pairing.PaymentPairingService: Donor <id:2> learned sender account 2900233333/2010 from bank payment 1001",
-        "DEBUG donations.infrastructure.fio.FioBankStatementSource: Fio movement 1001 from 2900233333/2010 (Svoboda Petr) with variable symbol <vs:Petr>",
-        "DEBUG donations.infrastructure.fio.FioBankStatementSource: Fio movement 1002 from 2900233333/2010 (Svoboda Petr) with variable symbol <vs:Petr>",
-        "DEBUG donations.infrastructure.fio.FioBankStatementSource: Fio movement 1003 from 2900233333/2010 (Svoboda Petr) with variable symbol null",
+        "DEBUG donations.application.pairing.PaymentPairingService: Bank payment 1002 stays unpaired: UNKNOWN_VARIABLE_SYMBOL (variable symbol given, sender account given)",
+        "DEBUG donations.application.pairing.PaymentPairingService: Bank payment 1003 stays unpaired: UNKNOWN_SENDER_ACCOUNT (variable symbol missing, sender account given)",
+        "DEBUG donations.application.pairing.PaymentPairingService: Donor <id:2> learned sender account link <id:3> from bank payment 1001",
+        "DEBUG donations.infrastructure.fio.FioBankStatementSource: Fio movement 1001 is incoming: sender account given, payer name given, variable symbol given",
+        "DEBUG donations.infrastructure.fio.FioBankStatementSource: Fio movement 1002 is incoming: sender account given, payer name given, variable symbol given",
+        "DEBUG donations.infrastructure.fio.FioBankStatementSource: Fio movement 1003 is incoming: sender account given, payer name given, variable symbol missing",
         "INFO donations.application.donor.DonorRecordService: Donor record <id:2> erased: 1 sender account link(s) and 0 older-symbol answer(s) deleted, 0 donation(s) keep only their pairing method",
         "INFO donations.application.importing.ImportBankPaymentsService: Fio import HOURLY 2026-10-14/2026-10-17 completed: bank reported 2026-10-14/2026-10-17, 2 movements, 2 new incoming, 0 known, 0 paired by symbol, 0 by account, 0 by confirmed symbol, 0 accounts learned, 2 left unpaired, covered 2026-07-20/2026-10-17",
         "INFO donations.application.importing.ImportBankPaymentsService: Fio import STARTUP 2026-07-20/2026-10-17 completed: bank reported 2026-07-20/2026-10-17, 1 movements, 1 new incoming, 0 known, 1 paired by symbol, 0 by account, 0 by confirmed symbol, 1 accounts learned, 0 left unpaired, covered 2026-07-20/2026-10-17",

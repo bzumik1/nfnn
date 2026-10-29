@@ -1,5 +1,5 @@
 {
-  "source": "v2-baseline@70e9233",
+  "source": "v2-baseline",
   "feature": "content/manage_news",
   "scenarios": {
     "A new article is a draft with an address made from its title and the site does not show it yet #1": {
@@ -65,6 +65,7 @@
                 "hasPassword": true,
                 "id": "<id:1>",
                 "name": "Jana Nováková",
+                "pendingEmailChange": null,
                 "preferredLocale": "cs",
                 "registeredAt": "2026-10-23T10:00:00Z",
                 "roles": [
@@ -147,6 +148,7 @@
                 "hasPassword": true,
                 "id": "<id:1>",
                 "name": "Jana Nováková",
+                "pendingEmailChange": null,
                 "preferredLocale": "cs",
                 "registeredAt": "2026-10-23T10:00:00Z",
                 "roles": [
@@ -227,6 +229,7 @@
                 "hasPassword": true,
                 "id": "<id:1>",
                 "name": "Jana Nováková",
+                "pendingEmailChange": null,
                 "preferredLocale": "cs",
                 "registeredAt": "2026-10-23T10:00:00Z",
                 "roles": [
@@ -271,6 +274,7 @@
               "coverImage": null,
               "createdAt": "2026-10-23T10:00:00Z",
               "id": "<id:2>",
+              "live": false,
               "perex": "Krátký souhrn aktuality.",
               "publishedOn": null,
               "slug": "novy-projekt-zahrada-pro-deti",
@@ -329,7 +333,66 @@
           }
         }
       },
-      "mails": [],
+      "mails": [
+        {
+          "from": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "to": [
+            "jana@example.cz"
+          ],
+          "replyTo": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "subject": "Dvoufaktorové ověření vašeho účtu bylo zapnuto – Nová naděje",
+          "text": "Dobrý den,\n\nu vašeho dárcovského účtu Nová naděje jste právě zapnuli dvoufaktorové ověření. Od teď se kromě hesla přihlásíte také kódem z aplikace v telefonu; všechna ostatní přihlášení jsme ukončili.\n\nOvěření najdete po přihlášení na kartě Přihlašovací údaje, kde ho můžete také vypnout.\n\nPokud jste ověření nezapínali vy, zná někdo vaše heslo. Napište nám prosím co nejdříve na info@nfnn.cz.\n\nNová naděje – nadační fond\n\nMáte-li dotaz, napište nám na info@nfnn.cz.\n",
+          "html": {
+            "text": "Dvoufaktorové ověření bylo zapnuto Dobrý den, u vašeho dárcovského účtu Nová naděje jste právě zapnuli dvoufaktorové ověření. Od teď se kromě hesla přihlásíte také kódem z aplikace v telefonu; všechna ostatní přihlášení jsme ukončili. Ověření najdete po přihlášení na kartě Přihlašovací údaje, kde ho můžete také vypnout. Pokud jste ověření nezapínali vy, zná někdo vaše heslo. Napište nám prosím co nejdříve na info@nfnn.cz. S pozdravem Nová naděje – nadační fond Máte-li dotaz, napište nám na info@nfnn.cz. Nová naděje – nadační fond · IČO 27278794 · Jiráskova 436, 473 01 Nový Bor localhost",
+            "links": [
+              "http://localhost:4200"
+            ],
+            "sha256": "569eecb1a69179063482395aaf12247ec254c1362045d6b1607bd9c8a6757b88"
+          },
+          "attachments": [
+            {
+              "fileName": "inline",
+              "contentType": "image/png",
+              "size": 41502,
+              "sha256": "aecbb8a4c043690e9918174f51cd419a3f1c02d34161454fe40e759db6e7dfcb"
+            }
+          ]
+        },
+        {
+          "from": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "to": [
+            "jana@example.cz"
+          ],
+          "replyTo": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "subject": "Potvrďte svůj e-mail – Nová naděje",
+          "text": "Dobrý den,\n\nděkujeme za registraci dárcovského účtu Nová naděje (jana@example.cz). Zbývá potvrdit, že je tato adresa vaše:\n\nhttp://localhost:4200/potvrzeni-emailu#token=<token>\n\nOdkaz platí 24 hodin a lze ho použít jen jednou. Do potvrzení se do účtu nepřihlásíte.\n\nPokud jste se neregistrovali vy, tento e-mail prosím ignorujte. Účet bez potvrzení zůstane neaktivní.\n\nNová naděje – nadační fond\n\nMáte-li dotaz, napište nám na info@nfnn.cz.\n",
+          "html": {
+            "text": "Vítejte v Nové naději Dobrý den, děkujeme za registraci dárcovského účtu Nová naděje (jana@example.cz). Zbývá potvrdit, že je tato adresa vaše: Potvrdit e-mail Pokud tlačítko nefunguje, otevřete tento odkaz: http://localhost:4200/potvrzeni-emailu#token=<token> Odkaz platí 24 hodin a lze ho použít jen jednou. Do potvrzení se do účtu nepřihlásíte. Pokud jste se neregistrovali vy, tento e-mail prosím ignorujte. Účet bez potvrzení zůstane neaktivní. S pozdravem Nová naděje – nadační fond Máte-li dotaz, napište nám na info@nfnn.cz. Nová naděje – nadační fond · IČO 27278794 · Jiráskova 436, 473 01 Nový Bor localhost",
+            "links": [
+              "http://localhost:4200/potvrzeni-emailu#token=<token>",
+              "http://localhost:4200/potvrzeni-emailu#token=<token>",
+              "http://localhost:4200"
+            ],
+            "sha256": "b997ca057549e76a39c2ee069bfabc9ff801bcc4fe1f95bdc05ff48d5e5057b2"
+          },
+          "attachments": [
+            {
+              "fileName": "inline",
+              "contentType": "image/png",
+              "size": 41502,
+              "sha256": "aecbb8a4c043690e9918174f51cd419a3f1c02d34161454fe40e759db6e7dfcb"
+            }
+          ]
+        }
+      ],
       "logs": [
         "INFO content.application.news.NewsAdminService: CREATE_NEWS on news article <id:2> by admin <id:1>",
         "INFO donations.application.pairing.PaymentPairingService: Payments of donor <id:1> paired after the registration: 0 by symbol, 0 by account, 0 accounts learned",
@@ -404,6 +467,7 @@
                 "hasPassword": true,
                 "id": "<id:1>",
                 "name": "Jana Nováková",
+                "pendingEmailChange": null,
                 "preferredLocale": "cs",
                 "registeredAt": "2026-10-23T10:00:00Z",
                 "roles": [
@@ -486,6 +550,7 @@
                 "hasPassword": true,
                 "id": "<id:1>",
                 "name": "Jana Nováková",
+                "pendingEmailChange": null,
                 "preferredLocale": "cs",
                 "registeredAt": "2026-10-23T10:00:00Z",
                 "roles": [
@@ -566,6 +631,7 @@
                 "hasPassword": true,
                 "id": "<id:1>",
                 "name": "Jana Nováková",
+                "pendingEmailChange": null,
                 "preferredLocale": "cs",
                 "registeredAt": "2026-10-23T10:00:00Z",
                 "roles": [
@@ -704,7 +770,66 @@
           }
         }
       },
-      "mails": [],
+      "mails": [
+        {
+          "from": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "to": [
+            "jana@example.cz"
+          ],
+          "replyTo": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "subject": "Dvoufaktorové ověření vašeho účtu bylo zapnuto – Nová naděje",
+          "text": "Dobrý den,\n\nu vašeho dárcovského účtu Nová naděje jste právě zapnuli dvoufaktorové ověření. Od teď se kromě hesla přihlásíte také kódem z aplikace v telefonu; všechna ostatní přihlášení jsme ukončili.\n\nOvěření najdete po přihlášení na kartě Přihlašovací údaje, kde ho můžete také vypnout.\n\nPokud jste ověření nezapínali vy, zná někdo vaše heslo. Napište nám prosím co nejdříve na info@nfnn.cz.\n\nNová naděje – nadační fond\n\nMáte-li dotaz, napište nám na info@nfnn.cz.\n",
+          "html": {
+            "text": "Dvoufaktorové ověření bylo zapnuto Dobrý den, u vašeho dárcovského účtu Nová naděje jste právě zapnuli dvoufaktorové ověření. Od teď se kromě hesla přihlásíte také kódem z aplikace v telefonu; všechna ostatní přihlášení jsme ukončili. Ověření najdete po přihlášení na kartě Přihlašovací údaje, kde ho můžete také vypnout. Pokud jste ověření nezapínali vy, zná někdo vaše heslo. Napište nám prosím co nejdříve na info@nfnn.cz. S pozdravem Nová naděje – nadační fond Máte-li dotaz, napište nám na info@nfnn.cz. Nová naděje – nadační fond · IČO 27278794 · Jiráskova 436, 473 01 Nový Bor localhost",
+            "links": [
+              "http://localhost:4200"
+            ],
+            "sha256": "569eecb1a69179063482395aaf12247ec254c1362045d6b1607bd9c8a6757b88"
+          },
+          "attachments": [
+            {
+              "fileName": "inline",
+              "contentType": "image/png",
+              "size": 41502,
+              "sha256": "aecbb8a4c043690e9918174f51cd419a3f1c02d34161454fe40e759db6e7dfcb"
+            }
+          ]
+        },
+        {
+          "from": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "to": [
+            "jana@example.cz"
+          ],
+          "replyTo": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "subject": "Potvrďte svůj e-mail – Nová naděje",
+          "text": "Dobrý den,\n\nděkujeme za registraci dárcovského účtu Nová naděje (jana@example.cz). Zbývá potvrdit, že je tato adresa vaše:\n\nhttp://localhost:4200/potvrzeni-emailu#token=<token>\n\nOdkaz platí 24 hodin a lze ho použít jen jednou. Do potvrzení se do účtu nepřihlásíte.\n\nPokud jste se neregistrovali vy, tento e-mail prosím ignorujte. Účet bez potvrzení zůstane neaktivní.\n\nNová naděje – nadační fond\n\nMáte-li dotaz, napište nám na info@nfnn.cz.\n",
+          "html": {
+            "text": "Vítejte v Nové naději Dobrý den, děkujeme za registraci dárcovského účtu Nová naděje (jana@example.cz). Zbývá potvrdit, že je tato adresa vaše: Potvrdit e-mail Pokud tlačítko nefunguje, otevřete tento odkaz: http://localhost:4200/potvrzeni-emailu#token=<token> Odkaz platí 24 hodin a lze ho použít jen jednou. Do potvrzení se do účtu nepřihlásíte. Pokud jste se neregistrovali vy, tento e-mail prosím ignorujte. Účet bez potvrzení zůstane neaktivní. S pozdravem Nová naděje – nadační fond Máte-li dotaz, napište nám na info@nfnn.cz. Nová naděje – nadační fond · IČO 27278794 · Jiráskova 436, 473 01 Nový Bor localhost",
+            "links": [
+              "http://localhost:4200/potvrzeni-emailu#token=<token>",
+              "http://localhost:4200/potvrzeni-emailu#token=<token>",
+              "http://localhost:4200"
+            ],
+            "sha256": "b997ca057549e76a39c2ee069bfabc9ff801bcc4fe1f95bdc05ff48d5e5057b2"
+          },
+          "attachments": [
+            {
+              "fileName": "inline",
+              "contentType": "image/png",
+              "size": 41502,
+              "sha256": "aecbb8a4c043690e9918174f51cd419a3f1c02d34161454fe40e759db6e7dfcb"
+            }
+          ]
+        }
+      ],
       "logs": [
         "INFO content.application.media.UploadImageService: Image <id:2> stored: 1600x1000 as 3 variants",
         "INFO donations.application.pairing.PaymentPairingService: Payments of donor <id:1> paired after the registration: 0 by symbol, 0 by account, 0 accounts learned",
@@ -778,6 +903,7 @@
                 "hasPassword": true,
                 "id": "<id:1>",
                 "name": "Jana Nováková",
+                "pendingEmailChange": null,
                 "preferredLocale": "cs",
                 "registeredAt": "2026-10-23T10:00:00Z",
                 "roles": [
@@ -860,6 +986,7 @@
                 "hasPassword": true,
                 "id": "<id:1>",
                 "name": "Jana Nováková",
+                "pendingEmailChange": null,
                 "preferredLocale": "cs",
                 "registeredAt": "2026-10-23T10:00:00Z",
                 "roles": [
@@ -940,6 +1067,7 @@
                 "hasPassword": true,
                 "id": "<id:1>",
                 "name": "Jana Nováková",
+                "pendingEmailChange": null,
                 "preferredLocale": "cs",
                 "registeredAt": "2026-10-23T10:00:00Z",
                 "roles": [
@@ -1027,7 +1155,66 @@
           }
         }
       },
-      "mails": [],
+      "mails": [
+        {
+          "from": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "to": [
+            "jana@example.cz"
+          ],
+          "replyTo": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "subject": "Dvoufaktorové ověření vašeho účtu bylo zapnuto – Nová naděje",
+          "text": "Dobrý den,\n\nu vašeho dárcovského účtu Nová naděje jste právě zapnuli dvoufaktorové ověření. Od teď se kromě hesla přihlásíte také kódem z aplikace v telefonu; všechna ostatní přihlášení jsme ukončili.\n\nOvěření najdete po přihlášení na kartě Přihlašovací údaje, kde ho můžete také vypnout.\n\nPokud jste ověření nezapínali vy, zná někdo vaše heslo. Napište nám prosím co nejdříve na info@nfnn.cz.\n\nNová naděje – nadační fond\n\nMáte-li dotaz, napište nám na info@nfnn.cz.\n",
+          "html": {
+            "text": "Dvoufaktorové ověření bylo zapnuto Dobrý den, u vašeho dárcovského účtu Nová naděje jste právě zapnuli dvoufaktorové ověření. Od teď se kromě hesla přihlásíte také kódem z aplikace v telefonu; všechna ostatní přihlášení jsme ukončili. Ověření najdete po přihlášení na kartě Přihlašovací údaje, kde ho můžete také vypnout. Pokud jste ověření nezapínali vy, zná někdo vaše heslo. Napište nám prosím co nejdříve na info@nfnn.cz. S pozdravem Nová naděje – nadační fond Máte-li dotaz, napište nám na info@nfnn.cz. Nová naděje – nadační fond · IČO 27278794 · Jiráskova 436, 473 01 Nový Bor localhost",
+            "links": [
+              "http://localhost:4200"
+            ],
+            "sha256": "569eecb1a69179063482395aaf12247ec254c1362045d6b1607bd9c8a6757b88"
+          },
+          "attachments": [
+            {
+              "fileName": "inline",
+              "contentType": "image/png",
+              "size": 41502,
+              "sha256": "aecbb8a4c043690e9918174f51cd419a3f1c02d34161454fe40e759db6e7dfcb"
+            }
+          ]
+        },
+        {
+          "from": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "to": [
+            "jana@example.cz"
+          ],
+          "replyTo": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "subject": "Potvrďte svůj e-mail – Nová naděje",
+          "text": "Dobrý den,\n\nděkujeme za registraci dárcovského účtu Nová naděje (jana@example.cz). Zbývá potvrdit, že je tato adresa vaše:\n\nhttp://localhost:4200/potvrzeni-emailu#token=<token>\n\nOdkaz platí 24 hodin a lze ho použít jen jednou. Do potvrzení se do účtu nepřihlásíte.\n\nPokud jste se neregistrovali vy, tento e-mail prosím ignorujte. Účet bez potvrzení zůstane neaktivní.\n\nNová naděje – nadační fond\n\nMáte-li dotaz, napište nám na info@nfnn.cz.\n",
+          "html": {
+            "text": "Vítejte v Nové naději Dobrý den, děkujeme za registraci dárcovského účtu Nová naděje (jana@example.cz). Zbývá potvrdit, že je tato adresa vaše: Potvrdit e-mail Pokud tlačítko nefunguje, otevřete tento odkaz: http://localhost:4200/potvrzeni-emailu#token=<token> Odkaz platí 24 hodin a lze ho použít jen jednou. Do potvrzení se do účtu nepřihlásíte. Pokud jste se neregistrovali vy, tento e-mail prosím ignorujte. Účet bez potvrzení zůstane neaktivní. S pozdravem Nová naděje – nadační fond Máte-li dotaz, napište nám na info@nfnn.cz. Nová naděje – nadační fond · IČO 27278794 · Jiráskova 436, 473 01 Nový Bor localhost",
+            "links": [
+              "http://localhost:4200/potvrzeni-emailu#token=<token>",
+              "http://localhost:4200/potvrzeni-emailu#token=<token>",
+              "http://localhost:4200"
+            ],
+            "sha256": "b997ca057549e76a39c2ee069bfabc9ff801bcc4fe1f95bdc05ff48d5e5057b2"
+          },
+          "attachments": [
+            {
+              "fileName": "inline",
+              "contentType": "image/png",
+              "size": 41502,
+              "sha256": "aecbb8a4c043690e9918174f51cd419a3f1c02d34161454fe40e759db6e7dfcb"
+            }
+          ]
+        }
+      ],
       "logs": [
         "INFO donations.application.pairing.PaymentPairingService: Payments of donor <id:1> paired after the registration: 0 by symbol, 0 by account, 0 accounts learned",
         "INFO donors.application.DonorAuthenticationService: Sign-in of donor <id:1> waits for the second factor",
@@ -1100,6 +1287,7 @@
                 "hasPassword": true,
                 "id": "<id:1>",
                 "name": "Jana Nováková",
+                "pendingEmailChange": null,
                 "preferredLocale": "cs",
                 "registeredAt": "2026-10-23T10:00:00Z",
                 "roles": [
@@ -1182,6 +1370,7 @@
                 "hasPassword": true,
                 "id": "<id:1>",
                 "name": "Jana Nováková",
+                "pendingEmailChange": null,
                 "preferredLocale": "cs",
                 "registeredAt": "2026-10-23T10:00:00Z",
                 "roles": [
@@ -1262,6 +1451,7 @@
                 "hasPassword": true,
                 "id": "<id:1>",
                 "name": "Jana Nováková",
+                "pendingEmailChange": null,
                 "preferredLocale": "cs",
                 "registeredAt": "2026-10-23T10:00:00Z",
                 "roles": [
@@ -1347,6 +1537,7 @@
               },
               "createdAt": "2026-10-23T10:00:00Z",
               "id": "<id:3>",
+              "live": false,
               "perex": "Stavíme zahradu.",
               "publishedOn": null,
               "slug": "zahrada-pro-deti",
@@ -1384,6 +1575,7 @@
               "coverImage": null,
               "createdAt": "2026-10-23T10:00:00Z",
               "id": "<id:4>",
+              "live": false,
               "perex": "Zveme vás na koncert.",
               "publishedOn": null,
               "slug": "beneficni-koncert",
@@ -1423,6 +1615,7 @@
               },
               "createdAt": "2026-10-23T10:00:00Z",
               "id": "<id:3>",
+              "live": true,
               "perex": "Stavíme zahradu.",
               "publishedOn": "2026-10-20",
               "slug": "zahrada-pro-deti",
@@ -1458,6 +1651,7 @@
               "coverImage": null,
               "createdAt": "2026-10-23T10:00:00Z",
               "id": "<id:4>",
+              "live": true,
               "perex": "Zveme vás na koncert.",
               "publishedOn": "2026-10-23",
               "slug": "beneficni-koncert",
@@ -1490,6 +1684,7 @@
                   "coverImage": null,
                   "createdAt": "2026-10-23T10:00:00Z",
                   "id": "<id:4>",
+                  "live": true,
                   "perex": "Zveme vás na koncert.",
                   "publishedOn": "2026-10-23",
                   "slug": "beneficni-koncert",
@@ -1506,6 +1701,7 @@
                   },
                   "createdAt": "2026-10-23T10:00:00Z",
                   "id": "<id:3>",
+                  "live": true,
                   "perex": "Stavíme zahradu.",
                   "publishedOn": "2026-10-20",
                   "slug": "zahrada-pro-deti",
@@ -1544,6 +1740,7 @@
               },
               "createdAt": "2026-10-23T10:00:00Z",
               "id": "<id:3>",
+              "live": true,
               "perex": "Stavíme zahradu.",
               "publishedOn": "2026-10-20",
               "slug": "zahrada-pro-deti",
@@ -1577,6 +1774,7 @@
               "coverImage": null,
               "createdAt": "2026-10-23T10:00:00Z",
               "id": "<id:4>",
+              "live": false,
               "perex": "Zveme vás na koncert.",
               "publishedOn": null,
               "slug": "beneficni-koncert",
@@ -1613,6 +1811,7 @@
                   },
                   "createdAt": "2026-10-23T10:00:00Z",
                   "id": "<id:3>",
+                  "live": true,
                   "perex": "Stavíme zahradu.",
                   "publishedOn": "2026-10-20",
                   "slug": "zahrada-pro-deti",
@@ -1652,7 +1851,66 @@
           }
         }
       },
-      "mails": [],
+      "mails": [
+        {
+          "from": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "to": [
+            "jana@example.cz"
+          ],
+          "replyTo": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "subject": "Dvoufaktorové ověření vašeho účtu bylo zapnuto – Nová naděje",
+          "text": "Dobrý den,\n\nu vašeho dárcovského účtu Nová naděje jste právě zapnuli dvoufaktorové ověření. Od teď se kromě hesla přihlásíte také kódem z aplikace v telefonu; všechna ostatní přihlášení jsme ukončili.\n\nOvěření najdete po přihlášení na kartě Přihlašovací údaje, kde ho můžete také vypnout.\n\nPokud jste ověření nezapínali vy, zná někdo vaše heslo. Napište nám prosím co nejdříve na info@nfnn.cz.\n\nNová naděje – nadační fond\n\nMáte-li dotaz, napište nám na info@nfnn.cz.\n",
+          "html": {
+            "text": "Dvoufaktorové ověření bylo zapnuto Dobrý den, u vašeho dárcovského účtu Nová naděje jste právě zapnuli dvoufaktorové ověření. Od teď se kromě hesla přihlásíte také kódem z aplikace v telefonu; všechna ostatní přihlášení jsme ukončili. Ověření najdete po přihlášení na kartě Přihlašovací údaje, kde ho můžete také vypnout. Pokud jste ověření nezapínali vy, zná někdo vaše heslo. Napište nám prosím co nejdříve na info@nfnn.cz. S pozdravem Nová naděje – nadační fond Máte-li dotaz, napište nám na info@nfnn.cz. Nová naděje – nadační fond · IČO 27278794 · Jiráskova 436, 473 01 Nový Bor localhost",
+            "links": [
+              "http://localhost:4200"
+            ],
+            "sha256": "569eecb1a69179063482395aaf12247ec254c1362045d6b1607bd9c8a6757b88"
+          },
+          "attachments": [
+            {
+              "fileName": "inline",
+              "contentType": "image/png",
+              "size": 41502,
+              "sha256": "aecbb8a4c043690e9918174f51cd419a3f1c02d34161454fe40e759db6e7dfcb"
+            }
+          ]
+        },
+        {
+          "from": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "to": [
+            "jana@example.cz"
+          ],
+          "replyTo": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "subject": "Potvrďte svůj e-mail – Nová naděje",
+          "text": "Dobrý den,\n\nděkujeme za registraci dárcovského účtu Nová naděje (jana@example.cz). Zbývá potvrdit, že je tato adresa vaše:\n\nhttp://localhost:4200/potvrzeni-emailu#token=<token>\n\nOdkaz platí 24 hodin a lze ho použít jen jednou. Do potvrzení se do účtu nepřihlásíte.\n\nPokud jste se neregistrovali vy, tento e-mail prosím ignorujte. Účet bez potvrzení zůstane neaktivní.\n\nNová naděje – nadační fond\n\nMáte-li dotaz, napište nám na info@nfnn.cz.\n",
+          "html": {
+            "text": "Vítejte v Nové naději Dobrý den, děkujeme za registraci dárcovského účtu Nová naděje (jana@example.cz). Zbývá potvrdit, že je tato adresa vaše: Potvrdit e-mail Pokud tlačítko nefunguje, otevřete tento odkaz: http://localhost:4200/potvrzeni-emailu#token=<token> Odkaz platí 24 hodin a lze ho použít jen jednou. Do potvrzení se do účtu nepřihlásíte. Pokud jste se neregistrovali vy, tento e-mail prosím ignorujte. Účet bez potvrzení zůstane neaktivní. S pozdravem Nová naděje – nadační fond Máte-li dotaz, napište nám na info@nfnn.cz. Nová naděje – nadační fond · IČO 27278794 · Jiráskova 436, 473 01 Nový Bor localhost",
+            "links": [
+              "http://localhost:4200/potvrzeni-emailu#token=<token>",
+              "http://localhost:4200/potvrzeni-emailu#token=<token>",
+              "http://localhost:4200"
+            ],
+            "sha256": "b997ca057549e76a39c2ee069bfabc9ff801bcc4fe1f95bdc05ff48d5e5057b2"
+          },
+          "attachments": [
+            {
+              "fileName": "inline",
+              "contentType": "image/png",
+              "size": 41502,
+              "sha256": "aecbb8a4c043690e9918174f51cd419a3f1c02d34161454fe40e759db6e7dfcb"
+            }
+          ]
+        }
+      ],
       "logs": [
         "INFO content.application.media.UploadImageService: Image <id:2> stored: 1600x1000 as 3 variants",
         "INFO content.application.news.NewsAdminService: CREATE_NEWS on news article <id:3> by admin <id:1>",
@@ -1673,7 +1931,7 @@
         "INFO shared.infrastructure.audit.AdminActionLog: Admin <id:1> performed UNPUBLISH_NEWS on <id:4>"
       ]
     },
-    "An article published with a future date appears on the site on that day #1": {
+    "An article published with a future date appears on the site on that day, and the administration says when it is live #1": {
       "requests": {
         "POST /api/donors/auth/register #1": {
           "request": {
@@ -1736,6 +1994,7 @@
                 "hasPassword": true,
                 "id": "<id:1>",
                 "name": "Jana Nováková",
+                "pendingEmailChange": null,
                 "preferredLocale": "cs",
                 "registeredAt": "2026-10-23T10:00:00Z",
                 "roles": [
@@ -1818,6 +2077,7 @@
                 "hasPassword": true,
                 "id": "<id:1>",
                 "name": "Jana Nováková",
+                "pendingEmailChange": null,
                 "preferredLocale": "cs",
                 "registeredAt": "2026-10-23T10:00:00Z",
                 "roles": [
@@ -1898,6 +2158,7 @@
                 "hasPassword": true,
                 "id": "<id:1>",
                 "name": "Jana Nováková",
+                "pendingEmailChange": null,
                 "preferredLocale": "cs",
                 "registeredAt": "2026-10-23T10:00:00Z",
                 "roles": [
@@ -1942,6 +2203,7 @@
               "coverImage": null,
               "createdAt": "2026-10-23T10:00:00Z",
               "id": "<id:2>",
+              "live": false,
               "perex": "Sbírka začne brzy.",
               "publishedOn": null,
               "slug": "vanocni-sbirka",
@@ -1977,6 +2239,7 @@
               "coverImage": null,
               "createdAt": "2026-10-23T10:00:00Z",
               "id": "<id:2>",
+              "live": false,
               "perex": "Sbírka začne brzy.",
               "publishedOn": "2026-11-01",
               "slug": "vanocni-sbirka",
@@ -2010,6 +2273,120 @@
             }
           }
         },
+        "POST /api/donors/auth/login #2": {
+          "request": {
+            "path": "/api/donors/auth/login",
+            "body": {
+              "email": "jana@example.cz",
+              "password": "<secret>"
+            }
+          },
+          "response": {
+            "status": 401,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/problem+json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "challenge": "<token>",
+              "challengeExpiresAt": "2026-11-01T11:05:00Z",
+              "detail": "Přihlášení dokončíte šestimístným kódem z ověřovací aplikace.",
+              "instance": "/api/donors/auth/login",
+              "status": 401,
+              "title": "Zadejte kód z aplikace",
+              "type": "https://nfnn.cz/problems/auth/second-factor-required"
+            }
+          }
+        },
+        "POST /api/donors/auth/login/second-factor #2": {
+          "request": {
+            "path": "/api/donors/auth/login/second-factor",
+            "body": {
+              "challenge": "<token>",
+              "code": "<secret>"
+            }
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "set-cookie": "refresh_token=<secret>; Path=/api/donors/auth; Max-Age=1209600; Expires=<time>; Secure; HttpOnly; SameSite=Strict",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "accessToken": "<secret>",
+              "accessTokenExpiresAt": "2026-11-01T11:15:00Z",
+              "user": {
+                "address": {
+                  "city": "Ústí nad Labem",
+                  "postalCode": "400 01",
+                  "street": "Dlouhá 12"
+                },
+                "companyIdentifier": null,
+                "email": "jana@example.cz",
+                "hasPassword": true,
+                "id": "<id:1>",
+                "name": "Jana Nováková",
+                "pendingEmailChange": null,
+                "preferredLocale": "cs",
+                "registeredAt": "2026-10-23T10:00:00Z",
+                "roles": [
+                  "DONOR",
+                  "ADMIN"
+                ],
+                "secondFactor": {
+                  "enabled": true,
+                  "neededForAdministration": false
+                },
+                "type": "PERSON",
+                "variableSymbol": "<vs:Jana>"
+              }
+            }
+          }
+        },
+        "GET /api/admin/content/news/{id} #1": {
+          "request": {
+            "path": "/api/admin/content/news/<id:2>",
+            "headers": {
+              "Authorization": "Bearer <jwt>"
+            }
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "body": "Text o sbírce.",
+              "coverImage": null,
+              "createdAt": "2026-10-23T10:00:00Z",
+              "id": "<id:2>",
+              "live": true,
+              "perex": "Sbírka začne brzy.",
+              "publishedOn": "2026-11-01",
+              "slug": "vanocni-sbirka",
+              "tag": null,
+              "title": "Vánoční sbírka",
+              "updatedAt": "2026-10-23T10:00:00Z"
+            }
+          }
+        },
         "GET /api/content/news #2": {
           "request": {
             "path": "/api/content/news"
@@ -2033,6 +2410,7 @@
                   "coverImage": null,
                   "createdAt": "2026-10-23T10:00:00Z",
                   "id": "<id:2>",
+                  "live": true,
                   "perex": "Sbírka začne brzy.",
                   "publishedOn": "2026-11-01",
                   "slug": "vanocni-sbirka",
@@ -2048,11 +2426,71 @@
           }
         }
       },
-      "mails": [],
+      "mails": [
+        {
+          "from": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "to": [
+            "jana@example.cz"
+          ],
+          "replyTo": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "subject": "Dvoufaktorové ověření vašeho účtu bylo zapnuto – Nová naděje",
+          "text": "Dobrý den,\n\nu vašeho dárcovského účtu Nová naděje jste právě zapnuli dvoufaktorové ověření. Od teď se kromě hesla přihlásíte také kódem z aplikace v telefonu; všechna ostatní přihlášení jsme ukončili.\n\nOvěření najdete po přihlášení na kartě Přihlašovací údaje, kde ho můžete také vypnout.\n\nPokud jste ověření nezapínali vy, zná někdo vaše heslo. Napište nám prosím co nejdříve na info@nfnn.cz.\n\nNová naděje – nadační fond\n\nMáte-li dotaz, napište nám na info@nfnn.cz.\n",
+          "html": {
+            "text": "Dvoufaktorové ověření bylo zapnuto Dobrý den, u vašeho dárcovského účtu Nová naděje jste právě zapnuli dvoufaktorové ověření. Od teď se kromě hesla přihlásíte také kódem z aplikace v telefonu; všechna ostatní přihlášení jsme ukončili. Ověření najdete po přihlášení na kartě Přihlašovací údaje, kde ho můžete také vypnout. Pokud jste ověření nezapínali vy, zná někdo vaše heslo. Napište nám prosím co nejdříve na info@nfnn.cz. S pozdravem Nová naděje – nadační fond Máte-li dotaz, napište nám na info@nfnn.cz. Nová naděje – nadační fond · IČO 27278794 · Jiráskova 436, 473 01 Nový Bor localhost",
+            "links": [
+              "http://localhost:4200"
+            ],
+            "sha256": "569eecb1a69179063482395aaf12247ec254c1362045d6b1607bd9c8a6757b88"
+          },
+          "attachments": [
+            {
+              "fileName": "inline",
+              "contentType": "image/png",
+              "size": 41502,
+              "sha256": "aecbb8a4c043690e9918174f51cd419a3f1c02d34161454fe40e759db6e7dfcb"
+            }
+          ]
+        },
+        {
+          "from": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "to": [
+            "jana@example.cz"
+          ],
+          "replyTo": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "subject": "Potvrďte svůj e-mail – Nová naděje",
+          "text": "Dobrý den,\n\nděkujeme za registraci dárcovského účtu Nová naděje (jana@example.cz). Zbývá potvrdit, že je tato adresa vaše:\n\nhttp://localhost:4200/potvrzeni-emailu#token=<token>\n\nOdkaz platí 24 hodin a lze ho použít jen jednou. Do potvrzení se do účtu nepřihlásíte.\n\nPokud jste se neregistrovali vy, tento e-mail prosím ignorujte. Účet bez potvrzení zůstane neaktivní.\n\nNová naděje – nadační fond\n\nMáte-li dotaz, napište nám na info@nfnn.cz.\n",
+          "html": {
+            "text": "Vítejte v Nové naději Dobrý den, děkujeme za registraci dárcovského účtu Nová naděje (jana@example.cz). Zbývá potvrdit, že je tato adresa vaše: Potvrdit e-mail Pokud tlačítko nefunguje, otevřete tento odkaz: http://localhost:4200/potvrzeni-emailu#token=<token> Odkaz platí 24 hodin a lze ho použít jen jednou. Do potvrzení se do účtu nepřihlásíte. Pokud jste se neregistrovali vy, tento e-mail prosím ignorujte. Účet bez potvrzení zůstane neaktivní. S pozdravem Nová naděje – nadační fond Máte-li dotaz, napište nám na info@nfnn.cz. Nová naděje – nadační fond · IČO 27278794 · Jiráskova 436, 473 01 Nový Bor localhost",
+            "links": [
+              "http://localhost:4200/potvrzeni-emailu#token=<token>",
+              "http://localhost:4200/potvrzeni-emailu#token=<token>",
+              "http://localhost:4200"
+            ],
+            "sha256": "b997ca057549e76a39c2ee069bfabc9ff801bcc4fe1f95bdc05ff48d5e5057b2"
+          },
+          "attachments": [
+            {
+              "fileName": "inline",
+              "contentType": "image/png",
+              "size": 41502,
+              "sha256": "aecbb8a4c043690e9918174f51cd419a3f1c02d34161454fe40e759db6e7dfcb"
+            }
+          ]
+        }
+      ],
       "logs": [
         "INFO content.application.news.NewsAdminService: CREATE_NEWS on news article <id:2> by admin <id:1>",
         "INFO content.application.news.NewsAdminService: PUBLISH_NEWS on news article <id:2> by admin <id:1>",
         "INFO donations.application.pairing.PaymentPairingService: Payments of donor <id:1> paired after the registration: 0 by symbol, 0 by account, 0 accounts learned",
+        "INFO donors.application.DonorAuthenticationService: Sign-in of donor <id:1> waits for the second factor",
         "INFO donors.application.DonorAuthenticationService: Sign-in of donor <id:1> waits for the second factor",
         "INFO donors.application.DonorEmailVerificationService: E-mail of donor <id:1> verified",
         "INFO donors.application.DonorEmailVerificationService: E-mail verification link issued for donor <id:1>",
@@ -2125,6 +2563,7 @@
                 "hasPassword": true,
                 "id": "<id:1>",
                 "name": "Jana Nováková",
+                "pendingEmailChange": null,
                 "preferredLocale": "cs",
                 "registeredAt": "2026-10-23T10:00:00Z",
                 "roles": [
@@ -2207,6 +2646,7 @@
                 "hasPassword": true,
                 "id": "<id:1>",
                 "name": "Jana Nováková",
+                "pendingEmailChange": null,
                 "preferredLocale": "cs",
                 "registeredAt": "2026-10-23T10:00:00Z",
                 "roles": [
@@ -2287,6 +2727,7 @@
                 "hasPassword": true,
                 "id": "<id:1>",
                 "name": "Jana Nováková",
+                "pendingEmailChange": null,
                 "preferredLocale": "cs",
                 "registeredAt": "2026-10-23T10:00:00Z",
                 "roles": [
@@ -2331,6 +2772,7 @@
               "coverImage": null,
               "createdAt": "2026-10-23T10:00:00Z",
               "id": "<id:2>",
+              "live": false,
               "perex": "Perex.",
               "publishedOn": null,
               "slug": "aktualita-1",
@@ -2366,6 +2808,7 @@
               "coverImage": null,
               "createdAt": "2026-10-23T10:00:00Z",
               "id": "<id:2>",
+              "live": true,
               "perex": "Perex.",
               "publishedOn": "2026-09-01",
               "slug": "aktualita-1",
@@ -2403,6 +2846,7 @@
               "coverImage": null,
               "createdAt": "2026-10-23T10:00:00Z",
               "id": "<id:3>",
+              "live": false,
               "perex": "Perex.",
               "publishedOn": null,
               "slug": "aktualita-2",
@@ -2438,6 +2882,7 @@
               "coverImage": null,
               "createdAt": "2026-10-23T10:00:00Z",
               "id": "<id:3>",
+              "live": true,
               "perex": "Perex.",
               "publishedOn": "2026-09-02",
               "slug": "aktualita-2",
@@ -2475,6 +2920,7 @@
               "coverImage": null,
               "createdAt": "2026-10-23T10:00:00Z",
               "id": "<id:4>",
+              "live": false,
               "perex": "Perex.",
               "publishedOn": null,
               "slug": "aktualita-3",
@@ -2510,6 +2956,7 @@
               "coverImage": null,
               "createdAt": "2026-10-23T10:00:00Z",
               "id": "<id:4>",
+              "live": true,
               "perex": "Perex.",
               "publishedOn": "2026-09-03",
               "slug": "aktualita-3",
@@ -2547,6 +2994,7 @@
               "coverImage": null,
               "createdAt": "2026-10-23T10:00:00Z",
               "id": "<id:5>",
+              "live": false,
               "perex": "Perex.",
               "publishedOn": null,
               "slug": "aktualita-4",
@@ -2582,6 +3030,7 @@
               "coverImage": null,
               "createdAt": "2026-10-23T10:00:00Z",
               "id": "<id:5>",
+              "live": true,
               "perex": "Perex.",
               "publishedOn": "2026-09-04",
               "slug": "aktualita-4",
@@ -2619,6 +3068,7 @@
               "coverImage": null,
               "createdAt": "2026-10-23T10:00:00Z",
               "id": "<id:6>",
+              "live": false,
               "perex": "Perex.",
               "publishedOn": null,
               "slug": "aktualita-5",
@@ -2654,6 +3104,7 @@
               "coverImage": null,
               "createdAt": "2026-10-23T10:00:00Z",
               "id": "<id:6>",
+              "live": true,
               "perex": "Perex.",
               "publishedOn": "2026-09-05",
               "slug": "aktualita-5",
@@ -2691,6 +3142,7 @@
               "coverImage": null,
               "createdAt": "2026-10-23T10:00:00Z",
               "id": "<id:7>",
+              "live": false,
               "perex": "Perex.",
               "publishedOn": null,
               "slug": "aktualita-6",
@@ -2726,6 +3178,7 @@
               "coverImage": null,
               "createdAt": "2026-10-23T10:00:00Z",
               "id": "<id:7>",
+              "live": true,
               "perex": "Perex.",
               "publishedOn": "2026-09-06",
               "slug": "aktualita-6",
@@ -2763,6 +3216,7 @@
               "coverImage": null,
               "createdAt": "2026-10-23T10:00:00Z",
               "id": "<id:8>",
+              "live": false,
               "perex": "Perex.",
               "publishedOn": null,
               "slug": "aktualita-7",
@@ -2798,6 +3252,7 @@
               "coverImage": null,
               "createdAt": "2026-10-23T10:00:00Z",
               "id": "<id:8>",
+              "live": true,
               "perex": "Perex.",
               "publishedOn": "2026-09-07",
               "slug": "aktualita-7",
@@ -2835,6 +3290,7 @@
               "coverImage": null,
               "createdAt": "2026-10-23T10:00:00Z",
               "id": "<id:9>",
+              "live": false,
               "perex": "Perex.",
               "publishedOn": null,
               "slug": "aktualita-8",
@@ -2870,6 +3326,7 @@
               "coverImage": null,
               "createdAt": "2026-10-23T10:00:00Z",
               "id": "<id:9>",
+              "live": true,
               "perex": "Perex.",
               "publishedOn": "2026-09-08",
               "slug": "aktualita-8",
@@ -2907,6 +3364,7 @@
               "coverImage": null,
               "createdAt": "2026-10-23T10:00:00Z",
               "id": "<id:10>",
+              "live": false,
               "perex": "Perex.",
               "publishedOn": null,
               "slug": "aktualita-9",
@@ -2942,6 +3400,7 @@
               "coverImage": null,
               "createdAt": "2026-10-23T10:00:00Z",
               "id": "<id:10>",
+              "live": true,
               "perex": "Perex.",
               "publishedOn": "2026-09-09",
               "slug": "aktualita-9",
@@ -2979,6 +3438,7 @@
               "coverImage": null,
               "createdAt": "2026-10-23T10:00:00Z",
               "id": "<id:11>",
+              "live": false,
               "perex": "Perex.",
               "publishedOn": null,
               "slug": "aktualita-10",
@@ -3014,6 +3474,7 @@
               "coverImage": null,
               "createdAt": "2026-10-23T10:00:00Z",
               "id": "<id:11>",
+              "live": true,
               "perex": "Perex.",
               "publishedOn": "2026-09-10",
               "slug": "aktualita-10",
@@ -3051,6 +3512,7 @@
               "coverImage": null,
               "createdAt": "2026-10-23T10:00:00Z",
               "id": "<id:12>",
+              "live": false,
               "perex": "Perex.",
               "publishedOn": null,
               "slug": "aktualita-11",
@@ -3086,6 +3548,7 @@
               "coverImage": null,
               "createdAt": "2026-10-23T10:00:00Z",
               "id": "<id:12>",
+              "live": true,
               "perex": "Perex.",
               "publishedOn": "2026-09-11",
               "slug": "aktualita-11",
@@ -3123,6 +3586,7 @@
               "coverImage": null,
               "createdAt": "2026-10-23T10:00:00Z",
               "id": "<id:13>",
+              "live": false,
               "perex": "Perex.",
               "publishedOn": null,
               "slug": "aktualita-12",
@@ -3158,6 +3622,7 @@
               "coverImage": null,
               "createdAt": "2026-10-23T10:00:00Z",
               "id": "<id:13>",
+              "live": true,
               "perex": "Perex.",
               "publishedOn": "2026-09-12",
               "slug": "aktualita-12",
@@ -3189,96 +3654,13 @@
                   "body": "Text.",
                   "coverImage": null,
                   "createdAt": "2026-10-23T10:00:00Z",
-                  "id": "<id:4>",
+                  "id": "<id:13>",
+                  "live": true,
                   "perex": "Perex.",
-                  "publishedOn": "2026-09-03",
-                  "slug": "aktualita-3",
+                  "publishedOn": "2026-09-12",
+                  "slug": "aktualita-12",
                   "tag": null,
-                  "title": "Aktualita 3",
-                  "updatedAt": "2026-10-23T10:00:00Z"
-                },
-                {
-                  "body": "Text.",
-                  "coverImage": null,
-                  "createdAt": "2026-10-23T10:00:00Z",
-                  "id": "<id:5>",
-                  "perex": "Perex.",
-                  "publishedOn": "2026-09-04",
-                  "slug": "aktualita-4",
-                  "tag": null,
-                  "title": "Aktualita 4",
-                  "updatedAt": "2026-10-23T10:00:00Z"
-                },
-                {
-                  "body": "Text.",
-                  "coverImage": null,
-                  "createdAt": "2026-10-23T10:00:00Z",
-                  "id": "<id:6>",
-                  "perex": "Perex.",
-                  "publishedOn": "2026-09-05",
-                  "slug": "aktualita-5",
-                  "tag": null,
-                  "title": "Aktualita 5",
-                  "updatedAt": "2026-10-23T10:00:00Z"
-                },
-                {
-                  "body": "Text.",
-                  "coverImage": null,
-                  "createdAt": "2026-10-23T10:00:00Z",
-                  "id": "<id:7>",
-                  "perex": "Perex.",
-                  "publishedOn": "2026-09-06",
-                  "slug": "aktualita-6",
-                  "tag": null,
-                  "title": "Aktualita 6",
-                  "updatedAt": "2026-10-23T10:00:00Z"
-                },
-                {
-                  "body": "Text.",
-                  "coverImage": null,
-                  "createdAt": "2026-10-23T10:00:00Z",
-                  "id": "<id:8>",
-                  "perex": "Perex.",
-                  "publishedOn": "2026-09-07",
-                  "slug": "aktualita-7",
-                  "tag": null,
-                  "title": "Aktualita 7",
-                  "updatedAt": "2026-10-23T10:00:00Z"
-                },
-                {
-                  "body": "Text.",
-                  "coverImage": null,
-                  "createdAt": "2026-10-23T10:00:00Z",
-                  "id": "<id:9>",
-                  "perex": "Perex.",
-                  "publishedOn": "2026-09-08",
-                  "slug": "aktualita-8",
-                  "tag": null,
-                  "title": "Aktualita 8",
-                  "updatedAt": "2026-10-23T10:00:00Z"
-                },
-                {
-                  "body": "Text.",
-                  "coverImage": null,
-                  "createdAt": "2026-10-23T10:00:00Z",
-                  "id": "<id:10>",
-                  "perex": "Perex.",
-                  "publishedOn": "2026-09-09",
-                  "slug": "aktualita-9",
-                  "tag": null,
-                  "title": "Aktualita 9",
-                  "updatedAt": "2026-10-23T10:00:00Z"
-                },
-                {
-                  "body": "Text.",
-                  "coverImage": null,
-                  "createdAt": "2026-10-23T10:00:00Z",
-                  "id": "<id:11>",
-                  "perex": "Perex.",
-                  "publishedOn": "2026-09-10",
-                  "slug": "aktualita-10",
-                  "tag": null,
-                  "title": "Aktualita 10",
+                  "title": "Aktualita 12",
                   "updatedAt": "2026-10-23T10:00:00Z"
                 },
                 {
@@ -3286,6 +3668,7 @@
                   "coverImage": null,
                   "createdAt": "2026-10-23T10:00:00Z",
                   "id": "<id:12>",
+                  "live": true,
                   "perex": "Perex.",
                   "publishedOn": "2026-09-11",
                   "slug": "aktualita-11",
@@ -3297,12 +3680,104 @@
                   "body": "Text.",
                   "coverImage": null,
                   "createdAt": "2026-10-23T10:00:00Z",
-                  "id": "<id:13>",
+                  "id": "<id:11>",
+                  "live": true,
                   "perex": "Perex.",
-                  "publishedOn": "2026-09-12",
-                  "slug": "aktualita-12",
+                  "publishedOn": "2026-09-10",
+                  "slug": "aktualita-10",
                   "tag": null,
-                  "title": "Aktualita 12",
+                  "title": "Aktualita 10",
+                  "updatedAt": "2026-10-23T10:00:00Z"
+                },
+                {
+                  "body": "Text.",
+                  "coverImage": null,
+                  "createdAt": "2026-10-23T10:00:00Z",
+                  "id": "<id:10>",
+                  "live": true,
+                  "perex": "Perex.",
+                  "publishedOn": "2026-09-09",
+                  "slug": "aktualita-9",
+                  "tag": null,
+                  "title": "Aktualita 9",
+                  "updatedAt": "2026-10-23T10:00:00Z"
+                },
+                {
+                  "body": "Text.",
+                  "coverImage": null,
+                  "createdAt": "2026-10-23T10:00:00Z",
+                  "id": "<id:9>",
+                  "live": true,
+                  "perex": "Perex.",
+                  "publishedOn": "2026-09-08",
+                  "slug": "aktualita-8",
+                  "tag": null,
+                  "title": "Aktualita 8",
+                  "updatedAt": "2026-10-23T10:00:00Z"
+                },
+                {
+                  "body": "Text.",
+                  "coverImage": null,
+                  "createdAt": "2026-10-23T10:00:00Z",
+                  "id": "<id:8>",
+                  "live": true,
+                  "perex": "Perex.",
+                  "publishedOn": "2026-09-07",
+                  "slug": "aktualita-7",
+                  "tag": null,
+                  "title": "Aktualita 7",
+                  "updatedAt": "2026-10-23T10:00:00Z"
+                },
+                {
+                  "body": "Text.",
+                  "coverImage": null,
+                  "createdAt": "2026-10-23T10:00:00Z",
+                  "id": "<id:7>",
+                  "live": true,
+                  "perex": "Perex.",
+                  "publishedOn": "2026-09-06",
+                  "slug": "aktualita-6",
+                  "tag": null,
+                  "title": "Aktualita 6",
+                  "updatedAt": "2026-10-23T10:00:00Z"
+                },
+                {
+                  "body": "Text.",
+                  "coverImage": null,
+                  "createdAt": "2026-10-23T10:00:00Z",
+                  "id": "<id:6>",
+                  "live": true,
+                  "perex": "Perex.",
+                  "publishedOn": "2026-09-05",
+                  "slug": "aktualita-5",
+                  "tag": null,
+                  "title": "Aktualita 5",
+                  "updatedAt": "2026-10-23T10:00:00Z"
+                },
+                {
+                  "body": "Text.",
+                  "coverImage": null,
+                  "createdAt": "2026-10-23T10:00:00Z",
+                  "id": "<id:5>",
+                  "live": true,
+                  "perex": "Perex.",
+                  "publishedOn": "2026-09-04",
+                  "slug": "aktualita-4",
+                  "tag": null,
+                  "title": "Aktualita 4",
+                  "updatedAt": "2026-10-23T10:00:00Z"
+                },
+                {
+                  "body": "Text.",
+                  "coverImage": null,
+                  "createdAt": "2026-10-23T10:00:00Z",
+                  "id": "<id:4>",
+                  "live": true,
+                  "perex": "Perex.",
+                  "publishedOn": "2026-09-03",
+                  "slug": "aktualita-3",
+                  "tag": null,
+                  "title": "Aktualita 3",
                   "updatedAt": "2026-10-23T10:00:00Z"
                 }
               ],
@@ -3334,24 +3809,26 @@
                   "body": "Text.",
                   "coverImage": null,
                   "createdAt": "2026-10-23T10:00:00Z",
-                  "id": "<id:2>",
+                  "id": "<id:3>",
+                  "live": true,
                   "perex": "Perex.",
-                  "publishedOn": "2026-09-01",
-                  "slug": "aktualita-1",
+                  "publishedOn": "2026-09-02",
+                  "slug": "aktualita-2",
                   "tag": null,
-                  "title": "Aktualita 1",
+                  "title": "Aktualita 2",
                   "updatedAt": "2026-10-23T10:00:00Z"
                 },
                 {
                   "body": "Text.",
                   "coverImage": null,
                   "createdAt": "2026-10-23T10:00:00Z",
-                  "id": "<id:3>",
+                  "id": "<id:2>",
+                  "live": true,
                   "perex": "Perex.",
-                  "publishedOn": "2026-09-02",
-                  "slug": "aktualita-2",
+                  "publishedOn": "2026-09-01",
+                  "slug": "aktualita-1",
                   "tag": null,
-                  "title": "Aktualita 2",
+                  "title": "Aktualita 1",
                   "updatedAt": "2026-10-23T10:00:00Z"
                 }
               ],
@@ -3392,7 +3869,66 @@
           }
         }
       },
-      "mails": [],
+      "mails": [
+        {
+          "from": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "to": [
+            "jana@example.cz"
+          ],
+          "replyTo": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "subject": "Dvoufaktorové ověření vašeho účtu bylo zapnuto – Nová naděje",
+          "text": "Dobrý den,\n\nu vašeho dárcovského účtu Nová naděje jste právě zapnuli dvoufaktorové ověření. Od teď se kromě hesla přihlásíte také kódem z aplikace v telefonu; všechna ostatní přihlášení jsme ukončili.\n\nOvěření najdete po přihlášení na kartě Přihlašovací údaje, kde ho můžete také vypnout.\n\nPokud jste ověření nezapínali vy, zná někdo vaše heslo. Napište nám prosím co nejdříve na info@nfnn.cz.\n\nNová naděje – nadační fond\n\nMáte-li dotaz, napište nám na info@nfnn.cz.\n",
+          "html": {
+            "text": "Dvoufaktorové ověření bylo zapnuto Dobrý den, u vašeho dárcovského účtu Nová naděje jste právě zapnuli dvoufaktorové ověření. Od teď se kromě hesla přihlásíte také kódem z aplikace v telefonu; všechna ostatní přihlášení jsme ukončili. Ověření najdete po přihlášení na kartě Přihlašovací údaje, kde ho můžete také vypnout. Pokud jste ověření nezapínali vy, zná někdo vaše heslo. Napište nám prosím co nejdříve na info@nfnn.cz. S pozdravem Nová naděje – nadační fond Máte-li dotaz, napište nám na info@nfnn.cz. Nová naděje – nadační fond · IČO 27278794 · Jiráskova 436, 473 01 Nový Bor localhost",
+            "links": [
+              "http://localhost:4200"
+            ],
+            "sha256": "569eecb1a69179063482395aaf12247ec254c1362045d6b1607bd9c8a6757b88"
+          },
+          "attachments": [
+            {
+              "fileName": "inline",
+              "contentType": "image/png",
+              "size": 41502,
+              "sha256": "aecbb8a4c043690e9918174f51cd419a3f1c02d34161454fe40e759db6e7dfcb"
+            }
+          ]
+        },
+        {
+          "from": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "to": [
+            "jana@example.cz"
+          ],
+          "replyTo": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "subject": "Potvrďte svůj e-mail – Nová naděje",
+          "text": "Dobrý den,\n\nděkujeme za registraci dárcovského účtu Nová naděje (jana@example.cz). Zbývá potvrdit, že je tato adresa vaše:\n\nhttp://localhost:4200/potvrzeni-emailu#token=<token>\n\nOdkaz platí 24 hodin a lze ho použít jen jednou. Do potvrzení se do účtu nepřihlásíte.\n\nPokud jste se neregistrovali vy, tento e-mail prosím ignorujte. Účet bez potvrzení zůstane neaktivní.\n\nNová naděje – nadační fond\n\nMáte-li dotaz, napište nám na info@nfnn.cz.\n",
+          "html": {
+            "text": "Vítejte v Nové naději Dobrý den, děkujeme za registraci dárcovského účtu Nová naděje (jana@example.cz). Zbývá potvrdit, že je tato adresa vaše: Potvrdit e-mail Pokud tlačítko nefunguje, otevřete tento odkaz: http://localhost:4200/potvrzeni-emailu#token=<token> Odkaz platí 24 hodin a lze ho použít jen jednou. Do potvrzení se do účtu nepřihlásíte. Pokud jste se neregistrovali vy, tento e-mail prosím ignorujte. Účet bez potvrzení zůstane neaktivní. S pozdravem Nová naděje – nadační fond Máte-li dotaz, napište nám na info@nfnn.cz. Nová naděje – nadační fond · IČO 27278794 · Jiráskova 436, 473 01 Nový Bor localhost",
+            "links": [
+              "http://localhost:4200/potvrzeni-emailu#token=<token>",
+              "http://localhost:4200/potvrzeni-emailu#token=<token>",
+              "http://localhost:4200"
+            ],
+            "sha256": "b997ca057549e76a39c2ee069bfabc9ff801bcc4fe1f95bdc05ff48d5e5057b2"
+          },
+          "attachments": [
+            {
+              "fileName": "inline",
+              "contentType": "image/png",
+              "size": 41502,
+              "sha256": "aecbb8a4c043690e9918174f51cd419a3f1c02d34161454fe40e759db6e7dfcb"
+            }
+          ]
+        }
+      ],
       "logs": [
         "INFO content.application.news.NewsAdminService: CREATE_NEWS on news article <id:2> by admin <id:1>",
         "INFO content.application.news.NewsAdminService: CREATE_NEWS on news article <id:3> by admin <id:1>",
@@ -3513,6 +4049,7 @@
                 "hasPassword": true,
                 "id": "<id:1>",
                 "name": "Jana Nováková",
+                "pendingEmailChange": null,
                 "preferredLocale": "cs",
                 "registeredAt": "2026-10-23T10:00:00Z",
                 "roles": [
@@ -3595,6 +4132,7 @@
                 "hasPassword": true,
                 "id": "<id:1>",
                 "name": "Jana Nováková",
+                "pendingEmailChange": null,
                 "preferredLocale": "cs",
                 "registeredAt": "2026-10-23T10:00:00Z",
                 "roles": [
@@ -3675,6 +4213,7 @@
                 "hasPassword": true,
                 "id": "<id:1>",
                 "name": "Jana Nováková",
+                "pendingEmailChange": null,
                 "preferredLocale": "cs",
                 "registeredAt": "2026-10-23T10:00:00Z",
                 "roles": [
@@ -3719,6 +4258,7 @@
               "coverImage": null,
               "createdAt": "2026-10-23T10:00:00Z",
               "id": "<id:2>",
+              "live": false,
               "perex": "Perex.",
               "publishedOn": null,
               "slug": "starsi-zprava",
@@ -3754,6 +4294,7 @@
               "coverImage": null,
               "createdAt": "2026-10-23T10:00:00Z",
               "id": "<id:2>",
+              "live": true,
               "perex": "Perex.",
               "publishedOn": "2026-09-01",
               "slug": "starsi-zprava",
@@ -3791,6 +4332,7 @@
               "coverImage": null,
               "createdAt": "2026-10-23T10:00:00Z",
               "id": "<id:3>",
+              "live": false,
               "perex": "Perex.",
               "publishedOn": null,
               "slug": "novejsi-zprava",
@@ -3826,6 +4368,7 @@
               "coverImage": null,
               "createdAt": "2026-10-23T10:00:00Z",
               "id": "<id:3>",
+              "live": true,
               "perex": "Perex.",
               "publishedOn": "2026-10-01",
               "slug": "novejsi-zprava",
@@ -3863,6 +4406,7 @@
               "coverImage": null,
               "createdAt": "2026-10-23T10:00:00Z",
               "id": "<id:4>",
+              "live": false,
               "perex": "Perex.",
               "publishedOn": null,
               "slug": "koncept",
@@ -3896,12 +4440,13 @@
                   "body": "Text.",
                   "coverImage": null,
                   "createdAt": "2026-10-23T10:00:00Z",
-                  "id": "<id:2>",
+                  "id": "<id:4>",
+                  "live": false,
                   "perex": "Perex.",
-                  "publishedOn": "2026-09-01",
-                  "slug": "starsi-zprava",
+                  "publishedOn": null,
+                  "slug": "koncept",
                   "tag": null,
-                  "title": "Starší zpráva",
+                  "title": "Koncept",
                   "updatedAt": "2026-10-23T10:00:00Z"
                 },
                 {
@@ -3909,6 +4454,7 @@
                   "coverImage": null,
                   "createdAt": "2026-10-23T10:00:00Z",
                   "id": "<id:3>",
+                  "live": true,
                   "perex": "Perex.",
                   "publishedOn": "2026-10-01",
                   "slug": "novejsi-zprava",
@@ -3920,12 +4466,13 @@
                   "body": "Text.",
                   "coverImage": null,
                   "createdAt": "2026-10-23T10:00:00Z",
-                  "id": "<id:4>",
+                  "id": "<id:2>",
+                  "live": true,
                   "perex": "Perex.",
-                  "publishedOn": null,
-                  "slug": "koncept",
+                  "publishedOn": "2026-09-01",
+                  "slug": "starsi-zprava",
                   "tag": null,
-                  "title": "Koncept",
+                  "title": "Starší zpráva",
                   "updatedAt": "2026-10-23T10:00:00Z"
                 }
               ]
@@ -3955,6 +4502,7 @@
               "coverImage": null,
               "createdAt": "2026-10-23T10:00:00Z",
               "id": "<id:4>",
+              "live": false,
               "perex": "Perex.",
               "publishedOn": null,
               "slug": "koncept",
@@ -3965,7 +4513,66 @@
           }
         }
       },
-      "mails": [],
+      "mails": [
+        {
+          "from": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "to": [
+            "jana@example.cz"
+          ],
+          "replyTo": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "subject": "Dvoufaktorové ověření vašeho účtu bylo zapnuto – Nová naděje",
+          "text": "Dobrý den,\n\nu vašeho dárcovského účtu Nová naděje jste právě zapnuli dvoufaktorové ověření. Od teď se kromě hesla přihlásíte také kódem z aplikace v telefonu; všechna ostatní přihlášení jsme ukončili.\n\nOvěření najdete po přihlášení na kartě Přihlašovací údaje, kde ho můžete také vypnout.\n\nPokud jste ověření nezapínali vy, zná někdo vaše heslo. Napište nám prosím co nejdříve na info@nfnn.cz.\n\nNová naděje – nadační fond\n\nMáte-li dotaz, napište nám na info@nfnn.cz.\n",
+          "html": {
+            "text": "Dvoufaktorové ověření bylo zapnuto Dobrý den, u vašeho dárcovského účtu Nová naděje jste právě zapnuli dvoufaktorové ověření. Od teď se kromě hesla přihlásíte také kódem z aplikace v telefonu; všechna ostatní přihlášení jsme ukončili. Ověření najdete po přihlášení na kartě Přihlašovací údaje, kde ho můžete také vypnout. Pokud jste ověření nezapínali vy, zná někdo vaše heslo. Napište nám prosím co nejdříve na info@nfnn.cz. S pozdravem Nová naděje – nadační fond Máte-li dotaz, napište nám na info@nfnn.cz. Nová naděje – nadační fond · IČO 27278794 · Jiráskova 436, 473 01 Nový Bor localhost",
+            "links": [
+              "http://localhost:4200"
+            ],
+            "sha256": "569eecb1a69179063482395aaf12247ec254c1362045d6b1607bd9c8a6757b88"
+          },
+          "attachments": [
+            {
+              "fileName": "inline",
+              "contentType": "image/png",
+              "size": 41502,
+              "sha256": "aecbb8a4c043690e9918174f51cd419a3f1c02d34161454fe40e759db6e7dfcb"
+            }
+          ]
+        },
+        {
+          "from": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "to": [
+            "jana@example.cz"
+          ],
+          "replyTo": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "subject": "Potvrďte svůj e-mail – Nová naděje",
+          "text": "Dobrý den,\n\nděkujeme za registraci dárcovského účtu Nová naděje (jana@example.cz). Zbývá potvrdit, že je tato adresa vaše:\n\nhttp://localhost:4200/potvrzeni-emailu#token=<token>\n\nOdkaz platí 24 hodin a lze ho použít jen jednou. Do potvrzení se do účtu nepřihlásíte.\n\nPokud jste se neregistrovali vy, tento e-mail prosím ignorujte. Účet bez potvrzení zůstane neaktivní.\n\nNová naděje – nadační fond\n\nMáte-li dotaz, napište nám na info@nfnn.cz.\n",
+          "html": {
+            "text": "Vítejte v Nové naději Dobrý den, děkujeme za registraci dárcovského účtu Nová naděje (jana@example.cz). Zbývá potvrdit, že je tato adresa vaše: Potvrdit e-mail Pokud tlačítko nefunguje, otevřete tento odkaz: http://localhost:4200/potvrzeni-emailu#token=<token> Odkaz platí 24 hodin a lze ho použít jen jednou. Do potvrzení se do účtu nepřihlásíte. Pokud jste se neregistrovali vy, tento e-mail prosím ignorujte. Účet bez potvrzení zůstane neaktivní. S pozdravem Nová naděje – nadační fond Máte-li dotaz, napište nám na info@nfnn.cz. Nová naděje – nadační fond · IČO 27278794 · Jiráskova 436, 473 01 Nový Bor localhost",
+            "links": [
+              "http://localhost:4200/potvrzeni-emailu#token=<token>",
+              "http://localhost:4200/potvrzeni-emailu#token=<token>",
+              "http://localhost:4200"
+            ],
+            "sha256": "b997ca057549e76a39c2ee069bfabc9ff801bcc4fe1f95bdc05ff48d5e5057b2"
+          },
+          "attachments": [
+            {
+              "fileName": "inline",
+              "contentType": "image/png",
+              "size": 41502,
+              "sha256": "aecbb8a4c043690e9918174f51cd419a3f1c02d34161454fe40e759db6e7dfcb"
+            }
+          ]
+        }
+      ],
       "logs": [
         "INFO content.application.news.NewsAdminService: CREATE_NEWS on news article <id:2> by admin <id:1>",
         "INFO content.application.news.NewsAdminService: CREATE_NEWS on news article <id:3> by admin <id:1>",
@@ -4048,6 +4655,7 @@
                 "hasPassword": true,
                 "id": "<id:1>",
                 "name": "Jana Nováková",
+                "pendingEmailChange": null,
                 "preferredLocale": "cs",
                 "registeredAt": "2026-10-23T10:00:00Z",
                 "roles": [
@@ -4130,6 +4738,7 @@
                 "hasPassword": true,
                 "id": "<id:1>",
                 "name": "Jana Nováková",
+                "pendingEmailChange": null,
                 "preferredLocale": "cs",
                 "registeredAt": "2026-10-23T10:00:00Z",
                 "roles": [
@@ -4210,6 +4819,7 @@
                 "hasPassword": true,
                 "id": "<id:1>",
                 "name": "Jana Nováková",
+                "pendingEmailChange": null,
                 "preferredLocale": "cs",
                 "registeredAt": "2026-10-23T10:00:00Z",
                 "roles": [
@@ -4293,6 +4903,7 @@
               },
               "createdAt": "2026-10-23T10:00:00Z",
               "id": "<id:3>",
+              "live": false,
               "perex": "Perex.",
               "publishedOn": null,
               "slug": "s-fotkou",
@@ -4371,6 +4982,7 @@
               },
               "createdAt": "2026-10-23T10:00:00Z",
               "id": "<id:3>",
+              "live": false,
               "perex": "Nový perex.",
               "publishedOn": null,
               "slug": "s-novou-fotkou",
@@ -4426,7 +5038,66 @@
           }
         }
       },
-      "mails": [],
+      "mails": [
+        {
+          "from": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "to": [
+            "jana@example.cz"
+          ],
+          "replyTo": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "subject": "Dvoufaktorové ověření vašeho účtu bylo zapnuto – Nová naděje",
+          "text": "Dobrý den,\n\nu vašeho dárcovského účtu Nová naděje jste právě zapnuli dvoufaktorové ověření. Od teď se kromě hesla přihlásíte také kódem z aplikace v telefonu; všechna ostatní přihlášení jsme ukončili.\n\nOvěření najdete po přihlášení na kartě Přihlašovací údaje, kde ho můžete také vypnout.\n\nPokud jste ověření nezapínali vy, zná někdo vaše heslo. Napište nám prosím co nejdříve na info@nfnn.cz.\n\nNová naděje – nadační fond\n\nMáte-li dotaz, napište nám na info@nfnn.cz.\n",
+          "html": {
+            "text": "Dvoufaktorové ověření bylo zapnuto Dobrý den, u vašeho dárcovského účtu Nová naděje jste právě zapnuli dvoufaktorové ověření. Od teď se kromě hesla přihlásíte také kódem z aplikace v telefonu; všechna ostatní přihlášení jsme ukončili. Ověření najdete po přihlášení na kartě Přihlašovací údaje, kde ho můžete také vypnout. Pokud jste ověření nezapínali vy, zná někdo vaše heslo. Napište nám prosím co nejdříve na info@nfnn.cz. S pozdravem Nová naděje – nadační fond Máte-li dotaz, napište nám na info@nfnn.cz. Nová naděje – nadační fond · IČO 27278794 · Jiráskova 436, 473 01 Nový Bor localhost",
+            "links": [
+              "http://localhost:4200"
+            ],
+            "sha256": "569eecb1a69179063482395aaf12247ec254c1362045d6b1607bd9c8a6757b88"
+          },
+          "attachments": [
+            {
+              "fileName": "inline",
+              "contentType": "image/png",
+              "size": 41502,
+              "sha256": "aecbb8a4c043690e9918174f51cd419a3f1c02d34161454fe40e759db6e7dfcb"
+            }
+          ]
+        },
+        {
+          "from": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "to": [
+            "jana@example.cz"
+          ],
+          "replyTo": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "subject": "Potvrďte svůj e-mail – Nová naděje",
+          "text": "Dobrý den,\n\nděkujeme za registraci dárcovského účtu Nová naděje (jana@example.cz). Zbývá potvrdit, že je tato adresa vaše:\n\nhttp://localhost:4200/potvrzeni-emailu#token=<token>\n\nOdkaz platí 24 hodin a lze ho použít jen jednou. Do potvrzení se do účtu nepřihlásíte.\n\nPokud jste se neregistrovali vy, tento e-mail prosím ignorujte. Účet bez potvrzení zůstane neaktivní.\n\nNová naděje – nadační fond\n\nMáte-li dotaz, napište nám na info@nfnn.cz.\n",
+          "html": {
+            "text": "Vítejte v Nové naději Dobrý den, děkujeme za registraci dárcovského účtu Nová naděje (jana@example.cz). Zbývá potvrdit, že je tato adresa vaše: Potvrdit e-mail Pokud tlačítko nefunguje, otevřete tento odkaz: http://localhost:4200/potvrzeni-emailu#token=<token> Odkaz platí 24 hodin a lze ho použít jen jednou. Do potvrzení se do účtu nepřihlásíte. Pokud jste se neregistrovali vy, tento e-mail prosím ignorujte. Účet bez potvrzení zůstane neaktivní. S pozdravem Nová naděje – nadační fond Máte-li dotaz, napište nám na info@nfnn.cz. Nová naděje – nadační fond · IČO 27278794 · Jiráskova 436, 473 01 Nový Bor localhost",
+            "links": [
+              "http://localhost:4200/potvrzeni-emailu#token=<token>",
+              "http://localhost:4200/potvrzeni-emailu#token=<token>",
+              "http://localhost:4200"
+            ],
+            "sha256": "b997ca057549e76a39c2ee069bfabc9ff801bcc4fe1f95bdc05ff48d5e5057b2"
+          },
+          "attachments": [
+            {
+              "fileName": "inline",
+              "contentType": "image/png",
+              "size": 41502,
+              "sha256": "aecbb8a4c043690e9918174f51cd419a3f1c02d34161454fe40e759db6e7dfcb"
+            }
+          ]
+        }
+      ],
       "logs": [
         "INFO content.application.media.UploadImageService: Image <id:2> stored: 1600x1000 as 3 variants",
         "INFO content.application.media.UploadImageService: Image <id:4> stored: 800x600 as 2 variants",
@@ -4505,6 +5176,7 @@
                 "hasPassword": true,
                 "id": "<id:1>",
                 "name": "Jana Nováková",
+                "pendingEmailChange": null,
                 "preferredLocale": "cs",
                 "registeredAt": "2026-10-23T10:00:00Z",
                 "roles": [
@@ -4587,6 +5259,7 @@
                 "hasPassword": true,
                 "id": "<id:1>",
                 "name": "Jana Nováková",
+                "pendingEmailChange": null,
                 "preferredLocale": "cs",
                 "registeredAt": "2026-10-23T10:00:00Z",
                 "roles": [
@@ -4667,6 +5340,7 @@
                 "hasPassword": true,
                 "id": "<id:1>",
                 "name": "Jana Nováková",
+                "pendingEmailChange": null,
                 "preferredLocale": "cs",
                 "registeredAt": "2026-10-23T10:00:00Z",
                 "roles": [
@@ -4750,6 +5424,7 @@
               },
               "createdAt": "2026-10-23T10:00:00Z",
               "id": "<id:3>",
+              "live": false,
               "perex": "Perex.",
               "publishedOn": null,
               "slug": "ke-smazani",
@@ -4789,6 +5464,7 @@
               },
               "createdAt": "2026-10-23T10:00:00Z",
               "id": "<id:3>",
+              "live": true,
               "perex": "Perex.",
               "publishedOn": "2026-10-23",
               "slug": "ke-smazani",
@@ -4869,7 +5545,66 @@
           }
         }
       },
-      "mails": [],
+      "mails": [
+        {
+          "from": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "to": [
+            "jana@example.cz"
+          ],
+          "replyTo": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "subject": "Dvoufaktorové ověření vašeho účtu bylo zapnuto – Nová naděje",
+          "text": "Dobrý den,\n\nu vašeho dárcovského účtu Nová naděje jste právě zapnuli dvoufaktorové ověření. Od teď se kromě hesla přihlásíte také kódem z aplikace v telefonu; všechna ostatní přihlášení jsme ukončili.\n\nOvěření najdete po přihlášení na kartě Přihlašovací údaje, kde ho můžete také vypnout.\n\nPokud jste ověření nezapínali vy, zná někdo vaše heslo. Napište nám prosím co nejdříve na info@nfnn.cz.\n\nNová naděje – nadační fond\n\nMáte-li dotaz, napište nám na info@nfnn.cz.\n",
+          "html": {
+            "text": "Dvoufaktorové ověření bylo zapnuto Dobrý den, u vašeho dárcovského účtu Nová naděje jste právě zapnuli dvoufaktorové ověření. Od teď se kromě hesla přihlásíte také kódem z aplikace v telefonu; všechna ostatní přihlášení jsme ukončili. Ověření najdete po přihlášení na kartě Přihlašovací údaje, kde ho můžete také vypnout. Pokud jste ověření nezapínali vy, zná někdo vaše heslo. Napište nám prosím co nejdříve na info@nfnn.cz. S pozdravem Nová naděje – nadační fond Máte-li dotaz, napište nám na info@nfnn.cz. Nová naděje – nadační fond · IČO 27278794 · Jiráskova 436, 473 01 Nový Bor localhost",
+            "links": [
+              "http://localhost:4200"
+            ],
+            "sha256": "569eecb1a69179063482395aaf12247ec254c1362045d6b1607bd9c8a6757b88"
+          },
+          "attachments": [
+            {
+              "fileName": "inline",
+              "contentType": "image/png",
+              "size": 41502,
+              "sha256": "aecbb8a4c043690e9918174f51cd419a3f1c02d34161454fe40e759db6e7dfcb"
+            }
+          ]
+        },
+        {
+          "from": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "to": [
+            "jana@example.cz"
+          ],
+          "replyTo": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "subject": "Potvrďte svůj e-mail – Nová naděje",
+          "text": "Dobrý den,\n\nděkujeme za registraci dárcovského účtu Nová naděje (jana@example.cz). Zbývá potvrdit, že je tato adresa vaše:\n\nhttp://localhost:4200/potvrzeni-emailu#token=<token>\n\nOdkaz platí 24 hodin a lze ho použít jen jednou. Do potvrzení se do účtu nepřihlásíte.\n\nPokud jste se neregistrovali vy, tento e-mail prosím ignorujte. Účet bez potvrzení zůstane neaktivní.\n\nNová naděje – nadační fond\n\nMáte-li dotaz, napište nám na info@nfnn.cz.\n",
+          "html": {
+            "text": "Vítejte v Nové naději Dobrý den, děkujeme za registraci dárcovského účtu Nová naděje (jana@example.cz). Zbývá potvrdit, že je tato adresa vaše: Potvrdit e-mail Pokud tlačítko nefunguje, otevřete tento odkaz: http://localhost:4200/potvrzeni-emailu#token=<token> Odkaz platí 24 hodin a lze ho použít jen jednou. Do potvrzení se do účtu nepřihlásíte. Pokud jste se neregistrovali vy, tento e-mail prosím ignorujte. Účet bez potvrzení zůstane neaktivní. S pozdravem Nová naděje – nadační fond Máte-li dotaz, napište nám na info@nfnn.cz. Nová naděje – nadační fond · IČO 27278794 · Jiráskova 436, 473 01 Nový Bor localhost",
+            "links": [
+              "http://localhost:4200/potvrzeni-emailu#token=<token>",
+              "http://localhost:4200/potvrzeni-emailu#token=<token>",
+              "http://localhost:4200"
+            ],
+            "sha256": "b997ca057549e76a39c2ee069bfabc9ff801bcc4fe1f95bdc05ff48d5e5057b2"
+          },
+          "attachments": [
+            {
+              "fileName": "inline",
+              "contentType": "image/png",
+              "size": 41502,
+              "sha256": "aecbb8a4c043690e9918174f51cd419a3f1c02d34161454fe40e759db6e7dfcb"
+            }
+          ]
+        }
+      ],
       "logs": [
         "INFO content.application.media.UploadImageService: Image <id:2> stored: 1600x1000 as 3 variants",
         "INFO content.application.news.NewsAdminService: CREATE_NEWS on news article <id:3> by admin <id:1>",
@@ -4949,6 +5684,7 @@
                 "hasPassword": true,
                 "id": "<id:1>",
                 "name": "Jana Nováková",
+                "pendingEmailChange": null,
                 "preferredLocale": "cs",
                 "registeredAt": "2026-10-23T10:00:00Z",
                 "roles": [
@@ -5031,6 +5767,7 @@
                 "hasPassword": true,
                 "id": "<id:1>",
                 "name": "Jana Nováková",
+                "pendingEmailChange": null,
                 "preferredLocale": "cs",
                 "registeredAt": "2026-10-23T10:00:00Z",
                 "roles": [
@@ -5111,6 +5848,7 @@
                 "hasPassword": true,
                 "id": "<id:1>",
                 "name": "Jana Nováková",
+                "pendingEmailChange": null,
                 "preferredLocale": "cs",
                 "registeredAt": "2026-10-23T10:00:00Z",
                 "roles": [
@@ -5155,6 +5893,7 @@
               "coverImage": null,
               "createdAt": "2026-10-23T10:00:00Z",
               "id": "<id:2>",
+              "live": false,
               "perex": "Perex.",
               "publishedOn": null,
               "slug": "zahrada-pro-deti",
@@ -5198,7 +5937,66 @@
           }
         }
       },
-      "mails": [],
+      "mails": [
+        {
+          "from": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "to": [
+            "jana@example.cz"
+          ],
+          "replyTo": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "subject": "Dvoufaktorové ověření vašeho účtu bylo zapnuto – Nová naděje",
+          "text": "Dobrý den,\n\nu vašeho dárcovského účtu Nová naděje jste právě zapnuli dvoufaktorové ověření. Od teď se kromě hesla přihlásíte také kódem z aplikace v telefonu; všechna ostatní přihlášení jsme ukončili.\n\nOvěření najdete po přihlášení na kartě Přihlašovací údaje, kde ho můžete také vypnout.\n\nPokud jste ověření nezapínali vy, zná někdo vaše heslo. Napište nám prosím co nejdříve na info@nfnn.cz.\n\nNová naděje – nadační fond\n\nMáte-li dotaz, napište nám na info@nfnn.cz.\n",
+          "html": {
+            "text": "Dvoufaktorové ověření bylo zapnuto Dobrý den, u vašeho dárcovského účtu Nová naděje jste právě zapnuli dvoufaktorové ověření. Od teď se kromě hesla přihlásíte také kódem z aplikace v telefonu; všechna ostatní přihlášení jsme ukončili. Ověření najdete po přihlášení na kartě Přihlašovací údaje, kde ho můžete také vypnout. Pokud jste ověření nezapínali vy, zná někdo vaše heslo. Napište nám prosím co nejdříve na info@nfnn.cz. S pozdravem Nová naděje – nadační fond Máte-li dotaz, napište nám na info@nfnn.cz. Nová naděje – nadační fond · IČO 27278794 · Jiráskova 436, 473 01 Nový Bor localhost",
+            "links": [
+              "http://localhost:4200"
+            ],
+            "sha256": "569eecb1a69179063482395aaf12247ec254c1362045d6b1607bd9c8a6757b88"
+          },
+          "attachments": [
+            {
+              "fileName": "inline",
+              "contentType": "image/png",
+              "size": 41502,
+              "sha256": "aecbb8a4c043690e9918174f51cd419a3f1c02d34161454fe40e759db6e7dfcb"
+            }
+          ]
+        },
+        {
+          "from": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "to": [
+            "jana@example.cz"
+          ],
+          "replyTo": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "subject": "Potvrďte svůj e-mail – Nová naděje",
+          "text": "Dobrý den,\n\nděkujeme za registraci dárcovského účtu Nová naděje (jana@example.cz). Zbývá potvrdit, že je tato adresa vaše:\n\nhttp://localhost:4200/potvrzeni-emailu#token=<token>\n\nOdkaz platí 24 hodin a lze ho použít jen jednou. Do potvrzení se do účtu nepřihlásíte.\n\nPokud jste se neregistrovali vy, tento e-mail prosím ignorujte. Účet bez potvrzení zůstane neaktivní.\n\nNová naděje – nadační fond\n\nMáte-li dotaz, napište nám na info@nfnn.cz.\n",
+          "html": {
+            "text": "Vítejte v Nové naději Dobrý den, děkujeme za registraci dárcovského účtu Nová naděje (jana@example.cz). Zbývá potvrdit, že je tato adresa vaše: Potvrdit e-mail Pokud tlačítko nefunguje, otevřete tento odkaz: http://localhost:4200/potvrzeni-emailu#token=<token> Odkaz platí 24 hodin a lze ho použít jen jednou. Do potvrzení se do účtu nepřihlásíte. Pokud jste se neregistrovali vy, tento e-mail prosím ignorujte. Účet bez potvrzení zůstane neaktivní. S pozdravem Nová naděje – nadační fond Máte-li dotaz, napište nám na info@nfnn.cz. Nová naděje – nadační fond · IČO 27278794 · Jiráskova 436, 473 01 Nový Bor localhost",
+            "links": [
+              "http://localhost:4200/potvrzeni-emailu#token=<token>",
+              "http://localhost:4200/potvrzeni-emailu#token=<token>",
+              "http://localhost:4200"
+            ],
+            "sha256": "b997ca057549e76a39c2ee069bfabc9ff801bcc4fe1f95bdc05ff48d5e5057b2"
+          },
+          "attachments": [
+            {
+              "fileName": "inline",
+              "contentType": "image/png",
+              "size": 41502,
+              "sha256": "aecbb8a4c043690e9918174f51cd419a3f1c02d34161454fe40e759db6e7dfcb"
+            }
+          ]
+        }
+      ],
       "logs": [
         "INFO content.application.news.NewsAdminService: CREATE_NEWS on news article <id:2> by admin <id:1>",
         "INFO donations.application.pairing.PaymentPairingService: Payments of donor <id:1> paired after the registration: 0 by symbol, 0 by account, 0 accounts learned",
@@ -5273,6 +6071,7 @@
                 "hasPassword": true,
                 "id": "<id:1>",
                 "name": "Jana Nováková",
+                "pendingEmailChange": null,
                 "preferredLocale": "cs",
                 "registeredAt": "2026-10-23T10:00:00Z",
                 "roles": [
@@ -5355,6 +6154,7 @@
                 "hasPassword": true,
                 "id": "<id:1>",
                 "name": "Jana Nováková",
+                "pendingEmailChange": null,
                 "preferredLocale": "cs",
                 "registeredAt": "2026-10-23T10:00:00Z",
                 "roles": [
@@ -5435,6 +6235,7 @@
                 "hasPassword": true,
                 "id": "<id:1>",
                 "name": "Jana Nováková",
+                "pendingEmailChange": null,
                 "preferredLocale": "cs",
                 "registeredAt": "2026-10-23T10:00:00Z",
                 "roles": [
@@ -5635,7 +6436,66 @@
           }
         }
       },
-      "mails": [],
+      "mails": [
+        {
+          "from": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "to": [
+            "jana@example.cz"
+          ],
+          "replyTo": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "subject": "Dvoufaktorové ověření vašeho účtu bylo zapnuto – Nová naděje",
+          "text": "Dobrý den,\n\nu vašeho dárcovského účtu Nová naděje jste právě zapnuli dvoufaktorové ověření. Od teď se kromě hesla přihlásíte také kódem z aplikace v telefonu; všechna ostatní přihlášení jsme ukončili.\n\nOvěření najdete po přihlášení na kartě Přihlašovací údaje, kde ho můžete také vypnout.\n\nPokud jste ověření nezapínali vy, zná někdo vaše heslo. Napište nám prosím co nejdříve na info@nfnn.cz.\n\nNová naděje – nadační fond\n\nMáte-li dotaz, napište nám na info@nfnn.cz.\n",
+          "html": {
+            "text": "Dvoufaktorové ověření bylo zapnuto Dobrý den, u vašeho dárcovského účtu Nová naděje jste právě zapnuli dvoufaktorové ověření. Od teď se kromě hesla přihlásíte také kódem z aplikace v telefonu; všechna ostatní přihlášení jsme ukončili. Ověření najdete po přihlášení na kartě Přihlašovací údaje, kde ho můžete také vypnout. Pokud jste ověření nezapínali vy, zná někdo vaše heslo. Napište nám prosím co nejdříve na info@nfnn.cz. S pozdravem Nová naděje – nadační fond Máte-li dotaz, napište nám na info@nfnn.cz. Nová naděje – nadační fond · IČO 27278794 · Jiráskova 436, 473 01 Nový Bor localhost",
+            "links": [
+              "http://localhost:4200"
+            ],
+            "sha256": "569eecb1a69179063482395aaf12247ec254c1362045d6b1607bd9c8a6757b88"
+          },
+          "attachments": [
+            {
+              "fileName": "inline",
+              "contentType": "image/png",
+              "size": 41502,
+              "sha256": "aecbb8a4c043690e9918174f51cd419a3f1c02d34161454fe40e759db6e7dfcb"
+            }
+          ]
+        },
+        {
+          "from": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "to": [
+            "jana@example.cz"
+          ],
+          "replyTo": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "subject": "Potvrďte svůj e-mail – Nová naděje",
+          "text": "Dobrý den,\n\nděkujeme za registraci dárcovského účtu Nová naděje (jana@example.cz). Zbývá potvrdit, že je tato adresa vaše:\n\nhttp://localhost:4200/potvrzeni-emailu#token=<token>\n\nOdkaz platí 24 hodin a lze ho použít jen jednou. Do potvrzení se do účtu nepřihlásíte.\n\nPokud jste se neregistrovali vy, tento e-mail prosím ignorujte. Účet bez potvrzení zůstane neaktivní.\n\nNová naděje – nadační fond\n\nMáte-li dotaz, napište nám na info@nfnn.cz.\n",
+          "html": {
+            "text": "Vítejte v Nové naději Dobrý den, děkujeme za registraci dárcovského účtu Nová naděje (jana@example.cz). Zbývá potvrdit, že je tato adresa vaše: Potvrdit e-mail Pokud tlačítko nefunguje, otevřete tento odkaz: http://localhost:4200/potvrzeni-emailu#token=<token> Odkaz platí 24 hodin a lze ho použít jen jednou. Do potvrzení se do účtu nepřihlásíte. Pokud jste se neregistrovali vy, tento e-mail prosím ignorujte. Účet bez potvrzení zůstane neaktivní. S pozdravem Nová naděje – nadační fond Máte-li dotaz, napište nám na info@nfnn.cz. Nová naděje – nadační fond · IČO 27278794 · Jiráskova 436, 473 01 Nový Bor localhost",
+            "links": [
+              "http://localhost:4200/potvrzeni-emailu#token=<token>",
+              "http://localhost:4200/potvrzeni-emailu#token=<token>",
+              "http://localhost:4200"
+            ],
+            "sha256": "b997ca057549e76a39c2ee069bfabc9ff801bcc4fe1f95bdc05ff48d5e5057b2"
+          },
+          "attachments": [
+            {
+              "fileName": "inline",
+              "contentType": "image/png",
+              "size": 41502,
+              "sha256": "aecbb8a4c043690e9918174f51cd419a3f1c02d34161454fe40e759db6e7dfcb"
+            }
+          ]
+        }
+      ],
       "logs": [
         "INFO donations.application.pairing.PaymentPairingService: Payments of donor <id:1> paired after the registration: 0 by symbol, 0 by account, 0 accounts learned",
         "INFO donors.application.DonorAuthenticationService: Sign-in of donor <id:1> waits for the second factor",
@@ -5708,6 +6568,7 @@
                 "hasPassword": true,
                 "id": "<id:1>",
                 "name": "Jana Nováková",
+                "pendingEmailChange": null,
                 "preferredLocale": "cs",
                 "registeredAt": "2026-10-23T10:00:00Z",
                 "roles": [
@@ -5790,6 +6651,7 @@
                 "hasPassword": true,
                 "id": "<id:1>",
                 "name": "Jana Nováková",
+                "pendingEmailChange": null,
                 "preferredLocale": "cs",
                 "registeredAt": "2026-10-23T10:00:00Z",
                 "roles": [
@@ -5870,6 +6732,7 @@
                 "hasPassword": true,
                 "id": "<id:1>",
                 "name": "Jana Nováková",
+                "pendingEmailChange": null,
                 "preferredLocale": "cs",
                 "registeredAt": "2026-10-23T10:00:00Z",
                 "roles": [
@@ -5947,6 +6810,7 @@
                 "hasPassword": true,
                 "id": "<id:2>",
                 "name": "Petr Svoboda",
+                "pendingEmailChange": null,
                 "preferredLocale": "cs",
                 "registeredAt": "2026-10-23T10:00:00Z",
                 "roles": [
@@ -6051,7 +6915,96 @@
           }
         }
       },
-      "mails": [],
+      "mails": [
+        {
+          "from": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "to": [
+            "jana@example.cz"
+          ],
+          "replyTo": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "subject": "Dvoufaktorové ověření vašeho účtu bylo zapnuto – Nová naděje",
+          "text": "Dobrý den,\n\nu vašeho dárcovského účtu Nová naděje jste právě zapnuli dvoufaktorové ověření. Od teď se kromě hesla přihlásíte také kódem z aplikace v telefonu; všechna ostatní přihlášení jsme ukončili.\n\nOvěření najdete po přihlášení na kartě Přihlašovací údaje, kde ho můžete také vypnout.\n\nPokud jste ověření nezapínali vy, zná někdo vaše heslo. Napište nám prosím co nejdříve na info@nfnn.cz.\n\nNová naděje – nadační fond\n\nMáte-li dotaz, napište nám na info@nfnn.cz.\n",
+          "html": {
+            "text": "Dvoufaktorové ověření bylo zapnuto Dobrý den, u vašeho dárcovského účtu Nová naděje jste právě zapnuli dvoufaktorové ověření. Od teď se kromě hesla přihlásíte také kódem z aplikace v telefonu; všechna ostatní přihlášení jsme ukončili. Ověření najdete po přihlášení na kartě Přihlašovací údaje, kde ho můžete také vypnout. Pokud jste ověření nezapínali vy, zná někdo vaše heslo. Napište nám prosím co nejdříve na info@nfnn.cz. S pozdravem Nová naděje – nadační fond Máte-li dotaz, napište nám na info@nfnn.cz. Nová naděje – nadační fond · IČO 27278794 · Jiráskova 436, 473 01 Nový Bor localhost",
+            "links": [
+              "http://localhost:4200"
+            ],
+            "sha256": "569eecb1a69179063482395aaf12247ec254c1362045d6b1607bd9c8a6757b88"
+          },
+          "attachments": [
+            {
+              "fileName": "inline",
+              "contentType": "image/png",
+              "size": 41502,
+              "sha256": "aecbb8a4c043690e9918174f51cd419a3f1c02d34161454fe40e759db6e7dfcb"
+            }
+          ]
+        },
+        {
+          "from": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "to": [
+            "jana@example.cz"
+          ],
+          "replyTo": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "subject": "Potvrďte svůj e-mail – Nová naděje",
+          "text": "Dobrý den,\n\nděkujeme za registraci dárcovského účtu Nová naděje (jana@example.cz). Zbývá potvrdit, že je tato adresa vaše:\n\nhttp://localhost:4200/potvrzeni-emailu#token=<token>\n\nOdkaz platí 24 hodin a lze ho použít jen jednou. Do potvrzení se do účtu nepřihlásíte.\n\nPokud jste se neregistrovali vy, tento e-mail prosím ignorujte. Účet bez potvrzení zůstane neaktivní.\n\nNová naděje – nadační fond\n\nMáte-li dotaz, napište nám na info@nfnn.cz.\n",
+          "html": {
+            "text": "Vítejte v Nové naději Dobrý den, děkujeme za registraci dárcovského účtu Nová naděje (jana@example.cz). Zbývá potvrdit, že je tato adresa vaše: Potvrdit e-mail Pokud tlačítko nefunguje, otevřete tento odkaz: http://localhost:4200/potvrzeni-emailu#token=<token> Odkaz platí 24 hodin a lze ho použít jen jednou. Do potvrzení se do účtu nepřihlásíte. Pokud jste se neregistrovali vy, tento e-mail prosím ignorujte. Účet bez potvrzení zůstane neaktivní. S pozdravem Nová naděje – nadační fond Máte-li dotaz, napište nám na info@nfnn.cz. Nová naděje – nadační fond · IČO 27278794 · Jiráskova 436, 473 01 Nový Bor localhost",
+            "links": [
+              "http://localhost:4200/potvrzeni-emailu#token=<token>",
+              "http://localhost:4200/potvrzeni-emailu#token=<token>",
+              "http://localhost:4200"
+            ],
+            "sha256": "b997ca057549e76a39c2ee069bfabc9ff801bcc4fe1f95bdc05ff48d5e5057b2"
+          },
+          "attachments": [
+            {
+              "fileName": "inline",
+              "contentType": "image/png",
+              "size": 41502,
+              "sha256": "aecbb8a4c043690e9918174f51cd419a3f1c02d34161454fe40e759db6e7dfcb"
+            }
+          ]
+        },
+        {
+          "from": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "to": [
+            "petr@example.cz"
+          ],
+          "replyTo": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "subject": "Potvrďte svůj e-mail – Nová naděje",
+          "text": "Dobrý den,\n\nděkujeme za registraci dárcovského účtu Nová naděje (petr@example.cz). Zbývá potvrdit, že je tato adresa vaše:\n\nhttp://localhost:4200/potvrzeni-emailu#token=<token>\n\nOdkaz platí 24 hodin a lze ho použít jen jednou. Do potvrzení se do účtu nepřihlásíte.\n\nPokud jste se neregistrovali vy, tento e-mail prosím ignorujte. Účet bez potvrzení zůstane neaktivní.\n\nNová naděje – nadační fond\n\nMáte-li dotaz, napište nám na info@nfnn.cz.\n",
+          "html": {
+            "text": "Vítejte v Nové naději Dobrý den, děkujeme za registraci dárcovského účtu Nová naděje (petr@example.cz). Zbývá potvrdit, že je tato adresa vaše: Potvrdit e-mail Pokud tlačítko nefunguje, otevřete tento odkaz: http://localhost:4200/potvrzeni-emailu#token=<token> Odkaz platí 24 hodin a lze ho použít jen jednou. Do potvrzení se do účtu nepřihlásíte. Pokud jste se neregistrovali vy, tento e-mail prosím ignorujte. Účet bez potvrzení zůstane neaktivní. S pozdravem Nová naděje – nadační fond Máte-li dotaz, napište nám na info@nfnn.cz. Nová naděje – nadační fond · IČO 27278794 · Jiráskova 436, 473 01 Nový Bor localhost",
+            "links": [
+              "http://localhost:4200/potvrzeni-emailu#token=<token>",
+              "http://localhost:4200/potvrzeni-emailu#token=<token>",
+              "http://localhost:4200"
+            ],
+            "sha256": "c3c281ed47557190235a9c6bef2f512e9ca9a504963a99c291365fc0343efddf"
+          },
+          "attachments": [
+            {
+              "fileName": "inline",
+              "contentType": "image/png",
+              "size": 41502,
+              "sha256": "aecbb8a4c043690e9918174f51cd419a3f1c02d34161454fe40e759db6e7dfcb"
+            }
+          ]
+        }
+      ],
       "logs": [
         "INFO donations.application.pairing.PaymentPairingService: Payments of donor <id:1> paired after the registration: 0 by symbol, 0 by account, 0 accounts learned",
         "INFO donations.application.pairing.PaymentPairingService: Payments of donor <id:2> paired after the registration: 0 by symbol, 0 by account, 0 accounts learned",
@@ -6127,6 +7080,7 @@
                 "hasPassword": true,
                 "id": "<id:1>",
                 "name": "Jana Nováková",
+                "pendingEmailChange": null,
                 "preferredLocale": "cs",
                 "registeredAt": "2026-10-23T10:00:00Z",
                 "roles": [
@@ -6209,6 +7163,7 @@
                 "hasPassword": true,
                 "id": "<id:1>",
                 "name": "Jana Nováková",
+                "pendingEmailChange": null,
                 "preferredLocale": "cs",
                 "registeredAt": "2026-10-23T10:00:00Z",
                 "roles": [
@@ -6289,6 +7244,7 @@
                 "hasPassword": true,
                 "id": "<id:1>",
                 "name": "Jana Nováková",
+                "pendingEmailChange": null,
                 "preferredLocale": "cs",
                 "registeredAt": "2026-10-23T10:00:00Z",
                 "roles": [
@@ -6333,6 +7289,7 @@
               "coverImage": null,
               "createdAt": "2026-10-23T10:00:00Z",
               "id": "<id:2>",
+              "live": false,
               "perex": "Zveme vás na koncert.",
               "publishedOn": null,
               "slug": "beneficni-koncert",
@@ -6368,6 +7325,7 @@
               "coverImage": null,
               "createdAt": "2026-10-23T10:00:00Z",
               "id": "<id:2>",
+              "live": true,
               "perex": "Zveme vás na koncert.",
               "publishedOn": "2026-10-20",
               "slug": "beneficni-koncert",
@@ -6406,6 +7364,7 @@
               "coverImage": null,
               "createdAt": "2026-10-23T10:00:00Z",
               "id": "<id:2>",
+              "live": true,
               "perex": "Zveme vás na koncert.",
               "publishedOn": "2026-10-20",
               "slug": "koncert-v-kostele",
@@ -6435,6 +7394,7 @@
               "coverImage": null,
               "createdAt": "2026-10-23T10:00:00Z",
               "id": "<id:2>",
+              "live": true,
               "perex": "Zveme vás na koncert.",
               "publishedOn": "2026-10-20",
               "slug": "koncert-v-kostele",
@@ -6496,6 +7456,7 @@
               "coverImage": null,
               "createdAt": "2026-10-23T10:00:00Z",
               "id": "<id:3>",
+              "live": false,
               "perex": "Další koncert na jaře.",
               "publishedOn": null,
               "slug": "beneficni-koncert",
@@ -6531,6 +7492,7 @@
               "coverImage": null,
               "createdAt": "2026-10-23T10:00:00Z",
               "id": "<id:3>",
+              "live": true,
               "perex": "Další koncert na jaře.",
               "publishedOn": "2026-10-21",
               "slug": "beneficni-koncert",
@@ -6560,6 +7522,7 @@
               "coverImage": null,
               "createdAt": "2026-10-23T10:00:00Z",
               "id": "<id:3>",
+              "live": true,
               "perex": "Další koncert na jaře.",
               "publishedOn": "2026-10-21",
               "slug": "beneficni-koncert",
@@ -6589,6 +7552,7 @@
               "coverImage": null,
               "createdAt": "2026-10-23T10:00:00Z",
               "id": "<id:2>",
+              "live": true,
               "perex": "Zveme vás na koncert.",
               "publishedOn": "2026-10-20",
               "slug": "koncert-v-kostele",
@@ -6599,7 +7563,66 @@
           }
         }
       },
-      "mails": [],
+      "mails": [
+        {
+          "from": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "to": [
+            "jana@example.cz"
+          ],
+          "replyTo": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "subject": "Dvoufaktorové ověření vašeho účtu bylo zapnuto – Nová naděje",
+          "text": "Dobrý den,\n\nu vašeho dárcovského účtu Nová naděje jste právě zapnuli dvoufaktorové ověření. Od teď se kromě hesla přihlásíte také kódem z aplikace v telefonu; všechna ostatní přihlášení jsme ukončili.\n\nOvěření najdete po přihlášení na kartě Přihlašovací údaje, kde ho můžete také vypnout.\n\nPokud jste ověření nezapínali vy, zná někdo vaše heslo. Napište nám prosím co nejdříve na info@nfnn.cz.\n\nNová naděje – nadační fond\n\nMáte-li dotaz, napište nám na info@nfnn.cz.\n",
+          "html": {
+            "text": "Dvoufaktorové ověření bylo zapnuto Dobrý den, u vašeho dárcovského účtu Nová naděje jste právě zapnuli dvoufaktorové ověření. Od teď se kromě hesla přihlásíte také kódem z aplikace v telefonu; všechna ostatní přihlášení jsme ukončili. Ověření najdete po přihlášení na kartě Přihlašovací údaje, kde ho můžete také vypnout. Pokud jste ověření nezapínali vy, zná někdo vaše heslo. Napište nám prosím co nejdříve na info@nfnn.cz. S pozdravem Nová naděje – nadační fond Máte-li dotaz, napište nám na info@nfnn.cz. Nová naděje – nadační fond · IČO 27278794 · Jiráskova 436, 473 01 Nový Bor localhost",
+            "links": [
+              "http://localhost:4200"
+            ],
+            "sha256": "569eecb1a69179063482395aaf12247ec254c1362045d6b1607bd9c8a6757b88"
+          },
+          "attachments": [
+            {
+              "fileName": "inline",
+              "contentType": "image/png",
+              "size": 41502,
+              "sha256": "aecbb8a4c043690e9918174f51cd419a3f1c02d34161454fe40e759db6e7dfcb"
+            }
+          ]
+        },
+        {
+          "from": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "to": [
+            "jana@example.cz"
+          ],
+          "replyTo": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "subject": "Potvrďte svůj e-mail – Nová naděje",
+          "text": "Dobrý den,\n\nděkujeme za registraci dárcovského účtu Nová naděje (jana@example.cz). Zbývá potvrdit, že je tato adresa vaše:\n\nhttp://localhost:4200/potvrzeni-emailu#token=<token>\n\nOdkaz platí 24 hodin a lze ho použít jen jednou. Do potvrzení se do účtu nepřihlásíte.\n\nPokud jste se neregistrovali vy, tento e-mail prosím ignorujte. Účet bez potvrzení zůstane neaktivní.\n\nNová naděje – nadační fond\n\nMáte-li dotaz, napište nám na info@nfnn.cz.\n",
+          "html": {
+            "text": "Vítejte v Nové naději Dobrý den, děkujeme za registraci dárcovského účtu Nová naděje (jana@example.cz). Zbývá potvrdit, že je tato adresa vaše: Potvrdit e-mail Pokud tlačítko nefunguje, otevřete tento odkaz: http://localhost:4200/potvrzeni-emailu#token=<token> Odkaz platí 24 hodin a lze ho použít jen jednou. Do potvrzení se do účtu nepřihlásíte. Pokud jste se neregistrovali vy, tento e-mail prosím ignorujte. Účet bez potvrzení zůstane neaktivní. S pozdravem Nová naděje – nadační fond Máte-li dotaz, napište nám na info@nfnn.cz. Nová naděje – nadační fond · IČO 27278794 · Jiráskova 436, 473 01 Nový Bor localhost",
+            "links": [
+              "http://localhost:4200/potvrzeni-emailu#token=<token>",
+              "http://localhost:4200/potvrzeni-emailu#token=<token>",
+              "http://localhost:4200"
+            ],
+            "sha256": "b997ca057549e76a39c2ee069bfabc9ff801bcc4fe1f95bdc05ff48d5e5057b2"
+          },
+          "attachments": [
+            {
+              "fileName": "inline",
+              "contentType": "image/png",
+              "size": 41502,
+              "sha256": "aecbb8a4c043690e9918174f51cd419a3f1c02d34161454fe40e759db6e7dfcb"
+            }
+          ]
+        }
+      ],
       "logs": [
         "INFO content.application.news.NewsAdminService: CREATE_NEWS on news article <id:2> by admin <id:1>",
         "INFO content.application.news.NewsAdminService: CREATE_NEWS on news article <id:3> by admin <id:1>",
@@ -6682,6 +7705,7 @@
                 "hasPassword": true,
                 "id": "<id:1>",
                 "name": "Jana Nováková",
+                "pendingEmailChange": null,
                 "preferredLocale": "cs",
                 "registeredAt": "2026-10-23T10:00:00Z",
                 "roles": [
@@ -6764,6 +7788,7 @@
                 "hasPassword": true,
                 "id": "<id:1>",
                 "name": "Jana Nováková",
+                "pendingEmailChange": null,
                 "preferredLocale": "cs",
                 "registeredAt": "2026-10-23T10:00:00Z",
                 "roles": [
@@ -6844,6 +7869,7 @@
                 "hasPassword": true,
                 "id": "<id:1>",
                 "name": "Jana Nováková",
+                "pendingEmailChange": null,
                 "preferredLocale": "cs",
                 "registeredAt": "2026-10-23T10:00:00Z",
                 "roles": [
@@ -6888,6 +7914,7 @@
               "coverImage": null,
               "createdAt": "2026-10-23T10:00:00Z",
               "id": "<id:2>",
+              "live": false,
               "perex": "Zveme vás na koncert.",
               "publishedOn": null,
               "slug": "beneficni-koncert",
@@ -6926,6 +7953,7 @@
               "coverImage": null,
               "createdAt": "2026-10-23T10:00:00Z",
               "id": "<id:2>",
+              "live": false,
               "perex": "Zveme vás na koncert.",
               "publishedOn": null,
               "slug": "koncert-v-kostele",
@@ -7003,7 +8031,66 @@
           }
         }
       },
-      "mails": [],
+      "mails": [
+        {
+          "from": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "to": [
+            "jana@example.cz"
+          ],
+          "replyTo": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "subject": "Dvoufaktorové ověření vašeho účtu bylo zapnuto – Nová naděje",
+          "text": "Dobrý den,\n\nu vašeho dárcovského účtu Nová naděje jste právě zapnuli dvoufaktorové ověření. Od teď se kromě hesla přihlásíte také kódem z aplikace v telefonu; všechna ostatní přihlášení jsme ukončili.\n\nOvěření najdete po přihlášení na kartě Přihlašovací údaje, kde ho můžete také vypnout.\n\nPokud jste ověření nezapínali vy, zná někdo vaše heslo. Napište nám prosím co nejdříve na info@nfnn.cz.\n\nNová naděje – nadační fond\n\nMáte-li dotaz, napište nám na info@nfnn.cz.\n",
+          "html": {
+            "text": "Dvoufaktorové ověření bylo zapnuto Dobrý den, u vašeho dárcovského účtu Nová naděje jste právě zapnuli dvoufaktorové ověření. Od teď se kromě hesla přihlásíte také kódem z aplikace v telefonu; všechna ostatní přihlášení jsme ukončili. Ověření najdete po přihlášení na kartě Přihlašovací údaje, kde ho můžete také vypnout. Pokud jste ověření nezapínali vy, zná někdo vaše heslo. Napište nám prosím co nejdříve na info@nfnn.cz. S pozdravem Nová naděje – nadační fond Máte-li dotaz, napište nám na info@nfnn.cz. Nová naděje – nadační fond · IČO 27278794 · Jiráskova 436, 473 01 Nový Bor localhost",
+            "links": [
+              "http://localhost:4200"
+            ],
+            "sha256": "569eecb1a69179063482395aaf12247ec254c1362045d6b1607bd9c8a6757b88"
+          },
+          "attachments": [
+            {
+              "fileName": "inline",
+              "contentType": "image/png",
+              "size": 41502,
+              "sha256": "aecbb8a4c043690e9918174f51cd419a3f1c02d34161454fe40e759db6e7dfcb"
+            }
+          ]
+        },
+        {
+          "from": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "to": [
+            "jana@example.cz"
+          ],
+          "replyTo": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "subject": "Potvrďte svůj e-mail – Nová naděje",
+          "text": "Dobrý den,\n\nděkujeme za registraci dárcovského účtu Nová naděje (jana@example.cz). Zbývá potvrdit, že je tato adresa vaše:\n\nhttp://localhost:4200/potvrzeni-emailu#token=<token>\n\nOdkaz platí 24 hodin a lze ho použít jen jednou. Do potvrzení se do účtu nepřihlásíte.\n\nPokud jste se neregistrovali vy, tento e-mail prosím ignorujte. Účet bez potvrzení zůstane neaktivní.\n\nNová naděje – nadační fond\n\nMáte-li dotaz, napište nám na info@nfnn.cz.\n",
+          "html": {
+            "text": "Vítejte v Nové naději Dobrý den, děkujeme za registraci dárcovského účtu Nová naděje (jana@example.cz). Zbývá potvrdit, že je tato adresa vaše: Potvrdit e-mail Pokud tlačítko nefunguje, otevřete tento odkaz: http://localhost:4200/potvrzeni-emailu#token=<token> Odkaz platí 24 hodin a lze ho použít jen jednou. Do potvrzení se do účtu nepřihlásíte. Pokud jste se neregistrovali vy, tento e-mail prosím ignorujte. Účet bez potvrzení zůstane neaktivní. S pozdravem Nová naděje – nadační fond Máte-li dotaz, napište nám na info@nfnn.cz. Nová naděje – nadační fond · IČO 27278794 · Jiráskova 436, 473 01 Nový Bor localhost",
+            "links": [
+              "http://localhost:4200/potvrzeni-emailu#token=<token>",
+              "http://localhost:4200/potvrzeni-emailu#token=<token>",
+              "http://localhost:4200"
+            ],
+            "sha256": "b997ca057549e76a39c2ee069bfabc9ff801bcc4fe1f95bdc05ff48d5e5057b2"
+          },
+          "attachments": [
+            {
+              "fileName": "inline",
+              "contentType": "image/png",
+              "size": 41502,
+              "sha256": "aecbb8a4c043690e9918174f51cd419a3f1c02d34161454fe40e759db6e7dfcb"
+            }
+          ]
+        }
+      ],
       "logs": [
         "INFO content.application.news.NewsAdminService: CREATE_NEWS on news article <id:2> by admin <id:1>",
         "INFO content.application.news.NewsAdminService: DELETE_NEWS on news article <id:2> by admin <id:1>",

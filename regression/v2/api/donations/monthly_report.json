@@ -1,5 +1,5 @@
 {
-  "source": "v2-baseline@70e9233",
+  "source": "v2-baseline",
   "feature": "donations/monthly_report",
   "scenarios": {
     "The report for the previous month counts the donors, the donations and the unpaired payments #1": {
@@ -65,6 +65,7 @@
                 "hasPassword": true,
                 "id": "<id:1>",
                 "name": "Petr Svoboda",
+                "pendingEmailChange": null,
                 "preferredLocale": "cs",
                 "registeredAt": "2026-08-20T10:00:00Z",
                 "roles": [
@@ -141,6 +142,7 @@
                 "hasPassword": true,
                 "id": "<id:2>",
                 "name": "Jana Nováková",
+                "pendingEmailChange": null,
                 "preferredLocale": "cs",
                 "registeredAt": "2026-09-10T10:00:00Z",
                 "roles": [
@@ -217,6 +219,7 @@
                 "hasPassword": true,
                 "id": "<id:3>",
                 "name": "Eva Nováková",
+                "pendingEmailChange": null,
                 "preferredLocale": "cs",
                 "registeredAt": "2026-10-01T10:00:00Z",
                 "roles": [
@@ -239,6 +242,36 @@
             "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
           ],
           "to": [
+            "eva@example.cz"
+          ],
+          "replyTo": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "subject": "Potvrďte svůj e-mail – Nová naděje",
+          "text": "Dobrý den,\n\nděkujeme za registraci dárcovského účtu Nová naděje (eva@example.cz). Zbývá potvrdit, že je tato adresa vaše:\n\nhttp://localhost:4200/potvrzeni-emailu#token=<token>\n\nOdkaz platí 24 hodin a lze ho použít jen jednou. Do potvrzení se do účtu nepřihlásíte.\n\nPokud jste se neregistrovali vy, tento e-mail prosím ignorujte. Účet bez potvrzení zůstane neaktivní.\n\nNová naděje – nadační fond\n\nMáte-li dotaz, napište nám na info@nfnn.cz.\n",
+          "html": {
+            "text": "Vítejte v Nové naději Dobrý den, děkujeme za registraci dárcovského účtu Nová naděje (eva@example.cz). Zbývá potvrdit, že je tato adresa vaše: Potvrdit e-mail Pokud tlačítko nefunguje, otevřete tento odkaz: http://localhost:4200/potvrzeni-emailu#token=<token> Odkaz platí 24 hodin a lze ho použít jen jednou. Do potvrzení se do účtu nepřihlásíte. Pokud jste se neregistrovali vy, tento e-mail prosím ignorujte. Účet bez potvrzení zůstane neaktivní. S pozdravem Nová naděje – nadační fond Máte-li dotaz, napište nám na info@nfnn.cz. Nová naděje – nadační fond · IČO 27278794 · Jiráskova 436, 473 01 Nový Bor localhost",
+            "links": [
+              "http://localhost:4200/potvrzeni-emailu#token=<token>",
+              "http://localhost:4200/potvrzeni-emailu#token=<token>",
+              "http://localhost:4200"
+            ],
+            "sha256": "92bdc198cbe2c9bb25b67078e32f9482b1fa2d82bc593d50d8268586f897a383"
+          },
+          "attachments": [
+            {
+              "fileName": "inline",
+              "contentType": "image/png",
+              "size": 41502,
+              "sha256": "aecbb8a4c043690e9918174f51cd419a3f1c02d34161454fe40e759db6e7dfcb"
+            }
+          ]
+        },
+        {
+          "from": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "to": [
             "info@nfnn.cz"
           ],
           "replyTo": [
@@ -246,7 +279,73 @@
           ],
           "subject": "Měsíční přehled Nová naděje – září 2026",
           "text": "Dobrý den,\n\nposíláme měsíční přehled dárcovského portálu Nová naděje za září 2026.\n\nDárci\nRegistrovaní dárci k 30. 9. 2026: 2\nNoví dárci za září 2026: 1\n\nDary\nPřijaté dary za září 2026: počet 3, celkem 1 684,50 Kč\nZ toho spárované s registrovanými dárci: počet 2, celkem 1 534,50 Kč\nPřijaté dary od 1. 1. 2026: počet 5, celkem 1 959,50 Kč\n\nPlatby bez dárce\nNespárované příchozí platby za září 2026: počet 1, celkem 150,00 Kč\nJsou to platby na účet fondu, které se nepodařilo přiřadit žádnému registrovanému dárci.\n\nBanka\nPoslední úspěšné stažení plateb z banky: 1. 10. 2026 12:00\n\nTento přehled posílá web automaticky jednou za měsíc. Zároveň tím udržuje v chodu odesílání e-mailů: Brevo zruší SMTP klíč, přes který 90 dní nic neodešlo.\n\nNová naděje – nadační fond\n",
-          "htmlSha256": "73c8bba16d3242542e0b06bcf5aff86dd33a6cb93832a147c5ec7182f58e4fac",
+          "html": {
+            "text": "Měsíční přehled – září 2026 Dobrý den, posíláme měsíční přehled dárcovského portálu Nová naděje za září 2026. Dárci Registrovaní dárci k 30. 9. 2026: 2 Noví dárci za září 2026: 1 Dary Přijaté dary za září 2026: počet 3, celkem 1 684,50 Kč Z toho spárované s registrovanými dárci: počet 2, celkem 1 534,50 Kč Přijaté dary od 1. 1. 2026: počet 5, celkem 1 959,50 Kč Platby bez dárce Nespárované příchozí platby za září 2026: počet 1, celkem 150,00 Kč Jsou to platby na účet fondu, které se nepodařilo přiřadit žádnému registrovanému dárci. Banka Poslední úspěšné stažení plateb z banky: 1. 10. 2026 12:00 S pozdravem Nová naděje – nadační fond Tento přehled posílá web automaticky jednou za měsíc. Zároveň tím udržuje v chodu odesílání e-mailů: Brevo zruší SMTP klíč, přes který 90 dní nic neodešlo. Nová naděje – nadační fond · IČO 27278794 · Jiráskova 436, 473 01 Nový Bor localhost",
+            "links": [
+              "http://localhost:4200"
+            ],
+            "sha256": "73c8bba16d3242542e0b06bcf5aff86dd33a6cb93832a147c5ec7182f58e4fac"
+          },
+          "attachments": [
+            {
+              "fileName": "inline",
+              "contentType": "image/png",
+              "size": 41502,
+              "sha256": "aecbb8a4c043690e9918174f51cd419a3f1c02d34161454fe40e759db6e7dfcb"
+            }
+          ]
+        },
+        {
+          "from": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "to": [
+            "jana@example.cz"
+          ],
+          "replyTo": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "subject": "Potvrďte svůj e-mail – Nová naděje",
+          "text": "Dobrý den,\n\nděkujeme za registraci dárcovského účtu Nová naděje (jana@example.cz). Zbývá potvrdit, že je tato adresa vaše:\n\nhttp://localhost:4200/potvrzeni-emailu#token=<token>\n\nOdkaz platí 24 hodin a lze ho použít jen jednou. Do potvrzení se do účtu nepřihlásíte.\n\nPokud jste se neregistrovali vy, tento e-mail prosím ignorujte. Účet bez potvrzení zůstane neaktivní.\n\nNová naděje – nadační fond\n\nMáte-li dotaz, napište nám na info@nfnn.cz.\n",
+          "html": {
+            "text": "Vítejte v Nové naději Dobrý den, děkujeme za registraci dárcovského účtu Nová naděje (jana@example.cz). Zbývá potvrdit, že je tato adresa vaše: Potvrdit e-mail Pokud tlačítko nefunguje, otevřete tento odkaz: http://localhost:4200/potvrzeni-emailu#token=<token> Odkaz platí 24 hodin a lze ho použít jen jednou. Do potvrzení se do účtu nepřihlásíte. Pokud jste se neregistrovali vy, tento e-mail prosím ignorujte. Účet bez potvrzení zůstane neaktivní. S pozdravem Nová naděje – nadační fond Máte-li dotaz, napište nám na info@nfnn.cz. Nová naděje – nadační fond · IČO 27278794 · Jiráskova 436, 473 01 Nový Bor localhost",
+            "links": [
+              "http://localhost:4200/potvrzeni-emailu#token=<token>",
+              "http://localhost:4200/potvrzeni-emailu#token=<token>",
+              "http://localhost:4200"
+            ],
+            "sha256": "b997ca057549e76a39c2ee069bfabc9ff801bcc4fe1f95bdc05ff48d5e5057b2"
+          },
+          "attachments": [
+            {
+              "fileName": "inline",
+              "contentType": "image/png",
+              "size": 41502,
+              "sha256": "aecbb8a4c043690e9918174f51cd419a3f1c02d34161454fe40e759db6e7dfcb"
+            }
+          ]
+        },
+        {
+          "from": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "to": [
+            "petr@example.cz"
+          ],
+          "replyTo": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "subject": "Potvrďte svůj e-mail – Nová naděje",
+          "text": "Dobrý den,\n\nděkujeme za registraci dárcovského účtu Nová naděje (petr@example.cz). Zbývá potvrdit, že je tato adresa vaše:\n\nhttp://localhost:4200/potvrzeni-emailu#token=<token>\n\nOdkaz platí 24 hodin a lze ho použít jen jednou. Do potvrzení se do účtu nepřihlásíte.\n\nPokud jste se neregistrovali vy, tento e-mail prosím ignorujte. Účet bez potvrzení zůstane neaktivní.\n\nNová naděje – nadační fond\n\nMáte-li dotaz, napište nám na info@nfnn.cz.\n",
+          "html": {
+            "text": "Vítejte v Nové naději Dobrý den, děkujeme za registraci dárcovského účtu Nová naděje (petr@example.cz). Zbývá potvrdit, že je tato adresa vaše: Potvrdit e-mail Pokud tlačítko nefunguje, otevřete tento odkaz: http://localhost:4200/potvrzeni-emailu#token=<token> Odkaz platí 24 hodin a lze ho použít jen jednou. Do potvrzení se do účtu nepřihlásíte. Pokud jste se neregistrovali vy, tento e-mail prosím ignorujte. Účet bez potvrzení zůstane neaktivní. S pozdravem Nová naděje – nadační fond Máte-li dotaz, napište nám na info@nfnn.cz. Nová naděje – nadační fond · IČO 27278794 · Jiráskova 436, 473 01 Nový Bor localhost",
+            "links": [
+              "http://localhost:4200/potvrzeni-emailu#token=<token>",
+              "http://localhost:4200/potvrzeni-emailu#token=<token>",
+              "http://localhost:4200"
+            ],
+            "sha256": "c3c281ed47557190235a9c6bef2f512e9ca9a504963a99c291365fc0343efddf"
+          },
           "attachments": [
             {
               "fileName": "inline",
@@ -261,17 +360,17 @@
         "DEBUG donations.application.pairing.PaymentPairingService: Bank payment 1001 paired with donor <id:1> by VARIABLE_SYMBOL",
         "DEBUG donations.application.pairing.PaymentPairingService: Bank payment 1002 paired with donor <id:2> by VARIABLE_SYMBOL",
         "DEBUG donations.application.pairing.PaymentPairingService: Bank payment 1003 paired with donor <id:1> by VARIABLE_SYMBOL",
-        "DEBUG donations.application.pairing.PaymentPairingService: Bank payment 1004 stays unpaired: UNKNOWN_VARIABLE_SYMBOL (symbol 1111111111, sender 2900255555/0800)",
-        "DEBUG donations.application.pairing.PaymentPairingService: Bank payment 1005 stays unpaired: UNKNOWN_VARIABLE_SYMBOL (symbol 1111111111, sender 2900255555/0800)",
+        "DEBUG donations.application.pairing.PaymentPairingService: Bank payment 1004 stays unpaired: UNKNOWN_VARIABLE_SYMBOL (variable symbol given, sender account given)",
+        "DEBUG donations.application.pairing.PaymentPairingService: Bank payment 1005 stays unpaired: UNKNOWN_VARIABLE_SYMBOL (variable symbol given, sender account given)",
         "DEBUG donations.application.pairing.PaymentPairingService: Bank payment 1006 paired with donor <id:2> by VARIABLE_SYMBOL",
-        "DEBUG donations.application.pairing.PaymentPairingService: Donor <id:2> learned sender account 2900233333/2010 from bank payment 1002",
-        "DEBUG donations.application.pairing.PaymentPairingService: Donor <id:1> learned sender account 2900244444/2010 from bank payment 1001",
-        "DEBUG donations.infrastructure.fio.FioBankStatementSource: Fio movement 1001 from 2900244444/2010 (Svoboda Petr) with variable symbol <vs:Petr>",
-        "DEBUG donations.infrastructure.fio.FioBankStatementSource: Fio movement 1002 from 2900233333/2010 (Nováková Jana) with variable symbol <vs:Jana>",
-        "DEBUG donations.infrastructure.fio.FioBankStatementSource: Fio movement 1003 from 2900244444/2010 (Svoboda Petr) with variable symbol <vs:Petr>",
-        "DEBUG donations.infrastructure.fio.FioBankStatementSource: Fio movement 1004 from 2900255555/0800 (Dvořák Karel) with variable symbol 1111111111",
-        "DEBUG donations.infrastructure.fio.FioBankStatementSource: Fio movement 1005 from 2900255555/0800 (Dvořák Karel) with variable symbol 1111111111",
-        "DEBUG donations.infrastructure.fio.FioBankStatementSource: Fio movement 1006 from 2900233333/2010 (Nováková Jana) with variable symbol <vs:Jana>",
+        "DEBUG donations.application.pairing.PaymentPairingService: Donor <id:1> learned sender account link <id:4> from bank payment 1001",
+        "DEBUG donations.application.pairing.PaymentPairingService: Donor <id:2> learned sender account link <id:5> from bank payment 1002",
+        "DEBUG donations.infrastructure.fio.FioBankStatementSource: Fio movement 1001 is incoming: sender account given, payer name given, variable symbol given",
+        "DEBUG donations.infrastructure.fio.FioBankStatementSource: Fio movement 1002 is incoming: sender account given, payer name given, variable symbol given",
+        "DEBUG donations.infrastructure.fio.FioBankStatementSource: Fio movement 1003 is incoming: sender account given, payer name given, variable symbol given",
+        "DEBUG donations.infrastructure.fio.FioBankStatementSource: Fio movement 1004 is incoming: sender account given, payer name given, variable symbol given",
+        "DEBUG donations.infrastructure.fio.FioBankStatementSource: Fio movement 1005 is incoming: sender account given, payer name given, variable symbol given",
+        "DEBUG donations.infrastructure.fio.FioBankStatementSource: Fio movement 1006 is incoming: sender account given, payer name given, variable symbol given",
         "INFO donations.application.importing.ImportBankPaymentsService: Fio import STARTUP 2026-07-04/2026-10-01 completed: bank reported 2026-07-04/2026-10-01, 6 movements, 6 new incoming, 0 known, 4 paired by symbol, 0 by account, 0 by confirmed symbol, 2 accounts learned, 2 left unpaired, covered 2026-07-04/2026-10-01",
         "INFO donations.application.pairing.PaymentPairingService: Payments of donor <id:1> paired after the registration: 0 by symbol, 0 by account, 0 accounts learned",
         "INFO donations.application.pairing.PaymentPairingService: Payments of donor <id:2> paired after the registration: 0 by symbol, 0 by account, 0 accounts learned",
@@ -300,7 +399,13 @@
           ],
           "subject": "Měsíční přehled Nová naděje – září 2026",
           "text": "Dobrý den,\n\nposíláme měsíční přehled dárcovského portálu Nová naděje za září 2026.\n\nDárci\nRegistrovaní dárci k 30. 9. 2026: 0\nNoví dárci za září 2026: 0\n\nDary\nPřijaté dary za září 2026: počet 0, celkem 0,00 Kč\nZ toho spárované s registrovanými dárci: počet 0, celkem 0,00 Kč\nPřijaté dary od 1. 1. 2026: počet 0, celkem 0,00 Kč\n\nPlatby bez dárce\nNespárované příchozí platby za září 2026: počet 0, celkem 0,00 Kč\nJsou to platby na účet fondu, které se nepodařilo přiřadit žádnému registrovanému dárci.\n\nBanka\nPoslední úspěšné stažení plateb z banky: zatím žádné\nPoslední pokus o stažení 1. 10. 2026 12:00 selhal: Fio token chybí, ještě neplatí nebo vypršel (platí 180 dní); je potřeba vytvořit nový.\n\nTento přehled posílá web automaticky jednou za měsíc. Zároveň tím udržuje v chodu odesílání e-mailů: Brevo zruší SMTP klíč, přes který 90 dní nic neodešlo.\n\nNová naděje – nadační fond\n",
-          "htmlSha256": "ab82208548c11f2b06d577a67661716f1069922055c7c673a6dc7da1a1315f4a",
+          "html": {
+            "text": "Měsíční přehled – září 2026 Dobrý den, posíláme měsíční přehled dárcovského portálu Nová naděje za září 2026. Dárci Registrovaní dárci k 30. 9. 2026: 0 Noví dárci za září 2026: 0 Dary Přijaté dary za září 2026: počet 0, celkem 0,00 Kč Z toho spárované s registrovanými dárci: počet 0, celkem 0,00 Kč Přijaté dary od 1. 1. 2026: počet 0, celkem 0,00 Kč Platby bez dárce Nespárované příchozí platby za září 2026: počet 0, celkem 0,00 Kč Jsou to platby na účet fondu, které se nepodařilo přiřadit žádnému registrovanému dárci. Banka Poslední úspěšné stažení plateb z banky: zatím žádné Poslední pokus o stažení 1. 10. 2026 12:00 selhal: Fio token chybí, ještě neplatí nebo vypršel (platí 180 dní); je potřeba vytvořit nový. S pozdravem Nová naděje – nadační fond Tento přehled posílá web automaticky jednou za měsíc. Zároveň tím udržuje v chodu odesílání e-mailů: Brevo zruší SMTP klíč, přes který 90 dní nic neodešlo. Nová naděje – nadační fond · IČO 27278794 · Jiráskova 436, 473 01 Nový Bor localhost",
+            "links": [
+              "http://localhost:4200"
+            ],
+            "sha256": "ab82208548c11f2b06d577a67661716f1069922055c7c673a6dc7da1a1315f4a"
+          },
           "attachments": [
             {
               "fileName": "inline",
@@ -322,7 +427,13 @@
           ],
           "subject": "Stahování plateb z banky selhává – Nová naděje",
           "text": "Dobrý den,\n\nFio 1. 10. 2026 12:00 odmítlo token, kterým web Nová naděje stahuje platby z účtu fondu.\n\nToken chybí, ještě neplatí nebo vypršel (platí 180 dní).\n\nV internetovém bankovnictví Fio (Nastavení → API) vytvořte nový token typu „Sledování účtu“ a vložte ho ve správě webu v části Nastavení jako Token Fio API.\n\nPoslední úspěšné stažení plateb z banky: zatím žádné\n\nDokud porucha trvá, nové dary se dárcům v portálu neukážou a potvrzení o daru za ně nevydáme.\n\nAž se stahování obnoví, pošleme ještě jednu zprávu; do té doby už tuto zprávu neopakujeme.\n\nNová naděje – nadační fond\n\nTuto zprávu posílá web automaticky, když stahování plateb z banky selže třikrát za sebou nebo když Fio odmítne token, a znovu, až se stahování obnoví.\n",
-          "htmlSha256": "300de7c2b611f1a09db9125d3f7b58dd257411ea415ac55bff6ce16b9d010460",
+          "html": {
+            "text": "Stahování plateb z banky selhává Dobrý den, Fio 1. 10. 2026 12:00 odmítlo token, kterým web Nová naděje stahuje platby z účtu fondu. Token chybí, ještě neplatí nebo vypršel (platí 180 dní). V internetovém bankovnictví Fio (Nastavení → API) vytvořte nový token typu „Sledování účtu“ a vložte ho ve správě webu v části Nastavení jako Token Fio API. Poslední úspěšné stažení plateb z banky: zatím žádné Dokud porucha trvá, nové dary se dárcům v portálu neukážou a potvrzení o daru za ně nevydáme. Až se stahování obnoví, pošleme ještě jednu zprávu; do té doby už tuto zprávu neopakujeme. S pozdravem Nová naděje – nadační fond Tuto zprávu posílá web automaticky, když stahování plateb z banky selže třikrát za sebou nebo když Fio odmítne token, a znovu, až se stahování obnoví. Nová naděje – nadační fond · IČO 27278794 · Jiráskova 436, 473 01 Nový Bor localhost",
+            "links": [
+              "http://localhost:4200"
+            ],
+            "sha256": "300de7c2b611f1a09db9125d3f7b58dd257411ea415ac55bff6ce16b9d010460"
+          },
           "attachments": [
             {
               "fileName": "inline",
@@ -353,7 +464,13 @@
           ],
           "subject": "Měsíční přehled Nová naděje – září 2026",
           "text": "Dobrý den,\n\nposíláme měsíční přehled dárcovského portálu Nová naděje za září 2026.\n\nDárci\nRegistrovaní dárci k 30. 9. 2026: 0\nNoví dárci za září 2026: 0\n\nDary\nPřijaté dary za září 2026: počet 0, celkem 0,00 Kč\nZ toho spárované s registrovanými dárci: počet 0, celkem 0,00 Kč\nPřijaté dary od 1. 1. 2026: počet 0, celkem 0,00 Kč\n\nPlatby bez dárce\nNespárované příchozí platby za září 2026: počet 0, celkem 0,00 Kč\nJsou to platby na účet fondu, které se nepodařilo přiřadit žádnému registrovanému dárci.\n\nBanka\nPoslední úspěšné stažení plateb z banky: zatím žádné\n\nTento přehled posílá web automaticky jednou za měsíc. Zároveň tím udržuje v chodu odesílání e-mailů: Brevo zruší SMTP klíč, přes který 90 dní nic neodešlo.\n\nNová naděje – nadační fond\n",
-          "htmlSha256": "d5c04b9eeafd811312b368e5c7ea425f5b0331555ce34606d86edbefbfa930e1",
+          "html": {
+            "text": "Měsíční přehled – září 2026 Dobrý den, posíláme měsíční přehled dárcovského portálu Nová naděje za září 2026. Dárci Registrovaní dárci k 30. 9. 2026: 0 Noví dárci za září 2026: 0 Dary Přijaté dary za září 2026: počet 0, celkem 0,00 Kč Z toho spárované s registrovanými dárci: počet 0, celkem 0,00 Kč Přijaté dary od 1. 1. 2026: počet 0, celkem 0,00 Kč Platby bez dárce Nespárované příchozí platby za září 2026: počet 0, celkem 0,00 Kč Jsou to platby na účet fondu, které se nepodařilo přiřadit žádnému registrovanému dárci. Banka Poslední úspěšné stažení plateb z banky: zatím žádné S pozdravem Nová naděje – nadační fond Tento přehled posílá web automaticky jednou za měsíc. Zároveň tím udržuje v chodu odesílání e-mailů: Brevo zruší SMTP klíč, přes který 90 dní nic neodešlo. Nová naděje – nadační fond · IČO 27278794 · Jiráskova 436, 473 01 Nový Bor localhost",
+            "links": [
+              "http://localhost:4200"
+            ],
+            "sha256": "d5c04b9eeafd811312b368e5c7ea425f5b0331555ce34606d86edbefbfa930e1"
+          },
           "attachments": [
             {
               "fileName": "inline",
@@ -375,7 +492,13 @@
           ],
           "subject": "Měsíční přehled Nová naděje – říjen 2026",
           "text": "Dobrý den,\n\nposíláme měsíční přehled dárcovského portálu Nová naděje za říjen 2026.\n\nDárci\nRegistrovaní dárci k 31. 10. 2026: 0\nNoví dárci za říjen 2026: 0\n\nDary\nPřijaté dary za říjen 2026: počet 0, celkem 0,00 Kč\nZ toho spárované s registrovanými dárci: počet 0, celkem 0,00 Kč\nPřijaté dary od 1. 1. 2026: počet 0, celkem 0,00 Kč\n\nPlatby bez dárce\nNespárované příchozí platby za říjen 2026: počet 0, celkem 0,00 Kč\nJsou to platby na účet fondu, které se nepodařilo přiřadit žádnému registrovanému dárci.\n\nBanka\nPoslední úspěšné stažení plateb z banky: zatím žádné\n\nTento přehled posílá web automaticky jednou za měsíc. Zároveň tím udržuje v chodu odesílání e-mailů: Brevo zruší SMTP klíč, přes který 90 dní nic neodešlo.\n\nNová naděje – nadační fond\n",
-          "htmlSha256": "1e2870d70591c3158d1110e8ce1c36d53455fd25686eac4b3fc2a0e0c7b6a60c",
+          "html": {
+            "text": "Měsíční přehled – říjen 2026 Dobrý den, posíláme měsíční přehled dárcovského portálu Nová naděje za říjen 2026. Dárci Registrovaní dárci k 31. 10. 2026: 0 Noví dárci za říjen 2026: 0 Dary Přijaté dary za říjen 2026: počet 0, celkem 0,00 Kč Z toho spárované s registrovanými dárci: počet 0, celkem 0,00 Kč Přijaté dary od 1. 1. 2026: počet 0, celkem 0,00 Kč Platby bez dárce Nespárované příchozí platby za říjen 2026: počet 0, celkem 0,00 Kč Jsou to platby na účet fondu, které se nepodařilo přiřadit žádnému registrovanému dárci. Banka Poslední úspěšné stažení plateb z banky: zatím žádné S pozdravem Nová naděje – nadační fond Tento přehled posílá web automaticky jednou za měsíc. Zároveň tím udržuje v chodu odesílání e-mailů: Brevo zruší SMTP klíč, přes který 90 dní nic neodešlo. Nová naděje – nadační fond · IČO 27278794 · Jiráskova 436, 473 01 Nový Bor localhost",
+            "links": [
+              "http://localhost:4200"
+            ],
+            "sha256": "1e2870d70591c3158d1110e8ce1c36d53455fd25686eac4b3fc2a0e0c7b6a60c"
+          },
           "attachments": [
             {
               "fileName": "inline",
@@ -403,7 +526,13 @@
           ],
           "subject": "Měsíční přehled Nová naděje – září 2026",
           "text": "Dobrý den,\n\nposíláme měsíční přehled dárcovského portálu Nová naděje za září 2026.\n\nDárci\nRegistrovaní dárci k 30. 9. 2026: 0\nNoví dárci za září 2026: 0\n\nDary\nPřijaté dary za září 2026: počet 0, celkem 0,00 Kč\nZ toho spárované s registrovanými dárci: počet 0, celkem 0,00 Kč\nPřijaté dary od 1. 1. 2026: počet 0, celkem 0,00 Kč\n\nPlatby bez dárce\nNespárované příchozí platby za září 2026: počet 0, celkem 0,00 Kč\nJsou to platby na účet fondu, které se nepodařilo přiřadit žádnému registrovanému dárci.\n\nBanka\nPoslední úspěšné stažení plateb z banky: zatím žádné\n\nTento přehled posílá web automaticky jednou za měsíc. Zároveň tím udržuje v chodu odesílání e-mailů: Brevo zruší SMTP klíč, přes který 90 dní nic neodešlo.\n\nNová naděje – nadační fond\n",
-          "htmlSha256": "d5c04b9eeafd811312b368e5c7ea425f5b0331555ce34606d86edbefbfa930e1",
+          "html": {
+            "text": "Měsíční přehled – září 2026 Dobrý den, posíláme měsíční přehled dárcovského portálu Nová naděje za září 2026. Dárci Registrovaní dárci k 30. 9. 2026: 0 Noví dárci za září 2026: 0 Dary Přijaté dary za září 2026: počet 0, celkem 0,00 Kč Z toho spárované s registrovanými dárci: počet 0, celkem 0,00 Kč Přijaté dary od 1. 1. 2026: počet 0, celkem 0,00 Kč Platby bez dárce Nespárované příchozí platby za září 2026: počet 0, celkem 0,00 Kč Jsou to platby na účet fondu, které se nepodařilo přiřadit žádnému registrovanému dárci. Banka Poslední úspěšné stažení plateb z banky: zatím žádné S pozdravem Nová naděje – nadační fond Tento přehled posílá web automaticky jednou za měsíc. Zároveň tím udržuje v chodu odesílání e-mailů: Brevo zruší SMTP klíč, přes který 90 dní nic neodešlo. Nová naděje – nadační fond · IČO 27278794 · Jiráskova 436, 473 01 Nový Bor localhost",
+            "links": [
+              "http://localhost:4200"
+            ],
+            "sha256": "d5c04b9eeafd811312b368e5c7ea425f5b0331555ce34606d86edbefbfa930e1"
+          },
           "attachments": [
             {
               "fileName": "inline",

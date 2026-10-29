@@ -1,5 +1,5 @@
 {
-  "source": "v2-baseline@70e9233",
+  "source": "v2-baseline",
   "feature": "donations/payment_qr",
   "scenarios": {
     "Donor's QR payment carries their variable symbol #1": {
@@ -173,7 +173,7 @@
       "mails": [],
       "logs": []
     },
-    "Amount that is not a whole number of crowns from 1 to 1 000 000 is rejected #1": {
+    "Amount that is not a whole number of crowns from 1 to 1 000 000 is rejected [0] #1": {
       "requests": {
         "GET /api/donations/payment-qr #1": {
           "request": {
@@ -209,7 +209,7 @@
       "mails": [],
       "logs": []
     },
-    "Amount that is not a whole number of crowns from 1 to 1 000 000 is rejected #2": {
+    "Amount that is not a whole number of crowns from 1 to 1 000 000 is rejected [1000001] #1": {
       "requests": {
         "GET /api/donations/payment-qr #1": {
           "request": {
@@ -245,7 +245,7 @@
       "mails": [],
       "logs": []
     },
-    "Amount that is not a whole number of crowns from 1 to 1 000 000 is rejected #3": {
+    "Amount that is not a whole number of crowns from 1 to 1 000 000 is rejected [abc] #1": {
       "requests": {
         "GET /api/donations/payment-qr #1": {
           "request": {
@@ -281,7 +281,7 @@
       "mails": [],
       "logs": []
     },
-    "Amount that is not a whole number of crowns from 1 to 1 000 000 is rejected #4": {
+    "Amount that is not a whole number of crowns from 1 to 1 000 000 is rejected [12.50] #1": {
       "requests": {
         "GET /api/donations/payment-qr #1": {
           "request": {

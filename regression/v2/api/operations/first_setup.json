@@ -1,5 +1,5 @@
 {
-  "source": "v2-baseline@70e9233",
+  "source": "v2-baseline",
   "feature": "operations/first_setup",
   "scenarios": {
     "Directly from the home network the setup opens without a code, stores the settings, seals the secrets and restarts once #1": {
@@ -71,11 +71,11 @@
                 },
                 {
                   "name": "MAIL_USERNAME",
-                  "value": "bebb0c001@smtp-brevo.com"
+                  "value": "abc@smtp-brevo.com"
                 },
                 {
                   "name": "MAIL_PASSWORD",
-                  "value": "xsmtpsib-key"
+                  "value": "<secret>"
                 },
                 {
                   "name": "MAIL_FROM",
@@ -87,7 +87,7 @@
                 },
                 {
                   "name": "FIO_TOKEN",
-                  "value": "fio-read-only-token"
+                  "value": "<secret>"
                 },
                 {
                   "name": "ADMIN_EMAILS",
@@ -538,11 +538,11 @@
       "mails": [],
       "logs": []
     },
-    "The mail server is tested before saving #1": {
+    "A test e-mail goes through the typed server to the typed first administrator before anything is saved #1": {
       "requests": {
-        "POST /api/operations/setup/mail-test #1": {
+        "POST /api/operations/setup/test-email #1": {
           "request": {
-            "path": "/api/operations/setup/mail-test",
+            "path": "/api/operations/setup/test-email",
             "headers": {
               "X-Nfnn-Direct": "1"
             },
@@ -551,6 +551,8 @@
               "host": "smtp.example.cz",
               "password": "<secret>",
               "port": 587,
+              "recipient": "spravce@example.cz",
+              "sender": "info@nfnn.cz",
               "startTls": true,
               "username": "user"
             }
@@ -567,13 +569,15 @@
               "x-xss-protection": "0"
             },
             "body": {
-              "ok": true
+              "outcome": "SENT",
+              "recipient": "spravce@example.cz",
+              "sent": true
             }
           }
         },
-        "POST /api/operations/setup/mail-test #2": {
+        "POST /api/operations/setup/test-email #2": {
           "request": {
-            "path": "/api/operations/setup/mail-test",
+            "path": "/api/operations/setup/test-email",
             "headers": {
               "X-Nfnn-Direct": "1"
             },
@@ -582,6 +586,8 @@
               "host": "smtp.example.cz",
               "password": "<secret>",
               "port": 587,
+              "recipient": "spravce@example.cz",
+              "sender": "info@nfnn.cz",
               "startTls": true,
               "username": "user"
             }
@@ -598,13 +604,655 @@
               "x-xss-protection": "0"
             },
             "body": {
-              "ok": false
+              "outcome": "SIGN_IN_REFUSED",
+              "recipient": "spravce@example.cz",
+              "sent": false
+            }
+          }
+        },
+        "POST /api/operations/setup/test-email #3": {
+          "request": {
+            "path": "/api/operations/setup/test-email",
+            "headers": {
+              "X-Nfnn-Direct": "1"
+            },
+            "body": {
+              "auth": true,
+              "host": "smtp.example.cz",
+              "password": "<secret>",
+              "port": 587,
+              "recipient": "spravce@example.cz",
+              "sender": "neovereny@example.cz",
+              "startTls": true,
+              "username": "user"
+            }
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "outcome": "SENDER_REFUSED",
+              "recipient": "spravce@example.cz",
+              "sent": false
+            }
+          }
+        },
+        "POST /api/operations/setup/test-email #4": {
+          "request": {
+            "path": "/api/operations/setup/test-email",
+            "headers": {
+              "X-Nfnn-Direct": "1"
+            },
+            "body": {
+              "auth": true,
+              "host": "smtp.nowhere.example",
+              "password": "<secret>",
+              "port": 587,
+              "recipient": "spravce@example.cz",
+              "sender": "info@nfnn.cz",
+              "startTls": true,
+              "username": "user"
+            }
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "outcome": "UNREACHABLE",
+              "recipient": "spravce@example.cz",
+              "sent": false
             }
           }
         }
       },
       "mails": [],
-      "logs": []
+      "logs": [
+        "INFO operations.application.settings.SetupService: A test e-mail was sent in the first setup: SENDER_REFUSED",
+        "INFO operations.application.settings.SetupService: A test e-mail was sent in the first setup: SENT",
+        "INFO operations.application.settings.SetupService: A test e-mail was sent in the first setup: SIGN_IN_REFUSED",
+        "INFO operations.application.settings.SetupService: A test e-mail was sent in the first setup: UNREACHABLE"
+      ]
+    },
+    "A test e-mail in the setup needs the code through the proxy and a valid sender and recipient #1": {
+      "requests": {
+        "POST /api/operations/setup/test-email #1": {
+          "request": {
+            "path": "/api/operations/setup/test-email",
+            "headers": {
+              "X-Nfnn-Direct": "0"
+            },
+            "body": {
+              "auth": true,
+              "host": "smtp.example.cz",
+              "password": "<secret>",
+              "port": 587,
+              "recipient": "spravce@example.cz",
+              "sender": "info@nfnn.cz",
+              "startTls": true,
+              "username": "user"
+            }
+          },
+          "response": {
+            "status": 403,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/problem+json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "detail": "Otevřete web přímo z domácí sítě (ikona aplikace v ZimaOS), nebo zadejte kód z logu kontejneru nfnn-backend.",
+              "instance": "/api/operations/setup/test-email",
+              "status": 403,
+              "title": "Průvodce je zamčený",
+              "type": "https://nfnn.cz/problems/operations/setup-locked"
+            }
+          }
+        },
+        "POST /api/operations/setup/test-email #2": {
+          "request": {
+            "path": "/api/operations/setup/test-email",
+            "headers": {
+              "X-Nfnn-Direct": "0"
+            },
+            "body": {
+              "auth": true,
+              "code": "<secret>",
+              "host": "smtp.example.cz",
+              "password": "<secret>",
+              "port": 587,
+              "recipient": "spravce@example.cz",
+              "sender": "info@nfnn.cz",
+              "startTls": true,
+              "username": "user"
+            }
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "outcome": "SENT",
+              "recipient": "spravce@example.cz",
+              "sent": true
+            }
+          }
+        },
+        "POST /api/operations/setup/test-email #3": {
+          "request": {
+            "path": "/api/operations/setup/test-email",
+            "headers": {
+              "X-Nfnn-Direct": "0"
+            },
+            "body": {
+              "auth": true,
+              "code": "<secret>",
+              "host": "smtp.example.cz",
+              "password": "<secret>",
+              "port": 587,
+              "recipient": "not-an-address",
+              "sender": "info@nfnn.cz",
+              "startTls": true,
+              "username": "user"
+            }
+          },
+          "response": {
+            "status": 400,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/problem+json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "detail": "Zkontrolujte prosím označená pole.",
+              "errors": [
+                {
+                  "field": "recipient",
+                  "message": "musí mít správně utvořenou e-mailovou adresu"
+                }
+              ],
+              "instance": "/api/operations/setup/test-email",
+              "status": 400,
+              "title": "Neplatné údaje",
+              "type": "https://nfnn.cz/problems/validation"
+            }
+          }
+        }
+      },
+      "mails": [],
+      "logs": [
+        "INFO operations.application.settings.SetupService: A test e-mail was sent in the first setup: SENT"
+      ]
+    },
+    "Test e-mails in the setup are limited to 10 an hour from one address #1": {
+      "requests": {
+        "POST /api/operations/setup/test-email #1": {
+          "request": {
+            "path": "/api/operations/setup/test-email",
+            "headers": {
+              "X-Nfnn-Direct": "1"
+            },
+            "body": {
+              "auth": true,
+              "host": "smtp.example.cz",
+              "password": "<secret>",
+              "port": 587,
+              "recipient": "spravce@example.cz",
+              "sender": "info@nfnn.cz",
+              "startTls": true,
+              "username": "user"
+            }
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "outcome": "SENT",
+              "recipient": "spravce@example.cz",
+              "sent": true
+            }
+          }
+        },
+        "POST /api/operations/setup/test-email #2": {
+          "request": {
+            "path": "/api/operations/setup/test-email",
+            "headers": {
+              "X-Nfnn-Direct": "1"
+            },
+            "body": {
+              "auth": true,
+              "host": "smtp.example.cz",
+              "password": "<secret>",
+              "port": 587,
+              "recipient": "spravce@example.cz",
+              "sender": "info@nfnn.cz",
+              "startTls": true,
+              "username": "user"
+            }
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "outcome": "SENT",
+              "recipient": "spravce@example.cz",
+              "sent": true
+            }
+          }
+        },
+        "POST /api/operations/setup/test-email #3": {
+          "request": {
+            "path": "/api/operations/setup/test-email",
+            "headers": {
+              "X-Nfnn-Direct": "1"
+            },
+            "body": {
+              "auth": true,
+              "host": "smtp.example.cz",
+              "password": "<secret>",
+              "port": 587,
+              "recipient": "spravce@example.cz",
+              "sender": "info@nfnn.cz",
+              "startTls": true,
+              "username": "user"
+            }
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "outcome": "SENT",
+              "recipient": "spravce@example.cz",
+              "sent": true
+            }
+          }
+        },
+        "POST /api/operations/setup/test-email #4": {
+          "request": {
+            "path": "/api/operations/setup/test-email",
+            "headers": {
+              "X-Nfnn-Direct": "1"
+            },
+            "body": {
+              "auth": true,
+              "host": "smtp.example.cz",
+              "password": "<secret>",
+              "port": 587,
+              "recipient": "spravce@example.cz",
+              "sender": "info@nfnn.cz",
+              "startTls": true,
+              "username": "user"
+            }
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "outcome": "SENT",
+              "recipient": "spravce@example.cz",
+              "sent": true
+            }
+          }
+        },
+        "POST /api/operations/setup/test-email #5": {
+          "request": {
+            "path": "/api/operations/setup/test-email",
+            "headers": {
+              "X-Nfnn-Direct": "1"
+            },
+            "body": {
+              "auth": true,
+              "host": "smtp.example.cz",
+              "password": "<secret>",
+              "port": 587,
+              "recipient": "spravce@example.cz",
+              "sender": "info@nfnn.cz",
+              "startTls": true,
+              "username": "user"
+            }
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "outcome": "SENT",
+              "recipient": "spravce@example.cz",
+              "sent": true
+            }
+          }
+        },
+        "POST /api/operations/setup/test-email #6": {
+          "request": {
+            "path": "/api/operations/setup/test-email",
+            "headers": {
+              "X-Nfnn-Direct": "1"
+            },
+            "body": {
+              "auth": true,
+              "host": "smtp.example.cz",
+              "password": "<secret>",
+              "port": 587,
+              "recipient": "spravce@example.cz",
+              "sender": "info@nfnn.cz",
+              "startTls": true,
+              "username": "user"
+            }
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "outcome": "SENT",
+              "recipient": "spravce@example.cz",
+              "sent": true
+            }
+          }
+        },
+        "POST /api/operations/setup/test-email #7": {
+          "request": {
+            "path": "/api/operations/setup/test-email",
+            "headers": {
+              "X-Nfnn-Direct": "1"
+            },
+            "body": {
+              "auth": true,
+              "host": "smtp.example.cz",
+              "password": "<secret>",
+              "port": 587,
+              "recipient": "spravce@example.cz",
+              "sender": "info@nfnn.cz",
+              "startTls": true,
+              "username": "user"
+            }
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "outcome": "SENT",
+              "recipient": "spravce@example.cz",
+              "sent": true
+            }
+          }
+        },
+        "POST /api/operations/setup/test-email #8": {
+          "request": {
+            "path": "/api/operations/setup/test-email",
+            "headers": {
+              "X-Nfnn-Direct": "1"
+            },
+            "body": {
+              "auth": true,
+              "host": "smtp.example.cz",
+              "password": "<secret>",
+              "port": 587,
+              "recipient": "spravce@example.cz",
+              "sender": "info@nfnn.cz",
+              "startTls": true,
+              "username": "user"
+            }
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "outcome": "SENT",
+              "recipient": "spravce@example.cz",
+              "sent": true
+            }
+          }
+        },
+        "POST /api/operations/setup/test-email #9": {
+          "request": {
+            "path": "/api/operations/setup/test-email",
+            "headers": {
+              "X-Nfnn-Direct": "1"
+            },
+            "body": {
+              "auth": true,
+              "host": "smtp.example.cz",
+              "password": "<secret>",
+              "port": 587,
+              "recipient": "spravce@example.cz",
+              "sender": "info@nfnn.cz",
+              "startTls": true,
+              "username": "user"
+            }
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "outcome": "SENT",
+              "recipient": "spravce@example.cz",
+              "sent": true
+            }
+          }
+        },
+        "POST /api/operations/setup/test-email #10": {
+          "request": {
+            "path": "/api/operations/setup/test-email",
+            "headers": {
+              "X-Nfnn-Direct": "1"
+            },
+            "body": {
+              "auth": true,
+              "host": "smtp.example.cz",
+              "password": "<secret>",
+              "port": 587,
+              "recipient": "spravce@example.cz",
+              "sender": "info@nfnn.cz",
+              "startTls": true,
+              "username": "user"
+            }
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "outcome": "SENT",
+              "recipient": "spravce@example.cz",
+              "sent": true
+            }
+          }
+        },
+        "POST /api/operations/setup/test-email #11": {
+          "request": {
+            "path": "/api/operations/setup/test-email",
+            "headers": {
+              "X-Nfnn-Direct": "1"
+            },
+            "body": {
+              "auth": true,
+              "host": "smtp.example.cz",
+              "password": "<secret>",
+              "port": 587,
+              "recipient": "spravce@example.cz",
+              "sender": "info@nfnn.cz",
+              "startTls": true,
+              "username": "user"
+            }
+          },
+          "response": {
+            "status": 429,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/problem+json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "detail": "Zkuste to prosím znovu později.",
+              "instance": "/api/operations/setup/test-email",
+              "status": 429,
+              "title": "Příliš mnoho požadavků",
+              "type": "https://nfnn.cz/problems/operations/rate-limited"
+            }
+          }
+        },
+        "POST /api/operations/setup/test-email #12": {
+          "request": {
+            "path": "/api/operations/setup/test-email",
+            "headers": {
+              "X-Nfnn-Direct": "1"
+            },
+            "body": {
+              "auth": true,
+              "host": "smtp.example.cz",
+              "password": "<secret>",
+              "port": 587,
+              "recipient": "spravce@example.cz",
+              "sender": "info@nfnn.cz",
+              "startTls": true,
+              "username": "user"
+            }
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "outcome": "SENT",
+              "recipient": "spravce@example.cz",
+              "sent": true
+            }
+          }
+        }
+      },
+      "mails": [],
+      "logs": [
+        "INFO operations.application.settings.SetupService: A test e-mail was sent in the first setup: SENT",
+        "INFO operations.application.settings.SetupService: A test e-mail was sent in the first setup: SENT",
+        "INFO operations.application.settings.SetupService: A test e-mail was sent in the first setup: SENT",
+        "INFO operations.application.settings.SetupService: A test e-mail was sent in the first setup: SENT",
+        "INFO operations.application.settings.SetupService: A test e-mail was sent in the first setup: SENT",
+        "INFO operations.application.settings.SetupService: A test e-mail was sent in the first setup: SENT",
+        "INFO operations.application.settings.SetupService: A test e-mail was sent in the first setup: SENT",
+        "INFO operations.application.settings.SetupService: A test e-mail was sent in the first setup: SENT",
+        "INFO operations.application.settings.SetupService: A test e-mail was sent in the first setup: SENT",
+        "INFO operations.application.settings.SetupService: A test e-mail was sent in the first setup: SENT",
+        "INFO operations.application.settings.SetupService: A test e-mail was sent in the first setup: SENT"
+      ]
     },
     "Once the setup is done, the setup answers that it is done to everyone #1": {
       "requests": {
@@ -695,9 +1343,9 @@
             }
           }
         },
-        "POST /api/operations/setup/mail-test #1": {
+        "POST /api/operations/setup/test-email #1": {
           "request": {
-            "path": "/api/operations/setup/mail-test",
+            "path": "/api/operations/setup/test-email",
             "headers": {
               "X-Nfnn-Direct": "1"
             },
@@ -706,6 +1354,8 @@
               "host": "smtp.example.cz",
               "password": "<secret>",
               "port": 587,
+              "recipient": "spravce@example.cz",
+              "sender": "info@nfnn.cz",
               "startTls": true,
               "username": "user"
             }
@@ -723,7 +1373,7 @@
             },
             "body": {
               "detail": "Nastavení teď mění správce webu ve Správě v části Nastavení.",
-              "instance": "/api/operations/setup/mail-test",
+              "instance": "/api/operations/setup/test-email",
               "status": 409,
               "title": "První nastavení už proběhlo",
               "type": "https://nfnn.cz/problems/operations/setup-completed"
