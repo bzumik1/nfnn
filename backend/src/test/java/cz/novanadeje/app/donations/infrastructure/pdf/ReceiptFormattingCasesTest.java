@@ -2,7 +2,7 @@ package cz.novanadeje.app.donations.infrastructure.pdf;
 
 import cz.novanadeje.app.donations.domain.donor.DonorRecord;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptDocumentFactory;
-import cz.novanadeje.app.regression.Baseline;
+import cz.novanadeje.app.cucumber.transcript.ApiTranscripts;
 import cz.novanadeje.app.regression.GoldenFiles;
 import cz.novanadeje.app.shared.domain.LocaleCode;
 import cz.novanadeje.app.shared.domain.Money;
@@ -78,7 +78,7 @@ class ReceiptFormattingCasesTest {
             cases.add(partyCase(party));
         }
         ObjectNode file = NODES.objectNode();
-        file.put("source", Baseline.SOURCE);
+        file.put("source", ApiTranscripts.SOURCE);
         file.put("logic", "How a v2 receipt prints amounts (ReceiptFormats: hellers as Czech crowns with U+00A0 as the thousands separator and before Kč, "
                 + "hellers only when not whole; English as CZK with a comma and a point), dates (Czech d. M. yyyy without leading zeros, which the web's "
                 + "15. 03. 2026 is not; English d MMMM yyyy) and the donor (ReceiptData from the donor record: trimmed name, identifier of a company, "

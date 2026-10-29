@@ -1,7 +1,7 @@
 package cz.novanadeje.app.donations.infrastructure.report;
 
 import cz.novanadeje.app.donations.domain.report.ReportMonth;
-import cz.novanadeje.app.regression.Baseline;
+import cz.novanadeje.app.cucumber.transcript.ApiTranscripts;
 import cz.novanadeje.app.regression.GoldenFiles;
 import cz.novanadeje.app.shared.domain.Money;
 import org.junit.jupiter.api.DisplayName;
@@ -64,7 +64,7 @@ class MonthlyReportFormattingCasesTest {
             cases.add(entry("the bank time " + time, input("time").put("instant", time), MonthlyReportFormats.time(Instant.parse(time))));
         }
         ObjectNode file = NODES.objectNode();
-        file.put("source", Baseline.SOURCE);
+        file.put("source", ApiTranscripts.SOURCE);
         file.put("logic", "How the monthly report e-mail prints its figures (MonthlyReportFormats): amounts in hellers always with two decimals, "
                 + "U+00A0 as the thousands separator and before Kč; counts with U+00A0 between thousands; months as the Czech nominative month name "
                 + "and year; dates d. M. yyyy; bank times as d. M. yyyy H:mm in Prague time. input.format names the formatter, expected.text is the printed text");

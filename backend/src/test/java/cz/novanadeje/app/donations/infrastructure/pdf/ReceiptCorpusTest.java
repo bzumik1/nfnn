@@ -15,7 +15,7 @@ import cz.novanadeje.app.donations.domain.receipt.ReceiptSnapshot;
 import cz.novanadeje.app.donations.domain.receipt.ReplacedReceipt;
 import cz.novanadeje.app.donations.domain.receipt.Signatory;
 import cz.novanadeje.app.donations.domain.receipt.SignatureImage;
-import cz.novanadeje.app.regression.Baseline;
+import cz.novanadeje.app.cucumber.transcript.ApiTranscripts;
 import cz.novanadeje.app.regression.GoldenFiles;
 import cz.novanadeje.app.shared.domain.LocaleCode;
 import cz.novanadeje.app.shared.domain.Money;
@@ -185,7 +185,7 @@ class ReceiptCorpusTest {
         refusal(cases, "a receipt for another donor's gift", () -> ReceiptDocumentFactory.forDonation(acme(),
                 receivedFromJana(LocalDate.of(2026, 3, 15), 50000), FOUNDATION, FICTIONAL_SIGNATORY, FIRST_NUMBER, TODAY, LocaleCode.CS, Optional.empty()));
         ObjectNode file = NODES.objectNode();
-        file.put("source", Baseline.SOURCE);
+        file.put("source", ApiTranscripts.SOURCE);
         file.put("logic", "Receipts that ReceiptDocumentFactory refuses to put together, with the refusal's message (ids written <id>); v2 never renders them. "
                 + "The cases have no input: the name says what was attempted, and the documents are built in ReceiptCorpusTest from the receipt fixtures");
         file.set("cases", cases);
@@ -207,7 +207,7 @@ class ReceiptCorpusTest {
 
     private static ObjectNode corpusEntry(Sample sample, Rendered rendered) {
         ObjectNode entry = NODES.objectNode();
-        entry.put("source", Baseline.SOURCE);
+        entry.put("source", ApiTranscripts.SOURCE);
         entry.put("logic", SAMPLE_LOGIC);
         entry.put("sample", sample.name());
         entry.put("description", sample.description());
@@ -236,7 +236,7 @@ class ReceiptCorpusTest {
 
     private static ObjectNode digests() {
         ObjectNode file = NODES.objectNode();
-        file.put("source", Baseline.SOURCE);
+        file.put("source", ApiTranscripts.SOURCE);
         file.put("logic", "The digests of each corpus sample as rendered on the recording machine: the SHA-256 of the PDF's bytes and, per page, of its "
                 + "raster (PDFBox PDFRenderer at " + DPI + " DPI, RGB, every pixel as a big-endian int without alpha). They change with the PDF libraries "
                 + "and the JDK, so only scripts/record-baseline-data.sh checks them (GOLDEN_FILES=digests); compare page text and the look by eye before "

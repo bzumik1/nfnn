@@ -1,6 +1,7 @@
 package cz.novanadeje.app.regression;
 
 import cz.novanadeje.app.TestcontainersConfiguration;
+import cz.novanadeje.app.cucumber.transcript.ApiTranscripts;
 import cz.novanadeje.app.donations.application.report.MonthlyReportSender;
 import cz.novanadeje.app.donations.application.report.MonthlyReportService;
 import cz.novanadeje.app.donations.domain.report.MonthlyReport;
@@ -333,7 +334,7 @@ class OverviewGoldenCasesTest {
 
     private static ObjectNode header(String logic, ArrayNode cases) {
         ObjectNode file = NODES.objectNode();
-        file.put("source", Baseline.SOURCE);
+        file.put("source", ApiTranscripts.SOURCE);
         file.put("logic", logic);
         file.set("cases", cases);
         return file;

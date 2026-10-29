@@ -1,5 +1,6 @@
 package cz.novanadeje.app.regression;
 
+import cz.novanadeje.app.cucumber.transcript.ApiTranscripts;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -53,7 +54,7 @@ class BaselineDataSetsTest {
         for (Path file : files) {
             JsonNode cases = JSON.readTree(Files.readString(file, StandardCharsets.UTF_8));
             assertThat(cases.properties().stream().map(java.util.Map.Entry::getKey).toList()).as("%s", file).containsExactly("source", "logic", "cases");
-            assertThat(cases.get("source").asString()).as("%s", file).isEqualTo(Baseline.SOURCE);
+            assertThat(cases.get("source").asString()).as("%s", file).isEqualTo(ApiTranscripts.SOURCE);
             assertThat(cases.get("logic").asString()).as("%s", file).isNotBlank();
             assertThat(cases.get("cases").isArray() && !cases.get("cases").isEmpty()).as("%s has cases", file).isTrue();
             Set<String> names = new HashSet<>();
@@ -125,7 +126,7 @@ class BaselineDataSetsTest {
     void should_list_every_state_at_both_widths_when_the_screens_manifest_is_read() throws IOException {
         JsonNode manifest = JSON.readTree(Files.readString(GoldenFiles.repositoryRoot().resolve(SCREENS_MANIFEST), StandardCharsets.UTF_8));
 
-        assertThat(manifest.get("source").asString()).isEqualTo(Baseline.SOURCE);
+        assertThat(manifest.get("source").asString()).isEqualTo(ApiTranscripts.SOURCE);
         JsonNode shots = manifest.get("shots");
         assertThat(shots.size()).as("shots").isGreaterThanOrEqualTo(60);
         Set<String> states = new HashSet<>();
