@@ -201,9 +201,10 @@ test.describe('Given a signed-in donor', () => {
     await openDonorSection(page, 'Moje dary');
 
     await expect(page.locator('.payments-card table')).toHaveCount(0);
-    await expect(page.locator('.payments-empty')).toHaveText(
-      'Zatím tu není žádná platba. Posíláte trvalým příkazem?',
-    );
+    await expect(page.locator('.payments-empty')).toHaveText('Zatím tu není žádná platba.');
+    await expect(
+      page.getByRole('heading', { level: 3, name: 'Poslali jste dar a nevidíte ho?' }),
+    ).toBeVisible();
 
     await openDonorSection(page, 'Potvrzení o daru');
 
@@ -211,19 +212,72 @@ test.describe('Given a signed-in donor', () => {
     await expect(page.locator('.yearly-pdf')).toHaveCount(0);
   });
 
-  test('when no donation has arrived yet and they follow the standing order link, then their bank accounts open', async ({
+  test('when no donation has arrived yet and they open the standing order guide, then it lists the account and their symbol and leads to the bank accounts for an older symbol', async ({
     page,
   }) => {
     await mockDonorApi(page, noDonations);
     await signIn(page);
 
-    await page.getByRole('link', { name: 'Posíláte trvalým příkazem?' }).click();
+    const toggle = page.getByRole('button', { name: 'Jak nastavit trvalý příkaz' });
+    await toggle.click();
+    await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    const guide = page.getByRole('region', { name: 'Jak nastavit trvalý příkaz' });
+    await expect(guide.locator('.standing-value')).toHaveText([
+      '5544332217/2010',
+      '1234567890',
+      'Jakákoli, kterou chcete posílat',
+      'Každý měsíc, nebo jak často chcete',
+    ]);
+
+    await guide.getByRole('link', { name: 'Bankovní účty' }).click();
 
     await expect(page).toHaveURL(/\/darce\/ucty$/);
     await expect(page.getByRole('heading', { level: 1, name: 'Bankovní účty' })).toBeFocused();
     await expect(page.locator('.accounts-nudge')).toContainText(
       'Posíláte trvalým příkazem s jiným symbolem?',
     );
+  });
+
+  test('when no donation has arrived yet and they sent a gift without the symbol, then the overview opens Přidat účet for the account it came from', async ({
+    page,
+  }) => {
+    await mockDonorApi(page, noDonations);
+    await signIn(page);
+
+    await page.getByRole('link', { name: 'Přidat účet, ze kterého jste platili' }).click();
+
+    await expect(page).toHaveURL(/\/darce\/ucty$/);
+    const dialog = page.getByRole('dialog', { name: 'Přidat účet' });
+    await expect(dialog).toBeVisible();
+    await dialog.locator('.add-account-close').click();
+    await expect(dialog).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Přidat účet' })).toBeFocused();
+  });
+
+  test('when they check for new payments and a gift has arrived, then the page says so and lists it', async ({
+    page,
+  }) => {
+    await mockDonorApi(page, noDonations);
+    let arrived = false;
+    await page.route(
+      (url) => url.pathname === '/api/donations/me/summary',
+      (route) => route.fulfill({ json: arrived ? twoYears.summary : noDonations.summary }),
+    );
+    await page.route(
+      (url) => url.pathname === '/api/donations/me',
+      (route) => route.fulfill({ json: arrived ? twoYears.list : noDonations.list }),
+    );
+    await signIn(page);
+    await openDonorSection(page, 'Moje dary');
+    await expect(page.locator('.payments-empty')).toBeVisible();
+
+    arrived = true;
+    await page.getByRole('button', { name: 'Zkontrolovat nové platby' }).click();
+
+    await expect(
+      page.getByRole('status').filter({ hasText: 'Přibyly 3 nové dary.' }),
+    ).toBeVisible();
+    await expect(page.locator('.payments-card tbody tr')).toHaveCount(4);
   });
 
   test('when they correct their address, then the details page saves it and shows it as the receipts will', async ({

@@ -18,8 +18,6 @@ const LATER = '2026-10-18T08:07:00Z';
 const ACCOUNT_ID = '0192f0c4-0000-7000-8000-000000000001';
 const CONFIRM_URL = `${LIST_URL}/${ACCOUNT_ID}/symbol-claim/confirm`;
 const DECLINE_URL = `${LIST_URL}/${ACCOUNT_ID}/symbol-claim/decline`;
-const OFFER_WAITING =
-  'U účtu na vás čeká otázka k platbám se starším variabilním symbolem. Najdete ji v seznamu účtů po zavření okna.';
 
 function paymentQr(): PaymentQrResponse {
   return {
@@ -327,7 +325,9 @@ describe('Given the bank accounts card in the overview', () => {
 
     expect(element('.accounts-list')).toBeNull();
     expect(text('.accounts-empty')).toBe(
-      'Účet se tu objeví sám, jakmile od vás přijde první platba s vaším variabilním symbolem. Nic dalšího dělat nemusíte.',
+      'Účet se tu objeví sám, jakmile z něj pošlete dar s vaším variabilním symbolem. ' +
+        'Poslali jste dar bez symbolu, s jiným symbolem nebo ještě před založením účtu? ' +
+        'Přidejte účet, ze kterého jste platili, tlačítkem „Přidat účet“ a dřívější dary z něj vám obvykle přiřadíme také.',
     );
   });
 
@@ -1039,6 +1039,29 @@ describe('Given the bank accounts card in the overview', () => {
     });
   });
 
+  it('when another section asks to open Přidat účet, then the dialog opens and closing it returns the focus to Přidat účet', async () => {
+    await respond([]);
+
+    fixture.componentInstance.openAddDialog();
+    await settle();
+    http.expectOne((request) => request.url === '/api/donations/payment-qr').flush(paymentQr());
+    await settle();
+
+    expect(element<HTMLDialogElement>('dialog')?.open).toBe(true);
+    await click('.add-account-close');
+    expect(document.activeElement).toBe(element('.accounts-add'));
+  });
+
+  it('when another section asks to open Přidat účet before the donor has a variable symbol, then nothing opens', async () => {
+    fixture.componentRef.setInput('variableSymbol', null);
+    await respond([]);
+
+    fixture.componentInstance.openAddDialog();
+    await settle();
+
+    expect(element('dialog')).toBeNull();
+  });
+
   describe('when the donor opens Přidat účet and pays from a new account', () => {
     const newAccount = bankAccount({
       id: '0192f0c4-0000-7000-8000-000000000002',
@@ -1133,15 +1156,81 @@ describe('Given the bank accounts card in the overview', () => {
       expect(element('.add-account-watch .watch-detail')).toBeNull();
     });
 
-    it('and the account verified in the dialog has a question about an older symbol, then the verified box points to it', async () => {
+    it('and the account is verified, then the payment details give way to the result, which takes the focus, and the dialog closes with Hotovo', async () => {
       await wait(30_000);
-      await answerCheck({ bankDataAsOf: LATER, checking: false }, [
-        { ...newAccount, symbolOffer: symbolOffer() },
-        bankAccount(),
-      ]);
+      await answerCheck({ bankDataAsOf: LATER, checking: false }, [newAccount, bankAccount()]);
 
+      expect(element('.add-account-text')).toBeNull();
+      expect(element('.add-account-payment')).toBeNull();
+      expect(element('.add-account-qr')).toBeNull();
+      expect(element('.add-account-bank')).toBeNull();
+      expect(element('details.add-account-more')).toBeNull();
       expect(text('.add-account-watch .watch-title')).toBe('Účet 1234567890/0800 je ověřený');
-      expect(texts('.add-account-watch .watch-detail')).toEqual([OFFER_WAITING]);
+      expect(document.activeElement).toBe(element('.add-account-watch .watch-title'));
+      expect(text('.add-account-close')).toBe('Hotovo');
+    });
+
+    describe('and the account verified in the dialog has a question about an older symbol', () => {
+      beforeEach(async () => {
+        await wait(30_000);
+        await answerCheck({ bankDataAsOf: LATER, checking: false }, [
+          { ...newAccount, symbolOffer: symbolOffer() },
+          bankAccount(),
+        ]);
+      });
+
+      it('then the question stands in the dialog under the result instead of the payment details, and only there', () => {
+        expect(text('.add-account-watch .watch-title')).toBe('Účet 1234567890/0800 je ověřený');
+        expect(element('.add-account-watch .watch-detail')).toBeNull();
+        const claim = element('dialog app-symbol-claim') as HTMLElement;
+        expect(claim).not.toBeNull();
+        expect(claim.closest('.add-account-watch')).toBeNull();
+        expect(text('dialog .claim-question')).toBe(
+          'Z tohoto účtu k nám chodí i platby s variabilním symbolem 6123456789 (14 plateb, leden 2025 – říjen 2026). ' +
+            'Jsou to dary od vás (Jana Nováková)?',
+        );
+        expect(element('.add-account-payment')).toBeNull();
+        expect(texts('app-symbol-claim')).toHaveLength(1);
+      });
+
+      it('and the donor answers Ano in the dialog, then the answer is posted, the dialog announces the paired payments and takes the focus there, and the overview reloads the donations', async () => {
+        await click('dialog .claim-yes');
+        http
+          .expectOne({
+            method: 'POST',
+            url: `${LIST_URL}/0192f0c4-0000-7000-8000-000000000002/symbol-claim/confirm`,
+          })
+          .flush({ pairedCount: 1, changedYearlyReceipts: [] });
+        await settle();
+        await respond([{ ...newAccount, confirmedSymbols: ['6123456789'] }, bankAccount()]);
+
+        expect(element('app-symbol-claim')).toBeNull();
+        const answer = element('dialog .add-account-answer') as HTMLElement;
+        expect(answer.getAttribute('role')).toBe('status');
+        expect(normalized(answer.textContent ?? '')).toBe(
+          'Přiřadili jsme vám 1 platbu se symbolem 6123456789 z účtu 1234567890/0800.',
+        );
+        expect(document.activeElement).toBe(answer);
+        expect(donationsChanged).toBe(1);
+        expect(element('dialog')).not.toBeNull();
+      });
+
+      it('and the answer fails, then the dialog shows the alert and keeps the question', async () => {
+        await click('dialog .claim-no');
+        http
+          .expectOne({
+            method: 'POST',
+            url: `${LIST_URL}/0192f0c4-0000-7000-8000-000000000002/symbol-claim/decline`,
+          })
+          .flush(null, { status: 500, statusText: 'Server Error' });
+        await settle();
+
+        expect(text('dialog .add-account-error')).toBe(
+          'Odpověď se nepodařilo uložit. Zkuste to prosím znovu.',
+        );
+        expect(element('dialog .add-account-error')?.getAttribute('role')).toBe('alert');
+        expect(element('dialog app-symbol-claim')).not.toBeNull();
+      });
     });
 
     it('and a 1 Kč arrives from an account that was verified already, then the watch ends saying the payment arrived, with its hint', async () => {
@@ -1171,7 +1260,8 @@ describe('Given the bank accounts card in the overview', () => {
       expect(text('.add-account-watch .watch-title')).toBe(
         'Platba z účtu 2900233333/2010 dorazila',
       );
-      expect(texts('.add-account-watch .watch-detail')).toEqual([OFFER_WAITING]);
+      expect(element('dialog app-symbol-claim')).not.toBeNull();
+      expect(texts('app-symbol-claim')).toHaveLength(1);
     });
 
     it('and the next check comes half a minute after the previous one ended, so the bank pause between checks is kept', async () => {

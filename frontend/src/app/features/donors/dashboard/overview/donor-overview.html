@@ -43,20 +43,17 @@
 }
 
 <ng-template #bankStatus>
-  <p class="recent-bank" role="status">
-    @if (donations.checkingBank()) {
-      <span i18n="@@donor.dashboard.bank.checking">Kontrolujeme nové platby v bance…</span>
-    } @else if (donations.bankDataAsOf(); as asOf) {
-      <span
-        ><span i18n="@@donor.dashboard.bank.asOf">Údaje z banky k</span>
-        {{ formatBankTime(asOf) }}</span
-      >
-    }
-  </p>
+  <app-bank-check />
   <p class="recent-hint" i18n="@@donor.dashboard.bank.hint">
     Nové platby hledáme v bance každou hodinu a také když otevřete tento přehled. Okamžitá platba se
     tu obvykle objeví do minuty, běžný převod z jiné banky do dalšího pracovního dne.
   </p>
+</ng-template>
+
+<ng-template #standingOrder>
+  @if (donor()?.variableSymbol; as symbol) {
+    <app-standing-order class="overview-standing" [variableSymbol]="symbol" />
+  }
 </ng-template>
 
 @if (donations.state() === 'ready' && donations.items().length === 0) {
@@ -91,14 +88,10 @@
         i18n="@@donor.overview.firstGift.show"
         >Zobrazit číslo účtu a QR kód</a
       >
-      <a
-        class="first-gift-standing"
-        routerLink="/darce/ucty"
-        i18n="@@donor.dashboard.yearly.emptyStandingOrder"
-        >Posíláte trvalým příkazem?</a
-      >
     </div>
     <ng-container [ngTemplateOutlet]="bankStatus" />
+    <ng-container [ngTemplateOutlet]="standingOrder" />
+    <app-missing-gift />
   </section>
   <app-symbol-card [variableSymbol]="donor()?.variableSymbol ?? null" />
 } @else if (donations.state() === 'ready') {
@@ -117,6 +110,7 @@
         >
       </p>
       <ng-container [ngTemplateOutlet]="bankStatus" />
+      <ng-container [ngTemplateOutlet]="standingOrder" />
     </section>
   }
   <app-symbol-card [variableSymbol]="donor()?.variableSymbol ?? null" [hasDonated]="true" />

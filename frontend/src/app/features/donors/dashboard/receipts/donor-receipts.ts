@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { formatMinorUnits } from '../../../donations/donation-amount';
+import { MissingGift } from '../missing-gift/missing-gift';
 import { DonationsPending } from '../donations-pending/donations-pending';
 import { DonorDonations } from '../donor-donations';
 import { PageTitle } from '../page-title/page-title';
@@ -15,7 +16,7 @@ interface YearRow {
 
 @Component({
   selector: 'app-donor-receipts',
-  imports: [RouterLink, PageTitle, DonationsPending],
+  imports: [RouterLink, PageTitle, DonationsPending, MissingGift],
   templateUrl: './donor-receipts.html',
   styleUrl: './donor-receipts.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

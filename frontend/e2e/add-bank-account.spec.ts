@@ -9,7 +9,7 @@ const newAccount = bankAccountItem({
 });
 
 test.describe('Given a signed-in donor adding a bank account', () => {
-  test('when the verification payment arrives while the dialog is open, then the waiting turns into a tick', async ({
+  test('when the verification payment arrives while the dialog is open, then the waiting turns into a tick that replaces the payment details and takes the focus', async ({
     page,
   }) => {
     await page.clock.install();
@@ -45,6 +45,10 @@ test.describe('Given a signed-in donor adding a bank account', () => {
     await page.clock.fastForward(30_000);
 
     await expect(watch).toContainText('Účet 1234567890/0800 je ověřený');
+    await expect(dialog.locator('.watch-title')).toBeFocused();
+    await expect(dialog.locator('.add-account-qr')).toHaveCount(0);
+    await expect(dialog.getByText('5544332217/2010')).toHaveCount(0);
+    await dialog.getByRole('button', { name: 'Hotovo' }).click();
     await expect(page.locator('.accounts-list .account-number')).toHaveText('1234567890/0800');
   });
 });

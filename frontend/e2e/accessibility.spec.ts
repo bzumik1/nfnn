@@ -411,6 +411,15 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
 
     expect(await violations(page)).toEqual([]);
 
+    await page.getByRole('button', { name: 'Jak nastavit trvalý příkaz' }).click();
+    await expect(page.locator('.standing-details .standing-value').first()).toHaveText(
+      '5544332217/2010',
+    );
+    await page.getByRole('button', { name: 'Zkontrolovat nové platby' }).click();
+    await expect(page.getByRole('status').filter({ hasText: 'Žádný nový dar' })).toBeVisible();
+
+    expect(await violations(page)).toEqual([]);
+
     for (const section of ['Moje dary', 'Potvrzení o daru', 'Údaje a zabezpečení']) {
       await openDonorSection(page, section);
       expect(await violations(page)).toEqual([]);
@@ -454,6 +463,12 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
                     accountNumber: '1234567890/0800',
                     verifiedOn: '2026-10-18',
                     verificationPaymentOn: '2026-10-18',
+                    symbolOffer: {
+                      variableSymbol: '6123456789',
+                      paymentCount: 1,
+                      firstMonth: '2026-10',
+                      lastMonth: '2026-10',
+                    },
                   }),
                 ]
               : [],
@@ -472,6 +487,9 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
 
     await page.clock.fastForward(30_000);
     await expect(watch).toContainText('Účet 1234567890/0800 je ověřený');
+    await expect(
+      page.getByRole('dialog').getByRole('button', { name: 'Ano, jsou moje' }),
+    ).toBeVisible();
 
     expect(await violations(page)).toEqual([]);
   });

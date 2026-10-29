@@ -1,0 +1,21 @@
+.bank-check {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+}
+
+.bank-check-status {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--color-text-soft);
+}
+
+.bank-check-outcome {
+  color: var(--color-text);
+}
+
+.bank-check-error {
+  flex-basis: 100%;
+  margin: 0;
+}

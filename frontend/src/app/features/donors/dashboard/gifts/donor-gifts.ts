@@ -7,14 +7,16 @@ import {
   inject,
   viewChild,
 } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { AuthStore } from '../../../../core/auth/auth-store';
 import { formatMinorUnits } from '../../../donations/donation-amount';
-import { formatBankTime } from '../../../donations/donation-date';
 import { DonationItem } from '../../../donations/donations-api';
+import { BankCheck } from '../bank-check/bank-check';
+import { MissingGift } from '../missing-gift/missing-gift';
 import { DonationsPending } from '../donations-pending/donations-pending';
 import { DonationsTable } from '../donations-table/donations-table';
 import { DonorDonations } from '../donor-donations';
 import { PageTitle } from '../page-title/page-title';
+import { StandingOrder } from '../standing-order/standing-order';
 import { YearReceipt, yearReceipt } from '../yearly-receipt';
 
 interface GiftYear {
@@ -27,13 +29,14 @@ interface GiftYear {
 
 @Component({
   selector: 'app-donor-gifts',
-  imports: [RouterLink, PageTitle, DonationsPending, DonationsTable],
+  imports: [PageTitle, BankCheck, DonationsPending, DonationsTable, MissingGift, StandingOrder],
   templateUrl: './donor-gifts.html',
   styleUrl: './donor-gifts.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class DonorGifts {
   protected readonly donations = inject(DonorDonations);
+  protected readonly donor = inject(AuthStore).donor;
 
   private readonly receiptAlert = viewChild<ElementRef<HTMLElement>>('receiptAlert');
 
@@ -73,9 +76,5 @@ export class DonorGifts {
 
   protected yearHeadingId(year: number): string {
     return `gifts-year-${year}`;
-  }
-
-  protected formatBankTime(isoInstant: string): string {
-    return formatBankTime(isoInstant);
   }
 }
