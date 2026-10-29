@@ -77,6 +77,14 @@ public record BankPayment(
         return matchingVariableSymbol.isPresent();
     }
 
+    public Optional<VariableSymbol> symbolInMessage() {
+        return carriesVariableSymbol() ? Optional.empty() : messageForRecipient.flatMap(VariableSymbols::inMessage);
+    }
+
+    public Optional<VariableSymbol> pairingSymbol() {
+        return matchingVariableSymbol.or(this::symbolInMessage);
+    }
+
     public boolean hasSender() {
         return sender.isPresent();
     }

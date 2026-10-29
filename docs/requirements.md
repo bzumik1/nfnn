@@ -66,7 +66,7 @@ Web představí fond a jeho pomoc dětem, usnadní darování a dárcům dá ú�
 ## 5. Příjem a párování darů
 
 - Dary chodí převodem na účet u Fio banky. Web si pohyby stahuje sám každou hodinu, tokenem jen pro čtení; první import sáhne tak daleko zpět, jak Fio dovolí.
-- Párování podle variabilního symbolu dárce. Symbol `0` znamená platbu bez symbolu.
+- Párování podle variabilního symbolu dárce. Symbol `0` znamená platbu bez symbolu. Když pole symbolu chybí a ve zprávě pro příjemce je právě jeden symbol některého dárce, platba patří jemu, i u ověření účtu platbou 1 Kč (Jakub 29. 10. 2026: některé banky pole symbolu nemají).
 - Platba bez symbolu se přiřadí podle čísla účtu odesílatele, ale jen z účtu, který dárce prokázal platbou se svým symbolem. Dárce si účet do profilu sám nezadává, jinak by kdokoli viděl cizí dary. Další účet prokáže platbou 1 Kč se svým symbolem; pak se mu přiřadí i dřívější platby z něj.
 - Jméno majitele účtu se nekontroluje: kdo účet prokáže, dostane jeho platby.
 - Párování z účtu může dárce i správce vypnout; dosavadní dary zůstávají a po zapnutí se párují jen nové platby. Účet, který prokázali dva dárci, je sdílený a platby bez symbolu z něj zůstávají nespárované; o druhém dárci web nic neříká.

@@ -289,7 +289,7 @@ public class FioImportStepDefinitions {
         movement.from(cell(row, "account"), cell(row, "bankCode"))
                 .named(cell(row, "name"))
                 .withVariableSymbol(variableSymbolCell(cell(row, "variableSymbol")))
-                .withMessage(cell(row, "message"));
+                .withMessage(scenarioDonors.resolve(cell(row, "message")));
         Optional.ofNullable(cell(row, "currency")).ifPresent(movement::inCurrency);
         return movement;
     }
