@@ -83,6 +83,11 @@ export const adminRoutes: Routes = [
         canDeactivate: [unsavedChangesGuard],
       },
       {
+        path: 'o-nas',
+        title: $localize`:@@admin.about.pageTitle:Fotka v sekci O nás | Správa | Nová naděje – nadační fond`,
+        loadComponent: () => import('./about/admin-about').then((m) => m.AdminAbout),
+      },
+      {
         path: 'zalohy',
         title: $localize`:@@admin.backups.pageTitle:Zálohy | Správa | Nová naděje – nadační fond`,
         loadComponent: () => import('./backups/admin-backups').then((m) => m.AdminBackups),
