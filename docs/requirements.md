@@ -108,7 +108,7 @@ Web představí fond a jeho pomoc dětem, usnadní darování a dárcům dá ú�
 
 - Správce připojí Clauda (claude.ai nebo Claude Code) ke správě: přihlásí se s druhým faktorem a připojení povolí (vždy s čerstvým kódem nebo klíčem). Připojit se smí jakákoli aplikace s jeho souhlasem; registrovat ji nikde netřeba.
 - Konektor smí číst všechno ze správy a dělat každou vratnou změnu (nastavení, report, obsah včetně fotek, párování, odpojení a připojení účtu, úrovně logů, zálohy na vyžádání). Každá akce je v historii změn pod jménem správce a s názvem aplikace.
-- Jen na webu zůstává, co je nebezpečné nebo nevratné: mazání, výmaz dárce, role správce, reset druhého faktoru a klíčů, oprava odpovědi o starším symbolu, stažení a obnova zálohy, zobrazení klíče k zálohám, hesla, tokeny a adresa webu, podpis potvrzení a schválení připojení.
+- Jen na webu zůstává, co je nebezpečné nebo nevratné: mazání, výmaz dárce, role správce, reset druhého faktoru a klíčů, oprava odpovědi o starším symbolu, stažení a obnova zálohy, zobrazení klíče k zálohám, stažení klíče k ověřovacím QR kódům, hesla, tokeny a adresa webu, podpis potvrzení a schválení připojení.
 - Povolení platí 14 dní od posledního použití; připojené aplikace správce vidí a odpojí v přehledu. Připojení skončí i s rolí správce.
 
 ## 8. Provoz a ochrana údajů
