@@ -7,6 +7,7 @@ import com.tngtech.archunit.lang.ArchRule;
 import cz.novanadeje.app.AppApplication;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.RepeatedTest;
+import org.junit.jupiter.api.TestFactory;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 
@@ -23,5 +24,6 @@ class TestNamingRulesTest {
             .that().areAnnotatedWith(Test.class)
             .or().areAnnotatedWith(ParameterizedTest.class)
             .or().areAnnotatedWith(RepeatedTest.class)
+            .or().areAnnotatedWith(TestFactory.class)
             .should().beAnnotatedWith(DisplayName.class);
 }
