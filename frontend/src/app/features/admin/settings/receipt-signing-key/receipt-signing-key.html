@@ -1,5 +1,6 @@
 <section class="ui-card" aria-labelledby="klic-k-overovacim-qr">
   <h2
+    #title
     id="klic-k-overovacim-qr"
     class="ui-card__title"
     tabindex="-1"
@@ -10,8 +11,8 @@
   <div class="ui-card__body">
     <p class="ui-card__intro" i18n="@@admin.signingKey.intro">
       Tímto klíčem bude server podepisovat ověřovací QR kódy na potvrzeních o daru. Jeho veřejnou
-      část web zveřejňuje, aby se podle ní dala potvrzení ověřit. Klíč vytvořil server sám a tady se
-      nedá změnit.
+      část web zveřejňuje, aby se podle ní dala potvrzení ověřit. Klíč vytvořil server sám. Kdyby se
+      mohl dostat do cizích rukou, stáhněte ho a server si vytvoří nový.
     </p>
 
     @switch (state()) {
@@ -41,7 +42,9 @@
             </div>
             <div>
               <dt i18n="@@admin.signingKey.state">Stav</dt>
-              @if (key.published) {
+              @if (key.status === 'revoked') {
+                <dd i18n="@@admin.signingKey.withdrawnState">Stažený</dd>
+              } @else if (key.published) {
                 <dd i18n="@@admin.signingKey.published">Zveřejněný</dd>
               } @else {
                 <dd i18n="@@admin.signingKey.notPublished">Nezveřejněný</dd>
@@ -64,11 +67,51 @@
           <p class="signing-key-earlier">{{ earlier }}</p>
         }
         <div role="alert">
-          @if (unpublished(); as unpublished) {
-            <p class="ui-callout ui-callout--danger">{{ unpublished }}</p>
+          @for (warning of warnings(); track $index) {
+            <p class="ui-callout ui-callout--danger signing-key-warning">{{ warning }}</p>
           }
         </div>
+        @if (offers().length > 0) {
+          <div class="signing-key-actions">
+            @for (offer of offers(); track offer.keyId) {
+              <button
+                type="button"
+                class="ui-button ui-button--danger-outline ui-button--small"
+                [attr.aria-disabled]="opening() ? 'true' : null"
+                (click)="ask(offer.keyId)"
+              >
+                {{ offer.label }}
+              </button>
+            }
+          </div>
+        }
+        @if (restartSlow()) {
+          <div class="signing-key-slow" role="alert">
+            <p i18n="@@admin.signingKey.slow">
+              Klíč je stažený, ale web se po restartu zatím nespustil. Počkejte pár minut a zkuste
+              to znovu.
+            </p>
+            <button
+              type="button"
+              class="ui-button"
+              (click)="watchRestart()"
+              i18n="@@admin.signingKey.slowRetry"
+            >
+              Zkusit znovu
+            </button>
+          </div>
+        }
       }
     }
+    <app-live-notice [notice]="notice()" />
   </div>
 </section>
+@if (withdrawal(); as withdrawal) {
+  <app-key-withdrawal-dialog
+    [keyId]="withdrawal.keyId"
+    [current]="withdrawal.current"
+    [hasPasskey]="withdrawal.hasPasskey"
+    (withdrawn)="withdrawn($event)"
+    (dismissed)="cancel()"
+  />
+}
