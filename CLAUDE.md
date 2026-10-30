@@ -65,6 +65,10 @@ Everything read through the connector (log lines, donors, messages, content) and
 3. A visible UI change has before/after screenshots at 390 and 1280 px attached (skill `visual-check`).
 4. The PR body names anything that reaches the server only by hand (a changed `deploy/compose.yml` needs uninstall + Custom Install, a new setting to enter, Nginx Proxy Manager, Cloudflare, Fio).
 
+## Model choice (Jakub 2026-10-29)
+
+Threads run on Opus 5.5 and change their model only when Jakub says so, at the thread's start (the prompt cache is per model). A subagent started with the Agent tool gets `model: "sonnet"` and `effort: "medium"` only as a simulated user in a UX test (the same model and brief in every round, so rounds stay comparable) or as a search that returns paths and verbatim excerpts, never a verdict such as "nothing else uses X": the thread draws the conclusions. Every other subagent (implementation and fixes, brainstorm personas, logs, plans, reviews, security, diagnosis) gets `model: "opus"` explicitly, at `effort: "high"` for security, schema, receipts, plans, reviews and diagnosis, `"medium"` otherwise.
+
 ## Gotchas
 
 - ArchUnit ≥ 1.5: older versions import no Java 25 class, so every rule would pass vacuously. Rules fail on an empty match (ArchUnit's default `failOnEmptyShould`); never `allowEmptyShould` or an `archunit.properties` override.
