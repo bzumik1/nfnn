@@ -13,6 +13,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -27,6 +28,8 @@ public class ReceiptSignatureService {
     static final String REMOVE_ACTION = "REMOVE_RECEIPT_SIGNATURE";
 
     private static final byte[] UTF8_BOM = {(byte) 0xef, (byte) 0xbb, (byte) 0xbf};
+    private static final byte[] UTF16_BE_BOM = {(byte) 0xfe, (byte) 0xff};
+    private static final byte[] UTF16_LE_BOM = {(byte) 0xff, (byte) 0xfe};
 
     private static final Logger log = LoggerFactory.getLogger(ReceiptSignatureService.class);
 
@@ -34,14 +37,16 @@ public class ReceiptSignatureService {
     private final SignatureVectorParser vectors;
     private final ReceiptSignatureRepository signatures;
     private final ApplicationEventPublisher events;
+    private final TransactionTemplate transaction;
     private final Clock clock;
 
     public ReceiptSignatureService(SignatureImageProcessor processor, SignatureVectorParser vectors, ReceiptSignatureRepository signatures,
-                                   ApplicationEventPublisher events, Clock clock) {
+                                   ApplicationEventPublisher events, TransactionTemplate transaction, Clock clock) {
         this.processor = processor;
         this.vectors = vectors;
         this.signatures = signatures;
         this.events = events;
+        this.transaction = transaction;
         this.clock = clock;
     }
 
@@ -50,12 +55,13 @@ public class ReceiptSignatureService {
         return signatures.current();
     }
 
-    @Transactional
     public CurrentSignature upload(UUID adminId, byte[] upload) {
-        SignatureArtwork artwork = isMarkup(upload) ? vector(upload) : processor.process(upload);
+        SignatureArtwork artwork = isSvg(upload) ? vector(upload) : processor.process(upload);
         Instant now = clock.instant();
-        signatures.replace(artwork, now);
-        events.publishEvent(new AdminActionPerformed(adminId, CHANGE_ACTION, Optional.empty(), details(artwork), now));
+        transaction.executeWithoutResult(status -> {
+            signatures.replace(artwork, now);
+            events.publishEvent(new AdminActionPerformed(adminId, CHANGE_ACTION, Optional.empty(), details(artwork), now));
+        });
         log.info("Admin {} uploaded a {}x{} signature image for receipts", adminId, artwork.width(), artwork.height());
         return new CurrentSignature(artwork, now);
     }
@@ -67,9 +73,12 @@ public class ReceiptSignatureService {
         return vectors.parse(upload);
     }
 
-    private static boolean isMarkup(byte[] upload) {
+    private static boolean isSvg(byte[] upload) {
         if (upload == null) {
             return false;
+        }
+        if (upload.length >= 2 && (Arrays.equals(upload, 0, 2, UTF16_BE_BOM, 0, 2) || Arrays.equals(upload, 0, 2, UTF16_LE_BOM, 0, 2))) {
+            return true;
         }
         int at = upload.length >= UTF8_BOM.length && Arrays.equals(upload, 0, UTF8_BOM.length, UTF8_BOM, 0, UTF8_BOM.length) ? UTF8_BOM.length : 0;
         while (at < upload.length && (upload[at] == ' ' || upload[at] == '\t' || upload[at] == '\r' || upload[at] == '\n')) {
