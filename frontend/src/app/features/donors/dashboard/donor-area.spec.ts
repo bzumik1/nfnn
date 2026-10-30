@@ -1896,6 +1896,75 @@ describe('Given a signed-in donor in the donor area', () => {
       expect(element('.single-card a')?.getAttribute('href')).toBe('/darce/dary');
     });
 
+    it('then the gifts of the running year are listed there, each with the download of its receipt', async () => {
+      await open('/darce/potvrzeni');
+      await respond(twoYearSummary(), twoYearDonations());
+
+      const rows = [...root().querySelectorAll<HTMLElement>('.single-card tbody tr')];
+      expect(rows.map((row) => normalized(row.querySelector('.date')?.textContent ?? ''))).toEqual([
+        '15. 03. 2026',
+        '10. 01. 2026',
+      ]);
+      expect(
+        rows.map((row) => normalized(row.querySelector('.download-btn')?.textContent ?? '')),
+      ).toEqual([
+        'Stáhnout PDF, dar z 15. 03. 2026, 500 Kč',
+        'Stáhnout PDF, dar z 10. 01. 2026, 1 000 Kč',
+      ]);
+      expect(text('.single-card .yearly-sub')).toBe(
+        'Potvrzení k letošním darům stáhnete tady hned po jejich připsání, ke starším darům v části Moje dary.',
+      );
+    });
+
+    it('then the receipt of a gift of the running year is saved from there and named at its row', async () => {
+      await open('/darce/potvrzeni');
+      await respond(twoYearSummary(), twoYearDonations());
+
+      const row = root().querySelectorAll<HTMLElement>('.single-card tbody tr')[1];
+      (row.querySelector('.download-btn') as HTMLButtonElement).click();
+      await settle();
+      http
+        .expectOne('/api/donations/me/d-3/receipt')
+        .flush(pdf(), attachment('potvrzeni-o-daru-2026-000017.pdf'));
+      await settle();
+
+      expect(savedFiles).toEqual([
+        { fileName: 'potvrzeni-o-daru-2026-000017.pdf', href: OBJECT_URL },
+      ]);
+      expect(normalized(row.querySelector('.receipt-saved')?.textContent ?? '')).toBe(
+        'Potvrzení potvrzeni-o-daru-2026-000017.pdf je stažené. Najdete ho ve stažených souborech.',
+      );
+    });
+
+    it('then a failed download of a gift receipt is told in the card of single gifts', async () => {
+      await open('/darce/potvrzeni');
+      await respond(twoYearSummary(), twoYearDonations());
+
+      (root().querySelector('.single-card .download-btn') as HTMLButtonElement).click();
+      await settle();
+      http
+        .expectOne('/api/donations/me/d-4/receipt')
+        .flush(null, { status: 500, statusText: 'Server Error' });
+      await settleBlobFailure();
+
+      expect(text('.single-card [role="alert"]')).toBe(
+        'Potvrzení se nepodařilo stáhnout. Zkuste to prosím znovu.',
+      );
+      expect(element('.yearly-card [role="alert"]')).toBeNull();
+    });
+
+    it('and the yearly receipt of every year with gifts is already out, then the card only points to the donations page', async () => {
+      const summary = twoYearSummary();
+      summary.yearlyReceiptsAvailableThrough = 2026;
+      await open('/darce/potvrzeni');
+      await respond(summary, twoYearDonations());
+
+      expect(element('.single-card table')).toBeNull();
+      expect(text('.single-card .yearly-sub')).toBe(
+        'Potvrzení ke každému přijatému daru zvlášť stáhnete hned po jeho připsání v části Moje dary.',
+      );
+    });
+
     it('then a donor with no donations yet reads how a gift appears and finds the way to add the account of a missing gift', async () => {
       await open('/darce/potvrzeni');
       await respond(emptySummary(), emptyDonations());

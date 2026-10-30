@@ -134,6 +134,27 @@ test.describe('Given a signed-in donor', () => {
     );
   });
 
+  test('when they open the receipts page during the year, then the gifts of this year are listed there and one receipt downloads from its row', async ({
+    page,
+  }) => {
+    await mockDonorApi(page, withReceipts);
+    await signIn(page);
+    await openDonorSection(page, 'Potvrzení o daru');
+
+    const rows = page.locator('.single-card tbody tr');
+    await expect(rows).toHaveCount(2);
+
+    const [download] = await Promise.all([
+      page.waitForEvent('download'),
+      rows.nth(1).getByRole('button', { name: 'Stáhnout PDF' }).click(),
+    ]);
+
+    expect(download.suggestedFilename()).toBe('potvrzeni-o-daru-2026-000001.pdf');
+    await expect(rows.nth(1).getByRole('status')).toHaveText(
+      'Potvrzení potvrzeni-o-daru-2026-000001.pdf je stažené. Najdete ho ve stažených souborech.',
+    );
+  });
+
   test('when they download the receipt of one payment, then the browser saves that PDF and a refunded payment offers none', async ({
     page,
   }) => {
