@@ -8,6 +8,8 @@ import cz.novanadeje.app.donors.cucumber.DonorPasskeyStepDefinitions;
 import cz.novanadeje.app.operations.application.backup.BackupKeySource;
 import cz.novanadeje.app.operations.domain.backup.BackupKey;
 import cz.novanadeje.app.operations.infrastructure.backup.BackupProperties;
+import cz.novanadeje.app.operations.infrastructure.settings.PublicDevelopmentKeys;
+import cz.novanadeje.app.support.SwitchablePublicBackupKeyPolicy;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
@@ -35,18 +37,21 @@ public class BackupKeyStepDefinitions {
     private final TotpCodes totpCodes;
     private final DonorPasskeyStepDefinitions passkeys;
     private final BackupKeySource keys;
+    private final SwitchablePublicBackupKeyPolicy publicKeys;
     private final Path restore;
     private String lastCode;
     private List<Integer> askedPositions = List.of();
 
     public BackupKeyStepDefinitions(ApiClient api, DonorSessions sessions, ScenarioDonors donors, TotpCodes totpCodes,
-                                    DonorPasskeyStepDefinitions passkeys, BackupKeySource keys, BackupProperties properties) {
+                                    DonorPasskeyStepDefinitions passkeys, BackupKeySource keys, SwitchablePublicBackupKeyPolicy publicKeys,
+                                    BackupProperties properties) {
         this.api = api;
         this.sessions = sessions;
         this.donors = donors;
         this.totpCodes = totpCodes;
         this.passkeys = passkeys;
         this.keys = keys;
+        this.publicKeys = publicKeys;
         this.restore = properties.restoreDirectory();
     }
 
@@ -164,11 +169,35 @@ public class BackupKeyStepDefinitions {
         api.putBytes(SETUP_RESTORE, ENCRYPTED_BACKUP, Map.of(BACKUP_KEY_HEADER, key));
     }
 
+    @Given("the backend runs outside development")
+    public void theBackendRunsOutsideDevelopment() {
+        publicKeys.runOutsideDevelopment();
+    }
+
+    @When("an encrypted backup is uploaded in the first setup with the public development backup key")
+    public void anEncryptedBackupIsUploadedWithThePublicDevelopmentKey() {
+        anEncryptedBackupIsUploadedWithTheKey(developmentKey().value());
+    }
+
+    @When("an encrypted backup is uploaded in the first setup with the 24 words of the public development backup key")
+    public void anEncryptedBackupIsUploadedWithTheWordsOfThePublicDevelopmentKey() {
+        anEncryptedBackupIsUploadedWithTheKey(String.join(" ", developmentKey().words()));
+    }
+
+    @Then("the uploaded backup waits in the restore folder beside the public development backup key")
+    public void theUploadedBackupWaitsBesideThePublicDevelopmentKey() {
+        theUploadedBackupWaitsBesideTheKey(developmentKey().value());
+    }
+
     @Then("the uploaded backup waits in the restore folder beside the key {string}")
     public void theUploadedBackupWaitsBesideTheKey(String key) {
         String requestId = api.lastResponseJson().get("requestId").asString();
         assertThat(restore.resolve(requestId + ".upload")).hasBinaryContent(ENCRYPTED_BACKUP);
         assertThat(restore.resolve(requestId + ".key")).hasContent(key + "\n");
+    }
+
+    private static BackupKey developmentKey() {
+        return PublicDevelopmentKeys.ofDevelopmentProfile().backupKey().orElseThrow(() -> new AssertionError("application-dev.yml has no backup key"));
     }
 
     private BackupKey serverKey() {
