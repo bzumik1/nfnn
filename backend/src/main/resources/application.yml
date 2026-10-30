@@ -186,6 +186,7 @@ logging:
     org.springframework.web.servlet.mvc.method.annotation: INFO
     org.springframework.web.client: INFO
     org.apache.coyote: INFO
+    org.apache.coyote.http11.Http11Processor: WARN
     org.apache.tomcat.util.http: INFO
     org.postgresql: INFO
     jakarta.mail: INFO

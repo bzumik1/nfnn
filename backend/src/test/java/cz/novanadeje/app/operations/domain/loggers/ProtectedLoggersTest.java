@@ -1,7 +1,9 @@
 package cz.novanadeje.app.operations.domain.loggers;
 
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -25,7 +27,7 @@ class ProtectedLoggersTest {
         assertThat(ProtectedLoggers.covers(new LoggerName(name))).isFalse();
     }
 
-    @org.junit.jupiter.api.Test
+    @Test
     @DisplayName("Given TRACE, when it is asked for a library or ROOT, then it is refused, and for the site's own code it is allowed")
     void should_allow_trace_only_for_own_code_when_checked_given_trace() {
         assertThat(ProtectedLoggers.refuses(new LoggerName("ROOT"), LogLevel.TRACE)).isTrue();
@@ -34,5 +36,24 @@ class ProtectedLoggersTest {
         assertThat(ProtectedLoggers.refuses(new LoggerName("cz.novanadeje.application"), LogLevel.TRACE)).isTrue();
         assertThat(ProtectedLoggers.refuses(new LoggerName("org.springframework.web"), LogLevel.DEBUG)).isFalse();
         assertThat(ProtectedLoggers.refuses(new LoggerName("org.postgresql"), LogLevel.DEBUG)).isTrue();
+    }
+
+    @Test
+    @DisplayName("Given Tomcat's request parser, which writes an unreadable request target with its query string at INFO, when its pin is looked up, then it is WARN")
+    void should_pin_at_warn_when_looked_up_given_request_parser() {
+        assertThat(ProtectedLoggers.PINS).containsEntry("org.apache.coyote.http11.Http11Processor", LogLevel.WARN);
+    }
+
+    @ParameterizedTest
+    @EnumSource(LogLevel.class)
+    @DisplayName("Given Tomcat's request parser, when any level is asked for it, then it is refused")
+    void should_refuse_when_any_level_is_asked_given_request_parser(LogLevel level) {
+        assertThat(ProtectedLoggers.refuses(new LoggerName("org.apache.coyote.http11.Http11Processor"), level)).isTrue();
+    }
+
+    @Test
+    @DisplayName("Given the pins, when their levels are looked up, then none is louder than INFO")
+    void should_pin_no_logger_louder_than_info_when_looked_up_given_pins() {
+        assertThat(ProtectedLoggers.PINS.values()).allMatch(level -> level.compareTo(LogLevel.INFO) >= 0);
     }
 }
