@@ -1,5 +1,6 @@
 package cz.novanadeje.app.cucumber.transcript;
 
+import cz.novanadeje.app.operations.domain.settings.Setting;
 import cz.novanadeje.app.support.CanonicalJson;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.node.JsonNodeFactory;
@@ -19,12 +20,16 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public final class ApiTranscripts {
 
     public static final String SOURCE = "v2-baseline";
     private static final String MAIL_SETTINGS = "MAIL_";
-    private static final Set<String> SECRET_VARIABLES = Set.of("FIO_TOKEN", "JWT_SECRET", "SETTINGS_KEY");
+    private static final Set<String> SERVER_SECRETS = Set.of("JWT_SECRET", "SETTINGS_KEY", "BACKUP_KEY", "DB_PASSWORD");
+    private static final Set<String> SECRET_VARIABLES = Stream.concat(SERVER_SECRETS.stream(), Setting.secrets().stream().map(Setting::name))
+            .collect(Collectors.toUnmodifiableSet());
     private static final String TABLE_ROW = "|";
     public static final Instant RECORDING_CLOCK = Instant.parse("2026-11-04T09:00:00Z");
     private static final String MODE = "api.transcripts";

@@ -1,0 +1,44 @@
+[
+  {
+    "path": "POST /api/admin/operations/backups/key/reveal",
+    "scenario": "operations/backup_key: *",
+    "kind": "body",
+    "reason": "0.6a (Phase 0 gate, security S-M1): the recorder masks the backup key (the age secret key shape AGE-SECRET-KEY-1..., any case) as <secret>; only the transcript changes, the API answers the same key, and the baseline holds only the public dev default key",
+    "contract": ".claude/rules/testing.md, Regression against v2 (Transcripts, Hygiene)"
+  },
+  {
+    "path": "GET /api/operations/setup/backup-key",
+    "scenario": "operations/first_setup: *",
+    "kind": "body",
+    "reason": "0.6a (Phase 0 gate, security S-M1): the recorder masks the backup key (the age secret key shape AGE-SECRET-KEY-1..., any case) as <secret>; only the transcript changes, the API answers the same key, and the baseline holds only the public dev default key",
+    "contract": ".claude/rules/testing.md, Regression against v2 (Transcripts, Hygiene)"
+  },
+  {
+    "path": "POST /api/admin/operations/backups/key/confirmation",
+    "scenario": "operations/backup_key: *",
+    "kind": "request",
+    "reason": "0.6a (Phase 0 gate, security S-M1): the recorder masks the backup key's words (fields word and words) as <secret>; only the transcript changes, the API receives the same words, and the baseline holds only words of the public dev default key or deliberately wrong ones",
+    "contract": ".claude/rules/testing.md, Regression against v2 (Transcripts, Hygiene)"
+  },
+  {
+    "path": "POST /api/operations/setup",
+    "scenario": "operations/first_setup: *",
+    "kind": "request",
+    "reason": "0.6a (Phase 0 gate, security S-M1): the recorder masks the backup key's words (fields word and words) as <secret>; only the transcript changes, the API receives the same words, and the baseline holds only words of the public dev default key or deliberately wrong ones",
+    "contract": ".claude/rules/testing.md, Regression against v2 (Transcripts, Hygiene)"
+  },
+  {
+    "path": "POST /api/operations/setup",
+    "scenario": "operations/restore: *",
+    "kind": "request",
+    "reason": "0.6a (Phase 0 gate, security S-M1): the recorder masks the backup key's words (fields word and words) as <secret>; only the transcript changes, the API receives the same words, and the baseline holds only words of the public dev default key or deliberately wrong ones",
+    "contract": ".claude/rules/testing.md, Regression against v2 (Transcripts, Hygiene)"
+  },
+  {
+    "path": "POST /api/operations/setup",
+    "scenario": "operations/settings: *",
+    "kind": "request",
+    "reason": "0.6a (Phase 0 gate, security S-M1): the recorder masks the backup key's words (fields word and words) as <secret>; only the transcript changes, the API receives the same words, and the baseline holds only words of the public dev default key or deliberately wrong ones",
+    "contract": ".claude/rules/testing.md, Regression against v2 (Transcripts, Hygiene)"
+  }
+]

@@ -1,17 +1,27 @@
 package cz.novanadeje.app.cucumber.transcript;
 
+import cz.novanadeje.app.operations.domain.settings.Setting;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.core.task.SimpleAsyncTaskExecutor;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
+import java.util.regex.Pattern;
+import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class ApiTranscriptsTest {
+
+    private static final Pattern BOUND_SECRET = Pattern.compile("\\$\\{([A-Z0-9_]*(?:PASSWORD|TOKEN|SECRET|KEY))[:}]");
 
     private static final String FEATURE = """
             Feature: Connected applications
@@ -51,6 +61,35 @@ class ApiTranscriptsTest {
         assertThatThrownBy(() -> ApiTranscripts.refuseRealSecrets(Map.of("JWT_SECRET", "x"))).isInstanceOf(IllegalStateException.class);
         assertThatThrownBy(() -> ApiTranscripts.refuseRealSecrets(Map.of("SETTINGS_KEY", "x"))).isInstanceOf(IllegalStateException.class);
         assertThatCode(() -> ApiTranscripts.refuseRealSecrets(Map.of("PATH", "/usr/bin", "MAIL_HOST", ""))).doesNotThrowAnyException();
+    }
+
+    @Test
+    @DisplayName("Given the backup key in the environment, when recording starts, then it is refused without naming its value")
+    void should_refuse_to_record_when_the_backup_key_is_in_the_environment() {
+        assertThatThrownBy(() -> ApiTranscripts.refuseRealSecrets(Map.of("BACKUP_KEY", "AGE-SECRET-KEY-1PLANTED")))
+                .isInstanceOf(IllegalStateException.class).hasMessageContaining("BACKUP_KEY").hasMessageNotContaining("PLANTED");
+    }
+
+    @Test
+    @DisplayName("Given every secret setting of the operations context, when one is in the environment, then recording is refused, so a new secret setting cannot be forgotten")
+    void should_refuse_to_record_when_any_secret_setting_is_in_the_environment() {
+        assertThat(Setting.secrets()).isNotEmpty().allSatisfy(setting ->
+                assertThatThrownBy(() -> ApiTranscripts.refuseRealSecrets(Map.of(setting.name(), "x")))
+                        .as(setting.name()).isInstanceOf(IllegalStateException.class).hasMessageContaining(setting.name()));
+    }
+
+    @Test
+    @DisplayName("Given every environment name the backend's configuration binds to a password, token, secret or key, when one is set, then recording is refused")
+    void should_refuse_to_record_when_any_secret_the_configuration_binds_is_in_the_environment() throws IOException {
+        Set<String> bound = new TreeSet<>();
+        try (Stream<Path> files = Files.list(Path.of("src/main/resources"))) {
+            for (Path file : files.filter(path -> path.getFileName().toString().matches("application.*\\.ya?ml")).toList()) {
+                BOUND_SECRET.matcher(Files.readString(file)).results().map(match -> match.group(1)).forEach(bound::add);
+            }
+        }
+
+        assertThat(bound).contains("BACKUP_KEY", "JWT_SECRET", "SETTINGS_KEY", "FIO_TOKEN", "MAIL_PASSWORD").allSatisfy(name ->
+                assertThatThrownBy(() -> ApiTranscripts.refuseRealSecrets(Map.of(name, "x"))).as(name).isInstanceOf(IllegalStateException.class));
     }
 
     @Test
