@@ -29,6 +29,13 @@ import {
   openPolicyFromFooter,
   withoutSessionStorage,
 } from './lost-chunks';
+import {
+  CHANGED_AMOUNT,
+  scanAfterLoad,
+  serveReceiptKeys,
+  SINGLE_RECEIPT,
+  YEARLY_RECEIPT,
+} from './receipt-verification';
 import { uploadedSignature } from './signature-image';
 
 const WCAG_AA = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
@@ -219,6 +226,42 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
 
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Tuhle stránku jsme nenašli');
     await expect(page).toHaveURL(/\/stara-stranka$/);
+    expect(await violations(page)).toEqual([]);
+  });
+
+  test('when they verify receipt codes, then the explanation, a signed yearly receipt, a receipt the fund does not keep, a changed code and the offline state break no rule', async ({
+    page,
+    context,
+  }) => {
+    await serveReceiptKeys(page);
+    let status = 'active';
+    await page.route(
+      (url) => url.pathname === '/api/donations/receipts/status',
+      (route) => route.fulfill({ json: { status } }),
+    );
+    const heading = page.getByRole('heading', { level: 1 });
+
+    await page.goto('/overit');
+    await expect(heading).toHaveText('Ověření potvrzení o daru');
+    expect(await violations(page)).toEqual([]);
+
+    await scanAfterLoad(page, YEARLY_RECEIPT);
+    await expect(heading).toHaveText('Podepsáno fondem Nová naděje');
+    expect(await violations(page)).toEqual([]);
+
+    status = 'unknown';
+    await scanAfterLoad(page, SINGLE_RECEIPT);
+    await expect(heading).toHaveText('Fond toto potvrzení ve své evidenci nevede');
+    expect(await violations(page)).toEqual([]);
+
+    await scanAfterLoad(page, CHANGED_AMOUNT);
+    await expect(heading).toHaveText('Neověřeno: podpis neodpovídá údajům');
+    expect(await violations(page)).toEqual([]);
+
+    await page.evaluate(() => window.localStorage.clear());
+    await context.setOffline(true);
+    await scanAfterLoad(page, YEARLY_RECEIPT);
+    await expect(heading).toHaveText('Nelze ověřit bez připojení');
     expect(await violations(page)).toEqual([]);
   });
 

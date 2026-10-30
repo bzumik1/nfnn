@@ -47,6 +47,14 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'overit',
+        title: $localize`:@@donor.verify.pageTitle:Ověření potvrzení o daru | Nová naděje – nadační fond`,
+        loadComponent: () =>
+          import('./features/donations/verification/verification-page').then(
+            (m) => m.VerificationPage,
+          ),
+      },
+      {
         path: '',
         loadChildren: () =>
           import('./features/content/content.routes').then((m) => m.contentRoutes),
