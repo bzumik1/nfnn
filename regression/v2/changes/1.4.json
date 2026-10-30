@@ -629,5 +629,12 @@
     "test": "feature_classpath_features/donations/payment_details.feature > Visitor gets the foundation's payment details to build a QR payment in the browser - The recipient and each message are what today's QR payment sends for its purpose*",
     "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): this 1.2 scenario compared payment-details with what payment-qr sent, and payment-qr is gone; DonationPurposeSharedCasesTest reads every text the browser writes as the import does",
     "replacement": "donations.domain.donation.DonationPurposeSharedCasesTest > Given 1 Kč verifying a donor's account, when the bank brings the payment the browser's SPAYD text asks for and the import reads its purpose, then it is an account verification exactly when the case verifies an account with the verification amount"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/home/sections/donate-cta/donate-cta.spec.ts > Given the donate section > when the visitor picked 1 000 Kč and the section opens again while the site stays open, then 1 000 Kč stays chosen and is asked for",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): main (#226) checked that the remembered 1 000 Kč was asked for again at /api/donations/payment-qr; that endpoint is gone, so the test now checks that no request leaves and the QR of 1 000 Kč is drawn from the payment details already held",
+    "replacement": "src/app/features/content/home/sections/donate-cta/donate-cta.spec.ts > Given the donate section > when the visitor picked 1 000 Kč and the section opens again while the site stays open, then 1 000 Kč stays chosen and its QR is drawn from the details already held"
   }
 ]
