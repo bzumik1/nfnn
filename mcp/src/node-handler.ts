@@ -13,23 +13,30 @@ export function nodeHandler(
 ): (request: IncomingMessage, response: ServerResponse) => Promise<void> {
   const mcp = toNodeHandler(app, { onerror });
   return async (request, response) => {
-    if (new URL(request.url ?? '/', 'http://localhost').pathname !== PHOTO_UPLOAD_PATH) {
+    const url = new URL(request.url ?? '/', 'http://localhost');
+    if (url.pathname !== PHOTO_UPLOAD_PATH) {
       await mcp(request, response);
       return;
     }
     let answer: Response;
     try {
-      answer = await app.fetch(binaryRequest(request));
+      answer = await app.fetch(binaryRequest(url, request));
     } catch (thrown: unknown) {
       onerror(thrown instanceof Error ? thrown : new Error(String(thrown)));
       answer = Response.json({ error: 'The photo could not be received.' }, { status: 500 });
     }
-    response.writeHead(answer.status, Object.fromEntries(answer.headers));
-    response.end(Buffer.from(await answer.arrayBuffer()));
+    try {
+      const body = Buffer.from(await answer.arrayBuffer());
+      response.writeHead(answer.status, Object.fromEntries(answer.headers));
+      response.end(body);
+    } catch (thrown: unknown) {
+      onerror(thrown instanceof Error ? thrown : new Error(String(thrown)));
+      response.destroy();
+    }
   };
 }
 
-function binaryRequest(request: IncomingMessage): Request {
+function binaryRequest(url: URL, request: IncomingMessage): Request {
   const headers = new Headers();
   for (const [name, value] of Object.entries(request.headers)) {
     if (value === undefined || name.startsWith(':')) {
@@ -45,5 +52,5 @@ function binaryRequest(request: IncomingMessage): Request {
     init.body = Readable.toWeb(request) as ReadableStream<Uint8Array>;
     init.duplex = 'half';
   }
-  return new Request(`http://${request.headers.host ?? 'localhost'}${request.url ?? '/'}`, init);
+  return new Request(url, init);
 }

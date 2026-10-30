@@ -95,6 +95,24 @@ describe('Given the connector served by Node over HTTP', () => {
     expect(digestOf(received[0]?.bytes)).toBe(digestOf(photo));
   });
 
+  it('when a photo is put with a Host that would make another path of the address, then the app still sees the upload address', async () => {
+    const { request } = await import('node:http');
+    const status = await new Promise<number>((resolve, reject) => {
+      const put = request(
+        `${baseUrl}/mcp-photos`,
+        { method: 'PUT', headers: { host: 'x\\mcp#', 'content-type': 'image/jpeg' } },
+        (answer) => {
+          answer.resume();
+          resolve(answer.statusCode ?? 0);
+        },
+      );
+      put.on('error', reject);
+      put.end(Buffer.from(JPEG_START));
+    });
+    expect(status).toBe(201);
+    expect(received.map((entry) => entry.path)).toEqual(['/mcp-photos']);
+  });
+
   it('when a JSON-RPC message is posted to the MCP endpoint, then the app gets it as before', async () => {
     const message =
       '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{"name":"Nová naděje"}}';
