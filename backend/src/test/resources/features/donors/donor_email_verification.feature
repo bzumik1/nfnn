@@ -120,7 +120,7 @@ Feature: Donor confirms the e-mail address after registering
     When a verification e-mail is asked for "not-an-email"
     Then the response status is 400
     And the problem type ends with "validation"
-    And the problem's error for field "email" says "Zadejte e-mail ve tvaru jmeno@domena.cz."
+    And the problem's only error for field "email" says "Zadejte e-mail ve tvaru jmeno@domena.cz."
 
   Scenario: A donor holds at most three live links, keeps the earlier ones and loses them all on confirmation
     Given a person registered with email "jana@example.cz" and password "correct horse battery" but has not confirmed the e-mail

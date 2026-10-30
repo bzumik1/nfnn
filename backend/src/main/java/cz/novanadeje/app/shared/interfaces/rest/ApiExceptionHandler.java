@@ -33,6 +33,7 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
 
 import java.net.URI;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 
@@ -54,7 +55,7 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
     protected ResponseEntity<Object> handleMethodArgumentNotValid(MethodArgumentNotValidException ex, HttpHeaders headers, HttpStatusCode status, WebRequest request) {
         ProblemDetail problem = ex.updateAndGetBody(getMessageSource(), LocaleContextHolder.getLocale());
         problem.setType(ProblemTypes.VALIDATION);
-        problem.setProperty("errors", fieldErrors(ex.getFieldErrors()));
+        problem.setProperty("errors", listed(fieldErrors(ex.getFieldErrors())));
         return handleExceptionInternal(ex, problem, headers, status, request);
     }
 
@@ -169,7 +170,7 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
         problem.setType(ProblemTypes.VALIDATION);
         problem.setTitle(message("problem.validation.title"));
         problem.setDetail(message("problem.validation.detail"));
-        problem.setProperty("errors", errors);
+        problem.setProperty("errors", listed(errors));
         return handleExceptionInternal(ex, problem, headers, HttpStatus.BAD_REQUEST, request);
     }
 
@@ -186,6 +187,13 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
                 .flatMap(result -> result instanceof ParameterErrors beanErrors
                         ? beanErrors.getFieldErrors().stream().map(error -> fieldError(error.getField(), error.getDefaultMessage()))
                         : result.getResolvableErrors().stream().map(error -> fieldError(result.getMethodParameter().getParameterName(), error.getDefaultMessage())))
+                .toList();
+    }
+
+    private static List<Map<String, String>> listed(List<Map<String, String>> errors) {
+        return errors.stream()
+                .distinct()
+                .sorted(Comparator.comparing((Map<String, String> error) -> error.get("field")).thenComparing(error -> error.get("message")))
                 .toList();
     }
 

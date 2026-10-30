@@ -25,7 +25,7 @@ Feature: Donor resets a forgotten password by e-mail
     When a password reset is asked for "<address>"
     Then the response status is 400
     And the problem type ends with "validation"
-    And the problem's error for field "email" says "Zadejte e-mail ve tvaru jmeno@domena.cz."
+    And the problem's only error for field "email" says "Zadejte e-mail ve tvaru jmeno@domena.cz."
 
     Examples:
       | address        |

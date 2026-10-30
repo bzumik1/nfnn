@@ -171,24 +171,48 @@
     "path": "POST /api/donors/me/email-change #3",
     "scenario": "donors/donor_credentials: The current address, a wrong password and a malformed address are refused without sending anything*",
     "kind": "body",
-    "field": "$.errors[*].message",
-    "reason": "1.18 (frontend.md, error at the field in its own words): the e-mail shape of EmailAddress names the site's message {donors.email.invalid} (Zadejte e-mail ve tvaru jmeno@domena.cz.) instead of the validator's text with the regular expression, as the registration e-mail does; the field fails two constraints, whose order in errors follows the validator's hash set and changes between runs, so the site's text may stand at either index",
+    "field": "$.errors[0].message",
+    "reason": "1.18 (frontend.md, error at the field in its own words): the e-mail shape of EmailAddress names the site's message {donors.email.invalid} (Zadejte e-mail ve tvaru jmeno@domena.cz.) instead of the validator's text with the regular expression, as the registration e-mail does",
+    "contract": "docs/api-contract.md, Conventions (Problem texts)"
+  },
+  {
+    "path": "POST /api/donors/me/email-change #3",
+    "scenario": "donors/donor_credentials: The current address, a wrong password and a malformed address are refused without sending anything*",
+    "kind": "body",
+    "field": "$.errors",
+    "reason": "1.18 (frontend.md, error at the field in its own words): the address fails both @Email and the EmailAddress shape, which now name the same message {donors.email.invalid}, and the answer lists a field's message once, so the two errors of v2 (the validator's @Email text and its @Pattern text with the regular expression) become one",
     "contract": "docs/api-contract.md, Conventions (Problem texts)"
   },
   {
     "path": "POST /api/donors/auth/email-verification/request #3",
     "scenario": "donors/donor_email_verification: A confirmed account, an unknown address and a malformed address get no new link*",
     "kind": "body",
-    "field": "$.errors[*].message",
-    "reason": "1.18 (frontend.md, error at the field in its own words): the e-mail shape of EmailAddress names the site's message {donors.email.invalid} (Zadejte e-mail ve tvaru jmeno@domena.cz.) instead of the validator's text with the regular expression, as the registration e-mail does; the field fails two constraints, whose order in errors follows the validator's hash set and changes between runs, so the site's text may stand at either index",
+    "field": "$.errors[0].message",
+    "reason": "1.18 (frontend.md, error at the field in its own words): the e-mail shape of EmailAddress names the site's message {donors.email.invalid} (Zadejte e-mail ve tvaru jmeno@domena.cz.) instead of the validator's text with the regular expression, as the registration e-mail does",
+    "contract": "docs/api-contract.md, Conventions (Problem texts)"
+  },
+  {
+    "path": "POST /api/donors/auth/email-verification/request #3",
+    "scenario": "donors/donor_email_verification: A confirmed account, an unknown address and a malformed address get no new link*",
+    "kind": "body",
+    "field": "$.errors",
+    "reason": "1.18 (frontend.md, error at the field in its own words): the address fails both @Email and the EmailAddress shape, which now name the same message {donors.email.invalid}, and the answer lists a field's message once, so the two errors of v2 (the validator's @Email text and its @Pattern text with the regular expression) become one",
     "contract": "docs/api-contract.md, Conventions (Problem texts)"
   },
   {
     "path": "POST /api/donors/auth/password-reset/request #1",
     "scenario": "donors/donor_password_reset: A malformed address is refused with a field error [not-an-email]*",
     "kind": "body",
-    "field": "$.errors[*].message",
-    "reason": "1.18 (frontend.md, error at the field in its own words): the e-mail shape of EmailAddress names the site's message {donors.email.invalid} (Zadejte e-mail ve tvaru jmeno@domena.cz.) instead of the validator's text with the regular expression, as the registration e-mail does; the field fails two constraints, whose order in errors follows the validator's hash set and changes between runs, so the site's text may stand at either index",
+    "field": "$.errors[0].message",
+    "reason": "1.18 (frontend.md, error at the field in its own words): the e-mail shape of EmailAddress names the site's message {donors.email.invalid} (Zadejte e-mail ve tvaru jmeno@domena.cz.) instead of the validator's text with the regular expression, as the registration e-mail does",
+    "contract": "docs/api-contract.md, Conventions (Problem texts)"
+  },
+  {
+    "path": "POST /api/donors/auth/password-reset/request #1",
+    "scenario": "donors/donor_password_reset: A malformed address is refused with a field error [not-an-email]*",
+    "kind": "body",
+    "field": "$.errors",
+    "reason": "1.18 (frontend.md, error at the field in its own words): the address fails both @Email and the EmailAddress shape, which now name the same message {donors.email.invalid}, and the answer lists a field's message once, so the two errors of v2 (the validator's @Email text and its @Pattern text with the regular expression) become one",
     "contract": "docs/api-contract.md, Conventions (Problem texts)"
   },
   {
@@ -203,8 +227,16 @@
     "path": "POST /api/donors/auth/password-reset/request #1",
     "scenario": "donors/donor_password_reset: A malformed address is refused with a field error [jana@]*",
     "kind": "body",
-    "field": "$.errors[*].message",
-    "reason": "1.18 (frontend.md, error at the field in its own words): the e-mail shape of EmailAddress names the site's message {donors.email.invalid} (Zadejte e-mail ve tvaru jmeno@domena.cz.) instead of the validator's text with the regular expression, as the registration e-mail does; the field fails two constraints, whose order in errors follows the validator's hash set and changes between runs, so the site's text may stand at either index",
+    "field": "$.errors[0].message",
+    "reason": "1.18 (frontend.md, error at the field in its own words): the e-mail shape of EmailAddress names the site's message {donors.email.invalid} (Zadejte e-mail ve tvaru jmeno@domena.cz.) instead of the validator's text with the regular expression, as the registration e-mail does",
+    "contract": "docs/api-contract.md, Conventions (Problem texts)"
+  },
+  {
+    "path": "POST /api/donors/auth/password-reset/request #1",
+    "scenario": "donors/donor_password_reset: A malformed address is refused with a field error [jana@]*",
+    "kind": "body",
+    "field": "$.errors",
+    "reason": "1.18 (frontend.md, error at the field in its own words): the address fails both @Email and the EmailAddress shape, which now name the same message {donors.email.invalid}, and the answer lists a field's message once, so the two errors of v2 (the validator's @Email text and its @Pattern text with the regular expression) become one",
     "contract": "docs/api-contract.md, Conventions (Problem texts)"
   },
   {

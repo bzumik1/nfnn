@@ -87,7 +87,7 @@ Feature: Donor registers an account
       | email      | jana@example   |
       | password   | dlouhe-heslo-1 |
     Then the response status is 400
-    And the problem's error for field "email" says "Zadejte e-mail ve tvaru jmeno@domena.cz."
+    And the problem's only error for field "email" says "Zadejte e-mail ve tvaru jmeno@domena.cz."
     And the problem does not repeat "jana@example"
 
   Scenario: A password everyone uses is refused
