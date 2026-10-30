@@ -100,6 +100,8 @@ describe('Given the key list the server publishes', () => {
         { ...TEST_1, publicKey: '11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHUR' },
         { ...TEST_1, publicKey: '11qYAYKxCrfVS/7TyWQHOg7hcvPapiMlrwIaaPcHURo' },
         { ...TEST_1, status: 'retired' },
+        { ...TEST_1, status: 'withdrawn' },
+        { ...TEST_1, status: 'suspended' },
         { ...TEST_1, keyId: '21FE31DF' },
         'a key',
         SHA_ABC,

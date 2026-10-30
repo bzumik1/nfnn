@@ -195,6 +195,66 @@ describe('Given a valid proof and a check that would accept any signature', () =
     expect(await reasonFor(textWithBody(withName(new Uint8Array(0))))).toBe('invalid-text');
   });
 
+  it('when the name starts with a byte order mark, then it is kept as the backend reads it', async () => {
+    const reading = await readReceiptProof(
+      textWithBody(withName(Uint8Array.from([0xef, 0xbb, 0xbf, 0x4d]))),
+      '27278794',
+      () => ({ keyId: '21fe31df', publicKey: new Uint8Array(32), status: 'active' }),
+      anySignature,
+    );
+
+    expect(reading.verdict === 'valid' && reading.receipt.donor.name).toBe('\ufeffM');
+  });
+
+  it('when the gifts sum to 2 to the power of 53 and the total is small, then the value is refused rather than the total', async () => {
+    const day = (iso: string): number[] => {
+      const days = (Date.parse(iso) - Date.UTC(2000, 0, 1)) / 86_400_000;
+      return [days >> 8, days & 0xff];
+    };
+    const leb128 = (value: bigint): number[] => {
+      const groups: number[] = [];
+      do {
+        const group = Number(value & 0x7fn);
+        value >>= 7n;
+        groups.push(value === 0n ? group : group | 0x80);
+      } while (value !== 0n);
+      return groups;
+    };
+    const body = [
+      0x01,
+      0x21,
+      0xfe,
+      0x31,
+      0xdf,
+      0x09,
+      0x00,
+      0x00,
+      0x01,
+      ...day('2027-01-15'),
+      0x07,
+      0xea,
+      1,
+      0x4d,
+      1,
+      0x4c,
+      1,
+      0x43,
+      0x00,
+      0xb3,
+      0xb1,
+      2,
+      ...day('2026-03-15'),
+      ...leb128(2n ** 52n),
+      ...day('2026-11-03'),
+      ...leb128(2n ** 52n),
+      1,
+    ];
+
+    expect(
+      await reasonFor(textWithBody(() => Uint8Array.from([...body, ...new Uint8Array(64)]))),
+    ).toBe('invalid-value');
+  });
+
   it('when the serial is zero, then the value is refused', async () => {
     expect(
       await reasonFor(
