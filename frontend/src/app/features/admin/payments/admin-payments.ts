@@ -16,11 +16,13 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, ParamMap, Router, RouterLink } from '@angular/router';
 import {
   catchError,
+  combineLatest,
   debounceTime,
   EMPTY,
   map,
   Observable,
   of,
+  startWith,
   Subject,
   switchMap,
   timer,
@@ -36,6 +38,7 @@ import {
   AdminDonorResponse,
   AdminDonorSearchResponse,
   AdminPaymentListResponse,
+  DonorAccountListResponse,
   AdminPaymentResponse,
   PairingFilter,
   PairingMethod,
@@ -62,6 +65,11 @@ interface DonorSearch {
   readonly immediate: boolean;
 }
 
+interface DonorSearchOutcome {
+  readonly found: AdminDonorSearchResponse | null;
+  readonly emails: ReadonlyMap<string, string>;
+}
+
 interface ChangedDonor {
   readonly id: string;
   readonly name: string;
@@ -70,6 +78,8 @@ interface ChangedDonor {
 const UNAUTHENTICATED = 'auth/unauthenticated';
 const FORBIDDEN = 'auth/forbidden';
 const SEARCH_DEBOUNCE_MS = 300;
+const EMAIL_LOOKUP_LIMIT = 100;
+const NO_EMAILS: ReadonlyMap<string, string> = new Map();
 const PAGE_SIZE = 50;
 const PAIRED_TAB = 'prirazene';
 const PARAMS = { tab: 'stav', text: 'q', from: 'od', to: 'do', donor: 'darce' } as const;
@@ -126,6 +136,7 @@ export class AdminPayments {
   protected readonly query = signal('');
   protected readonly results = signal<AdminDonorResponse[] | null>(null);
   protected readonly searchFailed = signal(false);
+  protected readonly emails = signal<ReadonlyMap<string, string>>(NO_EMAILS);
   protected readonly selectedDonor = signal<string | null>(null);
   protected readonly pairError = signal<string | null>(null);
 
@@ -170,14 +181,22 @@ export class AdminPayments {
         switchMap((search) => (search === null ? EMPTY : this.searchAfterPause(search))),
         takeUntilDestroyed(this.destroyRef),
       )
-      .subscribe((response) => {
-        this.searchFailed.set(response === null);
-        this.results.set(response?.items ?? []);
+      .subscribe(({ found, emails }) => {
+        this.searchFailed.set(found === null);
+        this.results.set(found?.items ?? []);
+        this.emails.set(emails);
       });
   }
 
-  private searchAfterPause(search: DonorSearch): Observable<AdminDonorSearchResponse | null> {
-    const lookUp = this.api.searchDonors(search.query).pipe(catchError(() => of(null)));
+  private searchAfterPause(search: DonorSearch): Observable<DonorSearchOutcome> {
+    const lookUp = combineLatest({
+      found: this.api.searchDonors(search.query).pipe(catchError(() => of(null))),
+      emails: this.api.donors(search.query, EMAIL_LOOKUP_LIMIT).pipe(
+        map(emailsById),
+        catchError(() => of(NO_EMAILS)),
+        startWith(NO_EMAILS),
+      ),
+    });
     return search.immediate ? lookUp : timer(SEARCH_DEBOUNCE_MS).pipe(switchMap(() => lookUp));
   }
 
@@ -304,6 +323,7 @@ export class AdminPayments {
     this.pairing.set(payment);
     this.query.set(prefill);
     this.results.set(null);
+    this.emails.set(NO_EMAILS);
     this.searchFailed.set(false);
     this.selectedDonor.set(null);
     this.pairError.set(null);
@@ -522,6 +542,10 @@ function isFiltered(filters: PaymentFilters): boolean {
 
 function queryOf(filters: PaymentFilters): PaymentQuery {
   return { text: filters.text, from: filters.from, to: filters.to, donorId: filters.donorId };
+}
+
+function emailsById(list: DonorAccountListResponse): ReadonlyMap<string, string> {
+  return new Map(list.items.map((account) => [account.donorId, account.email]));
 }
 
 function senderSurname(payment: AdminPaymentResponse): string {

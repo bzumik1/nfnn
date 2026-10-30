@@ -217,6 +217,13 @@
                     class="amount"
                   >
                     {{ crowns(item.amountMinor) }}&nbsp;Kč
+                    @if (item.accountVerification) {
+                      <span
+                        class="ui-badge ui-badge--accent verification-tag"
+                        i18n="@@admin.payments.verificationTag"
+                        >Ověření účtu</span
+                      >
+                    }
                   </td>
                   <td data-label="Odesílatel" i18n-data-label="@@admin.payments.col.sender">
                     <span class="sender-name">{{ item.counterpartyName ?? '—' }}</span>
@@ -356,7 +363,16 @@
     <dl class="pair-payment">
       <div>
         <dt i18n="@@admin.payments.pair.payment">Platba</dt>
-        <dd>{{ describe(payment) }}</dd>
+        <dd>
+          {{ describe(payment) }}
+          @if (payment.accountVerification) {
+            <span
+              class="ui-badge ui-badge--accent verification-tag"
+              i18n="@@admin.payments.verificationTag"
+              >Ověření účtu</span
+            >
+          }
+        </dd>
       </div>
       <div>
         <dt i18n="@@admin.payments.col.sender">Odesílatel</dt>
@@ -381,6 +397,15 @@
         </dd>
       </div>
     </dl>
+    @if (payment.accountVerification) {
+      <p
+        class="ui-callout ui-callout--warning pair-verification"
+        i18n="@@admin.payments.pair.verification"
+      >
+        Touto platbou si dárce ověřuje bankovní účet. Když ji přiřadíte ručně, dárci se započítá
+        1&nbsp;Kč, ale účet ověřený nebude; ten ověří až platba s jeho variabilním symbolem.
+      </p>
+    }
 
     <label class="pair-search-label" for="pair-search" i18n="@@admin.payments.pair.search.label"
       >Hledat dárce podle jména nebo variabilního symbolu</label
@@ -430,6 +455,9 @@
                 <ng-container i18n="@@admin.payments.pair.result.symbol"
                   >VS {{ donor.variableSymbol }}</ng-container
                 >
+                @if (emails().get(donor.donorId); as email) {
+                  · <span class="pair-result-email">{{ email }}</span>
+                }
                 @if (donor.companyIdentifier) {
                   ·
                   <ng-container i18n="@@admin.payments.pair.result.company"

@@ -1,26 +1,56 @@
 <app-page-title i18n="@@donor.overview.heading">Můj přehled</app-page-title>
 
+<div role="status">
+  @switch (adminRefusal()) {
+    @case ('not-administrator') {
+      <p
+        class="ui-callout ui-callout--warning admin-refusal"
+        i18n="@@donor.overview.adminRefusal.role"
+      >
+        Tento účet nemá přístup do správy. Pokud ho potřebujete, požádejte jiného správce, aby vám
+        ho přidělil.
+      </p>
+    }
+    @case ('second-factor') {
+      <p
+        class="ui-callout ui-callout--warning admin-refusal"
+        i18n="@@donor.overview.adminRefusal.secondFactor"
+      >
+        Správa se vám otevře, až se přihlásíte přístupovým klíčem nebo kódem z aplikace. Kód z
+        aplikace si zapnete v části <a routerLink="/darce/udaje">Údaje a zabezpečení</a>.
+      </p>
+    }
+  }
+</div>
+
 @if (donations.state() === 'ready') {
   @if (receiptYear(); as year) {
     <section class="ui-card ui-card--padded receipt-ready" aria-labelledby="receipt-ready-title">
       <h2 id="receipt-ready-title" class="ui-card__title" i18n="@@donor.overview.receipt.title">
         Potvrzení o darech za rok {{ year }} je připravené
       </h2>
-      <button
-        type="button"
-        class="ui-button ui-button--primary receipt-ready-pdf"
-        [disabled]="donations.yearlyDownloading(year)"
-        [attr.aria-busy]="donations.yearlyDownloading(year)"
-        (click)="donations.downloadYearlyReceipt(year)"
-      >
-        @if (donations.yearlyDownloading(year)) {
-          <span i18n="@@donor.dashboard.receipt.preparing">Připravujeme PDF…</span>
-        } @else {
-          <span i18n="@@donor.overview.receipt.download"
-            >Stáhnout potvrzení za rok {{ year }} (PDF)</span
-          >
-        }
-      </button>
+      <div class="receipt-ready-action">
+        <button
+          type="button"
+          class="ui-button ui-button--primary receipt-ready-pdf"
+          [disabled]="donations.yearlyDownloading(year)"
+          [attr.aria-busy]="donations.yearlyDownloading(year)"
+          (click)="donations.downloadYearlyReceipt(year)"
+        >
+          @if (donations.yearlyDownloading(year)) {
+            <span i18n="@@donor.dashboard.receipt.preparing">Připravujeme PDF…</span>
+          } @else {
+            <span i18n="@@donor.overview.receipt.download"
+              >Stáhnout potvrzení za rok {{ year }} (PDF)</span
+            >
+          }
+        </button>
+        <p class="ui-form-status receipt-saved" role="status">
+          @if (donations.yearlySaved(year); as saved) {
+            <span>{{ saved }}</span>
+          }
+        </p>
+      </div>
       @if (donations.receiptError(); as error) {
         @if (error.scope === 'yearly') {
           <p class="ui-callout ui-callout--danger receipt-error" role="alert">
@@ -59,6 +89,7 @@
     >
       Jak poslat první dar
     </h2>
+    <app-missing-gift />
     <ol class="first-gift-steps">
       <li i18n="@@donor.overview.firstGift.chooseInCard">
         Zvolte částku v kartě Poslat dar níže a pošlete dar na účet nadačního fondu, převodem nebo
@@ -98,11 +129,7 @@
   <app-donations-pending />
 }
 
-<app-send-gift [variableSymbol]="donor()?.variableSymbol ?? null">
-  @if (donations.state() === 'ready' && !hasGift()) {
-    <app-missing-gift />
-  }
-</app-send-gift>
+<app-send-gift [variableSymbol]="donor()?.variableSymbol ?? null" />
 
 @if (donations.state() === 'ready' && hasGift()) {
   <dl class="ui-card overview-stats">
@@ -112,7 +139,18 @@
     </div>
     <div class="overview-stat">
       <dt i18n="@@donor.dashboard.stat.count">Počet darů</dt>
-      <dd class="stat-value">{{ donations.summary()?.count ?? 0 }}</dd>
+      <dd class="stat-value">
+        {{ giftCount() }}
+        @if (verifications() > 0) {
+          <span class="stat-note" i18n="@@donor.overview.stat.andVerifications">
+            {verifications(), plural,
+              one {a ověření účtu}
+              few {a {{ verifications() }} ověření účtu}
+              other {a {{ verifications() }} ověření účtu}
+            }
+          </span>
+        }
+      </dd>
     </div>
     @if (currentYear(); as year) {
       <div class="overview-stat">

@@ -129,6 +129,9 @@ test.describe('Given a signed-in donor', () => {
 
     expect(download.suggestedFilename()).toBe('potvrzeni-o-darech-2025.pdf');
     await expect(page.locator('.yearly-pdf')).toHaveText('Stáhnout potvrzení za rok 2025 (PDF)');
+    await expect(page.locator('.year-row').getByRole('status')).toHaveText(
+      'Potvrzení potvrzeni-o-darech-2025.pdf je stažené. Najdete ho ve stažených souborech.',
+    );
   });
 
   test('when they download the receipt of one payment, then the browser saves that PDF and a refunded payment offers none', async ({
@@ -152,6 +155,9 @@ test.describe('Given a signed-in donor', () => {
     ]);
 
     expect(download.suggestedFilename()).toBe('potvrzeni-o-daru-2026-000001.pdf');
+    await expect(page.locator('.payments-card tbody tr').nth(1).getByRole('status')).toHaveText(
+      'Potvrzení potvrzeni-o-daru-2026-000001.pdf je stažené. Najdete ho ve stažených souborech.',
+    );
   });
 
   test('when some gifts arrived before the first receipt year, then those offer no PDF, nor does their year, and lines say from when receipts are issued', async ({
@@ -229,7 +235,7 @@ test.describe('Given a signed-in donor', () => {
     await expect(guide.locator('.standing-value')).toHaveText([
       '5544332217/2010',
       '1234567890',
-      'Jakákoli, kterou chcete posílat',
+      '500 Kč, nebo jiná, kterou chcete posílat',
       'Každý měsíc, nebo jak často chcete',
     ]);
 

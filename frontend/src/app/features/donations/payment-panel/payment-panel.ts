@@ -86,15 +86,14 @@ export class PaymentPanel {
 
   protected readonly customChosen = signal(false);
   protected readonly presetAmount = signal(DEFAULT_AMOUNT);
-  protected readonly customAmount = signal<number | null>(DEFAULT_AMOUNT);
-  protected readonly customAmountSeed = signal(DEFAULT_AMOUNT);
+  protected readonly customAmount = signal<number | null>(null);
   private readonly customAmountLeft = signal(false);
   private readonly amountChanged = signal(false);
   private readonly attempt = signal(0);
   private readonly qrCode = viewChild(QrCode);
   private readonly fetched = new Map<string, Observable<PaymentQrResponse>>();
 
-  protected readonly amount = computed(() =>
+  readonly amount = computed(() =>
     this.customChosen() ? wholeAmountInRange(this.customAmount()) : this.presetAmount(),
   );
 
@@ -134,6 +133,13 @@ export class PaymentPanel {
   });
 
   protected readonly saving = signal(false);
+  protected readonly savedQrFile = signal<string | null>(null);
+  protected readonly savedQrText = computed(() => {
+    const fileName = this.savedQrFile();
+    return fileName === null
+      ? null
+      : $localize`:@@home.donate.qr.saved:QR kód ${fileName}:fileName: je uložený. Najdete ho ve stažených souborech.`;
+  });
 
   protected readonly announcedAmount = computed(() => {
     const amount = this.amount();
@@ -165,6 +171,7 @@ export class PaymentPanel {
 
   choosePreset(amount: number): void {
     this.amountChanged.set(true);
+    this.savedQrFile.set(null);
     this.customChosen.set(false);
     this.presetAmount.set(amount);
   }
@@ -173,14 +180,15 @@ export class PaymentPanel {
     if (this.customChosen()) {
       return;
     }
-    this.customAmountSeed.set(this.presetAmount());
-    this.customAmount.set(this.presetAmount());
+    this.savedQrFile.set(null);
+    this.customAmount.set(null);
     this.customAmountLeft.set(false);
     this.customChosen.set(true);
   }
 
   enterCustomAmount(event: Event): void {
     this.amountChanged.set(true);
+    this.savedQrFile.set(null);
     this.customAmount.set(wholeCrowns((event.target as HTMLInputElement).value));
   }
 
@@ -207,6 +215,7 @@ export class PaymentPanel {
       link.href = await qrCode.pngDataUrl(SAVED_QR_SIDE_PX);
       link.download = SAVED_QR_FILE;
       link.click();
+      this.savedQrFile.set(SAVED_QR_FILE);
     } finally {
       this.saving.set(false);
     }

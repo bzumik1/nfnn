@@ -117,6 +117,9 @@ describe('Given the standing order guide of the donor area', () => {
       expect(text('.standing-after')).toBe(
         'Každá platba se vám tu pak objeví sama a do ročního potvrzení se započítají všechny.',
       );
+      expect(text('.standing-bank-only')).toBe(
+        'Částku i den platby pak měníte jen ve své bance. Na tomto webu nic nastavovat nemusíte.',
+      );
     });
 
     it('then a line for a standing order with an older symbol keeps the way to the bank accounts', async () => {
@@ -173,6 +176,44 @@ describe('Given the standing order guide of the donor area', () => {
 
       expect(element('.standing-toggle')?.getAttribute('aria-expanded')).toBe('false');
       expect(document.activeElement).toBe(element('.standing-toggle'));
+    });
+  });
+
+  describe('when the payment card it sits in has an amount chosen', () => {
+    beforeEach(() => {
+      fixture.componentRef.setInput('account', {
+        kind: 'ready',
+        account: paymentQr().bankAccount,
+      });
+    });
+
+    it('then the amount row names that amount and still allows another one', async () => {
+      fixture.componentRef.setInput('amount', 400);
+      await toggle();
+
+      expect(texts('.standing-details dd .standing-value')[2]).toBe(
+        '400 Kč, nebo jiná, kterou chcete posílat',
+      );
+    });
+
+    it('then a later choice in the card changes the amount row with thousands spaced', async () => {
+      fixture.componentRef.setInput('amount', 400);
+      await toggle();
+      fixture.componentRef.setInput('amount', 1000);
+      await settle();
+
+      expect(texts('.standing-details dd .standing-value')[2]).toBe(
+        '1 000 Kč, nebo jiná, kterou chcete posílat',
+      );
+    });
+
+    it('then an amount not entered yet leaves the row open for any amount', async () => {
+      fixture.componentRef.setInput('amount', null);
+      await toggle();
+
+      expect(texts('.standing-details dd .standing-value')[2]).toBe(
+        'Jakákoli, kterou chcete posílat',
+      );
     });
   });
 

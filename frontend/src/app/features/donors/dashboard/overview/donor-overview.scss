@@ -63,6 +63,15 @@
   }
 }
 
+.stat-note {
+  display: block;
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--color-text-soft);
+  letter-spacing: normal;
+}
+
 .recent-card {
   margin-bottom: 0;
 }
@@ -75,7 +84,8 @@
   gap: var(--space-2) var(--space-4);
 }
 
-.overview-question {
+.overview-question,
+.admin-refusal {
   margin: 0 0 var(--space-4);
 
   .overview-account {
@@ -98,6 +108,11 @@
   .receipt-error {
     flex-basis: 100%;
     margin-top: 0;
+  }
+
+  .receipt-saved span {
+    margin-top: var(--space-1-5);
+    overflow-wrap: anywhere;
   }
 }
 

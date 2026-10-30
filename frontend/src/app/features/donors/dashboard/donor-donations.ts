@@ -25,6 +25,11 @@ export type BankCheckOutcome =
   | { readonly kind: 'unfinished' }
   | { readonly kind: 'failed' };
 
+interface SavedReceipt {
+  readonly key: string;
+  readonly fileName: string;
+}
+
 export interface ReceiptError {
   readonly scope: ReceiptScope;
   readonly message: string;
@@ -69,6 +74,7 @@ export class DonorDonations {
 
   readonly receiptError = signal<ReceiptError | null>(null);
   private readonly downloads = signal<ReadonlySet<string>>(new Set());
+  private readonly savedReceipt = signal<SavedReceipt | null>(null);
   private latestDonationsRequest = 0;
 
   constructor() {
@@ -154,6 +160,23 @@ export class DonorDonations {
     return this.downloads().has(singleKey(item.id));
   }
 
+  yearlySaved(year: number): string | null {
+    return this.savedText(yearlyKey(year));
+  }
+
+  singleSaved(item: DonationItem): string | null {
+    return this.savedText(singleKey(item.id));
+  }
+
+  private savedText(key: string): string | null {
+    const saved = this.savedReceipt();
+    if (saved?.key !== key) {
+      return null;
+    }
+    const fileName = saved.fileName;
+    return $localize`:@@donor.dashboard.receipt.saved:Potvrzení ${fileName}:fileName: je stažené. Najdete ho ve stažených souborech.`;
+  }
+
   downloadYearlyReceipt(year: number): void {
     this.download(yearlyKey(year), 'yearly', this.donations.yearlyReceipt(year));
   }
@@ -218,11 +241,13 @@ export class DonorDonations {
       return;
     }
     this.receiptError.set(null);
+    this.savedReceipt.set(null);
     this.downloads.update((running) => new Set(running).add(key));
     file$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (file) => {
         this.finishDownload(key);
         saveBlob(file);
+        this.savedReceipt.set({ key, fileName: file.fileName });
       },
       error: (failure: unknown) => {
         this.finishDownload(key);

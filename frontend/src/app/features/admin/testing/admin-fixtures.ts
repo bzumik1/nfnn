@@ -58,6 +58,7 @@ export function unpairedPayment(
     messageForRecipient: 'Dar pro fond',
     importedAt: '2026-10-17T10:00:00Z',
     unpairedByAdminAt: null,
+    accountVerification: false,
     donation: null,
     ...overrides,
   };

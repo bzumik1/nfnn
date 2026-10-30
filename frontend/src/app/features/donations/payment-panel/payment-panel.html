@@ -37,7 +37,6 @@
         type="text"
         inputmode="numeric"
         autocomplete="off"
-        [value]="customAmountSeed()"
         [attr.aria-invalid]="showAmountHint()"
         [attr.aria-describedby]="showAmountHint() ? amountHintId() : null"
         (input)="enterCustomAmount($event)"
@@ -157,6 +156,11 @@
         }
       </button>
     }
+    <p class="ui-form-status qr-saved" role="status">
+      @if (savedQrText(); as saved) {
+        <span>{{ saved }}</span>
+      }
+    </p>
     @if (state().kind === 'failed') {
       <div class="ui-callout ui-callout--danger qr-error">
         <p i18n="@@home.donate.qr.error">

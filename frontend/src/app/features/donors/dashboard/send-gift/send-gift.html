@@ -16,8 +16,8 @@
       class="send-gift-standing"
       [variableSymbol]="symbol"
       [account]="panel.accountState()"
+      [amount]="panel.amount()"
       (retryRequested)="panel.retry()"
     />
   }
-  <ng-content />
 </section>

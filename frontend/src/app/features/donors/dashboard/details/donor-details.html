@@ -7,3 +7,23 @@
 @if (isAdmin()) {
   <app-connected-apps-card (sessionEnded)="donations.sendToSignIn()" />
 }
+
+<section class="ui-card ui-card--padded account-deletion" aria-labelledby="account-deletion-title">
+  <h2 id="account-deletion-title" class="ui-card__title" i18n="@@donor.details.deletion.title">
+    Smazání účtu
+  </h2>
+  <p i18n="@@donor.details.deletion.how">
+    Účet si sami smazat nemůžete. Napište nám na
+    <a href="mailto:info@nfnn.cz?subject=Sma%C5%BE%C3%A1n%C3%AD%20%C3%BA%C4%8Dtu"
+      >info&#64;nfnn.cz</a
+    >, nejlépe z adresy, kterou se přihlašujete, že chcete účet smazat.
+  </p>
+  <p i18n="@@donor.details.deletion.what">
+    Smažeme vaše jméno, adresu, e&#8209;mail a přihlašovací údaje a pošleme vám o tom e&#8209;mail.
+    Záznamy o darech a vystavená potvrzení si musíme ponechat kvůli účetnictví.
+  </p>
+  <p i18n="@@donor.details.deletion.before">
+    Potvrzení o daru, která budete potřebovat, si stáhněte předem. Po smazání se do účtu už
+    nepřihlásíte.
+  </p>
+</section>

@@ -539,7 +539,7 @@ describe('Given an administrator on the administration home', () => {
           (fixture.nativeElement as HTMLElement).querySelectorAll('.attention-problems li'),
         ).map((item) => (item.textContent ?? '').trim()),
       ).toEqual([
-        'Poslední záloha se nepovedla. Data webu jsou v pořádku, ale nejsou zálohovaná. Zkuste Zálohovat teď; když to nepomůže, pošlete stránku Zálohy správci serveru.',
+        'Poslední záloha se nepovedla. Data webu jsou v pořádku, ale nejsou zálohovaná. Zkuste Zálohovat teď; když to nepomůže, zkopírujte zprávu pro technika a pošlete ji správci serveru.',
         'Zatím se nevyzkoušelo, že jde zálohu obnovit. Spusťte Ověřit obnovu teď.',
       ]);
       expect(backupsCard().querySelector('.healthy')).toBeNull();
@@ -625,7 +625,7 @@ describe('Given an administrator on the administration home', () => {
 
       expect(items()).toEqual([
         '3 platby čekají na přiřazení dárci (850 Kč). Přiřadit platby',
-        'Poslední záloha se nepovedla. Data webu jsou v pořádku, ale nejsou zálohovaná. Zkuste Zálohovat teď; když to nepomůže, pošlete stránku Zálohy správci serveru. Otevřít zálohy',
+        'Poslední záloha se nepovedla. Data webu jsou v pořádku, ale nejsou zálohovaná. Zkuste Zálohovat teď; když to nepomůže, zkopírujte zprávu pro technika a pošlete ji správci serveru. Zkopírovat zprávu pro technika Otevřít zálohy',
         'Správce Petr Svoboda nemá druhý faktor (kód z ověřovací aplikace ani přístupový klíč), správa se mu neotevře. Otevřít Správce',
       ]);
       const links = Array.from(
@@ -643,9 +643,29 @@ describe('Given an administrator on the administration home', () => {
       );
 
       expect(items()).toEqual([
-        'Web teď nevidí složku se zálohami, takže zálohy nejde vytvořit ani stáhnout. Data webu jsou v pořádku. Pošlete prosím stránku Zálohy správci serveru. Otevřít zálohy',
+        'Web teď nevidí složku se zálohami, takže zálohy nejde vytvořit ani stáhnout. Data webu jsou v pořádku. Zkopírujte prosím zprávu pro technika a pošlete ji správci serveru. Zkopírovat zprávu pro technika Otevřít zálohy',
       ]);
       expect(attention().textContent).not.toContain('compose');
+    });
+
+    it('then the message for the technician is copied with the technical details from the row', async () => {
+      const writeText = vi.fn().mockResolvedValue(undefined);
+      Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+      await sources(
+        paymentList([]),
+        [administrator()],
+        backupsView({ available: false, problems: ['BACKUPS_UNAVAILABLE'] }),
+      );
+
+      (
+        Array.from(attention().querySelectorAll('button') as NodeListOf<HTMLButtonElement>).find(
+          (button) => button.textContent?.trim() === 'Zkopírovat zprávu pro technika',
+        ) as HTMLButtonElement
+      ).click();
+      await fixture.whenStable();
+
+      expect(writeText).toHaveBeenCalledOnce();
+      expect(writeText.mock.calls[0][0]).toContain('/DATA/AppData/nfnn/backups');
     });
 
     it('then a backup key nobody saved yet gets a row leading to the backups', async () => {

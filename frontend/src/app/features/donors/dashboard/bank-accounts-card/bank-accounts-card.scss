@@ -313,6 +313,13 @@
   margin-top: var(--space-2-5);
 }
 
+.add-account-no-symbol-field {
+  margin-top: var(--space-4);
+  font-size: var(--text-sm);
+  line-height: var(--leading-relaxed);
+  color: var(--color-text-secondary);
+}
+
 .add-account-more {
   margin-top: var(--space-5);
   font-size: var(--text-sm);

@@ -145,12 +145,24 @@
               }
             </ul>
             &ngsp;
-            <a
-              class="ui-button ui-button--small"
-              routerLink="/sprava/zalohy"
-              i18n="@@admin.home.attention.backups.open"
-              >Otevřít zálohy</a
-            >
+            <span class="attention-actions">
+              @if (backupTechnicianMessage(); as message) {
+                <app-copy-button
+                  [value]="message"
+                  what="zprávu pro technika"
+                  i18n-what="@@admin.backups.message.what"
+                  label="Zkopírovat zprávu pro technika"
+                  i18n-label="@@admin.backups.message.copy"
+                />
+                &ngsp;
+              }
+              <a
+                class="ui-button ui-button--small"
+                routerLink="/sprava/zalohy"
+                i18n="@@admin.home.attention.backups.open"
+                >Otevřít zálohy</a
+              >
+            </span>
           </li>
         }
         @if (backupKeyUnconfirmed()) {

@@ -63,6 +63,7 @@ export interface AdminPaymentResponse {
   messageForRecipient: string | null;
   importedAt: string;
   unpairedByAdminAt: string | null;
+  accountVerification: boolean;
   donation: PairedDonationResponse | null;
 }
 
@@ -610,8 +611,10 @@ export class AdminApi {
     return this.http.get<AdminActionListResponse>('/api/admin/donors/actions', { params });
   }
 
-  donors(query: string): Observable<DonorAccountListResponse> {
-    return this.http.get<DonorAccountListResponse>('/api/admin/donors', { params: { query } });
+  donors(query: string, limit?: number): Observable<DonorAccountListResponse> {
+    const params: Record<string, string | number> =
+      limit === undefined ? { query } : { query, limit };
+    return this.http.get<DonorAccountListResponse>('/api/admin/donors', { params });
   }
 
   donor(donorId: string): Observable<DonorAccountResponse> {

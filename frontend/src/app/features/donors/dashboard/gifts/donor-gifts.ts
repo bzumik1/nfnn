@@ -15,6 +15,7 @@ import { MissingGift } from '../missing-gift/missing-gift';
 import { DonationsPending } from '../donations-pending/donations-pending';
 import { DonationsTable } from '../donations-table/donations-table';
 import { DonorDonations } from '../donor-donations';
+import { GiftCount, receivedVerifications } from '../gift-count/gift-count';
 import { PageTitle } from '../page-title/page-title';
 import { StandingOrder } from '../standing-order/standing-order';
 import { YearReceipt, yearReceipt } from '../yearly-receipt';
@@ -22,14 +23,23 @@ import { YearReceipt, yearReceipt } from '../yearly-receipt';
 interface GiftYear {
   readonly year: number;
   readonly items: readonly DonationItem[];
-  readonly count: number;
+  readonly gifts: number;
+  readonly verifications: number;
   readonly totalAmountMinor: number;
   readonly receipt: YearReceipt;
 }
 
 @Component({
   selector: 'app-donor-gifts',
-  imports: [PageTitle, BankCheck, DonationsPending, DonationsTable, MissingGift, StandingOrder],
+  imports: [
+    PageTitle,
+    BankCheck,
+    DonationsPending,
+    DonationsTable,
+    GiftCount,
+    MissingGift,
+    StandingOrder,
+  ],
   templateUrl: './donor-gifts.html',
   styleUrl: './donor-gifts.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -60,10 +70,12 @@ export class DonorGifts {
     }
     return [...byYear.entries()].map(([year, items]) => {
       const total = summary.byYear.find((entry) => entry.year === year);
+      const verifications = receivedVerifications(items);
       return {
         year,
         items,
-        count: total?.count ?? 0,
+        gifts: Math.max((total?.count ?? 0) - verifications, 0),
+        verifications,
         totalAmountMinor: total?.totalAmountMinor ?? 0,
         receipt: yearReceipt(year, summary),
       };

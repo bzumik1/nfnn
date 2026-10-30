@@ -10,6 +10,13 @@
   gap: var(--space-2) var(--space-4);
 }
 
+.gifts-tax-note {
+  margin-top: var(--space-2);
+  font-size: var(--text-md);
+  line-height: var(--leading-relaxed);
+  color: var(--color-text-soft);
+}
+
 .gift-year + .gift-year {
   border-top: 1px solid var(--color-divider);
 }
@@ -41,6 +48,11 @@
   color: var(--color-text);
   font-variant-numeric: var(--numeric-figures);
   white-space: nowrap;
+}
+
+.receipt-saved span {
+  margin-top: var(--space-1-5);
+  overflow-wrap: anywhere;
 }
 
 .gift-year-note {
