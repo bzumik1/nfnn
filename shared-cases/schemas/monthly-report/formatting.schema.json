@@ -19,11 +19,11 @@
         "name": { "type": "string", "minLength": 1 },
         "input": {
           "oneOf": [
-            { "$ref": "#/$defs/input", "properties": { "format": { "const": "amount" }, "amountMinor": { "type": "integer", "minimum": 0 } }, "required": ["amountMinor"], "unevaluatedProperties": false },
-            { "$ref": "#/$defs/input", "properties": { "format": { "const": "count" }, "count": { "$ref": "../defs/rows.schema.json#/$defs/count" } }, "required": ["count"], "unevaluatedProperties": false },
-            { "$ref": "#/$defs/input", "properties": { "format": { "const": "month" }, "month": { "$ref": "../defs/rows.schema.json#/$defs/month" } }, "required": ["month"], "unevaluatedProperties": false },
-            { "$ref": "#/$defs/input", "properties": { "format": { "const": "date" }, "date": { "$ref": "../defs/rows.schema.json#/$defs/day" } }, "required": ["date"], "unevaluatedProperties": false },
-            { "$ref": "#/$defs/input", "properties": { "format": { "const": "time" }, "instant": { "$ref": "../defs/rows.schema.json#/$defs/instant" } }, "required": ["instant"], "unevaluatedProperties": false }
+            { "type": "object", "$ref": "#/$defs/input", "properties": { "format": { "const": "amount" }, "amountMinor": { "type": "integer", "minimum": 0 } }, "required": ["amountMinor"], "unevaluatedProperties": false },
+            { "type": "object", "$ref": "#/$defs/input", "properties": { "format": { "const": "count" }, "count": { "$ref": "../defs/rows.schema.json#/$defs/count" } }, "required": ["count"], "unevaluatedProperties": false },
+            { "type": "object", "$ref": "#/$defs/input", "properties": { "format": { "const": "month" }, "month": { "$ref": "../defs/rows.schema.json#/$defs/month" } }, "required": ["month"], "unevaluatedProperties": false },
+            { "type": "object", "$ref": "#/$defs/input", "properties": { "format": { "const": "date" }, "date": { "$ref": "../defs/rows.schema.json#/$defs/day" } }, "required": ["date"], "unevaluatedProperties": false },
+            { "type": "object", "$ref": "#/$defs/input", "properties": { "format": { "const": "time" }, "instant": { "$ref": "../defs/rows.schema.json#/$defs/instant" } }, "required": ["instant"], "unevaluatedProperties": false }
           ]
         },
         "expected": {

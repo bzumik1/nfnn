@@ -27,6 +27,7 @@
           }
         },
         "expected": {
+          "type": "object",
           "$ref": "../defs/qr-symbol.schema.json",
           "properties": {
             "errorCorrection": { "const": "H" },
