@@ -547,7 +547,7 @@ describe('Given an administrator on a donor card', () => {
     await choose('Dar z 10. 10. 2026, 500 Kč');
 
     button(section('Vydaná potvrzení'), 'Vystavit potvrzení').click();
-    fixture.detectChanges();
+    await settle();
 
     const waiting = button(section('Vydaná potvrzení'), 'Vystavujeme potvrzení…');
     expect(waiting.disabled).toBe(true);

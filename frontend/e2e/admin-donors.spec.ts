@@ -55,6 +55,8 @@ const petrDetail = {
     registeredAt: '2026-10-17T10:00:00Z',
     erasedAt: null as string | null,
   },
+  yearlyReceiptsAvailableThrough: 2025,
+  receiptsAvailableFrom: 2026,
   bankAccounts: [
     bankAccountItem({
       id: LINK_ID,
@@ -324,6 +326,85 @@ test.describe('Given an administrator on the donors page', () => {
 
     await page.getByRole('link', { name: '← Dárci' }).click();
     await expect(page).toHaveURL(/\/sprava\/darci$/);
+  });
+
+  test('when they issue the receipt of one donation, then the button names the wait, the status line names the number and the card lists the new receipt', async ({
+    page,
+  }) => {
+    const issued: unknown[] = [];
+    let release: () => void = () => undefined;
+    const answered = new Promise<void>((resolve) => (release = resolve));
+    const newReceipt = {
+      id: '019a1c00-0000-7000-8000-00000000f002',
+      number: '2026-000002',
+      kind: 'SINGLE',
+      donationId: '0192f0f1-0000-7000-8000-000000000001',
+      donationReceivedOn: '2026-10-12',
+      year: null,
+      issuedOn: '2026-10-20',
+      issuedAt: '2026-10-20T08:00:00Z',
+      locale: 'cs',
+      active: true,
+    };
+    await page.route(
+      (url) => url.pathname === PETR_ACCOUNT,
+      (route) => route.fulfill({ json: petrAccount }),
+    );
+    await page.route(
+      (url) => url.pathname === PETR_DONATIONS,
+      (route) =>
+        route.fulfill({
+          json:
+            issued.length === 0
+              ? petrDetail
+              : { ...petrDetail, receipts: [newReceipt, ...petrDetail.receipts] },
+        }),
+    );
+    await page.route(
+      (url) => url.pathname === `${PETR_DONATIONS}/receipts`,
+      async (route) => {
+        issued.push(route.request().postDataJSON());
+        await answered;
+        await route.fulfill({
+          json: {
+            id: newReceipt.id,
+            donorId: PETR_ID,
+            status: 'ACTIVE',
+            kind: 'SINGLE',
+            number: '2026-000002',
+            donationId: newReceipt.donationId,
+            year: null,
+            issuedAt: newReceipt.issuedAt,
+            supersededAt: null,
+            receipt: {
+              number: '2026-000002',
+              issuedOn: '2026-10-20',
+              replaces: null,
+              verification: { keyId: '21fe31df', qrText: 'https://nfnn.cz/overit#1' },
+            },
+          },
+        });
+      },
+    );
+
+    await page.goto(`/sprava/darci/${PETR_ID}`);
+    const receiptsCard = page.getByRole('region', { name: 'Vydaná potvrzení' });
+    const choice = receiptsCard.getByLabel('Potvrzení k vystavení');
+    await expect(choice).toHaveValue(/dar-/);
+    await choice.selectOption({ label: 'Dar z 12. 10. 2026, 300\u00a0Kč' });
+    await receiptsCard.getByRole('button', { name: 'Vystavit potvrzení' }).click();
+
+    await expect(
+      receiptsCard.getByRole('button', { name: 'Vystavujeme potvrzení…' }),
+    ).toBeDisabled();
+    release();
+    await expect(receiptsCard.getByRole('status').filter({ hasText: /\S/ })).toHaveText(
+      'Vystavili jsme potvrzení 2026-000002 z 20. 10. 2026 10:00. Je platné.',
+    );
+    await expect(receiptsCard.getByRole('row').filter({ hasText: '2026-000002' })).toContainText(
+      'Dar z 12. 10. 2026',
+    );
+    expect(issued).toEqual([{ donationId: '0192f0f1-0000-7000-8000-000000000001' }]);
   });
 
   test('when removing an account is refused because of a receipt, then the alert shows the reason and the account stays', async ({

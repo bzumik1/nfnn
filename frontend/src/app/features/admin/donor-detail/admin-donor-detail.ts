@@ -7,10 +7,12 @@ import {
   ElementRef,
   inject,
   Injector,
+  linkedSignal,
   signal,
   viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Observable } from 'rxjs';
 import { describeProblem, problemTypeEndsWith } from '../../../core/auth/api-problem';
@@ -24,11 +26,15 @@ import { DonationItem } from '../../donations/donations-api';
 import {
   AdminApi,
   AdminDonorDetailResponse,
+  AdminIssuedReceiptResponse,
   AdminReceiptResponse,
   DonorAccountResponse,
+  ReceiptIssueRequest,
 } from '../admin-api';
 import { CopyButton } from '../../../shared/ui/copy-button/copy-button';
 import { Dialog } from '../../../shared/ui/dialog/dialog';
+import { FormControlDirective } from '../../../shared/ui/form-field/form-control';
+import { FormField } from '../../../shared/ui/form-field/form-field';
 import { LiveNotice, Notice } from '../../../shared/ui/live-notice/live-notice';
 
 type LoadState = 'loading' | 'ready' | 'missing' | 'error';
@@ -38,11 +44,17 @@ type AccountAction = 'disconnect' | 'reconnect' | 'remove';
 type PendingAction =
   { kind: 'reset' | 'passkeys' } | { kind: AccountAction; linkId: string } | null;
 
-type NoticeCard = 'signIn' | 'accounts' | 'erasure';
+type NoticeCard = 'signIn' | 'accounts' | 'receipts' | 'erasure';
 
 interface CardSection {
   readonly id: string;
   readonly label: string;
+}
+
+interface IssueChoice {
+  readonly key: string;
+  readonly label: string;
+  readonly request: ReceiptIssueRequest;
 }
 
 interface CardNotice {
@@ -74,7 +86,15 @@ const PAIRING_LABELS: Record<NonNullable<DonationItem['pairedBy']>, string> = {
 
 @Component({
   selector: 'app-admin-donor-detail',
-  imports: [CopyButton, Dialog, LiveNotice, RouterLink],
+  imports: [
+    CopyButton,
+    Dialog,
+    FormControlDirective,
+    FormField,
+    FormsModule,
+    LiveNotice,
+    RouterLink,
+  ],
   templateUrl: './admin-donor-detail.html',
   styleUrl: './admin-donor-detail.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -92,6 +112,8 @@ export class AdminDonorDetail {
   private readonly confirmCancel = viewChild<ElementRef<HTMLButtonElement>>('confirmCancel');
   private readonly signInNotice = viewChild('signInNotice', { read: ElementRef });
   private readonly accountsNotice = viewChild('accountsNotice', { read: ElementRef });
+  private readonly receiptsNotice = viewChild('receiptsNotice', { read: ElementRef });
+  private readonly issueSubmit = viewChild<ElementRef<HTMLButtonElement>>('issueSubmit');
   private readonly erasureNotice = viewChild('erasureNotice', { read: ElementRef });
   private readonly eraseCancel = viewChild<ElementRef<HTMLButtonElement>>('eraseCancel');
   private readonly eraseSubmit = viewChild<ElementRef<HTMLButtonElement>>('eraseSubmit');
@@ -105,6 +127,7 @@ export class AdminDonorDetail {
   protected readonly busy = signal(false);
   protected readonly pending = signal<PendingAction>(null);
   protected readonly erasing = signal(false);
+  protected readonly issuing = signal(false);
   protected readonly eraseConfirmed = signal(false);
   protected readonly eraseError = signal<string | null>(null);
   protected readonly ids = SECTIONS;
@@ -131,6 +154,15 @@ export class AdminDonorDetail {
   protected readonly erasedAt = computed(
     () => this.account()?.erasedAt ?? this.detail()?.donor.erasedAt ?? null,
   );
+  protected readonly issueChoices = computed<IssueChoice[]>(() => {
+    const detail = this.detail();
+    return detail === null || this.erasedAt() !== null ? [] : issueChoicesOf(detail);
+  });
+  protected readonly issueChoice = linkedSignal<IssueChoice[], string>({
+    source: this.issueChoices,
+    computation: (choices, previous) =>
+      choices.find((choice) => choice.key === previous?.value)?.key ?? choices[0]?.key ?? '',
+  });
 
   constructor() {
     this.loadAccount();
@@ -175,6 +207,16 @@ export class AdminDonorDetail {
           this.detail.set(detail);
           this.donationsState.set('ready');
         },
+        error: (failure: unknown) => this.donationsState.set(this.stateAfter(failure)),
+      });
+  }
+
+  private refreshDonations(): void {
+    this.api
+      .donorDonations(this.donorId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (detail) => this.detail.set(detail),
         error: (failure: unknown) => this.donationsState.set(this.stateAfter(failure)),
       });
   }
@@ -405,6 +447,44 @@ export class AdminDonorDetail {
       });
   }
 
+  protected issue(): void {
+    const choice = this.issueChoices().find((candidate) => candidate.key === this.issueChoice());
+    if (this.issuing() || choice === undefined) {
+      return;
+    }
+    const known = new Set(this.receipts().map((receipt) => receipt.id));
+    this.issuing.set(true);
+    this.cardNotice.set(null);
+    this.api
+      .issueReceipt(this.donorId, choice.request)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (issued) => {
+          this.issuing.set(false);
+          this.cardNotice.set({
+            card: 'receipts',
+            notice: { kind: 'status', text: issuedText(issued, known.has(issued.id)) },
+          });
+          this.refreshDonations();
+          this.focusAfterRender(() => this.noticeElement('receipts'));
+        },
+        error: (failure: unknown) => {
+          this.issuing.set(false);
+          this.cardNotice.set({
+            card: 'receipts',
+            notice: {
+              kind: 'alert',
+              text: describeProblem(
+                failure,
+                $localize`:@@admin.donorDetail.issue.failed:Potvrzení se nepodařilo vystavit. Zkuste to prosím znovu.`,
+              ),
+            },
+          });
+          this.focusAfterRender(() => this.issueSubmit()?.nativeElement ?? null);
+        },
+      });
+  }
+
   protected disconnect(item: BankAccountItem): void {
     this.run(
       this.api.disconnectDonorAccount(this.donorId, item.id),
@@ -484,7 +564,9 @@ export class AdminDonorDetail {
         ? this.signInNotice()
         : card === 'accounts'
           ? this.accountsNotice()
-          : this.erasureNotice();
+          : card === 'receipts'
+            ? this.receiptsNotice()
+            : this.erasureNotice();
     return (notice?.nativeElement as HTMLElement | undefined) ?? null;
   }
 
@@ -522,4 +604,41 @@ function refusal(failure: unknown, failed: string): string {
   return problemTypeEndsWith(failure, HAS_RECEIPT)
     ? `${described} ${$localize`:@@admin.donorDetail.remove.receiptNextStep:Dary s potvrzením musí zůstat. Aby se dárci další platby z účtu nepřiřazovaly, vypněte u něj párování.`}`
     : described;
+}
+
+function issueChoicesOf(detail: AdminDonorDetailResponse): IssueChoice[] {
+  const received = detail.donations.items.filter((item) => item.status === 'RECEIVED');
+  const years: IssueChoice[] = [];
+  for (
+    let year = detail.yearlyReceiptsAvailableThrough;
+    year >= detail.receiptsAvailableFrom;
+    year--
+  ) {
+    if (received.some((item) => item.receivedAt.startsWith(`${year}-`))) {
+      years.push({
+        key: `rok-${year}`,
+        label: $localize`:@@admin.donorDetail.issue.yearly:Roční potvrzení za rok ${year}:year:`,
+        request: { year },
+      });
+    }
+  }
+  const singles = received
+    .filter((item) => item.receiptAvailable)
+    .map((item) => ({
+      key: `dar-${item.id}`,
+      label: $localize`:@@admin.donorDetail.issue.single:Dar z ${formatDonationDate(item.receivedAt)}:day:, ${formatMinorUnits(item.amountMinor)}:amount:\u00a0Kč`,
+      request: { donationId: item.id },
+    }));
+  return [...years, ...singles];
+}
+
+function issuedText(issued: AdminIssuedReceiptResponse, alreadyIssued: boolean): string {
+  const time = formatBankTime(issued.issuedAt);
+  if (alreadyIssued) {
+    return $localize`:@@admin.donorDetail.issue.unchanged:Potvrzení ${issued.number}:number: z ${time}:time: dál platí: údaje se nezměnily, nové číslo jsme nevydali.`;
+  }
+  const replaced = issued.receipt.replaces;
+  return replaced === null
+    ? $localize`:@@admin.donorDetail.issue.done:Vystavili jsme potvrzení ${issued.number}:number: z ${time}:time:. Je platné.`
+    : $localize`:@@admin.donorDetail.issue.replacing:Vystavili jsme potvrzení ${issued.number}:number: z ${time}:time:, které nahrazuje potvrzení ${replaced.number}:replaced:. Je platné.`;
 }

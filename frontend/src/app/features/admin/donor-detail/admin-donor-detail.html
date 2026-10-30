@@ -794,9 +794,62 @@
         <h2 id="receipts-title" class="ui-card__title" i18n="@@admin.donorDetail.receipts.title">
           Vydaná potvrzení
         </h2>
+        @if (erasedAt() === null) {
+          <div class="ui-card__body receipt-issue">
+            @if (issueChoices().length > 0) {
+              <form class="receipt-issue__form" (ngSubmit)="issue()">
+                <app-form-field
+                  label="Potvrzení k vystavení"
+                  i18n-label="@@admin.donorDetail.issue.label"
+                  hint="Stejné údaje vrátí potvrzení, které už platí; nové číslo vznikne, jen když se údaje dárce nebo dary změnily."
+                  i18n-hint="@@admin.donorDetail.issue.hint"
+                >
+                  <select
+                    appFormControl
+                    id="receipt-issue-choice"
+                    name="issueChoice"
+                    [ngModel]="issueChoice()"
+                    (ngModelChange)="issueChoice.set($event)"
+                    [disabled]="issuing()"
+                  >
+                    @for (choice of issueChoices(); track choice.key) {
+                      <option [value]="choice.key">{{ choice.label }}</option>
+                    }
+                  </select>
+                </app-form-field>
+                <button
+                  #issueSubmit
+                  type="submit"
+                  class="ui-button ui-button--primary"
+                  [disabled]="issuing()"
+                >
+                  @if (issuing()) {
+                    <ng-container i18n="@@admin.donorDetail.issue.busy"
+                      >Vystavujeme potvrzení…</ng-container
+                    >
+                  } @else {
+                    <ng-container i18n="@@admin.donorDetail.issue.submit"
+                      >Vystavit potvrzení</ng-container
+                    >
+                  }
+                </button>
+              </form>
+            } @else {
+              <p class="ui-card__intro" i18n="@@admin.donorDetail.issue.none">
+                Dárce nemá žádný dar, za který by šlo potvrzení vystavit.
+              </p>
+            }
+          </div>
+        }
+        <app-live-notice
+          #receiptsNotice
+          class="card-notice"
+          tabindex="-1"
+          [notice]="noticeIn('receipts')"
+        />
         @if (receipts().length === 0) {
           <p class="ui-card__empty" i18n="@@admin.donorDetail.receipts.empty">
-            Dárce si zatím žádné potvrzení nestáhl.
+            Dárci zatím nikdo žádné potvrzení nevystavil.
           </p>
         } @else {
           <table class="ui-table">
