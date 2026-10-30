@@ -11,7 +11,7 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { formatBankTime } from '../../../donations/donation-date';
 import { AdminApi, ReceiptSigningKeysResponse } from '../../admin-api';
-import { unpublishedKeysSentence } from './unpublished-keys';
+import { unpublishedKeyIds, unpublishedKeysSentence } from './unpublished-keys';
 
 type LoadState = 'loading' | 'ready' | 'error';
 
@@ -29,8 +29,10 @@ export class ReceiptSigningKey {
   protected readonly keys = signal<ReceiptSigningKeysResponse | null>(null);
 
   protected readonly current = computed(() => this.keys()?.keys.find((key) => key.current) ?? null);
+  protected readonly currentKeyId = computed(() => this.keys()?.currentKeyId ?? null);
   protected readonly unpublished = computed(() => {
-    const ids = (this.keys()?.keys ?? []).filter((key) => !key.published).map((key) => key.keyId);
+    const keys = this.keys();
+    const ids = keys === null ? [] : unpublishedKeyIds(keys);
     return ids.length === 0 ? null : unpublishedKeysSentence(ids);
   });
   protected readonly earlier = computed(() => {
@@ -44,7 +46,7 @@ export class ReceiptSigningKey {
           $localize`:@@admin.signingKey.earlierKey:${key.keyId}:key: (zaregistrovaný ${formatBankTime(key.registeredAt)}:time:)`,
       )
       .join(', ');
-    return $localize`:@@admin.signingKey.earlier:Ověřují se i potvrzení podepsaná dřívějšími klíči: ${list}:keys:.`;
+    return $localize`:@@admin.signingKey.earlier:Zveřejněné jsou i dřívější klíče: ${list}:keys:.`;
   });
 
   constructor() {

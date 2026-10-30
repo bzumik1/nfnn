@@ -396,7 +396,7 @@ test.describe('Given an administrator', () => {
     const attention = page.getByRole('region', { name: 'Co potřebuje vaši pozornost' });
     const row = attention.locator('.attention-signing-key');
     await expect(row).toHaveText(
-      'Klíč 21fe31df neprošel kontrolou pečeti, proto ho web nezveřejňuje a QR kódy jím podepsané se neověří. Záznam v databázi se změnil mimo web; obraťte se na technika serveru. Otevřít nastavení',
+      'Klíč 21fe31df není zveřejněný, proto se QR kódy jím podepsané neověří. Jeho záznam v databázi chybí nebo neprošel kontrolou pečeti (změna mimo web nebo záloha jiného serveru, kterou server nepřevzal); obraťte se na technika serveru. Otevřít nastavení',
     );
     await row.getByRole('link', { name: 'Otevřít nastavení' }).click();
 
@@ -406,7 +406,7 @@ test.describe('Given an administrator', () => {
     ).toBeFocused();
     const card = page.getByRole('region', { name: 'Klíč k ověřovacím QR kódům' });
     await expect(card.locator('dd')).toHaveText(['21fe31df', '13. 11. 2026 12:00', 'Nezveřejněný']);
-    await expect(card.getByRole('alert')).toContainText('Klíč 21fe31df neprošel kontrolou pečeti');
+    await expect(card.getByRole('alert')).toContainText('Klíč 21fe31df není zveřejněný');
   });
 
   test('when the state cannot be loaded, then a retry asks again', async ({ page }) => {

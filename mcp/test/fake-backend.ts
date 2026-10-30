@@ -34,6 +34,7 @@ export interface RecordedRequest {
 export class FakeBackend {
   readonly requests: RecordedRequest[] = [];
   metadataAvailable = true;
+  receiptSigningKeysAvailable = true;
   previousSignInAt: string | null = '2026-10-28T20:14:00Z';
   private server: Server | undefined;
   url = '';
@@ -108,6 +109,12 @@ export class FakeBackend {
     }
     if (request.method === 'GET' && url.pathname === '/api/admin/donors/me/previous-sign-in') {
       return [200, { previousSignInAt: this.previousSignInAt }];
+    }
+    if (
+      !this.receiptSigningKeysAvailable &&
+      url.pathname === '/api/admin/donations/receipt-signing-keys'
+    ) {
+      return [404, problem(404, 'not-found', 'Nenalezeno')];
     }
     return adminRoute(request, url, body);
   }

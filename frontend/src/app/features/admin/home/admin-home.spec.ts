@@ -699,13 +699,27 @@ describe('Given an administrator on the administration home', () => {
       );
 
       expect(items()).toEqual([
-        'Klíč 21fe31df neprošel kontrolou pečeti, proto ho web nezveřejňuje a QR kódy jím podepsané se neověří. Záznam v databázi se změnil mimo web; obraťte se na technika serveru. Otevřít nastavení',
+        'Klíč 21fe31df není zveřejněný, proto se QR kódy jím podepsané neověří. Jeho záznam v databázi chybí nebo neprošel kontrolou pečeti (změna mimo web nebo záloha jiného serveru, kterou server nepřevzal); obraťte se na technika serveru. Otevřít nastavení',
       ]);
       const row = attention().querySelector('.attention-list > li') as HTMLElement;
       expect(row.classList).toContain('attention-item--danger');
       expect(row.querySelector('a')?.getAttribute('href')).toBe(
         '/sprava/nastaveni#klic-k-overovacim-qr',
       );
+    });
+
+    it('then a current receipt signing key missing from the list gets the same red row', async () => {
+      await sources(
+        paymentList([]),
+        [administrator()],
+        backupsView(),
+        importState({ lastSucceededAt: '2026-10-18T08:05:30Z' }),
+        { currentKeyId: '21fe31df', currentKeyPublished: false, keys: [] },
+      );
+
+      expect(items()).toEqual([
+        'Klíč 21fe31df není zveřejněný, proto se QR kódy jím podepsané neověří. Jeho záznam v databázi chybí nebo neprošel kontrolou pečeti (změna mimo web nebo záloha jiného serveru, kterou server nepřevzal); obraťte se na technika serveru. Otevřít nastavení',
+      ]);
     });
 
     it('then a source that fails says so with a retry while the others still show', async () => {

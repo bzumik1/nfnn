@@ -8,6 +8,7 @@ import cz.novanadeje.app.cucumber.ApiClient;
 import cz.novanadeje.app.cucumber.DonorSessions;
 import cz.novanadeje.app.donations.application.signing.ReceiptSigningKeyRegistration;
 import cz.novanadeje.app.donations.domain.signing.ReceiptSigningKey;
+import cz.novanadeje.app.operations.infrastructure.backup.BackupProperties;
 import cz.novanadeje.app.operations.infrastructure.settings.EarlierServerSeals;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
 import io.cucumber.datatable.DataTable;
@@ -15,13 +16,21 @@ import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.core.env.Environment;
 import org.springframework.http.HttpHeaders;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import tools.jackson.databind.JsonNode;
 
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.sql.Timestamp;
+import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Base64;
@@ -37,22 +46,31 @@ public class ReceiptKeysStepDefinitions {
     private static final String ADMIN_RECEIPT_KEYS = "/api/admin/donations/receipt-signing-keys";
     private static final String EARLIER_PUBLIC_KEY = "3d4017c3e843895a92b70aa74d1b7ebc9c982ccf2ec4968cc0cd55f12af4660c";
     private static final String EARLIER_SETTINGS_KEY = Base64.getEncoder().encodeToString("an-earlier-server-settings-key!!".getBytes(StandardCharsets.US_ASCII));
+    private static final String APPLICATION_LOGGERS = "cz.novanadeje.app";
+    private static final List<String> KEY_LOGGERS = List.of(ReceiptSigningKeyRegistration.class.getName(),
+            "cz.novanadeje.app.donations.infrastructure.signing.ReceiptSigningKeyStartup");
 
     private final ApiClient api;
     private final DonorSessions sessions;
     private final ReceiptSigningKeyRegistration registration;
     private final JdbcClient jdbc;
     private final Environment environment;
+    private final ConfigurableApplicationContext context;
+    private final Clock clock;
+    private final Path restoreStatus;
     private final List<String> loggedErrors = new ArrayList<>();
     private String visitorAnswer;
 
     public ReceiptKeysStepDefinitions(ApiClient api, DonorSessions sessions, ReceiptSigningKeyRegistration registration, JdbcClient jdbc,
-                                      Environment environment) {
+                                      Environment environment, ConfigurableApplicationContext context, Clock clock, BackupProperties backups) {
         this.api = api;
         this.sessions = sessions;
         this.registration = registration;
         this.jdbc = jdbc;
         this.environment = environment;
+        this.context = context;
+        this.clock = clock;
+        this.restoreStatus = backups.directory().resolve("status").resolve("restore");
     }
 
     @Given("the server has started and registered its receipt signing key")
@@ -62,12 +80,48 @@ public class ReceiptKeysStepDefinitions {
 
     @When("the server starts again")
     public void theServerStartsAgain() {
+        whileLogging(registration::registerOwnKey);
+    }
+
+    @When("the backend is ready")
+    public void theBackendIsReady() {
+        whileOnlyKeyLinesAreLogged(() -> whileLogging(
+                () -> context.publishEvent(new ApplicationReadyEvent(new SpringApplication(), new String[0], context, Duration.ZERO))));
+    }
+
+    private static void whileOnlyKeyLinesAreLogged(Runnable start) {
+        Logger application = (Logger) LoggerFactory.getLogger(APPLICATION_LOGGERS);
+        List<Logger> keyLoggers = KEY_LOGGERS.stream().map(name -> (Logger) LoggerFactory.getLogger(name)).toList();
+        Level applicationLevel = application.getLevel();
+        List<Level> keyLevels = keyLoggers.stream().map(Logger::getLevel).toList();
+        Level effective = application.getEffectiveLevel();
+        keyLoggers.forEach(logger -> logger.setLevel(effective));
+        application.setLevel(Level.OFF);
+        try {
+            start.run();
+        } finally {
+            application.setLevel(applicationLevel);
+            for (int index = 0; index < keyLoggers.size(); index++) {
+                keyLoggers.get(index).setLevel(keyLevels.get(index));
+            }
+        }
+    }
+
+    @Given("the backup container finished that restore {int} minutes ago under the request {string}")
+    public void theBackupContainerFinishedThatRestore(int minutes, String requestId) throws IOException {
+        Instant finished = clock.instant().minus(Duration.ofMinutes(minutes));
+        Files.createDirectories(restoreStatus.getParent());
+        Files.writeString(restoreStatus, "outcome=ok\nstarted_at=" + finished.minusSeconds(40) + "\nfinished_at=" + finished
+                + "\nfile=nfnn-2026-11-01_0300.dump.age\nsize=1000\ntables=37\nrequest=" + requestId + "\nadmin=\n");
+    }
+
+    private void whileLogging(Runnable start) {
         Logger logger = (Logger) LoggerFactory.getLogger(ReceiptSigningKeyRegistration.class);
         ListAppender<ILoggingEvent> lines = new ListAppender<>();
         lines.start();
         logger.addAppender(lines);
         try {
-            registration.registerOwnKey();
+            start.run();
         } finally {
             logger.detachAppender(lines);
         }
@@ -77,6 +131,25 @@ public class ReceiptKeysStepDefinitions {
     @Given("the receipt signing key {string} was altered in the database to look revoked")
     public void theReceiptSigningKeyWasAltered(String keyId) {
         assertThat(jdbc.sql("update receipt_signing_key set status = 'revoked' where key_id = ?").param(keyId).update()).isEqualTo(1);
+    }
+
+    @Given("the public key of the receipt signing key {string} was replaced in the database by another key's")
+    public void thePublicKeyWasReplaced(String keyId) {
+        assertThat(jdbc.sql("update receipt_signing_key set public_key = ? where key_id = ?").params(HexFormat.of().parseHex(EARLIER_PUBLIC_KEY), keyId)
+                .update()).isEqualTo(1);
+    }
+
+    @Given("the registration time of the receipt signing key {string} was replaced in the database by {string}")
+    public void theRegistrationTimeWasReplaced(String keyId, String registeredAt) {
+        assertThat(jdbc.sql("update receipt_signing_key set registered_at = ? where key_id = ?").params(Timestamp.from(Instant.parse(registeredAt)), keyId)
+                .update()).isEqualTo(1);
+    }
+
+    @Given("a row for the receipt signing key {string} was added in the database with the seal of {string}")
+    public void aRowWasAddedWithTheSealOf(String keyId, String sealedKeyId) {
+        String seal = jdbc.sql("select seal from receipt_signing_key where key_id = ?").param(sealedKeyId).query(String.class).single();
+        jdbc.sql("insert into receipt_signing_key (key_id, public_key, registered_at, status, seal) values (?, ?, ?, 'active', ?)")
+                .params(keyId, HexFormat.of().parseHex(EARLIER_PUBLIC_KEY), Timestamp.from(Instant.parse("2026-11-01T07:00:00Z")), seal).update();
     }
 
     @Given("a backup of an earlier server with its receipt signing key registered at {string} was restored")

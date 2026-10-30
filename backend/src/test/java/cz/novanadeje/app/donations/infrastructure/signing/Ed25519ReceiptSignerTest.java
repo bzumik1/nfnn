@@ -34,6 +34,18 @@ class Ed25519ReceiptSignerTest {
     }
 
     @Test
+    @DisplayName("Given the seed of RFC 8032 test SHA(abc), whose public key has an odd x, when it signs the RFC's message, then it gives the RFC's public key and signature, which verify")
+    void should_give_rfc_public_key_and_signature_when_signing_given_rfc_sha_abc_seed_with_odd_x() {
+        Ed25519ReceiptSigner signer = Rfc8032Keys.testShaAbc();
+        byte[] message = HEX.parseHex(Rfc8032Keys.TEST_SHA_ABC_MESSAGE);
+
+        assertThat(HEX.formatHex(signer.publicKey())).isEqualTo(Rfc8032Keys.TEST_SHA_ABC_PUBLIC_KEY);
+        assertThat(signer.keyId().value()).isEqualTo(Rfc8032Keys.TEST_SHA_ABC_KEY_ID);
+        assertThat(HEX.formatHex(signer.sign(message))).isEqualTo(Rfc8032Keys.TEST_SHA_ABC_SIGNATURE);
+        assertThat(signer.verifies(signer.publicKey(), message, HEX.parseHex(Rfc8032Keys.TEST_SHA_ABC_SIGNATURE))).isTrue();
+    }
+
+    @Test
     @DisplayName("Given one seed, when it signs the same message twice, then both signatures are the same")
     void should_sign_deterministically_when_signing_twice_given_one_seed() {
         Ed25519ReceiptSigner signer = Rfc8032Keys.test1();

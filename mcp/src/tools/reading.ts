@@ -34,7 +34,7 @@ export function registerReadingTools(server: McpServer, deps: ToolDependencies):
     {
       title: 'Stav serveru',
       description:
-        'The running backend version and health, the Fio bank import state (covered period, last attempt and success, failures, reported outage), the last backup and test restore, and the key that signs the verification QR codes on receipts (its id, when the server registered it, whether it is published; attention is true when a key fails its seal and is not published).',
+        'The running backend version and health, the Fio bank import state (covered period, last attempt and success, failures, reported outage), the last backup and test restore, and the key that signs the verification QR codes on receipts (its id, when the server registered it, whether it is published; attention is true when a key fails its seal and is not published, and when that part is unavailable, which leaves the rest of the status as it is).',
       annotations: READ_ONLY,
     },
     async (ctx) =>
@@ -44,7 +44,9 @@ export function registerReadingTools(server: McpServer, deps: ToolDependencies):
           backend.get('/actuator/health'),
           backend.get('/api/admin/donations/import-state', apiToken),
           backend.get('/api/admin/operations/backups', apiToken),
-          backend.get('/api/admin/donations/receipt-signing-keys', apiToken),
+          backend
+            .get('/api/admin/donations/receipt-signing-keys', apiToken)
+            .then(receiptSigningKeys, unavailableReceiptSigningKeys),
         ]);
         const backupView = asRecord(backups);
         return text({
@@ -54,7 +56,7 @@ export function registerReadingTools(server: McpServer, deps: ToolDependencies):
           lastBackup: backupView['lastBackup'],
           lastTestRestore: backupView['lastTestRestore'],
           backupProblems: backupView['problems'],
-          receiptSigningKeys: receiptSigningKeys(signingKeys),
+          receiptSigningKeys: signingKeys,
         });
       }),
   );
@@ -645,6 +647,13 @@ function searchOrder(files: readonly LogFile[], series: string, start: string): 
   const order = [series, ...copies];
   const from = order.indexOf(start);
   return from < 0 ? [start] : order.slice(from);
+}
+
+function unavailableReceiptSigningKeys(failure: unknown): Record<string, unknown> {
+  return {
+    unavailable: failure instanceof BackendProblem ? failure.message : 'the backend did not answer',
+    attention: true,
+  };
 }
 
 function receiptSigningKeys(answer: unknown): Record<string, unknown> {

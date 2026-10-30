@@ -110,6 +110,22 @@ describe('Given an administrator connected with the reading permission only', ()
     );
   });
 
+  it('when the status is asked of a backend without the receipt signing keys, then the rest still comes and the key part says it is unavailable', async () => {
+    stack.backend.receiptSigningKeysAvailable = false;
+    try {
+      const result = await client.callTool({ name: 'nfnn_status', arguments: {} });
+      expect(result.isError).toBeFalsy();
+      const text = textOf(result);
+      expect(text).toContain('"revision":"abc1234"');
+      expect(text).toContain('"outcome":"OK"');
+      expect(text).toContain(
+        '"receiptSigningKeys":{"unavailable":"404 not-found: Nenalezeno","attention":true}',
+      );
+    } finally {
+      stack.backend.receiptSigningKeysAvailable = true;
+    }
+  });
+
   it('when the tools are listed, then the overview says it counts the donors who gave in each month', async () => {
     const { tools } = await client.listTools();
     expect(tools.find((tool) => tool.name === 'nfnn_overview')?.description).toContain(

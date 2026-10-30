@@ -27,4 +27,15 @@
         <sql>alter table receipt_signing_key add constraint ck_receipt_signing_key_status check (status in ('active', 'revoked'))</sql>
     </changeSet>
 
+    <changeSet id="021-record-receipt-signing-key-adoptions" author="nfnn">
+        <createTable tableName="receipt_signing_key_adoption">
+            <column name="restore_id" type="varchar(40)">
+                <constraints primaryKey="true" primaryKeyName="pk_receipt_signing_key_adoption" nullable="false"/>
+            </column>
+            <column name="adopted_at" type="timestamp with time zone">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+
 </databaseChangeLog>

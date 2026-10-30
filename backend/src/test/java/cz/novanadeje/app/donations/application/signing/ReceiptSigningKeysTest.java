@@ -1,0 +1,104 @@
+package cz.novanadeje.app.donations.application.signing;
+
+import cz.novanadeje.app.donations.domain.signing.ReceiptSigningKey;
+import cz.novanadeje.app.donations.domain.signing.ReceiptSigningKeyId;
+import cz.novanadeje.app.donations.domain.signing.ReceiptSigningKeyRepository;
+import cz.novanadeje.app.donations.domain.signing.ReceiptSigningKeyStatus;
+import cz.novanadeje.app.shared.application.seal.RecordSeals;
+import cz.novanadeje.app.shared.application.seal.SealVerdict;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.HexFormat;
+import java.util.List;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
+class ReceiptSigningKeysTest {
+
+    private static final byte[] OWN_PUBLIC_KEY = HexFormat.of().parseHex("d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a");
+    private static final byte[] EARLIER_PUBLIC_KEY = HexFormat.of().parseHex("3d4017c3e843895a92b70aa74d1b7ebc9c982ccf2ec4968cc0cd55f12af4660c");
+    private static final Instant EARLIER = Instant.parse("2026-11-01T07:00:00Z");
+    private static final Instant NOW = Instant.parse("2026-11-13T11:00:00Z");
+
+    private final List<ReceiptSigningKey> stored = new ArrayList<>();
+    private final ReceiptSigner signer = mock(ReceiptSigner.class);
+    private final ReceiptSigningKeys keys = new ReceiptSigningKeys(new ListedKeys(stored), new PrefixSeals(), signer);
+
+    @BeforeEach
+    void ownKey() {
+        when(signer.keyId()).thenReturn(ReceiptSigningKeyId.of(OWN_PUBLIC_KEY));
+        stored.add(ReceiptSigningKey.register(OWN_PUBLIC_KEY, NOW, content -> PrefixSeals.HERE));
+    }
+
+    @Test
+    @DisplayName("Given a key sealed under a carried settings key that no start adopted, when the keys are listed, then it is not published and the administrator sees it flagged")
+    void should_not_publish_when_listed_given_a_key_sealed_by_a_carried_key() {
+        stored.add(ReceiptSigningKey.register(EARLIER_PUBLIC_KEY, EARLIER, content -> PrefixSeals.CARRIED));
+
+        assertThat(keys.published()).extracting(key -> key.id().value()).containsExactly("21fe31df");
+        assertThat(keys.overview().keys()).filteredOn(key -> key.id().value().equals("39f713d0")).singleElement()
+                .satisfies(key -> assertThat(key.published()).isFalse());
+    }
+
+    @Test
+    @DisplayName("Given a row sealed here that pairs an earlier key id with another public key, when the keys are listed, then it is not published")
+    void should_not_publish_when_listed_given_an_id_that_is_not_its_public_keys() {
+        stored.add(new ReceiptSigningKey(ReceiptSigningKeyId.of(EARLIER_PUBLIC_KEY), OWN_PUBLIC_KEY, EARLIER, ReceiptSigningKeyStatus.ACTIVE,
+                PrefixSeals.HERE));
+
+        assertThat(keys.published()).extracting(key -> key.id().value()).containsExactly("21fe31df");
+    }
+
+    @Test
+    @DisplayName("Given the own key row missing, when the overview is read, then the current key is named and not published")
+    void should_name_current_key_unpublished_when_overview_is_read_given_no_own_row() {
+        stored.clear();
+
+        assertThat(keys.overview().currentKeyId().value()).isEqualTo("21fe31df");
+        assertThat(keys.overview().currentKeyPublished()).isFalse();
+    }
+
+    private record ListedKeys(List<ReceiptSigningKey> stored) implements ReceiptSigningKeyRepository {
+
+        @Override
+        public List<ReceiptSigningKey> findAll() {
+            return List.copyOf(stored);
+        }
+
+        @Override
+        public void save(ReceiptSigningKey key) {
+            throw new UnsupportedOperationException("the list only reads");
+        }
+
+        @Override
+        public boolean recordRestoreAdoption(String restoreId, Instant adoptedAt) {
+            throw new UnsupportedOperationException("the list only reads");
+        }
+    }
+
+    private static final class PrefixSeals implements RecordSeals {
+
+        private static final String HERE = "here";
+        private static final String CARRIED = "carried";
+
+        @Override
+        public String seal(String purpose, byte[] content) {
+            return HERE;
+        }
+
+        @Override
+        public SealVerdict check(String purpose, byte[] content, String seal) {
+            return switch (seal) {
+                case HERE -> SealVerdict.SEALED_HERE;
+                case CARRIED -> SealVerdict.SEALED_BY_CARRIED_KEY;
+                default -> SealVerdict.BROKEN;
+            };
+        }
+    }
+}

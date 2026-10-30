@@ -35,6 +35,10 @@ public record ReceiptSigningKey(ReceiptSigningKeyId id, byte[] publicKey, Instan
                 .getBytes(StandardCharsets.UTF_8);
     }
 
+    public boolean idMatchesPublicKey() {
+        return publicKey.length == ReceiptSigningKeyId.PUBLIC_KEY_BYTES && id.equals(ReceiptSigningKeyId.of(publicKey));
+    }
+
     public byte[] sealedContent() {
         return sealedContent(id, publicKey, registeredAt, status);
     }

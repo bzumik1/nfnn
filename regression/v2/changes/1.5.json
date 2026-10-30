@@ -27,37 +27,49 @@
   },
   {
     "kind": "log-field",
-    "line": "donations.application.signing.ReceiptSigningKeyRegistration: Receipt signing key <n>fe<n>df registered and published",
-    "reason": "1.5 logs at WARN when the server registers and publishes a new receipt signing key at start (plan v3 D9), so an unexpected new key shows in backend.log",
+    "line": "donations.application.signing.ReceiptSigningKeyRegistration: Receipt signing key <key-id> registered and published",
+    "reason": "1.5 logs at WARN, after the commit, when the server registers and publishes its own receipt signing key at start (plan v3 D9), so an unexpected new key shows in backend.log",
     "contract": "docs/api-contract.md, Receipt verification proof and signing keys; docs/security-overview.md, Receipt signing key",
     "security": {
       "approvedIn": "PENDING",
       "fields": {
-        "<n>": "the digit runs of the receipt signing key id, 8 hex digits of the SHA-256 of the public key (public, also served by GET /api/donations/receipt-keys; the shape follows the id, here the RFC 8032 test key 21fe31df)"
+        "<key-id>": "the receipt signing key id: 8 hex digits of the SHA-256 of the public key, public (GET /api/donations/receipt-keys serves it to anyone); no personal data and no secret"
       }
     }
   },
   {
     "kind": "log-field",
-    "line": "donations.application.signing.ReceiptSigningKeyRegistration: Receipt signing key <n>fe<n>df fails its seal, so it is not published",
-    "reason": "1.5 logs at ERROR every key row whose seal fails at start (plan v3 1.5: a tampered row is never published and raises the alarm)",
+    "line": "donations.application.signing.ReceiptSigningKeyRegistration: Receipt signing key <key-id> fails its seal, so it is not published",
+    "reason": "1.5 logs at ERROR, once per key row, a row whose seal fails or whose id is not the hash of its public key (plan v3 1.5: a tampered row is never published and raises the alarm)",
     "contract": "docs/api-contract.md, Receipt verification proof and signing keys; docs/security-overview.md, Receipt signing key",
     "security": {
       "approvedIn": "PENDING",
       "fields": {
-        "<n>": "the digit runs of the receipt signing key id, 8 hex digits of the SHA-256 of the public key (public, also served by GET /api/donations/receipt-keys; the shape follows the id, here the RFC 8032 test key 21fe31df)"
+        "<key-id>": "the receipt signing key id: 8 hex digits of the SHA-256 of the public key, public (GET /api/donations/receipt-keys serves it to anyone); no personal data and no secret"
       }
     }
   },
   {
     "kind": "log-field",
-    "line": "donations.application.signing.ReceiptSigningKeyRegistration: <n> receipt signing keys restored from a backup are sealed again with this server's settings key",
-    "reason": "1.5 logs at INFO how many key rows restored from another server's backup were sealed again under this server's settings key, so old receipts keep verifying after a move",
-    "contract": "docs/system-overview.md, donations (Receipt signing keys)",
+    "line": "donations.application.signing.ReceiptSigningKeyRegistration: Receipt signing key <key-id> is sealed by the settings key of another server and no restore confirms it, so it is not published",
+    "reason": "1.5 logs at ERROR, once per key row, a row sealed under a carried settings key when no restore finished by the backup container within the hour confirms it (1.5 security review M1)",
+    "contract": "docs/api-contract.md, Receipt verification proof and signing keys; docs/security-overview.md, Receipt signing key",
     "security": {
       "approvedIn": "PENDING",
       "fields": {
-        "<n>": "the number of key rows sealed again"
+        "<key-id>": "the receipt signing key id: 8 hex digits of the SHA-256 of the public key, public (GET /api/donations/receipt-keys serves it to anyone); no personal data and no secret"
+      }
+    }
+  },
+  {
+    "kind": "log-field",
+    "line": "donations.application.signing.ReceiptSigningKeyRegistration: Receipt signing key <key-id> from a restored backup is sealed again and published",
+    "reason": "1.5 logs at WARN, once per key row and after the commit, a key adopted from a restore the backup container confirmed, besides the ADOPT_RECEIPT_SIGNING_KEY audit entry (1.5 security review M1)",
+    "contract": "docs/api-contract.md, Receipt verification proof and signing keys; docs/security-overview.md, Receipt signing key",
+    "security": {
+      "approvedIn": "PENDING",
+      "fields": {
+        "<key-id>": "the receipt signing key id: 8 hex digits of the SHA-256 of the public key, public (GET /api/donations/receipt-keys serves it to anyone); no personal data and no secret"
       }
     }
   }

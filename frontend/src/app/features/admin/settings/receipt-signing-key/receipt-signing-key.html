@@ -9,8 +9,9 @@
   </h2>
   <div class="ui-card__body">
     <p class="ui-card__intro" i18n="@@admin.signingKey.intro">
-      Server jím podepisuje ověřovací QR kódy na potvrzeních o daru a web zveřejňuje jeho veřejnou
-      část, aby kdokoli mohl potvrzení ověřit. Klíč vytvořil server sám a tady se nedá změnit.
+      Tímto klíčem bude server podepisovat ověřovací QR kódy na potvrzeních o daru. Jeho veřejnou
+      část web zveřejňuje, aby se podle ní dala potvrzení ověřit. Klíč vytvořil server sám a tady se
+      nedá změnit.
     </p>
 
     @switch (state()) {
@@ -45,6 +46,17 @@
               } @else {
                 <dd i18n="@@admin.signingKey.notPublished">Nezveřejněný</dd>
               }
+            </div>
+          </dl>
+        } @else if (currentKeyId(); as keyId) {
+          <dl class="ui-data-list signing-key-data">
+            <div>
+              <dt i18n="@@admin.signingKey.keyId">Klíč serveru</dt>
+              <dd class="ui-mono">{{ keyId }}</dd>
+            </div>
+            <div>
+              <dt i18n="@@admin.signingKey.state">Stav</dt>
+              <dd i18n="@@admin.signingKey.notPublished">Nezveřejněný</dd>
             </div>
           </dl>
         }

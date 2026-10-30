@@ -1,5 +1,9 @@
 package cz.novanadeje.app.donations.infrastructure.signing;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import cz.novanadeje.app.donations.application.signing.ReceiptProofs;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptKind;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptNumber;
@@ -21,6 +25,7 @@ import cz.novanadeje.app.sharedcases.SharedCase;
 import cz.novanadeje.app.sharedcases.SharedCaseRunner;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.node.JsonNodeFactory;
+import org.slf4j.LoggerFactory;
 import tools.jackson.databind.node.ObjectNode;
 
 import java.security.MessageDigest;
@@ -86,8 +91,21 @@ class ReceiptProofSharedCasesTest extends SharedCaseRunner {
             assertThat(proofs.prove(receipt)).isEqualTo(proof);
         } else {
             answer.putObject("qr").put("refusal", ReceiptTooLong.CODE);
-            assertThatThrownBy(() -> proofs.prove(receipt)).isInstanceOfSatisfying(ReceiptTooLong.class,
-                    refused -> assertThat(refused.code()).isEqualTo(ReceiptTooLong.CODE));
+            ListAppender<ILoggingEvent> lines = new ListAppender<>();
+            Logger logger = (Logger) LoggerFactory.getLogger(ReceiptProofs.class);
+            lines.start();
+            logger.addAppender(lines);
+            try {
+                assertThatThrownBy(() -> proofs.prove(receipt)).isInstanceOfSatisfying(ReceiptTooLong.class,
+                        refused -> assertThat(refused.code()).isEqualTo(ReceiptTooLong.CODE));
+            } finally {
+                logger.detachAppender(lines);
+            }
+            assertThat(lines.list).singleElement().satisfies(line -> {
+                assertThat(line.getLevel()).isEqualTo(Level.ERROR);
+                assertThat(line.getFormattedMessage()).isEqualTo("Receipt " + receipt.number() + " needs a verification proof of " + proof.bytes().length
+                        + " bytes, more than a QR code holds, so it is not issued");
+            });
         }
         return answer;
     }
