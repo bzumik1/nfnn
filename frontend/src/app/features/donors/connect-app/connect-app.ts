@@ -87,6 +87,11 @@ export class ConnectApp {
   protected readonly donorName = computed(() => this.auth.donor()?.name ?? '');
   protected readonly usesCode = computed(() => this.auth.donor()?.secondFactor.enabled ?? false);
   protected readonly passkeySupported = inject(PasskeyAuthenticator).supported();
+  private readonly hasPasskey = signal(false);
+  private readonly codeChosen = signal(false);
+  protected readonly asksCode = computed(
+    () => this.usesCode() && !(this.passkeySupported && this.hasPasskey() && !this.codeChosen()),
+  );
   protected code = '';
   protected readonly codeHint = $localize`:@@donor.connect.consent.codeHint:Počkejte, až aplikace ukáže nový kód (mění se každých 30 sekund), a opište ho.`;
   protected readonly codeMessages = {
@@ -113,8 +118,14 @@ export class ConnectApp {
     this.auth.logout().subscribe(() => this.dialog.open('login'));
   }
 
+  chooseCode(): void {
+    this.error.set('');
+    this.codeChosen.set(true);
+    afterNextRender(() => this.codeField()?.nativeElement.focus(), { injector: this.injector });
+  }
+
   allow(form: NgForm): void {
-    if (!this.usesCode()) {
+    if (!this.asksCode()) {
       this.allowWithPasskey();
       return;
     }
@@ -188,7 +199,16 @@ export class ConnectApp {
     this.authApi.describeClient(request.clientId, request.redirectUri).subscribe({
       next: (client) => {
         this.client.set(client);
-        this.show(this.auth.isAdmin() ? 'consent' : 'not-admin');
+        if (!this.auth.isAdmin()) {
+          this.show('not-admin');
+        } else if (this.usesCode() && this.passkeySupported) {
+          this.auth.hasPasskeys().subscribe((hasPasskey) => {
+            this.hasPasskey.set(hasPasskey);
+            this.show('consent');
+          });
+        } else {
+          this.show('consent');
+        }
       },
       error: (failure: unknown) => this.fail(failure),
     });

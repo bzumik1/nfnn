@@ -1227,7 +1227,9 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     await page.getByRole('button', { name: 'Zobrazit klíč…' }).click();
     await page.locator('#backup-key-code').fill('123456');
     await page.getByRole('button', { name: 'Zobrazit klíč', exact: true }).click();
-    await expect(page.locator('.backup-key')).toBeVisible();
+    await expect(page.locator('.backup-key-word-list')).toBeVisible();
+    expect(await violations(page)).toEqual([]);
+    await page.getByRole('button', { name: 'Mám uloženo, ověřit' }).click();
     await page.getByRole('button', { name: 'Potvrdit uložení' }).click();
     await expect(page.locator('#backup-key-word-2-error')).toBeVisible();
     expect(await violations(page)).toEqual([]);
@@ -1297,7 +1299,8 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     await page.locator('#setup-mail-username').fill('abc@smtp-brevo.com');
     await page.locator('#setup-mail-password').fill('xsmtpsib-key');
     await page.locator('#setup-admin-email').fill('spravce@example.cz');
-    await expect(page.locator('.backup-key')).toBeVisible();
+    await expect(page.locator('.backup-key-word-list')).toBeVisible();
+    await page.getByRole('button', { name: 'Mám uloženo, ověřit' }).click();
     await page.locator('#setup-backup-key-word-2').fill('komora');
     await page.locator('#setup-backup-key-word-13').fill('motivace');
     await page.locator('#setup-backup-key-word-24').fill('studna');

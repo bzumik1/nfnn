@@ -11,13 +11,16 @@ import {
   passkeySignInOptions,
   SAMPLE_ASSERTION,
   SAMPLE_CHALLENGE,
+  samplePasskey,
   sampleDonor,
 } from '../../../core/auth/testing/donor-fixtures';
+import { Passkey } from '../../../core/auth/donor';
 import { BackupKeyStatus } from '../admin-api';
 import { BackupKeyCard } from './backup-key-card';
 
 const REVEAL_URL = '/api/admin/operations/backups/key/reveal';
 const CONFIRM_URL = '/api/admin/operations/backups/key/confirmation';
+const PASSKEYS_URL = '/api/donors/me/passkeys';
 const KEY = 'AGE-SECRET-KEY-1R45A984EXXAFC85YZSYGY9R6XJTD4E9AKY65ZCRGPDQ89E7ANW8QKT6GWH';
 const UNCONFIRMED: BackupKeyStatus = { available: true, confirmed: false, confirmedAt: null };
 const CONFIRMED: BackupKeyStatus = {
@@ -94,8 +97,14 @@ describe('Given the backup key card', () => {
     await settle();
   }
 
-  async function revealWithCode(): Promise<void> {
+  async function askToSee(items: Passkey[] = []): Promise<void> {
     await click('Zobrazit klíč…');
+    http.expectOne(PASSKEYS_URL).flush({ items });
+    await settle();
+  }
+
+  async function revealWithCode(): Promise<void> {
+    await askToSee();
     await type('backup-key-code', ' 123456 ');
     await submit();
     const request = http.expectOne(REVEAL_URL);
@@ -113,7 +122,7 @@ describe('Given the backup key card', () => {
     });
 
     it('and the administrator asks to see it, then a fresh code is asked for first', async () => {
-      await click('Zobrazit klíč…');
+      await askToSee();
 
       expect(document.activeElement).toBe(root().querySelector('#backup-key-code'));
       await submit();
@@ -122,7 +131,7 @@ describe('Given the backup key card', () => {
     });
 
     it('and the code is refused, then the reason stands and the key stays hidden', async () => {
-      await click('Zobrazit klíč…');
+      await askToSee();
       await type('backup-key-code', '000000');
       await submit();
       http.expectOne(REVEAL_URL).flush(
@@ -140,18 +149,24 @@ describe('Given the backup key card', () => {
       expect(root().textContent).not.toContain(KEY);
     });
 
-    it('and the right code is typed, then the key is shown with its 24 words, copy, saving and download', async () => {
+    it('and the right code is typed, then the key is shown as its 24 words with copy and download', async () => {
       await revealWithCode();
 
-      expect(text('.backup-key')).toBe(KEY);
+      expect(root().textContent).not.toContain(KEY);
       const words = Array.from(root().querySelectorAll('.backup-key-word-list li'));
       expect(words).toHaveLength(24);
       expect(words[0].textContent?.trim()).toBe('divoch');
       expect(words[23].textContent?.trim()).toBe('studna');
       expect(root().querySelector('app-copy-button')).not.toBeNull();
-      expect(text('.backup-key-save')).toBe('Uložit do správce hesel');
+      expect(root().querySelector('.backup-key-save')).toBeNull();
       expect(text('.backup-key-download')).toBe('Stáhnout jako soubor');
       expect(document.activeElement).toBe(root().querySelector('.revealed'));
+      expect(root().querySelector('#backup-key-word-13')).toBeNull();
+
+      await click('Mám uloženo, ověřit');
+
+      expect(root().querySelectorAll('.backup-key-word-list li')).toHaveLength(0);
+      expect(document.activeElement).toBe(root().querySelector('#backup-key-word-2'));
       expect(text('label[for="backup-key-word-13"]')).toBe('13. slovo klíče');
       for (const id of ['backup-key-word-2', 'backup-key-word-13', 'backup-key-word-24']) {
         const field = root().querySelector(`#${id}`);
@@ -164,6 +179,7 @@ describe('Given the backup key card', () => {
 
     it('and a word from another position is typed, then the confirmation is refused at the field', async () => {
       await revealWithCode();
+      await click('Mám uloženo, ověřit');
       await type('backup-key-word-2', 'divoch');
       await type('backup-key-word-13', 'motivace');
       await type('backup-key-word-24', 'studna');
@@ -177,6 +193,7 @@ describe('Given the backup key card', () => {
 
     it('and the three asked words are typed, then saving is confirmed and the key hides', async () => {
       await revealWithCode();
+      await click('Mám uloženo, ověřit');
       await type('backup-key-word-2', 'KOMO');
       await type('backup-key-word-13', ' motivace ');
       await type('backup-key-word-24', 'studna');
@@ -202,6 +219,7 @@ describe('Given the backup key card', () => {
 
     it('and the confirmation came too late, then the key hides and the reason says to show it again', async () => {
       await revealWithCode();
+      await click('Mám uloženo, ověřit');
       await type('backup-key-word-2', 'komora');
       await type('backup-key-word-13', 'motivace');
       await type('backup-key-word-24', 'studna');
@@ -222,6 +240,16 @@ describe('Given the backup key card', () => {
       expect(document.activeElement?.textContent?.trim()).toBe('Zobrazit klíč…');
     });
 
+    it('and they go back to the words, then the words show again and focus returns to them', async () => {
+      await revealWithCode();
+      await click('Mám uloženo, ověřit');
+      await click('Ukázat slova znovu');
+
+      expect(root().querySelectorAll('.backup-key-word-list li')).toHaveLength(24);
+      expect(root().querySelector('#backup-key-word-2')).toBeNull();
+      expect(document.activeElement).toBe(root().querySelector('.revealed'));
+    });
+
     it('and the key is hidden again, then nothing is sent', async () => {
       await revealWithCode();
       await click('Skrýt klíč');
@@ -231,7 +259,7 @@ describe('Given the backup key card', () => {
     });
 
     it('and the passkey is used instead of the code, then its answer goes with the request', async () => {
-      await click('Zobrazit klíč…');
+      await askToSee();
       await click('Potvrdit přístupovým klíčem');
       http
         .expectOne({ method: 'POST', url: '/api/donors/auth/passkey/options' })
@@ -244,7 +272,54 @@ describe('Given the backup key card', () => {
       });
       request.flush({ key: KEY, checkPositions: [2, 13, 24] });
       await settle();
-      expect(text('.backup-key')).toBe(KEY);
+      expect(root().querySelectorAll('.backup-key-word-list li')).toHaveLength(24);
+    });
+  });
+
+  describe('when an administrator with the code app also has a passkey', () => {
+    beforeEach(() => render(UNCONFIRMED));
+
+    it('and asks to see the key, then the passkey is offered first and its answer goes with the request', async () => {
+      await askToSee([samplePasskey()]);
+
+      expect(root().querySelector('#backup-key-code')).toBeNull();
+      expect(text('.key-note')).toContain('přístupovým klíčem');
+      expect(document.activeElement?.textContent?.trim()).toBe('Zobrazit klíč');
+      await submit();
+      http
+        .expectOne({ method: 'POST', url: '/api/donors/auth/passkey/options' })
+        .flush(passkeySignInOptions());
+      await settle();
+
+      const request = http.expectOne(REVEAL_URL);
+      expect(request.request.body).toEqual({
+        passkey: { challenge: SAMPLE_CHALLENGE, credential: SAMPLE_ASSERTION },
+      });
+      request.flush({ key: KEY, checkPositions: [2, 13, 24] });
+      await settle();
+      expect(root().querySelectorAll('.backup-key-word-list li')).toHaveLength(24);
+    });
+
+    it('and chooses the code instead, then the code field takes focus and the code goes with the request', async () => {
+      await askToSee([samplePasskey()]);
+      await click('Zadat kód z aplikace');
+
+      expect(document.activeElement).toBe(root().querySelector('#backup-key-code'));
+      await type('backup-key-code', '654321');
+      await submit();
+      const request = http.expectOne(REVEAL_URL);
+      expect(request.request.body).toEqual({ secondFactorCode: '654321' });
+      request.flush({ key: KEY, checkPositions: [2, 13, 24] });
+      await settle();
+      expect(root().querySelectorAll('.backup-key-word-list li')).toHaveLength(24);
+    });
+
+    it('and the passkeys cannot be listed, then the code is asked for', async () => {
+      await click('Zobrazit klíč…');
+      http.expectOne(PASSKEYS_URL).flush(null, { status: 503, statusText: 'Service Unavailable' });
+      await settle();
+
+      expect(document.activeElement).toBe(root().querySelector('#backup-key-code'));
     });
   });
 

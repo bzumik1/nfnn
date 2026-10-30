@@ -25,56 +25,78 @@
       }
 
       @if (revealed(); as key) {
-        <div #revealedRegion class="revealed" tabindex="-1">
-          <app-backup-key-panel [key]="key" />
-        </div>
-        <form
-          #confirmForm="ngForm"
-          class="key-form"
-          appFocusFirstInvalid
-          (ngSubmit)="confirm(confirmForm)"
-          novalidate
-        >
-          <p class="key-words-intro" i18n="@@admin.backups.key.words.intro">
-            Až klíč uložíte, opište z uloženého klíče tato tři slova. Tak si ověříte, že se uložil
-            celý.
-          </p>
-          @for (entry of words(); track entry.position) {
-            <app-form-field [label]="wordLabel(entry.position)" [messages]="wordMessages">
-              <input
-                appFormControl
-                [id]="'backup-key-word-' + entry.position"
-                [name]="'word' + entry.position"
-                autocomplete="off"
-                autocorrect="off"
-                autocapitalize="none"
-                spellcheck="false"
-                maxlength="40"
-                [(ngModel)]="entry.typed"
-                required
-                [appBackupKeyWord]="entry.expected"
-              />
-            </app-form-field>
-          }
+        @if (!checking()) {
+          <div #revealedRegion class="revealed" tabindex="-1">
+            <app-backup-key-panel [key]="key" />
+          </div>
           <div class="key-actions">
-            <button type="submit" class="ui-button ui-button--primary" [disabled]="confirming()">
-              @if (confirming()) {
-                <ng-container i18n="@@admin.backups.key.confirm.busy">Potvrzujeme…</ng-container>
-              } @else {
-                <ng-container i18n="@@admin.backups.key.confirm">Potvrdit uložení</ng-container>
-              }
+            <button
+              type="button"
+              class="ui-button ui-button--primary key-saved"
+              (click)="check()"
+              i18n="@@admin.backups.key.saved"
+            >
+              Mám uloženo, ověřit
             </button>
             <button
               type="button"
               class="ui-button ui-button--quiet"
-              [disabled]="confirming()"
               (click)="hide()"
               i18n="@@admin.backups.key.hide"
             >
               Skrýt klíč
             </button>
           </div>
-        </form>
+        } @else {
+          <form
+            #confirmForm="ngForm"
+            class="key-form"
+            appFocusFirstInvalid
+            (ngSubmit)="confirm(confirmForm)"
+            novalidate
+          >
+            <p class="key-words-intro" i18n="@@admin.backups.key.words.intro">
+              Slova jsme skryli. Opište z kopie, kterou jste si uložili, slova s těmito čísly. Tak
+              si ověříte, že se uložila celá.
+            </p>
+            @for (entry of words(); track entry.position) {
+              <app-form-field [label]="wordLabel(entry.position)" [messages]="wordMessages">
+                <input
+                  #wordField
+                  appFormControl
+                  [id]="'backup-key-word-' + entry.position"
+                  [name]="'word' + entry.position"
+                  autocomplete="off"
+                  autocorrect="off"
+                  autocapitalize="none"
+                  spellcheck="false"
+                  maxlength="40"
+                  [(ngModel)]="entry.typed"
+                  required
+                  [appBackupKeyWord]="entry.expected"
+                />
+              </app-form-field>
+            }
+            <div class="key-actions">
+              <button type="submit" class="ui-button ui-button--primary" [disabled]="confirming()">
+                @if (confirming()) {
+                  <ng-container i18n="@@admin.backups.key.confirm.busy">Potvrzujeme…</ng-container>
+                } @else {
+                  <ng-container i18n="@@admin.backups.key.confirm">Potvrdit uložení</ng-container>
+                }
+              </button>
+              <button
+                type="button"
+                class="ui-button ui-button--quiet"
+                [disabled]="confirming()"
+                (click)="showWordsAgain()"
+                i18n="@@admin.backups.key.showWordsAgain"
+              >
+                Ukázat slova znovu
+              </button>
+            </div>
+          </form>
+        }
       } @else if (asking()) {
         <form
           #proofForm="ngForm"
@@ -83,7 +105,7 @@
           (ngSubmit)="reveal(proofForm)"
           novalidate
         >
-          @if (usesCode()) {
+          @if (asksCode()) {
             <app-form-field
               label="Kód z aplikace"
               i18n-label="@@admin.backups.key.code"
@@ -124,6 +146,21 @@
             <p class="key-note" i18n="@@admin.backups.key.confirmPasskey">
               Zobrazení potvrďte svým přístupovým klíčem, i když jste se jím už přihlásili.
             </p>
+            @if (usesCode()) {
+              <p class="passkey-alternative">
+                <span i18n="@@admin.backups.key.orCode">Nebo bez přístupového klíče:</span>
+                &ngsp;
+                <button
+                  type="button"
+                  class="ui-link-button"
+                  [disabled]="revealing()"
+                  (click)="chooseCode()"
+                  i18n="@@admin.backups.key.chooseCode"
+                >
+                  Zadat kód z aplikace
+                </button>
+              </p>
+            }
           } @else {
             <p class="key-note" i18n="@@admin.backups.key.passkeyMissing">
               Zobrazení se potvrzuje přístupovým klíčem a tento prohlížeč je nepodporuje. Klíč si
@@ -135,9 +172,10 @@
           }
           <div class="key-actions">
             <button
+              #revealButton
               type="submit"
               class="ui-button ui-button--primary"
-              [disabled]="revealing() || (!usesCode() && !passkeySupported)"
+              [disabled]="revealing() || (!asksCode() && !passkeySupported)"
             >
               @if (revealing()) {
                 <ng-container i18n="@@admin.backups.key.reveal.busy">Ověřujeme…</ng-container>
@@ -162,6 +200,7 @@
             #showButton
             type="button"
             class="ui-button ui-button--primary"
+            [disabled]="opening()"
             (click)="ask()"
             i18n="@@admin.backups.key.show"
           >

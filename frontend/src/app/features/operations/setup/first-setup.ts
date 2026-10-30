@@ -11,6 +11,7 @@ import {
   Injector,
   signal,
   viewChild,
+  viewChildren,
 } from '@angular/core';
 import { HttpEventType } from '@angular/common/http';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -122,6 +123,10 @@ export class FirstSetup {
   private readonly injector = inject(Injector);
   private readonly heading = viewChild<ElementRef<HTMLElement>>('heading');
   private readonly testEmailButton = viewChild<ElementRef<HTMLButtonElement>>('testEmailButton');
+  private readonly backupKeySavedButton =
+    viewChild<ElementRef<HTMLButtonElement>>('backupKeySavedButton');
+  private readonly backupKeyWordFields =
+    viewChildren<ElementRef<HTMLInputElement>>('backupKeyWordField');
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
 
   protected readonly labels = SETTING_LABELS;
@@ -141,6 +146,8 @@ export class FirstSetup {
   protected readonly restoredBeforeSetup = signal(false);
   protected readonly backupKey = signal<string | null>(null);
   protected readonly backupKeyState = signal<BackupKeyState>('idle');
+  protected readonly backupKeyChecking = signal(false);
+  protected readonly backupKeyUnchecked = signal(false);
   protected readonly backupKeyWords = signal<BackupKeyWordEntry[]>([]);
   protected readonly backupKeyWordMessages = BACKUP_KEY_WORD_MESSAGES;
   protected readonly backupKeyWordLabel = backupKeyWordLabel;
@@ -334,6 +341,12 @@ export class FirstSetup {
       this.mailUnverified.set(false);
       return;
     }
+    if (this.backupKeyState() === 'ready' && !this.backupKeyChecking()) {
+      this.mailUnverified.set(false);
+      this.backupKeyUnchecked.set(true);
+      this.backupKeySavedButton()?.nativeElement.focus();
+      return;
+    }
     if (!unverifiedMailAccepted && this.verifiedMailServer !== this.testedValues()) {
       this.mailUnverified.set(true);
       return;
@@ -372,6 +385,21 @@ export class FirstSetup {
           this.refuseSettings(form, failure);
         },
       });
+  }
+
+  protected checkBackupKey(): void {
+    this.backupKeyUnchecked.set(false);
+    this.backupKeyChecking.set(true);
+    afterNextRender(() => this.backupKeyWordFields()[0]?.nativeElement.focus(), {
+      injector: this.injector,
+    });
+  }
+
+  protected showBackupKeyAgain(): void {
+    this.backupKeyChecking.set(false);
+    afterNextRender(() => this.backupKeySavedButton()?.nativeElement.focus(), {
+      injector: this.injector,
+    });
   }
 
   protected loadBackupKey(): void {
