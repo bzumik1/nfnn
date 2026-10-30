@@ -26,7 +26,6 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
-import java.time.Duration;
 import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
@@ -38,7 +37,6 @@ public class ApiClient {
 
     private static final String FORWARDED_FOR = "X-Forwarded-For";
     private static final AtomicInteger CLIENT_ADDRESSES = new AtomicInteger();
-    private static final Duration ASYNC_WORK_WAIT = Duration.ofSeconds(15);
 
     private final RestClient client;
     private final int port;
@@ -249,7 +247,7 @@ public class ApiClient {
 
     private void completeExchange(String method, String path, Map<String, String> extraHeaders, JsonNode requestBody, int status, HttpHeaders responseHeaders,
                              byte[] responseBody) {
-        asyncTasks.awaitIdle(ASYNC_WORK_WAIT);
+        asyncTasks.awaitIdleAfter(method + " " + path);
         Map<String, String> sent = new LinkedHashMap<>(defaultHeaders);
         sent.putAll(extraHeaders);
         transcript.exchange(new RecordedExchange(method, path, sent, requestBody, status, responseHeaders, responseBody));

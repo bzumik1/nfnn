@@ -4,6 +4,7 @@ import cz.novanadeje.app.donations.application.importing.BankImportProperties;
 import cz.novanadeje.app.donations.application.importing.ImportBankPaymentsService;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Primary;
 import org.springframework.jdbc.core.simple.JdbcClient;
 
@@ -11,17 +12,13 @@ import java.time.Instant;
 import java.time.ZoneId;
 
 @TestConfiguration(proxyBeanMethods = false)
+@Import(AsyncTaskTrackingConfiguration.class)
 public class TestSupportConfiguration {
 
     @Bean
     @Primary
     public MutableClock mutableClock() {
         return new MutableClock(Instant.now(), ZoneId.of("Europe/Prague"));
-    }
-
-    @Bean
-    public AsyncTaskTracker asyncTaskTracker() {
-        return new AsyncTaskTracker();
     }
 
     @Bean
