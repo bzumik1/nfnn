@@ -79,6 +79,25 @@ public class ReceiptKeysStepDefinitions {
         assertThat(jdbc.sql("update receipt_signing_key set status = 'revoked' where key_id = ?").param(keyId).update()).isEqualTo(1);
     }
 
+    @Given("the public key of the receipt signing key {string} was replaced in the database by another key's")
+    public void thePublicKeyWasReplaced(String keyId) {
+        assertThat(jdbc.sql("update receipt_signing_key set public_key = ? where key_id = ?").params(HexFormat.of().parseHex(EARLIER_PUBLIC_KEY), keyId)
+                .update()).isEqualTo(1);
+    }
+
+    @Given("the registration time of the receipt signing key {string} was replaced in the database by {string}")
+    public void theRegistrationTimeWasReplaced(String keyId, String registeredAt) {
+        assertThat(jdbc.sql("update receipt_signing_key set registered_at = ? where key_id = ?").params(Timestamp.from(Instant.parse(registeredAt)), keyId)
+                .update()).isEqualTo(1);
+    }
+
+    @Given("a row for the receipt signing key {string} was added in the database with the seal of {string}")
+    public void aRowWasAddedWithTheSealOf(String keyId, String sealedKeyId) {
+        String seal = jdbc.sql("select seal from receipt_signing_key where key_id = ?").param(sealedKeyId).query(String.class).single();
+        jdbc.sql("insert into receipt_signing_key (key_id, public_key, registered_at, status, seal) values (?, ?, ?, 'active', ?)")
+                .params(keyId, HexFormat.of().parseHex(EARLIER_PUBLIC_KEY), Timestamp.from(Instant.parse("2026-11-01T07:00:00Z")), seal).update();
+    }
+
     @Given("a backup of an earlier server with its receipt signing key registered at {string} was restored")
     public void aBackupOfAnEarlierServerWasRestored(String registeredAt) {
         EarlierServerSeals earlier = EarlierServerSeals.of(EARLIER_SETTINGS_KEY, environment.getRequiredProperty("app.operations.backup-key.value"));

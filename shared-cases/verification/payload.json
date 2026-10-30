@@ -1,6 +1,6 @@
 {
   "source": "edited",
-  "logic": "The verification proof a receipt carries in its QR code and its PDF link (plan v3 D5 to D7, slice 1.5): one form for every receipt, every gift always. An encoding case names a receipt (input.receipt), the key that signs it (signingKeyId, one of input.keys; the backend signs with the RFC 8032 test 1 seed its tests hold, never a key of a server) and the foundation's IČO. The backend writes the body (payloadHex, big-endian): format 0x01; the key id, the first 4 bytes of SHA-256 of the raw 32-byte public key; flags, bit 0 yearly, bit 1 a company, bit 2 replaces an earlier receipt, bit 3 the postal code in the Czech form NNN NN, bits 4 to 7 zero; the serial of the number as u24, its year being the year of issue; the issue day as u16 days since 2000-01-01; a yearly receipt's year as u16; a replaced receipt's serial as u24 and its issue day as u16; the donor's name, street and city as a LEB128 byte length and NFC UTF-8; the postal code as u24 under bit 3, else as text; a company's IČO as u32; the number of gifts as LEB128; each gift as its day (u16, days not decreasing) and its amount in hellers (LEB128); the total in hellers (LEB128). It signs with Ed25519 the ASCII tag nfnn.cz/receipt/v1, one zero byte, the foundation's IČO as u32 and the body (signatureHex; signedSha256 is the SHA-256 of that signed message), appends the 64-byte signature to the body and writes the bytes in chunks of 7 as decimal numbers of 17 digits, a last chunk of k bytes in 3, 5, 8, 10, 13 or 15 digits, after https://nfnn.cz/overit#1 (qrText). The symbol (qr) is a byte segment for https://nfnn.cz/overit# and a numeric segment for the rest, error correction M up to version 13 and L from version 14, the smallest version that holds both; above version 40 (2 893 bytes) there is none and issuance is refused as donations/receipt-too-long. The browser reads every encoding case's qrText against input.keys and gets the verdict valid with keyId signingKeyId and the receipt input.receipt. A reading case gives a qrText made by hand, and both sides read it to its expected verdict, checking in this order: the prefix https://nfnn.cz/overit#1 (not-a-proof); only digits whose count a chunk width gives, each chunk below 2 to the power of 8 times its bytes (digits); no bytes, or fewer than 70 once the format byte is 0x01 (truncated); the format byte (unknown-format); the key id among input.keys (unknown-key) and not revoked (revoked-key); the Ed25519 signature of the last 64 bytes over the tag, the IČO and the rest, refused when S is not below the group order (bad-signature); then the body: bits 4 to 7 (reserved-flags), a field running past the body (truncated), a LEB128 number with a needless last zero group (non-minimal-varint), text that is empty, not UTF-8 or not NFC (invalid-text), a serial outside 1 to 999 999, a year before 2000, a postal code above 99 999, an IČO above 99 999 999, a LEB128 number of more than eight groups or of 2 to the power of 53 or more, no gift or a single receipt of more than one, a day before the gift's predecessor, an amount of zero or a yearly gift outside its year (invalid-value), bytes after the total (trailing-bytes), a total other than the sum of the gifts (total-mismatch).",
+  "logic": "The verification proof a receipt carries in its QR code and its PDF link (plan v3 D5 to D7, slice 1.5): one form for every receipt, every gift always. An encoding case names a receipt (input.receipt), the key that signs it (signingKeyId, one of input.keys; the backend signs with the RFC 8032 test 1 seed its tests hold, never a key of a server) and the foundation's IČO. Every key in the file is a public RFC 8032 test key (test 1 21fe31df, test 2 39f713d0, test SHA(abc) 5f9b247e, whose public key has an odd x); a server outside development refuses them. The backend writes the body (payloadHex, big-endian): format 0x01; the key id, the first 4 bytes of SHA-256 of the raw 32-byte public key; flags, bit 0 yearly, bit 1 a company, bit 2 replaces an earlier receipt, bit 3 the postal code in the Czech form NNN NN, bits 4 to 7 zero; the serial of the number as u24, its year being the year of issue; the issue day as u16 days since 2000-01-01; a yearly receipt's year as u16; a replaced receipt's serial as u24 and its issue day as u16; the donor's name, street and city as a LEB128 byte length and NFC UTF-8; the postal code as u24 under bit 3, else as text; a company's IČO as u32; the number of gifts as LEB128; each gift as its day (u16, days not decreasing) and its amount in hellers (LEB128); the total in hellers (LEB128). It signs with Ed25519 the ASCII tag nfnn.cz/receipt/v1, one zero byte, the foundation's IČO as u32 and the body (signatureHex; signedSha256 is the SHA-256 of that signed message), appends the 64-byte signature to the body and writes the bytes in chunks of 7 as decimal numbers of 17 digits, a last chunk of k bytes in 3, 5, 8, 10, 13 or 15 digits, after https://nfnn.cz/overit#1 (qrText). The symbol (qr) is a byte segment for https://nfnn.cz/overit# and a numeric segment for the rest, without an ECI header (one would take 2 bytes of the largest proof), error correction M up to version 13 and L from version 14, the smallest version that holds both; above version 40 (2 893 bytes) there is none and issuance is refused as donations/receipt-too-long. The limit is the byte count: the largest case holds 553 gifts of 200 to 1 500 Kč, three-byte amounts, and gifts below 163.84 Kč take a byte less each, so more of them fit. The browser reads every encoding case's qrText against input.keys and gets the verdict valid with keyId signingKeyId and the receipt input.receipt. A reading case gives a qrText made by hand, and both sides read it to its expected verdict, checking in this order: the prefix https://nfnn.cz/overit#1 (not-a-proof); only digits whose count a chunk width gives, each chunk below 2 to the power of 8 times its bytes (digits); no bytes, or fewer than 70 once the format byte is 0x01 (truncated); the format byte (unknown-format); the key id among input.keys (unknown-key) and not revoked (revoked-key); the Ed25519 signature of the last 64 bytes over the tag, the IČO and the rest, refused when S is not below the group order (bad-signature); then the body: bits 4 to 7 (reserved-flags), a field running past the body (truncated), a LEB128 number with a needless last zero group (non-minimal-varint), text that is empty, not UTF-8 or not NFC (invalid-text), a serial outside 1 to 999 999, a year before 2000, a postal code above 99 999, an IČO above 99 999 999, a LEB128 number of more than eight groups or of 2 to the power of 53 or more, no gift or a single receipt of more than one, a day before the gift's predecessor, an amount of zero, gifts summing to 2 to the power of 53 or more, or a yearly gift outside its year (invalid-value), bytes after the total (trailing-bytes), a total other than the sum of the gifts (total-mismatch).",
   "cases": [
     {
       "name": "a single receipt of one gift",
@@ -2985,6 +2985,350 @@
       "expected": {
         "verdict": "rejected",
         "reason": "not-a-proof"
+      }
+    },
+    {
+      "name": "a valid proof signed by a key whose public key has an odd x",
+      "input": {
+        "qrText": "https://nfnn.cz/overit#10038659491351961600046343990168929322040303989858395561963591784434255064686062301295334291440491033672150796955971721900197572809870224453345851022781513790157247553260252081259792001928287403776617823663590940229026274510927846898021126587274825554851315397159371692863168810528240276753197786114956036",
+        "foundation": {
+          "companyIdentifier": "27278794"
+        },
+        "keys": [
+          {
+            "keyId": "21fe31df",
+            "publicKeyHex": "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a",
+            "status": "active"
+          },
+          {
+            "keyId": "5f9b247e",
+            "publicKeyHex": "ec172b93ad5e563bf4932c70e1245034c35467ef2efd4d64ebf819683467e2bf",
+            "status": "active"
+          }
+        ]
+      },
+      "expected": {
+        "verdict": "valid",
+        "keyId": "5f9b247e",
+        "receipt": {
+          "kind": "single",
+          "number": "2026-000042",
+          "issuedOn": "2026-11-05",
+          "year": null,
+          "replaces": null,
+          "donor": {
+            "type": "person",
+            "name": "Marie Dvořáková",
+            "street": "Lipová 12",
+            "city": "Liberec",
+            "postalCode": "460 01",
+            "companyIdentifier": null
+          },
+          "gifts": [
+            {"receivedOn": "2026-11-03", "amountMinor": 250000}
+          ],
+          "totalMinor": 250000
+        }
+      }
+    },
+    {
+      "name": "a name not in NFC, signed",
+      "input": {
+        "qrText": "https://nfnn.cz/overit#1003188506188206080004634399030343639528982385074244333369417308327473137430500738980131647753270534193140817736024979062853782731364791021269644678570255603512978919799896073648457787898430751156291688684513847690767808785816674851237266564286758264611892225352885777003660096041109089813541568095790742529014",
+        "foundation": {
+          "companyIdentifier": "27278794"
+        },
+        "keys": [
+          {
+            "keyId": "21fe31df",
+            "publicKeyHex": "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a",
+            "status": "active"
+          }
+        ]
+      },
+      "expected": {
+        "verdict": "rejected",
+        "reason": "invalid-text"
+      }
+    },
+    {
+      "name": "an empty name, signed",
+      "input": {
+        "qrText": "https://nfnn.cz/overit#100318850618820608000463439889721082967849659083190413847280786956901321996232329587211077913366453059304460363390703522582049038594264375286822104038451941430564740438644236276245952648156899496307392705348180214422344192687704859934011922576968997851052926888",
+        "foundation": {
+          "companyIdentifier": "27278794"
+        },
+        "keys": [
+          {
+            "keyId": "21fe31df",
+            "publicKeyHex": "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a",
+            "status": "active"
+          }
+        ]
+      },
+      "expected": {
+        "verdict": "rejected",
+        "reason": "invalid-text"
+      }
+    },
+    {
+      "name": "a name with a byte that is not UTF-8, signed",
+      "input": {
+        "qrText": "https://nfnn.cz/overit#1003188506188206080004634398925142571887213967274095334291440491033672150796955971721900197572809870224453345851022487466229985460536998038782110226464949659988650472231422990018024177307235887987203415673131779162388183984632636491149825150460015890310895063416375379205",
+        "foundation": {
+          "companyIdentifier": "27278794"
+        },
+        "keys": [
+          {
+            "keyId": "21fe31df",
+            "publicKeyHex": "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a",
+            "status": "active"
+          }
+        ]
+      },
+      "expected": {
+        "verdict": "rejected",
+        "reason": "invalid-text"
+      }
+    },
+    {
+      "name": "a name with an overlong UTF-8 slash, signed",
+      "input": {
+        "qrText": "https://nfnn.cz/overit#1003188506188206080004634398925152049369215830421615334291440491033672150796955971721900197572809870224453345851022864730257337560405936661841425580908825223211956241577821932580212895486502893890281343162353280610904581536580957391633756759131640666755854166477914826761",
+        "foundation": {
+          "companyIdentifier": "27278794"
+        },
+        "keys": [
+          {
+            "keyId": "21fe31df",
+            "publicKeyHex": "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a",
+            "status": "active"
+          }
+        ]
+      },
+      "expected": {
+        "verdict": "rejected",
+        "reason": "invalid-text"
+      }
+    },
+    {
+      "name": "a name with a surrogate encoded in UTF-8, signed",
+      "input": {
+        "qrText": "https://nfnn.cz/overit#100318850618820608000463439893171014517716772653707231374305008824626020543403430672372786679446314349940709484869390152599644060264826380633037634257259039042122783194730591155920819455653746190963958140302459547782887913656688755657747080246883376942641816845642513234701",
+        "foundation": {
+          "companyIdentifier": "27278794"
+        },
+        "keys": [
+          {
+            "keyId": "21fe31df",
+            "publicKeyHex": "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a",
+            "status": "active"
+          }
+        ]
+      },
+      "expected": {
+        "verdict": "rejected",
+        "reason": "invalid-text"
+      }
+    },
+    {
+      "name": "a total of 2 to the power of 53, signed",
+      "input": {
+        "qrText": "https://nfnn.cz/overit#100318850618820608000463439901689293220403039898583955619635917844342550646860623012953342914404910336721507969559717219001975728098700813617008641903833604544929527841681663979881454274502201084155890444041048904091057465203424583173307732106185822797147011941467529895151713173471947294015923625802015772949676",
+        "foundation": {
+          "companyIdentifier": "27278794"
+        },
+        "keys": [
+          {
+            "keyId": "21fe31df",
+            "publicKeyHex": "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a",
+            "status": "active"
+          }
+        ]
+      },
+      "expected": {
+        "verdict": "rejected",
+        "reason": "invalid-value"
+      }
+    },
+    {
+      "name": "an amount of nine LEB128 groups, signed",
+      "input": {
+        "qrText": "https://nfnn.cz/overit#100318850618820608000463439901689293220403039898583955619635917844342550646860623012953342914404910336721507969559717219001975728098702093617008641903833600001827572970847171699265443199484420089597309685401724138468235982235512975147709756367015139659131015636630708853997108757967346784871393537118139267116721920",
+        "foundation": {
+          "companyIdentifier": "27278794"
+        },
+        "keys": [
+          {
+            "keyId": "21fe31df",
+            "publicKeyHex": "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a",
+            "status": "active"
+          }
+        ]
+      },
+      "expected": {
+        "verdict": "rejected",
+        "reason": "invalid-value"
+      }
+    },
+    {
+      "name": "a serial of 0, signed",
+      "input": {
+        "qrText": "https://nfnn.cz/overit#10031885061882060800000164501802337322040303989858395561963591784434255064686062301295334291440491033672150796955971721900197572809870224453345851022943103234432448004204718368598892739478181200092596674775056019567918786713102719662863035226107112458123704213476141182329238058040461760951212462007322885",
+        "foundation": {
+          "companyIdentifier": "27278794"
+        },
+        "keys": [
+          {
+            "keyId": "21fe31df",
+            "publicKeyHex": "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a",
+            "status": "active"
+          }
+        ]
+      },
+      "expected": {
+        "verdict": "rejected",
+        "reason": "invalid-value"
+      }
+    },
+    {
+      "name": "a serial of 1 000 000, signed",
+      "input": {
+        "qrText": "https://nfnn.cz/overit#10031885061882062318647881708883297322040303989858395561963591784434255064686062301295334291440491033672150796955971721900197572809870224453345851022528566557068175061137211301402094267094366355126827249055642810662161888714716053024068699330478148748292304382182721746780241338271248676240195711311655426",
+        "foundation": {
+          "companyIdentifier": "27278794"
+        },
+        "keys": [
+          {
+            "keyId": "21fe31df",
+            "publicKeyHex": "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a",
+            "status": "active"
+          }
+        ]
+      },
+      "expected": {
+        "verdict": "rejected",
+        "reason": "invalid-value"
+      }
+    },
+    {
+      "name": "a yearly receipt for 1999, signed",
+      "input": {
+        "qrText": "https://nfnn.cz/overit#100318850618820864001354056225134262178071722912160433336941730832747313743050073898013164775327053419314081773602497906285378273136479094092425277612815771848788422424600345258751572841902793454950723681201687768078734366351624156775617376213738829598595211023545400565224660968941963177333667726850",
+        "foundation": {
+          "companyIdentifier": "27278794"
+        },
+        "keys": [
+          {
+            "keyId": "21fe31df",
+            "publicKeyHex": "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a",
+            "status": "active"
+          }
+        ]
+      },
+      "expected": {
+        "verdict": "rejected",
+        "reason": "invalid-value"
+      }
+    },
+    {
+      "name": "a postal code of 100000, signed",
+      "input": {
+        "qrText": "https://nfnn.cz/overit#10031885061882060800046343990168929322040303989858395561963591784434255064686062301295334291440491033672150796955971721900429496748886928453345851022839103560072459580720901233353681437640137294514469747272192069607820053717618131233419585305613011638436046248370208726407513726717687853001147425565764103",
+        "foundation": {
+          "companyIdentifier": "27278794"
+        },
+        "keys": [
+          {
+            "keyId": "21fe31df",
+            "publicKeyHex": "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a",
+            "status": "active"
+          }
+        ]
+      },
+      "expected": {
+        "verdict": "rejected",
+        "reason": "invalid-value"
+      }
+    },
+    {
+      "name": "an IČO of 100000000, signed",
+      "input": {
+        "qrText": "https://nfnn.cz/overit#1003188506188213760013540562252034422629511654896238273386227271876515332013403361649813070092477492419533202126065912641548808353653924733214904584762849000012588585139235869414651278270625673200061255744602346470280829630784400058097008131535873959593283266591794277013982514561981325821012744064971324691217252036134911223862616068",
+        "foundation": {
+          "companyIdentifier": "27278794"
+        },
+        "keys": [
+          {
+            "keyId": "21fe31df",
+            "publicKeyHex": "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a",
+            "status": "active"
+          }
+        ]
+      },
+      "expected": {
+        "verdict": "rejected",
+        "reason": "invalid-value"
+      }
+    },
+    {
+      "name": "a yearly receipt of no gift, signed",
+      "input": {
+        "qrText": "https://nfnn.cz/overit#10031885061882086400135405622520338217807172291216043333694173083274731374305007389801316477532705341931408177360249790628537827313647616329041132546727510498952124301384350745824737809858193136955801418371266065758141645710519917850773215430442194758439193342356176808601232466433981842944015",
+        "foundation": {
+          "companyIdentifier": "27278794"
+        },
+        "keys": [
+          {
+            "keyId": "21fe31df",
+            "publicKeyHex": "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a",
+            "status": "active"
+          }
+        ]
+      },
+      "expected": {
+        "verdict": "rejected",
+        "reason": "invalid-value"
+      }
+    },
+    {
+      "name": "an amount of zero, signed",
+      "input": {
+        "qrText": "https://nfnn.cz/overit#1003188506188206080004634399016892932204030398985839556196359178443425506468606230129533429144049103367215079695597172190019757280987008000274541369613545326792690183182361241927375738521119172671064606104143457993154981316023780839104200107437381951359247171693045023574013214883975458900302567",
+        "foundation": {
+          "companyIdentifier": "27278794"
+        },
+        "keys": [
+          {
+            "keyId": "21fe31df",
+            "publicKeyHex": "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a",
+            "status": "active"
+          }
+        ]
+      },
+      "expected": {
+        "verdict": "rejected",
+        "reason": "invalid-value"
+      }
+    },
+    {
+      "name": "gifts summing to 2 to the power of 53, signed",
+      "input": {
+        "qrText": "https://nfnn.cz/overit#1003188506188208640013540562252033821780717229121604333369417308327473137430500738980131647753270534193140817736024979062853782731364816540955161023119488360377544836711683617008641117401636170086419009664389609713794815180101506897007518616517004187399332655560715830294544855918602412913470160454382551192198729446327605956833443025119747646191030457796614",
+        "foundation": {
+          "companyIdentifier": "27278794"
+        },
+        "keys": [
+          {
+            "keyId": "21fe31df",
+            "publicKeyHex": "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a",
+            "status": "active"
+          }
+        ]
+      },
+      "expected": {
+        "verdict": "rejected",
+        "reason": "invalid-value"
       }
     }
   ]

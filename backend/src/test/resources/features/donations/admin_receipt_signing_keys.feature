@@ -25,6 +25,17 @@ Feature: An administrator sees which key signs the verification QR codes on rece
       | keyId    | status  | registeredAt         | published | current |
       | 21fe31df | revoked | 2026-11-13T11:00:00Z | false     | true    |
 
+  Scenario: A key row added in the database shows as not published beside the current key
+    Given "Jana" is an administrator
+    And a row for the receipt signing key "39f713d0" was added in the database with the seal of "21fe31df"
+    When "Jana" asks for the receipt signing keys
+    Then the response status is 200
+    And the current receipt signing key is "21fe31df", published: true
+    And the receipt signing keys are:
+      | keyId    | status | registeredAt         | published | current |
+      | 39f713d0 | active | 2026-11-01T07:00:00Z | false     | false   |
+      | 21fe31df | active | 2026-11-13T11:00:00Z | true      | true    |
+
   Scenario: A donor without the administrator role is refused
     When "Jana" asks for the receipt signing keys
     Then the response status is 403
