@@ -1,0 +1,97 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nfnn.cz/shared-cases/schemas/receipts/formatting.schema.json",
+  "title": "Receipt formatting cases: an amount, a date or a donor record and the formatter that prints it on a receipt",
+  "type": "object",
+  "required": ["source", "logic", "cases"],
+  "additionalProperties": false,
+  "properties": {
+    "source": { "type": "string", "minLength": 1 },
+    "logic": { "type": "string", "minLength": 1 },
+    "cases": { "type": "array", "minItems": 1, "items": { "oneOf": [{ "$ref": "#/$defs/amountCase" }, { "$ref": "#/$defs/dateCase" }, { "$ref": "#/$defs/donorCase" }] } }
+  },
+  "$defs": {
+    "amountCase": {
+      "type": "object",
+      "required": ["name", "input", "expected"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "input": {
+          "type": "object",
+          "required": ["format", "amountMinor"],
+          "additionalProperties": false,
+          "properties": {
+            "format": { "enum": ["czechAmount", "englishAmount"] },
+            "amountMinor": { "type": "integer", "minimum": 0 }
+          }
+        },
+        "expected": { "$ref": "#/$defs/text" }
+      }
+    },
+    "dateCase": {
+      "type": "object",
+      "required": ["name", "input", "expected"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "input": {
+          "type": "object",
+          "required": ["format", "date"],
+          "additionalProperties": false,
+          "properties": {
+            "format": { "enum": ["czechDate", "englishDate"] },
+            "date": { "$ref": "../defs/rows.schema.json#/$defs/day" }
+          }
+        },
+        "expected": { "$ref": "#/$defs/text" }
+      }
+    },
+    "donorCase": {
+      "type": "object",
+      "required": ["name", "input", "expected"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "input": {
+          "type": "object",
+          "required": ["format", "company", "name", "companyIdentifier", "street", "city", "postalCode"],
+          "additionalProperties": false,
+          "properties": {
+            "format": { "const": "donor" },
+            "company": { "type": "boolean" },
+            "name": { "type": "string", "minLength": 1 },
+            "companyIdentifier": { "type": ["string", "null"], "pattern": "^[0-9]{8}$" },
+            "street": { "type": "string", "minLength": 1 },
+            "city": { "type": "string", "minLength": 1 },
+            "postalCode": { "type": "string", "minLength": 1 }
+          }
+        },
+        "expected": {
+          "type": "object",
+          "required": ["donor"],
+          "additionalProperties": false,
+          "properties": {
+            "donor": {
+              "type": "object",
+              "required": ["company", "donorName", "donorIdentifier", "donorAddress"],
+              "additionalProperties": false,
+              "properties": {
+                "company": { "type": "boolean" },
+                "donorName": { "type": "string", "minLength": 1 },
+                "donorIdentifier": { "type": ["string", "null"], "pattern": "^[0-9]{8}$" },
+                "donorAddress": { "type": "string", "minLength": 1 }
+              }
+            }
+          }
+        }
+      }
+    },
+    "text": {
+      "type": "object",
+      "required": ["text"],
+      "additionalProperties": false,
+      "properties": { "text": { "type": "string", "minLength": 1 } }
+    }
+  }
+}
