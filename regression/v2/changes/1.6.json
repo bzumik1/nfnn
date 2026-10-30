@@ -1,0 +1,276 @@
+[
+  {
+    "kind": "shared-case",
+    "caseFile": "shared-cases/receipts/v1/frozen.json",
+    "reason": "1.6 freezes every issued receipt (plan v3 D10): one case per v2 receipt sample with its document as input and the frozen receipt the donor's receipt endpoints answer as expected (typed values, the bundle's receipt texts, the signature image digest, the key id and the proof's QR text under the RFC 8032 test 1 key); written from the 1.5 proof and the bundle texts (source edited), checked against the values each v2 sample printed, run by the backend from 1.6 (FrozenReceiptHistoryTest, FrozenReceiptCasesTest) and by the browser from 1.9",
+    "contract": "docs/api-contract.md, Issued receipts as frozen data; .claude/rules/testing.md, Logic on both sides"
+  },
+  {
+    "kind": "shared-case",
+    "caseFile": "shared-cases/schemas/receipts/v1/frozen.schema.json",
+    "reason": "1.6 adds the JSON Schema of the frozen receipt cases, checked by Vitest with ajv",
+    "contract": ".claude/rules/testing.md, Logic on both sides"
+  },
+  {
+    "kind": "shared-case",
+    "caseFile": "shared-cases/verification/payload.json",
+    "reason": "1.6 stores a receipt's status digest in issued_receipt.status_sha256, and the lead fixed its definition for 1.6 and 1.8 alike: SHA-256 of the signed message (tag, IČO and body, the bytes the Ed25519 signature covers) followed by the 64-byte signature; each encoding case's signedSha256 becomes statusSha256 with the values the 1.8 branch carries (same definition, same cases)",
+    "contract": "docs/api-contract.md, Issued receipts as frozen data; .claude/rules/testing.md, Logic on both sides"
+  },
+  {
+    "kind": "shared-case",
+    "caseFile": "shared-cases/schemas/verification/payload.schema.json",
+    "reason": "1.6 renames signedSha256 to statusSha256 in the schema of the verification proof cases, as above",
+    "contract": ".claude/rules/testing.md, Logic on both sides"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.application.receipt.DonationReceiptIssuerTest > Given a donation that is not the caller's or does not exist, when its receipt is issued, then it is not found under the lock and nothing is numbered, rendered or saved",
+    "reason": "1.6 issues receipts as frozen, signed data (plan v3 D10, D12): the issuer freezes and signs instead of rendering, and the PDF is drawn from the frozen data after the issuing transaction",
+    "replacement": "donations.application.receipt.DonationReceiptIssuerTest > Given a donation that is not the caller's or does not exist, when its receipt is issued, then it is not found under the lock and nothing is numbered, frozen or saved",
+    "contract": "docs/api-contract.md, Issued receipts as frozen data"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.application.receipt.DonationReceiptIssuerTest > Given a render that fails, when issued, then the failure propagates and nothing is saved or superseded",
+    "reason": "1.6: issuing no longer renders, so the failure under the lock that must leave nothing saved is the refused proof (donations/receipt-too-long)",
+    "replacement": "donations.application.receipt.DonationReceiptIssuerTest > Given a receipt whose proof does not fit a QR code, when issued, then the refusal propagates and nothing is saved or replaced",
+    "contract": "docs/api-contract.md, Issued receipts as frozen data"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.application.receipt.DonationReceiptIssuerTest > Given an active receipt certifying other data, when issued, then a replacement with a new number names the old one, which is superseded first",
+    "reason": "1.6 issues receipts as frozen, signed data (plan v3 D10, D12): the issuer freezes and signs instead of rendering, and the PDF is drawn from the frozen data after the issuing transaction; the superseded receipt now has the status REPLACED",
+    "replacement": "donations.application.receipt.DonationReceiptIssuerTest > Given an active receipt certifying other data, when issued, then a replacement with a new number names the old one, which is replaced first",
+    "contract": "docs/api-contract.md, Issued receipts as frozen data"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.application.receipt.DonationReceiptIssuerTest > Given an active receipt certifying the same data, when issued again, then its snapshot is rendered with its own number and issue time and nothing is numbered, frozen or saved",
+    "reason": "1.6 issues receipts as frozen, signed data (plan v3 D10, D12): the issuer freezes and signs instead of rendering, and the PDF is drawn from the frozen data after the issuing transaction",
+    "replacement": "donations.application.receipt.DonationReceiptIssuerTest > Given an active receipt certifying the same data, when issued again, then that receipt is returned and nothing is numbered, frozen, signed or saved",
+    "contract": "docs/api-contract.md, Issued receipts as frozen data"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.application.receipt.DonationReceiptIssuerTest > Given no receipt yet, when a single receipt is issued, then the donor is locked first, then the donation and the donor record are read, a new number is taken and the rendered PDF is stored",
+    "reason": "1.6 issues receipts as frozen, signed data (plan v3 D10, D12): the issuer freezes and signs instead of rendering, and the PDF is drawn from the frozen data after the issuing transaction",
+    "replacement": "donations.application.receipt.DonationReceiptIssuerTest > Given no receipt yet, when a single receipt is issued, then the donor is locked first, then the donation and the donor record are read, a new number is taken and the document is frozen, signed and stored as active",
+    "contract": "docs/api-contract.md, Issued receipts as frozen data"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.application.receipt.DonationReceiptServiceTest > Given a completed year, when its yearly receipt is asked for, then the issuer reads and issues it with today's Prague date",
+    "reason": "1.6 splits issuing (POST /api/donations/me/receipts, no rendering) from the interim PDF download, which renders the issued receipt from its frozen data; \"Given a completed year, when its yearly PDF is asked for, then the issued receipt is rendered from its frozen data\" covers the download",
+    "replacement": "donations.application.receipt.DonationReceiptServiceTest > Given a completed year, when its yearly receipt is issued, then the issuer freezes it with today's Prague date and nothing is rendered",
+    "contract": "docs/api-contract.md, Issued receipts as frozen data"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.application.receipt.DonationReceiptServiceTest > Given a donation of the caller, when its receipt is asked for, then the issuer reads and issues it with today's Prague date",
+    "reason": "1.6 splits issuing (POST /api/donations/me/receipts, no rendering) from the interim PDF download, which renders the issued receipt from its frozen data; \"Given a donation of the caller, when its PDF is asked for, then the issued receipt is rendered from its frozen data\" covers the download",
+    "replacement": "donations.application.receipt.DonationReceiptServiceTest > Given a donation of the caller, when it is issued, then the issuer freezes it with today's Prague date and nothing is rendered",
+    "contract": "docs/api-contract.md, Issued receipts as frozen data"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.application.receipt.DonationReceiptServiceTest > Given a donation the issuer does not find, when its receipt is asked for, then it is not found and the rendering slot is free again",
+    "reason": "1.6: only the PDF download takes a rendering slot, so the test names the PDF",
+    "replacement": "donations.application.receipt.DonationReceiptServiceTest > Given a donation the issuer does not find, when its PDF is asked for, then it is not found and the rendering slot is free again",
+    "contract": "docs/api-contract.md, Issued receipts as frozen data"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.domain.receipt.DonationReceiptTest > Given a donation, when its receipt is issued, then it is an active single receipt of that donation without a year",
+    "reason": "1.6 builds the receipt aggregate from a FrozenReceipt with a status (ACTIVE, REPLACED, WITHDRAWN) instead of a snapshot of template, data and images (plan v3 D10)",
+    "replacement": "donations.domain.receipt.DonationReceiptTest > Given the frozen receipt of a donation, when it is issued, then it is an active single receipt of that donation, with the number, issue day and locale frozen",
+    "contract": "docs/api-contract.md, Issued receipts as frozen data"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.domain.receipt.DonationReceiptTest > Given a kind that does not match what is set, when a receipt is reconstituted, then it is refused",
+    "reason": "1.6 builds the receipt aggregate from a FrozenReceipt with a status (ACTIVE, REPLACED, WITHDRAWN) instead of a snapshot of template, data and images (plan v3 D10); the kind, donation and year now come from the frozen document, so they cannot disagree, and the remaining invariant is the supersede time matching the status",
+    "replacement": "donations.domain.receipt.DonationReceiptTest > Given a missing part or a supersede time that does not match the status, when a receipt is issued or reconstituted, then it is refused",
+    "contract": "docs/api-contract.md, Issued receipts as frozen data"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.domain.receipt.DonationReceiptTest > Given a snapshot without the digest of its issued PDF, when it is kept as receipt content, then it is refused",
+    "reason": "1.6 builds the receipt aggregate from a FrozenReceipt with a status (ACTIVE, REPLACED, WITHDRAWN) instead of a snapshot of template, data and images (plan v3 D10); no PDF digest is kept any more (ReceiptContent is gone), and the frozen receipt validates its own parts (FrozenReceiptTest)",
+    "replacement": "donations.domain.receipt.DonationReceiptTest > Given a missing part or a supersede time that does not match the status, when a receipt is issued or reconstituted, then it is refused",
+    "contract": "docs/api-contract.md, Issued receipts as frozen data"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.domain.receipt.DonationReceiptTest > Given a superseded receipt, when it is superseded again, then it is refused",
+    "reason": "1.6 builds the receipt aggregate from a FrozenReceipt with a status (ACTIVE, REPLACED, WITHDRAWN) instead of a snapshot of template, data and images (plan v3 D10)",
+    "replacement": "donations.domain.receipt.DonationReceiptTest > Given a replaced or a withdrawn receipt, when it is superseded, then it is refused",
+    "contract": "docs/api-contract.md, Issued receipts as frozen data"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.domain.receipt.DonationReceiptTest > Given a year, when its receipt is issued as a replacement, then it is a yearly receipt of that year naming the replaced one",
+    "reason": "1.6 builds the receipt aggregate from a FrozenReceipt with a status (ACTIVE, REPLACED, WITHDRAWN) instead of a snapshot of template, data and images (plan v3 D10)",
+    "replacement": "donations.domain.receipt.DonationReceiptTest > Given the frozen receipt of a year, when it is issued as a replacement, then it is a yearly receipt of that year naming the replaced one",
+    "contract": "docs/api-contract.md, Issued receipts as frozen data"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.domain.receipt.DonationReceiptTest > Given an active receipt, when it is superseded, then it is no longer active and remembers when",
+    "reason": "1.6 builds the receipt aggregate from a FrozenReceipt with a status (ACTIVE, REPLACED, WITHDRAWN) instead of a snapshot of template, data and images (plan v3 D10)",
+    "replacement": "donations.domain.receipt.DonationReceiptTest > Given an active receipt, when it is superseded, then it is replaced, no longer active and remembers when",
+    "contract": "docs/api-contract.md, Issued receipts as frozen data"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.domain.receipt.DonationReceiptTest > Given no content, when a receipt is issued or reconstituted, then it is refused",
+    "reason": "1.6 builds the receipt aggregate from a FrozenReceipt with a status (ACTIVE, REPLACED, WITHDRAWN) instead of a snapshot of template, data and images (plan v3 D10)",
+    "replacement": "donations.domain.receipt.DonationReceiptTest > Given a missing part or a supersede time that does not match the status, when a receipt is issued or reconstituted, then it is refused",
+    "contract": "docs/api-contract.md, Issued receipts as frozen data"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.infrastructure.persistence.JpaDonationReceiptRepositoryTest > Given a receipt replaced by a newer one, when the active receipt is read, then the superseded one is left out",
+    "reason": "1.6 keeps receipts in issued_receipt as frozen data with a status, a proof and a status digest instead of the snapshot of template, data and images in donation_receipt (plan v3 D12)",
+    "replacement": "donations.infrastructure.persistence.JpaDonationReceiptRepositoryTest > Given a receipt replaced by a newer one, when the active receipt is read, then the replaced one is left out and keeps its status and time",
+    "contract": "docs/api-contract.md, Issued receipts as frozen data"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.infrastructure.persistence.JpaDonationReceiptRepositoryTest > Given a receipt without a signature image, when it is saved and read, then its snapshot still has no signature",
+    "reason": "1.6 keeps receipts in issued_receipt as frozen data with a status, a proof and a status digest instead of the snapshot of template, data and images in donation_receipt (plan v3 D12); a receipt without a signature image is the yearly fixture, read back whole",
+    "replacement": "donations.infrastructure.persistence.JpaDonationReceiptRepositoryTest > Given a yearly receipt, when it is saved and the donor's active receipt of that year is read, then it comes back with its year",
+    "contract": "docs/api-contract.md, Issued receipts as frozen data"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.infrastructure.persistence.JpaDonationReceiptRepositoryTest > Given a single receipt, when it is saved and its donation's active receipt is read, then every field survives",
+    "reason": "1.6 keeps receipts in issued_receipt as frozen data with a status, a proof and a status digest instead of the snapshot of template, data and images in donation_receipt (plan v3 D12)",
+    "replacement": "donations.infrastructure.persistence.JpaDonationReceiptRepositoryTest > Given a signed single receipt in English, when it is saved and its donation's active receipt is read, then every field and the whole frozen receipt survive",
+    "contract": "docs/api-contract.md, Issued receipts as frozen data"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.infrastructure.persistence.JpaDonationReceiptRepositoryTest > Given a snapshot naming a template that is not stored, when the receipt is saved, then the foreign key refuses it",
+    "reason": "1.6 keeps receipts in issued_receipt as frozen data with a status, a proof and a status digest instead of the snapshot of template, data and images in donation_receipt (plan v3 D12); issued_receipt names no template, only its signature image",
+    "replacement": "donations.infrastructure.persistence.JpaDonationReceiptRepositoryTest > Given a frozen receipt naming a signature image that is not stored, when it is saved, then the foreign key refuses it",
+    "contract": "docs/api-contract.md, Issued receipts as frozen data"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.infrastructure.persistence.JpaDonationReceiptRepositoryTest > Given a stored receipt, when a superseded copy of it with other content is saved, then only superseded_at changes and the snapshot stays",
+    "reason": "1.6 keeps receipts in issued_receipt as frozen data with a status, a proof and a status digest instead of the snapshot of template, data and images in donation_receipt (plan v3 D12)",
+    "replacement": "donations.infrastructure.persistence.JpaDonationReceiptRepositoryTest > Given a stored receipt, when a replaced copy of it with other frozen data is saved, then only the status and superseded_at change",
+    "contract": "docs/api-contract.md, Issued receipts as frozen data"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.infrastructure.persistence.JpaDonationReceiptRepositoryTest > Given a stored template and image, when they are stored again, then nothing changes and both read back unchanged",
+    "reason": "1.6 keeps receipts in issued_receipt as frozen data with a status, a proof and a status digest instead of the snapshot of template, data and images in donation_receipt (plan v3 D12); issued receipts store no template",
+    "replacement": "donations.infrastructure.persistence.JpaDonationReceiptRepositoryTest > Given a stored image, when it is stored again, then nothing changes and it reads back unchanged",
+    "contract": "docs/api-contract.md, Issued receipts as frozen data"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.infrastructure.persistence.JpaDonationReceiptRepositoryTest > Given a superseded and an active yearly receipt of a year, when asked whether a yearly receipt of that donor and year was issued since a time, then the superseded one counts too, and another year, donor or a later time does not",
+    "reason": "1.6 keeps receipts in issued_receipt as frozen data with a status, a proof and a status digest instead of the snapshot of template, data and images in donation_receipt (plan v3 D12)",
+    "replacement": "donations.infrastructure.persistence.JpaDonationReceiptRepositoryTest > Given a replaced and an active yearly receipt of a year, when asked whether a yearly receipt of that donor and year was issued since a time, then the replaced one counts too, and another year, donor or a later time does not",
+    "contract": "docs/api-contract.md, Issued receipts as frozen data"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.infrastructure.persistence.JpaDonationReceiptRepositoryTest > Given single receipts, one of them superseded, when donations with a receipt are asked for, then every donation ever receipted is named",
+    "reason": "1.6 keeps receipts in issued_receipt as frozen data with a status, a proof and a status digest instead of the snapshot of template, data and images in donation_receipt (plan v3 D12)",
+    "replacement": "donations.infrastructure.persistence.JpaDonationReceiptRepositoryTest > Given single receipts, one of them replaced, when donations with a receipt are asked for, then every donation ever receipted is named",
+    "contract": "docs/api-contract.md, Issued receipts as frozen data"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.infrastructure.persistence.JpaDonationReceiptRepositoryTest > Given single, yearly, superseded and other donors' receipts, when the donor's receipts are listed, then all of the donor's come, newest issue first",
+    "reason": "1.6 keeps receipts in issued_receipt as frozen data with a status, a proof and a status digest instead of the snapshot of template, data and images in donation_receipt (plan v3 D12)",
+    "replacement": "donations.infrastructure.persistence.JpaDonationReceiptRepositoryTest > Given single, yearly, replaced and other donors' receipts, when the donor's receipts are listed, then all of the donor's come, newest issue first",
+    "contract": "docs/api-contract.md, Issued receipts as frozen data"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.infrastructure.persistence.JpaDonationReceiptRepositoryTest > Given single, yearly, superseded and other donors' receipts, when the donor's single numbers are read, then only their active single ones come",
+    "reason": "1.6 keeps receipts in issued_receipt as frozen data with a status, a proof and a status digest instead of the snapshot of template, data and images in donation_receipt (plan v3 D12)",
+    "replacement": "donations.infrastructure.persistence.JpaDonationReceiptRepositoryTest > Given single, yearly, replaced and other donors' receipts, when the donor's single numbers are read, then only their active single ones come",
+    "contract": "docs/api-contract.md, Issued receipts as frozen data"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.infrastructure.persistence.JpaDonationReceiptRepositoryTest > Given the schema, when a receipt without its snapshot is inserted, then the not-null constraint refuses it",
+    "reason": "1.6 keeps receipts in issued_receipt as frozen data with a status, a proof and a status digest instead of the snapshot of template, data and images in donation_receipt (plan v3 D12); the checks of issued_receipt are the shape, status, supersede time, schema version and proof checks, one case each (\"a status the receipt cannot have\" and the rest)",
+    "replacement": "donations.infrastructure.persistence.JpaDonationReceiptRepositoryTest > Given the schema, when a single receipt without a donation is inserted, then the shape check refuses it",
+    "contract": "docs/api-contract.md, Issued receipts as frozen data"
+  },
+  {
+    "kind": "log-field",
+    "line": "donations.application.receipt.DonationReceiptIssuer: Returning issued receipt <n>-<digits:6> again for donor <id>",
+    "reason": "1.6 logs at DEBUG, when an issue finds the active receipt still certifying the same data, that it returns that receipt instead of issuing a new one; it replaces v2's DEBUG line Rendering issued receipt <number> again for donor <id>, since issuing no longer renders",
+    "contract": "docs/api-contract.md, Issued receipts as frozen data; docs/system-overview.md, donations",
+    "security": {
+      "approvedIn": "PENDING",
+      "fields": {
+        "<n>": "the year of the receipt number, the year of issue",
+        "<digits:6>": "the serial of the receipt number; the number is what the donor's own receipt shows, no name or address",
+        "<id>": "the donor's id (UUID), as every receipt log line of v2 names it"
+      }
+    }
+  },
+  {
+    "scenario": "donations/donation_receipts: *",
+    "kind": "logs",
+    "reason": "1.6: v2's DEBUG line \"Rendering issued receipt <number> again for donor <id>\" of DonationReceiptIssuer is gone, because issuing no longer renders; the issuer logs \"Returning issued receipt <number> again for donor <id>\" in its place (log-field entry above)",
+    "contract": "docs/api-contract.md, Issued receipts as frozen data",
+    "security": {
+      "approvedIn": "PENDING",
+      "fields": {
+        "<number>": "the receipt number, as before",
+        "<id>": "the donor's id, as before"
+      }
+    },
+    "line": "donations.application.receipt.DonationReceiptIssuer: Rendering issued receipt * again for donor *"
+  },
+  {
+    "scenario": "donations/admin_receipt_signature: *",
+    "kind": "logs",
+    "reason": "1.6: v2's DEBUG line \"Rendering issued receipt <number> again for donor <id>\" of DonationReceiptIssuer is gone, because issuing no longer renders; the issuer logs \"Returning issued receipt <number> again for donor <id>\" in its place (log-field entry above)",
+    "contract": "docs/api-contract.md, Issued receipts as frozen data",
+    "security": {
+      "approvedIn": "PENDING",
+      "fields": {
+        "<number>": "the receipt number, as before",
+        "<id>": "the donor's id, as before"
+      }
+    },
+    "line": "donations.application.receipt.DonationReceiptIssuer: Rendering issued receipt * again for donor *"
+  }
+]

@@ -59,7 +59,7 @@ describe('Given the receipt signing key section of the receipt settings', () => 
 
     expect(text('h2')).toBe('Klíč k ověřovacím QR kódům');
     expect(text('.ui-card__intro')).toBe(
-      'Tímto klíčem bude server podepisovat ověřovací QR kódy na potvrzeních o daru. Jeho veřejnou část web zveřejňuje, aby se podle ní dala potvrzení ověřit. Klíč vytvořil server sám a tady se nedá změnit.',
+      'Tímto klíčem server podepisuje ověřovací QR kódy na potvrzeních o daru. Jeho veřejnou část web zveřejňuje, aby se podle ní dala potvrzení ověřit. Klíč vytvořil server sám a tady se nedá změnit.',
     );
     expect(rows()).toEqual({
       'Klíč serveru': '21fe31df',
