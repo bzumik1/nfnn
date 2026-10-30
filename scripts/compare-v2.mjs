@@ -1184,14 +1184,13 @@ function render(result) {
     );
     const recipes = [...new Set(additions.map(({ entry }) => entry))];
     if (recipes.length > 0) {
-      lines.push('Takto se doplněk znovu nahraje (z kořene repozitáře):', '', '```sh');
+      lines.push(
+        'Takto se doplněk znovu nahraje: příkaz `record` se spouští z kořene checkoutu tohoto PR a základ s patchem si připraví sám.',
+        '',
+        '```sh',
+      );
       for (const entry of recipes) {
-        lines.push(
-          `git worktree add --detach ../v2-baseline ${entry.recordedFrom}`,
-          `git -C ../v2-baseline apply "$PWD/${entry.patch}"`,
-          `(cd ../v2-baseline && ${entry.record})`,
-          `git worktree remove --force ../v2-baseline`,
-        );
+        lines.push(`# ${entry.recordedFrom} + ${entry.patch}`, entry.record);
       }
       lines.push('```', '');
     }
