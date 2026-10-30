@@ -96,7 +96,7 @@ jobs:
             backend/build/api-transcripts/
             backend/build/backend-inventory.json
           if-no-files-found: error
-          retention-days: 3
+          retention-days: ${{ github.event_name == 'push' && 30 || 3 }}
 
   frontend:
     needs: changes
@@ -209,9 +209,62 @@ jobs:
           if-no-files-found: error
           retention-days: 3
 
+  main-recording:
+    name: Nahrávka main
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: read
+      contents: read
+    outputs:
+      commit: ${{ steps.find.outputs.commit }}
+      missing: ${{ steps.find.outputs.missing }}
+    steps:
+      - name: Find the newest successful push run on main at or before the base that keeps its recording
+        id: find
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          HEAD_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          base=$(gh api "repos/$REPOSITORY/commits/$HEAD_SHA" --jq '.parents[0].sha')
+          runs=$(gh api "repos/$REPOSITORY/actions/workflows/pr-check.yml/runs?branch=main&event=push&status=success&per_page=100" --jq '.workflow_runs[] | "\(.head_sha) \(.id)"')
+          for commit in $(gh api "repos/$REPOSITORY/commits?sha=$base&per_page=50" --jq '.[].sha'); do
+            for run in $(awk -v commit="$commit" '$1 == commit { print $2 }' <<<"$runs"); do
+              if [ -n "$(gh api "repos/$REPOSITORY/actions/runs/$run/artifacts" --jq '.artifacts[] | select(.name == "backend-recording" and .expired == false) | .id')" ]; then
+                echo "The recording of main at $commit (run $run) is the comparison base for $base."
+                { echo "commit=$commit"; echo "run=$run"; } >> "$GITHUB_OUTPUT"
+                exit 0
+              fi
+            done
+          done
+          missing="no successful push run of the last 50 commits on main up to ${base:0:12} keeps a backend-recording artifact (a first run, or every one expired)"
+          echo "::warning::$missing; the comparison falls back to v2 only"
+          echo "missing=$missing" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/download-artifact@v8
+        if: steps.find.outputs.run != ''
+        with:
+          name: backend-recording
+          run-id: ${{ steps.find.outputs.run }}
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/main-recording
+
+      - name: Keep the recording of main for the comparison
+        if: steps.find.outputs.run != ''
+        uses: actions/upload-artifact@v7
+        with:
+          name: main-recording
+          path: ${{ runner.temp }}/main-recording/
+          if-no-files-found: error
+          retention-days: 1
+
   compare-v2:
     name: Srovnání s v2
-    needs: [backend, frontend, mcp]
+    needs: [backend, frontend, mcp, main-recording]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -220,8 +273,22 @@ jobs:
           persist-credentials: false
           fetch-depth: 2
 
-      - name: List the files the pull request changes
-        run: git diff --name-only HEAD^1 HEAD > "$RUNNER_TEMP/changed-files.txt"
+      - name: List the files the pull request changes, with their git status
+        run: git diff --name-status --no-renames HEAD^1 HEAD > "$RUNNER_TEMP/changed-files.txt"
+
+      - uses: actions/download-artifact@v8
+        if: needs.main-recording.outputs.commit != ''
+        with:
+          name: main-recording
+          path: ${{ runner.temp }}/main-recording
+
+      - name: List the files changed since the recorded main commit
+        if: needs.main-recording.outputs.commit != ''
+        env:
+          MAIN_COMMIT: ${{ needs.main-recording.outputs.commit }}
+        run: |
+          git fetch --quiet --depth=1 origin "$MAIN_COMMIT"
+          git diff --name-status --no-renames "$MAIN_COMMIT" HEAD > "$RUNNER_TEMP/changed-since-main.txt"
 
       - uses: actions/setup-node@v7
         with:
@@ -267,9 +334,17 @@ jobs:
         env:
           API_TRANSCRIPTS_DIR: ${{ github.workspace }}/backend/build/api-transcripts
 
-      - name: Transcripts and tests compared with v2
+      - name: Transcripts and tests compared with v2 and with the recording of main
+        env:
+          MAIN_COMMIT: ${{ needs.main-recording.outputs.commit }}
+          MAIN_MISSING: ${{ needs.main-recording.outputs.missing }}
         run: |
-          node scripts/compare-v2.mjs --inventory="$RUNNER_TEMP/test-inventory.json" --changed="$RUNNER_TEMP/changed-files.txt" --report="$RUNNER_TEMP/srovnani-s-v2.md" > /dev/null
+          if [ -n "$MAIN_COMMIT" ]; then
+            main=(--main="$RUNNER_TEMP/main-recording/api-transcripts" --main-commit="$MAIN_COMMIT" --main-changed="$RUNNER_TEMP/changed-since-main.txt")
+          else
+            main=(--main-missing="${MAIN_MISSING:-the job main-recording named no recording of main}")
+          fi
+          node scripts/compare-v2.mjs --inventory="$RUNNER_TEMP/test-inventory.json" --changed="$RUNNER_TEMP/changed-files.txt" "${main[@]}" --report="$RUNNER_TEMP/srovnani-s-v2.md" > /dev/null
           status=$?
           cat "$RUNNER_TEMP/srovnani-s-v2.md" >> "$GITHUB_STEP_SUMMARY"
           exit $status
@@ -753,7 +828,7 @@ jobs:
 
   gate:
     if: always()
-    needs: [changes, backend, frontend, mcp, compare-v2, stack]
+    needs: [changes, backend, frontend, mcp, main-recording, compare-v2, stack]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:

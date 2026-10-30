@@ -51,6 +51,8 @@ public final class GoldenFiles {
         String expected = canonical(actual);
         try {
             if (writing) {
+                assertThat(file).as("%s is part of the v2 baseline and is never rewritten: record a new sample from the commit in regression/v2/BASELINE_COMMIT, "
+                        + "or declare the difference in regression/v2/changes/", relativePath).doesNotExist();
                 Files.createDirectories(file.getParent());
                 Files.writeString(file, expected, StandardCharsets.UTF_8);
                 return;
