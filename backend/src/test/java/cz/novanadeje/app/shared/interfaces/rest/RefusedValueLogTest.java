@@ -11,6 +11,8 @@ import org.junit.jupiter.api.Test;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.support.ResourceBundleMessageSource;
 
+import java.util.UUID;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 class RefusedValueLogTest {
@@ -53,6 +55,29 @@ class RefusedValueLogTest {
                 .contains(RefusedValueLogTest.class.getName() + ".refusal:" + frame.getLineNumber())
                 .doesNotContain(CLIENT_VALUE);
         assertThat(event.getThrowableProxy()).isNull();
+    }
+
+    @Test
+    @DisplayName("Given a value the JDK refuses with an IllegalArgumentException, when it is answered, then the warning also names the site's frame that called it, without the message")
+    void should_warn_with_site_frame_when_answered_given_illegal_argument_thrown_by_jdk() {
+        IllegalArgumentException refusal = jdkRefusal();
+
+        handler.handleIllegalArgument(refusal);
+
+        assertThat(log.list).hasSize(1);
+        assertThat(log.list.getFirst().getFormattedMessage())
+                .matches("Refused a value as validation \\(IllegalArgumentException thrown at java\\.util\\.UUID\\.\\w+:\\d+, called from "
+                        + RefusedValueLogTest.class.getName().replace(".", "\\.") + "\\.jdkRefusal:\\d+\\)")
+                .doesNotContain(CLIENT_VALUE);
+    }
+
+    private static IllegalArgumentException jdkRefusal() {
+        try {
+            UUID.fromString(CLIENT_VALUE);
+            throw new IllegalStateException("A UUID was read from " + CLIENT_VALUE);
+        } catch (IllegalArgumentException refused) {
+            return refused;
+        }
     }
 
     private static IllegalArgumentException refusal() {

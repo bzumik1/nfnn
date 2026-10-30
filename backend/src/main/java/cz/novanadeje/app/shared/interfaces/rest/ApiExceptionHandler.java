@@ -32,6 +32,7 @@ import org.springframework.web.method.annotation.HandlerMethodValidationExceptio
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
 import java.net.URI;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -39,6 +40,7 @@ import java.util.Map;
 public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(ApiExceptionHandler.class);
+    private static final String SITE_PACKAGE = "cz.novanadeje.app.";
 
     private ProblemMessages texts;
 
@@ -134,7 +136,19 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
         if (frames.length == 0) {
             return "an unknown frame";
         }
-        return frames[0].getClassName() + "." + frames[0].getMethodName() + ":" + frames[0].getLineNumber();
+        if (isSiteFrame(frames[0])) {
+            return frameName(frames[0]);
+        }
+        return frameName(frames[0]) + ", called from " + Arrays.stream(frames).filter(ApiExceptionHandler::isSiteFrame).findFirst()
+                .map(ApiExceptionHandler::frameName).orElse("no frame of the site");
+    }
+
+    private static boolean isSiteFrame(StackTraceElement frame) {
+        return frame.getClassName().startsWith(SITE_PACKAGE);
+    }
+
+    private static String frameName(StackTraceElement frame) {
+        return frame.getClassName() + "." + frame.getMethodName() + ":" + frame.getLineNumber();
     }
 
     private static boolean isExpiredToken(AuthenticationException ex) {
