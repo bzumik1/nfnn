@@ -7,6 +7,12 @@ import cz.novanadeje.app.donations.application.signing.ReceiptSigner;
 import cz.novanadeje.app.donations.domain.donor.DonorReference;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceipt;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceiptRepository;
+import cz.novanadeje.app.donations.domain.receipt.FrozenReceiptCases;
+import cz.novanadeje.app.donations.domain.receipt.proof.ReceiptProof;
+import cz.novanadeje.app.donations.domain.receipt.proof.ReceiptProofMessage;
+import cz.novanadeje.app.donations.domain.receipt.proof.ReceiptProofReader;
+import cz.novanadeje.app.donations.domain.receipt.proof.ReceiptProofText;
+import cz.novanadeje.app.donations.domain.receipt.proof.SignedReceipt;
 import cz.novanadeje.app.donations.interfaces.rest.FrozenReceiptResponse;
 import io.cucumber.datatable.DataTable;
 import io.cucumber.java.en.Then;
@@ -21,6 +27,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -258,6 +265,29 @@ public class DonorFrozenReceiptStepDefinitions {
         JsonNode verification = answeredReceipt().get("receipt").get("verification");
         assertThat(verification.get("keyId").asString()).isEqualTo(signer.keyId().value());
         assertThat(verification.get("qrText").asString()).startsWith(QR_PREFIX).matches("https://nfnn\\.cz/overit#1[0-9]+");
+    }
+
+    @Then("the frozen receipt's proof reads back as the receipt served, under the status digest stored for it")
+    public void theProofReadsBackAsTheReceiptServed() {
+        JsonNode answer = answeredReceipt();
+        JsonNode receipt = answer.get("receipt");
+        String qrText = receipt.get("verification").get("qrText").asString();
+        String companyIdentifier = receipt.get("foundation").get("companyIdentifier").asString();
+
+        ReceiptProofReader.ReadProof read = ReceiptProofReader.read(qrText, companyIdentifier,
+                keyId -> keyId.equals(signer.keyId()) ? Optional.of(new ReceiptProofReader.KnownKey(keyId, signer.publicKey(), false)) : Optional.empty(),
+                signer);
+
+        assertThat(read.keyId().value()).isEqualTo(receipt.get("verification").get("keyId").asString());
+        assertThat(read.receipt()).isEqualTo(SignedReceipt.of(FrozenReceiptCases.documentOf(receipt)));
+        assertThat(read.receipt().number().value()).isEqualTo(answer.get("number").asString());
+        byte[] proof = ReceiptProofText.read(qrText);
+        byte[] body = Arrays.copyOf(proof, proof.length - ReceiptProof.SIGNATURE_BYTES);
+        byte[] message = ReceiptProofMessage.of(companyIdentifier, body);
+        byte[] signedMessageAndSignature = Arrays.copyOf(message, message.length + ReceiptProof.SIGNATURE_BYTES);
+        System.arraycopy(proof, body.length, signedMessageAndSignature, message.length, ReceiptProof.SIGNATURE_BYTES);
+        assertThat(jdbc.sql("select status_sha256 from issued_receipt where id = ?").param(UUID.fromString(answer.get("id").asString()))
+                .query(String.class).single()).isEqualTo(sha256(signedMessageAndSignature));
     }
 
     @Then("its proof differs from the receipt it replaces")

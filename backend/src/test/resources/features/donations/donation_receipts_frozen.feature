@@ -43,6 +43,7 @@ Feature: A donor issues receipts of their donations as frozen, signed data
     And the frozen receipt carries the Czech texts only
     And the frozen receipt shows no signature image
     And the frozen receipt is signed with the server's key
+    And the frozen receipt's proof reads back as the receipt served, under the status digest stored for it
     And 1 receipt is stored
     And receipt "2027-000001" is kept as its frozen data
 
@@ -192,6 +193,7 @@ Feature: A donor issues receipts of their donations as frozen, signed data
       | 2026-12-10 | 125050      |
       | 2026-12-30 | 30000       |
     And its proof differs from the receipt it replaces
+    And the frozen receipt's proof reads back as the receipt served, under the status digest stored for it
     And 2 receipts are stored
     And 1 receipt is active
     And receipt "2027-000001" is superseded
