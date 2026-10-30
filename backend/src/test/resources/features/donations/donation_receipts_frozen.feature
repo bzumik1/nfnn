@@ -471,6 +471,45 @@ Feature: A donor issues receipts of their donations as frozen, signed data
     Then the response status is 400
     And the problem type ends with "donations/year-not-yet-completed"
 
+  Scenario: A yearly receipt with more gifts than its verification QR code holds is refused, stores nothing and leaves a gap in the numbering
+    Given today is 2026-12-20
+    And a person "Jana" is registered
+    And the bank account has these movements:
+      | id   | date       | amount  | account    | bankCode | name          | variableSymbol |
+      | 2001 | 2026-09-30 | 1000.00 | 2900233333 | 2010     | Nováková Jana | {Jana}         |
+    And the bank account has 600 movements of "200.00" from "Jana" between 2026-10-01 and 2026-12-19
+    And the application starts the import
+    And today is 2027-01-15
+    When "Jana" issues her yearly receipt for 2026
+    Then the response status is 400
+    And the problem type ends with "donations/receipt-too-long"
+    And the problem has the title "Potvrzení má příliš mnoho darů pro ověřovací QR kód"
+    And 0 receipts are stored
+    When "Jana" issues the receipt of her donation received on 2026-09-30
+    Then the response status is 200
+    And the issued receipt has number "2027-000002"
+    And 1 receipt is stored
+
+  Scenario: A replacement refused for its too long proof leaves the active yearly receipt active
+    Given today is 2026-12-20
+    And a person "Jana" is registered
+    And the bank account has these movements:
+      | id   | date       | amount  | account    | bankCode | name          | variableSymbol |
+      | 2001 | 2026-10-01 | 1000.00 | 2900233333 | 2010     | Nováková Jana | {Jana}         |
+    And the application starts the import
+    And today is 2027-01-15
+    And "Jana" issues her yearly receipt for 2026
+    And the bank account has 600 movements of "200.00" from "Jana" between 2026-12-21 and 2026-12-31
+    And the hourly import runs
+    When "Jana" issues her yearly receipt for 2026
+    Then the response status is 400
+    And the problem type ends with "donations/receipt-too-long"
+    And 1 receipt is stored
+    And 1 receipt is active
+    When "Jana" reads receipt "2027-000001"
+    Then the response status is 200
+    And the issued receipt is active
+
   Scenario: Issuing receipts is limited per client address, counting the old downloads too
     Given today is 2026-12-20
     And a person "Jana" is registered

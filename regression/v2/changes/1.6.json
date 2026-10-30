@@ -259,6 +259,19 @@
     }
   },
   {
+    "kind": "log-field",
+    "line": "donations.application.signing.ReceiptProofs: Receipt <n>-<digits:6> needs a verification proof of <n> bytes, more than a QR code holds, so it is not issued",
+    "reason": "1.6 is the first slice that signs while issuing, so a receipt whose proof does not fit one QR code (a yearly receipt of more than about 550 gifts) is refused with 400 donations/receipt-too-long and logged at ERROR, because the foundation must then issue that receipt by hand; donation_receipts_frozen.feature now reaches it over HTTP (review of 1.6, tests M1)",
+    "contract": "docs/api-contract.md, Receipt verification proof and signing keys (QR symbol)",
+    "security": {
+      "approvedIn": "PENDING",
+      "fields": {
+        "<n>": "the year of the receipt number the refused issue took, and the length of the proof in bytes, a count only",
+        "<digits:6>": "the serial of that receipt number, which stays a gap in the numbering; the number names no donor"
+      }
+    }
+  },
+  {
     "scenario": "donations/donation_receipts: *",
     "kind": "logs",
     "reason": "1.6: v2's DEBUG line \"Rendering issued receipt <number> again for donor <id>\" of DonationReceiptIssuer is gone, because issuing no longer renders; the issuer logs \"Returning issued receipt <number> again for donor <id>\" in its place (log-field entry above)",

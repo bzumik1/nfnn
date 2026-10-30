@@ -39,6 +39,7 @@ import java.net.http.HttpTimeoutException;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -60,6 +61,7 @@ public class FioImportStepDefinitions {
             UNAUTHORIZED, ImportFailureKind.UNAUTHORIZED,
             UNREACHABLE, ImportFailureKind.TRANSPORT);
     private static final LocalTime NOON = LocalTime.NOON;
+    private static final long BULK_MOVEMENT_IDS = 900_000;
 
     private final ImportBankPaymentsService importService;
     private final BankPaymentRepository payments;
@@ -95,6 +97,19 @@ public class FioImportStepDefinitions {
     @Given("the bank account has these movements:")
     public void theBankAccountHasTheseMovements(List<Map<String, String>> rows) {
         rows.forEach(row -> fio.addMovement(movement(row).build()));
+    }
+
+    @Given("the bank account has {int} movements of {string} from {string} between {date} and {date}")
+    public void theBankAccountHasMovementsFromBetween(int count, String amount, String alias, LocalDate first, LocalDate last) {
+        long days = ChronoUnit.DAYS.between(first, last) + 1;
+        String variableSymbol = scenarioDonors.resolve("{" + alias + "}");
+        for (int movement = 0; movement < count; movement++) {
+            fio.addMovement(FioMovements.incoming(BULK_MOVEMENT_IDS + movement, first.plusDays(movement % days), amount)
+                    .from("2900233333", "2010")
+                    .named(alias)
+                    .withVariableSymbol(variableSymbol)
+                    .build());
+        }
     }
 
     @Given("the bank account has a movement {long} on {date} with a {int}-character name, a {int}-character message and a {int}-character account")
