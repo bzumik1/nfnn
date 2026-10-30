@@ -30,5 +30,17 @@
     "field": "$.vector",
     "reason": "1.14 accepts a vector signature (SVG) beside the scan (Jakub 2026-10-30, \"Chtěl bych všude používat podpis jako SVG\"); the answer's vector carries an SVG signature as closed JSON (viewBox and paths[{d, fill, opacity}]) for the administration's preview, null for a scan or none",
     "contract": "docs/api-contract.md, Receipt signature"
+  },
+  {
+    "kind": "shared-case",
+    "caseFile": "shared-cases/signature/vector.json",
+    "reason": "1.14 stores an SVG signature as canonical JSON, the exact bytes the browser will be served and hash against the digest a receipt names (S/B review M2, lead 2026-10-30): the new file pins an uploaded SVG to those bytes and their SHA-256, with absolute coordinates rounded once (review m5); the backend runs every case through StaxSignatureVectorParser and SignatureVector (SignatureVectorSharedCasesTest), the browser's suite checks the SHA-256 half now and draws the JSON from 1.9",
+    "contract": ".claude/rules/testing.md, Logic on both sides"
+  },
+  {
+    "kind": "shared-case",
+    "caseFile": "shared-cases/schemas/signature/vector.schema.json",
+    "reason": "1.14 adds the schema of signature/vector.json: an input SVG text, and the canonical JSON (an object of viewBox and paths without whitespace) with its SHA-256 in 64 lowercase hex characters as the expected value",
+    "contract": ".claude/rules/testing.md, Logic on both sides"
   }
 ]
