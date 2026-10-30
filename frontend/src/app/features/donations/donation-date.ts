@@ -23,6 +23,10 @@ export function pragueDay(isoInstant: string): string {
   return `${parts['year']}-${parts['month']}-${parts['day']}`;
 }
 
+export function pragueHour(isoInstant: string): number {
+  return Number(pragueParts(isoInstant)['hour']);
+}
+
 function pragueParts(isoInstant: string): Record<string, string> {
   return Object.fromEntries(
     BANK_TIME.formatToParts(new Date(isoInstant)).map((part) => [part.type, part.value]),

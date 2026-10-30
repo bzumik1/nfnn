@@ -45,6 +45,7 @@ const YEARLY_PROBLEMS_SHOWN_AS_TITLE = [
   RECEIPT_BEFORE_FIRST_YEAR,
 ];
 const NOT_FOUND = 404;
+const BANK_CHECK_COOLDOWN_MS = 30_000;
 
 @Injectable()
 export class DonorDonations {
@@ -76,6 +77,7 @@ export class DonorDonations {
   private readonly downloads = signal<ReadonlySet<string>>(new Set());
   private readonly savedReceipt = signal<SavedReceipt | null>(null);
   private latestDonationsRequest = 0;
+  private bankCheckEndedAt: number | null = null;
 
   constructor() {
     this.load();
@@ -100,6 +102,13 @@ export class DonorDonations {
 
   refreshFromBank(): void {
     this.checkBank(true);
+  }
+
+  checkBankIfStale(): void {
+    const endedAt = this.bankCheckEndedAt;
+    if (endedAt !== null && Date.now() - endedAt > BANK_CHECK_COOLDOWN_MS) {
+      this.checkBank(false);
+    }
   }
 
   clearBankCheckOutcome(): void {
@@ -212,14 +221,14 @@ export class DonorDonations {
             this.bankDataArrived.update((count) => count + 1);
           }
           this.reloadDonations().subscribe((items) => {
-            this.checkingBank.set(false);
+            this.bankCheckEnded();
             if (byDonor && items !== null) {
               this.bankCheckOutcome.set(outcomeOf(check, items, known));
             }
           });
         },
         error: (failure: unknown) => {
-          this.checkingBank.set(false);
+          this.bankCheckEnded();
           if (!byDonor) {
             return;
           }
@@ -230,6 +239,11 @@ export class DonorDonations {
           this.bankCheckOutcome.set({ kind: 'failed' });
         },
       });
+  }
+
+  private bankCheckEnded(): void {
+    this.checkingBank.set(false);
+    this.bankCheckEndedAt = Date.now();
   }
 
   private sessionEnded(failure: unknown): boolean {

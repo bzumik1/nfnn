@@ -32,8 +32,37 @@ async function rememberedSession(page: Page): Promise<void> {
 
 test.describe('Given an administrator on the monthly report page', () => {
   test.beforeEach(async ({ page }) => {
+    await page.clock.setFixedTime(new Date('2026-10-23T08:00:00Z'));
     await mockDonorApi(page);
     await rememberedSession(page);
+  });
+
+  test('when the ended month has not gone out by its sending time, then the page says so and that only an ended month can be sent', async ({
+    page,
+  }) => {
+    await page.clock.setFixedTime(new Date('2026-10-30T14:52:00Z'));
+    const view = reportView({
+      sentReports: [{ month: '2026-08', sentAt: '2026-09-01T05:00:12Z' }],
+      nextReport: { month: '2026-09', dueOn: '2026-10-01' },
+      lastEndedMonth: '2026-09',
+    });
+    await page.route(
+      (url) => url.pathname === REPORT,
+      (route) => route.fulfill({ json: view }),
+    );
+
+    await page.goto('/sprava/prehledy');
+
+    await expect(
+      page.getByText(
+        'Přehled za září 2026 měl odejít 01. 10. 2026 v 7:00, ale zatím neodešel. Web ho zkusí poslat znovu v příští celou hodinu; poslat ho můžete i hned níže.',
+      ),
+    ).toBeVisible();
+    await expect(
+      page.getByText(
+        'Poslat jde jen měsíc, který už skončil: přehled za říjen 2026 půjde poslat od 01. 11. 2026.',
+      ),
+    ).toBeVisible();
   });
 
   test('when they change the recipients, the day and the sections, then the settings are saved and the page confirms', async ({

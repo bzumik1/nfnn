@@ -1,0 +1,18 @@
+[
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/layout/site-header/site-header.spec.ts > Given the site header over the dark top of a page > when a page other than home is at its top, then the logo is drawn light for the dark background",
+    "reason": "PR #217: the logo on a dark background is its own file whose star keeps its face, instead of the whole logo whitened by a filter, so the test checks which file is shown and its name says so",
+    "replacement": "src/app/layout/site-header/site-header.spec.ts > Given the site header over the dark top of a page > when a page other than home is at its top, then the logo is its variant for a dark background, whose star keeps its face",
+    "contract": "docs/frontend-overview.md, site-header"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/layout/site-footer/site-footer.spec.ts > Given the site footer > when it renders, then the logo is drawn light for the dark footer",
+    "reason": "PR #217: the logo on a dark background is its own file whose star keeps its face, instead of the whole logo whitened by a filter, so the test checks which file is shown and its name says so",
+    "replacement": "src/app/layout/site-footer/site-footer.spec.ts > Given the site footer > when it renders, then the logo is its variant for the dark footer, whose star keeps its face",
+    "contract": "docs/frontend-overview.md, site-footer"
+  }
+]
