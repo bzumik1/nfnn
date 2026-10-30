@@ -188,6 +188,25 @@ describe('Given the privacy policy page', () => {
     );
   });
 
+  it('when it renders, then it says the verification page checks the signature in the browser and sends the foundation only a digest for the status', () => {
+    const donations = purposeText('Evidence darů a potvrzení o daru');
+    expect(donations).toContain(
+      'Kód z potvrzení o daru můžete ověřit na stránce nfnn.cz/overit. Podpis fondu v něm kontroluje váš prohlížeč, údaje z kódu nám neposílá.',
+    );
+    expect(donations).toContain(
+      'Jste-li připojeni k internetu, pošle nám jen otisk podepsaných údajů (hash SHA-256), ze kterého jméno, adresu ani částky zjistit nelze, a my mu odpovíme, zda potvrzení vedeme jako platné, nahradili jsme ho novějším, nebo jsme ho zrušili.',
+    );
+    expect(donations).toContain(
+      'Otisk neukládáme ani nezapisujeme do záznamů serveru; IP adresu dotazu používáme jen k omezení počtu dotazů a držíme ji k tomu jen v operační paměti serveru.',
+    );
+  });
+
+  it('when it renders, then it warns that sharing a verification link shares the receipt data', () => {
+    expect(purposeText('Evidence darů a potvrzení o daru')).toContain(
+      'Odkaz z kódu nese všechny údaje z potvrzení: kdo ho od vás dostane, je uvidí, a některé e-mailové a chatovací služby si odkazy, které přes ně pošlete, ukládají na svých serverech. Sdílením odkazu proto sdílíte údaje z potvrzení.',
+    );
+  });
+
   it('when it renders, then it lists every payment detail the bank statement gives us', () => {
     expect(texts('.purpose li')).toEqual(
       expect.arrayContaining([
