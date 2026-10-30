@@ -2,11 +2,12 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://nfnn.cz/shared-cases/schemas/qr/payment.schema.json",
   "title": "Payment QR cases: a recipient account and the request's parameters give a SPAYD text and its QR symbol, or a refusal",
+  "description": "A refusal is the problem GET /api/donations/payment-qr answers (status, type, fields). Slice 1.4 draws the payment QR in the browser and removes that endpoint, so it rewrites these refusals as the browser's own refusals or retires them.",
   "type": "object",
   "required": ["source", "logic", "cases"],
   "additionalProperties": false,
   "properties": {
-    "source": { "type": "string", "minLength": 1 },
+    "source": { "$ref": "../defs/source.schema.json" },
     "logic": { "type": "string", "minLength": 1 },
     "cases": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/case" } }
   },
@@ -63,7 +64,7 @@
           "additionalProperties": false,
           "properties": {
             "status": { "type": "integer", "minimum": 400, "maximum": 499 },
-            "type": { "type": "string", "pattern": "^https://nfnn\\.cz/problems/" },
+            "type": { "type": "string", "pattern": "^https://nfnn\\.cz/problems/(validation|donations/[a-z]+(-[a-z]+)*)$" },
             "fields": { "type": "array", "uniqueItems": true, "items": { "enum": ["amount", "variableSymbol", "purpose"] } }
           }
         }

@@ -4,20 +4,85 @@ const { defineConfig } = require('eslint/config');
 const tseslint = require('typescript-eslint');
 const angular = require('angular-eslint');
 const prettier = require('eslint-config-prettier');
+const { builtinModules } = require('node:module');
 
-const SHARED_CASE_VALIDATOR_ONLY = {
-  group: ['ajv', 'ajv/*'],
-  message: 'Read and validate shared cases through src/testing/shared-cases.ts.',
+const NODE_BUILTINS = [
+  ...new Set(
+    builtinModules.flatMap((name) => (name.startsWith('node:') ? [name] : [name, `node:${name}`])),
+  ),
+];
+const TEST_SUPPORT = [
+  'src/**/*.spec.ts',
+  'src/**/testing/**',
+  'src/test-setup.ts',
+  'src/test-providers.ts',
+];
+const SHARED_CASE_LOADER = 'src/testing/shared-cases.ts';
+const SHARED_CASE_SETUP = 'src/testing/shared-cases-setup.ts';
+
+const SCOPES = {
+  app: { files: ['src/**/*.ts'], ignores: TEST_SUPPORT },
+  testSupport: { files: TEST_SUPPORT, ignores: [SHARED_CASE_LOADER, SHARED_CASE_SETUP] },
+  sharedCaseLoader: { files: [SHARED_CASE_LOADER], ignores: [] },
+  sharedCaseSetup: { files: [SHARED_CASE_SETUP], ignores: [] },
 };
-const VITEST_GLOBAL_SETUP_ONLY = {
-  group: ['node:*'],
-  message:
-    'Only the Vitest global setup src/testing/shared-cases-setup.ts reads files in Node; specs get the shared cases from it and the app never imports Node.',
-};
+
+const CONFINED_IMPORTS = [
+  {
+    patterns: ['ajv', 'ajv/*'],
+    dynamic: '^ajv(?:/.*)?$',
+    allowedIn: ['sharedCaseLoader'],
+    message: 'Read and validate shared cases through src/testing/shared-cases.ts.',
+  },
+  {
+    names: NODE_BUILTINS,
+    dynamic: `^(?:${NODE_BUILTINS.map((name) => name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})$`,
+    allowedIn: ['sharedCaseSetup'],
+    message:
+      'Only the Vitest global setup src/testing/shared-cases-setup.ts runs in Node; specs get the shared cases from it and the app never imports Node.',
+  },
+  {
+    patterns: ['**/testing', '**/testing/**'],
+    dynamic: '(?:^|/)testing(?:/|$)',
+    allowedIn: ['testSupport', 'sharedCaseLoader', 'sharedCaseSetup'],
+    message:
+      "Test support (a testing folder or a library's testing entry point) serves specs only; the app never imports it.",
+  },
+];
+
+function confinedImports() {
+  return Object.entries(SCOPES).map(([scope, { files, ignores }]) => {
+    const refused = CONFINED_IMPORTS.filter((entry) => !entry.allowedIn.includes(scope));
+    return {
+      files,
+      ignores,
+      rules: {
+        'no-restricted-imports': [
+          'error',
+          {
+            paths: refused.flatMap(({ names = [], message }) =>
+              names.map((name) => ({ name, message })),
+            ),
+            patterns: refused.flatMap(({ patterns = [], message }) =>
+              patterns.length === 0 ? [] : [{ group: patterns, message }],
+            ),
+          },
+        ],
+        'no-restricted-syntax': [
+          'error',
+          ...refused.map(({ dynamic, message }) => ({
+            selector: `ImportExpression[source.value=/${dynamic.replace(/\//g, '\\/')}/]`,
+            message,
+          })),
+        ],
+      },
+    };
+  });
+}
 
 module.exports = defineConfig([
   {
-    files: ['**/*.ts'],
+    files: ['**/*.ts', '**/*.mts'],
     extends: [
       eslint.configs.recommended,
       tseslint.configs.recommended,
@@ -64,28 +129,7 @@ module.exports = defineConfig([
       '@angular-eslint/prefer-on-push-component-change-detection': 'off',
     },
   },
-  {
-    files: ['src/**/*.ts'],
-    ignores: ['src/testing/shared-cases.ts', 'src/testing/shared-cases-setup.ts'],
-    rules: {
-      'no-restricted-imports': [
-        'error',
-        { patterns: [SHARED_CASE_VALIDATOR_ONLY, VITEST_GLOBAL_SETUP_ONLY] },
-      ],
-    },
-  },
-  {
-    files: ['src/testing/shared-cases.ts'],
-    rules: {
-      'no-restricted-imports': ['error', { patterns: [VITEST_GLOBAL_SETUP_ONLY] }],
-    },
-  },
-  {
-    files: ['src/testing/shared-cases-setup.ts'],
-    rules: {
-      'no-restricted-imports': ['error', { patterns: [SHARED_CASE_VALIDATOR_ONLY] }],
-    },
-  },
+  ...confinedImports(),
   {
     files: ['e2e/**/*.spec.ts'],
     rules: {

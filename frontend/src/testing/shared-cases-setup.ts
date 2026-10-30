@@ -1,9 +1,10 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import type { TestProject } from 'vitest/node';
 import type { SharedCaseLibrary } from './shared-cases';
 
-const SHARED_CASES = join(process.cwd(), '..', 'shared-cases');
+const SHARED_CASES = fileURLToPath(new URL('../../../shared-cases/', import.meta.url));
 const SCHEMAS = 'schemas/';
 
 export default function provideSharedCases(project: TestProject): void {

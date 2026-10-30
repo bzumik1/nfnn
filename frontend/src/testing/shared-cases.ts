@@ -8,7 +8,7 @@ export interface SharedCase<Input, Expected> {
 }
 
 export interface SharedCaseFile<Input, Expected> {
-  readonly source: string;
+  readonly source: 'v2-baseline' | 'edited';
   readonly logic: string;
   readonly cases: readonly SharedCase<Input, Expected>[];
 }
@@ -24,18 +24,108 @@ declare module 'vitest' {
   }
 }
 
+export interface QrSymbol {
+  readonly errorCorrection: 'L' | 'M' | 'Q' | 'H';
+  readonly version: number;
+  readonly mode: 'NUMERIC' | 'ALPHANUMERIC' | 'BYTE' | 'KANJI';
+  readonly eci: number | null;
+  readonly mask: number;
+  readonly size: number;
+  readonly matrix: readonly string[];
+}
+
+export interface PaymentQrInput {
+  readonly recipient: {
+    readonly accountNumber: string;
+    readonly iban: string;
+    readonly name: string;
+  };
+  readonly amount?: string;
+  readonly variableSymbol?: string;
+  readonly purpose?: string;
+}
+
+export type PaymentQrExpected =
+  | (QrSymbol & { readonly spayd: string })
+  | {
+      readonly refused: {
+        readonly status: number;
+        readonly type: string;
+        readonly fields: readonly string[];
+      };
+    };
+
+export interface TotpQrInput {
+  readonly secret: string;
+  readonly issuer: string;
+  readonly accountName: string;
+}
+
+export type ReceiptFormattingInput =
+  | { readonly format: 'czechAmount' | 'englishAmount'; readonly amountMinor: number }
+  | { readonly format: 'czechDate' | 'englishDate'; readonly date: string }
+  | {
+      readonly format: 'donor';
+      readonly company: boolean;
+      readonly name: string;
+      readonly companyIdentifier: string | null;
+      readonly street: string;
+      readonly city: string;
+      readonly postalCode: string;
+    };
+
+export type ReceiptFormattingExpected =
+  | { readonly text: string }
+  | {
+      readonly donor: {
+        readonly company: boolean;
+        readonly donorName: string;
+        readonly donorIdentifier: string | null;
+        readonly donorAddress: string;
+      };
+    };
+
+export type RowsInput = Readonly<Record<string, unknown>>;
+export type Answer = Readonly<Record<string, unknown>>;
+
+export interface SharedCaseTopics {
+  readonly 'admin-overview/year-overview.json': SharedCase<RowsInput, Answer>;
+  readonly 'donor-summary/summary.json': SharedCase<RowsInput, Answer>;
+  readonly 'monthly-report/formatting.json': SharedCase<Answer, { readonly text: string }>;
+  readonly 'monthly-report/report.json': SharedCase<RowsInput, Answer>;
+  readonly 'qr/payment.json': SharedCase<PaymentQrInput, PaymentQrExpected>;
+  readonly 'qr/totp.json': SharedCase<TotpQrInput, QrSymbol & { readonly uri: string }>;
+  readonly 'receipts/formatting.json': SharedCase<
+    ReceiptFormattingInput,
+    ReceiptFormattingExpected
+  >;
+}
+
+export type SharedCaseTopic = keyof SharedCaseTopics;
+
+export const SHARED_CASE_TOPICS: readonly SharedCaseTopic[] = [
+  'admin-overview/year-overview.json',
+  'donor-summary/summary.json',
+  'monthly-report/formatting.json',
+  'monthly-report/report.json',
+  'qr/payment.json',
+  'qr/totp.json',
+  'receipts/formatting.json',
+];
+
 const SCHEMA_ID_PREFIX = 'https://nfnn.cz/shared-cases/';
 const SCHEMAS = 'schemas/';
 const DEFINITIONS = `${SCHEMAS}defs/`;
 
+let library: SharedCaseLibrary | undefined;
 let validator: Ajv2020 | undefined;
 
 export function sharedCaseFiles(): readonly string[] {
-  return Object.keys(inject('sharedCases').caseFiles).sort();
+  return Object.keys(frozenLibrary().caseFiles).sort();
 }
 
 export function topicSchemas(): readonly string[] {
-  return Object.keys(inject('sharedCases').schemas)
+  return Object.keys(frozenLibrary().schemas)
     .filter((schema) => !schema.startsWith(DEFINITIONS))
     .sort();
 }
@@ -44,12 +134,25 @@ export function schemaOf(caseFile: string): string {
   return `${SCHEMAS}${caseFile.replace(/\.json$/, '.schema.json')}`;
 }
 
+export function schemaIdOf(schema: string): string {
+  return SCHEMA_ID_PREFIX + schema;
+}
+
 export function sharedCaseContent(caseFile: string): unknown {
-  return inject('sharedCases').caseFiles[caseFile];
+  return frozenLibrary().caseFiles[caseFile];
+}
+
+export function createSchemaValidator(): Ajv2020 {
+  const created = new Ajv2020({ allErrors: true, allowUnionTypes: true });
+  for (const schema of Object.values(frozenLibrary().schemas)) {
+    created.addSchema(structuredClone(schema));
+  }
+  return created;
 }
 
 export function schemaViolations(caseFile: string, content: unknown): readonly string[] {
-  const validate = schemas().getSchema(SCHEMA_ID_PREFIX + schemaOf(caseFile));
+  validator ??= createSchemaValidator();
+  const validate = validator.getSchema(schemaIdOf(schemaOf(caseFile)));
   if (validate === undefined) {
     return [`${schemaOf(caseFile)} is missing`];
   }
@@ -58,23 +161,28 @@ export function schemaViolations(caseFile: string, content: unknown): readonly s
     : (validate.errors ?? []).map((error) => `${error.instancePath || '/'} ${error.message}`);
 }
 
-export function sharedCases<Input, Expected>(
-  caseFile: string,
-): readonly SharedCase<Input, Expected>[] {
+export function sharedCases<Topic extends SharedCaseTopic>(
+  caseFile: Topic,
+): readonly SharedCaseTopics[Topic][] {
   const content = sharedCaseContent(caseFile);
   const violations = schemaViolations(caseFile, content);
   if (violations.length > 0) {
     throw new Error(`${caseFile} does not match ${schemaOf(caseFile)}: ${violations.join('; ')}`);
   }
-  return (content as SharedCaseFile<Input, Expected>).cases;
+  return (content as { readonly cases: readonly SharedCaseTopics[Topic][] }).cases;
 }
 
-function schemas(): Ajv2020 {
-  if (validator === undefined) {
-    validator = new Ajv2020({ allErrors: true, allowUnionTypes: true });
-    for (const schema of Object.values(inject('sharedCases').schemas)) {
-      validator.addSchema(schema);
+function frozenLibrary(): SharedCaseLibrary {
+  library ??= deepFreeze(structuredClone(inject('sharedCases')));
+  return library;
+}
+
+function deepFreeze<Value>(value: Value): Value {
+  if (typeof value === 'object' && value !== null && !Object.isFrozen(value)) {
+    Object.freeze(value);
+    for (const child of Object.values(value)) {
+      deepFreeze(child);
     }
   }
-  return validator;
+  return value;
 }

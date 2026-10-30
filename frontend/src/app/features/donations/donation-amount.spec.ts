@@ -23,16 +23,15 @@ describe('Given an amount in hellers as the API sends it', () => {
   });
 });
 
-type ReceiptFormattingInput =
-  | { readonly format: 'czechAmount' | 'englishAmount'; readonly amountMinor: number }
-  | { readonly format: 'czechDate' | 'englishDate'; readonly date: string }
-  | { readonly format: 'donor' };
-
-const CZECH_RECEIPT_AMOUNTS = sharedCases<ReceiptFormattingInput, { readonly text: string }>(
-  'receipts/formatting.json',
-).flatMap((sharedCase) =>
-  sharedCase.input.format === 'czechAmount'
-    ? [{ ...sharedCase, amountMinor: sharedCase.input.amountMinor }]
+const CZECH_RECEIPT_AMOUNTS = sharedCases('receipts/formatting.json').flatMap((sharedCase) =>
+  sharedCase.input.format === 'czechAmount' && 'text' in sharedCase.expected
+    ? [
+        {
+          name: sharedCase.name,
+          amountMinor: sharedCase.input.amountMinor,
+          text: sharedCase.expected.text,
+        },
+      ]
     : [],
 );
 
@@ -45,7 +44,7 @@ describe('Given the shared receipt formatting cases of Czech amounts', () => {
 for (const sharedCase of CZECH_RECEIPT_AMOUNTS) {
   describe(`Given the shared case ${sharedCase.name}`, () => {
     it('when the hellers are formatted as crowns followed by Kč, then the text reads as a receipt prints it', () => {
-      expect(`${formatMinorUnits(sharedCase.amountMinor)}\u00a0Kč`).toBe(sharedCase.expected.text);
+      expect(`${formatMinorUnits(sharedCase.amountMinor)}\u00a0Kč`).toBe(sharedCase.text);
     });
   });
 }

@@ -8,8 +8,8 @@
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "lint:styles": "stylelint \"src/app/**/*.scss\" \"src/styles/*.scss\" \"src/styles/ui/*.scss\" src/styles.scss && node scripts/check-themes.mjs",
-    "format": "prettier --write \"src/**/*.{ts,html,scss}\" \"e2e/**/*.ts\" \"scripts/**/*.mjs\" \"*.{json,js,ts}\" \".*.json\"",
-    "format:check": "prettier --check \"src/**/*.{ts,html,scss}\" \"e2e/**/*.ts\" \"scripts/**/*.mjs\" \"*.{json,js,ts}\" \".*.json\"",
+    "format": "prettier --write \"src/**/*.{ts,html,scss}\" \"e2e/**/*.ts\" \"scripts/**/*.mjs\" \"*.{json,js,ts,mts}\" \".*.json\"",
+    "format:check": "prettier --check \"src/**/*.{ts,html,scss}\" \"e2e/**/*.ts\" \"scripts/**/*.mjs\" \"*.{json,js,ts,mts}\" \".*.json\"",
     "e2e": "playwright test",
     "e2e:install": "playwright install --with-deps --only-shell chromium",
     "lint": "ng lint"
