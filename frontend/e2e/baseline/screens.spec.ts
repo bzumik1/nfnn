@@ -37,6 +37,7 @@ interface Screen {
   viewportOnly?: boolean;
   region?: string;
   elements?: ElementShot[];
+  elementsOnly?: boolean;
   ready?: (page: Page) => Promise<void>;
 }
 
@@ -47,7 +48,7 @@ const SEARCH_PAUSE_MS = 5_000;
 const PAGE_TOLERANCE = { maxDiffPixelRatio: 0.002 };
 const ELEMENT_TOLERANCE = { maxDiffPixels: 0 };
 const FIXED_BARS_HIDDEN =
-  'app-site-header, app-site-header *, app-dashboard-top-bar, app-dashboard-top-bar * { visibility: hidden !important; }';
+  '.skip-link, app-site-header, app-site-header *, app-dashboard-top-bar, app-dashboard-top-bar * { visibility: hidden !important; }';
 const DONATE_QR = '#prispet .qr-code';
 const DONATE_BANK = '#prispet .bank';
 const SEND_GIFT_QR = '.send-gift .qr-code';
@@ -341,7 +342,7 @@ const SCREENS: Screen[] = [
   },
   {
     name: 'donor-bank-accounts-add',
-    viewportOnly: true,
+    elementsOnly: true,
     elements: [
       element('donor-bank-accounts-add--qr', '.add-account-qr'),
       element('donor-bank-accounts-add--bank', '.add-account-bank'),
@@ -439,7 +440,6 @@ async function shootElement(
   await expect(target).toHaveScreenshot(file, {
     animations: 'disabled',
     caret: 'hide',
-    style: FIXED_BARS_HIDDEN,
     ...tolerance,
   });
 }
@@ -454,15 +454,22 @@ function shootEach(screens: Screen[]): void {
         await screen.open(page, width);
         await settle(page, screen);
 
-        if (screen.region) {
-          await shootElement(page.locator(screen.region), `${screen.name}-${width}.png`, {
-            ...PAGE_TOLERANCE,
-          });
-        } else {
+        if (!screen.region && !screen.elementsOnly) {
           await expect(page).toHaveScreenshot(`${screen.name}-${width}.png`, {
             fullPage: !screen.viewportOnly,
             animations: 'disabled',
             caret: 'hide',
+            ...PAGE_TOLERANCE,
+          });
+        }
+        if (screen.region || screen.elements) {
+          await page.addStyleTag({ content: FIXED_BARS_HIDDEN });
+        }
+        if (screen.region) {
+          await page
+            .locator(screen.region)
+            .evaluate((region) => region.scrollIntoView({ block: 'start', behavior: 'instant' }));
+          await shootElement(page.locator(screen.region), `${screen.name}-${width}.png`, {
             ...PAGE_TOLERANCE,
           });
         }

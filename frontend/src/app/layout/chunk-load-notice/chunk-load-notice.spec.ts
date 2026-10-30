@@ -79,12 +79,15 @@ describe('Given the chunk-load notice', () => {
       expect(document.activeElement).toBe(reloadButton());
     });
 
-    it('then the button that takes the focus announces the message once, as its description, and no alert repeats it', () => {
+    it('then its button is described by the message, so moving the focus there keeps it announced', () => {
       const describedBy = reloadButton()?.getAttribute('aria-describedby') ?? '';
       expect(document.getElementById(describedBy)?.textContent?.replace(/\s+/g, ' ').trim()).toBe(
         MESSAGE,
       );
-      expect(element().querySelector('[role="alert"], [aria-live]')).toBeNull();
+    });
+
+    it('then no alert or live region announces the message a second time', () => {
+      expect(element().querySelector('[role="alert"], [role="status"], [aria-live]')).toBeNull();
     });
 
     describe('and the focus moves to a control the bar covers', () => {

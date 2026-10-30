@@ -191,7 +191,9 @@ test.describe('Given an administrator with unsaved changes in the news editor', 
       .getByRole('button', { name: 'Odejít bez uložení' })
       .click();
 
-    await expect(page.getByRole('heading', { level: 1, name: 'Aktuality' })).toBeVisible();
+    await expect(
+      page.getByRole('heading', { level: 1, name: 'Aktuality', exact: true }),
+    ).toBeVisible();
     expect(chunks.documents).toEqual(['/sprava/aktuality']);
     expect(browserQuestions).toEqual([]);
   });

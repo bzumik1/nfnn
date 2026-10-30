@@ -104,7 +104,11 @@ describe('Given the scopes of the import confinement table', () => {
       cwd: frontend,
       overrideConfigFile: true,
       overrideConfig: [
-        { files: ['**/*.ts'], languageOptions: { parser: tseslint.parser } },
+        {
+          files: ['**/*.ts'],
+          languageOptions: { parser: tseslint.parser },
+          plugins: { '@typescript-eslint': tseslint.plugin },
+        },
         ...confinedImports(reversed),
       ],
     });
@@ -174,7 +178,11 @@ describe('Given a library that its adapter may load only lazily', () => {
     cwd: frontend,
     overrideConfigFile: true,
     overrideConfig: [
-      { files: ['**/*.ts'], languageOptions: { parser: tseslint.parser } },
+      {
+        files: ['**/*.ts'],
+        languageOptions: { parser: tseslint.parser },
+        plugins: { '@typescript-eslint': tseslint.plugin },
+      },
       ...confinedImports(SCOPES, [lazy]),
     ],
   });

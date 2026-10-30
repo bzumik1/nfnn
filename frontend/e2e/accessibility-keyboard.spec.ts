@@ -36,7 +36,7 @@ async function clippedTexts(page: Page): Promise<string[]> {
 async function settledOverlapWithBar(page: Page): Promise<number> {
   const overlap = () =>
     page.evaluate(() => {
-      const bar = document.querySelector('app-chunk-load-notice [role="alert"]')!;
+      const bar = document.querySelector('app-chunk-load-notice .chunk-load-bar')!;
       return Math.round(
         document.activeElement!.getBoundingClientRect().bottom - bar.getBoundingClientRect().top,
       );
@@ -279,7 +279,7 @@ for (const width of [320, 390, 1280]) {
 
       expect(await settledOverlapWithBar(page)).toBeLessThanOrEqual(0);
       const pageEndCovered = await page.evaluate(() => {
-        const bar = document.querySelector('app-chunk-load-notice [role="alert"]')!;
+        const bar = document.querySelector('app-chunk-load-notice .chunk-load-bar')!;
         window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'instant' });
         const lastText = document.querySelector('footer .ui-container')!.getBoundingClientRect();
         return lastText.bottom > bar.getBoundingClientRect().top;

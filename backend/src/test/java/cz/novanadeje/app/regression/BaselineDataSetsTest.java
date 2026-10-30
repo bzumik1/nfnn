@@ -42,9 +42,10 @@ class BaselineDataSetsTest {
     static final String SCREENS_SPEC = "frontend/e2e/baseline/screens.spec.ts";
     static final String SCREENS_MANIFEST = "regression/v2/screens/manifest.json";
     private static final Pattern TOKEN = Pattern.compile("[\\p{L}\\p{N}][\\p{L}\\p{N}._@+-]*[\\p{L}\\p{N}]");
-    static final String SCREENS_FOLDER = "regression/v2/screens";
+    static final String ADDITIONS_FOLDER = "regression/v2/additions";
     private static final Pattern SCREEN_NAME = Pattern.compile("^  (?:publicPage|donorPage|adminPage)\\('([^']+)'|^    name: '([^']+)'", Pattern.MULTILINE);
     private static final Pattern ELEMENT_SHOT_NAME = Pattern.compile("\\belement\\('([^']+)'");
+    private static final Pattern ELEMENTS_ONLY = Pattern.compile("^    name: '([^']+)',\\n    elementsOnly: true,", Pattern.MULTILINE);
     private static final JsonMapper JSON = JsonMapper.builder().build();
 
     @ParameterizedTest
@@ -90,7 +91,7 @@ class BaselineDataSetsTest {
     }
 
     @Test
-    @DisplayName("Given the screens spec and the manifests, when their states are compared, then the manifests have a shot of every state and element of the spec and no other")
+    @DisplayName("Given the screens spec and the manifest, when their states are compared, then the manifest has a shot of every state of the spec and no other")
     void should_list_exactly_the_states_of_the_spec_when_the_screens_manifest_is_compared_with_the_spec() throws IOException {
         String spec = Files.readString(GoldenFiles.repositoryRoot().resolve(SCREENS_SPEC), StandardCharsets.UTF_8);
         String screens = spec.substring(spec.indexOf("const SCREENS: Screen[] = ["), spec.indexOf("\n];", spec.indexOf("const SCREENS: Screen[] = [")));
@@ -105,6 +106,7 @@ class BaselineDataSetsTest {
             elementShots.add(element.group(1));
         }
         Set<String> expected = new TreeSet<>(specStates);
+        ELEMENTS_ONLY.matcher(screens).results().map(only -> only.group(1)).forEach(expected::remove);
         expected.addAll(elementShots);
 
         assertThat(specStates).as("states in %s", SCREENS_SPEC).hasSizeGreaterThan(30);
@@ -114,18 +116,16 @@ class BaselineDataSetsTest {
     }
 
     @Test
-    @DisplayName("Given the screens manifests, when the ones added after the baseline are read, then each was recorded from the baseline commit and adds only new shots")
-    void should_name_the_baseline_commit_when_screens_are_added_after_the_baseline() throws IOException {
-        String baselineCommit = Files.readString(GoldenFiles.repositoryRoot().resolve("regression/v2/BASELINE_COMMIT"), StandardCharsets.UTF_8).strip();
-        List<Path> additions = jsonFiles(SCREENS_FOLDER).stream().filter(file -> !file.endsWith("manifest.json")).toList();
+    @DisplayName("Given the screens manifest, when the shots added after the baseline are read, then each names its slice, whose patch of the screens spec lies beside the baseline, and follows every shot of the baseline")
+    void should_name_the_slice_and_its_spec_patch_when_screens_are_added_after_the_baseline() throws IOException {
+        List<JsonNode> shots = screenShots();
+        List<JsonNode> added = shots.stream().filter(shot -> shot.has("addedIn")).toList();
 
-        assertThat(additions).isNotEmpty();
-        for (Path file : additions) {
-            JsonNode manifest = JSON.readTree(Files.readString(file, StandardCharsets.UTF_8));
-            assertThat(manifest.get("source").asString()).as("%s", file).isEqualTo(ApiTranscripts.SOURCE);
-            assertThat(manifest.get("recordedFrom").asString()).as("%s", file).isEqualTo(baselineCommit);
-            assertThat(manifest.get("addedIn").asString()).as("%s", file).isNotBlank();
-            assertThat(manifest.get("shots").isEmpty()).as("%s has shots", file).isFalse();
+        assertThat(added).isNotEmpty();
+        assertThat(shots.subList(shots.size() - added.size(), shots.size())).as("shots added after the baseline come last").isEqualTo(added);
+        for (JsonNode shot : added) {
+            String slice = shot.get("addedIn").asString();
+            assertThat(GoldenFiles.repositoryRoot().resolve(ADDITIONS_FOLDER).resolve(slice + ".patch")).as("the spec patch of %s", shot.get("file").asString()).isRegularFile();
         }
     }
 
@@ -149,7 +149,7 @@ class BaselineDataSetsTest {
     }
 
     @Test
-    @DisplayName("Given the screens manifests, when they are read, then every route, state and element has a shot at 390 and at 1280 px with the digest of its pixels")
+    @DisplayName("Given the screens manifest, when it is read, then every route and state has a shot at 390 and at 1280 px with the digest of its pixels")
     void should_list_every_state_at_both_widths_when_the_screens_manifest_is_read() throws IOException {
         JsonNode manifest = JSON.readTree(Files.readString(GoldenFiles.repositoryRoot().resolve(SCREENS_MANIFEST), StandardCharsets.UTF_8));
 
@@ -171,11 +171,7 @@ class BaselineDataSetsTest {
     }
 
     private static List<JsonNode> screenShots() throws IOException {
-        List<JsonNode> shots = new ArrayList<>();
-        for (Path file : jsonFiles(SCREENS_FOLDER)) {
-            JSON.readTree(Files.readString(file, StandardCharsets.UTF_8)).get("shots").valueStream().forEach(shots::add);
-        }
-        return shots;
+        return JSON.readTree(Files.readString(GoldenFiles.repositoryRoot().resolve(SCREENS_MANIFEST), StandardCharsets.UTF_8)).get("shots").valueStream().toList();
     }
 
     private static List<Path> jsonFiles(String folder) {

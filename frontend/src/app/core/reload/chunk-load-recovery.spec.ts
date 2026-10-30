@@ -77,7 +77,7 @@ describe('Given the chunk-load recovery', () => {
   const failure = (error: unknown, url = '/darce/prehled') => new NavigationError(1, url, error);
   const showPage = () => TestBed.inject(Router).navigateByUrl('/jinam');
 
-  describe('when a lazy page fails to load, the server no longer has it and the guard allows a reload', () => {
+  describe('when a lazy page fails to load and the guard allows a reload', () => {
     beforeEach(() => recovery.handleNavigationError(failure(CHROME, '/#prispet')));
 
     it('then it asks the server about the failed chunk first', () => {
@@ -157,8 +157,11 @@ describe('Given the chunk-load recovery', () => {
       await recovery.handleNavigationError(failure(CHROME));
     });
 
-    it('then it keeps the reload of the guard, asks the server nothing and does not reload', () => {
+    it('then it asks the server nothing', () => {
       expect(reloadWouldLand).not.toHaveBeenCalled();
+    });
+
+    it('then it keeps the reload of the guard and does not reload', () => {
       expect(claim).not.toHaveBeenCalled();
       expect(loadFromServer).not.toHaveBeenCalled();
     });

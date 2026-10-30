@@ -12,7 +12,8 @@
     "format:check": "prettier --check \"src/**/*.{ts,html,scss}\" \"e2e/**/*.ts\" \"scripts/**/*.mjs\" \"*.{json,js,ts,mts}\" \".*.json\"",
     "e2e": "playwright test",
     "e2e:install": "playwright install --with-deps --only-shell chromium",
-    "lint": "ng lint"
+    "lint": "ng lint && node --test scripts/*.test.mjs",
+    "screens:compare": "node ../scripts/compare-screens.mjs"
   },
   "private": true,
   "packageManager": "npm@11.11.1",

@@ -691,6 +691,394 @@
       "file": "sign-in-second-factor-390.png",
       "bytes": 36483,
       "pixelsSha256": "9f5f69d783640ae5c5f7b3d07a97a7506eee602b905f7ac32ca276f77eac08cb"
+    },
+    {
+      "state": "donor-bank-accounts-add--bank",
+      "width": 1280,
+      "imageWidth": 440,
+      "height": 217,
+      "file": "donor-bank-accounts-add--bank-1280.png",
+      "bytes": 19743,
+      "pixelsSha256": "5095e4d1cf5d204d456fde2bfd2dec3dc8a09c58b8e566895f8e643585f155b6",
+      "addedIn": "0.6c"
+    },
+    {
+      "state": "donor-bank-accounts-add--bank",
+      "width": 390,
+      "imageWidth": 350,
+      "height": 239,
+      "file": "donor-bank-accounts-add--bank-390.png",
+      "bytes": 19554,
+      "pixelsSha256": "1d60f6625772fec863d6b9c80ff229894067dd392b9daf0f2a47a723e0404110",
+      "addedIn": "0.6c"
+    },
+    {
+      "state": "donor-bank-accounts-add--qr",
+      "width": 1280,
+      "imageWidth": 224,
+      "height": 225,
+      "file": "donor-bank-accounts-add--qr-1280.png",
+      "bytes": 33090,
+      "pixelsSha256": "8ce8caa871ee0fe41b7d9e18265c7dabf7e1d4bb91d058d2b0e0293620197d91",
+      "addedIn": "0.6c"
+    },
+    {
+      "state": "donor-bank-accounts-add--qr",
+      "width": 390,
+      "imageWidth": 224,
+      "height": 225,
+      "file": "donor-bank-accounts-add--qr-390.png",
+      "bytes": 33066,
+      "pixelsSha256": "2a86b5b4ed0b0948a3c0c3df0324d53d41bd1ab13d6b7bb292a81dd2f08f08fd",
+      "addedIn": "0.6c"
+    },
+    {
+      "state": "donor-details-second-factor-setup--qr",
+      "width": 1280,
+      "imageWidth": 200,
+      "height": 200,
+      "file": "donor-details-second-factor-setup--qr-1280.png",
+      "bytes": 2601,
+      "pixelsSha256": "6dfebbfbff3e6600d9d62eb38e0ba88a851490d51f65651916c370baba66155d",
+      "addedIn": "0.6c"
+    },
+    {
+      "state": "donor-details-second-factor-setup--qr",
+      "width": 390,
+      "imageWidth": 200,
+      "height": 201,
+      "file": "donor-details-second-factor-setup--qr-390.png",
+      "bytes": 2604,
+      "pixelsSha256": "21bc58048cbf22a2ca6c7935ec135609bf0b4d09214b9b52530b8995cc40a81e",
+      "addedIn": "0.6c"
+    },
+    {
+      "state": "donor-details-second-factor-setup",
+      "width": 1280,
+      "height": 1197,
+      "file": "donor-details-second-factor-setup-1280.png",
+      "bytes": 104510,
+      "pixelsSha256": "d80a5190a46798ccbd1a3d5fb43a94be7537830b484f310855d1eac46d3968a0",
+      "addedIn": "0.6c"
+    },
+    {
+      "state": "donor-details-second-factor-setup",
+      "width": 390,
+      "height": 1638,
+      "file": "donor-details-second-factor-setup-390.png",
+      "bytes": 90257,
+      "pixelsSha256": "2ff779b66106d53adddd835f3630cb9dc55c336c110aeaf4b01704552acea11c",
+      "addedIn": "0.6c"
+    },
+    {
+      "state": "home--donate-bank",
+      "width": 1280,
+      "imageWidth": 528,
+      "height": 195,
+      "file": "home--donate-bank-1280.png",
+      "bytes": 18325,
+      "pixelsSha256": "78fc50d561c5a4211db8d1b599e3f192bc1ccaac18053ffeeec4abd9536c30a2",
+      "addedIn": "0.6c"
+    },
+    {
+      "state": "home--donate-bank",
+      "width": 390,
+      "imageWidth": 350,
+      "height": 250,
+      "file": "home--donate-bank-390.png",
+      "bytes": 18470,
+      "pixelsSha256": "7bc513cd1ab051fbccf42973f4108df5dd01d882506da12c9cd720cf9ff045e0",
+      "addedIn": "0.6c"
+    },
+    {
+      "state": "home--donate-qr",
+      "width": 1280,
+      "imageWidth": 224,
+      "height": 225,
+      "file": "home--donate-qr-1280.png",
+      "bytes": 29799,
+      "pixelsSha256": "e1b49c77cc1f1f02838a17cb9acb2b8d62f5fab8504595c82e3ce077706f4bb9",
+      "addedIn": "0.6c"
+    },
+    {
+      "state": "home--donate-qr",
+      "width": 390,
+      "imageWidth": 224,
+      "height": 225,
+      "file": "home--donate-qr-390.png",
+      "bytes": 29766,
+      "pixelsSha256": "73ad045fa3704e9f269699f8ba637a05133fc0f7a8402af8a6432f7903d06907",
+      "addedIn": "0.6c"
+    },
+    {
+      "state": "home-donate-1000--bank",
+      "width": 1280,
+      "imageWidth": 528,
+      "height": 195,
+      "file": "home-donate-1000--bank-1280.png",
+      "bytes": 18449,
+      "pixelsSha256": "abbb4f327cac607b2c40f15e8835a7d292429b8da074619a6d431597b2a7e479",
+      "addedIn": "0.6c"
+    },
+    {
+      "state": "home-donate-1000--bank",
+      "width": 390,
+      "imageWidth": 350,
+      "height": 250,
+      "file": "home-donate-1000--bank-390.png",
+      "bytes": 18529,
+      "pixelsSha256": "7dfcb7bfbbba16baa46f012cd4891cbac91299414d2f5fd9d5fd610b9f1b38b3",
+      "addedIn": "0.6c"
+    },
+    {
+      "state": "home-donate-1000--qr",
+      "width": 1280,
+      "imageWidth": 224,
+      "height": 225,
+      "file": "home-donate-1000--qr-1280.png",
+      "bytes": 30150,
+      "pixelsSha256": "a8505ff24df29eb460dd94d1e56036aa33ce393b92e038c173b809d157b03808",
+      "addedIn": "0.6c"
+    },
+    {
+      "state": "home-donate-1000--qr",
+      "width": 390,
+      "imageWidth": 224,
+      "height": 225,
+      "file": "home-donate-1000--qr-390.png",
+      "bytes": 30149,
+      "pixelsSha256": "f84cc79f515adf15054d23bc7d13e2b824d0019e7aa3048c6d87ea5d9bb41ff1",
+      "addedIn": "0.6c"
+    },
+    {
+      "state": "home-donate-1000",
+      "width": 1280,
+      "height": 1370,
+      "file": "home-donate-1000-1280.png",
+      "bytes": 375130,
+      "pixelsSha256": "edcc85e4ac6f556d27ccbb70424ac80a4e7e0c46a32b8365611a52b92e89102c",
+      "addedIn": "0.6c"
+    },
+    {
+      "state": "home-donate-1000",
+      "width": 390,
+      "height": 1546,
+      "file": "home-donate-1000-390.png",
+      "bytes": 120995,
+      "pixelsSha256": "d3214c7cd586ce6be1e5f6140fee19db7132bd81a147da57ceca422fce249206",
+      "addedIn": "0.6c"
+    },
+    {
+      "state": "home-donate-own-amount--bank",
+      "width": 1280,
+      "imageWidth": 528,
+      "height": 195,
+      "file": "home-donate-own-amount--bank-1280.png",
+      "bytes": 18384,
+      "pixelsSha256": "82cf69bd1ed236c95d92c4c68c07690bc4d4f0dfe482e3e13fc8e563326e3ddf",
+      "addedIn": "0.6c"
+    },
+    {
+      "state": "home-donate-own-amount--bank",
+      "width": 390,
+      "imageWidth": 350,
+      "height": 250,
+      "file": "home-donate-own-amount--bank-390.png",
+      "bytes": 18457,
+      "pixelsSha256": "9f2a84b96d415c3a87472442978404d0f6a81bbf8a4a831e0f0e8fc2d688b621",
+      "addedIn": "0.6c"
+    },
+    {
+      "state": "home-donate-own-amount--qr",
+      "width": 1280,
+      "imageWidth": 224,
+      "height": 225,
+      "file": "home-donate-own-amount--qr-1280.png",
+      "bytes": 29973,
+      "pixelsSha256": "aa0184a272fbb55cb7f63e105d952a62eff237791cf72870600278d29d4d51d6",
+      "addedIn": "0.6c"
+    },
+    {
+      "state": "home-donate-own-amount--qr",
+      "width": 390,
+      "imageWidth": 224,
+      "height": 225,
+      "file": "home-donate-own-amount--qr-390.png",
+      "bytes": 30121,
+      "pixelsSha256": "0c43985b6fe3250b997102f4f8f61d0cd312b1842946e9ba238cc60c9b2c8092",
+      "addedIn": "0.6c"
+    },
+    {
+      "state": "home-donate-own-amount",
+      "width": 1280,
+      "height": 1430,
+      "file": "home-donate-own-amount-1280.png",
+      "bytes": 377621,
+      "pixelsSha256": "76b9a1dc00956275154f2bd8abb46d7bdbedcc318057632a919046cd1c19c8bf",
+      "addedIn": "0.6c"
+    },
+    {
+      "state": "home-donate-own-amount",
+      "width": 390,
+      "height": 1606,
+      "file": "home-donate-own-amount-390.png",
+      "bytes": 122583,
+      "pixelsSha256": "c62b2c8cc153578bb80bf0712a3c897715f160c9ee9169b1a8e9472c1fe51720",
+      "addedIn": "0.6c"
+    },
+    {
+      "state": "home-donate-qr-error--qr",
+      "width": 1280,
+      "imageWidth": 528,
+      "height": 225,
+      "file": "home-donate-qr-error--qr-1280.png",
+      "bytes": 17990,
+      "pixelsSha256": "830334594081c0609c81016e6b0efd190560b1ba7efc73891a6b586470dd0fd6",
+      "addedIn": "0.6c"
+    },
+    {
+      "state": "home-donate-qr-error--qr",
+      "width": 390,
+      "imageWidth": 350,
+      "height": 432,
+      "file": "home-donate-qr-error--qr-390.png",
+      "bytes": 17340,
+      "pixelsSha256": "d3d074d2e89d01e7ace6f7cf55217a0bdc96519bf61c3276ce3712d72f1e608c",
+      "addedIn": "0.6c"
+    },
+    {
+      "state": "home-donate-qr-error",
+      "width": 1280,
+      "height": 1152,
+      "file": "home-donate-qr-error-1280.png",
+      "bytes": 320696,
+      "pixelsSha256": "3f4fcc25d9f72cce5f256111f13b55b39bb1e0b02e0c7db6236ef372d6bdf7ba",
+      "addedIn": "0.6c"
+    },
+    {
+      "state": "home-donate-qr-error",
+      "width": 390,
+      "height": 1344,
+      "file": "home-donate-qr-error-390.png",
+      "bytes": 76157,
+      "pixelsSha256": "fface9f51c67d39b9b521a8e7028f2664dad1a95d6e7a702bbd799b3e19cc296",
+      "addedIn": "0.6c"
+    },
+    {
+      "state": "home-donate-signed-in--bank",
+      "width": 1280,
+      "imageWidth": 528,
+      "height": 237,
+      "file": "home-donate-signed-in--bank-1280.png",
+      "bytes": 23865,
+      "pixelsSha256": "83eeb7f8bf99ff0a25b98ef4519cfba54757c571ad2192824318fd76e284b073",
+      "addedIn": "0.6c"
+    },
+    {
+      "state": "home-donate-signed-in--bank",
+      "width": 390,
+      "imageWidth": 350,
+      "height": 313,
+      "file": "home-donate-signed-in--bank-390.png",
+      "bytes": 24022,
+      "pixelsSha256": "e0cfb5b347af95ff3e59e9ce36a7e1e4c6445b9c208ec24bdbe1fd84e7339656",
+      "addedIn": "0.6c"
+    },
+    {
+      "state": "home-donate-signed-in--qr",
+      "width": 1280,
+      "imageWidth": 224,
+      "height": 225,
+      "file": "home-donate-signed-in--qr-1280.png",
+      "bytes": 33841,
+      "pixelsSha256": "d49fdf70535e6e2d100fd52f30b0a56c9a1622c4f7caaef0f98e1f5f01818305",
+      "addedIn": "0.6c"
+    },
+    {
+      "state": "home-donate-signed-in--qr",
+      "width": 390,
+      "imageWidth": 224,
+      "height": 225,
+      "file": "home-donate-signed-in--qr-390.png",
+      "bytes": 33791,
+      "pixelsSha256": "7335f5f15b67cafd226e3fa26735e7ed9e3e251d0881619514b8d4ef008af952",
+      "addedIn": "0.6c"
+    },
+    {
+      "state": "home-donate-signed-in",
+      "width": 1280,
+      "height": 1332,
+      "file": "home-donate-signed-in-1280.png",
+      "bytes": 379089,
+      "pixelsSha256": "9f22eca268c8b1e17d26c841a6a1ba9a8e640fb9b9d3c0244c7490b6a915aeff",
+      "addedIn": "0.6c"
+    },
+    {
+      "state": "home-donate-signed-in",
+      "width": 390,
+      "height": 1529,
+      "file": "home-donate-signed-in-390.png",
+      "bytes": 124626,
+      "pixelsSha256": "f81df38c0c611785318fa352b7e965c5b77d16fc443296168e3d60211429daab",
+      "addedIn": "0.6c"
+    },
+    {
+      "state": "sign-in-recovery-payment--details",
+      "width": 1280,
+      "imageWidth": 340,
+      "height": 181,
+      "file": "sign-in-recovery-payment--details-1280.png",
+      "bytes": 12744,
+      "pixelsSha256": "f26a551fc4e8a5037f47d42c4c14d0e29582e728cebc9b3a3367ef51785687cb",
+      "addedIn": "0.6c"
+    },
+    {
+      "state": "sign-in-recovery-payment--details",
+      "width": 390,
+      "imageWidth": 350,
+      "height": 181,
+      "file": "sign-in-recovery-payment--details-390.png",
+      "bytes": 12844,
+      "pixelsSha256": "e5d262cf7510f6f86b5035b1ba55f958a0d16b7d1b3654c793c864c3f43c6a79",
+      "addedIn": "0.6c"
+    },
+    {
+      "state": "sign-in-recovery-payment--qr",
+      "width": 1280,
+      "imageWidth": 224,
+      "height": 225,
+      "file": "sign-in-recovery-payment--qr-1280.png",
+      "bytes": 33654,
+      "pixelsSha256": "4009d4e0c0786e7d2a2469188181ea64006c65eb56cdeffce20b397360fe3fbd",
+      "addedIn": "0.6c"
+    },
+    {
+      "state": "sign-in-recovery-payment--qr",
+      "width": 390,
+      "imageWidth": 224,
+      "height": 225,
+      "file": "sign-in-recovery-payment--qr-390.png",
+      "bytes": 33575,
+      "pixelsSha256": "82b55cb1508300fff088584614a92314d1c97796d091cb0aae3af7e50a6bac6f",
+      "addedIn": "0.6c"
+    },
+    {
+      "state": "sign-in-recovery-payment",
+      "width": 1280,
+      "height": 900,
+      "file": "sign-in-recovery-payment-1280.png",
+      "bytes": 337985,
+      "pixelsSha256": "b401a8a015f06982fc18a91f8ee406ef61caa87e8dda2bd1a50dc9db051cb6bc",
+      "addedIn": "0.6c"
+    },
+    {
+      "state": "sign-in-recovery-payment",
+      "width": 390,
+      "height": 900,
+      "file": "sign-in-recovery-payment-390.png",
+      "bytes": 83127,
+      "pixelsSha256": "358831aafec2d29920d50ec6b70da16cf197abb070f203c4fa55c7da22d0c3a3",
+      "addedIn": "0.6c"
     }
   ]
 }
