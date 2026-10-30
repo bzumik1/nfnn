@@ -84,6 +84,11 @@ export class SiteHeader {
     this.loginDialog.open('login', { afterSignIn: () => this.focusHeader() });
   }
 
+  openRegistration(): void {
+    this.menuOpen.set(false);
+    this.loginDialog.open('register');
+  }
+
   private focusHeader(): void {
     afterNextRender(() => this.nav().nativeElement.focus(), { injector: this.injector });
   }

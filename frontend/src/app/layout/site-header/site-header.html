@@ -48,6 +48,14 @@
       } @else {
         <button
           type="button"
+          class="nav-link nav-register"
+          (click)="openRegistration()"
+          i18n="@@layout.header.nav.register"
+        >
+          Založit účet
+        </button>
+        <button
+          type="button"
           class="nav-login"
           (click)="openLogin()"
           i18n="@@layout.header.nav.login"
@@ -157,6 +165,14 @@
           <path d="M4 21a8 8 0 0 1 16 0" />
         </svg>
         <span i18n="@@layout.header.mobile.login">Přihlásit se</span>
+      </button>
+      <button
+        type="button"
+        class="mobile-register"
+        (click)="openRegistration()"
+        i18n="@@layout.header.mobile.register"
+      >
+        Založit účet
       </button>
     }
   </div>

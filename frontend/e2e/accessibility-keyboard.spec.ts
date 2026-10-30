@@ -225,6 +225,7 @@ test.describe('Given a visitor whose browser shows text twice as large on a comp
       'Aktuality',
       'Kontakt',
       'Přispět',
+      'Založit účet',
       'Přihlásit se',
     ]);
     for (const item of items) {
@@ -248,7 +249,7 @@ test.describe('Given a visitor on a phone who uses only the keyboard', () => {
   }) => {
     await page.goto('/');
     await page.getByRole('button', { name: 'Otevřít menu' }).click();
-    await page.locator('#mobile-menu .mobile-login').focus();
+    await page.locator('#mobile-menu .mobile-register').focus();
 
     await page.keyboard.press('Tab');
 

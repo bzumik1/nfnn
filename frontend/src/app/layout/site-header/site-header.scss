@@ -235,6 +235,30 @@
   text-decoration: none;
 }
 
+.nav-register {
+  background: none;
+  border: none;
+  font-family: var(--font-sans);
+  cursor: pointer;
+  margin-left: var(--space-2);
+}
+
+.mobile-register {
+  display: block;
+  width: 100%;
+  background: none;
+  border: none;
+  color: var(--color-accent);
+  text-align: center;
+  padding: var(--space-3);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  font-family: var(--font-sans);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  cursor: pointer;
+}
+
 @media (forced-colors: active) {
   .mobile-menu-btn span {
     background: ButtonText;
