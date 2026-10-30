@@ -28,6 +28,14 @@ const RFC8032_TEST_SHA_ABC = {
   ),
 };
 
+const SMALL_ORDER_KEY = {
+  publicKey: bytesOfHex('0100000000000000000000000000000000000000000000000000000000000000'),
+  message: new TextEncoder().encode('nfnn.cz/receipt/v1'),
+  signature: bytesOfHex(
+    '01000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000',
+  ),
+};
+
 const PATHS: readonly { readonly name: string; readonly verifies: SignatureCheck }[] = [
   { name: 'WebCrypto', verifies: webCryptoEd25519Verifies },
   { name: 'the @noble/curves fallback', verifies: nobleEd25519Verifies },
@@ -45,6 +53,12 @@ for (const path of PATHS) {
       const { publicKey, message, signature } = RFC8032_TEST_SHA_ABC;
 
       expect(await path.verifies(publicKey, message, signature)).toBe(true);
+    });
+
+    it('when the key is the small-order identity point with R the identity and S zero, which ZIP215 accepts, then the strict RFC 8032 check refuses it', async () => {
+      const { publicKey, message, signature } = SMALL_ORDER_KEY;
+
+      expect(await path.verifies(publicKey, message, signature)).toBe(false);
     });
 
     it('when one bit of the message of test 1 changed, then the signature does not hold', async () => {

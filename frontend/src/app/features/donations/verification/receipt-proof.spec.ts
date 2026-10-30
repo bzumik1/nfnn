@@ -152,6 +152,21 @@ describe('Given a valid proof and a check that would accept any signature', () =
     return reading.verdict === 'rejected' ? reading.reason : reading.verdict;
   }
 
+  it('when its key has any status but active, then the proof is refused as signed by a revoked key', async () => {
+    const reading = await readReceiptProof(
+      textWithBody((bytes) => bytes),
+      '27278794',
+      () => ({
+        keyId: '21fe31df',
+        publicKey: new Uint8Array(32),
+        status: 'suspended' as ProofKey['status'],
+      }),
+      anySignature,
+    );
+
+    expect(reading).toEqual({ verdict: 'rejected', reason: 'revoked-key' });
+  });
+
   it('when the name is not UTF-8, then the text is refused', async () => {
     expect(await reasonFor(textWithBody(withName(Uint8Array.from([0x4d, 0xff, 0x61]))))).toBe(
       'invalid-text',
