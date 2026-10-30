@@ -13,22 +13,33 @@ import {
   session,
   signIn,
 } from './donor-session';
-import { QrMatrixFixture, SECOND_FACTOR_QR } from './qr-matrices';
+import { Locator } from '@playwright/test';
+import jsQR from 'jsqr';
 
 const QUIET_ZONE = 4;
-const DECOY_QR: QrMatrixFixture = {
-  size: SECOND_FACTOR_QR.size,
-  modules: Array.from(SECOND_FACTOR_QR.modules, (_, index) => String(index % 2)).join(''),
-};
+const PIXELS_PER_MODULE = 4;
+const DARK_SQUARE = /M(\d+) (\d+)h1v1h-1z/g;
 
-function plainPath({ size, modules }: QrMatrixFixture): string {
-  let path = '';
-  for (let index = 0; index < modules.length; index++) {
-    if (modules[index] === '1') {
-      path += `M${(index % size) + QUIET_ZONE} ${Math.floor(index / size) + QUIET_ZONE}h1v1h-1z`;
+async function plainQrText(qr: Locator): Promise<string | undefined> {
+  const side = Number((await qr.getAttribute('viewBox'))?.split(' ')[2]);
+  const path = (await qr.locator('.qr-plain').getAttribute('d')) ?? '';
+  const width = side * PIXELS_PER_MODULE;
+  const pixels = new Uint8ClampedArray(width * width * 4).fill(255);
+  for (const [, x, y] of path.matchAll(DARK_SQUARE)) {
+    for (
+      let row = Number(y) * PIXELS_PER_MODULE;
+      row < (Number(y) + 1) * PIXELS_PER_MODULE;
+      row++
+    ) {
+      const start = (row * width + Number(x) * PIXELS_PER_MODULE) * 4;
+      for (let pixel = start; pixel < start + PIXELS_PER_MODULE * 4; pixel += 4) {
+        pixels.fill(0, pixel, pixel + 3);
+      }
     }
   }
-  return path;
+  return side > 2 * QUIET_ZONE
+    ? jsQR(pixels, width, width, { inversionAttempts: 'dontInvert' })?.data
+    : undefined;
 }
 
 const protectedDonor = {
@@ -188,7 +199,7 @@ test.describe('Given a donor who protects the account with an authenticator app'
     const posted: { path: string; body: unknown }[] = [];
     await page.route('**/api/donors/me/second-factor/setup', async (route) => {
       posted.push({ path: 'setup', body: route.request().postDataJSON() });
-      await route.fulfill({ json: { ...secondFactorEnrolment, qrCode: DECOY_QR } });
+      await route.fulfill({ json: secondFactorEnrolment });
     });
     await page.route('**/api/donors/me/second-factor/confirm', async (route) => {
       posted.push({ path: 'confirm', body: route.request().postDataJSON() });
@@ -207,7 +218,7 @@ test.describe('Given a donor who protects the account with an authenticator app'
 
     const qr = page.getByRole('img', { name: 'QR kód s nastavením pro ověřovací aplikaci' });
     await expect(qr).toBeVisible();
-    await expect(qr.locator('.qr-plain')).toHaveAttribute('d', plainPath(SECOND_FACTOR_QR));
+    await expect.poll(() => plainQrText(qr)).toBe(secondFactorEnrolment.otpauthUri);
     await expect(page.locator('.account-secret-value')).toHaveText(
       'GEZD GNBV GY3T QOJQ GEZD GNBV GY3T QOJQ',
     );

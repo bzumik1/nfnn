@@ -1,70 +1,72 @@
-import { Locator, Page } from '@playwright/test';
+import { Page } from '@playwright/test';
 import { expect, test } from './fixtures';
-import { PAYMENT_QR_1000, PAYMENT_QR_500, QrMatrixFixture } from './qr-matrices';
+import {
+  FOUNDATION_PAYMENT_DETAILS,
+  PAYMENT_QR_1000,
+  PAYMENT_QR_500,
+  drawnModulesMatch,
+} from './qr-matrices';
 
-const QR_FOR_AMOUNT: Record<string, QrMatrixFixture> = {
-  '500': PAYMENT_QR_500,
-  '1000': PAYMENT_QR_1000,
-};
+const PAYMENT_QR_PATH = '/api/donations/payment-qr';
 
-async function drawnModulesMatch(qrCode: Locator, matrix: QrMatrixFixture): Promise<boolean> {
-  return qrCode.evaluate((svg, { size, modules }) => {
-    const dots = Array.from(svg.querySelectorAll('circle.qr-dot'));
-    return (
-      dots.length > 0 &&
-      dots.every((dot) => {
-        const column = Number(dot.getAttribute('cx')) - 4.5;
-        const row = Number(dot.getAttribute('cy')) - 4.5;
-        const dark = modules[row * size + column] === '1';
-        return dark !== dot.classList.contains('is-off');
-      })
-    );
-  }, matrix);
-}
-
-async function servePaymentQr(page: Page, requestedAmounts: string[]): Promise<void> {
+async function servePaymentDetails(page: Page, asked: string[]): Promise<void> {
   await page.route(
-    (url) => url.pathname === '/api/donations/payment-qr',
+    (url) => url.pathname.startsWith('/api/donations/payment-'),
     async (route) => {
-      const amount = new URL(route.request().url()).searchParams.get('amount') ?? '';
-      requestedAmounts.push(amount);
-      await route.fulfill({
-        json: {
-          spayd: `SPD*1.0*ACC:CZ2620100000005544332217*AM:${amount}.00*CC:CZK`,
-          qrCode: QR_FOR_AMOUNT[amount] ?? PAYMENT_QR_500,
-          bankAccount: {
-            accountNumber: '5544332217/2010',
-            iban: 'CZ2620100000005544332217',
-            recipientName: 'Nadační fond Nová naděje',
-          },
-        },
-      });
+      const path = new URL(route.request().url()).pathname;
+      asked.push(path);
+      await (path === '/api/donations/payment-details'
+        ? route.fulfill({ json: FOUNDATION_PAYMENT_DETAILS })
+        : route.abort());
     },
   );
 }
 
 test.describe('Given a visitor on the home page', () => {
-  test('when they choose 1 000 Kč, then its prefetched QR payment is drawn without asking the server again', async ({
+  test('when they choose 1 000 Kč and back 500 Kč, then the browser draws each QR payment from one answer of payment details and never asks for a server QR', async ({
     page,
   }) => {
-    const requestedAmounts: string[] = [];
-    await servePaymentQr(page, requestedAmounts);
+    const asked: string[] = [];
+    await servePaymentDetails(page, asked);
 
     await page.goto('/');
     const qrCode = page.getByRole('img', { name: 'QR platba na účet Nadačního fondu Nová naděje' });
     await expect(qrCode).toBeVisible();
     await expect.poll(() => drawnModulesMatch(qrCode, PAYMENT_QR_500)).toBe(true);
-    await expect.poll(() => requestedAmounts.length).toBe(3);
 
     await page.getByRole('button', { name: '1 000 Kč' }).click();
-
     await expect.poll(() => drawnModulesMatch(qrCode, PAYMENT_QR_1000)).toBe(true);
-    expect(requestedAmounts).toEqual(['500', '1000', '100']);
+    await page.getByRole('button', { name: '500 Kč' }).click();
+    await expect.poll(() => drawnModulesMatch(qrCode, PAYMENT_QR_500)).toBe(true);
+
+    expect(PAYMENT_QR_1000.modules).not.toBe(PAYMENT_QR_500.modules);
+    expect(asked).toEqual(['/api/donations/payment-details']);
+    expect(asked).not.toContain(PAYMENT_QR_PATH);
     await expect(page.locator('#prispet')).toContainText('CZ26 2010 0000 0055 4433 2217');
   });
 
+  test('when they type an amount, then its QR payment is drawn and announced once they stop typing', async ({
+    page,
+  }) => {
+    const asked: string[] = [];
+    await servePaymentDetails(page, asked);
+    await page.goto('/');
+    const qrCode = page.getByRole('img', { name: 'QR platba na účet Nadačního fondu Nová naděje' });
+    await expect.poll(() => drawnModulesMatch(qrCode, PAYMENT_QR_500)).toBe(true);
+
+    await page.getByRole('button', { name: 'Jiná částka' }).click();
+    await page.locator('#donate-custom-amount').pressSequentially('1000');
+
+    await expect(page.locator('#prispet .qr-image')).not.toHaveClass(/qr-image-stale/);
+    await expect.poll(() => drawnModulesMatch(qrCode, PAYMENT_QR_1000)).toBe(true);
+    await expect(page.locator('#prispet .qr-announcement')).toHaveText(
+      'QR platba na 1 000\u00a0Kč je připravená.',
+    );
+    expect(asked).toEqual(['/api/donations/payment-details']);
+  });
+
   test('when they save the QR code, then a PNG image of it downloads', async ({ page }) => {
-    await servePaymentQr(page, []);
+    await servePaymentDetails(page, []);
     await page.goto('/');
     await expect(
       page.getByRole('img', { name: 'QR platba na účet Nadačního fondu Nová naděje' }),
@@ -89,7 +91,7 @@ test.describe('Given a visitor on the home page', () => {
   test('when they Tab past the amounts, then the line before paying, the copy buttons and then the QR follow in the order they see', async ({
     page,
   }) => {
-    await servePaymentQr(page, []);
+    await servePaymentDetails(page, []);
     await page.goto('/');
     await expect(page.locator('#prispet .bank')).toContainText('5544332217/2010');
     await page.getByRole('button', { name: 'Jiná částka' }).focus();
@@ -124,7 +126,7 @@ test.describe('Given a visitor on the home page', () => {
     test('when they copy the amount, then the clipboard holds it and the bank details come before the QR code', async ({
       page,
     }) => {
-      await servePaymentQr(page, []);
+      await servePaymentDetails(page, []);
       await page.goto('/');
       const bank = page.locator('#prispet .bank');
       await expect(bank).toContainText('5544332217/2010');

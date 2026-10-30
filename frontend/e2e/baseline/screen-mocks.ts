@@ -433,16 +433,9 @@ const adminAnswers: Record<string, unknown> = {
 
 export const PETR_DETAIL_PATH = `/sprava/darci/${PETR_ID}`;
 
-interface SpaydCase {
+interface PaymentDetailsCase {
   name: string;
-  input: { recipient: { accountNumber: string; iban: string; name: string } };
-  expected: { spayd?: string };
-}
-
-interface PaymentQrCase {
-  name: string;
-  input: { spayd: string };
-  expected: { size?: number; matrix?: string[] };
+  expected: object;
 }
 
 function sharedCases<T>(...path: string[]): T[] {
@@ -451,59 +444,28 @@ function sharedCases<T>(...path: string[]): T[] {
   ).cases;
 }
 
-const SPAYD_CASES = sharedCases<SpaydCase>('payment', 'spayd.json');
-const PAYMENT_QR_CASES = sharedCases<PaymentQrCase>('qr', 'payment.json');
+const FOUNDATION_DETAILS_CASE = "the foundation's account";
 
-const PAYMENT_QR_CASE_OF_QUERY: Record<string, string> = {
-  'amount=100': '100 Kč without a variable symbol',
-  'amount=500': '500 Kč without a variable symbol',
-  'amount=1000': '1 000 Kč without a variable symbol',
-  'amount=1234': '1 234 Kč without a variable symbol',
-  'amount=500&variableSymbol=1234567890': '500 Kč with a ten-digit variable symbol',
-  'amount=1000&variableSymbol=1234567890': '1 000 Kč as a donation named explicitly',
-  'amount=1&variableSymbol=1234567890&purpose=ACCOUNT_VERIFICATION':
-    "1 Kč verifying a donor's account",
-};
-
-function paymentQrAnswer(name: string) {
-  const spaydCase = SPAYD_CASES.find((candidate) => candidate.name === name);
-  const qrCase = PAYMENT_QR_CASES.find((candidate) => candidate.name === name);
-  const spayd = spaydCase?.expected.spayd;
-  const { size, matrix } = qrCase?.expected ?? {};
-  if (!spaydCase || spayd === undefined || size === undefined || matrix === undefined) {
-    throw new Error(
-      `shared-cases/payment/spayd.json and qr/payment.json have no QR symbol for the case ${name}`,
-    );
+function foundationPaymentDetails(): object {
+  const details = sharedCases<PaymentDetailsCase>('payment', 'details.json').find(
+    (candidate) => candidate.name === FOUNDATION_DETAILS_CASE,
+  );
+  if (!details) {
+    throw new Error(`shared-cases/payment/details.json has no case ${FOUNDATION_DETAILS_CASE}`);
   }
-  if (qrCase?.input.spayd !== spayd) {
-    throw new Error(`the QR case ${name} encodes another text than its SPAYD case gives`);
-  }
-  const { accountNumber, iban, name: recipientName } = spaydCase.input.recipient;
-  return {
-    spayd,
-    qrCode: { size, modules: matrix.join('') },
-    bankAccount: { accountNumber, iban, recipientName },
-  };
+  return details.expected;
 }
 
-export async function servePaymentQrCases(page: Page): Promise<void> {
+export async function servePaymentDetails(page: Page): Promise<void> {
   await page.route(
-    (url) => url.pathname === '/api/donations/payment-qr',
-    (route) => {
-      const query = new URL(route.request().url()).searchParams.toString();
-      const name = PAYMENT_QR_CASE_OF_QUERY[query];
-      return name
-        ? route.fulfill({ json: paymentQrAnswer(name) })
-        : route.fulfill(
-            problem(400, 'donations/no-shared-case', 'Žádný sdílený případ', `Dotaz ${query}`),
-          );
-    },
+    (url) => url.pathname === '/api/donations/payment-details',
+    (route) => route.fulfill({ json: foundationPaymentDetails() }),
   );
 }
 
-export async function failPaymentQr(page: Page): Promise<void> {
+export async function failPaymentDetails(page: Page): Promise<void> {
   await page.route(
-    (url) => url.pathname === '/api/donations/payment-qr',
+    (url) => url.pathname === '/api/donations/payment-details',
     (route) =>
       route.fulfill(problem(500, 'server-error', 'Chyba serveru', 'Zkuste to prosím znovu.')),
   );

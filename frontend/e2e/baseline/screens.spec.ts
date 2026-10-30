@@ -15,7 +15,7 @@ import { expect, test } from '../fixtures';
 import {
   article,
   donorWithDonations,
-  failPaymentQr,
+  failPaymentDetails,
   FIXED_TIME,
   mockAdministration,
   mockPublicContent,
@@ -23,7 +23,7 @@ import {
   PETR_DETAIL_PATH,
   project,
   rememberedSession,
-  servePaymentQrCases,
+  servePaymentDetails,
 } from './screen-mocks';
 
 interface ElementShot {
@@ -84,7 +84,7 @@ function donorPage(name: string, path: string, donations = donorWithDonations): 
 async function openDonateSection(page: Page, signedIn = false): Promise<void> {
   await mockDonorApi(page);
   await mockPublicContent(page);
-  await servePaymentQrCases(page);
+  await servePaymentDetails(page);
   if (signedIn) {
     await rememberedSession(page, donor);
   }
@@ -317,7 +317,7 @@ const SCREENS: Screen[] = [
     open: async (page) => {
       await mockDonorApi(page);
       await mockPublicContent(page);
-      await failPaymentQr(page);
+      await failPaymentDetails(page);
       await page.goto('/');
       await expect(page.locator('#prispet .qr-error')).toBeVisible();
     },
@@ -350,7 +350,7 @@ const SCREENS: Screen[] = [
     ],
     open: async (page) => {
       await mockDonorApi(page, donorWithDonations);
-      await servePaymentQrCases(page);
+      await servePaymentDetails(page);
       await rememberedSession(page, donor);
       await page.goto('/darce/ucty');
       await page.getByRole('button', { name: 'Přidat účet' }).click();
@@ -398,7 +398,7 @@ const SCREENS_SINCE_V2: Screen[] = [
     ],
     open: async (page) => {
       await mockDonorApi(page, donorWithDonations);
-      await servePaymentQrCases(page);
+      await servePaymentDetails(page);
       await rememberedSession(page, donor);
       await page.goto('/darce/prehled');
       await expect(page.locator(SEND_GIFT_BANK)).toContainText(donor.variableSymbol);
