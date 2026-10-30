@@ -22,7 +22,7 @@
   },
   {
     "path": "GET /api/admin/donations/donors/{id}",
-    "scenario": "*",
+    "scenario": "donations/admin_donor_accounts: *",
     "kind": "added",
     "field": "$.yearlyReceiptsAvailableThrough",
     "reason": "1.7 (plan v3): the donor card offers the yearly receipts the administration may issue, up to the last completed year in Prague, from the server so the page needs no client clock; the fields before it answer as they did",
@@ -30,7 +30,23 @@
   },
   {
     "path": "GET /api/admin/donations/donors/{id}",
-    "scenario": "*",
+    "scenario": "donations/admin_donor_erasure: *",
+    "kind": "added",
+    "field": "$.yearlyReceiptsAvailableThrough",
+    "reason": "1.7 (plan v3): the donor card offers the yearly receipts the administration may issue, up to the last completed year in Prague, from the server so the page needs no client clock; the fields before it answer as they did",
+    "contract": "docs/api-contract.md, Donor accounts"
+  },
+  {
+    "path": "GET /api/admin/donations/donors/{id}",
+    "scenario": "donations/admin_donor_accounts: *",
+    "kind": "added",
+    "field": "$.receiptsAvailableFrom",
+    "reason": "1.7 (plan v3): the first receipt year (app.donations.receipt.first-year), from which the donor card offers yearly receipts; the fields before it answer as they did",
+    "contract": "docs/api-contract.md, Donor accounts"
+  },
+  {
+    "path": "GET /api/admin/donations/donors/{id}",
+    "scenario": "donations/admin_donor_erasure: *",
     "kind": "added",
     "field": "$.receiptsAvailableFrom",
     "reason": "1.7 (plan v3): the first receipt year (app.donations.receipt.first-year), from which the donor card offers yearly receipts; the fields before it answer as they did",
