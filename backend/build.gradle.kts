@@ -84,20 +84,51 @@ dependencies {
 	testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
+class JavaAgent(@get:Classpath val jar: FileCollection) : CommandLineArgumentProvider {
+	override fun asArguments() = listOf("-javaagent:${jar.singleFile.absolutePath}")
+}
+
+val runsCucumber = !project.hasProperty("noCucumber")
+
 tasks.withType<Test> {
-	useJUnitPlatform {
-		if (project.hasProperty("noCucumber")) {
-			excludeEngines("cucumber", "junit-platform-suite")
-		}
-	}
 	systemProperty("cucumber.junit-platform.naming-strategy", "long")
 	System.getenv("CUCUMBER_FILTER_TAGS")?.let { systemProperty("cucumber.filter.tags", it) }
 	System.getenv("API_TRANSCRIPTS")?.let { systemProperty("api.transcripts", it) }
 	System.getenv("GOLDEN_FILES")?.let { systemProperty("golden.files", it) }
 	maxHeapSize = "1g"
-	jvmArgs("--enable-native-access=ALL-UNNAMED", "-Duser.timezone=Etc/UTC", "-Duser.language=en", "-Duser.country=US", "-Dfile.encoding=UTF-8")
-	jvmArgumentProviders.add(CommandLineArgumentProvider { listOf("-javaagent:${mockitoAgent.singleFile}", "-Xshare:off") })
+	maxParallelForks = 2
+	jvmArgs("--enable-native-access=ALL-UNNAMED", "-Duser.timezone=Etc/UTC", "-Duser.language=en", "-Duser.country=US", "-Dfile.encoding=UTF-8", "-Xshare:off")
+	jvmArgumentProviders.add(JavaAgent(mockitoAgent))
 	environment("TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE", "/var/run/docker.sock")
 	inputs.file("../frontend/src/themes/nova-nadeje/_theme.scss").withPropertyName("siteTheme").withPathSensitivity(PathSensitivity.NONE)
 	inputs.files(fileTree("../shared-cases"), fileTree("../regression")).withPropertyName("baselineArtefacts").withPathSensitivity(PathSensitivity.RELATIVE)
+}
+
+val acceptanceTest = tasks.register<Test>("acceptanceTest") {
+	description = "Runs the Cucumber acceptance scenarios, one suite per fork."
+	group = LifecycleBasePlugin.VERIFICATION_GROUP
+	testClassesDirs = sourceSets.test.get().output.classesDirs
+	classpath = sourceSets.test.get().runtimeClasspath
+	useJUnitPlatform {
+		includeEngines("junit-platform-suite")
+	}
+	include("**/*AcceptanceTests.class")
+	enabled = runsCucumber
+	val transcripts = layout.buildDirectory.dir("api-transcripts")
+	val recording = providers.environmentVariable("API_TRANSCRIPTS").map { it == "record" }.orElse(false)
+	doFirst {
+		if (recording.get()) {
+			transcripts.get().asFile.deleteRecursively()
+		}
+	}
+}
+
+tasks.test {
+	useJUnitPlatform {
+		excludeEngines("cucumber", "junit-platform-suite")
+	}
+	filter {
+		isFailOnNoMatchingTests = !runsCucumber
+	}
+	finalizedBy(acceptanceTest)
 }

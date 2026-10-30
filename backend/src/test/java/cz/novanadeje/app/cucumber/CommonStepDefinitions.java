@@ -12,17 +12,25 @@ import cz.novanadeje.app.support.MutableClock;
 import cz.novanadeje.app.support.RateLimiterWindows;
 import cz.novanadeje.app.support.RecordingMailSender;
 import io.cucumber.java.Before;
+import io.cucumber.java.BeforeAll;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
+import org.awaitility.Awaitility;
 import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import tools.jackson.databind.JsonNode;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.concurrent.ThreadPoolExecutor;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 
 public class CommonStepDefinitions {
+
+    private static final Duration POLL_INTERVAL = Duration.ofMillis(10);
+    private static final Duration ASYNC_WORK_WAIT = Duration.ofSeconds(10);
 
     private final ApiClient api;
     private final RecordingMailSender mailSender;
@@ -31,9 +39,11 @@ public class CommonStepDefinitions {
     private final FakeFioClient fioClient;
     private final FakeCompanyRegistry companyRegistry;
     private final ConfigurableApplicationContext context;
+    private final ThreadPoolTaskExecutor asyncWork;
 
     public CommonStepDefinitions(ApiClient api, RecordingMailSender mailSender, MutableClock clock, DatabaseCleaner database,
-                                 FakeFioClient fioClient, FakeCompanyRegistry companyRegistry, ConfigurableApplicationContext context) {
+                                 FakeFioClient fioClient, FakeCompanyRegistry companyRegistry, ConfigurableApplicationContext context,
+                                 ThreadPoolTaskExecutor asyncWork) {
         this.api = api;
         this.mailSender = mailSender;
         this.clock = clock;
@@ -41,11 +51,19 @@ public class CommonStepDefinitions {
         this.fioClient = fioClient;
         this.companyRegistry = companyRegistry;
         this.context = context;
+        this.asyncWork = asyncWork;
+    }
+
+    @BeforeAll
+    public static void pollWithoutDelay() {
+        Awaitility.setDefaultPollDelay(Duration.ZERO);
+        Awaitility.setDefaultPollInterval(POLL_INTERVAL);
     }
 
     @Before
     public void isolateScenario() {
-        database.truncateAllTables();
+        await().atMost(ASYNC_WORK_WAIT).until(this::asyncWorkIsDone);
+        database.emptyAllTables();
         mailSender.clear();
         mailSender.startScenario();
         fioClient.reset();
@@ -58,6 +76,11 @@ public class CommonStepDefinitions {
         } else {
             clock.advance(Duration.ofDays(1));
         }
+    }
+
+    private boolean asyncWorkIsDone() {
+        ThreadPoolExecutor executor = asyncWork.getThreadPoolExecutor();
+        return executor.getCompletedTaskCount() == executor.getTaskCount();
     }
 
     @When("{int} seconds pass")

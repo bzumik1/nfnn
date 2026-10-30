@@ -79,7 +79,7 @@ if ! node "$root/scripts/screens-manifest.mjs" --check "$second_run"; then
 fi
 
 echo "== Every suite, which reads the recorded files back with their digests, and the test inventory"
-(cd "$root/backend" && GOLDEN_FILES=digests ./gradlew test --rerun "${gradle_init[@]}" -q)
+(cd "$root/backend" && GOLDEN_FILES=digests ./gradlew test --rerun acceptanceTest --rerun "${gradle_init[@]}" -q)
 (cd "$root/frontend" && npx playwright test --list --reporter=json >"$work/inventory-playwright.json")
 (cd "$root/frontend" && npx ng test --watch=false --reporters=json --output-file="$work/inventory-vitest.json" >/dev/null)
 (cd "$root/mcp" && npx vitest run --reporter=json --outputFile="$work/inventory-mcp-vitest.json" >/dev/null)

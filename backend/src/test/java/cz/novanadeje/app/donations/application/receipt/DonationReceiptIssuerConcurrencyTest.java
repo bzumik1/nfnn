@@ -1,6 +1,6 @@
 package cz.novanadeje.app.donations.application.receipt;
 
-import cz.novanadeje.app.TestcontainersConfiguration;
+import cz.novanadeje.app.IntegrationTest;
 import cz.novanadeje.app.donations.application.donor.ChangeDonorRecordProfileCommand;
 import cz.novanadeje.app.donations.application.donor.DonorRecordService;
 import cz.novanadeje.app.donations.domain.FoundationCalendar;
@@ -22,12 +22,10 @@ import cz.novanadeje.app.shared.domain.PostalAddress;
 import cz.novanadeje.app.shared.domain.UuidV7;
 import cz.novanadeje.app.shared.domain.VariableSymbol;
 import cz.novanadeje.app.support.DatabaseCleaner;
-import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.transaction.IllegalTransactionStateException;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -52,9 +50,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 
-@Import(TestcontainersConfiguration.class)
-@SpringBootTest(properties = {"app.donations.fio.token=", "app.donations.report.cron=-", "app.contact.retention.cron=-", "app.content.media-cleanup.cron=-", "app.operations.backups.check-cron=-", "app.donors.registration-reminder.cron=-",
-        "app.donations.receipt.first-year=2025"})
+@IntegrationTest
 class DonationReceiptIssuerConcurrencyTest {
 
     private static final Year YEAR_2025 = Year.of(2025);
@@ -81,9 +77,9 @@ class DonationReceiptIssuerConcurrencyTest {
     @Autowired
     private JdbcClient jdbc;
 
-    @AfterEach
-    void cleanTables() {
-        new DatabaseCleaner(jdbc).truncateAllTables();
+    @BeforeEach
+    void startFromEmptyTables() {
+        new DatabaseCleaner(jdbc).emptyAllTables();
     }
 
     @Test

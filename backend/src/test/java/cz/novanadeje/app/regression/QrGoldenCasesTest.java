@@ -9,7 +9,7 @@ import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel;
 import com.google.zxing.qrcode.encoder.ByteMatrix;
 import com.google.zxing.qrcode.encoder.Encoder;
 import com.google.zxing.qrcode.encoder.QRCode;
-import cz.novanadeje.app.TestcontainersConfiguration;
+import cz.novanadeje.app.IntegrationTest;
 import cz.novanadeje.app.cucumber.transcript.ApiTranscripts;
 import cz.novanadeje.app.donations.application.GeneratePaymentQrQuery;
 import cz.novanadeje.app.donations.application.GeneratePaymentQrService;
@@ -25,9 +25,6 @@ import cz.novanadeje.app.shared.application.qr.QrMatrix;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
-import org.springframework.context.annotation.Import;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
@@ -45,9 +42,7 @@ import java.util.Map;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 
-@Import(TestcontainersConfiguration.class)
-@SpringBootTest(properties = {"app.donations.fio.token=", "app.donations.report.cron=-", "app.contact.retention.cron=-", "app.content.media-cleanup.cron=-", "app.operations.backups.check-cron=-", "app.donors.registration-reminder.cron=-"})
-@AutoConfigureMockMvc
+@IntegrationTest
 class QrGoldenCasesTest {
 
     static final String PAYMENT_CASES = "shared-cases/qr/payment.json";

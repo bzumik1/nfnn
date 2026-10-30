@@ -1,6 +1,5 @@
 package cz.novanadeje.app.donors.infrastructure.persistence;
 
-import cz.novanadeje.app.TestcontainersConfiguration;
 import cz.novanadeje.app.donors.domain.LinkSecret;
 import cz.novanadeje.app.donors.domain.PasskeyChallenge;
 import cz.novanadeje.app.donors.domain.PasskeyChallengeRepository;
@@ -19,7 +18,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import({TestcontainersConfiguration.class, JpaPasskeyChallengeRepository.class})
+@Import(DonorsPersistenceTestConfiguration.class)
 class JpaPasskeyChallengeRepositoryTest {
 
     private static final Instant NOW = Instant.parse("2026-10-23T10:00:00Z");

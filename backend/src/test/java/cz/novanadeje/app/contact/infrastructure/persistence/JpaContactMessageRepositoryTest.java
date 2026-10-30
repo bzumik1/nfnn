@@ -1,6 +1,5 @@
 package cz.novanadeje.app.contact.infrastructure.persistence;
 
-import cz.novanadeje.app.TestcontainersConfiguration;
 import cz.novanadeje.app.contact.domain.ContactMessage;
 import cz.novanadeje.app.contact.domain.ContactMessageRepository;
 import cz.novanadeje.app.shared.domain.EmailAddress;
@@ -18,7 +17,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import({TestcontainersConfiguration.class, JpaContactMessageRepository.class})
+@Import(ContactPersistenceTestConfiguration.class)
 class JpaContactMessageRepositoryTest {
 
     private static final Instant CUTOFF = Instant.parse("2025-10-23T10:00:00Z");
