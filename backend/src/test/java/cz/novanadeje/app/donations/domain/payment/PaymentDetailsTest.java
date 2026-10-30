@@ -10,6 +10,8 @@ import cz.novanadeje.app.shared.domain.Money;
 import cz.novanadeje.app.shared.domain.VariableSymbol;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.Optional;
 
@@ -75,6 +77,18 @@ class PaymentDetailsTest {
 
         assertThatIllegalArgumentException().isThrownBy(() -> new PaymentDetails(FOUNDATION, Currency.CZK, thirtySix,
                 details.donationMessage(), details.accountVerificationMessage(), details.accountVerificationAmount()));
+    }
+
+    @ParameterizedTest(name = "{0} message empty")
+    @ValueSource(strings = {"donation", "account verification"})
+    @DisplayName("Given an empty message, when the payment details are created, then they are refused, since the contract promises a message that is never empty")
+    void should_refuse_when_created_given_an_empty_message(String emptyOne) {
+        SpaydText empty = SpaydText.message("");
+        SpaydText donation = emptyOne.equals("donation") ? empty : details.donationMessage();
+        SpaydText verification = emptyOne.equals("donation") ? details.accountVerificationMessage() : empty;
+
+        assertThatIllegalArgumentException().isThrownBy(() -> new PaymentDetails(FOUNDATION, Currency.CZK, details.recipientName(),
+                donation, verification, details.accountVerificationAmount()));
     }
 
     @Test

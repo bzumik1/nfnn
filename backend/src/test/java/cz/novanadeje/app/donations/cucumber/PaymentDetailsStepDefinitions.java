@@ -2,6 +2,7 @@ package cz.novanadeje.app.donations.cucumber;
 
 import cz.novanadeje.app.cucumber.ApiClient;
 import cz.novanadeje.app.cucumber.DonorSessions;
+import cz.novanadeje.app.cucumber.ScenarioDonors;
 import io.cucumber.java.en.And;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
@@ -24,13 +25,15 @@ public class PaymentDetailsStepDefinitions {
 
     private final ApiClient api;
     private final DonorSessions sessions;
+    private final ScenarioDonors donors;
     private ResponseEntity<String> visitorsAnswer;
     private JsonNode paymentDetails;
     private String paymentQr;
 
-    public PaymentDetailsStepDefinitions(ApiClient api, DonorSessions sessions) {
+    public PaymentDetailsStepDefinitions(ApiClient api, DonorSessions sessions, ScenarioDonors donors) {
         this.api = api;
         this.sessions = sessions;
+        this.donors = donors;
     }
 
     @Given("a visitor asked for the payment details {int} times")
@@ -45,9 +48,7 @@ public class PaymentDetailsStepDefinitions {
     public void aVisitorAsksForThePaymentDetails() {
         api.forgetCredentials();
         visitorsAnswer = api.get(PAYMENT_DETAILS_PATH);
-        if (visitorsAnswer.getStatusCode().value() == 200) {
-            paymentDetails = api.lastResponseJson();
-        }
+        paymentDetails = visitorsAnswer.getStatusCode().value() == 200 ? api.lastResponseJson() : null;
     }
 
     @When("{string} asks for the payment details")
@@ -56,10 +57,30 @@ public class PaymentDetailsStepDefinitions {
         api.get(PAYMENT_DETAILS_PATH);
     }
 
+    @When("{string} asks for the payment details again with the access token she was given then")
+    public void asksAgainWithTheAccessTokenGivenThen(String alias) {
+        api.forgetCredentials();
+        api.authorize(donors.accessTokenOf(alias));
+        api.get(PAYMENT_DETAILS_PATH);
+        api.forgetCredentials();
+    }
+
+    @When("a browser that sends the bearer token {string} asks for the payment details")
+    public void aBrowserThatSendsTheBearerTokenAsks(String token) {
+        api.forgetCredentials();
+        api.authorize(token);
+        api.get(PAYMENT_DETAILS_PATH);
+        api.forgetCredentials();
+    }
+
     @When("the visitor asks for the payment details again with the ETag it was given")
     public void theVisitorAsksAgainWithTheEtagItWasGiven() {
-        assertThat(visitorsAnswer).as("an earlier answer to the visitor").isNotNull();
-        theVisitorAsksAgainWithTheEtag(visitorsAnswer.getHeaders().getETag());
+        theVisitorAsksAgainWithTheEtag(visitorsEtag());
+    }
+
+    @When("the visitor asks for the payment details again with the ETag it was given, marked weak")
+    public void theVisitorAsksAgainWithTheWeakEtagItWasGiven() {
+        theVisitorAsksAgainWithTheEtag("W/" + visitorsEtag());
     }
 
     @When("a visitor asks for the payment details again with the ETag {string}")
@@ -78,7 +99,7 @@ public class PaymentDetailsStepDefinitions {
 
     @When("the visitor asks for a QR payment that verifies an account with variable symbol {string} for the verification amount of the payment details")
     public void theVisitorAsksForAVerificationQrPayment(String variableSymbol) {
-        long amountMinor = paymentDetails.get("accountVerificationAmountMinor").asLong();
+        long amountMinor = paymentDetails().get("accountVerificationAmountMinor").asLong();
         assertThat(amountMinor % 100).as("the verification amount in whole crowns, as payment-qr takes it").isZero();
         api.get(PAYMENT_QR_PATH + "?amount=" + amountMinor / 100 + "&variableSymbol=" + variableSymbol + "&purpose=ACCOUNT_VERIFICATION");
         paymentQr = api.lastResponseJson().get("spayd").asString();
@@ -140,7 +161,7 @@ public class PaymentDetailsStepDefinitions {
 
     @And("the answer carries the same ETag")
     public void theAnswerCarriesTheSameEtag() {
-        assertThat(api.lastResponse().getHeaders().getETag()).isNotNull().isEqualTo(visitorsAnswer.getHeaders().getETag());
+        assertThat(api.lastResponse().getHeaders().getETag()).isNotNull().isEqualTo(visitorsEtag());
     }
 
     @And("the answer is the visitor's answer with the same ETag")
@@ -151,22 +172,34 @@ public class PaymentDetailsStepDefinitions {
 
     @Then("the recipient and the donation message of the payment details are the RN and MSG of that QR payment")
     public void theRecipientAndTheDonationMessageAreTheRnAndMsg() {
-        assertThat(paymentQr).endsWith("*RN:" + recipientName() + "*MSG:" + paymentDetails.get("messages").get("donation").asString());
+        assertThat(paymentQr).endsWith("*RN:" + recipientName() + "*MSG:" + paymentDetails().get("messages").get("donation").asString());
     }
 
     @Then("the recipient and the account verification message of the payment details are the RN and MSG of that QR payment")
     public void theRecipientAndTheVerificationMessageAreTheRnAndMsg() {
-        assertThat(paymentQr).endsWith("*RN:" + recipientName() + "*MSG:" + paymentDetails.get("messages").get("accountVerification").asString());
+        assertThat(paymentQr).endsWith("*RN:" + recipientName() + "*MSG:" + paymentDetails().get("messages").get("accountVerification").asString());
     }
 
     @And("that QR payment's amount is the verification amount of the payment details")
     public void thatQrPaymentsAmountIsTheVerificationAmount() {
-        long amountMinor = paymentDetails.get("accountVerificationAmountMinor").asLong();
+        long amountMinor = paymentDetails().get("accountVerificationAmountMinor").asLong();
         assertThat(paymentQr).contains("*AM:" + amountMinor / 100 + "." + String.format("%02d", amountMinor % 100) + "*");
     }
 
+    private JsonNode paymentDetails() {
+        assertThat(visitorsAnswer).as("the visitor's answer to the payment details").isNotNull();
+        assertThat(visitorsAnswer.getStatusCode().value()).as("the status of the visitor's answer to the payment details").isEqualTo(200);
+        return paymentDetails;
+    }
+
+    private String visitorsEtag() {
+        assertThat(visitorsAnswer).as("an earlier answer to the visitor").isNotNull();
+        assertThat(visitorsAnswer.getHeaders().getETag()).as("the ETag of the visitor's earlier answer").isNotNull();
+        return visitorsAnswer.getHeaders().getETag();
+    }
+
     private String recipientName() {
-        return paymentDetails.get("account").get("recipientName").asString();
+        return paymentDetails().get("account").get("recipientName").asString();
     }
 
     private static String sha256(String body) {
