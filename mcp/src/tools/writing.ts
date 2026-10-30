@@ -6,6 +6,7 @@ import {
   answerChange,
   asRecord,
   plain,
+  receiptView,
   text,
   ToolRefusal,
   withHint,
@@ -433,6 +434,51 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
               : { photoId, photoAlt: photoAlt ?? null, caption: caption ?? null },
           ),
         ),
+      ),
+  );
+
+  server.registerTool(
+    'nfnn_issue_receipt',
+    {
+      title: 'Vystavit potvrzení',
+      description:
+        "Issues a donor's donation receipt, as \"Vystavit potvrzení\" on the donor card at /sprava does: the yearly receipt of a completed year (`year`, from the first receipt year) or the receipt of one donation (`donationId`, one of the donor's donations in nfnn_donor with receiptAvailable), never both. The same data give back the receipt already issued with its number, so calling it again changes nothing; when the donor's name, address or gifts changed since, a replacement with a new number is issued and the earlier one becomes REPLACED. The answer is that of nfnn_receipt. The donor's cap of 20 replacements in 24 hours holds whoever asks (409 donations/receipt-issue-limit), and an erased donor gets none (409 donations/donor-erased). A new number is audited as ISSUE_RECEIPT, naming this application.",
+      inputSchema: z.object({
+        donorId: UUID,
+        year: z
+          .number()
+          .int()
+          .min(2000)
+          .max(2100)
+          .optional()
+          .describe('The completed year of a yearly receipt.'),
+        donationId: UUID.optional().describe('The donation of a receipt for one donation.'),
+      }),
+      annotations: { ...WRITING, idempotentHint: true },
+    },
+    async ({ donorId, year, donationId }, ctx) =>
+      answerChange(
+        deps,
+        ctx,
+        'nfnn_issue_receipt',
+        async ({ apiToken }) => {
+          if ((year === undefined) === (donationId === undefined)) {
+            throw new ToolRefusal(
+              'receipt-subject',
+              'Name either `year` (the yearly receipt of a completed year) or `donationId` (the receipt of one donation), one of them; nothing was issued.',
+            );
+          }
+          return text(
+            receiptView(
+              await backend.post(
+                `/api/admin/donations/donors/${donorId}/receipts`,
+                apiToken,
+                year === undefined ? { donationId } : { year },
+              ),
+            ),
+          );
+        },
+        `donor ${donorId}`,
       ),
   );
 

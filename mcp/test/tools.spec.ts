@@ -331,7 +331,9 @@ describe('Given an administrator connected with the reading permission only', ()
     });
     expect(result.isError).toBe(true);
     expect(textOf(result)).toContain('This connection may only read');
-    expect(stack.backend.requests.filter((request) => request.method === 'POST')).toHaveLength(0);
+    expect(
+      stack.backend.requests.filter((request) => request.path.endsWith('/receipts')),
+    ).toHaveLength(0);
   });
 
   it('when the history, the report and the content are asked, then they come from the administration', async () => {

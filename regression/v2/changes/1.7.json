@@ -1,0 +1,39 @@
+[
+  {
+    "path": "GET /api/admin/donations/receipts",
+    "scenario": "donations/admin_receipts: *",
+    "kind": "added",
+    "reason": "1.7 (plan v3): the administration and the connector's nfnn_receipts list the issued receipts a page at a time, by donor and by the year of issue, without names or addresses; v2 had no such endpoint",
+    "contract": "docs/api-contract.md, Issued receipts in the administration; MCP connector"
+  },
+  {
+    "path": "GET /api/admin/donations/receipts/{id}",
+    "scenario": "donations/admin_receipts: *",
+    "kind": "added",
+    "reason": "1.7 (plan v3): the administration and the connector's nfnn_receipt read one issued receipt with its frozen data and verification proof; v2 had no such endpoint",
+    "contract": "docs/api-contract.md, Issued receipts in the administration; MCP connector"
+  },
+  {
+    "path": "POST /api/admin/donations/donors/{id}/receipts",
+    "scenario": "donations/admin_receipts: *",
+    "kind": "added",
+    "reason": "1.7 (plan v3): an administrator (\"Vystavit potvrzení\" on the donor card) or a connected application with admin:write (nfnn_issue_receipt) issues a donor's receipt through the donor's issuer, idempotent, under the same cap of 20 replacements in 24 hours, audited as ISSUE_RECEIPT; v2 had no such endpoint",
+    "contract": "docs/api-contract.md, Issued receipts in the administration; docs/security-overview.md, Connected applications"
+  },
+  {
+    "path": "GET /api/admin/donations/donors/{id}",
+    "scenario": "*",
+    "kind": "added",
+    "field": "$.yearlyReceiptsAvailableThrough",
+    "reason": "1.7 (plan v3): the donor card offers the yearly receipts the administration may issue, up to the last completed year in Prague, from the server so the page needs no client clock; the fields before it answer as they did",
+    "contract": "docs/api-contract.md, Donor accounts"
+  },
+  {
+    "path": "GET /api/admin/donations/donors/{id}",
+    "scenario": "*",
+    "kind": "added",
+    "field": "$.receiptsAvailableFrom",
+    "reason": "1.7 (plan v3): the first receipt year (app.donations.receipt.first-year), from which the donor card offers yearly receipts; the fields before it answer as they did",
+    "contract": "docs/api-contract.md, Donor accounts"
+  }
+]

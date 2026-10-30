@@ -117,6 +117,12 @@ export function withHint(result: CallToolResult, hint: string | undefined): Call
   return result;
 }
 
+export function receiptView(answer: unknown): Record<string, unknown> {
+  const issued = asRecord(answer);
+  const { texts: _texts, ...receipt } = asRecord(issued['receipt']);
+  return { ...issued, receipt, verificationLink: asRecord(receipt['verification'])['qrText'] };
+}
+
 export function asRecord(value: unknown): Record<string, unknown> {
   return typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : {};
 }

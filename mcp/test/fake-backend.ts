@@ -683,7 +683,7 @@ function issuedReceipt(subject: ReceiptSubject): Record<string, unknown> {
       gifts,
       total: { amountMinor: total, currency: 'CZK' },
       signatory: { name: 'Jan Novák', role: 'předseda správní rady', signatureImage: null },
-      texts: { cs: { 'receipt.title': 'Potvrzení o daru' }, en: null },
+      texts: { cs: { 'receipt.declaration.yearly': '{0} potvrzuje, že …' }, en: null },
       verification: { keyId: '21fe31df', qrText: VERIFICATION_LINK },
     },
   };
