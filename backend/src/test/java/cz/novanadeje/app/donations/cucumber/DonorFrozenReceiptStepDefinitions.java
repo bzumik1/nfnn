@@ -62,6 +62,14 @@ public class DonorFrozenReceiptStepDefinitions {
         issueAs(alias, Map.of("year", year));
     }
 
+    @When("{string} issued her/his/its yearly receipt for {int} {int} times")
+    public void issuedTheYearlyReceiptTimes(String alias, int year, int times) {
+        for (int request = 0; request < times; request++) {
+            issuesTheYearlyReceipt(alias, year);
+            assertThat(api.lastResponse().getStatusCode().value()).isEqualTo(200);
+        }
+    }
+
     @When("{string} issues the receipt of her/his/its donation received on {date}")
     public void issuesTheReceiptOfTheirDonation(String alias, LocalDate receivedOn) {
         issueAs(alias, Map.of("donationId", donationIdOf(alias, receivedOn).toString()));

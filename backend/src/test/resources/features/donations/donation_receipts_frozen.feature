@@ -471,6 +471,28 @@ Feature: A donor issues receipts of their donations as frozen, signed data
     Then the response status is 400
     And the problem type ends with "donations/year-not-yet-completed"
 
+  Scenario: Issuing receipts is limited per client address, counting the old downloads too
+    Given today is 2026-12-20
+    And a person "Jana" is registered
+    And the bank account has these movements:
+      | id   | date       | amount  | account    | bankCode | name          | variableSymbol |
+      | 2001 | 2026-10-01 | 1000.00 | 2900233333 | 2010     | Nováková Jana | {Jana}         |
+    And the application starts the import
+    And today is 2027-01-15
+    And "Jana" issued her yearly receipt for 2026 25 times
+    And "Jana" downloaded her yearly receipt for 2026 5 times
+    When "Jana" issues her yearly receipt for 2026
+    Then the response status is 429
+    And the problem type ends with "donations/rate-limited"
+    When "Jana" downloads her yearly receipt for 2026
+    Then the response status is 429
+    When "Jana" downloads the receipt of her donation received on 2026-10-01
+    Then the response status is 429
+    And 1 receipt is stored
+    When the following requests come from another client address
+    And "Jana" issues her yearly receipt for 2026
+    Then the response status is 200
+
   Scenario: Without a token no receipt endpoint answers
     When someone without a token issues the yearly receipt for 2026
     Then the response status is 401

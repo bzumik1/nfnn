@@ -8,6 +8,7 @@ import cz.novanadeje.app.donations.domain.receipt.ContentDigest;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceipt;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceiptId;
 import cz.novanadeje.app.donations.domain.receipt.StoredReceiptImage;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Pattern;
 import org.springframework.http.HttpHeaders;
@@ -34,14 +35,18 @@ class DonorReceiptsController {
 
     private final DonationReceiptService issuance;
     private final DonorReceiptsService receipts;
+    private final ReceiptIssuanceRateLimiter rateLimiter;
 
-    DonorReceiptsController(DonationReceiptService issuance, DonorReceiptsService receipts) {
+    DonorReceiptsController(DonationReceiptService issuance, DonorReceiptsService receipts, ReceiptIssuanceRateLimiter rateLimiter) {
         this.issuance = issuance;
         this.receipts = receipts;
+        this.rateLimiter = rateLimiter;
     }
 
     @PostMapping("/receipts")
-    ResponseEntity<DonorReceiptResponse> issue(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody ReceiptIssueRequest request) {
+    ResponseEntity<DonorReceiptResponse> issue(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody ReceiptIssueRequest request,
+                                              HttpServletRequest http) {
+        rateLimiter.check(http.getRemoteAddr());
         DonorReference donor = caller(jwt);
         DonationReceipt receipt = request.year() != null
                 ? issuance.issueForYear(donor, Year.of(request.year()))

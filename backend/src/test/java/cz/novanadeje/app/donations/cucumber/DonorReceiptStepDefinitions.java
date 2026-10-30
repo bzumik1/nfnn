@@ -72,6 +72,14 @@ public class DonorReceiptStepDefinitions {
         downloadAs(alias, YEARLY_RECEIPT_PATH + year);
     }
 
+    @When("{string} downloaded her/his/its yearly receipt for {int} {int} times")
+    public void downloadedTheYearlyReceiptTimes(String alias, int year, int times) {
+        for (int request = 0; request < times; request++) {
+            downloadsTheYearlyReceipt(alias, year);
+            assertThat(api.lastResponse().getStatusCode().value()).isEqualTo(200);
+        }
+    }
+
     @When("{string} downloads her/his yearly receipt for year {string}")
     public void downloadsTheYearlyReceiptForYearWritten(String alias, String year) {
         downloadAs(alias, YEARLY_RECEIPT_PATH + year);

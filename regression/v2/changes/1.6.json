@@ -246,6 +246,19 @@
     }
   },
   {
+    "kind": "log-field",
+    "line": "donations.application.receipt.DonationReceiptIssuer: Receipt serial <digits:6> has passed <n> % of the numbering, which ends at <digits:6>",
+    "reason": "1.6 warns, for every new receipt number from serial 900 000 on, that the receipt numbering (donation_receipt_number_seq, at most 999 999, no cycle) is running out, because nothing else would alert before issuing stops (security review of 1.6, M1)",
+    "contract": "docs/security-overview.md, Rate limits (issuing receipts); docs/system-overview.md, donations",
+    "security": {
+      "approvedIn": "PENDING",
+      "fields": {
+        "<digits:6>": "the serial just taken and the last serial of the numbering, counters only, no receipt number of a donor's year or anything about the donor",
+        "<n>": "the fixed 90, the share of the numbering past which the warning starts"
+      }
+    }
+  },
+  {
     "scenario": "donations/donation_receipts: *",
     "kind": "logs",
     "reason": "1.6: v2's DEBUG line \"Rendering issued receipt <number> again for donor <id>\" of DonationReceiptIssuer is gone, because issuing no longer renders; the issuer logs \"Returning issued receipt <number> again for donor <id>\" in its place (log-field entry above)",

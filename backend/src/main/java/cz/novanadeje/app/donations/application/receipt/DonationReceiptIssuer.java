@@ -32,6 +32,7 @@ import java.util.Optional;
 public class DonationReceiptIssuer {
 
     private static final Logger LOG = LoggerFactory.getLogger(DonationReceiptIssuer.class);
+    private static final long SERIAL_WORTH_A_WARNING = (ReceiptNumber.LAST_SERIAL + 1) / 10 * 9;
 
     private final DonationReceiptRepository receipts;
     private final ReceiptRequestReader requests;
@@ -75,7 +76,11 @@ public class DonationReceiptIssuer {
     }
 
     private DonationReceipt issueNew(ReceiptRequest request, ReceiptFingerprint fingerprint, Optional<DonationReceipt> replaced) {
-        ReceiptNumber number = ReceiptNumber.of(Year.from(request.today()), receipts.nextSerial());
+        long serial = receipts.nextSerial();
+        ReceiptNumber number = ReceiptNumber.of(Year.from(request.today()), serial);
+        if (serial >= SERIAL_WORTH_A_WARNING) {
+            LOG.warn("Receipt serial {} has passed 90 % of the numbering, which ends at {}", serial, ReceiptNumber.LAST_SERIAL);
+        }
         Instant issuedAt = clock.instant();
         LocaleCode locale = replaced.map(DonationReceipt::locale).orElse(request.record().preferredLocale());
         ReceiptDocument document = request.document(foundation, signatory, number, locale,

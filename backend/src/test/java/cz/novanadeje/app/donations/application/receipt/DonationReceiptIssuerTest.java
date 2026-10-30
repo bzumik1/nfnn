@@ -25,10 +25,17 @@ import cz.novanadeje.app.donations.domain.receipt.ReplacedReceipt;
 import cz.novanadeje.app.donations.domain.receipt.SignatureImage;
 import cz.novanadeje.app.donations.domain.receipt.proof.ReceiptTooLong;
 import cz.novanadeje.app.shared.domain.LocaleCode;
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
+import org.slf4j.LoggerFactory;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -260,6 +267,30 @@ class DonationReceiptIssuerTest {
         verify(receipts, never()).nextSerial();
         verify(receipts, never()).save(any());
         verifyNoInteractions(freezer);
+    }
+
+    @ParameterizedTest(name = "Given serial {0}, when a new receipt takes it, then {1} warnings say the numbering is running out")
+    @CsvSource({"899999, 0", "900000, 1", "999999, 1"})
+    @DisplayName("Given a serial near the end of the numbering, when a new receipt takes it, then a warning says so from 90 % on")
+    void should_warn_that_numbering_runs_out_when_issued_given_serial_past_ninety_percent(long serial, int warnings) {
+        givenDonationsOfJana(jana(), MARCH);
+        when(receipts.findActiveForYear(JANA, YEAR_2026)).thenReturn(Optional.empty());
+        when(receipts.nextSerial()).thenReturn(serial);
+        givenFreezer();
+        Logger logger = (Logger) LoggerFactory.getLogger(DonationReceiptIssuer.class);
+        ListAppender<ILoggingEvent> logs = new ListAppender<>();
+        logs.start();
+        logger.addAppender(logs);
+        try {
+            issuer.issueForYear(JANA, YEAR_2026, TODAY);
+        } finally {
+            logger.detachAppender(logs);
+        }
+
+        assertThat(logs.list).filteredOn(event -> event.getLevel() == Level.WARN)
+                .extracting(ILoggingEvent::getFormattedMessage)
+                .hasSize(warnings)
+                .allSatisfy(message -> assertThat(message).isEqualTo("Receipt serial " + serial + " has passed 90 % of the numbering, which ends at 999999"));
     }
 
     private DonationReceipt yearlyReceipt(ReceiptFingerprint fingerprint, LocaleCode locale) {
