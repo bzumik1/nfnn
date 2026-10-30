@@ -98,7 +98,7 @@ class HomeContentServiceTest {
     void should_carry_the_people_when_read_given_people_of_the_foundation() {
         PublicPeopleView shown = new PublicPeopleView(List.of(), List.of(new BoardMemberView("Eva Vzorová", Optional.empty())), Optional.empty());
         when(news.findVisibleNewestFirst(eq(PRAGUE_DAY), eq(0), anyInt())).thenReturn(List.of());
-        when(projects.findVisibleNewestFirst(eq(PRAGUE_DAY), eq(0), anyInt())).thenReturn(List.of());
+        when(projects.findVisible(eq(PRAGUE_DAY), any(), eq(0), anyInt())).thenReturn(List.of());
         when(about.read()).thenReturn(new AboutView(Optional.empty()));
         when(people.read()).thenReturn(Optional.of(shown), Optional.empty());
 
