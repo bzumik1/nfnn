@@ -23,7 +23,7 @@ Na serveru se nic nepíše do souborů. `compose.yml` se do ZimaOS vkládá vžd
 ## Instalace
 
 1. Stěhuješ-li web z jiného serveru nebo ho obnovuješ po havárii, měj po ruce soubor zálohy `.dump.age` (stažený ze stránky Zálohy, nebo kopii složky `backups/` starého serveru) a klíč k zálohám starého serveru: v kroku 3 je průvodce nahraje sám (viz [Obnova](#obnova)).
-2. ZimaOS → App Store → Custom Install → smazat vzor, vložit `deploy/compose.yml` beze změn → Install. Složky v `/DATA/AppData/nfnn/` vytvoří Docker sám. Ikona aplikace: v nastavení aplikace v ZimaOS dej do pole s adresou ikony `https://<adresa webu>/app-icon.svg` (bílá dlaždice s hvězdou; `app-icon.png` zůstává jen pro starou adresu, dokud ji nezměníš).
+2. ZimaOS → App Store → Custom Install → smazat vzor, vložit `deploy/compose.yml` beze změn → Install. Složky v `/DATA/AppData/nfnn/` vytvoří Docker sám. Ikona aplikace: v nastavení aplikace v ZimaOS dej do pole s adresou ikony `https://<adresa webu>/app-icon.svg` (bílá dlaždice s hvězdou).
 3. Klikni v ZimaOS na ikonu aplikace. Web se otevře na adrese Zimy s portem 8089 a protože jde přímo z domácí sítě, ukáže rovnou průvodce prvním nastavením. Otevřeš-li web odjinud (přes doménu, NPM nebo Cloudflare), průvodce chce kód z logu: ZimaOS → aplikace → Terminál a logy → `nfnn-backend`, rámeček „První nastavení webu“ s kódem typu `K7QM-2XPA-9TRD` (mění se s každým startem; do `logs/backend.log` ani do správy se nedostane).
 4. V průvodci vyplň:
    - **Adresa webu**: adresa, na které ho uvidí návštěvníci (`https://nfnn.cz`, dokud DNS nepřepneš `https://nfnn.znamenacek.duckdns.org`).
