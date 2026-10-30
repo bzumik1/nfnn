@@ -48,8 +48,9 @@ class ReceiptSignatureProblemHandlerTest {
         assertThat(problem.getStatus()).isEqualTo(400);
         assertThat(problem.getType().toString()).endsWith("/donations/unsupported-signature-vector");
         assertThat(problem.getTitle()).isEqualTo("SVG nejde použít jako podpis");
-        assertThat(problem.getDetail()).isEqualTo("Soubor obsahuje nepovolený prvek „foreignObject“. Podpis ve formátu SVG smí mít jen vyplněné tvary "
-                + "(path), bez čar a efektů, a nejvýš 200 kB. Místo něj můžete nahrát sken JPEG, PNG nebo WebP.");
+        assertThat(problem.getDetail()).isEqualTo("Soubor obsahuje nepovolený prvek „foreignObject“. Ručně psaný podpis v SVG jde, když jsou jeho tahy "
+                + "převedené na vyplněné tvary (path); obrysy s nastavenou tloušťkou čáry (stroke) a efekty web nepřijme a soubor smí mít nejvýš 200 kB. "
+                + "Místo něj můžete nahrát sken JPEG, PNG nebo WebP.");
         assertThat(fieldError(problem)).containsExactlyInAnyOrderEntriesOf(Map.of(
                 "field", "file", "code", "element", "message", "Soubor obsahuje nepovolený prvek „foreignObject“."));
     }
@@ -60,8 +61,9 @@ class ReceiptSignatureProblemHandlerTest {
         ProblemDetail problem = handle(new UnsupportedSignatureVector(SignatureVectorProblem.ELEMENT, "script"), Locale.ENGLISH);
 
         assertThat(problem.getTitle()).isEqualTo("The SVG cannot be used as a signature");
-        assertThat(problem.getDetail()).isEqualTo("The file holds the element “script”, which is not allowed. A signature in SVG may hold only filled "
-                + "shapes (path), without strokes or effects, and at most 200 kB. You can upload a scan as a JPEG, PNG or WebP image instead.");
+        assertThat(problem.getDetail()).isEqualTo("The file holds the element “script”, which is not allowed. A handwritten signature in SVG is fine when "
+                + "its strokes are converted to filled shapes (path); outlines with a set line width (stroke) and effects are refused, and the file may "
+                + "have at most 200 kB. You can upload a scan as a JPEG, PNG or WebP image instead.");
     }
 
     @Test

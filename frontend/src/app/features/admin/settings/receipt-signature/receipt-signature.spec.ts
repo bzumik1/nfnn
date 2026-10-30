@@ -153,11 +153,11 @@ describe('Given the signature section of the receipt settings', () => {
     expect(text('.signature-state')).toBe('Nahráno 23. 10. 2026 21:30, 1 200 × 400 px.');
   });
 
-  it('when the hint is read, then it names SVG of filled shapes without strokes or effects before the scan', async () => {
+  it('when the hint is read, then it says a handwritten SVG signature is fine as filled shapes and only strokes and effects are refused, before the scan', async () => {
     await load(noReceiptSignature());
 
     expect(text('#receipt-signature-hint')).toBe(
-      'Podpis se tiskne nad jméno podepisujícího na potvrzeních vystavených po nahrání; ta už vystavená se nemění. Nejlépe SVG do 200 kB jen s vyplněnými tvary, bez čar a efektů. Jinak sken JPEG, PNG či WebP do 10 MB: tmavý podpis na bílém papíře.',
+      'Podpis se tiskne nad jméno podepisujícího na potvrzeních vystavených po nahrání; ta už vystavená se nemění. Nejlépe SVG do 200 kB: ručně psaný podpis jde, když jsou jeho tahy převedené na vyplněné tvary. Obrysy s nastavenou tloušťkou čáry (stroke) a efekty web odmítne. Jinak sken JPEG, PNG či WebP do 10 MB: tmavý podpis na bílém papíře.',
     );
   });
 
@@ -244,7 +244,7 @@ describe('Given the signature section of the receipt settings', () => {
           type: 'https://nfnn.cz/problems/donations/unsupported-signature-vector',
           title: 'SVG nejde použít jako podpis',
           detail:
-            'Soubor obsahuje nepovolený prvek „script“. Podpis ve formátu SVG smí mít jen vyplněné tvary (path), bez čar a efektů, a nejvýš 200 kB. Místo něj můžete nahrát sken JPEG, PNG nebo WebP.',
+            'Soubor obsahuje nepovolený prvek „script“. Ručně psaný podpis v SVG jde, když jsou jeho tahy převedené na vyplněné tvary (path); obrysy s nastavenou tloušťkou čáry (stroke) a efekty web nepřijme a soubor smí mít nejvýš 200 kB. Místo něj můžete nahrát sken JPEG, PNG nebo WebP.',
           status: 400,
           errors: [
             {
@@ -259,7 +259,7 @@ describe('Given the signature section of the receipt settings', () => {
       await settle();
 
       expect(text('[role="alert"]:not(:empty)')).toBe(
-        'SVG nejde použít jako podpis. Soubor obsahuje nepovolený prvek „script“. Podpis ve formátu SVG smí mít jen vyplněné tvary (path), bez čar a efektů, a nejvýš 200 kB. Místo něj můžete nahrát sken JPEG, PNG nebo WebP.',
+        'SVG nejde použít jako podpis. Soubor obsahuje nepovolený prvek „script“. Ručně psaný podpis v SVG jde, když jsou jeho tahy převedené na vyplněné tvary (path); obrysy s nastavenou tloušťkou čáry (stroke) a efekty web nepřijme a soubor smí mít nejvýš 200 kB. Místo něj můžete nahrát sken JPEG, PNG nebo WebP.',
       );
       expect(vectorPreview()).toBeNull();
     });
