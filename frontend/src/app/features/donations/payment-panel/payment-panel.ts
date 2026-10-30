@@ -30,6 +30,7 @@ import {
 import { CopyButton } from '../../../shared/ui/copy-button/copy-button';
 import { QrCode } from '../../../shared/ui/qr-code/qr-code';
 import { formatCrowns } from '../donation-amount';
+import { formatIban } from '../iban-format';
 import { BankAccountResponse, PaymentQrApi, PaymentQrResponse } from '../payment-qr-api';
 import { ChosenAmount, ChosenAmountStore } from './chosen-amount';
 
@@ -170,7 +171,7 @@ export class PaymentPanel {
 
   protected readonly ibanInGroups = computed(() => {
     const account = this.bankAccount();
-    return account ? inGroupsOfFour(account.iban) : '';
+    return account ? formatIban(account.iban) : '';
   });
 
   protected readonly amountLabelId = computed(() => `${this.idPrefix()}-amount-label`);
@@ -311,8 +312,4 @@ function sameRequest(previous: QrRequest, current: QrRequest): boolean {
     previous.variableSymbol === current.variableSymbol &&
     previous.attempt === current.attempt
   );
-}
-
-function inGroupsOfFour(iban: string): string {
-  return iban.replace(/(.{4})(?=.)/g, '$1 ');
 }
