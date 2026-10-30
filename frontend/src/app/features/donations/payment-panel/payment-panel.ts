@@ -5,37 +5,30 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  DestroyRef,
   ElementRef,
   inject,
   Injector,
   input,
-  linkedSignal,
   signal,
   viewChild,
 } from '@angular/core';
-import { toObservable, toSignal } from '@angular/core/rxjs-interop';
-import {
-  catchError,
-  debounce,
-  distinctUntilChanged,
-  map,
-  Observable,
-  of,
-  shareReplay,
-  startWith,
-  switchMap,
-  tap,
-  timer,
-} from 'rxjs';
 import { CopyButton } from '../../../shared/ui/copy-button/copy-button';
 import { QrCode } from '../../../shared/ui/qr-code/qr-code';
+import { encodeText } from '../../../shared/ui/qr-code/qr-encoder';
+import { QrMatrix } from '../../../shared/ui/qr-code/qr-matrix';
 import { formatCrowns } from '../donation-amount';
-import { BankAccountResponse, PaymentQrApi, PaymentQrResponse } from '../payment-qr-api';
+import { PaymentAccount, PaymentDetails } from '../payment-details-api';
+import { PaymentDetailsStore } from '../payment-details-store';
+import { spayd } from '../spayd';
 
 const DEFAULT_AMOUNT = 500;
 const MIN_AMOUNT = 1;
 const MAX_AMOUNT = 1_000_000;
-const REQUEST_DEBOUNCE_MS = 300;
+const MINOR_PER_CROWN = 100;
+const REDRAW_DELAY_MS = 400;
+const ANNOUNCE_DELAY_MS = 1200;
+const PAYMENT_QR_LEVEL = 'H';
 const SAVED_QR_SIDE_PX = 720;
 const SAVED_QR_FILE = 'qr-platba-nova-nadeje.png';
 
@@ -44,22 +37,15 @@ interface AmountPreset {
   readonly label: string;
 }
 
-interface QrRequest {
-  readonly amount: number | null;
-  readonly variableSymbol: string | null;
-  readonly typed: boolean;
-  readonly attempt: number;
-}
-
 type QrState =
   | { readonly kind: 'loading' }
-  | { readonly kind: 'ready'; readonly qr: PaymentQrResponse }
+  | { readonly kind: 'ready'; readonly matrix: QrMatrix }
   | { readonly kind: 'failed' }
   | { readonly kind: 'amountInvalid' };
 
 export type PaymentAccountState =
   | { readonly kind: 'loading' }
-  | { readonly kind: 'ready'; readonly account: BankAccountResponse }
+  | { readonly kind: 'ready'; readonly account: PaymentAccount }
   | { readonly kind: 'failed' };
 
 @Component({
@@ -70,7 +56,7 @@ export type PaymentAccountState =
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PaymentPanel {
-  private readonly api = inject(PaymentQrApi);
+  private readonly store = inject(PaymentDetailsStore);
   private readonly injector = inject(Injector);
   private readonly bankLabel = viewChild<ElementRef<HTMLElement>>('bankLabel');
 
@@ -88,10 +74,12 @@ export class PaymentPanel {
   protected readonly presetAmount = signal(DEFAULT_AMOUNT);
   protected readonly customAmount = signal<number | null>(null);
   private readonly customAmountLeft = signal(false);
-  private readonly amountChanged = signal(false);
-  private readonly attempt = signal(0);
+  private readonly drawnAmount = signal<number | null>(DEFAULT_AMOUNT);
+  protected readonly redrawing = signal(false);
+  private readonly announced = signal<number | null>(null);
   private readonly qrCode = viewChild(QrCode);
-  private readonly fetched = new Map<string, Observable<PaymentQrResponse>>();
+  private redrawTimer: ReturnType<typeof setTimeout> | undefined;
+  private announceTimer: ReturnType<typeof setTimeout> | undefined;
 
   readonly amount = computed(() =>
     this.customChosen() ? wholeAmountInRange(this.customAmount()) : this.presetAmount(),
@@ -101,36 +89,30 @@ export class PaymentPanel {
     () => this.customChosen() && this.customAmountLeft() && this.amount() === null,
   );
 
-  private readonly request = computed<QrRequest>(() => ({
-    amount: this.amount(),
-    variableSymbol: this.variableSymbol(),
-    typed: this.customChosen(),
-    attempt: this.attempt(),
-  }));
+  private readonly details = computed<PaymentDetails | null>(() => {
+    const state = this.store.state();
+    return state.kind === 'ready' ? state.details : null;
+  });
 
-  protected readonly state = toSignal(
-    toObservable(this.request).pipe(
-      debounce((request) => (request.typed ? timer(REQUEST_DEBOUNCE_MS) : of(request))),
-      distinctUntilChanged(sameRequest),
-      switchMap((request) => this.load(request)),
-    ),
-    { initialValue: { kind: 'loading' } as QrState },
-  );
+  protected readonly state = computed<QrState>(() => {
+    const stored = this.store.state();
+    if (stored.kind !== 'ready') {
+      return stored;
+    }
+    const amount = this.drawnAmount();
+    if (amount === null) {
+      return { kind: 'amountInvalid' };
+    }
+    const matrix = paymentMatrix(stored.details, amount, this.variableSymbol());
+    return matrix === null ? { kind: 'failed' } : { kind: 'ready', matrix };
+  });
 
-  protected readonly qr = computed(() => {
+  protected readonly qrMatrix = computed(() => {
     const state = this.state();
-    return state.kind === 'ready' ? state.qr : null;
+    return state.kind === 'ready' ? state.matrix : null;
   });
 
-  protected readonly shownQr = linkedSignal<QrState, PaymentQrResponse | null>({
-    source: this.state,
-    computation: (state, previous) => {
-      if (state.kind === 'ready') {
-        return state.qr;
-      }
-      return state.kind === 'loading' ? (previous?.value ?? null) : null;
-    },
-  });
+  protected readonly busy = computed(() => this.state().kind === 'loading' || this.redrawing());
 
   protected readonly saving = signal(false);
   protected readonly savedQrFile = signal<string | null>(null);
@@ -141,23 +123,16 @@ export class PaymentPanel {
       : $localize`:@@home.donate.qr.saved:QR kód ${fileName}:fileName: je uložený. Najdete ho ve stažených souborech.`;
   });
 
-  protected readonly announcedAmount = computed(() => {
-    const amount = this.amount();
-    return this.amountChanged() && this.qr() && amount !== null ? amount : null;
-  });
+  protected readonly announcedAmount = this.announced.asReadonly();
 
-  protected readonly bankAccount = linkedSignal<QrState, BankAccountResponse | null>({
-    source: this.state,
-    computation: (state, previous) =>
-      state.kind === 'ready' ? state.qr.bankAccount : (previous?.value ?? null),
-  });
+  protected readonly bankAccount = computed(() => this.details()?.account ?? null);
 
   readonly accountState = computed<PaymentAccountState>(() => {
     const account = this.bankAccount();
     if (account) {
       return { kind: 'ready', account };
     }
-    return this.state().kind === 'loading' ? { kind: 'loading' } : { kind: 'failed' };
+    return this.store.state().kind === 'loading' ? { kind: 'loading' } : { kind: 'failed' };
   });
 
   protected readonly ibanInGroups = computed(() => {
@@ -168,12 +143,25 @@ export class PaymentPanel {
   protected readonly amountLabelId = computed(() => `${this.idPrefix()}-amount-label`);
   protected readonly customAmountId = computed(() => `${this.idPrefix()}-custom-amount`);
   protected readonly amountHintId = computed(() => `${this.idPrefix()}-amount-hint`);
+  protected readonly redrawHintId = computed(() => `${this.idPrefix()}-redraw-hint`);
+  protected readonly customAmountDescription = computed(() =>
+    this.showAmountHint() ? `${this.redrawHintId()} ${this.amountHintId()}` : this.redrawHintId(),
+  );
+
+  constructor() {
+    this.store.load();
+    inject(DestroyRef).onDestroy(() => {
+      clearTimeout(this.redrawTimer);
+      clearTimeout(this.announceTimer);
+    });
+  }
 
   choosePreset(amount: number): void {
-    this.amountChanged.set(true);
     this.savedQrFile.set(null);
     this.customChosen.set(false);
     this.presetAmount.set(amount);
+    this.redrawNow();
+    this.announceAfterQuiet();
   }
 
   chooseCustomAmount(): void {
@@ -184,12 +172,14 @@ export class PaymentPanel {
     this.customAmount.set(null);
     this.customAmountLeft.set(false);
     this.customChosen.set(true);
+    this.redrawLater();
   }
 
   enterCustomAmount(event: Event): void {
-    this.amountChanged.set(true);
     this.savedQrFile.set(null);
     this.customAmount.set(wholeCrowns((event.target as HTMLInputElement).value));
+    this.redrawLater();
+    this.announceAfterQuiet();
   }
 
   leaveCustomAmount(): void {
@@ -201,7 +191,7 @@ export class PaymentPanel {
   }
 
   retry(): void {
-    this.attempt.update((attempt) => attempt + 1);
+    this.store.load();
   }
 
   async saveQr(): Promise<void> {
@@ -221,46 +211,45 @@ export class PaymentPanel {
     }
   }
 
-  private load(request: QrRequest): Observable<QrState> {
-    if (request.amount === null) {
-      return of({ kind: 'amountInvalid' });
-    }
-    const variableSymbol = request.variableSymbol;
-    return this.fetch(request.amount, variableSymbol).pipe(
-      tap(() => this.prefetchPresets(variableSymbol)),
-      map((qr): QrState => ({ kind: 'ready', qr })),
-      catchError(() => of<QrState>({ kind: 'failed' })),
-      startWith<QrState>({ kind: 'loading' }),
-    );
+  private redrawLater(): void {
+    this.redrawing.set(true);
+    clearTimeout(this.redrawTimer);
+    this.redrawTimer = setTimeout(() => this.redrawNow(), REDRAW_DELAY_MS);
   }
 
-  private prefetchPresets(variableSymbol: string | null): void {
-    for (const preset of this.presets) {
-      if (!this.fetched.has(qrKey(preset.amount, variableSymbol))) {
-        this.fetch(preset.amount, variableSymbol).subscribe({ error: () => undefined });
+  private redrawNow(): void {
+    clearTimeout(this.redrawTimer);
+    this.redrawing.set(false);
+    this.drawnAmount.set(this.amount());
+  }
+
+  private announceAfterQuiet(): void {
+    const previous = this.announced();
+    this.announced.set(null);
+    clearTimeout(this.announceTimer);
+    this.announceTimer = setTimeout(() => {
+      const amount = this.amount();
+      if (amount !== null && amount !== previous && this.qrMatrix() !== null) {
+        this.announced.set(amount);
       }
-    }
-  }
-
-  private fetch(amount: number, variableSymbol: string | null): Observable<PaymentQrResponse> {
-    const key = qrKey(amount, variableSymbol);
-    let qr = this.fetched.get(key);
-    if (!qr) {
-      qr = this.api.paymentQr(amount, variableSymbol).pipe(
-        catchError((error: unknown) => {
-          this.fetched.delete(key);
-          throw error;
-        }),
-        shareReplay(1),
-      );
-      this.fetched.set(key, qr);
-    }
-    return qr;
+    }, ANNOUNCE_DELAY_MS);
   }
 }
 
-function qrKey(amount: number, variableSymbol: string | null): string {
-  return `${amount}|${variableSymbol ?? ''}`;
+function paymentMatrix(
+  details: PaymentDetails,
+  amount: number,
+  variableSymbol: string | null,
+): QrMatrix | null {
+  const payment = spayd(details, { amountMinor: amount * MINOR_PER_CROWN, variableSymbol });
+  if (!('spayd' in payment)) {
+    return null;
+  }
+  try {
+    return encodeText(payment.spayd, PAYMENT_QR_LEVEL);
+  } catch {
+    return null;
+  }
 }
 
 function wholeCrowns(typed: string): number | null {
@@ -272,14 +261,6 @@ function wholeAmountInRange(amount: number | null): number | null {
   return amount !== null && Number.isInteger(amount) && amount >= MIN_AMOUNT && amount <= MAX_AMOUNT
     ? amount
     : null;
-}
-
-function sameRequest(previous: QrRequest, current: QrRequest): boolean {
-  return (
-    previous.amount === current.amount &&
-    previous.variableSymbol === current.variableSymbol &&
-    previous.attempt === current.attempt
-  );
 }
 
 function inGroupsOfFour(iban: string): string {

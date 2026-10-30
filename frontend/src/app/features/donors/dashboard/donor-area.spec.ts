@@ -14,8 +14,9 @@ import { AuthStore } from '../../../core/auth/auth-store';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
 import { authResponse, sampleDonor } from '../../../core/auth/testing/donor-fixtures';
 import { DonationListResponse, DonationSummaryResponse } from '../../donations/donations-api';
-import { PaymentQrResponse } from '../../donations/payment-qr-api';
-import { checkerboard } from '../../../shared/ui/qr-code/testing/qr-matrices';
+import { foundationPaymentDetails } from '../../donations/testing/payment-details-fixtures';
+import { spayd } from '../../donations/spayd';
+import { drawsText } from '../../../shared/ui/qr-code/testing/branded-qr';
 import { BankAccountItem } from '../../donations/bank-accounts-api';
 import { bankAccount, symbolOffer } from '../../donations/testing/bank-account-fixtures';
 import {
@@ -33,24 +34,12 @@ const OBJECT_URL = 'blob:http://localhost/receipt';
 const BANK_CHECK_URL = '/api/donations/me/bank-check';
 const BANK_ACCOUNTS_URL = '/api/donations/me/bank-accounts';
 const PASSKEYS_URL = '/api/donors/me/passkeys';
-const PAYMENT_QR_URL = '/api/donations/payment-qr';
+const PAYMENT_DETAILS_URL = '/api/donations/payment-details';
 const EARLIER = '2026-10-18T08:05:30Z';
 const LATER = '2026-10-18T08:07:10Z';
 
-const PAYMENT_QR_URL_MATCH = (request: { url: string }): boolean => request.url === PAYMENT_QR_URL;
-
-function paymentQr(request: TestRequest): PaymentQrResponse {
-  const amount = request.request.params.get('amount') ?? '500';
-  return {
-    spayd: `SPD*1.0*ACC:CZ2620100000005544332217*AM:${amount}.00*CC:CZK`,
-    qrCode: checkerboard(25),
-    bankAccount: {
-      accountNumber: '5544332217/2010',
-      iban: 'CZ2620100000005544332217',
-      recipientName: 'Nadační fond Nová naděje',
-    },
-  };
-}
+const PAYMENT_DETAILS_URL_MATCH = (request: { url: string }): boolean =>
+  request.url === PAYMENT_DETAILS_URL;
 
 describe('Given a signed-in donor in the donor area', () => {
   let harness: RouterTestingHarness;
@@ -61,7 +50,6 @@ describe('Given a signed-in donor in the donor area', () => {
   let bankCheck: TestRequest;
   let areaAccounts: BankAccountItem[];
   let sectionAccountRequests: TestRequest[];
-  let qrRequests: string[];
 
   beforeEach(async () => {
     localStorage.clear();
@@ -104,9 +92,9 @@ describe('Given a signed-in donor in the donor area', () => {
 
   afterEach(() => {
     vi.useRealTimers();
-    for (let round = 0; round < 3; round++) {
-      http.match(PAYMENT_QR_URL_MATCH).forEach((request) => request.flush(paymentQr(request)));
-    }
+    http
+      .match(PAYMENT_DETAILS_URL_MATCH)
+      .forEach((request) => request.flush(foundationPaymentDetails()));
     http.verify();
     vi.restoreAllMocks();
     Reflect.deleteProperty(URL, 'createObjectURL');
@@ -121,24 +109,18 @@ describe('Given a signed-in donor in the donor area', () => {
     sectionAccountRequests = sectionRequests;
     await settle();
     if (url.startsWith('/darce/prehled')) {
-      qrRequests = await answerPaymentQr();
+      await answerPaymentDetails();
     }
   }
 
-  async function answerPaymentQr(): Promise<string[]> {
-    const asked: string[] = [];
-    for (let round = 0; round < 3; round++) {
-      const requests = http.match(PAYMENT_QR_URL_MATCH);
-      if (requests.length === 0) {
-        break;
-      }
-      for (const request of requests) {
-        asked.push(request.request.urlWithParams);
-        request.flush(paymentQr(request));
-      }
-      await settle();
-    }
-    return asked;
+  async function answerPaymentDetails(): Promise<void> {
+    http.expectOne(PAYMENT_DETAILS_URL_MATCH).flush(foundationPaymentDetails());
+    await settle();
+  }
+
+  function drawsDonation(selector: string, amountMinor: number, variableSymbol: string): boolean {
+    const payment = spayd(foundationPaymentDetails(), { amountMinor, variableSymbol });
+    return 'spayd' in payment && drawsText(element(`${selector} svg[role="img"]`), payment.spayd);
   }
 
   async function go(url: string): Promise<void> {
@@ -632,8 +614,7 @@ describe('Given a signed-in donor in the donor area', () => {
       ]);
       expect(element('.send-gift app-qr-code')).not.toBeNull();
       expect(text('.send-gift .qr-save')).toBe('Uložit QR kód');
-      expect(qrRequests[0]).toBe(`${PAYMENT_QR_URL}?amount=500&variableSymbol=9876543210`);
-      expect(qrRequests.every((asked) => asked.includes('variableSymbol=9876543210'))).toBe(true);
+      expect(drawsDonation('.send-gift .qr-image', 50000, '9876543210')).toBe(true);
     });
 
     it('then choosing another amount there shows that amount in the bank details at once', async () => {
@@ -660,8 +641,7 @@ describe('Given a signed-in donor in the donor area', () => {
         '5544332217/2010',
         '9876543210',
       ]);
-      http.expectNone(PAYMENT_QR_URL_MATCH);
-      expect(qrRequests.some((asked) => !asked.includes('variableSymbol'))).toBe(false);
+      http.expectNone(PAYMENT_DETAILS_URL_MATCH);
     });
 
     it('then the standing order guide in the card names the amount chosen there', async () => {
@@ -670,7 +650,6 @@ describe('Given a signed-in donor in the donor area', () => {
 
       [...root().querySelectorAll<HTMLButtonElement>('.send-gift .amount-option')][0].click();
       await settle();
-      await answerPaymentQr();
       await click('.send-gift app-standing-order .standing-toggle');
 
       expect(texts('.send-gift .standing-details dd .standing-value')[2]).toBe(
@@ -695,7 +674,7 @@ describe('Given a signed-in donor in the donor area', () => {
       await respond(twoYearSummary(), twoYearDonations());
 
       expect(element('.dashboard-loading')).toBeNull();
-      http.expectNone(PAYMENT_QR_URL_MATCH);
+      http.expectNone(PAYMENT_DETAILS_URL_MATCH);
     });
 
     it('then one row of stats shows the total, the count and the sum of the current year from the summary', async () => {
@@ -1930,17 +1909,7 @@ describe('Given a signed-in donor in the donor area', () => {
       await respond(emptySummary(), emptyDonations());
       await settle();
 
-      http
-        .expectOne((request) => request.url === '/api/donations/payment-qr')
-        .flush({
-          spayd: 'SPD*1.0',
-          qrCode: { size: 1, modules: '1' },
-          bankAccount: {
-            accountNumber: '5544332217/2010',
-            iban: 'CZ2620100000005544332217',
-            recipientName: 'Nadační fond Nová naděje',
-          },
-        });
+      http.expectOne(PAYMENT_DETAILS_URL_MATCH).flush(foundationPaymentDetails());
       await settle();
 
       expect((element('dialog') as HTMLDialogElement).open).toBe(true);

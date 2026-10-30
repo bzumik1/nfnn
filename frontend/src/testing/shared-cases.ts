@@ -35,23 +35,18 @@ export interface QrSymbol {
 }
 
 export interface SpaydInput {
-  readonly recipient: {
-    readonly accountNumber: string;
-    readonly iban: string;
-    readonly name: string;
-  };
-  readonly amount?: string;
+  readonly details?: string;
+  readonly servedDetails?: PaymentDetailsExpected;
+  readonly amountMinor: number;
   readonly variableSymbol?: string;
-  readonly purpose?: string;
+  readonly purpose?: 'DONATION' | 'ACCOUNT_VERIFICATION';
 }
 
 export type SpaydExpected =
   | { readonly spayd: string }
   | {
       readonly refused: {
-        readonly status: number;
-        readonly type: string;
-        readonly fields: readonly string[];
+        readonly fields: readonly ('amountMinor' | 'variableSymbol' | 'details')[];
       };
     };
 

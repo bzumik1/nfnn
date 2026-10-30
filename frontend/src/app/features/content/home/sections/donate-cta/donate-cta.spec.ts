@@ -1,36 +1,31 @@
 import { provideHttpClient } from '@angular/common/http';
-import {
-  HttpTestingController,
-  provideHttpClientTesting,
-  TestRequest,
-} from '@angular/common/http/testing';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { LoginDialogService } from '../../../../../core/auth/login-dialog.service';
 import { QrCode } from '../../../../../shared/ui/qr-code/qr-code';
+import { encodeText } from '../../../../../shared/ui/qr-code/qr-encoder';
 import { QrMatrix } from '../../../../../shared/ui/qr-code/qr-matrix';
-import { qrMatrix } from '../../../../../shared/ui/qr-code/testing/qr-matrices';
-import { PaymentQrResponse } from '../../../../donations/payment-qr-api';
+import { PaymentDetails } from '../../../../donations/payment-details-api';
+import {
+  foundationPaymentDetails,
+  paymentQrCase,
+} from '../../../../donations/testing/payment-details-fixtures';
 import { DonateCta } from './donate-cta';
 
-const PAYMENT_QR_URL = '/api/donations/payment-qr';
-const DEBOUNCE_MS = 300;
+const PAYMENT_DETAILS_URL = '/api/donations/payment-details';
+const REDRAW_MS = 400;
+const ANNOUNCE_MS = 1200;
+const QR_OF_500 = paymentQrCase('500 Kč without a variable symbol');
+const QR_OF_1000 = paymentQrCase('1 000 Kč without a variable symbol');
+const QR_OF_100 = paymentQrCase('100 Kč without a variable symbol');
+const QR_OF_500_FOR_JANA = paymentQrCase('500 Kč with a ten-digit variable symbol');
 
-function matrixFor(amount: string): QrMatrix {
-  const seed = Number.parseInt(amount, 10);
-  return qrMatrix(25, (column, row) => (column * 7 + row * 3 + seed) % 5 < 2);
-}
-
-function paymentQr(amount: string): PaymentQrResponse {
-  return {
-    spayd: `SPD*1.0*ACC:CZ2620100000005544332217*AM:${amount}*CC:CZK`,
-    qrCode: matrixFor(amount),
-    bankAccount: {
-      accountNumber: '5544332217/2010',
-      iban: 'CZ2620100000005544332217',
-      recipientName: 'Nadační fond Nová naděje',
-    },
-  };
+function qrOfTyped(crowns: number): QrMatrix {
+  return encodeText(
+    `SPD*1.0*ACC:CZ2620100000005544332217*AM:${crowns}.00*CC:CZK*RN:NADACNI FOND NOVA NADEJE*MSG:DAR NADACNI FOND NOVA NADEJE`,
+    'H',
+  );
 }
 
 describe('Given the donate section', () => {
@@ -71,31 +66,21 @@ describe('Given the donate section', () => {
     return match;
   }
 
-  async function settle(): Promise<void> {
+  async function settle(milliseconds = 0): Promise<void> {
     fixture.detectChanges();
-    await vi.advanceTimersByTimeAsync(DEBOUNCE_MS);
-    fixture.detectChanges();
-  }
-
-  function expectQrRequest(): TestRequest {
-    return http.expectOne((request) => request.url === PAYMENT_QR_URL);
-  }
-
-  function respond(request: TestRequest): void {
-    request.flush(paymentQr(`${request.request.params.get('amount')}.00`));
+    await vi.advanceTimersByTimeAsync(milliseconds);
     fixture.detectChanges();
   }
 
-  function respondToPrefetch(): (string | null)[] {
-    const requests = http.match((request) => request.url === PAYMENT_QR_URL);
-    requests.forEach((request) => respond(request));
-    return requests.map((request) => request.request.params.get('amount'));
+  function respondWithDetails(details: PaymentDetails = foundationPaymentDetails()): void {
+    http.expectOne((request) => request.url === PAYMENT_DETAILS_URL).flush(details);
+    fixture.detectChanges();
   }
 
   async function openWithQr(): Promise<void> {
     await settle();
-    respond(expectQrRequest());
-    respondToPrefetch();
+    respondWithDetails();
+    await settle();
   }
 
   function qrCode(): SVGSVGElement | null {
@@ -115,13 +100,36 @@ describe('Given the donate section', () => {
     );
   }
 
-  async function enterCustomAmount(value: string): Promise<void> {
-    button('Jiná částka').click();
-    fixture.detectChanges();
+  function squashed(selector: string): string {
+    return text(selector).replace(/\s+/g, ' ').trim();
+  }
+
+  function stepOrder(): string[] {
+    const steps = ['.amount', '.before-pay', '.bank', '.qr', '.next'];
+    return Array.from(
+      fixture.nativeElement.querySelectorAll(steps.join(', ')) as NodeListOf<Element>,
+    ).map((step) => steps.find((selector) => step.matches(selector)) ?? '');
+  }
+
+  function isDimmed(): boolean {
+    return element('.qr-image')?.classList.contains('qr-image-stale') ?? false;
+  }
+
+  function announcement(): string {
+    return element('.qr-announcement[role="status"]').textContent?.replace(/\s/g, ' ').trim() ?? '';
+  }
+
+  async function type(value: string): Promise<void> {
     const input = element<HTMLInputElement>('#donate-custom-amount');
     input.value = value;
     input.dispatchEvent(new Event('input'));
     await settle();
+  }
+
+  async function enterCustomAmount(value: string): Promise<void> {
+    button('Jiná částka').click();
+    fixture.detectChanges();
+    await type(value);
   }
 
   it('when it renders, then its photo waits until it is near and comes in two widths', async () => {
@@ -134,36 +142,23 @@ describe('Given the donate section', () => {
     expect(image.getAttribute('loading')).toBe('lazy');
   });
 
-  it('when it opens, then it asks for a QR payment of 500 Kč without a variable symbol and shows the QR and the bank account', async () => {
+  it('when it opens, then it loads the payment details once and draws the QR payment of 500 Kč without a variable symbol beside the bank account', async () => {
     await settle();
 
-    const request = expectQrRequest();
+    const request = http.expectOne((pending) => pending.url === PAYMENT_DETAILS_URL);
     expect(request.request.method).toBe('GET');
-    expect(request.request.params.get('amount')).toBe('500');
-    expect(request.request.params.has('variableSymbol')).toBe(false);
-    respond(request);
-    respondToPrefetch();
+    request.flush(foundationPaymentDetails());
+    await settle();
 
     expect(qrCode()?.getAttribute('aria-label')).toBe(
       'QR platba na účet Nadačního fondu Nová naděje',
     );
-    expect(drawnMatrixIs(matrixFor('500'))).toBe(true);
+    expect(drawnMatrixIs(QR_OF_500)).toBe(true);
     expect(text('.bank')).toContain('5544332217/2010');
     expect(text('.bank')).toContain('CZ26 2010 0000 0055 4433 2217');
     expect(text('.bank')).not.toContain('Variabilní symbol');
     expect(button('500 Kč').getAttribute('aria-pressed')).toBe('true');
   });
-
-  function squashed(selector: string): string {
-    return text(selector).replace(/\s+/g, ' ').trim();
-  }
-
-  function stepOrder(): string[] {
-    const steps = ['.amount', '.before-pay', '.bank', '.qr', '.next'];
-    return Array.from(
-      fixture.nativeElement.querySelectorAll(steps.join(', ')) as NodeListOf<Element>,
-    ).map((step) => steps.find((selector) => step.matches(selector)) ?? '');
-  }
 
   it('when it renders, then the section is introduced as Přispět with a heading about the gift and one sentence why', async () => {
     await openWithQr();
@@ -225,56 +220,74 @@ describe('Given the donate section', () => {
     expect(labels).toEqual(['1 000 Kč', '500 Kč', '100 Kč', 'Jiná částka']);
   });
 
-  it('when the QR is on its way, then it says it is being prepared', async () => {
+  it('when the payment details are on their way, then it says the QR is being prepared', async () => {
     await settle();
 
     expect(text('.qr-code')).toContain('Připravujeme QR kód');
-    respond(expectQrRequest());
-    respondToPrefetch();
+    respondWithDetails();
     expect(text('.qr-code')).not.toContain('Připravujeme QR kód');
   });
 
-  it('when the first QR is ready, then the other preset amounts are fetched ahead', async () => {
-    await settle();
-    respond(expectQrRequest());
+  it('when the visitor picks every preset and types an amount, then nothing more is asked of the server', async () => {
+    await openWithQr();
 
-    expect(respondToPrefetch()).toEqual(['1000', '100']);
+    button('1 000 Kč').click();
+    await settle();
+    button('100 Kč').click();
+    await settle();
+    expect(drawnMatrixIs(QR_OF_100)).toBe(true);
+    await enterCustomAmount('250');
+    await settle(REDRAW_MS);
+
+    http.expectNone(() => true);
+    expect(drawnMatrixIs(qrOfTyped(250))).toBe(true);
   });
 
-  it('when the visitor picks 1 000 Kč, then its fetched-ahead QR payment is drawn at once without asking again', async () => {
+  it('when the visitor picks 1 000 Kč, then its QR payment is drawn at once in the browser, with other dots than for 500 Kč', async () => {
     await openWithQr();
 
     button('1 000 Kč').click();
     fixture.detectChanges();
     await fixture.whenStable();
 
-    http.expectNone((request) => request.url === PAYMENT_QR_URL);
-    expect(drawnMatrixIs(matrixFor('1000'))).toBe(true);
+    expect(QR_OF_1000.modules).not.toBe(QR_OF_500.modules);
+    expect(drawnMatrixIs(QR_OF_1000)).toBe(true);
+    expect(isDimmed()).toBe(false);
     expect(text('.qr-code')).not.toContain('Připravujeme QR kód');
     expect(button('1 000 Kč').getAttribute('aria-pressed')).toBe('true');
     expect(button('500 Kč').getAttribute('aria-pressed')).toBe('false');
+
+    button('500 Kč').click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(drawnMatrixIs(QR_OF_500)).toBe(true);
   });
 
-  it('when the visitor enters another amount, then it asks for the QR payment of that amount', async () => {
+  it('when the visitor enters another amount, then its QR payment is drawn 400 ms after the last key', async () => {
+    await openWithQr();
+
+    await enterCustomAmount('250');
+    await settle(REDRAW_MS - 1);
+    expect(drawnMatrixIs(QR_OF_500)).toBe(true);
+
+    await settle(1);
+    expect(drawnMatrixIs(qrOfTyped(250))).toBe(true);
+    expect(isDimmed()).toBe(false);
+  });
+
+  it('when the visitor types, then the previous QR is dimmed at once and stays until the new one replaces it', async () => {
     await openWithQr();
 
     await enterCustomAmount('250');
 
-    const request = expectQrRequest();
-    expect(request.request.params.get('amount')).toBe('250');
-    respond(request);
-    expect(drawnMatrixIs(matrixFor('250'))).toBe(true);
-  });
-
-  it('when the QR for another amount is on its way, then the previous QR stays until the new one replaces it', async () => {
-    await openWithQr();
-
-    await enterCustomAmount('250');
-
+    expect(isDimmed()).toBe(true);
+    expect(drawnMatrixIs(QR_OF_500)).toBe(true);
     expect(element('.qr-code').getAttribute('aria-busy')).toBe('true');
-    expect(drawnMatrixIs(matrixFor('500'))).toBe(true);
     expect(element<HTMLButtonElement>('.qr-save').disabled).toBe(true);
-    respond(expectQrRequest());
+    expect(text('.bank')).toContain('250');
+    await settle(REDRAW_MS);
+    expect(isDimmed()).toBe(false);
     expect(element('.qr-code').getAttribute('aria-busy')).toBe('false');
     expect(element<HTMLButtonElement>('.qr-save').disabled).toBe(false);
   });
@@ -286,40 +299,72 @@ describe('Given the donate section', () => {
     expect(element('.qr-text').hasAttribute('aria-live')).toBe(false);
   });
 
-  it('when the visitor picks another amount, then the status region says the QR for that amount is ready', async () => {
+  it('when the visitor picks another amount, then after 1.2 s of quiet the status region says the QR for that amount is ready', async () => {
     await openWithQr();
 
     button('1 000 Kč').click();
-    await settle();
+    await settle(ANNOUNCE_MS - 1);
+    expect(announcement()).toBe('');
 
-    expect(element('.qr-announcement[role="status"]').textContent?.replace(/\s/g, ' ').trim()).toBe(
-      'QR platba na 1 000 Kč je připravená.',
-    );
+    await settle(1);
+    expect(announcement()).toBe('QR platba na 1 000 Kč je připravená.');
   });
 
-  it('when the visitor enters an amount that is not a whole number from 1 to 1 000 000, then nothing is asked for and a hint explains why', async () => {
+  it('when the visitor types a burst of keys, then the status region speaks once, for the finished amount', async () => {
     await openWithQr();
+    await enterCustomAmount('2');
+    const spoken: string[] = [];
 
-    await enterCustomAmount('12.5');
+    for (const typed of ['25', '250', '2500']) {
+      await settle(ANNOUNCE_MS / 3);
+      spoken.push(announcement());
+      await type(typed);
+    }
+    await settle(ANNOUNCE_MS);
+    spoken.push(announcement());
 
-    http.expectNone((request) => request.url === PAYMENT_QR_URL);
+    expect(spoken.filter((line) => line !== '')).toEqual(['QR platba na 2 500 Kč je připravená.']);
+  });
+
+  it('when the visitor enters an amount that is not a whole number from 1 to 1 000 000, then no QR is drawn and a hint explains why', async () => {
+    await openWithQr();
+    button('Jiná částka').click();
+    fixture.detectChanges();
+
+    for (const typed of ['12.5', '12,50', '0', '1000001', 'abc']) {
+      await type(typed);
+      await settle(REDRAW_MS);
+
+      expect(qrCode()).toBeNull();
+      expect(squashed('.qr-placeholder')).toBe('Nejprve zadejte částku');
+    }
     expect(element('.amount-hint')).toBeNull();
 
     element('#donate-custom-amount').dispatchEvent(new Event('blur'));
     fixture.detectChanges();
 
     expect(text('.amount-hint')).toContain('celou částku od 1 do 1 000 000 Kč');
-    expect(qrCode()).toBeNull();
   });
 
-  it('when the visitor writes the amount with a space between thousands, then it asks for that amount', async () => {
+  it('when the visitor types an amount that is not valid yet, then the QR stays dimmed until 400 ms after the last key and only then asks for an amount', async () => {
+    await openWithQr();
+
+    await enterCustomAmount('0');
+
+    expect(qrCode()).not.toBeNull();
+    expect(isDimmed()).toBe(true);
+    await settle(REDRAW_MS);
+    expect(qrCode()).toBeNull();
+    expect(squashed('.qr-placeholder')).toBe('Nejprve zadejte částku');
+  });
+
+  it('when the visitor writes the amount with a space between thousands, then the QR is drawn for that amount', async () => {
     await openWithQr();
 
     await enterCustomAmount('2 500');
+    await settle(REDRAW_MS);
 
-    const request = expectQrRequest();
-    expect(request.request.params.get('amount')).toBe('2500');
-    respond(request);
+    expect(drawnMatrixIs(qrOfTyped(2500))).toBe(true);
   });
 
   it('when the QR is ready, then the bank details list the account, the amount and the IBAN, each with a copy button', async () => {
@@ -377,7 +422,6 @@ describe('Given the donate section', () => {
 
     button('1 000 Kč').click();
     await settle();
-    respondToPrefetch();
     expect(squashed('.qr-saved')).toBe('');
     vi.restoreAllMocks();
   });
@@ -387,9 +431,11 @@ describe('Given the donate section', () => {
 
     button('Jiná částka').click();
     await settle();
+    expect(isDimmed()).toBe(true);
+    await settle(REDRAW_MS);
 
     expect(element<HTMLInputElement>('#donate-custom-amount').value).toBe('');
-    http.expectNone((request) => request.url === PAYMENT_QR_URL);
+    http.expectNone(() => true);
     expect(qrCode()).toBeNull();
     expect(squashed('.qr-placeholder')).toBe('Nejprve zadejte částku');
     expect(squashed('.bank')).not.toContain('Částka');
@@ -421,8 +467,6 @@ describe('Given the donate section', () => {
     fixture.componentRef.setInput('variableSymbol', '1234567890');
     dialog.signedIn();
     await settle();
-    respond(expectQrRequest());
-    respondToPrefetch();
 
     expect(document.activeElement).toBe(element('.bank .panel-label'));
     expect(text('.bank')).toContain('1234567890');
@@ -435,45 +479,32 @@ describe('Given the donate section', () => {
     expect(element('a[href*="contact"]')).toBeNull();
   });
 
-  it('when the visitor is still typing an amount, then only the finished amount is asked for', async () => {
+  it('when the visitor is still typing an amount, then the QR is redrawn once, for the finished amount, without a placeholder in between', async () => {
     await openWithQr();
     button('Jiná částka').click();
     fixture.detectChanges();
-    const input = element<HTMLInputElement>('#donate-custom-amount');
+    await type('2');
+    const frames: boolean[] = [];
 
-    for (const typed of ['2', '25', '250']) {
-      input.value = typed;
-      input.dispatchEvent(new Event('input'));
-      fixture.detectChanges();
-      await vi.advanceTimersByTimeAsync(DEBOUNCE_MS / 3);
+    for (const typed of ['25', '250']) {
+      await settle(REDRAW_MS / 3);
+      frames.push(qrCode() !== null);
+      expect(drawnMatrixIs(QR_OF_500)).toBe(true);
+      await type(typed);
     }
-    await settle();
+    await settle(REDRAW_MS);
 
-    const requests = http.match((request) => request.url === PAYMENT_QR_URL);
-    expect(requests.map((request) => request.request.params.get('amount'))).toEqual(['250']);
-    respond(requests[0]);
+    expect(frames).toEqual([true, true]);
+    expect(drawnMatrixIs(qrOfTyped(250))).toBe(true);
+    http.expectNone(() => true);
   });
 
-  it('when the amount changes before the QR arrives, then the late answer for the old amount does not replace the new QR', async () => {
-    await settle();
-    const stale = expectQrRequest();
-
-    button('100 Kč').click();
+  it('when the payment details fail to load, then it says so in Czech and asking again loads them and draws the QR', async () => {
     await settle();
 
-    const fresh = expectQrRequest();
-    expect(fresh.request.params.get('amount')).toBe('100');
-    respond(fresh);
-    respond(stale);
-    respondToPrefetch();
-
-    expect(drawnMatrixIs(matrixFor('100'))).toBe(true);
-  });
-
-  it('when the server fails, then it says so in Czech and asking again loads the QR', async () => {
-    await settle();
-
-    expectQrRequest().flush(null, { status: 500, statusText: 'Server Error' });
+    http
+      .expectOne((request) => request.url === PAYMENT_DETAILS_URL)
+      .flush(null, { status: 500, statusText: 'Server Error' });
     fixture.detectChanges();
 
     expect(qrCode()).toBeNull();
@@ -482,29 +513,30 @@ describe('Given the donate section', () => {
     button('Zkusit znovu').click();
     await settle();
 
-    respond(expectQrRequest());
-    respondToPrefetch();
-    expect(qrCode()).not.toBeNull();
+    respondWithDetails();
+    await settle();
+    expect(drawnMatrixIs(QR_OF_500)).toBe(true);
     expect(element('.qr-error')).toBeNull();
   });
 
+  it('when the payment details hold a text that is no SPAYD text, then no QR is drawn and it says the QR failed', async () => {
+    await settle();
+    const details = foundationPaymentDetails();
+    respondWithDetails({ ...details, messages: { ...details.messages, donation: 'Dar*AM:1' } });
+    await settle();
+
+    expect(qrCode()).toBeNull();
+    expect(text('.qr-error')).toContain('QR platbu se nepodařilo připravit');
+  });
+
   describe('Given a signed-in donor with a variable symbol', () => {
-    it('when the section opens, then the variable symbol travels with the request and is shown with the bank account', async () => {
+    it('when the section opens, then the variable symbol is in the QR payment and shown with the bank account', async () => {
       fixture.componentRef.setInput('variableSymbol', '1234567890');
       fixture.componentRef.setInput('donorName', 'Jana Nováková');
 
-      await settle();
+      await openWithQr();
 
-      const request = expectQrRequest();
-      expect(request.request.params.get('amount')).toBe('500');
-      expect(request.request.params.get('variableSymbol')).toBe('1234567890');
-      respond(request);
-      const prefetched = http.match((pending) => pending.url === PAYMENT_QR_URL);
-      expect(prefetched.map((pending) => pending.request.params.get('variableSymbol'))).toEqual([
-        '1234567890',
-        '1234567890',
-      ]);
-      prefetched.forEach((pending) => respond(pending));
+      expect(drawnMatrixIs(QR_OF_500_FOR_JANA)).toBe(true);
       expect(text('.bank')).toContain('Variabilní symbol');
       expect(text('.bank')).toContain('1234567890');
       const items = Array.from(

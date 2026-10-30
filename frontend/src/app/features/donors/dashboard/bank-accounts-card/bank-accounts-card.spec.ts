@@ -6,9 +6,9 @@ import { AuthStore } from '../../../../core/auth/auth-store';
 import { authResponse, problem, sampleDonor } from '../../../../core/auth/testing/donor-fixtures';
 import { BankAccountItem } from '../../../donations/bank-accounts-api';
 import { BankCheckResponse } from '../../../donations/donations-api';
-import { PaymentQrResponse } from '../../../donations/payment-qr-api';
 import { bankAccount, symbolOffer } from '../../../donations/testing/bank-account-fixtures';
-import { checkerboard } from '../../../../shared/ui/qr-code/testing/qr-matrices';
+import { foundationPaymentDetails } from '../../../donations/testing/payment-details-fixtures';
+import { drawsText } from '../../../../shared/ui/qr-code/testing/branded-qr';
 import { BankAccountsCard } from './bank-accounts-card';
 
 const LIST_URL = '/api/donations/me/bank-accounts';
@@ -19,17 +19,9 @@ const ACCOUNT_ID = '0192f0c4-0000-7000-8000-000000000001';
 const CONFIRM_URL = `${LIST_URL}/${ACCOUNT_ID}/symbol-claim/confirm`;
 const DECLINE_URL = `${LIST_URL}/${ACCOUNT_ID}/symbol-claim/decline`;
 
-function paymentQr(): PaymentQrResponse {
-  return {
-    spayd: 'SPD*1.0*ACC:CZ2620100000005544332217*AM:1.00*CC:CZK*X-VS:9876543210',
-    qrCode: checkerboard(25),
-    bankAccount: {
-      accountNumber: '5544332217/2010',
-      iban: 'CZ2620100000005544332217',
-      recipientName: 'Nadační fond Nová naděje',
-    },
-  };
-}
+const PAYMENT_DETAILS_URL = '/api/donations/payment-details';
+const VERIFICATION_SPAYD =
+  'SPD*1.0*ACC:CZ2620100000005544332217*AM:1.00*CC:CZK*X-VS:9876543210*RN:NADACNI FOND NOVA NADEJE*MSG:OVERENI UCTU NADACNI FOND NOVA NADEJE';
 
 describe('Given the bank accounts card in the overview', () => {
   let fixture: ComponentFixture<BankAccountsCard>;
@@ -965,16 +957,13 @@ describe('Given the bank accounts card in the overview', () => {
       ).toBeTruthy();
       expect(text('.add-account-qr')).toBe('Připravujeme QR kód…');
 
-      const request = http.expectOne({
-        method: 'GET',
-        url: '/api/donations/payment-qr?amount=1&variableSymbol=9876543210&purpose=ACCOUNT_VERIFICATION',
-      });
-      request.flush(paymentQr());
+      const request = http.expectOne({ method: 'GET', url: PAYMENT_DETAILS_URL });
+      request.flush(foundationPaymentDetails());
       await settle();
 
-      expect(element('.add-account-qr svg[role="img"]')?.getAttribute('aria-label')).toBe(
-        'QR platba 1 Kč s vaším variabilním symbolem',
-      );
+      const qr = element('.add-account-qr svg[role="img"]');
+      expect(qr?.getAttribute('aria-label')).toBe('QR platba 1 Kč s vaším variabilním symbolem');
+      expect(drawsText(qr, VERIFICATION_SPAYD)).toBe(true);
       expect(texts('.add-account-bank dd .bank-value')).toEqual([
         '5544332217/2010',
         '1 Kč',
@@ -989,7 +978,7 @@ describe('Given the bank accounts card in the overview', () => {
     });
 
     it('then one line under the payment details says where the symbol goes when the bank has no field for it', async () => {
-      http.expectOne((request) => request.url === '/api/donations/payment-qr').flush(paymentQr());
+      http.expectOne(PAYMENT_DETAILS_URL).flush(foundationPaymentDetails());
       await settle();
 
       expect(text('.add-account-no-symbol-field')).toBe(
@@ -1003,7 +992,7 @@ describe('Given the bank accounts card in the overview', () => {
     });
 
     it('then a closed disclosure explains when it works and that a standing order with an older symbol needs exactly 1 Kč with the message', async () => {
-      http.expectOne((request) => request.url === '/api/donations/payment-qr').flush(paymentQr());
+      http.expectOne(PAYMENT_DETAILS_URL).flush(foundationPaymentDetails());
       await settle();
 
       const more = element<HTMLDetailsElement>('details.add-account-more');
@@ -1021,23 +1010,21 @@ describe('Given the bank accounts card in the overview', () => {
       ]);
     });
 
-    it('and the QR payment cannot be prepared, then the dialog says so and a retry asks again', async () => {
-      http
-        .expectOne((request) => request.url === '/api/donations/payment-qr')
-        .flush(null, { status: 500, statusText: 'Server Error' });
+    it('and the payment details cannot be loaded, then the dialog says the QR payment failed and a retry asks again', async () => {
+      http.expectOne(PAYMENT_DETAILS_URL).flush(null, { status: 500, statusText: 'Server Error' });
       await settle();
 
       expect(text('.add-account-qr-error')).toContain('QR platbu se nepodařilo připravit.');
 
       await click('.add-account-qr-retry');
-      http.expectOne((request) => request.url === '/api/donations/payment-qr').flush(paymentQr());
+      http.expectOne(PAYMENT_DETAILS_URL).flush(foundationPaymentDetails());
       await settle();
 
       expect(element('.add-account-qr svg[role="img"]')).not.toBeNull();
     });
 
     it('and closes the dialog, then it disappears and the focus returns to Přidat účet', async () => {
-      http.expectOne((request) => request.url === '/api/donations/payment-qr').flush(paymentQr());
+      http.expectOne(PAYMENT_DETAILS_URL).flush(foundationPaymentDetails());
       await settle();
 
       await click('.add-account-close');
@@ -1047,7 +1034,7 @@ describe('Given the bank accounts card in the overview', () => {
     });
 
     it('and presses Esc, then the dialog closes', async () => {
-      http.expectOne((request) => request.url === '/api/donations/payment-qr').flush(paymentQr());
+      http.expectOne(PAYMENT_DETAILS_URL).flush(foundationPaymentDetails());
       await settle();
 
       element<HTMLDialogElement>('dialog')?.close();
@@ -1062,7 +1049,7 @@ describe('Given the bank accounts card in the overview', () => {
 
     fixture.componentInstance.openAddDialog();
     await settle();
-    http.expectOne((request) => request.url === '/api/donations/payment-qr').flush(paymentQr());
+    http.expectOne(PAYMENT_DETAILS_URL).flush(foundationPaymentDetails());
     await settle();
 
     expect(element<HTMLDialogElement>('dialog')?.open).toBe(true);
@@ -1091,7 +1078,7 @@ describe('Given the bank accounts card in the overview', () => {
       vi.useFakeTimers();
       await respond([bankAccount()]);
       await click('.accounts-add');
-      http.expectOne((request) => request.url === '/api/donations/payment-qr').flush(paymentQr());
+      http.expectOne(PAYMENT_DETAILS_URL).flush(foundationPaymentDetails());
       await settle();
     });
 
@@ -1342,7 +1329,7 @@ describe('Given the bank accounts card in the overview', () => {
       await click('.add-account-close');
       await respondToReload([bankAccount({ verificationPaymentOn: '2026-10-16' })]);
       await click('.accounts-add');
-      http.expectOne((request) => request.url === '/api/donations/payment-qr').flush(paymentQr());
+      http.expectNone(PAYMENT_DETAILS_URL);
 
       await wait(30_000);
       await answerCheck({ bankDataAsOf: LATER, checking: false }, [
@@ -1356,7 +1343,7 @@ describe('Given the bank accounts card in the overview', () => {
       await click('.add-account-close');
       await respondToReload([bankAccount({ status: 'AWAITING_PAYMENT', verifiedOn: null })]);
       await click('.accounts-add');
-      http.expectOne((request) => request.url === '/api/donations/payment-qr').flush(paymentQr());
+      http.expectNone(PAYMENT_DETAILS_URL);
 
       await wait(30_000);
       await answerCheck({ bankDataAsOf: LATER, checking: false }, [bankAccount()]);

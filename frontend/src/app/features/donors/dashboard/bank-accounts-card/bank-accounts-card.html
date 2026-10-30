@@ -388,7 +388,7 @@
           @if (qrResponse(); as response) {
             <app-qr-code
               class="add-account-qr-image"
-              [matrix]="response.qrCode"
+              [matrix]="response.matrix"
               label="QR platba 1 Kč s vaším variabilním symbolem"
               i18n-label="@@donor.bankAccounts.addDialog.qrAlt"
             />
@@ -418,9 +418,9 @@
             <div class="add-account-row">
               <dt i18n="@@home.donate.bank.account">Číslo účtu</dt>
               <dd>
-                <span class="bank-value">{{ response.bankAccount.accountNumber }}</span>
+                <span class="bank-value">{{ response.account.number }}</span>
                 <app-copy-button
-                  [value]="response.bankAccount.accountNumber"
+                  [value]="response.account.number"
                   what="číslo účtu"
                   i18n-what="@@home.donate.bank.copyAccount"
                 />
@@ -430,7 +430,8 @@
               <dt i18n="@@home.donate.bank.amount">Částka</dt>
               <dd>
                 <span class="bank-value"
-                  >{{ verificationAmount }}&nbsp;<ng-container i18n="@@home.donate.amount.currency"
+                  >{{ amountOf(response.amountMinor) }}&nbsp;<ng-container
+                    i18n="@@home.donate.amount.currency"
                     >Kč</ng-container
                   ></span
                 >

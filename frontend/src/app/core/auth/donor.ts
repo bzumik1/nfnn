@@ -1,4 +1,3 @@
-import { QrMatrix } from '../../shared/ui/qr-code/qr-matrix';
 import { ConfirmationReturn } from './confirmation-return';
 
 export const PASSWORD_MIN_LENGTH = 12;
@@ -87,7 +86,6 @@ export interface SecondFactorRecovery {
   currency: string;
   usableFrom: string | null;
   spayd: string;
-  qrCode: QrMatrix;
 }
 
 export interface SecondFactorDisableRequest extends Confirmation {
@@ -97,7 +95,6 @@ export interface SecondFactorDisableRequest extends Confirmation {
 export interface SecondFactorEnrolment {
   secret: string;
   otpauthUri: string;
-  qrCode: QrMatrix;
 }
 
 export type OAuthScope = 'admin:read' | 'admin:write';

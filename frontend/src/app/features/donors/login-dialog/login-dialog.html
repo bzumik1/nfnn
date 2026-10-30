@@ -115,11 +115,21 @@
               </div>
             </dl>
             <div class="recovery-qr">
-              <app-qr-code
-                class="recovery-qr-image"
-                [matrix]="instructions.qrCode"
-                [label]="recoveryQrLabel"
-              />
+              @if (recoveryQr(); as matrix) {
+                <app-qr-code
+                  class="recovery-qr-image"
+                  [matrix]="matrix"
+                  [label]="recoveryQrLabel"
+                />
+              } @else {
+                <p
+                  class="ui-field-error recovery-qr-failed"
+                  role="alert"
+                  i18n="@@donor.login.recovery.qrFailed"
+                >
+                  QR kód se nepodařilo vykreslit. Zaplaťte prosím podle uvedených údajů.
+                </p>
+              }
             </div>
           </div>
           <p class="recovery-note" i18n="@@donor.login.recovery.note">

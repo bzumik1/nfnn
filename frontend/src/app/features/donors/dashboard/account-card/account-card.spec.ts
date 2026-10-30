@@ -278,7 +278,7 @@ describe('Given the sign-in and security card of the details page', () => {
       );
     });
 
-    it("and confirms the password, then the QR code is the browser's own encoding of the otpauth URI, not the matrix the server sent beside it", async () => {
+    it("and confirms the password, then the QR code is the browser's own encoding of the otpauth URI", async () => {
       const authenticatorCase = sharedCases('qr/totp.json').find(
         (sharedCase) => sharedCase.name === 'an address with a dot',
       )!;
