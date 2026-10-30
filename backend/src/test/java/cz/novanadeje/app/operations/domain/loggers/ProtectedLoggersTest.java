@@ -85,4 +85,11 @@ class ProtectedLoggersTest {
     void should_allow_when_checked_given_debugging_logger_without_request_text(String name) {
         assertThat(ProtectedLoggers.covers(new LoggerName(name))).isFalse();
     }
+
+    @Test
+    @DisplayName("Given Tomcat's cookie parser, which writes an invalid cookie as the client wrote it at INFO, when its pin is looked up, then it is WARN and every level is refused")
+    void should_pin_at_warn_and_refuse_every_level_when_looked_up_given_cookie_parser() {
+        assertThat(ProtectedLoggers.PINS).containsEntry("org.apache.tomcat.util.http.parser.Cookie", LogLevel.WARN);
+        assertThat(LogLevel.values()).allMatch(level -> ProtectedLoggers.refuses(new LoggerName("org.apache.tomcat.util.http.parser.Cookie"), level));
+    }
 }

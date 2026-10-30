@@ -21,6 +21,7 @@ public final class ProtectedLoggers {
             entry("org.apache.coyote", LogLevel.INFO),
             entry("org.apache.coyote.http11.Http11Processor", LogLevel.WARN),
             entry("org.apache.tomcat.util.http", LogLevel.INFO),
+            entry("org.apache.tomcat.util.http.parser.Cookie", LogLevel.WARN),
             entry("org.postgresql", LogLevel.INFO),
             entry("jakarta.mail", LogLevel.INFO));
 

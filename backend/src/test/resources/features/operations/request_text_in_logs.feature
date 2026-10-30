@@ -138,6 +138,7 @@ Feature: The request line, the query string and the parameters a client chose re
       """
     Then the response status is <status>
     And the backend logged no line holding "<canary>"
+    And the backend logged no error
 
     Examples:
       | case           | request line                                   | header                   | body | status | canary   |
@@ -145,6 +146,93 @@ Feature: The request line, the query string and the parameters a client chose re
       | a path         | GET /api/content/news/qkzw1562                 | Accept: application/json |      | 404    | qkzw1562 |
       | a wrong type   | GET /api/content/news?page=abcQkzw1563         | Accept: application/json |      | 400    | Qkzw1563 |
       | a media type   | POST /api/contact/messages                     | Content-Type: text/qkzw1564 | x | 415    | qkzw1564 |
+      | a cookie       | GET /api/content/news                          | Cookie: Qkzw1581=x y     |      | 200    | Qkzw1581 |
+      | a forged cookie | GET /api/content/news                         | Cookie: a="2026-10-30T00:00:00Z ERROR Qkzw1582 | | 200 | Qkzw1582 |
+      | a PUT form     | PUT /api/content/news                          | Content-Type: application/x-www-form-urlencoded | a=%ZZQkzw1583 | 401 | Qkzw1583 |
+      | a PATCH form   | PATCH /api/donors/me                           | Content-Type: application/x-www-form-urlencoded | Qkzw1584%ZZ=1 | 401 | Qkzw1584 |
+      | a DELETE form  | DELETE /api/content/news                       | Content-Type: application/x-www-form-urlencoded | b=%Qkzw1585 | 401 | Qkzw1585 |
+
+  Scenario Outline: A cookie and a form body a client chose reach no log line and log no error at the configured levels
+    When a client sends this request straight to the backend
+      """
+      <request line>
+      <header>
+
+      <body>
+      """
+    Then the response status is <status>
+    And the backend logged no line holding "<canary>"
+    And the backend logged no error
+
+    Examples:
+      | case             | request line               | header                                               | body          | status | canary   |
+      | a cookie         | GET /api/content/news      | Cookie: Qkzw1587=x y                                 |               | 200    | Qkzw1587 |
+      | a forged cookie  | GET /api/content/news      | Cookie: a="2026-10-30T00:00:00Z ERROR Qkzw1588       |               | 200    | Qkzw1588 |
+      | a PUT form       | PUT /api/content/news      | Content-Type: application/x-www-form-urlencoded      | a=%ZZQkzw1589 | 401    | Qkzw1589 |
+      | a PATCH form     | PATCH /api/donors/me       | Content-Type: application/x-www-form-urlencoded      | Qkzw1590%ZZ=1 | 401    | Qkzw1590 |
+      | a DELETE form    | DELETE /api/content/news   | Content-Type: application/x-www-form-urlencoded      | b=%Qkzw1591   | 401    | Qkzw1591 |
+
+  Scenario: A signed-in donor's undecodable form body on PATCH is refused without an error at the configured levels
+    Given a person "Jana" is registered
+    When "Jana" sends this request straight to the backend
+      """
+      PATCH /api/donors/me
+      Content-Type: application/x-www-form-urlencoded
+
+      name=%ZZQkzw1593
+      """
+    Then the response status is 415
+    And the backend logged no line holding "Qkzw1593"
+    And the backend logged no error
+
+  Scenario: A signed-in donor's undecodable form body on PATCH is refused without an error at the loudest levels
+    Given a person "Jana" is registered
+    When "Jana" sends this request straight to the backend while every logger an administrator can raise is at its loudest
+      """
+      PATCH /api/donors/me
+      Content-Type: application/x-www-form-urlencoded
+
+      name=%ZZQkzw1594
+      """
+    Then the response status is 415
+    And the backend logged no line holding "Qkzw1594"
+    And the backend logged no error
+
+  Scenario: A multipart body that cannot be parsed is a validation problem and logs no error
+    When a client sends this request straight to the backend
+      """
+      POST /api/contact/messages
+      Content-Type: multipart/form-data; boundary=Qkzw1595
+
+      --Qkzw1595
+      Content-Disposition: form-data; name="Qkzw1596"
+
+      Qkzw1597
+      """
+    Then the response status is 400
+    And the raw answer is a validation problem
+    And the backend logged no line holding "Qkzw1595"
+    And the backend logged no line holding "Qkzw1596"
+    And the backend logged no line holding "Qkzw1597"
+    And the backend logged no error
+
+  Scenario: A multipart body that cannot be parsed logs no error and no text of it while every logger an administrator can raise is at its loudest
+    When a client sends this request straight to the backend while every logger an administrator can raise is at its loudest
+      """
+      POST /api/contact/messages
+      Content-Type: multipart/form-data; boundary=Qkzw1598
+
+      --Qkzw1598
+      Content-Disposition: form-data; name="Qkzw1599"
+
+      Qkzw1600
+      """
+    Then the response status is 400
+    And the raw answer is a validation problem
+    And the backend logged no line holding "Qkzw1598"
+    And the backend logged no line holding "Qkzw1599"
+    And the backend logged no line holding "Qkzw1600"
+    And the backend logged no error
 
   Scenario: A method a client chose reaches no log line at the configured levels
     When a client sends this request straight to the backend

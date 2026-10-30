@@ -36,6 +36,7 @@ public class ApiClient {
 
     private static final String FORWARDED_FOR = "X-Forwarded-For";
     private static final AtomicInteger CLIENT_ADDRESSES = new AtomicInteger();
+    private static final int RAW_READ_TIMEOUT_MILLIS = 10_000;
 
     private final RestClient client;
     private final int port;
@@ -187,17 +188,24 @@ public class ApiClient {
         }
         request.append("Connection: close\r\n\r\n");
         try (Socket socket = new Socket("localhost", port)) {
+            socket.setSoTimeout(RAW_READ_TIMEOUT_MILLIS);
             OutputStream out = socket.getOutputStream();
             out.write(request.toString().getBytes(StandardCharsets.ISO_8859_1));
             out.write(content);
             out.flush();
-            String raw = new String(socket.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+            String raw = new String(socket.getInputStream().readAllBytes(), StandardCharsets.ISO_8859_1);
             int status = Integer.parseInt(raw.split(" ", 3)[1]);
             int bodyStart = raw.indexOf("\r\n\r\n");
-            lastResponse = ResponseEntity.status(status).headers(rawHeaders(raw, bodyStart)).body(bodyStart < 0 ? "" : raw.substring(bodyStart + 4));
+            HttpHeaders responseHeaders = rawHeaders(raw, bodyStart);
+            String rawBody = bodyStart < 0 ? "" : raw.substring(bodyStart + 4);
+            if ("chunked".equalsIgnoreCase(responseHeaders.getFirst(HttpHeaders.TRANSFER_ENCODING))) {
+                rawBody = unchunked(rawBody);
+            }
+            String responseBody = new String(rawBody.getBytes(StandardCharsets.ISO_8859_1), StandardCharsets.UTF_8);
+            lastResponse = ResponseEntity.status(status).headers(responseHeaders).body(responseBody);
             lastResponseBytes = null;
-            recordBytes(method, target, sent, content.length > 0 ? JsonNodeFactory.instance.stringNode(body) : null, status, rawHeaders(raw, bodyStart),
-                    lastResponse.getBody().getBytes(StandardCharsets.UTF_8));
+            recordBytes(method, target, sent, content.length > 0 ? JsonNodeFactory.instance.stringNode(body) : null, status, responseHeaders,
+                    responseBody.getBytes(StandardCharsets.UTF_8));
             return lastResponse;
         } catch (IOException unreachable) {
             throw new IllegalStateException("The raw request to " + target + " failed", unreachable);
@@ -283,6 +291,21 @@ public class ApiClient {
         } catch (RuntimeException notJson) {
             return JsonNodeFactory.instance.stringNode(json);
         }
+    }
+
+    static String unchunked(String chunked) {
+        StringBuilder body = new StringBuilder();
+        int at = 0;
+        while (at < chunked.length()) {
+            int sizeEnd = chunked.indexOf("\r\n", at);
+            int size = Integer.parseInt(chunked.substring(at, sizeEnd).split(";", 2)[0].strip(), 16);
+            if (size == 0) {
+                break;
+            }
+            body.append(chunked, sizeEnd + 2, sizeEnd + 2 + size);
+            at = sizeEnd + 2 + size + 2;
+        }
+        return body.toString();
     }
 
     static HttpHeaders rawHeaders(String raw, int bodyStart) {

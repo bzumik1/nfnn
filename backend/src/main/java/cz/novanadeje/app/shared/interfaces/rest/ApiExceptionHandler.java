@@ -25,6 +25,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.MultipartException;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
@@ -96,6 +97,11 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
 
     @ExceptionHandler(InvalidParameterException.class)
     ResponseEntity<Object> handleUndecodableParameter(InvalidParameterException ex, WebRequest request) {
+        return validationProblem(ex, List.of(), new HttpHeaders(), request);
+    }
+
+    @ExceptionHandler(MultipartException.class)
+    ResponseEntity<Object> handleUnreadableMultipart(MultipartException ex, WebRequest request) {
         return validationProblem(ex, List.of(), new HttpHeaders(), request);
     }
 

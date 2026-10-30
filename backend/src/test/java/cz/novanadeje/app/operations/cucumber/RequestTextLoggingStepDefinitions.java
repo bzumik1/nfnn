@@ -1,5 +1,6 @@
 package cz.novanadeje.app.operations.cucumber;
 
+import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.classic.spi.ThrowableProxyUtil;
@@ -25,6 +26,7 @@ public class RequestTextLoggingStepDefinitions {
 
     private static final String RAW_HOST = "localhost";
     private static final String FORM = "application/x-www-form-urlencoded";
+    private static final String TOMCAT_USER_DATA_LOGGING = "org.apache.juli.logging.UserDataHelper.CONFIG";
 
     private final ApiClient api;
     private final DonorSessions sessions;
@@ -62,18 +64,22 @@ public class RequestTextLoggingStepDefinitions {
 
     @When("a client sends this request straight to the backend")
     public void aClientSendsThisRequestStraightToTheBackend(String request) {
-        captureEveryLine();
         api.forgetCredentials();
-        String[] headAndBody = request.split("\n\n", 2);
-        List<String> head = headAndBody[0].lines().toList();
-        String[] requestLine = head.getFirst().split(" ", 2);
-        Map<String, String> headers = new LinkedHashMap<>();
-        headers.put(HttpHeaders.HOST, RAW_HOST);
-        head.stream().skip(1).forEach(header -> {
-            String[] nameAndValue = header.split(":", 2);
-            headers.put(nameAndValue[0].strip(), nameAndValue[1].strip());
-        });
-        api.sendRaw(requestLine[0], requestLine[1], headers, headAndBody.length > 1 ? headAndBody[1] : "");
+        sendRawRequest(request, Map.of());
+    }
+
+    @When("{string} sends this request straight to the backend")
+    public void sendsThisRequestStraightToTheBackend(String alias, String request) {
+        sessions.actAs(alias);
+        sendRawRequest(request, Map.of(HttpHeaders.AUTHORIZATION, "Bearer " + donors.accessTokenOf(alias)));
+    }
+
+    @When("{string} sends this request straight to the backend while every logger an administrator can raise is at its loudest")
+    public void sendsThisRequestWhileEveryLoggerIsAtItsLoudest(String alias, String request) {
+        sessions.actAs(alias);
+        try (RaisedLogLevels raised = loudest()) {
+            sendRawRequest(request, Map.of(HttpHeaders.AUTHORIZATION, "Bearer " + donors.accessTokenOf(alias)));
+        }
     }
 
     @When("a client sends this request straight to the backend while every logger an administrator can raise is at its loudest")
@@ -115,6 +121,16 @@ public class RequestTextLoggingStepDefinitions {
         assertThat(api.lastResponse().getBody()).contains("\"type\":\"https://nfnn.cz/problems/validation\"");
     }
 
+    @Then("the backend logged no error")
+    public void theBackendLoggedNoError() {
+        List<ILoggingEvent> events;
+        synchronized (everyLine) {
+            events = List.copyOf(everyLine.list);
+        }
+        assertThat(events.stream().filter(event -> event.getLevel().isGreaterOrEqual(Level.ERROR)).map(event -> event.getLoggerName() + ": " + event.getFormattedMessage()))
+                .as("error lines").isEmpty();
+    }
+
     @Then("the backend logged no line holding {string}")
     public void theBackendLoggedNoLineHolding(String text) {
         assertThat(everyLoggedText().stream().filter(line -> line.contains(text)).map(RequestTextLoggingStepDefinitions::head))
@@ -124,6 +140,21 @@ public class RequestTextLoggingStepDefinitions {
     @Then("the backend logged no line holding the access token of {string}")
     public void theBackendLoggedNoLineHoldingTheAccessTokenOf(String alias) {
         theBackendLoggedNoLineHolding(donors.accessTokenOf(alias));
+    }
+
+    private void sendRawRequest(String request, Map<String, String> credentials) {
+        captureEveryLine();
+        String[] headAndBody = request.split("\n\n", 2);
+        List<String> head = headAndBody[0].lines().toList();
+        String[] requestLine = head.getFirst().split(" ", 2);
+        Map<String, String> headers = new LinkedHashMap<>();
+        headers.put(HttpHeaders.HOST, RAW_HOST);
+        headers.putAll(credentials);
+        head.stream().skip(1).filter(header -> !header.isBlank()).forEach(header -> {
+            String[] nameAndValue = header.split(":", 2);
+            headers.put(nameAndValue[0].strip(), nameAndValue[1].strip());
+        });
+        api.sendRaw(requestLine[0], requestLine[1], headers, headAndBody.length > 1 ? headAndBody[1].replace("\n", "\r\n") : "");
     }
 
     private void askWhileEveryLoggerIsAtItsLoudest(String path) {
@@ -138,6 +169,8 @@ public class RequestTextLoggingStepDefinitions {
     }
 
     private void captureEveryLine() {
+        assertThat(System.getProperty(TOMCAT_USER_DATA_LOGGING)).as("Tomcat logs every refused request only with " + TOMCAT_USER_DATA_LOGGING
+                + "=INFO_ALL, as the Gradle task acceptanceTest sets it; without it a row after the first one can pass unseen").isEqualTo("INFO_ALL");
         if (!rootLogger.isAttached(everyLine)) {
             everyLine.start();
             rootLogger.addAppender(everyLine);

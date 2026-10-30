@@ -41,6 +41,10 @@ spring:
   web:
     locale: cs
     locale-resolver: accept_header
+  mvc:
+    formcontent:
+      filter:
+        enabled: false
   servlet:
     multipart:
       max-file-size: 10MB
@@ -194,6 +198,7 @@ logging:
     org.apache.coyote: INFO
     org.apache.coyote.http11.Http11Processor: WARN
     org.apache.tomcat.util.http: INFO
+    org.apache.tomcat.util.http.parser.Cookie: WARN
     org.postgresql: INFO
     jakarta.mail: INFO
     cz.novanadeje.app: INFO

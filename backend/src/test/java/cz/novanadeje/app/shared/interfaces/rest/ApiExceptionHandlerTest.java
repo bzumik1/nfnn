@@ -16,6 +16,7 @@ import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartException;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasItem;
@@ -41,6 +42,11 @@ class ApiExceptionHandlerTest {
         @GetMapping("/undecodable")
         String undecodable() {
             throw new InvalidParameterException("Character decoding failed. Parameter [q] with value [Qkzw1571] has been ignored.");
+        }
+
+        @GetMapping("/malformed-multipart")
+        String malformedMultipart() {
+            throw new MultipartException("Failed to parse multipart servlet request; boundary Qkzw1572");
         }
     }
 
@@ -100,6 +106,14 @@ class ApiExceptionHandlerTest {
         expectValidationProblem(mockMvc.perform(inCzech("/undecodable")))
                 .andExpect(jsonPath("$.errors", hasSize(0)))
                 .andExpect(content().string(not(containsString("Qkzw1571"))));
+    }
+
+    @Test
+    @DisplayName("Given a multipart body that cannot be parsed, when requested, then the answer is a validation problem without the exception's text")
+    void should_answer_validation_problem_without_exception_text_when_multipart_body_cannot_be_parsed() throws Exception {
+        expectValidationProblem(mockMvc.perform(inCzech("/malformed-multipart")))
+                .andExpect(jsonPath("$.errors", hasSize(0)))
+                .andExpect(content().string(not(containsString("Qkzw1572"))));
     }
 
     private static MockHttpServletRequestBuilder inCzech(String path) {
