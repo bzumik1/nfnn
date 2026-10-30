@@ -1,0 +1,72 @@
+[
+  {
+    "path": "GET /api/admin/content/people",
+    "scenario": "content/manage_people: *",
+    "kind": "added",
+    "reason": "Jakub 2026-10-30: the people of the foundation (Lidé fondu) are kept in the administration at /sprava/lide-fondu and listed with the founders note, and the connector's nfnn_people reads them; each person carries an optional personal and fund e-mail for the administration only (Jakub 2026-10-30), never in the home content; v2 had no such endpoint",
+    "contract": "docs/api-contract.md, content — public CMS; MCP connector"
+  },
+  {
+    "path": "POST /api/admin/content/people",
+    "scenario": "content/manage_people: *",
+    "kind": "added",
+    "reason": "Jakub 2026-10-30: the people of the foundation (Lidé fondu) are kept in the administration at /sprava/lide-fondu and added, also by the connector's nfnn_add_person; each person carries an optional personal and fund e-mail for the administration only (Jakub 2026-10-30), never in the home content; v2 had no such endpoint",
+    "contract": "docs/api-contract.md, content — public CMS; MCP connector"
+  },
+  {
+    "path": "PUT /api/admin/content/people/{id}",
+    "scenario": "content/manage_people: *",
+    "kind": "added",
+    "reason": "Jakub 2026-10-30: the people of the foundation (Lidé fondu) are kept in the administration at /sprava/lide-fondu and edited, also by the connector's nfnn_update_person; each person carries an optional personal and fund e-mail for the administration only (Jakub 2026-10-30), never in the home content; v2 had no such endpoint",
+    "contract": "docs/api-contract.md, content — public CMS; MCP connector"
+  },
+  {
+    "path": "DELETE /api/admin/content/people/{id}",
+    "scenario": "content/manage_people: *",
+    "kind": "added",
+    "reason": "Jakub 2026-10-30: the people of the foundation (Lidé fondu) are kept in the administration at /sprava/lide-fondu and removed with their portrait and web signature, also by the connector's nfnn_remove_person unless the person has a web signature; v2 had no such endpoint",
+    "contract": "docs/api-contract.md, content — public CMS; MCP connector"
+  },
+  {
+    "path": "PUT /api/admin/content/people/order",
+    "scenario": "content/manage_people: *",
+    "kind": "added",
+    "reason": "Jakub 2026-10-30: the people of the foundation (Lidé fondu) are kept in the administration at /sprava/lide-fondu and ordered, also by the connector's nfnn_order_people; v2 had no such endpoint",
+    "contract": "docs/api-contract.md, content — public CMS; MCP connector"
+  },
+  {
+    "path": "PUT /api/admin/content/people/note",
+    "scenario": "content/manage_people: *",
+    "kind": "added",
+    "reason": "Jakub 2026-10-30: the people of the foundation (Lidé fondu) are kept in the administration at /sprava/lide-fondu and the founders note is written, also by the connector's nfnn_update_founders_note; v2 had no such endpoint",
+    "contract": "docs/api-contract.md, content — public CMS; MCP connector"
+  },
+  {
+    "path": "POST /api/admin/content/people/{id}/web-signature",
+    "scenario": "content/manage_people: *",
+    "kind": "added",
+    "reason": "Jakub 2026-10-30: the people of the foundation (Lidé fondu) are kept in the administration at /sprava/lide-fondu and a web signature, a public image for the site only, is set from a browser only; v2 had no such endpoint",
+    "contract": "docs/api-contract.md, content — public CMS; MCP connector"
+  },
+  {
+    "path": "DELETE /api/admin/content/people/{id}/web-signature",
+    "scenario": "content/manage_people: *",
+    "kind": "added",
+    "reason": "Jakub 2026-10-30: the people of the foundation (Lidé fondu) are kept in the administration at /sprava/lide-fondu and a web signature is removed from a browser only; v2 had no such endpoint",
+    "contract": "docs/api-contract.md, content — public CMS; MCP connector"
+  },
+  {
+    "path": "POST /api/admin/content/people/{id}/web-signature",
+    "scenario": "donors/connected_apps: *",
+    "kind": "added",
+    "reason": "Jakub 2026-10-30: setting or removing a web signature is web-only, so a connected application gets 403 like the other web-only changes",
+    "contract": "docs/security-overview.md, connected applications; docs/api-contract.md, content — public CMS"
+  },
+  {
+    "path": "DELETE /api/admin/content/people/{id}/web-signature",
+    "scenario": "donors/connected_apps: *",
+    "kind": "added",
+    "reason": "Jakub 2026-10-30: setting or removing a web signature is web-only, so a connected application gets 403 like the other web-only changes",
+    "contract": "docs/security-overview.md, connected applications; docs/api-contract.md, content — public CMS"
+  }
+]

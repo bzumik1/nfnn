@@ -427,6 +427,20 @@ export function registerReadingTools(server: McpServer, deps: ToolDependencies):
   );
 
   server.registerTool(
+    'nfnn_people',
+    {
+      title: 'Lidé fondu',
+      description:
+        'The people of the foundation (Lidé fondu) the home page shows in "Kdo fond vede", in their order: id, name, role, position, onBoard with boardNote, featured, portrait and webSignature (id, url, size, or null), personalEmail and fundEmail (administration data only, never on the site), and the founders note under the cards (null when none). With no people the home page shows its own block. Change them with nfnn_add_person, nfnn_update_person, nfnn_remove_person, nfnn_order_people and nfnn_update_founders_note; a web signature is set and removed only on the web at /sprava/lide-fondu.',
+      annotations: READ_ONLY,
+    },
+    async (ctx) =>
+      answer(deps, ctx, 'nfnn_people', async ({ apiToken }) =>
+        text(await backend.get('/api/admin/content/people', apiToken)),
+      ),
+  );
+
+  server.registerTool(
     'nfnn_log_files',
     {
       title: 'Soubory logů',
