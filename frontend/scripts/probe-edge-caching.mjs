@@ -26,6 +26,7 @@ const EDGE_ONLY = [
   { method: 'GET', path: '/.well-known/oauth-protected-resource/mcp' },
 ];
 const APP_SHELL = ['/', '/overit'];
+const NOT_INDEXED = ['/overit', '/overit/'];
 
 const failures = [];
 const fail = (message) => failures.push(message);
@@ -43,6 +44,7 @@ async function request({ method, path, headers = {}, body }) {
     cacheControl: response.headers.get('cache-control') ?? '',
     edge: response.headers.get(EDGE_HEADER) ?? '',
     setCookie: response.headers.get('set-cookie') ?? '',
+    robots: response.headers.get('x-robots-tag') ?? '',
     text,
   };
 }
@@ -141,6 +143,14 @@ for (const path of APP_SHELL) {
     fail(
       `GET ${path} answered ${answer.status} with Cache-Control "${answer.cacheControl}", expected 200 and "no-cache"`,
     );
+  }
+}
+
+for (const path of [...APP_SHELL, '/overit/']) {
+  const answer = await request({ method: 'GET', path });
+  const expected = NOT_INDEXED.includes(path) ? 'noindex' : '';
+  if (answer.robots !== expected) {
+    fail(`GET ${path} answered X-Robots-Tag "${answer.robots}", expected "${expected}"`);
   }
 }
 
