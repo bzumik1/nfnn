@@ -25,6 +25,7 @@
     "@angular/localize": "^22.2.3",
     "@angular/platform-browser": "^22.2.3",
     "@angular/router": "^22.2.3",
+    "@noble/curves": "2.4.0",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0"
   },
