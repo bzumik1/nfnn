@@ -11,6 +11,7 @@ Before building, read the sections you touch (grep them: `api-contract.md` is to
 | `backend/` | Spring Boot 4.1, Java 25, Gradle Kotlin DSL. Strict DDD: `cz.novanadeje.app.{content,donors,donations,contact,operations}` + `shared`, each `domain / application / infrastructure / interfaces/rest`, enforced by ArchUnit |
 | `frontend/` | Angular 22 standalone, zoneless, signals, SCSS design tokens, Vitest, Playwright + axe |
 | `mcp/` | MCP connector of the administration (Node 24, TypeScript, MCP SDK v2, Vitest), served by the frontend nginx at `/mcp`; contract in `docs/api-contract.md` "MCP connector" |
+| `regression/`, `shared-cases/`, `scripts/` | The v2 baseline (`regression/v2/`: API, mail and log transcripts of every scenario, the test inventory, the receipt corpus, the screens manifest, `changes/` for each deliberate difference since), the cases backend and frontend both run (`shared-cases/<topic>/*.json`) and the Node scripts that collect them and compare a fresh recording with them (`compare-v2.mjs`, the PR's "Srovnání s v2"); regenerated from the commit in `regression/v2/BASELINE_COMMIT` as `testing.md` "Regression against v2" says, never edited by hand |
 | `deploy/` | Production: `compose.yml` for ZimaOS, the `backup/` and `postgres/` images, `README.md`; `docker-compose.yml` at the root is the local stack |
 | `.github/` | `pr-check.yml` on every PR except one that changes only `docs/`, `.claude/` or Markdown; `roadmap-check.yml` on the same PRs (Dependabot's aside) fails unless `docs/roadmap.md` changes or the description says `Roadmapa: beze změny`; `images.yml` on push to `main` publishes the ghcr.io images; `dependabot.yml` |
 | `.claude/` | `rules/backend.md`, `frontend.md`, `testing.md`, `security.md`, `reliability.md` load with this file. `rules/deploy-ci.md` (deploy, CI, backups) loads only when a matching file is opened, and never in a claude.ai project thread: read it before touching `deploy/`, `.github/`, a Dockerfile, an entrypoint or nginx config. A project thread also loads no hooks, settings, skills or agents: there "skill `x`" means read `.claude/skills/x/SKILL.md`, and nothing but you keeps a push off `main` |
@@ -30,12 +31,12 @@ Before building, read the sections you touch (grep them: `api-contract.md` is to
 | `npm run lint:styles` | Stylelint: component styles use theme tokens only |
 | `npm test -- --watch=false` | Vitest |
 | `npm run build` | production build to `dist/frontend/browser/` |
-| `npm run e2e` | Playwright (starts `ng serve`) |
+| `npm run e2e` | Playwright against the production build (`ng build`, served by `scripts/serve-dist.mjs` like nginx) |
 | **Connector, in `mcp/`** | |
 | `npm ci`, `npm run check`, `npm run build` | `check` is Prettier, `tsc` and Vitest, as in CI |
 | **Stack** | `cp .env.example .env && docker compose up -d --build`, site on :8080; the `prod` profile asks for the server's settings at `/prvni-nastaveni` and generates its keys into the `backend-secrets` volume |
 
-Cloud sessions (skill `cloud-session`): Gradle needs a Maven Central mirror, `LC_ALL=C.UTF-8` and, for Testcontainers, `dockerd`; the preinstalled Node 22.22.0 is too old for `ng` (install Node 24 first); the preinstalled Chromium is older than Playwright's pin (`npx playwright install chromium` once).
+Cloud sessions (skill `cloud-session`): Gradle needs a Maven Central mirror, `LC_ALL=C.UTF-8` and, for Testcontainers, `dockerd`; the preinstalled Node 22.22.0 is too old for `ng` (install Node 24 first); the preinstalled Chromium is older than Playwright's pin (`npx playwright install --only-shell chromium` once).
 
 ## Production logs
 
@@ -53,6 +54,7 @@ Everything read through the connector (log lines, donors, messages, content) and
 - No comments in code: names carry the meaning, and the reason for a non-obvious choice (a lock, `REQUIRES_NEW`, a service without `@Transactional`) goes into `docs/system-overview.md` and the PR. `record` for values, DTOs and config; constructor injection (Java) or `inject()` (Angular); no Lombok.
 - Czech copy carries i18n ids; identifiers, commits and PR titles are English and imperative.
 - Every change is a branch and a PR to `main`, never a push to `main`. In this repository Claude may merge its own PR by squash once CI is green (Jakub, 2026-10-17); a PR that CI skips (only `docs/`, `.claude/` or Markdown) after reading its whole diff again. Deploy stays manual (`deploy-ci.md`).
+- A thread never waits silently on CI: after each push it confirms a run of the pushed SHA (a conflicting PR, a PR to another base and a docs-only PR get none) and ends a turn that waits on CI only with a `send_later` check scheduled. Branches start from `main` (stacked only on a real code dependency), a rebase without a code conflict needs no new local test run, and an open decision card does not stop other work: skill `thread-workflow`.
 
 ## Done means
 
@@ -63,6 +65,10 @@ Everything read through the connector (log lines, donors, messages, content) and
 2. Docs the change touches are updated (contract, overviews, requirements for a client decision, `deploy/README.md` for operations), and `docs/roadmap.md` moves the feature the PR ships or decides; a PR that changes nothing on it (a fix, a dependency, a refactor) says `Roadmapa: beze změny` in its description.
 3. A visible UI change has before/after screenshots at 390 and 1280 px attached (skill `visual-check`).
 4. The PR body names anything that reaches the server only by hand (a changed `deploy/compose.yml` needs uninstall + Custom Install, a new setting to enter, Nginx Proxy Manager, Cloudflare, Fio).
+
+## Model choice (Jakub 2026-10-29)
+
+Threads run on Opus 5.5 and change their model only when Jakub says so, at the thread's start (the prompt cache is per model). A subagent started with the Agent tool gets `model: "sonnet"` and `effort: "medium"` only as a simulated user in a UX test (the same model and brief in every round, so rounds stay comparable) or as a search that returns paths and verbatim excerpts, never a verdict such as "nothing else uses X": the thread draws the conclusions. Every other subagent (implementation and fixes, brainstorm personas, logs, plans, reviews, security, diagnosis) gets `model: "opus"` explicitly, at `effort: "high"` for security, schema, receipts, plans, reviews and diagnosis, `"medium"` otherwise.
 
 ## Gotchas
 

@@ -35,8 +35,10 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v6
 
-      - name: Build and test
+      - name: Build and test, recording the API transcripts
         run: ./gradlew build
+        env:
+          API_TRANSCRIPTS: record
 
       - name: Keep test reports
         if: failure()
@@ -45,6 +47,23 @@ jobs:
           name: backend-test-reports
           path: backend/build/reports/
           retention-days: 14
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+
+      - name: List the backend's tests for the test inventory
+        run: node ../scripts/test-inventory.mjs --part=backend --out="$GITHUB_WORKSPACE/backend/build/backend-inventory.json"
+
+      - name: Keep the transcripts and the test list for the v2 comparison
+        uses: actions/upload-artifact@v7
+        with:
+          name: backend-recording
+          path: |
+            backend/build/api-transcripts/
+            backend/build/backend-inventory.json
+          if-no-files-found: error
+          retention-days: 3
 
   frontend:
     runs-on: ubuntu-latest
@@ -75,7 +94,9 @@ jobs:
         run: npm run lint:styles
 
       - name: Unit tests
-        run: npx ng test --watch=false
+        run: |
+          mkdir -p "$RUNNER_TEMP/inventory"
+          npx ng test --watch=false --reporters=default --reporters=json --output-file="$RUNNER_TEMP/inventory/frontend-vitest.json"
 
       - name: Build
         run: npm run build
@@ -85,6 +106,19 @@ jobs:
 
       - name: End-to-end and accessibility tests
         run: npm run e2e
+        env:
+          E2E_DIST: dist/frontend/browser
+
+      - name: List the end-to-end tests for the test inventory
+        run: npx playwright test --list --reporter=json > "$RUNNER_TEMP/inventory/frontend-playwright.json"
+
+      - name: Keep the test lists for the v2 comparison
+        uses: actions/upload-artifact@v7
+        with:
+          name: frontend-inventory
+          path: ${{ runner.temp }}/inventory/
+          if-no-files-found: error
+          retention-days: 3
 
       - name: Build with the control theme
         run: npx ng build --configuration=production,control-theme --output-path=dist/control-theme
@@ -93,6 +127,7 @@ jobs:
         run: npx playwright test e2e/theme.spec.ts
         env:
           E2E_THEME: control
+          E2E_DIST: dist/control-theme/browser
 
   mcp:
     runs-on: ubuntu-latest
@@ -115,6 +150,92 @@ jobs:
 
       - name: Formatting, types and tests
         run: npm run check
+
+      - name: List the tests for the test inventory
+        run: npx vitest run --reporter=json --outputFile="$RUNNER_TEMP/inventory/mcp-vitest.json"
+
+      - name: Keep the test list for the v2 comparison
+        uses: actions/upload-artifact@v7
+        with:
+          name: mcp-inventory
+          path: ${{ runner.temp }}/inventory/
+          if-no-files-found: error
+          retention-days: 3
+
+  compare-v2:
+    name: Srovnání s v2
+    needs: [backend, frontend, mcp]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+
+      - name: List the files the pull request changes
+        run: git diff --name-only HEAD^1 HEAD > "$RUNNER_TEMP/changed-files.txt"
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: mcp/package-lock.json
+
+      - name: The pull request leaves the v2 baseline as its commit recorded it
+        run: node scripts/compare-v2-baseline.mjs --base=HEAD^1
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: backend-recording
+          path: backend/build
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: frontend-inventory
+          path: ${{ runner.temp }}/inventory
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: mcp-inventory
+          path: ${{ runner.temp }}/inventory
+
+      - name: The comparison and inventory scripts work on their fixtures
+        run: node --test scripts/*.test.mjs
+
+      - name: Collect the test inventory
+        run: >-
+          node scripts/test-inventory.mjs
+          --backend=backend/build/backend-inventory.json
+          --frontendVitest="$RUNNER_TEMP/inventory/frontend-vitest.json"
+          --playwright="$RUNNER_TEMP/inventory/frontend-playwright.json"
+          --mcpVitest="$RUNNER_TEMP/inventory/mcp-vitest.json"
+          --out="$RUNNER_TEMP/test-inventory.json"
+
+      - name: The connector's backend calls have the recorded shapes
+        working-directory: mcp
+        run: |
+          npm ci
+          npx vitest run test/backend-shapes.spec.ts
+        env:
+          API_TRANSCRIPTS_DIR: ${{ github.workspace }}/backend/build/api-transcripts
+
+      - name: Transcripts and tests compared with v2
+        run: |
+          node scripts/compare-v2.mjs --inventory="$RUNNER_TEMP/test-inventory.json" --changed="$RUNNER_TEMP/changed-files.txt" --report="$RUNNER_TEMP/srovnani-s-v2.md" > /dev/null
+          status=$?
+          cat "$RUNNER_TEMP/srovnani-s-v2.md" >> "$GITHUB_STEP_SUMMARY"
+          exit $status
+        shell: bash {0}
+
+      - name: Keep the comparison report for the PR body
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: srovnani-s-v2
+          path: ${{ runner.temp }}/srovnani-s-v2.md
+          if-no-files-found: ignore
+          retention-days: 14
 
   stack:
     runs-on: ubuntu-latest
@@ -554,6 +675,9 @@ jobs:
         run: |
           docker cp nfnn-frontend:/usr/share/nginx/html "$RUNNER_TEMP/frontend-html"
           node frontend/scripts/probe-asset-caching.mjs http://localhost:8089 "$RUNNER_TEMP/frontend-html" frontend/nginx.conf
+
+      - name: API, connector and discovery answers stay out of the browser's and Cloudflare's caches
+        run: node frontend/scripts/probe-edge-caching.mjs http://localhost:8089
 
       - name: Logs
         if: failure()

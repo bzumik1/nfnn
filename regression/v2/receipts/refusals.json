@@ -1,0 +1,30 @@
+{
+  "source": "v2-baseline",
+  "logic": "Receipts that ReceiptDocumentFactory refuses to put together, with the refusal's message (ids written <id>); v2 never renders them. The cases have no input: the name says what was attempted, and the documents are built in ReceiptCorpusTest from the receipt fixtures",
+  "cases": [
+    {
+      "name": "a yearly receipt without a gift",
+      "expected": {
+        "refused": "A receipt certifies at least one donation"
+      }
+    },
+    {
+      "name": "a single receipt for a refunded gift",
+      "expected": {
+        "refused": "Only a received donation is certified, not REFUNDED <id>"
+      }
+    },
+    {
+      "name": "a yearly receipt with a gift from another year",
+      "expected": {
+        "refused": "A yearly receipt lists only donations received in 2026"
+      }
+    },
+    {
+      "name": "a receipt for another donor's gift",
+      "expected": {
+        "refused": "A receipt certifies only donations of donor <id>"
+      }
+    }
+  ]
+}

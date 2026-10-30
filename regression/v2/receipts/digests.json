@@ -1,0 +1,306 @@
+{
+  "source": "v2-baseline",
+  "logic": "The digests of each corpus sample as rendered on the recording machine: the SHA-256 of the PDF's bytes and, per page, of its raster (PDFBox PDFRenderer at 100 DPI, RGB, every pixel as a big-endian int without alpha). They change with the PDF libraries and the JDK, so only scripts/record-baseline-data.sh checks them (GOLDEN_FILES=digests); compare page text and the look by eye before recording them again. The rendered PDFs and page PNGs are kept beside the screens, in receipts/",
+  "samples": [
+    {
+      "sample": "single-person-cs",
+      "pdfSha256": "bcc512a5f9ae430d40dfec41ceb4307e242923c7df64eee4fde79e1545ccb022",
+      "pages": [
+        {
+          "number": 1,
+          "dpi": 100,
+          "width": 826,
+          "height": 1169,
+          "rgbSha256": "3184435bbcf1513ec0621f156f03216ebd053990c1bb79c2cd9e757dc59a837d"
+        }
+      ]
+    },
+    {
+      "sample": "yearly-person-en",
+      "pdfSha256": "604d3487b3eff28ae2f76c7ec917e604c23ed8aef7ae650b9437cda4f5d46600",
+      "pages": [
+        {
+          "number": 1,
+          "dpi": 100,
+          "width": 826,
+          "height": 1169,
+          "rgbSha256": "b7f150a3785bd323b1a2595c3fe8debef5ef770a8c724a083bf4459d19c72bf1"
+        }
+      ]
+    },
+    {
+      "sample": "single-company-replacement-cs",
+      "pdfSha256": "df5fbfe8f44ee5eb8040ef7da1af534b62c0c267610f39bbfd5c683e17a75a83",
+      "pages": [
+        {
+          "number": 1,
+          "dpi": 100,
+          "width": 826,
+          "height": 1169,
+          "rgbSha256": "6709dce9d6753bc0454ab7bad786cde264838b61a6f75a9b462408a440e84c25"
+        }
+      ]
+    },
+    {
+      "sample": "yearly-person-many-gifts-cs",
+      "pdfSha256": "624d5ea730b7065b449ed9e7b046f48e909b742d1952f97f3900b01e2f02a524",
+      "pages": [
+        {
+          "number": 1,
+          "dpi": 100,
+          "width": 826,
+          "height": 1169,
+          "rgbSha256": "5ce40867db73a2085d828d8e2dbc4c58c7d3dac54d2d30183846ff3a29bf2d72"
+        },
+        {
+          "number": 2,
+          "dpi": 100,
+          "width": 826,
+          "height": 1169,
+          "rgbSha256": "0d5c19beb3f8b0b6103d5c4ea48bd4c6666601f084b83716b69acbd28f7f98b6"
+        },
+        {
+          "number": 3,
+          "dpi": 100,
+          "width": 826,
+          "height": 1169,
+          "rgbSha256": "99e470e27b366d9ebf3c8e58ee094635916b28887e360c058750a4e740861a92"
+        },
+        {
+          "number": 4,
+          "dpi": 100,
+          "width": 826,
+          "height": 1169,
+          "rgbSha256": "48444fa1d7218cc1f939ffeb978219ab77c8e7a895de23995ce2e6ba2f3b0606"
+        }
+      ]
+    },
+    {
+      "sample": "single-company-cs",
+      "pdfSha256": "faf030204bec3a0ab77a9b0fcd8f63f7b6126bf4fa7a5959010064a9e231742d",
+      "pages": [
+        {
+          "number": 1,
+          "dpi": 100,
+          "width": 826,
+          "height": 1169,
+          "rgbSha256": "54890542b45dc9326a74a63756dfafdd7db3e864cd494f52bb632f3200e37841"
+        }
+      ]
+    },
+    {
+      "sample": "single-person-en",
+      "pdfSha256": "5ba2a343016727ff4f022e6f99746d80ffa42d6c40d6d210e51e3e1d3d560193",
+      "pages": [
+        {
+          "number": 1,
+          "dpi": 100,
+          "width": 826,
+          "height": 1169,
+          "rgbSha256": "24a1dc0379e63c9945ba5d19071988090bd0304235561b68be5b90b8f2927c6b"
+        }
+      ]
+    },
+    {
+      "sample": "single-diacritics-cs",
+      "pdfSha256": "5c2ac1a75561b9000c1709426c2945fbb80b1a2971683dba84cff0a902ccce6c",
+      "pages": [
+        {
+          "number": 1,
+          "dpi": 100,
+          "width": 826,
+          "height": 1169,
+          "rgbSha256": "94c48f96dcc78b9e37b35e811fa5a66e8a91b8e0214d9a8640dbcb8cf1cff305"
+        }
+      ]
+    },
+    {
+      "sample": "single-foreign-address-cs",
+      "pdfSha256": "f31485b3cbb9357f778143960cadfbad8b10e6ec7007f869d88d8ef20362b0ea",
+      "pages": [
+        {
+          "number": 1,
+          "dpi": 100,
+          "width": 826,
+          "height": 1169,
+          "rgbSha256": "2f2a303cbf72b35971ba52fae536c01b4011d3e20ecc85abca2039af127073c0"
+        }
+      ]
+    },
+    {
+      "sample": "single-manual-gift-cs",
+      "pdfSha256": "0e50b1f389acd05a1a8be6f4d75494b2ffe5dd082785cb986c38a64c324b0eca",
+      "pages": [
+        {
+          "number": 1,
+          "dpi": 100,
+          "width": 826,
+          "height": 1169,
+          "rgbSha256": "b0bad15843dbd012806d9dccde6b71bac2a612b93115320495c8a8f560b04f6a"
+        }
+      ]
+    },
+    {
+      "sample": "single-signature-cs",
+      "pdfSha256": "f0ea6685d4b61796ce395d65372ded6d269d97e9a1cc02b7180ea618bba00b7c",
+      "pages": [
+        {
+          "number": 1,
+          "dpi": 100,
+          "width": 826,
+          "height": 1169,
+          "rgbSha256": "8fbd0560f1900dc0bdc6c86a3fd6e8143b90fb145cf6418438d23d8bf1ba8326"
+        }
+      ]
+    },
+    {
+      "sample": "yearly-one-gift-cs",
+      "pdfSha256": "c5b1026699c9cb05ce6273f1e18bbe98ba50f2e3860455ccf1d84f125451dfa6",
+      "pages": [
+        {
+          "number": 1,
+          "dpi": 100,
+          "width": 826,
+          "height": 1169,
+          "rgbSha256": "d267b1190f96570e504b1515d2601a85f40b0e066d5c8f052b65e8013ec20158"
+        }
+      ]
+    },
+    {
+      "sample": "yearly-large-amounts-cs",
+      "pdfSha256": "155a3627069c54dd4b126ab3b0cc60492eaeaa8010e309d57200445d854ec35a",
+      "pages": [
+        {
+          "number": 1,
+          "dpi": 100,
+          "width": 826,
+          "height": 1169,
+          "rgbSha256": "318082ee632054aeabdd2d9b7b593e2b4d8ac02219ea69244d763545e7488190"
+        }
+      ]
+    },
+    {
+      "sample": "yearly-40-gifts-cs",
+      "pdfSha256": "c23c7d66fb7b1d7774ed5ba7fb6285b7d13bb92e813538766e1e450ad788a782",
+      "pages": [
+        {
+          "number": 1,
+          "dpi": 100,
+          "width": 826,
+          "height": 1169,
+          "rgbSha256": "0d93f92ad90472a7669f5aac4c429b68e3320784b48f4a232b312d8aff7fea55"
+        },
+        {
+          "number": 2,
+          "dpi": 100,
+          "width": 826,
+          "height": 1169,
+          "rgbSha256": "bb727668215c5f90194a6fffceee804ee4db4bdd6cb57319ae206be8926af89c"
+        }
+      ]
+    },
+    {
+      "sample": "yearly-366-gifts-leap-2028-en",
+      "pdfSha256": "730a2f77af3f3d6d107bd0a9bc1db85cb7d5104a7b4e50c83e5735e67da4ce01",
+      "pages": [
+        {
+          "number": 1,
+          "dpi": 100,
+          "width": 826,
+          "height": 1169,
+          "rgbSha256": "5164ffa4b5837780cd63f992af6636e3dd41caa957bf5f376a2ac4919448e7c7"
+        },
+        {
+          "number": 2,
+          "dpi": 100,
+          "width": 826,
+          "height": 1169,
+          "rgbSha256": "67e3554834fd39a338a6c1ddbb36e6f4c47c8ff531bdb058b4c0e8e83558d491"
+        },
+        {
+          "number": 3,
+          "dpi": 100,
+          "width": 826,
+          "height": 1169,
+          "rgbSha256": "360e9a86c7cc76e489e440fd343671b39b4238df5f872d901cee8f7224094645"
+        },
+        {
+          "number": 4,
+          "dpi": 100,
+          "width": 826,
+          "height": 1169,
+          "rgbSha256": "84403f8e9661fa32814741e5295d4b4b2a5f1557a0a1cc6789020860414817ec"
+        },
+        {
+          "number": 5,
+          "dpi": 100,
+          "width": 826,
+          "height": 1169,
+          "rgbSha256": "fce19e660bde27673fe4c0c7540fb39a5c9ff0bc3e06dad44eea33de65317029"
+        },
+        {
+          "number": 6,
+          "dpi": 100,
+          "width": 826,
+          "height": 1169,
+          "rgbSha256": "e593a67f574e046267f2c6235d73f0b03899a76aa53eb973a16b0b1395119521"
+        },
+        {
+          "number": 7,
+          "dpi": 100,
+          "width": 826,
+          "height": 1169,
+          "rgbSha256": "4ddf1e21544d874a1672345f685a906c57ea42495f30db5fa482a5234469a610"
+        },
+        {
+          "number": 8,
+          "dpi": 100,
+          "width": 826,
+          "height": 1169,
+          "rgbSha256": "5b4eadcef0e79d4a9f29013b45ff8741ca2392ceedc3dc804bb25b4745e50af2"
+        },
+        {
+          "number": 9,
+          "dpi": 100,
+          "width": 826,
+          "height": 1169,
+          "rgbSha256": "c9d70b5e5d55d20cf80f7c172344041f3e1b5d80ee09c3dad513015daac30705"
+        },
+        {
+          "number": 10,
+          "dpi": 100,
+          "width": 826,
+          "height": 1169,
+          "rgbSha256": "7539500df38dc7e611e19046bb6e720b0393f1219d9876351515784f91094c22"
+        },
+        {
+          "number": 11,
+          "dpi": 100,
+          "width": 826,
+          "height": 1169,
+          "rgbSha256": "4cc1ac2b47aed44a4baf7a9fc1bb9b56b87298e5947c9032c34e49284a45b1b2"
+        },
+        {
+          "number": 12,
+          "dpi": 100,
+          "width": 826,
+          "height": 1169,
+          "rgbSha256": "79a1999136274cf9a99cb4abcde4f1babaddc4946354c7e765f95aa9f99d64c8"
+        }
+      ]
+    },
+    {
+      "sample": "yearly-leap-year-en",
+      "pdfSha256": "88144a749dd812c03f5638368c2700810041e86d252fa4fa857eb3a380b48bae",
+      "pages": [
+        {
+          "number": 1,
+          "dpi": 100,
+          "width": 826,
+          "height": 1169,
+          "rgbSha256": "65649745a2def90bb7bf175ac30b5eb49012257c886ca11d47ecb91edb55573c"
+        }
+      ]
+    }
+  ]
+}

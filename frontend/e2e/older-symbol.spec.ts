@@ -199,6 +199,7 @@ test.describe('Given a signed-in donor whose verified account sent payments with
       name: /Z tohoto účtu k nám chodí i platby s variabilním symbolem/,
     });
     await expect(question).toBeVisible();
+    const loadsBeforeAnswer = answers.overviewLoads;
 
     await question.getByRole('button', { name: 'Ne, nejsou moje' }).click();
 
@@ -219,6 +220,6 @@ test.describe('Given a signed-in donor whose verified account sent payments with
 
     await expect(page.locator('.payments-card tbody tr')).toHaveCount(2);
     await expect(page.locator('.pairing-tag')).toHaveCount(0);
-    expect(answers.overviewLoads).toBe(1);
+    expect(answers.overviewLoads).toBe(loadsBeforeAnswer);
   });
 });

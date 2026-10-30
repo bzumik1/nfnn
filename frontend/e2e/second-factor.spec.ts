@@ -206,6 +206,36 @@ test.describe('Given a donor who protects the account with an authenticator app'
     ]);
   });
 
+  test('when they press the button slowly after a short code, then the press still sends the form and the code field says what is wrong', async ({
+    page,
+  }) => {
+    await page.route('**/api/donors/me/second-factor/setup', (route) =>
+      route.fulfill({ json: secondFactorEnrolment }),
+    );
+    await signIn(page);
+    await openDonorSection(page, 'Údaje a zabezpečení');
+    await page.getByRole('button', { name: 'Zapnout dvoufaktorové ověření' }).click();
+    await page.getByLabel('Současné heslo').fill('correct horse battery');
+    await page.getByRole('button', { name: 'Pokračovat' }).click();
+    await page.getByLabel('Kód z aplikace').fill('12345');
+
+    const button = page.getByRole('button', { name: 'Zapnout kód z aplikace' });
+    await button.scrollIntoViewIfNeeded();
+    const box = (await button.boundingBox())!;
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.evaluate(
+      () =>
+        new Promise((rendered) =>
+          requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(rendered))),
+        ),
+    );
+    await page.mouse.up();
+
+    await expect(page.getByLabel('Kód z aplikace')).toBeFocused();
+    await expect(page.getByText('Kód má přesně šest číslic.')).toBeVisible();
+  });
+
   test('when they turn the second factor off, then the password and the code go together and the card says it is off', async ({
     page,
   }) => {

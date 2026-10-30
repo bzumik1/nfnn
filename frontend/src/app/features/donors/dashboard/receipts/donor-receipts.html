@@ -1,4 +1,8 @@
 <app-page-title i18n="@@donor.receipts.heading">Potvrzení o daru</app-page-title>
+<p class="receipts-intro" i18n="@@donor.receipts.intro">
+  Do daňového přiznání přiložte buď roční potvrzení, nebo potvrzení k jednotlivým darům, ne obojí.
+  Když změníte jméno nebo adresu, nově stažené potvrzení dostane nové číslo a nahradí to dřívější.
+</p>
 
 @if (donations.state() === 'ready') {
   <section class="ui-card ui-card--padded yearly-card" aria-labelledby="yearly-title">
@@ -89,14 +93,11 @@
         </p>
       }
     } @else {
-      <p class="yearly-empty">
-        <span i18n="@@donor.dashboard.yearly.empty"
-          >Zatím tu nemáme žádný váš dar. Jakmile dorazí platba s vaším variabilním symbolem, objeví
-          se tady.</span
-        >&ngsp;<a routerLink="/darce/ucty" i18n="@@donor.dashboard.yearly.emptyStandingOrder"
-          >Posíláte trvalým příkazem?</a
-        >
+      <p class="yearly-empty" i18n="@@donor.dashboard.yearly.empty">
+        Zatím tu nemáme žádný váš dar. Jakmile dorazí platba s vaším variabilním symbolem, objeví se
+        tady.
       </p>
+      <app-missing-gift />
     }
   </section>
 

@@ -92,9 +92,12 @@ tasks.withType<Test> {
 	}
 	systemProperty("cucumber.junit-platform.naming-strategy", "long")
 	System.getenv("CUCUMBER_FILTER_TAGS")?.let { systemProperty("cucumber.filter.tags", it) }
+	System.getenv("API_TRANSCRIPTS")?.let { systemProperty("api.transcripts", it) }
+	System.getenv("GOLDEN_FILES")?.let { systemProperty("golden.files", it) }
 	maxHeapSize = "1g"
-	jvmArgs("--enable-native-access=ALL-UNNAMED")
+	jvmArgs("--enable-native-access=ALL-UNNAMED", "-Duser.timezone=Etc/UTC", "-Duser.language=en", "-Duser.country=US", "-Dfile.encoding=UTF-8")
 	jvmArgumentProviders.add(CommandLineArgumentProvider { listOf("-javaagent:${mockitoAgent.singleFile}", "-Xshare:off") })
 	environment("TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE", "/var/run/docker.sock")
 	inputs.file("../frontend/src/themes/nova-nadeje/_theme.scss").withPropertyName("siteTheme").withPathSensitivity(PathSensitivity.NONE)
+	inputs.files(fileTree("../shared-cases"), fileTree("../regression")).withPropertyName("baselineArtefacts").withPathSensitivity(PathSensitivity.RELATIVE)
 }

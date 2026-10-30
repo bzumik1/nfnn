@@ -14,6 +14,10 @@ public class RecordingSetupCodeAnnouncer implements SetupCodeAnnouncer {
         announced = code;
     }
 
+    public Optional<SetupCode> findAnnounced() {
+        return Optional.ofNullable(announced);
+    }
+
     public SetupCode announced() {
         return Optional.ofNullable(announced).orElseThrow(() -> new IllegalStateException("No setup code was announced"));
     }

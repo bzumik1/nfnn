@@ -1,0 +1,295 @@
+{
+  "source": "v2-baseline",
+  "feature": "donations/import_outage_alerts",
+  "scenarios": {
+    "Three failed imports in a row send one outage e-mail, a fourth failure sends nothing more #1": {
+      "requests": {},
+      "mails": [
+        {
+          "from": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "to": [
+            "info@nfnn.cz"
+          ],
+          "replyTo": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "subject": "Stahování plateb z banky selhává – Nová naděje",
+          "text": "Dobrý den,\n\nweb Nová naděje už 3× za sebou nedokázal stáhnout platby z Fio, naposledy 18. 10. 2026 12:00.\n\nFio nebylo dostupné: spojení selhalo nebo vypršelo.\n\nZkontrolujte připojení serveru k internetu a stav Fio API; další pokusy proběhnou samy každou hodinu.\n\nPoslední úspěšné stažení plateb z banky: 17. 10. 2026 12:00\n\nDokud porucha trvá, nové dary se dárcům v portálu neukážou a potvrzení o daru za ně nevydáme.\n\nAž se stahování obnoví, pošleme ještě jednu zprávu; do té doby už tuto zprávu neopakujeme.\n\nNová naděje – nadační fond\n\nTuto zprávu posílá web automaticky, když stahování plateb z banky selže třikrát za sebou nebo když Fio odmítne token, a znovu, až se stahování obnoví.\n",
+          "html": {
+            "text": "Stahování plateb z banky selhává Dobrý den, web Nová naděje už 3× za sebou nedokázal stáhnout platby z Fio, naposledy 18. 10. 2026 12:00. Fio nebylo dostupné: spojení selhalo nebo vypršelo. Zkontrolujte připojení serveru k internetu a stav Fio API; další pokusy proběhnou samy každou hodinu. Poslední úspěšné stažení plateb z banky: 17. 10. 2026 12:00 Dokud porucha trvá, nové dary se dárcům v portálu neukážou a potvrzení o daru za ně nevydáme. Až se stahování obnoví, pošleme ještě jednu zprávu; do té doby už tuto zprávu neopakujeme. S pozdravem Nová naděje – nadační fond Tuto zprávu posílá web automaticky, když stahování plateb z banky selže třikrát za sebou nebo když Fio odmítne token, a znovu, až se stahování obnoví. Nová naděje – nadační fond · IČO 27278794 · Jiráskova 436, 473 01 Nový Bor localhost",
+            "links": [
+              "http://localhost:4200"
+            ],
+            "sha256": "1aa7433c1ae027a764f3a9d5bba04f66b7ee2ccf118bd11fc0422946339f68b0"
+          },
+          "attachments": [
+            {
+              "fileName": "inline",
+              "contentType": "image/png",
+              "size": 41502,
+              "sha256": "aecbb8a4c043690e9918174f51cd419a3f1c02d34161454fe40e759db6e7dfcb"
+            }
+          ]
+        }
+      ],
+      "logs": [
+        "ERROR donations.application.importing.BankStatementRecorder: Fio import outage: TRANSPORT failed 3 times in a row, the foundation is being told",
+        "INFO donations.application.importing.ImportBankPaymentsService: Fio import STARTUP 2026-07-20/2026-10-17 completed: bank reported 2026-07-20/2026-10-17, 0 movements, 0 new incoming, 0 known, 0 paired by symbol, 0 by account, 0 by confirmed symbol, 0 accounts learned, 0 left unpaired, covered 2026-07-20/2026-10-17",
+        "INFO donations.infrastructure.fio.FioBankStatementSource: Fio answered 2026-07-20/2026-10-17: reported 2026-07-20/2026-10-17 ids null-null, 0 movements",
+        "INFO donations.infrastructure.report.ImportAlertEmailSender: Fio import alert e-mail sent: outage TRANSPORT"
+      ]
+    },
+    "A rejected token sends the outage e-mail at once with the renewal steps #1": {
+      "requests": {},
+      "mails": [
+        {
+          "from": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "to": [
+            "info@nfnn.cz"
+          ],
+          "replyTo": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "subject": "Stahování plateb z banky selhává – Nová naděje",
+          "text": "Dobrý den,\n\nFio 18. 10. 2026 12:00 odmítlo token, kterým web Nová naděje stahuje platby z účtu fondu.\n\nToken chybí, ještě neplatí nebo vypršel (platí 180 dní).\n\nV internetovém bankovnictví Fio (Nastavení → API) vytvořte nový token typu „Sledování účtu“ a vložte ho ve správě webu v části Nastavení jako Token Fio API.\n\nPoslední úspěšné stažení plateb z banky: 17. 10. 2026 12:00\n\nDokud porucha trvá, nové dary se dárcům v portálu neukážou a potvrzení o daru za ně nevydáme.\n\nAž se stahování obnoví, pošleme ještě jednu zprávu; do té doby už tuto zprávu neopakujeme.\n\nNová naděje – nadační fond\n\nTuto zprávu posílá web automaticky, když stahování plateb z banky selže třikrát za sebou nebo když Fio odmítne token, a znovu, až se stahování obnoví.\n",
+          "html": {
+            "text": "Stahování plateb z banky selhává Dobrý den, Fio 18. 10. 2026 12:00 odmítlo token, kterým web Nová naděje stahuje platby z účtu fondu. Token chybí, ještě neplatí nebo vypršel (platí 180 dní). V internetovém bankovnictví Fio (Nastavení → API) vytvořte nový token typu „Sledování účtu“ a vložte ho ve správě webu v části Nastavení jako Token Fio API. Poslední úspěšné stažení plateb z banky: 17. 10. 2026 12:00 Dokud porucha trvá, nové dary se dárcům v portálu neukážou a potvrzení o daru za ně nevydáme. Až se stahování obnoví, pošleme ještě jednu zprávu; do té doby už tuto zprávu neopakujeme. S pozdravem Nová naděje – nadační fond Tuto zprávu posílá web automaticky, když stahování plateb z banky selže třikrát za sebou nebo když Fio odmítne token, a znovu, až se stahování obnoví. Nová naděje – nadační fond · IČO 27278794 · Jiráskova 436, 473 01 Nový Bor localhost",
+            "links": [
+              "http://localhost:4200"
+            ],
+            "sha256": "808bf5d02527a1777cbd355e4e060afa142b032f849a0d72919500eee11242be"
+          },
+          "attachments": [
+            {
+              "fileName": "inline",
+              "contentType": "image/png",
+              "size": 41502,
+              "sha256": "aecbb8a4c043690e9918174f51cd419a3f1c02d34161454fe40e759db6e7dfcb"
+            }
+          ]
+        }
+      ],
+      "logs": [
+        "ERROR donations.application.importing.BankStatementRecorder: Fio import outage: UNAUTHORIZED failed 1 times in a row, the foundation is being told",
+        "INFO donations.application.importing.ImportBankPaymentsService: Fio import STARTUP 2026-07-20/2026-10-17 completed: bank reported 2026-07-20/2026-10-17, 0 movements, 0 new incoming, 0 known, 0 paired by symbol, 0 by account, 0 by confirmed symbol, 0 accounts learned, 0 left unpaired, covered 2026-07-20/2026-10-17",
+        "INFO donations.infrastructure.fio.FioBankStatementSource: Fio answered 2026-07-20/2026-10-17: reported 2026-07-20/2026-10-17 ids null-null, 0 movements",
+        "INFO donations.infrastructure.report.ImportAlertEmailSender: Fio import alert e-mail sent: outage UNAUTHORIZED"
+      ]
+    },
+    "The recovery after an outage sends one e-mail and the next success sends nothing #1": {
+      "requests": {},
+      "mails": [
+        {
+          "from": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "to": [
+            "info@nfnn.cz"
+          ],
+          "replyTo": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "subject": "Stahování plateb z banky selhává – Nová naděje",
+          "text": "Dobrý den,\n\nFio 18. 10. 2026 12:00 odmítlo token, kterým web Nová naděje stahuje platby z účtu fondu.\n\nToken chybí, ještě neplatí nebo vypršel (platí 180 dní).\n\nV internetovém bankovnictví Fio (Nastavení → API) vytvořte nový token typu „Sledování účtu“ a vložte ho ve správě webu v části Nastavení jako Token Fio API.\n\nPoslední úspěšné stažení plateb z banky: 17. 10. 2026 12:00\n\nDokud porucha trvá, nové dary se dárcům v portálu neukážou a potvrzení o daru za ně nevydáme.\n\nAž se stahování obnoví, pošleme ještě jednu zprávu; do té doby už tuto zprávu neopakujeme.\n\nNová naděje – nadační fond\n\nTuto zprávu posílá web automaticky, když stahování plateb z banky selže třikrát za sebou nebo když Fio odmítne token, a znovu, až se stahování obnoví.\n",
+          "html": {
+            "text": "Stahování plateb z banky selhává Dobrý den, Fio 18. 10. 2026 12:00 odmítlo token, kterým web Nová naděje stahuje platby z účtu fondu. Token chybí, ještě neplatí nebo vypršel (platí 180 dní). V internetovém bankovnictví Fio (Nastavení → API) vytvořte nový token typu „Sledování účtu“ a vložte ho ve správě webu v části Nastavení jako Token Fio API. Poslední úspěšné stažení plateb z banky: 17. 10. 2026 12:00 Dokud porucha trvá, nové dary se dárcům v portálu neukážou a potvrzení o daru za ně nevydáme. Až se stahování obnoví, pošleme ještě jednu zprávu; do té doby už tuto zprávu neopakujeme. S pozdravem Nová naděje – nadační fond Tuto zprávu posílá web automaticky, když stahování plateb z banky selže třikrát za sebou nebo když Fio odmítne token, a znovu, až se stahování obnoví. Nová naděje – nadační fond · IČO 27278794 · Jiráskova 436, 473 01 Nový Bor localhost",
+            "links": [
+              "http://localhost:4200"
+            ],
+            "sha256": "808bf5d02527a1777cbd355e4e060afa142b032f849a0d72919500eee11242be"
+          },
+          "attachments": [
+            {
+              "fileName": "inline",
+              "contentType": "image/png",
+              "size": 41502,
+              "sha256": "aecbb8a4c043690e9918174f51cd419a3f1c02d34161454fe40e759db6e7dfcb"
+            }
+          ]
+        },
+        {
+          "from": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "to": [
+            "info@nfnn.cz"
+          ],
+          "replyTo": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "subject": "Stahování plateb z banky zase funguje – Nová naděje",
+          "text": "Dobrý den,\n\nweb Nová naděje 19. 10. 2026 12:00 znovu stáhl platby z Fio. Předtím selhal 1 pokus za sebou.\n\nPoslední úspěšné stažení před poruchou: 17. 10. 2026 12:00\n\nPlatby, které mezitím přišly, jsou stažené a spárované; dárci je vidí ve svém přehledu.\n\nNová naděje – nadační fond\n\nTuto zprávu posílá web automaticky, když stahování plateb z banky selže třikrát za sebou nebo když Fio odmítne token, a znovu, až se stahování obnoví.\n",
+          "html": {
+            "text": "Stahování plateb z banky zase funguje Dobrý den, web Nová naděje 19. 10. 2026 12:00 znovu stáhl platby z Fio. Předtím selhal 1 pokus za sebou. Poslední úspěšné stažení před poruchou: 17. 10. 2026 12:00 Platby, které mezitím přišly, jsou stažené a spárované; dárci je vidí ve svém přehledu. S pozdravem Nová naděje – nadační fond Tuto zprávu posílá web automaticky, když stahování plateb z banky selže třikrát za sebou nebo když Fio odmítne token, a znovu, až se stahování obnoví. Nová naděje – nadační fond · IČO 27278794 · Jiráskova 436, 473 01 Nový Bor localhost",
+            "links": [
+              "http://localhost:4200"
+            ],
+            "sha256": "b460d35386dadcbe7fa20507a2a326d035e238196610373cd1ec51bdc6f5ec25"
+          },
+          "attachments": [
+            {
+              "fileName": "inline",
+              "contentType": "image/png",
+              "size": 41502,
+              "sha256": "aecbb8a4c043690e9918174f51cd419a3f1c02d34161454fe40e759db6e7dfcb"
+            }
+          ]
+        }
+      ],
+      "logs": [
+        "DEBUG donations.application.pairing.PaymentPairingService: Bank payment 1001 stays unpaired: UNKNOWN_SENDER_ACCOUNT (variable symbol missing, sender account given)",
+        "DEBUG donations.application.pairing.PaymentPairingService: Bank payment 1001 stays unpaired: UNKNOWN_SENDER_ACCOUNT (variable symbol missing, sender account given)",
+        "DEBUG donations.infrastructure.fio.FioBankStatementSource: Fio movement 1001 is incoming: sender account given, payer name given, variable symbol missing",
+        "DEBUG donations.infrastructure.fio.FioBankStatementSource: Fio movement 1001 is incoming: sender account given, payer name given, variable symbol missing",
+        "ERROR donations.application.importing.BankStatementRecorder: Fio import outage: UNAUTHORIZED failed 1 times in a row, the foundation is being told",
+        "INFO donations.application.importing.BankStatementRecorder: Fio import recovered from the UNAUTHORIZED outage after 1 failures",
+        "INFO donations.application.importing.ImportBankPaymentsService: Fio import HOURLY 2026-10-14/2026-10-19 completed: bank reported 2026-10-14/2026-10-19, 1 movements, 1 new incoming, 0 known, 0 paired by symbol, 0 by account, 0 by confirmed symbol, 0 accounts learned, 1 left unpaired, covered 2026-07-20/2026-10-19",
+        "INFO donations.application.importing.ImportBankPaymentsService: Fio import HOURLY 2026-10-16/2026-10-20 completed: bank reported 2026-10-16/2026-10-20, 1 movements, 0 new incoming, 1 known, 0 paired by symbol, 0 by account, 0 by confirmed symbol, 0 accounts learned, 1 left unpaired, covered 2026-07-20/2026-10-20",
+        "INFO donations.application.importing.ImportBankPaymentsService: Fio import STARTUP 2026-07-20/2026-10-17 completed: bank reported 2026-07-20/2026-10-17, 0 movements, 0 new incoming, 0 known, 0 paired by symbol, 0 by account, 0 by confirmed symbol, 0 accounts learned, 0 left unpaired, covered 2026-07-20/2026-10-17",
+        "INFO donations.infrastructure.fio.FioBankStatementSource: Fio answered 2026-07-20/2026-10-17: reported 2026-07-20/2026-10-17 ids null-null, 0 movements",
+        "INFO donations.infrastructure.fio.FioBankStatementSource: Fio answered 2026-10-14/2026-10-19: reported 2026-10-14/2026-10-19 ids 1001-1001, 1 movements",
+        "INFO donations.infrastructure.fio.FioBankStatementSource: Fio answered 2026-10-16/2026-10-20: reported 2026-10-16/2026-10-20 ids 1001-1001, 1 movements",
+        "INFO donations.infrastructure.report.ImportAlertEmailSender: Fio import alert e-mail sent: outage UNAUTHORIZED",
+        "INFO donations.infrastructure.report.ImportAlertEmailSender: Fio import alert e-mail sent: recovery from UNAUTHORIZED"
+      ]
+    },
+    "A rate limit and a locked history neither count towards the outage nor end the streak #1": {
+      "requests": {},
+      "mails": [
+        {
+          "from": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "to": [
+            "info@nfnn.cz"
+          ],
+          "replyTo": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "subject": "Stahování plateb z banky selhává – Nová naděje",
+          "text": "Dobrý den,\n\nweb Nová naděje už 3× za sebou nedokázal stáhnout platby z Fio, naposledy 18. 10. 2026 12:00.\n\nFio nebylo dostupné: spojení selhalo nebo vypršelo.\n\nZkontrolujte připojení serveru k internetu a stav Fio API; další pokusy proběhnou samy každou hodinu.\n\nPoslední úspěšné stažení plateb z banky: 17. 10. 2026 12:00\n\nDokud porucha trvá, nové dary se dárcům v portálu neukážou a potvrzení o daru za ně nevydáme.\n\nAž se stahování obnoví, pošleme ještě jednu zprávu; do té doby už tuto zprávu neopakujeme.\n\nNová naděje – nadační fond\n\nTuto zprávu posílá web automaticky, když stahování plateb z banky selže třikrát za sebou nebo když Fio odmítne token, a znovu, až se stahování obnoví.\n",
+          "html": {
+            "text": "Stahování plateb z banky selhává Dobrý den, web Nová naděje už 3× za sebou nedokázal stáhnout platby z Fio, naposledy 18. 10. 2026 12:00. Fio nebylo dostupné: spojení selhalo nebo vypršelo. Zkontrolujte připojení serveru k internetu a stav Fio API; další pokusy proběhnou samy každou hodinu. Poslední úspěšné stažení plateb z banky: 17. 10. 2026 12:00 Dokud porucha trvá, nové dary se dárcům v portálu neukážou a potvrzení o daru za ně nevydáme. Až se stahování obnoví, pošleme ještě jednu zprávu; do té doby už tuto zprávu neopakujeme. S pozdravem Nová naděje – nadační fond Tuto zprávu posílá web automaticky, když stahování plateb z banky selže třikrát za sebou nebo když Fio odmítne token, a znovu, až se stahování obnoví. Nová naděje – nadační fond · IČO 27278794 · Jiráskova 436, 473 01 Nový Bor localhost",
+            "links": [
+              "http://localhost:4200"
+            ],
+            "sha256": "1aa7433c1ae027a764f3a9d5bba04f66b7ee2ccf118bd11fc0422946339f68b0"
+          },
+          "attachments": [
+            {
+              "fileName": "inline",
+              "contentType": "image/png",
+              "size": 41502,
+              "sha256": "aecbb8a4c043690e9918174f51cd419a3f1c02d34161454fe40e759db6e7dfcb"
+            }
+          ]
+        }
+      ],
+      "logs": [
+        "ERROR donations.application.importing.BankStatementRecorder: Fio import outage: TRANSPORT failed 3 times in a row, the foundation is being told",
+        "INFO donations.application.importing.ImportBankPaymentsService: Fio import STARTUP 2026-07-20/2026-10-17 completed: bank reported 2026-07-20/2026-10-17, 0 movements, 0 new incoming, 0 known, 0 paired by symbol, 0 by account, 0 by confirmed symbol, 0 accounts learned, 0 left unpaired, covered 2026-07-20/2026-10-17",
+        "INFO donations.infrastructure.fio.FioBankStatementSource: Fio answered 2026-07-20/2026-10-17: reported 2026-07-20/2026-10-17 ids null-null, 0 movements",
+        "INFO donations.infrastructure.report.ImportAlertEmailSender: Fio import alert e-mail sent: outage TRANSPORT"
+      ]
+    },
+    "Two failures followed by a success send nothing #1": {
+      "requests": {},
+      "mails": [],
+      "logs": [
+        "INFO donations.application.importing.ImportBankPaymentsService: Fio import HOURLY 2026-10-14/2026-10-18 completed: bank reported 2026-10-14/2026-10-18, 0 movements, 0 new incoming, 0 known, 0 paired by symbol, 0 by account, 0 by confirmed symbol, 0 accounts learned, 0 left unpaired, covered 2026-07-20/2026-10-18",
+        "INFO donations.application.importing.ImportBankPaymentsService: Fio import STARTUP 2026-07-20/2026-10-17 completed: bank reported 2026-07-20/2026-10-17, 0 movements, 0 new incoming, 0 known, 0 paired by symbol, 0 by account, 0 by confirmed symbol, 0 accounts learned, 0 left unpaired, covered 2026-07-20/2026-10-17",
+        "INFO donations.infrastructure.fio.FioBankStatementSource: Fio answered 2026-07-20/2026-10-17: reported 2026-07-20/2026-10-17 ids null-null, 0 movements",
+        "INFO donations.infrastructure.fio.FioBankStatementSource: Fio answered 2026-10-14/2026-10-18: reported 2026-10-14/2026-10-18 ids null-null, 0 movements"
+      ]
+    },
+    "An outage e-mail the mail server refuses goes out after the next import and only once #1": {
+      "requests": {},
+      "mails": [
+        {
+          "from": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "to": [
+            "info@nfnn.cz"
+          ],
+          "replyTo": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "subject": "Stahování plateb z banky selhává – Nová naděje",
+          "text": "Dobrý den,\n\nFio 18. 10. 2026 12:00 odmítlo token, kterým web Nová naděje stahuje platby z účtu fondu.\n\nToken chybí, ještě neplatí nebo vypršel (platí 180 dní).\n\nV internetovém bankovnictví Fio (Nastavení → API) vytvořte nový token typu „Sledování účtu“ a vložte ho ve správě webu v části Nastavení jako Token Fio API.\n\nPoslední úspěšné stažení plateb z banky: 17. 10. 2026 12:00\n\nDokud porucha trvá, nové dary se dárcům v portálu neukážou a potvrzení o daru za ně nevydáme.\n\nAž se stahování obnoví, pošleme ještě jednu zprávu; do té doby už tuto zprávu neopakujeme.\n\nNová naděje – nadační fond\n\nTuto zprávu posílá web automaticky, když stahování plateb z banky selže třikrát za sebou nebo když Fio odmítne token, a znovu, až se stahování obnoví.\n",
+          "html": {
+            "text": "Stahování plateb z banky selhává Dobrý den, Fio 18. 10. 2026 12:00 odmítlo token, kterým web Nová naděje stahuje platby z účtu fondu. Token chybí, ještě neplatí nebo vypršel (platí 180 dní). V internetovém bankovnictví Fio (Nastavení → API) vytvořte nový token typu „Sledování účtu“ a vložte ho ve správě webu v části Nastavení jako Token Fio API. Poslední úspěšné stažení plateb z banky: 17. 10. 2026 12:00 Dokud porucha trvá, nové dary se dárcům v portálu neukážou a potvrzení o daru za ně nevydáme. Až se stahování obnoví, pošleme ještě jednu zprávu; do té doby už tuto zprávu neopakujeme. S pozdravem Nová naděje – nadační fond Tuto zprávu posílá web automaticky, když stahování plateb z banky selže třikrát za sebou nebo když Fio odmítne token, a znovu, až se stahování obnoví. Nová naděje – nadační fond · IČO 27278794 · Jiráskova 436, 473 01 Nový Bor localhost",
+            "links": [
+              "http://localhost:4200"
+            ],
+            "sha256": "808bf5d02527a1777cbd355e4e060afa142b032f849a0d72919500eee11242be"
+          },
+          "attachments": [
+            {
+              "fileName": "inline",
+              "contentType": "image/png",
+              "size": 41502,
+              "sha256": "aecbb8a4c043690e9918174f51cd419a3f1c02d34161454fe40e759db6e7dfcb"
+            }
+          ]
+        }
+      ],
+      "logs": [
+        "ERROR donations.application.importing.BankStatementRecorder: Fio import outage: UNAUTHORIZED failed 1 times in a row, the foundation is being told",
+        "ERROR donations.infrastructure.report.ImportAlertEmailSender: The Fio import alert e-mail (outage UNAUTHORIZED) could not be sent: MailSendException",
+        "INFO donations.application.importing.ImportBankPaymentsService: Fio import STARTUP 2026-07-20/2026-10-17 completed: bank reported 2026-07-20/2026-10-17, 0 movements, 0 new incoming, 0 known, 0 paired by symbol, 0 by account, 0 by confirmed symbol, 0 accounts learned, 0 left unpaired, covered 2026-07-20/2026-10-17",
+        "INFO donations.infrastructure.fio.FioBankStatementSource: Fio answered 2026-07-20/2026-10-17: reported 2026-07-20/2026-10-17 ids null-null, 0 movements",
+        "INFO donations.infrastructure.report.ImportAlertEmailSender: Fio import alert e-mail sent: outage UNAUTHORIZED",
+        "WARN donations.application.importing.ImportAlertDelivery: Fio import alert <id:1> was not delivered; it is sent again after the next import"
+      ]
+    },
+    "An outage e-mail still waiting when the import works again is replaced by the recovery e-mail #1": {
+      "requests": {},
+      "mails": [
+        {
+          "from": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "to": [
+            "info@nfnn.cz"
+          ],
+          "replyTo": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "subject": "Stahování plateb z banky zase funguje – Nová naděje",
+          "text": "Dobrý den,\n\nweb Nová naděje 19. 10. 2026 12:00 znovu stáhl platby z Fio. Předtím selhal 1 pokus za sebou.\n\nPoslední úspěšné stažení před poruchou: 17. 10. 2026 12:00\n\nPlatby, které mezitím přišly, jsou stažené a spárované; dárci je vidí ve svém přehledu.\n\nNová naděje – nadační fond\n\nTuto zprávu posílá web automaticky, když stahování plateb z banky selže třikrát za sebou nebo když Fio odmítne token, a znovu, až se stahování obnoví.\n",
+          "html": {
+            "text": "Stahování plateb z banky zase funguje Dobrý den, web Nová naděje 19. 10. 2026 12:00 znovu stáhl platby z Fio. Předtím selhal 1 pokus za sebou. Poslední úspěšné stažení před poruchou: 17. 10. 2026 12:00 Platby, které mezitím přišly, jsou stažené a spárované; dárci je vidí ve svém přehledu. S pozdravem Nová naděje – nadační fond Tuto zprávu posílá web automaticky, když stahování plateb z banky selže třikrát za sebou nebo když Fio odmítne token, a znovu, až se stahování obnoví. Nová naděje – nadační fond · IČO 27278794 · Jiráskova 436, 473 01 Nový Bor localhost",
+            "links": [
+              "http://localhost:4200"
+            ],
+            "sha256": "b460d35386dadcbe7fa20507a2a326d035e238196610373cd1ec51bdc6f5ec25"
+          },
+          "attachments": [
+            {
+              "fileName": "inline",
+              "contentType": "image/png",
+              "size": 41502,
+              "sha256": "aecbb8a4c043690e9918174f51cd419a3f1c02d34161454fe40e759db6e7dfcb"
+            }
+          ]
+        }
+      ],
+      "logs": [
+        "ERROR donations.application.importing.BankStatementRecorder: Fio import outage: UNAUTHORIZED failed 1 times in a row, the foundation is being told",
+        "ERROR donations.infrastructure.report.ImportAlertEmailSender: The Fio import alert e-mail (outage UNAUTHORIZED) could not be sent: MailSendException",
+        "INFO donations.application.importing.BankStatementRecorder: Fio import recovered from the UNAUTHORIZED outage after 1 failures",
+        "INFO donations.application.importing.ImportBankPaymentsService: Fio import HOURLY 2026-10-14/2026-10-19 completed: bank reported 2026-10-14/2026-10-19, 0 movements, 0 new incoming, 0 known, 0 paired by symbol, 0 by account, 0 by confirmed symbol, 0 accounts learned, 0 left unpaired, covered 2026-07-20/2026-10-19",
+        "INFO donations.application.importing.ImportBankPaymentsService: Fio import STARTUP 2026-07-20/2026-10-17 completed: bank reported 2026-07-20/2026-10-17, 0 movements, 0 new incoming, 0 known, 0 paired by symbol, 0 by account, 0 by confirmed symbol, 0 accounts learned, 0 left unpaired, covered 2026-07-20/2026-10-17",
+        "INFO donations.infrastructure.fio.FioBankStatementSource: Fio answered 2026-07-20/2026-10-17: reported 2026-07-20/2026-10-17 ids null-null, 0 movements",
+        "INFO donations.infrastructure.fio.FioBankStatementSource: Fio answered 2026-10-14/2026-10-19: reported 2026-10-14/2026-10-19 ids null-null, 0 movements",
+        "INFO donations.infrastructure.report.ImportAlertEmailSender: Fio import alert e-mail sent: recovery from UNAUTHORIZED",
+        "WARN donations.application.importing.ImportAlertDelivery: Fio import alert <id:1> was not delivered; it is sent again after the next import"
+      ]
+    }
+  }
+}

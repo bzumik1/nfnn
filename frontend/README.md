@@ -10,7 +10,7 @@ npm run lint                 # ESLint (angular-eslint): TypeScript, šablony a j
 npm run lint:styles          # Stylelint: v komponentách jen tokeny z motivu; každý motiv má všechny tokeny
 npm test -- --watch=false    # Vitest
 npm run build                # produkční build do dist/frontend/browser/
-npm run e2e                  # Playwright (jednou předtím npm run e2e:install, v cloudu npx playwright install chromium)
+npm run e2e                  # Playwright proti produkčnímu buildu (jednou předtím npm run e2e:install, v cloudu npx playwright install --only-shell chromium)
 E2E_THEME=control npx playwright test e2e/theme.spec.ts   # kontrolní motiv přebarví každou stránku
 ```
 

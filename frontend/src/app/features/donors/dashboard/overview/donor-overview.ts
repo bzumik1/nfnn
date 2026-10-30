@@ -3,19 +3,32 @@ import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/c
 import { RouterLink } from '@angular/router';
 import { AuthStore } from '../../../../core/auth/auth-store';
 import { formatMinorUnits } from '../../../donations/donation-amount';
-import { formatBankTime, formatDonationDate } from '../../../donations/donation-date';
+import { formatDonationDate } from '../../../donations/donation-date';
 import { DonationStatus } from '../../../donations/donations-api';
+import { BankCheck } from '../bank-check/bank-check';
+import { MissingGift } from '../missing-gift/missing-gift';
 import { DonationsPending } from '../donations-pending/donations-pending';
 import { donationStatusLabel, DonationsTable } from '../donations-table/donations-table';
 import { DonorDonations } from '../donor-donations';
 import { PageTitle } from '../page-title/page-title';
+import { StandingOrder } from '../standing-order/standing-order';
 import { SymbolCard } from '../symbol-card/symbol-card';
 
 const RECENT_DONATIONS_SHOWN = 5;
 
 @Component({
   selector: 'app-donor-overview',
-  imports: [NgTemplateOutlet, RouterLink, PageTitle, SymbolCard, DonationsPending, DonationsTable],
+  imports: [
+    NgTemplateOutlet,
+    RouterLink,
+    PageTitle,
+    BankCheck,
+    MissingGift,
+    StandingOrder,
+    SymbolCard,
+    DonationsPending,
+    DonationsTable,
+  ],
   templateUrl: './donor-overview.html',
   styleUrl: './donor-overview.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -52,10 +65,6 @@ export class DonorOverview {
 
   protected crowns(amountMinor: number): string {
     return formatMinorUnits(amountMinor);
-  }
-
-  protected formatBankTime(isoInstant: string): string {
-    return formatBankTime(isoInstant);
   }
 
   protected statusLabel(status: DonationStatus): string {

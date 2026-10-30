@@ -1,0 +1,16 @@
+[
+  {
+    "path": "GET /actuator/health",
+    "scenario": "operations/server_status: *",
+    "kind": "added",
+    "reason": "0.3 records the health that the connector's nfnn_status reads; v2 checked it only in HealthEndpointTests, so the baseline has no transcript of it",
+    "contract": "docs/api-contract.md, MCP connector"
+  },
+  {
+    "path": "GET /actuator/info",
+    "scenario": "operations/server_status: *",
+    "kind": "added",
+    "reason": "0.3 records the revision that the connector's nfnn_status reads; v2 checked it only in InfoEndpointTests, so the baseline has no transcript of it",
+    "contract": "docs/api-contract.md, MCP connector"
+  }
+]

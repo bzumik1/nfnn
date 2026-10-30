@@ -1,0 +1,95 @@
+<button
+  #toggleButton
+  type="button"
+  class="ui-link-button standing-toggle"
+  [id]="toggleId"
+  [attr.aria-controls]="panelId"
+  [attr.aria-expanded]="open()"
+  (click)="toggle()"
+  i18n="@@donor.standingOrder.toggle"
+>
+  Jak nastavit trvalý příkaz
+</button>
+
+<div
+  class="standing-panel"
+  role="region"
+  [id]="panelId"
+  [attr.aria-labelledby]="toggleId"
+  [hidden]="!open()"
+  (keydown.escape)="close()"
+>
+  <p class="standing-lead" i18n="@@donor.standingOrder.lead">
+    Trvalý příkaz si nastavíte ve své bance, v aplikaci nebo v internetovém bankovnictví. Vyplňte:
+  </p>
+  @switch (account().kind) {
+    @case ('loading') {
+      <p class="standing-loading" role="status" i18n="@@donor.standingOrder.loading">
+        Načítáme číslo účtu…
+      </p>
+    }
+    @case ('failed') {
+      <p class="ui-callout ui-callout--danger standing-error" role="alert">
+        <span i18n="@@donor.standingOrder.error"
+          >Číslo účtu se nepodařilo načíst. Najdete ho na hlavní stránce v části</span
+        >&ngsp;<a routerLink="/" fragment="prispet" i18n="@@donor.standingOrder.errorLink"
+          >Přispět</a
+        >.
+      </p>
+    }
+  }
+  <dl class="standing-details">
+    @if (account(); as state) {
+      @if (state.kind === 'ready') {
+        <div class="standing-row">
+          <dt i18n="@@home.donate.bank.account">Číslo účtu</dt>
+          <dd>
+            <span class="standing-value">{{ state.account.accountNumber }}</span>
+            <app-copy-button
+              [value]="state.account.accountNumber"
+              what="číslo účtu"
+              i18n-what="@@home.donate.bank.copyAccount"
+            />
+          </dd>
+        </div>
+      }
+    }
+    <div class="standing-row">
+      <dt i18n="@@home.donate.bank.vs">Variabilní symbol</dt>
+      <dd>
+        <span class="standing-value">{{ variableSymbol() }}</span>
+        <app-copy-button
+          [value]="variableSymbol()"
+          what="variabilní symbol"
+          i18n-what="@@home.donate.bank.copyVs"
+        />
+      </dd>
+    </div>
+    <div class="standing-row">
+      <dt i18n="@@home.donate.bank.amount">Částka</dt>
+      <dd>
+        <span class="standing-value" i18n="@@donor.standingOrder.amount"
+          >Jakákoli, kterou chcete posílat</span
+        >
+      </dd>
+    </div>
+    <div class="standing-row">
+      <dt i18n="@@donor.standingOrder.frequency">Opakování</dt>
+      <dd>
+        <span class="standing-value" i18n="@@donor.standingOrder.monthly"
+          >Každý měsíc, nebo jak často chcete</span
+        >
+      </dd>
+    </div>
+  </dl>
+  <p class="standing-after" i18n="@@donor.standingOrder.after">
+    Každá platba se vám tu pak objeví sama a do ročního potvrzení se započítají všechny.
+  </p>
+  <p class="standing-older">
+    <span i18n="@@donor.standingOrder.older"
+      >Posíláte už trvalým příkazem s jiným nebo starším symbolem? Změňte v něm symbol na
+      <strong>{{ variableSymbol() }}</strong
+      >, nebo ověřte účet v části</span
+    >&ngsp;<a routerLink="/darce/ucty" i18n="@@donor.standingOrder.olderLink">Bankovní účty</a>.
+  </p>
+</div>

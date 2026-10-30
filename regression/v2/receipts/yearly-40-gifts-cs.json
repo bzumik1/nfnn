@@ -1,0 +1,678 @@
+{
+  "source": "v2-baseline",
+  "logic": "A receipt v2 freezes (ThymeleafPdfReceiptRenderer.freeze: data is the frozen JSON) and renders (render, at renderer.issuedAt): the PDF's page count and fonts (PDFBox; a subset prefix is dropped), each page's size in points and its text lines (PDFTextStripper per page, every line stripped, empty lines dropped, U+00A0 written as a space) with the position of its first character in points from the page's top left, rounded to whole points (x, and y at the baseline; TextPosition xDirAdj and yDirAdj). The PDF's and the page rasters' digests depend on the PDF libraries and the JDK, so they are kept apart in digests.json",
+  "sample": "yearly-40-gifts-cs",
+  "description": "A person's year with 40 gifts, Czech. Three are received on 5 May and given in this order: 5,000.00 CZK recorded at 12:00, 100.00 CZK recorded at 8:00 with the higher id and 200.00 CZK recorded at 8:00 with the lower id; v2 lists gifts by the day received, then the time recorded, then the id",
+  "renderer": {
+    "profile": 1,
+    "template": "7b30974aef2fdaf01f6e4990c8c4b526a0de8d8371452023be783677b69bf7e7",
+    "number": "2027-000001",
+    "issuedAt": "2027-01-15T09:30:00Z",
+    "signatureImage": false
+  },
+  "data": {
+    "locale": "cs",
+    "single": false,
+    "bilingual": false,
+    "documentTitle": "Potvrzení o přijatých darech za rok 2026",
+    "year": "2026",
+    "number": "2027-000001",
+    "issuedOnCs": "15. 1. 2027",
+    "issuedOnEn": "15 January 2027",
+    "replaced": false,
+    "replacedNumber": null,
+    "replacedOnCs": null,
+    "replacedOnEn": null,
+    "foundationName": "Nová naděje - nadační fond",
+    "foundationIdentifier": "27278794",
+    "foundationAddress": "Jiráskova 436, 473 01 Nový Bor",
+    "registryFile": "N 78",
+    "registryCourt": "Krajský soud v Ústí nad Labem",
+    "accountNumber": "5544332217/2010",
+    "issuePlace": "V Novém Boru",
+    "issuePlaceEn": "Nový Bor",
+    "company": false,
+    "donorName": "Jana Nováková",
+    "donorIdentifier": null,
+    "donorAddress": "Dlouhá 12, 400 01 Ústí nad Labem",
+    "variableSymbol": "4821937560",
+    "giftFormKey": "receipt.gift.form.BANK_TRANSFER",
+    "receivedOnCs": "3. 1. 2026",
+    "receivedOnEn": "3 January 2026",
+    "lines": [
+      {
+        "receivedOnCs": "3. 1. 2026",
+        "receivedOnEn": "3 January 2026",
+        "amountCs": "100 Kč",
+        "amountEn": "CZK 100"
+      },
+      {
+        "receivedOnCs": "12. 1. 2026",
+        "receivedOnEn": "12 January 2026",
+        "amountCs": "102,50 Kč",
+        "amountEn": "CZK 102.50"
+      },
+      {
+        "receivedOnCs": "21. 1. 2026",
+        "receivedOnEn": "21 January 2026",
+        "amountCs": "105 Kč",
+        "amountEn": "CZK 105"
+      },
+      {
+        "receivedOnCs": "30. 1. 2026",
+        "receivedOnEn": "30 January 2026",
+        "amountCs": "107,50 Kč",
+        "amountEn": "CZK 107.50"
+      },
+      {
+        "receivedOnCs": "8. 2. 2026",
+        "receivedOnEn": "8 February 2026",
+        "amountCs": "110 Kč",
+        "amountEn": "CZK 110"
+      },
+      {
+        "receivedOnCs": "17. 2. 2026",
+        "receivedOnEn": "17 February 2026",
+        "amountCs": "112,50 Kč",
+        "amountEn": "CZK 112.50"
+      },
+      {
+        "receivedOnCs": "26. 2. 2026",
+        "receivedOnEn": "26 February 2026",
+        "amountCs": "115 Kč",
+        "amountEn": "CZK 115"
+      },
+      {
+        "receivedOnCs": "7. 3. 2026",
+        "receivedOnEn": "7 March 2026",
+        "amountCs": "117,50 Kč",
+        "amountEn": "CZK 117.50"
+      },
+      {
+        "receivedOnCs": "16. 3. 2026",
+        "receivedOnEn": "16 March 2026",
+        "amountCs": "120 Kč",
+        "amountEn": "CZK 120"
+      },
+      {
+        "receivedOnCs": "25. 3. 2026",
+        "receivedOnEn": "25 March 2026",
+        "amountCs": "122,50 Kč",
+        "amountEn": "CZK 122.50"
+      },
+      {
+        "receivedOnCs": "3. 4. 2026",
+        "receivedOnEn": "3 April 2026",
+        "amountCs": "125 Kč",
+        "amountEn": "CZK 125"
+      },
+      {
+        "receivedOnCs": "12. 4. 2026",
+        "receivedOnEn": "12 April 2026",
+        "amountCs": "127,50 Kč",
+        "amountEn": "CZK 127.50"
+      },
+      {
+        "receivedOnCs": "21. 4. 2026",
+        "receivedOnEn": "21 April 2026",
+        "amountCs": "130 Kč",
+        "amountEn": "CZK 130"
+      },
+      {
+        "receivedOnCs": "30. 4. 2026",
+        "receivedOnEn": "30 April 2026",
+        "amountCs": "132,50 Kč",
+        "amountEn": "CZK 132.50"
+      },
+      {
+        "receivedOnCs": "5. 5. 2026",
+        "receivedOnEn": "5 May 2026",
+        "amountCs": "200 Kč",
+        "amountEn": "CZK 200"
+      },
+      {
+        "receivedOnCs": "5. 5. 2026",
+        "receivedOnEn": "5 May 2026",
+        "amountCs": "100 Kč",
+        "amountEn": "CZK 100"
+      },
+      {
+        "receivedOnCs": "5. 5. 2026",
+        "receivedOnEn": "5 May 2026",
+        "amountCs": "5 000 Kč",
+        "amountEn": "CZK 5,000"
+      },
+      {
+        "receivedOnCs": "9. 5. 2026",
+        "receivedOnEn": "9 May 2026",
+        "amountCs": "135 Kč",
+        "amountEn": "CZK 135"
+      },
+      {
+        "receivedOnCs": "18. 5. 2026",
+        "receivedOnEn": "18 May 2026",
+        "amountCs": "137,50 Kč",
+        "amountEn": "CZK 137.50"
+      },
+      {
+        "receivedOnCs": "27. 5. 2026",
+        "receivedOnEn": "27 May 2026",
+        "amountCs": "140 Kč",
+        "amountEn": "CZK 140"
+      },
+      {
+        "receivedOnCs": "5. 6. 2026",
+        "receivedOnEn": "5 June 2026",
+        "amountCs": "142,50 Kč",
+        "amountEn": "CZK 142.50"
+      },
+      {
+        "receivedOnCs": "14. 6. 2026",
+        "receivedOnEn": "14 June 2026",
+        "amountCs": "145 Kč",
+        "amountEn": "CZK 145"
+      },
+      {
+        "receivedOnCs": "23. 6. 2026",
+        "receivedOnEn": "23 June 2026",
+        "amountCs": "147,50 Kč",
+        "amountEn": "CZK 147.50"
+      },
+      {
+        "receivedOnCs": "2. 7. 2026",
+        "receivedOnEn": "2 July 2026",
+        "amountCs": "150 Kč",
+        "amountEn": "CZK 150"
+      },
+      {
+        "receivedOnCs": "11. 7. 2026",
+        "receivedOnEn": "11 July 2026",
+        "amountCs": "152,50 Kč",
+        "amountEn": "CZK 152.50"
+      },
+      {
+        "receivedOnCs": "20. 7. 2026",
+        "receivedOnEn": "20 July 2026",
+        "amountCs": "155 Kč",
+        "amountEn": "CZK 155"
+      },
+      {
+        "receivedOnCs": "29. 7. 2026",
+        "receivedOnEn": "29 July 2026",
+        "amountCs": "157,50 Kč",
+        "amountEn": "CZK 157.50"
+      },
+      {
+        "receivedOnCs": "7. 8. 2026",
+        "receivedOnEn": "7 August 2026",
+        "amountCs": "160 Kč",
+        "amountEn": "CZK 160"
+      },
+      {
+        "receivedOnCs": "16. 8. 2026",
+        "receivedOnEn": "16 August 2026",
+        "amountCs": "162,50 Kč",
+        "amountEn": "CZK 162.50"
+      },
+      {
+        "receivedOnCs": "25. 8. 2026",
+        "receivedOnEn": "25 August 2026",
+        "amountCs": "165 Kč",
+        "amountEn": "CZK 165"
+      },
+      {
+        "receivedOnCs": "3. 9. 2026",
+        "receivedOnEn": "3 September 2026",
+        "amountCs": "167,50 Kč",
+        "amountEn": "CZK 167.50"
+      },
+      {
+        "receivedOnCs": "12. 9. 2026",
+        "receivedOnEn": "12 September 2026",
+        "amountCs": "170 Kč",
+        "amountEn": "CZK 170"
+      },
+      {
+        "receivedOnCs": "21. 9. 2026",
+        "receivedOnEn": "21 September 2026",
+        "amountCs": "172,50 Kč",
+        "amountEn": "CZK 172.50"
+      },
+      {
+        "receivedOnCs": "30. 9. 2026",
+        "receivedOnEn": "30 September 2026",
+        "amountCs": "175 Kč",
+        "amountEn": "CZK 175"
+      },
+      {
+        "receivedOnCs": "9. 10. 2026",
+        "receivedOnEn": "9 October 2026",
+        "amountCs": "177,50 Kč",
+        "amountEn": "CZK 177.50"
+      },
+      {
+        "receivedOnCs": "18. 10. 2026",
+        "receivedOnEn": "18 October 2026",
+        "amountCs": "180 Kč",
+        "amountEn": "CZK 180"
+      },
+      {
+        "receivedOnCs": "27. 10. 2026",
+        "receivedOnEn": "27 October 2026",
+        "amountCs": "182,50 Kč",
+        "amountEn": "CZK 182.50"
+      },
+      {
+        "receivedOnCs": "5. 11. 2026",
+        "receivedOnEn": "5 November 2026",
+        "amountCs": "185 Kč",
+        "amountEn": "CZK 185"
+      },
+      {
+        "receivedOnCs": "14. 11. 2026",
+        "receivedOnEn": "14 November 2026",
+        "amountCs": "187,50 Kč",
+        "amountEn": "CZK 187.50"
+      },
+      {
+        "receivedOnCs": "23. 11. 2026",
+        "receivedOnEn": "23 November 2026",
+        "amountCs": "190 Kč",
+        "amountEn": "CZK 190"
+      }
+    ],
+    "count": "40",
+    "totalCs": "10 665 Kč",
+    "totalEn": "CZK 10,665",
+    "signatoryName": "Petr Vzorový",
+    "signatoryRole": "předseda správní rady"
+  },
+  "pdf": {
+    "pageCount": 2,
+    "fonts": [
+      "DejaVuSans (Type0, embedded, subset)",
+      "DejaVuSans-Bold (Type0, embedded, subset)"
+    ]
+  },
+  "pages": [
+    {
+      "number": 1,
+      "widthPt": 595.275,
+      "heightPt": 841.875,
+      "lines": [
+        {
+          "text": "Nová naděje - nadační fond · IČO 27278794 · Jiráskova 436, 473 01 Nový Bor · Číslo potvrzení: 2027-000001 1 / 2",
+          "x": 88,
+          "y": 804
+        },
+        {
+          "text": "Potvrzení o přijatých darech za rok 2026",
+          "x": 246,
+          "y": 56
+        },
+        {
+          "text": "Číslo potvrzení: 2027-000001",
+          "x": 404,
+          "y": 73
+        },
+        {
+          "text": "Datum vystavení: 15. 1. 2027",
+          "x": 403,
+          "y": 85
+        },
+        {
+          "text": "Obdarovaný",
+          "x": 51,
+          "y": 122
+        },
+        {
+          "text": "Název: Nová naděje - nadační fond",
+          "x": 51,
+          "y": 142
+        },
+        {
+          "text": "IČO: 27278794",
+          "x": 51,
+          "y": 157
+        },
+        {
+          "text": "Sídlo: Jiráskova 436, 473 01 Nový Bor",
+          "x": 51,
+          "y": 172
+        },
+        {
+          "text": "zapsaný v nadačním rejstříku, spisová značka",
+          "x": 51,
+          "y": 188
+        },
+        {
+          "text": "N 78, rejstříkový soud: Krajský soud v Ústí nad",
+          "x": 51,
+          "y": 200
+        },
+        {
+          "text": "Labem",
+          "x": 51,
+          "y": 212
+        },
+        {
+          "text": "Dárce",
+          "x": 298,
+          "y": 122
+        },
+        {
+          "text": "Jméno a příjmení: Jana Nováková",
+          "x": 298,
+          "y": 142
+        },
+        {
+          "text": "Bydliště: Dlouhá 12, 400 01 Ústí nad Labem",
+          "x": 298,
+          "y": 157
+        },
+        {
+          "text": "Variabilní symbol: 4821937560",
+          "x": 298,
+          "y": 172
+        },
+        {
+          "text": "Účet příjemce: 5544332217/2010",
+          "x": 51,
+          "y": 239
+        },
+        {
+          "text": "Datum připsání na účet Částka",
+          "x": 57,
+          "y": 261
+        },
+        {
+          "text": "3. 1. 2026 100 Kč",
+          "x": 57,
+          "y": 282
+        },
+        {
+          "text": "12. 1. 2026 102,50 Kč",
+          "x": 57,
+          "y": 301
+        },
+        {
+          "text": "21. 1. 2026 105 Kč",
+          "x": 57,
+          "y": 321
+        },
+        {
+          "text": "30. 1. 2026 107,50 Kč",
+          "x": 57,
+          "y": 341
+        },
+        {
+          "text": "8. 2. 2026 110 Kč",
+          "x": 57,
+          "y": 360
+        },
+        {
+          "text": "17. 2. 2026 112,50 Kč",
+          "x": 57,
+          "y": 380
+        },
+        {
+          "text": "26. 2. 2026 115 Kč",
+          "x": 57,
+          "y": 400
+        },
+        {
+          "text": "7. 3. 2026 117,50 Kč",
+          "x": 57,
+          "y": 419
+        },
+        {
+          "text": "16. 3. 2026 120 Kč",
+          "x": 57,
+          "y": 439
+        },
+        {
+          "text": "25. 3. 2026 122,50 Kč",
+          "x": 57,
+          "y": 459
+        },
+        {
+          "text": "3. 4. 2026 125 Kč",
+          "x": 57,
+          "y": 478
+        },
+        {
+          "text": "12. 4. 2026 127,50 Kč",
+          "x": 57,
+          "y": 498
+        },
+        {
+          "text": "21. 4. 2026 130 Kč",
+          "x": 57,
+          "y": 518
+        },
+        {
+          "text": "30. 4. 2026 132,50 Kč",
+          "x": 57,
+          "y": 537
+        },
+        {
+          "text": "5. 5. 2026 200 Kč",
+          "x": 57,
+          "y": 557
+        },
+        {
+          "text": "5. 5. 2026 100 Kč",
+          "x": 57,
+          "y": 577
+        },
+        {
+          "text": "5. 5. 2026 5 000 Kč",
+          "x": 57,
+          "y": 596
+        },
+        {
+          "text": "9. 5. 2026 135 Kč",
+          "x": 57,
+          "y": 616
+        },
+        {
+          "text": "18. 5. 2026 137,50 Kč",
+          "x": 57,
+          "y": 635
+        },
+        {
+          "text": "27. 5. 2026 140 Kč",
+          "x": 57,
+          "y": 655
+        },
+        {
+          "text": "5. 6. 2026 142,50 Kč",
+          "x": 57,
+          "y": 675
+        },
+        {
+          "text": "14. 6. 2026 145 Kč",
+          "x": 57,
+          "y": 694
+        },
+        {
+          "text": "23. 6. 2026 147,50 Kč",
+          "x": 57,
+          "y": 714
+        },
+        {
+          "text": "2. 7. 2026 150 Kč",
+          "x": 57,
+          "y": 734
+        },
+        {
+          "text": "11. 7. 2026 152,50 Kč",
+          "x": 57,
+          "y": 753
+        },
+        {
+          "text": "20. 7. 2026 155 Kč",
+          "x": 57,
+          "y": 773
+        }
+      ]
+    },
+    {
+      "number": 2,
+      "widthPt": 595.275,
+      "heightPt": 841.875,
+      "lines": [
+        {
+          "text": "Nová naděje - nadační fond · IČO 27278794 · Jiráskova 436, 473 01 Nový Bor · Číslo potvrzení: 2027-000001 2 / 2",
+          "x": 88,
+          "y": 804
+        },
+        {
+          "text": "Datum připsání na účet Částka",
+          "x": 57,
+          "y": 56
+        },
+        {
+          "text": "29. 7. 2026 157,50 Kč",
+          "x": 57,
+          "y": 77
+        },
+        {
+          "text": "7. 8. 2026 160 Kč",
+          "x": 57,
+          "y": 96
+        },
+        {
+          "text": "16. 8. 2026 162,50 Kč",
+          "x": 57,
+          "y": 116
+        },
+        {
+          "text": "25. 8. 2026 165 Kč",
+          "x": 57,
+          "y": 136
+        },
+        {
+          "text": "3. 9. 2026 167,50 Kč",
+          "x": 57,
+          "y": 155
+        },
+        {
+          "text": "12. 9. 2026 170 Kč",
+          "x": 57,
+          "y": 175
+        },
+        {
+          "text": "21. 9. 2026 172,50 Kč",
+          "x": 57,
+          "y": 195
+        },
+        {
+          "text": "30. 9. 2026 175 Kč",
+          "x": 57,
+          "y": 214
+        },
+        {
+          "text": "9. 10. 2026 177,50 Kč",
+          "x": 57,
+          "y": 234
+        },
+        {
+          "text": "18. 10. 2026 180 Kč",
+          "x": 57,
+          "y": 254
+        },
+        {
+          "text": "27. 10. 2026 182,50 Kč",
+          "x": 57,
+          "y": 273
+        },
+        {
+          "text": "5. 11. 2026 185 Kč",
+          "x": 57,
+          "y": 293
+        },
+        {
+          "text": "14. 11. 2026 187,50 Kč",
+          "x": 57,
+          "y": 313
+        },
+        {
+          "text": "23. 11. 2026 190 Kč",
+          "x": 57,
+          "y": 332
+        },
+        {
+          "text": "Počet darů: 40",
+          "x": 51,
+          "y": 354
+        },
+        {
+          "text": "Celkem darováno v roce 2026: 10 665 Kč",
+          "x": 51,
+          "y": 366
+        },
+        {
+          "text": "Nová naděje - nadační fond potvrzuje, že od výše uvedeného dárce přijal v roce 2026 peněžité dary",
+          "x": 51,
+          "y": 390
+        },
+        {
+          "text": "uvedené v tomto potvrzení v celkové výši 10 665 Kč, poukázané bankovním převodem na účet",
+          "x": 51,
+          "y": 402
+        },
+        {
+          "text": "nadačního fondu č. 5544332217/2010. Dary byly poskytnuty bezúplatně a bez jakéhokoli protiplnění",
+          "x": 51,
+          "y": 415
+        },
+        {
+          "text": "na účely sociální, zdravotnické, charitativní a na podporu a ochranu mládeže ve smyslu § 15 odst. 1 a",
+          "x": 51,
+          "y": 427
+        },
+        {
+          "text": "§ 20 odst. 8 zákona č. 586/1992 Sb., o daních z příjmů, ve znění pozdějších předpisů, a to v souladu s",
+          "x": 51,
+          "y": 439
+        },
+        {
+          "text": "účelem nadačního fondu. Potvrzení se vydává na žádost dárce pro účely uplatnění odpočtu hodnoty",
+          "x": 51,
+          "y": 452
+        },
+        {
+          "text": "darů od základu daně podle § 15 odst. 1 (poplatník daně z příjmů fyzických osob) nebo § 20 odst. 8",
+          "x": 51,
+          "y": 464
+        },
+        {
+          "text": "(poplatník daně z příjmů právnických osob) uvedeného zákona.",
+          "x": 51,
+          "y": 476
+        },
+        {
+          "text": "V Novém Boru, dne 15. 1. 2027",
+          "x": 51,
+          "y": 506
+        },
+        {
+          "text": "Za Nová naděje - nadační fond:",
+          "x": 51,
+          "y": 518
+        },
+        {
+          "text": "Petr Vzorový",
+          "x": 51,
+          "y": 568
+        },
+        {
+          "text": "předseda správní rady",
+          "x": 51,
+          "y": 580
+        }
+      ]
+    }
+  ]
+}

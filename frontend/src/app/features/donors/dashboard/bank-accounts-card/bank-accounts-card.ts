@@ -7,6 +7,7 @@ import {
   Component,
   computed,
   DestroyRef,
+  effect,
   ElementRef,
   inject,
   Injector,
@@ -131,6 +132,10 @@ export class BankAccountsCard {
   private readonly title = viewChild<ElementRef<HTMLElement>>('title');
   private readonly confirmCancel = viewChild<ElementRef<HTMLButtonElement>>('confirmCancel');
   private readonly helpToggle = viewChild<ElementRef<HTMLButtonElement>>('helpToggle');
+  private readonly addButton = viewChild<ElementRef<HTMLButtonElement>>('addButton');
+  private readonly addResult = viewChild<ElementRef<HTMLElement>>('addResult');
+  private readonly addAnswer = viewChild<ElementRef<HTMLElement>>('addAnswer');
+  private readonly addError = viewChild<ElementRef<HTMLElement>>('addError');
 
   protected readonly helpOpen = signal(false);
 
@@ -173,10 +178,18 @@ export class BankAccountsCard {
       ) ?? null
     );
   });
+  private readonly newlyVerifiedId = computed(() => this.newlyVerified()?.id ?? null);
   private watchRequest: Subscription | undefined;
 
   constructor() {
     this.fetch();
+    effect(() => {
+      if (this.newlyVerifiedId() !== null) {
+        afterNextRender(() => this.addResult()?.nativeElement.focus(), {
+          injector: this.injector,
+        });
+      }
+    });
     this.destroyRef.onDestroy(() => {
       this.qrRequest?.unsubscribe();
       this.watchRequest?.unsubscribe();
@@ -257,6 +270,10 @@ export class BankAccountsCard {
 
   protected warns(account: BankAccountItem): boolean {
     return labelOf(account) === 'shared';
+  }
+
+  protected asksInDialog(account: BankAccountItem): boolean {
+    return this.newlyVerifiedId() === account.id;
   }
 
   protected wasActiveWhenOpened(account: BankAccountItem): boolean {
@@ -374,7 +391,7 @@ export class BankAccountsCard {
         this.busy.set(null);
         this.confirming.set(null);
         this.actionDone.set(doneMessage);
-        this.fetch(true);
+        this.fetchAfterChange(this.addAnswer);
       },
       error: (failure: unknown) => {
         this.busy.set(null);
@@ -385,13 +402,32 @@ export class BankAccountsCard {
         this.actionError.set(describeProblem(failure, failedMessage));
         if (STALE_LIST_STATUSES.includes(problemOf(failure)?.status ?? 0)) {
           this.confirming.set(null);
-          this.fetch(true);
+          this.fetchAfterChange(this.addError);
         }
       },
     });
   }
 
+  private fetchAfterChange(inDialog: () => ElementRef<HTMLElement> | undefined): void {
+    if (!this.adding()) {
+      this.fetch(true);
+      return;
+    }
+    this.fetch();
+    afterNextRender(() => inDialog()?.nativeElement.focus(), { injector: this.injector });
+  }
+
+  openAddDialog(): void {
+    if (!this.variableSymbol() || this.adding()) {
+      return;
+    }
+    this.addButton()?.nativeElement.focus();
+    this.openAdd();
+  }
+
   protected openAdd(): void {
+    this.actionError.set('');
+    this.actionDone.set('');
     this.adding.set(true);
     if (this.state() === 'ready') {
       this.accountsWhenOpened.set(accountsWhenOpened(this.accounts()));

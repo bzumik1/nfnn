@@ -11,27 +11,7 @@
         >
           Všechny dary
         </h2>
-        <div class="bank-check" aria-live="polite">
-          @if (donations.checkingBank()) {
-            <span class="bank-check-status" i18n="@@donor.dashboard.bank.checking"
-              >Kontrolujeme nové platby v bance…</span
-            >
-          } @else if (donations.bankDataAsOf(); as asOf) {
-            <span class="bank-check-status">
-              <span i18n="@@donor.dashboard.bank.asOf">Údaje z banky k</span>
-              {{ formatBankTime(asOf) }}
-            </span>
-          }
-          <button
-            type="button"
-            class="ui-button ui-button--small bank-check-btn"
-            [disabled]="donations.checkingBank()"
-            (click)="donations.refreshFromBank()"
-            i18n="@@donor.dashboard.bank.refresh"
-          >
-            Zkontrolovat nové platby
-          </button>
-        </div>
+        <app-bank-check />
       </div>
       @if (donations.receiptError(); as error) {
         <p #receiptAlert class="ui-callout ui-callout--danger receipt-error" role="alert">
@@ -92,18 +72,22 @@
         </p>
       }
     } @else {
-      <p class="payments-empty">
-        <span i18n="@@donor.dashboard.payments.empty">Zatím tu není žádná platba.</span>&ngsp;<a
-          routerLink="/darce/ucty"
-          i18n="@@donor.dashboard.yearly.emptyStandingOrder"
-          >Posíláte trvalým příkazem?</a
-        >
-      </p>
+      <div class="payments-empty-state">
+        <p class="payments-empty" i18n="@@donor.dashboard.payments.empty">
+          Zatím tu není žádná platba.
+        </p>
+        <app-missing-gift />
+      </div>
     }
-    <p class="ui-card__footer bank-hint" i18n="@@donor.dashboard.bank.hint">
-      Nové platby hledáme v bance každou hodinu a také když otevřete tento přehled. Okamžitá platba
-      se tu obvykle objeví do minuty, běžný převod z jiné banky do dalšího pracovního dne.
-    </p>
+    <div class="ui-card__footer">
+      <p class="bank-hint" i18n="@@donor.dashboard.bank.hint">
+        Nové platby hledáme v bance každou hodinu a také když otevřete tento přehled. Okamžitá
+        platba se tu obvykle objeví do minuty, běžný převod z jiné banky do dalšího pracovního dne.
+      </p>
+      @if (donor()?.variableSymbol; as symbol) {
+        <app-standing-order class="gifts-standing" [variableSymbol]="symbol" />
+      }
+    </div>
   </div>
 } @else {
   <app-donations-pending />

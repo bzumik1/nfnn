@@ -14,7 +14,7 @@ CLAUDE_CODE_REMOTE=true CLAUDE_PROJECT_DIR=$PWD bash .claude/hooks/session-start
 Run `npm ci` again after a merge to `main` that changed a `package-lock.json`, or `format:check` may pass locally on an older Prettier than CI's.
 
 ## Playwright
-The preinstalled Chromium (`/opt/pw-browsers`) is older than the build Playwright pins, so `npm run e2e` reports a missing executable: run `npx playwright install chromium` once (about 2 minutes). `PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD` only stops the npm postinstall, not this.
+The preinstalled Chromium (`/opt/pw-browsers`) is older than the build Playwright pins, so `npm run e2e` reports a missing executable: run `npx playwright install --only-shell chromium` once (seconds: headless runs need only the headless shell, not the full browser). `PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD` only stops the npm postinstall, not this.
 
 ## Gradle (backend)
 1. Maven Central answers HTTP 429 from the cloud. Write `/tmp/mirror.gradle.kts`:
@@ -30,4 +30,5 @@ The preinstalled Chromium (`/opt/pw-browsers`) is older than the build Playwrigh
 2. Run Gradle as `LC_ALL=C.UTF-8 LANG=C.UTF-8 ./gradlew …` (run `./gradlew --stop` first if a daemon started without it): with the POSIX locale the test report fails on the Czech scenario names ("Kč") and the build fails even when every test passed. Gradle's foojay toolchain downloads JDK 25 by itself.
 3. ArchUnit or single classes, no Docker: `./gradlew test --tests "*architecture*" -PnoCucumber --init-script /tmp/mirror.gradle.kts`.
 4. Everything (Testcontainers, Cucumber): start Docker as root with `dockerd > /tmp/dockerd.log 2>&1 &` and wait until `docker info` answers (a restart of the container stops it; start it again). Docker Hub rate-limits, so `docker pull mirror.gcr.io/library/postgres:17-alpine && docker tag mirror.gcr.io/library/postgres:17-alpine postgres:17-alpine`, then `TESTCONTAINERS_HUB_IMAGE_NAME_PREFIX=mirror.gcr.io/ LC_ALL=C.UTF-8 LANG=C.UTF-8 ./gradlew test --init-script /tmp/mirror.gradle.kts` (Ryuk comes through the mirror too). Test logs sit inside the result XML's `system-out`.
+   Several agents share one container: run the full suite under `flock /tmp/nfnn-full-suite.lock` (skill `thread-workflow`).
 5. `docker build` has no registry access for `npm ci` or Gradle inside the build; the PR check builds the images.

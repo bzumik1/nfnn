@@ -1,0 +1,230 @@
+{
+  "source": "v2-baseline",
+  "feature": "donations/fio_payment_import",
+  "scenarios": {
+    "The first import asks for the last 89 days and stores only incoming payments #1": {
+      "requests": {},
+      "mails": [],
+      "logs": [
+        "DEBUG donations.application.pairing.PaymentPairingService: Bank payment 1001 stays unpaired: UNKNOWN_SENDER_ACCOUNT (variable symbol missing, sender account given)",
+        "DEBUG donations.infrastructure.fio.FioBankStatementSource: Fio movement 1001 is incoming: sender account given, payer name given, variable symbol missing",
+        "INFO donations.application.importing.ImportBankPaymentsService: Fio import STARTUP 2026-07-20/2026-10-17 completed: bank reported 2026-07-20/2026-10-17, 3 movements, 1 new incoming, 0 known, 0 paired by symbol, 0 by account, 0 by confirmed symbol, 0 accounts learned, 1 left unpaired, covered 2026-07-20/2026-10-17",
+        "INFO donations.infrastructure.fio.FioBankStatementSource: Fio answered 2026-07-20/2026-10-17: reported 2026-07-20/2026-10-17 ids 1001-1003, 3 movements",
+        "WARN donations.infrastructure.fio.FioBankStatementSource: Fio movement 1003 is in EUR, not CZK; it is not imported"
+      ]
+    },
+    "The first import reaches further back when the history is unlocked #1": {
+      "requests": {},
+      "mails": [],
+      "logs": [
+        "DEBUG donations.application.pairing.PaymentPairingService: Bank payment 1001 stays unpaired: UNKNOWN_SENDER_ACCOUNT (variable symbol missing, sender account given)",
+        "DEBUG donations.application.pairing.PaymentPairingService: Bank payment 1002 stays unpaired: UNKNOWN_SENDER_ACCOUNT (variable symbol missing, sender account given)",
+        "DEBUG donations.infrastructure.fio.FioBankStatementSource: Fio movement 1001 is incoming: sender account given, payer name given, variable symbol missing",
+        "DEBUG donations.infrastructure.fio.FioBankStatementSource: Fio movement 1002 is incoming: sender account given, payer name given, variable symbol missing",
+        "INFO donations.application.importing.ImportBankPaymentsService: Fio import STARTUP 2025-01-01/2026-10-17 completed: bank reported 2025-01-01/2026-10-17, 2 movements, 2 new incoming, 0 known, 0 paired by symbol, 0 by account, 0 by confirmed symbol, 0 accounts learned, 2 left unpaired, covered 2025-01-01/2026-10-17",
+        "INFO donations.infrastructure.fio.FioBankStatementSource: Fio answered 2025-01-01/2026-10-17: reported 2025-01-01/2026-10-17 ids 1001-1002, 2 movements"
+      ]
+    },
+    "Locked history is attempted at startup and the import falls back to the last 89 days #1": {
+      "requests": {},
+      "mails": [],
+      "logs": [
+        "DEBUG donations.application.pairing.PaymentPairingService: Bank payment 1002 stays unpaired: UNKNOWN_SENDER_ACCOUNT (variable symbol missing, sender account given)",
+        "DEBUG donations.infrastructure.fio.FioBankStatementSource: Fio movement 1002 is incoming: sender account given, payer name given, variable symbol missing",
+        "INFO donations.application.importing.ImportBankPaymentsService: Fio import HOURLY 2026-07-20/2026-10-17 completed: bank reported 2026-07-20/2026-10-17, 1 movements, 1 new incoming, 0 known, 0 paired by symbol, 0 by account, 0 by confirmed symbol, 0 accounts learned, 1 left unpaired, covered 2026-07-20/2026-10-17",
+        "INFO donations.infrastructure.fio.FioBankStatementSource: Fio answered 2026-07-20/2026-10-17: reported 2026-07-20/2026-10-17 ids 1002-1002, 1 movements"
+      ]
+    },
+    "The deep history is attempted again at the next start until it is filled #1": {
+      "requests": {},
+      "mails": [],
+      "logs": [
+        "DEBUG donations.application.pairing.PaymentPairingService: Bank payment 1001 stays unpaired: UNKNOWN_SENDER_ACCOUNT (variable symbol missing, sender account given)",
+        "DEBUG donations.application.pairing.PaymentPairingService: Bank payment 1001 stays unpaired: UNKNOWN_SENDER_ACCOUNT (variable symbol missing, sender account given)",
+        "DEBUG donations.application.pairing.PaymentPairingService: Bank payment 1002 stays unpaired: UNKNOWN_SENDER_ACCOUNT (variable symbol missing, sender account given)",
+        "DEBUG donations.application.pairing.PaymentPairingService: Bank payment 1002 stays unpaired: UNKNOWN_SENDER_ACCOUNT (variable symbol missing, sender account given)",
+        "DEBUG donations.application.pairing.PaymentPairingService: Bank payment 1002 stays unpaired: UNKNOWN_SENDER_ACCOUNT (variable symbol missing, sender account given)",
+        "DEBUG donations.infrastructure.fio.FioBankStatementSource: Fio movement 1001 is incoming: sender account given, payer name given, variable symbol missing",
+        "DEBUG donations.infrastructure.fio.FioBankStatementSource: Fio movement 1002 is incoming: sender account given, payer name given, variable symbol missing",
+        "DEBUG donations.infrastructure.fio.FioBankStatementSource: Fio movement 1002 is incoming: sender account given, payer name given, variable symbol missing",
+        "DEBUG donations.infrastructure.fio.FioBankStatementSource: Fio movement 1002 is incoming: sender account given, payer name given, variable symbol missing",
+        "INFO donations.application.importing.ImportBankPaymentsService: Fio import HOURLY 2026-07-20/2026-10-17 completed: bank reported 2026-07-20/2026-10-17, 1 movements, 1 new incoming, 0 known, 0 paired by symbol, 0 by account, 0 by confirmed symbol, 0 accounts learned, 1 left unpaired, covered 2026-07-20/2026-10-17",
+        "INFO donations.application.importing.ImportBankPaymentsService: Fio import STARTUP 2025-01-01/2026-10-17 completed: bank reported 2025-01-01/2026-10-17, 2 movements, 1 new incoming, 1 known, 0 paired by symbol, 0 by account, 0 by confirmed symbol, 0 accounts learned, 2 left unpaired, covered 2025-01-01/2026-10-17",
+        "INFO donations.application.importing.ImportBankPaymentsService: Fio import STARTUP 2026-10-14/2026-10-17 completed: bank reported 2025-01-01/2026-10-17, 1 movements, 0 new incoming, 1 known, 0 paired by symbol, 0 by account, 0 by confirmed symbol, 0 accounts learned, 2 left unpaired, covered 2025-01-01/2026-10-17",
+        "INFO donations.infrastructure.fio.FioBankStatementSource: Fio answered 2025-01-01/2026-10-17: reported 2025-01-01/2026-10-17 ids 1001-1002, 2 movements",
+        "INFO donations.infrastructure.fio.FioBankStatementSource: Fio answered 2026-07-20/2026-10-17: reported 2026-07-20/2026-10-17 ids 1002-1002, 1 movements",
+        "INFO donations.infrastructure.fio.FioBankStatementSource: Fio answered 2026-10-14/2026-10-17: reported 2025-01-01/2026-10-17 ids 1002-1002, 1 movements",
+        "WARN donations.application.importing.BankStatementRecorder: Fio reported 2025-01-01/2026-10-17 for a request of 2026-10-14/2026-10-17"
+      ]
+    },
+    "An hourly import asks only for the days since the last run with a three-day overlap #1": {
+      "requests": {},
+      "mails": [],
+      "logs": [
+        "DEBUG donations.application.pairing.PaymentPairingService: Bank payment 1001 stays unpaired: UNKNOWN_SENDER_ACCOUNT (variable symbol missing, sender account given)",
+        "DEBUG donations.application.pairing.PaymentPairingService: Bank payment 1001 stays unpaired: UNKNOWN_SENDER_ACCOUNT (variable symbol missing, sender account given)",
+        "DEBUG donations.infrastructure.fio.FioBankStatementSource: Fio movement 1001 is incoming: sender account given, payer name given, variable symbol missing",
+        "DEBUG donations.infrastructure.fio.FioBankStatementSource: Fio movement 1001 is incoming: sender account given, payer name given, variable symbol missing",
+        "INFO donations.application.importing.ImportBankPaymentsService: Fio import HOURLY 2026-10-14/2026-10-18 completed: bank reported 2026-10-14/2026-10-18, 1 movements, 0 new incoming, 1 known, 0 paired by symbol, 0 by account, 0 by confirmed symbol, 0 accounts learned, 1 left unpaired, covered 2026-07-20/2026-10-18",
+        "INFO donations.application.importing.ImportBankPaymentsService: Fio import STARTUP 2026-07-20/2026-10-17 completed: bank reported 2026-07-20/2026-10-17, 1 movements, 1 new incoming, 0 known, 0 paired by symbol, 0 by account, 0 by confirmed symbol, 0 accounts learned, 1 left unpaired, covered 2026-07-20/2026-10-17",
+        "INFO donations.infrastructure.fio.FioBankStatementSource: Fio answered 2026-07-20/2026-10-17: reported 2026-07-20/2026-10-17 ids 1001-1001, 1 movements",
+        "INFO donations.infrastructure.fio.FioBankStatementSource: Fio answered 2026-10-14/2026-10-18: reported 2026-10-14/2026-10-18 ids 1001-1001, 1 movements"
+      ]
+    },
+    "An hourly import does not ask for the pending deep history #1": {
+      "requests": {},
+      "mails": [],
+      "logs": [
+        "DEBUG donations.application.pairing.PaymentPairingService: Bank payment 1001 stays unpaired: UNKNOWN_SENDER_ACCOUNT (variable symbol missing, sender account given)",
+        "DEBUG donations.application.pairing.PaymentPairingService: Bank payment 1001 stays unpaired: UNKNOWN_SENDER_ACCOUNT (variable symbol missing, sender account given)",
+        "DEBUG donations.infrastructure.fio.FioBankStatementSource: Fio movement 1001 is incoming: sender account given, payer name given, variable symbol missing",
+        "DEBUG donations.infrastructure.fio.FioBankStatementSource: Fio movement 1001 is incoming: sender account given, payer name given, variable symbol missing",
+        "INFO donations.application.importing.ImportBankPaymentsService: Fio import HOURLY 2026-07-20/2026-10-17 completed: bank reported 2026-07-20/2026-10-17, 1 movements, 1 new incoming, 0 known, 0 paired by symbol, 0 by account, 0 by confirmed symbol, 0 accounts learned, 1 left unpaired, covered 2026-07-20/2026-10-17",
+        "INFO donations.application.importing.ImportBankPaymentsService: Fio import HOURLY 2026-10-14/2026-10-18 completed: bank reported 2026-10-14/2026-10-18, 1 movements, 0 new incoming, 1 known, 0 paired by symbol, 0 by account, 0 by confirmed symbol, 0 accounts learned, 1 left unpaired, covered 2026-07-20/2026-10-18",
+        "INFO donations.infrastructure.fio.FioBankStatementSource: Fio answered 2026-07-20/2026-10-17: reported 2026-07-20/2026-10-17 ids 1001-1001, 1 movements",
+        "INFO donations.infrastructure.fio.FioBankStatementSource: Fio answered 2026-10-14/2026-10-18: reported 2026-10-14/2026-10-18 ids 1001-1001, 1 movements"
+      ]
+    },
+    "A movement delivered twice is stored once #1": {
+      "requests": {},
+      "mails": [],
+      "logs": [
+        "DEBUG donations.application.pairing.PaymentPairingService: Bank payment 1001 stays unpaired: UNKNOWN_SENDER_ACCOUNT (variable symbol missing, sender account given)",
+        "DEBUG donations.application.pairing.PaymentPairingService: Bank payment 1001 stays unpaired: UNKNOWN_SENDER_ACCOUNT (variable symbol missing, sender account given)",
+        "DEBUG donations.infrastructure.fio.FioBankStatementSource: Fio movement 1001 is incoming: sender account given, payer name given, variable symbol missing",
+        "DEBUG donations.infrastructure.fio.FioBankStatementSource: Fio movement 1001 is incoming: sender account given, payer name given, variable symbol missing",
+        "INFO donations.application.importing.ImportBankPaymentsService: Fio import HOURLY 2026-10-14/2026-10-18 completed: bank reported 2026-10-14/2026-10-18, 1 movements, 0 new incoming, 1 known, 0 paired by symbol, 0 by account, 0 by confirmed symbol, 0 accounts learned, 1 left unpaired, covered 2026-07-20/2026-10-18",
+        "INFO donations.application.importing.ImportBankPaymentsService: Fio import STARTUP 2026-07-20/2026-10-17 completed: bank reported 2026-07-20/2026-10-17, 1 movements, 1 new incoming, 0 known, 0 paired by symbol, 0 by account, 0 by confirmed symbol, 0 accounts learned, 1 left unpaired, covered 2026-07-20/2026-10-17",
+        "INFO donations.infrastructure.fio.FioBankStatementSource: Fio answered 2026-07-20/2026-10-17: reported 2026-07-20/2026-10-17 ids 1001-1001, 1 movements",
+        "INFO donations.infrastructure.fio.FioBankStatementSource: Fio answered 2026-10-14/2026-10-18: reported 2026-10-14/2026-10-18 ids 1001-1001, 1 movements"
+      ]
+    },
+    "The requested period is covered even when the bank reports only the days with movements #1": {
+      "requests": {},
+      "mails": [],
+      "logs": [
+        "DEBUG donations.application.pairing.PaymentPairingService: Bank payment 1001 stays unpaired: UNKNOWN_SENDER_ACCOUNT (variable symbol missing, sender account given)",
+        "DEBUG donations.infrastructure.fio.FioBankStatementSource: Fio movement 1001 is incoming: sender account given, payer name given, variable symbol missing",
+        "INFO donations.application.importing.ImportBankPaymentsService: Fio import HOURLY 2026-10-12/2026-10-18 completed: bank reported 2026-10-18/2026-10-18, 1 movements, 1 new incoming, 0 known, 0 paired by symbol, 0 by account, 0 by confirmed symbol, 0 accounts learned, 1 left unpaired, covered 2026-07-18/2026-10-18",
+        "INFO donations.application.importing.ImportBankPaymentsService: Fio import STARTUP 2026-07-18/2026-10-15 completed: bank reported 2026-07-18/2026-10-15, 0 movements, 0 new incoming, 0 known, 0 paired by symbol, 0 by account, 0 by confirmed symbol, 0 accounts learned, 0 left unpaired, covered 2026-07-18/2026-10-15",
+        "INFO donations.infrastructure.fio.FioBankStatementSource: Fio answered 2026-07-18/2026-10-15: reported 2026-07-18/2026-10-15 ids null-null, 0 movements",
+        "INFO donations.infrastructure.fio.FioBankStatementSource: Fio answered 2026-10-12/2026-10-18: reported 2026-10-18/2026-10-18 ids 1001-1001, 1 movements"
+      ]
+    },
+    "A deep import is covered from the day the bank reports #1": {
+      "requests": {},
+      "mails": [],
+      "logs": [
+        "DEBUG donations.application.pairing.PaymentPairingService: Bank payment 1001 stays unpaired: UNKNOWN_SENDER_ACCOUNT (variable symbol missing, sender account given)",
+        "DEBUG donations.infrastructure.fio.FioBankStatementSource: Fio movement 1001 is incoming: sender account given, payer name given, variable symbol missing",
+        "INFO donations.application.importing.ImportBankPaymentsService: Fio import STARTUP 2025-01-01/2026-10-17 completed: bank reported 2025-02-03/2026-10-17, 1 movements, 1 new incoming, 0 known, 0 paired by symbol, 0 by account, 0 by confirmed symbol, 0 accounts learned, 1 left unpaired, covered 2025-02-03/2026-10-17",
+        "INFO donations.infrastructure.fio.FioBankStatementSource: Fio answered 2025-01-01/2026-10-17: reported 2025-02-03/2026-10-17 ids 1001-1001, 1 movements"
+      ]
+    },
+    "A download refused by the 30-second limit changes nothing and is retried after the bank's retry time #1": {
+      "requests": {},
+      "mails": [],
+      "logs": [
+        "DEBUG donations.application.pairing.PaymentPairingService: Bank payment 1001 stays unpaired: UNKNOWN_SENDER_ACCOUNT (variable symbol missing, sender account given)",
+        "DEBUG donations.application.pairing.PaymentPairingService: Bank payment 1001 stays unpaired: UNKNOWN_SENDER_ACCOUNT (variable symbol missing, sender account given)",
+        "DEBUG donations.application.pairing.PaymentPairingService: Bank payment 1002 stays unpaired: UNKNOWN_SENDER_ACCOUNT (variable symbol missing, sender account given)",
+        "DEBUG donations.infrastructure.fio.FioBankStatementSource: Fio movement 1001 is incoming: sender account given, payer name given, variable symbol missing",
+        "DEBUG donations.infrastructure.fio.FioBankStatementSource: Fio movement 1001 is incoming: sender account given, payer name given, variable symbol missing",
+        "DEBUG donations.infrastructure.fio.FioBankStatementSource: Fio movement 1002 is incoming: sender account given, payer name given, variable symbol missing",
+        "INFO donations.application.importing.ImportBankPaymentsService: Fio import HOURLY 2026-10-14/2026-10-18 completed: bank reported 2026-10-14/2026-10-18, 2 movements, 1 new incoming, 1 known, 0 paired by symbol, 0 by account, 0 by confirmed symbol, 0 accounts learned, 2 left unpaired, covered 2026-07-20/2026-10-18",
+        "INFO donations.application.importing.ImportBankPaymentsService: Fio import STARTUP 2026-07-20/2026-10-17 completed: bank reported 2026-07-20/2026-10-17, 1 movements, 1 new incoming, 0 known, 0 paired by symbol, 0 by account, 0 by confirmed symbol, 0 accounts learned, 1 left unpaired, covered 2026-07-20/2026-10-17",
+        "INFO donations.infrastructure.fio.FioBankStatementSource: Fio answered 2026-07-20/2026-10-17: reported 2026-07-20/2026-10-17 ids 1001-1001, 1 movements",
+        "INFO donations.infrastructure.fio.FioBankStatementSource: Fio answered 2026-10-14/2026-10-18: reported 2026-10-14/2026-10-18 ids 1001-1002, 2 movements"
+      ]
+    },
+    "A rejected token is recorded as an authorization failure and the coverage is unchanged #1": {
+      "requests": {},
+      "mails": [
+        {
+          "from": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "to": [
+            "info@nfnn.cz"
+          ],
+          "replyTo": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "subject": "Stahování plateb z banky selhává – Nová naděje",
+          "text": "Dobrý den,\n\nFio 18. 10. 2026 12:00 odmítlo token, kterým web Nová naděje stahuje platby z účtu fondu.\n\nToken chybí, ještě neplatí nebo vypršel (platí 180 dní).\n\nV internetovém bankovnictví Fio (Nastavení → API) vytvořte nový token typu „Sledování účtu“ a vložte ho ve správě webu v části Nastavení jako Token Fio API.\n\nPoslední úspěšné stažení plateb z banky: 17. 10. 2026 12:00\n\nDokud porucha trvá, nové dary se dárcům v portálu neukážou a potvrzení o daru za ně nevydáme.\n\nAž se stahování obnoví, pošleme ještě jednu zprávu; do té doby už tuto zprávu neopakujeme.\n\nNová naděje – nadační fond\n\nTuto zprávu posílá web automaticky, když stahování plateb z banky selže třikrát za sebou nebo když Fio odmítne token, a znovu, až se stahování obnoví.\n",
+          "html": {
+            "text": "Stahování plateb z banky selhává Dobrý den, Fio 18. 10. 2026 12:00 odmítlo token, kterým web Nová naděje stahuje platby z účtu fondu. Token chybí, ještě neplatí nebo vypršel (platí 180 dní). V internetovém bankovnictví Fio (Nastavení → API) vytvořte nový token typu „Sledování účtu“ a vložte ho ve správě webu v části Nastavení jako Token Fio API. Poslední úspěšné stažení plateb z banky: 17. 10. 2026 12:00 Dokud porucha trvá, nové dary se dárcům v portálu neukážou a potvrzení o daru za ně nevydáme. Až se stahování obnoví, pošleme ještě jednu zprávu; do té doby už tuto zprávu neopakujeme. S pozdravem Nová naděje – nadační fond Tuto zprávu posílá web automaticky, když stahování plateb z banky selže třikrát za sebou nebo když Fio odmítne token, a znovu, až se stahování obnoví. Nová naděje – nadační fond · IČO 27278794 · Jiráskova 436, 473 01 Nový Bor localhost",
+            "links": [
+              "http://localhost:4200"
+            ],
+            "sha256": "808bf5d02527a1777cbd355e4e060afa142b032f849a0d72919500eee11242be"
+          },
+          "attachments": [
+            {
+              "fileName": "inline",
+              "contentType": "image/png",
+              "size": 41502,
+              "sha256": "aecbb8a4c043690e9918174f51cd419a3f1c02d34161454fe40e759db6e7dfcb"
+            }
+          ]
+        }
+      ],
+      "logs": [
+        "ERROR donations.application.importing.BankStatementRecorder: Fio import outage: UNAUTHORIZED failed 1 times in a row, the foundation is being told",
+        "INFO donations.application.importing.ImportBankPaymentsService: Fio import STARTUP 2026-07-20/2026-10-17 completed: bank reported 2026-07-20/2026-10-17, 0 movements, 0 new incoming, 0 known, 0 paired by symbol, 0 by account, 0 by confirmed symbol, 0 accounts learned, 0 left unpaired, covered 2026-07-20/2026-10-17",
+        "INFO donations.infrastructure.fio.FioBankStatementSource: Fio answered 2026-07-20/2026-10-17: reported 2026-07-20/2026-10-17 ids null-null, 0 movements",
+        "INFO donations.infrastructure.report.ImportAlertEmailSender: Fio import alert e-mail sent: outage UNAUTHORIZED"
+      ]
+    },
+    "A download that times out leaves the coverage unchanged so the next run asks again #1": {
+      "requests": {},
+      "mails": [],
+      "logs": [
+        "INFO donations.application.importing.ImportBankPaymentsService: Fio import HOURLY 2026-10-14/2026-10-18 completed: bank reported 2026-10-14/2026-10-18, 0 movements, 0 new incoming, 0 known, 0 paired by symbol, 0 by account, 0 by confirmed symbol, 0 accounts learned, 0 left unpaired, covered 2026-07-20/2026-10-18",
+        "INFO donations.application.importing.ImportBankPaymentsService: Fio import STARTUP 2026-07-20/2026-10-17 completed: bank reported 2026-07-20/2026-10-17, 0 movements, 0 new incoming, 0 known, 0 paired by symbol, 0 by account, 0 by confirmed symbol, 0 accounts learned, 0 left unpaired, covered 2026-07-20/2026-10-17",
+        "INFO donations.infrastructure.fio.FioBankStatementSource: Fio answered 2026-07-20/2026-10-17: reported 2026-07-20/2026-10-17 ids null-null, 0 movements",
+        "INFO donations.infrastructure.fio.FioBankStatementSource: Fio answered 2026-10-14/2026-10-18: reported 2026-10-14/2026-10-18 ids null-null, 0 movements"
+      ]
+    },
+    "A payment whose variable symbol has leading zeros keeps the symbol as sent and is matched without them #1": {
+      "requests": {},
+      "mails": [],
+      "logs": [
+        "DEBUG donations.application.pairing.PaymentPairingService: Bank payment 1001 stays unpaired: UNKNOWN_VARIABLE_SYMBOL (variable symbol given, sender account given)",
+        "DEBUG donations.application.pairing.PaymentPairingService: Bank payment 1002 stays unpaired: UNKNOWN_SENDER_ACCOUNT (variable symbol given, sender account given)",
+        "DEBUG donations.infrastructure.fio.FioBankStatementSource: Fio movement 1001 is incoming: sender account given, payer name given, variable symbol given",
+        "DEBUG donations.infrastructure.fio.FioBankStatementSource: Fio movement 1002 is incoming: sender account given, payer name given, variable symbol given",
+        "INFO donations.application.importing.ImportBankPaymentsService: Fio import STARTUP 2026-07-20/2026-10-17 completed: bank reported 2026-07-20/2026-10-17, 2 movements, 2 new incoming, 0 known, 0 paired by symbol, 0 by account, 0 by confirmed symbol, 0 accounts learned, 2 left unpaired, covered 2026-07-20/2026-10-17",
+        "INFO donations.infrastructure.fio.FioBankStatementSource: Fio answered 2026-07-20/2026-10-17: reported 2026-07-20/2026-10-17 ids 1001-1002, 2 movements"
+      ]
+    },
+    "A payment with overlong texts from the bank is stored with the texts cut to size #1": {
+      "requests": {},
+      "mails": [],
+      "logs": [
+        "DEBUG donations.application.pairing.PaymentPairingService: Bank payment 1001 stays unpaired: NO_IDENTIFICATION (variable symbol missing, sender account missing)",
+        "DEBUG donations.infrastructure.fio.FioBankStatementSource: Fio movement 1001 is incoming: sender account given, payer name given, variable symbol missing",
+        "INFO donations.application.importing.ImportBankPaymentsService: Fio import STARTUP 2026-07-20/2026-10-17 completed: bank reported 2026-07-20/2026-10-17, 1 movements, 1 new incoming, 0 known, 0 paired by symbol, 0 by account, 0 by confirmed symbol, 0 accounts learned, 1 left unpaired, covered 2026-07-20/2026-10-17",
+        "INFO donations.infrastructure.fio.FioBankStatementSource: Fio answered 2026-07-20/2026-10-17: reported 2026-07-20/2026-10-17 ids 1001-1001, 1 movements"
+      ]
+    },
+    "The bank-side bookmark is never used #1": {
+      "requests": {},
+      "mails": [],
+      "logs": [
+        "DEBUG donations.application.pairing.PaymentPairingService: Bank payment 1001 stays unpaired: UNKNOWN_SENDER_ACCOUNT (variable symbol missing, sender account given)",
+        "DEBUG donations.application.pairing.PaymentPairingService: Bank payment 1001 stays unpaired: UNKNOWN_SENDER_ACCOUNT (variable symbol missing, sender account given)",
+        "DEBUG donations.application.pairing.PaymentPairingService: Bank payment 1001 stays unpaired: UNKNOWN_SENDER_ACCOUNT (variable symbol missing, sender account given)",
+        "DEBUG donations.infrastructure.fio.FioBankStatementSource: Fio movement 1001 is incoming: sender account given, payer name given, variable symbol missing",
+        "DEBUG donations.infrastructure.fio.FioBankStatementSource: Fio movement 1001 is incoming: sender account given, payer name given, variable symbol missing",
+        "DEBUG donations.infrastructure.fio.FioBankStatementSource: Fio movement 1001 is incoming: sender account given, payer name given, variable symbol missing",
+        "INFO donations.application.importing.ImportBankPaymentsService: Fio import HOURLY 2026-10-14/2026-10-18 completed: bank reported 2026-10-14/2026-10-18, 1 movements, 0 new incoming, 1 known, 0 paired by symbol, 0 by account, 0 by confirmed symbol, 0 accounts learned, 1 left unpaired, covered 2026-07-20/2026-10-18",
+        "INFO donations.application.importing.ImportBankPaymentsService: Fio import HOURLY 2026-10-15/2026-10-19 completed: bank reported 2026-10-15/2026-10-19, 1 movements, 0 new incoming, 1 known, 0 paired by symbol, 0 by account, 0 by confirmed symbol, 0 accounts learned, 1 left unpaired, covered 2026-07-20/2026-10-19",
+        "INFO donations.application.importing.ImportBankPaymentsService: Fio import STARTUP 2026-07-20/2026-10-17 completed: bank reported 2026-07-20/2026-10-17, 1 movements, 1 new incoming, 0 known, 0 paired by symbol, 0 by account, 0 by confirmed symbol, 0 accounts learned, 1 left unpaired, covered 2026-07-20/2026-10-17",
+        "INFO donations.infrastructure.fio.FioBankStatementSource: Fio answered 2026-07-20/2026-10-17: reported 2026-07-20/2026-10-17 ids 1001-1001, 1 movements",
+        "INFO donations.infrastructure.fio.FioBankStatementSource: Fio answered 2026-10-14/2026-10-18: reported 2026-10-14/2026-10-18 ids 1001-1001, 1 movements",
+        "INFO donations.infrastructure.fio.FioBankStatementSource: Fio answered 2026-10-15/2026-10-19: reported 2026-10-15/2026-10-19 ids 1001-1001, 1 movements"
+      ]
+    }
+  }
+}

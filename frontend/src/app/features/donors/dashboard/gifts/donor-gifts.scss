@@ -10,18 +10,6 @@
   gap: var(--space-2) var(--space-4);
 }
 
-.bank-check {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2) var(--space-3);
-}
-
-.bank-check-status {
-  font-size: var(--text-sm);
-  color: var(--color-text-soft);
-}
-
 .gift-year + .gift-year {
   border-top: 1px solid var(--color-divider);
 }
@@ -60,14 +48,17 @@
   color: var(--color-text-soft);
 }
 
-.payments-empty {
+.payments-empty-state {
   padding: var(--space-6);
+}
+
+.payments-empty {
   text-align: center;
   font-size: var(--text-md);
   line-height: var(--leading-relaxed);
   color: var(--color-text-soft);
 }
 
-a {
-  color: var(--color-accent);
+.gifts-standing {
+  margin-top: var(--space-2);
 }

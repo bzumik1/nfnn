@@ -146,6 +146,17 @@ test.describe('Given an administrator on the backups page', () => {
       },
     );
 
+    await page.addInitScript(() => {
+      const stored: { id: string; password: string }[] = [];
+      Object.assign(window, { storedCredentials: stored });
+      Object.defineProperty(navigator.credentials, 'store', {
+        value: (credential: PasswordCredential) => {
+          stored.push({ id: credential.id, password: credential.password ?? '' });
+          return Promise.resolve(credential);
+        },
+      });
+    });
+
     await page.goto('/sprava/zalohy');
     await expect(page.getByText('Klíč si zatím nikdo neuložil.')).toBeVisible();
     await page.getByRole('button', { name: 'Zobrazit klíč…' }).click();
@@ -162,6 +173,11 @@ test.describe('Given an administrator on the backups page', () => {
     await expect(page.getByRole('list', { name: 'Klíč k zálohám je těchto 24 slov' })).toHaveCount(
       0,
     );
+    expect(
+      await page.evaluate(
+        () => (window as unknown as { storedCredentials: unknown[] }).storedCredentials,
+      ),
+    ).toEqual([{ id: 'Klíč k zálohám', password: key }]);
     await page.getByLabel('2. slovo klíče', { exact: true }).fill('komora');
     await page.getByLabel('13. slovo klíče', { exact: true }).fill('moti');
     await page.getByLabel('24. slovo klíče', { exact: true }).fill('studna');
