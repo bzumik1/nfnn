@@ -15,6 +15,7 @@ export interface QrSymbol extends QrMatrix {
 }
 
 const MAX_VERSION = 40;
+const LONGEST_QR_TEXT = 7089;
 const ISO_8859_1_ECI = 1;
 const LARGEST_ONE_BYTE_ECI = 127;
 const LARGEST_LATIN1_CODE = 0xff;
@@ -108,6 +109,7 @@ const MASKS: readonly ((column: number, row: number) => boolean)[] = [
 ];
 
 export function encodeText(text: string, errorCorrection: QrErrorCorrection): QrSymbol {
+  refuseLongerThanAnyQr(text);
   return encodeSegments(textSegments(text), errorCorrection);
 }
 
@@ -146,6 +148,7 @@ export function textSegments(text: string): readonly QrSegment[] {
 }
 
 export function numericSegment(digits: string): QrSegment {
+  refuseLongerThanAnyQr(digits);
   if (!DIGITS.test(digits)) {
     throw new Error('A numeric QR segment holds digits only');
   }
@@ -158,6 +161,7 @@ export function numericSegment(digits: string): QrSegment {
 }
 
 export function alphanumericSegment(text: string): QrSegment {
+  refuseLongerThanAnyQr(text);
   if (!Array.from(text).every((character) => isAlphanumeric(character))) {
     throw new Error('An alphanumeric QR segment holds only 0-9, A-Z, space and $%*+-./:');
   }
@@ -175,6 +179,7 @@ export function alphanumericSegment(text: string): QrSegment {
 }
 
 export function byteSegment(text: string): QrSegment {
+  refuseLongerThanAnyQr(text);
   const bits: number[] = [];
   for (let index = 0; index < text.length; index++) {
     const code = text.charCodeAt(index);
@@ -191,6 +196,12 @@ export function eciSegment(assignment: number): QrSegment {
     throw new Error('An ECI header takes an assignment number from 0 to 127');
   }
   return { mode: 'ECI', assignment };
+}
+
+function refuseLongerThanAnyQr(text: string): void {
+  if (text.length > LONGEST_QR_TEXT) {
+    throw new Error(`A QR code holds at most ${LONGEST_QR_TEXT} characters`);
+  }
 }
 
 function isAlphanumeric(character: string): boolean {

@@ -27,7 +27,7 @@ Before building, read the sections you touch (grep them: `api-contract.md` is to
 | **Frontend, in `frontend/`** (Node ^22.22.3, ^24.15 or ≥ 26; CI and the images use 24) | |
 | `npm ci`, `npm start` | dependencies; dev server :4200 with `/api` proxied to :8080 |
 | `npm run format`, `npm run format:check` | Prettier over `src/`, `e2e/` and the config files |
-| `npm run lint` | ESLint (angular-eslint): TypeScript, templates and their accessibility |
+| `npm run lint` | ESLint (angular-eslint): TypeScript, templates and their accessibility, and `tsc` over the Vitest setup |
 | `npm run lint:styles` | Stylelint: component styles use theme tokens only |
 | `npm test -- --watch=false` | Vitest |
 | `npm run build` | production build to `dist/frontend/browser/` |

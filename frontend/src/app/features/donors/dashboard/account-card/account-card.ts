@@ -105,7 +105,14 @@ export class AccountCard {
   protected readonly enrolment = signal<SecondFactorEnrolment | null>(null);
   protected readonly enrolmentQr = computed(() => {
     const otpauthUri = this.enrolment()?.otpauthUri;
-    return otpauthUri === undefined ? null : encodeText(otpauthUri, AUTHENTICATOR_QR_LEVEL);
+    if (otpauthUri === undefined) {
+      return null;
+    }
+    try {
+      return encodeText(otpauthUri, AUTHENTICATOR_QR_LEVEL);
+    } catch {
+      return null;
+    }
   });
   protected readonly groupedSecret = computed(() => {
     const secret = this.enrolment()?.secret ?? '';

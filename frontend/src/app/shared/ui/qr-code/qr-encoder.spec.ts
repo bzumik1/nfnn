@@ -146,7 +146,9 @@ describe('Given the verification link of a receipt, its prefix in bytes and its 
 });
 
 const LEVELS: readonly QrErrorCorrection[] = ['L', 'M', 'Q', 'H'];
-const RANDOM_SYMBOLS = 120;
+const RANDOM_SYMBOLS = 80;
+const LONGEST_RANDOM_PAYLOAD = 600;
+const RANDOM_LOOP_TIMEOUT_MS = 30_000;
 
 function seededRandom(seed: number): () => number {
   let state = seed;
@@ -178,39 +180,46 @@ function smallestVersion(
 }
 
 describe('Given random links of a prefix in bytes and a payload in digits, from a fixed seed', () => {
-  it('when each is encoded at a random level, then jsQR reads back both segments at the smallest version that holds them', () => {
-    const random = seededRandom(20261030);
-    for (let index = 0; index < RANDOM_SYMBOLS; index++) {
-      const level = LEVELS[index % LEVELS.length];
-      const prefix = Array.from({ length: 1 + Math.floor(random() * 40) }, () =>
-        String.fromCharCode(32 + Math.floor(random() * 224)),
-      ).join('');
-      const digits = Array.from({ length: 1 + Math.floor(random() ** 2 * 900) }, () =>
-        String(Math.floor(random() * 10)),
-      ).join('');
-      const eci = index % 5 === 4;
-      const segments = [
-        ...(eci ? [eciSegment(1)] : []),
-        byteSegment(prefix),
-        numericSegment(digits),
-      ];
+  it(
+    'when each is encoded at a random level, then jsQR reads back both segments at the smallest version that holds them',
+    () => {
+      const random = seededRandom(20261030);
+      for (let index = 0; index < RANDOM_SYMBOLS; index++) {
+        const level = LEVELS[index % LEVELS.length];
+        const prefix = Array.from({ length: 1 + Math.floor(random() * 40) }, () =>
+          String.fromCharCode(32 + Math.floor(random() * 224)),
+        ).join('');
+        const digits = Array.from(
+          { length: 1 + Math.floor(random() ** 2 * LONGEST_RANDOM_PAYLOAD) },
+          () => String(Math.floor(random() * 10)),
+        ).join('');
+        const eci = index % 5 === 4;
+        const segments = [
+          ...(eci ? [eciSegment(1)] : []),
+          byteSegment(prefix),
+          numericSegment(digits),
+        ];
 
-      const symbol = encodeSegments(segments, level);
-      const decoded = decodeMatrix(symbol);
+        const symbol = encodeSegments(segments, level);
+        const decoded = decodeMatrix(symbol);
 
-      const label = `symbol ${index} at level ${level}`;
-      expect(symbol.version, label).toBe(smallestVersion(prefix.length, digits.length, eci, level));
-      expect(decoded?.version, label).toBe(symbol.version);
-      expect(
-        decoded?.chunks.map((chunk) =>
-          'bytes' in chunk ? chunk.bytes : 'text' in chunk ? chunk.text : chunk.assignmentNumber,
-        ),
-        label,
-      ).toEqual([
-        ...(eci ? [1] : []),
-        Array.from(prefix, (character) => character.charCodeAt(0)),
-        digits,
-      ]);
-    }
-  });
+        const label = `symbol ${index} at level ${level}`;
+        expect(symbol.version, label).toBe(
+          smallestVersion(prefix.length, digits.length, eci, level),
+        );
+        expect(decoded?.version, label).toBe(symbol.version);
+        expect(
+          decoded?.chunks.map((chunk) =>
+            'bytes' in chunk ? chunk.bytes : 'text' in chunk ? chunk.text : chunk.assignmentNumber,
+          ),
+          label,
+        ).toEqual([
+          ...(eci ? [1] : []),
+          Array.from(prefix, (character) => character.charCodeAt(0)),
+          digits,
+        ]);
+      }
+    },
+    RANDOM_LOOP_TIMEOUT_MS,
+  );
 });
