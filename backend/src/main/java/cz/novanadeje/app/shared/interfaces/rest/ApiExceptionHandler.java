@@ -6,6 +6,8 @@ import cz.novanadeje.app.shared.domain.error.Conflict;
 import cz.novanadeje.app.shared.domain.error.DomainException;
 import cz.novanadeje.app.shared.domain.error.NotFound;
 import cz.novanadeje.app.shared.domain.error.RuleViolation;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.TypeMismatchException;
 import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
@@ -35,6 +37,8 @@ import java.util.Map;
 
 @RestControllerAdvice
 public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
+
+    private static final Logger log = LoggerFactory.getLogger(ApiExceptionHandler.class);
 
     private ProblemMessages texts;
 
@@ -104,6 +108,7 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
 
     @ExceptionHandler(IllegalArgumentException.class)
     ProblemDetail handleIllegalArgument(IllegalArgumentException ex) {
+        log.warn("Refused a value as validation ({} thrown at {})", ex.getClass().getSimpleName(), thrownAt(ex));
         ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
         problem.setType(ProblemTypes.VALIDATION);
         problem.setTitle(message("problem.validation.title", HttpStatus.BAD_REQUEST.getReasonPhrase()));
@@ -122,6 +127,14 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
     @ExceptionHandler(AccessDeniedException.class)
     ProblemDetail handleAccessDenied(AccessDeniedException ex) {
         return problem(HttpStatus.FORBIDDEN, ProblemTypes.FORBIDDEN, "problem.forbidden.title");
+    }
+
+    private static String thrownAt(Throwable ex) {
+        StackTraceElement[] frames = ex.getStackTrace();
+        if (frames.length == 0) {
+            return "an unknown frame";
+        }
+        return frames[0].getClassName() + "." + frames[0].getMethodName() + ":" + frames[0].getLineNumber();
     }
 
     private static boolean isExpiredToken(AuthenticationException ex) {
