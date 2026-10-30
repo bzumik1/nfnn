@@ -11,6 +11,7 @@ import {
   BackupRunResponse,
   BackupScheduleResponse,
   AdminDonorDetailResponse,
+  AdminIssuedReceiptResponse,
   AdminOverviewResponse,
   AdminReportResponse,
   AdminSettingResponse,
@@ -257,6 +258,31 @@ export function donorDetail(
         donationReceivedOn: '2026-10-10',
       }),
     ],
+    yearlyReceiptsAvailableThrough: 2025,
+    receiptsAvailableFrom: 2026,
+    ...overrides,
+  };
+}
+
+export function issuedReceipt(
+  overrides: Partial<AdminIssuedReceiptResponse> = {},
+): AdminIssuedReceiptResponse {
+  return {
+    id: '019a1c00-0000-7000-8000-00000000f002',
+    donorId: '01a18e56-bdb0-775a-bd0a-a60756831369',
+    status: 'ACTIVE',
+    kind: 'SINGLE',
+    number: '2026-000002',
+    donationId: '0192f0f1-0000-7000-8000-000000000001',
+    year: null,
+    issuedAt: '2026-10-17T09:00:00Z',
+    supersededAt: null,
+    receipt: {
+      number: '2026-000002',
+      issuedOn: '2026-10-17',
+      replaces: null,
+      verification: { keyId: '21fe31df', qrText: 'https://nfnn.cz/overit#1003188506188208' },
+    },
     ...overrides,
   };
 }
