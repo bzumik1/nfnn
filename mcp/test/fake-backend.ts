@@ -162,7 +162,7 @@ function adminRoute(request: RecordedRequest, url: URL, body: string): [number, 
       return [
         200,
         {
-          from: url.searchParams.get('from'),
+          from: url.searchParams.get('from') ?? '2026-10-28T20:14:00Z',
           payments: { count: 5, totalMinor: 1250000, currency: 'CZK' },
           paired: { count: 3, totalMinor: 750000, currency: 'CZK' },
           unpaired: { count: 2, totalMinor: 500000, currency: 'CZK' },
