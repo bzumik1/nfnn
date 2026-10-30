@@ -4,10 +4,6 @@ import { mockDonorApi } from './donor-session';
 
 const PNG_TRUECOLOUR_WITHOUT_ALPHA = 2;
 
-function icoImageWidths(ico: Buffer): number[] {
-  return Array.from({ length: ico.readUInt16LE(4) }, (_, index) => ico[6 + 16 * index]);
-}
-
 function pngSize(png: Buffer): [number, number] {
   return [png.readUInt32BE(16), png.readUInt32BE(20)];
 }
@@ -24,17 +20,18 @@ test.describe("Given the site's SVG tab icon", () => {
     return page.locator('img').screenshot({ omitBackground: true });
   }
 
-  test('when it is drawn at 16 px, then it leaves out the face, which it keeps at 32 px', async ({
-    page,
-    request,
-  }) => {
-    const svg = await (await request.get('/favicon.svg')).text();
-    const withoutFace = svg.replace(/<g class="face"[^>]*>[\s\S]*?<\/g>/, '');
-    expect(withoutFace).not.toEqual(svg);
+  for (const size of [16, 32]) {
+    test(`when it is drawn at ${size} px, then it shows the face of the star`, async ({
+      page,
+      request,
+    }) => {
+      const svg = await (await request.get('/favicon.svg')).text();
+      const withoutFace = svg.replace(/<g class="face"[^>]*>[\s\S]*?<\/g>/, '');
+      expect(withoutFace).not.toEqual(svg);
 
-    expect(await drawn(page, svg, 16)).toEqual(await drawn(page, withoutFace, 16));
-    expect(await drawn(page, svg, 32)).not.toEqual(await drawn(page, withoutFace, 32));
-  });
+      expect(await drawn(page, svg, size)).not.toEqual(await drawn(page, withoutFace, size));
+    });
+  }
 });
 
 test.describe('Given a visitor on the home page', () => {
@@ -66,7 +63,7 @@ test.describe('Given a visitor on the home page', () => {
     expect(elsewhere).toEqual([]);
   });
 
-  test('when it loads, then it links a tab icon as ICO and SVG and an opaque 180 px home-screen icon, all served by the site', async ({
+  test('when it loads, then it links a tab icon only as SVG and an opaque 180 px home-screen icon, all served by the site', async ({
     page,
     request,
   }) => {
@@ -86,14 +83,11 @@ test.describe('Given a visitor on the home page', () => {
         }),
       );
     expect(links).toEqual([
-      { rel: 'icon', path: '/favicon.ico', type: '', sizes: '32x32' },
       { rel: 'icon', path: '/favicon.svg', type: 'image/svg+xml', sizes: '' },
       { rel: 'apple-touch-icon', path: '/apple-touch-icon.png', type: '', sizes: '' },
     ]);
 
-    const ico = await request.get('/favicon.ico');
-    expect(ico.ok()).toBe(true);
-    expect(icoImageWidths(await ico.body())).toEqual([16, 32, 48]);
+    expect((await request.get('/favicon.ico')).status()).toBe(404);
 
     const svg = await request.get('/favicon.svg');
     expect(svg.ok()).toBe(true);
