@@ -48,7 +48,7 @@ class ReceiptFormattingCasesTest {
     @Test
     @DisplayName("Given the receipt formatting cases, when v2 formats them for a receipt, then the texts equal the recorded shared cases")
     void should_equal_the_recorded_shared_cases_when_v2_formats_the_receipt_cases() {
-        GoldenFiles.assertMatches(CASES, cases());
+        GoldenFiles.generateSharedCases(CASES, cases());
     }
 
     @Test

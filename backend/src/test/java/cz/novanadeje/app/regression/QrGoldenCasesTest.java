@@ -96,13 +96,13 @@ class QrGoldenCasesTest {
     @Test
     @DisplayName("Given the payment QR cases, when v2 answers them, then the answers equal the recorded shared cases")
     void should_equal_the_recorded_shared_cases_when_v2_answers_the_payment_qr_cases() throws Exception {
-        GoldenFiles.assertMatches(PAYMENT_CASES, paymentCases());
+        GoldenFiles.generateSharedCases(PAYMENT_CASES, paymentCases());
     }
 
     @Test
     @DisplayName("Given the TOTP QR cases, when v2 encodes them, then the matrices equal the recorded shared cases")
     void should_equal_the_recorded_shared_cases_when_v2_encodes_the_totp_qr_cases() throws Exception {
-        GoldenFiles.assertMatches(TOTP_CASES, totpCases());
+        GoldenFiles.generateSharedCases(TOTP_CASES, totpCases());
     }
 
     @Test

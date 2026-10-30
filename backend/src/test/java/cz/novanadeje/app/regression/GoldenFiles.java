@@ -1,7 +1,10 @@
 package cz.novanadeje.app.regression;
 
+import cz.novanadeje.app.cucumber.transcript.ApiTranscripts;
 import cz.novanadeje.app.support.CanonicalJson;
+import org.junit.jupiter.api.Assumptions;
 import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.json.JsonMapper;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -16,6 +19,7 @@ public final class GoldenFiles {
 
     private static final String MODE = "golden.files";
     private static final String WRITE = "write";
+    private static final JsonMapper JSON = JsonMapper.builder().build();
 
     private GoldenFiles() {
     }
@@ -48,6 +52,26 @@ public final class GoldenFiles {
                     relativePath, callerTestClass()).exists();
             List<String> recorded = Files.readString(file, StandardCharsets.UTF_8).lines().toList();
             assertThat(expected.lines().toList()).as("%s no longer matches what v2 produced", relativePath).containsExactlyElementsOf(recorded);
+        } catch (IOException unreadable) {
+            throw new UncheckedIOException(unreadable);
+        }
+    }
+
+    public static void generateSharedCases(String relativePath, JsonNode generated) {
+        generateSharedCases(repositoryRoot().resolve(relativePath), generated, WRITE.equals(System.getProperty(MODE)));
+    }
+
+    static void generateSharedCases(Path file, JsonNode generated, boolean writing) {
+        Assumptions.assumeTrue(writing, () -> file.getFileName() + " is the specification of its computation, changed by hand and checked by its runner; "
+                + "its v2 generator runs only under GOLDEN_FILES=write");
+        try {
+            if (Files.exists(file)) {
+                String source = JSON.readTree(Files.readString(file, StandardCharsets.UTF_8)).path("source").asString();
+                assertThat(source).as("%s was edited by hand since the v2 baseline, and generating it again would undo the edit", file)
+                        .isEqualTo(ApiTranscripts.SOURCE);
+            }
+            Files.createDirectories(file.getParent());
+            Files.writeString(file, canonical(generated), StandardCharsets.UTF_8);
         } catch (IOException unreadable) {
             throw new UncheckedIOException(unreadable);
         }

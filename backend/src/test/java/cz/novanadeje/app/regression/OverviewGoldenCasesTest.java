@@ -6,14 +6,12 @@ import cz.novanadeje.app.donations.application.report.MonthlyReportSender;
 import cz.novanadeje.app.donations.application.report.MonthlyReportService;
 import cz.novanadeje.app.donations.domain.report.MonthlyReport;
 import cz.novanadeje.app.donations.domain.report.ReportMonth;
-import cz.novanadeje.app.donations.domain.report.Tally;
 import cz.novanadeje.app.support.DatabaseCleaner;
-import cz.novanadeje.app.support.MailContents;
 import cz.novanadeje.app.support.MutableClock;
 import cz.novanadeje.app.support.RecordingMailSender;
+import cz.novanadeje.app.regression.MonthlyReportState.BankImport;
+import cz.novanadeje.app.regression.MonthlyReportState.Sections;
 import cz.novanadeje.app.support.TestSupportConfiguration;
-import jakarta.mail.MessagingException;
-import jakarta.mail.internet.MimeMessage;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -80,19 +78,19 @@ class OverviewGoldenCasesTest {
     @Test
     @DisplayName("Given the admin overview cases, when v2 answers GET /api/admin/donations/overview over their rows, then the answers equal the recorded shared cases")
     void should_equal_the_recorded_shared_cases_when_v2_answers_the_admin_overview_cases() throws Exception {
-        GoldenFiles.assertMatches(ADMIN_OVERVIEW_CASES, adminOverviewCases());
+        GoldenFiles.generateSharedCases(ADMIN_OVERVIEW_CASES, adminOverviewCases());
     }
 
     @Test
     @DisplayName("Given the donor summary cases, when v2 answers GET /api/donations/me/summary over their rows, then the answers equal the recorded shared cases")
     void should_equal_the_recorded_shared_cases_when_v2_answers_the_donor_summary_cases() throws Exception {
-        GoldenFiles.assertMatches(DONOR_SUMMARY_CASES, donorSummaryCases());
+        GoldenFiles.generateSharedCases(DONOR_SUMMARY_CASES, donorSummaryCases());
     }
 
     @Test
     @DisplayName("Given the monthly report cases, when v2 compiles and mails the report over their rows, then its figures and text equal the recorded shared cases")
     void should_equal_the_recorded_shared_cases_when_v2_compiles_and_mails_the_monthly_report_cases() throws Exception {
-        GoldenFiles.assertMatches(MONTHLY_REPORT_CASES, monthlyReportCases());
+        GoldenFiles.generateSharedCases(MONTHLY_REPORT_CASES, monthlyReportCases());
     }
 
     @Test
@@ -254,47 +252,13 @@ class OverviewGoldenCasesTest {
             input.set("bankImport", reportCase.bankImport().toJson());
             input.set("sections", reportCase.sections().toJson());
             ObjectNode expected = NODES.objectNode();
-            expected.set("figures", figures(report.getValue()));
-            expected.setAll(mailOf(mail.sent().getFirst()));
+            expected.set("figures", MonthlyReportState.figures(report.getValue()));
+            expected.setAll(MonthlyReportState.mail(mail.sent().getFirst()));
             entries.add(entry(reportCase.name(), input, expected));
         }
         return header("The monthly report e-mail for input.month (MonthlyReportService over the real queries, then MonthlyReport.compile and "
                 + "MonthlyReportEmailSender in Czech): figures are the compiled report, text the plain text part line by line; bankImport is the "
                 + "bank_import_state row (instants, failure kind or null) and sections the report settings. " + BaselineRows.DESCRIPTION, entries);
-    }
-
-    private static ObjectNode figures(MonthlyReport report) {
-        ObjectNode figures = NODES.objectNode();
-        figures.put("month", report.month().toString());
-        figures.put("donorsRegistered", report.donors().registered());
-        figures.put("newDonorsInMonth", report.donors().newInMonth());
-        figures.set("receivedInMonth", tally(report.receivedInMonth()));
-        figures.set("pairedInMonth", tally(report.pairedInMonth()));
-        figures.set("unpairedInMonth", tally(report.unpairedInMonth()));
-        figures.set("receivedInYear", tally(report.receivedInYear()));
-        ObjectNode bank = figures.putObject("bankImport");
-        report.bankImport().lastSucceededAt().ifPresentOrElse(at -> bank.put("lastSucceededAt", at.toString()), () -> bank.putNull("lastSucceededAt"));
-        report.bankImport().lastFailure().ifPresentOrElse(failure -> {
-            ObjectNode node = bank.putObject("lastFailure");
-            node.put("kind", failure.kind().name());
-            node.put("attemptedAt", failure.attemptedAt().toString());
-        }, () -> bank.putNull("lastFailure"));
-        return figures;
-    }
-
-    private static ObjectNode tally(Tally tally) {
-        ObjectNode node = NODES.objectNode();
-        node.put("count", tally.count());
-        node.put("totalMinor", tally.total().amountMinor());
-        return node;
-    }
-
-    private static ObjectNode mailOf(MimeMessage message) throws MessagingException {
-        ObjectNode node = NODES.objectNode();
-        node.put("subject", message.getSubject());
-        ArrayNode lines = node.putArray("text");
-        MailContents.plainText(message).lines().forEach(lines::add);
-        return node;
     }
 
     private JsonNode answer(MockHttpServletRequestBuilder call) throws Exception {
@@ -354,56 +318,4 @@ class OverviewGoldenCasesTest {
 
     private record ReportCase(String name, BaselineRows rows, String month, BankImport bankImport, Sections sections) {
     }
-
-    private record BankImport(Optional<String> lastAttemptedAt, Optional<String> lastSucceededAt, Optional<String> lastFailureKind) {
-
-        void write(JdbcClient jdbc) {
-            jdbc.sql("insert into bank_import_state (id, covered_from, covered_to, last_attempted_at, last_succeeded_at, last_failure_kind, "
-                            + "last_failure_message, updated_at, consecutive_failures, reported_outage) values (1, null, null, :attempted, :succeeded, :kind, "
-                            + "null, :attempted, :failures, null)")
-                    .param("attempted", lastAttemptedAt.map(BaselineRows::timestamp).orElse(null))
-                    .param("succeeded", lastSucceededAt.map(BaselineRows::timestamp).orElse(null))
-                    .param("kind", lastFailureKind.orElse(null))
-                    .param("failures", lastFailureKind.isPresent() ? 1 : 0)
-                    .update();
-        }
-
-        ObjectNode toJson() {
-            ObjectNode node = NODES.objectNode();
-            put(node, "lastAttemptedAt", lastAttemptedAt);
-            put(node, "lastSucceededAt", lastSucceededAt);
-            put(node, "lastFailureKind", lastFailureKind);
-            return node;
-        }
-    }
-
-    private record Sections(boolean donors, boolean donations, boolean unpairedPayments, boolean bankImport) {
-
-        static final Sections ALL = new Sections(true, true, true, true);
-
-        void write(JdbcClient jdbc) {
-            jdbc.sql("insert into donation_report_settings (id, recipients, send_day, send_hour, include_donors, include_donations, "
-                            + "include_unpaired_payments, include_bank_import, updated_at) values (1, 'vybor@example.cz', 1, 6, :donors, :donations, :unpaired, :bank, "
-                            + "'2026-01-01T00:00:00Z')")
-                    .param("donors", donors)
-                    .param("donations", donations)
-                    .param("unpaired", unpairedPayments)
-                    .param("bank", bankImport)
-                    .update();
-        }
-
-        ObjectNode toJson() {
-            ObjectNode node = NODES.objectNode();
-            node.put("donors", donors);
-            node.put("donations", donations);
-            node.put("unpairedPayments", unpairedPayments);
-            node.put("bankImport", bankImport);
-            return node;
-        }
-    }
-
-    private static void put(ObjectNode node, String field, Optional<String> value) {
-        value.ifPresentOrElse(present -> node.put(field, present), () -> node.putNull(field));
-    }
-
 }

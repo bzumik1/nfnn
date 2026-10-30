@@ -9,7 +9,6 @@ import tools.jackson.databind.node.ObjectNode;
 
 import java.time.LocalDate;
 
-
 class ReceiptFormattingSharedCasesTest extends SharedCaseRunner {
 
     private static final JsonNodeFactory NODES = JsonNodeFactory.instance;

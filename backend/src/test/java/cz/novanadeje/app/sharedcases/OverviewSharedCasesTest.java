@@ -1,29 +1,43 @@
 package cz.novanadeje.app.sharedcases;
 
 import cz.novanadeje.app.IntegrationTest;
+import cz.novanadeje.app.donations.application.report.MonthlyReportSender;
+import cz.novanadeje.app.donations.application.report.MonthlyReportService;
 import cz.novanadeje.app.donations.domain.receipt.FirstReceiptYear;
+import cz.novanadeje.app.donations.domain.report.MonthlyReport;
+import cz.novanadeje.app.donations.domain.report.ReportMonth;
 import cz.novanadeje.app.regression.BaselineRows;
+import cz.novanadeje.app.regression.MonthlyReportState;
 import cz.novanadeje.app.support.DatabaseCleaner;
 import cz.novanadeje.app.support.MutableClock;
+import cz.novanadeje.app.support.RecordingMailSender;
 import cz.novanadeje.app.support.TestSupportConfiguration;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
+import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
+import tools.jackson.databind.node.JsonNodeFactory;
+import tools.jackson.databind.node.ObjectNode;
 
 import java.nio.charset.StandardCharsets;
+import java.time.YearMonth;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.clearInvocations;
+import static org.mockito.Mockito.verify;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 
@@ -42,6 +56,12 @@ class OverviewSharedCasesTest {
     private MutableClock clock;
     @Autowired
     private FirstReceiptYear firstReceiptYear;
+    @Autowired
+    private RecordingMailSender mail;
+    @Autowired
+    private MonthlyReportService monthlyReports;
+    @MockitoSpyBean
+    private MonthlyReportSender reportSender;
 
     @AfterEach
     void truncate() {
@@ -112,6 +132,46 @@ class OverviewSharedCasesTest {
                     .with(jwt().jwt(token -> token.subject(donor.toString()).claims(claims -> claims.remove("scope"))).authorities(new SimpleGrantedAuthority("ROLE_DONOR")));
 
             assertGives(answer(call), sharedCase.expected());
+        }
+    }
+
+    @Nested
+    @DisplayName("Given the monthly report cases")
+    class MonthlyReportCases extends SharedCaseRunner {
+
+        @Override
+        protected String caseFile() {
+            return "monthly-report/report.json";
+        }
+
+        @Override
+        protected String when() {
+            return "when the backend compiles the month's report over its rows with the real queries and mails it in Czech";
+        }
+
+        @Override
+        protected String then() {
+            return "then the report holds the expected figures and the e-mail the expected subject and text";
+        }
+
+        @Override
+        protected void run(SharedCase sharedCase) throws Exception {
+            JsonNode input = sharedCase.input();
+            BaselineRows.fromJson(input).write(jdbc, clock);
+            MonthlyReportState.BankImport.fromJson(input.get("bankImport")).write(jdbc);
+            MonthlyReportState.Sections.fromJson(input.get("sections")).write(jdbc);
+            mail.clear();
+            clearInvocations(reportSender);
+
+            monthlyReports.sendReportFor(new ReportMonth(YearMonth.parse(input.get("month").asString())));
+
+            ArgumentCaptor<MonthlyReport> report = ArgumentCaptor.forClass(MonthlyReport.class);
+            verify(reportSender).send(report.capture(), any());
+            assertThat(mail.sent()).as("e-mails sent for %s", sharedCase.name()).hasSize(1);
+            ObjectNode sent = JsonNodeFactory.instance.objectNode();
+            sent.set("figures", MonthlyReportState.figures(report.getValue()));
+            sent.setAll(MonthlyReportState.mail(mail.sent().getFirst()));
+            assertGives(sent, sharedCase.expected());
         }
     }
 
