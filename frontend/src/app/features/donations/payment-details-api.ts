@@ -1,7 +1,8 @@
-import { HttpClient, HttpContext } from '@angular/common/http';
+import { HttpClient, HttpContext, HttpHeaders } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { map, Observable } from 'rxjs';
 import { WITHOUT_ACCESS_TOKEN } from '../../core/auth/auth-interceptor';
+import { accountMatchesIban } from './czech-account';
 
 export interface PaymentAccount {
   readonly number: string;
@@ -19,6 +20,9 @@ export interface PaymentDetails {
   readonly accountVerificationAmountMinor: number;
 }
 
+const PAST_BROWSER_CACHE = new HttpHeaders({ 'Cache-Control': 'no-cache' });
+const NO_HEADERS = new HttpHeaders();
+
 @Injectable({ providedIn: 'root' })
 export class PaymentDetailsApi {
   private readonly http = inject(HttpClient);
@@ -27,6 +31,7 @@ export class PaymentDetailsApi {
     return this.http
       .get<unknown>('/api/donations/payment-details', {
         context: new HttpContext().set(WITHOUT_ACCESS_TOKEN, true),
+        headers: pastBrowserCache ? PAST_BROWSER_CACHE : NO_HEADERS,
         cache: pastBrowserCache ? 'no-cache' : 'default',
       })
       .pipe(map(paymentDetailsOf));
@@ -36,6 +41,9 @@ export class PaymentDetailsApi {
 function paymentDetailsOf(answer: unknown): PaymentDetails {
   if (!isPaymentDetails(answer)) {
     throw new Error('The payment details answer does not have the shape of payment details');
+  }
+  if (!accountMatchesIban(answer.account.number, answer.account.iban)) {
+    throw new Error('The IBAN of the payment details is not the IBAN of their account number');
   }
   return answer;
 }

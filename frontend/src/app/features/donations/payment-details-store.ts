@@ -1,4 +1,4 @@
-import { DOCUMENT, inject, Injectable, signal } from '@angular/core';
+import { DestroyRef, DOCUMENT, inject, Injectable, signal } from '@angular/core';
 import { PaymentDetails, PaymentDetailsApi } from './payment-details-api';
 
 export type PaymentDetailsState =
@@ -20,11 +20,15 @@ export class PaymentDetailsStore {
   readonly state = this.current.asReadonly();
 
   constructor() {
-    this.document.addEventListener('visibilitychange', () => {
+    const checkWhenVisible = () => {
       if (this.document.visibilityState === 'visible') {
         this.checkIfOld();
       }
-    });
+    };
+    this.document.addEventListener('visibilitychange', checkWhenVisible);
+    inject(DestroyRef).onDestroy(() =>
+      this.document.removeEventListener('visibilitychange', checkWhenVisible),
+    );
   }
 
   load(): void {
@@ -43,7 +47,7 @@ export class PaymentDetailsStore {
     if (
       this.current().kind !== 'ready' ||
       this.checking ||
-      Date.now() - this.loadedAt < KEPT_FOR_MS
+      performance.now() - this.loadedAt < KEPT_FOR_MS
     ) {
       return;
     }
@@ -67,7 +71,7 @@ export class PaymentDetailsStore {
 
   private hold(details: PaymentDetails): void {
     this.checking = false;
-    this.loadedAt = Date.now();
+    this.loadedAt = performance.now();
     const held = this.current();
     if (held.kind !== 'ready' || JSON.stringify(held.details) !== JSON.stringify(details)) {
       this.current.set({ kind: 'ready', details });

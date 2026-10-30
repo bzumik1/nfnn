@@ -30,6 +30,7 @@ describe('Given the payment details store', () => {
   afterEach(() => {
     http.verify();
     vi.useRealTimers();
+    vi.restoreAllMocks();
   });
 
   function movedAccount(): PaymentDetails {
@@ -56,6 +57,7 @@ describe('Given the payment details store', () => {
     expect(store.state()).toEqual({ kind: 'loading' });
     const request = http.expectOne(PAYMENT_DETAILS_URL);
     expect(request.request.method).toBe('GET');
+    expect(request.request.headers.has('Cache-Control')).toBe(false);
     request.flush(foundationPaymentDetails());
 
     expect(store.state()).toEqual({ kind: 'ready', details: foundationPaymentDetails() });
@@ -110,6 +112,7 @@ describe('Given the payment details store', () => {
       store.load();
 
       const request = http.expectOne(PAYMENT_DETAILS_URL);
+      expect(request.request.headers.get('Cache-Control')).toBe('no-cache');
       expect(request.request.cache).toBe('no-cache');
       expect(store.state()).toEqual({ kind: 'ready', details: foundationPaymentDetails() });
       store.load();
@@ -138,6 +141,32 @@ describe('Given the payment details store', () => {
       store.load();
       http.expectOne(PAYMENT_DETAILS_URL).flush(foundationPaymentDetails());
     });
+
+    it('then the check repeats once the details it brought are five minutes old again', () => {
+      vi.advanceTimersByTime(FIVE_MINUTES_MS);
+      store.load();
+      http.expectOne(PAYMENT_DETAILS_URL).flush(foundationPaymentDetails());
+
+      vi.advanceTimersByTime(FIVE_MINUTES_MS - 1);
+      store.load();
+      http.expectNone(PAYMENT_DETAILS_URL);
+      vi.advanceTimersByTime(1);
+      store.load();
+
+      const second = http.expectOne(PAYMENT_DETAILS_URL);
+      expect(second.request.headers.get('Cache-Control')).toBe('no-cache');
+      second.flush(movedAccount());
+      expect(store.state()).toEqual({ kind: 'ready', details: movedAccount() });
+    });
+
+    it('then the five minutes count from the load even when the wall clock is set back', () => {
+      vi.setSystemTime(Date.now() - 60 * 60 * 1000);
+      vi.advanceTimersByTime(FIVE_MINUTES_MS);
+
+      store.load();
+
+      http.expectOne(PAYMENT_DETAILS_URL).flush(foundationPaymentDetails());
+    });
   });
 
   it('when a reload is asked while it holds details, then it asks the server again past the browser cache and shows the wait', () => {
@@ -148,9 +177,54 @@ describe('Given the payment details store', () => {
 
     expect(store.state()).toEqual({ kind: 'loading' });
     const request = http.expectOne(PAYMENT_DETAILS_URL);
+    expect(request.request.headers.get('Cache-Control')).toBe('no-cache');
     expect(request.request.cache).toBe('no-cache');
     request.flush(movedAccount());
     expect(store.state()).toEqual({ kind: 'ready', details: movedAccount() });
+  });
+
+  it.each([
+    ['without the verification amount', { accountVerificationAmountMinor: undefined }],
+    ['with the verification amount as text', { accountVerificationAmountMinor: '100' }],
+  ])(
+    'when an otherwise complete answer comes %s, then the state is failed instead of a QR that cannot be drawn',
+    (_, change) => {
+      store.load();
+      http.expectOne(PAYMENT_DETAILS_URL).flush({ ...foundationPaymentDetails(), ...change });
+
+      expect(store.state()).toEqual({ kind: 'failed' });
+    },
+  );
+
+  it('when the IBAN of the answer is not the IBAN of its account number, then the state is failed, so no page shows the account', () => {
+    store.load();
+    const details = foundationPaymentDetails();
+    http.expectOne(PAYMENT_DETAILS_URL).flush({
+      ...details,
+      account: { ...details.account, iban: 'CZ6508000000192000145399' },
+    });
+
+    expect(store.state()).toEqual({ kind: 'failed' });
+  });
+
+  it('when its injector is destroyed, then it stops listening for the page becoming visible', () => {
+    TestBed.resetTestingModule();
+    const added = vi.spyOn(document, 'addEventListener');
+    const removed = vi.spyOn(document, 'removeEventListener');
+    TestBed.configureTestingModule({
+      providers: [provideHttpClient(), provideHttpClientTesting()],
+    });
+    TestBed.inject(PaymentDetailsStore);
+    const listener = added.mock.calls.find(([type]) => type === 'visibilitychange')?.[1];
+
+    TestBed.resetTestingModule();
+
+    expect(listener).toBeDefined();
+    expect(removed).toHaveBeenCalledWith('visibilitychange', listener);
+    TestBed.configureTestingModule({
+      providers: [provideHttpClient(), provideHttpClientTesting()],
+    });
+    http = TestBed.inject(HttpTestingController);
   });
 
   it('when the answer does not have the shape of payment details, then the state is failed instead of details that break the QR', () => {
