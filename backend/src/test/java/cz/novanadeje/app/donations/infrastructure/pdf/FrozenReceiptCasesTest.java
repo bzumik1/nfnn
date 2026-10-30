@@ -10,7 +10,7 @@ import cz.novanadeje.app.donations.domain.receipt.Receipts;
 import cz.novanadeje.app.donations.domain.receipt.SignatureImage;
 import cz.novanadeje.app.donations.domain.receipt.proof.SignedReceipt;
 import cz.novanadeje.app.donations.infrastructure.signing.Rfc8032Keys;
-import cz.novanadeje.app.donations.infrastructure.texts.BundleReceiptTextSource;
+import cz.novanadeje.app.donations.infrastructure.texts.RecordedReceiptTextSource;
 import cz.novanadeje.app.donations.interfaces.rest.FrozenReceiptResponse;
 import cz.novanadeje.app.sharedcases.SharedCase;
 import cz.novanadeje.app.sharedcases.SharedCases;
@@ -37,10 +37,9 @@ class FrozenReceiptCasesTest {
 
     private static final JsonMapper JSON = JsonMapper.builder().build();
     private static final List<String> NOT_INPUT = List.of("schemaVersion", "texts", "verification");
-    private static final List<String> CASE_ONLY = List.of("v2Sample");
+    private static final List<String> CASE_ONLY = List.of("v2Sample", "textsSet");
     private final ReceiptSigner signer = Rfc8032Keys.test1Signer();
     private final ReceiptProofs proofs = new ReceiptProofs(signer, Receipts.FOUNDATION);
-    private final BundleReceiptTextSource texts = new BundleReceiptTextSource();
 
     @TestFactory
     @DisplayName("Given every frozen receipt case, when its v2 sample is put together as the issuer does, then the case's name and input are that sample's")
@@ -51,7 +50,8 @@ class FrozenReceiptCasesTest {
                 "Given the case " + sharedCase.name() + ", when its v2 sample is put together, then the case holds it as input", () -> {
                     ReceiptCorpusTest.Sample sample = samples.get(sharedCase.input().get("v2Sample").asString());
                     ReceiptDocument document = sample.document();
-                    FrozenReceipt frozen = new FrozenReceipt(document, texts.textsFor(document.locale()), sample.signature().map(SignatureImage::digest),
+                    FrozenReceipt frozen = new FrozenReceipt(document,
+                            RecordedReceiptTextSource.of(sharedCase.input().get("textsSet").asString()).textsFor(document.locale()), sample.signature().map(SignatureImage::digest),
                             new ReceiptVerification(signer.keyId(), proofs.prove(SignedReceipt.of(document))));
                     ObjectNode putTogether = (ObjectNode) JSON.readTree(JSON.writeValueAsString(FrozenReceiptResponse.from(frozen)));
                     putTogether.remove(NOT_INPUT);

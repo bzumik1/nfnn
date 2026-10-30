@@ -136,7 +136,10 @@ export interface FrozenReceiptDocument {
   };
 }
 
-export type FrozenReceiptInput = FrozenReceiptDocument & { readonly v2Sample: string };
+export type FrozenReceiptInput = FrozenReceiptDocument & {
+  readonly v2Sample: string;
+  readonly textsSet: string;
+};
 
 export type FrozenReceipt = FrozenReceiptDocument & {
   readonly schemaVersion: 1;

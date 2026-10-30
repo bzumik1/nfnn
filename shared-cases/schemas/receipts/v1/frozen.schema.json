@@ -121,8 +121,11 @@
     "document": {
       "allOf": [{ "$ref": "#/$defs/documentProperties" }],
       "type": "object",
-      "required": ["v2Sample", "kind", "number", "issuedOn", "locale", "year", "replaces", "foundation", "donor", "gifts", "total", "signatory"],
-      "properties": { "v2Sample": { "type": "string", "pattern": "^[a-z0-9-]+$" } },
+      "required": ["v2Sample", "textsSet", "kind", "number", "issuedOn", "locale", "year", "replaces", "foundation", "donor", "gifts", "total", "signatory"],
+      "properties": {
+        "v2Sample": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+        "textsSet": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+      },
       "unevaluatedProperties": false
     },
     "texts": {

@@ -24,13 +24,13 @@ import static org.assertj.core.api.Assertions.fail;
 
 class ReceiptTextsHistoryTest {
 
-    private static final Path HISTORY = Path.of("src/test/resources/receipts/texts");
+    private static final Path HISTORY = RecordedReceiptTextSource.HISTORY;
     private static final Path CANDIDATE = Path.of("build/receipt-texts");
-    private static final String SUFFIX = ".json";
+    private static final String SUFFIX = RecordedReceiptTextSource.SUFFIX;
     private static final JsonMapper JSON = JsonMapper.builder().build();
 
     @Test
-    @DisplayName("Given the receipt texts of the bundle, when the history is read, then they are recorded under their digest")
+    @DisplayName("Given the receipt texts of the bundle, when the history is read, then they are its newest set, recorded under their digest")
     void should_be_recorded_when_history_is_read_given_current_receipt_texts() throws IOException {
         String current = recorded(new BundleReceiptTextSource().textsFor(LocaleCode.EN));
         String digest = ContentDigest.of(current.getBytes(StandardCharsets.UTF_8)).value();
@@ -42,7 +42,7 @@ class ReceiptTextsHistoryTest {
         Files.writeString(candidate, current, StandardCharsets.UTF_8);
         fail("The receipt texts changed, and every receipt issued from now on freezes them for good."
                 + " Review " + candidate.toAbsolutePath() + " word for word, then copy it into backend/" + HISTORY
-                + ", commit it and regenerate shared-cases/receipts/v1/frozen.json, whose cases carry the texts receipts freeze.");
+                + " and commit it; the frozen receipt cases keep the set they name (input.textsSet), so none of them changes.");
     }
 
     @TestFactory

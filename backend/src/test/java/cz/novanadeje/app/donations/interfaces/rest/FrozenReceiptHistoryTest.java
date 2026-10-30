@@ -7,7 +7,7 @@ import cz.novanadeje.app.donations.domain.receipt.FrozenReceipt;
 import cz.novanadeje.app.donations.domain.receipt.FrozenReceiptCases;
 import cz.novanadeje.app.donations.domain.receipt.Receipts;
 import cz.novanadeje.app.donations.infrastructure.signing.Rfc8032Keys;
-import cz.novanadeje.app.donations.infrastructure.texts.BundleReceiptTextSource;
+import cz.novanadeje.app.donations.infrastructure.texts.RecordedReceiptTextSource;
 import cz.novanadeje.app.sharedcases.SharedCase;
 import cz.novanadeje.app.sharedcases.SharedCaseRunner;
 import tools.jackson.databind.JsonNode;
@@ -18,7 +18,7 @@ class FrozenReceiptHistoryTest extends SharedCaseRunner {
     private static final JsonMapper JSON = JsonMapper.builder().build();
 
     private final ReceiptSigner signer = Rfc8032Keys.test1Signer();
-    private final ReceiptFreezer freezer = new ReceiptFreezer(new BundleReceiptTextSource(), new ReceiptProofs(signer, Receipts.FOUNDATION), signer);
+    private final ReceiptProofs proofs = new ReceiptProofs(signer, Receipts.FOUNDATION);
 
     @Override
     protected String caseFile() {
@@ -27,7 +27,7 @@ class FrozenReceiptHistoryTest extends SharedCaseRunner {
 
     @Override
     protected String when() {
-        return "when the issuer freezes and signs the receipt and the donor's receipt endpoints write it";
+        return "when the issuer freezes it with its recorded texts and signs it and the donor's receipt endpoints write it";
     }
 
     @Override
@@ -38,6 +38,7 @@ class FrozenReceiptHistoryTest extends SharedCaseRunner {
     @Override
     protected void run(SharedCase sharedCase) {
         JsonNode input = sharedCase.input();
+        ReceiptFreezer freezer = new ReceiptFreezer(RecordedReceiptTextSource.of(input.get("textsSet").asString()), proofs, signer);
         FrozenReceipt frozen = freezer.freeze(FrozenReceiptCases.documentOf(input), FrozenReceiptCases.signatureImageOf(input));
 
         assertGives(JSON.valueToTree(FrozenReceiptResponse.from(frozen)), sharedCase.expected());
