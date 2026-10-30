@@ -126,6 +126,11 @@ public record AdminActionFacts(String summaryKey, Map<String, String> values) {
         shapes.put("REMOVE_RECEIPT_SIGNATURE", List.of(
                 full("Obrázek podpisu odebrán; .*"),
                 full("Signature image for receipts removed; .*")));
+        shapes.put("CHANGE_ABOUT_PHOTO", List.of(
+                full("Fotka " + ID + " v sekci O nás nastavena"),
+                variant("edited", "Fotka " + ID + " v sekci O nás upravena")));
+        shapes.put("REMOVE_ABOUT_PHOTO", List.of(
+                full("Fotka " + ID + " v sekci O nás odebrána")));
         content(shapes, "NEWS", "Aktualita", "News article", List.of("napsána", "upravena", "zveřejněna od", "stažena z webu", "smazána"));
         content(shapes, "PROJECT", "Projekt", "Project", List.of("napsán", "upraven", "zveřejněn od", "stažen z webu", "smazán"));
         shapes.put("CHANGE_BACKUP_SCHEDULE", List.of(

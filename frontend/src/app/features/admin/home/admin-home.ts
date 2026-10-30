@@ -130,6 +130,7 @@ export class AdminHome {
   protected readonly unpaired = signal<UnpairedSummary | null>(null);
   protected readonly administratorsState = signal<LoadState>('loading');
   protected readonly withoutSecondFactor = signal<readonly string[]>([]);
+  protected readonly signatureMissing = signal(false);
   protected readonly sinceState = signal<LoadState>('loading');
   protected readonly since = signal<SinceSignIn | null>(null);
   protected readonly backupsState = signal<LoadState>('loading');
@@ -280,7 +281,8 @@ export class AdminHome {
       this.backupsNeedAttention() ||
       this.backupKeyUnconfirmed() ||
       this.administratorsNeedAttention() ||
-      this.signingKeysNeedAttention(),
+      this.signingKeysNeedAttention() ||
+      this.signatureMissing(),
   );
   protected readonly unpairedText = computed(() => {
     const summary = this.unpaired();
@@ -309,6 +311,7 @@ export class AdminHome {
     this.loadUnpaired();
     this.loadAdministrators();
     this.loadSigningKeys();
+    this.loadSignature();
     afterNextRender(() => this.title().nativeElement.focus(), { injector: this.injector });
   }
 
@@ -408,6 +411,16 @@ export class AdminHome {
           this.signingKeysState.set('ready');
         },
         error: () => this.signingKeysState.set('error'),
+      });
+  }
+
+  private loadSignature(): void {
+    this.api
+      .receiptSignature()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (signature) => this.signatureMissing.set(!signature.configured),
+        error: () => this.signatureMissing.set(false),
       });
   }
 

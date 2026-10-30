@@ -83,6 +83,7 @@ export class DonorGifts {
   });
 
   constructor() {
+    this.donations.checkBankIfStale();
     effect(() => this.receiptAlert()?.nativeElement.scrollIntoView?.({ block: 'center' }));
   }
 

@@ -22,6 +22,9 @@
 # marks the passwords ready before a new database is even created, and neither that initialisation
 # nor its password check on an existing database listens on TCP, so an open port means the server
 # the backend will use, and the backend does not stop and restart on a fresh install.
+# The WebP codec's native library is loaded from /app/native, where the image build put it: the
+# library would extract it into /tmp, a noexec tmpfs on the server, where it cannot be loaded, so its
+# extraction folder is pointed at the read-only /app/native, it gives up there and loads the copy.
 set -eu
 
 LOG_DIR=${LOG_DIR:-/logs}
@@ -172,4 +175,4 @@ fi
 wait_while_restore_due
 wait_for_database
 
-exec java --enable-native-access=ALL-UNNAMED -jar /app/app.jar
+exec java --enable-native-access=ALL-UNNAMED -Djava.library.path=/app/native -Dcom.luciad.imageio.webp.tmpdir=/app/native -jar /app/app.jar

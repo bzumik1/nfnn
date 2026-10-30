@@ -471,11 +471,23 @@ describe('Given the sign-in dialog', () => {
           expect(element('.recovery').textContent).toContain('OBNOVA K7MP4RXA');
         });
 
+        it('then whoever cannot wait until that day reads to write to info@nfnn.cz, next to the date', async () => {
+          (await askForRecovery()).flush(instructions);
+          await settle();
+
+          const wait = element('.recovery .ui-callout .recovery-cannot-wait');
+          expect(wait.textContent?.replace(/\s+/g, ' ').trim()).toBe(
+            'Nemůžete tak dlouho čekat? Napište nám na info@nfnn.cz a kód z aplikace vám vypneme.',
+          );
+          expect(wait.querySelector('a')?.getAttribute('href')).toBe('mailto:info@nfnn.cz');
+        });
+
         it('from an account usable today, then no later date is named', async () => {
           (await askForRecovery()).flush({ ...instructions, usableFrom: null });
           await settle();
 
           expect(element('.recovery').textContent).not.toContain('nejdříve');
+          expect(element('.recovery-cannot-wait')).toBeNull();
         });
 
         it('without a verified bank account, then the code step stays and says why', async () => {

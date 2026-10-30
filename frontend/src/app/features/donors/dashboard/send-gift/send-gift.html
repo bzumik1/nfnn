@@ -10,14 +10,16 @@
     Variabilní symbol je v údajích i v QR kódu už vyplněný. Uveďte ho u každé platby, dar se tak
     přiřadí k vašemu účtu a objeví se v tomto přehledu.
   </p>
-  <app-payment-panel #panel idPrefix="send-gift" [variableSymbol]="variableSymbol()" />
-  @if (variableSymbol(); as symbol) {
-    <app-standing-order
-      class="send-gift-standing"
-      [variableSymbol]="symbol"
-      [account]="panel.accountState()"
-      [amount]="panel.amount()"
-      (retryRequested)="panel.retry()"
-    />
-  }
+  <app-payment-panel #panel idPrefix="send-gift" [variableSymbol]="variableSymbol()">
+    @if (variableSymbol(); as symbol) {
+      <app-standing-order
+        afterBankDetails
+        class="send-gift-standing"
+        [variableSymbol]="symbol"
+        [account]="panel.accountState()"
+        [amount]="panel.amount()"
+        (retryRequested)="panel.retry()"
+      />
+    }
+  </app-payment-panel>
 </section>

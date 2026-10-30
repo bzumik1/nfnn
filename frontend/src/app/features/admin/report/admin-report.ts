@@ -21,7 +21,12 @@ import { LoginDialogService } from '../../../core/auth/login-dialog.service';
 import { FocusFirstInvalid } from '../../../shared/ui/form-field/focus-first-invalid';
 import { FormControlDirective } from '../../../shared/ui/form-field/form-control';
 import { FormField } from '../../../shared/ui/form-field/form-field';
-import { formatBankTime, formatDonationDate } from '../../donations/donation-date';
+import {
+  formatBankTime,
+  formatDonationDate,
+  pragueDay,
+  pragueHour,
+} from '../../donations/donation-date';
 import { AdminApi, AdminReportResponse, SentReportResponse } from '../admin-api';
 import {
   EmailListValidator,
@@ -103,14 +108,18 @@ export class AdminReport {
 
   protected readonly changedAt = computed(() => time(this.report()?.settings.changedAt));
   protected readonly nextReport = computed(() => {
-    const next = this.report()?.nextReport;
-    return next
-      ? {
-          month: formatReportMonth(next.month),
-          dueOn: formatDonationDate(next.dueOn),
-          hour: `${this.report()?.settings.sendHour ?? 7}:00`,
-        }
-      : null;
+    const report = this.report();
+    const next = report?.nextReport;
+    if (!report || !next) {
+      return null;
+    }
+    const hour = report.settings.sendHour;
+    return {
+      month: formatReportMonth(next.month),
+      dueOn: formatDonationDate(next.dueOn),
+      hour: `${hour}:00`,
+      overdue: next.month === report.lastEndedMonth && passed(next.dueOn, hour),
+    };
   });
   protected readonly sentReports = computed(() => this.report()?.sentReports ?? []);
   protected readonly monthOptions = computed<MonthOption[]>(() => {
@@ -129,12 +138,14 @@ export class AdminReport {
       };
     });
   });
-  protected readonly monthHint = computed(() => {
-    const report = this.report();
-    return report
-      ? $localize`:@@admin.report.send.month.hint:Nabízíme jen skončené měsíce. Přehled za ${formatReportMonth(followingMonth(report.lastEndedMonth))}:month: půjde poslat, až měsíc skončí.`
-      : '';
-  });
+  protected readonly runningMonth = computed(() =>
+    formatReportMonth(followingMonth(this.report()?.lastEndedMonth ?? '2000-01')),
+  );
+  protected readonly runningMonthEnds = computed(() =>
+    formatDonationDate(
+      `${followingMonth(followingMonth(this.report()?.lastEndedMonth ?? '2000-01'))}-01`,
+    ),
+  );
   protected readonly selectedMonthLabel = computed(() =>
     formatReportMonth(this.month || '2000-01'),
   );
@@ -294,6 +305,12 @@ export class AdminReport {
       this.loginDialog.open('login', { returnTo });
     });
   }
+}
+
+function passed(isoDay: string, hour: number): boolean {
+  const now = new Date().toISOString();
+  const today = pragueDay(now);
+  return today > isoDay || (today === isoDay && pragueHour(now) >= hour);
 }
 
 function time(isoInstant: string | null | undefined): string | null {

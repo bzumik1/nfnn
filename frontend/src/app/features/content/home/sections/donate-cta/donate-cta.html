@@ -71,6 +71,23 @@
         </div>
 
         <h3 class="step-title" i18n="@@home.donate.pay.title">Zaplaťte</h3>
+
+        @if (!variableSymbol()) {
+          <p afterBankDetails class="ui-callout ui-callout--warning bank-receipt-note">
+            <span i18n="@@home.donate.bank.receiptNote.before"
+              >Potvrzení o daru k platbě bez přihlášení vystavíme, až si</span
+            >&ngsp;<button
+              type="button"
+              class="bank-receipt-register"
+              (click)="register()"
+              i18n="@@home.donate.bank.receiptNote.register"
+            >
+              založíte účet</button
+            >&ngsp;<span i18n="@@home.donate.bank.receiptNote.after"
+              >a ověříte v něm bankovní účet, ze kterého jste platili.</span
+            >
+          </p>
+        }
       </app-payment-panel>
 
       <div class="next">
