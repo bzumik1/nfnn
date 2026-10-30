@@ -2,7 +2,7 @@ package cz.novanadeje.app.donations.infrastructure.pdf;
 
 import cz.novanadeje.app.donations.domain.receipt.CurrentSignature;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptSignatureRepository;
-import cz.novanadeje.app.donations.domain.receipt.SignatureImage;
+import cz.novanadeje.app.donations.domain.receipt.SignatureArtwork;
 
 import java.time.Instant;
 import java.util.Optional;
@@ -14,9 +14,9 @@ class InMemoryReceiptSignatures implements ReceiptSignatureRepository {
 
     private final AtomicReference<CurrentSignature> current = new AtomicReference<>();
 
-    static InMemoryReceiptSignatures holding(Optional<SignatureImage> signature) {
+    static InMemoryReceiptSignatures holding(Optional<? extends SignatureArtwork> signature) {
         InMemoryReceiptSignatures signatures = new InMemoryReceiptSignatures();
-        signature.ifPresent(image -> signatures.replace(image, UPLOADED_AT));
+        signature.ifPresent(artwork -> signatures.replace(artwork, UPLOADED_AT));
         return signatures;
     }
 
@@ -26,8 +26,8 @@ class InMemoryReceiptSignatures implements ReceiptSignatureRepository {
     }
 
     @Override
-    public void replace(SignatureImage image, Instant uploadedAt) {
-        current.set(new CurrentSignature(image, uploadedAt));
+    public void replace(SignatureArtwork artwork, Instant uploadedAt) {
+        current.set(new CurrentSignature(artwork, uploadedAt));
     }
 
     @Override
