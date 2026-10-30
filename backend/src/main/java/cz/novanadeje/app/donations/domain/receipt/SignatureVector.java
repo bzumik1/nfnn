@@ -10,6 +10,7 @@ public record SignatureVector(SignatureViewBox viewBox, List<SignaturePath> path
     public static final int MAX_UPLOAD_BYTES = 200 * 1024;
     public static final int MAX_PATHS = 1000;
     public static final int MAX_SEGMENTS = 20_000;
+    public static final int MAX_CANONICAL_BYTES = 256 * 1024;
 
     public SignatureVector {
         if (viewBox == null) {
@@ -22,9 +23,16 @@ public record SignatureVector(SignatureViewBox viewBox, List<SignaturePath> path
         if (paths.size() > MAX_PATHS || paths.stream().mapToLong(path -> path.data().segments()).sum() > MAX_SEGMENTS) {
             throw new UnsupportedSignatureVector(SignatureVectorProblem.TOO_COMPLEX);
         }
+        if (canonicalJson(viewBox, paths).length() > MAX_CANONICAL_BYTES) {
+            throw new UnsupportedSignatureVector(SignatureVectorProblem.TOO_COMPLEX);
+        }
     }
 
     public String canonicalJson() {
+        return canonicalJson(viewBox, paths);
+    }
+
+    private static String canonicalJson(SignatureViewBox viewBox, List<SignaturePath> paths) {
         StringBuilder json = new StringBuilder("{\"viewBox\":[").append(viewBox.canonical().replace(' ', ',')).append("],\"paths\":[");
         for (int index = 0; index < paths.size(); index++) {
             json.append(index == 0 ? "" : ",").append(paths.get(index).canonicalJson());

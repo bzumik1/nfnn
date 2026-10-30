@@ -80,15 +80,16 @@ Feature: An administrator uploads the signature printed on donation receipts
     Then the receipt signature is a vector of 3 paths in the view box "0 0 300 100", 1200 by 400 pixels, uploaded at "2026-12-20T11:00:00Z"
 
     Examples:
-      | construct                       | message                                                                  |
-      | a script                        | Soubor obsahuje nepovolený prvek „script“.                               |
-      | an external entity              | Soubor obsahuje deklaraci DOCTYPE nebo entity, ty SVG podpisu mít nesmí. |
-      | a link                          | Soubor obsahuje nepovolený atribut „href“.                               |
-      | a style                         | Soubor obsahuje nepovolený atribut „style“.                              |
-      | a filter                        | Soubor obsahuje nepovolený prvek „filter“.                               |
-      | an element of another namespace | Prvek „svg“ nepatří do SVG, patří do jiného jmenného prostoru (xmlns).   |
-      | more than 200 kB                | Soubor je větší než 200 kB.                                              |
-      | malformed path data             | Tvar má neplatný zápis cesty (atribut d).                                |
+      | construct                                      | message                                                                  |
+      | a script                                       | Soubor obsahuje nepovolený prvek „script“.                               |
+      | an external entity                             | Soubor obsahuje deklaraci DOCTYPE nebo entity, ty SVG podpisu mít nesmí. |
+      | a link                                         | Soubor obsahuje nepovolený atribut „href“.                               |
+      | a style                                        | Soubor obsahuje nepovolený atribut „style“.                              |
+      | a filter                                       | Soubor obsahuje nepovolený prvek „filter“.                               |
+      | an element of another namespace                | Prvek „svg“ nepatří do SVG, patří do jiného jmenného prostoru (xmlns).   |
+      | more than 200 kB                               | Soubor je větší než 200 kB.                                              |
+      | path data that grows past 256 kB once absolute | Podpis má příliš mnoho tvarů, bodů nebo vnořených skupin.                |
+      | malformed path data                            | Tvar má neplatný zápis cesty (atribut d).                                |
 
   Scenario: A donor without the administrator role and a visitor without a token cannot upload a vector signature
     Given a person "Petr" is registered

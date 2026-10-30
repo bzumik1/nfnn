@@ -48,6 +48,8 @@ public class AdminReceiptSignatureStepDefinitions {
             "a style", "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 10 10\"><path style=\"fill:url(https://example.com/)\" d=\"M0 0 L1 1\"/></svg>",
             "a filter", "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 10 10\"><filter id=\"blur\"/><path d=\"M0 0 L1 1\"/></svg>",
             "more than 200 kB", "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 10 10\"><path d=\"M0 0" + " ".repeat(205_000) + "L1 1\"/></svg>",
+            "path data that grows past 256 kB once absolute", "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 10 10\"><path d=\"M0 0"
+                    + " c1 1 1 1 1 1".repeat(14_000) + "\"/></svg>",
             "an element of another namespace", "<svg xmlns=\"urn:example:other\" viewBox=\"0 0 10 10\"><path d=\"M0 0 L1 1\"/></svg>",
             "malformed path data", "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 10 10\"><path d=\"M0 0 L1\"/></svg>");
 

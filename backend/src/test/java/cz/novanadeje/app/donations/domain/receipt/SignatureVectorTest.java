@@ -123,6 +123,21 @@ class SignatureVectorTest {
     }
 
     @Test
+    @DisplayName("Given paths whose canonical JSON is exactly as large as a stored signature may be, when a vector is made, then it is accepted")
+    void should_accept_when_made_given_canonical_json_at_the_limit() {
+        SignatureVector vector = vectorOfCanonicalSize(SignatureVector.MAX_CANONICAL_BYTES);
+
+        assertThat(vector.canonicalBytes()).hasSize(SignatureVector.MAX_CANONICAL_BYTES);
+        assertThat(vector.segments()).isLessThanOrEqualTo(SignatureVector.MAX_SEGMENTS);
+    }
+
+    @Test
+    @DisplayName("Given paths whose canonical JSON is one byte larger than a stored signature may be, when a vector is made, then it is refused as too complex")
+    void should_refuse_when_made_given_canonical_json_one_byte_over_the_limit() {
+        assertRefused(() -> vectorOfCanonicalSize(SignatureVector.MAX_CANONICAL_BYTES + 1), SignatureVectorProblem.TOO_COMPLEX);
+    }
+
+    @Test
     @DisplayName("Given more paths than a signature may have, when a vector is made, then it is refused as too complex")
     void should_refuse_when_made_given_too_many_paths() {
         List<SignaturePath> paths = Collections.nCopies(SignatureVector.MAX_PATHS + 1, SIGNATURE.paths().getFirst());
@@ -152,6 +167,19 @@ class SignatureVectorTest {
     @DisplayName("Given a vector signature, when it is printed, then only its path count and digest show")
     void should_print_count_and_digest_when_printed_given_vector() {
         assertThat(SIGNATURE).hasToString("SignatureVector[2 paths, " + SIGNATURE.digest() + "]");
+    }
+
+    private static SignatureVector vectorOfCanonicalSize(int size) {
+        String prefix = "{\"viewBox\":[0,0,10,10],\"paths\":[{\"d\":\"M0 0";
+        String suffix = "\",\"fill\":\"#000000\",\"opacity\":1}]}";
+        int rest = size - prefix.length() - suffix.length();
+        int shorter = Math.floorMod(-rest, 15);
+        int longer = (rest - 14 * shorter) / 15;
+        String data = "M0 0" + " L123456 123456".repeat(longer) + " L12345 123456".repeat(shorter);
+        SignatureVector vector = new SignatureVector(SignatureViewBox.parse("0 0 10 10"),
+                List.of(new SignaturePath(SignaturePathData.parse(data), "#000000", BigDecimal.ONE)));
+        assertThat(vector.canonicalJson()).startsWith(prefix).endsWith(suffix);
+        return vector;
     }
 
     private static void assertRefused(ThrowingCallable action, SignatureVectorProblem problem) {
