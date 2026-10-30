@@ -1,0 +1,30 @@
+[
+  {
+    "path": "GET /api/admin/donations/donors/{id}",
+    "scenario": "donations/admin_donor_accounts: *",
+    "kind": "body",
+    "reason": "PR #207: a 1 Kč account verification gets no receipt of its own (Jakub 2026-10-29, decision 1: it is shown as a verification, not a gift), so its receiptAvailable is false; the yearly receipt still counts it",
+    "contract": "docs/api-contract.md, GET /api/donations/me and GET /api/donations/me/summary"
+  },
+  {
+    "path": "GET /api/admin/donations/donors/{id}",
+    "scenario": "donations/admin_donor_erasure: *",
+    "kind": "body",
+    "reason": "PR #207: a 1 Kč account verification gets no receipt of its own (Jakub 2026-10-29, decision 1: it is shown as a verification, not a gift), so its receiptAvailable is false; the yearly receipt still counts it",
+    "contract": "docs/api-contract.md, GET /api/donations/me and GET /api/donations/me/summary"
+  },
+  {
+    "path": "GET /api/donations/me",
+    "scenario": "donations/symbol_claims: *",
+    "kind": "body",
+    "reason": "PR #207: a 1 Kč account verification gets no receipt of its own (Jakub 2026-10-29, decision 1: it is shown as a verification, not a gift), so its receiptAvailable is false; the yearly receipt still counts it",
+    "contract": "docs/api-contract.md, GET /api/donations/me and GET /api/donations/me/summary"
+  },
+  {
+    "path": "GET /api/donations/me",
+    "scenario": "donations/donor_donations_overview: The 1 Kč payment that verifies a bank account shows its own purpose*",
+    "kind": "body",
+    "reason": "PR #207: a 1 Kč account verification gets no receipt of its own (Jakub 2026-10-29, decision 1: it is shown as a verification, not a gift), so its receiptAvailable is false; the yearly receipt still counts it",
+    "contract": "docs/api-contract.md, GET /api/donations/me and GET /api/donations/me/summary"
+  }
+]

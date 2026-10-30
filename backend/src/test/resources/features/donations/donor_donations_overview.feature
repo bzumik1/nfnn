@@ -46,7 +46,7 @@ Feature: A donor sees their own donations and their summary
       | receivedAt | amountMinor | currency | purpose              | status   | source        |
       | 2026-01-10 | 50000       | CZK      | General contribution | RECEIVED | BANK_TRANSFER |
 
-  Scenario: The 1 Kč payment that verifies a bank account shows its own purpose and no receipt of its own
+  Scenario: The 1 Kč payment that verifies a bank account shows its own purpose
     Given today is 2026-01-20
     And a person "Jana" is registered
     And the bank account has these movements:
