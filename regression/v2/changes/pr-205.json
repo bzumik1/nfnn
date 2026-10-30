@@ -1,0 +1,14 @@
+[
+  {
+    "scenario": "donors/donor_credentials: *",
+    "kind": "mails",
+    "reason": "PR #205: the e-mail change link carries &change=email so the confirmation page says the address changed instead of using the registration text",
+    "contract": "docs/api-contract.md, Changing the password and the e-mail"
+  },
+  {
+    "scenario": "donors/donor_passwordless: *",
+    "kind": "mails",
+    "reason": "PR #205: the e-mail change link carries &change=email so the confirmation page says the address changed instead of using the registration text",
+    "contract": "docs/api-contract.md, Changing the password and the e-mail"
+  }
+]
