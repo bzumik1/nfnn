@@ -18,6 +18,8 @@ Web představí fond a jeho pomoc dětem, usnadní darování a dárcům dá ú�
 ## 3. Veřejný web
 
 - Sekce úvodní stránky: Domů, O nás, čísla, Projekty, Aktuality, Přispět, Kontakt (formulář) a patička s IČO a zápisem v rejstříku. Vzhled vychází z původního prototypu (modrý akcent, hero přes celou obrazovku, zaoblené karty).
+- O nás říká i to, kdo fond vede dnes: portrét a jméno předsedy správní rady, celou správní radu podle rejstříku (revizora ne, Jakub 30. 10. 2026). Kontakt má jednu kartu „Údaje pro účetní“ (název, IČO, sídlo, zápis v rejstříku, číslo účtu a IBAN, s tlačítky Kopírovat) a každý údaj v Kontaktu jen jednou (Jakub 30. 10. 2026 po uživatelských testech: sponzor nenašel, kdo fond vede, a údaje pro účetní byly roztroušené).
+- Fotka v O nás se nahrává ve správě (`/sprava/o-nas`), ne do veřejného kódu webu, protože zobrazuje dítě (Jakub 30. 10. 2026): je uložená v databázi jako fotky aktualit, má popis pro čtečky a popisek pod fotkou, oba nepovinné, a ukáže se celá, na výšku i na šířku. Správce ji může kdykoli odebrat; smazáním zmizí z webu, ze záloh do 30 dnů; stažená záloha ji drží dál a obnova ze zálohy starší než odebrání ji na web vrátí (pak ji správce odebere znovu). Dokud žádná není, zůstává ilustrační fotka.
 - Vzhled je vyměnitelné téma oddělené od chování: nové téma změní celý web bez zásahu do stránek.
 - **Přispět**: návštěvník zvolí částku (100 / 500 / 1 000 / jiná) a dostane QR platbu na účet fondu. Přihlášenému dárci nese QR jeho variabilní symbol, takže se dar spáruje sám.
 - Aktuality a projekty píše správce. Úvodní stránka ukazuje tři nejnovější z každých, každá má svou stránku a obojí má seznam po deseti. Dokud žádné nejsou zveřejněné, zůstávají zástupné karty.
@@ -30,6 +32,7 @@ Web představí fond a jeho pomoc dětem, usnadní darování a dárcům dá ú�
 
 ### Registrace a přihlášení
 
+- Hlavička webu nabízí nepřihlášenému návštěvníkovi vedle „Přihlásit se“ i „Založit účet“, na počítači i v menu na telefonu (Jakub 30. 10. 2026, po třetím kole uživatelských testů).
 - Přepínač „člověk / firma“. Člověk zadá jméno, adresu a e-mail, firma název, IČO, sídlo a e-mail. Adresa a IČO jsou povinné hned, protože patří na potvrzení.
 - Firma vyplní nejdřív IČO a web po zadání platného IČO doplní z obchodního rejstříku (ARES) název a sídlo do prázdných polí, dárce je jen zkontroluje. Když ARES nefunguje nebo IČO nezná, formulář se chová jako dřív a dárce nic nepozná, web jen zaloguje varování; na ARES tak nejsme závislí (Jakub 24. 10. 2026).
 - Dárce se přihlašuje heslem, nebo přístupovým klíčem (passkey). Účet může mít jen klíč a žádné heslo; poslední způsob přihlášení odebrat nejde.

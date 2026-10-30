@@ -269,6 +269,28 @@ test.describe('Given a signed-in donor', () => {
     );
   });
 
+  test('when they open the standing order guide on a phone, then it sits after the bank details and the opened guide comes into view', async ({
+    page,
+  }) => {
+    await mockDonorApi(page, noDonations);
+    await signIn(page);
+    await page.setViewportSize({ width: 390, height: 844 });
+
+    const card = page.locator('.send-gift');
+    await expect(card.locator('.bank')).toContainText('5544332217/2010');
+    const toggle = card.getByRole('button', { name: 'Jak nastavit trvalý příkaz' });
+    const toggleTop = (await toggle.boundingBox())!.y;
+    expect(toggleTop).toBeGreaterThan((await card.locator('.bank').boundingBox())!.y);
+    expect(toggleTop).toBeLessThan((await card.locator('.qr').boundingBox())!.y);
+
+    await toggle.click();
+
+    await expect(page.getByRole('region', { name: 'Jak nastavit trvalý příkaz' })).toBeInViewport({
+      ratio: 0.5,
+    });
+    await expect(toggle).toBeInViewport();
+  });
+
   test('when no donation has arrived yet and they sent a gift without the symbol, then the overview opens Přidat účet for the account it came from', async ({
     page,
   }) => {

@@ -8,11 +8,16 @@
 .two-col {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: var(--space-20);
+  grid-template-rows: auto 1fr;
+  grid-template-areas:
+    'intro form'
+    'accounting form';
+  gap: var(--space-10) var(--space-20);
   align-items: start;
 }
 
 .contact-left {
+  grid-area: intro;
   color: var(--color-on-inverse);
 }
 
@@ -77,6 +82,7 @@ a.info-value {
 }
 
 .contact-form-wrap {
+  grid-area: form;
   position: relative;
   background: var(--color-surface);
   border-radius: var(--radius-card);
@@ -188,13 +194,22 @@ app-form-field {
   font-family: var(--font-sans);
 }
 
+app-accounting-details {
+  grid-area: accounting;
+}
+
 @include bp.down(tablet) {
   .contact {
     padding: var(--space-16) 0;
   }
 
   .two-col {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: none;
+    grid-template-areas:
+      'intro'
+      'form'
+      'accounting';
     gap: var(--space-10);
   }
 

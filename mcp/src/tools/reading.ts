@@ -417,6 +417,20 @@ export function registerReadingTools(server: McpServer, deps: ToolDependencies):
   );
 
   server.registerTool(
+    'nfnn_about',
+    {
+      title: 'Fotka v sekci O nás',
+      description:
+        'The photo the home page shows in its About section: its id, size in pixels, alt (read by screen readers) and caption (shown under it to every visitor), or photo null while the site shows its placeholder photo. Change it with nfnn_update_about.',
+      annotations: READ_ONLY,
+    },
+    async (ctx) =>
+      answer(deps, ctx, 'nfnn_about', async ({ apiToken }) =>
+        text(await backend.get('/api/admin/content/about', apiToken)),
+      ),
+  );
+
+  server.registerTool(
     'nfnn_log_files',
     {
       title: 'Soubory logů',

@@ -1,4 +1,4 @@
-import { formatBankTime, formatDonationDate, pragueDay } from './donation-date';
+import { formatBankTime, formatDonationDate, pragueDay, pragueHour } from './donation-date';
 
 describe('Given a date the donations API sends', () => {
   it('when it is formatted, then it reads as day, month and year with leading zeros', () => {
@@ -29,5 +29,10 @@ describe('Given an instant the API sends', () => {
 
   it('when it is late in the evening in UTC, then the day is already the next Prague day', () => {
     expect(pragueDay('2026-10-28T23:30:00Z')).toBe('2026-10-29');
+  });
+
+  it('when its Prague hour is asked for, then it counts in Prague summer and winter time', () => {
+    expect(pragueHour('2026-10-01T05:00:00Z')).toBe(7);
+    expect(pragueHour('2026-11-01T06:00:00Z')).toBe(7);
   });
 });

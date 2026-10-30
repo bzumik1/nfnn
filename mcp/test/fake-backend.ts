@@ -301,6 +301,15 @@ function adminRoute(request: RecordedRequest, url: URL, body: string): [number, 
           applied: { backupTime: '03:00', testRestoreDay: 7, testRestoreTime: '04:00' },
         },
       ];
+    case 'GET /api/admin/content/about':
+      return [
+        200,
+        { photo: aboutPhoto({ photoAlt: 'Malý chlapec', caption: 'Kde to všechno začalo' }) },
+      ];
+    case 'PUT /api/admin/content/about': {
+      const about = JSON.parse(body) as Record<string, unknown>;
+      return [200, { photo: about['photoId'] === null ? null : aboutPhoto(about) }];
+    }
     case 'POST /api/admin/content/news':
       return [201, { id: UNKNOWN_ID, slug: 'letni-tabor', ...content(body) }];
     case `PUT /api/admin/content/news/${UNKNOWN_ID}`:
@@ -659,4 +668,15 @@ function problem(
 function jwt(subject: string, scope: string): string {
   const encode = (value: unknown) => Buffer.from(JSON.stringify(value)).toString('base64url');
   return `${encode({ alg: 'HS256' })}.${encode({ sub: subject, scope, aud: `${ISSUER}/mcp` })}.signature`;
+}
+
+function aboutPhoto(about: Record<string, unknown>): Record<string, unknown> {
+  return {
+    id: MEDIA_ID,
+    url: `/api/content/media/${MEDIA_ID}`,
+    width: 1200,
+    height: 1600,
+    alt: about['photoAlt'] ?? null,
+    caption: about['caption'] ?? null,
+  };
 }

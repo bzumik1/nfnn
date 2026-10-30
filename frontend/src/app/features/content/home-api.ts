@@ -1,12 +1,14 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
+import { AboutResponse } from './about-api';
 import { NewsArticleResponse } from './news-api';
 import { ProjectResponse } from './projects-api';
 
 export interface HomeResponse {
   news: NewsArticleResponse[];
   projects: ProjectResponse[];
+  about?: AboutResponse;
 }
 
 const HOME = '/api/content/home';

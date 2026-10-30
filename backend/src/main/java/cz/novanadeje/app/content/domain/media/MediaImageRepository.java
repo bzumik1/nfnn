@@ -9,6 +9,8 @@ public interface MediaImageRepository {
 
     Optional<MediaImage> findById(MediaId id);
 
+    Optional<MediaSize> findSize(MediaId id);
+
     boolean exists(MediaId id);
 
     void delete(MediaId id);

@@ -22,6 +22,7 @@ import { FocusFirstInvalid } from '../../../shared/ui/form-field/focus-first-inv
 import { FormControlDirective } from '../../../shared/ui/form-field/form-control';
 import { FormField } from '../../../shared/ui/form-field/form-field';
 import { placeServerErrors } from '../../../shared/ui/form-field/server-errors';
+import { AccountingDetails } from '../accounting-details/accounting-details';
 import { ContactApi, ContactMessageRequest } from '../contact-api';
 
 const TOO_MANY_REQUESTS = 429;
@@ -33,7 +34,14 @@ const MESSAGE_FIELDS: Readonly<Record<string, string>> = {
 
 @Component({
   selector: 'app-contact-form',
-  imports: [FormsModule, RouterLink, FormField, FormControlDirective, FocusFirstInvalid],
+  imports: [
+    FormsModule,
+    RouterLink,
+    FormField,
+    FormControlDirective,
+    FocusFirstInvalid,
+    AccountingDetails,
+  ],
   templateUrl: './contact-form.html',
   styleUrl: './contact-form.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
