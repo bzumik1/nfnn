@@ -9,5 +9,5 @@ public interface SecondFactorRecoveryTargets {
 
     Optional<SecondFactorRecoveryTarget> targetFor(UUID donorId);
 
-    SecondFactorRecoveryPaymentQr paymentQrFor(SecondFactorRecoveryCode code);
+    SecondFactorRecoveryPaymentText spaydFor(SecondFactorRecoveryCode code);
 }

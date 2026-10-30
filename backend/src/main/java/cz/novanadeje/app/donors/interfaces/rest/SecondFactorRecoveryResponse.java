@@ -12,7 +12,7 @@ record SecondFactorRecoveryResponse(String message, Instant startedAt, Instant e
     static SecondFactorRecoveryResponse of(SecondFactorRecoveryInstructions instructions) {
         return new SecondFactorRecoveryResponse(instructions.message(), instructions.startedAt(), instructions.expiresAt(), instructions.resumed(),
                 instructions.accountNumber(), instructions.iban(), instructions.amount().amountMinor(), instructions.amount().currency().name(),
-                instructions.usableFrom(), instructions.paymentQr().spayd());
+                instructions.usableFrom(), instructions.paymentText().spayd());
     }
 
     @Override

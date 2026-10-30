@@ -5,8 +5,15 @@ import cz.novanadeje.app.donations.domain.donation.DonationPurpose;
 import cz.novanadeje.app.shared.domain.Currency;
 import cz.novanadeje.app.shared.domain.Money;
 
+import java.util.StringJoiner;
+
 public record PaymentDetails(BankAccount account, Currency currency, SpaydText recipientName, SpaydText donationMessage,
                              SpaydText accountVerificationMessage, Money accountVerificationAmount) {
+
+    private static final String DONATION_MESSAGE = "Dar Nadační fond Nová naděje";
+    private static final String ACCOUNT_VERIFICATION_MESSAGE = "Ověření účtu Nadační fond Nová naděje";
+    private static final String HEADER = "SPD*1.0";
+    private static final String FIELD_SEPARATOR = "*";
 
     public PaymentDetails {
         if (account == null || currency == null || recipientName == null || donationMessage == null || accountVerificationMessage == null
@@ -26,7 +33,20 @@ public record PaymentDetails(BankAccount account, Currency currency, SpaydText r
 
     public static PaymentDetails of(BankAccount account) {
         return new PaymentDetails(account, Currency.CZK, SpaydText.recipientName(account.recipientName()),
-                SpaydText.message(QrPaymentPurpose.DONATION.message()), SpaydText.message(QrPaymentPurpose.ACCOUNT_VERIFICATION.message()),
-                DonationPurpose.VERIFICATION_AMOUNT);
+                SpaydText.message(DONATION_MESSAGE), SpaydText.message(ACCOUNT_VERIFICATION_MESSAGE), DonationPurpose.VERIFICATION_AMOUNT);
+    }
+
+    public String spaydWithoutVariableSymbol(Money amount, SpaydText message) {
+        if (amount == null || !amount.isPositive() || message == null || message.isEmpty()) {
+            throw new IllegalArgumentException("A SPAYD text needs a positive amount and a message: " + amount);
+        }
+        StringJoiner spayd = new StringJoiner(FIELD_SEPARATOR).add(HEADER)
+                .add("ACC:" + account.iban().value())
+                .add("AM:" + amount.toDecimal().toPlainString())
+                .add("CC:" + currency.name());
+        if (!recipientName.isEmpty()) {
+            spayd.add("RN:" + recipientName.value());
+        }
+        return spayd.add("MSG:" + message.value()).toString();
     }
 }
