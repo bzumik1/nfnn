@@ -176,22 +176,28 @@ public class ApiClient {
         }
     }
 
-    public ResponseEntity<String> getRaw(String target, Map<String, String> headers) {
+    public ResponseEntity<String> sendRaw(String method, String target, Map<String, String> headers, String body) {
+        byte[] content = body.getBytes(StandardCharsets.ISO_8859_1);
         Map<String, String> sent = new LinkedHashMap<>(headers);
         sent.putIfAbsent(FORWARDED_FOR, clientAddress);
-        StringBuilder request = new StringBuilder("GET " + target + " HTTP/1.1\r\n");
+        StringBuilder request = new StringBuilder(method + " " + target + " HTTP/1.1\r\n");
         sent.forEach((name, value) -> request.append(name).append(": ").append(value).append("\r\n"));
+        if (content.length > 0) {
+            request.append("Content-Length: ").append(content.length).append("\r\n");
+        }
         request.append("Connection: close\r\n\r\n");
         try (Socket socket = new Socket("localhost", port)) {
             OutputStream out = socket.getOutputStream();
             out.write(request.toString().getBytes(StandardCharsets.ISO_8859_1));
+            out.write(content);
             out.flush();
             String raw = new String(socket.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
             int status = Integer.parseInt(raw.split(" ", 3)[1]);
             int bodyStart = raw.indexOf("\r\n\r\n");
-            lastResponse = ResponseEntity.status(status).body(bodyStart < 0 ? "" : raw.substring(bodyStart + 4));
+            lastResponse = ResponseEntity.status(status).headers(rawHeaders(raw, bodyStart)).body(bodyStart < 0 ? "" : raw.substring(bodyStart + 4));
             lastResponseBytes = null;
-            recordBytes("GET", target, sent, null, status, rawHeaders(raw, bodyStart), lastResponse.getBody().getBytes(StandardCharsets.UTF_8));
+            recordBytes(method, target, sent, content.length > 0 ? JsonNodeFactory.instance.stringNode(body) : null, status, rawHeaders(raw, bodyStart),
+                    lastResponse.getBody().getBytes(StandardCharsets.UTF_8));
             return lastResponse;
         } catch (IOException unreachable) {
             throw new IllegalStateException("The raw request to " + target + " failed", unreachable);

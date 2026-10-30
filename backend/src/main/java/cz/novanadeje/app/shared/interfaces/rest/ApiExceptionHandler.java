@@ -6,6 +6,7 @@ import cz.novanadeje.app.shared.domain.error.Conflict;
 import cz.novanadeje.app.shared.domain.error.DomainException;
 import cz.novanadeje.app.shared.domain.error.NotFound;
 import cz.novanadeje.app.shared.domain.error.RuleViolation;
+import org.apache.tomcat.util.http.InvalidParameterException;
 import org.springframework.beans.TypeMismatchException;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.http.HttpHeaders;
@@ -91,6 +92,11 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
         problem.setTitle(message("problem.validation.title", HttpStatus.BAD_REQUEST.getReasonPhrase()));
         problem.setDetail(ex.getMessage());
         return problem;
+    }
+
+    @ExceptionHandler(InvalidParameterException.class)
+    ResponseEntity<Object> handleUndecodableParameter(InvalidParameterException ex, WebRequest request) {
+        return validationProblem(ex, List.of(), new HttpHeaders(), request);
     }
 
     @ExceptionHandler(AuthenticationException.class)

@@ -56,4 +56,33 @@ class ProtectedLoggersTest {
     void should_pin_no_logger_louder_than_info_when_looked_up_given_pins() {
         assertThat(ProtectedLoggers.PINS.values()).allMatch(level -> level.compareTo(LogLevel.INFO) >= 0);
     }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"org.springframework.security.web.FilterChainProxy", "org.springframework.security.web.firewall.HttpStatusRequestRejectedHandler",
+            "org.springframework.web.servlet.DispatcherServlet", "org.springframework.web.filter.ForwardedHeaderFilter",
+            "org.springframework.web.method.HandlerMethod", "org.springframework.web.method.support.InvocableHandlerMethod",
+            "org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter"})
+    @DisplayName("Given a framework logger that writes the request line, its query string, a parameter's value or the client address at DEBUG, when it is checked, then it is protected")
+    void should_protect_when_checked_given_logger_that_writes_request_text(String name) {
+        assertThat(ProtectedLoggers.covers(new LoggerName(name))).isTrue();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"org.springframework.security.web.FilterChainProxy", "org.springframework.security.web.firewall",
+            "org.springframework.web.servlet.DispatcherServlet", "org.springframework.web.filter.ForwardedHeaderFilter", "org.springframework.web.method",
+            "org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter"})
+    @DisplayName("Given a framework logger that writes request text at DEBUG, when its pin is looked up, then it is INFO")
+    void should_pin_at_info_when_looked_up_given_logger_that_writes_request_text(String name) {
+        assertThat(ProtectedLoggers.PINS).containsEntry(name, LogLevel.INFO);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"org.springframework.security", "org.springframework.security.web", "org.springframework.security.web.authentication",
+            "org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationProvider",
+            "org.springframework.security.web.access.ExceptionTranslationFilter", "org.springframework.web.servlet",
+            "org.springframework.web.servlet.mvc.support.DefaultHandlerExceptionResolver", "org.springframework.web.filter"})
+    @DisplayName("Given a logger for debugging sign-in, authorization or request handling that writes no request text, when it is checked, then it may be raised")
+    void should_allow_when_checked_given_debugging_logger_without_request_text(String name) {
+        assertThat(ProtectedLoggers.covers(new LoggerName(name))).isFalse();
+    }
 }

@@ -3,6 +3,7 @@ package cz.novanadeje.app.shared.interfaces.rest;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Pattern;
+import org.apache.tomcat.util.http.InvalidParameterException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -16,8 +17,10 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.not;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -33,6 +36,11 @@ class ApiExceptionHandlerTest {
         @GetMapping("/probe")
         String probe(@RequestParam @Min(1) @Max(10) long amount, @RequestParam(required = false) @Pattern(regexp = "[0-9]{1,3}") String code) {
             return "ok";
+        }
+
+        @GetMapping("/undecodable")
+        String undecodable() {
+            throw new InvalidParameterException("Character decoding failed. Parameter [q] with value [Qkzw1571] has been ignored.");
         }
     }
 
@@ -84,6 +92,14 @@ class ApiExceptionHandlerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.title").value("Invalid data"))
                 .andExpect(jsonPath("$.errors[0].message").value("The value has an invalid format."));
+    }
+
+    @Test
+    @DisplayName("Given a parameter the container cannot decode, when requested, then the answer is a validation problem without the parameter or its value")
+    void should_answer_validation_problem_without_value_when_parameter_cannot_be_decoded() throws Exception {
+        expectValidationProblem(mockMvc.perform(inCzech("/undecodable")))
+                .andExpect(jsonPath("$.errors", hasSize(0)))
+                .andExpect(content().string(not(containsString("Qkzw1571"))));
     }
 
     private static MockHttpServletRequestBuilder inCzech(String path) {
