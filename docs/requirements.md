@@ -18,7 +18,7 @@ Web představí fond a jeho pomoc dětem, usnadní darování a dárcům dá ú�
 ## 3. Veřejný web
 
 - Sekce úvodní stránky: Domů, O nás, čísla, Projekty, Aktuality, Přispět, Kontakt (formulář) a patička s IČO a zápisem v rejstříku. Vzhled vychází z původního prototypu (modrý akcent, hero přes celou obrazovku, zaoblené karty).
-- O nás říká i to, kdo fond vede dnes: portrét a jméno předsedy správní rady, celou správní radu a revizora podle rejstříku. Kontakt má jednu kartu „Údaje pro účetní“ (název, IČO, sídlo, zápis v rejstříku, číslo účtu a IBAN, s tlačítky Kopírovat) a každý údaj v Kontaktu jen jednou (Jakub 30. 10. 2026 po uživatelských testech: sponzor nenašel, kdo fond vede, a údaje pro účetní byly roztroušené).
+- O nás říká i to, kdo fond vede dnes: portrét a jméno předsedy správní rady, celou správní radu podle rejstříku (revizora ne, Jakub 30. 10. 2026). Kontakt má jednu kartu „Údaje pro účetní“ (název, IČO, sídlo, zápis v rejstříku, číslo účtu a IBAN, s tlačítky Kopírovat) a každý údaj v Kontaktu jen jednou (Jakub 30. 10. 2026 po uživatelských testech: sponzor nenašel, kdo fond vede, a údaje pro účetní byly roztroušené).
 - Vzhled je vyměnitelné téma oddělené od chování: nové téma změní celý web bez zásahu do stránek.
 - **Přispět**: návštěvník zvolí částku (100 / 500 / 1 000 / jiná) a dostane QR platbu na účet fondu. Přihlášenému dárci nese QR jeho variabilní symbol, takže se dar spáruje sám.
 - Aktuality a projekty píše správce. Úvodní stránka ukazuje tři nejnovější z každých, každá má svou stránku a obojí má seznam po deseti. Dokud žádné nejsou zveřejněné, zůstávají zástupné karty.
