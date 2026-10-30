@@ -6,7 +6,7 @@
     "reason": "1.15 answers a multipart body that cannot be read as 400 validation instead of a 500 with an ERROR stack trace, and logs one WARN line so that a server-side failure (a full /tmp, a missing upload directory) is not silent (security review of 1.15, round 2, m4; reliability.md); the line names only the simple class name of the deepest cause, never its message or anything the client sent",
     "contract": "docs/security-overview.md, Logs; docs/api-contract.md, error conventions",
     "security": {
-      "approvedIn": "PENDING",
+      "approvedIn": "PR #236, Jakub 2026-10-30",
       "fields": {
         "MalformedStreamException": "the simple class name of the deepest cause of the MultipartException, here Tomcat's fileupload refusing a malformed body; another class name in production, such as IOException when a part cannot be written to /tmp; never the exception's message"
       }
