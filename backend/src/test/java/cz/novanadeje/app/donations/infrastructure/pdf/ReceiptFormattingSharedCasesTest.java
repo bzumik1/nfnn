@@ -1,6 +1,5 @@
 package cz.novanadeje.app.donations.infrastructure.pdf;
 
-import cz.novanadeje.app.regression.GoldenFiles;
 import cz.novanadeje.app.shared.domain.Money;
 import cz.novanadeje.app.sharedcases.SharedCase;
 import cz.novanadeje.app.sharedcases.SharedCaseRunner;
@@ -10,7 +9,6 @@ import tools.jackson.databind.node.ObjectNode;
 
 import java.time.LocalDate;
 
-import static org.assertj.core.api.Assertions.assertThat;
 
 class ReceiptFormattingSharedCasesTest extends SharedCaseRunner {
 
@@ -33,7 +31,7 @@ class ReceiptFormattingSharedCasesTest extends SharedCaseRunner {
 
     @Override
     protected void run(SharedCase sharedCase) {
-        assertThat(GoldenFiles.canonical(formatted(sharedCase.input()))).isEqualTo(GoldenFiles.canonical(sharedCase.expected()));
+        assertGives(formatted(sharedCase.input()), sharedCase.expected());
     }
 
     private static ObjectNode formatted(JsonNode input) {

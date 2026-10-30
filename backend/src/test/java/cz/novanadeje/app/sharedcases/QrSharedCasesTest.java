@@ -8,7 +8,6 @@ import cz.novanadeje.app.donations.application.PaymentQr;
 import cz.novanadeje.app.donations.domain.BankAccount;
 import cz.novanadeje.app.donations.domain.payment.QrPaymentPurpose;
 import cz.novanadeje.app.donors.domain.TotpSecret;
-import cz.novanadeje.app.regression.GoldenFiles;
 import cz.novanadeje.app.regression.QrSymbols;
 import cz.novanadeje.app.shared.application.qr.QrCodeEncoder;
 import cz.novanadeje.app.shared.application.qr.QrErrorCorrection;
@@ -29,7 +28,6 @@ import tools.jackson.databind.node.ObjectNode;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 
 @IntegrationTest
@@ -73,7 +71,7 @@ class QrSharedCasesTest {
             BankAccount recipient = recipientOf(sharedCase.input().get("recipient"));
             JsonNode actual = recipient.equals(foundationAccount) ? endpointAnswer(sharedCase.input()) : serviceAnswer(recipient, sharedCase.input());
 
-            assertThat(GoldenFiles.canonical(actual)).isEqualTo(GoldenFiles.canonical(sharedCase.expected()));
+            assertGives(actual, sharedCase.expected());
         }
 
         private ObjectNode endpointAnswer(JsonNode input) throws Exception {
@@ -146,7 +144,7 @@ class QrSharedCasesTest {
             actual.put("uri", uri);
             actual.setAll(QrSymbols.describe(uri, encoder.encode(uri, QrErrorCorrection.MEDIUM), ErrorCorrectionLevel.M));
 
-            assertThat(GoldenFiles.canonical(actual)).isEqualTo(GoldenFiles.canonical(sharedCase.expected()));
+            assertGives(actual, sharedCase.expected());
         }
     }
 }

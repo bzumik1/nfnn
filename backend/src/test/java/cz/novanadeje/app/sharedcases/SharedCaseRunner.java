@@ -1,8 +1,10 @@
 package cz.novanadeje.app.sharedcases;
 
+import cz.novanadeje.app.regression.GoldenFiles;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.TestFactory;
+import tools.jackson.databind.JsonNode;
 
 import java.util.stream.Stream;
 
@@ -17,6 +19,10 @@ public abstract class SharedCaseRunner {
     protected abstract String then();
 
     protected abstract void run(SharedCase sharedCase) throws Exception;
+
+    public static void assertGives(JsonNode actual, JsonNode expected) {
+        assertThat(GoldenFiles.canonical(actual)).as("the whole value, every field and none more").isEqualTo(GoldenFiles.canonical(expected));
+    }
 
     @TestFactory
     @DisplayName("Given every case of a shared case file, when the backend computes it, then it gives the case's expected value")

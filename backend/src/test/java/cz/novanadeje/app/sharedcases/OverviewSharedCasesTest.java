@@ -3,7 +3,6 @@ package cz.novanadeje.app.sharedcases;
 import cz.novanadeje.app.IntegrationTest;
 import cz.novanadeje.app.donations.domain.receipt.FirstReceiptYear;
 import cz.novanadeje.app.regression.BaselineRows;
-import cz.novanadeje.app.regression.GoldenFiles;
 import cz.novanadeje.app.support.DatabaseCleaner;
 import cz.novanadeje.app.support.MutableClock;
 import cz.novanadeje.app.support.TestSupportConfiguration;
@@ -79,7 +78,7 @@ class OverviewSharedCasesTest {
                 call = call.param("year", Integer.toString(year.asInt()));
             }
 
-            assertThat(GoldenFiles.canonical(answer(call))).isEqualTo(GoldenFiles.canonical(sharedCase.expected()));
+            assertGives(answer(call), sharedCase.expected());
         }
     }
 
@@ -112,7 +111,7 @@ class OverviewSharedCasesTest {
             MockHttpServletRequestBuilder call = get("/api/donations/me/summary")
                     .with(jwt().jwt(token -> token.subject(donor.toString()).claims(claims -> claims.remove("scope"))).authorities(new SimpleGrantedAuthority("ROLE_DONOR")));
 
-            assertThat(GoldenFiles.canonical(answer(call))).isEqualTo(GoldenFiles.canonical(sharedCase.expected()));
+            assertGives(answer(call), sharedCase.expected());
         }
     }
 
