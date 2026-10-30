@@ -5,7 +5,7 @@
     "reason": "1.1: every accepted browser error report is one WARN line built only from values of closed lists and ranges (no address, no free text); the literal values in this shape are the ones the feature sends, each other value of the same lists makes a shape of the same form",
     "contract": "docs/api-contract.md, Browser error reports",
     "security": {
-      "approvedIn": "PENDING",
+      "approvedIn": "PR #221, Jakub 2026-10-30",
       "fields": {
         "<n>": "the browser's major version after the slash (1-999, absent for a browser the app does not recognise) and count, the number of times the browser saw this kind, place and name, this report included (1-100); both integers checked against those ranges",
         "kind": "the kind of failure, one of unexpected, chunk-load, pdf-render, pdf-load, qr-encode, verify-parse, verify-signature",
@@ -24,7 +24,7 @@
     "reason": "1.1: every accepted browser error report is one WARN line built only from values of closed lists and ranges (no address, no free text); the literal values in this shape are the ones the feature sends, each other value of the same lists makes a shape of the same form",
     "contract": "docs/api-contract.md, Browser error reports",
     "security": {
-      "approvedIn": "PENDING",
+      "approvedIn": "PR #221, Jakub 2026-10-30",
       "fields": {
         "<n>": "the browser's major version after the slash (1-999, absent for a browser the app does not recognise) and count, the number of times the browser saw this kind, place and name, this report included (1-100); both integers checked against those ranges",
         "kind": "the kind of failure, one of unexpected, chunk-load, pdf-render, pdf-load, qr-encode, verify-parse, verify-signature",
@@ -43,7 +43,7 @@
     "reason": "1.1: every accepted browser error report is one WARN line built only from values of closed lists and ranges (no address, no free text); the literal values in this shape are the ones the feature sends, each other value of the same lists makes a shape of the same form",
     "contract": "docs/api-contract.md, Browser error reports",
     "security": {
-      "approvedIn": "PENDING",
+      "approvedIn": "PR #221, Jakub 2026-10-30",
       "fields": {
         "<n>": "the browser's major version after the slash (1-999, absent for a browser the app does not recognise) and count, the number of times the browser saw this kind, place and name, this report included (1-100); both integers checked against those ranges",
         "kind": "the kind of failure, one of unexpected, chunk-load, pdf-render, pdf-load, qr-encode, verify-parse, verify-signature",
@@ -62,7 +62,7 @@
     "reason": "1.1: every accepted browser error report is one WARN line built only from values of closed lists and ranges (no address, no free text); the literal values in this shape are the ones the feature sends, each other value of the same lists makes a shape of the same form",
     "contract": "docs/api-contract.md, Browser error reports",
     "security": {
-      "approvedIn": "PENDING",
+      "approvedIn": "PR #221, Jakub 2026-10-30",
       "fields": {
         "<n>": "the browser's major version after the slash (1-999, absent for a browser the app does not recognise) and count, the number of times the browser saw this kind, place and name, this report included (1-100); both integers checked against those ranges",
         "kind": "the kind of failure, one of unexpected, chunk-load, pdf-render, pdf-load, qr-encode, verify-parse, verify-signature",
@@ -81,7 +81,7 @@
     "reason": "1.1: every accepted browser error report is one WARN line built only from values of closed lists and ranges (no address, no free text); the literal values in this shape are the ones the feature sends, each other value of the same lists makes a shape of the same form",
     "contract": "docs/api-contract.md, Browser error reports",
     "security": {
-      "approvedIn": "PENDING",
+      "approvedIn": "PR #221, Jakub 2026-10-30",
       "fields": {
         "<n>": "the browser's major version after the slash (1-999, absent for a browser the app does not recognise) and count, the number of times the browser saw this kind, place and name, this report included (1-100); both integers checked against those ranges",
         "kind": "the kind of failure, one of unexpected, chunk-load, pdf-render, pdf-load, qr-encode, verify-parse, verify-signature",
@@ -100,7 +100,7 @@
     "reason": "1.1: every accepted browser error report is one WARN line built only from values of closed lists and ranges (no address, no free text); the literal values in this shape are the ones the feature sends, each other value of the same lists makes a shape of the same form",
     "contract": "docs/api-contract.md, Browser error reports",
     "security": {
-      "approvedIn": "PENDING",
+      "approvedIn": "PR #221, Jakub 2026-10-30",
       "fields": {
         "<n>": "the browser's major version after the slash (1-999, absent for a browser the app does not recognise) and count, the number of times the browser saw this kind, place and name, this report included (1-100); both integers checked against those ranges",
         "kind": "the kind of failure, one of unexpected, chunk-load, pdf-render, pdf-load, qr-encode, verify-parse, verify-signature",
@@ -119,7 +119,7 @@
     "reason": "1.1: when an hour in which the global cap dropped browser error reports ends, one WARN line per bucket says how many were dropped",
     "contract": "docs/api-contract.md, Browser error reports",
     "security": {
-      "approvedIn": "PENDING",
+      "approvedIn": "PR #221, Jakub 2026-10-30",
       "fields": {
         "<n>": "how many reports of that bucket the cap dropped in the hour that just ended (1 or more)",
         "bucket": "the cap's bucket, one of general, pdf-render, pdf-load, verify-signature"
@@ -132,7 +132,7 @@
     "reason": "1.1: when an hour in which the global cap dropped browser error reports ends, one WARN line per bucket says how many were dropped",
     "contract": "docs/api-contract.md, Browser error reports",
     "security": {
-      "approvedIn": "PENDING",
+      "approvedIn": "PR #221, Jakub 2026-10-30",
       "fields": {
         "<n>": "how many reports of that bucket the cap dropped in the hour that just ended (1 or more)",
         "bucket": "the cap's bucket, one of general, pdf-render, pdf-load, verify-signature"
