@@ -58,6 +58,38 @@
   }
 }
 
+.about-figure {
+  --about-photo-ratio: 3 / 4;
+  justify-self: center;
+  width: min(100%, calc(640px * var(--about-photo-ratio)));
+  margin: 0;
+}
+
+.about-frame {
+  position: relative;
+
+  .about-badge {
+    bottom: var(--space-6);
+  }
+}
+
+.about-photo {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: var(--about-photo-ratio);
+  border-radius: var(--radius-media);
+  background: var(--color-surface-alt);
+}
+
+.about-caption {
+  contain: inline-size;
+  margin-top: var(--space-3);
+  font-size: var(--text-md);
+  line-height: var(--leading-normal);
+  color: var(--color-text-muted);
+}
+
 .about-badge {
   position: absolute;
   bottom: -28px;
@@ -154,7 +186,8 @@
     gap: var(--space-10);
   }
 
-  .about-img-wrap {
+  .about-img-wrap,
+  .about-frame .about-badge {
     display: none;
   }
 }

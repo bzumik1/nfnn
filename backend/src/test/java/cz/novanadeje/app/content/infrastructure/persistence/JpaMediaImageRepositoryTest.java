@@ -1,8 +1,12 @@
 package cz.novanadeje.app.content.infrastructure.persistence;
 
+import cz.novanadeje.app.content.domain.about.AboutPhoto;
+import cz.novanadeje.app.content.domain.about.AboutSection;
+import cz.novanadeje.app.content.domain.about.AboutSectionRepository;
 import cz.novanadeje.app.content.domain.media.MediaId;
 import cz.novanadeje.app.content.domain.media.MediaImage;
 import cz.novanadeje.app.content.domain.media.MediaImageRepository;
+import cz.novanadeje.app.content.domain.media.MediaSize;
 import cz.novanadeje.app.content.domain.media.MediaVariant;
 import cz.novanadeje.app.content.domain.Slug;
 import cz.novanadeje.app.content.domain.news.NewsArticle;
@@ -41,6 +45,8 @@ class JpaMediaImageRepositoryTest {
     private NewsArticleRepository news;
     @Autowired
     private ProjectRepository projects;
+    @Autowired
+    private AboutSectionRepository about;
     @Autowired
     private JdbcClient jdbc;
     @Autowired
@@ -122,6 +128,34 @@ class JpaMediaImageRepositoryTest {
         assertThat(spareDeleted).isTrue();
         assertThat(media.exists(photo.id())).isTrue();
         assertThat(media.exists(spare.id())).isFalse();
+    }
+
+    @Test
+    @DisplayName("Given the photo the About section shows, when it is deleted only if unused or the old unused photos are cleaned up, then it stays")
+    void should_keep_the_about_photo_when_cleaned_up_given_the_about_section_shows_it() {
+        MediaImage shown = image(1413, 1884, NOW.minusSeconds(864_000), 480);
+        media.save(shown);
+        about.save(AboutSection.withoutPhoto(NOW).show(Optional.of(new AboutPhoto(shown.id(), Optional.empty(), Optional.empty())), NOW));
+        flushAndClear();
+
+        boolean deletedIfUnused = media.deleteIfUnused(shown.id());
+        int cleanedUp = media.deleteUnusedUploadedBefore(NOW.minusSeconds(604_800));
+        flushAndClear();
+
+        assertThat(deletedIfUnused).isFalse();
+        assertThat(cleanedUp).isZero();
+        assertThat(media.exists(shown.id())).isTrue();
+    }
+
+    @Test
+    @DisplayName("Given a stored image and an unknown id, when their sizes are read, then the image answers its original size without its variants and the unknown id nothing")
+    void should_read_the_original_size_when_asked_given_a_stored_image() {
+        MediaImage portrait = image(1413, 1884, 480, 960, 1440);
+        media.save(portrait);
+        flushAndClear();
+
+        assertThat(media.findSize(portrait.id())).contains(new MediaSize(1413, 1884));
+        assertThat(media.findSize(MediaId.newId(NOW))).isEmpty();
     }
 
     private void flushAndClear() {

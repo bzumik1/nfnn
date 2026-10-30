@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
+import { aboutPhoto, ABOUT_PHOTO_ID } from '../../../testing/about-fixtures';
 import { About } from './about';
 
 describe('Given the about section', () => {
@@ -78,6 +79,63 @@ describe('Given the about section', () => {
         expect(portrait.getAttribute('width')).toBe('160');
         expect(portrait.getAttribute('height')).toBe('160');
       }
+    });
+  });
+
+  describe('when an administrator has set a photo for it', () => {
+    function root(): HTMLElement {
+      return fixture.nativeElement as HTMLElement;
+    }
+
+    beforeEach(async () => {
+      fixture.componentRef.setInput('photo', aboutPhoto());
+      fixture.detectChanges();
+      await fixture.whenStable();
+    });
+
+    it('then the photo replaces the placeholder as a figure with its description for screen readers and its caption under it', () => {
+      const figure = root().querySelector('figure')!;
+
+      expect(figure.querySelector('img')?.getAttribute('alt')).toBe(
+        'Malý chlapec v náručí dvou dospělých',
+      );
+      expect(figure.querySelector('figcaption')?.textContent?.trim()).toBe('Kde to všechno začalo');
+      expect(root().querySelector('img[src^="/images/about-"]')).toBeNull();
+    });
+
+    it('then the photo loads late, keeps the size of its original and comes in the widths the site stores', () => {
+      const image = root().querySelector('figure img')!;
+
+      expect(image.getAttribute('loading')).toBe('lazy');
+      expect(image.getAttribute('width')).toBe('1413');
+      expect(image.getAttribute('height')).toBe('1884');
+      expect(image.getAttribute('src')).toBe(`/api/content/media/${ABOUT_PHOTO_ID}?w=480`);
+      expect(image.getAttribute('srcset')).toBe(
+        `/api/content/media/${ABOUT_PHOTO_ID}?w=480 480w, /api/content/media/${ABOUT_PHOTO_ID}?w=960 960w, /api/content/media/${ABOUT_PHOTO_ID}?w=1440 1413w`,
+      );
+    });
+
+    it('then the badge about the work with FOD stays beside the photo, outside its caption', () => {
+      const figure = root().querySelector('figure')!;
+
+      expect(figure.querySelector('.about-badge')?.textContent).toContain('FOD');
+      expect(figure.querySelector('figcaption .about-badge')).toBeNull();
+    });
+
+    it('and the photo is small and has neither texts, then it stays out of the screen reader without a caption and offers only its own width', async () => {
+      fixture.componentRef.setInput(
+        'photo',
+        aboutPhoto({ width: 700, height: 500, alt: null, caption: null }),
+      );
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      const image = root().querySelector('figure img')!;
+      expect(image.getAttribute('alt')).toBe('');
+      expect(root().querySelector('figcaption')).toBeNull();
+      expect(image.getAttribute('srcset')).toBe(
+        `/api/content/media/${ABOUT_PHOTO_ID}?w=480 480w, /api/content/media/${ABOUT_PHOTO_ID}?w=1440 700w`,
+      );
     });
   });
 });
