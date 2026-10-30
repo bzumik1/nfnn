@@ -23,26 +23,57 @@ const MAC_CHROME =
 describe('Given the user agent and display of a browser', () => {
   it.each([
     ['Safari on an iPhone', IPHONE_SAFARI, 0, { browser: 'safari', browserMajor: 18, os: 'ios' }],
-    ['Safari on an iPad that says Macintosh', IPAD_AS_MAC, 5, { browser: 'safari', browserMajor: 18, os: 'ipados' }],
+    [
+      'Safari on an iPad that says Macintosh',
+      IPAD_AS_MAC,
+      5,
+      { browser: 'safari', browserMajor: 18, os: 'ipados' },
+    ],
     ['Safari on a Mac', IPAD_AS_MAC, 0, { browser: 'safari', browserMajor: 18, os: 'macos' }],
     ['Chrome on an iPhone', IPHONE_CHROME, 0, { browser: 'chrome', browserMajor: 131, os: 'ios' }],
-    ['the Home Screen app on an iPhone', IPHONE_HOME_SCREEN, 0, { browser: 'safari', browserMajor: null, os: 'ios' }],
-    ['Chrome on Android', ANDROID_CHROME, 5, { browser: 'chrome', browserMajor: 131, os: 'android' }],
-    ['Samsung Internet', ANDROID_SAMSUNG, 5, { browser: 'samsung', browserMajor: 26, os: 'android' }],
+    [
+      'the Home Screen app on an iPhone',
+      IPHONE_HOME_SCREEN,
+      0,
+      { browser: 'safari', browserMajor: null, os: 'ios' },
+    ],
+    [
+      'Chrome on Android',
+      ANDROID_CHROME,
+      5,
+      { browser: 'chrome', browserMajor: 131, os: 'android' },
+    ],
+    [
+      'Samsung Internet',
+      ANDROID_SAMSUNG,
+      5,
+      { browser: 'samsung', browserMajor: 26, os: 'android' },
+    ],
     ['Edge on Windows', WINDOWS_EDGE, 0, { browser: 'edge', browserMajor: 131, os: 'windows' }],
     ['Opera on Windows', WINDOWS_OPERA, 0, { browser: 'opera', browserMajor: 115, os: 'windows' }],
     ['Firefox on Linux', LINUX_FIREFOX, 0, { browser: 'firefox', browserMajor: 140, os: 'linux' }],
     ['Chrome on a Mac', MAC_CHROME, 0, { browser: 'chrome', browserMajor: 131, os: 'macos' }],
-    ['an unknown agent', 'Zxqv Kanárek 7781/2099', 0, { browser: 'other', browserMajor: null, os: 'other' }],
-  ])('when it is %s, then only its family, major version and system are kept', (_what, userAgent, touchPoints, expected) => {
-    expect(detectPlatform({ userAgent, maxTouchPoints: touchPoints }, false)).toEqual({
-      ...expected,
-      display: 'browser',
-    });
-  });
+    [
+      'an unknown agent',
+      'Zxqv Kanárek 7781/2099',
+      0,
+      { browser: 'other', browserMajor: null, os: 'other' },
+    ],
+  ])(
+    'when it is %s, then only its family, major version and system are kept',
+    (_what, userAgent, touchPoints, expected) => {
+      expect(detectPlatform({ userAgent, maxTouchPoints: touchPoints }, false)).toEqual({
+        ...expected,
+        display: 'browser',
+      });
+    },
+  );
 
   it('when the major version is out of range, then it is left out', () => {
-    expect(detectPlatform({ userAgent: 'Mozilla/5.0 Firefox/1000.0', maxTouchPoints: 0 }, false).browserMajor).toBeNull();
+    expect(
+      detectPlatform({ userAgent: 'Mozilla/5.0 Firefox/1000.0', maxTouchPoints: 0 }, false)
+        .browserMajor,
+    ).toBeNull();
   });
 
   it('when the page runs as an installed app, then the display is standalone', () => {

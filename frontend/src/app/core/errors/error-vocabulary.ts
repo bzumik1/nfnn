@@ -40,7 +40,15 @@ export const ERROR_NAMES = [
   'Other',
 ] as const;
 
-export const BROWSERS = ['chrome', 'edge', 'firefox', 'safari', 'samsung', 'opera', 'other'] as const;
+export const BROWSERS = [
+  'chrome',
+  'edge',
+  'firefox',
+  'safari',
+  'samsung',
+  'opera',
+  'other',
+] as const;
 
 export const OPERATING_SYSTEMS = [
   'android',

@@ -21,7 +21,10 @@ const BROWSER_PATTERNS: readonly (readonly [Browser, RegExp])[] = [
   ['firefox', /(?:Firefox|FxiOS)\/(\d+)/],
   ['chrome', /(?:CriOS|Chrome)\/(\d+)/],
   ['safari', /Version\/(\d+)[\d.]* (?:Mobile\/\S+ )?Safari\//],
-  ['safari', /\((?:iPhone|iPad|iPod);.*AppleWebKit\/[\d.]+ \(KHTML, like Gecko\)(?: Mobile\/\S+)?$/],
+  [
+    'safari',
+    /\((?:iPhone|iPad|iPod);.*AppleWebKit\/[\d.]+ \(KHTML, like Gecko\)(?: Mobile\/\S+)?$/,
+  ],
 ];
 
 export function detectPlatform(agent: UserAgentSource, standalone: boolean): ClientPlatform {

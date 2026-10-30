@@ -77,8 +77,16 @@ describe('Given the browser error reporter', () => {
 
   it.each([
     ['a TypeError', new TypeError(CANARY), 'TypeError'],
-    ['a DOMException of an allowed name', new DOMException(CANARY, 'QuotaExceededError'), 'QuotaExceededError'],
-    ['an error with a name of its own', Object.assign(new Error(CANARY), { name: CANARY }), 'Other'],
+    [
+      'a DOMException of an allowed name',
+      new DOMException(CANARY, 'QuotaExceededError'),
+      'QuotaExceededError',
+    ],
+    [
+      'an error with a name of its own',
+      Object.assign(new Error(CANARY), { name: CANARY }),
+      'Other',
+    ],
     ['a thrown string', CANARY, 'Other'],
     ['a thrown object', { name: 'TypeError', message: CANARY }, 'TypeError'],
     ['nothing', undefined, 'Other'],
