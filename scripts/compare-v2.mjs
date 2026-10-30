@@ -37,6 +37,7 @@ const WATCHED_FILES = [
   /^scripts\/compare-v2[^/]*\.mjs$/,
   /^\.github\/workflows\/pr-check\.yml$/,
   /^backend\/build\.gradle\.kts$/,
+  /^regression\/v2\/BASELINE_COMMIT$/,
   /^scripts\/test-inventory\.mjs$/,
   /^mcp\/test\/backend-shapes[^/]*\.ts$/,
 ];

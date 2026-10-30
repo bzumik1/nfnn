@@ -176,24 +176,14 @@ jobs:
       - name: List the files the pull request changes
         run: git diff --name-only HEAD^1 HEAD > "$RUNNER_TEMP/changed-files.txt"
 
-      - name: The pull request leaves the v2 baseline as the tag recorded it
-        run: |
-          if git fetch --quiet --depth=1 origin +refs/tags/v2-baseline:refs/tags/v2-baseline 2> /dev/null; then
-            if ! git diff --quiet v2-baseline -- regression/v2/api regression/v2/test-inventory.json; then
-              echo "::error::regression/v2/api or the test inventory differs from the tag v2-baseline; a baseline file is never regenerated, declare the difference in regression/v2/changes/"
-              git diff --stat v2-baseline -- regression/v2/api regression/v2/test-inventory.json
-              exit 1
-            fi
-            echo "regression/v2 equals the tag v2-baseline"
-          else
-            echo "The tag v2-baseline does not exist yet, so only the pull request's own changes are checked"
-          fi
-
       - uses: actions/setup-node@v7
         with:
           node-version: "24"
           cache: npm
           cache-dependency-path: mcp/package-lock.json
+
+      - name: The pull request leaves the v2 baseline as its commit recorded it
+        run: node scripts/compare-v2-baseline.mjs --base=HEAD^1
 
       - uses: actions/download-artifact@v8
         with:

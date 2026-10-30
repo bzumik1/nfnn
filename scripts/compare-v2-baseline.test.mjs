@@ -38,7 +38,7 @@ function write(root, path, text) {
 
 function commit(root, message) {
   git(root, 'add', '-A');
-  git(root, 'commit', '-q', '-m', message);
+  git(root, 'commit', '-q', '--allow-empty', '-m', message);
   return git(root, 'rev-parse', 'HEAD');
 }
 
