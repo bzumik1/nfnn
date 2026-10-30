@@ -128,14 +128,11 @@ class DevelopmentKeysGuardTest {
     @DisplayName("Given a real application start with the prod profile and the public development JWT_SECRET, when Spring Boot prepares the environment, then the guard stops it after the profiles are resolved")
     void should_stop_the_start_naming_the_variable_when_the_environment_is_prepared_given_prod_with_the_development_jwt_secret() {
         String developmentSecret = developmentValue("app.security.jwt.secret");
-        StandardEnvironment withoutSystemEnvironment = new StandardEnvironment();
-        withoutSystemEnvironment.getPropertySources().remove(StandardEnvironment.SYSTEM_ENVIRONMENT_PROPERTY_SOURCE_NAME);
         SpringApplication application = new SpringApplication(NoBeans.class);
         application.setWebApplicationType(WebApplicationType.NONE);
         application.setBannerMode(Banner.Mode.OFF);
         application.setLogStartupInfo(false);
         application.setListeners(List.of(new EnvironmentPostProcessorApplicationListener()));
-        application.setEnvironment(withoutSystemEnvironment);
 
         assertThatIllegalStateException()
                 .isThrownBy(() -> application.run("--spring.profiles.active=prod", "--app.security.jwt.secret=" + developmentSecret))

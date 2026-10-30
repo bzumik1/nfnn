@@ -12,6 +12,7 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.security.MessageDigest;
 import java.util.Optional;
+import java.util.function.Function;
 
 public final class PublicDevelopmentKeys {
 
@@ -21,11 +22,11 @@ public final class PublicDevelopmentKeys {
     static final String JWT_SECRET_PROPERTY = "app.security.jwt.secret";
     private static final String DEVELOPMENT_CONFIGURATION = "application-" + DEVELOPMENT_PROFILE + ".yml";
 
-    private final Optional<byte[]> settingsKey;
-    private final Optional<BackupKey> backupKey;
-    private final Optional<String> jwtSecret;
+    private final byte[] settingsKey;
+    private final BackupKey backupKey;
+    private final String jwtSecret;
 
-    private PublicDevelopmentKeys(Optional<byte[]> settingsKey, Optional<BackupKey> backupKey, Optional<String> jwtSecret) {
+    private PublicDevelopmentKeys(byte[] settingsKey, BackupKey backupKey, String jwtSecret) {
         this.settingsKey = settingsKey;
         this.backupKey = backupKey;
         this.jwtSecret = jwtSecret;
@@ -37,25 +38,42 @@ public final class PublicDevelopmentKeys {
 
     static PublicDevelopmentKeys of(PropertyResolver defaults) {
         return new PublicDevelopmentKeys(
-                Optional.ofNullable(defaults.getProperty(SETTINGS_KEY_PROPERTY)).flatMap(PublicDevelopmentKeys::settingsKeyBytes),
-                Optional.ofNullable(defaults.getProperty(BACKUP_KEY_PROPERTY)).flatMap(PublicDevelopmentKeys::backupKeyOf),
-                Optional.ofNullable(defaults.getProperty(JWT_SECRET_PROPERTY)).flatMap(PublicDevelopmentKeys::stripped));
+                required(defaults, SETTINGS_KEY_PROPERTY, PublicDevelopmentKeys::settingsKeyBytes),
+                required(defaults, BACKUP_KEY_PROPERTY, PublicDevelopmentKeys::backupKeyOf),
+                required(defaults, JWT_SECRET_PROPERTY, PublicDevelopmentKeys::stripped));
     }
 
     public BackupKey backupKey() {
-        return backupKey.orElseThrow();
+        return backupKey;
     }
 
     public boolean isSettingsKey(String value) {
-        return settingsKey.isPresent() && settingsKeyBytes(value).filter(bytes -> MessageDigest.isEqual(bytes, settingsKey.get())).isPresent();
+        return settingsKeyBytes(value).filter(bytes -> MessageDigest.isEqual(bytes, settingsKey)).isPresent();
     }
 
     public boolean isJwtSecret(String value) {
-        return jwtSecret.isPresent() && stripped(value).filter(jwtSecret.get()::equals).isPresent();
+        return stripped(value).filter(jwtSecret::equals).isPresent();
     }
 
     public boolean isBackupKey(String value) {
-        return backupKey.isPresent() && backupKeyOf(value).filter(backupKey.get()::equals).isPresent();
+        return backupKeyOf(value).filter(backupKey::equals).isPresent();
+    }
+
+    private static <T> T required(PropertyResolver defaults, String property, Function<String, Optional<T>> reader) {
+        return developmentValue(defaults, property).flatMap(reader).orElseThrow(() -> unusable(property));
+    }
+
+    private static Optional<String> developmentValue(PropertyResolver defaults, String property) {
+        try {
+            return Optional.ofNullable(defaults.getProperty(property));
+        } catch (IllegalArgumentException unresolvable) {
+            throw unusable(property);
+        }
+    }
+
+    private static IllegalStateException unusable(String property) {
+        return new IllegalStateException(DEVELOPMENT_CONFIGURATION + " gives " + property + " no usable default, so the backend cannot tell "
+                + "that public value from a server's own and does not start; restore the default in " + DEVELOPMENT_CONFIGURATION);
     }
 
     private static MutablePropertySources developmentConfiguration() {

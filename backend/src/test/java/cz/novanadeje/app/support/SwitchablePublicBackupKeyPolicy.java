@@ -9,7 +9,7 @@ public class SwitchablePublicBackupKeyPolicy implements PublicBackupKeyPolicy {
 
     private final PublicBackupKeyPolicy development;
     private final PublicBackupKeyPolicy production;
-    private PublicBackupKeyPolicy current;
+    private volatile PublicBackupKeyPolicy current;
 
     public SwitchablePublicBackupKeyPolicy() {
         MockEnvironment developmentProfile = new MockEnvironment();
