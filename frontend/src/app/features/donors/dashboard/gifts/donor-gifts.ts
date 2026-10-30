@@ -15,6 +15,7 @@ import { MissingGift } from '../missing-gift/missing-gift';
 import { DonationsPending } from '../donations-pending/donations-pending';
 import { DonationsTable } from '../donations-table/donations-table';
 import { DonorDonations } from '../donor-donations';
+import { GiftCount, receivedVerifications } from '../gift-count/gift-count';
 import { PageTitle } from '../page-title/page-title';
 import { StandingOrder } from '../standing-order/standing-order';
 import { YearReceipt, yearReceipt } from '../yearly-receipt';
@@ -30,7 +31,15 @@ interface GiftYear {
 
 @Component({
   selector: 'app-donor-gifts',
-  imports: [PageTitle, BankCheck, DonationsPending, DonationsTable, MissingGift, StandingOrder],
+  imports: [
+    PageTitle,
+    BankCheck,
+    DonationsPending,
+    DonationsTable,
+    GiftCount,
+    MissingGift,
+    StandingOrder,
+  ],
   templateUrl: './donor-gifts.html',
   styleUrl: './donor-gifts.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -61,9 +70,7 @@ export class DonorGifts {
     }
     return [...byYear.entries()].map(([year, items]) => {
       const total = summary.byYear.find((entry) => entry.year === year);
-      const verifications = items.filter(
-        (item) => item.status === 'RECEIVED' && item.accountVerification,
-      ).length;
+      const verifications = receivedVerifications(items);
       return {
         year,
         items,

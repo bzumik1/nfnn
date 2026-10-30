@@ -244,6 +244,9 @@ describe('Given the privacy policy page', () => {
     const recipients = sectionText('Komu údaje předáváme');
 
     expect(recipients).toContain('Sendinblue SAS');
+    expect(recipients).toContain(
+      'přes kterou web odesílá e‑maily dárcům popsané v části Jaké e‑maily posíláme, zprávy z kontaktního formuláře přeposílané do schránky nadačního fondu a přehledy a upozornění pro správce webu',
+    );
     expect(recipients).toContain('Brevo');
     expect(recipients).toContain('Cloudflare');
     expect(recipients).toContain('Gmail');

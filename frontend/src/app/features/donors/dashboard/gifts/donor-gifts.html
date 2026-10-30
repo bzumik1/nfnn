@@ -32,32 +32,7 @@
           <div class="gift-year-head">
             <h3 class="gift-year-title" [id]="yearHeadingId(group.year)">{{ group.year }}</h3>
             <p class="gift-year-sum">
-              @if (group.gifts > 0) {
-                <span i18n="@@donor.gifts.year.count">
-                  {group.gifts, plural,
-                    one {{{ group.gifts }} dar}
-                    few {{{ group.gifts }} dary}
-                    other {{{ group.gifts }} darů}
-                  }
-                </span>
-                @if (group.verifications > 0) {
-                  &ngsp;<span i18n="@@donor.gifts.year.andVerifications">
-                    {group.verifications, plural,
-                      one {a ověření účtu}
-                      few {a {{ group.verifications }} ověření účtu}
-                      other {a {{ group.verifications }} ověření účtu}
-                    }
-                  </span>
-                }
-              } @else {
-                <span i18n="@@donor.gifts.year.verificationsOnly">
-                  {group.verifications, plural,
-                    one {Ověření účtu}
-                    few {{{ group.verifications }} ověření účtu}
-                    other {{{ group.verifications }} ověření účtu}
-                  }
-                </span>
-              }
+              <app-gift-count [gifts]="group.gifts" [verifications]="group.verifications" />
               ·
               <span class="gift-year-total">{{ crowns(group.totalAmountMinor) }}&nbsp;Kč</span>
             </p>

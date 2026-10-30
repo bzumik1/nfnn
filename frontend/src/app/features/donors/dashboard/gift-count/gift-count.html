@@ -1,0 +1,22 @@
+@if (gifts() > 0) {
+  <span i18n="@@donor.gifts.year.count">
+    {gifts(), plural, one {{{ gifts() }} dar} few {{{ gifts() }} dary} other {{{ gifts() }} darů}}
+  </span>
+  @if (verifications() > 0) {
+    &ngsp;<span i18n="@@donor.gifts.year.andVerifications">
+      {verifications(), plural,
+        one {a ověření účtu}
+        few {a {{ verifications() }} ověření účtu}
+        other {a {{ verifications() }} ověření účtu}
+      }
+    </span>
+  }
+} @else {
+  <span i18n="@@donor.gifts.year.verificationsOnly">
+    {verifications(), plural,
+      one {Ověření účtu}
+      few {{{ verifications() }} ověření účtu}
+      other {{{ verifications() }} ověření účtu}
+    }
+  </span>
+}

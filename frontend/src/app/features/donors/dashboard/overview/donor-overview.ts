@@ -10,6 +10,7 @@ import { MissingGift } from '../missing-gift/missing-gift';
 import { DonationsPending } from '../donations-pending/donations-pending';
 import { donationStatusLabel, DonationsTable } from '../donations-table/donations-table';
 import { DonorDonations } from '../donor-donations';
+import { receivedVerifications } from '../gift-count/gift-count';
 import { PageTitle } from '../page-title/page-title';
 import { SendGift } from '../send-gift/send-gift';
 
@@ -44,6 +45,12 @@ export class DonorOverview {
   );
 
   protected readonly hasGift = computed(() => this.gifts().length > 0);
+
+  protected readonly verifications = computed(() => receivedVerifications(this.donations.items()));
+
+  protected readonly giftCount = computed(() =>
+    Math.max((this.donations.summary()?.count ?? 0) - this.verifications(), 0),
+  );
 
   protected readonly lastGift = computed(() => this.gifts().at(0) ?? null);
 

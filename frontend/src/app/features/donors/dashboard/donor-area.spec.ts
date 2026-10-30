@@ -675,6 +675,19 @@ describe('Given a signed-in donor in the donor area', () => {
       expect(texts('.overview-stats dd')).toEqual(['1 750 Kč', '3', '1 500 Kč']);
     });
 
+    it('then the count of gifts names account verifications apart while their amounts stay in the sums', async () => {
+      const list = twoYearDonations();
+      list.items = [accountVerificationItem({ receivedAt: '2026-03-20' }), ...list.items];
+      const summary = twoYearSummary();
+      summary.count = 4;
+      summary.totalAmountMinor = 175100;
+      summary.byYear[0] = { year: 2026, count: 3, totalAmountMinor: 150100 };
+      await open('/darce/prehled');
+      await respond(summary, list);
+
+      expect(texts('.overview-stats dd')).toEqual(['1 751 Kč', '3 a ověření účtu', '1 501 Kč']);
+    });
+
     it('then a current year without a gift shows zero in its stat', async () => {
       const summary = twoYearSummary();
       summary.byYear = summary.byYear.filter((entry) => entry.year !== 2026);
@@ -1664,6 +1677,44 @@ describe('Given a signed-in donor in the donor area', () => {
         ['2025', '1 dar', '250 Kč', 'Stáhnout potvrzení za rok 2025 (PDF)'],
       ]);
       expect(element('.yearly-hint')).toBeNull();
+    });
+
+    it('then account verifications are named apart from the gifts of their year while the total keeps their amount', async () => {
+      const list = twoYearDonations();
+      list.items = [
+        accountVerificationItem({ id: 'v-1', receivedAt: '2026-03-20' }),
+        accountVerificationItem({ id: 'v-2', receivedAt: '2025-12-01' }),
+        ...list.items,
+      ];
+      const summary = twoYearSummary();
+      summary.byYear = [
+        { year: 2026, count: 3, totalAmountMinor: 150100 },
+        { year: 2025, count: 2, totalAmountMinor: 25100 },
+      ];
+      await open('/darce/potvrzeni');
+      await respond(summary, list);
+
+      expect(yearRows().map((row) => row.slice(0, 3))).toEqual([
+        ['2026', '2 dary a ověření účtu', '1 501 Kč'],
+        ['2025', '1 dar a ověření účtu', '251 Kč'],
+      ]);
+    });
+
+    it('then a year with only an account verification names just that', async () => {
+      const list = {
+        ...emptyDonations(),
+        items: [accountVerificationItem({ receivedAt: '2026-10-30' })],
+      };
+      const summary = {
+        ...emptySummary(),
+        count: 1,
+        totalAmountMinor: 100,
+        byYear: [{ year: 2026, count: 1, totalAmountMinor: 100 }],
+      };
+      await open('/darce/potvrzeni');
+      await respond(summary, list);
+
+      expect(yearRows()[0].slice(0, 3)).toEqual(['2026', 'Ověření účtu', '1 Kč']);
     });
 
     it('then a year with five or more donations uses the plural for many', async () => {

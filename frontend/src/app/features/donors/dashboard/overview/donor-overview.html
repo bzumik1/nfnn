@@ -116,7 +116,18 @@
     </div>
     <div class="overview-stat">
       <dt i18n="@@donor.dashboard.stat.count">Počet darů</dt>
-      <dd class="stat-value">{{ donations.summary()?.count ?? 0 }}</dd>
+      <dd class="stat-value">
+        {{ giftCount() }}
+        @if (verifications() > 0) {
+          <span class="stat-note" i18n="@@donor.overview.stat.andVerifications">
+            {verifications(), plural,
+              one {a ověření účtu}
+              few {a {{ verifications() }} ověření účtu}
+              other {a {{ verifications() }} ověření účtu}
+            }
+          </span>
+        }
+      </dd>
     </div>
     @if (currentYear(); as year) {
       <div class="overview-stat">
