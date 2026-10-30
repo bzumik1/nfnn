@@ -352,53 +352,11 @@ describe('Given the site header over the dark top of a page', () => {
     expect(logo().getAttribute('src')).toBe('/images/logo.svg');
   });
 
-  function statusBarTint(): string | null {
-    return (
-      fixture.nativeElement.querySelector('.status-bar-tint')?.getAttribute('data-tint') ?? null
-    );
-  }
-
-  function scrollTo(y: number): void {
-    Object.defineProperty(window, 'scrollY', { value: y, configurable: true });
-    window.dispatchEvent(new Event('scroll'));
-    fixture.detectChanges();
-  }
-
-  it('when the home page is at its top, then the phone browser tints its status bar with the grey of the photo top', async () => {
-    await showAt('/');
-
-    expect(statusBarTint()).toBe('photo');
-  });
-
-  it('when a page other than home is at its top, then the status bar takes the dark of the page top', async () => {
+  it('when any page opens, then the header gives the phone browser the strip it tints its status bar from, never seen nor read', async () => {
     await showAt('/projekty');
 
-    expect(statusBarTint()).toBe('dark');
-  });
-
-  it('when the page scrolls under the bar, then the status bar turns light with the bar and back at the top again', async () => {
-    await showAt('/');
-
-    scrollTo(400);
-    expect(statusBarTint()).toBe('light');
-
-    scrollTo(0);
-    expect(statusBarTint()).toBe('photo');
-  });
-
-  it('when the menu opens over the page, then the status bar turns light with the bar', async () => {
-    await showAt('/');
-
-    (fixture.nativeElement.querySelector('.mobile-menu-btn') as HTMLButtonElement).click();
-    fixture.detectChanges();
-
-    expect(statusBarTint()).toBe('light');
-  });
-
-  it('when it renders, then the tint is never seen nor read: it only tells the browser a colour', async () => {
-    await showAt('/');
-
     const tint = fixture.nativeElement.querySelector('.status-bar-tint') as HTMLElement;
+    expect(tint).not.toBeNull();
     expect(tint.textContent).toBe('');
     expect(tint.getAttribute('aria-hidden')).toBe('true');
   });

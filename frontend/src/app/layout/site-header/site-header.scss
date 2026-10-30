@@ -13,15 +13,7 @@
   height: var(--space-1);
   visibility: hidden;
   pointer-events: none;
-  background-color: var(--color-surface);
-
-  &[data-tint='photo'] {
-    background-color: var(--color-hero-top);
-  }
-
-  &[data-tint='dark'] {
-    background-color: var(--color-surface-inverse);
-  }
+  background-color: var(--color-accent);
 }
 
 .nav {

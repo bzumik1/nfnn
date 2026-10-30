@@ -36,13 +36,9 @@ export class SiteHeader {
   protected readonly scrolled = signal(false);
   protected readonly menuOpen = signal(false);
   private readonly onHome = onHomePage();
-  protected readonly statusBarTint = computed<'photo' | 'dark' | 'light'>(() => {
-    if (this.scrolled() || this.menuOpen()) {
-      return 'light';
-    }
-    return this.onHome() ? 'photo' : 'dark';
-  });
-  protected readonly logoOnDark = computed(() => this.statusBarTint() === 'dark');
+  protected readonly logoOnDark = computed(
+    () => !this.onHome() && !this.scrolled() && !this.menuOpen(),
+  );
   protected readonly openMenuLabel = $localize`:@@layout.header.toggleMenu:Otevřít menu`;
   protected readonly closeMenuLabel = $localize`:@@layout.header.closeMenu:Zavřít menu`;
 
