@@ -36,6 +36,10 @@ public record ReceiptSigningKeyId(String value) {
         return new ReceiptSigningKeyId(HexFormat.of().formatHex(bytes));
     }
 
+    public boolean isPublicTestKey() {
+        return false;
+    }
+
     public byte[] bytes() {
         return HexFormat.of().parseHex(value);
     }

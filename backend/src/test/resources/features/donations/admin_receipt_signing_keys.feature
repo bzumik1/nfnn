@@ -36,6 +36,16 @@ Feature: An administrator sees which key signs the verification QR codes on rece
       | 39f713d0 | active | 2026-11-01T07:00:00Z | false     | false   |
       | 21fe31df | active | 2026-11-13T11:00:00Z | true      | true    |
 
+  Scenario: Outside development the current key shows as not published when it is a public test key of RFC 8032
+    Given "Jana" is an administrator
+    And the server runs outside development
+    When "Jana" asks for the receipt signing keys
+    Then the response status is 200
+    And the current receipt signing key is "21fe31df", published: false
+    And the receipt signing keys are:
+      | keyId    | status | registeredAt         | published | current |
+      | 21fe31df | active | 2026-11-13T11:00:00Z | false     | true    |
+
   Scenario: A donor without the administrator role is refused
     When "Jana" asks for the receipt signing keys
     Then the response status is 403

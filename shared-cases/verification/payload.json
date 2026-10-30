@@ -1,6 +1,6 @@
 {
   "source": "edited",
-  "logic": "The verification proof a receipt carries in its QR code and its PDF link (plan v3 D5 to D7, slice 1.5): one form for every receipt, every gift always. An encoding case names a receipt (input.receipt), the key that signs it (signingKeyId, one of input.keys; the backend signs with the RFC 8032 test 1 seed its tests hold, never a key of a server) and the foundation's IČO. Every key in the file is a public RFC 8032 test key (test 1 21fe31df, test 2 39f713d0, test SHA(abc) 5f9b247e, whose public key has an odd x); a server outside development refuses them. The backend writes the body (payloadHex, big-endian): format 0x01; the key id, the first 4 bytes of SHA-256 of the raw 32-byte public key; flags, bit 0 yearly, bit 1 a company, bit 2 replaces an earlier receipt, bit 3 the postal code in the Czech form NNN NN, bits 4 to 7 zero; the serial of the number as u24, its year being the year of issue; the issue day as u16 days since 2000-01-01; a yearly receipt's year as u16; a replaced receipt's serial as u24 and its issue day as u16; the donor's name, street and city as a LEB128 byte length and NFC UTF-8; the postal code as u24 under bit 3, else as text; a company's IČO as u32; the number of gifts as LEB128; each gift as its day (u16, days not decreasing) and its amount in hellers (LEB128); the total in hellers (LEB128). It signs with Ed25519 the ASCII tag nfnn.cz/receipt/v1, one zero byte, the foundation's IČO as u32 and the body (signatureHex; signedSha256 is the SHA-256 of that signed message), appends the 64-byte signature to the body and writes the bytes in chunks of 7 as decimal numbers of 17 digits, a last chunk of k bytes in 3, 5, 8, 10, 13 or 15 digits, after https://nfnn.cz/overit#1 (qrText). The symbol (qr) is a byte segment for https://nfnn.cz/overit# and a numeric segment for the rest, without an ECI header (one would take 2 bytes of the largest proof), error correction M up to version 13 and L from version 14, the smallest version that holds both; above version 40 (2 893 bytes) there is none and issuance is refused as donations/receipt-too-long. The limit is the byte count: the largest case holds 553 gifts of 200 to 1 500 Kč, three-byte amounts, and gifts below 163.84 Kč take a byte less each, so more of them fit. The browser reads every encoding case's qrText against input.keys and gets the verdict valid with keyId signingKeyId and the receipt input.receipt. A reading case gives a qrText made by hand, and both sides read it to its expected verdict, checking in this order: the prefix https://nfnn.cz/overit#1 (not-a-proof); only digits whose count a chunk width gives, each chunk below 2 to the power of 8 times its bytes (digits); no bytes, or fewer than 70 once the format byte is 0x01 (truncated); the format byte (unknown-format); the key id among input.keys (unknown-key) and not revoked (revoked-key); the Ed25519 signature of the last 64 bytes over the tag, the IČO and the rest, refused when S is not below the group order (bad-signature); then the body: bits 4 to 7 (reserved-flags), a field running past the body (truncated), a LEB128 number with a needless last zero group (non-minimal-varint), text that is empty, not UTF-8 or not NFC (invalid-text), a serial outside 1 to 999 999, a year before 2000, a postal code above 99 999, an IČO above 99 999 999, a LEB128 number of more than eight groups or of 2 to the power of 53 or more, no gift or a single receipt of more than one, a day before the gift's predecessor, an amount of zero, gifts summing to 2 to the power of 53 or more, or a yearly gift outside its year (invalid-value), bytes after the total (trailing-bytes), a total other than the sum of the gifts (total-mismatch).",
+  "logic": "The verification proof a receipt carries in its QR code and its PDF link (plan v3 D5 to D7, slice 1.5): one form for every receipt, every gift always. An encoding case names a receipt (input.receipt), the key that signs it (signingKeyId, one of input.keys; the backend signs with the RFC 8032 test 1 seed its tests hold, never a key of a server) and the foundation's IČO. Every key in the file is a public RFC 8032 test key (test 1 21fe31df, test 2 39f713d0, test SHA(abc) 5f9b247e, whose public key has an odd x); a server outside development refuses them. The backend writes the body (payloadHex, big-endian): format 0x01; the key id, the first 4 bytes of SHA-256 of the raw 32-byte public key; flags, bit 0 yearly, bit 1 a company, bit 2 replaces an earlier receipt, bit 3 the postal code in the Czech form NNN NN, bits 4 to 7 zero; the serial of the number as u24, its year being the year of issue; the issue day as u16 days since 2000-01-01; a yearly receipt's year as u16; a replaced receipt's serial as u24 and its issue day as u16; the donor's name, street and city as a LEB128 byte length and NFC UTF-8; the postal code as u24 under bit 3, else as text; a company's IČO as u32; the number of gifts as LEB128; each gift as its day (u16, days not decreasing) and its amount in hellers (LEB128); the total in hellers (LEB128). It signs with Ed25519 the ASCII tag nfnn.cz/receipt/v1, one zero byte, the foundation's IČO as u32 and the body (signatureHex; signedSha256 is the SHA-256 of that signed message), appends the 64-byte signature to the body and writes the bytes in chunks of 7 as decimal numbers of 17 digits, a last chunk of k bytes in 3, 5, 8, 10, 13 or 15 digits, after https://nfnn.cz/overit#1 (qrText). The symbol (qr) is a byte segment for https://nfnn.cz/overit# and a numeric segment for the rest, without an ECI header (one would take 2 bytes of the largest proof), error correction M up to version 13 and L from version 14, the smallest version that holds both; above version 40 (2 893 bytes) there is none and issuance is refused as donations/receipt-too-long. The limit is the byte count: the largest case holds 553 gifts of 200 to 1 500 Kč, three-byte amounts, and gifts below 163.84 Kč take a byte less each, so more of them fit. The browser reads every encoding case's qrText against input.keys and gets the verdict valid with keyId signingKeyId and the receipt input.receipt. A reading case gives a qrText made by hand, and both sides read it to its expected verdict. The reader checks the outside first, in this order: the prefix https://nfnn.cz/overit#1 (not-a-proof); only digits whose count a chunk width gives, each chunk below 2 to the power of 8 times its bytes (digits); no bytes, or fewer than 70 once the format byte is 0x01 (truncated); the format byte (unknown-format); the key id among input.keys (unknown-key) and not revoked (revoked-key); the Ed25519 signature of the last 64 bytes over the tag, the IČO and the rest, refused when S is not below the group order (bad-signature). Then it reads the body field by field in byte order and stops at the first field that breaks a rule, so a body broken in two places gets the verdict of the field nearer its start (a yearly receipt for 1999 with a name not in NFC is invalid-value, from the year, not invalid-text). The rules, by the field they apply to: the flags with any of bits 4 to 7 (reserved-flags); any field running past the body (truncated); any LEB128 number with a needless last zero group (non-minimal-varint), of more than eight groups or of 2 to the power of 53 or more (invalid-value); a serial outside 1 to 999 999, a year before 2000 (invalid-value); a text that is empty, not UTF-8 or not NFC (invalid-text); a postal code above 99 999, an IČO above 99 999 999, no gift or a single receipt of more than one (invalid-value); a gift's day before its predecessor's, outside a yearly receipt's year, or an amount of zero (invalid-value), and, checked as each gift is added and before the total is read, gifts summing to 2 to the power of 53 or more (invalid-value, even when the total says 1); after the total, bytes after it (trailing-bytes), and only then a total other than the sum of the gifts (total-mismatch).",
   "cases": [
     {
       "name": "a single receipt of one gift",
@@ -3315,6 +3315,46 @@
       "name": "gifts summing to 2 to the power of 53, signed",
       "input": {
         "qrText": "https://nfnn.cz/overit#1003188506188208640013540562252033821780717229121604333369417308327473137430500738980131647753270534193140817736024979062853782731364816540955161023119488360377544836711683617008641117401636170086419009664389609713794815180101506897007518616517004187399332655560715830294544855918602412913470160454382551192198729446327605956833443025119747646191030457796614",
+        "foundation": {
+          "companyIdentifier": "27278794"
+        },
+        "keys": [
+          {
+            "keyId": "21fe31df",
+            "publicKeyHex": "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a",
+            "status": "active"
+          }
+        ]
+      },
+      "expected": {
+        "verdict": "rejected",
+        "reason": "invalid-value"
+      }
+    },
+    {
+      "name": "a yearly receipt for 1999 with a name not in NFC, signed",
+      "input": {
+        "qrText": "https://nfnn.cz/overit#100318850618820864001354056225134312555765144042941309082474721365132275279289662480335756277648060836733429144049103367215079695597172190019757280982256428303372234428448480446139417393955126860986406292869080960809175486239492053160703415462931275026312758446872479195780641031967745066675149867080616837831750",
+        "foundation": {
+          "companyIdentifier": "27278794"
+        },
+        "keys": [
+          {
+            "keyId": "21fe31df",
+            "publicKeyHex": "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a",
+            "status": "active"
+          }
+        ]
+      },
+      "expected": {
+        "verdict": "rejected",
+        "reason": "invalid-value"
+      }
+    },
+    {
+      "name": "gifts summing to 2 to the power of 53 with a total of 1, signed",
+      "input": {
+        "qrText": "https://nfnn.cz/overit#10031885061882086400135405622520338217807172291216043333694173083274731374305007389801316477532705341931408177360249790628537827313648165409551610231194883603775448367116836170086411141545436180063488881684260818601363402512107437450532029235061248590703665909589421871700223801861841918426431515625558237362830873032122071465277151019197199",
         "foundation": {
           "companyIdentifier": "27278794"
         },

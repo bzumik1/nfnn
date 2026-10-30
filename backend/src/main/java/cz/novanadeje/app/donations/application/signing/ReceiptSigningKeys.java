@@ -17,11 +17,13 @@ public class ReceiptSigningKeys {
     private final ReceiptSigningKeyRepository keys;
     private final RecordSeals seals;
     private final ReceiptSigner signer;
+    private final PublicTestKeyPolicy testKeys;
 
-    public ReceiptSigningKeys(ReceiptSigningKeyRepository keys, RecordSeals seals, ReceiptSigner signer) {
+    public ReceiptSigningKeys(ReceiptSigningKeyRepository keys, RecordSeals seals, ReceiptSigner signer, PublicTestKeyPolicy testKeys) {
         this.keys = keys;
         this.seals = seals;
         this.signer = signer;
+        this.testKeys = testKeys;
     }
 
     public List<PublishedReceiptKey> published() {

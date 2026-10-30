@@ -33,16 +33,19 @@ public class ReceiptSigningKeyRegistration {
     private final ReceiptSigningKeyRepository keys;
     private final RecordSeals seals;
     private final FinishedRestores restores;
+    private final PublicTestKeyPolicy testKeys;
     private final ApplicationEventPublisher events;
     private final TransactionOperations transactions;
     private final Clock clock;
 
     public ReceiptSigningKeyRegistration(ReceiptSigner signer, ReceiptSigningKeyRepository keys, RecordSeals seals, FinishedRestores restores,
-                                         ApplicationEventPublisher events, TransactionOperations transactions, Clock clock) {
+                                         PublicTestKeyPolicy testKeys, ApplicationEventPublisher events, TransactionOperations transactions,
+                                         Clock clock) {
         this.signer = signer;
         this.keys = keys;
         this.seals = seals;
         this.restores = restores;
+        this.testKeys = testKeys;
         this.events = events;
         this.transactions = transactions;
         this.clock = clock;

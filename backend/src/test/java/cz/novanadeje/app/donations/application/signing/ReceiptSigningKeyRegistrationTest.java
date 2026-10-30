@@ -16,6 +16,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
@@ -59,8 +61,9 @@ class ReceiptSigningKeyRegistrationTest {
     private final WatchedTransactions transactions = new WatchedTransactions();
     private final LinesWithTransaction lines = new LinesWithTransaction(transactions);
     private Optional<FinishedRestore> lastRestore = Optional.empty();
-    private final ReceiptSigningKeyRegistration registration = new ReceiptSigningKeyRegistration(signer, keys, seals, () -> lastRestore, events,
-            transactions, Clock.fixed(NOW, ZoneOffset.UTC));
+    private boolean outsideDevelopment;
+    private final ReceiptSigningKeyRegistration registration = new ReceiptSigningKeyRegistration(signer, keys, seals, () -> lastRestore,
+            id -> outsideDevelopment && id.isPublicTestKey(), events, transactions, Clock.fixed(NOW, ZoneOffset.UTC));
 
     @BeforeEach
     void ownKeyAndLog() {
@@ -145,6 +148,55 @@ class ReceiptSigningKeyRegistrationTest {
             assertThat(line.level()).isEqualTo(Level.WARN);
             assertThat(line.message()).isEqualTo("Receipt signing key 39f713d0 from a restored backup is sealed again and published");
             assertThat(line.insideTransaction()).isFalse();
+        });
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {59, 60})
+    @DisplayName("Given a key sealed under the settings key the backup carried and a restore that finished up to an hour before, when the server registers its own, then it adopts that key")
+    void should_adopt_when_registering_given_a_restore_finished_within_the_hour(int minutesAgo) {
+        ReceiptSigningKey earlier = ReceiptSigningKey.register(EARLIER_PUBLIC_KEY, EARLIER, content -> seals.carried(content));
+        keys.stored.add(earlier);
+        lastRestore = Optional.of(new FinishedRestore(RESTORE, NOW.minus(Duration.ofMinutes(minutesAgo))));
+
+        registration.registerOwnKey();
+
+        assertThat(keys.adoptions).containsExactly(RESTORE);
+        assertThat(keys.stored).filteredOn(key -> key.id().equals(earlier.id())).singleElement()
+                .satisfies(key -> assertThat(seals.check(ReceiptSigningKey.SEAL_PURPOSE, key.sealedContent(), key.seal())).isEqualTo(SealVerdict.SEALED_HERE));
+    }
+
+    @Test
+    @DisplayName("Given a server outside development, a key of a public RFC 8032 test sealed under the carried settings key and a fresh restore, when the server registers its own, then that key is not adopted and an ERROR names it after the transaction")
+    void should_refuse_test_key_when_registering_given_a_server_outside_development_and_a_fresh_restore() {
+        outsideDevelopment = true;
+        ReceiptSigningKey earlier = ReceiptSigningKey.register(EARLIER_PUBLIC_KEY, EARLIER, content -> seals.carried(content));
+        keys.stored.add(earlier);
+        lastRestore = Optional.of(new FinishedRestore(RESTORE, NOW.minus(Duration.ofMinutes(3))));
+
+        registration.registerOwnKey();
+
+        assertThat(keys.stored).contains(earlier);
+        verify(events, never()).publishEvent(org.mockito.ArgumentMatchers.<AdminActionPerformed>argThat(
+                action -> action.action().equals(ReceiptSigningKeyRegistration.ADOPT_ACTION)));
+        assertThat(lines.written).filteredOn(line -> line.message().contains("39f713d0")).singleElement().satisfies(line -> {
+            assertThat(line.level()).isEqualTo(Level.ERROR);
+            assertThat(line.message()).isEqualTo("Receipt signing key 39f713d0 is a public test key of RFC 8032, so it is not published");
+            assertThat(line.insideTransaction()).isFalse();
+        });
+    }
+
+    @Test
+    @DisplayName("Given a server outside development and a key of a public RFC 8032 test sealed here, when the server registers its own, then an ERROR names it")
+    void should_log_error_when_registering_given_a_server_outside_development_and_a_test_key_sealed_here() {
+        outsideDevelopment = true;
+        keys.stored.add(ReceiptSigningKey.register(EARLIER_PUBLIC_KEY, EARLIER, content -> seals.seal(ReceiptSigningKey.SEAL_PURPOSE, content)));
+
+        registration.registerOwnKey();
+
+        assertThat(lines.written).filteredOn(line -> line.message().contains("39f713d0")).singleElement().satisfies(line -> {
+            assertThat(line.level()).isEqualTo(Level.ERROR);
+            assertThat(line.message()).isEqualTo("Receipt signing key 39f713d0 is a public test key of RFC 8032, so it is not published");
         });
     }
 

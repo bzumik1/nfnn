@@ -1,11 +1,16 @@
 package cz.novanadeje.app.operations.infrastructure.backup;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import cz.novanadeje.app.operations.application.backup.BackupStore;
 import cz.novanadeje.app.operations.domain.backup.BackupRun;
 import cz.novanadeje.app.operations.domain.backup.RunOutcome;
 import cz.novanadeje.app.shared.application.restore.FinishedRestore;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.slf4j.LoggerFactory;
 
 import java.time.Instant;
 import java.util.Optional;
@@ -48,6 +53,37 @@ class BackupStoreFinishedRestoresTest {
 
         when(store.lastRestore()).thenReturn(Optional.empty());
         assertThat(restores.lastSucceeded()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Given a successful restore whose request id has 40 characters, when the last restore is read, then it is named by that request")
+    void should_name_the_request_when_read_given_a_request_id_of_40_characters() {
+        String request = "r".repeat(FinishedRestore.MAX_ID_LENGTH);
+        when(store.lastRestore()).thenReturn(Optional.of(run(RunOutcome.OK, Optional.of(request))));
+
+        assertThat(restores.lastSucceeded()).contains(new FinishedRestore(request, FINISHED));
+    }
+
+    @Test
+    @DisplayName("Given a successful restore whose request id is longer than 40 characters, when the last restore is read, then there is none and a WARN gives only the length")
+    void should_give_none_and_warn_when_read_given_a_request_id_over_40_characters() {
+        String request = "019a1b2c-0000-7000-8000-000000000001-and-more";
+        when(store.lastRestore()).thenReturn(Optional.of(run(RunOutcome.OK, Optional.of(request))));
+        Logger logger = (Logger) LoggerFactory.getLogger(BackupStoreFinishedRestores.class);
+        ListAppender<ILoggingEvent> lines = new ListAppender<>();
+        lines.start();
+        logger.addAppender(lines);
+        try {
+            assertThat(restores.lastSucceeded()).isEmpty();
+        } finally {
+            logger.detachAppender(lines);
+        }
+
+        assertThat(lines.list).singleElement().satisfies(line -> {
+            assertThat(line.getLevel()).isEqualTo(Level.WARN);
+            assertThat(line.getFormattedMessage())
+                    .isEqualTo("The last restore names a request id of 45 characters, more than 40, so it confirms no receipt signing key");
+        });
     }
 
     private static BackupRun run(RunOutcome outcome, Optional<String> request) {

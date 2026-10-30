@@ -93,6 +93,26 @@ Feature: Anyone reads the keys that verify the QR codes on donation receipts
       | keyId    | algorithm | publicKey                                   | status | registeredAt         |
       | 21fe31df | Ed25519   | 11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo | active | 2026-11-13T11:00:00Z |
 
+  Scenario: A restore named by a request id longer than 40 characters confirms no key
+    Given a backup of an earlier server with its receipt signing key registered at "2026-11-01T07:00:00Z" was restored
+    And the backup container finished that restore 3 minutes ago under the request "019a1b2c-0000-7000-8000-000000000007-and-more"
+    When the server starts again
+    Then the server logged the error "Receipt signing key 39f713d0 is sealed by the settings key of another server and no restore confirms it, so it is not published"
+    And the server's admin action "ADOPT_RECEIPT_SIGNING_KEY" is recorded 0 times with details containing "39f713d0"
+
+  Scenario: Outside development no public test key of RFC 8032 is published, not even one a confirmed restore brings
+    Given a backup of an earlier server with its receipt signing key registered at "2026-11-01T07:00:00Z" was restored
+    And the backup container finished that restore 3 minutes ago under the request "019a1b2c-0000-7000-8000-000000000008"
+    And the server runs outside development
+    When the server starts again
+    Then the server logged the error "Receipt signing key 39f713d0 is a public test key of RFC 8032, so it is not published"
+    And the server logged the error "Receipt signing key 21fe31df is a public test key of RFC 8032, so it is not published"
+    And the server's admin action "ADOPT_RECEIPT_SIGNING_KEY" is recorded 0 times with details containing "39f713d0"
+    When a visitor asks for the receipt keys
+    Then the response status is 200
+    And the receipt keys are those of the foundation "Nová naděje - nadační fond" "27278794":
+      | keyId | algorithm | publicKey | status | registeredAt |
+
   Scenario: At a real start after a confirmed restore the earlier key is adopted before the carried settings key is replaced
     Given a backup of an earlier server with its receipt signing key registered at "2026-11-01T07:00:00Z" was restored
     And the backup container finished that restore 3 minutes ago under the request "019a1b2c-0000-7000-8000-000000000006"
