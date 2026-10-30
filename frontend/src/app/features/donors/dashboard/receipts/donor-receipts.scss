@@ -75,7 +75,8 @@
   text-align: right;
 }
 
-.yearly-hint {
+.yearly-hint,
+.yearly-earlier {
   margin-top: var(--space-2);
   font-size: var(--text-sm);
   color: var(--color-text-soft);
@@ -141,4 +142,8 @@ a {
 
 .yearly-pdf-icon {
   flex: none;
+}
+
+.single-gifts {
+  margin-top: var(--space-4);
 }

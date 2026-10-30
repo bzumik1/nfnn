@@ -49,7 +49,15 @@ describe('Given an administrator on the monthly report page', () => {
     fixture.detectChanges();
   });
 
-  afterEach(() => http.verify());
+  afterEach(() => {
+    vi.useRealTimers();
+    http.verify();
+  });
+
+  function today(isoInstant: string): void {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(isoInstant));
+  }
 
   function element<T extends HTMLElement>(selector: string): T {
     const found = fixture.nativeElement.querySelector(selector) as T | null;
@@ -119,6 +127,7 @@ describe('Given an administrator on the monthly report page', () => {
   });
 
   it('when the server defaults still apply, then the form shows them, the next report is announced and no report is listed', async () => {
+    today('2026-10-01T04:00:00Z');
     await respond(reportView());
 
     expect(element<HTMLTextAreaElement>('#report-recipients').value).toBe('info@nfnn.cz');
@@ -146,6 +155,27 @@ describe('Given an administrator on the monthly report page', () => {
     expect(options[0]?.value).toBe('2026-09');
     expect(options[0]?.textContent).toBe('září 2026 (zatím neodesláno)');
     expect(options[23]?.value).toBe('2024-10');
+  });
+
+  it('when the report of the ended month is past its sending time and has not gone out, then the line says so and when the web tries again', async () => {
+    today('2026-10-30T14:52:00Z');
+    await respond(reportView());
+
+    expect(text('.next-report')).toBe(
+      'Přehled za září 2026 měl odejít 01. 10. 2026 v 7:00, ale zatím neodešel. Web ho zkusí poslat znovu v příští celou hodinu; poslat ho můžete i hned níže.',
+    );
+  });
+
+  it('when the sending day has come but not yet the hour, then the line still announces the report for that hour', async () => {
+    today('2026-10-05T15:30:00Z');
+    await respond(
+      reportView({
+        settings: { ...reportView().settings, sendDay: 5, sendHour: 18 },
+        nextReport: { month: '2026-09', dueOn: '2026-10-05' },
+      }),
+    );
+
+    expect(text('.next-report')).toBe('Příští přehled za září 2026 odejde 05. 10. 2026 v 18:00.');
   });
 
   it('when settings were changed and reports went out, then the change time, the sent months and the sent dates in the month list are shown', async () => {
@@ -308,11 +338,8 @@ describe('Given an administrator on the monthly report page', () => {
     expect(text('.send-card .send-recipients')).toBe(
       'Přehled dostanou: info@nfnn.cz, pavel@example.cz. To jsou příjemci uložení v nastavení výše.',
     );
-    expect(text('#report-month-hint')).toBe(
-      'Nabízíme jen skončené měsíce. Přehled za říjen 2026 půjde poslat, až měsíc skončí.',
-    );
-    expect(element<HTMLSelectElement>('#report-month').getAttribute('aria-describedby')).toContain(
-      'report-month-hint',
+    expect(text('.send-card .send-intro')).toBe(
+      'Přehled za vybraný měsíc odejde hned, i když už jednou odešel. Poslat jde jen měsíc, který už skončil: přehled za říjen 2026 půjde poslat od 01. 11. 2026.',
     );
     expect(element<HTMLSelectElement>('#report-month').options[0]?.textContent).toBe(
       'září 2026 (zatím neodesláno)',

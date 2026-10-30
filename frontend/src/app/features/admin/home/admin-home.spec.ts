@@ -27,6 +27,15 @@ const UNPAIRED_URL = '/api/admin/donations/payments?pairing=unpaired';
 const ADMINISTRATORS_URL = '/api/admin/donors/administrators';
 const PREVIOUS_SIGN_IN_URL = '/api/admin/donors/me/previous-sign-in';
 const SINCE_URL = '/api/admin/donations/overview/since';
+const SIGNATURE_URL = '/api/admin/donations/receipt-signature';
+const SIGNATURE = { configured: true, image: null, width: 400, height: 120, uploadedAt: null };
+const NO_SIGNATURE = {
+  configured: false,
+  image: null,
+  width: null,
+  height: null,
+  uploadedAt: null,
+};
 
 describe('Given an administrator on the administration home', () => {
   let fixture: ComponentFixture<AdminHome>;
@@ -67,6 +76,7 @@ describe('Given an administrator on the administration home', () => {
     http
       .match((request) => request.url === SINCE_URL)
       .forEach((pending) => pending.flush(activitySince()));
+    http.match(SIGNATURE_URL).forEach((pending) => pending.flush(SIGNATURE));
     http.verify();
   });
 
@@ -308,6 +318,15 @@ describe('Given an administrator on the administration home', () => {
       ).toEqual(['Měsíc', 'Dary', 'Dárci', 'Noví dárci', 'Celkem', 'Přiřazené', 'Bez dárce']);
     });
 
+    it('then a line under the table says new donors are registrations and the total includes payments without a donor', () => {
+      const table = fixture.nativeElement.querySelector('.overview-table') as HTMLTableElement;
+
+      expect(table.nextElementSibling?.classList.contains('overview-columns')).toBe(true);
+      expect(text('.overview-columns')).toBe(
+        'Noví dárci jsou nové registrace, i bez daru, takže jich může být víc než dárců. Celkem zahrnuje i platby, které ještě nemají dárce (Celkem = Přiřazené + Bez dárce).',
+      );
+    });
+
     it('then another year can be chosen and its months replace the table', async () => {
       const select = fixture.nativeElement.querySelector(
         '.year-select select',
@@ -539,7 +558,7 @@ describe('Given an administrator on the administration home', () => {
           (fixture.nativeElement as HTMLElement).querySelectorAll('.attention-problems li'),
         ).map((item) => (item.textContent ?? '').trim()),
       ).toEqual([
-        'Poslední záloha se nepovedla. Data webu jsou v pořádku, ale nejsou zálohovaná. Zkuste Zálohovat teď; když to nepomůže, zkopírujte zprávu pro technika a pošlete ji správci serveru.',
+        'Poslední záloha se nepovedla. Data webu jsou v pořádku, ale nejsou zálohovaná. Zkuste Zálohovat teď; když to nepomůže, zkopírujte zprávu pro technika a pošlete ji správci serveru, který web nainstaloval.',
         'Zatím se nevyzkoušelo, že jde zálohu obnovit. Spusťte Ověřit obnovu teď.',
       ]);
       expect(backupsCard().querySelector('.healthy')).toBeNull();
@@ -625,7 +644,7 @@ describe('Given an administrator on the administration home', () => {
 
       expect(items()).toEqual([
         '3 platby čekají na přiřazení dárci (850 Kč). Přiřadit platby',
-        'Poslední záloha se nepovedla. Data webu jsou v pořádku, ale nejsou zálohovaná. Zkuste Zálohovat teď; když to nepomůže, zkopírujte zprávu pro technika a pošlete ji správci serveru. Zkopírovat zprávu pro technika Otevřít zálohy',
+        'Poslední záloha se nepovedla. Data webu jsou v pořádku, ale nejsou zálohovaná. Zkuste Zálohovat teď; když to nepomůže, zkopírujte zprávu pro technika a pošlete ji správci serveru, který web nainstaloval. Zkopírovat zprávu pro technika Otevřít zálohy',
         'Správce Petr Svoboda nemá druhý faktor (kód z ověřovací aplikace ani přístupový klíč), správa se mu neotevře. Otevřít Správce',
       ]);
       const links = Array.from(
@@ -643,7 +662,7 @@ describe('Given an administrator on the administration home', () => {
       );
 
       expect(items()).toEqual([
-        'Web teď nevidí složku se zálohami, takže zálohy nejde vytvořit ani stáhnout. Data webu jsou v pořádku. Zkopírujte prosím zprávu pro technika a pošlete ji správci serveru. Zkopírovat zprávu pro technika Otevřít zálohy',
+        'Web teď nevidí složku se zálohami, takže zálohy nejde vytvořit ani stáhnout. Data webu jsou v pořádku. Zkopírujte prosím zprávu pro technika a pošlete ji správci serveru, který web nainstaloval. Zkopírovat zprávu pro technika Otevřít zálohy',
       ]);
       expect(attention().textContent).not.toContain('compose');
     });
@@ -676,11 +695,36 @@ describe('Given an administrator on the administration home', () => {
       );
 
       expect(items()).toEqual([
-        'Klíč k zálohám si zatím nikdo neuložil. Bez něj žádnou zálohu neobnovíte. Uložit klíč',
+        'Klíč k zálohám si zatím nikdo neuložil. Bez něj žádnou zálohu neobnovíte. Uložit ho má někdo ze správní rady, ne technik. Uložit klíč',
       ]);
       expect(attention().querySelector('a')?.getAttribute('href')).toBe(
         '/sprava/zalohy#klic-k-zaloham',
       );
+    });
+
+    it('then receipts without an uploaded signature get a row leading to the receipt settings', async () => {
+      await sources();
+      http.expectOne(SIGNATURE_URL).flush(NO_SIGNATURE);
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(items()).toEqual([
+        'Potvrzení o daru zatím nemají nahraný podpis, jen čáru se jménem. Nahrát podpis',
+      ]);
+      expect(attention().querySelector('a')?.getAttribute('href')).toBe(
+        '/sprava/nastaveni#settings-RECEIPTS',
+      );
+      expect(attention().querySelector('.healthy')).toBeNull();
+    });
+
+    it('then an uploaded signature or one that cannot be checked adds no row', async () => {
+      await sources();
+      http.expectOne(SIGNATURE_URL).flush(null, { status: 500, statusText: 'Error' });
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(attention().querySelector('.attention-list')).toBeNull();
+      expect(text('.attention .healthy')).toContain('Vše je v pořádku.');
     });
 
     it('then a source that fails says so with a retry while the others still show', async () => {
