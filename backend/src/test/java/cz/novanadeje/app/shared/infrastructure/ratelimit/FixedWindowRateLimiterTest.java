@@ -16,6 +16,7 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class FixedWindowRateLimiterTest {
 
@@ -90,6 +91,24 @@ class FixedWindowRateLimiterTest {
         }
 
         assertThat(limiter.trackedKeys()).isBetween(45_000L, 50_000L);
+    }
+
+    @Test
+    @DisplayName("Given a limiter built to track at most 1 000 keys, when 5 000 addresses ask once, then it keeps at most 1 000 of them")
+    void should_keep_at_most_its_maximum_of_keys_when_acquired_given_a_smaller_maximum() {
+        FixedWindowRateLimiter small = new FixedWindowRateLimiter(2, Duration.ofHours(1), 1_000, clock);
+
+        for (int address = 0; address < 5_000; address++) {
+            small.tryAcquire(key("10.1." + (address >> 8 & 0xff) + "." + (address & 0xff)));
+        }
+
+        assertThat(small.trackedKeys()).isBetween(900L, 1_000L);
+    }
+
+    @Test
+    @DisplayName("Given a maximum of no keys, when a limiter is built, then it is refused")
+    void should_refuse_a_maximum_of_no_keys_when_a_limiter_is_built() {
+        assertThatThrownBy(() -> new FixedWindowRateLimiter(2, Duration.ofHours(1), 0, clock)).isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
