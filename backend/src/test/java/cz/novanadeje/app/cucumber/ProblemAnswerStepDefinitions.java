@@ -24,6 +24,11 @@ public class ProblemAnswerStepDefinitions {
         api.send(method, path, contentType, body);
     }
 
+    @When("the signed-in donor sends {word} {string} as {string} with the body {string}")
+    public void theSignedInDonorSendsAsWithTheBody(String method, String path, String contentType, String body) {
+        api.send(method, path, contentType, body);
+    }
+
     @Then("the problem says {string}: {string}")
     public void theProblemSays(String title, String detail) {
         assertThat(api.lastResponse().getHeaders().getContentType()).hasToString("application/problem+json");

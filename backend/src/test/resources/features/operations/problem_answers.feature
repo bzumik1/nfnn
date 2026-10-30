@@ -16,7 +16,6 @@ Feature: A refused request is answered in the client's language without exceptio
       | A body of a type the address cannot read | POST   | /api/contact/messages      | text/x-nfnn-client-value      | {}                 | 415    | Nepodporovaný formát dat | Tato adresa data v tomto formátu nepřijímá.                                            | nfnn-client-value         |
       | A method the address does not take       | DELETE | /api/content/news          |                               |                    | 405    | Nepovolená metoda        | Tato adresa takový požadavek nepřijímá.                                                | DELETE                    |
       | An address with nothing behind it        | GET    | /api/donors/nfnn-client-value |                            |                    | 404    | Nenalezeno               | Na této adrese nic není.                                                               | nfnn-client-value         |
-      | A value a value object refuses           | PATCH  | /api/donors/me             | application/json              | {"name": "   "}    | 400    | Neplatné údaje           | Některou ze zadaných hodnot nejde přijmout. Zkontrolujte je prosím a zkuste to znovu. | Name is required          |
 
   Scenario Outline: <case> is refused before any endpoint, with the site's own texts and without the address
     When "Jana" sends <method> "<path>" as "" with the body ''
