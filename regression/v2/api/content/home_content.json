@@ -1,0 +1,1550 @@
+{
+  "source": "v2-baseline",
+  "feature": "content/home_content",
+  "scenarios": {
+    "The home content carries the three newest news articles and the three newest published projects, newest year first #1": {
+      "requests": {
+        "POST /api/donors/auth/register #1": {
+          "request": {
+            "path": "/api/donors/auth/register",
+            "body": {
+              "address": {
+                "city": "Ústí nad Labem",
+                "postalCode": "400 01",
+                "street": "Dlouhá 12"
+              },
+              "companyIdentifier": null,
+              "email": "jana@example.cz",
+              "name": "Jana Nováková",
+              "password": "<secret>",
+              "type": "PERSON"
+            }
+          },
+          "response": {
+            "status": 202,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            }
+          }
+        },
+        "POST /api/donors/auth/email-verification/confirm #1": {
+          "request": {
+            "path": "/api/donors/auth/email-verification/confirm",
+            "body": {
+              "token": "<secret>"
+            }
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "set-cookie": "refresh_token=<secret>; Path=/api/donors/auth; Max-Age=1209600; Expires=<time>; Secure; HttpOnly; SameSite=Strict",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "accessToken": "<secret>",
+              "accessTokenExpiresAt": "2026-10-23T10:15:00Z",
+              "user": {
+                "address": {
+                  "city": "Ústí nad Labem",
+                  "postalCode": "400 01",
+                  "street": "Dlouhá 12"
+                },
+                "companyIdentifier": null,
+                "email": "jana@example.cz",
+                "hasPassword": true,
+                "id": "<id:1>",
+                "name": "Jana Nováková",
+                "pendingEmailChange": null,
+                "preferredLocale": "cs",
+                "registeredAt": "2026-10-23T10:00:00Z",
+                "roles": [
+                  "DONOR"
+                ],
+                "secondFactor": {
+                  "enabled": false,
+                  "neededForAdministration": false
+                },
+                "type": "PERSON",
+                "variableSymbol": "<vs:Jana>"
+              }
+            }
+          }
+        },
+        "POST /api/donors/me/second-factor/setup #1": {
+          "request": {
+            "path": "/api/donors/me/second-factor/setup",
+            "headers": {
+              "Authorization": "Bearer <jwt>"
+            },
+            "body": {
+              "password": "<secret>"
+            }
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "otpauthUri": "<secret>",
+              "qrCode": {
+                "modules": "<secret>",
+                "size": "<secret>"
+              },
+              "secret": "<secret>"
+            }
+          }
+        },
+        "POST /api/donors/me/second-factor/confirm #1": {
+          "request": {
+            "path": "/api/donors/me/second-factor/confirm",
+            "headers": {
+              "Authorization": "Bearer <jwt>"
+            },
+            "body": {
+              "code": "<secret>"
+            }
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "set-cookie": "refresh_token=<secret>; Path=/api/donors/auth; Max-Age=1209600; Expires=<time>; Secure; HttpOnly; SameSite=Strict",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "accessToken": "<secret>",
+              "accessTokenExpiresAt": "2026-10-23T10:15:00Z",
+              "user": {
+                "address": {
+                  "city": "Ústí nad Labem",
+                  "postalCode": "400 01",
+                  "street": "Dlouhá 12"
+                },
+                "companyIdentifier": null,
+                "email": "jana@example.cz",
+                "hasPassword": true,
+                "id": "<id:1>",
+                "name": "Jana Nováková",
+                "pendingEmailChange": null,
+                "preferredLocale": "cs",
+                "registeredAt": "2026-10-23T10:00:00Z",
+                "roles": [
+                  "DONOR",
+                  "ADMIN"
+                ],
+                "secondFactor": {
+                  "enabled": true,
+                  "neededForAdministration": false
+                },
+                "type": "PERSON",
+                "variableSymbol": "<vs:Jana>"
+              }
+            }
+          }
+        },
+        "POST /api/donors/auth/login #1": {
+          "request": {
+            "path": "/api/donors/auth/login",
+            "body": {
+              "email": "jana@example.cz",
+              "password": "<secret>"
+            }
+          },
+          "response": {
+            "status": 401,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/problem+json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "challenge": "<token>",
+              "challengeExpiresAt": "2026-10-23T10:05:00Z",
+              "detail": "Přihlášení dokončíte šestimístným kódem z ověřovací aplikace.",
+              "instance": "/api/donors/auth/login",
+              "status": 401,
+              "title": "Zadejte kód z aplikace",
+              "type": "https://nfnn.cz/problems/auth/second-factor-required"
+            }
+          }
+        },
+        "POST /api/donors/auth/login/second-factor #1": {
+          "request": {
+            "path": "/api/donors/auth/login/second-factor",
+            "body": {
+              "challenge": "<token>",
+              "code": "<secret>"
+            }
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "set-cookie": "refresh_token=<secret>; Path=/api/donors/auth; Max-Age=1209600; Expires=<time>; Secure; HttpOnly; SameSite=Strict",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "accessToken": "<secret>",
+              "accessTokenExpiresAt": "2026-10-23T10:15:00Z",
+              "user": {
+                "address": {
+                  "city": "Ústí nad Labem",
+                  "postalCode": "400 01",
+                  "street": "Dlouhá 12"
+                },
+                "companyIdentifier": null,
+                "email": "jana@example.cz",
+                "hasPassword": true,
+                "id": "<id:1>",
+                "name": "Jana Nováková",
+                "pendingEmailChange": null,
+                "preferredLocale": "cs",
+                "registeredAt": "2026-10-23T10:00:00Z",
+                "roles": [
+                  "DONOR",
+                  "ADMIN"
+                ],
+                "secondFactor": {
+                  "enabled": true,
+                  "neededForAdministration": false
+                },
+                "type": "PERSON",
+                "variableSymbol": "<vs:Jana>"
+              }
+            }
+          }
+        },
+        "POST /api/admin/content/news #1": {
+          "request": {
+            "path": "/api/admin/content/news",
+            "headers": {
+              "Authorization": "Bearer <jwt>"
+            },
+            "body": {
+              "body": "Text.",
+              "perex": "Perex.",
+              "title": "Aktualita 1"
+            }
+          },
+          "response": {
+            "status": 201,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "body": "Text.",
+              "coverImage": null,
+              "createdAt": "2026-10-23T10:00:00Z",
+              "id": "<id:2>",
+              "live": false,
+              "perex": "Perex.",
+              "publishedOn": null,
+              "slug": "aktualita-1",
+              "tag": null,
+              "title": "Aktualita 1",
+              "updatedAt": "2026-10-23T10:00:00Z"
+            }
+          }
+        },
+        "POST /api/admin/content/news/{id}/publish #1": {
+          "request": {
+            "path": "/api/admin/content/news/<id:2>/publish",
+            "headers": {
+              "Authorization": "Bearer <jwt>"
+            },
+            "body": {
+              "publishedOn": "2026-09-01"
+            }
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "body": "Text.",
+              "coverImage": null,
+              "createdAt": "2026-10-23T10:00:00Z",
+              "id": "<id:2>",
+              "live": true,
+              "perex": "Perex.",
+              "publishedOn": "2026-09-01",
+              "slug": "aktualita-1",
+              "tag": null,
+              "title": "Aktualita 1",
+              "updatedAt": "2026-10-23T10:00:00Z"
+            }
+          }
+        },
+        "POST /api/admin/content/news #2": {
+          "request": {
+            "path": "/api/admin/content/news",
+            "headers": {
+              "Authorization": "Bearer <jwt>"
+            },
+            "body": {
+              "body": "Text.",
+              "perex": "Perex.",
+              "title": "Aktualita 2"
+            }
+          },
+          "response": {
+            "status": 201,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "body": "Text.",
+              "coverImage": null,
+              "createdAt": "2026-10-23T10:00:00Z",
+              "id": "<id:3>",
+              "live": false,
+              "perex": "Perex.",
+              "publishedOn": null,
+              "slug": "aktualita-2",
+              "tag": null,
+              "title": "Aktualita 2",
+              "updatedAt": "2026-10-23T10:00:00Z"
+            }
+          }
+        },
+        "POST /api/admin/content/news/{id}/publish #2": {
+          "request": {
+            "path": "/api/admin/content/news/<id:3>/publish",
+            "headers": {
+              "Authorization": "Bearer <jwt>"
+            },
+            "body": {
+              "publishedOn": "2026-09-02"
+            }
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "body": "Text.",
+              "coverImage": null,
+              "createdAt": "2026-10-23T10:00:00Z",
+              "id": "<id:3>",
+              "live": true,
+              "perex": "Perex.",
+              "publishedOn": "2026-09-02",
+              "slug": "aktualita-2",
+              "tag": null,
+              "title": "Aktualita 2",
+              "updatedAt": "2026-10-23T10:00:00Z"
+            }
+          }
+        },
+        "POST /api/admin/content/news #3": {
+          "request": {
+            "path": "/api/admin/content/news",
+            "headers": {
+              "Authorization": "Bearer <jwt>"
+            },
+            "body": {
+              "body": "Text.",
+              "perex": "Perex.",
+              "title": "Aktualita 3"
+            }
+          },
+          "response": {
+            "status": 201,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "body": "Text.",
+              "coverImage": null,
+              "createdAt": "2026-10-23T10:00:00Z",
+              "id": "<id:4>",
+              "live": false,
+              "perex": "Perex.",
+              "publishedOn": null,
+              "slug": "aktualita-3",
+              "tag": null,
+              "title": "Aktualita 3",
+              "updatedAt": "2026-10-23T10:00:00Z"
+            }
+          }
+        },
+        "POST /api/admin/content/news/{id}/publish #3": {
+          "request": {
+            "path": "/api/admin/content/news/<id:4>/publish",
+            "headers": {
+              "Authorization": "Bearer <jwt>"
+            },
+            "body": {
+              "publishedOn": "2026-09-03"
+            }
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "body": "Text.",
+              "coverImage": null,
+              "createdAt": "2026-10-23T10:00:00Z",
+              "id": "<id:4>",
+              "live": true,
+              "perex": "Perex.",
+              "publishedOn": "2026-09-03",
+              "slug": "aktualita-3",
+              "tag": null,
+              "title": "Aktualita 3",
+              "updatedAt": "2026-10-23T10:00:00Z"
+            }
+          }
+        },
+        "POST /api/admin/content/news #4": {
+          "request": {
+            "path": "/api/admin/content/news",
+            "headers": {
+              "Authorization": "Bearer <jwt>"
+            },
+            "body": {
+              "body": "Text.",
+              "perex": "Perex.",
+              "title": "Aktualita 4"
+            }
+          },
+          "response": {
+            "status": 201,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "body": "Text.",
+              "coverImage": null,
+              "createdAt": "2026-10-23T10:00:00Z",
+              "id": "<id:5>",
+              "live": false,
+              "perex": "Perex.",
+              "publishedOn": null,
+              "slug": "aktualita-4",
+              "tag": null,
+              "title": "Aktualita 4",
+              "updatedAt": "2026-10-23T10:00:00Z"
+            }
+          }
+        },
+        "POST /api/admin/content/news/{id}/publish #4": {
+          "request": {
+            "path": "/api/admin/content/news/<id:5>/publish",
+            "headers": {
+              "Authorization": "Bearer <jwt>"
+            },
+            "body": {
+              "publishedOn": "2026-09-04"
+            }
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "body": "Text.",
+              "coverImage": null,
+              "createdAt": "2026-10-23T10:00:00Z",
+              "id": "<id:5>",
+              "live": true,
+              "perex": "Perex.",
+              "publishedOn": "2026-09-04",
+              "slug": "aktualita-4",
+              "tag": null,
+              "title": "Aktualita 4",
+              "updatedAt": "2026-10-23T10:00:00Z"
+            }
+          }
+        },
+        "POST /api/admin/content/projects #1": {
+          "request": {
+            "path": "/api/admin/content/projects",
+            "headers": {
+              "Authorization": "Bearer <jwt>"
+            },
+            "body": {
+              "body": "Text.",
+              "perex": "Perex.",
+              "title": "Tomáš, 9 let",
+              "year": 2023
+            }
+          },
+          "response": {
+            "status": 201,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "body": "Text.",
+              "coverImage": null,
+              "createdAt": "2026-10-23T10:00:00Z",
+              "id": "<id:6>",
+              "live": false,
+              "perex": "Perex.",
+              "publishedOn": null,
+              "slug": "tomas-9-let",
+              "tag": null,
+              "title": "Tomáš, 9 let",
+              "updatedAt": "2026-10-23T10:00:00Z",
+              "year": 2023
+            }
+          }
+        },
+        "POST /api/admin/content/projects/{id}/publish #1": {
+          "request": {
+            "path": "/api/admin/content/projects/<id:6>/publish",
+            "headers": {
+              "Authorization": "Bearer <jwt>"
+            },
+            "body": {
+              "publishedOn": "2026-10-01"
+            }
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "body": "Text.",
+              "coverImage": null,
+              "createdAt": "2026-10-23T10:00:00Z",
+              "id": "<id:6>",
+              "live": true,
+              "perex": "Perex.",
+              "publishedOn": "2026-10-01",
+              "slug": "tomas-9-let",
+              "tag": null,
+              "title": "Tomáš, 9 let",
+              "updatedAt": "2026-10-23T10:00:00Z",
+              "year": 2023
+            }
+          }
+        },
+        "POST /api/admin/content/projects #2": {
+          "request": {
+            "path": "/api/admin/content/projects",
+            "headers": {
+              "Authorization": "Bearer <jwt>"
+            },
+            "body": {
+              "body": "Text.",
+              "perex": "Perex.",
+              "title": "Dominik, 7 let",
+              "year": 2024
+            }
+          },
+          "response": {
+            "status": 201,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "body": "Text.",
+              "coverImage": null,
+              "createdAt": "2026-10-23T10:00:00Z",
+              "id": "<id:7>",
+              "live": false,
+              "perex": "Perex.",
+              "publishedOn": null,
+              "slug": "dominik-7-let",
+              "tag": null,
+              "title": "Dominik, 7 let",
+              "updatedAt": "2026-10-23T10:00:00Z",
+              "year": 2024
+            }
+          }
+        },
+        "POST /api/admin/content/projects/{id}/publish #2": {
+          "request": {
+            "path": "/api/admin/content/projects/<id:7>/publish",
+            "headers": {
+              "Authorization": "Bearer <jwt>"
+            },
+            "body": {
+              "publishedOn": "2026-09-01"
+            }
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "body": "Text.",
+              "coverImage": null,
+              "createdAt": "2026-10-23T10:00:00Z",
+              "id": "<id:7>",
+              "live": true,
+              "perex": "Perex.",
+              "publishedOn": "2026-09-01",
+              "slug": "dominik-7-let",
+              "tag": null,
+              "title": "Dominik, 7 let",
+              "updatedAt": "2026-10-23T10:00:00Z",
+              "year": 2024
+            }
+          }
+        },
+        "POST /api/admin/content/projects #3": {
+          "request": {
+            "path": "/api/admin/content/projects",
+            "headers": {
+              "Authorization": "Bearer <jwt>"
+            },
+            "body": {
+              "body": "Text.",
+              "perex": "Perex.",
+              "title": "Anička, 5 let",
+              "year": 2022
+            }
+          },
+          "response": {
+            "status": 201,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "body": "Text.",
+              "coverImage": null,
+              "createdAt": "2026-10-23T10:00:00Z",
+              "id": "<id:8>",
+              "live": false,
+              "perex": "Perex.",
+              "publishedOn": null,
+              "slug": "anicka-5-let",
+              "tag": null,
+              "title": "Anička, 5 let",
+              "updatedAt": "2026-10-23T10:00:00Z",
+              "year": 2022
+            }
+          }
+        },
+        "POST /api/admin/content/projects/{id}/publish #3": {
+          "request": {
+            "path": "/api/admin/content/projects/<id:8>/publish",
+            "headers": {
+              "Authorization": "Bearer <jwt>"
+            },
+            "body": {
+              "publishedOn": "2026-08-01"
+            }
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "body": "Text.",
+              "coverImage": null,
+              "createdAt": "2026-10-23T10:00:00Z",
+              "id": "<id:8>",
+              "live": true,
+              "perex": "Perex.",
+              "publishedOn": "2026-08-01",
+              "slug": "anicka-5-let",
+              "tag": null,
+              "title": "Anička, 5 let",
+              "updatedAt": "2026-10-23T10:00:00Z",
+              "year": 2022
+            }
+          }
+        },
+        "POST /api/admin/content/projects #4": {
+          "request": {
+            "path": "/api/admin/content/projects",
+            "headers": {
+              "Authorization": "Bearer <jwt>"
+            },
+            "body": {
+              "body": "Text.",
+              "perex": "Perex.",
+              "title": "Martin, 11 let",
+              "year": 2021
+            }
+          },
+          "response": {
+            "status": 201,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "body": "Text.",
+              "coverImage": null,
+              "createdAt": "2026-10-23T10:00:00Z",
+              "id": "<id:9>",
+              "live": false,
+              "perex": "Perex.",
+              "publishedOn": null,
+              "slug": "martin-11-let",
+              "tag": null,
+              "title": "Martin, 11 let",
+              "updatedAt": "2026-10-23T10:00:00Z",
+              "year": 2021
+            }
+          }
+        },
+        "POST /api/admin/content/projects/{id}/publish #4": {
+          "request": {
+            "path": "/api/admin/content/projects/<id:9>/publish",
+            "headers": {
+              "Authorization": "Bearer <jwt>"
+            },
+            "body": {
+              "publishedOn": "2026-07-01"
+            }
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "body": "Text.",
+              "coverImage": null,
+              "createdAt": "2026-10-23T10:00:00Z",
+              "id": "<id:9>",
+              "live": true,
+              "perex": "Perex.",
+              "publishedOn": "2026-07-01",
+              "slug": "martin-11-let",
+              "tag": null,
+              "title": "Martin, 11 let",
+              "updatedAt": "2026-10-23T10:00:00Z",
+              "year": 2021
+            }
+          }
+        },
+        "POST /api/admin/content/projects #5": {
+          "request": {
+            "path": "/api/admin/content/projects",
+            "headers": {
+              "Authorization": "Bearer <jwt>"
+            },
+            "body": {
+              "body": "Text.",
+              "perex": "Perex.",
+              "title": "Eliška, 6 let",
+              "year": 2025
+            }
+          },
+          "response": {
+            "status": 201,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "body": "Text.",
+              "coverImage": null,
+              "createdAt": "2026-10-23T10:00:00Z",
+              "id": "<id:10>",
+              "live": false,
+              "perex": "Perex.",
+              "publishedOn": null,
+              "slug": "eliska-6-let",
+              "tag": null,
+              "title": "Eliška, 6 let",
+              "updatedAt": "2026-10-23T10:00:00Z",
+              "year": 2025
+            }
+          }
+        },
+        "GET /api/content/home #1": {
+          "request": {
+            "path": "/api/content/home"
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "news": [
+                {
+                  "body": "Text.",
+                  "coverImage": null,
+                  "createdAt": "2026-10-23T10:00:00Z",
+                  "id": "<id:5>",
+                  "live": true,
+                  "perex": "Perex.",
+                  "publishedOn": "2026-09-04",
+                  "slug": "aktualita-4",
+                  "tag": null,
+                  "title": "Aktualita 4",
+                  "updatedAt": "2026-10-23T10:00:00Z"
+                },
+                {
+                  "body": "Text.",
+                  "coverImage": null,
+                  "createdAt": "2026-10-23T10:00:00Z",
+                  "id": "<id:4>",
+                  "live": true,
+                  "perex": "Perex.",
+                  "publishedOn": "2026-09-03",
+                  "slug": "aktualita-3",
+                  "tag": null,
+                  "title": "Aktualita 3",
+                  "updatedAt": "2026-10-23T10:00:00Z"
+                },
+                {
+                  "body": "Text.",
+                  "coverImage": null,
+                  "createdAt": "2026-10-23T10:00:00Z",
+                  "id": "<id:3>",
+                  "live": true,
+                  "perex": "Perex.",
+                  "publishedOn": "2026-09-02",
+                  "slug": "aktualita-2",
+                  "tag": null,
+                  "title": "Aktualita 2",
+                  "updatedAt": "2026-10-23T10:00:00Z"
+                }
+              ],
+              "projects": [
+                {
+                  "body": "Text.",
+                  "coverImage": null,
+                  "createdAt": "2026-10-23T10:00:00Z",
+                  "id": "<id:7>",
+                  "live": true,
+                  "perex": "Perex.",
+                  "publishedOn": "2026-09-01",
+                  "slug": "dominik-7-let",
+                  "tag": null,
+                  "title": "Dominik, 7 let",
+                  "updatedAt": "2026-10-23T10:00:00Z",
+                  "year": 2024
+                },
+                {
+                  "body": "Text.",
+                  "coverImage": null,
+                  "createdAt": "2026-10-23T10:00:00Z",
+                  "id": "<id:6>",
+                  "live": true,
+                  "perex": "Perex.",
+                  "publishedOn": "2026-10-01",
+                  "slug": "tomas-9-let",
+                  "tag": null,
+                  "title": "Tomáš, 9 let",
+                  "updatedAt": "2026-10-23T10:00:00Z",
+                  "year": 2023
+                },
+                {
+                  "body": "Text.",
+                  "coverImage": null,
+                  "createdAt": "2026-10-23T10:00:00Z",
+                  "id": "<id:8>",
+                  "live": true,
+                  "perex": "Perex.",
+                  "publishedOn": "2026-08-01",
+                  "slug": "anicka-5-let",
+                  "tag": null,
+                  "title": "Anička, 5 let",
+                  "updatedAt": "2026-10-23T10:00:00Z",
+                  "year": 2022
+                }
+              ]
+            }
+          }
+        }
+      },
+      "mails": [
+        {
+          "from": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "to": [
+            "jana@example.cz"
+          ],
+          "replyTo": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "subject": "Dvoufaktorové ověření vašeho účtu bylo zapnuto – Nová naděje",
+          "text": "Dobrý den,\n\nu vašeho dárcovského účtu Nová naděje jste právě zapnuli dvoufaktorové ověření. Od teď se kromě hesla přihlásíte také kódem z aplikace v telefonu; všechna ostatní přihlášení jsme ukončili.\n\nOvěření najdete po přihlášení na kartě Přihlašovací údaje, kde ho můžete také vypnout.\n\nPokud jste ověření nezapínali vy, zná někdo vaše heslo. Napište nám prosím co nejdříve na info@nfnn.cz.\n\nNová naděje – nadační fond\n\nMáte-li dotaz, napište nám na info@nfnn.cz.\n",
+          "html": {
+            "text": "Dvoufaktorové ověření bylo zapnuto Dobrý den, u vašeho dárcovského účtu Nová naděje jste právě zapnuli dvoufaktorové ověření. Od teď se kromě hesla přihlásíte také kódem z aplikace v telefonu; všechna ostatní přihlášení jsme ukončili. Ověření najdete po přihlášení na kartě Přihlašovací údaje, kde ho můžete také vypnout. Pokud jste ověření nezapínali vy, zná někdo vaše heslo. Napište nám prosím co nejdříve na info@nfnn.cz. S pozdravem Nová naděje – nadační fond Máte-li dotaz, napište nám na info@nfnn.cz. Nová naděje – nadační fond · IČO 27278794 · Jiráskova 436, 473 01 Nový Bor localhost",
+            "links": [
+              "http://localhost:4200"
+            ],
+            "sha256": "569eecb1a69179063482395aaf12247ec254c1362045d6b1607bd9c8a6757b88"
+          },
+          "attachments": [
+            {
+              "fileName": "inline",
+              "contentType": "image/png",
+              "size": 41502,
+              "sha256": "aecbb8a4c043690e9918174f51cd419a3f1c02d34161454fe40e759db6e7dfcb"
+            }
+          ]
+        },
+        {
+          "from": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "to": [
+            "jana@example.cz"
+          ],
+          "replyTo": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "subject": "Potvrďte svůj e-mail – Nová naděje",
+          "text": "Dobrý den,\n\nděkujeme za registraci dárcovského účtu Nová naděje (jana@example.cz). Zbývá potvrdit, že je tato adresa vaše:\n\nhttp://localhost:4200/potvrzeni-emailu#token=<token>\n\nOdkaz platí 24 hodin a lze ho použít jen jednou. Do potvrzení se do účtu nepřihlásíte.\n\nPokud jste se neregistrovali vy, tento e-mail prosím ignorujte. Účet bez potvrzení zůstane neaktivní.\n\nNová naděje – nadační fond\n\nMáte-li dotaz, napište nám na info@nfnn.cz.\n",
+          "html": {
+            "text": "Vítejte v Nové naději Dobrý den, děkujeme za registraci dárcovského účtu Nová naděje (jana@example.cz). Zbývá potvrdit, že je tato adresa vaše: Potvrdit e-mail Pokud tlačítko nefunguje, otevřete tento odkaz: http://localhost:4200/potvrzeni-emailu#token=<token> Odkaz platí 24 hodin a lze ho použít jen jednou. Do potvrzení se do účtu nepřihlásíte. Pokud jste se neregistrovali vy, tento e-mail prosím ignorujte. Účet bez potvrzení zůstane neaktivní. S pozdravem Nová naděje – nadační fond Máte-li dotaz, napište nám na info@nfnn.cz. Nová naděje – nadační fond · IČO 27278794 · Jiráskova 436, 473 01 Nový Bor localhost",
+            "links": [
+              "http://localhost:4200/potvrzeni-emailu#token=<token>",
+              "http://localhost:4200/potvrzeni-emailu#token=<token>",
+              "http://localhost:4200"
+            ],
+            "sha256": "b997ca057549e76a39c2ee069bfabc9ff801bcc4fe1f95bdc05ff48d5e5057b2"
+          },
+          "attachments": [
+            {
+              "fileName": "inline",
+              "contentType": "image/png",
+              "size": 41502,
+              "sha256": "aecbb8a4c043690e9918174f51cd419a3f1c02d34161454fe40e759db6e7dfcb"
+            }
+          ]
+        }
+      ],
+      "logs": [
+        "INFO content.application.news.NewsAdminService: CREATE_NEWS on news article <id:2> by admin <id:1>",
+        "INFO content.application.news.NewsAdminService: CREATE_NEWS on news article <id:3> by admin <id:1>",
+        "INFO content.application.news.NewsAdminService: CREATE_NEWS on news article <id:4> by admin <id:1>",
+        "INFO content.application.news.NewsAdminService: CREATE_NEWS on news article <id:5> by admin <id:1>",
+        "INFO content.application.news.NewsAdminService: PUBLISH_NEWS on news article <id:2> by admin <id:1>",
+        "INFO content.application.news.NewsAdminService: PUBLISH_NEWS on news article <id:3> by admin <id:1>",
+        "INFO content.application.news.NewsAdminService: PUBLISH_NEWS on news article <id:4> by admin <id:1>",
+        "INFO content.application.news.NewsAdminService: PUBLISH_NEWS on news article <id:5> by admin <id:1>",
+        "INFO content.application.project.ProjectAdminService: CREATE_PROJECT on project <id:6> by admin <id:1>",
+        "INFO content.application.project.ProjectAdminService: CREATE_PROJECT on project <id:7> by admin <id:1>",
+        "INFO content.application.project.ProjectAdminService: CREATE_PROJECT on project <id:8> by admin <id:1>",
+        "INFO content.application.project.ProjectAdminService: CREATE_PROJECT on project <id:9> by admin <id:1>",
+        "INFO content.application.project.ProjectAdminService: CREATE_PROJECT on project <id:10> by admin <id:1>",
+        "INFO content.application.project.ProjectAdminService: PUBLISH_PROJECT on project <id:6> by admin <id:1>",
+        "INFO content.application.project.ProjectAdminService: PUBLISH_PROJECT on project <id:7> by admin <id:1>",
+        "INFO content.application.project.ProjectAdminService: PUBLISH_PROJECT on project <id:8> by admin <id:1>",
+        "INFO content.application.project.ProjectAdminService: PUBLISH_PROJECT on project <id:9> by admin <id:1>",
+        "INFO donations.application.pairing.PaymentPairingService: Payments of donor <id:1> paired after the registration: 0 by symbol, 0 by account, 0 accounts learned",
+        "INFO donors.application.DonorAuthenticationService: Sign-in of donor <id:1> waits for the second factor",
+        "INFO donors.application.DonorEmailVerificationService: E-mail of donor <id:1> verified",
+        "INFO donors.application.DonorEmailVerificationService: E-mail verification link issued for donor <id:1>",
+        "INFO donors.application.DonorSecondFactorService: Second factor enabled for donor <id:1>, every session revoked",
+        "INFO donors.application.DonorSecondFactorService: Second factor set-up started for donor <id:1>",
+        "INFO shared.infrastructure.audit.AdminActionLog: Admin <id:1> performed CREATE_NEWS on <id:2>",
+        "INFO shared.infrastructure.audit.AdminActionLog: Admin <id:1> performed CREATE_NEWS on <id:3>",
+        "INFO shared.infrastructure.audit.AdminActionLog: Admin <id:1> performed CREATE_NEWS on <id:4>",
+        "INFO shared.infrastructure.audit.AdminActionLog: Admin <id:1> performed CREATE_NEWS on <id:5>",
+        "INFO shared.infrastructure.audit.AdminActionLog: Admin <id:1> performed CREATE_PROJECT on <id:6>",
+        "INFO shared.infrastructure.audit.AdminActionLog: Admin <id:1> performed CREATE_PROJECT on <id:7>",
+        "INFO shared.infrastructure.audit.AdminActionLog: Admin <id:1> performed CREATE_PROJECT on <id:8>",
+        "INFO shared.infrastructure.audit.AdminActionLog: Admin <id:1> performed CREATE_PROJECT on <id:9>",
+        "INFO shared.infrastructure.audit.AdminActionLog: Admin <id:1> performed CREATE_PROJECT on <id:10>",
+        "INFO shared.infrastructure.audit.AdminActionLog: Admin <id:1> performed PUBLISH_NEWS on <id:2>",
+        "INFO shared.infrastructure.audit.AdminActionLog: Admin <id:1> performed PUBLISH_NEWS on <id:3>",
+        "INFO shared.infrastructure.audit.AdminActionLog: Admin <id:1> performed PUBLISH_NEWS on <id:4>",
+        "INFO shared.infrastructure.audit.AdminActionLog: Admin <id:1> performed PUBLISH_NEWS on <id:5>",
+        "INFO shared.infrastructure.audit.AdminActionLog: Admin <id:1> performed PUBLISH_PROJECT on <id:6>",
+        "INFO shared.infrastructure.audit.AdminActionLog: Admin <id:1> performed PUBLISH_PROJECT on <id:7>",
+        "INFO shared.infrastructure.audit.AdminActionLog: Admin <id:1> performed PUBLISH_PROJECT on <id:8>",
+        "INFO shared.infrastructure.audit.AdminActionLog: Admin <id:1> performed PUBLISH_PROJECT on <id:9>"
+      ]
+    },
+    "A news article published with a future date is left out until that day #1": {
+      "requests": {
+        "POST /api/donors/auth/register #1": {
+          "request": {
+            "path": "/api/donors/auth/register",
+            "body": {
+              "address": {
+                "city": "Ústí nad Labem",
+                "postalCode": "400 01",
+                "street": "Dlouhá 12"
+              },
+              "companyIdentifier": null,
+              "email": "jana@example.cz",
+              "name": "Jana Nováková",
+              "password": "<secret>",
+              "type": "PERSON"
+            }
+          },
+          "response": {
+            "status": 202,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            }
+          }
+        },
+        "POST /api/donors/auth/email-verification/confirm #1": {
+          "request": {
+            "path": "/api/donors/auth/email-verification/confirm",
+            "body": {
+              "token": "<secret>"
+            }
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "set-cookie": "refresh_token=<secret>; Path=/api/donors/auth; Max-Age=1209600; Expires=<time>; Secure; HttpOnly; SameSite=Strict",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "accessToken": "<secret>",
+              "accessTokenExpiresAt": "2026-10-23T10:15:00Z",
+              "user": {
+                "address": {
+                  "city": "Ústí nad Labem",
+                  "postalCode": "400 01",
+                  "street": "Dlouhá 12"
+                },
+                "companyIdentifier": null,
+                "email": "jana@example.cz",
+                "hasPassword": true,
+                "id": "<id:1>",
+                "name": "Jana Nováková",
+                "pendingEmailChange": null,
+                "preferredLocale": "cs",
+                "registeredAt": "2026-10-23T10:00:00Z",
+                "roles": [
+                  "DONOR"
+                ],
+                "secondFactor": {
+                  "enabled": false,
+                  "neededForAdministration": false
+                },
+                "type": "PERSON",
+                "variableSymbol": "<vs:Jana>"
+              }
+            }
+          }
+        },
+        "POST /api/donors/me/second-factor/setup #1": {
+          "request": {
+            "path": "/api/donors/me/second-factor/setup",
+            "headers": {
+              "Authorization": "Bearer <jwt>"
+            },
+            "body": {
+              "password": "<secret>"
+            }
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "otpauthUri": "<secret>",
+              "qrCode": {
+                "modules": "<secret>",
+                "size": "<secret>"
+              },
+              "secret": "<secret>"
+            }
+          }
+        },
+        "POST /api/donors/me/second-factor/confirm #1": {
+          "request": {
+            "path": "/api/donors/me/second-factor/confirm",
+            "headers": {
+              "Authorization": "Bearer <jwt>"
+            },
+            "body": {
+              "code": "<secret>"
+            }
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "set-cookie": "refresh_token=<secret>; Path=/api/donors/auth; Max-Age=1209600; Expires=<time>; Secure; HttpOnly; SameSite=Strict",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "accessToken": "<secret>",
+              "accessTokenExpiresAt": "2026-10-23T10:15:00Z",
+              "user": {
+                "address": {
+                  "city": "Ústí nad Labem",
+                  "postalCode": "400 01",
+                  "street": "Dlouhá 12"
+                },
+                "companyIdentifier": null,
+                "email": "jana@example.cz",
+                "hasPassword": true,
+                "id": "<id:1>",
+                "name": "Jana Nováková",
+                "pendingEmailChange": null,
+                "preferredLocale": "cs",
+                "registeredAt": "2026-10-23T10:00:00Z",
+                "roles": [
+                  "DONOR",
+                  "ADMIN"
+                ],
+                "secondFactor": {
+                  "enabled": true,
+                  "neededForAdministration": false
+                },
+                "type": "PERSON",
+                "variableSymbol": "<vs:Jana>"
+              }
+            }
+          }
+        },
+        "POST /api/donors/auth/login #1": {
+          "request": {
+            "path": "/api/donors/auth/login",
+            "body": {
+              "email": "jana@example.cz",
+              "password": "<secret>"
+            }
+          },
+          "response": {
+            "status": 401,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/problem+json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "challenge": "<token>",
+              "challengeExpiresAt": "2026-10-23T10:05:00Z",
+              "detail": "Přihlášení dokončíte šestimístným kódem z ověřovací aplikace.",
+              "instance": "/api/donors/auth/login",
+              "status": 401,
+              "title": "Zadejte kód z aplikace",
+              "type": "https://nfnn.cz/problems/auth/second-factor-required"
+            }
+          }
+        },
+        "POST /api/donors/auth/login/second-factor #1": {
+          "request": {
+            "path": "/api/donors/auth/login/second-factor",
+            "body": {
+              "challenge": "<token>",
+              "code": "<secret>"
+            }
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "set-cookie": "refresh_token=<secret>; Path=/api/donors/auth; Max-Age=1209600; Expires=<time>; Secure; HttpOnly; SameSite=Strict",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "accessToken": "<secret>",
+              "accessTokenExpiresAt": "2026-10-23T10:15:00Z",
+              "user": {
+                "address": {
+                  "city": "Ústí nad Labem",
+                  "postalCode": "400 01",
+                  "street": "Dlouhá 12"
+                },
+                "companyIdentifier": null,
+                "email": "jana@example.cz",
+                "hasPassword": true,
+                "id": "<id:1>",
+                "name": "Jana Nováková",
+                "pendingEmailChange": null,
+                "preferredLocale": "cs",
+                "registeredAt": "2026-10-23T10:00:00Z",
+                "roles": [
+                  "DONOR",
+                  "ADMIN"
+                ],
+                "secondFactor": {
+                  "enabled": true,
+                  "neededForAdministration": false
+                },
+                "type": "PERSON",
+                "variableSymbol": "<vs:Jana>"
+              }
+            }
+          }
+        },
+        "POST /api/admin/content/news #1": {
+          "request": {
+            "path": "/api/admin/content/news",
+            "headers": {
+              "Authorization": "Bearer <jwt>"
+            },
+            "body": {
+              "body": "Text.",
+              "perex": "Perex.",
+              "title": "Zítřejší zpráva"
+            }
+          },
+          "response": {
+            "status": 201,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "body": "Text.",
+              "coverImage": null,
+              "createdAt": "2026-10-23T10:00:00Z",
+              "id": "<id:2>",
+              "live": false,
+              "perex": "Perex.",
+              "publishedOn": null,
+              "slug": "zitrejsi-zprava",
+              "tag": null,
+              "title": "Zítřejší zpráva",
+              "updatedAt": "2026-10-23T10:00:00Z"
+            }
+          }
+        },
+        "POST /api/admin/content/news/{id}/publish #1": {
+          "request": {
+            "path": "/api/admin/content/news/<id:2>/publish",
+            "headers": {
+              "Authorization": "Bearer <jwt>"
+            },
+            "body": {
+              "publishedOn": "2026-10-24"
+            }
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "body": "Text.",
+              "coverImage": null,
+              "createdAt": "2026-10-23T10:00:00Z",
+              "id": "<id:2>",
+              "live": false,
+              "perex": "Perex.",
+              "publishedOn": "2026-10-24",
+              "slug": "zitrejsi-zprava",
+              "tag": null,
+              "title": "Zítřejší zpráva",
+              "updatedAt": "2026-10-23T10:00:00Z"
+            }
+          }
+        },
+        "GET /api/content/home #1": {
+          "request": {
+            "path": "/api/content/home"
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "news": [],
+              "projects": []
+            }
+          }
+        },
+        "GET /api/content/home #2": {
+          "request": {
+            "path": "/api/content/home"
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "news": [
+                {
+                  "body": "Text.",
+                  "coverImage": null,
+                  "createdAt": "2026-10-23T10:00:00Z",
+                  "id": "<id:2>",
+                  "live": true,
+                  "perex": "Perex.",
+                  "publishedOn": "2026-10-24",
+                  "slug": "zitrejsi-zprava",
+                  "tag": null,
+                  "title": "Zítřejší zpráva",
+                  "updatedAt": "2026-10-23T10:00:00Z"
+                }
+              ],
+              "projects": []
+            }
+          }
+        }
+      },
+      "mails": [
+        {
+          "from": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "to": [
+            "jana@example.cz"
+          ],
+          "replyTo": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "subject": "Dvoufaktorové ověření vašeho účtu bylo zapnuto – Nová naděje",
+          "text": "Dobrý den,\n\nu vašeho dárcovského účtu Nová naděje jste právě zapnuli dvoufaktorové ověření. Od teď se kromě hesla přihlásíte také kódem z aplikace v telefonu; všechna ostatní přihlášení jsme ukončili.\n\nOvěření najdete po přihlášení na kartě Přihlašovací údaje, kde ho můžete také vypnout.\n\nPokud jste ověření nezapínali vy, zná někdo vaše heslo. Napište nám prosím co nejdříve na info@nfnn.cz.\n\nNová naděje – nadační fond\n\nMáte-li dotaz, napište nám na info@nfnn.cz.\n",
+          "html": {
+            "text": "Dvoufaktorové ověření bylo zapnuto Dobrý den, u vašeho dárcovského účtu Nová naděje jste právě zapnuli dvoufaktorové ověření. Od teď se kromě hesla přihlásíte také kódem z aplikace v telefonu; všechna ostatní přihlášení jsme ukončili. Ověření najdete po přihlášení na kartě Přihlašovací údaje, kde ho můžete také vypnout. Pokud jste ověření nezapínali vy, zná někdo vaše heslo. Napište nám prosím co nejdříve na info@nfnn.cz. S pozdravem Nová naděje – nadační fond Máte-li dotaz, napište nám na info@nfnn.cz. Nová naděje – nadační fond · IČO 27278794 · Jiráskova 436, 473 01 Nový Bor localhost",
+            "links": [
+              "http://localhost:4200"
+            ],
+            "sha256": "569eecb1a69179063482395aaf12247ec254c1362045d6b1607bd9c8a6757b88"
+          },
+          "attachments": [
+            {
+              "fileName": "inline",
+              "contentType": "image/png",
+              "size": 41502,
+              "sha256": "aecbb8a4c043690e9918174f51cd419a3f1c02d34161454fe40e759db6e7dfcb"
+            }
+          ]
+        },
+        {
+          "from": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "to": [
+            "jana@example.cz"
+          ],
+          "replyTo": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "subject": "Potvrďte svůj e-mail – Nová naděje",
+          "text": "Dobrý den,\n\nděkujeme za registraci dárcovského účtu Nová naděje (jana@example.cz). Zbývá potvrdit, že je tato adresa vaše:\n\nhttp://localhost:4200/potvrzeni-emailu#token=<token>\n\nOdkaz platí 24 hodin a lze ho použít jen jednou. Do potvrzení se do účtu nepřihlásíte.\n\nPokud jste se neregistrovali vy, tento e-mail prosím ignorujte. Účet bez potvrzení zůstane neaktivní.\n\nNová naděje – nadační fond\n\nMáte-li dotaz, napište nám na info@nfnn.cz.\n",
+          "html": {
+            "text": "Vítejte v Nové naději Dobrý den, děkujeme za registraci dárcovského účtu Nová naděje (jana@example.cz). Zbývá potvrdit, že je tato adresa vaše: Potvrdit e-mail Pokud tlačítko nefunguje, otevřete tento odkaz: http://localhost:4200/potvrzeni-emailu#token=<token> Odkaz platí 24 hodin a lze ho použít jen jednou. Do potvrzení se do účtu nepřihlásíte. Pokud jste se neregistrovali vy, tento e-mail prosím ignorujte. Účet bez potvrzení zůstane neaktivní. S pozdravem Nová naděje – nadační fond Máte-li dotaz, napište nám na info@nfnn.cz. Nová naděje – nadační fond · IČO 27278794 · Jiráskova 436, 473 01 Nový Bor localhost",
+            "links": [
+              "http://localhost:4200/potvrzeni-emailu#token=<token>",
+              "http://localhost:4200/potvrzeni-emailu#token=<token>",
+              "http://localhost:4200"
+            ],
+            "sha256": "b997ca057549e76a39c2ee069bfabc9ff801bcc4fe1f95bdc05ff48d5e5057b2"
+          },
+          "attachments": [
+            {
+              "fileName": "inline",
+              "contentType": "image/png",
+              "size": 41502,
+              "sha256": "aecbb8a4c043690e9918174f51cd419a3f1c02d34161454fe40e759db6e7dfcb"
+            }
+          ]
+        }
+      ],
+      "logs": [
+        "INFO content.application.news.NewsAdminService: CREATE_NEWS on news article <id:2> by admin <id:1>",
+        "INFO content.application.news.NewsAdminService: PUBLISH_NEWS on news article <id:2> by admin <id:1>",
+        "INFO donations.application.pairing.PaymentPairingService: Payments of donor <id:1> paired after the registration: 0 by symbol, 0 by account, 0 accounts learned",
+        "INFO donors.application.DonorAuthenticationService: Sign-in of donor <id:1> waits for the second factor",
+        "INFO donors.application.DonorEmailVerificationService: E-mail of donor <id:1> verified",
+        "INFO donors.application.DonorEmailVerificationService: E-mail verification link issued for donor <id:1>",
+        "INFO donors.application.DonorSecondFactorService: Second factor enabled for donor <id:1>, every session revoked",
+        "INFO donors.application.DonorSecondFactorService: Second factor set-up started for donor <id:1>",
+        "INFO shared.infrastructure.audit.AdminActionLog: Admin <id:1> performed CREATE_NEWS on <id:2>",
+        "INFO shared.infrastructure.audit.AdminActionLog: Admin <id:1> performed PUBLISH_NEWS on <id:2>"
+      ]
+    }
+  }
+}

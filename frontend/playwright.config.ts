@@ -1,4 +1,6 @@
 import { defineConfig, devices } from '@playwright/test';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 const theme = process.env.E2E_THEME;
 const builtApp = theme ? `dist/${theme}-theme/browser` : 'dist/frontend/browser';
@@ -19,7 +21,26 @@ export default defineConfig({
     baseURL: process.env.E2E_BASE_URL ?? 'http://localhost:4200',
     trace: 'on-first-retry',
   },
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
+  projects: [
+    { name: 'chromium', testIgnore: /baseline\//, use: { ...devices['Desktop Chrome'] } },
+    {
+      name: 'baseline',
+      testMatch: /baseline\/.*\.spec\.ts$/,
+      snapshotPathTemplate: `${process.env.BASELINE_SCREENS_DIR ?? join(tmpdir(), 'nfnn-baseline-screens')}/{arg}{ext}`,
+      use: {
+        ...devices['Desktop Chrome'],
+        launchOptions: {
+          args: [
+            '--num-raster-threads=1',
+            '--disable-partial-raster',
+            '--disable-skia-runtime-opts',
+            '--disable-gpu',
+          ],
+          env: { ...process.env, LANG: 'cs_CZ.UTF-8', LANGUAGE: 'cs', LC_ALL: 'cs_CZ.UTF-8' },
+        },
+      },
+    },
+  ],
   webServer: process.env.E2E_BASE_URL
     ? undefined
     : {

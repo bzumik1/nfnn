@@ -1,0 +1,270 @@
+{
+  "source": "v2-baseline",
+  "logic": "A receipt v2 freezes (ThymeleafPdfReceiptRenderer.freeze: data is the frozen JSON) and renders (render, at renderer.issuedAt): the PDF's page count and fonts (PDFBox; a subset prefix is dropped), each page's size in points and its text lines (PDFTextStripper per page, every line stripped, empty lines dropped, U+00A0 written as a space) with the position of its first character in points from the page's top left, rounded to whole points (x, and y at the baseline; TextPosition xDirAdj and yDirAdj). The PDF's and the page rasters' digests depend on the PDF libraries and the JDK, so they are kept apart in digests.json",
+  "sample": "yearly-large-amounts-cs",
+  "description": "A company's year with the largest single amount, hellers and a total over a million, Czech",
+  "renderer": {
+    "profile": 1,
+    "template": "7b30974aef2fdaf01f6e4990c8c4b526a0de8d8371452023be783677b69bf7e7",
+    "number": "2027-000001",
+    "issuedAt": "2027-01-15T09:30:00Z",
+    "signatureImage": false
+  },
+  "data": {
+    "locale": "cs",
+    "single": false,
+    "bilingual": false,
+    "documentTitle": "Potvrzení o přijatých darech za rok 2026",
+    "year": "2026",
+    "number": "2027-000001",
+    "issuedOnCs": "15. 1. 2027",
+    "issuedOnEn": "15 January 2027",
+    "replaced": false,
+    "replacedNumber": null,
+    "replacedOnCs": null,
+    "replacedOnEn": null,
+    "foundationName": "Nová naděje - nadační fond",
+    "foundationIdentifier": "27278794",
+    "foundationAddress": "Jiráskova 436, 473 01 Nový Bor",
+    "registryFile": "N 78",
+    "registryCourt": "Krajský soud v Ústí nad Labem",
+    "accountNumber": "5544332217/2010",
+    "issuePlace": "V Novém Boru",
+    "issuePlaceEn": "Nový Bor",
+    "company": true,
+    "donorName": "Acme Třebíč s.r.o.",
+    "donorIdentifier": "25596641",
+    "donorAddress": "Průmyslová 5, 470 01 Česká Lípa",
+    "variableSymbol": "7310945528",
+    "giftFormKey": "receipt.gift.form.BANK_TRANSFER",
+    "receivedOnCs": "1. 1. 2026",
+    "receivedOnEn": "1 January 2026",
+    "lines": [
+      {
+        "receivedOnCs": "1. 1. 2026",
+        "receivedOnEn": "1 January 2026",
+        "amountCs": "1 000 000 Kč",
+        "amountEn": "CZK 1,000,000"
+      },
+      {
+        "receivedOnCs": "2. 2. 2026",
+        "receivedOnEn": "2 February 2026",
+        "amountCs": "999 999,99 Kč",
+        "amountEn": "CZK 999,999.99"
+      },
+      {
+        "receivedOnCs": "3. 3. 2026",
+        "receivedOnEn": "3 March 2026",
+        "amountCs": "1 250,50 Kč",
+        "amountEn": "CZK 1,250.50"
+      },
+      {
+        "receivedOnCs": "4. 4. 2026",
+        "receivedOnEn": "4 April 2026",
+        "amountCs": "0,01 Kč",
+        "amountEn": "CZK 0.01"
+      }
+    ],
+    "count": "4",
+    "totalCs": "2 001 250,50 Kč",
+    "totalEn": "CZK 2,001,250.50",
+    "signatoryName": "Petr Vzorový",
+    "signatoryRole": "předseda správní rady"
+  },
+  "pdf": {
+    "pageCount": 1,
+    "fonts": [
+      "DejaVuSans (Type0, embedded, subset)",
+      "DejaVuSans-Bold (Type0, embedded, subset)"
+    ]
+  },
+  "pages": [
+    {
+      "number": 1,
+      "widthPt": 595.275,
+      "heightPt": 841.875,
+      "lines": [
+        {
+          "text": "Nová naděje - nadační fond · IČO 27278794 · Jiráskova 436, 473 01 Nový Bor · Číslo potvrzení: 2027-000001 1 / 1",
+          "x": 88,
+          "y": 804
+        },
+        {
+          "text": "Potvrzení o přijatých darech za rok 2026",
+          "x": 246,
+          "y": 56
+        },
+        {
+          "text": "Číslo potvrzení: 2027-000001",
+          "x": 404,
+          "y": 73
+        },
+        {
+          "text": "Datum vystavení: 15. 1. 2027",
+          "x": 403,
+          "y": 85
+        },
+        {
+          "text": "Obdarovaný",
+          "x": 51,
+          "y": 122
+        },
+        {
+          "text": "Název: Nová naděje - nadační fond",
+          "x": 51,
+          "y": 142
+        },
+        {
+          "text": "IČO: 27278794",
+          "x": 51,
+          "y": 157
+        },
+        {
+          "text": "Sídlo: Jiráskova 436, 473 01 Nový Bor",
+          "x": 51,
+          "y": 172
+        },
+        {
+          "text": "zapsaný v nadačním rejstříku, spisová značka",
+          "x": 51,
+          "y": 188
+        },
+        {
+          "text": "N 78, rejstříkový soud: Krajský soud v Ústí nad",
+          "x": 51,
+          "y": 200
+        },
+        {
+          "text": "Labem",
+          "x": 51,
+          "y": 212
+        },
+        {
+          "text": "Dárce",
+          "x": 298,
+          "y": 122
+        },
+        {
+          "text": "Název: Acme Třebíč s.r.o.",
+          "x": 298,
+          "y": 142
+        },
+        {
+          "text": "IČO: 25596641",
+          "x": 298,
+          "y": 157
+        },
+        {
+          "text": "Sídlo: Průmyslová 5, 470 01 Česká Lípa",
+          "x": 298,
+          "y": 172
+        },
+        {
+          "text": "Variabilní symbol: 7310945528",
+          "x": 298,
+          "y": 188
+        },
+        {
+          "text": "Účet příjemce: 5544332217/2010",
+          "x": 51,
+          "y": 239
+        },
+        {
+          "text": "Datum připsání na účet Částka",
+          "x": 57,
+          "y": 261
+        },
+        {
+          "text": "1. 1. 2026 1 000 000 Kč",
+          "x": 57,
+          "y": 282
+        },
+        {
+          "text": "2. 2. 2026 999 999,99 Kč",
+          "x": 57,
+          "y": 301
+        },
+        {
+          "text": "3. 3. 2026 1 250,50 Kč",
+          "x": 57,
+          "y": 321
+        },
+        {
+          "text": "4. 4. 2026 0,01 Kč",
+          "x": 57,
+          "y": 341
+        },
+        {
+          "text": "Počet darů: 4",
+          "x": 51,
+          "y": 362
+        },
+        {
+          "text": "Celkem darováno v roce 2026: 2 001 250,50 Kč",
+          "x": 51,
+          "y": 375
+        },
+        {
+          "text": "Nová naděje - nadační fond potvrzuje, že od výše uvedeného dárce přijal v roce 2026 peněžité dary",
+          "x": 51,
+          "y": 398
+        },
+        {
+          "text": "uvedené v tomto potvrzení v celkové výši 2 001 250,50 Kč, poukázané bankovním převodem na účet",
+          "x": 51,
+          "y": 411
+        },
+        {
+          "text": "nadačního fondu č. 5544332217/2010. Dary byly poskytnuty bezúplatně a bez jakéhokoli protiplnění",
+          "x": 51,
+          "y": 423
+        },
+        {
+          "text": "na účely sociální, zdravotnické, charitativní a na podporu a ochranu mládeže ve smyslu § 15 odst. 1 a",
+          "x": 51,
+          "y": 435
+        },
+        {
+          "text": "§ 20 odst. 8 zákona č. 586/1992 Sb., o daních z příjmů, ve znění pozdějších předpisů, a to v souladu s",
+          "x": 51,
+          "y": 448
+        },
+        {
+          "text": "účelem nadačního fondu. Potvrzení se vydává na žádost dárce pro účely uplatnění odpočtu hodnoty",
+          "x": 51,
+          "y": 460
+        },
+        {
+          "text": "darů od základu daně podle § 15 odst. 1 (poplatník daně z příjmů fyzických osob) nebo § 20 odst. 8",
+          "x": 51,
+          "y": 472
+        },
+        {
+          "text": "(poplatník daně z příjmů právnických osob) uvedeného zákona.",
+          "x": 51,
+          "y": 485
+        },
+        {
+          "text": "V Novém Boru, dne 15. 1. 2027",
+          "x": 51,
+          "y": 514
+        },
+        {
+          "text": "Za Nová naděje - nadační fond:",
+          "x": 51,
+          "y": 526
+        },
+        {
+          "text": "Petr Vzorový",
+          "x": 51,
+          "y": 576
+        },
+        {
+          "text": "předseda správní rady",
+          "x": 51,
+          "y": 588
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,696 @@
+{
+  "source": "v2-baseline",
+  "logic": "Screenshots of frontend/e2e/baseline/screens.spec.ts, of the whole page or, for a dialog, of the viewport (Playwright Chromium, the e2e API mocks, clock fixed at 2026-10-28T09:00:00Z, cs-CZ, Europe/Prague, reduced motion, animations off) at 390 and 1280 px wide, 900 px viewport height; a second recording on the same machine gives the same pixels, which the recording script checks, and a comparison run (testing.md) accepts up to 0.2 % of pixels. The PNGs are kept outside the repository, in `stored`. pixelsSha256 is the SHA-256 of the decoded pixels (8-bit RGBA, row by row), so a chunk a file store adds does not change it; bytes is the size as recorded. The digests hold on the recording machine; another browser build renders other pixels, so a differing digest means comparing pixels (testing.md), never recording again.",
+  "stored": "/mnt/project-files/nfnn-ux/snimky/v2-baseline",
+  "totalBytes": 18071271,
+  "shots": [
+    {
+      "state": "admin-administrators",
+      "width": 1280,
+      "height": 900,
+      "file": "admin-administrators-1280.png",
+      "bytes": 99893,
+      "pixelsSha256": "16a53bc85d6046ae532825e26c08f5afa0aa5b654c927cd3f80c500258e023b7"
+    },
+    {
+      "state": "admin-administrators",
+      "width": 390,
+      "height": 1203,
+      "file": "admin-administrators-390.png",
+      "bytes": 71884,
+      "pixelsSha256": "e89d9566241cb2c8557b88d672ee591f92463dac6fe41cd4f5dc48d969f89874"
+    },
+    {
+      "state": "admin-backups",
+      "width": 1280,
+      "height": 1564,
+      "file": "admin-backups-1280.png",
+      "bytes": 164500,
+      "pixelsSha256": "348b4bd3608214b27f215ee836dfb1f5afa5c2e3688e0494e72d2a0d29ad04df"
+    },
+    {
+      "state": "admin-backups",
+      "width": 390,
+      "height": 2353,
+      "file": "admin-backups-390.png",
+      "bytes": 137436,
+      "pixelsSha256": "7d06fc79ce1d65789395f70a0c3b122a0b994d48004f3aaec7979069b4069fc7"
+    },
+    {
+      "state": "admin-donor-detail",
+      "width": 1280,
+      "height": 1703,
+      "file": "admin-donor-detail-1280.png",
+      "bytes": 169257,
+      "pixelsSha256": "45de4e763dc9d2731ac97c09b43cb0b3c8d21718c4610614afc8a44fc1742adb"
+    },
+    {
+      "state": "admin-donor-detail",
+      "width": 390,
+      "height": 2606,
+      "file": "admin-donor-detail-390.png",
+      "bytes": 148011,
+      "pixelsSha256": "aa9a92212cd06e41a85fbbd0aeac8ab855883c8c47dc2076559dd5842b8cd0f8"
+    },
+    {
+      "state": "admin-donors",
+      "width": 1280,
+      "height": 900,
+      "file": "admin-donors-1280.png",
+      "bytes": 68809,
+      "pixelsSha256": "8be0ed0e819e6b2448a9a4f0eb6fb4014f2d7d5d657adc1d7b10de1f34c558ea"
+    },
+    {
+      "state": "admin-donors",
+      "width": 390,
+      "height": 900,
+      "file": "admin-donors-390.png",
+      "bytes": 39196,
+      "pixelsSha256": "7dc9d995140e49ac6867b12d0661a24eb50de89c6bc75bd1c2473fe61130f91b"
+    },
+    {
+      "state": "admin-donors-search",
+      "width": 1280,
+      "height": 900,
+      "file": "admin-donors-search-1280.png",
+      "bytes": 86712,
+      "pixelsSha256": "fe58385af6066d61d6b4c13e523c2671e648d5aa195c4231182a41f1c1874277"
+    },
+    {
+      "state": "admin-donors-search",
+      "width": 390,
+      "height": 1098,
+      "file": "admin-donors-search-390.png",
+      "bytes": 63516,
+      "pixelsSha256": "5326ca230655f48f14248f3c368c58d9e95812e95a9d0d4e06fe37e3a38b5b94"
+    },
+    {
+      "state": "admin-history",
+      "width": 1280,
+      "height": 900,
+      "file": "admin-history-1280.png",
+      "bytes": 85146,
+      "pixelsSha256": "39b3b4a626b49bbc900c5b7f7032db7b17594f7c6415788cef5d18fb28a1148e"
+    },
+    {
+      "state": "admin-history",
+      "width": 390,
+      "height": 952,
+      "file": "admin-history-390.png",
+      "bytes": 61503,
+      "pixelsSha256": "b1e3949770e9bdd7e9a4b30d6c4495f76cfa2ccb2b71ae71424cbff1eab22f86"
+    },
+    {
+      "state": "admin-home",
+      "width": 1280,
+      "height": 961,
+      "file": "admin-home-1280.png",
+      "bytes": 102482,
+      "pixelsSha256": "0cba1e68893ca1ad952d2f7c2c2e7ae30278a0d06cde4f0c62f2410363dae8bd"
+    },
+    {
+      "state": "admin-home",
+      "width": 390,
+      "height": 1624,
+      "file": "admin-home-390.png",
+      "bytes": 92051,
+      "pixelsSha256": "0389d054527b98ed02a485a114fcd8e7876d0604431db84aaf7a8a137fd86610"
+    },
+    {
+      "state": "admin-logs",
+      "width": 1280,
+      "height": 2347,
+      "file": "admin-logs-1280.png",
+      "bytes": 264930,
+      "pixelsSha256": "e88d67bc8f4aa8484952bcc55d10904f3b80cf0f2bc149b035a95a51920a91c1"
+    },
+    {
+      "state": "admin-logs",
+      "width": 390,
+      "height": 3968,
+      "file": "admin-logs-390.png",
+      "bytes": 181698,
+      "pixelsSha256": "1d5adc609c64cbcf30f9f737be0c3f18dbc5ad1e2b1ea3188460ab2d2113290f"
+    },
+    {
+      "state": "admin-news",
+      "width": 1280,
+      "height": 900,
+      "file": "admin-news-1280.png",
+      "bytes": 72816,
+      "pixelsSha256": "a013b10d2475b986b1c945710372bc6d04160a8710746b685a09ba4c3d01fee3"
+    },
+    {
+      "state": "admin-news",
+      "width": 390,
+      "height": 900,
+      "file": "admin-news-390.png",
+      "bytes": 50461,
+      "pixelsSha256": "7889a0c9cca83556bc9073c081dff15ad2b738d6cccdf0fb5accf51cb5cdf261"
+    },
+    {
+      "state": "admin-news-edit",
+      "width": 1280,
+      "height": 2180,
+      "file": "admin-news-edit-1280.png",
+      "bytes": 418118,
+      "pixelsSha256": "d6aaa53fa977cc01fa542a0f65442c477089db296519cdb711495817dd904836"
+    },
+    {
+      "state": "admin-news-edit",
+      "width": 390,
+      "height": 2325,
+      "file": "admin-news-edit-390.png",
+      "bytes": 225741,
+      "pixelsSha256": "d44d7d3a6ab9399e5e9118c1fab7ccbb08c3416d17e7d78973e26d1412f57c90"
+    },
+    {
+      "state": "admin-news-new",
+      "width": 1280,
+      "height": 1557,
+      "file": "admin-news-new-1280.png",
+      "bytes": 115030,
+      "pixelsSha256": "fe4390a6ec200a1c4061865f393a7d265de961a73cd95afa8555e8a8c427a9cf"
+    },
+    {
+      "state": "admin-news-new",
+      "width": 390,
+      "height": 1730,
+      "file": "admin-news-new-390.png",
+      "bytes": 79493,
+      "pixelsSha256": "b4417d5a9bdd44f5d1e8c1ae3333d09d27345fd3b54fab1f6ce86ade0ea017cd"
+    },
+    {
+      "state": "admin-older-symbols",
+      "width": 1280,
+      "height": 900,
+      "file": "admin-older-symbols-1280.png",
+      "bytes": 96070,
+      "pixelsSha256": "80fb5a4668874bf9dc4568aecb2fd41575c0d737bfe42ca85dcadd999ce07bbf"
+    },
+    {
+      "state": "admin-older-symbols",
+      "width": 390,
+      "height": 1196,
+      "file": "admin-older-symbols-390.png",
+      "bytes": 75921,
+      "pixelsSha256": "95bf9a4897e09c97728efdf1c4793dd4b6b198a5094a26a26ef9dafd897860d1"
+    },
+    {
+      "state": "admin-payments",
+      "width": 1280,
+      "height": 900,
+      "file": "admin-payments-1280.png",
+      "bytes": 80663,
+      "pixelsSha256": "bebf44f79ae75f74952da460c59b182a36bf6788c418eb21b1e810026f86a7cc"
+    },
+    {
+      "state": "admin-payments",
+      "width": 390,
+      "height": 900,
+      "file": "admin-payments-390.png",
+      "bytes": 54580,
+      "pixelsSha256": "46c5ab78c7fcd8bc09a4cb535b1dd8b06863b7e3f1b8dc64cfcf8ad4f95db33a"
+    },
+    {
+      "state": "admin-payments-error",
+      "width": 1280,
+      "height": 900,
+      "file": "admin-payments-error-1280.png",
+      "bytes": 74243,
+      "pixelsSha256": "f338675e27f55b8359fd6e6c1935e7b16a1779e7f6475f8746f71b27fd2d2d1e"
+    },
+    {
+      "state": "admin-payments-error",
+      "width": 390,
+      "height": 900,
+      "file": "admin-payments-error-390.png",
+      "bytes": 48408,
+      "pixelsSha256": "e059b6cfbb54cd25d012f270b02d4f4429fc897fcccc459589d72255598ebc4d"
+    },
+    {
+      "state": "admin-projects",
+      "width": 1280,
+      "height": 900,
+      "file": "admin-projects-1280.png",
+      "bytes": 69649,
+      "pixelsSha256": "fa5f6e1a57615de4ed56ed02162189f5ccc7383c38b65eb4f8797b1c91fc2e90"
+    },
+    {
+      "state": "admin-projects",
+      "width": 390,
+      "height": 900,
+      "file": "admin-projects-390.png",
+      "bytes": 45601,
+      "pixelsSha256": "36fdfd3d6a47a695534edd31234073429383883e785a2c9f68a02770d68b3917"
+    },
+    {
+      "state": "admin-projects-edit",
+      "width": 1280,
+      "height": 2285,
+      "file": "admin-projects-edit-1280.png",
+      "bytes": 426502,
+      "pixelsSha256": "c215902c4664eb1e6221d49289de4179fac7922b092fd2de59a388eaf22a53c1"
+    },
+    {
+      "state": "admin-projects-edit",
+      "width": 390,
+      "height": 2448,
+      "file": "admin-projects-edit-390.png",
+      "bytes": 234855,
+      "pixelsSha256": "a56bbbbe5c8ef7f8ffe0d723bd358608671ea9bfe2ace1ed517043b32adc61cd"
+    },
+    {
+      "state": "admin-projects-new",
+      "width": 1280,
+      "height": 1662,
+      "file": "admin-projects-new-1280.png",
+      "bytes": 115622,
+      "pixelsSha256": "0c4f4063c65c55e1911c5cbe7ef09b0657666bfb947d6e2e7a8de9a0749b3f38"
+    },
+    {
+      "state": "admin-projects-new",
+      "width": 390,
+      "height": 1853,
+      "file": "admin-projects-new-390.png",
+      "bytes": 88223,
+      "pixelsSha256": "5300b5e99d47322faeb0081ac5f4fdd659065590bcebad2c23becac536f212a4"
+    },
+    {
+      "state": "admin-reports",
+      "width": 1280,
+      "height": 1451,
+      "file": "admin-reports-1280.png",
+      "bytes": 129570,
+      "pixelsSha256": "9a55ada89332af8f1236a7cf6d0fa4f9f4c18562bfebe1c0cf0a617c4a8ce575"
+    },
+    {
+      "state": "admin-reports",
+      "width": 390,
+      "height": 1746,
+      "file": "admin-reports-390.png",
+      "bytes": 97173,
+      "pixelsSha256": "d8b60c5a2317c1f941ba072a621437a06f36482df1236a1ac39b125890e8e267"
+    },
+    {
+      "state": "admin-settings",
+      "width": 1280,
+      "height": 1657,
+      "file": "admin-settings-1280.png",
+      "bytes": 152531,
+      "pixelsSha256": "668ab199447703d969bc15b7a66bba9f88897f34aa88f3003179d4ee758b4a57"
+    },
+    {
+      "state": "admin-settings",
+      "width": 390,
+      "height": 2065,
+      "file": "admin-settings-390.png",
+      "bytes": 119892,
+      "pixelsSha256": "d89e64bf20f17340c5b38a8ea6cf97cd08c1802a7c73bb2f5d383de706854326"
+    },
+    {
+      "state": "connect-app-signed-in",
+      "width": 1280,
+      "height": 1569,
+      "file": "connect-app-signed-in-1280.png",
+      "bytes": 384256,
+      "pixelsSha256": "95772d2ee8220109de17414aab5b81f48d90480c2f165e13c274d38ee126b34b"
+    },
+    {
+      "state": "connect-app-signed-in",
+      "width": 390,
+      "height": 1866,
+      "file": "connect-app-signed-in-390.png",
+      "bytes": 152345,
+      "pixelsSha256": "bf73800ad53ac58fccede521e638e067c34892fdc3adf3fb3794ccb0f43bb32f"
+    },
+    {
+      "state": "connect-app-signed-out",
+      "width": 1280,
+      "height": 1130,
+      "file": "connect-app-signed-out-1280.png",
+      "bytes": 258738,
+      "pixelsSha256": "da7d92078914e0cb483f73c75617084aeca97edc38e7ec55f4655a022c01840c"
+    },
+    {
+      "state": "connect-app-signed-out",
+      "width": 390,
+      "height": 1278,
+      "file": "connect-app-signed-out-390.png",
+      "bytes": 108258,
+      "pixelsSha256": "f561488bdacce559919d5cf476e3a725e266aea51f358dce84e7940aa2674c09"
+    },
+    {
+      "state": "donor-bank-accounts",
+      "width": 1280,
+      "height": 900,
+      "file": "donor-bank-accounts-1280.png",
+      "bytes": 70053,
+      "pixelsSha256": "5f658ad18ef1ef6c747b4e99672939cbb9d82880dd4c6d8097db23abd55615b6"
+    },
+    {
+      "state": "donor-bank-accounts",
+      "width": 390,
+      "height": 900,
+      "file": "donor-bank-accounts-390.png",
+      "bytes": 56661,
+      "pixelsSha256": "d8e506e23493b53bb1111ba1944f9bbcd3e4b9e6011655598844a31639726b02"
+    },
+    {
+      "state": "donor-details",
+      "width": 1280,
+      "height": 900,
+      "file": "donor-details-1280.png",
+      "bytes": 67936,
+      "pixelsSha256": "d9dc77d9ed0d6c43c4d30fbd072051b10a3f790d12df5f556bd0d6a23c067726"
+    },
+    {
+      "state": "donor-details",
+      "width": 390,
+      "height": 983,
+      "file": "donor-details-390.png",
+      "bytes": 57571,
+      "pixelsSha256": "300c83e19a86b0b41ddbba72445e66c8724feb6a4b54a47cb228be9083c6a353"
+    },
+    {
+      "state": "donor-donations",
+      "width": 1280,
+      "height": 900,
+      "file": "donor-donations-1280.png",
+      "bytes": 96482,
+      "pixelsSha256": "2dce7db5a9344c01baa1065f10e1185151f1cc4a249e6422503290b8cfe11c29"
+    },
+    {
+      "state": "donor-donations",
+      "width": 390,
+      "height": 1352,
+      "file": "donor-donations-390.png",
+      "bytes": 87976,
+      "pixelsSha256": "5af07fecb0e6946d40fcc157114109410435383d498e2a3f886ec832e7d1e916"
+    },
+    {
+      "state": "donor-overview",
+      "width": 1280,
+      "height": 1183,
+      "file": "donor-overview-1280.png",
+      "bytes": 124255,
+      "pixelsSha256": "41b5506d4552825f1342805fae965736302520e4c267c54e5f15090b488275d2"
+    },
+    {
+      "state": "donor-overview",
+      "width": 390,
+      "height": 1670,
+      "file": "donor-overview-390.png",
+      "bytes": 111361,
+      "pixelsSha256": "b7429bbfcf30e894458a73127216cee62756802c076f393799f0a66d94c37b22"
+    },
+    {
+      "state": "donor-overview-empty",
+      "width": 1280,
+      "height": 929,
+      "file": "donor-overview-empty-1280.png",
+      "bytes": 104554,
+      "pixelsSha256": "dcde41baa090469e8bdf0150475bc425813b90490ad46af02022898b8966866c"
+    },
+    {
+      "state": "donor-overview-empty",
+      "width": 390,
+      "height": 1384,
+      "file": "donor-overview-empty-390.png",
+      "bytes": 90480,
+      "pixelsSha256": "caa123dff93e0f239b253399141bba6796bca3db80245594d186a4d55f5fab8e"
+    },
+    {
+      "state": "donor-overview-error",
+      "width": 1280,
+      "height": 900,
+      "file": "donor-overview-error-1280.png",
+      "bytes": 53812,
+      "pixelsSha256": "6bc3ab3b5d6f9c0a91539b51b812063c1b47d43570b8fe7a3724ec6c5d512f29"
+    },
+    {
+      "state": "donor-overview-error",
+      "width": 390,
+      "height": 900,
+      "file": "donor-overview-error-390.png",
+      "bytes": 39827,
+      "pixelsSha256": "48ee13ed4d4734f15830682367e5444eaf925a72ea48e05a97cbcadab28fe52f"
+    },
+    {
+      "state": "donor-receipts",
+      "width": 1280,
+      "height": 900,
+      "file": "donor-receipts-1280.png",
+      "bytes": 77036,
+      "pixelsSha256": "8e30bcd90e8b2676cdd963df510dbddb54b0e3f2ef1d5ea0a1be21544f14c203"
+    },
+    {
+      "state": "donor-receipts",
+      "width": 390,
+      "height": 1033,
+      "file": "donor-receipts-390.png",
+      "bytes": 65646,
+      "pixelsSha256": "d8441a48d75cc241fded5eb54c71998caa49b7af6567c5a7c78b4f7219598879"
+    },
+    {
+      "state": "email-verification-with-link",
+      "width": 1280,
+      "height": 1130,
+      "file": "email-verification-with-link-1280.png",
+      "bytes": 261235,
+      "pixelsSha256": "73fda873435881d8985e7ff2d0f6d23683de060e42cbddc15e7ead20f1724cb5"
+    },
+    {
+      "state": "email-verification-with-link",
+      "width": 390,
+      "height": 1278,
+      "file": "email-verification-with-link-390.png",
+      "bytes": 109690,
+      "pixelsSha256": "ecf9772cf2a97638bba1efd3110aa86d1020d21a63b5eaea65594696e18f439f"
+    },
+    {
+      "state": "email-verification-without-link",
+      "width": 1280,
+      "height": 1130,
+      "file": "email-verification-without-link-1280.png",
+      "bytes": 256146,
+      "pixelsSha256": "e531e17cba8442436d248d6e6a82ffb48d43e3092944ad90716d4a5d373ad065"
+    },
+    {
+      "state": "email-verification-without-link",
+      "width": 390,
+      "height": 1278,
+      "file": "email-verification-without-link-390.png",
+      "bytes": 104162,
+      "pixelsSha256": "0caa41ff5ee41cb213ad182f299fe46278b6b4033e429d2c7a034b004e98f417"
+    },
+    {
+      "state": "first-setup",
+      "width": 1280,
+      "height": 1130,
+      "file": "first-setup-1280.png",
+      "bytes": 248814,
+      "pixelsSha256": "d510a53b8f81c9fc4c0a795b69a88d7cca09e2adc00e833d02b0cade959fcde3"
+    },
+    {
+      "state": "first-setup",
+      "width": 390,
+      "height": 1278,
+      "file": "first-setup-390.png",
+      "bytes": 109076,
+      "pixelsSha256": "7e20b7901c4bd6aeecb979cacba690f72e81ed09a4d570cda38fd6bfbdb80f35"
+    },
+    {
+      "state": "home",
+      "width": 1280,
+      "height": 5778,
+      "file": "home-1280.png",
+      "bytes": 1952701,
+      "pixelsSha256": "80190f1cfa3f50c105961a1ee5a39e7be9856f45c69f29e88a85ab8356856cca"
+    },
+    {
+      "state": "home",
+      "width": 390,
+      "height": 6361,
+      "file": "home-390.png",
+      "bytes": 887756,
+      "pixelsSha256": "26995686e513d87f1b8ee5b12493c003399839410c161d81339c65e3616e4e27"
+    },
+    {
+      "state": "news",
+      "width": 1280,
+      "height": 1139,
+      "file": "news-1280.png",
+      "bytes": 296438,
+      "pixelsSha256": "7137edca7a7c57f9ce80c2b748009f62a8f5da3dbdc6d551cfa7fa2def3ed9a8"
+    },
+    {
+      "state": "news",
+      "width": 390,
+      "height": 1177,
+      "file": "news-390.png",
+      "bytes": 198771,
+      "pixelsSha256": "574eaf30a89e7c0ee86996352b11f56b38d2d59a7f90372936bbfcad7b562dcf"
+    },
+    {
+      "state": "news-article",
+      "width": 1280,
+      "height": 1727,
+      "file": "news-article-1280.png",
+      "bytes": 887511,
+      "pixelsSha256": "f0df39047441a7625c2a6a0a61d15c73e281c07fd224f29d897fa4c3f4fe7de8"
+    },
+    {
+      "state": "news-article",
+      "width": 390,
+      "height": 1361,
+      "file": "news-article-390.png",
+      "bytes": 247846,
+      "pixelsSha256": "3796a0b2f53a7e8f1f75158cc0f229e3f6a85a8529a282ba7680ced136324f48"
+    },
+    {
+      "state": "not-found",
+      "width": 1280,
+      "height": 900,
+      "file": "not-found-1280.png",
+      "bytes": 249068,
+      "pixelsSha256": "2ce50b387e0b6b182bf47be001df253d08d7c87e8b4d80eca785b2889e926a04"
+    },
+    {
+      "state": "not-found",
+      "width": 390,
+      "height": 1008,
+      "file": "not-found-390.png",
+      "bytes": 122953,
+      "pixelsSha256": "4e1a283dbd07faf5f8d7f3b60375c4dce090566e1afe51e526780d4bfe121c72"
+    },
+    {
+      "state": "password-reset-with-link",
+      "width": 1280,
+      "height": 1130,
+      "file": "password-reset-with-link-1280.png",
+      "bytes": 259575,
+      "pixelsSha256": "77fd32b2481c751734d66fa0b3d1438eac991718f25e59334230263bccd31e3f"
+    },
+    {
+      "state": "password-reset-with-link",
+      "width": 390,
+      "height": 1278,
+      "file": "password-reset-with-link-390.png",
+      "bytes": 107787,
+      "pixelsSha256": "b29fd633186f43779a2483735131b6a4d410419d51dd518e1707e0b014df942d"
+    },
+    {
+      "state": "password-reset-without-link",
+      "width": 1280,
+      "height": 1130,
+      "file": "password-reset-without-link-1280.png",
+      "bytes": 260257,
+      "pixelsSha256": "857983d30c8a28ec3b863e7164a0ffbbdadbf448c7217e0a5965984d53b2d7c4"
+    },
+    {
+      "state": "password-reset-without-link",
+      "width": 390,
+      "height": 1278,
+      "file": "password-reset-without-link-390.png",
+      "bytes": 110331,
+      "pixelsSha256": "841977ed0b90821de2377d112e83404de73ab1c349f77eddb1bb340c962393b6"
+    },
+    {
+      "state": "privacy-policy",
+      "width": 1280,
+      "height": 7668,
+      "file": "privacy-policy-1280.png",
+      "bytes": 1003080,
+      "pixelsSha256": "e298e9ec2003279169dfbd101ab2372707ad4886f88843e53904e609cd77dc42"
+    },
+    {
+      "state": "privacy-policy",
+      "width": 390,
+      "height": 11580,
+      "file": "privacy-policy-390.png",
+      "bytes": 986328,
+      "pixelsSha256": "53af8d48f6b14e4c39cc43a659ddb71a7ac20f5243c2acfd35414a543fda848e"
+    },
+    {
+      "state": "project",
+      "width": 1280,
+      "height": 1727,
+      "file": "project-1280.png",
+      "bytes": 888129,
+      "pixelsSha256": "dc43f36296847f7c7ef0d708fd35b301c75c2929c7a37135a30c77f40845e9d8"
+    },
+    {
+      "state": "project",
+      "width": 390,
+      "height": 1394,
+      "file": "project-390.png",
+      "bytes": 255745,
+      "pixelsSha256": "07d2619704b7b9ba8c5e9e4417f63bfc49e86c9713890438141a361abc4b48bd"
+    },
+    {
+      "state": "projects",
+      "width": 1280,
+      "height": 1183,
+      "file": "projects-1280.png",
+      "bytes": 323818,
+      "pixelsSha256": "32f01e9073f5879faf0a97b1e9b9f62f9b77251956cefb074dc4943449917579"
+    },
+    {
+      "state": "projects",
+      "width": 390,
+      "height": 1221,
+      "file": "projects-390.png",
+      "bytes": 224180,
+      "pixelsSha256": "b65ed310fe543df647464347d76071f7c395b9d8b5b1897a2ba789ce8b34cdce"
+    },
+    {
+      "state": "registration-dialog",
+      "width": 1280,
+      "height": 900,
+      "file": "registration-dialog-1280.png",
+      "bytes": 273215,
+      "pixelsSha256": "0ce4e9fbf163cc045cbbb818d3844b6440bcfe6a5cd5f6953a770382174e5cc9"
+    },
+    {
+      "state": "registration-dialog",
+      "width": 390,
+      "height": 900,
+      "file": "registration-dialog-390.png",
+      "bytes": 48359,
+      "pixelsSha256": "39d623ddafa4c534e68cd8334a2ff250dbe3a6fc0b8616d7f0868c382182dda8"
+    },
+    {
+      "state": "sign-in-dialog",
+      "width": 1280,
+      "height": 900,
+      "file": "sign-in-dialog-1280.png",
+      "bytes": 297263,
+      "pixelsSha256": "289a4653e8eb53f40d3c11c12764f3199011844a7a3f4bca06b398b17cc710a1"
+    },
+    {
+      "state": "sign-in-dialog",
+      "width": 390,
+      "height": 900,
+      "file": "sign-in-dialog-390.png",
+      "bytes": 37061,
+      "pixelsSha256": "4287424e73e65042471fba67e1145613da1ccce20f509d90c114f344beb0ab6c"
+    },
+    {
+      "state": "sign-in-second-factor",
+      "width": 1280,
+      "height": 900,
+      "file": "sign-in-second-factor-1280.png",
+      "bytes": 312060,
+      "pixelsSha256": "cde99077d8ab2784e489e569384105a0486cae2a659c7360cbf0d1fd58dae387"
+    },
+    {
+      "state": "sign-in-second-factor",
+      "width": 390,
+      "height": 900,
+      "file": "sign-in-second-factor-390.png",
+      "bytes": 36483,
+      "pixelsSha256": "9f5f69d783640ae5c5f7b3d07a97a7506eee602b905f7ac32ca276f77eac08cb"
+    }
+  ]
+}

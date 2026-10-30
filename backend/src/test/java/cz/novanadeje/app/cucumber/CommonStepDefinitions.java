@@ -1,13 +1,20 @@
 package cz.novanadeje.app.cucumber;
 
+import cz.novanadeje.app.cucumber.transcript.ApiTranscripts;
+import cz.novanadeje.app.donors.application.CompanyLookupService;
+import cz.novanadeje.app.operations.application.backup.BackupKeyWordChallenges;
+import cz.novanadeje.app.support.BackupKeyWordDraws;
+import cz.novanadeje.app.support.CompanyLookupPause;
 import cz.novanadeje.app.support.DatabaseCleaner;
 import cz.novanadeje.app.support.FakeCompanyRegistry;
 import cz.novanadeje.app.support.FakeFioClient;
 import cz.novanadeje.app.support.MutableClock;
+import cz.novanadeje.app.support.RateLimiterWindows;
 import cz.novanadeje.app.support.RecordingMailSender;
 import io.cucumber.java.Before;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
+import org.springframework.context.ConfigurableApplicationContext;
 import tools.jackson.databind.JsonNode;
 
 import java.time.Duration;
@@ -23,24 +30,34 @@ public class CommonStepDefinitions {
     private final DatabaseCleaner database;
     private final FakeFioClient fioClient;
     private final FakeCompanyRegistry companyRegistry;
+    private final ConfigurableApplicationContext context;
 
     public CommonStepDefinitions(ApiClient api, RecordingMailSender mailSender, MutableClock clock, DatabaseCleaner database,
-                                 FakeFioClient fioClient, FakeCompanyRegistry companyRegistry) {
+                                 FakeFioClient fioClient, FakeCompanyRegistry companyRegistry, ConfigurableApplicationContext context) {
         this.api = api;
         this.mailSender = mailSender;
         this.clock = clock;
         this.database = database;
         this.fioClient = fioClient;
         this.companyRegistry = companyRegistry;
+        this.context = context;
     }
 
     @Before
     public void isolateScenario() {
         database.truncateAllTables();
         mailSender.clear();
+        mailSender.startScenario();
         fioClient.reset();
         companyRegistry.reset();
-        clock.advance(Duration.ofDays(1));
+        if (ApiTranscripts.recording()) {
+            clock.set(ApiTranscripts.RECORDING_CLOCK);
+            RateLimiterWindows.reset(context);
+            CompanyLookupPause.reset(context.getBean(CompanyLookupService.class));
+            BackupKeyWordDraws.reseed(context.getBean(BackupKeyWordChallenges.class));
+        } else {
+            clock.advance(Duration.ofDays(1));
+        }
     }
 
     @When("{int} seconds pass")

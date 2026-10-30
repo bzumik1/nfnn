@@ -1,0 +1,1885 @@
+{
+  "source": "v2-baseline",
+  "feature": "donations/payment_pairing",
+  "scenarios": {
+    "A payment carrying the donor's variable symbol becomes the donor's donation #1": {
+      "requests": {
+        "POST /api/donors/auth/register #1": {
+          "request": {
+            "path": "/api/donors/auth/register",
+            "body": {
+              "address": {
+                "city": "Ústí nad Labem",
+                "postalCode": "400 01",
+                "street": "Dlouhá 12"
+              },
+              "companyIdentifier": null,
+              "email": "jana@example.cz",
+              "name": "Jana Nováková",
+              "password": "<secret>",
+              "type": "PERSON"
+            }
+          },
+          "response": {
+            "status": 202,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            }
+          }
+        },
+        "POST /api/donors/auth/email-verification/confirm #1": {
+          "request": {
+            "path": "/api/donors/auth/email-verification/confirm",
+            "body": {
+              "token": "<secret>"
+            }
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "set-cookie": "refresh_token=<secret>; Path=/api/donors/auth; Max-Age=1209600; Expires=<time>; Secure; HttpOnly; SameSite=Strict",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "accessToken": "<secret>",
+              "accessTokenExpiresAt": "2026-10-17T10:15:00Z",
+              "user": {
+                "address": {
+                  "city": "Ústí nad Labem",
+                  "postalCode": "400 01",
+                  "street": "Dlouhá 12"
+                },
+                "companyIdentifier": null,
+                "email": "jana@example.cz",
+                "hasPassword": true,
+                "id": "<id:1>",
+                "name": "Jana Nováková",
+                "pendingEmailChange": null,
+                "preferredLocale": "cs",
+                "registeredAt": "2026-10-17T10:00:00Z",
+                "roles": [
+                  "DONOR"
+                ],
+                "secondFactor": {
+                  "enabled": false,
+                  "neededForAdministration": false
+                },
+                "type": "PERSON",
+                "variableSymbol": "<vs:Jana>"
+              }
+            }
+          }
+        }
+      },
+      "mails": [
+        {
+          "from": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "to": [
+            "jana@example.cz"
+          ],
+          "replyTo": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "subject": "Potvrďte svůj e-mail – Nová naděje",
+          "text": "Dobrý den,\n\nděkujeme za registraci dárcovského účtu Nová naděje (jana@example.cz). Zbývá potvrdit, že je tato adresa vaše:\n\nhttp://localhost:4200/potvrzeni-emailu#token=<token>\n\nOdkaz platí 24 hodin a lze ho použít jen jednou. Do potvrzení se do účtu nepřihlásíte.\n\nPokud jste se neregistrovali vy, tento e-mail prosím ignorujte. Účet bez potvrzení zůstane neaktivní.\n\nNová naděje – nadační fond\n\nMáte-li dotaz, napište nám na info@nfnn.cz.\n",
+          "html": {
+            "text": "Vítejte v Nové naději Dobrý den, děkujeme za registraci dárcovského účtu Nová naděje (jana@example.cz). Zbývá potvrdit, že je tato adresa vaše: Potvrdit e-mail Pokud tlačítko nefunguje, otevřete tento odkaz: http://localhost:4200/potvrzeni-emailu#token=<token> Odkaz platí 24 hodin a lze ho použít jen jednou. Do potvrzení se do účtu nepřihlásíte. Pokud jste se neregistrovali vy, tento e-mail prosím ignorujte. Účet bez potvrzení zůstane neaktivní. S pozdravem Nová naděje – nadační fond Máte-li dotaz, napište nám na info@nfnn.cz. Nová naděje – nadační fond · IČO 27278794 · Jiráskova 436, 473 01 Nový Bor localhost",
+            "links": [
+              "http://localhost:4200/potvrzeni-emailu#token=<token>",
+              "http://localhost:4200/potvrzeni-emailu#token=<token>",
+              "http://localhost:4200"
+            ],
+            "sha256": "b997ca057549e76a39c2ee069bfabc9ff801bcc4fe1f95bdc05ff48d5e5057b2"
+          },
+          "attachments": [
+            {
+              "fileName": "inline",
+              "contentType": "image/png",
+              "size": 41502,
+              "sha256": "aecbb8a4c043690e9918174f51cd419a3f1c02d34161454fe40e759db6e7dfcb"
+            }
+          ]
+        }
+      ],
+      "logs": [
+        "DEBUG donations.application.pairing.PaymentPairingService: Bank payment 1001 paired with donor <id:1> by VARIABLE_SYMBOL",
+        "DEBUG donations.application.pairing.PaymentPairingService: Donor <id:1> learned sender account link <id:2> from bank payment 1001",
+        "DEBUG donations.infrastructure.fio.FioBankStatementSource: Fio movement 1001 is incoming: sender account given, payer name given, variable symbol given",
+        "INFO donations.application.importing.ImportBankPaymentsService: Fio import STARTUP 2026-07-20/2026-10-17 completed: bank reported 2026-07-20/2026-10-17, 1 movements, 1 new incoming, 0 known, 1 paired by symbol, 0 by account, 0 by confirmed symbol, 1 accounts learned, 0 left unpaired, covered 2026-07-20/2026-10-17",
+        "INFO donations.application.pairing.PaymentPairingService: Payments of donor <id:1> paired after the registration: 0 by symbol, 0 by account, 0 accounts learned",
+        "INFO donations.infrastructure.fio.FioBankStatementSource: Fio answered 2026-07-20/2026-10-17: reported 2026-07-20/2026-10-17 ids 1001-1001, 1 movements",
+        "INFO donors.application.DonorEmailVerificationService: E-mail of donor <id:1> verified",
+        "INFO donors.application.DonorEmailVerificationService: E-mail verification link issued for donor <id:1>"
+      ]
+    },
+    "A payment with a variable symbol nobody has stays unpaired and teaches no account #1": {
+      "requests": {
+        "POST /api/donors/auth/register #1": {
+          "request": {
+            "path": "/api/donors/auth/register",
+            "body": {
+              "address": {
+                "city": "Ústí nad Labem",
+                "postalCode": "400 01",
+                "street": "Dlouhá 12"
+              },
+              "companyIdentifier": null,
+              "email": "jana@example.cz",
+              "name": "Jana Nováková",
+              "password": "<secret>",
+              "type": "PERSON"
+            }
+          },
+          "response": {
+            "status": 202,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            }
+          }
+        },
+        "POST /api/donors/auth/email-verification/confirm #1": {
+          "request": {
+            "path": "/api/donors/auth/email-verification/confirm",
+            "body": {
+              "token": "<secret>"
+            }
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "set-cookie": "refresh_token=<secret>; Path=/api/donors/auth; Max-Age=1209600; Expires=<time>; Secure; HttpOnly; SameSite=Strict",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "accessToken": "<secret>",
+              "accessTokenExpiresAt": "2026-10-17T10:15:00Z",
+              "user": {
+                "address": {
+                  "city": "Ústí nad Labem",
+                  "postalCode": "400 01",
+                  "street": "Dlouhá 12"
+                },
+                "companyIdentifier": null,
+                "email": "jana@example.cz",
+                "hasPassword": true,
+                "id": "<id:1>",
+                "name": "Jana Nováková",
+                "pendingEmailChange": null,
+                "preferredLocale": "cs",
+                "registeredAt": "2026-10-17T10:00:00Z",
+                "roles": [
+                  "DONOR"
+                ],
+                "secondFactor": {
+                  "enabled": false,
+                  "neededForAdministration": false
+                },
+                "type": "PERSON",
+                "variableSymbol": "<vs:Jana>"
+              }
+            }
+          }
+        }
+      },
+      "mails": [
+        {
+          "from": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "to": [
+            "jana@example.cz"
+          ],
+          "replyTo": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "subject": "Potvrďte svůj e-mail – Nová naděje",
+          "text": "Dobrý den,\n\nděkujeme za registraci dárcovského účtu Nová naděje (jana@example.cz). Zbývá potvrdit, že je tato adresa vaše:\n\nhttp://localhost:4200/potvrzeni-emailu#token=<token>\n\nOdkaz platí 24 hodin a lze ho použít jen jednou. Do potvrzení se do účtu nepřihlásíte.\n\nPokud jste se neregistrovali vy, tento e-mail prosím ignorujte. Účet bez potvrzení zůstane neaktivní.\n\nNová naděje – nadační fond\n\nMáte-li dotaz, napište nám na info@nfnn.cz.\n",
+          "html": {
+            "text": "Vítejte v Nové naději Dobrý den, děkujeme za registraci dárcovského účtu Nová naděje (jana@example.cz). Zbývá potvrdit, že je tato adresa vaše: Potvrdit e-mail Pokud tlačítko nefunguje, otevřete tento odkaz: http://localhost:4200/potvrzeni-emailu#token=<token> Odkaz platí 24 hodin a lze ho použít jen jednou. Do potvrzení se do účtu nepřihlásíte. Pokud jste se neregistrovali vy, tento e-mail prosím ignorujte. Účet bez potvrzení zůstane neaktivní. S pozdravem Nová naděje – nadační fond Máte-li dotaz, napište nám na info@nfnn.cz. Nová naděje – nadační fond · IČO 27278794 · Jiráskova 436, 473 01 Nový Bor localhost",
+            "links": [
+              "http://localhost:4200/potvrzeni-emailu#token=<token>",
+              "http://localhost:4200/potvrzeni-emailu#token=<token>",
+              "http://localhost:4200"
+            ],
+            "sha256": "b997ca057549e76a39c2ee069bfabc9ff801bcc4fe1f95bdc05ff48d5e5057b2"
+          },
+          "attachments": [
+            {
+              "fileName": "inline",
+              "contentType": "image/png",
+              "size": 41502,
+              "sha256": "aecbb8a4c043690e9918174f51cd419a3f1c02d34161454fe40e759db6e7dfcb"
+            }
+          ]
+        }
+      ],
+      "logs": [
+        "DEBUG donations.application.pairing.PaymentPairingService: Bank payment 1001 stays unpaired: UNKNOWN_VARIABLE_SYMBOL (variable symbol given, sender account given)",
+        "DEBUG donations.infrastructure.fio.FioBankStatementSource: Fio movement 1001 is incoming: sender account given, payer name given, variable symbol given",
+        "INFO donations.application.importing.ImportBankPaymentsService: Fio import STARTUP 2026-07-20/2026-10-17 completed: bank reported 2026-07-20/2026-10-17, 1 movements, 1 new incoming, 0 known, 0 paired by symbol, 0 by account, 0 by confirmed symbol, 0 accounts learned, 1 left unpaired, covered 2026-07-20/2026-10-17",
+        "INFO donations.application.pairing.PaymentPairingService: Payments of donor <id:1> paired after the registration: 0 by symbol, 0 by account, 0 accounts learned",
+        "INFO donations.infrastructure.fio.FioBankStatementSource: Fio answered 2026-07-20/2026-10-17: reported 2026-07-20/2026-10-17 ids 1001-1001, 1 movements",
+        "INFO donors.application.DonorEmailVerificationService: E-mail of donor <id:1> verified",
+        "INFO donors.application.DonorEmailVerificationService: E-mail verification link issued for donor <id:1>"
+      ]
+    },
+    "A payment without a variable symbol from an unknown account stays unpaired #1": {
+      "requests": {
+        "POST /api/donors/auth/register #1": {
+          "request": {
+            "path": "/api/donors/auth/register",
+            "body": {
+              "address": {
+                "city": "Ústí nad Labem",
+                "postalCode": "400 01",
+                "street": "Dlouhá 12"
+              },
+              "companyIdentifier": null,
+              "email": "jana@example.cz",
+              "name": "Jana Nováková",
+              "password": "<secret>",
+              "type": "PERSON"
+            }
+          },
+          "response": {
+            "status": 202,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            }
+          }
+        },
+        "POST /api/donors/auth/email-verification/confirm #1": {
+          "request": {
+            "path": "/api/donors/auth/email-verification/confirm",
+            "body": {
+              "token": "<secret>"
+            }
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "set-cookie": "refresh_token=<secret>; Path=/api/donors/auth; Max-Age=1209600; Expires=<time>; Secure; HttpOnly; SameSite=Strict",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "accessToken": "<secret>",
+              "accessTokenExpiresAt": "2026-10-17T10:15:00Z",
+              "user": {
+                "address": {
+                  "city": "Ústí nad Labem",
+                  "postalCode": "400 01",
+                  "street": "Dlouhá 12"
+                },
+                "companyIdentifier": null,
+                "email": "jana@example.cz",
+                "hasPassword": true,
+                "id": "<id:1>",
+                "name": "Jana Nováková",
+                "pendingEmailChange": null,
+                "preferredLocale": "cs",
+                "registeredAt": "2026-10-17T10:00:00Z",
+                "roles": [
+                  "DONOR"
+                ],
+                "secondFactor": {
+                  "enabled": false,
+                  "neededForAdministration": false
+                },
+                "type": "PERSON",
+                "variableSymbol": "<vs:Jana>"
+              }
+            }
+          }
+        }
+      },
+      "mails": [
+        {
+          "from": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "to": [
+            "jana@example.cz"
+          ],
+          "replyTo": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "subject": "Potvrďte svůj e-mail – Nová naděje",
+          "text": "Dobrý den,\n\nděkujeme za registraci dárcovského účtu Nová naděje (jana@example.cz). Zbývá potvrdit, že je tato adresa vaše:\n\nhttp://localhost:4200/potvrzeni-emailu#token=<token>\n\nOdkaz platí 24 hodin a lze ho použít jen jednou. Do potvrzení se do účtu nepřihlásíte.\n\nPokud jste se neregistrovali vy, tento e-mail prosím ignorujte. Účet bez potvrzení zůstane neaktivní.\n\nNová naděje – nadační fond\n\nMáte-li dotaz, napište nám na info@nfnn.cz.\n",
+          "html": {
+            "text": "Vítejte v Nové naději Dobrý den, děkujeme za registraci dárcovského účtu Nová naděje (jana@example.cz). Zbývá potvrdit, že je tato adresa vaše: Potvrdit e-mail Pokud tlačítko nefunguje, otevřete tento odkaz: http://localhost:4200/potvrzeni-emailu#token=<token> Odkaz platí 24 hodin a lze ho použít jen jednou. Do potvrzení se do účtu nepřihlásíte. Pokud jste se neregistrovali vy, tento e-mail prosím ignorujte. Účet bez potvrzení zůstane neaktivní. S pozdravem Nová naděje – nadační fond Máte-li dotaz, napište nám na info@nfnn.cz. Nová naděje – nadační fond · IČO 27278794 · Jiráskova 436, 473 01 Nový Bor localhost",
+            "links": [
+              "http://localhost:4200/potvrzeni-emailu#token=<token>",
+              "http://localhost:4200/potvrzeni-emailu#token=<token>",
+              "http://localhost:4200"
+            ],
+            "sha256": "b997ca057549e76a39c2ee069bfabc9ff801bcc4fe1f95bdc05ff48d5e5057b2"
+          },
+          "attachments": [
+            {
+              "fileName": "inline",
+              "contentType": "image/png",
+              "size": 41502,
+              "sha256": "aecbb8a4c043690e9918174f51cd419a3f1c02d34161454fe40e759db6e7dfcb"
+            }
+          ]
+        }
+      ],
+      "logs": [
+        "DEBUG donations.application.pairing.PaymentPairingService: Bank payment 1001 stays unpaired: UNKNOWN_SENDER_ACCOUNT (variable symbol missing, sender account given)",
+        "DEBUG donations.infrastructure.fio.FioBankStatementSource: Fio movement 1001 is incoming: sender account given, payer name given, variable symbol missing",
+        "INFO donations.application.importing.ImportBankPaymentsService: Fio import STARTUP 2026-07-20/2026-10-17 completed: bank reported 2026-07-20/2026-10-17, 1 movements, 1 new incoming, 0 known, 0 paired by symbol, 0 by account, 0 by confirmed symbol, 0 accounts learned, 1 left unpaired, covered 2026-07-20/2026-10-17",
+        "INFO donations.application.pairing.PaymentPairingService: Payments of donor <id:1> paired after the registration: 0 by symbol, 0 by account, 0 accounts learned",
+        "INFO donations.infrastructure.fio.FioBankStatementSource: Fio answered 2026-07-20/2026-10-17: reported 2026-07-20/2026-10-17 ids 1001-1001, 1 movements",
+        "INFO donors.application.DonorEmailVerificationService: E-mail of donor <id:1> verified",
+        "INFO donors.application.DonorEmailVerificationService: E-mail verification link issued for donor <id:1>"
+      ]
+    },
+    "The sender account is learned from a payment with the symbol and a later payment from it without a symbol is paired #1": {
+      "requests": {
+        "POST /api/donors/auth/register #1": {
+          "request": {
+            "path": "/api/donors/auth/register",
+            "body": {
+              "address": {
+                "city": "Ústí nad Labem",
+                "postalCode": "400 01",
+                "street": "Dlouhá 12"
+              },
+              "companyIdentifier": null,
+              "email": "jana@example.cz",
+              "name": "Jana Nováková",
+              "password": "<secret>",
+              "type": "PERSON"
+            }
+          },
+          "response": {
+            "status": 202,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            }
+          }
+        },
+        "POST /api/donors/auth/email-verification/confirm #1": {
+          "request": {
+            "path": "/api/donors/auth/email-verification/confirm",
+            "body": {
+              "token": "<secret>"
+            }
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "set-cookie": "refresh_token=<secret>; Path=/api/donors/auth; Max-Age=1209600; Expires=<time>; Secure; HttpOnly; SameSite=Strict",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "accessToken": "<secret>",
+              "accessTokenExpiresAt": "2026-10-17T10:15:00Z",
+              "user": {
+                "address": {
+                  "city": "Ústí nad Labem",
+                  "postalCode": "400 01",
+                  "street": "Dlouhá 12"
+                },
+                "companyIdentifier": null,
+                "email": "jana@example.cz",
+                "hasPassword": true,
+                "id": "<id:1>",
+                "name": "Jana Nováková",
+                "pendingEmailChange": null,
+                "preferredLocale": "cs",
+                "registeredAt": "2026-10-17T10:00:00Z",
+                "roles": [
+                  "DONOR"
+                ],
+                "secondFactor": {
+                  "enabled": false,
+                  "neededForAdministration": false
+                },
+                "type": "PERSON",
+                "variableSymbol": "<vs:Jana>"
+              }
+            }
+          }
+        }
+      },
+      "mails": [
+        {
+          "from": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "to": [
+            "jana@example.cz"
+          ],
+          "replyTo": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "subject": "Potvrďte svůj e-mail – Nová naděje",
+          "text": "Dobrý den,\n\nděkujeme za registraci dárcovského účtu Nová naděje (jana@example.cz). Zbývá potvrdit, že je tato adresa vaše:\n\nhttp://localhost:4200/potvrzeni-emailu#token=<token>\n\nOdkaz platí 24 hodin a lze ho použít jen jednou. Do potvrzení se do účtu nepřihlásíte.\n\nPokud jste se neregistrovali vy, tento e-mail prosím ignorujte. Účet bez potvrzení zůstane neaktivní.\n\nNová naděje – nadační fond\n\nMáte-li dotaz, napište nám na info@nfnn.cz.\n",
+          "html": {
+            "text": "Vítejte v Nové naději Dobrý den, děkujeme za registraci dárcovského účtu Nová naděje (jana@example.cz). Zbývá potvrdit, že je tato adresa vaše: Potvrdit e-mail Pokud tlačítko nefunguje, otevřete tento odkaz: http://localhost:4200/potvrzeni-emailu#token=<token> Odkaz platí 24 hodin a lze ho použít jen jednou. Do potvrzení se do účtu nepřihlásíte. Pokud jste se neregistrovali vy, tento e-mail prosím ignorujte. Účet bez potvrzení zůstane neaktivní. S pozdravem Nová naděje – nadační fond Máte-li dotaz, napište nám na info@nfnn.cz. Nová naděje – nadační fond · IČO 27278794 · Jiráskova 436, 473 01 Nový Bor localhost",
+            "links": [
+              "http://localhost:4200/potvrzeni-emailu#token=<token>",
+              "http://localhost:4200/potvrzeni-emailu#token=<token>",
+              "http://localhost:4200"
+            ],
+            "sha256": "b997ca057549e76a39c2ee069bfabc9ff801bcc4fe1f95bdc05ff48d5e5057b2"
+          },
+          "attachments": [
+            {
+              "fileName": "inline",
+              "contentType": "image/png",
+              "size": 41502,
+              "sha256": "aecbb8a4c043690e9918174f51cd419a3f1c02d34161454fe40e759db6e7dfcb"
+            }
+          ]
+        }
+      ],
+      "logs": [
+        "DEBUG donations.application.pairing.PaymentPairingService: Bank payment 1001 paired with donor <id:1> by VARIABLE_SYMBOL",
+        "DEBUG donations.application.pairing.PaymentPairingService: Bank payment 1002 paired with donor <id:1> by SENDER_ACCOUNT",
+        "DEBUG donations.application.pairing.PaymentPairingService: Donor <id:1> learned sender account link <id:2> from bank payment 1001",
+        "DEBUG donations.infrastructure.fio.FioBankStatementSource: Fio movement 1001 is incoming: sender account given, payer name given, variable symbol given",
+        "DEBUG donations.infrastructure.fio.FioBankStatementSource: Fio movement 1002 is incoming: sender account given, payer name given, variable symbol missing",
+        "INFO donations.application.importing.ImportBankPaymentsService: Fio import HOURLY 2026-10-14/2026-10-17 completed: bank reported 2026-10-14/2026-10-17, 1 movements, 1 new incoming, 0 known, 0 paired by symbol, 1 by account, 0 by confirmed symbol, 0 accounts learned, 0 left unpaired, covered 2026-07-20/2026-10-17",
+        "INFO donations.application.importing.ImportBankPaymentsService: Fio import STARTUP 2026-07-20/2026-10-17 completed: bank reported 2026-07-20/2026-10-17, 1 movements, 1 new incoming, 0 known, 1 paired by symbol, 0 by account, 0 by confirmed symbol, 1 accounts learned, 0 left unpaired, covered 2026-07-20/2026-10-17",
+        "INFO donations.application.pairing.PaymentPairingService: Payments of donor <id:1> paired after the registration: 0 by symbol, 0 by account, 0 accounts learned",
+        "INFO donations.infrastructure.fio.FioBankStatementSource: Fio answered 2026-07-20/2026-10-17: reported 2026-07-20/2026-10-17 ids 1001-1001, 1 movements",
+        "INFO donations.infrastructure.fio.FioBankStatementSource: Fio answered 2026-10-14/2026-10-17: reported 2026-10-14/2026-10-17 ids 1002-1002, 1 movements",
+        "INFO donors.application.DonorEmailVerificationService: E-mail of donor <id:1> verified",
+        "INFO donors.application.DonorEmailVerificationService: E-mail verification link issued for donor <id:1>"
+      ]
+    },
+    "Earlier unpaired payments from a newly learned account are paired in the same run #1": {
+      "requests": {
+        "POST /api/donors/auth/register #1": {
+          "request": {
+            "path": "/api/donors/auth/register",
+            "body": {
+              "address": {
+                "city": "Ústí nad Labem",
+                "postalCode": "400 01",
+                "street": "Dlouhá 12"
+              },
+              "companyIdentifier": null,
+              "email": "jana@example.cz",
+              "name": "Jana Nováková",
+              "password": "<secret>",
+              "type": "PERSON"
+            }
+          },
+          "response": {
+            "status": 202,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            }
+          }
+        },
+        "POST /api/donors/auth/email-verification/confirm #1": {
+          "request": {
+            "path": "/api/donors/auth/email-verification/confirm",
+            "body": {
+              "token": "<secret>"
+            }
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "set-cookie": "refresh_token=<secret>; Path=/api/donors/auth; Max-Age=1209600; Expires=<time>; Secure; HttpOnly; SameSite=Strict",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "accessToken": "<secret>",
+              "accessTokenExpiresAt": "2026-10-17T10:15:00Z",
+              "user": {
+                "address": {
+                  "city": "Ústí nad Labem",
+                  "postalCode": "400 01",
+                  "street": "Dlouhá 12"
+                },
+                "companyIdentifier": null,
+                "email": "jana@example.cz",
+                "hasPassword": true,
+                "id": "<id:1>",
+                "name": "Jana Nováková",
+                "pendingEmailChange": null,
+                "preferredLocale": "cs",
+                "registeredAt": "2026-10-17T10:00:00Z",
+                "roles": [
+                  "DONOR"
+                ],
+                "secondFactor": {
+                  "enabled": false,
+                  "neededForAdministration": false
+                },
+                "type": "PERSON",
+                "variableSymbol": "<vs:Jana>"
+              }
+            }
+          }
+        }
+      },
+      "mails": [
+        {
+          "from": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "to": [
+            "jana@example.cz"
+          ],
+          "replyTo": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "subject": "Potvrďte svůj e-mail – Nová naděje",
+          "text": "Dobrý den,\n\nděkujeme za registraci dárcovského účtu Nová naděje (jana@example.cz). Zbývá potvrdit, že je tato adresa vaše:\n\nhttp://localhost:4200/potvrzeni-emailu#token=<token>\n\nOdkaz platí 24 hodin a lze ho použít jen jednou. Do potvrzení se do účtu nepřihlásíte.\n\nPokud jste se neregistrovali vy, tento e-mail prosím ignorujte. Účet bez potvrzení zůstane neaktivní.\n\nNová naděje – nadační fond\n\nMáte-li dotaz, napište nám na info@nfnn.cz.\n",
+          "html": {
+            "text": "Vítejte v Nové naději Dobrý den, děkujeme za registraci dárcovského účtu Nová naděje (jana@example.cz). Zbývá potvrdit, že je tato adresa vaše: Potvrdit e-mail Pokud tlačítko nefunguje, otevřete tento odkaz: http://localhost:4200/potvrzeni-emailu#token=<token> Odkaz platí 24 hodin a lze ho použít jen jednou. Do potvrzení se do účtu nepřihlásíte. Pokud jste se neregistrovali vy, tento e-mail prosím ignorujte. Účet bez potvrzení zůstane neaktivní. S pozdravem Nová naděje – nadační fond Máte-li dotaz, napište nám na info@nfnn.cz. Nová naděje – nadační fond · IČO 27278794 · Jiráskova 436, 473 01 Nový Bor localhost",
+            "links": [
+              "http://localhost:4200/potvrzeni-emailu#token=<token>",
+              "http://localhost:4200/potvrzeni-emailu#token=<token>",
+              "http://localhost:4200"
+            ],
+            "sha256": "b997ca057549e76a39c2ee069bfabc9ff801bcc4fe1f95bdc05ff48d5e5057b2"
+          },
+          "attachments": [
+            {
+              "fileName": "inline",
+              "contentType": "image/png",
+              "size": 41502,
+              "sha256": "aecbb8a4c043690e9918174f51cd419a3f1c02d34161454fe40e759db6e7dfcb"
+            }
+          ]
+        }
+      ],
+      "logs": [
+        "DEBUG donations.application.pairing.PaymentPairingService: Bank payment 1001 paired with donor <id:1> by SENDER_ACCOUNT",
+        "DEBUG donations.application.pairing.PaymentPairingService: Bank payment 1001 stays unpaired: UNKNOWN_SENDER_ACCOUNT (variable symbol missing, sender account given)",
+        "DEBUG donations.application.pairing.PaymentPairingService: Bank payment 1002 paired with donor <id:1> by VARIABLE_SYMBOL",
+        "DEBUG donations.application.pairing.PaymentPairingService: Donor <id:1> learned sender account link <id:2> from bank payment 1002",
+        "DEBUG donations.infrastructure.fio.FioBankStatementSource: Fio movement 1001 is incoming: sender account given, payer name given, variable symbol missing",
+        "DEBUG donations.infrastructure.fio.FioBankStatementSource: Fio movement 1002 is incoming: sender account given, payer name given, variable symbol given",
+        "INFO donations.application.importing.ImportBankPaymentsService: Fio import HOURLY 2026-10-14/2026-10-17 completed: bank reported 2026-10-14/2026-10-17, 1 movements, 1 new incoming, 0 known, 1 paired by symbol, 1 by account, 0 by confirmed symbol, 1 accounts learned, 0 left unpaired, covered 2026-07-20/2026-10-17",
+        "INFO donations.application.importing.ImportBankPaymentsService: Fio import STARTUP 2026-07-20/2026-10-17 completed: bank reported 2026-07-20/2026-10-17, 1 movements, 1 new incoming, 0 known, 0 paired by symbol, 0 by account, 0 by confirmed symbol, 0 accounts learned, 1 left unpaired, covered 2026-07-20/2026-10-17",
+        "INFO donations.application.pairing.PaymentPairingService: Payments of donor <id:1> paired after the registration: 0 by symbol, 0 by account, 0 accounts learned",
+        "INFO donations.infrastructure.fio.FioBankStatementSource: Fio answered 2026-07-20/2026-10-17: reported 2026-07-20/2026-10-17 ids 1001-1001, 1 movements",
+        "INFO donations.infrastructure.fio.FioBankStatementSource: Fio answered 2026-10-14/2026-10-17: reported 2026-10-14/2026-10-17 ids 1002-1002, 1 movements",
+        "INFO donors.application.DonorEmailVerificationService: E-mail of donor <id:1> verified",
+        "INFO donors.application.DonorEmailVerificationService: E-mail verification link issued for donor <id:1>"
+      ]
+    },
+    "A payment with an unknown variable symbol from a learned account stays unpaired without the donor's confirmation #1": {
+      "requests": {
+        "POST /api/donors/auth/register #1": {
+          "request": {
+            "path": "/api/donors/auth/register",
+            "body": {
+              "address": {
+                "city": "Ústí nad Labem",
+                "postalCode": "400 01",
+                "street": "Dlouhá 12"
+              },
+              "companyIdentifier": null,
+              "email": "jana@example.cz",
+              "name": "Jana Nováková",
+              "password": "<secret>",
+              "type": "PERSON"
+            }
+          },
+          "response": {
+            "status": 202,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            }
+          }
+        },
+        "POST /api/donors/auth/email-verification/confirm #1": {
+          "request": {
+            "path": "/api/donors/auth/email-verification/confirm",
+            "body": {
+              "token": "<secret>"
+            }
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "set-cookie": "refresh_token=<secret>; Path=/api/donors/auth; Max-Age=1209600; Expires=<time>; Secure; HttpOnly; SameSite=Strict",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "accessToken": "<secret>",
+              "accessTokenExpiresAt": "2026-10-17T10:15:00Z",
+              "user": {
+                "address": {
+                  "city": "Ústí nad Labem",
+                  "postalCode": "400 01",
+                  "street": "Dlouhá 12"
+                },
+                "companyIdentifier": null,
+                "email": "jana@example.cz",
+                "hasPassword": true,
+                "id": "<id:1>",
+                "name": "Jana Nováková",
+                "pendingEmailChange": null,
+                "preferredLocale": "cs",
+                "registeredAt": "2026-10-17T10:00:00Z",
+                "roles": [
+                  "DONOR"
+                ],
+                "secondFactor": {
+                  "enabled": false,
+                  "neededForAdministration": false
+                },
+                "type": "PERSON",
+                "variableSymbol": "<vs:Jana>"
+              }
+            }
+          }
+        }
+      },
+      "mails": [
+        {
+          "from": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "to": [
+            "jana@example.cz"
+          ],
+          "replyTo": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "subject": "Potvrďte svůj e-mail – Nová naděje",
+          "text": "Dobrý den,\n\nděkujeme za registraci dárcovského účtu Nová naděje (jana@example.cz). Zbývá potvrdit, že je tato adresa vaše:\n\nhttp://localhost:4200/potvrzeni-emailu#token=<token>\n\nOdkaz platí 24 hodin a lze ho použít jen jednou. Do potvrzení se do účtu nepřihlásíte.\n\nPokud jste se neregistrovali vy, tento e-mail prosím ignorujte. Účet bez potvrzení zůstane neaktivní.\n\nNová naděje – nadační fond\n\nMáte-li dotaz, napište nám na info@nfnn.cz.\n",
+          "html": {
+            "text": "Vítejte v Nové naději Dobrý den, děkujeme za registraci dárcovského účtu Nová naděje (jana@example.cz). Zbývá potvrdit, že je tato adresa vaše: Potvrdit e-mail Pokud tlačítko nefunguje, otevřete tento odkaz: http://localhost:4200/potvrzeni-emailu#token=<token> Odkaz platí 24 hodin a lze ho použít jen jednou. Do potvrzení se do účtu nepřihlásíte. Pokud jste se neregistrovali vy, tento e-mail prosím ignorujte. Účet bez potvrzení zůstane neaktivní. S pozdravem Nová naděje – nadační fond Máte-li dotaz, napište nám na info@nfnn.cz. Nová naděje – nadační fond · IČO 27278794 · Jiráskova 436, 473 01 Nový Bor localhost",
+            "links": [
+              "http://localhost:4200/potvrzeni-emailu#token=<token>",
+              "http://localhost:4200/potvrzeni-emailu#token=<token>",
+              "http://localhost:4200"
+            ],
+            "sha256": "b997ca057549e76a39c2ee069bfabc9ff801bcc4fe1f95bdc05ff48d5e5057b2"
+          },
+          "attachments": [
+            {
+              "fileName": "inline",
+              "contentType": "image/png",
+              "size": 41502,
+              "sha256": "aecbb8a4c043690e9918174f51cd419a3f1c02d34161454fe40e759db6e7dfcb"
+            }
+          ]
+        }
+      ],
+      "logs": [
+        "DEBUG donations.application.pairing.PaymentPairingService: Bank payment 1001 paired with donor <id:1> by VARIABLE_SYMBOL",
+        "DEBUG donations.application.pairing.PaymentPairingService: Bank payment 1002 stays unpaired: UNKNOWN_VARIABLE_SYMBOL (variable symbol given, sender account given)",
+        "DEBUG donations.application.pairing.PaymentPairingService: Donor <id:1> learned sender account link <id:2> from bank payment 1001",
+        "DEBUG donations.infrastructure.fio.FioBankStatementSource: Fio movement 1001 is incoming: sender account given, payer name given, variable symbol given",
+        "DEBUG donations.infrastructure.fio.FioBankStatementSource: Fio movement 1002 is incoming: sender account given, payer name given, variable symbol given",
+        "INFO donations.application.importing.ImportBankPaymentsService: Fio import HOURLY 2026-10-14/2026-10-17 completed: bank reported 2026-10-14/2026-10-17, 1 movements, 1 new incoming, 0 known, 0 paired by symbol, 0 by account, 0 by confirmed symbol, 0 accounts learned, 1 left unpaired, covered 2026-07-20/2026-10-17",
+        "INFO donations.application.importing.ImportBankPaymentsService: Fio import STARTUP 2026-07-20/2026-10-17 completed: bank reported 2026-07-20/2026-10-17, 1 movements, 1 new incoming, 0 known, 1 paired by symbol, 0 by account, 0 by confirmed symbol, 1 accounts learned, 0 left unpaired, covered 2026-07-20/2026-10-17",
+        "INFO donations.application.pairing.PaymentPairingService: Payments of donor <id:1> paired after the registration: 0 by symbol, 0 by account, 0 accounts learned",
+        "INFO donations.infrastructure.fio.FioBankStatementSource: Fio answered 2026-07-20/2026-10-17: reported 2026-07-20/2026-10-17 ids 1001-1001, 1 movements",
+        "INFO donations.infrastructure.fio.FioBankStatementSource: Fio answered 2026-10-14/2026-10-17: reported 2026-10-14/2026-10-17 ids 1002-1002, 1 movements",
+        "INFO donors.application.DonorEmailVerificationService: E-mail of donor <id:1> verified",
+        "INFO donors.application.DonorEmailVerificationService: E-mail verification link issued for donor <id:1>"
+      ]
+    },
+    "A payment carrying another donor's variable symbol goes to that donor even from a learned account, and that donor learns the account too #1": {
+      "requests": {
+        "POST /api/donors/auth/register #1": {
+          "request": {
+            "path": "/api/donors/auth/register",
+            "body": {
+              "address": {
+                "city": "Ústí nad Labem",
+                "postalCode": "400 01",
+                "street": "Dlouhá 12"
+              },
+              "companyIdentifier": null,
+              "email": "jana@example.cz",
+              "name": "Jana Nováková",
+              "password": "<secret>",
+              "type": "PERSON"
+            }
+          },
+          "response": {
+            "status": 202,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            }
+          }
+        },
+        "POST /api/donors/auth/email-verification/confirm #1": {
+          "request": {
+            "path": "/api/donors/auth/email-verification/confirm",
+            "body": {
+              "token": "<secret>"
+            }
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "set-cookie": "refresh_token=<secret>; Path=/api/donors/auth; Max-Age=1209600; Expires=<time>; Secure; HttpOnly; SameSite=Strict",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "accessToken": "<secret>",
+              "accessTokenExpiresAt": "2026-10-17T10:15:00Z",
+              "user": {
+                "address": {
+                  "city": "Ústí nad Labem",
+                  "postalCode": "400 01",
+                  "street": "Dlouhá 12"
+                },
+                "companyIdentifier": null,
+                "email": "jana@example.cz",
+                "hasPassword": true,
+                "id": "<id:1>",
+                "name": "Jana Nováková",
+                "pendingEmailChange": null,
+                "preferredLocale": "cs",
+                "registeredAt": "2026-10-17T10:00:00Z",
+                "roles": [
+                  "DONOR"
+                ],
+                "secondFactor": {
+                  "enabled": false,
+                  "neededForAdministration": false
+                },
+                "type": "PERSON",
+                "variableSymbol": "<vs:Jana>"
+              }
+            }
+          }
+        },
+        "POST /api/donors/auth/register #2": {
+          "request": {
+            "path": "/api/donors/auth/register",
+            "body": {
+              "address": {
+                "city": "Ústí nad Labem",
+                "postalCode": "400 01",
+                "street": "Dlouhá 12"
+              },
+              "companyIdentifier": null,
+              "email": "petr@example.cz",
+              "name": "Petr Svoboda",
+              "password": "<secret>",
+              "type": "PERSON"
+            }
+          },
+          "response": {
+            "status": 202,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            }
+          }
+        },
+        "POST /api/donors/auth/email-verification/confirm #2": {
+          "request": {
+            "path": "/api/donors/auth/email-verification/confirm",
+            "body": {
+              "token": "<secret>"
+            }
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "set-cookie": "refresh_token=<secret>; Path=/api/donors/auth; Max-Age=1209600; Expires=<time>; Secure; HttpOnly; SameSite=Strict",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "accessToken": "<secret>",
+              "accessTokenExpiresAt": "2026-10-17T10:15:00Z",
+              "user": {
+                "address": {
+                  "city": "Ústí nad Labem",
+                  "postalCode": "400 01",
+                  "street": "Dlouhá 12"
+                },
+                "companyIdentifier": null,
+                "email": "petr@example.cz",
+                "hasPassword": true,
+                "id": "<id:2>",
+                "name": "Petr Svoboda",
+                "pendingEmailChange": null,
+                "preferredLocale": "cs",
+                "registeredAt": "2026-10-17T10:00:00Z",
+                "roles": [
+                  "DONOR"
+                ],
+                "secondFactor": {
+                  "enabled": false,
+                  "neededForAdministration": false
+                },
+                "type": "PERSON",
+                "variableSymbol": "<vs:Petr>"
+              }
+            }
+          }
+        }
+      },
+      "mails": [
+        {
+          "from": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "to": [
+            "jana@example.cz"
+          ],
+          "replyTo": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "subject": "Potvrďte svůj e-mail – Nová naděje",
+          "text": "Dobrý den,\n\nděkujeme za registraci dárcovského účtu Nová naděje (jana@example.cz). Zbývá potvrdit, že je tato adresa vaše:\n\nhttp://localhost:4200/potvrzeni-emailu#token=<token>\n\nOdkaz platí 24 hodin a lze ho použít jen jednou. Do potvrzení se do účtu nepřihlásíte.\n\nPokud jste se neregistrovali vy, tento e-mail prosím ignorujte. Účet bez potvrzení zůstane neaktivní.\n\nNová naděje – nadační fond\n\nMáte-li dotaz, napište nám na info@nfnn.cz.\n",
+          "html": {
+            "text": "Vítejte v Nové naději Dobrý den, děkujeme za registraci dárcovského účtu Nová naděje (jana@example.cz). Zbývá potvrdit, že je tato adresa vaše: Potvrdit e-mail Pokud tlačítko nefunguje, otevřete tento odkaz: http://localhost:4200/potvrzeni-emailu#token=<token> Odkaz platí 24 hodin a lze ho použít jen jednou. Do potvrzení se do účtu nepřihlásíte. Pokud jste se neregistrovali vy, tento e-mail prosím ignorujte. Účet bez potvrzení zůstane neaktivní. S pozdravem Nová naděje – nadační fond Máte-li dotaz, napište nám na info@nfnn.cz. Nová naděje – nadační fond · IČO 27278794 · Jiráskova 436, 473 01 Nový Bor localhost",
+            "links": [
+              "http://localhost:4200/potvrzeni-emailu#token=<token>",
+              "http://localhost:4200/potvrzeni-emailu#token=<token>",
+              "http://localhost:4200"
+            ],
+            "sha256": "b997ca057549e76a39c2ee069bfabc9ff801bcc4fe1f95bdc05ff48d5e5057b2"
+          },
+          "attachments": [
+            {
+              "fileName": "inline",
+              "contentType": "image/png",
+              "size": 41502,
+              "sha256": "aecbb8a4c043690e9918174f51cd419a3f1c02d34161454fe40e759db6e7dfcb"
+            }
+          ]
+        },
+        {
+          "from": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "to": [
+            "petr@example.cz"
+          ],
+          "replyTo": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "subject": "Potvrďte svůj e-mail – Nová naděje",
+          "text": "Dobrý den,\n\nděkujeme za registraci dárcovského účtu Nová naděje (petr@example.cz). Zbývá potvrdit, že je tato adresa vaše:\n\nhttp://localhost:4200/potvrzeni-emailu#token=<token>\n\nOdkaz platí 24 hodin a lze ho použít jen jednou. Do potvrzení se do účtu nepřihlásíte.\n\nPokud jste se neregistrovali vy, tento e-mail prosím ignorujte. Účet bez potvrzení zůstane neaktivní.\n\nNová naděje – nadační fond\n\nMáte-li dotaz, napište nám na info@nfnn.cz.\n",
+          "html": {
+            "text": "Vítejte v Nové naději Dobrý den, děkujeme za registraci dárcovského účtu Nová naděje (petr@example.cz). Zbývá potvrdit, že je tato adresa vaše: Potvrdit e-mail Pokud tlačítko nefunguje, otevřete tento odkaz: http://localhost:4200/potvrzeni-emailu#token=<token> Odkaz platí 24 hodin a lze ho použít jen jednou. Do potvrzení se do účtu nepřihlásíte. Pokud jste se neregistrovali vy, tento e-mail prosím ignorujte. Účet bez potvrzení zůstane neaktivní. S pozdravem Nová naděje – nadační fond Máte-li dotaz, napište nám na info@nfnn.cz. Nová naděje – nadační fond · IČO 27278794 · Jiráskova 436, 473 01 Nový Bor localhost",
+            "links": [
+              "http://localhost:4200/potvrzeni-emailu#token=<token>",
+              "http://localhost:4200/potvrzeni-emailu#token=<token>",
+              "http://localhost:4200"
+            ],
+            "sha256": "c3c281ed47557190235a9c6bef2f512e9ca9a504963a99c291365fc0343efddf"
+          },
+          "attachments": [
+            {
+              "fileName": "inline",
+              "contentType": "image/png",
+              "size": 41502,
+              "sha256": "aecbb8a4c043690e9918174f51cd419a3f1c02d34161454fe40e759db6e7dfcb"
+            }
+          ]
+        }
+      ],
+      "logs": [
+        "DEBUG donations.application.pairing.PaymentPairingService: Bank payment 1001 paired with donor <id:1> by VARIABLE_SYMBOL",
+        "DEBUG donations.application.pairing.PaymentPairingService: Bank payment 1002 paired with donor <id:2> by VARIABLE_SYMBOL",
+        "DEBUG donations.application.pairing.PaymentPairingService: Donor <id:1> learned sender account link <id:3> from bank payment 1001",
+        "DEBUG donations.application.pairing.PaymentPairingService: Donor <id:2> learned sender account link <id:4> from bank payment 1002",
+        "DEBUG donations.infrastructure.fio.FioBankStatementSource: Fio movement 1001 is incoming: sender account given, payer name given, variable symbol given",
+        "DEBUG donations.infrastructure.fio.FioBankStatementSource: Fio movement 1002 is incoming: sender account given, payer name given, variable symbol given",
+        "INFO donations.application.importing.ImportBankPaymentsService: Fio import HOURLY 2026-10-14/2026-10-17 completed: bank reported 2026-10-14/2026-10-17, 1 movements, 1 new incoming, 0 known, 1 paired by symbol, 0 by account, 0 by confirmed symbol, 1 accounts learned, 0 left unpaired, covered 2026-07-20/2026-10-17",
+        "INFO donations.application.importing.ImportBankPaymentsService: Fio import STARTUP 2026-07-20/2026-10-17 completed: bank reported 2026-07-20/2026-10-17, 1 movements, 1 new incoming, 0 known, 1 paired by symbol, 0 by account, 0 by confirmed symbol, 1 accounts learned, 0 left unpaired, covered 2026-07-20/2026-10-17",
+        "INFO donations.application.pairing.PaymentPairingService: Payments of donor <id:1> paired after the registration: 0 by symbol, 0 by account, 0 accounts learned",
+        "INFO donations.application.pairing.PaymentPairingService: Payments of donor <id:2> paired after the registration: 0 by symbol, 0 by account, 0 accounts learned",
+        "INFO donations.infrastructure.fio.FioBankStatementSource: Fio answered 2026-07-20/2026-10-17: reported 2026-07-20/2026-10-17 ids 1001-1001, 1 movements",
+        "INFO donations.infrastructure.fio.FioBankStatementSource: Fio answered 2026-10-14/2026-10-17: reported 2026-10-14/2026-10-17 ids 1002-1002, 1 movements",
+        "INFO donors.application.DonorEmailVerificationService: E-mail of donor <id:1> verified",
+        "INFO donors.application.DonorEmailVerificationService: E-mail of donor <id:2> verified",
+        "INFO donors.application.DonorEmailVerificationService: E-mail verification link issued for donor <id:1>",
+        "INFO donors.application.DonorEmailVerificationService: E-mail verification link issued for donor <id:2>"
+      ]
+    },
+    "An account used with two donors' symbols pairs no further payment without a symbol, and the earlier account-based donation is kept #1": {
+      "requests": {
+        "POST /api/donors/auth/register #1": {
+          "request": {
+            "path": "/api/donors/auth/register",
+            "body": {
+              "address": {
+                "city": "Ústí nad Labem",
+                "postalCode": "400 01",
+                "street": "Dlouhá 12"
+              },
+              "companyIdentifier": null,
+              "email": "jana@example.cz",
+              "name": "Jana Nováková",
+              "password": "<secret>",
+              "type": "PERSON"
+            }
+          },
+          "response": {
+            "status": 202,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            }
+          }
+        },
+        "POST /api/donors/auth/email-verification/confirm #1": {
+          "request": {
+            "path": "/api/donors/auth/email-verification/confirm",
+            "body": {
+              "token": "<secret>"
+            }
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "set-cookie": "refresh_token=<secret>; Path=/api/donors/auth; Max-Age=1209600; Expires=<time>; Secure; HttpOnly; SameSite=Strict",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "accessToken": "<secret>",
+              "accessTokenExpiresAt": "2026-10-17T10:15:00Z",
+              "user": {
+                "address": {
+                  "city": "Ústí nad Labem",
+                  "postalCode": "400 01",
+                  "street": "Dlouhá 12"
+                },
+                "companyIdentifier": null,
+                "email": "jana@example.cz",
+                "hasPassword": true,
+                "id": "<id:1>",
+                "name": "Jana Nováková",
+                "pendingEmailChange": null,
+                "preferredLocale": "cs",
+                "registeredAt": "2026-10-17T10:00:00Z",
+                "roles": [
+                  "DONOR"
+                ],
+                "secondFactor": {
+                  "enabled": false,
+                  "neededForAdministration": false
+                },
+                "type": "PERSON",
+                "variableSymbol": "<vs:Jana>"
+              }
+            }
+          }
+        },
+        "POST /api/donors/auth/register #2": {
+          "request": {
+            "path": "/api/donors/auth/register",
+            "body": {
+              "address": {
+                "city": "Ústí nad Labem",
+                "postalCode": "400 01",
+                "street": "Dlouhá 12"
+              },
+              "companyIdentifier": null,
+              "email": "petr@example.cz",
+              "name": "Petr Svoboda",
+              "password": "<secret>",
+              "type": "PERSON"
+            }
+          },
+          "response": {
+            "status": 202,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            }
+          }
+        },
+        "POST /api/donors/auth/email-verification/confirm #2": {
+          "request": {
+            "path": "/api/donors/auth/email-verification/confirm",
+            "body": {
+              "token": "<secret>"
+            }
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "set-cookie": "refresh_token=<secret>; Path=/api/donors/auth; Max-Age=1209600; Expires=<time>; Secure; HttpOnly; SameSite=Strict",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "accessToken": "<secret>",
+              "accessTokenExpiresAt": "2026-10-17T10:15:00Z",
+              "user": {
+                "address": {
+                  "city": "Ústí nad Labem",
+                  "postalCode": "400 01",
+                  "street": "Dlouhá 12"
+                },
+                "companyIdentifier": null,
+                "email": "petr@example.cz",
+                "hasPassword": true,
+                "id": "<id:2>",
+                "name": "Petr Svoboda",
+                "pendingEmailChange": null,
+                "preferredLocale": "cs",
+                "registeredAt": "2026-10-17T10:00:00Z",
+                "roles": [
+                  "DONOR"
+                ],
+                "secondFactor": {
+                  "enabled": false,
+                  "neededForAdministration": false
+                },
+                "type": "PERSON",
+                "variableSymbol": "<vs:Petr>"
+              }
+            }
+          }
+        }
+      },
+      "mails": [
+        {
+          "from": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "to": [
+            "jana@example.cz"
+          ],
+          "replyTo": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "subject": "Potvrďte svůj e-mail – Nová naděje",
+          "text": "Dobrý den,\n\nděkujeme za registraci dárcovského účtu Nová naděje (jana@example.cz). Zbývá potvrdit, že je tato adresa vaše:\n\nhttp://localhost:4200/potvrzeni-emailu#token=<token>\n\nOdkaz platí 24 hodin a lze ho použít jen jednou. Do potvrzení se do účtu nepřihlásíte.\n\nPokud jste se neregistrovali vy, tento e-mail prosím ignorujte. Účet bez potvrzení zůstane neaktivní.\n\nNová naděje – nadační fond\n\nMáte-li dotaz, napište nám na info@nfnn.cz.\n",
+          "html": {
+            "text": "Vítejte v Nové naději Dobrý den, děkujeme za registraci dárcovského účtu Nová naděje (jana@example.cz). Zbývá potvrdit, že je tato adresa vaše: Potvrdit e-mail Pokud tlačítko nefunguje, otevřete tento odkaz: http://localhost:4200/potvrzeni-emailu#token=<token> Odkaz platí 24 hodin a lze ho použít jen jednou. Do potvrzení se do účtu nepřihlásíte. Pokud jste se neregistrovali vy, tento e-mail prosím ignorujte. Účet bez potvrzení zůstane neaktivní. S pozdravem Nová naděje – nadační fond Máte-li dotaz, napište nám na info@nfnn.cz. Nová naděje – nadační fond · IČO 27278794 · Jiráskova 436, 473 01 Nový Bor localhost",
+            "links": [
+              "http://localhost:4200/potvrzeni-emailu#token=<token>",
+              "http://localhost:4200/potvrzeni-emailu#token=<token>",
+              "http://localhost:4200"
+            ],
+            "sha256": "b997ca057549e76a39c2ee069bfabc9ff801bcc4fe1f95bdc05ff48d5e5057b2"
+          },
+          "attachments": [
+            {
+              "fileName": "inline",
+              "contentType": "image/png",
+              "size": 41502,
+              "sha256": "aecbb8a4c043690e9918174f51cd419a3f1c02d34161454fe40e759db6e7dfcb"
+            }
+          ]
+        },
+        {
+          "from": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "to": [
+            "petr@example.cz"
+          ],
+          "replyTo": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "subject": "Potvrďte svůj e-mail – Nová naděje",
+          "text": "Dobrý den,\n\nděkujeme za registraci dárcovského účtu Nová naděje (petr@example.cz). Zbývá potvrdit, že je tato adresa vaše:\n\nhttp://localhost:4200/potvrzeni-emailu#token=<token>\n\nOdkaz platí 24 hodin a lze ho použít jen jednou. Do potvrzení se do účtu nepřihlásíte.\n\nPokud jste se neregistrovali vy, tento e-mail prosím ignorujte. Účet bez potvrzení zůstane neaktivní.\n\nNová naděje – nadační fond\n\nMáte-li dotaz, napište nám na info@nfnn.cz.\n",
+          "html": {
+            "text": "Vítejte v Nové naději Dobrý den, děkujeme za registraci dárcovského účtu Nová naděje (petr@example.cz). Zbývá potvrdit, že je tato adresa vaše: Potvrdit e-mail Pokud tlačítko nefunguje, otevřete tento odkaz: http://localhost:4200/potvrzeni-emailu#token=<token> Odkaz platí 24 hodin a lze ho použít jen jednou. Do potvrzení se do účtu nepřihlásíte. Pokud jste se neregistrovali vy, tento e-mail prosím ignorujte. Účet bez potvrzení zůstane neaktivní. S pozdravem Nová naděje – nadační fond Máte-li dotaz, napište nám na info@nfnn.cz. Nová naděje – nadační fond · IČO 27278794 · Jiráskova 436, 473 01 Nový Bor localhost",
+            "links": [
+              "http://localhost:4200/potvrzeni-emailu#token=<token>",
+              "http://localhost:4200/potvrzeni-emailu#token=<token>",
+              "http://localhost:4200"
+            ],
+            "sha256": "c3c281ed47557190235a9c6bef2f512e9ca9a504963a99c291365fc0343efddf"
+          },
+          "attachments": [
+            {
+              "fileName": "inline",
+              "contentType": "image/png",
+              "size": 41502,
+              "sha256": "aecbb8a4c043690e9918174f51cd419a3f1c02d34161454fe40e759db6e7dfcb"
+            }
+          ]
+        }
+      ],
+      "logs": [
+        "DEBUG donations.application.pairing.PaymentPairingService: Bank payment 1001 paired with donor <id:1> by VARIABLE_SYMBOL",
+        "DEBUG donations.application.pairing.PaymentPairingService: Bank payment 1002 paired with donor <id:1> by SENDER_ACCOUNT",
+        "DEBUG donations.application.pairing.PaymentPairingService: Bank payment 1003 paired with donor <id:2> by VARIABLE_SYMBOL",
+        "DEBUG donations.application.pairing.PaymentPairingService: Bank payment 1004 stays unpaired: AMBIGUOUS_SENDER_ACCOUNT (variable symbol missing, sender account given)",
+        "DEBUG donations.application.pairing.PaymentPairingService: Donor <id:1> learned sender account link <id:3> from bank payment 1001",
+        "DEBUG donations.application.pairing.PaymentPairingService: Donor <id:2> learned sender account link <id:4> from bank payment 1003",
+        "DEBUG donations.infrastructure.fio.FioBankStatementSource: Fio movement 1001 is incoming: sender account given, payer name given, variable symbol given",
+        "DEBUG donations.infrastructure.fio.FioBankStatementSource: Fio movement 1002 is incoming: sender account given, payer name given, variable symbol missing",
+        "DEBUG donations.infrastructure.fio.FioBankStatementSource: Fio movement 1003 is incoming: sender account given, payer name given, variable symbol given",
+        "DEBUG donations.infrastructure.fio.FioBankStatementSource: Fio movement 1004 is incoming: sender account given, payer name given, variable symbol missing",
+        "INFO donations.application.importing.ImportBankPaymentsService: Fio import HOURLY 2026-10-14/2026-10-17 completed: bank reported 2026-10-14/2026-10-17, 2 movements, 2 new incoming, 0 known, 1 paired by symbol, 0 by account, 0 by confirmed symbol, 1 accounts learned, 1 left unpaired, covered 2026-07-20/2026-10-17",
+        "INFO donations.application.importing.ImportBankPaymentsService: Fio import STARTUP 2026-07-20/2026-10-17 completed: bank reported 2026-07-20/2026-10-17, 2 movements, 2 new incoming, 0 known, 1 paired by symbol, 1 by account, 0 by confirmed symbol, 1 accounts learned, 0 left unpaired, covered 2026-07-20/2026-10-17",
+        "INFO donations.application.pairing.PaymentPairingService: Payments of donor <id:1> paired after the registration: 0 by symbol, 0 by account, 0 accounts learned",
+        "INFO donations.application.pairing.PaymentPairingService: Payments of donor <id:2> paired after the registration: 0 by symbol, 0 by account, 0 accounts learned",
+        "INFO donations.infrastructure.fio.FioBankStatementSource: Fio answered 2026-07-20/2026-10-17: reported 2026-07-20/2026-10-17 ids 1001-1002, 2 movements",
+        "INFO donations.infrastructure.fio.FioBankStatementSource: Fio answered 2026-10-14/2026-10-17: reported 2026-10-14/2026-10-17 ids 1003-1004, 2 movements",
+        "INFO donors.application.DonorEmailVerificationService: E-mail of donor <id:1> verified",
+        "INFO donors.application.DonorEmailVerificationService: E-mail of donor <id:2> verified",
+        "INFO donors.application.DonorEmailVerificationService: E-mail verification link issued for donor <id:1>",
+        "INFO donors.application.DonorEmailVerificationService: E-mail verification link issued for donor <id:2>",
+        "WARN donations.application.pairing.PaymentPairingService: Bank payment 1004 without a variable symbol stays unpaired: its sender account was learned by several donors; later payments from that account stay unpaired too until they are paired by hand"
+      ]
+    },
+    "An account is never learned from a payment without a variable symbol #1": {
+      "requests": {
+        "POST /api/donors/auth/register #1": {
+          "request": {
+            "path": "/api/donors/auth/register",
+            "body": {
+              "address": {
+                "city": "Ústí nad Labem",
+                "postalCode": "400 01",
+                "street": "Dlouhá 12"
+              },
+              "companyIdentifier": null,
+              "email": "jana@example.cz",
+              "name": "Jana Nováková",
+              "password": "<secret>",
+              "type": "PERSON"
+            }
+          },
+          "response": {
+            "status": 202,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            }
+          }
+        },
+        "POST /api/donors/auth/email-verification/confirm #1": {
+          "request": {
+            "path": "/api/donors/auth/email-verification/confirm",
+            "body": {
+              "token": "<secret>"
+            }
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "set-cookie": "refresh_token=<secret>; Path=/api/donors/auth; Max-Age=1209600; Expires=<time>; Secure; HttpOnly; SameSite=Strict",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "accessToken": "<secret>",
+              "accessTokenExpiresAt": "2026-10-17T10:15:00Z",
+              "user": {
+                "address": {
+                  "city": "Ústí nad Labem",
+                  "postalCode": "400 01",
+                  "street": "Dlouhá 12"
+                },
+                "companyIdentifier": null,
+                "email": "jana@example.cz",
+                "hasPassword": true,
+                "id": "<id:1>",
+                "name": "Jana Nováková",
+                "pendingEmailChange": null,
+                "preferredLocale": "cs",
+                "registeredAt": "2026-10-17T10:00:00Z",
+                "roles": [
+                  "DONOR"
+                ],
+                "secondFactor": {
+                  "enabled": false,
+                  "neededForAdministration": false
+                },
+                "type": "PERSON",
+                "variableSymbol": "<vs:Jana>"
+              }
+            }
+          }
+        }
+      },
+      "mails": [
+        {
+          "from": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "to": [
+            "jana@example.cz"
+          ],
+          "replyTo": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "subject": "Potvrďte svůj e-mail – Nová naděje",
+          "text": "Dobrý den,\n\nděkujeme za registraci dárcovského účtu Nová naděje (jana@example.cz). Zbývá potvrdit, že je tato adresa vaše:\n\nhttp://localhost:4200/potvrzeni-emailu#token=<token>\n\nOdkaz platí 24 hodin a lze ho použít jen jednou. Do potvrzení se do účtu nepřihlásíte.\n\nPokud jste se neregistrovali vy, tento e-mail prosím ignorujte. Účet bez potvrzení zůstane neaktivní.\n\nNová naděje – nadační fond\n\nMáte-li dotaz, napište nám na info@nfnn.cz.\n",
+          "html": {
+            "text": "Vítejte v Nové naději Dobrý den, děkujeme za registraci dárcovského účtu Nová naděje (jana@example.cz). Zbývá potvrdit, že je tato adresa vaše: Potvrdit e-mail Pokud tlačítko nefunguje, otevřete tento odkaz: http://localhost:4200/potvrzeni-emailu#token=<token> Odkaz platí 24 hodin a lze ho použít jen jednou. Do potvrzení se do účtu nepřihlásíte. Pokud jste se neregistrovali vy, tento e-mail prosím ignorujte. Účet bez potvrzení zůstane neaktivní. S pozdravem Nová naděje – nadační fond Máte-li dotaz, napište nám na info@nfnn.cz. Nová naděje – nadační fond · IČO 27278794 · Jiráskova 436, 473 01 Nový Bor localhost",
+            "links": [
+              "http://localhost:4200/potvrzeni-emailu#token=<token>",
+              "http://localhost:4200/potvrzeni-emailu#token=<token>",
+              "http://localhost:4200"
+            ],
+            "sha256": "b997ca057549e76a39c2ee069bfabc9ff801bcc4fe1f95bdc05ff48d5e5057b2"
+          },
+          "attachments": [
+            {
+              "fileName": "inline",
+              "contentType": "image/png",
+              "size": 41502,
+              "sha256": "aecbb8a4c043690e9918174f51cd419a3f1c02d34161454fe40e759db6e7dfcb"
+            }
+          ]
+        }
+      ],
+      "logs": [
+        "DEBUG donations.application.pairing.PaymentPairingService: Bank payment 1001 stays unpaired: UNKNOWN_SENDER_ACCOUNT (variable symbol missing, sender account given)",
+        "DEBUG donations.application.pairing.PaymentPairingService: Bank payment 1002 stays unpaired: UNKNOWN_SENDER_ACCOUNT (variable symbol missing, sender account given)",
+        "DEBUG donations.infrastructure.fio.FioBankStatementSource: Fio movement 1001 is incoming: sender account given, payer name given, variable symbol missing",
+        "DEBUG donations.infrastructure.fio.FioBankStatementSource: Fio movement 1002 is incoming: sender account given, payer name given, variable symbol missing",
+        "INFO donations.application.importing.ImportBankPaymentsService: Fio import STARTUP 2026-07-20/2026-10-17 completed: bank reported 2026-07-20/2026-10-17, 2 movements, 2 new incoming, 0 known, 0 paired by symbol, 0 by account, 0 by confirmed symbol, 0 accounts learned, 2 left unpaired, covered 2026-07-20/2026-10-17",
+        "INFO donations.application.pairing.PaymentPairingService: Payments of donor <id:1> paired after the registration: 0 by symbol, 0 by account, 0 accounts learned",
+        "INFO donations.infrastructure.fio.FioBankStatementSource: Fio answered 2026-07-20/2026-10-17: reported 2026-07-20/2026-10-17 ids 1001-1002, 2 movements",
+        "INFO donors.application.DonorEmailVerificationService: E-mail of donor <id:1> verified",
+        "INFO donors.application.DonorEmailVerificationService: E-mail verification link issued for donor <id:1>"
+      ]
+    },
+    "Payments are never paired by the sender's name alone #1": {
+      "requests": {
+        "POST /api/donors/auth/register #1": {
+          "request": {
+            "path": "/api/donors/auth/register",
+            "body": {
+              "address": {
+                "city": "Ústí nad Labem",
+                "postalCode": "400 01",
+                "street": "Dlouhá 12"
+              },
+              "companyIdentifier": null,
+              "email": "jana@example.cz",
+              "name": "Jana Nováková",
+              "password": "<secret>",
+              "type": "PERSON"
+            }
+          },
+          "response": {
+            "status": 202,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            }
+          }
+        },
+        "POST /api/donors/auth/email-verification/confirm #1": {
+          "request": {
+            "path": "/api/donors/auth/email-verification/confirm",
+            "body": {
+              "token": "<secret>"
+            }
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "set-cookie": "refresh_token=<secret>; Path=/api/donors/auth; Max-Age=1209600; Expires=<time>; Secure; HttpOnly; SameSite=Strict",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "accessToken": "<secret>",
+              "accessTokenExpiresAt": "2026-10-17T10:15:00Z",
+              "user": {
+                "address": {
+                  "city": "Ústí nad Labem",
+                  "postalCode": "400 01",
+                  "street": "Dlouhá 12"
+                },
+                "companyIdentifier": null,
+                "email": "jana@example.cz",
+                "hasPassword": true,
+                "id": "<id:1>",
+                "name": "Jana Nováková",
+                "pendingEmailChange": null,
+                "preferredLocale": "cs",
+                "registeredAt": "2026-10-17T10:00:00Z",
+                "roles": [
+                  "DONOR"
+                ],
+                "secondFactor": {
+                  "enabled": false,
+                  "neededForAdministration": false
+                },
+                "type": "PERSON",
+                "variableSymbol": "<vs:Jana>"
+              }
+            }
+          }
+        }
+      },
+      "mails": [
+        {
+          "from": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "to": [
+            "jana@example.cz"
+          ],
+          "replyTo": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "subject": "Potvrďte svůj e-mail – Nová naděje",
+          "text": "Dobrý den,\n\nděkujeme za registraci dárcovského účtu Nová naděje (jana@example.cz). Zbývá potvrdit, že je tato adresa vaše:\n\nhttp://localhost:4200/potvrzeni-emailu#token=<token>\n\nOdkaz platí 24 hodin a lze ho použít jen jednou. Do potvrzení se do účtu nepřihlásíte.\n\nPokud jste se neregistrovali vy, tento e-mail prosím ignorujte. Účet bez potvrzení zůstane neaktivní.\n\nNová naděje – nadační fond\n\nMáte-li dotaz, napište nám na info@nfnn.cz.\n",
+          "html": {
+            "text": "Vítejte v Nové naději Dobrý den, děkujeme za registraci dárcovského účtu Nová naděje (jana@example.cz). Zbývá potvrdit, že je tato adresa vaše: Potvrdit e-mail Pokud tlačítko nefunguje, otevřete tento odkaz: http://localhost:4200/potvrzeni-emailu#token=<token> Odkaz platí 24 hodin a lze ho použít jen jednou. Do potvrzení se do účtu nepřihlásíte. Pokud jste se neregistrovali vy, tento e-mail prosím ignorujte. Účet bez potvrzení zůstane neaktivní. S pozdravem Nová naděje – nadační fond Máte-li dotaz, napište nám na info@nfnn.cz. Nová naděje – nadační fond · IČO 27278794 · Jiráskova 436, 473 01 Nový Bor localhost",
+            "links": [
+              "http://localhost:4200/potvrzeni-emailu#token=<token>",
+              "http://localhost:4200/potvrzeni-emailu#token=<token>",
+              "http://localhost:4200"
+            ],
+            "sha256": "b997ca057549e76a39c2ee069bfabc9ff801bcc4fe1f95bdc05ff48d5e5057b2"
+          },
+          "attachments": [
+            {
+              "fileName": "inline",
+              "contentType": "image/png",
+              "size": 41502,
+              "sha256": "aecbb8a4c043690e9918174f51cd419a3f1c02d34161454fe40e759db6e7dfcb"
+            }
+          ]
+        }
+      ],
+      "logs": [
+        "DEBUG donations.application.pairing.PaymentPairingService: Bank payment 1001 stays unpaired: UNKNOWN_SENDER_ACCOUNT (variable symbol missing, sender account given)",
+        "DEBUG donations.application.pairing.PaymentPairingService: Bank payment 1002 stays unpaired: NO_IDENTIFICATION (variable symbol missing, sender account missing)",
+        "DEBUG donations.infrastructure.fio.FioBankStatementSource: Fio movement 1001 is incoming: sender account given, payer name given, variable symbol missing",
+        "DEBUG donations.infrastructure.fio.FioBankStatementSource: Fio movement 1002 is incoming: sender account missing, payer name given, variable symbol missing",
+        "INFO donations.application.importing.ImportBankPaymentsService: Fio import STARTUP 2026-07-20/2026-10-17 completed: bank reported 2026-07-20/2026-10-17, 2 movements, 2 new incoming, 0 known, 0 paired by symbol, 0 by account, 0 by confirmed symbol, 0 accounts learned, 2 left unpaired, covered 2026-07-20/2026-10-17",
+        "INFO donations.application.pairing.PaymentPairingService: Payments of donor <id:1> paired after the registration: 0 by symbol, 0 by account, 0 accounts learned",
+        "INFO donations.infrastructure.fio.FioBankStatementSource: Fio answered 2026-07-20/2026-10-17: reported 2026-07-20/2026-10-17 ids 1001-1002, 2 movements",
+        "INFO donors.application.DonorEmailVerificationService: E-mail of donor <id:1> verified",
+        "INFO donors.application.DonorEmailVerificationService: E-mail verification link issued for donor <id:1>"
+      ]
+    },
+    "A payment from a foreign account is paired by symbol only and nothing is learned #1": {
+      "requests": {
+        "POST /api/donors/auth/register #1": {
+          "request": {
+            "path": "/api/donors/auth/register",
+            "body": {
+              "address": {
+                "city": "Ústí nad Labem",
+                "postalCode": "400 01",
+                "street": "Dlouhá 12"
+              },
+              "companyIdentifier": null,
+              "email": "jana@example.cz",
+              "name": "Jana Nováková",
+              "password": "<secret>",
+              "type": "PERSON"
+            }
+          },
+          "response": {
+            "status": 202,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            }
+          }
+        },
+        "POST /api/donors/auth/email-verification/confirm #1": {
+          "request": {
+            "path": "/api/donors/auth/email-verification/confirm",
+            "body": {
+              "token": "<secret>"
+            }
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "set-cookie": "refresh_token=<secret>; Path=/api/donors/auth; Max-Age=1209600; Expires=<time>; Secure; HttpOnly; SameSite=Strict",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "accessToken": "<secret>",
+              "accessTokenExpiresAt": "2026-10-17T10:15:00Z",
+              "user": {
+                "address": {
+                  "city": "Ústí nad Labem",
+                  "postalCode": "400 01",
+                  "street": "Dlouhá 12"
+                },
+                "companyIdentifier": null,
+                "email": "jana@example.cz",
+                "hasPassword": true,
+                "id": "<id:1>",
+                "name": "Jana Nováková",
+                "pendingEmailChange": null,
+                "preferredLocale": "cs",
+                "registeredAt": "2026-10-17T10:00:00Z",
+                "roles": [
+                  "DONOR"
+                ],
+                "secondFactor": {
+                  "enabled": false,
+                  "neededForAdministration": false
+                },
+                "type": "PERSON",
+                "variableSymbol": "<vs:Jana>"
+              }
+            }
+          }
+        }
+      },
+      "mails": [
+        {
+          "from": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "to": [
+            "jana@example.cz"
+          ],
+          "replyTo": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "subject": "Potvrďte svůj e-mail – Nová naděje",
+          "text": "Dobrý den,\n\nděkujeme za registraci dárcovského účtu Nová naděje (jana@example.cz). Zbývá potvrdit, že je tato adresa vaše:\n\nhttp://localhost:4200/potvrzeni-emailu#token=<token>\n\nOdkaz platí 24 hodin a lze ho použít jen jednou. Do potvrzení se do účtu nepřihlásíte.\n\nPokud jste se neregistrovali vy, tento e-mail prosím ignorujte. Účet bez potvrzení zůstane neaktivní.\n\nNová naděje – nadační fond\n\nMáte-li dotaz, napište nám na info@nfnn.cz.\n",
+          "html": {
+            "text": "Vítejte v Nové naději Dobrý den, děkujeme za registraci dárcovského účtu Nová naděje (jana@example.cz). Zbývá potvrdit, že je tato adresa vaše: Potvrdit e-mail Pokud tlačítko nefunguje, otevřete tento odkaz: http://localhost:4200/potvrzeni-emailu#token=<token> Odkaz platí 24 hodin a lze ho použít jen jednou. Do potvrzení se do účtu nepřihlásíte. Pokud jste se neregistrovali vy, tento e-mail prosím ignorujte. Účet bez potvrzení zůstane neaktivní. S pozdravem Nová naděje – nadační fond Máte-li dotaz, napište nám na info@nfnn.cz. Nová naděje – nadační fond · IČO 27278794 · Jiráskova 436, 473 01 Nový Bor localhost",
+            "links": [
+              "http://localhost:4200/potvrzeni-emailu#token=<token>",
+              "http://localhost:4200/potvrzeni-emailu#token=<token>",
+              "http://localhost:4200"
+            ],
+            "sha256": "b997ca057549e76a39c2ee069bfabc9ff801bcc4fe1f95bdc05ff48d5e5057b2"
+          },
+          "attachments": [
+            {
+              "fileName": "inline",
+              "contentType": "image/png",
+              "size": 41502,
+              "sha256": "aecbb8a4c043690e9918174f51cd419a3f1c02d34161454fe40e759db6e7dfcb"
+            }
+          ]
+        }
+      ],
+      "logs": [
+        "DEBUG donations.application.pairing.PaymentPairingService: Bank payment 1001 paired with donor <id:1> by VARIABLE_SYMBOL",
+        "DEBUG donations.infrastructure.fio.FioBankStatementSource: Fio movement 1001 is incoming: sender account given, payer name given, variable symbol given",
+        "INFO donations.application.importing.ImportBankPaymentsService: Fio import STARTUP 2026-07-20/2026-10-17 completed: bank reported 2026-07-20/2026-10-17, 1 movements, 1 new incoming, 0 known, 1 paired by symbol, 0 by account, 0 by confirmed symbol, 0 accounts learned, 0 left unpaired, covered 2026-07-20/2026-10-17",
+        "INFO donations.application.pairing.PaymentPairingService: Payments of donor <id:1> paired after the registration: 0 by symbol, 0 by account, 0 accounts learned",
+        "INFO donations.infrastructure.fio.FioBankStatementSource: Fio answered 2026-07-20/2026-10-17: reported 2026-07-20/2026-10-17 ids 1001-1001, 1 movements",
+        "INFO donors.application.DonorEmailVerificationService: E-mail of donor <id:1> verified",
+        "INFO donors.application.DonorEmailVerificationService: E-mail verification link issued for donor <id:1>"
+      ]
+    },
+    "A donor whose registration is announced after paying gets the payments with their symbol and the earlier payments from the same account #1": {
+      "requests": {},
+      "mails": [],
+      "logs": [
+        "DEBUG donations.application.pairing.PaymentPairingService: Bank payment 1001 paired with donor <id:1> by SENDER_ACCOUNT",
+        "DEBUG donations.application.pairing.PaymentPairingService: Bank payment 1001 stays unpaired: UNKNOWN_SENDER_ACCOUNT (variable symbol missing, sender account given)",
+        "DEBUG donations.application.pairing.PaymentPairingService: Bank payment 1002 paired with donor <id:1> by VARIABLE_SYMBOL",
+        "DEBUG donations.application.pairing.PaymentPairingService: Bank payment 1002 stays unpaired: UNKNOWN_VARIABLE_SYMBOL (variable symbol given, sender account given)",
+        "DEBUG donations.application.pairing.PaymentPairingService: Donor <id:1> learned sender account link <id:2> from bank payment 1002",
+        "DEBUG donations.infrastructure.fio.FioBankStatementSource: Fio movement 1001 is incoming: sender account given, payer name given, variable symbol missing",
+        "DEBUG donations.infrastructure.fio.FioBankStatementSource: Fio movement 1002 is incoming: sender account given, payer name given, variable symbol given",
+        "INFO donations.application.importing.ImportBankPaymentsService: Fio import STARTUP 2026-07-20/2026-10-17 completed: bank reported 2026-07-20/2026-10-17, 2 movements, 2 new incoming, 0 known, 0 paired by symbol, 0 by account, 0 by confirmed symbol, 0 accounts learned, 2 left unpaired, covered 2026-07-20/2026-10-17",
+        "INFO donations.application.pairing.PaymentPairingService: Payments of donor <id:1> paired after the registration: 1 by symbol, 1 by account, 1 accounts learned",
+        "INFO donations.infrastructure.fio.FioBankStatementSource: Fio answered 2026-07-20/2026-10-17: reported 2026-07-20/2026-10-17 ids 1001-1002, 2 movements"
+      ]
+    },
+    "A paired payment keeps its donor when imported again #1": {
+      "requests": {
+        "POST /api/donors/auth/register #1": {
+          "request": {
+            "path": "/api/donors/auth/register",
+            "body": {
+              "address": {
+                "city": "Ústí nad Labem",
+                "postalCode": "400 01",
+                "street": "Dlouhá 12"
+              },
+              "companyIdentifier": null,
+              "email": "jana@example.cz",
+              "name": "Jana Nováková",
+              "password": "<secret>",
+              "type": "PERSON"
+            }
+          },
+          "response": {
+            "status": 202,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            }
+          }
+        },
+        "POST /api/donors/auth/email-verification/confirm #1": {
+          "request": {
+            "path": "/api/donors/auth/email-verification/confirm",
+            "body": {
+              "token": "<secret>"
+            }
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "set-cookie": "refresh_token=<secret>; Path=/api/donors/auth; Max-Age=1209600; Expires=<time>; Secure; HttpOnly; SameSite=Strict",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "accessToken": "<secret>",
+              "accessTokenExpiresAt": "2026-10-17T10:15:00Z",
+              "user": {
+                "address": {
+                  "city": "Ústí nad Labem",
+                  "postalCode": "400 01",
+                  "street": "Dlouhá 12"
+                },
+                "companyIdentifier": null,
+                "email": "jana@example.cz",
+                "hasPassword": true,
+                "id": "<id:1>",
+                "name": "Jana Nováková",
+                "pendingEmailChange": null,
+                "preferredLocale": "cs",
+                "registeredAt": "2026-10-17T10:00:00Z",
+                "roles": [
+                  "DONOR"
+                ],
+                "secondFactor": {
+                  "enabled": false,
+                  "neededForAdministration": false
+                },
+                "type": "PERSON",
+                "variableSymbol": "<vs:Jana>"
+              }
+            }
+          }
+        }
+      },
+      "mails": [
+        {
+          "from": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "to": [
+            "jana@example.cz"
+          ],
+          "replyTo": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "subject": "Potvrďte svůj e-mail – Nová naděje",
+          "text": "Dobrý den,\n\nděkujeme za registraci dárcovského účtu Nová naděje (jana@example.cz). Zbývá potvrdit, že je tato adresa vaše:\n\nhttp://localhost:4200/potvrzeni-emailu#token=<token>\n\nOdkaz platí 24 hodin a lze ho použít jen jednou. Do potvrzení se do účtu nepřihlásíte.\n\nPokud jste se neregistrovali vy, tento e-mail prosím ignorujte. Účet bez potvrzení zůstane neaktivní.\n\nNová naděje – nadační fond\n\nMáte-li dotaz, napište nám na info@nfnn.cz.\n",
+          "html": {
+            "text": "Vítejte v Nové naději Dobrý den, děkujeme za registraci dárcovského účtu Nová naděje (jana@example.cz). Zbývá potvrdit, že je tato adresa vaše: Potvrdit e-mail Pokud tlačítko nefunguje, otevřete tento odkaz: http://localhost:4200/potvrzeni-emailu#token=<token> Odkaz platí 24 hodin a lze ho použít jen jednou. Do potvrzení se do účtu nepřihlásíte. Pokud jste se neregistrovali vy, tento e-mail prosím ignorujte. Účet bez potvrzení zůstane neaktivní. S pozdravem Nová naděje – nadační fond Máte-li dotaz, napište nám na info@nfnn.cz. Nová naděje – nadační fond · IČO 27278794 · Jiráskova 436, 473 01 Nový Bor localhost",
+            "links": [
+              "http://localhost:4200/potvrzeni-emailu#token=<token>",
+              "http://localhost:4200/potvrzeni-emailu#token=<token>",
+              "http://localhost:4200"
+            ],
+            "sha256": "b997ca057549e76a39c2ee069bfabc9ff801bcc4fe1f95bdc05ff48d5e5057b2"
+          },
+          "attachments": [
+            {
+              "fileName": "inline",
+              "contentType": "image/png",
+              "size": 41502,
+              "sha256": "aecbb8a4c043690e9918174f51cd419a3f1c02d34161454fe40e759db6e7dfcb"
+            }
+          ]
+        }
+      ],
+      "logs": [
+        "DEBUG donations.application.pairing.PaymentPairingService: Bank payment 1001 paired with donor <id:1> by VARIABLE_SYMBOL",
+        "DEBUG donations.application.pairing.PaymentPairingService: Donor <id:1> learned sender account link <id:2> from bank payment 1001",
+        "DEBUG donations.infrastructure.fio.FioBankStatementSource: Fio movement 1001 is incoming: sender account given, payer name given, variable symbol given",
+        "DEBUG donations.infrastructure.fio.FioBankStatementSource: Fio movement 1001 is incoming: sender account given, payer name given, variable symbol given",
+        "INFO donations.application.importing.ImportBankPaymentsService: Fio import HOURLY 2026-10-14/2026-10-18 completed: bank reported 2026-10-14/2026-10-18, 1 movements, 0 new incoming, 1 known, 0 paired by symbol, 0 by account, 0 by confirmed symbol, 0 accounts learned, 0 left unpaired, covered 2026-07-20/2026-10-18",
+        "INFO donations.application.importing.ImportBankPaymentsService: Fio import STARTUP 2026-07-20/2026-10-17 completed: bank reported 2026-07-20/2026-10-17, 1 movements, 1 new incoming, 0 known, 1 paired by symbol, 0 by account, 0 by confirmed symbol, 1 accounts learned, 0 left unpaired, covered 2026-07-20/2026-10-17",
+        "INFO donations.application.pairing.PaymentPairingService: Payments of donor <id:1> paired after the registration: 0 by symbol, 0 by account, 0 accounts learned",
+        "INFO donations.infrastructure.fio.FioBankStatementSource: Fio answered 2026-07-20/2026-10-17: reported 2026-07-20/2026-10-17 ids 1001-1001, 1 movements",
+        "INFO donations.infrastructure.fio.FioBankStatementSource: Fio answered 2026-10-14/2026-10-18: reported 2026-10-14/2026-10-18 ids 1001-1001, 1 movements",
+        "INFO donors.application.DonorEmailVerificationService: E-mail of donor <id:1> verified",
+        "INFO donors.application.DonorEmailVerificationService: E-mail verification link issued for donor <id:1>"
+      ]
+    },
+    "A payment with a variable symbol padded with zeros is paired with the donor whose symbol it spells #1": {
+      "requests": {},
+      "mails": [],
+      "logs": [
+        "DEBUG donations.application.pairing.PaymentPairingService: Bank payment 1001 paired with donor <id:1> by VARIABLE_SYMBOL",
+        "DEBUG donations.application.pairing.PaymentPairingService: Donor <id:1> learned sender account link <id:2> from bank payment 1001",
+        "DEBUG donations.infrastructure.fio.FioBankStatementSource: Fio movement 1001 is incoming: sender account given, payer name given, variable symbol given",
+        "INFO donations.application.importing.ImportBankPaymentsService: Fio import STARTUP 2026-07-20/2026-10-17 completed: bank reported 2026-07-20/2026-10-17, 1 movements, 1 new incoming, 0 known, 1 paired by symbol, 0 by account, 0 by confirmed symbol, 1 accounts learned, 0 left unpaired, covered 2026-07-20/2026-10-17",
+        "INFO donations.application.pairing.PaymentPairingService: Payments of donor <id:1> paired after the registration: 0 by symbol, 0 by account, 0 accounts learned",
+        "INFO donations.infrastructure.fio.FioBankStatementSource: Fio answered 2026-07-20/2026-10-17: reported 2026-07-20/2026-10-17 ids 1001-1001, 1 movements"
+      ]
+    },
+    "A standing order with the variable symbol 0 from a learned account is paired by the sender account #1": {
+      "requests": {
+        "POST /api/donors/auth/register #1": {
+          "request": {
+            "path": "/api/donors/auth/register",
+            "body": {
+              "address": {
+                "city": "Ústí nad Labem",
+                "postalCode": "400 01",
+                "street": "Dlouhá 12"
+              },
+              "companyIdentifier": null,
+              "email": "jana@example.cz",
+              "name": "Jana Nováková",
+              "password": "<secret>",
+              "type": "PERSON"
+            }
+          },
+          "response": {
+            "status": 202,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "expires": "0",
+              "pragma": "no-cache",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            }
+          }
+        },
+        "POST /api/donors/auth/email-verification/confirm #1": {
+          "request": {
+            "path": "/api/donors/auth/email-verification/confirm",
+            "body": {
+              "token": "<secret>"
+            }
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+              "content-type": "application/json",
+              "expires": "0",
+              "pragma": "no-cache",
+              "set-cookie": "refresh_token=<secret>; Path=/api/donors/auth; Max-Age=1209600; Expires=<time>; Secure; HttpOnly; SameSite=Strict",
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0"
+            },
+            "body": {
+              "accessToken": "<secret>",
+              "accessTokenExpiresAt": "2026-10-17T10:15:00Z",
+              "user": {
+                "address": {
+                  "city": "Ústí nad Labem",
+                  "postalCode": "400 01",
+                  "street": "Dlouhá 12"
+                },
+                "companyIdentifier": null,
+                "email": "jana@example.cz",
+                "hasPassword": true,
+                "id": "<id:1>",
+                "name": "Jana Nováková",
+                "pendingEmailChange": null,
+                "preferredLocale": "cs",
+                "registeredAt": "2026-10-17T10:00:00Z",
+                "roles": [
+                  "DONOR"
+                ],
+                "secondFactor": {
+                  "enabled": false,
+                  "neededForAdministration": false
+                },
+                "type": "PERSON",
+                "variableSymbol": "<vs:Jana>"
+              }
+            }
+          }
+        }
+      },
+      "mails": [
+        {
+          "from": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "to": [
+            "jana@example.cz"
+          ],
+          "replyTo": [
+            "\"Nová naděje – nadační fond\" <info@nfnn.cz>"
+          ],
+          "subject": "Potvrďte svůj e-mail – Nová naděje",
+          "text": "Dobrý den,\n\nděkujeme za registraci dárcovského účtu Nová naděje (jana@example.cz). Zbývá potvrdit, že je tato adresa vaše:\n\nhttp://localhost:4200/potvrzeni-emailu#token=<token>\n\nOdkaz platí 24 hodin a lze ho použít jen jednou. Do potvrzení se do účtu nepřihlásíte.\n\nPokud jste se neregistrovali vy, tento e-mail prosím ignorujte. Účet bez potvrzení zůstane neaktivní.\n\nNová naděje – nadační fond\n\nMáte-li dotaz, napište nám na info@nfnn.cz.\n",
+          "html": {
+            "text": "Vítejte v Nové naději Dobrý den, děkujeme za registraci dárcovského účtu Nová naděje (jana@example.cz). Zbývá potvrdit, že je tato adresa vaše: Potvrdit e-mail Pokud tlačítko nefunguje, otevřete tento odkaz: http://localhost:4200/potvrzeni-emailu#token=<token> Odkaz platí 24 hodin a lze ho použít jen jednou. Do potvrzení se do účtu nepřihlásíte. Pokud jste se neregistrovali vy, tento e-mail prosím ignorujte. Účet bez potvrzení zůstane neaktivní. S pozdravem Nová naděje – nadační fond Máte-li dotaz, napište nám na info@nfnn.cz. Nová naděje – nadační fond · IČO 27278794 · Jiráskova 436, 473 01 Nový Bor localhost",
+            "links": [
+              "http://localhost:4200/potvrzeni-emailu#token=<token>",
+              "http://localhost:4200/potvrzeni-emailu#token=<token>",
+              "http://localhost:4200"
+            ],
+            "sha256": "b997ca057549e76a39c2ee069bfabc9ff801bcc4fe1f95bdc05ff48d5e5057b2"
+          },
+          "attachments": [
+            {
+              "fileName": "inline",
+              "contentType": "image/png",
+              "size": 41502,
+              "sha256": "aecbb8a4c043690e9918174f51cd419a3f1c02d34161454fe40e759db6e7dfcb"
+            }
+          ]
+        }
+      ],
+      "logs": [
+        "DEBUG donations.application.pairing.PaymentPairingService: Bank payment 1001 paired with donor <id:1> by VARIABLE_SYMBOL",
+        "DEBUG donations.application.pairing.PaymentPairingService: Bank payment 1002 paired with donor <id:1> by SENDER_ACCOUNT",
+        "DEBUG donations.application.pairing.PaymentPairingService: Donor <id:1> learned sender account link <id:2> from bank payment 1001",
+        "DEBUG donations.infrastructure.fio.FioBankStatementSource: Fio movement 1001 is incoming: sender account given, payer name given, variable symbol given",
+        "DEBUG donations.infrastructure.fio.FioBankStatementSource: Fio movement 1002 is incoming: sender account given, payer name given, variable symbol given",
+        "INFO donations.application.importing.ImportBankPaymentsService: Fio import STARTUP 2026-07-20/2026-10-17 completed: bank reported 2026-07-20/2026-10-17, 2 movements, 2 new incoming, 0 known, 1 paired by symbol, 1 by account, 0 by confirmed symbol, 1 accounts learned, 0 left unpaired, covered 2026-07-20/2026-10-17",
+        "INFO donations.application.pairing.PaymentPairingService: Payments of donor <id:1> paired after the registration: 0 by symbol, 0 by account, 0 accounts learned",
+        "INFO donations.infrastructure.fio.FioBankStatementSource: Fio answered 2026-07-20/2026-10-17: reported 2026-07-20/2026-10-17 ids 1001-1002, 2 movements",
+        "INFO donors.application.DonorEmailVerificationService: E-mail of donor <id:1> verified",
+        "INFO donors.application.DonorEmailVerificationService: E-mail verification link issued for donor <id:1>"
+      ]
+    }
+  }
+}

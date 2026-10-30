@@ -4,7 +4,9 @@ import cz.novanadeje.app.shared.domain.VariableSymbol;
 import io.cucumber.spring.ScenarioScope;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -21,6 +23,7 @@ public class ScenarioDonors {
     private final Map<String, String> accessTokens = new HashMap<>();
     private final Map<String, Credentials> credentials = new HashMap<>();
     private final Map<String, String> secondFactorSecrets = new HashMap<>();
+    private final List<String> everySecondFactorSecret = new ArrayList<>();
 
     public void remember(String alias, UUID donorId, VariableSymbol variableSymbol) {
         donors.put(alias, new RememberedDonor(donorId, variableSymbol));
@@ -36,6 +39,7 @@ public class ScenarioDonors {
 
     public void rememberSecondFactorSecret(String alias, String secret) {
         secondFactorSecrets.put(alias, secret);
+        everySecondFactorSecret.add(secret);
     }
 
     public boolean hasSecondFactor(String alias) {
@@ -76,6 +80,16 @@ public class ScenarioDonors {
 
     public VariableSymbol variableSymbolOf(String alias) {
         return donor(alias).variableSymbol();
+    }
+
+    public Map<String, String> variableSymbolsByAlias() {
+        Map<String, String> symbols = new HashMap<>();
+        donors.forEach((alias, donor) -> symbols.put(alias, donor.variableSymbol().value()));
+        return symbols;
+    }
+
+    public List<String> everySecondFactorSecret() {
+        return List.copyOf(everySecondFactorSecret);
     }
 
     public String resolve(String cell) {
