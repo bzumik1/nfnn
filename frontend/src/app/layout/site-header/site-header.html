@@ -9,10 +9,9 @@
   <div class="nav-inner">
     <a class="brand" routerLink="/" fragment="uvod" (click)="closeMenu()">
       <img
-        src="/images/logo.svg"
+        [src]="logoOnDark() ? '/images/logo-on-dark.svg' : '/images/logo.svg'"
         alt="Nová naděje – nadační fond"
         i18n-alt="@@layout.header.logoAlt"
-        [class.logo-on-dark]="logoOnDark()"
       />
     </a>
 
