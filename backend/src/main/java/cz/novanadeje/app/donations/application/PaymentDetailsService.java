@@ -7,10 +7,13 @@ import org.springframework.stereotype.Service;
 @Service
 public class PaymentDetailsService {
 
+    private final PaymentDetails details;
+
     public PaymentDetailsService(BankAccount foundationAccount) {
+        this.details = PaymentDetails.of(foundationAccount);
     }
 
     public PaymentDetails details() {
-        throw new UnsupportedOperationException("not yet");
+        return details;
     }
 }
