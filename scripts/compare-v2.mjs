@@ -60,10 +60,11 @@ const IBAN_DIGITS = 10;
 const LITERAL_IBAN =
   /(?<![\p{L}\p{N}])\p{Lu}{2}\d{2}(?: ?[\p{Lu}\d]{4}){3,7}(?: ?[\p{Lu}\d]{1,3})?(?![\p{L}\p{N}])/u;
 const FIXTURE_NAME = /^\p{Lu}\p{Ll}+(?: \p{Lu}\p{Ll}+)+$/u;
-const PERSONAL_FIELD =
-  /^(?:name|fullName|firstName|lastName|payerName|companyName|street|city|counterparty\w*)$/i;
+const PERSONAL_FIELD = /^(?:fullName|payerName|street|city|counterparty\w*)$/;
+const PERSON_NAME_NEIGHBOURS = ['street', 'city', 'email', 'variableSymbol', 'companyIdentifier'];
 const PERSONAL_WORD = /\p{Lu}\p{Ll}{3,}/gu;
-const COMMON_WORDS = new Set(['Nová', 'Nové', 'Nový']);
+const COMMON_WORDS = new Set(['Nová', 'Nové', 'Nový', 'Most']);
+const ERASED_PLACEHOLDERS = new Set(['Vymazaný', 'Vymazáno']);
 const FORBIDDEN_LOG_SLOTS = [
   'vs',
   'token',
@@ -151,16 +152,29 @@ function jsonFiles(directory) {
     .sort();
 }
 
-function personalWords(value, key, words) {
+function personalWords(value, words) {
   if (Array.isArray(value)) {
-    value.forEach((item) => personalWords(item, key, words));
+    value.forEach((item) => personalWords(item, words));
   } else if (value !== null && typeof value === 'object') {
-    Object.entries(value).forEach(([field, item]) => personalWords(item, field, words));
-  } else if (typeof value === 'string' && key !== undefined && PERSONAL_FIELD.test(key)) {
-    for (const [word] of value.replace(/<[^>]*>/g, ' ').matchAll(PERSONAL_WORD)) {
-      if (!COMMON_WORDS.has(word)) {
-        words.add(word);
+    const person = PERSON_NAME_NEIGHBOURS.some((field) => field in value);
+    for (const [field, item] of Object.entries(value)) {
+      if (PERSONAL_FIELD.test(field) || (field === 'name' && person)) {
+        [item]
+          .flat()
+          .forEach((part) =>
+            typeof part === 'string' ? wordsOf(part, words) : personalWords(part, words),
+          );
+      } else {
+        personalWords(item, words);
       }
+    }
+  }
+}
+
+function wordsOf(text, words) {
+  for (const [word] of text.replace(/<[^>]*>/g, ' ').matchAll(PERSONAL_WORD)) {
+    if (!COMMON_WORDS.has(word) && !ERASED_PLACEHOLDERS.has(word)) {
+      words.add(word);
     }
   }
 }
@@ -178,7 +192,7 @@ function transcripts(directory, what, data) {
       data.aliases.add(alias);
     }
     const file = parsed(text, path, `The ${what} file`);
-    personalWords(file.scenarios ?? {}, undefined, data.words);
+    personalWords(file.scenarios ?? {}, data.words);
     const feature = file.feature ?? posix(relative(directory, path)).replace(/\.json$/, '');
     features.set(feature, file.scenarios ?? {});
   }
@@ -931,7 +945,9 @@ function forbiddenLogData(line, shape, data) {
   }
   for (const word of data.words) {
     if (words.has(word) && !data.aliases.has(word)) {
-      found.push(`the recorded name or address word ${word}`);
+      found.push(
+        `the recorded name or address word ${word} (rename the fixture value or add the word to COMMON_WORDS with a reason in testing.md)`,
+      );
     }
   }
   const iban = [...shape.matchAll(/(?<![\p{L}\p{N}])\p{Lu}{2}<digits:(\d+)>/gu)].some(
