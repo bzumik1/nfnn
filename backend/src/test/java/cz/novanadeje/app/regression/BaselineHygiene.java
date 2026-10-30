@@ -60,9 +60,9 @@ final class BaselineHygiene {
     private static final Pattern FEATURE_WORD = Pattern.compile("\"(\\p{L}{3," + BackupKeyWords.MAX_WORD_LENGTH + "})\"");
     private static final String FEATURE_FILE = ".feature";
     private static final Pattern BCRYPT = Pattern.compile("\\$2[aby]\\$\\d{2}\\$[./A-Za-z0-9]{53}");
-    private static final Pattern HEX = Pattern.compile("(?<![A-Za-z0-9_-])[0-9a-f]{32,}(?![A-Za-z0-9_-])");
+    private static final Pattern HEX = Pattern.compile("(?<![A-Za-z0-9_-])[0-9a-fA-F]{32,}(?![A-Za-z0-9_-])");
     private static final Pattern DIGIT = Pattern.compile("[0-9]");
-    private static final Pattern HEX_LETTER = Pattern.compile("[a-f]");
+    private static final Pattern HEX_LETTER = Pattern.compile("[a-fA-F]");
     private static final Pattern LABELLED_DIGEST = Pattern.compile("(?:\"[A-Za-z]*(?:sha256|Sha256)\"\\s*:\\s*\"|sha256=)$");
     private static final int LABEL_WINDOW = 40;
     private static final String BASELINE_COMMIT_FILE = "BASELINE_COMMIT";

@@ -144,7 +144,7 @@ class BaselineHygieneTest {
 
     @Test
     @DisplayName("Given the dev default backup key the hygiene allows, when the dev configuration is read, then it is the key application-dev.yml falls back to")
-    void should_allow_exactly_the_dev_default_backup_key_of_the_dev_configuration() throws IOException {
+    void should_allow_exactly_the_dev_default_backup_key_when_the_dev_configuration_is_read() throws IOException {
         String devConfiguration = Files.readString(GoldenFiles.repositoryRoot().resolve("backend/src/main/resources/application-dev.yml"));
 
         assertThat(devConfiguration).contains("${BACKUP_KEY:" + BaselineHygiene.DEV_BACKUP_KEY + "}");
@@ -174,6 +174,19 @@ class BaselineHygieneTest {
 
         assertThat(findings).hasSize(2).allMatch(finding -> finding.contains("a hex secret starting"));
         assertThat(BaselineHygiene.findings("v2/BASELINE_COMMIT", "0123456789abcdef0123456789abcdef01234567\n", NO_FIXTURES)).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Given upper-case hex of 32 characters and more, when text is checked, then it is reported, and an upper-case labelled digest and a value the tests spell out are not")
+    void should_report_upper_case_hex_secrets_when_text_is_checked() {
+        String text = """
+                {"seed":"3F2A9C41D07BE65F8A1C29E0B4D7F3A6", "sha256":"9F86D081884C7D659A2FEAA0C55AD015A3BF4F1B2B0B822CD15D6C15B0F00A08",
+                 "fixture":"0A1B2C3D4E5F60718293A4B5C6D7E8F9", "name":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"}
+                """;
+
+        List<String> findings = BaselineHygiene.findings("hex.txt", text, new BaselineHygiene.Fixtures(Set.of(), Set.of("0A1B2C3D4E5F60718293A4B5C6D7E8F9")));
+
+        assertThat(findings).singleElement().satisfies(finding -> assertThat(finding).contains("a hex secret starting 3F2A9C41"));
     }
 
     @Test
@@ -220,7 +233,7 @@ class BaselineHygieneTest {
 
     @Test
     @DisplayName("Given the foundation's account the hygiene allows, when the configuration is read, then it is the account and IBAN application.yml falls back to")
-    void should_allow_exactly_the_foundation_account_of_the_configuration() throws IOException {
+    void should_allow_exactly_the_foundation_account_when_the_configuration_is_read() throws IOException {
         String configuration = Files.readString(GoldenFiles.repositoryRoot().resolve("backend/src/main/resources/application.yml"));
 
         assertThat(configuration).contains("${BANK_ACCOUNT_NUMBER:" + BaselineHygiene.FOUNDATION_ACCOUNT + "}")
