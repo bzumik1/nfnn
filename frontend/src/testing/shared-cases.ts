@@ -59,10 +59,14 @@ export interface PaymentQrInput {
   readonly spayd: string;
 }
 
-export interface TotpQrInput {
+export interface TotpUriInput {
   readonly secret: string;
   readonly issuer: string;
   readonly accountName: string;
+}
+
+export interface TotpQrInput {
+  readonly uri: string;
 }
 
 export type ReceiptFormattingInput =
@@ -99,11 +103,12 @@ export interface SharedCaseTopics {
   readonly 'monthly-report/report.json': SharedCase<RowsInput, Answer>;
   readonly 'payment/spayd.json': SharedCase<SpaydInput, SpaydExpected>;
   readonly 'qr/payment.json': SharedCase<PaymentQrInput, QrSymbol>;
-  readonly 'qr/totp.json': SharedCase<TotpQrInput, QrSymbol & { readonly uri: string }>;
+  readonly 'qr/totp.json': SharedCase<TotpQrInput, QrSymbol>;
   readonly 'receipts/formatting.json': SharedCase<
     ReceiptFormattingInput,
     ReceiptFormattingExpected
   >;
+  readonly 'totp/uri.json': SharedCase<TotpUriInput, { readonly uri: string }>;
 }
 
 export type SharedCaseTopic = keyof SharedCaseTopics;
@@ -117,6 +122,7 @@ const REGISTERED_TOPICS: Readonly<Record<SharedCaseTopic, true>> = {
   'qr/payment.json': true,
   'qr/totp.json': true,
   'receipts/formatting.json': true,
+  'totp/uri.json': true,
 };
 
 export const SHARED_CASE_TOPICS = Object.keys(REGISTERED_TOPICS) as readonly SharedCaseTopic[];

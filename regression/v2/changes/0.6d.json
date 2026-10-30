@@ -2,7 +2,7 @@
   {
     "kind": "shared-case",
     "caseFile": "shared-cases/payment/spayd.json",
-    "reason": "0.6d splits the payment cases where Phase 1 gives them to different slices (architect review M3): this file holds the inputs to the SPAYD text or the refusal of GET /api/donations/payment-qr, every value as v2 wrote it in qr/payment.json; the backend runs it today through the endpoint and GeneratePaymentQrService, from 1.2 through SpaydText, the browser from 1.4 through spayd()",
+    "reason": "0.6d splits the payment cases where Phase 1 gives them to different slices (architect review M3): this file holds the inputs to the SPAYD text or the refusal of GET /api/donations/payment-qr, every value as v2 wrote it in qr/payment.json; the backend runs it through the endpoint and GeneratePaymentQrService until 1.4 retires that runner, and from 1.4 it is the browser's, through spayd() over what payment-details serves (lead 2026-10-30); the messages and recipient name the backend serves get a backend-only file in 1.2",
     "contract": ".claude/rules/testing.md, Logic on both sides"
   },
   {
@@ -13,8 +13,20 @@
   },
   {
     "kind": "shared-case",
+    "caseFile": "shared-cases/qr/totp.json",
+    "reason": "0.6d keeps only the otpauth URI to its authenticator QR symbol here (architect review round 1), run beside the encoder in shared/infrastructure/qr and by the browser from 1.3: the input is the URI totp/uri.json gives under the same case name, the expected value the symbol as v2 wrote it; the source becomes edited",
+    "contract": ".claude/rules/testing.md, Logic on both sides"
+  },
+  {
+    "kind": "shared-case",
+    "caseFile": "shared-cases/totp/uri.json",
+    "reason": "0.6d moves the secret, issuer and account to the otpauth URI out of qr/totp.json into a backend-only file beside TotpSecret (architect review round 1), every value as v2 wrote it: the browser receives the URI from the API and never computes it",
+    "contract": ".claude/rules/testing.md, Logic on both sides"
+  },
+  {
+    "kind": "shared-case",
     "caseFile": "shared-cases/schemas/*",
-    "reason": "0.6d adds the schema of payment/spayd.json and the SPAYD text as a shared definition (defs/spayd.schema.json), and the payment QR schema takes that text as its input and the symbol alone as its expected value",
+    "reason": "0.6d adds the schemas of payment/spayd.json and totp/uri.json and the SPAYD text and the otpauth URI as shared definitions (defs/spayd.schema.json, defs/otpauth-uri.schema.json); the payment and TOTP QR schemas take that text or URI as their input and the symbol alone as their expected value, and every object schema names type object, so ajv's strict mode warns of nothing",
     "contract": ".claude/rules/testing.md, Logic on both sides"
   },
   {
@@ -62,7 +74,7 @@
     "suite": "backend-junit",
     "test": "regression.QrGoldenCasesTest > Given the TOTP QR cases, when v2 encodes them, then the matrices equal the recorded shared cases",
     "reason": "0.6d retires the v2 generators from main (architect review m2): every file they wrote is the hand-edited specification now, so on main they could only fail on an edited file or write v3 output labelled v2-baseline; they stay at BASELINE_COMMIT, where the baseline is re-recorded",
-    "replacement": "donors.application.TotpQrSharedCasesTest, one test per case of shared-cases/qr/totp.json (\"Given <case>, when the backend builds the otpauth URI for the secret, issuer and account and encodes it, then it gives the expected URI and QR symbol\")",
+    "replacement": "shared.infrastructure.qr.TotpQrSharedCasesTest, one test per case of shared-cases/qr/totp.json (\"Given <case>, when the backend encodes its otpauth URI into the authenticator QR, then it gives the expected QR symbol\"), and donors.domain.TotpUriSharedCasesTest, one per case of shared-cases/totp/uri.json (\"Given <case>, when the backend builds the otpauth URI for the secret, issuer and account, then it gives the expected URI\")",
     "contract": ".claude/rules/testing.md, Logic on both sides (Generators and runners)"
   },
   {
@@ -86,7 +98,7 @@
     "suite": "backend-junit",
     "test": "regression.QrGoldenCasesTest > Given a TOTP URI, when v2 encodes it, then it is in byte mode with the ECI 1 header that ISO-8859-1 adds",
     "reason": "0.6d retires the v2 generators from main (architect review m2): every file they wrote is the hand-edited specification now, so on main they could only fail on an edited file or write v3 output labelled v2-baseline; they stay at BASELINE_COMMIT, where the baseline is re-recorded",
-    "replacement": "donors.application.TotpQrSharedCasesTest, one test per case of shared-cases/qr/totp.json (\"Given <case>, when the backend builds the otpauth URI for the secret, issuer and account and encodes it, then it gives the expected URI and QR symbol\"): every case expects mode BYTE and ECI 1, which schemas/qr/totp.schema.json also requires (frontend shared-cases.spec.ts > Given a TOTP case)",
+    "replacement": "shared.infrastructure.qr.TotpQrSharedCasesTest, one test per case of shared-cases/qr/totp.json (\"Given <case>, when the backend encodes its otpauth URI into the authenticator QR, then it gives the expected QR symbol\"): every case expects mode BYTE and ECI 1, which schemas/qr/totp.schema.json also requires (frontend shared-cases.spec.ts > Given a TOTP case)",
     "contract": ".claude/rules/testing.md, Logic on both sides (Generators and runners)"
   },
   {

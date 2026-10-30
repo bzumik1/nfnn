@@ -1,0 +1,61 @@
+{
+  "source": "edited",
+  "logic": "The otpauth:// URI that DonorSecondFactorService builds for a fixed test secret, the issuer and the account name (TotpSecret.otpauthUri); the secrets are test values, never used anywhere else. Only the backend computes it: the browser receives the URI from the API. qr/totp.json encodes each URI into its QR symbol under the same case name",
+  "cases": [
+    {
+      "name": "a short address",
+      "input": {
+        "secret": "JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP",
+        "issuer": "Nová naděje",
+        "accountName": "jana@example.cz"
+      },
+      "expected": {
+        "uri": "otpauth://totp/Nov%C3%A1%20nad%C4%9Bje:jana%40example.cz?secret=JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP&issuer=Nov%C3%A1%20nad%C4%9Bje&algorithm=SHA1&digits=6&period=30"
+      }
+    },
+    {
+      "name": "an address with a dot",
+      "input": {
+        "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+        "issuer": "Nová naděje",
+        "accountName": "jana.novakova@example.cz"
+      },
+      "expected": {
+        "uri": "otpauth://totp/Nov%C3%A1%20nad%C4%9Bje:jana.novakova%40example.cz?secret=GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ&issuer=Nov%C3%A1%20nad%C4%9Bje&algorithm=SHA1&digits=6&period=30"
+      }
+    },
+    {
+      "name": "an address with a plus sign",
+      "input": {
+        "secret": "MFRGGZDFMZTWQ2LKNNWG23TPOBYXE43U",
+        "issuer": "Nová naděje",
+        "accountName": "jana+sprava@example.cz"
+      },
+      "expected": {
+        "uri": "otpauth://totp/Nov%C3%A1%20nad%C4%9Bje:jana%2Bsprava%40example.cz?secret=MFRGGZDFMZTWQ2LKNNWG23TPOBYXE43U&issuer=Nov%C3%A1%20nad%C4%9Bje&algorithm=SHA1&digits=6&period=30"
+      }
+    },
+    {
+      "name": "a long address",
+      "input": {
+        "secret": "KRUGKIDROVUWG2ZAMJZG653OEBTG66BA",
+        "issuer": "Nová naděje",
+        "accountName": "administrace.nadacniho.fondu.nova.nadeje@example.cz"
+      },
+      "expected": {
+        "uri": "otpauth://totp/Nov%C3%A1%20nad%C4%9Bje:administrace.nadacniho.fondu.nova.nadeje%40example.cz?secret=KRUGKIDROVUWG2ZAMJZG653OEBTG66BA&issuer=Nov%C3%A1%20nad%C4%9Bje&algorithm=SHA1&digits=6&period=30"
+      }
+    },
+    {
+      "name": "an address of a company domain",
+      "input": {
+        "secret": "ONSWG4TFOQQGC3TEEBZWK4TWMVZCAMZS",
+        "issuer": "Nová naděje",
+        "accountName": "ucetni@stavby.example.cz"
+      },
+      "expected": {
+        "uri": "otpauth://totp/Nov%C3%A1%20nad%C4%9Bje:ucetni%40stavby.example.cz?secret=ONSWG4TFOQQGC3TEEBZWK4TWMVZCAMZS&issuer=Nov%C3%A1%20nad%C4%9Bje&algorithm=SHA1&digits=6&period=30"
+      }
+    }
+  ]
+}

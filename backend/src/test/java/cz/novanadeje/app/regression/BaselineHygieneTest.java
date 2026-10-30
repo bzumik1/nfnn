@@ -132,7 +132,7 @@ class BaselineHygieneTest {
     @Test
     @DisplayName("Given the TOTP golden cases, when their secrets are read, then they are exactly the test secrets the hygiene scan allows")
     void should_allow_exactly_the_secrets_of_the_totp_golden_cases() throws IOException {
-        JsonNode cases = JsonMapper.builder().build().readTree(SharedCases.repositoryRoot().resolve("shared-cases/qr/totp.json").toFile()).get("cases");
+        JsonNode cases = JsonMapper.builder().build().readTree(SharedCases.repositoryRoot().resolve("shared-cases/totp/uri.json").toFile()).get("cases");
 
         assertThat(cases.valueStream().map(entry -> entry.get("input").get("secret").asString()).toList())
                 .containsExactlyInAnyOrderElementsOf(BaselineHygiene.TEST_TOTP_SECRETS);

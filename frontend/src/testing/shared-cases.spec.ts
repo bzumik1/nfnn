@@ -23,6 +23,7 @@ interface EditableCaseFile {
 const SPAYD_CASES = 'payment/spayd.json';
 const PAYMENT_CASES = 'qr/payment.json';
 const TOTP_CASES = 'qr/totp.json';
+const TOTP_URI_CASES = 'totp/uri.json';
 const RECEIPT_CASES = 'receipts/formatting.json';
 const FINDER_SPAN = 17;
 const MODULES_PER_VERSION = 4;
@@ -261,7 +262,41 @@ describe('Given a payment QR case', () => {
   });
 });
 
+describe('Given the TOTP URI cases and the TOTP QR cases', () => {
+  it('when they are matched by case name, then every URI has its QR case and every QR case encodes the URI of its URI case', () => {
+    const uris = Object.fromEntries(
+      sharedCases('totp/uri.json').map((sharedCase) => [sharedCase.name, sharedCase.expected.uri]),
+    );
+    const encodedUris = Object.fromEntries(
+      sharedCases('qr/totp.json').map((sharedCase) => [sharedCase.name, sharedCase.input.uri]),
+    );
+
+    expect(Object.keys(encodedUris).length).toBeGreaterThan(0);
+    expect(encodedUris).toEqual(uris);
+  });
+});
+
+describe('Given a TOTP URI case', () => {
+  it('when its expected URI is no otpauth URI, then it is refused', () => {
+    const file = editable(TOTP_URI_CASES);
+    file.cases[0].expected['uri'] = 'https://nfnn.cz/';
+
+    expect(schemaViolations(TOTP_URI_CASES, file).join('\n')).toMatch(
+      /\/cases\/0\/expected\/uri must match pattern/,
+    );
+  });
+});
+
 describe('Given a TOTP case', () => {
+  it('when its expected symbol still carries the URI, then it is refused', () => {
+    const file = editable(TOTP_CASES);
+    file.cases[0].expected['uri'] = file.cases[0].input['uri'];
+
+    expect(schemaViolations(TOTP_CASES, file)).toContain(
+      '/cases/0/expected must NOT have unevaluated properties',
+    );
+  });
+
   it('when its mode is not BYTE, then it is refused', () => {
     const file = editable(TOTP_CASES);
     file.cases[0].expected['mode'] = 'ALPHANUMERIC';
