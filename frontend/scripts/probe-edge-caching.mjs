@@ -25,6 +25,8 @@ const EDGE_ONLY = [
   { method: 'GET', path: '/.well-known/oauth-authorization-server' },
   { method: 'GET', path: '/.well-known/oauth-protected-resource/mcp' },
 ];
+const STATUS_PATH = '/api/donations/receipts/status';
+const STATUS_BODY_LIMIT = 1024;
 const APP_SHELL = ['/', '/overit'];
 const NOT_INDEXED = ['/overit', '/overit/'];
 
@@ -132,6 +134,31 @@ if (limited) {
 } else {
   fail(`POST ${signIn.path} never answered 429 within ${SIGN_IN_ATTEMPTS} sign-ins`);
 }
+
+const statusQuestion = {
+  method: 'POST',
+  path: STATUS_PATH,
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ digest: '0'.repeat(64) }),
+};
+const statusAnswer = await request(statusQuestion);
+seen.add(statusAnswer.status);
+if (statusAnswer.status !== 200 || statusAnswer.cacheControl !== 'no-store') {
+  fail(
+    `POST ${STATUS_PATH} answered ${statusAnswer.status} with Cache-Control "${statusAnswer.cacheControl}", expected 200 and "no-store"`,
+  );
+}
+expectEdgeNoStore(`POST ${STATUS_PATH}`, statusAnswer);
+const oversized = await request({
+  ...statusQuestion,
+  body: JSON.stringify({ digest: '0'.repeat(STATUS_BODY_LIMIT) }),
+});
+if (oversized.status !== 413) {
+  fail(
+    `POST ${STATUS_PATH} with a body over ${STATUS_BODY_LIMIT} bytes answered ${oversized.status}, expected 413 from nginx`,
+  );
+}
+expectEdgeNoStore(`POST ${STATUS_PATH} over ${STATUS_BODY_LIMIT} bytes`, oversized);
 
 for (const probe of EDGE_ONLY) {
   expectEdgeNoStore(`${probe.method} ${probe.path}`, await request(probe));

@@ -65,7 +65,7 @@ Feature: Anyone holding a receipt's proof asks whether the foundation keeps the 
       | 00000000000000000000000000000000000000000000000000000000000000ff0 |
       | 00000000000000000000000000000000000000000000000000000000000000FF  |
       | 00000000000000000000000000000000000000000000000000000000000000fg  |
-      | 0000000000000000000000000000000 0000000000000000000000000000000ff |
+      | 0000000000000000000000000000000 000000000000000000000000000000ff  |
 
   Scenario: A question without a digest, or with a digest far too long, is refused as invalid
     When a visitor asks the status without a digest
@@ -77,7 +77,7 @@ Feature: Anyone holding a receipt's proof asks whether the foundation keeps the 
     And the problem type ends with "validation"
     And the problem lists an error for field "digest"
 
-  Scenario: The sixty-first question within 15 minutes from one /64 network is refused, another network is answered
+  Scenario: The sixty-first question within 15 minutes from one /64 network is refused until the window ends, another network is answered
     Given the following requests come from the client address "2001:db8:41:7::10"
     And a visitor asked the status of receipt "2027-000001" 60 times
     When the following requests come from the client address "2001:db8:41:7::99"
@@ -88,7 +88,10 @@ Feature: Anyone holding a receipt's proof asks whether the foundation keeps the 
     And a visitor asks the status of receipt "2027-000001"
     Then the response status is 200
     And the receipt status is "active"
-    When 15 minutes pass
+    When 14 minutes pass
     And the following requests come from the client address "2001:db8:41:7::10"
+    And a visitor asks the status of receipt "2027-000001"
+    Then the response status is 429
+    When 1 minutes pass
     And a visitor asks the status of receipt "2027-000001"
     Then the response status is 200
