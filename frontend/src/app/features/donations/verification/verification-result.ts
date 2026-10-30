@@ -58,6 +58,7 @@ const RETRIABLE: readonly ResultKind[] = [
 const UNCHECKED: readonly ResultKind[] = [
   'no-connection',
   'no-answer',
+  'keys-refused',
   'broken',
   'newer',
   'failed',
@@ -92,6 +93,7 @@ export class VerificationResult {
     return outcome.state === 'signed' ? receiptDisplay(outcome.receipt) : null;
   });
   protected readonly statusAnswered = computed(() => ANSWERED.includes(this.status() ?? ''));
+  protected readonly statusUnanswered = computed(() => this.status() === 'unanswered');
   protected readonly checked = computed(() => !UNCHECKED.includes(this.kind()));
   protected readonly retriable = computed(() => RETRIABLE.includes(this.kind()));
 }
@@ -107,6 +109,7 @@ function kindOf(outcome: FinalOutcome): ResultKind {
         case 'unknown':
           return 'unrecorded';
         case 'no-answer':
+        case 'unanswered':
           return 'signed-no-answer';
         default:
           return 'signed';

@@ -24,9 +24,9 @@
         Podpis sedí, ale fond teď neodpověděl, zda potvrzení vede
       </h1>
       <p class="ui-panel__lead verify-lead" i18n="@@donor.verify.signedNoAnswer.text">
-        Údaje v tomto kódu podepsal fond Nová naděje, fond ale teď neodpověděl, zda potvrzení vede
-        jako platné. Dokud neodpoví, nevíte, zda ho nenahradil novějším nebo nezrušil. Zkuste to za
-        chvíli znovu.
+        Údaje v tomto kódu podepsal fond Nová naděje ke dni vystavení, fond ale teď neodpověděl, zda
+        potvrzení vede jako platné. Dokud neodpoví, nevíte, zda ho nenahradil novějším nebo
+        nezrušil. Zkuste to za chvíli znovu.
       </p>
     }
     @case ('replaced') {
@@ -172,6 +172,21 @@
       </h1>
       <p class="ui-panel__lead verify-lead" i18n="@@donor.verify.noAnswer.text">
         Stránka teď nedostala od fondu klíče k ověření podpisu. Zkuste to za chvíli znovu.
+      </p>
+    }
+    @case ('keys-refused') {
+      <h1
+        id="verify-title"
+        class="ui-panel__title"
+        tabindex="-1"
+        i18n="@@donor.verify.keysRefused.title"
+      >
+        Neověřeno: seznam klíčů fondu teď nejde použít
+      </h1>
+      <p class="ui-panel__lead verify-lead" i18n="@@donor.verify.keysRefused.text">
+        Fond poslal seznam klíčů, se kterým tato stránka neumí pracovat, takže podpis teď ověřit
+        nejde. Potvrzení zatím nepovažujte za ověřené a napište prosím na
+        <a href="mailto:info@nfnn.cz">info&#64;nfnn.cz</a> s číslem potvrzení.
       </p>
     }
     @case ('broken') {
@@ -329,6 +344,12 @@
       <ng-container i18n="@@donor.verify.local.withStatus"
         >Podpis jsme ověřili ve vašem zařízení. Fondu jsme poslali jen otisk podepsaných údajů, aby
         nám sdělil stav potvrzení; jméno, adresa ani částky se nikam neposílají.</ng-container
+      >
+    } @else if (statusUnanswered()) {
+      <ng-container i18n="@@donor.verify.local.unanswered"
+        >Podpis jsme ověřili ve vašem zařízení. Fondu jsme poslali jen otisk podepsaných údajů,
+        abychom zjistili stav potvrzení, ale neodpověděl; jméno, adresa ani částky se nikam
+        neposílají.</ng-container
       >
     } @else {
       <ng-container i18n="@@donor.verify.local"

@@ -19,7 +19,7 @@ import { type ReceiptStatus, ReceiptStatusApi } from './receipt-status-api';
 
 export type Reach = 'online' | 'offline' | 'no-answer';
 
-export type SignedStatus = ReceiptStatus | Exclude<Reach, 'online'> | 'unanswered';
+export type SignedStatus = ReceiptStatus | 'offline' | 'no-answer' | 'unanswered';
 
 export type VerificationStep = 'asking-status';
 
@@ -43,7 +43,7 @@ export const SIGNATURE_CHECK = new InjectionToken<SignatureCheck>('SIGNATURE_CHE
 
 type FreshKeys =
   | { readonly reach: 'online'; readonly keys: TrustedKeys }
-  | { readonly reach: Exclude<Reach, 'online'> };
+  | { readonly reach: Exclude<Reach, 'online'> | 'refused' };
 
 const NEWER_TEXT_VERSION = /^[2-9][0-9]*$/;
 const REQUEST_TIMEOUT_MS = 5_000;
@@ -76,6 +76,9 @@ export class ReceiptVerifier {
         return unreadable;
       }
       const fresh = await this.freshKeys();
+      if (fresh.reach === 'refused') {
+        return { state: 'keys-refused' };
+      }
       if (fresh.reach !== 'online' && kept === null) {
         return { state: fresh.reach === 'offline' ? 'no-connection' : 'no-answer' };
       }
@@ -103,7 +106,7 @@ export class ReceiptVerifier {
       const list = await firstValueFrom(this.keysApi.list().pipe(timeout(REQUEST_TIMEOUT_MS)));
       const trusted = await this.store.trusted(list);
       if (trusted === null) {
-        return { reach: 'no-answer' };
+        return { reach: 'refused' };
       }
       this.store.replace(list);
       return { reach: 'online', keys: trusted };
@@ -142,9 +145,9 @@ export class ReceiptVerifier {
       const answer = await firstValueFrom(
         this.statusApi.status(digest).pipe(timeout(REQUEST_TIMEOUT_MS)),
       );
-      return STATUSES.includes(answer?.status) ? answer.status : 'no-answer';
-    } catch (failure: unknown) {
-      return reachOf(failure);
+      return STATUSES.includes(answer?.status) ? answer.status : 'unanswered';
+    } catch {
+      return 'unanswered';
     }
   }
 }
