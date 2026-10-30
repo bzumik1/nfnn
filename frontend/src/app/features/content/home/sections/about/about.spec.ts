@@ -51,10 +51,9 @@ describe('Given the about section', () => {
       );
     });
 
-    it('then the whole board and the auditor are listed as in the registry', () => {
+    it('then the whole board is listed as in the registry, without the auditor', () => {
       expect(Array.from(board().querySelectorAll('.board-members')).map(text)).toEqual([
-        'Správní rada: Pavel Znamenáček (předseda), Andrea Znamenáčková, Zdeňka Znamenáčková. Každý člen jedná za fond samostatně.',
-        'Revizor: Miroslav Hloucal.',
+        'Správní rada: Pavel Znamenáček (předseda), Andrea Znamenáčková, Zdeňka Znamenáčková.',
       ]);
     });
 
