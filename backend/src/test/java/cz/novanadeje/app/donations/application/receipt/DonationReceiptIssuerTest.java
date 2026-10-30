@@ -16,6 +16,7 @@ import cz.novanadeje.app.donations.domain.receipt.FrozenReceipt;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptDocument;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptDocumentFactory;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptFingerprint;
+import cz.novanadeje.app.donations.domain.receipt.ReceiptIssueLimitReached;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptKind;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptNumber;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptSignatureRepository;
@@ -38,6 +39,7 @@ import org.mockito.InOrder;
 import org.slf4j.LoggerFactory;
 
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.Year;
@@ -132,6 +134,7 @@ class DonationReceiptIssuerTest {
         assertThat(issued).isSameAs(active);
         verify(receipts).lockDonor(JANA);
         verify(receipts, never()).nextSerial();
+        verify(receipts, never()).countIssuedAfter(any(), any());
         verify(receipts, never()).save(any());
         verifyNoInteractions(freezer, signatures);
     }
@@ -219,6 +222,39 @@ class DonationReceiptIssuerTest {
         assertThatThrownBy(() -> issuer.issueForYear(JANA, YEAR_2026, TODAY)).isInstanceOf(ReceiptTooLong.class);
         verify(receipts, never()).save(any());
         assertThat(active.isActive()).isTrue();
+    }
+
+    @Test
+    @DisplayName("Given 20 receipts issued to the donor in the last 24 hours, when a receipt with changed data is issued, then it is refused before a number is taken and the active receipt stays active")
+    void should_refuse_before_numbering_when_issued_given_twenty_receipts_in_a_day() {
+        DonationReceipt active = yearlyReceipt(ReceiptDocumentFactory.fingerprintForYear(jana(), YEAR_2026, List.of(MARCH)), LocaleCode.CS);
+        givenDonationsOfJana(jana(), JUNE, MARCH);
+        when(receipts.findActiveForYear(JANA, YEAR_2026)).thenReturn(Optional.of(active));
+        when(receipts.countIssuedAfter(JANA, NOW.minus(Duration.ofHours(24)))).thenReturn(20L);
+
+        assertThatThrownBy(() -> issuer.issueForYear(JANA, YEAR_2026, TODAY))
+                .isInstanceOfSatisfying(ReceiptIssueLimitReached.class, refused -> assertThat(refused.code()).isEqualTo("donations/receipt-issue-limit"));
+
+        InOrder order = inOrder(receipts);
+        order.verify(receipts).lockDonor(JANA);
+        order.verify(receipts).countIssuedAfter(JANA, NOW.minus(Duration.ofHours(24)));
+        verify(receipts, never()).nextSerial();
+        verify(receipts, never()).save(any());
+        verifyNoInteractions(freezer);
+        assertThat(active.isActive()).isTrue();
+    }
+
+    @Test
+    @DisplayName("Given 19 receipts issued to the donor in the last 24 hours, when a receipt is issued, then it is numbered and stored")
+    void should_issue_when_issued_given_nineteen_receipts_in_a_day() {
+        givenDonationsOfJana(jana(), MARCH);
+        when(receipts.findActiveForYear(JANA, YEAR_2026)).thenReturn(Optional.empty());
+        when(receipts.countIssuedAfter(JANA, NOW.minus(Duration.ofHours(24)))).thenReturn(19L);
+        when(receipts.nextSerial()).thenReturn(20L);
+        givenFreezer();
+
+        assertThat(issuer.issueForYear(JANA, YEAR_2026, TODAY).number()).isEqualTo(new ReceiptNumber("2027-000020"));
+        verify(receipts).save(any());
     }
 
     @Test

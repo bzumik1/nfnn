@@ -25,6 +25,8 @@ public interface DonationReceiptRepository {
 
     boolean existsYearlyIssuedSince(DonorReference donor, Year year, Instant since);
 
+    long countIssuedAfter(DonorReference donor, Instant after);
+
     Set<DonationId> findDonationsWithReceipt(Collection<DonationId> donations);
 
     Map<DonationId, ReceiptNumber> findActiveSingleNumbersFor(DonorReference donor);

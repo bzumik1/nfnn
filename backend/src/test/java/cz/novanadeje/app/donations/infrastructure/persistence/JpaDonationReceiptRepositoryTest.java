@@ -473,6 +473,27 @@ class JpaDonationReceiptRepositoryTest {
     }
 
     @Test
+    @DisplayName("Given a donor's receipts issued two hours ago, an hour ago and now, one of them replaced, and another donor's, when the donor's receipts issued after a time are counted, then only those issued strictly after it count, the replaced one included")
+    void should_count_receipts_issued_after_a_time_when_counted_given_receipts_at_several_times() {
+        DonorReference jana = storedDonor("4821937560");
+        DonorReference petr = storedDonor("7310945528");
+        DonationReceipt twoHoursAgo = issued(jana, NOW.minusSeconds(7200), yearlyDocument(Year.of(2023), "2026-000001", Optional.empty()), Optional.empty());
+        receipts.save(twoHoursAgo);
+        twoHoursAgo.markSuperseded(NOW.minusSeconds(3600));
+        receipts.save(twoHoursAgo);
+        receipts.save(issued(jana, NOW.minusSeconds(3600), yearlyDocument(Year.of(2024), "2026-000002", Optional.empty()), Optional.empty()));
+        receipts.save(issued(jana, NOW, yearlyDocument(YEAR_2025, "2026-000003", Optional.empty()), Optional.empty()));
+        receipts.save(issued(petr, NOW, yearlyDocument(YEAR_2025, "2026-000004", Optional.empty()), Optional.empty()));
+        flushAndClear();
+
+        assertThat(receipts.countIssuedAfter(jana, NOW.minusSeconds(7201))).isEqualTo(3);
+        assertThat(receipts.countIssuedAfter(jana, NOW.minusSeconds(7200))).isEqualTo(2);
+        assertThat(receipts.countIssuedAfter(jana, NOW.minusSeconds(1))).isEqualTo(1);
+        assertThat(receipts.countIssuedAfter(jana, NOW)).isZero();
+        assertThat(receipts.countIssuedAfter(petr, NOW.minusSeconds(7201))).isEqualTo(1);
+    }
+
+    @Test
     @DisplayName("Given single, yearly, replaced and other donors' receipts, when the donor's receipts are listed, then all of the donor's come, newest issue first")
     void should_list_all_donor_receipts_newest_first_when_listed_given_mixed_receipts() {
         DonorReference jana = storedDonor("4821937560");

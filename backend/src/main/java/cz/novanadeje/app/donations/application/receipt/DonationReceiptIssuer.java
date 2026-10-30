@@ -10,6 +10,7 @@ import cz.novanadeje.app.donations.domain.receipt.FoundationIdentity;
 import cz.novanadeje.app.donations.domain.receipt.FrozenReceipt;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptDocument;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptFingerprint;
+import cz.novanadeje.app.donations.domain.receipt.ReceiptIssueLimitReached;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptNumber;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptSignatureRepository;
 import cz.novanadeje.app.donations.domain.receipt.ReplacedReceipt;
@@ -23,6 +24,7 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.Year;
@@ -33,6 +35,8 @@ public class DonationReceiptIssuer {
 
     private static final Logger LOG = LoggerFactory.getLogger(DonationReceiptIssuer.class);
     private static final long SERIAL_WORTH_A_WARNING = (ReceiptNumber.LAST_SERIAL + 1) / 10 * 9;
+    static final int NEW_RECEIPTS_PER_DONOR_A_DAY = 20;
+    private static final Duration ISSUE_LIMIT_WINDOW = Duration.ofHours(24);
 
     private final DonationReceiptRepository receipts;
     private final ReceiptRequestReader requests;
@@ -76,6 +80,9 @@ public class DonationReceiptIssuer {
     }
 
     private DonationReceipt issueNew(ReceiptRequest request, ReceiptFingerprint fingerprint, Optional<DonationReceipt> replaced) {
+        if (receipts.countIssuedAfter(request.donor(), clock.instant().minus(ISSUE_LIMIT_WINDOW)) >= NEW_RECEIPTS_PER_DONOR_A_DAY) {
+            throw new ReceiptIssueLimitReached(request.donor(), NEW_RECEIPTS_PER_DONOR_A_DAY);
+        }
         long serial = receipts.nextSerial();
         ReceiptNumber number = ReceiptNumber.of(Year.from(request.today()), serial);
         if (serial >= SERIAL_WORTH_A_WARNING) {

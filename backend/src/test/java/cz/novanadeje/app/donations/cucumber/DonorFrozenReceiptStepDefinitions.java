@@ -83,6 +83,17 @@ public class DonorFrozenReceiptStepDefinitions {
         jdbc.sql("select setval('donation_receipt_number_seq', ?)").param(serial).query(Long.class).single();
     }
 
+    @Given("{string} changed her/his address and issued her/his yearly receipt for {int} {int} times")
+    public void changedTheAddressAndIssuedTheYearlyReceiptTimes(String alias, int year, int times) {
+        for (int round = 1; round <= times; round++) {
+            sessions.actAs(alias);
+            assertThat(api.patch("/api/donors/me", Map.of("address", Map.of("street", "Dlouhá " + round, "city", "Ústí nad Labem", "postalCode", "400 01")))
+                    .getStatusCode().value()).isEqualTo(200);
+            issuesTheYearlyReceipt(alias, year);
+            assertThat(api.lastResponse().getStatusCode().value()).withFailMessage("Issue %d answered %s", round, api.lastResponse().getBody()).isEqualTo(200);
+        }
+    }
+
     @When("{string} issues the receipt of her/his/its donation received on {date}")
     public void issuesTheReceiptOfTheirDonation(String alias, LocalDate receivedOn) {
         issueAs(alias, Map.of("donationId", donationIdOf(alias, receivedOn).toString()));

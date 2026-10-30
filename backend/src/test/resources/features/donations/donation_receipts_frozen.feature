@@ -527,6 +527,39 @@ Feature: A donor issues receipts of their donations as frozen, signed data
     And the issued receipt has number "2027-900000"
     And 1 receipt is stored
 
+  Scenario: A donor gets at most 20 new receipt numbers in 24 hours, and an unchanged receipt is returned all the same
+    Given today is 2026-12-20
+    And a person "Jana" is registered
+    And the bank account has these movements:
+      | id   | date       | amount  | account    | bankCode | name          | variableSymbol |
+      | 2001 | 2026-10-01 | 1000.00 | 2900233333 | 2010     | Nováková Jana | {Jana}         |
+    And the application starts the import
+    And today is 2027-01-15
+    And "Jana" changed her address and issued her yearly receipt for 2026 20 times
+    When "Jana" issues her yearly receipt for 2026
+    Then the response status is 200
+    And the issued receipt has number "2027-000020"
+    When "Jana" changes her address to street "Nová 7", postal code "405 02" and city "Děčín"
+    And "Jana" issues her yearly receipt for 2026
+    Then the response status is 409
+    And the problem type ends with "donations/receipt-issue-limit"
+    And the problem has the title "Nové potvrzení teď nejde vydat"
+    And 20 receipts are stored
+    And 1 receipt is active
+    When 1439 minutes pass
+    And "Jana" issues her yearly receipt for 2026
+    Then the response status is 409
+    When 1 minutes pass
+    And "Jana" issues her yearly receipt for 2026
+    Then the response status is 200
+    And the issued receipt has number "2027-000021"
+    And the frozen receipt holds:
+      | field                | value       |
+      | donor.address.street | Nová 7      |
+      | replaces.number      | 2027-000020 |
+    And 21 receipts are stored
+    And 1 receipt is active
+
   Scenario: Issuing receipts is limited per client address, counting the old downloads too
     Given today is 2026-12-20
     And a person "Jana" is registered
