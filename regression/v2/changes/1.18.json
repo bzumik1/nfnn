@@ -158,5 +158,18 @@
     "field": "$.error_description",
     "reason": "1.18 (security.md, Output): error_description is a fixed English sentence per error code (RFC 6749 allows only ASCII there) instead of the exception's text, which named the reason and, for invalid_target, repeated the client's resource",
     "contract": "docs/api-contract.md, Connected applications (POST /api/donors/oauth/token)"
+  },
+  {
+    "kind": "log-field",
+    "line": "shared.interfaces.rest.ApiExceptionHandler: Refused a value as validation (IllegalArgumentException thrown at cz.novanadeje.app.donors.domain.Passkey.validName:<n>)",
+    "scenario": "donors/donor_passkeys: A passkey name with a control character is refused with the site's own text, without the name*",
+    "reason": "1.18 (security m2, reliability.md): an IllegalArgumentException answered as validation logs one WARN with its class and the frame that threw it (class, method, line), never its message, so a server bug answered as a refusal leaves a trace; the frame differs by where the value was refused, the recording holds the passkey name",
+    "contract": "docs/system-overview.md, Problem answers; docs/security-overview.md, Error answers",
+    "security": {
+      "approvedIn": "PENDING",
+      "fields": {
+        "<n>": "the line number of the throwing frame in the source"
+      }
+    }
   }
 ]
