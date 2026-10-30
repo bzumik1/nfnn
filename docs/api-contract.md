@@ -1125,6 +1125,39 @@ Tests: `diagnostics.feature` (a raised level audited and listed with its overrid
 
 Tests: `diagnostics.feature` (the database reachable, threads and heap positive, the log folder mounted, a thread dump with frames, 401 without a token), `DiagnosticsServiceTest`. The page `/sprava/logy` shows the logs, the levels and the diagnostics (`docs/frontend-overview.md`).
 
+#### Browser error reports
+
+| Method | Path | Auth | Purpose |
+|---|---|---|---|
+| `POST` | `/api/operations/client-errors` | public | A failure in the browser (an unexpected error, a lost chunk, and from the receipt slices PDF, QR and verification failures) as closed values only, so that no field can carry text a visitor or a page chose. 204 without a body; 400 `validation` with one `errors[]` entry per field; 415 for anything but `application/json` (so with CORS unconfigured a page on another site cannot post one as a form); 429 `operations/rate-limited` after 30 reports per 15 minutes from one client address (IPv6 by its /64); 413 from the frontend nginx for a body over 4 kB. |
+
+Request (`operations/interfaces/rest/ClientErrorReportRequest`, every string `@Size(max = 40)` and checked against its list, so a value with a line break or any text outside the list is refused at its field):
+
+```json
+{ "kind": "pdf-render", "place": "global", "name": "TypeError", "appVersion": "1a2b3c4",
+  "browser": "safari", "browserMajor": 18, "os": "ios", "display": "standalone", "count": 2 }
+```
+
+| Field | Values |
+|---|---|
+| `kind` | `unexpected`, `chunk-load`, `pdf-render`, `pdf-load`, `qr-encode`, `verify-parse`, `verify-signature` |
+| `place` | `global` (Angular's `ErrorHandler`), `navigation` (a failed lazy chunk) |
+| `name` | the error's `name` when it is one of the standard ones (`Error`, `AggregateError`, `EvalError`, `RangeError`, `ReferenceError`, `SyntaxError`, `TypeError`, `URIError`, the `DOMException` names `AbortError` … `UnknownError`, `HttpErrorResponse`), else `Other` |
+| `appVersion` | the build's revision, 7–40 lowercase hex digits, or `dev` |
+| `browser` | `chrome`, `edge`, `firefox`, `safari`, `samsung`, `opera`, `other` |
+| `browserMajor` | optional, 1–999 |
+| `os` | `android`, `ios`, `ipados`, `macos`, `windows`, `linux`, `other` |
+| `display` | `browser`, `standalone` (the installed app) |
+| `count` | 1–100: this report plus the repeats the browser held back |
+
+The lists are the frontend's (`frontend/src/app/core/errors/error-vocabulary.ts`, exported by `npm run errors:vocabulary` to `error-vocabulary.json`), and `ClientErrorVocabularyTest` fails when the Java enums of `operations/domain/clienterrors/` differ from that file. A field the request does not know is ignored and never logged. A token is not needed and not read; an invalid `Authorization` header still answers 401 from the security chain, and the browser sends none (`credentials: 'omit'`).
+
+Each accepted report is one WARN line on the logger `cz.novanadeje.app.operations.clienterrors` in `backend.log`, built from the values above and nothing else (`ClientErrorReportService`): `Browser error kind=pdf-render place=global name=TypeError version=1a2b3c4 browser=safari/18 os=ios display=standalone count=2` (`browser=safari` without a major). On top of the per-address limit, `application/clienterrors/ClientErrorCap` admits per hour at most 100 reports of the general bucket (`unexpected`, `chunk-load`, `qr-encode`, `verify-parse`) and 30 of each protected bucket (`pdf-render`, `pdf-load`, `verify-signature`), so a flood of one kind never hides the receipt failures. A report over the cap still answers 204 and is dropped; when the hour of a bucket that dropped something ends, one WARN line says how many: `Browser error reports over the hourly cap bucket=general dropped=2` (timed on the `ResetTimer` of the log levels). The cap is global, not per address, and lives in memory: a restart opens it again.
+
+The administration finds the lines at `/sprava/logy` with the preset "Chyby z prohlížečů" (the search `Browser error`), and Claude with `nfnn_log_search` for the same pattern.
+
+Tests: `features/operations/client_error_reports.feature` (204 and the line, a browser without a major, 400 for each value outside its list or range and each missing field, a line break, an unknown field never logged, a form 415, the 31st report 429 and the window after 15 minutes, the cap with the protected buckets and its hourly count, a new hour), `ClientErrorReportOutputTest` (the whole backend output holds exactly the line and none of a canary's text, plain, URL-encoded or in base64, nor the client address), `ClientErrorReportTest`, `ClientErrorCapTest`, `ClientErrorReportServiceTest`, `ClientErrorRateLimiterTest`, `ClientErrorVocabularyTest`.
+
 #### Settings and the first setup
 
 The server's own values (the site address, SMTP, the senders, the Fio token, the first administrator and the advanced bank and receipt values) live in the database, not in env files (Jakub, 2026-10-23: a first install asks for them in the browser and needs no file on the server). `operations/domain/settings/Setting` lists them under their env names with a group, a format and a length limit:
@@ -1295,7 +1328,7 @@ Shared pieces that came with it: the sealed `shared/domain/error/DomainException
 
 ### `operations` (backups and diagnostics done)
 
-`features/operations/backups.feature` covers the administration of the backups (see "Backups"), `diagnostics.feature` the logs, the log levels and the diagnostics (see "Logs", "Log levels", "Diagnostics"). Its only public endpoints are the first setup's (see "Settings and the first setup", `first_setup.feature`), and `settings.feature` covers the administration of the settings; the container's own behaviour is proved by the stack job of the PR check. `docs/system-overview.md` "operations" says how the logs reach Claude; `/actuator/info` (public, like `/actuator/health`) answers `{"build": {"revision": "<short sha>"}}` (`InfoEndpointTests`, `BuildRevisionTest`).
+`features/operations/backups.feature` covers the administration of the backups (see "Backups"), `diagnostics.feature` the logs, the log levels and the diagnostics (see "Logs", "Log levels", "Diagnostics"). Its only public endpoints are the first setup's (see "Settings and the first setup", `first_setup.feature`) and the browser error reports (see "Browser error reports", `client_error_reports.feature`), and `settings.feature` covers the administration of the settings; the container's own behaviour is proved by the stack job of the PR check. `docs/system-overview.md` "operations" says how the logs reach Claude; `/actuator/info` (public, like `/actuator/health`) answers `{"build": {"revision": "<short sha>"}}` (`InfoEndpointTests`, `BuildRevisionTest`).
 
 ## ArchUnit
 
