@@ -599,6 +599,7 @@ describe('Given an administrator connected with the writing permission', () => {
       year: 2026,
       perex: 'Střecha.',
       body: '## Co se stalo\n\n**Nová** střecha.',
+      category: 'CHILDREN',
       coverImageId: MEDIA_ID,
       coverImageAlt: 'Nová střecha nad dílnou',
     };
@@ -617,6 +618,22 @@ describe('Given an administrator connected with the writing permission', () => {
       ['POST', '/api/admin/content/projects', project],
       ['PUT', `/api/admin/content/projects/${UNKNOWN_ID}`, project],
     ]);
+  });
+
+  it('when a project comes without a category or with an unknown one, then the tool refuses it and the administration gets nothing', async () => {
+    const project = { title: 'Nová střecha', year: 2026, perex: 'Střecha.', body: 'Text.' };
+    const missing = await client.callTool({ name: 'nfnn_create_project', arguments: project });
+    const unknown = await client.callTool({
+      name: 'nfnn_update_project',
+      arguments: { id: UNKNOWN_ID, ...project, category: 'PLANTS' },
+    });
+
+    expect(missing.isError).toBe(true);
+    expect(unknown.isError).toBe(true);
+    expect(textOf(unknown)).toContain('category');
+    expect(
+      stack.backend.requests.filter((request) => request.path.startsWith('/api/admin/content')),
+    ).toEqual([]);
   });
 
   it('when the About photo is set and then removed, then the administration gets the photo with its texts and then no photo and no texts', async () => {

@@ -97,6 +97,25 @@ async function type(
   await settle(fixture);
 }
 
+async function choose(
+  fixture: ComponentFixture<unknown>,
+  selector: string,
+  label: string,
+): Promise<void> {
+  const control = element<HTMLSelectElement>(fixture, selector);
+  control.selectedIndex = Array.from(control.options).findIndex(
+    (option) => option.textContent?.trim() === label,
+  );
+  control.dispatchEvent(new Event('change'));
+  control.dispatchEvent(new Event('blur'));
+  await settle(fixture);
+}
+
+function selected(fixture: ComponentFixture<unknown>, selector: string): string {
+  const control = element<HTMLSelectElement>(fixture, selector);
+  return control.options[control.selectedIndex]?.textContent?.trim() ?? '';
+}
+
 async function submit(fixture: ComponentFixture<unknown>): Promise<void> {
   element<HTMLFormElement>(fixture, 'form.project-form').dispatchEvent(new Event('submit'));
   await settle(fixture);
@@ -141,6 +160,36 @@ describe('Given an administrator writing a new project', () => {
     );
   });
 
+  it('when they open the form, then the project is for children until they choose whom it helped', () => {
+    expect(selected(fixture, '#projects-category')).toBe('Děti');
+    expect(
+      Array.from(element<HTMLSelectElement>(fixture, '#projects-category').options).map((option) =>
+        option.textContent?.trim(),
+      ),
+    ).toEqual(['Děti', 'Dospělí', 'Zvířata', 'Ostatní']);
+    expect(text(fixture, '#projects-category-hint')).toBe(
+      'V rámci roku web ukáže nejdřív projekty pro děti, pak pro dospělé, zvířata a ostatní.',
+    );
+  });
+
+  it('when they choose animals and save, then the project is sent for animals', async () => {
+    await type(fixture, '#projects-title', 'Plná miska pro útulek');
+    await choose(fixture, '#projects-category', 'Zvířata');
+    await type(fixture, '#projects-perex', 'Krmivo pro pejsky.');
+    await type(fixture, '#projects-body', 'Text.');
+    await submit(fixture);
+
+    const request = http.expectOne(PROJECTS_URL);
+    expect(request.request.body).toMatchObject({
+      title: 'Plná miska pro útulek',
+      category: 'ANIMALS',
+    });
+    request.flush(draftProject({ category: 'ANIMALS' }));
+    await settle(fixture);
+
+    expect(selected(fixture, '#projects-category')).toBe('Zvířata');
+  });
+
   it('when the year is before the fund was founded, then the field says so and nothing is sent', async () => {
     await type(fixture, '#projects-title', 'Starý projekt');
     await type(fixture, '#projects-year', '2004');
@@ -179,6 +228,7 @@ describe('Given an administrator writing a new project', () => {
     expect(request.request.body).toEqual({
       title: 'Benefiční koncert',
       year: 2026,
+      category: 'CHILDREN',
       slug: 'beneficni-koncert',
       tag: null,
       perex: 'Zveme vás na koncert.',
@@ -517,6 +567,10 @@ describe('Given an administrator editing a draft project', () => {
 
   afterEach(() => http.verify());
 
+  it('when it arrives, then the form says whom it helped as the project says', () => {
+    expect(selected(fixture, '#projects-category')).toBe('Ostatní');
+  });
+
   it('when it arrives, then saving keeps it a draft and no link to the site is offered', () => {
     expect(button(fixture, 'Uložit koncept').type).toBe('submit');
     expect(text(fixture, '.publish-state .ui-badge')).toBe('Koncept');
@@ -630,6 +684,7 @@ describe('Given an administrator editing a published project', () => {
     expect(request.request.body).toEqual({
       title: 'Zahrada pro děti',
       year: 2024,
+      category: 'CHILDREN',
       slug: 'zahrada-pro-deti',
       tag: 'Projekt',
       perex: project().perex,

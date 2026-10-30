@@ -47,6 +47,7 @@
               <tr>
                 <th i18n="@@admin.projects.col.title">Titulek</th>
                 <th i18n="@@admin.projects.col.year">Rok</th>
+                <th i18n="@@admin.projects.col.category">Komu</th>
                 <th i18n="@@admin.projects.col.tag">Štítek</th>
                 <th i18n="@@admin.projects.col.state">Stav</th>
                 <th i18n="@@admin.projects.col.updatedAt">Upraveno</th>
@@ -62,6 +63,9 @@
                   </td>
                   <td data-label="Rok" i18n-data-label="@@admin.projects.col.year">
                     {{ item.year }}
+                  </td>
+                  <td data-label="Komu" i18n-data-label="@@admin.projects.col.category">
+                    {{ categoryLabel(item.category) }}
                   </td>
                   <td data-label="Štítek" i18n-data-label="@@admin.projects.col.tag">
                     @if (item.tag) {

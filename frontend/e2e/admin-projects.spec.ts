@@ -18,6 +18,7 @@ function project(overrides: Record<string, unknown> = {}) {
     slug: 'zahrada-pro-deti',
     title: 'Zahrada pro děti',
     year: 2024,
+    category: 'CHILDREN',
     tag: 'Projekt',
     perex: 'Stavíme zahradu, kde si děti budou hrát.',
     body: 'První odstavec.\n\nDruhý odstavec.',
@@ -36,6 +37,7 @@ function draft(overrides: Record<string, unknown> = {}) {
     slug: 'beneficni-koncert',
     title: 'Benefiční koncert',
     year: 2026,
+    category: 'OTHER',
     tag: null,
     perex: 'Zveme vás na koncert.',
     body: 'Text o koncertu.',
@@ -85,6 +87,7 @@ test.describe('Given an administrator managing the projects', () => {
     await expect(page.locator('tbody tr').nth(0).locator('td')).toHaveText([
       'Benefiční koncert',
       '2026',
+      'Ostatní',
       'bez štítku',
       'Koncept',
       '22. 10. 2026 11:00',
@@ -92,6 +95,7 @@ test.describe('Given an administrator managing the projects', () => {
     await expect(page.locator('tbody tr').nth(1).locator('td')).toHaveText([
       'Zahrada pro děti',
       '2024',
+      'Děti',
       'Projekt',
       'Na webu od 20. 10. 2026',
       '20. 10. 2026 09:30',
@@ -157,6 +161,7 @@ test.describe('Given an administrator managing the projects', () => {
       page.getByText('Projekt bude na nfnn.cz/projekty/beneficni-koncert.'),
     ).toBeVisible();
     await page.getByLabel('Rok').fill('2026');
+    await page.getByLabel('Komu projekt pomohl').selectOption({ label: 'Dospělí' });
     await page.getByLabel('Krátký souhrn').fill('Zveme vás na koncert.');
     await page.getByLabel('Text', { exact: true }).fill('Text o koncertu.');
     await page.getByLabel('Nahrát fotku').setInputFiles({
@@ -182,6 +187,7 @@ test.describe('Given an administrator managing the projects', () => {
       {
         title: 'Benefiční koncert',
         year: 2026,
+        category: 'ADULTS',
         slug: 'beneficni-koncert',
         tag: null,
         perex: 'Zveme vás na koncert.',

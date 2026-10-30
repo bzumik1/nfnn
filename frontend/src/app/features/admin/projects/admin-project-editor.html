@@ -118,6 +118,24 @@
               </app-form-field>
 
               <app-form-field
+                label="Komu projekt pomohl"
+                i18n-label="@@admin.projectEditor.category"
+                hint="V rámci roku web ukáže nejdřív projekty pro děti, pak pro dospělé, zvířata a ostatní."
+                i18n-hint="@@admin.projectEditor.category.hint"
+              >
+                <select
+                  appFormControl
+                  id="projects-category"
+                  name="category"
+                  [(ngModel)]="category"
+                >
+                  @for (option of categories; track option) {
+                    <option [ngValue]="option">{{ categoryLabel(option) }}</option>
+                  }
+                </select>
+              </app-form-field>
+
+              <app-form-field
                 label="Adresa na webu (nepovinné)"
                 i18n-label="@@admin.projectEditor.slug"
                 [hint]="publicAddressHint()"

@@ -85,9 +85,9 @@ describe('Given an administrator on the project list', () => {
     await settle();
 
     expect(rows()).toEqual([
-      'Benefiční koncert 2026 bez štítku Koncept 22. 10. 2026 11:00',
-      'Zahrada pro děti 2024 Projekt Zveřejní se 30. 10. 2026 20. 10. 2026 09:30',
-      'Zahrada pro děti 2024 Projekt Na webu od 20. 10. 2026 20. 10. 2026 09:30',
+      'Benefiční koncert 2026 Ostatní bez štítku Koncept 22. 10. 2026 11:00',
+      'Zahrada pro děti 2024 Děti Projekt Zveřejní se 30. 10. 2026 20. 10. 2026 09:30',
+      'Zahrada pro děti 2024 Děti Projekt Na webu od 20. 10. 2026 20. 10. 2026 09:30',
     ]);
     const links = fixture.nativeElement.querySelectorAll(
       'tbody a',
@@ -98,6 +98,21 @@ describe('Given an administrator on the project list', () => {
         fixture.nativeElement.querySelector('a.ui-button--primary') as HTMLAnchorElement
       ).getAttribute('href'),
     ).toBe('/sprava/projekty/nova');
+  });
+
+  it('when the list arrives, then each project says whom it helped, under the column Komu', async () => {
+    http.expectOne(LIST_URL).flush({
+      items: [
+        project({ category: 'CHILDREN' }),
+        project({ id: '0199f3e0-0000-7000-8000-00000000c004', category: 'ADULTS' }),
+        project({ id: '0199f3e0-0000-7000-8000-00000000c005', category: 'ANIMALS' }),
+        draftProject({ category: 'OTHER' }),
+      ],
+    });
+    await settle();
+
+    expect(texts('thead th')).toContain('Komu');
+    expect(texts('td[data-label="Komu"]')).toEqual(['Děti', 'Dospělí', 'Zvířata', 'Ostatní']);
   });
 
   it('when there is no project yet, then the page says so and offers the first one', async () => {

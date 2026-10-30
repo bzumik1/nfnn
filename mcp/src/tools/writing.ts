@@ -65,7 +65,16 @@ const ARTICLE = {
       'One sentence saying what the photo shows, for screen readers and when it does not load; kept only with a photo.',
     ),
 };
-const PROJECT = { ...ARTICLE, year: z.number().int().min(2005).max(2100) };
+const PROJECT_CATEGORY = z
+  .enum(['CHILDREN', 'ADULTS', 'ANIMALS', 'OTHER'])
+  .describe(
+    'Whom the project helped: CHILDREN, ADULTS, ANIMALS or OTHER. Within a year the site lists children first, then adults, animals and the others.',
+  );
+const PROJECT = {
+  ...ARTICLE,
+  year: z.number().int().min(2005).max(2100),
+  category: PROJECT_CATEGORY,
+};
 const ACCOUNT_LINK = z.object({
   donorId: UUID,
   linkId: UUID.describe("Id of the account link from the donor's card (nfnn_donor)."),
@@ -365,7 +374,7 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
     {
       title: 'Založit projekt',
       description:
-        'Creates a project of the given year as a draft (not on the site until nfnn_publish_project); audited as CREATE_PROJECT.',
+        'Creates a project of the given year and category as a draft (not on the site until nfnn_publish_project); audited as CREATE_PROJECT.',
       inputSchema: z.object(PROJECT),
       annotations: WRITING,
     },
@@ -380,7 +389,7 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
     {
       title: 'Upravit projekt',
       description:
-        'Replaces the texts, the year and the photo of a project (the published date stays); send every field, read them with nfnn_project first. Audited as UPDATE_PROJECT.',
+        'Replaces the texts, the year, the category and the photo of a project (the published date stays); send every field, read them with nfnn_project first. Audited as UPDATE_PROJECT.',
       inputSchema: z.object({ id: UUID, ...PROJECT }),
       annotations: { ...WRITING, idempotentHint: true },
     },
