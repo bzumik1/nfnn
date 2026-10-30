@@ -37,6 +37,22 @@ describe('Given the reporting error handler', () => {
     });
   });
 
+  describe('when a lazy chunk fails to load', () => {
+    const error = new TypeError(
+      'Failed to fetch dynamically imported module: https://nfnn.cz/chunk-ABCD1234.js',
+    );
+
+    beforeEach(() => handler.handleError(error));
+
+    it('then it still reaches the console as before', () => {
+      expect(consoleError).toHaveBeenCalled();
+    });
+
+    it('then it leaves the report to the chunk-load recovery, which already sent one', () => {
+      expect(report).not.toHaveBeenCalled();
+    });
+  });
+
   it('when the reporter itself fails, then the handler still returns', () => {
     report.mockImplementation(() => {
       throw new Error('broken');

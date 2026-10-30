@@ -1,6 +1,11 @@
 import { Request } from '@playwright/test';
 
 import { expect, test } from './fixtures';
+import {
+  openHomeThenLoseNewChunks,
+  openPolicyFromFooter,
+  chunkLoadPageHeading,
+} from './lost-chunks';
 
 const CANARY = 'Zxqv Kanárek 7781,77 Kč 2099-778177';
 
@@ -41,5 +46,28 @@ test.describe('Given a visitor on a public page of the production build', () => 
     expect(report.postData()).not.toContain('Kanárek');
     expect(report.postData()).not.toContain('7781');
     expect(report.url()).not.toContain('zasady');
+  });
+});
+
+test.describe('Given a visitor whose open tab is older than the deployed version', () => {
+  test('when the chunk of the page they open is gone, then each page load sends exactly one chunk-load report and no unexpected one', async ({
+    page,
+  }) => {
+    const reports: { kind: string; place: string; load: number }[] = [];
+    const chunks = await openHomeThenLoseNewChunks(page);
+    await page.route('/api/operations/client-errors', (route) => {
+      const { kind, place } = route.request().postDataJSON() as { kind: string; place: string };
+      reports.push({ kind, place, load: chunks.documents.length });
+      return route.fulfill({ status: 204 });
+    });
+
+    await openPolicyFromFooter(page);
+
+    await expect(page.getByRole('main').getByRole('heading', chunkLoadPageHeading)).toBeFocused();
+    await page.waitForLoadState('networkidle');
+    expect(reports).toEqual([
+      { kind: 'chunk-load', place: 'navigation', load: 0 },
+      { kind: 'chunk-load', place: 'navigation', load: 1 },
+    ]);
   });
 });
