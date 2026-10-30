@@ -2,13 +2,25 @@
   {
     "kind": "shared-case",
     "caseFile": "shared-cases/payment/spayd.json",
-    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): payment/spayd.json becomes the browser's specification, run by spayd() and the encoder (source edited); SpaydText maps % to a space, so the 100% case changes; section 12's cases join (9 999 999,99 Kč accepted, one heller more refused, no variable symbol, the whole string alphanumeric, the 60-character message kept whole and 61 refused), and every refusal is the one spayd() gives, by its fields",
-    "contract": ".claude/rules/testing.md, Logic on both sides; docs/api-contract.md, GET /api/donations/payment-details"
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): payment/spayd.json becomes the browser's specification, run by spayd() and the encoder (source edited); SpaydText maps % to a space, so the 100% case changes; section 12's cases join (9 999 999,99 Kč accepted, one heller more refused, no variable symbol, the whole string alphanumeric, the 60-character message kept whole and 61 refused), and every refusal is the one spayd() gives, by its fields; the five cases of the removed endpoint's validation go (1 000 001 Kč, abc, 12.50, a missing amount and an unknown purpose): the panel spec refuses a typed amount that is not a whole number from 1 to 1 000 000 (12.5, 12,50, 0, 1000001, abc), and the amount and the purpose are typed values the browser never leaves out or misspells; round 1 of the review adds refusals for a 36-character recipient, an unchecked, empty or field-separating verification message, an empty donation message, a two-letter currency and an IBAN that is not the shown account number's or has wrong check digits",
+    "contract": ".claude/rules/testing.md, Logic on both sides; docs/api-contract.md, GET /api/donations/payment-details; shared-cases/payment/account.json"
   },
   {
     "kind": "shared-case",
     "caseFile": "shared-cases/schemas/payment/spayd.schema.json",
     "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): the schema of payment/spayd.json takes the payment details by case name or written in, and a refusal as the fields spayd() names (amountMinor, variableSymbol, details)",
+    "contract": ".claude/rules/testing.md, Logic on both sides"
+  },
+  {
+    "kind": "shared-case",
+    "caseFile": "shared-cases/payment/account.json",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): the browser checks before it draws a payment QR that the served IBAN is the IBAN of the shown Czech account number (round 1 of the review), so payment/account.json is new (source edited): modulo 11 on the prefix and the number, a zero number, the bank code, IBAN check digits; the backend runs every case through CzechAccountNumber.toIban and BankAccount, which refused such pairs at startup since 1.2",
+    "contract": ".claude/rules/testing.md, Logic on both sides; docs/api-contract.md, GET /api/donations/payment-details"
+  },
+  {
+    "kind": "shared-case",
+    "caseFile": "shared-cases/schemas/payment/account.schema.json",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): the schema of the new payment/account.json: an account number and an IBAN in, the IBAN of the number (or null when the number is refused) and whether the pair matches out",
     "contract": ".claude/rules/testing.md, Logic on both sides"
   },
   {
