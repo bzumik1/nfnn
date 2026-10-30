@@ -316,7 +316,9 @@ test.describe('Given a visitor who wants an account without a password', () => {
     await page.goto('/potvrzeni-emailu#token=abc');
     await page.getByRole('button', { name: 'Vytvořit přístupový klíč' }).click();
 
-    await expect(page.getByRole('status')).toContainText('Přístupový klíč je uložený');
+    await expect(page.getByRole('status').filter({ hasText: /\S/ })).toContainText(
+      'Přístupový klíč je uložený',
+    );
     expect(requests).toEqual([{}]);
     await page.getByRole('button', { name: 'Přejít do přehledu' }).click();
     await openDonorSection(page, 'Údaje a zabezpečení');

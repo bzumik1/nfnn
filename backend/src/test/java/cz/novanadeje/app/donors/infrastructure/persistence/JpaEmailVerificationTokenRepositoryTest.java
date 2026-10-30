@@ -1,6 +1,5 @@
 package cz.novanadeje.app.donors.infrastructure.persistence;
 
-import cz.novanadeje.app.TestcontainersConfiguration;
 import cz.novanadeje.app.donors.domain.Donor;
 import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.donors.domain.DonorRepository;
@@ -30,7 +29,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import({TestcontainersConfiguration.class, JpaDonorRepository.class, JpaEmailVerificationTokenRepository.class})
+@Import(DonorsPersistenceTestConfiguration.class)
 class JpaEmailVerificationTokenRepositoryTest {
 
     private static final Instant NOW = Instant.parse("2026-10-18T10:00:00Z");

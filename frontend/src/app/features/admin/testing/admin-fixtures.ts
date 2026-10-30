@@ -1,5 +1,6 @@
 import {
   AdminActionResponse,
+  AdminActivitySinceResponse,
   DiagnosticsResponse,
   LogFileResponse,
   LoggerResponse,
@@ -57,6 +58,7 @@ export function unpairedPayment(
     messageForRecipient: 'Dar pro fond',
     importedAt: '2026-10-17T10:00:00Z',
     unpairedByAdminAt: null,
+    accountVerification: false,
     donation: null,
     ...overrides,
   };
@@ -193,6 +195,7 @@ export function adminDonation(overrides: Partial<DonationItem> = {}): DonationIt
     pairedBy: 'SENDER_ACCOUNT',
     senderAccount: '2900233333/2010',
     confirmedSymbol: null,
+    accountVerification: false,
     receiptAvailable: true,
     ...overrides,
   };
@@ -279,6 +282,7 @@ export function monthOverview(
     month: '2026-10',
     received: { count: 1, totalMinor: 99900, currency: 'CZK' },
     newDonors: 1,
+    givingDonors: 1,
     paired: { count: 1, totalMinor: 99900, currency: 'CZK' },
     unpaired: { count: 0, totalMinor: 0, currency: 'CZK' },
     ...overrides,
@@ -291,6 +295,7 @@ export function overview(overrides: Partial<AdminOverviewResponse> = {}): AdminO
     availableYears: [2026, 2025],
     donorsRegistered: 3,
     newDonors: 3,
+    givingDonors: 2,
     received: { count: 5, totalMinor: 288350, currency: 'CZK' },
     paired: { count: 4, totalMinor: 273350, currency: 'CZK' },
     unpaired: { count: 1, totalMinor: 15000, currency: 'CZK' },
@@ -300,6 +305,7 @@ export function overview(overrides: Partial<AdminOverviewResponse> = {}): AdminO
         month: '2026-09',
         received: { count: 3, totalMinor: 168450, currency: 'CZK' },
         newDonors: 1,
+        givingDonors: 2,
         paired: { count: 2, totalMinor: 153450, currency: 'CZK' },
         unpaired: { count: 1, totalMinor: 15000, currency: 'CZK' },
       }),
@@ -310,6 +316,19 @@ export function overview(overrides: Partial<AdminOverviewResponse> = {}): AdminO
         paired: { count: 1, totalMinor: 20000, currency: 'CZK' },
       }),
     ],
+    ...overrides,
+  };
+}
+
+export function activitySince(
+  overrides: Partial<AdminActivitySinceResponse> = {},
+): AdminActivitySinceResponse {
+  return {
+    from: '2026-10-28T20:14:00Z',
+    payments: { count: 5, totalMinor: 1250000, currency: 'CZK' },
+    paired: { count: 3, totalMinor: 750000, currency: 'CZK' },
+    unpaired: { count: 2, totalMinor: 500000, currency: 'CZK' },
+    newDonors: 3,
     ...overrides,
   };
 }

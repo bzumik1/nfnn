@@ -1,0 +1,10 @@
+[
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "cucumber.transcript.ApiTranscriptsTest > Given transcript files left by an earlier run, when a recording run starts, then the folder is emptied, so no stale file survives",
+    "reason": "#199 runs the Cucumber suites in two forks that write into one transcript folder at the same time, so a JVM emptying it at its start would delete what the other fork had written; the recording Gradle task acceptanceTest empties the folder before its forks start",
+    "replacement": "acceptanceTest in backend/build.gradle.kts deletes build/api-transcripts before a recording run (API_TRANSCRIPTS=record); the PR's recording run removed a stale file planted there and wrote the same transcripts as regression/v2/api",
+    "contract": ".claude/rules/testing.md, Regression against v2 (Recording) and docs/system-overview.md, Backend tests"
+  }
+]

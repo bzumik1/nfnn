@@ -129,6 +129,7 @@
           <app-form-field
             label="E-mailová adresa"
             i18n-label="@@home.contact.form.email"
+            [hint]="emailHint"
             [messages]="emailMessages"
           >
             <input
@@ -140,6 +141,7 @@
               [(ngModel)]="model.email"
               required
               email
+              pattern="[^\s@]+@[^\s@]+\.[^\s@]+"
               maxlength="254"
             />
           </app-form-field>

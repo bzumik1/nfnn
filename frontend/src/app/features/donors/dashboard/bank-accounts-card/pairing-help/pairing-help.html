@@ -22,6 +22,19 @@
         symbolem přiřadíme vám, ať přijde z jakéhokoli účtu.
       </li>
     }
+    @if (variableSymbol(); as symbol) {
+      <li i18n="@@donor.bankAccounts.help.symbolInMessage">
+        <span class="help-lead">Moje banka nemá pole pro variabilní symbol</span> Napište symbol
+        <strong class="help-symbol">{{ symbol }}</strong> do zprávy pro příjemce. Platbu vám
+        přiřadíme stejně, jako kdyby byl v poli pro symbol.
+      </li>
+    } @else {
+      <li i18n="@@donor.bankAccounts.help.symbolInMessageWithoutNumber">
+        <span class="help-lead">Moje banka nemá pole pro variabilní symbol</span> Napište svůj
+        variabilní symbol do zprávy pro příjemce. Platbu vám přiřadíme stejně, jako kdyby byl v poli
+        pro symbol.
+      </li>
+    }
     <li i18n="@@donor.bankAccounts.help.byAccount">
       <span class="help-lead">Co když pošlu platbu bez symbolu?</span> Přiřadíme ji podle účtu, ze
       kterého přišla, pokud jste ho ověřili platbou s vaším symbolem (stačí 1&nbsp;Kč přes „Přidat

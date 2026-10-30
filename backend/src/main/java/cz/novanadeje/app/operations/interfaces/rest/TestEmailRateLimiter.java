@@ -26,4 +26,8 @@ class TestEmailRateLimiter {
             throw new RateLimitExceededException(ProblemTypes.of("operations", "rate-limited"));
         }
     }
+
+    long trackedKeys() {
+        return limiter.trackedKeys();
+    }
 }

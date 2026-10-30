@@ -280,6 +280,13 @@ export class BankAccountsCard {
     return this.accountsWhenOpened()?.active.has(account.id) ?? false;
   }
 
+  protected earlierGifts(account: BankAccountItem): string | null {
+    if (this.wasActiveWhenOpened(account) || account.donationCount === 0) {
+      return null;
+    }
+    return earlierGiftsMessage(account.donationCount, formatMinorUnits(account.totalAmountMinor));
+  }
+
   protected symbolList(symbols: readonly string[]): string {
     return joinedList(symbols);
   }
@@ -569,6 +576,17 @@ function pairedMessage(count: number, symbol: string, account: string): string {
       return $localize`:@@donor.bankAccounts.claim.paired.few:Přiřadili jsme vám ${count}:count: platby se symbolem ${symbol}:symbol: z účtu ${account}:account:.`;
     case 'other':
       return $localize`:@@donor.bankAccounts.claim.paired.many:Přiřadili jsme vám ${count}:count: plateb se symbolem ${symbol}:symbol: z účtu ${account}:account:.`;
+  }
+}
+
+function earlierGiftsMessage(count: number, total: string): string {
+  switch (pluralCategory(count)) {
+    case 'one':
+      return $localize`:@@donor.bankAccounts.addDialog.earlierGifts.one:Přiřadili jsme vám také ${count}:count: dřívější dar z\u00a0tohoto účtu, celkem ${total}:total:\u00a0Kč.`;
+    case 'few':
+      return $localize`:@@donor.bankAccounts.addDialog.earlierGifts.few:Přiřadili jsme vám také ${count}:count: dřívější dary z\u00a0tohoto účtu, celkem ${total}:total:\u00a0Kč.`;
+    default:
+      return $localize`:@@donor.bankAccounts.addDialog.earlierGifts.other:Přiřadili jsme vám také ${count}:count: dřívějších darů z\u00a0tohoto účtu, celkem ${total}:total:\u00a0Kč.`;
   }
 }
 

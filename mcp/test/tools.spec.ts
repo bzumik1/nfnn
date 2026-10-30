@@ -71,6 +71,7 @@ describe('Given an administrator connected with the reading permission only', ()
       'nfnn_send_test_email',
       'nfnn_set_log_level',
       'nfnn_settings',
+      'nfnn_since_last_sign_in',
       'nfnn_status',
       'nfnn_symbol_claims',
       'nfnn_thread_dump',
@@ -97,6 +98,48 @@ describe('Given an administrator connected with the reading permission only', ()
     expect(text).toContain('"health":"UP"');
     expect(text).toContain('"lastSucceededAt":"2026-10-23T07:00:00+02:00"');
     expect(text).toContain('"outcome":"OK"');
+  });
+
+  it('when the tools are listed, then the overview says it counts the donors who gave in each month', async () => {
+    const { tools } = await client.listTools();
+    expect(tools.find((tool) => tool.name === 'nfnn_overview')?.description).toContain(
+      'givingDonors',
+    );
+  });
+
+  it('when what came in since the last sign-in is asked, then the previous sign-in sets the moment and the amounts come in crowns with Prague offsets', async () => {
+    const result = await client.callTool({ name: 'nfnn_since_last_sign_in', arguments: {} });
+    expect(result.isError).toBeFalsy();
+    const paths = stack.backend.requests.map((request) => request.path);
+    expect(paths).toContain('/api/admin/donors/me/previous-sign-in');
+    expect(paths).toContain('/api/admin/donations/overview/since?from=2026-10-28T20%3A14%3A00Z');
+    const text = textOf(result);
+    expect(text).toContain('"previousSignInAt":"2026-10-28T21:14:00+01:00"');
+    expect(text).toContain('"total":12500');
+    expect(text).toContain('"unpaired":{"count":2,"total":5000');
+    expect(text).toContain('"newDonors":3');
+  });
+
+  it('when a moment is given, then it is asked for instead of the previous sign-in', async () => {
+    await client.callTool({
+      name: 'nfnn_since_last_sign_in',
+      arguments: { from: '2026-10-01T00:00:00+02:00' },
+    });
+    expect(stack.backend.requests.map((request) => request.path)).toContain(
+      '/api/admin/donations/overview/since?from=2026-10-01T00%3A00%3A00%2B02%3A00',
+    );
+  });
+
+  it('when the administrator never signed in before and no moment is given, then the tool says so and asks nothing more', async () => {
+    stack.backend.previousSignInAt = null;
+
+    const result = await client.callTool({ name: 'nfnn_since_last_sign_in', arguments: {} });
+
+    expect(result.isError).toBeFalsy();
+    expect(textOf(result)).toContain('no earlier sign-in');
+    expect(stack.backend.requests.some((request) => request.path.includes('/overview/since'))).toBe(
+      false,
+    );
   });
 
   it('when the payments are asked, then the administration gets the exchanged API token, a first page of 50, and amounts come as crowns with the next page named', async () => {

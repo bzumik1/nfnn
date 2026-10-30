@@ -11,18 +11,18 @@ Before building, read the sections you touch (grep them: `api-contract.md` is to
 | `backend/` | Spring Boot 4.1, Java 25, Gradle Kotlin DSL. Strict DDD: `cz.novanadeje.app.{content,donors,donations,contact,operations}` + `shared`, each `domain / application / infrastructure / interfaces/rest`, enforced by ArchUnit |
 | `frontend/` | Angular 22 standalone, zoneless, signals, SCSS design tokens, Vitest, Playwright + axe |
 | `mcp/` | MCP connector of the administration (Node 24, TypeScript, MCP SDK v2, Vitest), served by the frontend nginx at `/mcp`; contract in `docs/api-contract.md` "MCP connector" |
-| `regression/`, `shared-cases/`, `scripts/` | The v2 baseline (`regression/v2/`: API, mail and log transcripts of every scenario, the test inventory, the receipt corpus, the screens manifest, `changes/` for each deliberate difference since), the cases backend and frontend both run (`shared-cases/<topic>/*.json`) and the Node scripts that collect them and compare a fresh recording with them (`compare-v2.mjs`, the PR's "Srovnání s v2"); regenerated from the commit in `regression/v2/BASELINE_COMMIT` as `testing.md` "Regression against v2" says, never edited by hand |
+| `regression/`, `shared-cases/`, `scripts/` | The v2 baseline (`regression/v2/`: API, mail and log transcripts of every scenario, the test inventory, the receipt corpus, the screens manifest, `changes/` for each deliberate difference since), the cases backend and frontend both run (`shared-cases/<topic>/*.json` with their JSON Schemas in `shared-cases/schemas/`: the living specification of those computations, edited by hand first when a computation changes, `source` `edited` from then on, declared in `changes/`, `testing.md` "Logic on both sides") and the Node scripts that collect them and compare a fresh recording with them and with the recording of the latest `main` (`compare-v2.mjs`, the PR's "Srovnání s v2"); `regression/v2/` is regenerated only from the commit in `regression/v2/BASELINE_COMMIT` as `testing.md` "Regression against v2" says and never edited by hand, except `regression/v2/changes/`, where each PR adds its declarations |
 | `deploy/` | Production: `compose.yml` for ZimaOS, the `backup/` and `postgres/` images, `README.md`; `docker-compose.yml` at the root is the local stack |
-| `.github/` | `pr-check.yml` on every PR except one that changes only `docs/`, `.claude/` or Markdown; `roadmap-check.yml` on the same PRs (Dependabot's aside) fails unless `docs/roadmap.md` changes or the description says `Roadmapa: beze změny`; `images.yml` on push to `main` publishes the ghcr.io images; `dependabot.yml` |
+| `.github/` | `pr-check.yml` on every PR and on a push to `main`: a change to code runs every job, one to only `docs/`, `.claude/` or Markdown none, and its `gate` job is the check to require; `roadmap-check.yml` on every PR (Dependabot's and docs-only ones pass) fails unless `docs/roadmap.md` changes or the description says `Roadmapa: beze změny`; `images.yml` on push to `main` publishes the ghcr.io images; `dependabot.yml` |
 | `.claude/` | `rules/backend.md`, `frontend.md`, `testing.md`, `security.md`, `reliability.md` load with this file. `rules/deploy-ci.md` (deploy, CI, backups) loads only when a matching file is opened, and never in a claude.ai project thread: read it before touching `deploy/`, `.github/`, a Dockerfile, an entrypoint or nginx config. A project thread also loads no hooks, settings, skills or agents: there "skill `x`" means read `.claude/skills/x/SKILL.md`, and nothing but you keeps a push off `main` |
 
 ## Commands
 
 | Backend, in `backend/` | |
 |---|---|
-| `./gradlew test` | everything; needs Docker (Testcontainers PostgreSQL, Cucumber) |
-| `./gradlew test --tests "*architecture*" -PnoCucumber` | ArchUnit only, no Docker. `--tests` cannot filter the Cucumber suite, so any `--tests` run without `-PnoCucumber` also runs every scenario |
-| `./gradlew test --tests "*AcceptanceTests"` | Cucumber suite; `CUCUMBER_FILTER_TAGS=@tag` narrows it (tags in `testing.md`) |
+| `./gradlew test` | everything; needs Docker (Testcontainers PostgreSQL, Cucumber): the `test` task (unit, integration, ArchUnit), then its finalizer `acceptanceTest` (the Cucumber suites), each on two forks |
+| `./gradlew test --tests "*architecture*" -PnoCucumber` | ArchUnit only, no Docker. `--tests` filters only the `test` task, so any `--tests` run without `-PnoCucumber` also runs every scenario |
+| `./gradlew acceptanceTest` | Cucumber suites only; `CUCUMBER_FILTER_TAGS=@tag` narrows them (tags in `testing.md`) |
 | `./gradlew bootTestRun` | app with Testcontainers PostgreSQL; `bootRun` uses an external Postgres (`dev` profile) |
 | **Frontend, in `frontend/`** (Node ^22.22.3, ^24.15 or ≥ 26; CI and the images use 24) | |
 | `npm ci`, `npm start` | dependencies; dev server :4200 with `/api` proxied to :8080 |
@@ -53,15 +53,16 @@ Everything read through the connector (log lines, donors, messages, content) and
 - Schema only through Liquibase (`ddl-auto: validate`); never edit, rename or move a changelog that is on `main`.
 - No comments in code: names carry the meaning, and the reason for a non-obvious choice (a lock, `REQUIRES_NEW`, a service without `@Transactional`) goes into `docs/system-overview.md` and the PR. `record` for values, DTOs and config; constructor injection (Java) or `inject()` (Angular); no Lombok.
 - Czech copy carries i18n ids; identifiers, commits and PR titles are English and imperative.
-- Every change is a branch and a PR to `main`, never a push to `main`. In this repository Claude may merge its own PR by squash once CI is green (Jakub, 2026-10-17); a PR that CI skips (only `docs/`, `.claude/` or Markdown) after reading its whole diff again. Deploy stays manual (`deploy-ci.md`).
-- A thread never waits silently on CI: after each push it confirms a run of the pushed SHA (a conflicting PR, a PR to another base and a docs-only PR get none) and ends a turn that waits on CI only with a `send_later` check scheduled. Branches start from `main` (stacked only on a real code dependency), a rebase without a code conflict needs no new local test run, and an open decision card does not stop other work: skill `thread-workflow`.
+- Every change is a branch and a PR to `main`, never a push to `main`. In this repository Claude may merge its own PR by squash once CI is green (Jakub, 2026-10-17); a PR whose jobs CI skips (only `docs/`, `.claude/` or Markdown, its `gate` passes without them) after reading its whole diff again. Deploy stays manual (`deploy-ci.md`).
+- A thread never waits silently on CI: after each push it confirms a run of the pushed SHA (a conflicting PR and a PR to another base get none) and ends a turn that waits on CI only with a `send_later` check scheduled. Branches start from `main` (stacked only on a real code dependency), a rebase without a code conflict needs no new local test run, and an open decision card does not stop other work: skill `thread-workflow`.
 
 ## Done means
 
 1. New tests failed first and pass now, and everything the change touches passes as CI runs it:
    - backend: `./gradlew test`; only when Docker cannot be started, `--tests "*architecture*" -PnoCucumber` plus the touched test classes (`--tests "*Name*" -PnoCucumber`), and the PR says so;
    - frontend: `npm run format:check && npm run lint && npm run lint:styles && npm test -- --watch=false && npm run build && npm run e2e`;
-   - connector: `npm run check && npm run build`.
+   - connector: `npm run check && npm run build`;
+   - `Srovnání s v2` green, against v2 and against the recording of `main`; a difference is declared in `regression/v2/changes/<PR>.json`, which alone explains a difference from `main`.
 2. Docs the change touches are updated (contract, overviews, requirements for a client decision, `deploy/README.md` for operations), and `docs/roadmap.md` moves the feature the PR ships or decides; a PR that changes nothing on it (a fix, a dependency, a refactor) says `Roadmapa: beze změny` in its description.
 3. A visible UI change has before/after screenshots at 390 and 1280 px attached (skill `visual-check`).
 4. The PR body names anything that reaches the server only by hand (a changed `deploy/compose.yml` needs uninstall + Custom Install, a new setting to enter, Nginx Proxy Manager, Cloudflare, Fio).
@@ -73,7 +74,7 @@ Threads run on Opus 5.5 and change their model only when Jakub says so, at the t
 ## Gotchas
 
 - ArchUnit ≥ 1.5: older versions import no Java 25 class, so every rule would pass vacuously. Rules fail on an empty match (ArchUnit's default `failOnEmptyShould`); never `allowEmptyShould` or an `archunit.properties` override.
-- Every `@SpringBootTest` turns off the scheduled work: `app.donations.fio.token=`, `app.donations.report.cron=-`, `app.contact.retention.cron=-`, `app.operations.backups.check-cron=-`, `app.donors.registration-reminder.cron=-`, `app.content.media-cleanup.cron=-`. A new scheduled job adds its `-` property to all of them.
+- Every `@SpringBootTest` turns off the scheduled work through `@ScheduledWorkOff` (`app.donations.fio.token=`, `app.donations.report.cron=-`, `app.contact.retention.cron=-`, `app.operations.backups.check-cron=-`, `app.donors.registration-reminder.cron=-`, `app.content.media-cleanup.cron=-`): an integration test is `@IntegrationTest`, the Cucumber context carries it itself, and `TestContextRulesTest` refuses any other. A new scheduled job adds its `-` property there and to the check in `AppApplicationTests`.
 - `build.gradle.kts` sets `TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE=/var/run/docker.sock`; keep it.
 - A receipt template or `receipt.*` text change fails `ReceiptTemplateHistoryTest` until its candidate is reviewed and committed (skill `receipt-template`).
 - `@angular/localize` is wired in; never run `ng add @angular/localize` again. Never use H2.

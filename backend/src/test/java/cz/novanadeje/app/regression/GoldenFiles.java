@@ -10,6 +10,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 
+import static cz.novanadeje.app.sharedcases.SharedCases.repositoryRoot;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public final class GoldenFiles {
@@ -20,26 +21,24 @@ public final class GoldenFiles {
     private GoldenFiles() {
     }
 
-    public static Path repositoryRoot() {
-        Path directory = Path.of("").toAbsolutePath();
-        while (directory != null && !(Files.isDirectory(directory.resolve("backend")) && Files.isDirectory(directory.resolve("frontend")))) {
-            directory = directory.getParent();
-        }
-        if (directory == null) {
-            throw new IllegalStateException("The repository root is not above " + Path.of("").toAbsolutePath());
-        }
-        return directory;
-    }
-
     public static String canonical(JsonNode node) {
         return CanonicalJson.write(node);
     }
 
     public static void assertMatches(String relativePath, JsonNode actual) {
-        Path file = repositoryRoot().resolve(relativePath);
+        assertMatches(repositoryRoot().resolve(relativePath), relativePath, actual, WRITE.equals(System.getProperty(MODE)));
+    }
+
+    static void assertMatches(Path file, JsonNode actual, boolean writing) {
+        assertMatches(file, file.toString(), actual, writing);
+    }
+
+    private static void assertMatches(Path file, String relativePath, JsonNode actual, boolean writing) {
         String expected = canonical(actual);
         try {
-            if (WRITE.equals(System.getProperty(MODE))) {
+            if (writing) {
+                assertThat(file).as("%s is part of the v2 baseline and is never rewritten: record a new sample from the commit in regression/v2/BASELINE_COMMIT, "
+                        + "or declare the difference in regression/v2/changes/", relativePath).doesNotExist();
                 Files.createDirectories(file.getParent());
                 Files.writeString(file, expected, StandardCharsets.UTF_8);
                 return;

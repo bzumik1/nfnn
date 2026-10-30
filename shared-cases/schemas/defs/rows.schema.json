@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nfnn.cz/shared-cases/schemas/defs/rows.schema.json",
+  "title": "Database rows of a case: the server clock, donor records, bank payments and donations, each with only the columns the computation reads",
+  "type": "object",
+  "required": ["now", "donors", "payments", "donations"],
+  "properties": {
+    "now": { "$ref": "#/$defs/instant" },
+    "donors": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["alias", "registeredAt", "erasedAt"],
+        "additionalProperties": false,
+        "properties": {
+          "alias": { "$ref": "#/$defs/alias" },
+          "registeredAt": { "$ref": "#/$defs/instant" },
+          "erasedAt": { "oneOf": [{ "$ref": "#/$defs/instant" }, { "type": "null" }] }
+        }
+      }
+    },
+    "payments": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["alias", "bookedOn", "amountMinor", "unpairedByAdminAt"],
+        "additionalProperties": false,
+        "properties": {
+          "alias": { "$ref": "#/$defs/alias" },
+          "bookedOn": { "$ref": "#/$defs/day" },
+          "amountMinor": { "$ref": "#/$defs/amountMinor" },
+          "unpairedByAdminAt": { "oneOf": [{ "$ref": "#/$defs/instant" }, { "type": "null" }] }
+        }
+      }
+    },
+    "donations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["donor", "payment", "receivedOn", "amountMinor", "status", "source", "purpose"],
+        "additionalProperties": false,
+        "properties": {
+          "donor": { "$ref": "#/$defs/alias" },
+          "payment": { "oneOf": [{ "$ref": "#/$defs/alias" }, { "type": "null" }] },
+          "receivedOn": { "$ref": "#/$defs/day" },
+          "amountMinor": { "$ref": "#/$defs/amountMinor" },
+          "status": { "enum": ["RECEIVED", "REFUNDED"] },
+          "source": { "enum": ["BANK_TRANSFER", "MANUAL"] },
+          "purpose": { "enum": ["GENERAL", "ACCOUNT_VERIFICATION"] }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "alias": { "type": "string", "pattern": "^[a-z][a-z0-9]*$" },
+    "instant": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$" },
+    "day": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
+    "month": { "type": "string", "pattern": "^\\d{4}-(0[1-9]|1[0-2])$" },
+    "amountMinor": { "type": "integer", "minimum": 1 },
+    "count": { "type": "integer", "minimum": 0 },
+    "year": { "type": "integer", "minimum": 2000, "maximum": 2999 }
+  }
+}

@@ -79,6 +79,9 @@ class DonorJpaEntity {
     @Column(name = "erased_at")
     private Instant erasedAt;
 
+    @Column(name = "previous_signed_in_at", insertable = false, updatable = false)
+    private Instant previousSignedInAt;
+
     protected DonorJpaEntity() {
     }
 

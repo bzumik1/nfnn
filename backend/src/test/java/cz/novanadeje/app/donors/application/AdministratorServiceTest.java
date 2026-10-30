@@ -176,12 +176,21 @@ class AdministratorServiceTest {
         verify(donors).save(saved.capture());
         assertThat(saved.getValue().roles()).containsExactly(Role.DONOR);
         verify(refreshTokens).revokeAllOf(PETR, NOW);
+        verify(donors).forgetSignIns(PETR);
         ArgumentCaptor<Object> published = ArgumentCaptor.forClass(Object.class);
         verify(events).publishEvent(published.capture());
         AdminActionPerformed action = (AdminActionPerformed) published.getValue();
         assertThat(action.adminId()).isEqualTo(JANA.value());
         assertThat(action.action()).isEqualTo("REVOKE_ADMINISTRATION");
         assertThat(action.subjectId()).contains(PETR.value());
+    }
+
+    @Test
+    @DisplayName("Given an administrator who signed in before, when their previous sign-in is asked for, then it comes from the repository")
+    void should_answer_previous_sign_in_when_asked_given_recorded_sign_ins() {
+        when(donors.findPreviousSignIn(JANA)).thenReturn(Optional.of(NOW.minusSeconds(86400)));
+
+        assertThat(service.previousSignIn(JANA)).contains(NOW.minusSeconds(86400));
     }
 
     @Test

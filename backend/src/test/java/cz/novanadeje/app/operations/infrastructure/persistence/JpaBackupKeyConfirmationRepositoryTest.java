@@ -1,6 +1,5 @@
 package cz.novanadeje.app.operations.infrastructure.persistence;
 
-import cz.novanadeje.app.TestcontainersConfiguration;
 import cz.novanadeje.app.operations.domain.backup.BackupKey;
 import cz.novanadeje.app.operations.domain.backup.BackupKeyConfirmation;
 import cz.novanadeje.app.operations.domain.backup.BackupKeyConfirmationRepository;
@@ -19,7 +18,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import({TestcontainersConfiguration.class, JpaBackupKeyConfirmationRepository.class})
+@Import(OperationsPersistenceTestConfiguration.class)
 class JpaBackupKeyConfirmationRepositoryTest {
 
     private static final BackupKey KEY = new BackupKey("AGE-SECRET-KEY-1R45A984EXXAFC85YZSYGY9R6XJTD4E9AKY65ZCRGPDQ89E7ANW8QKT6GWH");

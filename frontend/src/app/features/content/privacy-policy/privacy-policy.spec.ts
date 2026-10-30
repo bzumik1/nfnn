@@ -43,6 +43,7 @@ describe('Given the privacy policy page', () => {
     expect(texts('h2')).toEqual([
       'Správce osobních údajů',
       'Jaké údaje zpracováváme a proč',
+      'Jaké e‑maily posíláme',
       'Jak dlouho údaje uchováváme',
       'Komu údaje předáváme',
       'Cookies',
@@ -61,19 +62,36 @@ describe('Given the privacy policy page', () => {
       const section = fixture.nativeElement.querySelector(`section#${fragment}`) as HTMLElement;
       return [link.textContent?.trim(), section?.querySelector('h2')?.textContent?.trim()];
     });
-    expect(entries).toHaveLength(8);
+    expect(entries).toHaveLength(9);
     for (const [entry, heading] of entries) {
       expect(entry).toBe(heading);
     }
     expect(Array.from(toc.querySelectorAll('a')).map((link) => link.getAttribute('href'))).toEqual([
       '/zasady-ochrany-osobnich-udaju#spravce',
       '/zasady-ochrany-osobnich-udaju#udaje',
+      '/zasady-ochrany-osobnich-udaju#emaily',
       '/zasady-ochrany-osobnich-udaju#uchovavani',
       '/zasady-ochrany-osobnich-udaju#prijemci',
       '/zasady-ochrany-osobnich-udaju#cookies',
       '/zasady-ochrany-osobnich-udaju#prava',
       '/zasady-ochrany-osobnich-udaju#kontakt',
       '/zasady-ochrany-osobnich-udaju#ucinnost',
+    ]);
+  });
+
+  it('when it renders, then it lists the e-mails a donor gets, says what is never sent and that they cannot be turned off', () => {
+    expect(texts('#emaily li')).toEqual([
+      'po registraci odkaz k potvrzení e‑mailu a jednu připomínku, pokud registraci do druhého dne nepotvrdíte,',
+      'odkaz pro obnovu hesla, když o něj požádáte,',
+      'při změně e‑mailu potvrzovací odkaz na novou adresu a oznámení na dosavadní adresu,',
+      'upozornění na změnu hesla, na zapnutí nebo vypnutí dvoufaktorového ověření a na přidání nebo odebrání přístupového klíče,',
+      'upozornění, když se s vaší adresou někdo zkusí zaregistrovat nebo ji chce použít jiný účet,',
+      'oznámení, že jsme vaše osobní údaje vymazali, když o výmaz požádáte.',
+    ]);
+    expect(texts('#emaily p')).toEqual([
+      'Dárcům posíláme jen e‑maily, které patří k jejich účtu:',
+      'Potvrzení o daru e‑mailem neposíláme, stáhnete si je ve svém dárcovském účtu. Neposíláme ani zpravodaj, reklamu nebo e‑mail po každém daru.',
+      'Tyto e‑maily vypnout nejde, protože slouží k přihlášení a k ochraně vašeho účtu. Na zprávu z kontaktního formuláře vám odpovíme e‑mailem.',
     ]);
   });
 
@@ -116,6 +134,9 @@ describe('Given the privacy policy page', () => {
     const donations = purposeText('Evidence darů a potvrzení o daru');
 
     expect(donations).toContain('podle vašeho variabilního symbolu');
+    expect(donations).toContain(
+      'i když ho místo do pole pro symbol napíšete do zprávy pro příjemce',
+    );
     expect(donations).toContain('podle čísla účtu, ze kterého přišla');
     expect(donations).toContain(
       'Když nám ho prokážete poprvé a předtím ho neprokázal jiný dárce, přiřadíme vám i dřívější platby bez symbolu z tohoto účtu.',
@@ -223,6 +244,9 @@ describe('Given the privacy policy page', () => {
     const recipients = sectionText('Komu údaje předáváme');
 
     expect(recipients).toContain('Sendinblue SAS');
+    expect(recipients).toContain(
+      'přes kterou web odesílá e‑maily dárcům popsané v části Jaké e‑maily posíláme, zprávy z kontaktního formuláře přeposílané do schránky nadačního fondu a přehledy a upozornění pro správce webu',
+    );
     expect(recipients).toContain('Brevo');
     expect(recipients).toContain('Cloudflare');
     expect(recipients).toContain('Gmail');

@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nfnn.cz/shared-cases/schemas/payment/spayd.schema.json",
+  "title": "SPAYD cases: a recipient account and the payment's amount, variable symbol and purpose give the SPAYD text of its QR, or a refusal",
+  "description": "A refusal is the problem GET /api/donations/payment-qr answers (status, type, fields). The backend runs the cases through that endpoint and GeneratePaymentQrService until slice 1.4, which removes the endpoint and retires the backend runner; from 1.4 the browser composes the text with spayd() from what GET /api/donations/payment-details serves, runs every case and rewrites these refusals as the ones spayd() gives. The messages and recipient name the backend serves have their own backend-only file from 1.2. qr/payment.json holds the QR symbol of each text under the same case name.",
+  "type": "object",
+  "required": ["source", "logic", "cases"],
+  "additionalProperties": false,
+  "properties": {
+    "source": { "$ref": "../defs/source.schema.json" },
+    "logic": { "type": "string", "minLength": 1 },
+    "cases": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/case" } }
+  },
+  "$defs": {
+    "case": {
+      "type": "object",
+      "required": ["name", "input", "expected"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "input": { "$ref": "#/$defs/input" },
+        "expected": { "oneOf": [{ "$ref": "#/$defs/text" }, { "$ref": "#/$defs/refusal" }] }
+      }
+    },
+    "input": {
+      "type": "object",
+      "required": ["recipient"],
+      "additionalProperties": false,
+      "properties": {
+        "recipient": {
+          "type": "object",
+          "required": ["accountNumber", "iban", "name"],
+          "additionalProperties": false,
+          "properties": {
+            "accountNumber": { "type": "string", "pattern": "^([0-9]{1,6}-)?[0-9]{1,10}/[0-9]{4}$" },
+            "iban": { "type": "string", "pattern": "^CZ[0-9]{22}$" },
+            "name": { "type": "string" }
+          }
+        },
+        "amount": { "type": "string" },
+        "variableSymbol": { "type": "string" },
+        "purpose": { "type": "string" }
+      }
+    },
+    "text": {
+      "type": "object",
+      "required": ["spayd"],
+      "additionalProperties": false,
+      "properties": {
+        "spayd": { "$ref": "../defs/spayd.schema.json" }
+      }
+    },
+    "refusal": {
+      "type": "object",
+      "required": ["refused"],
+      "additionalProperties": false,
+      "properties": {
+        "refused": {
+          "type": "object",
+          "required": ["status", "type", "fields"],
+          "additionalProperties": false,
+          "properties": {
+            "status": { "type": "integer", "minimum": 400, "maximum": 499 },
+            "type": { "type": "string", "pattern": "^https://nfnn\\.cz/problems/(validation|donations/[a-z]+(-[a-z]+)*)$" },
+            "fields": { "type": "array", "uniqueItems": true, "items": { "enum": ["amount", "variableSymbol", "purpose"] } }
+          }
+        }
+      }
+    }
+  }
+}

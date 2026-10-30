@@ -29,4 +29,6 @@ public interface DonorRecordRepository {
     List<DonorRecord> searchByNameOrSymbol(String query, int limit);
 
     long countRegisteredBefore(Instant end);
+
+    long countRegisteredSince(Instant from);
 }

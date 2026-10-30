@@ -137,6 +137,7 @@ export class LoginDialog {
   protected readonly recoveryQrLabel = $localize`:@@donor.login.recovery.qrAlt:QR platba 1 Kč se zprávou pro obnovu přístupu`;
   protected readonly passkeysSupported = this.passkeyAuthenticator.supported();
   protected readonly mode = signal<LoginDialogMode>(this.dialog.initialMode());
+  protected readonly forAdministration = this.dialog.forAdministration();
   protected readonly donorType = signal<DonorType>(this.draft?.donorType ?? 'PERSON');
   protected readonly signInMethod = signal<'password' | 'passkey'>(
     this.passkeysSupported ? (this.draft?.signInMethod ?? 'password') : 'password',

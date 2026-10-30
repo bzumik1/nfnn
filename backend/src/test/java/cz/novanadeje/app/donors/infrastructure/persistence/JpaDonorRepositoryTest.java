@@ -1,6 +1,5 @@
 package cz.novanadeje.app.donors.infrastructure.persistence;
 
-import cz.novanadeje.app.TestcontainersConfiguration;
 import cz.novanadeje.app.donors.domain.Donor;
 import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.donors.domain.DonorRepository;
@@ -30,7 +29,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import({TestcontainersConfiguration.class, JpaDonorRepository.class, JpaEmailVerificationTokenRepository.class})
+@Import(DonorsPersistenceTestConfiguration.class)
 class JpaDonorRepositoryTest {
 
     private static final Instant NOW = Instant.parse("2026-10-18T10:00:00Z");
@@ -56,6 +55,47 @@ class JpaDonorRepositoryTest {
         flushAndClear();
 
         assertThat(donors.findById(donor.id()).orElseThrow().emailVerifiedAt()).contains(NOW.plusSeconds(90));
+    }
+
+    @Test
+    @DisplayName("Given a donor who never signed in, when the sign-ins are recorded one after another, then the previous one is always the sign-in before the last")
+    void should_keep_the_sign_in_before_the_last_when_recorded_given_several_sign_ins() {
+        Donor donor = donor("jana@example.cz", "4821937560");
+        donors.save(donor);
+        flushAndClear();
+        assertThat(donors.findPreviousSignIn(donor.id())).isEmpty();
+
+        donors.recordSignIn(donor.id(), NOW);
+        flushAndClear();
+        assertThat(donors.findPreviousSignIn(donor.id())).isEmpty();
+
+        donors.recordSignIn(donor.id(), NOW.plusSeconds(3600));
+        donors.recordSignIn(donor.id(), NOW.plusSeconds(7200));
+        flushAndClear();
+
+        assertThat(donors.findPreviousSignIn(donor.id())).contains(NOW.plusSeconds(3600));
+    }
+
+    @Test
+    @DisplayName("Given a donor with recorded sign-ins, when the donor is changed and saved, then the sign-ins stay, and when they are forgotten, then none is left")
+    void should_keep_sign_ins_when_saved_and_drop_them_when_forgotten_given_recorded_sign_ins() {
+        Donor donor = donor("jana@example.cz", "4821937560");
+        donors.save(donor);
+        donors.recordSignIn(donor.id(), NOW);
+        donors.recordSignIn(donor.id(), NOW.plusSeconds(60));
+        flushAndClear();
+
+        Donor reloaded = donors.findById(donor.id()).orElseThrow();
+        reloaded.verifyEmail(NOW.plusSeconds(90));
+        donors.save(reloaded);
+        flushAndClear();
+        assertThat(donors.findPreviousSignIn(donor.id())).contains(NOW);
+
+        donors.forgetSignIns(donor.id());
+        donors.recordSignIn(donor.id(), NOW.plusSeconds(120));
+        flushAndClear();
+
+        assertThat(donors.findPreviousSignIn(donor.id())).isEmpty();
     }
 
     @Test

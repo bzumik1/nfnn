@@ -216,6 +216,11 @@ td.amount {
   white-space: nowrap;
 }
 
+td.amount {
+  font-weight: var(--weight-bold);
+  color: var(--color-text);
+}
+
 .admin-name {
   color: var(--color-text);
   font-weight: var(--weight-semibold);

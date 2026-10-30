@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { AuthStore } from '../../../../core/auth/auth-store';
+import { SignedOutNotice } from '../../../../core/auth/signed-out-notice';
 
 @Component({
   selector: 'app-dashboard-top-bar',
@@ -12,6 +13,7 @@ import { AuthStore } from '../../../../core/auth/auth-store';
 export class DashboardTopBar {
   private readonly router = inject(Router);
   private readonly auth = inject(AuthStore);
+  private readonly signedOut = inject(SignedOutNotice);
 
   readonly area = input<'donor' | 'admin'>('donor');
   readonly wide = input(false);
@@ -26,6 +28,8 @@ export class DashboardTopBar {
       return;
     }
     this.signingOut.set(true);
-    this.auth.logout().subscribe(() => this.router.navigateByUrl('/'));
+    this.auth
+      .logout()
+      .subscribe(() => void this.router.navigateByUrl('/').then(() => this.signedOut.show()));
   }
 }

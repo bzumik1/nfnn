@@ -74,7 +74,7 @@ public class DonorPasskeySignInService {
         passkey.recordSignIn(signCount, now);
         passkeys.save(passkey);
         log.info("Donor {} signed in with passkey {}", donor.id(), passkey.id());
-        return views.authenticated(donor, sessions.open(donor, true));
+        return views.authenticated(donor, sessions.signIn(donor, true));
     }
 
     private static LinkSecret parse(String challenge) {

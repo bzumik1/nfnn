@@ -107,6 +107,11 @@ class JpaDonorRecordRepository implements DonorRecordRepository {
         return jpa.countByRegisteredAtBefore(end);
     }
 
+    @Override
+    public long countRegisteredSince(Instant from) {
+        return jpa.countByRegisteredAtGreaterThanEqual(from);
+    }
+
     private DonorRecord withAccounts(DonorRecordJpaEntity entity) {
         return entity.toDomain(accounts.findByDonorIdOrderByCreatedAtAscIdAsc(entity.donorId()).stream()
                 .map(DonorSenderAccountJpaEntity::toDomain)

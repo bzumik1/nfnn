@@ -9,6 +9,7 @@ import cz.novanadeje.app.shared.domain.VariableSymbol;
 import cz.novanadeje.app.shared.infrastructure.search.AccentFolding;
 import org.springframework.stereotype.Repository;
 
+import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -71,5 +72,20 @@ class JpaDonorRepository implements DonorRepository {
     public List<Donor> search(String query, int offset, int limit) {
         String escaped = AccentFolding.fold(query).replace("!", "!!").replace("%", "!%").replace("_", "!_");
         return jpa.search(escaped, new OffsetPage(offset, limit)).stream().map(DonorJpaEntity::toDomain).toList();
+    }
+
+    @Override
+    public void recordSignIn(DonorId id, Instant at) {
+        jpa.recordSignIn(id.value(), at);
+    }
+
+    @Override
+    public Optional<Instant> findPreviousSignIn(DonorId id) {
+        return jpa.findPreviousSignIn(id.value());
+    }
+
+    @Override
+    public void forgetSignIns(DonorId id) {
+        jpa.forgetSignIns(id.value());
     }
 }

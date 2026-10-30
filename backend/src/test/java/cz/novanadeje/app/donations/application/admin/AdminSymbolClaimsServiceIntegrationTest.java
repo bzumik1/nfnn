@@ -1,6 +1,6 @@
 package cz.novanadeje.app.donations.application.admin;
 
-import cz.novanadeje.app.TestcontainersConfiguration;
+import cz.novanadeje.app.IntegrationTest;
 import cz.novanadeje.app.donations.application.bankaccount.DonorBankAccountsService;
 import cz.novanadeje.app.donations.application.bankaccount.SymbolClaimConfirmation;
 import cz.novanadeje.app.donations.application.bankaccount.SymbolClaimService;
@@ -26,12 +26,10 @@ import cz.novanadeje.app.shared.domain.PostalAddress;
 import cz.novanadeje.app.shared.domain.UuidV7;
 import cz.novanadeje.app.shared.domain.VariableSymbol;
 import cz.novanadeje.app.support.DatabaseCleaner;
-import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.simple.JdbcClient;
 
 import java.time.Instant;
@@ -46,9 +44,7 @@ import static cz.novanadeje.app.donations.BankPayments.payment;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-@Import(TestcontainersConfiguration.class)
-@SpringBootTest(properties = {"app.donations.fio.token=", "app.donations.report.cron=-", "app.contact.retention.cron=-", "app.content.media-cleanup.cron=-", "app.operations.backups.check-cron=-", "app.donors.registration-reminder.cron=-",
-        "app.donations.receipt.first-year=2025"})
+@IntegrationTest
 class AdminSymbolClaimsServiceIntegrationTest {
 
     private static final UUID ADMIN = UUID.fromString("01a18e56-bdb0-775a-bd0a-a60756831369");
@@ -74,9 +70,9 @@ class AdminSymbolClaimsServiceIntegrationTest {
     @Autowired
     private JdbcClient jdbc;
 
-    @AfterEach
-    void cleanTables() {
-        new DatabaseCleaner(jdbc).truncateAllTables();
+    @BeforeEach
+    void startFromEmptyTables() {
+        new DatabaseCleaner(jdbc).emptyAllTables();
     }
 
     @Test

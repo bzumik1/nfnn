@@ -13,9 +13,21 @@ export function donationItem(overrides: Partial<DonationItem> = {}): DonationIte
     pairedBy: 'VARIABLE_SYMBOL',
     senderAccount: null,
     confirmedSymbol: null,
+    accountVerification: false,
     receiptAvailable: true,
     ...overrides,
   };
+}
+
+export function accountVerificationItem(overrides: Partial<DonationItem> = {}): DonationItem {
+  return donationItem({
+    id: '0192f0f1-0000-7000-8000-0000000000a1',
+    amountMinor: 100,
+    purpose: 'Ověření účtu',
+    accountVerification: true,
+    receiptAvailable: false,
+    ...overrides,
+  });
 }
 
 export function twoYearDonations(): DonationListResponse {

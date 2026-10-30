@@ -43,7 +43,7 @@ Web představí fond a jeho pomoc dětem, usnadní darování a dárcům dá ú�
 
 - Heslo a e-mail se mění jen se současným heslem (nebo klíčem). Nový e-mail se potvrdí z nové adresy a stará adresa dostane oznámení. Po změně hesla dostane dárce e-mail.
 - Na stránce Údaje a zabezpečení je všechno k přihlášení v jedné kartě „Přihlášení a zabezpečení“: řádky E-mail, Heslo, Dvoufaktorové ověření a Přístupové klíče, každý se stavem a jednou akcí, formulář se otevře pod řádkem. Rozpracovaná změna e-mailu je vidět („Čeká na potvrzení: adresa“) a jde poslat znovu (starý odkaz přestane platit) nebo zrušit (Jakub 24. 10. 2026).
-- Dvoufaktorové ověření kódem z aplikace v telefonu si může zapnout každý dárce; správce ho mít musí (nebo se přihlásit klíčem, který platí jako druhý faktor). Záložní kódy nejsou.
+- Dvoufaktorové ověření kódem z aplikace v telefonu si může zapnout každý dárce; správce ho mít musí (nebo se přihlásit klíčem, který platí jako druhý faktor). Záložní kódy nejsou (Jakub 29. 10. 2026); před zapnutím se dárce dočte, že ztracený telefon nahradí platba 1 Kč z účtu ověřeného aspoň týden, dřív jen správce.
 - Ztracený telefon: jiný správce ověření vypne, nebo ho dárce vypne sám platbou 1 Kč s jednorázovým kódem z bankovního účtu, který má u fondu ověřený aspoň 7 dní. Ztracené klíče odebere správce.
 - Kdo obnovu platbou zahájí znovu, dokud předchozí platí, dostane stejný kód a platnost s větou „Tuto obnovu už jste zahájili …“; obnova ukazuje i QR platbu 1 Kč se zprávou OBNOVA … bez VS (Jakub 24. 10. 2026, kód se proto ukládá i čitelně).
 - Přístupové klíče přidá dárce v přehledu (se současným heslem nebo klíčem), přejmenuje a odebere; o přidání i odebrání dostane e-mail; nejvýš 10. Klíče ze zkušební adresy se po přechodu na nfnn.cz smažou samy.
@@ -53,6 +53,8 @@ Web představí fond a jeho pomoc dětem, usnadní darování a dárcům dá ú�
 
 - Celkem darováno, počet darů, poslední dar, tabulka plateb a souhrn po letech (rok, počet darů, částka).
 - Moje dary jsou seskupené po letech od nejnovějšího, každý rok s počtem darů, částkou a tlačítkem na roční potvrzení, jakmile je k dispozici (Jakub 24. 10. 2026).
+- Můj přehled má kartu „Poslat dar“ se stejnou volbou částky, číslem účtu, variabilním symbolem, IBAN a QR jako sekce Přispět a s návodem na trvalý příkaz; dárce kvůli číslu účtu nechodí na hlavní stránku (Jakub 29. 10. 2026).
+- Částky v přehledu, v Moje dary, v potvrzeních a v platbách a kartě dárce ve správě jsou tučné v barvě textu; modrá zůstává odkazům a tlačítkům (Jakub 29. 10. 2026).
 - Bankovní účty, ze kterých se dárci přiřazují platby bez symbolu (§5), s počtem a součtem darů z každého.
 
 ### Potvrzení o daru
@@ -66,14 +68,14 @@ Web představí fond a jeho pomoc dětem, usnadní darování a dárcům dá ú�
 ## 5. Příjem a párování darů
 
 - Dary chodí převodem na účet u Fio banky. Web si pohyby stahuje sám každou hodinu, tokenem jen pro čtení; první import sáhne tak daleko zpět, jak Fio dovolí.
-- Párování podle variabilního symbolu dárce. Symbol `0` znamená platbu bez symbolu.
+- Párování podle variabilního symbolu dárce. Symbol `0` znamená platbu bez symbolu. Když pole symbolu chybí a ve zprávě pro příjemce je právě jeden symbol některého dárce, platba patří jemu, i u ověření účtu platbou 1 Kč (Jakub 29. 10. 2026: některé banky pole symbolu nemají).
 - Platba bez symbolu se přiřadí podle čísla účtu odesílatele, ale jen z účtu, který dárce prokázal platbou se svým symbolem. Dárce si účet do profilu sám nezadává, jinak by kdokoli viděl cizí dary. Další účet prokáže platbou 1 Kč se svým symbolem; pak se mu přiřadí i dřívější platby z něj.
 - Jméno majitele účtu se nekontroluje: kdo účet prokáže, dostane jeho platby.
 - Párování z účtu může dárce i správce vypnout; dosavadní dary zůstávají a po zapnutí se párují jen nové platby. Účet, který prokázali dva dárci, je sdílený a platby bez symbolu z něj zůstávají nespárované; o druhém dárci web nic neříká.
 - Sběrné účty (platební brány, účty fondu, Česká pošta) správce vyloučí z párování v nastavení.
 - Platba s neznámým symbolem zůstane nespárovaná, i když přišla ze známého účtu: překlep nesmí skončit jako cizí dar.
 - **Starší variabilní symbol**: dlouholetí dárci posílají se starým symbolem, který nikdo z registrovaných nemá. Když dárce prokáže účet platbou 1 Kč se zprávou „Ověření účtu“ a z toho účtu chodil právě jeden takový symbol, přehled se ho zeptá, jestli jsou to jeho dary (symbol, počet plateb a měsíce, nikdy částky). Po „Ano“ se mu tyto platby přiřadí i do budoucna. Otázka nepřijde u rodinných, sdílených nebo vyloučených účtů ani když jméno z banky neodpovídá typu dárce (firma a člověk). Odpověď dárce sám nezmění, omyl opraví správce.
-- Platba 1 Kč se zprávou „Ověření účtu“ je „Ověření účtu“, ostatní „Obecný příspěvek“; i ověřovací platba je dar a počítá se do potvrzení.
+- Platba 1 Kč se zprávou „Ověření účtu“ je „Ověření účtu“, ostatní „Obecný příspěvek“. Přehled a Moje dary ji ukazují jako „Ověření účtu“ s částkou, méně výrazně než dary; nikdy není „Poslední dar“ (dárce, který poslal jen ověření, ještě dar nemá) a nemá vlastní potvrzení o jednotlivém daru. Do ročních součtů a ročního potvrzení se dál počítá (Jakub 29. 10. 2026; dříve, 18. 10., byla obyčejným darem s vlastním potvrzením).
 - Co nejde přiřadit, přiřadí ručně správce. Ruční přiřazení nenaučí účet odesílatele a zrušené přiřazení se při dalším stažení samo nevrátí. Dar, ke kterému je vydané potvrzení o jednotlivém daru, odpárovat nejde; změna roku, za který už dárce stáhl roční potvrzení, se správci ohlásí.
 
 ## 6. Správa
@@ -81,7 +83,8 @@ Web představí fond a jeho pomoc dětem, usnadní darování a dárcům dá ú�
 - Všechno, co správa potřebuje, jde v prohlížeči na `/sprava`; nic se nedělá SQL ani zásahem na serveru.
 - Každé datum, lhůta a čas funkce je nastavení ve správě s výchozí hodnotou, a každý automatický e-mail jde ve správě vypnout (upozornění na poruchy s varováním, bezpečnostní e-maily nikdy). U stávajících funkcí se to doplňuje postupně (`roadmap.md`).
 - Menu podle toho, jak často se stránky používají: Přehled; Každý den (Platby z banky, Dárci, Aktuality, Projekty); Občas (Správci, Měsíční e-mail, Zálohy, Historie změn); Pro technika (Nastavení, Logy a diagnostika, Odpovědi o starších symbolech).
-- **Přehled**: dary a dárci za rok po měsících: počet a součet všech přijatých plateb, noví dárci, kolik je spárovaných a kolik ne.
+- **Přehled**: dary a dárci za rok po měsících: počet a součet všech přijatých plateb, kolik různých dárců v měsíci poslalo dar (sloupec „Dárci“; platby bez dárce se nepočítají), noví dárci (registrace), kolik je spárovaných a kolik ne.
+- **Od posledního přihlášení** (Jakub 29. 10. 2026, po uživatelských testech, „Obojí“: tento blok i sloupec „Dárci“): nahoře na přehledu správy, co přibylo od předchozího přihlášení správce do správy: nové platby z banky (počet a součet), kolik z nich je přiřazených a kolik čeká na přiřazení, a noví registrovaní dárci; každé číslo vede na svou stránku (Platby z banky s datem od přihlášení, Dárci) a blok uvádí, kdy přihlášení bylo. Bez předchozího přihlášení nebo když nic nepřibylo, řekne to jednou větou. Web si pamatuje jen poslední dvě přihlášení správců (u dárců nic) a každý správce vidí jen svoje; obnovení přihlášení se nepočítá. Konektor totéž čte nástrojem. Zatím to počítá server; verze z dat v zařízení s vydanými potvrzeními a zásahy jiných správců zůstává v roadmapě.
 - **Správci**: roli dává a bere jen jiný správce, a jen účtu s potvrzeným e-mailem; sám sobě nikdo. Prvního správce určí e-mail z prvního nastavení. Správce na žádost majitele vypne dvoufaktorové ověření nebo odebere klíče.
 - **Dárci**: hledání podle jména, e-mailu nebo symbolu (bez ohledu na diakritiku), karta dárce s účtem, bankovními účty, dary a potvrzeními. Správce dárci údaje nemění. Odebere účet přiřazený omylem, dokud jeho dary nekryje vydané potvrzení.
 - **Výmaz podle GDPR** na kartě dárce: jméno, adresa, e-mail a přihlašovací údaje se nahradí zástupnými, dary a vydaná potvrzení zůstávají kvůli účetnictví, symbol se už nepáruje a dárce dostane e-mail. Výmaz je nevratný; správce vymazat nejde.

@@ -23,6 +23,30 @@ Feature: Imported payments are paired with donors
     And "Jana" has 0 donations
     And "Jana" has learned no sender account
 
+  Scenario: A payment without a variable symbol whose message carries the donor's symbol is paired by that symbol
+    Given today is 2026-10-17
+    And a person "Jana" is registered
+    And the bank account has these movements:
+      | id   | date       | amount | account    | bankCode | name          | variableSymbol | message                       |
+      | 1001 | 2026-10-10 | 200.00 | 2900233333 | 2010     | Nováková Jana |                |                               |
+      | 1002 | 2026-10-15 | 1.00   | 2900233333 | 2010     | Nováková Jana |                | OVERENI UCTU VS {Jana}        |
+    When the application starts the import
+    Then bank payment 1002 is paired with "Jana"
+    And "Jana" has learned sender account "2900233333/2010"
+    And bank payment 1001 is paired with "Jana"
+    And "Jana" has a donation of "1.00" CZK received on 2026-10-15 paired by variable symbol
+
+  Scenario: A payment without a variable symbol whose message carries a number no donor has is paired by its account
+    Given today is 2026-10-17
+    And a person "Jana" is registered
+    And the bank account has these movements:
+      | id   | date       | amount | account    | bankCode | name          | variableSymbol | message            |
+      | 1001 | 2026-10-10 | 500.00 | 2900233333 | 2010     | Nováková Jana | {Jana}         |                    |
+      | 1002 | 2026-10-15 | 300.00 | 2900233333 | 2010     | Nováková Jana |                | faktura 2026000123 |
+    When the application starts the import
+    Then bank payment 1002 is paired with "Jana"
+    And "Jana" has a donation of "300.00" CZK received on 2026-10-15 paired by sender account
+
   Scenario: A payment without a variable symbol from an unknown account stays unpaired
     Given today is 2026-10-17
     And a person "Jana" is registered

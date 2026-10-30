@@ -25,6 +25,23 @@ Feature: An administrator pairs bank payments by hand
       | counterpartyAccount | 2900233333/2010 |
       | counterpartyName    | Nováková Jana   |
       | messageForRecipient | Dar pro fond    |
+      | accountVerification | false           |
+
+  Scenario: An unpaired 1 Kč account verification is marked as one in the list
+    Given the bank account has these movements:
+      | id   | date       | amount | account    | bankCode | name          | variableSymbol | message                               |
+      | 1001 | 2026-10-10 | 500.00 | 2900233333 | 2010     | Nováková Jana | 1111111111     | Dar pro fond                          |
+      | 1004 | 2026-10-11 | 1.00   | 2501234567 | 2010     | Marková Lucie |                | Ověření účtu Nadační fond Nová naděje |
+    And the application starts the import
+    When "Jana" asks for the unpaired payments
+    Then the response status is 200
+    And the unpaired payments are 1004, 1001
+    And unpaired payment 1001 says:
+      | amountMinor         | 50000 |
+      | accountVerification | false |
+    And unpaired payment 1004 says:
+      | amountMinor         | 100   |
+      | accountVerification | true  |
 
   Scenario: The payments are filtered by text and period and paged with the total of all that match
     Given the bank account has these movements:

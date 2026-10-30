@@ -1,0 +1,6 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nfnn.cz/shared-cases/schemas/defs/source.schema.json",
+  "title": "Where a case file comes from: v2-baseline while it is what the v2 generator wrote at the baseline commit, edited once a pull request changed it by hand",
+  "enum": ["v2-baseline", "edited"]
+}

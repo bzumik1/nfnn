@@ -94,6 +94,7 @@
         "test": {
           "builder": "@angular/build:unit-test",
           "options": {
+            "runnerConfig": "vitest.config.mts",
             "setupFiles": ["src/test-setup.ts"],
             "providersFile": "src/test-providers.ts"
           }
@@ -101,7 +102,7 @@
         "lint": {
           "builder": "@angular-eslint/builder:lint",
           "options": {
-            "lintFilePatterns": ["src/**/*.ts", "src/**/*.html", "e2e/**/*.ts"]
+            "lintFilePatterns": ["src/**/*.ts", "src/**/*.html", "e2e/**/*.ts", "vitest.config.mts"]
           }
         }
       }

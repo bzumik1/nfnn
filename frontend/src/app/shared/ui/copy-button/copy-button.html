@@ -1,6 +1,8 @@
 <button type="button" class="copy-button" [class.is-copied]="state() === 'copied'" (click)="copy()">
   @if (state() === 'copied') {
     <span i18n="@@ui.copy.done">Zkopírováno</span>
+  } @else if (label(); as text) {
+    <span>{{ text }}</span>
   } @else {
     <span i18n="@@ui.copy.action">Kopírovat</span>
     <span class="visually-hidden"> {{ what() }}</span>

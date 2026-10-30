@@ -2,6 +2,7 @@ package cz.novanadeje.app.donations.domain.bank;
 
 import cz.novanadeje.app.shared.domain.VariableSymbol;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.Year;
 import java.util.Collection;
@@ -36,4 +37,8 @@ public interface BankPaymentRepository {
     List<BankPayment> findUnpairedBookedBetween(LocalDate firstDay, LocalDate lastDay);
 
     List<Year> findBookedYearsNewestFirst();
+
+    List<BankPayment> findImportedSince(Instant from);
+
+    List<BankPayment> findUnpairedImportedSince(Instant from);
 }

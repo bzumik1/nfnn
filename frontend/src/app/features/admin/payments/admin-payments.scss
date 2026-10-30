@@ -143,7 +143,7 @@
 .payments-card td.amount {
   font-size: var(--text-lg);
   font-weight: var(--weight-bold);
-  color: var(--color-accent);
+  color: var(--color-text);
   font-family: var(--font-serif);
   font-variant-numeric: var(--numeric-figures);
   white-space: nowrap;
@@ -364,6 +364,16 @@
   font-size: var(--text-sm);
   color: var(--color-text-muted);
   font-variant-numeric: var(--numeric-figures);
+  overflow-wrap: anywhere;
+}
+
+.verification-tag {
+  margin-left: var(--space-1-5);
+  font-family: var(--font-sans);
+}
+
+.pair-verification {
+  margin: 0 0 var(--space-5);
 }
 
 .pair-empty {

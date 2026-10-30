@@ -61,3 +61,26 @@ describe('Given a copy button for an account number', () => {
     expect(status()).toBe('Zkopírovat se nepodařilo, opište si údaj prosím ručně.');
   });
 });
+
+describe('Given a copy button with a label of its own', () => {
+  let fixture: ComponentFixture<CopyButton>;
+
+  beforeEach(async () => {
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText: vi.fn().mockResolvedValue(undefined) },
+      configurable: true,
+    });
+    await TestBed.configureTestingModule({ imports: [CopyButton] }).compileComponents();
+    fixture = TestBed.createComponent(CopyButton);
+    fixture.componentRef.setInput('value', 'Zálohy nefungují.');
+    fixture.componentRef.setInput('what', 'zprávu pro technika');
+    fixture.componentRef.setInput('label', 'Zkopírovat zprávu pro technika');
+    fixture.detectChanges();
+  });
+
+  it('when it renders, then the button shows the label alone', () => {
+    const button = fixture.nativeElement.querySelector('button') as HTMLButtonElement;
+
+    expect(button.textContent?.replace(/\s+/g, ' ').trim()).toBe('Zkopírovat zprávu pro technika');
+  });
+});

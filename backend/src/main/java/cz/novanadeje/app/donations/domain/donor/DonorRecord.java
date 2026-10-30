@@ -113,7 +113,7 @@ public final class DonorRecord {
     }
 
     public boolean claimsBySymbol(BankPayment payment) {
-        return erasedAt == null && require(payment, "Payment").matchingVariableSymbol().filter(variableSymbol::equals).isPresent();
+        return erasedAt == null && require(payment, "Payment").pairingSymbol().filter(variableSymbol::equals).isPresent();
     }
 
     public Optional<SenderAccountLink> linkPairingPaymentsFrom(SenderAccount account, LocalDate bookedOn) {

@@ -12,7 +12,7 @@
   </thead>
   <tbody>
     @for (item of items(); track item.id) {
-      <tr>
+      <tr [class.is-verification]="item.accountVerification">
         <td class="date" data-label="Datum" i18n-data-label="@@donor.dashboard.payments.col.date">
           {{ formatDate(item.receivedAt) }}
         </td>
@@ -81,11 +81,23 @@
                   >
                 }
               </button>
+              <p class="ui-form-status receipt-saved" role="status">
+                @if (donations.singleSaved(item); as saved) {
+                  <span>{{ saved }}</span>
+                }
+              </p>
             } @else {
               @switch (missingReceipt(item)) {
                 @case ('refunded') {
                   <span class="receipt-note" i18n="@@donor.dashboard.payments.noReceipt.refunded"
                     >Vrácený dar potvrzení nemá</span
+                  >
+                }
+                @case ('verification') {
+                  <span
+                    class="receipt-note"
+                    i18n="@@donor.dashboard.payments.noReceipt.verification"
+                    >Započítá se do ročního potvrzení</span
                   >
                 }
                 @case ('before-first-year') {

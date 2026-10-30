@@ -47,7 +47,7 @@ npm start                   # dev server na http://localhost:4200, /api proxy na
 | | Backend | Frontend |
 |---|---|---|
 | Unit | `./gradlew test` (potřebuje Docker) | `npm test -- --watch=false` |
-| Cucumber / E2E | `./gradlew test --tests "*AcceptanceTests"` | `npm run e2e` |
+| Cucumber / E2E | `./gradlew acceptanceTest` | `npm run e2e` |
 | Bez Dockeru | `./gradlew test --tests "*architecture*" -PnoCucumber` | `npm run format:check`, `npm run lint`, `npm run lint:styles`, `npm run build` |
 
 ## Produkční nasazení (ZimaOS)

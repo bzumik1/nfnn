@@ -39,7 +39,7 @@ OWNERSHIP_SQL=${OWNERSHIP_SQL:-/usr/local/share/nfnn/own-by-app-role.sql}
 LOGS=${LOGS_DIR:-/logs}
 SECRETS=${SECRETS_DIR:-/secrets}
 KEY_FILE=${BACKUP_KEY_FILE:-$SECRETS/backup-key}
-POLL_SECONDS=10
+POLL_SECONDS=${POLL_SECONDS:-10}
 AGE_HEADER="age-encryption.org/v1"
 
 STATUS="$BACKUPS/status"

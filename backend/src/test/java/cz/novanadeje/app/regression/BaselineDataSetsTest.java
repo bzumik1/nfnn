@@ -1,6 +1,7 @@
 package cz.novanadeje.app.regression;
 
 import cz.novanadeje.app.cucumber.transcript.ApiTranscripts;
+import cz.novanadeje.app.sharedcases.SharedCases;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -54,7 +55,7 @@ class BaselineDataSetsTest {
         for (Path file : files) {
             JsonNode cases = JSON.readTree(Files.readString(file, StandardCharsets.UTF_8));
             assertThat(cases.properties().stream().map(java.util.Map.Entry::getKey).toList()).as("%s", file).containsExactly("source", "logic", "cases");
-            assertThat(cases.get("source").asString()).as("%s", file).isEqualTo(ApiTranscripts.SOURCE);
+            assertThat(cases.get("source").asString()).as("%s", file).isIn(SharedCases.SOURCES);
             assertThat(cases.get("logic").asString()).as("%s", file).isNotBlank();
             assertThat(cases.get("cases").isArray() && !cases.get("cases").isEmpty()).as("%s has cases", file).isTrue();
             Set<String> names = new HashSet<>();
@@ -89,14 +90,14 @@ class BaselineDataSetsTest {
     @Test
     @DisplayName("Given the screens spec and the manifest, when their states are compared, then the manifest has a shot of every state of the spec and no other")
     void should_list_exactly_the_states_of_the_spec_when_the_screens_manifest_is_compared_with_the_spec() throws IOException {
-        String spec = Files.readString(GoldenFiles.repositoryRoot().resolve(SCREENS_SPEC), StandardCharsets.UTF_8);
+        String spec = Files.readString(SharedCases.repositoryRoot().resolve(SCREENS_SPEC), StandardCharsets.UTF_8);
         String screens = spec.substring(spec.indexOf("const SCREENS: Screen[] = ["), spec.indexOf("\n];", spec.indexOf("const SCREENS: Screen[] = [")));
         Set<String> specStates = new TreeSet<>();
         Matcher name = SCREEN_NAME.matcher(screens);
         while (name.find()) {
             specStates.add(name.group(1) != null ? name.group(1) : name.group(2));
         }
-        JsonNode manifest = JSON.readTree(Files.readString(GoldenFiles.repositoryRoot().resolve(SCREENS_MANIFEST), StandardCharsets.UTF_8));
+        JsonNode manifest = JSON.readTree(Files.readString(SharedCases.repositoryRoot().resolve(SCREENS_MANIFEST), StandardCharsets.UTF_8));
 
         assertThat(specStates).as("states in %s", SCREENS_SPEC).hasSizeGreaterThan(30);
         assertThat(new TreeSet<>(manifest.get("shots").valueStream().map(shot -> shot.get("state").asString()).toList())).isEqualTo(specStates);
@@ -124,7 +125,7 @@ class BaselineDataSetsTest {
     @Test
     @DisplayName("Given the screens manifest, when it is read, then every route and state has a shot at 390 and at 1280 px with the digest of its pixels")
     void should_list_every_state_at_both_widths_when_the_screens_manifest_is_read() throws IOException {
-        JsonNode manifest = JSON.readTree(Files.readString(GoldenFiles.repositoryRoot().resolve(SCREENS_MANIFEST), StandardCharsets.UTF_8));
+        JsonNode manifest = JSON.readTree(Files.readString(SharedCases.repositoryRoot().resolve(SCREENS_MANIFEST), StandardCharsets.UTF_8));
 
         assertThat(manifest.get("source").asString()).isEqualTo(ApiTranscripts.SOURCE);
         JsonNode shots = manifest.get("shots");
@@ -144,7 +145,7 @@ class BaselineDataSetsTest {
     }
 
     private static List<Path> jsonFiles(String folder) {
-        Path root = GoldenFiles.repositoryRoot().resolve(folder);
+        Path root = SharedCases.repositoryRoot().resolve(folder);
         if (!Files.isDirectory(root)) {
             return List.of();
         }

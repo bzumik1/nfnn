@@ -1,15 +1,19 @@
 package cz.novanadeje.app.cucumber.transcript;
 
+import cz.novanadeje.app.operations.domain.settings.Setting;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
 import org.springframework.core.task.SimpleAsyncTaskExecutor;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
+import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -17,6 +21,8 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class ApiTranscriptsTest {
+
+    private static final Pattern BOUND_SECRET = Pattern.compile("\\$\\{([A-Z0-9_]*(?:PASSWORD|TOKEN|SECRET|KEY))[:}]");
 
     private static final String FEATURE = """
             Feature: Connected applications
@@ -59,23 +65,51 @@ class ApiTranscriptsTest {
     }
 
     @Test
+    @DisplayName("Given the backup key in the environment, when recording starts, then it is refused without naming its value")
+    void should_refuse_to_record_when_the_backup_key_is_in_the_environment() {
+        assertThatThrownBy(() -> ApiTranscripts.refuseRealSecrets(Map.of("BACKUP_KEY", "AGE-SECRET-KEY-1PLANTED")))
+                .isInstanceOf(IllegalStateException.class).hasMessageContaining("BACKUP_KEY").hasMessageNotContaining("PLANTED");
+    }
+
+    @Test
+    @DisplayName("Given a secret under a name Spring binds by relaxed binding, an application variable or SPRING_APPLICATION_JSON, when recording starts, then it is refused")
+    void should_refuse_to_record_when_a_secret_could_reach_spring_under_another_name() {
+        for (String name : List.of("APP_OPERATIONS_BACKUPKEY_VALUE", "APP_SECURITY_JWT_SECRET", "APP_DONATIONS_FIO_TOKEN", "SPRING_APPLICATION_JSON",
+                "SPRING_MAIL_PASSWORD", "SPRING_DATASOURCE_PASSWORD")) {
+            assertThatThrownBy(() -> ApiTranscripts.refuseRealSecrets(Map.of(name, "x"))).as(name).isInstanceOf(IllegalStateException.class)
+                    .hasMessageContaining(name);
+        }
+        assertThatCode(() -> ApiTranscripts.refuseRealSecrets(Map.of("API_TRANSCRIPTS", "record", "SPRING_PROFILES_ACTIVE", "dev",
+                "TESTCONTAINERS_HUB_IMAGE_NAME_PREFIX", "mirror.gcr.io/"))).doesNotThrowAnyException();
+    }
+
+    @Test
+    @DisplayName("Given every secret setting of the operations context, when one is in the environment, then recording is refused, so a new secret setting cannot be forgotten")
+    void should_refuse_to_record_when_any_secret_setting_is_in_the_environment() {
+        assertThat(Setting.secrets()).isNotEmpty().allSatisfy(setting ->
+                assertThatThrownBy(() -> ApiTranscripts.refuseRealSecrets(Map.of(setting.name(), "x")))
+                        .as(setting.name()).isInstanceOf(IllegalStateException.class).hasMessageContaining(setting.name()));
+    }
+
+    @Test
+    @DisplayName("Given every environment name the backend's configuration binds to a password, token, secret or key, when one is set, then recording is refused")
+    void should_refuse_to_record_when_any_secret_the_configuration_binds_is_in_the_environment() throws IOException {
+        Set<String> bound = new TreeSet<>();
+        try (Stream<Path> files = Files.list(Path.of("src/main/resources"))) {
+            for (Path file : files.filter(path -> path.getFileName().toString().matches("application.*\\.ya?ml")).toList()) {
+                BOUND_SECRET.matcher(Files.readString(file)).results().map(match -> match.group(1)).forEach(bound::add);
+            }
+        }
+
+        assertThat(bound).contains("BACKUP_KEY", "JWT_SECRET", "SETTINGS_KEY", "FIO_TOKEN", "MAIL_PASSWORD").allSatisfy(name ->
+                assertThatThrownBy(() -> ApiTranscripts.refuseRealSecrets(Map.of(name, "x"))).as(name).isInstanceOf(IllegalStateException.class));
+    }
+
+    @Test
     @DisplayName("Given an executor that cannot report its work, when the recorder waits for asynchronous work, then it fails instead of skipping the wait")
     void should_fail_when_the_recorder_cannot_wait_for_asynchronous_work() {
         assertThatThrownBy(() -> ApiTranscriptHooks.awaitIdle(new SimpleAsyncTaskExecutor(), Duration.ofSeconds(1)))
                 .isInstanceOf(IllegalStateException.class);
-    }
-
-    @Test
-    @DisplayName("Given transcript files left by an earlier run, when a recording run starts, then the folder is emptied, so no stale file survives")
-    void should_empty_the_folder_when_a_recording_run_starts_given_files_of_an_earlier_run(@TempDir Path transcripts) throws IOException {
-        Files.createDirectories(transcripts.resolve("donors"));
-        Files.writeString(transcripts.resolve("donors/removed_feature.json"), "{}");
-
-        ApiTranscripts.startRun(transcripts);
-
-        try (Stream<Path> left = Files.walk(transcripts)) {
-            assertThat(left.filter(Files::isRegularFile)).isEmpty();
-        }
     }
 
     @Test

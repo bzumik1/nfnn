@@ -4,6 +4,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Collection;
 import java.util.List;
@@ -44,4 +45,9 @@ interface BankPaymentJpaRepository extends JpaRepository<BankPaymentJpaEntity, U
 
     @Query("select distinct year(p.bookedOn) from BankPaymentJpaEntity p order by year(p.bookedOn) desc")
     List<Integer> findBookedYearsNewestFirst();
+
+    List<BankPaymentJpaEntity> findByImportedAtGreaterThanEqual(Instant from);
+
+    @Query(UNPAIRED + " and p.importedAt >= :from")
+    List<BankPaymentJpaEntity> findUnpairedImportedSince(@Param("from") Instant from);
 }

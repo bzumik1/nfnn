@@ -4,11 +4,6 @@ on:
   pull_request:
     branches: [main]
     types: [opened, synchronize, reopened, edited]
-    paths:
-      - "**"
-      - "!docs/**"
-      - "!.claude/**"
-      - "!**/*.md"
 
 permissions:
   contents: read
@@ -32,6 +27,10 @@ jobs:
           PULL_BODY: ${{ github.event.pull_request.body }}
         run: |
           files=$(gh api "repos/$REPOSITORY/pulls/$PULL_NUMBER/files" --paginate --jq '.[].filename')
+          if ! grep -Ev '^(docs/|\.claude/)|\.md$' <<<"$files" | grep -q .; then
+            echo "The pull request changes only docs/, .claude/ or Markdown, so it needs no roadmap update."
+            exit 0
+          fi
           if grep -qx 'docs/roadmap.md' <<<"$files"; then
             echo "docs/roadmap.md is updated."
             exit 0

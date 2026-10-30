@@ -35,7 +35,7 @@ public record DonationOverview(DonationList list, Map<DonationId, ReceiptNumber>
     }
 
     public boolean receiptAvailable(Donation donation) {
-        return donation.isReceived() && firstReceiptYear.admits(donation.receivedOn());
+        return donation.isReceived() && !donation.isAccountVerification() && firstReceiptYear.admits(donation.receivedOn());
     }
 
     public Optional<SenderAccount> senderAccountOf(Donation donation) {

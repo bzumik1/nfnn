@@ -276,6 +276,26 @@ Feature: A donor downloads PDF receipts of their donations
     Then the response status is 404
     And the problem type ends with "donations/yearly-receipt-not-available"
 
+  Scenario: A payment that verified an account has no receipt of its own and counts in the yearly receipt
+    Given today is 2026-12-20
+    And a person "Jana" is registered
+    And the bank account has these movements:
+      | id   | date       | amount  | account    | bankCode | name          | variableSymbol | message                               |
+      | 2001 | 2026-10-01 | 1000.00 | 2900233333 | 2010     | Nováková Jana | {Jana}         | DAR NADACNI FOND NOVA NADEJE          |
+      | 2002 | 2026-11-15 | 1.00    | 2700112222 | 2010     | Nováková Jana | {Jana}         | OVERENI UCTU NADACNI FOND NOVA NADEJE |
+    And the application starts the import
+    When "Jana" downloads the receipt of her donation received on 2026-11-15
+    Then the response status is 400
+    And the problem type ends with "donations/verification-without-receipt"
+    And the problem has the title "K ověření účtu samostatné potvrzení nevystavujeme"
+    And 0 receipts are stored
+    Given today is 2027-01-15
+    When "Jana" downloads her yearly receipt for 2026
+    Then the response status is 200
+    And the PDF says "Počet darů: 2"
+    And the PDF says "Celkem darováno v roce 2026: 1 001 Kč"
+    And the PDF says "15. 11. 2026"
+
   Scenario: Only the donor's own existing donation has a receipt
     Given today is 2026-12-20
     And a person "Jana" is registered

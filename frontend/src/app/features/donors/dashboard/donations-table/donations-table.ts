@@ -42,12 +42,17 @@ export class DonationsTable {
     return bankCode === undefined ? `…${lastDigits}` : `…${lastDigits}/${bankCode}`;
   }
 
-  protected missingReceipt(item: DonationItem): 'refunded' | 'before-first-year' | null {
+  protected missingReceipt(
+    item: DonationItem,
+  ): 'refunded' | 'verification' | 'before-first-year' | null {
     if (item.receiptAvailable) {
       return null;
     }
     if (item.status === 'REFUNDED') {
       return 'refunded';
+    }
+    if (item.accountVerification) {
+      return 'verification';
     }
     const firstYear = this.donations.receiptsFrom();
     return firstYear !== null && Number(item.receivedAt.slice(0, 4)) < firstYear

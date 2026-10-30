@@ -33,13 +33,13 @@ record DonationListResponse(List<DonationItemResponse> items, long totalAmountMi
 
     record DonationItemResponse(UUID id, String receiptNumber, LocalDate receivedAt, long amountMinor, Currency currency, String purpose,
                                 DonationStatus status, DonationSource source, PairingMethod pairedBy, String senderAccount,
-                                String confirmedSymbol, boolean receiptAvailable) {
+                                String confirmedSymbol, boolean accountVerification, boolean receiptAvailable) {
 
         static DonationItemResponse from(Donation donation, String receiptNumber, String purpose, String senderAccount, String confirmedSymbol,
                                          boolean receiptAvailable) {
             return new DonationItemResponse(donation.id().value(), receiptNumber, donation.receivedOn(), donation.amount().amountMinor(),
                     donation.amount().currency(), purpose, donation.status(), donation.source(), donation.pairedBy().orElse(null),
-                    senderAccount, confirmedSymbol, receiptAvailable);
+                    senderAccount, confirmedSymbol, donation.isAccountVerification(), receiptAvailable);
         }
     }
 }

@@ -10,6 +10,7 @@ import { ProfileCard } from '../profile-card/profile-card';
   selector: 'app-donor-details',
   imports: [PageTitle, ProfileCard, AccountCard, ConnectedAppsCard],
   templateUrl: './donor-details.html',
+  styleUrl: './donor-details.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class DonorDetails {

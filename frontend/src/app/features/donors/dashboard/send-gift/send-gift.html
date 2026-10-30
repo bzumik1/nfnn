@@ -1,0 +1,23 @@
+<section class="ui-card ui-card--padded send-gift" aria-labelledby="send-gift-title">
+  <h2
+    id="send-gift-title"
+    class="ui-card__title ui-card__title--large"
+    i18n="@@donor.sendGift.title"
+  >
+    Poslat dar
+  </h2>
+  <p class="send-gift-lead" i18n="@@donor.sendGift.lead">
+    Variabilní symbol je v údajích i v QR kódu už vyplněný. Uveďte ho u každé platby, dar se tak
+    přiřadí k vašemu účtu a objeví se v tomto přehledu.
+  </p>
+  <app-payment-panel #panel idPrefix="send-gift" [variableSymbol]="variableSymbol()" />
+  @if (variableSymbol(); as symbol) {
+    <app-standing-order
+      class="send-gift-standing"
+      [variableSymbol]="symbol"
+      [account]="panel.accountState()"
+      [amount]="panel.amount()"
+      (retryRequested)="panel.retry()"
+    />
+  }
+</section>

@@ -3,14 +3,12 @@ package cz.novanadeje.app;
 import io.github.bzumik1.fio.FioClient;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.ApplicationContext;
-import org.springframework.context.annotation.Import;
+import org.springframework.core.env.Environment;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@Import(TestcontainersConfiguration.class)
-@SpringBootTest(properties = {"app.donations.fio.token=", "app.donations.report.cron=-", "app.contact.retention.cron=-", "app.content.media-cleanup.cron=-", "app.operations.backups.check-cron=-", "app.donors.registration-reminder.cron=-"})
+@IntegrationTest
 class AppApplicationTests {
 
 	@Test
@@ -25,6 +23,19 @@ class AppApplicationTests {
 
 		assertThat(context.getBean(FioClient.class).getClass().getSimpleName()).isEqualTo("DisabledFioClient");
 		assertThat(context.getBeanNamesForType(scheduler)).isEmpty();
+	}
+
+	@Test
+	@DisplayName("Given the shared integration test configuration, when the application starts, then every scheduled job is switched off")
+	void should_switch_off_every_scheduled_job_when_started_given_shared_configuration(ApplicationContext context) {
+		Environment environment = context.getEnvironment();
+
+		assertThat(environment.getProperty("app.donations.fio.token")).isEmpty();
+		assertThat(environment.getProperty("app.donations.report.cron")).isEqualTo("-");
+		assertThat(environment.getProperty("app.contact.retention.cron")).isEqualTo("-");
+		assertThat(environment.getProperty("app.content.media-cleanup.cron")).isEqualTo("-");
+		assertThat(environment.getProperty("app.operations.backups.check-cron")).isEqualTo("-");
+		assertThat(environment.getProperty("app.donors.registration-reminder.cron")).isEqualTo("-");
 	}
 
 }

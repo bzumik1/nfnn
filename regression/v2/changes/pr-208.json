@@ -1,0 +1,10 @@
+[
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/admin.spec.ts > Given a donor without the administrator role > when they type the administration address, then they land on their own overview",
+    "reason": "PR #208: the overview now also says why the administration did not open (user tests, round 2), so the test that checks the landing checks that line too and its name says so",
+    "replacement": "e2e/admin.spec.ts > Given a donor without the administrator role > when they type the administration address, then they land on their own overview, which says why",
+    "contract": "docs/frontend-overview.md, core/auth (adminGuard)"
+  }
+]

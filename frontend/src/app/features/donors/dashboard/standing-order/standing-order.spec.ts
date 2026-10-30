@@ -117,6 +117,9 @@ describe('Given the standing order guide of the donor area', () => {
       expect(text('.standing-after')).toBe(
         'Každá platba se vám tu pak objeví sama a do ročního potvrzení se započítají všechny.',
       );
+      expect(text('.standing-bank-only')).toBe(
+        'Částku i den platby pak měníte jen ve své bance. Na tomto webu nic nastavovat nemusíte.',
+      );
     });
 
     it('then a line for a standing order with an older symbol keeps the way to the bank accounts', async () => {
@@ -129,17 +132,25 @@ describe('Given the standing order guide of the donor area', () => {
       expect(element('.standing-older a')?.getAttribute('href')).toBe('/darce/ucty');
     });
 
-    it('and the account cannot be loaded, then an alert points to the account on the home page', async () => {
+    it('and the account cannot be loaded, then an alert says so and trying again asks once more', async () => {
       http
         .expectOne((request) => request.url === QR_URL)
         .flush(null, { status: 500, statusText: 'Server Error' });
       await settle();
 
       expect(element('.standing-error')?.getAttribute('role')).toBe('alert');
-      expect(text('.standing-error')).toBe(
-        'Číslo účtu se nepodařilo načíst. Najdete ho na hlavní stránce v části Přispět.',
+      expect(text('.standing-error p')).toBe(
+        'Číslo účtu se nepodařilo načíst. Zkuste to prosím znovu.',
       );
-      expect(element('.standing-error a')?.getAttribute('href')).toBe('/#prispet');
+      expect(element('.standing-error a')).toBeNull();
+
+      element<HTMLButtonElement>('.standing-retry')!.click();
+      await settle();
+
+      http.expectOne((request) => request.url === QR_URL).flush(paymentQr());
+      await settle();
+      expect(element('.standing-error')).toBeNull();
+      expect(text('.standing-details dd .standing-value')).toBe('5544332217/2010');
     });
 
     it('and closes and opens it again, then the account is not asked for again', async () => {
@@ -165,6 +176,84 @@ describe('Given the standing order guide of the donor area', () => {
 
       expect(element('.standing-toggle')?.getAttribute('aria-expanded')).toBe('false');
       expect(document.activeElement).toBe(element('.standing-toggle'));
+    });
+  });
+
+  describe('when the payment card it sits in has an amount chosen', () => {
+    beforeEach(() => {
+      fixture.componentRef.setInput('account', {
+        kind: 'ready',
+        account: paymentQr().bankAccount,
+      });
+    });
+
+    it('then the amount row names that amount and still allows another one', async () => {
+      fixture.componentRef.setInput('amount', 400);
+      await toggle();
+
+      expect(texts('.standing-details dd .standing-value')[2]).toBe(
+        '400 Kč, nebo jiná, kterou chcete posílat',
+      );
+    });
+
+    it('then a later choice in the card changes the amount row with thousands spaced', async () => {
+      fixture.componentRef.setInput('amount', 400);
+      await toggle();
+      fixture.componentRef.setInput('amount', 1000);
+      await settle();
+
+      expect(texts('.standing-details dd .standing-value')[2]).toBe(
+        '1 000 Kč, nebo jiná, kterou chcete posílat',
+      );
+    });
+
+    it('then an amount not entered yet leaves the row open for any amount', async () => {
+      fixture.componentRef.setInput('amount', null);
+      await toggle();
+
+      expect(texts('.standing-details dd .standing-value')[2]).toBe(
+        'Jakákoli, kterou chcete posílat',
+      );
+    });
+  });
+
+  describe('when the account comes from the payment card it sits in', () => {
+    it('then it shows that account and asks for nothing', async () => {
+      fixture.componentRef.setInput('account', {
+        kind: 'ready',
+        account: paymentQr().bankAccount,
+      });
+      await toggle();
+
+      http.expectNone(QR_URL);
+      expect(texts('.standing-details dd .standing-value').slice(0, 2)).toEqual([
+        '5544332217/2010',
+        '9876543210',
+      ]);
+    });
+
+    it('then while the card loads it says the account is on its way', async () => {
+      fixture.componentRef.setInput('account', { kind: 'loading' });
+      await toggle();
+
+      http.expectNone(QR_URL);
+      expect(text('.standing-loading')).toBe('Načítáme číslo účtu…');
+    });
+
+    it('then a card that failed shows the alert and trying again asks the card to load again', async () => {
+      const retries: unknown[] = [];
+      fixture.componentInstance.retryRequested.subscribe((value) => retries.push(value));
+      fixture.componentRef.setInput('account', { kind: 'failed' });
+      await toggle();
+
+      expect(text('.standing-error p')).toBe(
+        'Číslo účtu se nepodařilo načíst. Zkuste to prosím znovu.',
+      );
+      element<HTMLButtonElement>('.standing-retry')!.click();
+      await settle();
+
+      expect(retries).toHaveLength(1);
+      http.expectNone(QR_URL);
     });
   });
 });

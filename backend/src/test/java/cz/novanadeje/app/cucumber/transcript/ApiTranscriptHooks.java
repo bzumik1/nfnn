@@ -48,7 +48,7 @@ public class ApiTranscriptHooks {
     @BeforeAll
     public static void startRecordingRun() {
         if (ApiTranscripts.recording()) {
-            ApiTranscripts.startRun(ApiTranscripts.directory());
+            ApiTranscripts.startRun();
         }
     }
 

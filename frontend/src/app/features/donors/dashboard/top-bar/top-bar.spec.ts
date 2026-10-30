@@ -1,9 +1,10 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { provideRouter, Router } from '@angular/router';
 import { AuthStore } from '../../../../core/auth/auth-store';
 import { authResponse, sampleDonor } from '../../../../core/auth/testing/donor-fixtures';
+import { SignedOutNotice } from '../../../../core/auth/signed-out-notice';
 import { DashboardTopBar } from './top-bar';
 
 describe('Given the dashboard top bar', () => {
@@ -69,5 +70,41 @@ describe('Given the dashboard top bar', () => {
     it('then it leads back to their own overview instead', () => {
       expect(links()).toEqual(['Hlavní stránkaDomů → /', 'Můj přehled → /darce/prehled']);
     });
+  });
+});
+
+describe('Given a signed-in donor at the dashboard top bar', () => {
+  let fixture: ComponentFixture<DashboardTopBar>;
+  let http: HttpTestingController;
+
+  beforeEach(async () => {
+    localStorage.clear();
+    await TestBed.configureTestingModule({
+      imports: [DashboardTopBar],
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])],
+    }).compileComponents();
+    http = TestBed.inject(HttpTestingController);
+    TestBed.inject(AuthStore).login('jana@example.cz', 'correct horse battery').subscribe();
+    http.expectOne('/api/donors/auth/login').flush(authResponse('token-1', sampleDonor()));
+    fixture = TestBed.createComponent(DashboardTopBar);
+    fixture.detectChanges();
+    await fixture.whenStable();
+  });
+
+  afterEach(() => http.verify());
+
+  it('when they sign out, then they land on the home page and the notice says they signed out', async () => {
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+    const notice = TestBed.inject(SignedOutNotice);
+
+    (fixture.nativeElement.querySelector('.topbar-logout') as HTMLButtonElement).click();
+    expect(notice.shown()).toBe(false);
+    http
+      .expectOne('/api/donors/auth/logout')
+      .flush(null, { status: 204, statusText: 'No Content' });
+    await fixture.whenStable();
+
+    expect(navigate).toHaveBeenCalledWith('/');
+    expect(notice.shown()).toBe(true);
   });
 });

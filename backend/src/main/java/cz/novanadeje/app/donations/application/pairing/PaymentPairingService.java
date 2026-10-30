@@ -66,21 +66,28 @@ public class PaymentPairingService {
         Tally tally = new Tally();
         Map<VariableSymbol, Optional<DonorRecord>> donorsBySymbol = new HashMap<>();
         List<BankPayment> unknownSymbol = new ArrayList<>();
+        Set<BankPayment> pairedBySymbolInMessage = new HashSet<>();
         for (BankPayment payment : unpaired) {
-            if (payment.carriesVariableSymbol()) {
-                Optional<DonorRecord> donor = donorsBySymbol.computeIfAbsent(payment.matchingVariableSymbol().orElseThrow(),
-                        donorRecords::findByVariableSymbol);
-                if (donor.isPresent()) {
+            Optional<VariableSymbol> symbol = payment.pairingSymbol();
+            if (symbol.isEmpty()) {
+                continue;
+            }
+            Optional<DonorRecord> donor = donorsBySymbol.computeIfAbsent(symbol.get(), donorRecords::findByVariableSymbol);
+            if (!payment.carriesVariableSymbol()) {
+                if (donor.filter(holder -> holder.claimsBySymbol(payment)).isPresent()) {
                     applySymbolDecision(policy.decide(payment, donor, List.of()), payment, now, tally);
-                } else {
-                    unknownSymbol.add(payment);
+                    pairedBySymbolInMessage.add(payment);
                 }
+            } else if (donor.isPresent()) {
+                applySymbolDecision(policy.decide(payment, donor, List.of()), payment, now, tally);
+            } else {
+                unknownSymbol.add(payment);
             }
         }
         Map<SenderAccount, List<DonorRecord>> ownersByAccount = new HashMap<>();
         Set<SenderAccount> reportedAmbiguous = new HashSet<>();
         for (BankPayment payment : unpaired) {
-            if (!payment.carriesVariableSymbol()) {
+            if (!payment.carriesVariableSymbol() && !pairedBySymbolInMessage.contains(payment)) {
                 List<DonorRecord> owners = payment.sender()
                         .map(sender -> ownersByAccount.computeIfAbsent(sender, donorRecords::findBySenderAccount))
                         .orElse(List.of());

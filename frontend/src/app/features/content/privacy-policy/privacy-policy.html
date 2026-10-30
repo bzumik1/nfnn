@@ -40,6 +40,14 @@
         <li>
           <a
             routerLink="/zasady-ochrany-osobnich-udaju"
+            fragment="emaily"
+            i18n="@@content.privacy.emails.title"
+            >Jaké e&#8209;maily posíláme</a
+          >
+        </li>
+        <li>
+          <a
+            routerLink="/zasady-ochrany-osobnich-udaju"
             fragment="uchovavani"
             i18n="@@content.privacy.retention.title"
             >Jak dlouho údaje uchováváme</a
@@ -175,14 +183,15 @@
             </li>
           </ul>
           <p i18n="@@content.privacy.donations.purpose">
-            Dar přiřadíme k vašemu dárcovskému účtu podle vašeho variabilního symbolu. Platbu bez
-            variabilního symbolu přiřadíme podle čísla účtu, ze kterého přišla, pokud jste nám tento
-            účet prokázali platbou se svým variabilním symbolem. Když nám ho prokážete poprvé a
-            předtím ho neprokázal jiný dárce, přiřadíme vám i dřívější platby bez symbolu z tohoto
-            účtu. Jméno plátce k přiřazení nepoužíváme; jen u ověřovací platby podle něj poznáme,
-            zda účet patří firmě, nebo osobě (viz níže). Přiřazený dar zobrazíme v přehledu vašich
-            darů a za dary přijaté od 1.&nbsp;ledna&nbsp;2026 k němu vystavíme potvrzení o daru ve
-            formátu PDF.
+            Dar přiřadíme k vašemu dárcovskému účtu podle vašeho variabilního symbolu, i když ho
+            místo do pole pro symbol napíšete do zprávy pro příjemce. Platbu bez variabilního
+            symbolu přiřadíme podle čísla účtu, ze kterého přišla, pokud jste nám tento účet
+            prokázali platbou se svým variabilním symbolem. Když nám ho prokážete poprvé a předtím
+            ho neprokázal jiný dárce, přiřadíme vám i dřívější platby bez symbolu z tohoto účtu.
+            Jméno plátce k přiřazení nepoužíváme; jen u ověřovací platby podle něj poznáme, zda účet
+            patří firmě, nebo osobě (viz níže). Přiřazený dar zobrazíme v přehledu vašich darů a za
+            dary přijaté od 1.&nbsp;ledna&nbsp;2026 k němu vystavíme potvrzení o daru ve formátu
+            PDF.
           </p>
           <p i18n="@@content.privacy.donations.accounts">
             Čísla účtů, které jste nám takto prokázali, uchováváme u vašeho dárcovského účtu. Vidíte
@@ -259,6 +268,45 @@
         </div>
       </section>
 
+      <section id="emaily">
+        <h2 i18n="@@content.privacy.emails.title">Jaké e&#8209;maily posíláme</h2>
+        <p i18n="@@content.privacy.emails.intro">
+          Dárcům posíláme jen e&#8209;maily, které patří k jejich účtu:
+        </p>
+        <ul>
+          <li i18n="@@content.privacy.emails.registration">
+            po registraci odkaz k potvrzení e&#8209;mailu a jednu připomínku, pokud registraci do
+            druhého dne nepotvrdíte,
+          </li>
+          <li i18n="@@content.privacy.emails.passwordReset">
+            odkaz pro obnovu hesla, když o něj požádáte,
+          </li>
+          <li i18n="@@content.privacy.emails.emailChange">
+            při změně e&#8209;mailu potvrzovací odkaz na novou adresu a oznámení na dosavadní
+            adresu,
+          </li>
+          <li i18n="@@content.privacy.emails.security">
+            upozornění na změnu hesla, na zapnutí nebo vypnutí dvoufaktorového ověření a na přidání
+            nebo odebrání přístupového klíče,
+          </li>
+          <li i18n="@@content.privacy.emails.addressInUse">
+            upozornění, když se s vaší adresou někdo zkusí zaregistrovat nebo ji chce použít jiný
+            účet,
+          </li>
+          <li i18n="@@content.privacy.emails.erasure">
+            oznámení, že jsme vaše osobní údaje vymazali, když o výmaz požádáte.
+          </li>
+        </ul>
+        <p i18n="@@content.privacy.emails.notSent">
+          Potvrzení o daru e&#8209;mailem neposíláme, stáhnete si je ve svém dárcovském účtu.
+          Neposíláme ani zpravodaj, reklamu nebo e&#8209;mail po každém daru.
+        </p>
+        <p i18n="@@content.privacy.emails.optOut">
+          Tyto e&#8209;maily vypnout nejde, protože slouží k přihlášení a k ochraně vašeho účtu. Na
+          zprávu z kontaktního formuláře vám odpovíme e&#8209;mailem.
+        </p>
+      </section>
+
       <section id="uchovavani">
         <h2 i18n="@@content.privacy.retention.title">Jak dlouho údaje uchováváme</h2>
         <p i18n="@@content.privacy.retention.intro">
@@ -299,8 +347,11 @@
         <ul>
           <li i18n="@@content.privacy.recipients.email">
             společnosti Sendinblue SAS se sídlem ve Francii (služba Brevo), přes kterou web odesílá
-            e&#8209;maily: odkazy pro obnovu hesla a zprávy z kontaktního formuláře přeposílané do
-            schránky nadačního fondu; Brevo u odeslaných e&#8209;mailů zaznamenává, zda byly
+            e&#8209;maily dárcům popsané v části
+            <a routerLink="/zasady-ochrany-osobnich-udaju" fragment="emaily"
+              >Jaké e&#8209;maily posíláme</a
+            >, zprávy z kontaktního formuláře přeposílané do schránky nadačního fondu a přehledy a
+            upozornění pro správce webu; Brevo u odeslaných e&#8209;mailů zaznamenává, zda byly
             otevřeny a zda příjemce klikl na odkaz (odkazy proto vedou nejprve přes jeho server), a
             v bezplatném tarifu, který používáme, to vypnout nejde,
           </li>

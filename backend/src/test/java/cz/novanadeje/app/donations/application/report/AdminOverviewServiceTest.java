@@ -4,6 +4,7 @@ import cz.novanadeje.app.donations.domain.bank.BankPaymentRepository;
 import cz.novanadeje.app.donations.domain.bank.SenderAccount;
 import cz.novanadeje.app.donations.domain.donation.DonationRepository;
 import cz.novanadeje.app.donations.domain.donor.DonorRecordRepository;
+import cz.novanadeje.app.donations.domain.report.ActivitySince;
 import cz.novanadeje.app.donations.domain.report.ReportMonth;
 import cz.novanadeje.app.donations.domain.report.Tally;
 import cz.novanadeje.app.shared.domain.Money;
@@ -108,5 +109,26 @@ class AdminOverviewServiceTest {
         OverviewView view = service.overview(Optional.empty());
 
         assertThat(view.availableYears()).containsExactly(Year.of(2026), Year.of(2025), Year.of(2024));
+    }
+
+    @Test
+    @DisplayName("Given three payments imported since the last sign-in, one of them still unpaired, and two new registrations, when the activity since then is asked for, then it counts and sums them")
+    void should_count_payments_and_registrations_when_activity_since_asked_given_new_ones() {
+        Instant from = Instant.parse("2026-10-22T19:14:00Z");
+        when(payments.findImportedSince(from)).thenReturn(List.of(
+                payment(1010, LocalDate.of(2026, 10, 22), Money.czk(50000), UNKNOWN, null),
+                payment(1011, LocalDate.of(2026, 10, 23), Money.czk(20000), UNKNOWN, null),
+                payment(1012, LocalDate.of(2026, 10, 23), Money.czk(15000), UNKNOWN, "1111111111")));
+        when(payments.findUnpairedImportedSince(from)).thenReturn(List.of(
+                payment(1012, LocalDate.of(2026, 10, 23), Money.czk(15000), UNKNOWN, "1111111111")));
+        when(donors.countRegisteredSince(from)).thenReturn(2L);
+
+        ActivitySince activity = service.since(from);
+
+        assertThat(activity.from()).isEqualTo(from);
+        assertThat(activity.payments()).isEqualTo(new Tally(3, Money.czk(85000)));
+        assertThat(activity.unpaired()).isEqualTo(new Tally(1, Money.czk(15000)));
+        assertThat(activity.paired()).isEqualTo(new Tally(2, Money.czk(70000)));
+        assertThat(activity.newDonors()).isEqualTo(2);
     }
 }

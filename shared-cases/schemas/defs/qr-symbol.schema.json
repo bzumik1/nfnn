@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nfnn.cz/shared-cases/schemas/defs/qr-symbol.schema.json",
+  "title": "A QR symbol: its error correction, version, mode, ECI header, mask and matrix",
+  "type": "object",
+  "required": ["errorCorrection", "version", "mode", "eci", "mask", "size", "matrix"],
+  "properties": {
+    "errorCorrection": { "enum": ["L", "M", "Q", "H"] },
+    "version": { "type": "integer", "minimum": 1, "maximum": 40 },
+    "mode": { "enum": ["NUMERIC", "ALPHANUMERIC", "BYTE", "KANJI"] },
+    "eci": { "type": ["integer", "null"], "minimum": 0, "maximum": 999999 },
+    "mask": { "type": "integer", "minimum": 0, "maximum": 7 },
+    "size": { "type": "integer", "minimum": 21, "maximum": 177 },
+    "matrix": {
+      "type": "array",
+      "minItems": 21,
+      "maxItems": 177,
+      "items": { "type": "string", "pattern": "^[01]{21,177}$" }
+    }
+  }
+}

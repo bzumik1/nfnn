@@ -7,6 +7,8 @@ const OVERVIEW = '/api/admin/donations/overview';
 const BACKUPS = '/api/admin/operations/backups';
 const PAYMENTS = '/api/admin/donations/payments';
 const ADMINISTRATORS = '/api/admin/donors/administrators';
+const PREVIOUS_SIGN_IN = '/api/admin/donors/me/previous-sign-in';
+const SINCE = '/api/admin/donations/overview/since';
 
 const backups = {
   available: true,
@@ -33,6 +35,7 @@ const overview = {
   availableYears: [2026, 2025],
   donorsRegistered: 3,
   newDonors: 3,
+  givingDonors: 2,
   received: { count: 5, totalMinor: 288350, currency: 'CZK' },
   paired: { count: 4, totalMinor: 273350, currency: 'CZK' },
   unpaired: { count: 1, totalMinor: 15000, currency: 'CZK' },
@@ -41,6 +44,7 @@ const overview = {
       month: '2026-10',
       received: { count: 1, totalMinor: 99900, currency: 'CZK' },
       newDonors: 1,
+      givingDonors: 1,
       paired: { count: 1, totalMinor: 99900, currency: 'CZK' },
       unpaired: { count: 0, totalMinor: 0, currency: 'CZK' },
     },
@@ -48,6 +52,7 @@ const overview = {
       month: '2026-09',
       received: { count: 3, totalMinor: 168450, currency: 'CZK' },
       newDonors: 1,
+      givingDonors: 2,
       paired: { count: 2, totalMinor: 153450, currency: 'CZK' },
       unpaired: { count: 1, totalMinor: 15000, currency: 'CZK' },
     },
@@ -55,6 +60,7 @@ const overview = {
       month: '2026-08',
       received: { count: 1, totalMinor: 20000, currency: 'CZK' },
       newDonors: 1,
+      givingDonors: 1,
       paired: { count: 1, totalMinor: 20000, currency: 'CZK' },
       unpaired: { count: 0, totalMinor: 0, currency: 'CZK' },
     },
@@ -73,6 +79,7 @@ async function mockOverview(page: Page): Promise<void> {
                 ...overview,
                 year: 2025,
                 newDonors: 0,
+                givingDonors: 1,
                 received: { count: 1, totalMinor: 50000, currency: 'CZK' },
                 paired: { count: 1, totalMinor: 50000, currency: 'CZK' },
                 unpaired: { count: 0, totalMinor: 0, currency: 'CZK' },
@@ -81,6 +88,7 @@ async function mockOverview(page: Page): Promise<void> {
                     month: '2025-12',
                     received: { count: 1, totalMinor: 50000, currency: 'CZK' },
                     newDonors: 0,
+                    givingDonors: 1,
                     paired: { count: 1, totalMinor: 50000, currency: 'CZK' },
                     unpaired: { count: 0, totalMinor: 0, currency: 'CZK' },
                   },
@@ -89,6 +97,26 @@ async function mockOverview(page: Page): Promise<void> {
             : overview,
       });
     },
+  );
+}
+
+async function mockSince(page: Page, previousSignInAt: string | null): Promise<void> {
+  await page.route(
+    (url) => url.pathname === PREVIOUS_SIGN_IN,
+    (route) => route.fulfill({ json: { previousSignInAt } }),
+  );
+  await page.route(
+    (url) => url.pathname === SINCE,
+    (route) =>
+      route.fulfill({
+        json: {
+          from: new URL(route.request().url()).searchParams.get('from'),
+          payments: { count: 5, totalMinor: 1250000, currency: 'CZK' },
+          paired: { count: 3, totalMinor: 750000, currency: 'CZK' },
+          unpaired: { count: 2, totalMinor: 500000, currency: 'CZK' },
+          newDonors: 3,
+        },
+      }),
   );
 }
 
@@ -181,6 +209,7 @@ test.describe('Given an administrator', () => {
     await mockOverview(page);
     await mockBackups(page);
     await mockAttentionSources(page);
+    await mockSince(page, '2026-10-28T20:14:00Z');
   });
 
   test('when they sign in, then the overview offers the administration and it shows how the bank import is doing', async ({
@@ -218,7 +247,7 @@ test.describe('Given an administrator', () => {
     const attention = page.getByRole('region', { name: 'Co potřebuje vaši pozornost' });
     await expect(attention.locator('.attention-list > li')).toHaveText([
       '1 platba čeká na přiřazení dárci (150 Kč). Přiřadit platby',
-      'Zkušební obnova ještě neproběhla, i když zálohy jsou starší než týden. Otevřít zálohy',
+      'Zatím se nevyzkoušelo, že jde zálohu obnovit. Spusťte Ověřit obnovu teď. Otevřít zálohy',
     ]);
     await expect(attention.getByRole('link', { name: 'Přiřadit platby' })).toHaveAttribute(
       'href',
@@ -234,12 +263,15 @@ test.describe('Given an administrator', () => {
       page.getByText('Registrovaní dárci: 3, z toho nových v roce 2026: 3.'),
     ).toBeVisible();
     await expect(page.locator('.overview-table tbody tr')).toHaveText([
-      'říjen 2026 1 1 999 Kč 999 Kč 0 Kč',
-      'září 2026 3 1 1 684,50 Kč 1 534,50 Kč 150 Kč',
-      'srpen 2026 1 1 200 Kč 200 Kč 0 Kč',
+      'říjen 2026 1 1 1 999 Kč 999 Kč 0 Kč',
+      'září 2026 3 2 1 1 684,50 Kč 1 534,50 Kč 150 Kč',
+      'srpen 2026 1 1 1 200 Kč 200 Kč 0 Kč',
     ]);
     await expect(page.locator('.overview-table tfoot tr')).toHaveText(
-      'Celkem 2026 5 3 2 883,50 Kč 2 733,50 Kč 150 Kč',
+      'Celkem 2026 5 2 3 2 883,50 Kč 2 733,50 Kč 150 Kč',
+    );
+    await expect(page.locator('#admin-overview-hint')).toHaveText(
+      'Dárci: kolik různých dárců v měsíci poslalo dar; platby bez dárce se nepočítají. Noví dárci: kolik dárců se v měsíci zaregistrovalo.',
     );
 
     await page.getByLabel('Rok').selectOption('2025');
@@ -248,12 +280,53 @@ test.describe('Given an administrator', () => {
       page.getByText('Registrovaní dárci: 3, z toho nových v roce 2025: 0.'),
     ).toBeVisible();
     await expect(page.locator('.overview-table tbody tr')).toHaveText([
-      'prosinec 2025 1 0 500 Kč 500 Kč 0 Kč',
+      'prosinec 2025 1 1 0 500 Kč 500 Kč 0 Kč',
     ]);
 
     await page.getByRole('link', { name: 'Můj přehled', exact: true }).click();
 
     await expect(page).toHaveURL(/\/darce\/prehled$/);
+  });
+
+  test('when they come back after an earlier sign-in, then the overview opens with what came in since then and leads to the waiting payments', async ({
+    page,
+  }) => {
+    await mockImportState(page, quietImport);
+    await rememberedSession(page, administrator);
+
+    await page.goto('/sprava');
+
+    const since = page.getByRole('region', { name: 'Od posledního přihlášení' });
+    await expect(since).toContainText(
+      'Poslední přihlášení 28. 10. 2026 21:14. Od té doby přišlo 5 plateb za 12 500 Kč.',
+    );
+    await expect(since.getByRole('link', { name: '3 platby za 7 500 Kč' })).toHaveAttribute(
+      'href',
+      '/sprava/platby?stav=prirazene&od=2026-10-28',
+    );
+    await expect(since.getByRole('link', { name: '3 nové registrace' })).toHaveAttribute(
+      'href',
+      '/sprava/darci',
+    );
+
+    await since.getByRole('link', { name: '2 platby za 5 000 Kč' }).click();
+
+    await expect(page).toHaveURL(/\/sprava\/platby\?od=2026-10-28$/);
+    await expect(page.getByLabel('Od', { exact: true })).toHaveValue('2026-10-28');
+  });
+
+  test('when they sign in to the administration for the first time, then the block says there is nothing to compare yet', async ({
+    page,
+  }) => {
+    await mockSince(page, null);
+    await mockImportState(page, quietImport);
+    await rememberedSession(page, administrator);
+
+    await page.goto('/sprava');
+
+    await expect(page.getByRole('region', { name: 'Od posledního přihlášení' })).toContainText(
+      'Jste tu poprvé. Od příštího přihlášení tu uvidíte nové platby a nové dárce.',
+    );
   });
 
   test('when the bank import keeps failing, then the administration says so and names the failure', async ({
@@ -417,7 +490,7 @@ test.describe('Given a donor without the administrator role', () => {
     await expect(page.getByRole('link', { name: 'Správa' })).toHaveCount(0);
   });
 
-  test('when they type the administration address, then they land on their own overview', async ({
+  test('when they type the administration address, then they land on their own overview, which says why', async ({
     page,
   }) => {
     await rememberedSession(page, donor);
@@ -425,6 +498,28 @@ test.describe('Given a donor without the administrator role', () => {
     await page.goto('/sprava');
 
     await expect(page).toHaveURL(/\/darce\/prehled$/);
+    await expect(page.locator('.admin-refusal')).toHaveText(
+      'Tento účet nemá přístup do správy. Pokud ho potřebujete, požádejte jiného správce, aby vám ho přidělil.',
+    );
+  });
+
+  test('when an administrator signed in without the second factor types the address, then the overview says how to open the administration', async ({
+    page,
+  }) => {
+    await rememberedSession(page, {
+      ...donor,
+      secondFactor: { enabled: false, neededForAdministration: true },
+    });
+
+    await page.goto('/sprava');
+
+    await expect(page).toHaveURL(/\/darce\/prehled$/);
+    const refusal = page.locator('.admin-refusal');
+    await expect(refusal).toContainText(
+      'Správa se vám otevře, až se přihlásíte přístupovým klíčem',
+    );
+    await refusal.getByRole('link', { name: 'Údaje a zabezpečení' }).click();
+    await expect(page).toHaveURL(/\/darce\/udaje$/);
   });
 
   test('when the role is taken away while the page is open, then the next load sends them to their overview', async ({
@@ -457,5 +552,20 @@ test.describe('Given a visitor who is not signed in', () => {
     await expect(page).toHaveURL(/\/$/);
     await expect(page.getByRole('dialog')).toBeVisible();
     await expect(page.locator('#login-email')).toBeFocused();
+  });
+});
+
+test.describe('Given a visitor who is not signed in', () => {
+  test('when they open the administration, then the sign-in dialog says it leads into the administration', async ({
+    page,
+  }) => {
+    await mockDonorApi(page);
+
+    await page.goto('/sprava');
+
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toBeVisible();
+    await expect(dialog).toContainText('Pro vstup do správy se přihlaste.');
+    await expect(dialog).not.toContainText('Přístup do vašeho přehledu příspěvků');
   });
 });

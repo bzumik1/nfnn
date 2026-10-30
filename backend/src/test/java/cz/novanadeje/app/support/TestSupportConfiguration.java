@@ -74,6 +74,11 @@ public class TestSupportConfiguration {
     }
 
     @Bean
+    public static CachingPasswordHashers cachingPasswordHashers() {
+        return new CachingPasswordHashers();
+    }
+
+    @Bean
     public DatabaseCleaner databaseCleaner(JdbcClient jdbcClient) {
         return new DatabaseCleaner(jdbcClient);
     }

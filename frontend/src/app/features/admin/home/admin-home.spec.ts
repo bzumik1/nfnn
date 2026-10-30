@@ -7,6 +7,7 @@ import { AuthStore } from '../../../core/auth/auth-store';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
 import { authResponse, sampleDonor } from '../../../core/auth/testing/donor-fixtures';
 import {
+  activitySince,
   backupRun,
   backupsView,
   importState,
@@ -24,6 +25,8 @@ const OVERVIEW_URL = '/api/admin/donations/overview';
 const BACKUPS_URL = '/api/admin/operations/backups';
 const UNPAIRED_URL = '/api/admin/donations/payments?pairing=unpaired';
 const ADMINISTRATORS_URL = '/api/admin/donors/administrators';
+const PREVIOUS_SIGN_IN_URL = '/api/admin/donors/me/previous-sign-in';
+const SINCE_URL = '/api/admin/donations/overview/since';
 
 describe('Given an administrator on the administration home', () => {
   let fixture: ComponentFixture<AdminHome>;
@@ -58,6 +61,12 @@ describe('Given an administrator on the administration home', () => {
     http
       .match(ADMINISTRATORS_URL)
       .forEach((pending) => pending.flush({ items: [administrator()] }));
+    http
+      .match(PREVIOUS_SIGN_IN_URL)
+      .forEach((pending) => pending.flush({ previousSignInAt: null }));
+    http
+      .match((request) => request.url === SINCE_URL)
+      .forEach((pending) => pending.flush(activitySince()));
     http.verify();
   });
 
@@ -274,13 +283,29 @@ describe('Given an administrator on the administration home', () => {
             '.overview-table thead th',
           ) as NodeListOf<HTMLElement>,
         ).map((cell) => cell.textContent?.trim()),
-      ).toEqual(['Měsíc', 'Dary', 'Noví dárci', 'Celkem', 'Přiřazené', 'Bez dárce']);
+      ).toEqual(['Měsíc', 'Dary', 'Dárci', 'Noví dárci', 'Celkem', 'Přiřazené', 'Bez dárce']);
       expect(overviewRows()).toEqual([
-        'říjen 2026 1 1 999 Kč 999 Kč 0 Kč',
-        'září 2026 3 1 1 684,50 Kč 1 534,50 Kč 150 Kč',
-        'srpen 2026 1 1 200 Kč 200 Kč 0 Kč',
-        'Celkem 2026 5 3 2 883,50 Kč 2 733,50 Kč 150 Kč',
+        'říjen 2026 1 1 1 999 Kč 999 Kč 0 Kč',
+        'září 2026 3 2 1 1 684,50 Kč 1 534,50 Kč 150 Kč',
+        'srpen 2026 1 1 1 200 Kč 200 Kč 0 Kč',
+        'Celkem 2026 5 2 3 2 883,50 Kč 2 733,50 Kč 150 Kč',
       ]);
+    });
+
+    it('then a hint above the table tells the donors who gave from the newly registered ones', () => {
+      const table = fixture.nativeElement.querySelector('.overview-table') as HTMLTableElement;
+      const hint = fixture.nativeElement.querySelector(
+        `#${table.getAttribute('aria-describedby')}`,
+      ) as HTMLElement;
+
+      expect(hint.textContent?.replace(/\s+/g, ' ').trim()).toBe(
+        'Dárci: kolik různých dárců v měsíci poslalo dar; platby bez dárce se nepočítají. Noví dárci: kolik dárců se v měsíci zaregistrovalo.',
+      );
+      expect(
+        Array.from(
+          table.querySelectorAll('tbody tr:first-child td') as NodeListOf<HTMLElement>,
+        ).map((cell) => cell.dataset['label']),
+      ).toEqual(['Měsíc', 'Dary', 'Dárci', 'Noví dárci', 'Celkem', 'Přiřazené', 'Bez dárce']);
     });
 
     it('then another year can be chosen and its months replace the table', async () => {
@@ -301,6 +326,7 @@ describe('Given an administrator on the administration home', () => {
         overview({
           year: 2025,
           newDonors: 0,
+          givingDonors: 1,
           received: { count: 1, totalMinor: 50000, currency: 'CZK' },
           paired: { count: 1, totalMinor: 50000, currency: 'CZK' },
           unpaired: { count: 0, totalMinor: 0, currency: 'CZK' },
@@ -317,9 +343,143 @@ describe('Given an administrator on the administration home', () => {
 
       expect(text('.admin-summary')).toBe('Registrovaní dárci: 3, z toho nových v roce 2025: 0.');
       expect(overviewRows()).toEqual([
-        'prosinec 2025 1 0 500 Kč 500 Kč 0 Kč',
-        'Celkem 2025 1 0 500 Kč 500 Kč 0 Kč',
+        'prosinec 2025 1 1 0 500 Kč 500 Kč 0 Kč',
+        'Celkem 2025 1 1 0 500 Kč 500 Kč 0 Kč',
       ]);
+    });
+  });
+
+  describe('when the previous sign-in arrives', () => {
+    const SINCE_CARD = '.ui-card[aria-labelledby="admin-since-title"]';
+
+    function sinceRequest(from: string) {
+      return http.expectOne(
+        (request) => request.url === SINCE_URL && request.params.get('from') === from,
+      );
+    }
+
+    async function signedInBefore(at: string, activity = activitySince()): Promise<void> {
+      await respondOverview(PREVIOUS_SIGN_IN_URL, { previousSignInAt: at });
+      sinceRequest(at).flush(activity);
+      await fixture.whenStable();
+      fixture.detectChanges();
+    }
+
+    function links(): { text: string; href: string | null }[] {
+      return Array.from(
+        fixture.nativeElement.querySelectorAll(`${SINCE_CARD} a`) as NodeListOf<HTMLAnchorElement>,
+      ).map((link) => ({
+        text: (link.textContent ?? '').replace(/\s+/g, ' ').trim(),
+        href: link.getAttribute('href'),
+      }));
+    }
+
+    it('then the block is the first card and says it is loading until both answers come', () => {
+      const first = fixture.nativeElement.querySelector('.ui-card') as HTMLElement;
+      expect(first.getAttribute('aria-labelledby')).toBe('admin-since-title');
+      expect(text('#admin-since-title')).toBe('Od posledního přihlášení');
+      expect(text(`${SINCE_CARD} [role="status"]`)).toBe('Zjišťujeme, co je od minula nového…');
+    });
+
+    it('then it names the sign-in, sums the new payments and links the paired, the waiting payments and the new donors', async () => {
+      await signedInBefore('2026-10-28T20:14:00Z');
+
+      expect(text(`${SINCE_CARD} .since-lead`)).toBe(
+        'Poslední přihlášení 28. 10. 2026 21:14. Od té doby přišlo 5 plateb za 12 500 Kč.',
+      );
+      expect(dataRows('admin-since-title')).toEqual({
+        'Přiřazené dárcům': '3 platby za 7 500 Kč',
+        'Čekají na přiřazení': '2 platby za 5 000 Kč',
+        'Noví dárci': '3 nové registrace',
+      });
+      expect(links()).toEqual([
+        { text: '3 platby za 7 500 Kč', href: '/sprava/platby?stav=prirazene&od=2026-10-28' },
+        { text: '2 platby za 5 000 Kč', href: '/sprava/platby?od=2026-10-28' },
+        { text: '3 nové registrace', href: '/sprava/darci' },
+      ]);
+    });
+
+    it('then one payment and one donor read in the singular and a figure of none has no link', async () => {
+      await signedInBefore(
+        '2026-10-28T23:30:00Z',
+        activitySince({
+          payments: { count: 1, totalMinor: 50000, currency: 'CZK' },
+          paired: { count: 1, totalMinor: 50000, currency: 'CZK' },
+          unpaired: { count: 0, totalMinor: 0, currency: 'CZK' },
+          newDonors: 1,
+        }),
+      );
+
+      expect(text(`${SINCE_CARD} .since-lead`)).toBe(
+        'Poslední přihlášení 29. 10. 2026 00:30. Od té doby přišla 1 platba za 500 Kč.',
+      );
+      expect(dataRows('admin-since-title')).toEqual({
+        'Přiřazené dárcům': '1 platba za 500 Kč',
+        'Čekají na přiřazení': 'žádná',
+        'Noví dárci': '1 nová registrace',
+      });
+      expect(links().map((link) => link.href)).toEqual([
+        '/sprava/platby?stav=prirazene&od=2026-10-29',
+        '/sprava/darci',
+      ]);
+    });
+
+    it('then registrations without any payment say no payment came and leave the payment figures out', async () => {
+      await signedInBefore(
+        '2026-10-28T20:14:00Z',
+        activitySince({
+          payments: { count: 0, totalMinor: 0, currency: 'CZK' },
+          paired: { count: 0, totalMinor: 0, currency: 'CZK' },
+          unpaired: { count: 0, totalMinor: 0, currency: 'CZK' },
+          newDonors: 2,
+        }),
+      );
+
+      expect(text(`${SINCE_CARD} .since-lead`)).toBe(
+        'Poslední přihlášení 28. 10. 2026 21:14. Od té doby nepřišla žádná platba.',
+      );
+      expect(dataRows('admin-since-title')).toEqual({ 'Noví dárci': '2 nové registrace' });
+    });
+
+    it('then nothing new is said in one sentence instead of zeros', async () => {
+      await signedInBefore(
+        '2026-10-28T20:14:00Z',
+        activitySince({
+          payments: { count: 0, totalMinor: 0, currency: 'CZK' },
+          paired: { count: 0, totalMinor: 0, currency: 'CZK' },
+          unpaired: { count: 0, totalMinor: 0, currency: 'CZK' },
+          newDonors: 0,
+        }),
+      );
+
+      expect(text(`${SINCE_CARD} .since-lead`)).toBe(
+        'Poslední přihlášení 28. 10. 2026 21:14. Od té doby nepřišla žádná platba a nikdo nový se nezaregistroval.',
+      );
+      expect(fixture.nativeElement.querySelector(`${SINCE_CARD} dl`)).toBeNull();
+    });
+
+    it('then a first sign-in says so and asks for nothing more', async () => {
+      await respondOverview(PREVIOUS_SIGN_IN_URL, { previousSignInAt: null });
+
+      expect(text(`${SINCE_CARD} .since-lead`)).toBe(
+        'Jste tu poprvé. Od příštího přihlášení tu uvidíte nové platby a nové dárce.',
+      );
+      http.expectNone((request) => request.url === SINCE_URL);
+    });
+
+    it('then a failure offers a retry that asks again', async () => {
+      await respondOverview(PREVIOUS_SIGN_IN_URL, { title: 'Server error' }, 500);
+
+      const card = fixture.nativeElement.querySelector(SINCE_CARD) as HTMLElement;
+      expect(card.querySelector('[role="alert"]')?.textContent).toContain(
+        'Co je od minula nového, se nepodařilo zjistit.',
+      );
+
+      (card.querySelector('[role="alert"] button') as HTMLButtonElement).click();
+      await signedInBefore('2026-10-28T20:14:00Z');
+
+      expect(card.querySelector('[role="alert"]')).toBeNull();
+      expect(text(`${SINCE_CARD} .since-lead`)).toContain('Od té doby přišlo 5 plateb');
     });
   });
 
@@ -379,8 +539,8 @@ describe('Given an administrator on the administration home', () => {
           (fixture.nativeElement as HTMLElement).querySelectorAll('.attention-problems li'),
         ).map((item) => (item.textContent ?? '').trim()),
       ).toEqual([
-        'Poslední záloha selhala.',
-        'Zkušební obnova ještě neproběhla, i když zálohy jsou starší než týden.',
+        'Poslední záloha se nepovedla. Data webu jsou v pořádku, ale nejsou zálohovaná. Zkuste Zálohovat teď; když to nepomůže, zkopírujte zprávu pro technika a pošlete ji správci serveru.',
+        'Zatím se nevyzkoušelo, že jde zálohu obnovit. Spusťte Ověřit obnovu teď.',
       ]);
       expect(backupsCard().querySelector('.healthy')).toBeNull();
       expect(dataRows('admin-backups-title')).toEqual({
@@ -465,7 +625,7 @@ describe('Given an administrator on the administration home', () => {
 
       expect(items()).toEqual([
         '3 platby čekají na přiřazení dárci (850 Kč). Přiřadit platby',
-        'Poslední záloha selhala. Otevřít zálohy',
+        'Poslední záloha se nepovedla. Data webu jsou v pořádku, ale nejsou zálohovaná. Zkuste Zálohovat teď; když to nepomůže, zkopírujte zprávu pro technika a pošlete ji správci serveru. Zkopírovat zprávu pro technika Otevřít zálohy',
         'Správce Petr Svoboda nemá druhý faktor (kód z ověřovací aplikace ani přístupový klíč), správa se mu neotevře. Otevřít Správce',
       ]);
       const links = Array.from(
@@ -473,6 +633,39 @@ describe('Given an administrator on the administration home', () => {
       ).map((link) => link.getAttribute('href'));
       expect(links).toEqual(['/sprava/platby', '/sprava/zalohy', '/sprava/spravci']);
       expect(attention().querySelector('.healthy')).toBeNull();
+    });
+
+    it('then a backup folder the backend cannot see is told in plain words, without the server details', async () => {
+      await sources(
+        paymentList([]),
+        [administrator()],
+        backupsView({ available: false, problems: ['BACKUPS_UNAVAILABLE'] }),
+      );
+
+      expect(items()).toEqual([
+        'Web teď nevidí složku se zálohami, takže zálohy nejde vytvořit ani stáhnout. Data webu jsou v pořádku. Zkopírujte prosím zprávu pro technika a pošlete ji správci serveru. Zkopírovat zprávu pro technika Otevřít zálohy',
+      ]);
+      expect(attention().textContent).not.toContain('compose');
+    });
+
+    it('then the message for the technician is copied with the technical details from the row', async () => {
+      const writeText = vi.fn().mockResolvedValue(undefined);
+      Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+      await sources(
+        paymentList([]),
+        [administrator()],
+        backupsView({ available: false, problems: ['BACKUPS_UNAVAILABLE'] }),
+      );
+
+      (
+        Array.from(attention().querySelectorAll('button') as NodeListOf<HTMLButtonElement>).find(
+          (button) => button.textContent?.trim() === 'Zkopírovat zprávu pro technika',
+        ) as HTMLButtonElement
+      ).click();
+      await fixture.whenStable();
+
+      expect(writeText).toHaveBeenCalledOnce();
+      expect(writeText.mock.calls[0][0]).toContain('/DATA/AppData/nfnn/backups');
     });
 
     it('then a backup key nobody saved yet gets a row leading to the backups', async () => {

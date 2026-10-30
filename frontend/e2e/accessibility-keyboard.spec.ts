@@ -123,6 +123,40 @@ test.describe('Given a visitor who uses only the keyboard or a screen reader', (
     await expect(page.getByRole('main')).toContainText('Můj přehled');
   });
 
+  test('when a signed-in donor chooses an amount in Poslat dar with the keyboard, then it is pressed, the bank details follow it and Tab reaches the copy buttons before the QR', async ({
+    page,
+  }) => {
+    await signIn(page);
+    const card = page.getByRole('region', { name: 'Poslat dar' });
+    const thousand = card.getByRole('button', { name: '1 000 Kč' });
+    await thousand.focus();
+    await page.keyboard.press('Enter');
+
+    await expect(thousand).toHaveAttribute('aria-pressed', 'true');
+    await expect(card.locator('.bank-value').nth(1)).toHaveText('1 000 Kč');
+    await expect(card.getByRole('status').filter({ hasText: 'QR platba na 1 000 Kč' })).toHaveCount(
+      1,
+    );
+
+    await card.getByRole('button', { name: 'Jiná částka' }).focus();
+    const order: string[] = [];
+    for (let step = 0; step < 6; step++) {
+      await page.keyboard.press('Tab');
+      order.push(
+        await page.evaluate(() =>
+          (document.activeElement as HTMLElement).textContent!.replace(/\s+/g, ' ').trim(),
+        ),
+      );
+    }
+    expect(order.slice(0, 5)).toEqual([
+      'Kopírovat číslo účtu',
+      'Kopírovat částku',
+      'Kopírovat variabilní symbol',
+      'Kopírovat IBAN',
+      'Uložit QR kód',
+    ]);
+  });
+
   test('when a signed-in donor opens a row of the security card with Enter, then its form takes the focus and Zrušit returns it to the row', async ({
     page,
   }) => {

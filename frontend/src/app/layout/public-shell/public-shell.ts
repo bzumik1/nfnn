@@ -19,11 +19,12 @@ import {
 } from '@angular/router';
 import { SiteHeader } from '../site-header/site-header';
 import { SiteFooter } from '../site-footer/site-footer';
+import { SignedOutNotice } from '../signed-out-notice/signed-out-notice';
 import { SetupRedirect } from '../../features/operations/setup/setup-redirect';
 
 @Component({
   selector: 'app-public-shell',
-  imports: [RouterOutlet, SiteHeader, SiteFooter],
+  imports: [RouterOutlet, SiteHeader, SiteFooter, SignedOutNotice],
   templateUrl: './public-shell.html',
   styleUrl: './public-shell.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

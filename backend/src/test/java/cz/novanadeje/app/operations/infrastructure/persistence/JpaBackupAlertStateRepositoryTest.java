@@ -1,6 +1,5 @@
 package cz.novanadeje.app.operations.infrastructure.persistence;
 
-import cz.novanadeje.app.TestcontainersConfiguration;
 import cz.novanadeje.app.operations.domain.backup.BackupAlertState;
 import cz.novanadeje.app.operations.domain.backup.BackupAlertStateRepository;
 import cz.novanadeje.app.operations.domain.backup.BackupProblem;
@@ -18,7 +17,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import({TestcontainersConfiguration.class, JpaBackupAlertStateRepository.class})
+@Import(OperationsPersistenceTestConfiguration.class)
 class JpaBackupAlertStateRepositoryTest {
 
     private static final Instant NOW = Instant.parse("2026-10-23T05:15:00Z");

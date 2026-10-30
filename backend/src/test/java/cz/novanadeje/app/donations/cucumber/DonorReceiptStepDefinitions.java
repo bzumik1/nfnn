@@ -4,7 +4,6 @@ import cz.novanadeje.app.cucumber.ApiClient;
 import cz.novanadeje.app.cucumber.DonorSessions;
 import cz.novanadeje.app.cucumber.ScenarioDonors;
 import cz.novanadeje.app.support.MutableClock;
-import io.cucumber.java.After;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
@@ -43,7 +42,6 @@ public class DonorReceiptStepDefinitions {
     private final JdbcClient jdbc;
     private final MutableClock clock;
     private final List<byte[]> downloads = new ArrayList<>();
-    private Instant clockBeforeScenarioTime;
 
     public DonorReceiptStepDefinitions(ApiClient api, DonorSessions sessions, ScenarioDonors scenarioDonors, JdbcClient jdbc, MutableClock clock) {
         this.api = api;
@@ -53,18 +51,8 @@ public class DonorReceiptStepDefinitions {
         this.clock = clock;
     }
 
-    @After
-    public void keepTheClockMovingForward() {
-        if (clockBeforeScenarioTime != null && clock.instant().isBefore(clockBeforeScenarioTime)) {
-            clock.set(clockBeforeScenarioTime);
-        }
-    }
-
     @Given("the time is {string}")
     public void theTimeIs(String instant) {
-        if (clockBeforeScenarioTime == null) {
-            clockBeforeScenarioTime = clock.instant();
-        }
         clock.set(Instant.parse(instant));
     }
 
@@ -211,6 +199,16 @@ public class DonorReceiptStepDefinitions {
         assertReceiptAvailable(receivedOn, false);
     }
 
+    @Then("the donation received on {date} is listed as an account verification")
+    public void theDonationIsListedAsAnAccountVerification(LocalDate receivedOn) {
+        assertAccountVerification(receivedOn, true);
+    }
+
+    @Then("the donation received on {date} is listed as a gift")
+    public void theDonationIsListedAsAGift(LocalDate receivedOn) {
+        assertAccountVerification(receivedOn, false);
+    }
+
     @Then("the summary makes receipts available from {int}")
     public void theSummaryMakesReceiptsAvailableFrom(int year) {
         JsonNode json = api.lastResponseJson();
@@ -254,6 +252,14 @@ public class DonorReceiptStepDefinitions {
         assertThat(donation.get("receiptAvailable")).withFailMessage("No receiptAvailable in %s", donation).isNotNull();
         assertThat(donation.get("receiptAvailable").isBoolean()).withFailMessage("No boolean receiptAvailable in %s", donation).isTrue();
         assertThat(donation.get("receiptAvailable").asBoolean()).withFailMessage("Unexpected receiptAvailable in %s", donation).isEqualTo(available);
+    }
+
+    private void assertAccountVerification(LocalDate receivedOn, boolean verification) {
+        JsonNode donation = listedDonation(receivedOn);
+        assertThat(donation.get("accountVerification")).withFailMessage("No accountVerification in %s", donation).isNotNull();
+        assertThat(donation.get("accountVerification").isBoolean()).withFailMessage("No boolean accountVerification in %s", donation).isTrue();
+        assertThat(donation.get("accountVerification").asBoolean()).withFailMessage("Unexpected accountVerification in %s", donation)
+                .isEqualTo(verification);
     }
 
     private JsonNode listedDonation(LocalDate receivedOn) {

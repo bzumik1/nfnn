@@ -1,4 +1,5 @@
 import { expect, test } from './fixtures';
+import { mockDonorApi, signIn } from './donor-session';
 
 test.describe('Given a visitor on the home page', () => {
   test('when they send a contact message, then the site posts it to the API and thanks them', async ({
@@ -28,6 +29,35 @@ test.describe('Given a visitor on the home page', () => {
         website: '',
       },
     ]);
+  });
+
+  test('when the API refuses the e-mail address, then the e-mail field says so and takes the focus', async ({
+    page,
+  }) => {
+    await page.route('**/api/contact/messages', (route) =>
+      route.fulfill({
+        status: 400,
+        contentType: 'application/problem+json',
+        body: JSON.stringify({
+          type: 'https://nfnn.cz/problems/validation',
+          title: 'Neplatný požadavek',
+          status: 400,
+          errors: [{ field: 'email', message: 'musí odpovídat tvaru e-mailové adresy' }],
+        }),
+      }),
+    );
+
+    await page.goto('/');
+    await page.locator('#contact-name').fill('Jana Nováková');
+    await page.locator('#contact-email').fill('jana@example.c');
+    await page.locator('#contact-message').fill('Dobrý den.');
+    await page.getByRole('button', { name: 'Odeslat zprávu' }).click();
+
+    await expect(page.locator('#contact-email-error')).toHaveText(
+      'Zadejte e-mail ve tvaru jan@example.com.',
+    );
+    await expect(page.locator('#contact-email')).toBeFocused();
+    await expect(page.getByRole('alert').filter({ hasText: /\S/ })).toHaveCount(0);
   });
 
   test('when the API refuses the message, then the form stays with an explanation', async ({
@@ -70,7 +100,7 @@ test.describe('Given a visitor on the home page', () => {
       'Napište nám prosím své jméno.',
     );
     await expect(page.locator('#contact-email')).toHaveAccessibleDescription(
-      'Zadejte e-mail ve tvaru jan@example.com.',
+      'Odpovíme vám na zadaný e-mail. Zadejte e-mail ve tvaru jan@example.com.',
     );
     await expect(page.locator('#contact-message')).toHaveAttribute('aria-invalid', 'true');
     expect(posted).toEqual([]);
@@ -90,5 +120,22 @@ test.describe('Given a visitor on the home page', () => {
       ).toHaveAttribute('href', 'mailto:info@nfnn.cz');
       await expect(page.getByText('Jiráskova 436, 473 01 Nový Bor')).toBeVisible();
     });
+  });
+});
+
+test.describe('Given a signed-in donor who goes back to the home page', () => {
+  test('when they reach the contact form, then their name and e-mail are filled in and can be changed', async ({
+    page,
+  }) => {
+    await mockDonorApi(page);
+    await signIn(page);
+
+    await page.getByRole('link', { name: 'Hlavní stránka' }).click();
+    await page.locator('#kontakt').scrollIntoViewIfNeeded();
+
+    await expect(page.locator('#contact-name')).toHaveValue('Jana Nováková');
+    await expect(page.locator('#contact-email')).toHaveValue('jana@example.cz');
+    await page.locator('#contact-email').fill('jana.jinak@example.cz');
+    await expect(page.locator('#contact-email')).toHaveValue('jana.jinak@example.cz');
   });
 });

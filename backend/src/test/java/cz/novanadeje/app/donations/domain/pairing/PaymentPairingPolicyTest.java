@@ -72,6 +72,37 @@ class PaymentPairingPolicyTest {
     }
 
     @Test
+    @DisplayName("Given a payment without a symbol whose message carries the donor's symbol, when decided, then it is paired by symbol")
+    void should_pair_by_symbol_when_decided_given_donor_symbol_in_message() {
+        BankPayment inMessage = payment(1, BOOKED_ON, czk(100), Optional.of(ACCOUNT), null, "VS " + JANA_SYMBOL.value());
+
+        PairingDecision decision = policy.decide(inMessage, Optional.of(jana), List.of(withAccount(petr)));
+
+        assertThat(decision).isEqualTo(new PairingDecision.PairBySymbol(jana));
+    }
+
+    @Test
+    @DisplayName("Given a payment without a symbol whose message carries a number no donor has, when decided, then it is paired by its account")
+    void should_pair_by_account_when_decided_given_unknown_number_in_message() {
+        DonorRecord owner = withAccount(petr);
+        BankPayment inMessage = payment(1, BOOKED_ON, czk(100), Optional.of(ACCOUNT), null, "faktura 2026000123");
+
+        PairingDecision decision = policy.decide(inMessage, Optional.empty(), List.of(owner));
+
+        assertThat(decision).isEqualTo(new PairingDecision.PairByAccount(owner, owner.senderAccountLinks().getFirst()));
+    }
+
+    @Test
+    @DisplayName("Given a payment from no account whose message carries the donor's symbol, when decided, then it is paired by symbol")
+    void should_pair_by_symbol_when_decided_given_symbol_in_message_without_sender() {
+        BankPayment inMessage = payment(1, BOOKED_ON, czk(100), Optional.empty(), null, JANA_SYMBOL.value());
+
+        PairingDecision decision = policy.decide(inMessage, Optional.of(jana), List.of());
+
+        assertThat(decision).isEqualTo(new PairingDecision.PairBySymbol(jana));
+    }
+
+    @Test
     @DisplayName("Given a donor found for a symbol that is not the payment's, when decided, then it stays unpaired as an unknown symbol")
     void should_leave_unpaired_when_decided_given_donor_not_claiming_symbol() {
         PairingDecision decision = policy.decide(payment(1, Optional.of(ACCOUNT), "1111111111"), Optional.of(jana), List.of());

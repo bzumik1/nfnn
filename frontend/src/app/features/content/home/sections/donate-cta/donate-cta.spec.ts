@@ -196,6 +196,14 @@ describe('Given the donate section', () => {
     expect(element('.before-pay .account-sign-in')).not.toBeNull();
   });
 
+  it('when nobody is signed in, then a line says the receipt can be issued to a company registered with its company ID', async () => {
+    await openWithQr();
+
+    expect(squashed('.before-pay .company-hint')).toBe(
+      'Potvrzení vystavíme i na firmu: při registraci zvolte Firma a vyplňte IČO.',
+    );
+  });
+
   it('when nobody is signed in, then what comes next says how an earlier gift can still be paired and where the yearly receipt is', async () => {
     await openWithQr();
 
@@ -350,6 +358,43 @@ describe('Given the donate section', () => {
       name: 'qr-platba-nova-nadeje.png',
     });
     vi.restoreAllMocks();
+  });
+
+  it('when the visitor saves the QR, then a status line names the saved file and where to find it until another amount is picked', async () => {
+    await openWithQr();
+    vi.spyOn(QrCode.prototype, 'pngDataUrl').mockResolvedValue('data:image/png;base64,AAAA');
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
+    expect(element('.qr-saved').getAttribute('role')).toBe('status');
+    expect(squashed('.qr-saved')).toBe('');
+
+    button('Uložit QR kód').click();
+    await vi.waitFor(() => {
+      fixture.detectChanges();
+      expect(squashed('.qr-saved')).toBe(
+        'QR kód qr-platba-nova-nadeje.png je uložený. Najdete ho ve stažených souborech.',
+      );
+    });
+
+    button('1 000 Kč').click();
+    await settle();
+    respondToPrefetch();
+    expect(squashed('.qr-saved')).toBe('');
+    vi.restoreAllMocks();
+  });
+
+  it('when the visitor picks Jiná částka, then the field opens empty, nothing is asked for and the QR waits for an amount', async () => {
+    await openWithQr();
+
+    button('Jiná částka').click();
+    await settle();
+
+    expect(element<HTMLInputElement>('#donate-custom-amount').value).toBe('');
+    http.expectNone((request) => request.url === PAYMENT_QR_URL);
+    expect(qrCode()).toBeNull();
+    expect(squashed('.qr-placeholder')).toBe('Nejprve zadejte částku');
+    expect(squashed('.bank')).not.toContain('Částka');
+    expect(button('500 Kč').getAttribute('aria-pressed')).toBe('false');
+    expect(button('Jiná částka').getAttribute('aria-pressed')).toBe('true');
   });
 
   it('when nobody is signed in, then it offers to create an account and opens the registration that leads back here after the e-mail', async () => {

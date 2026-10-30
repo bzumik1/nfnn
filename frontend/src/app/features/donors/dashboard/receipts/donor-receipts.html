@@ -1,7 +1,9 @@
 <app-page-title i18n="@@donor.receipts.heading">Potvrzení o daru</app-page-title>
 <p class="receipts-intro" i18n="@@donor.receipts.intro">
-  Do daňového přiznání přiložte buď roční potvrzení, nebo potvrzení k jednotlivým darům, ne obojí.
-  Když změníte jméno nebo adresu, nově stažené potvrzení dostane nové číslo a nahradí to dřívější.
+  Potvrzení k jednotlivým darům stáhnete hned, roční potvrzení za celý rok od 1.&nbsp;ledna dalšího
+  roku a do daňového přiznání přiložíte buď jednotlivá, nebo roční, ne obojí, protože roční obsahuje
+  všechny dary roku. Když změníte jméno nebo adresu, nově stažené potvrzení dostane nové číslo a
+  nahradí to dřívější.
 </p>
 
 @if (donations.state() === 'ready') {
@@ -28,13 +30,9 @@
         @for (row of rows(); track row.year) {
           <li class="year-row">
             <span class="year">{{ row.year }}</span>
-            <span class="year-count" i18n="@@donor.receipts.year.count">
-              {row.count, plural,
-                one {{{ row.count }} dar}
-                few {{{ row.count }} dary}
-                other {{{ row.count }} darů}
-              }
-            </span>
+            <span class="year-count"
+              ><app-gift-count [gifts]="row.gifts" [verifications]="row.verifications"
+            /></span>
             <span class="year-total">{{ crowns(row.totalAmountMinor) }}&nbsp;Kč</span>
             <span class="year-action">
               @switch (row.receipt) {
@@ -70,6 +68,11 @@
                       >
                     }
                   </button>
+                  <span class="ui-form-status receipt-saved" role="status">
+                    @if (donations.yearlySaved(row.year); as saved) {
+                      <span>{{ saved }}</span>
+                    }
+                  </span>
                 }
                 @case ('after-year-end') {
                   <span class="year-note" i18n="@@donor.receipts.year.afterYearEnd"

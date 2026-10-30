@@ -3,6 +3,8 @@ name: PR check
 on:
   pull_request:
     branches: [main]
+  push:
+    branches: [main]
     paths:
       - "**"
       - "!docs/**"
@@ -13,13 +15,44 @@ permissions:
   contents: read
 
 concurrency:
-  group: pr-check-${{ github.event.pull_request.number }}
-  cancel-in-progress: true
+  group: pr-check-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  backend:
+  changes:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 5
+    permissions:
+      pull-requests: read
+    outputs:
+      code: ${{ steps.files.outputs.code }}
+    steps:
+      - name: Find whether the change touches code or only docs/, .claude/ and Markdown
+        id: files
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          PULL_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          if [ -z "$PULL_NUMBER" ]; then
+            echo "A push to main runs every job."
+            echo "code=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          files=$(gh api "repos/$REPOSITORY/pulls/$PULL_NUMBER/files" --paginate --jq '.[].filename')
+          if grep -Ev '^(docs/|\.claude/)|\.md$' <<<"$files" | grep -q .; then
+            echo "The pull request changes code, so every job runs."
+            echo "code=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "The pull request changes only docs/, .claude/ or Markdown, so no job runs and the gate passes."
+            echo "code=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  backend:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: ${{ github.event_name == 'push' && 35 || 25 }}
     defaults:
       run:
         working-directory: backend
@@ -63,9 +96,20 @@ jobs:
             backend/build/api-transcripts/
             backend/build/backend-inventory.json
           if-no-files-found: error
-          retention-days: 3
+          retention-days: ${{ github.event_name == 'push' && 90 || 3 }}
+
+      - name: Record main a second time and compare the two recordings
+        if: github.event_name == 'push'
+        run: |
+          cp -R build/api-transcripts "$RUNNER_TEMP/first-recording"
+          ./gradlew acceptanceTest --rerun
+          node ../scripts/compare-recordings.mjs "$RUNNER_TEMP/first-recording" build/api-transcripts
+        env:
+          API_TRANSCRIPTS: record
 
   frontend:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     defaults:
@@ -84,6 +128,10 @@ jobs:
 
       - run: npm ci
 
+      - name: Start installing Playwright's Chromium headless shell while the checks run
+        run: |
+          (npx playwright install --with-deps --only-shell chromium > "$RUNNER_TEMP/playwright-install.log" 2>&1; echo $? > "$RUNNER_TEMP/playwright-install.status") &
+
       - name: Formatting follows Prettier
         run: npm run format:check
 
@@ -101,8 +149,14 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Install Playwright's Chromium
-        run: npx playwright install --with-deps chromium
+      - name: Playwright's Chromium headless shell is installed
+        run: |
+          for _ in $(seq 300); do
+            [ -s "$RUNNER_TEMP/playwright-install.status" ] && break
+            sleep 1
+          done
+          cat "$RUNNER_TEMP/playwright-install.log"
+          [ "$(cat "$RUNNER_TEMP/playwright-install.status" 2>/dev/null)" = 0 ] || { echo "::error::Playwright's Chromium headless shell was not installed (log above)"; exit 1; }
 
       - name: End-to-end and accessibility tests
         run: npm run e2e
@@ -118,7 +172,7 @@ jobs:
           name: frontend-inventory
           path: ${{ runner.temp }}/inventory/
           if-no-files-found: error
-          retention-days: 3
+          retention-days: ${{ github.event_name == 'push' && 90 || 3 }}
 
       - name: Build with the control theme
         run: npx ng build --configuration=production,control-theme --output-path=dist/control-theme
@@ -130,6 +184,8 @@ jobs:
           E2E_DIST: dist/control-theme/browser
 
   mcp:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     defaults:
@@ -160,11 +216,89 @@ jobs:
           name: mcp-inventory
           path: ${{ runner.temp }}/inventory/
           if-no-files-found: error
-          retention-days: 3
+          retention-days: ${{ github.event_name == 'push' && 90 || 3 }}
+
+  main-recording:
+    name: Nahrávka main
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: read
+      contents: read
+    outputs:
+      commit: ${{ steps.find.outputs.commit }}
+      missing: ${{ steps.find.outputs.missing }}
+    steps:
+      - name: Find the newest successful push run on main at or before the base that keeps its recording
+        id: find
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          HEAD_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          keeps() {
+            [ "$(gh api "repos/$REPOSITORY/actions/runs/$1/artifacts?per_page=100" --jq '[.artifacts[] | select(.expired == false) | .name | select(. == "backend-recording" or . == "frontend-inventory" or . == "mcp-inventory")] | unique | length')" = 3 ]
+          }
+          base=$(gh api "repos/$REPOSITORY/commits/$HEAD_SHA" --jq '.parents[0].sha')
+          runs=$(gh api "repos/$REPOSITORY/actions/workflows/pr-check.yml/runs?branch=main&event=push&status=success&per_page=100" --jq '.workflow_runs[] | "\(.head_sha) \(.id)"')
+          for commit in $(gh api "repos/$REPOSITORY/commits?sha=$base&per_page=50" --jq '.[].sha'); do
+            for run in $(awk -v commit="$commit" '$1 == commit { print $2 }' <<<"$runs"); do
+              if keeps "$run"; then
+                echo "The recording of main at $commit (run $run) is the comparison base for $base."
+                { echo "commit=$commit"; echo "run=$run"; } >> "$GITHUB_OUTPUT"
+                exit 0
+              fi
+            done
+          done
+          for run in $(awk '{ print $2 }' <<<"$runs"); do
+            if keeps "$run"; then
+              echo "::error::No successful push run of the last 50 commits on main up to ${base:0:12} keeps its recording and test lists, although run $run does. Re-run the PR check of the newest commit on main (Actions, PR check, the push run, Re-run all jobs), then re-run this check (testing.md, \"Regression against v2\")."
+              exit 1
+            fi
+          done
+          missing="no successful push run on main keeps a backend-recording, frontend-inventory and mcp-inventory artifact yet (before the first push run that keeps them)"
+          echo "::warning::$missing; the comparison falls back to v2 only"
+          echo "missing=$missing" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/download-artifact@v8
+        if: steps.find.outputs.run != ''
+        with:
+          name: backend-recording
+          run-id: ${{ steps.find.outputs.run }}
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/main-recording
+
+      - uses: actions/download-artifact@v8
+        if: steps.find.outputs.run != ''
+        with:
+          name: frontend-inventory
+          run-id: ${{ steps.find.outputs.run }}
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/main-recording
+
+      - uses: actions/download-artifact@v8
+        if: steps.find.outputs.run != ''
+        with:
+          name: mcp-inventory
+          run-id: ${{ steps.find.outputs.run }}
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/main-recording
+
+      - name: Keep the recording and test lists of main for the comparison
+        if: steps.find.outputs.run != ''
+        uses: actions/upload-artifact@v7
+        with:
+          name: main-recording
+          path: ${{ runner.temp }}/main-recording/
+          if-no-files-found: error
+          retention-days: 1
 
   compare-v2:
     name: Srovnání s v2
-    needs: [backend, frontend, mcp]
+    needs: [backend, frontend, mcp, main-recording]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -173,8 +307,22 @@ jobs:
           persist-credentials: false
           fetch-depth: 2
 
-      - name: List the files the pull request changes
-        run: git diff --name-only HEAD^1 HEAD > "$RUNNER_TEMP/changed-files.txt"
+      - name: List the files the pull request changes, with their git status
+        run: git diff --name-status --no-renames HEAD^1 HEAD > "$RUNNER_TEMP/changed-files.txt"
+
+      - uses: actions/download-artifact@v8
+        if: needs.main-recording.outputs.commit != ''
+        with:
+          name: main-recording
+          path: ${{ runner.temp }}/main-recording
+
+      - name: List the files changed since the recorded main commit
+        if: needs.main-recording.outputs.commit != ''
+        env:
+          MAIN_COMMIT: ${{ needs.main-recording.outputs.commit }}
+        run: |
+          git fetch --quiet --depth=1 origin "$MAIN_COMMIT"
+          git diff --name-status --no-renames "$MAIN_COMMIT" HEAD > "$RUNNER_TEMP/changed-since-main.txt"
 
       - uses: actions/setup-node@v7
         with:
@@ -220,9 +368,27 @@ jobs:
         env:
           API_TRANSCRIPTS_DIR: ${{ github.workspace }}/backend/build/api-transcripts
 
-      - name: Transcripts and tests compared with v2
+      - name: Collect the test inventory of main
+        if: needs.main-recording.outputs.commit != ''
+        run: >-
+          node scripts/test-inventory.mjs
+          --backend="$RUNNER_TEMP/main-recording/backend-inventory.json"
+          --frontendVitest="$RUNNER_TEMP/main-recording/frontend-vitest.json"
+          --playwright="$RUNNER_TEMP/main-recording/frontend-playwright.json"
+          --mcpVitest="$RUNNER_TEMP/main-recording/mcp-vitest.json"
+          --out="$RUNNER_TEMP/main-inventory.json"
+
+      - name: Transcripts and tests compared with v2 and with the recording of main
+        env:
+          MAIN_COMMIT: ${{ needs.main-recording.outputs.commit }}
+          MAIN_MISSING: ${{ needs.main-recording.outputs.missing }}
         run: |
-          node scripts/compare-v2.mjs --inventory="$RUNNER_TEMP/test-inventory.json" --changed="$RUNNER_TEMP/changed-files.txt" --report="$RUNNER_TEMP/srovnani-s-v2.md" > /dev/null
+          if [ -n "$MAIN_COMMIT" ]; then
+            main=(--main="$RUNNER_TEMP/main-recording/api-transcripts" --main-commit="$MAIN_COMMIT" --main-changed="$RUNNER_TEMP/changed-since-main.txt" --main-inventory="$RUNNER_TEMP/main-inventory.json")
+          else
+            main=(--main-missing="${MAIN_MISSING:-the job main-recording named no recording of main}")
+          fi
+          node scripts/compare-v2.mjs --inventory="$RUNNER_TEMP/test-inventory.json" --changed="$RUNNER_TEMP/changed-files.txt" "${main[@]}" --report="$RUNNER_TEMP/srovnani-s-v2.md" > /dev/null
           status=$?
           cat "$RUNNER_TEMP/srovnani-s-v2.md" >> "$GITHUB_STEP_SUMMARY"
           exit $status
@@ -238,24 +404,14 @@ jobs:
           retention-days: 14
 
   stack:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
         with:
           persist-credentials: false
-
-      - uses: actions/setup-node@v7
-        with:
-          node-version: "24"
-
-      - name: Build images
-        run: |
-          docker build -t ghcr.io/bzumik1/nfnn-backend:latest backend
-          docker build -t ghcr.io/bzumik1/nfnn-frontend:latest frontend
-          docker build -t ghcr.io/bzumik1/nfnn-backup:latest deploy/backup
-          docker build -t ghcr.io/bzumik1/nfnn-postgres:latest deploy/postgres
-          docker build -t ghcr.io/bzumik1/nfnn-mcp:latest mcp
 
       - name: Compose file has no dollar signs
         run: |
@@ -344,6 +500,23 @@ jobs:
             exit 1
           fi
 
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+
+      - uses: docker/setup-buildx-action@v4
+
+      - name: Build images
+        uses: docker/bake-action@v7
+        env:
+          CACHE_FROM_GHA: "true"
+          CACHE_TO_GHA: ${{ github.event_name == 'push' }}
+          DOCKER_BUILD_RECORD_UPLOAD: "false"
+        with:
+          source: .
+          files: .github/docker-bake.hcl
+          load: true
+
       - name: Prepare the compose file
         run: |
           mkdir -p "$RUNNER_TEMP/nfnn"
@@ -354,10 +527,16 @@ jobs:
             touch -d '2 days ago' "$RUNNER_TEMP/nfnn/logs/$log"
           done
           sed "s#/DATA/AppData/nfnn#$RUNNER_TEMP/nfnn#g" deploy/compose.yml > "$RUNNER_TEMP/compose.yml"
+          yq -i '.services.backup.environment.POLL_SECONDS = "1"' "$RUNNER_TEMP/compose.yml"
           echo "COMPOSE_FILE=$RUNNER_TEMP/compose.yml" >> "$GITHUB_ENV"
 
       - name: Start the production stack
-        run: docker compose up -d --wait --wait-timeout 300
+        run: |
+          docker compose up -d --wait --wait-timeout 300
+          for container in nfnn-postgres nfnn-backup nfnn-backend nfnn-mcp nfnn-frontend; do
+            restarts=$(docker inspect -f '{{.RestartCount}}' "$container")
+            [ "$restarts" = 0 ] || { echo "::error::$container restarted $restarts times while a fresh install started: the backend waits until the database accepts connections, so nothing restarts"; exit 1; }
+          done
 
       - name: First setup
         run: |
@@ -690,3 +869,21 @@ jobs:
       - name: Stop
         if: always()
         run: docker compose down
+
+  gate:
+    if: always()
+    needs: [changes, backend, frontend, mcp, main-recording, compare-v2, stack]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Every job passed, or the change touches no code and no job ran
+        env:
+          CODE: ${{ needs.changes.outputs.code }}
+          NEEDS: ${{ toJSON(needs) }}
+        run: |
+          jq -r 'to_entries[] | "\(.key): \(.value.result)"' <<<"$NEEDS"
+          if [ "$CODE" = true ]; then expected=success; else expected=skipped; fi
+          if ! jq -e --arg expected "$expected" '.changes.result == "success" and ([del(.changes)[] | .result] | all(. == $expected))' <<<"$NEEDS" > /dev/null; then
+            echo "::error::every job must pass on a change to code (and none run on a change to docs/, .claude/ or Markdown only); see the results above"
+            exit 1
+          fi

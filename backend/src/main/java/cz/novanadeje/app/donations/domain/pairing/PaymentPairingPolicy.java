@@ -37,6 +37,10 @@ public final class PaymentPairingPolicy {
             }
             return decideByConfirmedSymbol(payment, accountOwners, confirmedClaims);
         }
+        Optional<DonorRecord> byMessage = donorBySymbol.filter(donor -> donor.claimsBySymbol(payment));
+        if (byMessage.isPresent()) {
+            return new PairingDecision.PairBySymbol(byMessage.get());
+        }
         if (payment.sender().isEmpty()) {
             return new PairingDecision.LeaveUnpaired(UnpairedReason.NO_IDENTIFICATION);
         }

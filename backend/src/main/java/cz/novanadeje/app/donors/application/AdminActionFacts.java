@@ -21,6 +21,7 @@ public record AdminActionFacts(String summaryKey, Map<String, String> values) {
     private static final String DAY = "\\d{4}-\\d{2}-\\d{2}";
     private static final String MONEY = "Money\\[amountMinor=(?<amount>-?\\d+), currency=CZK]";
     private static final String WITHOUT_VARIANT = "";
+    private static final String WITH_TITLE = "withTitle";
     private static final String INHERITED = "INHERITED";
 
     private static final Map<String, String> SECTION_CODES = Map.of(
@@ -166,8 +167,10 @@ public record AdminActionFacts(String summaryKey, Map<String, String> values) {
         List<String> englishVerbs = List.of("created", "updated", "published on", "unpublished", "deleted");
         for (int index = 0; index < actions.size(); index++) {
             String on = "PUBLISH_".equals(actions.get(index)) ? " (?<on>" + DAY + ")" : "";
+            String czech = czechNoun + " " + ID + " „(?<slug>[^“]+)“ " + czechVerbs.get(index) + on;
             shapes.put(actions.get(index) + kind, List.of(
-                    full(czechNoun + " " + ID + " „(?<slug>[^“]+)“ " + czechVerbs.get(index) + on),
+                    variant(WITH_TITLE, czech + "; titulek „(?<title>(?s:.+))“"),
+                    full(czech),
                     full(englishNoun + " " + ID + " '(?<slug>[^']+)' " + englishVerbs.get(index) + on)));
         }
     }

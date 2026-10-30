@@ -11,7 +11,7 @@ A project thread wakes only on events: Jakub's message, a PR event it subscribed
 2. Within about 3 minutes, for the pushed head SHA, read the PR's `mergeable_state` (`unknown` right after a push: ask again a minute later) and look for a `PR check` run of that SHA (GitHub tools: `actions_list` with `list_workflow_runs` for `pr-check.yml` and the branch):
    - `dirty`: GitHub runs no workflow on a PR that conflicts with its base. Rebase onto `origin/main` now, resolve, `git push --force-with-lease`, start again.
    - Base other than `main`: `pr-check.yml` and `roadmap-check.yml` run only for PRs to `main`. Retarget the PR to `main` (see Branches) or keep it a draft and say why it has no CI.
-   - Only `docs/`, `.claude/` or Markdown changed: no check comes by design. Read the whole diff again, then merge (`CLAUDE.md`).
+   - Only `docs/`, `.claude/` or Markdown changed: the `PR check` run skips every job but `changes` and `gate`, and `gate` passes within a minute. Read the whole diff again, then merge (`CLAUDE.md`).
    - No run otherwise: look at githubstatus.com and again after 10 minutes, then tell Jakub; keep the scheduled check.
 3. Never end a turn that waits on CI unless a run of the head SHA was seen and a `send_later` check is scheduled about 20 minutes after the push, naming the PR and the SHA. Each check acts or schedules the next one (10 minutes later while the run is in progress, up to 35 minutes after the push; after that, treat it as no run). A check that fires after the merge only confirms it and stops.
 4. When the run ends:
@@ -21,7 +21,7 @@ A project thread wakes only on events: Jakub's message, a PR event it subscribed
 5. Tell Jakub, in one message with the PR link and the one thing he must do, only when: the fix needs him (a setting, a secret, GitHub settings, the server); no run started 10 minutes after a clean push; the same flaky step failed twice in a day; or a PR has waited more than 2 hours on something no thread can unblock.
 
 Known flaky (remove a line when its fix merges):
-- `stack`, "Start the production stack": the backend restarts once while a fresh postgres still runs initdb and `docker compose up --wait` gives up. The fix belongs in the CI step or `backend/docker-entrypoint.sh`, never `service_healthy` (`deploy-ci.md`, ZimaOS starts the app once).
+- None at the moment. (The stack start that restarted the backend while a fresh postgres ran initdb is fixed: the backend entrypoint waits for the database port, and the stack job fails on any restart.)
 
 ## Branches
 - One task, one branch from the latest `origin/main`, one worktree (`git worktree add /home/user/wt/<task> -b claude/<task> origin/main`), one PR to `main`. Run `git config rerere.enabled true` once per clone, so a conflict resolved once is replayed on every later rebase.

@@ -34,6 +34,7 @@ export interface RecordedRequest {
 export class FakeBackend {
   readonly requests: RecordedRequest[] = [];
   metadataAvailable = true;
+  previousSignInAt: string | null = '2026-10-28T20:14:00Z';
   private server: Server | undefined;
   url = '';
 
@@ -105,6 +106,9 @@ export class FakeBackend {
     if (request.method !== 'GET' && token !== 'api-token-write') {
       return [403, problem(403, 'auth/forbidden', 'Přístup odepřen', 'Chybí oprávnění.')];
     }
+    if (request.method === 'GET' && url.pathname === '/api/admin/donors/me/previous-sign-in') {
+      return [200, { previousSignInAt: this.previousSignInAt }];
+    }
     return adminRoute(request, url, body);
   }
 }
@@ -152,6 +156,17 @@ function adminRoute(request: RecordedRequest, url: URL, body: string): [number, 
         {
           year: Number(url.searchParams.get('year') ?? 2026),
           received: { count: 1, totalMinor: 99900, currency: 'CZK' },
+        },
+      ];
+    case 'GET /api/admin/donations/overview/since':
+      return [
+        200,
+        {
+          from: url.searchParams.get('from') ?? '2026-10-28T20:14:00Z',
+          payments: { count: 5, totalMinor: 1250000, currency: 'CZK' },
+          paired: { count: 3, totalMinor: 750000, currency: 'CZK' },
+          unpaired: { count: 2, totalMinor: 500000, currency: 'CZK' },
+          newDonors: 3,
         },
       ];
     case 'GET /api/admin/donations/payments':

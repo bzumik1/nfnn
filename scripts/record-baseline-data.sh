@@ -2,6 +2,11 @@
 set -euo pipefail
 
 root="$(cd "$(dirname "$0")/.." && pwd)"
+anchor="$root/regression/v2/BASELINE_COMMIT"
+if [[ -f "$anchor" && "$(git -C "$root" rev-parse HEAD)" != "$(cat "$anchor")" ]]; then
+  echo "The v2 baseline is recorded only on a checkout of $(cat "$anchor") (regression/v2/BASELINE_COMMIT): its generators exist only there, and here the shared cases are the hand-edited specification" >&2
+  exit 2
+fi
 store="${BASELINE_SCREENS_STORE:-/mnt/project-files/nfnn-ux/snimky/v2-baseline}"
 work="$(mktemp -d)"
 first_run="$work/screens"
@@ -79,7 +84,7 @@ if ! node "$root/scripts/screens-manifest.mjs" --check "$second_run"; then
 fi
 
 echo "== Every suite, which reads the recorded files back with their digests, and the test inventory"
-(cd "$root/backend" && GOLDEN_FILES=digests ./gradlew test --rerun "${gradle_init[@]}" -q)
+(cd "$root/backend" && GOLDEN_FILES=digests ./gradlew test --rerun acceptanceTest --rerun "${gradle_init[@]}" -q)
 (cd "$root/frontend" && npx playwright test --list --reporter=json >"$work/inventory-playwright.json")
 (cd "$root/frontend" && npx ng test --watch=false --reporters=json --output-file="$work/inventory-vitest.json" >/dev/null)
 (cd "$root/mcp" && npx vitest run --reporter=json --outputFile="$work/inventory-mcp-vitest.json" >/dev/null)

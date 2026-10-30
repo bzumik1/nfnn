@@ -187,6 +187,32 @@ Feature: An administrator sets up the monthly report, sends it again and reads t
       | received.count   | 0    |
     And the donations overview lists 12 months
 
+  Scenario: The yearly overview counts every donor who gave in a month once, and unpaired payments count no donor
+    Given today is 2026-09-01
+    And a person "Petr" is registered
+    And a person "Eva" is registered
+    And the bank account has these movements:
+      | id   | date       | amount | account    | bankCode | name         | variableSymbol |
+      | 1001 | 2026-09-02 | 200.00 | 2900244444 | 2010     | Svoboda Petr | {Petr}         |
+      | 1002 | 2026-09-20 | 300.00 | 2900244444 | 2010     | Svoboda Petr | {Petr}         |
+      | 1003 | 2026-09-25 | 150.00 | 2900255555 | 0800     | Dvořák Karel | 1111111111     |
+      | 1004 | 2026-10-01 | 999.00 | 2900233333 | 2010     | Nováková Eva | {Eva}          |
+      | 1005 | 2026-10-02 | 100.00 | 2900244444 | 2010     | Svoboda Petr | {Petr}         |
+    And today is 2026-10-23
+    And the application starts the import
+    When "Jana" asks for the donations overview
+    Then the response status is 200
+    And the donations overview says:
+      | givingDonors            | 2       |
+      | paired.count            | 4       |
+      | months.0.month          | 2026-10 |
+      | months.0.givingDonors   | 2       |
+      | months.1.month          | 2026-09 |
+      | months.1.givingDonors   | 1       |
+      | months.1.paired.count   | 2       |
+      | months.1.received.count | 3       |
+      | months.2.givingDonors   | 0       |
+
   Scenario: A donor without the administrator role and a visitor without a token are refused
     Given a person "Petr" is registered
     When "Petr" asks for the monthly report settings

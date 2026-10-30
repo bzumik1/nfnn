@@ -63,6 +63,7 @@ export interface AdminPaymentResponse {
   messageForRecipient: string | null;
   importedAt: string;
   unpairedByAdminAt: string | null;
+  accountVerification: boolean;
   donation: PairedDonationResponse | null;
 }
 
@@ -267,6 +268,7 @@ export interface MonthOverviewResponse {
   month: string;
   received: TallyResponse;
   newDonors: number;
+  givingDonors: number;
   paired: TallyResponse;
   unpaired: TallyResponse;
 }
@@ -276,10 +278,23 @@ export interface AdminOverviewResponse {
   availableYears: number[];
   donorsRegistered: number;
   newDonors: number;
+  givingDonors: number;
   received: TallyResponse;
   paired: TallyResponse;
   unpaired: TallyResponse;
   months: MonthOverviewResponse[];
+}
+
+export interface AdminActivitySinceResponse {
+  from: string;
+  payments: TallyResponse;
+  paired: TallyResponse;
+  unpaired: TallyResponse;
+  newDonors: number;
+}
+
+export interface PreviousSignInResponse {
+  previousSignInAt: string | null;
 }
 
 export type SettingGroup = 'SITE' | 'MAIL' | 'BANK' | 'RECEIPTS' | 'ADMINISTRATORS';
@@ -596,8 +611,10 @@ export class AdminApi {
     return this.http.get<AdminActionListResponse>('/api/admin/donors/actions', { params });
   }
 
-  donors(query: string): Observable<DonorAccountListResponse> {
-    return this.http.get<DonorAccountListResponse>('/api/admin/donors', { params: { query } });
+  donors(query: string, limit?: number): Observable<DonorAccountListResponse> {
+    const params: Record<string, string | number> =
+      limit === undefined ? { query } : { query, limit };
+    return this.http.get<DonorAccountListResponse>('/api/admin/donors', { params });
   }
 
   donor(donorId: string): Observable<DonorAccountResponse> {
@@ -626,6 +643,16 @@ export class AdminApi {
       params['year'] = String(year);
     }
     return this.http.get<AdminOverviewResponse>('/api/admin/donations/overview', { params });
+  }
+
+  overviewSince(from: string): Observable<AdminActivitySinceResponse> {
+    return this.http.get<AdminActivitySinceResponse>('/api/admin/donations/overview/since', {
+      params: { from },
+    });
+  }
+
+  previousSignIn(): Observable<PreviousSignInResponse> {
+    return this.http.get<PreviousSignInResponse>('/api/admin/donors/me/previous-sign-in');
   }
 
   donorDonations(donorId: string): Observable<AdminDonorDetailResponse> {

@@ -77,7 +77,7 @@ public class DonorEmailVerificationService {
         Donor donor = found.newEmail()
                 .map(newEmail -> changeEmail(found, newEmail, now))
                 .orElseGet(() -> verifyRegistration(found, now));
-        return views.authenticated(donor, sessions.open(donor, false));
+        return views.authenticated(donor, sessions.signIn(donor, false));
     }
 
     private Donor verifyRegistration(EmailVerificationToken found, Instant now) {

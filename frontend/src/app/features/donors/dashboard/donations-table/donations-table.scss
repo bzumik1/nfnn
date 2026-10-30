@@ -37,7 +37,7 @@ td {
 td.amount {
   font-size: var(--text-lg);
   font-weight: var(--weight-bold);
-  color: var(--color-accent);
+  color: var(--color-text);
   font-family: var(--font-serif);
   font-variant-numeric: var(--numeric-figures);
   white-space: nowrap;
@@ -46,6 +46,16 @@ td.amount {
 th.amount,
 td.amount {
   text-align: right;
+}
+
+tr.is-verification td {
+  color: var(--color-text-muted);
+}
+
+tr.is-verification td.amount {
+  font-size: var(--text-md);
+  font-weight: var(--weight-medium);
+  color: var(--color-text-muted);
 }
 
 .pairing-tag {
@@ -74,6 +84,16 @@ td.amount {
 .status-pill--refunded {
   background: var(--color-border);
   color: var(--color-text-muted);
+}
+
+.receipt-saved {
+  max-width: 12rem;
+}
+
+.receipt-saved span {
+  margin-top: var(--space-1-5);
+  font-size: var(--text-xs);
+  overflow-wrap: anywhere;
 }
 
 .receipt-note {
@@ -163,5 +183,9 @@ td.amount {
 
   td.receipt.is-empty {
     display: none;
+  }
+
+  .receipt-saved {
+    max-width: none;
   }
 }

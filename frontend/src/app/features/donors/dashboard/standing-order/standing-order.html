@@ -22,24 +22,30 @@
   <p class="standing-lead" i18n="@@donor.standingOrder.lead">
     Trvalý příkaz si nastavíte ve své bance, v aplikaci nebo v internetovém bankovnictví. Vyplňte:
   </p>
-  @switch (account().kind) {
+  @switch (shownAccount().kind) {
     @case ('loading') {
       <p class="standing-loading" role="status" i18n="@@donor.standingOrder.loading">
         Načítáme číslo účtu…
       </p>
     }
     @case ('failed') {
-      <p class="ui-callout ui-callout--danger standing-error" role="alert">
-        <span i18n="@@donor.standingOrder.error"
-          >Číslo účtu se nepodařilo načíst. Najdete ho na hlavní stránce v části</span
-        >&ngsp;<a routerLink="/" fragment="prispet" i18n="@@donor.standingOrder.errorLink"
-          >Přispět</a
-        >.
-      </p>
+      <div class="ui-callout ui-callout--danger standing-error" role="alert">
+        <p i18n="@@donor.standingOrder.errorRetry">
+          Číslo účtu se nepodařilo načíst. Zkuste to prosím znovu.
+        </p>
+        <button
+          type="button"
+          class="ui-link-button standing-retry"
+          (click)="retry()"
+          i18n="@@donor.standingOrder.retry"
+        >
+          Zkusit znovu
+        </button>
+      </div>
     }
   }
   <dl class="standing-details">
-    @if (account(); as state) {
+    @if (shownAccount(); as state) {
       @if (state.kind === 'ready') {
         <div class="standing-row">
           <dt i18n="@@home.donate.bank.account">Číslo účtu</dt>
@@ -68,9 +74,15 @@
     <div class="standing-row">
       <dt i18n="@@home.donate.bank.amount">Částka</dt>
       <dd>
-        <span class="standing-value" i18n="@@donor.standingOrder.amount"
-          >Jakákoli, kterou chcete posílat</span
-        >
+        @if (chosenAmount(); as chosen) {
+          <span class="standing-value" i18n="@@donor.standingOrder.chosenAmount"
+            >{{ chosen }}&nbsp;Kč, nebo jiná, kterou chcete posílat</span
+          >
+        } @else {
+          <span class="standing-value" i18n="@@donor.standingOrder.amount"
+            >Jakákoli, kterou chcete posílat</span
+          >
+        }
       </dd>
     </div>
     <div class="standing-row">
@@ -84,6 +96,9 @@
   </dl>
   <p class="standing-after" i18n="@@donor.standingOrder.after">
     Každá platba se vám tu pak objeví sama a do ročního potvrzení se započítají všechny.
+  </p>
+  <p class="standing-bank-only" i18n="@@donor.standingOrder.bankOnly">
+    Částku i den platby pak měníte jen ve své bance. Na tomto webu nic nastavovat nemusíte.
   </p>
   <p class="standing-older">
     <span i18n="@@donor.standingOrder.older"

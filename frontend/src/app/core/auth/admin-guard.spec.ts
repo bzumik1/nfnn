@@ -8,6 +8,7 @@ import {
   RouterStateSnapshot,
   UrlTree,
 } from '@angular/router';
+import { AdminAccessRefusal } from './admin-access-refusal';
 import { adminGuard } from './admin-guard';
 import { SESSION_HINT_KEY } from './auth-store';
 import { DialogHistory } from '../../shared/ui/dialog/dialog-history';
@@ -53,6 +54,7 @@ describe('Given the administration guard', () => {
       .flush(authResponse('token-1', sampleDonor({ roles: ['DONOR', 'ADMIN'] })));
 
     expect(await result).toBe(true);
+    expect(TestBed.inject(AdminAccessRefusal).reason()).toBeNull();
   });
 
   it('when a donor without the role is signed in, then they go to their overview without a dialog', async () => {
@@ -65,11 +67,44 @@ describe('Given the administration guard', () => {
     expect(TestBed.inject(LoginDialogService).isOpen()).toBe(false);
   });
 
+  it('when a donor without the role is signed in, then the overview is told the account has no administration', async () => {
+    localStorage.setItem(SESSION_HINT_KEY, '1');
+
+    const result = activate();
+    http.expectOne('/api/donors/auth/refresh').flush(authResponse('token-1'));
+    await result;
+
+    expect(TestBed.inject(AdminAccessRefusal).reason()).toBe('not-administrator');
+  });
+
+  it('when an administrator signed in without the second factor, then the overview is told the second factor opens the administration', async () => {
+    localStorage.setItem(SESSION_HINT_KEY, '1');
+
+    const result = activate();
+    http
+      .expectOne('/api/donors/auth/refresh')
+      .flush(
+        authResponse(
+          'token-1',
+          sampleDonor({ secondFactor: { enabled: false, neededForAdministration: true } }),
+        ),
+      );
+
+    expect(serialized(await result)).toBe('/darce/prehled');
+    expect(TestBed.inject(AdminAccessRefusal).reason()).toBe('second-factor');
+  });
+
   it('when nobody is signed in, then the visitor goes to the home page and the sign-in dialog opens', async () => {
     const result = await activate();
 
     expect(serialized(result)).toBe('/');
     expect(TestBed.inject(LoginDialogService).isOpen()).toBe(true);
+  });
+
+  it('when nobody is signed in, then the sign-in dialog says it leads into the administration', async () => {
+    await activate();
+
+    expect(TestBed.inject(LoginDialogService).forAdministration()).toBe(true);
   });
 
   it('when nobody is signed in and then signs in through the dialog, then the page they asked for opens', async () => {
