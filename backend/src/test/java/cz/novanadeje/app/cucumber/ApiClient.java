@@ -259,6 +259,7 @@ public class ApiClient {
 
     private void recordBytes(String method, String path, Map<String, String> extraHeaders, JsonNode requestBody, int status, HttpHeaders responseHeaders,
                              byte[] responseBody) {
+        BundleTexts.requireBundleTexts(method + " " + path, responseHeaders, responseBody);
         Map<String, String> sent = new LinkedHashMap<>(defaultHeaders);
         sent.putAll(extraHeaders);
         transcript.exchange(new RecordedExchange(method, path, sent, requestBody, status, responseHeaders, responseBody));

@@ -19,6 +19,7 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
 import org.springframework.validation.FieldError;
 import org.springframework.validation.method.ParameterErrors;
+import org.springframework.web.ErrorResponseException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -73,6 +74,15 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
         problem.setTitle(message("problem.upload-too-large.title"));
         problem.setDetail(message("problem.upload-too-large.detail"));
         return handleExceptionInternal(ex, problem, headers, HttpStatus.CONTENT_TOO_LARGE, request);
+    }
+
+    @Override
+    protected ResponseEntity<Object> handleErrorResponseException(ErrorResponseException ex, HttpHeaders headers, HttpStatusCode status, WebRequest request) {
+        ProblemDetail problem = ProblemDetail.forStatus(status);
+        problem.setType(ex.getBody().getType());
+        texts.find("problemDetail.title." + ex.getClass().getName()).ifPresent(problem::setTitle);
+        texts.find("problemDetail." + ex.getClass().getName()).ifPresent(problem::setDetail);
+        return handleExceptionInternal(ex, problem, headers, status, request);
     }
 
     @ExceptionHandler(DomainException.class)

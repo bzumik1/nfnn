@@ -2,6 +2,8 @@ package cz.novanadeje.app.shared.interfaces.rest;
 
 import cz.novanadeje.app.shared.domain.error.NotFound;
 import cz.novanadeje.app.shared.domain.error.RuleViolation;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Size;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -10,9 +12,11 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.ConversionNotSupportedException;
 import org.springframework.beans.TypeMismatchException;
+import org.springframework.core.MethodParameter;
 import org.springframework.context.support.ResourceBundleMessageSource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.http.converter.HttpMessageNotWritableException;
@@ -21,19 +25,26 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.test.web.servlet.RequestBuilder;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.HttpMediaTypeNotAcceptableException;
 import org.springframework.web.HttpMediaTypeNotSupportedException;
+import org.springframework.web.ErrorResponseException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
+import org.springframework.web.bind.MissingPathVariableException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.ServletRequestBindingException;
 import org.springframework.web.bind.UnsatisfiedServletRequestParameterException;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.context.request.async.AsyncRequestTimeoutException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.NoHandlerFoundException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
@@ -87,7 +98,22 @@ class ProblemTextsTest {
             Map.entry("async-timeout", AsyncRequestTimeoutException::new),
             Map.entry("upload-too-large", () -> new MaxUploadSizeExceededException(10, new IllegalStateException(EXCEPTION_TEXT))),
             Map.entry("authentication", () -> new BadCredentialsException(EXCEPTION_TEXT + ": " + CLIENT_VALUE)),
-            Map.entry("access-denied", () -> new AccessDeniedException(EXCEPTION_TEXT + ": " + CLIENT_VALUE)));
+            Map.entry("access-denied", () -> new AccessDeniedException(EXCEPTION_TEXT + ": " + CLIENT_VALUE)),
+            Map.entry("response-status", () -> new ResponseStatusException(HttpStatus.BAD_REQUEST, EXCEPTION_TEXT + ": " + CLIENT_VALUE)),
+            Map.entry("error-response", ProblemTextsTest::errorResponseWithDetail),
+            Map.entry("missing-parameter", () -> new MissingServletRequestParameterException("mode", "String")),
+            Map.entry("missing-path-variable", () -> new MissingPathVariableException("kind", probeParameter())),
+            Map.entry("missing-part", () -> new MissingServletRequestPartException("file")));
+
+    private static final Map<String, RequestBuilder> REQUESTS = Map.of(
+            "invalid-field", post("/probe/record").contentType(MediaType.APPLICATION_JSON).content("{\"value\": \"" + CLIENT_VALUE + "\"}"),
+            "invalid-parameter", get("/probe/size").param("value", CLIENT_VALUE),
+            "unreadable-body", post("/probe").contentType(MediaType.APPLICATION_JSON).content("{\"value\": " + CLIENT_VALUE + "}"),
+            "unsupported-type", post("/probe").contentType("text/x-" + CLIENT_VALUE).content("{}"),
+            "unsupported-method", request(HttpMethod.valueOf(CLIENT_METHOD), "/probe"));
+
+    record ProbeRecord(@Size(max = 3) String value) {
+    }
 
     private MockMvc mockMvc;
     private ResourceBundleMessageSource messages;
@@ -102,6 +128,16 @@ class ProblemTextsTest {
 
         @PostMapping("/probe")
         String write(@RequestBody Map<String, Object> body) {
+            return "ok";
+        }
+
+        @PostMapping("/probe/record")
+        String record(@Valid @RequestBody ProbeRecord body) {
+            return "ok";
+        }
+
+        @GetMapping("/probe/size")
+        String size(@RequestParam @Size(max = 3) String value) {
             return "ok";
         }
 
@@ -135,6 +171,20 @@ class ProblemTextsTest {
         MvcResult result = mockMvc.perform(get("/fail/" + kind).header("Accept-Language", language)).andReturn();
 
         assertThat(bodyOf(result)).doesNotContainIgnoringCase(CLIENT_VALUE).doesNotContain(EXCEPTION_TEXT);
+    }
+
+    static Stream<Arguments> requestsInEveryLanguage() {
+        return REQUESTS.keySet().stream().sorted().flatMap(kind -> LANGUAGES.stream().map(language -> Arguments.of(kind, language)));
+    }
+
+    @ParameterizedTest(name = "{0} in {1}")
+    @MethodSource("requestsInEveryLanguage")
+    @DisplayName("Given a request Spring refuses that carries a value the client sent, when it is answered, then the problem body does not repeat it")
+    void should_hold_no_client_value_when_answered_given_refused_request(String kind, String language) throws Exception {
+        MvcResult result = mockMvc.perform(withLanguage(REQUESTS.get(kind), language)).andReturn();
+
+        assertThat(result.getResponse().getStatus()).isBetween(400, 499);
+        assertThat(bodyOf(result)).doesNotContainIgnoringCase(CLIENT_VALUE);
     }
 
     @Test
@@ -244,6 +294,30 @@ class ProblemTextsTest {
             return Files.readString(path);
         } catch (IOException unreadable) {
             throw new UncheckedIOException(unreadable);
+        }
+    }
+
+    private static RequestBuilder withLanguage(RequestBuilder builder, String language) {
+        return servletContext -> {
+            var request = builder.buildRequest(servletContext);
+            request.addHeader("Accept-Language", language);
+            request.addPreferredLocale(Locale.forLanguageTag(language));
+            return request;
+        };
+    }
+
+    private static ErrorResponseException errorResponseWithDetail() {
+        ErrorResponseException failure = new ErrorResponseException(HttpStatus.CONFLICT, new IllegalStateException(EXCEPTION_TEXT));
+        failure.setDetail(EXCEPTION_TEXT + ": " + CLIENT_VALUE);
+        failure.getBody().setTitle(EXCEPTION_TEXT);
+        return failure;
+    }
+
+    private static MethodParameter probeParameter() {
+        try {
+            return new MethodParameter(ProbeController.class.getDeclaredMethod("fail", String.class), 0);
+        } catch (NoSuchMethodException missing) {
+            throw new IllegalStateException(missing);
         }
     }
 
