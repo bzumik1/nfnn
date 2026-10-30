@@ -20,6 +20,11 @@ public class TestSupportConfiguration {
     }
 
     @Bean
+    public AsyncTaskTracker asyncTaskTracker() {
+        return new AsyncTaskTracker();
+    }
+
+    @Bean
     @Primary
     public RecordingMailSender recordingMailSender() {
         return new RecordingMailSender();

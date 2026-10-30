@@ -3,6 +3,7 @@ package cz.novanadeje.app.cucumber;
 import cz.novanadeje.app.cucumber.transcript.ApiTranscriptRecorder;
 import cz.novanadeje.app.cucumber.transcript.RecordedExchange;
 import cz.novanadeje.app.cucumber.transcript.ScenarioTranscript;
+import cz.novanadeje.app.support.AsyncTaskTracker;
 import io.cucumber.spring.ScenarioScope;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.core.io.ByteArrayResource;
@@ -25,6 +26,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
@@ -36,19 +38,22 @@ public class ApiClient {
 
     private static final String FORWARDED_FOR = "X-Forwarded-For";
     private static final AtomicInteger CLIENT_ADDRESSES = new AtomicInteger();
+    private static final Duration ASYNC_WORK_WAIT = Duration.ofSeconds(15);
 
     private final RestClient client;
     private final int port;
     private final ApiTranscriptRecorder transcript;
+    private final AsyncTaskTracker asyncTasks;
     private final JsonMapper jsonMapper = JsonMapper.builder().build();
     private final Map<String, String> defaultHeaders = new LinkedHashMap<>();
     private ResponseEntity<String> lastResponse;
     private byte[] lastResponseBytes;
     private String clientAddress = nextClientAddress();
 
-    public ApiClient(@LocalServerPort int port, ApiTranscriptRecorder transcript) {
+    public ApiClient(@LocalServerPort int port, ApiTranscriptRecorder transcript, AsyncTaskTracker asyncTasks) {
         this.port = port;
         this.transcript = transcript;
+        this.asyncTasks = asyncTasks;
         this.client = RestClient.builder()
                 .baseUrl("http://localhost:" + port)
                 .defaultStatusHandler(status -> true, (request, response) -> {
@@ -145,7 +150,7 @@ public class ApiClient {
         lastResponse = ResponseEntity.status(response.getStatusCode())
                 .headers(response.getHeaders())
                 .body(new String(lastResponseBytes, StandardCharsets.UTF_8));
-        recordBytes("GET", path, Map.of(), null, response.getStatusCode().value(), response.getHeaders(), lastResponseBytes);
+        completeExchange("GET", path, Map.of(), null, response.getStatusCode().value(), response.getHeaders(), lastResponseBytes);
         return response;
     }
 
@@ -169,7 +174,7 @@ public class ApiClient {
             int bodyStart = raw.indexOf("\r\n\r\n");
             lastResponse = ResponseEntity.status(status).body(bodyStart < 0 ? "" : raw.substring(bodyStart + 4));
             lastResponseBytes = null;
-            recordBytes("POST", path, sent, rawBody(json), status, rawHeaders(raw, bodyStart), lastResponse.getBody().getBytes(StandardCharsets.UTF_8));
+            completeExchange("POST", path, sent, rawBody(json), status, rawHeaders(raw, bodyStart), lastResponse.getBody().getBytes(StandardCharsets.UTF_8));
             return lastResponse;
         } catch (IOException unreachable) {
             throw new IllegalStateException("The raw request to " + path + " failed", unreachable);
@@ -238,12 +243,13 @@ public class ApiClient {
 
     private void record(String method, String path, Map<String, String> extraHeaders, JsonNode requestBody) {
         String body = lastResponse.getBody();
-        recordBytes(method, path, extraHeaders, requestBody, lastResponse.getStatusCode().value(), lastResponse.getHeaders(),
+        completeExchange(method, path, extraHeaders, requestBody, lastResponse.getStatusCode().value(), lastResponse.getHeaders(),
                 body == null ? new byte[0] : body.getBytes(StandardCharsets.UTF_8));
     }
 
-    private void recordBytes(String method, String path, Map<String, String> extraHeaders, JsonNode requestBody, int status, HttpHeaders responseHeaders,
+    private void completeExchange(String method, String path, Map<String, String> extraHeaders, JsonNode requestBody, int status, HttpHeaders responseHeaders,
                              byte[] responseBody) {
+        asyncTasks.awaitIdle(ASYNC_WORK_WAIT);
         Map<String, String> sent = new LinkedHashMap<>(defaultHeaders);
         sent.putAll(extraHeaders);
         transcript.exchange(new RecordedExchange(method, path, sent, requestBody, status, responseHeaders, responseBody));
