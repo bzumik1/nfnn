@@ -5,6 +5,7 @@ import { NavigationError, provideRouter, Router } from '@angular/router';
 import { Connectivity } from '../../core/navigation/connectivity';
 import { ExternalNavigation } from '../../core/navigation/external-navigation';
 import { ChunkLoadRecovery } from '../../core/reload/chunk-load-recovery';
+import { ChunkProbe } from '../../core/reload/chunk-probe';
 import { ReloadGuard } from '../../core/reload/reload-guard';
 import { ChunkLoadNotice } from './chunk-load-notice';
 
@@ -30,6 +31,7 @@ describe('Given the chunk-load notice', () => {
         { provide: ReloadGuard, useValue: { claim: () => false } },
         { provide: ExternalNavigation, useValue: { loadFromServer } },
         { provide: Connectivity, useValue: { isOffline: () => false } },
+        { provide: ChunkProbe, useValue: { reloadWouldLand: () => Promise.resolve(true) } },
       ],
     }).compileComponents();
     fixture = TestBed.createComponent(ChunkLoadNotice);
@@ -47,7 +49,7 @@ describe('Given the chunk-load notice', () => {
     );
 
   async function failToLoad(): Promise<void> {
-    TestBed.inject(ChunkLoadRecovery).handleNavigationError(
+    await TestBed.inject(ChunkLoadRecovery).handleNavigationError(
       new NavigationError(
         1,
         '/aktuality',
@@ -68,8 +70,8 @@ describe('Given the chunk-load notice', () => {
       await failToLoad();
     });
 
-    it('then an alert over the page says the page did not open and what to do', () => {
-      expect(text('[role="alert"]')).toBe(`${MESSAGE} Načíst znovu`);
+    it('then a bar over the page says the page did not open and what to do', () => {
+      expect(text('.chunk-load-bar')).toBe(`${MESSAGE} Načíst znovu`);
       expect(element().querySelector('main')).toBeNull();
     });
 
@@ -77,12 +79,12 @@ describe('Given the chunk-load notice', () => {
       expect(document.activeElement).toBe(reloadButton());
     });
 
-    it('then its button is described by the message, so moving the focus there keeps it announced', () => {
+    it('then the button that takes the focus announces the message once, as its description, and no alert repeats it', () => {
       const describedBy = reloadButton()?.getAttribute('aria-describedby') ?? '';
-
       expect(document.getElementById(describedBy)?.textContent?.replace(/\s+/g, ' ').trim()).toBe(
         MESSAGE,
       );
+      expect(element().querySelector('[role="alert"], [aria-live]')).toBeNull();
     });
 
     describe('and the focus moves to a control the bar covers', () => {
@@ -98,7 +100,7 @@ describe('Given the chunk-load notice', () => {
         });
         scrollBy = vi.fn();
         window.scrollBy = scrollBy as unknown as typeof window.scrollBy;
-        const bar = element().querySelector('[role="alert"]') as HTMLElement;
+        const bar = element().querySelector('.chunk-load-bar') as HTMLElement;
         vi.spyOn(bar, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 700, 800, 60));
         control = document.createElement('input');
         vi.spyOn(control, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 690, 200, 40));
@@ -142,11 +144,11 @@ describe('Given the chunk-load notice', () => {
       expect(loadFromServer).toHaveBeenCalledExactlyOnceWith('/aktuality');
     });
 
-    it('and a later navigation succeeds, then the alert goes and the room is given back', async () => {
+    it('and a later navigation succeeds, then the bar goes and the room is given back', async () => {
       await TestBed.inject(Router).navigateByUrl('/dale');
       await fixture.whenStable();
 
-      expect(element().querySelector('[role="alert"]')).toBeNull();
+      expect(element().querySelector('.chunk-load-bar')).toBeNull();
       expect(document.documentElement.classList).not.toContain('has-floating-notice');
     });
   });

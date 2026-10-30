@@ -368,6 +368,18 @@ describe('Given an administrator writing a new news article', () => {
       expect(fixture.nativeElement.querySelector('dialog')).toBeNull();
     });
 
+    it('and choose to leave without saving, then a page load that follows asks the browser for no second warning', async () => {
+      const answer = fixture.componentInstance.canLeave();
+      await settle(fixture);
+      button(fixture, 'Odejít bez uložení').click();
+      await answer;
+
+      const event = new Event('beforeunload', { cancelable: true });
+      window.dispatchEvent(event);
+
+      expect(event.defaultPrevented).toBe(false);
+    });
+
     it('and choose to stay and save, then the navigation stops and the form is checked and saved', async () => {
       const answer = fixture.componentInstance.canLeave();
       await settle(fixture);

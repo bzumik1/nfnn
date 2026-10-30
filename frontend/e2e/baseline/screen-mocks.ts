@@ -9,6 +9,7 @@ import {
   donationItem,
   DonorApiMock,
   noDonations,
+  problem,
   session,
 } from '../donor-session';
 
@@ -432,8 +433,66 @@ const adminAnswers: Record<string, unknown> = {
 
 export const PETR_DETAIL_PATH = `/sprava/darci/${PETR_ID}`;
 
+interface PaymentQrCase {
+  name: string;
+  input: { recipient: { accountNumber: string; iban: string; name: string } };
+  expected: { spayd?: string; size?: number; matrix?: string[] };
+}
+
+const PAYMENT_QR_CASES: PaymentQrCase[] = JSON.parse(
+  readFileSync(join(__dirname, '..', '..', '..', 'shared-cases', 'qr', 'payment.json'), 'utf8'),
+).cases;
+
+const PAYMENT_QR_CASE_OF_QUERY: Record<string, string> = {
+  'amount=100': '100 Kč without a variable symbol',
+  'amount=500': '500 Kč without a variable symbol',
+  'amount=1000': '1 000 Kč without a variable symbol',
+  'amount=1234': '1 234 Kč without a variable symbol',
+  'amount=500&variableSymbol=1234567890': '500 Kč with a ten-digit variable symbol',
+  'amount=1000&variableSymbol=1234567890': '1 000 Kč as a donation named explicitly',
+  'amount=1&variableSymbol=1234567890&purpose=ACCOUNT_VERIFICATION':
+    "1 Kč verifying a donor's account",
+};
+
+function paymentQrAnswer(name: string) {
+  const sharedCase = PAYMENT_QR_CASES.find((candidate) => candidate.name === name);
+  const { spayd, size, matrix } = sharedCase?.expected ?? {};
+  if (!sharedCase || spayd === undefined || size === undefined || matrix === undefined) {
+    throw new Error(`shared-cases/qr/payment.json has no QR symbol for the case ${name}`);
+  }
+  const { accountNumber, iban, name: recipientName } = sharedCase.input.recipient;
+  return {
+    spayd,
+    qrCode: { size, modules: matrix.join('') },
+    bankAccount: { accountNumber, iban, recipientName },
+  };
+}
+
+export async function servePaymentQrCases(page: Page): Promise<void> {
+  await page.route(
+    (url) => url.pathname === '/api/donations/payment-qr',
+    (route) => {
+      const query = new URL(route.request().url()).searchParams.toString();
+      const name = PAYMENT_QR_CASE_OF_QUERY[query];
+      return name
+        ? route.fulfill({ json: paymentQrAnswer(name) })
+        : route.fulfill(
+            problem(400, 'donations/no-shared-case', 'Žádný sdílený případ', `Dotaz ${query}`),
+          );
+    },
+  );
+}
+
+export async function failPaymentQr(page: Page): Promise<void> {
+  await page.route(
+    (url) => url.pathname === '/api/donations/payment-qr',
+    (route) =>
+      route.fulfill(problem(500, 'server-error', 'Chyba serveru', 'Zkuste to prosím znovu.')),
+  );
+}
+
 async function mockMedia(page: Page): Promise<void> {
-  const cover = readFileSync(join(process.cwd(), 'public', 'images', 'news-1.webp'));
+  const cover = readFileSync(join(__dirname, '..', '..', 'public', 'images', 'news-1.webp'));
   await page.route(
     (url) => url.pathname.startsWith('/api/content/media/'),
     (route) => route.fulfill({ contentType: 'image/webp', body: cover }),

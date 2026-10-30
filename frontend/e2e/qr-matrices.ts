@@ -12,7 +12,7 @@ interface PaymentQrCase {
 }
 
 const PAYMENT_QR_CASES: { cases: PaymentQrCase[] } = JSON.parse(
-  readFileSync(join(process.cwd(), '..', 'shared-cases', 'qr', 'payment.json'), 'utf8'),
+  readFileSync(join(__dirname, '..', '..', 'shared-cases', 'qr', 'payment.json'), 'utf8'),
 );
 
 function paymentQr(name: string): QrMatrixFixture {
