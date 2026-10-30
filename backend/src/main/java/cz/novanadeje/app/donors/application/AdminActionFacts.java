@@ -125,6 +125,8 @@ public record AdminActionFacts(String summaryKey, Map<String, String> values) {
                 full("Server převzal klíč k ověřovacím QR (?<key>[0-9a-f]{8}) z obnovené zálohy \\(obnova (?<restore>[0-9A-Za-z:.-]{1,40})\\)")));
         shapes.put("WITHDRAW_RECEIPT_SIGNING_KEY", List.of(
                 full("Stažen klíč k ověřovacím QR (?<key>[0-9a-f]{8}) \\(ověřeno druhým faktorem\\)")));
+        shapes.put("WITHDRAW_RECEIPT_SIGNING_KEY_REFUSED", List.of(
+                full("Klíč k ověřovacím QR (?<key>[0-9a-f]{8}) se nestáhl: druhý faktor nesouhlasil")));
         shapes.put("REMOVE_RECEIPT_SIGNATURE", List.of(
                 full("Obrázek podpisu odebrán; .*"),
                 full("Signature image for receipts removed; .*")));

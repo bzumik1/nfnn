@@ -5,11 +5,13 @@ import cz.novanadeje.app.donations.domain.signing.ReceiptSigningKeyAlreadyWithdr
 import cz.novanadeje.app.donations.domain.signing.ReceiptSigningKeyId;
 import cz.novanadeje.app.donations.domain.signing.ReceiptSigningKeyNotFound;
 import cz.novanadeje.app.donations.domain.signing.ReceiptSigningKeyRepository;
+import cz.novanadeje.app.donations.domain.signing.ReceiptSigningKeyWithdrawalPaused;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
 import cz.novanadeje.app.shared.application.event.ReceiptSigningKeyWithdrawn;
 import cz.novanadeje.app.shared.application.seal.RecordSeals;
 import cz.novanadeje.app.shared.application.secondfactor.FreshSecondFactor;
 import cz.novanadeje.app.shared.application.secondfactor.FreshSecondFactorProof;
+import cz.novanadeje.app.shared.domain.error.DomainException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
@@ -31,15 +33,18 @@ public class ReceiptSigningKeyWithdrawal {
     private final ReceiptSigningKeys published;
     private final RecordSeals seals;
     private final FreshSecondFactor freshSecondFactor;
+    private final ReceiptSigningKeyWithdrawalRefusals refusals;
     private final ApplicationEventPublisher events;
     private final Clock clock;
 
     public ReceiptSigningKeyWithdrawal(ReceiptSigningKeyRepository keys, ReceiptSigningKeys published, RecordSeals seals,
-                                       FreshSecondFactor freshSecondFactor, ApplicationEventPublisher events, Clock clock) {
+                                       FreshSecondFactor freshSecondFactor, ReceiptSigningKeyWithdrawalRefusals refusals,
+                                       ApplicationEventPublisher events, Clock clock) {
         this.keys = keys;
         this.published = published;
         this.seals = seals;
         this.freshSecondFactor = freshSecondFactor;
+        this.refusals = refusals;
         this.events = events;
         this.clock = clock;
     }
@@ -57,8 +62,17 @@ public class ReceiptSigningKeyWithdrawal {
         if (key.isWithdrawn()) {
             throw new ReceiptSigningKeyAlreadyWithdrawn(keyId);
         }
-        freshSecondFactor.require(adminId, proof);
         Instant now = clock.instant();
+        if (refusals.paused(adminId, now)) {
+            log.warn("Admin {} asked to withdraw a receipt signing key while it is paused after refused second factors", adminId);
+            throw new ReceiptSigningKeyWithdrawalPaused();
+        }
+        try {
+            freshSecondFactor.require(adminId, proof);
+        } catch (DomainException refused) {
+            refusals.record(adminId, keyId, now);
+            throw refused;
+        }
         boolean current = published.isCurrent(keyId);
         keys.save(key.withdrawn(content -> seals.seal(ReceiptSigningKey.SEAL_PURPOSE, content)));
         events.publishEvent(new AdminActionPerformed(adminId, ACTION, Optional.empty(), details(keyId), now));
