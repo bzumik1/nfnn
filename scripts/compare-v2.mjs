@@ -24,13 +24,14 @@ const TRANSCRIPT_KINDS = [
   'added',
   'removed',
 ];
-const KINDS = [...TRANSCRIPT_KINDS, 'log-field', 'retired'];
+const KINDS = [...TRANSCRIPT_KINDS, 'log-field', 'retired', 'shared-case'];
 const NEEDS_SECURITY = new Set(['logs', 'log-field']);
 const LISTED = 20;
 const LISTED_LOG_LINES = 200;
 const SHORT_NUMBER = 4;
 const FOUNDATION_ADDRESS = 'info@nfnn.cz';
 const BASELINE_FILES = [/^regression\/v2\/api\//, /^regression\/v2\/test-inventory\.json$/];
+const SHARED_CASES = 'shared-cases/';
 const WATCHED_FILES = [
   /^backend\/src\/test\/java\/.*\/transcript\//,
   /(?:^|\/)ApiTranscripts[^/]*$/,
@@ -164,12 +165,35 @@ function validated(entry, file, index) {
   if (typeof entry.reason !== 'string' || entry.reason.trim() === '') {
     problem('needs a reason naming the decision');
   }
-  for (const field of ['path', 'scenario', 'line', 'suite', 'test', 'replacement', 'contract']) {
+  for (const field of [
+    'path',
+    'scenario',
+    'line',
+    'suite',
+    'test',
+    'replacement',
+    'contract',
+    'caseFile',
+  ]) {
     if (field in entry && typeof entry[field] !== 'string') {
       problem(`${field} must be a string`);
     }
   }
-  if (entry.kind === 'retired') {
+  if (entry.kind === 'shared-case') {
+    if (!entry.caseFile?.startsWith(SHARED_CASES)) {
+      problem(
+        'a changed shared case needs caseFile: the path from the repository root, starting with the literal "shared-cases/", * allowed after it',
+      );
+    }
+    for (const field of ['path', 'scenario', 'line', 'suite', 'test', 'replacement']) {
+      if (field in entry) {
+        problem(`a changed shared case names its caseFile, not ${field}`);
+      }
+    }
+    if (!entry.contract?.trim()) {
+      problem('needs contract: the contract or overview section that describes the change');
+    }
+  } else if (entry.kind === 'retired') {
     for (const field of ['suite', 'test', 'replacement']) {
       if (!entry[field]?.trim()) {
         problem(
@@ -230,6 +254,7 @@ function validated(entry, file, index) {
       line: entry.kind === 'log-field' ? exactly(entry.line) : glob(entry.line ?? '*'),
       suite: glob(entry.suite ?? '*'),
       test: glob(entry.test ?? '*'),
+      caseFile: glob(entry.caseFile ?? '*'),
     },
   };
 }
@@ -682,6 +707,7 @@ export function changedPaths(paths) {
     all: new Set(paths.map((path) => resolve(root, path.trim()))),
     baseline: relativePaths.filter((path) => BASELINE_FILES.some((rule) => rule.test(path))),
     watched: relativePaths.filter((path) => WATCHED_FILES.some((rule) => rule.test(path))),
+    sharedCases: relativePaths.filter((path) => path.startsWith(SHARED_CASES)),
   };
 }
 
@@ -708,10 +734,20 @@ function list(items, empty, limit = LISTED) {
 }
 
 const describeEntry = (entry) =>
-  `${entry.file}: \`${entry.kind}\` ${entry.path ?? entry.line ?? entry.test ?? ''} ${entry.scenario ?? entry.suite ?? ''}`.trim();
+  `${entry.file}: \`${entry.kind}\` ${entry.path ?? entry.line ?? entry.test ?? entry.caseFile ?? ''} ${entry.scenario ?? entry.suite ?? ''}`.trim();
 
 function render(result) {
-  const { chosen, counts, errors, declared, entries, files, inventoryChecked, changed } = result;
+  const {
+    chosen,
+    counts,
+    errors,
+    declared,
+    entries,
+    files,
+    inventoryChecked,
+    changed,
+    sharedCases,
+  } = result;
   const relativeToRoot = (path) => posix(relative(root, resolve(root, path))) || '.';
   const lines = ['## Srovnání s v2', ''];
   lines.push(
@@ -756,6 +792,20 @@ function render(result) {
         changed.watched.map((path) => `\`${path}\``),
         'žádné: nahrávání, maskování ani srovnání se nemění',
         changed.watched.length,
+      ),
+      '',
+    );
+  }
+  if (changed) {
+    lines.push('### Změněné sdílené případy', '');
+    lines.push(
+      ...list(
+        sharedCases.map(
+          ({ path, entry }) =>
+            `\`${path}\`: ${entry.reason} (${entry.file}${entry.contract ? `; ${entry.contract}` : ''})`,
+        ),
+        'žádné',
+        sharedCases.length,
       ),
       '',
     );
@@ -877,6 +927,21 @@ export function run(argv) {
       error: `the pull request changes the v2 baseline file ${path}; declare the difference in regression/v2/changes/ instead`,
     });
   }
+  const sharedCases = [];
+  for (const path of changed?.sharedCases ?? []) {
+    const entry = entries.find(
+      (candidate) => candidate.kind === 'shared-case' && candidate.matches.caseFile.test(path),
+    );
+    if (!entry) {
+      errors.push({
+        report: `\`shared-case\` ${path}: tento PR mění sdílené případy bez deklarace; pojmenujte soubor v \`regression/v2/changes/\``,
+        error: `the pull request changes ${path} without a shared-case declaration in regression/v2/changes/ naming it`,
+      });
+      continue;
+    }
+    entry.used += 1;
+    sharedCases.push({ path, entry });
+  }
   for (const difference of differences) {
     const entry = declare(difference, entries);
     if (!entry) {
@@ -920,6 +985,7 @@ export function run(argv) {
     files,
     inventoryChecked,
     changed,
+    sharedCases,
   });
   return { report, errors, output: chosen.report === '' ? '' : at(chosen.report) };
 }
