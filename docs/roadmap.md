@@ -188,6 +188,7 @@ E-maily:
 Veřejný web a provoz:
 
 - Instagram (Jakub 28. 10. 2026, plně automaticky, protože ho nikdo nebude mít čas spravovat): zveřejnění projektu nebo aktuality na webu ji samo publikuje na Instagram fondu (titulní fotka a krátký popisek s odkazem), bez dalšího kroku. Zapíná a vypíná se ve správě, token se obnovuje sám a při selhání přijde e-mail. Jednorázově je potřeba založit profesionální účet na Instagramu a aplikaci Meta; fond zatím účet nemá.
+- Více fotek u projektu a aktuality (Jakub 30. 10. 2026): kromě titulní fotky galerie dalších fotek, ve správě i přes konektor s pořadím a popiskem každé fotky, na webu pod textem s prohlížením na celou obrazovku (šipky, klávesy, posun prstem). Dnes má každý projekt a aktualita jen titulní fotku a text obrázky nevkládá; po zavedení se k projektům z let 2023–2025 doplní další fotky z jejich sbírek na Doniu.
 - Jedna hláška „Web se právě aktualizuje“ při restartu serveru.
 - E-mail při docházejícím místě na disku.
 - Smazání registrací, které nikdo nepotvrdil do 30 dnů.
