@@ -60,6 +60,9 @@ public class ReceiptRequestReader {
         return ReceiptRequest.forYear(record(donor), year, received, today);
     }
 
+    public void requireLiveRecord(DonorReference donor) {
+    }
+
     private DonorRecord record(DonorReference donor) {
         return donorRecords.findById(donor)
                 .orElseThrow(() -> new IllegalStateException("Donor " + donor + " has donations but no donor record"));

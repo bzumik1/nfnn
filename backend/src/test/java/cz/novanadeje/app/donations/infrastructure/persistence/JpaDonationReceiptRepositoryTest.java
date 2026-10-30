@@ -23,7 +23,9 @@ import cz.novanadeje.app.donations.domain.receipt.ReceiptImageRepository;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptKind;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptLine;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptNumber;
+import cz.novanadeje.app.donations.domain.receipt.ReceiptPage;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptParty;
+import cz.novanadeje.app.donations.domain.receipt.ReceiptQuery;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptStatus;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptTextSet;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptVerification;
@@ -65,6 +67,7 @@ import java.time.Year;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import static cz.novanadeje.app.donations.BankPayments.payment;
 import static cz.novanadeje.app.donations.infrastructure.persistence.BankPersistenceTestConfiguration.NOW;
@@ -571,6 +574,51 @@ class JpaDonationReceiptRepositoryTest {
         assertThat(jdbc.sql("select first_used_at from receipt_image where sha256 = ?").param(SIGNATURE.digest().value()).query(Instant.class).single())
                 .isEqualTo(NOW);
         assertThat(resources.image(new ContentDigest("e".repeat(64)))).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Given receipts of two donors issued in two years, when the administration lists them, then they come newest issue first, a page at a time, by donor, by the year of issue or by both, with the total of the match")
+    void should_page_receipts_newest_first_when_listed_given_donor_and_year_filters() {
+        DonorReference jana = storedDonor("4821937560");
+        DonorReference petr = storedDonor("7310945528");
+        Donation march = storedDonation(jana, LocalDate.of(2026, 3, 15));
+        receipts.save(single(jana, march, "2026-000001"));
+        receipts.save(issued(jana, NOW.plusSeconds(86_400), yearlyDocumentIssuedOn(YEAR_2026, "2027-000002", LocalDate.of(2027, 1, 15)),
+                Optional.empty()));
+        receipts.save(issued(petr, NOW.plusSeconds(2 * 86_400), yearlyDocumentIssuedOn(YEAR_2026, "2027-000003", LocalDate.of(2027, 1, 16)),
+                Optional.empty()));
+        flushAndClear();
+
+        assertThat(numbersOf(new ReceiptQuery(Optional.empty(), Optional.empty(), 0, 50))).containsExactly("3", "2027-000003", "2027-000002", "2026-000001");
+        assertThat(numbersOf(new ReceiptQuery(Optional.of(jana), Optional.empty(), 0, 50))).containsExactly("2", "2027-000002", "2026-000001");
+        assertThat(numbersOf(new ReceiptQuery(Optional.empty(), Optional.of(Year.of(2027)), 0, 50))).containsExactly("2", "2027-000003", "2027-000002");
+        assertThat(numbersOf(new ReceiptQuery(Optional.of(jana), Optional.of(Year.of(2027)), 0, 50))).containsExactly("1", "2027-000002");
+        assertThat(numbersOf(new ReceiptQuery(Optional.empty(), Optional.empty(), 1, 1))).containsExactly("3", "2027-000002");
+        assertThat(numbersOf(new ReceiptQuery(Optional.of(petr), Optional.of(Year.of(2026)), 0, 50))).containsExactly("0");
+    }
+
+    @Test
+    @DisplayName("Given a receipt that shows a signature image, when asked whether any receipt shows an image, then that image does and another does not")
+    void should_tell_whether_any_receipt_shows_image_when_asked_given_signed_receipt() {
+        DonorReference jana = storedDonor("4821937560");
+        receipts.save(single(jana, storedDonation(jana, LocalDate.of(2026, 3, 15)), "2026-000001"));
+        flushAndClear();
+
+        assertThat(receipts.anyShowsSignatureImage(SIGNATURE.digest())).isTrue();
+        assertThat(receipts.anyShowsSignatureImage(OTHER_SIGNATURE.digest())).isFalse();
+    }
+
+    private List<String> numbersOf(ReceiptQuery query) {
+        ReceiptPage page = receipts.findNewestFirst(query);
+        return Stream.concat(Stream.of(String.valueOf(page.total())),
+                page.items().stream().map(receipt -> receipt.number().value())).toList();
+    }
+
+    private static ReceiptDocument yearlyDocumentIssuedOn(Year year, String number, LocalDate issuedOn) {
+        Money amount = Money.czk(50000);
+        return new ReceiptDocument(ReceiptKind.YEARLY, new ReceiptNumber(number), issuedOn, LocaleCode.CS, FOUNDATION, JANA_PARTY,
+                List.of(new ReceiptLine(DonationId.newId(NOW), year.atDay(1), amount, DonationSource.BANK_TRANSFER)), amount, Optional.of(year),
+                SIGNATORY, Optional.empty());
     }
 
     private DonationReceipt single(DonorReference donor, Donation donation, String number) {

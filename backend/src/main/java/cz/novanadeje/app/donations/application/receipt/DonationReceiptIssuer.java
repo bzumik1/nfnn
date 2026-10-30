@@ -16,9 +16,11 @@ import cz.novanadeje.app.donations.domain.receipt.ReceiptSignatureRepository;
 import cz.novanadeje.app.donations.domain.receipt.ReplacedReceipt;
 import cz.novanadeje.app.donations.domain.receipt.Signatory;
 import cz.novanadeje.app.donations.domain.receipt.SignatureImage;
+import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
 import cz.novanadeje.app.shared.domain.LocaleCode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,6 +31,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.Year;
 import java.util.Optional;
+import java.util.UUID;
 
 @Service
 public class DonationReceiptIssuer {
@@ -37,6 +40,7 @@ public class DonationReceiptIssuer {
     private static final long SERIAL_WORTH_A_WARNING = (ReceiptNumber.LAST_SERIAL + 1) / 10 * 9;
     static final int NEW_RECEIPTS_PER_DONOR_A_DAY = 20;
     private static final Duration ISSUE_LIMIT_WINDOW = Duration.ofHours(24);
+    static final String ISSUE_ACTION = "ISSUE_RECEIPT";
 
     private final DonationReceiptRepository receipts;
     private final ReceiptRequestReader requests;
@@ -44,16 +48,19 @@ public class DonationReceiptIssuer {
     private final ReceiptSignatureRepository signatures;
     private final FoundationIdentity foundation;
     private final Signatory signatory;
+    private final ApplicationEventPublisher events;
     private final Clock clock;
 
     public DonationReceiptIssuer(DonationReceiptRepository receipts, ReceiptRequestReader requests, ReceiptFreezer freezer,
-                                 ReceiptSignatureRepository signatures, FoundationIdentity foundation, Signatory signatory, Clock clock) {
+                                 ReceiptSignatureRepository signatures, FoundationIdentity foundation, Signatory signatory,
+                                 ApplicationEventPublisher events, Clock clock) {
         this.receipts = receipts;
         this.requests = requests;
         this.freezer = freezer;
         this.signatures = signatures;
         this.foundation = foundation;
         this.signatory = signatory;
+        this.events = events;
         this.clock = clock;
     }
 
@@ -67,6 +74,16 @@ public class DonationReceiptIssuer {
     public DonationReceipt issueForYear(DonorReference donor, Year year, LocalDate today) {
         receipts.lockDonor(donor);
         return issue(requests.forYear(donor, year, today));
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public DonationReceipt issueForDonationByAdministrator(UUID adminId, DonorReference donor, DonationId donation, LocalDate today) {
+        throw new UnsupportedOperationException("not yet");
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public DonationReceipt issueForYearByAdministrator(UUID adminId, DonorReference donor, Year year, LocalDate today) {
+        throw new UnsupportedOperationException("not yet");
     }
 
     private DonationReceipt issue(ReceiptRequest request) {

@@ -124,6 +124,7 @@ Feature: An administrator connects an application such as Claude to the administ
       | POST   | /api/admin/donations/symbol-claims/{id}/reverse                     |
       | DELETE | /api/admin/donations/symbol-claims/{id}                             |
       | POST   | /api/admin/operations/backups/nfnn-2026-10-23_0300.dump.age/restore |
+      | GET    | /api/admin/operations/backups/nfnn-2026-10-23_0300.dump.age         |
       | POST   | /api/admin/donations/receipt-signature                              |
       | POST   | /api/admin/operations/backups/key/reveal                            |
       | POST   | /api/admin/operations/backups/key/confirmation                      |

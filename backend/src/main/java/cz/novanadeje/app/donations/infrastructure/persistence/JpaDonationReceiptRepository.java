@@ -8,6 +8,8 @@ import cz.novanadeje.app.donations.domain.receipt.DonationReceiptId;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceiptRepository;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptKind;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptNumber;
+import cz.novanadeje.app.donations.domain.receipt.ReceiptPage;
+import cz.novanadeje.app.donations.domain.receipt.ReceiptQuery;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptStatus;
 import org.springframework.stereotype.Repository;
 
@@ -92,6 +94,16 @@ class JpaDonationReceiptRepository implements DonationReceiptRepository {
     @Override
     public boolean showsSignatureImage(DonorReference donor, ContentDigest image) {
         return jpa.existsByDonorIdAndSignatureImageSha256(donor.value(), image.value());
+    }
+
+    @Override
+    public boolean anyShowsSignatureImage(ContentDigest image) {
+        throw new UnsupportedOperationException("not yet");
+    }
+
+    @Override
+    public ReceiptPage findNewestFirst(ReceiptQuery query) {
+        throw new UnsupportedOperationException("not yet");
     }
 
     @Override
