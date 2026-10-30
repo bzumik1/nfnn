@@ -50,7 +50,8 @@
                              referencedColumnNames="sha256"/>
             </column>
             <column name="signing_key_id" type="varchar(8)">
-                <constraints nullable="false"/>
+                <constraints nullable="false" foreignKeyName="fk_issued_receipt_signing_key" referencedTableName="receipt_signing_key"
+                             referencedColumnNames="key_id"/>
             </column>
             <column name="proof" type="bytea">
                 <constraints nullable="false"/>
@@ -82,6 +83,9 @@
         </createIndex>
         <createIndex tableName="issued_receipt" indexName="ix_issued_receipt_supersedes">
             <column name="supersedes_id"/>
+        </createIndex>
+        <createIndex tableName="issued_receipt" indexName="ix_issued_receipt_signing_key">
+            <column name="signing_key_id"/>
         </createIndex>
     </changeSet>
 

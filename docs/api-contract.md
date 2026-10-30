@@ -636,7 +636,7 @@ Table `issued_receipt` (`db/changelog/donations/022_issue_receipts_as_frozen_dat
 | `schema_version` | `1` (checked) |
 | `frozen` | the frozen receipt as JSON: the typed values and the texts |
 | `signature_image_sha256` | FK to `receipt_image`, null without a signature |
-| `signing_key_id`, `proof` | the signing key's id (no foreign key: the key table belongs to the startup registrar) and the proof bytes, body and 64-byte signature (`ck_issued_receipt_proof`) |
+| `signing_key_id`, `proof` | the signing key's id (`fk_issued_receipt_signing_key` to `receipt_signing_key`, indexed: a receipt names a registered key, so while the server's own key is not registered, for example after a failed registration at start, issuing fails and stores nothing instead of freezing a proof no published key verifies; a key row is never deleted, a revoked key is a status) and the proof bytes, body and 64-byte signature (`ck_issued_receipt_proof`) |
 | `status_sha256` | SHA-256 hex of the signed message (tag, IČO and body, the bytes the signature covers) followed by the signature, unique: the key under which the verification page asks for the receipt's status (slice 1.8) |
 | `supersedes_id`, `superseded_at` | the receipt this one replaces; when this one was replaced (`ck_issued_receipt_superseded`: exactly when `REPLACED`) |
 

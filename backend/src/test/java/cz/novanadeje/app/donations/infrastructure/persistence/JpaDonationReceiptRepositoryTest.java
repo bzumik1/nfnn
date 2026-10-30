@@ -58,6 +58,7 @@ import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.nio.charset.StandardCharsets;
+import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.Year;
@@ -116,9 +117,11 @@ class JpaDonationReceiptRepositoryTest {
     private long transactionIds = 5000;
 
     @BeforeEach
-    void storeSignatureImages() {
+    void storeSignatureImagesAndTheSigningKey() {
         resources.storeImage(SIGNATURE.digest(), SIGNATURE, NOW);
         resources.storeImage(OTHER_SIGNATURE.digest(), OTHER_SIGNATURE, NOW);
+        jdbc.sql("insert into receipt_signing_key (key_id, public_key, registered_at, status, seal) values (?, ?, ?, 'active', 'seal')")
+                .params(KEY_ID.value(), new byte[32], Timestamp.from(NOW)).update();
     }
 
     @Test
@@ -384,6 +387,20 @@ class JpaDonationReceiptRepositoryTest {
         assertThatThrownBy(() -> receipts.save(copied))
                 .isInstanceOf(DataIntegrityViolationException.class)
                 .hasMessageContaining("uq_issued_receipt_status_sha256");
+    }
+
+    @Test
+    @DisplayName("Given a frozen receipt signed by a key that is not registered, when it is saved, then the foreign key refuses it")
+    void should_refuse_when_saved_given_unregistered_signing_key() {
+        DonorReference jana = storedDonor("4821937560");
+        ReceiptDocument document = yearlyDocument(YEAR_2025, "2026-000013", Optional.empty());
+        ReceiptVerification unregistered = new ReceiptVerification(new ReceiptSigningKeyId("0a0b0c0d"), verificationOf("2026-000013").proof());
+        DonationReceipt receipt = DonationReceipt.issue(DonationReceiptId.newId(NOW), jana, NOW, FINGERPRINT,
+                new FrozenReceipt(document, CZECH, Optional.empty(), unregistered), Optional.empty());
+
+        assertThatThrownBy(() -> receipts.save(receipt))
+                .isInstanceOf(DataIntegrityViolationException.class)
+                .hasMessageContaining("fk_issued_receipt_signing_key");
     }
 
     @Test

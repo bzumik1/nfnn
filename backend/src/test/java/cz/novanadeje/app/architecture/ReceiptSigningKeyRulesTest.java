@@ -53,7 +53,7 @@ class ReceiptSigningKeyRulesTest {
     private static final String KEY_TABLE = "receipt_signing_key";
     private static final Set<String> FILES_NAMING_THE_KEY_TABLES = Set.of(
             "ReceiptSigningKeyJpaEntity.java", "ReceiptSigningKeyAdoptionJpaEntity.java", "ReceiptSigningKeyAdoptionJpaRepository.java",
-            "021_register_receipt_signing_keys.xml");
+            "021_register_receipt_signing_keys.xml", "022_issue_receipts_as_frozen_data.xml");
 
     private static final DescribedPredicate<JavaClass> SIGNING_CRYPTOGRAPHY = JavaClass.Predicates
             .belongToAnyOf(Signature.class, KeyFactory.class, KeyPairGenerator.class, KeyPair.class, PrivateKey.class)
@@ -84,7 +84,7 @@ class ReceiptSigningKeyRulesTest {
             .should().dependOnClassesThat(THE_KEY_PERSISTENCE);
 
     @Test
-    @DisplayName("Given the main sources and changelogs, when they are searched for the key tables, then only the key entities, the adoption repository and changelog 021 name them")
+    @DisplayName("Given the main sources and changelogs, when they are searched for the key tables, then only the key entities, the adoption repository, changelog 021 and the foreign key of changelog 022 name them")
     void should_name_the_key_tables_only_in_their_adapter_when_searched_given_the_main_sources() throws IOException {
         assertThat(filesNamingTheKeyTables(Path.of("src", "main"))).containsExactlyInAnyOrderElementsOf(FILES_NAMING_THE_KEY_TABLES);
     }

@@ -11,6 +11,7 @@ import cz.novanadeje.app.support.FakeFioClient;
 import cz.novanadeje.app.support.MutableClock;
 import cz.novanadeje.app.support.RateLimiterWindows;
 import cz.novanadeje.app.support.RecordingMailSender;
+import cz.novanadeje.app.support.ServerReceiptSigningKey;
 import cz.novanadeje.app.support.SwitchablePublicTestKeyPolicy;
 import io.cucumber.java.Before;
 import io.cucumber.java.BeforeAll;
@@ -70,6 +71,7 @@ public class CommonStepDefinitions {
         fioClient.reset();
         companyRegistry.reset();
         clock.set(ApiTranscripts.RECORDING_CLOCK);
+        ServerReceiptSigningKey.storeAfterEmptyTables(context);
         RateLimiterWindows.reset(context);
         CompanyLookupPause.reset(context.getBean(CompanyLookupService.class));
         BackupKeyWordDraws.reseed(context.getBean(BackupKeyWordChallenges.class));
