@@ -35,6 +35,8 @@ public interface DonationReceiptRepository {
 
     boolean showsSignatureImage(DonorReference donor, ContentDigest image);
 
+    Optional<ReceiptStatus> findStatusByStatusDigest(ContentDigest statusDigest);
+
     long nextSerial();
 
     void lockDonor(DonorReference donor);
