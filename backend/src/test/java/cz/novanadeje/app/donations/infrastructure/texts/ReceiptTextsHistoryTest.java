@@ -30,7 +30,7 @@ class ReceiptTextsHistoryTest {
     private static final JsonMapper JSON = JsonMapper.builder().build();
 
     @Test
-    @DisplayName("Given the receipt texts of the bundle, when the history is read, then they are its newest set, recorded under their digest")
+    @DisplayName("Given the receipt texts of the bundle, when the history is read, then they are recorded under their digest")
     void should_be_recorded_when_history_is_read_given_current_receipt_texts() throws IOException {
         String current = recorded(new BundleReceiptTextSource().textsFor(LocaleCode.EN));
         String digest = ContentDigest.of(current.getBytes(StandardCharsets.UTF_8)).value();
