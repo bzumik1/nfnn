@@ -10,7 +10,7 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 record EmailChangeRequest(
-        @NotBlank @Email @Pattern(regexp = EmailAddress.SHAPE_REGEX) @Size(max = 254) String newEmail,
+        @NotBlank @Email @Pattern(regexp = EmailAddress.SHAPE_REGEX, message = "{donors.email.invalid}") @Size(max = 254) String newEmail,
         @Size(max = RawPassword.MAX_LENGTH) String password,
         @Valid PasskeySignInRequest passkey
 ) {

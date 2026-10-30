@@ -134,7 +134,7 @@ Feature: Donor changes the password or the e-mail while signed in
     And the problem type ends with "donors/wrong-password"
     When the donor asks to change the e-mail to "not-an-email" with password "correct horse battery"
     Then the response status is 400
-    And the problem lists an error for field "newEmail"
+    And the problem's error for field "newEmail" says "Zadejte e-mail ve tvaru jmeno@domena.cz."
     And no email is sent
     And 0 verification links are stored
 

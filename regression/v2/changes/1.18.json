@@ -160,6 +160,54 @@
     "contract": "docs/api-contract.md, Connected applications (POST /api/donors/oauth/token)"
   },
   {
+    "path": "POST /api/admin/donors/administrators #1",
+    "scenario": "donors/admin_administrators: A blank e-mail is refused before any lookup*",
+    "kind": "body",
+    "field": "$.errors[0].message",
+    "reason": "1.18 (frontend.md, error at the field in its own words): the e-mail shape of EmailAddress names the site's message {donors.email.invalid} (Zadejte e-mail ve tvaru jmeno@domena.cz.) instead of the validator's text with the regular expression, as the registration e-mail does",
+    "contract": "docs/api-contract.md, Conventions (Problem texts)"
+  },
+  {
+    "path": "POST /api/donors/me/email-change #3",
+    "scenario": "donors/donor_credentials: The current address, a wrong password and a malformed address are refused without sending anything*",
+    "kind": "body",
+    "field": "$.errors[1].message",
+    "reason": "1.18 (frontend.md, error at the field in its own words): the e-mail shape of EmailAddress names the site's message {donors.email.invalid} (Zadejte e-mail ve tvaru jmeno@domena.cz.) instead of the validator's text with the regular expression, as the registration e-mail does",
+    "contract": "docs/api-contract.md, Conventions (Problem texts)"
+  },
+  {
+    "path": "POST /api/donors/auth/email-verification/request #3",
+    "scenario": "donors/donor_email_verification: A confirmed account, an unknown address and a malformed address get no new link*",
+    "kind": "body",
+    "field": "$.errors[1].message",
+    "reason": "1.18 (frontend.md, error at the field in its own words): the e-mail shape of EmailAddress names the site's message {donors.email.invalid} (Zadejte e-mail ve tvaru jmeno@domena.cz.) instead of the validator's text with the regular expression, as the registration e-mail does",
+    "contract": "docs/api-contract.md, Conventions (Problem texts)"
+  },
+  {
+    "path": "POST /api/donors/auth/password-reset/request #1",
+    "scenario": "donors/donor_password_reset: A malformed address is refused with a field error [not-an-email]*",
+    "kind": "body",
+    "field": "$.errors[1].message",
+    "reason": "1.18 (frontend.md, error at the field in its own words): the e-mail shape of EmailAddress names the site's message {donors.email.invalid} (Zadejte e-mail ve tvaru jmeno@domena.cz.) instead of the validator's text with the regular expression, as the registration e-mail does",
+    "contract": "docs/api-contract.md, Conventions (Problem texts)"
+  },
+  {
+    "path": "POST /api/donors/auth/password-reset/request #1",
+    "scenario": "donors/donor_password_reset: A malformed address is refused with a field error [jana@localhost]*",
+    "kind": "body",
+    "field": "$.errors[0].message",
+    "reason": "1.18 (frontend.md, error at the field in its own words): the e-mail shape of EmailAddress names the site's message {donors.email.invalid} (Zadejte e-mail ve tvaru jmeno@domena.cz.) instead of the validator's text with the regular expression, as the registration e-mail does",
+    "contract": "docs/api-contract.md, Conventions (Problem texts)"
+  },
+  {
+    "path": "POST /api/donors/auth/password-reset/request #1",
+    "scenario": "donors/donor_password_reset: A malformed address is refused with a field error [jana@]*",
+    "kind": "body",
+    "field": "$.errors[1].message",
+    "reason": "1.18 (frontend.md, error at the field in its own words): the e-mail shape of EmailAddress names the site's message {donors.email.invalid} (Zadejte e-mail ve tvaru jmeno@domena.cz.) instead of the validator's text with the regular expression, as the registration e-mail does",
+    "contract": "docs/api-contract.md, Conventions (Problem texts)"
+  },
+  {
     "kind": "log-field",
     "line": "shared.interfaces.rest.ApiExceptionHandler: Refused a value as validation (IllegalArgumentException thrown at cz.novanadeje.app.donors.domain.Passkey.validName:<n>)",
     "scenario": "donors/donor_passkeys: A passkey name with a control character is refused with the site's own text, without the name*",

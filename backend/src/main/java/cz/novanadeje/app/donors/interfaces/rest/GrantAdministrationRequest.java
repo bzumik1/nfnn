@@ -7,7 +7,7 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 record GrantAdministrationRequest(
-        @NotBlank @Email @Pattern(regexp = EmailAddress.SHAPE_REGEX) @Size(max = 254) String email
+        @NotBlank @Email @Pattern(regexp = EmailAddress.SHAPE_REGEX, message = "{donors.email.invalid}") @Size(max = 254) String email
 ) {
 
     GrantAdministrationRequest {
