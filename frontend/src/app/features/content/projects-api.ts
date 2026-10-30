@@ -8,11 +8,21 @@ export interface CoverImageResponse {
   alt: string | null;
 }
 
+export type ProjectCategory = 'CHILDREN' | 'ADULTS' | 'ANIMALS' | 'OTHER';
+
+export const PROJECT_CATEGORIES: readonly ProjectCategory[] = [
+  'CHILDREN',
+  'ADULTS',
+  'ANIMALS',
+  'OTHER',
+];
+
 export interface ProjectResponse {
   id: string;
   slug: string;
   title: string;
   year: number;
+  category: ProjectCategory;
   tag: string | null;
   perex: string;
   body: string;
@@ -37,6 +47,7 @@ export interface ProjectPageResponse extends ProjectListResponse {
 export interface ProjectRequest {
   title: string;
   year: number;
+  category: ProjectCategory;
   slug: string | null;
   tag: string | null;
   perex: string;
