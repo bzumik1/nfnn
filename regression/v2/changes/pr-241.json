@@ -68,5 +68,21 @@
     "kind": "added",
     "reason": "Jakub 2026-10-30: setting or removing a web signature is web-only, so a connected application gets 403 like the other web-only changes",
     "contract": "docs/security-overview.md, connected applications; docs/api-contract.md, content — public CMS"
+  },
+  {
+    "path": "GET /api/content/home",
+    "scenario": "content/home_content: *",
+    "kind": "added",
+    "field": "$.people",
+    "reason": "PR #241, Jakub 2026-10-30: the home content carries the people of the foundation for the block Kdo fond vede, or null while none are kept, so the site shows its own block; the fields before it answer as they did",
+    "contract": "docs/api-contract.md, content — public CMS"
+  },
+  {
+    "path": "GET /api/content/home",
+    "scenario": "content/manage_about: *",
+    "kind": "added",
+    "field": "$.people",
+    "reason": "PR #241, Jakub 2026-10-30: the home content carries the people of the foundation for the block Kdo fond vede, or null while none are kept, so the site shows its own block; the fields before it answer as they did",
+    "contract": "docs/api-contract.md, content — public CMS"
   }
 ]

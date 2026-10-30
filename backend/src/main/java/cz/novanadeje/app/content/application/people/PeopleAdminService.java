@@ -7,6 +7,7 @@ import cz.novanadeje.app.content.domain.people.PeopleOrder;
 import cz.novanadeje.app.content.domain.people.Person;
 import cz.novanadeje.app.content.domain.people.PersonDetails;
 import cz.novanadeje.app.content.domain.people.PersonId;
+import cz.novanadeje.app.content.domain.people.PersonImageInUse;
 import cz.novanadeje.app.content.domain.people.PersonNotFound;
 import cz.novanadeje.app.content.domain.people.PersonRepository;
 import cz.novanadeje.app.content.domain.people.TooManyPeople;
@@ -52,7 +53,7 @@ public class PeopleAdminService {
 
     public PersonView add(UUID adminId, PersonCommand command) {
         Instant now = clock.instant();
-        List<Person> current = people.findAllInOrder();
+        List<Person> current = people.findAllInOrderForUpdate();
         if (current.size() >= Person.MAX_PEOPLE) {
             throw new TooManyPeople();
         }
@@ -64,10 +65,14 @@ public class PeopleAdminService {
         return view(added);
     }
 
-    public PersonView update(UUID adminId, PersonId id, PersonCommand command) {
+    public PersonView update(UUID adminId, PersonId id, PersonCommand command, boolean webSignatureMayChange) {
         Instant now = clock.instant();
         Person current = find(id);
-        Person edited = current.edit(checked(command.toDetails()), now);
+        PersonDetails details = checked(command.toDetails());
+        if (current.webSignature().isPresent() && !webSignatureMayChange && !details.name().equals(current.details().name())) {
+            throw new WebSignatureInBrowserOnly();
+        }
+        Person edited = current.edit(details, now);
         people.save(edited);
         current.imagesLeftBy(edited).forEach(media::deleteIfUnused);
         publish(adminId, UPDATE_ACTION, "Osoba " + id + " v lidech fondu upravena", now);
@@ -87,7 +92,7 @@ public class PeopleAdminService {
 
     public List<PersonView> order(UUID adminId, List<PersonId> order) {
         Instant now = clock.instant();
-        List<Person> ordered = PeopleOrder.apply(people.findAllInOrder(), order, now);
+        List<Person> ordered = PeopleOrder.apply(people.findAllInOrderForUpdate(), order, now);
         ordered.forEach(people::save);
         publish(adminId, ORDER_ACTION, "Pořadí lidí fondu změněno", now);
         return ordered.stream().map(this::view).toList();
@@ -98,6 +103,9 @@ public class PeopleAdminService {
         Person current = find(id);
         if (media.findSize(signature).isEmpty()) {
             throw new MediaNotFound(signature);
+        }
+        if (people.isAnyonesPortrait(signature)) {
+            throw new PersonImageInUse(signature);
         }
         Person signed = current.signWith(signature, now);
         people.save(signed);
@@ -123,11 +131,14 @@ public class PeopleAdminService {
         details.portrait().filter(portrait -> media.findSize(portrait).isEmpty()).ifPresent(portrait -> {
             throw new MediaNotFound(portrait);
         });
+        details.portrait().filter(people::isAnyonesWebSignature).ifPresent(portrait -> {
+            throw new PersonImageInUse(portrait);
+        });
         return details;
     }
 
     private Person find(PersonId id) {
-        return people.findById(id).orElseThrow(() -> new PersonNotFound(id));
+        return people.findByIdForUpdate(id).orElseThrow(() -> new PersonNotFound(id));
     }
 
     private PersonView view(Person person) {

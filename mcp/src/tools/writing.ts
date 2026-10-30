@@ -498,7 +498,7 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
     {
       title: 'Upravit osobu mezi lidmi fondu',
       description:
-        'Replaces the name, role, board membership, board note, featured flag, portrait and the two e-mails of a person of the foundation; send every field, read them with nfnn_people first. A replaced or removed portrait is deleted unless a news article or project still uses it. The web signature stays as it is: it is set and removed only on the web at /sprava/lide-fondu. Audited as UPDATE_PERSON.',
+        'Replaces the name, role, board membership, board note, featured flag, portrait and the two e-mails of a person of the foundation; send every field, read them with nfnn_people first. A replaced or removed portrait is deleted unless a news article or project still uses it. The web signature stays as it is: it is set and removed only on the web at /sprava/lide-fondu, and the name of a person who has one changes only there too (the backend refuses it here). A portrait cannot be an image that is a web signature. Audited as UPDATE_PERSON.',
       inputSchema: z.object({ id: UUID, ...PERSON }),
       annotations: { ...WRITING, destructiveHint: true, idempotentHint: true },
     },

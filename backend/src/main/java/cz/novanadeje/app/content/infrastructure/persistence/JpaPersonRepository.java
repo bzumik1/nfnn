@@ -1,5 +1,6 @@
 package cz.novanadeje.app.content.infrastructure.persistence;
 
+import cz.novanadeje.app.content.domain.media.MediaId;
 import cz.novanadeje.app.content.domain.people.Person;
 import cz.novanadeje.app.content.domain.people.PersonId;
 import cz.novanadeje.app.content.domain.people.PersonRepository;
@@ -25,6 +26,26 @@ class JpaPersonRepository implements PersonRepository {
     @Override
     public Optional<Person> findById(PersonId id) {
         return jpa.findById(id.value()).map(PersonJpaEntity::toDomain);
+    }
+
+    @Override
+    public List<Person> findAllInOrderForUpdate() {
+        return jpa.findAllInOrderForUpdate().stream().map(PersonJpaEntity::toDomain).toList();
+    }
+
+    @Override
+    public Optional<Person> findByIdForUpdate(PersonId id) {
+        return jpa.findByIdForUpdate(id.value()).map(PersonJpaEntity::toDomain);
+    }
+
+    @Override
+    public boolean isAnyonesPortrait(MediaId image) {
+        return jpa.existsByPortraitMediaId(image.value());
+    }
+
+    @Override
+    public boolean isAnyonesWebSignature(MediaId image) {
+        return jpa.existsByWebSignatureMediaId(image.value());
     }
 
     @Override

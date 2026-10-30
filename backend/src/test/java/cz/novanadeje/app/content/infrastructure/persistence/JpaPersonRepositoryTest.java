@@ -11,6 +11,7 @@ import cz.novanadeje.app.content.domain.people.PersonId;
 import cz.novanadeje.app.content.domain.people.PersonRepository;
 import cz.novanadeje.app.shared.domain.EmailAddress;
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -81,6 +82,46 @@ class JpaPersonRepositoryTest {
 
         assertThat(people.findById(removed.id())).isEmpty();
         assertThat(people.findAllInOrder()).extracting(Person::id).containsExactly(kept.id());
+    }
+
+    @Test
+    @DisplayName("Given saved people, when they are read for an update, then they come in order and each row is locked for writing")
+    void should_lock_the_rows_when_read_for_update_given_saved_people() {
+        Person second = person("Adam", 1, NOW);
+        Person first = person("Eva", 0, NOW);
+        people.save(second);
+        people.save(first);
+        flushAndClear();
+
+        assertThat(people.findByIdForUpdate(first.id())).contains(first);
+        assertThat(lockOf(first)).isEqualTo(LockModeType.PESSIMISTIC_WRITE);
+        entityManager.clear();
+        assertThat(people.findAllInOrderForUpdate()).extracting(Person::id).containsExactly(first.id(), second.id());
+        assertThat(lockOf(second)).isEqualTo(LockModeType.PESSIMISTIC_WRITE);
+        assertThat(people.findByIdForUpdate(PersonId.newId(NOW))).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Given a person with a portrait and a web signature, when an image is checked, then only their portrait counts as a portrait and only their signature as a signature")
+    void should_tell_portraits_from_signatures_when_checked_given_a_person_with_both() {
+        MediaId portrait = storedImage();
+        MediaId signature = storedImage();
+        MediaId unused = storedImage();
+        people.save(Person.add(PersonId.newId(BEFORE),
+                new PersonDetails("Eva", Optional.empty(), true, Optional.empty(), true, Optional.of(portrait), PersonEmails.NONE), 0, BEFORE)
+                .signWith(signature, NOW));
+        flushAndClear();
+
+        assertThat(people.isAnyonesPortrait(portrait)).isTrue();
+        assertThat(people.isAnyonesPortrait(signature)).isFalse();
+        assertThat(people.isAnyonesWebSignature(signature)).isTrue();
+        assertThat(people.isAnyonesWebSignature(portrait)).isFalse();
+        assertThat(people.isAnyonesPortrait(unused)).isFalse();
+        assertThat(people.isAnyonesWebSignature(unused)).isFalse();
+    }
+
+    private LockModeType lockOf(Person person) {
+        return entityManager.getLockMode(entityManager.find(PersonJpaEntity.class, person.id().value()));
     }
 
     private static Person person(String name, int position, Instant at) {

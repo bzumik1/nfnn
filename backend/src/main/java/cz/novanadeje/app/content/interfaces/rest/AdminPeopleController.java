@@ -58,7 +58,7 @@ class AdminPeopleController {
 
     @PutMapping("/{id}")
     PersonResponse update(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id, @Valid @RequestBody PersonRequest request) {
-        return PersonResponse.from(people.update(admin(jwt), new PersonId(id), request.toCommand()));
+        return PersonResponse.from(people.update(admin(jwt), new PersonId(id), request.toCommand(), !jwt.hasClaim(SCOPE_CLAIM)));
     }
 
     @DeleteMapping("/{id}")

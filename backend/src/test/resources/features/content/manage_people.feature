@@ -328,7 +328,26 @@ Feature: An administrator keeps the people of the foundation that the About sect
     When "Jana" sets the web signature of "Eva Vzorová" to an image that was never uploaded
     Then the response status is 404
     And the problem type ends with "content/media-not-found"
-    Given "Jana" adds 29 people
+    Given "Jana" uploads a 600 by 180 pixel PNG image named "podpis-eva.png"
+    And "Jana" sets the web signature of "Eva Vzorová" to the image uploaded as "podpis-eva.png"
+    When "Jana" adds a person:
+      | name     | Adam Vzor      |
+      | portrait | podpis-eva.png |
+    Then the response status is 400
+    And the problem type ends with "content/person-image-in-use"
+    When "Jana" updates the person "Eva Vzorová":
+      | name     | Eva Vzorová    |
+      | portrait | podpis-eva.png |
+    Then the response status is 400
+    And the problem type ends with "content/person-image-in-use"
+    Given "Jana" uploads a 640 by 640 pixel PNG image named "hana.png"
+    And "Jana" adds a person:
+      | name     | Hana Vzorová |
+      | portrait | hana.png     |
+    When "Jana" sets the web signature of "Eva Vzorová" to the image uploaded as "hana.png"
+    Then the response status is 400
+    And the problem type ends with "content/person-image-in-use"
+    Given "Jana" adds 28 people
     When "Jana" adds a person:
       | name | Adam Vzor |
     Then the response status is 409
@@ -381,6 +400,20 @@ Feature: An administrator keeps the people of the foundation that the About sect
       Děkujeme.
       """
     Then the response status is 200
+    When the exchanged API token updates the person "Eva Vzorová":
+      | name     | Eva Nová |
+      | featured | true     |
+    Then the response status is 403
+    And the problem type ends with "content/web-signature-in-browser-only"
+    When the exchanged API token updates the person "Eva Vzorová":
+      | name     | Eva Vzorová  |
+      | role     | Zakladatelka |
+      | featured | true         |
+    Then the response status is 200
+    And the person says:
+      | name            | Eva Vzorová            |
+      | role            | Zakladatelka           |
+      | webSignature.id | {image:podpis-eva.png} |
     When the exchanged API token removes the web signature of "Eva Vzorová"
     Then the response status is 403
     And the problem type ends with "auth/forbidden"
@@ -399,6 +432,7 @@ Feature: An administrator keeps the people of the foundation that the About sect
     And these admin actions were recorded:
       | action               | client    |
       | REMOVE_PERSON        | claude.ai |
+      | UPDATE_PERSON        | claude.ai |
       | CHANGE_FOUNDERS_NOTE | claude.ai |
       | ORDER_PEOPLE         | claude.ai |
       | UPDATE_PERSON        | claude.ai |
