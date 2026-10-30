@@ -84,7 +84,7 @@ class ReceiptProofSharedCasesTest extends SharedCaseRunner {
                 .put("signatureHex", HEX.formatHex(proof.signature()))
                 .put("signedSha256", HEX.formatHex(MessageDigest.getInstance("SHA-256").digest(message)))
                 .put("qrText", proof.text());
-        ReceiptProofs proofs = new ReceiptProofs(signer, Receipts.FOUNDATION);
+        ReceiptProofs proofs = new ReceiptProofs(signer, Receipts.FOUNDATION, () -> false);
         Optional<VerificationQrSymbol> symbol = VerificationQrSymbol.of(proof.text());
         if (symbol.isPresent()) {
             answer.putObject("qr").put("version", symbol.get().version()).put("errorCorrection", symbol.get().errorCorrection().name());

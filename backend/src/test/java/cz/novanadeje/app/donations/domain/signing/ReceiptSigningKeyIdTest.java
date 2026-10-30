@@ -17,9 +17,10 @@ class ReceiptSigningKeyIdTest {
             "3d4017c3e843895a92b70aa74d1b7ebc9c982ccf2ec4968cc0cd55f12af4660c, 39f713d0",
             "fc51cd8e6218a1a38da47ed00230f0580816ed13ba3303ac5deb911548908025, dac073e0",
             "278117fc144c72340f67d0f2316e8386ceffbf2b2428c9c51fef7c597f1d426e, 91384c41",
-            "ec172b93ad5e563bf4932c70e1245034c35467ef2efd4d64ebf819683467e2bf, 5f9b247e"
+            "ec172b93ad5e563bf4932c70e1245034c35467ef2efd4d64ebf819683467e2bf, 5f9b247e",
+            "dfc9425e4f968f7f0c29f0259cf5f9aed6851c2bb4ad8bfb860cfee0ab248292, c07ba992"
     })
-    @DisplayName("Given the public key of each test of RFC 8032, when its id is taken, then it is the listed id and a public test key")
+    @DisplayName("Given the public key of each test of RFC 8032, Ed25519ctx included, when its id is taken, then it is the listed id and a public test key")
     void should_be_a_public_test_key_when_its_id_is_taken_given_an_rfc_8032_public_key(String publicKeyHex, String keyId) {
         ReceiptSigningKeyId id = ReceiptSigningKeyId.of(HexFormat.of().parseHex(publicKeyHex));
 

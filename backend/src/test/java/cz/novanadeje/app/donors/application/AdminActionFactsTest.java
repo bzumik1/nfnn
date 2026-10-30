@@ -112,6 +112,8 @@ class AdminActionFactsTest {
                         "ADOPT_RECEIPT_SIGNING_KEY", Map.of("key", "39f713d0", "restore", "019a1b2c-0000-7000-8000-000000000005")),
                 arguments("ADOPT_RECEIPT_SIGNING_KEY", "Server převzal klíč k ověřovacím QR 39f713d0 z obnovené zálohy (obnova 2026-11-13T10:02:41Z)",
                         "ADOPT_RECEIPT_SIGNING_KEY", Map.of("key", "39f713d0", "restore", "2026-11-13T10:02:41Z")),
+                arguments("WITHDRAW_RECEIPT_SIGNING_KEY", "Stažen klíč k ověřovacím QR 21fe31df (ověřeno druhým faktorem)",
+                        "WITHDRAW_RECEIPT_SIGNING_KEY", Map.of("key", "21fe31df")),
                 arguments("REMOVE_RECEIPT_SIGNATURE", "Obrázek podpisu odebrán; nová potvrzení o daru mají jen čáru a jméno",
                         "REMOVE_RECEIPT_SIGNATURE", Map.of()),
                 arguments("REMOVE_RECEIPT_SIGNATURE", "Signature image for receipts removed; new receipts carry the line and the name only",

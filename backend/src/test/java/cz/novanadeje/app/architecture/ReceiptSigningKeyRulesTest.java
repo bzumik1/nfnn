@@ -11,6 +11,7 @@ import com.tngtech.archunit.junit.ArchTest;
 import com.tngtech.archunit.lang.ArchRule;
 import cz.novanadeje.app.AppApplication;
 import cz.novanadeje.app.donations.application.signing.ReceiptSigningKeyRegistration;
+import cz.novanadeje.app.donations.application.signing.ReceiptSigningKeyWithdrawal;
 import cz.novanadeje.app.donations.application.signing.ReceiptSigningKeys;
 import cz.novanadeje.app.donations.domain.signing.ReceiptSigningKey;
 import cz.novanadeje.app.donations.domain.signing.ReceiptSigningKeyRepository;
@@ -73,8 +74,9 @@ class ReceiptSigningKeyRulesTest {
             .should().dependOnClassesThat(SIGNING_CRYPTOGRAPHY);
 
     @ArchTest
-    static final ArchRule receipt_signing_keys_are_written_only_by_the_startup_registrar = noClasses()
+    static final ArchRule receipt_signing_keys_are_written_only_by_the_startup_registrar_and_the_web_only_withdrawal = noClasses()
             .that().doNotHaveFullyQualifiedName(ReceiptSigningKeyRegistration.class.getName())
+            .and().doNotHaveFullyQualifiedName(ReceiptSigningKeyWithdrawal.class.getName())
             .should().callMethodWhere(A_WRITE_OF_THE_KEY_REPOSITORY);
 
     @ArchTest
@@ -104,7 +106,7 @@ class ReceiptSigningKeyRulesTest {
         JavaClasses classes = new ClassFileImporter().importClasses(PlantedAdoptionRecorder.class, ReceiptSigningKeyRegistration.class,
                 ReceiptSigningKeys.class, ReceiptSigningKeyRepository.class);
 
-        var result = receipt_signing_keys_are_written_only_by_the_startup_registrar.evaluate(classes);
+        var result = receipt_signing_keys_are_written_only_by_the_startup_registrar_and_the_web_only_withdrawal.evaluate(classes);
 
         assertThat(result.getFailureReport().getDetails()).singleElement().asString().contains(PlantedAdoptionRecorder.class.getSimpleName());
     }
@@ -127,9 +129,20 @@ class ReceiptSigningKeyRulesTest {
         JavaClasses classes = new ClassFileImporter().importClasses(PlantedKeyWriter.class, ReceiptSigningKeyRegistration.class,
                 ReceiptSigningKeyRepository.class);
 
-        var result = receipt_signing_keys_are_written_only_by_the_startup_registrar.evaluate(classes);
+        var result = receipt_signing_keys_are_written_only_by_the_startup_registrar_and_the_web_only_withdrawal.evaluate(classes);
 
         assertThat(result.hasViolation()).isTrue();
+        assertThat(result.getFailureReport().getDetails()).singleElement().asString().contains(PlantedKeyWriter.class.getSimpleName());
+    }
+
+    @Test
+    @DisplayName("Given the registrar and the web-only withdrawal, which both save keys, when the writer rule checks them beside a planted writer, then only the planted writer is reported")
+    void should_admit_registrar_and_withdrawal_when_rule_checks_given_both_save_keys() {
+        JavaClasses classes = new ClassFileImporter().importClasses(PlantedKeyWriter.class, ReceiptSigningKeyRegistration.class,
+                ReceiptSigningKeyWithdrawal.class, ReceiptSigningKeyRepository.class);
+
+        var result = receipt_signing_keys_are_written_only_by_the_startup_registrar_and_the_web_only_withdrawal.evaluate(classes);
+
         assertThat(result.getFailureReport().getDetails()).singleElement().asString().contains(PlantedKeyWriter.class.getSimpleName());
     }
 
