@@ -60,6 +60,13 @@ class PaymentDetailsTest {
     }
 
     @Test
+    @DisplayName("Given an amount whose AM would be longer than the 10 characters SPAYD allows, when a SPAYD text is written, then it is refused, and 9 999 999,99 Kč is still written")
+    void should_refuse_when_written_given_an_amount_longer_than_the_am_field() {
+        assertThatIllegalArgumentException().isThrownBy(() -> details.spaydWithoutVariableSymbol(Money.czk(1_000_000_000), SpaydText.message("OBNOVA")));
+        assertThat(details.spaydWithoutVariableSymbol(Money.czk(999_999_999), SpaydText.message("OBNOVA"))).contains("*AM:9999999.99*");
+    }
+
+    @Test
     @DisplayName("Given a payment of the verification amount with the verification message, when the import reads its purpose, then it is an account verification")
     void should_be_read_as_an_account_verification_when_the_import_reads_a_payment_of_the_served_amount_and_message() {
         var payment = BankPayments.payment(1, BankPayments.BOOKED_ON, details.accountVerificationAmount(),
