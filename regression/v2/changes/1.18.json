@@ -246,7 +246,7 @@
     "reason": "1.18 (security m2, reliability.md): an IllegalArgumentException answered as validation logs one WARN with its class and the frame that threw it (class, method, line), never its message, so a server bug answered as a refusal leaves a trace; the frame differs by where the value was refused, the recording holds the passkey name",
     "contract": "docs/system-overview.md, Problem answers; docs/security-overview.md, Error answers",
     "security": {
-      "approvedIn": "PENDING",
+      "approvedIn": "PR #247, Jakub 2026-10-30",
       "fields": {
         "<n>": "the line number of the throwing frame in the source"
       }
