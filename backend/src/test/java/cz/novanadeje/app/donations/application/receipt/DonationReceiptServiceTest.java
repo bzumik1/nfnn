@@ -17,6 +17,11 @@ import java.time.LocalDate;
 import java.time.Year;
 import java.time.ZoneOffset;
 import java.util.Optional;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 import static cz.novanadeje.app.donations.domain.receipt.Receipts.FIRST_NUMBER;
 import static cz.novanadeje.app.donations.domain.receipt.Receipts.JANA;
@@ -27,6 +32,8 @@ import static cz.novanadeje.app.donations.domain.receipt.Receipts.yearlyReceiptO
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.timeout;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
@@ -102,6 +109,36 @@ class DonationReceiptServiceTest {
         when(renderer.render(yearly.frozen(), yearly.issuedAt())).thenReturn(PDF);
 
         assertThat(service(NOW).yearlyReceipt(JANA, YEAR_2026).content()).isEqualTo(PDF);
+    }
+
+    @Test
+    @DisplayName("Given the only rendering slot held by another PDF, when a yearly PDF is asked for, then its receipt is issued before it waits for the slot")
+    void should_issue_before_waiting_for_slot_when_pdf_asked_given_slot_held() throws Exception {
+        CountDownLatch rendering = new CountDownLatch(1);
+        CountDownLatch release = new CountDownLatch(1);
+        when(issuer.issueForDonation(JANA, MARCH_2026, TODAY)).thenReturn(yearly);
+        when(issuer.issueForYear(JANA, YEAR_2026, TODAY)).thenReturn(yearly);
+        when(renderer.render(yearly.frozen(), yearly.issuedAt())).thenAnswer(call -> {
+            rendering.countDown();
+            release.await(10, TimeUnit.SECONDS);
+            return PDF;
+        });
+        DonationReceiptService service = service(NOW);
+        ExecutorService callers = Executors.newFixedThreadPool(2);
+        try {
+            Future<IssuedReceipt> holding = callers.submit(() -> service.singleReceipt(JANA, MARCH_2026));
+            assertThat(rendering.await(10, TimeUnit.SECONDS)).isTrue();
+            Future<IssuedReceipt> waiting = callers.submit(() -> service.yearlyReceipt(JANA, YEAR_2026));
+
+            verify(issuer, timeout(10_000)).issueForYear(JANA, YEAR_2026, TODAY);
+            assertThat(waiting.isDone()).isFalse();
+            release.countDown();
+            assertThat(holding.get(10, TimeUnit.SECONDS).content()).isEqualTo(PDF);
+            assertThat(waiting.get(10, TimeUnit.SECONDS).content()).isEqualTo(PDF);
+        } finally {
+            release.countDown();
+            callers.shutdownNow();
+        }
     }
 
     @Test

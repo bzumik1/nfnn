@@ -202,6 +202,7 @@ class JpaDonationReceiptRepositoryTest {
             assertThat(stored.year()).contains(YEAR_2025);
             assertThat(stored.donation()).isEmpty();
             assertThat(stored.number()).isEqualTo(new ReceiptNumber("2026-000002"));
+            assertThat(stored.frozen().signatureImage()).isEmpty();
         });
         assertThat(receipts.findActiveForYear(jana, Year.of(2024))).isEmpty();
         assertThat(receipts.findActiveForYear(storedDonor("7310945528"), YEAR_2025)).isEmpty();

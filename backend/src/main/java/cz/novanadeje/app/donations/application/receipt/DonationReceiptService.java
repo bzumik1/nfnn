@@ -44,13 +44,15 @@ public class DonationReceiptService {
 
     public IssuedReceipt singleReceipt(DonorReference donor, DonationId donationId) {
         LocalDate today = FoundationCalendar.today(clock);
-        return renderingLimit.withinLimit(() -> pdf(issuer.issueForDonation(donor, donationId, today)));
+        DonationReceipt receipt = issuer.issueForDonation(donor, donationId, today);
+        return renderingLimit.withinLimit(() -> pdf(receipt));
     }
 
     public IssuedReceipt yearlyReceipt(DonorReference donor, Year year) {
         LocalDate today = FoundationCalendar.today(clock);
         requireCompletedYear(year, today);
-        return renderingLimit.withinLimit(() -> pdf(issuer.issueForYear(donor, year, today)));
+        DonationReceipt receipt = issuer.issueForYear(donor, year, today);
+        return renderingLimit.withinLimit(() -> pdf(receipt));
     }
 
     private IssuedReceipt pdf(DonationReceipt receipt) {
