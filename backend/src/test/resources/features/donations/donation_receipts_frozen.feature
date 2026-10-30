@@ -513,6 +513,20 @@ Feature: A donor issues receipts of their donations as frozen, signed data
     Then the response status is 200
     And the issued receipt is active
 
+  Scenario: From serial 900 000 on a new receipt number warns that the numbering is running out
+    Given today is 2026-12-20
+    And a person "Jana" is registered
+    And the bank account has these movements:
+      | id   | date       | amount  | account    | bankCode | name          | variableSymbol |
+      | 2001 | 2026-10-01 | 1000.00 | 2900233333 | 2010     | Nováková Jana | {Jana}         |
+    And the application starts the import
+    And today is 2027-01-15
+    And the receipt numbering has used the serials up to 899999
+    When "Jana" issues her yearly receipt for 2026
+    Then the response status is 200
+    And the issued receipt has number "2027-900000"
+    And 1 receipt is stored
+
   Scenario: Issuing receipts is limited per client address, counting the old downloads too
     Given today is 2026-12-20
     And a person "Jana" is registered

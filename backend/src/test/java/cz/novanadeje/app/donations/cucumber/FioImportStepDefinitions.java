@@ -61,7 +61,7 @@ public class FioImportStepDefinitions {
             UNAUTHORIZED, ImportFailureKind.UNAUTHORIZED,
             UNREACHABLE, ImportFailureKind.TRANSPORT);
     private static final LocalTime NOON = LocalTime.NOON;
-    private static final long BULK_MOVEMENT_IDS = 900_000;
+    private static final long BULK_MOVEMENT_IDS = 3000;
 
     private final ImportBankPaymentsService importService;
     private final BankPaymentRepository payments;

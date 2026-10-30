@@ -15,6 +15,7 @@ import cz.novanadeje.app.donations.domain.receipt.proof.ReceiptProofText;
 import cz.novanadeje.app.donations.domain.receipt.proof.SignedReceipt;
 import cz.novanadeje.app.donations.interfaces.rest.FrozenReceiptResponse;
 import io.cucumber.datatable.DataTable;
+import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
 import org.springframework.http.HttpHeaders;
@@ -75,6 +76,11 @@ public class DonorFrozenReceiptStepDefinitions {
             issuesTheYearlyReceipt(alias, year);
             assertThat(api.lastResponse().getStatusCode().value()).isEqualTo(200);
         }
+    }
+
+    @Given("the receipt numbering has used the serials up to {long}")
+    public void theReceiptNumberingHasUsedTheSerialsUpTo(long serial) {
+        jdbc.sql("select setval('donation_receipt_number_seq', ?)").param(serial).query(Long.class).single();
     }
 
     @When("{string} issues the receipt of her/his/its donation received on {date}")
