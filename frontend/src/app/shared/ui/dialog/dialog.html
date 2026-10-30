@@ -17,5 +17,10 @@
       <span aria-hidden="true">×</span>
     </button>
     <ng-content />
+    <p class="visually-hidden" role="status">
+      @if (announcer.message(); as message) {
+        <span>{{ message }}</span>
+      }
+    </p>
   </div>
 </dialog>

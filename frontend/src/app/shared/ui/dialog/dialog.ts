@@ -11,6 +11,8 @@ import {
   viewChild,
 } from '@angular/core';
 
+import { DialogAnnouncer } from './dialog-announcer';
+
 @Component({
   selector: 'app-dialog',
   templateUrl: './dialog.html',
@@ -21,6 +23,7 @@ export class Dialog implements AfterViewInit, OnDestroy {
   readonly labelledBy = input.required<string>();
   readonly wide = input(false);
   readonly dismissed = output<void>();
+  protected readonly announcer = inject(DialogAnnouncer);
 
   private readonly element = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
   private readonly opener = inject(DOCUMENT).activeElement;

@@ -29,7 +29,7 @@ const scrollOptions: InMemoryScrollingOptions = {
 const inMemoryScrolling: InMemoryScrollingFeature = withInMemoryScrolling(scrollOptions);
 
 export const chunkLoadRecoveryFeature: NavigationErrorHandlerFeature = withNavigationErrorHandler(
-  (error) => inject(ChunkLoadRecovery).handleNavigationError(error),
+  (error) => void inject(ChunkLoadRecovery).handleNavigationError(error),
 );
 
 export const appHttpClient: EnvironmentProviders = provideHttpClient(

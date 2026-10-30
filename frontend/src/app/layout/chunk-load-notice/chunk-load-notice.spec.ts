@@ -5,7 +5,9 @@ import { NavigationError, provideRouter, Router } from '@angular/router';
 import { Connectivity } from '../../core/navigation/connectivity';
 import { ExternalNavigation } from '../../core/navigation/external-navigation';
 import { ChunkLoadRecovery } from '../../core/reload/chunk-load-recovery';
+import { ChunkProbe } from '../../core/reload/chunk-probe';
 import { ReloadGuard } from '../../core/reload/reload-guard';
+import { DialogAnnouncer } from '../../shared/ui/dialog/dialog-announcer';
 import { ChunkLoadNotice } from './chunk-load-notice';
 
 @Component({ template: '' })
@@ -30,6 +32,7 @@ describe('Given the chunk-load notice', () => {
         { provide: ReloadGuard, useValue: { claim: () => false } },
         { provide: ExternalNavigation, useValue: { loadFromServer } },
         { provide: Connectivity, useValue: { isOffline: () => false } },
+        { provide: ChunkProbe, useValue: { reloadWouldLand: () => Promise.resolve(true) } },
       ],
     }).compileComponents();
     fixture = TestBed.createComponent(ChunkLoadNotice);
@@ -47,7 +50,7 @@ describe('Given the chunk-load notice', () => {
     );
 
   async function failToLoad(): Promise<void> {
-    TestBed.inject(ChunkLoadRecovery).handleNavigationError(
+    await TestBed.inject(ChunkLoadRecovery).handleNavigationError(
       new NavigationError(
         1,
         '/aktuality',
@@ -62,14 +65,42 @@ describe('Given the chunk-load notice', () => {
     expect(document.documentElement.classList).not.toContain('has-floating-notice');
   });
 
+  it('when every page loaded, then it adds no status region beside the ones of the page', () => {
+    expect(element().querySelector('[role="status"]')).toBeNull();
+  });
+
+  describe('when a later page could not be loaded while an open modal dialog keeps the focus from the bar', () => {
+    beforeEach(async () => {
+      await TestBed.inject(Router).navigateByUrl('/jinam');
+      vi.spyOn(HTMLButtonElement.prototype, 'focus').mockImplementation(() => undefined);
+      await failToLoad();
+    });
+
+    afterEach(() => vi.restoreAllMocks());
+
+    it('then the open dialog is given the message to announce in its own status region, since moving the focus cannot', () => {
+      expect(document.activeElement).not.toBe(reloadButton());
+      expect(TestBed.inject(DialogAnnouncer).message()).toBe(MESSAGE);
+      expect(element().querySelector('[role="status"]')).toBeNull();
+    });
+
+    it('and a later navigation succeeds, then the announcement is withdrawn with the bar', async () => {
+      await TestBed.inject(Router).navigateByUrl('/dale');
+      await fixture.whenStable();
+
+      expect(element().querySelector('.chunk-load-bar')).toBeNull();
+      expect(TestBed.inject(DialogAnnouncer).message()).toBe('');
+    });
+  });
+
   describe('when a later page could not be loaded and no automatic reload is left', () => {
     beforeEach(async () => {
       await TestBed.inject(Router).navigateByUrl('/jinam');
       await failToLoad();
     });
 
-    it('then an alert over the page says the page did not open and what to do', () => {
-      expect(text('[role="alert"]')).toBe(`${MESSAGE} Načíst znovu`);
+    it('then a bar over the page says the page did not open and what to do', () => {
+      expect(text('.chunk-load-bar')).toBe(`${MESSAGE} Načíst znovu`);
       expect(element().querySelector('main')).toBeNull();
     });
 
@@ -79,10 +110,14 @@ describe('Given the chunk-load notice', () => {
 
     it('then its button is described by the message, so moving the focus there keeps it announced', () => {
       const describedBy = reloadButton()?.getAttribute('aria-describedby') ?? '';
-
       expect(document.getElementById(describedBy)?.textContent?.replace(/\s+/g, ' ').trim()).toBe(
         MESSAGE,
       );
+    });
+
+    it('then no alert or live region announces the message a second time', () => {
+      expect(element().querySelector('[role="alert"], [role="status"], [aria-live]')).toBeNull();
+      expect(TestBed.inject(DialogAnnouncer).message()).toBe('');
     });
 
     describe('and the focus moves to a control the bar covers', () => {
@@ -98,7 +133,7 @@ describe('Given the chunk-load notice', () => {
         });
         scrollBy = vi.fn();
         window.scrollBy = scrollBy as unknown as typeof window.scrollBy;
-        const bar = element().querySelector('[role="alert"]') as HTMLElement;
+        const bar = element().querySelector('.chunk-load-bar') as HTMLElement;
         vi.spyOn(bar, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 700, 800, 60));
         control = document.createElement('input');
         vi.spyOn(control, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 690, 200, 40));
@@ -142,11 +177,11 @@ describe('Given the chunk-load notice', () => {
       expect(loadFromServer).toHaveBeenCalledExactlyOnceWith('/aktuality');
     });
 
-    it('and a later navigation succeeds, then the alert goes and the room is given back', async () => {
+    it('and a later navigation succeeds, then the bar goes and the room is given back', async () => {
       await TestBed.inject(Router).navigateByUrl('/dale');
       await fixture.whenStable();
 
-      expect(element().querySelector('[role="alert"]')).toBeNull();
+      expect(element().querySelector('.chunk-load-bar')).toBeNull();
       expect(document.documentElement.classList).not.toContain('has-floating-notice');
     });
   });

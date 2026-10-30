@@ -1,5 +1,13 @@
+import {
+  article,
+  donorWithDonations,
+  mockAdministration,
+  rememberedSession,
+} from './baseline/screen-mocks';
+import { mockDonorApi } from './donor-session';
 import { expect, test } from './fixtures';
 import {
+  chunkLoadMessage,
   chunkLoadNotice,
   chunkLoadPageHeading,
   LostChunks,
@@ -78,6 +86,9 @@ test.describe('Given a visitor whose browser keeps no session storage', () => {
 
     await expect(chunkLoadNotice(page)).toBeVisible();
     await expect(chunkLoadNotice(page).getByRole('button', { name: 'Načíst znovu' })).toBeFocused();
+    await expect(
+      chunkLoadNotice(page).getByRole('button', { name: 'Načíst znovu' }),
+    ).toHaveAccessibleDescription(chunkLoadMessage);
     expect(chunks.documents).toEqual([]);
 
     chunks.bringBack();
@@ -110,6 +121,34 @@ test.describe('Given a visitor whose browser keeps no session storage', () => {
   });
 });
 
+test.describe('Given a visitor with the sign-in dialog open and no session storage', () => {
+  test.beforeEach(async ({ page }) => {
+    await withoutSessionStorage(page);
+  });
+
+  test('when a page they opened before the dialog cannot be loaded, then the dialog announces the message in its own status region, since the focus stays in the dialog', async ({
+    page,
+  }) => {
+    const chunks = await openHomeThenLoseNewChunks(page);
+    const release = chunks.hold();
+
+    await openPolicyFromFooter(page);
+    await page.locator('.nav-login').click();
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toBeVisible();
+    release();
+
+    await expect(chunkLoadNotice(page)).toBeVisible();
+    await expect(
+      chunkLoadNotice(page).getByRole('button', { name: 'Načíst znovu' }),
+    ).not.toBeFocused();
+    await expect(dialog.getByRole('status').filter({ hasText: chunkLoadMessage })).toHaveText(
+      chunkLoadMessage,
+    );
+    expect(chunks.documents).toEqual([]);
+  });
+});
+
 test.describe('Given a visitor who lost the connection', () => {
   test('when they open a page that was not loaded yet, then the app does not reload into an error page and offers a reload', async ({
     page,
@@ -129,5 +168,61 @@ test.describe('Given a visitor who lost the connection', () => {
 
     await expect(page.getByRole('heading', policyHeading)).toBeVisible();
     expect(chunks.documents).toEqual([policyPath]);
+  });
+});
+
+test.describe('Given a visitor whose connection fails while the browser still says it is online', () => {
+  test('when they open a page whose chunk cannot be fetched, then the app does not reload into an error page of the browser and offers a reload', async ({
+    page,
+  }) => {
+    const chunks = await LostChunks.watch(page);
+    await chunks.open('/');
+    chunks.cutOffEveryChunkNotLoadedYet();
+
+    await openPolicyFromFooter(page);
+
+    await expect(chunkLoadNotice(page)).toBeVisible();
+    await expect(chunkLoadNotice(page).getByRole('button', { name: 'Načíst znovu' })).toBeFocused();
+    expect(await page.evaluate(() => navigator.onLine)).toBe(true);
+    expect(chunks.documents).toEqual([]);
+
+    chunks.bringBack();
+    await chunkLoadNotice(page).getByRole('button', { name: 'Načíst znovu' }).click();
+
+    await expect(page.getByRole('heading', policyHeading)).toBeVisible();
+    expect(chunks.documents).toEqual([policyPath]);
+  });
+});
+
+test.describe('Given an administrator with unsaved changes in the news editor', () => {
+  test('when they leave for a page whose chunk is gone, then only the page asks them and the new page loads from the server', async ({
+    page,
+  }) => {
+    const browserQuestions: string[] = [];
+    page.on('dialog', (dialog) => {
+      browserQuestions.push(dialog.type());
+      void dialog.accept();
+    });
+    await mockDonorApi(page, donorWithDonations);
+    await mockAdministration(page);
+    const chunks = await LostChunks.watch(page);
+    await rememberedSession(page);
+    await page.goto(`/sprava/aktuality/${article.id}`);
+    await expect(page.getByLabel('Titulek')).toHaveValue(article.title);
+    chunks.loseEveryChunkNotLoadedYet();
+    chunks.bringBackAtDocument(1);
+
+    await page.getByLabel('Titulek').fill('Zahrada pro děti a rodiče');
+    await page.getByRole('link', { name: '← Aktuality' }).click();
+    await page
+      .getByRole('dialog', { name: 'Máte neuložené změny' })
+      .getByRole('button', { name: 'Odejít bez uložení' })
+      .click();
+
+    await expect(
+      page.getByRole('heading', { level: 1, name: 'Aktuality', exact: true }),
+    ).toBeVisible();
+    expect(chunks.documents).toEqual(['/sprava/aktuality']);
+    expect(browserQuestions).toEqual([]);
   });
 });

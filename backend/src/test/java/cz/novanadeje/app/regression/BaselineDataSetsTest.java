@@ -42,7 +42,9 @@ class BaselineDataSetsTest {
     static final String SCREENS_SPEC = "frontend/e2e/baseline/screens.spec.ts";
     static final String SCREENS_MANIFEST = "regression/v2/screens/manifest.json";
     private static final Pattern TOKEN = Pattern.compile("[\\p{L}\\p{N}][\\p{L}\\p{N}._@+-]*[\\p{L}\\p{N}]");
+    static final String ADDITIONS_FOLDER = "regression/v2/additions";
     private static final Pattern SCREEN_NAME = Pattern.compile("^  (?:publicPage|donorPage|adminPage)\\('([^']+)'|^    name: '([^']+)'", Pattern.MULTILINE);
+    private static final Pattern ELEMENT_SHOT_NAME = Pattern.compile("\\belement\\('([^']+)'");
     private static final JsonMapper JSON = JsonMapper.builder().build();
 
     @ParameterizedTest
@@ -97,10 +99,32 @@ class BaselineDataSetsTest {
         while (name.find()) {
             specStates.add(name.group(1) != null ? name.group(1) : name.group(2));
         }
-        JsonNode manifest = JSON.readTree(Files.readString(SharedCases.repositoryRoot().resolve(SCREENS_MANIFEST), StandardCharsets.UTF_8));
+        Set<String> elementShots = new TreeSet<>();
+        Matcher element = ELEMENT_SHOT_NAME.matcher(screens);
+        while (element.find()) {
+            elementShots.add(element.group(1));
+        }
+        Set<String> expected = new TreeSet<>(specStates);
+        expected.addAll(elementShots);
 
         assertThat(specStates).as("states in %s", SCREENS_SPEC).hasSizeGreaterThan(30);
-        assertThat(new TreeSet<>(manifest.get("shots").valueStream().map(shot -> shot.get("state").asString()).toList())).isEqualTo(specStates);
+        assertThat(elementShots).as("element shots in %s", SCREENS_SPEC).isNotEmpty()
+                .allSatisfy(shot -> assertThat(specStates).as("the state of %s", shot).contains(shot.substring(0, shot.indexOf("--"))));
+        assertThat(new TreeSet<>(screenShots().stream().map(shot -> shot.get("state").asString()).toList())).isEqualTo(expected);
+    }
+
+    @Test
+    @DisplayName("Given the screens manifest, when the shots added after the baseline are read, then each names its slice, whose patch of the screens spec lies beside the baseline, and follows every shot of the baseline")
+    void should_name_the_slice_and_its_spec_patch_when_screens_are_added_after_the_baseline() throws IOException {
+        List<JsonNode> shots = screenShots();
+        List<JsonNode> added = shots.stream().filter(shot -> shot.has("addedIn")).toList();
+
+        assertThat(added).isNotEmpty();
+        assertThat(shots.subList(shots.size() - added.size(), shots.size())).as("shots added after the baseline come last").isEqualTo(added);
+        for (JsonNode shot : added) {
+            String slice = shot.get("addedIn").asString();
+            assertThat(SharedCases.repositoryRoot().resolve(ADDITIONS_FOLDER).resolve(slice + ".patch")).as("the spec patch of %s", shot.get("file").asString()).isRegularFile();
+        }
     }
 
     static Set<String> realLookingTokens(String text, Set<String> digests) {
@@ -128,7 +152,7 @@ class BaselineDataSetsTest {
         JsonNode manifest = JSON.readTree(Files.readString(SharedCases.repositoryRoot().resolve(SCREENS_MANIFEST), StandardCharsets.UTF_8));
 
         assertThat(manifest.get("source").asString()).isEqualTo(ApiTranscripts.SOURCE);
-        JsonNode shots = manifest.get("shots");
+        List<JsonNode> shots = screenShots();
         assertThat(shots.size()).as("shots").isGreaterThanOrEqualTo(60);
         Set<String> states = new HashSet<>();
         Set<String> files = new HashSet<>();
@@ -139,9 +163,13 @@ class BaselineDataSetsTest {
             assertThat(shot.get("width").asInt()).isIn(390, 1280);
         }
         for (String state : states) {
-            assertThat(shots.valueStream().filter(shot -> shot.get("state").asString().equals(state)).map(shot -> shot.get("width").asInt()).toList())
+            assertThat(shots.stream().filter(shot -> shot.get("state").asString().equals(state)).map(shot -> shot.get("width").asInt()).toList())
                     .as("widths of %s", state).containsExactlyInAnyOrder(390, 1280);
         }
+    }
+
+    private static List<JsonNode> screenShots() throws IOException {
+        return JSON.readTree(Files.readString(SharedCases.repositoryRoot().resolve(SCREENS_MANIFEST), StandardCharsets.UTF_8)).get("shots").valueStream().toList();
     }
 
     private static List<Path> jsonFiles(String folder) {

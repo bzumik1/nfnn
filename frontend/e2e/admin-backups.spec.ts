@@ -4,6 +4,7 @@ import { administrator, mockDonorApi, session } from './donor-session';
 
 const BACKUPS = '/api/admin/operations/backups';
 const REQUESTS = '/api/admin/operations/backups/requests';
+const RESTART_POLL_MS = 3_000;
 
 function backupFile(overrides: Record<string, unknown> = {}) {
   return {
@@ -240,7 +241,7 @@ test.describe('Given an administrator on the backups page', () => {
     page,
   }) => {
     let restored = false;
-    let polls = 0;
+    let pollsAfterRestore = 0;
     const posted: string[] = [];
     await page.route(
       (url) => url.pathname === BACKUPS,
@@ -275,10 +276,18 @@ test.describe('Given an administrator on the backups page', () => {
     await page.route(
       (url) => url.pathname === '/api/operations/setup',
       (route) =>
-        polls++ < 1
+        restored && pollsAfterRestore++ < 1
           ? route.fulfill({ status: 502, body: '' })
           : route.fulfill({ json: { required: false, codeRequired: true, lastRestore: null } }),
     );
+    const restartPoll = async () => {
+      const poll = page.waitForResponse((response) =>
+        response.url().endsWith('/api/operations/setup'),
+      );
+      await page.clock.runFor(RESTART_POLL_MS);
+      return (await poll).status();
+    };
+    await page.clock.install();
 
     await page.goto('/sprava/zalohy');
     await page
@@ -293,9 +302,10 @@ test.describe('Given an administrator on the backups page', () => {
     await dialog.getByRole('button', { name: 'Obnovit a restartovat web' }).click();
 
     await expect(page.getByRole('heading', { name: 'Obnova ze zálohy' })).toBeVisible();
+    expect(await restartPoll()).toBe(502);
+    expect(await restartPoll()).toBe(200);
     await expect(page.locator('.ui-notice--status')).toHaveText(
       'Databáze je obnovená ze zálohy nfnn-2026-10-22_0300.dump.age. Stav před obnovou je uložený jako záloha „Před obnovou“.',
-      { timeout: 15_000 },
     );
     expect(posted).toEqual(['POST']);
   });

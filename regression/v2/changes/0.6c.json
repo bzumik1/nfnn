@@ -1,0 +1,35 @@
+[
+  {
+    "kind": "baseline-addition",
+    "file": "regression/v2/screens/manifest.json",
+    "recordedFrom": "c4a256c2912b03c8fc9609ec1fc2e342774c31e5",
+    "patch": "regression/v2/additions/0.6c.patch",
+    "record": "out=$(mktemp -d) && for run in 1 2; do node scripts/compare-screens.mjs --base=c4a256c2912b03c8fc9609ec1fc2e342774c31e5 --patch=regression/v2/additions/0.6c.patch --v2-only --base-only --out=$out/$run || exit 1; done && node scripts/screens-manifest.mjs --add $out/1/base-shots $out/2/base-shots 0.6c",
+    "reason": "0.6c: the screens v2 had but the baseline never shot (TOTP enrolment with its QR, Přispět at 1 000 Kč, at an own amount, for a signed-in donor and with the QR failing, the add-account 1 Kč dialog, the recovery-payment QR), plus element shots of the QR and bank-detail blocks compared pixel for pixel; recorded twice from the baseline commit with only the patch applied (run from the root of this PR's checkout: compare-screens.mjs makes the baseline worktree itself), both runs identical, appended to the manifest with addedIn 0.6c",
+    "contract": ".claude/rules/testing.md, Regression against v2"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/core/reload/chunk-load-recovery.spec.ts > Given the chunk-load recovery > when a lazy page fails to load and the guard allows a reload > then it offers nothing",
+    "reason": "0.6c: the recovery asks the server before it reloads by itself, so it sets the offer before the reload starts and a browser that stays on the page (a reload refused or cut off) still shows it",
+    "replacement": "src/app/core/reload/chunk-load-recovery.spec.ts > Given the chunk-load recovery > when a lazy page fails to load and the guard allows a reload > then it already offers the reload, so a browser that stays on the page still shows it",
+    "contract": "docs/frontend-overview.md, core/reload"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/layout/chunk-load-notice/chunk-load-notice.spec.ts > Given the chunk-load notice > when a later page could not be loaded and no automatic reload is left > then an alert over the page says the page did not open and what to do",
+    "reason": "0.6c: the bar is no longer an alert region, so a screen reader announces the message once, through the description of the button that takes the focus",
+    "replacement": "src/app/layout/chunk-load-notice/chunk-load-notice.spec.ts > Given the chunk-load notice > when a later page could not be loaded and no automatic reload is left > then a bar over the page says the page did not open and what to do",
+    "contract": "docs/frontend-overview.md, layout/chunk-load-notice"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/layout/chunk-load-notice/chunk-load-notice.spec.ts > Given the chunk-load notice > when a later page could not be loaded and no automatic reload is left > and a later navigation succeeds, then the alert goes and the room is given back",
+    "reason": "0.6c: the bar is no longer an alert region, so a screen reader announces the message once, through the description of the button that takes the focus",
+    "replacement": "src/app/layout/chunk-load-notice/chunk-load-notice.spec.ts > Given the chunk-load notice > when a later page could not be loaded and no automatic reload is left > and a later navigation succeeds, then the bar goes and the room is given back",
+    "contract": "docs/frontend-overview.md, layout/chunk-load-notice"
+  }
+]

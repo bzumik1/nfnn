@@ -15,7 +15,9 @@ export class LostChunks {
   private readonly loaded = new Set<string>();
   private kept = new Set<string>();
   private lost = false;
+  private unreachable = false;
   private restoreAtDocument: number | null = null;
+  private held: Promise<void> = Promise.resolve();
 
   private constructor(private readonly page: Page) {
     page.on('request', (request) => {
@@ -38,11 +40,21 @@ export class LostChunks {
     const chunks = new LostChunks(page);
     await page.route(
       (url) => CHUNK.test(url.pathname),
-      (route) => {
+      async (route) => {
         const path = new URL(route.request().url()).pathname;
-        return chunks.lost && !chunks.kept.has(path)
-          ? route.fulfill({ status: 404, contentType: 'text/html', body: '<h1>404 Not Found</h1>' })
-          : route.continue();
+        if (chunks.lost && !chunks.kept.has(path)) {
+          await chunks.held;
+        }
+        if (!chunks.lost || chunks.kept.has(path)) {
+          return route.continue();
+        }
+        return chunks.unreachable
+          ? route.abort('internetdisconnected')
+          : route.fulfill({
+              status: 404,
+              contentType: 'text/html',
+              body: '<h1>404 Not Found</h1>',
+            });
       },
     );
     return chunks;
@@ -57,15 +69,28 @@ export class LostChunks {
   loseEveryChunkNotLoadedYet(): void {
     this.kept = new Set(this.loaded);
     this.lost = true;
+    this.unreachable = false;
     this.documents.length = 0;
+  }
+
+  cutOffEveryChunkNotLoadedYet(): void {
+    this.loseEveryChunkNotLoadedYet();
+    this.unreachable = true;
   }
 
   bringBackAtDocument(count: number): void {
     this.restoreAtDocument = count;
   }
 
+  hold(): () => void {
+    let release = (): void => undefined;
+    this.held = new Promise((resolve) => (release = resolve));
+    return () => release();
+  }
+
   bringBack(): void {
     this.lost = false;
+    this.unreachable = false;
   }
 }
 
@@ -84,7 +109,9 @@ export async function openPolicyFromFooter(page: Page): Promise<void> {
 }
 
 export function chunkLoadNotice(page: Page) {
-  return page.getByRole('alert').filter({ hasText: chunkLoadMessage });
+  return page
+    .locator('app-chunk-load-notice .chunk-load-bar')
+    .filter({ hasText: chunkLoadMessage });
 }
 
 export async function withoutSessionStorage(page: Page): Promise<void> {

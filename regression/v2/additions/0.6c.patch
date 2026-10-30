@@ -1,0 +1,476 @@
+diff --git a/frontend/e2e/baseline/screen-mocks.ts b/frontend/e2e/baseline/screen-mocks.ts
+index 5d4cfcff..4d9ec7a8 100644
+--- a/frontend/e2e/baseline/screen-mocks.ts
++++ b/frontend/e2e/baseline/screen-mocks.ts
+@@ -9,6 +9,7 @@ import {
+   donationItem,
+   DonorApiMock,
+   noDonations,
++  problem,
+   session,
+ } from '../donor-session';
+ 
+@@ -432,8 +433,66 @@ const adminAnswers: Record<string, unknown> = {
+ 
+ export const PETR_DETAIL_PATH = `/sprava/darci/${PETR_ID}`;
+ 
++interface PaymentQrCase {
++  name: string;
++  input: { recipient: { accountNumber: string; iban: string; name: string } };
++  expected: { spayd?: string; size?: number; matrix?: string[] };
++}
++
++const PAYMENT_QR_CASES: PaymentQrCase[] = JSON.parse(
++  readFileSync(join(__dirname, '..', '..', '..', 'shared-cases', 'qr', 'payment.json'), 'utf8'),
++).cases;
++
++const PAYMENT_QR_CASE_OF_QUERY: Record<string, string> = {
++  'amount=100': '100 Kč without a variable symbol',
++  'amount=500': '500 Kč without a variable symbol',
++  'amount=1000': '1 000 Kč without a variable symbol',
++  'amount=1234': '1 234 Kč without a variable symbol',
++  'amount=500&variableSymbol=1234567890': '500 Kč with a ten-digit variable symbol',
++  'amount=1000&variableSymbol=1234567890': '1 000 Kč as a donation named explicitly',
++  'amount=1&variableSymbol=1234567890&purpose=ACCOUNT_VERIFICATION':
++    "1 Kč verifying a donor's account",
++};
++
++function paymentQrAnswer(name: string) {
++  const sharedCase = PAYMENT_QR_CASES.find((candidate) => candidate.name === name);
++  const { spayd, size, matrix } = sharedCase?.expected ?? {};
++  if (!sharedCase || spayd === undefined || size === undefined || matrix === undefined) {
++    throw new Error(`shared-cases/qr/payment.json has no QR symbol for the case ${name}`);
++  }
++  const { accountNumber, iban, name: recipientName } = sharedCase.input.recipient;
++  return {
++    spayd,
++    qrCode: { size, modules: matrix.join('') },
++    bankAccount: { accountNumber, iban, recipientName },
++  };
++}
++
++export async function servePaymentQrCases(page: Page): Promise<void> {
++  await page.route(
++    (url) => url.pathname === '/api/donations/payment-qr',
++    (route) => {
++      const query = new URL(route.request().url()).searchParams.toString();
++      const name = PAYMENT_QR_CASE_OF_QUERY[query];
++      return name
++        ? route.fulfill({ json: paymentQrAnswer(name) })
++        : route.fulfill(
++            problem(400, 'donations/no-shared-case', 'Žádný sdílený případ', `Dotaz ${query}`),
++          );
++    },
++  );
++}
++
++export async function failPaymentQr(page: Page): Promise<void> {
++  await page.route(
++    (url) => url.pathname === '/api/donations/payment-qr',
++    (route) =>
++      route.fulfill(problem(500, 'server-error', 'Chyba serveru', 'Zkuste to prosím znovu.')),
++  );
++}
++
+ async function mockMedia(page: Page): Promise<void> {
+-  const cover = readFileSync(join(process.cwd(), 'public', 'images', 'news-1.webp'));
++  const cover = readFileSync(join(__dirname, '..', '..', 'public', 'images', 'news-1.webp'));
+   await page.route(
+     (url) => url.pathname.startsWith('/api/content/media/'),
+     (route) => route.fulfill({ contentType: 'image/webp', body: cover }),
+diff --git a/frontend/e2e/baseline/screens.spec.ts b/frontend/e2e/baseline/screens.spec.ts
+index becc094d..ebc8ff54 100644
+--- a/frontend/e2e/baseline/screens.spec.ts
++++ b/frontend/e2e/baseline/screens.spec.ts
+@@ -1,4 +1,4 @@
+-import { Page } from '@playwright/test';
++import { Locator, Page } from '@playwright/test';
+ import {
+   connectionRequest,
+   donor,
+@@ -6,6 +6,8 @@ import {
+   mockDonorApi,
+   openSignInDialog,
+   problem,
++  secondFactorEnrolment,
++  secondFactorRecovery,
+   secondFactorRequired,
+   session,
+ } from '../donor-session';
+@@ -13,6 +15,7 @@ import { expect, test } from '../fixtures';
+ import {
+   article,
+   donorWithDonations,
++  failPaymentQr,
+   FIXED_TIME,
+   mockAdministration,
+   mockPublicContent,
+@@ -20,20 +23,42 @@ import {
+   PETR_DETAIL_PATH,
+   project,
+   rememberedSession,
++  servePaymentQrCases,
+ } from './screen-mocks';
+ 
++interface ElementShot {
++  name: string;
++  selector: string;
++}
++
+ interface Screen {
+   name: string;
+   open: (page: Page, width: number) => Promise<void>;
+   viewportOnly?: boolean;
++  region?: string;
++  elements?: ElementShot[];
++  masked?: string[];
++  ready?: (page: Page) => Promise<void>;
+ }
+ 
+ const WIDTHS = [390, 1280];
+ const HEIGHT = 900;
+ const DIALOG_OPENING_WIDTH = 1280;
+ const SEARCH_PAUSE_MS = 5_000;
++const PAGE_TOLERANCE = { maxDiffPixelRatio: 0.002 };
++const ELEMENT_TOLERANCE = { maxDiffPixels: 0 };
++const FIXED_BARS_HIDDEN =
++  '.skip-link, app-site-header, app-site-header *, app-dashboard-top-bar, app-dashboard-top-bar * { visibility: hidden !important; }';
++const DONATE_QR = '#prispet .qr-code';
++const DONATE_BANK = '#prispet .bank';
++const SEND_GIFT_QR = '.send-gift .qr-code';
++const SEND_GIFT_BANK = '.send-gift .bank';
+ 
+-function publicPage(name: string, path: string): Screen {
++function element(name: string, selector: string): ElementShot {
++  return { name, selector };
++}
++
++function publicPage(name: string, path: string, more: Partial<Screen> = {}): Screen {
+   return {
+     name,
+     open: async (page) => {
+@@ -41,6 +66,7 @@ function publicPage(name: string, path: string): Screen {
+       await mockPublicContent(page);
+       await page.goto(path);
+     },
++    ...more,
+   };
+ }
+ 
+@@ -55,7 +81,24 @@ function donorPage(name: string, path: string, donations = donorWithDonations):
+   };
+ }
+ 
+-function adminPage(name: string, path: string): Screen {
++async function openDonateSection(page: Page, signedIn = false): Promise<void> {
++  await mockDonorApi(page);
++  await mockPublicContent(page);
++  await servePaymentQrCases(page);
++  if (signedIn) {
++    await rememberedSession(page, donor);
++  }
++  await page.goto('/');
++  await expect(page.locator(DONATE_QR).getByRole('img')).toBeVisible();
++}
++
++async function elementsShown(page: Page, elements: string[]): Promise<void> {
++  for (const selector of elements) {
++    await expect(page.locator(selector)).toBeVisible();
++  }
++}
++
++function adminPage(name: string, path: string, more: Partial<Screen> = {}): Screen {
+   return {
+     name,
+     open: async (page) => {
+@@ -64,6 +107,7 @@ function adminPage(name: string, path: string): Screen {
+       await rememberedSession(page);
+       await page.goto(path);
+     },
++    ...more,
+   };
+ }
+ 
+@@ -74,7 +118,9 @@ async function openDialogAt(page: Page, width: number): Promise<void> {
+ }
+ 
+ const SCREENS: Screen[] = [
+-  publicPage('home', '/'),
++  publicPage('home', '/', {
++    elements: [element('home--donate-qr', DONATE_QR), element('home--donate-bank', DONATE_BANK)],
++  }),
+   publicPage('news', '/aktuality'),
+   publicPage('news-article', `/aktuality/${article.slug}`),
+   publicPage('projects', '/projekty'),
+@@ -170,6 +216,9 @@ const SCREENS: Screen[] = [
+       await rememberedSession(page, donor);
+       await page.goto('/darce/prehled');
+     },
++    ready: async (page) => {
++      await expect(page.getByRole('alert').filter({ hasText: /\S/ }).first()).toBeVisible();
++    },
+   },
+   donorPage('donor-donations', '/darce/dary'),
+   donorPage('donor-receipts', '/darce/potvrzeni'),
+@@ -203,7 +252,11 @@ const SCREENS: Screen[] = [
+   },
+   adminPage('admin-donor-detail', PETR_DETAIL_PATH),
+   adminPage('admin-administrators', '/sprava/spravci'),
+-  adminPage('admin-older-symbols', '/sprava/starsi-symboly'),
++  adminPage('admin-older-symbols', '/sprava/starsi-symboly', {
++    ready: async (page) => {
++      await expect(page.getByText('6123456789').first()).toBeVisible();
++    },
++  }),
+   adminPage('admin-reports', '/sprava/prehledy'),
+   adminPage('admin-news', '/sprava/aktuality'),
+   adminPage('admin-news-new', '/sprava/aktuality/nova'),
+@@ -215,11 +268,152 @@ const SCREENS: Screen[] = [
+   adminPage('admin-logs', '/sprava/logy'),
+   adminPage('admin-settings', '/sprava/nastaveni'),
+   adminPage('admin-history', '/sprava/historie'),
++  {
++    name: 'home-donate-1000',
++    region: '#prispet',
++    elements: [
++      element('home-donate-1000--qr', DONATE_QR),
++      element('home-donate-1000--bank', DONATE_BANK),
++    ],
++    open: async (page) => {
++      await openDonateSection(page);
++      await page.getByRole('button', { name: '1 000 Kč' }).click();
++      await expect(page.locator(DONATE_BANK)).toContainText('1 000 Kč');
++    },
++    ready: (page) => elementsShown(page, [DONATE_QR, DONATE_BANK]),
++  },
++  {
++    name: 'home-donate-own-amount',
++    region: '#prispet',
++    elements: [
++      element('home-donate-own-amount--qr', DONATE_QR),
++      element('home-donate-own-amount--bank', DONATE_BANK),
++    ],
++    open: async (page) => {
++      await openDonateSection(page);
++      await page.getByRole('button', { name: 'Jiná částka' }).click();
++      await page.locator('#donate-custom-amount').fill('1 234');
++      await expect(page.locator(DONATE_BANK)).toContainText('1 234 Kč');
++    },
++    ready: (page) => elementsShown(page, [DONATE_QR, DONATE_BANK]),
++  },
++  {
++    name: 'home-donate-signed-in',
++    region: '#prispet',
++    elements: [
++      element('home-donate-signed-in--qr', DONATE_QR),
++      element('home-donate-signed-in--bank', DONATE_BANK),
++    ],
++    open: async (page) => {
++      await openDonateSection(page, true);
++      await expect(page.locator(DONATE_BANK)).toContainText(donor.variableSymbol);
++    },
++    ready: (page) => elementsShown(page, [DONATE_QR, DONATE_BANK]),
++  },
++  {
++    name: 'home-donate-qr-error',
++    region: '#prispet',
++    elements: [element('home-donate-qr-error--qr', '#prispet .qr')],
++    open: async (page) => {
++      await mockDonorApi(page);
++      await mockPublicContent(page);
++      await failPaymentQr(page);
++      await page.goto('/');
++      await expect(page.locator('#prispet .qr-error')).toBeVisible();
++    },
++    ready: (page) => elementsShown(page, ['#prispet .qr']),
++  },
++  {
++    name: 'donor-details-second-factor-setup',
++    elements: [element('donor-details-second-factor-setup--qr', '.account-qr')],
++    open: async (page) => {
++      await mockDonorApi(page, donorWithDonations);
++      await page.route('**/api/donors/me/second-factor/setup', (route) =>
++        route.fulfill({ json: secondFactorEnrolment }),
++      );
++      await rememberedSession(page, donor);
++      await page.goto('/darce/udaje');
++      await page.getByRole('button', { name: 'Zapnout dvoufaktorové ověření' }).click();
++      await page.getByLabel('Současné heslo').fill('correct horse battery');
++      await page.getByRole('button', { name: 'Pokračovat' }).click();
++      await expect(page.getByLabel('Kód z aplikace')).toBeFocused();
++    },
++    ready: (page) => elementsShown(page, ['.account-qr']),
++  },
++  {
++    name: 'donor-bank-accounts-add',
++    viewportOnly: true,
++    masked: ['.add-account-text', '.add-account-watch .watch-detail'],
++    elements: [
++      element('donor-bank-accounts-add--qr', '.add-account-qr'),
++      element('donor-bank-accounts-add--bank', '.add-account-bank'),
++    ],
++    open: async (page) => {
++      await mockDonorApi(page, donorWithDonations);
++      await servePaymentQrCases(page);
++      await rememberedSession(page, donor);
++      await page.goto('/darce/ucty');
++      await page.getByRole('button', { name: 'Přidat účet' }).click();
++      await expect(
++        page.getByRole('dialog').locator('.add-account-qr').getByRole('img'),
++      ).toBeVisible();
++    },
++    ready: (page) => elementsShown(page, ['.add-account-qr', '.add-account-bank']),
++  },
++  {
++    name: 'sign-in-recovery-payment',
++    viewportOnly: true,
++    elements: [
++      element('sign-in-recovery-payment--qr', '.recovery-qr'),
++      element('sign-in-recovery-payment--details', '.recovery-details'),
++    ],
++    open: async (page, width) => {
++      await mockDonorApi(page);
++      await page.route('**/api/donors/auth/login', (route) =>
++        route.fulfill(secondFactorRequired()),
++      );
++      await page.route('**/api/donors/auth/login/second-factor/recovery', (route) =>
++        route.fulfill({ json: secondFactorRecovery }),
++      );
++      await openDialogAt(page, width);
++      await page.locator('#login-email').fill('jana@example.cz');
++      await page.locator('#login-password').fill('correct horse battery');
++      await page.getByRole('dialog').locator('.ui-button--block').click();
++      await page.getByRole('button', { name: 'Obnovit přístup platbou' }).click();
++      await expect(
++        page.getByRole('dialog').getByRole('heading', { name: 'Obnova přístupu platbou' }),
++      ).toBeFocused();
++    },
++    ready: (page) => elementsShown(page, ['.recovery-qr', '.recovery-details']),
++  },
+ ];
+ 
+-async function settle(page: Page): Promise<void> {
++const SCREENS_SINCE_V2: Screen[] = [
++  {
++    name: 'donor-overview-send-gift',
++    region: '.send-gift',
++    elements: [
++      element('donor-overview-send-gift--qr', SEND_GIFT_QR),
++      element('donor-overview-send-gift--bank', SEND_GIFT_BANK),
++    ],
++    open: async (page) => {
++      await mockDonorApi(page, donorWithDonations);
++      await servePaymentQrCases(page);
++      await rememberedSession(page, donor);
++      await page.goto('/darce/prehled');
++      await expect(page.locator(SEND_GIFT_BANK)).toContainText(donor.variableSymbol);
++    },
++    ready: (page) => elementsShown(page, [SEND_GIFT_QR, SEND_GIFT_BANK]),
++  },
++];
++
++async function settle(page: Page, screen: Screen): Promise<void> {
+   await expect(page.locator('h1').first()).toBeVisible();
+-  await page.waitForLoadState('networkidle');
++  if (screen.ready) {
++    await screen.ready(page);
++  } else {
++    await page.waitForLoadState('networkidle');
++  }
+   await page.evaluate(async () => {
+     document.querySelectorAll<HTMLImageElement>('img[loading="lazy"]').forEach((image) => {
+       image.loading = 'eager';
+@@ -239,30 +433,79 @@ async function settle(page: Page): Promise<void> {
+   });
+ }
+ 
+-test.describe('Given the v2 baseline screens', () => {
+-  test.skip(!process.env.BASELINE_SCREENS, 'records the v2 baseline screens (BASELINE_SCREENS)');
+-  test.use({ reducedMotion: 'reduce', locale: 'cs-CZ', timezoneId: 'Europe/Prague' });
+-
+-  test.beforeEach(async ({ page }) => {
+-    await page.clock.setFixedTime(FIXED_TIME);
++async function shootElement(
++  target: Locator,
++  file: string,
++  tolerance: { maxDiffPixels?: number; maxDiffPixelRatio?: number },
++): Promise<void> {
++  await expect(target).toHaveScreenshot(file, {
++    animations: 'disabled',
++    caret: 'hide',
++    ...tolerance,
+   });
++}
+ 
+-  for (const screen of SCREENS) {
++function shootEach(screens: Screen[]): void {
++  for (const screen of screens) {
+     for (const width of WIDTHS) {
+       test(`when ${screen.name} is shown ${width} px wide, then it looks as recorded`, async ({
+         page,
+       }) => {
+         await page.setViewportSize({ width, height: HEIGHT });
+         await screen.open(page, width);
+-        await settle(page);
++        await settle(page, screen);
+ 
+-        await expect(page).toHaveScreenshot(`${screen.name}-${width}.png`, {
+-          fullPage: !screen.viewportOnly,
+-          animations: 'disabled',
+-          caret: 'hide',
+-          maxDiffPixelRatio: 0.002,
+-        });
++        if (!screen.region) {
++          await expect(page).toHaveScreenshot(`${screen.name}-${width}.png`, {
++            fullPage: !screen.viewportOnly,
++            mask: (screen.masked ?? []).map((selector) => page.locator(selector)),
++            animations: 'disabled',
++            caret: 'hide',
++            ...PAGE_TOLERANCE,
++          });
++        }
++        if (screen.region || screen.elements) {
++          await page.addStyleTag({ content: FIXED_BARS_HIDDEN });
++        }
++        if (screen.region) {
++          await page
++            .locator(screen.region)
++            .evaluate((region) => region.scrollIntoView({ block: 'start', behavior: 'instant' }));
++          await shootElement(page.locator(screen.region), `${screen.name}-${width}.png`, {
++            ...PAGE_TOLERANCE,
++          });
++        }
++        for (const shot of screen.elements ?? []) {
++          await shootElement(page.locator(shot.selector), `${shot.name}-${width}.png`, {
++            ...ELEMENT_TOLERANCE,
++          });
++        }
+       });
+     }
+   }
++}
++
++test.describe('Given the v2 baseline screens', () => {
++  test.skip(!process.env.BASELINE_SCREENS, 'records the v2 baseline screens (BASELINE_SCREENS)');
++  test.use({ reducedMotion: 'reduce', locale: 'cs-CZ', timezoneId: 'Europe/Prague' });
++
++  test.beforeEach(async ({ page }) => {
++    await page.clock.setFixedTime(FIXED_TIME);
++  });
++
++  shootEach(SCREENS);
++});
++
++test.describe('Given the screens added after the v2 baseline', () => {
++  test.skip(
++    !process.env.BASELINE_SCREENS || process.env.BASELINE_SCREENS === 'v2',
++    'v2 has no such screens; they are compared only against the merge base (BASELINE_SCREENS)',
++  );
++  test.use({ reducedMotion: 'reduce', locale: 'cs-CZ', timezoneId: 'Europe/Prague' });
++
++  test.beforeEach(async ({ page }) => {
++    await page.clock.setFixedTime(FIXED_TIME);
++  });
++
++  shootEach(SCREENS_SINCE_V2);
+ });

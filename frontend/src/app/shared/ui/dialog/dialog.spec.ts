@@ -1,6 +1,7 @@
 import { Component, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Dialog } from './dialog';
+import { DialogAnnouncer } from './dialog-announcer';
 
 @Component({
   imports: [Dialog],
@@ -44,6 +45,43 @@ describe('Given a dialog opened from a button', () => {
   it('when it renders, then it is open as a modal dialog named by its title', () => {
     expect(native().open).toBe(true);
     expect(native().getAttribute('aria-labelledby')).toBe('title');
+  });
+
+  it('when it renders, then it holds an empty status region of its own for messages from behind it', () => {
+    const status = native().querySelector('[role="status"]');
+
+    expect(status).not.toBeNull();
+    expect(status?.textContent?.trim()).toBe('');
+  });
+
+  it('when a message is announced to the open dialog, then its own status region carries it', () => {
+    TestBed.inject(DialogAnnouncer).announce('Stránku se nepodařilo otevřít.');
+    fixture.detectChanges();
+
+    expect(native().querySelector('[role="status"]')?.textContent?.trim()).toBe(
+      'Stránku se nepodařilo otevřít.',
+    );
+  });
+
+  it('when an announcement is withdrawn, then the status region empties and stays rendered', () => {
+    const withdraw = TestBed.inject(DialogAnnouncer).announce('Stránku se nepodařilo otevřít.');
+    fixture.detectChanges();
+
+    withdraw();
+    fixture.detectChanges();
+
+    expect(native().querySelector('[role="status"]')?.textContent?.trim()).toBe('');
+  });
+
+  it('when a later announcement replaced the first, then withdrawing the first keeps the later one', () => {
+    const announcer = TestBed.inject(DialogAnnouncer);
+    const withdrawFirst = announcer.announce('První');
+    announcer.announce('Druhá');
+
+    withdrawFirst();
+    fixture.detectChanges();
+
+    expect(native().querySelector('[role="status"]')?.textContent?.trim()).toBe('Druhá');
   });
 
   it('when the browser closes it on Esc, then it asks to be dismissed', () => {

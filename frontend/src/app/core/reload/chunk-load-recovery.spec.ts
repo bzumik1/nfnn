@@ -5,6 +5,7 @@ import { NavigationError, provideRouter, Router } from '@angular/router';
 import { Connectivity } from '../navigation/connectivity';
 import { ExternalNavigation } from '../navigation/external-navigation';
 import { ChunkLoadRecovery, isChunkLoadError } from './chunk-load-recovery';
+import { ChunkProbe } from './chunk-probe';
 import { ReloadGuard } from './reload-guard';
 
 @Component({ template: '' })
@@ -50,12 +51,14 @@ describe('Given the chunk-load recovery', () => {
   let claim: ReturnType<typeof vi.fn>;
   let loadFromServer: ReturnType<typeof vi.fn>;
   let isOffline: ReturnType<typeof vi.fn>;
+  let reloadWouldLand: ReturnType<typeof vi.fn>;
   let recovery: ChunkLoadRecovery;
 
   beforeEach(() => {
     claim = vi.fn(() => true);
     loadFromServer = vi.fn();
     isOffline = vi.fn(() => false);
+    reloadWouldLand = vi.fn(() => Promise.resolve(true));
     TestBed.configureTestingModule({
       providers: [
         provideRouter([
@@ -65,6 +68,7 @@ describe('Given the chunk-load recovery', () => {
         { provide: ReloadGuard, useValue: { claim } },
         { provide: ExternalNavigation, useValue: { loadFromServer } },
         { provide: Connectivity, useValue: { isOffline } },
+        { provide: ChunkProbe, useValue: { reloadWouldLand } },
       ],
     });
     recovery = TestBed.inject(ChunkLoadRecovery);
@@ -76,6 +80,10 @@ describe('Given the chunk-load recovery', () => {
   describe('when a lazy page fails to load and the guard allows a reload', () => {
     beforeEach(() => recovery.handleNavigationError(failure(CHROME, '/#prispet')));
 
+    it('then it asks the server about the failed chunk first', () => {
+      expect(reloadWouldLand).toHaveBeenCalledExactlyOnceWith(CHROME);
+    });
+
     it('then it claims the chunk-load reload', () => {
       expect(claim).toHaveBeenCalledWith('chunk-load');
     });
@@ -84,8 +92,57 @@ describe('Given the chunk-load recovery', () => {
       expect(loadFromServer).toHaveBeenCalledExactlyOnceWith('/#prispet');
     });
 
-    it('then it offers nothing', () => {
+    it('then it already offers the reload, so a browser that stays on the page still shows it', () => {
+      expect(recovery.failure()).toEqual({ url: '/#prispet', initial: true });
+    });
+  });
+
+  describe('when a lazy page fails to load and the server takes its time to answer the probe', () => {
+    let answer: (lands: boolean) => void;
+    let handled: Promise<void>;
+
+    beforeEach(async () => {
+      await showPage();
+      reloadWouldLand.mockReturnValue(new Promise<boolean>((resolve) => (answer = resolve)));
+      handled = recovery.handleNavigationError(failure(CHROME));
+    });
+
+    it('then it offers the reload while it waits', () => {
+      expect(recovery.failure()).toEqual({ url: '/darce/prehled', initial: false });
+    });
+
+    it('and the answer says a reload lands, then it loads the page from the server', async () => {
+      answer(true);
+      await handled;
+
+      expect(loadFromServer).toHaveBeenCalledExactlyOnceWith('/darce/prehled');
+    });
+
+    it('and the visitor opens another page before the answer, then the late answer does not take them back', async () => {
+      await TestBed.inject(Router).navigateByUrl('/dale');
+      answer(true);
+      await handled;
+
+      expect(claim).not.toHaveBeenCalled();
+      expect(loadFromServer).not.toHaveBeenCalled();
       expect(recovery.failure()).toBeNull();
+    });
+  });
+
+  describe('when a lazy page fails to load and the server cannot be reached though the browser says it is online', () => {
+    beforeEach(async () => {
+      await showPage();
+      reloadWouldLand.mockResolvedValue(false);
+      await recovery.handleNavigationError(failure(CHROME));
+    });
+
+    it('then it keeps the reload of the guard and does not reload into an error page of the browser', () => {
+      expect(claim).not.toHaveBeenCalled();
+      expect(loadFromServer).not.toHaveBeenCalled();
+    });
+
+    it('then it offers a reload of that page', () => {
+      expect(recovery.failure()).toEqual({ url: '/darce/prehled', initial: false });
     });
   });
 
@@ -93,7 +150,7 @@ describe('Given the chunk-load recovery', () => {
     beforeEach(async () => {
       await showPage();
       claim.mockReturnValue(false);
-      recovery.handleNavigationError(failure(CHROME));
+      await recovery.handleNavigationError(failure(CHROME));
     });
 
     it('then it does not reload', () => {
@@ -117,10 +174,10 @@ describe('Given the chunk-load recovery', () => {
     });
   });
 
-  it('when the first page fails to load and the guard refuses a reload, then the offer says no page is shown', () => {
+  it('when the first page fails to load and the guard refuses a reload, then the offer says no page is shown', async () => {
     claim.mockReturnValue(false);
 
-    recovery.handleNavigationError(failure(CHROME));
+    await recovery.handleNavigationError(failure(CHROME));
 
     expect(recovery.failure()).toEqual({ url: '/darce/prehled', initial: true });
   });
@@ -129,7 +186,11 @@ describe('Given the chunk-load recovery', () => {
     beforeEach(async () => {
       await showPage();
       isOffline.mockReturnValue(true);
-      recovery.handleNavigationError(failure(CHROME));
+      await recovery.handleNavigationError(failure(CHROME));
+    });
+
+    it('then it asks the server nothing', () => {
+      expect(reloadWouldLand).not.toHaveBeenCalled();
     });
 
     it('then it keeps the reload of the guard and does not reload', () => {
@@ -142,9 +203,10 @@ describe('Given the chunk-load recovery', () => {
     });
   });
 
-  it('when a navigation fails for another reason, then it neither reloads nor offers anything', () => {
-    recovery.handleNavigationError(failure(new Error('guard failed')));
+  it('when a navigation fails for another reason, then it neither reloads nor offers anything', async () => {
+    await recovery.handleNavigationError(failure(new Error('guard failed')));
 
+    expect(reloadWouldLand).not.toHaveBeenCalled();
     expect(claim).not.toHaveBeenCalled();
     expect(loadFromServer).not.toHaveBeenCalled();
     expect(recovery.failure()).toBeNull();

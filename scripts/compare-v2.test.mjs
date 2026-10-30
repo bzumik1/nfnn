@@ -1550,7 +1550,7 @@ describe('Given baseline additions with their patch', () => {
     }
   });
 
-  it('when the addition is declared, then the report prints the commands that reproduce it', () => {
+  it('when the addition is declared, then the report prints its record command to run from the root of the pull request checkout', () => {
     const result = compare(
       workspace({
         changes: { '0.6c.json': [addition()] },
@@ -1562,12 +1562,13 @@ describe('Given baseline additions with their patch', () => {
       }),
     );
     assert.equal(result.status, 0, result.output);
-    assert.match(result.report, new RegExp(`git worktree add --detach \\S+ ${BASELINE_COMMIT}`));
+    assert.match(result.report, /z kořene checkoutu tohoto PR/);
+    assert.match(result.report, /^env -u FIO_TOKEN scripts\/record-baseline-data\.sh$/m);
     assert.match(
       result.report,
-      /git -C \S+ apply .*regression\/v2\/additions\/0\.6c-screens\.patch/,
+      new RegExp(`${BASELINE_COMMIT}.*regression/v2/additions/0\\.6c-screens\\.patch`),
     );
-    assert.match(result.report, /record-baseline-data\.sh/);
+    assert.doesNotMatch(result.report, /cd \.\.\/v2-baseline|git worktree add/);
   });
 
   it('when a new file lands in screens or anything but a JSON sample lands in receipts, then it fails even when declared', () => {

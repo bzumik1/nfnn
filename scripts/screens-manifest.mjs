@@ -1,21 +1,23 @@
 #!/usr/bin/env node
 import { createHash } from 'node:crypto';
-import { mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { decodePng } from './png-pixels.mjs';
 
 const root = resolve(fileURLToPath(new URL('..', import.meta.url)));
+const SCREENS_MANIFEST = 'regression/v2/screens/manifest.json';
+const ADDITIONS_FOLDER = 'regression/v2/additions';
 const usage = [
   'Usage: node scripts/screens-manifest.mjs <folder of PNGs> [manifest path] [where the PNGs are kept]',
   '       node scripts/screens-manifest.mjs --check <folder of PNGs> [manifest path]',
+  '       node scripts/screens-manifest.mjs --add <first recording> <second recording> <slice, whose spec patch is regression/v2/additions/<slice>.patch>',
 ].join('\n');
 const argv = process.argv.slice(2);
-const checking = argv[0] === '--check';
-const [screens, out = 'regression/v2/screens/manifest.json', stored = screens] = checking
-  ? argv.slice(1)
-  : argv;
-if (!screens) {
+const mode = ['--check', '--add'].includes(argv[0]) ? argv[0] : 'write';
+const [screens, out, stored = screens] = mode === 'write' ? argv : argv.slice(1);
+const [, , slice] = argv.slice(1);
+if (!screens || (mode === '--add' && !slice)) {
   console.error(usage);
   process.exit(2);
 }
@@ -24,12 +26,14 @@ function shot(folder, file) {
   const path = resolve(root, folder, file);
   const { width: imageWidth, height, rgba } = decodePng(readFileSync(path));
   const [, state, width] = file.match(/^(.+)-(\d+)\.png$/);
-  if (Number(width) !== imageWidth) {
+  const element = state.includes('--');
+  if (!element && Number(width) !== imageWidth) {
     throw new Error(`${file} is ${imageWidth} px wide`);
   }
   return {
     state,
     width: Number(width),
+    ...(element ? { imageWidth } : {}),
     height,
     file,
     bytes: statSync(path).size,
@@ -42,27 +46,81 @@ const pngs = (folder) =>
     .filter((name) => name.endsWith('.png'))
     .sort();
 
-if (checking) {
-  const manifest = JSON.parse(readFileSync(resolve(root, out), 'utf8'));
-  const listed = manifest.shots.map((entry) => entry.file).sort();
-  const present = pngs(screens);
-  const problems = [
-    ...listed.filter((file) => !present.includes(file)).map((file) => `${file} is missing`),
-    ...present.filter((file) => !listed.includes(file)).map((file) => `${file} is not listed`),
-  ];
-  for (const entry of manifest.shots.filter((listedShot) => present.includes(listedShot.file))) {
-    const found = shot(screens, entry.file);
-    if (found.pixelsSha256 !== entry.pixelsSha256 || found.height !== entry.height) {
-      problems.push(
+function digestProblems(listedShots, present) {
+  return listedShots
+    .filter((entry) => present.includes(entry.file))
+    .filter((entry) => {
+      const found = shot(screens, entry.file);
+      return found.pixelsSha256 !== entry.pixelsSha256 || found.height !== entry.height;
+    })
+    .map(
+      (entry) =>
         `${entry.state} at ${entry.width} px (${entry.file}) has other pixels than the manifest records`,
-      );
-    }
-  }
+    );
+}
+
+function failOn(problems) {
   if (problems.length > 0) {
     console.error(problems.join('\n'));
     process.exit(1);
   }
-  console.log(`${present.length} shots in ${screens} match ${out}`);
+}
+
+if (mode === '--check') {
+  const file = out ?? SCREENS_MANIFEST;
+  const listedShots = JSON.parse(readFileSync(resolve(root, file), 'utf8')).shots;
+  const listed = listedShots.map((entry) => entry.file).sort();
+  const present = pngs(screens);
+  failOn([
+    ...listed.filter((file) => !present.includes(file)).map((file) => `${file} is missing`),
+    ...present.filter((file) => !listed.includes(file)).map((file) => `${file} is not listed`),
+    ...digestProblems(listedShots, present),
+  ]);
+  console.log(`${present.length} shots in ${screens} match ${file}`);
+} else if (mode === '--add') {
+  const second = out;
+  const patch = `${ADDITIONS_FOLDER}/${slice}.patch`;
+  if (!/^[\w.-]+$/.test(slice) || !existsSync(resolve(root, patch))) {
+    console.error(
+      `the additions of ${slice} are recorded with the spec patch ${patch}; write it first (git diff <BASELINE_COMMIT> -- frontend/e2e/baseline)`,
+    );
+    process.exit(2);
+  }
+  const firstShots = pngs(screens);
+  const secondShots = pngs(second);
+  failOn([
+    ...[...new Set([...firstShots, ...secondShots])]
+      .filter((file) => !firstShots.includes(file) || !secondShots.includes(file))
+      .map((file) => `${file} is in only one of the two recordings`),
+    ...firstShots
+      .filter((file) => secondShots.includes(file))
+      .filter((file) => shot(screens, file).pixelsSha256 !== shot(second, file).pixelsSha256)
+      .map(
+        (file) => `${file} differs between the two recordings, so it is not stable enough to add`,
+      ),
+  ]);
+  const target = resolve(root, SCREENS_MANIFEST);
+  const manifest = JSON.parse(readFileSync(target, 'utf8'));
+  const listed = manifest.shots.map((entry) => entry.file);
+  const present = pngs(screens);
+  failOn([
+    ...listed
+      .filter((file) => !present.includes(file))
+      .map((file) => `${file} is missing, so the recording cannot show it reproduces the baseline`),
+    ...digestProblems(manifest.shots, present),
+  ]);
+  const shots = present
+    .filter((file) => !listed.includes(file))
+    .map((file) => ({ ...shot(screens, file), addedIn: slice }));
+  if (shots.length === 0) {
+    console.error(`${screens} has no shot that ${SCREENS_MANIFEST} does not list`);
+    process.exit(1);
+  }
+  manifest.shots.push(...shots);
+  writeFileSync(target, `${JSON.stringify(manifest, null, 2)}\n`);
+  console.log(
+    `${listed.length} listed shots reproduced; ${shots.length} shots, ${shots.reduce((sum, entry) => sum + entry.bytes, 0)} bytes, appended to ${SCREENS_MANIFEST} as added in ${slice}`,
+  );
 } else {
   const shots = pngs(screens).map((file) => shot(screens, file));
   const manifest = {
@@ -73,8 +131,8 @@ if (checking) {
     totalBytes: shots.reduce((sum, entry) => sum + entry.bytes, 0),
     shots,
   };
-  const target = resolve(root, out);
+  const target = resolve(root, out ?? SCREENS_MANIFEST);
   mkdirSync(dirname(target), { recursive: true });
   writeFileSync(target, `${JSON.stringify(manifest, null, 2)}\n`);
-  console.log(`${shots.length} shots, ${manifest.totalBytes} bytes, manifest ${out}`);
+  console.log(`${shots.length} shots, ${manifest.totalBytes} bytes, manifest ${target}`);
 }

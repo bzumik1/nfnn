@@ -540,6 +540,7 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
 
   private closeLeaveQuestion(leave: boolean): void {
     this.askingToLeave.set(false);
+    this.discarded ||= leave;
     const answer = this.answerLeave;
     this.answerLeave = null;
     answer?.(leave);

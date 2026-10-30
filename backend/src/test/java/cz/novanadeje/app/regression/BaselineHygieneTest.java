@@ -178,6 +178,53 @@ class BaselineHygieneTest {
     }
 
     @Test
+    @DisplayName("Given a baseline folder whose BASELINE_COMMIT names a commit, when it is scanned, then a changes file naming that commit is clean and another commit in it is still reported")
+    void should_allow_the_baseline_commit_in_other_files_when_a_folder_is_scanned(@TempDir Path temporary) throws IOException {
+        Path root = temporary.resolve("regression");
+        String baseline = "c4a256c2912b03c8fc9609ec1fc2e342774c31e5";
+        String other = "797db519f82975f9dab4b31b199e34bd9e527db5";
+        Files.createDirectories(root.resolve("v2/changes"));
+        Files.writeString(root.resolve("v2/BASELINE_COMMIT"), baseline + "\n");
+        Files.writeString(root.resolve("v2/changes/0.6c.json"), """
+                {"recordedFrom":"%s", "record":"node scripts/compare-screens.mjs --base=%s", "other":"%s"}
+                """.formatted(baseline, baseline, other));
+
+        BaselineHygiene.Report report = BaselineHygiene.scan(root, NO_FIXTURES);
+
+        assertThat(report.findings()).containsExactly("v2/changes/0.6c.json: a hex secret starting 797db519");
+    }
+
+    @Test
+    @DisplayName("Given a second BASELINE_COMMIT beside the anchored one, a file whose name only ends so and a v2/BASELINE_COMMIT in the shared cases, when the folders are scanned, then the ids they hold are still reported, in those files and where other files name them")
+    void should_trust_only_the_anchored_baseline_commit_when_a_folder_is_scanned_given_planted_commit_files(@TempDir Path temporary) throws IOException {
+        Path regression = temporary.resolve("regression");
+        Path sharedCases = temporary.resolve("shared-cases");
+        String baseline = "c4a256c2912b03c8fc9609ec1fc2e342774c31e5";
+        String planted = "797db519f82975f9dab4b31b199e34bd9e527db5";
+        String renamed = "655dd631a1b2c3d4e5f60718293a4b5c6d7e8f90";
+        Files.createDirectories(regression.resolve("v2/changes"));
+        Files.createDirectories(regression.resolve("v3"));
+        Files.createDirectories(sharedCases.resolve("v2"));
+        Files.writeString(regression.resolve("v2/BASELINE_COMMIT"), baseline + "\n");
+        Files.writeString(regression.resolve("v3/BASELINE_COMMIT"), planted + "\n");
+        Files.writeString(regression.resolve("v2/xBASELINE_COMMIT"), renamed + "\n");
+        Files.writeString(regression.resolve("v2/changes/planted.json"), """
+                {"recordedFrom":"%s", "planted":"%s", "renamed":"%s"}
+                """.formatted(baseline, planted, renamed));
+        Files.writeString(sharedCases.resolve("v2/BASELINE_COMMIT"), planted + "\n");
+
+        BaselineHygiene.Report inRegression = BaselineHygiene.scan(regression, NO_FIXTURES);
+        BaselineHygiene.Report inSharedCases = BaselineHygiene.scan(sharedCases, NO_FIXTURES);
+
+        assertThat(inRegression.findings()).containsExactlyInAnyOrder(
+                "v2/changes/planted.json: a hex secret starting 797db519",
+                "v2/changes/planted.json: a hex secret starting 655dd631",
+                "v3/BASELINE_COMMIT: a hex secret starting 797db519",
+                "v2/xBASELINE_COMMIT: a hex secret starting 655dd631");
+        assertThat(inSharedCases.findings()).containsExactly("v2/BASELINE_COMMIT: a hex secret starting 797db519");
+    }
+
+    @Test
     @DisplayName("Given upper-case hex of 32 characters and more, when text is checked, then it is reported, and an upper-case labelled digest and a value the tests spell out are not")
     void should_report_upper_case_hex_secrets_when_text_is_checked() {
         String text = """

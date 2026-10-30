@@ -4,6 +4,7 @@ import { provideRouter, Router } from '@angular/router';
 
 import { appHttpClient, chunkLoadRecoveryFeature } from './app.config';
 import { ExternalNavigation } from './core/navigation/external-navigation';
+import { ChunkProbe } from './core/reload/chunk-probe';
 import { ReloadGuard } from './core/reload/reload-guard';
 
 describe('Given the HTTP client of the app', () => {
@@ -37,6 +38,7 @@ describe('Given the router of the app', () => {
         ),
         { provide: ReloadGuard, useValue: { claim: () => true } },
         { provide: ExternalNavigation, useValue: { loadFromServer } },
+        { provide: ChunkProbe, useValue: { reloadWouldLand: () => Promise.resolve(true) } },
       ],
     });
   });
@@ -46,6 +48,6 @@ describe('Given the router of the app', () => {
       .navigateByUrl('/aktuality')
       .catch(() => false);
 
-    expect(loadFromServer).toHaveBeenCalledExactlyOnceWith('/aktuality');
+    await vi.waitFor(() => expect(loadFromServer).toHaveBeenCalledExactlyOnceWith('/aktuality'));
   });
 });
