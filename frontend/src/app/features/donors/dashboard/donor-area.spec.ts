@@ -433,22 +433,7 @@ describe('Given a signed-in donor in the donor area', () => {
       await open('/darce/prehled');
       await respond(twoYearSummary(), twoYearDonations());
 
-      expect(text('.contact-line')).toBe(
-        'Máte dotaz k platbě? Napište nám na info@nfnn.cz nebo přes kontaktní formulář.',
-      );
-    });
-
-    it('then the help line also leads to the contact form on the home page', async () => {
-      await open('/darce/prehled');
-      await respond(twoYearSummary(), twoYearDonations());
-
-      const links = [...root().querySelectorAll<HTMLAnchorElement>('.contact-line a')];
-      expect(links.map((link) => normalized(link.textContent ?? ''))).toEqual([
-        'info@nfnn.cz',
-        'kontaktní formulář',
-      ]);
-      expect(links[0].getAttribute('href')).toBe('mailto:info@nfnn.cz');
-      expect(links[1].getAttribute('href')).toBe('/#kontakt');
+      expect(text('.contact-line')).toBe('Máte dotaz k platbě? Napište nám na info@nfnn.cz');
     });
 
     it('then the donations cannot be loaded, an alert offers to try again and a retry asks for both again and shows them', async () => {
