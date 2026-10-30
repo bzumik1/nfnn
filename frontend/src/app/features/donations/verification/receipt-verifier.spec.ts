@@ -11,6 +11,7 @@ import { ReceiptVerifier, type VerificationOutcome } from './receipt-verifier';
 import {
   KEY_LIST,
   keyListWith,
+  OTHER_KEY,
   proofCase,
   REVOKED_KEY_LIST,
   TAMPERED_KEY_LIST,
@@ -22,6 +23,12 @@ const STORAGE_KEY = 'nfnn.receipt-keys';
 const SINGLE = proofCase('a single receipt of one gift');
 const CHANGED_AMOUNT = proofCase('an amount changed');
 const OTHER_FORMAT = proofCase('another format version');
+const RESERVED_FLAG = proofCase('a reserved flag set, signed');
+const TIMEOUT_MS = 5_000;
+const REFUSALS: readonly { readonly status: number; readonly statusText: string }[] = [
+  { status: 429, statusText: 'Too Many Requests' },
+  { status: 503, statusText: 'Service Unavailable' },
+];
 
 describe('Given the receipt verifier', () => {
   let verifier: ReceiptVerifier;
@@ -56,6 +63,23 @@ describe('Given the receipt verifier', () => {
 
   async function cutOff(url: string): Promise<void> {
     (await request(url)).error(new ProgressEvent('error'), { status: 0, statusText: '' });
+  }
+
+  async function refuse(
+    url: string,
+    refusal: { status: number; statusText: string },
+  ): Promise<void> {
+    (await request(url)).flush(
+      { type: 'https://nfnn.cz/problems/x', status: refusal.status },
+      refusal,
+    );
+  }
+
+  async function settledWithin<T>(outcome: Promise<T>, milliseconds: number): Promise<boolean> {
+    let settled = false;
+    void outcome.then(() => (settled = true));
+    await vi.advanceTimersByTimeAsync(milliseconds);
+    return settled;
   }
 
   function keep(list: unknown): void {
@@ -105,25 +129,54 @@ describe('Given the receipt verifier', () => {
       });
     }
 
-    it('and the status cannot be learned, then the signature stands with the status unavailable', async () => {
-      const outcome = verifier.verify(SINGLE.fragment);
+    for (const refusal of [{ status: 404, statusText: 'Not Found' }, ...REFUSALS]) {
+      it(`and the status call answers ${refusal.status}, then the signature stands but the fund gave no answer`, async () => {
+        const outcome = verifier.verify(SINGLE.fragment);
 
-      (await request(KEYS)).flush(KEY_LIST);
-      (await request(STATUS)).flush(
-        { type: 'x', status: 404 },
-        { status: 404, statusText: 'Not Found' },
-      );
+        (await request(KEYS)).flush(KEY_LIST);
+        await refuse(STATUS, refusal);
 
-      expect(await outcome).toEqual(signedWith('unavailable'));
-    });
+        expect(await outcome).toEqual(signedWith('no-answer'));
+      });
+    }
 
-    it('and the status answer is not one the page knows, then the status is unavailable', async () => {
+    it('and the status answer is not one the page knows, then the fund gave no answer', async () => {
       const outcome = verifier.verify(SINGLE.fragment);
 
       (await request(KEYS)).flush(KEY_LIST);
       (await request(STATUS)).flush({ status: 'valid' });
 
-      expect(await outcome).toEqual(signedWith('unavailable'));
+      expect(await outcome).toEqual(signedWith('no-answer'));
+    });
+
+    it('and the status call is cut off with no response, then the signature stands as checked offline', async () => {
+      const outcome = verifier.verify(SINGLE.fragment);
+
+      (await request(KEYS)).flush(KEY_LIST);
+      await cutOff(STATUS);
+
+      expect(await outcome).toEqual(signedWith('offline'));
+    });
+
+    it('and the signature holds, then the progress says so before the status is asked for', async () => {
+      const steps: string[] = [];
+      const outcome = verifier.verify(SINGLE.fragment, (step) => steps.push(step));
+
+      (await request(KEYS)).flush(KEY_LIST);
+      const status = await request(STATUS);
+
+      expect(steps).toEqual(['asking-status']);
+      status.flush({ status: 'active' });
+      expect(await outcome).toEqual(signedWith('active'));
+      expect(steps).toEqual(['asking-status']);
+    });
+
+    it('and the code has a reserved flag set, then the page says the code is newer than it', async () => {
+      const outcome = verifier.verify(RESERVED_FLAG.fragment);
+
+      (await request(KEYS)).flush(KEY_LIST);
+
+      expect(await outcome).toEqual({ state: 'newer' });
     });
 
     it('and the code was changed, then it is invalid and no status is asked for', async () => {
@@ -147,7 +200,7 @@ describe('Given the receipt verifier', () => {
 
       (await request(KEYS)).flush(keyListWith([]));
 
-      expect(await outcome).toEqual({ state: 'unknown-key', online: true });
+      expect(await outcome).toEqual({ state: 'unknown-key', reach: 'online' });
     });
 
     it('and the listed key id does not belong to its public key, then that key is not trusted', async () => {
@@ -155,7 +208,7 @@ describe('Given the receipt verifier', () => {
 
       (await request(KEYS)).flush(TAMPERED_KEY_LIST);
 
-      expect(await outcome).toEqual({ state: 'unknown-key', online: true });
+      expect(await outcome).toEqual({ state: 'unknown-key', reach: 'online' });
     });
   });
 
@@ -166,6 +219,47 @@ describe('Given the receipt verifier', () => {
       await cutOff(KEYS);
 
       expect(await outcome).toEqual({ state: 'no-connection' });
+    });
+  });
+
+  describe('when no key list is kept and the fund gives no usable list while the browser is online', () => {
+    for (const refusal of REFUSALS) {
+      it(`and the list answers ${refusal.status}, then the fund gave no answer and nothing is kept`, async () => {
+        const outcome = verifier.verify(SINGLE.fragment);
+
+        await refuse(KEYS, refusal);
+
+        expect(await outcome).toEqual({ state: 'no-answer' });
+        expect(localStorage.getItem(STORAGE_KEY)).toBeNull();
+      });
+    }
+
+    it('and the list is malformed, then the fund gave no answer and the list is never kept', async () => {
+      const outcome = verifier.verify(SINGLE.fragment);
+
+      (await request(KEYS)).flush({ foundation: { companyIdentifier: '27278794' }, keys: 'none' });
+
+      expect(await outcome).toEqual({ state: 'no-answer' });
+      expect(localStorage.getItem(STORAGE_KEY)).toBeNull();
+    });
+
+    describe('and the list does not come at all', () => {
+      beforeEach(() =>
+        vi.useFakeTimers({
+          toFake: ['setTimeout', 'setInterval', 'clearTimeout', 'clearInterval'],
+        }),
+      );
+      afterEach(() => vi.useRealTimers());
+
+      it('then after five seconds the fund gave no answer, and not before', async () => {
+        const outcome = verifier.verify(SINGLE.fragment);
+        const keys = await request(KEYS);
+
+        expect(await settledWithin(outcome, TIMEOUT_MS - 100)).toBe(false);
+        expect(await settledWithin(outcome, 100)).toBe(true);
+        expect(await outcome).toEqual({ state: 'no-answer' });
+        expect(keys.cancelled).toBe(true);
+      });
     });
   });
 
@@ -186,6 +280,56 @@ describe('Given the receipt verifier', () => {
       expect(await verifier.verify(SINGLE.fragment)).toEqual(signedWith('offline'));
     });
 
+    for (const refusal of REFUSALS) {
+      it(`and the list answers ${refusal.status} while the browser is online, then the kept keys verify the code but the fund gave no answer`, async () => {
+        const outcome = verifier.verify(SINGLE.fragment);
+
+        await refuse(KEYS, refusal);
+
+        expect(await outcome).toEqual(signedWith('no-answer'));
+        expect(JSON.parse(localStorage.getItem(STORAGE_KEY) ?? 'null')).toEqual(KEY_LIST);
+      });
+    }
+
+    it('and a malformed list comes, then it is never kept and the fund gave no answer', async () => {
+      const outcome = verifier.verify(SINGLE.fragment);
+
+      (await request(KEYS)).flush({ foundation: { companyIdentifier: '2727879' }, keys: [] });
+
+      expect(await outcome).toEqual(signedWith('no-answer'));
+      expect(JSON.parse(localStorage.getItem(STORAGE_KEY) ?? 'null')).toEqual(KEY_LIST);
+    });
+
+    it('and a list with one malformed entry and the other key comes, then it replaces the kept one with the good entry', async () => {
+      const outcome = verifier.verify(SINGLE.fragment);
+      const list = keyListWith([{ keyId: 'zz' }, OTHER_KEY]);
+
+      (await request(KEYS)).flush(list);
+
+      expect(await outcome).toEqual({ state: 'unknown-key', reach: 'online' });
+      expect(JSON.parse(localStorage.getItem(STORAGE_KEY) ?? 'null')).toEqual(list);
+    });
+
+    describe('and the status does not come at all', () => {
+      beforeEach(() =>
+        vi.useFakeTimers({
+          toFake: ['setTimeout', 'setInterval', 'clearTimeout', 'clearInterval'],
+        }),
+      );
+      afterEach(() => vi.useRealTimers());
+
+      it('then after five seconds the fund gave no answer, and not before', async () => {
+        const outcome = verifier.verify(SINGLE.fragment);
+        (await request(KEYS)).flush(KEY_LIST);
+        const status = await request(STATUS);
+
+        expect(await settledWithin(outcome, TIMEOUT_MS - 100)).toBe(false);
+        expect(await settledWithin(outcome, 100)).toBe(true);
+        expect(await outcome).toEqual(signedWith('no-answer'));
+        expect(status.cancelled).toBe(true);
+      });
+    });
+
     it('and the server now marks the key revoked, then the fresh list wins and replaces the kept one', async () => {
       const outcome = verifier.verify(SINGLE.fragment);
 
@@ -204,7 +348,15 @@ describe('Given the receipt verifier', () => {
 
       await cutOff(KEYS);
 
-      expect(await outcome).toEqual({ state: 'unknown-key', online: false });
+      expect(await outcome).toEqual({ state: 'unknown-key', reach: 'offline' });
+    });
+
+    it('and the list answers 503 while the browser is online, then the key is unknown and the fund gave no answer', async () => {
+      const outcome = verifier.verify(SINGLE.fragment);
+
+      await refuse(KEYS, REFUSALS[1]);
+
+      expect(await outcome).toEqual({ state: 'unknown-key', reach: 'no-answer' });
     });
 
     it('and the server lists it, then one fetch of the list verifies the code', async () => {

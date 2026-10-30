@@ -46,3 +46,11 @@ export const REVOKED_KEY_LIST = keyListWith([{ ...TEST_KEY, status: 'revoked' }]
 export const TAMPERED_KEY_LIST = keyListWith([
   { ...TEST_KEY, publicKey: 'PUAXw-hDiVqStwqnTRt-vJyYLM8uxJaMwM1V8Sr0Zgw' },
 ]);
+
+export const OTHER_KEY = {
+  keyId: '39f713d0',
+  algorithm: 'Ed25519',
+  publicKey: 'PUAXw-hDiVqStwqnTRt-vJyYLM8uxJaMwM1V8Sr0Zgw',
+  status: 'active',
+  registeredAt: '2026-11-14T11:00:00Z',
+};
