@@ -35,6 +35,8 @@ class StaxSignatureVectorParser implements SignatureVectorParser {
     static final int MAX_DEPTH = 16;
 
     private static final String SVG_NAMESPACE = "http://www.w3.org/2000/svg";
+    private static final String XML_VERSION = "1.0";
+    private static final String XML_WHITESPACE = " \t\r\n";
     private static final String BLACK = "#000000";
     private static final Set<String> DROPPED_ELEMENTS = Set.of("metadata", "title", "desc");
     private static final Map<String, Set<String>> ALLOWED_ATTRIBUTES = Map.of(
@@ -59,6 +61,9 @@ class StaxSignatureVectorParser implements SignatureVectorParser {
         List<SignaturePath> paths = new ArrayList<>();
         Deque<Style> styles = new ArrayDeque<>();
         boolean rootSeen = false;
+        if (!XML_VERSION.equals(Optional.ofNullable(reader.getVersion()).orElse(XML_VERSION))) {
+            throw new UnsupportedSignatureVector(SignatureVectorProblem.MALFORMED);
+        }
         while (reader.hasNext()) {
             int event = reader.next();
             switch (event) {
@@ -74,6 +79,9 @@ class StaxSignatureVectorParser implements SignatureVectorParser {
                 }
                 case XMLStreamConstants.START_ELEMENT -> {
                     String name = elementName(reader);
+                    if (!isSvgElement(reader)) {
+                        throw new UnsupportedSignatureVector(SignatureVectorProblem.NAMESPACE, name);
+                    }
                     if (styles.isEmpty()) {
                         if (rootSeen || !"svg".equals(name)) {
                             throw new UnsupportedSignatureVector(rootSeen ? SignatureVectorProblem.MALFORMED : SignatureVectorProblem.ELEMENT, name);
@@ -153,13 +161,13 @@ class StaxSignatureVectorParser implements SignatureVectorParser {
         return attributes;
     }
 
-    private static String elementName(XMLStreamReader reader) {
+    private static boolean isSvgElement(XMLStreamReader reader) {
         String namespace = reader.getNamespaceURI();
-        String local = reader.getLocalName();
-        if (namespace == null || namespace.isEmpty() || SVG_NAMESPACE.equals(namespace)) {
-            return local;
-        }
-        return prefixed(reader.getPrefix(), local);
+        return namespace == null || namespace.isEmpty() || SVG_NAMESPACE.equals(namespace);
+    }
+
+    private static String elementName(XMLStreamReader reader) {
+        return isSvgElement(reader) ? reader.getLocalName() : prefixed(reader.getPrefix(), reader.getLocalName());
     }
 
     private static String prefixed(String prefix, String local) {
@@ -190,7 +198,11 @@ class StaxSignatureVectorParser implements SignatureVectorParser {
                     .onUnmappableCharacter(CodingErrorAction.REPORT)
                     .decode(ByteBuffer.wrap(svg))
                     .toString();
-            return text.startsWith("﻿") ? text.substring(1) : text;
+            int start = text.startsWith("﻿") ? 1 : 0;
+            while (start < text.length() && XML_WHITESPACE.indexOf(text.charAt(start)) >= 0) {
+                start++;
+            }
+            return text.substring(start);
         } catch (CharacterCodingException notUtf8) {
             throw new UnsupportedSignatureVector(SignatureVectorProblem.MALFORMED);
         }

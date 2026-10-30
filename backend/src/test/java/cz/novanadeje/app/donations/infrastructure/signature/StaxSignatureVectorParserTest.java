@@ -89,6 +89,14 @@ class StaxSignatureVectorParserTest {
         assertThat(parser.parse(withBom).paths()).hasSize(1);
     }
 
+    @Test
+    @DisplayName("Given an SVG with blank lines before its XML declaration, when it is parsed, then it is read like one without them")
+    void should_read_when_parsed_given_whitespace_before_xml_declaration() {
+        byte[] padded = bytes("\n  \t\r\n<?xml version=\"1.0\" encoding=\"UTF-8\"?><svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 10 10\"><path d=\"M0 0 L10 10\"/></svg>");
+
+        assertThat(parser.parse(padded).paths()).hasSize(1);
+    }
+
     @ParameterizedTest(name = "{0}")
     @CsvSource(delimiter = '|', value = {
             "script element|<svg viewBox='0 0 10 10'><script>alert(1)</script><path d='M0 0 L1 1'/></svg>|ELEMENT|script",
@@ -100,7 +108,11 @@ class StaxSignatureVectorParserTest {
             "bare filter element|<svg viewBox='0 0 10 10'><filter id='f'/><path d='M0 0 L1 1'/></svg>|ELEMENT|filter",
             "text element|<svg viewBox='0 0 10 10'><text>Josef</text></svg>|ELEMENT|text",
             "circle element|<svg viewBox='0 0 10 10'><circle r='5'/></svg>|ELEMENT|circle",
-            "element of another namespace|<svg viewBox='0 0 10 10' xmlns:i='urn:x'><i:layer/></svg>|ELEMENT|i:layer",
+            "element of another namespace|<svg viewBox='0 0 10 10' xmlns:i='urn:x'><i:layer/></svg>|NAMESPACE|i:layer",
+            "root in another default namespace|<svg xmlns='urn:evil' viewBox='0 0 10 10'><path d='M0 0 L1 1'/></svg>|NAMESPACE|svg",
+            "path in the XHTML namespace|<svg viewBox='0 0 10 10'><path xmlns='http://www.w3.org/1999/xhtml' d='M0 0 L1 1'/></svg>|NAMESPACE|path",
+            "dropped element of another namespace|<svg viewBox='0 0 10 10' xmlns:i='urn:x'><i:metadata/><path d='M0 0 L1 1'/></svg>|NAMESPACE|i:metadata",
+            "XML 1.1|<?xml version='1.1'?><svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'><path d='M0 0 L1 1'/></svg>|MALFORMED|",
             "child of a path|<svg viewBox='0 0 10 10'><path d='M0 0 L1 1'><animate attributeName='d'/></path></svg>|ELEMENT|animate",
             "root other than svg|<html><path d='M0 0 L1 1'/></html>|ELEMENT|html",
             "processing instruction|<?xml-stylesheet href='https://example.com/a.css'?><svg viewBox='0 0 10 10'><path d='M0 0 L1 1'/></svg>|ELEMENT|?xml-stylesheet",

@@ -131,6 +131,12 @@ public class CommonStepDefinitions {
                 .contains(message);
     }
 
+    @Then("the problem's detail starts with {string}")
+    public void theProblemsDetailStartsWith(String start) {
+        assertThat(api.lastResponse().getHeaders().getContentType().toString()).startsWith("application/problem+json");
+        assertThat(api.lastResponseJson().get("detail").asString()).startsWith(start);
+    }
+
     private List<String> errorFields() {
         assertThat(api.lastResponse().getHeaders().getContentType().toString()).startsWith("application/problem+json");
         JsonNode errors = api.lastResponseJson().get("errors");

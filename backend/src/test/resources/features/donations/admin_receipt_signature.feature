@@ -51,7 +51,7 @@ Feature: An administrator uploads the signature printed on donation receipts
     When "Jana" asks for the receipt signature
     Then the receipt signature is set, 600 by 200 pixels, uploaded at "2026-12-20T11:00:00Z"
 
-  Scenario: An uploaded vector signature is kept as filled paths, shown to administrators as paths, audited and left out by the server drawing
+  Scenario: An uploaded vector signature is kept as filled paths, shown to administrators as paths, audited and, interim until 1.10, left out by the server drawing
     Given the bank account has these movements:
       | id   | date       | amount  | account    | bankCode | name          | variableSymbol |
       | 2001 | 2026-10-01 | 1000.00 | 2900233333 | 2010     | Nováková Jana | {Jana}         |
@@ -75,18 +75,20 @@ Feature: An administrator uploads the signature printed on donation receipts
     Then the response status is 400
     And the problem type ends with "donations/unsupported-signature-vector"
     And the problem's error for field "file" says "<message>"
+    And the problem's detail starts with "<message>"
     When "Jana" asks for the receipt signature
     Then the receipt signature is a vector of 3 paths in the view box "0 0 300 100", 1200 by 400 pixels, uploaded at "2026-12-20T11:00:00Z"
 
     Examples:
-      | construct           | message                                                                  |
-      | a script            | Soubor obsahuje nepovolený prvek „script“.                               |
-      | an external entity  | Soubor obsahuje deklaraci DOCTYPE nebo entity, ty SVG podpisu mít nesmí. |
-      | a link              | Soubor obsahuje nepovolený atribut „href“.                               |
-      | a style             | Soubor obsahuje nepovolený atribut „style“.                              |
-      | a filter            | Soubor obsahuje nepovolený prvek „filter“.                               |
-      | more than 200 kB    | Soubor je větší než 200 kB.                                              |
-      | malformed path data | Tvar má neplatný zápis cesty (atribut d).                                |
+      | construct                       | message                                                                  |
+      | a script                        | Soubor obsahuje nepovolený prvek „script“.                               |
+      | an external entity              | Soubor obsahuje deklaraci DOCTYPE nebo entity, ty SVG podpisu mít nesmí. |
+      | a link                          | Soubor obsahuje nepovolený atribut „href“.                               |
+      | a style                         | Soubor obsahuje nepovolený atribut „style“.                              |
+      | a filter                        | Soubor obsahuje nepovolený prvek „filter“.                               |
+      | an element of another namespace | Prvek „svg“ nepatří do SVG, patří do jiného jmenného prostoru (xmlns).   |
+      | more than 200 kB                | Soubor je větší než 200 kB.                                              |
+      | malformed path data             | Tvar má neplatný zápis cesty (atribut d).                                |
 
   Scenario: A donor without the administrator role and a visitor without a token cannot upload a vector signature
     Given a person "Petr" is registered

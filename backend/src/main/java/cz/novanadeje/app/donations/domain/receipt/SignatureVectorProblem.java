@@ -4,6 +4,7 @@ public enum SignatureVectorProblem {
     MALFORMED("malformed"),
     DOCTYPE("doctype"),
     ELEMENT("element"),
+    NAMESPACE("namespace"),
     ATTRIBUTE("attribute"),
     TEXT("text"),
     VIEW_BOX("view-box"),

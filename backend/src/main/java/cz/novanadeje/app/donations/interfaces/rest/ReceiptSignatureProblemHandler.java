@@ -33,13 +33,10 @@ class ReceiptSignatureProblemHandler {
         ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
         problem.setType(ProblemTypes.of(UnsupportedSignatureVector.CODE));
         problem.setTitle(messages.getMessage("problem." + UnsupportedSignatureVector.CODE + ".title", null, locale));
-        problem.setDetail(messages.getMessage("problem." + UnsupportedSignatureVector.CODE + ".detail", null, locale));
         String code = refused.problem().code();
-        Object[] name = {refused.name().orElse("")};
-        problem.setProperty("errors", List.of(Map.of(
-                "field", FIELD,
-                "code", code,
-                "message", messages.getMessage("donations.signatureVector." + code, name, locale))));
+        String reason = messages.getMessage("donations.signatureVector." + code, new Object[] {refused.name().orElse("")}, locale);
+        problem.setDetail(messages.getMessage("problem." + UnsupportedSignatureVector.CODE + ".detail", new Object[] {reason}, locale));
+        problem.setProperty("errors", List.of(Map.of("field", FIELD, "code", code, "message", reason)));
         return problem;
     }
 }
