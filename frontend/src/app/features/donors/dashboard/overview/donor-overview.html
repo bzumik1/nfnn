@@ -1,5 +1,28 @@
 <app-page-title i18n="@@donor.overview.heading">Můj přehled</app-page-title>
 
+<div role="status">
+  @switch (adminRefusal()) {
+    @case ('not-administrator') {
+      <p
+        class="ui-callout ui-callout--warning admin-refusal"
+        i18n="@@donor.overview.adminRefusal.role"
+      >
+        Tento účet nemá přístup do správy. Pokud ho potřebujete, požádejte jiného správce, aby vám
+        ho přidělil.
+      </p>
+    }
+    @case ('second-factor') {
+      <p
+        class="ui-callout ui-callout--warning admin-refusal"
+        i18n="@@donor.overview.adminRefusal.secondFactor"
+      >
+        Správa se vám otevře, až se přihlásíte přístupovým klíčem nebo kódem z aplikace. Kód z
+        aplikace si zapnete v části <a routerLink="/darce/udaje">Údaje a zabezpečení</a>.
+      </p>
+    }
+  }
+</div>
+
 @if (donations.state() === 'ready') {
   @if (receiptYear(); as year) {
     <section class="ui-card ui-card--padded receipt-ready" aria-labelledby="receipt-ready-title">

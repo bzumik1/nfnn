@@ -23,6 +23,7 @@ type CopyState = 'idle' | 'copied' | 'failed';
 export class CopyButton {
   readonly value = input.required<string>();
   readonly what = input.required<string>();
+  readonly label = input<string | null>(null);
 
   protected readonly state = signal<CopyState>('idle');
   private reset: ReturnType<typeof setTimeout> | undefined;

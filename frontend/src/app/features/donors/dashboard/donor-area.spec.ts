@@ -9,6 +9,7 @@ import { By } from '@angular/platform-browser';
 import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { authInterceptor } from '../../../core/auth/auth-interceptor';
+import { AdminAccessRefusal } from '../../../core/auth/admin-access-refusal';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
 import { authResponse, sampleDonor } from '../../../core/auth/testing/donor-fixtures';
@@ -359,6 +360,40 @@ describe('Given a signed-in donor in the donor area', () => {
       await settle();
 
       expect(element('.side-nav-badge')).toBeNull();
+    });
+  });
+
+  describe('when the administration sent the donor here', () => {
+    it('then a donor without the role reads that the account has no administration and whom to ask', async () => {
+      TestBed.inject(AdminAccessRefusal).refuse('not-administrator');
+      await open('/darce/prehled');
+      await respond(twoYearSummary(), twoYearDonations());
+
+      expect(text('.admin-refusal')).toBe(
+        'Tento účet nemá přístup do správy. Pokud ho potřebujete, požádejte jiného správce, aby vám ho přidělil.',
+      );
+      expect(element('.admin-refusal')?.closest('[role="status"]')).not.toBeNull();
+    });
+
+    it('then an administrator without the second factor reads how to open the administration, with a link to turn it on', async () => {
+      TestBed.inject(AdminAccessRefusal).refuse('second-factor');
+      await open('/darce/prehled');
+      await respond(twoYearSummary(), twoYearDonations());
+
+      expect(text('.admin-refusal')).toBe(
+        'Správa se vám otevře, až se přihlásíte přístupovým klíčem nebo kódem z aplikace. Kód z aplikace si zapnete v části Údaje a zabezpečení.',
+      );
+      expect(element('.admin-refusal a')?.getAttribute('href')).toBe('/darce/udaje');
+    });
+
+    it('then the sentence is gone once the donor leaves the overview', async () => {
+      TestBed.inject(AdminAccessRefusal).refuse('not-administrator');
+      await open('/darce/prehled');
+      await respond(twoYearSummary(), twoYearDonations());
+
+      await harness.navigateByUrl('/darce/dary');
+
+      expect(TestBed.inject(AdminAccessRefusal).reason()).toBeNull();
     });
   });
 

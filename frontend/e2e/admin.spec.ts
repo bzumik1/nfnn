@@ -490,7 +490,7 @@ test.describe('Given a donor without the administrator role', () => {
     await expect(page.getByRole('link', { name: 'Správa' })).toHaveCount(0);
   });
 
-  test('when they type the administration address, then they land on their own overview', async ({
+  test('when they type the administration address, then they land on their own overview, which says why', async ({
     page,
   }) => {
     await rememberedSession(page, donor);
@@ -498,6 +498,28 @@ test.describe('Given a donor without the administrator role', () => {
     await page.goto('/sprava');
 
     await expect(page).toHaveURL(/\/darce\/prehled$/);
+    await expect(page.locator('.admin-refusal')).toHaveText(
+      'Tento účet nemá přístup do správy. Pokud ho potřebujete, požádejte jiného správce, aby vám ho přidělil.',
+    );
+  });
+
+  test('when an administrator signed in without the second factor types the address, then the overview says how to open the administration', async ({
+    page,
+  }) => {
+    await rememberedSession(page, {
+      ...donor,
+      secondFactor: { enabled: false, neededForAdministration: true },
+    });
+
+    await page.goto('/sprava');
+
+    await expect(page).toHaveURL(/\/darce\/prehled$/);
+    const refusal = page.locator('.admin-refusal');
+    await expect(refusal).toContainText(
+      'Správa se vám otevře, až se přihlásíte přístupovým klíčem',
+    );
+    await refusal.getByRole('link', { name: 'Údaje a zabezpečení' }).click();
+    await expect(page).toHaveURL(/\/darce\/udaje$/);
   });
 
   test('when the role is taken away while the page is open, then the next load sends them to their overview', async ({

@@ -150,7 +150,7 @@ describe('Given an administrator on the backups page', () => {
     );
 
     expect(texts('.problems > ul li')).toEqual([
-      'Poslední záloha se nepovedla. Data webu jsou v pořádku, ale nejsou zálohovaná. Zkuste Zálohovat teď; když to nepomůže, pošlete stránku Zálohy správci serveru.',
+      'Poslední záloha se nepovedla. Data webu jsou v pořádku, ale nejsou zálohovaná. Zkuste Zálohovat teď; když to nepomůže, zkopírujte zprávu pro technika a pošlete ji správci serveru.',
       'Zatím se nevyzkoušelo, že jde zálohu obnovit. Spusťte Ověřit obnovu teď.',
     ]);
     expect(texts('.problems details li')).toEqual([
@@ -190,7 +190,7 @@ describe('Given an administrator on the backups page', () => {
     );
 
     expect(texts('.problems > ul li')[0]).toBe(
-      'Web teď nevidí složku se zálohami, takže zálohy nejde vytvořit ani stáhnout. Data webu jsou v pořádku. Pošlete prosím stránku Zálohy správci serveru.',
+      'Web teď nevidí složku se zálohami, takže zálohy nejde vytvořit ani stáhnout. Data webu jsou v pořádku. Zkopírujte prosím zprávu pro technika a pošlete ji správci serveru.',
     );
     expect(texts('.problems details li')[0]).toContain('Backend nevidí složku záloh.');
     expect(button('Zálohovat teď').disabled).toBe(true);
@@ -199,6 +199,36 @@ describe('Given an administrator on the backups page', () => {
       'Zálohovat teď ani ověřit obnovu nejde, dokud se nevyřeší problém výše.',
     );
     expect(text('[aria-labelledby="backups-list-title"]')).toContain('Zatím žádná záloha.');
+  });
+
+  it('when a problem needs the server administrator, then a button copies the message for the technician without the backup key', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+    await respond(
+      backupsView({
+        available: false,
+        backups: [],
+        lastBackup: null,
+        lastTestRestore: null,
+        problems: ['BACKUPS_UNAVAILABLE'],
+      }),
+    );
+
+    button('Zkopírovat zprávu pro technika').click();
+    await settle();
+
+    const message = writeText.mock.calls[0][0] as string;
+    expect(message).toContain('Co je špatně:');
+    expect(message).toContain('Web teď nevidí složku se zálohami');
+    expect(message).toContain('Backend nevidí složku záloh.');
+    expect(message.toLowerCase()).not.toContain('klíč');
+    expect(text('.tech-copy [role="status"]')).toBe('Zkopírováno.');
+  });
+
+  it('when the only problem is a test restore not tried yet, then no message for the technician is offered', async () => {
+    await respond(backupsView({ problems: ['TEST_RESTORE_MISSING'] }));
+
+    expect(texts('button')).not.toContain('Zkopírovat zprávu pro technika');
   });
 
   describe('when a backup is started', () => {

@@ -1,6 +1,7 @@
 import { NgTemplateOutlet } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { AdminAccessRefusal } from '../../../../core/auth/admin-access-refusal';
 import { AuthStore } from '../../../../core/auth/auth-store';
 import { formatMinorUnits } from '../../../donations/donation-amount';
 import { formatDonationDate } from '../../../donations/donation-date';
@@ -35,6 +36,8 @@ const RECENT_DONATIONS_SHOWN = 5;
 export class DonorOverview {
   protected readonly donations = inject(DonorDonations);
   protected readonly donor = inject(AuthStore).donor;
+  private readonly refusal = inject(AdminAccessRefusal);
+  protected readonly adminRefusal = this.refusal.reason;
 
   protected readonly recent = computed(() =>
     this.donations.items().slice(0, RECENT_DONATIONS_SHOWN),
@@ -73,6 +76,10 @@ export class DonorOverview {
     const gave = summary.byYear.some((entry) => entry.year === year && entry.count > 0);
     return gave && year >= summary.receiptsAvailableFrom ? year : null;
   });
+
+  constructor() {
+    inject(DestroyRef).onDestroy(() => this.refusal.clear());
+  }
 
   protected crowns(amountMinor: number): string {
     return formatMinorUnits(amountMinor);

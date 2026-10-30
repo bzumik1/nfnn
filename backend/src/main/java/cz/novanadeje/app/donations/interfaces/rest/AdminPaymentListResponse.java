@@ -26,7 +26,7 @@ record AdminPaymentListResponse(Integer year, List<Integer> availableYears, List
 
     record AdminPaymentResponse(UUID id, long bankTransactionId, LocalDate bookedOn, long amountMinor, Currency currency, String variableSymbol,
                                 String counterpartyAccount, String counterpartyName, String messageForRecipient, Instant importedAt,
-                                Instant unpairedByAdminAt, PairedDonationResponse donation) {
+                                Instant unpairedByAdminAt, boolean accountVerification, PairedDonationResponse donation) {
 
         static AdminPaymentResponse from(AdminPaymentView view) {
             BankPayment payment = view.payment();
@@ -36,7 +36,7 @@ record AdminPaymentListResponse(Integer year, List<Integer> availableYears, List
             return new AdminPaymentResponse(payment.id().value(), payment.transactionId().value(), payment.bookedOn(), payment.amount().amountMinor(),
                     payment.amount().currency(), payment.variableSymbol().orElse(null), account, payment.counterpartyName().orElse(null),
                     payment.messageForRecipient().orElse(null), payment.importedAt(), payment.unpairedByAdminAt().orElse(null),
-                    view.donation().map(PairedDonationResponse::from).orElse(null));
+                    view.accountVerification(), view.donation().map(PairedDonationResponse::from).orElse(null));
         }
     }
 

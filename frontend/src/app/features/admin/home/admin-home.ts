@@ -32,6 +32,8 @@ import {
 } from '../admin-api';
 import { formatSize } from '../backups/backup-format';
 import { BACKUP_PROBLEM_HELP } from '../backups/backup-texts';
+import { needsTechnician, technicianMessage } from '../backups/backup-message';
+import { CopyButton } from '../../../shared/ui/copy-button/copy-button';
 import { formatReportMonth } from '../report/report-month';
 
 type LoadState = 'loading' | 'ready' | 'error';
@@ -101,7 +103,7 @@ const FAILURE_LABELS: Record<ImportFailureKind, string> = {
 
 @Component({
   selector: 'app-admin-home',
-  imports: [RouterLink],
+  imports: [RouterLink, CopyButton],
   templateUrl: './admin-home.html',
   styleUrl: './admin-home.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -132,6 +134,10 @@ export class AdminHome {
   protected readonly backupProblems = computed(() =>
     (this.backups()?.problems ?? []).map((problem) => BACKUP_PROBLEM_HELP[problem]),
   );
+  protected readonly backupTechnicianMessage = computed(() => {
+    const view = this.backups();
+    return view !== null && needsTechnician(view) ? technicianMessage(view) : null;
+  });
   protected readonly lastBackup = computed(() => {
     const run = this.backups()?.lastBackup;
     if (!run) {

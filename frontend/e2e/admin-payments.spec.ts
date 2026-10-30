@@ -18,6 +18,7 @@ const unpaired = {
   messageForRecipient: 'Dar pro fond',
   importedAt: '2026-10-17T10:00:00Z',
   unpairedByAdminAt: null,
+  accountVerification: false,
   donation: null,
 };
 
@@ -104,6 +105,16 @@ test.describe('Given an administrator with an unpaired bank payment', () => {
       },
     );
     await page.route(
+      (url) => url.pathname === '/api/admin/donors',
+      (route) =>
+        route.fulfill({
+          json: {
+            items: [{ donorId: administrator.id, email: 'jana.novakova@example.cz' }],
+            hasMore: false,
+          },
+        }),
+    );
+    await page.route(
       (url) => url.pathname === `${PAYMENTS}/${PAYMENT_ID}/pair`,
       (route) => {
         pairRequests.push(route.request().postDataJSON());
@@ -137,6 +148,7 @@ test.describe('Given an administrator with an unpaired bank payment', () => {
 
     await page.getByRole('dialog').getByRole('searchbox').fill('nov');
     await expect(dialog.getByRole('radio', { name: /Jana Nováková/ })).toBeVisible();
+    await expect(dialog.locator('.pair-result')).toContainText('jana.novakova@example.cz');
     await dialog.getByRole('radio', { name: /Jana Nováková/ }).check();
     const submit = dialog.getByRole('button', { name: 'Přiřadit dárci Jana Nováková' });
     await expect(submit).toBeEnabled();
@@ -325,5 +337,47 @@ test.describe('Given an administrator with many paired payments', () => {
     await expect(page.getByRole('status').filter({ hasText: /\S/ })).toHaveText(
       'Nalezeno 51 plateb.',
     );
+  });
+});
+
+test.describe('Given an administrator with a 1 Kč account verification waiting for a donor', () => {
+  test('when they open the payments and the pairing dialog, then both say it is an account verification', async ({
+    page,
+  }) => {
+    await mockDonorApi(page);
+    await page.route(
+      (url) => url.pathname === PAYMENTS,
+      (route) =>
+        route.fulfill({
+          json: {
+            year: null,
+            availableYears: [],
+            total: 1,
+            items: [
+              {
+                ...unpaired,
+                amountMinor: 100,
+                variableSymbol: null,
+                counterpartyName: 'Marková Lucie',
+                messageForRecipient: 'Ověření účtu Nadační fond Nová naděje',
+                accountVerification: true,
+              },
+            ],
+          },
+        }),
+    );
+    await page.route(
+      (url) => url.pathname === DONORS,
+      (route) => route.fulfill({ json: { items: [] } }),
+    );
+    await rememberedSession(page);
+
+    await page.goto('/sprava/platby');
+
+    await expect(page.locator('tbody tr')).toContainText('1 Kč Ověření účtu');
+    await page.getByRole('button', { name: 'Přiřadit dárci' }).click();
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toBeVisible();
+    await expect(dialog).toContainText('Touto platbou si dárce ověřuje bankovní účet.');
   });
 });

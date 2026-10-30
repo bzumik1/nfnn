@@ -7,6 +7,7 @@ import { authInterceptor } from '../../../core/auth/auth-interceptor';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { authResponse, sampleDonor } from '../../../core/auth/testing/donor-fixtures';
 import {
+  donorAccount,
   foundDonor,
   pairedDonation,
   paymentList,
@@ -16,6 +17,7 @@ import { AdminPayments } from './admin-payments';
 
 const PAYMENTS_URL = '/api/admin/donations/payments';
 const DONORS_URL = '/api/admin/donations/donors';
+const ACCOUNTS_URL = '/api/admin/donors';
 const PAYMENT_ID = '019a1c00-0000-7000-8000-000000001001';
 
 function problem(status: number, type: string, title: string, detail: string) {
@@ -164,6 +166,24 @@ describe('Given an administrator on the bank payments page', () => {
     expect(fixture.nativeElement.querySelector('.held-tag')?.getAttribute('title')).toBeNull();
     expect(text('.admin-tabs')).toBe('Čekají na přiřazení (2) Přiřazené');
     expect(text('#payments-title')).toBe('Platby čekající na přiřazení');
+  });
+
+  it('when a 1 Kč account verification waits, then its row is marked as an account verification', async () => {
+    await open();
+    await listResponds(
+      paymentList([
+        unpairedPayment({
+          amountMinor: 100,
+          variableSymbol: null,
+          messageForRecipient: 'Ověření účtu Nadační fond Nová naděje',
+          accountVerification: true,
+        }),
+        unpairedPayment({ id: 'p2' }),
+      ]),
+    );
+
+    expect(rows()[0]).toContain('1 Kč Ověření účtu');
+    expect(rows()[1]).not.toContain('Ověření účtu');
   });
 
   it('when the list cannot be loaded, then an alert offers a retry that asks again', async () => {
@@ -321,7 +341,15 @@ describe('Given an administrator on the bank payments page', () => {
       await settle();
       http.expectOne((request) => request.url === DONORS_URL).flush({ items: [foundDonor()] });
       await settle();
+      answerAccounts('Nováková', [donorAccount()]);
+      await settle();
     });
+
+    function answerAccounts(query: string, accounts: object[]): void {
+      http
+        .expectOne(`${ACCOUNTS_URL}?query=${encodeURIComponent(query)}&limit=100`)
+        .flush({ items: accounts, hasMore: false });
+    }
 
     function dialog(): HTMLElement {
       const found = document.querySelector('dialog');
@@ -347,9 +375,10 @@ describe('Given an administrator on the bank payments page', () => {
       expect(input.value).toBe('Nováková');
       expect(document.activeElement).toBe(input);
       expect(Array.from(dialog().querySelectorAll('.pair-result')).map(rowText)).toEqual([
-        'Jana Nováková VS 4821937560',
+        'Jana Nováková VS 4821937560 · jana@example.cz',
       ]);
       expect((button('Přiřadit') as HTMLButtonElement).disabled).toBe(true);
+      expect(dialog().textContent).not.toContain('Ověření účtu');
     });
 
     it('then typing searches once the typing pauses, a chosen donor enables the button and pairing reports success', async () => {
@@ -367,6 +396,14 @@ describe('Given an administrator on the bank payments page', () => {
           }),
         ],
       });
+      await settle();
+      http.expectOne(`${ACCOUNTS_URL}?query=nov&limit=100`).flush(
+        {},
+        {
+          status: 500,
+          statusText: 'Error',
+        },
+      );
       await settle();
 
       const results = Array.from(dialog().querySelectorAll('.pair-result')).map(rowText);
@@ -401,6 +438,7 @@ describe('Given an administrator on the bank payments page', () => {
     it('then an empty search result says so and a refused pairing stays in the dialog with the reason', async () => {
       search('xyz');
       http.expectOne(`${DONORS_URL}?query=xyz`).flush({ items: [] });
+      answerAccounts('xyz', []);
       await settle();
       expect(dialog().querySelector('[role="status"]:not(:empty)')?.textContent?.trim()).toBe(
         'Žádný dárce neodpovídá.',
@@ -408,6 +446,7 @@ describe('Given an administrator on the bank payments page', () => {
 
       search('jana');
       http.expectOne(`${DONORS_URL}?query=jana`).flush({ items: [foundDonor()] });
+      answerAccounts('jana', [donorAccount()]);
       await settle();
       (dialog().querySelector('input[type="radio"]') as HTMLInputElement).click();
       await settle();
@@ -430,12 +469,67 @@ describe('Given an administrator on the bank payments page', () => {
       );
     });
 
+    it('then two donors of the same name are told apart by their e-mails', async () => {
+      search('marko');
+      http.expectOne(`${DONORS_URL}?query=marko`).flush({
+        items: [
+          foundDonor({ donorId: 'd-1', name: 'Lucie Marková', variableSymbol: '4821937560' }),
+          foundDonor({ donorId: 'd-2', name: 'Lucie Marková', variableSymbol: '7310945528' }),
+        ],
+      });
+      answerAccounts('marko', [
+        donorAccount({ donorId: 'd-2', name: 'Lucie Marková', email: 'lm1958@example.cz' }),
+        donorAccount({ donorId: 'd-1', name: 'Lucie Marková', email: 'lucie@example.cz' }),
+      ]);
+      await settle();
+
+      expect(Array.from(dialog().querySelectorAll('.pair-result')).map(rowText)).toEqual([
+        'Lucie Marková VS 4821937560 · lucie@example.cz',
+        'Lucie Marková VS 7310945528 · lm1958@example.cz',
+      ]);
+    });
+
     it('then closing the dialog returns focus to the pairing button', async () => {
       button('Zavřít').click();
       await settle();
 
       expect(document.querySelector('dialog')).toBeNull();
       expect(document.activeElement?.textContent?.trim()).toBe('Přiřadit dárci');
+    });
+  });
+
+  describe('when the administrator opens the pairing dialog for a 1 Kč account verification', () => {
+    beforeEach(async () => {
+      await open();
+      await listResponds(
+        paymentList([
+          unpairedPayment({
+            amountMinor: 100,
+            counterpartyName: 'Marková Lucie',
+            variableSymbol: null,
+            messageForRecipient: 'Ověření účtu Nadační fond Nová naděje',
+            accountVerification: true,
+          }),
+        ]),
+      );
+      button('Přiřadit dárci').click();
+      await settle();
+      http.expectOne((request) => request.url === DONORS_URL).flush({ items: [] });
+      http
+        .expectOne((request) => request.url === ACCOUNTS_URL)
+        .flush({ items: [], hasMore: false });
+      await settle();
+    });
+
+    it('then the dialog says it is an account verification and that pairing it by hand verifies no account', () => {
+      const dialog = document.querySelector('dialog') as HTMLElement;
+
+      expect(rowText(dialog.querySelector('.pair-payment dd') as HTMLElement)).toBe(
+        '1 Kč z 10. 10. 2026 Ověření účtu',
+      );
+      expect(rowText(dialog.querySelector('.pair-verification') as HTMLElement)).toBe(
+        'Touto platbou si dárce ověřuje bankovní účet. Když ji přiřadíte ručně, dárci se započítá 1 Kč, ale účet ověřený nebude; ten ověří až platba s jeho variabilním symbolem.',
+      );
     });
   });
 

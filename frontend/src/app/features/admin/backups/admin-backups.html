@@ -76,6 +76,17 @@
                   </ul>
                 </details>
               </div>
+              @if (technicianMessage(); as message) {
+                <p class="tech-copy">
+                  <app-copy-button
+                    [value]="message"
+                    what="zprávu pro technika"
+                    i18n-what="@@admin.backups.message.what"
+                    label="Zkopírovat zprávu pro technika"
+                    i18n-label="@@admin.backups.message.copy"
+                  />
+                </p>
+              }
             } @else {
               <p class="healthy" i18n="@@admin.backups.status.healthy">Zálohování je v pořádku.</p>
             }

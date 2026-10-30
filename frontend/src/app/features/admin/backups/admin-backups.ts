@@ -36,6 +36,8 @@ import { formatPlanTime, onDay } from './backup-plan';
 import { BackupKeyCard } from './backup-key-card';
 import { BackupScheduleCard } from './backup-schedule-card';
 import { BACKUP_PROBLEM_HELP, BACKUP_PROBLEM_TEXTS } from './backup-texts';
+import { needsTechnician, technicianMessage } from './backup-message';
+import { CopyButton } from '../../../shared/ui/copy-button/copy-button';
 import { RestoreDialog } from './restore-dialog';
 import { LiveNotice, Notice } from '../../../shared/ui/live-notice/live-notice';
 
@@ -76,7 +78,14 @@ function failedAt(at: string): string {
 
 @Component({
   selector: 'app-admin-backups',
-  imports: [LiveNotice, RestoreDialog, BackupKeyCard, BackupScheduleCard, NgTemplateOutlet],
+  imports: [
+    LiveNotice,
+    RestoreDialog,
+    BackupKeyCard,
+    BackupScheduleCard,
+    NgTemplateOutlet,
+    CopyButton,
+  ],
   templateUrl: './admin-backups.html',
   styleUrl: './admin-backups.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -112,6 +121,10 @@ export class AdminBackups {
   protected readonly problemDetails = computed(() =>
     (this.view()?.problems ?? []).map((problem) => BACKUP_PROBLEM_TEXTS[problem]),
   );
+  protected readonly technicianMessage = computed(() => {
+    const view = this.view();
+    return view !== null && needsTechnician(view) ? technicianMessage(view) : null;
+  });
   protected readonly lastBackup = computed(() => this.describeBackup(this.view()?.lastBackup));
   protected readonly lastTestRestore = computed(() =>
     this.describeTestRestore(this.view()?.lastTestRestore),
