@@ -19,6 +19,10 @@ Feature: An administrator writes news articles with photos and publishes them on
       | publishedOn |                               |
       | coverImage  |                               |
     And the admin action "CREATE_NEWS" by "Jana" on the news article "novy-projekt-zahrada-pro-deti" is recorded with details containing "napsána"
+    When "Jana" asks for the admin actions
+    Then the admin actions are:
+      | action      | summary                                             |
+      | CREATE_NEWS | Napsána aktualita „Nový projekt: Zahrada pro děti“. |
     When someone without a token asks for the news articles
     Then the response status is 200
     And the news list has 0 items

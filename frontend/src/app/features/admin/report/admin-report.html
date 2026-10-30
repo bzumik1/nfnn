@@ -151,11 +151,17 @@
         </h2>
         <div class="ui-card__body">
           <p class="ui-card__intro" i18n="@@admin.report.send.intro">
-            Přehled za vybraný měsíc odejde hned na adresy z nastavení, i když už jednou odešel.
-            Měsíc, který ještě neskončil, poslat nejde.
+            Přehled za vybraný měsíc odejde hned, i když už jednou odešel.
+          </p>
+          <p class="ui-card__intro send-recipients" i18n="@@admin.report.send.recipients">
+            Přehled dostanou: {{ currentRecipients() }}. To jsou příjemci uložení v nastavení výše.
           </p>
           <div class="send-row">
-            <app-form-field label="Měsíc" i18n-label="@@admin.report.send.month">
+            <app-form-field
+              label="Měsíc"
+              i18n-label="@@admin.report.send.month"
+              [hint]="monthHint()"
+            >
               <select
                 appFormControl
                 id="report-month"

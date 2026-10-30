@@ -30,7 +30,7 @@ import {
   TallyResponse,
 } from '../admin-api';
 import { formatSize } from '../backups/backup-format';
-import { BACKUP_PROBLEM_TEXTS } from '../backups/backup-texts';
+import { BACKUP_PROBLEM_HELP } from '../backups/backup-texts';
 import { formatReportMonth } from '../report/report-month';
 
 type LoadState = 'loading' | 'ready' | 'error';
@@ -115,7 +115,7 @@ export class AdminHome {
   protected readonly backups = signal<AdminBackupsResponse | null>(null);
 
   protected readonly backupProblems = computed(() =>
-    (this.backups()?.problems ?? []).map((problem) => BACKUP_PROBLEM_TEXTS[problem]),
+    (this.backups()?.problems ?? []).map((problem) => BACKUP_PROBLEM_HELP[problem]),
   );
   protected readonly lastBackup = computed(() => {
     const run = this.backups()?.lastBackup;
