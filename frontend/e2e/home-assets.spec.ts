@@ -110,6 +110,18 @@ test.describe('Given a visitor on the home page', () => {
     expect(pngSize(await icon.body())).toEqual([512, 512]);
   });
 
+  test('when a server dashboard asks for the app icon as SVG, then the site serves the white tile with the star', async ({
+    request,
+  }) => {
+    const icon = await request.get('/app-icon.svg');
+
+    expect(icon.ok()).toBe(true);
+    expect(icon.headers()['content-type']).toContain('image/svg+xml');
+    const svg = await icon.text();
+    expect(svg).toContain('<rect width="1024" height="1024" rx="230" fill="#fff"/>');
+    expect(svg).toContain('fill="#005dab"');
+  });
+
   test.describe('on a phone', () => {
     test.use({ viewport: { width: 390, height: 844 } });
 
