@@ -1,6 +1,6 @@
 {
-  "source": "v2-baseline",
-  "logic": "The administration's year overview that GET /api/admin/donations/overview[?year=] answers (AdminOverviewService over the real queries, then YearOverview.compile): input.year is the requested year or null; the expected value is the answer as sent. The rows hold only the columns the computation reads: a runner fills every other column with any valid value. A donor is a donor_record row (registeredAt and erasedAt instants); a payment a bank_payment row (bookedOn, amountMinor, unpairedByAdmin); a donation a donation row of a donor, with the payment it was paired from (a bank transfer) or none (MANUAL), status RECEIVED or REFUNDED and purpose GENERAL or ACCOUNT_VERIFICATION. A payment no donation points to is unpaired. now is the server clock; the foundation's calendar is Prague's.",
+  "source": "edited",
+  "logic": "The administration's year overview that GET /api/admin/donations/overview[?year=] answers (AdminOverviewService over the real queries, then YearOverview.compile): input.year is the requested year or null; the expected value is the answer as sent. The rows hold only the columns the computation reads: a runner fills every other column with any valid value. A donor is a donor_record row (registeredAt and erasedAt instants); a payment a bank_payment row (bookedOn, amountMinor, and unpairedByAdminAt, the instant an administrator unpaired it or null); a donation a donation row of a donor, with the payment it was paired from (a bank transfer) or none (MANUAL), status RECEIVED or REFUNDED and purpose GENERAL or ACCOUNT_VERIFICATION. A payment no donation points to is unpaired. now is the server clock; the foundation's calendar is Prague's.",
   "cases": [
     {
       "name": "an empty database in March",
@@ -124,49 +124,49 @@
             "alias": "p1",
             "bookedOn": "2026-01-05",
             "amountMinor": 50000,
-            "unpairedByAdmin": false
+            "unpairedByAdminAt": null
           },
           {
             "alias": "p2",
             "bookedOn": "2026-02-05",
             "amountMinor": 125050,
-            "unpairedByAdmin": false
+            "unpairedByAdminAt": null
           },
           {
             "alias": "p3",
             "bookedOn": "2026-02-06",
             "amountMinor": 20000,
-            "unpairedByAdmin": false
+            "unpairedByAdminAt": null
           },
           {
             "alias": "p4",
             "bookedOn": "2026-02-10",
             "amountMinor": 100,
-            "unpairedByAdmin": false
+            "unpairedByAdminAt": null
           },
           {
             "alias": "p5",
             "bookedOn": "2026-02-11",
             "amountMinor": 100000,
-            "unpairedByAdmin": false
+            "unpairedByAdminAt": null
           },
           {
             "alias": "p6",
             "bookedOn": "2026-01-20",
             "amountMinor": 3000,
-            "unpairedByAdmin": false
+            "unpairedByAdminAt": null
           },
           {
             "alias": "p7",
             "bookedOn": "2026-02-20",
             "amountMinor": 4550,
-            "unpairedByAdmin": false
+            "unpairedByAdminAt": null
           },
           {
             "alias": "p8",
             "bookedOn": "2026-03-03",
             "amountMinor": 7000,
-            "unpairedByAdmin": true
+            "unpairedByAdminAt": "2026-03-03T13:00:00Z"
           }
         ],
         "donations": [
@@ -340,49 +340,49 @@
             "alias": "p1",
             "bookedOn": "2026-01-05",
             "amountMinor": 50000,
-            "unpairedByAdmin": false
+            "unpairedByAdminAt": null
           },
           {
             "alias": "p2",
             "bookedOn": "2026-02-05",
             "amountMinor": 125050,
-            "unpairedByAdmin": false
+            "unpairedByAdminAt": null
           },
           {
             "alias": "p3",
             "bookedOn": "2026-02-06",
             "amountMinor": 20000,
-            "unpairedByAdmin": false
+            "unpairedByAdminAt": null
           },
           {
             "alias": "p4",
             "bookedOn": "2026-02-10",
             "amountMinor": 100,
-            "unpairedByAdmin": false
+            "unpairedByAdminAt": null
           },
           {
             "alias": "p5",
             "bookedOn": "2026-02-11",
             "amountMinor": 100000,
-            "unpairedByAdmin": false
+            "unpairedByAdminAt": null
           },
           {
             "alias": "p6",
             "bookedOn": "2026-01-20",
             "amountMinor": 3000,
-            "unpairedByAdmin": false
+            "unpairedByAdminAt": null
           },
           {
             "alias": "p7",
             "bookedOn": "2026-02-20",
             "amountMinor": 4550,
-            "unpairedByAdmin": false
+            "unpairedByAdminAt": null
           },
           {
             "alias": "p8",
             "bookedOn": "2026-03-03",
             "amountMinor": 7000,
-            "unpairedByAdmin": true
+            "unpairedByAdminAt": "2026-03-03T13:00:00Z"
           }
         ],
         "donations": [
@@ -561,25 +561,25 @@
             "alias": "p1",
             "bookedOn": "2026-01-31",
             "amountMinor": 10000,
-            "unpairedByAdmin": false
+            "unpairedByAdminAt": null
           },
           {
             "alias": "p2",
             "bookedOn": "2026-02-01",
             "amountMinor": 20000,
-            "unpairedByAdmin": false
+            "unpairedByAdminAt": null
           },
           {
             "alias": "p3",
             "bookedOn": "2026-02-28",
             "amountMinor": 3000,
-            "unpairedByAdmin": false
+            "unpairedByAdminAt": null
           },
           {
             "alias": "p4",
             "bookedOn": "2026-03-01",
             "amountMinor": 4000,
-            "unpairedByAdmin": false
+            "unpairedByAdminAt": null
           }
         ],
         "donations": [
@@ -732,19 +732,19 @@
             "alias": "p1",
             "bookedOn": "2025-12-31",
             "amountMinor": 10000,
-            "unpairedByAdmin": false
+            "unpairedByAdminAt": null
           },
           {
             "alias": "p2",
             "bookedOn": "2026-01-01",
             "amountMinor": 20000,
-            "unpairedByAdmin": false
+            "unpairedByAdminAt": null
           },
           {
             "alias": "p3",
             "bookedOn": "2025-12-31",
             "amountMinor": 3000,
-            "unpairedByAdmin": false
+            "unpairedByAdminAt": null
           }
         ],
         "donations": [
@@ -838,31 +838,31 @@
             "alias": "p1",
             "bookedOn": "2025-01-02",
             "amountMinor": 10000,
-            "unpairedByAdmin": false
+            "unpairedByAdminAt": null
           },
           {
             "alias": "p2",
             "bookedOn": "2025-06-15",
             "amountMinor": 20000,
-            "unpairedByAdmin": false
+            "unpairedByAdminAt": null
           },
           {
             "alias": "p3",
             "bookedOn": "2025-12-31",
             "amountMinor": 30000,
-            "unpairedByAdmin": false
+            "unpairedByAdminAt": null
           },
           {
             "alias": "p4",
             "bookedOn": "2024-03-01",
             "amountMinor": 5000,
-            "unpairedByAdmin": false
+            "unpairedByAdminAt": null
           },
           {
             "alias": "p5",
             "bookedOn": "2025-07-07",
             "amountMinor": 6000,
-            "unpairedByAdmin": false
+            "unpairedByAdminAt": null
           }
         ],
         "donations": [
@@ -1186,31 +1186,31 @@
             "alias": "p1",
             "bookedOn": "2025-01-02",
             "amountMinor": 10000,
-            "unpairedByAdmin": false
+            "unpairedByAdminAt": null
           },
           {
             "alias": "p2",
             "bookedOn": "2025-06-15",
             "amountMinor": 20000,
-            "unpairedByAdmin": false
+            "unpairedByAdminAt": null
           },
           {
             "alias": "p3",
             "bookedOn": "2025-12-31",
             "amountMinor": 30000,
-            "unpairedByAdmin": false
+            "unpairedByAdminAt": null
           },
           {
             "alias": "p4",
             "bookedOn": "2024-03-01",
             "amountMinor": 5000,
-            "unpairedByAdmin": false
+            "unpairedByAdminAt": null
           },
           {
             "alias": "p5",
             "bookedOn": "2025-07-07",
             "amountMinor": 6000,
-            "unpairedByAdmin": false
+            "unpairedByAdminAt": null
           }
         ],
         "donations": [
@@ -1334,31 +1334,31 @@
             "alias": "p1",
             "bookedOn": "2025-01-02",
             "amountMinor": 10000,
-            "unpairedByAdmin": false
+            "unpairedByAdminAt": null
           },
           {
             "alias": "p2",
             "bookedOn": "2025-06-15",
             "amountMinor": 20000,
-            "unpairedByAdmin": false
+            "unpairedByAdminAt": null
           },
           {
             "alias": "p3",
             "bookedOn": "2025-12-31",
             "amountMinor": 30000,
-            "unpairedByAdmin": false
+            "unpairedByAdminAt": null
           },
           {
             "alias": "p4",
             "bookedOn": "2024-03-01",
             "amountMinor": 5000,
-            "unpairedByAdmin": false
+            "unpairedByAdminAt": null
           },
           {
             "alias": "p5",
             "bookedOn": "2025-07-07",
             "amountMinor": 6000,
-            "unpairedByAdmin": false
+            "unpairedByAdminAt": null
           }
         ],
         "donations": [
@@ -1441,19 +1441,19 @@
             "alias": "p1",
             "bookedOn": "2026-01-15",
             "amountMinor": 10000,
-            "unpairedByAdmin": false
+            "unpairedByAdminAt": null
           },
           {
             "alias": "p2",
             "bookedOn": "2026-06-15",
             "amountMinor": 20000,
-            "unpairedByAdmin": false
+            "unpairedByAdminAt": null
           },
           {
             "alias": "p3",
             "bookedOn": "2026-12-31",
             "amountMinor": 30000,
-            "unpairedByAdmin": false
+            "unpairedByAdminAt": null
           }
         ],
         "donations": [
@@ -1770,7 +1770,7 @@
             "alias": "p1",
             "bookedOn": "2026-01-15",
             "amountMinor": 10000,
-            "unpairedByAdmin": false
+            "unpairedByAdminAt": null
           }
         ],
         "donations": [
@@ -1894,19 +1894,19 @@
             "alias": "p1",
             "bookedOn": "2028-02-29",
             "amountMinor": 29029,
-            "unpairedByAdmin": false
+            "unpairedByAdminAt": null
           },
           {
             "alias": "p2",
             "bookedOn": "2028-03-01",
             "amountMinor": 10000,
-            "unpairedByAdmin": false
+            "unpairedByAdminAt": null
           },
           {
             "alias": "p3",
             "bookedOn": "2028-02-29",
             "amountMinor": 2900,
-            "unpairedByAdmin": false
+            "unpairedByAdminAt": null
           }
         ],
         "donations": [
@@ -2039,13 +2039,13 @@
             "alias": "p1",
             "bookedOn": "2026-06-01",
             "amountMinor": 100000000,
-            "unpairedByAdmin": false
+            "unpairedByAdminAt": null
           },
           {
             "alias": "p2",
             "bookedOn": "2026-06-02",
             "amountMinor": 99999999,
-            "unpairedByAdmin": false
+            "unpairedByAdminAt": null
           }
         ],
         "donations": [
@@ -2227,13 +2227,13 @@
             "alias": "p1",
             "bookedOn": "2024-07-01",
             "amountMinor": 5000,
-            "unpairedByAdmin": false
+            "unpairedByAdminAt": null
           },
           {
             "alias": "p2",
             "bookedOn": "2024-08-01",
             "amountMinor": 6000,
-            "unpairedByAdmin": true
+            "unpairedByAdminAt": "2024-08-01T13:00:00Z"
           }
         ],
         "donations": [],

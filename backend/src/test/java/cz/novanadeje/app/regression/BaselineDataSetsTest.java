@@ -1,6 +1,7 @@
 package cz.novanadeje.app.regression;
 
 import cz.novanadeje.app.cucumber.transcript.ApiTranscripts;
+import cz.novanadeje.app.sharedcases.SharedCases;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -54,7 +55,7 @@ class BaselineDataSetsTest {
         for (Path file : files) {
             JsonNode cases = JSON.readTree(Files.readString(file, StandardCharsets.UTF_8));
             assertThat(cases.properties().stream().map(java.util.Map.Entry::getKey).toList()).as("%s", file).containsExactly("source", "logic", "cases");
-            assertThat(cases.get("source").asString()).as("%s", file).isEqualTo(ApiTranscripts.SOURCE);
+            assertThat(cases.get("source").asString()).as("%s", file).isIn(SharedCases.SOURCES);
             assertThat(cases.get("logic").asString()).as("%s", file).isNotBlank();
             assertThat(cases.get("cases").isArray() && !cases.get("cases").isEmpty()).as("%s has cases", file).isTrue();
             Set<String> names = new HashSet<>();

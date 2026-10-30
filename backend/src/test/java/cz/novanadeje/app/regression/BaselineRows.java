@@ -22,10 +22,11 @@ import java.util.function.Function;
 public final class BaselineRows {
 
     public static final String DESCRIPTION = "The rows hold only the columns the computation reads: a runner fills every other column with any valid value. "
-            + "A donor is a donor_record row (registeredAt and erasedAt instants); a payment a bank_payment row (bookedOn, amountMinor, unpairedByAdmin); "
+            + "A donor is a donor_record row (registeredAt and erasedAt instants); a payment a bank_payment row (bookedOn, amountMinor, and unpairedByAdminAt, the instant an administrator unpaired it or null); "
             + "a donation a donation row of a donor, with the payment it was paired from (a bank transfer) or none (MANUAL), status RECEIVED or REFUNDED "
             + "and purpose GENERAL or ACCOUNT_VERIFICATION. A payment no donation points to is unpaired. now is the server clock; the foundation's calendar is Prague's.";
     private static final JsonNodeFactory NODES = JsonNodeFactory.instance;
+    private static final String UNPAIRED_BY_ADMIN_AT = "T13:00:00Z";
     private static final long ID_HIGH = 0x0190a000_0000_7000L;
     private static final long ID_LOW = 0x8000_0000_0000_0000L;
     private static final int ADMINISTRATOR = 0x999;
@@ -49,7 +50,7 @@ public final class BaselineRows {
         input.get("donors").forEach(donor -> rows.donors.add(new Donor(donor.get("alias").asString(), donor.get("registeredAt").asString(),
                 optional(donor.get("erasedAt")))));
         input.get("payments").forEach(payment -> rows.payments.add(new Payment(payment.get("alias").asString(), payment.get("bookedOn").asString(),
-                payment.get("amountMinor").asLong(), payment.get("unpairedByAdmin").asBoolean())));
+                payment.get("amountMinor").asLong(), optional(payment.get("unpairedByAdminAt")))));
         input.get("donations").forEach(gift -> rows.donations.add(new Gift(gift.get("donor").asString(), optional(gift.get("payment")),
                 gift.get("receivedOn").asString(), gift.get("amountMinor").asLong(), gift.get("status").asString(), gift.get("source").asString(),
                 gift.get("purpose").asString())));
@@ -96,17 +97,17 @@ public final class BaselineRows {
     }
 
     public BaselineRows unpaired(String day, long amountMinor) {
-        payments.add(new Payment("p" + (payments.size() + 1), day, amountMinor, false));
+        payments.add(new Payment("p" + (payments.size() + 1), day, amountMinor, Optional.empty()));
         return this;
     }
 
     public BaselineRows unpairedByAdmin(String day, long amountMinor) {
-        payments.add(new Payment("p" + (payments.size() + 1), day, amountMinor, true));
+        payments.add(new Payment("p" + (payments.size() + 1), day, amountMinor, Optional.of(day + UNPAIRED_BY_ADMIN_AT)));
         return this;
     }
 
     private BaselineRows bankDonation(String donor, String day, long amountMinor, String status, String purpose) {
-        Payment payment = new Payment("p" + (payments.size() + 1), day, amountMinor, false);
+        Payment payment = new Payment("p" + (payments.size() + 1), day, amountMinor, Optional.empty());
         payments.add(payment);
         donations.add(new Gift(donor, Optional.of(payment.alias()), day, amountMinor, status, "BANK_TRANSFER", purpose));
         return this;
@@ -148,7 +149,7 @@ public final class BaselineRows {
                     .param("booked", LocalDate.parse(payment.bookedOn()))
                     .param("amount", payment.amountMinor())
                     .param("imported", timestamp(payment.bookedOn() + "T12:00:00Z"))
-                    .param("unpairedAt", payment.unpairedByAdmin() ? timestamp(payment.bookedOn() + "T13:00:00Z") : null)
+                    .param("unpairedAt", payment.unpairedByAdminAt().map(BaselineRows::timestamp).orElse(null))
                     .update();
         }
         for (Gift gift : donations) {
@@ -185,7 +186,7 @@ public final class BaselineRows {
             node.put("alias", payment.alias());
             node.put("bookedOn", payment.bookedOn());
             node.put("amountMinor", payment.amountMinor());
-            node.put("unpairedByAdmin", payment.unpairedByAdmin());
+            payment.unpairedByAdminAt().ifPresentOrElse(at -> node.put("unpairedByAdminAt", at), () -> node.putNull("unpairedByAdminAt"));
             return node;
         }));
         input.set("donations", array(donations, gift -> {
@@ -221,7 +222,7 @@ public final class BaselineRows {
     private record Donor(String alias, String registeredAt, Optional<String> erasedAt) {
     }
 
-    private record Payment(String alias, String bookedOn, long amountMinor, boolean unpairedByAdmin) {
+    private record Payment(String alias, String bookedOn, long amountMinor, Optional<String> unpairedByAdminAt) {
     }
 
     private record Gift(String donor, Optional<String> payment, String receivedOn, long amountMinor, String status, String source, String purpose) {

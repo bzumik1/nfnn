@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nfnn.cz/shared-cases/schemas/monthly-report/formatting.schema.json",
+  "title": "Monthly report formatting cases: an amount, a count, a month, a date or a bank time and the text the report e-mail prints",
+  "type": "object",
+  "required": ["source", "logic", "cases"],
+  "additionalProperties": false,
+  "properties": {
+    "source": { "$ref": "../defs/source.schema.json" },
+    "logic": { "type": "string", "minLength": 1 },
+    "cases": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/case" } }
+  },
+  "$defs": {
+    "case": {
+      "type": "object",
+      "required": ["name", "input", "expected"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "input": {
+          "oneOf": [
+            { "$ref": "#/$defs/input", "properties": { "format": { "const": "amount" }, "amountMinor": { "type": "integer", "minimum": 0 } }, "required": ["amountMinor"], "unevaluatedProperties": false },
+            { "$ref": "#/$defs/input", "properties": { "format": { "const": "count" }, "count": { "$ref": "../defs/rows.schema.json#/$defs/count" } }, "required": ["count"], "unevaluatedProperties": false },
+            { "$ref": "#/$defs/input", "properties": { "format": { "const": "month" }, "month": { "$ref": "../defs/rows.schema.json#/$defs/month" } }, "required": ["month"], "unevaluatedProperties": false },
+            { "$ref": "#/$defs/input", "properties": { "format": { "const": "date" }, "date": { "$ref": "../defs/rows.schema.json#/$defs/day" } }, "required": ["date"], "unevaluatedProperties": false },
+            { "$ref": "#/$defs/input", "properties": { "format": { "const": "time" }, "instant": { "$ref": "../defs/rows.schema.json#/$defs/instant" } }, "required": ["instant"], "unevaluatedProperties": false }
+          ]
+        },
+        "expected": {
+          "type": "object",
+          "required": ["text"],
+          "additionalProperties": false,
+          "properties": { "text": { "type": "string", "minLength": 1 } }
+        }
+      }
+    },
+    "input": { "type": "object", "required": ["format"] }
+  }
+}

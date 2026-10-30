@@ -1,0 +1,26 @@
+[
+  {
+    "kind": "shared-case",
+    "caseFile": "shared-cases/schemas/*",
+    "reason": "0.2 describes every shared case file by a JSON Schema that Vitest checks with ajv; the case files are the specification from now on",
+    "contract": ".claude/rules/testing.md, Logic on both sides"
+  },
+  {
+    "kind": "shared-case",
+    "caseFile": "shared-cases/admin-overview/year-overview.json",
+    "reason": "0.2 names when an administrator unpaired a payment (unpairedByAdminAt, the instant or null, as bank_payment.unpaired_by_admin_at and the 2.12 sync projection carry it) instead of a flag; the expected values stay as v2 computed them, and the source becomes edited",
+    "contract": ".claude/rules/testing.md, Logic on both sides"
+  },
+  {
+    "kind": "shared-case",
+    "caseFile": "shared-cases/donor-summary/summary.json",
+    "reason": "0.2 names when an administrator unpaired a payment (unpairedByAdminAt, the instant or null, as bank_payment.unpaired_by_admin_at and the 2.12 sync projection carry it) instead of a flag; the expected values stay as v2 computed them, and the source becomes edited",
+    "contract": ".claude/rules/testing.md, Logic on both sides"
+  },
+  {
+    "kind": "shared-case",
+    "caseFile": "shared-cases/monthly-report/report.json",
+    "reason": "0.2 names when an administrator unpaired a payment (unpairedByAdminAt, the instant or null, as bank_payment.unpaired_by_admin_at and the 2.12 sync projection carry it) instead of a flag; the expected values stay as v2 computed them, and the source becomes edited",
+    "contract": ".claude/rules/testing.md, Logic on both sides"
+  }
+]

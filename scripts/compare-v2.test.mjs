@@ -755,6 +755,84 @@ describe('Given the files the pull request changes', () => {
   });
 });
 
+describe('Given a pull request that changes the shared cases', () => {
+  const caseFile = 'shared-cases/admin-overview/year-overview.json';
+  const declaration = {
+    kind: 'shared-case',
+    caseFile,
+    reason: '2.20b counts a refunded gift once',
+    contract: 'docs/api-contract.md, Monthly report settings and overview',
+  };
+
+  it('when no declaration names a changed case file, then the comparison fails and names the file', () => {
+    const result = compare(workspace({ changed: ['docs/api-contract.md', caseFile] }));
+    assert.equal(result.status, 1, result.output);
+    assert.ok(result.report.includes(caseFile), result.report);
+    assert.match(result.output, /::error::.*shared-cases\/admin-overview\/year-overview\.json/);
+  });
+
+  it('when a declaration names the changed case file, then the comparison passes and the report lists it', () => {
+    const result = compare(
+      workspace({
+        changes: { '2.20b.json': [declaration] },
+        changed: ['<changes>/2.20b.json', caseFile],
+      }),
+    );
+    assert.equal(result.status, 0, result.output);
+    assert.match(result.report, /### Změněné sdílené případy/);
+    assert.ok(result.report.includes('2.20b counts a refunded gift once'), result.report);
+  });
+
+  it('when a declaration names a pattern over the schemas, then it covers every schema the pull request changes', () => {
+    const result = compare(
+      workspace({
+        changes: {
+          '2.20b.json': [
+            { ...declaration, caseFile: 'shared-cases/schemas/*', reason: 'stricter' },
+          ],
+        },
+        changed: [
+          '<changes>/2.20b.json',
+          'shared-cases/schemas/qr/totp.schema.json',
+          'shared-cases/schemas/defs/rows.schema.json',
+        ],
+      }),
+    );
+    assert.equal(result.status, 0, result.output);
+  });
+
+  it('when only an unchanged earlier changes file names the changed case file, then the comparison fails', () => {
+    const result = compare(
+      workspace({ changes: { '0.2.json': [declaration] }, changed: [caseFile] }),
+    );
+    assert.equal(result.status, 1, result.output);
+    assert.match(result.output, /::error::.*shared-cases\/admin-overview\/year-overview\.json/);
+  });
+
+  it('when a declaration names another case file, then the changed file is undeclared and the declaration unused', () => {
+    const result = compare(
+      workspace({
+        changes: { '2.20b.json': [{ ...declaration, caseFile: 'shared-cases/qr/totp.json' }] },
+        changed: ['<changes>/2.20b.json', caseFile],
+      }),
+    );
+    assert.equal(result.status, 1, result.output);
+    assert.match(result.output, /::error::.*year-overview\.json/);
+    assert.match(result.output, /::error::.*2\.20b\.json.*unused/);
+  });
+
+  it('when a declaration names a file outside shared-cases or has no contract, then the comparison refuses to run', () => {
+    for (const entry of [
+      { ...declaration, caseFile: 'docs/api-contract.md' },
+      { ...declaration, contract: undefined },
+    ]) {
+      const result = compare(workspace({ changes: { '2.20b.json': [entry] } }));
+      assert.equal(result.status, 2, result.output);
+      assert.match(result.output, /2\.20b\.json entry 1/);
+    }
+  });
+});
+
 describe('Given a recording with an added mail', () => {
   it('when compared, then the report lists its subject and the kind of recipient without the address', () => {
     const result = compare(

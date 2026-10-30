@@ -101,7 +101,8 @@ tasks.withType<Test> {
 	jvmArgumentProviders.add(JavaAgent(mockitoAgent))
 	environment("TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE", "/var/run/docker.sock")
 	inputs.file("../frontend/src/themes/nova-nadeje/_theme.scss").withPropertyName("siteTheme").withPathSensitivity(PathSensitivity.NONE)
-	inputs.files(fileTree("../shared-cases"), fileTree("../regression")).withPropertyName("baselineArtefacts").withPathSensitivity(PathSensitivity.RELATIVE)
+	inputs.files(fileTree("../shared-cases")).withPropertyName("sharedCases").withPathSensitivity(PathSensitivity.RELATIVE)
+	inputs.files(fileTree("../regression")).withPropertyName("baselineArtefacts").withPathSensitivity(PathSensitivity.RELATIVE)
 }
 
 val acceptanceTest = tasks.register<Test>("acceptanceTest") {

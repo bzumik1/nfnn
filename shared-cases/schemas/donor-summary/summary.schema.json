@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nfnn.cz/shared-cases/schemas/donor-summary/summary.schema.json",
+  "title": "Donor summary cases: database rows, the donor and the first receipt year give the summary the donor is answered",
+  "type": "object",
+  "required": ["source", "logic", "cases"],
+  "additionalProperties": false,
+  "properties": {
+    "source": { "$ref": "../defs/source.schema.json" },
+    "logic": { "type": "string", "minLength": 1 },
+    "cases": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/case" } }
+  },
+  "$defs": {
+    "case": {
+      "type": "object",
+      "required": ["name", "input", "expected"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "input": {
+          "type": "object",
+          "$ref": "../defs/rows.schema.json",
+          "required": ["donor", "firstReceiptYear"],
+          "properties": {
+            "donor": { "$ref": "../defs/rows.schema.json#/$defs/alias" },
+            "firstReceiptYear": {
+              "$ref": "../defs/rows.schema.json#/$defs/year",
+              "description": "The setting RECEIPT_FIRST_YEAR the summary is computed with. Each case names its own: the browser computes with it per case, and the backend runner, whose context is configured once, refuses a case that names another year than its context."
+            }
+          },
+          "unevaluatedProperties": false
+        },
+        "expected": { "$ref": "#/$defs/summary" }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "required": ["totalAmountMinor", "currency", "count", "lastReceivedAt", "byYear", "yearlyReceiptsAvailableThrough", "receiptsAvailableFrom"],
+      "additionalProperties": false,
+      "properties": {
+        "totalAmountMinor": { "type": "integer", "minimum": 0 },
+        "currency": { "const": "CZK" },
+        "count": { "$ref": "../defs/rows.schema.json#/$defs/count" },
+        "lastReceivedAt": { "oneOf": [{ "$ref": "../defs/rows.schema.json#/$defs/day" }, { "type": "null" }] },
+        "byYear": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["year", "count", "totalAmountMinor"],
+            "additionalProperties": false,
+            "properties": {
+              "year": { "$ref": "../defs/rows.schema.json#/$defs/year" },
+              "count": { "$ref": "../defs/rows.schema.json#/$defs/count" },
+              "totalAmountMinor": { "type": "integer", "minimum": 0 }
+            }
+          }
+        },
+        "yearlyReceiptsAvailableThrough": { "$ref": "../defs/rows.schema.json#/$defs/year" },
+        "receiptsAvailableFrom": { "$ref": "../defs/rows.schema.json#/$defs/year" }
+      }
+    }
+  }
+}
