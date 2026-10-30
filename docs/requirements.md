@@ -65,7 +65,7 @@ Web představí fond a jeho pomoc dětem, usnadní darování a dárcům dá ú�
 - Hlavně roční potvrzení jako PDF ke stažení po skončení roku; nic se neposílá, dárce si ho stáhne, když potřebuje. Navíc potvrzení k jednotlivému daru.
 - Stránka Potvrzení o daru nabízí kromě ročních potvrzení i potvrzení k jednotlivým letošním darům; Moje dary je mají u každého daru dál (Jakub 30. 10. 2026).
 - Obsah: údaje fondu, údaje dárce, dary s datem a částkou, celková částka, účel, datum vystavení a číslo potvrzení.
-- Podepisuje Pavel Znamenáček, předseda správní rady. Jméno, funkci a sken podpisu mění správce ve správě; bez razítka (zákon ho nevyžaduje). Bez nahraného podpisu je na potvrzení čára se jménem.
+- Podepisuje Pavel Znamenáček, předseda správní rady. Jméno, funkci a podpis mění správce ve správě; podpis nejlépe jako vektor SVG složený jen z vyplněných tvarů (Jakub 2026-10-30: „Chtěl bych všude používat podpis jako SVG“), sken JPEG, PNG nebo WebP zůstává jako záloha; bez razítka (zákon ho nevyžaduje). Bez nahraného podpisu je na potvrzení čára se jménem.
 - Vystavené potvrzení se nemění. Změní-li se potvrzované údaje (pozdě spárovaný dar, nové jméno nebo adresa), další stažení vystaví náhradní potvrzení s novým číslem, které uvádí, co nahrazuje. Jazyk podle dárce; anglické potvrzení je dvojjazyčné.
 - Web vystavuje potvrzení jen za dary od 1. 1. 2026. Starší dary přehled ukazuje, jen bez PDF.
 

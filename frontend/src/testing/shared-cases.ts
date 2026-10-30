@@ -93,6 +93,15 @@ export type ReceiptFormattingExpected =
       };
     };
 
+export interface SignatureVectorInput {
+  readonly svg: string;
+}
+
+export interface SignatureVectorExpected {
+  readonly canonical: string;
+  readonly sha256: string;
+}
+
 export type RowsInput = Readonly<Record<string, unknown>>;
 export type Answer = Readonly<Record<string, unknown>>;
 
@@ -108,6 +117,7 @@ export interface SharedCaseTopics {
     ReceiptFormattingInput,
     ReceiptFormattingExpected
   >;
+  readonly 'signature/vector.json': SharedCase<SignatureVectorInput, SignatureVectorExpected>;
   readonly 'totp/uri.json': SharedCase<TotpUriInput, { readonly uri: string }>;
 }
 
@@ -122,6 +132,7 @@ const REGISTERED_TOPICS: Readonly<Record<SharedCaseTopic, true>> = {
   'qr/payment.json': true,
   'qr/totp.json': true,
   'receipts/formatting.json': true,
+  'signature/vector.json': true,
   'totp/uri.json': true,
 };
 

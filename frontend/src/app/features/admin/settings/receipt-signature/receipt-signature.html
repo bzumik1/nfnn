@@ -7,8 +7,10 @@
       Ukládá se hned, bez tlačítka Uložit nastavení a bez restartu webu.
     </p>
     <p id="receipt-signature-hint" class="signature-hint" i18n="@@admin.signature.hint">
-      Sken se tiskne nad jméno podepisujícího na potvrzeních vystavených po nahrání; ta už vystavená
-      se nemění. JPEG, PNG nebo WebP do 10 MB, nejlépe tmavý podpis na bílém papíře.
+      Podpis se tiskne nad jméno podepisujícího na potvrzeních vystavených po nahrání; ta už
+      vystavená se nemění. Nejlépe SVG do 200 kB: ručně psaný podpis jde, když jsou jeho tahy
+      převedené na vyplněné tvary. Obrysy s nastavenou tloušťkou čáry (stroke) a efekty web odmítne.
+      Jinak sken JPEG, PNG či WebP do 10 MB: tmavý podpis na bílém papíře.
     </p>
 
     @switch (state()) {
@@ -27,7 +29,27 @@
       }
       @case ('ready') {
         @if (signature(); as current) {
-          @if (current.configured && current.image) {
+          @if (current.kind === 'VECTOR' && current.vector) {
+            <div class="signature-frame">
+              <svg
+                class="signature-preview"
+                role="img"
+                aria-label="Nahraný podpis"
+                i18n-aria-label="@@admin.signature.alt"
+                preserveAspectRatio="xMidYMid meet"
+                [attr.viewBox]="viewBox(current.vector)"
+              >
+                @for (path of current.vector.paths; track $index) {
+                  <path
+                    [attr.d]="path.d"
+                    [attr.fill]="fill(path)"
+                    [attr.fill-opacity]="path.opacity"
+                  />
+                }
+              </svg>
+            </div>
+            <p class="signature-state">{{ uploadedLine(current) }}</p>
+          } @else if (current.configured && current.image) {
             <div class="signature-frame">
               <img
                 class="signature-preview"
@@ -48,15 +70,15 @@
           <div class="signature-actions">
             <app-file-button
               inputId="receipt-signature-file"
-              accept="image/jpeg,image/png,image/webp"
+              accept="image/svg+xml,.svg,image/jpeg,image/png,image/webp"
               describedBy="receipt-signature-hint"
               [disabled]="uploading() || removing()"
               (chosen)="upload($event)"
             >
               @if (current.configured) {
-                <ng-container i18n="@@admin.signature.replace">Nahrát jiný sken</ng-container>
+                <ng-container i18n="@@admin.signature.replace">Nahrát jiný podpis</ng-container>
               } @else {
-                <ng-container i18n="@@admin.signature.choose">Nahrát sken</ng-container>
+                <ng-container i18n="@@admin.signature.choose">Nahrát podpis</ng-container>
               }
             </app-file-button>
             @if (current.configured && !confirmingRemoval()) {

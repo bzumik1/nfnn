@@ -25,6 +25,7 @@ const PAYMENT_CASES = 'qr/payment.json';
 const TOTP_CASES = 'qr/totp.json';
 const TOTP_URI_CASES = 'totp/uri.json';
 const RECEIPT_CASES = 'receipts/formatting.json';
+const VECTOR_CASES = 'signature/vector.json';
 const FINDER_SPAN = 17;
 const MODULES_PER_VERSION = 4;
 
@@ -352,5 +353,30 @@ describe('Given a shared case file without its schema', () => {
     expect(schemaViolations('unknown/topic.json', {})).toEqual([
       'schemas/unknown/topic.schema.json is missing',
     ]);
+  });
+});
+
+describe('Given the vector signature cases', () => {
+  it('when each canonical JSON is hashed as the browser will hash the served bytes, then it gives the SHA-256 of its case', async () => {
+    const cases = sharedCases('signature/vector.json');
+    const digests = await Promise.all(
+      cases.map(async (sharedCase) => {
+        const bytes = new TextEncoder().encode(sharedCase.expected.canonical);
+        const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', bytes));
+        return Array.from(digest, (byte) => byte.toString(16).padStart(2, '0')).join('');
+      }),
+    );
+
+    expect(cases.length).toBeGreaterThan(0);
+    expect(digests).toEqual(cases.map((sharedCase) => sharedCase.expected.sha256));
+  });
+
+  it('when its canonical JSON is written with whitespace, then it is refused', () => {
+    const file = editable(VECTOR_CASES);
+    file.cases[0].expected['canonical'] = ' ' + String(file.cases[0].expected['canonical']);
+
+    expect(schemaViolations(VECTOR_CASES, file).join('\n')).toMatch(
+      /\/cases\/0\/expected\/canonical must match pattern/,
+    );
   });
 });

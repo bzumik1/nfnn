@@ -7,7 +7,13 @@ import cz.novanadeje.app.donations.domain.receipt.ReceiptDocumentFactory;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptNumber;
 import cz.novanadeje.app.donations.domain.receipt.Receipts;
 import cz.novanadeje.app.donations.domain.receipt.ReplacedReceipt;
+import cz.novanadeje.app.donations.domain.receipt.SignatureArtwork;
 import cz.novanadeje.app.donations.domain.receipt.SignatureImage;
+import cz.novanadeje.app.donations.domain.receipt.SignaturePath;
+import cz.novanadeje.app.donations.domain.receipt.SignaturePathData;
+import cz.novanadeje.app.donations.domain.receipt.SignatureVector;
+import cz.novanadeje.app.donations.domain.receipt.ReceiptSignatureRepository;
+import cz.novanadeje.app.donations.domain.receipt.SignatureViewBox;
 import cz.novanadeje.app.shared.domain.LocaleCode;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
@@ -25,6 +31,7 @@ import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.LocalDate;
@@ -48,6 +55,10 @@ import static cz.novanadeje.app.donations.domain.receipt.Receipts.janaSpeakingEn
 import static cz.novanadeje.app.donations.domain.receipt.Receipts.receivedFromAcme;
 import static cz.novanadeje.app.donations.domain.receipt.Receipts.receivedFromJana;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 class ThymeleafPdfReceiptRendererTest {
 
@@ -192,6 +203,35 @@ class ThymeleafPdfReceiptRendererTest {
     }
 
     @Test
+    @DisplayName("Given a vector signature, when a receipt is issued, then the server drawing leaves the signature out and prints the line and the name")
+    void should_leave_signature_out_when_issued_given_vector_signature() {
+        SignatureVector vector = new SignatureVector(SignatureViewBox.parse("0 0 300 100"),
+                List.of(new SignaturePath(SignaturePathData.parse("M10 80 C40 10 65 10 95 80 Z"), "#1d2a5c", BigDecimal.ONE)));
+        ThymeleafPdfReceiptRenderer renderer = renderer(ReceiptTemplate.fromClasspath(), Optional.of(vector));
+        ReceiptDocument document = Receipts.singleDocument(jana(), MARCH);
+
+        byte[] pdf = issue(renderer, document);
+
+        assertThat(renderer.freeze(document).signature()).isEmpty();
+        assertThat(text(pdf)).contains("Pavel Znamenáček");
+        assertThat(imagesOnFirstPage(pdf)).as("logo only").isEqualTo(1);
+        assertThat(resources.image(vector.digest())).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Given a current signature that cannot be read as a scan, when a receipt is frozen, then only the current scan is asked for and the receipt carries no signature")
+    void should_ask_only_for_current_scan_when_frozen_given_signature_that_is_no_scan() {
+        ReceiptSignatureRepository signatures = mock(ReceiptSignatureRepository.class);
+        when(signatures.current()).thenThrow(new IllegalStateException("The stored signature vector cannot be read"));
+        when(signatures.currentScan()).thenReturn(Optional.empty());
+        ThymeleafPdfReceiptRenderer renderer = new ThymeleafPdfReceiptRenderer(resources, ReceiptTemplate.fromClasspath(), signatures,
+                Clock.fixed(NOW, ZoneOffset.UTC));
+
+        assertThat(renderer.freeze(Receipts.singleDocument(jana(), MARCH)).signature()).isEmpty();
+        verify(signatures, never()).current();
+    }
+
+    @Test
     @DisplayName("Given a yearly receipt, when rendered, then its title stays on one line with the year")
     void should_keep_title_on_one_line_when_rendered_given_yearly_receipt() {
         render(Receipts.yearlyDocument(jana(), List.of(MARCH, JUNE)), pdf -> assertThat(lines(pdf))
@@ -236,7 +276,7 @@ class ThymeleafPdfReceiptRendererTest {
         return renderer(ReceiptTemplate.fromClasspath(), Optional.of(signature(300, 100)));
     }
 
-    private ThymeleafPdfReceiptRenderer renderer(ReceiptTemplate template, Optional<SignatureImage> signature) {
+    private ThymeleafPdfReceiptRenderer renderer(ReceiptTemplate template, Optional<? extends SignatureArtwork> signature) {
         return new ThymeleafPdfReceiptRenderer(resources, template, InMemoryReceiptSignatures.holding(signature), Clock.fixed(NOW, ZoneOffset.UTC));
     }
 

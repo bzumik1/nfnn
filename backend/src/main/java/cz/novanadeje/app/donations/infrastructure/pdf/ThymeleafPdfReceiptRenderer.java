@@ -76,7 +76,7 @@ class ThymeleafPdfReceiptRenderer implements DonationReceiptRenderer {
         Instant now = clock.instant();
         resources.storeTemplate(templateDigest, templateContent, now);
         resources.storeImage(logo.digest(), logo, now);
-        Optional<ReceiptImage> signature = signatures.current().map(current -> new ReceiptImage(current.image().png(), "image/png"));
+        Optional<ReceiptImage> signature = signatures.currentScan().map(scan -> new ReceiptImage(scan.png(), "image/png"));
         signature.ifPresent(image -> resources.storeImage(image.digest(), image, now));
         String data = JSON.writeValueAsString(ReceiptData.of(document, template.texts(LocaleCode.CS)));
         return new ReceiptSnapshot(templateDigest, data, logo.digest(), signature.map(ReceiptImage::digest), RENDER_PROFILE);

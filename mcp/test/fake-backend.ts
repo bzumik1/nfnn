@@ -21,6 +21,19 @@ const LOG_MATCHES: Record<string, number[]> = {
   'backend.log.2026-10-21.0.gz': [5],
 };
 
+const VECTOR_SIGNATURE = {
+  configured: true,
+  kind: 'VECTOR',
+  image: null,
+  vector: {
+    viewBox: [0, 0, 300, 100],
+    paths: [{ d: 'M10 80 C40 10 65 10 95 80 Z', fill: '#1d2a5c', opacity: 0.9 }],
+  },
+  width: 1200,
+  height: 400,
+  uploadedAt: '2026-10-23T19:30:00Z',
+};
+
 export interface RecordedRequest {
   readonly method: string;
   readonly path: string;
@@ -35,6 +48,7 @@ export class FakeBackend {
   readonly requests: RecordedRequest[] = [];
   metadataAvailable = true;
   previousSignInAt: string | null = '2026-10-28T20:14:00Z';
+  signatureIsVector = false;
   private server: Server | undefined;
   url = '';
 
@@ -108,6 +122,13 @@ export class FakeBackend {
     }
     if (request.method === 'GET' && url.pathname === '/api/admin/donors/me/previous-sign-in') {
       return [200, { previousSignInAt: this.previousSignInAt }];
+    }
+    if (
+      this.signatureIsVector &&
+      request.method === 'GET' &&
+      url.pathname === '/api/admin/donations/receipt-signature'
+    ) {
+      return [200, VECTOR_SIGNATURE];
     }
     return adminRoute(request, url, body);
   }
