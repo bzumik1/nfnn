@@ -1,0 +1,18 @@
+[
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/home-assets.spec.ts > Given the site's SVG tab icon > when it is drawn at 16 px, then it leaves out the face, which it keeps at 32 px",
+    "reason": "PR #238: Jakub 2026-10-30 chose the tab icon with the star's face at every size, so the face is no longer hidden at 16 px",
+    "replacement": "e2e/home-assets.spec.ts > Given the site's SVG tab icon > when it is drawn at 16 px, then it shows the face of the star",
+    "contract": "docs/frontend-overview.md, Icons"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/home-assets.spec.ts > Given a visitor on the home page > when it loads, then it links a tab icon as ICO and SVG and an opaque 180 px home-screen icon, all served by the site",
+    "reason": "PR #238: Jakub 2026-10-30, everything on the site that can be SVG is SVG, so favicon.ico is gone and only favicon.svg is linked",
+    "replacement": "e2e/home-assets.spec.ts > Given a visitor on the home page > when it loads, then it links a tab icon only as SVG and an opaque 180 px home-screen icon, all served by the site",
+    "contract": "docs/frontend-overview.md, src/index.html"
+  }
+]

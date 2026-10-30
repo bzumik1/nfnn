@@ -1,20 +1,13 @@
 <div class="stats">
   <div class="stats-grid">
-    <div class="stat">
-      <div class="stat-value">{{ yearsHelping }}</div>
-      <div class="stat-label" i18n="@@home.stats.years">let pomáháme</div>
-    </div>
-    <div class="stat">
-      <div class="stat-value">200+</div>
-      <div class="stat-label" i18n="@@home.stats.children">podpořených dětí</div>
-    </div>
-    <div class="stat">
-      <div class="stat-value">100%</div>
-      <div class="stat-label" i18n="@@home.stats.transparent">transparentně</div>
-    </div>
-    <div class="stat">
-      <div class="stat-value">{{ foundedYear }}</div>
-      <div class="stat-label" i18n="@@home.stats.founded">rok vzniku</div>
-    </div>
+    @for (stat of stats; track stat.label; let order = $index) {
+      <div class="stat" [class.is-waiting]="waiting()" [style.--stat-order]="order">
+        <div class="stat-value">
+          <span class="visually-hidden">{{ stat.final }}</span>
+          <span aria-hidden="true">{{ shown()[order] }}</span>
+        </div>
+        <div class="stat-label">{{ stat.label }}</div>
+      </div>
+    }
   </div>
 </div>

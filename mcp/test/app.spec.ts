@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { ISSUER, READ_TOKEN } from './fake-backend.js';
-import { MCP_URL, startApp, type TestApp } from './support.js';
+import { connect, MCP_URL, startApp, type TestApp } from './support.js';
 
 describe('Given the MCP connector in front of the administration', () => {
   let stack: TestApp;
@@ -23,6 +23,14 @@ describe('Given the MCP connector in front of the administration', () => {
     expect(
       stack.logLines.filter((line) => line.includes('Authorization server discovered')),
     ).toEqual([`INFO Authorization server discovered: ${ISSUER}`]);
+  });
+
+  it('when a client connects, then the connector names itself with the tab icon of the site, so a client that shows server icons shows the star', async () => {
+    const client = await connect(stack.app, READ_TOKEN);
+    expect(client.getServerVersion()?.icons).toEqual([
+      { src: `${ISSUER}/favicon.svg`, mimeType: 'image/svg+xml', sizes: ['any'] },
+    ]);
+    await client.close();
   });
 
   it('when the protected resource metadata is read, then it names the connector and the site as its authorization server', async () => {

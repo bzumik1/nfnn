@@ -351,4 +351,13 @@ describe('Given the site header over the dark top of a page', () => {
 
     expect(logo().getAttribute('src')).toBe('/images/logo.svg');
   });
+
+  it('when any page opens, then the header gives the phone browser the strip it tints its status bar from, never seen nor read', async () => {
+    await showAt('/projekty');
+
+    const tint = fixture.nativeElement.querySelector('.status-bar-tint') as HTMLElement;
+    expect(tint).not.toBeNull();
+    expect(tint.textContent).toBe('');
+    expect(tint.getAttribute('aria-hidden')).toBe('true');
+  });
 });
