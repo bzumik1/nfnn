@@ -30,6 +30,15 @@ Feature: An administrator writes news articles with photos and publishes them on
     Then the response status is 404
     And the problem type ends with "content/news-not-found"
 
+  Scenario: A title with no letter or digit and no address of its own is refused with the reason
+    When "Jana" creates a news article:
+      | title | ???                       |
+      | perex | Krátký souhrn aktuality.  |
+      | body  | První odstavec.           |
+    Then the response status is 400
+    And the problem type ends with "content/slug-not-derivable"
+    And the problem does not repeat "slug can be made"
+
   Scenario: An uploaded photo is stored as WebP variants and served to everyone, cached for a year
     When "Jana" uploads a 1600 by 1000 pixel PNG image named "zahrada.png"
     Then the response status is 201

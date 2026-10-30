@@ -16,6 +16,8 @@ import cz.novanadeje.app.operations.domain.backup.RestoreSource;
 import cz.novanadeje.app.operations.domain.backup.RunOutcome;
 import cz.novanadeje.app.operations.domain.settings.Setting;
 import cz.novanadeje.app.operations.domain.settings.SettingChange;
+import cz.novanadeje.app.operations.domain.settings.SettingError;
+import cz.novanadeje.app.operations.domain.settings.SettingProblem;
 import cz.novanadeje.app.operations.domain.settings.SettingsRejected;
 import cz.novanadeje.app.operations.domain.settings.SetupCode;
 import cz.novanadeje.app.operations.domain.settings.SetupCompleted;
@@ -172,7 +174,8 @@ class SetupServiceTest {
     @DisplayName("Given an administration-only setting, when the setup is completed with it, then it is refused")
     void should_refuse_when_completed_given_administration_only_setting() {
         assertThatThrownBy(() -> setup.complete(new SetupAccess(true, null), List.of(new SettingChange(Setting.RECEIPT_FIRST_YEAR, "2026")), KEY_CHECK))
-                .isInstanceOf(IllegalArgumentException.class);
+                .isInstanceOfSatisfying(SettingsRejected.class, rejected -> assertThat(rejected.errors())
+                        .containsExactly(SettingError.of(Setting.RECEIPT_FIRST_YEAR, SettingProblem.NOT_IN_SETUP)));
     }
 
     @Test

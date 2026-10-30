@@ -16,7 +16,7 @@ public record ReportRecipients(List<EmailAddress> addresses) {
             throw new IllegalArgumentException("The report has at most " + MAX_RECIPIENTS + " recipients, not " + addresses.size());
         }
         if (addresses.stream().distinct().count() != addresses.size()) {
-            throw new IllegalArgumentException("A report recipient is listed once");
+            throw new RepeatedReportRecipient();
         }
         addresses = List.copyOf(addresses);
     }
@@ -28,6 +28,9 @@ public record ReportRecipients(List<EmailAddress> addresses) {
     public static ReportRecipients parse(List<String> values) {
         if (values == null) {
             throw new IllegalArgumentException("The report needs at least one recipient");
+        }
+        if (!values.stream().allMatch(EmailAddress::isValid)) {
+            throw new InvalidReportRecipient();
         }
         return new ReportRecipients(values.stream().map(EmailAddress::new).toList());
     }

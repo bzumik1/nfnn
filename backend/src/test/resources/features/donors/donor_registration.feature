@@ -78,6 +78,18 @@ Feature: Donor registers an account
     Then the response status is 400
     And the problem lists an error for field "password"
 
+  Scenario: An e-mail address without a dot in its domain is refused as a field without repeating it
+    When a person registers
+      | name       | Jana Nováková  |
+      | street     | Dlouhá 12      |
+      | city       | Ústí nad Labem |
+      | postalCode | 400 01         |
+      | email      | jana@example   |
+      | password   | dlouhe-heslo-1 |
+    Then the response status is 400
+    And the problem lists an error for field "email"
+    And the problem does not repeat "jana@example"
+
   Scenario: A password everyone uses is refused
     When a person registers
       | name       | Jana Nováková   |

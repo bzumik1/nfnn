@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
 import java.util.Locale;
@@ -103,6 +104,20 @@ public class ApiClient {
                 .toEntity(String.class);
         lastResponseBytes = null;
         record("PUT", path, headers, JsonNodeFactory.instance.objectNode().put("size", bytes.length).put("sha256", ScenarioTranscript.sha256(bytes)));
+        return lastResponse;
+    }
+
+    public ResponseEntity<String> send(String method, String path, String contentType, String body) {
+        RestClient.RequestBodySpec request = client.method(HttpMethod.valueOf(method))
+                .uri(URI.create("http://localhost:" + port + path))
+                .headers(this::addDefaultHeaders);
+        if (!body.isEmpty()) {
+            request = request.header(HttpHeaders.CONTENT_TYPE, contentType).body(body);
+        }
+        lastResponse = request.retrieve().toEntity(String.class);
+        lastResponseBytes = null;
+        Map<String, String> sent = contentType.isEmpty() ? Map.of() : Map.of(HttpHeaders.CONTENT_TYPE, contentType);
+        record(method, path, sent, body.isEmpty() ? null : rawBody(body));
         return lastResponse;
     }
 

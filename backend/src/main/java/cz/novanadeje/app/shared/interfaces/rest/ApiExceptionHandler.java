@@ -1,5 +1,6 @@
 package cz.novanadeje.app.shared.interfaces.rest;
 
+import cz.novanadeje.app.shared.domain.LocaleCode;
 import cz.novanadeje.app.shared.domain.error.AccessDenied;
 import cz.novanadeje.app.shared.domain.error.AuthenticationFailure;
 import cz.novanadeje.app.shared.domain.error.Conflict;
@@ -31,6 +32,7 @@ import java.net.URI;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 
 @RestControllerAdvice
 public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
@@ -78,8 +80,8 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
         };
         ProblemDetail problem = ProblemDetail.forStatus(status);
         problem.setType(ProblemTypes.of(ex.code()));
-        problem.setTitle(message("problem." + ex.code() + ".title", ex.getMessage()));
-        problem.setDetail(message("problem." + ex.code() + ".detail", ex.getMessage()));
+        problem.setTitle(message("problem." + ex.code() + ".title", status.getReasonPhrase()));
+        problem.setDetail(translation("problem." + ex.code() + ".detail").orElse(null));
         ex.extensions().forEach(problem::setProperty);
         return problem;
     }
@@ -89,7 +91,7 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
         ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
         problem.setType(ProblemTypes.VALIDATION);
         problem.setTitle(message("problem.validation.title", HttpStatus.BAD_REQUEST.getReasonPhrase()));
-        problem.setDetail(ex.getMessage());
+        problem.setDetail(message("problem.validation.refused-value"));
         return problem;
     }
 
@@ -133,8 +135,13 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
     }
 
     private String message(String key, String fallback) {
+        return translation(key).orElse(fallback);
+    }
+
+    private Optional<String> translation(String key) {
         Locale locale = LocaleContextHolder.getLocale();
-        return getMessageSource().getMessage(key, null, fallback, locale);
+        return Optional.ofNullable(getMessageSource().getMessage(key, null, null, locale))
+                .or(() -> Optional.ofNullable(getMessageSource().getMessage(key, null, null, LocaleCode.CS.toLocale())));
     }
 
     private static List<Map<String, String>> parameterErrors(HandlerMethodValidationException ex) {
