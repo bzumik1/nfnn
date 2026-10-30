@@ -18,7 +18,7 @@ class TestEmailRateLimiter {
     private final FixedWindowRateLimiter limiter;
 
     TestEmailRateLimiter(Clock clock) {
-        this.limiter = new FixedWindowRateLimiter(REQUESTS_PER_WINDOW, WINDOW, FixedWindowRateLimiter.ADMINISTRATOR_ONLY_MAXIMUM_TRACKED_KEYS, clock);
+        this.limiter = new FixedWindowRateLimiter(REQUESTS_PER_WINDOW, WINDOW, clock);
     }
 
     void check(String clientAddress) {

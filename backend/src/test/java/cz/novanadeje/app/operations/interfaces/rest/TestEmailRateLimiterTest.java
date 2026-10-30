@@ -31,12 +31,12 @@ class TestEmailRateLimiterTest {
     }
 
     @Test
-    @DisplayName("Given an endpoint only administrators reach, when 5 000 addresses ask once, then the limiter keeps at most 1 000 of them")
-    void should_keep_at_most_a_thousand_addresses_when_checked_given_an_administrator_only_endpoint() {
+    @DisplayName("Given the public setup test e-mail also reaches it before any access check, when 5 000 addresses ask once, then the limiter keeps all of them")
+    void should_keep_every_address_of_a_flood_when_checked_given_the_public_setup_reaches_it() {
         for (int address = 0; address < 5_000; address++) {
             limiter.check("10.2." + (address >> 8 & 0xff) + "." + (address & 0xff));
         }
 
-        assertThat(limiter.trackedKeys()).isBetween(900L, 1_000L);
+        assertThat(limiter.trackedKeys()).isEqualTo(5_000L);
     }
 }
