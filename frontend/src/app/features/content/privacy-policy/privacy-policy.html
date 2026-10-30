@@ -213,17 +213,23 @@
           </p>
           <p i18n="@@content.privacy.donations.verification">
             Kód z potvrzení o daru můžete ověřit na stránce nfnn.cz/overit. Podpis fondu v něm
-            kontroluje váš prohlížeč, údaje z kódu nám neposílá. Jste-li připojeni k internetu,
-            pošle nám jen otisk podepsaných údajů (hash SHA-256), ze kterého jméno, adresu ani
-            částky zjistit nelze, a my mu odpovíme, zda potvrzení vedeme jako platné, nahradili jsme
-            ho novějším, nebo jsme ho zrušili. Otisk neukládáme ani nezapisujeme do záznamů serveru;
-            IP adresu dotazu používáme jen k omezení počtu dotazů a držíme ji k tomu jen v operační
-            paměti serveru.
+            kontroluje váš prohlížeč a údaje z kódu nám neposílá. Jste-li připojeni k internetu,
+            pošle nám jen otisk potvrzení (hash SHA-256 podepsaných údajů a podpisu). Podle něj v
+            evidenci najdeme, o které potvrzení jde, a odpovíme, zda ho vedeme jako platné,
+            nahradili jsme ho novějším, nebo jsme ho zrušili. Jméno, adresa ani částky se přitom
+            neposílají. Otisk ani to, které potvrzení se ověřovalo, neukládáme a nikam nezapisujeme.
+          </p>
+          <p i18n="@@content.privacy.donations.verificationLog">
+            Samotný dotaz ale server zapíše do provozních záznamů jako každý jiný požadavek (IP
+            adresu, čas a adresu stránky, bez otisku), jak popisujeme níže u IP adresy a záznamů
+            serveru, a smaže ho s nimi. Kvůli ochraně před zneužitím počítáme tyto dotazy z každé IP
+            adresy; adresu k tomu držíme jen v operační paměti serveru.
           </p>
           <p i18n="@@content.privacy.donations.verificationLink">
             Odkaz z kódu nese všechny údaje z potvrzení: kdo ho od vás dostane, je uvidí, a některé
             e-mailové a chatovací služby si odkazy, které přes ně pošlete, ukládají na svých
-            serverech. Sdílením odkazu proto sdílíte údaje z potvrzení.
+            serverech. Sdílením odkazu proto sdílíte údaje z potvrzení. Odkaz i s údaji si uloží
+            také historie prohlížeče; na sdíleném počítači ho proto po ověření z historie smažte.
           </p>
           <dl class="basis">
             <dt i18n="@@content.privacy.data.basisLabel">Právní základ</dt>

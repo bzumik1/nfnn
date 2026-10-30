@@ -188,22 +188,32 @@ describe('Given the privacy policy page', () => {
     );
   });
 
-  it('when it renders, then it says the verification page checks the signature in the browser and sends the foundation only a digest for the status', () => {
+  it('when it renders, then it says the verification page checks the signature in the browser and sends the foundation only a digest by which it finds the receipt', () => {
     const donations = purposeText('Evidence darů a potvrzení o daru');
     expect(donations).toContain(
-      'Kód z potvrzení o daru můžete ověřit na stránce nfnn.cz/overit. Podpis fondu v něm kontroluje váš prohlížeč, údaje z kódu nám neposílá.',
+      'Kód z potvrzení o daru můžete ověřit na stránce nfnn.cz/overit. Podpis fondu v něm kontroluje váš prohlížeč a údaje z kódu nám neposílá.',
     );
     expect(donations).toContain(
-      'Jste-li připojeni k internetu, pošle nám jen otisk podepsaných údajů (hash SHA-256), ze kterého jméno, adresu ani částky zjistit nelze, a my mu odpovíme, zda potvrzení vedeme jako platné, nahradili jsme ho novějším, nebo jsme ho zrušili.',
+      'Jste-li připojeni k internetu, pošle nám jen otisk potvrzení (hash SHA-256 podepsaných údajů a podpisu). Podle něj v evidenci najdeme, o které potvrzení jde, a odpovíme, zda ho vedeme jako platné, nahradili jsme ho novějším, nebo jsme ho zrušili. Jméno, adresa ani částky se přitom neposílají.',
     );
     expect(donations).toContain(
-      'Otisk neukládáme ani nezapisujeme do záznamů serveru; IP adresu dotazu používáme jen k omezení počtu dotazů a držíme ji k tomu jen v operační paměti serveru.',
+      'Otisk ani to, které potvrzení se ověřovalo, neukládáme a nikam nezapisujeme.',
     );
   });
 
-  it('when it renders, then it warns that sharing a verification link shares the receipt data', () => {
+  it('when it renders, then it says the status request itself is logged like any other request and its address counted only in memory', () => {
     expect(purposeText('Evidence darů a potvrzení o daru')).toContain(
+      'Samotný dotaz ale server zapíše do provozních záznamů jako každý jiný požadavek (IP adresu, čas a adresu stránky, bez otisku), jak popisujeme níže u IP adresy a záznamů serveru, a smaže ho s nimi. Kvůli ochraně před zneužitím počítáme tyto dotazy z každé IP adresy; adresu k tomu držíme jen v operační paměti serveru.',
+    );
+  });
+
+  it('when it renders, then it warns that sharing a verification link shares the receipt data and that the browser history keeps it', () => {
+    const donations = purposeText('Evidence darů a potvrzení o daru');
+    expect(donations).toContain(
       'Odkaz z kódu nese všechny údaje z potvrzení: kdo ho od vás dostane, je uvidí, a některé e-mailové a chatovací služby si odkazy, které přes ně pošlete, ukládají na svých serverech. Sdílením odkazu proto sdílíte údaje z potvrzení.',
+    );
+    expect(donations).toContain(
+      'Odkaz i s údaji si uloží také historie prohlížeče; na sdíleném počítači ho proto po ověření z historie smažte.',
     );
   });
 
