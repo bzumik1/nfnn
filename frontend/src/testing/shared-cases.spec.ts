@@ -54,6 +54,10 @@ function qrSymbols(): readonly { name: string; symbol: QrSymbol }[] {
       name: sharedCase.name,
       symbol: sharedCase.expected,
     })),
+    ...sharedCases('qr/encoder.json').map((sharedCase) => ({
+      name: sharedCase.name,
+      symbol: sharedCase.expected,
+    })),
     ...sharedCases('qr/totp.json').map((sharedCase) => ({
       name: sharedCase.name,
       symbol: sharedCase.expected,

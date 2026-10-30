@@ -10,6 +10,8 @@ import {
   QrSymbol,
   textSegments,
 } from './qr-encoder';
+import { decodeMatrix } from './testing/plain-qr-decoder';
+import { DATA_CODEWORDS } from './testing/qr-capacities';
 
 const VERIFICATION_PREFIX = 'https://nfnn.cz/overit#1';
 const SEVENTEEN_DIGITS = '72057594037927935';
@@ -35,6 +37,16 @@ function described(text: string, errorCorrection: QrErrorCorrection): CaseSymbol
     size: symbol.size,
     matrix: rows(symbol),
   };
+}
+
+for (const sharedCase of sharedCases('qr/encoder.json')) {
+  describe(`Given the shared case ${sharedCase.name}`, () => {
+    it('when its text is encoded at its level, then the symbol is the one ZXing drew, bit for bit', () => {
+      expect(described(sharedCase.input.text, sharedCase.input.errorCorrection)).toEqual(
+        sharedCase.expected,
+      );
+    });
+  });
 }
 
 for (const sharedCase of sharedCases('qr/payment.json')) {
@@ -94,8 +106,17 @@ describe('Given segments the encoder refuses', () => {
   });
 
   it('when the text does not fit version 40 at the chosen level, then it is refused', () => {
-    expect(() => encodeText('9'.repeat(7090), 'L')).toThrowError(/version 40/);
     expect(() => encodeText('9'.repeat(3058), 'H')).toThrowError(/version 40/);
+    expect(() => encodeText('a'.repeat(2953), 'L')).toThrowError(/version 40/);
+  });
+
+  it('when a text is longer than any QR code holds, then it is refused before any work, with a message of its own', () => {
+    expect(() => encodeText('9'.repeat(7090), 'L')).toThrowError(/at most 7089 characters/);
+    expect(() => byteSegment('a'.repeat(10_000_000))).toThrowError(/at most 7089 characters/);
+    expect(() => numericSegment('9'.repeat(10_000_000))).toThrowError(/at most 7089 characters/);
+    expect(() => alphanumericSegment('A'.repeat(10_000_000))).toThrowError(
+      /at most 7089 characters/,
+    );
   });
 
   it('when the text just fits version 40, then it is encoded there', () => {
@@ -121,5 +142,75 @@ describe('Given the verification link of a receipt, its prefix in bytes and its 
 
     expect(encodeSegments(segments, 'L')).toMatchObject({ errorCorrection: 'L', version: 2 });
     expect(encodeSegments(segments, 'M')).toMatchObject({ errorCorrection: 'M', version: 3 });
+  });
+});
+
+const LEVELS: readonly QrErrorCorrection[] = ['L', 'M', 'Q', 'H'];
+const RANDOM_SYMBOLS = 120;
+
+function seededRandom(seed: number): () => number {
+  let state = seed;
+  return () => {
+    state = (state * 1103515245 + 12345) % 2147483648;
+    return state / 2147483648;
+  };
+}
+
+function bitsNeeded(prefix: number, digits: number, eci: boolean, version: number): number {
+  const group = version < 10 ? 0 : version < 27 ? 1 : 2;
+  const byteCount = [8, 16, 16][group];
+  const digitCount = [10, 12, 14][group];
+  const digitBits = Math.floor(digits / 3) * 10 + [0, 4, 7][digits % 3];
+  return (eci ? 12 : 0) + 4 + byteCount + 8 * prefix + 4 + digitCount + digitBits;
+}
+
+function smallestVersion(
+  prefix: number,
+  digits: number,
+  eci: boolean,
+  level: QrErrorCorrection,
+): number {
+  return (
+    DATA_CODEWORDS[level].findIndex(
+      (codewords, index) => bitsNeeded(prefix, digits, eci, index + 1) <= codewords * 8,
+    ) + 1
+  );
+}
+
+describe('Given random links of a prefix in bytes and a payload in digits, from a fixed seed', () => {
+  it('when each is encoded at a random level, then jsQR reads back both segments at the smallest version that holds them', () => {
+    const random = seededRandom(20261030);
+    for (let index = 0; index < RANDOM_SYMBOLS; index++) {
+      const level = LEVELS[index % LEVELS.length];
+      const prefix = Array.from({ length: 1 + Math.floor(random() * 40) }, () =>
+        String.fromCharCode(32 + Math.floor(random() * 224)),
+      ).join('');
+      const digits = Array.from({ length: 1 + Math.floor(random() ** 2 * 900) }, () =>
+        String(Math.floor(random() * 10)),
+      ).join('');
+      const eci = index % 5 === 4;
+      const segments = [
+        ...(eci ? [eciSegment(1)] : []),
+        byteSegment(prefix),
+        numericSegment(digits),
+      ];
+
+      const symbol = encodeSegments(segments, level);
+      const decoded = decodeMatrix(symbol);
+
+      const label = `symbol ${index} at level ${level}`;
+      expect(symbol.version, label).toBe(smallestVersion(prefix.length, digits.length, eci, level));
+      expect(decoded?.version, label).toBe(symbol.version);
+      expect(
+        decoded?.chunks.map((chunk) =>
+          'bytes' in chunk ? chunk.bytes : 'text' in chunk ? chunk.text : chunk.assignmentNumber,
+        ),
+        label,
+      ).toEqual([
+        ...(eci ? [1] : []),
+        Array.from(prefix, (character) => character.charCodeAt(0)),
+        digits,
+      ]);
+    }
   });
 });
