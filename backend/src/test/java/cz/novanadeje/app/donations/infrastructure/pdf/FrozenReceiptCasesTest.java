@@ -37,7 +37,7 @@ class FrozenReceiptCasesTest {
 
     private static final JsonMapper JSON = JsonMapper.builder().build();
     private static final List<String> NOT_INPUT = List.of("schemaVersion", "texts", "verification");
-    private static final List<String> CASE_ONLY = List.of("v2Sample", "textsSet");
+    private static final List<String> CASE_ONLY = List.of("v2Sample", "textsSha256");
     private final ReceiptSigner signer = Rfc8032Keys.test1Signer();
     private final ReceiptProofs proofs = new ReceiptProofs(signer, Receipts.FOUNDATION);
 
@@ -51,7 +51,7 @@ class FrozenReceiptCasesTest {
                     ReceiptCorpusTest.Sample sample = samples.get(sharedCase.input().get("v2Sample").asString());
                     ReceiptDocument document = sample.document();
                     FrozenReceipt frozen = new FrozenReceipt(document,
-                            RecordedReceiptTextSource.of(sharedCase.input().get("textsSet").asString()).textsFor(document.locale()), sample.signature().map(SignatureImage::digest),
+                            RecordedReceiptTextSource.of(sharedCase.input().get("textsSha256").asString()).textsFor(document.locale()), sample.signature().map(SignatureImage::digest),
                             new ReceiptVerification(signer.keyId(), proofs.prove(SignedReceipt.of(document))));
                     ObjectNode putTogether = (ObjectNode) JSON.readTree(JSON.writeValueAsString(FrozenReceiptResponse.from(frozen)));
                     putTogether.remove(NOT_INPUT);

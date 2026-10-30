@@ -138,7 +138,7 @@ export interface FrozenReceiptDocument {
 
 export type FrozenReceiptInput = FrozenReceiptDocument & {
   readonly v2Sample: string;
-  readonly textsSet: string;
+  readonly textsSha256: string;
 };
 
 export type FrozenReceipt = FrozenReceiptDocument & {

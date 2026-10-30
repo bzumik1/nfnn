@@ -1,12 +1,12 @@
 {
   "source": "edited",
-  "logic": "The frozen receipt v1 (plan v3 D10, slice 1.6): what POST /api/donations/me/receipts and GET /api/donations/me/receipts/{id} answer as receipt, and what issued_receipt keeps of each issued receipt for good. One case per sample of the v2 receipt corpus (input.v2Sample names regression/v2/receipts/<sample>.json): input.textsSet names the recorded set of receipt texts the receipt freezes (backend/src/test/resources/receipts/texts/<textsSet>.json, the SHA-256 of that file), and the rest of the input is the receipt as the issuer puts it together (kind, number, day of issue, language, year of a yearly receipt, the receipt it replaces, the foundation, the donor, the gifts in the order v2 lists them, the total, the signatory and the digest of the signature image, or null); the expected value adds schemaVersion 1, the receipt texts frozen at issue, taken from the named set (texts.cs always, texts.en exactly for an English receipt, every receipt.* key of the message bundles but the file names), so a change of the bundle's texts records a new set and leaves these cases as they are and the verification: the id of the key that signed it (the backend signs with the RFC 8032 test 1 seed its tests hold, never a key of a server) and the QR text of its proof (shared-cases/verification/payload.json, every gift always). Amounts are hellers, days ISO dates; the foundation's and the donor's values are those the receipt certifies, so a later change of either never alters an issued receipt. From the frozen receipt alone the v2 receipt data (the sample's data) follows word for word, which the browser's PDF of slice 1.9 renders.",
+  "logic": "The frozen receipt v1 (plan v3 D10, slice 1.6): what POST /api/donations/me/receipts and GET /api/donations/me/receipts/{id} answer as receipt, and what issued_receipt keeps of each issued receipt for good. One case per sample of the v2 receipt corpus (input.v2Sample names regression/v2/receipts/<sample>.json): input.textsSha256 names the recorded set of receipt texts the receipt freezes (backend/src/test/resources/receipts/texts/<textsSha256>.json, the SHA-256 of that file), and the rest of the input is the receipt as the issuer puts it together (kind, number, day of issue, language, year of a yearly receipt, the receipt it replaces, the foundation, the donor, the gifts in the order v2 lists them, the total, the signatory and the digest of the signature image, or null); the expected value adds schemaVersion 1, the receipt texts frozen at issue, taken from the named set (texts.cs always, texts.en exactly for an English receipt, every receipt.* key of the message bundles but the file names), so a change of the bundle's texts records a new set and leaves these cases as they are and the verification: the id of the key that signed it (the backend signs with the RFC 8032 test 1 seed its tests hold, never a key of a server) and the QR text of its proof (shared-cases/verification/payload.json, every gift always). Amounts are hellers, days ISO dates; the foundation's and the donor's values are those the receipt certifies, so a later change of either never alters an issued receipt. From the frozen receipt alone the v2 receipt data (the sample's data) follows word for word, which the browser's PDF of slice 1.9 renders.",
   "cases": [
     {
       "name": "History sample: one gift of a person, Czech",
       "input": {
         "v2Sample": "single-person-cs",
-        "textsSet": "b1d6acedd40747fa898f64d385b34c01ab0be04a61f5f398efac6414f4f77662",
+        "textsSha256": "b1d6acedd40747fa898f64d385b34c01ab0be04a61f5f398efac6414f4f77662",
         "kind": "SINGLE",
         "number": "2027-000001",
         "issuedOn": "2027-01-15",
@@ -150,7 +150,7 @@
       "name": "History sample: a person's year with two gifts, English and so bilingual",
       "input": {
         "v2Sample": "yearly-person-en",
-        "textsSet": "b1d6acedd40747fa898f64d385b34c01ab0be04a61f5f398efac6414f4f77662",
+        "textsSha256": "b1d6acedd40747fa898f64d385b34c01ab0be04a61f5f398efac6414f4f77662",
         "kind": "YEARLY",
         "number": "2027-000001",
         "issuedOn": "2027-01-15",
@@ -336,7 +336,7 @@
       "name": "History sample: one gift of a company, replacing an earlier receipt, Czech",
       "input": {
         "v2Sample": "single-company-replacement-cs",
-        "textsSet": "b1d6acedd40747fa898f64d385b34c01ab0be04a61f5f398efac6414f4f77662",
+        "textsSha256": "b1d6acedd40747fa898f64d385b34c01ab0be04a61f5f398efac6414f4f77662",
         "kind": "SINGLE",
         "number": "2027-000002",
         "issuedOn": "2027-01-15",
@@ -486,7 +486,7 @@
       "name": "History sample: a person's year with 120 gifts over several pages, Czech",
       "input": {
         "v2Sample": "yearly-person-many-gifts-cs",
-        "textsSet": "b1d6acedd40747fa898f64d385b34c01ab0be04a61f5f398efac6414f4f77662",
+        "textsSha256": "b1d6acedd40747fa898f64d385b34c01ab0be04a61f5f398efac6414f4f77662",
         "kind": "YEARLY",
         "number": "2027-000001",
         "issuedOn": "2027-01-15",
@@ -1820,7 +1820,7 @@
       "name": "One gift of a company with its identifier, no replacement, Czech",
       "input": {
         "v2Sample": "single-company-cs",
-        "textsSet": "b1d6acedd40747fa898f64d385b34c01ab0be04a61f5f398efac6414f4f77662",
+        "textsSha256": "b1d6acedd40747fa898f64d385b34c01ab0be04a61f5f398efac6414f4f77662",
         "kind": "SINGLE",
         "number": "2027-000001",
         "issuedOn": "2027-01-15",
@@ -1964,7 +1964,7 @@
       "name": "One gift of a person who prefers English, so a bilingual single receipt",
       "input": {
         "v2Sample": "single-person-en",
-        "textsSet": "b1d6acedd40747fa898f64d385b34c01ab0be04a61f5f398efac6414f4f77662",
+        "textsSha256": "b1d6acedd40747fa898f64d385b34c01ab0be04a61f5f398efac6414f4f77662",
         "kind": "SINGLE",
         "number": "2027-000001",
         "issuedOn": "2027-01-15",
@@ -2140,7 +2140,7 @@
       "name": "Every Czech letter with a diacritic, lower and upper case, in a long name and address",
       "input": {
         "v2Sample": "single-diacritics-cs",
-        "textsSet": "b1d6acedd40747fa898f64d385b34c01ab0be04a61f5f398efac6414f4f77662",
+        "textsSha256": "b1d6acedd40747fa898f64d385b34c01ab0be04a61f5f398efac6414f4f77662",
         "kind": "SINGLE",
         "number": "2027-000001",
         "issuedOn": "2027-01-15",
@@ -2284,7 +2284,7 @@
       "name": "One gift of a person living abroad: the country is written into the city, as v2 has no country field",
       "input": {
         "v2Sample": "single-foreign-address-cs",
-        "textsSet": "b1d6acedd40747fa898f64d385b34c01ab0be04a61f5f398efac6414f4f77662",
+        "textsSha256": "b1d6acedd40747fa898f64d385b34c01ab0be04a61f5f398efac6414f4f77662",
         "kind": "SINGLE",
         "number": "2027-000001",
         "issuedOn": "2027-01-15",
@@ -2428,7 +2428,7 @@
       "name": "One gift recorded by hand, not by bank transfer, Czech",
       "input": {
         "v2Sample": "single-manual-gift-cs",
-        "textsSet": "b1d6acedd40747fa898f64d385b34c01ab0be04a61f5f398efac6414f4f77662",
+        "textsSha256": "b1d6acedd40747fa898f64d385b34c01ab0be04a61f5f398efac6414f4f77662",
         "kind": "SINGLE",
         "number": "2027-000001",
         "issuedOn": "2027-01-15",
@@ -2572,7 +2572,7 @@
       "name": "One gift of a person on a receipt that carries the signature image",
       "input": {
         "v2Sample": "single-signature-cs",
-        "textsSet": "b1d6acedd40747fa898f64d385b34c01ab0be04a61f5f398efac6414f4f77662",
+        "textsSha256": "b1d6acedd40747fa898f64d385b34c01ab0be04a61f5f398efac6414f4f77662",
         "kind": "SINGLE",
         "number": "2027-000001",
         "issuedOn": "2027-01-15",
@@ -2720,7 +2720,7 @@
       "name": "A person's year with exactly one gift, Czech",
       "input": {
         "v2Sample": "yearly-one-gift-cs",
-        "textsSet": "b1d6acedd40747fa898f64d385b34c01ab0be04a61f5f398efac6414f4f77662",
+        "textsSha256": "b1d6acedd40747fa898f64d385b34c01ab0be04a61f5f398efac6414f4f77662",
         "kind": "YEARLY",
         "number": "2027-000001",
         "issuedOn": "2027-01-15",
@@ -2864,7 +2864,7 @@
       "name": "A company's year with the largest single amount, hellers and a total over a million, Czech",
       "input": {
         "v2Sample": "yearly-large-amounts-cs",
-        "textsSet": "b1d6acedd40747fa898f64d385b34c01ab0be04a61f5f398efac6414f4f77662",
+        "textsSha256": "b1d6acedd40747fa898f64d385b34c01ab0be04a61f5f398efac6414f4f77662",
         "kind": "YEARLY",
         "number": "2027-000001",
         "issuedOn": "2027-01-15",
@@ -3038,7 +3038,7 @@
       "name": "A person's year with 40 gifts, Czech. Three are received on 5 May and given in this order: 5,000.00 CZK recorded at 12:00, 100.00 CZK recorded at 8:00 with the higher id and 200.00 CZK recorded at 8:00 with the lower id; v2 lists gifts by the day received, then the time recorded, then the id",
       "input": {
         "v2Sample": "yearly-40-gifts-cs",
-        "textsSet": "b1d6acedd40747fa898f64d385b34c01ab0be04a61f5f398efac6414f4f77662",
+        "textsSha256": "b1d6acedd40747fa898f64d385b34c01ab0be04a61f5f398efac6414f4f77662",
         "kind": "YEARLY",
         "number": "2027-000001",
         "issuedOn": "2027-01-15",
@@ -3572,7 +3572,7 @@
       "name": "A person's leap year 2028 with one gift on each of its 366 days, English",
       "input": {
         "v2Sample": "yearly-366-gifts-leap-2028-en",
-        "textsSet": "b1d6acedd40747fa898f64d385b34c01ab0be04a61f5f398efac6414f4f77662",
+        "textsSha256": "b1d6acedd40747fa898f64d385b34c01ab0be04a61f5f398efac6414f4f77662",
         "kind": "YEARLY",
         "number": "2029-000008",
         "issuedOn": "2029-01-02",
@@ -7398,7 +7398,7 @@
       "name": "A person's leap year with gifts on 1 January, 29 February and 31 December, English",
       "input": {
         "v2Sample": "yearly-leap-year-en",
-        "textsSet": "b1d6acedd40747fa898f64d385b34c01ab0be04a61f5f398efac6414f4f77662",
+        "textsSha256": "b1d6acedd40747fa898f64d385b34c01ab0be04a61f5f398efac6414f4f77662",
         "kind": "YEARLY",
         "number": "2029-000007",
         "issuedOn": "2029-01-02",

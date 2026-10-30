@@ -42,7 +42,7 @@ class ReceiptTextsHistoryTest {
         Files.writeString(candidate, current, StandardCharsets.UTF_8);
         fail("The receipt texts changed, and every receipt issued from now on freezes them for good."
                 + " Review " + candidate.toAbsolutePath() + " word for word, then copy it into backend/" + HISTORY
-                + " and commit it; the frozen receipt cases keep the set they name (input.textsSet), so none of them changes.");
+                + " and commit it; the frozen receipt cases keep the set they name (input.textsSha256), so none of them changes.");
     }
 
     @TestFactory

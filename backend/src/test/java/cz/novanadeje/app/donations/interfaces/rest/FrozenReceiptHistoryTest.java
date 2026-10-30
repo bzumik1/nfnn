@@ -38,7 +38,7 @@ class FrozenReceiptHistoryTest extends SharedCaseRunner {
     @Override
     protected void run(SharedCase sharedCase) {
         JsonNode input = sharedCase.input();
-        ReceiptFreezer freezer = new ReceiptFreezer(RecordedReceiptTextSource.of(input.get("textsSet").asString()), proofs, signer);
+        ReceiptFreezer freezer = new ReceiptFreezer(RecordedReceiptTextSource.of(input.get("textsSha256").asString()), proofs, signer);
         FrozenReceipt frozen = freezer.freeze(FrozenReceiptCases.documentOf(input), FrozenReceiptCases.signatureImageOf(input));
 
         assertGives(JSON.valueToTree(FrozenReceiptResponse.from(frozen)), sharedCase.expected());
