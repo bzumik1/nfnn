@@ -197,7 +197,7 @@ public class BackupKeyStepDefinitions {
     }
 
     private static BackupKey developmentKey() {
-        return PublicDevelopmentKeys.ofDevelopmentProfile().backupKey().orElseThrow(() -> new AssertionError("application-dev.yml has no backup key"));
+        return PublicDevelopmentKeys.ofDevelopmentProfile().backupKey();
     }
 
     private BackupKey serverKey() {

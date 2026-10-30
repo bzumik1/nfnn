@@ -12,8 +12,7 @@ class DevelopmentBackupKeyPolicyTest {
 
     private static final BackupKey SERVER_KEY = new BackupKey("AGE-SECRET-KEY-1R45A984EXXAFC85YZSYGY9R6XJTD4E9AKY65ZCRGPDQ89E7ANW8QKT6GWH");
 
-    private final BackupKey developmentKey = PublicDevelopmentKeys.ofDevelopmentProfile().backupKey()
-            .orElseThrow(() -> new AssertionError("application-dev.yml has no backup key"));
+    private final BackupKey developmentKey = PublicDevelopmentKeys.ofDevelopmentProfile().backupKey();
 
     @Test
     @DisplayName("Given the prod profile, when the public development key is offered, also as its 24 words, then it is refused and another key is not")

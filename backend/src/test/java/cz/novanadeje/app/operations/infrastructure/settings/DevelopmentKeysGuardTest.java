@@ -4,9 +4,12 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.springframework.boot.Banner;
 import org.springframework.boot.EnvironmentPostProcessor;
 import org.springframework.boot.SpringApplication;
+import org.springframework.boot.WebApplicationType;
 import org.springframework.boot.logging.DeferredLogs;
+import org.springframework.boot.support.EnvironmentPostProcessorApplicationListener;
 import org.springframework.boot.test.context.ConfigDataApplicationContextInitializer;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.core.env.ConfigurableEnvironment;
@@ -103,9 +106,46 @@ class DevelopmentKeysGuardTest {
                 .withMessageNotContaining(developmentSecret);
     }
 
+    @Test
+    @DisplayName("Given the prod profile with all three public development secrets, when the backend starts, then one failure names every variable without a value")
+    void should_stop_naming_every_variable_when_started_given_prod_with_all_development_secrets() {
+        String settingsKey = developmentValue("app.operations.settings.key");
+        String backupKey = developmentValue("app.operations.backup-key.value");
+        String jwtSecret = developmentValue("app.security.jwt.secret");
+
+        assertThatIllegalStateException()
+                .isThrownBy(() -> guard.postProcessEnvironment(environment("spring.profiles.active=prod", "SETTINGS_KEY=" + settingsKey,
+                        "BACKUP_KEY=" + backupKey, "JWT_SECRET=" + jwtSecret), new SpringApplication()))
+                .withMessageContaining("SETTINGS_KEY (app.operations.settings.key)")
+                .withMessageContaining("BACKUP_KEY (app.operations.backup-key.value)")
+                .withMessageContaining("JWT_SECRET (app.security.jwt.secret)")
+                .withMessageNotContaining(settingsKey)
+                .withMessageNotContaining(backupKey)
+                .withMessageNotContaining(jwtSecret);
+    }
+
+    @Test
+    @DisplayName("Given a real application start with the prod profile and the public development JWT_SECRET, when Spring Boot prepares the environment, then the guard stops it after the profiles are resolved")
+    void should_stop_the_start_naming_the_variable_when_the_environment_is_prepared_given_prod_with_the_development_jwt_secret() {
+        String developmentSecret = developmentValue("app.security.jwt.secret");
+        StandardEnvironment withoutSystemEnvironment = new StandardEnvironment();
+        withoutSystemEnvironment.getPropertySources().remove(StandardEnvironment.SYSTEM_ENVIRONMENT_PROPERTY_SOURCE_NAME);
+        SpringApplication application = new SpringApplication(NoBeans.class);
+        application.setWebApplicationType(WebApplicationType.NONE);
+        application.setBannerMode(Banner.Mode.OFF);
+        application.setLogStartupInfo(false);
+        application.setListeners(List.of(new EnvironmentPostProcessorApplicationListener()));
+        application.setEnvironment(withoutSystemEnvironment);
+
+        assertThatIllegalStateException()
+                .isThrownBy(() -> application.run("--spring.profiles.active=prod", "--app.security.jwt.secret=" + developmentSecret))
+                .withMessageContaining("JWT_SECRET (app.security.jwt.secret)")
+                .withMessageNotContaining(developmentSecret);
+    }
+
     @ParameterizedTest
     @ValueSource(strings = {"prod,dev", "dev,prod", "prod,local", "staging"})
-    @DisplayName("Given profiles other than development alone or exactly prod, when the backend starts, then it stops naming the active profiles")
+    @DisplayName("Given profiles other than development without prod, or exactly prod, when the backend starts, then it stops naming the active profiles")
     void should_stop_naming_the_profiles_when_started_given_neither_development_nor_exactly_prod(String profiles) {
         assertThatIllegalStateException()
                 .isThrownBy(() -> guard.postProcessEnvironment(environment("spring.profiles.active=" + profiles), new SpringApplication()))
@@ -124,6 +164,9 @@ class DevelopmentKeysGuardTest {
 
         assertThat(registered).contains(DevelopmentKeysGuard.class.getName(), DatabaseSettingsEnvironmentPostProcessor.class.getName());
         assertThat(guard.getOrder()).isLessThan(new DatabaseSettingsEnvironmentPostProcessor(new DeferredLogs()).getOrder());
+    }
+
+    static class NoBeans {
     }
 
     private static ConfigurableEnvironment environment(String... properties) {

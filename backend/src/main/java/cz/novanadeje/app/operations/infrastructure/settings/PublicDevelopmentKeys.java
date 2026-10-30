@@ -4,6 +4,7 @@ import cz.novanadeje.app.operations.domain.backup.BackupKey;
 import cz.novanadeje.app.operations.domain.backup.InvalidBackupKey;
 import org.springframework.boot.env.YamlPropertySourceLoader;
 import org.springframework.core.env.MutablePropertySources;
+import org.springframework.core.env.PropertyResolver;
 import org.springframework.core.env.PropertySourcesPropertyResolver;
 import org.springframework.core.io.ClassPathResource;
 
@@ -31,15 +32,18 @@ public final class PublicDevelopmentKeys {
     }
 
     public static PublicDevelopmentKeys ofDevelopmentProfile() {
-        PropertySourcesPropertyResolver defaults = new PropertySourcesPropertyResolver(developmentConfiguration());
+        return of(new PropertySourcesPropertyResolver(developmentConfiguration()));
+    }
+
+    static PublicDevelopmentKeys of(PropertyResolver defaults) {
         return new PublicDevelopmentKeys(
                 Optional.ofNullable(defaults.getProperty(SETTINGS_KEY_PROPERTY)).flatMap(PublicDevelopmentKeys::settingsKeyBytes),
                 Optional.ofNullable(defaults.getProperty(BACKUP_KEY_PROPERTY)).flatMap(PublicDevelopmentKeys::backupKeyOf),
                 Optional.ofNullable(defaults.getProperty(JWT_SECRET_PROPERTY)).flatMap(PublicDevelopmentKeys::stripped));
     }
 
-    public Optional<BackupKey> backupKey() {
-        return backupKey;
+    public BackupKey backupKey() {
+        return backupKey.orElseThrow();
     }
 
     public boolean isSettingsKey(String value) {
