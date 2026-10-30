@@ -8,13 +8,27 @@ import java.util.Map;
 public final class ClientErrorCapWindows {
 
     private static final String WINDOWS = "windows";
+    private static final String DROPPED = "dropped";
 
     private ClientErrorCapWindows() {
     }
 
     public static void reset(ClientErrorCap cap) {
         synchronized (cap) {
-            windowsOf(cap).clear();
+            Map<?, ?> windows = windowsOf(cap);
+            windows.values().forEach(ClientErrorCapWindows::forgetDropped);
+            windows.clear();
+        }
+    }
+
+    private static void forgetDropped(Object window) {
+        try {
+            Field field = window.getClass().getDeclaredField(DROPPED);
+            field.setAccessible(true);
+            field.setInt(window, 0);
+        } catch (NoSuchFieldException | IllegalAccessException | IllegalArgumentException changed) {
+            throw new IllegalStateException("A ClientErrorCap window no longer counts its drops in an int named " + DROPPED
+                    + ", so a pending hourly warning would leak into the next scenario; adapt ClientErrorCapWindows", changed);
         }
     }
 

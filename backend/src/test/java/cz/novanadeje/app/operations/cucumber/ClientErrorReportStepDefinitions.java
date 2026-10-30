@@ -2,20 +2,24 @@ package cz.novanadeje.app.operations.cucumber;
 
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.classic.spi.ThrowableProxyUtil;
 import ch.qos.logback.core.read.ListAppender;
 import cz.novanadeje.app.cucumber.ApiClient;
 import cz.novanadeje.app.support.MutableClock;
+import cz.novanadeje.app.support.RaisedLogLevels;
 import cz.novanadeje.app.support.RecordingResetTimer;
 import io.cucumber.java.After;
 import io.cucumber.java.Before;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.logging.LoggingSystem;
 
 import java.time.Duration;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -24,30 +28,41 @@ public class ClientErrorReportStepDefinitions {
     private static final String CLIENT_ERRORS = "/api/operations/client-errors";
     private static final String CLIENT_ERROR_LOGGER = "cz.novanadeje.app.operations.clienterrors";
     private static final Duration CAP_WINDOW = Duration.ofHours(1);
+    private static final int AFTER_THE_SHARED_SET_UP = 90_000;
+    private static final String RAW_HOST = "localhost";
 
     private final ApiClient api;
     private final MutableClock clock;
     private final RecordingResetTimer timer;
+    private final LoggingSystem loggingSystem;
     private final Logger logger = (Logger) LoggerFactory.getLogger(CLIENT_ERROR_LOGGER);
+    private final Logger rootLogger = (Logger) LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME);
     private ListAppender<ILoggingEvent> lines;
+    private ListAppender<ILoggingEvent> everyLine;
 
-    public ClientErrorReportStepDefinitions(ApiClient api, MutableClock clock, RecordingResetTimer timer) {
+    public ClientErrorReportStepDefinitions(ApiClient api, MutableClock clock, RecordingResetTimer timer, LoggingSystem loggingSystem) {
         this.api = api;
         this.clock = clock;
         this.timer = timer;
+        this.loggingSystem = loggingSystem;
     }
 
-    @Before
+    @Before(order = AFTER_THE_SHARED_SET_UP)
     public void captureBrowserErrorLines() {
         lines = new ListAppender<>();
         lines.start();
         logger.addAppender(lines);
+        everyLine = new ListAppender<>();
+        everyLine.start();
+        rootLogger.addAppender(everyLine);
     }
 
     @After
     public void releaseBrowserErrorLines() {
         logger.detachAppender(lines);
         lines.stop();
+        rootLogger.detachAppender(everyLine);
+        everyLine.stop();
     }
 
     @When("a browser reports an error")
@@ -79,7 +94,26 @@ public class ClientErrorReportStepDefinitions {
     @When("a browser sends the raw report {string}")
     public void aBrowserSendsTheRawReport(String json) {
         api.forgetCredentials();
-        api.postRaw(CLIENT_ERRORS, json, Map.of("Host", "localhost"));
+        api.postRaw(CLIENT_ERRORS, json, Map.of("Host", RAW_HOST));
+    }
+
+    @When("a browser sends the raw report {string} as {string}")
+    public void aBrowserSendsTheRawReportAs(String body, String contentType) {
+        api.forgetCredentials();
+        api.postRaw(CLIENT_ERRORS, body, Map.of("Host", RAW_HOST, "Content-Type", contentType));
+    }
+
+    @When("a browser sends the raw report {string} with the token {string}")
+    public void aBrowserSendsTheRawReportWithTheToken(String json, String token) {
+        api.forgetCredentials();
+        api.postRaw(CLIENT_ERRORS, json, Map.of("Host", RAW_HOST, "Authorization", "Bearer " + token));
+    }
+
+    @When("a browser sends the raw report {string} while every framework logger an administrator can raise is at DEBUG")
+    public void aBrowserSendsTheRawReportWhileEveryFrameworkLoggerIsAtDebug(String json) {
+        try (RaisedLogLevels raised = RaisedLogLevels.raise(loggingSystem, RaisedLogLevels.FRAMEWORK_AT_DEBUG)) {
+            aBrowserSendsTheRawReport(json);
+        }
     }
 
     @When("a browser sends the report as a form")
@@ -121,6 +155,16 @@ public class ClientErrorReportStepDefinitions {
         assertThat(api.lastResponse().getBody()).contains("\"type\":\"https://nfnn.cz/problems/validation\"").contains("\"field\":\"" + field + "\"");
     }
 
+    @Then("no line the backend logged holds {string}")
+    public void noLineTheBackendLoggedHolds(String text) {
+        assertThat(everyLoggedText()).noneMatch(line -> line.contains(text));
+    }
+
+    @Then("no line the backend logged starts with {string}")
+    public void noLineTheBackendLoggedStartsWith(String text) {
+        assertThat(everyLoggedText().flatMap(String::lines)).noneMatch(line -> line.startsWith(text));
+    }
+
     @Then("the browser error log holds exactly the line {string}")
     public void theBrowserErrorLogHoldsExactlyTheLine(String line) {
         assertThat(loggedLines()).containsExactly(line);
@@ -144,6 +188,15 @@ public class ClientErrorReportStepDefinitions {
     private void report(Map<String, Object> body) {
         api.forgetCredentials();
         api.post(CLIENT_ERRORS, body);
+    }
+
+    private Stream<String> everyLoggedText() {
+        List<ILoggingEvent> events;
+        synchronized (everyLine) {
+            events = List.copyOf(everyLine.list);
+        }
+        return events.stream().map(event -> event.getFormattedMessage()
+                + (event.getThrowableProxy() == null ? "" : System.lineSeparator() + ThrowableProxyUtil.asString(event.getThrowableProxy())));
     }
 
     private List<String> loggedLines() {

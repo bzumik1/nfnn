@@ -51,6 +51,9 @@ public class ClientErrorCap {
     }
 
     private synchronized void warnOfDropped(ClientErrorBucket bucket, Window window) {
+        if (window.dropped == 0) {
+            return;
+        }
         log.warn("Browser error reports over the hourly cap bucket={} dropped={}", bucket.wire(), window.dropped);
     }
 

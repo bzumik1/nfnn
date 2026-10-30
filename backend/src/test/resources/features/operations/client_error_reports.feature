@@ -86,6 +86,36 @@ Feature: A browser reports a failure as closed values only, which reach the log 
     Then the response status is 415
     And the browser error log holds no line
 
+  Scenario: A report sent as plain text is refused
+    When a browser sends the raw report '{"kind":"unexpected","place":"global","name":"Error","appVersion":"dev","browser":"chrome","browserMajor":131,"os":"android","display":"browser","count":1}' as "text/plain"
+    Then the response status is 415
+    And the browser error log holds no line
+
+  Scenario: A report with an invalid token is refused by the security chain, logs nothing and does not count against the address
+    When a browser sends the raw report '{"kind":"unexpected","place":"global","name":"Error","appVersion":"dev","browser":"chrome","browserMajor":131,"os":"android","display":"browser","count":1}' with the token "Zxqv21.Kanarek.778177"
+    Then the response status is 401
+    And the browser error log holds no line
+    And no line the backend logged holds "Zxqv21"
+    When 30 browser errors of kind "unexpected" arrive from this client address
+    Then the browser error log holds 30 lines
+
+  Scenario Outline: A body that cannot be read leaves none of its text in the log, whatever framework level an administrator raised
+    When a browser sends the raw report '<body>' while every framework logger an administrator can raise is at DEBUG
+    Then the response status is 400
+    And the browser error log holds no line
+    And no line the backend logged holds "Zxqv"
+    And no line the backend logged holds "778177"
+    And no line the backend logged holds "FORGED"
+    And no line the backend logged starts with "2026-10-30T00:00:00.000Z"
+
+    Examples:
+      | body                                                                                                                                                                                                                                                       |
+      | {"kind":"unexpected","place":"global","name":"Error","appVersion":"dev","browser":"chrome","os":"android","display":"browser","count":"1\\r\\n2026-10-30T00:00:00.000Z  WARN 1 --- [nova-nadeje] [exec-1] c.n.app.operations.clienterrors : Browser error kind=verify-signature Zxqv FORGED"} |
+      | {"kind":"unexpected","place":"global","name":"Error","appVersion":"dev","browser":"chrome","browserMajor":"Zxqv 2099-778177","os":"android","display":"browser","count":1}                                                                               |
+      | {"kind":ZxqvKanarek778177,"place":"global","name":"Error","appVersion":"dev","browser":"chrome","os":"android","display":"browser","count":1}                                                                                                            |
+      | {"kind":"unexpected","place":"global","name":"Error","appVersion":"dev","browser":"chrome","os":"android","display":"browser","count":1} Zxqv-778177 FORGED                                                                                               |
+      | {"kind":{"Zxqv":"778177"},"place":"global","name":"Error","appVersion":"dev","browser":"chrome","os":"android","display":"browser","count":1}                                                                                                            |
+
   Scenario: The 31st report within 15 minutes from one client address is refused
     When 30 browser errors of kind "unexpected" arrive from this client address
     And a browser reports an error of kind "unexpected"
