@@ -180,11 +180,13 @@
             <p class="actions-hint" i18n="@@admin.backups.actions.hint">
               Záloha trvá pár sekund, zkušební obnova do minuty; výsledek se ukáže tady.
             </p>
-            <p class="ui-callout ui-callout--warning off-server" i18n="@@admin.backups.offServer">
-              Zálohy leží na stejném disku jako web. Jednou za měsíc si nejnovější stáhněte
-              tlačítkem Stáhnout a uložte jinam, třeba na flash disk nebo do cloudu. Jsou
-              zašifrované, takže je bez klíče k zálohám nikdo nepřečte.
-            </p>
+            @if (backups().length > 0) {
+              <p class="ui-callout ui-callout--warning off-server" i18n="@@admin.backups.offServer">
+                Zálohy leží na stejném disku jako web. Jednou za měsíc si nejnovější stáhněte
+                tlačítkem Stáhnout a uložte jinam, třeba na flash disk nebo do cloudu. Jsou
+                zašifrované, takže je bez klíče k zálohám nikdo nepřečte.
+              </p>
+            }
           </div>
         </section>
 

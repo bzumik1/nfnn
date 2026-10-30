@@ -356,3 +356,44 @@ describe('Given the contact form seen by a signed-in donor', () => {
     expect(value('#contact-message')).toBe('');
   });
 });
+
+describe('Given the contact section around the form', () => {
+  let fixture: ComponentFixture<ContactForm>;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [ContactForm],
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])],
+    }).compileComponents();
+    fixture = TestBed.createComponent(ContactForm);
+    fixture.detectChanges();
+    await fixture.whenStable();
+  });
+
+  afterEach(() => TestBed.inject(HttpTestingController).verify());
+
+  function text(element: Element | null): string {
+    return element?.textContent?.replace(/\s+/g, ' ').trim() ?? '';
+  }
+
+  it('when it is shown, then the e-mail stays beside the heading alone and the seat is never called Adresa', () => {
+    const root = fixture.nativeElement as HTMLElement;
+
+    expect(Array.from(root.querySelectorAll('.contact-info .info-label')).map(text)).toEqual([
+      'E-mail',
+    ]);
+    expect(text(root)).not.toContain('Adresa');
+  });
+
+  it('when it is shown, then the details for accountants follow the form, each fact once', () => {
+    const root = fixture.nativeElement as HTMLElement;
+    const details = root.querySelector('app-accounting-details')!;
+
+    expect(
+      root.querySelector('.contact-form-wrap')!.compareDocumentPosition(details) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(text(root).split('27278794')).toHaveLength(2);
+    expect(text(root).split('Jiráskova 436')).toHaveLength(2);
+  });
+});

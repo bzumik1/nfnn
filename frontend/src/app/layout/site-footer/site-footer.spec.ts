@@ -45,13 +45,13 @@ describe('Given the site footer', () => {
     ]);
   });
 
-  it('when it renders, then the logo is drawn light for the dark footer', () => {
+  it('when it renders, then the logo is its variant for the dark footer, whose star keeps its face', () => {
     const fixture = TestBed.createComponent(SiteFooter);
     fixture.detectChanges();
 
     const logo = (fixture.nativeElement as HTMLElement).querySelector('.footer-brand img');
 
-    expect(logo?.classList).toContain('logo-on-dark');
+    expect(logo?.getAttribute('src')).toBe('/images/logo-on-dark.svg');
   });
 
   it('when it renders, then the foundation e-mail address is there to write to', () => {

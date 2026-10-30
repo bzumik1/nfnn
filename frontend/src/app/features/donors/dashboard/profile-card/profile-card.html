@@ -95,18 +95,6 @@
       }
 
       <div class="field-row">
-        <app-form-field label="Město" i18n-label="@@donor.register.city" [messages]="cityMessages">
-          <input
-            appFormControl
-            id="profile-city"
-            name="city"
-            type="text"
-            autocomplete="address-level2"
-            [(ngModel)]="fields.city"
-            required
-            maxlength="120"
-          />
-        </app-form-field>
         <app-form-field
           label="PSČ"
           i18n-label="@@donor.register.postalCode"
@@ -122,6 +110,18 @@
             [(ngModel)]="fields.postalCode"
             required
             pattern="\s*\d{3}\s*\d{2}\s*"
+          />
+        </app-form-field>
+        <app-form-field label="Město" i18n-label="@@donor.register.city" [messages]="cityMessages">
+          <input
+            appFormControl
+            id="profile-city"
+            name="city"
+            type="text"
+            autocomplete="address-level2"
+            [(ngModel)]="fields.city"
+            required
+            maxlength="120"
           />
         </app-form-field>
       </div>
