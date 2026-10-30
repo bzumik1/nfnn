@@ -9,6 +9,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.MessageSource;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
@@ -77,15 +78,17 @@ class UndecodableTargetFilter extends OncePerRequestFilter {
 
     private void answerValidationProblem(HttpServletRequest request, HttpServletResponse response) throws IOException {
         Locale locale = localeResolver.resolveLocale(request);
+        int status = request.getAttribute(RequestDispatcher.ERROR_STATUS_CODE) instanceof Integer code ? code : HttpStatus.BAD_REQUEST.value();
         Map<String, Object> problem = new LinkedHashMap<>();
         problem.put("type", ProblemTypes.VALIDATION.toString());
         problem.put("title", messages.getMessage("problem.validation.title", null, locale));
-        problem.put("status", HttpStatus.BAD_REQUEST.value());
+        problem.put("status", status);
         problem.put("detail", messages.getMessage("problem.validation.detail", null, locale));
         problem.put("errors", List.of());
-        response.setStatus(HttpStatus.BAD_REQUEST.value());
+        response.setStatus(status);
+        response.setHeader(HttpHeaders.CACHE_CONTROL, "no-store");
+        response.setHeader("X-Content-Type-Options", "nosniff");
         response.setContentType(MediaType.APPLICATION_PROBLEM_JSON_VALUE);
-        response.setCharacterEncoding(StandardCharsets.UTF_8);
-        json.writeValue(response.getOutputStream(), problem);
+        response.getOutputStream().write(json.writeValueAsBytes(problem));
     }
 }

@@ -35,7 +35,7 @@ Feature: The request line, the query string and the parameters a client chose re
       | /api/x{Zxqv}?q=Qkzw1504    | Qkzw1504 |
       | /api/x;m=%ZZ?q=Qkzw1505    | Qkzw1505 |
 
-  Scenario Outline: A request target Tomcat refuses for an encoding it cannot decode is a validation problem, logs no error and reaches no log line
+  Scenario Outline: A path parameter Spring cannot decode is refused as a validation problem, logs no error and reaches no log line
     When a client sends this request target straight to the backend
       """
       <target>
@@ -50,7 +50,7 @@ Feature: The request line, the query string and the parameters a client chose re
       | a bad encoding    | /api/x;m=%ZZQkzw1606              | Qkzw1606 |
       | on a real path    | /api/content/news;m=%ZZQkzw1607   | Qkzw1607 |
 
-  Scenario Outline: A request target Tomcat refuses for an encoding it cannot decode logs no error and reaches no log line while every logger an administrator can raise is at its loudest
+  Scenario Outline: A path parameter Spring cannot decode logs no error and reaches no log line while every logger an administrator can raise is at its loudest
     When a client sends this request target straight to the backend while every logger an administrator can raise is at its loudest
       """
       <target>

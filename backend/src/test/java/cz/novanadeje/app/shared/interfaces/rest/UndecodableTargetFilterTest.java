@@ -21,7 +21,7 @@ class UndecodableTargetFilterTest {
     private final UndecodableTargetFilter filter = new UndecodableTargetFilter(messages(), localeResolver());
 
     @Test
-    @DisplayName("Given Tomcat's error page for a target with a path parameter it cannot decode, when it is dispatched, then the answer is a Czech validation problem without the target and the error page is not rendered")
+    @DisplayName("Given the error page for a target with a path parameter Spring cannot decode, when it is dispatched, then the answer is a Czech validation problem without the target and the error page is not rendered")
     void should_answer_validation_problem_without_target_when_dispatched_given_error_page_for_undecodable_target() throws Exception {
         MockHttpServletResponse response = new MockHttpServletResponse();
         MockFilterChain errorPage = new MockFilterChain();
@@ -30,7 +30,9 @@ class UndecodableTargetFilterTest {
 
         assertThat(errorPage.getRequest()).isNull();
         assertThat(response.getStatus()).isEqualTo(400);
-        assertThat(response.getContentType()).startsWith("application/problem+json");
+        assertThat(response.getContentType()).isEqualTo("application/problem+json");
+        assertThat(response.getHeader("Cache-Control")).isEqualTo("no-store");
+        assertThat(response.getHeader("X-Content-Type-Options")).isEqualTo("nosniff");
         JsonNode problem = JsonMapper.builder().build().readTree(response.getContentAsString());
         assertThat(problem.get("type").asString()).isEqualTo("https://nfnn.cz/problems/validation");
         assertThat(problem.get("title").asString()).isEqualTo("Neplatné údaje");
@@ -41,13 +43,39 @@ class UndecodableTargetFilterTest {
     }
 
     @Test
-    @DisplayName("Given an English client, when Tomcat's error page for an undecodable target is dispatched, then the problem title is in English")
+    @DisplayName("Given an English client, when the error page for an undecodable target is dispatched, then the problem title is in English")
     void should_answer_in_english_when_dispatched_given_english_client() throws Exception {
         MockHttpServletResponse response = new MockHttpServletResponse();
 
         filter.doFilter(errorDispatchFor("/api/content/news;m=%ZZ", "en"), response, new MockFilterChain());
 
         assertThat(JsonMapper.builder().build().readTree(response.getContentAsString()).get("title").asString()).isEqualTo("Invalid data");
+    }
+
+    @Test
+    @DisplayName("Given the error page for an undecodable target with another status, when it is dispatched, then the answer keeps that status")
+    void should_keep_error_status_when_dispatched_given_error_page_with_other_status() throws Exception {
+        MockHttpServletRequest request = errorDispatchFor("/api/x;m=%ZZ", "cs");
+        request.setAttribute(RequestDispatcher.ERROR_STATUS_CODE, 414);
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        filter.doFilter(request, response, new MockFilterChain());
+
+        assertThat(response.getStatus()).isEqualTo(414);
+        assertThat(JsonMapper.builder().build().readTree(response.getContentAsString()).get("status").asInt()).isEqualTo(414);
+    }
+
+    @Test
+    @DisplayName("Given the error page for an undecodable target without a status, when it is dispatched, then the answer is 400")
+    void should_answer_400_when_dispatched_given_error_page_without_status() throws Exception {
+        MockHttpServletRequest request = errorDispatchFor("/api/x;m=%ZZ", "cs");
+        request.removeAttribute(RequestDispatcher.ERROR_STATUS_CODE);
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        filter.doFilter(request, response, new MockFilterChain());
+
+        assertThat(response.getStatus()).isEqualTo(400);
+        assertThat(JsonMapper.builder().build().readTree(response.getContentAsString()).get("status").asInt()).isEqualTo(400);
     }
 
     @Test
