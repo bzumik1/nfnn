@@ -458,6 +458,7 @@ The connector is a separate Node 24 container (`mcp/`, TypeScript, MCP TypeScrip
 | `GET` | `/api/donations/me/receipts/yearly?year=` | donor | PDF receipt of the caller's donations received in a completed year from the first receipt year on. 400 before the first receipt year and while the year is not completed, 404 when it has none. |
 | `GET` | `/api/donations/payment-qr?amount=&variableSymbol=&purpose=` | public | Returns the SPAYD string (Czech "QR platba"), its QR code modules and the foundation's bank account. A signed-in donor's frontend passes their variable symbol; the 1 Kč payment that verifies an account passes `purpose=ACCOUNT_VERIFICATION`. |
 | `GET` | `/api/donations/receipt-keys` | public | The foundation's name and IČO and every receipt signing key whose seal holds, with its status, for checking a receipt's verification QR; `Cache-Control: public, max-age=3600`, an ETag and 304 on `If-None-Match`; 429 `donations/rate-limited` after 60 requests in 15 minutes from one address. See "Receipt verification proof and signing keys". |
+| `POST` | `/api/donations/receipts/status` | public | Planned (plan v3 1.8, backend part after 1.6; the page `/overit` already calls it): whether the foundation keeps the receipt with this signed data as valid, replaced or withdrawn, from `{"digest": "<SHA-256 of the signed message>"}`; answers only the status. See "Receipt status". |
 | `GET` | `/api/admin/donations/receipt-signing-keys` | admin | Read only: the server's own key id, whether it is published, and every registered key with `published` (its seal holds) and `current`. See "Receipt verification proof and signing keys". |
 | `GET` | `/api/admin/donations/import-state` | admin | The Fio import's state for the administration: covered period, last attempt and success, last failure, failures in a row, the outage being reported. See "Administration". |
 | `GET` | `/api/admin/donations/report` | admin | The monthly report's administration: the settings (recipients, send day, sections, when they were last changed), the reports already sent, the next report and its due day, the last ended month. See "Monthly report settings and overview". |
@@ -681,7 +682,23 @@ A varint is minimal LEB128 below 2^53. The signature is Ed25519 (RFC 8032, deter
 }
 ```
 
-`publicKey` is the raw 32 bytes in unpadded base64url; a key whose seal fails is left out. Headers: `Cache-Control: public, max-age=3600` and `ETag: "<base64url of the first 12 bytes of SHA-256 over the body's values>"`; a request with that `If-None-Match` gets 304 with both headers and no body.
+`publicKey` is the raw 32 bytes in unpadded base64url; a key whose seal fails is left out. Headers: `Cache-Control: public, max-age=3600` and `ETag: "<base64url of the first 12 bytes of SHA-256 over the body's values>"`; a request with that `If-None-Match` gets 304 with both headers and no body. The page `/overit` sends `Cache-Control: no-cache` with its request, so the browser revalidates its copy (ETag, 304) instead of reading an hour-old list, and sends no `Authorization` header (`WITHOUT_ACCESS_TOKEN`). It accepts a list only whole: an answer with an unknown algorithm or status, a public key that is not 32 bytes of base64url, a key id that is not the first 4 bytes of the SHA-256 of its public key, or, on `nfnn.cz`, one of the RFC 8032 test keys (ids `21fe31df`, `39f713d0`, `dac073e0`, `91384c41`, `5f9b247e`) is ignored and the kept list stays.
+
+#### Receipt status
+
+Planned in plan v3 1.8 (A12); the backend part follows once 1.6 keeps `issued_receipt`. The page `/overit` calls it after a valid signature while online; until the endpoint exists the page shows "Stav potvrzení se teď u fondu nepodařilo zjistit…" with "Zkusit znovu".
+
+```
+POST /api/donations/receipts/status
+Content-Type: application/json
+
+{ "digest": "8f2c…" }
+```
+
+- `digest`: the SHA-256 of the signed message (`nfnn.cz/receipt/v1`, a zero byte, the foundation's IČO, the body: "Format v1" above), 64 lowercase hex digits; anything else answers 400 `validation`.
+- Answer 200 `{ "status": "active" | "replaced" | "withdrawn" | "unknown" }` and nothing else: `active` the foundation issued the receipt with exactly this signed data and keeps it, `replaced` it issued a newer one in its place, `withdrawn` it withdrew it, `unknown` it has no receipt with this signed data. `Cache-Control: no-store`.
+- Public (`permitAll`), no token is sent. `ReceiptStatusRateLimiter` per client address (an IPv6 address counted by its /64), checked before any work; 429 `donations/rate-limited`. No log line per request (only the limiter's 429 outcome), neither the address nor the digest is stored.
+- The page treats any other answer, a failure or a timeout as no answer.
 
 `GET /api/admin/donations/receipt-signing-keys` (admin; a connected application with `admin:read` too, read only):
 
