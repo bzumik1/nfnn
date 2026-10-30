@@ -99,6 +99,20 @@ public class DonorFrozenReceiptStepDefinitions {
         issueAs(alias, Map.of("donationId", donationIdOf(alias, receivedOn).toString()));
     }
 
+    @When("{string} issues the receipt of each of her/his/its donations")
+    public void issuesTheReceiptOfEachOfTheirDonations(String alias) {
+        List<UUID> donations = jdbc.sql("select id from donation where donor_id = ? order by received_on, id")
+                .param(scenarioDonors.idOf(alias))
+                .query(UUID.class)
+                .list();
+        for (UUID donation : donations) {
+            issuesTheReceiptOfDonation(alias, donation.toString());
+            assertThat(api.lastResponse().getStatusCode().value())
+                    .withFailMessage("Donation %d of %d answered %s", donations.indexOf(donation) + 1, donations.size(), api.lastResponse().getBody())
+                    .isEqualTo(200);
+        }
+    }
+
     @When("{string} issues the receipt of the donation of {string} received on {date}")
     public void issuesTheReceiptOfSomeoneElsesDonation(String alias, String owner, LocalDate receivedOn) {
         issueAs(alias, Map.of("donationId", donationIdOf(owner, receivedOn).toString()));

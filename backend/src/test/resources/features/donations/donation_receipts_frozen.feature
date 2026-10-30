@@ -546,7 +546,7 @@ Feature: A donor issues receipts of their donations as frozen, signed data
     And the issued receipt has number "2027-900000"
     And 1 receipt is stored
 
-  Scenario: A donor gets at most 20 new receipt numbers in 24 hours, and an unchanged receipt is returned all the same
+  Scenario: A donor gets at most 20 replacements in 24 hours, and an unchanged receipt is returned all the same
     Given today is 2026-12-20
     And a person "Jana" is registered
     And the bank account has these movements:
@@ -554,16 +554,16 @@ Feature: A donor issues receipts of their donations as frozen, signed data
       | 2001 | 2026-10-01 | 1000.00 | 2900233333 | 2010     | Nováková Jana | {Jana}         |
     And the application starts the import
     And today is 2027-01-15
-    And "Jana" changed her address and issued her yearly receipt for 2026 20 times
+    And "Jana" changed her address and issued her yearly receipt for 2026 21 times
     When "Jana" issues her yearly receipt for 2026
     Then the response status is 200
-    And the issued receipt has number "2027-000020"
+    And the issued receipt has number "2027-000021"
     When "Jana" changes her address to street "Nová 7", postal code "405 02" and city "Děčín"
     And "Jana" issues her yearly receipt for 2026
     Then the response status is 409
     And the problem type ends with "donations/receipt-issue-limit"
     And the problem has the title "Nové potvrzení teď nejde vydat"
-    And 20 receipts are stored
+    And 21 receipts are stored
     And 1 receipt is active
     When 1439 minutes pass
     And "Jana" issues her yearly receipt for 2026
@@ -571,13 +571,27 @@ Feature: A donor issues receipts of their donations as frozen, signed data
     When 1 minutes pass
     And "Jana" issues her yearly receipt for 2026
     Then the response status is 200
-    And the issued receipt has number "2027-000021"
+    And the issued receipt has number "2027-000022"
     And the frozen receipt holds:
       | field                | value       |
       | donor.address.street | Nová 7      |
-      | replaces.number      | 2027-000020 |
-    And 21 receipts are stored
+      | replaces.number      | 2027-000021 |
+    And 22 receipts are stored
     And 1 receipt is active
+
+  Scenario: A donor with many gifts gets the first receipt of each of them on one day
+    Given today is 2026-12-20
+    And a person "Jana" is registered
+    And the bank account has 21 movements of "200.00" from "Jana" between 2026-10-01 and 2026-10-21
+    And the application starts the import
+    And today is 2027-01-15
+    When "Jana" issues the receipt of each of her donations
+    Then 21 receipts are stored
+    And 21 receipts are active
+    When "Jana" issues her yearly receipt for 2026
+    Then the response status is 200
+    And the issued receipt has number "2027-000022"
+    And 22 receipts are stored
 
   Scenario: Issuing receipts is limited per client address, counting the old downloads too
     Given today is 2026-12-20
