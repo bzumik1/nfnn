@@ -1,0 +1,190 @@
+<div class="ui-page container">
+  <h1 #title class="ui-page-title" tabindex="-1" i18n="@@admin.about.heading">
+    Fotka v sekci O nás
+  </h1>
+  <p class="ui-page-intro" i18n="@@admin.about.intro">
+    Fotka se ukáže na úvodní stránce v sekci O nás vedle textu o vzniku fondu, na telefonu pod ním.
+    Dokud žádnou neuložíte, je tam ilustrační fotka. Fotka je jen v databázi webu, ne ve veřejném
+    kódu, a odebrat ji můžete kdykoli.
+  </p>
+
+  @switch (state()) {
+    @case ('loading') {
+      <p class="ui-load-state" role="status" i18n="@@admin.about.loading">Načítáme fotku…</p>
+    }
+    @case ('error') {
+      <div class="ui-load-state ui-load-state--error" role="alert">
+        <p i18n="@@admin.about.error.text">Fotku se nepodařilo načíst.</p>
+        <button type="button" class="ui-button" (click)="load()" i18n="@@admin.about.error.retry">
+          Zkusit znovu
+        </button>
+      </div>
+    }
+    @case ('ready') {
+      <section class="ui-card" aria-labelledby="about-photo-title">
+        <h2 id="about-photo-title" class="ui-card__title" i18n="@@admin.about.card.title">Fotka</h2>
+        <form
+          #aboutForm="ngForm"
+          class="ui-card__body"
+          appFocusFirstInvalid
+          (ngSubmit)="submit(aboutForm)"
+          novalidate
+        >
+          @if (previewUrl(); as url) {
+            <img
+              class="photo-preview"
+              [src]="url"
+              alt=""
+              [attr.width]="chosen()?.width"
+              [attr.height]="chosen()?.height"
+            />
+          } @else {
+            <p class="photo-state" i18n="@@admin.about.none">
+              Fotka zatím není nahraná, web ukazuje ilustrační fotku.
+            </p>
+          }
+          <div class="photo-actions">
+            <app-file-button
+              inputId="about-photo"
+              accept="image/jpeg,image/png,image/webp"
+              describedBy="about-photo-hint"
+              [disabled]="busy()"
+              (chosen)="upload($event)"
+            >
+              @if (chosen()) {
+                <ng-container i18n="@@admin.about.photo.replace">Vyměnit fotku</ng-container>
+              } @else {
+                <ng-container i18n="@@admin.about.photo.choose">Nahrát fotku</ng-container>
+              }
+            </app-file-button>
+          </div>
+          <p id="about-photo-hint" class="field-hint" i18n="@@admin.about.photo.hint">
+            JPEG, PNG nebo WebP do 10 MB. Web ukáže celou fotku, na výšku i na šířku, a vyrobí si z
+            ní zmenšené kopie.
+          </p>
+          <div role="status">
+            @if (uploading()) {
+              <p class="field-status" i18n="@@admin.about.photo.uploading">Nahráváme fotku…</p>
+            } @else if (photoUnsaved() && chosen()) {
+              <p class="field-status" i18n="@@admin.about.photo.uploaded">
+                Fotka je nahraná. Na web se dostane, až ji uložíte.
+              </p>
+            }
+          </div>
+          @if (uploadError(); as error) {
+            <p class="field-error" role="alert">{{ error }}</p>
+          }
+
+          @if (chosen()) {
+            <div class="fields">
+              <app-form-field
+                label="Popis pro čtečky (nepovinné)"
+                i18n-label="@@admin.about.alt"
+                hint="Jednou větou, co je na fotce. Přečte ho nevidomým čtečka obrazovky a ukáže se, když se fotka nenačte."
+                i18n-hint="@@admin.about.alt.hint"
+                [messages]="altMessages"
+              >
+                <input
+                  appFormControl
+                  id="about-photo-alt"
+                  name="photoAlt"
+                  type="text"
+                  autocomplete="off"
+                  [(ngModel)]="photoAlt"
+                  [maxlength]="maxAltLength"
+                />
+              </app-form-field>
+              <app-form-field
+                label="Popisek pod fotkou (nepovinné)"
+                i18n-label="@@admin.about.caption"
+                hint="Ukáže se pod fotkou všem návštěvníkům, například kdo na ní je a kdy vznikla."
+                i18n-hint="@@admin.about.caption.hint"
+                [messages]="captionMessages"
+              >
+                <input
+                  appFormControl
+                  id="about-photo-caption"
+                  name="caption"
+                  type="text"
+                  autocomplete="off"
+                  [(ngModel)]="caption"
+                  [maxlength]="maxCaptionLength"
+                />
+              </app-form-field>
+            </div>
+            <div class="form-actions">
+              <button type="submit" class="ui-button ui-button--primary" [disabled]="busy()">
+                @if (saving()) {
+                  <ng-container i18n="@@admin.about.saving">Ukládáme…</ng-container>
+                } @else {
+                  <ng-container i18n="@@admin.about.save">Uložit a ukázat na webu</ng-container>
+                }
+              </button>
+            </div>
+          }
+          <app-live-notice class="card-notice" [notice]="notice()" />
+        </form>
+      </section>
+
+      @if (saved()) {
+        <section class="ui-card ui-card--danger remove-card" aria-labelledby="about-remove-title">
+          <h2 id="about-remove-title" class="ui-card__title" i18n="@@admin.about.remove.title">
+            Odebrání fotky
+          </h2>
+          <div class="ui-card__body">
+            <p class="ui-card__intro" i18n="@@admin.about.remove.intro">
+              Fotka hned zmizí z webu a smaže se z databáze; ze záloh zmizí do 30 dnů. Sekce O nás
+              pak ukáže zase ilustrační fotku.
+            </p>
+            @if (confirmingRemoval()) {
+              <span
+                class="confirm"
+                role="group"
+                aria-label="Odebrat fotku?"
+                i18n-aria-label="@@admin.about.remove.confirm.label"
+              >
+                <span i18n="@@admin.about.remove.confirm.question"
+                  >Opravdu fotku odebrat z webu a smazat?</span
+                >
+                <button
+                  type="button"
+                  class="ui-button ui-button--danger"
+                  [disabled]="removing()"
+                  (click)="remove()"
+                >
+                  @if (removing()) {
+                    <ng-container i18n="@@admin.about.removing">Odebíráme…</ng-container>
+                  } @else {
+                    <ng-container i18n="@@admin.about.remove.yes">Odebrat a smazat</ng-container>
+                  }
+                </button>
+                <button
+                  #removeCancel
+                  type="button"
+                  class="ui-link-button"
+                  [disabled]="removing()"
+                  (click)="cancelRemoval()"
+                  i18n="@@admin.about.remove.no"
+                >
+                  Zrušit
+                </button>
+              </span>
+            } @else {
+              <button
+                #removeButton
+                type="button"
+                class="ui-button ui-button--danger-outline"
+                [disabled]="busy()"
+                (click)="askRemoval()"
+                i18n="@@admin.about.remove.open"
+              >
+                Odebrat fotku z webu
+              </button>
+            }
+            <app-live-notice class="card-notice" [notice]="removeNotice()" />
+          </div>
+        </section>
+      }
+    }
+  }
+</div>

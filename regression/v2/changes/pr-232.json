@@ -1,0 +1,16 @@
+[
+  {
+    "path": "GET /api/admin/content/about",
+    "scenario": "content/manage_about: *",
+    "kind": "added",
+    "reason": "Jakub 2026-10-30: the photo of the About section is uploaded and removed in the administration, and the connector's nfnn_about reads it; v2 had no such endpoint",
+    "contract": "docs/api-contract.md, content — public CMS; MCP connector"
+  },
+  {
+    "path": "PUT /api/admin/content/about",
+    "scenario": "content/manage_about: *",
+    "kind": "added",
+    "reason": "Jakub 2026-10-30: the photo of the About section is set, replaced and removed in the administration and by the connector's nfnn_update_about; v2 had no such endpoint",
+    "contract": "docs/api-contract.md, content — public CMS; MCP connector"
+  }
+]

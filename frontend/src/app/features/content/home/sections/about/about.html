@@ -21,26 +21,42 @@
         >Naše projekty →</a
       >
     </div>
-    <div class="about-img-wrap">
-      <div class="about-img">
-        <img
-          loading="lazy"
-          srcset="/images/about-720.webp 720w, /images/about-1440.webp 1440w"
-          sizes="720px"
-          src="/images/about-720.webp"
-          width="720"
-          height="480"
-          alt=""
-          class="real-img"
-        />
-      </div>
-      <div class="about-badge">
-        <div class="about-badge-title">FOD</div>
-        <div class="about-badge-text" i18n="@@home.about.badge">
-          Úzká spolupráce s Fondem ohrožených dětí
+    @if (photo(); as photo) {
+      <figure class="about-figure" [style.--about-photo-ratio]="photo.width / photo.height">
+        <div class="about-frame">
+          <img
+            loading="lazy"
+            [attr.srcset]="photoSet()"
+            sizes="(max-width: 768px) calc(100vw - 32px), 560px"
+            [src]="photoSource()"
+            [attr.width]="photo.width"
+            [attr.height]="photo.height"
+            [alt]="photo.alt ?? ''"
+            class="about-photo"
+          />
+          <ng-container [ngTemplateOutlet]="badge" />
         </div>
+        @if (photo.caption) {
+          <figcaption class="about-caption">{{ photo.caption }}</figcaption>
+        }
+      </figure>
+    } @else {
+      <div class="about-img-wrap">
+        <div class="about-img">
+          <img
+            loading="lazy"
+            srcset="/images/about-720.webp 720w, /images/about-1440.webp 1440w"
+            sizes="720px"
+            src="/images/about-720.webp"
+            width="720"
+            height="480"
+            alt=""
+            class="real-img"
+          />
+        </div>
+        <ng-container [ngTemplateOutlet]="badge" />
       </div>
-    </div>
+    }
   </div>
   <div class="ui-container">
     <div class="board">
@@ -92,4 +108,12 @@
       </p>
     </div>
   </div>
+  <ng-template #badge>
+    <div class="about-badge">
+      <div class="about-badge-title">FOD</div>
+      <div class="about-badge-text" i18n="@@home.about.badge">
+        Úzká spolupráce s Fondem ohrožených dětí
+      </div>
+    </div>
+  </ng-template>
 </section>
