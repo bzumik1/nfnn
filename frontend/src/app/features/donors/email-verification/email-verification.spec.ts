@@ -241,6 +241,15 @@ describe('Given the page that confirms the e-mail from the registration link', (
       expect(navigate).toHaveBeenCalledWith('/#prispet');
     });
 
+    it('and the server confirms it, then the page also offers the overview beside the way back', async () => {
+      await answerConfirm(authResponse('token-1') as unknown as Record<string, unknown>, 200, 'OK');
+
+      const overview = element<HTMLAnchorElement>('a.overview-link');
+      expect(overview.textContent?.trim()).toBe('Přejít na můj přehled');
+      expect(overview.getAttribute('href')).toBe('/darce/prehled');
+      expect(overview.classList).not.toContain('ui-button--primary');
+    });
+
     it('and the link is no longer valid, then a new link asked for keeps the way back', async () => {
       await answerConfirm(
         problem('donors/invalid-email-verification-token', 'Odkaz je neplatný', ''),
@@ -267,6 +276,42 @@ describe('Given the page that confirms the e-mail from the registration link', (
       TestBed.inject(LoginDialogService).signedIn();
 
       expect(navigate).toHaveBeenCalledWith('/#prispet');
+    });
+  });
+
+  describe('when the link confirms a new address of the account', () => {
+    beforeEach(() => open('/potvrzeni-emailu#token=abc&change=email'));
+
+    it('then only the token is sent and the address bar keeps neither', () => {
+      expect(TestBed.inject(Location).path(true)).toBe('/potvrzeni-emailu');
+      const request = http.expectOne('/api/donors/auth/email-verification/confirm');
+      expect(request.request.body).toEqual({ token: 'abc' });
+      request.flush(authResponse('token-1'));
+    });
+
+    it('and the server confirms it, then the page says the address changed and sign-in now uses it, without asking for a passkey', async () => {
+      await answerConfirm(
+        authResponse(
+          'token-1',
+          sampleDonor({ email: 'jana.nova@example.cz', hasPassword: false }),
+        ) as unknown as Record<string, unknown>,
+        200,
+        'OK',
+      );
+
+      expect(heading().textContent).toContain('E-mail je změněný');
+      expect(document.activeElement).toBe(heading());
+      const status = element('[role="status"]').textContent?.replace(/\s+/g, ' ');
+      expect(status).toContain('Účet teď používá adresu jana.nova@example.cz.');
+      expect(status).toContain('Přihlašujte se odteď touto adresou.');
+      expect(status).not.toContain('Účet je připravený');
+      expect(harness.routeNativeElement!.textContent).not.toContain('přístupový klíč');
+      expect(element('a.overview-link')).toBeNull();
+      expect(element('.ui-button--primary').textContent?.trim()).toBe('Přejít na můj přehled');
+
+      await click('.ui-button--primary');
+
+      expect(navigate).toHaveBeenCalledWith('/darce/prehled');
     });
   });
 

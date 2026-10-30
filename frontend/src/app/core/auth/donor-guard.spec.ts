@@ -55,6 +55,7 @@ describe('Given the donor area guard', () => {
     expect(result).toBeInstanceOf(UrlTree);
     expect(TestBed.inject(Router).serializeUrl(result as UrlTree)).toBe('/');
     expect(TestBed.inject(LoginDialogService).isOpen()).toBe(true);
+    expect(TestBed.inject(LoginDialogService).forAdministration()).toBe(false);
   });
 
   it('when nobody is signed in and then signs in through the dialog, then the page they asked for opens', async () => {

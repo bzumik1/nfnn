@@ -126,6 +126,15 @@ public class CommonStepDefinitions {
         assertThat(errorFields()).contains(field);
     }
 
+    @Then("the problem's error for field {string} says {string}")
+    public void theProblemsErrorForFieldSays(String field, String message) {
+        assertThat(errorFields()).contains(field);
+        assertThat(api.lastResponseJson().get("errors").valueStream()
+                .filter(error -> error.get("field").asString().equals(field))
+                .map(error -> error.get("message").asString()))
+                .contains(message);
+    }
+
     private List<String> errorFields() {
         assertThat(api.lastResponse().getHeaders().getContentType().toString()).startsWith("application/problem+json");
         JsonNode errors = api.lastResponseJson().get("errors");

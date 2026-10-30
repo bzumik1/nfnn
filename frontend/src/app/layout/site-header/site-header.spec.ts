@@ -264,3 +264,55 @@ describe('Given the site header on the pages of news and projects', () => {
     ]);
   });
 });
+
+describe('Given the site header over the dark top of a page', () => {
+  let fixture: ComponentFixture<SiteHeader>;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [SiteHeader],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([
+          { path: '', children: [] },
+          { path: 'projekty', children: [] },
+        ]),
+      ],
+    }).compileComponents();
+  });
+
+  afterEach(() => TestBed.inject(HttpTestingController).verify());
+
+  async function showAt(url: string): Promise<void> {
+    await TestBed.inject(Router).navigateByUrl(url);
+    fixture = TestBed.createComponent(SiteHeader);
+    fixture.detectChanges();
+    await fixture.whenStable();
+  }
+
+  function logo(): HTMLImageElement {
+    return fixture.nativeElement.querySelector('.brand img') as HTMLImageElement;
+  }
+
+  it('when a page other than home is at its top, then the logo is drawn light for the dark background', async () => {
+    await showAt('/projekty');
+
+    expect(logo().classList).toContain('logo-on-dark');
+  });
+
+  it('when the home page is at its top, then the logo keeps its colours over the bright photo', async () => {
+    await showAt('/');
+
+    expect(logo().classList).not.toContain('logo-on-dark');
+  });
+
+  it('when the menu opens over the page, then the bar turns light and the logo keeps its colours', async () => {
+    await showAt('/projekty');
+
+    (fixture.nativeElement.querySelector('.mobile-menu-btn') as HTMLButtonElement).click();
+    fixture.detectChanges();
+
+    expect(logo().classList).not.toContain('logo-on-dark');
+  });
+});

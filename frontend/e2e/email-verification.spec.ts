@@ -1,5 +1,5 @@
 import { expect, test } from './fixtures';
-import { mockDonorApi, problem, session } from './donor-session';
+import { donor, mockDonorApi, problem, session } from './donor-session';
 
 test.describe('Given a visitor on the donate section without an account', () => {
   test('when they register from there, then the registration asks the e-mail link to lead back to the donate section', async ({
@@ -71,6 +71,40 @@ test.describe('Given a visitor who registered and received the confirmation e-ma
 
     await expect(page).toHaveURL(/\/#prispet$/);
     await expect(page.locator('#prispet .bank')).toContainText('1234567890');
+  });
+
+  test('when they registered from the donate section, then the page also leads to their overview', async ({
+    page,
+  }) => {
+    await page.route('**/api/donors/auth/email-verification/confirm', (route) =>
+      route.fulfill(session(200)),
+    );
+    await mockDonorApi(page);
+
+    await page.goto('/potvrzeni-emailu#token=abc&returnTo=%2F%23prispet');
+    await page.getByRole('link', { name: 'Přejít na můj přehled' }).click();
+
+    await expect(page).toHaveURL(/\/darce\/prehled$/);
+  });
+
+  test('when the link confirms a new address of the account, then the page says the address changed and leads to the overview', async ({
+    page,
+  }) => {
+    await page.route('**/api/donors/auth/email-verification/confirm', (route) =>
+      route.fulfill(session(200, { ...donor, email: 'jana.nova@example.cz' })),
+    );
+    await mockDonorApi(page);
+
+    await page.goto('/potvrzeni-emailu#token=abc&change=email');
+
+    await expect(page.getByRole('heading', { name: 'E-mail je změněný' })).toBeFocused();
+    await expect(page.getByRole('status').filter({ hasText: /\S/ })).toContainText(
+      'Účet teď používá adresu jana.nova@example.cz.',
+    );
+    expect(page.url()).not.toContain('change');
+    await page.getByRole('button', { name: 'Přejít na můj přehled' }).click();
+
+    await expect(page).toHaveURL(/\/darce\/prehled$/);
   });
 
   test('when the link has expired, then the page sends a new one to the address they enter', async ({

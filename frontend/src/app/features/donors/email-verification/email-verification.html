@@ -20,103 +20,135 @@
       @case ('confirmed') {
         <div class="ui-status">
           <div class="ui-status__icon" aria-hidden="true">✓</div>
-          <h1
-            #heading
-            id="email-verification-title"
-            class="ui-panel__title"
-            tabindex="-1"
-            i18n="@@donor.emailVerification.confirmed.title"
-          >
-            E-mail je potvrzený
-          </h1>
-          @if (needsPasskey()) {
-            <p
-              class="ui-panel__lead"
-              role="status"
-              i18n="@@donor.emailVerification.confirmed.passkeyText"
+          @if (changesEmail) {
+            <h1
+              #heading
+              id="email-verification-title"
+              class="ui-panel__title"
+              tabindex="-1"
+              i18n="@@donor.emailVerification.changed.title"
             >
-              Účet je připravený a jste přihlášeni. Teď si vytvořte přístupový klíč, kterým se
-              budete přihlašovat: zařízení vás požádá o otisk prstu, obličej nebo PIN.
+              E-mail je změněný
+            </h1>
+            <p class="ui-panel__lead" role="status" i18n="@@donor.emailVerification.changed.text">
+              Účet teď používá adresu {{ donorEmail() }}. Přihlašujte se odteď touto adresou. Teď už
+              jste přihlášeni.
             </p>
-            @if (!passkeysSupported) {
-              <p class="ui-panel__lead" i18n="@@donor.emailVerification.passkey.unsupported">
-                Tento prohlížeč přístupové klíče neumí. Klíč vytvoříte v části Údaje a zabezpečení v
-                aktuálním Safari, Chromu, Edgi nebo Firefoxu, nebo si tam nastavíte heslo.
-              </p>
-            } @else {
-              @if (error()) {
-                <p class="ui-field-error" role="alert">{{ error() }}</p>
-              }
-              <button
-                type="button"
-                class="ui-button ui-button--primary ui-button--block"
-                [disabled]="loading()"
-                (click)="createPasskey()"
-              >
-                @if (loading()) {
-                  <span i18n="@@donor.passkeys.saving">Čekáme na zařízení…</span>
-                } @else {
-                  <span i18n="@@donor.emailVerification.passkey.create"
-                    >Vytvořit přístupový klíč</span
-                  >
-                }
-              </button>
-            }
-            <button type="button" class="link-action" (click)="enterPortal()">
-              @if (returnsToDonation) {
-                <ng-container i18n="@@donor.emailVerification.passkey.laterDonate"
-                  >Pokračovat k příspěvku bez klíče</ng-container
-                >
-              } @else {
-                <ng-container i18n="@@donor.emailVerification.passkey.later"
-                  >Přejít do přehledu bez klíče</ng-container
-                >
-              }
-            </button>
-          } @else {
-            @if (passkeyCreated()) {
-              <p
-                class="ui-panel__lead"
-                role="status"
-                i18n="@@donor.emailVerification.passkey.created"
-              >
-                Přístupový klíč je uložený a příště se jím přihlásíte. Doporučujeme přidat v části
-                Údaje a zabezpečení ještě klíč v dalším zařízení.
-              </p>
-            } @else if (returnsToDonation) {
-              <p
-                class="ui-panel__lead"
-                role="status"
-                i18n="@@donor.emailVerification.confirmed.donateText"
-              >
-                Účet je připravený a jste přihlášeni. QR kód pro platbu už ponese váš variabilní
-                symbol, takže dar uvedeme na potvrzení o daru.
-              </p>
-            } @else {
-              <p
-                class="ui-panel__lead"
-                role="status"
-                i18n="@@donor.emailVerification.confirmed.text"
-              >
-                Účet je připravený a jste přihlášeni. Na přehledu najdete svůj variabilní symbol pro
-                příspěvky.
-              </p>
-            }
             <button
               type="button"
               class="ui-button ui-button--primary ui-button--block"
               (click)="enterPortal()"
+              i18n="@@donor.emailVerification.overviewAction"
             >
-              @if (returnsToDonation) {
-                <ng-container i18n="@@donor.emailVerification.confirmed.donateAction"
-                  >Pokračovat k příspěvku</ng-container
-                >
+              Přejít na můj přehled
+            </button>
+          } @else {
+            <h1
+              #heading
+              id="email-verification-title"
+              class="ui-panel__title"
+              tabindex="-1"
+              i18n="@@donor.emailVerification.confirmed.title"
+            >
+              E-mail je potvrzený
+            </h1>
+            @if (needsPasskey()) {
+              <p
+                class="ui-panel__lead"
+                role="status"
+                i18n="@@donor.emailVerification.confirmed.passkeyText"
+              >
+                Účet je připravený a jste přihlášeni. Teď si vytvořte přístupový klíč, kterým se
+                budete přihlašovat: zařízení vás požádá o otisk prstu, obličej nebo PIN.
+              </p>
+              @if (!passkeysSupported) {
+                <p class="ui-panel__lead" i18n="@@donor.emailVerification.passkey.unsupported">
+                  Tento prohlížeč přístupové klíče neumí. Klíč vytvoříte v části Údaje a zabezpečení
+                  v aktuálním Safari, Chromu, Edgi nebo Firefoxu, nebo si tam nastavíte heslo.
+                </p>
               } @else {
-                <ng-container i18n="@@donor.emailVerification.confirmed.action"
-                  >Přejít do přehledu</ng-container
+                @if (error()) {
+                  <p class="ui-field-error" role="alert">{{ error() }}</p>
+                }
+                <button
+                  type="button"
+                  class="ui-button ui-button--primary ui-button--block"
+                  [disabled]="loading()"
+                  (click)="createPasskey()"
+                >
+                  @if (loading()) {
+                    <span i18n="@@donor.passkeys.saving">Čekáme na zařízení…</span>
+                  } @else {
+                    <span i18n="@@donor.emailVerification.passkey.create"
+                      >Vytvořit přístupový klíč</span
+                    >
+                  }
+                </button>
+              }
+              <button type="button" class="link-action" (click)="enterPortal()">
+                @if (returnsToDonation) {
+                  <ng-container i18n="@@donor.emailVerification.passkey.laterDonate"
+                    >Pokračovat k příspěvku bez klíče</ng-container
+                  >
+                } @else {
+                  <ng-container i18n="@@donor.emailVerification.passkey.later"
+                    >Přejít do přehledu bez klíče</ng-container
+                  >
+                }
+              </button>
+            } @else {
+              @if (passkeyCreated()) {
+                <p
+                  class="ui-panel__lead"
+                  role="status"
+                  i18n="@@donor.emailVerification.passkey.created"
+                >
+                  Přístupový klíč je uložený a příště se jím přihlásíte. Doporučujeme přidat v části
+                  Údaje a zabezpečení ještě klíč v dalším zařízení.
+                </p>
+              } @else if (returnsToDonation) {
+                <p
+                  class="ui-panel__lead"
+                  role="status"
+                  i18n="@@donor.emailVerification.confirmed.donateText"
+                >
+                  Účet je připravený a jste přihlášeni. QR kód pro platbu už ponese váš variabilní
+                  symbol, takže dar uvedeme na potvrzení o daru.
+                </p>
+              } @else {
+                <p
+                  class="ui-panel__lead"
+                  role="status"
+                  i18n="@@donor.emailVerification.confirmed.text"
+                >
+                  Účet je připravený a jste přihlášeni. Na přehledu najdete svůj variabilní symbol
+                  pro příspěvky.
+                </p>
+              }
+              <button
+                type="button"
+                class="ui-button ui-button--primary ui-button--block"
+                (click)="enterPortal()"
+              >
+                @if (returnsToDonation) {
+                  <ng-container i18n="@@donor.emailVerification.confirmed.donateAction"
+                    >Pokračovat k příspěvku</ng-container
+                  >
+                } @else {
+                  <ng-container i18n="@@donor.emailVerification.confirmed.action"
+                    >Přejít do přehledu</ng-container
+                  >
+                }
+              </button>
+              @if (returnsToDonation) {
+                <a
+                  class="ui-button ui-button--block overview-link"
+                  [routerLink]="portalPath"
+                  i18n="@@donor.emailVerification.overviewAction"
+                  >Přejít na můj přehled</a
                 >
               }
-            </button>
+            }
           }
         </div>
       }

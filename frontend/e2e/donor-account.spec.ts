@@ -211,6 +211,11 @@ test.describe('Given a visitor who wants a donor account', () => {
 
     await expect(page).toHaveURL(/\/$/);
     await expect(page.locator('.nav-login')).toHaveText('Přihlásit se');
+    await expect(page.getByRole('status').getByText('Odhlásili jste se.')).toBeVisible();
+
+    await page.getByRole('button', { name: 'Zavřít' }).click();
+
+    await expect(page.getByText('Odhlásili jste se.')).toHaveCount(0);
   });
 
   test('when they go back to the home page from the overview, then they stay signed in and can return to it', async ({

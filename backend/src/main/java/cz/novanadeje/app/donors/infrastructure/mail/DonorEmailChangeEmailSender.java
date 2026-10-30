@@ -30,6 +30,7 @@ class DonorEmailChangeEmailSender {
     private static final String CHANGE_KEYS = "donors.emailChange.email.";
     private static final String CHANGE_TEMPLATE = "email/donors/email-change";
     private static final String VERIFICATION_PAGE = "/potvrzeni-emailu#token=";
+    private static final String CHANGE_MARKER = "&change=email";
     private static final String CHANGED_KEYS = "donors.emailChanged.email.";
     private static final String CHANGED_TEMPLATE = "email/donors/email-changed";
     private static final String IN_USE_KEYS = "donors.emailInUse.email.";
@@ -56,7 +57,7 @@ class DonorEmailChangeEmailSender {
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void sendChangeLink(DonorEmailChangeRequested event) {
         Locale locale = event.preferredLocale().toLocale();
-        String link = publicUrl.link(VERIFICATION_PAGE + event.secret().value()).toString();
+        String link = publicUrl.link(VERIFICATION_PAGE + event.secret().value() + CHANGE_MARKER).toString();
         long validHours = properties.tokenTtl().toHours();
         String footer = text(CHANGE_KEYS, "footer", locale, sender.senderEmail());
         String plainText = paragraphs(

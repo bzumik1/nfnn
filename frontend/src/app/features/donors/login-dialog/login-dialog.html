@@ -59,10 +59,9 @@
             Obnova přístupu platbou
           </h3>
           <p class="step-lead" i18n="@@donor.login.recovery.lead">
-            Pošlete 1&nbsp;Kč se zprávou níže z bankovního účtu, ze kterého nám už posíláte dary
-            (najdete ho v přehledu dárce v části Bankovní účty). Jakmile platbu načteme, vypneme
-            dvoufaktorové ověření, ukončíme všechna přihlášení a pošleme vám e-mail. Pak se
-            přihlásíte jen heslem.
+            Pošlete 1&nbsp;Kč se zprávou níže z bankovního účtu, ze kterého jste nám už poslali dar
+            (obvykle ten, ze kterého nám platíte). Jakmile platbu načteme, vypneme dvoufaktorové
+            ověření, ukončíme všechna přihlášení a pošleme vám e-mail. Pak se přihlásíte jen heslem.
           </p>
           @if (instructions.resumed) {
             <p
@@ -169,7 +168,6 @@
             type="text"
             inputmode="numeric"
             autocomplete="one-time-code"
-            placeholder="123456"
             [(ngModel)]="code"
             required
             pattern="\s*\d{6}\s*"
@@ -208,7 +206,11 @@
       </p>
     }
     @case ('login') {
-      <p class="sub" i18n="@@donor.login.sub.login">Přístup do vašeho přehledu příspěvků</p>
+      @if (forAdministration) {
+        <p class="sub" i18n="@@donor.login.sub.administration">Pro vstup do správy se přihlaste.</p>
+      } @else {
+        <p class="sub" i18n="@@donor.login.sub.login">Přístup do vašeho přehledu příspěvků</p>
+      }
 
       <form
         #login="ngForm"
@@ -456,7 +458,6 @@
               name="companyIdentifier"
               type="text"
               inputmode="numeric"
-              placeholder="12345678"
               [(ngModel)]="registration.companyIdentifier"
               (ngModelChange)="lookUpCompany($event)"
               required
@@ -482,8 +483,6 @@
               name="name"
               type="text"
               autocomplete="organization"
-              placeholder="Stavby Novák s.r.o."
-              i18n-placeholder="@@donor.register.companyNamePlaceholder"
               [(ngModel)]="registration.name"
               required
               maxlength="160"
@@ -501,7 +500,6 @@
               name="street"
               type="text"
               autocomplete="street-address"
-              placeholder="Dlouhá 12"
               [(ngModel)]="registration.street"
               required
               maxlength="200"
@@ -520,8 +518,6 @@
               name="name"
               type="text"
               autocomplete="name"
-              placeholder="Jan Novák"
-              i18n-placeholder="@@home.contact.form.namePlaceholder"
               [(ngModel)]="registration.name"
               required
               maxlength="160"
@@ -539,7 +535,6 @@
               name="street"
               type="text"
               autocomplete="street-address"
-              placeholder="Dlouhá 12"
               [(ngModel)]="registration.street"
               required
               maxlength="200"
@@ -560,7 +555,6 @@
               type="text"
               inputmode="numeric"
               autocomplete="postal-code"
-              placeholder="400 01"
               [(ngModel)]="registration.postalCode"
               required
               pattern="\s*\d{3}\s*\d{2}\s*"
@@ -577,7 +571,6 @@
               name="city"
               type="text"
               autocomplete="address-level2"
-              placeholder="Ústí nad Labem"
               [(ngModel)]="registration.city"
               required
               maxlength="120"
@@ -592,8 +585,6 @@
             name="email"
             type="email"
             autocomplete="email"
-            placeholder="vas@email.cz"
-            i18n-placeholder="@@donor.login.emailPlaceholder"
             [(ngModel)]="registration.email"
             required
             email

@@ -28,6 +28,17 @@ Feature: Visitor sends a contact message
       | message  | Dobrý den       |
     Then the response status is 400
     And the problem lists errors for fields "fullName" and "email"
+    And the problem's error for field "email" says "Zadejte e-mail ve tvaru jmeno@domena.cz."
+    And no message is stored
+
+  Scenario: An e-mail without a dot in its domain is rejected at the e-mail field
+    When the visitor submits a contact message
+      | fullName | Jana Nováková |
+      | email    | jana@example  |
+      | message  | Dobrý den     |
+    Then the response status is 400
+    And the problem type ends with "validation"
+    And the problem's error for field "email" says "Zadejte e-mail ve tvaru jmeno@domena.cz."
     And no message is stored
 
   Scenario: Sixth message within an hour from one address is refused

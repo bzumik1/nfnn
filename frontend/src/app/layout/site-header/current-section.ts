@@ -16,7 +16,26 @@ export function currentListSection(): Signal<ListSection | null> {
   );
 }
 
+export function onHomePage(): Signal<boolean> {
+  const router = inject(Router);
+  return toSignal(
+    router.events.pipe(
+      filter((event) => event instanceof NavigationEnd),
+      map(() => isHome(router.url)),
+    ),
+    { initialValue: isHome(router.url) },
+  );
+}
+
+function isHome(url: string): boolean {
+  return pathOf(url) === '/';
+}
+
+function pathOf(url: string): string {
+  return url.split(/[?#]/)[0];
+}
+
 function listSectionOf(url: string): ListSection | null {
-  const first = url.split(/[?#]/)[0].split('/')[1];
+  const first = pathOf(url).split('/')[1];
   return first === 'aktuality' || first === 'projekty' ? first : null;
 }

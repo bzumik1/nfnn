@@ -236,6 +236,17 @@ describe('Given the sign-in and security card of the details page', () => {
       http.expectNone('/api/donors/me/second-factor/setup');
     });
 
+    it('then before continuing the form says how access comes back when the phone is lost', () => {
+      expect(normalized(card.element('.account-lost-phone').textContent)).toBe(
+        'Když telefon s aplikací ztratíte, přístup obnovíte platbou 1 Kč z bankovního účtu, který u nás máte ověřený aspoň týden. Dřív to nejde; do té doby nám napište a kód z aplikace vám vypneme.',
+      );
+      const actions = card.element('.account-form-actions');
+      expect(
+        card.element('.account-lost-phone').compareDocumentPosition(actions) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+    });
+
     it('and confirms the password, then the QR code, the key and the code field appear with the focus on the code', async () => {
       await card.fillIn('#account-second-factor-password', 'correct horse battery');
 
@@ -344,6 +355,43 @@ describe('Given the sign-in and security card of the details page', () => {
         expect(card.element('.account-qr')).not.toBeNull();
         expect(card.element('.account-form .ui-field-error').textContent).toContain(
           'Nesprávný kód.',
+        );
+      });
+
+      it('and sends a wrong code and then edits it, then the reason from the server goes away', async () => {
+        await card.fillIn('#account-second-factor-code', '000000');
+        await card.submit();
+        http
+          .expectOne('/api/donors/me/second-factor/confirm')
+          .flush(problem('donors/second-factor-code-rejected', 'Nesprávný kód', ''), {
+            status: 400,
+            statusText: 'Bad Request',
+          });
+        await card.settle();
+
+        await card.fillIn('#account-second-factor-code', '2870');
+
+        expect(card.element('.account-form p.ui-field-error[role="alert"]')).toBeNull();
+      });
+
+      it('and sends a wrong code and then an incomplete one, then only the field says what is wrong', async () => {
+        await card.fillIn('#account-second-factor-code', '000000');
+        await card.submit();
+        http
+          .expectOne('/api/donors/me/second-factor/confirm')
+          .flush(problem('donors/second-factor-code-rejected', 'Nesprávný kód', ''), {
+            status: 400,
+            statusText: 'Bad Request',
+          });
+        await card.settle();
+
+        await card.fillIn('#account-second-factor-code', '12345');
+        await card.submit();
+
+        http.expectNone('/api/donors/me/second-factor/confirm');
+        expect(card.element('.account-form p.ui-field-error[role="alert"]')).toBeNull();
+        expect(card.element('#account-second-factor-code-error').textContent).toContain(
+          'Kód má přesně šest číslic.',
         );
       });
 

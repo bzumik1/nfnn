@@ -196,6 +196,14 @@ describe('Given the donate section', () => {
     expect(element('.before-pay .account-sign-in')).not.toBeNull();
   });
 
+  it('when nobody is signed in, then a line says the receipt can be issued to a company registered with its company ID', async () => {
+    await openWithQr();
+
+    expect(squashed('.before-pay .company-hint')).toBe(
+      'Potvrzení vystavíme i na firmu: při registraci zvolte Firma a vyplňte IČO.',
+    );
+  });
+
   it('when nobody is signed in, then what comes next says how an earlier gift can still be paired and where the yearly receipt is', async () => {
     await openWithQr();
 

@@ -56,7 +56,8 @@ class DonorEmailChangeEmailSenderTest {
     private static final EmailAddress NEW_EMAIL = new EmailAddress("jana.nova@example.cz");
     private static final String SENDER = "info@nfnn.cz";
     private static final LinkSecret SECRET = LinkSecret.generate();
-    private static final String LINK = "http://localhost:4200/potvrzeni-emailu#token=" + SECRET.value();
+    private static final String LINK = "http://localhost:4200/potvrzeni-emailu#token=" + SECRET.value() + "&change=email";
+    private static final String HTML_LINK = LINK.replace("&", "&amp;");
     private static final Instant EXPIRES_AT = Instant.parse("2026-10-23T10:00:00Z");
 
     private final ApplicationContextRunner contexts = new ApplicationContextRunner()
@@ -105,8 +106,8 @@ class DonorEmailChangeEmailSenderTest {
                     """.formatted(LINK));
             assertThat(MailContents.html(email))
                     .contains("lang=\"cs\"")
-                    .contains("href=\"" + LINK + "\"")
-                    .contains(">" + LINK + "<")
+                    .contains("href=\"" + HTML_LINK + "\"")
+                    .contains(">" + HTML_LINK + "<")
                     .contains("Potvrdit novou adresu")
                     .contains(">Potvrďte novou adresu</h1>")
                     .contains("jana.nova@example.cz")

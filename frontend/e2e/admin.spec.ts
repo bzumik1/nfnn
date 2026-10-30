@@ -459,3 +459,18 @@ test.describe('Given a visitor who is not signed in', () => {
     await expect(page.locator('#login-email')).toBeFocused();
   });
 });
+
+test.describe('Given a visitor who is not signed in', () => {
+  test('when they open the administration, then the sign-in dialog says it leads into the administration', async ({
+    page,
+  }) => {
+    await mockDonorApi(page);
+
+    await page.goto('/sprava');
+
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toBeVisible();
+    await expect(dialog).toContainText('Pro vstup do správy se přihlaste.');
+    await expect(dialog).not.toContainText('Přístup do vašeho přehledu příspěvků');
+  });
+});

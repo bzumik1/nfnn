@@ -126,6 +126,27 @@ describe('Given the sign-in dialog', () => {
     });
   });
 
+  it('when it opens for the administration, then the lead says signing in leads into the administration', async () => {
+    await render('login', { returnTo: '/sprava', forAdministration: true });
+
+    expect(element('.sub').textContent?.trim()).toBe('Pro vstup do správy se přihlaste.');
+  });
+
+  it('when it opens for a donor page, then the lead names the donor overview', async () => {
+    await render('login', { returnTo: '/darce/prehled' });
+
+    expect(element('.sub').textContent?.trim()).toBe('Přístup do vašeho přehledu příspěvků');
+  });
+
+  it('when it opens, then the passkey button stands apart from the sign-in button behind a divider saying "nebo"', async () => {
+    await render();
+
+    const divider = element('.login-form').nextElementSibling as HTMLElement;
+    expect(divider.classList).toContain('divider');
+    expect(divider.textContent?.trim()).toBe('nebo');
+    expect(divider.nextElementSibling?.classList).toContain('passkey-btn');
+  });
+
   it('when it opens on the registration with an address, then that address is filled in', async () => {
     await render('register', { email: 'spravce@nfnn.cz' });
 
@@ -231,6 +252,10 @@ describe('Given the sign-in dialog', () => {
           .expectOne('/api/donors/auth/login')
           .flush(secondFactorRequired(), { status: 401, statusText: 'Unauthorized' });
         await settle();
+      });
+
+      it('then the code field shows no example code that could pass for a filled-in one', () => {
+        expect(element('#login-code').hasAttribute('placeholder')).toBe(false);
       });
 
       it('then the dialog asks for the code from the app, focuses its field and shows no error', () => {
@@ -388,6 +413,17 @@ describe('Given the sign-in dialog', () => {
             ),
           ).toEqual(['Kopírovat číslo účtu', 'Kopírovat zprávu pro příjemce']);
           expect(document.activeElement).toBe(element('.recovery-title'));
+        });
+
+        it('then the lead names the account to pay from without sending the donor to the overview they cannot open', async () => {
+          (await askForRecovery()).flush(instructions);
+          await settle();
+
+          const lead = element('.recovery .step-lead').textContent?.replace(/\s+/g, ' ').trim();
+          expect(lead).toContain(
+            'z bankovního účtu, ze kterého jste nám už poslali dar (obvykle ten, ze kterého nám platíte)',
+          );
+          expect(lead).not.toContain('přehled');
         });
 
         it('then the earliest day comes before the payment details and a note says a new request shows the same details', async () => {
@@ -741,6 +777,24 @@ describe('Given the sign-in dialog', () => {
       await fillIn('#register-email', 'jana@example.cz');
       await fillIn('#register-password', 'correct horse battery');
     }
+
+    it('as a person, then no field shows an example value that could pass for a filled-in one', () => {
+      const withPlaceholder = [...fixture.nativeElement.querySelectorAll('.register-form input')]
+        .filter((input) => (input as HTMLInputElement).hasAttribute('placeholder'))
+        .map((input) => (input as HTMLInputElement).id);
+
+      expect(withPlaceholder).toEqual([]);
+    });
+
+    it('as a company, then no field shows an example value that could pass for a filled-in one', async () => {
+      await click('.type-switch button:nth-child(2)');
+
+      const withPlaceholder = [...fixture.nativeElement.querySelectorAll('.register-form input')]
+        .filter((input) => (input as HTMLInputElement).hasAttribute('placeholder'))
+        .map((input) => (input as HTMLInputElement).id);
+
+      expect(withPlaceholder).toEqual([]);
+    });
 
     it('as a person, then the registration is posted without a company identifier and the dialog asks to check the e-mail', async () => {
       await fillInPerson();

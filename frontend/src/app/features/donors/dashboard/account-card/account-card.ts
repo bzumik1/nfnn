@@ -300,8 +300,16 @@ export class AccountCard {
     });
   }
 
+  codeChanged(): void {
+    this.error.set('');
+  }
+
   confirmSecondFactor(form: NgForm): void {
-    if (form.invalid || this.saving()) {
+    if (form.invalid) {
+      this.error.set('');
+      return;
+    }
+    if (this.saving()) {
       return;
     }
     this.start();
