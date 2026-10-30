@@ -1,0 +1,16 @@
+[
+  {
+    "path": "GET /api/admin/donations/overview/since",
+    "scenario": "donations/admin_activity_since: *",
+    "kind": "added",
+    "reason": "PR #206 adds what came in since a moment, which the connector's nfnn_since_last_sign_in reads (Jakub 2026-10-29, \"Obojí\"); v2 had no such endpoint",
+    "contract": "docs/api-contract.md, Monthly report settings and overview; MCP connector"
+  },
+  {
+    "path": "GET /api/admin/donors/me/previous-sign-in",
+    "scenario": "donors/admin_previous_sign_in: *",
+    "kind": "added",
+    "reason": "PR #206 adds the administrator's previous sign-in, which the connector's nfnn_since_last_sign_in reads (Jakub 2026-10-29, \"Obojí\"); v2 had no such endpoint",
+    "contract": "docs/api-contract.md, Administrators; MCP connector"
+  }
+]
