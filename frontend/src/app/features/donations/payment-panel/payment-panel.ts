@@ -31,6 +31,7 @@ import { CopyButton } from '../../../shared/ui/copy-button/copy-button';
 import { QrCode } from '../../../shared/ui/qr-code/qr-code';
 import { formatCrowns } from '../donation-amount';
 import { BankAccountResponse, PaymentQrApi, PaymentQrResponse } from '../payment-qr-api';
+import { ChosenAmount, ChosenAmountStore } from './chosen-amount';
 
 const DEFAULT_AMOUNT = 500;
 const MIN_AMOUNT = 1;
@@ -72,6 +73,7 @@ export type PaymentAccountState =
 export class PaymentPanel {
   private readonly api = inject(PaymentQrApi);
   private readonly injector = inject(Injector);
+  private readonly chosenAmount = inject(ChosenAmountStore);
   private readonly bankLabel = viewChild<ElementRef<HTMLElement>>('bankLabel');
 
   readonly variableSymbol = input<string | null>(null);
@@ -84,9 +86,15 @@ export class PaymentPanel {
   ];
   protected readonly crowns = formatCrowns;
 
-  protected readonly customChosen = signal(false);
-  protected readonly presetAmount = signal(DEFAULT_AMOUNT);
-  protected readonly customAmount = signal<number | null>(null);
+  private readonly initial = initialChoice(this.presets, this.chosenAmount.remembered());
+  protected readonly customChosen = signal(this.initial.custom);
+  protected readonly presetAmount = signal(
+    this.initial.custom ? DEFAULT_AMOUNT : this.initial.amount,
+  );
+  protected readonly customAmount = signal<number | null>(
+    this.initial.custom ? this.initial.amount : null,
+  );
+  protected readonly customText = signal(this.initial.custom ? String(this.initial.amount) : '');
   private readonly customAmountLeft = signal(false);
   private readonly amountChanged = signal(false);
   private readonly attempt = signal(0);
@@ -174,6 +182,7 @@ export class PaymentPanel {
     this.savedQrFile.set(null);
     this.customChosen.set(false);
     this.presetAmount.set(amount);
+    this.chosenAmount.remember({ amount, custom: false });
   }
 
   chooseCustomAmount(): void {
@@ -182,6 +191,7 @@ export class PaymentPanel {
     }
     this.savedQrFile.set(null);
     this.customAmount.set(null);
+    this.customText.set('');
     this.customAmountLeft.set(false);
     this.customChosen.set(true);
   }
@@ -189,7 +199,12 @@ export class PaymentPanel {
   enterCustomAmount(event: Event): void {
     this.amountChanged.set(true);
     this.savedQrFile.set(null);
-    this.customAmount.set(wholeCrowns((event.target as HTMLInputElement).value));
+    const typed = wholeCrowns((event.target as HTMLInputElement).value);
+    this.customAmount.set(typed);
+    const amount = wholeAmountInRange(typed);
+    if (amount !== null) {
+      this.chosenAmount.remember({ amount, custom: true });
+    }
   }
 
   leaveCustomAmount(): void {
@@ -257,6 +272,22 @@ export class PaymentPanel {
     }
     return qr;
   }
+}
+
+function initialChoice(
+  presets: readonly AmountPreset[],
+  remembered: ChosenAmount | null,
+): ChosenAmount {
+  if (remembered === null) {
+    return { amount: DEFAULT_AMOUNT, custom: false };
+  }
+  if (remembered.custom) {
+    const amount = wholeAmountInRange(remembered.amount);
+    return amount === null ? { amount: DEFAULT_AMOUNT, custom: false } : { amount, custom: true };
+  }
+  return presets.some((preset) => preset.amount === remembered.amount)
+    ? remembered
+    : { amount: DEFAULT_AMOUNT, custom: false };
 }
 
 function qrKey(amount: number, variableSymbol: string | null): string {
