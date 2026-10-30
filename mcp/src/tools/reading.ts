@@ -360,7 +360,7 @@ export function registerReadingTools(server: McpServer, deps: ToolDependencies):
     {
       title: 'Aktuality a projekty',
       description:
-        'Every news article and project of the site, drafts included, with id, slug, title, tag, perex, photo, published date, live (whether the site shows it today: published and the published date not after today in Prague) and the length of the text, but not the text itself: read one whole with nfnn_news_article or nfnn_project.',
+        'Every news article and project of the site, drafts included, with id, slug, title, tag, perex, the year and category of a project, photo, published date, live (whether the site shows it today: published and the published date not after today in Prague) and the length of the text, but not the text itself: read one whole with nfnn_news_article or nfnn_project.',
       annotations: READ_ONLY,
     },
     async (ctx) =>
@@ -397,7 +397,7 @@ export function registerReadingTools(server: McpServer, deps: ToolDependencies):
     {
       title: 'Projekt',
       description:
-        'One project whole, draft or published: every field nfnn_update_project takes, with its text, year and photo, and live (whether the site shows it today; false for a draft and before its published date).',
+        'One project whole, draft or published: every field nfnn_update_project takes, with its text, year, category and photo, and live (whether the site shows it today; false for a draft and before its published date).',
       inputSchema: z.object({ id: UUID }),
       annotations: READ_ONLY,
     },
