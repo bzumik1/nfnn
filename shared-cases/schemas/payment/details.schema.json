@@ -56,7 +56,7 @@
           "properties": {
             "number": { "type": "string", "pattern": "^([0-9]{1,6}-)?[0-9]{1,10}/[0-9]{4}$" },
             "iban": { "type": "string", "pattern": "^CZ[0-9]{22}$" },
-            "recipientName": { "allOf": [{ "$ref": "#/$defs/spaydText" }, { "maxLength": 35 }] }
+            "recipientName": { "allOf": [{ "$ref": "#/$defs/spaydText" }, { "type": "string", "maxLength": 35 }] }
           }
         },
         "currency": { "const": "CZK" },
@@ -65,8 +65,8 @@
           "required": ["donation", "accountVerification"],
           "additionalProperties": false,
           "properties": {
-            "donation": { "allOf": [{ "$ref": "#/$defs/spaydText" }, { "minLength": 1 }] },
-            "accountVerification": { "allOf": [{ "$ref": "#/$defs/spaydText" }, { "minLength": 1 }] }
+            "donation": { "allOf": [{ "$ref": "#/$defs/spaydText" }, { "type": "string", "minLength": 1 }] },
+            "accountVerification": { "allOf": [{ "$ref": "#/$defs/spaydText" }, { "type": "string", "minLength": 1 }] }
           }
         },
         "accountVerificationAmountMinor": { "type": "integer", "minimum": 1 }
