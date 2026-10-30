@@ -1638,6 +1638,65 @@ describe('Given recorded log lines with an IBAN or the data of the fixtures', ()
     });
   });
 
+  it('when a line holds a word of a name beside an e-mail or a company identifier, then the comparison fails', () => {
+    failsOn('INFO donations.application.ImportService: Payer Dvořáková paid', {
+      changeBaseline: (file) =>
+        (callOf(file).response.body.payers = [{ name: 'Hana Dvořáková', email: 'h@example.cz' }]),
+    });
+    failsOn('INFO donations.application.ImportService: Payer Stavby paid', {
+      changeBaseline: (file) =>
+        (callOf(file).response.body.companies = [
+          { name: 'Acme Stavby', companyIdentifier: '12345678' },
+        ]),
+    });
+  });
+
+  it("when a line holds a donor's street word, then the comparison fails and names the remedy", () => {
+    const result = failsOn('INFO donations.application.ImportService: Sent to Krátká', {
+      changeBaseline: (file) =>
+        (callOf(file).response.body.addresses = [
+          { street: 'Krátká 5', city: 'Nový Bor', postalCode: '47301' },
+        ]),
+    });
+    assert.match(result.output, /Krátká/);
+    assert.match(
+      result.output,
+      /rename the fixture value or add the word to COMMON_WORDS with a reason in testing\.md/,
+    );
+  });
+
+  it('when a line names a passkey, a device, a connected app, an erasure placeholder or the fixture city Most, then the data check lets it through', () => {
+    const lines = [
+      'INFO donors.application.PasskeyService: Passkey Android registered',
+      'INFO donors.application.PasskeyService: Passkey Klíč from Windows removed',
+      'INFO donors.application.ConnectedAppService: Claude Code connected',
+      'INFO donors.application.ErasureService: Vymazaný record kept, Vymazáno address kept',
+      'INFO donations.application.ImportService: Most payments imported',
+    ];
+    const result = compare(
+      workspace({
+        changeBaseline: (file) => {
+          const body = callOf(file).response.body;
+          body.passkeys = [
+            { id: '<id:3>', name: 'Android Phone', createdAt: '2026-01-01T00:00:00Z' },
+            { challenge: '<token>', credential: {}, name: 'Klíč Windows' },
+          ];
+          body.application = { name: 'Claude Code', host: 'localhost', loopback: true };
+          body.erased = {
+            name: 'Vymazaný dárce',
+            companyIdentifier: null,
+            erasedAt: '2026-01-01T00:00:00Z',
+            address: { street: 'Vymazáno', city: 'Vymazáno', postalCode: '00000' },
+          };
+          body.addresses = [{ street: 'Krátká 5', city: 'Most', postalCode: '43401' }];
+          scenarioOf(file).logs.push(...lines);
+        },
+        change: (file) => scenarioOf(file).logs.push(...lines),
+      }),
+    );
+    assert.doesNotMatch(result.output, /must not/);
+  });
+
   it("when a line holds only a common word of the foundation's name or a lower-case word, then the data check lets it through", () => {
     const result = compare(
       workspace({
