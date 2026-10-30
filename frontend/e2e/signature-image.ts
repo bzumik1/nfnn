@@ -50,7 +50,7 @@ export const refusedVector = {
   title: 'SVG nejde použít jako podpis',
   status: 400,
   detail:
-    'Podpis ve formátu SVG smí obsahovat jen tvary (path) s barevnou výplní a mít nejvýš 200 kB. Sken ve formátu JPEG, PNG nebo WebP jde nahrát dál.',
+    'Soubor obsahuje nepovolený prvek „script“. Podpis ve formátu SVG smí mít jen vyplněné tvary (path), bez čar a efektů, a nejvýš 200 kB. Místo něj můžete nahrát sken JPEG, PNG nebo WebP.',
   errors: [
     { field: 'file', code: 'element', message: 'Soubor obsahuje nepovolený prvek „script“.' },
   ],

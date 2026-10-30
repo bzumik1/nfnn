@@ -8,8 +8,8 @@
     </p>
     <p id="receipt-signature-hint" class="signature-hint" i18n="@@admin.signature.hint">
       Podpis se tiskne nad jméno podepisujícího na potvrzeních vystavených po nahrání; ta už
-      vystavená se nemění. Nejlépe vektorový podpis SVG do 200 kB jen z vyplněných tvarů, nebo sken
-      JPEG, PNG či WebP do 10 MB, tmavý podpis na bílém papíře.
+      vystavená se nemění. Nejlépe SVG do 200 kB jen s vyplněnými tvary, bez čar a efektů. Jinak
+      sken JPEG, PNG či WebP do 10 MB: tmavý podpis na bílém papíře.
     </p>
 
     @switch (state()) {
@@ -28,7 +28,7 @@
       }
       @case ('ready') {
         @if (signature(); as current) {
-          @if (current.configured && current.vector) {
+          @if (current.kind === 'VECTOR' && current.vector) {
             <div class="signature-frame">
               <svg
                 class="signature-preview"

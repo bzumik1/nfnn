@@ -201,11 +201,12 @@ test.describe('Given an administrator on the settings page', () => {
     expect(methods).toEqual(['GET', 'POST', 'DELETE']);
   });
 
-  test('when they upload a vector signature, then the card draws it and a refused SVG keeps it with the reason', async ({
+  test('when they upload a vector signature, then the card draws it, a refused SVG keeps it with the reason first, and a scan and an SVG replace each other', async ({
     page,
   }) => {
     let current: object = noSignature;
     let uploads = 0;
+    const answers: object[] = [vectorSignature, refusedVector, uploadedSignature, vectorSignature];
     await page.route(
       (url) => url.pathname === SETTINGS,
       (route) => route.fulfill({ json: adminSettings }),
@@ -216,21 +217,23 @@ test.describe('Given an administrator on the settings page', () => {
         if (route.request().method() !== 'POST') {
           return route.fulfill({ json: current });
         }
-        uploads++;
-        if (uploads === 1) {
-          current = vectorSignature;
-          return route.fulfill({ json: current });
+        const answer = answers[uploads++];
+        if (answer === refusedVector) {
+          return route.fulfill({
+            status: 400,
+            contentType: 'application/problem+json',
+            body: JSON.stringify(refusedVector),
+          });
         }
-        return route.fulfill({
-          status: 400,
-          contentType: 'application/problem+json',
-          body: JSON.stringify(refusedVector),
-        });
+        current = answer;
+        return route.fulfill({ json: current });
       },
     );
 
     await page.goto('/sprava/nastaveni');
     const card = page.getByRole('region', { name: 'Podpis na potvrzeních' });
+    const saved = card.getByRole('status').filter({ hasText: /\S/ });
+    const alert = card.getByRole('alert').filter({ hasText: /\S/ });
     await expect(card).toContainText('Podpis není nahraný.');
 
     await card.getByLabel('Nahrát podpis').setInputFiles({
@@ -239,10 +242,12 @@ test.describe('Given an administrator on the settings page', () => {
       buffer: Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 100"/>'),
     });
 
-    const drawing = card.getByRole('img', { name: 'Nahraný podpis' });
+    const drawing = card.locator('svg.signature-preview');
     await expect(drawing).toBeVisible();
+    await expect(drawing).toHaveAccessibleName('Nahraný podpis');
     await expect(drawing.locator('path')).toHaveCount(2);
     await expect(card).toContainText('Nahráno 23. 10. 2026 21:30, vektorový podpis (SVG).');
+    await expect(saved).toHaveText('Podpis je uložený. Ponesou ho potvrzení vystavená od teď.');
 
     await card.getByLabel('Nahrát jiný podpis').setInputFiles({
       name: 'jiny.svg',
@@ -250,10 +255,61 @@ test.describe('Given an administrator on the settings page', () => {
       buffer: Buffer.from('<svg><script/></svg>'),
     });
 
-    await expect(card.getByRole('alert').filter({ hasText: /\S/ })).toContainText(
-      'Soubor obsahuje nepovolený prvek „script“.',
+    await expect(alert).toHaveText(
+      'SVG nejde použít jako podpis. Soubor obsahuje nepovolený prvek „script“. Podpis ve formátu SVG smí mít jen vyplněné tvary (path), bez čar a efektů, a nejvýš 200 kB. Místo něj můžete nahrát sken JPEG, PNG nebo WebP.',
     );
     await expect(drawing.locator('path')).toHaveCount(2);
-    expect(uploads).toBe(2);
+
+    await card.getByLabel('Nahrát jiný podpis').setInputFiles({
+      name: 'podpis.jpg',
+      mimeType: 'image/jpeg',
+      buffer: Buffer.from([0xff, 0xd8, 0xff, 0xe0]),
+    });
+
+    const scan = card.locator('img.signature-preview');
+    await expect(scan).toBeVisible();
+    await expect(drawing).toHaveCount(0);
+    await expect(card).toContainText('Nahráno 23. 10. 2026 21:30, 600 × 200 px.');
+    await expect(saved).toHaveText('Podpis je uložený. Ponesou ho potvrzení vystavená od teď.');
+    await expect(alert).toHaveCount(0);
+
+    await card.getByLabel('Nahrát jiný podpis').setInputFiles({
+      name: 'podpis.svg',
+      mimeType: 'image/svg+xml',
+      buffer: Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 100"/>'),
+    });
+
+    await expect(drawing.locator('path')).toHaveCount(2);
+    await expect(scan).toHaveCount(0);
+    await expect(card).toContainText('Nahráno 23. 10. 2026 21:30, vektorový podpis (SVG).');
+    expect(uploads).toBe(4);
+  });
+
+  test('when the vector signature is shown in a dark forced-colours mode, then its frame keeps the paper and the ink keeps its colour', async ({
+    page,
+  }) => {
+    await page.emulateMedia({ forcedColors: 'active', colorScheme: 'dark' });
+    await page.route(
+      (url) => url.pathname === SETTINGS,
+      (route) => route.fulfill({ json: adminSettings }),
+    );
+    await page.route(
+      (url) => url.pathname === SIGNATURE,
+      (route) => route.fulfill({ json: vectorSignature }),
+    );
+
+    await page.goto('/sprava/nastaveni');
+    const card = page.getByRole('region', { name: 'Podpis na potvrzeních' });
+    const frame = card.locator('.signature-frame');
+    await expect(frame.locator('path')).toHaveCount(2);
+
+    const colours = await frame.evaluate((element) => ({
+      adjust: getComputedStyle(element).forcedColorAdjust,
+      paper: getComputedStyle(element).backgroundColor,
+      ink: getComputedStyle(element.querySelector('path') as Element).fill,
+    }));
+    expect(colours.adjust).toBe('none');
+    expect(colours.paper).not.toBe('rgb(0, 0, 0)');
+    expect(colours.ink).toBe('rgb(29, 42, 92)');
   });
 });

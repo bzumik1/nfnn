@@ -12,7 +12,11 @@ import {
   viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { describeProblem } from '../../../../core/auth/api-problem';
+import {
+  describeProblem,
+  describeProblemWithoutFields,
+  problemTypeEndsWith,
+} from '../../../../core/auth/api-problem';
 import { formatBankTime } from '../../../donations/donation-date';
 import {
   AdminApi,
@@ -31,6 +35,7 @@ const MAX_BYTES = 10 * 1024 * 1024;
 const MAX_SVG_BYTES = 200 * 1024;
 const HEX_FILL = /^#[0-9a-f]{6}$/;
 const BLACK = '#000000';
+const UNSUPPORTED_VECTOR = '/donations/unsupported-signature-vector';
 const PIXELS = new Intl.NumberFormat('cs-CZ');
 
 @Component({
@@ -83,7 +88,7 @@ export class ReceiptSignature {
 
   protected uploadedLine(signature: ReceiptSignatureResponse): string {
     const uploadedAt = formatBankTime(signature.uploadedAt ?? '');
-    if (signature.vector !== null) {
+    if (signature.kind === 'VECTOR') {
       return $localize`:@@admin.signature.uploadedVector:Nahráno ${uploadedAt}:time:, vektorový podpis (SVG).`;
     }
     const width = PIXELS.format(signature.width ?? 0);
@@ -134,9 +139,12 @@ export class ReceiptSignature {
         },
         error: (failure: unknown) => {
           this.uploading.set(false);
+          const describe = problemTypeEndsWith(failure, UNSUPPORTED_VECTOR)
+            ? describeProblemWithoutFields
+            : describeProblem;
           this.notice.set({
             kind: 'alert',
-            text: describeProblem(
+            text: describe(
               failure,
               $localize`:@@admin.signature.failed:Podpis se nepodařilo nahrát. Zkuste to prosím znovu.`,
             ),

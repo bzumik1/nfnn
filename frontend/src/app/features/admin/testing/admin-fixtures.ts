@@ -434,7 +434,7 @@ export const SIGNATURE_VECTOR: SignatureVectorResponse = {
   viewBox: [0, 0, 300, 100],
   paths: [
     { d: 'M10 80 C40 10 65 10 95 80 S150 150 180 80 Z', fill: '#1d2a5c', opacity: 0.9 },
-    { d: 'm250 50 l40 40 z', fill: '#c0392b', opacity: 1 },
+    { d: 'M250 50 L290 90 Z', fill: '#c0392b', opacity: 1 },
   ],
 };
 
