@@ -31,8 +31,15 @@ import {
 } from './lost-chunks';
 import {
   CHANGED_AMOUNT,
-  scanAfterLoad,
-  serveReceiptKeys,
+  forgetKeyList,
+  keepKeyListNow,
+  KEY_LIST,
+  LIST_WITHOUT_THE_KEY,
+  type ReceiptApi,
+  REVOKED_KEY_LIST,
+  scanFragment,
+  breakSha256,
+  serveReceiptApi,
   SINGLE_RECEIPT,
   YEARLY_RECEIPT,
 } from './receipt-verification';
@@ -229,39 +236,117 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     expect(await violations(page)).toEqual([]);
   });
 
-  test('when they verify receipt codes, then the explanation, a signed yearly receipt, a receipt the fund does not keep, a changed code and the offline state break no rule', async ({
+  test('when they verify receipt codes, then the explanation, the check under way and every result break no rule', async ({
     page,
     context,
   }) => {
-    await serveReceiptKeys(page);
-    let status = 'active';
-    await page.route(
-      (url) => url.pathname === '/api/donations/receipts/status',
-      (route) => route.fulfill({ json: { status } }),
-    );
+    const api: ReceiptApi = { keys: KEY_LIST, status: 'never' };
+    await serveReceiptApi(page, api);
     const heading = page.getByRole('heading', { level: 1 });
 
     await page.goto('/overit');
     await expect(heading).toHaveText('Ověření potvrzení o daru');
     expect(await violations(page)).toEqual([]);
 
-    await scanAfterLoad(page, YEARLY_RECEIPT);
-    await expect(heading).toHaveText('Podepsáno fondem Nová naděje');
+    await scanFragment(page, SINGLE_RECEIPT.fragment);
+    await expect(page.getByText('Podpis sedí, ptáme se fondu na stav potvrzení…')).toBeVisible();
+    expect(await violations(page)).toEqual([]);
+    await expect(heading).toHaveText('Podpis sedí, ale fond teď neodpověděl, zda potvrzení vede');
     expect(await violations(page)).toEqual([]);
 
-    status = 'unknown';
-    await scanAfterLoad(page, SINGLE_RECEIPT);
-    await expect(heading).toHaveText('Fond toto potvrzení ve své evidenci nevede');
+    const online: readonly [ReceiptApi, string, string][] = [
+      [
+        { keys: KEY_LIST, status: 'active' },
+        YEARLY_RECEIPT.fragment,
+        'Podepsáno fondem Nová naděje',
+      ],
+      [
+        { keys: KEY_LIST, status: 'replaced' },
+        SINGLE_RECEIPT.fragment,
+        'Fond toto potvrzení nahradil novějším',
+      ],
+      [
+        { keys: KEY_LIST, status: 'withdrawn' },
+        YEARLY_RECEIPT.fragment,
+        'Fond toto potvrzení zrušil',
+      ],
+      [
+        { keys: KEY_LIST, status: 'unknown' },
+        SINGLE_RECEIPT.fragment,
+        'Fond toto potvrzení ve své evidenci nevede',
+      ],
+      [
+        { keys: KEY_LIST, status: 'active' },
+        CHANGED_AMOUNT.fragment,
+        'Neověřeno: podpis neodpovídá údajům',
+      ],
+      [
+        { keys: LIST_WITHOUT_THE_KEY, status: 'active' },
+        YEARLY_RECEIPT.fragment,
+        'Neověřeno: kód podepsal klíč, který fond nezveřejnil',
+      ],
+      [
+        { keys: REVOKED_KEY_LIST, status: 'active' },
+        SINGLE_RECEIPT.fragment,
+        'Neověřeno: fond tento klíč zneplatnil',
+      ],
+      [
+        { keys: KEY_LIST, status: 'active' },
+        SINGLE_RECEIPT.fragment.slice(0, 60),
+        'Odkaz je neúplný',
+      ],
+      [
+        { keys: KEY_LIST, status: 'active' },
+        `2${SINGLE_RECEIPT.fragment.slice(1)}`,
+        'Tento kód je novější než stránka',
+      ],
+    ];
+    for (const [answers, fragment, title] of online) {
+      Object.assign(api, answers);
+      await scanFragment(page, fragment);
+      await expect(heading).toHaveText(title);
+      expect(await violations(page)).toEqual([]);
+    }
+
+    await forgetKeyList(page);
+    Object.assign(api, { keys: 503 });
+    await scanFragment(page, SINGLE_RECEIPT.fragment);
+    await expect(heading).toHaveText('Ověření teď nejde dokončit');
     expect(await violations(page)).toEqual([]);
 
-    await scanAfterLoad(page, CHANGED_AMOUNT);
-    await expect(heading).toHaveText('Neověřeno: podpis neodpovídá údajům');
+    await keepKeyListNow(page, LIST_WITHOUT_THE_KEY);
+    await scanFragment(page, YEARLY_RECEIPT.fragment);
+    await expect(heading).toHaveText('Neověřeno: tento podpis zatím neumíme ověřit');
     expect(await violations(page)).toEqual([]);
 
-    await page.evaluate(() => window.localStorage.clear());
     await context.setOffline(true);
-    await scanAfterLoad(page, YEARLY_RECEIPT);
+    await scanFragment(page, SINGLE_RECEIPT.fragment);
+    await expect(
+      page.getByText(
+        'Kód podepsal klíč, který tato stránka zatím nezná. Připojte se k internetu a zkuste to znovu.',
+      ),
+    ).toBeVisible();
+    expect(await violations(page)).toEqual([]);
+
+    await keepKeyListNow(page, KEY_LIST);
+    await scanFragment(page, YEARLY_RECEIPT.fragment);
+    await expect(heading).toHaveText('Podepsáno fondem Nová naděje');
+    await expect(
+      page.getByText(
+        'Bez připojení nelze zjistit, zda fond potvrzení později nenahradil novějším nebo nezrušil.',
+      ),
+    ).toBeVisible();
+    expect(await violations(page)).toEqual([]);
+
+    await forgetKeyList(page);
+    await scanFragment(page, SINGLE_RECEIPT.fragment);
     await expect(heading).toHaveText('Nelze ověřit bez připojení');
+    expect(await violations(page)).toEqual([]);
+
+    await keepKeyListNow(page, KEY_LIST);
+    await breakSha256(page);
+    await scanFragment(page, YEARLY_RECEIPT.fragment);
+    await expect(heading).toHaveText('Ověření se nepodařilo');
     expect(await violations(page)).toEqual([]);
   });
 

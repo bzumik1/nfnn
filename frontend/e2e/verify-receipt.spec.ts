@@ -3,6 +3,7 @@ import { mockDonorApi } from './donor-session';
 import { expect, test } from './fixtures';
 import {
   CHANGED_AMOUNT,
+  serveReceiptApi,
   KEY_LIST,
   keepKeyList,
   keptKeyList,
@@ -79,7 +80,7 @@ test.describe('Given a visitor who scans the verification QR of a receipt', () =
 
       await expect(page.getByRole('heading', { level: 1 })).toHaveText(heading);
       await expect(page.getByText(SIGNED)).toHaveCount(0);
-      await expect(page.locator('.ui-status__icon--success')).toHaveCount(0);
+      await expect(page.locator('.ui-status [aria-hidden="true"]')).not.toHaveText('✓');
     });
   }
 
@@ -117,7 +118,7 @@ test.describe('Given a visitor who scans the verification QR of a receipt', () =
     await page.goto(`/overit#${SINGLE_RECEIPT.fragment}`);
 
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(
-      'Neověřeno: kód nepodepsal žádný klíč fondu',
+      'Neověřeno: kód podepsal klíč, který fond nezveřejnil',
     );
   });
 
@@ -157,7 +158,7 @@ test.describe('Given a visitor who scans the verification QR of a receipt', () =
     await serveReceiptStatus(page, 'active');
     const scripts: Promise<string>[] = [];
     page.on('response', (response) => {
-      if (response.url().endsWith('.js')) {
+      if (new URL(response.url()).pathname.endsWith('.js')) {
         scripts.push(response.text());
       }
     });
@@ -177,7 +178,7 @@ test.describe('Given a visitor who scans the verification QR of a receipt', () =
     await serveReceiptStatus(page, 'active');
     const scripts: Promise<string>[] = [];
     page.on('response', (response) => {
-      if (response.url().endsWith('.js')) {
+      if (new URL(response.url()).pathname.endsWith('.js')) {
         scripts.push(response.text());
       }
     });
@@ -279,4 +280,59 @@ test.describe('Given a visitor whose connection drops after the page has loaded'
       ),
     ).toBeVisible();
   });
+});
+
+test.describe('Given a visitor who is online while the fund gives no usable answer', () => {
+  const NO_ANSWER = 'Podpis sedí, ale fond teď neodpověděl, zda potvrzení vede';
+
+  test.beforeEach(async ({ page }) => {
+    await mockDonorApi(page);
+  });
+
+  for (const refusal of [503, 429]) {
+    test(`when the status call answers ${refusal}, then the signature holds but the result is a caution with a retry, never green`, async ({
+      page,
+    }) => {
+      await serveReceiptApi(page, { keys: KEY_LIST, status: refusal });
+
+      await page.goto(`/overit#${SINGLE_RECEIPT.fragment}`);
+
+      await expect(page.getByRole('heading', { level: 1 })).toHaveText(NO_ANSWER);
+      await expect(page.locator('.ui-status [aria-hidden="true"]')).toHaveText('!');
+      await expect(page.getByRole('button', { name: 'Zkusit znovu' })).toBeVisible();
+      await expect(page.getByText('Fondu jsme poslali')).toHaveCount(0);
+    });
+
+    test(`when the key list answers ${refusal} and keys are kept, then the kept keys check the signature but the result is a caution, not offline`, async ({
+      page,
+    }) => {
+      await keepKeyList(page);
+      await serveReceiptApi(page, { keys: refusal, status: 'active' });
+
+      await page.goto(`/overit#${SINGLE_RECEIPT.fragment}`);
+
+      await expect(page.getByRole('heading', { level: 1 })).toHaveText(NO_ANSWER);
+      await expect(page.getByText('Bez připojení')).toHaveCount(0);
+      await expect(page.getByRole('button', { name: 'Zkusit znovu' })).toBeVisible();
+    });
+
+    test(`when the key list answers ${refusal} and no keys are kept, then the page says the check cannot be finished now, not that the visitor is offline`, async ({
+      page,
+    }) => {
+      const api = { keys: refusal as number | object, status: 'active' };
+      await serveReceiptApi(page, api);
+
+      await page.goto(`/overit#${SINGLE_RECEIPT.fragment}`);
+
+      await expect(page.getByRole('heading', { level: 1 })).toHaveText(
+        'Ověření teď nejde dokončit',
+      );
+      await expect(page.getByText('Připojte se k internetu')).toHaveCount(0);
+
+      api.keys = KEY_LIST;
+      await page.getByRole('button', { name: 'Zkusit znovu' }).click();
+
+      await expect(page.getByRole('heading', { level: 1 })).toHaveText(SIGNED);
+    });
+  }
 });

@@ -115,3 +115,51 @@ export async function withoutWebCryptoEd25519(page: Page): Promise<void> {
     } as SubtleCrypto['importKey'];
   });
 }
+
+export interface ReceiptApi {
+  keys: object | number;
+  status: string | number | 'never';
+}
+
+export async function serveReceiptApi(page: Page, api: ReceiptApi): Promise<void> {
+  await page.route(
+    (url) => url.pathname === '/api/donations/receipt-keys',
+    (route) =>
+      typeof api.keys === 'number'
+        ? route.fulfill({ status: api.keys, json: { type: 'about:blank', status: api.keys } })
+        : route.fulfill({ json: api.keys }),
+  );
+  await page.route(
+    (url) => url.pathname === '/api/donations/receipts/status',
+    (route) => {
+      if (api.status === 'never') {
+        return undefined;
+      }
+      return typeof api.status === 'number'
+        ? route.fulfill({ status: api.status, json: { type: 'about:blank', status: api.status } })
+        : route.fulfill({ json: { status: api.status } });
+    },
+  );
+}
+
+export async function forgetKeyList(page: Page): Promise<void> {
+  await page.evaluate((key) => window.localStorage.removeItem(key), STORAGE_KEY);
+}
+
+export async function keepKeyListNow(page: Page, list: object): Promise<void> {
+  await page.evaluate(([key, value]) => window.localStorage.setItem(key, value), [
+    STORAGE_KEY,
+    JSON.stringify(list),
+  ] as const);
+}
+
+export async function scanFragment(page: Page, fragment: string): Promise<void> {
+  await page.evaluate((value) => (window.location.hash = value), fragment);
+}
+
+export async function breakSha256(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    SubtleCrypto.prototype.digest = () =>
+      Promise.reject(new DOMException('broken', 'OperationError'));
+  });
+}
