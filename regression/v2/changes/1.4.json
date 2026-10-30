@@ -527,6 +527,104 @@
   },
   {
     "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.domain.payment.QrPaymentTest > Given a donation that identifies the donor, when the payment is rendered, then the SPAYD carries the variable symbol",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): QrPayment, which wrote v2's server QR, is removed in round 1 of the 1.4 review, as it had no production caller left; the browser's spayd() writes X-VS from the donor's symbol, proved by the shared case",
+    "replacement": "src/app/features/donations/spayd.spec.ts > Given the shared case 500 Kč with a ten-digit variable symbol > when the browser composes the payment from the payment details it holds, then it gives the expected SPAYD text or refusal"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.domain.payment.QrPaymentTest > Given an anonymous donation, when the payment is rendered, then the SPAYD leaves out the variable symbol",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): QrPayment, which wrote v2's server QR, is removed in round 1 of the 1.4 review, as it had no production caller left; the browser's spayd() leaves X-VS out without a symbol, proved by the shared case",
+    "replacement": "src/app/features/donations/spayd.spec.ts > Given the shared case 500 Kč without a variable symbol > when the browser composes the payment from the payment details it holds, then it gives the expected SPAYD text or refusal"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.domain.payment.QrPaymentTest > Given an account verification, when the payment is rendered, then it says it verifies the account",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): QrPayment, which wrote v2's server QR, is removed in round 1 of the 1.4 review, as it had no production caller left; the browser's spayd() writes the served verification message, proved by the shared case",
+    "replacement": "src/app/features/donations/spayd.spec.ts > Given the shared case 1 Kč verifying a donor's account > when the browser composes the payment from the payment details it holds, then it gives the expected SPAYD text or refusal"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.domain.payment.QrPaymentTest > Given a second-factor recovery, when the payment is rendered, then it carries the recovery message and no variable symbol",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): QrPayment, which wrote v2's server QR, is removed in round 1 of the 1.4 review, as it had no production caller left; the recovery payment's text is written by PaymentDetails.spaydWithoutVariableSymbol through SecondFactorRecoveryPayments.spaydFor and checked there",
+    "replacement": "donations.application.recovery.SecondFactorRecoveryPaymentsTest > Given a recovery code, when the payment text is asked for, then it is the SPAYD text of 1 Kč to the foundation's account with the recovery message and no variable symbol"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.domain.payment.QrPaymentTest > Given an account verification without a variable symbol, when the payment is created, then it is refused",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): QrPayment, which wrote v2's server QR, is removed in round 1 of the 1.4 review, as it had no production caller left; spayd() refuses a verification without a symbol, proved by the shared case",
+    "replacement": "src/app/features/donations/spayd.spec.ts > Given the shared case an account verification without a variable symbol is refused > when the browser composes the payment from the payment details it holds, then it gives the expected SPAYD text or refusal"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.domain.payment.QrPaymentTest > Given an amount with hellers, when the payment is rendered, then the amount has two decimals",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): QrPayment, which wrote v2's server QR, is removed in round 1 of the 1.4 review, as it had no production caller left; spayd() writes AM with two decimals, down to the smallest amount, proved by the shared case",
+    "replacement": "src/app/features/donations/spayd.spec.ts > Given the shared case 1 heller, the smallest amount SPAYD holds > when the browser composes the payment from the payment details it holds, then it gives the expected SPAYD text or refusal"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.domain.payment.QrPaymentTest > Given a recipient name with diacritics and punctuation, when the payment is rendered, then the name is uppercase ASCII",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): QrPayment, which wrote v2's server QR, is removed in round 1 of the 1.4 review, as it had no production caller left; SpaydText writes the recipient as uppercase ASCII for the payment details, and spayd() sends it as served, proved by the shared case",
+    "replacement": "src/app/features/donations/spayd.spec.ts > Given the shared case lowercase, diacritics and symbols in a recipient name become SPAYD text > when the browser composes the payment from the payment details it holds, then it gives the expected SPAYD text or refusal"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.domain.payment.QrPaymentTest > Given a longer recipient name, when the payment is rendered, then the name is shortened to 35 characters",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): QrPayment, which wrote v2's server QR, is removed in round 1 of the 1.4 review, as it had no production caller left; SpaydText cuts the recipient at 35 characters",
+    "replacement": "donations.domain.payment.SpaydTextTest > Given a name longer than 35 characters, when it becomes SPAYD text, then it is cut at 35 and loses a space the cut leaves at its end"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.domain.payment.QrPaymentTest > Given any values, when the payment is rendered, then the SPAYD keeps to the allowed characters",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): QrPayment, which wrote v2's server QR, is removed in round 1 of the 1.4 review, as it had no production caller left; SpaydText keeps only the characters a SPAYD value allows",
+    "replacement": "donations.domain.payment.SpaydTextTest > Given the characters a SPAYD value keeps, when a text becomes SPAYD text, then they stay"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.domain.payment.QrPaymentTest > Given a donation that is not positive, when the payment is created, then it is rejected",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): QrPayment, which wrote v2's server QR, is removed in round 1 of the 1.4 review, as it had no production caller left; PaymentDetails refuses a SPAYD text for an amount that is not positive (the browser's spayd() refuses one below a heller, panel and shared cases)",
+    "replacement": "donations.domain.payment.PaymentDetailsTest > Given an amount that is not positive or an empty message, when a SPAYD text is written, then it is refused"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.domain.payment.QrPaymentTest > Given a donation that does not fit the SPAYD amount field, when the payment is created, then it is rejected",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): QrPayment, which wrote v2's server QR, is removed in round 1 of the 1.4 review, as it had no production caller left; spayd() refuses one heller more than 9 999 999,99 Kč, proved by the shared case",
+    "replacement": "src/app/features/donations/spayd.spec.ts > Given the shared case one heller more than 9 999 999,99 Kč is refused > when the browser composes the payment from the payment details it holds, then it gives the expected SPAYD text or refusal"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.domain.payment.QrPaymentTest > Given no recipient, when the payment is created, then it is rejected",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): QrPayment, which wrote v2's server QR, is removed in round 1 of the 1.4 review, as it had no production caller left; PaymentDetails refuses a missing part, the recipient included",
+    "replacement": "donations.domain.payment.PaymentDetailsTest > Given a missing part, when the payment details are created, then they are refused"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.domain.payment.QrPaymentTest > Given the same values, when two payments are created, then they are equal",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): QrPayment, which wrote v2's server QR, is removed in round 1 of the 1.4 review, as it had no production caller left; no caller compares payments any more; PaymentDetails and SpaydText are records compared by value, as the payment details test does",
+    "replacement": "donations.domain.payment.PaymentDetailsTest > Given the foundation's account, when its payment details are made, then they carry the account, CZK and the SPAYD texts of the recipient and both messages"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.domain.payment.PaymentDetailsTest > Given the payment details, when they are compared with today's QR payments, then the recipient and each message are the RN and MSG those payments send",
+    "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): the bridge to QrPayment goes with QrPayment (round 1 of the 1.4 review); the recovery text is now written by PaymentDetails itself, so its RN and MSG are the details' by construction",
+    "replacement": "donations.domain.payment.PaymentDetailsTest > Given the payment details, when a SPAYD text without a variable symbol is written, then it carries the IBAN, the amount, CZK, the recipient and the message"
+  },
+  {
+    "kind": "retired",
     "suite": "backend-cucumber",
     "test": "feature_classpath_features/donations/payment_details.feature > Visitor gets the foundation's payment details to build a QR payment in the browser - The recipient and each message are what today's QR payment sends for its purpose*",
     "reason": "1.4 draws every payment QR in the browser from GET /api/donations/payment-details (D30, A2: nothing old has to keep working): this 1.2 scenario compared payment-details with what payment-qr sent, and payment-qr is gone; DonationPurposeSharedCasesTest reads every text the browser writes as the import does",
