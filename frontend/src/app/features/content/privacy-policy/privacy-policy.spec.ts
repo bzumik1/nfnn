@@ -242,13 +242,19 @@ describe('Given the privacy policy page', () => {
     expect(reports).toContain(
       'nikdy neobsahuje text chybové zprávy, adresu stránky, vaše jméno, e‑mail, částky, čísla potvrzení',
     );
-    expect(reports).toContain('bez přihlašovacích údajů, takže ho s vaším účtem nespojíme');
+    expect(reports).toContain(
+      'Hlášení nenese váš účet ani IP adresu; podle času by šlo přiřadit k ostatním záznamům serveru z téže chvíle, a to děláme jen při hledání konkrétní chyby.',
+    );
+    expect(reports).not.toContain('nespojíme');
     expect(reports).toContain('nejpozději po 14 dnech');
+    expect(reports).toContain(
+      'kopii v záznamu kontejneru na serveru, kterou čte jen jeho správce, mažeme, jakmile překročí nastavený objem',
+    );
   });
 
   it('when it renders, then the retention of browser error reports is listed with the rest', () => {
     expect(sectionText('Jak dlouho údaje uchováváme')).toContain(
-      'hlášení chyb z prohlížeče v provozním záznamu aplikace nejdéle 14 dní',
+      'hlášení chyb z prohlížeče v provozním záznamu aplikace nejdéle 14 dní, v záznamu kontejneru na serveru do jeho automatického smazání podle objemu,',
     );
   });
 

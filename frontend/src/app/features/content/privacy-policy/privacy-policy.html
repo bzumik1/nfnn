@@ -253,9 +253,12 @@
           <p i18n="@@content.privacy.clientErrors.never">
             Hlášení nikdy neobsahuje text chybové zprávy, adresu stránky, vaše jméno, e&#8209;mail,
             částky, čísla potvrzení ani jiné údaje, které jste zadali nebo které na stránce vidíte.
-            Prohlížeč ho posílá bez přihlašovacích údajů, takže ho s vaším účtem nespojíme. Server
-            ho zapíše jako jeden řádek do provozního záznamu (logu) aplikace, který se automaticky
-            maže nejpozději po 14 dnech; IP adresu, ze které hlášení přišlo, do něj nezapisuje.
+            Prohlížeč ho posílá bez přihlašovacích údajů. Hlášení nenese váš účet ani IP adresu;
+            podle času by šlo přiřadit k ostatním záznamům serveru z téže chvíle, a to děláme jen
+            při hledání konkrétní chyby. Server ho zapíše jako jeden řádek do provozního záznamu
+            (logu) aplikace, který se automaticky maže nejpozději po 14 dnech; kopii v záznamu
+            kontejneru na serveru, kterou čte jen jeho správce, mažeme, jakmile překročí nastavený
+            objem.
           </p>
           <dl class="basis">
             <dt i18n="@@content.privacy.data.basisLabel">Právní základ</dt>
@@ -354,7 +357,8 @@
             e&#8209;mailem jen po dobu potřebnou k vyřízení dotazu,
           </li>
           <li i18n="@@content.privacy.retention.clientErrors">
-            hlášení chyb z prohlížeče v provozním záznamu aplikace nejdéle 14 dní,
+            hlášení chyb z prohlížeče v provozním záznamu aplikace nejdéle 14 dní, v záznamu
+            kontejneru na serveru do jeho automatického smazání podle objemu,
           </li>
           <li i18n="@@content.privacy.retention.ipAddress">
             IP adresu pro omezení počtu žádostí hodinu od první žádosti (v operační paměti nejdéle
