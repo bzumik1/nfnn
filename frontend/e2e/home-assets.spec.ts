@@ -24,17 +24,18 @@ test.describe("Given the site's SVG tab icon", () => {
     return page.locator('img').screenshot({ omitBackground: true });
   }
 
-  test('when it is drawn at 16 px, then it leaves out the face, which it keeps at 32 px', async ({
-    page,
-    request,
-  }) => {
-    const svg = await (await request.get('/favicon.svg')).text();
-    const withoutFace = svg.replace(/<g class="face"[^>]*>[\s\S]*?<\/g>/, '');
-    expect(withoutFace).not.toEqual(svg);
+  for (const size of [16, 32]) {
+    test(`when it is drawn at ${size} px, then it shows the face of the star`, async ({
+      page,
+      request,
+    }) => {
+      const svg = await (await request.get('/favicon.svg')).text();
+      const withoutFace = svg.replace(/<g class="face"[^>]*>[\s\S]*?<\/g>/, '');
+      expect(withoutFace).not.toEqual(svg);
 
-    expect(await drawn(page, svg, 16)).toEqual(await drawn(page, withoutFace, 16));
-    expect(await drawn(page, svg, 32)).not.toEqual(await drawn(page, withoutFace, 32));
-  });
+      expect(await drawn(page, svg, size)).not.toEqual(await drawn(page, withoutFace, size));
+    });
+  }
 });
 
 test.describe('Given a visitor on the home page', () => {
@@ -66,7 +67,7 @@ test.describe('Given a visitor on the home page', () => {
     expect(elsewhere).toEqual([]);
   });
 
-  test('when it loads, then it links a tab icon as ICO and SVG and an opaque 180 px home-screen icon, all served by the site', async ({
+  test('when it loads, then it links a tab icon only as SVG and an opaque 180 px home-screen icon, all served by the site', async ({
     page,
     request,
   }) => {
@@ -86,14 +87,9 @@ test.describe('Given a visitor on the home page', () => {
         }),
       );
     expect(links).toEqual([
-      { rel: 'icon', path: '/favicon.ico', type: '', sizes: '32x32' },
       { rel: 'icon', path: '/favicon.svg', type: 'image/svg+xml', sizes: '' },
       { rel: 'apple-touch-icon', path: '/apple-touch-icon.png', type: '', sizes: '' },
     ]);
-
-    const ico = await request.get('/favicon.ico');
-    expect(ico.ok()).toBe(true);
-    expect(icoImageWidths(await ico.body())).toEqual([16, 32, 48]);
 
     const svg = await request.get('/favicon.svg');
     expect(svg.ok()).toBe(true);
@@ -106,14 +102,31 @@ test.describe('Given a visitor on the home page', () => {
     expect(pngColourType(png)).toBe(PNG_TRUECOLOUR_WITHOUT_ALPHA);
   });
 
-  test('when a server dashboard asks for the app icon, then the site serves it as a 512 px PNG', async ({
+  test('when a service that knows only the default address asks for /favicon.ico, then the site serves the star in 16, 32 and 48 px', async ({
     request,
   }) => {
-    const icon = await request.get('/app-icon.png');
+    const ico = await request.get('/favicon.ico');
+
+    expect(ico.ok()).toBe(true);
+    expect(icoImageWidths(await ico.body())).toEqual([16, 32, 48]);
+  });
+
+  test('when a server dashboard asks for the app icon as PNG, then the site has none, because the icon is SVG', async ({
+    request,
+  }) => {
+    expect((await request.get('/app-icon.png')).status()).toBe(404);
+  });
+
+  test('when a server dashboard asks for the app icon as SVG, then the site serves the white tile with the star', async ({
+    request,
+  }) => {
+    const icon = await request.get('/app-icon.svg');
 
     expect(icon.ok()).toBe(true);
-    expect(icon.headers()['content-type']).toBe('image/png');
-    expect(pngSize(await icon.body())).toEqual([512, 512]);
+    expect(icon.headers()['content-type']).toContain('image/svg+xml');
+    const svg = await icon.text();
+    expect(svg).toContain('<rect width="1024" height="1024" rx="230" fill="#fff"/>');
+    expect(svg).toContain('fill="#005dab"');
   });
 
   test.describe('on a phone', () => {

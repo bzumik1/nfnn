@@ -7,7 +7,9 @@ import {
   LINK_ID,
   MEDIA_ID,
   PAYMENT_ID,
+  PERSON_ID,
   READ_TOKEN,
+  SIGNED_PERSON_ID,
   UNKNOWN_ID,
   WRITE_TOKEN,
 } from './fake-backend.js';
@@ -40,6 +42,7 @@ describe('Given an administrator connected with the reading permission only', ()
     const names = tools.map((tool) => tool.name).sort();
     expect(names).toEqual([
       'nfnn_about',
+      'nfnn_add_person',
       'nfnn_admin_actions',
       'nfnn_administrators',
       'nfnn_backups',
@@ -56,15 +59,18 @@ describe('Given an administrator connected with the reading permission only', ()
       'nfnn_log_levels',
       'nfnn_log_search',
       'nfnn_news_article',
+      'nfnn_order_people',
       'nfnn_overview',
       'nfnn_pair_payment',
       'nfnn_payments',
+      'nfnn_people',
       'nfnn_photo_upload_link',
       'nfnn_project',
       'nfnn_publish_news',
       'nfnn_publish_project',
       'nfnn_receipt_signature',
       'nfnn_reconnect_bank_account',
+      'nfnn_remove_person',
       'nfnn_report',
       'nfnn_request_backup',
       'nfnn_reset_log_level',
@@ -81,7 +87,9 @@ describe('Given an administrator connected with the reading permission only', ()
       'nfnn_unpublish_project',
       'nfnn_update_about',
       'nfnn_update_backup_schedule',
+      'nfnn_update_founders_note',
       'nfnn_update_news',
+      'nfnn_update_person',
       'nfnn_update_project',
       'nfnn_update_report_settings',
       'nfnn_upload_photo',
@@ -286,6 +294,33 @@ describe('Given an administrator connected with the reading permission only', ()
     expect(textOf(result)).toContain('may only read, so nothing was changed');
     expect(
       stack.backend.requests.some((request) => request.path === '/api/admin/content/about'),
+    ).toBe(false);
+  });
+
+  it('when the people of the foundation are asked, then they come in order with their portraits, web signatures and the founders note', async () => {
+    const result = await client.callTool({ name: 'nfnn_people', arguments: {} });
+    expect(result.isError).toBeFalsy();
+    const text = textOf(result);
+    expect(text).toContain('"name":"Eva Vzorová"');
+    expect(text).toContain('"boardNote":"předsedkyně"');
+    expect(text).toContain('"fundEmail":"eva@nfnn.cz"');
+    expect(text).toContain('"note":"Děkujeme všem, kdo pomáhají s námi."');
+    expect(stack.backend.requests.map((request) => request.path)).toContain(
+      '/api/admin/content/people',
+    );
+  });
+
+  it('when a person is added with the reading permission only, then nothing reaches the administration and the answer says how to allow changes', async () => {
+    const result = await client.callTool({
+      name: 'nfnn_add_person',
+      arguments: { name: 'Adam Vzor', onBoard: true, featured: false },
+    });
+    expect(result.isError).toBe(true);
+    expect(textOf(result)).toContain('may only read, so nothing was changed');
+    expect(
+      stack.backend.requests.some((request) =>
+        request.path.startsWith('/api/admin/content/people'),
+      ),
     ).toBe(false);
   });
 
@@ -624,6 +659,7 @@ describe('Given an administrator connected with the writing permission', () => {
       year: 2026,
       perex: 'Střecha.',
       body: '## Co se stalo\n\n**Nová** střecha.',
+      category: 'CHILDREN',
       coverImageId: MEDIA_ID,
       coverImageAlt: 'Nová střecha nad dílnou',
     };
@@ -642,6 +678,22 @@ describe('Given an administrator connected with the writing permission', () => {
       ['POST', '/api/admin/content/projects', project],
       ['PUT', `/api/admin/content/projects/${UNKNOWN_ID}`, project],
     ]);
+  });
+
+  it('when a project comes without a category or with an unknown one, then the tool refuses it and the administration gets nothing', async () => {
+    const project = { title: 'Nová střecha', year: 2026, perex: 'Střecha.', body: 'Text.' };
+    const missing = await client.callTool({ name: 'nfnn_create_project', arguments: project });
+    const unknown = await client.callTool({
+      name: 'nfnn_update_project',
+      arguments: { id: UNKNOWN_ID, ...project, category: 'PLANTS' },
+    });
+
+    expect(missing.isError).toBe(true);
+    expect(unknown.isError).toBe(true);
+    expect(textOf(unknown)).toContain('category');
+    expect(
+      stack.backend.requests.filter((request) => request.path.startsWith('/api/admin/content')),
+    ).toEqual([]);
   });
 
   it('when the About photo is set and then removed, then the administration gets the photo with its texts and then no photo and no texts', async () => {
@@ -690,6 +742,119 @@ describe('Given an administrator connected with the writing permission', () => {
       photoAlt: null,
       caption: null,
     });
+  });
+
+  it('when a person is added and updated, then the administration gets every field with the missing ones as empty', async () => {
+    const added = await client.callTool({
+      name: 'nfnn_add_person',
+      arguments: { name: 'Adam Vzor', onBoard: true, featured: false },
+    });
+    expect(added.isError).toBeFalsy();
+    expect(textOf(added)).toContain(`"id":"${PERSON_ID}"`);
+    const updated = await client.callTool({
+      name: 'nfnn_update_person',
+      arguments: {
+        id: PERSON_ID,
+        name: 'Adam Vzor',
+        role: 'Zakladatel a člen rady',
+        onBoard: true,
+        boardNote: 'místopředseda',
+        featured: true,
+        portraitId: MEDIA_ID,
+        personalEmail: 'adam.vzor@example.org',
+        fundEmail: 'adam@nfnn.cz',
+      },
+    });
+    expect(updated.isError).toBeFalsy();
+    expect(textOf(updated)).toContain('"fundEmail":"adam@nfnn.cz"');
+
+    const writes = stack.backend.requests
+      .filter((request) => request.path.startsWith('/api/admin/content/people'))
+      .map((request) => [
+        request.method,
+        request.path,
+        JSON.parse(request.body),
+        request.authorization,
+      ]);
+    expect(writes).toEqual([
+      [
+        'POST',
+        '/api/admin/content/people',
+        {
+          name: 'Adam Vzor',
+          role: null,
+          onBoard: true,
+          boardNote: null,
+          featured: false,
+          portraitId: null,
+          personalEmail: null,
+          fundEmail: null,
+        },
+        'Bearer api-token-write',
+      ],
+      [
+        'PUT',
+        `/api/admin/content/people/${PERSON_ID}`,
+        {
+          name: 'Adam Vzor',
+          role: 'Zakladatel a člen rady',
+          onBoard: true,
+          boardNote: 'místopředseda',
+          featured: true,
+          portraitId: MEDIA_ID,
+          personalEmail: 'adam.vzor@example.org',
+          fundEmail: 'adam@nfnn.cz',
+        },
+        'Bearer api-token-write',
+      ],
+    ]);
+  });
+
+  it('when people are removed, then a person without a web signature goes and one with a signature is refused with the reason', async () => {
+    const removed = await client.callTool({
+      name: 'nfnn_remove_person',
+      arguments: { id: PERSON_ID },
+    });
+    expect(removed.isError).toBeFalsy();
+    expect(textOf(removed)).toContain('removed from the people of the foundation');
+
+    const refused = await client.callTool({
+      name: 'nfnn_remove_person',
+      arguments: { id: SIGNED_PERSON_ID },
+    });
+    expect(refused.isError).toBe(true);
+    expect(textOf(refused)).toContain('Podpis jen v prohlížeči');
+    expect(
+      stack.backend.requests
+        .filter((request) => request.path.startsWith('/api/admin/content/people'))
+        .map((request) => `${request.method} ${request.path}`),
+    ).toEqual([
+      `DELETE /api/admin/content/people/${PERSON_ID}`,
+      `DELETE /api/admin/content/people/${SIGNED_PERSON_ID}`,
+    ]);
+  });
+
+  it('when the people are ordered and the founders note is written and emptied, then the administration gets the order and the text, an empty one as none', async () => {
+    const ordered = await client.callTool({
+      name: 'nfnn_order_people',
+      arguments: { memberIds: [PERSON_ID, SIGNED_PERSON_ID] },
+    });
+    expect(ordered.isError).toBeFalsy();
+    await client.callTool({ name: 'nfnn_update_founders_note', arguments: { text: 'Děkujeme.' } });
+    const emptied = await client.callTool({
+      name: 'nfnn_update_founders_note',
+      arguments: { text: '  ' },
+    });
+    expect(textOf(emptied)).toContain('"text":null');
+
+    const writes = stack.backend.requests
+      .filter((request) => request.path.startsWith('/api/admin/content/people'))
+      .map((request) => [request.method, request.path, JSON.parse(request.body)]);
+    expect(writes).toEqual([
+      ['PUT', '/api/admin/content/people/order', { memberIds: [PERSON_ID, SIGNED_PERSON_ID] }],
+      ['PUT', '/api/admin/content/people/note', { text: 'Děkujeme.' }],
+      ['PUT', '/api/admin/content/people/note', { text: null }],
+    ]);
   });
 
   it('when the pairing from a donor account is turned off and on, then the administration gets both and a refusal comes back', async () => {

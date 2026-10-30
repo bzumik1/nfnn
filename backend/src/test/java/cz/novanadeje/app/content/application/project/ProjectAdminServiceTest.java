@@ -4,6 +4,7 @@ import cz.novanadeje.app.content.domain.media.MediaId;
 import cz.novanadeje.app.content.domain.media.MediaImageRepository;
 import cz.novanadeje.app.content.domain.media.MediaNotFound;
 import cz.novanadeje.app.content.domain.project.Project;
+import cz.novanadeje.app.content.domain.project.ProjectCategory;
 import cz.novanadeje.app.content.domain.project.ProjectId;
 import cz.novanadeje.app.content.domain.project.ProjectNotFound;
 import cz.novanadeje.app.content.domain.project.ProjectRepository;
@@ -66,6 +67,7 @@ class ProjectAdminServiceTest {
         ProjectView view = service().create(ADMIN, command("Pomohli jsme Dominikovi", Optional.empty(), Optional.empty()));
 
         assertThat(view.slug()).isEqualTo("pomohli-jsme-dominikovi");
+        assertThat(view.category()).isEqualTo(ProjectCategory.CHILDREN);
         assertThat(view.publishedOn()).isEmpty();
         ArgumentCaptor<Project> saved = ArgumentCaptor.forClass(Project.class);
         verify(projects).save(saved.capture());
@@ -236,7 +238,7 @@ class ProjectAdminServiceTest {
     }
 
     private static ProjectCommand command(String title, Optional<String> slug, Optional<MediaId> image) {
-        return new ProjectCommand(title, 2024, slug, Optional.of("Projekt"), "Perex", "Text", image, Optional.empty());
+        return new ProjectCommand(title, 2024, ProjectCategory.CHILDREN, slug, Optional.of("Projekt"), "Perex", "Text", image, Optional.empty());
     }
 
     private static ProjectContent content(String slug, Optional<MediaId> image) {

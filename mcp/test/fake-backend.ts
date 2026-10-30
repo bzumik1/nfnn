@@ -15,6 +15,8 @@ export const GIVING_DONOR_ID = '019a0000-0000-7000-8000-000000000003';
 export const MEDIA_ID = '019a0000-0000-7000-8000-000000000004';
 export const DONATION_ID = '019a0000-0000-7000-8000-000000000005';
 export const LINK_ID = '019a0000-0000-7000-8000-000000000006';
+export const PERSON_ID = '019a0000-0000-7000-8000-000000000007';
+export const SIGNED_PERSON_ID = '019a0000-0000-7000-8000-000000000008';
 const LOG_MATCHES: Record<string, number[]> = {
   'backend.log': [36],
   'backend.log.2026-10-22.0.gz': [70, 50, 10],
@@ -301,6 +303,30 @@ function adminRoute(request: RecordedRequest, url: URL, body: string): [number, 
           applied: { backupTime: '03:00', testRestoreDay: 7, testRestoreTime: '04:00' },
         },
       ];
+    case 'GET /api/admin/content/people':
+      return [200, people()];
+    case 'POST /api/admin/content/people':
+      return [201, person(PERSON_ID, 1, JSON.parse(body) as Record<string, unknown>)];
+    case `PUT /api/admin/content/people/${PERSON_ID}`:
+      return [200, person(PERSON_ID, 1, JSON.parse(body) as Record<string, unknown>)];
+    case `DELETE /api/admin/content/people/${PERSON_ID}`:
+      return [204, undefined];
+    case `DELETE /api/admin/content/people/${SIGNED_PERSON_ID}`:
+      return [
+        403,
+        problem(
+          403,
+          'content/web-signature-in-browser-only',
+          'Podpis jen v prohlížeči',
+          'Podpis na webu se nahrává a odebírá jen ve Správě webu v prohlížeči.',
+        ),
+      ];
+    case 'PUT /api/admin/content/people/order':
+      return [200, people()];
+    case 'PUT /api/admin/content/people/note': {
+      const note = JSON.parse(body) as Record<string, unknown>;
+      return [200, { text: note['text'] ?? null }];
+    }
     case 'GET /api/admin/content/about':
       return [
         200,
@@ -678,5 +704,55 @@ function aboutPhoto(about: Record<string, unknown>): Record<string, unknown> {
     height: 1600,
     alt: about['photoAlt'] ?? null,
     caption: about['caption'] ?? null,
+  };
+}
+
+function people(): Record<string, unknown> {
+  return {
+    members: [
+      {
+        ...person(SIGNED_PERSON_ID, 0, {
+          name: 'Eva Vzorová',
+          role: 'Zakladatelka a předsedkyně rady',
+          onBoard: true,
+          boardNote: 'předsedkyně',
+          featured: true,
+          portraitId: MEDIA_ID,
+          fundEmail: 'eva@nfnn.cz',
+        }),
+        webSignature: {
+          id: UNKNOWN_ID,
+          url: `/api/content/media/${UNKNOWN_ID}`,
+          width: 600,
+          height: 180,
+        },
+      },
+      person(PERSON_ID, 1, { name: 'Adam Vzor', onBoard: true, featured: false }),
+    ],
+    note: 'Děkujeme všem, kdo pomáhají s námi.',
+  };
+}
+
+function person(
+  id: string,
+  position: number,
+  fields: Record<string, unknown>,
+): Record<string, unknown> {
+  const portraitId = fields['portraitId'];
+  return {
+    id,
+    name: fields['name'],
+    role: fields['role'] ?? null,
+    position,
+    onBoard: fields['onBoard'],
+    boardNote: fields['boardNote'] ?? null,
+    featured: fields['featured'],
+    portrait:
+      typeof portraitId === 'string'
+        ? { id: portraitId, url: `/api/content/media/${portraitId}`, width: 640, height: 640 }
+        : null,
+    webSignature: null,
+    personalEmail: fields['personalEmail'] ?? null,
+    fundEmail: fields['fundEmail'] ?? null,
   };
 }
