@@ -1,0 +1,200 @@
+@use 'breakpoints' as bp;
+
+:host {
+  display: block;
+}
+
+.container {
+  max-width: 900px;
+}
+
+.ui-card + .ui-card,
+.ui-card + #person-editor,
+#person-editor + .ui-card,
+#person-editor > .ui-card {
+  margin-top: var(--space-6);
+}
+
+.people-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.person-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: var(--space-3) var(--space-4);
+  align-items: center;
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--color-divider);
+
+  @include bp.down(cards) {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+}
+
+.person-thumb {
+  display: block;
+  width: var(--space-12);
+  height: var(--space-12);
+  border-radius: var(--radius-round);
+  object-fit: cover;
+  background: var(--color-surface-alt);
+}
+
+.person-name {
+  font-weight: var(--weight-semibold);
+  color: var(--color-text);
+}
+
+.person-role {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.person-badges {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1-5);
+  margin-top: var(--space-1-5);
+
+  .ui-badge {
+    white-space: normal;
+  }
+}
+
+.person-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  justify-content: flex-end;
+
+  @include bp.down(cards) {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+  }
+}
+
+.list-actions {
+  margin-top: var(--space-4);
+}
+
+.fields {
+  max-width: 640px;
+  margin-top: var(--space-5);
+}
+
+.choices {
+  border: 0;
+  padding: 0;
+  margin: var(--space-5) 0 0;
+
+  legend {
+    font-weight: var(--weight-semibold);
+    color: var(--color-text);
+    margin-bottom: var(--space-2);
+  }
+}
+
+.emails .fields {
+  margin-top: var(--space-2);
+}
+
+.choice {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--space-6);
+  color: var(--color-text);
+}
+
+.image-field {
+  margin-top: var(--space-5);
+}
+
+.field-label,
+.part-title {
+  font-weight: var(--weight-semibold);
+  color: var(--color-text);
+  margin-bottom: var(--space-2);
+}
+
+.portrait-preview {
+  display: block;
+  width: 120px;
+  height: 120px;
+  border-radius: var(--radius-round);
+  object-fit: cover;
+  margin-bottom: var(--space-2-5);
+  background: var(--color-surface-alt);
+}
+
+.signature-preview {
+  display: block;
+  width: auto;
+  max-width: 100%;
+  height: auto;
+  max-height: var(--space-20);
+  margin: var(--space-2-5) 0;
+}
+
+.image-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+}
+
+.field-hint,
+.field-status,
+.field-error {
+  font-size: var(--text-xs);
+  line-height: var(--leading-normal);
+  margin-top: var(--space-1-5);
+}
+
+.field-hint {
+  color: var(--color-text-soft);
+}
+
+.field-status {
+  color: var(--color-text-muted);
+}
+
+.field-error {
+  color: var(--color-danger);
+  font-weight: var(--weight-semibold);
+}
+
+.form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+  margin-top: var(--space-5);
+}
+
+.card-notice {
+  margin-top: var(--space-3-5);
+}
+
+.signature-part,
+.remove-part {
+  border-top: 1px solid var(--color-divider);
+
+  .ui-card__intro {
+    margin-bottom: var(--space-3-5);
+  }
+}
+
+.confirm {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--color-text);
+}

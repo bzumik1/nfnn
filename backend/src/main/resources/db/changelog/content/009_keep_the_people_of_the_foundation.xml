@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <changeSet id="009-keep-the-people-of-the-foundation" author="nfnn">
+        <createTable tableName="content_person">
+            <column name="id" type="uuid">
+                <constraints primaryKey="true" primaryKeyName="pk_content_person" nullable="false"/>
+            </column>
+            <column name="name" type="varchar(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="role" type="varchar(120)"/>
+            <column name="position" type="integer">
+                <constraints nullable="false"/>
+            </column>
+            <column name="on_board" type="boolean">
+                <constraints nullable="false"/>
+            </column>
+            <column name="board_note" type="varchar(60)"/>
+            <column name="featured" type="boolean">
+                <constraints nullable="false"/>
+            </column>
+            <column name="portrait_media_id" type="uuid">
+                <constraints foreignKeyName="fk_content_person_portrait_media" references="content_media(id)"/>
+            </column>
+            <column name="web_signature_media_id" type="uuid">
+                <constraints foreignKeyName="fk_content_person_web_signature_media" references="content_media(id)"/>
+            </column>
+            <column name="personal_email" type="varchar(254)"/>
+            <column name="fund_email" type="varchar(254)"/>
+            <column name="created_at" type="timestamp with time zone">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="timestamp with time zone">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <sql>alter table content_person add constraint ck_content_person_position check (position &gt;= 0)</sql>
+        <createIndex tableName="content_person" indexName="ix_content_person_portrait_media">
+            <column name="portrait_media_id"/>
+        </createIndex>
+        <createIndex tableName="content_person" indexName="ix_content_person_web_signature_media">
+            <column name="web_signature_media_id"/>
+        </createIndex>
+
+        <createTable tableName="content_founders_note">
+            <column name="id" type="smallint">
+                <constraints primaryKey="true" primaryKeyName="pk_content_founders_note" nullable="false"/>
+            </column>
+            <column name="text" type="varchar(600)"/>
+            <column name="updated_at" type="timestamp with time zone">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <sql>alter table content_founders_note add constraint ck_content_founders_note_singleton check (id = 1)</sql>
+    </changeSet>
+</databaseChangeLog>

@@ -6,6 +6,6 @@ import org.springframework.context.annotation.Import;
 
 @TestConfiguration(proxyBeanMethods = false)
 @Import({TestcontainersConfiguration.class, JpaMediaImageRepository.class, JpaNewsArticleRepository.class, JpaProjectRepository.class,
-        JpaFormerSlugs.class, JpaAboutSectionRepository.class})
+        JpaFormerSlugs.class, JpaAboutSectionRepository.class, JpaPersonRepository.class, JpaFoundersNoteRepository.class})
 class ContentPersistenceTestConfiguration {
 }

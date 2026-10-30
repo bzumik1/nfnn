@@ -5,6 +5,7 @@ import cz.novanadeje.app.content.domain.media.MediaImage;
 import cz.novanadeje.app.content.domain.media.MediaImageRepository;
 import cz.novanadeje.app.content.domain.media.MediaVariant;
 import cz.novanadeje.app.content.domain.project.Project;
+import cz.novanadeje.app.content.domain.project.ProjectCategory;
 import cz.novanadeje.app.content.domain.project.ProjectId;
 import cz.novanadeje.app.content.domain.project.ProjectRepository;
 import cz.novanadeje.app.content.domain.project.ProjectContent;
@@ -45,7 +46,7 @@ class JpaProjectRepositoryTest {
         MediaImage image = image();
         media.save(image);
         Project project = Project.create(ProjectId.newId(NOW),
-                new ProjectContent(new Slug("dominik"), "Dominik", 2024, Optional.of("Projekt"), "Perex", "Text\n\nDruhý odstavec", Optional.of(image.id()), Optional.of("Dominik na novém vozíku")), NOW);
+                new ProjectContent(new Slug("dominik"), "Dominik", 2024, ProjectCategory.CHILDREN, Optional.of("Projekt"), "Perex", "Text\n\nDruhý odstavec", Optional.of(image.id()), Optional.of("Dominik na novém vozíku")), NOW);
 
         projects.save(project);
         flushAndClear();
@@ -98,6 +99,25 @@ class JpaProjectRepositoryTest {
     }
 
     @Test
+    @DisplayName("Given projects of two years in every category, when they are listed, then within a year children come first, then adults, animals and the others")
+    void should_order_by_category_within_a_year_when_listed() {
+        LocalDate published = LocalDate.parse("2026-10-01");
+        save(project("zvirata", 2025, ProjectCategory.ANIMALS, NOW.minusSeconds(4)), Optional.of(published));
+        save(project("ostatni", 2025, ProjectCategory.OTHER, NOW.minusSeconds(3)), Optional.of(published));
+        save(project("dospeli", 2025, ProjectCategory.ADULTS, NOW.minusSeconds(2)), Optional.of(published));
+        save(project("deti", 2025, ProjectCategory.CHILDREN, NOW.minusSeconds(5)), Optional.of(published));
+        save(project("deti-novejsi", 2025, ProjectCategory.CHILDREN, NOW.minusSeconds(1)), Optional.of(published));
+        save(project("zvirata-letos", 2026, ProjectCategory.ANIMALS, NOW), Optional.of(published));
+        save(project("koncept-deti", 2024, ProjectCategory.CHILDREN, NOW), Optional.empty());
+        flushAndClear();
+
+        assertThat(projects.findVisibleNewestFirst(TODAY, 0, 10)).extracting(project -> project.slug().value())
+                .containsExactly("zvirata-letos", "deti-novejsi", "deti", "dospeli", "zvirata", "ostatni");
+        assertThat(projects.findAllDraftsFirst()).extracting(project -> project.slug().value())
+                .containsExactly("koncept-deti", "zvirata-letos", "deti-novejsi", "deti", "dospeli", "zvirata", "ostatni");
+    }
+
+    @Test
     @DisplayName("Given a saved project, when it is deleted, then it is gone")
     void should_delete_when_deleted_given_a_saved_project() {
         Project project = save(project("smazat", NOW), Optional.empty());
@@ -120,7 +140,12 @@ class JpaProjectRepositoryTest {
     }
 
     private static Project project(String slug, int year, Instant at) {
-        return Project.create(ProjectId.newId(at), new ProjectContent(new Slug(slug), slug, year, Optional.empty(), "Perex", "Text", Optional.empty()), at);
+        return project(slug, year, ProjectCategory.OTHER, at);
+    }
+
+    private static Project project(String slug, int year, ProjectCategory category, Instant at) {
+        return Project.create(ProjectId.newId(at), new ProjectContent(new Slug(slug), slug, year, category, Optional.empty(), "Perex", "Text", Optional.empty(),
+                Optional.empty()), at);
     }
 
     private static MediaImage image() {
