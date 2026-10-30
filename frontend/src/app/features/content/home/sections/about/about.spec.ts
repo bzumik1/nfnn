@@ -44,11 +44,17 @@ describe('Given the about section', () => {
       return element?.textContent?.replace(/\s+/g, ' ').trim() ?? '';
     }
 
-    it('then a heading under the founding story names it and the chairman follows with his role', () => {
+    it('then a heading under the founding story names it and the two founders follow with their roles', () => {
       expect(text(board().querySelector('h3'))).toBe('Kdo fond vede');
-      expect(text(board().querySelector('.board-chair'))).toBe(
-        'Pavel Znamenáček, předseda správní rady',
-      );
+      expect(
+        Array.from(board().querySelectorAll('.board-person')).map((person) => [
+          text(person.querySelector('.board-name')),
+          text(person.querySelector('.board-role')),
+        ]),
+      ).toEqual([
+        ['Pavel Znamenáček', 'Zakladatel a předseda správní rady'],
+        ['Andrea Znamenáčková', 'Zakladatelka a členka správní rady'],
+      ]);
     });
 
     it('then the whole board is listed as in the registry, without the auditor', () => {
@@ -57,16 +63,21 @@ describe('Given the about section', () => {
       ]);
     });
 
-    it('then his portrait stays out of the screen reader, since his name is beside it, and loads late in two widths', () => {
-      const portrait = board().querySelector('img')!;
+    it('then their portraits stay out of the screen reader, since their names are beside them, and load late in two widths', () => {
+      const portraits = Array.from(board().querySelectorAll('.board-person img'));
 
-      expect(portrait.getAttribute('alt')).toBe('');
-      expect(portrait.getAttribute('loading')).toBe('lazy');
-      expect(portrait.getAttribute('srcset')).toBe(
+      expect(
+        portraits.map((portrait) => portrait.getAttribute('srcset')?.replace(/\s+/g, ' ').trim()),
+      ).toEqual([
         '/images/pavel-znamenacek-160.webp 160w, /images/pavel-znamenacek-320.webp 320w',
-      );
-      expect(portrait.getAttribute('width')).toBe('160');
-      expect(portrait.getAttribute('height')).toBe('160');
+        '/images/andrea-znamenackova-160.webp 160w, /images/andrea-znamenackova-320.webp 320w',
+      ]);
+      for (const portrait of portraits) {
+        expect(portrait.getAttribute('alt')).toBe('');
+        expect(portrait.getAttribute('loading')).toBe('lazy');
+        expect(portrait.getAttribute('width')).toBe('160');
+        expect(portrait.getAttribute('height')).toBe('160');
+      }
     });
   });
 });

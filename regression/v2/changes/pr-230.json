@@ -1,0 +1,18 @@
+[
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/home/sections/about/about.spec.ts > Given the about section > when it renders who runs the foundation today > then a heading under the founding story names it and the chairman follows with his role",
+    "reason": "PR #230: Jakub 2026-10-30 wants Andrea shown beside Pavel, so the block lists both founders with their roles",
+    "replacement": "src/app/features/content/home/sections/about/about.spec.ts > Given the about section > when it renders who runs the foundation today > then a heading under the founding story names it and the two founders follow with their roles",
+    "contract": "docs/frontend-overview.md, about"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/home/sections/about/about.spec.ts > Given the about section > when it renders who runs the foundation today > then his portrait stays out of the screen reader, since his name is beside it, and loads late in two widths",
+    "reason": "PR #230: Andrea's portrait joins Pavel's, so the test checks both",
+    "replacement": "src/app/features/content/home/sections/about/about.spec.ts > Given the about section > when it renders who runs the foundation today > then their portraits stay out of the screen reader, since their names are beside them, and load late in two widths",
+    "contract": "docs/frontend-overview.md, about"
+  }
+]
