@@ -210,6 +210,7 @@ Feature: A donor issues receipts of their donations as frozen, signed data
       | 2027-000001 | REPLACED | YEARLY |
     When "Jana" reads receipt "2027-000001"
     Then the response status is 200
+    And the answer is JSON that must not be cached
     And the issued receipt is replaced
     And the frozen receipt holds:
       | field    | value |
