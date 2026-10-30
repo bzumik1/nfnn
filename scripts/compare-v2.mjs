@@ -930,12 +930,15 @@ export function run(argv) {
   const sharedCases = [];
   for (const path of changed?.sharedCases ?? []) {
     const entry = entries.find(
-      (candidate) => candidate.kind === 'shared-case' && candidate.matches.caseFile.test(path),
+      (candidate) =>
+        candidate.kind === 'shared-case' &&
+        candidate.changedInPr &&
+        candidate.matches.caseFile.test(path),
     );
     if (!entry) {
       errors.push({
-        report: `\`shared-case\` ${path}: tento PR mění sdílené případy bez deklarace; pojmenujte soubor v \`regression/v2/changes/\``,
-        error: `the pull request changes ${path} without a shared-case declaration in regression/v2/changes/ naming it`,
+        report: `\`shared-case\` ${path}: tento PR mění sdílené případy bez deklarace; pojmenujte soubor v souboru \`regression/v2/changes/\`, který tento PR mění`,
+        error: `the pull request changes ${path} without a shared-case declaration naming it in a regression/v2/changes/ file that this pull request changes`,
       });
       continue;
     }

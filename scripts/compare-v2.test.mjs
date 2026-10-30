@@ -801,6 +801,14 @@ describe('Given a pull request that changes the shared cases', () => {
     assert.equal(result.status, 0, result.output);
   });
 
+  it('when only an unchanged earlier changes file names the changed case file, then the comparison fails', () => {
+    const result = compare(
+      workspace({ changes: { '0.2.json': [declaration] }, changed: [caseFile] }),
+    );
+    assert.equal(result.status, 1, result.output);
+    assert.match(result.output, /::error::.*shared-cases\/admin-overview\/year-overview\.json/);
+  });
+
   it('when a declaration names another case file, then the changed file is undeclared and the declaration unused', () => {
     const result = compare(
       workspace({
