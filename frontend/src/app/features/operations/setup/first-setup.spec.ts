@@ -139,6 +139,10 @@ describe('Given the first setup page', () => {
     thirteenth: string,
     last: string,
   ): Promise<void> {
+    if ((fixture.nativeElement as HTMLElement).querySelector('#setup-backup-key-word-2') === null) {
+      button('Mám uloženo, ověřit').click();
+      await settle();
+    }
     await type('#setup-backup-key-word-2', second);
     await type('#setup-backup-key-word-13', thirteenth);
     await type('#setup-backup-key-word-24', last);
@@ -264,9 +268,6 @@ describe('Given the first setup page', () => {
         'Vyplňte prosím e-mailovou adresu.',
         'Vyplňte prosím přihlašovací jméno ze stránky SMTP v Brevo.',
         'Vyplňte prosím heslo nebo klíč SMTP.',
-        'Opište prosím toto slovo z uloženého klíče.',
-        'Opište prosím toto slovo z uloženého klíče.',
-        'Opište prosím toto slovo z uloženého klíče.',
       ]);
       http.expectNone(STATUS_URL);
     });
@@ -667,9 +668,39 @@ describe('Given the first setup page', () => {
       });
     });
 
-    it('then the backup key is shown with its words and saving waits for three of them', async () => {
-      expect(text('.backup-key')).toBe(BACKUP_KEY);
-      expect(element('.backup-key-word-list').querySelectorAll('li')).toHaveLength(24);
+    it('then the backup key is shown as its words and saving waits until they are saved and checked', async () => {
+      expect(
+        (fixture.nativeElement as HTMLElement).querySelectorAll('.backup-key-word-list li'),
+      ).toHaveLength(24);
+      expect(
+        (fixture.nativeElement as HTMLElement).querySelector('#setup-backup-key-word-2'),
+      ).toBeNull();
+      await type('#setup-mail-username', 'abc@smtp-brevo.com');
+      await type('#setup-mail-password', 'xsmtpsib-key');
+      await type('#setup-admin-email', 'spravce@example.cz');
+      await submit('form.setup-form');
+
+      http.expectNone(STATUS_URL);
+      expect(text('#setup-backup-key-unchecked')).toBe(
+        'Nejdřív si slova uložte a ověřte tlačítkem „Mám uloženo, ověřit“.',
+      );
+      expect(document.activeElement).toBe(button('Mám uloženo, ověřit'));
+
+      button('Mám uloženo, ověřit').click();
+      await settle();
+      expect(
+        (fixture.nativeElement as HTMLElement).querySelectorAll('.backup-key-word-list li'),
+      ).toHaveLength(0);
+      expect(document.activeElement).toBe(element('#setup-backup-key-word-2'));
+      button('Ukázat slova znovu').click();
+      await settle();
+      expect(
+        (fixture.nativeElement as HTMLElement).querySelectorAll('.backup-key-word-list li'),
+      ).toHaveLength(24);
+      expect(document.activeElement).toBe(button('Mám uloženo, ověřit'));
+    });
+
+    it('then the checked words must be those of the key', async () => {
       await fillInSecrets();
       await type('#setup-admin-email', 'spravce@example.cz');
       await typeBackupKeyWords('komora', 'motivace', 'moudrost');
@@ -764,6 +795,6 @@ describe('Given the first setup page on a server whose backup key is not there y
     await fixture.whenStable();
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.querySelector('#setup-backup-key-word-2')).not.toBeNull();
+    expect(fixture.nativeElement.querySelectorAll('.backup-key-word-list li')).toHaveLength(24);
   });
 });

@@ -135,7 +135,7 @@
             (ngSubmit)="allow(consentForm)"
             novalidate
           >
-            @if (usesCode()) {
+            @if (asksCode()) {
               <p class="ui-panel__lead confirm-note" i18n="@@donor.connect.consent.confirmCode">
                 Povolení potvrďte kódem z ověřovací aplikace.
               </p>
@@ -178,6 +178,20 @@
               <p class="ui-panel__lead confirm-note" i18n="@@donor.connect.consent.confirmPasskey">
                 Povolení potvrďte svým přístupovým klíčem, i když jste se jím už přihlásili.
               </p>
+              @if (usesCode()) {
+                <p class="passkey-alternative">
+                  <span i18n="@@donor.connect.consent.orCode">Nebo bez přístupového klíče:</span>
+                  <button
+                    type="button"
+                    class="ui-link-button"
+                    [disabled]="deciding() !== null"
+                    (click)="chooseCode()"
+                    i18n="@@donor.connect.consent.chooseCode"
+                  >
+                    Zadat kód z aplikace
+                  </button>
+                </p>
+              }
             } @else {
               <p class="ui-panel__lead confirm-note" i18n="@@donor.connect.consent.passkeyMissing">
                 Povolení se potvrzuje přístupovým klíčem a tento prohlížeč je nepodporuje. Připojení
@@ -192,12 +206,12 @@
                 type="submit"
                 class="ui-button ui-button--primary ui-button--block"
                 [disabled]="
-                  deciding() !== null || unknownScope || (!usesCode() && !passkeySupported)
+                  deciding() !== null || unknownScope || (!asksCode() && !passkeySupported)
                 "
               >
                 @if (deciding() === 'allow') {
                   <span i18n="@@donor.connect.consent.allowing">Povoluji…</span>
-                } @else if (usesCode()) {
+                } @else if (asksCode()) {
                   <span i18n="@@donor.connect.consent.allow">Povolit</span>
                 } @else {
                   <span i18n="@@donor.connect.consent.allowWithPasskey"

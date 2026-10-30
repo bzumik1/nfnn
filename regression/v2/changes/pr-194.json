@@ -1,0 +1,42 @@
+[
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/operations/backup-key/backup-key-panel.spec.ts > Given the backup key panel > when the browser *",
+    "replacement": "src/app/features/operations/backup-key/backup-key-panel.spec.ts > Given the backup key panel > when it is shown, then it offers copying and the file and nothing that hands the key to the browser",
+    "reason": "Jakub 2026-10-29: the \"Uložit do správce hesel\" button is removed, Safari ignored the off-screen form",
+    "contract": "docs/frontend-overview.md, setup/first-setup and backups/"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/operations/backup-key/backup-key-panel.spec.ts > Given the backup key panel > when it is shown, then the key and its 24 numbered words are there",
+    "replacement": "src/app/features/operations/backup-key/backup-key-panel.spec.ts > Given the backup key panel > when it is shown, then the key is there as its 24 numbered words only",
+    "reason": "Jakub 2026-10-29: the backup key is shown only as its 24 words",
+    "contract": "docs/frontend-overview.md, setup/first-setup"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/admin/backups/backup-key-card.spec.ts > Given the backup key card > when nobody has confirmed saving the key > and the right code is typed, then the key is shown with its 24 words, copy, saving and download",
+    "replacement": "src/app/features/admin/backups/backup-key-card.spec.ts > Given the backup key card > when nobody has confirmed saving the key > and the right code is typed, then the key is shown as its 24 words with copy and download",
+    "reason": "Jakub 2026-10-29: words only, no password-manager button, the check on a step of its own",
+    "contract": "docs/frontend-overview.md, backups/"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/operations/setup/first-setup.spec.ts > Given the first setup page > when the page is opened directly from the home network > then the backup key is shown with its words and saving waits for three of them",
+    "replacement": "src/app/features/operations/setup/first-setup.spec.ts > Given the first setup page > when the page is opened directly from the home network > then the backup key is shown as its words and saving waits until they are saved and checked",
+    "reason": "Jakub 2026-10-29: the three words are asked on a step of their own, after the words disappear",
+    "contract": "docs/frontend-overview.md, setup/first-setup"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donors/connect-app/connect-app.spec.ts > Given an application sent the browser to the connection page > when the application is unknown or asks for a permission the site does not offer > then an administrator with the code and a browser with passkeys may confirm either way",
+    "replacement": "src/app/features/donors/connect-app/connect-app.spec.ts > Given an application sent the browser to the connection page > when the application is unknown or asks for a permission the site does not offer > then an administrator with the code and a passkey is offered the passkey first and the code on request",
+    "reason": "Jakub 2026-10-29: an administrator who has a passkey is offered it first, the code on request",
+    "contract": "docs/frontend-overview.md, connect-app/"
+  }
+]

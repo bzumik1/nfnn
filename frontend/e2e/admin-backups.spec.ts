@@ -146,37 +146,22 @@ test.describe('Given an administrator on the backups page', () => {
       },
     );
 
-    await page.addInitScript(() => {
-      const stored: { id: string; password: string }[] = [];
-      Object.assign(window, { storedCredentials: stored });
-      Object.defineProperty(navigator.credentials, 'store', {
-        value: (credential: PasswordCredential) => {
-          stored.push({ id: credential.id, password: credential.password ?? '' });
-          return Promise.resolve(credential);
-        },
-      });
-    });
-
     await page.goto('/sprava/zalohy');
     await expect(page.getByText('Klíč si zatím nikdo neuložil.')).toBeVisible();
     await page.getByRole('button', { name: 'Zobrazit klíč…' }).click();
     await page.locator('#backup-key-code').fill('123456');
     await page.getByRole('button', { name: 'Zobrazit klíč', exact: true }).click();
 
-    await expect(page.locator('.backup-key')).toHaveText(key);
-    expect(revealed).toEqual([{ secondFactorCode: '123456' }]);
     await expect(
-      page.getByRole('list', { name: 'Stejný klíč jako 24 slov' }).getByRole('listitem'),
+      page.getByRole('list', { name: 'Klíč k zálohám je těchto 24 slov' }).getByRole('listitem'),
     ).toHaveCount(24);
-    await page.getByRole('button', { name: 'Uložit do správce hesel' }).click();
-    await expect(page.getByRole('status').filter({ hasText: /\S/ })).toContainText(
-      'Pokud prohlížeč nabídl uložení',
+    await expect(page.getByText(key)).toHaveCount(0);
+    expect(revealed).toEqual([{ secondFactorCode: '123456' }]);
+    await expect(page.getByRole('button', { name: 'Uložit do správce hesel' })).toHaveCount(0);
+    await page.getByRole('button', { name: 'Mám uloženo, ověřit' }).click();
+    await expect(page.getByRole('list', { name: 'Klíč k zálohám je těchto 24 slov' })).toHaveCount(
+      0,
     );
-    expect(
-      await page.evaluate(
-        () => (window as unknown as { storedCredentials: unknown[] }).storedCredentials,
-      ),
-    ).toEqual([{ id: 'Klíč k zálohám', password: key }]);
     await page.getByLabel('2. slovo klíče', { exact: true }).fill('komora');
     await page.getByLabel('13. slovo klíče', { exact: true }).fill('moti');
     await page.getByLabel('24. slovo klíče', { exact: true }).fill('studna');
@@ -194,7 +179,9 @@ test.describe('Given an administrator on the backups page', () => {
         ],
       },
     ]);
-    await expect(page.locator('.backup-key')).toHaveCount(0);
+    await expect(page.getByRole('list', { name: 'Klíč k zálohám je těchto 24 slov' })).toHaveCount(
+      0,
+    );
     await expect(page.getByText('Klíč si zatím nikdo neuložil.')).toHaveCount(0);
     await expect(page.getByText('Uložení klíče jste potvrdili 28. 10. 2026 10:00.')).toBeVisible();
   });

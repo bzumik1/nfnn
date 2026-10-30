@@ -351,35 +351,69 @@
             <legend i18n="@@operations.setup.group.backupKey">5. Klíč k zálohám</legend>
             <p class="group-intro" i18n="@@operations.setup.backupKey.intro">
               Web se každý den zálohuje a zálohy šifruje tímto klíčem. Bez něj žádnou zálohu
-              neobnovíte, ani po havárii serveru. Uložte si ho teď mimo server a pak opište tři jeho
-              slova. Ve správě si ho později zobrazíte znovu.
+              neobnovíte, ani po havárii serveru. Uložte si teď jeho 24 slov mimo server a pak tři z
+              nich opište. Ve správě si ho později zobrazíte znovu.
             </p>
             @switch (backupKeyState()) {
               @case ('ready') {
-                @if (backupKey(); as key) {
-                  <app-backup-key-panel [key]="key" />
-                }
-                @for (entry of backupKeyWords(); track entry.position) {
-                  <app-form-field
-                    [label]="backupKeyWordLabel(entry.position)"
-                    hint="Opište ho z uloženého klíče, tak si ověříte, že se uložil celý."
-                    i18n-hint="@@operations.setup.backupKeyWord.hint"
-                    [messages]="backupKeyWordMessages"
+                @if (!backupKeyChecking()) {
+                  @if (backupKey(); as key) {
+                    <app-backup-key-panel [key]="key" />
+                  }
+                  <div class="backup-key-step">
+                    <button
+                      #backupKeySavedButton
+                      type="button"
+                      class="ui-button ui-button--primary"
+                      aria-describedby="setup-backup-key-unchecked"
+                      (click)="checkBackupKey()"
+                      i18n="@@operations.setup.backupKey.saved"
+                    >
+                      Mám uloženo, ověřit
+                    </button>
+                    <p id="setup-backup-key-unchecked" class="ui-field-error">
+                      @if (backupKeyUnchecked()) {
+                        <span role="alert" i18n="@@operations.setup.backupKey.unchecked"
+                          >Nejdřív si slova uložte a ověřte tlačítkem „Mám uloženo, ověřit“.</span
+                        >
+                      }
+                    </p>
+                  </div>
+                } @else {
+                  <p class="group-intro" i18n="@@operations.setup.backupKey.check">
+                    Slova jsme skryli. Opište z kopie, kterou jste si uložili, slova s těmito čísly.
+                  </p>
+                  @for (entry of backupKeyWords(); track entry.position) {
+                    <app-form-field
+                      [label]="backupKeyWordLabel(entry.position)"
+                      hint="Opište ho z uloženého klíče, tak si ověříte, že se uložil celý."
+                      i18n-hint="@@operations.setup.backupKeyWord.hint"
+                      [messages]="backupKeyWordMessages"
+                    >
+                      <input
+                        #backupKeyWordField
+                        appFormControl
+                        [id]="'setup-backup-key-word-' + entry.position"
+                        [name]="'backupKeyWord' + entry.position"
+                        autocomplete="off"
+                        autocorrect="off"
+                        autocapitalize="none"
+                        spellcheck="false"
+                        maxlength="40"
+                        [(ngModel)]="entry.typed"
+                        required
+                        [appBackupKeyWord]="entry.expected"
+                      />
+                    </app-form-field>
+                  }
+                  <button
+                    type="button"
+                    class="ui-button ui-button--quiet backup-key-again"
+                    (click)="showBackupKeyAgain()"
+                    i18n="@@operations.setup.backupKey.showAgain"
                   >
-                    <input
-                      appFormControl
-                      [id]="'setup-backup-key-word-' + entry.position"
-                      [name]="'backupKeyWord' + entry.position"
-                      autocomplete="off"
-                      autocorrect="off"
-                      autocapitalize="none"
-                      spellcheck="false"
-                      maxlength="40"
-                      [(ngModel)]="entry.typed"
-                      required
-                      [appBackupKeyWord]="entry.expected"
-                    />
-                  </app-form-field>
+                    Ukázat slova znovu
+                  </button>
                 }
               }
               @case ('unavailable') {

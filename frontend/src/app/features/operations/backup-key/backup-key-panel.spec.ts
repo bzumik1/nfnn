@@ -3,12 +3,6 @@ import { BackupKeyPanel, backupKeyFile } from './backup-key-panel';
 
 const KEY = 'AGE-SECRET-KEY-1R45A984EXXAFC85YZSYGY9R6XJTD4E9AKY65ZCRGPDQ89E7ANW8QKT6GWH';
 
-interface StoredCredential {
-  id: string;
-  password: string;
-  name: string;
-}
-
 describe('Given the backup key panel', () => {
   let fixture: ComponentFixture<BackupKeyPanel>;
 
@@ -31,99 +25,39 @@ describe('Given the backup key panel', () => {
     return (root().querySelector(selector)?.textContent ?? '').replace(/\s+/g, ' ').trim();
   }
 
-  async function save(): Promise<void> {
-    (root().querySelector('.backup-key-save') as HTMLButtonElement).click();
-    await new Promise((resolve) => setTimeout(resolve));
-    await settle();
-  }
-
-  afterEach(() => {
-    delete (globalThis as { PasswordCredential?: unknown }).PasswordCredential;
-    Reflect.deleteProperty(navigator, 'credentials');
-    vi.restoreAllMocks();
-  });
-
-  it('when it is shown, then the key and its 24 numbered words are there', async () => {
+  it('when it is shown, then the key is there as its 24 numbered words only', async () => {
     await render();
 
-    expect(text('.backup-key')).toBe(KEY);
+    expect(root().textContent).not.toContain(KEY);
     const words = Array.from(root().querySelectorAll('ol.backup-key-word-list li'));
     expect(words.map((word) => word.textContent?.trim())).toEqual(
       'divoch komora probudit najednou dekl komando nikl odebrat biograf bytovka dodnes mikrofon motivace naivita zdaleka ekonomie jeseter azyl atlas obyvatel glazura vytesat moudrost studna'.split(
         ' ',
       ),
     );
-    expect(text('.backup-key-words')).toContain('stačí první čtyři písmena');
+    expect(text('.backup-key-hint')).toContain('stačí první čtyři písmena');
   });
 
-  describe('when the browser stores passwords through the Credential Management API', () => {
-    let stored: StoredCredential[];
+  it('when the words are copied, then the clipboard holds the 24 words in order', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+    await render();
 
-    beforeEach(async () => {
-      stored = [];
-      class FakePasswordCredential {
-        constructor(readonly data: StoredCredential) {}
-      }
-      (globalThis as { PasswordCredential?: unknown }).PasswordCredential = FakePasswordCredential;
-      Object.defineProperty(navigator, 'credentials', {
-        configurable: true,
-        value: {
-          store: vi.fn(async (credential: FakePasswordCredential) => {
-            stored.push(credential.data);
-            return credential;
-          }),
-        },
-      });
-      await render();
-    });
+    (root().querySelector('app-copy-button button') as HTMLButtonElement).click();
+    await settle();
 
-    it('then saving hands the key to the password manager under its own name', async () => {
-      await save();
-
-      expect(stored).toEqual([{ id: 'Klíč k zálohám', password: KEY, name: 'Klíč k zálohám' }]);
-      expect(text('app-live-notice [role="status"]')).toContain('Pokud prohlížeč nabídl uložení');
-      expect(document.querySelector('body > form')).toBeNull();
-    });
-
-    it('and the browser refuses, then the panel says to copy the key by hand', async () => {
-      vi.mocked(navigator.credentials.store).mockRejectedValueOnce(new Error('NotAllowedError'));
-
-      await save();
-
-      expect(text('app-live-notice [role="alert"]')).toContain('Klíč prosím zkopírujte');
-    });
+    expect(writeText).toHaveBeenCalledWith(
+      'divoch komora probudit najednou dekl komando nikl odebrat biograf bytovka dodnes mikrofon motivace naivita zdaleka ekonomie jeseter azyl atlas obyvatel glazura vytesat moudrost studna',
+    );
   });
 
-  describe('when the browser has no Credential Management API', () => {
-    beforeEach(() => render());
+  it('when it is shown, then it offers copying and the file and nothing that hands the key to the browser', async () => {
+    await render();
 
-    it('then saving submits an off-screen form with the key as a new password and removes it', async () => {
-      const submitted: { username: string; password: string; prevented: boolean }[] = [];
-      vi.spyOn(HTMLFormElement.prototype, 'requestSubmit').mockImplementation(function (
-        this: HTMLFormElement,
-      ) {
-        const fields = Array.from(this.querySelectorAll('input'));
-        const event = new Event('submit', { cancelable: true });
-        this.dispatchEvent(event);
-        submitted.push({
-          username: fields.find((field) => field.autocomplete === 'username')?.value ?? '',
-          password:
-            fields.find(
-              (field) => field.type === 'password' && field.autocomplete === 'new-password',
-            )?.value ?? '',
-          prevented: event.defaultPrevented,
-        });
-        expect(this.isConnected).toBe(true);
-        expect(this.getAttribute('action')).toBeNull();
-        expect(this.getAttribute('name')).toBeNull();
-      });
-
-      await save();
-
-      expect(submitted).toEqual([{ username: 'Klíč k zálohám', password: KEY, prevented: true }]);
-      expect(document.querySelector('body > form')).toBeNull();
-      expect(text('app-live-notice [role="status"]')).toContain('Pokud prohlížeč nabídl uložení');
-    });
+    const labels = Array.from(root().querySelectorAll('button')).map((button) =>
+      button.textContent?.replace(/\s+/g, ' ').trim(),
+    );
+    expect(labels).toEqual(['Kopírovat slova klíče k zálohám', 'Stáhnout jako soubor']);
   });
 });
 
