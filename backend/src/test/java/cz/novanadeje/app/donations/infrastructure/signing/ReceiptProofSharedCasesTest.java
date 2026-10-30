@@ -7,6 +7,7 @@ import ch.qos.logback.core.read.ListAppender;
 import cz.novanadeje.app.donations.application.signing.ReceiptProofs;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptKind;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptNumber;
+import cz.novanadeje.app.donations.domain.receipt.ReceiptVerification;
 import cz.novanadeje.app.donations.domain.receipt.Receipts;
 import cz.novanadeje.app.donations.domain.receipt.ReplacedReceipt;
 import cz.novanadeje.app.donations.domain.receipt.proof.InvalidReceiptProof;
@@ -28,7 +29,6 @@ import tools.jackson.databind.node.JsonNodeFactory;
 import org.slf4j.LoggerFactory;
 import tools.jackson.databind.node.ObjectNode;
 
-import java.security.MessageDigest;
 import java.time.LocalDate;
 import java.time.Year;
 import java.util.HexFormat;
@@ -82,7 +82,7 @@ class ReceiptProofSharedCasesTest extends SharedCaseRunner {
         ObjectNode answer = NODES.objectNode()
                 .put("payloadHex", HEX.formatHex(body))
                 .put("signatureHex", HEX.formatHex(proof.signature()))
-                .put("statusSha256", HEX.formatHex(statusDigest(message, proof.signature())))
+                .put("statusSha256", new ReceiptVerification(signer.keyId(), proof).statusDigest(foundation).value())
                 .put("qrText", proof.text());
         ReceiptProofs proofs = new ReceiptProofs(signer, Receipts.FOUNDATION);
         Optional<VerificationQrSymbol> symbol = VerificationQrSymbol.of(proof.text());
@@ -125,13 +125,6 @@ class ReceiptProofSharedCasesTest extends SharedCaseRunner {
         } catch (InvalidReceiptProof rejected) {
             return NODES.objectNode().put("verdict", "rejected").put("reason", rejected.rejection().code());
         }
-    }
-
-    private static byte[] statusDigest(byte[] message, byte[] signature) throws Exception {
-        MessageDigest sha256 = MessageDigest.getInstance("SHA-256");
-        sha256.update(message);
-        sha256.update(signature);
-        return sha256.digest();
     }
 
     private static SignedReceipt receiptOf(JsonNode receipt) {

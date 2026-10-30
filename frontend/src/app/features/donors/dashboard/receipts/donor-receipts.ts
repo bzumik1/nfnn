@@ -1,6 +1,8 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { formatMinorUnits } from '../../../donations/donation-amount';
+import { DonationItem } from '../../../donations/donations-api';
+import { DonationsTable } from '../donations-table/donations-table';
 import { MissingGift } from '../missing-gift/missing-gift';
 import { DonationsPending } from '../donations-pending/donations-pending';
 import { DonorDonations } from '../donor-donations';
@@ -18,7 +20,7 @@ interface YearRow {
 
 @Component({
   selector: 'app-donor-receipts',
-  imports: [RouterLink, PageTitle, DonationsPending, GiftCount, MissingGift],
+  imports: [RouterLink, PageTitle, DonationsPending, DonationsTable, GiftCount, MissingGift],
   templateUrl: './donor-receipts.html',
   styleUrl: './donor-receipts.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -42,6 +44,20 @@ export class DonorReceipts {
         receipt: yearReceipt(entry.year, summary),
       };
     });
+  });
+
+  protected readonly runningYearGifts = computed<readonly DonationItem[]>(() => {
+    const summary = this.donations.summary();
+    if (summary === null) {
+      return [];
+    }
+    return this.donations
+      .items()
+      .filter(
+        (item) =>
+          item.receiptAvailable &&
+          yearReceipt(Number(item.receivedAt.slice(0, 4)), summary) === 'after-year-end',
+      );
   });
 
   protected readonly someNotIssued = computed(() =>

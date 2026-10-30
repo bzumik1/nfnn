@@ -37,6 +37,7 @@
         type="text"
         inputmode="numeric"
         autocomplete="off"
+        [value]="customText()"
         [attr.aria-invalid]="showAmountHint()"
         [attr.aria-describedby]="showAmountHint() ? amountHintId() : null"
         (input)="enterCustomAmount($event)"
@@ -117,6 +118,8 @@
     </div>
   </div>
 }
+
+<ng-content select="[afterBankDetails]" />
 
 <div class="qr">
   <div class="qr-code" [attr.aria-busy]="state().kind === 'loading'">

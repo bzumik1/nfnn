@@ -3,10 +3,7 @@ package cz.novanadeje.app.donations.application.receipt;
 import cz.novanadeje.app.donations.domain.donation.Donation;
 import cz.novanadeje.app.donations.domain.donor.DonorRecord;
 import cz.novanadeje.app.donations.domain.donor.DonorReference;
-import cz.novanadeje.app.donations.domain.receipt.DonationReceipt;
-import cz.novanadeje.app.donations.domain.receipt.DonationReceiptId;
 import cz.novanadeje.app.donations.domain.receipt.FoundationIdentity;
-import cz.novanadeje.app.donations.domain.receipt.ReceiptContent;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptDocument;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptDocumentFactory;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptFingerprint;
@@ -15,7 +12,6 @@ import cz.novanadeje.app.donations.domain.receipt.ReplacedReceipt;
 import cz.novanadeje.app.donations.domain.receipt.Signatory;
 import cz.novanadeje.app.shared.domain.LocaleCode;
 
-import java.time.Instant;
 import java.time.LocalDate;
 import java.time.Year;
 import java.util.List;
@@ -31,9 +27,6 @@ public sealed interface ReceiptRequest {
 
     ReceiptDocument document(FoundationIdentity foundation, Signatory signatory, ReceiptNumber number, LocaleCode locale,
                              Optional<ReplacedReceipt> replaces);
-
-    DonationReceipt receipt(DonationReceiptId id, ReceiptNumber number, Instant issuedAt, LocaleCode locale, ReceiptFingerprint fingerprint,
-                            ReceiptContent content, Optional<DonationReceiptId> supersedes);
 
     default DonorReference donor() {
         return record().id();
@@ -66,11 +59,6 @@ public sealed interface ReceiptRequest {
             return ReceiptDocumentFactory.forDonation(record, donation, foundation, signatory, number, today, locale, replaces);
         }
 
-        @Override
-        public DonationReceipt receipt(DonationReceiptId id, ReceiptNumber number, Instant issuedAt, LocaleCode locale,
-                                       ReceiptFingerprint fingerprint, ReceiptContent content, Optional<DonationReceiptId> supersedes) {
-            return DonationReceipt.issueForDonation(id, donor(), donation.id(), number, today, issuedAt, locale, fingerprint, content, supersedes);
-        }
     }
 
     record ForYear(DonorRecord record, Year year, List<Donation> donations, LocalDate today) implements ReceiptRequest {
@@ -93,10 +81,5 @@ public sealed interface ReceiptRequest {
             return ReceiptDocumentFactory.forYear(record, year, donations, foundation, signatory, number, today, locale, replaces);
         }
 
-        @Override
-        public DonationReceipt receipt(DonationReceiptId id, ReceiptNumber number, Instant issuedAt, LocaleCode locale,
-                                       ReceiptFingerprint fingerprint, ReceiptContent content, Optional<DonationReceiptId> supersedes) {
-            return DonationReceipt.issueForYear(id, donor(), year, number, today, issuedAt, locale, fingerprint, content, supersedes);
-        }
     }
 }

@@ -78,6 +78,7 @@ export class DonorOverview {
   });
 
   constructor() {
+    this.donations.checkBankIfStale();
     inject(DestroyRef).onDestroy(() => this.refusal.clear());
   }
 

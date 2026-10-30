@@ -1,5 +1,9 @@
 package cz.novanadeje.app.content.application.home;
 
+import cz.novanadeje.app.content.application.about.AboutPhotoView;
+import cz.novanadeje.app.content.application.about.AboutService;
+import cz.novanadeje.app.content.application.about.AboutView;
+import cz.novanadeje.app.content.domain.media.MediaId;
 import cz.novanadeje.app.content.domain.news.NewsArticle;
 import cz.novanadeje.app.content.domain.news.NewsArticleRepository;
 import cz.novanadeje.app.content.domain.news.NewsContent;
@@ -33,7 +37,8 @@ class HomeContentServiceTest {
 
     private final NewsArticleRepository news = mock(NewsArticleRepository.class);
     private final ProjectRepository projects = mock(ProjectRepository.class);
-    private final HomeContentService service = new HomeContentService(news, projects, Clock.fixed(LATE_EVENING_UTC, ZoneOffset.UTC));
+    private final AboutService about = mock(AboutService.class);
+    private final HomeContentService service = new HomeContentService(news, projects, about, Clock.fixed(LATE_EVENING_UTC, ZoneOffset.UTC));
 
     @Test
     @DisplayName("Given published news and projects, when the home content is read, then it asks for the three newest news articles and the three newest projects visible on the Prague day")
@@ -42,6 +47,7 @@ class HomeContentServiceTest {
         Project project = Project.create(ProjectId.newId(LATE_EVENING_UTC), new ProjectContent(new Slug("dominik"), "Dominik", 2024, Optional.empty(), "Perex", "Text", Optional.empty()), LATE_EVENING_UTC);
         when(news.findVisibleNewestFirst(eq(PRAGUE_DAY), eq(0), anyInt())).thenReturn(List.of(article));
         when(projects.findVisibleNewestFirst(eq(PRAGUE_DAY), eq(0), anyInt())).thenReturn(List.of(project));
+        when(about.read()).thenReturn(new AboutView(Optional.empty()));
 
         HomeContent content = service.read();
 
@@ -56,10 +62,24 @@ class HomeContentServiceTest {
     void should_be_empty_when_read_given_nothing_published() {
         when(news.findVisibleNewestFirst(eq(PRAGUE_DAY), eq(0), anyInt())).thenReturn(List.of());
         when(projects.findVisibleNewestFirst(eq(PRAGUE_DAY), eq(0), anyInt())).thenReturn(List.of());
+        when(about.read()).thenReturn(new AboutView(Optional.empty()));
 
         HomeContent content = service.read();
 
         assertThat(content.news()).isEmpty();
         assertThat(content.projects()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Given a photo in the About section, when the home content is read, then it carries the photo with its size and texts")
+    void should_carry_the_about_photo_when_read_given_a_photo_in_the_about_section() {
+        AboutPhotoView photo = new AboutPhotoView(MediaId.newId(LATE_EVENING_UTC), 1413, 1884, Optional.of("Chlapec v náručí"), Optional.of("Kde to začalo"));
+        when(news.findVisibleNewestFirst(eq(PRAGUE_DAY), eq(0), anyInt())).thenReturn(List.of());
+        when(projects.findVisibleNewestFirst(eq(PRAGUE_DAY), eq(0), anyInt())).thenReturn(List.of());
+        when(about.read()).thenReturn(new AboutView(Optional.of(photo)));
+
+        HomeContent content = service.read();
+
+        assertThat(content.about().photo()).contains(photo);
     }
 }

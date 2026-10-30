@@ -13,64 +13,45 @@ public final class DonationReceipt {
 
     private final DonationReceiptId id;
     private final DonorReference donor;
-    private final ReceiptKind kind;
-    private final DonationId donation;
-    private final Year year;
-    private final ReceiptNumber number;
-    private final LocalDate issuedOn;
     private final Instant issuedAt;
-    private final LocaleCode locale;
     private final ReceiptFingerprint fingerprint;
-    private final ReceiptContent content;
+    private final FrozenReceipt frozen;
     private final DonationReceiptId supersedes;
+    private ReceiptStatus status;
     private Instant supersededAt;
 
-    private DonationReceipt(DonationReceiptId id, DonorReference donor, ReceiptKind kind, Optional<DonationId> donation, Optional<Year> year,
-                            ReceiptNumber number, LocalDate issuedOn, Instant issuedAt, LocaleCode locale, ReceiptFingerprint fingerprint,
-                            ReceiptContent content, Optional<DonationReceiptId> supersedes, Optional<Instant> supersededAt) {
+    private DonationReceipt(DonationReceiptId id, DonorReference donor, Instant issuedAt, ReceiptFingerprint fingerprint, FrozenReceipt frozen,
+                            Optional<DonationReceiptId> supersedes, ReceiptStatus status, Optional<Instant> supersededAt) {
         this.id = require(id, "Receipt id");
         this.donor = require(donor, "Donor reference");
-        this.kind = require(kind, "Receipt kind");
-        this.donation = require(donation, "Donation").orElse(null);
-        this.year = require(year, "Year").orElse(null);
-        this.number = require(number, "Receipt number");
-        this.issuedOn = require(issuedOn, "Issue date");
         this.issuedAt = require(issuedAt, "Issue time");
-        this.locale = require(locale, "Locale");
         this.fingerprint = require(fingerprint, "Fingerprint");
-        this.content = require(content, "Content");
+        this.frozen = require(frozen, "Frozen receipt");
         this.supersedes = require(supersedes, "Superseded receipt").orElse(null);
+        this.status = require(status, "Status");
         this.supersededAt = require(supersededAt, "Supersede time").orElse(null);
-        requireSubjectMatchingKind();
+        if ((status == ReceiptStatus.REPLACED) != (this.supersededAt != null)) {
+            throw new IllegalArgumentException("A receipt has its supersede time exactly when it was replaced");
+        }
     }
 
-    public static DonationReceipt issueForDonation(DonationReceiptId id, DonorReference donor, DonationId donation, ReceiptNumber number,
-                                                   LocalDate issuedOn, Instant issuedAt, LocaleCode locale, ReceiptFingerprint fingerprint,
-                                                   ReceiptContent content, Optional<DonationReceiptId> supersedes) {
-        return new DonationReceipt(id, donor, ReceiptKind.SINGLE, Optional.ofNullable(donation), Optional.empty(), number, issuedOn, issuedAt,
-                locale, fingerprint, content, supersedes, Optional.empty());
+    public static DonationReceipt issue(DonationReceiptId id, DonorReference donor, Instant issuedAt, ReceiptFingerprint fingerprint,
+                                        FrozenReceipt frozen, Optional<DonationReceiptId> supersedes) {
+        return new DonationReceipt(id, donor, issuedAt, fingerprint, frozen, supersedes, ReceiptStatus.ACTIVE, Optional.empty());
     }
 
-    public static DonationReceipt issueForYear(DonationReceiptId id, DonorReference donor, Year year, ReceiptNumber number, LocalDate issuedOn,
-                                               Instant issuedAt, LocaleCode locale, ReceiptFingerprint fingerprint, ReceiptContent content,
-                                               Optional<DonationReceiptId> supersedes) {
-        return new DonationReceipt(id, donor, ReceiptKind.YEARLY, Optional.empty(), Optional.ofNullable(year), number, issuedOn, issuedAt,
-                locale, fingerprint, content, supersedes, Optional.empty());
-    }
-
-    public static DonationReceipt reconstitute(DonationReceiptId id, DonorReference donor, ReceiptKind kind, Optional<DonationId> donation,
-                                               Optional<Year> year, ReceiptNumber number, LocalDate issuedOn, Instant issuedAt,
-                                               LocaleCode locale, ReceiptFingerprint fingerprint, ReceiptContent content,
-                                               Optional<DonationReceiptId> supersedes, Optional<Instant> supersededAt) {
-        return new DonationReceipt(id, donor, kind, donation, year, number, issuedOn, issuedAt, locale, fingerprint, content, supersedes,
-                supersededAt);
+    public static DonationReceipt reconstitute(DonationReceiptId id, DonorReference donor, Instant issuedAt, ReceiptFingerprint fingerprint,
+                                               FrozenReceipt frozen, Optional<DonationReceiptId> supersedes, ReceiptStatus status,
+                                               Optional<Instant> supersededAt) {
+        return new DonationReceipt(id, donor, issuedAt, fingerprint, frozen, supersedes, status, supersededAt);
     }
 
     public void markSuperseded(Instant at) {
         require(at, "Supersede time");
-        if (supersededAt != null) {
-            throw new IllegalStateException("Receipt " + number + " was already superseded at " + supersededAt);
+        if (status != ReceiptStatus.ACTIVE) {
+            throw new IllegalStateException("Receipt " + number() + " is " + status + ", so it cannot be superseded");
         }
+        status = ReceiptStatus.REPLACED;
         supersededAt = at;
     }
 
@@ -79,7 +60,7 @@ public final class DonationReceipt {
     }
 
     public boolean isActive() {
-        return supersededAt == null;
+        return status == ReceiptStatus.ACTIVE;
     }
 
     public DonationReceiptId id() {
@@ -91,23 +72,23 @@ public final class DonationReceipt {
     }
 
     public ReceiptKind kind() {
-        return kind;
+        return frozen.document().kind();
     }
 
     public Optional<DonationId> donation() {
-        return Optional.ofNullable(donation);
+        return kind() == ReceiptKind.SINGLE ? Optional.of(frozen.document().lines().getFirst().donationId()) : Optional.empty();
     }
 
     public Optional<Year> year() {
-        return Optional.ofNullable(year);
+        return frozen.document().year();
     }
 
     public ReceiptNumber number() {
-        return number;
+        return frozen.document().number();
     }
 
     public LocalDate issuedOn() {
-        return issuedOn;
+        return frozen.document().issuedOn();
     }
 
     public Instant issuedAt() {
@@ -115,31 +96,27 @@ public final class DonationReceipt {
     }
 
     public LocaleCode locale() {
-        return locale;
+        return frozen.document().locale();
     }
 
     public ReceiptFingerprint fingerprint() {
         return fingerprint;
     }
 
-    public ReceiptContent content() {
-        return content;
+    public FrozenReceipt frozen() {
+        return frozen;
     }
 
     public Optional<DonationReceiptId> supersedes() {
         return Optional.ofNullable(supersedes);
     }
 
-    public Optional<Instant> supersededAt() {
-        return Optional.ofNullable(supersededAt);
+    public ReceiptStatus status() {
+        return status;
     }
 
-    private void requireSubjectMatchingKind() {
-        boolean single = kind == ReceiptKind.SINGLE && donation != null && year == null;
-        boolean yearly = kind == ReceiptKind.YEARLY && donation == null && year != null;
-        if (!single && !yearly) {
-            throw new IllegalArgumentException("A single receipt names its donation and a yearly receipt its year, never both");
-        }
+    public Optional<Instant> supersededAt() {
+        return Optional.ofNullable(supersededAt);
     }
 
     private static <T> T require(T value, String label) {

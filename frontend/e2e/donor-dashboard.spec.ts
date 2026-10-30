@@ -134,6 +134,27 @@ test.describe('Given a signed-in donor', () => {
     );
   });
 
+  test('when they open the receipts page during the year, then the gifts of this year are listed there and one receipt downloads from its row', async ({
+    page,
+  }) => {
+    await mockDonorApi(page, withReceipts);
+    await signIn(page);
+    await openDonorSection(page, 'Potvrzení o daru');
+
+    const rows = page.locator('.single-card tbody tr');
+    await expect(rows).toHaveCount(2);
+
+    const [download] = await Promise.all([
+      page.waitForEvent('download'),
+      rows.nth(1).getByRole('button', { name: 'Stáhnout PDF' }).click(),
+    ]);
+
+    expect(download.suggestedFilename()).toBe('potvrzeni-o-daru-2026-000001.pdf');
+    await expect(rows.nth(1).getByRole('status')).toHaveText(
+      'Potvrzení potvrzeni-o-daru-2026-000001.pdf je stažené. Najdete ho ve stažených souborech.',
+    );
+  });
+
   test('when they download the receipt of one payment, then the browser saves that PDF and a refunded payment offers none', async ({
     page,
   }) => {
@@ -246,6 +267,28 @@ test.describe('Given a signed-in donor', () => {
     await expect(page.locator('.accounts-nudge')).toContainText(
       'Posíláte trvalým příkazem s jiným symbolem?',
     );
+  });
+
+  test('when they open the standing order guide on a phone, then it sits after the bank details and the opened guide comes into view', async ({
+    page,
+  }) => {
+    await mockDonorApi(page, noDonations);
+    await signIn(page);
+    await page.setViewportSize({ width: 390, height: 844 });
+
+    const card = page.locator('.send-gift');
+    await expect(card.locator('.bank')).toContainText('5544332217/2010');
+    const toggle = card.getByRole('button', { name: 'Jak nastavit trvalý příkaz' });
+    const toggleTop = (await toggle.boundingBox())!.y;
+    expect(toggleTop).toBeGreaterThan((await card.locator('.bank').boundingBox())!.y);
+    expect(toggleTop).toBeLessThan((await card.locator('.qr').boundingBox())!.y);
+
+    await toggle.click();
+
+    await expect(page.getByRole('region', { name: 'Jak nastavit trvalý příkaz' })).toBeInViewport({
+      ratio: 0.5,
+    });
+    await expect(toggle).toBeInViewport();
   });
 
   test('when no donation has arrived yet and they sent a gift without the symbol, then the overview opens Přidat účet for the account it came from', async ({

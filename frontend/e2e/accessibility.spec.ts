@@ -1555,6 +1555,58 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     expect(await violations(page)).toEqual([]);
   });
 
+  test('when an administrator sets the About photo and the home page shows it, then the page, its removal confirmation and the section break no rule', async ({
+    page,
+  }) => {
+    const photoId = '0199f3e0-0000-7000-8000-00000000b001';
+    const photo = {
+      id: photoId,
+      url: `/api/content/media/${photoId}`,
+      width: 1413,
+      height: 1884,
+      alt: 'Malý chlapec v náručí dvou dospělých',
+      caption: 'Kde to všechno začalo',
+    };
+    await page.route(
+      (url) => url.pathname === '/api/admin/content/about',
+      (route) => route.fulfill({ json: { photo } }),
+    );
+    await page.route(
+      (url) => url.pathname === '/api/content/home',
+      (route) => route.fulfill({ json: { news: [], projects: [], about: { photo } } }),
+    );
+    await page.route(
+      (url) => url.pathname.startsWith('/api/content/media/'),
+      (route) =>
+        route.fulfill({
+          contentType: 'image/png',
+          body: Buffer.from(samplePngBase64, 'base64'),
+        }),
+    );
+    await page.route('**/api/donors/auth/refresh', (route) =>
+      route.fulfill(session(200, administrator)),
+    );
+    await page.goto('/');
+    await page.locator('#o-nas figcaption').scrollIntoViewIfNeeded();
+    await expect(page.locator('#o-nas figcaption')).toHaveText('Kde to všechno začalo');
+
+    expect(await violations(page)).toEqual([]);
+
+    await page.evaluate(() => localStorage.setItem('nfnn.donor-session', '1'));
+    await page.goto('/sprava/o-nas');
+    await expect(
+      page.getByRole('heading', { level: 1, name: 'Fotka v sekci O nás' }),
+    ).toBeFocused();
+    await expect(page.locator('.photo-preview')).toBeVisible();
+
+    expect(await violations(page)).toEqual([]);
+
+    await page.getByRole('button', { name: 'Odebrat fotku z webu' }).click();
+    await expect(page.getByRole('group', { name: 'Odebrat fotku?' })).toBeVisible();
+
+    expect(await violations(page)).toEqual([]);
+  });
+
   test('when an administrator writes a news article, then the list, the editor with its errors, its preview and the deletion confirmation break no rule', async ({
     page,
   }) => {
