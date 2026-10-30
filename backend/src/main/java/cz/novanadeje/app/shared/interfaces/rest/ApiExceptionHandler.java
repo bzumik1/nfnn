@@ -1,6 +1,5 @@
 package cz.novanadeje.app.shared.interfaces.rest;
 
-import cz.novanadeje.app.shared.domain.LocaleCode;
 import cz.novanadeje.app.shared.domain.error.AccessDenied;
 import cz.novanadeje.app.shared.domain.error.AuthenticationFailure;
 import cz.novanadeje.app.shared.domain.error.Conflict;
@@ -8,6 +7,7 @@ import cz.novanadeje.app.shared.domain.error.DomainException;
 import cz.novanadeje.app.shared.domain.error.NotFound;
 import cz.novanadeje.app.shared.domain.error.RuleViolation;
 import org.springframework.beans.TypeMismatchException;
+import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -30,12 +30,18 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
 
 import java.net.URI;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
-import java.util.Optional;
 
 @RestControllerAdvice
 public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
+
+    private ProblemMessages texts;
+
+    @Override
+    public void setMessageSource(MessageSource messageSource) {
+        super.setMessageSource(messageSource);
+        this.texts = new ProblemMessages(messageSource);
+    }
 
     @Override
     protected ResponseEntity<Object> handleMethodArgumentNotValid(MethodArgumentNotValidException ex, HttpHeaders headers, HttpStatusCode status, WebRequest request) {
@@ -81,7 +87,7 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
         ProblemDetail problem = ProblemDetail.forStatus(status);
         problem.setType(ProblemTypes.of(ex.code()));
         problem.setTitle(message("problem." + ex.code() + ".title", status.getReasonPhrase()));
-        problem.setDetail(translation("problem." + ex.code() + ".detail").orElse(null));
+        problem.setDetail(texts.find("problem." + ex.code() + ".detail").orElse(null));
         ex.extensions().forEach(problem::setProperty);
         return problem;
     }
@@ -131,17 +137,11 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
     }
 
     private String message(String key) {
-        return message(key, key);
+        return texts.text(key);
     }
 
     private String message(String key, String fallback) {
-        return translation(key).orElse(fallback);
-    }
-
-    private Optional<String> translation(String key) {
-        Locale locale = LocaleContextHolder.getLocale();
-        return Optional.ofNullable(getMessageSource().getMessage(key, null, null, locale))
-                .or(() -> Optional.ofNullable(getMessageSource().getMessage(key, null, null, LocaleCode.CS.toLocale())));
+        return texts.text(key, LocaleContextHolder.getLocale(), fallback);
     }
 
     private static List<Map<String, String>> parameterErrors(HandlerMethodValidationException ex) {

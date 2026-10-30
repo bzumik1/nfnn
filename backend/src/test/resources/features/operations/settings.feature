@@ -58,6 +58,16 @@ Feature: An administrator changes the settings of the site in the administration
     And the problem does not repeat "NFNN_NO_SUCH_SETTING"
     And the backend does not restart
 
+  Scenario: A refused setting is answered in Czech to a client whose language the site has no texts in
+    When "Jana" changes the settings in "de-DE":
+      | name                 | value |
+      | NFNN_NO_SUCH_SETTING | 1     |
+    Then the response status is 400
+    And the problem type ends with "operations/invalid-settings"
+    And the problem says "Nastavení nejde uložit": "Opravte označené hodnoty a uložte znovu."
+    And the problem's error for field "" says "Takové nastavení web nezná."
+    And the backend does not restart
+
   Scenario: An administrator sends a test e-mail to their own address through the typed values before saving, and it is audited
     When "Jana" sends a test e-mail through "smtp.example.cz" with the password "right-key" from "info@nfnn.cz"
     Then the test e-mail says "SENT" to the e-mail of "Jana"

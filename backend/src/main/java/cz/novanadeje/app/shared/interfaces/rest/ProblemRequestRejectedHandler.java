@@ -22,12 +22,12 @@ class ProblemRequestRejectedHandler implements RequestRejectedHandler {
 
     private static final String NO_STORE = "no-cache, no-store, max-age=0, must-revalidate";
 
-    private final MessageSource messages;
+    private final ProblemMessages texts;
     private final LocaleResolver locales;
     private final JsonMapper json = JsonMapper.builder().build();
 
     ProblemRequestRejectedHandler(MessageSource messages, LocaleResolver locales) {
-        this.messages = messages;
+        this.texts = new ProblemMessages(messages);
         this.locales = locales;
     }
 
@@ -36,9 +36,9 @@ class ProblemRequestRejectedHandler implements RequestRejectedHandler {
         Locale locale = locales.resolveLocale(request);
         Map<String, Object> problem = new LinkedHashMap<>();
         problem.put("type", ProblemTypes.VALIDATION.toString());
-        problem.put("title", messages.getMessage("problem.validation.title", null, locale));
+        problem.put("title", texts.text("problem.validation.title", locale));
         problem.put("status", HttpStatus.BAD_REQUEST.value());
-        problem.put("detail", messages.getMessage("problem.validation.rejected-request", null, locale));
+        problem.put("detail", texts.text("problem.validation.rejected-request", locale));
         response.resetBuffer();
         response.setStatus(HttpStatus.BAD_REQUEST.value());
         response.setContentType(MediaType.APPLICATION_PROBLEM_JSON_VALUE);

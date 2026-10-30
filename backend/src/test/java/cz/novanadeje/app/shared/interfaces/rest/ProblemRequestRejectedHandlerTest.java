@@ -65,4 +65,19 @@ class ProblemRequestRejectedHandlerTest {
                 .contains("\"title\":\"Invalid data\"")
                 .contains("\"detail\":\"The request has a form the site does not accept. Please check the address.\"");
     }
+
+    @Test
+    @DisplayName("Given a client in a language the site has no texts in, when a rejected request is answered, then the texts are Czech")
+    void should_answer_in_czech_when_answered_given_language_without_texts() throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api//" + CLIENT_VALUE);
+        request.addHeader("Accept-Language", "de");
+        request.addPreferredLocale(Locale.GERMAN);
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        handler.handle(request, response, new RequestRejectedException(CLIENT_VALUE));
+
+        assertThat(response.getContentAsString(StandardCharsets.UTF_8))
+                .doesNotContain(CLIENT_VALUE)
+                .contains("\"title\":\"Neplatné údaje\"");
+    }
 }
