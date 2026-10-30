@@ -121,6 +121,12 @@ describe('Given the backup key card', () => {
       expect(root().textContent).not.toContain(KEY);
     });
 
+    it('then it says saving the key is for the board, not for the technician', () => {
+      expect(text('.ui-callout--warning')).toBe(
+        'Klíč si zatím nikdo neuložil. Uložit ho má někdo ze správní rady, kdo má přístup do správy, ne technik. Zobrazte si ho, uložte mimo server a potvrďte to opsáním tří jeho slov.',
+      );
+    });
+
     it('and the administrator asks to see it, then a fresh code is asked for first', async () => {
       await askToSee();
 

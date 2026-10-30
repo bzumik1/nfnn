@@ -3,7 +3,7 @@
 import { formatBankTime } from '../../donations/donation-date';
 import { AdminBackupsResponse, BackupProblem, BackupRunResponse } from '../admin-api';
 import { formatSize } from './backup-format';
-import { BACKUP_PROBLEM_HELP, BACKUP_PROBLEM_TEXTS } from './backup-texts';
+import { BACKUP_PROBLEM_SUMMARIES, BACKUP_PROBLEM_TEXTS } from './backup-texts';
 
 const TECHNICIAN_PROBLEMS: readonly BackupProblem[] = [
   'BACKUPS_UNAVAILABLE',
@@ -22,7 +22,7 @@ export function technicianMessage(view: AdminBackupsResponse): string {
     $localize`:@@admin.backups.message.intro:Zálohy webu Nová naděje potřebují pomoc správce serveru.`,
     '',
     $localize`:@@admin.backups.message.problems:Co je špatně:`,
-    ...view.problems.map((problem) => `- ${BACKUP_PROBLEM_HELP[problem]}`),
+    ...view.problems.map((problem) => `- ${BACKUP_PROBLEM_SUMMARIES[problem]}`),
     '',
     $localize`:@@admin.backups.message.details:Technické podrobnosti:`,
     ...view.problems.map((problem) => `- ${BACKUP_PROBLEM_TEXTS[problem]}`),
