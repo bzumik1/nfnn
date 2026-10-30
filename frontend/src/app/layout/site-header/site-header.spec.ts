@@ -295,16 +295,16 @@ describe('Given the site header over the dark top of a page', () => {
     return fixture.nativeElement.querySelector('.brand img') as HTMLImageElement;
   }
 
-  it('when a page other than home is at its top, then the logo is drawn light for the dark background', async () => {
+  it('when a page other than home is at its top, then the logo is its variant for a dark background, whose star keeps its face', async () => {
     await showAt('/projekty');
 
-    expect(logo().classList).toContain('logo-on-dark');
+    expect(logo().getAttribute('src')).toBe('/images/logo-on-dark.svg');
   });
 
   it('when the home page is at its top, then the logo keeps its colours over the bright photo', async () => {
     await showAt('/');
 
-    expect(logo().classList).not.toContain('logo-on-dark');
+    expect(logo().getAttribute('src')).toBe('/images/logo.svg');
   });
 
   it('when the menu opens over the page, then the bar turns light and the logo keeps its colours', async () => {
@@ -313,6 +313,6 @@ describe('Given the site header over the dark top of a page', () => {
     (fixture.nativeElement.querySelector('.mobile-menu-btn') as HTMLButtonElement).click();
     fixture.detectChanges();
 
-    expect(logo().classList).not.toContain('logo-on-dark');
+    expect(logo().getAttribute('src')).toBe('/images/logo.svg');
   });
 });
