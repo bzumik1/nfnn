@@ -18,6 +18,7 @@ type ResultKind =
   | 'unknown-key-no-answer'
   | 'no-connection'
   | 'no-answer'
+  | 'keys-refused'
   | 'broken'
   | 'newer'
   | 'failed';
@@ -37,6 +38,7 @@ const TONES: Readonly<Record<ResultKind, Tone>> = {
   'unknown-key-no-answer': 'caution',
   'no-connection': 'caution',
   'no-answer': 'caution',
+  'keys-refused': 'caution',
   broken: 'caution',
   newer: 'caution',
   failed: 'caution',

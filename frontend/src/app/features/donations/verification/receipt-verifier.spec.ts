@@ -130,32 +130,32 @@ describe('Given the receipt verifier', () => {
     }
 
     for (const refusal of [{ status: 404, statusText: 'Not Found' }, ...REFUSALS]) {
-      it(`and the status call answers ${refusal.status}, then the signature stands but the fund gave no answer`, async () => {
+      it(`and the status call answers ${refusal.status}, then the signature stands but the fund, asked, gave no answer`, async () => {
         const outcome = verifier.verify(SINGLE.fragment);
 
         (await request(KEYS)).flush(KEY_LIST);
         await refuse(STATUS, refusal);
 
-        expect(await outcome).toEqual(signedWith('no-answer'));
+        expect(await outcome).toEqual(signedWith('unanswered'));
       });
     }
 
-    it('and the status answer is not one the page knows, then the fund gave no answer', async () => {
+    it('and the status answer is not one the page knows, then the fund, asked, gave no answer', async () => {
       const outcome = verifier.verify(SINGLE.fragment);
 
       (await request(KEYS)).flush(KEY_LIST);
       (await request(STATUS)).flush({ status: 'valid' });
 
-      expect(await outcome).toEqual(signedWith('no-answer'));
+      expect(await outcome).toEqual(signedWith('unanswered'));
     });
 
-    it('and the status call is cut off with no response, then the signature stands as checked offline', async () => {
+    it('and the status call is cut off after the key list came, then the fund, asked, gave no answer and the result is never the offline one', async () => {
       const outcome = verifier.verify(SINGLE.fragment);
 
       (await request(KEYS)).flush(KEY_LIST);
       await cutOff(STATUS);
 
-      expect(await outcome).toEqual(signedWith('offline'));
+      expect(await outcome).toEqual(signedWith('unanswered'));
     });
 
     it('and the signature holds, then the progress says so before the status is asked for', async () => {
@@ -234,12 +234,12 @@ describe('Given the receipt verifier', () => {
       });
     }
 
-    it('and the list is malformed, then the fund gave no answer and the list is never kept', async () => {
+    it('and the list is malformed, then the page says it cannot use the list and never keeps it', async () => {
       const outcome = verifier.verify(SINGLE.fragment);
 
       (await request(KEYS)).flush({ foundation: { companyIdentifier: '27278794' }, keys: 'none' });
 
-      expect(await outcome).toEqual({ state: 'no-answer' });
+      expect(await outcome).toEqual({ state: 'keys-refused' });
       expect(localStorage.getItem(STORAGE_KEY)).toBeNull();
     });
 
@@ -291,12 +291,12 @@ describe('Given the receipt verifier', () => {
       });
     }
 
-    it('and a malformed list comes, then it is never kept and the fund gave no answer', async () => {
+    it('and a malformed list comes, then the page says it cannot use the list, keeps the old one and asks no status', async () => {
       const outcome = verifier.verify(SINGLE.fragment);
 
       (await request(KEYS)).flush({ foundation: { companyIdentifier: '2727879' }, keys: [] });
 
-      expect(await outcome).toEqual(signedWith('no-answer'));
+      expect(await outcome).toEqual({ state: 'keys-refused' });
       expect(JSON.parse(localStorage.getItem(STORAGE_KEY) ?? 'null')).toEqual(KEY_LIST);
     });
 
@@ -325,7 +325,7 @@ describe('Given the receipt verifier', () => {
 
         expect(await settledWithin(outcome, TIMEOUT_MS - 100)).toBe(false);
         expect(await settledWithin(outcome, 100)).toBe(true);
-        expect(await outcome).toEqual(signedWith('no-answer'));
+        expect(await outcome).toEqual(signedWith('unanswered'));
         expect(status.cancelled).toBe(true);
       });
     });

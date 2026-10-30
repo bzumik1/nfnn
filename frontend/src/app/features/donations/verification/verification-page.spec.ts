@@ -271,30 +271,40 @@ describe('Given the verification page', () => {
     expect(page).not.toContain('Fondu jsme poslali');
   });
 
-  describe('when the signature holds but the fund gave no usable answer', () => {
-    beforeEach(() =>
-      open(`/overit#${FRAGMENT}`, { state: 'signed', receipt: SINGLE, status: 'no-answer' }),
-    );
+  for (const status of ['no-answer', 'unanswered'] as const) {
+    it(`when the signature holds but the fund gave no usable answer (${status}), then the result is not green, the heading says the fund did not answer and the data are listed`, async () => {
+      await open(`/overit#${FRAGMENT}`, { state: 'signed', receipt: SINGLE, status });
 
-    it('then the result is not green, the heading says the fund did not answer and the data are listed', () => {
       expect(heading().textContent?.trim()).toBe(
         'Podpis sedí, ale fond teď neodpověděl, zda potvrzení vede',
       );
       expect(tone()).toBe(AMBER);
       expect(lead()).toBe(
-        'Údaje v tomto kódu podepsal fond Nová naděje, fond ale teď neodpověděl, zda potvrzení vede jako platné. Dokud neodpoví, nevíte, zda ho nenahradil novějším nebo nezrušil. Zkuste to za chvíli znovu.',
+        'Údaje v tomto kódu podepsal fond Nová naděje ke dni vystavení, fond ale teď neodpověděl, zda potvrzení vede jako platné. Dokud neodpoví, nevíte, zda ho nenahradil novějším nebo nezrušil. Zkuste to za chvíli znovu.',
       );
       expect(data()['Číslo potvrzení']).toBe('2026-000042');
       expect(button('Zkusit znovu')).toBeDefined();
     });
+  }
 
-    it('then it does not claim that the digest reached the fund', () => {
-      const page = root().textContent?.replace(/\s+/g, ' ');
-      expect(page).not.toContain('Fondu jsme poslali');
-      expect(page).toContain(
-        'Ověření proběhlo jen ve vašem zařízení; údaje z kódu se nikam neposílají.',
-      );
-    });
+  it('when the key list gave no usable answer and the kept keys verified the code, then the page says nothing left the device', async () => {
+    await open(`/overit#${FRAGMENT}`, { state: 'signed', receipt: SINGLE, status: 'no-answer' });
+
+    const page = root().textContent?.replace(/\s+/g, ' ');
+    expect(page).not.toContain('Fondu jsme poslali');
+    expect(page).toContain(
+      'Ověření proběhlo jen ve vašem zařízení; údaje z kódu se nikam neposílají.',
+    );
+  });
+
+  it('when the status was asked and the fund did not answer, then the page says only the fingerprint was sent and the fund did not answer', async () => {
+    await open(`/overit#${FRAGMENT}`, { state: 'signed', receipt: SINGLE, status: 'unanswered' });
+
+    const page = root().textContent?.replace(/\s+/g, ' ');
+    expect(page).toContain(
+      'Podpis jsme ověřili ve vašem zařízení. Fondu jsme poslali jen otisk podepsaných údajů, abychom zjistili stav potvrzení, ale neodpověděl; jméno, adresa ani částky se nikam neposílají.',
+    );
+    expect(page).not.toContain('Ověření proběhlo jen ve vašem zařízení');
   });
 
   for (const [status, title, glyph] of [
@@ -362,6 +372,13 @@ describe('Given the verification page', () => {
       true,
     ],
     [
+      { state: 'keys-refused' },
+      'Neověřeno: seznam klíčů fondu teď nejde použít',
+      'Fond poslal seznam klíčů, se kterým tato stránka neumí pracovat, takže podpis teď ověřit nejde. Potvrzení zatím nepovažujte za ověřené a napište prosím na info@nfnn.cz s číslem potvrzení.',
+      AMBER,
+      false,
+    ],
+    [
       { state: 'broken' },
       'Odkaz je neúplný',
       'Kód se nepřečetl celý, nebo je adresa opsaná s chybou. Naskenujte ho znovu, blíž a se světlem.',
@@ -395,7 +412,14 @@ describe('Given the verification page', () => {
     });
   }
 
-  for (const state of ['no-connection', 'no-answer', 'broken', 'newer', 'failed'] as const) {
+  for (const state of [
+    'no-connection',
+    'no-answer',
+    'keys-refused',
+    'broken',
+    'newer',
+    'failed',
+  ] as const) {
     it(`when the outcome is ${state}, then the page does not claim that a verification took place`, async () => {
       await open(`/overit#${FRAGMENT}`, { state });
 

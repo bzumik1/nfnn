@@ -19,7 +19,7 @@ import { type ReceiptStatus, ReceiptStatusApi } from './receipt-status-api';
 
 export type Reach = 'online' | 'offline' | 'no-answer';
 
-export type SignedStatus = ReceiptStatus | Exclude<Reach, 'online'>;
+export type SignedStatus = ReceiptStatus | Exclude<Reach, 'online'> | 'unanswered';
 
 export type VerificationStep = 'asking-status';
 
@@ -29,6 +29,7 @@ export type VerificationOutcome =
   | { readonly state: 'newer' }
   | { readonly state: 'no-connection' }
   | { readonly state: 'no-answer' }
+  | { readonly state: 'keys-refused' }
   | { readonly state: 'failed' }
   | { readonly state: 'invalid' }
   | { readonly state: 'revoked' }

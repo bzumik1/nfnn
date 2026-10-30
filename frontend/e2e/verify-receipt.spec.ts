@@ -289,6 +289,36 @@ test.describe('Given a visitor who is online while the fund gives no usable answ
     await mockDonorApi(page);
   });
 
+  test('when the key list came and the status call is then cut off, then the result is a caution, never green', async ({
+    page,
+  }) => {
+    await serveReceiptApi(page, { keys: KEY_LIST, status: 'reset' });
+
+    await page.goto(`/overit#${SINGLE_RECEIPT.fragment}`);
+
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(NO_ANSWER);
+    await expect(page.locator('.ui-status [aria-hidden="true"]')).toHaveText('!');
+    await expect(page.getByText('Bez připojení')).toHaveCount(0);
+  });
+
+  test('when the key list comes but the page cannot use it, then the code is not verified and the page says whom to write to instead of trying again later', async ({
+    page,
+  }) => {
+    await serveReceiptApi(page, {
+      keys: { foundation: { companyIdentifier: '27278794' }, keys: 'none' },
+      status: 'active',
+    });
+
+    await page.goto(`/overit#${SINGLE_RECEIPT.fragment}`);
+
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(
+      'Neověřeno: seznam klíčů fondu teď nejde použít',
+    );
+    await expect(page.getByRole('button', { name: 'Zkusit znovu' })).toHaveCount(0);
+    await expect(page.getByText('za chvíli')).toHaveCount(0);
+    await expect(page.getByRole('link', { name: 'info@nfnn.cz' }).first()).toBeVisible();
+  });
+
   for (const refusal of [503, 429]) {
     test(`when the status call answers ${refusal}, then the signature holds but the result is a caution with a retry, never green`, async ({
       page,
@@ -300,7 +330,11 @@ test.describe('Given a visitor who is online while the fund gives no usable answ
       await expect(page.getByRole('heading', { level: 1 })).toHaveText(NO_ANSWER);
       await expect(page.locator('.ui-status [aria-hidden="true"]')).toHaveText('!');
       await expect(page.getByRole('button', { name: 'Zkusit znovu' })).toBeVisible();
-      await expect(page.getByText('Fondu jsme poslali')).toHaveCount(0);
+      await expect(
+        page.getByText(
+          'Fondu jsme poslali jen otisk podepsaných údajů, abychom zjistili stav potvrzení, ale neodpověděl',
+        ),
+      ).toBeVisible();
     });
 
     test(`when the key list answers ${refusal} and keys are kept, then the kept keys check the signature but the result is a caution, not offline`, async ({

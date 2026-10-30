@@ -314,6 +314,12 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     await expect(heading).toHaveText('Ověření teď nejde dokončit');
     expect(await violations(page)).toEqual([]);
 
+    Object.assign(api, { keys: { foundation: { companyIdentifier: '27278794' }, keys: 'none' } });
+    await scanFragment(page, CHANGED_AMOUNT.fragment);
+    await expect(heading).toHaveText('Neověřeno: seznam klíčů fondu teď nejde použít');
+    expect(await violations(page)).toEqual([]);
+    Object.assign(api, { keys: 503 });
+
     await keepKeyListNow(page, LIST_WITHOUT_THE_KEY);
     await scanFragment(page, YEARLY_RECEIPT.fragment);
     await expect(heading).toHaveText('Neověřeno: tento podpis zatím neumíme ověřit');

@@ -118,7 +118,7 @@ export async function withoutWebCryptoEd25519(page: Page): Promise<void> {
 
 export interface ReceiptApi {
   keys: object | number;
-  status: string | number | 'never';
+  status: string | number | 'never' | 'reset';
 }
 
 export async function serveReceiptApi(page: Page, api: ReceiptApi): Promise<void> {
@@ -134,6 +134,9 @@ export async function serveReceiptApi(page: Page, api: ReceiptApi): Promise<void
     (route) => {
       if (api.status === 'never') {
         return undefined;
+      }
+      if (api.status === 'reset') {
+        return route.abort('connectionreset');
       }
       return typeof api.status === 'number'
         ? route.fulfill({ status: api.status, json: { type: 'about:blank', status: api.status } })
