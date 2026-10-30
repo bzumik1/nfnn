@@ -53,6 +53,7 @@ public class ReceiptSigningKeyRegistration {
 
     public void registerOwnKey() {
         Registration outcome = transactions.execute(status -> register());
+        outcome.testKeys().forEach(id -> log.error("Receipt signing key {} is a public test key of RFC 8032, so it is not published", id));
         outcome.broken().forEach(id -> log.error("Receipt signing key {} fails its seal, so it is not published", id));
         outcome.unconfirmed().forEach(id ->
                 log.error("Receipt signing key {} is sealed by the settings key of another server and no restore confirms it, so it is not published", id));
@@ -64,10 +65,15 @@ public class ReceiptSigningKeyRegistration {
         Instant now = clock.instant();
         Optional<FinishedRestore> restore = restoreToAdoptFrom(now);
         List<ReceiptSigningKey> stored = keys.findAll();
+        List<ReceiptSigningKeyId> testKeyRows = new ArrayList<>();
         List<ReceiptSigningKeyId> broken = new ArrayList<>();
         List<ReceiptSigningKeyId> unconfirmed = new ArrayList<>();
         List<ReceiptSigningKeyId> adopted = new ArrayList<>();
         for (ReceiptSigningKey key : stored) {
+            if (testKeys.refuses(key.id())) {
+                testKeyRows.add(key.id());
+                continue;
+            }
             SealVerdict verdict = key.idMatchesPublicKey() ? seals.check(ReceiptSigningKey.SEAL_PURPOSE, key.sealedContent(), key.seal())
                     : SealVerdict.BROKEN;
             if (verdict == SealVerdict.BROKEN) {
@@ -82,7 +88,7 @@ public class ReceiptSigningKeyRegistration {
         ReceiptSigningKeyId own = signer.keyId();
         Optional<ReceiptSigningKeyId> registered = stored.stream().anyMatch(key -> key.id().equals(own)) ? Optional.empty()
                 : Optional.of(registerOwn(now));
-        return new Registration(broken, unconfirmed, adopted, registered);
+        return new Registration(testKeyRows, broken, unconfirmed, adopted, registered);
     }
 
     private Optional<FinishedRestore> restoreToAdoptFrom(Instant now) {
@@ -107,7 +113,7 @@ public class ReceiptSigningKeyRegistration {
         return key.id();
     }
 
-    private record Registration(List<ReceiptSigningKeyId> broken, List<ReceiptSigningKeyId> unconfirmed, List<ReceiptSigningKeyId> adopted,
+    private record Registration(List<ReceiptSigningKeyId> testKeys, List<ReceiptSigningKeyId> broken, List<ReceiptSigningKeyId> unconfirmed, List<ReceiptSigningKeyId> adopted,
                                 Optional<ReceiptSigningKeyId> registered) {
     }
 }

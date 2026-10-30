@@ -40,7 +40,7 @@ public class ReceiptSigningKeys {
         return keys.findAll().stream()
                 .sorted(Comparator.comparing(ReceiptSigningKey::registeredAt).thenComparing(key -> key.id().value()))
                 .map(key -> new PublishedReceiptKey(key.id(), key.publicKey(), key.registeredAt(), key.status(),
-                        key.idMatchesPublicKey() && seals.check(ReceiptSigningKey.SEAL_PURPOSE, key.sealedContent(), key.seal()) == SealVerdict.SEALED_HERE,
+                        !testKeys.refuses(key.id()) && key.idMatchesPublicKey() && seals.check(ReceiptSigningKey.SEAL_PURPOSE, key.sealedContent(), key.seal()) == SealVerdict.SEALED_HERE,
                         key.id().equals(signer.keyId())))
                 .toList();
     }
