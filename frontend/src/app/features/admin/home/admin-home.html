@@ -180,6 +180,33 @@
             >
           </li>
         }
+        @if (signingKeysState() === 'error') {
+          <li class="attention-item">
+            <span role="alert" i18n="@@admin.home.attention.signingKey.failed"
+              >Klíč k ověřovacím QR kódům se nepodařilo zkontrolovat.</span
+            >
+            <button
+              type="button"
+              class="ui-button ui-button--small"
+              (click)="loadSigningKeys()"
+              i18n="@@admin.home.attention.retry"
+            >
+              Zkusit znovu
+            </button>
+          </li>
+        } @else if (unpublishedSigningKeys().length > 0) {
+          <li class="attention-item attention-item--danger attention-signing-key">
+            <span>{{ unpublishedSigningKeysText() }}</span
+            >&ngsp;
+            <a
+              class="ui-button ui-button--small"
+              routerLink="/sprava/nastaveni"
+              fragment="klic-k-overovacim-qr"
+              i18n="@@admin.home.attention.signingKey.open"
+              >Otevřít nastavení</a
+            >
+          </li>
+        }
         @if (administratorsState() === 'error') {
           <li class="attention-item">
             <span role="alert" i18n="@@admin.home.attention.secondFactor.failed"

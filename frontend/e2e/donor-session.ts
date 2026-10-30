@@ -165,6 +165,22 @@ export const paymentQr = {
   },
 };
 
+export const receiptSigningKeys = {
+  currentKeyId: '21fe31df',
+  currentKeyPublished: true,
+  keys: [
+    {
+      keyId: '21fe31df',
+      algorithm: 'Ed25519',
+      publicKey: '11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo',
+      status: 'active',
+      registeredAt: '2026-11-13T11:00:00Z',
+      published: true,
+      current: true,
+    },
+  ],
+};
+
 export async function mockDonorApi(
   page: Page,
   donations: DonorApiMock = noDonations,
@@ -192,6 +208,10 @@ export async function mockDonorApi(
   await page.route(
     (url) => url.pathname === '/api/admin/donations/receipt-signature',
     (route) => route.fulfill({ json: noSignature }),
+  );
+  await page.route(
+    (url) => url.pathname === '/api/admin/donations/receipt-signing-keys',
+    (route) => route.fulfill({ json: receiptSigningKeys }),
   );
   await page.route(
     (url) => url.pathname === '/api/content/home',

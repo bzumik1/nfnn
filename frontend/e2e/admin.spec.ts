@@ -1,6 +1,15 @@
 import { Page } from '@playwright/test';
 import { expect, test } from './fixtures';
-import { administrator, donor, mockDonorApi, problem, session, signIn } from './donor-session';
+import {
+  administrator,
+  donor,
+  mockDonorApi,
+  adminSettings,
+  problem,
+  receiptSigningKeys,
+  session,
+  signIn,
+} from './donor-session';
 
 const IMPORT_STATE = '/api/admin/donations/import-state';
 const OVERVIEW = '/api/admin/donations/overview';
@@ -9,6 +18,7 @@ const PAYMENTS = '/api/admin/donations/payments';
 const ADMINISTRATORS = '/api/admin/donors/administrators';
 const PREVIOUS_SIGN_IN = '/api/admin/donors/me/previous-sign-in';
 const SINCE = '/api/admin/donations/overview/since';
+const SIGNING_KEYS = '/api/admin/donations/receipt-signing-keys';
 
 const backups = {
   available: true,
@@ -361,6 +371,42 @@ test.describe('Given an administrator', () => {
     await expect(value(page, 'Poslední chyba')).toContainText(
       'Fio odmítlo token (chybí, ještě neplatí nebo vypršel) 18. 10. 2026 11:00 (HTTP 401)',
     );
+  });
+
+  test('when the receipt signing key of the server fails its seal, then a red row leads to the key in the settings, which names it unpublished', async ({
+    page,
+  }) => {
+    const unpublished = {
+      ...receiptSigningKeys,
+      currentKeyPublished: false,
+      keys: receiptSigningKeys.keys.map((key) => ({ ...key, published: false })),
+    };
+    await mockImportState(page, quietImport);
+    await page.route(
+      (url) => url.pathname === SIGNING_KEYS,
+      (route) => route.fulfill({ json: unpublished }),
+    );
+    await page.route(
+      (url) => url.pathname === '/api/admin/operations/settings',
+      (route) => route.fulfill({ json: adminSettings }),
+    );
+    await rememberedSession(page, administrator);
+
+    await page.goto('/sprava');
+    const attention = page.getByRole('region', { name: 'Co potřebuje vaši pozornost' });
+    const row = attention.locator('.attention-signing-key');
+    await expect(row).toHaveText(
+      'Klíč 21fe31df neprošel kontrolou pečeti, proto ho web nezveřejňuje a QR kódy jím podepsané se neověří. Záznam v databázi se změnil mimo web; obraťte se na technika serveru. Otevřít nastavení',
+    );
+    await row.getByRole('link', { name: 'Otevřít nastavení' }).click();
+
+    await expect(page).toHaveURL(/\/sprava\/nastaveni#klic-k-overovacim-qr$/);
+    await expect(
+      page.getByRole('heading', { level: 2, name: 'Klíč k ověřovacím QR kódům' }),
+    ).toBeFocused();
+    const card = page.getByRole('region', { name: 'Klíč k ověřovacím QR kódům' });
+    await expect(card.locator('dd')).toHaveText(['21fe31df', '13. 11. 2026 12:00', 'Nezveřejněný']);
+    await expect(card.getByRole('alert')).toContainText('Klíč 21fe31df neprošel kontrolou pečeti');
   });
 
   test('when the state cannot be loaded, then a retry asks again', async ({ page }) => {

@@ -129,6 +129,30 @@ function adminRoute(request: RecordedRequest, url: URL, body: string): [number, 
           consecutiveFailures: 0,
         },
       ];
+    case 'GET /api/admin/donations/receipt-signing-keys':
+      return [
+        200,
+        {
+          currentKeyId: '21fe31df',
+          currentKeyPublished: true,
+          keys: [
+            {
+              keyId: '39f713d0',
+              status: 'active',
+              registeredAt: '2026-11-01T07:00:00Z',
+              published: false,
+              current: false,
+            },
+            {
+              keyId: '21fe31df',
+              status: 'active',
+              registeredAt: '2026-11-13T11:00:00Z',
+              published: true,
+              current: true,
+            },
+          ],
+        },
+      ];
     case 'GET /api/admin/operations/backups':
       return [
         200,

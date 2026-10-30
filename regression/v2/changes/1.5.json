@@ -1,0 +1,64 @@
+[
+  {
+    "kind": "shared-case",
+    "caseFile": "shared-cases/verification/payload.json",
+    "reason": "1.5 specifies the receipt verification proof v1 (plan v3 D6, D7): encoding cases with exact payload hex, Ed25519 signature under the RFC 8032 test 1 key, signed digest, QR text and the symbol each needs (or the refusal donations/receipt-too-long above version 40), and reading cases with their verdicts; written by hand (source edited), run by the backend from 1.5 and by the browser from 1.8",
+    "contract": "docs/api-contract.md, Receipt verification proof and signing keys; .claude/rules/testing.md, Logic on both sides"
+  },
+  {
+    "kind": "shared-case",
+    "caseFile": "shared-cases/schemas/verification/payload.schema.json",
+    "reason": "1.5 adds the JSON Schema of the verification proof cases, checked by Vitest with ajv",
+    "contract": ".claude/rules/testing.md, Logic on both sides"
+  },
+  {
+    "path": "GET /api/donations/receipt-keys",
+    "scenario": "donations/receipt_keys: *",
+    "kind": "added",
+    "reason": "1.5 publishes the receipt signing keys whose seal holds (plan v3 D9, D15: public, 60 per 15 minutes, Cache-Control public, max-age=3600, ETag); v2 had no such endpoint",
+    "contract": "docs/api-contract.md, Receipt verification proof and signing keys"
+  },
+  {
+    "path": "GET /api/admin/donations/receipt-signing-keys",
+    "scenario": "donations/admin_receipt_signing_keys: *",
+    "kind": "added",
+    "reason": "1.5 shows the administrator, and the connector's nfnn_status, the server's key, its registration time and whether every key is published (plan v3 1.5, read only); v2 had no such endpoint",
+    "contract": "docs/api-contract.md, Receipt verification proof and signing keys; MCP connector"
+  },
+  {
+    "kind": "log-field",
+    "line": "donations.application.signing.ReceiptSigningKeyRegistration: Receipt signing key <n>fe<n>df registered and published",
+    "reason": "1.5 logs at WARN when the server registers and publishes a new receipt signing key at start (plan v3 D9), so an unexpected new key shows in backend.log",
+    "contract": "docs/api-contract.md, Receipt verification proof and signing keys; docs/security-overview.md, Receipt signing key",
+    "security": {
+      "approvedIn": "PENDING",
+      "fields": {
+        "<n>": "the digit runs of the receipt signing key id, 8 hex digits of the SHA-256 of the public key (public, also served by GET /api/donations/receipt-keys; the shape follows the id, here the RFC 8032 test key 21fe31df)"
+      }
+    }
+  },
+  {
+    "kind": "log-field",
+    "line": "donations.application.signing.ReceiptSigningKeyRegistration: Receipt signing key <n>fe<n>df fails its seal, so it is not published",
+    "reason": "1.5 logs at ERROR every key row whose seal fails at start (plan v3 1.5: a tampered row is never published and raises the alarm)",
+    "contract": "docs/api-contract.md, Receipt verification proof and signing keys; docs/security-overview.md, Receipt signing key",
+    "security": {
+      "approvedIn": "PENDING",
+      "fields": {
+        "<n>": "the digit runs of the receipt signing key id, 8 hex digits of the SHA-256 of the public key (public, also served by GET /api/donations/receipt-keys; the shape follows the id, here the RFC 8032 test key 21fe31df)"
+      }
+    }
+  },
+  {
+    "kind": "log-field",
+    "line": "donations.application.signing.ReceiptSigningKeyRegistration: <n> receipt signing keys restored from a backup are sealed again with this server's settings key",
+    "reason": "1.5 logs at INFO how many key rows restored from another server's backup were sealed again under this server's settings key, so old receipts keep verifying after a move",
+    "contract": "docs/system-overview.md, donations (Receipt signing keys)",
+    "security": {
+      "approvedIn": "PENDING",
+      "fields": {
+        "<n>": "the number of key rows sealed again"
+      }
+    }
+  }
+]
