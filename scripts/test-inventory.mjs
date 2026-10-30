@@ -10,8 +10,12 @@ const defaults = {
   frontendVitest: 'frontend/test-results/inventory-vitest.json',
   playwright: 'frontend/test-results/inventory-playwright.json',
   mcpVitest: 'mcp/test-results/inventory-vitest.json',
+  backend: '',
+  part: '',
   out: 'regression/v2/test-inventory.json',
 };
+const BACKEND_SUITES = ['backend-junit', 'backend-cucumber'];
+const SETTINGS = new Set(['out', 'part', 'backend']);
 
 const options = { ...defaults };
 for (const argument of process.argv.slice(2)) {
@@ -105,7 +109,19 @@ function inventory(names) {
     });
 }
 
-for (const [name, path] of Object.entries(options).filter(([name]) => name !== 'out')) {
+if (options.part !== '' && options.part !== 'backend') {
+  console.error(`Unknown part ${options.part}; known: backend`);
+  process.exit(2);
+}
+const needed = Object.entries(options).filter(
+  ([name]) =>
+    !SETTINGS.has(name) &&
+    (options.part === 'backend' ? name === 'junit' : name !== 'junit' || options.backend === ''),
+);
+if (options.backend !== '') {
+  needed.push(['backend', options.backend]);
+}
+for (const [name, path] of needed) {
   if (!existsSync(at(path))) {
     console.error(
       `Missing ${name} report ${path}; see .claude/rules/testing.md "Regression against v2"`,
@@ -114,14 +130,24 @@ for (const [name, path] of Object.entries(options).filter(([name]) => name !== '
   }
 }
 
-const { backend, cucumber } = junit(at(options.junit));
-const suites = {
-  'backend-junit': inventory(backend),
-  'backend-cucumber': inventory(cucumber),
-  'frontend-vitest': inventory(vitest(at(options.frontendVitest), at('frontend'))),
-  'frontend-playwright': inventory(playwright(at(options.playwright))),
-  'mcp-vitest': inventory(vitest(at(options.mcpVitest), at('mcp'))),
-};
+function backendSuites() {
+  if (options.backend !== '') {
+    const part = JSON.parse(readFileSync(at(options.backend), 'utf8')).suites;
+    return Object.fromEntries(BACKEND_SUITES.map((name) => [name, part[name] ?? []]));
+  }
+  const { backend, cucumber } = junit(at(options.junit));
+  return { 'backend-junit': inventory(backend), 'backend-cucumber': inventory(cucumber) };
+}
+
+const suites =
+  options.part === 'backend'
+    ? backendSuites()
+    : {
+        ...backendSuites(),
+        'frontend-vitest': inventory(vitest(at(options.frontendVitest), at('frontend'))),
+        'frontend-playwright': inventory(playwright(at(options.playwright))),
+        'mcp-vitest': inventory(vitest(at(options.mcpVitest), at('mcp'))),
+      };
 const counts = Object.fromEntries(
   Object.entries(suites).map(([name, tests]) => [name, tests.length]),
 );
