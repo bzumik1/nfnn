@@ -1,0 +1,16 @@
+[
+  {
+    "path": "GET /api/admin/content/project-order",
+    "scenario": "content/choose_project_order: *",
+    "kind": "added",
+    "reason": "Jakub 2026-10-30: the order of the projects on the site is chosen in the administration and by the connector's nfnn_project_order; v2 had no such endpoint",
+    "contract": "docs/api-contract.md, content — public CMS; MCP connector"
+  },
+  {
+    "path": "PUT /api/admin/content/project-order",
+    "scenario": "content/choose_project_order: *",
+    "kind": "added",
+    "reason": "Jakub 2026-10-30: an administrator chooses the order of the projects on the site at /sprava/projekty or with the connector's nfnn_set_project_order, each choice described; v2 had no such endpoint",
+    "contract": "docs/api-contract.md, content — public CMS; MCP connector"
+  }
+]

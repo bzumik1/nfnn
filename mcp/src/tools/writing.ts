@@ -6,6 +6,7 @@ import {
   answerChange,
   asRecord,
   plain,
+  PROJECT_ORDERS,
   text,
   ToolRefusal,
   withHint,
@@ -101,7 +102,7 @@ const ARTICLE = {
 const PROJECT_CATEGORY = z
   .enum(['CHILDREN', 'ADULTS', 'ANIMALS', 'OTHER'])
   .describe(
-    'Whom the project helped: CHILDREN, ADULTS, ANIMALS or OTHER. Within a year the site lists children first, then adults, animals and the others.',
+    'Whom the project helped: CHILDREN, ADULTS, ANIMALS or OTHER. How the site orders the projects by year and category is chosen with nfnn_set_project_order.',
   );
 const PROJECT = {
   ...ARTICLE,
@@ -273,6 +274,22 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
         async ({ apiToken }) =>
           text(await backend.post(`/api/admin/content/projects/${id}/unpublish`, apiToken)),
         `project ${id}`,
+      ),
+  );
+
+  server.registerTool(
+    'nfnn_set_project_order',
+    {
+      title: 'Nastavit řazení projektů',
+      description: `Chooses how the site orders the projects on the home page and the list of projects (the administration lists them the same way, drafts first): ${PROJECT_ORDERS} Choosing the order already set changes nothing. Audited as CHANGE_PROJECT_ORDER.`,
+      inputSchema: z.object({
+        order: z.enum(['YEAR_THEN_CATEGORY', 'YEAR', 'CATEGORY_THEN_YEAR']),
+      }),
+      annotations: WRITING,
+    },
+    async ({ order }, ctx) =>
+      answerChange(deps, ctx, 'nfnn_set_project_order', async ({ apiToken }) =>
+        text(await backend.put('/api/admin/content/project-order', apiToken, { order })),
       ),
   );
 
