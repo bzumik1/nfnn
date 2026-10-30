@@ -15,6 +15,11 @@
 # as backup-key.replaced-<time>), so the backups made before and after the restore open with the
 # same key and the app user, who can write to /restore, cannot plant a key of its own.
 # The superuser's password stays with the database and the backup.
+# Java starts only once the database named in DB_URL accepts TCP connections, for at most
+# DATABASE_PATIENCE_SECONDS (two minutes; then it starts anyway and fails as before): nfnn-postgres
+# marks the passwords ready before a new database is even created, and neither that initialisation
+# nor its password check on an existing database listens on TCP, so an open port means the server
+# the backend will use, and the backend does not stop and restart on a fresh install.
 set -eu
 
 LOG_DIR=${LOG_DIR:-/logs}
@@ -26,6 +31,7 @@ REQUEST_PATIENCE_MINUTES=${REQUEST_PATIENCE_MINUTES:-5}
 BACKUP_KEY_FILE="$SECRETS_DIR/backup-key"
 ADOPTED_BACKUP_KEY="$RESTORE_DIR/backup-key.adopt"
 ADOPTED_KEY_RECORD=${ADOPTED_KEY_RECORD:-/backups/status/adopted-key}
+DATABASE_PATIENCE_SECONDS=${DATABASE_PATIENCE_SECONDS:-120}
 
 generate_secret() {
   if [ ! -s "$SECRETS_DIR/$1" ]; then
@@ -95,6 +101,36 @@ wait_while_restore_due() {
   done
 }
 
+database_address() {
+  address=${DB_URL:-}
+  case "$address" in jdbc:postgresql://*) ;; *) return 1 ;; esac
+  address=${address#jdbc:postgresql://}
+  address=${address%%[/?]*}
+  case "$address" in ''|*,*|\[*) return 1 ;; esac
+  DATABASE_HOST=${address%%:*}
+  DATABASE_PORT=${address#"$DATABASE_HOST"}
+  DATABASE_PORT=${DATABASE_PORT#:}
+  DATABASE_PORT=${DATABASE_PORT:-5432}
+}
+
+wait_for_database() {
+  database_address || return 0
+  started=$(date +%s)
+  logged=-60
+  until timeout 2 bash -c 'exec 3<>"/dev/tcp/$0/$1"' "$DATABASE_HOST" "$DATABASE_PORT" 2>/dev/null; do
+    waited=$(($(date +%s) - started))
+    if [ "$waited" -ge "$DATABASE_PATIENCE_SECONDS" ]; then
+      echo "The database at $DATABASE_HOST:$DATABASE_PORT accepted no connection within ${DATABASE_PATIENCE_SECONDS}s; starting anyway"
+      return 0
+    fi
+    if [ $((waited - logged)) -ge 60 ]; then
+      echo "Waiting for the database at $DATABASE_HOST:$DATABASE_PORT to accept connections (waited ${waited}s)"
+      logged=$waited
+    fi
+    sleep 1
+  done
+}
+
 if [ "$(id -u)" = 0 ]; then
   mkdir -p "$LOG_DIR" 2>/dev/null || true
   chown app:app "$LOG_DIR" 2>/dev/null || chmod 1777 "$LOG_DIR" 2>/dev/null || echo "Could not make $LOG_DIR writable for the app user; the log file will not be written"
@@ -130,5 +166,6 @@ if [ "$(id -u)" = 0 ]; then
 fi
 
 wait_while_restore_due
+wait_for_database
 
 exec java --enable-native-access=ALL-UNNAMED -jar /app/app.jar

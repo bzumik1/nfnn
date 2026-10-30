@@ -2,11 +2,12 @@
 
 FROM eclipse-temurin:25-jdk AS build
 WORKDIR /workspace
+ENV GRADLE_USER_HOME=/workspace/.gradle-home
 COPY gradlew settings.gradle.kts build.gradle.kts ./
 COPY gradle ./gradle
-RUN --mount=type=cache,target=/root/.gradle ./gradlew --no-daemon dependencies || true
+RUN ./gradlew --no-daemon --init-script gradle/download-dependencies.init.gradle.kts downloadDependencies || true
 COPY src ./src
-RUN --mount=type=cache,target=/root/.gradle ./gradlew --no-daemon clean bootJar -x test
+RUN ./gradlew --no-daemon clean bootJar -x test
 
 FROM eclipse-temurin:25-jre
 ARG REVISION=dev
