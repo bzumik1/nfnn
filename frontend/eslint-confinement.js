@@ -61,11 +61,13 @@ const CONFINED_IMPORTS = [
       'fake-indexeddb/*',
       'pdfjs-dist',
       'pdfjs-dist/*',
+      'jsqr',
+      'jsqr/*',
       '@playwright/test',
       '@playwright/test/*',
     ],
     dynamic:
-      '^(?:vitest|@vitest/[^/]+|fast-check|fake-indexeddb|pdfjs-dist|@playwright/test)(?:/.*)?$',
+      '^(?:vitest|@vitest/[^/]+|fast-check|fake-indexeddb|pdfjs-dist|jsqr|@playwright/test)(?:/.*)?$',
     allowedIn: TEST_SCOPES,
     examples: [
       'vitest',
@@ -75,10 +77,12 @@ const CONFINED_IMPORTS = [
       'fake-indexeddb/auto',
       'pdfjs-dist',
       'pdfjs-dist/legacy/build/pdf.mjs',
+      'jsqr',
+      'jsqr/dist/jsQR.js',
       '@playwright/test',
     ],
     message:
-      'A development library (Vitest, fast-check, fake-indexeddb, pdf.js, Playwright) serves the tests only; the app never ships it.',
+      'A development library (Vitest, fast-check, fake-indexeddb, pdf.js, jsQR, Playwright) serves the tests only; the app never ships it.',
   },
 ];
 

@@ -17,6 +17,8 @@ import {
   samplePasskey,
   secondFactorEnrolment,
 } from '../../../../core/auth/testing/donor-fixtures';
+import { sharedCases } from '../../../../../testing/shared-cases';
+import { decodePlainQr, drawnRows } from '../../../../shared/ui/qr-code/testing/plain-qr-decoder';
 import { AccountCard } from './account-card';
 
 const PASSKEYS_URL = '/api/donors/me/passkeys';
@@ -274,6 +276,23 @@ describe('Given the sign-in and security card of the details page', () => {
       expect(card.element('.account-otpauth').textContent?.trim()).toBe(
         'Přidat do ověřovací aplikace v tomto telefonu',
       );
+    });
+
+    it("and confirms the password, then the QR code is the browser's own encoding of the otpauth URI, not the matrix the server sent beside it", async () => {
+      const authenticatorCase = sharedCases('qr/totp.json').find(
+        (sharedCase) => sharedCase.name === 'an address with a dot',
+      )!;
+      await card.fillIn('#account-second-factor-password', 'correct horse battery');
+
+      await card.submit();
+      http
+        .expectOne('/api/donors/me/second-factor/setup')
+        .flush({ ...secondFactorEnrolment(), otpauthUri: authenticatorCase.input.uri });
+      await card.settle();
+
+      const qr = card.element('.account-qr svg[role="img"]') as unknown as SVGSVGElement;
+      expect(drawnRows(qr)).toEqual(authenticatorCase.expected.matrix);
+      expect(decodePlainQr(qr)?.data).toBe(authenticatorCase.input.uri);
     });
 
     it('and the password is wrong, then the password form stays and shows the reason', async () => {
