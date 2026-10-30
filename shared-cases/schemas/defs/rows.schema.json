@@ -23,13 +23,13 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["alias", "bookedOn", "amountMinor", "unpairedByAdmin"],
+        "required": ["alias", "bookedOn", "amountMinor", "unpairedByAdminAt"],
         "additionalProperties": false,
         "properties": {
           "alias": { "$ref": "#/$defs/alias" },
           "bookedOn": { "$ref": "#/$defs/day" },
           "amountMinor": { "$ref": "#/$defs/amountMinor" },
-          "unpairedByAdmin": { "type": "boolean" }
+          "unpairedByAdminAt": { "oneOf": [{ "$ref": "#/$defs/instant" }, { "type": "null" }] }
         }
       }
     },
