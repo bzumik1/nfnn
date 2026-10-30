@@ -63,6 +63,7 @@ const ACTION_NAMES: Record<string, string> = {
   RESET_LOG_LEVEL: $localize`:@@admin.actions.action.resetLogLevel:Vrácení úrovně logování`,
   CHANGE_SETTINGS: $localize`:@@admin.actions.action.changeSettings:Změna nastavení webu`,
   REGISTER_RECEIPT_SIGNING_KEY: $localize`:@@admin.actions.action.registerReceiptSigningKey:Registrace klíče k ověřovacím QR kódům`,
+  ADOPT_RECEIPT_SIGNING_KEY: $localize`:@@admin.actions.action.adoptReceiptSigningKey:Převzetí klíče k ověřovacím QR kódům ze zálohy`,
 };
 
 const SERVER_ACTOR = '00000000-0000-0000-0000-000000000000';

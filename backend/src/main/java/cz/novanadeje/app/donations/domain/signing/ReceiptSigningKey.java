@@ -36,7 +36,7 @@ public record ReceiptSigningKey(ReceiptSigningKeyId id, byte[] publicKey, Instan
     }
 
     public boolean idMatchesPublicKey() {
-        return true;
+        return publicKey.length == ReceiptSigningKeyId.PUBLIC_KEY_BYTES && id.equals(ReceiptSigningKeyId.of(publicKey));
     }
 
     public byte[] sealedContent() {

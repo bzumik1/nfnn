@@ -1,6 +1,7 @@
 package cz.novanadeje.app.operations.infrastructure.backup;
 
 import cz.novanadeje.app.operations.application.backup.BackupStore;
+import cz.novanadeje.app.operations.domain.backup.BackupRun;
 import cz.novanadeje.app.shared.application.restore.FinishedRestore;
 import cz.novanadeje.app.shared.application.restore.FinishedRestores;
 import org.springframework.stereotype.Component;
@@ -18,6 +19,7 @@ class BackupStoreFinishedRestores implements FinishedRestores {
 
     @Override
     public Optional<FinishedRestore> lastSucceeded() {
-        return Optional.empty();
+        return store.lastRestore().filter(BackupRun::succeeded)
+                .map(run -> new FinishedRestore(run.requestId().orElseGet(() -> run.finishedAt().toString()), run.finishedAt()));
     }
 }

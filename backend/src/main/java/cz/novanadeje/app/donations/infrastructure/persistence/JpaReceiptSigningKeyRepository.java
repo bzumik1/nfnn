@@ -11,9 +11,11 @@ import java.util.List;
 class JpaReceiptSigningKeyRepository implements ReceiptSigningKeyRepository {
 
     private final ReceiptSigningKeyJpaRepository keys;
+    private final ReceiptSigningKeyAdoptionJpaRepository adoptions;
 
-    JpaReceiptSigningKeyRepository(ReceiptSigningKeyJpaRepository keys) {
+    JpaReceiptSigningKeyRepository(ReceiptSigningKeyJpaRepository keys, ReceiptSigningKeyAdoptionJpaRepository adoptions) {
         this.keys = keys;
+        this.adoptions = adoptions;
     }
 
     @Override
@@ -28,6 +30,9 @@ class JpaReceiptSigningKeyRepository implements ReceiptSigningKeyRepository {
 
     @Override
     public boolean recordRestoreAdoption(String restoreId, Instant adoptedAt) {
-        return false;
+        if (restoreId.length() > ReceiptSigningKeyAdoptionJpaEntity.MAX_RESTORE_ID_LENGTH) {
+            throw new IllegalArgumentException("A restore id is at most " + ReceiptSigningKeyAdoptionJpaEntity.MAX_RESTORE_ID_LENGTH + " characters");
+        }
+        return adoptions.insertIfAbsent(restoreId, adoptedAt) == 1;
     }
 }

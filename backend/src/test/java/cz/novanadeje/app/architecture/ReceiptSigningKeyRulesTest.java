@@ -20,6 +20,7 @@ import org.junit.jupiter.api.io.TempDir;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.KeyFactory;
@@ -180,7 +181,7 @@ class ReceiptSigningKeyRulesTest {
         try (Stream<Path> files = Files.walk(root)) {
             return files.filter(Files::isRegularFile).filter(file -> {
                 try {
-                    return Files.readString(file).contains(KEY_TABLE);
+                    return new String(Files.readAllBytes(file), StandardCharsets.ISO_8859_1).contains(KEY_TABLE);
                 } catch (IOException unreadable) {
                     throw new UncheckedIOException(unreadable);
                 }

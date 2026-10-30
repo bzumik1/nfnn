@@ -69,7 +69,8 @@ final class BaselineHygiene {
     private static final String VERIFICATION_CASES = "verification/";
     private static final Pattern LABELLED_PUBLIC_PROOF = Pattern.compile("\"(?:payloadHex|signatureHex|publicKeyHex)\"\\s*:\\s*\"$|\"qrText\"\\s*:\\s*\"https://nfnn\\.cz/overit#$");
     static final Set<String> TEST_SIGNING_SEEDS = Set.of("9d61b19deffd5a60ba844af492ec2cc44449c5697b326919703bac031cae7f60",
-            "4ccd089b28ff96da9db6c346ec114e0f5b8a319f35aba624da8cf6ed4fb8a6fb");
+            "4ccd089b28ff96da9db6c346ec114e0f5b8a319f35aba624da8cf6ed4fb8a6fb", "833fe62409237b9d62ec77587520911e9a759cec1d19755b7da901b96dca3d42",
+            "6e666e6e2d70726f642d746573742d736565642d6e6f742d7266632d38303332");
     private static final Pattern SIGNING_SEED_FIELD = Pattern.compile("(?i)[a-z]*(?:seed|signingkey|privatekey)(?:hex|base64|base64url)?");
     static final Path BASELINE_COMMIT = Path.of("v2", "BASELINE_COMMIT");
     private static final Path REGRESSION_FOLDER = Path.of("regression");

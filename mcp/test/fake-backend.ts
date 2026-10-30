@@ -110,7 +110,10 @@ export class FakeBackend {
     if (request.method === 'GET' && url.pathname === '/api/admin/donors/me/previous-sign-in') {
       return [200, { previousSignInAt: this.previousSignInAt }];
     }
-    if (!this.receiptSigningKeysAvailable && url.pathname === '/api/admin/donations/receipt-signing-keys') {
+    if (
+      !this.receiptSigningKeysAvailable &&
+      url.pathname === '/api/admin/donations/receipt-signing-keys'
+    ) {
       return [404, problem(404, 'not-found', 'Nenalezeno')];
     }
     return adminRoute(request, url, body);

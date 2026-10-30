@@ -35,7 +35,10 @@ import { BACKUP_PROBLEM_HELP } from '../backups/backup-texts';
 import { needsTechnician, technicianMessage } from '../backups/backup-message';
 import { CopyButton } from '../../../shared/ui/copy-button/copy-button';
 import { formatReportMonth } from '../report/report-month';
-import { unpublishedKeysSentence } from '../settings/receipt-signing-key/unpublished-keys';
+import {
+  unpublishedKeyIds,
+  unpublishedKeysSentence,
+} from '../settings/receipt-signing-key/unpublished-keys';
 
 type LoadState = 'loading' | 'ready' | 'error';
 
@@ -400,10 +403,8 @@ export class AdminHome {
       .receiptSigningKeys()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: ({ keys }) => {
-          this.unpublishedSigningKeys.set(
-            keys.filter((key) => !key.published).map((key) => key.keyId),
-          );
+        next: (keys) => {
+          this.unpublishedSigningKeys.set(unpublishedKeyIds(keys));
           this.signingKeysState.set('ready');
         },
         error: () => this.signingKeysState.set('error'),
