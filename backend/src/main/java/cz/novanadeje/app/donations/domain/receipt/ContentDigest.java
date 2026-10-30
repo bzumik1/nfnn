@@ -13,7 +13,7 @@ public record ContentDigest(String value) {
 
     public ContentDigest {
         if (value == null || !FORMAT.matcher(value).matches()) {
-            throw new IllegalArgumentException("A content digest is the SHA-256 in 64 lowercase hex characters: " + value);
+            throw new IllegalArgumentException("A content digest is the SHA-256 in 64 lowercase hex characters");
         }
     }
 
