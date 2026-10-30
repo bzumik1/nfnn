@@ -170,6 +170,9 @@ public class ProjectStepDefinitions {
         if (fields.containsKey("tag")) {
             body.put("tag", fields.get("tag"));
         }
+        if (fields.containsKey("category")) {
+            body.put("category", fields.get("category"));
+        }
         if (fields.containsKey("coverImage")) {
             body.put("coverImageId", images.resolve(fields.get("coverImage")));
         }

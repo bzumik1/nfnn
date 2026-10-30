@@ -5,3 +5,15 @@
 main {
   display: block;
 }
+
+.status-bar-tint {
+  position: fixed;
+  top: -7.5px;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  height: 12px;
+  opacity: 0.12;
+  pointer-events: none;
+  background-color: var(--color-accent);
+}

@@ -3,6 +3,9 @@ package cz.novanadeje.app.content.application.home;
 import cz.novanadeje.app.content.application.about.AboutPhotoView;
 import cz.novanadeje.app.content.application.about.AboutService;
 import cz.novanadeje.app.content.application.about.AboutView;
+import cz.novanadeje.app.content.application.people.BoardMemberView;
+import cz.novanadeje.app.content.application.people.PublicPeopleService;
+import cz.novanadeje.app.content.application.people.PublicPeopleView;
 import cz.novanadeje.app.content.domain.media.MediaId;
 import cz.novanadeje.app.content.domain.news.NewsArticle;
 import cz.novanadeje.app.content.domain.news.NewsArticleRepository;
@@ -38,7 +41,8 @@ class HomeContentServiceTest {
     private final NewsArticleRepository news = mock(NewsArticleRepository.class);
     private final ProjectRepository projects = mock(ProjectRepository.class);
     private final AboutService about = mock(AboutService.class);
-    private final HomeContentService service = new HomeContentService(news, projects, about, Clock.fixed(LATE_EVENING_UTC, ZoneOffset.UTC));
+    private final PublicPeopleService people = mock(PublicPeopleService.class);
+    private final HomeContentService service = new HomeContentService(news, projects, about, people, Clock.fixed(LATE_EVENING_UTC, ZoneOffset.UTC));
 
     @Test
     @DisplayName("Given published news and projects, when the home content is read, then it asks for the three newest news articles and the three newest projects visible on the Prague day")
@@ -81,5 +85,18 @@ class HomeContentServiceTest {
         HomeContent content = service.read();
 
         assertThat(content.about().photo()).contains(photo);
+    }
+
+    @Test
+    @DisplayName("Given the people of the foundation, when the home content is read, then it carries them, and without people it carries none")
+    void should_carry_the_people_when_read_given_people_of_the_foundation() {
+        PublicPeopleView shown = new PublicPeopleView(List.of(), List.of(new BoardMemberView("Eva Vzorová", Optional.empty())), Optional.empty());
+        when(news.findVisibleNewestFirst(eq(PRAGUE_DAY), eq(0), anyInt())).thenReturn(List.of());
+        when(projects.findVisibleNewestFirst(eq(PRAGUE_DAY), eq(0), anyInt())).thenReturn(List.of());
+        when(about.read()).thenReturn(new AboutView(Optional.empty()));
+        when(people.read()).thenReturn(Optional.of(shown), Optional.empty());
+
+        assertThat(service.read().people()).contains(shown);
+        assertThat(service.read().people()).isEmpty();
     }
 }
