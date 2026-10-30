@@ -12,5 +12,13 @@
     "kind": "added",
     "reason": "Jakub 2026-10-30: an administrator chooses the order of the projects on the site at /sprava/projekty or with the connector's nfnn_set_project_order, each choice described; v2 had no such endpoint",
     "contract": "docs/api-contract.md, content — public CMS; MCP connector"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "content.application.home.HomeContentServiceTest > Given published news and projects, when the home content is read, then it asks for the three newest news articles and the three newest projects visible on the Prague day",
+    "reason": "Jakub 2026-10-30: the home page shows the first three projects in the order an administrator chose, so the test asks for them in that order",
+    "replacement": "content.application.home.HomeContentServiceTest > Given published news and projects, when the home content is read, then it asks for the three newest news articles and the first three projects in the chosen order visible on the Prague day",
+    "contract": "docs/api-contract.md, content — public CMS"
   }
 ]
