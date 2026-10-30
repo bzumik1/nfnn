@@ -1,0 +1,179 @@
+package cz.novanadeje.app.donations.cucumber;
+
+import cz.novanadeje.app.cucumber.ApiClient;
+import cz.novanadeje.app.cucumber.DonorSessions;
+import io.cucumber.java.en.And;
+import io.cucumber.java.en.Given;
+import io.cucumber.java.en.Then;
+import io.cucumber.java.en.When;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseEntity;
+import tools.jackson.databind.JsonNode;
+
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.HexFormat;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+public class PaymentDetailsStepDefinitions {
+
+    private static final String PAYMENT_DETAILS_PATH = "/api/donations/payment-details";
+    private static final String PAYMENT_QR_PATH = "/api/donations/payment-qr";
+
+    private final ApiClient api;
+    private final DonorSessions sessions;
+    private ResponseEntity<String> visitorsAnswer;
+    private JsonNode paymentDetails;
+    private String paymentQr;
+
+    public PaymentDetailsStepDefinitions(ApiClient api, DonorSessions sessions) {
+        this.api = api;
+        this.sessions = sessions;
+    }
+
+    @Given("a visitor asked for the payment details {int} times")
+    public void aVisitorAskedForThePaymentDetailsTimes(int times) {
+        for (int request = 0; request < times; request++) {
+            aVisitorAsksForThePaymentDetails();
+            assertThat(api.lastResponse().getStatusCode().value()).as("request %d of %d", request + 1, times).isEqualTo(200);
+        }
+    }
+
+    @When("a visitor asks for the payment details")
+    public void aVisitorAsksForThePaymentDetails() {
+        api.forgetCredentials();
+        visitorsAnswer = api.get(PAYMENT_DETAILS_PATH);
+        if (visitorsAnswer.getStatusCode().value() == 200) {
+            paymentDetails = api.lastResponseJson();
+        }
+    }
+
+    @When("{string} asks for the payment details")
+    public void asksForThePaymentDetails(String alias) {
+        sessions.actAs(alias);
+        api.get(PAYMENT_DETAILS_PATH);
+    }
+
+    @When("the visitor asks for the payment details again with the ETag it was given")
+    public void theVisitorAsksAgainWithTheEtagItWasGiven() {
+        assertThat(visitorsAnswer).as("an earlier answer to the visitor").isNotNull();
+        theVisitorAsksAgainWithTheEtag(visitorsAnswer.getHeaders().getETag());
+    }
+
+    @When("a visitor asks for the payment details again with the ETag {string}")
+    public void theVisitorAsksAgainWithTheEtag(String etag) {
+        api.forgetCredentials();
+        api.sendHeader(HttpHeaders.IF_NONE_MATCH, etag);
+        api.get(PAYMENT_DETAILS_PATH);
+        api.forgetCredentials();
+    }
+
+    @When("the visitor also asks for a QR payment of {int} CZK")
+    public void theVisitorAsksForAQrPaymentOf(int amount) {
+        api.get(PAYMENT_QR_PATH + "?amount=" + amount);
+        paymentQr = api.lastResponseJson().get("spayd").asString();
+    }
+
+    @When("the visitor asks for a QR payment that verifies an account with variable symbol {string} for the verification amount of the payment details")
+    public void theVisitorAsksForAVerificationQrPayment(String variableSymbol) {
+        long amountMinor = paymentDetails.get("accountVerificationAmountMinor").asLong();
+        assertThat(amountMinor % 100).as("the verification amount in whole crowns, as payment-qr takes it").isZero();
+        api.get(PAYMENT_QR_PATH + "?amount=" + amountMinor / 100 + "&variableSymbol=" + variableSymbol + "&purpose=ACCOUNT_VERIFICATION");
+        paymentQr = api.lastResponseJson().get("spayd").asString();
+    }
+
+    @Then("the payment details name the account {string} with IBAN {string} in {string}")
+    public void thePaymentDetailsNameTheAccount(String accountNumber, String iban, String currency) {
+        JsonNode account = api.lastResponseJson().get("account");
+        assertThat(account.get("number").asString()).isEqualTo(accountNumber);
+        assertThat(account.get("iban").asString()).isEqualTo(iban);
+        assertThat(api.lastResponseJson().get("currency").asString()).isEqualTo(currency);
+    }
+
+    @And("the payment details send the recipient as {string}")
+    public void thePaymentDetailsSendTheRecipientAs(String recipientName) {
+        assertThat(api.lastResponseJson().get("account").get("recipientName").asString()).isEqualTo(recipientName);
+    }
+
+    @And("the payment details send the donation message {string} and the account verification message {string}")
+    public void thePaymentDetailsSendTheMessages(String donation, String accountVerification) {
+        JsonNode messages = api.lastResponseJson().get("messages");
+        assertThat(messages.get("donation").asString()).isEqualTo(donation);
+        assertThat(messages.get("accountVerification").asString()).isEqualTo(accountVerification);
+    }
+
+    @And("the payment details verify an account with {long} minor CZK")
+    public void thePaymentDetailsVerifyAnAccountWith(long amountMinor) {
+        assertThat(api.lastResponseJson().get("accountVerificationAmountMinor").asLong()).isEqualTo(amountMinor);
+    }
+
+    @And("the answer may be kept by the visitor's browser only, for {int} seconds")
+    public void theAnswerMayBeKeptByTheBrowserOnly(int seconds) {
+        assertThat(api.lastResponse().getHeaders().get(HttpHeaders.CACHE_CONTROL)).containsExactly("private, max-age=" + seconds);
+        assertThat(api.lastResponse().getHeaders().get(HttpHeaders.PRAGMA)).isNull();
+        assertThat(api.lastResponse().getHeaders().get(HttpHeaders.EXPIRES)).isNull();
+    }
+
+    @And("the answer is not stored by the browser")
+    public void theAnswerIsNotStoredByTheBrowser() {
+        assertThat(api.lastResponse().getHeaders().getCacheControl()).contains("no-store");
+    }
+
+    @And("the answer's ETag is the SHA-256 of its body")
+    public void theAnswersEtagIsTheSha256OfItsBody() {
+        String body = api.lastResponse().getBody();
+        assertThat(body).isNotBlank();
+        assertThat(api.lastResponse().getHeaders().getETag()).isEqualTo("\"" + sha256(body) + "\"");
+    }
+
+    @And("the answer sets no cookie")
+    public void theAnswerSetsNoCookie() {
+        assertThat(api.lastResponse().getHeaders().get(HttpHeaders.SET_COOKIE)).isNull();
+    }
+
+    @And("the answer has no body")
+    public void theAnswerHasNoBody() {
+        assertThat(api.lastResponse().getBody()).isNullOrEmpty();
+    }
+
+    @And("the answer carries the same ETag")
+    public void theAnswerCarriesTheSameEtag() {
+        assertThat(api.lastResponse().getHeaders().getETag()).isNotNull().isEqualTo(visitorsAnswer.getHeaders().getETag());
+    }
+
+    @And("the answer is the visitor's answer with the same ETag")
+    public void theAnswerIsTheVisitorsAnswer() {
+        assertThat(api.lastResponse().getBody()).isEqualTo(visitorsAnswer.getBody());
+        assertThat(api.lastResponse().getHeaders().getETag()).isNotNull().isEqualTo(visitorsAnswer.getHeaders().getETag());
+    }
+
+    @Then("the recipient and the donation message of the payment details are the RN and MSG of that QR payment")
+    public void theRecipientAndTheDonationMessageAreTheRnAndMsg() {
+        assertThat(paymentQr).endsWith("*RN:" + recipientName() + "*MSG:" + paymentDetails.get("messages").get("donation").asString());
+    }
+
+    @Then("the recipient and the account verification message of the payment details are the RN and MSG of that QR payment")
+    public void theRecipientAndTheVerificationMessageAreTheRnAndMsg() {
+        assertThat(paymentQr).endsWith("*RN:" + recipientName() + "*MSG:" + paymentDetails.get("messages").get("accountVerification").asString());
+    }
+
+    @And("that QR payment's amount is the verification amount of the payment details")
+    public void thatQrPaymentsAmountIsTheVerificationAmount() {
+        long amountMinor = paymentDetails.get("accountVerificationAmountMinor").asLong();
+        assertThat(paymentQr).contains("*AM:" + amountMinor / 100 + "." + String.format("%02d", amountMinor % 100) + "*");
+    }
+
+    private String recipientName() {
+        return paymentDetails.get("account").get("recipientName").asString();
+    }
+
+    private static String sha256(String body) {
+        try {
+            return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(body.getBytes(StandardCharsets.UTF_8)));
+        } catch (NoSuchAlgorithmException missing) {
+            throw new IllegalStateException("SHA-256 is not available", missing);
+        }
+    }
+}
