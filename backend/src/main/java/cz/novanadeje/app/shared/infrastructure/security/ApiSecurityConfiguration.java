@@ -47,7 +47,6 @@ class ApiSecurityConfiguration {
                 .authorizeHttpRequests(requests -> requests
                         .dispatcherTypeMatchers(DispatcherType.ERROR, DispatcherType.ASYNC).permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/contact/messages").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/donations/payment-qr").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/donations/payment-details").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/content/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/donors/auth/**").permitAll()

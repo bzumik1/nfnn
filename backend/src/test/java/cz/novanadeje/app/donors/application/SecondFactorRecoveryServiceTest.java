@@ -20,7 +20,6 @@ import cz.novanadeje.app.donors.domain.SecondFactorRepository;
 import cz.novanadeje.app.donors.domain.TotpSecret;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
 import cz.novanadeje.app.shared.application.event.SecondFactorRecoveryPaid;
-import cz.novanadeje.app.shared.application.qr.QrMatrix;
 import cz.novanadeje.app.shared.application.recovery.SecondFactorRecoveryPaymentQr;
 import cz.novanadeje.app.shared.application.recovery.SecondFactorRecoveryTarget;
 import cz.novanadeje.app.shared.application.recovery.SecondFactorRecoveryTargets;
@@ -74,7 +73,7 @@ class SecondFactorRecoveryServiceTest {
     private static final SecondFactorRecoveryTarget TARGET = new SecondFactorRecoveryTarget("5544332217/2010", "CZ2620100000005544332217",
             Money.czk(100), LocalDate.of(2026, 10, 27));
     private static final SecondFactorRecoveryPaymentQr PAYMENT_QR = new SecondFactorRecoveryPaymentQr(
-            "SPD*1.0*ACC:CZ2620100000005544332217*AM:1.00*CC:CZK*MSG:OBNOVA ABCD2345", new QrMatrix(21, "0".repeat(21 * 21)));
+            "SPD*1.0*ACC:CZ2620100000005544332217*AM:1.00*CC:CZK*MSG:OBNOVA ABCD2345");
 
     @Mock
     private DonorRepository donors;

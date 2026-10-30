@@ -1,11 +1,9 @@
 package cz.novanadeje.app.shared.application.recovery;
 
-import cz.novanadeje.app.shared.application.qr.QrMatrix;
-
-public record SecondFactorRecoveryPaymentQr(String spayd, QrMatrix qrCode) {
+public record SecondFactorRecoveryPaymentQr(String spayd) {
 
     @Override
     public String toString() {
-        return "SecondFactorRecoveryPaymentQr[spayd=***, qrCode=***]";
+        return "SecondFactorRecoveryPaymentQr[spayd=***]";
     }
 }
