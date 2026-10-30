@@ -400,7 +400,7 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
     {
       title: 'Fotka v sekci O nás',
       description:
-        'Sets the photo the home page shows in its About section, with its alt and caption, or removes it with photoId null: the site then shows its placeholder photo again, the texts go too, and the removed or replaced photo is deleted unless a news article or project still uses it. Send every field; read them with nfnn_about first. Audited as CHANGE_ABOUT_PHOTO or REMOVE_ABOUT_PHOTO.',
+        'Sets the photo the home page shows in its About section, with its alt and caption, or removes it with photoId null: the site then shows its placeholder photo again, the texts go too, and the removed or replaced photo is deleted unless a news article or project still uses it. Send every field; read them with nfnn_about first. A photo of people goes up through nfnn_photo_upload_link (or the web), never from a public address. Audited as CHANGE_ABOUT_PHOTO or REMOVE_ABOUT_PHOTO.',
       inputSchema: z.object({
         photoId: UUID.nullable().describe(
           'Id of an uploaded photo (nfnn_upload_photo, nfnn_photo_upload_link, or the one nfnn_about shows); null removes the photo.',
@@ -416,7 +416,9 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
           .string()
           .max(200)
           .optional()
-          .describe('Shown under the photo to every visitor, for example who is on it.'),
+          .describe(
+            "Shown under the photo to every visitor, for example when and where it was taken. Name a person only with their consent, or their guardians' for a child.",
+          ),
       }),
       annotations: { ...WRITING, destructiveHint: true, idempotentHint: true },
     },

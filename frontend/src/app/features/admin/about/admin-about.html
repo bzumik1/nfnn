@@ -97,7 +97,7 @@
               <app-form-field
                 label="Popisek pod fotkou (nepovinné)"
                 i18n-label="@@admin.about.caption"
-                hint="Ukáže se pod fotkou všem návštěvníkům, například kdo na ní je a kdy vznikla."
+                hint="Ukáže se pod fotkou všem návštěvníkům, například kdy a kde vznikla. Jméno uveďte jen se souhlasem toho, kdo je na fotce, u dítěte jeho zákonných zástupců."
                 i18n-hint="@@admin.about.caption.hint"
                 [messages]="captionMessages"
               >
@@ -133,8 +133,8 @@
           </h2>
           <div class="ui-card__body">
             <p class="ui-card__intro" i18n="@@admin.about.remove.intro">
-              Fotka hned zmizí z webu a smaže se z databáze; ze záloh zmizí do 30 dnů. Sekce O nás
-              pak ukáže zase ilustrační fotku.
+              Fotka hned zmizí z webu a smaže se z databáze; ze záloh zmizí do 30 dnů. Obnova ze
+              starší zálohy by ji vrátila. Sekce O nás pak ukáže zase ilustrační fotku.
             </p>
             @if (confirmingRemoval()) {
               <span
