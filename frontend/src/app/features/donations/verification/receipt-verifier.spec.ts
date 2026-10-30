@@ -291,6 +291,15 @@ describe('Given the receipt verifier', () => {
       });
     }
 
+    it('and the list answers 200 with a body that is not JSON, then the kept keys verify the code but the fund gave no answer, never the offline green', async () => {
+      const outcome = verifier.verify(SINGLE.fragment);
+
+      (await request(KEYS)).error(new ProgressEvent('error'), { status: 200, statusText: 'OK' });
+
+      expect(await outcome).toEqual(signedWith('no-answer'));
+      expect(JSON.parse(localStorage.getItem(STORAGE_KEY) ?? 'null')).toEqual(KEY_LIST);
+    });
+
     it('and a malformed list comes, then the page says it cannot use the list, keeps the old one and asks no status', async () => {
       const outcome = verifier.verify(SINGLE.fragment);
 
