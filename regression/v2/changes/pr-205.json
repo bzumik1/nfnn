@@ -10,5 +10,12 @@
     "kind": "mails",
     "reason": "PR #205: the e-mail change link carries &change=email so the confirmation page says the address changed instead of using the registration text",
     "contract": "docs/api-contract.md, Changing the password and the e-mail"
+  },
+  {
+    "path": "POST /api/contact/messages",
+    "scenario": "contact/contact_message: Incomplete message is rejected with field errors*",
+    "kind": "body",
+    "reason": "PR #205: the contact form shows the server's field errors at the field, so a malformed e-mail answers one readable sentence instead of the validator's default text",
+    "contract": "docs/api-contract.md, Contact (POST /api/contact/messages)"
   }
 ]
