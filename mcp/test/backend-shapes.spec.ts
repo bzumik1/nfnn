@@ -353,7 +353,38 @@ describe('Given the connector, its fake backend and the recorded transcripts', (
     );
     expect(fixtures.filter((fixture) => fixture.status === 200).length).toBeGreaterThan(30);
   });
+
+  it('when the server QR endpoints that 1.4 removes are looked for, then the connector never calls them and its fake neither serves them nor answers with a QR code', async () => {
+    const calls = [...connectorCalls(join(MCP, 'src')), ...AUTHORIZATION_CALLS];
+    const constants = Object.fromEntries(
+      Object.entries(fake).filter(
+        (entry): entry is [string, string] => typeof entry[1] === 'string',
+      ),
+    );
+    const requests: FakeRequest[] = [
+      ...fakeBackendRequests(readFileSync(join(MCP, 'test/fake-backend.ts'), 'utf8'), constants),
+      ...FAKE_ROUTES_OUTSIDE_CASES,
+    ];
+    const answers: unknown[] = [];
+    for (const request of requests) {
+      answers.push((await askFakeBackend(backend.url, request, calls, new Map())).body);
+    }
+
+    expect(calls.map((call) => call.template).filter(removedIn14)).toEqual([]);
+    expect(requests.map((request) => request.path).filter(removedIn14)).toEqual([]);
+    expect(answers.filter((body) => JSON.stringify(body ?? null).includes('"qrCode"'))).toEqual([]);
+  });
 });
+
+const REMOVED_IN_1_4 = [
+  '/api/donations/payment-qr',
+  '/api/donors/me/second-factor/setup',
+  '/api/donors/auth/login/second-factor/recovery',
+];
+
+function removedIn14(path: string): boolean {
+  return REMOVED_IN_1_4.some((removed) => path.split('?')[0]?.startsWith(removed));
+}
 
 const RECORDED_ONLY_AS_NULL = {
   'PUT /api/admin/operations/backups/schedule $.applied':
