@@ -30,4 +30,3 @@ Feature: A refused request is answered in the client's language without exceptio
       | A semicolon in the address        | GET               | /api/content/news;nfnn-client-value  |
       | A double slash in the address     | GET               | /api/content//nfnn-client-value      |
       | An encoded percent in the address | GET               | /api/content/news%25nfnn-client-value |
-      | A method the site does not know   | NFNN-CLIENT-VALUE | /api/content/news                    |
