@@ -37,7 +37,12 @@ function transcriptFile() {
                 'cache-control': 'no-cache, no-store, max-age=0, must-revalidate',
                 'content-type': 'application/json',
               },
-              body: { donorId: '<id:2>', name: 'Jana Nováková', addresses: [{ city: 'Nový Bor' }] },
+              body: {
+                donorId: '<id:2>',
+                name: 'Jana Nováková',
+                variableSymbol: '<vs:Jana>',
+                addresses: [{ city: 'Nový Bor' }],
+              },
             },
           },
         },
@@ -62,6 +67,11 @@ const INVENTORY = {
 };
 
 const workspaces = [];
+const BASELINE_COMMIT = 'c4a256c2912b03c8fc9609ec1fc2e342774c31e5';
+
+function changedList(root, lines) {
+  return lines.map((line) => line.replace('<changes>', join(root, 'changes'))).join('\n');
+}
 
 function workspace({
   change = () => {},
@@ -69,6 +79,8 @@ function workspace({
   changes = {},
   freshInventory,
   changed,
+  main,
+  mainChanged,
 } = {}) {
   const root = mkdtempSync(join(tmpdir(), 'compare-v2-'));
   workspaces.push(root);
@@ -91,11 +103,17 @@ function workspace({
     write('inventory.json', inventory(freshInventory));
   }
   if (changed) {
-    writeFileSync(
-      join(root, 'changed.txt'),
-      changed.map((path) => path.replace('<changes>', join(root, 'changes'))).join('\n'),
-    );
+    writeFileSync(join(root, 'changed.txt'), changedList(root, changed));
   }
+  if (main) {
+    const recordedOnMain = transcriptFile();
+    main(recordedOnMain);
+    write(`main/${FEATURE}.json`, recordedOnMain);
+  }
+  if (mainChanged) {
+    writeFileSync(join(root, 'main-changed.txt'), changedList(root, mainChanged));
+  }
+  writeFileSync(join(root, 'BASELINE_COMMIT'), `${BASELINE_COMMIT}\n`);
   return root;
 }
 
@@ -109,7 +127,12 @@ function compare(root, extra = []) {
       `--changes=${join(root, 'changes')}`,
       `--inventory-baseline=${join(root, 'inventory-baseline.json')}`,
       `--report=${join(root, 'report.md')}`,
+      `--baseline-commit=${join(root, 'BASELINE_COMMIT')}`,
       ...(existsSync(join(root, 'changed.txt')) ? [`--changed=${join(root, 'changed.txt')}`] : []),
+      ...(existsSync(join(root, 'main')) ? [`--main=${join(root, 'main')}`] : []),
+      ...(existsSync(join(root, 'main-changed.txt'))
+        ? [`--main-changed=${join(root, 'main-changed.txt')}`]
+        : []),
       ...extra,
     ],
     { encoding: 'utf8' },
@@ -403,7 +426,7 @@ describe('Given a recording that lost a scenario and a request', () => {
               kind: 'logs',
               reason: '1.6 logs elsewhere',
               contract: 'docs/system-overview.md, Donors',
-              security: { approvedIn: 'PR #210', fields: {} },
+              security: { approvedIn: 'PR #210, Jakub 2026-11-12', fields: {} },
             },
           ],
         },
@@ -424,7 +447,7 @@ describe('Given declarations that name another line or the whole scenario', () =
     kind: 'logs',
     reason: 'r',
     contract: 'docs/system-overview.md, Donors',
-    security: { approvedIn: 'PR #210', fields: {} },
+    security: { approvedIn: 'PR #210, Jakub 2026-11-12', fields: {} },
   });
 
   it('when a logs declaration names another logger, then the lost line stays undeclared', () => {
@@ -489,7 +512,7 @@ describe('Given a slice file that is not a valid declaration', () => {
   const body = { kind: 'body', reason: 'r', contract: 'docs/api-contract.md, Administration' };
 
   const anywhere = `${FEATURE}: *`;
-  const approved = { approvedIn: 'PR #1', fields: {} };
+  const approved = { approvedIn: 'PR #1, Jakub 2026-11-12', fields: {} };
   const logs = {
     ...body,
     kind: 'logs',
@@ -576,7 +599,7 @@ describe('Given a slice file that is not a valid declaration', () => {
 
   it('when an approval names no review or no fields, then the comparison refuses it', () => {
     refused({ ...logs, security: { fields: {} } }, /approvedIn/);
-    refused({ ...logs, security: { approvedIn: 'PR #1' } }, /fields/);
+    refused({ ...logs, security: { approvedIn: 'PR #1, Jakub 2026-11-12' } }, /fields/);
   });
 
   it('when a logs entry names no line or no literal logger, then the comparison refuses it', () => {
@@ -845,5 +868,504 @@ describe('Given a recording with an added mail', () => {
     assert.match(result.report, /Přehled darů za <n>\/<n>/);
     assert.match(result.report, /dárce/);
     assert.doesNotMatch(result.report.split('### Přidáno')[1], /jana@example\.cz/);
+  });
+});
+
+const bodyEntry = (extra = {}) => ({
+  path: 'GET /api/admin/donors/{id}',
+  scenario: `${FEATURE}: *`,
+  kind: 'body',
+  reason: '1.7 moves the name into the profile',
+  contract: 'docs/api-contract.md, Administration',
+  ...extra,
+});
+const withoutName = (file) => delete callOf(file).response.body.name;
+const otherCity = (file) => (callOf(file).response.body.addresses[0].city = 'Liberec');
+
+describe('Given the recording of the latest main push', () => {
+  it('when this branch records what main recorded, then the report says the comparison with main found nothing', () => {
+    const result = compare(
+      workspace({
+        change: withoutName,
+        main: withoutName,
+        changes: { 'pr-300.json': [bodyEntry()] },
+        changed: ['M\tdocs/api-contract.md'],
+        mainChanged: [],
+      }),
+      [`--main-commit=${'a'.repeat(40)}`],
+    );
+    assert.equal(result.status, 0, result.output);
+    assert.match(result.report, /### Srovnání s main/);
+    assert.match(result.report, /aaaaaaaaaaaa/);
+    assert.match(result.report, /Proti main žádný nedeklarovaný rozdíl/);
+  });
+
+  it('when this branch differs from main where only an older changes file declares it, then the comparison fails and says so against main', () => {
+    const result = compare(
+      workspace({
+        change: withoutName,
+        changes: { 'pr-300.json': [bodyEntry()] },
+        changed: ['M\tdocs/api-contract.md'],
+        main: () => {},
+        mainChanged: [],
+      }),
+    );
+    assert.equal(result.status, 1, result.output);
+    assert.match(result.output, /::error::.*against main.*body.*\$\.name/);
+    assert.match(result.report, /proti main/);
+  });
+
+  it("when a changes file this branch adds explains the difference from main, then it passes and the report lists the entry as this branch's own", () => {
+    const result = compare(
+      workspace({
+        change: withoutName,
+        changes: { 'pr-310.json': [bodyEntry({ reason: '#310 drops the name' })] },
+        changed: ['A\t<changes>/pr-310.json'],
+        main: () => {},
+      }),
+    );
+    assert.equal(result.status, 0, result.output);
+    const own = result.report.split('### Deklarace tohoto PR')[1] ?? '';
+    assert.match(own.split('###')[0], /pr-310\.json.*#310 drops the name/s);
+    assert.ok(
+      result.report.indexOf('### Deklarace tohoto PR') <
+        result.report.indexOf('### Deklarované rozdíly starších PR'),
+      result.report,
+    );
+  });
+
+  it('when main was recorded a few commits earlier, then a changes file added since that commit explains the difference', () => {
+    const result = compare(
+      workspace({
+        change: withoutName,
+        changes: { 'pr-305.json': [bodyEntry()] },
+        changed: ['M\tdocs/api-contract.md'],
+        main: () => {},
+        mainChanged: ['A\t<changes>/pr-305.json', 'M\tdocs/api-contract.md'],
+      }),
+    );
+    assert.equal(result.status, 0, result.output);
+  });
+
+  it("when this branch goes back to what v2 did, then the difference from main needs this branch's declaration, which then counts as used", () => {
+    const restoring = {
+      change: () => {},
+      main: otherCity,
+      changes: {
+        'pr-300.json': [bodyEntry()],
+      },
+      changed: ['M\tdocs/api-contract.md'],
+    };
+    const undeclared = compare(workspace(restoring));
+    assert.equal(undeclared.status, 1, undeclared.output);
+    assert.match(undeclared.output, /::error::.*against main.*body/);
+    const declared = compare(
+      workspace({
+        ...restoring,
+        changes: {
+          ...restoring.changes,
+          'pr-320.json': [bodyEntry({ reason: '#320 shows the name again' })],
+        },
+        changed: ['A\t<changes>/pr-320.json'],
+      }),
+    );
+    assert.equal(declared.status, 0, declared.output);
+  });
+});
+
+describe('Given no recording of main', () => {
+  it('when the job says why, then the report names the reason and only the v2 comparison counts', () => {
+    const result = compare(workspace(), [
+      '--main-missing=no successful push run on main keeps a backend-recording artifact',
+    ]);
+    assert.equal(result.status, 0, result.output);
+    assert.match(result.report, /Srovnání s main neprovedeno/);
+    assert.match(result.report, /no successful push run on main/);
+    assert.match(result.output, /::warning::.*main/);
+  });
+
+  it('when nothing names a main recording, then the report still says the comparison with main did not run', () => {
+    const result = compare(workspace());
+    assert.equal(result.status, 0, result.output);
+    assert.match(result.report, /Srovnání s main neprovedeno/);
+  });
+});
+
+describe('Given a body or headers entry that names a field', () => {
+  it('when the field matches the changed JSON path, then it covers that path and no other', () => {
+    const named = compare(
+      workspace({
+        change: (file) => {
+          withoutName(file);
+          otherCity(file);
+        },
+        changes: { 'pr-330.json': [bodyEntry({ field: '$.name' })] },
+        changed: ['A\t<changes>/pr-330.json'],
+      }),
+    );
+    assert.equal(named.status, 1, named.output);
+    assert.match(named.output, /::error::.*\$\.addresses\[0\]\.city/);
+    assert.doesNotMatch(named.output, /::error::.*\$\.name/);
+  });
+
+  it('when the field is a glob over list items, then it covers every item', () => {
+    const result = compare(
+      workspace({
+        change: otherCity,
+        changes: { 'pr-330.json': [bodyEntry({ field: '$.addresses[*].city' })] },
+        changed: ['A\t<changes>/pr-330.json'],
+      }),
+    );
+    assert.equal(result.status, 0, result.output);
+  });
+
+  it('when a headers entry names one header, then another changed header still fails', () => {
+    const result = compare(
+      workspace({
+        change: (file) => {
+          callOf(file).response.headers['cache-control'] = 'public, max-age=60';
+          callOf(file).response.headers['content-type'] = 'text/plain';
+        },
+        changes: {
+          'pr-330.json': [bodyEntry({ kind: 'headers', field: 'cache-control' })],
+        },
+        changed: ['A\t<changes>/pr-330.json'],
+      }),
+    );
+    assert.equal(result.status, 1, result.output);
+    assert.match(result.output, /::error::.*headers.*content-type/);
+    assert.doesNotMatch(result.output, /::error::.*cache-control/);
+  });
+
+  it('when the field is on another kind or a body field does not start with $, then the comparison refuses it', () => {
+    for (const entry of [
+      bodyEntry({ kind: 'status', field: '$.name' }),
+      bodyEntry({ field: 'name' }),
+      bodyEntry({ kind: 'headers', field: '$.name' }),
+    ]) {
+      const result = compare(workspace({ changes: { 'pr-330.json': [entry] } }));
+      assert.equal(result.status, 2, result.output);
+      assert.match(result.output, /pr-330\.json entry 1.*field/);
+    }
+  });
+});
+
+describe('Given a mails entry', () => {
+  const mailsEntry = (extra = {}) => ({
+    scenario: `${FEATURE}: *`,
+    kind: 'mails',
+    reason: '#340 rewrites the confirmation',
+    contract: 'docs/api-contract.md, Registration',
+    ...extra,
+  });
+  const changedText = (file) => {
+    scenarioOf(file).mails = [
+      { ...MAIL, text: 'Dobrý den,\nklikněte na tlačítko.\n' },
+      { ...MAIL, subject: 'Heslo bylo změněno', text: 'Nové.\n' },
+    ];
+  };
+  const withPasswordNotice = (file) =>
+    scenarioOf(file).mails.push({ ...MAIL, subject: 'Heslo bylo změněno', text: 'Staré.\n' });
+
+  it('when it names a subject, then it covers that mail and a change to another mail still fails', () => {
+    const result = compare(
+      workspace({
+        changeBaseline: withPasswordNotice,
+        change: changedText,
+        changes: { 'pr-340.json': [mailsEntry({ subject: 'Potvrďte svůj e-mail' })] },
+        changed: ['A\t<changes>/pr-340.json'],
+      }),
+    );
+    assert.equal(result.status, 1, result.output);
+    assert.match(result.output, /::error::.*mails.*Heslo bylo změněno/);
+    assert.doesNotMatch(result.output, /::error::.*mails.*Potvrďte svůj e-mail/);
+  });
+
+  it('when a file this branch adds has a mails entry without a subject, then the comparison refuses it', () => {
+    const result = compare(
+      workspace({
+        change: changedText,
+        changes: { 'pr-340.json': [mailsEntry()] },
+        changed: ['A\t<changes>/pr-340.json'],
+      }),
+    );
+    assert.equal(result.status, 2, result.output);
+    assert.match(result.output, /pr-340\.json entry 1.*subject/);
+  });
+
+  it('when an older file has a mails entry without a subject, then it still covers every mail of its scenario', () => {
+    const result = compare(
+      workspace({
+        changeBaseline: withPasswordNotice,
+        change: changedText,
+        changes: { 'pr-205.json': [mailsEntry()] },
+        changed: ['M\tdocs/api-contract.md'],
+      }),
+    );
+    assert.equal(result.status, 0, result.output);
+  });
+});
+
+describe('Given the changed files with their git status', () => {
+  it('when the branch changes or deletes an older declaration file, then the report lists it with its status', () => {
+    const result = compare(
+      workspace({
+        changes: { 'pr-205.json': [bodyEntry()], 'pr-206.json': [bodyEntry()] },
+        changed: ['M\t<changes>/pr-205.json', 'D\t<changes>/pr-199.json'],
+      }),
+    );
+    const listed = result.report.split('### Starší soubory deklarací, které tento PR mění')[1];
+    assert.ok(listed, result.report);
+    assert.match(listed.split('###')[0], /`M` .*pr-205\.json/);
+    assert.match(listed.split('###')[0], /`D` .*pr-199\.json/);
+  });
+
+  it('when the branch only adds its own declaration file, then the report lists no older one', () => {
+    const result = compare(
+      workspace({
+        change: withoutName,
+        changes: { 'pr-350.json': [bodyEntry()] },
+        changed: ['A\t<changes>/pr-350.json'],
+      }),
+    );
+    assert.equal(result.status, 0, result.output);
+    const listed = result.report.split('### Starší soubory deklarací, které tento PR mění')[1];
+    assert.match(listed.split('###')[0], /- žádné/);
+  });
+
+  it('when the branch adds a declaration file, then the report names it among the changes to recording and comparison', () => {
+    const result = compare(workspace({ changed: ['A\tregression/v2/changes/pr-350.json'] }));
+    const watched = result.report.split('### Změny nahrávání a srovnání')[1];
+    assert.ok(watched, result.report);
+    assert.match(watched.split('###')[0], /regression\/v2\/changes\/pr-350\.json/);
+  });
+});
+
+describe('Given a branch that touches the receipt corpus or the screens manifest', () => {
+  const addition = (extra = {}) => ({
+    kind: 'baseline-addition',
+    file: 'regression/v2/screens/manifest.json',
+    recordedFrom: BASELINE_COMMIT,
+    reason: '0.6c records the TOTP enrolment from the baseline commit',
+    ...extra,
+  });
+
+  it('when it changes or deletes an existing receipt file, then the comparison fails and names the file', () => {
+    for (const line of [
+      'M\tregression/v2/receipts/single-person-cs.json',
+      'D\tregression/v2/receipts/yearly-person-en.json',
+      'D\tregression/v2/screens/manifest.json',
+    ]) {
+      const result = compare(workspace({ changed: [line] }));
+      assert.equal(result.status, 1, result.output);
+      assert.match(result.output, /::error::.*baseline.*regression\/v2\/(receipts|screens)\//);
+    }
+  });
+
+  it('when it adds a receipt sample or new screen states without saying they were recorded from the baseline commit, then the comparison fails', () => {
+    for (const line of [
+      'A\tregression/v2/receipts/yearly-500-gifts-cs.json',
+      'M\tregression/v2/screens/manifest.json',
+    ]) {
+      const result = compare(workspace({ changed: [line] }));
+      assert.equal(result.status, 1, result.output);
+      assert.match(result.output, /::error::.*BASELINE_COMMIT/);
+    }
+  });
+
+  it('when a file this branch adds lists the addition as recorded from the baseline commit, then it passes and the report names it', () => {
+    const result = compare(
+      workspace({
+        changes: { '0.6c.json': [addition()] },
+        changed: ['A\t<changes>/0.6c.json', 'M\tregression/v2/screens/manifest.json'],
+      }),
+    );
+    assert.equal(result.status, 0, result.output);
+    assert.match(result.report, /regression\/v2\/screens\/manifest\.json/);
+    assert.match(result.report, /0\.6c records the TOTP enrolment/);
+  });
+
+  it('when the addition names another commit or another folder, then the comparison refuses it', () => {
+    for (const entry of [
+      addition({ recordedFrom: 'f'.repeat(40) }),
+      addition({ file: 'regression/v2/api/donors/admin_donors.json' }),
+    ]) {
+      const result = compare(workspace({ changes: { '0.6c.json': [entry] } }));
+      assert.equal(result.status, 2, result.output);
+      assert.match(result.output, /0\.6c\.json entry 1/);
+    }
+  });
+
+  it('when an addition names an existing receipt file that the branch changes, then it still fails', () => {
+    const result = compare(
+      workspace({
+        changes: {
+          '0.6c.json': [addition({ file: 'regression/v2/receipts/single-person-cs.json' })],
+        },
+        changed: ['A\t<changes>/0.6c.json', 'M\tregression/v2/receipts/single-person-cs.json'],
+      }),
+    );
+    assert.equal(result.status, 1, result.output);
+    assert.match(result.output, /::error::.*single-person-cs\.json/);
+  });
+});
+
+describe('Given recorded log lines that carry data security.md forbids in logs', () => {
+  const approval = { approvedIn: 'PR #360, Jakub 2026-11-12', fields: {} };
+  const logging = (line) => (file) => scenarioOf(file).logs.push(line);
+  const forbidden = [
+    [
+      'an e-mail address',
+      'INFO donors.application.DonorEmailVerificationService: Sent to jana@example.cz',
+    ],
+    [
+      'a fixture name',
+      'INFO donors.application.DonorEmailVerificationService: E-mail of Jana verified',
+    ],
+    [
+      'a variable symbol',
+      'INFO donors.application.DonorEmailVerificationService: Symbol <vs:Jana> verified',
+    ],
+    ['a token', 'INFO donors.application.DonorEmailVerificationService: Link <token> issued'],
+    ['a secret', 'INFO donors.application.DonorEmailVerificationService: Secret <secret> stored'],
+    ['a JWT', 'INFO donors.application.DonorEmailVerificationService: Session <jwt> opened'],
+    [
+      'the signatory',
+      'INFO donors.application.DonorEmailVerificationService: Signed by <signatory-name>',
+    ],
+    ['the setup code', 'INFO operations.application.SetupService: Code <setup-code> accepted'],
+    [
+      'a recovery code',
+      'INFO donors.application.DonorSecondFactorService: OBNOVA-<recovery-code> used',
+    ],
+    ['an account number', 'INFO donations.application.ImportService: Account 1234567890/0800 seen'],
+    [
+      'an account number before its prefix',
+      'INFO donations.application.ImportService: Account 19/123456 seen',
+    ],
+  ];
+
+  for (const [what, line] of forbidden) {
+    it(`when a line holds ${what}, then the comparison fails even with a security approval`, () => {
+      const shape = line
+        .replace(/^INFO /, '')
+        .replace(/<([a-z-]+):[^>]*>/g, '<$1>')
+        .replace(/\d+/g, (digits) => (digits.length <= 4 ? '<n>' : `<digits:${digits.length}>`));
+      const result = compare(
+        workspace({
+          change: logging(line),
+          changes: {
+            'pr-360.json': [{ kind: 'log-field', line: shape, reason: 'r', security: approval }],
+          },
+          changed: ['A\t<changes>/pr-360.json'],
+        }),
+      );
+      assert.equal(result.status, 1, result.output);
+      assert.match(result.output, /::error::.*log line.*must not/);
+      assert.match(result.report, /`log-data`/);
+    });
+  }
+
+  it('when a line holds a short number next to a slash, then the data check lets it through', () => {
+    const result = compare(
+      workspace({
+        changeBaseline: logging('INFO donations.application.ImportService: Batch 12/2026 done'),
+        change: logging('INFO donations.application.ImportService: Batch 12345/2026 done'),
+      }),
+    );
+    assert.doesNotMatch(result.output, /log-data|must not/);
+  });
+
+  it('when the recording of the v2 baseline is checked, then no line carries such data', () => {
+    const root = workspace();
+    const result = compare(root, [
+      `--recording=${fileURLToPath(new URL('../regression/v2/api', import.meta.url))}`,
+    ]);
+    assert.doesNotMatch(result.output, /log-data|must not/);
+  });
+});
+
+describe('Given a security approval', () => {
+  const lostLog = (file) => (scenarioOf(file).logs = []);
+  const logsEntry = (approvedIn) => ({
+    line: 'donors.application.DonorEmailVerificationService: *',
+    scenario: `${FEATURE}: *`,
+    kind: 'logs',
+    reason: 'r',
+    contract: 'docs/system-overview.md, Donors',
+    security: { approvedIn, fields: {} },
+  });
+
+  it("when it does not name a PR and Jakub's date, then the comparison refuses it", () => {
+    for (const approvedIn of [
+      'PR #210',
+      'Jakub 2026-11-12',
+      'review 2026-11-12',
+      'PR #210, Jakub 12. 11. 2026',
+    ]) {
+      const result = compare(
+        workspace({ change: lostLog, changes: { 'pr-370.json': [logsEntry(approvedIn)] } }),
+      );
+      assert.equal(result.status, 2, result.output);
+      assert.match(
+        result.output,
+        /pr-370\.json entry 1.*approvedIn.*PR #<number>, Jakub <YYYY-MM-DD>/,
+      );
+    }
+  });
+
+  it("when it names the PR and Jakub's date, then the comparison accepts it", () => {
+    const result = compare(
+      workspace({
+        change: lostLog,
+        changes: { 'pr-370.json': [logsEntry('PR #370, Jakub 2026-11-12')] },
+      }),
+    );
+    assert.equal(result.status, 0, result.output);
+  });
+});
+
+describe('Given a retirement in a file this branch adds', () => {
+  const withoutBackendTest = {
+    ...INVENTORY,
+    'backend-junit': ['donors.DonorProfileTest > Given a donor, when read, then shown'],
+  };
+  const retirement = (replacement) => ({
+    kind: 'retired',
+    suite: 'backend-junit',
+    test: 'donors.DonorTest > Given a donor, when read, then shown',
+    replacement,
+    reason: '1.2 splits the donor test',
+  });
+  const run = (replacement, changed = ['A\t<changes>/1.2.json']) => {
+    const root = workspace({
+      freshInventory: withoutBackendTest,
+      changes: { '1.2.json': [retirement(replacement)] },
+      changed,
+    });
+    return compare(root, [`--inventory=${join(root, 'inventory.json')}`]);
+  };
+
+  it('when the replacement is prose instead of a test, then the comparison fails and asks for a test id', () => {
+    const result = run('acceptanceTest in backend/build.gradle.kts deletes the folder');
+    assert.equal(result.status, 1, result.output);
+    assert.match(result.output, /::error::.*replacement.*test id/);
+  });
+
+  it('when the replacement names a test that the inventory does not hold, then the comparison fails', () => {
+    const result = run('donors.DonorCardTest > Given a donor, when read, then shown');
+    assert.equal(result.status, 1, result.output);
+    assert.match(result.output, /::error::.*DonorCardTest.*not in the test inventory/);
+  });
+
+  it('when the replacement names a test of the inventory, then it passes', () => {
+    const result = run('donors.DonorProfileTest > Given a donor, when read, then shown');
+    assert.equal(result.status, 0, result.output);
+  });
+
+  it('when an older file names prose as the replacement, then it passes and the report marks it', () => {
+    const result = run('acceptanceTest in backend/build.gradle.kts deletes the folder', []);
+    assert.equal(result.status, 0, result.output);
+    assert.match(result.report, /náhrada není test/);
   });
 });

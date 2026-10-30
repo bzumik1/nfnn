@@ -40,10 +40,17 @@ public final class GoldenFiles {
     }
 
     public static void assertMatches(String relativePath, JsonNode actual) {
-        Path file = repositoryRoot().resolve(relativePath);
+        assertMatches(repositoryRoot().resolve(relativePath), relativePath, actual, WRITE.equals(System.getProperty(MODE)));
+    }
+
+    static void assertMatches(Path file, JsonNode actual, boolean writing) {
+        assertMatches(file, file.toString(), actual, writing);
+    }
+
+    private static void assertMatches(Path file, String relativePath, JsonNode actual, boolean writing) {
         String expected = canonical(actual);
         try {
-            if (WRITE.equals(System.getProperty(MODE))) {
+            if (writing) {
                 Files.createDirectories(file.getParent());
                 Files.writeString(file, expected, StandardCharsets.UTF_8);
                 return;

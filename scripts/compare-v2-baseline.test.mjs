@@ -10,6 +10,18 @@ const SCRIPT = fileURLToPath(new URL('compare-v2-baseline.mjs', import.meta.url)
 const ANCHOR = 'regression/v2/BASELINE_COMMIT';
 const TRANSCRIPT = 'regression/v2/api/donors/admin_donors.json';
 const INVENTORY = 'regression/v2/test-inventory.json';
+const RECEIPT = 'regression/v2/receipts/single-person-cs.json';
+const MANIFEST = 'regression/v2/screens/manifest.json';
+const shot = (state, digest) => ({
+  state,
+  width: 390,
+  file: `${state}-390.png`,
+  bytes: 10,
+  pixelsSha256: digest,
+});
+const manifest = (shots) =>
+  `${JSON.stringify({ source: 'v2-baseline', logic: 'shots', totalBytes: shots.length * 10, shots }, null, 2)}\n`;
+const BASELINE_SHOTS = [shot('home', 'a'.repeat(64)), shot('login', 'b'.repeat(64))];
 
 const folders = [];
 
@@ -48,6 +60,8 @@ function repository({ change = () => {}, anchorOf = (baseline) => baseline } = {
   git(origin, 'init', '-q', '-b', 'main');
   write(origin, TRANSCRIPT, '{"source": "v2-baseline"}\n');
   write(origin, INVENTORY, '{"source": "v2-baseline"}\n');
+  write(origin, RECEIPT, '{"source": "v2-baseline", "pages": 1}\n');
+  write(origin, MANIFEST, manifest(BASELINE_SHOTS));
   const baseline = commit(origin, 'Record the v2 baseline');
   write(origin, 'docs/later.md', 'later\n');
   commit(origin, 'Work after the baseline');
@@ -149,5 +163,68 @@ describe('Given a checkout without a usable anchor', () => {
     const result = guard(checkout);
     assert.equal(result.status, 1, result.output);
     assert.match(result.output, /::error::.*fetch/);
+  });
+});
+
+describe('Given the receipt corpus and the screens manifest of the baseline commit', () => {
+  const guarded = (change) => {
+    const { checkout, base } = repository({ change });
+    return guard(checkout, [`--base=${base}`]);
+  };
+
+  it('when the pull request edits a receipt sample, then the guard fails and names the file', () => {
+    const result = guarded((origin) =>
+      write(origin, RECEIPT, '{"source": "v2-baseline", "pages": 2}\n'),
+    );
+    assert.equal(result.status, 1, result.output);
+    assert.match(result.output, /::error::.*single-person-cs\.json.*never changes/);
+  });
+
+  it('when the pull request deletes a receipt sample, then the guard fails and names the file', () => {
+    const result = guarded((origin) => rmSync(join(origin, RECEIPT)));
+    assert.equal(result.status, 1, result.output);
+    assert.match(result.output, /::error::.*single-person-cs\.json.*deleted/);
+  });
+
+  it('when the pull request adds a receipt sample, then the guard passes and lists the addition', () => {
+    const result = guarded((origin) =>
+      write(
+        origin,
+        'regression/v2/receipts/yearly-500-gifts-cs.json',
+        '{"source": "v2-baseline"}\n',
+      ),
+    );
+    assert.equal(result.status, 0, result.output);
+    assert.match(result.output, /yearly-500-gifts-cs\.json/);
+  });
+
+  it('when the manifest gains a shot and keeps every recorded one, then the guard passes', () => {
+    const result = guarded((origin) =>
+      write(
+        origin,
+        MANIFEST,
+        manifest([BASELINE_SHOTS[0], shot('totp', 'c'.repeat(64)), BASELINE_SHOTS[1]]),
+      ),
+    );
+    assert.equal(result.status, 0, result.output);
+  });
+
+  it('when the manifest changes the digest of a recorded shot, then the guard fails and names the shot', () => {
+    const result = guarded((origin) =>
+      write(origin, MANIFEST, manifest([BASELINE_SHOTS[0], shot('login', 'd'.repeat(64))])),
+    );
+    assert.equal(result.status, 1, result.output);
+    assert.match(result.output, /::error::.*manifest\.json.*login-390\.png/);
+  });
+
+  it('when the manifest loses a recorded shot or changes its description, then the guard fails', () => {
+    for (const text of [
+      manifest([BASELINE_SHOTS[0]]),
+      manifest(BASELINE_SHOTS).replace('"logic": "shots"', '"logic": "other shots"'),
+    ]) {
+      const result = guarded((origin) => write(origin, MANIFEST, text));
+      assert.equal(result.status, 1, result.output);
+      assert.match(result.output, /::error::.*manifest\.json/);
+    }
   });
 });

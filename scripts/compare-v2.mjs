@@ -12,6 +12,11 @@ const defaults = {
   inventory: '',
   report: '',
   changed: '',
+  main: '',
+  'main-commit': '',
+  'main-changed': '',
+  'main-missing': '',
+  'baseline-commit': 'regression/v2/BASELINE_COMMIT',
 };
 
 const TRANSCRIPT_KINDS = [
