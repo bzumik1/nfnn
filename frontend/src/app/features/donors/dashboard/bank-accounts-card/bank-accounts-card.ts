@@ -70,7 +70,8 @@ interface VerificationPayment {
 type QrState =
   | { readonly kind: 'loading' }
   | { readonly kind: 'ready'; readonly payment: VerificationPayment }
-  | { readonly kind: 'failed' };
+  | { readonly kind: 'unavailable' }
+  | { readonly kind: 'refused' };
 
 type PaymentWatch = 'waiting' | 'stopped';
 
@@ -159,11 +160,14 @@ export class BankAccountsCard {
   protected readonly adding = signal(false);
   protected readonly qr = computed<QrState>(() => {
     const state = this.paymentDetails.state();
-    if (state.kind !== 'ready') {
+    if (state.kind === 'loading') {
       return state;
     }
+    if (state.kind === 'failed') {
+      return { kind: 'unavailable' };
+    }
     const payment = verificationPayment(state.details, this.variableSymbol());
-    return payment === null ? { kind: 'failed' } : { kind: 'ready', payment };
+    return payment === null ? { kind: 'refused' } : { kind: 'ready', payment };
   });
   protected readonly qrResponse = computed(() => {
     const state = this.qr();
@@ -524,6 +528,10 @@ export class BankAccountsCard {
 
   protected loadQr(): void {
     this.paymentDetails.load();
+  }
+
+  protected reloadQr(): void {
+    this.paymentDetails.reload();
   }
 
   private actionButtonOf(account: BankAccountItem): HTMLButtonElement | null {

@@ -6,6 +6,7 @@ import {
   Component,
   computed,
   DestroyRef,
+  effect,
   ElementRef,
   inject,
   Injector,
@@ -40,7 +41,8 @@ interface AmountPreset {
 type QrState =
   | { readonly kind: 'loading' }
   | { readonly kind: 'ready'; readonly matrix: QrMatrix }
-  | { readonly kind: 'failed' }
+  | { readonly kind: 'unavailable' }
+  | { readonly kind: 'refused' }
   | { readonly kind: 'amountInvalid' };
 
 export type PaymentAccountState =
@@ -59,6 +61,8 @@ export class PaymentPanel {
   private readonly store = inject(PaymentDetailsStore);
   private readonly injector = inject(Injector);
   private readonly bankLabel = viewChild<ElementRef<HTMLElement>>('bankLabel');
+  private readonly qrBox = viewChild<ElementRef<HTMLElement>>('qrBox');
+  private readonly retryButton = viewChild<ElementRef<HTMLButtonElement>>('retryButton');
 
   readonly variableSymbol = input<string | null>(null);
   readonly idPrefix = input('donate');
@@ -77,6 +81,8 @@ export class PaymentPanel {
   private readonly drawnAmount = signal<number | null>(DEFAULT_AMOUNT);
   protected readonly redrawing = signal(false);
   private readonly announced = signal<number | null>(null);
+  private lastAnnounced: number | null = null;
+  private retried = false;
   private readonly qrCode = viewChild(QrCode);
   private redrawTimer: ReturnType<typeof setTimeout> | undefined;
   private announceTimer: ReturnType<typeof setTimeout> | undefined;
@@ -96,15 +102,18 @@ export class PaymentPanel {
 
   protected readonly state = computed<QrState>(() => {
     const stored = this.store.state();
-    if (stored.kind !== 'ready') {
+    if (stored.kind === 'loading') {
       return stored;
+    }
+    if (stored.kind === 'failed') {
+      return { kind: 'unavailable' };
     }
     const amount = this.drawnAmount();
     if (amount === null) {
       return { kind: 'amountInvalid' };
     }
     const matrix = paymentMatrix(stored.details, amount, this.variableSymbol());
-    return matrix === null ? { kind: 'failed' } : { kind: 'ready', matrix };
+    return matrix === null ? { kind: 'refused' } : { kind: 'ready', matrix };
   });
 
   protected readonly qrMatrix = computed(() => {
@@ -113,6 +122,10 @@ export class PaymentPanel {
   });
 
   protected readonly busy = computed(() => this.state().kind === 'loading' || this.redrawing());
+  protected readonly failure = computed(() => {
+    const kind = this.state().kind;
+    return kind === 'unavailable' || kind === 'refused' ? kind : null;
+  });
 
   protected readonly saving = signal(false);
   protected readonly savedQrFile = signal<string | null>(null);
@@ -150,6 +163,7 @@ export class PaymentPanel {
 
   constructor() {
     this.store.load();
+    effect(() => this.focusAfterRetry(this.state().kind));
     inject(DestroyRef).onDestroy(() => {
       clearTimeout(this.redrawTimer);
       clearTimeout(this.announceTimer);
@@ -172,6 +186,8 @@ export class PaymentPanel {
     this.customAmount.set(null);
     this.customAmountLeft.set(false);
     this.customChosen.set(true);
+    this.announced.set(null);
+    clearTimeout(this.announceTimer);
     this.redrawLater();
   }
 
@@ -191,7 +207,9 @@ export class PaymentPanel {
   }
 
   retry(): void {
-    this.store.load();
+    this.retried = true;
+    this.qrBox()?.nativeElement.focus();
+    this.store.reload();
   }
 
   async saveQr(): Promise<void> {
@@ -221,18 +239,29 @@ export class PaymentPanel {
     clearTimeout(this.redrawTimer);
     this.redrawing.set(false);
     this.drawnAmount.set(this.amount());
+    this.store.load();
   }
 
   private announceAfterQuiet(): void {
-    const previous = this.announced();
     this.announced.set(null);
     clearTimeout(this.announceTimer);
     this.announceTimer = setTimeout(() => {
       const amount = this.amount();
-      if (amount !== null && amount !== previous && this.qrMatrix() !== null) {
+      if (amount !== null && amount !== this.lastAnnounced && this.qrMatrix() !== null) {
+        this.lastAnnounced = amount;
         this.announced.set(amount);
       }
     }, ANNOUNCE_DELAY_MS);
+  }
+
+  private focusAfterRetry(kind: QrState['kind']): void {
+    if (!this.retried || kind === 'loading') {
+      return;
+    }
+    this.retried = false;
+    if (kind === 'unavailable' || kind === 'refused') {
+      afterNextRender(() => this.retryButton()?.nativeElement.focus(), { injector: this.injector });
+    }
   }
 }
 

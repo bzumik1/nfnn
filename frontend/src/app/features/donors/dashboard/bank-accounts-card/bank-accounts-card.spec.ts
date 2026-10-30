@@ -1023,6 +1023,40 @@ describe('Given the bank accounts card in the overview', () => {
       expect(element('.add-account-qr svg[role="img"]')).not.toBeNull();
     });
 
+    it('and the server asks for 2 Kč to verify, then the QR and the amount carry the served amount, not a constant', async () => {
+      http
+        .expectOne(PAYMENT_DETAILS_URL)
+        .flush({ ...foundationPaymentDetails(), accountVerificationAmountMinor: 200 });
+      await settle();
+
+      expect(
+        drawsText(
+          element('.add-account-qr svg[role="img"]'),
+          VERIFICATION_SPAYD.replace('AM:1.00', 'AM:2.00'),
+        ),
+      ).toBe(true);
+      expect(texts('.add-account-bank dd .bank-value')[1]).toBe('2 Kč');
+    });
+
+    it('and the browser refuses the payment details it got, then the dialog says the QR cannot be made now, and a retry asks the server again past the browser cache', async () => {
+      const details = foundationPaymentDetails();
+      http
+        .expectOne(PAYMENT_DETAILS_URL)
+        .flush({ ...details, account: { ...details.account, iban: 'CZ6508000000192000145399' } });
+      await settle();
+
+      expect(element('.add-account-qr svg[role="img"]')).toBeNull();
+      expect(text('.add-account-qr-error')).toContain('QR kód teď nejde vytvořit.');
+
+      await click('.add-account-qr-retry');
+      const again = http.expectOne(PAYMENT_DETAILS_URL);
+      expect(again.request.cache).toBe('no-cache');
+      again.flush(details);
+      await settle();
+
+      expect(drawsText(element('.add-account-qr svg[role="img"]'), VERIFICATION_SPAYD)).toBe(true);
+    });
+
     it('and closes the dialog, then it disappears and the focus returns to Přidat účet', async () => {
       http.expectOne(PAYMENT_DETAILS_URL).flush(foundationPaymentDetails());
       await settle();

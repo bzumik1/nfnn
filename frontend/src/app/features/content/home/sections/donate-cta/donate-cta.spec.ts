@@ -111,6 +111,18 @@ describe('Given the donate section', () => {
     ).map((step) => steps.find((selector) => step.matches(selector)) ?? '');
   }
 
+  function frame(): { dimmed: boolean; busy: string | null; old: boolean } {
+    return {
+      dimmed: isDimmed(),
+      busy: element('.qr-code').getAttribute('aria-busy'),
+      old: drawnMatrixIs(QR_OF_500),
+    };
+  }
+
+  function drawsMatrixInFocus(): boolean {
+    return document.activeElement === element('.qr-code') && drawnMatrixIs(QR_OF_500);
+  }
+
   function isDimmed(): boolean {
     return element('.qr-image')?.classList.contains('qr-image-stale') ?? false;
   }
@@ -519,14 +531,152 @@ describe('Given the donate section', () => {
     expect(element('.qr-error')).toBeNull();
   });
 
-  it('when the payment details hold a text that is no SPAYD text, then no QR is drawn and it says the QR failed', async () => {
+  it('when the payment details fail to load, then an alert says so and the retry keeps the focus on the QR, then on the retry when it fails again', async () => {
+    await settle();
+    http
+      .expectOne((request) => request.url === PAYMENT_DETAILS_URL)
+      .flush(null, { status: 503, statusText: 'Service Unavailable' });
+    await settle();
+
+    expect(element('.qr-error[role="alert"]')?.textContent).toContain(
+      'QR platbu se nepodařilo připravit. Zkuste to prosím znovu.',
+    );
+    button('Zkusit znovu').focus();
+    button('Zkusit znovu').click();
+    await settle();
+    expect(document.activeElement).toBe(element('.qr-code'));
+
+    http
+      .expectOne((request) => request.url === PAYMENT_DETAILS_URL)
+      .flush(null, { status: 503, statusText: 'Service Unavailable' });
+    await settle();
+    expect(document.activeElement).toBe(button('Zkusit znovu'));
+
+    button('Zkusit znovu').click();
+    await settle();
+    respondWithDetails();
+    await settle();
+    expect(drawsMatrixInFocus()).toBe(true);
+  });
+
+  it('when the answer is not payment details, then no QR is drawn and it offers to try again instead of breaking the section', async () => {
+    await settle();
+    http.expectOne((request) => request.url === PAYMENT_DETAILS_URL).flush({ currency: 'CZK' });
+    await settle();
+
+    expect(qrCode()).toBeNull();
+    expect(text('.qr-error')).toContain('QR platbu se nepodařilo připravit');
+    expect(button('Zkusit znovu')).not.toBeNull();
+  });
+
+  it('when the browser refuses the payment details it holds, then it says the QR cannot be made now and to pay by the bank details, which stay, and asking again reloads them past the browser cache', async () => {
     await settle();
     const details = foundationPaymentDetails();
     respondWithDetails({ ...details, messages: { ...details.messages, donation: 'Dar*AM:1' } });
     await settle();
 
     expect(qrCode()).toBeNull();
-    expect(text('.qr-error')).toContain('QR platbu se nepodařilo připravit');
+    expect(squashed('.qr-error[role="alert"]')).toContain(
+      'QR kód teď nejde vytvořit. Zaplaťte prosím podle bankovního spojení.',
+    );
+    expect(text('.bank')).toContain('5544332217/2010');
+
+    button('Zkusit znovu').click();
+    await settle();
+    const again = http.expectOne((request) => request.url === PAYMENT_DETAILS_URL);
+    expect(again.request.cache).toBe('no-cache');
+    again.flush(details);
+    await settle();
+
+    expect(drawnMatrixIs(QR_OF_500)).toBe(true);
+    expect(element('.qr-error')).toBeNull();
+  });
+
+  it('when the visitor types keys 300 ms apart, then the old QR stays dimmed until 400 ms after the last key and is redrawn once, for the finished amount', async () => {
+    await openWithQr();
+    button('Jiná částka').click();
+    fixture.detectChanges();
+    await type('2');
+    const frames: { dimmed: boolean; busy: string | null; old: boolean }[] = [];
+
+    for (const typed of ['25', '250', '2500']) {
+      await settle(300);
+      frames.push(frame());
+      await type(typed);
+    }
+    await settle(REDRAW_MS - 1);
+    frames.push(frame());
+    await settle(1);
+
+    expect(frames).toEqual(Array(4).fill({ dimmed: true, busy: 'true', old: true }));
+    expect(isDimmed()).toBe(false);
+    expect(drawnMatrixIs(qrOfTyped(2500))).toBe(true);
+  });
+
+  it('when the visitor types, then the field names the hint that the QR is redrawn once they stop typing', async () => {
+    await openWithQr();
+    button('Jiná částka').click();
+    fixture.detectChanges();
+
+    const described = element('#donate-custom-amount').getAttribute('aria-describedby') ?? '';
+    expect(described.split(' ').map((id) => text(`#${id}`).trim())).toContain(
+      'QR kód se překreslí, když přestanete psát.',
+    );
+  });
+
+  it('when the section goes away while a redraw and an announcement wait, then it leaves no timer behind', async () => {
+    await openWithQr();
+    await enterCustomAmount('250');
+
+    fixture.destroy();
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('when the visitor picks Jiná částka after an amount was announced, then the status region no longer says that QR is ready', async () => {
+    await openWithQr();
+    button('1 000 Kč').click();
+    await settle(ANNOUNCE_MS);
+    expect(announcement()).toBe('QR platba na 1 000 Kč je připravená.');
+
+    button('Jiná částka').click();
+    await settle();
+
+    expect(announcement()).toBe('');
+  });
+
+  it('when the visitor types the amount whose QR was just announced, then it is not announced again', async () => {
+    await openWithQr();
+    button('1 000 Kč').click();
+    await settle(ANNOUNCE_MS);
+    button('Jiná částka').click();
+    await settle();
+
+    for (const typed of ['1', '10', '100', '1000']) {
+      await type(typed);
+      await settle(100);
+    }
+    await settle(ANNOUNCE_MS);
+
+    expect(announcement()).toBe('');
+    button('500 Kč').click();
+    await settle(ANNOUNCE_MS);
+    expect(announcement()).toBe('QR platba na 500 Kč je připravená.');
+  });
+
+  it('when the visitor picks an amount five minutes after the details came, then the browser checks them again past its cache', async () => {
+    await openWithQr();
+    await settle(5 * 60 * 1000);
+
+    button('1 000 Kč').click();
+    await settle();
+
+    const check = http.expectOne((request) => request.url === PAYMENT_DETAILS_URL);
+    expect(check.request.cache).toBe('no-cache');
+    check.flush(foundationPaymentDetails());
+    await settle();
+    expect(drawnMatrixIs(QR_OF_1000)).toBe(true);
   });
 
   describe('Given a signed-in donor with a variable symbol', () => {
