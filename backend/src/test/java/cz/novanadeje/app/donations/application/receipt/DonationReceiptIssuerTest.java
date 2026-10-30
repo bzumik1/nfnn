@@ -65,6 +65,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -385,7 +386,7 @@ class DonationReceiptIssuerTest {
 
             InOrder order = inOrder(receipts, donorRecords, events);
             order.verify(receipts).lockDonor(JANA);
-            order.verify(donorRecords).findById(JANA);
+            order.verify(donorRecords, atLeastOnce()).findById(JANA);
             order.verify(receipts).save(issued);
             order.verify(events).publishEvent(new AdminActionPerformed(petr, "ISSUE_RECEIPT", Optional.of(issued.id().value()),
                     "Potvrzení 2027-000001 za rok 2026 vystaveno dárci " + JANA.value(), NOW));
@@ -467,11 +468,12 @@ class DonationReceiptIssuerTest {
         }
 
         @Test
-        @DisplayName("when the donor already got 20 new numbers in 24 hours, then the same cap refuses a new one and nothing is audited")
+        @DisplayName("when the donor already got 20 replacements in 24 hours, then the same cap refuses another replacement and nothing is audited")
         void should_share_donor_cap_when_issued_by_administrator() {
-            givenDonationsOfJana(jana(), MARCH);
-            when(receipts.findActiveForYear(JANA, YEAR_2026)).thenReturn(Optional.empty());
-            when(receipts.countIssuedAfter(eq(JANA), any())).thenReturn(20L);
+            DonationReceipt active = yearlyReceipt(ReceiptDocumentFactory.fingerprintForYear(jana(), YEAR_2026, List.of(MARCH)), LocaleCode.CS);
+            givenDonationsOfJana(jana(), JUNE, MARCH);
+            when(receipts.findActiveForYear(JANA, YEAR_2026)).thenReturn(Optional.of(active));
+            when(receipts.countReplacementsIssuedAfter(eq(JANA), any())).thenReturn(20L);
 
             assertThatThrownBy(() -> issuer.issueForYearByAdministrator(petr, JANA, YEAR_2026, TODAY)).isInstanceOf(ReceiptIssueLimitReached.class);
 

@@ -37,7 +37,7 @@ Feature: An administrator or a connected application issues a donor's receipt an
       | 2026-10-01 | 100000      |
       | 2026-11-15 | 250000      |
     And the frozen receipt is signed with the server's key
-    When 2 hours pass
+    When 120 minutes pass
     And "Petr" issues in the administration the yearly receipt of "Jana" for 2026
     Then the response status is 200
     And the issued receipt has number "2027-000001"
@@ -90,8 +90,8 @@ Feature: An administrator or a connected application issues a donor's receipt an
     Then the response status is 400
     And the problem type ends with "donations/year-not-yet-completed"
     When "Petr" issues in the administration the yearly receipt of "Jana" for 2025
-    Then the response status is 404
-    And the problem type ends with "donations/yearly-receipt-not-available"
+    Then the response status is 400
+    And the problem type ends with "donations/receipt-before-first-year"
     When "Petr" issues in the administration the receipt of the donation of "Petr" numbered "0192f0f1-0000-7000-8000-000000000000"
     Then the response status is 404
     And the problem type ends with "donations/donation-not-found"
@@ -108,13 +108,17 @@ Feature: An administrator or a connected application issues a donor's receipt an
     And the problem has the title "Dárce je vymazaný"
     And 0 receipts are stored
 
-  Scenario: The administration shares the donor's cap of 20 new receipt numbers in 24 hours
-    Given "Jana" changed her address and issued her yearly receipt for 2026 20 times
+  Scenario: The administration shares the donor's cap of 20 replacements in 24 hours, which a first issue does not count against
+    Given "Jana" changed her address and issued her yearly receipt for 2026 21 times
     When "Jana" changes her address to street "Nová 7", postal code "405 02" and city "Děčín"
     And "Petr" issues in the administration the yearly receipt of "Jana" for 2026
     Then the response status is 409
     And the problem type ends with "donations/receipt-issue-limit"
-    And 20 receipts are stored
+    And 21 receipts are stored
+    When "Petr" issues in the administration the receipt of the donation of "Jana" received on 2026-10-01
+    Then the response status is 200
+    And the issued receipt has number "2027-000022"
+    And 22 receipts are stored
 
   Scenario: The administration lists the issued receipts newest first, a page at a time, by donor and by the year of issue, and reads one with its image
     Given "Petr" uploads a 600 by 200 pixel JPEG scan named "podpis.jpg" as the receipt signature
