@@ -200,6 +200,18 @@ class ProblemTextsTest {
     }
 
     @Test
+    @DisplayName("Given a body that cannot be read, when it is posted, then the problem says so in the site's words without the body, in Czech")
+    void should_answer_site_text_when_posted_given_unreadable_body() throws Exception {
+        MvcResult result = mockMvc.perform(post("/probe").header("Accept-Language", "cs").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"value\": " + CLIENT_VALUE + "}")).andReturn();
+
+        assertThat(result.getResponse().getStatus()).isEqualTo(400);
+        assertThat(bodyOf(result)).doesNotContain(CLIENT_VALUE)
+                .contains("\"title\":\"Neplatné údaje\"")
+                .contains("\"detail\":\"Data požadavku nejdou přečíst. Zkontrolujte prosím jejich tvar.\"");
+    }
+
+    @Test
     @DisplayName("Given a request method the address does not take, when it is sent, then the problem does not repeat the method, in English")
     void should_answer_without_method_when_sent_given_unsupported_method() throws Exception {
         MvcResult result = mockMvc.perform(request(HttpMethod.valueOf(CLIENT_METHOD), "/probe").header("Accept-Language", "en")).andReturn();

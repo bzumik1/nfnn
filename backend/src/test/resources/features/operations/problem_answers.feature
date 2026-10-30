@@ -21,7 +21,7 @@ Feature: A refused request is answered in the client's language without exceptio
     When "Jana" sends <method> "<path>" as "" with the body ''
     Then the response status is 400
     And the problem type ends with "validation"
-    And the problem says "Neplatné údaje": "Požadavek má tvar, který web nepřijímá. Zkontrolujte prosím adresu."
+    And the problem says "Neplatné údaje": "Požadavek má tvar, který web nepřijímá. Zkontrolujte prosím adresu a způsob odeslání."
     And the answer is stored nowhere and not sniffed
     And the problem does not repeat "nfnn-client-value"
 

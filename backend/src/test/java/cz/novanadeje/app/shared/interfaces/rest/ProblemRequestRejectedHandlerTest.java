@@ -47,7 +47,7 @@ class ProblemRequestRejectedHandlerTest {
                 .doesNotContain(CLIENT_VALUE).doesNotContain("rejected").doesNotContain("/api/")
                 .contains("\"type\":\"https://nfnn.cz/problems/validation\"")
                 .contains("\"title\":\"Neplatné údaje\"")
-                .contains("\"detail\":\"Požadavek má tvar, který web nepřijímá. Zkontrolujte prosím adresu.\"");
+                .contains("\"detail\":\"Požadavek má tvar, který web nepřijímá. Zkontrolujte prosím adresu a způsob odeslání.\"");
     }
 
     @Test
@@ -63,7 +63,7 @@ class ProblemRequestRejectedHandlerTest {
         assertThat(response.getContentAsString(StandardCharsets.UTF_8))
                 .doesNotContain(CLIENT_VALUE)
                 .contains("\"title\":\"Invalid data\"")
-                .contains("\"detail\":\"The request has a form the site does not accept. Please check the address.\"");
+                .contains("\"detail\":\"The request has a form the site does not accept. Please check the address and how it is sent.\"");
     }
 
     @Test
