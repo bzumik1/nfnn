@@ -149,6 +149,7 @@ Dárci:
 - Úvodní e-mail: správce vloží e-maily dárců, kteří žádali o potvrzení, a web jim pošle, jak se zaregistrovat a potvrzení stáhnout.
 - Lednový e-mail registrovaným dárcům: potvrzení je připravené, jen odkaz na web, bez PDF.
 - Poděkování za každý spárovaný dar (odhlásitelné v profilu); dary starší 7 dní spárované najednou shrne jeden e-mail.
+- Portrét předsedy správní rady nahraný ve správě (Jakub 30. 10. 2026): jedna čtvercová fotka nahraná jednou v `/sprava/nastaveni` jen z prohlížeče, stejně jako podpis potvrzení, a web si z ní sám udělá ořezy pro každé použití. Na potvrzení stojí vedle podpisu v podpisové kartě (rozvržení „dopis“: místo a datum vlevo, vpravo karta s fotkou, „Za …:“, podpisem, jménem a funkcí; stavba v plánu v3), dál v poděkováních za dary vedle podpisu (kulatý ořez s bílými rohy a světlým okrajem kvůli tmavému režimu) a v sekci O nás. Bez nahrané fotky zůstane všude podoba bez ní.
 - Upozornění správci na vynechaný trvalý příkaz.
 - Aktuality e-mailem registrovaným dárcům, s odhlášením.
 - „Chybí vám tu dar?“ v Moje dary: běžné důvody, kontrola banky a formulář fondu s VS dárce.
