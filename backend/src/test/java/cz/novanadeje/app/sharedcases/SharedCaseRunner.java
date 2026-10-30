@@ -1,6 +1,6 @@
 package cz.novanadeje.app.sharedcases;
 
-import cz.novanadeje.app.regression.GoldenFiles;
+import cz.novanadeje.app.support.CanonicalJson;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.TestFactory;
@@ -21,7 +21,7 @@ public abstract class SharedCaseRunner {
     protected abstract void run(SharedCase sharedCase) throws Exception;
 
     public static void assertGives(JsonNode actual, JsonNode expected) {
-        assertThat(GoldenFiles.canonical(actual)).as("the whole value, every field and none more").isEqualTo(GoldenFiles.canonical(expected));
+        assertThat(CanonicalJson.write(actual)).as("the whole value, every field and none more").isEqualTo(CanonicalJson.write(expected));
     }
 
     @TestFactory

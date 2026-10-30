@@ -433,15 +433,26 @@ const adminAnswers: Record<string, unknown> = {
 
 export const PETR_DETAIL_PATH = `/sprava/darci/${PETR_ID}`;
 
-interface PaymentQrCase {
+interface SpaydCase {
   name: string;
   input: { recipient: { accountNumber: string; iban: string; name: string } };
-  expected: { spayd?: string; size?: number; matrix?: string[] };
+  expected: { spayd?: string };
 }
 
-const PAYMENT_QR_CASES: PaymentQrCase[] = JSON.parse(
-  readFileSync(join(__dirname, '..', '..', '..', 'shared-cases', 'qr', 'payment.json'), 'utf8'),
-).cases;
+interface PaymentQrCase {
+  name: string;
+  input: { spayd: string };
+  expected: { size?: number; matrix?: string[] };
+}
+
+function sharedCases<T>(...path: string[]): T[] {
+  return JSON.parse(
+    readFileSync(join(__dirname, '..', '..', '..', 'shared-cases', ...path), 'utf8'),
+  ).cases;
+}
+
+const SPAYD_CASES = sharedCases<SpaydCase>('payment', 'spayd.json');
+const PAYMENT_QR_CASES = sharedCases<PaymentQrCase>('qr', 'payment.json');
 
 const PAYMENT_QR_CASE_OF_QUERY: Record<string, string> = {
   'amount=100': '100 Kč without a variable symbol',
@@ -455,12 +466,19 @@ const PAYMENT_QR_CASE_OF_QUERY: Record<string, string> = {
 };
 
 function paymentQrAnswer(name: string) {
-  const sharedCase = PAYMENT_QR_CASES.find((candidate) => candidate.name === name);
-  const { spayd, size, matrix } = sharedCase?.expected ?? {};
-  if (!sharedCase || spayd === undefined || size === undefined || matrix === undefined) {
-    throw new Error(`shared-cases/qr/payment.json has no QR symbol for the case ${name}`);
+  const spaydCase = SPAYD_CASES.find((candidate) => candidate.name === name);
+  const qrCase = PAYMENT_QR_CASES.find((candidate) => candidate.name === name);
+  const spayd = spaydCase?.expected.spayd;
+  const { size, matrix } = qrCase?.expected ?? {};
+  if (!spaydCase || spayd === undefined || size === undefined || matrix === undefined) {
+    throw new Error(
+      `shared-cases/payment/spayd.json and qr/payment.json have no QR symbol for the case ${name}`,
+    );
   }
-  const { accountNumber, iban, name: recipientName } = sharedCase.input.recipient;
+  if (qrCase?.input.spayd !== spayd) {
+    throw new Error(`the QR case ${name} encodes another text than its SPAYD case gives`);
+  }
+  const { accountNumber, iban, name: recipientName } = spaydCase.input.recipient;
   return {
     spayd,
     qrCode: { size, modules: matrix.join('') },

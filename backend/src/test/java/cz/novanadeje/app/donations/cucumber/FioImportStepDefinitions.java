@@ -23,7 +23,6 @@ import cz.novanadeje.app.support.FakeFioClient;
 import cz.novanadeje.app.support.FakeFioClient.RequestedPeriod;
 import cz.novanadeje.app.support.FioMovements;
 import cz.novanadeje.app.support.MutableClock;
-import io.cucumber.java.After;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
@@ -38,7 +37,6 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import java.math.BigDecimal;
 import java.net.http.HttpTimeoutException;
 import java.time.Duration;
-import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.ArrayList;
@@ -72,7 +70,6 @@ public class FioImportStepDefinitions {
     private final ScenarioDonors scenarioDonors;
     private final List<ImportReport> reports = new ArrayList<>();
     private ImportSettings settings = ImportSettings.defaults();
-    private Instant clockBeforeScenarioDate;
 
     public FioImportStepDefinitions(ImportBankPaymentsService importService, BankPaymentRepository payments, BankImportStateRepository states,
                                     FakeFioClient fio, MutableClock clock, JdbcClient jdbc, ScenarioDonors scenarioDonors) {
@@ -85,18 +82,8 @@ public class FioImportStepDefinitions {
         this.scenarioDonors = scenarioDonors;
     }
 
-    @After
-    public void keepTheClockMovingForward() {
-        if (clockBeforeScenarioDate != null && clock.instant().isBefore(clockBeforeScenarioDate)) {
-            clock.set(clockBeforeScenarioDate);
-        }
-    }
-
     @Given("today is {date}")
     public void todayIs(LocalDate date) {
-        if (clockBeforeScenarioDate == null) {
-            clockBeforeScenarioDate = clock.instant();
-        }
         clock.set(date.atTime(NOON).atZone(BankCalendar.ZONE).toInstant());
     }
 

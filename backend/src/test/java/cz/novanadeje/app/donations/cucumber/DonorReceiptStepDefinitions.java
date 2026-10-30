@@ -4,7 +4,6 @@ import cz.novanadeje.app.cucumber.ApiClient;
 import cz.novanadeje.app.cucumber.DonorSessions;
 import cz.novanadeje.app.cucumber.ScenarioDonors;
 import cz.novanadeje.app.support.MutableClock;
-import io.cucumber.java.After;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
@@ -43,7 +42,6 @@ public class DonorReceiptStepDefinitions {
     private final JdbcClient jdbc;
     private final MutableClock clock;
     private final List<byte[]> downloads = new ArrayList<>();
-    private Instant clockBeforeScenarioTime;
 
     public DonorReceiptStepDefinitions(ApiClient api, DonorSessions sessions, ScenarioDonors scenarioDonors, JdbcClient jdbc, MutableClock clock) {
         this.api = api;
@@ -53,18 +51,8 @@ public class DonorReceiptStepDefinitions {
         this.clock = clock;
     }
 
-    @After
-    public void keepTheClockMovingForward() {
-        if (clockBeforeScenarioTime != null && clock.instant().isBefore(clockBeforeScenarioTime)) {
-            clock.set(clockBeforeScenarioTime);
-        }
-    }
-
     @Given("the time is {string}")
     public void theTimeIs(String instant) {
-        if (clockBeforeScenarioTime == null) {
-            clockBeforeScenarioTime = clock.instant();
-        }
         clock.set(Instant.parse(instant));
     }
 

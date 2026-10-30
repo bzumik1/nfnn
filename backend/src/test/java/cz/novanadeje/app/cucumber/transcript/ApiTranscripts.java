@@ -1,5 +1,6 @@
 package cz.novanadeje.app.cucumber.transcript;
 
+import cz.novanadeje.app.operations.domain.settings.Setting;
 import cz.novanadeje.app.support.CanonicalJson;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.node.JsonNodeFactory;
@@ -19,12 +20,21 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public final class ApiTranscripts {
 
     public static final String SOURCE = "v2-baseline";
     private static final String MAIL_SETTINGS = "MAIL_";
-    private static final Set<String> SECRET_VARIABLES = Set.of("FIO_TOKEN", "JWT_SECRET", "SETTINGS_KEY");
+    private static final String APPLICATION_PROPERTIES = "APP_";
+    private static final String SPRING_PROPERTIES = "SPRING_";
+    private static final String SPRING_APPLICATION_JSON = "SPRING_APPLICATION_JSON";
+    private static final Pattern SECRET_NAME = Pattern.compile("[A-Z0-9_]*(?:PASSWORD|TOKEN|SECRET|KEY)[A-Z0-9_]*");
+    private static final Set<String> SERVER_SECRETS = Set.of("JWT_SECRET", "SETTINGS_KEY", "BACKUP_KEY", "DB_PASSWORD");
+    private static final Set<String> SECRET_VARIABLES = Stream.concat(SERVER_SECRETS.stream(), Setting.secrets().stream().map(Setting::name))
+            .collect(Collectors.toUnmodifiableSet());
     private static final String TABLE_ROW = "|";
     public static final Instant RECORDING_CLOCK = Instant.parse("2026-11-04T09:00:00Z");
     private static final String MODE = "api.transcripts";
@@ -79,13 +89,18 @@ public final class ApiTranscripts {
 
     static void refuseRealSecrets(Map<String, String> environment) {
         List<String> secrets = environment.entrySet().stream()
-                .filter(variable -> variable.getKey().startsWith(MAIL_SETTINGS) || SECRET_VARIABLES.contains(variable.getKey()))
+                .filter(variable -> mayCarryASecret(variable.getKey()))
                 .filter(variable -> variable.getValue() != null && !variable.getValue().isBlank())
                 .map(Map.Entry::getKey).sorted().toList();
         if (!secrets.isEmpty()) {
             throw new IllegalStateException("Recording API transcripts refuses to run while " + secrets
                     + " are set in the environment: the transcripts are public, so unset them and record with the fictional test settings only");
         }
+    }
+
+    private static boolean mayCarryASecret(String name) {
+        return name.startsWith(MAIL_SETTINGS) || name.startsWith(APPLICATION_PROPERTIES) || SECRET_VARIABLES.contains(name)
+                || SPRING_APPLICATION_JSON.equals(name) || name.startsWith(SPRING_PROPERTIES) && SECRET_NAME.matcher(name).matches();
     }
 
     static String featureText(URI featureUri) {

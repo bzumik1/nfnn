@@ -1,16 +1,13 @@
 {
-  "source": "v2-baseline",
-  "logic": "The otpauth:// URI that DonorSecondFactorService builds for a fixed test secret and its QR matrix (ZXing 3.5.4, level M, ISO-8859-1 hint); the secrets are test values, never used anywhere else",
+  "source": "edited",
+  "logic": "The QR symbol of each otpauth URI of totp/uri.json, under the same case name, as DonorSecondFactorService encodes it (ZXing 3.5.4, level M, ISO-8859-1 hint, so byte mode with the ECI 1 header): error correction, version, mode, ECI header, mask and matrix. The backend encodes each URI through ZXing until slice 1.10; the browser's encoder runs every case from 1.3",
   "cases": [
     {
       "name": "a short address",
       "input": {
-        "secret": "JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP",
-        "issuer": "Nová naděje",
-        "accountName": "jana@example.cz"
+        "uri": "otpauth://totp/Nov%C3%A1%20nad%C4%9Bje:jana%40example.cz?secret=JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP&issuer=Nov%C3%A1%20nad%C4%9Bje&algorithm=SHA1&digits=6&period=30"
       },
       "expected": {
-        "uri": "otpauth://totp/Nov%C3%A1%20nad%C4%9Bje:jana%40example.cz?secret=JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP&issuer=Nov%C3%A1%20nad%C4%9Bje&algorithm=SHA1&digits=6&period=30",
         "errorCorrection": "M",
         "version": 9,
         "mode": "BYTE",
@@ -77,12 +74,9 @@
     {
       "name": "an address with a dot",
       "input": {
-        "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
-        "issuer": "Nová naděje",
-        "accountName": "jana.novakova@example.cz"
+        "uri": "otpauth://totp/Nov%C3%A1%20nad%C4%9Bje:jana.novakova%40example.cz?secret=GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ&issuer=Nov%C3%A1%20nad%C4%9Bje&algorithm=SHA1&digits=6&period=30"
       },
       "expected": {
-        "uri": "otpauth://totp/Nov%C3%A1%20nad%C4%9Bje:jana.novakova%40example.cz?secret=GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ&issuer=Nov%C3%A1%20nad%C4%9Bje&algorithm=SHA1&digits=6&period=30",
         "errorCorrection": "M",
         "version": 9,
         "mode": "BYTE",
@@ -149,12 +143,9 @@
     {
       "name": "an address with a plus sign",
       "input": {
-        "secret": "MFRGGZDFMZTWQ2LKNNWG23TPOBYXE43U",
-        "issuer": "Nová naděje",
-        "accountName": "jana+sprava@example.cz"
+        "uri": "otpauth://totp/Nov%C3%A1%20nad%C4%9Bje:jana%2Bsprava%40example.cz?secret=MFRGGZDFMZTWQ2LKNNWG23TPOBYXE43U&issuer=Nov%C3%A1%20nad%C4%9Bje&algorithm=SHA1&digits=6&period=30"
       },
       "expected": {
-        "uri": "otpauth://totp/Nov%C3%A1%20nad%C4%9Bje:jana%2Bsprava%40example.cz?secret=MFRGGZDFMZTWQ2LKNNWG23TPOBYXE43U&issuer=Nov%C3%A1%20nad%C4%9Bje&algorithm=SHA1&digits=6&period=30",
         "errorCorrection": "M",
         "version": 9,
         "mode": "BYTE",
@@ -221,12 +212,9 @@
     {
       "name": "a long address",
       "input": {
-        "secret": "KRUGKIDROVUWG2ZAMJZG653OEBTG66BA",
-        "issuer": "Nová naděje",
-        "accountName": "administrace.nadacniho.fondu.nova.nadeje@example.cz"
+        "uri": "otpauth://totp/Nov%C3%A1%20nad%C4%9Bje:administrace.nadacniho.fondu.nova.nadeje%40example.cz?secret=KRUGKIDROVUWG2ZAMJZG653OEBTG66BA&issuer=Nov%C3%A1%20nad%C4%9Bje&algorithm=SHA1&digits=6&period=30"
       },
       "expected": {
-        "uri": "otpauth://totp/Nov%C3%A1%20nad%C4%9Bje:administrace.nadacniho.fondu.nova.nadeje%40example.cz?secret=KRUGKIDROVUWG2ZAMJZG653OEBTG66BA&issuer=Nov%C3%A1%20nad%C4%9Bje&algorithm=SHA1&digits=6&period=30",
         "errorCorrection": "M",
         "version": 10,
         "mode": "BYTE",
@@ -297,12 +285,9 @@
     {
       "name": "an address of a company domain",
       "input": {
-        "secret": "ONSWG4TFOQQGC3TEEBZWK4TWMVZCAMZS",
-        "issuer": "Nová naděje",
-        "accountName": "ucetni@stavby.example.cz"
+        "uri": "otpauth://totp/Nov%C3%A1%20nad%C4%9Bje:ucetni%40stavby.example.cz?secret=ONSWG4TFOQQGC3TEEBZWK4TWMVZCAMZS&issuer=Nov%C3%A1%20nad%C4%9Bje&algorithm=SHA1&digits=6&period=30"
       },
       "expected": {
-        "uri": "otpauth://totp/Nov%C3%A1%20nad%C4%9Bje:ucetni%40stavby.example.cz?secret=ONSWG4TFOQQGC3TEEBZWK4TWMVZCAMZS&issuer=Nov%C3%A1%20nad%C4%9Bje&algorithm=SHA1&digits=6&period=30",
         "errorCorrection": "M",
         "version": 9,
         "mode": "BYTE",

@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nfnn.cz/shared-cases/schemas/totp/uri.schema.json",
+  "title": "TOTP URI cases: a test secret, the issuer and the account name give an otpauth URI",
+  "description": "Only the backend computes the URI; the browser receives it from the API. qr/totp.json holds the QR symbol of each URI under the same case name.",
+  "type": "object",
+  "required": ["source", "logic", "cases"],
+  "additionalProperties": false,
+  "properties": {
+    "source": { "$ref": "../defs/source.schema.json" },
+    "logic": { "type": "string", "minLength": 1 },
+    "cases": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/case" } }
+  },
+  "$defs": {
+    "case": {
+      "type": "object",
+      "required": ["name", "input", "expected"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "input": {
+          "type": "object",
+          "required": ["secret", "issuer", "accountName"],
+          "additionalProperties": false,
+          "properties": {
+            "secret": { "type": "string", "pattern": "^[A-Z2-7]{32}$" },
+            "issuer": { "type": "string", "minLength": 1 },
+            "accountName": { "type": "string", "minLength": 1 }
+          }
+        },
+        "expected": {
+          "type": "object",
+          "required": ["uri"],
+          "additionalProperties": false,
+          "properties": {
+            "uri": { "$ref": "../defs/otpauth-uri.schema.json" }
+          }
+        }
+      }
+    }
+  }
+}

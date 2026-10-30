@@ -1,6 +1,6 @@
 package cz.novanadeje.app.sharedcases;
 
-import cz.novanadeje.app.regression.GoldenFiles;
+import cz.novanadeje.app.cucumber.transcript.ApiTranscripts;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -18,9 +18,8 @@ public final class SharedCases {
     public static final String FOLDER = "shared-cases";
     public static final String SCHEMAS = "schemas";
     public static final String DEFINITIONS = "defs";
-    public static final String BASELINE = "v2-baseline";
     public static final String EDITED = "edited";
-    public static final Set<String> SOURCES = Set.of(BASELINE, EDITED);
+    public static final Set<String> SOURCES = Set.of(ApiTranscripts.SOURCE, EDITED);
     static final String CASE_SUFFIX = ".json";
     static final String SCHEMA_SUFFIX = ".schema.json";
     private static final JsonMapper JSON = JsonMapper.builder().build();
@@ -28,8 +27,19 @@ public final class SharedCases {
     private SharedCases() {
     }
 
+    public static Path repositoryRoot() {
+        Path directory = Path.of("").toAbsolutePath();
+        while (directory != null && !(Files.isDirectory(directory.resolve("backend")) && Files.isDirectory(directory.resolve("frontend")))) {
+            directory = directory.getParent();
+        }
+        if (directory == null) {
+            throw new IllegalStateException("The repository root is not above " + Path.of("").toAbsolutePath());
+        }
+        return directory;
+    }
+
     public static Path root() {
-        return GoldenFiles.repositoryRoot().resolve(FOLDER);
+        return repositoryRoot().resolve(FOLDER);
     }
 
     public static List<String> caseFiles() {

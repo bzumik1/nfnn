@@ -7,8 +7,8 @@ import java.util.random.RandomGenerator;
 
 public record SetupCode(String value) {
 
-    static final String ALPHABET = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
-    private static final int LENGTH = 12;
+    public static final String ALPHABET = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
+    public static final int LENGTH = 12;
     private static final int GROUP = 4;
 
     public SetupCode {

@@ -68,14 +68,10 @@ public class CommonStepDefinitions {
         mailSender.startScenario();
         fioClient.reset();
         companyRegistry.reset();
-        if (ApiTranscripts.recording()) {
-            clock.set(ApiTranscripts.RECORDING_CLOCK);
-            RateLimiterWindows.reset(context);
-            CompanyLookupPause.reset(context.getBean(CompanyLookupService.class));
-            BackupKeyWordDraws.reseed(context.getBean(BackupKeyWordChallenges.class));
-        } else {
-            clock.advance(Duration.ofDays(1));
-        }
+        clock.set(ApiTranscripts.RECORDING_CLOCK);
+        RateLimiterWindows.reset(context);
+        CompanyLookupPause.reset(context.getBean(CompanyLookupService.class));
+        BackupKeyWordDraws.reseed(context.getBean(BackupKeyWordChallenges.class));
     }
 
     private boolean asyncWorkIsDone() {

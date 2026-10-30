@@ -1,7 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://nfnn.cz/shared-cases/schemas/qr/totp.schema.json",
-  "title": "TOTP QR cases: a test secret, the issuer and the account name give an otpauth URI and its QR symbol",
+  "title": "TOTP QR cases: an otpauth URI gives its QR symbol",
+  "description": "The URIs are those of totp/uri.json, under the same case names. The backend encodes them through ZXing until slice 1.10; the browser's encoder runs every case from 1.3.",
   "type": "object",
   "required": ["source", "logic", "cases"],
   "additionalProperties": false,
@@ -19,19 +20,16 @@
         "name": { "type": "string", "minLength": 1 },
         "input": {
           "type": "object",
-          "required": ["secret", "issuer", "accountName"],
+          "required": ["uri"],
           "additionalProperties": false,
           "properties": {
-            "secret": { "type": "string", "pattern": "^[A-Z2-7]{32}$" },
-            "issuer": { "type": "string", "minLength": 1 },
-            "accountName": { "type": "string", "minLength": 1 }
+            "uri": { "$ref": "../defs/otpauth-uri.schema.json" }
           }
         },
         "expected": {
+          "type": "object",
           "$ref": "../defs/qr-symbol.schema.json",
-          "required": ["uri"],
           "properties": {
-            "uri": { "type": "string", "pattern": "^otpauth://totp/[^?]+\\?[a-z]+=[^&]*(&[a-z]+=[^&]*)*$" },
             "errorCorrection": { "const": "M" },
             "mode": { "const": "BYTE" },
             "eci": { "const": 1 }

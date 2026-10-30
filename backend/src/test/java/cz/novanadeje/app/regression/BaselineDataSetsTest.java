@@ -92,7 +92,7 @@ class BaselineDataSetsTest {
     @Test
     @DisplayName("Given the screens spec and the manifest, when their states are compared, then the manifest has a shot of every state of the spec and no other")
     void should_list_exactly_the_states_of_the_spec_when_the_screens_manifest_is_compared_with_the_spec() throws IOException {
-        String spec = Files.readString(GoldenFiles.repositoryRoot().resolve(SCREENS_SPEC), StandardCharsets.UTF_8);
+        String spec = Files.readString(SharedCases.repositoryRoot().resolve(SCREENS_SPEC), StandardCharsets.UTF_8);
         String screens = spec.substring(spec.indexOf("const SCREENS: Screen[] = ["), spec.indexOf("\n];", spec.indexOf("const SCREENS: Screen[] = [")));
         Set<String> specStates = new TreeSet<>();
         Matcher name = SCREEN_NAME.matcher(screens);
@@ -123,7 +123,7 @@ class BaselineDataSetsTest {
         assertThat(shots.subList(shots.size() - added.size(), shots.size())).as("shots added after the baseline come last").isEqualTo(added);
         for (JsonNode shot : added) {
             String slice = shot.get("addedIn").asString();
-            assertThat(GoldenFiles.repositoryRoot().resolve(ADDITIONS_FOLDER).resolve(slice + ".patch")).as("the spec patch of %s", shot.get("file").asString()).isRegularFile();
+            assertThat(SharedCases.repositoryRoot().resolve(ADDITIONS_FOLDER).resolve(slice + ".patch")).as("the spec patch of %s", shot.get("file").asString()).isRegularFile();
         }
     }
 
@@ -149,7 +149,7 @@ class BaselineDataSetsTest {
     @Test
     @DisplayName("Given the screens manifest, when it is read, then every route and state has a shot at 390 and at 1280 px with the digest of its pixels")
     void should_list_every_state_at_both_widths_when_the_screens_manifest_is_read() throws IOException {
-        JsonNode manifest = JSON.readTree(Files.readString(GoldenFiles.repositoryRoot().resolve(SCREENS_MANIFEST), StandardCharsets.UTF_8));
+        JsonNode manifest = JSON.readTree(Files.readString(SharedCases.repositoryRoot().resolve(SCREENS_MANIFEST), StandardCharsets.UTF_8));
 
         assertThat(manifest.get("source").asString()).isEqualTo(ApiTranscripts.SOURCE);
         List<JsonNode> shots = screenShots();
@@ -169,11 +169,11 @@ class BaselineDataSetsTest {
     }
 
     private static List<JsonNode> screenShots() throws IOException {
-        return JSON.readTree(Files.readString(GoldenFiles.repositoryRoot().resolve(SCREENS_MANIFEST), StandardCharsets.UTF_8)).get("shots").valueStream().toList();
+        return JSON.readTree(Files.readString(SharedCases.repositoryRoot().resolve(SCREENS_MANIFEST), StandardCharsets.UTF_8)).get("shots").valueStream().toList();
     }
 
     private static List<Path> jsonFiles(String folder) {
-        Path root = GoldenFiles.repositoryRoot().resolve(folder);
+        Path root = SharedCases.repositoryRoot().resolve(folder);
         if (!Files.isDirectory(root)) {
             return List.of();
         }
