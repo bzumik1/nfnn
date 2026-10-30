@@ -42,7 +42,7 @@ public record SignaturePath(SignaturePathData data, String fill, BigDecimal opac
         return opacity;
     }
 
-    String canonicalSvg() {
-        return "<path d=\"" + data.value() + "\" fill=\"" + fill + "\" fill-opacity=\"" + SignatureNumbers.format(opacity) + "\"/>";
+    String canonicalJson() {
+        return "{\"d\":\"" + data.value() + "\",\"fill\":\"" + fill + "\",\"opacity\":" + SignatureNumbers.format(opacity) + "}";
     }
 }

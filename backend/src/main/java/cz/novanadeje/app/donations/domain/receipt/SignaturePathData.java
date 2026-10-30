@@ -1,5 +1,7 @@
 package cz.novanadeje.app.donations.domain.receipt;
 
+import java.math.BigDecimal;
+
 public final class SignaturePathData {
 
     private static final String COMMANDS = "MmLlHhVvCcSsQqTtAaZz";
@@ -17,53 +19,44 @@ public final class SignaturePathData {
             throw new UnsupportedSignatureVector(SignatureVectorProblem.PATH_DATA);
         }
         SignatureScanner scanner = new SignatureScanner(raw, SignatureVectorProblem.PATH_DATA);
-        StringBuilder canonical = new StringBuilder();
-        int segments = 0;
         scanner.skipWhitespace();
         if (scanner.atEnd() || Character.toUpperCase(scanner.peek()) != 'M') {
             throw scanner.refused();
         }
+        Pen pen = new Pen();
         while (!scanner.atEnd()) {
             char command = scanner.next();
             if (COMMANDS.indexOf(command) < 0) {
                 throw scanner.refused();
             }
-            if (!canonical.isEmpty()) {
-                canonical.append(' ');
-            }
-            canonical.append(command);
+            pen.command(command);
             int arity = arity(command);
             if (arity == 0) {
-                segments = counted(segments + 1);
+                pen.close();
                 scanner.skipWhitespace();
                 continue;
             }
             boolean firstNumber = true;
             do {
+                BigDecimal[] values = new BigDecimal[arity];
                 for (int index = 0; index < arity; index++) {
-                    if (!firstNumber) {
-                        canonical.append(' ');
-                        if (scanner.skipSeparator() && !scanner.startsNumber()) {
-                            throw scanner.refused();
-                        }
-                    } else {
+                    if (!firstNumber && scanner.skipSeparator() && !scanner.startsNumber()) {
+                        throw scanner.refused();
+                    }
+                    if (firstNumber) {
                         scanner.skipWhitespace();
                     }
                     firstNumber = false;
-                    if (isArcFlag(command, index)) {
-                        canonical.append(scanner.flag());
-                    } else {
-                        canonical.append(SignatureNumbers.format(scanner.number()));
-                    }
+                    values[index] = isArcFlag(command, index) ? BigDecimal.valueOf(scanner.flag()) : scanner.preciseNumber();
                 }
-                segments = counted(segments + 1);
+                pen.segment(command, values);
                 boolean comma = scanner.skipSeparator();
                 if (comma && !scanner.startsNumber()) {
                     throw scanner.refused();
                 }
             } while (scanner.startsNumber());
         }
-        return new SignaturePathData(canonical.toString(), segments);
+        return new SignaturePathData(pen.canonical.toString(), pen.segments);
     }
 
     public String value() {
@@ -87,6 +80,64 @@ public final class SignaturePathData {
     @Override
     public String toString() {
         return "SignaturePathData[" + segments + " segments]";
+    }
+
+    private static final class Pen {
+
+        private final StringBuilder canonical = new StringBuilder();
+        private int segments;
+        private BigDecimal x = BigDecimal.ZERO;
+        private BigDecimal y = BigDecimal.ZERO;
+        private BigDecimal startX = BigDecimal.ZERO;
+        private BigDecimal startY = BigDecimal.ZERO;
+        private int segmentsInCommand;
+
+        void command(char command) {
+            if (!canonical.isEmpty()) {
+                canonical.append(' ');
+            }
+            canonical.append(Character.toUpperCase(command));
+            segmentsInCommand = 0;
+        }
+
+        void close() {
+            segments = counted(segments + 1);
+            x = startX;
+            y = startY;
+        }
+
+        void segment(char command, BigDecimal[] values) {
+            boolean relative = Character.isLowerCase(command);
+            char absolute = Character.toUpperCase(command);
+            switch (absolute) {
+                case 'H' -> x = values[0] = relative ? x.add(values[0]) : values[0];
+                case 'V' -> y = values[0] = relative ? y.add(values[0]) : values[0];
+                default -> {
+                    int firstCoordinate = absolute == 'A' ? 5 : 0;
+                    for (int index = firstCoordinate; index < values.length; index += 2) {
+                        if (relative) {
+                            values[index] = x.add(values[index]);
+                            values[index + 1] = y.add(values[index + 1]);
+                        }
+                    }
+                    x = values[values.length - 2];
+                    y = values[values.length - 1];
+                }
+            }
+            if (absolute == 'M' && segmentsInCommand == 0) {
+                startX = x;
+                startY = y;
+            }
+            for (int index = 0; index < values.length; index++) {
+                if (index > 0 || segmentsInCommand > 0) {
+                    canonical.append(' ');
+                }
+                canonical.append(isArcFlag(command, index) ? values[index].toPlainString()
+                        : SignatureNumbers.format(SignatureNumbers.canonical(values[index], SignatureVectorProblem.PATH_DATA)));
+            }
+            segments = counted(segments + 1);
+            segmentsInCommand++;
+        }
     }
 
     private static int counted(int segments) {

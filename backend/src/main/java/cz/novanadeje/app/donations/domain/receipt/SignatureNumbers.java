@@ -6,6 +6,7 @@ import java.math.RoundingMode;
 final class SignatureNumbers {
 
     static final int SCALE = 3;
+    static final int PRECISE_SCALE = 12;
     static final BigDecimal LIMIT = BigDecimal.valueOf(1_000_000);
 
     private SignatureNumbers() {
@@ -20,6 +21,13 @@ final class SignatureNumbers {
             return BigDecimal.ZERO;
         }
         return rounded.scale() < 0 ? rounded.setScale(0) : rounded;
+    }
+
+    static BigDecimal precise(BigDecimal value, SignatureVectorProblem problem) {
+        if (value == null || value.abs().compareTo(LIMIT) > 0) {
+            throw new UnsupportedSignatureVector(problem);
+        }
+        return value.setScale(PRECISE_SCALE, RoundingMode.HALF_EVEN);
     }
 
     static String format(BigDecimal value) {

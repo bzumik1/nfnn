@@ -12,6 +12,7 @@ import cz.novanadeje.app.donations.domain.receipt.SignatureImage;
 import cz.novanadeje.app.donations.domain.receipt.SignaturePath;
 import cz.novanadeje.app.donations.domain.receipt.SignaturePathData;
 import cz.novanadeje.app.donations.domain.receipt.SignatureVector;
+import cz.novanadeje.app.donations.domain.receipt.ReceiptSignatureRepository;
 import cz.novanadeje.app.donations.domain.receipt.SignatureViewBox;
 import cz.novanadeje.app.shared.domain.LocaleCode;
 import org.apache.pdfbox.Loader;
@@ -54,6 +55,10 @@ import static cz.novanadeje.app.donations.domain.receipt.Receipts.janaSpeakingEn
 import static cz.novanadeje.app.donations.domain.receipt.Receipts.receivedFromAcme;
 import static cz.novanadeje.app.donations.domain.receipt.Receipts.receivedFromJana;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 class ThymeleafPdfReceiptRendererTest {
 
@@ -211,6 +216,19 @@ class ThymeleafPdfReceiptRendererTest {
         assertThat(text(pdf)).contains("Pavel Znamenáček");
         assertThat(imagesOnFirstPage(pdf)).as("logo only").isEqualTo(1);
         assertThat(resources.image(vector.digest())).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Given a current signature that cannot be read as a scan, when a receipt is frozen, then only the current scan is asked for and the receipt carries no signature")
+    void should_ask_only_for_current_scan_when_frozen_given_signature_that_is_no_scan() {
+        ReceiptSignatureRepository signatures = mock(ReceiptSignatureRepository.class);
+        when(signatures.current()).thenThrow(new IllegalStateException("The stored signature vector cannot be read"));
+        when(signatures.currentScan()).thenReturn(Optional.empty());
+        ThymeleafPdfReceiptRenderer renderer = new ThymeleafPdfReceiptRenderer(resources, ReceiptTemplate.fromClasspath(), signatures,
+                Clock.fixed(NOW, ZoneOffset.UTC));
+
+        assertThat(renderer.freeze(Receipts.singleDocument(jana(), MARCH)).signature()).isEmpty();
+        verify(signatures, never()).current();
     }
 
     @Test

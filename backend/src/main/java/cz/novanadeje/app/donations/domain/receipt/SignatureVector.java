@@ -24,14 +24,16 @@ public record SignatureVector(SignatureViewBox viewBox, List<SignaturePath> path
         }
     }
 
-    public String canonicalSvg() {
-        StringBuilder svg = new StringBuilder("<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"").append(viewBox.canonical()).append("\">");
-        paths.forEach(path -> svg.append(path.canonicalSvg()));
-        return svg.append("</svg>").toString();
+    public String canonicalJson() {
+        StringBuilder json = new StringBuilder("{\"viewBox\":[").append(viewBox.canonical().replace(' ', ',')).append("],\"paths\":[");
+        for (int index = 0; index < paths.size(); index++) {
+            json.append(index == 0 ? "" : ",").append(paths.get(index).canonicalJson());
+        }
+        return json.append("]}").toString();
     }
 
     public byte[] canonicalBytes() {
-        return canonicalSvg().getBytes(StandardCharsets.UTF_8);
+        return canonicalJson().getBytes(StandardCharsets.UTF_8);
     }
 
     public int segments() {

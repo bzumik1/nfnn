@@ -56,6 +56,14 @@ final class SignatureScanner {
     }
 
     BigDecimal number() {
+        return SignatureNumbers.canonical(literal(), problem);
+    }
+
+    BigDecimal preciseNumber() {
+        return SignatureNumbers.precise(literal(), problem);
+    }
+
+    private BigDecimal literal() {
         int start = at;
         if (!atEnd() && (peek() == '+' || peek() == '-')) {
             at++;
@@ -97,7 +105,7 @@ final class SignatureScanner {
         if (plain.startsWith(".") || plain.startsWith("-.")) {
             plain = plain.replace(".", "0.");
         }
-        return SignatureNumbers.canonical(new BigDecimal(plain + exponent), problem);
+        return new BigDecimal(plain + exponent);
     }
 
     int flag() {

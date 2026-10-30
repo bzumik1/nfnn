@@ -3,6 +3,7 @@ package cz.novanadeje.app.donations.infrastructure.pdf;
 import cz.novanadeje.app.donations.domain.receipt.CurrentSignature;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptSignatureRepository;
 import cz.novanadeje.app.donations.domain.receipt.SignatureArtwork;
+import cz.novanadeje.app.donations.domain.receipt.SignatureImage;
 
 import java.time.Instant;
 import java.util.Optional;
@@ -23,6 +24,11 @@ class InMemoryReceiptSignatures implements ReceiptSignatureRepository {
     @Override
     public Optional<CurrentSignature> current() {
         return Optional.ofNullable(current.get());
+    }
+
+    @Override
+    public Optional<SignatureImage> currentScan() {
+        return current().map(CurrentSignature::artwork).filter(SignatureImage.class::isInstance).map(SignatureImage.class::cast);
     }
 
     @Override

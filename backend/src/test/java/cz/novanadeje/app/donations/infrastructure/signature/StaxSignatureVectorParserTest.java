@@ -61,15 +61,15 @@ class StaxSignatureVectorParserTest {
     }
 
     @Test
-    @DisplayName("Given a parsed vector, when its canonical form is parsed again, then the same vector comes back byte for byte")
-    void should_read_same_vector_when_canonical_form_parsed_given_parsed_vector() {
+    @DisplayName("Given one SVG, when it is parsed twice, then both give the same canonical JSON byte for byte and one digest")
+    void should_give_same_canonical_json_when_parsed_twice_given_one_svg() {
         SignatureVector vector = parser.parse(bytes(SYNTHETIC_SIGNATURE));
 
-        SignatureVector again = parser.parse(bytes(vector.canonicalSvg()));
+        SignatureVector again = parser.parse(bytes(SYNTHETIC_SIGNATURE));
 
         assertThat(again).isEqualTo(vector);
-        assertThat(again.canonicalSvg()).isEqualTo(vector.canonicalSvg());
-        assertThat(parser.parse(bytes(SYNTHETIC_SIGNATURE)).digest()).isEqualTo(vector.digest());
+        assertThat(again.canonicalBytes()).isEqualTo(vector.canonicalBytes());
+        assertThat(again.digest()).isEqualTo(vector.digest());
     }
 
     @Test

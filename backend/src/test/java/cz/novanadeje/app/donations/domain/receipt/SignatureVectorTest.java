@@ -22,14 +22,25 @@ class SignatureVectorTest {
             new SignaturePath(SignaturePathData.parse("m250 50 l40 40 z"), "#c0392b", BigDecimal.ONE)));
 
     @Test
-    @DisplayName("Given a vector signature, when its canonical form is written, then it is one SVG document with only the view box and the paths")
-    void should_write_only_view_box_and_paths_when_written_given_vector() {
-        assertThat(SIGNATURE.canonicalSvg()).isEqualTo("<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 300 100\">"
-                + "<path d=\"M10 80 C40 10 65 10 95 80 S150 150 180 80 Z\" fill=\"#1d2a5c\" fill-opacity=\"0.9\"/>"
-                + "<path d=\"m250 50 l40 40 z\" fill=\"#c0392b\" fill-opacity=\"1\"/>"
-                + "</svg>");
-        assertThat(SIGNATURE.digest()).isEqualTo(ContentDigest.of(SIGNATURE.canonicalSvg().getBytes(StandardCharsets.UTF_8)));
+    @DisplayName("Given a vector signature, when its canonical form is written, then it is one JSON object with only the view box and the paths, in a fixed order and without whitespace")
+    void should_write_only_view_box_and_paths_as_json_when_written_given_vector() {
+        assertThat(SIGNATURE.canonicalJson()).isEqualTo("{\"viewBox\":[0,0,300,100],\"paths\":["
+                + "{\"d\":\"M10 80 C40 10 65 10 95 80 S150 150 180 80 Z\",\"fill\":\"#1d2a5c\",\"opacity\":0.9},"
+                + "{\"d\":\"M250 50 L290 90 Z\",\"fill\":\"#c0392b\",\"opacity\":1}"
+                + "]}");
+        assertThat(SIGNATURE.canonicalBytes()).isEqualTo(SIGNATURE.canonicalJson().getBytes(StandardCharsets.UTF_8));
+        assertThat(SIGNATURE.digest()).isEqualTo(ContentDigest.of(SIGNATURE.canonicalJson().getBytes(StandardCharsets.UTF_8)));
         assertThat(SIGNATURE.segments()).isEqualTo(7);
+    }
+
+    @Test
+    @DisplayName("Given a view box and an opacity with negative and fractional numbers, when the canonical JSON is written, then every number is a plain JSON number")
+    void should_write_plain_json_numbers_when_written_given_negative_and_fractional_values() {
+        SignatureVector vector = new SignatureVector(SignatureViewBox.parse("-1.5 -0.25 1e3 0.5"),
+                List.of(new SignaturePath(SignaturePathData.parse("M-1 -0.25 L0.5 0.125"), "#000000", new BigDecimal("0.05"))));
+
+        assertThat(vector.canonicalJson()).isEqualTo("{\"viewBox\":[-1.5,-0.25,1000,0.5],\"paths\":["
+                + "{\"d\":\"M-1 -0.25 L0.5 0.125\",\"fill\":\"#000000\",\"opacity\":0.05}]}");
     }
 
     @Test
@@ -38,11 +49,11 @@ class SignatureVectorTest {
         SignatureVector respelled = new SignatureVector(SignatureViewBox.parse("0,0,300.000,1e2"), List.of(
                 new SignaturePath(SignaturePathData.parse("M 10,80 C 40,10 65,10 95,80 S 150,150 180,80 Z"), SignaturePath.parseFill("#1D2A5C"),
                         new BigDecimal("0.90")),
-                new SignaturePath(SignaturePathData.parse("m250,50l40,40z"), SignaturePath.parseFill("#C0392B"), new BigDecimal("1.000"))));
+                new SignaturePath(SignaturePathData.parse("M250,50L290,90z"), SignaturePath.parseFill("#C0392B"), new BigDecimal("1.000"))));
 
         assertThat(respelled).isEqualTo(SIGNATURE).hasSameHashCodeAs(SIGNATURE);
         assertThat(respelled.digest()).isEqualTo(SIGNATURE.digest());
-        assertThat(respelled.canonicalSvg()).isEqualTo(SIGNATURE.canonicalSvg());
+        assertThat(respelled.canonicalJson()).isEqualTo(SIGNATURE.canonicalJson());
     }
 
     @ParameterizedTest(name = "{0} -> {1}x{2}")

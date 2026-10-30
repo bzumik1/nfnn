@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nfnn.cz/shared-cases/schemas/signature/vector.schema.json",
+  "title": "Vector signature cases: an uploaded SVG of filled paths gives its canonical JSON and the SHA-256 of those bytes",
+  "description": "The backend reads the SVG and writes the canonical JSON it stores and serves; the browser never reads SVG and from 1.9 checks the SHA-256 of the canonical JSON before it draws it.",
+  "type": "object",
+  "required": [
+    "source",
+    "logic",
+    "cases"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "source": {
+      "$ref": "../defs/source.schema.json"
+    },
+    "logic": {
+      "type": "string",
+      "minLength": 1
+    },
+    "cases": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/case"
+      }
+    }
+  },
+  "$defs": {
+    "case": {
+      "type": "object",
+      "required": [
+        "name",
+        "input",
+        "expected"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "input": {
+          "type": "object",
+          "required": [
+            "svg"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "svg": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "expected": {
+          "type": "object",
+          "required": [
+            "canonical",
+            "sha256"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "canonical": {
+              "type": "string",
+              "pattern": "^\\{\"viewBox\":\\[[^\\]]*\\],\"paths\":\\[.*\\]\\}$"
+            },
+            "sha256": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            }
+          }
+        }
+      }
+    }
+  }
+}

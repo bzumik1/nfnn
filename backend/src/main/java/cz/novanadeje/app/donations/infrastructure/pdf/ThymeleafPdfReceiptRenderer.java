@@ -6,12 +6,10 @@ import com.openhtmltopdf.pdfboxout.PdfBoxRenderer;
 import com.openhtmltopdf.pdfboxout.PdfRendererBuilder;
 import cz.novanadeje.app.donations.application.receipt.DonationReceiptRenderer;
 import cz.novanadeje.app.donations.domain.receipt.ContentDigest;
-import cz.novanadeje.app.donations.domain.receipt.CurrentSignature;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptDocument;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptNumber;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptSignatureRepository;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptSnapshot;
-import cz.novanadeje.app.donations.domain.receipt.SignatureImage;
 import cz.novanadeje.app.shared.domain.LocaleCode;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.springframework.core.io.ClassPathResource;
@@ -78,10 +76,7 @@ class ThymeleafPdfReceiptRenderer implements DonationReceiptRenderer {
         Instant now = clock.instant();
         resources.storeTemplate(templateDigest, templateContent, now);
         resources.storeImage(logo.digest(), logo, now);
-        Optional<ReceiptImage> signature = signatures.current()
-                .map(CurrentSignature::artwork)
-                .filter(SignatureImage.class::isInstance)
-                .map(scan -> new ReceiptImage(((SignatureImage) scan).png(), "image/png"));
+        Optional<ReceiptImage> signature = signatures.currentScan().map(scan -> new ReceiptImage(scan.png(), "image/png"));
         signature.ifPresent(image -> resources.storeImage(image.digest(), image, now));
         String data = JSON.writeValueAsString(ReceiptData.of(document, template.texts(LocaleCode.CS)));
         return new ReceiptSnapshot(templateDigest, data, logo.digest(), signature.map(ReceiptImage::digest), RENDER_PROFILE);

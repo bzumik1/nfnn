@@ -1,0 +1,46 @@
+{
+  "source": "edited",
+  "logic": "An uploaded SVG signature of filled paths and its canonical JSON, the exact bytes stored as the signature's content (media type application/json), with their SHA-256, the digest a receipt names: StaxSignatureVectorParser reads the SVG and SignatureVector.canonicalJson writes the view box and the paths in a fixed key order, without whitespace, with absolute coordinates and every number rounded once to three decimals. The backend runs every case now (donations/infrastructure/signature/SignatureVectorSharedCasesTest). The browser never reads SVG; from 1.9 it runs the canonical-to-SHA-256 half and draws the canonical JSON, because it checks the served bytes against the receipt's digest before drawing them",
+  "cases": [
+    {
+      "name": "filled paths in a group with inherited fill and opacity",
+      "input": {
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 240 80\"><g fill=\"#1D2A5C\" fill-opacity=\"0.8\"><path d=\"M12 60 C 30 8, 70 8, 90 60 S 150 110, 170 60 Z\"/></g><path fill=\"#c0392b\" d=\"M200 30 L230 70 Z\"/></svg>"
+      },
+      "expected": {
+        "canonical": "{\"viewBox\":[0,0,240,80],\"paths\":[{\"d\":\"M12 60 C30 8 70 8 90 60 S150 110 170 60 Z\",\"fill\":\"#1d2a5c\",\"opacity\":0.8},{\"d\":\"M200 30 L230 70 Z\",\"fill\":\"#c0392b\",\"opacity\":1}]}",
+        "sha256": "cfc2c2790a9aeb5dfbcd31b9956d0d15fdde39b361af54ed95ef91e6a961c764"
+      }
+    },
+    {
+      "name": "relative commands, implicit line-tos and an arc, made absolute",
+      "input": {
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0,0,120,60\"><path fill=\"#abc\" fill-opacity=\".5\" opacity=\"0.5\" d=\"m10,10 20,0 0,20 h-10 v-5 a5 5 0 0110 0 z\"/></svg>"
+      },
+      "expected": {
+        "canonical": "{\"viewBox\":[0,0,120,60],\"paths\":[{\"d\":\"M10 10 30 10 30 30 H20 V25 A5 5 0 0 1 30 25 Z\",\"fill\":\"#aabbcc\",\"opacity\":0.25}]}",
+        "sha256": "913e22980a3323afaa87e47492c0ad5d68097ad03b149d24f7652573404355c8"
+      }
+    },
+    {
+      "name": "small relative steps rounded once from their absolute position",
+      "input": {
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 1 1\"><path d=\"M0.0004 0.0004 l0.0004 0.0004 0.0004 0.0004 0.0004 0.0004\"/></svg>"
+      },
+      "expected": {
+        "canonical": "{\"viewBox\":[0,0,1,1],\"paths\":[{\"d\":\"M0 0 L0.001 0.001 0.001 0.001 0.002 0.002\",\"fill\":\"#000000\",\"opacity\":1}]}",
+        "sha256": "2d3cf6a7aca0db7db05e89c89df1352f3bc64a38c4860b79be97e2fc1feef258"
+      }
+    },
+    {
+      "name": "a byte order mark, an XML declaration, a title and metadata left out",
+      "input": {
+        "svg": "﻿<?xml version=\"1.0\" encoding=\"UTF-8\"?><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"300\" height=\"100\" viewBox=\"-5 -5 10 5e0\"><title>Podpis</title><metadata><note xmlns=\"urn:example:note\">drawn for the tests</note></metadata><path d=\"M-4-4L4,-1\" fill=\"#000\"/></svg>"
+      },
+      "expected": {
+        "canonical": "{\"viewBox\":[-5,-5,10,5],\"paths\":[{\"d\":\"M-4 -4 L4 -1\",\"fill\":\"#000000\",\"opacity\":1}]}",
+        "sha256": "5bca513bbe7362df53869135d5e79639a8016f2f2c00e3d3b5b0cef5f9497c69"
+      }
+    }
+  ]
+}

@@ -30,7 +30,7 @@ import java.util.Optional;
 import java.util.Set;
 
 @Component
-public class StaxSignatureVectorParser implements SignatureVectorParser {
+class StaxSignatureVectorParser implements SignatureVectorParser {
 
     static final int MAX_DEPTH = 16;
 
