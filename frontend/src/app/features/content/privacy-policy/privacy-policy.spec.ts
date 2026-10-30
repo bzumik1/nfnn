@@ -116,6 +116,9 @@ describe('Given the privacy policy page', () => {
     const donations = purposeText('Evidence darů a potvrzení o daru');
 
     expect(donations).toContain('podle vašeho variabilního symbolu');
+    expect(donations).toContain(
+      'i když ho místo do pole pro symbol napíšete do zprávy pro příjemce',
+    );
     expect(donations).toContain('podle čísla účtu, ze kterého přišla');
     expect(donations).toContain(
       'Když nám ho prokážete poprvé a předtím ho neprokázal jiný dárce, přiřadíme vám i dřívější platby bez symbolu z tohoto účtu.',
