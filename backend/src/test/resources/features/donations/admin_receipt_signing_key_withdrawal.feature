@@ -54,10 +54,11 @@ Feature: An administrator withdraws a leaked receipt signing key from the web, w
     Then the response status is 200
     And the withdrawal answer says the backend restarts: true
 
-  Scenario: Every withdrawal needs a fresh second factor, even in a session opened with one, and a refused one changes nothing
+  Scenario: Every withdrawal needs a fresh second factor, even in a session opened with one, and a refused one is recorded and changes nothing
     When "Jana" withdraws the receipt signing key "21fe31df" without confirming it again
     Then the response status is 400
     And the problem type ends with "donors/fresh-second-factor-required"
+    And the admin action "WITHDRAW_RECEIPT_SIGNING_KEY_REFUSED" by "Jana" is recorded with details containing "Klíč k ověřovacím QR 21fe31df se nestáhl: druhý faktor nesouhlasil"
     When "Jana" withdraws the receipt signing key "21fe31df" with the code "000000"
     Then the response status is 400
     And the problem type ends with "donors/second-factor-code-rejected"
@@ -124,11 +125,23 @@ Feature: An administrator withdraws a leaked receipt signing key from the web, w
     Then the response status is 401
     And the problem type ends with "auth/unauthenticated"
 
-  Scenario: Guessing at the second factor is stopped after ten attempts from one address
-    Given "Jana" tried to withdraw the receipt signing key "21fe31df" with a wrong code 10 times
+  Scenario: Five refused second factors of an administrator pause their withdrawals for a quarter of an hour, even with a right code
+    Given "Jana" tried to withdraw the receipt signing key "21fe31df" with a wrong code 5 times
     When "Jana" withdraws the receipt signing key "21fe31df" with a fresh code
+    Then the response status is 409
+    And the problem type ends with "donations/receipt-signing-key-withdrawal-paused"
+    And the backend is not restarted for a new receipt signing seed
+    When 15 minutes pass
+    And "Jana" withdraws the receipt signing key "21fe31df" with a fresh code
+    Then the response status is 200
+
+  Scenario: Guessing at the second factor is stopped after ten attempts from one address
+    Given a person "Petr" is registered
+    And "Petr" is an administrator
+    And "Jana" tried to withdraw the receipt signing key "21fe31df" with a wrong code 10 times
+    When "Petr" withdraws the receipt signing key "21fe31df" with a fresh code
     Then the response status is 429
     And the problem type ends with "donations/rate-limited"
     When the following requests come from another client address
-    And "Jana" withdraws the receipt signing key "21fe31df" with a fresh code
+    And "Petr" withdraws the receipt signing key "21fe31df" with a fresh code
     Then the response status is 200

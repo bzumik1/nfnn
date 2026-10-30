@@ -97,7 +97,7 @@ public class ReceiptKeyWithdrawalStepDefinitions {
     public void triedToWithdrawWithAWrongCode(String alias, String keyId, int times) {
         for (int attempt = 0; attempt < times; attempt++) {
             withdrawsWithTheCode(alias, keyId, "000000");
-            assertThat(api.lastResponse().getStatusCode().value()).withFailMessage("Withdrawing answered %s", api.lastResponse().getBody()).isEqualTo(400);
+            assertThat(api.lastResponse().getStatusCode().value()).withFailMessage("Withdrawing answered %s", api.lastResponse().getBody()).isIn(400, 409);
         }
     }
 
