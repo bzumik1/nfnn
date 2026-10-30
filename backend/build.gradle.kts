@@ -25,6 +25,7 @@ extra["zxingVersion"] = "3.5.4"
 extra["fioApiVersion"] = "1.0.0"
 extra["webpImageioVersion"] = "0.3.3"
 extra["webauthn4jVersion"] = "0.31.11.RELEASE"
+extra["jsonSchemaValidatorVersion"] = "3.0.6"
 
 val mockitoAgent: Configuration = configurations.create("mockitoAgent")
 
@@ -68,6 +69,7 @@ dependencies {
 	testImplementation("org.testcontainers:testcontainers-postgresql")
 
 	testImplementation("com.google.zxing:javase:${property("zxingVersion")}")
+	testImplementation("com.networknt:json-schema-validator:${property("jsonSchemaValidatorVersion")}")
 	testImplementation("org.assertj:assertj-core")
 	testImplementation("org.awaitility:awaitility")
 	testImplementation("org.mockito:mockito-core")
@@ -101,7 +103,8 @@ tasks.withType<Test> {
 	jvmArgumentProviders.add(JavaAgent(mockitoAgent))
 	environment("TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE", "/var/run/docker.sock")
 	inputs.file("../frontend/src/themes/nova-nadeje/_theme.scss").withPropertyName("siteTheme").withPathSensitivity(PathSensitivity.NONE)
-	inputs.files(fileTree("../shared-cases"), fileTree("../regression")).withPropertyName("baselineArtefacts").withPathSensitivity(PathSensitivity.RELATIVE)
+	inputs.files(fileTree("../shared-cases")).withPropertyName("sharedCases").withPathSensitivity(PathSensitivity.RELATIVE)
+	inputs.files(fileTree("../regression")).withPropertyName("baselineArtefacts").withPathSensitivity(PathSensitivity.RELATIVE)
 }
 
 val acceptanceTest = tasks.register<Test>("acceptanceTest") {

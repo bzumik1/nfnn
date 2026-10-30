@@ -10,6 +10,7 @@ import cz.novanadeje.app.shared.domain.PostalAddress;
 import cz.novanadeje.app.shared.domain.VariableSymbol;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.node.ArrayNode;
 import tools.jackson.databind.node.JsonNodeFactory;
 import tools.jackson.databind.node.ObjectNode;
@@ -88,13 +89,6 @@ class ReceiptFormattingCasesTest {
     }
 
     private static ObjectNode partyCase(Party party) {
-        PostalAddress address = new PostalAddress(party.street(), party.city(), party.postalCode());
-        VariableSymbol symbol = new VariableSymbol("4821937560");
-        DonorRecord record = party.company()
-                ? DonorRecord.registerCompany(JANA, party.name(), party.identifier(), address, symbol, LocaleCode.CS, NOW)
-                : DonorRecord.registerPerson(JANA, party.name(), address, symbol, LocaleCode.CS, NOW);
-        Map<String, Object> data = ReceiptData.of(ReceiptDocumentFactory.forDonation(record, receivedFromJana(LocalDate.of(2026, 3, 15), 50000), FOUNDATION,
-                SIGNATORY, FIRST_NUMBER, TODAY, LocaleCode.CS, Optional.empty()), ReceiptTemplate.fromClasspath().texts(LocaleCode.CS));
         ObjectNode input = input("donor").put("company", party.company()).put("name", party.name());
         if (party.identifier() == null) {
             input.putNull("companyIdentifier");
@@ -103,7 +97,24 @@ class ReceiptFormattingCasesTest {
         }
         input.put("street", party.street()).put("city", party.city()).put("postalCode", party.postalCode());
         ObjectNode expected = NODES.objectNode();
-        ObjectNode donor = expected.putObject("donor");
+        expected.set("donor", donorFields(input));
+        ObjectNode entry = NODES.objectNode();
+        entry.put("name", party.label());
+        entry.set("input", input);
+        entry.set("expected", expected);
+        return entry;
+    }
+
+    static ObjectNode donorFields(JsonNode input) {
+        PostalAddress address = new PostalAddress(input.get("street").asString(), input.get("city").asString(), input.get("postalCode").asString());
+        VariableSymbol symbol = new VariableSymbol("4821937560");
+        String name = input.get("name").asString();
+        DonorRecord record = input.get("company").asBoolean()
+                ? DonorRecord.registerCompany(JANA, name, input.get("companyIdentifier").asString(), address, symbol, LocaleCode.CS, NOW)
+                : DonorRecord.registerPerson(JANA, name, address, symbol, LocaleCode.CS, NOW);
+        Map<String, Object> data = ReceiptData.of(ReceiptDocumentFactory.forDonation(record, receivedFromJana(LocalDate.of(2026, 3, 15), 50000), FOUNDATION,
+                SIGNATORY, FIRST_NUMBER, TODAY, LocaleCode.CS, Optional.empty()), ReceiptTemplate.fromClasspath().texts(LocaleCode.CS));
+        ObjectNode donor = NODES.objectNode();
         for (String field : List.of("company", "donorName", "donorIdentifier", "donorAddress")) {
             Object value = data.get(field);
             if (value == null) {
@@ -114,11 +125,7 @@ class ReceiptFormattingCasesTest {
                 donor.put(field, value.toString());
             }
         }
-        ObjectNode entry = NODES.objectNode();
-        entry.put("name", party.label());
-        entry.set("input", input);
-        entry.set("expected", expected);
-        return entry;
+        return donor;
     }
 
     private static String hellers(long amount) {

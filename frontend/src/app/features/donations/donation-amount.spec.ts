@@ -1,4 +1,5 @@
 import { formatCrowns, formatMinorUnits } from './donation-amount';
+import { sharedCases } from '../../../testing/shared-cases';
 
 describe('Given an amount in crowns', () => {
   it('when it is whole, then it is grouped by thousands without decimals', () => {
@@ -21,3 +22,30 @@ describe('Given an amount in hellers as the API sends it', () => {
     expect(formatMinorUnits(100050)).toBe('1 000,50');
   });
 });
+
+type ReceiptFormattingInput =
+  | { readonly format: 'czechAmount' | 'englishAmount'; readonly amountMinor: number }
+  | { readonly format: 'czechDate' | 'englishDate'; readonly date: string }
+  | { readonly format: 'donor' };
+
+const CZECH_RECEIPT_AMOUNTS = sharedCases<ReceiptFormattingInput, { readonly text: string }>(
+  'receipts/formatting.json',
+).flatMap((sharedCase) =>
+  sharedCase.input.format === 'czechAmount'
+    ? [{ ...sharedCase, amountMinor: sharedCase.input.amountMinor }]
+    : [],
+);
+
+describe('Given the shared receipt formatting cases of Czech amounts', () => {
+  it('when they are read, then there are some to run', () => {
+    expect(CZECH_RECEIPT_AMOUNTS.length).toBeGreaterThan(0);
+  });
+});
+
+for (const sharedCase of CZECH_RECEIPT_AMOUNTS) {
+  describe(`Given the shared case ${sharedCase.name}`, () => {
+    it('when the hellers are formatted as crowns followed by Kč, then the text reads as a receipt prints it', () => {
+      expect(`${formatMinorUnits(sharedCase.amountMinor)}\u00a0Kč`).toBe(sharedCase.expected.text);
+    });
+  });
+}

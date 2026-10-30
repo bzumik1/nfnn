@@ -5,6 +5,16 @@ const tseslint = require('typescript-eslint');
 const angular = require('angular-eslint');
 const prettier = require('eslint-config-prettier');
 
+const SHARED_CASE_VALIDATOR_ONLY = {
+  group: ['ajv', 'ajv/*'],
+  message: 'Read and validate shared cases through src/testing/shared-cases.ts.',
+};
+const VITEST_GLOBAL_SETUP_ONLY = {
+  group: ['node:*'],
+  message:
+    'Only the Vitest global setup src/testing/shared-cases-setup.ts reads files in Node; specs get the shared cases from it and the app never imports Node.',
+};
+
 module.exports = defineConfig([
   {
     files: ['**/*.ts'],
@@ -52,6 +62,28 @@ module.exports = defineConfig([
     files: ['**/*.spec.ts'],
     rules: {
       '@angular-eslint/prefer-on-push-component-change-detection': 'off',
+    },
+  },
+  {
+    files: ['src/**/*.ts'],
+    ignores: ['src/testing/shared-cases.ts', 'src/testing/shared-cases-setup.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        { patterns: [SHARED_CASE_VALIDATOR_ONLY, VITEST_GLOBAL_SETUP_ONLY] },
+      ],
+    },
+  },
+  {
+    files: ['src/testing/shared-cases.ts'],
+    rules: {
+      'no-restricted-imports': ['error', { patterns: [VITEST_GLOBAL_SETUP_ONLY] }],
+    },
+  },
+  {
+    files: ['src/testing/shared-cases-setup.ts'],
+    rules: {
+      'no-restricted-imports': ['error', { patterns: [SHARED_CASE_VALIDATOR_ONLY] }],
     },
   },
   {
