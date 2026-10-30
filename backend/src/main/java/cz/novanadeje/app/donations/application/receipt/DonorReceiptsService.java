@@ -27,14 +27,17 @@ public class DonorReceiptsService {
     }
 
     public List<DonationReceipt> receiptsOf(DonorReference donor) {
-        return List.of();
+        return receipts.findByDonorNewestFirst(donor);
     }
 
     public DonationReceipt receiptOf(DonorReference donor, DonationReceiptId id) {
-        throw new ReceiptNotFound(id);
+        return receipts.findById(id).filter(receipt -> receipt.donor().equals(donor)).orElseThrow(() -> new ReceiptNotFound(id));
     }
 
     public StoredReceiptImage signatureImageOf(DonorReference donor, ContentDigest digest) {
-        throw new ReceiptImageNotFound(digest);
+        if (!receipts.showsSignatureImage(donor, digest)) {
+            throw new ReceiptImageNotFound(digest);
+        }
+        return images.find(digest).orElseThrow(() -> new ReceiptImageNotFound(digest));
     }
 }

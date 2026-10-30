@@ -329,11 +329,11 @@ class JpaDonationReceiptRepositoryTest {
 
     @ParameterizedTest(name = "{0}")
     @CsvSource(delimiter = '|', textBlock = """
-            a status the receipt cannot have          | 'LOST'     | null  | 1 | 65 | ck_issued_receipt_status
-            a replaced receipt without its time       | 'REPLACED' | null  | 1 | 65 | ck_issued_receipt_superseded
-            an active receipt with a supersede time   | 'ACTIVE'   | now() | 1 | 65 | ck_issued_receipt_superseded
-            another schema version                    | 'ACTIVE'   | null  | 2 | 65 | ck_issued_receipt_schema_version
-            a proof no longer than its signature      | 'ACTIVE'   | null  | 1 | 64 | ck_issued_receipt_proof
+            a status the receipt cannot have          | LOST     | null  | 1 | 65 | ck_issued_receipt_status
+            a replaced receipt without its time       | REPLACED | null  | 1 | 65 | ck_issued_receipt_superseded
+            an active receipt with a supersede time   | ACTIVE   | now() | 1 | 65 | ck_issued_receipt_superseded
+            another schema version                    | ACTIVE   | null  | 2 | 65 | ck_issued_receipt_schema_version
+            a proof no longer than its signature      | ACTIVE   | null  | 1 | 64 | ck_issued_receipt_proof
             """)
     @DisplayName("Given the schema, when a receipt breaking a check is inserted, then the check refuses it")
     void should_refuse_when_inserted_given_receipt_breaking_a_check(String broken, String status, String supersededAt, String schemaVersion,
@@ -341,7 +341,8 @@ class JpaDonationReceiptRepositoryTest {
         DonorReference jana = storedDonor("4821937560");
         entityManager.flush();
 
-        assertThatThrownBy(() -> insert(jana, "'YEARLY'", "2025", status, supersededAt, schemaVersion, proofBytes)).as(broken).hasMessageContaining(check);
+        assertThatThrownBy(() -> insert(jana, "'YEARLY'", "2025", "'" + status + "'", supersededAt, schemaVersion, proofBytes))
+                .as(broken).hasMessageContaining(check);
     }
 
     @Test
@@ -475,6 +476,19 @@ class JpaDonationReceiptRepositoryTest {
         assertThat(receipts.findByDonorNewestFirst(jana)).filteredOn(receipt -> receipt.number().value().equals("2026-000001"))
                 .singleElement().satisfies(receipt -> assertThat(receipt.isActive()).isFalse());
         assertThat(receipts.findByDonorNewestFirst(petr)).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("Given a donor's receipts issued at the same instant, when the donor's receipts are listed, then the higher number comes first")
+    void should_list_higher_number_first_when_listed_given_receipts_issued_at_same_instant() {
+        DonorReference jana = storedDonor("4821937560");
+        receipts.save(issued(jana, NOW, yearlyDocument(Year.of(2023), "2026-000002", Optional.empty()), Optional.empty()));
+        receipts.save(issued(jana, NOW, yearlyDocument(Year.of(2022), "2026-000001", Optional.empty()), Optional.empty()));
+        receipts.save(issued(jana, NOW, yearlyDocument(Year.of(2024), "2026-000003", Optional.empty()), Optional.empty()));
+        flushAndClear();
+
+        assertThat(receipts.findByDonorNewestFirst(jana)).extracting(receipt -> receipt.number().value())
+                .containsExactly("2026-000003", "2026-000002", "2026-000001");
     }
 
     @Test

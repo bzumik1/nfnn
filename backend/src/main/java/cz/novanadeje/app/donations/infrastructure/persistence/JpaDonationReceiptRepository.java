@@ -81,7 +81,7 @@ class JpaDonationReceiptRepository implements DonationReceiptRepository {
 
     @Override
     public List<DonationReceipt> findByDonorNewestFirst(DonorReference donor) {
-        return jpa.findByDonorIdOrderByIssuedAtDescIdDesc(donor.value()).stream().map(IssuedReceiptJpaEntity::toDomain).toList();
+        return jpa.findByDonorIdOrderByIssuedAtDescNumberDesc(donor.value()).stream().map(IssuedReceiptJpaEntity::toDomain).toList();
     }
 
     @Override

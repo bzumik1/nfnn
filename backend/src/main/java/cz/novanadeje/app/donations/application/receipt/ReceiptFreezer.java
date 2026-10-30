@@ -25,6 +25,7 @@ public class ReceiptFreezer {
     }
 
     public FrozenReceipt freeze(ReceiptDocument document, Optional<ContentDigest> signatureImage) {
-        throw new UnsupportedOperationException("Freezing a receipt arrives with the implementation of slice 1.6");
+        return new FrozenReceipt(document, texts.textsFor(document.locale()), signatureImage,
+                new ReceiptVerification(signer.keyId(), proofs.prove(SignedReceipt.of(document))));
     }
 }

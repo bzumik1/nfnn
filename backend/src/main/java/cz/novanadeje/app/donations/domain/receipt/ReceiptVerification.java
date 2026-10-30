@@ -1,7 +1,10 @@
 package cz.novanadeje.app.donations.domain.receipt;
 
 import cz.novanadeje.app.donations.domain.receipt.proof.ReceiptProof;
+import cz.novanadeje.app.donations.domain.receipt.proof.ReceiptProofMessage;
 import cz.novanadeje.app.donations.domain.signing.ReceiptSigningKeyId;
+
+import java.util.Arrays;
 
 public record ReceiptVerification(ReceiptSigningKeyId keyId, ReceiptProof proof) {
 
@@ -16,6 +19,9 @@ public record ReceiptVerification(ReceiptSigningKeyId keyId, ReceiptProof proof)
     }
 
     public ContentDigest statusDigest(String foundationCompanyIdentifier) {
-        return ContentDigest.of(proof.bytes());
+        byte[] message = ReceiptProofMessage.of(foundationCompanyIdentifier, proof.body());
+        byte[] signedMessage = Arrays.copyOf(message, message.length + ReceiptProof.SIGNATURE_BYTES);
+        System.arraycopy(proof.signature(), 0, signedMessage, message.length, ReceiptProof.SIGNATURE_BYTES);
+        return ContentDigest.of(signedMessage);
     }
 }

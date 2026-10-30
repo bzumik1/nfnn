@@ -30,7 +30,7 @@ interface IssuedReceiptJpaRepository extends JpaRepository<IssuedReceiptJpaEntit
 
     List<SingleReceiptNumber> findByDonorIdAndKindAndStatus(UUID donorId, ReceiptKind kind, ReceiptStatus status);
 
-    List<IssuedReceiptJpaEntity> findByDonorIdOrderByIssuedAtDescIdDesc(UUID donorId);
+    List<IssuedReceiptJpaEntity> findByDonorIdOrderByIssuedAtDescNumberDesc(UUID donorId);
 
     boolean existsByDonorIdAndSignatureImageSha256(UUID donorId, String signatureImageSha256);
 

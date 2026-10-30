@@ -74,7 +74,16 @@ class ThymeleafPdfReceiptRenderer implements DonationReceiptRenderer {
 
     @Override
     public byte[] render(FrozenReceipt receipt, Instant issuedAt) {
-        throw new UnsupportedOperationException("Rendering a frozen receipt arrives with the implementation of slice 1.6");
+        ReceiptDocument document = receipt.document();
+        ReceiptTexts czech = new ReceiptTexts(receipt.texts().czech(), LocaleCode.CS.toLocale());
+        ReceiptTexts english = new ReceiptTexts(receipt.texts().english().orElse(template.english()), LocaleCode.EN.toLocale());
+        Map<String, Object> variables = new HashMap<>(JSON.readValue(JSON.writeValueAsString(ReceiptData.of(document, czech)), DATA));
+        variables.put("cs", czech);
+        variables.put("en", english);
+        variables.put("logo", logo.dataUri());
+        variables.put("signature", receipt.signatureImage().map(this::image).orElse(null));
+        String html = engine.process(template.html(), new Context(document.locale().toLocale(), variables));
+        return pdf(html, document.number(), issuedAt);
     }
 
     public ReceiptSnapshot freeze(ReceiptDocument document) {
