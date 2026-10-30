@@ -1,0 +1,168 @@
+[
+  {
+    "kind": "shared-case",
+    "caseFile": "shared-cases/payment/spayd.json",
+    "reason": "0.6d splits the payment cases where Phase 1 gives them to different slices (architect review M3): this file holds the inputs to the SPAYD text or the refusal of GET /api/donations/payment-qr, every value as v2 wrote it in qr/payment.json; the backend runs it through the endpoint and GeneratePaymentQrService until 1.4 retires that runner, and from 1.4 it is the browser's, through spayd() over what payment-details serves (lead 2026-10-30); the messages and recipient name the backend serves get a backend-only file in 1.2",
+    "contract": ".claude/rules/testing.md, Logic on both sides"
+  },
+  {
+    "kind": "shared-case",
+    "caseFile": "shared-cases/qr/payment.json",
+    "reason": "0.6d keeps only the SPAYD text to its QR symbol here (architect review M3): the input is the text payment/spayd.json gives under the same case name, the expected value the symbol as v2 wrote it; the refusals moved to payment/spayd.json, and the source becomes edited",
+    "contract": ".claude/rules/testing.md, Logic on both sides"
+  },
+  {
+    "kind": "shared-case",
+    "caseFile": "shared-cases/qr/totp.json",
+    "reason": "0.6d keeps only the otpauth URI to its authenticator QR symbol here (architect review round 1), run beside the encoder in shared/infrastructure/qr and by the browser from 1.3: the input is the URI totp/uri.json gives under the same case name, the expected value the symbol as v2 wrote it; the source becomes edited",
+    "contract": ".claude/rules/testing.md, Logic on both sides"
+  },
+  {
+    "kind": "shared-case",
+    "caseFile": "shared-cases/totp/uri.json",
+    "reason": "0.6d moves the secret, issuer and account to the otpauth URI out of qr/totp.json into a backend-only file beside TotpSecret (architect review round 1), every value as v2 wrote it: the browser receives the URI from the API and never computes it",
+    "contract": ".claude/rules/testing.md, Logic on both sides"
+  },
+  {
+    "kind": "shared-case",
+    "caseFile": "shared-cases/schemas/*",
+    "reason": "0.6d adds the schemas of payment/spayd.json and totp/uri.json and the SPAYD text and the otpauth URI as shared definitions (defs/spayd.schema.json, defs/otpauth-uri.schema.json); the payment and TOTP QR schemas take that text or URI as their input and the symbol alone as their expected value, and every object schema names type object, so ajv's strict mode warns of nothing",
+    "contract": ".claude/rules/testing.md, Logic on both sides"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "regression.OverviewGoldenCasesTest > Given the admin overview cases, when v2 answers GET /api/admin/donations/overview over their rows, then the answers equal the recorded shared cases",
+    "reason": "0.6d retires the v2 generators from main (architect review m2): every file they wrote is the hand-edited specification now, so on main they could only fail on an edited file or write v3 output labelled v2-baseline; they stay at BASELINE_COMMIT, where the baseline is re-recorded",
+    "replacement": "donations.interfaces.rest.AdminOverviewSharedCasesTest, one test per case of shared-cases/admin-overview/year-overview.json (\"Given <case>, when the backend selects its rows with the real queries and compiles the year overview, then the administration gets the expected overview\")",
+    "contract": ".claude/rules/testing.md, Logic on both sides (Generators and runners)"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "regression.OverviewGoldenCasesTest > Given the donor summary cases, when v2 answers GET /api/donations/me/summary over their rows, then the answers equal the recorded shared cases",
+    "reason": "0.6d retires the v2 generators from main (architect review m2): every file they wrote is the hand-edited specification now, so on main they could only fail on an edited file or write v3 output labelled v2-baseline; they stay at BASELINE_COMMIT, where the baseline is re-recorded",
+    "replacement": "donations.interfaces.rest.DonorSummarySharedCasesTest, one test per case of shared-cases/donor-summary/summary.json (\"Given <case>, when the backend reads the donor's donations with the real query and summarizes them, then the donor gets the expected summary\")",
+    "contract": ".claude/rules/testing.md, Logic on both sides (Generators and runners)"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "regression.OverviewGoldenCasesTest > Given the monthly report cases, when v2 compiles and mails the report over their rows, then its figures and text equal the recorded shared cases",
+    "reason": "0.6d retires the v2 generators from main (architect review m2): every file they wrote is the hand-edited specification now, so on main they could only fail on an edited file or write v3 output labelled v2-baseline; they stay at BASELINE_COMMIT, where the baseline is re-recorded",
+    "replacement": "donations.application.report.MonthlyReportSharedCasesTest, one test per case of shared-cases/monthly-report/report.json (\"Given <case>, when the backend compiles the month's report over its rows with the real queries and mails it in Czech, then the report holds the expected figures and the e-mail the expected subject and text\")",
+    "contract": ".claude/rules/testing.md, Logic on both sides (Generators and runners)"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "regression.OverviewGoldenCasesTest > Given the overview, summary and report cases, when they are generated twice, then both runs give identical files",
+    "reason": "0.6d retires the v2 generators from main (architect review m2): every file they wrote is the hand-edited specification now, so on main they could only fail on an edited file or write v3 output labelled v2-baseline; they stay at BASELINE_COMMIT, where the baseline is re-recorded",
+    "replacement": "None needed: nothing on main generates the case files any more; sharedcases.SharedCaseFilesTest checks every file's envelope and the runners check every value",
+    "contract": ".claude/rules/testing.md, Logic on both sides (Generators and runners)"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "regression.QrGoldenCasesTest > Given the payment QR cases, when v2 answers them, then the answers equal the recorded shared cases",
+    "reason": "0.6d retires the v2 generators from main (architect review m2): every file they wrote is the hand-edited specification now, so on main they could only fail on an edited file or write v3 output labelled v2-baseline; they stay at BASELINE_COMMIT, where the baseline is re-recorded",
+    "replacement": "donations.interfaces.rest.SpaydSharedCasesTest, one test per case of shared-cases/payment/spayd.json (\"Given <case>, when the backend builds the payment's SPAYD text for the recipient, amount, variable symbol and purpose, then it gives the expected SPAYD text or the expected refusal\") for the text or refusal, and shared.infrastructure.qr.PaymentQrSharedCasesTest, one test per case of shared-cases/qr/payment.json (\"Given <case>, when the backend encodes its SPAYD text into the payment QR, then it gives the expected QR symbol\") for the symbol",
+    "contract": ".claude/rules/testing.md, Logic on both sides (Generators and runners)"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "regression.QrGoldenCasesTest > Given the TOTP QR cases, when v2 encodes them, then the matrices equal the recorded shared cases",
+    "reason": "0.6d retires the v2 generators from main (architect review m2): every file they wrote is the hand-edited specification now, so on main they could only fail on an edited file or write v3 output labelled v2-baseline; they stay at BASELINE_COMMIT, where the baseline is re-recorded",
+    "replacement": "shared.infrastructure.qr.TotpQrSharedCasesTest, one test per case of shared-cases/qr/totp.json (\"Given <case>, when the backend encodes its otpauth URI into the authenticator QR, then it gives the expected QR symbol\"), and donors.domain.TotpUriSharedCasesTest, one per case of shared-cases/totp/uri.json (\"Given <case>, when the backend builds the otpauth URI for the secret, issuer and account, then it gives the expected URI\")",
+    "contract": ".claude/rules/testing.md, Logic on both sides (Generators and runners)"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "regression.QrGoldenCasesTest > Given the QR cases, when they are generated twice, then both runs give identical files",
+    "reason": "0.6d retires the v2 generators from main (architect review m2): every file they wrote is the hand-edited specification now, so on main they could only fail on an edited file or write v3 output labelled v2-baseline; they stay at BASELINE_COMMIT, where the baseline is re-recorded",
+    "replacement": "None needed: nothing on main generates the case files any more; sharedcases.SharedCaseFilesTest checks every file's envelope and the runners check every value",
+    "contract": ".claude/rules/testing.md, Logic on both sides (Generators and runners)"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "regression.QrGoldenCasesTest > Given recipient names that the cut at 35 leaves with a trailing space or that hold symbols only, when v2 builds the SPAYD, then the space is trimmed and the RN field is left out",
+    "reason": "0.6d retires the v2 generators from main (architect review m2): every file they wrote is the hand-edited specification now, so on main they could only fail on an edited file or write v3 output labelled v2-baseline; they stay at BASELINE_COMMIT, where the baseline is re-recorded",
+    "replacement": "donations.interfaces.rest.SpaydSharedCasesTest > Given a recipient name whose cut at 35 ends in a space loses the space, when the backend builds the payment's SPAYD text for the recipient, amount, variable symbol and purpose, then it gives the expected SPAYD text or the expected refusal; and the same test for \"a recipient name of symbols only becomes empty and the RN field is left out\"",
+    "contract": ".claude/rules/testing.md, Logic on both sides (Generators and runners)"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "regression.QrGoldenCasesTest > Given a TOTP URI, when v2 encodes it, then it is in byte mode with the ECI 1 header that ISO-8859-1 adds",
+    "reason": "0.6d retires the v2 generators from main (architect review m2): every file they wrote is the hand-edited specification now, so on main they could only fail on an edited file or write v3 output labelled v2-baseline; they stay at BASELINE_COMMIT, where the baseline is re-recorded",
+    "replacement": "shared.infrastructure.qr.TotpQrSharedCasesTest, one test per case of shared-cases/qr/totp.json (\"Given <case>, when the backend encodes its otpauth URI into the authenticator QR, then it gives the expected QR symbol\"): every case expects mode BYTE and ECI 1, which schemas/qr/totp.schema.json also requires (frontend shared-cases.spec.ts > Given a TOTP case)",
+    "contract": ".claude/rules/testing.md, Logic on both sides (Generators and runners)"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "regression.QrGoldenCasesTest > Given a SPAYD text, when v2 encodes it, then it is in alphanumeric mode without an ECI header",
+    "reason": "0.6d retires the v2 generators from main (architect review m2): every file they wrote is the hand-edited specification now, so on main they could only fail on an edited file or write v3 output labelled v2-baseline; they stay at BASELINE_COMMIT, where the baseline is re-recorded",
+    "replacement": "shared.infrastructure.qr.PaymentQrSharedCasesTest, one test per case of shared-cases/qr/payment.json (\"Given <case>, when the backend encodes its SPAYD text into the payment QR, then it gives the expected QR symbol\"): every case expects mode ALPHANUMERIC and no ECI header, which schemas/qr/payment.schema.json also requires (frontend shared-cases.spec.ts > Given a payment QR case > when its mode is not alphanumeric, then it is refused)",
+    "contract": ".claude/rules/testing.md, Logic on both sides (Generators and runners)"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.infrastructure.pdf.ReceiptFormattingCasesTest > Given the receipt formatting cases, when v2 formats them for a receipt, then the texts equal the recorded shared cases",
+    "reason": "0.6d retires the v2 generators from main (architect review m2): every file they wrote is the hand-edited specification now, so on main they could only fail on an edited file or write v3 output labelled v2-baseline; they stay at BASELINE_COMMIT, where the baseline is re-recorded",
+    "replacement": "donations.infrastructure.pdf.ReceiptFormattingSharedCasesTest, one test per case of shared-cases/receipts/formatting.json (\"Given <case>, when the backend formats it for a receipt, then the receipt's frozen data holds the expected text\")",
+    "contract": ".claude/rules/testing.md, Logic on both sides (Generators and runners)"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.infrastructure.pdf.ReceiptFormattingCasesTest > Given the receipt formatting cases, when they are generated twice, then both runs give identical files",
+    "reason": "0.6d retires the v2 generators from main (architect review m2): every file they wrote is the hand-edited specification now, so on main they could only fail on an edited file or write v3 output labelled v2-baseline; they stay at BASELINE_COMMIT, where the baseline is re-recorded",
+    "replacement": "None needed: nothing on main generates the case files any more; sharedcases.SharedCaseFilesTest checks every file's envelope and the runners check every value",
+    "contract": ".claude/rules/testing.md, Logic on both sides (Generators and runners)"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.infrastructure.report.MonthlyReportFormattingCasesTest > Given the monthly report formatting cases, when v2 formats them for the e-mail, then the texts equal the recorded shared cases",
+    "reason": "0.6d retires the v2 generators from main (architect review m2): every file they wrote is the hand-edited specification now, so on main they could only fail on an edited file or write v3 output labelled v2-baseline; they stay at BASELINE_COMMIT, where the baseline is re-recorded",
+    "replacement": "donations.infrastructure.report.MonthlyReportFormattingSharedCasesTest, one test per case of shared-cases/monthly-report/formatting.json (\"Given <case>, when the backend formats it for the monthly report e-mail, then the e-mail prints the expected text\")",
+    "contract": ".claude/rules/testing.md, Logic on both sides (Generators and runners)"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.infrastructure.report.MonthlyReportFormattingCasesTest > Given the monthly report formatting cases, when they are generated twice, then both runs give identical files",
+    "reason": "0.6d retires the v2 generators from main (architect review m2): every file they wrote is the hand-edited specification now, so on main they could only fail on an edited file or write v3 output labelled v2-baseline; they stay at BASELINE_COMMIT, where the baseline is re-recorded",
+    "replacement": "None needed: nothing on main generates the case files any more; sharedcases.SharedCaseFilesTest checks every file's envelope and the runners check every value",
+    "contract": ".claude/rules/testing.md, Logic on both sides (Generators and runners)"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "regression.BaselineRowsTest > [1] cases = \"shared-cases/admin-overview/year-overview.json\"",
+    "reason": "0.6d moves the rows fixture from regression into sharedcases and renames BaselineRows to CaseRows (architect review m1), before 2.12 makes it the sync-shaped row fixture; its round-trip test moves with it unchanged",
+    "replacement": "sharedcases.CaseRowsTest > [1] cases = \"shared-cases/admin-overview/year-overview.json\"",
+    "contract": ".claude/rules/testing.md, Logic on both sides (Placement)"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "regression.BaselineRowsTest > [2] cases = \"shared-cases/donor-summary/summary.json\"",
+    "reason": "0.6d moves the rows fixture from regression into sharedcases and renames BaselineRows to CaseRows (architect review m1), before 2.12 makes it the sync-shaped row fixture; its round-trip test moves with it unchanged",
+    "replacement": "sharedcases.CaseRowsTest > [2] cases = \"shared-cases/donor-summary/summary.json\"",
+    "contract": ".claude/rules/testing.md, Logic on both sides (Placement)"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "regression.BaselineRowsTest > [3] cases = \"shared-cases/monthly-report/report.json\"",
+    "reason": "0.6d moves the rows fixture from regression into sharedcases and renames BaselineRows to CaseRows (architect review m1), before 2.12 makes it the sync-shaped row fixture; its round-trip test moves with it unchanged",
+    "replacement": "sharedcases.CaseRowsTest > [3] cases = \"shared-cases/monthly-report/report.json\"",
+    "contract": ".claude/rules/testing.md, Logic on both sides (Placement)"
+  }
+]

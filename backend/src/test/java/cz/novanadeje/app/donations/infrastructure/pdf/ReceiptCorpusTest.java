@@ -17,6 +17,7 @@ import cz.novanadeje.app.donations.domain.receipt.Signatory;
 import cz.novanadeje.app.donations.domain.receipt.SignatureImage;
 import cz.novanadeje.app.cucumber.transcript.ApiTranscripts;
 import cz.novanadeje.app.regression.GoldenFiles;
+import cz.novanadeje.app.sharedcases.SharedCases;
 import cz.novanadeje.app.shared.domain.LocaleCode;
 import cz.novanadeje.app.shared.domain.Money;
 import cz.novanadeje.app.shared.domain.PostalAddress;
@@ -132,7 +133,7 @@ class ReceiptCorpusTest {
         expected.add("refusals.json");
         expected.add("digests.json");
 
-        try (Stream<Path> files = Files.list(GoldenFiles.repositoryRoot().resolve(CORPUS))) {
+        try (Stream<Path> files = Files.list(SharedCases.repositoryRoot().resolve(CORPUS))) {
             assertThat(files.map(file -> file.getFileName().toString()).sorted().toList()).containsExactlyElementsOf(expected);
         }
     }

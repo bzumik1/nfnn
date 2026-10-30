@@ -1,4 +1,4 @@
-package cz.novanadeje.app.regression;
+package cz.novanadeje.app.sharedcases;
 
 import cz.novanadeje.app.support.DatabaseCleaner;
 import cz.novanadeje.app.support.MutableClock;
@@ -19,14 +19,9 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Function;
 
-public final class BaselineRows {
+public final class CaseRows {
 
-    public static final String DESCRIPTION = "The rows hold only the columns the computation reads: a runner fills every other column with any valid value. "
-            + "A donor is a donor_record row (registeredAt and erasedAt instants); a payment a bank_payment row (bookedOn, amountMinor, and unpairedByAdminAt, the instant an administrator unpaired it or null); "
-            + "a donation a donation row of a donor, with the payment it was paired from (a bank transfer) or none (MANUAL), status RECEIVED or REFUNDED "
-            + "and purpose GENERAL or ACCOUNT_VERIFICATION. A payment no donation points to is unpaired. now is the server clock; the foundation's calendar is Prague's.";
     private static final JsonNodeFactory NODES = JsonNodeFactory.instance;
-    private static final String UNPAIRED_BY_ADMIN_AT = "T13:00:00Z";
     private static final long ID_HIGH = 0x0190a000_0000_7000L;
     private static final long ID_LOW = 0x8000_0000_0000_0000L;
     private static final int ADMINISTRATOR = 0x999;
@@ -37,16 +32,12 @@ public final class BaselineRows {
     private final List<Gift> donations = new ArrayList<>();
     private final Map<String, UUID> ids = new LinkedHashMap<>();
 
-    private BaselineRows(String now) {
+    private CaseRows(String now) {
         this.now = now;
     }
 
-    public static BaselineRows at(String now) {
-        return new BaselineRows(now);
-    }
-
-    public static BaselineRows fromJson(JsonNode input) {
-        BaselineRows rows = new BaselineRows(input.get("now").asString());
+    public static CaseRows fromJson(JsonNode input) {
+        CaseRows rows = new CaseRows(input.get("now").asString());
         input.get("donors").forEach(donor -> rows.donors.add(new Donor(donor.get("alias").asString(), donor.get("registeredAt").asString(),
                 optional(donor.get("erasedAt")))));
         input.get("payments").forEach(payment -> rows.payments.add(new Payment(payment.get("alias").asString(), payment.get("bookedOn").asString(),
@@ -57,60 +48,8 @@ public final class BaselineRows {
         return rows;
     }
 
-    private static Optional<String> optional(JsonNode value) {
+    static Optional<String> optional(JsonNode value) {
         return value == null || value.isNull() ? Optional.empty() : Optional.of(value.asString());
-    }
-
-    public BaselineRows now(String instant) {
-        BaselineRows moved = new BaselineRows(instant);
-        moved.donors.addAll(donors);
-        moved.payments.addAll(payments);
-        moved.donations.addAll(donations);
-        return moved;
-    }
-
-    public BaselineRows donor(String alias, String registeredAt) {
-        donors.add(new Donor(alias, registeredAt, Optional.empty()));
-        return this;
-    }
-
-    public BaselineRows erasedDonor(String alias, String registeredAt, String erasedAt) {
-        donors.add(new Donor(alias, registeredAt, Optional.of(erasedAt)));
-        return this;
-    }
-
-    public BaselineRows gift(String donor, String day, long amountMinor) {
-        return bankDonation(donor, day, amountMinor, "RECEIVED", "GENERAL");
-    }
-
-    public BaselineRows refunded(String donor, String day, long amountMinor) {
-        return bankDonation(donor, day, amountMinor, "REFUNDED", "GENERAL");
-    }
-
-    public BaselineRows verification(String donor, String day, long amountMinor) {
-        return bankDonation(donor, day, amountMinor, "RECEIVED", "ACCOUNT_VERIFICATION");
-    }
-
-    public BaselineRows manual(String donor, String day, long amountMinor) {
-        donations.add(new Gift(donor, Optional.empty(), day, amountMinor, "RECEIVED", "MANUAL", "GENERAL"));
-        return this;
-    }
-
-    public BaselineRows unpaired(String day, long amountMinor) {
-        payments.add(new Payment("p" + (payments.size() + 1), day, amountMinor, Optional.empty()));
-        return this;
-    }
-
-    public BaselineRows unpairedByAdmin(String day, long amountMinor) {
-        payments.add(new Payment("p" + (payments.size() + 1), day, amountMinor, Optional.of(day + UNPAIRED_BY_ADMIN_AT)));
-        return this;
-    }
-
-    private BaselineRows bankDonation(String donor, String day, long amountMinor, String status, String purpose) {
-        Payment payment = new Payment("p" + (payments.size() + 1), day, amountMinor, Optional.empty());
-        payments.add(payment);
-        donations.add(new Gift(donor, Optional.of(payment.alias()), day, amountMinor, status, "BANK_TRANSFER", purpose));
-        return this;
     }
 
     public UUID donorId(String alias) {
@@ -135,7 +74,7 @@ public final class BaselineRows {
                     .param("name", "Dárce " + donor.alias())
                     .param("symbol", Long.toString(4000000000L + sequence))
                     .param("registered", timestamp(donor.registeredAt()))
-                    .param("erased", donor.erasedAt().map(BaselineRows::timestamp).orElse(null))
+                    .param("erased", donor.erasedAt().map(CaseRows::timestamp).orElse(null))
                     .update();
         }
         for (Payment payment : payments) {
@@ -149,7 +88,7 @@ public final class BaselineRows {
                     .param("booked", LocalDate.parse(payment.bookedOn()))
                     .param("amount", payment.amountMinor())
                     .param("imported", timestamp(payment.bookedOn() + "T12:00:00Z"))
-                    .param("unpairedAt", payment.unpairedByAdminAt().map(BaselineRows::timestamp).orElse(null))
+                    .param("unpairedAt", payment.unpairedByAdminAt().map(CaseRows::timestamp).orElse(null))
                     .update();
         }
         for (Gift gift : donations) {

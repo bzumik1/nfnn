@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://nfnn.cz/shared-cases/schemas/qr/payment.schema.json",
-  "title": "Payment QR cases: a recipient account and the request's parameters give a SPAYD text and its QR symbol, or a refusal",
-  "description": "A refusal is the problem GET /api/donations/payment-qr answers (status, type, fields). Slice 1.4 draws the payment QR in the browser and removes that endpoint, so it rewrites these refusals as the browser's own refusals or retires them.",
+  "title": "Payment QR cases: a SPAYD text gives its QR symbol",
+  "description": "The texts are those of payment/spayd.json, under the same case names. The backend encodes them through ZXing until slice 1.10; the browser's encoder runs every case from 1.3.",
   "type": "object",
   "required": ["source", "logic", "cases"],
   "additionalProperties": false,
@@ -18,55 +18,23 @@
       "additionalProperties": false,
       "properties": {
         "name": { "type": "string", "minLength": 1 },
-        "input": { "$ref": "#/$defs/input" },
-        "expected": { "oneOf": [{ "$ref": "#/$defs/payment" }, { "$ref": "#/$defs/refusal" }] }
-      }
-    },
-    "input": {
-      "type": "object",
-      "required": ["recipient"],
-      "additionalProperties": false,
-      "properties": {
-        "recipient": {
+        "input": {
           "type": "object",
-          "required": ["accountNumber", "iban", "name"],
+          "required": ["spayd"],
           "additionalProperties": false,
           "properties": {
-            "accountNumber": { "type": "string", "pattern": "^([0-9]{1,6}-)?[0-9]{1,10}/[0-9]{4}$" },
-            "iban": { "type": "string", "pattern": "^CZ[0-9]{22}$" },
-            "name": { "type": "string" }
+            "spayd": { "$ref": "../defs/spayd.schema.json" }
           }
         },
-        "amount": { "type": "string" },
-        "variableSymbol": { "type": "string" },
-        "purpose": { "type": "string" }
-      }
-    },
-    "payment": {
-      "$ref": "../defs/qr-symbol.schema.json",
-      "required": ["spayd"],
-      "properties": {
-        "spayd": { "type": "string", "pattern": "^SPD\\*1\\.0(\\*[A-Z-]+:[0-9A-Z $%+./:-]*)+$" },
-        "errorCorrection": { "const": "H" },
-        "mode": { "const": "ALPHANUMERIC" },
-        "eci": { "type": "null" }
-      },
-      "unevaluatedProperties": false
-    },
-    "refusal": {
-      "type": "object",
-      "required": ["refused"],
-      "additionalProperties": false,
-      "properties": {
-        "refused": {
+        "expected": {
           "type": "object",
-          "required": ["status", "type", "fields"],
-          "additionalProperties": false,
+          "$ref": "../defs/qr-symbol.schema.json",
           "properties": {
-            "status": { "type": "integer", "minimum": 400, "maximum": 499 },
-            "type": { "type": "string", "pattern": "^https://nfnn\\.cz/problems/(validation|donations/[a-z]+(-[a-z]+)*)$" },
-            "fields": { "type": "array", "uniqueItems": true, "items": { "enum": ["amount", "variableSymbol", "purpose"] } }
-          }
+            "errorCorrection": { "const": "H" },
+            "mode": { "const": "ALPHANUMERIC" },
+            "eci": { "type": "null" }
+          },
+          "unevaluatedProperties": false
         }
       }
     }

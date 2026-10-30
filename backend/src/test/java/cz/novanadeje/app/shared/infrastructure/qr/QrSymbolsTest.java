@@ -1,4 +1,4 @@
-package cz.novanadeje.app.regression;
+package cz.novanadeje.app.shared.infrastructure.qr;
 
 import com.google.zxing.EncodeHintType;
 import com.google.zxing.WriterException;
