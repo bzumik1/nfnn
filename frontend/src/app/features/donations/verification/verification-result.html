@@ -14,6 +14,21 @@
         Údaje v tomto kódu podepsal fond Nová naděje ke dni vystavení. Porovnejte je s papírem.
       </p>
     }
+    @case ('signed-no-answer') {
+      <h1
+        id="verify-title"
+        class="ui-panel__title"
+        tabindex="-1"
+        i18n="@@donor.verify.signedNoAnswer.title"
+      >
+        Podpis sedí, ale fond teď neodpověděl, zda potvrzení vede
+      </h1>
+      <p class="ui-panel__lead verify-lead" i18n="@@donor.verify.signedNoAnswer.text">
+        Údaje v tomto kódu podepsal fond Nová naděje, fond ale teď neodpověděl, zda potvrzení vede
+        jako platné. Dokud neodpoví, nevíte, zda ho nenahradil novějším nebo nezrušil. Zkuste to za
+        chvíli znovu.
+      </p>
+    }
     @case ('replaced') {
       <h1
         id="verify-title"
@@ -96,11 +111,12 @@
         tabindex="-1"
         i18n="@@donor.verify.unknownKey.onlineTitle"
       >
-        Neověřeno: kód nepodepsal žádný klíč fondu
+        Neověřeno: kód podepsal klíč, který fond nezveřejnil
       </h1>
       <p class="ui-panel__lead verify-lead" i18n="@@donor.verify.unknownKey.onlineText">
-        Fond takový klíč nepoužívá. Potvrzení nepovažujte za ověřené. Máte-li pochybnost, napište na
-        <a href="mailto:info@nfnn.cz">info&#64;nfnn.cz</a> s číslem potvrzení.
+        Fond takový klíč mezi svými klíči nemá. Potvrzení nepovažujte za ověřené. Máte-li
+        pochybnost, napište na <a href="mailto:info@nfnn.cz">info&#64;nfnn.cz</a> s číslem
+        potvrzení.
       </p>
     }
     @case ('unknown-key-offline') {
@@ -117,6 +133,20 @@
         znovu.
       </p>
     }
+    @case ('unknown-key-no-answer') {
+      <h1
+        id="verify-title"
+        class="ui-panel__title"
+        tabindex="-1"
+        i18n="@@donor.verify.unknownKey.noAnswerTitle"
+      >
+        Neověřeno: tento podpis zatím neumíme ověřit
+      </h1>
+      <p class="ui-panel__lead verify-lead" i18n="@@donor.verify.unknownKey.noAnswerText">
+        Kód podepsal klíč, který tato stránka zatím nezná, a fond teď neposlal svůj seznam klíčů.
+        Zkuste to za chvíli znovu.
+      </p>
+    }
     @case ('no-connection') {
       <h1
         id="verify-title"
@@ -127,8 +157,21 @@
         Nelze ověřit bez připojení
       </h1>
       <p class="ui-panel__lead verify-lead" i18n="@@donor.verify.noConnection.text">
-        Stránka si poprvé potřebuje načíst klíče fondu, pak už ověřuje i bez připojení. Připojte se
-        k internetu a zkuste to znovu.
+        Stránka potřebuje načíst klíče fondu, a to jde jen s připojením. Připojte se k internetu a
+        zkuste to znovu.
+      </p>
+    }
+    @case ('no-answer') {
+      <h1
+        id="verify-title"
+        class="ui-panel__title"
+        tabindex="-1"
+        i18n="@@donor.verify.noAnswer.title"
+      >
+        Ověření teď nejde dokončit
+      </h1>
+      <p class="ui-panel__lead verify-lead" i18n="@@donor.verify.noAnswer.text">
+        Stránka teď nedostala od fondu klíče k ověření podpisu. Zkuste to za chvíli znovu.
       </p>
     }
     @case ('broken') {
@@ -150,7 +193,8 @@
         Tento kód je novější než stránka
       </h1>
       <p class="ui-panel__lead verify-lead" i18n="@@donor.verify.newer.text">
-        Načtěte stránku znovu s připojením. Když to nepomůže, napište na
+        Načtěte stránku znovu s připojením a naskenujte kód ještě jednou. Když to nepomůže, napište
+        na
         <a href="mailto:info@nfnn.cz">info&#64;nfnn.cz</a>.
       </p>
     }
@@ -178,16 +222,10 @@
           >Fond toto potvrzení vede jako platné.</ng-container
         >
       }
-      @case ('offline') {
+      @default {
         <ng-container i18n="@@donor.verify.status.offline"
           >Bez připojení nelze zjistit, zda fond potvrzení později nenahradil novějším nebo
           nezrušil.</ng-container
-        >
-      }
-      @default {
-        <ng-container i18n="@@donor.verify.status.unavailable"
-          >Stav potvrzení se teď u fondu nepodařilo zjistit, takže nevíme, zda ho fond později
-          nenahradil novějším nebo nezrušil.</ng-container
         >
       }
     }
@@ -276,7 +314,7 @@
       <tbody>
         @for (gift of data.gifts; track $index) {
           <tr>
-            <td>{{ gift.receivedOn }}</td>
+            <th scope="row">{{ gift.receivedOn }}</th>
             <td class="verify-gifts__amount">{{ gift.amount }}</td>
           </tr>
         }
@@ -287,7 +325,7 @@
 
 @if (checked()) {
   <p class="verify-local">
-    @if (statusAsked()) {
+    @if (statusAnswered()) {
       <ng-container i18n="@@donor.verify.local.withStatus"
         >Podpis jsme ověřili ve vašem zařízení. Fondu jsme poslali jen otisk podepsaných údajů, aby
         nám sdělil stav potvrzení; jméno, adresa ani částky se nikam neposílají.</ng-container

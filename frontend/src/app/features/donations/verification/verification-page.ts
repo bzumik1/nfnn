@@ -3,6 +3,7 @@ import {
   afterNextRender,
   ChangeDetectionStrategy,
   Component,
+  computed,
   DestroyRef,
   ElementRef,
   inject,
@@ -12,7 +13,7 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Meta } from '@angular/platform-browser';
 import { ActivatedRoute } from '@angular/router';
-import { ReceiptVerifier } from './receipt-verifier';
+import { ReceiptVerifier, type VerificationStep } from './receipt-verifier';
 import { type FinalOutcome, VerificationResult } from './verification-result';
 
 type PageState = { readonly state: 'checking' } | { readonly state: 'empty' } | FinalOutcome;
@@ -36,6 +37,11 @@ export class VerificationPage {
   private run = 0;
 
   protected readonly page = signal<PageState>({ state: 'checking' });
+  protected readonly step = signal<VerificationStep | null>(null);
+  protected readonly outcome = computed<FinalOutcome | null>(() => {
+    const page = this.page();
+    return page.state === 'checking' || page.state === 'empty' ? null : page;
+  });
 
   constructor() {
     const meta = inject(Meta);
@@ -52,24 +58,36 @@ export class VerificationPage {
       });
   }
 
-  protected verify(): void {
+  protected retry(): void {
+    this.verify();
+    this.focusHeading();
+  }
+
+  private verify(): void {
     const run = ++this.run;
     const fragment = this.fragment;
     this.page.set({ state: 'checking' });
-    this.verifier.verify(fragment).then((outcome) => {
-      if (run !== this.run || this.destroyRef.destroyed) {
-        return;
-      }
-      this.page.set(outcome);
-      if (outcome.state !== 'empty') {
-        afterNextRender(() => this.host.nativeElement.querySelector('h1')?.focus(), {
-          injector: this.injector,
-        });
-      }
-    });
+    this.step.set(null);
+    this.verifier
+      .verify(fragment, (step) => {
+        if (run === this.run) {
+          this.step.set(step);
+        }
+      })
+      .then((outcome) => {
+        if (run !== this.run || this.destroyRef.destroyed) {
+          return;
+        }
+        this.page.set(outcome);
+        if (outcome.state !== 'empty') {
+          this.focusHeading();
+        }
+      });
   }
 
-  protected finalOutcome(page: PageState): FinalOutcome | null {
-    return page.state === 'checking' || page.state === 'empty' ? null : page;
+  private focusHeading(): void {
+    afterNextRender(() => this.host.nativeElement.querySelector('h1')?.focus(), {
+      injector: this.injector,
+    });
   }
 }

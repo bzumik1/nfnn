@@ -1,4 +1,5 @@
 import { DOCUMENT } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
 import { inject, Injectable, InjectionToken } from '@angular/core';
 import { firstValueFrom, timeout } from 'rxjs';
 import { ed25519Verifies } from './ed25519';
@@ -16,17 +17,22 @@ import {
 } from './receipt-proof';
 import { type ReceiptStatus, ReceiptStatusApi } from './receipt-status-api';
 
-export type SignedStatus = ReceiptStatus | 'offline' | 'unavailable';
+export type Reach = 'online' | 'offline' | 'no-answer';
+
+export type SignedStatus = ReceiptStatus | Exclude<Reach, 'online'>;
+
+export type VerificationStep = 'asking-status';
 
 export type VerificationOutcome =
   | { readonly state: 'empty' }
   | { readonly state: 'broken' }
   | { readonly state: 'newer' }
   | { readonly state: 'no-connection' }
+  | { readonly state: 'no-answer' }
   | { readonly state: 'failed' }
   | { readonly state: 'invalid' }
   | { readonly state: 'revoked' }
-  | { readonly state: 'unknown-key'; readonly online: boolean }
+  | { readonly state: 'unknown-key'; readonly reach: Reach }
   | { readonly state: 'signed'; readonly receipt: SignedReceipt; readonly status: SignedStatus };
 
 export const SIGNATURE_CHECK = new InjectionToken<SignatureCheck>('SIGNATURE_CHECK', {
@@ -34,8 +40,12 @@ export const SIGNATURE_CHECK = new InjectionToken<SignatureCheck>('SIGNATURE_CHE
   factory: () => ed25519Verifies,
 });
 
+type FreshKeys =
+  | { readonly reach: 'online'; readonly keys: TrustedKeys }
+  | { readonly reach: Exclude<Reach, 'online'> };
+
 const NEWER_TEXT_VERSION = /^[2-9][0-9]*$/;
-const REQUEST_TIMEOUT_MS = 10_000;
+const REQUEST_TIMEOUT_MS = 5_000;
 const STATUSES: readonly string[] = ['active', 'replaced', 'withdrawn', 'unknown'];
 
 @Injectable({ providedIn: 'root' })
@@ -46,7 +56,10 @@ export class ReceiptVerifier {
   private readonly verifies = inject(SIGNATURE_CHECK);
   private readonly navigator = inject(DOCUMENT).defaultView?.navigator;
 
-  async verify(fragment: string | null): Promise<VerificationOutcome> {
+  async verify(
+    fragment: string | null,
+    progress: (step: VerificationStep) => void = () => undefined,
+  ): Promise<VerificationOutcome> {
     if (!fragment) {
       return { state: 'empty' };
     }
@@ -62,11 +75,11 @@ export class ReceiptVerifier {
         return unreadable;
       }
       const fresh = await this.freshKeys();
-      if (fresh === null && kept === null) {
-        return { state: 'no-connection' };
+      if (fresh.reach !== 'online' && kept === null) {
+        return { state: fresh.reach === 'offline' ? 'no-connection' : 'no-answer' };
       }
-      const reading = fresh === null ? first : await this.read(text, fresh);
-      return await this.outcomeOf(reading, fresh !== null);
+      const reading = fresh.reach === 'online' ? await this.read(text, fresh.keys) : first;
+      return await this.outcomeOf(reading, fresh.reach, progress);
     } catch {
       return { state: 'failed' };
     }
@@ -81,33 +94,38 @@ export class ReceiptVerifier {
     );
   }
 
-  private async freshKeys(): Promise<TrustedKeys | null> {
+  private async freshKeys(): Promise<FreshKeys> {
     if (this.navigator?.onLine === false) {
-      return null;
+      return { reach: 'offline' };
     }
     try {
       const list = await firstValueFrom(this.keysApi.list().pipe(timeout(REQUEST_TIMEOUT_MS)));
       const trusted = await this.store.trusted(list);
-      if (trusted !== null) {
-        this.store.replace(list);
+      if (trusted === null) {
+        return { reach: 'no-answer' };
       }
-      return trusted;
-    } catch {
-      return null;
+      this.store.replace(list);
+      return { reach: 'online', keys: trusted };
+    } catch (failure: unknown) {
+      return { reach: reachOf(failure) };
     }
   }
 
-  private async outcomeOf(reading: ProofReading, online: boolean): Promise<VerificationOutcome> {
+  private async outcomeOf(
+    reading: ProofReading,
+    reach: Reach,
+    progress: (step: VerificationStep) => void,
+  ): Promise<VerificationOutcome> {
     if (reading.verdict === 'valid') {
-      return {
-        state: 'signed',
-        receipt: reading.receipt,
-        status: online ? await this.status(reading) : 'offline',
-      };
+      if (reach !== 'online') {
+        return { state: 'signed', receipt: reading.receipt, status: reach };
+      }
+      progress('asking-status');
+      return { state: 'signed', receipt: reading.receipt, status: await this.status(reading) };
     }
     switch (reading.reason) {
       case 'unknown-key':
-        return { state: 'unknown-key', online };
+        return { state: 'unknown-key', reach };
       case 'revoked-key':
         return { state: 'revoked' };
       case 'reserved-flags':
@@ -123,11 +141,15 @@ export class ReceiptVerifier {
       const answer = await firstValueFrom(
         this.statusApi.status(digest).pipe(timeout(REQUEST_TIMEOUT_MS)),
       );
-      return STATUSES.includes(answer?.status) ? answer.status : 'unavailable';
-    } catch {
-      return 'unavailable';
+      return STATUSES.includes(answer?.status) ? answer.status : 'no-answer';
+    } catch (failure: unknown) {
+      return reachOf(failure);
     }
   }
+}
+
+function reachOf(failure: unknown): Exclude<Reach, 'online'> {
+  return failure instanceof HttpErrorResponse && failure.status === 0 ? 'offline' : 'no-answer';
 }
 
 function unreadableOutcome(reading: ProofReading): VerificationOutcome | null {

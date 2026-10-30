@@ -1,11 +1,13 @@
 import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
 import { type ReceiptDisplay, receiptDisplay } from '../receipt-format';
+import type { ReceiptStatus } from './receipt-status-api';
 import type { VerificationOutcome } from './receipt-verifier';
 
 export type FinalOutcome = Exclude<VerificationOutcome, { readonly state: 'empty' }>;
 
 type ResultKind =
   | 'signed'
+  | 'signed-no-answer'
   | 'replaced'
   | 'withdrawn'
   | 'unrecorded'
@@ -13,7 +15,9 @@ type ResultKind =
   | 'revoked'
   | 'unknown-key-online'
   | 'unknown-key-offline'
+  | 'unknown-key-no-answer'
   | 'no-connection'
+  | 'no-answer'
   | 'broken'
   | 'newer'
   | 'failed';
@@ -22,6 +26,7 @@ type Tone = 'success' | 'caution' | 'danger';
 
 const TONES: Readonly<Record<ResultKind, Tone>> = {
   signed: 'success',
+  'signed-no-answer': 'caution',
   replaced: 'caution',
   withdrawn: 'danger',
   unrecorded: 'caution',
@@ -29,7 +34,9 @@ const TONES: Readonly<Record<ResultKind, Tone>> = {
   revoked: 'danger',
   'unknown-key-online': 'danger',
   'unknown-key-offline': 'caution',
+  'unknown-key-no-answer': 'caution',
   'no-connection': 'caution',
+  'no-answer': 'caution',
   broken: 'caution',
   newer: 'caution',
   failed: 'caution',
@@ -37,9 +44,29 @@ const TONES: Readonly<Record<ResultKind, Tone>> = {
 
 const ICONS: Readonly<Record<Tone, string>> = { success: '✓', caution: '!', danger: '×' };
 
-const RETRIABLE: readonly ResultKind[] = ['unknown-key-offline', 'no-connection', 'failed'];
+const RETRIABLE: readonly ResultKind[] = [
+  'signed-no-answer',
+  'unknown-key-offline',
+  'unknown-key-no-answer',
+  'no-connection',
+  'no-answer',
+  'failed',
+];
 
-const UNCHECKED: readonly ResultKind[] = ['no-connection', 'broken', 'newer', 'failed'];
+const UNCHECKED: readonly ResultKind[] = [
+  'no-connection',
+  'no-answer',
+  'broken',
+  'newer',
+  'failed',
+];
+
+const ANSWERED: readonly string[] = [
+  'active',
+  'replaced',
+  'withdrawn',
+  'unknown',
+] satisfies readonly ReceiptStatus[];
 
 @Component({
   selector: 'app-verification-result',
@@ -62,14 +89,9 @@ export class VerificationResult {
     const outcome = this.outcome();
     return outcome.state === 'signed' ? receiptDisplay(outcome.receipt) : null;
   });
-  protected readonly statusAsked = computed(() => {
-    const status = this.status();
-    return status !== null && status !== 'offline';
-  });
+  protected readonly statusAnswered = computed(() => ANSWERED.includes(this.status() ?? ''));
   protected readonly checked = computed(() => !UNCHECKED.includes(this.kind()));
-  protected readonly retriable = computed(
-    () => RETRIABLE.includes(this.kind()) || this.status() === 'unavailable',
-  );
+  protected readonly retriable = computed(() => RETRIABLE.includes(this.kind()));
 }
 
 function kindOf(outcome: FinalOutcome): ResultKind {
@@ -82,11 +104,13 @@ function kindOf(outcome: FinalOutcome): ResultKind {
           return 'withdrawn';
         case 'unknown':
           return 'unrecorded';
+        case 'no-answer':
+          return 'signed-no-answer';
         default:
           return 'signed';
       }
     case 'unknown-key':
-      return outcome.online ? 'unknown-key-online' : 'unknown-key-offline';
+      return `unknown-key-${outcome.reach}`;
     default:
       return outcome.state;
   }
