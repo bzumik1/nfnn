@@ -248,13 +248,13 @@ describe('Given the privacy policy page', () => {
       'Jméno, adresu, e‑mail, přihlašovací údaje a bankovní účty vašeho účtu poté vymažeme a účet už nepůjde použít.',
     );
     expect(erasure).toContain(
-      'Vystavená potvrzení o daru jsou účetní doklady: na našem serveru je ponecháme beze změny, tedy i s vaším jménem a adresou, jak na nich stojí, po dobu stanovenou účetními a daňovými předpisy.',
+      'Vystavená potvrzení o daru jsou účetní doklady: na našem serveru je ponecháme beze změny, tedy i s vaším jménem a adresou (u firmy i s IČO), jak na nich stojí, po dobu stanovenou účetními a daňovými předpisy.',
     );
     expect(erasure).toContain(
       'Stejně dlouho ponecháme záznamy o přijatých platbách a darech s tím, co o platbě uvádí výpis z banky, včetně čísla účtu a jména plátce.',
     );
     expect(erasure).toContain(
-      'Na serveru zůstane i historie zásahů správců webu, která může uvádět i číslo vašeho bankovního účtu, včetně záznamu o výmazu.',
+      'Na serveru zůstane i záznam o tom, co správci webu udělali, včetně vašeho výmazu; může uvádět i číslo vašeho bankovního účtu.',
     );
     expect(erasure).not.toContain('zařízení');
   });

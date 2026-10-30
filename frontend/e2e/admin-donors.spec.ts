@@ -306,7 +306,7 @@ test.describe('Given an administrator on the donors page', () => {
     await expect(
       page.getByRole('status').filter({ hasText: /\S/ }).filter({ hasNotText: 'Načítáme' }),
     ).toHaveText(
-      'Osobní údaje dárce jsme vymazali a na jeho dosavadní e-mail poslali potvrzení. Účet už nejde použít; dary a vydaná potvrzení zůstávají kvůli účetnictví, potvrzení beze změny i se jménem a adresou.',
+      'Osobní údaje dárce jsme vymazali a na jeho dosavadní e-mail poslali potvrzení. Účet už nejde použít. Dary a vydaná potvrzení zůstávají kvůli účetnictví; potvrzení zůstávají beze změny, i se jménem a adresou.',
     );
     await expect(page.getByRole('heading', { level: 1, name: 'Vymazaný dárce' })).toBeVisible();
     await expect(page.getByRole('note')).toContainText(

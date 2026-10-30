@@ -46,6 +46,7 @@ class DonorAccountErasedEmailSender {
                 text("greeting", locale),
                 text("intro", locale),
                 text("kept", locale),
+                text("backups", locale),
                 text("again", locale),
                 text("signature", locale),
                 footer)) + "\n";

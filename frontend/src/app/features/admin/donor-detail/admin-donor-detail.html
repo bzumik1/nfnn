@@ -11,9 +11,9 @@
   </h1>
   @if (erasedAt(); as erasedAt) {
     <p class="admin-erased" role="note" i18n="@@admin.donorDetail.erased">
-      Osobní údaje tohoto dárce jsme vymazali {{ time(erasedAt) }}. Účet už nejde použít; dary a
-      vydaná potvrzení zůstávají kvůli účetnictví, potvrzení na serveru beze změny i se jménem a
-      adresou dárce.
+      Osobní údaje tohoto dárce jsme vymazali {{ time(erasedAt) }}. Účet už nejde použít. Dary a
+      vydaná potvrzení zůstávají kvůli účetnictví; potvrzení zůstávají na serveru beze změny, i se
+      jménem a adresou dárce.
     </p>
   }
 
@@ -913,6 +913,10 @@
           <li i18n="@@admin.donorDetail.erase.dialog.kept.donations">
             dary a vydaná potvrzení kvůli účetnictví; potvrzení na serveru beze změny, i se jménem a
             adresou dárce
+          </li>
+          <li i18n="@@admin.donorDetail.erase.dialog.kept.payments">
+            platby z banky, jak je uvádí výpis (číslo účtu a jméno plátce), a záznamy v Historii
+            změn
           </li>
         </ul>
       </div>

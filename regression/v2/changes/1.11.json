@@ -1,23 +1,53 @@
 [
   {
-    "scenario": "donors/admin_donor_erasure: *",
+    "scenario": "donors/admin_donor_erasure: An administrator erases a donor who asked for it, the donor is told and the account cannot be used any more*",
     "kind": "mails",
     "subject": "Vaše osobní údaje jsme vymazali – Nová naděje",
-    "reason": "1.11 (Jakub's answer A6, 2026-10-29): donors.erased.email.kept no longer claims the receipts are no longer linked to the name; it says the issued receipts stay on the server unchanged with the name and address on them, the payment records keep the bank statement's account number and payer name, and the history of the administrators' actions stays on the server",
+    "reason": "1.11 (Jakub's answer A6, 2026-10-29): donors.erased.email.kept no longer claims the receipts are no longer linked to the name; it says the issued receipts stay on the server unchanged for the time the accounting and tax rules set, with the name and address (and a company's identification number) on them, the payment records keep the bank statement's account number and payer name, and the record of the administrators' actions stays on the server; the new donors.erased.email.backups says the backups drop the erased data within about a month",
+    "contract": "docs/api-contract.md, Donors (DELETE /api/admin/donors/{donorId})"
+  },
+  {
+    "scenario": "donors/admin_donor_erasure: The former e-mail address can register again after the erasure*",
+    "kind": "mails",
+    "subject": "Vaše osobní údaje jsme vymazali – Nová naděje",
+    "reason": "1.11 (Jakub's answer A6, 2026-10-29): donors.erased.email.kept no longer claims the receipts are no longer linked to the name; it says the issued receipts stay on the server unchanged for the time the accounting and tax rules set, with the name and address (and a company's identification number) on them, the payment records keep the bank statement's account number and payer name, and the record of the administrators' actions stays on the server; the new donors.erased.email.backups says the backups drop the erased data within about a month",
+    "contract": "docs/api-contract.md, Donors (DELETE /api/admin/donors/{donorId})"
+  },
+  {
+    "scenario": "donors/admin_donor_erasure: An erased donor cannot be erased again*",
+    "kind": "mails",
+    "subject": "Vaše osobní údaje jsme vymazali – Nová naděje",
+    "reason": "1.11 (Jakub's answer A6, 2026-10-29): donors.erased.email.kept no longer claims the receipts are no longer linked to the name; it says the issued receipts stay on the server unchanged for the time the accounting and tax rules set, with the name and address (and a company's identification number) on them, the payment records keep the bank statement's account number and payer name, and the record of the administrators' actions stays on the server; the new donors.erased.email.backups says the backups drop the erased data within about a month",
     "contract": "docs/api-contract.md, Donors (DELETE /api/admin/donors/{donorId})"
   },
   {
     "scenario": "donations/admin_donor_erasure: *",
     "kind": "mails",
     "subject": "Vaše osobní údaje jsme vymazali – Nová naděje",
-    "reason": "1.11 (Jakub's answer A6, 2026-10-29): donors.erased.email.kept no longer claims the receipts are no longer linked to the name; it says the issued receipts stay on the server unchanged with the name and address on them, the payment records keep the bank statement's account number and payer name, and the history of the administrators' actions stays on the server",
+    "reason": "1.11 (Jakub's answer A6, 2026-10-29): donors.erased.email.kept no longer claims the receipts are no longer linked to the name; it says the issued receipts stay on the server unchanged for the time the accounting and tax rules set, with the name and address (and a company's identification number) on them, the payment records keep the bank statement's account number and payer name, and the record of the administrators' actions stays on the server; the new donors.erased.email.backups says the backups drop the erased data within about a month",
     "contract": "docs/api-contract.md, Donors (DELETE /api/admin/donors/{donorId})"
   },
   {
     "scenario": "donors/donor_passkeys: An erased donor's passkey opens no session*",
     "kind": "mails",
     "subject": "Vaše osobní údaje jsme vymazali – Nová naděje",
-    "reason": "1.11 (Jakub's answer A6, 2026-10-29): donors.erased.email.kept no longer claims the receipts are no longer linked to the name; it says the issued receipts stay on the server unchanged with the name and address on them, the payment records keep the bank statement's account number and payer name, and the history of the administrators' actions stays on the server",
+    "reason": "1.11 (Jakub's answer A6, 2026-10-29): donors.erased.email.kept no longer claims the receipts are no longer linked to the name; it says the issued receipts stay on the server unchanged for the time the accounting and tax rules set, with the name and address (and a company's identification number) on them, the payment records keep the bank statement's account number and payer name, and the record of the administrators' actions stays on the server; the new donors.erased.email.backups says the backups drop the erased data within about a month",
+    "contract": "docs/api-contract.md, Donors (DELETE /api/admin/donors/{donorId})"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-cucumber",
+    "test": "feature_classpath_features/donations/admin_donor_erasure.feature > Donations keep an erased donor's gifts and receipts without personal data - Erasing a donor anonymizes the record, drops the bank accounts and answers, and keeps the donations and receipts",
+    "reason": "1.11: the feature's title said the receipts are kept without personal data, which is untrue (A6); it now says the issued receipts are kept and the record's personal data dropped, and the scenario is unchanged",
+    "replacement": "feature_classpath_features/donations/admin_donor_erasure.feature > Donations keep an erased donor's gifts and issued receipts, and drop the record's personal data - Erasing a donor anonymizes the record, drops the bank accounts and answers, and keeps the donations and receipts",
+    "contract": "docs/api-contract.md, Donors (DELETE /api/admin/donors/{donorId})"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-cucumber",
+    "test": "feature_classpath_features/donations/admin_donor_erasure.feature > Donations keep an erased donor's gifts and receipts without personal data - Payments of an erased donor are not paired any more, by symbol or by account",
+    "reason": "1.11: the feature's title said the receipts are kept without personal data, which is untrue (A6); it now says the issued receipts are kept and the record's personal data dropped, and the scenario is unchanged",
+    "replacement": "feature_classpath_features/donations/admin_donor_erasure.feature > Donations keep an erased donor's gifts and issued receipts, and drop the record's personal data - Payments of an erased donor are not paired any more, by symbol or by account",
     "contract": "docs/api-contract.md, Donors (DELETE /api/admin/donors/{donorId})"
   }
 ]
