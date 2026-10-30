@@ -31,7 +31,7 @@
     "reason": "1.5 logs at WARN, after the commit, when the server registers and publishes its own receipt signing key at start (plan v3 D9), so an unexpected new key shows in backend.log",
     "contract": "docs/api-contract.md, Receipt verification proof and signing keys; docs/security-overview.md, Receipt signing key",
     "security": {
-      "approvedIn": "PENDING",
+      "approvedIn": "PR #231, Jakub 2026-10-30",
       "fields": {
         "<key-id>": "the receipt signing key id: 8 hex digits of the SHA-256 of the public key, public (GET /api/donations/receipt-keys serves it to anyone); no personal data and no secret"
       }
@@ -43,7 +43,7 @@
     "reason": "1.5 logs at ERROR, once per key row, a row whose seal fails or whose id is not the hash of its public key (plan v3 1.5: a tampered row is never published and raises the alarm)",
     "contract": "docs/api-contract.md, Receipt verification proof and signing keys; docs/security-overview.md, Receipt signing key",
     "security": {
-      "approvedIn": "PENDING",
+      "approvedIn": "PR #231, Jakub 2026-10-30",
       "fields": {
         "<key-id>": "the receipt signing key id: 8 hex digits of the SHA-256 of the public key, public (GET /api/donations/receipt-keys serves it to anyone); no personal data and no secret"
       }
@@ -55,7 +55,7 @@
     "reason": "1.5 logs at ERROR, once per key row, a row sealed under a carried settings key when no restore finished by the backup container within the hour confirms it (1.5 security review M1)",
     "contract": "docs/api-contract.md, Receipt verification proof and signing keys; docs/security-overview.md, Receipt signing key",
     "security": {
-      "approvedIn": "PENDING",
+      "approvedIn": "PR #231, Jakub 2026-10-30",
       "fields": {
         "<key-id>": "the receipt signing key id: 8 hex digits of the SHA-256 of the public key, public (GET /api/donations/receipt-keys serves it to anyone); no personal data and no secret"
       }
@@ -67,7 +67,7 @@
     "reason": "1.5 logs at WARN, once per key row and after the commit, a key adopted from a restore the backup container confirmed, besides the ADOPT_RECEIPT_SIGNING_KEY audit entry (1.5 security review M1)",
     "contract": "docs/api-contract.md, Receipt verification proof and signing keys; docs/security-overview.md, Receipt signing key",
     "security": {
-      "approvedIn": "PENDING",
+      "approvedIn": "PR #231, Jakub 2026-10-30",
       "fields": {
         "<key-id>": "the receipt signing key id: 8 hex digits of the SHA-256 of the public key, public (GET /api/donations/receipt-keys serves it to anyone); no personal data and no secret"
       }
