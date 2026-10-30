@@ -1159,6 +1159,8 @@ describe('Given a branch that touches the receipt corpus or the screens manifest
     kind: 'baseline-addition',
     file: 'regression/v2/screens/manifest.json',
     recordedFrom: BASELINE_COMMIT,
+    patch: 'regression/v2/additions/0.6c-screens.patch',
+    record: 'env -u FIO_TOKEN scripts/record-baseline-data.sh',
     reason: '0.6c records the TOTP enrolment from the baseline commit',
     ...extra,
   });

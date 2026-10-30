@@ -51,7 +51,19 @@ const BASELINE_INDEXES = new Set([
 ]);
 const COMMIT_ID = /^[0-9a-f]{40}$/;
 const APPROVED_IN = /^PR #\d+, Jakub \d{4}-\d{2}-\d{2}$/;
-const FIELD_KINDS = new Set(['body', 'headers']);
+const FIELD_KINDS = new Set(['body', 'headers', 'added']);
+const SUBJECT_KINDS = new Set(['mails', 'added']);
+const NEW_RECEIPT_SAMPLE = /^regression\/v2\/receipts\/[^/]+\.json$/;
+const ADDITION_PATCHES = 'regression/v2/additions/';
+const ADDITION_PATCH = /^regression\/v2\/additions\/[^/*]+\.patch$/;
+const IBAN_DIGITS = 10;
+const LITERAL_IBAN =
+  /(?<![\p{L}\p{N}])\p{Lu}{2}\d{2}(?: ?[\p{Lu}\d]{4}){3,7}(?: ?[\p{Lu}\d]{1,3})?(?![\p{L}\p{N}])/u;
+const FIXTURE_NAME = /^\p{Lu}\p{Ll}+(?: \p{Lu}\p{Ll}+)+$/u;
+const PERSONAL_FIELD =
+  /^(?:name|fullName|firstName|lastName|payerName|companyName|street|city|counterparty\w*)$/i;
+const PERSONAL_WORD = /\p{Lu}\p{Ll}{3,}/gu;
+const COMMON_WORDS = new Set(['Nová', 'Nové', 'Nový']);
 const FORBIDDEN_LOG_SLOTS = [
   'vs',
   'token',
@@ -74,6 +86,7 @@ const WATCHED_FILES = [
   /^scripts\/test-inventory\.mjs$/,
   /^mcp\/test\/backend-shapes[^/]*\.ts$/,
   /^regression\/v2\/changes\//,
+  /^regression\/v2\/additions\//,
 ];
 const UPPER_WORD = /\p{Lu}[\p{Lu}\d_]*/gu;
 const SLOT = /<[a-z-]+(?::\d+)?>/g;
@@ -138,7 +151,21 @@ function jsonFiles(directory) {
     .sort();
 }
 
-function transcripts(directory, what, aliases) {
+function personalWords(value, key, words) {
+  if (Array.isArray(value)) {
+    value.forEach((item) => personalWords(item, key, words));
+  } else if (value !== null && typeof value === 'object') {
+    Object.entries(value).forEach(([field, item]) => personalWords(item, field, words));
+  } else if (typeof value === 'string' && key !== undefined && PERSONAL_FIELD.test(key)) {
+    for (const [word] of value.replace(/<[^>]*>/g, ' ').matchAll(PERSONAL_WORD)) {
+      if (!COMMON_WORDS.has(word)) {
+        words.add(word);
+      }
+    }
+  }
+}
+
+function transcripts(directory, what, data) {
   if (!existsSync(directory)) {
     throw new InvalidInput(
       `The ${what} ${directory} does not exist; record it with API_TRANSCRIPTS=record (.claude/rules/testing.md, "Regression against v2")`,
@@ -148,9 +175,10 @@ function transcripts(directory, what, aliases) {
   for (const path of jsonFiles(directory)) {
     const text = readFileSync(path, 'utf8');
     for (const [, alias] of text.matchAll(FIXTURE_ALIAS)) {
-      aliases.add(alias);
+      data.aliases.add(alias);
     }
     const file = parsed(text, path, `The ${what} file`);
+    personalWords(file.scenarios ?? {}, undefined, data.words);
     const feature = file.feature ?? posix(relative(directory, path)).replace(/\.json$/, '');
     features.set(feature, file.scenarios ?? {});
   }
@@ -228,6 +256,8 @@ function validated(entry, file, index, baselineCommit) {
     'subject',
     'file',
     'recordedFrom',
+    'patch',
+    'record',
   ]) {
     if (field in entry && typeof entry[field] !== 'string') {
       problem(`${field} must be a string`);
@@ -236,7 +266,7 @@ function validated(entry, file, index, baselineCommit) {
   if ('field' in entry) {
     if (!FIELD_KINDS.has(entry.kind)) {
       problem(
-        `field names a JSON path or a header, so only a body or headers entry takes it, not ${entry.kind}`,
+        `field names a JSON path or a header, so only a body, headers or added entry takes it, not ${entry.kind}`,
       );
     }
     if (entry.kind === 'body' && !entry.field.startsWith('$')) {
@@ -249,16 +279,24 @@ function validated(entry, file, index, baselineCommit) {
         'a headers field is the literal header name ("cache-control"), * allowed after its first letter',
       );
     }
+    if (entry.kind === 'added' && !/^[$A-Za-z0-9]/.test(entry.field)) {
+      problem(
+        'an added field is a JSON path that starts with "$" or the literal name of a response header',
+      );
+    }
   }
   if (
     'subject' in entry &&
-    (entry.kind !== 'mails' || entry.subject.trim() === '' || entry.subject.startsWith('*'))
+    (!SUBJECT_KINDS.has(entry.kind) || entry.subject.trim() === '' || entry.subject.startsWith('*'))
   ) {
     problem(
-      'subject names the subject of the v2 mail a mails entry covers, so only a mails entry takes it, and it starts with a literal letter (* allowed after it)',
+      'subject names the subject of the mail a mails or added entry covers, so only those take it, and it starts with a literal letter (* allowed after it)',
     );
   }
-  for (const field of ['file', 'recordedFrom']) {
+  if ('subject' in entry && 'field' in entry) {
+    problem('an entry covers a mail (subject) or a field (field), not both');
+  }
+  for (const field of ['file', 'recordedFrom', 'patch', 'record']) {
     if (field in entry && entry.kind !== 'baseline-addition') {
       problem(`only a baseline-addition takes ${field}`);
     }
@@ -272,6 +310,16 @@ function validated(entry, file, index, baselineCommit) {
     if (entry.recordedFrom !== baselineCommit) {
       problem(
         `recordedFrom must be the commit in regression/v2/BASELINE_COMMIT (${baselineCommit || 'missing'}), because a baseline file is recorded only from it, not ${shown(entry.recordedFrom)}`,
+      );
+    }
+    if (!ADDITION_PATCH.test(entry.patch ?? '')) {
+      problem(
+        'a baseline addition needs patch: the change it applied to a checkout of the baseline commit, as "regression/v2/additions/<name>.patch" (git diff of that checkout)',
+      );
+    }
+    if (!entry.record?.trim()) {
+      problem(
+        'a baseline addition needs record: the command that recorded it on that checkout ("env -u FIO_TOKEN scripts/record-baseline-data.sh")',
       );
     }
     for (const field of ['path', 'scenario', 'line', 'suite', 'test', 'replacement', 'caseFile']) {
@@ -317,9 +365,11 @@ function validated(entry, file, index, baselineCommit) {
       problem('scenario must start with the literal "<context>/<feature>: "');
     }
   } else {
-    if (PATH_REFUSED.has(entry.kind)) {
+    if (PATH_REFUSED.has(entry.kind) || (entry.kind === 'added' && 'subject' in entry)) {
       if ('path' in entry) {
-        problem(`${entry.kind} belong to the scenario, not to a request: drop path`);
+        problem(
+          `${entry.kind === 'added' ? 'an added mail belongs' : `${entry.kind} belong`} to the scenario, not to a request: drop path`,
+        );
       }
     } else if ('path' in entry || !PATH_OPTIONAL.has(entry.kind)) {
       if (!REQUEST_ANCHOR.test(entry.path ?? '')) {
@@ -405,6 +455,14 @@ function declare(difference, entries, counter = 'used') {
     }
     if (difference.kind === 'mails') {
       return entry.matches.subject.test(difference.subject ?? '');
+    }
+    if (difference.kind === 'added') {
+      if (difference.mail) {
+        return 'subject' in entry && entry.matches.subject.test(difference.subject);
+      }
+      if (!('field' in entry)) {
+        return false;
+      }
     }
     if ('field' in entry && !entry.matches.field.test(difference.field ?? '')) {
       return false;
@@ -565,6 +623,12 @@ function compareCall(scenario, key, baseline, recorded, differences, counts) {
   for (const name of Object.keys(after.headers ?? {})) {
     if (!(name in (before.headers ?? {}))) {
       counts.addedHeaders.add(`${name} (${template(key)})`);
+      counts.addedDetails.push({
+        ...at,
+        kind: 'added',
+        field: name,
+        detail: `hlavička ${name} přidána`,
+      });
     }
   }
   if ('body' in before && !('body' in after)) {
@@ -581,6 +645,7 @@ function compareCall(scenario, key, baseline, recorded, differences, counts) {
   }
   for (const field of fields) {
     counts.addedFields.add(`${template(key)} ${field}`);
+    counts.addedDetails.push({ ...at, kind: 'added', field, detail: `pole ${field} přidáno` });
   }
   return changed;
 }
@@ -682,7 +747,16 @@ function compareScenario(scenario, baseline, recorded, differences, counts, shap
     changed = true;
   }
   counts.mails.added += mails.extra.length;
-  mails.extra.forEach((mail) => addedMail(counts, scenario, mail));
+  mails.extra.forEach((mail) => {
+    addedMail(counts, scenario, mail);
+    counts.addedDetails.push({
+      scenario,
+      kind: 'added',
+      mail: true,
+      subject: String(mail.subject ?? ''),
+      detail: `e-mail „${mail.subject}“ přidán`,
+    });
+  });
 
   const logs = unmatched(baseline.logs ?? [], recorded.logs ?? []);
   counts.logs.unchanged += (baseline.logs ?? []).length - logs.missing.length;
@@ -716,6 +790,7 @@ function emptyCounts() {
     logs: tally(),
     tests: tally(),
     addedRequests: [],
+    addedDetails: [],
     addedPairs: [],
     addedScenarios: [],
     addedFields: new Set(),
@@ -815,17 +890,55 @@ function compareInventory(baseline, fresh, differences, counts) {
   }
 }
 
-function forbiddenLogData(line, shape, aliases) {
+function fixtureNames(directory) {
+  if (!existsSync(directory)) {
+    throw new InvalidInput(
+      `The test sources ${directory} do not exist; --fixture-sources names the folder whose cucumber step definitions hold the fixtures' names`,
+    );
+  }
+  const names = new Set();
+  const sources = (folder) =>
+    readdirSync(folder).flatMap((name) => {
+      const path = join(folder, name);
+      return statSync(path).isDirectory() ? sources(path) : name.endsWith('.java') ? [path] : [];
+    });
+  for (const path of sources(directory).filter((file) => posix(file).includes('/cucumber/'))) {
+    for (const [, literal] of readFileSync(path, 'utf8').matchAll(/"((?:[^"\\\n]|\\.)*)"/g)) {
+      if (FIXTURE_NAME.test(literal)) {
+        names.add(literal);
+      }
+    }
+  }
+  return names;
+}
+
+function forbiddenLogData(line, shape, data) {
   const found = [];
   if (line.includes('@')) {
     found.push('an e-mail address (@)');
   }
   const text = line.replace(/<[^>]*>/g, ' ');
   const words = new Set(text.split(/[^\p{L}\p{N}_]+/u));
-  for (const alias of aliases) {
+  for (const alias of data.aliases) {
     if (words.has(alias)) {
       found.push(`the fixture name ${alias}`);
     }
+  }
+  for (const name of data.names) {
+    if (text.includes(name)) {
+      found.push(`the fixture name ${name}`);
+    }
+  }
+  for (const word of data.words) {
+    if (words.has(word) && !data.aliases.has(word)) {
+      found.push(`the recorded name or address word ${word}`);
+    }
+  }
+  const iban = [...shape.matchAll(/(?<![\p{L}\p{N}])\p{Lu}{2}<digits:(\d+)>/gu)].some(
+    ([, digits]) => Number(digits) >= IBAN_DIGITS,
+  );
+  if (iban || LITERAL_IBAN.test(line)) {
+    found.push('an IBAN');
   }
   for (const slot of FORBIDDEN_LOG_SLOTS) {
     if (shape.includes(`<${slot}>`)) {
@@ -841,13 +954,13 @@ function forbiddenLogData(line, shape, aliases) {
   return found;
 }
 
-function logDataErrors(recording, shape, aliases) {
+function logDataErrors(recording, shape, data) {
   const errors = [];
   const reported = new Set();
   for (const [feature, scenarios] of recording) {
     for (const [name, scenario] of Object.entries(scenarios)) {
       for (const line of scenario.logs ?? []) {
-        const found = forbiddenLogData(line, shape(line), aliases);
+        const found = forbiddenLogData(line, shape(line), data);
         if (found.length === 0 || reported.has(line)) {
           continue;
         }
@@ -877,6 +990,7 @@ export function changedPaths(lines) {
     baseline: listed.filter(({ path }) => BASELINE_FILES.some((rule) => rule.test(path))),
     watched: listed.filter(({ path }) => WATCHED_FILES.some((rule) => rule.test(path))),
     sharedCases: listed.filter(({ path }) => path.startsWith(SHARED_CASES)).map(({ path }) => path),
+    patches: listed.filter(({ path }) => path.startsWith(ADDITION_PATCHES)),
   };
 }
 
@@ -993,6 +1107,11 @@ function render(result) {
       '',
     );
     countsTable(main.counts, lines);
+    lines.push(
+      main.inventoryChecked
+        ? `| Testy (inventář) | ${main.counts.tests.unchanged} | ${main.counts.tests.changed} | ${main.counts.tests.added} | ${main.counts.tests.removed} |`
+        : '| Testy (inventář) | neprovedeno | | | |',
+    );
     lines.push('');
   } else {
     lines.push(`Srovnání s main neprovedeno: ${main.reason}. Platí jen srovnání s v2.`, '');
@@ -1047,6 +1166,19 @@ function render(result) {
       ),
       '',
     );
+    const recipes = [...new Set(additions.map(({ entry }) => entry))];
+    if (recipes.length > 0) {
+      lines.push('Takto se doplněk znovu nahraje (z kořene repozitáře):', '', '```sh');
+      for (const entry of recipes) {
+        lines.push(
+          `git worktree add --detach ../v2-baseline ${entry.recordedFrom}`,
+          `git -C ../v2-baseline apply "$PWD/${entry.patch}"`,
+          `(cd ../v2-baseline && ${entry.record})`,
+          `git worktree remove --force ../v2-baseline`,
+        );
+      }
+      lines.push('```', '');
+    }
     lines.push('### Změny nahrávání a srovnání', '');
     lines.push(
       ...list(
@@ -1173,7 +1305,10 @@ function judge(differences, entries, counter, againstMain) {
 }
 
 function countAdded(entries, counts, counter) {
-  for (const entry of entries.filter((candidate) => candidate.kind === 'added')) {
+  for (const entry of entries.filter(
+    (candidate) =>
+      candidate.kind === 'added' && !('field' in candidate) && !('subject' in candidate),
+  )) {
     entry[counter] = counts.addedPairs.filter(
       (pair) => entry.matches.scenario.test(pair.scenario) && entry.matches.path.test(pair.path),
     ).length;
@@ -1238,19 +1373,24 @@ export function run(argv) {
     entry.sinceMain = sinceMain?.all.has(path) ?? false;
   }
   strictForThisPullRequest(entries);
-  const aliases = new Set();
-  const baseline = transcripts(at(chosen.baseline), 'baseline', aliases);
-  const recording = transcripts(at(chosen.recording), 'recording', aliases);
+  const data = {
+    aliases: new Set(),
+    words: new Set(),
+    names: fixtureNames(at(chosen['fixture-sources'])),
+  };
+  const baseline = transcripts(at(chosen.baseline), 'baseline', data);
+  const recording = transcripts(at(chosen.recording), 'recording', data);
   const mainRecording =
-    chosen.main === '' ? undefined : transcripts(at(chosen.main), 'recording of main', aliases);
+    chosen.main === '' ? undefined : transcripts(at(chosen.main), 'recording of main', data);
   const shape = logShaper(enumWords(baseline));
   const differences = [];
   const counts = emptyCounts();
   compareTranscripts(baseline, recording, differences, counts, shape);
   const inventoryChecked = chosen.inventory !== '';
   let freshTests;
+  let fresh;
   if (inventoryChecked) {
-    const fresh = readJson(at(chosen.inventory), 'The test inventory');
+    fresh = readJson(at(chosen.inventory), 'The test inventory');
     compareInventory(
       readJson(at(chosen['inventory-baseline']), 'The baseline test inventory'),
       fresh,
@@ -1263,6 +1403,13 @@ export function run(argv) {
   const additions = [];
   for (const { path, status } of changed?.baseline ?? []) {
     const addable = ADDABLE_BASELINE.test(path);
+    if (addable && status === 'A' && !NEW_RECEIPT_SAMPLE.test(path)) {
+      errors.push({
+        report: `\`baseline\` ${path}: do základu v2 přibývají jen nové vzorky dokladů \`regression/v2/receipts/<vzorek>.json\` a nové položky indexů; nové stavy obrazovek jsou nové položky \`screens/manifest.json\``,
+        error: `the pull request adds ${path}, but the v2 baseline takes new files only as regression/v2/receipts/<sample>.json, and new screen states only as new entries of regression/v2/screens/manifest.json`,
+      });
+      continue;
+    }
     if (addable && (status === 'A' || (status === 'M' && BASELINE_INDEXES.has(path)))) {
       const entry = entries.find(
         (candidate) =>
@@ -1293,7 +1440,23 @@ export function run(argv) {
           },
     );
   }
-  errors.push(...logDataErrors(recording, shape, aliases));
+  for (const { path, status } of changed?.patches ?? []) {
+    const named = entries.some(
+      (candidate) =>
+        candidate.kind === 'baseline-addition' && candidate.changedInPr && candidate.patch === path,
+    );
+    if (status === 'A' && named) {
+      continue;
+    }
+    errors.push({
+      report: `\`baseline\` ${path}: ${status === 'A' ? 'žádné `baseline-addition` tohoto PR tuto záplatu nejmenuje' : `tento PR ${status === 'D' ? 'maže' : 'mění'} záplatu, kterou už nahrál starší PR; záplata se nikdy nemění`}`,
+      error:
+        status === 'A'
+          ? `the pull request adds ${path}, but no baseline-addition in a regression/v2/changes/ file it adds or changes names it as its patch`
+          : `the pull request ${status === 'D' ? 'deletes' : 'changes'} ${path}; a patch of regression/v2/additions/ records how an addition was made and never changes`,
+    });
+  }
+  errors.push(...logDataErrors(recording, shape, data));
   const sharedCases = [];
   for (const path of changed?.sharedCases ?? []) {
     const entry = entries.find(
@@ -1323,7 +1486,22 @@ export function run(argv) {
     const mainDifferences = [];
     const mainCounts = emptyCounts();
     compareTranscripts(mainRecording, recording, mainDifferences, mainCounts, shape);
-    const mainEntries = entries.filter((entry) => entry.sinceMain);
+    mainDifferences.push(...mainCounts.addedDetails);
+    const mainInventoryChecked = inventoryChecked && chosen['main-inventory'] !== '';
+    if (mainInventoryChecked) {
+      compareInventory(
+        readJson(at(chosen['main-inventory']), 'The test inventory of main'),
+        fresh,
+        mainDifferences,
+        mainCounts,
+      );
+    }
+    const mainEntries = entries.filter(
+      (entry) =>
+        entry.sinceMain &&
+        (entry.kind !== 'retired' ||
+          (TEST_ANCHOR.test(entry.replacement) && (freshTests?.has(entry.replacement) ?? true))),
+    );
     const againstMain = judge(mainDifferences, mainEntries, 'usedMain', true);
     countAdded(mainEntries, mainCounts, 'usedMain');
     errors.push(...againstMain.errors);
@@ -1334,6 +1512,7 @@ export function run(argv) {
       counts: mainCounts,
       errors: againstMain.errors.length,
       entries: mainEntries.length,
+      inventoryChecked: mainInventoryChecked,
     };
   } else {
     main = {

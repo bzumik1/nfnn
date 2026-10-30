@@ -52,7 +52,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: ${{ github.event_name == 'push' && 35 || 25 }}
     defaults:
       run:
         working-directory: backend
@@ -96,7 +96,16 @@ jobs:
             backend/build/api-transcripts/
             backend/build/backend-inventory.json
           if-no-files-found: error
-          retention-days: ${{ github.event_name == 'push' && 30 || 3 }}
+          retention-days: ${{ github.event_name == 'push' && 90 || 3 }}
+
+      - name: Record main a second time and compare the two recordings
+        if: github.event_name == 'push'
+        run: |
+          cp -R build/api-transcripts "$RUNNER_TEMP/first-recording"
+          ./gradlew acceptanceTest --rerun
+          node ../scripts/compare-recordings.mjs "$RUNNER_TEMP/first-recording" build/api-transcripts
+        env:
+          API_TRANSCRIPTS: record
 
   frontend:
     needs: changes
@@ -163,7 +172,7 @@ jobs:
           name: frontend-inventory
           path: ${{ runner.temp }}/inventory/
           if-no-files-found: error
-          retention-days: 3
+          retention-days: ${{ github.event_name == 'push' && 90 || 3 }}
 
       - name: Build with the control theme
         run: npx ng build --configuration=production,control-theme --output-path=dist/control-theme
@@ -207,7 +216,7 @@ jobs:
           name: mcp-inventory
           path: ${{ runner.temp }}/inventory/
           if-no-files-found: error
-          retention-days: 3
+          retention-days: ${{ github.event_name == 'push' && 90 || 3 }}
 
   main-recording:
     name: Nahrávka main
@@ -230,18 +239,27 @@ jobs:
           HEAD_SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
+          keeps() {
+            [ "$(gh api "repos/$REPOSITORY/actions/runs/$1/artifacts?per_page=100" --jq '[.artifacts[] | select(.expired == false) | .name | select(. == "backend-recording" or . == "frontend-inventory" or . == "mcp-inventory")] | unique | length')" = 3 ]
+          }
           base=$(gh api "repos/$REPOSITORY/commits/$HEAD_SHA" --jq '.parents[0].sha')
           runs=$(gh api "repos/$REPOSITORY/actions/workflows/pr-check.yml/runs?branch=main&event=push&status=success&per_page=100" --jq '.workflow_runs[] | "\(.head_sha) \(.id)"')
           for commit in $(gh api "repos/$REPOSITORY/commits?sha=$base&per_page=50" --jq '.[].sha'); do
             for run in $(awk -v commit="$commit" '$1 == commit { print $2 }' <<<"$runs"); do
-              if [ -n "$(gh api "repos/$REPOSITORY/actions/runs/$run/artifacts" --jq '.artifacts[] | select(.name == "backend-recording" and .expired == false) | .id')" ]; then
+              if keeps "$run"; then
                 echo "The recording of main at $commit (run $run) is the comparison base for $base."
                 { echo "commit=$commit"; echo "run=$run"; } >> "$GITHUB_OUTPUT"
                 exit 0
               fi
             done
           done
-          missing="no successful push run of the last 50 commits on main up to ${base:0:12} keeps a backend-recording artifact (a first run, or every one expired)"
+          for run in $(awk '{ print $2 }' <<<"$runs"); do
+            if keeps "$run"; then
+              echo "::error::No successful push run of the last 50 commits on main up to ${base:0:12} keeps its recording and test lists, although run $run does. Re-run the PR check of the newest commit on main (Actions, PR check, the push run, Re-run all jobs), then re-run this check (testing.md, \"Regression against v2\")."
+              exit 1
+            fi
+          done
+          missing="no successful push run on main keeps a backend-recording, frontend-inventory and mcp-inventory artifact yet (before the first push run that keeps them)"
           echo "::warning::$missing; the comparison falls back to v2 only"
           echo "missing=$missing" >> "$GITHUB_OUTPUT"
 
@@ -253,7 +271,23 @@ jobs:
           github-token: ${{ github.token }}
           path: ${{ runner.temp }}/main-recording
 
-      - name: Keep the recording of main for the comparison
+      - uses: actions/download-artifact@v8
+        if: steps.find.outputs.run != ''
+        with:
+          name: frontend-inventory
+          run-id: ${{ steps.find.outputs.run }}
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/main-recording
+
+      - uses: actions/download-artifact@v8
+        if: steps.find.outputs.run != ''
+        with:
+          name: mcp-inventory
+          run-id: ${{ steps.find.outputs.run }}
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/main-recording
+
+      - name: Keep the recording and test lists of main for the comparison
         if: steps.find.outputs.run != ''
         uses: actions/upload-artifact@v7
         with:
@@ -334,13 +368,23 @@ jobs:
         env:
           API_TRANSCRIPTS_DIR: ${{ github.workspace }}/backend/build/api-transcripts
 
+      - name: Collect the test inventory of main
+        if: needs.main-recording.outputs.commit != ''
+        run: >-
+          node scripts/test-inventory.mjs
+          --backend="$RUNNER_TEMP/main-recording/backend-inventory.json"
+          --frontendVitest="$RUNNER_TEMP/main-recording/frontend-vitest.json"
+          --playwright="$RUNNER_TEMP/main-recording/frontend-playwright.json"
+          --mcpVitest="$RUNNER_TEMP/main-recording/mcp-vitest.json"
+          --out="$RUNNER_TEMP/main-inventory.json"
+
       - name: Transcripts and tests compared with v2 and with the recording of main
         env:
           MAIN_COMMIT: ${{ needs.main-recording.outputs.commit }}
           MAIN_MISSING: ${{ needs.main-recording.outputs.missing }}
         run: |
           if [ -n "$MAIN_COMMIT" ]; then
-            main=(--main="$RUNNER_TEMP/main-recording/api-transcripts" --main-commit="$MAIN_COMMIT" --main-changed="$RUNNER_TEMP/changed-since-main.txt")
+            main=(--main="$RUNNER_TEMP/main-recording/api-transcripts" --main-commit="$MAIN_COMMIT" --main-changed="$RUNNER_TEMP/changed-since-main.txt" --main-inventory="$RUNNER_TEMP/main-inventory.json")
           else
             main=(--main-missing="${MAIN_MISSING:-the job main-recording named no recording of main}")
           fi
