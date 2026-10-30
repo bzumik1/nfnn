@@ -1,3 +1,4 @@
+import { accountMatchesIban } from './czech-account';
 import { PaymentDetails } from './payment-details-api';
 
 export type PaymentPurpose = 'DONATION' | 'ACCOUNT_VERIFICATION';
@@ -23,7 +24,6 @@ const VARIABLE_SYMBOL = /^[0-9]{1,10}$/;
 const SPAYD_TEXT = /^(?:[0-9A-Z$+./:-]+(?: [0-9A-Z$+./:-]+)*)?$/;
 const RECIPIENT_NAME_LENGTH = 35;
 const MESSAGE_LENGTH = 60;
-const IBAN = /^[A-Z]{2}[0-9]{2}[0-9A-Z]{1,30}$/;
 const CURRENCY = /^[A-Z]{3}$/;
 
 export function spayd(details: PaymentDetails, payment: SpaydPayment): SpaydOutcome {
@@ -80,7 +80,7 @@ function amountText(amountMinor: number): string {
 
 function isSpaydReady(details: PaymentDetails): boolean {
   return (
-    IBAN.test(details.account.iban) &&
+    accountMatchesIban(details.account.number, details.account.iban) &&
     CURRENCY.test(details.currency) &&
     isSpaydText(details.account.recipientName, RECIPIENT_NAME_LENGTH, false) &&
     isSpaydText(details.messages.donation, MESSAGE_LENGTH, true) &&

@@ -6,6 +6,7 @@ import cz.novanadeje.app.sharedcases.SharedCase;
 import cz.novanadeje.app.sharedcases.SharedCaseRunner;
 import tools.jackson.databind.JsonNode;
 
+import java.math.BigDecimal;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -20,6 +21,7 @@ class DonationPurposeSharedCasesTest extends SharedCaseRunner {
 
     private static final String FIELD_SEPARATOR = "\\*";
     private static final String KEY_SEPARATOR = ":";
+    private static final int HELLER_DIGITS = 2;
     private static final Optional<SenderAccount> SENDER = SenderAccount.parse("2900233333", "2010");
 
     @Override
@@ -44,15 +46,16 @@ class DonationPurposeSharedCasesTest extends SharedCaseRunner {
             return;
         }
         Map<String, String> fields = fieldsOf(sharedCase.expected().get("spayd").asString());
-        Money amount = Money.czk(sharedCase.input().get("amountMinor").asLong());
+        Money amount = Money.czk(new BigDecimal(fields.get("AM")).movePointRight(HELLER_DIGITS).longValueExact());
         var paid = payment(1, BOOKED_ON, amount, SENDER, fields.get("X-VS"), fields.get("MSG"));
 
-        assertThat(DonationPurpose.of(paid)).isEqualTo(expectedPurpose(sharedCase.input(), amount));
+        assertThat(DonationPurpose.of(paid)).isEqualTo(expectedPurpose(sharedCase.input()));
     }
 
-    private static DonationPurpose expectedPurpose(JsonNode input, Money amount) {
+    private static DonationPurpose expectedPurpose(JsonNode input) {
         boolean verifies = input.has("purpose") && input.get("purpose").asString().equals("ACCOUNT_VERIFICATION");
-        return verifies && amount.equals(DonationPurpose.VERIFICATION_AMOUNT) ? DonationPurpose.ACCOUNT_VERIFICATION : DonationPurpose.GENERAL;
+        Money asked = Money.czk(input.get("amountMinor").asLong());
+        return verifies && asked.equals(DonationPurpose.VERIFICATION_AMOUNT) ? DonationPurpose.ACCOUNT_VERIFICATION : DonationPurpose.GENERAL;
     }
 
     private static Map<String, String> fieldsOf(String spayd) {

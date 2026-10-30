@@ -1,6 +1,6 @@
 {
   "source": "edited",
-  "logic": "The SPAYD text of a payment QR that the browser composes with spayd() (features/donations/spayd.ts) from what GET /api/donations/payment-details serves and the payment's amount in hellers, variable symbol and purpose (DONATION when left out), or its refusal as the fields it refuses. details names the case of payment/details.json whose answer the browser holds, so the recipient cases chain from the name the backend writes as SPAYD text; servedDetails is an answer the backend never gives (PaymentDetails refuses it at startup), which spayd() refuses rather than send. spayd() has no text rules of its own: it writes ACC, AM (crowns with two decimals, 1 heller to 9 999 999,99 Kč, the 10 characters SPAYD allows), CC, X-VS (only with a symbol, 1 to 10 digits; an account verification needs one), RN (left out when empty) and MSG (the purpose's message) as they come, and refuses details that are not SPAYD text (upper-case 0-9 A-Z $ + - . / : with single spaces, at most 35 characters for RN and 60 for MSG), so the whole text stays in the QR alphanumeric set and no value can carry the separator *. The donation form's own limits (whole crowns from 1 to 1 000 000 Kč) are the payment panel's, outside these cases. Only the browser runs the cases (spayd.spec.ts); the backend's DonationPurposeSharedCasesTest reads the account-verification cases and checks that the import recognises their message at the verification amount. qr/payment.json encodes each text into its QR symbol under the same case name",
+  "logic": "The SPAYD text of a payment QR that the browser composes with spayd() (features/donations/spayd.ts) from what GET /api/donations/payment-details serves and the payment's amount in hellers, variable symbol and purpose (DONATION when left out), or its refusal as the fields it refuses. details names the case of payment/details.json whose answer the browser holds, so the recipient cases chain from the name the backend writes as SPAYD text; servedDetails is an answer the backend never gives (PaymentDetails refuses it at startup), which spayd() refuses rather than send. spayd() has no text rules of its own: it writes ACC, AM (crowns with two decimals, 1 heller to 9 999 999,99 Kč, the 10 characters SPAYD allows), CC, X-VS (only with a symbol, 1 to 10 digits; an account verification needs one), RN (left out when empty) and MSG (the purpose's message) as they come, and refuses details that are not SPAYD text (upper-case 0-9 A-Z $ + - . / : with single spaces, at most 35 characters for RN, 1 to 60 for both messages, whichever purpose is asked), a currency that is not three capital letters, and an account whose IBAN is not the IBAN of its Czech account number (payment/account.json, the pairing BankAccount enforces at startup), so the whole text stays in the QR alphanumeric set, no value can carry the separator * and the QR pays the account number people read. The donation form's own limits (whole crowns from 1 to 1 000 000 Kč) are the payment panel's, outside these cases. Only the browser runs the cases (spayd.spec.ts); the backend's DonationPurposeSharedCasesTest reads the account-verification cases and checks that the import recognises their message at the verification amount. qr/payment.json encodes each text into its QR symbol under the same case name",
   "cases": [
     {
       "name": "1 Kč without a variable symbol",
@@ -419,6 +419,268 @@
           "currency": "CZK",
           "messages": {
             "donation": "DAR %20 FOND",
+            "accountVerification": "OVERENI UCTU NADACNI FOND NOVA NADEJE"
+          },
+          "accountVerificationAmountMinor": 100
+        },
+        "amountMinor": 50000
+      },
+      "expected": {
+        "refused": {
+          "fields": [
+            "details"
+          ]
+        }
+      }
+    },
+    {
+      "name": "a recipient name of 36 characters is refused, one more than SPAYD text is cut to",
+      "input": {
+        "servedDetails": {
+          "account": {
+            "number": "5544332217/2010",
+            "iban": "CZ2620100000005544332217",
+            "recipientName": "NADACNI FOND NOVA NADEJE PRO DETI AB"
+          },
+          "currency": "CZK",
+          "messages": {
+            "donation": "DAR NADACNI FOND NOVA NADEJE",
+            "accountVerification": "OVERENI UCTU NADACNI FOND NOVA NADEJE"
+          },
+          "accountVerificationAmountMinor": 100
+        },
+        "amountMinor": 50000
+      },
+      "expected": {
+        "refused": {
+          "fields": [
+            "details"
+          ]
+        }
+      }
+    },
+    {
+      "name": "an account-verification message over 60 characters is refused for a verification",
+      "input": {
+        "servedDetails": {
+          "account": {
+            "number": "5544332217/2010",
+            "iban": "CZ2620100000005544332217",
+            "recipientName": "NADACNI FOND NOVA NADEJE"
+          },
+          "currency": "CZK",
+          "messages": {
+            "donation": "DAR NADACNI FOND NOVA NADEJE",
+            "accountVerification": "OVERENI UCTU NADACNI FOND NOVA NADEJE PRO DETI A MLADEZ Z TIS"
+          },
+          "accountVerificationAmountMinor": 100
+        },
+        "amountMinor": 100,
+        "variableSymbol": "1234567890",
+        "purpose": "ACCOUNT_VERIFICATION"
+      },
+      "expected": {
+        "refused": {
+          "fields": [
+            "details"
+          ]
+        }
+      }
+    },
+    {
+      "name": "an account-verification message over 60 characters refuses the details for a donation too",
+      "input": {
+        "servedDetails": {
+          "account": {
+            "number": "5544332217/2010",
+            "iban": "CZ2620100000005544332217",
+            "recipientName": "NADACNI FOND NOVA NADEJE"
+          },
+          "currency": "CZK",
+          "messages": {
+            "donation": "DAR NADACNI FOND NOVA NADEJE",
+            "accountVerification": "OVERENI UCTU NADACNI FOND NOVA NADEJE PRO DETI A MLADEZ Z TIS"
+          },
+          "accountVerificationAmountMinor": 100
+        },
+        "amountMinor": 50000
+      },
+      "expected": {
+        "refused": {
+          "fields": [
+            "details"
+          ]
+        }
+      }
+    },
+    {
+      "name": "an account-verification message holding the field separator * is refused",
+      "input": {
+        "servedDetails": {
+          "account": {
+            "number": "5544332217/2010",
+            "iban": "CZ2620100000005544332217",
+            "recipientName": "NADACNI FOND NOVA NADEJE"
+          },
+          "currency": "CZK",
+          "messages": {
+            "donation": "DAR NADACNI FOND NOVA NADEJE",
+            "accountVerification": "OVERENI*AM:1.00"
+          },
+          "accountVerificationAmountMinor": 100
+        },
+        "amountMinor": 50000
+      },
+      "expected": {
+        "refused": {
+          "fields": [
+            "details"
+          ]
+        }
+      }
+    },
+    {
+      "name": "an empty donation message is refused, so every QR says what the payment is for",
+      "input": {
+        "servedDetails": {
+          "account": {
+            "number": "5544332217/2010",
+            "iban": "CZ2620100000005544332217",
+            "recipientName": "NADACNI FOND NOVA NADEJE"
+          },
+          "currency": "CZK",
+          "messages": {
+            "donation": "",
+            "accountVerification": "OVERENI UCTU NADACNI FOND NOVA NADEJE"
+          },
+          "accountVerificationAmountMinor": 100
+        },
+        "amountMinor": 50000
+      },
+      "expected": {
+        "refused": {
+          "fields": [
+            "details"
+          ]
+        }
+      }
+    },
+    {
+      "name": "an empty account-verification message is refused",
+      "input": {
+        "servedDetails": {
+          "account": {
+            "number": "5544332217/2010",
+            "iban": "CZ2620100000005544332217",
+            "recipientName": "NADACNI FOND NOVA NADEJE"
+          },
+          "currency": "CZK",
+          "messages": {
+            "donation": "DAR NADACNI FOND NOVA NADEJE",
+            "accountVerification": ""
+          },
+          "accountVerificationAmountMinor": 100
+        },
+        "amountMinor": 50000
+      },
+      "expected": {
+        "refused": {
+          "fields": [
+            "details"
+          ]
+        }
+      }
+    },
+    {
+      "name": "a two-letter currency is refused",
+      "input": {
+        "servedDetails": {
+          "account": {
+            "number": "5544332217/2010",
+            "iban": "CZ2620100000005544332217",
+            "recipientName": "NADACNI FOND NOVA NADEJE"
+          },
+          "currency": "CZ",
+          "messages": {
+            "donation": "DAR NADACNI FOND NOVA NADEJE",
+            "accountVerification": "OVERENI UCTU NADACNI FOND NOVA NADEJE"
+          },
+          "accountVerificationAmountMinor": 100
+        },
+        "amountMinor": 50000
+      },
+      "expected": {
+        "refused": {
+          "fields": [
+            "details"
+          ]
+        }
+      }
+    },
+    {
+      "name": "an IBAN that is not the IBAN of the shown account number is refused, so the QR pays the account people read",
+      "input": {
+        "servedDetails": {
+          "account": {
+            "number": "5544332217/2010",
+            "iban": "CZ6508000000192000145399",
+            "recipientName": "NADACNI FOND NOVA NADEJE"
+          },
+          "currency": "CZK",
+          "messages": {
+            "donation": "DAR NADACNI FOND NOVA NADEJE",
+            "accountVerification": "OVERENI UCTU NADACNI FOND NOVA NADEJE"
+          },
+          "accountVerificationAmountMinor": 100
+        },
+        "amountMinor": 50000
+      },
+      "expected": {
+        "refused": {
+          "fields": [
+            "details"
+          ]
+        }
+      }
+    },
+    {
+      "name": "an IBAN with wrong check digits is refused",
+      "input": {
+        "servedDetails": {
+          "account": {
+            "number": "19-2000145399/0800",
+            "iban": "CZ6608000000192000145399",
+            "recipientName": "NADACNI FOND NOVA NADEJE"
+          },
+          "currency": "CZK",
+          "messages": {
+            "donation": "DAR NADACNI FOND NOVA NADEJE",
+            "accountVerification": "OVERENI UCTU NADACNI FOND NOVA NADEJE"
+          },
+          "accountVerificationAmountMinor": 100
+        },
+        "amountMinor": 50000
+      },
+      "expected": {
+        "refused": {
+          "fields": [
+            "details"
+          ]
+        }
+      }
+    },
+    {
+      "name": "an account number that fails the modulo 11 check is refused, even with the IBAN of the right number",
+      "input": {
+        "servedDetails": {
+          "account": {
+            "number": "2000145398/0800",
+            "iban": "CZ7908000000002000145399",
+            "recipientName": "NADACNI FOND NOVA NADEJE"
+          },
+          "currency": "CZK",
+          "messages": {
+            "donation": "DAR NADACNI FOND NOVA NADEJE",
             "accountVerification": "OVERENI UCTU NADACNI FOND NOVA NADEJE"
           },
           "accountVerificationAmountMinor": 100

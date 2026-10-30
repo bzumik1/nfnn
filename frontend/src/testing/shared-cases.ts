@@ -72,6 +72,16 @@ export interface PaymentDetailsExpected {
   readonly accountVerificationAmountMinor: number;
 }
 
+export interface PaymentAccountInput {
+  readonly accountNumber: string;
+  readonly iban: string;
+}
+
+export interface PaymentAccountExpected {
+  readonly ibanOfNumber: string | null;
+  readonly matches: boolean;
+}
+
 export interface PaymentQrInput {
   readonly spayd: string;
 }
@@ -123,6 +133,7 @@ export interface SharedCaseTopics {
   readonly 'donor-summary/summary.json': SharedCase<RowsInput, Answer>;
   readonly 'monthly-report/formatting.json': SharedCase<Answer, { readonly text: string }>;
   readonly 'monthly-report/report.json': SharedCase<RowsInput, Answer>;
+  readonly 'payment/account.json': SharedCase<PaymentAccountInput, PaymentAccountExpected>;
   readonly 'payment/details.json': SharedCase<PaymentDetailsInput, PaymentDetailsExpected>;
   readonly 'payment/spayd.json': SharedCase<SpaydInput, SpaydExpected>;
   readonly 'qr/encoder.json': SharedCase<EncoderQrInput, QrSymbol>;
@@ -142,6 +153,7 @@ const REGISTERED_TOPICS: Readonly<Record<SharedCaseTopic, true>> = {
   'donor-summary/summary.json': true,
   'monthly-report/formatting.json': true,
   'monthly-report/report.json': true,
+  'payment/account.json': true,
   'payment/details.json': true,
   'payment/spayd.json': true,
   'qr/encoder.json': true,
