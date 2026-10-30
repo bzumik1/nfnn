@@ -1,0 +1,57 @@
+[
+  {
+    "path": "PUT /api/admin/donations/report/settings",
+    "scenario": "donations/admin_monthly_report: Settings with a malformed address, a day outside every month, an hour outside the day or no section are refused*",
+    "kind": "body",
+    "field": "$.type",
+    "reason": "1.18 (security.md, Output): a recipient that is no e-mail address and a report without a section are domain problems of their own (donations/report-recipient-invalid, donations/report-section-required) instead of an IllegalArgumentException answered as validation",
+    "contract": "docs/api-contract.md, Monthly report settings and overview"
+  },
+  {
+    "path": "PUT /api/admin/donations/report/settings",
+    "scenario": "donations/admin_monthly_report: Settings with a malformed address, a day outside every month, an hour outside the day or no section are refused*",
+    "kind": "body",
+    "field": "$.title",
+    "reason": "1.18: the title of the new domain problems (Příjemce přehledu není e-mailová adresa, Přehled nemá žádnou část) replaces the generic Neplatné údaje",
+    "contract": "docs/api-contract.md, Monthly report settings and overview"
+  },
+  {
+    "path": "PUT /api/admin/donations/report/settings",
+    "scenario": "donations/admin_monthly_report: Settings with a malformed address, a day outside every month, an hour outside the day or no section are refused*",
+    "kind": "body",
+    "field": "$.detail",
+    "reason": "1.18 (security.md, Output): v2 answered the exception's English text with the client's own value (Email address is not valid: pavel; The report has at least one section); the detail is now the problem's Czech text",
+    "contract": "docs/api-contract.md, Conventions (Problem texts)"
+  },
+  {
+    "path": "POST /api/operations/setup",
+    "scenario": "operations/first_setup: Settings that belong only to the administration are refused in the setup*",
+    "kind": "body",
+    "reason": "1.18 (security.md, Output): a setting the first setup does not take answers operations/invalid-settings with an error not-in-setup for that setting, instead of an IllegalArgumentException whose English text (Only settings of the first setup are set here) was the detail; type, title, detail and errors change",
+    "contract": "docs/api-contract.md, Settings and the first setup"
+  },
+  {
+    "path": "DELETE /api/admin/donors/administrators/{id}",
+    "scenario": "donors/admin_administrators: An unknown donor cannot be removed*",
+    "kind": "body",
+    "field": "$.detail",
+    "reason": "1.18 (security.md, Output): donors/donor-not-found had no detail text, so v2 answered the exception's message with the requested id (Donor <id> does not exist); it now has its Czech and English detail, and a code without texts never falls back to the exception's message",
+    "contract": "docs/api-contract.md, Conventions (Problem texts)"
+  },
+  {
+    "path": "DELETE /api/admin/donors/{id}",
+    "scenario": "donors/admin_donor_erasure: An unknown donor cannot be erased*",
+    "kind": "body",
+    "field": "$.detail",
+    "reason": "1.18 (security.md, Output): donors/donor-not-found gets its own detail instead of the exception's message with the requested id",
+    "contract": "docs/api-contract.md, Conventions (Problem texts)"
+  },
+  {
+    "path": "GET /api/admin/donors/{id}",
+    "scenario": "donors/admin_donors: An unknown donor has no card*",
+    "kind": "body",
+    "field": "$.detail",
+    "reason": "1.18 (security.md, Output): donors/donor-not-found gets its own detail instead of the exception's message with the requested id",
+    "contract": "docs/api-contract.md, Conventions (Problem texts)"
+  }
+]
