@@ -456,6 +456,7 @@ export function receiptSigningKeys(
     currentKeyId: current?.keyId ?? '21fe31df',
     currentKeyPublished: current?.published ?? false,
     keys,
+    auditMismatches: [],
   };
 }
 

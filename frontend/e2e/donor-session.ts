@@ -179,6 +179,7 @@ export const receiptSigningKeys = {
       current: true,
     },
   ],
+  auditMismatches: [],
 };
 
 export async function mockDonorApi(
