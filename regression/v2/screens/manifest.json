@@ -733,6 +733,24 @@
       "addedIn": "0.6c"
     },
     {
+      "state": "donor-bank-accounts-add",
+      "width": 1280,
+      "height": 900,
+      "file": "donor-bank-accounts-add-1280.png",
+      "bytes": 142674,
+      "pixelsSha256": "a90aa2a81afaf1579e97ad36d0317254d56ea1a5fc04eed0cef0f6ee78057d54",
+      "addedIn": "0.6c"
+    },
+    {
+      "state": "donor-bank-accounts-add",
+      "width": 390,
+      "height": 900,
+      "file": "donor-bank-accounts-add-390.png",
+      "bytes": 74229,
+      "pixelsSha256": "8365b3a669d0fc0bf31438d6fa71946a212edeb6ff22947091aa3353a441c443",
+      "addedIn": "0.6c"
+    },
+    {
       "state": "donor-details-second-factor-setup--qr",
       "width": 1280,
       "imageWidth": 200,

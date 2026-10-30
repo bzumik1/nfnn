@@ -362,21 +362,49 @@ export function compareFolders(baseShots, headShots, out) {
   return { results, added, removed };
 }
 
-function options(argv) {
-  const named = Object.fromEntries(
-    argv
-      .filter((argument) => argument.startsWith('--'))
-      .map((argument) => {
-        const [key, ...value] = argument.slice(2).split('=');
-        return [key, value.length > 0 ? value.join('=') : true];
-      }),
-  );
+const VALUE_OPTIONS = ['base', 'out', 'patch'];
+const SWITCHES = ['head-spec', 'v2-only', 'base-only', 'keep', 'help'];
+
+export function options(argv) {
+  const named = {};
+  for (const argument of argv) {
+    if (!argument.startsWith('--')) {
+      throw new Error(`unexpected argument ${argument}; give options as --name or --name=value`);
+    }
+    const [key, ...value] = argument.slice(2).split('=');
+    if (VALUE_OPTIONS.includes(key)) {
+      if (value.length === 0 || value.join('=') === '') {
+        throw new Error(
+          `--${key} needs a value: --${key}=<${key === 'base' ? 'commit' : key === 'out' ? 'folder' : 'file'}>`,
+        );
+      }
+      named[key] = value.join('=');
+    } else if (SWITCHES.includes(key)) {
+      if (value.length > 0) {
+        throw new Error(`--${key} takes no value`);
+      }
+      named[key] = true;
+    } else {
+      throw new Error(
+        `unknown option --${key}; known: ${[...VALUE_OPTIONS, ...SWITCHES].map((name) => `--${name}`).join(', ')}`,
+      );
+    }
+  }
+  if (named['head-spec'] && named.patch) {
+    throw new Error('--head-spec and --patch both change the spec of the base; give one');
+  }
   return named;
 }
 
 async function main() {
   const root = realpathSync(fileURLToPath(new URL('..', import.meta.url)));
-  const given = options(process.argv.slice(2));
+  let given;
+  try {
+    given = options(process.argv.slice(2));
+  } catch (refused) {
+    console.error(refused.message);
+    return 2;
+  }
   if (given.help) {
     console.log(
       [
@@ -398,9 +426,7 @@ async function main() {
     `${given.base ?? git(root, 'merge-base', 'origin/main', 'HEAD')}^{commit}`,
   );
   const head = git(root, 'rev-parse', 'HEAD');
-  const out = resolve(
-    typeof given.out === 'string' ? given.out : mkdtempSync(join(tmpdir(), 'nfnn-screens-')),
-  );
+  const out = resolve(given.out ?? mkdtempSync(join(tmpdir(), 'nfnn-screens-')));
   if (!outsideRepository(out, root)) {
     console.error(`${out} is inside the repository; write the comparison to a scratch folder`);
     return 2;
@@ -409,13 +435,9 @@ async function main() {
   const screens = given['v2-only'] ? 'v2' : '1';
   const tree = join(out, 'base-tree');
   rmSync(tree, { recursive: true, force: true });
-  if (given['head-spec'] && given.patch) {
-    console.error('--head-spec and --patch both change the spec of the base; give one');
-    return 2;
-  }
   prepareBase(root, base, tree, {
     headSpec: !!given['head-spec'],
-    patch: typeof given.patch === 'string' ? given.patch : undefined,
+    patch: given.patch,
   });
   try {
     const baseRun = await shoot(root, tree, 'base', out, screens);

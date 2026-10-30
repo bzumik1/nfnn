@@ -45,7 +45,6 @@ class BaselineDataSetsTest {
     static final String ADDITIONS_FOLDER = "regression/v2/additions";
     private static final Pattern SCREEN_NAME = Pattern.compile("^  (?:publicPage|donorPage|adminPage)\\('([^']+)'|^    name: '([^']+)'", Pattern.MULTILINE);
     private static final Pattern ELEMENT_SHOT_NAME = Pattern.compile("\\belement\\('([^']+)'");
-    private static final Pattern ELEMENTS_ONLY = Pattern.compile("^    name: '([^']+)',\\n    elementsOnly: true,", Pattern.MULTILINE);
     private static final JsonMapper JSON = JsonMapper.builder().build();
 
     @ParameterizedTest
@@ -106,7 +105,6 @@ class BaselineDataSetsTest {
             elementShots.add(element.group(1));
         }
         Set<String> expected = new TreeSet<>(specStates);
-        ELEMENTS_ONLY.matcher(screens).results().map(only -> only.group(1)).forEach(expected::remove);
         expected.addAll(elementShots);
 
         assertThat(specStates).as("states in %s", SCREENS_SPEC).hasSizeGreaterThan(30);

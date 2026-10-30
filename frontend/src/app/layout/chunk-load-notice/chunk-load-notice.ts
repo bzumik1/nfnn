@@ -5,6 +5,7 @@ import {
   Component,
   ElementRef,
   inject,
+  signal,
   viewChild,
 } from '@angular/core';
 
@@ -26,9 +27,14 @@ export class ChunkLoadNotice {
   private readonly bar = viewChild<ElementRef<HTMLElement>>('bar');
   private readonly barButton = viewChild<ElementRef<HTMLButtonElement>>('barButton');
   private readonly pageHeading = viewChild<ElementRef<HTMLElement>>('pageHeading');
+  protected readonly focusMissedBar = signal(false);
 
   constructor() {
-    afterRenderEffect(() => this.barButton()?.nativeElement.focus());
+    afterRenderEffect(() => {
+      const button = this.barButton()?.nativeElement;
+      button?.focus();
+      this.focusMissedBar.set(button !== undefined && this.document.activeElement !== button);
+    });
     afterRenderEffect(() => {
       const heading = this.pageHeading()?.nativeElement;
       if (heading) {

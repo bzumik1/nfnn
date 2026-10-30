@@ -79,7 +79,7 @@ index 5d4cfcff..4d9ec7a8 100644
      (url) => url.pathname.startsWith('/api/content/media/'),
      (route) => route.fulfill({ contentType: 'image/webp', body: cover }),
 diff --git a/frontend/e2e/baseline/screens.spec.ts b/frontend/e2e/baseline/screens.spec.ts
-index becc094d..3455ff4b 100644
+index becc094d..ebc8ff54 100644
 --- a/frontend/e2e/baseline/screens.spec.ts
 +++ b/frontend/e2e/baseline/screens.spec.ts
 @@ -1,4 +1,4 @@
@@ -123,7 +123,7 @@ index becc094d..3455ff4b 100644
    viewportOnly?: boolean;
 +  region?: string;
 +  elements?: ElementShot[];
-+  elementsOnly?: boolean;
++  masked?: string[];
 +  ready?: (page: Page) => Promise<void>;
  }
  
@@ -225,7 +225,7 @@ index becc094d..3455ff4b 100644
    adminPage('admin-reports', '/sprava/prehledy'),
    adminPage('admin-news', '/sprava/aktuality'),
    adminPage('admin-news-new', '/sprava/aktuality/nova'),
-@@ -215,11 +268,151 @@ const SCREENS: Screen[] = [
+@@ -215,11 +268,152 @@ const SCREENS: Screen[] = [
    adminPage('admin-logs', '/sprava/logy'),
    adminPage('admin-settings', '/sprava/nastaveni'),
    adminPage('admin-history', '/sprava/historie'),
@@ -303,7 +303,8 @@ index becc094d..3455ff4b 100644
 +  },
 +  {
 +    name: 'donor-bank-accounts-add',
-+    elementsOnly: true,
++    viewportOnly: true,
++    masked: ['.add-account-text', '.add-account-watch .watch-detail'],
 +    elements: [
 +      element('donor-bank-accounts-add--qr', '.add-account-qr'),
 +      element('donor-bank-accounts-add--bank', '.add-account-bank'),
@@ -379,7 +380,7 @@ index becc094d..3455ff4b 100644
    await page.evaluate(async () => {
      document.querySelectorAll<HTMLImageElement>('img[loading="lazy"]').forEach((image) => {
        image.loading = 'eager';
-@@ -239,30 +432,78 @@ async function settle(page: Page): Promise<void> {
+@@ -239,30 +433,79 @@ async function settle(page: Page): Promise<void> {
    });
  }
  
@@ -419,9 +420,10 @@ index becc094d..3455ff4b 100644
 -          caret: 'hide',
 -          maxDiffPixelRatio: 0.002,
 -        });
-+        if (!screen.region && !screen.elementsOnly) {
++        if (!screen.region) {
 +          await expect(page).toHaveScreenshot(`${screen.name}-${width}.png`, {
 +            fullPage: !screen.viewportOnly,
++            mask: (screen.masked ?? []).map((selector) => page.locator(selector)),
 +            animations: 'disabled',
 +            caret: 'hide',
 +            ...PAGE_TOLERANCE,

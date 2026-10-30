@@ -11,12 +11,13 @@ const ADDITIONS_FOLDER = 'regression/v2/additions';
 const usage = [
   'Usage: node scripts/screens-manifest.mjs <folder of PNGs> [manifest path] [where the PNGs are kept]',
   '       node scripts/screens-manifest.mjs --check <folder of PNGs> [manifest path]',
-  '       node scripts/screens-manifest.mjs --add <folder of PNGs> <slice, whose spec patch is regression/v2/additions/<slice>.patch>',
+  '       node scripts/screens-manifest.mjs --add <first recording> <second recording> <slice, whose spec patch is regression/v2/additions/<slice>.patch>',
 ].join('\n');
 const argv = process.argv.slice(2);
 const mode = ['--check', '--add'].includes(argv[0]) ? argv[0] : 'write';
 const [screens, out, stored = screens] = mode === 'write' ? argv : argv.slice(1);
-if (!screens || (mode === '--add' && !out)) {
+const [, , slice] = argv.slice(1);
+if (!screens || (mode === '--add' && !slice)) {
   console.error(usage);
   process.exit(2);
 }
@@ -77,7 +78,7 @@ if (mode === '--check') {
   ]);
   console.log(`${present.length} shots in ${screens} match ${file}`);
 } else if (mode === '--add') {
-  const slice = out;
+  const second = out;
   const patch = `${ADDITIONS_FOLDER}/${slice}.patch`;
   if (!/^[\w.-]+$/.test(slice) || !existsSync(resolve(root, patch))) {
     console.error(
@@ -85,6 +86,19 @@ if (mode === '--check') {
     );
     process.exit(2);
   }
+  const firstShots = pngs(screens);
+  const secondShots = pngs(second);
+  failOn([
+    ...[...new Set([...firstShots, ...secondShots])]
+      .filter((file) => !firstShots.includes(file) || !secondShots.includes(file))
+      .map((file) => `${file} is in only one of the two recordings`),
+    ...firstShots
+      .filter((file) => secondShots.includes(file))
+      .filter((file) => shot(screens, file).pixelsSha256 !== shot(second, file).pixelsSha256)
+      .map(
+        (file) => `${file} differs between the two recordings, so it is not stable enough to add`,
+      ),
+  ]);
   const target = resolve(root, SCREENS_MANIFEST);
   const manifest = JSON.parse(readFileSync(target, 'utf8'));
   const listed = manifest.shots.map((entry) => entry.file);

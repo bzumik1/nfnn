@@ -10,6 +10,7 @@ import {
   diffImage,
   ELEMENT_TOLERANCE_PIXELS,
   encodePng,
+  options,
   outsideRepository,
   PAGE_TOLERANCE_RATIO,
   pairShots,
@@ -197,5 +198,54 @@ describe('Given where the report is written', () => {
     assert.equal(outsideRepository(join(root, 'frontend/test-results'), root), false);
     assert.equal(outsideRepository(root, root), false);
     assert.equal(outsideRepository(join(tmpdir(), 'nfnn-screens'), root), true);
+  });
+});
+
+describe('Given the options of the script', () => {
+  it('when every option is known and the value options carry =value, then it returns them', () => {
+    assert.deepEqual(
+      options([
+        '--base=abc1234',
+        '--out=/tmp/x=y',
+        '--patch=regression/v2/additions/0.6c.patch',
+        '--v2-only',
+        '--base-only',
+        '--keep',
+      ]),
+      {
+        base: 'abc1234',
+        out: '/tmp/x=y',
+        patch: 'regression/v2/additions/0.6c.patch',
+        'v2-only': true,
+        'base-only': true,
+        keep: true,
+      },
+    );
+  });
+
+  it('when an option is unknown, then it is refused by name', () => {
+    assert.throws(() => options(['--head-specs']), /unknown option --head-specs/);
+  });
+
+  it('when a value option is given without =value, as with a space, then it is refused', () => {
+    assert.throws(
+      () => options(['--patch', 'regression/v2/additions/0.6c.patch']),
+      /--patch needs a value: --patch=<file>/,
+    );
+  });
+
+  it('when a switch is given a value, then it is refused', () => {
+    assert.throws(() => options(['--keep=no']), /--keep takes no value/);
+  });
+
+  it('when an argument is no option, then it is refused', () => {
+    assert.throws(() => options(['main']), /unexpected argument main/);
+  });
+
+  it('when the head spec and a patch are both asked for, then it is refused', () => {
+    assert.throws(
+      () => options(['--head-spec', '--patch=regression/v2/additions/0.6c.patch']),
+      /--head-spec and --patch both change the spec of the base; give one/,
+    );
   });
 });

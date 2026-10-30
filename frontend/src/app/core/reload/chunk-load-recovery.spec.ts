@@ -97,6 +97,38 @@ describe('Given the chunk-load recovery', () => {
     });
   });
 
+  describe('when a lazy page fails to load and the server takes its time to answer the probe', () => {
+    let answer: (lands: boolean) => void;
+    let handled: Promise<void>;
+
+    beforeEach(async () => {
+      await showPage();
+      reloadWouldLand.mockReturnValue(new Promise<boolean>((resolve) => (answer = resolve)));
+      handled = recovery.handleNavigationError(failure(CHROME));
+    });
+
+    it('then it offers the reload while it waits', () => {
+      expect(recovery.failure()).toEqual({ url: '/darce/prehled', initial: false });
+    });
+
+    it('and the answer says a reload lands, then it loads the page from the server', async () => {
+      answer(true);
+      await handled;
+
+      expect(loadFromServer).toHaveBeenCalledExactlyOnceWith('/darce/prehled');
+    });
+
+    it('and the visitor opens another page before the answer, then the late answer does not take them back', async () => {
+      await TestBed.inject(Router).navigateByUrl('/dale');
+      answer(true);
+      await handled;
+
+      expect(claim).not.toHaveBeenCalled();
+      expect(loadFromServer).not.toHaveBeenCalled();
+      expect(recovery.failure()).toBeNull();
+    });
+  });
+
   describe('when a lazy page fails to load and the server cannot be reached though the browser says it is online', () => {
     beforeEach(async () => {
       await showPage();

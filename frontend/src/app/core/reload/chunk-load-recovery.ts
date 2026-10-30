@@ -1,5 +1,5 @@
 import { DestroyRef, inject, Injectable, signal } from '@angular/core';
-import { NavigationEnd, NavigationError, Router } from '@angular/router';
+import { NavigationEnd, NavigationError, NavigationStart, Router } from '@angular/router';
 
 import { Connectivity } from '../navigation/connectivity';
 import { ExternalNavigation } from '../navigation/external-navigation';
@@ -32,11 +32,15 @@ export class ChunkLoadRecovery {
   private readonly connectivity = inject(Connectivity);
   private readonly probe = inject(ChunkProbe);
   private readonly failed = signal<ChunkLoadFailure | null>(null);
+  private navigationsStarted = 0;
 
   readonly failure = this.failed.asReadonly();
 
   constructor() {
     const subscription = this.router.events.subscribe((event) => {
+      if (event instanceof NavigationStart) {
+        this.navigationsStarted++;
+      }
       if (event instanceof NavigationEnd) {
         this.failed.set(null);
       }
@@ -48,13 +52,13 @@ export class ChunkLoadRecovery {
     if (!isChunkLoadError(error.error)) {
       return;
     }
-    const failure = { url: error.url, initial: !this.router.navigated };
-    const reload =
-      !this.connectivity.isOffline() &&
-      (await this.probe.reloadWouldLand(error.error)) &&
-      this.guard.claim('chunk-load');
-    this.failed.set(failure);
-    if (reload) {
+    this.failed.set({ url: error.url, initial: !this.router.navigated });
+    if (this.connectivity.isOffline()) {
+      return;
+    }
+    const navigation = this.navigationsStarted;
+    const lands = await this.probe.reloadWouldLand(error.error);
+    if (lands && navigation === this.navigationsStarted && this.guard.claim('chunk-load')) {
       this.navigation.loadFromServer(error.url);
     }
   }

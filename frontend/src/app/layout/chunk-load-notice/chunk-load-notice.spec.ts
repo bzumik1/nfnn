@@ -64,6 +64,33 @@ describe('Given the chunk-load notice', () => {
     expect(document.documentElement.classList).not.toContain('has-floating-notice');
   });
 
+  it('when every page loaded, then it adds no status region beside the ones of the page', () => {
+    expect(element().querySelector('[role="status"]')).toBeNull();
+  });
+
+  describe('when a later page could not be loaded while an open modal dialog keeps the focus from the bar', () => {
+    beforeEach(async () => {
+      await TestBed.inject(Router).navigateByUrl('/jinam');
+      vi.spyOn(HTMLButtonElement.prototype, 'focus').mockImplementation(() => undefined);
+      await failToLoad();
+    });
+
+    afterEach(() => vi.restoreAllMocks());
+
+    it('then the status region announces the message, since moving the focus cannot', () => {
+      expect(document.activeElement).not.toBe(reloadButton());
+      expect(text('[role="status"]')).toBe(MESSAGE);
+    });
+
+    it('and a later navigation succeeds, then the status region goes with the bar', async () => {
+      await TestBed.inject(Router).navigateByUrl('/dale');
+      await fixture.whenStable();
+
+      expect(element().querySelector('.chunk-load-bar')).toBeNull();
+      expect(element().querySelector('[role="status"]')).toBeNull();
+    });
+  });
+
   describe('when a later page could not be loaded and no automatic reload is left', () => {
     beforeEach(async () => {
       await TestBed.inject(Router).navigateByUrl('/jinam');
@@ -87,7 +114,8 @@ describe('Given the chunk-load notice', () => {
     });
 
     it('then no alert or live region announces the message a second time', () => {
-      expect(element().querySelector('[role="alert"], [role="status"], [aria-live]')).toBeNull();
+      expect(element().querySelector('[role="alert"], [aria-live]')).toBeNull();
+      expect(text('[role="status"]')).toBe('');
     });
 
     describe('and the focus moves to a control the bar covers', () => {

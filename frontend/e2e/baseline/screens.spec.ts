@@ -37,7 +37,7 @@ interface Screen {
   viewportOnly?: boolean;
   region?: string;
   elements?: ElementShot[];
-  elementsOnly?: boolean;
+  masked?: string[];
   ready?: (page: Page) => Promise<void>;
 }
 
@@ -342,7 +342,8 @@ const SCREENS: Screen[] = [
   },
   {
     name: 'donor-bank-accounts-add',
-    elementsOnly: true,
+    viewportOnly: true,
+    masked: ['.add-account-text', '.add-account-watch .watch-detail'],
     elements: [
       element('donor-bank-accounts-add--qr', '.add-account-qr'),
       element('donor-bank-accounts-add--bank', '.add-account-bank'),
@@ -454,9 +455,10 @@ function shootEach(screens: Screen[]): void {
         await screen.open(page, width);
         await settle(page, screen);
 
-        if (!screen.region && !screen.elementsOnly) {
+        if (!screen.region) {
           await expect(page).toHaveScreenshot(`${screen.name}-${width}.png`, {
             fullPage: !screen.viewportOnly,
+            mask: (screen.masked ?? []).map((selector) => page.locator(selector)),
             animations: 'disabled',
             caret: 'hide',
             ...PAGE_TOLERANCE,

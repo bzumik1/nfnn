@@ -4,7 +4,8 @@
     "file": "regression/v2/screens/manifest.json",
     "recordedFrom": "c4a256c2912b03c8fc9609ec1fc2e342774c31e5",
     "patch": "regression/v2/additions/0.6c.patch",
-    "reason": "0.6c: the screens v2 had but the baseline never shot (TOTP enrolment with its QR, Přispět at 1 000 Kč, at an own amount, for a signed-in donor and with the QR failing, the add-account 1 Kč QR, the recovery-payment QR), plus element shots of the QR and bank-detail blocks compared pixel for pixel; recorded from the baseline commit with only the patch applied, appended to the manifest with addedIn 0.6c",
+    "record": "out=$(mktemp -d) && for run in 1 2; do node scripts/compare-screens.mjs --base=c4a256c2912b03c8fc9609ec1fc2e342774c31e5 --patch=regression/v2/additions/0.6c.patch --v2-only --base-only --out=$out/$run || exit 1; done && node scripts/screens-manifest.mjs --add $out/1/base-shots $out/2/base-shots 0.6c",
+    "reason": "0.6c: the screens v2 had but the baseline never shot (TOTP enrolment with its QR, Přispět at 1 000 Kč, at an own amount, for a signed-in donor and with the QR failing, the add-account 1 Kč dialog, the recovery-payment QR), plus element shots of the QR and bank-detail blocks compared pixel for pixel; recorded twice from the baseline commit with only the patch applied (run from the root of this PR's checkout: compare-screens.mjs makes the baseline worktree itself), both runs identical, appended to the manifest with addedIn 0.6c",
     "contract": ".claude/rules/testing.md, Regression against v2"
   },
   {

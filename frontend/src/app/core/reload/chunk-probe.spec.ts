@@ -6,8 +6,23 @@ const CHUNK = `${location.origin}/chunk-BQ1Fwj_M.js`;
 const CHROME = new TypeError(`Failed to fetch dynamically imported module: ${CHUNK}`);
 const SAFARI = new TypeError('Importing a module script failed.');
 
-function answer(status: number, contentType: string): Response {
-  return new Response(null, { status, headers: { 'Content-Type': contentType } });
+const PROBE = { method: 'HEAD', cache: 'no-store', signal: expect.any(AbortSignal) };
+
+function answer(
+  status: number,
+  contentType: string,
+  { url = CHUNK, redirected = false }: { url?: string; redirected?: boolean } = {},
+): Response {
+  const response = new Response(null, { status, headers: { 'Content-Type': contentType } });
+  Object.defineProperty(response, 'url', { value: url });
+  Object.defineProperty(response, 'redirected', { value: redirected });
+  return response;
+}
+
+function neverAnswered(_url: string, init: RequestInit): Promise<Response> {
+  return new Promise((_resolve, reject) =>
+    init.signal?.addEventListener('abort', () => reject(init.signal?.reason)),
+  );
 }
 
 describe('Given the probe that runs before an automatic reload', () => {
@@ -20,14 +35,17 @@ describe('Given the probe that runs before an automatic reload', () => {
     probe = TestBed.inject(ChunkProbe);
   });
 
-  afterEach(() => vi.unstubAllGlobals());
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
 
   it('when the error names the chunk, then it asks the server for that chunk without the cache', async () => {
     fetch.mockResolvedValue(answer(404, 'text/html'));
 
     await probe.reloadWouldLand(CHROME);
 
-    expect(fetch).toHaveBeenCalledExactlyOnceWith(CHUNK, { method: 'HEAD', cache: 'no-store' });
+    expect(fetch).toHaveBeenCalledExactlyOnceWith(CHUNK, PROBE);
   });
 
   it('when the server no longer has the chunk, then a reload would land on the new version', async () => {
@@ -60,6 +78,41 @@ describe('Given the probe that runs before an automatic reload', () => {
     await expect(probe.reloadWouldLand(CHROME)).resolves.toBe(false);
   });
 
+  it('when the server takes the request but never answers, then after four seconds a reload is only offered', async () => {
+    vi.useFakeTimers();
+    fetch.mockImplementation(neverAnswered);
+    let verdict: boolean | undefined;
+    void probe.reloadWouldLand(CHROME).then((lands) => (verdict = lands));
+
+    await vi.advanceTimersByTimeAsync(3_999);
+    expect(verdict).toBeUndefined();
+    await vi.advanceTimersByTimeAsync(1);
+
+    expect(verdict).toBe(false);
+  });
+
+  it('when the chunk is redirected to a page, then a reload is only offered', async () => {
+    fetch.mockResolvedValue(
+      answer(200, 'text/html', { url: `${location.origin}/prihlaseni`, redirected: true }),
+    );
+
+    await expect(probe.reloadWouldLand(CHROME)).resolves.toBe(false);
+  });
+
+  it('when the chunk is redirected to an address the server does not know, then a reload is only offered', async () => {
+    fetch.mockResolvedValue(
+      answer(404, 'text/html', { url: `${location.origin}/jinde.js`, redirected: true }),
+    );
+
+    await expect(probe.reloadWouldLand(CHROME)).resolves.toBe(false);
+  });
+
+  it('when a page answers the chunk from another address, then a reload is only offered', async () => {
+    fetch.mockResolvedValue(answer(200, 'text/html', { url: `${location.origin}/` }));
+
+    await expect(probe.reloadWouldLand(CHROME)).resolves.toBe(false);
+  });
+
   it('when the error names a chunk of another site, then it asks for the home page instead', async () => {
     fetch.mockResolvedValue(answer(200, 'text/html'));
 
@@ -67,15 +120,23 @@ describe('Given the probe that runs before an automatic reload', () => {
       new TypeError('Failed to fetch dynamically imported module: https://cdn.example/chunk-x.js'),
     );
 
-    expect(fetch).toHaveBeenCalledExactlyOnceWith('/', { method: 'HEAD', cache: 'no-store' });
+    expect(fetch).toHaveBeenCalledExactlyOnceWith('/', PROBE);
   });
 
   describe('when the error names no chunk, as in Safari', () => {
     it('then it asks for the home page and a reload lands when the server answers with it', async () => {
-      fetch.mockResolvedValue(answer(200, 'text/html'));
+      fetch.mockResolvedValue(answer(200, 'text/html', { url: `${location.origin}/` }));
 
       await expect(probe.reloadWouldLand(SAFARI)).resolves.toBe(true);
-      expect(fetch).toHaveBeenCalledExactlyOnceWith('/', { method: 'HEAD', cache: 'no-store' });
+      expect(fetch).toHaveBeenCalledExactlyOnceWith('/', PROBE);
+    });
+
+    it('and the home page is redirected elsewhere, then a reload is only offered', async () => {
+      fetch.mockResolvedValue(
+        answer(200, 'text/html', { url: `${location.origin}/udrzba`, redirected: true }),
+      );
+
+      await expect(probe.reloadWouldLand(SAFARI)).resolves.toBe(false);
     });
 
     it('and the home page does not come back, then a reload is only offered', async () => {

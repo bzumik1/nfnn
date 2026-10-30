@@ -43,5 +43,13 @@
         Načíst znovu
       </button>
     </div>
+    <p class="visually-hidden" role="status">
+      @if (focusMissedBar()) {
+        <span i18n="@@layout.chunk-load.announcement"
+          >Stránku se nepodařilo otevřít. Web byl mezitím možná aktualizován nebo vypadlo připojení.
+          Zkuste ji načíst znovu.</span
+        >
+      }
+    </p>
   }
 }
