@@ -240,6 +240,25 @@ describe('Given the privacy policy page', () => {
     expect(sectionText('Jak dlouho údaje uchováváme')).toContain('zálohy');
   });
 
+  it('when it renders, then it says an erasure keeps the issued receipts on the server unchanged, with the name and address on them, and the history of the administrators', () => {
+    const erasure =
+      texts('#prava p').find((paragraph) => paragraph.includes('Zrušení dárcovského účtu')) ?? '';
+
+    expect(erasure).toContain(
+      'Jméno, adresu, e‑mail, přihlašovací údaje a bankovní účty vašeho účtu poté vymažeme a účet už nepůjde použít.',
+    );
+    expect(erasure).toContain(
+      'Vystavená potvrzení o daru jsou účetní doklady: na našem serveru je ponecháme beze změny, tedy i s vaším jménem a adresou, jak na nich stojí, po dobu stanovenou účetními a daňovými předpisy.',
+    );
+    expect(erasure).toContain(
+      'Stejně dlouho ponecháme záznamy o přijatých platbách a darech s tím, co o platbě uvádí výpis z banky, včetně čísla účtu a jména plátce.',
+    );
+    expect(erasure).toContain(
+      'Na serveru zůstane i historie zásahů správců webu, která může uvádět i číslo vašeho bankovního účtu, včetně záznamu o výmazu.',
+    );
+    expect(erasure).not.toContain('zařízení');
+  });
+
   it('when it renders, then it names the e-mail and network providers and the transfer to the USA', () => {
     const recipients = sectionText('Komu údaje předáváme');
 

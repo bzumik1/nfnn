@@ -1,0 +1,23 @@
+[
+  {
+    "scenario": "donors/admin_donor_erasure: *",
+    "kind": "mails",
+    "subject": "Vaše osobní údaje jsme vymazali – Nová naděje",
+    "reason": "1.11 (Jakub's answer A6, 2026-10-29): donors.erased.email.kept no longer claims the receipts are no longer linked to the name; it says the issued receipts stay on the server unchanged with the name and address on them, the payment records keep the bank statement's account number and payer name, and the history of the administrators' actions stays on the server",
+    "contract": "docs/api-contract.md, Donors (DELETE /api/admin/donors/{donorId})"
+  },
+  {
+    "scenario": "donations/admin_donor_erasure: *",
+    "kind": "mails",
+    "subject": "Vaše osobní údaje jsme vymazali – Nová naděje",
+    "reason": "1.11 (Jakub's answer A6, 2026-10-29): donors.erased.email.kept no longer claims the receipts are no longer linked to the name; it says the issued receipts stay on the server unchanged with the name and address on them, the payment records keep the bank statement's account number and payer name, and the history of the administrators' actions stays on the server",
+    "contract": "docs/api-contract.md, Donors (DELETE /api/admin/donors/{donorId})"
+  },
+  {
+    "scenario": "donors/donor_passkeys: An erased donor's passkey opens no session*",
+    "kind": "mails",
+    "subject": "Vaše osobní údaje jsme vymazali – Nová naděje",
+    "reason": "1.11 (Jakub's answer A6, 2026-10-29): donors.erased.email.kept no longer claims the receipts are no longer linked to the name; it says the issued receipts stay on the server unchanged with the name and address on them, the payment records keep the bank statement's account number and payer name, and the history of the administrators' actions stays on the server",
+    "contract": "docs/api-contract.md, Donors (DELETE /api/admin/donors/{donorId})"
+  }
+]

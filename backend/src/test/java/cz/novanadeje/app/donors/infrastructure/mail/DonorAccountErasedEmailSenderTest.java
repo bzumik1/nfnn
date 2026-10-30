@@ -86,7 +86,7 @@ class DonorAccountErasedEmailSenderTest {
 
                     na vaši žádost jsme vymazali osobní údaje z vašeho dárcovského účtu Nová naděje: jméno, adresu, e-mail, heslo a bankovní účty. Účet už nejde použít a všechna přihlášení jsme ukončili.
 
-                    Záznamy o přijatých darech a vydaná potvrzení o daru musíme podle účetních předpisů uchovat; nejsou už ale spojené s vaším jménem.
+                    Vydaná potvrzení o daru jsou účetní doklady, a proto je podle účetních předpisů uchováváme na našem serveru beze změny, tedy i s vaším jménem a adresou, jak na nich stojí. Uchováváme také záznamy o přijatých platbách a darech s tím, co o platbě uvádí výpis z banky, včetně čísla účtu a jména plátce. Na serveru zůstává i historie zásahů správců webu, včetně tohoto výmazu.
 
                     Kdybyste se k nám chtěli někdy vrátit, stačí se znovu zaregistrovat. Děkujeme za vaši podporu.
 
@@ -116,6 +116,12 @@ class DonorAccountErasedEmailSenderTest {
             assertThat(MailContents.plainText(email))
                     .startsWith("Hello,")
                     .contains("we have erased the personal data of your Nová naděje donor account")
+                    .contains("The donation receipts issued are accounting documents, so under the accounting rules we keep them on our server unchanged,"
+                            + " with your name and address as they stand on them.")
+                    .contains("including the account number and the payer's name")
+                    .contains("The history of the site administrators' actions, this erasure included, also stays on the server.")
+                    .doesNotContain("no longer linked to your name")
+                    .doesNotContain("device")
                     .contains("simply register again");
             assertThat(MailContents.html(email)).contains("lang=\"en\"").contains(">Personal data erased</h1>");
         });

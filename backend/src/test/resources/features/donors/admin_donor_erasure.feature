@@ -13,6 +13,12 @@ Feature: An administrator erases a donor's personal data
     Then the response status is 204
     And the admin action "ERASE_DONOR" by "Jana" on "Petr" is recorded
     And e-mail 1 goes to the address of "Petr" with the subject "Vaše osobní údaje jsme vymazali – Nová naděje"
+    And both parts of the last e-mail contain "Vydaná potvrzení o daru jsou účetní doklady"
+    And both parts of the last e-mail contain "uchováváme na našem serveru beze změny, tedy i s vaším jménem a adresou, jak na nich stojí"
+    And both parts of the last e-mail contain "včetně čísla účtu a jména plátce"
+    And both parts of the last e-mail contain "Na serveru zůstává i historie zásahů správců webu, včetně tohoto výmazu."
+    And neither part of the last e-mail contains "nejsou už ale spojené s vaším jménem"
+    And neither part of the last e-mail contains "zařízení"
     When "Jana" opens the donor "Petr"
     Then the response status is 200
     And the donor card says the donor was erased on 2026-10-17
