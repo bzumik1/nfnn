@@ -66,6 +66,7 @@ final class BaselineHygiene {
     private static final Pattern LABELLED_DIGEST = Pattern.compile("(?:\"[A-Za-z]*(?:sha256|Sha256)\"\\s*:\\s*\"|sha256=)$");
     private static final int LABEL_WINDOW = 40;
     private static final String BASELINE_COMMIT_FILE = "BASELINE_COMMIT";
+    private static final Pattern COMMIT_ID = Pattern.compile("[0-9a-f]{40}");
     private static final Pattern STANDARD_BASE64 = Pattern.compile("(?<![A-Za-z0-9+/=_-])[A-Za-z0-9+/]{32,}={0,2}(?![A-Za-z0-9+/=_-])");
     private static final Pattern BASE64_ONLY_CHARACTER = Pattern.compile("[+/=]");
     private static final Pattern RECOVERY_CODE = Pattern.compile("(?<![A-Z0-9])OBNOVA[\\s:-]*([A-HJ-NP-Z2-9]{4}[\\s-]?[A-HJ-NP-Z2-9]{4})(?![A-Z0-9])");
@@ -91,15 +92,29 @@ final class BaselineHygiene {
         if (!Files.isDirectory(root)) {
             return new Report(0, List.of());
         }
-        List<String> findings = new ArrayList<>();
-        int scanned = 0;
+        List<Path> paths;
         try (Stream<Path> files = Files.walk(root)) {
-            for (Path file : files.filter(Files::isRegularFile).sorted().toList()) {
-                scanned++;
-                findings.addAll(findings(root.relativize(file).toString(), Files.readString(file, StandardCharsets.UTF_8), fixtures));
+            paths = files.filter(Files::isRegularFile).sorted().toList();
+        }
+        Fixtures withBaselineCommits = withBaselineCommits(fixtures, paths);
+        List<String> findings = new ArrayList<>();
+        for (Path file : paths) {
+            findings.addAll(findings(root.relativize(file).toString(), Files.readString(file, StandardCharsets.UTF_8), withBaselineCommits));
+        }
+        return new Report(paths.size(), findings);
+    }
+
+    private static Fixtures withBaselineCommits(Fixtures fixtures, List<Path> paths) throws IOException {
+        Set<String> values = new TreeSet<>(fixtures.values());
+        for (Path file : paths) {
+            if (file.getFileName().toString().equals(BASELINE_COMMIT_FILE)) {
+                String commit = Files.readString(file, StandardCharsets.UTF_8).strip();
+                if (COMMIT_ID.matcher(commit).matches()) {
+                    values.add(commit);
+                }
             }
         }
-        return new Report(scanned, findings);
+        return new Fixtures(fixtures.addresses(), values, fixtures.words());
     }
 
     static List<String> findings(String file, String text, Fixtures fixtures) {

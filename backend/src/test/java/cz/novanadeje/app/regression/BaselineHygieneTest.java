@@ -178,6 +178,22 @@ class BaselineHygieneTest {
     }
 
     @Test
+    @DisplayName("Given a baseline folder whose BASELINE_COMMIT names a commit, when it is scanned, then a changes file naming that commit is clean and another commit in it is still reported")
+    void should_allow_the_baseline_commit_in_other_files_when_a_folder_is_scanned(@TempDir Path root) throws IOException {
+        String baseline = "c4a256c2912b03c8fc9609ec1fc2e342774c31e5";
+        String other = "797db519f82975f9dab4b31b199e34bd9e527db5";
+        Files.createDirectories(root.resolve("v2/changes"));
+        Files.writeString(root.resolve("v2/BASELINE_COMMIT"), baseline + "\n");
+        Files.writeString(root.resolve("v2/changes/0.6c.json"), """
+                {"recordedFrom":"%s", "record":"node scripts/compare-screens.mjs --base=%s", "other":"%s"}
+                """.formatted(baseline, baseline, other));
+
+        BaselineHygiene.Report report = BaselineHygiene.scan(root, NO_FIXTURES);
+
+        assertThat(report.findings()).containsExactly("v2/changes/0.6c.json: a hex secret starting 797db519");
+    }
+
+    @Test
     @DisplayName("Given upper-case hex of 32 characters and more, when text is checked, then it is reported, and an upper-case labelled digest and a value the tests spell out are not")
     void should_report_upper_case_hex_secrets_when_text_is_checked() {
         String text = """
