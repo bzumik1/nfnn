@@ -476,6 +476,10 @@ jobs:
             echo "::error::the backend logs in to the database as the application role novanadeje_app, never as the superuser"
             exit 1
           fi
+          if [ "$(yq '.services.backend.environment.SPRING_PROFILES_ACTIVE' deploy/compose.yml)" != prod ]; then
+            echo "::error::the backend runs with exactly the prod profile: without one it would start as dev, which accepts the public development keys and reads no stored settings"
+            exit 1
+          fi
 
       - name: The backend gets the time its shutdown waits for before Docker kills it
         run: |
