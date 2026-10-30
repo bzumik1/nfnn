@@ -8,6 +8,6 @@ public class ReceiptIssueLimitReached extends Conflict {
     public static final String CODE = "donations/receipt-issue-limit";
 
     public ReceiptIssueLimitReached(DonorReference donor, int limit) {
-        super(CODE, "Donor " + donor + " was issued " + limit + " new receipts in the last 24 hours, no further receipt is numbered yet");
+        super(CODE, "Donor " + donor + " was issued " + limit + " replacement receipts in the last 24 hours, no further replacement is numbered yet");
     }
 }

@@ -134,7 +134,7 @@ class DonationReceiptIssuerTest {
         assertThat(issued).isSameAs(active);
         verify(receipts).lockDonor(JANA);
         verify(receipts, never()).nextSerial();
-        verify(receipts, never()).countIssuedAfter(any(), any());
+        verify(receipts, never()).countReplacementsIssuedAfter(any(), any());
         verify(receipts, never()).save(any());
         verifyNoInteractions(freezer, signatures);
     }
@@ -225,19 +225,19 @@ class DonationReceiptIssuerTest {
     }
 
     @Test
-    @DisplayName("Given 20 receipts issued to the donor in the last 24 hours, when a receipt with changed data is issued, then it is refused before a number is taken and the active receipt stays active")
-    void should_refuse_before_numbering_when_issued_given_twenty_receipts_in_a_day() {
+    @DisplayName("Given 20 replacements issued to the donor in the last 24 hours, when a receipt with changed data is issued, then it is refused before a number is taken and the active receipt stays active")
+    void should_refuse_before_numbering_when_issued_given_twenty_replacements_in_a_day() {
         DonationReceipt active = yearlyReceipt(ReceiptDocumentFactory.fingerprintForYear(jana(), YEAR_2026, List.of(MARCH)), LocaleCode.CS);
         givenDonationsOfJana(jana(), JUNE, MARCH);
         when(receipts.findActiveForYear(JANA, YEAR_2026)).thenReturn(Optional.of(active));
-        when(receipts.countIssuedAfter(JANA, NOW.minus(Duration.ofHours(24)))).thenReturn(20L);
+        when(receipts.countReplacementsIssuedAfter(JANA, NOW.minus(Duration.ofHours(24)))).thenReturn(20L);
 
         assertThatThrownBy(() -> issuer.issueForYear(JANA, YEAR_2026, TODAY))
                 .isInstanceOfSatisfying(ReceiptIssueLimitReached.class, refused -> assertThat(refused.code()).isEqualTo("donations/receipt-issue-limit"));
 
         InOrder order = inOrder(receipts);
         order.verify(receipts).lockDonor(JANA);
-        order.verify(receipts).countIssuedAfter(JANA, NOW.minus(Duration.ofHours(24)));
+        order.verify(receipts).countReplacementsIssuedAfter(JANA, NOW.minus(Duration.ofHours(24)));
         verify(receipts, never()).nextSerial();
         verify(receipts, never()).save(any());
         verifyNoInteractions(freezer);
@@ -245,15 +245,33 @@ class DonationReceiptIssuerTest {
     }
 
     @Test
-    @DisplayName("Given 19 receipts issued to the donor in the last 24 hours, when a receipt is issued, then it is numbered and stored")
-    void should_issue_when_issued_given_nineteen_receipts_in_a_day() {
+    @DisplayName("Given 19 replacements issued to the donor in the last 24 hours, when a receipt with changed data is issued, then the replacement is numbered and stored")
+    void should_replace_when_issued_given_nineteen_replacements_in_a_day() {
+        DonationReceipt active = yearlyReceipt(ReceiptDocumentFactory.fingerprintForYear(jana(), YEAR_2026, List.of(MARCH)), LocaleCode.CS);
+        givenDonationsOfJana(jana(), JUNE, MARCH);
+        when(receipts.findActiveForYear(JANA, YEAR_2026)).thenReturn(Optional.of(active));
+        when(receipts.countReplacementsIssuedAfter(JANA, NOW.minus(Duration.ofHours(24)))).thenReturn(19L);
+        when(receipts.nextSerial()).thenReturn(20L);
+        givenFreezer();
+
+        DonationReceipt issued = issuer.issueForYear(JANA, YEAR_2026, TODAY);
+
+        assertThat(issued.number()).isEqualTo(new ReceiptNumber("2027-000020"));
+        assertThat(issued.supersedes()).contains(active.id());
+        verify(receipts, times(2)).save(any());
+    }
+
+    @Test
+    @DisplayName("Given no receipt yet for the year and 20 replacements issued to the donor in the last 24 hours, when the receipt is issued, then it is numbered and stored without the replacements being counted")
+    void should_issue_without_counting_when_issued_given_first_issue() {
         givenDonationsOfJana(jana(), MARCH);
         when(receipts.findActiveForYear(JANA, YEAR_2026)).thenReturn(Optional.empty());
-        when(receipts.countIssuedAfter(JANA, NOW.minus(Duration.ofHours(24)))).thenReturn(19L);
+        when(receipts.countReplacementsIssuedAfter(any(), any())).thenReturn(20L);
         when(receipts.nextSerial()).thenReturn(20L);
         givenFreezer();
 
         assertThat(issuer.issueForYear(JANA, YEAR_2026, TODAY).number()).isEqualTo(new ReceiptNumber("2027-000020"));
+        verify(receipts, never()).countReplacementsIssuedAfter(any(), any());
         verify(receipts).save(any());
     }
 

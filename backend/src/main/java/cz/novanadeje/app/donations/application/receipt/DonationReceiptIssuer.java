@@ -35,7 +35,7 @@ public class DonationReceiptIssuer {
 
     private static final Logger LOG = LoggerFactory.getLogger(DonationReceiptIssuer.class);
     private static final long SERIAL_WORTH_A_WARNING = (ReceiptNumber.LAST_SERIAL + 1) / 10 * 9;
-    static final int NEW_RECEIPTS_PER_DONOR_A_DAY = 20;
+    static final int REPLACEMENTS_PER_DONOR_A_DAY = 20;
     private static final Duration ISSUE_LIMIT_WINDOW = Duration.ofHours(24);
 
     private final DonationReceiptRepository receipts;
@@ -80,8 +80,8 @@ public class DonationReceiptIssuer {
     }
 
     private DonationReceipt issueNew(ReceiptRequest request, ReceiptFingerprint fingerprint, Optional<DonationReceipt> replaced) {
-        if (receipts.countIssuedAfter(request.donor(), clock.instant().minus(ISSUE_LIMIT_WINDOW)) >= NEW_RECEIPTS_PER_DONOR_A_DAY) {
-            throw new ReceiptIssueLimitReached(request.donor(), NEW_RECEIPTS_PER_DONOR_A_DAY);
+        if (replaced.isPresent() && receipts.countReplacementsIssuedAfter(request.donor(), clock.instant().minus(ISSUE_LIMIT_WINDOW)) >= REPLACEMENTS_PER_DONOR_A_DAY) {
+            throw new ReceiptIssueLimitReached(request.donor(), REPLACEMENTS_PER_DONOR_A_DAY);
         }
         long serial = receipts.nextSerial();
         ReceiptNumber number = ReceiptNumber.of(Year.from(request.today()), serial);

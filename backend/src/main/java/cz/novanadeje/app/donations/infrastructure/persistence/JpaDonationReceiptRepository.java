@@ -64,8 +64,8 @@ class JpaDonationReceiptRepository implements DonationReceiptRepository {
     }
 
     @Override
-    public long countIssuedAfter(DonorReference donor, Instant after) {
-        return jpa.countByDonorIdAndIssuedAtAfter(donor.value(), after);
+    public long countReplacementsIssuedAfter(DonorReference donor, Instant after) {
+        return jpa.countByDonorIdAndSupersedesIdIsNotNullAndIssuedAtAfter(donor.value(), after);
     }
 
     @Override
