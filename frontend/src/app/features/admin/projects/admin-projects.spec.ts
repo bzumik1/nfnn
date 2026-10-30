@@ -100,7 +100,7 @@ describe('Given an administrator on the project list', () => {
     ).toBe('/sprava/projekty/nova');
   });
 
-  it('when the list arrives, then each project says whom it helped, under the column Komu', async () => {
+  it('when the list arrives, then each project says whom it helped, under the column Kategorie', async () => {
     http.expectOne(LIST_URL).flush({
       items: [
         project({ category: 'CHILDREN' }),
@@ -111,8 +111,8 @@ describe('Given an administrator on the project list', () => {
     });
     await settle();
 
-    expect(texts('thead th')).toContain('Komu');
-    expect(texts('td[data-label="Komu"]')).toEqual(['Děti', 'Dospělí', 'Zvířata', 'Ostatní']);
+    expect(texts('thead th')).toContain('Kategorie');
+    expect(texts('td[data-label="Kategorie"]')).toEqual(['Děti', 'Dospělí', 'Zvířata', 'Ostatní']);
   });
 
   it('when there is no project yet, then the page says so and offers the first one', async () => {

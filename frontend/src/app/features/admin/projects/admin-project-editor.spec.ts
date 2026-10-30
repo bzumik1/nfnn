@@ -160,7 +160,8 @@ describe('Given an administrator writing a new project', () => {
     );
   });
 
-  it('when they open the form, then the project is for children until they choose whom it helped', () => {
+  it('when they open the form, then the project is in the category Děti until they choose another', () => {
+    expect(text(fixture, 'label[for="projects-category"]')).toBe('Kategorie');
     expect(selected(fixture, '#projects-category')).toBe('Děti');
     expect(
       Array.from(element<HTMLSelectElement>(fixture, '#projects-category').options).map((option) =>

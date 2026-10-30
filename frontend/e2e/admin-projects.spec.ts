@@ -161,7 +161,7 @@ test.describe('Given an administrator managing the projects', () => {
       page.getByText('Projekt bude na nfnn.cz/projekty/beneficni-koncert.'),
     ).toBeVisible();
     await page.getByLabel('Rok').fill('2026');
-    await page.getByLabel('Komu projekt pomohl').selectOption({ label: 'Dospělí' });
+    await page.getByLabel('Kategorie').selectOption({ label: 'Dospělí' });
     await page.getByLabel('Krátký souhrn').fill('Zveme vás na koncert.');
     await page.getByLabel('Text', { exact: true }).fill('Text o koncertu.');
     await page.getByLabel('Nahrát fotku').setInputFiles({
