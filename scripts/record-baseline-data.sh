@@ -35,12 +35,12 @@ trap finish EXIT
 start_server() {
   local port
   port="$(node -e "const s = require('node:net').createServer(); s.listen(0, '127.0.0.1', () => { console.log(s.address().port); s.close(); });")"
-  setsid bash -c "cd '$root/frontend' && exec node_modules/.bin/ng serve --host 127.0.0.1 --port $port" >"$work/ng-serve-$port.log" 2>&1 &
+  setsid bash -c "cd '$root/frontend' && exec node scripts/serve-dist.mjs '$work/dist/browser' $port" >"$work/serve-$port.log" 2>&1 &
   server_group=$!
   for _ in $(seq 1 180); do
     if ! kill -0 "$server_group" 2>/dev/null; then
       server_group=""
-      echo "ng serve on port $port stopped before it served the site (log: $work/ng-serve-$port.log)" >&2
+      echo "The server on port $port stopped before it served the site (log: $work/serve-$port.log)" >&2
       return 1
     fi
     if curl -fs --noproxy "*" -o /dev/null "http://127.0.0.1:$port/"; then
@@ -49,7 +49,7 @@ start_server() {
     fi
     sleep 1
   done
-  echo "ng serve on port $port did not serve the site within 180 s" >&2
+  echo "The server on port $port did not serve the site within 180 s" >&2
   return 1
 }
 
@@ -60,7 +60,8 @@ rm -rf "$root/regression/v2/receipts" "$root/regression/v2/screens" "$root/share
 cp -r "$root/backend/build/receipt-corpus" "$receipts"
 node "$root/scripts/receipts-check.mjs" "$receipts"
 
-echo "== This worktree's frontend on a port of its own"
+echo "== This worktree's frontend, built for production and served on a port of its own"
+(cd "$root/frontend" && npx ng build --output-path="$work/dist" >"$work/ng-build.log" 2>&1) || { cat "$work/ng-build.log" >&2; exit 1; }
 start_server || { stop_server; start_server; }
 
 echo "== Screens, recorded twice into separate folders"
