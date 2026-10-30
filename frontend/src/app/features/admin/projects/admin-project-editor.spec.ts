@@ -665,7 +665,7 @@ describe('Given an administrator editing a published project', () => {
     );
     expect(text(fixture, '.publish-state .ui-badge')).toBe('Na webu');
     expect(text(fixture, '#projects-publish-date-hint')).toBe(
-      'Projekt je na webu, změny se ukážou hned. Web řadí projekty podle roku a pak podle data zveřejnění.',
+      'Projekt je na webu, změny se ukážou hned. Web řadí projekty podle roku, v něm podle toho, komu pomohly, a pak podle data zveřejnění.',
     );
     expect(element<HTMLInputElement>(fixture, '#projects-publish-date').value).toBe('2026-10-20');
     expect(text(fixture, '.updated-at')).toBe('Naposledy uloženo 20. 10. 2026 09:30.');
@@ -810,7 +810,7 @@ describe('Given an administrator editing a published project', () => {
 
     expect(text(fixture, '.publish-state .ui-badge')).toBe('Zveřejní se 30. 10. 2026');
     expect(text(fixture, '#projects-publish-date-hint')).toBe(
-      'Na web se projekt dostane 30. 10. 2026, do té doby ho vidíte jen vy. Web řadí projekty podle roku a pak podle data zveřejnění.',
+      'Na web se projekt dostane 30. 10. 2026, do té doby ho vidíte jen vy. Web řadí projekty podle roku, v něm podle toho, komu pomohly, a pak podle data zveřejnění.',
     );
     expect(fixture.nativeElement.querySelector('.public-link')).toBeNull();
     expect(button(fixture, 'Uložit změny').type).toBe('submit');
