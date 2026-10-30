@@ -124,7 +124,7 @@ describe('Given the home page', () => {
 
   it('when the home content carries a photo for the About section, then the section shows it instead of the placeholder', async () => {
     await settle();
-    expectQrRequest();
+    expectDetailsRequest();
     http
       .expectOne('/api/content/home')
       .flush({ news: [], projects: [], about: { photo: aboutPhoto() } });
@@ -139,7 +139,7 @@ describe('Given the home page', () => {
 
   it('when the home content has no About photo or cannot be loaded, then the About section keeps its placeholder photo', async () => {
     await settle();
-    expectQrRequest();
+    expectDetailsRequest();
     http.expectOne('/api/content/home').flush(null, { status: 500, statusText: 'Error' });
     fixture.detectChanges();
 
