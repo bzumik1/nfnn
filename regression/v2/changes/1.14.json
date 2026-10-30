@@ -1,0 +1,34 @@
+[
+  {
+    "path": "GET /api/admin/donations/receipt-signature",
+    "scenario": "donations/admin_receipt_signature: *",
+    "kind": "added",
+    "field": "$.kind",
+    "reason": "1.14 accepts a vector signature (SVG) beside the scan (Jakub 2026-10-30, \"Chtěl bych všude používat podpis jako SVG\"); the answer's kind says whether the signature is a scan (RASTER) or an SVG of filled paths (VECTOR), null when none is set",
+    "contract": "docs/api-contract.md, Receipt signature"
+  },
+  {
+    "path": "GET /api/admin/donations/receipt-signature",
+    "scenario": "donations/admin_receipt_signature: *",
+    "kind": "added",
+    "field": "$.vector",
+    "reason": "1.14 accepts a vector signature (SVG) beside the scan (Jakub 2026-10-30, \"Chtěl bych všude používat podpis jako SVG\"); the answer's vector carries an SVG signature as closed JSON (viewBox and paths[{d, fill, opacity}]) for the administration's preview, null for a scan or none",
+    "contract": "docs/api-contract.md, Receipt signature"
+  },
+  {
+    "path": "POST /api/admin/donations/receipt-signature",
+    "scenario": "donations/admin_receipt_signature: *",
+    "kind": "added",
+    "field": "$.kind",
+    "reason": "1.14 accepts a vector signature (SVG) beside the scan (Jakub 2026-10-30, \"Chtěl bych všude používat podpis jako SVG\"); the answer's kind says whether the signature is a scan (RASTER) or an SVG of filled paths (VECTOR), null when none is set",
+    "contract": "docs/api-contract.md, Receipt signature"
+  },
+  {
+    "path": "POST /api/admin/donations/receipt-signature",
+    "scenario": "donations/admin_receipt_signature: *",
+    "kind": "added",
+    "field": "$.vector",
+    "reason": "1.14 accepts a vector signature (SVG) beside the scan (Jakub 2026-10-30, \"Chtěl bych všude používat podpis jako SVG\"); the answer's vector carries an SVG signature as closed JSON (viewBox and paths[{d, fill, opacity}]) for the administration's preview, null for a scan or none",
+    "contract": "docs/api-contract.md, Receipt signature"
+  }
+]
