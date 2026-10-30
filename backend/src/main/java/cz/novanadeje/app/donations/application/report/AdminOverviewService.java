@@ -4,11 +4,15 @@ import cz.novanadeje.app.donations.domain.FoundationCalendar;
 import cz.novanadeje.app.donations.domain.bank.BankPaymentRepository;
 import cz.novanadeje.app.donations.domain.donation.DonationRepository;
 import cz.novanadeje.app.donations.domain.donor.DonorRecordRepository;
+import cz.novanadeje.app.donations.domain.bank.BankPayment;
+import cz.novanadeje.app.donations.domain.report.ActivitySince;
+import cz.novanadeje.app.donations.domain.report.Tally;
 import cz.novanadeje.app.donations.domain.report.YearOverview;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.Year;
 import java.time.YearMonth;
@@ -52,5 +56,15 @@ public class AdminOverviewService {
                 .toList();
         return new OverviewView(YearOverview.compile(year, today, donations.findReceivedOnBetween(firstDay, lastDay),
                 payments.findUnpairedBookedBetween(firstDay, lastDay), registrations), years);
+    }
+
+    @Transactional(readOnly = true)
+    public ActivitySince since(Instant from) {
+        return new ActivitySince(from, tally(payments.findImportedSince(from)), tally(payments.findUnpairedImportedSince(from)),
+                donorRecords.countRegisteredSince(from));
+    }
+
+    private static Tally tally(List<BankPayment> found) {
+        return Tally.of(found.stream().map(BankPayment::amount).toList());
     }
 }

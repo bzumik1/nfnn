@@ -137,7 +137,7 @@ class DonorAuthenticationServiceTest {
     void should_open_session_when_logged_in_given_matching_password() {
         when(donors.findByEmail(EMAIL)).thenReturn(Optional.of(donor));
         when(passwordHasher.matches(new RawPassword("correct horse battery"), HASH)).thenReturn(true);
-        when(sessions.open(donor, false)).thenReturn(TOKENS);
+        when(sessions.signIn(donor, false)).thenReturn(TOKENS);
 
         AuthenticatedDonor result = service.login("jana@example.cz", "correct horse battery");
 
@@ -218,7 +218,7 @@ class DonorAuthenticationServiceTest {
         when(donors.findByEmail(EMAIL)).thenReturn(Optional.of(donor));
         when(passwordHasher.matches(new RawPassword("correct horse battery"), HASH)).thenReturn(true);
         when(secondFactors.findByDonor(donor.id())).thenReturn(Optional.of(SecondFactor.enrol(donor.id(), SECRET, NOW)));
-        when(sessions.open(donor, false)).thenReturn(TOKENS);
+        when(sessions.signIn(donor, false)).thenReturn(TOKENS);
 
         AuthenticatedDonor result = service.login("jana@example.cz", "correct horse battery");
 
@@ -235,7 +235,7 @@ class DonorAuthenticationServiceTest {
         when(challenges.findBySecretHash(secret.hash())).thenReturn(Optional.of(challenge));
         when(donors.findById(donor.id())).thenReturn(Optional.of(donor));
         when(secondFactors.findByDonor(donor.id())).thenReturn(Optional.of(factor));
-        when(sessions.open(donor, true)).thenReturn(TOKENS);
+        when(sessions.signIn(donor, true)).thenReturn(TOKENS);
         when(challenges.reserveAttempt(challenge.id(), NOW, CHALLENGE_ATTEMPTS)).thenReturn(true);
         when(challenges.markUsed(challenge.id(), NOW)).thenReturn(true);
 

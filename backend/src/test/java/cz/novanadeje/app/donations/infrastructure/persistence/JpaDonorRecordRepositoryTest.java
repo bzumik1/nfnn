@@ -195,6 +195,19 @@ class JpaDonorRecordRepositoryTest {
     }
 
     @Test
+    @DisplayName("Given donors registered at three instants, when donors registered since an instant are counted, then that instant and the later ones count")
+    void should_count_registrations_from_the_instant_on_when_counted_given_three_registration_times() {
+        donorRecords.save(registeredAt("4821937560", NOW));
+        donorRecords.save(registeredAt("7310945528", LATER));
+        donorRecords.save(registeredAt("1234567890", LATER.plusSeconds(1)));
+        flushAndClear();
+
+        assertThat(donorRecords.countRegisteredSince(NOW)).isEqualTo(3);
+        assertThat(donorRecords.countRegisteredSince(LATER)).isEqualTo(2);
+        assertThat(donorRecords.countRegisteredSince(LATER.plusSeconds(2))).isZero();
+    }
+
+    @Test
     @DisplayName("Given stored records, when several are asked for by id, then exactly those come back with their accounts")
     void should_find_records_when_asked_by_ids_given_stored_records() {
         DonorRecord jana = person("Jana Nováková", "4821937560");

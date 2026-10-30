@@ -563,6 +563,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
             availableYears: [2026, 2025],
             donorsRegistered: 3,
             newDonors: 3,
+            givingDonors: 3,
             received: { count: 5, totalMinor: 288350, currency: 'CZK' },
             paired: { count: 4, totalMinor: 273350, currency: 'CZK' },
             unpaired: { count: 1, totalMinor: 15000, currency: 'CZK' },
@@ -571,6 +572,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
                 month: '2026-10',
                 received: { count: 1, totalMinor: 99900, currency: 'CZK' },
                 newDonors: 1,
+                givingDonors: 1,
                 paired: { count: 1, totalMinor: 99900, currency: 'CZK' },
                 unpaired: { count: 0, totalMinor: 0, currency: 'CZK' },
               },
@@ -578,6 +580,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
                 month: '2026-09',
                 received: { count: 4, totalMinor: 188450, currency: 'CZK' },
                 newDonors: 2,
+                givingDonors: 2,
                 paired: { count: 3, totalMinor: 173450, currency: 'CZK' },
                 unpaired: { count: 1, totalMinor: 15000, currency: 'CZK' },
               },
@@ -625,9 +628,31 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
           },
         }),
     );
+    await page.route(
+      (url) => url.pathname === '/api/admin/donors/me/previous-sign-in',
+      (route) => route.fulfill({ json: { previousSignInAt: '2026-10-28T20:14:00Z' } }),
+    );
+    await page.route(
+      (url) => url.pathname === '/api/admin/donations/overview/since',
+      (route) =>
+        route.fulfill({
+          json: {
+            from: '2026-10-28T20:14:00Z',
+            payments: { count: 5, totalMinor: 1250000, currency: 'CZK' },
+            paired: { count: 3, totalMinor: 750000, currency: 'CZK' },
+            unpaired: { count: 2, totalMinor: 500000, currency: 'CZK' },
+            newDonors: 3,
+          },
+        }),
+    );
     await signIn(page, administrator);
     await page.getByRole('link', { name: 'Správa' }).click();
     await expect(page.getByRole('heading', { level: 1, name: 'Správa' })).toBeFocused();
+    await expect(
+      page
+        .getByRole('region', { name: 'Od posledního přihlášení' })
+        .getByRole('link', { name: '2 platby za 5 000 Kč' }),
+    ).toBeVisible();
     await expect(page.getByRole('region', { name: 'Co potřebuje vaši pozornost' })).toContainText(
       'Platby z banky se nestahují',
     );

@@ -1,5 +1,49 @@
 <div class="ui-page container">
   <h1 #title class="ui-page-title" tabindex="-1" i18n="@@admin.home.heading">Správa</h1>
+  <section class="ui-card since" aria-labelledby="admin-since-title">
+    <h2 id="admin-since-title" class="ui-card__title" i18n="@@admin.home.since.title">
+      Od posledního přihlášení
+    </h2>
+    @switch (sinceState()) {
+      @case ('loading') {
+        <p class="ui-load-state" role="status" i18n="@@admin.home.since.loading">
+          Zjišťujeme, co je od minula nového…
+        </p>
+      }
+      @case ('error') {
+        <div class="ui-load-state ui-load-state--error" role="alert">
+          <p i18n="@@admin.home.since.error.text">Co je od minula nového, se nepodařilo zjistit.</p>
+          <button
+            type="button"
+            class="ui-button"
+            (click)="loadSince()"
+            i18n="@@admin.home.since.error.retry"
+          >
+            Zkusit znovu
+          </button>
+        </div>
+      }
+      @case ('ready') {
+        <p class="since-lead">{{ sinceLead() }}</p>
+        @if (sinceFigures().length > 0) {
+          <dl class="admin-data">
+            @for (figure of sinceFigures(); track figure.label) {
+              <div>
+                <dt>{{ figure.label }}</dt>
+                <dd>
+                  @if (figure.link; as link) {
+                    <a [routerLink]="link" [queryParams]="figure.query">{{ figure.text }}</a>
+                  } @else {
+                    {{ figure.text }}
+                  }
+                </dd>
+              </div>
+            }
+          </dl>
+        }
+      }
+    }
+  </section>
   <section class="ui-card attention" aria-labelledby="admin-attention-title">
     <h2 id="admin-attention-title" class="ui-card__title" i18n="@@admin.home.attention.title">
       Co potřebuje vaši pozornost
@@ -329,16 +373,23 @@
             Registrovaní dárci: {{ data.donorsRegistered }}, z toho nových v roce {{ data.year }}:
             {{ data.newDonors }}.
           </p>
+          @if (data.months.length > 0) {
+            <p id="admin-overview-hint" class="overview-hint" i18n="@@admin.home.overview.hint">
+              Dárci: kolik různých dárců v měsíci poslalo dar; platby bez dárce se nepočítají. Noví
+              dárci: kolik dárců se v měsíci zaregistrovalo.
+            </p>
+          }
           @if (data.months.length === 0) {
             <p class="admin-empty" i18n="@@admin.home.overview.empty">
               Rok {{ data.year }} ještě nezačal.
             </p>
           } @else {
-            <table class="overview-table">
+            <table class="overview-table" aria-describedby="admin-overview-hint">
               <thead>
                 <tr>
                   <th i18n="@@admin.home.overview.col.month">Měsíc</th>
                   <th class="num" i18n="@@admin.home.overview.col.count">Dary</th>
+                  <th class="num" i18n="@@admin.home.overview.col.givingDonors">Dárci</th>
                   <th class="num col-new" i18n="@@admin.home.overview.col.newDonors">Noví dárci</th>
                   <th class="num" i18n="@@admin.home.overview.col.total">Celkem</th>
                   <th class="num col-paired" i18n="@@admin.home.overview.col.paired">Přiřazené</th>
@@ -357,6 +408,13 @@
                       i18n-data-label="@@admin.home.overview.col.count"
                     >
                       {{ item.received.count }}
+                    </td>
+                    <td
+                      class="num"
+                      data-label="Dárci"
+                      i18n-data-label="@@admin.home.overview.col.givingDonors"
+                    >
+                      {{ item.givingDonors }}
                     </td>
                     <td
                       class="num col-new"
@@ -402,6 +460,13 @@
                     i18n-data-label="@@admin.home.overview.col.count"
                   >
                     {{ data.received.count }}
+                  </td>
+                  <td
+                    class="num"
+                    data-label="Dárci"
+                    i18n-data-label="@@admin.home.overview.col.givingDonors"
+                  >
+                    {{ data.givingDonors }}
                   </td>
                   <td
                     class="num col-new"

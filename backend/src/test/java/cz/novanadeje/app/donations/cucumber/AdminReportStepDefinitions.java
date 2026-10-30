@@ -89,9 +89,28 @@ public class AdminReportStepDefinitions {
         api.get(OVERVIEW + "?year=" + year);
     }
 
+    @When("{string} asks what came in since {string}")
+    public void asksWhatCameInSince(String alias, String from) {
+        sessions.actAs(alias);
+        api.get(OVERVIEW + "/since?from=" + from);
+    }
+
+    @When("{string} asks what came in without saying since when")
+    public void asksWhatCameInWithoutSayingSinceWhen(String alias) {
+        sessions.actAs(alias);
+        api.get(OVERVIEW + "/since");
+    }
+
+    @When("someone without a token asks what came in since {string}")
+    public void someoneWithoutATokenAsksWhatCameInSince(String from) {
+        api.forgetCredentials();
+        api.get(OVERVIEW + "/since?from=" + from);
+    }
+
     @Then("the monthly report settings say:")
     @Then("the sent report says:")
     @Then("the donations overview says:")
+    @Then("the activity since then says:")
     public void theResponseSays(Map<String, String> expected) {
         JsonNode response = api.lastResponseJson();
         expected.forEach((path, value) -> assertThat(at(response, path).asString()).as(path).isEqualTo(value));

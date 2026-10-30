@@ -299,7 +299,7 @@ class DonorEmailVerificationServiceTest {
         when(tokens.findBySecretHash(secret.hash())).thenReturn(Optional.of(token));
         when(tokens.markUsed(token.id(), NOW)).thenReturn(true);
         when(donors.findById(DONOR)).thenReturn(Optional.of(donor));
-        when(sessions.open(donor, false)).thenReturn(TOKENS);
+        when(sessions.signIn(donor, false)).thenReturn(TOKENS);
 
         AuthenticatedDonor result = service.confirm(secret.value());
 
@@ -309,7 +309,7 @@ class DonorEmailVerificationServiceTest {
         order.verify(tokens).deleteAllOf(DONOR);
         order.verify(events).publishEvent(new DonorRegistered(DONOR.value(), DonorType.PERSON, "Jana Nováková", Optional.empty(), ADDRESS, EMAIL,
                 SYMBOL, LocaleCode.CS, donor.registeredAt()));
-        order.verify(sessions).open(donor, false);
+        order.verify(sessions).signIn(donor, false);
         assertThat(saved.getValue().emailVerifiedAt()).contains(NOW);
         assertThat(result.donor().email()).isEqualTo("jana@example.cz");
         assertThat(result.tokens()).isEqualTo(TOKENS);
@@ -407,7 +407,7 @@ class DonorEmailVerificationServiceTest {
         when(tokens.markUsed(token.id(), NOW)).thenReturn(true);
         when(donors.findById(DONOR)).thenReturn(Optional.of(donor));
         when(donors.existsByEmail(NEW_EMAIL)).thenReturn(false);
-        when(sessions.open(donor, false)).thenReturn(TOKENS);
+        when(sessions.signIn(donor, false)).thenReturn(TOKENS);
 
         AuthenticatedDonor result = service.confirm(secret.value());
 
@@ -416,7 +416,7 @@ class DonorEmailVerificationServiceTest {
         order.verify(tokens).deleteAllOf(DONOR);
         order.verify(refreshTokens).revokeAllOf(DONOR, NOW);
         order.verify(events).publishEvent(new DonorEmailChanged(DONOR.value(), EMAIL, NEW_EMAIL, LocaleCode.CS));
-        order.verify(sessions).open(donor, false);
+        order.verify(sessions).signIn(donor, false);
         assertThat(donor.email()).isEqualTo(NEW_EMAIL);
         assertThat(result.donor().email()).isEqualTo("jana.nova@example.cz");
         assertThat(result.tokens()).isEqualTo(TOKENS);

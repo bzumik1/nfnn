@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <changeSet id="020-index-activity-since" author="nfnn">
+        <createIndex tableName="bank_payment" indexName="ix_bank_payment_imported_at">
+            <column name="imported_at"/>
+        </createIndex>
+        <createIndex tableName="donor_record" indexName="ix_donor_record_registered_at">
+            <column name="registered_at"/>
+        </createIndex>
+    </changeSet>
+</databaseChangeLog>

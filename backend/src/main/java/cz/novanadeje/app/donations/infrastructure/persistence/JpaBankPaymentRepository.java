@@ -8,6 +8,7 @@ import cz.novanadeje.app.donations.domain.bank.SenderAccount;
 import cz.novanadeje.app.shared.domain.VariableSymbol;
 import org.springframework.stereotype.Repository;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.Year;
 import java.util.Collection;
@@ -87,6 +88,16 @@ class JpaBankPaymentRepository implements BankPaymentRepository {
             return List.of();
         }
         return toDomain(jpa.findAllById(ids.stream().map(BankPaymentId::value).collect(Collectors.toSet())));
+    }
+
+    @Override
+    public List<BankPayment> findImportedSince(Instant from) {
+        return toDomain(jpa.findByImportedAtGreaterThanEqual(from));
+    }
+
+    @Override
+    public List<BankPayment> findUnpairedImportedSince(Instant from) {
+        return toDomain(jpa.findUnpairedImportedSince(from));
     }
 
     @Override

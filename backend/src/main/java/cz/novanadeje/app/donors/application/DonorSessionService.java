@@ -34,6 +34,16 @@ public class DonorSessionService {
     }
 
     @Transactional
+    public IssuedTokens signIn(Donor donor, boolean secondFactorVerified) {
+        Instant now = clock.instant();
+        Set<Role> roles = donor.sessionRoles(secondFactorVerified);
+        if (roles.contains(Role.ADMIN)) {
+            donors.recordSignIn(donor.id(), now);
+        }
+        return issue(donor.id(), roles, secondFactorVerified, now);
+    }
+
+    @Transactional
     public IssuedTokens open(Donor donor, boolean secondFactorVerified) {
         return issue(donor.id(), donor.sessionRoles(secondFactorVerified), secondFactorVerified, clock.instant());
     }

@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.Instant;
 import java.time.Year;
 import java.util.Optional;
 
@@ -27,5 +28,10 @@ class AdminOverviewController {
     @GetMapping("/overview")
     AdminOverviewResponse overview(@RequestParam(required = false) @Min(FIRST_FOUR_DIGIT_YEAR) @Max(LAST_FOUR_DIGIT_YEAR) Integer year) {
         return AdminOverviewResponse.from(overview.overview(Optional.ofNullable(year).map(Year::of)));
+    }
+
+    @GetMapping("/overview/since")
+    AdminActivitySinceResponse since(@RequestParam Instant from) {
+        return AdminActivitySinceResponse.from(overview.since(from));
     }
 }

@@ -7,9 +7,10 @@ import java.time.LocalDate;
 import java.time.Year;
 import java.time.YearMonth;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
-public record YearOverview(Year year, List<MonthOverview> months, Tally paired, long newDonors, Tally unpaired,
+public record YearOverview(Year year, List<MonthOverview> months, Tally paired, long givingDonors, long newDonors, Tally unpaired,
                            long donorsRegistered) {
 
     public static final int MONTH_BOUNDARIES = 13;
@@ -20,6 +21,9 @@ public record YearOverview(Year year, List<MonthOverview> months, Tally paired, 
         }
         if (newDonors < 0 || donorsRegistered < newDonors) {
             throw new IllegalArgumentException("New donors are part of the registered ones: " + newDonors + " of " + donorsRegistered);
+        }
+        if (givingDonors < 0 || givingDonors > paired.count()) {
+            throw new IllegalArgumentException("Giving donors are between zero and the paired donations: " + givingDonors + " of " + paired.count());
         }
         months = List.copyOf(months);
     }
@@ -48,18 +52,26 @@ public record YearOverview(Year year, List<MonthOverview> months, Tally paired, 
             if (newDonors < 0) {
                 throw new IllegalArgumentException("Donor counts cannot fall from one month to the next");
             }
+            List<Donation> ofMonth = received.stream().filter(donation -> month.contains(donation.receivedOn())).toList();
             months.addFirst(new MonthOverview(month,
-                    Tally.of(received.stream().filter(donation -> month.contains(donation.receivedOn())).map(Donation::amount).toList()),
+                    Tally.of(ofMonth.stream().map(Donation::amount).toList()),
+                    distinctDonors(ofMonth),
                     newDonors,
                     Tally.of(unpairedPayments.stream().filter(payment -> month.contains(payment.bookedOn())).map(BankPayment::amount).toList())));
             started++;
         }
         long registeredAtStart = registeredBeforeMonthStarts.getFirst();
         long registered = registeredBeforeMonthStarts.get(started);
+        List<Donation> ofYear = received.stream().filter(donation -> donation.receivedIn(year)).toList();
         return new YearOverview(year, months,
-                Tally.of(received.stream().filter(donation -> donation.receivedIn(year)).map(Donation::amount).toList()),
+                Tally.of(ofYear.stream().map(Donation::amount).toList()),
+                distinctDonors(ofYear),
                 registered - registeredAtStart,
                 Tally.of(unpairedPayments.stream().filter(payment -> Year.from(payment.bookedOn()).equals(year)).map(BankPayment::amount).toList()),
                 registered);
+    }
+
+    private static long distinctDonors(Collection<Donation> donations) {
+        return donations.stream().map(Donation::donor).distinct().count();
     }
 }

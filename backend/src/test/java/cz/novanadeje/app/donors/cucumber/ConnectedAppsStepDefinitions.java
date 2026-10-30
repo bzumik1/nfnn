@@ -306,6 +306,7 @@ public class ConnectedAppsStepDefinitions {
         switch (method) {
             case "POST" -> api.post(target, Map.of());
             case "DELETE" -> api.delete(target);
+            case "GET" -> api.get(target);
             default -> throw new IllegalArgumentException("Unsupported method " + method);
         }
     }

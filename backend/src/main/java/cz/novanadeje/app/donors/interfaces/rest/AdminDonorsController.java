@@ -58,6 +58,11 @@ class AdminDonorsController {
         return DonorAccountListResponse.from(donors.search(query, page, limit));
     }
 
+    @GetMapping("/me/previous-sign-in")
+    PreviousSignInResponse previousSignIn(@AuthenticationPrincipal Jwt jwt) {
+        return PreviousSignInResponse.from(administrators.previousSignIn(admin(jwt)));
+    }
+
     @GetMapping("/{donorId}")
     DonorAccountResponse donor(@PathVariable UUID donorId) {
         return DonorAccountResponse.from(donors.view(new DonorId(donorId)));

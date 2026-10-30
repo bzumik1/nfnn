@@ -81,7 +81,7 @@ public class DonorAuthenticationService {
             log.info("Sign-in of donor {} waits for the second factor", donor.id());
             throw new SecondFactorRequired(secret.value(), challenge.expiresAt());
         }
-        return views.authenticated(donor, sessions.open(donor, false));
+        return views.authenticated(donor, sessions.signIn(donor, false));
     }
 
     @Transactional(noRollbackFor = InvalidSecondFactorCode.class)
@@ -111,7 +111,7 @@ public class DonorAuthenticationService {
             throw new InvalidSecondFactorChallenge();
         }
         secondFactors.save(factor);
-        return views.authenticated(donor, sessions.open(donor, true));
+        return views.authenticated(donor, sessions.signIn(donor, true));
     }
 
     @Transactional(noRollbackFor = InvalidRefreshToken.class)
