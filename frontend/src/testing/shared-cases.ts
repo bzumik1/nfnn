@@ -103,15 +103,17 @@ export interface SharedCaseTopics {
 
 export type SharedCaseTopic = keyof SharedCaseTopics;
 
-export const SHARED_CASE_TOPICS: readonly SharedCaseTopic[] = [
-  'admin-overview/year-overview.json',
-  'donor-summary/summary.json',
-  'monthly-report/formatting.json',
-  'monthly-report/report.json',
-  'qr/payment.json',
-  'qr/totp.json',
-  'receipts/formatting.json',
-];
+const REGISTERED_TOPICS: Readonly<Record<SharedCaseTopic, true>> = {
+  'admin-overview/year-overview.json': true,
+  'donor-summary/summary.json': true,
+  'monthly-report/formatting.json': true,
+  'monthly-report/report.json': true,
+  'qr/payment.json': true,
+  'qr/totp.json': true,
+  'receipts/formatting.json': true,
+};
+
+export const SHARED_CASE_TOPICS = Object.keys(REGISTERED_TOPICS) as readonly SharedCaseTopic[];
 
 const SCHEMA_ID_PREFIX = 'https://nfnn.cz/shared-cases/';
 const SCHEMAS = 'schemas/';
