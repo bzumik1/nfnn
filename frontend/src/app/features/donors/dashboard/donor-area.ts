@@ -1,7 +1,7 @@
 /// <reference types="@angular/localize" />
 
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
-import { RouterOutlet } from '@angular/router';
+import { RouterLink, RouterOutlet } from '@angular/router';
 import { pluralCategory } from '../../../core/i18n/plural-category';
 import { SideNav, SideNavBadge, SideNavGroup } from '../../../shared/ui/side-nav/side-nav';
 import { DonorDonations } from './donor-donations';
@@ -25,7 +25,7 @@ export const DONOR_SECTIONS: readonly SideNavGroup[] = [
 
 @Component({
   selector: 'app-donor-area',
-  imports: [RouterOutlet, DashboardTopBar, SideNav],
+  imports: [RouterLink, RouterOutlet, DashboardTopBar, SideNav],
   providers: [DonorDonations],
   templateUrl: './donor-area.html',
   styleUrl: './donor-area.scss',

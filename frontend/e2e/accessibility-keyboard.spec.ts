@@ -148,11 +148,12 @@ test.describe('Given a visitor who uses only the keyboard or a screen reader', (
         ),
       );
     }
-    expect(order.slice(0, 5)).toEqual([
+    expect(order).toEqual([
       'Kopírovat číslo účtu',
       'Kopírovat částku',
       'Kopírovat variabilní symbol',
       'Kopírovat IBAN',
+      'Jak nastavit trvalý příkaz',
       'Uložit QR kód',
     ]);
   });

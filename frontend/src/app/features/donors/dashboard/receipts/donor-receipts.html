@@ -94,6 +94,13 @@
         <p class="yearly-hint" i18n="@@donor.dashboard.yearly.beforeReceipts">
           Potvrzení za rok tu vystavujeme za dary od roku {{ donations.receiptsFrom() }}.
         </p>
+      } @else {
+        <p class="yearly-earlier">
+          <span i18n="@@donor.receipts.yearly.earlier"
+            >Potvrzení tu vystavujeme za dary od roku {{ donations.receiptsFrom() }}. Za dřívější
+            dary nám napište na</span
+          >&ngsp;<a href="mailto:info@nfnn.cz">info&#64;nfnn.cz</a>.
+        </p>
       }
     } @else {
       <p class="yearly-empty" i18n="@@donor.dashboard.yearly.empty">

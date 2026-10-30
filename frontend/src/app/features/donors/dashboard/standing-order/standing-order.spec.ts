@@ -179,6 +179,49 @@ describe('Given the standing order guide of the donor area', () => {
     });
   });
 
+  describe('when the donor opens it below the visible part of the page', () => {
+    let scrolled: { element: Element; options: ScrollIntoViewOptions | boolean | undefined }[];
+
+    beforeEach(() => {
+      scrolled = [];
+      Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', {
+        configurable: true,
+        writable: true,
+        value: function (this: Element, options?: ScrollIntoViewOptions | boolean) {
+          scrolled.push({ element: this, options });
+        },
+      });
+    });
+
+    afterEach(() => {
+      Reflect.deleteProperty(HTMLElement.prototype, 'scrollIntoView');
+    });
+
+    it('then the button and the opened guide are brought into view together', async () => {
+      await toggle();
+      http.expectOne((request) => request.url === QR_URL).flush(paymentQr());
+      await settle();
+
+      expect(scrolled).toHaveLength(1);
+      expect(scrolled[0].element).toBe(fixture.nativeElement);
+      expect(scrolled[0].options).toEqual({ block: 'nearest' });
+      expect(element<HTMLButtonElement>('.standing-toggle')!.getAttribute('aria-expanded')).toBe(
+        'true',
+      );
+    });
+
+    it('and closes it again, then nothing scrolls', async () => {
+      await toggle();
+      http.expectOne((request) => request.url === QR_URL).flush(paymentQr());
+      await settle();
+      scrolled = [];
+
+      await toggle();
+
+      expect(scrolled).toEqual([]);
+    });
+  });
+
   describe('when the payment card it sits in has an amount chosen', () => {
     beforeEach(() => {
       fixture.componentRef.setInput('account', {

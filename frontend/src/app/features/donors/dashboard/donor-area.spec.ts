@@ -433,7 +433,22 @@ describe('Given a signed-in donor in the donor area', () => {
       await open('/darce/prehled');
       await respond(twoYearSummary(), twoYearDonations());
 
-      expect(text('.contact-line')).toBe('Máte dotaz k platbě? Napište nám na info@nfnn.cz');
+      expect(text('.contact-line')).toBe(
+        'Máte dotaz k platbě? Napište nám na info@nfnn.cz nebo přes kontaktní formulář.',
+      );
+    });
+
+    it('then the help line also leads to the contact form on the home page', async () => {
+      await open('/darce/prehled');
+      await respond(twoYearSummary(), twoYearDonations());
+
+      const links = [...root().querySelectorAll<HTMLAnchorElement>('.contact-line a')];
+      expect(links.map((link) => normalized(link.textContent ?? ''))).toEqual([
+        'info@nfnn.cz',
+        'kontaktní formulář',
+      ]);
+      expect(links[0].getAttribute('href')).toBe('mailto:info@nfnn.cz');
+      expect(links[1].getAttribute('href')).toBe('/#kontakt');
     });
 
     it('then the donations cannot be loaded, an alert offers to try again and a retry asks for both again and shows them', async () => {
@@ -597,7 +612,113 @@ describe('Given a signed-in donor in the donor area', () => {
     });
   });
 
+  describe('when the donor moves between the sections after the check of the area ended', () => {
+    async function openAfterAreaCheck(url: string): Promise<void> {
+      vi.useFakeTimers();
+      await open(url);
+      await respond(twoYearSummary(), twoYearDonations());
+      bankCheck.flush(
+        { bankDataAsOf: EARLIER, checking: false },
+        { status: 202, statusText: 'Accepted' },
+      );
+      await settle();
+      await respond(twoYearSummary(), twoYearDonations());
+    }
+
+    async function checkedOnOpening(url: string): Promise<void> {
+      await go(url);
+      await answerPaymentQr();
+      const check = http.expectOne({ method: 'POST', url: BANK_CHECK_URL });
+      expect(check.request.headers.get('Authorization')).toBe('Bearer token-1');
+      check.flush({ bankDataAsOf: LATER, checking: false });
+      await settle();
+      await respond(twoYearSummary(), twoYearDonations());
+    }
+
+    it('and opens Přehled more than half a minute later, then the bank is asked again and the time of the new bank data shows', async () => {
+      await openAfterAreaCheck('/darce/dary');
+      await vi.advanceTimersByTimeAsync(31_000);
+
+      await checkedOnOpening('/darce/prehled');
+
+      expect(text('.bank-check-status')).toBe('Údaje z banky k 18. 10. 2026 10:07');
+    });
+
+    it('and opens Moje dary more than half a minute later, then the bank is asked again and the donations load again', async () => {
+      await openAfterAreaCheck('/darce/prehled');
+      await vi.advanceTimersByTimeAsync(31_000);
+
+      await checkedOnOpening('/darce/dary');
+
+      expect(text('.bank-check-status')).toBe('Údaje z banky k 18. 10. 2026 10:07');
+      expect(texts('.payments-card tbody tr')).toHaveLength(twoYearDonations().items.length);
+    });
+
+    it('and opens Přehled within half a minute, then the bank is not asked again', async () => {
+      await openAfterAreaCheck('/darce/dary');
+      await vi.advanceTimersByTimeAsync(29_000);
+
+      await go('/darce/prehled');
+      await answerPaymentQr();
+
+      http.expectNone({ method: 'POST', url: BANK_CHECK_URL });
+      http.expectNone('/api/donations/me/summary');
+    });
+
+    it('and opens Potvrzení o daru more than half a minute later, then the bank is not asked again', async () => {
+      await openAfterAreaCheck('/darce/prehled');
+      await vi.advanceTimersByTimeAsync(31_000);
+
+      await go('/darce/potvrzeni');
+
+      http.expectNone({ method: 'POST', url: BANK_CHECK_URL });
+    });
+
+    it('and a check started on opening a section ended, then the next half minute starts no other one', async () => {
+      await openAfterAreaCheck('/darce/dary');
+      await vi.advanceTimersByTimeAsync(31_000);
+      await checkedOnOpening('/darce/prehled');
+      await vi.advanceTimersByTimeAsync(20_000);
+
+      await go('/darce/dary');
+
+      http.expectNone({ method: 'POST', url: BANK_CHECK_URL });
+    });
+  });
+
   describe('when the overview opens', () => {
+    it('then an amount chosen in the card Poslat dar stays chosen after the donor leaves the overview and comes back', async () => {
+      await open('/darce/prehled');
+      await respond(twoYearSummary(), twoYearDonations());
+      [...root().querySelectorAll<HTMLButtonElement>('.send-gift .amount-option')][0].click();
+      await settle();
+      await answerPaymentQr();
+
+      await go('/darce/dary');
+      await go('/darce/prehled');
+      const asked = await answerPaymentQr();
+
+      expect(asked[0]).toBe(`${PAYMENT_QR_URL}?amount=1000&variableSymbol=9876543210`);
+      const thousand = [
+        ...root().querySelectorAll<HTMLButtonElement>('.send-gift .amount-option'),
+      ][0];
+      expect(thousand.getAttribute('aria-pressed')).toBe('true');
+      expect(texts('.send-gift .bank-value')[1]).toBe('1 000 Kč');
+    });
+
+    it('then the standing order guide stands in the card Poslat dar right after the bank details and before the QR code', async () => {
+      await open('/darce/prehled');
+      await respond(twoYearSummary(), twoYearDonations());
+
+      const guide = element('.send-gift app-standing-order') as HTMLElement;
+      expect(element('.send-gift .bank')!.compareDocumentPosition(guide)).toBe(
+        Node.DOCUMENT_POSITION_FOLLOWING,
+      );
+      expect(guide.compareDocumentPosition(element('.send-gift .qr')!)).toBe(
+        Node.DOCUMENT_POSITION_FOLLOWING,
+      );
+    });
+
     it('then a card Poslat dar offers the amounts, the account, the variable symbol and the IBAN with copy buttons and a QR carrying the symbol', async () => {
       await open('/darce/prehled');
       await respond(twoYearSummary(), twoYearDonations());
@@ -1712,6 +1833,23 @@ describe('Given a signed-in donor in the donor area', () => {
         ['2025', '1 dar', '250 Kč', 'Stáhnout potvrzení za rok 2025 (PDF)'],
       ]);
       expect(element('.yearly-hint')).toBeNull();
+    });
+
+    it('then a donor without a year before the first receipt year still reads from which year receipts are issued here and whom to write for earlier gifts', async () => {
+      await open('/darce/potvrzeni');
+      await respond(twoYearSummary(), twoYearDonations());
+
+      expect(text('.yearly-earlier')).toBe(
+        'Potvrzení tu vystavujeme za dary od roku 2025. Za dřívější dary nám napište na info@nfnn.cz.',
+      );
+      expect(element('.yearly-earlier a')?.getAttribute('href')).toBe('mailto:info@nfnn.cz');
+    });
+
+    it('then a donor with a year before the first receipt year reads the line about it only once', async () => {
+      await open('/darce/potvrzeni');
+      await respond(summaryWithReceiptsFrom2026(), donationsWithoutReceiptsBefore2026());
+
+      expect(element('.yearly-earlier')).toBeNull();
     });
 
     it('then account verifications are named apart from the gifts of their year while the total keeps their amount', async () => {
