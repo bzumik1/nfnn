@@ -26,10 +26,19 @@ public final class GoldenFiles {
     }
 
     public static void assertMatches(String relativePath, JsonNode actual) {
-        Path file = repositoryRoot().resolve(relativePath);
+        assertMatches(repositoryRoot().resolve(relativePath), relativePath, actual, WRITE.equals(System.getProperty(MODE)));
+    }
+
+    static void assertMatches(Path file, JsonNode actual, boolean writing) {
+        assertMatches(file, file.toString(), actual, writing);
+    }
+
+    private static void assertMatches(Path file, String relativePath, JsonNode actual, boolean writing) {
         String expected = canonical(actual);
         try {
-            if (WRITE.equals(System.getProperty(MODE))) {
+            if (writing) {
+                assertThat(file).as("%s is part of the v2 baseline and is never rewritten: record a new sample from the commit in regression/v2/BASELINE_COMMIT, "
+                        + "or declare the difference in regression/v2/changes/", relativePath).doesNotExist();
                 Files.createDirectories(file.getParent());
                 Files.writeString(file, expected, StandardCharsets.UTF_8);
                 return;
