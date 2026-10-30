@@ -4,6 +4,26 @@
   display: contents;
 }
 
+.status-bar-tint {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 101;
+  height: var(--space-1);
+  visibility: hidden;
+  pointer-events: none;
+  background-color: var(--color-surface);
+
+  &[data-tint='photo'] {
+    background-color: var(--color-hero-top);
+  }
+
+  &[data-tint='dark'] {
+    background-color: var(--color-surface-inverse);
+  }
+}
+
 .nav {
   position: fixed;
   top: 0;
