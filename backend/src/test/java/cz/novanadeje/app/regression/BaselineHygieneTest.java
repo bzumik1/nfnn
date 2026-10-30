@@ -1,5 +1,6 @@
 package cz.novanadeje.app.regression;
 
+import cz.novanadeje.app.sharedcases.SharedCases;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -25,9 +26,9 @@ class BaselineHygieneTest {
     @ValueSource(strings = {"regression", "shared-cases"})
     @DisplayName("Given a folder of public baseline artefacts, when it is scanned, then it holds files and none carries an id, a token or a foreign address")
     void should_hold_files_without_ids_tokens_or_foreign_addresses_when_a_public_artefact_folder_is_scanned(String folder) throws IOException {
-        Path root = GoldenFiles.repositoryRoot().resolve(folder);
+        Path root = SharedCases.repositoryRoot().resolve(folder);
 
-        BaselineHygiene.Report report = BaselineHygiene.scan(root, BaselineHygiene.fixtures(GoldenFiles.repositoryRoot().resolve("backend/src/test")));
+        BaselineHygiene.Report report = BaselineHygiene.scan(root, BaselineHygiene.fixtures(SharedCases.repositoryRoot().resolve("backend/src/test")));
 
         assertThat(report.filesScanned()).as("files in %s", folder).isPositive();
         assertThat(report.findings()).as("findings in %s", folder).isEmpty();
@@ -131,7 +132,7 @@ class BaselineHygieneTest {
     @Test
     @DisplayName("Given the TOTP golden cases, when their secrets are read, then they are exactly the test secrets the hygiene scan allows")
     void should_allow_exactly_the_secrets_of_the_totp_golden_cases() throws IOException {
-        JsonNode cases = JsonMapper.builder().build().readTree(GoldenFiles.repositoryRoot().resolve(QrGoldenCasesTest.TOTP_CASES).toFile()).get("cases");
+        JsonNode cases = JsonMapper.builder().build().readTree(SharedCases.repositoryRoot().resolve("shared-cases/qr/totp.json").toFile()).get("cases");
 
         assertThat(cases.valueStream().map(entry -> entry.get("input").get("secret").asString()).toList())
                 .containsExactlyInAnyOrderElementsOf(BaselineHygiene.TEST_TOTP_SECRETS);
@@ -140,7 +141,7 @@ class BaselineHygieneTest {
     @Test
     @DisplayName("Given the backend tests, when fixtures are collected, then the fictional donors, the foundation's address and the secrets the tests spell out are among them")
     void should_collect_fictional_addresses_and_spelled_out_secrets_when_fixtures_are_collected() throws IOException {
-        BaselineHygiene.Fixtures fixtures = BaselineHygiene.fixtures(GoldenFiles.repositoryRoot().resolve("backend/src/test"));
+        BaselineHygiene.Fixtures fixtures = BaselineHygiene.fixtures(SharedCases.repositoryRoot().resolve("backend/src/test"));
 
         assertThat(fixtures.addresses()).contains("info@nfnn.cz").anyMatch(address -> address.endsWith("@example.cz"));
         assertThat(fixtures.values()).contains(FIXTURE_SECRET);

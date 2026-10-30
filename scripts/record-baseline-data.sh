@@ -2,6 +2,11 @@
 set -euo pipefail
 
 root="$(cd "$(dirname "$0")/.." && pwd)"
+baseline="$(cat "$root/regression/v2/BASELINE_COMMIT")"
+if [[ "$(git -C "$root" rev-parse HEAD)" != "$baseline" ]]; then
+  echo "The v2 baseline is recorded only on a checkout of $baseline (regression/v2/BASELINE_COMMIT): its generators exist only there, and here the shared cases are the hand-edited specification" >&2
+  exit 2
+fi
 store="${BASELINE_SCREENS_STORE:-/mnt/project-files/nfnn-ux/snimky/v2-baseline}"
 work="$(mktemp -d)"
 first_run="$work/screens"
