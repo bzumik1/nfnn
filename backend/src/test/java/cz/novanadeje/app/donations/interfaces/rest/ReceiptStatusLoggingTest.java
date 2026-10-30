@@ -36,6 +36,7 @@ import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.simple.JdbcClient;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.Clock;
@@ -43,7 +44,6 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 import static cz.novanadeje.app.donations.BankPayments.payment;
@@ -51,6 +51,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 
 @IntegrationTest
+@TestPropertySource(properties = {"spring.jpa.show-sql=false", "logging.level.cz.novanadeje.app=INFO", "logging.level.org.springframework.web=INFO",
+        "logging.level.org.hibernate.SQL=INFO"})
 @ExtendWith(OutputCaptureExtension.class)
 class ReceiptStatusLoggingTest {
 
@@ -59,10 +61,6 @@ class ReceiptStatusLoggingTest {
     private static final String CLIENT_NETWORK = "2001:db8:5c:77";
     private static final String UNKNOWN_DIGEST = "5ca1ab1e".repeat(8);
     private static final String CANARY = "Receipt status logging canary";
-    private static final Map<String, LogLevel> PRODUCTION_LEVELS = Map.of(
-            "cz.novanadeje.app", LogLevel.INFO,
-            "org.springframework.web", LogLevel.INFO,
-            "org.hibernate.SQL", LogLevel.INFO);
 
     @Autowired
     private MockMvc mockMvc;
@@ -103,7 +101,6 @@ class ReceiptStatusLoggingTest {
     @DisplayName("Given the production log levels, when receipts' statuses are asked, refused as invalid and refused for the rate limit, then not one line is written")
     void should_write_no_line_when_statuses_asked_refused_and_limited_given_production_levels(CapturedOutput output) throws Exception {
         String digest = issuedReceiptDigest();
-        PRODUCTION_LEVELS.forEach(this::setLevel);
         int start = afterCanary(output);
 
         List<Integer> answers = askEveryKindOfQuestion(digest);

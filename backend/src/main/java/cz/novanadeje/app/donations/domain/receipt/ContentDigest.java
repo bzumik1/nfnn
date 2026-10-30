@@ -7,7 +7,9 @@ import java.util.regex.Pattern;
 
 public record ContentDigest(String value) {
 
-    private static final Pattern FORMAT = Pattern.compile("[0-9a-f]{64}");
+    public static final int LENGTH = 64;
+    public static final String SHAPE_REGEX = "[0-9a-f]{" + LENGTH + "}";
+    private static final Pattern FORMAT = Pattern.compile(SHAPE_REGEX);
 
     public ContentDigest {
         if (value == null || !FORMAT.matcher(value).matches()) {

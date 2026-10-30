@@ -96,7 +96,7 @@ class JpaDonationReceiptRepository implements DonationReceiptRepository {
 
     @Override
     public Optional<ReceiptStatus> findStatusByStatusDigest(ContentDigest statusDigest) {
-        return Optional.empty();
+        return jpa.findStatusByStatusSha256(statusDigest.value());
     }
 
     @Override
