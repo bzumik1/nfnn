@@ -34,7 +34,7 @@
   {
     "kind": "shared-case",
     "caseFile": "shared-cases/signature/vector.json",
-    "reason": "1.14 stores an SVG signature as canonical JSON, the exact bytes the browser will be served and hash against the digest a receipt names (S/B review M2, lead 2026-10-30): the new file pins an uploaded SVG to those bytes and their SHA-256, with absolute coordinates rounded once (review m5); the backend runs every case through StaxSignatureVectorParser and SignatureVector (SignatureVectorSharedCasesTest), the browser's suite checks the SHA-256 half now and draws the JSON from 1.9",
+    "reason": "1.14 stores an SVG signature as canonical JSON, the exact bytes the browser will be served and hash against the digest a receipt names (S/B review M2, lead 2026-10-30): the new file pins an uploaded SVG to those bytes and their SHA-256, with absolute coordinates, every number read at 12 decimals, summed exactly at that precision and written rounded once to three (review m5, n9); the backend runs every case through StaxSignatureVectorParser and SignatureVector (SignatureVectorSharedCasesTest), the browser's suite checks the SHA-256 half now and draws the JSON from 1.9",
     "contract": ".claude/rules/testing.md, Logic on both sides"
   },
   {
