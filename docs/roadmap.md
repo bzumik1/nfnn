@@ -72,12 +72,12 @@ Mimo očíslované úkoly:
 - První nastavení serveru v prohlížeči místo env souborů (#116), obnova ze zálohy v prohlížeči (#121), plán záloh ve správě (#145), podpis potvrzení nahraný ve správě (#123), silnější komprese záloh (#80), šifrované zálohy s klíčem v prvním nastavení a ve správě, které nesou i heslo k poště a token Fio (#162), klíč k zálohám jako 24 slov s ověřením na samostatném kroku (#192, #194).
 - Postranní panel správy a účtu dárce (#109, #122), cíl po přihlášení (#103), čtení nebo změny při připojení aplikace (#102), součty všech přijatých darů (#106), hledání bez diakritiky, historie česky, volitelná hodina přehledu (#139), Markdown a popisky fotek (#143), staré adresy obsahu, mazání nepoužitých fotek, seznamy po stránkách (#144), e-maily k účtu a opakování upozornění (#134).
 - Bezpečnostní audit: vlastní databázová role, zpevněné kontejnery, jedna síť `nfnn-edge`, role správce jen s potvrzeným e-mailem (#125, #148, #149, #150).
-- Vzhled a přístupnost: české adresy (#78), vzhled QR kódu (#101), fotka a ikona (#107, #111), vyměnitelný vzhled a sdílené bloky (#124, #126, #127, #132, #136, #138, #140), přístupnost pro klávesnici, čtečky a zvětšení (#133), audit přehlednosti celého webu (#151–#156), zkušební e-mail z nastavení pošty a nastavení seřazené podle četnosti (#157), karta „Přihlášení a zabezpečení“, dary po letech a čekající změna e-mailu v účtu dárce (#183), editor aktualit a projektů s náhledem a lištou akcí (#185), obnova platbou 1 Kč vrací zahájenou obnovu s QR kódem a registrace ze sekce Přispět vede zpět k příspěvku (#187), hledání, období a stránkování plateb ve správě a historie změn jako věty (#189), registrace firmy s názvem a sídlem z ARES (#191).
+- Vzhled a přístupnost: české adresy (#78), vzhled QR kódu (#101), fotka a ikona (#107, #111), vyměnitelný vzhled a sdílené bloky (#124, #126, #127, #132, #136, #138, #140), přístupnost pro klávesnici, čtečky a zvětšení (#133), audit přehlednosti celého webu (#151–#156), zkušební e-mail z nastavení pošty a nastavení seřazené podle četnosti (#157), karta „Přihlášení a zabezpečení“, dary po letech a čekající změna e-mailu v účtu dárce (#183), editor aktualit a projektů s náhledem a lištou akcí (#185), obnova platbou 1 Kč vrací zahájenou obnovu s QR kódem a registrace ze sekce Přispět vede zpět k příspěvku (#187), hledání, období a stránkování plateb ve správě a historie změn jako věty (#189), registrace firmy s názvem a sídlem z ARES (#191), blok „Kdo fond vede“ s portréty zakladatelů Pavla a Andrey a správní radou v O nás a karta „Údaje pro účetní“ v Kontaktu po uživatelských testech (Jakub 30. 10. 2026), fotka v O nás nahraná ve správě, protože zobrazuje dítě, s popisem, popiskem a odebráním kdykoli (Jakub 30. 10. 2026).
 - Údržba: úspora minut CI (#82), aktualizace závislostí (#83, #96), fokus po přihlášení (#104), cizí klíče s indexy a test migrací nad daty (#141), čísla potvrzení po obnově a české locale (#129), pravidla pro Clauda (#128).
 
 Zbývá před spuštěním na nfnn.cz:
 
-- Skutečný obsah úvodní stránky (texty, příběhy, čísla, fotky) od Jakuba a Pavla; rozhodnout o „100 % transparentně“ a o vlastních fotkách místo fotobanky.
+- Skutečný obsah úvodní stránky (texty, příběhy, čísla, fotky) od Jakuba a Pavla; rozhodnout o „100 % transparentně“ a o vlastních fotkách místo fotobanky (fotku v O nás už nahraje správce v `/sprava/o-nas`).
 - Řádek „Výroční zprávy“ v O nás, až budou PDF.
 - Přechod na doménu nfnn.cz na serveru (postup v `deploy/README.md`).
 - Hlídání dostupnosti zvenčí; kopie záloh mimo server až po spuštění (zálohy jsou už šifrované; Jakub vybírá úložiště: Cloudflare R2, iCloud přes zkratku v iPhonu, nebo obojí).
@@ -150,6 +150,7 @@ Dárci:
 - Úvodní e-mail: správce vloží e-maily dárců, kteří žádali o potvrzení, a web jim pošle, jak se zaregistrovat a potvrzení stáhnout.
 - Lednový e-mail registrovaným dárcům: potvrzení je připravené, jen odkaz na web, bez PDF.
 - Poděkování za každý spárovaný dar (odhlásitelné v profilu); dary starší 7 dní spárované najednou shrne jeden e-mail.
+- Portrét předsedy správní rady nahraný ve správě (Jakub 30. 10. 2026): jedna čtvercová fotka nahraná jednou v `/sprava/nastaveni` jen z prohlížeče, stejně jako podpis potvrzení, a web si z ní sám udělá ořezy pro každé použití. Na potvrzení stojí vedle podpisu v podpisové kartě (rozvržení „dopis“: místo a datum vlevo, vpravo karta s fotkou, „Za …:“, podpisem, jménem a funkcí; stavba v plánu v3), dál v poděkováních za dary vedle podpisu (kulatý ořez s bílými rohy a světlým okrajem kvůli tmavému režimu) a v sekci O nás (blok „Kdo fond vede“ zatím ukazuje pevné fotky Pavla a Andrey z webu; nahraná nahradí tu Pavlovu). Bez nahrané fotky zůstane všude podoba bez ní.
 - Upozornění správci na vynechaný trvalý příkaz.
 - Aktuality e-mailem registrovaným dárcům, s odhlášením.
 - „Chybí vám tu dar?“ v Moje dary: běžné důvody, kontrola banky a formulář fondu s VS dárce.
@@ -189,6 +190,7 @@ E-maily:
 Veřejný web a provoz:
 
 - Instagram (Jakub 28. 10. 2026, plně automaticky, protože ho nikdo nebude mít čas spravovat): zveřejnění projektu nebo aktuality na webu ji samo publikuje na Instagram fondu (titulní fotka a krátký popisek s odkazem), bez dalšího kroku. Zapíná a vypíná se ve správě, token se obnovuje sám a při selhání přijde e-mail. Jednorázově je potřeba založit profesionální účet na Instagramu a aplikaci Meta; fond zatím účet nemá.
+- Více fotek u projektu a aktuality (Jakub 30. 10. 2026): kromě titulní fotky galerie dalších fotek, ve správě i přes konektor s pořadím a popiskem každé fotky, na webu pod textem s prohlížením na celou obrazovku (šipky, klávesy, posun prstem). Dnes má každý projekt a aktualita jen titulní fotku a text obrázky nevkládá; po zavedení se k projektům z let 2023–2025 doplní další fotky z jejich sbírek na Doniu.
 - Jedna hláška „Web se právě aktualizuje“ při restartu serveru.
 - E-mail při docházejícím místě na disku.
 - Smazání registrací, které nikdo nepotvrdil do 30 dnů.

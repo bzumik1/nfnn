@@ -494,28 +494,28 @@
                 class="ui-card__intro account-form-intro"
                 i18n="@@donor.account.secondFactor.on.intro"
               >
-                Při každém přihlášení pak k heslu zadáte kód z ověřovací aplikace v telefonu
-                (například Google Authenticator, Microsoft Authenticator nebo Aegis). Nejdřív
-                potvrďte heslem.
+                Při každém přihlášení pak k heslu zadáte kód z ověřovací aplikace v telefonu nebo
+                tabletu (například Google Authenticator, Microsoft Authenticator nebo Aegis).
+                Nejdřív potvrďte heslem.
               </p>
             } @else {
               <p
                 class="ui-card__intro account-form-intro"
                 i18n="@@donor.account.secondFactor.on.introPasswordless"
               >
-                Kód z ověřovací aplikace v telefonu (například Google Authenticator, Microsoft
-                Authenticator nebo Aegis) pak budete potřebovat, když budete obnovovat přístup
-                odkazem z e-mailu; samotný e-mail tak k účtu nestačí. Přihlášení klíčem zůstává
-                stejné.
+                Kód z ověřovací aplikace v telefonu nebo tabletu (například Google Authenticator,
+                Microsoft Authenticator nebo Aegis) pak budete potřebovat, když budete obnovovat
+                přístup odkazem z e-mailu; samotný e-mail tak k účtu nestačí. Přihlášení klíčem
+                zůstává stejné.
               </p>
             }
             <p
               class="ui-card__intro account-form-intro account-lost-phone"
               i18n="@@donor.account.secondFactor.on.lostPhone"
             >
-              Když telefon s aplikací ztratíte, přístup obnovíte platbou 1&nbsp;Kč z bankovního
-              účtu, který u nás máte ověřený aspoň týden. Dřív to nejde; do té doby nám napište a
-              kód z aplikace vám vypneme.
+              Když telefon nebo tablet s aplikací ztratíte, přístup obnovíte platbou 1&nbsp;Kč z
+              bankovního účtu, který u nás máte ověřený aspoň týden. Dřív to nejde; do té doby nám
+              napište a kód z aplikace vám vypneme.
             </p>
             @if (hasPassword()) {
               <app-form-field
@@ -605,7 +605,7 @@
                   class="account-otpauth"
                   [href]="current.otpauthUri"
                   i18n="@@donor.account.secondFactor.openApp"
-                  >Přidat do ověřovací aplikace v tomto telefonu</a
+                  >Přidat do ověřovací aplikace v tomto telefonu nebo tabletu</a
                 >
               }
               <div class="account-secret">

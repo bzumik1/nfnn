@@ -28,8 +28,19 @@
         </h2>
         <div class="ui-card__body">
           @if (nextReport(); as next) {
-            <p class="next-report" i18n="@@admin.report.next">
-              Příští přehled za {{ next.month }} odejde {{ next.dueOn }} v {{ next.hour }}.
+            <p class="next-report">
+              @if (next.overdue) {
+                <ng-container i18n="@@admin.report.next.overdue"
+                  >Přehled za {{ next.month }} měl odejít {{ next.dueOn }} v {{ next.hour }}, ale
+                  zatím neodešel. Web ho zkusí poslat znovu v příští celou hodinu; poslat ho můžete
+                  i hned níže.</ng-container
+                >
+              } @else {
+                <ng-container i18n="@@admin.report.next"
+                  >Příští přehled za {{ next.month }} odejde {{ next.dueOn }} v
+                  {{ next.hour }}.</ng-container
+                >
+              }
             </p>
           }
           <p class="changed-at">
@@ -150,18 +161,16 @@
           Poslat přehled hned
         </h2>
         <div class="ui-card__body">
-          <p class="ui-card__intro" i18n="@@admin.report.send.intro">
-            Přehled za vybraný měsíc odejde hned, i když už jednou odešel.
+          <p class="ui-card__intro send-intro" i18n="@@admin.report.send.intro">
+            Přehled za vybraný měsíc odejde hned, i když už jednou odešel. Poslat jde jen měsíc,
+            který už skončil: přehled za {{ runningMonth() }} půjde poslat od
+            {{ runningMonthEnds() }}.
           </p>
           <p class="ui-card__intro send-recipients" i18n="@@admin.report.send.recipients">
             Přehled dostanou: {{ currentRecipients() }}. To jsou příjemci uložení v nastavení výše.
           </p>
           <div class="send-row">
-            <app-form-field
-              label="Měsíc"
-              i18n-label="@@admin.report.send.month"
-              [hint]="monthHint()"
-            >
+            <app-form-field label="Měsíc" i18n-label="@@admin.report.send.month">
               <select
                 appFormControl
                 id="report-month"

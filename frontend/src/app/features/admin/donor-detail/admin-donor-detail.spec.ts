@@ -389,6 +389,30 @@ describe('Given an administrator on a donor card', () => {
     expect(receipts).toContain('platné');
   });
 
+  it('when the donor gives with the symbol from a verified account, then the account column counts only gifts paired by the account and says where the others are', async () => {
+    await loaded(
+      donorAccount(),
+      donorDetail({
+        bankAccounts: [
+          adminBankAccount({ donationCount: 0, totalAmountMinor: 0, lastDonationOn: null }),
+        ],
+      }),
+    );
+
+    const accounts = section('Bankovní účty');
+    expect(
+      Array.from(accounts.querySelectorAll('thead th') as NodeListOf<HTMLElement>).map((cell) =>
+        cell.textContent?.trim(),
+      ),
+    ).toEqual(['Účet', 'Stav', 'Dary přiřazené podle účtu', 'Akce']);
+    const cell = accounts.querySelector('tbody tr td:nth-child(3)') as HTMLElement;
+    expect(cell.dataset['label']).toBe('Dary přiřazené podle účtu');
+    expect(cell.textContent?.trim()).toBe('0 darů');
+    expect((accounts.querySelector('.admin-hint') as HTMLElement).textContent).toContain(
+      'Sloupec Dary přiřazené podle účtu počítá jen platby bez variabilního symbolu, které se dárci přiřadily podle účtu; dary se symbolem najdete níže v části Dary.',
+    );
+  });
+
   it('when the donor has donations, then the donations card links to the paired payments of this donor', async () => {
     await loaded();
 

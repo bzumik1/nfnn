@@ -396,6 +396,47 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
   );
 
   server.registerTool(
+    'nfnn_update_about',
+    {
+      title: 'Fotka v sekci O nás',
+      description:
+        'Sets the photo the home page shows in its About section, with its alt and caption, or removes it with photoId null: the site then shows its placeholder photo again, the texts go too, and the removed or replaced photo is deleted unless a news article or project still uses it. Send every field; read them with nfnn_about first. A photo of people goes up through nfnn_photo_upload_link (or the web), never from a public address. Audited as CHANGE_ABOUT_PHOTO or REMOVE_ABOUT_PHOTO.',
+      inputSchema: z.object({
+        photoId: UUID.nullable().describe(
+          'Id of an uploaded photo (nfnn_upload_photo, nfnn_photo_upload_link, or the one nfnn_about shows); null removes the photo.',
+        ),
+        photoAlt: z
+          .string()
+          .max(200)
+          .optional()
+          .describe(
+            'One sentence saying what the photo shows, for screen readers and when it does not load.',
+          ),
+        caption: z
+          .string()
+          .max(200)
+          .optional()
+          .describe(
+            "Shown under the photo to every visitor, for example when and where it was taken. Name a person only with their consent, or their guardians' for a child.",
+          ),
+      }),
+      annotations: { ...WRITING, destructiveHint: true, idempotentHint: true },
+    },
+    async ({ photoId, photoAlt, caption }, ctx) =>
+      answerChange(deps, ctx, 'nfnn_update_about', async ({ apiToken }) =>
+        text(
+          await backend.put(
+            '/api/admin/content/about',
+            apiToken,
+            photoId === null
+              ? { photoId, photoAlt: null, caption: null }
+              : { photoId, photoAlt: photoAlt ?? null, caption: caption ?? null },
+          ),
+        ),
+      ),
+  );
+
+  server.registerTool(
     'nfnn_disconnect_bank_account',
     {
       title: 'Vypnout párování z účtu dárce',
@@ -451,7 +492,7 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
     'nfnn_upload_photo',
     {
       title: 'Nahrát fotku z adresy',
-      description: `Downloads a photo from a public https address (the image file itself: JPEG, PNG, WebP or GIF, at most ${MAX_PHOTO_BYTES / 1024 / 1024} MB, 3 redirects, 15 s) and uploads it to the site as the web does: turned upright, converted to WebP in sizes for every screen. Answers the photo id for coverImageId of nfnn_create_news, nfnn_update_news, nfnn_create_project or nfnn_update_project; the photo shows nowhere until one of them uses it. Addresses in private networks are refused. For a file on this computer use nfnn_photo_upload_link.`,
+      description: `Downloads a photo from a public https address (the image file itself: JPEG, PNG, WebP or GIF, at most ${MAX_PHOTO_BYTES / 1024 / 1024} MB, 3 redirects, 15 s) and uploads it to the site as the web does: turned upright, converted to WebP in sizes for every screen. Answers the photo id for coverImageId of nfnn_create_news, nfnn_update_news, nfnn_create_project or nfnn_update_project, or for photoId of nfnn_update_about; the photo shows nowhere until one of them uses it. Addresses in private networks are refused. For a file on this computer use nfnn_photo_upload_link.`,
       inputSchema: z.object({ url: z.string().min(1).max(2000) }),
       annotations: { ...WRITING, openWorldHint: true },
     },

@@ -39,6 +39,7 @@ describe('Given an administrator connected with the reading permission only', ()
     const { tools } = await client.listTools();
     const names = tools.map((tool) => tool.name).sort();
     expect(names).toEqual([
+      'nfnn_about',
       'nfnn_admin_actions',
       'nfnn_administrators',
       'nfnn_backups',
@@ -78,6 +79,7 @@ describe('Given an administrator connected with the reading permission only', ()
       'nfnn_unpair_payment',
       'nfnn_unpublish_news',
       'nfnn_unpublish_project',
+      'nfnn_update_about',
       'nfnn_update_backup_schedule',
       'nfnn_update_news',
       'nfnn_update_project',
@@ -261,6 +263,30 @@ describe('Given an administrator connected with the reading permission only', ()
     expect(textOf(await client.callTool({ name: 'nfnn_backups', arguments: {} }))).toContain(
       'nfnn-2026-10-23_0300.dump',
     );
+  });
+
+  it('when the About section is asked, then its photo comes with its size, description and caption', async () => {
+    const result = await client.callTool({ name: 'nfnn_about', arguments: {} });
+    expect(result.isError).toBeFalsy();
+    const text = textOf(result);
+    expect(text).toContain(`"id":"${MEDIA_ID}"`);
+    expect(text).toContain('"width":1200,"height":1600');
+    expect(text).toContain('"caption":"Kde to všechno začalo"');
+    expect(stack.backend.requests.map((request) => request.path)).toContain(
+      '/api/admin/content/about',
+    );
+  });
+
+  it('when the About photo is changed with the reading permission only, then nothing reaches the administration and the answer says how to allow changes', async () => {
+    const result = await client.callTool({
+      name: 'nfnn_update_about',
+      arguments: { photoId: null },
+    });
+    expect(result.isError).toBe(true);
+    expect(textOf(result)).toContain('may only read, so nothing was changed');
+    expect(
+      stack.backend.requests.some((request) => request.path === '/api/admin/content/about'),
+    ).toBe(false);
   });
 
   it('when the settings are asked, then they come from the administration with secrets only as set or not', async () => {
@@ -591,6 +617,54 @@ describe('Given an administrator connected with the writing permission', () => {
       ['POST', '/api/admin/content/projects', project],
       ['PUT', `/api/admin/content/projects/${UNKNOWN_ID}`, project],
     ]);
+  });
+
+  it('when the About photo is set and then removed, then the administration gets the photo with its texts and then no photo and no texts', async () => {
+    const set = await client.callTool({
+      name: 'nfnn_update_about',
+      arguments: {
+        photoId: MEDIA_ID,
+        photoAlt: 'Malý chlapec v náručí dvou dospělých',
+        caption: 'Kde to všechno začalo',
+      },
+    });
+    expect(set.isError).toBeFalsy();
+    expect(textOf(set)).toContain('"caption":"Kde to všechno začalo"');
+    const removed = await client.callTool({
+      name: 'nfnn_update_about',
+      arguments: { photoId: null, caption: 'Zůstane?' },
+    });
+    expect(removed.isError).toBeFalsy();
+    expect(textOf(removed)).toContain('"photo":null');
+
+    const writes = stack.backend.requests
+      .filter((request) => request.path === '/api/admin/content/about')
+      .map((request) => [request.method, JSON.parse(request.body), request.authorization]);
+    expect(writes).toEqual([
+      [
+        'PUT',
+        {
+          photoId: MEDIA_ID,
+          photoAlt: 'Malý chlapec v náručí dvou dospělých',
+          caption: 'Kde to všechno začalo',
+        },
+        'Bearer api-token-write',
+      ],
+      ['PUT', { photoId: null, photoAlt: null, caption: null }, 'Bearer api-token-write'],
+    ]);
+  });
+
+  it('when the About photo is set without texts, then they go as empty', async () => {
+    await client.callTool({ name: 'nfnn_update_about', arguments: { photoId: MEDIA_ID } });
+
+    const put = stack.backend.requests.find(
+      (request) => request.path === '/api/admin/content/about',
+    );
+    expect(JSON.parse(put?.body ?? '{}')).toEqual({
+      photoId: MEDIA_ID,
+      photoAlt: null,
+      caption: null,
+    });
   });
 
   it('when the pairing from a donor account is turned off and on, then the administration gets both and a refusal comes back', async () => {
