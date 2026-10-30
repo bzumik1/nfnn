@@ -3,8 +3,8 @@
   "counts": {
     "backend-junit": 2351,
     "backend-cucumber": 482,
-    "frontend-vitest": 1208,
-    "frontend-playwright": 321,
+    "frontend-vitest": 1212,
+    "frontend-playwright": 322,
     "mcp-vitest": 89
   },
   "suites": {
@@ -3997,6 +3997,7 @@
       "src/app/shared/ui/file-button/file-button.spec.ts > Given a file button > when a file is chosen, then it is handed over and the field is emptied for the next choice",
       "src/app/shared/ui/file-button/file-button.spec.ts > Given a file button > when it is disabled, then the file field cannot be used",
       "src/app/shared/ui/file-button/file-button.spec.ts > Given a file button > when it shows, then the file field is named by the visible button text and keeps its hint",
+      "src/app/shared/ui/form-field/form-field.spec.ts > Given a form built from form fields > when a field already shows its message and the visitor presses the pointer anywhere, then the message stays",
       "src/app/shared/ui/form-field/form-field.spec.ts > Given a form built from form fields > when it renders, then each label names its input and the hint describes it",
       "src/app/shared/ui/form-field/form-field.spec.ts > Given a form built from form fields > when nothing was touched yet, then no field shows an error",
       "src/app/shared/ui/form-field/form-field.spec.ts > Given a form built from form fields > when only a later field is wrong, then that field takes the focus",
@@ -4005,6 +4006,9 @@
       "src/app/shared/ui/form-field/form-field.spec.ts > Given a form built from form fields > when the server refuses fields with its own messages > then the message stands at its field and the one without a field is handed back",
       "src/app/shared/ui/form-field/form-field.spec.ts > Given a form built from form fields > when the visitor fixes the field, then the message goes away",
       "src/app/shared/ui/form-field/form-field.spec.ts > Given a form built from form fields > when the visitor leaves an invalid field, then its own message appears next to it",
+      "src/app/shared/ui/form-field/form-field.spec.ts > Given a form built from form fields > when the visitor presses the pointer on the send button while leaving an invalid field > and releases it, then the message appears",
+      "src/app/shared/ui/form-field/form-field.spec.ts > Given a form built from form fields > when the visitor presses the pointer on the send button while leaving an invalid field > and the press is cancelled, then the message appears",
+      "src/app/shared/ui/form-field/form-field.spec.ts > Given a form built from form fields > when the visitor presses the pointer on the send button while leaving an invalid field > then the message waits, so the button stays under the pointer",
       "src/app/shared/ui/live-notice/live-notice.spec.ts > Given a page with a live notice > when a status arrives, then its text fills the status region in place",
       "src/app/shared/ui/live-notice/live-notice.spec.ts > Given a page with a live notice > when an alert follows, then the status empties and the alert region carries the text",
       "src/app/shared/ui/live-notice/live-notice.spec.ts > Given a page with a live notice > when nothing has happened yet, then both live regions are already there and empty",
@@ -4358,6 +4362,7 @@
       "e2e/second-factor.spec.ts > Given a donor who protects the account with an authenticator app > when an administrator has no second factor yet, then the overview says the administration waits for it and offers no link to it",
       "e2e/second-factor.spec.ts > Given a donor who protects the account with an authenticator app > when they lost the phone, then the dialog offers recovery by payment, names what to pay and goes back to the code",
       "e2e/second-factor.spec.ts > Given a donor who protects the account with an authenticator app > when they open the overview and sign in, then the password alone is not enough and the code from the app opens the overview",
+      "e2e/second-factor.spec.ts > Given a donor who protects the account with an authenticator app > when they press the button slowly after a short code, then the press still sends the form and the code field says what is wrong",
       "e2e/second-factor.spec.ts > Given a donor who protects the account with an authenticator app > when they start the recovery again on a phone while it is open, then the dialog shows the same message, says when it started and puts the bank details before the QR code",
       "e2e/second-factor.spec.ts > Given a donor who protects the account with an authenticator app > when they turn the second factor off, then the password and the code go together and the card says it is off",
       "e2e/second-factor.spec.ts > Given a donor who protects the account with an authenticator app > when they turn the second factor on in the overview, then the QR code and the key appear and the first code enables it",
