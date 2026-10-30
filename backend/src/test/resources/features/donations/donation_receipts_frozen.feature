@@ -67,6 +67,25 @@ Feature: A donor issues receipts of their donations as frozen, signed data
       | issuedOn | 2027-01-15 |
     And 1 receipt is stored
 
+  Scenario: Issuing the receipt of one donation again returns the same receipt
+    Given today is 2026-12-20
+    And a person "Jana" is registered
+    And the bank account has these movements:
+      | id   | date       | amount  | account    | bankCode | name          | variableSymbol |
+      | 2001 | 2026-10-01 | 1000.00 | 2900233333 | 2010     | Nováková Jana | {Jana}         |
+    And the application starts the import
+    And today is 2027-01-15
+    And "Jana" issues the receipt of her donation received on 2026-10-01
+    When 30 days pass
+    And "Jana" issues the receipt of her donation received on 2026-10-01
+    Then the response status is 200
+    And the issued receipt is the one issued before
+    And the issued receipt has number "2027-000001"
+    And the frozen receipt holds:
+      | field    | value      |
+      | issuedOn | 2027-01-15 |
+    And 1 receipt is stored
+
   Scenario: The yearly receipt is not issued before the year ends, nor for a year that is not a four-digit number, nor without saying what to issue
     Given today is 2026-12-20
     And a person "Jana" is registered
