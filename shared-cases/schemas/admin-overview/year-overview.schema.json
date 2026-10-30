@@ -30,13 +30,14 @@
     },
     "overview": {
       "type": "object",
-      "required": ["year", "availableYears", "donorsRegistered", "newDonors", "received", "paired", "unpaired", "months"],
+      "required": ["year", "availableYears", "donorsRegistered", "newDonors", "givingDonors", "received", "paired", "unpaired", "months"],
       "additionalProperties": false,
       "properties": {
         "year": { "$ref": "../defs/rows.schema.json#/$defs/year" },
         "availableYears": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "../defs/rows.schema.json#/$defs/year" } },
         "donorsRegistered": { "$ref": "../defs/rows.schema.json#/$defs/count" },
         "newDonors": { "$ref": "../defs/rows.schema.json#/$defs/count" },
+        "givingDonors": { "$ref": "../defs/rows.schema.json#/$defs/count" },
         "received": { "$ref": "#/$defs/tally" },
         "paired": { "$ref": "#/$defs/tally" },
         "unpaired": { "$ref": "#/$defs/tally" },
@@ -45,12 +46,13 @@
     },
     "month": {
       "type": "object",
-      "required": ["month", "received", "newDonors", "paired", "unpaired"],
+      "required": ["month", "received", "newDonors", "givingDonors", "paired", "unpaired"],
       "additionalProperties": false,
       "properties": {
         "month": { "$ref": "../defs/rows.schema.json#/$defs/month" },
         "received": { "$ref": "#/$defs/tally" },
         "newDonors": { "$ref": "../defs/rows.schema.json#/$defs/count" },
+        "givingDonors": { "$ref": "../defs/rows.schema.json#/$defs/count" },
         "paired": { "$ref": "#/$defs/tally" },
         "unpaired": { "$ref": "#/$defs/tally" }
       }
