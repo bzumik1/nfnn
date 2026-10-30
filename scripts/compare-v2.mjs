@@ -17,6 +17,8 @@ const defaults = {
   'main-changed': '',
   'main-missing': '',
   'baseline-commit': 'regression/v2/BASELINE_COMMIT',
+  'main-inventory': '',
+  'fixture-sources': 'backend/src/test/java',
 };
 
 const TRANSCRIPT_KINDS = [

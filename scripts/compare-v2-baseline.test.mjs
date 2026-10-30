@@ -54,7 +54,11 @@ function commit(root, message) {
   return git(root, 'rev-parse', 'HEAD');
 }
 
-function repository({ change = () => {}, anchorOf = (baseline) => baseline } = {}) {
+function repository({
+  change = () => {},
+  anchorOf = (baseline) => baseline,
+  afterBaseline = () => {},
+} = {}) {
   const origin = mkdtempSync(join(tmpdir(), 'compare-v2-baseline-'));
   folders.push(origin);
   git(origin, 'init', '-q', '-b', 'main');
@@ -64,6 +68,7 @@ function repository({ change = () => {}, anchorOf = (baseline) => baseline } = {
   write(origin, MANIFEST, manifest(BASELINE_SHOTS));
   const baseline = commit(origin, 'Record the v2 baseline');
   write(origin, 'docs/later.md', 'later\n');
+  afterBaseline(origin);
   commit(origin, 'Work after the baseline');
   write(origin, ANCHOR, `${anchorOf(baseline)}\n`);
   const base = commit(origin, 'Anchor the baseline');
@@ -226,5 +231,116 @@ describe('Given the receipt corpus and the screens manifest of the baseline comm
       assert.equal(result.status, 1, result.output);
       assert.match(result.output, /::error::.*manifest\.json/);
     }
+  });
+});
+
+describe('Given entries and samples added to the baseline after its commit', () => {
+  const LATER = shot('totp', 'c'.repeat(64));
+  const LATER_RECEIPT = 'regression/v2/receipts/yearly-500-gifts-cs.json';
+  const afterBaseline = (origin) => {
+    write(origin, MANIFEST, manifest([...BASELINE_SHOTS, LATER]));
+    write(origin, LATER_RECEIPT, '{"source": "v2-baseline", "pages": 9}\n');
+  };
+  const guarded = (change) => {
+    const { checkout, base } = repository({ afterBaseline, change });
+    return guard(checkout, [`--base=${base}`]);
+  };
+
+  it('when the pull request changes an entry added after the baseline, then the guard fails and names it', () => {
+    const result = guarded((origin) =>
+      write(origin, MANIFEST, manifest([...BASELINE_SHOTS, shot('totp', 'd'.repeat(64))])),
+    );
+    assert.equal(result.status, 1, result.output);
+    assert.match(result.output, /::error::.*manifest\.json.*totp-390\.png/);
+  });
+
+  it('when the pull request drops an entry added after the baseline, then the guard fails', () => {
+    const result = guarded((origin) => write(origin, MANIFEST, manifest(BASELINE_SHOTS)));
+    assert.equal(result.status, 1, result.output);
+    assert.match(result.output, /::error::.*manifest\.json.*totp-390\.png/);
+  });
+
+  it('when the pull request edits a receipt sample added after the baseline, then the guard fails', () => {
+    const result = guarded((origin) =>
+      write(origin, LATER_RECEIPT, '{"source": "v2-baseline", "pages": 10}\n'),
+    );
+    assert.equal(result.status, 1, result.output);
+    assert.match(result.output, /::error::.*yearly-500-gifts-cs\.json/);
+  });
+
+  it('when the pull request keeps them and adds another entry, then the guard passes', () => {
+    const result = guarded((origin) =>
+      write(
+        origin,
+        MANIFEST,
+        manifest([...BASELINE_SHOTS, LATER, shot('qr-error', 'e'.repeat(64))]),
+      ),
+    );
+    assert.equal(result.status, 0, result.output);
+  });
+});
+
+describe('Given a baseline addition that names its patch', () => {
+  const PATCH = 'regression/v2/additions/0.6c-screens.patch';
+  const APPLIES = [
+    'diff --git a/notes/extra.txt b/notes/extra.txt',
+    'new file mode 100644',
+    '--- /dev/null',
+    '+++ b/notes/extra.txt',
+    '@@ -0,0 +1 @@',
+    '+extra',
+    '',
+  ].join('\n');
+  const DOES_NOT_APPLY = [
+    'diff --git a/docs/later.md b/docs/later.md',
+    '--- a/docs/later.md',
+    '+++ b/docs/later.md',
+    '@@ -1 +1 @@',
+    '-later',
+    '+sooner',
+    '',
+  ].join('\n');
+  const declared = (origin, { baseline }, patch) => {
+    write(
+      origin,
+      'regression/v2/changes/0.6c.json',
+      `${JSON.stringify([
+        {
+          kind: 'baseline-addition',
+          file: MANIFEST,
+          recordedFrom: baseline,
+          patch: PATCH,
+          record: 'scripts/record-baseline-data.sh',
+          reason: 'r',
+        },
+      ])}\n`,
+    );
+    if (patch !== undefined) {
+      write(origin, PATCH, patch);
+    }
+  };
+  const guarded = (patch) => {
+    const { checkout, base } = repository({
+      change: (origin, ids) => declared(origin, ids, patch),
+    });
+    return guard(checkout, [`--base=${base}`]);
+  };
+
+  it('when the patch applies on the baseline commit, then the guard passes', () => {
+    const result = guarded(APPLIES);
+    assert.equal(result.status, 0, result.output);
+    assert.match(result.output, /0\.6c-screens\.patch applies/);
+  });
+
+  it('when the patch does not apply on the baseline commit, then the guard fails and names it', () => {
+    const result = guarded(DOES_NOT_APPLY);
+    assert.equal(result.status, 1, result.output);
+    assert.match(result.output, /::error::.*0\.6c-screens\.patch.*does not apply/);
+  });
+
+  it('when the patch is missing, then the guard fails and names it', () => {
+    const result = guarded(undefined);
+    assert.equal(result.status, 1, result.output);
+    assert.match(result.output, /::error::.*0\.6c-screens\.patch.*missing/);
   });
 });
