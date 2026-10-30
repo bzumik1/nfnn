@@ -28,7 +28,12 @@
     </main>
   } @else {
     <div #bar class="ui-notice ui-notice--alert ui-notice--floating chunk-load-bar">
-      <p id="chunk-load-message" class="ui-notice__text" i18n="@@layout.chunk-load.message">
+      <p
+        #message
+        id="chunk-load-message"
+        class="ui-notice__text"
+        i18n="@@layout.chunk-load.message"
+      >
         Stránku se nepodařilo otevřít. Web byl mezitím možná aktualizován nebo vypadlo připojení.
         Zkuste ji načíst znovu.
       </p>
@@ -43,13 +48,5 @@
         Načíst znovu
       </button>
     </div>
-    <p class="visually-hidden" role="status">
-      @if (focusMissedBar()) {
-        <span i18n="@@layout.chunk-load.announcement"
-          >Stránku se nepodařilo otevřít. Web byl mezitím možná aktualizován nebo vypadlo připojení.
-          Zkuste ji načíst znovu.</span
-        >
-      }
-    </p>
   }
 }

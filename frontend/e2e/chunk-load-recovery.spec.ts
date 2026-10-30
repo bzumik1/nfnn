@@ -121,6 +121,34 @@ test.describe('Given a visitor whose browser keeps no session storage', () => {
   });
 });
 
+test.describe('Given a visitor with the sign-in dialog open and no session storage', () => {
+  test.beforeEach(async ({ page }) => {
+    await withoutSessionStorage(page);
+  });
+
+  test('when a page they opened before the dialog cannot be loaded, then the dialog announces the message in its own status region, since the focus stays in the dialog', async ({
+    page,
+  }) => {
+    const chunks = await openHomeThenLoseNewChunks(page);
+    const release = chunks.hold();
+
+    await openPolicyFromFooter(page);
+    await page.locator('.nav-login').click();
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toBeVisible();
+    release();
+
+    await expect(chunkLoadNotice(page)).toBeVisible();
+    await expect(
+      chunkLoadNotice(page).getByRole('button', { name: 'Načíst znovu' }),
+    ).not.toBeFocused();
+    await expect(dialog.getByRole('status').filter({ hasText: chunkLoadMessage })).toHaveText(
+      chunkLoadMessage,
+    );
+    expect(chunks.documents).toEqual([]);
+  });
+});
+
 test.describe('Given a visitor who lost the connection', () => {
   test('when they open a page that was not loaded yet, then the app does not reload into an error page and offers a reload', async ({
     page,

@@ -161,9 +161,9 @@ test.describe('Given a visitor who wants a donor account', () => {
     await expect(page.getByRole('alert')).toContainText('E-mail ještě není potvrzený');
     await page.getByRole('button', { name: 'Poslat ověřovací e-mail znovu' }).click();
 
-    await expect(page.getByRole('dialog').getByRole('status')).toContainText(
-      'Ověřovací e-mail jsme poslali znovu.',
-    );
+    await expect(
+      page.getByRole('dialog').getByRole('status').filter({ hasText: /\S/ }),
+    ).toContainText('Ověřovací e-mail jsme poslali znovu.');
     expect(requested).toEqual([{ email: 'jana@example.cz' }]);
   });
 

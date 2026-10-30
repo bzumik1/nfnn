@@ -17,6 +17,7 @@ export class LostChunks {
   private lost = false;
   private unreachable = false;
   private restoreAtDocument: number | null = null;
+  private held: Promise<void> = Promise.resolve();
 
   private constructor(private readonly page: Page) {
     page.on('request', (request) => {
@@ -39,8 +40,11 @@ export class LostChunks {
     const chunks = new LostChunks(page);
     await page.route(
       (url) => CHUNK.test(url.pathname),
-      (route) => {
+      async (route) => {
         const path = new URL(route.request().url()).pathname;
+        if (chunks.lost && !chunks.kept.has(path)) {
+          await chunks.held;
+        }
         if (!chunks.lost || chunks.kept.has(path)) {
           return route.continue();
         }
@@ -76,6 +80,12 @@ export class LostChunks {
 
   bringBackAtDocument(count: number): void {
     this.restoreAtDocument = count;
+  }
+
+  hold(): () => void {
+    let release = (): void => undefined;
+    this.held = new Promise((resolve) => (release = resolve));
+    return () => release();
   }
 
   bringBack(): void {

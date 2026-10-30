@@ -5,13 +5,13 @@ import {
   Component,
   ElementRef,
   inject,
-  signal,
   viewChild,
 } from '@angular/core';
 
 import { Title } from '@angular/platform-browser';
 
 import { ChunkLoadRecovery } from '../../core/reload/chunk-load-recovery';
+import { DialogAnnouncer } from '../../shared/ui/dialog/dialog-announcer';
 import { keepRoomForFloatingNotice } from '../../shared/ui/floating-notice/floating-notice-room';
 
 @Component({
@@ -26,14 +26,21 @@ export class ChunkLoadNotice {
   private readonly title = inject(Title);
   private readonly bar = viewChild<ElementRef<HTMLElement>>('bar');
   private readonly barButton = viewChild<ElementRef<HTMLButtonElement>>('barButton');
+  private readonly message = viewChild<ElementRef<HTMLElement>>('message');
   private readonly pageHeading = viewChild<ElementRef<HTMLElement>>('pageHeading');
-  protected readonly focusMissedBar = signal(false);
+  private readonly dialogAnnouncer = inject(DialogAnnouncer);
 
   constructor() {
-    afterRenderEffect(() => {
+    afterRenderEffect((onCleanup) => {
       const button = this.barButton()?.nativeElement;
-      button?.focus();
-      this.focusMissedBar.set(button !== undefined && this.document.activeElement !== button);
+      const message = this.message()?.nativeElement.textContent?.replace(/\s+/g, ' ').trim();
+      if (!button || !message) {
+        return;
+      }
+      button.focus();
+      if (this.document.activeElement !== button) {
+        onCleanup(this.dialogAnnouncer.announce(message));
+      }
     });
     afterRenderEffect(() => {
       const heading = this.pageHeading()?.nativeElement;

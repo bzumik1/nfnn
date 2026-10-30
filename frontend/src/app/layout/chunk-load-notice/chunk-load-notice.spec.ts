@@ -7,6 +7,7 @@ import { ExternalNavigation } from '../../core/navigation/external-navigation';
 import { ChunkLoadRecovery } from '../../core/reload/chunk-load-recovery';
 import { ChunkProbe } from '../../core/reload/chunk-probe';
 import { ReloadGuard } from '../../core/reload/reload-guard';
+import { DialogAnnouncer } from '../../shared/ui/dialog/dialog-announcer';
 import { ChunkLoadNotice } from './chunk-load-notice';
 
 @Component({ template: '' })
@@ -77,17 +78,18 @@ describe('Given the chunk-load notice', () => {
 
     afterEach(() => vi.restoreAllMocks());
 
-    it('then the status region announces the message, since moving the focus cannot', () => {
+    it('then the open dialog is given the message to announce in its own status region, since moving the focus cannot', () => {
       expect(document.activeElement).not.toBe(reloadButton());
-      expect(text('[role="status"]')).toBe(MESSAGE);
+      expect(TestBed.inject(DialogAnnouncer).message()).toBe(MESSAGE);
+      expect(element().querySelector('[role="status"]')).toBeNull();
     });
 
-    it('and a later navigation succeeds, then the status region goes with the bar', async () => {
+    it('and a later navigation succeeds, then the announcement is withdrawn with the bar', async () => {
       await TestBed.inject(Router).navigateByUrl('/dale');
       await fixture.whenStable();
 
       expect(element().querySelector('.chunk-load-bar')).toBeNull();
-      expect(element().querySelector('[role="status"]')).toBeNull();
+      expect(TestBed.inject(DialogAnnouncer).message()).toBe('');
     });
   });
 
@@ -114,8 +116,8 @@ describe('Given the chunk-load notice', () => {
     });
 
     it('then no alert or live region announces the message a second time', () => {
-      expect(element().querySelector('[role="alert"], [aria-live]')).toBeNull();
-      expect(text('[role="status"]')).toBe('');
+      expect(element().querySelector('[role="alert"], [role="status"], [aria-live]')).toBeNull();
+      expect(TestBed.inject(DialogAnnouncer).message()).toBe('');
     });
 
     describe('and the focus moves to a control the bar covers', () => {
