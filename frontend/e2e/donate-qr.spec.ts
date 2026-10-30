@@ -108,9 +108,33 @@ test.describe('Given a visitor on the home page', () => {
       'Kopírovat číslo účtu',
       'Kopírovat částku',
       'Kopírovat IBAN',
+      'založíte účet',
       'Uložit QR kód',
-      expect.any(String),
     ]);
+  });
+
+  test('when they enter their own amount, open the privacy policy and come back to Přispět, then the same amount stays chosen in the field, the bank details and the QR', async ({
+    page,
+  }) => {
+    await servePaymentDetails(page, []);
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Jiná částka' }).click();
+    await page.getByLabel('Vlastní částka v korunách').fill('300');
+    await expect(page.locator('#prispet .bank')).toContainText('300 Kč');
+
+    await page
+      .locator('footer')
+      .getByRole('link', { name: 'Zásady ochrany osobních údajů' })
+      .click();
+    await expect(page).toHaveURL(/zasady-ochrany-osobnich-udaju/);
+    await page.locator('footer').getByRole('link', { name: 'Přispět' }).click();
+
+    await expect(page.getByRole('button', { name: 'Jiná částka' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    await expect(page.getByLabel('Vlastní částka v korunách')).toHaveValue('300');
+    await expect(page.locator('#prispet .bank')).toContainText('300 Kč');
   });
 
   test.describe('on a phone', () => {

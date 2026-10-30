@@ -34,4 +34,50 @@ describe('Given the about section', () => {
     expect(paragraphs[1]).toMatch(/^Od svého počátku úzce spolupracujeme/);
     expect(paragraphs[2]).toMatch(/^Nová naděje – nadační fond byl zřízen/);
   });
+
+  describe('when it renders who runs the foundation today', () => {
+    function board(): HTMLElement {
+      return (fixture.nativeElement as HTMLElement).querySelector('.board')!;
+    }
+
+    function text(element: Element | null): string {
+      return element?.textContent?.replace(/\s+/g, ' ').trim() ?? '';
+    }
+
+    it('then a heading under the founding story names it and the two founders follow with their roles', () => {
+      expect(text(board().querySelector('h3'))).toBe('Kdo fond vede');
+      expect(
+        Array.from(board().querySelectorAll('.board-person')).map((person) => [
+          text(person.querySelector('.board-name')),
+          text(person.querySelector('.board-role')),
+        ]),
+      ).toEqual([
+        ['Pavel Znamenáček', 'Zakladatel a předseda správní rady'],
+        ['Andrea Znamenáčková', 'Zakladatelka a členka správní rady'],
+      ]);
+    });
+
+    it('then the whole board is listed as in the registry, without the auditor', () => {
+      expect(Array.from(board().querySelectorAll('.board-members')).map(text)).toEqual([
+        'Správní rada: Pavel Znamenáček (předseda), Andrea Znamenáčková, Zdeňka Znamenáčková.',
+      ]);
+    });
+
+    it('then their portraits stay out of the screen reader, since their names are beside them, and load late in two widths', () => {
+      const portraits = Array.from(board().querySelectorAll('.board-person img'));
+
+      expect(
+        portraits.map((portrait) => portrait.getAttribute('srcset')?.replace(/\s+/g, ' ').trim()),
+      ).toEqual([
+        '/images/pavel-znamenacek-160.webp 160w, /images/pavel-znamenacek-320.webp 320w',
+        '/images/andrea-znamenackova-160.webp 160w, /images/andrea-znamenackova-320.webp 320w',
+      ]);
+      for (const portrait of portraits) {
+        expect(portrait.getAttribute('alt')).toBe('');
+        expect(portrait.getAttribute('loading')).toBe('lazy');
+        expect(portrait.getAttribute('width')).toBe('160');
+        expect(portrait.getAttribute('height')).toBe('160');
+      }
+    });
+  });
 });

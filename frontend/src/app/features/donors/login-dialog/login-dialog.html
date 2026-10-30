@@ -73,10 +73,20 @@
             </p>
           }
           @if (instructions.usableFrom; as from) {
-            <p class="ui-callout ui-callout--warning" i18n="@@donor.login.recovery.usableFrom">
-              Platbu pošlete nejdříve {{ day(from) }}: obnovu přijmeme jen z účtu, který u nás známe
-              aspoň týden.
-            </p>
+            <div class="ui-callout ui-callout--warning recovery-wait">
+              <p i18n="@@donor.login.recovery.usableFrom">
+                Platbu pošlete nejdříve {{ day(from) }}: obnovu přijmeme jen z účtu, který u nás
+                známe aspoň týden.
+              </p>
+              <p class="recovery-cannot-wait">
+                <span i18n="@@donor.login.recovery.cannotWait"
+                  >Nemůžete tak dlouho čekat? Napište nám na</span
+                >&ngsp;<a href="mailto:info@nfnn.cz">info&#64;nfnn.cz</a>&ngsp;<span
+                  i18n="@@donor.login.recovery.cannotWaitAfter"
+                  >a kód z aplikace vám vypneme.</span
+                >
+              </p>
+            </div>
           }
           <div class="recovery-payment">
             <dl class="recovery-details">

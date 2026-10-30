@@ -45,7 +45,14 @@ describe('Given the donate section', () => {
   afterEach(() => {
     http.verify();
     vi.useRealTimers();
+    vi.restoreAllMocks();
   });
+
+  async function openAgain(): Promise<void> {
+    fixture.destroy();
+    fixture = TestBed.createComponent(DonateCta);
+    await settle();
+  }
 
   function element<T extends HTMLElement>(selector: string): T {
     return fixture.nativeElement.querySelector(selector) as T;
@@ -485,6 +492,63 @@ describe('Given the donate section', () => {
     fixture.nativeElement.remove();
   });
 
+  it('when the visitor picked 1 000 Kč and the section opens again while the site stays open, then 1 000 Kč stays chosen and its QR is drawn from the details already held', async () => {
+    await openWithQr();
+    button('1 000 Kč').click();
+    await settle();
+
+    await openAgain();
+
+    http.expectNone((request) => request.url === PAYMENT_DETAILS_URL);
+    expect(drawnMatrixIs(QR_OF_1000)).toBe(true);
+    expect(button('1 000 Kč').getAttribute('aria-pressed')).toBe('true');
+    expect(button('500 Kč').getAttribute('aria-pressed')).toBe('false');
+  });
+
+  it('when the visitor entered 300 Kč and the section opens again while the site stays open, then Jiná částka stays chosen with 300 in its field', async () => {
+    await openWithQr();
+    await enterCustomAmount('300');
+    await settle(REDRAW_MS);
+
+    await openAgain();
+
+    expect(drawnMatrixIs(qrOfTyped(300))).toBe(true);
+    expect(button('Jiná částka').getAttribute('aria-pressed')).toBe('true');
+    expect(element<HTMLInputElement>('#donate-custom-amount').value).toBe('300');
+    expect(squashed('.bank')).toContain('300 Kč');
+  });
+
+  it('when the visitor left Jiná částka empty and the section opens again, then the last whole amount picked stays chosen', async () => {
+    await openWithQr();
+    button('100 Kč').click();
+    await settle();
+    button('Jiná částka').click();
+    await settle();
+
+    await openAgain();
+
+    expect(button('100 Kč').getAttribute('aria-pressed')).toBe('true');
+    expect(drawnMatrixIs(QR_OF_100)).toBe(true);
+  });
+
+  it('when nobody is signed in, then right after the bank details one line says a receipt needs an account and opens the registration from there', async () => {
+    await openWithQr();
+
+    const note = element('.bank-receipt-note');
+    expect(squashed('.bank-receipt-note')).toBe(
+      'Potvrzení o daru k platbě bez přihlášení vystavíme, až si založíte účet a ověříte v něm bankovní účet, ze kterého jste platili.',
+    );
+    expect(element('.bank').compareDocumentPosition(note)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(note.compareDocumentPosition(element('.qr'))).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+
+    (note.querySelector('button') as HTMLButtonElement).click();
+
+    const dialog = TestBed.inject(LoginDialogService);
+    expect(dialog.isOpen()).toBe(true);
+    expect(dialog.initialMode()).toBe('register');
+    expect(dialog.confirmationReturnTo()).toBe('/#prispet');
+  });
+
   it('when it renders, then nothing in it sends the visitor to the contact form', async () => {
     await openWithQr();
 
@@ -728,6 +792,13 @@ describe('Given the donate section', () => {
   });
 
   describe('Given a signed-in donor with a variable symbol', () => {
+    it('when the section opens, then no line beside the bank details asks for an account', async () => {
+      fixture.componentRef.setInput('variableSymbol', '1234567890');
+      await openWithQr();
+
+      expect(element('.bank-receipt-note')).toBeNull();
+    });
+
     it('when the section opens, then the variable symbol is in the QR payment and shown with the bank account', async () => {
       fixture.componentRef.setInput('variableSymbol', '1234567890');
       fixture.componentRef.setInput('donorName', 'Jana Nováková');

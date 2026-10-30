@@ -37,6 +37,7 @@
         type="text"
         inputmode="numeric"
         autocomplete="off"
+        [value]="customText()"
         [attr.aria-invalid]="showAmountHint()"
         [attr.aria-describedby]="customAmountDescription()"
         (input)="enterCustomAmount($event)"
@@ -120,6 +121,8 @@
     </div>
   </div>
 }
+
+<ng-content select="[afterBankDetails]" />
 
 <div class="qr">
   <div #qrBox class="qr-code" tabindex="-1" [attr.aria-busy]="busy()">

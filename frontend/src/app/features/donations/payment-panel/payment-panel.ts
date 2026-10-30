@@ -19,9 +19,11 @@ import { QrCode } from '../../../shared/ui/qr-code/qr-code';
 import { encodeText } from '../../../shared/ui/qr-code/qr-encoder';
 import { QrMatrix } from '../../../shared/ui/qr-code/qr-matrix';
 import { formatCrowns } from '../donation-amount';
+import { formatIban } from '../iban-format';
 import { PaymentAccount, PaymentDetails } from '../payment-details-api';
 import { PaymentDetailsStore } from '../payment-details-store';
 import { spayd } from '../spayd';
+import { ChosenAmount, ChosenAmountStore } from './chosen-amount';
 
 const DEFAULT_AMOUNT = 500;
 const MIN_AMOUNT = 1;
@@ -60,6 +62,7 @@ export type PaymentAccountState =
 export class PaymentPanel {
   private readonly store = inject(PaymentDetailsStore);
   private readonly injector = inject(Injector);
+  private readonly chosenAmount = inject(ChosenAmountStore);
   private readonly bankLabel = viewChild<ElementRef<HTMLElement>>('bankLabel');
   private readonly qrBox = viewChild<ElementRef<HTMLElement>>('qrBox');
   private readonly retryButton = viewChild<ElementRef<HTMLButtonElement>>('retryButton');
@@ -74,11 +77,17 @@ export class PaymentPanel {
   ];
   protected readonly crowns = formatCrowns;
 
-  protected readonly customChosen = signal(false);
-  protected readonly presetAmount = signal(DEFAULT_AMOUNT);
-  protected readonly customAmount = signal<number | null>(null);
+  private readonly initial = initialChoice(this.presets, this.chosenAmount.remembered());
+  protected readonly customChosen = signal(this.initial.custom);
+  protected readonly presetAmount = signal(
+    this.initial.custom ? DEFAULT_AMOUNT : this.initial.amount,
+  );
+  protected readonly customAmount = signal<number | null>(
+    this.initial.custom ? this.initial.amount : null,
+  );
+  protected readonly customText = signal(this.initial.custom ? String(this.initial.amount) : '');
   private readonly customAmountLeft = signal(false);
-  private readonly drawnAmount = signal<number | null>(DEFAULT_AMOUNT);
+  private readonly drawnAmount = signal<number | null>(this.initial.amount);
   protected readonly redrawing = signal(false);
   private readonly announced = signal<number | null>(null);
   private lastAnnounced: number | null = null;
@@ -151,7 +160,7 @@ export class PaymentPanel {
 
   protected readonly ibanInGroups = computed(() => {
     const account = this.bankAccount();
-    return account ? inGroupsOfFour(account.iban) : '';
+    return account ? formatIban(account.iban) : '';
   });
 
   protected readonly amountLabelId = computed(() => `${this.idPrefix()}-amount-label`);
@@ -175,6 +184,7 @@ export class PaymentPanel {
     this.savedQrFile.set(null);
     this.customChosen.set(false);
     this.presetAmount.set(amount);
+    this.chosenAmount.remember({ amount, custom: false });
     this.redrawNow();
     this.announceAfterQuiet();
   }
@@ -185,6 +195,7 @@ export class PaymentPanel {
     }
     this.savedQrFile.set(null);
     this.customAmount.set(null);
+    this.customText.set('');
     this.customAmountLeft.set(false);
     this.customChosen.set(true);
     this.announced.set(null);
@@ -195,7 +206,12 @@ export class PaymentPanel {
 
   enterCustomAmount(event: Event): void {
     this.savedQrFile.set(null);
-    this.customAmount.set(wholeCrowns((event.target as HTMLInputElement).value));
+    const typed = wholeCrowns((event.target as HTMLInputElement).value);
+    this.customAmount.set(typed);
+    const amount = wholeAmountInRange(typed);
+    if (amount !== null) {
+      this.chosenAmount.remember({ amount, custom: true });
+    }
     this.redrawLater();
     this.announceAfterQuiet();
   }
@@ -291,6 +307,22 @@ function paymentMatrix(
   }
 }
 
+function initialChoice(
+  presets: readonly AmountPreset[],
+  remembered: ChosenAmount | null,
+): ChosenAmount {
+  if (remembered === null) {
+    return { amount: DEFAULT_AMOUNT, custom: false };
+  }
+  if (remembered.custom) {
+    const amount = wholeAmountInRange(remembered.amount);
+    return amount === null ? { amount: DEFAULT_AMOUNT, custom: false } : { amount, custom: true };
+  }
+  return presets.some((preset) => preset.amount === remembered.amount)
+    ? remembered
+    : { amount: DEFAULT_AMOUNT, custom: false };
+}
+
 function wholeCrowns(typed: string): number | null {
   const digits = typed.replace(/\s/g, '');
   return /^\d+$/.test(digits) ? Number(digits) : null;
@@ -300,8 +332,4 @@ function wholeAmountInRange(amount: number | null): number | null {
   return amount !== null && Number.isInteger(amount) && amount >= MIN_AMOUNT && amount <= MAX_AMOUNT
     ? amount
     : null;
-}
-
-function inGroupsOfFour(iban: string): string {
-  return iban.replace(/(.{4})(?=.)/g, '$1 ');
 }

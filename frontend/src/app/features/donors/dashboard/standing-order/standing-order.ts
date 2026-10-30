@@ -1,9 +1,11 @@
 import {
+  afterNextRender,
   ChangeDetectionStrategy,
   Component,
   computed,
   ElementRef,
   inject,
+  Injector,
   input,
   output,
   signal,
@@ -28,6 +30,8 @@ let nextId = 0;
 })
 export class StandingOrder {
   private readonly paymentDetails = inject(PaymentDetailsStore);
+  private readonly injector = inject(Injector);
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
 
   readonly variableSymbol = input.required<string>();
   readonly account = input<PaymentAccountState | null>(null);
@@ -58,9 +62,15 @@ export class StandingOrder {
 
   protected toggle(): void {
     this.open.update((open) => !open);
-    if (this.open() && this.account() === null && this.ownAccount().kind !== 'ready') {
+    if (!this.open()) {
+      return;
+    }
+    if (this.account() === null && this.ownAccount().kind !== 'ready') {
       this.loadAccount();
     }
+    afterNextRender(() => this.host.nativeElement.scrollIntoView?.({ block: 'nearest' }), {
+      injector: this.injector,
+    });
   }
 
   protected close(): void {

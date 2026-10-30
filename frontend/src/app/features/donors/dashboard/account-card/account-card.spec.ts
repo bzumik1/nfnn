@@ -238,9 +238,15 @@ describe('Given the sign-in and security card of the details page', () => {
       http.expectNone('/api/donors/me/second-factor/setup');
     });
 
+    it('then the form says the authenticator app may run on a phone or a tablet', () => {
+      expect(normalized(card.element('.account-form-intro').textContent)).toContain(
+        'kód z ověřovací aplikace v telefonu nebo tabletu',
+      );
+    });
+
     it('then before continuing the form says how access comes back when the phone is lost', () => {
       expect(normalized(card.element('.account-lost-phone').textContent)).toBe(
-        'Když telefon s aplikací ztratíte, přístup obnovíte platbou 1 Kč z bankovního účtu, který u nás máte ověřený aspoň týden. Dřív to nejde; do té doby nám napište a kód z aplikace vám vypneme.',
+        'Když telefon nebo tablet s aplikací ztratíte, přístup obnovíte platbou 1 Kč z bankovního účtu, který u nás máte ověřený aspoň týden. Dřív to nejde; do té doby nám napište a kód z aplikace vám vypneme.',
       );
       const actions = card.element('.account-form-actions');
       expect(
@@ -274,7 +280,7 @@ describe('Given the sign-in and security card of the details page', () => {
         secondFactorEnrolment()['otpauthUri'],
       );
       expect(card.element('.account-otpauth').textContent?.trim()).toBe(
-        'Přidat do ověřovací aplikace v tomto telefonu',
+        'Přidat do ověřovací aplikace v tomto telefonu nebo tabletu',
       );
     });
 

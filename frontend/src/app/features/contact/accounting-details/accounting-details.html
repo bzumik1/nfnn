@@ -1,0 +1,82 @@
+<div class="ui-card ui-card--padded accounting">
+  <h3 class="ui-card__title accounting-title" i18n="@@home.contact.accounting.title">
+    Údaje pro účetní
+  </h3>
+  <dl class="ui-data-list accounting-list">
+    <div class="accounting-item">
+      <dt i18n="@@home.contact.accounting.name">Název</dt>
+      <dd>
+        <span class="accounting-value" i18n="@@home.contact.accounting.nameValue"
+          >Nová naděje - nadační fond</span
+        >
+      </dd>
+    </div>
+    <div class="accounting-item">
+      <dt i18n="@@home.contact.accounting.ico">IČO</dt>
+      <dd>
+        <span class="accounting-value">{{ companyId }}</span>
+        <app-copy-button
+          [value]="companyId"
+          what="IČO"
+          i18n-what="@@home.contact.accounting.copyIco"
+        />
+      </dd>
+    </div>
+    <div class="accounting-item">
+      <dt i18n="@@home.contact.accounting.seat">Sídlo</dt>
+      <dd>
+        <span class="accounting-value">{{ seat }}</span>
+        <app-copy-button
+          [value]="seat"
+          what="sídlo"
+          i18n-what="@@home.contact.accounting.copySeat"
+        />
+      </dd>
+    </div>
+    <div class="accounting-item">
+      <dt i18n="@@home.contact.accounting.registry">Zápis</dt>
+      <dd>
+        <span class="accounting-value" i18n="@@home.contact.accounting.registryValue"
+          >nadační rejstřík vedený Krajským soudem v Ústí nad Labem, oddíl N, vložka 78</span
+        >
+      </dd>
+    </div>
+    <div class="accounting-item">
+      <dt i18n="@@home.contact.accounting.account">Číslo účtu</dt>
+      <dd>
+        @if (account(); as known) {
+          <span class="accounting-value">{{ known.number }}</span>
+          <app-copy-button
+            [value]="known.number"
+            what="číslo účtu"
+            i18n-what="@@home.contact.accounting.copyAccount"
+          />
+        } @else {
+          <a
+            class="accounting-link"
+            routerLink="/"
+            fragment="prispet"
+            i18n="@@home.contact.accounting.accountElsewhere"
+            >Najdete ho v sekci Přispět</a
+          >
+        }
+      </dd>
+    </div>
+    @if (account(); as known) {
+      <div class="accounting-item">
+        <dt i18n="@@home.contact.accounting.iban">IBAN</dt>
+        <dd>
+          <span class="accounting-value">{{ iban() }}</span>
+          <app-copy-button
+            [value]="known.iban"
+            what="IBAN"
+            i18n-what="@@home.contact.accounting.copyIban"
+          />
+        </dd>
+      </div>
+    }
+  </dl>
+  <p class="ui-card__intro accounting-note" i18n="@@home.contact.accounting.companyReceipt">
+    Potvrzení o daru na firmu získáte, když si při registraci zvolíte Firma a vyplníte IČO.
+  </p>
+</div>

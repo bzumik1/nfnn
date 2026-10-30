@@ -360,6 +360,12 @@
       }
     </div>
 
+    @if (!newlyVerified()) {
+      @if (alreadyVerified(); as verified) {
+        <p class="add-account-verified">{{ verified }}</p>
+      }
+    }
+
     @if (newlyVerified(); as account) {
       @if (account.symbolOffer; as offer) {
         <app-symbol-claim

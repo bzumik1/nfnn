@@ -1107,6 +1107,58 @@ describe('Given the bank accounts card in the overview', () => {
     });
   });
 
+  describe('when the donor opens Přidat účet while some accounts are verified already', () => {
+    async function openWith(items: BankAccountItem[]): Promise<void> {
+      await respond(items);
+      await click('.accounts-add');
+      http.expectOne(PAYMENT_DETAILS_URL).flush(foundationPaymentDetails());
+      await settle();
+    }
+
+    it('then one verified account is named under the waiting with the news that it needs no 1 Kč', async () => {
+      await openWith([bankAccount({ accountNumber: '8877665544/2700' })]);
+
+      expect(text('.add-account-verified')).toBe(
+        'Účet 8877665544/2700 už máte ověřený, 1 Kč z něj posílat nemusíte.',
+      );
+      expect(
+        (element('.add-account-watch') as HTMLElement).compareDocumentPosition(
+          element('.add-account-verified') as HTMLElement,
+        ),
+      ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+      expect(
+        (element('.add-account-verified') as HTMLElement).compareDocumentPosition(
+          element('.add-account-payment') as HTMLElement,
+        ),
+      ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    });
+
+    it('then two verified accounts are named together', async () => {
+      await openWith([
+        bankAccount({ accountNumber: '3344556677/0300' }),
+        bankAccount({
+          id: '0192f0c4-0000-7000-8000-000000000002',
+          accountNumber: '8877665544/2700',
+        }),
+      ]);
+
+      expect(text('.add-account-verified')).toBe(
+        'Účty 3344556677/0300 a 8877665544/2700 už máte ověřené, 1 Kč z nich posílat nemusíte.',
+      );
+    });
+
+    it('then accounts that are shared, wait for a payment, only pair with the symbol or are disconnected are not named', async () => {
+      await openWith([
+        bankAccount({ shared: true }),
+        bankAccount({ id: '0192f0c4-0000-7000-8000-000000000002', status: 'AWAITING_PAYMENT' }),
+        bankAccount({ id: '0192f0c4-0000-7000-8000-000000000003', pairingExcluded: true }),
+        bankAccount({ id: '0192f0c4-0000-7000-8000-000000000004', status: 'DISCONNECTED' }),
+      ]);
+
+      expect(element('.add-account-verified')).toBeNull();
+    });
+  });
+
   it('when another section asks to open Přidat účet, then the dialog opens and closing it returns the focus to Přidat účet', async () => {
     await respond([]);
 
