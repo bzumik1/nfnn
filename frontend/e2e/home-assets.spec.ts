@@ -4,6 +4,10 @@ import { mockDonorApi } from './donor-session';
 
 const PNG_TRUECOLOUR_WITHOUT_ALPHA = 2;
 
+function icoImageWidths(ico: Buffer): number[] {
+  return Array.from({ length: ico.readUInt16LE(4) }, (_, index) => ico[6 + 16 * index]);
+}
+
 function pngSize(png: Buffer): [number, number] {
   return [png.readUInt32BE(16), png.readUInt32BE(20)];
 }
@@ -87,8 +91,6 @@ test.describe('Given a visitor on the home page', () => {
       { rel: 'apple-touch-icon', path: '/apple-touch-icon.png', type: '', sizes: '' },
     ]);
 
-    expect((await request.get('/favicon.ico')).status()).toBe(404);
-
     const svg = await request.get('/favicon.svg');
     expect(svg.ok()).toBe(true);
     expect(await svg.text()).toContain('<svg');
@@ -98,6 +100,15 @@ test.describe('Given a visitor on the home page', () => {
     const png = await touch.body();
     expect(pngSize(png)).toEqual([180, 180]);
     expect(pngColourType(png)).toBe(PNG_TRUECOLOUR_WITHOUT_ALPHA);
+  });
+
+  test('when a service that knows only the default address asks for /favicon.ico, then the site serves the star in 16, 32 and 48 px', async ({
+    request,
+  }) => {
+    const ico = await request.get('/favicon.ico');
+
+    expect(ico.ok()).toBe(true);
+    expect(icoImageWidths(await ico.body())).toEqual([16, 32, 48]);
   });
 
   test('when a server dashboard asks for the app icon, then the site serves it as a 512 px PNG', async ({
