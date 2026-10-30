@@ -13,6 +13,19 @@ import {
   session,
   signIn,
 } from './donor-session';
+import { QrMatrixFixture, SECOND_FACTOR_QR } from './qr-matrices';
+
+const QUIET_ZONE = 4;
+
+function plainPath({ size, modules }: QrMatrixFixture): string {
+  let path = '';
+  for (let index = 0; index < modules.length; index++) {
+    if (modules[index] === '1') {
+      path += `M${(index % size) + QUIET_ZONE} ${Math.floor(index / size) + QUIET_ZONE}h1v1h-1z`;
+    }
+  }
+  return path;
+}
 
 const protectedDonor = {
   ...donor,
@@ -190,7 +203,7 @@ test.describe('Given a donor who protects the account with an authenticator app'
 
     const qr = page.getByRole('img', { name: 'QR kód s nastavením pro ověřovací aplikaci' });
     await expect(qr).toBeVisible();
-    await expect(qr.locator('.qr-plain')).toHaveAttribute('d', /^M4 4h1v1h-1z/);
+    await expect(qr.locator('.qr-plain')).toHaveAttribute('d', plainPath(SECOND_FACTOR_QR));
     await expect(page.locator('.account-secret-value')).toHaveText(
       'GEZD GNBV GY3T QOJQ GEZD GNBV GY3T QOJQ',
     );

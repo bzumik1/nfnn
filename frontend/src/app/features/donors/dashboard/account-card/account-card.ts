@@ -32,6 +32,7 @@ import { FormControlDirective } from '../../../../shared/ui/form-field/form-cont
 import { FormField } from '../../../../shared/ui/form-field/form-field';
 import { PasswordReveal } from '../../../../shared/ui/password-reveal/password-reveal';
 import { QrCode } from '../../../../shared/ui/qr-code/qr-code';
+import { encodeText } from '../../../../shared/ui/qr-code/qr-encoder';
 import { PasskeysPanel } from '../passkeys-panel/passkeys-panel';
 
 type Panel =
@@ -44,6 +45,7 @@ type Panel =
   | 'passkeys';
 
 const UNAUTHENTICATED = 'auth/unauthenticated';
+const AUTHENTICATOR_QR_LEVEL = 'M';
 const SECRET_GROUP = 4;
 
 @Component({
@@ -101,6 +103,10 @@ export class AccountCard {
   protected readonly passwordChanged = signal<'changed' | 'set' | 'removed' | null>(null);
   protected readonly secondFactorChanged = signal<'on' | 'off' | null>(null);
   protected readonly enrolment = signal<SecondFactorEnrolment | null>(null);
+  protected readonly enrolmentQr = computed(() => {
+    const otpauthUri = this.enrolment()?.otpauthUri;
+    return otpauthUri === undefined ? null : encodeText(otpauthUri, AUTHENTICATOR_QR_LEVEL);
+  });
   protected readonly groupedSecret = computed(() => {
     const secret = this.enrolment()?.secret ?? '';
     return secret.match(new RegExp(`.{1,${SECRET_GROUP}}`, 'g'))?.join(' ') ?? '';

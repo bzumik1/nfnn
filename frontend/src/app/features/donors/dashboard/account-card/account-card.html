@@ -591,11 +591,11 @@
               aplikace ukáže.
             </p>
             <div class="account-enrolment">
-              @if (enrolment(); as current) {
+              @if (enrolmentQr(); as qr) {
                 <app-qr-code
                   class="account-qr"
                   variant="plain"
-                  [matrix]="current.qrCode"
+                  [matrix]="qr"
                   label="QR kód s nastavením pro ověřovací aplikaci"
                   i18n-label="@@donor.account.secondFactor.qrAlt"
                 />
