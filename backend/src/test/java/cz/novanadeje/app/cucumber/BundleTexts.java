@@ -1,5 +1,8 @@
 package cz.novanadeje.app.cucumber;
 
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
+import org.springframework.core.type.classreading.SimpleMetadataReaderFactory;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -10,15 +13,19 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.UncheckedIOException;
+import java.lang.reflect.AnnotatedElement;
+import java.lang.reflect.Executable;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 final class BundleTexts {
@@ -28,7 +35,12 @@ final class BundleTexts {
             .map(suffix -> "org/hibernate/validator/ValidationMessages" + suffix + ".properties").toList();
     private static final Set<String> SERVER_VALUES = Set.of("type", "instance", "status", "challenge", "challengeExpiresAt");
     private static final Set<String> ERROR_NAMES = Set.of("field", "code");
-    private static final Pattern PLACEHOLDER = Pattern.compile("\\$\\{[^}]*}|\\{[^}]*}");
+    private static final Pattern PLACEHOLDER = Pattern.compile("\\$\\{([^}]*)}|\\{([^}]*)}");
+    private static final Pattern CONDITION_TEXT = Pattern.compile("'([^']*)'");
+    private static final Set<String> NUMBER_NAMES = Set.of("value", "min", "max", "integer", "fraction");
+    private static final String NUMBER = "-?[0-9]+(?:\\.[0-9]+)?";
+    private static final String SITE_CLASSES = "classpath*:cz/novanadeje/app/**/*.class";
+    private static final String SITE_PATTERNS = sitePatterns();
     private static final Set<String> TEXTS = texts(BUNDLES);
     private static final List<Pattern> VALIDATOR_MESSAGES = templates(VALIDATOR_BUNDLES);
     private static final Set<String> REASON_PHRASES = reasonPhrases();
@@ -115,19 +127,71 @@ final class BundleTexts {
 
     private static List<Pattern> templates(List<String> bundles) {
         List<Pattern> templates = new ArrayList<>();
-        values(bundles).forEach(template -> templates.add(template(template)));
+        values(bundles).forEach(template -> template(template).ifPresent(templates::add));
         return List.copyOf(templates);
     }
 
-    private static Pattern template(String template) {
+    private static Optional<Pattern> template(String template) {
         StringBuilder pattern = new StringBuilder();
         Matcher placeholder = PLACEHOLDER.matcher(template);
         int literalStart = 0;
         while (placeholder.find()) {
-            pattern.append(Pattern.quote(template.substring(literalStart, placeholder.start()))).append(".*?");
+            Optional<String> filled = placeholder.group(1) != null ? condition(placeholder.group(1)) : parameter(placeholder.group(2));
+            if (filled.isEmpty()) {
+                return Optional.empty();
+            }
+            pattern.append(Pattern.quote(template.substring(literalStart, placeholder.start()))).append(filled.get());
             literalStart = placeholder.end();
         }
-        return Pattern.compile(pattern.append(Pattern.quote(template.substring(literalStart))).toString(), Pattern.DOTALL);
+        return Optional.of(Pattern.compile(pattern.append(Pattern.quote(template.substring(literalStart))).toString()));
+    }
+
+    private static Optional<String> condition(String expression) {
+        if (expression.contains("validatedValue") || expression.contains("+=")) {
+            return Optional.empty();
+        }
+        Matcher text = CONDITION_TEXT.matcher(expression);
+        List<String> alternatives = new ArrayList<>();
+        while (text.find()) {
+            alternatives.add(Pattern.quote(text.group(1)));
+        }
+        return alternatives.isEmpty() ? Optional.empty() : Optional.of("(?:" + String.join("|", alternatives) + ")");
+    }
+
+    private static Optional<String> parameter(String name) {
+        if (NUMBER_NAMES.contains(name)) {
+            return Optional.of(NUMBER);
+        }
+        return "regexp".equals(name) ? Optional.of(SITE_PATTERNS) : Optional.empty();
+    }
+
+    private static String sitePatterns() {
+        Set<String> regexps = new HashSet<>();
+        SimpleMetadataReaderFactory readers = new SimpleMetadataReaderFactory();
+        try {
+            for (Resource resource : new PathMatchingResourcePatternResolver().getResources(SITE_CLASSES)) {
+                if (!resource.getURL().toString().contains("/test/")) {
+                    String name = readers.getMetadataReader(resource).getClassMetadata().getClassName();
+                    patternsOf(Class.forName(name, false, BundleTexts.class.getClassLoader())).forEach(regexps::add);
+                }
+            }
+        } catch (IOException unreadable) {
+            throw new UncheckedIOException(unreadable);
+        } catch (ClassNotFoundException missing) {
+            throw new IllegalStateException(missing);
+        }
+        return regexps.stream().sorted().map(Pattern::quote).collect(Collectors.joining("|", "(?:", ")"));
+    }
+
+    private static Stream<String> patternsOf(Class<?> type) {
+        Stream<AnnotatedElement> members = Stream.of(type.getDeclaredFields(), type.getDeclaredMethods(), type.getDeclaredConstructors())
+                .flatMap(Stream::of);
+        Stream<AnnotatedElement> parameters = Stream.of(type.getDeclaredMethods(), type.getDeclaredConstructors())
+                .flatMap(Stream::<Executable>of)
+                .flatMap(executable -> Stream.of(executable.getParameters()));
+        return Stream.concat(members, parameters)
+                .flatMap(element -> Stream.of(element.getAnnotationsByType(jakarta.validation.constraints.Pattern.class)))
+                .map(jakarta.validation.constraints.Pattern::regexp);
     }
 
     private static Stream<String> values(List<String> bundles) {
