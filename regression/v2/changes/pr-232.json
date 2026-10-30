@@ -12,5 +12,13 @@
     "kind": "added",
     "reason": "Jakub 2026-10-30: the photo of the About section is set, replaced and removed in the administration and by the connector's nfnn_update_about; v2 had no such endpoint",
     "contract": "docs/api-contract.md, content — public CMS; MCP connector"
+  },
+  {
+    "path": "GET /api/content/home",
+    "scenario": "content/home_content: *",
+    "kind": "added",
+    "field": "$.about",
+    "reason": "PR #232, Jakub 2026-10-30: the home content carries the About photo an administrator set at /sprava/o-nas, or null; the fields before it answer as they did",
+    "contract": "docs/api-contract.md, content — public CMS"
   }
 ]
