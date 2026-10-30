@@ -18,12 +18,16 @@ class BackupKeyRateLimiter {
     private final FixedWindowRateLimiter limiter;
 
     BackupKeyRateLimiter(Clock clock) {
-        this.limiter = new FixedWindowRateLimiter(REQUESTS_PER_WINDOW, WINDOW, clock);
+        this.limiter = new FixedWindowRateLimiter(REQUESTS_PER_WINDOW, WINDOW, FixedWindowRateLimiter.ADMINISTRATOR_ONLY_MAXIMUM_TRACKED_KEYS, clock);
     }
 
     void check(String clientAddress) {
         if (!limiter.tryAcquire(new ClientAddressKey(clientAddress))) {
             throw new RateLimitExceededException(ProblemTypes.of("operations", "rate-limited"));
         }
+    }
+
+    long trackedKeys() {
+        return limiter.trackedKeys();
     }
 }

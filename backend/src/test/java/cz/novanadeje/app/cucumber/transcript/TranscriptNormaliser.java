@@ -28,6 +28,7 @@ public final class TranscriptNormaliser {
     private static final String NUMBER = "#";
     private static final Pattern UUID_SHAPE = Pattern.compile("(?i)\\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\\b");
     private static final Pattern JWT_SHAPE = Pattern.compile("eyJ[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]*");
+    private static final Pattern BACKUP_KEY_SHAPE = Pattern.compile("(?i)(?<![A-Za-z0-9])age-secret-key-1[0-9a-z]{58}(?![A-Za-z0-9])");
     private static final Pattern TOKEN_CANDIDATE = Pattern.compile("(?<![A-Za-z0-9_-])[A-Za-z0-9_-]{32,}(?![A-Za-z0-9_-])");
     private static final Pattern UPPERCASE = Pattern.compile("[A-Z]");
     private static final Pattern LOWERCASE = Pattern.compile("[a-z]");
@@ -47,7 +48,8 @@ public final class TranscriptNormaliser {
     private static final String ID_FIELD = "id";
     private static final Set<String> SECRET_FIELDS = Set.of("password", "currentpassword", "newpassword", "secret", "otpauthuri",
             "accesstoken", "access_token", "refreshtoken", "refresh_token", "id_token", "token", "recoverycodes", "recoverycode",
-            "setupcode", "client_secret", "clientsecret", "code_verifier", "codeverifier");
+            "setupcode", "client_secret", "clientsecret", "code_verifier", "codeverifier", "word");
+    private static final String WORDS_FIELD = "words";
     private static final String CODE_FIELD = "code";
     private static final String CODE_SUFFIX = "code";
     private static final String TOTP_URI_FIELD = "otpauthUri";
@@ -81,6 +83,7 @@ public final class TranscriptNormaliser {
         String normalised = replace(DATA_URI, raw, TranscriptNormaliser::dataUri);
         normalised = replace(UUID_SHAPE, normalised, this::id);
         normalised = replace(JWT_SHAPE, normalised, jwt -> masking(jwt, JWT));
+        normalised = replace(BACKUP_KEY_SHAPE, normalised, key -> masking(key, SECRET));
         normalised = recoveryCodesMasked(normalised);
         normalised = replace(TOKEN_CANDIDATE, normalised, candidate -> isRandom(candidate) ? masking(candidate, TOKEN) : candidate);
         if (knownValuePattern != null) {
@@ -182,6 +185,9 @@ public final class TranscriptNormaliser {
         }
         if (totpEnrolment && TOTP_QR_FIELD.equals(name)) {
             return true;
+        }
+        if (WORDS_FIELD.equals(key) && value.isArray()) {
+            return value.valueStream().allMatch(JsonNode::isString);
         }
         if (!value.isString()) {
             return false;

@@ -15,7 +15,8 @@ import java.util.concurrent.atomic.AtomicReference;
 public final class FixedWindowRateLimiter {
 
     private static final Logger log = LoggerFactory.getLogger(FixedWindowRateLimiter.class);
-    private static final int MAXIMUM_TRACKED_KEYS = 50_000;
+    public static final int DEFAULT_MAXIMUM_TRACKED_KEYS = 50_000;
+    public static final int ADMINISTRATOR_ONLY_MAXIMUM_TRACKED_KEYS = 1_000;
     private static final Duration WARNING_INTERVAL = Duration.ofMinutes(1);
 
     private final int limit;
@@ -25,11 +26,18 @@ public final class FixedWindowRateLimiter {
     private final AtomicReference<Instant> nextWarning = new AtomicReference<>(Instant.MIN);
 
     public FixedWindowRateLimiter(int limit, Duration window, Clock clock) {
+        this(limit, window, DEFAULT_MAXIMUM_TRACKED_KEYS, clock);
+    }
+
+    public FixedWindowRateLimiter(int limit, Duration window, int maximumTrackedKeys, Clock clock) {
+        if (maximumTrackedKeys < 1) {
+            throw new IllegalArgumentException("A rate limiter tracks at least one key");
+        }
         this.limit = limit;
         this.window = window;
         this.clock = clock;
         this.windows = Caffeine.newBuilder()
-                .maximumSize(MAXIMUM_TRACKED_KEYS)
+                .maximumSize(maximumTrackedKeys)
                 .expireAfterWrite(window)
                 .ticker(() -> TimeUnit.MILLISECONDS.toNanos(clock.millis()))
                 .build();
@@ -51,7 +59,7 @@ public final class FixedWindowRateLimiter {
         }
     }
 
-    long trackedKeys() {
+    public long trackedKeys() {
         windows.cleanUp();
         return windows.estimatedSize();
     }
